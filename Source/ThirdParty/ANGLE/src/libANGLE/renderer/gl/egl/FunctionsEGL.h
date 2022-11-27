@@ -105,10 +105,22 @@ class FunctionsEGL
 
     EGLint dupNativeFenceFDANDROID(EGLSync sync) const;
 
+    EGLint queryDmaBufFormatsEXT(EGLint maxFormats, EGLint *formats, EGLint *numFormats) const;
+
+    EGLint queryDmaBufModifiersEXT(EGLint format,
+                                   EGLint maxModifiers,
+                                   EGLuint64KHR *modifiers,
+                                   EGLBoolean *externalOnly,
+                                   EGLint *numModifiers) const;
+
+    EGLBoolean queryDeviceAttribEXT(EGLDisplay dpy, EGLint attribute, EGLAttrib *value) const;
+    const char *queryDeviceStringEXT(EGLDeviceEXT device, EGLint name) const;
+    EGLBoolean queryDisplayAttribEXT(EGLint attribute, EGLAttrib *value) const;
+
   private:
     // So as to isolate from angle we do not include angleutils.h and cannot
     // use angle::NonCopyable so we replicated it here instead.
-    FunctionsEGL(const FunctionsEGL &) = delete;
+    FunctionsEGL(const FunctionsEGL &)   = delete;
     void operator=(const FunctionsEGL &) = delete;
 
     // Fallback mechanism for creating a display from a native device object.

@@ -44,6 +44,8 @@ class DisplayMtl : public DisplayImpl
     egl::Error initialize(egl::Display *display) override;
     void terminate() override;
 
+    egl::Display *getDisplay() const { return mDisplay; }
+
     bool testDeviceLost() override;
     egl::Error restoreLostDevice(const egl::Display *display) override;
 
@@ -91,6 +93,7 @@ class DisplayMtl : public DisplayImpl
                                                          const egl::AttributeMap &attribs) override;
     gl::Version getMaxSupportedESVersion() const override;
     gl::Version getMaxConformantESVersion() const override;
+    Optional<gl::Version> getMaxSupportedDesktopVersion() const override;
 
     EGLSyncImpl *createSync(const egl::AttributeMap &attribs) override;
 
@@ -119,6 +122,8 @@ class DisplayMtl : public DisplayImpl
     const gl::TextureCapsMap &getNativeTextureCaps() const;
     const gl::Extensions &getNativeExtensions() const;
     const gl::Limitations &getNativeLimitations() const;
+    ShPixelLocalStorageType getNativePixelLocalStorageType() const;
+    ShFragmentSynchronizationType getPLSSynchronizationType() const;
     const angle::FeaturesMtl &getFeatures() const { return mFeatures; }
 
     // Check whether either of the specified iOS or Mac GPU family is supported
@@ -161,8 +166,6 @@ class DisplayMtl : public DisplayImpl
     mtl::AutoObjCObj<MTLSharedEventListener> getOrCreateSharedEventListener();
 #endif
 
-    bool useDirectToMetalCompiler() const;
-
   protected:
     void generateExtensions(egl::DisplayExtensions *outExtensions) const override;
     void generateCaps(egl::Caps *outCaps) const override;
@@ -179,6 +182,8 @@ class DisplayMtl : public DisplayImpl
     mtl::AutoObjCPtr<id<MTLDevice>> getMetalDeviceMatchingAttribute(
         const egl::AttributeMap &attribs);
     angle::Result initializeShaderLibrary();
+
+    egl::Display *mDisplay;
 
     mtl::AutoObjCPtr<id<MTLDevice>> mMetalDevice = nil;
     uint32_t mMetalDeviceVendorId                = 0;
@@ -201,6 +206,11 @@ class DisplayMtl : public DisplayImpl
     mutable gl::Caps mNativeCaps;
     mutable gl::Limitations mNativeLimitations;
     mutable uint32_t mMaxColorTargetBits = 0;
+
+    // GL_ANGLE_shader_pixel_local_storage.
+    mutable ShPixelLocalStorageType mPixelLocalStorageType = ShPixelLocalStorageType::NotSupported;
+    mutable ShFragmentSynchronizationType mPLSSynchronizationType =
+        ShFragmentSynchronizationType::NotSupported;
 
     angle::FeaturesMtl mFeatures;
 };

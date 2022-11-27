@@ -103,6 +103,27 @@ private:
 }
 @end
 
+#pragma mark - _WKInsetLabel
+
+@interface _WKInsetLabel : UILabel
+@property (assign, nonatomic) UIEdgeInsets edgeInsets;
+@end
+
+@implementation _WKInsetLabel
+- (void)drawTextInRect:(CGRect)rect
+{
+    [super drawTextInRect:UIEdgeInsetsInsetRect(rect, self.edgeInsets)];
+}
+
+- (CGSize)intrinsicContentSize
+{
+    auto intrinsicSize = [super intrinsicContentSize];
+    intrinsicSize.width += self.edgeInsets.left + self.edgeInsets.right;
+    intrinsicSize.height += self.edgeInsets.top + self.edgeInsets.bottom;
+    return intrinsicSize;
+}
+@end
+
 #pragma mark - WKFullScreenViewController
 
 @interface WKFullScreenViewController () <UIGestureRecognizerDelegate, UIToolbarDelegate>
@@ -116,14 +137,21 @@ private:
     RetainPtr<UILongPressGestureRecognizer> _touchGestureRecognizer;
     RetainPtr<UIView> _animatingView;
     RetainPtr<UIStackView> _stackView;
+    RetainPtr<UIStackView> _banner;
+    RetainPtr<_WKInsetLabel> _bannerLabel;
     RetainPtr<_WKExtrinsicButton> _cancelButton;
     RetainPtr<_WKExtrinsicButton> _pipButton;
     RetainPtr<UIButton> _locationButton;
     RetainPtr<UILayoutGuide> _topGuide;
     RetainPtr<NSLayoutConstraint> _topConstraint;
+    String _location;
     WebKit::FullscreenTouchSecheuristic _secheuristic;
     WKFullScreenViewControllerPlaybackSessionModelClient _playbackClient;
     CGFloat _nonZeroStatusBarHeight;
+    std::optional<UIInterfaceOrientationMask> _supportedOrientations;
+#if HAVE(UIKIT_WEBKIT_INTERNALS)
+    BOOL m_shouldHideMediaControls;
+#endif
 }
 
 @synthesize prefersStatusBarHidden = _prefersStatusBarHidden;
@@ -142,11 +170,13 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_statusBarFrameDidChange:) name:UIApplicationDidChangeStatusBarFrameNotification object:nil];
 ALLOW_DEPRECATED_DECLARATIONS_END
     _secheuristic.setParameters(WebKit::FullscreenTouchSecheuristicParameters::iosParameters());
-
     self._webView = webView;
 
     _playbackClient.setParent(self);
     _valid = YES;
+#if HAVE(UIKIT_WEBKIT_INTERNALS)
+    m_shouldHideMediaControls = NO;
+#endif
 
     return self;
 }
@@ -159,6 +189,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _valid = NO;
 
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideUI) object:nil];
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideBanner) object:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     _playbackClient.setParent(nullptr);
     _playbackClient.setInterface(nullptr);
@@ -169,9 +200,27 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [self invalidate];
 
     [_target release];
-    [_location release];
 
     [super dealloc];
+}
+
+- (void)setSupportedOrientations:(UIInterfaceOrientationMask)supportedOrientations
+{
+    _supportedOrientations = supportedOrientations;
+    [self setNeedsUpdateOfSupportedInterfaceOrientations];
+}
+
+- (void)resetSupportedOrientations
+{
+    _supportedOrientations = std::nullopt;
+    [self setNeedsUpdateOfSupportedInterfaceOrientations];
+}
+
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations
+{
+    if (!_supportedOrientations)
+        return [super supportedInterfaceOrientations];
+    return *_supportedOrientations;
 }
 
 - (void)showUI
@@ -220,6 +269,33 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     }];
 }
 
+- (void)showBanner
+{
+    ASSERT(_valid);
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideBanner) object:nil];
+
+    [UIView animateWithDuration:showHideAnimationDuration animations:^{
+        [_banner setHidden:NO];
+        [_banner setAlpha:1];
+    }];
+
+    [self performSelector:@selector(hideBanner) withObject:nil afterDelay:autoHideDelay];
+}
+
+- (void)hideBanner
+{
+    ASSERT(_valid);
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideBanner) object:nil];
+    [UIView animateWithDuration:showHideAnimationDuration animations:^{
+        [_banner setAlpha:0];
+    } completion:^(BOOL finished) {
+        if (!finished)
+            return;
+
+        [_banner setHidden:YES];
+    }];
+}
+
 - (void)videoControlsManagerDidChange
 {
     ASSERT(_valid);
@@ -236,6 +312,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (auto page = [self._webView _page])
         isPiPEnabled = page->preferences().pictureInPictureAPIEnabled() && page->preferences().allowsPictureInPictureMediaPlayback();
     bool isPiPSupported = playbackSessionModel && playbackSessionModel->isPictureInPictureSupported();
+#if HAVE(UIKIT_WEBKIT_INTERNALS)
+    [_cancelButton setHidden:m_shouldHideMediaControls];
+    isPiPEnabled = !m_shouldHideMediaControls && isPiPEnabled;
+#endif
     [_pipButton setHidden:!isPiPEnabled || !isPiPSupported];
 }
 
@@ -246,6 +326,17 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         _animatingView.get().alpha = alpha;
     }];
 }
+
+#if HAVE(UIKIT_WEBKIT_INTERNALS)
+- (void)hideMediaControls:(BOOL)hidden
+{
+    if (m_shouldHideMediaControls == hidden)
+        return;
+
+    m_shouldHideMediaControls = hidden;
+    [self videoControlsManagerDidChange];
+}
+#endif // HAVE(UIKIT_WEBKIT_INTERNALS)
 
 - (void)setPrefersStatusBarHidden:(BOOL)value
 {
@@ -308,6 +399,18 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         [self hideUI];
     else
         [self showUI];
+}
+
+- (NSString *)location
+{
+    return _location;
+}
+
+- (void)setLocation:(NSString *)location
+{
+    _location = location;
+
+    [_bannerLabel setText:[NSString stringWithFormat:WEB_UI_NSSTRING(@"”%@” is in full screen.\nSwipe down to exit.", "Full Screen Warning Banner Content Text"), (NSString *)self.location]];
 }
 
 #pragma mark - UIViewController Overrides
@@ -387,9 +490,24 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         [stackView addArrangedSubview:_pipButton.get() applyingMaterialStyle:AVBackgroundViewMaterialStylePrimary tintEffectStyle:AVBackgroundViewTintEffectStyleSecondary];
         _stackView = WTFMove(stackView);
     }
-    
+
     [_stackView setTranslatesAutoresizingMaskIntoConstraints:NO];
-    [_animatingView addSubview:_stackView.get()];    
+    [_animatingView addSubview:_stackView.get()];
+
+    _bannerLabel = adoptNS([[_WKInsetLabel alloc] initWithFrame:CGRectMake(0, 0, 100, 100)]);
+    [_bannerLabel setEdgeInsets:UIEdgeInsetsMake(16, 16, 16, 16)];
+    [_bannerLabel setBackgroundColor:[UIColor clearColor]];
+    [_bannerLabel setNumberOfLines:0];
+    [_bannerLabel setLineBreakMode:NSLineBreakByWordWrapping];
+    [_bannerLabel setTextAlignment:NSTextAlignmentCenter];
+    [_bannerLabel setText:[NSString stringWithFormat:WEB_UI_NSSTRING(@"”%@” is in full screen.\nSwipe down to exit.", "Full Screen Warning Banner Content Text"), (NSString *)self.location]];
+
+    auto banner = adoptNS([[WKFullscreenStackView alloc] init]);
+    [banner addArrangedSubview:_bannerLabel.get() applyingMaterialStyle:AVBackgroundViewMaterialStyleSecondary tintEffectStyle:AVBackgroundViewTintEffectStyleSecondary];
+    _banner = WTFMove(banner);
+    [_banner setTranslatesAutoresizingMaskIntoConstraints:NO];
+
+    [_animatingView addSubview:_banner.get()];
 
     UILayoutGuide *safeArea = self.view.safeAreaLayoutGuide;
     UILayoutGuide *margins = self.view.layoutMarginsGuide;
@@ -406,12 +524,18 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [NSLayoutConstraint activateConstraints:@[
         _topConstraint.get(),
         stackViewToTopGuideConstraint,
+        [[_banner centerYAnchor] constraintEqualToAnchor:margins.centerYAnchor],
+        [[_banner centerXAnchor] constraintEqualToAnchor:margins.centerXAnchor],
+        [[_banner widthAnchor] constraintEqualToAnchor:margins.widthAnchor],
         [[_stackView leadingAnchor] constraintEqualToAnchor:margins.leadingAnchor],
     ]];
 
     [_stackView setAlpha:0];
     [_stackView setHidden:YES];
     [self videoControlsManagerDidChange];
+
+    [_banner setAlpha:0];
+    [_banner setHidden:YES];
 
     _touchGestureRecognizer = adoptNS([[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(_touchDetected:)]);
     [_touchGestureRecognizer setCancelsTouchesInView:NO];
@@ -431,6 +555,16 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     [super viewWillAppear:animated];
 }
+
+#if HAVE(UIKIT_WEBKIT_INTERNALS)
+- (void)viewIsAppearing:(BOOL)animated
+{
+    self.view.clipsToBounds = YES;
+    self.view._continuousCornerRadius = self.view.window._continuousCornerRadius;
+
+    [super viewIsAppearing:animated];
+}
+#endif
 
 - (void)viewDidLayoutSubviews
 {

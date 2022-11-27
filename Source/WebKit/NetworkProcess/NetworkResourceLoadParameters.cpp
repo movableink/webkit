@@ -98,6 +98,8 @@ void NetworkResourceLoadParameters::encode(IPC::Encoder& encoder) const
         encoder << *topOrigin;
     encoder << options;
     encoder << cspResponseHeaders;
+    encoder << parentFrameURL;
+    encoder << frameURL;
     encoder << parentCrossOriginEmbedderPolicy;
     encoder << crossOriginEmbedderPolicy;
     encoder << originalRequestHeaders;
@@ -112,11 +114,13 @@ void NetworkResourceLoadParameters::encode(IPC::Encoder& encoder) const
     encoder << pageHasResourceLoadClient;
     encoder << parentFrameID;
     encoder << crossOriginAccessControlCheckEnabled;
+    encoder << networkConnectionIntegrityPolicy;
     encoder << allowPrivacyProxy;
 
     encoder << documentURL;
 
     encoder << isCrossOriginOpenerPolicyEnabled;
+    encoder << isClearSiteDataHeaderEnabled;
     encoder << isDisplayingInitialEmptyDocument;
     encoder << effectiveSandboxFlags;
     encoder << openerURL;
@@ -247,6 +251,18 @@ std::optional<NetworkResourceLoadParameters> NetworkResourceLoadParameters::deco
     if (!decoder.decode(result.cspResponseHeaders))
         return std::nullopt;
 
+    std::optional<URL> parentFrameURL;
+    decoder >> parentFrameURL;
+    if (!parentFrameURL)
+        return std::nullopt;
+    result.parentFrameURL = WTFMove(*parentFrameURL);
+
+    std::optional<URL> frameURL;
+    decoder >> frameURL;
+    if (!frameURL)
+        return std::nullopt;
+    result.frameURL = WTFMove(*frameURL);
+
     std::optional<WebCore::CrossOriginEmbedderPolicy> parentCrossOriginEmbedderPolicy;
     decoder >> parentCrossOriginEmbedderPolicy;
     if (!parentCrossOriginEmbedderPolicy)
@@ -298,6 +314,12 @@ std::optional<NetworkResourceLoadParameters> NetworkResourceLoadParameters::deco
         return std::nullopt;
     result.crossOriginAccessControlCheckEnabled = *crossOriginAccessControlCheckEnabled;
 
+    std::optional<OptionSet<NetworkConnectionIntegrity>> networkConnectionIntegrityPolicy;
+    decoder >> networkConnectionIntegrityPolicy;
+    if (!networkConnectionIntegrityPolicy)
+        return std::nullopt;
+    result.networkConnectionIntegrityPolicy = *networkConnectionIntegrityPolicy;
+
     std::optional<bool> allowPrivacyProxy;
     decoder >> allowPrivacyProxy;
     if (!allowPrivacyProxy)
@@ -315,6 +337,12 @@ std::optional<NetworkResourceLoadParameters> NetworkResourceLoadParameters::deco
     if (!isCrossOriginOpenerPolicyEnabled)
         return std::nullopt;
     result.isCrossOriginOpenerPolicyEnabled = *isCrossOriginOpenerPolicyEnabled;
+
+    std::optional<bool> isClearSiteDataHeaderEnabled;
+    decoder >> isClearSiteDataHeaderEnabled;
+    if (!isClearSiteDataHeaderEnabled)
+        return std::nullopt;
+    result.isClearSiteDataHeaderEnabled = *isClearSiteDataHeaderEnabled;
 
     std::optional<bool> isDisplayingInitialEmptyDocument;
     decoder >> isDisplayingInitialEmptyDocument;

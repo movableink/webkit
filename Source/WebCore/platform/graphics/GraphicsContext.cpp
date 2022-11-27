@@ -33,6 +33,7 @@
 #include "FloatRoundedRect.h"
 #include "Gradient.h"
 #include "ImageBuffer.h"
+#include "ImageOrientation.h"
 #include "IntRect.h"
 #include "MediaPlayer.h"
 #include "MediaPlayerPrivate.h"
@@ -81,9 +82,15 @@ void GraphicsContext::restore()
         m_stack.clear();
 }
 
-void GraphicsContext::updateState(GraphicsContextState& state, const std::optional<GraphicsContextState>& lastDrawingState)
+void GraphicsContext::mergeLastChanges(const GraphicsContextState& state, const std::optional<GraphicsContextState>& lastDrawingState)
 {
-    m_state.mergeChanges(state, lastDrawingState);
+    m_state.mergeLastChanges(state, lastDrawingState);
+    didUpdateState(m_state);
+}
+
+void GraphicsContext::mergeAllChanges(const GraphicsContextState& state)
+{
+    m_state.mergeAllChanges(state);
     didUpdateState(m_state);
 }
 
@@ -615,6 +622,13 @@ Vector<FloatPoint> GraphicsContext::centerLineAndCutOffCorners(bool isVerticalLi
 void GraphicsContext::paintFrameForMedia(MediaPlayer& player, const FloatRect& destination)
 {
     player.playerPrivate()->paintCurrentFrameInContext(*this, destination);
+}
+#endif
+
+#if ENABLE(WEB_CODECS)
+void GraphicsContext::paintVideoFrame(VideoFrame& frame, const FloatRect& destination, bool shouldDiscardAlpha)
+{
+    frame.paintInContext(*this, destination, ImageOrientation::None, shouldDiscardAlpha);
 }
 #endif
 

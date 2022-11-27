@@ -440,6 +440,15 @@ static void overrideDefaults()
     Options::numberOfFTLCompilerThreads() = 3;
 #endif
 
+#if OS(LINUX) && CPU(ARM)
+    Options::maximumFunctionForCallInlineCandidateBytecodeCost() = 77;
+    Options::maximumOptimizationCandidateBytecodeCost() = 42403;
+    Options::maximumFunctionForClosureCallInlineCandidateBytecodeCost() = 68;
+    Options::maximumInliningCallerBytecodeCost() = 9912;
+    Options::maximumInliningDepth() = 8;
+    Options::maximumInliningRecursion() = 3;
+#endif
+
 #if USE(BMALLOC_MEMORY_FOOTPRINT_API)
     // On iOS and conditionally Linux, we control heap growth using process memory footprint. Therefore these values can be agressive.
     Options::smallHeapRAMFraction() = 0.8;
@@ -524,6 +533,9 @@ void Options::recomputeDependentOptions()
     Options::useConcurrentGC() = false;
     Options::forceUnlinkedDFG() = false;
 #endif
+
+    if (!Options::allowDoubleShape())
+        Options::useJIT() = false; // We don't support JIT with !allowDoubleShape. So disable it.
 
     // At initialization time, we may decide that useJIT should be false for any
     // number of reasons (including failing to allocate JIT memory), and therefore,
@@ -667,6 +679,18 @@ void Options::recomputeDependentOptions()
 
     if (Options::verboseVerifyGC())
         Options::verifyGC() = true;
+    
+    // FIXME: This should be removed when we add LLint/OMG support for WASM SIMD
+    if (Options::useWebAssemblySIMD()) {
+        Options::useWasmLLInt() = false;
+        Options::useBBQJIT() = true;
+        Options::useOMGJIT() = false;
+        Options::wasmBBQUsesAir() = true;
+        Options::webAssemblyBBQAirModeThreshold() = 0;
+        Options::webAssemblyBBQAirOptimizationLevel() = 0;
+        Options::defaultB3OptLevel() = 0;
+        Options::airRandomizeRegs() = 0;
+    }
 
 #if ASAN_ENABLED && OS(LINUX) && ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
     if (Options::useWasmFaultSignalHandler()) {

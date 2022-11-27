@@ -165,6 +165,9 @@ struct Limitations
     bool compressedBaseMipLevelMultipleOfFour = false;
 
     bool limitWebglMaxTextureSizeTo4096 = false;
+
+    // When clip and cull distances are used simultaneously, D3D11 can support up to four of each.
+    bool limitSimultaneousClipAndCullDistanceUsage = false;
 };
 
 struct TypePrecision
@@ -374,6 +377,14 @@ struct Caps
     GLuint maxCullDistances                = 0;
     GLuint maxCombinedClipAndCullDistances = 0;
 
+    // GL_ANGLE_shader_pixel_local_storage
+    GLuint maxPixelLocalStoragePlanes                       = 0;
+    GLuint maxColorAttachmentsWithActivePixelLocalStorage   = 0;
+    GLuint maxCombinedDrawBuffersAndPixelLocalStoragePlanes = 0;
+
+    // GL_EXT_shader_pixel_local_storage.
+    GLuint maxShaderPixelLocalStorageFastSizeEXT = 0;
+
     // GLES1 emulation: Caps for ES 1.1. Taken from Table 6.20 / 6.22 in the OpenGL ES 1.1 spec.
     GLuint maxMultitextureUnits                 = 0;
     GLuint maxClipPlanes                        = 0;
@@ -554,6 +565,9 @@ struct DisplayExtensions
     // EGL_ANDROID_get_frame_timestamps
     bool getFrameTimestamps = false;
 
+    // EGL_ANGLE_timestamp_surface_attribute
+    bool timestampSurfaceAttributeANGLE = false;
+
     // EGL_ANDROID_recordable
     bool recordable = false;
 
@@ -605,6 +619,9 @@ struct DisplayExtensions
     // EGL_EXT_gl_colorspace_display_p3_passthrough
     bool glColorspaceDisplayP3Passthrough = false;
 
+    // EGL_ANGLE_colorspace_attribute_passthrough
+    bool eglColorspaceAttributePassthroughANGLE = false;
+
     // EGL_ANDROID_framebuffer_target
     bool framebufferTargetANDROID = false;
 
@@ -655,6 +672,9 @@ struct DisplayExtensions
 
     // EGL_KHR_partial_update
     bool partialUpdateKHR = false;
+
+    // EGL_ANGLE_sync_mtl_shared_event
+    bool mtlSyncSharedEventANGLE = false;
 };
 
 struct DeviceExtensions
@@ -678,6 +698,12 @@ struct DeviceExtensions
 
     // EGL_ANGLE_device_vulkan
     bool deviceVulkan = false;
+
+    // EGL_EXT_device_drm
+    bool deviceDrmEXT = false;
+
+    // EGL_EXT_device_drm_render_node
+    bool deviceDrmRenderNodeEXT = false;
 };
 
 struct ClientExtensions

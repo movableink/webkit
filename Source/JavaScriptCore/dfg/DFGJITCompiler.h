@@ -239,7 +239,7 @@ public:
         m_privateBrandAccesses.append(InlineCacheWrapper<JITPrivateBrandAccessGenerator>(gen, slowPath));
     }
 
-    void addJSCall(Label slowPathStart, Label doneLocation, OptimizingCallLinkInfo* info)
+    void addJSCall(Label slowPathStart, Label doneLocation, CompileTimeCallLinkInfo info)
     {
         m_jsCalls.append(JSCallRecord(slowPathStart, doneLocation, info));
     }
@@ -312,6 +312,7 @@ public:
     class LinkableConstant final : public CCallHelpers::ConstantMaterializer {
     public:
         enum NonCellTag { NonCell };
+        enum GlobalObjectTag { GlobalObject };
         LinkableConstant() = default;
         LinkableConstant(JITCompiler&, JSCell*);
         LinkableConstant(LinkerIR::Constant index)
@@ -333,6 +334,11 @@ public:
             return LinkableConstant(jit, structure.get());
         }
 
+        static LinkableConstant globalObject(JITCompiler& jit, Node* node)
+        {
+            return LinkableConstant(jit, GlobalObject, node->origin.semantic);
+        }
+
         bool isUnlinked() const { return m_index != UINT_MAX; }
 
         void* pointer() const { return m_pointer; }
@@ -348,6 +354,7 @@ public:
 
     private:
         LinkableConstant(JITCompiler&, void*, NonCellTag);
+        LinkableConstant(JITCompiler&, GlobalObjectTag, CodeOrigin);
 
         LinkerIR::Constant m_index { UINT_MAX };
         void* m_pointer { nullptr };
@@ -376,6 +383,7 @@ public:
     }
 
     std::tuple<CompileTimeStructureStubInfo, LinkableConstant> addStructureStubInfo();
+    std::tuple<CompileTimeCallLinkInfo, LinkableConstant> addCallLinkInfo(CodeOrigin);
     LinkerIR::Constant addToConstantPool(LinkerIR::Type, void*);
 
 private:
@@ -413,7 +421,7 @@ private:
 
 
     struct JSCallRecord {
-        JSCallRecord(Label slowPathStart, Label doneLocation, OptimizingCallLinkInfo* info)
+        JSCallRecord(Label slowPathStart, Label doneLocation, CompileTimeCallLinkInfo info)
             : slowPathStart(slowPathStart)
             , doneLocation(doneLocation)
             , info(info)
@@ -422,7 +430,7 @@ private:
         
         Label slowPathStart;
         Label doneLocation;
-        OptimizingCallLinkInfo* info;
+        CompileTimeCallLinkInfo info;
     };
     
     struct JSDirectCallRecord {
@@ -455,9 +463,8 @@ private:
     Vector<DFG::OSREntryData> m_osrEntry;
     Vector<DFG::OSRExit> m_osrExit;
     Vector<DFG::SpeculationRecovery> m_speculationRecovery;
-    Vector<LinkerIR::Value> m_constantPool;
-    HashMap<LinkerIR::Value, LinkerIR::Constant, LinkerIR::ValueHash, LinkerIR::ValueTraits> m_constantPoolMap;
     SegmentedVector<DFG::UnlinkedStructureStubInfo> m_unlinkedStubInfos;
+    SegmentedVector<DFG::UnlinkedCallLinkInfo> m_unlinkedCallLinkInfos;
     
     struct ExceptionHandlingOSRExitInfo {
         OSRExitCompilationInfo& exitInfo;

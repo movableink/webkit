@@ -28,7 +28,7 @@ from .command import Command
 from .branch import Branch
 from .squash import Squash
 
-from webkitbugspy import Tracker
+from webkitbugspy import Tracker, radar
 from webkitcorepy import arguments, run, Terminal
 from webkitscmpy import local, log, remote
 
@@ -38,6 +38,7 @@ class PullRequest(Command):
     aliases = ['pr', 'pfr', 'upload']
     help = 'Push the current checkout state as a pull-request'
     BLOCKED_LABEL = 'merging-blocked'
+    SKIP_EWS_LABEL = 'skip-ews'
     MERGE_LABELS = ['merge-queue']
     UNSAFE_MERGE_LABELS = ['unsafe-merge-queue']
 
@@ -76,6 +77,12 @@ class PullRequest(Command):
             '--append', action='store_const', const='append',
             dest='technique', default=None,
             help='When creating a pull request, append a new commit on the existing branch by default',
+        )
+        parser.add_argument(
+            '--commit', '--no-commit',
+            dest='commit', default=None,
+            help='When creating a pull request, create (or do not create) a commit from the set of staged changes',
+            action=arguments.NoAction,
         )
         parser.add_argument(
             '--with-history', '--no-history',
@@ -149,9 +156,9 @@ class PullRequest(Command):
 
     @classmethod
     def title_for(cls, commits):
-        title = os.path.commonprefix([commit.message.splitlines()[0] for commit in commits])
+        title = os.path.commonprefix([commit.message.splitlines()[0] for commit in commits if commit.message])
         if not title:
-            title = commits[0].message.splitlines()[0]
+            title = commits[0].message.splitlines()[0] if commits[0].message else '???'
         title = title.rstrip().lstrip()
         return title[:-5].rstrip() if title.endswith('(Part') else title
 
@@ -193,16 +200,36 @@ class PullRequest(Command):
                     if remote in bp_remotes:
                         source_remote = remote
                         break
-            if source_remote and source_remote != 'origin':
+            if source_remote != repository.default_remote:
+                print("Making pull request against '{}' because that is where the branch point is from".format(source_remote))
+                if branch_point.branch in repository.DEFAULT_BRANCHES:
+                    sys.stderr.write('Branch point is on the default branch\n')
+                    sys.stderr.write("Local record of '{}' may be out of date\n".format(repository.default_remote))
+                    sys.stderr.write("Update with 'git fetch {}'\n".format(repository.default_remote))
+            if source_remote and source_remote != repository.default_remote:
                 args.remote = source_remote
         if not source_remote:
             source_remote = repository.default_remote
 
-        if repository.branch is None or repository.branch in repository.DEFAULT_BRANCHES or repository.PROD_BRANCHES.match(repository.branch):
+        if repository.branch is None or repository.branch in repository.DEFAULT_BRANCHES or \
+                repository.PROD_BRANCHES.match(repository.branch) or \
+                repository.branch in repository.branches_for(remote=source_remote):
+
+            if not args.issue:
+                head = repository.commit(include_log=True, include_identifier=False)
+                if run([
+                    repository.executable(), 'merge-base', '--is-ancestor',
+                    head.hash, 'remotes/{}/{}'.format(source_remote, branch_point.branch),
+                ], capture_output=True, cwd=repository.root_path).returncode:
+                    if head.issues:
+                        args.issue = head.issues[0].link
+
             if Branch.main(
                 args, repository,
                 why="'{}' is not a pull request branch".format(repository.branch),
-                redact=source_remote != repository.default_remote, **kwargs
+                redact=source_remote != repository.default_remote,
+                target_remote='fork' if source_remote == repository.default_remote else '{}-fork'.format(source_remote),
+                **kwargs
             ):
                 sys.stderr.write("Abandoning pushing pull-request because '{}' could not be created\n".format(args.issue))
                 return None
@@ -226,9 +253,12 @@ class PullRequest(Command):
     @classmethod
     def find_existing_pull_request(cls, repository, remote):
         existing_pr = None
+        user, _ = remote.credentials(required=False)
         for pr in remote.pull_requests.find(opened=None, head=repository.branch):
             existing_pr = pr
-            if existing_pr.opened:
+            if not existing_pr.opened:
+                continue
+            if user and existing_pr.author == user:
                 break
         return existing_pr
 
@@ -263,6 +293,8 @@ class PullRequest(Command):
 
     @classmethod
     def is_revert_commit(cls, commit):
+        if not commit.message:
+            return False
         msg = commit.message.split()
         if not len(msg):
             return False
@@ -281,11 +313,8 @@ class PullRequest(Command):
             return 1
 
         log.info('Adding comment for reverted commits...')
-        for line in commit.message.split():
-            issue = Tracker.from_string(line)
-            if issue:
-                issue.open(why='Reverted by {}'.format(pr.url))
-                break
+        for issue in commit.issues:
+            issue.open(why='Reverted by {}'.format(pr.url))
         return 0
 
     @classmethod
@@ -314,28 +343,38 @@ class PullRequest(Command):
             sys.stderr.write('Checks have failed, aborting pull request.\n')
             return 1
 
-        issue = None
         commits = list(repository.commits(begin=dict(hash=branch_point.hash), end=dict(branch=repository.branch)))
-        for line in commits[0].message.split() if commits[0] and commits[0].message else []:
-            issue = Tracker.from_string(line)
-            if issue:
-                break
+        issues = commits[0].issues
+
+        radar_issue = next(iter(filter(lambda issue: isinstance(issue.tracker, radar.Tracker), issues)), None)
+        not_radar = next(iter(filter(lambda issue: not isinstance(issue.tracker, radar.Tracker), issues)), None)
+        if radar_issue and not_radar and radar_issue.tracker.radarclient():
+            not_radar.cc_radar(radar=radar_issue)
+        issue = issues[0] if issues else None
 
         remote_repo = repository.remote(name=source_remote)
         if isinstance(remote_repo, remote.GitHub):
             if issue and issue.redacted and args.remote is None:
-                print("Your issue is redacted, diverting to a secure, non-origin remote you have access to.")
+                print('{} is considered the primary issue for your pull request'.format(issue.link))
+                print("{} {}".format(issue.link, issue.redacted))
+                print("Pull request needs to be sent to a secure remote for review")
                 original_remote = source_remote
                 if len(repository.source_remotes()) < 2:
-                    print("Error. You do not have access to a secure, non-origin remote")
+                    sys.stderr.write("Error. You do not have access to a secure remote to make a pull request for a redacted issue\n")
                     if args.defaults or Terminal.choose(
                         "Would you like to proceed anyways? \n",
                         default='No',
                     ) == 'No':
-                        sys.stderr.write("Failed to create pull request due to non-suitable remote\n")
+                        sys.stderr.write("Failed to create pull request due to unsuitable remote\n")
                         return 1
                 else:
                     source_remote = repository.source_remotes()[1]
+                    if args.defaults or Terminal.choose(
+                        "Would you like to make a pull request against '{}' instead of '{}'? \n".format(source_remote, original_remote),
+                        default='Yes',
+                    ) == 'No':
+                        sys.stderr.write("User declined to create a pull request against the secure remote '{}'\n".format(source_remote))
+                        return 1
                     remote_repo = repository.remote(name=source_remote)
                     print("Making PR against '{}' instead of '{}'".format(source_remote, original_remote))
             target = 'fork' if source_remote == repository.default_remote else '{}-fork'.format(source_remote)
@@ -354,15 +393,48 @@ class PullRequest(Command):
 
         existing_pr = None
         if remote_repo.pull_requests:
+            user, _ = remote_repo.credentials(required=False)
+
             log.info("Checking if PR already exists...")
             existing_pr = cls.find_existing_pull_request(repository, remote_repo)
             log.info("PR #{} found.".format(existing_pr.number) if existing_pr else "PR not found.")
-            if existing_pr and not existing_pr.opened and not args.defaults and (args.defaults is False or Terminal.choose(
-                    "'{}' is already associated with '{}', which is closed.\nWould you like to create a new pull-request?".format(
-                        repository.branch, existing_pr,
-                    ), default='No',
+            if existing_pr and not existing_pr.opened and not args.defaults and (
+                args.defaults is False or Terminal.choose(
+                    "'{}' is already associated with '{}', which is closed.\nWould you like to create a new pull-request?".format(repository.branch, existing_pr),
+                    default='No',
             ) == 'Yes'):
                 existing_pr = None
+
+            if existing_pr and user and existing_pr.author != user and (args.defaults or Terminal.choose(
+                "'{}' is owned by '{}'\nYou can either".format(existing_pr, existing_pr.author),
+                options=('Create a new pull request', 'Overwrite PR-{} and assign to yourself'.format(existing_pr.number)),
+                default='Create a new pull request',
+                numbered=True,
+            ) == 'Create a new pull request'):
+                if target == source_remote:
+                    sys.stderr.write("'{}' already exists on '{}', creating a pull-request would overwrite it\n".format(
+                        repository.branch, target,
+                    ))
+                    return 1
+                existing_pr = None
+
+            if user and existing_pr and isinstance(remote_repo, remote.GitHub) and existing_pr._metadata.get('full_name'):
+                pr_target = existing_pr._metadata['full_name']
+                if not pr_target.startswith('{}/'.format(user)):
+                    target, repo_name = pr_target.split('/')
+                    if '-' in repo_name:
+                        target = '{}-{}'.format(target, repo_name.split('-')[-1])
+                    base_url = repository.url(name=source_remote)
+                    if '://' in base_url:
+                        base_url = '/'.join(base_url.split('/')[:3]) + '/'
+                    else:
+                        base_url = base_url.split(':')[0] + ':'
+                    if target not in repository.source_remotes(personal=True) and run(
+                        [repository.executable(), 'remote', 'add', target, '{}{}.git'.format(base_url, pr_target)],
+                        capture_output=True, cwd=repository.root_path,
+                    ).returncode not in [0, 3]:
+                        sys.stderr.write("Failed to add '{}' remote\n".format(target))
+                        return 1
 
         # Remove any active labels
         if existing_pr and existing_pr._metadata and existing_pr._metadata.get('issue'):
@@ -370,7 +442,7 @@ class PullRequest(Command):
             pr_issue = existing_pr._metadata['issue']
             labels = pr_issue.labels
             did_remove = False
-            for to_remove in cls.MERGE_LABELS + cls.UNSAFE_MERGE_LABELS + ([cls.BLOCKED_LABEL] if unblock else []):
+            for to_remove in cls.MERGE_LABELS + cls.UNSAFE_MERGE_LABELS + ([cls.BLOCKED_LABEL] if unblock else []) + [cls.SKIP_EWS_LABEL]:
                 if to_remove in labels:
                     log.info("Removing '{}' from PR #{}...".format(to_remove, existing_pr.number))
                     labels.remove(to_remove)
@@ -405,6 +477,7 @@ class PullRequest(Command):
                 repository.executable(), 'push', '-f', target, history_branch,
             ], cwd=repository.root_path).returncode:
                 sys.stderr.write("Failed to create and push '{}' to '{}'\n".format(history_branch, target))
+                return 1
 
         if not remote_repo.pull_requests:
             sys.stderr.write("'{}' cannot generate pull-requests\n".format(remote_repo.url))
@@ -465,11 +538,8 @@ class PullRequest(Command):
             component = issue.component
             if pr_issue.component == component or component not in pr_issue.tracker.projects.get(project, {}).get('components', {}):
                 component = None
-            version = issue.version
-            if pr_issue.version == version or version not in pr_issue.tracker.projects.get(project, {}).get('versions', []):
-                version = None
-            if component or version:
-                pr_issue.set_component(component=component, version=version)
+            if component:
+                pr_issue.set_component(component=component)
                 log.info('Synced PR labels with issue component!')
             else:
                 log.info('No label syncing required')
@@ -496,9 +566,12 @@ class PullRequest(Command):
         if not branch_point:
             return 1
 
-        result = cls.create_commit(args, repository, **kwargs)
-        if result:
-            return result
+        if args.commit is None:
+            args.commit = repository.config().get('webkitscmpy.auto-create-commit') == 'true'
+        if args.commit:
+            result = cls.create_commit(args, repository, **kwargs)
+            if result:
+                return result
         if args.squash:
             result = Squash.squash_commit(args, repository, branch_point, **kwargs)
             if result:

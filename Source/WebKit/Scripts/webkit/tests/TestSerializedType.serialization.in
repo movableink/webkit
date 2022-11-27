@@ -1,10 +1,10 @@
 # test comment
 
-headers requiring ENABLE(TEST_FEATURE): "StructHeader.h" "FirstMemberType.h" "SecondMemberType.h"
 headers: "HeaderWithoutCondition"
 
 #if ENABLE(TEST_FEATURE)
-[AdditionalEncoder=OtherEncoder] struct Namespace::Subnamespace::StructName {
+headers: "StructHeader.h" "FirstMemberType.h" "SecondMemberType.h"
+[AdditionalEncoder=OtherEncoder, CustomHeader=True] struct Namespace::Subnamespace::StructName {
     FirstMemberType firstMemberName
     #if ENABLE(SECOND_MEMBER)
     SecondMemberType secondMemberName;
@@ -13,10 +13,11 @@ headers: "HeaderWithoutCondition"
 }
 #endif
 
-class Namespace::OtherClass {
+[Nested] class Namespace::OtherClass {
     [ReturnEarlyIfTrue] bool isNull
     int a
     bool b
+    [SecureCodingAllowed=[NSArray.class, PAL::getDDScannerResultClass()]] RetainPtr<NSArray> dataDetectorResults;
 }
 
 [Return=Ref] class Namespace::ReturnRefClass {
@@ -32,8 +33,10 @@ class Namespace::OtherClass {
 
 [LegacyPopulateFrom=EmptyConstructor] class Namespace::EmptyConstructorNullable {
     [ReturnEarlyIfTrue] bool m_isNull;
+#if CONDITION_AROUND_M_TYPE_AND_M_VALUE
     MemberType m_type;
     OtherMemberType m_value;
+#endif
 }
 
 class WithoutNamespace {
@@ -43,3 +46,53 @@ class WithoutNamespace {
 [AdditionalEncoder=OtherEncoder] class WithoutNamespaceWithAttributes {
     int a;
 }
+
+class WebCore::InheritsFrom : WithoutNamespace {
+    float b;
+}
+
+class WebCore::InheritanceGrandchild : WebCore::InheritsFrom {
+    double c;
+}
+
+#if ENABLE(BOOL_ENUM)
+enum class EnumNamespace::BoolEnumType : bool
+#endif
+
+enum class EnumWithoutNamespace : uint8_t {
+    Value1,
+    Value2,
+    Value3
+}
+
+#if ENABLE(UINT16_ENUM)
+enum class EnumNamespace::EnumType : uint16_t {
+    FirstValue,
+#if ENABLE(ENUM_VALUE_CONDITION)
+    SecondValue
+#endif
+}
+#endif
+
+[OptionSet, Nested] enum class EnumNamespace2::OptionSetEnumType : uint8_t {
+    OptionSetFirstValue,
+#if ENABLE(OPTION_SET_SECOND_VALUE)
+    OptionSetSecondValue,
+#endif
+    OptionSetThirdValue
+}
+
+class WTF::Seconds {
+    double value()
+}
+
+[CreateUsing=fromDouble] class WTF::CreateUsingClass {
+    double value
+}
+
+[Alias=RectEdges<float>] alias WebCore::FloatBoxExtent {
+    float top()
+    float right()
+    float bottom()
+    float left()
+};

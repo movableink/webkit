@@ -11,10 +11,10 @@
 #include "libGLESv2/entry_points_gles_3_0_autogen.h"
 
 #include "common/entry_points_enum_autogen.h"
+#include "common/gl_enum_utils.h"
 #include "libANGLE/Context.h"
 #include "libANGLE/Context.inl.h"
 #include "libANGLE/capture/capture_gles_3_0_autogen.h"
-#include "libANGLE/capture/gl_enum_utils.h"
 #include "libANGLE/entry_points_utils.h"
 #include "libANGLE/validationES3.h"
 #include "libGLESv2/global_state.h"
@@ -26,7 +26,7 @@ void GL_APIENTRY GL_BeginQuery(GLenum target, GLuint id)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLBeginQuery, "context = %d, target = %s, id = %u", CID(context),
-          GLenumToString(GLenumGroup::QueryTarget, target), id);
+          GLenumToString(GLESEnum::QueryTarget, target), id);
 
     if (context)
     {
@@ -35,7 +35,9 @@ void GL_APIENTRY GL_BeginQuery(GLenum target, GLuint id)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateBeginQuery(context, angle::EntryPoint::GLBeginQuery, targetPacked, idPacked));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLBeginQuery) &&
+              ValidateBeginQuery(context, angle::EntryPoint::GLBeginQuery, targetPacked,
+                                 idPacked)));
         if (isCallValid)
         {
             context->beginQuery(targetPacked, idPacked);
@@ -52,7 +54,7 @@ void GL_APIENTRY GL_BeginTransformFeedback(GLenum primitiveMode)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLBeginTransformFeedback, "context = %d, primitiveMode = %s", CID(context),
-          GLenumToString(GLenumGroup::PrimitiveType, primitiveMode));
+          GLenumToString(GLESEnum::PrimitiveType, primitiveMode));
 
     if (context)
     {
@@ -60,8 +62,10 @@ void GL_APIENTRY GL_BeginTransformFeedback(GLenum primitiveMode)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateBeginTransformFeedback(context, angle::EntryPoint::GLBeginTransformFeedback,
-                                            primitiveModePacked));
+             (ValidatePixelLocalStorageInactive(context,
+                                                angle::EntryPoint::GLBeginTransformFeedback) &&
+              ValidateBeginTransformFeedback(context, angle::EntryPoint::GLBeginTransformFeedback,
+                                             primitiveModePacked)));
         if (isCallValid)
         {
             context->beginTransformFeedback(primitiveModePacked);
@@ -78,7 +82,7 @@ void GL_APIENTRY GL_BindBufferBase(GLenum target, GLuint index, GLuint buffer)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLBindBufferBase, "context = %d, target = %s, index = %u, buffer = %u",
-          CID(context), GLenumToString(GLenumGroup::BufferTargetARB, target), index, buffer);
+          CID(context), GLenumToString(GLESEnum::BufferTargetARB, target), index, buffer);
 
     if (context)
     {
@@ -106,7 +110,7 @@ GL_BindBufferRange(GLenum target, GLuint index, GLuint buffer, GLintptr offset, 
     Context *context = GetValidGlobalContext();
     EVENT(context, GLBindBufferRange,
           "context = %d, target = %s, index = %u, buffer = %u, offset = %llu, size = %llu",
-          CID(context), GLenumToString(GLenumGroup::BufferTargetARB, target), index, buffer,
+          CID(context), GLenumToString(GLESEnum::BufferTargetARB, target), index, buffer,
           static_cast<unsigned long long>(offset), static_cast<unsigned long long>(size));
 
     if (context)
@@ -160,7 +164,7 @@ void GL_APIENTRY GL_BindTransformFeedback(GLenum target, GLuint id)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLBindTransformFeedback, "context = %d, target = %s, id = %u", CID(context),
-          GLenumToString(GLenumGroup::BindTransformFeedbackTarget, target), id);
+          GLenumToString(GLESEnum::BindTransformFeedbackTarget, target), id);
 
     if (context)
     {
@@ -168,8 +172,10 @@ void GL_APIENTRY GL_BindTransformFeedback(GLenum target, GLuint id)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateBindTransformFeedback(context, angle::EntryPoint::GLBindTransformFeedback,
-                                           target, idPacked));
+             (ValidatePixelLocalStorageInactive(context,
+                                                angle::EntryPoint::GLBindTransformFeedback) &&
+              ValidateBindTransformFeedback(context, angle::EntryPoint::GLBindTransformFeedback,
+                                            target, idPacked)));
         if (isCallValid)
         {
             context->bindTransformFeedback(target, idPacked);
@@ -222,16 +228,17 @@ void GL_APIENTRY GL_BlitFramebuffer(GLint srcX0,
           "context = %d, srcX0 = %d, srcY0 = %d, srcX1 = %d, srcY1 = %d, dstX0 = %d, dstY0 = %d, "
           "dstX1 = %d, dstY1 = %d, mask = %s, filter = %s",
           CID(context), srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1,
-          GLbitfieldToString(GLenumGroup::ClearBufferMask, mask).c_str(),
-          GLenumToString(GLenumGroup::BlitFramebufferFilter, filter));
+          GLbitfieldToString(GLESEnum::ClearBufferMask, mask).c_str(),
+          GLenumToString(GLESEnum::BlitFramebufferFilter, filter));
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateBlitFramebuffer(context, angle::EntryPoint::GLBlitFramebuffer, srcX0, srcY0,
-                                     srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLBlitFramebuffer) &&
+              ValidateBlitFramebuffer(context, angle::EntryPoint::GLBlitFramebuffer, srcX0, srcY0,
+                                      srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter)));
         if (isCallValid)
         {
             context->blitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask,
@@ -251,7 +258,7 @@ void GL_APIENTRY GL_ClearBufferfi(GLenum buffer, GLint drawbuffer, GLfloat depth
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClearBufferfi,
           "context = %d, buffer = %s, drawbuffer = %d, depth = %f, stencil = %d", CID(context),
-          GLenumToString(GLenumGroup::Buffer, buffer), drawbuffer, depth, stencil);
+          GLenumToString(GLESEnum::Buffer, buffer), drawbuffer, depth, stencil);
 
     if (context)
     {
@@ -276,7 +283,7 @@ void GL_APIENTRY GL_ClearBufferfv(GLenum buffer, GLint drawbuffer, const GLfloat
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClearBufferfv,
           "context = %d, buffer = %s, drawbuffer = %d, value = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::Buffer, buffer), drawbuffer, (uintptr_t)value);
+          GLenumToString(GLESEnum::Buffer, buffer), drawbuffer, (uintptr_t)value);
 
     if (context)
     {
@@ -301,7 +308,7 @@ void GL_APIENTRY GL_ClearBufferiv(GLenum buffer, GLint drawbuffer, const GLint *
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClearBufferiv,
           "context = %d, buffer = %s, drawbuffer = %d, value = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::Buffer, buffer), drawbuffer, (uintptr_t)value);
+          GLenumToString(GLESEnum::Buffer, buffer), drawbuffer, (uintptr_t)value);
 
     if (context)
     {
@@ -326,7 +333,7 @@ void GL_APIENTRY GL_ClearBufferuiv(GLenum buffer, GLint drawbuffer, const GLuint
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClearBufferuiv,
           "context = %d, buffer = %s, drawbuffer = %d, value = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::Buffer, buffer), drawbuffer, (uintptr_t)value);
+          GLenumToString(GLESEnum::Buffer, buffer), drawbuffer, (uintptr_t)value);
 
     if (context)
     {
@@ -351,16 +358,18 @@ GLenum GL_APIENTRY GL_ClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 tim
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClientWaitSync,
           "context = %d, sync = 0x%016" PRIxPTR ", flags = %s, timeout = %llu", CID(context),
-          (uintptr_t)sync, GLbitfieldToString(GLenumGroup::SyncObjectMask, flags).c_str(),
+          (uintptr_t)sync, GLbitfieldToString(GLESEnum::SyncObjectMask, flags).c_str(),
           static_cast<unsigned long long>(timeout));
 
     GLenum returnValue;
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateClientWaitSync(context, angle::EntryPoint::GLClientWaitSync,
-                                                   sync, flags, timeout));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLClientWaitSync) &&
+              ValidateClientWaitSync(context, angle::EntryPoint::GLClientWaitSync, sync, flags,
+                                     timeout)));
         if (isCallValid)
         {
             returnValue = context->clientWaitSync(sync, flags, timeout);
@@ -393,8 +402,8 @@ void GL_APIENTRY GL_CompressedTexImage3D(GLenum target,
     EVENT(context, GLCompressedTexImage3D,
           "context = %d, target = %s, level = %d, internalformat = %s, width = %d, height = %d, "
           "depth = %d, border = %d, imageSize = %d, data = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::TextureTarget, target), level,
-          GLenumToString(GLenumGroup::InternalFormat, internalformat), width, height, depth, border,
+          CID(context), GLenumToString(GLESEnum::TextureTarget, target), level,
+          GLenumToString(GLESEnum::InternalFormat, internalformat), width, height, depth, border,
           imageSize, (uintptr_t)data);
 
     if (context)
@@ -403,9 +412,11 @@ void GL_APIENTRY GL_CompressedTexImage3D(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateCompressedTexImage3D(context, angle::EntryPoint::GLCompressedTexImage3D,
-                                          targetPacked, level, internalformat, width, height, depth,
-                                          border, imageSize, data));
+             (ValidatePixelLocalStorageInactive(context,
+                                                angle::EntryPoint::GLCompressedTexImage3D) &&
+              ValidateCompressedTexImage3D(context, angle::EntryPoint::GLCompressedTexImage3D,
+                                           targetPacked, level, internalformat, width, height,
+                                           depth, border, imageSize, data)));
         if (isCallValid)
         {
             context->compressedTexImage3D(targetPacked, level, internalformat, width, height, depth,
@@ -436,8 +447,8 @@ void GL_APIENTRY GL_CompressedTexSubImage3D(GLenum target,
     EVENT(context, GLCompressedTexSubImage3D,
           "context = %d, target = %s, level = %d, xoffset = %d, yoffset = %d, zoffset = %d, width "
           "= %d, height = %d, depth = %d, format = %s, imageSize = %d, data = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::TextureTarget, target), level, xoffset, yoffset,
-          zoffset, width, height, depth, GLenumToString(GLenumGroup::PixelFormat, format),
+          CID(context), GLenumToString(GLESEnum::TextureTarget, target), level, xoffset, yoffset,
+          zoffset, width, height, depth, GLenumToString(GLESEnum::InternalFormat, format),
           imageSize, (uintptr_t)data);
 
     if (context)
@@ -446,9 +457,11 @@ void GL_APIENTRY GL_CompressedTexSubImage3D(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateCompressedTexSubImage3D(context, angle::EntryPoint::GLCompressedTexSubImage3D,
-                                             targetPacked, level, xoffset, yoffset, zoffset, width,
-                                             height, depth, format, imageSize, data));
+             (ValidatePixelLocalStorageInactive(context,
+                                                angle::EntryPoint::GLCompressedTexSubImage3D) &&
+              ValidateCompressedTexSubImage3D(context, angle::EntryPoint::GLCompressedTexSubImage3D,
+                                              targetPacked, level, xoffset, yoffset, zoffset, width,
+                                              height, depth, format, imageSize, data)));
         if (isCallValid)
         {
             context->compressedTexSubImage3D(targetPacked, level, xoffset, yoffset, zoffset, width,
@@ -473,8 +486,8 @@ void GL_APIENTRY GL_CopyBufferSubData(GLenum readTarget,
     EVENT(context, GLCopyBufferSubData,
           "context = %d, readTarget = %s, writeTarget = %s, readOffset = %llu, writeOffset = %llu, "
           "size = %llu",
-          CID(context), GLenumToString(GLenumGroup::CopyBufferSubDataTarget, readTarget),
-          GLenumToString(GLenumGroup::CopyBufferSubDataTarget, writeTarget),
+          CID(context), GLenumToString(GLESEnum::CopyBufferSubDataTarget, readTarget),
+          GLenumToString(GLESEnum::CopyBufferSubDataTarget, writeTarget),
           static_cast<unsigned long long>(readOffset), static_cast<unsigned long long>(writeOffset),
           static_cast<unsigned long long>(size));
 
@@ -483,10 +496,12 @@ void GL_APIENTRY GL_CopyBufferSubData(GLenum readTarget,
         BufferBinding readTargetPacked  = PackParam<BufferBinding>(readTarget);
         BufferBinding writeTargetPacked = PackParam<BufferBinding>(writeTarget);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateCopyBufferSubData(
-                                context, angle::EntryPoint::GLCopyBufferSubData, readTargetPacked,
-                                writeTargetPacked, readOffset, writeOffset, size));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLCopyBufferSubData) &&
+              ValidateCopyBufferSubData(context, angle::EntryPoint::GLCopyBufferSubData,
+                                        readTargetPacked, writeTargetPacked, readOffset,
+                                        writeOffset, size)));
         if (isCallValid)
         {
             context->copyBufferSubData(readTargetPacked, writeTargetPacked, readOffset, writeOffset,
@@ -515,17 +530,19 @@ void GL_APIENTRY GL_CopyTexSubImage3D(GLenum target,
     EVENT(context, GLCopyTexSubImage3D,
           "context = %d, target = %s, level = %d, xoffset = %d, yoffset = %d, zoffset = %d, x = "
           "%d, y = %d, width = %d, height = %d",
-          CID(context), GLenumToString(GLenumGroup::TextureTarget, target), level, xoffset, yoffset,
+          CID(context), GLenumToString(GLESEnum::TextureTarget, target), level, xoffset, yoffset,
           zoffset, x, y, width, height);
 
     if (context)
     {
         TextureTarget targetPacked = PackParam<TextureTarget>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateCopyTexSubImage3D(
-                                context, angle::EntryPoint::GLCopyTexSubImage3D, targetPacked,
-                                level, xoffset, yoffset, zoffset, x, y, width, height));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLCopyTexSubImage3D) &&
+              ValidateCopyTexSubImage3D(context, angle::EntryPoint::GLCopyTexSubImage3D,
+                                        targetPacked, level, xoffset, yoffset, zoffset, x, y, width,
+                                        height)));
         if (isCallValid)
         {
             context->copyTexSubImage3D(targetPacked, level, xoffset, yoffset, zoffset, x, y, width,
@@ -552,7 +569,8 @@ void GL_APIENTRY GL_DeleteQueries(GLsizei n, const GLuint *ids)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateDeleteQueries(context, angle::EntryPoint::GLDeleteQueries, n, idsPacked));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLDeleteQueries) &&
+              ValidateDeleteQueries(context, angle::EntryPoint::GLDeleteQueries, n, idsPacked)));
         if (isCallValid)
         {
             context->deleteQueries(n, idsPacked);
@@ -575,9 +593,11 @@ void GL_APIENTRY GL_DeleteSamplers(GLsizei count, const GLuint *samplers)
     {
         const SamplerID *samplersPacked = PackParam<const SamplerID *>(samplers);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateDeleteSamplers(context, angle::EntryPoint::GLDeleteSamplers,
-                                                   count, samplersPacked));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLDeleteSamplers) &&
+              ValidateDeleteSamplers(context, angle::EntryPoint::GLDeleteSamplers, count,
+                                     samplersPacked)));
         if (isCallValid)
         {
             context->deleteSamplers(count, samplersPacked);
@@ -599,8 +619,10 @@ void GL_APIENTRY GL_DeleteSync(GLsync sync)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateDeleteSync(context, angle::EntryPoint::GLDeleteSync, sync));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLDeleteSync) &&
+              ValidateDeleteSync(context, angle::EntryPoint::GLDeleteSync, sync)));
         if (isCallValid)
         {
             context->deleteSync(sync);
@@ -625,8 +647,10 @@ void GL_APIENTRY GL_DeleteTransformFeedbacks(GLsizei n, const GLuint *ids)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateDeleteTransformFeedbacks(
-                 context, angle::EntryPoint::GLDeleteTransformFeedbacks, n, idsPacked));
+             (ValidatePixelLocalStorageInactive(context,
+                                                angle::EntryPoint::GLDeleteTransformFeedbacks) &&
+              ValidateDeleteTransformFeedbacks(
+                  context, angle::EntryPoint::GLDeleteTransformFeedbacks, n, idsPacked)));
         if (isCallValid)
         {
             context->deleteTransformFeedbacks(n, idsPacked);
@@ -649,9 +673,11 @@ void GL_APIENTRY GL_DeleteVertexArrays(GLsizei n, const GLuint *arrays)
     {
         const VertexArrayID *arraysPacked = PackParam<const VertexArrayID *>(arrays);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateDeleteVertexArrays(
-                                context, angle::EntryPoint::GLDeleteVertexArrays, n, arraysPacked));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLDeleteVertexArrays) &&
+              ValidateDeleteVertexArrays(context, angle::EntryPoint::GLDeleteVertexArrays, n,
+                                         arraysPacked)));
         if (isCallValid)
         {
             context->deleteVertexArrays(n, arraysPacked);
@@ -672,7 +698,7 @@ void GL_APIENTRY GL_DrawArraysInstanced(GLenum mode,
     Context *context = GetValidGlobalContext();
     EVENT(context, GLDrawArraysInstanced,
           "context = %d, mode = %s, first = %d, count = %d, instancecount = %d", CID(context),
-          GLenumToString(GLenumGroup::PrimitiveType, mode), first, count, instancecount);
+          GLenumToString(GLESEnum::PrimitiveType, mode), first, count, instancecount);
 
     if (context)
     {
@@ -706,7 +732,8 @@ void GL_APIENTRY GL_DrawBuffers(GLsizei n, const GLenum *bufs)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateDrawBuffers(context, angle::EntryPoint::GLDrawBuffers, n, bufs));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLDrawBuffers) &&
+              ValidateDrawBuffers(context, angle::EntryPoint::GLDrawBuffers, n, bufs)));
         if (isCallValid)
         {
             context->drawBuffers(n, bufs);
@@ -729,8 +756,8 @@ void GL_APIENTRY GL_DrawElementsInstanced(GLenum mode,
     EVENT(context, GLDrawElementsInstanced,
           "context = %d, mode = %s, count = %d, type = %s, indices = 0x%016" PRIxPTR
           ", instancecount = %d",
-          CID(context), GLenumToString(GLenumGroup::PrimitiveType, mode), count,
-          GLenumToString(GLenumGroup::DrawElementsType, type), (uintptr_t)indices, instancecount);
+          CID(context), GLenumToString(GLESEnum::PrimitiveType, mode), count,
+          GLenumToString(GLESEnum::DrawElementsType, type), (uintptr_t)indices, instancecount);
 
     if (context)
     {
@@ -765,8 +792,8 @@ void GL_APIENTRY GL_DrawRangeElements(GLenum mode,
     EVENT(context, GLDrawRangeElements,
           "context = %d, mode = %s, start = %u, end = %u, count = %d, type = %s, indices = "
           "0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::PrimitiveType, mode), start, end, count,
-          GLenumToString(GLenumGroup::DrawElementsType, type), (uintptr_t)indices);
+          CID(context), GLenumToString(GLESEnum::PrimitiveType, mode), start, end, count,
+          GLenumToString(GLESEnum::DrawElementsType, type), (uintptr_t)indices);
 
     if (context)
     {
@@ -794,14 +821,16 @@ void GL_APIENTRY GL_EndQuery(GLenum target)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLEndQuery, "context = %d, target = %s", CID(context),
-          GLenumToString(GLenumGroup::QueryTarget, target));
+          GLenumToString(GLESEnum::QueryTarget, target));
 
     if (context)
     {
         QueryType targetPacked = PackParam<QueryType>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateEndQuery(context, angle::EntryPoint::GLEndQuery, targetPacked));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLEndQuery) &&
+              ValidateEndQuery(context, angle::EntryPoint::GLEndQuery, targetPacked)));
         if (isCallValid)
         {
             context->endQuery(targetPacked);
@@ -824,7 +853,9 @@ void GL_APIENTRY GL_EndTransformFeedback()
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateEndTransformFeedback(context, angle::EntryPoint::GLEndTransformFeedback));
+             (ValidatePixelLocalStorageInactive(context,
+                                                angle::EntryPoint::GLEndTransformFeedback) &&
+              ValidateEndTransformFeedback(context, angle::EntryPoint::GLEndTransformFeedback)));
         if (isCallValid)
         {
             context->endTransformFeedback();
@@ -841,8 +872,8 @@ GLsync GL_APIENTRY GL_FenceSync(GLenum condition, GLbitfield flags)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFenceSync, "context = %d, condition = %s, flags = %s", CID(context),
-          GLenumToString(GLenumGroup::SyncCondition, condition),
-          GLbitfieldToString(GLenumGroup::DefaultGroup, flags).c_str());
+          GLenumToString(GLESEnum::SyncCondition, condition),
+          GLbitfieldToString(GLESEnum::SyncBehaviorFlags, flags).c_str());
 
     GLsync returnValue;
     if (context)
@@ -850,7 +881,8 @@ GLsync GL_APIENTRY GL_FenceSync(GLenum condition, GLbitfield flags)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateFenceSync(context, angle::EntryPoint::GLFenceSync, condition, flags));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLFenceSync) &&
+              ValidateFenceSync(context, angle::EntryPoint::GLFenceSync, condition, flags)));
         if (isCallValid)
         {
             returnValue = context->fenceSync(condition, flags);
@@ -874,7 +906,7 @@ void GL_APIENTRY GL_FlushMappedBufferRange(GLenum target, GLintptr offset, GLsiz
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFlushMappedBufferRange,
           "context = %d, target = %s, offset = %llu, length = %llu", CID(context),
-          GLenumToString(GLenumGroup::BufferTargetARB, target),
+          GLenumToString(GLESEnum::BufferTargetARB, target),
           static_cast<unsigned long long>(offset), static_cast<unsigned long long>(length));
 
     if (context)
@@ -883,8 +915,10 @@ void GL_APIENTRY GL_FlushMappedBufferRange(GLenum target, GLintptr offset, GLsiz
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateFlushMappedBufferRange(context, angle::EntryPoint::GLFlushMappedBufferRange,
-                                            targetPacked, offset, length));
+             (ValidatePixelLocalStorageInactive(context,
+                                                angle::EntryPoint::GLFlushMappedBufferRange) &&
+              ValidateFlushMappedBufferRange(context, angle::EntryPoint::GLFlushMappedBufferRange,
+                                             targetPacked, offset, length)));
         if (isCallValid)
         {
             context->flushMappedBufferRange(targetPacked, offset, length);
@@ -907,8 +941,8 @@ void GL_APIENTRY GL_FramebufferTextureLayer(GLenum target,
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFramebufferTextureLayer,
           "context = %d, target = %s, attachment = %s, texture = %u, level = %d, layer = %d",
-          CID(context), GLenumToString(GLenumGroup::FramebufferTarget, target),
-          GLenumToString(GLenumGroup::FramebufferAttachment, attachment), texture, level, layer);
+          CID(context), GLenumToString(GLESEnum::FramebufferTarget, target),
+          GLenumToString(GLESEnum::FramebufferAttachment, attachment), texture, level, layer);
 
     if (context)
     {
@@ -916,8 +950,10 @@ void GL_APIENTRY GL_FramebufferTextureLayer(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateFramebufferTextureLayer(context, angle::EntryPoint::GLFramebufferTextureLayer,
-                                             target, attachment, texturePacked, level, layer));
+             (ValidatePixelLocalStorageInactive(context,
+                                                angle::EntryPoint::GLFramebufferTextureLayer) &&
+              ValidateFramebufferTextureLayer(context, angle::EntryPoint::GLFramebufferTextureLayer,
+                                              target, attachment, texturePacked, level, layer)));
         if (isCallValid)
         {
             context->framebufferTextureLayer(target, attachment, texturePacked, level, layer);
@@ -943,7 +979,8 @@ void GL_APIENTRY GL_GenQueries(GLsizei n, GLuint *ids)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateGenQueries(context, angle::EntryPoint::GLGenQueries, n, idsPacked));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLGenQueries) &&
+              ValidateGenQueries(context, angle::EntryPoint::GLGenQueries, n, idsPacked)));
         if (isCallValid)
         {
             context->genQueries(n, idsPacked);
@@ -968,7 +1005,9 @@ void GL_APIENTRY GL_GenSamplers(GLsizei count, GLuint *samplers)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateGenSamplers(context, angle::EntryPoint::GLGenSamplers, count, samplersPacked));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLGenSamplers) &&
+              ValidateGenSamplers(context, angle::EntryPoint::GLGenSamplers, count,
+                                  samplersPacked)));
         if (isCallValid)
         {
             context->genSamplers(count, samplersPacked);
@@ -991,9 +1030,12 @@ void GL_APIENTRY GL_GenTransformFeedbacks(GLsizei n, GLuint *ids)
     {
         TransformFeedbackID *idsPacked = PackParam<TransformFeedbackID *>(ids);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateGenTransformFeedbacks(
-                                context, angle::EntryPoint::GLGenTransformFeedbacks, n, idsPacked));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context,
+                                                angle::EntryPoint::GLGenTransformFeedbacks) &&
+              ValidateGenTransformFeedbacks(context, angle::EntryPoint::GLGenTransformFeedbacks, n,
+                                            idsPacked)));
         if (isCallValid)
         {
             context->genTransformFeedbacks(n, idsPacked);
@@ -1016,9 +1058,11 @@ void GL_APIENTRY GL_GenVertexArrays(GLsizei n, GLuint *arrays)
     {
         VertexArrayID *arraysPacked = PackParam<VertexArrayID *>(arrays);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateGenVertexArrays(context, angle::EntryPoint::GLGenVertexArrays,
-                                                    n, arraysPacked));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLGenVertexArrays) &&
+              ValidateGenVertexArrays(context, angle::EntryPoint::GLGenVertexArrays, n,
+                                      arraysPacked)));
         if (isCallValid)
         {
             context->genVertexArrays(n, arraysPacked);
@@ -1079,7 +1123,7 @@ void GL_APIENTRY GL_GetActiveUniformBlockiv(GLuint program,
           "context = %d, program = %u, uniformBlockIndex = %u, pname = %s, params = 0x%016" PRIxPTR
           "",
           CID(context), program, uniformBlockIndex,
-          GLenumToString(GLenumGroup::UniformBlockPName, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::UniformBlockPName, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1114,7 +1158,7 @@ void GL_APIENTRY GL_GetActiveUniformsiv(GLuint program,
           "context = %d, program = %u, uniformCount = %d, uniformIndices = 0x%016" PRIxPTR
           ", pname = %s, params = 0x%016" PRIxPTR "",
           CID(context), program, uniformCount, (uintptr_t)uniformIndices,
-          GLenumToString(GLenumGroup::UniformPName, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::UniformPName, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1143,8 +1187,8 @@ void GL_APIENTRY GL_GetBufferParameteri64v(GLenum target, GLenum pname, GLint64 
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetBufferParameteri64v,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::BufferTargetARB, target),
-          GLenumToString(GLenumGroup::DefaultGroup, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::BufferTargetARB, target),
+          GLenumToString(GLESEnum::AllEnums, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1171,8 +1215,8 @@ void GL_APIENTRY GL_GetBufferPointerv(GLenum target, GLenum pname, void **params
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetBufferPointerv,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::BufferTargetARB, target),
-          GLenumToString(GLenumGroup::DefaultGroup, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::BufferTargetARB, target),
+          GLenumToString(GLESEnum::AllEnums, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1233,7 +1277,7 @@ void GL_APIENTRY GL_GetInteger64i_v(GLenum target, GLuint index, GLint64 *data)
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetInteger64i_v,
           "context = %d, target = %s, index = %u, data = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::TypeEnum, target), index, (uintptr_t)data);
+          GLenumToString(GLESEnum::GetPName, target), index, (uintptr_t)data);
 
     if (context)
     {
@@ -1257,7 +1301,7 @@ void GL_APIENTRY GL_GetInteger64v(GLenum pname, GLint64 *data)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetInteger64v, "context = %d, pname = %s, data = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::GetPName, pname), (uintptr_t)data);
+          CID(context), GLenumToString(GLESEnum::GetPName, pname), (uintptr_t)data);
 
     if (context)
     {
@@ -1282,7 +1326,7 @@ void GL_APIENTRY GL_GetIntegeri_v(GLenum target, GLuint index, GLint *data)
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetIntegeri_v,
           "context = %d, target = %s, index = %u, data = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::TypeEnum, target), index, (uintptr_t)data);
+          GLenumToString(GLESEnum::GetPName, target), index, (uintptr_t)data);
 
     if (context)
     {
@@ -1305,16 +1349,16 @@ void GL_APIENTRY GL_GetIntegeri_v(GLenum target, GLuint index, GLint *data)
 void GL_APIENTRY GL_GetInternalformativ(GLenum target,
                                         GLenum internalformat,
                                         GLenum pname,
-                                        GLsizei bufSize,
+                                        GLsizei count,
                                         GLint *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetInternalformativ,
-          "context = %d, target = %s, internalformat = %s, pname = %s, bufSize = %d, params = "
+          "context = %d, target = %s, internalformat = %s, pname = %s, count = %d, params = "
           "0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::TextureTarget, target),
-          GLenumToString(GLenumGroup::InternalFormat, internalformat),
-          GLenumToString(GLenumGroup::InternalFormatPName, pname), bufSize, (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::TextureTarget, target),
+          GLenumToString(GLESEnum::InternalFormat, internalformat),
+          GLenumToString(GLESEnum::InternalFormatPName, pname), count, (uintptr_t)params);
 
     if (context)
     {
@@ -1322,13 +1366,13 @@ void GL_APIENTRY GL_GetInternalformativ(GLenum target,
         bool isCallValid =
             (context->skipValidation() ||
              ValidateGetInternalformativ(context, angle::EntryPoint::GLGetInternalformativ, target,
-                                         internalformat, pname, bufSize, params));
+                                         internalformat, pname, count, params));
         if (isCallValid)
         {
-            context->getInternalformativ(target, internalformat, pname, bufSize, params);
+            context->getInternalformativ(target, internalformat, pname, count, params);
         }
         ANGLE_CAPTURE_GL(GetInternalformativ, isCallValid, context, target, internalformat, pname,
-                         bufSize, params);
+                         count, params);
     }
     else
     {
@@ -1375,7 +1419,7 @@ void GL_APIENTRY GL_GetQueryObjectuiv(GLuint id, GLenum pname, GLuint *params)
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetQueryObjectuiv,
           "context = %d, id = %u, pname = %s, params = 0x%016" PRIxPTR "", CID(context), id,
-          GLenumToString(GLenumGroup::QueryObjectParameterName, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::QueryObjectParameterName, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1402,8 +1446,8 @@ void GL_APIENTRY GL_GetQueryiv(GLenum target, GLenum pname, GLint *params)
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetQueryiv,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::QueryTarget, target),
-          GLenumToString(GLenumGroup::QueryParameterName, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::QueryTarget, target),
+          GLenumToString(GLESEnum::QueryParameterName, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1429,7 +1473,7 @@ void GL_APIENTRY GL_GetSamplerParameterfv(GLuint sampler, GLenum pname, GLfloat 
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetSamplerParameterfv,
           "context = %d, sampler = %u, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          sampler, GLenumToString(GLenumGroup::SamplerParameterName, pname), (uintptr_t)params);
+          sampler, GLenumToString(GLESEnum::SamplerParameterF, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1456,7 +1500,7 @@ void GL_APIENTRY GL_GetSamplerParameteriv(GLuint sampler, GLenum pname, GLint *p
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetSamplerParameteriv,
           "context = %d, sampler = %u, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          sampler, GLenumToString(GLenumGroup::SamplerParameterName, pname), (uintptr_t)params);
+          sampler, GLenumToString(GLESEnum::SamplerParameterI, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1482,7 +1526,7 @@ const GLubyte *GL_APIENTRY GL_GetStringi(GLenum name, GLuint index)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetStringi, "context = %d, name = %s, index = %u", CID(context),
-          GLenumToString(GLenumGroup::StringName, name), index);
+          GLenumToString(GLESEnum::StringName, name), index);
 
     const GLubyte *returnValue;
     if (context)
@@ -1510,26 +1554,26 @@ const GLubyte *GL_APIENTRY GL_GetStringi(GLenum name, GLuint index)
 }
 
 void GL_APIENTRY
-GL_GetSynciv(GLsync sync, GLenum pname, GLsizei bufSize, GLsizei *length, GLint *values)
+GL_GetSynciv(GLsync sync, GLenum pname, GLsizei count, GLsizei *length, GLint *values)
 {
     Context *context = GetGlobalContext();
     EVENT(context, GLGetSynciv,
-          "context = %d, sync = 0x%016" PRIxPTR
-          ", pname = %s, bufSize = %d, length = 0x%016" PRIxPTR ", values = 0x%016" PRIxPTR "",
-          CID(context), (uintptr_t)sync, GLenumToString(GLenumGroup::SyncParameterName, pname),
-          bufSize, (uintptr_t)length, (uintptr_t)values);
+          "context = %d, sync = 0x%016" PRIxPTR ", pname = %s, count = %d, length = 0x%016" PRIxPTR
+          ", values = 0x%016" PRIxPTR "",
+          CID(context), (uintptr_t)sync, GLenumToString(GLESEnum::SyncParameterName, pname), count,
+          (uintptr_t)length, (uintptr_t)values);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() || ValidateGetSynciv(context, angle::EntryPoint::GLGetSynciv,
-                                                            sync, pname, bufSize, length, values));
+                                                            sync, pname, count, length, values));
         if (isCallValid)
         {
-            context->getSynciv(sync, pname, bufSize, length, values);
+            context->getSynciv(sync, pname, count, length, values);
         }
-        ANGLE_CAPTURE_GL(GetSynciv, isCallValid, context, sync, pname, bufSize, length, values);
+        ANGLE_CAPTURE_GL(GetSynciv, isCallValid, context, sync, pname, count, length, values);
     }
     else
     {}
@@ -1673,7 +1717,7 @@ void GL_APIENTRY GL_GetVertexAttribIiv(GLuint index, GLenum pname, GLint *params
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetVertexAttribIiv,
           "context = %d, index = %u, pname = %s, params = 0x%016" PRIxPTR "", CID(context), index,
-          GLenumToString(GLenumGroup::VertexAttribEnum, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::VertexAttribEnum, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1699,7 +1743,7 @@ void GL_APIENTRY GL_GetVertexAttribIuiv(GLuint index, GLenum pname, GLuint *para
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetVertexAttribIuiv,
           "context = %d, index = %u, pname = %s, params = 0x%016" PRIxPTR "", CID(context), index,
-          GLenumToString(GLenumGroup::VertexAttribEnum, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::VertexAttribEnum, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1727,7 +1771,7 @@ void GL_APIENTRY GL_InvalidateFramebuffer(GLenum target,
     Context *context = GetValidGlobalContext();
     EVENT(context, GLInvalidateFramebuffer,
           "context = %d, target = %s, numAttachments = %d, attachments = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::FramebufferTarget, target), numAttachments,
+          CID(context), GLenumToString(GLESEnum::FramebufferTarget, target), numAttachments,
           (uintptr_t)attachments);
 
     if (context)
@@ -1735,8 +1779,10 @@ void GL_APIENTRY GL_InvalidateFramebuffer(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateInvalidateFramebuffer(context, angle::EntryPoint::GLInvalidateFramebuffer,
-                                           target, numAttachments, attachments));
+             (ValidatePixelLocalStorageInactive(context,
+                                                angle::EntryPoint::GLInvalidateFramebuffer) &&
+              ValidateInvalidateFramebuffer(context, angle::EntryPoint::GLInvalidateFramebuffer,
+                                            target, numAttachments, attachments)));
         if (isCallValid)
         {
             context->invalidateFramebuffer(target, numAttachments, attachments);
@@ -1762,16 +1808,18 @@ void GL_APIENTRY GL_InvalidateSubFramebuffer(GLenum target,
     EVENT(context, GLInvalidateSubFramebuffer,
           "context = %d, target = %s, numAttachments = %d, attachments = 0x%016" PRIxPTR
           ", x = %d, y = %d, width = %d, height = %d",
-          CID(context), GLenumToString(GLenumGroup::DefaultGroup, target), numAttachments,
+          CID(context), GLenumToString(GLESEnum::FramebufferTarget, target), numAttachments,
           (uintptr_t)attachments, x, y, width, height);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid = (context->skipValidation() ||
-                            ValidateInvalidateSubFramebuffer(
-                                context, angle::EntryPoint::GLInvalidateSubFramebuffer, target,
-                                numAttachments, attachments, x, y, width, height));
+                            (ValidatePixelLocalStorageInactive(
+                                 context, angle::EntryPoint::GLInvalidateSubFramebuffer) &&
+                             ValidateInvalidateSubFramebuffer(
+                                 context, angle::EntryPoint::GLInvalidateSubFramebuffer, target,
+                                 numAttachments, attachments, x, y, width, height)));
         if (isCallValid)
         {
             context->invalidateSubFramebuffer(target, numAttachments, attachments, x, y, width,
@@ -1948,9 +1996,9 @@ void *GL_APIENTRY GL_MapBufferRange(GLenum target,
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMapBufferRange,
           "context = %d, target = %s, offset = %llu, length = %llu, access = %s", CID(context),
-          GLenumToString(GLenumGroup::BufferTargetARB, target),
+          GLenumToString(GLESEnum::BufferTargetARB, target),
           static_cast<unsigned long long>(offset), static_cast<unsigned long long>(length),
-          GLbitfieldToString(GLenumGroup::BufferAccessMask, access).c_str());
+          GLbitfieldToString(GLESEnum::MapBufferAccessMask, access).c_str());
 
     void *returnValue;
     if (context)
@@ -1987,9 +2035,11 @@ void GL_APIENTRY GL_PauseTransformFeedback()
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid =
-            (context->skipValidation() ||
-             ValidatePauseTransformFeedback(context, angle::EntryPoint::GLPauseTransformFeedback));
+        bool isCallValid = (context->skipValidation() ||
+                            (ValidatePixelLocalStorageInactive(
+                                 context, angle::EntryPoint::GLPauseTransformFeedback) &&
+                             ValidatePauseTransformFeedback(
+                                 context, angle::EntryPoint::GLPauseTransformFeedback)));
         if (isCallValid)
         {
             context->pauseTransformFeedback();
@@ -2010,16 +2060,18 @@ void GL_APIENTRY GL_ProgramBinary(GLuint program,
     Context *context = GetValidGlobalContext();
     EVENT(context, GLProgramBinary,
           "context = %d, program = %u, binaryFormat = %s, binary = 0x%016" PRIxPTR ", length = %d",
-          CID(context), program, GLenumToString(GLenumGroup::DefaultGroup, binaryFormat),
+          CID(context), program, GLenumToString(GLESEnum::AllEnums, binaryFormat),
           (uintptr_t)binary, length);
 
     if (context)
     {
         ShaderProgramID programPacked = PackParam<ShaderProgramID>(program);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateProgramBinary(context, angle::EntryPoint::GLProgramBinary,
-                                                  programPacked, binaryFormat, binary, length));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLProgramBinary) &&
+              ValidateProgramBinary(context, angle::EntryPoint::GLProgramBinary, programPacked,
+                                    binaryFormat, binary, length)));
         if (isCallValid)
         {
             context->programBinary(programPacked, binaryFormat, binary, length);
@@ -2037,7 +2089,7 @@ void GL_APIENTRY GL_ProgramParameteri(GLuint program, GLenum pname, GLint value)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLProgramParameteri, "context = %d, program = %u, pname = %s, value = %d",
-          CID(context), program, GLenumToString(GLenumGroup::ProgramParameterPName, pname), value);
+          CID(context), program, GLenumToString(GLESEnum::ProgramParameterPName, pname), value);
 
     if (context)
     {
@@ -2045,8 +2097,9 @@ void GL_APIENTRY GL_ProgramParameteri(GLuint program, GLenum pname, GLint value)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateProgramParameteri(context, angle::EntryPoint::GLProgramParameteri,
-                                       programPacked, pname, value));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLProgramParameteri) &&
+              ValidateProgramParameteri(context, angle::EntryPoint::GLProgramParameteri,
+                                        programPacked, pname, value)));
         if (isCallValid)
         {
             context->programParameteri(programPacked, pname, value);
@@ -2063,13 +2116,15 @@ void GL_APIENTRY GL_ReadBuffer(GLenum src)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLReadBuffer, "context = %d, src = %s", CID(context),
-          GLenumToString(GLenumGroup::ReadBufferMode, src));
+          GLenumToString(GLESEnum::ReadBufferMode, src));
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateReadBuffer(context, angle::EntryPoint::GLReadBuffer, src));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLReadBuffer) &&
+              ValidateReadBuffer(context, angle::EntryPoint::GLReadBuffer, src)));
         if (isCallValid)
         {
             context->readBuffer(src);
@@ -2091,16 +2146,18 @@ void GL_APIENTRY GL_RenderbufferStorageMultisample(GLenum target,
     Context *context = GetValidGlobalContext();
     EVENT(context, GLRenderbufferStorageMultisample,
           "context = %d, target = %s, samples = %d, internalformat = %s, width = %d, height = %d",
-          CID(context), GLenumToString(GLenumGroup::RenderbufferTarget, target), samples,
-          GLenumToString(GLenumGroup::InternalFormat, internalformat), width, height);
+          CID(context), GLenumToString(GLESEnum::RenderbufferTarget, target), samples,
+          GLenumToString(GLESEnum::InternalFormat, internalformat), width, height);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid = (context->skipValidation() ||
-                            ValidateRenderbufferStorageMultisample(
-                                context, angle::EntryPoint::GLRenderbufferStorageMultisample,
-                                target, samples, internalformat, width, height));
+                            (ValidatePixelLocalStorageInactive(
+                                 context, angle::EntryPoint::GLRenderbufferStorageMultisample) &&
+                             ValidateRenderbufferStorageMultisample(
+                                 context, angle::EntryPoint::GLRenderbufferStorageMultisample,
+                                 target, samples, internalformat, width, height)));
         if (isCallValid)
         {
             context->renderbufferStorageMultisample(target, samples, internalformat, width, height);
@@ -2123,8 +2180,10 @@ void GL_APIENTRY GL_ResumeTransformFeedback()
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid = (context->skipValidation() ||
-                            ValidateResumeTransformFeedback(
-                                context, angle::EntryPoint::GLResumeTransformFeedback));
+                            (ValidatePixelLocalStorageInactive(
+                                 context, angle::EntryPoint::GLResumeTransformFeedback) &&
+                             ValidateResumeTransformFeedback(
+                                 context, angle::EntryPoint::GLResumeTransformFeedback)));
         if (isCallValid)
         {
             context->resumeTransformFeedback();
@@ -2141,7 +2200,7 @@ void GL_APIENTRY GL_SamplerParameterf(GLuint sampler, GLenum pname, GLfloat para
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLSamplerParameterf, "context = %d, sampler = %u, pname = %s, param = %f",
-          CID(context), sampler, GLenumToString(GLenumGroup::SamplerParameterName, pname), param);
+          CID(context), sampler, GLenumToString(GLESEnum::SamplerParameterF, pname), param);
 
     if (context)
     {
@@ -2168,7 +2227,7 @@ void GL_APIENTRY GL_SamplerParameterfv(GLuint sampler, GLenum pname, const GLflo
     Context *context = GetValidGlobalContext();
     EVENT(context, GLSamplerParameterfv,
           "context = %d, sampler = %u, pname = %s, param = 0x%016" PRIxPTR "", CID(context),
-          sampler, GLenumToString(GLenumGroup::SamplerParameterName, pname), (uintptr_t)param);
+          sampler, GLenumToString(GLESEnum::SamplerParameterF, pname), (uintptr_t)param);
 
     if (context)
     {
@@ -2194,7 +2253,7 @@ void GL_APIENTRY GL_SamplerParameteri(GLuint sampler, GLenum pname, GLint param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLSamplerParameteri, "context = %d, sampler = %u, pname = %s, param = %d",
-          CID(context), sampler, GLenumToString(GLenumGroup::SamplerParameterName, pname), param);
+          CID(context), sampler, GLenumToString(GLESEnum::SamplerParameterI, pname), param);
 
     if (context)
     {
@@ -2221,7 +2280,7 @@ void GL_APIENTRY GL_SamplerParameteriv(GLuint sampler, GLenum pname, const GLint
     Context *context = GetValidGlobalContext();
     EVENT(context, GLSamplerParameteriv,
           "context = %d, sampler = %u, pname = %s, param = 0x%016" PRIxPTR "", CID(context),
-          sampler, GLenumToString(GLenumGroup::SamplerParameterName, pname), (uintptr_t)param);
+          sampler, GLenumToString(GLESEnum::SamplerParameterI, pname), (uintptr_t)param);
 
     if (context)
     {
@@ -2258,18 +2317,20 @@ void GL_APIENTRY GL_TexImage3D(GLenum target,
     EVENT(context, GLTexImage3D,
           "context = %d, target = %s, level = %d, internalformat = %d, width = %d, height = %d, "
           "depth = %d, border = %d, format = %s, type = %s, pixels = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::TextureTarget, target), level, internalformat,
-          width, height, depth, border, GLenumToString(GLenumGroup::PixelFormat, format),
-          GLenumToString(GLenumGroup::PixelType, type), (uintptr_t)pixels);
+          CID(context), GLenumToString(GLESEnum::TextureTarget, target), level, internalformat,
+          width, height, depth, border, GLenumToString(GLESEnum::PixelFormat, format),
+          GLenumToString(GLESEnum::PixelType, type), (uintptr_t)pixels);
 
     if (context)
     {
         TextureTarget targetPacked = PackParam<TextureTarget>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateTexImage3D(context, angle::EntryPoint::GLTexImage3D,
-                                               targetPacked, level, internalformat, width, height,
-                                               depth, border, format, type, pixels));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTexImage3D) &&
+              ValidateTexImage3D(context, angle::EntryPoint::GLTexImage3D, targetPacked, level,
+                                 internalformat, width, height, depth, border, format, type,
+                                 pixels)));
         if (isCallValid)
         {
             context->texImage3D(targetPacked, level, internalformat, width, height, depth, border,
@@ -2290,8 +2351,8 @@ GL_TexStorage2D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei wi
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexStorage2D,
           "context = %d, target = %s, levels = %d, internalformat = %s, width = %d, height = %d",
-          CID(context), GLenumToString(GLenumGroup::TextureTarget, target), levels,
-          GLenumToString(GLenumGroup::InternalFormat, internalformat), width, height);
+          CID(context), GLenumToString(GLESEnum::TextureTarget, target), levels,
+          GLenumToString(GLESEnum::SizedInternalFormat, internalformat), width, height);
 
     if (context)
     {
@@ -2299,8 +2360,9 @@ GL_TexStorage2D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei wi
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateTexStorage2D(context, angle::EntryPoint::GLTexStorage2D, targetPacked, levels,
-                                  internalformat, width, height));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTexStorage2D) &&
+              ValidateTexStorage2D(context, angle::EntryPoint::GLTexStorage2D, targetPacked, levels,
+                                   internalformat, width, height)));
         if (isCallValid)
         {
             context->texStorage2D(targetPacked, levels, internalformat, width, height);
@@ -2325,8 +2387,8 @@ void GL_APIENTRY GL_TexStorage3D(GLenum target,
     EVENT(context, GLTexStorage3D,
           "context = %d, target = %s, levels = %d, internalformat = %s, width = %d, height = %d, "
           "depth = %d",
-          CID(context), GLenumToString(GLenumGroup::TextureTarget, target), levels,
-          GLenumToString(GLenumGroup::InternalFormat, internalformat), width, height, depth);
+          CID(context), GLenumToString(GLESEnum::TextureTarget, target), levels,
+          GLenumToString(GLESEnum::SizedInternalFormat, internalformat), width, height, depth);
 
     if (context)
     {
@@ -2334,8 +2396,9 @@ void GL_APIENTRY GL_TexStorage3D(GLenum target,
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateTexStorage3D(context, angle::EntryPoint::GLTexStorage3D, targetPacked, levels,
-                                  internalformat, width, height, depth));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTexStorage3D) &&
+              ValidateTexStorage3D(context, angle::EntryPoint::GLTexStorage3D, targetPacked, levels,
+                                   internalformat, width, height, depth)));
         if (isCallValid)
         {
             context->texStorage3D(targetPacked, levels, internalformat, width, height, depth);
@@ -2365,18 +2428,20 @@ void GL_APIENTRY GL_TexSubImage3D(GLenum target,
     EVENT(context, GLTexSubImage3D,
           "context = %d, target = %s, level = %d, xoffset = %d, yoffset = %d, zoffset = %d, width "
           "= %d, height = %d, depth = %d, format = %s, type = %s, pixels = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::TextureTarget, target), level, xoffset, yoffset,
-          zoffset, width, height, depth, GLenumToString(GLenumGroup::PixelFormat, format),
-          GLenumToString(GLenumGroup::PixelType, type), (uintptr_t)pixels);
+          CID(context), GLenumToString(GLESEnum::TextureTarget, target), level, xoffset, yoffset,
+          zoffset, width, height, depth, GLenumToString(GLESEnum::PixelFormat, format),
+          GLenumToString(GLESEnum::PixelType, type), (uintptr_t)pixels);
 
     if (context)
     {
         TextureTarget targetPacked = PackParam<TextureTarget>(target);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateTexSubImage3D(context, angle::EntryPoint::GLTexSubImage3D,
-                                                  targetPacked, level, xoffset, yoffset, zoffset,
-                                                  width, height, depth, format, type, pixels));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTexSubImage3D) &&
+              ValidateTexSubImage3D(context, angle::EntryPoint::GLTexSubImage3D, targetPacked,
+                                    level, xoffset, yoffset, zoffset, width, height, depth, format,
+                                    type, pixels)));
         if (isCallValid)
         {
             context->texSubImage3D(targetPacked, level, xoffset, yoffset, zoffset, width, height,
@@ -2400,16 +2465,18 @@ void GL_APIENTRY GL_TransformFeedbackVaryings(GLuint program,
     EVENT(context, GLTransformFeedbackVaryings,
           "context = %d, program = %u, count = %d, varyings = 0x%016" PRIxPTR ", bufferMode = %s",
           CID(context), program, count, (uintptr_t)varyings,
-          GLenumToString(GLenumGroup::DefaultGroup, bufferMode));
+          GLenumToString(GLESEnum::TransformFeedbackBufferMode, bufferMode));
 
     if (context)
     {
         ShaderProgramID programPacked = PackParam<ShaderProgramID>(program);
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid = (context->skipValidation() ||
-                            ValidateTransformFeedbackVaryings(
-                                context, angle::EntryPoint::GLTransformFeedbackVaryings,
-                                programPacked, count, varyings, bufferMode));
+                            (ValidatePixelLocalStorageInactive(
+                                 context, angle::EntryPoint::GLTransformFeedbackVaryings) &&
+                             ValidateTransformFeedbackVaryings(
+                                 context, angle::EntryPoint::GLTransformFeedbackVaryings,
+                                 programPacked, count, varyings, bufferMode)));
         if (isCallValid)
         {
             context->transformFeedbackVaryings(programPacked, count, varyings, bufferMode);
@@ -2849,7 +2916,7 @@ GLboolean GL_APIENTRY GL_UnmapBuffer(GLenum target)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLUnmapBuffer, "context = %d, target = %s", CID(context),
-          GLenumToString(GLenumGroup::BufferTargetARB, target));
+          GLenumToString(GLESEnum::BufferTargetARB, target));
 
     GLboolean returnValue;
     if (context)
@@ -3004,8 +3071,8 @@ GL_VertexAttribIPointer(GLuint index, GLint size, GLenum type, GLsizei stride, c
     EVENT(context, GLVertexAttribIPointer,
           "context = %d, index = %u, size = %d, type = %s, stride = %d, pointer = 0x%016" PRIxPTR
           "",
-          CID(context), index, size, GLenumToString(GLenumGroup::VertexAttribPointerType, type),
-          stride, (uintptr_t)pointer);
+          CID(context), index, size, GLenumToString(GLESEnum::VertexAttribIType, type), stride,
+          (uintptr_t)pointer);
 
     if (context)
     {
@@ -3033,7 +3100,7 @@ void GL_APIENTRY GL_WaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
     Context *context = GetValidGlobalContext();
     EVENT(context, GLWaitSync, "context = %d, sync = 0x%016" PRIxPTR ", flags = %s, timeout = %llu",
           CID(context), (uintptr_t)sync,
-          GLbitfieldToString(GLenumGroup::DefaultGroup, flags).c_str(),
+          GLbitfieldToString(GLESEnum::SyncBehaviorFlags, flags).c_str(),
           static_cast<unsigned long long>(timeout));
 
     if (context)
@@ -3041,7 +3108,8 @@ void GL_APIENTRY GL_WaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateWaitSync(context, angle::EntryPoint::GLWaitSync, sync, flags, timeout));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLWaitSync) &&
+              ValidateWaitSync(context, angle::EntryPoint::GLWaitSync, sync, flags, timeout)));
         if (isCallValid)
         {
             context->waitSync(sync, flags, timeout);

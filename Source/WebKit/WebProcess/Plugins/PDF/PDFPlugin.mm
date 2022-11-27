@@ -145,8 +145,10 @@ static constexpr auto annotationStyle =
 "} "
 "input.annotation[type='password'] { "
 "    position: static; "
-"    width: 200px; "
-"    margin-top: 100px; "
+"    width: 238px; "
+"    height: 20px; "
+"    margin-top: 110px; "
+"    font-size: 15px; "
 "} "_s;
 
 // In non-continuous modes, a single scroll event with a magnitude of >= 20px
@@ -283,11 +285,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         return [_pdfLayerController accessibilityStringForRangeAttributeForParameter:parameter];
 
     return 0;
-}
-
-- (CPReadingModel *)readingModel
-{
-    return [_pdfLayerController readingModel];
 }
 
 ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
@@ -1279,6 +1276,8 @@ PluginInfo PDFPlugin::pluginInfo()
 {
     PluginInfo info;
     info.name = builtInPDFPluginName();
+    info.desc = pdfDocumentTypeDescription();
+    info.file = "internal-pdf-viewer"_s;
     info.isApplicationPlugin = true;
     info.clientLoadPolicy = PluginLoadClientPolicy::Undefined;
     info.bundleIdentifier = "com.apple.webkit.builtinpdfplugin"_s;
@@ -2096,10 +2095,10 @@ static bool getEventTypeFromWebEvent(const WebEvent& event, NSEventType& eventTy
         return true;
     case WebEvent::MouseDown:
         switch (static_cast<const WebMouseEvent&>(event).button()) {
-        case WebMouseEvent::LeftButton:
+        case WebMouseEventButton::LeftButton:
             eventType = NSEventTypeLeftMouseDown;
             return true;
-        case WebMouseEvent::RightButton:
+        case WebMouseEventButton::RightButton:
             eventType = NSEventTypeRightMouseDown;
             return true;
         default:
@@ -2107,10 +2106,10 @@ static bool getEventTypeFromWebEvent(const WebEvent& event, NSEventType& eventTy
         }
     case WebEvent::MouseUp:
         switch (static_cast<const WebMouseEvent&>(event).button()) {
-        case WebMouseEvent::LeftButton:
+        case WebMouseEventButton::LeftButton:
             eventType = NSEventTypeLeftMouseUp;
             return true;
-        case WebMouseEvent::RightButton:
+        case WebMouseEventButton::RightButton:
             eventType = NSEventTypeRightMouseUp;
             return true;
         default:
@@ -2118,13 +2117,13 @@ static bool getEventTypeFromWebEvent(const WebEvent& event, NSEventType& eventTy
         }
     case WebEvent::MouseMove:
         switch (static_cast<const WebMouseEvent&>(event).button()) {
-        case WebMouseEvent::LeftButton:
+        case WebMouseEventButton::LeftButton:
             eventType = NSEventTypeLeftMouseDragged;
             return true;
-        case WebMouseEvent::RightButton:
+        case WebMouseEventButton::RightButton:
             eventType = NSEventTypeRightMouseDragged;
             return true;
-        case WebMouseEvent::NoButton:
+        case WebMouseEventButton::NoButton:
             eventType = NSEventTypeMouseMoved;
             return true;
         default:
@@ -2184,7 +2183,7 @@ bool PDFPlugin::handleMouseEvent(const WebMouseEvent& event)
         return false;
 
     // Right-clicks and Control-clicks always call handleContextMenuEvent as well.
-    if (event.button() == WebMouseEvent::RightButton || (event.button() == WebMouseEvent::LeftButton && event.controlKey()))
+    if (event.button() == WebMouseEventButton::RightButton || (event.button() == WebMouseEventButton::LeftButton && event.controlKey()))
         return true;
 
     NSEvent *nsEvent = nsEventForWebMouseEvent(event);
@@ -2205,44 +2204,44 @@ bool PDFPlugin::handleMouseEvent(const WebMouseEvent& event)
             targetScrollbarForLastMousePosition->mouseExited();
 
         switch (event.button()) {
-        case WebMouseEvent::LeftButton:
+        case WebMouseEventButton::LeftButton:
             [m_pdfLayerController mouseDragged:nsEvent];
             return true;
-        case WebMouseEvent::RightButton:
-        case WebMouseEvent::MiddleButton:
+        case WebMouseEventButton::RightButton:
+        case WebMouseEventButton::MiddleButton:
             return false;
-        case WebMouseEvent::NoButton:
+        case WebMouseEventButton::NoButton:
             [m_pdfLayerController mouseMoved:nsEvent];
             return true;
         }
         break;
     case WebEvent::MouseDown:
         switch (event.button()) {
-        case WebMouseEvent::LeftButton:
+        case WebMouseEventButton::LeftButton:
             if (targetScrollbar)
                 return targetScrollbar->mouseDown(platformEvent);
 
             [m_pdfLayerController mouseDown:nsEvent];
             return true;
-        case WebMouseEvent::RightButton:
+        case WebMouseEventButton::RightButton:
             [m_pdfLayerController rightMouseDown:nsEvent];
             return true;
-        case WebMouseEvent::MiddleButton:
-        case WebMouseEvent::NoButton:
+        case WebMouseEventButton::MiddleButton:
+        case WebMouseEventButton::NoButton:
             return false;
         }
         break;
     case WebEvent::MouseUp:
         switch (event.button()) {
-        case WebMouseEvent::LeftButton:
+        case WebMouseEventButton::LeftButton:
             if (targetScrollbar)
                 return targetScrollbar->mouseUp(platformEvent);
 
             [m_pdfLayerController mouseUp:nsEvent];
             return true;
-        case WebMouseEvent::RightButton:
-        case WebMouseEvent::MiddleButton:
-        case WebMouseEvent::NoButton:
+        case WebMouseEventButton::RightButton:
+        case WebMouseEventButton::MiddleButton:
+        case WebMouseEventButton::NoButton:
             return false;
         }
         break;
@@ -2271,7 +2270,7 @@ bool PDFPlugin::showContextMenuAtPoint(const IntPoint& point)
     if (!frameView)
         return false;
     IntPoint contentsPoint = frameView->contentsToRootView(point);
-    WebMouseEvent event(WebEvent::MouseDown, WebMouseEvent::RightButton, 0, contentsPoint, contentsPoint, 0, 0, 0, 1, OptionSet<WebEvent::Modifier> { }, WallTime::now(), WebCore::ForceAtClick);
+    WebMouseEvent event({ WebEvent::MouseDown, OptionSet<WebEventModifier> { }, WallTime::now() }, WebMouseEventButton::RightButton, 0, contentsPoint, contentsPoint, 0, 0, 0, 1, WebCore::ForceAtClick);
     return handleContextMenuEvent(event);
 }
 
@@ -2308,8 +2307,8 @@ bool PDFPlugin::handleContextMenuEvent(const WebMouseEvent& event)
     }
     PDFContextMenu contextMenu { point, WTFMove(items), WTFMove(openInPreviewIndex) };
 
-    std::optional<int> selectedIndex = -1;
-    webPage->sendSync(Messages::WebPageProxy::ShowPDFContextMenu(contextMenu, m_identifier), Messages::WebPageProxy::ShowPDFContextMenu::Reply(selectedIndex));
+    auto sendResult = webPage->sendSync(Messages::WebPageProxy::ShowPDFContextMenu(contextMenu, m_identifier));
+    auto [selectedIndex] = sendResult.takeReplyOr(-1);
 
     if (selectedIndex && *selectedIndex >= 0 && *selectedIndex < itemCount)
         [nsMenu performActionForItemAtIndex:*selectedIndex];
@@ -2553,10 +2552,8 @@ void PDFPlugin::writeItemsToPasteboard(NSString *pasteboardName, NSArray *items,
     auto pasteboardTypes = makeVector<String>(types);
     auto pageIdentifier = m_frame && m_frame->coreFrame() ? m_frame->coreFrame()->pageID() : std::nullopt;
 
-    int64_t newChangeCount;
     auto& webProcess = WebProcess::singleton();
-    webProcess.parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::SetPasteboardTypes(pasteboardName, pasteboardTypes, pageIdentifier),
-        Messages::WebPasteboardProxy::SetPasteboardTypes::Reply(newChangeCount), 0);
+    webProcess.parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::SetPasteboardTypes(pasteboardName, pasteboardTypes, pageIdentifier), 0);
 
     for (NSUInteger i = 0, count = items.count; i < count; ++i) {
         NSString *type = [types objectAtIndex:i];
@@ -2570,10 +2567,10 @@ void PDFPlugin::writeItemsToPasteboard(NSString *pasteboardName, NSArray *items,
 
         if ([type isEqualToString:legacyStringPasteboardType()] || [type isEqualToString:NSPasteboardTypeString]) {
             auto plainTextString = adoptNS([[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
-            webProcess.parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::SetPasteboardStringForType(pasteboardName, type, plainTextString.get(), pageIdentifier), Messages::WebPasteboardProxy::SetPasteboardStringForType::Reply(newChangeCount), 0);
+            webProcess.parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::SetPasteboardStringForType(pasteboardName, type, plainTextString.get(), pageIdentifier), 0);
         } else {
             auto buffer = SharedBuffer::create(data);
-            webProcess.parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::SetPasteboardBufferForType(pasteboardName, type, WTFMove(buffer), pageIdentifier), Messages::WebPasteboardProxy::SetPasteboardBufferForType::Reply(newChangeCount), 0);
+            webProcess.parentProcessConnection()->sendSync(Messages::WebPasteboardProxy::SetPasteboardBufferForType(pasteboardName, type, WTFMove(buffer), pageIdentifier), 0);
         }
     }
 }
@@ -2582,7 +2579,7 @@ void PDFPlugin::showDefinitionForAttributedString(NSAttributedString *string, CG
 {
     DictionaryPopupInfo dictionaryPopupInfo;
     dictionaryPopupInfo.origin = convertFromPDFViewToRootView(IntPoint(point));
-    dictionaryPopupInfo.attributedString = string;
+    dictionaryPopupInfo.platformData.attributedString = string;
     
     
     NSRect rangeRect;

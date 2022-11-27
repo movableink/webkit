@@ -721,6 +721,13 @@ slowWasmOp(set_global_ref_portable_binding)
 slowWasmOp(memory_atomic_wait32)
 slowWasmOp(memory_atomic_wait64)
 slowWasmOp(memory_atomic_notify)
+slowWasmOp(array_new)
+slowWasmOp(array_new_default)
+slowWasmOp(array_get)
+slowWasmOp(array_set)
+slowWasmOp(struct_new)
+slowWasmOp(struct_get)
+slowWasmOp(struct_set)
 
 wasmOp(grow_memory, WasmGrowMemory, macro(ctx)
     callWasmSlowPath(_slow_path_wasm_grow_memory)
@@ -1044,7 +1051,7 @@ end)
 wasmOp(current_memory, WasmCurrentMemory, macro(ctx)
     loadp Wasm::Instance::m_memory[wasmInstance], t0
     loadp Wasm::Memory::m_handle[t0], t0
-    loadp Wasm::MemoryHandle::m_size[t0], t0
+    loadp BufferMemoryHandle::m_size[t0], t0
     urshiftp 16, t0
 if JSVALUE64
     returnq(ctx, t0)

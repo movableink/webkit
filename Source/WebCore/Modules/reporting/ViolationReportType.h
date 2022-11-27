@@ -25,10 +25,16 @@
 
 #pragma once
 
+#include <wtf/EnumTraits.h>
+
 namespace WebCore {
 
 enum class ViolationReportType : uint8_t {
+    COEPInheritenceViolation, // https://html.spec.whatwg.org/multipage/origin.html#queue-a-cross-origin-embedder-policy-inheritance-violation
+    CORPViolation, // https://fetch.spec.whatwg.org/#queue-a-cross-origin-embedder-policy-corp-violation-report
     ContentSecurityPolicy,
+    CrossOriginOpenerPolicy,
+    Deprecation, // https://wicg.github.io/deprecation-reporting/
     StandardReportingAPIViolation, // https://www.w3.org/TR/reporting/#try-delivery
     Test, // https://www.w3.org/TR/reporting-1/#generate-test-report-command
     // More to come
@@ -41,7 +47,11 @@ namespace WTF {
 template<> struct EnumTraits<WebCore::ViolationReportType> {
     using values = EnumValues<
     WebCore::ViolationReportType,
+    WebCore::ViolationReportType::COEPInheritenceViolation,
+    WebCore::ViolationReportType::CORPViolation,
     WebCore::ViolationReportType::ContentSecurityPolicy,
+    WebCore::ViolationReportType::CrossOriginOpenerPolicy,
+    WebCore::ViolationReportType::Deprecation,
     WebCore::ViolationReportType::StandardReportingAPIViolation,
     WebCore::ViolationReportType::Test
     >;

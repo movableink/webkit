@@ -27,6 +27,7 @@
 
 #if ENABLE(WEBGL)
 
+#include "DestinationColorSpace.h"
 #include "GraphicsContextGLAttributes.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "GraphicsTypesGL.h"
@@ -57,6 +58,43 @@ class MediaPlayer;
 #if ENABLE(MEDIA_STREAM)
 class VideoFrame;
 #endif
+
+struct GraphicsContextGLActiveInfo {
+    String name;
+    GCGLenum type;
+    GCGLint size;
+};
+
+class GraphicsContextGL;
+
+struct GCGLOwned {
+    GCGLOwned() = default;
+    GCGLOwned(const GCGLOwned&) = delete;
+    GCGLOwned(GCGLOwned&&) = delete;
+    ~GCGLOwned();
+
+    GCGLOwned& operator=(const GCGLOwned&) const = delete;
+    GCGLOwned& operator=(GCGLOwned&&) = delete;
+
+    operator PlatformGLObject() const { return m_object; }
+
+    PlatformGLObject leakObject() { return std::exchange(m_object, 0); }
+
+protected:
+    PlatformGLObject m_object = 0;
+};
+
+#define DECLARE_GCGL_OWNED(ClassName) \
+struct GCGLOwned##ClassName : public GCGLOwned { \
+    void ensure(GraphicsContextGL& gl); \
+    void release(GraphicsContextGL& gl); \
+}
+
+DECLARE_GCGL_OWNED(Framebuffer);
+DECLARE_GCGL_OWNED(Renderbuffer);
+DECLARE_GCGL_OWNED(Texture);
+
+#undef DECLARE_GCGL_OWNED
 
 // Base class for graphics context for implementing WebGL rendering model.
 class GraphicsContextGL : public RefCounted<GraphicsContextGL> {
@@ -782,6 +820,11 @@ public:
     static constexpr GCGLenum RGB16_SNORM_EXT = 0x8F9A;
     static constexpr GCGLenum RGBA16_SNORM_EXT = 0x8F9B;
 
+    // GL_ANGLE_provoking_vertex
+    static constexpr GCGLenum FIRST_VERTEX_CONVENTION_ANGLE = 0x8E4D;
+    static constexpr GCGLenum LAST_VERTEX_CONVENTION_ANGLE = 0x8E4E;
+    static constexpr GCGLenum PROVOKING_VERTEX_ANGLE = 0x8E4F;
+
     // GL_ARB_draw_buffers / GL_EXT_draw_buffers
     static constexpr GCGLenum MAX_DRAW_BUFFERS_EXT = 0x8824;
     static constexpr GCGLenum DRAW_BUFFER0_EXT = 0x8825;
@@ -1068,12 +1111,6 @@ public:
         virtual void dispatchContextChangedNotification() = 0;
     };
 
-    struct ActiveInfo {
-        String name;
-        GCGLenum type;
-        GCGLint size;
-    };
-
     WEBCORE_EXPORT GraphicsContextGL(GraphicsContextGLAttributes);
     WEBCORE_EXPORT virtual ~GraphicsContextGL();
 
@@ -1139,8 +1176,8 @@ public:
 
     virtual void generateMipmap(GCGLenum target) = 0;
 
-    virtual bool getActiveAttrib(PlatformGLObject program, GCGLuint index, ActiveInfo&) = 0;
-    virtual bool getActiveUniform(PlatformGLObject program, GCGLuint index, ActiveInfo&) = 0;
+    virtual bool getActiveAttrib(PlatformGLObject program, GCGLuint index, GraphicsContextGLActiveInfo&) = 0;
+    virtual bool getActiveUniform(PlatformGLObject program, GCGLuint index, GraphicsContextGLActiveInfo&) = 0;
 
     virtual GCGLint getAttribLocation(PlatformGLObject, const String& name) = 0;
 
@@ -1371,7 +1408,7 @@ public:
     virtual void beginTransformFeedback(GCGLenum primitiveMode) = 0;
     virtual void endTransformFeedback() = 0;
     virtual void transformFeedbackVaryings(PlatformGLObject program, const Vector<String>& varyings, GCGLenum bufferMode) = 0;
-    virtual void getTransformFeedbackVarying(PlatformGLObject program, GCGLuint index, ActiveInfo&) = 0;
+    virtual void getTransformFeedbackVarying(PlatformGLObject program, GCGLuint index, GraphicsContextGLActiveInfo&) = 0;
     virtual void pauseTransformFeedback() = 0;
     virtual void resumeTransformFeedback() = 0;
 
@@ -1427,6 +1464,9 @@ public:
     virtual void multiDrawArraysInstancedBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLint, const GCGLsizei, const GCGLsizei, const GCGLuint> firstsCountsInstanceCountsAndBaseInstances) = 0;
     virtual void multiDrawElementsInstancedBaseVertexBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLsizei, const GCGLsizei, const GCGLsizei, const GCGLint, const GCGLuint> countsOffsetsInstanceCountsBaseVerticesAndBaseInstances, GCGLenum type) = 0;
 
+    // GL_ANGLE_provoking_vertex
+    virtual void provokingVertexANGLE(GCGLenum mode) = 0;
+
     // ========== Other functions.
     GCGLfloat getFloat(GCGLenum pname);
     GCGLboolean getBoolean(GCGLenum pname);
@@ -1441,6 +1481,8 @@ public:
     virtual void reshape(int width, int height) = 0;
 
     virtual void setContextVisibility(bool) = 0;
+
+    WEBCORE_EXPORT virtual void setDrawingBufferColorSpace(const DestinationColorSpace&);
 
     virtual bool isGLES2Compliant() const = 0;
 
@@ -1602,6 +1644,31 @@ inline GCGLint GraphicsContextGL::getInternalformati(GCGLenum target, GCGLenum i
     getInternalformativ(target, internalformat, pname, value);
     return value[0];
 }
+
+inline GCGLOwned::~GCGLOwned()
+{
+    ASSERT(!m_object, "Have you explicitly deleted this object? If so, call release().");
+}
+
+#define IMPLEMENT_GCGL_OWNED(ClassName) \
+inline void GCGLOwned##ClassName::ensure(GraphicsContextGL& gl) \
+{ \
+    if (!m_object) \
+        m_object = gl.create##ClassName(); \
+} \
+\
+inline void GCGLOwned##ClassName::release(GraphicsContextGL& gl) \
+{ \
+    if (m_object) \
+        gl.delete##ClassName(m_object); \
+    m_object = 0; \
+}
+
+IMPLEMENT_GCGL_OWNED(Framebuffer)
+IMPLEMENT_GCGL_OWNED(Renderbuffer)
+IMPLEMENT_GCGL_OWNED(Texture)
+
+#undef IMPLEMENT_GCGL_OWNED
 
 } // namespace WebCore
 

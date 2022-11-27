@@ -25,15 +25,14 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSNumericType.h"
 #include "CSSStyleValue.h"
 #include <variant>
-#include <wtf/FixedVector.h>
+#include <wtf/HashMap.h>
 
 namespace WebCore {
 
+class CSSCalcExpressionNode;
 class CSSNumericValue;
 class CSSUnitValue;
 class CSSMathSum;
@@ -74,6 +73,8 @@ public:
     virtual std::optional<SumValue> toSumValue() const = 0;
     virtual bool equals(const CSSNumericValue&) const = 0;
 
+    virtual RefPtr<CSSCalcExpressionNode> toCalcExpressionNode() const = 0;
+
 protected:
     ExceptionOr<Ref<CSSNumericValue>> addInternal(Vector<Ref<CSSNumericValue>>&&);
     ExceptionOr<Ref<CSSNumericValue>> multiplyInternal(Vector<Ref<CSSNumericValue>>&&);
@@ -90,5 +91,3 @@ protected:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSNumericValue)
     static bool isType(const WebCore::CSSStyleValue& styleValue) { return isCSSNumericValue(styleValue.getType()); }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

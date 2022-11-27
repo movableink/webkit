@@ -57,7 +57,7 @@ WebPermissionController::~WebPermissionController()
     WebProcess::singleton().removeMessageReceiver(Messages::WebPermissionController::messageReceiverName());
 }
 
-void WebPermissionController::query(WebCore::ClientOrigin&& origin, WebCore::PermissionDescriptor descriptor, WebCore::Page* page, WebCore::PermissionQuerySource source, CompletionHandler<void(std::optional<WebCore::PermissionState>)>&& completionHandler)
+void WebPermissionController::query(WebCore::ClientOrigin&& origin, WebCore::PermissionDescriptor descriptor, const WeakPtr<WebCore::Page>& page, WebCore::PermissionQuerySource source, CompletionHandler<void(std::optional<WebCore::PermissionState>)>&& completionHandler)
 {
     std::optional<WebPageProxyIdentifier> proxyIdentifier;
     if (source == WebCore::PermissionQuerySource::Window || source == WebCore::PermissionQuerySource::DedicatedWorker) {
@@ -65,27 +65,7 @@ void WebPermissionController::query(WebCore::ClientOrigin&& origin, WebCore::Per
         proxyIdentifier = WebPage::fromCorePage(*page).webPageProxyIdentifier();
     }
 
-    m_requests.append(PermissionRequest { WTFMove(origin), descriptor, proxyIdentifier, source, WTFMove(completionHandler) });
-    tryProcessingRequests();
-}
-
-void WebPermissionController::tryProcessingRequests()
-{
-    while (!m_requests.isEmpty()) {
-        auto& currentRequest = m_requests.first();
-        if (currentRequest.isWaitingForReply)
-            return;
-
-        currentRequest.isWaitingForReply = true;
-        WebProcess::singleton().sendWithAsyncReply(Messages::WebPermissionControllerProxy::Query(currentRequest.origin, currentRequest.descriptor, currentRequest.identifier, currentRequest.source), [this, weakThis = WeakPtr { *this }](auto state) {
-            RefPtr protectedThis { weakThis.get() };
-            if (!protectedThis)
-                return;
-
-            m_requests.takeFirst().completionHandler(state);
-            tryProcessingRequests();
-        });
-    }
+    WebProcess::singleton().sendWithAsyncReply(Messages::WebPermissionControllerProxy::Query(origin, descriptor, proxyIdentifier, source), WTFMove(completionHandler));
 }
 
 void WebPermissionController::addObserver(WebCore::PermissionObserver& observer)
@@ -100,23 +80,17 @@ void WebPermissionController::removeObserver(WebCore::PermissionObserver& observ
 
 void WebPermissionController::permissionChanged(WebCore::PermissionName permissionName, const WebCore::SecurityOriginData& topOrigin)
 {
+    ASSERT(isMainRunLoop());
+
     for (auto& observer : m_observers) {
         if (observer.descriptor().name != permissionName || observer.origin().topOrigin != topOrigin)
             return;
 
-        auto* context = observer.context();
-        if (!context)
-            continue;
+        auto source = observer.source();
+        if (!observer.page() && (source == WebCore::PermissionQuerySource::Window || source == WebCore::PermissionQuerySource::DedicatedWorker))
+            return;
 
-        auto source = WebCore::Permissions::sourceFromContext(*context);
-        // FIXME: Add support for workers.
-        ASSERT(source && *source == WebCore::PermissionQuerySource::Window);
-
-        auto* page = downcast<WebCore::Document>(context)->page();
-        if (!page)
-            continue;
-
-        query(WebCore::ClientOrigin { observer.origin() }, WebCore::PermissionDescriptor { permissionName }, page, *source, [observer = WeakPtr { observer }](auto newState) {
+        query(WebCore::ClientOrigin { observer.origin() }, WebCore::PermissionDescriptor { permissionName }, observer.page(), source, [observer = WeakPtr { observer }](auto newState) {
             if (observer && newState != observer->currentState())
                 observer->stateChanged(*newState);
         });

@@ -27,6 +27,7 @@
 #include "RenderTable.h"
 
 #include "AutoTableLayout.h"
+#include "BackgroundPainter.h"
 #include "BorderPainter.h"
 #include "CollapsedBorderValue.h"
 #include "Document.h"
@@ -793,10 +794,12 @@ void RenderTable::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& p
 
     LayoutRect rect(paintOffset, size());
     adjustBorderBoxRectForPainting(rect);
-    
+
+    BackgroundPainter backgroundPainter { *this, paintInfo };
+
     BackgroundBleedAvoidance bleedAvoidance = determineBackgroundBleedAvoidance(paintInfo.context());
-    if (!boxShadowShouldBeAppliedToBackground(rect.location(), bleedAvoidance, { }))
-        paintBoxShadow(paintInfo, rect, style(), ShadowStyle::Normal);
+    if (!BackgroundPainter::boxShadowShouldBeAppliedToBackground(*this, rect.location(), bleedAvoidance, { }))
+        backgroundPainter.paintBoxShadow(rect, style(), ShadowStyle::Normal);
 
     GraphicsContextStateSaver stateSaver(paintInfo.context(), false);
     if (bleedAvoidance == BackgroundBleedUseTransparencyLayer) {
@@ -808,8 +811,8 @@ void RenderTable::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& p
         paintInfo.context().beginTransparencyLayer(1);
     }
 
-    paintBackground(paintInfo, rect, bleedAvoidance);
-    paintBoxShadow(paintInfo, rect, style(), ShadowStyle::Inset);
+    backgroundPainter.paintBackground(rect, bleedAvoidance);
+    backgroundPainter.paintBoxShadow(rect, style(), ShadowStyle::Inset);
 
     if (style().hasVisibleBorderDecoration() && !collapseBorders())
         BorderPainter { *this, paintInfo }.paintBorder(rect, style());
@@ -895,6 +898,14 @@ RenderTableSection* RenderTable::topNonEmptySection() const
     RenderTableSection* section = topSection();
     if (section && !section->numRows())
         section = sectionBelow(section, SkipEmptySections);
+    return section;
+}
+
+RenderTableSection* RenderTable::bottomNonEmptySection() const
+{
+    auto* section = bottomSection();
+    if (section && !section->numRows())
+        section = sectionAbove(section, SkipEmptySections);
     return section;
 }
 
@@ -1505,9 +1516,9 @@ RenderTableCell* RenderTable::cellAfter(const RenderTableCell* cell) const
 
 LayoutUnit RenderTable::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
 {
-    return valueOrCompute(firstLineBaseline(), [&] {
-        return RenderBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
-    });
+    if (auto baselinePos = firstLineBaseline())
+        return (direction == HorizontalLine ? marginTop() : marginRight()) + baselinePos.value();
+    return RenderBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
 }
 
 std::optional<LayoutUnit> RenderTable::inlineBlockBaseline(LineDirectionMode) const
@@ -1536,6 +1547,22 @@ std::optional<LayoutUnit> RenderTable::firstLineBaseline() const
 
     // FIXME: A table row always has a baseline per CSS 2.1. Will this return the right value?
     return std::optional<LayoutUnit>();
+}
+
+std::optional<LayoutUnit> RenderTable::lastLineBaseline() const
+{
+    if (isWritingModeRoot() || shouldApplyLayoutContainment())
+        return { };
+
+    recalcSectionsIfNeeded();
+
+    auto* tableSection = bottomNonEmptySection();
+    if (!tableSection)
+        return { };
+
+    if (auto baseline = tableSection->lastLineBaseline())
+        return LayoutUnit { baseline.value() + tableSection->logicalTop() };
+    return { };
 }
 
 LayoutRect RenderTable::overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy, PaintPhase phase) const

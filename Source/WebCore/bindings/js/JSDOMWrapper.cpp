@@ -32,15 +32,14 @@
 #include "JSRemoteDOMWindow.h"
 #include "SerializedScriptValue.h"
 #include "WebCoreJSClientData.h"
-#include <JavaScriptCore/Butterfly.h>
 #include <JavaScriptCore/Error.h>
 
 namespace WebCore {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSDOMObject);
 
-JSDOMObject::JSDOMObject(JSC::Structure* structure, JSC::JSGlobalObject& globalObject, JSC::Butterfly* butterfly)
-    : Base(globalObject.vm(), structure, butterfly)
+JSDOMObject::JSDOMObject(JSC::Structure* structure, JSC::JSGlobalObject& globalObject)
+    : Base(globalObject.vm(), structure)
 {
     ASSERT(scriptExecutionContext() || globalObject.classInfo() == JSRemoteDOMWindow::info());
 }
@@ -50,7 +49,7 @@ JSC::JSValue cloneAcrossWorlds(JSC::JSGlobalObject& lexicalGlobalObject, const J
     if (isWorldCompatible(lexicalGlobalObject, value))
         return value;
     // FIXME: Is it best to handle errors by returning null rather than throwing an exception?
-    auto serializedValue = SerializedScriptValue::create(lexicalGlobalObject, value, SerializationErrorMode::NonThrowing);
+    auto serializedValue = SerializedScriptValue::create(lexicalGlobalObject, value, SerializationForStorage::No, SerializationErrorMode::NonThrowing);
     if (!serializedValue)
         return JSC::jsNull();
     // FIXME: Why is owner->globalObject() better than lexicalGlobalObject.lexicalGlobalObject() here?

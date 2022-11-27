@@ -10,6 +10,7 @@
 
 #include "trace_egl_loader_autogen.h"
 
+extern "C" {
 ANGLE_TRACE_LOADER_EXPORT PFNEGLCHOOSECONFIGPROC t_eglChooseConfig;
 ANGLE_TRACE_LOADER_EXPORT PFNEGLCOPYBUFFERSPROC t_eglCopyBuffers;
 ANGLE_TRACE_LOADER_EXPORT PFNEGLCREATECONTEXTPROC t_eglCreateContext;
@@ -72,6 +73,7 @@ ANGLE_TRACE_LOADER_EXPORT PFNEGLCREATEDEVICEANGLEPROC t_eglCreateDeviceANGLE;
 ANGLE_TRACE_LOADER_EXPORT PFNEGLRELEASEDEVICEANGLEPROC t_eglReleaseDeviceANGLE;
 ANGLE_TRACE_LOADER_EXPORT PFNEGLQUERYDISPLAYATTRIBANGLEPROC t_eglQueryDisplayAttribANGLE;
 ANGLE_TRACE_LOADER_EXPORT PFNEGLQUERYSTRINGIANGLEPROC t_eglQueryStringiANGLE;
+ANGLE_TRACE_LOADER_EXPORT PFNEGLCOPYMETALSHAREDEVENTANGLEPROC t_eglCopyMetalSharedEventANGLE;
 ANGLE_TRACE_LOADER_EXPORT PFNEGLFORCEGPUSWITCHANGLEPROC t_eglForceGPUSwitchANGLE;
 ANGLE_TRACE_LOADER_EXPORT PFNEGLHANDLEGPUSWITCHANGLEPROC t_eglHandleGPUSwitchANGLE;
 ANGLE_TRACE_LOADER_EXPORT PFNEGLREACQUIREHIGHPOWERGPUANGLEPROC t_eglReacquireHighPowerGPUANGLE;
@@ -129,9 +131,7 @@ ANGLE_TRACE_LOADER_EXPORT PFNEGLPOSTSUBBUFFERNVPROC t_eglPostSubBufferNV;
 ANGLE_TRACE_LOADER_EXPORT PFNEGLSTREAMCONSUMERGLTEXTUREEXTERNALATTRIBSNVPROC
     t_eglStreamConsumerGLTextureExternalAttribsNV;
 
-namespace trace_angle
-{
-void LoadEGL(LoadProc loadProc)
+void LoadTraceEGL(LoadProc loadProc)
 {
     t_eglChooseConfig  = reinterpret_cast<PFNEGLCHOOSECONFIGPROC>(loadProc("eglChooseConfig"));
     t_eglCopyBuffers   = reinterpret_cast<PFNEGLCOPYBUFFERSPROC>(loadProc("eglCopyBuffers"));
@@ -220,6 +220,8 @@ void LoadEGL(LoadProc loadProc)
         reinterpret_cast<PFNEGLQUERYDISPLAYATTRIBANGLEPROC>(loadProc("eglQueryDisplayAttribANGLE"));
     t_eglQueryStringiANGLE =
         reinterpret_cast<PFNEGLQUERYSTRINGIANGLEPROC>(loadProc("eglQueryStringiANGLE"));
+    t_eglCopyMetalSharedEventANGLE = reinterpret_cast<PFNEGLCOPYMETALSHAREDEVENTANGLEPROC>(
+        loadProc("eglCopyMetalSharedEventANGLE"));
     t_eglForceGPUSwitchANGLE =
         reinterpret_cast<PFNEGLFORCEGPUSWITCHANGLEPROC>(loadProc("eglForceGPUSwitchANGLE"));
     t_eglHandleGPUSwitchANGLE =
@@ -318,4 +320,4 @@ void LoadEGL(LoadProc loadProc)
         reinterpret_cast<PFNEGLSTREAMCONSUMERGLTEXTUREEXTERNALATTRIBSNVPROC>(
             loadProc("eglStreamConsumerGLTextureExternalAttribsNV"));
 }
-}  // namespace trace_angle
+}  // extern "C"

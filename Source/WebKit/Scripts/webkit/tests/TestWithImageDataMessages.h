@@ -70,12 +70,9 @@ public:
     static IPC::MessageName name() { return IPC::MessageName::TestWithImageData_ReceiveImageData; }
     static constexpr bool isSync = false;
 
-    static void callReply(IPC::Decoder&, CompletionHandler<void(RefPtr<WebCore::ImageData>&&)>&&);
-    static void cancelReply(CompletionHandler<void(RefPtr<WebCore::ImageData>&&)>&&);
     static IPC::MessageName asyncMessageReplyName() { return IPC::MessageName::TestWithImageData_ReceiveImageDataReply; }
     using AsyncReply = ReceiveImageDataAsyncReply;
     static constexpr auto callbackThread = WTF::CompletionHandlerCallThread::ConstructionThread;
-    using Reply = std::tuple<RefPtr<WebCore::ImageData>&>;
     using ReplyArguments = std::tuple<RefPtr<WebCore::ImageData>>;
     const Arguments& arguments() const
     {

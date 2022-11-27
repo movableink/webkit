@@ -423,6 +423,7 @@ sub determineBaseProductDir
         $baseProductDir =~ s|^~/|$ENV{HOME}/|;
         die "Can't handle Xcode product directory with a ~ in it.\n" if $baseProductDir =~ /~/;
         die "Can't handle Xcode product directory with a variable in it.\n" if $baseProductDir =~ /\$/;
+        $baseProductDir = realpath($baseProductDir);
         @baseProductDirOption = ("SYMROOT=$baseProductDir", "OBJROOT=$baseProductDir");
         push(@baseProductDirOption, "SHARED_PRECOMPS_DIR=${baseProductDir}/PrecompiledHeaders") if $setSharedPrecompsDir;
         push(@baseProductDirOption, "INDEX_ENABLE_DATA_STORE=YES", "INDEX_DATA_STORE_DIR=${indexDataStoreDir}") if $indexDataStoreDir;
@@ -3066,6 +3067,11 @@ sub installedMobileSafariBundle()
     return File::Spec->catfile(iosSimulatorApplicationsPath(), "MobileSafari.app");
 }
 
+sub installedMobileMiniBrowserBundle()
+{
+    return File::Spec->catfile(iosSimulatorApplicationsPath(), "MobileMiniBrowser.app");
+}
+
 sub mobileSafariBundle()
 {
     determineConfigurationProductDir();
@@ -3076,6 +3082,17 @@ sub mobileSafariBundle()
     }
     return installedMobileSafariBundle();
 }
+
+sub mobileMiniBrowserBundle()
+{
+    determineConfigurationProductDir();
+
+    if (isIOSWebKit() && -d "$configurationProductDir/MobileMiniBrowser.app") {
+        return "$configurationProductDir/MobileMiniBrowser.app";
+    }
+    return installedMobileMiniBrowserBundle();
+}
+
 
 sub plistPathFromBundle($)
 {
@@ -3203,8 +3220,8 @@ sub findOrCreateSimulatorForIOSDevice($)
         $simulatorName = "iPad Pro " . $simulatorNameSuffix;
         $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPad-Pro--9-7-inch-";
     } else {
-        $simulatorName = "iPhone SE " . $simulatorNameSuffix;
-        $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPhone-SE";
+        $simulatorName = "iPhone 12 " . $simulatorNameSuffix;
+        $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPhone-12";
     }
 
     my $simulatedDevice = iosSimulatorDeviceByName($simulatorName);
@@ -3431,6 +3448,9 @@ sub runMiniBrowser
     if (isAppleWinWebKit() || isFTW()) {
         my $webKitLauncherPath = File::Spec->catfile(executableProductDir(), "MiniBrowser.exe");
         return system { $webKitLauncherPath } $webKitLauncherPath, @ARGV;
+    }
+    if (isIOSWebKit()) {
+        return runIOSWebKitApp(mobileMiniBrowserBundle());
     }
     return 1;
 }

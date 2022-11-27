@@ -9,12 +9,14 @@
 #include "libANGLE/renderer/gl/egl/DisplayEGL.h"
 
 #include "common/debug.h"
+#include "common/system_utils.h"
 #include "libANGLE/Context.h"
 #include "libANGLE/Display.h"
 #include "libANGLE/Surface.h"
 #include "libANGLE/renderer/gl/ContextGL.h"
 #include "libANGLE/renderer/gl/RendererGL.h"
 #include "libANGLE/renderer/gl/egl/ContextEGL.h"
+#include "libANGLE/renderer/gl/egl/DeviceEGL.h"
 #include "libANGLE/renderer/gl/egl/DmaBufImageSiblingEGL.h"
 #include "libANGLE/renderer/gl/egl/FunctionsEGLDL.h"
 #include "libANGLE/renderer/gl/egl/ImageEGL.h"
@@ -720,7 +722,8 @@ egl::Error DisplayEGL::makeCurrent(egl::Display *display,
                                    egl::Surface *readSurface,
                                    gl::Context *context)
 {
-    CurrentNativeContext &currentContext = mCurrentNativeContexts[std::this_thread::get_id()];
+    CurrentNativeContext &currentContext =
+        mCurrentNativeContexts[angle::GetCurrentThreadUniqueId()];
 
     EGLSurface newSurface = EGL_NO_SURFACE;
     if (drawSurface)
@@ -953,7 +956,8 @@ egl::Error DisplayEGL::createRenderer(EGLContext shareContext,
     outRenderer->reset(new RendererEGL(std::move(functionsGL), mDisplayAttributes, this, context,
                                        attribs, isExternalContext));
 
-    CurrentNativeContext &currentContext = mCurrentNativeContexts[std::this_thread::get_id()];
+    CurrentNativeContext &currentContext =
+        mCurrentNativeContexts[angle::GetCurrentThreadUniqueId()];
     if (makeNewContextCurrent)
     {
         currentContext.surface = mMockPbuffer;
@@ -1041,6 +1045,60 @@ EGLint DisplayEGL::fixSurfaceType(EGLint surfaceType) const
 const FunctionsEGL *DisplayEGL::getFunctionsEGL() const
 {
     return mEGL;
+}
+
+DeviceImpl *DisplayEGL::createDevice()
+{
+    return new DeviceEGL(this);
+}
+
+bool DisplayEGL::supportsDmaBufFormat(EGLint format) const
+{
+    return std::find(std::begin(mDrmFormats), std::end(mDrmFormats), format) !=
+           std::end(mDrmFormats);
+}
+
+egl::Error DisplayEGL::queryDmaBufFormats(EGLint maxFormats, EGLint *formats, EGLint *numFormats)
+
+{
+    if (!mDrmFormatsInitialized)
+    {
+        EGLint numFormatsInit = 0;
+        if (mEGL->queryDmaBufFormatsEXT(0, nullptr, &numFormatsInit) && numFormatsInit > 0)
+        {
+            mDrmFormats.resize(numFormatsInit);
+            if (!mEGL->queryDmaBufFormatsEXT(numFormatsInit, mDrmFormats.data(), &numFormatsInit))
+            {
+                mDrmFormats.resize(0);
+            }
+        }
+        mDrmFormatsInitialized = true;
+    }
+
+    EGLint formatsSize = static_cast<EGLint>(mDrmFormats.size());
+    *numFormats        = formatsSize;
+    if (maxFormats > 0)
+    {
+        // Do not copy data beyond the limits of the vector
+        maxFormats = std::min(maxFormats, formatsSize);
+        std::memcpy(formats, mDrmFormats.data(), maxFormats * sizeof(EGLint));
+    }
+
+    return egl::NoError();
+}
+
+egl::Error DisplayEGL::queryDmaBufModifiers(EGLint drmFormat,
+                                            EGLint maxModifiers,
+                                            EGLuint64KHR *modifiers,
+                                            EGLBoolean *externalOnly,
+                                            EGLint *numModifiers)
+
+{
+    if (!mEGL->queryDmaBufModifiersEXT(drmFormat, maxModifiers, modifiers, externalOnly,
+                                       numModifiers))
+        return egl::Error(mEGL->getError(), "eglQueryDmaBufModifiersEXT failed");
+
+    return egl::NoError();
 }
 
 }  // namespace rx

@@ -49,7 +49,7 @@ namespace WebKit {
 
 class LayerHostingContext;
 
-class TiledCoreAnimationDrawingArea : public DrawingArea {
+class TiledCoreAnimationDrawingArea final : public DrawingArea {
 public:
     TiledCoreAnimationDrawingArea(WebPage&, const WebPageCreationParameters&);
     virtual ~TiledCoreAnimationDrawingArea();
@@ -78,6 +78,9 @@ private:
 
     bool supportsAsyncScrolling() const override { return true; }
 
+    void registerScrollingTree() override;
+    void unregisterScrollingTree() override;
+
     void dispatchAfterEnsuringUpdatedScrollPosition(WTF::Function<void ()>&&) override;
 
     bool shouldUseTiledBackingForFrameView(const WebCore::FrameView&) const override;
@@ -99,6 +102,7 @@ private:
     void resumePainting();
     void setLayerHostingMode(LayerHostingMode) override;
     void setColorSpace(std::optional<WebCore::DestinationColorSpace>) override;
+    std::optional<WebCore::DestinationColorSpace> displayColorSpace() const override;
     void addFence(const WTF::MachSendRight&) override;
 
     void addTransactionCallbackID(CallbackID) override;

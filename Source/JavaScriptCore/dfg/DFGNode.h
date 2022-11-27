@@ -127,11 +127,21 @@ struct NewArrayBufferData {
 static_assert(sizeof(IndexingType) <= sizeof(unsigned));
 static_assert(sizeof(NewArrayBufferData) == sizeof(uint64_t));
 
+struct NewArrayWithSpeciesData {
+    unsigned arrayMode { 0 };
+    unsigned indexingMode { 0 };
+
+    uint64_t asQuadWord() const { return bitwise_cast<uint64_t>(*this); }
+};
+static_assert(sizeof(IndexingType) <= sizeof(unsigned));
+static_assert(sizeof(ArrayMode) <= sizeof(unsigned));
+
 struct DataViewData {
     union {
         struct {
             uint8_t byteSize;
             bool isSigned;
+            bool isResizable;
             bool isFloatingPoint; // Used for the DataViewSet node.
             TriState isLittleEndian;
         };
@@ -816,6 +826,7 @@ public:
     }
 
     void convertToNewArrayBuffer(FrozenValue* immutableButterfly);
+    void convertToNewArrayWithSize();
     
     void convertToDirectCall(FrozenValue*);
 
@@ -1268,10 +1279,22 @@ public:
         case NewArrayWithSize:
         case NewArrayBuffer:
         case PhantomNewArrayBuffer:
+        case NewArrayWithSpecies:
             return true;
         default:
             return false;
         }
+    }
+
+    bool hasNewArrayWithSpeciesData()
+    {
+        return op() == NewArrayWithSpecies;
+    }
+
+    NewArrayWithSpeciesData newArrayWithSpeciesData()
+    {
+        ASSERT(hasNewArrayWithSpeciesData());
+        return m_opInfo.asNewArrayWithSpeciesData();
     }
 
     BitVector* bitVector()
@@ -1293,6 +1316,8 @@ public:
         ASSERT(hasIndexingType());
         if (op() == NewArrayBuffer || op() == PhantomNewArrayBuffer)
             return static_cast<IndexingType>(newArrayBufferData().indexingMode) & IndexingTypeMask;
+        if (op() == NewArrayWithSpecies)
+            return static_cast<IndexingType>(newArrayWithSpeciesData().indexingMode) & IndexingTypeMask;
         return static_cast<IndexingType>(m_opInfo.as<uint32_t>());
     }
 
@@ -1301,6 +1326,8 @@ public:
         ASSERT(hasIndexingType());
         if (op() == NewArrayBuffer || op() == PhantomNewArrayBuffer)
             return static_cast<IndexingType>(newArrayBufferData().indexingMode);
+        if (op() == NewArrayWithSpecies)
+            return static_cast<IndexingType>(newArrayWithSpeciesData().indexingMode);
         return static_cast<IndexingType>(m_opInfo.as<uint32_t>());
     }
     
@@ -1785,7 +1812,7 @@ public:
         case Construct:
         case DirectConstruct:
         case CallVarargs:
-        case CallEval:
+        case CallDirectEval:
         case TailCallVarargsInlinedCaller:
         case ConstructVarargs:
         case CallForwardVarargs:
@@ -1808,6 +1835,7 @@ public:
         case GetGlobalLexicalVariable:
         case StringReplace:
         case StringReplaceRegExp:
+        case StringReplaceString:
         case ToNumber:
         case ToNumeric:
         case ToObject:
@@ -1839,6 +1867,7 @@ public:
         case DataViewGetInt:
         case DataViewGetFloat:
         case DateGetInt32OrNaN:
+        case NewArrayWithSpecies:
             return true;
         default:
             return false;
@@ -2293,6 +2322,8 @@ public:
         case GetIndexedPropertyStorage:
         case GetArrayLength:
         case GetTypedArrayLengthAsInt52:
+        case GetTypedArrayByteOffset:
+        case GetTypedArrayByteOffsetAsInt52:
         case GetVectorLength:
         case InByVal:
         case PutByValDirect:
@@ -2323,6 +2354,7 @@ public:
         case AtomicsStore:
         case AtomicsSub:
         case AtomicsXor:
+        case NewArrayWithSpecies:
             return true;
         default:
             return false;
@@ -2334,6 +2366,8 @@ public:
         ASSERT(hasArrayMode());
         if (op() == ArrayifyToStructure)
             return ArrayMode::fromWord(m_opInfo2.as<uint32_t>());
+        if (op() == NewArrayWithSpecies)
+            return ArrayMode::fromWord(newArrayWithSpeciesData().arrayMode);
         return ArrayMode::fromWord(m_opInfo.as<uint32_t>());
     }
     
@@ -2342,6 +2376,12 @@ public:
         ASSERT(hasArrayMode());
         if (this->arrayMode() == arrayMode)
             return false;
+        if (op() == NewArrayWithSpecies) {
+            auto data = newArrayWithSpeciesData();
+            data.arrayMode = arrayMode.asWord();
+            m_opInfo = data.asQuadWord();
+            return true;
+        }
         m_opInfo = arrayMode.asWord();
         return true;
     }
@@ -2349,7 +2389,7 @@ public:
     bool hasECMAMode()
     {
         switch (op()) {
-        case CallEval:
+        case CallDirectEval:
         case DeleteById:
         case DeleteByVal:
         case PutById:
@@ -2372,7 +2412,7 @@ public:
     {
         ASSERT(hasECMAMode());
         switch (op()) {
-        case CallEval:
+        case CallDirectEval:
         case DeleteByVal:
         case PutByValWithThis:
         case ToThis:
@@ -3295,6 +3335,12 @@ public:
         return OptionSet<JSPropertyNameEnumerator::Flag>::fromRaw(m_opInfo2.as<unsigned>());
     }
 
+    void resetOpInfo()
+    {
+        m_opInfo = OpInfoWrapper();
+        m_opInfo2 = OpInfoWrapper();
+    }
+
     void dumpChildren(PrintStream& out)
     {
         if (!child1())
@@ -3433,6 +3479,11 @@ private:
         ALWAYS_INLINE NewArrayBufferData asNewArrayBufferData() const
         {
             return bitwise_cast<NewArrayBufferData>(u.int64);
+        }
+
+        ALWAYS_INLINE NewArrayWithSpeciesData asNewArrayWithSpeciesData() const
+        {
+            return bitwise_cast<NewArrayWithSpeciesData>(u.int64);
         }
 
         union {

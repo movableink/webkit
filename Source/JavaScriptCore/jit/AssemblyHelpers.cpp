@@ -33,6 +33,7 @@
 #include "JITOperations.h"
 #include "JSArrayBufferView.h"
 #include "JSCJSValueInlines.h"
+#include "JSDataView.h"
 #include "LinkBuffer.h"
 #include "MaxFrameExtentForSlowPathCall.h"
 #include "SuperSampler.h"
@@ -48,7 +49,7 @@ namespace JSC {
 
 AssemblyHelpers::Jump AssemblyHelpers::branchIfFastTypedArray(GPRReg baseGPR)
 {
-    return branch32(
+    return branch8(
         Equal,
         Address(baseGPR, JSArrayBufferView::offsetOfMode()),
         TrustedImm32(FastTypedArray));
@@ -56,7 +57,7 @@ AssemblyHelpers::Jump AssemblyHelpers::branchIfFastTypedArray(GPRReg baseGPR)
 
 AssemblyHelpers::Jump AssemblyHelpers::branchIfNotFastTypedArray(GPRReg baseGPR)
 {
-    return branch32(
+    return branch8(
         NotEqual,
         Address(baseGPR, JSArrayBufferView::offsetOfMode()),
         TrustedImm32(FastTypedArray));
@@ -356,8 +357,7 @@ void AssemblyHelpers::emitStoreStructureWithTypeInfo(AssemblyHelpers& jit, Trust
 {
     const Structure* structurePtr = reinterpret_cast<const Structure*>(structure.m_value);
 #if USE(JSVALUE64)
-    jit.store32(TrustedImm32(structurePtr->id().bits()), MacroAssembler::Address(dest, JSCell::structureIDOffset()));
-    jit.store32(TrustedImm32(structurePtr->typeInfoBlob()), MacroAssembler::Address(dest, JSCell::indexingTypeAndMiscOffset()));
+    jit.store64(TrustedImm64(static_cast<uint64_t>(structurePtr->id().bits()) | (static_cast<uint64_t>(structurePtr->typeInfoBlob()) << 32)), MacroAssembler::Address(dest, JSCell::structureIDOffset()));
     if (ASSERT_ENABLED) {
         Jump correctStructure = jit.branch32(Equal, MacroAssembler::Address(dest, JSCell::structureIDOffset()), TrustedImm32(structurePtr->id().bits()));
         jit.abortWithReason(AHStructureIDIsValid);
@@ -601,8 +601,8 @@ void AssemblyHelpers::emitAllocateWithNonNullAllocator(GPRReg resultGPR, const J
 
     // NOTE, some invariants of this function:
     // - When going to the slow path, we must leave resultGPR with zero in it.
-    // - We *can not* use RegisterSet::macroScratchRegisters on x86.
-    // - We *can* use RegisterSet::macroScratchRegisters on ARM.
+    // - We *can not* use RegisterSetBuilder::macroScratchRegisters on x86.
+    // - We *can* use RegisterSetBuilder::macroScratchRegisters on ARM.
 
     Jump popPath;
     Jump done;
@@ -626,9 +626,15 @@ void AssemblyHelpers::emitAllocateWithNonNullAllocator(GPRReg resultGPR, const J
     done = jump();
         
     popPath.link(this);
-        
-    loadPtr(Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfScrambledHead()), resultGPR);
-    xorPtr(Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfSecret()), resultGPR);
+
+    ASSERT(static_cast<ptrdiff_t>(LocalAllocator::offsetOfFreeList() + FreeList::offsetOfScrambledHead() + sizeof(void*)) == static_cast<ptrdiff_t>(LocalAllocator::offsetOfFreeList() + FreeList::offsetOfSecret()));
+    if constexpr (isARM64()) {
+        loadPairPtr(allocatorGPR, TrustedImm32(LocalAllocator::offsetOfFreeList() + FreeList::offsetOfScrambledHead()), resultGPR, scratchGPR);
+        xorPtr(scratchGPR, resultGPR);
+    } else {
+        loadPtr(Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfScrambledHead()), resultGPR);
+        xorPtr(Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfSecret()), resultGPR);
+    }
     slowPath.append(branchTestPtr(Zero, resultGPR));
         
     // The object is half-allocated: we have what we know is a fresh object, but
@@ -669,8 +675,8 @@ void AssemblyHelpers::emitAllocateVariableSized(GPRReg resultGPR, CompleteSubspa
 void AssemblyHelpers::restoreCalleeSavesFromEntryFrameCalleeSavesBuffer(EntryFrame*& topEntryFrame)
 {
 #if NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
-    RegisterAtOffsetList* allCalleeSaves = RegisterSet::vmCalleeSaveRegisterOffsets();
-    RegisterSet dontRestoreRegisters = RegisterSet::stackRegisters();
+    RegisterAtOffsetList* allCalleeSaves = RegisterSetBuilder::vmCalleeSaveRegisterOffsets();
+    auto dontRestoreRegisters = RegisterSetBuilder::stackRegisters();
     unsigned registerCount = allCalleeSaves->registerCount();
     JIT_COMMENT(*this, "restoreCalleeSavesFromEntryFrameCalleeSavesBuffer ", *allCalleeSaves, " skip: ", dontRestoreRegisters);
 
@@ -686,13 +692,13 @@ void AssemblyHelpers::restoreCalleeSavesFromEntryFrameCalleeSavesBuffer(EntryFra
     // Use the first GPR entry's register as our baseGPR.
     for (unsigned i = 0; i < registerCount; i++) {
         RegisterAtOffset entry = allCalleeSaves->at(i);
-        if (dontRestoreRegisters.contains(entry.reg()))
+        if (dontRestoreRegisters.contains(entry.reg(), IgnoreVectors))
             continue;
         if (entry.reg().isGPR()) {
 #if CPU(ARM64)
             if (i + 1 < registerCount) {
                 RegisterAtOffset entry2 = allCalleeSaves->at(i + 1);
-                if (!dontRestoreRegisters.contains(entry2.reg())
+                if (!dontRestoreRegisters.contains(entry2.reg(), IgnoreVectors)
                     && entry2.reg().isGPR()
                     && entry2.offset() == entry.offset() + static_cast<ptrdiff_t>(sizeof(CPURegister))) {
                     scratchGPREntryIndex = i;
@@ -711,13 +717,13 @@ void AssemblyHelpers::restoreCalleeSavesFromEntryFrameCalleeSavesBuffer(EntryFra
     ASSERT(scratch != InvalidGPRReg);
     
     RegisterSet skipList;
-    skipList.set(dontRestoreRegisters);
+    skipList.merge(dontRestoreRegisters);
 
     // Skip the scratch register(s). We'll restore them later.
-    skipList.add(scratch);
+    skipList.add(scratch, IgnoreVectors);
 #if CPU(ARM64)
     RELEASE_ASSERT(unusedNextSlotGPR != InvalidGPRReg);
-    skipList.add(unusedNextSlotGPR);
+    skipList.add(unusedNextSlotGPR, IgnoreVectors);
 #endif
 
     loadPtr(&topEntryFrame, scratch);
@@ -725,12 +731,12 @@ void AssemblyHelpers::restoreCalleeSavesFromEntryFrameCalleeSavesBuffer(EntryFra
 
     // Restore the callee save value of the scratch.
     RegisterAtOffset entry = allCalleeSaves->at(scratchGPREntryIndex);
-    ASSERT(!dontRestoreRegisters.get(entry.reg()));
+    ASSERT(!dontRestoreRegisters.contains(entry.reg(), IgnoreVectors));
     ASSERT(entry.reg().isGPR());
     ASSERT(scratch == entry.reg().gpr());
 #if CPU(ARM64)
     RegisterAtOffset entry2 = allCalleeSaves->at(scratchGPREntryIndex + 1);
-    ASSERT_UNUSED(entry2, !dontRestoreRegisters.get(entry2.reg()));
+    ASSERT_UNUSED(entry2, !dontRestoreRegisters.contains(entry2.reg(), IgnoreVectors));
     ASSERT(entry2.reg().isGPR());
     ASSERT(unusedNextSlotGPR == entry2.reg().gpr());
     loadPair64(scratch, TrustedImm32(entry.offset()), scratch, unusedNextSlotGPR);
@@ -747,7 +753,7 @@ void AssemblyHelpers::restoreCalleeSavesFromVMEntryFrameCalleeSavesBuffer(GPRReg
 {
 #if NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
     loadPtr(Address(vmGPR, VM::topEntryFrameOffset()), scratchGPR);
-    restoreCalleeSavesFromVMEntryFrameCalleeSavesBufferImpl(scratchGPR, RegisterSet::stackRegisters());
+    restoreCalleeSavesFromVMEntryFrameCalleeSavesBufferImpl(scratchGPR, RegisterSetBuilder::stackRegisters());
 #else
     UNUSED_PARAM(vmGPR);
 #endif // NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
@@ -758,7 +764,7 @@ void AssemblyHelpers::restoreCalleeSavesFromVMEntryFrameCalleeSavesBufferImpl(GP
 #if NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
     addPtr(TrustedImm32(EntryFrame::calleeSaveRegistersBufferOffset()), entryFrameGPR);
 
-    RegisterAtOffsetList* allCalleeSaves = RegisterSet::vmCalleeSaveRegisterOffsets();
+    RegisterAtOffsetList* allCalleeSaves = RegisterSetBuilder::vmCalleeSaveRegisterOffsets();
     JIT_COMMENT(*this, "restoreCalleeSavesFromVMEntryFrameCalleeSavesBufferImpl ", entryFrameGPR, " callee saves: ", *allCalleeSaves, " skip: ", skipList);
     unsigned registerCount = allCalleeSaves->registerCount();
 
@@ -768,7 +774,7 @@ void AssemblyHelpers::restoreCalleeSavesFromVMEntryFrameCalleeSavesBufferImpl(GP
     unsigned i = 0;
     for (; i < registerCount; i++) {
         RegisterAtOffset entry = allCalleeSaves->at(i);
-        if (skipList.contains(entry.reg()))
+        if (skipList.contains(entry.reg(), IgnoreVectors))
             continue;
         if (!entry.reg().isGPR())
             break;
@@ -777,7 +783,7 @@ void AssemblyHelpers::restoreCalleeSavesFromVMEntryFrameCalleeSavesBufferImpl(GP
     spooler.finalizeGPR();
     for (; i < registerCount; i++) {
         RegisterAtOffset entry = allCalleeSaves->at(i);
-        if (skipList.contains(entry.reg()))
+        if (skipList.contains(entry.reg(), IgnoreVectors))
             continue;
         ASSERT(!entry.reg().isGPR());
         spooler.loadFPR(entry);
@@ -1153,8 +1159,8 @@ void AssemblyHelpers::copyCalleeSavesToEntryFrameCalleeSavesBufferImpl(GPRReg ca
 #if NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
     addPtr(TrustedImm32(EntryFrame::calleeSaveRegistersBufferOffset()), calleeSavesBuffer);
 
-    RegisterAtOffsetList* allCalleeSaves = RegisterSet::vmCalleeSaveRegisterOffsets();
-    RegisterSet dontCopyRegisters = RegisterSet::stackRegisters();
+    RegisterAtOffsetList* allCalleeSaves = RegisterSetBuilder::vmCalleeSaveRegisterOffsets();
+    auto dontCopyRegisters = RegisterSetBuilder::stackRegisters();
     unsigned registerCount = allCalleeSaves->registerCount();
 
     StoreRegSpooler spooler(*this, calleeSavesBuffer);
@@ -1162,7 +1168,7 @@ void AssemblyHelpers::copyCalleeSavesToEntryFrameCalleeSavesBufferImpl(GPRReg ca
     unsigned i = 0;
     for (; i < registerCount; i++) {
         RegisterAtOffset entry = allCalleeSaves->at(i);
-        if (dontCopyRegisters.contains(entry.reg()))
+        if (dontCopyRegisters.contains(entry.reg(), IgnoreVectors))
             continue;
         if (!entry.reg().isGPR())
             break;
@@ -1171,7 +1177,7 @@ void AssemblyHelpers::copyCalleeSavesToEntryFrameCalleeSavesBufferImpl(GPRReg ca
     spooler.finalizeGPR();
     for (; i < registerCount; i++) {
         RegisterAtOffset entry = allCalleeSaves->at(i);
-        if (dontCopyRegisters.contains(entry.reg()))
+        if (dontCopyRegisters.contains(entry.reg(), IgnoreVectors))
             continue;
         spooler.storeFPR(entry);
     }
@@ -1303,7 +1309,7 @@ void AssemblyHelpers::emitRestore(const RegisterAtOffsetList& list)
 
 void AssemblyHelpers::emitSaveCalleeSavesFor(const RegisterAtOffsetList* calleeSaves)
 {
-    RegisterSet dontSaveRegisters = RegisterSet(RegisterSet::stackRegisters());
+    auto dontSaveRegisters = RegisterSetBuilder::stackRegisters();
     unsigned registerCount = calleeSaves->registerCount();
     JIT_COMMENT(*this, "emitSaveCalleeSavesFor ", *calleeSaves, " dontRestore: ", dontSaveRegisters);
 
@@ -1314,14 +1320,14 @@ void AssemblyHelpers::emitSaveCalleeSavesFor(const RegisterAtOffsetList* calleeS
         RegisterAtOffset entry = calleeSaves->at(i);
         if (entry.reg().isFPR())
             break;
-        if (dontSaveRegisters.contains(entry.reg()))
+        if (dontSaveRegisters.contains(entry.reg(), IgnoreVectors))
             continue;
         spooler.storeGPR(entry);
     }
     spooler.finalizeGPR();
     for (; i < registerCount; i++) {
         RegisterAtOffset entry = calleeSaves->at(i);
-        if (dontSaveRegisters.contains(entry.reg()))
+        if (dontSaveRegisters.contains(entry.reg(), IgnoreVectors))
             continue;
         spooler.storeFPR(entry);
     }
@@ -1330,7 +1336,7 @@ void AssemblyHelpers::emitSaveCalleeSavesFor(const RegisterAtOffsetList* calleeS
 
 void AssemblyHelpers::emitRestoreCalleeSavesFor(const RegisterAtOffsetList* calleeSaves)
 {
-    RegisterSet dontRestoreRegisters = RegisterSet(RegisterSet::stackRegisters());
+    auto dontRestoreRegisters = RegisterSetBuilder::stackRegisters();
     unsigned registerCount = calleeSaves->registerCount();
     JIT_COMMENT(*this, "emitRestoreCalleeSavesFor ", *calleeSaves, " dontSave: ", dontRestoreRegisters);
     
@@ -1341,14 +1347,14 @@ void AssemblyHelpers::emitRestoreCalleeSavesFor(const RegisterAtOffsetList* call
         RegisterAtOffset entry = calleeSaves->at(i);
         if (entry.reg().isFPR())
             break;
-        if (dontRestoreRegisters.get(entry.reg()))
+        if (dontRestoreRegisters.contains(entry.reg(), IgnoreVectors))
             continue;
         spooler.loadGPR(entry);
     }
     spooler.finalizeGPR();
     for (; i < registerCount; i++) {
         RegisterAtOffset entry = calleeSaves->at(i);
-        if (dontRestoreRegisters.get(entry.reg()))
+        if (dontRestoreRegisters.contains(entry.reg(), IgnoreVectors))
             continue;
         spooler.loadFPR(entry);
     }
@@ -1372,15 +1378,15 @@ void AssemblyHelpers::copyLLIntBaselineCalleeSavesFromFrameOrRegisterToEntryFram
 
     CopySpooler spooler(*this, framePointerRegister, destBufferGPR, temp1, temp2, fpTemp1, fpTemp2);
 
-    RegisterAtOffsetList* allCalleeSaves = RegisterSet::vmCalleeSaveRegisterOffsets();
+    RegisterAtOffsetList* allCalleeSaves = RegisterSetBuilder::vmCalleeSaveRegisterOffsets();
     const RegisterAtOffsetList* currentCalleeSaves = &RegisterAtOffsetList::llintBaselineCalleeSaveRegisters();
-    RegisterSet dontCopyRegisters = RegisterSet::stackRegisters();
+    auto dontCopyRegisters = RegisterSetBuilder::stackRegisters();
     unsigned registerCount = allCalleeSaves->registerCount();
 
     unsigned i = 0;
     for (; i < registerCount; i++) {
         RegisterAtOffset entry = allCalleeSaves->at(i);
-        if (dontCopyRegisters.contains(entry.reg()))
+        if (dontCopyRegisters.contains(entry.reg(), IgnoreVectors))
             continue;
         RegisterAtOffset* currentFrameEntry = currentCalleeSaves->find(entry.reg());
 
@@ -1396,7 +1402,7 @@ void AssemblyHelpers::copyLLIntBaselineCalleeSavesFromFrameOrRegisterToEntryFram
 
     for (; i < registerCount; i++) {
         RegisterAtOffset entry = allCalleeSaves->at(i);
-        if (dontCopyRegisters.get(entry.reg()))
+        if (dontCopyRegisters.contains(entry.reg(), IgnoreVectors))
             continue;
         RegisterAtOffset* currentFrameEntry = currentCalleeSaves->find(entry.reg());
 
@@ -1422,7 +1428,7 @@ void AssemblyHelpers::emitSaveOrCopyLLIntBaselineCalleeSavesFor(CodeBlock* codeB
     ASSERT(codeBlock->jitCode()->calleeSaveRegisters() == &RegisterAtOffsetList::llintBaselineCalleeSaveRegisters());
 
     const RegisterAtOffsetList* calleeSaves = &RegisterAtOffsetList::llintBaselineCalleeSaveRegisters();
-    RegisterSet dontSaveRegisters = RegisterSet(RegisterSet::stackRegisters());
+    auto dontSaveRegisters = RegisterSetBuilder::stackRegisters();
     unsigned registerCount = calleeSaves->registerCount();
 
     GPRReg dstBufferGPR = temp1;
@@ -1432,7 +1438,7 @@ void AssemblyHelpers::emitSaveOrCopyLLIntBaselineCalleeSavesFor(CodeBlock* codeB
 
     for (unsigned i = 0; i < registerCount; i++) {
         RegisterAtOffset entry = calleeSaves->at(i);
-        if (dontSaveRegisters.get(entry.reg()))
+        if (dontSaveRegisters.contains(entry.reg(), IgnoreVectors))
             continue;
         RELEASE_ASSERT(entry.reg().isGPR());
 
@@ -1477,6 +1483,232 @@ void AssemblyHelpers::getArityPadding(VM& vm, unsigned numberOfParameters, GPRRe
     subPtr(GPRInfo::callFrameRegister, scratchGPR0, scratchGPR1);
     stackOverflow.append(branchPtr(Above, AbsoluteAddress(vm.addressOfSoftStackLimit()), scratchGPR1));
 }
+
+#if USE(JSVALUE64)
+
+AssemblyHelpers::JumpList AssemblyHelpers::branchIfResizableOrGrowableSharedTypedArrayIsOutOfBounds(GPRReg baseGPR, GPRReg scratchGPR, GPRReg scratch2GPR, std::optional<TypedArrayType> typedArrayType)
+{
+    ASSERT(scratchGPR != scratch2GPR);
+    // valueGPR can be baseGPR
+
+    JumpList outOfBounds;
+
+    outOfBounds.append(branchTestPtr(MacroAssembler::Zero, MacroAssembler::Address(baseGPR, JSArrayBufferView::offsetOfVector())));
+
+    load8(Address(baseGPR, JSArrayBufferView::offsetOfMode()), scratchGPR);
+    and32(TrustedImm32(resizabilityAndAutoLengthMask), scratchGPR, scratch2GPR);
+    auto canUseRawFieldsDirectly = branch32(BelowOrEqual, scratch2GPR, TrustedImm32(isGrowableSharedMode));
+
+    // Three cases come here.
+    //     GrowableSharedAutoLengthWastefulTypedArray
+    //     ResizableNonSharedWastefulTypedArray
+    //     ResizableNonSharedAutoLengthWastefulTypedArray
+
+    loadPtr(Address(baseGPR, JSObject::butterflyOffset()), scratch2GPR);
+    loadPtr(Address(scratch2GPR, Butterfly::offsetOfArrayBuffer()), scratch2GPR);
+
+    auto isGrowableShared = branchTest32(NonZero, scratchGPR, TrustedImm32(isGrowableSharedMode));
+#if USE(LARGE_TYPED_ARRAYS)
+    load64(Address(scratch2GPR, ArrayBuffer::offsetOfSizeInBytes()), scratch2GPR);
+#else
+    load32(Address(scratch2GPR, ArrayBuffer::offsetOfSizeInBytes()), scratch2GPR);
+#endif
+    auto loadedFromResizable = jump();
+
+    isGrowableShared.link(this);
+    loadPtr(Address(scratch2GPR, ArrayBuffer::offsetOfShared()), scratch2GPR);
+#if USE(LARGE_TYPED_ARRAYS)
+    atomicLoad64(Address(scratch2GPR, SharedArrayBufferContents::offsetOfSizeInBytes()), scratch2GPR);
+#else
+    atomicLoad32(Address(scratch2GPR, SharedArrayBufferContents::offsetOfSizeInBytes()), scratch2GPR);
+#endif
+
+    loadedFromResizable.link(this);
+
+    // It never overflows since it is already checked at the construction.
+#if USE(LARGE_TYPED_ARRAYS)
+    if (typedArrayType) {
+        load64(Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR);
+        if (elementSize(typedArrayType.value()) > 1)
+            lshift64(TrustedImm32(logElementSize(typedArrayType.value())), scratchGPR);
+    } else {
+        load8(Address(baseGPR, JSObject::typeInfoTypeOffset()), scratchGPR);
+        addPtr(TrustedImmPtr(logElementSizes), scratchGPR);
+        load8(Address(scratchGPR, -FirstTypedArrayType), scratchGPR);
+        lshift64(Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR, scratchGPR);
+    }
+    add64(Address(baseGPR, JSArrayBufferView::offsetOfByteOffset()), scratchGPR);
+    outOfBounds.append(branch64(Above, scratchGPR, scratch2GPR));
+#else
+    if (typedArrayType) {
+        load32(Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR);
+        if (elementSize(typedArrayType.value()) > 1)
+            lshift32(TrustedImm32(logElementSize(typedArrayType.value())), scratchGPR);
+    } else {
+        load8(Address(baseGPR, JSObject::typeInfoTypeOffset()), scratchGPR);
+        addPtr(TrustedImmPtr(logElementSizes), scratchGPR);
+        load8(Address(scratchGPR, -FirstTypedArrayType), scratchGPR);
+        lshift32(Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR, scratchGPR);
+    }
+    add32(Address(baseGPR, JSArrayBufferView::offsetOfByteOffset()), scratchGPR);
+    outOfBounds.append(branch32(Above, scratchGPR, scratch2GPR));
+#endif
+
+    canUseRawFieldsDirectly.link(this);
+
+    return outOfBounds;
+}
+
+void AssemblyHelpers::loadTypedArrayByteLengthImpl(GPRReg baseGPR, GPRReg valueGPR, GPRReg scratchGPR, GPRReg scratch2GPR, std::optional<TypedArrayType> typedArrayType, TypedArrayField field)
+{
+    ASSERT(scratchGPR != scratch2GPR);
+    ASSERT(scratchGPR != valueGPR);
+    // scratch2GPR can be valueGPR
+    // valueGPR can be baseGPR
+
+    load8(Address(baseGPR, JSArrayBufferView::offsetOfMode()), scratchGPR);
+    and32(TrustedImm32(resizabilityAndAutoLengthMask), scratchGPR, scratch2GPR);
+    auto canUseRawFieldsDirectly = branch32(BelowOrEqual, scratch2GPR, TrustedImm32(isGrowableSharedMode));
+
+    // Three cases come here.
+    //     GrowableSharedAutoLengthWastefulTypedArray
+    //     ResizableNonSharedWastefulTypedArray
+    //     ResizableNonSharedAutoLengthWastefulTypedArray
+
+    if (typedArrayType && typedArrayType.value() == TypeDataView)
+        loadPtr(Address(baseGPR, JSDataView::offsetOfBuffer()), scratch2GPR);
+    else {
+        loadPtr(Address(baseGPR, JSObject::butterflyOffset()), scratch2GPR);
+        loadPtr(Address(scratch2GPR, Butterfly::offsetOfArrayBuffer()), scratch2GPR);
+    }
+
+    auto isGrowableShared = branchTest32(NonZero, scratchGPR, TrustedImm32(isGrowableSharedMode));
+#if USE(LARGE_TYPED_ARRAYS)
+    load64(Address(scratch2GPR, ArrayBuffer::offsetOfSizeInBytes()), scratch2GPR);
+#else
+    load32(Address(scratch2GPR, ArrayBuffer::offsetOfSizeInBytes()), scratch2GPR);
+#endif
+    auto loadedFromResizable = jump();
+
+    isGrowableShared.link(this);
+    loadPtr(Address(scratch2GPR, ArrayBuffer::offsetOfShared()), scratch2GPR);
+#if USE(LARGE_TYPED_ARRAYS)
+    atomicLoad64(Address(scratch2GPR, SharedArrayBufferContents::offsetOfSizeInBytes()), scratch2GPR);
+#else
+    atomicLoad32(Address(scratch2GPR, SharedArrayBufferContents::offsetOfSizeInBytes()), scratch2GPR);
+#endif
+
+    loadedFromResizable.link(this);
+
+    // It never overflows since it is already checked at the construction.
+#if USE(LARGE_TYPED_ARRAYS)
+    if (typedArrayType) {
+        load64(Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR);
+        if (elementSize(typedArrayType.value()) > 1)
+            lshift64(TrustedImm32(logElementSize(typedArrayType.value())), scratchGPR);
+    } else {
+        load8(Address(baseGPR, JSObject::typeInfoTypeOffset()), scratchGPR);
+        addPtr(TrustedImmPtr(logElementSizes), scratchGPR);
+        load8(Address(scratchGPR, -FirstTypedArrayType), scratchGPR);
+        lshift64(Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR, scratchGPR);
+    }
+    add64(Address(baseGPR, JSArrayBufferView::offsetOfByteOffset()), scratchGPR);
+    auto outOfBounds = branch64(Above, scratchGPR, scratch2GPR);
+#else
+    if (typedArrayType) {
+        load32(Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR);
+        if (elementSize(typedArrayType.value()) > 1)
+            lshift32(TrustedImm32(logElementSize(typedArrayType.value())), scratchGPR);
+    } else {
+        load8(Address(baseGPR, JSObject::typeInfoTypeOffset()), scratchGPR);
+        addPtr(TrustedImmPtr(logElementSizes), scratchGPR);
+        load8(Address(scratchGPR, -FirstTypedArrayType), scratchGPR);
+        lshift32(Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR, scratchGPR);
+    }
+    add32(Address(baseGPR, JSArrayBufferView::offsetOfByteOffset()), scratchGPR);
+    auto outOfBounds = branch32(Above, scratchGPR, scratch2GPR);
+#endif
+
+    auto nonAutoLength = branchTest8(Zero, Address(baseGPR, JSArrayBufferView::offsetOfMode()), TrustedImm32(isAutoLengthMode));
+
+    JumpList doneCases;
+
+#if USE(LARGE_TYPED_ARRAYS)
+    if (field == TypedArrayField::ByteLength) {
+        sub64(scratch2GPR, scratchGPR, valueGPR);
+        ASSERT(typedArrayType);
+        if (elementSize(typedArrayType.value()) > 1)
+            and64(TrustedImm64(~static_cast<uint64_t>(elementSize(typedArrayType.value()) - 1)), valueGPR);
+    } else {
+        if (typedArrayType) {
+            sub64(scratch2GPR, scratchGPR, valueGPR);
+            if (elementSize(typedArrayType.value()) > 1)
+                urshift64(TrustedImm32(logElementSize(typedArrayType.value())), valueGPR);
+        } else {
+            sub64(scratch2GPR, scratchGPR, scratch2GPR); // Do not change valueGPR until we use baseGPR.
+            load8(Address(baseGPR, JSObject::typeInfoTypeOffset()), scratchGPR);
+            addPtr(TrustedImmPtr(logElementSizes), scratchGPR);
+            load8(Address(scratchGPR, -FirstTypedArrayType), scratchGPR);
+            urshift64(scratch2GPR, scratchGPR, valueGPR);
+        }
+    }
+#else
+    if (field == TypedArrayField::ByteLength) {
+        sub32(scratch2GPR, scratchGPR, valueGPR);
+        ASSERT(typedArrayType);
+        if (elementSize(typedArrayType.value()) > 1)
+            and32(TrustedImm32(~static_cast<uint32_t>(elementSize(typedArrayType.value()) - 1)), valueGPR);
+    } else {
+        if (typedArrayType) {
+            sub32(scratch2GPR, scratchGPR, valueGPR);
+            if (elementSize(typedArrayType.value()) > 1)
+                urshift32(TrustedImm32(logElementSize(typedArrayType.value())), valueGPR);
+        } else {
+            sub32(scratch2GPR, scratchGPR, scratch2GPR); // Do not change valueGPR until we use baseGPR.
+            load8(Address(baseGPR, JSObject::typeInfoTypeOffset()), scratchGPR);
+            addPtr(TrustedImmPtr(logElementSizes), scratchGPR);
+            load8(Address(scratchGPR, -FirstTypedArrayType), scratchGPR);
+            urshift32(scratch2GPR, scratchGPR, valueGPR);
+        }
+    }
+#endif
+    doneCases.append(jump());
+
+    outOfBounds.link(this);
+    move(TrustedImm32(0), valueGPR);
+    doneCases.append(jump());
+
+    nonAutoLength.link(this);
+    canUseRawFieldsDirectly.link(this);
+#if USE(LARGE_TYPED_ARRAYS)
+    load64(MacroAssembler::Address(baseGPR, JSArrayBufferView::offsetOfLength()), valueGPR);
+    if (field == TypedArrayField::ByteLength) {
+        ASSERT(typedArrayType);
+        if (elementSize(typedArrayType.value()) > 1)
+            lshift64(TrustedImm32(logElementSize(typedArrayType.value())), valueGPR);
+    }
+#else
+    load32(MacroAssembler::Address(baseGPR, JSArrayBufferView::offsetOfLength()), valueGPR);
+    if (field == TypedArrayField::ByteLength) {
+        ASSERT(typedArrayType);
+        if (elementSize(typedArrayType.value()) > 1)
+            lshift32(TrustedImm32(logElementSize(typedArrayType.value())), valueGPR);
+    }
+#endif
+    doneCases.link(this);
+}
+
+void AssemblyHelpers::loadTypedArrayByteLength(GPRReg baseGPR, GPRReg valueGPR, GPRReg scratchGPR, GPRReg scratch2GPR, TypedArrayType typedArrayType)
+{
+    loadTypedArrayByteLengthImpl(baseGPR, valueGPR, scratchGPR, scratch2GPR, typedArrayType, TypedArrayField::ByteLength);
+}
+
+void AssemblyHelpers::loadTypedArrayLength(GPRReg baseGPR, GPRReg valueGPR, GPRReg scratchGPR, GPRReg scratch2GPR, std::optional<TypedArrayType> typedArrayType)
+{
+    loadTypedArrayByteLengthImpl(baseGPR, valueGPR, scratchGPR, scratch2GPR, typedArrayType, TypedArrayField::Length);
+}
+
+#endif
 
 } // namespace JSC
 

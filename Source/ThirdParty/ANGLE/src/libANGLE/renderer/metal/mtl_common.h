@@ -106,7 +106,7 @@ constexpr uint32_t kMaxShaderXFBs = gl::IMPLEMENTATION_MAX_TRANSFORM_FEEDBACK_SE
 // The max size of a buffer that will be allocated in shared memory.
 // NOTE(hqle): This is just a hint. There is no official document on what is the max allowed size
 // for shared memory.
-constexpr size_t kSharedMemBufferMaxBufSizeHint = 128 * 1024;
+constexpr size_t kSharedMemBufferMaxBufSizeHint = 256 * 1024;
 
 constexpr size_t kDefaultAttributeSize = 4 * sizeof(float);
 
@@ -249,6 +249,7 @@ class WrappedObject
     bool valid() const { return (mMetalObject != nil); }
 
     T get() const { return mMetalObject; }
+    T leakObject() { return std::exchange(mMetalObject, nullptr); }
     inline void reset() { release(); }
 
     operator T() const { return get(); }

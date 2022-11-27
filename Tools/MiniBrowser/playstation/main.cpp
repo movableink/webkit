@@ -50,6 +50,9 @@ static void initialize()
 
     loadLibraryOrExit(ICU_LOAD_AT);
     loadLibraryOrExit(PNG_LOAD_AT);
+#if defined(JPEG_LOAD_AT)
+    loadLibraryOrExit(JPEG_LOAD_AT);
+#endif 
 #if defined(WebP_LOAD_AT)
     loadLibraryOrExit(WebP_LOAD_AT);
 #endif
@@ -59,6 +62,9 @@ static void initialize()
     loadLibraryOrExit(Cairo_LOAD_AT);
     loadLibraryOrExit(ToolKitten_LOAD_AT);
     loadLibraryOrExit(WebKitRequirements_LOAD_AT);
+#if defined(WPE_LOAD_AT)
+    loadLibraryOrExit(WPE_LOAD_AT);
+#endif
 #if !(defined(ENABLE_STATIC_JSC) && ENABLE_STATIC_JSC)
     loadLibraryOrExit("libJavaScriptCore");
 #endif
@@ -87,9 +93,10 @@ int main(int argc, char *argv[])
     auto& app = Application::singleton();
     app.init(&applicationClient);
 
-    auto mainWindow = std::make_unique<MainWindow>(argc > 1 ? argv[1] : nullptr);
+    const std::vector<std::string> options(argv + 1, argv + argc);
+    auto mainWindow = std::make_unique<MainWindow>(options);
     mainWindow->setFocused();
-    app.setRootWidget(move(mainWindow));
+    app.setRootWidget(std::move(mainWindow));
 
     // Request the first frame to start the application loop.
     applicationClient.requestNextFrame();

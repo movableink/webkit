@@ -27,7 +27,8 @@
 #import "HTTPServer.h"
 
 #import "Utilities.h"
-#import <WebCore/SQLiteFileSystem.h>
+#import <WebKit/WKWebsiteDataStorePrivate.h>
+#import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/CallbackAggregator.h>
 #import <wtf/CompletionHandler.h>
@@ -434,6 +435,15 @@ NSURLRequest *HTTPServer::requestWithLocalhost(StringView path) const
     return [NSURLRequest requestWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"%s://localhost:%d%@", scheme(), port(), path.createNSString().get()]]];
 }
 
+WKWebViewConfiguration *HTTPServer::httpsProxyConfiguration() const
+{
+    auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initNonPersistentConfiguration]);
+    [storeConfiguration setHTTPSProxy:[NSURL URLWithString:[NSString stringWithFormat:@"https://127.0.0.1:%d/", port()]]];
+    auto viewConfiguration = adoptNS([WKWebViewConfiguration new]);
+    [viewConfiguration setWebsiteDataStore:adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]).get()];
+    return viewConfiguration.autorelease();
+}
+
 void Connection::receiveBytes(CompletionHandler<void(Vector<uint8_t>&&)>&& completionHandler, size_t minimumSize) const
 {
     nw_connection_receive(m_connection.get(), minimumSize, std::numeric_limits<uint32_t>::max(), makeBlockPtr([connection = *this, completionHandler = WTFMove(completionHandler)](dispatch_data_t content, nw_content_context_t, bool, nw_error_t error) mutable {
@@ -465,7 +475,7 @@ ReceiveOperation Connection::awaitableReceiveHTTPRequest() const
     return { *this };
 }
 
-void ReceiveOperation::await_suspend(std::experimental::coroutine_handle<> handle)
+void ReceiveOperation::await_suspend(std::coroutine_handle<> handle)
 {
     m_connection.receiveHTTPRequest([this, handle](Vector<char>&& result) mutable {
         m_result = WTFMove(result);
@@ -473,7 +483,7 @@ void ReceiveOperation::await_suspend(std::experimental::coroutine_handle<> handl
     });
 }
 
-void SendOperation::await_suspend(std::experimental::coroutine_handle<> handle)
+void SendOperation::await_suspend(std::coroutine_handle<> handle)
 {
     m_connection.send(WTFMove(m_data), [handle] (bool) mutable {
         handle();

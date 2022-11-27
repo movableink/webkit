@@ -83,7 +83,10 @@ class Git(mocks.Subprocess):
                     commit.revision = None
 
         self.head = self.commits[self.default_branch][-1]
-        self.remotes = {'origin/{}'.format(branch): commits[:] for branch, commits in self.commits.items()}
+        self.remotes = {
+            'origin/{}'.format(branch): commits[:] for branch, commits in self.commits.items()
+            if not local.Git.DEV_BRANCHES.match(branch)
+        }
         for name in (remotes or {}).keys():
             for branch, commits in self.commits.items():
                 self.remotes['{}/{}'.format(name, branch)] = commits[:]
@@ -340,6 +343,18 @@ nothing to commit, working tree clean
                         ) for commit in list(self.rev_list(args[5]))
                     ])
                 )
+            ),
+            # We don't have modified files for our mock commits, so we assume that every scope
+            # applies to all odd commits
+            mocks.Subprocess.Route(
+                self.executable, 'log', '--pretty=%H', re.compile(r'.+'), '--', re.compile(r'.+'),
+                cwd=self.path,
+                generator=lambda *args, **kwargs: mocks.ProcessCompletion(
+                    returncode=0,
+                    stdout='\n'.join([
+                        commit.hash for commit in list(self.rev_list(args[3])) if commit.identifier % 2
+                    ])
+                )
             ), mocks.Subprocess.Route(
                 self.executable, 'log', re.compile(r'.+'),
                 cwd=self.path,
@@ -411,6 +426,11 @@ nothing to commit, working tree clean
                 cwd=self.path,
                 generator=lambda *args, **kwargs:
                     mocks.ProcessCompletion(returncode=0) if self.checkout(args[2], create=False) else mocks.ProcessCompletion(returncode=1)
+            ), mocks.Subprocess.Route(
+                self.executable, 'rebase', 'HEAD', re.compile(r'.+'), '--autostash',
+                cwd=self.path,
+                generator=lambda *args, **kwargs:
+                    mocks.ProcessCompletion(returncode=0) if self.checkout(args[3], create=False) else mocks.ProcessCompletion(returncode=1)
             ), mocks.Subprocess.Route(
                 self.executable, 'filter-branch', '-f', '--env-filter', re.compile(r'.*'), '--msg-filter',
                 cwd=self.path,
@@ -602,6 +622,10 @@ nothing to commit, working tree clean
                 generator=lambda *args, **kwargs: mocks.ProcessCompletion(
                     returncode=0,
                 ) if args[4] in self.remotes else mocks.ProcessCompletion(returncode=128, stderr="fatal: branch '{}' does not exist".format(args[4])),
+            ), mocks.Subprocess.Route(
+                self.executable, 'merge-base', re.compile(r'.+'), re.compile(r'.+'),
+                cwd=self.path,
+                generator=lambda *args, **kwargs: self.merge_base(args[2], args[3]),
             ), mocks.Subprocess.Route(
                 self.executable,
                 cwd=self.path,
@@ -1241,4 +1265,24 @@ nothing to commit, working tree clean
         return mocks.ProcessCompletion(
             returncode=0,
             stdout='Updated Git hooks.\nGit LFS initialized.\n',
+        )
+
+    def merge_base(self, *refs):
+        objs = [self.find(ref) for ref in refs]
+        for i in [0, 1]:
+            if not refs[i] or not objs[i]:
+                return mocks.ProcessCompletion(
+                    returncode=128,
+                    stderr='fatal: Not a valid object name {}\n'.format(refs[i]),
+                )
+        if objs[0].branch != objs[1].branch:
+            for i in [0, 1]:
+                if objs[i].branch == self.default_branch:
+                    continue
+                objs[i] = self.commits[self.default_branch][objs[i].branch_point - 1]
+
+        base = objs[0] if objs[0].identifier < objs[1].identifier else objs[1]
+        return mocks.ProcessCompletion(
+            returncode=0,
+            stdout='{}\n'.format(base.hash),
         )

@@ -27,6 +27,9 @@ import subprocess
 import sys
 
 API_SINGLE_HEADER_CHECK = {
+    "gtk4": '''#if !defined(__WEBKIT_H_INSIDE__) && !defined(BUILDING_WEBKIT)
+#error \"Only <webkit/webkit.h> can be included directly.\"
+#endif''',
     "gtk": '''#if !defined(__WEBKIT2_H_INSIDE__) && !defined(BUILDING_WEBKIT)
 #error \"Only <webkit2/webkit2.h> can be included directly.\"
 #endif''',
@@ -36,6 +39,9 @@ API_SINGLE_HEADER_CHECK = {
 }
 
 INJECTED_BUNDLE_API_SINGLE_HEADER_CHECK = {
+    "gtk4": '''#if !defined(__WEBKIT_WEB_EXTENSION_H_INSIDE__) && !defined(BUILDING_WEBKIT)
+#error \"Only <webkit/webkit-web-extension.h> can be included directly.\"
+#endif''',
     "gtk": '''#if !defined(__WEBKIT_WEB_EXTENSION_H_INSIDE__) && !defined(BUILDING_WEBKIT)
 #error \"Only <webkit2/webkit-web-extension.h> can be included directly.\"
 #endif''',
@@ -45,6 +51,9 @@ INJECTED_BUNDLE_API_SINGLE_HEADER_CHECK = {
 }
 
 SHARED_API_SINGLE_HEADER_CHECK = {
+    "gtk4": '''#if !defined(__WEBKIT_H_INSIDE__) && !defined(__WEBKIT_WEB_EXTENSION_H_INSIDE__) && !defined(BUILDING_WEBKIT)
+#error \"Only <webkit/webkit.h> can be included directly.\"
+#endif''',
     "gtk": '''#if !defined(__WEBKIT2_H_INSIDE__) && !defined(__WEBKIT_WEB_EXTENSION_H_INSIDE__) && !defined(BUILDING_WEBKIT)
 #error \"Only <webkit2/webkit2.h> can be included directly.\"
 #endif''',
@@ -54,13 +63,15 @@ SHARED_API_SINGLE_HEADER_CHECK = {
 }
 
 API_INCLUDE_PREFIX = {
-    "gtk": "webkit2",
+    "gtk4": "webkit",
+    "gtk": "webkit",
     "wpe": "wpe"
 }
 
 
 def expand_ifdefs(line):
-    return re.sub(r"(PLATFORM|USE)\(([A-Z]+[0-9]*)\)", r"WTF_\1_\2", line)
+    s = re.sub(r"(ENABLE|USE)\(([A-Z0-9_]+)\)", r"(defined(\1_\2) && \1_\2)", line)
+    return re.sub(r"(PLATFORM)\(([A-Z0-9_]+)\)", r"(defined(WTF_\1_\2) && WTF_\1_\2)", s)
 
 
 def main(args):
@@ -68,7 +79,10 @@ def main(args):
     input = args[1]
     output = args[2]
     unifdef = args[3]
-    unifdef_args = [expand_ifdefs(arg) for arg in args[4:]]
+    unifdef_args = args[4:]
+
+    if port == "gtk" and "-DUSE_GTK4=1" in unifdef_args:
+        port = "gtk4"
 
     input_data = ""
     with open(input, "r", encoding="utf-8") as fd:

@@ -51,7 +51,6 @@ private:
     void terminateWorkerGlobalScope() final;
     void postMessageToWorkerGlobalScope(MessageWithMessagePorts&&) final;
     void postTaskToWorkerGlobalScope(Function<void(ScriptExecutionContext&)>&&) final;
-    bool hasPendingActivity() const final;
     void workerObjectDestroyed() final;
     void notifyNetworkStateChange(bool isOnline) final;
     void suspendForBackForwardCache() final;
@@ -62,8 +61,6 @@ private:
     void postMessageToWorkerObject(MessageWithMessagePorts&&) final;
     void postTaskToWorkerObject(Function<void(Worker&)>&&) final;
     void postExceptionToWorkerObject(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL) final;
-    void confirmMessageFromWorkerObject(bool hasPendingActivity) final;
-    void reportPendingActivity(bool hasPendingActivity) final;
     void workerGlobalScopeClosed() final;
     void workerGlobalScopeDestroyed() final;
 
@@ -77,28 +74,25 @@ private:
     // requests and to send callbacks back to WorkerGlobalScope.
     bool isWorkerMessagingProxy() const final { return true; }
     void postTaskToLoader(ScriptExecutionContext::Task&&) final;
+    ScriptExecutionContextIdentifier loaderContextIdentifier() const final;
     RefPtr<CacheStorageConnection> createCacheStorageConnection() final;
     StorageConnection* storageConnection() final;
     RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() final;
 
     void workerThreadCreated(DedicatedWorkerThread&);
 
-    // Only use this method on the worker object thread.
-    bool askedToTerminate() const { return m_askedToTerminate; }
+    bool askedToTerminate() const final { return m_askedToTerminate; }
 
     void workerGlobalScopeDestroyedInternal();
-    void reportPendingActivityInternal(bool confirmingMessage, bool hasPendingActivity);
     Worker* workerObject() const { return m_workerObject; }
 
     RefPtr<ScriptExecutionContext> m_scriptExecutionContext;
+    ScriptExecutionContextIdentifier m_loaderContextIdentifier;
     RefPtr<WorkerInspectorProxy> m_inspectorProxy;
     RefPtr<WorkerUserGestureForwarder> m_userGestureForwarder;
     Worker* m_workerObject;
     bool m_mayBeDestroyed { false };
     RefPtr<DedicatedWorkerThread> m_workerThread;
-
-    unsigned m_unconfirmedMessageCount { 0 }; // Unconfirmed messages from worker object to worker thread.
-    bool m_workerThreadHadPendingActivity { false }; // The latest confirmation from worker thread reported that it was still active.
 
     bool m_askedToSuspend { false };
     bool m_askedToTerminate { false };

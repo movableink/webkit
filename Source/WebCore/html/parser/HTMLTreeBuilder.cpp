@@ -39,6 +39,7 @@
 #include "HTMLParserIdioms.h"
 #include "HTMLScriptElement.h"
 #include "HTMLTableElement.h"
+#include "HTMLTemplateElement.h"
 #include "JSCustomElementInterface.h"
 #include "LocalizedStrings.h"
 #include "MathMLNames.h"
@@ -242,7 +243,7 @@ private:
     {
         if (stringView.is8Bit() || !isAll8BitData())
             return stringView.toString();
-        return String::make8BitFrom16BitSource(stringView.characters16(), stringView.length());
+        return String::make8Bit(stringView.characters16(), stringView.length());
     }
 
     StringView m_text;
@@ -259,7 +260,7 @@ inline bool HTMLTreeBuilder::isParsingFragmentOrTemplateContents() const
     return isParsingFragment() || isParsingTemplateContents();
 }
 
-HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser& parser, HTMLDocument& document, ParserContentPolicy parserContentPolicy, const HTMLParserOptions& options)
+HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser& parser, HTMLDocument& document, OptionSet<ParserContentPolicy> parserContentPolicy, const HTMLParserOptions& options)
     : m_parser(parser)
     , m_options(options)
     , m_tree(document, parserContentPolicy, options.maximumDOMTreeDepth)
@@ -270,7 +271,7 @@ HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser& parser, HTMLDocument& docum
 #endif
 }
 
-HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser& parser, DocumentFragment& fragment, Element& contextElement, ParserContentPolicy parserContentPolicy, const HTMLParserOptions& options)
+HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser& parser, DocumentFragment& fragment, Element& contextElement, OptionSet<ParserContentPolicy> parserContentPolicy, const HTMLParserOptions& options)
     : m_parser(parser)
     , m_options(options)
     , m_fragmentContext(fragment, contextElement)
@@ -884,7 +885,7 @@ void HTMLTreeBuilder::didCreateCustomOrFallbackElement(Ref<Element>&& element, C
 void HTMLTreeBuilder::processTemplateStartTag(AtomHTMLToken&& token)
 {
     m_tree.activeFormattingElements().appendMarker();
-    m_tree.insertHTMLElement(WTFMove(token));
+    m_tree.insertHTMLTemplateElement(WTFMove(token));
     m_templateInsertionModes.append(InsertionMode::TemplateContents);
     m_insertionMode = InsertionMode::TemplateContents;
 }
@@ -900,10 +901,21 @@ bool HTMLTreeBuilder::processTemplateEndTag(AtomHTMLToken&& token)
     m_tree.generateImpliedEndTags();
     if (m_tree.currentStackItem().elementName() != HTML::template_)
         parseError(token);
-    m_tree.openElements().popUntilPopped(HTML::template_);
+    m_tree.openElements().popUntil(HTML::template_);
+    RELEASE_ASSERT(is<HTMLTemplateElement>(m_tree.openElements().top()));
+    Ref templateElement = downcast<HTMLTemplateElement>(m_tree.openElements().top());
+    m_tree.openElements().pop();
+
+    auto& item = adjustedCurrentStackItem();
+    RELEASE_ASSERT(item.isElement());
+    Ref shadowHost = item.element();
+
     m_tree.activeFormattingElements().clearToLastMarker();
     m_templateInsertionModes.removeLast();
     resetInsertionModeAppropriately();
+
+    m_tree.attachDeclarativeShadowRootIfNeeded(shadowHost.get(), templateElement);
+
     return true;
 }
 
@@ -1552,7 +1564,7 @@ void HTMLTreeBuilder::callTheAdoptionAgency(AtomHTMLToken& token)
             // 4.13.4.
             bool nodeIsInListOfActiveFormattingElements = m_tree.activeFormattingElements().contains(node->element());
             if (innerLoopCounter > innerIterationLimit && nodeIsInListOfActiveFormattingElements)
-                m_tree.activeFormattingElements().remove(node->element());
+                m_tree.activeFormattingElements().removeUpdatingBookmark(node->element(), bookmark);
             // 4.13.5.
             auto* nodeEntry = m_tree.activeFormattingElements().find(node->element());
             if (!nodeEntry) {

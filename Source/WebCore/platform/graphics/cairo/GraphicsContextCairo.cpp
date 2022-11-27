@@ -242,6 +242,7 @@ void GraphicsContextCairo::drawFocusRing(const Path& path, float width, float of
     UNUSED_PARAM(offset);
     return;
 #else
+    UNUSED_PARAM(offset);
     Cairo::drawFocusRing(*this, path, width, color);
 #endif
 }
@@ -254,6 +255,7 @@ void GraphicsContextCairo::drawFocusRing(const Vector<FloatRect>& rects, float w
     UNUSED_PARAM(offset);
     return;
 #else
+    UNUSED_PARAM(offset);
     Cairo::drawFocusRing(*this, rects, width, color);
 #endif
 }
@@ -268,12 +270,6 @@ void GraphicsContextCairo::drawLinesForText(const FloatPoint& point, float thick
 void GraphicsContextCairo::drawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style)
 {
     Cairo::drawDotsForDocumentMarker(*this, rect, style);
-}
-
-FloatRect GraphicsContextCairo::roundToDevicePixels(const FloatRect& rect, RoundingMode roundingMode)
-{
-    UNUSED_PARAM(roundingMode);
-    return Cairo::State::roundToDevicePixels(*this, rect);
 }
 
 void GraphicsContextCairo::translate(float x, float y)
@@ -400,8 +396,7 @@ void GraphicsContextCairo::drawPattern(NativeImage& nativeImage, const FloatRect
     if (!patternTransform.isInvertible())
         return;
 
-    UNUSED_PARAM(spacing);
-    Cairo::drawPattern(*this, nativeImage.platformImage().get(), nativeImage.size(), destRect, tileRect, patternTransform, phase, options);
+    Cairo::drawPattern(*this, nativeImage.platformImage().get(), nativeImage.size(), destRect, tileRect, patternTransform, phase, spacing, options);
 }
 
 RenderingMode GraphicsContextCairo::renderingMode() const

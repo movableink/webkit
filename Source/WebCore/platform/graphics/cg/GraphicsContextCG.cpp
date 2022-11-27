@@ -285,6 +285,8 @@ void GraphicsContextCG::drawNativeImage(NativeImage& nativeImage, const FloatSiz
     CGContextStateSaver stateSaver(context, false);
     auto transform = CGContextGetCTM(context);
 
+    convertToDestinationColorSpaceIfNeeded(image);
+
     auto subImage = image;
     auto currentImageSize = imageLogicalSize(image.get(), options);
 
@@ -396,7 +398,7 @@ void GraphicsContextCG::drawPattern(NativeImage& nativeImage, const FloatRect& d
     CGContextStateSaver stateSaver(context);
     CGContextClipToRect(context, destRect);
 
-    setCompositeOperation(options.compositeOperator(), options.blendMode());
+    setCGBlendMode(context, options.compositeOperator(), options.blendMode());
 
     CGContextTranslateCTM(context, destRect.x(), destRect.y() + destRect.height());
     CGContextScaleCTM(context, 1, -1);
@@ -814,8 +816,7 @@ void GraphicsContextCG::fillRect(const FloatRect& rect)
     bool drawOwnShadow = canUseShadowBlur();
     CGContextStateSaver stateSaver(context, drawOwnShadow);
     if (drawOwnShadow) {
-        // Turn off CG shadows.
-        CGContextSetShadowWithColor(platformContext(), CGSizeZero, 0, 0);
+        clearCGShadow();
 
         ShadowBlur contextShadow(dropShadow(), shadowsIgnoreTransforms());
         contextShadow.drawRectShadow(*this, FloatRoundedRect(rect));
@@ -835,8 +836,7 @@ void GraphicsContextCG::fillRect(const FloatRect& rect, const Color& color)
     bool drawOwnShadow = canUseShadowBlur();
     CGContextStateSaver stateSaver(context, drawOwnShadow);
     if (drawOwnShadow) {
-        // Turn off CG shadows.
-        CGContextSetShadowWithColor(platformContext(), CGSizeZero, 0, 0);
+        clearCGShadow();
 
         ShadowBlur contextShadow(dropShadow(), shadowsIgnoreTransforms());
         contextShadow.drawRectShadow(*this, FloatRoundedRect(rect));
@@ -862,8 +862,7 @@ void GraphicsContextCG::fillRoundedRectImpl(const FloatRoundedRect& rect, const 
     bool drawOwnShadow = canUseShadowBlur();
     CGContextStateSaver stateSaver(context, drawOwnShadow);
     if (drawOwnShadow) {
-        // Turn off CG shadows.
-        CGContextSetShadowWithColor(platformContext(), CGSizeZero, 0, 0);
+        clearCGShadow();
 
         ShadowBlur contextShadow(dropShadow(), shadowsIgnoreTransforms());
         contextShadow.drawRectShadow(*this, rect);
@@ -911,8 +910,7 @@ void GraphicsContextCG::fillRectWithRoundedHole(const FloatRect& rect, const Flo
     bool drawOwnShadow = canUseShadowBlur();
     CGContextStateSaver stateSaver(context, drawOwnShadow);
     if (drawOwnShadow) {
-        // Turn off CG shadows.
-        CGContextSetShadowWithColor(platformContext(), CGSizeZero, 0, 0);
+        clearCGShadow();
 
         ShadowBlur contextShadow(dropShadow(), shadowsIgnoreTransforms());
         contextShadow.drawInsetShadow(*this, rect, roundedHoleRect);
@@ -1028,10 +1026,10 @@ static void applyShadowOffsetWorkaroundIfNeeded(CGContextRef context, CGFloat& x
 #endif
 }
 
-static void setCGShadow(CGContextRef context, RenderingMode renderingMode, const FloatSize& offset, float blur, const Color& color, bool shadowsIgnoreTransforms)
+void GraphicsContextCG::setCGShadow(RenderingMode renderingMode, const FloatSize& offset, float blur, const Color& color, bool shadowsIgnoreTransforms)
 {
     if (offset.isZero() && !blur) {
-        CGContextSetShadowWithColor(context, CGSizeZero, 0, 0);
+        clearCGShadow();
         return;
     }
 
@@ -1040,6 +1038,7 @@ static void setCGShadow(CGContextRef context, RenderingMode renderingMode, const
     CGFloat xOffset = offset.width();
     CGFloat yOffset = offset.height();
     CGFloat blurRadius = blur;
+    CGContextRef context = platformContext();
 
     if (!shadowsIgnoreTransforms) {
         CGAffineTransform userToBaseCTM = getUserToBaseCTM(context);
@@ -1073,6 +1072,41 @@ static void setCGShadow(CGContextRef context, RenderingMode renderingMode, const
         CGContextSetShadowWithColor(context, CGSizeMake(xOffset, yOffset), blurRadius, cachedCGColor(color).get());
 }
 
+void GraphicsContextCG::clearCGShadow()
+{
+    CGContextSetShadowWithColor(platformContext(), CGSizeZero, 0, 0);
+}
+
+#if HAVE(CORE_GRAPHICS_STYLES)
+static void setCGStyle(CGContextRef context, const std::optional<GraphicsStyle>& style)
+{
+    if (!style) {
+        CGContextSetStyle(context, nullptr);
+        return;
+    }
+
+    auto cgStyle = WTF::switchOn(*style,
+        [&] (const GraphicsDropShadow& dropShadow) -> RetainPtr<CGStyleRef> {
+            return adoptCF(CGStyleCreateShadow2(dropShadow.offset, dropShadow.radius.width(), cachedCGColor(dropShadow.color).get()));
+        },
+        [&] (const GraphicsGaussianBlur& gaussianBlur) -> RetainPtr<CGStyleRef> {
+            ASSERT(gaussianBlur.radius.width() == gaussianBlur.radius.height());
+            CGGaussianBlurStyle gaussianBlurStyle = { 1, gaussianBlur.radius.width() };
+            return adoptCF(CGStyleCreateGaussianBlur(&gaussianBlurStyle));
+        },
+        [&] (const GraphicsColorMatrix& colorMatrix) -> RetainPtr<CGStyleRef> {
+            CGColorMatrixStyle colorMatrixStyle = { 1, { 0 } };
+            for (auto value : colorMatrix.values)
+                colorMatrixStyle.matrix[i] = value;
+            return adoptCF(CGStyleCreateColorMatrix(&colorMatrixStyle));
+        }
+    );
+
+    if (cgStyle)
+        CGContextSetStyle(context, cgStyle.get());
+}
+#endif
+
 void GraphicsContextCG::didUpdateState(GraphicsContextState& state)
 {
     if (!state.changes())
@@ -1099,7 +1133,13 @@ void GraphicsContextCG::didUpdateState(GraphicsContextState& state)
             break;
 
         case GraphicsContextState::Change::DropShadow:
-            setCGShadow(context, renderingMode(), state.dropShadow().offset, state.dropShadow().blurRadius, state.dropShadow().color, state.shadowsIgnoreTransforms());
+            setCGShadow(renderingMode(), state.dropShadow().offset, state.dropShadow().blurRadius, state.dropShadow().color, state.shadowsIgnoreTransforms());
+            break;
+
+        case GraphicsContextState::Change::Style:
+#if HAVE(CORE_GRAPHICS_STYLES)
+            setCGStyle(context, state.style());
+#endif
             break;
 
         case GraphicsContextState::Change::Alpha:
@@ -1288,7 +1328,7 @@ AffineTransform GraphicsContextCG::getCTM(IncludeDeviceScale includeScale) const
     return CGContextGetCTM(platformContext());
 }
 
-FloatRect GraphicsContextCG::roundToDevicePixels(const FloatRect& rect, RoundingMode roundingMode)
+FloatRect GraphicsContextCG::roundToDevicePixels(const FloatRect& rect, RoundingMode roundingMode) const
 {
     // It is not enough just to round to pixels in device space. The rotation part of the
     // affine transform matrix to device space can mess with this conversion if we have a

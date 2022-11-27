@@ -1279,7 +1279,7 @@ unsigned int GetReservedFragmentUniformVectors(D3D_FEATURE_LEVEL featureLevel)
         case D3D_FEATURE_LEVEL_9_3:
         case D3D_FEATURE_LEVEL_9_2:
         case D3D_FEATURE_LEVEL_9_1:
-            return 3;
+            return 4;  // dx_ViewCoords, dx_DepthFront, dx_DepthRange, dx_FragCoordOffset
 
         default:
             UNREACHABLE();
@@ -1704,6 +1704,13 @@ void GenerateCaps(ID3D11Device *device,
     // GL_EXT_clip_control
     extensions->clipControlEXT = (renderer11DeviceCaps.featureLevel >= D3D_FEATURE_LEVEL_9_3);
 
+    // GL_APPLE_clip_distance / GL_EXT_clip_cull_distance
+    extensions->clipDistanceAPPLE         = true;
+    extensions->clipCullDistanceEXT       = true;
+    caps->maxClipDistances                = D3D11_CLIP_OR_CULL_DISTANCE_COUNT;
+    caps->maxCullDistances                = D3D11_CLIP_OR_CULL_DISTANCE_COUNT;
+    caps->maxCombinedClipAndCullDistances = D3D11_CLIP_OR_CULL_DISTANCE_COUNT;
+
     // GL_KHR_parallel_shader_compile
     extensions->parallelShaderCompileKHR = true;
 
@@ -1712,6 +1719,11 @@ void GenerateCaps(ID3D11Device *device,
 
     // GL_OES_texture_buffer
     extensions->textureBufferOES = extensions->textureBufferEXT;
+
+    // ANGLE_shader_pixel_local_storage -- fragment shader UAVs appear in D3D 11.0.
+    extensions->shaderPixelLocalStorageANGLE = (featureLevel >= D3D_FEATURE_LEVEL_11_0);
+    extensions->shaderPixelLocalStorageCoherentANGLE =
+        renderer11DeviceCaps.supportsRasterizerOrderViews;
 
     // D3D11 Feature Level 10_0+ uses SV_IsFrontFace in HLSL to emulate gl_FrontFacing.
     // D3D11 Feature Level 9_3 doesn't support SV_IsFrontFace, and has no equivalent, so can't
@@ -1744,6 +1756,9 @@ void GenerateCaps(ID3D11Device *device,
 
     // D3D11 does not support compressed textures where the base mip level is not a multiple of 4
     limitations->compressedBaseMipLevelMultipleOfFour = true;
+
+    // When clip and cull distances are used simultaneously, D3D11 can support up to four of each.
+    limitations->limitSimultaneousClipAndCullDistanceUsage = true;
 
     if (extensions->textureBufferAny())
     {

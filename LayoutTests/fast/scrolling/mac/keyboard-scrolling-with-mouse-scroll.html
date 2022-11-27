@@ -1,0 +1,46 @@
+<!DOCTYPE html> <!-- webkit-test-runner [ useFlexibleViewport=true EventHandlerDrivenSmoothKeyboardScrollingEnabled=true ] -->
+
+<html>
+
+<head>
+    <script src="../../../resources/ui-helper.js"></script>
+    <script src="../../../resources/js-test.js"></script>
+    <meta name="viewport" content="initial-scale=1.5, user-scalable=no">
+    <script>
+        if (window.testRunner) {
+            testRunner.dumpAsText();
+            testRunner.waitUntilDone();
+        }
+        
+        async function runTest()
+        {
+            eventSender.monitorWheelEvents();
+            if (!window.testRunner || !testRunner.runUIScript)
+                return;
+
+            await UIHelper.rawKeyDown("downArrow");
+            
+            setTimeout(async () => {
+                await UIHelper.rawKeyUp("downArrow");
+                const startingPosition = window.scrollY;
+
+                await UIHelper.mouseWheelScrollAt(0, 0, 0, 0, 0, 0);
+
+                const position = window.scrollY;
+                if (Math.abs(startingPosition - position) < 20)
+                    debug("Successful.");
+                else
+                    debug("Unsuccessful. window.scrollY after wheel event == " + position + "; window.scrollY before wheel event == " + startingPosition);
+
+                testRunner.notifyDone();
+            }, 100);
+        }
+    </script>
+</head>
+
+<body onload="runTest()">
+    <div style="height: 5000px;">
+    </div>
+</body>
+
+</html>

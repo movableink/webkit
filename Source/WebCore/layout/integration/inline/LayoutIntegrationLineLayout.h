@@ -26,6 +26,7 @@
 #pragma once
 
 #include "FloatRect.h"
+#include "InlineFormattingConstraints.h"
 #include "InlineIteratorInlineBox.h"
 #include "InlineIteratorLineBox.h"
 #include "InlineIteratorTextBox.h"
@@ -75,14 +76,8 @@ public:
 
     bool shouldSwitchToLegacyOnInvalidation() const;
 
-    void updateFormattingRootGeometryAndInvalidate();
-    void updateReplacedDimensions(const RenderBox&);
-    void updateInlineBlockDimensions(const RenderBlock&);
-    void updateLineBreakBoxDimensions(const RenderLineBreak&);
-    void updateInlineBoxDimensions(const RenderInline&);
-    void updateInlineTableDimensions(const RenderTable&);
-    void updateListItemDimensions(const RenderListItem&);
-    void updateListMarkerDimensions(const RenderListMarker&);
+    void updateInlineContentConstraints();
+    void updateInlineContentDimensions();
     void updateStyle(const RenderBoxModelObject&, const RenderStyle& oldStyle);
     void updateOverflow();
 
@@ -102,6 +97,7 @@ public:
     size_t lineCount() const;
     bool hasVisualOverflow() const;
     LayoutUnit firstLinePhysicalBaseline() const;
+    LayoutUnit lastLinePhysicalBaseline() const;
     LayoutUnit lastLineLogicalBaseline() const;
     LayoutRect firstInlineBoxRect(const RenderInline&) const;
     LayoutRect enclosingBorderBoxRectFor(const RenderInline&) const;
@@ -124,22 +120,36 @@ public:
 #endif
 
 private:
+    void updateReplacedDimensions(const RenderBox&);
+    void updateInlineBlockDimensions(const RenderBlock&);
+    void updateLineBreakBoxDimensions(const RenderLineBreak&);
+    void updateInlineBoxDimensions(const RenderInline&);
+    void updateInlineTableDimensions(const RenderTable&);
+    void updateListItemDimensions(const RenderListItem&);
+    void updateListMarkerDimensions(const RenderListMarker&);
+
     void prepareLayoutState();
     void prepareFloatingState();
     void constructContent();
     InlineContent& ensureInlineContent();
     void updateLayoutBoxDimensions(const RenderBox&);
 
+    Layout::LayoutState& layoutState() { return *m_layoutState; }
+
     Layout::InlineDamage& ensureLineDamage();
 
-    const Layout::ContainerBox& rootLayoutBox() const;
-    Layout::ContainerBox& rootLayoutBox();
+    const Layout::ElementBox& rootLayoutBox() const;
+    Layout::ElementBox& rootLayoutBox();
     void clearInlineContent();
     void releaseCaches();
 
+    LayoutUnit physicalBaselineForLine(LayoutIntegration::Line&) const;
+    
     BoxTree m_boxTree;
-    Layout::LayoutState m_layoutState;
+    WeakPtr<Layout::LayoutState> m_layoutState;
+    Layout::BlockFormattingState& m_blockFormattingState;
     Layout::InlineFormattingState& m_inlineFormattingState;
+    std::optional<Layout::ConstraintsForInlineContent> m_inlineContentConstraints;
     // FIXME: This should be part of LayoutState.
     std::unique_ptr<Layout::InlineDamage> m_lineDamage;
     std::unique_ptr<InlineContent> m_inlineContent;

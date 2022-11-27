@@ -72,11 +72,11 @@
 {
     WebCore::PrivateClickMeasurement measurement(
         WebCore::PrivateClickMeasurement::SourceID(sourceID),
-        WebCore::PrivateClickMeasurement::SourceSite(reportEndpoint),
-        WebCore::PrivateClickMeasurement::AttributionDestinationSite(destination),
+        WebCore::PCM::SourceSite(reportEndpoint),
+        WebCore::PCM::AttributionDestinationSite(destination),
         bundleID,
         WallTime::now(),
-        ephemeral ? WebCore::PrivateClickMeasurement::AttributionEphemeral::Yes : WebCore::PrivateClickMeasurement::AttributionEphemeral::No
+        ephemeral ? WebCore::PCM::AttributionEphemeral::Yes : WebCore::PCM::AttributionEphemeral::No
     );
     if (nonce)
         measurement.setEphemeralSourceNonce({ nonce });
@@ -220,12 +220,12 @@
         _page->process().sendProcessDidResume(WebKit::ProcessThrottlerClient::ResumeReason::ForegroundActivity);
 }
 
-- (void)_setAssertionTypeForTesting:(int)value
+- (void)_setThrottleStateForTesting:(int)value
 {
     if (!_page)
         return;
 
-    _page->process().setAssertionTypeForTesting(static_cast<WebKit::ProcessAssertionType>(value));
+    _page->process().setThrottleStateForTesting(static_cast<WebKit::ProcessThrottleState>(value));
 }
 
 - (BOOL)_hasServiceWorkerBackgroundActivityForTesting

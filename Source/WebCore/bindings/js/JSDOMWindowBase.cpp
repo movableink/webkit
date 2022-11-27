@@ -42,9 +42,9 @@
 #include "JSFetchResponse.h"
 #include "JSMicrotaskCallback.h"
 #include "JSNode.h"
-#include "JSNodeList.h"
 #include "Logging.h"
 #include "Page.h"
+#include "Quirks.h"
 #include "RejectedPromiseTracker.h"
 #include "RuntimeApplicationChecks.h"
 #include "ScriptController.h"
@@ -134,39 +134,8 @@ void JSDOMWindowBase::finishCreation(VM& vm, JSWindowProxy* proxy)
     if (m_wrapped && m_wrapped->frame() && m_wrapped->frame()->settings().needsSiteSpecificQuirks())
         setNeedsSiteSpecificQuirks(true);
 
-    if (m_wrapped && m_wrapped->frame() && m_wrapped->frame()->settings().showModalDialogEnabled())
+    if (m_wrapped && ((m_wrapped->frame() && m_wrapped->frame()->settings().showModalDialogEnabled()) || (m_wrapped->document() && m_wrapped->document()->quirks().shouldExposeShowModalDialog())))
         putDirectCustomAccessor(vm, builtinNames(vm).showModalDialogPublicName(), CustomGetterSetter::create(vm, showModalDialogGetter, nullptr), static_cast<unsigned>(PropertyAttribute::CustomValue));
-
-    installAlwaysSlowPutContiguousPrototypesAreSaneWatchpoint(vm);
-}
-
-void JSDOMWindowBase::installAlwaysSlowPutContiguousPrototypesAreSaneWatchpoint(VM& vm)
-{
-    DeferTerminationForAWhile deferScope(vm);
-
-    auto* staticNodeListStructure = getDOMStructure<JSStaticNodeList>(vm, *this);
-    ASSERT(!staticNodeListStructure->isDictionary());
-
-    auto* staticNodeListPrototype = staticNodeListStructure->storedPrototypeObject();
-    auto* staticNodeListPrototypeStructure = staticNodeListPrototype->structure();
-
-    if (staticNodeListPrototypeStructure->isDictionary())
-        staticNodeListPrototypeStructure = staticNodeListPrototypeStructure->flattenDictionaryStructure(vm, staticNodeListPrototype);
-
-    PropertyOffset lengthOffset = staticNodeListPrototype->getDirectOffset(vm, vm.propertyNames->length);
-    JSValue lengthAccessor = staticNodeListPrototype->getDirect(lengthOffset);
-    ASSERT(lengthAccessor.isCustomGetterSetter());
-
-    staticNodeListPrototypeStructure->startWatchingPropertyForReplacements(vm, lengthOffset);
-
-    m_alwaysSlowPutContiguousPrototypesAreSaneWatchpointSet.startWatching();
-
-    ObjectPropertyCondition prototypeLengthCondition = ObjectPropertyCondition::equivalence(vm, staticNodeListPrototype, staticNodeListPrototype, vm.propertyNames->length.impl(), lengthAccessor);
-
-    m_staticNodeListPrototypeLengthWatchpoint = makeUnique<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>(this, prototypeLengthCondition, m_alwaysSlowPutContiguousPrototypesAreSaneWatchpointSet);
-    m_staticNodeListPrototypeLengthWatchpoint->install(vm);
-
-    recordOriginalAlwaysSlowPutContiguousStructure(staticNodeListStructure);
 }
 
 void JSDOMWindowBase::destroy(JSCell* cell)

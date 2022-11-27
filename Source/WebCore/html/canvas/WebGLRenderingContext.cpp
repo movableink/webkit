@@ -57,7 +57,6 @@
 #include "WebGLBuffer.h"
 #include "WebGLColorBufferFloat.h"
 #include "WebGLCompressedTextureASTC.h"
-#include "WebGLCompressedTextureATC.h"
 #include "WebGLCompressedTextureETC.h"
 #include "WebGLCompressedTextureETC1.h"
 #include "WebGLCompressedTexturePVRTC.h"
@@ -127,10 +126,6 @@ WebGLRenderingContext::WebGLRenderingContext(CanvasBase& canvas, Ref<GraphicsCon
 
 void WebGLRenderingContext::initializeVertexArrayObjects()
 {
-#if !USE(ANGLE)
-    if (!isGLES2Compliant())
-        initVertexAttrib0();
-#endif
     m_defaultVertexArrayObject = WebGLVertexArrayObjectOES::create(*this, WebGLVertexArrayObjectOES::Type::Default);
     addContextObject(*m_defaultVertexArrayObject);
     m_boundVertexArrayObject = m_defaultVertexArrayObject;
@@ -138,7 +133,7 @@ void WebGLRenderingContext::initializeVertexArrayObjects()
 
 WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
 {
-    if (isContextLostOrPending())
+    if (isContextLost())
         return nullptr;
 
 #define ENABLE_IF_REQUESTED(type, variable, nameLiteral, canEnable) \
@@ -172,7 +167,6 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
     ENABLE_IF_REQUESTED(OESVertexArrayObject, m_oesVertexArrayObject, "OES_vertex_array_object", OESVertexArrayObject::supported(*m_context));
     ENABLE_IF_REQUESTED(WebGLColorBufferFloat, m_webglColorBufferFloat, "WEBGL_color_buffer_float", WebGLColorBufferFloat::supported(*m_context));
     ENABLE_IF_REQUESTED(WebGLCompressedTextureASTC, m_webglCompressedTextureASTC, "WEBGL_compressed_texture_astc", WebGLCompressedTextureASTC::supported(*m_context));
-    ENABLE_IF_REQUESTED(WebGLCompressedTextureATC, m_webglCompressedTextureATC, "WEBKIT_WEBGL_compressed_texture_atc", WebGLCompressedTextureATC::supported(*m_context));
     ENABLE_IF_REQUESTED(WebGLCompressedTextureETC, m_webglCompressedTextureETC, "WEBGL_compressed_texture_etc", WebGLCompressedTextureETC::supported(*m_context));
     ENABLE_IF_REQUESTED(WebGLCompressedTextureETC1, m_webglCompressedTextureETC1, "WEBGL_compressed_texture_etc1", WebGLCompressedTextureETC1::supported(*m_context));
     ENABLE_IF_REQUESTED(WebGLCompressedTexturePVRTC, m_webglCompressedTexturePVRTC, "WEBGL_compressed_texture_pvrtc", WebGLCompressedTexturePVRTC::supported(*m_context));
@@ -194,9 +188,6 @@ std::optional<Vector<String>> WebGLRenderingContext::getSupportedExtensions()
         return std::nullopt;
 
     Vector<String> result;
-
-    if (m_isPendingPolicyResolution)
-        return result;
 
 #define APPEND_IF_SUPPORTED(nameLiteral, condition) \
     if (condition) \
@@ -223,7 +214,6 @@ std::optional<Vector<String>> WebGLRenderingContext::getSupportedExtensions()
     APPEND_IF_SUPPORTED("OES_vertex_array_object", OESVertexArrayObject::supported(*m_context))
     APPEND_IF_SUPPORTED("WEBGL_color_buffer_float", WebGLColorBufferFloat::supported(*m_context))
     APPEND_IF_SUPPORTED("WEBGL_compressed_texture_astc", WebGLCompressedTextureASTC::supported(*m_context))
-    APPEND_IF_SUPPORTED("WEBKIT_WEBGL_compressed_texture_atc", WebGLCompressedTextureATC::supported(*m_context))
     APPEND_IF_SUPPORTED("WEBGL_compressed_texture_etc", WebGLCompressedTextureETC::supported(*m_context))
     APPEND_IF_SUPPORTED("WEBGL_compressed_texture_etc1", WebGLCompressedTextureETC1::supported(*m_context))
     APPEND_IF_SUPPORTED("WEBGL_compressed_texture_pvrtc", WebGLCompressedTexturePVRTC::supported(*m_context))
@@ -242,7 +232,7 @@ std::optional<Vector<String>> WebGLRenderingContext::getSupportedExtensions()
 
 WebGLAny WebGLRenderingContext::getFramebufferAttachmentParameter(GCGLenum target, GCGLenum attachment, GCGLenum pname)
 {
-    if (isContextLostOrPending() || !validateFramebufferFuncParameters("getFramebufferAttachmentParameter", target, attachment))
+    if (isContextLost() || !validateFramebufferFuncParameters("getFramebufferAttachmentParameter", target, attachment))
         return nullptr;
 
     if (!m_framebufferBinding || !m_framebufferBinding->object()) {
@@ -326,71 +316,6 @@ GCGLint WebGLRenderingContext::getMaxColorAttachments()
     if (!m_maxColorAttachments)
         m_maxColorAttachments = m_context->getInteger(GraphicsContextGL::MAX_COLOR_ATTACHMENTS_EXT);
     return m_maxColorAttachments;
-}
-
-bool WebGLRenderingContext::validateIndexArrayConservative(GCGLenum type, unsigned& numElementsRequired)
-{
-    // Performs conservative validation by caching a maximum index of
-    // the given type per element array buffer. If all of the bound
-    // array buffers have enough elements to satisfy that maximum
-    // index, skips the expensive per-draw-call iteration in
-    // validateIndexArrayPrecise.
-
-    RefPtr<WebGLBuffer> elementArrayBuffer = m_boundVertexArrayObject->getElementArrayBuffer();
-
-    if (!elementArrayBuffer)
-        return false;
-
-    GCGLsizeiptr numElements = elementArrayBuffer->byteLength();
-    // The case count==0 is already dealt with in drawElements before validateIndexArrayConservative.
-    if (!numElements)
-        return false;
-    auto buffer = elementArrayBuffer->elementArrayBuffer();
-    ASSERT(buffer);
-
-    std::optional<unsigned> maxIndex = elementArrayBuffer->getCachedMaxIndex(type);
-    if (!maxIndex) {
-        // Compute the maximum index in the entire buffer for the given type of index.
-        switch (type) {
-        case GraphicsContextGL::UNSIGNED_BYTE: {
-            const GCGLubyte* p = static_cast<const GCGLubyte*>(buffer->data());
-            for (GCGLsizeiptr i = 0; i < numElements; i++)
-                maxIndex = maxIndex ? std::max(maxIndex.value(), static_cast<unsigned>(p[i])) : static_cast<unsigned>(p[i]);
-            break;
-        }
-        case GraphicsContextGL::UNSIGNED_SHORT: {
-            numElements /= sizeof(GCGLushort);
-            const GCGLushort* p = static_cast<const GCGLushort*>(buffer->data());
-            for (GCGLsizeiptr i = 0; i < numElements; i++)
-                maxIndex = maxIndex ? std::max(maxIndex.value(), static_cast<unsigned>(p[i])) : static_cast<unsigned>(p[i]);
-            break;
-        }
-        case GraphicsContextGL::UNSIGNED_INT: {
-            if (!m_oesElementIndexUint)
-                return false;
-            numElements /= sizeof(GCGLuint);
-            const GCGLuint* p = static_cast<const GCGLuint*>(buffer->data());
-            for (GCGLsizeiptr i = 0; i < numElements; i++)
-                maxIndex = maxIndex ? std::max(maxIndex.value(), static_cast<unsigned>(p[i])) : static_cast<unsigned>(p[i]);
-            break;
-        }
-        default:
-            return false;
-        }
-        if (maxIndex)
-            elementArrayBuffer->setCachedMaxIndex(type, maxIndex.value());
-    }
-
-    if (!maxIndex)
-        return false;
-
-    // The number of required elements is one more than the maximum index that will be accessed.
-    auto checkedNumElementsRequired = checkedAddAndMultiply<unsigned>(maxIndex.value(), 1, 1);
-    if (!checkedNumElementsRequired)
-        return false;
-    numElementsRequired = checkedNumElementsRequired.value();
-
-    return true;
 }
 
 bool WebGLRenderingContext::validateBlendEquation(const char* functionName, GCGLenum mode)

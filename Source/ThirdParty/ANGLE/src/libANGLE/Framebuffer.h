@@ -45,6 +45,7 @@ class Context;
 struct Extensions;
 class Framebuffer;
 class ImageIndex;
+class PixelLocalStorage;
 class Renderbuffer;
 class TextureCapsMap;
 
@@ -196,20 +197,19 @@ class Framebuffer final : public angle::ObserverInterface,
                           public angle::Subject
 {
   public:
+    // Constructor to build default framebuffers.
+    Framebuffer(const Context *context, rx::GLImplFactory *factory);
     // Constructor to build application-defined framebuffers
-    Framebuffer(const Caps &caps,
-                rx::GLImplFactory *factory,
-                FramebufferID id,
-                egl::ShareGroup *shareGroup);
-    // Constructor to build default framebuffers for a surface and context pair
-    Framebuffer(const Context *context, egl::Surface *surface, egl::Surface *readSurface);
-    // Constructor to build a fake default framebuffer when surfaceless
-    Framebuffer(const Context *context, rx::GLImplFactory *factory, egl::Surface *readSurface);
+    Framebuffer(const Context *context, rx::GLImplFactory *factory, FramebufferID id);
 
     ~Framebuffer() override;
     void onDestroy(const Context *context);
 
+    egl::Error setSurfaces(const Context *context,
+                           egl::Surface *surface,
+                           egl::Surface *readSurface);
     void setReadSurface(const Context *context, egl::Surface *readSurface);
+    egl::Error unsetSurfaces(const Context *context);
     angle::Result setLabel(const Context *context, const std::string &label) override;
     const std::string &getLabel() const override;
 
@@ -438,6 +438,14 @@ class Framebuffer final : public angle::ObserverInterface,
     angle::Result ensureReadAttachmentsInitialized(const Context *context);
     Box getDimensions() const;
 
+    // ANGLE_shader_pixel_local_storage.
+    // Lazily creates a PixelLocalStorage object for this Framebuffer.
+    PixelLocalStorage &getPixelLocalStorage(const Context *);
+    // Returns nullptr if the pixel local storage object has not been created yet.
+    const PixelLocalStorage *peekPixelLocalStorage() const { return mPixelLocalStorage.get(); }
+    // Detaches the the pixel local storage object so the Context can call deleteContextObjects().
+    std::unique_ptr<PixelLocalStorage> detachPixelLocalStorage();
+
     static const FramebufferID kDefaultDrawFramebufferHandle;
 
   private:
@@ -518,6 +526,9 @@ class Framebuffer final : public angle::ObserverInterface,
     // The dirty bits guard is checked when we get a dependent state change message. We verify that
     // we don't set a dirty bit that isn't already set, when inside the dirty bits syncState.
     mutable Optional<DirtyBits> mDirtyBitsGuard;
+
+    // ANGLE_shader_pixel_local_storage
+    std::unique_ptr<PixelLocalStorage> mPixelLocalStorage;
 };
 
 using UniqueFramebufferPointer = angle::UniqueObjectPointer<Framebuffer, Context>;

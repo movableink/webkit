@@ -55,7 +55,8 @@ namespace WebCore {
     macro(TextDecoder) \
     macro(TextEncoder) \
     macro(URL) \
-    macro(URLSearchParams)
+    macro(URLSearchParams) \
+    macro(UserActivation)
 #endif
 
 #define WEBCORE_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
@@ -159,8 +160,11 @@ namespace WebCore {
     macro(DecompressionStreamDecoder) \
     macro(DecompressionStreamTransform) \
     macro(DelayNode) \
+    macro(DeprecationReportBody) \
     macro(DocumentTimeline) \
     macro(DynamicsCompressorNode) \
+    macro(ElementInternals) \
+    macro(EncodedVideoChunk) \
     macro(ExtendableEvent) \
     macro(ExtendableMessageEvent) \
     macro(FakeXRDevice) \
@@ -361,6 +365,7 @@ namespace WebCore {
     macro(SQLResultSetRowList) \
     macro(SQLTransaction) \
     macro(ScreenLuminance) \
+    macro(ScreenOrientation) \
     macro(ServiceWorker) \
     macro(ServiceWorkerContainer) \
     macro(ServiceWorkerGlobalScope) \
@@ -394,7 +399,12 @@ namespace WebCore {
     macro(TransformStreamDefaultController) \
     macro(UndoItem) \
     macro(UndoManager) \
+    macro(VideoDecoder) \
+    macro(VideoEncoder) \
+    macro(VideoFrame) \
     macro(VisualViewport) \
+    macro(WakeLock) \
+    macro(WakeLockSentinel) \
     macro(WaveShaperNode) \
     macro(WebGL2RenderingContext) \
     macro(WebGLActiveInfo) \
@@ -497,6 +507,8 @@ namespace WebCore {
     macro(fatal) \
     macro(fetch) \
     macro(fetchRequest) \
+    macro(FileReader) \
+    macro(FileReaderSync) \
     macro(fillFromJS) \
     macro(finishConsumingStream) \
     macro(flush) \
@@ -586,6 +598,11 @@ namespace WebCore {
     macro(setBodyFromInputRequest) \
     macro(setStatus) \
     macro(showModalDialog) \
+    macro(SpeechSynthesis) \
+    macro(SpeechSynthesisErrorEvent) \
+    macro(SpeechSynthesisEvent) \
+    macro(SpeechSynthesisUtterance) \
+    macro(SpeechSynthesisVoice) \
     macro(start) \
     macro(startConsumingStream) \
     macro(started) \

@@ -35,9 +35,10 @@
 #include "DFGInsertionSet.h"
 #include "DFGJITCode.h"
 #include "DFGPhase.h"
+#include "JSObjectInlines.h"
 #include "MathCommon.h"
 #include "RegExpObject.h"
-#include "StringPrototype.h"
+#include "StringPrototypeInlines.h"
 #include <cstdlib>
 #include <wtf/text/StringBuilder.h>
 
@@ -486,14 +487,17 @@ private:
         case RegExpExecNonGlobalOrSticky: {
             JSGlobalObject* globalObject = m_node->child1()->dynamicCastConstant<JSGlobalObject*>();
             if (!globalObject) {
-                if (verbose)
-                    dataLog("Giving up because no global object.\n");
+                dataLogLnIf(verbose, "Giving up because no global object.");
                 break;
             }
 
             if (globalObject->isHavingABadTime()) {
-                if (verbose)
-                    dataLog("Giving up because bad time.\n");
+                dataLogLnIf(verbose, "Giving up because bad time.");
+                break;
+            }
+
+            if (m_graph.m_plan.isUnlinked() && globalObject != m_graph.globalObjectFor(m_node->origin.semantic)) {
+                dataLogLnIf(verbose, "Giving up because unlinked DFG requires globalObject is the same to the node's origin.");
                 break;
             }
 
@@ -509,7 +513,7 @@ private:
                             dataLog("Giving up because RegExp recompile happens.\n");
                         break;
                     }
-                    m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpoint());
+                    m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                     regExp = regExpObject->regExp();
                     regExpObjectNodeIsConstant = true;
                 } else if (regExpObjectNode->op() == NewRegexp) {
@@ -519,7 +523,7 @@ private:
                             dataLog("Giving up because RegExp recompile happens.\n");
                         break;
                     }
-                    m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpoint());
+                    m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                     regExp = regExpObjectNode->castOperand<RegExp*>();
                 } else {
                     if (verbose)
@@ -639,7 +643,7 @@ private:
                     }
                 }
 
-                m_graph.watchpoints().addLazily(globalObject->havingABadTimeWatchpoint());
+                m_graph.watchpoints().addLazily(globalObject->havingABadTimeWatchpointSet());
 
                 Structure* structure = globalObject->regExpMatchesArrayStructure();
                 if (structure->indexingType() != ArrayWithContiguous) {
@@ -744,8 +748,10 @@ private:
                             PromotedLocationDescriptor(NamedPropertyPLoc, groupsIndex));
 
                         auto materializeString = [&] (const String& string) -> Node* {
-                            if (string.isNull())
-                                return nullptr;
+                            if (string.isNull()) {
+                                return m_insertionSet.insertConstant(
+                                    m_nodeIndex, origin, jsUndefined());
+                            }
                             if (string.isEmpty()) {
                                 return m_insertionSet.insertConstant(
                                     m_nodeIndex, origin, vm().smallStrings.emptyString());
@@ -757,11 +763,10 @@ private:
                         };
 
                         for (unsigned i = 0; i < resultArray.size(); ++i) {
-                            if (Node* node = materializeString(resultArray[i])) {
-                                m_graph.m_varArgChildren.append(Edge(node, UntypedUse));
-                                data->m_properties.append(
-                                    PromotedLocationDescriptor(IndexedPropertyPLoc, i));
-                            }
+                            Node* node = materializeString(resultArray[i]);
+                            m_graph.m_varArgChildren.append(Edge(node, UntypedUse));
+                            data->m_properties.append(
+                                PromotedLocationDescriptor(IndexedPropertyPLoc, i));
                         }
 
                         Node* resultNode = m_insertionSet.insertNode(
@@ -900,55 +905,28 @@ private:
             RegExp* regExp;
             if (RegExpObject* regExpObject = regExpObjectNode->dynamicCastConstant<RegExpObject*>()) {
                 JSGlobalObject* globalObject = regExpObject->globalObject();
-                if (globalObject->isRegExpRecompiled()) {
-                    if (verbose)
-                        dataLog("Giving up because RegExp recompile happens.\n");
+                if (m_graph.m_plan.isUnlinked() && globalObject != m_graph.globalObjectFor(m_node->origin.semantic)) {
+                    dataLogLnIf(verbose, "Giving up because unlinked DFG requires globalObject is the same to the node's origin.");
                     break;
                 }
-                m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpoint());
+                if (globalObject->isRegExpRecompiled()) {
+                    dataLogLnIf(verbose, "Giving up because RegExp recompile happens.");
+                    break;
+                }
+                m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                 regExp = regExpObject->regExp();
             } else if (regExpObjectNode->op() == NewRegexp) {
                 JSGlobalObject* globalObject = m_graph.globalObjectFor(regExpObjectNode->origin.semantic);
+                if (m_graph.m_plan.isUnlinked() && globalObject != m_graph.globalObjectFor(m_node->origin.semantic)) {
+                    dataLogLnIf(verbose, "Giving up because unlinked DFG requires globalObject is the same to the node's origin.");
+                    break;
+                }
                 if (globalObject->isRegExpRecompiled()) {
-                    if (verbose)
-                        dataLog("Giving up because RegExp recompile happens.\n");
+                    dataLogLnIf(verbose, "Giving up because RegExp recompile happens.");
                     break;
                 }
-                m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpoint());
+                m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                 regExp = regExpObjectNode->castOperand<RegExp*>();
-            } else if (String searchString = m_node->child2()->tryGetString(m_graph); !!searchString && m_graph.isWatchingStringSymbolReplaceWatchpoint(m_node)) {
-                // String/String/String case.
-                // FIXME: Extract these operations and share it with runtime code.
-
-                size_t matchStart = string.find(searchString);
-                if (matchStart == notFound) {
-                    m_changed = true;
-                    m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
-                    m_node->convertToIdentityOn(stringNode);
-                    break;
-                }
-
-                size_t searchStringLength = searchString.length();
-                size_t matchEnd = matchStart + searchStringLength;
-
-                size_t dollarSignPosition = replace.find('$');
-                if (dollarSignPosition != WTF::notFound) {
-                    StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
-                    int ovector[2] = { static_cast<int>(matchStart),  static_cast<int>(matchEnd) };
-                    substituteBackreferencesSlow(builder, replace, string, ovector, nullptr, dollarSignPosition);
-                    if (UNLIKELY(builder.hasOverflowed()))
-                        break;
-                    replace = builder.toString();
-                }
-
-                auto result = tryMakeString(StringView(string).substring(0, matchStart), replace, StringView(string).substring(matchEnd, string.length() - matchEnd));
-                if (UNLIKELY(!result))
-                    break;
-
-                m_changed = true;
-                m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
-                m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, WTFMove(result)));
-                break;
             } else {
                 if (verbose)
                     dataLog("Giving up because the regexp is unknown.\n");
@@ -1035,7 +1013,99 @@ private:
             m_node->origin = origin;
             break;
         }
-            
+
+        case StringReplaceString: {
+            Node* stringNode = m_node->child1().node();
+            String string = stringNode->tryGetString(m_graph);
+            if (!string)
+                break;
+
+            String searchString = m_node->child2()->tryGetString(m_graph);
+            if (!searchString)
+                break;
+
+            String replace = m_node->child3()->tryGetString(m_graph);
+            if (!replace)
+                break;
+
+            // String/String/String case.
+            // FIXME: Extract these operations and share it with runtime code.
+
+            size_t matchStart = string.find(searchString);
+            if (matchStart == notFound) {
+                m_changed = true;
+                m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
+                m_node->convertToIdentityOn(stringNode);
+                break;
+            }
+
+            size_t searchStringLength = searchString.length();
+            size_t matchEnd = matchStart + searchStringLength;
+
+            size_t dollarSignPosition = replace.find('$');
+            if (dollarSignPosition != WTF::notFound) {
+                StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+                int ovector[2] = { static_cast<int>(matchStart),  static_cast<int>(matchEnd) };
+                substituteBackreferencesSlow(builder, replace, string, ovector, nullptr, dollarSignPosition);
+                if (UNLIKELY(builder.hasOverflowed()))
+                    break;
+                replace = builder.toString();
+            }
+
+            auto result = tryMakeString(StringView(string).substring(0, matchStart), replace, StringView(string).substring(matchEnd, string.length() - matchEnd));
+            if (UNLIKELY(!result))
+                break;
+
+            m_changed = true;
+            m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
+            m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, WTFMove(result)));
+            break;
+        }
+
+        case StringSubstring:
+        case StringSlice: {
+            Node* stringNode = m_node->child1().node();
+
+            if (!m_node->child2()->isInt32Constant())
+                break;
+
+            int32_t startValue = m_node->child2()->asInt32();
+            std::optional<int32_t> endValue = std::nullopt;
+            if (m_node->child3()) {
+                if (!m_node->child3()->isInt32Constant())
+                    break;
+                endValue = m_node->child3()->asInt32();
+                if (endValue.value() == startValue) {
+                    // Regardless of whatever the string is, it generates empty string (Even if both are negative index).
+                    m_changed = true;
+                    m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
+                    m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, emptyString()));
+                    break;
+                }
+            }
+
+            String string = stringNode->tryGetString(m_graph);
+            if (!string)
+                break;
+
+            int32_t length = string.length();
+            int32_t start = 0;
+            int32_t end = 0;
+            if (m_node->op() == StringSubstring)
+                std::tie(start, end) = extractSubstringOffsets(length, startValue, endValue);
+            else
+                std::tie(start, end) = extractSliceOffsets(length, startValue, endValue);
+
+            m_changed = true;
+            m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
+            if (!start && end == length) {
+                m_node->convertToIdentityOn(stringNode);
+                break;
+            }
+            m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, string.substring(start, end - start)));
+            break;
+        }
+
         case Call:
         case Construct:
         case TailCallInlinedCaller:

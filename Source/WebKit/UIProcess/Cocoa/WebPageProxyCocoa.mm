@@ -50,6 +50,7 @@
 #import "WebPasteboardProxy.h"
 #import "WebProcessMessages.h"
 #import "WebProcessProxy.h"
+#import "WebScreenOrientationManagerProxy.h"
 #import "WebsiteDataStore.h"
 #import "WKErrorInternal.h"
 #import <Foundation/NSURLRequest.h>
@@ -192,7 +193,7 @@ void WebPageProxy::contentFilterDidBlockLoadForFrame(const WebCore::ContentFilte
 
 void WebPageProxy::contentFilterDidBlockLoadForFrameShared(Ref<WebProcessProxy>&& process, const WebCore::ContentFilterUnblockHandler& unblockHandler, FrameIdentifier frameID)
 {
-    if (WebFrameProxy* frame = process->webFrame(frameID))
+    if (RefPtr frame = WebFrameProxy::webFrame(frameID))
         frame->contentFilterDidBlockLoad(unblockHandler);
 }
 #endif
@@ -251,7 +252,7 @@ bool WebPageProxy::scrollingUpdatesDisabledForTesting()
 
 #if ENABLE(DRAG_SUPPORT)
 
-void WebPageProxy::startDrag(const DragItem& dragItem, const ShareableBitmap::Handle& dragImageHandle)
+void WebPageProxy::startDrag(const DragItem& dragItem, const ShareableBitmapHandle& dragImageHandle)
 {
     pageClient().startDrag(dragItem, dragImageHandle);
 }
@@ -312,7 +313,7 @@ static RefPtr<WebKit::ShareableBitmap> convertPlatformImageToBitmap(CocoaImage *
     auto resultRect = roundedIntRect(largestRectWithAspectRatioInsideRect(originalThumbnailSize.aspectRatio(), { { }, fittingSize }));
     resultRect.setLocation({ });
 
-    WebKit::ShareableBitmap::Configuration bitmapConfiguration;
+    WebKit::ShareableBitmapConfiguration bitmapConfiguration;
     auto bitmap = WebKit::ShareableBitmap::create(resultRect.size(), bitmapConfiguration);
     if (!bitmap)
         return nullptr;
@@ -629,13 +630,13 @@ void WebPageProxy::requestThumbnailWithPath(const String& filePath, const String
 
 #endif // HAVE(QUICKLOOK_THUMBNAILING)
 
-#if PLATFORM(MAC)
+#if ENABLE(ATTACHMENT_ELEMENT) && PLATFORM(MAC)
 
-void WebPageProxy::updateIconForDirectory(NSFileWrapper *fileWrapper, const String& identifier)
+bool WebPageProxy::updateIconForDirectory(NSFileWrapper *fileWrapper, const String& identifier)
 {
     auto image = [fileWrapper icon];
     if (!image)
-        return;
+        return false;
 
     auto flippedIcon = [NSImage imageWithSize:iconSize flipped:YES drawingHandler:^BOOL(NSRect destinationRect) {
         [image drawInRect:destinationRect fromRect:NSMakeRect(0, 0, [image size].width, [image size].height) operation:NSCompositingOperationSourceOver fraction:1.0f];
@@ -644,11 +645,13 @@ void WebPageProxy::updateIconForDirectory(NSFileWrapper *fileWrapper, const Stri
 
     auto convertedImage = convertPlatformImageToBitmap(flippedIcon, iconSize);
     if (!convertedImage)
-        return;
+        return false;
 
-    ShareableBitmap::Handle handle;
-    convertedImage->createHandle(handle);
-    send(Messages::WebPage::UpdateAttachmentIcon(identifier, handle, iconSize));
+    auto handle = convertedImage->createHandle();
+    if (!handle)
+        return false;
+    send(Messages::WebPage::UpdateAttachmentIcon(identifier, *handle, iconSize));
+    return true;
 }
 
 #endif
@@ -717,11 +720,8 @@ void WebPageProxy::restoreAppHighlightsAndScrollToIndex(const Vector<Ref<SharedM
     if (!hasRunningProcess())
         return;
 
-    auto memoryHandles = WTF::compactMap(highlights, [](auto& highlight) -> std::optional<SharedMemory::Handle> {
-        SharedMemory::Handle handle;
-        if (!highlight->createHandle(handle, SharedMemory::Protection::ReadOnly))
-            return std::nullopt;
-        return handle;
+    auto memoryHandles = WTF::compactMap(highlights, [](auto& highlight) {
+        return highlight->createHandle(SharedMemory::Protection::ReadOnly);
     });
     
     setUpHighlightsObserver();
@@ -936,6 +936,15 @@ void WebPageProxy::classifyModalContainerControls(Vector<String>&& texts, Comple
 void WebPageProxy::replaceSelectionWithPasteboardData(const Vector<String>& types, const IPC::DataReference& data)
 {
     send(Messages::WebPage::ReplaceSelectionWithPasteboardData(types, data));
+}
+
+void WebPageProxy::setCocoaView(WKWebView *view)
+{
+    m_cocoaView = view;
+#if PLATFORM(IOS_FAMILY)
+    if (m_screenOrientationManager)
+        m_screenOrientationManager->setWindow(view.window);
+#endif
 }
 
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)

@@ -303,18 +303,12 @@ def appendCustomTestingFlags(step, platform, device_model):
 
 
 class CompileWebKit(shell.Compile):
-    command = ["perl", "Tools/Scripts/build-webkit", WithProperties("--%(configuration)s")]
+    command = ["perl", "Tools/Scripts/build-webkit", "--no-fatal-warnings", WithProperties("--%(configuration)s")]
     env = {'MFLAGS': ''}
     name = "compile-webkit"
     description = ["compiling"]
     descriptionDone = ["compiled"]
     warningPattern = ".*arning: .*"
-
-    def __init__(self, **kwargs):
-        # https://bugs.webkit.org/show_bug.cgi?id=239455: The timeout needs to be >20 min to
-        # work around log output delays on slower machines.
-        kwargs.setdefault('timeout', 60 * 30)
-        super().__init__(**kwargs)
 
     def start(self):
         platform = self.getProperty('platform')
@@ -351,6 +345,17 @@ class CompileWebKit(shell.Compile):
         appendCustomBuildFlags(self, platform, self.getProperty('fullPlatform'))
 
         return shell.Compile.start(self)
+
+    def buildCommandKwargs(self, warnings):
+        kwargs = super(CompileWebKit, self).buildCommandKwargs(warnings)
+        # https://bugs.webkit.org/show_bug.cgi?id=239455: The timeout needs to be >20 min to
+        # work around log output delays on slower machines.
+        # https://bugs.webkit.org/show_bug.cgi?id=247506: Only applies to Xcode 12.x.
+        if self.getProperty('fullPlatform') == 'mac-bigsur':
+            kwargs['timeout'] = 60 * 60
+        else:
+            kwargs['timeout'] = 60 * 30
+        return kwargs
 
     def parseOutputLine(self, line):
         if "arning:" in line:
@@ -547,7 +552,7 @@ class RunJavaScriptCoreTests(TestWithFailureCount):
         # high enough.
         self.command += self.commandExtra
         # Currently run-javascriptcore-test doesn't support run javascript core test binaries list below remotely
-        if architecture in ['mips', 'aarch64']:
+        if architecture in ['mips', 'aarch64'] or platform in ['win']:
             self.command += ['--no-testmasm', '--no-testair', '--no-testb3', '--no-testdfg', '--no-testapi']
         # Linux bots have currently problems with JSC tests that try to use large amounts of memory.
         # Check: https://bugs.webkit.org/show_bug.cgi?id=175140
@@ -799,7 +804,6 @@ class RunWebKitPyTests(RunPythonTests):
     command = [
         "python3",
         "Tools/Scripts/test-webkitpy",
-        "--all",
         "--verbose",
         "--buildbot-master", CURRENT_HOSTNAME,
         "--builder-name", WithProperties("%(buildername)s"),

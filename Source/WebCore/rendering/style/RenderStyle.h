@@ -30,7 +30,6 @@
 #include "CSSLineBoxContainValue.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyNames.h"
-#include "Color.h"
 #include "CounterDirectives.h"
 #include "FilterOperations.h"
 #include "FontCascadeDescription.h"
@@ -55,6 +54,7 @@
 #include "ShapeValue.h"
 #include "StyleBackgroundData.h"
 #include "StyleBoxData.h"
+#include "StyleColor.h"
 #include "StyleDeprecatedFlexibleBoxData.h"
 #include "StyleFilterData.h"
 #include "StyleFlexibleBoxData.h"
@@ -307,6 +307,7 @@ public:
     const LengthSize& borderTopRightRadius() const { return m_surroundData->border.topRightRadius(); }
     const LengthSize& borderBottomLeftRadius() const { return m_surroundData->border.bottomLeftRadius(); }
     const LengthSize& borderBottomRightRadius() const { return m_surroundData->border.bottomRightRadius(); }
+    const BorderData::Radii& borderRadii() const { return m_surroundData->border.m_radii; }
     bool hasBorderRadius() const { return m_surroundData->border.hasBorderRadius(); }
     bool hasExplicitlySetBorderBottomLeftRadius() const { return m_nonInheritedFlags.hasExplicitlySetBorderBottomLeftRadius; }
     bool hasExplicitlySetBorderBottomRightRadius() const { return m_nonInheritedFlags.hasExplicitlySetBorderBottomRightRadius; }
@@ -370,6 +371,7 @@ public:
     float specifiedFontSize() const;
     float computedFontSize() const;
     unsigned computedFontPixelSize() const;
+    std::optional<float> fontSizeAdjust() const { return fontDescription().fontSizeAdjust(); }
     std::pair<FontOrientation, NonCJKGlyphOrientation> fontAndGlyphOrientation();
 
     FontVariationSettings fontVariationSettings() const { return fontDescription().variationSettings(); }
@@ -548,6 +550,8 @@ public:
 
     ContentVisibility contentVisibility() const { return static_cast<ContentVisibility>(m_rareNonInheritedData->contentVisibility); }
 
+    bool effectiveSkipsContent() const { return m_rareInheritedData->effectiveSkipsContent; }
+
     ContainIntrinsicSizeType containIntrinsicWidthType() const { return static_cast<ContainIntrinsicSizeType>(m_rareNonInheritedData->containIntrinsicWidthType); }
     ContainIntrinsicSizeType containIntrinsicHeightType() const { return static_cast<ContainIntrinsicSizeType>(m_rareNonInheritedData->containIntrinsicHeightType); }
     std::optional<Length> containIntrinsicWidth() const { return m_rareNonInheritedData->containIntrinsicWidth; }
@@ -603,6 +607,8 @@ public:
     GridAutoFlow gridAutoFlow() const { return static_cast<GridAutoFlow>(m_rareNonInheritedData->grid->gridAutoFlow); }
     bool gridSubgridRows() const { return m_rareNonInheritedData->grid->subgridRows(); }
     bool gridSubgridColumns() const { return m_rareNonInheritedData->grid->subgridColumns(); }
+    bool gridMasonryRows() const { return m_rareNonInheritedData->grid->masonryRows(); }
+    bool gridMasonryColumns() const { return m_rareNonInheritedData->grid->masonryColumns(); }
     bool isGridAutoFlowDirectionRow() const { return (m_rareNonInheritedData->grid->gridAutoFlow & InternalAutoFlowDirectionRow); }
     bool isGridAutoFlowDirectionColumn() const { return (m_rareNonInheritedData->grid->gridAutoFlow & InternalAutoFlowDirectionColumn); }
     bool isGridAutoFlowAlgorithmSparse() const { return (m_rareNonInheritedData->grid->gridAutoFlow & InternalAutoFlowAlgorithmSparse); }
@@ -719,7 +725,7 @@ public:
     bool affectedByTransformOrigin() const;
 
     FloatPoint computePerspectiveOrigin(const FloatRect& boundingBox) const;
-    void applyPerspective(TransformationMatrix&, const RenderObject&, const FloatPoint& originTranslate) const;
+    void applyPerspective(TransformationMatrix&, const FloatPoint& originTranslate) const;
 
     FloatPoint3D computeTransformOrigin(const FloatRect& boundingBox) const;
     void applyTransformOrigin(TransformationMatrix&, const FloatPoint3D& originTranslate) const;
@@ -767,7 +773,7 @@ public:
 
     BackfaceVisibility backfaceVisibility() const { return static_cast<BackfaceVisibility>(m_rareNonInheritedData->backfaceVisibility); }
     float perspective() const { return m_rareNonInheritedData->perspective; }
-    float usedPerspective(const RenderObject&) const;
+    float usedPerspective() const { return std::max(1.0f, perspective()); }
     bool hasPerspective() const { return m_rareNonInheritedData->perspective != initialPerspective(); }
     const Length& perspectiveOriginX() const { return m_rareNonInheritedData->perspectiveOriginX; }
     const Length& perspectiveOriginY() const { return m_rareNonInheritedData->perspectiveOriginY; }
@@ -807,7 +813,7 @@ public:
     ScrollSnapStop scrollSnapStop() const;
 
 #if ENABLE(TOUCH_EVENTS)
-    Color tapHighlightColor() const { return m_rareInheritedData->tapHighlightColor; }
+    StyleColor tapHighlightColor() const { return m_rareInheritedData->tapHighlightColor; }
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -883,10 +889,6 @@ public:
 
     bool shouldPlaceVerticalScrollbarOnLeft() const;
 
-#if ENABLE(CSS_TRAILING_WORD)
-    TrailingWord trailingWord() const { return TrailingWord::Auto; }
-#endif
-
 #if ENABLE(APPLE_PAY)
     ApplePayButtonStyle applePayButtonStyle() const { return static_cast<ApplePayButtonStyle>(m_rareNonInheritedData->applePayButtonStyle); }
     ApplePayButtonType applePayButtonType() const { return static_cast<ApplePayButtonType>(m_rareNonInheritedData->applePayButtonType); }
@@ -929,12 +931,12 @@ public:
     void resetBorderLeft() { SET_VAR(m_surroundData, border.m_left, BorderValue()); }
     void resetBorderImage() { SET_VAR(m_surroundData, border.m_image, NinePieceImage()); }
     void resetBorderRadius() { resetBorderTopLeftRadius(); resetBorderTopRightRadius(); resetBorderBottomLeftRadius(); resetBorderBottomRightRadius(); }
-    void resetBorderTopLeftRadius() { SET_VAR(m_surroundData, border.m_topLeftRadius, initialBorderRadius()); }
-    void resetBorderTopRightRadius() { SET_VAR(m_surroundData, border.m_topRightRadius, initialBorderRadius()); }
-    void resetBorderBottomLeftRadius() { SET_VAR(m_surroundData, border.m_bottomLeftRadius, initialBorderRadius()); }
-    void resetBorderBottomRightRadius() { SET_VAR(m_surroundData, border.m_bottomRightRadius, initialBorderRadius()); }
+    void resetBorderTopLeftRadius() { SET_VAR(m_surroundData, border.m_radii.topLeft, initialBorderRadius()); }
+    void resetBorderTopRightRadius() { SET_VAR(m_surroundData, border.m_radii.topRight, initialBorderRadius()); }
+    void resetBorderBottomLeftRadius() { SET_VAR(m_surroundData, border.m_radii.bottomLeft, initialBorderRadius()); }
+    void resetBorderBottomRightRadius() { SET_VAR(m_surroundData, border.m_radii.bottomRight, initialBorderRadius()); }
 
-    void setBackgroundColor(const Color& v) { SET_VAR(m_backgroundData, color, v); }
+    void setBackgroundColor(const StyleColor& v) { SET_VAR(m_backgroundData, color, v); }
 
     void setBackgroundXPosition(Length&& length) { SET_NESTED_VAR(m_backgroundData, background, m_xPosition, WTFMove(length)); }
     void setBackgroundYPosition(Length&& length) { SET_NESTED_VAR(m_backgroundData, background, m_yPosition, WTFMove(length)); }
@@ -956,10 +958,10 @@ public:
     void setBorderImageHorizontalRule(NinePieceImageRule);
     void setBorderImageVerticalRule(NinePieceImageRule);
 
-    void setBorderTopLeftRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_topLeftRadius, WTFMove(size)); }
-    void setBorderTopRightRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_topRightRadius, WTFMove(size)); }
-    void setBorderBottomLeftRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_bottomLeftRadius, WTFMove(size)); }
-    void setBorderBottomRightRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_bottomRightRadius, WTFMove(size)); }
+    void setBorderTopLeftRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_radii.topLeft, WTFMove(size)); }
+    void setBorderTopRightRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_radii.topRight, WTFMove(size)); }
+    void setBorderBottomLeftRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_radii.bottomLeft, WTFMove(size)); }
+    void setBorderBottomRightRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_radii.bottomRight, WTFMove(size)); }
 
     void setBorderRadius(LengthSize&&);
     void setBorderRadius(const IntSize&);
@@ -973,24 +975,25 @@ public:
 
     RoundedRect getRoundedInnerBorderFor(const LayoutRect& borderRect, LayoutUnit topWidth, LayoutUnit bottomWidth,
         LayoutUnit leftWidth, LayoutUnit rightWidth, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true) const;
+    static RoundedRect getRoundedInnerBorderFor(const LayoutRect&, LayoutUnit topWidth, LayoutUnit bottomWidth, LayoutUnit leftWidth, LayoutUnit rightWidth, std::optional<BorderData::Radii>, bool isHorizontal, bool includeLogicalLeftEdge, bool includeLogicalRightEdge);
 
     void setBorderLeftWidth(float v) { SET_VAR(m_surroundData, border.m_left.m_width, v); }
     void setBorderLeftStyle(BorderStyle v) { SET_VAR(m_surroundData, border.m_left.m_style, static_cast<unsigned>(v)); }
-    void setBorderLeftColor(const Color& v) { SET_BORDERVALUE_COLOR(m_surroundData, border.m_left, v); }
+    void setBorderLeftColor(const StyleColor& v) { SET_BORDERVALUE_COLOR(m_surroundData, border.m_left, v); }
     void setBorderRightWidth(float v) { SET_VAR(m_surroundData, border.m_right.m_width, v); }
     void setBorderRightStyle(BorderStyle v) { SET_VAR(m_surroundData, border.m_right.m_style, static_cast<unsigned>(v)); }
-    void setBorderRightColor(const Color& v) { SET_BORDERVALUE_COLOR(m_surroundData, border.m_right, v); }
+    void setBorderRightColor(const StyleColor& v) { SET_BORDERVALUE_COLOR(m_surroundData, border.m_right, v); }
     void setBorderTopWidth(float v) { SET_VAR(m_surroundData, border.m_top.m_width, v); }
     void setBorderTopStyle(BorderStyle v) { SET_VAR(m_surroundData, border.m_top.m_style, static_cast<unsigned>(v)); }
-    void setBorderTopColor(const Color& v) { SET_BORDERVALUE_COLOR(m_surroundData, border.m_top, v); }
+    void setBorderTopColor(const StyleColor& v) { SET_BORDERVALUE_COLOR(m_surroundData, border.m_top, v); }
     void setBorderBottomWidth(float v) { SET_VAR(m_surroundData, border.m_bottom.m_width, v); }
     void setBorderBottomStyle(BorderStyle v) { SET_VAR(m_surroundData, border.m_bottom.m_style, static_cast<unsigned>(v)); }
-    void setBorderBottomColor(const Color& v) { SET_BORDERVALUE_COLOR(m_surroundData, border.m_bottom, v); }
+    void setBorderBottomColor(const StyleColor& v) { SET_BORDERVALUE_COLOR(m_surroundData, border.m_bottom, v); }
 
     void setOutlineWidth(float v) { SET_VAR(m_backgroundData, outline.m_width, v); }
     void setOutlineStyleIsAuto(OutlineIsAuto isAuto) { SET_VAR(m_backgroundData, outline.m_isAuto, static_cast<unsigned>(isAuto)); }
     void setOutlineStyle(BorderStyle v) { SET_VAR(m_backgroundData, outline.m_style, static_cast<unsigned>(v)); }
-    void setOutlineColor(const Color& v) { SET_BORDERVALUE_COLOR(m_backgroundData, outline, v); }
+    void setOutlineColor(const StyleColor& v) { SET_BORDERVALUE_COLOR(m_backgroundData, outline, v); }
 
     void setOverflowX(Overflow v) { m_nonInheritedFlags.overflowX =  static_cast<unsigned>(v); }
     void setOverflowY(Overflow v) { m_nonInheritedFlags.overflowY = static_cast<unsigned>(v); }
@@ -1017,6 +1020,7 @@ public:
 
     // Only used for blending font sizes when animating, for MathML anonymous blocks, and for text autosizing.
     void setFontSize(float);
+    void setFontSizeAdjust(std::optional<float>);
 
     void setFontVariationSettings(FontVariationSettings);
     void setFontWeight(FontSelectionValue);
@@ -1110,6 +1114,8 @@ public:
 
     void setContentVisibility(ContentVisibility value) { SET_VAR(m_rareNonInheritedData, contentVisibility, static_cast<unsigned>(value)); }
 
+    void setEffectiveSkipsContent(bool effectiveSkipsContent) { SET_VAR(m_rareInheritedData, effectiveSkipsContent, effectiveSkipsContent); }
+
     void setListStyleStringValue(const AtomString& value) { SET_VAR(m_rareInheritedData, listStyleStringValue, value); }
     void setListStyleType(ListStyleType v) { m_inheritedFlags.listStyleType = static_cast<unsigned>(v); }
     void setListStyleImage(RefPtr<StyleImage>&&);
@@ -1182,12 +1188,12 @@ public:
     // CSS3 Setters
     void setOutlineOffset(float v) { SET_VAR(m_backgroundData, outline.m_offset, v); }
     void setTextShadow(std::unique_ptr<ShadowData>, bool add = false);
-    void setTextStrokeColor(const Color& c) { SET_VAR(m_rareInheritedData, textStrokeColor, c); }
+    void setTextStrokeColor(const StyleColor& c) { SET_VAR(m_rareInheritedData, textStrokeColor, c); }
     void setTextStrokeWidth(float w) { SET_VAR(m_rareInheritedData, textStrokeWidth, w); }
-    void setTextFillColor(const Color& c) { SET_VAR(m_rareInheritedData, textFillColor, c); }
-    void setCaretColor(const Color& c) { SET_VAR(m_rareInheritedData, caretColor, c); SET_VAR(m_rareInheritedData, hasAutoCaretColor, false);  }
+    void setTextFillColor(const StyleColor& c) { SET_VAR(m_rareInheritedData, textFillColor, c); }
+    void setCaretColor(const StyleColor& c) { SET_VAR(m_rareInheritedData, caretColor, c); SET_VAR(m_rareInheritedData, hasAutoCaretColor, false);  }
     void setHasAutoCaretColor() { SET_VAR(m_rareInheritedData, hasAutoCaretColor, true); SET_VAR(m_rareInheritedData, caretColor, currentColor()); }
-    void setAccentColor(const Color& c) { SET_VAR(m_rareInheritedData, accentColor, c); SET_VAR(m_rareInheritedData, hasAutoAccentColor, false);  }
+    void setAccentColor(const StyleColor& c) { SET_VAR(m_rareInheritedData, accentColor, c); SET_VAR(m_rareInheritedData, hasAutoAccentColor, false);  }
     void setHasAutoAccentColor() { SET_VAR(m_rareInheritedData, hasAutoAccentColor, true); SET_VAR(m_rareInheritedData, accentColor, currentColor()); }
     void setOpacity(float f) { float v = clampTo<float>(f, 0.f, 1.f); SET_VAR(m_rareNonInheritedData, opacity, v); }
     static_assert(largestControlPart < 1 << appearanceBitWidth, "Control part must fit in storage bits");
@@ -1273,11 +1279,11 @@ public:
     void setColumnWidth(float f) { SET_NESTED_VAR(m_rareNonInheritedData, multiCol, autoWidth, false); SET_NESTED_VAR(m_rareNonInheritedData, multiCol, width, f); }
     void setHasAutoColumnWidth() { SET_NESTED_VAR(m_rareNonInheritedData, multiCol, autoWidth, true); SET_NESTED_VAR(m_rareNonInheritedData, multiCol, width, 0); }
     void setColumnCount(unsigned short c) { SET_NESTED_VAR(m_rareNonInheritedData, multiCol, autoCount, false); SET_NESTED_VAR(m_rareNonInheritedData, multiCol, count, c); }
-    void setHasAutoColumnCount() { SET_NESTED_VAR(m_rareNonInheritedData, multiCol, autoCount, true); SET_NESTED_VAR(m_rareNonInheritedData, multiCol, count, 0); }
+    void setHasAutoColumnCount() { SET_NESTED_VAR(m_rareNonInheritedData, multiCol, autoCount, true); SET_NESTED_VAR(m_rareNonInheritedData, multiCol, count, initialColumnCount()); }
     void setColumnFill(ColumnFill columnFill) { SET_NESTED_VAR(m_rareNonInheritedData, multiCol, fill, static_cast<unsigned>(columnFill)); }
     void setColumnGap(GapLength&& gapLength) { SET_VAR(m_rareNonInheritedData, columnGap, WTFMove(gapLength)); }
     void setRowGap(GapLength&& gapLength) { SET_VAR(m_rareNonInheritedData, rowGap, WTFMove(gapLength)); }
-    void setColumnRuleColor(const Color& c) { SET_BORDERVALUE_COLOR(m_rareNonInheritedData.access().multiCol, rule, c); }
+    void setColumnRuleColor(const StyleColor& c) { SET_BORDERVALUE_COLOR(m_rareNonInheritedData.access().multiCol, rule, c); }
     void setColumnRuleStyle(BorderStyle b) { SET_NESTED_VAR(m_rareNonInheritedData, multiCol, rule.m_style, static_cast<unsigned>(b)); }
     void setColumnRuleWidth(unsigned short w) { SET_NESTED_VAR(m_rareNonInheritedData, multiCol, rule.m_width, w); }
     void resetColumnRule() { SET_NESTED_VAR(m_rareNonInheritedData, multiCol, rule, BorderValue()); }
@@ -1296,8 +1302,8 @@ public:
 
     void setSpeakAs(OptionSet<SpeakAs> s) { SET_VAR(m_rareInheritedData, speakAs, s.toRaw()); }
     void setTextCombine(TextCombine v) { SET_VAR(m_rareInheritedData, textCombine, static_cast<unsigned>(v)); }
-    void setTextDecorationColor(const Color& c) { SET_VAR(m_rareNonInheritedData, textDecorationColor, c); }
-    void setTextEmphasisColor(const Color& c) { SET_VAR(m_rareInheritedData, textEmphasisColor, c); }
+    void setTextDecorationColor(const StyleColor& c) { SET_VAR(m_rareNonInheritedData, textDecorationColor, c); }
+    void setTextEmphasisColor(const StyleColor& c) { SET_VAR(m_rareInheritedData, textEmphasisColor, c); }
     void setTextEmphasisFill(TextEmphasisFill fill) { SET_VAR(m_rareInheritedData, textEmphasisFill, static_cast<unsigned>(fill)); }
     void setTextEmphasisMark(TextEmphasisMark mark) { SET_VAR(m_rareInheritedData, textEmphasisMark, static_cast<unsigned>(mark)); }
     void setTextEmphasisCustomMark(const AtomString& mark) { SET_VAR(m_rareInheritedData, textEmphasisCustomMark, mark); }
@@ -1379,7 +1385,7 @@ public:
     void setScrollSnapStop(const ScrollSnapStop);
 
 #if ENABLE(TOUCH_EVENTS)
-    void setTapHighlightColor(const Color& c) { SET_VAR(m_rareInheritedData, tapHighlightColor, c); }
+    void setTapHighlightColor(const StyleColor& c) { SET_VAR(m_rareInheritedData, tapHighlightColor, c); }
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -1399,10 +1405,6 @@ public:
 
     void setTextSecurity(TextSecurity security) { SET_VAR(m_rareInheritedData, textSecurity, static_cast<unsigned>(security)); }
     void setInputSecurity(InputSecurity security) { SET_VAR(m_rareNonInheritedData, inputSecurity, static_cast<unsigned>(security)); }
-
-#if ENABLE(CSS_TRAILING_WORD)
-    void setTrailingWord(TrailingWord) { }
-#endif
 
 #if ENABLE(APPLE_PAY)
     void setApplePayButtonStyle(ApplePayButtonStyle style) { SET_VAR(m_rareNonInheritedData, applePayButtonStyle, static_cast<unsigned>(style)); }
@@ -1437,13 +1439,13 @@ public:
     bool hasExplicitlySetStrokeWidth() const { return m_rareInheritedData->hasSetStrokeWidth; };
     bool hasPositiveStrokeWidth() const;
     
-    Color strokeColor() const { return m_rareInheritedData->strokeColor; }
-    void setStrokeColor(const Color& v)  { SET_VAR(m_rareInheritedData, strokeColor, v); }
-    void setVisitedLinkStrokeColor(const Color& v) { SET_VAR(m_rareInheritedData, visitedLinkStrokeColor, v); }
-    const Color& visitedLinkStrokeColor() const { return m_rareInheritedData->visitedLinkStrokeColor; }
+    StyleColor strokeColor() const { return m_rareInheritedData->strokeColor; }
+    void setStrokeColor(const StyleColor& v)  { SET_VAR(m_rareInheritedData, strokeColor, v); }
+    void setVisitedLinkStrokeColor(const StyleColor& v) { SET_VAR(m_rareInheritedData, visitedLinkStrokeColor, v); }
+    const StyleColor& visitedLinkStrokeColor() const { return m_rareInheritedData->visitedLinkStrokeColor; }
     void setHasExplicitlySetStrokeColor(bool v) { SET_VAR(m_rareInheritedData, hasSetStrokeColor, static_cast<unsigned>(v)); }
     bool hasExplicitlySetStrokeColor() const { return m_rareInheritedData->hasSetStrokeColor; };
-    static Color initialStrokeColor() { return Color::transparentBlack; }
+    static StyleColor initialStrokeColor() { return { Color::transparentBlack }; }
     Color computedStrokeColor() const;
     CSSPropertyID effectiveStrokeColorProperty() const { return hasExplicitlySetStrokeColor() ? CSSPropertyStrokeColor : CSSPropertyWebkitTextStrokeColor; }
 
@@ -1456,14 +1458,14 @@ public:
     SVGRenderStyle& accessSVGStyle() { return m_svgStyle.access(); }
 
     SVGPaintType fillPaintType() const { return svgStyle().fillPaintType(); }
-    Color fillPaintColor() const { return svgStyle().fillPaintColor(); }
-    void setFillPaintColor(const Color& color) { accessSVGStyle().setFillPaint(SVGPaintType::RGBColor, color, emptyString()); }
+    StyleColor fillPaintColor() const { return svgStyle().fillPaintColor(); }
+    void setFillPaintColor(const StyleColor& color) { accessSVGStyle().setFillPaint(SVGPaintType::RGBColor, color, emptyString()); }
     float fillOpacity() const { return svgStyle().fillOpacity(); }
     void setFillOpacity(float f) { accessSVGStyle().setFillOpacity(f); }
 
     SVGPaintType strokePaintType() const { return svgStyle().strokePaintType(); }
-    Color strokePaintColor() const { return svgStyle().strokePaintColor(); }
-    void setStrokePaintColor(const Color& color) { accessSVGStyle().setStrokePaint(SVGPaintType::RGBColor, color, emptyString()); }
+    StyleColor strokePaintColor() const { return svgStyle().strokePaintColor(); }
+    void setStrokePaintColor(const StyleColor& color) { accessSVGStyle().setStrokePaint(SVGPaintType::RGBColor, color, emptyString()); }
     float strokeOpacity() const { return svgStyle().strokeOpacity(); }
     void setStrokeOpacity(float f) { accessSVGStyle().setStrokeOpacity(f); }
     Vector<SVGLengthValue> strokeDashArray() const { return svgStyle().strokeDashArray(); }
@@ -1492,9 +1494,9 @@ public:
     float stopOpacity() const { return svgStyle().stopOpacity(); }
     void setStopOpacity(float f) { accessSVGStyle().setStopOpacity(f); }
 
-    void setStopColor(const Color& c) { accessSVGStyle().setStopColor(c); }
-    void setFloodColor(const Color& c) { accessSVGStyle().setFloodColor(c); }
-    void setLightingColor(const Color& c) { accessSVGStyle().setLightingColor(c); }
+    void setStopColor(const StyleColor& c) { accessSVGStyle().setStopColor(c); }
+    void setFloodColor(const StyleColor& c) { accessSVGStyle().setFloodColor(c); }
+    void setLightingColor(const StyleColor& c) { accessSVGStyle().setLightingColor(c); }
 
     SVGLengthValue baselineShiftValue() const { return svgStyle().baselineShiftValue(); }
     void setBaselineShiftValue(SVGLengthValue s) { accessSVGStyle().setBaselineShiftValue(s); }
@@ -1565,7 +1567,8 @@ public:
     bool isDisplayFlexibleOrGridBox() const { return isDisplayFlexibleOrGridBox(display()); }
     bool isDisplayFlexibleBoxIncludingDeprecatedOrGridBox() const { return isDisplayFlexibleOrGridBox() || isDisplayDeprecatedFlexibleBox(display()); }
     bool isDisplayRegionType() const;
-    bool isDisplayBlockLevel() const;
+    bool isDisplayBlockLevel() const { return isDisplayBlockType(display()); }
+    bool isOriginalDisplayBlockType() const { return isDisplayBlockType(originalDisplay()); }
     bool isDisplayTableOrTablePart() const { return isDisplayTableOrTablePart(display()); }
     bool isOriginalDisplayListItemType() const { return isDisplayListItemType(originalDisplay()); }
 
@@ -1585,15 +1588,18 @@ public:
     bool lastChildState() const { return m_nonInheritedFlags.lastChildState; }
     void setLastChildState() { setUnique(); m_nonInheritedFlags.lastChildState = true; }
 
-    Color unresolvedColorForProperty(CSSPropertyID colorProperty, bool visitedLink = false) const;
-    Color colorResolvingCurrentColor(const Color&) const;
+    StyleColor unresolvedColorForProperty(CSSPropertyID colorProperty, bool visitedLink = false) const;
+    Color colorResolvingCurrentColor(CSSPropertyID colorProperty, bool visitedLink) const;
+    // Resolves the currentColor keyword (except for the "color" property which has specific semantic).
+    WEBCORE_EXPORT Color colorResolvingCurrentColor(const StyleColor&) const;
 
     WEBCORE_EXPORT Color visitedDependentColor(CSSPropertyID) const;
     WEBCORE_EXPORT Color visitedDependentColorWithColorFilter(CSSPropertyID) const;
 
     WEBCORE_EXPORT Color colorByApplyingColorFilter(const Color&) const;
+    WEBCORE_EXPORT Color colorWithColorFilter(const StyleColor&) const;
 
-    bool backgroundColorEqualsToColorIgnoringVisited(const Color& color) const { return color == backgroundColor(); }
+    bool backgroundColorEqualsToColorIgnoringVisited(const StyleColor& color) const { return color == backgroundColor(); }
 
     void setHasExplicitlyInheritedProperties() { m_nonInheritedFlags.hasExplicitlyInheritedProperties = true; }
     bool hasExplicitlyInheritedProperties() const { return m_nonInheritedFlags.hasExplicitlyInheritedProperties; }
@@ -1644,6 +1650,8 @@ public:
     static float initialVerticalBorderSpacing() { return 0; }
     static CursorType initialCursor() { return CursorType::Auto; }
     static Color initialColor() { return Color::black; }
+    static StyleColor initialTextStrokeColor() { return currentColor(); }
+    static StyleColor initialTextDecorationColor() { return currentColor(); }
     static StyleImage* initialListStyleImage() { return 0; }
     static float initialBorderWidth() { return 3; }
     static unsigned short initialColumnRuleWidth() { return 3; }
@@ -1754,8 +1762,8 @@ public:
     static float initialPerspective() { return -1; }
     static Length initialPerspectiveOriginX() { return Length(50.0f, LengthType::Percent); }
     static Length initialPerspectiveOriginY() { return Length(50.0f, LengthType::Percent); }
-    static Color initialBackgroundColor() { return Color::transparentBlack; }
-    static Color initialTextEmphasisColor() { return currentColor(); }
+    static StyleColor initialBackgroundColor() { return Color::transparentBlack; }
+    static StyleColor initialTextEmphasisColor() { return currentColor(); }
     static TextEmphasisFill initialTextEmphasisFill() { return TextEmphasisFill::Filled; }
     static TextEmphasisMark initialTextEmphasisMark() { return TextEmphasisMark::None; }
     static const AtomString& initialTextEmphasisCustomMark() { return nullAtom(); }
@@ -1800,10 +1808,6 @@ public:
     static ScrollSnapType initialScrollSnapType();
     static ScrollSnapAlign initialScrollSnapAlign();
     static ScrollSnapStop initialScrollSnapStop();
-
-#if ENABLE(CSS_TRAILING_WORD)
-    static TrailingWord initialTrailingWord() { return TrailingWord::Auto; }
-#endif
 
 #if ENABLE(APPLE_PAY)
     static ApplePayButtonStyle initialApplePayButtonStyle() { return ApplePayButtonStyle::Black; }
@@ -1854,7 +1858,7 @@ public:
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
-    static Color initialTapHighlightColor();
+    static StyleColor initialTapHighlightColor();
 #endif
 
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
@@ -1882,18 +1886,18 @@ public:
     void setIsNotFinal() { SET_VAR(m_rareNonInheritedData, isNotFinal, true); }
 
     void setVisitedLinkColor(const Color&);
-    void setVisitedLinkBackgroundColor(const Color& v) { SET_VAR(m_rareNonInheritedData, visitedLinkBackgroundColor, v); }
-    void setVisitedLinkBorderLeftColor(const Color& v) { SET_VAR(m_rareNonInheritedData, visitedLinkBorderLeftColor, v); }
-    void setVisitedLinkBorderRightColor(const Color& v) { SET_VAR(m_rareNonInheritedData, visitedLinkBorderRightColor, v); }
-    void setVisitedLinkBorderBottomColor(const Color& v) { SET_VAR(m_rareNonInheritedData, visitedLinkBorderBottomColor, v); }
-    void setVisitedLinkBorderTopColor(const Color& v) { SET_VAR(m_rareNonInheritedData, visitedLinkBorderTopColor, v); }
-    void setVisitedLinkOutlineColor(const Color& v) { SET_VAR(m_rareNonInheritedData, visitedLinkOutlineColor, v); }
-    void setVisitedLinkColumnRuleColor(const Color& v) { SET_NESTED_VAR(m_rareNonInheritedData, multiCol, visitedLinkColumnRuleColor, v); }
-    void setVisitedLinkTextDecorationColor(const Color& v) { SET_VAR(m_rareNonInheritedData, visitedLinkTextDecorationColor, v); }
-    void setVisitedLinkTextEmphasisColor(const Color& v) { SET_VAR(m_rareInheritedData, visitedLinkTextEmphasisColor, v); }
-    void setVisitedLinkTextFillColor(const Color& v) { SET_VAR(m_rareInheritedData, visitedLinkTextFillColor, v); }
-    void setVisitedLinkTextStrokeColor(const Color& v) { SET_VAR(m_rareInheritedData, visitedLinkTextStrokeColor, v); }
-    void setVisitedLinkCaretColor(const Color& v) { SET_VAR(m_rareInheritedData, visitedLinkCaretColor, v); SET_VAR(m_rareInheritedData, hasVisitedLinkAutoCaretColor, false); }
+    void setVisitedLinkBackgroundColor(const StyleColor& v) { SET_VAR(m_rareNonInheritedData, visitedLinkBackgroundColor, v); }
+    void setVisitedLinkBorderLeftColor(const StyleColor& v) { SET_VAR(m_rareNonInheritedData, visitedLinkBorderLeftColor, v); }
+    void setVisitedLinkBorderRightColor(const StyleColor& v) { SET_VAR(m_rareNonInheritedData, visitedLinkBorderRightColor, v); }
+    void setVisitedLinkBorderBottomColor(const StyleColor& v) { SET_VAR(m_rareNonInheritedData, visitedLinkBorderBottomColor, v); }
+    void setVisitedLinkBorderTopColor(const StyleColor& v) { SET_VAR(m_rareNonInheritedData, visitedLinkBorderTopColor, v); }
+    void setVisitedLinkOutlineColor(const StyleColor& v) { SET_VAR(m_rareNonInheritedData, visitedLinkOutlineColor, v); }
+    void setVisitedLinkColumnRuleColor(const StyleColor& v) { SET_NESTED_VAR(m_rareNonInheritedData, multiCol, visitedLinkColumnRuleColor, v); }
+    void setVisitedLinkTextDecorationColor(const StyleColor& v) { SET_VAR(m_rareNonInheritedData, visitedLinkTextDecorationColor, v); }
+    void setVisitedLinkTextEmphasisColor(const StyleColor& v) { SET_VAR(m_rareInheritedData, visitedLinkTextEmphasisColor, v); }
+    void setVisitedLinkTextFillColor(const StyleColor& v) { SET_VAR(m_rareInheritedData, visitedLinkTextFillColor, v); }
+    void setVisitedLinkTextStrokeColor(const StyleColor& v) { SET_VAR(m_rareInheritedData, visitedLinkTextStrokeColor, v); }
+    void setVisitedLinkCaretColor(const StyleColor& v) { SET_VAR(m_rareInheritedData, visitedLinkCaretColor, v); SET_VAR(m_rareInheritedData, hasVisitedLinkAutoCaretColor, false); }
     void setHasVisitedLinkAutoCaretColor() { SET_VAR(m_rareInheritedData, hasVisitedLinkAutoCaretColor, true); SET_VAR(m_rareInheritedData, visitedLinkCaretColor, currentColor()); }
 
     void inheritUnicodeBidiFrom(const RenderStyle* parent) { m_nonInheritedFlags.unicodeBidi = parent->m_nonInheritedFlags.unicodeBidi; }
@@ -1901,45 +1905,45 @@ public:
     void getShadowInlineDirectionExtent(const ShadowData*, LayoutUnit& logicalLeft, LayoutUnit& logicalRight) const;
     void getShadowBlockDirectionExtent(const ShadowData*, LayoutUnit& logicalTop, LayoutUnit& logicalBottom) const;
 
-    // In RenderStyle invalid color value is used to signify 'currentcolor' which resolves to color().
-    static Color currentColor() { return { }; }
-    static bool isCurrentColor(const Color& color) { return !color.isValid(); }
+    static StyleColor currentColor() { return StyleColor::currentColor(); }
+    static bool isCurrentColor(const StyleColor& color) { return color.isCurrentColor(); }
 
-    const Color& borderLeftColor() const { return m_surroundData->border.left().color(); }
-    const Color& borderRightColor() const { return m_surroundData->border.right().color(); }
-    const Color& borderTopColor() const { return m_surroundData->border.top().color(); }
-    const Color& borderBottomColor() const { return m_surroundData->border.bottom().color(); }
-    const Color& backgroundColor() const { return m_backgroundData->color; }
+    const StyleColor& borderLeftColor() const { return m_surroundData->border.left().color(); }
+    const StyleColor& borderRightColor() const { return m_surroundData->border.right().color(); }
+    const StyleColor& borderTopColor() const { return m_surroundData->border.top().color(); }
+    const StyleColor& borderBottomColor() const { return m_surroundData->border.bottom().color(); }
+    const StyleColor& backgroundColor() const { return m_backgroundData->color; }
     WEBCORE_EXPORT const Color& color() const;
-    const Color& columnRuleColor() const { return m_rareNonInheritedData->multiCol->rule.color(); }
-    const Color& outlineColor() const { return m_backgroundData->outline.color(); }
-    const Color& textEmphasisColor() const { return m_rareInheritedData->textEmphasisColor; }
-    const Color& textFillColor() const { return m_rareInheritedData->textFillColor; }
-    const Color& textStrokeColor() const { return m_rareInheritedData->textStrokeColor; }
-    const Color& caretColor() const { return m_rareInheritedData->caretColor; }
+    const StyleColor& columnRuleColor() const { return m_rareNonInheritedData->multiCol->rule.color(); }
+    const StyleColor& outlineColor() const { return m_backgroundData->outline.color(); }
+    const StyleColor& textEmphasisColor() const { return m_rareInheritedData->textEmphasisColor; }
+    const StyleColor& textFillColor() const { return m_rareInheritedData->textFillColor; }
+    static StyleColor initialTextFillColor() { return currentColor() ; }
+    const StyleColor& textStrokeColor() const { return m_rareInheritedData->textStrokeColor; }
+    const StyleColor& caretColor() const { return m_rareInheritedData->caretColor; }
     bool hasAutoCaretColor() const { return m_rareInheritedData->hasAutoCaretColor; }
     const Color& visitedLinkColor() const;
-    const Color& visitedLinkBackgroundColor() const { return m_rareNonInheritedData->visitedLinkBackgroundColor; }
-    const Color& visitedLinkBorderLeftColor() const { return m_rareNonInheritedData->visitedLinkBorderLeftColor; }
-    const Color& visitedLinkBorderRightColor() const { return m_rareNonInheritedData->visitedLinkBorderRightColor; }
-    const Color& visitedLinkBorderBottomColor() const { return m_rareNonInheritedData->visitedLinkBorderBottomColor; }
-    const Color& visitedLinkBorderTopColor() const { return m_rareNonInheritedData->visitedLinkBorderTopColor; }
-    const Color& visitedLinkOutlineColor() const { return m_rareNonInheritedData->visitedLinkOutlineColor; }
-    const Color& visitedLinkColumnRuleColor() const { return m_rareNonInheritedData->multiCol->visitedLinkColumnRuleColor; }
-    const Color& textDecorationColor() const { return m_rareNonInheritedData->textDecorationColor; }
-    const Color& visitedLinkTextDecorationColor() const { return m_rareNonInheritedData->visitedLinkTextDecorationColor; }
-    const Color& visitedLinkTextEmphasisColor() const { return m_rareInheritedData->visitedLinkTextEmphasisColor; }
-    const Color& visitedLinkTextFillColor() const { return m_rareInheritedData->visitedLinkTextFillColor; }
-    const Color& visitedLinkTextStrokeColor() const { return m_rareInheritedData->visitedLinkTextStrokeColor; }
-    const Color& visitedLinkCaretColor() const { return m_rareInheritedData->visitedLinkCaretColor; }
+    const StyleColor& visitedLinkBackgroundColor() const { return m_rareNonInheritedData->visitedLinkBackgroundColor; }
+    const StyleColor& visitedLinkBorderLeftColor() const { return m_rareNonInheritedData->visitedLinkBorderLeftColor; }
+    const StyleColor& visitedLinkBorderRightColor() const { return m_rareNonInheritedData->visitedLinkBorderRightColor; }
+    const StyleColor& visitedLinkBorderBottomColor() const { return m_rareNonInheritedData->visitedLinkBorderBottomColor; }
+    const StyleColor& visitedLinkBorderTopColor() const { return m_rareNonInheritedData->visitedLinkBorderTopColor; }
+    const StyleColor& visitedLinkOutlineColor() const { return m_rareNonInheritedData->visitedLinkOutlineColor; }
+    const StyleColor& visitedLinkColumnRuleColor() const { return m_rareNonInheritedData->multiCol->visitedLinkColumnRuleColor; }
+    const StyleColor& textDecorationColor() const { return m_rareNonInheritedData->textDecorationColor; }
+    const StyleColor& visitedLinkTextDecorationColor() const { return m_rareNonInheritedData->visitedLinkTextDecorationColor; }
+    const StyleColor& visitedLinkTextEmphasisColor() const { return m_rareInheritedData->visitedLinkTextEmphasisColor; }
+    const StyleColor& visitedLinkTextFillColor() const { return m_rareInheritedData->visitedLinkTextFillColor; }
+    const StyleColor& visitedLinkTextStrokeColor() const { return m_rareInheritedData->visitedLinkTextStrokeColor; }
+    const StyleColor& visitedLinkCaretColor() const { return m_rareInheritedData->visitedLinkCaretColor; }
     bool hasVisitedLinkAutoCaretColor() const { return m_rareInheritedData->hasVisitedLinkAutoCaretColor; }
 
-    const Color& stopColor() const { return svgStyle().stopColor(); }
-    const Color& floodColor() const { return svgStyle().floodColor(); }
-    const Color& lightingColor() const { return svgStyle().lightingColor(); }
+    const StyleColor& stopColor() const { return svgStyle().stopColor(); }
+    const StyleColor& floodColor() const { return svgStyle().floodColor(); }
+    const StyleColor& lightingColor() const { return svgStyle().lightingColor(); }
 
     Color effectiveAccentColor() const;
-    const Color& accentColor() const { return m_rareInheritedData->accentColor; }
+    const StyleColor& accentColor() const { return m_rareInheritedData->accentColor; }
     bool hasAutoAccentColor() const { return m_rareInheritedData->hasAutoAccentColor; }
 
     PathOperation* offsetPath() const { return m_rareNonInheritedData->offsetPath.get(); }
@@ -2065,6 +2069,7 @@ private:
     bool hasAutoTopAndBottom() const { return top().isAuto() && bottom().isAuto(); }
 
     static bool isDisplayInlineType(DisplayType);
+    static bool isDisplayBlockType(DisplayType);
     static bool isDisplayFlexibleBox(DisplayType);
     static bool isDisplayGridBox(DisplayType);
     static bool isDisplayFlexibleOrGridBox(DisplayType);
@@ -2076,8 +2081,6 @@ private:
     static LayoutBoxExtent shadowInsetExtent(const ShadowData*);
     static void getShadowHorizontalExtent(const ShadowData*, LayoutUnit& left, LayoutUnit& right);
     static void getShadowVerticalExtent(const ShadowData*, LayoutUnit& top, LayoutUnit& bottom);
-
-    Color colorResolvingCurrentColor(CSSPropertyID colorProperty, bool visitedLink) const;
 
     bool changeAffectsVisualOverflow(const RenderStyle&) const;
     bool changeRequiresLayout(const RenderStyle&, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties) const;
@@ -2452,11 +2455,12 @@ inline bool RenderStyle::isDisplayRegionType() const
         || display() == DisplayType::ListItem;
 }
 
-inline bool RenderStyle::isDisplayBlockLevel() const
+inline bool RenderStyle::isDisplayBlockType(DisplayType display)
 {
-    return display() == DisplayType::Block || display() == DisplayType::Table
-        || display() == DisplayType::FlowRoot || display() == DisplayType::Grid
-        || display() == DisplayType::Flex || display() == DisplayType::ListItem;
+    return display == DisplayType::Block || display == DisplayType::Table
+        || display == DisplayType::FlowRoot || display == DisplayType::Grid
+        || display == DisplayType::Flex || display == DisplayType::Box
+        || display == DisplayType::ListItem;
 }
 
 inline bool RenderStyle::setWritingMode(WritingMode v)
@@ -2548,6 +2552,11 @@ inline bool pseudoElementRendererIsNeeded(const RenderStyle* style)
 inline bool generatesBox(const RenderStyle& style)
 {
     return style.display() != DisplayType::None && style.display() != DisplayType::Contents;
+}
+
+inline bool isNonVisibleOverflow(Overflow overflow)
+{
+    return overflow == Overflow::Hidden || overflow == Overflow::Scroll || overflow == Overflow::Clip;
 }
 
 } // namespace WebCore

@@ -2442,18 +2442,34 @@ void SetMaterialParameters(GLES1State *state,
                            MaterialParameter pname,
                            const GLfloat *params)
 {
+    // Note: Ambient and diffuse colors are inherited from glColor when COLOR_MATERIAL is enabled,
+    // and can only be modified by this function if that is disabled:
+    //
+    // > the replaced values remain until changed by either sending a new color or by setting a
+    // > new material value when COLOR_MATERIAL is not currently enabled, to override that
+    // particular value.
+
     MaterialParameters &material = state->materialParameters();
     switch (pname)
     {
         case MaterialParameter::Ambient:
-            material.ambient = ColorF::fromData(params);
+            if (!state->isColorMaterialEnabled())
+            {
+                material.ambient = ColorF::fromData(params);
+            }
             break;
         case MaterialParameter::Diffuse:
-            material.diffuse = ColorF::fromData(params);
+            if (!state->isColorMaterialEnabled())
+            {
+                material.diffuse = ColorF::fromData(params);
+            }
             break;
         case MaterialParameter::AmbientAndDiffuse:
-            material.ambient = ColorF::fromData(params);
-            material.diffuse = ColorF::fromData(params);
+            if (!state->isColorMaterialEnabled())
+            {
+                material.ambient = ColorF::fromData(params);
+                material.diffuse = ColorF::fromData(params);
+            }
             break;
         case MaterialParameter::Specular:
             material.specular = ColorF::fromData(params);
@@ -3227,6 +3243,16 @@ bool GetQueryParameterInfo(const State &glState,
             *numParams = 1;
             return true;
         }
+        case GL_COLOR_LOGIC_OP:
+        {
+            if (!extensions.logicOpANGLE)
+            {
+                return false;
+            }
+            *type      = GL_BOOL;
+            *numParams = 1;
+            return true;
+        }
         case GL_COLOR_WRITEMASK:
         {
             *type      = GL_BOOL;
@@ -3606,6 +3632,13 @@ bool GetQueryParameterInfo(const State &glState,
         return true;
     }
 
+    if (extensions.provokingVertexANGLE && pname == GL_PROVOKING_VERTEX_ANGLE)
+    {
+        *type      = GL_INT;
+        *numParams = 1;
+        return true;
+    }
+
     if (glState.getClientVersion() < Version(2, 0))
     {
         switch (pname)
@@ -3816,6 +3849,20 @@ bool GetQueryParameterInfo(const State &glState,
             case GL_TEXTURE_BINDING_BUFFER:
             case GL_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
             case GL_MAX_TEXTURE_BUFFER_SIZE:
+                *type      = GL_INT;
+                *numParams = 1;
+                return true;
+        }
+    }
+
+    if (extensions.shaderPixelLocalStorageANGLE)
+    {
+        switch (pname)
+        {
+            case GL_MAX_PIXEL_LOCAL_STORAGE_PLANES_ANGLE:
+            case GL_MAX_COLOR_ATTACHMENTS_WITH_ACTIVE_PIXEL_LOCAL_STORAGE_ANGLE:
+            case GL_MAX_COMBINED_DRAW_BUFFERS_AND_PIXEL_LOCAL_STORAGE_PLANES_ANGLE:
+            case GL_PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_ANGLE:
                 *type      = GL_INT;
                 *numParams = 1;
                 return true;

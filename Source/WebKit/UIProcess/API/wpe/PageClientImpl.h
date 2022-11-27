@@ -158,7 +158,7 @@ private:
     void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) override;
 #endif
 
-    IPC::Attachment hostFileDescriptor() final;
+    UnixFileDescriptor hostFileDescriptor() final;
     void requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, const WebCore::IntRect&, const String&, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&&) final;
 
     WebCore::UserInterfaceLayoutDirection userInterfaceLayoutDirection() override;
@@ -166,6 +166,8 @@ private:
     void didChangeWebPageID() const override;
 
     void selectionDidChange() override;
+
+    WebKitWebResourceLoadManager* webResourceLoadManager() override;
 
     WKWPE::View& m_view;
 };

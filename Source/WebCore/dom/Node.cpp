@@ -134,8 +134,10 @@ static const char* stringForRareDataUseType(NodeRareData::UseType useType)
         return "ClassList";
     case NodeRareData::UseType::ShadowRoot:
         return "ShadowRoot";
-    case NodeRareData::UseType::CustomElementQueue:
-        return "CustomElementQueue";
+    case NodeRareData::UseType::CustomElementReactionQueue:
+        return "CustomElementReactionQueue";
+    case NodeRareData::UseType::CustomElementDefaultARIA:
+        return "CustomElementDefaultARIA";
     case NodeRareData::UseType::AttributeMap:
         return "AttributeMap";
     case NodeRareData::UseType::InteractionObserver:
@@ -347,11 +349,15 @@ void Node::trackForDebugging()
 
 inline void NodeRareData::operator delete(NodeRareData* nodeRareData, std::destroying_delete_t)
 {
+    auto destroyAndFree = [&](auto& value) {
+        std::destroy_at(&value);
+        std::decay_t<decltype(value)>::freeAfterDestruction(&value);
+    };
+
     if (nodeRareData->m_isElementRareData)
-        static_cast<ElementRareData*>(nodeRareData)->~ElementRareData();
+        destroyAndFree(static_cast<ElementRareData&>(*nodeRareData));
     else
-        nodeRareData->~NodeRareData();
-    NodeRareData::freeAfterDestruction(nodeRareData);
+        destroyAndFree(*nodeRareData);
 }
 
 Node::Node(Document& document, ConstructionType type)
@@ -775,7 +781,7 @@ static Node::Editability computeEditabilityFromComputedStyle(const RenderStyle& 
     return Node::Editability::ReadOnly;
 }
 
-Node::Editability Node::computeEditabilityWithStyle(const RenderStyle* style, UserSelectAllTreatment treatment, ShouldUpdateStyle shouldUpdateStyle) const
+Node::Editability Node::computeEditabilityWithStyle(const RenderStyle* incomingStyle, UserSelectAllTreatment treatment, ShouldUpdateStyle shouldUpdateStyle) const
 {
     if (!document().hasLivingRenderTree() || isPseudoElement())
         return Editability::ReadOnly;
@@ -792,8 +798,15 @@ Node::Editability Node::computeEditabilityWithStyle(const RenderStyle* style, Us
         document->updateStyleIfNeeded();
     }
 
-    if (!style)
-        style = isDocumentNode() ? renderStyle() : const_cast<Node*>(this)->computedStyle();
+    auto* style = [&] {
+        if (incomingStyle)
+            return incomingStyle;
+        if (isDocumentNode())
+            return renderStyle();
+        auto* element = is<Element>(this) ? downcast<Element>(this) : parentElementInComposedTree();
+        return element ? const_cast<Element&>(*element).computedStyleForEditability() : nullptr;
+    }();
+
     if (!style)
         return Editability::ReadOnly;
 
@@ -1125,7 +1138,7 @@ Node* Node::pseudoAwareLastChild() const
 
 const RenderStyle* Node::computedStyle(PseudoId pseudoElementSpecifier)
 {
-    auto* composedParent = composedTreeAncestors(*this).first();
+    auto* composedParent = parentElementInComposedTree();
     if (!composedParent)
         return nullptr;
     return composedParent->computedStyle(pseudoElementSpecifier);
@@ -2039,7 +2052,7 @@ inline void Node::moveShadowTreeToNewDocument(ShadowRoot& shadowRoot, Document& 
         node.moveNodeToNewDocument(oldDocument, newDocument);
     }, [&oldDocument, &newDocument](ShadowRoot& innerShadowRoot) {
         RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&innerShadowRoot.document() == &oldDocument);
-        innerShadowRoot.moveShadowRootToNewDocument(newDocument);
+        innerShadowRoot.moveShadowRootToNewDocument(oldDocument, newDocument);
         moveShadowTreeToNewDocument(innerShadowRoot, oldDocument, newDocument);
     });
 }
@@ -2559,10 +2572,7 @@ bool Node::willRespondToMouseClickEventsWithEditability(Editability editability)
     return hasEventListeners(eventNames.mouseupEvent)
         || hasEventListeners(eventNames.mousedownEvent)
         || hasEventListeners(eventNames.clickEvent)
-#if !PLATFORM(IOS_FAMILY)
-        || hasEventListeners(eventNames.DOMActivateEvent)
-#endif
-    ;
+        || hasEventListeners(eventNames.DOMActivateEvent);
 }
 
 bool Node::willRespondToMouseWheelEvents() const

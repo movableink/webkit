@@ -507,6 +507,9 @@ EXPORTS
     glDrawElementsInstancedANGLE
     glVertexAttribDivisorANGLE
 
+    ; GL_ANGLE_logic_op
+    glLogicOpANGLE
+
     ; GL_ANGLE_memory_object_flags
     glTexStorageMemFlags2DANGLE
     glTexStorageMemFlags2DMultisampleANGLE
@@ -603,6 +606,18 @@ EXPORTS
 
     ; GL_ANGLE_semaphore_fuchsia
     glImportSemaphoreZirconHandleANGLE
+
+    ; GL_ANGLE_shader_pixel_local_storage
+    glBeginPixelLocalStorageANGLE
+    glEndPixelLocalStorageANGLE
+    glFramebufferMemorylessPixelLocalStorageANGLE
+    glFramebufferPixelLocalClearValuefvANGLE
+    glFramebufferPixelLocalClearValueivANGLE
+    glFramebufferPixelLocalClearValueuivANGLE
+    glFramebufferTexturePixelLocalStorageANGLE
+    glGetFramebufferPixelLocalStorageParameterfvANGLE
+    glGetFramebufferPixelLocalStorageParameterivANGLE
+    glPixelLocalStorageBarrierANGLE
 
     ; GL_ANGLE_texture_compression_dxt3
 
@@ -771,6 +786,8 @@ EXPORTS
     ; GL_EXT_multisampled_render_to_texture
     glFramebufferTexture2DMultisampleEXT
     glRenderbufferStorageMultisampleEXT
+
+    ; GL_EXT_multisampled_render_to_texture2
 
     ; GL_EXT_occlusion_query_boolean
 
@@ -988,6 +1005,8 @@ EXPORTS
     ; GL_OES_EGL_image_external_essl3
 
     ; GL_OES_compressed_ETC1_RGB8_texture
+
+    ; GL_OES_compressed_paletted_texture
 
     ; GL_OES_copy_image
     glCopyImageSubDataOES
@@ -2248,29 +2267,3 @@ EXPORTS
     glMultiDrawElementsIndirectCount
     glPolygonOffsetClamp
     glSpecializeShader
-
-    ; WGL 1.0
-    wglChoosePixelFormat
-    wglCopyContext
-    wglCreateContext
-    wglCreateLayerContext
-    wglDeleteContext
-    wglDescribeLayerPlane
-    wglDescribePixelFormat
-    wglGetCurrentContext
-    wglGetCurrentDC
-    wglGetEnhMetaFilePixelFormat
-    wglGetLayerPaletteEntries
-    wglGetPixelFormat
-    wglGetProcAddress
-    wglMakeCurrent
-    wglRealizeLayerPalette
-    wglSetLayerPaletteEntries
-    wglSetPixelFormat
-    wglShareLists
-    wglSwapBuffers
-    wglSwapLayerBuffers
-    wglUseFontBitmapsA
-    wglUseFontBitmapsW
-    wglUseFontOutlinesA
-    wglUseFontOutlinesW

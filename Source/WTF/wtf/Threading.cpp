@@ -29,8 +29,8 @@
 #include <cstring>
 #include <wtf/DateMath.h>
 #include <wtf/Gigacage.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/PrintStream.h>
-#include <wtf/RandomNumberSeed.h>
 #include <wtf/ThreadGroup.h>
 #include <wtf/ThreadingPrimitives.h>
 #include <wtf/WTFConfig.h>
@@ -45,7 +45,7 @@
 #include <wtf/linux/RealTimeThreads.h>
 #endif
 
-#if OS(DARWIN) && !PLATFORM(QT)
+#if PLATFORM(COCOA)
 #include <wtf/darwin/LibraryPathDiagnostics.h>
 #endif
 
@@ -124,7 +124,16 @@ static std::optional<size_t> stackSize(ThreadType threadType)
 #endif
 }
 
-std::atomic<uint32_t> Thread::s_uid { 0 };
+std::atomic<uint32_t> ThreadLike::s_uid;
+
+uint32_t ThreadLike::currentSequence()
+{
+#if PLATFORM(COCOA)
+    if (uint32_t uid = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(dispatch_get_specific(&s_uid))))
+        return uid;
+#endif
+    return Thread::current().uid();
+}
 
 struct Thread::NewThreadContext : public ThreadSafeRefCounted<NewThreadContext> {
 public:
@@ -476,7 +485,6 @@ void initialize()
         setPermissionsOfConfigPage();
         Gigacage::ensureGigacage();
         Config::AssertNotFrozenScope assertScope;
-        initializeRandomNumberGenerator();
 #if !HAVE(FAST_TLS) && !OS(WINDOWS)
         Thread::initializeTLSKey();
 #endif
@@ -485,7 +493,7 @@ void initialize()
 #if USE(PTHREADS) && HAVE(MACHINE_CONTEXT)
         SignalHandlers::initialize();
 #endif
-#if OS(DARWIN) && !PLATFORM(QT)
+#if PLATFORM(COCOA)
         initializeLibraryPathDiagnostics();
 #endif
     });

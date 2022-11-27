@@ -127,7 +127,7 @@ unsigned HTMLElement::parseBorderWidthAttribute(const AtomString& value) const
     if (auto optionalBorderWidth = parseHTMLNonNegativeInteger(value))
         return optionalBorderWidth.value();
 
-    return hasTagName(tableTag) ? 1 : 0;
+    return hasTagName(tableTag) && !value.isNull() ? 1 : 0;
 }
 
 void HTMLElement::applyBorderAttributeToStyle(const AtomString& value, MutableStyleProperties& style)
@@ -762,12 +762,12 @@ HTMLFormElement* HTMLElement::form() const
     return HTMLFormElement::findClosestFormAncestor(*this);
 }
 
-FormNamedItem* HTMLElement::asFormNamedItem()
+FormAssociatedElement* HTMLElement::asFormAssociatedElement()
 {
     return nullptr;
 }
 
-FormAssociatedElement* HTMLElement::asFormAssociatedElement()
+FormListedElement* HTMLElement::asFormListedElement()
 {
     return nullptr;
 }

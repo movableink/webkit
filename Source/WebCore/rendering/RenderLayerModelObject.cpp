@@ -90,6 +90,9 @@ void RenderLayerModelObject::destroyLayer()
 {
     ASSERT(!hasLayer());
     ASSERT(m_layer);
+#if PLATFORM(IOS_FAMILY)
+    m_layer->willBeDestroyed();
+#endif
     m_layer = nullptr;
 }
 
@@ -266,12 +269,12 @@ void RenderLayerModelObject::updateLayerTransform()
 }
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-bool RenderLayerModelObject::shouldPaintSVGRenderer(const PaintInfo& paintInfo, const std::optional<StdUnorderedSet<PaintPhase>>& relevantPaintPhases) const
+bool RenderLayerModelObject::shouldPaintSVGRenderer(const PaintInfo& paintInfo, const OptionSet<PaintPhase> relevantPaintPhases) const
 {
     if (paintInfo.context().paintingDisabled())
         return false;
 
-    if (relevantPaintPhases && !relevantPaintPhases->contains(paintInfo.phase))
+    if (!relevantPaintPhases.isEmpty() && !relevantPaintPhases.contains(paintInfo.phase))
         return false;
 
     if (!paintInfo.shouldPaintWithinRoot(*this))
@@ -335,9 +338,7 @@ std::optional<LayoutRect> RenderLayerModelObject::computeVisibleRectInSVGContain
 
 void RenderLayerModelObject::mapLocalToSVGContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, OptionSet<MapCoordinatesMode> mode, bool* wasFixed) const
 {
-    // FIXME: [LBSE] Upstream RenderSVGBlock changes
-    // ASSERT(is<RenderSVGModelObject>(this) || is<RenderSVGBlock>(this));
-    ASSERT(is<RenderSVGModelObject>(this));
+    ASSERT(is<RenderSVGModelObject>(this) || is<RenderSVGBlock>(this));
     ASSERT(style().position() == PositionType::Static);
 
     if (ancestorContainer == this)
@@ -375,14 +376,15 @@ void RenderLayerModelObject::mapLocalToSVGContainer(const RenderLayerModelObject
     container->mapLocalToContainer(ancestorContainer, transformState, mode, wasFixed);
 }
 
-void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, SVGGraphicsElement& graphicsElement, const RenderStyle& style, const FloatRect& boundingBox, const std::optional<AffineTransform>& preApplySVGTransformMatrix, const std::optional<AffineTransform>& postApplySVGTransformMatrix, OptionSet<RenderStyle::TransformOperationOption> options) const
+void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, const SVGGraphicsElement& graphicsElement, const RenderStyle& style, const FloatRect& boundingBox, const std::optional<AffineTransform>& preApplySVGTransformMatrix, const std::optional<AffineTransform>& postApplySVGTransformMatrix, OptionSet<RenderStyle::TransformOperationOption> options) const
 {
-    auto svgTransform = graphicsElement.animatedLocalTransform();
+    auto svgTransform = graphicsElement.transform().concatenate();
+    auto* supplementalTransform = graphicsElement.supplementalTransform(); // SMIL <animateMotion>
 
     // This check does not use style.hasTransformRelatedProperty() on purpose -- we only want to know if either the 'transform' property, an
     // offset path, or the individual transform operations are set (perspective / transform-style: preserve-3d are not relevant here).
     bool hasCSSTransform = style.hasTransform() || style.rotate() || style.translate() || style.scale();
-    bool hasSVGTransform = !svgTransform.isIdentity() || preApplySVGTransformMatrix || postApplySVGTransformMatrix;
+    bool hasSVGTransform = !svgTransform.isIdentity() || preApplySVGTransformMatrix || postApplySVGTransformMatrix || supplementalTransform;
 
     // Common case: 'viewBox' set on outermost <svg> element -> 'preApplySVGTransformMatrix'
     // passed by RenderSVGViewportContainer::applyTransform(), the anonymous single child
@@ -396,6 +398,8 @@ void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, 
             return true;
         if (postApplySVGTransformMatrix && !postApplySVGTransformMatrix->isIdentityOrTranslation())
             return true;
+        if (supplementalTransform && !supplementalTransform->isIdentityOrTranslation())
+            return true;
         if (hasCSSTransform)
             return style.affectedByTransformOrigin();
         return !svgTransform.isIdentityOrTranslation();
@@ -406,6 +410,9 @@ void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, 
         originTranslate = style.computeTransformOrigin(boundingBox);
 
     style.applyTransformOrigin(transform, originTranslate);
+
+    if (supplementalTransform)
+        transform.multiplyAffineTransform(*supplementalTransform);
 
     if (preApplySVGTransformMatrix)
         transform.multiplyAffineTransform(preApplySVGTransformMatrix.value());
@@ -422,10 +429,12 @@ void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, 
     style.unapplyTransformOrigin(transform, originTranslate);
 }
 
-void RenderLayerModelObject::updateHasSVGTransformFlags(const SVGGraphicsElement& graphicsElement)
+void RenderLayerModelObject::updateHasSVGTransformFlags()
 {
-    bool hasSVGTransform = !graphicsElement.animatedLocalTransform().isIdentity();
-    setHasTransformRelatedProperty(style().hasTransformRelatedProperty() || hasSVGTransform);
+    ASSERT(document().settings().layerBasedSVGEngineEnabled());
+
+    bool hasSVGTransform = needsHasSVGTransformFlags();
+    setHasTransformRelatedProperty(hasSVGTransform || style().hasTransformRelatedProperty());
     setHasSVGTransform(hasSVGTransform);
 }
 #endif

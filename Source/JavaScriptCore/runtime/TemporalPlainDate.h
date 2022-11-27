@@ -49,9 +49,9 @@ public:
     DECLARE_INFO;
 
     static ISO8601::PlainDate toPlainDate(JSGlobalObject*, const ISO8601::Duration&);
+    static std::array<std::optional<double>, 3> toPartialDate(JSGlobalObject*, JSObject*);
 
     static TemporalPlainDate* from(JSGlobalObject*, JSValue, std::optional<TemporalOverflow>);
-    static int32_t compare(const ISO8601::PlainDate&, const ISO8601::PlainDate&);
 
     TemporalCalendar* calendar() { return m_calendar.get(this); }
     ISO8601::PlainDate plainDate() const { return m_plainDate; }
@@ -60,6 +60,8 @@ public:
     decltype(auto) name() const { return m_plainDate.name(); }
     JSC_TEMPORAL_PLAIN_DATE_UNITS(JSC_DEFINE_TEMPORAL_PLAIN_DATE_FIELD);
 #undef JSC_DEFINE_TEMPORAL_PLAIN_DATE_FIELD
+
+    ISO8601::PlainDate with(JSGlobalObject*, JSObject* temporalDateLike, JSValue options);
 
     String monthCode() const;
     uint8_t dayOfWeek() const;
@@ -71,6 +73,9 @@ public:
     {
         return ISO8601::temporalDateToString(m_plainDate);
     }
+
+    ISO8601::Duration until(JSGlobalObject*, TemporalPlainDate*, JSValue options);
+    ISO8601::Duration since(JSGlobalObject*, TemporalPlainDate*, JSValue options);
 
     DECLARE_VISIT_CHILDREN;
 

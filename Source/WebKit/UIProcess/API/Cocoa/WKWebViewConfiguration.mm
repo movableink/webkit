@@ -120,6 +120,10 @@ static bool defaultShouldDecidePolicyBeforeLoadingQuickLookPreview()
     LazyInitialized<RetainPtr<WKProcessPool>> _processPool;
     LazyInitialized<RetainPtr<WKPreferences>> _preferences;
     LazyInitialized<RetainPtr<WKUserContentController>> _userContentController;
+#if ENABLE(WK_WEB_EXTENSIONS)
+    LazyInitialized<RetainPtr<_WKWebExtensionController>> _webExtensionController;
+    WeakObjCPtr<_WKWebExtensionController> _weakWebExtensionController;
+#endif
     LazyInitialized<RetainPtr<_WKVisitedLinkStore>> _visitedLinkStore;
     LazyInitialized<RetainPtr<WKWebsiteDataStore>> _websiteDataStore;
     LazyInitialized<RetainPtr<WKWebpagePreferences>> _defaultWebpagePreferences;
@@ -388,6 +392,14 @@ static bool defaultShouldDecidePolicyBeforeLoadingQuickLookPreview()
     configuration._contentProviderRegistry = self._contentProviderRegistry;
 #endif
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+    if (auto *controller = self->_webExtensionController.peek())
+        configuration._webExtensionController = controller;
+
+    if (auto controller = self->_weakWebExtensionController.get())
+        configuration->_weakWebExtensionController = controller.get();
+#endif
+
     configuration->_suppressesIncrementalRendering = self->_suppressesIncrementalRendering;
     configuration->_applicationNameForUserAgent = self->_applicationNameForUserAgent;
 
@@ -491,6 +503,49 @@ static bool defaultShouldDecidePolicyBeforeLoadingQuickLookPreview()
     _userContentController.set(userContentController);
 }
 
+- (_WKWebExtensionController *)_strongWebExtensionController
+{
+#if ENABLE(WK_WEB_EXTENSIONS)
+    return _webExtensionController.peek();
+#else
+    return nullptr;
+#endif
+}
+
+- (_WKWebExtensionController *)_webExtensionController
+{
+#if ENABLE(WK_WEB_EXTENSIONS)
+    return self._weakWebExtensionController ?: _webExtensionController.get([] {
+        return adoptNS([[_WKWebExtensionController alloc] init]);
+    });
+#else
+    return nullptr;
+#endif
+}
+
+- (void)_setWebExtensionController:(_WKWebExtensionController *)webExtensionController
+{
+#if ENABLE(WK_WEB_EXTENSIONS)
+    _webExtensionController.set(webExtensionController);
+#endif
+}
+
+- (_WKWebExtensionController *)_weakWebExtensionController
+{
+#if ENABLE(WK_WEB_EXTENSIONS)
+    return _weakWebExtensionController.getAutoreleased();
+#else
+    return nullptr;
+#endif
+}
+
+- (void)_setWeakWebExtensionController:(_WKWebExtensionController *)webExtensionController
+{
+#if ENABLE(WK_WEB_EXTENSIONS)
+    _weakWebExtensionController = webExtensionController;
+#endif
+}
+
 - (BOOL)upgradeKnownHostsToHTTPS
 {
     return _pageConfiguration->httpsUpgradeEnabled();
@@ -579,7 +634,10 @@ static NSString *defaultApplicationNameForUserAgent()
         return nil;
 
     auto handler = _pageConfiguration->urlSchemeHandlerForURLScheme(*canonicalScheme);
-    return handler ? static_cast<WebKit::WebURLSchemeHandlerCocoa*>(handler.get())->apiHandler() : nil;
+    if (!handler || !handler->isAPIHandler())
+        return nil;
+
+    return static_cast<WebKit::WebURLSchemeHandlerCocoa*>(handler.get())->apiHandler();
 }
 
 #if PLATFORM(IOS_FAMILY)

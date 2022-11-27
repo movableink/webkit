@@ -155,7 +155,7 @@ void BlobResourceHandle::loadResourceSynchronously(BlobData* blobData, const Res
 }
 
 BlobResourceHandle::BlobResourceHandle(BlobData* blobData, const ResourceRequest& request, ResourceHandleClient* client, bool async)
-    : ResourceHandle { nullptr, request, client, false /* defersLoading */, false /* shouldContentSniff */, true /* shouldContentEncodingSniff */, nullptr /* sourceOrigin */, false /* isMainFrameNavigation */ }
+    : ResourceHandle { nullptr, request, client, false /* defersLoading */, false /* shouldContentSniff */, ContentEncodingSniffingPolicy::Default, nullptr /* sourceOrigin */, false /* isMainFrameNavigation */ }
     , m_blobData { blobData }
     , m_async { async }
 {
@@ -577,8 +577,7 @@ void BlobResourceHandle::notifyResponseOnSuccess()
     response.setHTTPHeaderField(HTTPHeaderName::ContentType, m_blobData->contentType());
     response.setTextEncodingName(extractCharsetFromMediaType(m_blobData->contentType()).toAtomString());
     response.setHTTPHeaderField(HTTPHeaderName::ContentLength, String::number(m_totalRemainingSize));
-    addCrossOriginOpenerPolicyHeaders(response, m_blobData->policyContainer().crossOriginOpenerPolicy);
-    addCrossOriginEmbedderPolicyHeaders(response, m_blobData->policyContainer().crossOriginEmbedderPolicy);
+    addPolicyContainerHeaders(response, m_blobData->policyContainer());
 
     if (isRangeRequest) {
         auto rangeEnd = m_rangeEnd;

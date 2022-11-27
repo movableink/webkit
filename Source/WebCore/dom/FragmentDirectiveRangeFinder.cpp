@@ -41,6 +41,7 @@
 #include "HTMLScriptElement.h"
 #include "HTMLStyleElement.h"
 #include "HTMLVideoElement.h"
+#include "NodeRenderStyle.h"
 #include "Position.h"
 #include "SimpleRange.h"
 #include "TextBoundaries.h"
@@ -55,7 +56,8 @@ enum class WordBounded : bool { No, Yes };
 // https://wicg.github.io/scroll-to-text-fragment/#search-invisible
 static bool isSearchInvisible(const Node& node)
 {
-    // FIXME: The computed value of its display property is none.
+    if (!node.renderStyle() || node.renderStyle()->display() == DisplayType::None)
+        return true;
     
     // FIXME: If the node serializes as void.
     
@@ -144,6 +146,8 @@ static std::optional<SimpleRange> findRangeFromNodeList(const String& query, con
         searchBufferBuilder.append(downcast<Text>(node.get()).data());
     // FIXME: try to use SearchBuffer in TextIterator.h instead.
     searchBuffer = searchBufferBuilder.toString();
+    
+    searchBuffer = foldQuoteMarks(searchBuffer);
     
     unsigned searchStart = 0;
     

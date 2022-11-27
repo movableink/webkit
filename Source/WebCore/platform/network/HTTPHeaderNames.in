@@ -39,6 +39,7 @@ Access-Control-Request-Method
 Age
 Authorization
 Cache-Control
+Clear-Site-Data
 Connection
 Content-Disposition
 Content-Encoding
@@ -87,6 +88,7 @@ Report-To
 Reporting-Endpoints
 Sec-Fetch-Dest
 Sec-Fetch-Mode
+Sec-Fetch-Site
 Sec-WebSocket-Accept
 Sec-WebSocket-Extensions
 Sec-WebSocket-Key

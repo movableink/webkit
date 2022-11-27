@@ -49,6 +49,10 @@ class WebURLSchemeHandler;
 class WebUserContentControllerProxy;
 class WebsiteDataStore;
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+class WebExtensionController;
+#endif
+
 #if PLATFORM(IOS_FAMILY)
 enum class AttributionOverrideTesting : uint8_t {
     NoOverride,
@@ -81,6 +85,14 @@ public:
 
     WebKit::WebUserContentControllerProxy* userContentController();
     void setUserContentController(WebKit::WebUserContentControllerProxy*);
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+    WebKit::WebExtensionController* webExtensionController();
+    void setWebExtensionController(WebKit::WebExtensionController*);
+
+    WebKit::WebExtensionController* weakWebExtensionController();
+    void setWeakWebExtensionController(WebKit::WebExtensionController*);
+#endif
 
     WebKit::WebPageGroup* pageGroup();
     void setPageGroup(WebKit::WebPageGroup*);
@@ -193,8 +205,8 @@ public:
     void setRequiresUserActionForEditingControlsManager(bool value) { m_requiresUserActionForEditingControlsManager = value; }
 #endif
 
-    bool isCaptivePortalModeExplicitlySet() const;
-    bool captivePortalModeEnabled() const;
+    bool isLockdownModeExplicitlySet() const;
+    bool lockdownModeEnabled() const;
 
     void setContentSecurityPolicyModeForExtension(WebCore::ContentSecurityPolicyModeForExtension mode) { m_contentSecurityPolicyModeForExtension = mode; }
     WebCore::ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension() const { return m_contentSecurityPolicyModeForExtension; }
@@ -203,6 +215,10 @@ private:
 
     RefPtr<WebKit::WebProcessPool> m_processPool;
     RefPtr<WebKit::WebUserContentControllerProxy> m_userContentController;
+#if ENABLE(WK_WEB_EXTENSIONS)
+    RefPtr<WebKit::WebExtensionController> m_webExtensionController;
+    WeakPtr<WebKit::WebExtensionController> m_weakWebExtensionController;
+#endif
     RefPtr<WebKit::WebPageGroup> m_pageGroup;
     RefPtr<WebKit::WebPreferences> m_preferences;
     RefPtr<WebKit::WebPageProxy> m_relatedPage;

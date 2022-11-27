@@ -141,7 +141,7 @@ static bool isAppearanceAllowedForAllElements(ControlPart part)
 
 void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const RenderStyle* userAgentAppearanceStyle)
 {
-    ControlPart autoAppearance = autoAppearanceForElement(element);
+    ControlPart autoAppearance = autoAppearanceForElement(style, element);
     auto part = adjustAppearanceForElement(style, element, autoAppearance);
 
     if (part == NoControlPart)
@@ -332,7 +332,7 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
     }
 }
 
-ControlPart RenderTheme::autoAppearanceForElement(const Element* elementPtr) const
+ControlPart RenderTheme::autoAppearanceForElement(RenderStyle& style, const Element* elementPtr) const
 {
     if (!elementPtr)
         return NoControlPart;
@@ -373,7 +373,7 @@ ControlPart RenderTheme::autoAppearanceForElement(const Element* elementPtr) con
 #endif
 
         if (input.isRangeControl())
-            return SliderHorizontalPart;
+            return style.isHorizontalWritingMode() ? SliderHorizontalPart : SliderVerticalPart;
 
         if (input.isTextField())
             return TextFieldPart;
@@ -458,11 +458,12 @@ bool RenderTheme::paint(const RenderBox& box, ControlStates& controlStates, cons
     }
     if (paintInfo.context().paintingDisabled())
         return false;
+    
+    ControlPart part = box.style().effectiveAppearance();
 
-    if (UNLIKELY(!canPaint(paintInfo, box.settings())))
+    if (UNLIKELY(!canPaint(paintInfo, box.settings(), part)))
         return false;
 
-    ControlPart part = box.style().effectiveAppearance();
     IntRect integralSnappedRect = snappedIntRect(rect);
     float deviceScaleFactor = box.document().deviceScaleFactor();
     FloatRect devicePixelSnappedRect = snapRectToDevicePixels(rect, deviceScaleFactor);
@@ -547,14 +548,14 @@ bool RenderTheme::paint(const RenderBox& box, ControlStates& controlStates, cons
     case ApplePayButtonPart:
         return paintApplePayButton(box, paintInfo, integralSnappedRect);
 #endif
+#if ENABLE(DATALIST_ELEMENT)
+    case ListButtonPart:
+        return paintListButton(box, paintInfo, devicePixelSnappedRect);
+#endif
 #if ENABLE(ATTACHMENT_ELEMENT)
     case AttachmentPart:
     case BorderlessAttachmentPart:
         return paintAttachment(box, paintInfo, integralSnappedRect);
-#endif
-#if ENABLE(DATALIST_ELEMENT)
-    case ListButtonPart:
-        return paintListButton(box, paintInfo, devicePixelSnappedRect);
 #endif
     default:
         break;
@@ -1124,7 +1125,7 @@ bool RenderTheme::paintAttachment(const RenderObject&, const PaintInfo&, const I
 
 String RenderTheme::colorInputStyleSheet(const Settings&) const
 {
-    return "input[type=\"color\"] { appearance: auto; width: 44px; height: 23px; box-sizing: border-box; outline: none; } "_s;
+    return "input[type=\"color\"] { appearance: auto; inline-size: 44px; block-size: 23px; box-sizing: border-box; outline: none; } "_s;
 }
 
 #endif // ENABLE(INPUT_TYPE_COLOR)
@@ -1165,7 +1166,7 @@ void RenderTheme::paintSliderTicks(const RenderObject& o, const PaintInfo& paint
     // We don't support ticks on alternate sliders like MediaVolumeSliders.
     if (part != SliderHorizontalPart && part != SliderVerticalPart)
         return;
-    bool isHorizontal = part ==  SliderHorizontalPart;
+    bool isHorizontal = part == SliderHorizontalPart;
 
     IntSize thumbSize;
     const RenderObject* thumbRenderer = input.sliderThumbElement()->renderer();
@@ -1208,10 +1209,11 @@ void RenderTheme::paintSliderTicks(const RenderObject& o, const PaintInfo& paint
     }
     GraphicsContextStateSaver stateSaver(paintInfo.context());
     paintInfo.context().setFillColor(o.style().visitedDependentColorWithColorFilter(CSSPropertyColor));
+    bool isReversedInlineDirection = (!isHorizontal && o.style().isHorizontalWritingMode()) || !o.style().isLeftToRightDirection();
     for (auto& optionElement : dataList->suggestions()) {
         if (auto optionValue = input.listOptionValueAsDouble(optionElement)) {
             double tickFraction = (*optionValue - min) / (max - min);
-            double tickRatio = isHorizontal && o.style().isLeftToRightDirection() ? tickFraction : 1.0 - tickFraction;
+            double tickRatio = isReversedInlineDirection ? 1.0 - tickFraction : tickFraction;
             double tickPosition = round(tickRegionSideMargin + tickRegionWidth * tickRatio);
             if (isHorizontal)
                 tickRect.setX(tickPosition);
@@ -1321,83 +1323,246 @@ auto RenderTheme::colorCache(OptionSet<StyleColorOptions> options) const -> Colo
 Color RenderTheme::systemColor(CSSValueID cssValueId, OptionSet<StyleColorOptions> options) const
 {
     switch (cssValueId) {
-    case CSSValueWebkitLink:
-        return options.contains(StyleColorOptions::ForVisitedLink) ? SRGBA<uint8_t> { 85, 26, 139 } : SRGBA<uint8_t> { 0, 0, 238 };
-    case CSSValueWebkitActivelink:
-    case CSSValueActivetext:
-        return Color::red;
-    case CSSValueLinktext:
-        return SRGBA<uint8_t> { 0, 0, 238 };
-    case CSSValueVisitedtext:
-        return SRGBA<uint8_t> { 85, 26, 139 };
-    case CSSValueActiveborder:
-        return Color::white;
-    case CSSValueActivebuttontext:
-        return Color::black;
-    case CSSValueActivecaption:
-        return SRGBA<uint8_t> { 204, 204, 204 };
-    case CSSValueAppworkspace:
-        return Color::white;
-    case CSSValueBackground:
-        return SRGBA<uint8_t> { 99, 99, 206 };
-    case CSSValueButtonface:
-        return Color::lightGray;
-    case CSSValueButtonhighlight:
-        return SRGBA<uint8_t> { 221, 221, 221 };
-    case CSSValueButtonshadow:
-        return SRGBA<uint8_t> { 136, 136, 136 };
-    case CSSValueButtontext:
-        return Color::black;
-    case CSSValueCaptiontext:
-        return Color::black;
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-canvas
+    // Background of application content or documents.
     case CSSValueCanvas:
         return Color::white;
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-canvastext
+    // Text in application content or documents.
     case CSSValueCanvastext:
         return Color::black;
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-linktext
+    // Text in non-active, non-visited links. For light backgrounds, traditionally blue.
+    case CSSValueLinktext:
+        return SRGBA<uint8_t> { 0, 0, 238 };
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-visitedtext
+    // Text in visited links. For light backgrounds, traditionally purple.
+    case CSSValueVisitedtext:
+        return SRGBA<uint8_t> { 85, 26, 139 };
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-activetext
+    // Text in active links. For light backgrounds, traditionally red.
+    case CSSValueActivetext:
+    case CSSValueWebkitActivelink: // Non-standard addition.
+        return Color::red;
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-buttonface
+    // The face background color for push buttons.
+    case CSSValueButtonface:
+        return Color::lightGray;
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-buttontext
+    // Text on push buttons.
+    case CSSValueButtontext:
+        return Color::black;
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-buttonborder
+    // The base border color for push buttons.
+    case CSSValueButtonborder:
+        return Color::white;
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-field
+    // Background of input fields.
     case CSSValueField:
         return Color::white;
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-fieldtext
+    // Text in input fields.
     case CSSValueFieldtext:
         return Color::black;
-    case CSSValueGraytext:
-        return Color::darkGray;
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-highlight
+    // Background of selected text, for example from ::selection.
     case CSSValueHighlight:
         return SRGBA<uint8_t> { 181, 213, 255 };
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-highlighttext
+    // Text of selected text.
     case CSSValueHighlighttext:
         return Color::black;
-    case CSSValueInactiveborder:
-        return Color::white;
-    case CSSValueInactivecaption:
-        return Color::white;
-    case CSSValueInactivecaptiontext:
-        return SRGBA<uint8_t> { 127, 127, 127 };
-    case CSSValueInfobackground:
-        return SRGBA<uint8_t> { 251, 252, 197 };
-    case CSSValueInfotext:
-        return Color::black;
-    case CSSValueMenu:
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-selecteditem
+    // Background of selected items, for example a selected checkbox.
+    case CSSValueSelecteditem:
         return Color::lightGray;
-    case CSSValueMenutext:
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-selecteditemtext
+    // Text of selected items.
+    case CSSValueSelecteditemtext:
         return Color::black;
-    case CSSValueScrollbar:
-        return Color::white;
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-mark
+    // Background of text that has been specially marked (such as by the HTML mark element).
+    case CSSValueMark:
+        return Color::yellow;
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-marktext
+    // Text that has been specially marked (such as by the HTML mark element).
+    case CSSValueMarktext:
+        return Color::black;
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-graytext
+    // Disabled text. (Often, but not necessarily, gray.)
+    case CSSValueGraytext:
+        return Color::darkGray;
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-accentcolor
+    // Background of accented user interface controls.
+    case CSSValueAccentcolor:
+        return SRGBA<uint8_t> { 0, 122, 255 };
+
+    // https://drafts.csswg.org/css-color-4/#valdef-system-color-accentcolortext
+    // Text of accented user interface controls.
+    case CSSValueAccentcolortext:
+        return Color::black;
+
+    // Non-standard addition.
+    case CSSValueActivebuttontext:
+        return Color::black;
+
+    // Non-standard addition.
     case CSSValueText:
         return Color::black;
+
+    // Non-standard addition.
+    case CSSValueWebkitLink:
+        return options.contains(StyleColorOptions::ForVisitedLink) ? SRGBA<uint8_t> { 85, 26, 139 } : SRGBA<uint8_t> { 0, 0, 238 };
+
+    // Deprecated system-colors:
+    // https://drafts.csswg.org/css-color-4/#deprecated-system-colors
+
+    // FIXME: CSS Color 4 imposes same-as requirements on all the deprecated
+    // system colors - https://webkit.org/b/245609.
+
+    // https://drafts.csswg.org/css-color-4/#activeborder
+    // DEPRECATED: Active window border.
+    case CSSValueActiveborder:
+        return Color::white;
+
+    // https://drafts.csswg.org/css-color-4/#activecaption
+    // DEPRECATED: Active window caption.
+    case CSSValueActivecaption:
+        return SRGBA<uint8_t> { 204, 204, 204 };
+
+    // https://drafts.csswg.org/css-color-4/#appworkspace
+    // DEPRECATED: Background color of multiple document interface.
+    case CSSValueAppworkspace:
+        return Color::white;
+
+    // https://drafts.csswg.org/css-color-4/#background
+    // DEPRECATED: Desktop background.
+    case CSSValueBackground:
+        return SRGBA<uint8_t> { 99, 99, 206 };
+
+    // https://drafts.csswg.org/css-color-4/#buttonhighlight
+    // DEPRECATED: The color of the border facing the light source for 3-D elements that
+    // appear 3-D due to one layer of surrounding border.
+    case CSSValueButtonhighlight:
+        return SRGBA<uint8_t> { 221, 221, 221 };
+
+    // https://drafts.csswg.org/css-color-4/#buttonshadow
+    // DEPRECATED: The color of the border away from the light source for 3-D elements that
+    // appear 3-D due to one layer of surrounding border.
+    case CSSValueButtonshadow:
+        return SRGBA<uint8_t> { 136, 136, 136 };
+
+    // https://drafts.csswg.org/css-color-4/#captiontext
+    // DEPRECATED: Text in caption, size box, and scrollbar arrow box.
+    case CSSValueCaptiontext:
+        return Color::black;
+
+    // https://drafts.csswg.org/css-color-4/#inactiveborder
+    // DEPRECATED: Inactive window border.
+    case CSSValueInactiveborder:
+        return Color::white;
+
+    // https://drafts.csswg.org/css-color-4/#inactivecaption
+    // DEPRECATED: Inactive window caption.
+    case CSSValueInactivecaption:
+        return Color::white;
+
+    // https://drafts.csswg.org/css-color-4/#inactivecaptiontext
+    // DEPRECATED: Color of text in an inactive caption.
+    case CSSValueInactivecaptiontext:
+        return SRGBA<uint8_t> { 127, 127, 127 };
+
+    // https://drafts.csswg.org/css-color-4/#infobackground
+    // DEPRECATED: Background color for tooltip controls.
+    case CSSValueInfobackground:
+        return SRGBA<uint8_t> { 251, 252, 197 };
+
+    // https://drafts.csswg.org/css-color-4/#infotext
+    // DEPRECATED: Text color for tooltip controls.
+    case CSSValueInfotext:
+        return Color::black;
+
+    // https://drafts.csswg.org/css-color-4/#menu
+    // DEPRECATED: Menu background.
+    case CSSValueMenu:
+        return Color::lightGray;
+
+    // https://drafts.csswg.org/css-color-4/#menutext
+    // DEPRECATED: Text in menus.
+    case CSSValueMenutext:
+        return Color::black;
+
+    // https://drafts.csswg.org/css-color-4/#scrollbar
+    // DEPRECATED: Scroll bar gray area.
+    case CSSValueScrollbar:
+        return Color::white;
+
+    // https://drafts.csswg.org/css-color-4/#threeddarkshadow
+    // DEPRECATED: The color of the darker (generally outer) of the two borders away from
+    // thelight source for 3-D elements that appear 3-D due to two concentric layers of
+    // surrounding border.
     case CSSValueThreeddarkshadow:
         return SRGBA<uint8_t> { 102, 102, 102 };
+
+    // https://drafts.csswg.org/css-color-4/#threedface
+    // DEPRECATED: The face background color for 3-D elements that appear 3-D due to two
+    // concentric layers of surrounding border
     case CSSValueThreedface:
         return Color::lightGray;
+
+    // https://drafts.csswg.org/css-color-4/#threedhighlight
+    // DEPRECATED: The color of the lighter (generally outer) of the two borders facing
+    // the light source for 3-D elements that appear 3-D due to two concentric layers of
+    // surrounding border.
     case CSSValueThreedhighlight:
         return SRGBA<uint8_t> { 221, 221, 221 };
+
+    // https://drafts.csswg.org/css-color-4/#threedlightshadow
+    // DEPRECATED: The color of the darker (generally inner) of the two borders facing
+    // the light source for 3-D elements that appear 3-D due to two concentric layers of
+    // surrounding border
     case CSSValueThreedlightshadow:
         return Color::lightGray;
+
+    // https://drafts.csswg.org/css-color-4/#threedshadow
+    // DEPRECATED: The color of the lighter (generally inner) of the two borders away
+    // from the light source for 3-D elements that appear 3-D due to two concentric layers
+    // of surrounding border.
     case CSSValueThreedshadow:
         return SRGBA<uint8_t> { 136, 136, 136 };
+
+    // https://drafts.csswg.org/css-color-4/#window
+    // DEPRECATED: Window background.
     case CSSValueWindow:
         return Color::white;
+
+    // https://drafts.csswg.org/css-color-4/#windowframe
+    // DEPRECATED: Window frame.
     case CSSValueWindowframe:
         return SRGBA<uint8_t> { 204, 204, 204 };
+
+    // https://drafts.csswg.org/css-color-4/#windowtext
+    // DEPRECATED: Text in windows.
     case CSSValueWindowtext:
         return Color::black;
+
     default:
         return { };
     }

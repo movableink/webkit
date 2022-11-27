@@ -313,16 +313,6 @@ AsynchronousSpellCheckingEnabled:
     WebCore:
       default: false
 
-AttachmentElementEnabled:
-  type: bool
-  webcoreBinding: DeprecatedGlobalSettings
-  condition: ENABLE(ATTACHMENT_ELEMENT)
-  defaultValue:
-    WebKitLegacy:
-      default: WebKit::defaultAttachmentElementEnabled()
-    WebKit:
-      default: false
-
 AuthorAndUserStylesEnabled:
   type: bool
   webKitLegacyPreferenceKey: WebKitAuthorAndUserStylesEnabledPreferenceKey
@@ -371,16 +361,6 @@ CSSTransformStyleOptimized3DEnabled:
       default: false
     WebCore:
       default: false
-
-# FIXME: This is not relevent for WebKitLegacy, so should be excluded from WebKitLegacy entirely (though we should still set the default value to false when initializing settings).
-CacheAPIEnabled:
-  type: bool
-  webcoreBinding: DeprecatedGlobalSettings
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: true
 
 CanvasUsesAcceleratedDrawing:
   type: bool
@@ -987,6 +967,26 @@ InspectorWindowFrame:
     WebKit:
       default: '""'
 
+InteractionRegionInlinePadding:
+  type: double
+  defaultValue:
+    WebKitLegacy:
+      default: 3
+    WebKit:
+      default: 3
+    WebCore:
+      default: 3
+
+InteractionRegionMinimumCornerRadius:
+  type: double
+  defaultValue:
+    WebKitLegacy:
+      default: 4
+    WebKit:
+      default: 4
+    WebCore:
+      default: 4
+
 # FIXME: This is handled via WebView SPI rather than WebPreferences for WebKitLegacy. We should change the SPI to lookup the WebPreferences value instead.
 InteractiveFormValidationEnabled:
   type: bool
@@ -1010,6 +1010,18 @@ InterruptAudioOnPageVisibilityChangeEnabled:
       default: false
     WebKit:
       "PLATFORM(IOS_FAMILY)": true
+    WebCore:
+      default: false
+
+InterruptVideoOnPageVisibilityChangeEnabled:
+  type: bool
+  condition: ENABLE(MEDIA_STREAM)
+  defaultValue:
+    WebKitLegacy:
+      "PLATFORM(IOS_FAMILY) && !HAVE(UIKIT_WEBKIT_INTERNALS)": true
+      default: false
+    WebKit:
+      "PLATFORM(IOS_FAMILY) && !HAVE(UIKIT_WEBKIT_INTERNALS)": true
       default: false
     WebCore:
       default: false
@@ -1286,7 +1298,7 @@ MaxParseDuration:
     WebCore:
       default: -1
 
-MediaAudioCodecIDsAllowedInCaptivePortalMode:
+MediaAudioCodecIDsAllowedInLockdownMode:
   type: String
   webcoreBinding: none
   exposed: [ WebKit ]
@@ -1304,7 +1316,7 @@ MediaCapabilitiesEnabled:
     WebCore:
       default: false
 
-MediaCaptionFormatTypesAllowedInCaptivePortalMode:
+MediaCaptionFormatTypesAllowedInLockdownMode:
   type: String
   webcoreBinding: none
   exposed: [ WebKit ]
@@ -1312,7 +1324,7 @@ MediaCaptionFormatTypesAllowedInCaptivePortalMode:
     WebKit:
       default: '"c608,wvtt"'
 
-MediaCodecTypesAllowedInCaptivePortalMode:
+MediaCodecTypesAllowedInLockdownMode:
   type: String
   webcoreBinding: none
   exposed: [ WebKit ]
@@ -1320,7 +1332,7 @@ MediaCodecTypesAllowedInCaptivePortalMode:
     WebKit:
       default: '"mp4a.40,avc1"'
 
-MediaContainerTypesAllowedInCaptivePortalMode:
+MediaContainerTypesAllowedInLockdownMode:
   type: String
   webcoreBinding: none
   exposed: [ WebKit ]
@@ -1399,6 +1411,16 @@ MediaEnabled:
     WebCore:
       default: true
 
+MediaPreferredFullscreenWidth:
+  type: double
+  defaultValue:
+    WebKitLegacy:
+      default: 960
+    WebKit:
+      default: 960
+    WebCore:
+      default: 960
+
 MediaPreloadingEnabled:
   type: bool
   defaultValue:
@@ -1447,7 +1469,7 @@ MediaUserGestureInheritsFromDocument:
     WebCore:
       default: false
 
-MediaVideoCodecIDsAllowedInCaptivePortalMode:
+MediaVideoCodecIDsAllowedInLockdownMode:
   type: String
   webcoreBinding: none
   exposed: [ WebKit ]
@@ -2139,8 +2161,10 @@ SourceBufferChangeTypeEnabled:
     WebKitLegacy:
       default: true
     WebKit:
+      "USE(GSTREAMER)": false
       default: true
     WebCore:
+      "USE(GSTREAMER)": false
       default: true
 
 SpatialNavigationEnabled:
@@ -2482,17 +2506,6 @@ WebArchiveDebugModeEnabled:
     WebCore:
       default: false
 
-WebArchiveTestingModeEnabled:
-  type: bool
-  condition: ENABLE(WEB_ARCHIVE)
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: false
-    WebCore:
-      default: false
-
 WebAudioEnabled:
   type: bool
   condition: ENABLE(WEB_AUDIO)
@@ -2519,10 +2532,13 @@ WebGPU:
   type: bool
   defaultValue:
     WebKitLegacy:
+      "ENABLE(WEBGPU_BY_DEFAULT)": true
       default: false
     WebKit:
+      "ENABLE(WEBGPU_BY_DEFAULT)": true
       default: false
     WebCore:
+      "ENABLE(WEBGPU_BY_DEFAULT)": true
       default: false
 
 WebMFormatReaderEnabled:

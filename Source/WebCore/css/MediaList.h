@@ -36,7 +36,7 @@ class CSSParser;
 class CSSRule;
 class CSSStyleSheet;
 class Document;
-class MediaQuery;
+class LegacyMediaQuery;
 
 class MediaQuerySet final : public RefCounted<MediaQuerySet> {
 public:
@@ -52,9 +52,9 @@ public:
     bool add(const String&);
     bool remove(const String&);
 
-    void addMediaQuery(MediaQuery&&);
+    void addMediaQuery(LegacyMediaQuery&&);
 
-    const Vector<MediaQuery>& queryVector() const { return m_queries; }
+    const Vector<LegacyMediaQuery>& queryVector() const { return m_queries; }
 
     WEBCORE_EXPORT String mediaText() const;
 
@@ -67,7 +67,7 @@ private:
     WEBCORE_EXPORT MediaQuerySet(const String& mediaQuery);
     MediaQuerySet(const MediaQuerySet&);
 
-    Vector<MediaQuery> m_queries;
+    Vector<LegacyMediaQuery> m_queries;
 };
 
 class MediaList final : public RefCounted<MediaList> {
@@ -96,6 +96,7 @@ public:
     void clearParentStyleSheet() { ASSERT(m_parentStyleSheet); m_parentStyleSheet = nullptr; }
     void clearParentRule() { ASSERT(m_parentRule); m_parentRule = nullptr; }
     const MediaQuerySet* queries() const { return m_mediaQueries.get(); }
+    MediaQuerySet* queries() { return m_mediaQueries.get(); }
 
     void reattach(MediaQuerySet*);
 

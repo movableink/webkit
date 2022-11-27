@@ -1,0 +1,4 @@
+
+PASS Promises#reject
+PASS Promises#reject 1
+

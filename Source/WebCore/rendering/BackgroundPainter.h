@@ -27,17 +27,50 @@
 
 namespace WebCore {
 
+struct BackgroundImageGeometry {
+    BackgroundImageGeometry(const LayoutRect& destinationRect, const LayoutSize& tileSizeWithoutPixelSnapping, const LayoutSize& tileSize, const LayoutSize& phase, const LayoutSize& spaceSize, bool fixedAttachment);
+
+    LayoutSize relativePhase() const
+    {
+        LayoutSize relativePhase = phase;
+        relativePhase += destinationRect.location() - destinationOrigin;
+        return relativePhase;
+    }
+
+    void clip(const LayoutRect& clipRect) { destinationRect.intersect(clipRect); }
+
+    LayoutRect destinationRect;
+    LayoutPoint destinationOrigin;
+    LayoutSize tileSizeWithoutPixelSnapping;
+    LayoutSize tileSize;
+    LayoutSize phase;
+    LayoutSize spaceSize;
+    bool hasNonLocalGeometry; // Has background-attachment: fixed. Implies that we can't always cheaply compute destRect.
+};
+
 class BackgroundPainter {
 public:
     BackgroundPainter(RenderBoxModelObject&, const PaintInfo&);
 
+    void paintBackground(const LayoutRect&, BackgroundBleedAvoidance);
+
+    void paintFillLayers(const Color&, const FillLayer&, const LayoutRect&, BackgroundBleedAvoidance, CompositeOperator, RenderElement* backgroundObject = nullptr);
     void paintFillLayer(const Color&, const FillLayer&, const LayoutRect&, BackgroundBleedAvoidance, const InlineIterator::InlineBoxIterator&, const LayoutRect& backgroundImageStrip = { }, CompositeOperator = CompositeOperator::SourceOver, RenderElement* backgroundObject = nullptr, BaseBackgroundColorUsage = BaseBackgroundColorUse);
 
+    void paintBoxShadow(const LayoutRect&, const RenderStyle&, ShadowStyle, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true);
+
+    static bool paintsOwnBackground(const RenderBoxModelObject&);
+    static BackgroundImageGeometry calculateBackgroundImageGeometry(const RenderBoxModelObject&, const RenderLayerModelObject* paintContainer, const FillLayer&, const LayoutPoint& paintOffset, const LayoutRect& borderBoxRect);
     static void clipRoundedInnerRect(GraphicsContext&, const FloatRect&, const FloatRoundedRect& clipRect);
+    static bool boxShadowShouldBeAppliedToBackground(const RenderBoxModelObject&, const LayoutPoint& paintOffset, BackgroundBleedAvoidance, const InlineIterator::InlineBoxIterator&);
 
 private:
+    void paintRootBoxFillLayers();
+
     RoundedRect backgroundRoundedRectAdjustedForBleedAvoidance(const LayoutRect& borderRect, BackgroundBleedAvoidance, const InlineIterator::InlineBoxIterator&, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const;
-    RoundedRect getBackgroundRoundedRect(const LayoutRect& borderRect, const InlineIterator::InlineBoxIterator&, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const;
+    RoundedRect backgroundRoundedRect(const LayoutRect& borderRect, const InlineIterator::InlineBoxIterator&, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const;
+
+    static LayoutSize calculateFillTileSize(const RenderBoxModelObject&, const FillLayer&, const LayoutSize& positioningAreaSize);
 
     const Document& document() const;
     const RenderView& view() const;

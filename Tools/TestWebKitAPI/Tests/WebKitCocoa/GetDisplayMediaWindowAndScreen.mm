@@ -95,7 +95,7 @@ static constexpr unsigned stateChangeQueryMaxCount = 30;
     do {
         if (expectedState == _displayCaptureState)
             return YES;
-        TestWebKitAPI::Util::sleep(0.1);
+        TestWebKitAPI::Util::runFor(0.1_s);
     } while (++tries <= stateChangeQueryMaxCount);
 
     return expectedState == _displayCaptureState;
@@ -107,7 +107,7 @@ static constexpr unsigned stateChangeQueryMaxCount = 30;
     do {
         if (expectedState == _displayCaptureSurfaces)
             return YES;
-        TestWebKitAPI::Util::sleep(0.1);
+        TestWebKitAPI::Util::runFor(0.1_s);
     } while (++tries <= stateChangeQueryMaxCount);
 
     return expectedState == _displayCaptureSurfaces;
@@ -150,9 +150,16 @@ TEST(WebKit2, GetDisplayMediaWindowAndScreenPrompt)
     EXPECT_TRUE([webView _displayCaptureState] == WKDisplayCaptureStateNone);
     EXPECT_TRUE([webView _displayCaptureSurfaces] == WKDisplayCaptureSurfaceNone);
 
+    auto hasSleepDisabler = [webView stringByEvaluatingJavaScript:@"hasSleepDisabler()"].boolValue;
+    EXPECT_FALSE(hasSleepDisabler);
+
     // Check "Allow Screen"
     [webView stringByEvaluatingJavaScript:@"stop()"];
     [delegate resetWasPrompted];
+
+    hasSleepDisabler = [webView stringByEvaluatingJavaScript:@"hasSleepDisabler()"].boolValue;
+    EXPECT_FALSE(hasSleepDisabler);
+
     [webView _setIndexOfGetDisplayMediaDeviceSelectedForTesting:@0];
     [delegate setGetDisplayMediaDecision:WKDisplayCapturePermissionDecisionScreenPrompt];
     [webView stringByEvaluatingJavaScript:@"promptForCapture({ video : true })"];
@@ -166,6 +173,9 @@ TEST(WebKit2, GetDisplayMediaWindowAndScreenPrompt)
     EXPECT_TRUE([observer displayCaptureState] == WKDisplayCaptureStateActive);
     EXPECT_TRUE([webView _displayCaptureSurfaces] == WKDisplayCaptureSurfaceScreen);
     EXPECT_TRUE([observer displayCaptureSurfaces] == WKDisplayCaptureSurfaceScreen);
+
+    hasSleepDisabler = [webView stringByEvaluatingJavaScript:@"hasSleepDisabler()"].boolValue;
+    EXPECT_TRUE(hasSleepDisabler);
 
     // Mute and unmute screen capture
     __block bool completionCalled = false;
@@ -188,12 +198,16 @@ TEST(WebKit2, GetDisplayMediaWindowAndScreenPrompt)
     EXPECT_TRUE([webView _displayCaptureSurfaces] == WKDisplayCaptureSurfaceScreen);
     EXPECT_TRUE([observer displayCaptureSurfaces] == WKDisplayCaptureSurfaceScreen);
 
+    hasSleepDisabler = [webView stringByEvaluatingJavaScript:@"hasSleepDisabler()"].boolValue;
+    EXPECT_TRUE(hasSleepDisabler);
+
     // Stop all capture
     [webView stringByEvaluatingJavaScript:@"stop()"];
-    EXPECT_TRUE([webView _displayCaptureState] == WKDisplayCaptureStateNone);
-    EXPECT_TRUE([observer displayCaptureSurfaces] == WKDisplayCaptureSurfaceNone);
-    EXPECT_TRUE([webView _displayCaptureState] == WKDisplayCaptureStateNone);
-    EXPECT_TRUE([observer displayCaptureSurfaces] == WKDisplayCaptureSurfaceNone);
+    EXPECT_TRUE([observer waitForDisplayCaptureState:WKDisplayCaptureStateNone]);
+    EXPECT_TRUE([observer waitForDisplayCaptureSurfaces:WKDisplayCaptureSurfaceNone]);
+
+    hasSleepDisabler = [webView stringByEvaluatingJavaScript:@"hasSleepDisabler()"].boolValue;
+    EXPECT_FALSE(hasSleepDisabler);
 
     // Check "Allow Window"
     [delegate resetWasPrompted];

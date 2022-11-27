@@ -53,7 +53,7 @@ def cppMacro(wasmOpcode, value, b3, inc, *extraArgs):
 def typeMacroizer():
     inc = 0
     for ty in wasm.types:
-        yield cppMacro(ty, wasm.types[ty]["value"], wasm.types[ty]["b3type"], inc, ty)
+        yield cppMacro(ty, wasm.types[ty]["value"], wasm.types[ty]["b3type"], inc, ty, str(wasm.types[ty]["width"]))
         inc += 1
 
 
@@ -160,6 +160,7 @@ defines.append("\n\n")
 defines = "".join(defines)
 
 opValueSet = set([op for op in wasm.opcodeIterator(lambda op: True, lambda op: opcodes[op]["value"])])
+opValueSet.add(0xFD)  # ExtSIMD
 maxOpValue = max(opValueSet)
 
 
@@ -208,11 +209,11 @@ contents = wasm.header + """
 #include <cstdint>
 #include <wtf/PrintStream.h>
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
-#include "B3Type.h"
-#endif
+namespace JSC {
 
-namespace JSC { namespace Wasm {
+enum class Width : uint8_t;
+
+namespace Wasm {
 
 static constexpr unsigned expectedVersionNumber = """ + wasm.expectedVersionNumber + """;
 
@@ -226,21 +227,15 @@ enum class TypeKind : int8_t {
 };
 #undef CREATE_ENUM_VALUE
 
-enum class Nullable : bool {
-  No = false,
-  Yes = true,
-};
-
 using TypeIndex = uintptr_t;
 
 struct Type {
     TypeKind kind;
-    Nullable nullable;
     TypeIndex index;
 
     bool operator==(const Type& other) const
     {
-        return other.kind == kind && other.nullable == nullable && other.index == index;
+        return other.kind == kind && other.isNullable() == isNullable() && other.index == index;
     }
 
     bool operator!=(const Type& other) const
@@ -250,17 +245,11 @@ struct Type {
 
     bool isNullable() const
     {
-        return static_cast<bool>(nullable);
+        return kind == TypeKind::RefNull || kind == TypeKind::Externref || kind == TypeKind::Funcref;
     }
 
-    void dump(PrintStream& out) const
-    {
-        switch (kind) {
-        #define CREATE_CASE(name, ...) case TypeKind::name: out.print(#name); break;
-        FOR_EACH_WASM_TYPE(CREATE_CASE)
-        #undef CREATE_CASE
-        }
-    }
+    void dump(PrintStream& out) const;
+    Width width() const;
 
     // Use Wasm::isFuncref and Wasm::isExternref instead because they check againts all kind of representations of function referenes and external references.
 
@@ -271,7 +260,7 @@ struct Type {
 
 namespace Types
 {
-#define CREATE_CONSTANT(name, id, ...) constexpr Type name = Type{TypeKind::name, Nullable::Yes, 0u};
+#define CREATE_CONSTANT(name, id, ...) constexpr Type name = Type{TypeKind::name, 0u};
 FOR_EACH_WASM_TYPE(CREATE_CONSTANT)
 #undef CREATE_CONSTANT
 } // namespace Types
@@ -288,19 +277,6 @@ inline bool isValidTypeKind(Int i)
     return false;
 }
 #undef CREATE_CASE
-
-#if ENABLE(WEBASSEMBLY_B3JIT)
-#define CREATE_CASE(name, id, b3type, ...) case TypeKind::name: return b3type;
-inline B3::Type toB3Type(Type type)
-{
-    switch (type.kind) {
-    FOR_EACH_WASM_TYPE(CREATE_CASE)
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-    return B3::Void;
-}
-#undef CREATE_CASE
-#endif
 
 #define CREATE_CASE(name, ...) case TypeKind::name: return #name;
 inline const char* makeString(TypeKind kind)
@@ -345,6 +321,7 @@ inline TypeKind linearizedToType(int i)
     FOR_EACH_WASM_MEMORY_LOAD_OP(macro) \\
     FOR_EACH_WASM_MEMORY_STORE_OP(macro) \\
     macro(Ext1,  0xFC, Oops, 0) \\
+    macro(ExtSIMD, 0xFD, Oops, 0) \\
     macro(GCPrefix,  0xFB, Oops, 0) \\
     macro(ExtAtomic, 0xFE, Oops, 0)
 
@@ -382,6 +359,8 @@ enum class Ext1OpType : uint8_t {
     FOR_EACH_WASM_TABLE_OP(CREATE_ENUM_VALUE)
     FOR_EACH_WASM_TRUNC_SATURATED_OP(CREATE_ENUM_VALUE)
 };
+
+enum class ExtSIMDOpType : uint8_t;
 
 enum class GCOpType : uint8_t {
     FOR_EACH_WASM_GC_OP(CREATE_ENUM_VALUE)

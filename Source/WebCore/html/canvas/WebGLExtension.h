@@ -81,7 +81,6 @@ public:
         OESVertexArrayObjectName,
         WebGLColorBufferFloatName,
         WebGLCompressedTextureASTCName,
-        WebGLCompressedTextureATCName,
         WebGLCompressedTextureETCName,
         WebGLCompressedTextureETC1Name,
         WebGLCompressedTexturePVRTCName,
@@ -95,6 +94,7 @@ public:
         WebGLLoseContextName,
         WebGLMultiDrawName,
         WebGLMultiDrawInstancedBaseVertexBaseInstanceName,
+        WebGLProvokingVertexName,
     };
 
     WebGLRenderingContextBase* context() { return m_context; }

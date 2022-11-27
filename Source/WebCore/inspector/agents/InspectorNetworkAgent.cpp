@@ -70,7 +70,7 @@
 #include "TextResourceDecoder.h"
 #include "ThreadableLoaderClient.h"
 #include "WebConsoleAgent.h"
-#include <wtf/URL.h>
+#include "WebCorePersistentCoders.h"
 #include "WebSocket.h"
 #include "WebSocketChannel.h"
 #include "WebSocketFrame.h"
@@ -86,6 +86,7 @@
 #include <wtf/Lock.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Stopwatch.h>
+#include <wtf/URL.h>
 #include <wtf/persistence/PersistentEncoder.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/StringBuilder.h>
@@ -470,9 +471,9 @@ void InspectorNetworkAgent::willSendRequest(ResourceLoaderIdentifier identifier,
     String targetId = request.initiatorIdentifier();
 
     if (type == InspectorPageAgent::OtherResource) {
-        if (m_loadingXHRSynchronously || request.requester() == ResourceRequest::Requester::XHR)
+        if (m_loadingXHRSynchronously || request.requester() == ResourceRequestRequester::XHR)
             type = InspectorPageAgent::XHRResource;
-        else if (request.requester() == ResourceRequest::Requester::Fetch)
+        else if (request.requester() == ResourceRequestRequester::Fetch)
             type = InspectorPageAgent::FetchResource;
         else if (loader && equalIgnoringFragmentIdentifier(request.url(), loader->url()) && !loader->isCommitted())
             type = InspectorPageAgent::DocumentResource;

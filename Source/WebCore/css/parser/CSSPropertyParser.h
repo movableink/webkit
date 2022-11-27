@@ -25,16 +25,14 @@
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserHelpers.h"
 #include "CSSPropertyParserWorkerSafe.h"
-#include "StyleRule.h"
+#include "StyleRuleType.h"
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
 
+class CSSCustomPropertyValue;
 class CSSProperty;
-class CSSValue;
-class CSSValueList;
 class StylePropertyShorthand;
-class StyleSheetContents;
 
 namespace Style {
 class BuilderState;
@@ -75,17 +73,20 @@ private:
     bool parseFontFaceDescriptor(CSSPropertyID);
     bool parseFontPaletteValuesDescriptor(CSSPropertyID);
     bool parseCounterStyleDescriptor(CSSPropertyID, const CSSParserContext&);
+    bool parseKeyframeDescriptor(CSSPropertyID, bool important);
 
     void addProperty(CSSPropertyID, CSSPropertyID, Ref<CSSValue>&&, bool important, bool implicit = false);
     void addPropertyWithImplicitDefault(CSSPropertyID, CSSPropertyID, RefPtr<CSSValue>&&, Ref<CSSValue>&& implicitDefault, bool important);
     void addExpandedPropertyForValue(CSSPropertyID propId, Ref<CSSValue>&&, bool);
 
-    bool consumeBorder(RefPtr<CSSValue>& width, RefPtr<CSSValue>& style, RefPtr<CSSValue>& color);
+    // Shorthand Parsing.
 
     bool parseShorthand(CSSPropertyID, bool important);
     bool consumeShorthandGreedily(const StylePropertyShorthand&, bool important);
     bool consume2ValueShorthand(const StylePropertyShorthand&, bool important);
     bool consume4ValueShorthand(const StylePropertyShorthand&, bool important);
+
+    bool consumeBorder(RefPtr<CSSValue>& width, RefPtr<CSSValue>& style, RefPtr<CSSValue>& color);
 
     // Legacy parsing allows <string>s for animation-name
     bool consumeAnimationShorthand(const StylePropertyShorthand&, bool important);
@@ -107,7 +108,7 @@ private:
     bool consumeFont(bool important);
     bool consumeTextDecorationSkip(bool important);
     bool consumeFontVariantShorthand(bool important);
-    bool consumeSystemFont(bool important);
+    bool consumeFontSynthesis(bool important);
 
     bool consumeBorderSpacing(bool important);
 
@@ -123,6 +124,7 @@ private:
     bool consumePerspectiveOrigin(bool important);
     bool consumePrefixedPerspective(bool important);
     bool consumeOffset(bool important);
+    bool consumeListStyleShorthand(bool important);
 
     bool consumeOverscrollBehaviorShorthand(bool important);
 

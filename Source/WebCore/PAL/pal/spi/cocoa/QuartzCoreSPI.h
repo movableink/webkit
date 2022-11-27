@@ -136,6 +136,7 @@ typedef struct _CARenderContext CARenderContext;
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
 @property (getter=isSeparated) BOOL separated;
 #endif
+@property BOOL toneMapToStandardDynamicRange;
 @end
 
 #if ENABLE(FILTERS_LEVEL_2)
@@ -264,8 +265,4 @@ extern NSString * const kCAContextPortNumber;
 #if PLATFORM(IOS_FAMILY)
 extern NSString * const kCAContextSecure;
 extern NSString * const kCAContentsFormatRGBA10XR;
-#endif
-
-#if PLATFORM(MAC)
-extern NSString * const kCAContentsFormatRGBA8ColorRGBA8LinearGlyphMask;
 #endif

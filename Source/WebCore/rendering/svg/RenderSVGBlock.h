@@ -36,7 +36,11 @@ protected:
     void willBeDestroyed() override;
 
     void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false) override;
+
     void updateFromStyle() override;
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    bool needsHasSVGTransformFlags() const override;
+#endif
 
 private:
     void element() const = delete;
@@ -49,6 +53,8 @@ private:
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
     LayoutPoint currentSVGLayoutLocation() const final { return location(); }
     void setCurrentSVGLayoutLocation(const LayoutPoint& location) final { setLocation(location); }
+
+    FloatRect referenceBoxRect(CSSBoxType) const final;
 #endif
 
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const final;

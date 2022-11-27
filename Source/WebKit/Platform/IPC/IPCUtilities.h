@@ -27,6 +27,10 @@
 
 #define ASSERT_IS_TESTING_IPC() ASSERT(IPC::isTestingIPC(), "Untrusted connection sent invalid data. Should only happen when testing IPC.")
 
+#if OS(WINDOWS)
+#include <windows.h>
+#endif
+
 namespace IPC {
 
 // Function to check when asserting IPC-related failures, so that IPC testing skips the assertions
@@ -41,6 +45,24 @@ inline bool isTestingIPC()
 {
     return false;
 }
+#endif
+
+#if USE(UNIX_DOMAIN_SOCKETS)
+struct SocketPair {
+    int client;
+    int server;
+};
+
+enum PlatformConnectionOptions {
+    SetCloexecOnClient = 1 << 0,
+    SetCloexecOnServer = 1 << 1,
+};
+
+SocketPair createPlatformConnection(unsigned options = SetCloexecOnClient | SetCloexecOnServer);
+#endif
+
+#if OS(WINDOWS)
+bool createServerAndClientIdentifiers(HANDLE& serverIdentifier, HANDLE& clientIdentifier);
 #endif
 
 }

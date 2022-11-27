@@ -37,12 +37,40 @@ InlineFormattingQuirks::InlineFormattingQuirks(const InlineFormattingContext& in
 {
 }
 
+bool InlineFormattingQuirks::shouldPreserveTrailingWhitespace(bool isInIntrinsicWidthMode, bool lineHasBidiContent, bool lineHasOverflow, bool lineEndWithLineBreak) const
+{
+    // Legacy line layout quirk: keep the trailing whitespace around when it is followed by a line break, unless the content overflows the line.
+    // This quirk however should not be applied when running intrinsic width computation.
+    // FIXME: webkit.org/b/233261
+    if (isInIntrinsicWidthMode || !layoutState().isInlineFormattingContextIntegration())
+        return false;
+    if (lineHasBidiContent)
+        return false;
+    if (lineHasOverflow)
+        return false;
+
+    auto isTextAlignRight = [&] {
+        auto textAlign = formattingContext().root().style().textAlign();
+        return textAlign == TextAlignMode::Right
+            || textAlign == TextAlignMode::WebKitRight
+            || textAlign == TextAlignMode::End;
+    };
+    return lineEndWithLineBreak && !isTextAlignRight();
+}
+
+bool InlineFormattingQuirks::trailingNonBreakingSpaceNeedsAdjustment(bool isInIntrinsicWidthMode, bool lineHasOverflow) const
+{
+    if (isInIntrinsicWidthMode || !lineHasOverflow)
+        return false;
+    auto& rootStyle = formattingContext().root().style();
+    auto whiteSpace = rootStyle.whiteSpace();
+    return rootStyle.nbspMode() == NBSPMode::Space && (whiteSpace == WhiteSpace::Normal || whiteSpace == WhiteSpace::PreWrap || whiteSpace == WhiteSpace::PreLine);
+}
+
 InlineLayoutUnit InlineFormattingQuirks::initialLineHeight() const
 {
     ASSERT(!layoutState().inStandardsMode());
-    // Negative lineHeight value means the line-height is not set
-    auto& rootStyle = formattingContext().root().style();
-    return rootStyle.lineHeight().isNegative() ? rootStyle.metricsOfPrimaryFont().floatHeight() : rootStyle.computedLineHeight();
+    return 0.f;
 }
 
 bool InlineFormattingQuirks::inlineLevelBoxAffectsLineBox(const InlineLevelBox& inlineLevelBox, const LineBox& lineBox) const
@@ -92,12 +120,6 @@ bool InlineFormattingQuirks::inlineLevelBoxAffectsLineBox(const InlineLevelBox& 
     }
     ASSERT_NOT_REACHED();
     return false;
-}
-
-bool InlineFormattingQuirks::hasSoftWrapOpportunityAtImage() const
-{
-    ASSERT(layoutState().inQuirksMode());
-    return !formattingContext().root().isTableCell();
 }
 
 }

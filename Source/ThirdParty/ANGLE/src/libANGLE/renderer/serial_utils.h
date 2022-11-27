@@ -84,7 +84,7 @@ class Serial final
 class AtomicQueueSerial final
 {
   public:
-    constexpr AtomicQueueSerial() : mValue(kInvalid) { ASSERT(mValue.is_lock_free()); }
+    AtomicQueueSerial() : mValue(kInvalid) { ASSERT(mValue.is_lock_free()); }
     AtomicQueueSerial &operator=(const Serial &other)
     {
         mValue.store(other.mValue, std::memory_order_release);
@@ -117,8 +117,9 @@ class SerialFactoryBase final : angle::NonCopyable
     SerialBaseType mSerial;
 };
 
-using SerialFactory       = SerialFactoryBase<uint64_t>;
-using AtomicSerialFactory = SerialFactoryBase<std::atomic<uint64_t>>;
+using SerialFactory           = SerialFactoryBase<uint64_t>;
+using AtomicSerialFactory     = SerialFactoryBase<std::atomic<uint64_t>>;
+using RenderPassSerialFactory = SerialFactoryBase<uint64_t>;
 
 }  // namespace rx
 

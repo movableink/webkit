@@ -25,7 +25,6 @@
 
 #include "config.h"
 #include "WasmCallee.h"
-#include "runtime/VM.h"
 
 #if ENABLE(WEBASSEMBLY)
 
@@ -48,14 +47,84 @@ Callee::Callee(Wasm::CompilationMode compilationMode, size_t index, std::pair<co
     CalleeRegistry::singleton().registerCallee(this);
 }
 
-Callee::~Callee()
+template<typename Func>
+inline void Callee::runWithDowncast(const Func& func)
 {
-    CalleeRegistry::singleton().unregisterCallee(this);
+    switch (m_compilationMode) {
+    case CompilationMode::LLIntMode:
+        func(static_cast<LLIntCallee*>(this));
+        break;
+#if ENABLE(WEBASSEMBLY_B3JIT)
+    case CompilationMode::BBQMode:
+        func(static_cast<BBQCallee*>(this));
+        break;
+    case CompilationMode::BBQForOSREntryMode:
+        func(static_cast<OSREntryCallee*>(this));
+        break;
+    case CompilationMode::OMGMode:
+        func(static_cast<OMGCallee*>(this));
+        break;
+    case CompilationMode::OMGForOSREntryMode:
+        func(static_cast<OSREntryCallee*>(this));
+        break;
+#else
+    case CompilationMode::BBQMode:
+    case CompilationMode::BBQForOSREntryMode:
+    case CompilationMode::OMGMode:
+    case CompilationMode::OMGForOSREntryMode:
+        break;
+#endif
+    case CompilationMode::EmbedderEntrypointMode:
+        func(static_cast<EmbedderEntrypointCallee*>(this));
+        break;
+    }
+}
+
+template<typename Func>
+inline void Callee::runWithDowncast(const Func& func) const
+{
+    const_cast<Callee*>(this)->runWithDowncast(func);
 }
 
 void Callee::dump(PrintStream& out) const
 {
     out.print(makeString(m_indexOrName));
+}
+
+CodePtr<WasmEntryPtrTag> Callee::entrypoint() const
+{
+    CodePtr<WasmEntryPtrTag> codePtr;
+    runWithDowncast([&](auto* derived) {
+        codePtr = derived->entrypointImpl();
+    });
+    return codePtr;
+}
+
+std::tuple<void*, void*> Callee::range() const
+{
+    std::tuple<void*, void*> result;
+    runWithDowncast([&](auto* derived) {
+        result = derived->rangeImpl();
+    });
+    return result;
+}
+
+RegisterAtOffsetList* Callee::calleeSaveRegisters()
+{
+    RegisterAtOffsetList* result = nullptr;
+    runWithDowncast([&](auto* derived) {
+        result = derived->calleeSaveRegistersImpl();
+    });
+    return result;
+}
+
+void Callee::operator delete(Callee* callee, std::destroying_delete_t)
+{
+    CalleeRegistry::singleton().unregisterCallee(callee);
+    callee->runWithDowncast([](auto* derived) {
+        std::destroy_at(derived);
+        std::decay_t<decltype(*derived)>::freeAfterDestruction(derived);
+    });
 }
 
 const HandlerInfo* Callee::handlerForIndex(Instance& instance, unsigned index, const Tag* tag)
@@ -110,29 +179,19 @@ LLIntCallee::LLIntCallee(FunctionCodeBlockGenerator& generator, size_t index, st
     }
 }
 
-void LLIntCallee::setEntrypoint(CodePtr<WasmEntryPtrTag> entrypoint)
-{
-    m_entrypoint = entrypoint;
-}
-
-CodePtr<WasmEntryPtrTag> LLIntCallee::entrypoint() const
-{
-    return m_entrypoint;
-}
-
-RegisterAtOffsetList* LLIntCallee::calleeSaveRegisters()
+RegisterAtOffsetList* LLIntCallee::calleeSaveRegistersImpl()
 {
     static LazyNeverDestroyed<RegisterAtOffsetList> calleeSaveRegisters;
     static std::once_flag initializeFlag;
     std::call_once(initializeFlag, [] {
         RegisterSet registers;
-        registers.set(GPRInfo::regCS0); // Wasm::Instance
+        registers.add(GPRInfo::regCS0, IgnoreVectors); // Wasm::Instance
 #if CPU(X86_64)
-        registers.set(GPRInfo::regCS2); // PB
+        registers.add(GPRInfo::regCS2, IgnoreVectors); // PB
 #elif CPU(ARM64) || CPU(RISCV64)
-        registers.set(GPRInfo::regCS7); // PB
+        registers.add(GPRInfo::regCS7, IgnoreVectors); // PB
 #elif CPU(ARM)
-        registers.set(GPRInfo::regCS1); // PB
+        registers.add(GPRInfo::regCS1, IgnoreVectors); // PB
 #else
 #error Unsupported architecture.
 #endif
@@ -140,11 +199,6 @@ RegisterAtOffsetList* LLIntCallee::calleeSaveRegisters()
         calleeSaveRegisters.construct(WTFMove(registers));
     });
     return &calleeSaveRegisters.get();
-}
-
-std::tuple<void*, void*> LLIntCallee::range() const
-{
-    return { nullptr, nullptr };
 }
 
 WasmInstructionStream::Offset LLIntCallee::outOfLineJumpOffset(WasmInstructionStream::Offset bytecodeOffset)

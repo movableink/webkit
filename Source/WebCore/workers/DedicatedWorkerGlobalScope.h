@@ -48,8 +48,11 @@ class JSRTCRtpScriptTransformerConstructor;
 class RTCRtpScriptTransformer;
 class RequestAnimationFrameCallback;
 class SerializedScriptValue;
-
 struct StructuredSerializeOptions;
+
+#if ENABLE(NOTIFICATIONS)
+class WorkerNotificationClient;
+#endif
 
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
 class WorkerAnimationController;
@@ -71,6 +74,10 @@ public:
 
     DedicatedWorkerThread& thread();
 
+#if ENABLE(NOTIFICATIONS)
+    NotificationClient* notificationClient() final;
+#endif
+
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     CallbackId requestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
     void cancelAnimationFrame(CallbackId);
@@ -89,7 +96,6 @@ private:
 
     Type type() const final { return Type::DedicatedWorker; }
 
-    ExceptionOr<void> importScripts(const FixedVector<String>& urls) final;
     EventTargetInterface eventTargetInterface() const final;
 
     void prepareForDestruction() final;
@@ -98,6 +104,9 @@ private:
 
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     RefPtr<WorkerAnimationController> m_workerAnimationController;
+#endif
+#if ENABLE(NOTIFICATIONS)
+    RefPtr<WorkerNotificationClient> m_notificationClient;
 #endif
 };
 

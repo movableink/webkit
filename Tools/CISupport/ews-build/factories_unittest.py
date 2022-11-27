@@ -91,7 +91,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'layout-tests',
             'set-build-summary'
         ],
-        'iOS-15-Build-EWS': [
+        'iOS-16-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -105,7 +105,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'kill-old-processes',
             'compile-webkit'
         ],
-        'iOS-15-Simulator-Build-EWS': [
+        'iOS-16-Simulator-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -119,7 +119,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'kill-old-processes',
             'compile-webkit'
         ],
-        'iOS-15-Simulator-WK2-Tests-EWS': [
+        'iOS-16-Simulator-WK2-Tests-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -289,7 +289,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
-        'watchOS-8-Build-EWS': [
+        'watchOS-9-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -303,7 +303,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'kill-old-processes',
             'compile-webkit'
         ],
-        'watchOS-8-Simulator-Build-EWS': [
+        'watchOS-9-Simulator-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -317,7 +317,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'kill-old-processes',
             'compile-webkit'
         ],
-        'tvOS-15-Build-EWS': [
+        'tvOS-16-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -331,7 +331,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'kill-old-processes',
             'compile-webkit'
         ],
-        'tvOS-15-Simulator-Build-EWS': [
+        'tvOS-16-Simulator-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -350,6 +350,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'check-change-relevance',
             'validate-change',
             'configuration',
+            'delete-stale-build-files',
             'clean-up-git-repo',
             'checkout-source',
             'fetch-branch-references',
@@ -630,6 +631,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'clean-up-git-repo',
             'checkout-source',
             'fetch-branch-references',
+            'map-branch-alias',
             'update-working-directory',
             'show-identifier',
             'checkout-pull-request',
@@ -658,6 +660,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'clean-up-git-repo',
             'checkout-source',
             'fetch-branch-references',
+            'map-branch-alias',
             'update-working-directory',
             'show-identifier',
             'checkout-pull-request',

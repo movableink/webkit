@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 #include "EventNames.h"
 #include "FrameLoader.h"
 #include "HTMLBodyElement.h"
+#include "HTMLCollection.h"
 #include "HTMLDivElement.h"
 #include "HTMLMetaElement.h"
 #include "HTMLObjectElement.h"
@@ -225,57 +226,6 @@ bool Quirks::shouldHideSearchFieldResultsButton() const
     return false;
 }
 
-bool Quirks::shouldDisableResolutionMediaQuery() const
-{
-    if (!needsQuirks())
-        return false;
-    auto host = m_document->url().host();
-
-    if (equalLettersIgnoringASCIICase(host, "www.carrentals.com"_s))
-        return true;
-
-    if (equalLettersIgnoringASCIICase(host, "www.cheaptickets.com"_s))
-        return true;
-
-    if (topPrivatelyControlledDomain(host.toString()).startsWith("ebookers."_s))
-        return true;
-
-    if (topPrivatelyControlledDomain(host.toString()).startsWith("expedia."_s))
-        return true;
-
-    if (host.endsWithIgnoringASCIICase(".hoteis.com"_s))
-        return true;
-
-    if (host.endsWithIgnoringASCIICase(".hoteles.com"_s))
-        return true;
-
-    if (equalLettersIgnoringASCIICase(host, "www.hotels.cn"_s))
-        return true;
-
-    if (host.endsWithIgnoringASCIICase(".hotels.com"_s))
-        return true;
-
-    if (equalLettersIgnoringASCIICase(host, "www.mrjet.se"_s))
-        return true;
-
-    if (equalLettersIgnoringASCIICase(host, "www.orbitz.com"_s))
-        return true;
-
-    if (equalLettersIgnoringASCIICase(host, "www.travelocity.ca"_s))
-        return true;
-
-    if (equalLettersIgnoringASCIICase(host, "www.travelocity.com"_s))
-        return true;
-
-    if (equalLettersIgnoringASCIICase(host, "www.wotif.com"_s))
-        return true;
-
-    if (equalLettersIgnoringASCIICase(host, "www.wotif.co.nz"_s))
-        return true;
-
-    return false;
-}
-
 bool Quirks::needsMillisecondResolutionForHighResTimeStamp() const
 {
     if (!needsQuirks())
@@ -335,7 +285,7 @@ bool Quirks::isNeverRichlyEditableForTouchBar() const
     return false;
 }
 
-static bool shouldSuppressAutocorrectionAndAutocaptializationInHiddenEditableAreasForHost(StringView host)
+static bool shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreasForHost(StringView host)
 {
 #if PLATFORM(IOS_FAMILY)
     return equalLettersIgnoringASCIICase(host, "docs.google.com"_s);
@@ -391,12 +341,12 @@ bool Quirks::shouldAvoidUsingIOS13ForGmail() const
 #endif
 }
 
-bool Quirks::shouldSuppressAutocorrectionAndAutocaptializationInHiddenEditableAreas() const
+bool Quirks::shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreas() const
 {
     if (!needsQuirks())
         return false;
 
-    return shouldSuppressAutocorrectionAndAutocaptializationInHiddenEditableAreasForHost(m_document->topDocument().url().host());
+    return shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreasForHost(m_document->topDocument().url().host());
 }
 
 #if ENABLE(TOUCH_EVENTS)
@@ -437,8 +387,6 @@ bool Quirks::shouldDispatchSimulatedMouseEvents(const EventTarget* target) const
             return startsWithLettersIgnoringASCIICase(url.path(), "/website/templates/"_s) ? ShouldDispatchSimulatedMouseEvents::No : ShouldDispatchSimulatedMouseEvents::Yes;
         }
 
-        if ((host == "desmos.com"_s || host.endsWith(".desmos.com"_s)) && startsWithLettersIgnoringASCIICase(url.path(), "/calculator/"_s))
-            return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host == "trello.com"_s || host.endsWith(".trello.com"_s))
             return ShouldDispatchSimulatedMouseEvents::Yes;
         if (host == "airtable.com"_s || host.endsWith(".airtable.com"_s))
@@ -1059,7 +1007,7 @@ bool Quirks::shouldAvoidPastingImagesAsWebContent() const
 #endif
 }
 
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
 static bool isKinjaLoginAvatarElement(const Element& element)
 {
     // The click event handler has been found to trigger on a div or
@@ -1195,10 +1143,10 @@ Quirks::StorageAccessResult Quirks::requestStorageAccessAndHandleClick(Completio
 
 Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& element, const PlatformMouseEvent& platformEvent, const AtomString& eventType, int detail, Element* relatedTarget, bool isParentProcessAFullWebBrowser, IsSyntheticClick isSyntheticClick) const
 {
-    if (!DeprecatedGlobalSettings::resourceLoadStatisticsEnabled() || !isParentProcessAFullWebBrowser)
+    if (!DeprecatedGlobalSettings::trackingPreventionEnabled() || !isParentProcessAFullWebBrowser)
         return Quirks::StorageAccessResult::ShouldNotCancelEvent;
 
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
     if (!needsQuirks())
         return Quirks::StorageAccessResult::ShouldNotCancelEvent;
 
@@ -1518,19 +1466,6 @@ bool Quirks::allowLayeredFullscreenVideos() const
 }
 #endif
 
-bool Quirks::hasBrokenPermissionsAPISupportQuirk() const
-{
-    if (!needsQuirks())
-        return false;
-
-    if (!m_hasBrokenPermissionsAPISupportQuirk) {
-        auto domain = m_document->securityOrigin().domain().convertToASCIILowercase();
-        m_hasBrokenPermissionsAPISupportQuirk = domain.endsWith(".nfl.com"_s);
-    }
-
-    return m_hasBrokenPermissionsAPISupportQuirk.value();
-}
-
 bool Quirks::shouldEnableApplicationCacheQuirk() const
 {
     bool shouldEnableBySetting = m_document && m_document->settings().offlineWebApplicationCacheEnabled();
@@ -1550,6 +1485,69 @@ bool Quirks::shouldEnableApplicationCacheQuirk() const
 #else
     return shouldEnableBySetting;
 #endif
+}
+
+bool Quirks::shouldEnableFontLoadingAPIQuirk() const
+{
+    if (!needsQuirks() || m_document->settings().downloadableBinaryFontsEnabled())
+        return false;
+
+    if (!m_shouldEnableFontLoadingAPIQuirk)
+        m_shouldEnableFontLoadingAPIQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "play.hbomax.com"_s);
+
+    return m_shouldEnableFontLoadingAPIQuirk.value();
+}
+
+bool Quirks::needsVideoShouldMaintainAspectRatioQuirk() const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (m_needsVideoShouldMaintainAspectRatioQuirk)
+        return m_needsVideoShouldMaintainAspectRatioQuirk.value();
+
+    auto domain = RegistrableDomain(m_document->url()).string();
+    m_needsVideoShouldMaintainAspectRatioQuirk = domain == "hulu.com"_s;
+
+    return m_needsVideoShouldMaintainAspectRatioQuirk.value();
+}
+
+bool Quirks::shouldExposeShowModalDialog() const
+{
+    if (!needsQuirks())
+        return false;
+    if (!m_shouldExposeShowModalDialog) {
+        auto domain = RegistrableDomain(m_document->url()).string();
+        m_shouldExposeShowModalDialog = domain == "pandora.com"_s || domain == "marcus.com"_s;
+    }
+    return *m_shouldExposeShowModalDialog;
+}
+
+bool Quirks::shouldDisableLazyImageLoadingQuirk() const
+{
+    // Images are displaying as fully grey when loaded lazily in significant percentage of page loads.
+    // This issue is not observed when lazy image loading is disabled, and has been fixed in future Gatsby versions.
+    // This quirk is only applied to IKEA.com when "<meta name="generator" content="Gatsby 4.24.1" />" is present.
+    // This quirk can be removed once the gatsby version has been upgraded.
+    // Further discussion can be found here https://github.com/webcompat/web-bugs/issues/113635.
+
+    if (!needsQuirks())
+        return false;
+
+    if (m_shouldDisableLazyImageLoadingQuirk)
+        return m_shouldDisableLazyImageLoadingQuirk.value();
+
+    m_shouldDisableLazyImageLoadingQuirk = false;
+
+    if (RegistrableDomain(m_document->url()).string() != "ikea.com"_s)
+        return false;
+
+    auto* metaElement = m_document->getElementsByTagName("meta"_s)->namedItem("generator"_s);
+    
+    if (metaElement && metaElement->getAttribute("content"_s) == "Gatsby 4.24.1"_s)
+        m_shouldDisableLazyImageLoadingQuirk = true;
+
+    return m_shouldDisableLazyImageLoadingQuirk.value();
 }
 
 }

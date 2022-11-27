@@ -34,7 +34,6 @@
 #include <utility>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
-#include <wtf/Span.h>
 #include <wtf/Vector.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
@@ -64,7 +63,7 @@ namespace FileSystemImpl {
 // PlatformFileHandle
 #if USE(GLIB) && !OS(WINDOWS) && !PLATFORM(QT)
 typedef GFileIOStream* PlatformFileHandle;
-const PlatformFileHandle invalidPlatformFileHandle = 0;
+const PlatformFileHandle invalidPlatformFileHandle = nullptr;
 #elif OS(WINDOWS)
 typedef HANDLE PlatformFileHandle;
 // FIXME: -1 is INVALID_HANDLE_VALUE, defined in <winbase.h>. Chromium tries to
@@ -73,6 +72,15 @@ const PlatformFileHandle invalidPlatformFileHandle = reinterpret_cast<HANDLE>(-1
 #else
 typedef int PlatformFileHandle;
 const PlatformFileHandle invalidPlatformFileHandle = -1;
+#endif
+
+// PlatformFileID
+#if USE(GLIB) && !OS(WINDOWS)
+typedef CString PlatformFileID;
+#elif OS(WINDOWS)
+typedef FILE_ID_128 PlatformFileID;
+#else
+typedef ino_t PlatformFileID;
 #endif
 
 enum class FileOpenMode {
@@ -114,6 +122,8 @@ WTF_EXPORT_PRIVATE bool moveFile(const String& oldPath, const String& newPath);
 WTF_EXPORT_PRIVATE std::optional<uint64_t> fileSize(const String&); // Follows symlinks.
 WTF_EXPORT_PRIVATE std::optional<uint64_t> fileSize(PlatformFileHandle);
 WTF_EXPORT_PRIVATE std::optional<WallTime> fileModificationTime(const String&);
+WTF_EXPORT_PRIVATE std::optional<PlatformFileID> fileID(PlatformFileHandle);
+WTF_EXPORT_PRIVATE bool fileIDsAreEqual(std::optional<PlatformFileID>, std::optional<PlatformFileID>);
 WTF_EXPORT_PRIVATE bool updateFileModificationTime(const String& path); // Sets modification time to now.
 WTF_EXPORT_PRIVATE std::optional<WallTime> fileCreationTime(const String&); // Not all platforms store file creation time.
 WTF_EXPORT_PRIVATE bool isHiddenFile(const String&);

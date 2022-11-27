@@ -104,6 +104,13 @@
 #import "_WKInspectorExtensionInternal.h"
 #endif
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+#import "_WKWebExtensionContextInternal.h"
+#import "_WKWebExtensionControllerInternal.h"
+#import "_WKWebExtensionInternal.h"
+#import "_WKWebExtensionMatchPatternInternal.h"
+#endif
+
 static const size_t minimumObjectAlignment = alignof(std::aligned_storage<std::numeric_limits<size_t>::max()>::type);
 static_assert(minimumObjectAlignment >= alignof(void*), "Objects should always be at least pointer-aligned.");
 static const size_t maximumExtraSpaceForAlignment = minimumObjectAlignment - alignof(void*);
@@ -112,12 +119,12 @@ namespace API {
 
 void Object::ref() const
 {
-    CFRetain((__bridge CFTypeRef)wrapper());
+    CFRetain(m_wrapper);
 }
 
 void Object::deref() const
 {
-    CFRelease((__bridge CFTypeRef)wrapper());
+    CFRelease(m_wrapper);
 }
 
 static id <WKObject> allocateWKObject(Class cls, size_t size)
@@ -391,6 +398,24 @@ void* Object::newObject(size_t size, Type type)
         wrapper = [_WKVisitedLinkStore alloc];
         break;
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+    case Type::WebExtension:
+        wrapper = [_WKWebExtension alloc];
+        break;
+
+    case Type::WebExtensionContext:
+        wrapper = [_WKWebExtensionContext alloc];
+        break;
+
+    case Type::WebExtensionController:
+        wrapper = [_WKWebExtensionController alloc];
+        break;
+
+    case Type::WebExtensionMatchPattern:
+        wrapper = [_WKWebExtensionMatchPattern alloc];
+        break;
+#endif
+
     case Type::WebsiteDataRecord:
         wrapper = [WKWebsiteDataRecord alloc];
         break;
@@ -450,7 +475,7 @@ void* Object::newObject(size_t size, Type type)
     }
 
     Object& object = wrapper._apiObject;
-    object.m_wrapper = wrapper;
+    object.m_wrapper = (__bridge CFTypeRef)wrapper;
 
     return &object;
 }

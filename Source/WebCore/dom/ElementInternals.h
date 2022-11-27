@@ -43,6 +43,15 @@ public:
     Element* element() const { return m_element.get(); }
     ShadowRoot* shadowRoot() const;
 
+    // For ARIAMixin
+    const AtomString& attributeWithoutSynchronization(const QualifiedName&) const;
+    void setAttributeWithoutSynchronization(const QualifiedName&, const AtomString& value);
+
+    Element* getElementAttribute(const QualifiedName&) const;
+    void setElementAttribute(const QualifiedName&, Element*);
+    std::optional<Vector<RefPtr<Element>>> getElementsArrayAttribute(const QualifiedName&) const;
+    void setElementsArrayAttribute(const QualifiedName&, std::optional<Vector<RefPtr<Element>>>&&);
+
 private:
     ElementInternals(HTMLElement& element)
         : m_element(element)

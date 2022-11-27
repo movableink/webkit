@@ -58,6 +58,7 @@ from webkitpy.style.checkers.test_expectations import TestExpectationsChecker
 from webkitpy.style.checkers.text import TextChecker
 from webkitpy.style.checkers.watchlist import WatchListChecker
 from webkitpy.style.checkers.xcodeproj import XcodeProjectFileChecker
+from webkitpy.style.checkers.xcscheme import XcodeSchemeChecker
 from webkitpy.style.checkers.xml import XMLChecker
 from webkitpy.style.error_handlers import DefaultStyleErrorHandler
 from webkitpy.style.filter import FilterConfiguration
@@ -257,6 +258,8 @@ _PATH_RULES_SPECIFIER = [
     ([
       # These files define GObjects, which implies some definitions of
       # variables and functions containing underscores.
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'AppSinkWorkaround.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'AppSinkWorkaround.h'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GLVideoSinkGStreamer.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GLVideoSinkGStreamer.h'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'DMABufVideoSinkGStreamer.cpp'),
@@ -391,6 +394,8 @@ _TEXT_FILE_EXTENSIONS = [
 
 _XCODEPROJ_FILE_EXTENSION = 'pbxproj'
 
+_XCSCHEME_FILE_EXTENSION = 'xcscheme'
+
 _XML_FILE_EXTENSIONS = [
     'vcproj',
     'vsprops',
@@ -412,9 +417,10 @@ _NEVER_SKIPPED_JS_FILES = [
 ]
 
 _NEVER_SKIPPED_FILES = _NEVER_SKIPPED_JS_FILES + [
-    'TestExpectations',
-    'TestExpectations.json',
-    '.py'
+    re.compile('.*TestExpectations$'),
+    re.compile('.*TestExpectations.json$'),
+    # Avoid imported WebDriverTests python machinery
+    re.compile('(?!WebDriverTests).{0,14}.*.py$'),
 ]
 
 # Files to skip that are less obvious.
@@ -441,6 +447,7 @@ _SKIPPED_FILES_WITH_WARNING = [
     os.path.join('Source', 'JavaScriptCore', 'API', 'glib', 'jsc.h'),
     os.path.join('Source', 'WebCore', 'platform', 'gtk', 'GtkVersioning.h'),
     os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'gtk', 'webkit2.h'),
+    os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'gtk', 'webkit.h'),
     os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'wpe', 'webkit.h'),
     os.path.join('Source', 'WebKit', 'WebProcess', 'InjectedBundle', 'API', 'gtk', 'webkit-web-extension.h'),
     os.path.join('Source', 'WebKit', 'WebProcess', 'InjectedBundle', 'API', 'wpe', 'webkit-web-extension.h'),
@@ -497,6 +504,7 @@ def _all_categories():
     categories = categories.union(ChangeLogChecker.categories)
     categories = categories.union(PNGChecker.categories)
     categories = categories.union(FeatureDefinesChecker.categories)
+    categories = categories.union(XcodeSchemeChecker.categories)
 
     # FIXME: Consider adding all of the pep8 categories.  Since they
     #        are not too meaningful for documentation purposes, for
@@ -651,6 +659,7 @@ class FileType:
     CMAKE = 11
     FEATUREDEFINES = 12
     SDKVARIANT = 13
+    XCSCHEME = 14
 
 
 class CheckerDispatcher(object):
@@ -665,10 +674,13 @@ class CheckerDispatcher(object):
         match = re.search(r"\s*png$", file_path)
         if match:
             return False
-        if isinstance(skip_array_entry, str):
-            if file_path.find(skip_array_entry) >= 0:
+        return self._file_matches_pattern(file_path, skip_array_entry)
+
+    def _file_matches_pattern(self, file_path, pattern):
+        if isinstance(pattern, str):
+            if file_path.find(pattern) >= 0:
                 return True
-        elif skip_array_entry.match(file_path):
+        elif pattern.match(file_path):
                 return True
         return False
 
@@ -693,8 +705,8 @@ class CheckerDispatcher(object):
         basename = os.path.basename(file_path)
         if basename.startswith('ChangeLog'):
             return False
-        for suffix in _NEVER_SKIPPED_FILES:
-            if basename.endswith(suffix):
+        for pattern in _NEVER_SKIPPED_FILES:
+            if self._file_matches_pattern(file_path, pattern):
                 return False
         for skipped_file in _SKIPPED_FILES_WITHOUT_WARNING:
             if self._should_skip_file_path(file_path, skipped_file):
@@ -736,6 +748,8 @@ class CheckerDispatcher(object):
             return FileType.WATCHLIST
         elif file_extension == _XCODEPROJ_FILE_EXTENSION:
             return FileType.XCODEPROJ
+        elif file_extension == _XCSCHEME_FILE_EXTENSION:
+            return FileType.XCSCHEME
         elif file_extension == _PNG_FILE_EXTENSION:
             return FileType.PNG
         elif ((file_extension == _CMAKE_FILE_EXTENSION) or os.path.basename(file_path) == 'CMakeLists.txt'):
@@ -795,6 +809,11 @@ class CheckerDispatcher(object):
                 checker = PythonChecker(file_path, handle_style_error)
         elif file_type == FileType.XML:
             checker = XMLChecker(file_path, handle_style_error)
+        elif file_type == FileType.XCSCHEME:
+            if apple_additions():
+                checker = apple_additions().xcscheme_checker(file_path, handle_style_error)
+            else:
+                checker = XcodeSchemeChecker(file_path, handle_style_error)
         elif file_type == FileType.XCODEPROJ:
             checker = XcodeProjectFileChecker(file_path, handle_style_error)
         elif file_type == FileType.PNG:

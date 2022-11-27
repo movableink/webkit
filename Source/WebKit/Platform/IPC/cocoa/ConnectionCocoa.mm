@@ -36,6 +36,8 @@
 #import "XPCUtilities.h"
 #import <WebCore/AXObjectCache.h>
 #import <mach/mach_error.h>
+#import <mach/mach_init.h>
+#import <mach/mach_traps.h>
 #import <mach/vm_map.h>
 #import <sys/mman.h>
 #import <wtf/HexNumber.h>
@@ -73,6 +75,28 @@ static const size_t inlineMessageMaxSize = 4096;
 constexpr mach_msg_id_t inlineBodyMessageID = 0xdba0dba;
 constexpr mach_msg_id_t outOfLineBodyMessageID = 0xdba1dba;
 
+static void requestNoSenderNotifications(mach_port_t port, mach_port_t notify)
+{
+    mach_port_t previousNotificationPort = MACH_PORT_NULL;
+    auto kr = mach_port_request_notification(mach_task_self(), port, MACH_NOTIFY_NO_SENDERS, 0, notify, MACH_MSG_TYPE_MAKE_SEND_ONCE, &previousNotificationPort);
+    ASSERT(kr == KERN_SUCCESS);
+    if (kr != KERN_SUCCESS) {
+        // If mach_port_request_notification fails, 'previousNotificationPort' will be uninitialized.
+        LOG_ERROR("mach_port_request_notification failed: (%x) %s", kr, mach_error_string(kr));
+    } else
+        deallocateSendRightSafely(previousNotificationPort);
+}
+
+static void requestNoSenderNotifications(mach_port_t port)
+{
+    requestNoSenderNotifications(port, port);
+}
+
+static void clearNoSenderNotifications(mach_port_t port)
+{
+    requestNoSenderNotifications(port, MACH_PORT_NULL);
+}
+
 void Connection::platformInvalidate()
 {
     if (!m_isConnected) {
@@ -95,6 +119,7 @@ void Connection::platformInvalidate()
 #if !PLATFORM(WATCHOS)
             mach_port_unguard(mach_task_self(), m_receivePort, reinterpret_cast<mach_port_context_t>(this));
 #endif
+            clearNoSenderNotifications(m_receivePort);
             mach_port_mod_refs(mach_task_self(), m_receivePort, MACH_PORT_RIGHT_RECEIVE, -1);
             m_receivePort = MACH_PORT_NULL;
         }
@@ -103,18 +128,21 @@ void Connection::platformInvalidate()
     }
 
     m_pendingOutgoingMachMessage = nullptr;
-    m_isInitializingSendSource = false;
     m_isConnected = false;
 
-    ASSERT(m_sendPort);
     ASSERT(m_receivePort);
 
-    // Unregister our ports.
+    cancelSendSource();
+    cancelReceiveSource();
+}
+
+void Connection::cancelSendSource()
+{
+    if (!m_sendSource)
+        return;
     dispatch_source_cancel(m_sendSource.get());
     m_sendSource = nullptr;
     m_sendPort = MACH_PORT_NULL;
-
-    cancelReceiveSource();
 }
 
 void Connection::cancelReceiveSource()
@@ -147,34 +175,15 @@ void Connection::platformInitialize(Identifier identifier)
     m_xpcConnection = identifier.xpcConnection;
 }
 
-static void requestNoSenderNotifications(mach_port_t port, mach_port_t notify)
-{
-    mach_port_t previousNotificationPort = MACH_PORT_NULL;
-    auto kr = mach_port_request_notification(mach_task_self(), port, MACH_NOTIFY_NO_SENDERS, 0, notify, MACH_MSG_TYPE_MAKE_SEND_ONCE, &previousNotificationPort);
-    ASSERT(kr == KERN_SUCCESS);
-    if (kr != KERN_SUCCESS) {
-        // If mach_port_request_notification fails, 'previousNotificationPort' will be uninitialized.
-        LOG_ERROR("mach_port_request_notification failed: (%x) %s", kr, mach_error_string(kr));
-    } else
-        deallocateSendRightSafely(previousNotificationPort);
-}
-
-static void requestNoSenderNotifications(mach_port_t port)
-{
-    requestNoSenderNotifications(port, port);
-}
-
-static void clearNoSenderNotifications(mach_port_t port)
-{
-    requestNoSenderNotifications(port, MACH_PORT_NULL);
-}
-
-bool Connection::open()
+void Connection::platformOpen()
 {
     if (m_isServer) {
         ASSERT(m_receivePort);
         ASSERT(!m_sendPort);
         ASSERT(MACH_PORT_VALID(m_receivePort));
+        // Client passed m_receivePort. Call Client::didClose() when there are no senders to that port.
+        requestNoSenderNotifications(m_receivePort);
+
     } else {
         ASSERT(!m_receivePort);
         ASSERT(m_sendPort);
@@ -194,13 +203,15 @@ bool Connection::open()
 #endif
 
         m_isConnected = true;
-        
+
         // Send the initialize message, which contains a send right for the server to use.
         auto encoder = makeUniqueRef<Encoder>(MessageName::InitializeConnection, 0);
 
         mach_port_insert_right(mach_task_self(), m_receivePort, m_receivePort, MACH_MSG_TYPE_MAKE_SEND);
-        MachSendRight right = MachSendRight::adopt(m_receivePort);
-        encoder.get() << Attachment { WTFMove(right) };
+        encoder.get() << MachSendRight::adopt(m_receivePort);
+
+        // Call Client::didClose() when the above send right gets destroyed.
+        requestNoSenderNotifications(m_receivePort);
 
         initializeSendSource();
 
@@ -218,30 +229,19 @@ bool Connection::open()
 #if !PLATFORM(WATCHOS)
         mach_port_unguard(mach_task_self(), receivePort, reinterpret_cast<mach_port_context_t>(protectedThis.ptr()));
 #endif
+        clearNoSenderNotifications(receivePort);
         mach_port_mod_refs(mach_task_self(), receivePort, MACH_PORT_RIGHT_RECEIVE, -1);
     });
-    // Disconnections are normally handled by DISPATCH_MACH_SEND_DEAD on the m_sendSource, but that's not
-    // initialized until we receive the connection message from the client, so we need to request MACH_NOTIFY_NO_SENDERS
-    // on the receiving port until then.
-    if (m_isServer)
-        requestNoSenderNotifications(m_receivePort);
 
     m_connectionQueue->dispatch([strongRef = Ref { *this }, this] {
         dispatch_resume(m_receiveSource.get());
-
-        if (m_sendSource)
-            dispatch_resume(m_sendSource.get());
     });
-
-    return true;
 }
 
 bool Connection::sendMessage(std::unique_ptr<MachMessage> message)
 {
     ASSERT(message);
     ASSERT(!m_pendingOutgoingMachMessage);
-    ASSERT(!m_isInitializingSendSource);
-
     // Send the message.
     kern_return_t kr = mach_msg(message->header(), MACH_SEND_MSG | MACH_SEND_TIMEOUT | MACH_SEND_NOTIFY, message->size(), 0, MACH_PORT_NULL, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
     switch (kr) {
@@ -256,7 +256,15 @@ bool Connection::sendMessage(std::unique_ptr<MachMessage> message)
         return false;
 
     case MACH_SEND_INVALID_DEST:
-        // The other end has disappeared, we'll get a dead name notification which will cause us to be invalidated.
+        // The other end has destroyed the receive right to the port we are trying to send to.
+        // Cancel the send source, so that we do not try to send more messages needlessly.
+        cancelSendSource();
+
+        // We do not yet invalidate this instance. When the send right to the port of this instance is
+        // destroyed, this instance gets a NO_SENDERS notification which will cause this instance invalidation.
+        // Noteworthy special case:
+        // InitializeConnection message will hold our send right. If that send fails here, we will destroy
+        // the send right inside the `message`that goes out of scope, and thus we get the NO_SENDERS.
         return false;
 
     default:
@@ -271,20 +279,15 @@ bool Connection::sendMessage(std::unique_ptr<MachMessage> message)
 
 bool Connection::platformCanSendOutgoingMessages() const
 {
-    return !m_pendingOutgoingMachMessage && !m_isInitializingSendSource;
+    return !m_pendingOutgoingMachMessage && MACH_PORT_VALID(m_sendPort);
 }
 
 bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
 {
-    ASSERT(!m_pendingOutgoingMachMessage);
-    ASSERT(!m_isInitializingSendSource);
+    ASSERT(canSendOutgoingMessages());
 
     auto attachments = encoder->releaseAttachments();
-    
-    auto numberOfPortDescriptors = std::count_if(attachments.begin(), attachments.end(), [](auto& attachment)
-    {
-        return attachment.type() == Attachment::MachPortType;
-    });
+    auto numberOfPortDescriptors = attachments.size();
 
     bool messageBodyIsOOL = false;
     auto messageSize = MachMessage::messageSize(encoder->bufferSize(), numberOfPortDescriptors, messageBodyIsOOL);
@@ -325,13 +328,10 @@ bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
         };
 
         for (auto& attachment : attachments) {
-            ASSERT(attachment.type() == Attachment::MachPortType);
-            if (attachment.type() == Attachment::MachPortType) {
-                auto* descriptor = getDescriptorAndAdvance(messageData, sizeof(mach_msg_port_descriptor_t));
-                descriptor->port.name = attachment.leakSendRight();
-                descriptor->port.disposition = MACH_MSG_TYPE_MOVE_SEND;
-                descriptor->port.type = MACH_MSG_PORT_DESCRIPTOR;
-            }
+            auto* descriptor = getDescriptorAndAdvance(messageData, sizeof(mach_msg_port_descriptor_t));
+            descriptor->port.name = attachment.leakSendRight();
+            descriptor->port.disposition = MACH_MSG_TYPE_MOVE_SEND;
+            descriptor->port.type = MACH_MSG_PORT_DESCRIPTOR;
         }
 
         if (messageBodyIsOOL) {
@@ -356,13 +356,13 @@ bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
 
 void Connection::initializeSendSource()
 {
-    m_sendSource = adoptOSObject(dispatch_source_create(DISPATCH_SOURCE_TYPE_MACH_SEND, m_sendPort, DISPATCH_MACH_SEND_DEAD | DISPATCH_MACH_SEND_POSSIBLE, m_connectionQueue->dispatchQueue()));
-    m_isInitializingSendSource = true;
+    ASSERT(m_isConnected);
+    ASSERT(MACH_PORT_VALID(m_sendPort));
 
+    m_sendSource = adoptOSObject(dispatch_source_create(DISPATCH_SOURCE_TYPE_MACH_SEND, m_sendPort, DISPATCH_MACH_SEND_POSSIBLE, m_connectionQueue->dispatchQueue()));
     dispatch_source_set_registration_handler(m_sendSource.get(), [this, protectedThis = Ref { *this }] {
         if (!m_sendSource)
             return;
-        m_isInitializingSendSource = false;
         resumeSendSource();
     });
     dispatch_source_set_event_handler(m_sendSource.get(), [this, protectedThis = Ref { *this }] {
@@ -371,11 +371,6 @@ void Connection::initializeSendSource()
 
         unsigned long data = dispatch_source_get_data(m_sendSource.get());
 
-        if (data & DISPATCH_MACH_SEND_DEAD) {
-            connectionDidClose();
-            return;
-        }
-
         if (data & DISPATCH_MACH_SEND_POSSIBLE) {
             // FIXME: Figure out why we get spurious DISPATCH_MACH_SEND_POSSIBLE events.
             resumeSendSource();
@@ -383,18 +378,16 @@ void Connection::initializeSendSource()
         }
     });
 
-    if (MACH_PORT_VALID(m_sendPort)) {
-        mach_port_t sendPort = m_sendPort;
-        dispatch_source_set_cancel_handler(m_sendSource.get(), ^{
-            // Release our send right.
-            deallocateSendRightSafely(sendPort);
-        });
-    }
+    mach_port_t sendPort = m_sendPort;
+    dispatch_source_set_cancel_handler(m_sendSource.get(), ^{
+        // Release our send right.
+        deallocateSendRightSafely(sendPort);
+    });
+    dispatch_resume(m_sendSource.get());
 }
 
 void Connection::resumeSendSource()
 {
-    ASSERT(!m_isInitializingSendSource);
     if (m_pendingOutgoingMachMessage)
         sendMessage(WTFMove(m_pendingOutgoingMachMessage));
     sendOutgoingMessages();
@@ -503,7 +496,7 @@ static mach_msg_header_t* readFromMachPort(mach_port_t machPort, ReceiveBuffer& 
         // The message was too large, resize the buffer and try again.
         buffer.resize(header->msgh_size + MAX_TRAILER_SIZE);
         header = reinterpret_cast<mach_msg_header_t*>(buffer.data());
-        
+
         kr = mach_msg(header, MACH_RCV_MSG | MACH_RCV_LARGE | MACH_RCV_TIMEOUT | MACH_RCV_VOUCHER, 0, buffer.size(), machPort, 0, MACH_PORT_NULL);
         ASSERT(kr != MACH_RCV_TOO_LARGE);
     }
@@ -533,9 +526,7 @@ void Connection::receiveSourceEventHandler()
 
     switch (header->msgh_id) {
     case MACH_NOTIFY_NO_SENDERS:
-        ASSERT(m_isServer);
-        if (!m_sendPort)
-            connectionDidClose();
+        connectionDidClose();
         return;
 
     case inlineBodyMessageID:
@@ -554,41 +545,35 @@ void Connection::receiveSourceEventHandler()
 #if PLATFORM(MAC) || (PLATFORM(QT) && USE(MACH_PORTS))
     decoder->setImportanceAssertion(ImportanceAssertion { header });
 #endif
-    
+
     if (decoder->messageName() == MessageName::InitializeConnection) {
         ASSERT(m_isServer);
         ASSERT(!m_sendPort);
-        if (m_isConnected) {
+        MachSendRight sendRight;
+        if (m_isConnected || !decoder->decode(sendRight)) {
+            // The sender sent an invalid message deliberately, close immediately.
             ASSERT_IS_TESTING_IPC();
+            connectionDidClose();
             return;
-        }
-
-        Attachment attachment;
-        if (!decoder->decode(attachment)) {
-            // FIXME: Disconnect.
-            return;
-        }
-
-        m_sendPort = attachment.leakSendRight();
-        
-        if (m_sendPort) {
-            ASSERT(MACH_PORT_VALID(m_receivePort));
-            clearNoSenderNotifications(m_receivePort);
-
-            initializeSendSource();
-            dispatch_resume(m_sendSource.get());
         }
 
         m_isConnected = true;
 
-        // Send any pending outgoing messages.
-        sendOutgoingMessages();
-        
+        if (!MACH_PORT_VALID(sendRight.sendRight())) {
+            // The InitializeConnection message was valid message. We received MACH_PORT_DEAD
+            // because by the time we read the message, the port was already closed.
+            // Do not initialize the send source, as there is nobody to send to.
+            // Keep the receive source, so that we receive the sent messages and then
+            // the NO_SENDERS notification.
+            return;
+        }
+        m_sendPort = sendRight.leakSendRight();
+        initializeSendSource();
         return;
     }
 
     processIncomingMessage(WTFMove(decoder));
-}    
+}
 
 IPC::Connection::Identifier Connection::identifier() const
 {
@@ -599,7 +584,7 @@ std::optional<audit_token_t> Connection::getAuditToken()
 {
     if (!m_xpcConnection)
         return std::nullopt;
-    
+
     audit_token_t auditToken;
     xpc_connection_get_audit_token(m_xpcConnection.get(), &auditToken);
     return WTFMove(auditToken);
@@ -661,8 +646,6 @@ std::optional<Connection::ConnectionIdentifierPair> Connection::createConnection
         return std::nullopt;
     }
     mach_port_insert_right(mach_task_self(), listeningPort, listeningPort, MACH_MSG_TYPE_MAKE_SEND);
-    MachSendRight right = MachSendRight::adopt(listeningPort);
-
-    return ConnectionIdentifierPair { Connection::Identifier { listeningPort }, Attachment { WTFMove(right) } };
+    return ConnectionIdentifierPair { Identifier { listeningPort, nullptr }, MachSendRight::adopt(listeningPort) };
 }
 } // namespace IPC

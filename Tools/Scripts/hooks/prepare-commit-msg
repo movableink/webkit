@@ -8,6 +8,9 @@ import sys
 LOCATION = r'{{ location }}'
 SPACING = 8
 SCRIPTS = os.path.dirname(os.path.dirname(LOCATION))
+CHERRY_PICKING_RE = re.compile(r'^# You are currently cherry-picking commit (?P<hash>[a-f0-9A-F]+)\.$')
+IDENTIFIER_RE = re.compile(r'(\d+\.)?\d+@\S+')
+PREFER_RADAR = {{ prefer_radar }}
 
 sys.path.append(SCRIPTS)
 from webkitpy.common.checkout.diff_parser import DiffParser
@@ -34,41 +37,12 @@ def get_bugs_string():
         bugs_string += '\n' + need_the_radar
     return bugs_string
 
-
-def message_from_staged_changelogs():
-    try:
-        diff = subprocess.check_output(['git', 'diff', '--staged'])
-    except subprocess.CalledProcessError:
-        return ''
-
-    modified_files = DiffParser(diff.splitlines()).files
-    message = ''
-    for path, parsed_diff in modified_files.items():
-        if not path.endswith('ChangeLog'):
-            continue
-
-        # Ignore first line (date, name, email) and second line (empty).
-        diff_lines = parsed_diff.lines[2:]
-
-        # Get added lines and strip leading 8 characters indentation.
-        lines = [line[2][SPACING:] for line in diff_lines if not line[0]]
-
-        message += '\n'.join(lines)
-
-    return message
-
-
-def message(source=None, sha=None):
-    msg = message_from_staged_changelogs()
-    if msg:
-        return msg
-
+def parseChanges(command, commit_message):
     dirname = None
-    commit_message = []
 
     try:
         for line in subprocess.check_output(
-            ['perl', os.path.join(SCRIPTS, 'prepare-ChangeLog'), '--no-write', '--only-files', '--delimiters'],
+            command,
             **(dict(encoding='utf-8') if sys.version_info > (3, 0) else dict())
         ).splitlines():
             if line == '~':
@@ -83,7 +57,23 @@ def message(source=None, sha=None):
                 dirname = line.split(':')[0]
                 continue
     except subprocess.CalledProcessError:
-        return ''
+        commit_message.append('')
+        return
+
+def message(source=None, sha=None):
+    commit_message = []
+    command = ['perl', os.path.join(SCRIPTS, 'prepare-ChangeLog'), '--no-write', '--only-files', '--delimiters', '--git-index']
+
+    if sha:
+        commit_message.append('Amend changes:')
+        parseChanges(command, commit_message)
+        commit_message.append('')
+
+        commit_message.append('Combined changes:')
+        command.append('--git-commit')
+        command.append('HEAD')
+
+    parseChanges(command, commit_message)
 
     bugs_string = get_bugs_string()
 
@@ -91,6 +81,8 @@ def message(source=None, sha=None):
 {bugs}
 
 Reviewed by NOBODY (OOPS!).
+
+Explanation of why this fixes the bug (OOPS!).
 
 {content}
 '''.format(
@@ -104,21 +96,53 @@ def cherry_pick(content):
     cherry_picked = os.environ.get('GIT_WEBKIT_CHERRY_PICKED')
     bug = os.environ.get('GIT_WEBKIT_BUG')
 
+    if PREFER_RADAR and not bug:
+        RADAR_RES = [
+            re.compile(r'<?rdar://problem/(?P<id>\d+)>?'),
+            re.compile(r'<?radar://problem/(?P<id>\d+)>?'),
+            re.compile(r'<?rdar:\/\/(?P<id>\d+)>?'),
+            re.compile(r'<?radar:\/\/(?P<id>\d+)>?'),
+        ]
+        seen_empty = False
+        for line in content.splitlines():
+            if not line and seen_empty:
+                break
+            elif not line:
+                seen_empty = True
+                continue
+            words = line.split()
+            for word in [words[0], words[-1]] if words[0] != words[-1] else [words[0]]:
+                for regex in RADAR_RES:
+                    if regex.match(word):
+                        bug = word
+                        break
+                if bug:
+                    break
+
     if not cherry_picked or not bug:
         LINK_RE = re.compile(r'^\S+:\/\/\S+\d+\S*$')
-        HASH_RE = re.compile(r'^# You are currently cherry-picking commit (?P<hash>[a-f0-9A-F]+)\.$')
 
+        last_line = ''
         for line in content.splitlines():
             if not line:
                 continue
+            if not line.startswith('#'):
+                last_line = line
             if not bug and LINK_RE.match(line):
                 bug = line
-            match = None if cherry_picked else HASH_RE.match(line)
+            match = None if cherry_picked else CHERRY_PICKING_RE.match(line)
             if match:
                 cherry_picked = match.group('hash')
 
             if bug and cherry_picked:
                 break
+
+        if last_line and (not cherry_picked or not IDENTIFIER_RE.search(cherry_picked)):
+            from_last_line = IDENTIFIER_RE.search(last_line)
+            if from_last_line and not cherry_picked:
+                cherry_picked = from_last_line.group(0)
+            elif from_last_line:
+                cherry_picked = '{} ({})'.format(from_last_line.group(0), cherry_picked)
 
     result = 'Cherry-pick {}. {}\n\n'.format(cherry_picked or '???', bug or '<bug>')
     for line in content.splitlines():
@@ -137,6 +161,11 @@ def main(file_name=None, source=None, sha=None):
 
     if source not in (None, 'commit', 'template', 'merge'):
         return 0
+
+    for line in content.splitlines():
+        if CHERRY_PICKING_RE.match(line):
+            os.environ['GIT_REFLOG_ACTION'] = 'cherry-pick'
+            break
 
     if source == 'merge' and os.environ.get('GIT_REFLOG_ACTION') == 'cherry-pick':
         with open(file_name, 'w') as commit_message_file:

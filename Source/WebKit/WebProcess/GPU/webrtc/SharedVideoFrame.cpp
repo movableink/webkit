@@ -39,7 +39,13 @@
 #include <wtf/Scope.h>
 
 #if USE(LIBWEBRTC)
+
+ALLOW_COMMA_BEGIN
+
 #include <webrtc/sdk/WebKit/WebKitUtilities.h>
+
+ALLOW_COMMA_END
+
 #endif
 
 #include <pal/cf/CoreMediaSoftLink.h>
@@ -69,9 +75,11 @@ bool SharedVideoFrameWriter::allocateStorage(size_t size, const Function<void(co
     if (!m_storage)
         return false;
 
-    SharedMemory::Handle handle;
-    m_storage->createHandle(handle, SharedMemory::Protection::ReadOnly);
-    newMemoryCallback(WTFMove(handle));
+    auto handle = m_storage->createHandle(SharedMemory::Protection::ReadOnly);
+    if (!handle)
+        return false;
+
+    newMemoryCallback(WTFMove(*handle));
     return true;
 }
 
@@ -246,7 +254,7 @@ RetainPtr<CVPixelBufferRef> SharedVideoFrameReader::readBuffer(SharedVideoFrame:
         ASSERT(sample->pixelBuffer());
         return sample->pixelBuffer();
     } , [](MachSendRight&& sendRight) -> RetainPtr<CVPixelBufferRef> {
-        auto surface = WebCore::IOSurface::createFromSendRight(WTFMove(sendRight), DestinationColorSpace::SRGB());
+        auto surface = WebCore::IOSurface::createFromSendRight(WTFMove(sendRight));
         if (!surface) {
             RELEASE_LOG_ERROR(WebRTC, "SharedVideoFrameReader::readBuffer no surface");
             return nullptr;

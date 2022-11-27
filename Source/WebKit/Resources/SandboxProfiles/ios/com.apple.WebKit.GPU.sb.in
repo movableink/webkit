@@ -103,7 +103,11 @@
            (global-name "com.apple.coremedia.customurlloader.xpc") ; Needed for custom media loading
            (global-name "com.apple.coremedia.figcpecryptor")
            (global-name "com.apple.coremedia.formatreader.xpc")
+           (global-name "com.apple.coremedia.mediaparserd.fairplaypsshatomparser.xpc")
            (global-name "com.apple.coremedia.mediaparserd.formatreader.xpc")
+#if USE(MEDIAPARSERD)
+           (global-name "com.apple.coremedia.mediaparserd.manifold.xpc")
+#endif
            (global-name "com.apple.coremedia.player.xpc")
            (global-name "com.apple.coremedia.remaker")
            (global-name "com.apple.coremedia.routediscoverer.xpc")
@@ -166,6 +170,7 @@
             )
         )
         (allow mach-lookup
+            (global-name "com.apple.audio.PhaseXPCServer")
             (global-name "com.apple.springboard.statusbarservices"))
     )
 

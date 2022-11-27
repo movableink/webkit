@@ -40,6 +40,7 @@
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/FrameLoaderTypes.h>
 #include <WebCore/HTTPHeaderField.h>
+#include <WebCore/NetworkConnectionIntegrity.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Vector.h>
 
@@ -125,9 +126,9 @@ public:
     WebCore::AllowsContentJavaScript allowsContentJavaScript() const { return m_allowsContentJavaScript; }
     void setAllowsContentJavaScript(WebCore::AllowsContentJavaScript allows) { m_allowsContentJavaScript = allows; }
 
-    bool captivePortalModeEnabled() const;
-    void setCaptivePortalModeEnabled(std::optional<bool> captivePortalModeEnabled) { m_captivePortalModeEnabled = captivePortalModeEnabled; }
-    bool isCaptivePortalModeExplicitlySet() const { return !!m_captivePortalModeEnabled; }
+    bool lockdownModeEnabled() const;
+    void setLockdownModeEnabled(std::optional<bool> enabled) { m_lockdownModeEnabled = enabled; }
+    bool isLockdownModeExplicitlySet() const { return !!m_lockdownModeEnabled; }
 
     WebCore::ColorSchemePreference colorSchemePreference() const { return m_colorSchemePreference; }
     void setColorSchemePreference(WebCore::ColorSchemePreference colorSchemePreference) { m_colorSchemePreference = colorSchemePreference; }
@@ -137,6 +138,9 @@ public:
 
     WebCore::ModalContainerObservationPolicy modalContainerObservationPolicy() const { return m_modalContainerObservationPolicy; }
     void setModalContainerObservationPolicy(WebCore::ModalContainerObservationPolicy policy) { m_modalContainerObservationPolicy = policy; }
+
+    OptionSet<WebCore::NetworkConnectionIntegrity> networkConnectionIntegrityPolicy() const { return m_networkConnectionIntegrityPolicy; }
+    void setNetworkConnectionIntegrityPolicy(OptionSet<WebCore::NetworkConnectionIntegrity> policy) { m_networkConnectionIntegrityPolicy = policy; }
 
     bool idempotentModeAutosizingOnlyHonorsPercentages() const { return m_idempotentModeAutosizingOnlyHonorsPercentages; }
     void setIdempotentModeAutosizingOnlyHonorsPercentages(bool idempotentModeAutosizingOnlyHonorsPercentages) { m_idempotentModeAutosizingOnlyHonorsPercentages = idempotentModeAutosizingOnlyHonorsPercentages; }
@@ -171,8 +175,9 @@ private:
     WebCore::AllowsContentJavaScript m_allowsContentJavaScript { WebCore::AllowsContentJavaScript::Yes };
     WebCore::MouseEventPolicy m_mouseEventPolicy { WebCore::MouseEventPolicy::Default };
     WebCore::ModalContainerObservationPolicy m_modalContainerObservationPolicy { WebCore::ModalContainerObservationPolicy::Disabled };
+    OptionSet<WebCore::NetworkConnectionIntegrity> m_networkConnectionIntegrityPolicy;
     bool m_idempotentModeAutosizingOnlyHonorsPercentages { false };
-    std::optional<bool> m_captivePortalModeEnabled;
+    std::optional<bool> m_lockdownModeEnabled;
     WebCore::ColorSchemePreference m_colorSchemePreference { WebCore::ColorSchemePreference::NoPreference };
     bool m_allowPrivacyProxy { true };
 };

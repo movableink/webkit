@@ -53,7 +53,11 @@ JSClassRef AccessibilityUIElement::wrapperClass()
 
 bool AccessibilityUIElement::isValid() const
 {
-    return m_element;            
+#if PLATFORM(COCOA)
+    return m_element.getAutoreleased();
+#else
+    return m_element;
+#endif
 }
 
 #if !ENABLE(ACCESSIBILITY_ISOLATED_TREE)
@@ -137,8 +141,6 @@ RefPtr<AccessibilityTextMarker> AccessibilityUIElement::previousSentenceStartTex
 RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::misspellingTextMarkerRange(AccessibilityTextMarkerRange*, bool) { return nullptr; }
 void AccessibilityUIElement::dismiss() { }
 JSValueRef AccessibilityUIElement::children() const { return { }; }
-JSValueRef AccessibilityUIElement::detailsElements() const { return { }; }
-JSValueRef AccessibilityUIElement::errorMessageElements() const { return { }; }
 JSValueRef AccessibilityUIElement::imageOverlayElements() const { return { }; }
 JSRetainPtr<JSStringRef> AccessibilityUIElement::embeddedImageDescription() const { return nullptr; }
 #endif // !PLATFORM(COCOA) || !ENABLE(ACCESSIBILITY)

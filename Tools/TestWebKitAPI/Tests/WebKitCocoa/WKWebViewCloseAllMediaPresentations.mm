@@ -51,16 +51,21 @@ static void loadPictureInPicture(RetainPtr<TestWKWebView> webView)
     [webView performAfterReceivingMessage:@"presentationmodechanged" action:^{ presentationModeChanged = true; }];
 
     [webView objectByEvaluatingJavaScriptWithUserGesture:@"document.querySelector('video').webkitSetPresentationMode('picture-in-picture')"];
-    ASSERT_UNUSED(presentationModeChanged, TestWebKitAPI::Util::runFor(&presentationModeChanged, 10));
+    ASSERT_UNUSED(presentationModeChanged, TestWebKitAPI::Util::runFor(&presentationModeChanged, 10_s));
     do {
         if (![webView stringByEvaluatingJavaScript:@"window.internals.isChangingPresentationMode(document.querySelector('video'))"].boolValue)
             break;
 
-        TestWebKitAPI::Util::sleep(0.5);
+        TestWebKitAPI::Util::runFor(0.5_s);
     } while (true);
 }
 
+// FIXME: Re-enable this test for Big Sur once webkit.org/b/245241 is resolved
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 131000)
+TEST(WKWebViewCloseAllMediaPresentations, DISABLED_PictureInPicture)
+#else
 TEST(WKWebViewCloseAllMediaPresentations, PictureInPicture)
+#endif
 {
     if (!WebCore::supportsPictureInPicture())
         return;
@@ -85,7 +90,12 @@ TEST(WKWebViewCloseAllMediaPresentations, PictureInPicture)
     EXPECT_TRUE([webView _allMediaPresentationsClosed]);
 }
 
+// FIXME: Re-enable this test for Big Sur once webkit.org/b/245241 is resolved
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 131000)
+TEST(WKWebViewCloseAllMediaPresentationsInternal, DISABLED_PictureInPicture)
+#else
 TEST(WKWebViewCloseAllMediaPresentationsInternal, PictureInPicture)
+#endif
 {
     if (!WebCore::supportsPictureInPicture())
         return;
@@ -107,7 +117,7 @@ TEST(WKWebViewCloseAllMediaPresentationsInternal, PictureInPicture)
         if (![webView stringByEvaluatingJavaScript:@"window.internals.isChangingPresentationMode(document.querySelector('video'))"].boolValue)
             break;
 
-        TestWebKitAPI::Util::sleep(0.5);
+        TestWebKitAPI::Util::runFor(0.5_s);
     } while (true);
 
     EXPECT_TRUE([webView _allMediaPresentationsClosed]);
@@ -137,7 +147,7 @@ TEST(WKWebViewCloseAllMediaPresentations, VideoFullscreen)
         if (![webView stringByEvaluatingJavaScript:@"window.internals.isChangingPresentationMode(document.querySelector('video'))"].boolValue)
             break;
 
-        TestWebKitAPI::Util::sleep(0.5);
+        TestWebKitAPI::Util::runFor(0.5_s);
     } while (true);
 
     static bool isDone = false;
@@ -177,7 +187,12 @@ TEST(WKWebViewCloseAllMediaPresentations, ElementFullscreen)
     EXPECT_TRUE([webView _allMediaPresentationsClosed]);
 }
 
+// FIXME: Re-enable this test for Big Sur once webkit.org/b/245241 is resolved
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 131000)
+TEST(WKWebViewCloseAllMediaPresentations, DISABLED_MultipleSequentialCloseAllMediaPresentations)
+#else
 TEST(WKWebViewCloseAllMediaPresentations, MultipleSequentialCloseAllMediaPresentations)
+#endif
 {
     if (!WebCore::supportsPictureInPicture())
         return;

@@ -23,11 +23,11 @@
 #include "config.h"
 #include "RenderStyle.h"
 
-#include "CSSComputedStyleDeclaration.h"
 #include "CSSCustomPropertyValue.h"
 #include "CSSParser.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
+#include "ComputedStyleExtractor.h"
 #include "ContentData.h"
 #include "CursorList.h"
 #include "FloatRoundedRect.h"
@@ -63,7 +63,7 @@
 namespace WebCore {
 
 struct SameSizeAsBorderValue {
-    Color m_color;
+    StyleColor m_color;
     float m_width;
     int m_restBits;
 };
@@ -814,6 +814,9 @@ static bool rareNonInheritedDataChangeRequiresLayout(const StyleRareNonInherited
     if (first.scrollSnapType != second.scrollSnapType)
         return true;
 
+    if (first.containIntrinsicWidth != second.containIntrinsicWidth || first.containIntrinsicHeight != second.containIntrinsicHeight)
+        return true;
+
     return false;
 }
 
@@ -1493,7 +1496,7 @@ FloatPoint RenderStyle::computePerspectiveOrigin(const FloatRect& boundingBox) c
     return boundingBox.location() + floatPointForLengthPoint(perspectiveOrigin(), boundingBox.size());
 }
 
-void RenderStyle::applyPerspective(TransformationMatrix& transform, const RenderObject& renderer, const FloatPoint& originTranslate) const
+void RenderStyle::applyPerspective(TransformationMatrix& transform, const FloatPoint& originTranslate) const
 {
     // https://www.w3.org/TR/css-transforms-2/#perspective
     // The perspective matrix is computed as follows:
@@ -1503,7 +1506,7 @@ void RenderStyle::applyPerspective(TransformationMatrix& transform, const Render
     transform.translate(originTranslate.x(), originTranslate.y());
 
     // 3. Multiply by the matrix that would be obtained from the perspective() transform function, where the length is provided by the value of the perspective property
-    transform.applyPerspective(usedPerspective(renderer));
+    transform.applyPerspective(usedPerspective());
 
     // 4. Translate by the negated computed X and Y values of perspective-origin
     transform.translate(-originTranslate.x(), -originTranslate.y());
@@ -1671,13 +1674,13 @@ void RenderStyle::setBoxShadow(std::unique_ptr<ShadowData> shadowData, bool add)
     rareData.boxShadow = WTFMove(shadowData);
 }
 
-static RoundedRect::Radii calcRadiiFor(const BorderData& border, const LayoutSize& size)
+static RoundedRect::Radii calcRadiiFor(const BorderData::Radii& radii, const LayoutSize& size)
 {
     return {
-        sizeForLengthSize(border.topLeftRadius(), size),
-        sizeForLengthSize(border.topRightRadius(), size),
-        sizeForLengthSize(border.bottomLeftRadius(), size),
-        sizeForLengthSize(border.bottomRightRadius(), size)
+        sizeForLengthSize(radii.topLeft, size),
+        sizeForLengthSize(radii.topRight, size),
+        sizeForLengthSize(radii.bottomLeft, size),
+        sizeForLengthSize(radii.bottomRight, size)
     };
 }
 
@@ -1736,7 +1739,7 @@ RoundedRect RenderStyle::getRoundedBorderFor(const LayoutRect& borderRect, bool 
 {
     RoundedRect roundedRect(borderRect);
     if (hasBorderRadius()) {
-        RoundedRect::Radii radii = calcRadiiFor(m_surroundData->border, borderRect.size());
+        RoundedRect::Radii radii = calcRadiiFor(m_surroundData->border.m_radii, borderRect.size());
         radii.scale(calcBorderRadiiConstraintScaleFor(borderRect, radii));
         roundedRect.includeLogicalEdges(radii, isHorizontalWritingMode(), includeLogicalLeftEdge, includeLogicalRightEdge);
     }
@@ -1756,6 +1759,13 @@ RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, 
 RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, LayoutUnit topWidth, LayoutUnit bottomWidth,
     LayoutUnit leftWidth, LayoutUnit rightWidth, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const
 {
+    auto radii = hasBorderRadius() ? std::make_optional(m_surroundData->border.m_radii) : std::nullopt;
+    return getRoundedInnerBorderFor(borderRect, topWidth, bottomWidth, leftWidth, rightWidth, radii, isHorizontalWritingMode(), includeLogicalLeftEdge, includeLogicalRightEdge);
+}
+
+RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, LayoutUnit topWidth, LayoutUnit bottomWidth,
+    LayoutUnit leftWidth, LayoutUnit rightWidth, std::optional<BorderData::Radii> radii, bool isHorizontalWritingMode, bool includeLogicalLeftEdge, bool includeLogicalRightEdge)
+{
     auto width = std::max(0_lu, borderRect.width() - leftWidth - rightWidth);
     auto height = std::max(0_lu, borderRect.height() - topWidth - bottomWidth);
     auto roundedRect = RoundedRect {
@@ -1764,11 +1774,14 @@ RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, 
         width,
         height
     };
-    if (hasBorderRadius()) {
-        auto radii = getRoundedBorderFor(borderRect).radii();
-        radii.shrink(topWidth, bottomWidth, leftWidth, rightWidth);
-        roundedRect.includeLogicalEdges(radii, isHorizontalWritingMode(), includeLogicalLeftEdge, includeLogicalRightEdge);
+    if (radii) {
+        auto adjustedRadii = calcRadiiFor(*radii, borderRect.size());
+        adjustedRadii.scale(calcBorderRadiiConstraintScaleFor(borderRect, adjustedRadii));
+        adjustedRadii.shrink(topWidth, bottomWidth, leftWidth, rightWidth);
+        roundedRect.includeLogicalEdges(adjustedRadii, isHorizontalWritingMode, includeLogicalLeftEdge, includeLogicalRightEdge);
     }
+    if (!roundedRect.isRenderable())
+        roundedRect.adjustRadii();
     return roundedRect;
 }
 
@@ -1914,11 +1927,6 @@ AnimationList& RenderStyle::ensureTransitions()
     return *m_rareNonInheritedData->transitions;
 }
 
-float RenderStyle::usedPerspective(const RenderObject& object) const
-{
-    return object.document().settings().css3DTransformInteroperabilityEnabled() ? std::max(1.0f, perspective()) : perspective();
-}
-
 const FontCascade& RenderStyle::fontCascade() const
 {
     return m_inheritedData->fontCascade;
@@ -2027,7 +2035,7 @@ void RenderStyle::setWordSpacing(Length&& value)
         fontWordSpacing = value.value();
         break;
     case LengthType::Calculated:
-        fontWordSpacing = value.nonNanCalculatedValue(maxValueForCssLength);
+        fontWordSpacing = value.nonNanCalculatedValue(static_cast<float>(maxValueForCssLength));
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -2040,11 +2048,11 @@ void RenderStyle::setWordSpacing(Length&& value)
 
 void RenderStyle::setLetterSpacing(float letterSpacing)
 {
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setShouldDisableLigaturesForSpacing(letterSpacing);
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
 
     setLetterSpacingWithoutUpdatingFontDescription(letterSpacing);
 }
@@ -2065,63 +2073,73 @@ void RenderStyle::setFontSize(float size)
     else
         size = std::min(maximumAllowedFontSize, size);
 
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setSpecifiedSize(size);
     description.setComputedSize(size);
 
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
+}
+
+void RenderStyle::setFontSizeAdjust(std::optional<float> sizeAdjust)
+{
+    auto selector = fontCascade().fontSelector();
+    auto description = fontDescription();
+    description.setFontSizeAdjust(sizeAdjust);
+
+    setFontDescription(WTFMove(description));
+    fontCascade().update(selector);
 }
 
 void RenderStyle::setFontVariationSettings(FontVariationSettings settings)
 {
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setVariationSettings(WTFMove(settings));
 
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
 }
 
 void RenderStyle::setFontWeight(FontSelectionValue value)
 {
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setWeight(value);
 
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
 }
 
 void RenderStyle::setFontStretch(FontSelectionValue value)
 {
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setStretch(value);
 
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
 }
 
 void RenderStyle::setFontItalic(std::optional<FontSelectionValue> value)
 {
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setItalic(value);
 
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
 }
 
 void RenderStyle::setFontPalette(FontPalette value)
 {
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setFontPalette(value);
 
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
 }
 
 LayoutBoxExtent RenderStyle::shadowExtent(const ShadowData* shadow)
@@ -2196,7 +2214,7 @@ void RenderStyle::getShadowVerticalExtent(const ShadowData* shadow, LayoutUnit &
     }
 }
 
-Color RenderStyle::unresolvedColorForProperty(CSSPropertyID colorProperty, bool visitedLink) const
+StyleColor RenderStyle::unresolvedColorForProperty(CSSPropertyID colorProperty, bool visitedLink) const
 {
     switch (colorProperty) {
     case CSSPropertyAccentColor:
@@ -2254,21 +2272,6 @@ Color RenderStyle::unresolvedColorForProperty(CSSPropertyID colorProperty, bool 
 
 Color RenderStyle::colorResolvingCurrentColor(CSSPropertyID colorProperty, bool visitedLink) const
 {
-    auto computeBorderStyle = [&] {
-        switch (colorProperty) {
-        case CSSPropertyBorderLeftColor:
-            return borderLeftStyle();
-        case CSSPropertyBorderRightColor:
-            return borderRightStyle();
-        case CSSPropertyBorderTopColor:
-            return borderTopStyle();
-        case CSSPropertyBorderBottomColor:
-            return borderBottomStyle();
-        default:
-            return BorderStyle::None;
-        }
-    };
-
     auto result = unresolvedColorForProperty(colorProperty, visitedLink);
 
     if (isCurrentColor(result)) {
@@ -2283,22 +2286,33 @@ Color RenderStyle::colorResolvingCurrentColor(CSSPropertyID colorProperty, bool 
             return colorResolvingCurrentColor(CSSPropertyWebkitTextFillColor, visitedLink);
         }
 
-        auto borderStyle = computeBorderStyle();
+        auto borderStyle = [&] {
+            switch (colorProperty) {
+            case CSSPropertyBorderLeftColor:
+                return borderLeftStyle();
+            case CSSPropertyBorderRightColor:
+                return borderRightStyle();
+            case CSSPropertyBorderTopColor:
+                return borderTopStyle();
+            case CSSPropertyBorderBottomColor:
+                return borderBottomStyle();
+            default:
+                return BorderStyle::None;
+            }
+        }();
+
         if (!visitedLink && (borderStyle == BorderStyle::Inset || borderStyle == BorderStyle::Outset || borderStyle == BorderStyle::Ridge || borderStyle == BorderStyle::Groove))
-            return SRGBA<uint8_t> { 238, 238, 238 };
+            return { SRGBA<uint8_t> { 238, 238, 238 } };
 
         return visitedLink ? visitedLinkColor() : color();
     }
 
-    return result;
+    return colorResolvingCurrentColor(result);
 }
 
-Color RenderStyle::colorResolvingCurrentColor(const Color& color) const
+Color RenderStyle::colorResolvingCurrentColor(const StyleColor& color) const
 {
-    if (isCurrentColor(color))
-        return this->color();
-
-    return color;
+    return color.resolveColor(this->color());
 }
 
 Color RenderStyle::visitedDependentColor(CSSPropertyID colorProperty) const
@@ -2339,6 +2353,11 @@ Color RenderStyle::colorByApplyingColorFilter(const Color& color) const
     Color transformedColor = color;
     appleColorFilter().transformColor(transformedColor);
     return transformedColor;
+}
+
+Color RenderStyle::colorWithColorFilter(const StyleColor& color) const
+{
+    return colorByApplyingColorFilter(colorResolvingCurrentColor(color));
 }
 
 Color RenderStyle::effectiveAccentColor() const
@@ -2486,7 +2505,7 @@ TextEmphasisMark RenderStyle::textEmphasisMark() const
 
 #if ENABLE(TOUCH_EVENTS)
 
-Color RenderStyle::initialTapHighlightColor()
+StyleColor RenderStyle::initialTapHighlightColor()
 {
     return RenderTheme::tapHighlightColor();
 }

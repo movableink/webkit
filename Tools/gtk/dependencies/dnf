@@ -2,54 +2,39 @@
 
 source "$(dirname "$0")/../glib/dependencies/dnf"
 
+# NOTE: This appends the list in glib/dependencies/dnf
 PACKAGES+=(
     # These are dependencies necessary for building WebKitGTK.
-    atk-devel
-    cairo-devel
+    
     enchant-devel
     geoclue2-devel
     gettext-devel
-    gobject-introspection-devel
     gtk3-devel
+    gtk4-devel
     hyphen-devel
     json-glib-devel
     libedit-devel
     libffi-devel
-    libgcrypt-devel
     libgudev1-devel
-    libmount-devel
+    libmanette-devel
     libnotify-devel
     libsecret-devel
-    libsoup-devel
-    libsrtp-devel
-    libtheora-devel
-    libv4l-devel
-    libvorbis-devel
-    libvpx-devel
-    libwayland-client-devel
-    libwayland-server-devel
     libXt-devel
     libXtst-devel
-    mesa-libGL-devel
     nasm
-    openssl-devel
-    opus-devel
     pcre-devel
     perl-Switch
-    pulseaudio-libs-devel
     python-devel
     redhat-rpm-config
-    unifdef
     upower-devel
-    woff2-devel
 
     # These are dependencies necessary for running tests.
     cups
     dbus-x11
     hunspell-en
     hunspell-en-GB
-    pygobject3-base
-    python2-yaml
+    python3-gobject
+    python3-yaml
     weston-devel
     xorg-x11-server-Xvfb
 
@@ -58,14 +43,9 @@ PACKAGES+=(
     cups-devel
     docbook-utils
     flex
-    gnutls-devel
-    gobject-introspection
     icon-naming-utils
-    itstool
-    libcroco-devel
     libdrm-devel
-    libepoxy-devel
-    libevdev-dev
+    libevdev-devel
     libgpg-error-devel
     libinput-devel
     libp11-devel
@@ -73,7 +53,6 @@ PACKAGES+=(
     libtiff-devel
     libunistring-devel
     libXfont2-devel
-    libxkbcommon-x11-devel
     libxkbfile-devel
     mtdev-devel
     ragel

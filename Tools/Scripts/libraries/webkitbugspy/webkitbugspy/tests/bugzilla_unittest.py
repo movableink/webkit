@@ -22,9 +22,11 @@
 
 import json
 import re
+import logging
 import unittest
 
-from webkitbugspy import Tracker, User, bugzilla, mocks
+from mock import patch
+from webkitbugspy import Tracker, User, bugzilla, mocks, radar
 from webkitcorepy import OutputCapture, mocks as wkmocks
 
 
@@ -333,7 +335,6 @@ class TestBugzilla(unittest.TestCase):
 
             self.assertEqual(created.project, 'WebKit')
             self.assertEqual(created.component, 'SVG')
-            self.assertEqual(created.version, 'Safari 15')
 
         self.assertEqual(
             captured.stdout.getvalue(),
@@ -346,12 +347,6 @@ What component in 'WebKit' should the bug be associated with?:
     2) Scrolling
     3) Tables
     4) Text
-: 
-What version of 'WebKit' should the bug be associated with?:
-    1) Other
-    2) Safari 15
-    3) Safari Technology Preview
-    4) WebKit Local Build
 : 
 ''',
         )
@@ -418,7 +413,95 @@ What version of 'WebKit' should the bug be associated with?:
     def test_redaction(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, projects=mocks.PROJECTS):
             self.assertEqual(bugzilla.Tracker(self.URL, redact=None).issue(1).redacted, False)
-            self.assertEqual(bugzilla.Tracker(self.URL, redact={'.*': True}).issue(1).redacted, True)
-            self.assertEqual(bugzilla.Tracker(self.URL, redact={'project:WebKit': True}).issue(1).redacted, True)
-            self.assertEqual(bugzilla.Tracker(self.URL, redact={'component:Text': True}).issue(1).redacted, True)
-            self.assertEqual(bugzilla.Tracker(self.URL, redact={'version:Other': True}).issue(1).redacted, True)
+            self.assertTrue(bool(bugzilla.Tracker(self.URL, redact={'.*': True}).issue(1).redacted))
+            self.assertEqual(
+                bugzilla.Tracker(self.URL, redact={'.*': True}).issue(1).redacted,
+                bugzilla.Tracker.Redaction(True, 'is a Bugzilla'),
+            )
+            self.assertEqual(
+                bugzilla.Tracker(self.URL, redact={'project:WebKit': True}).issue(1).redacted,
+                bugzilla.Tracker.Redaction(True, "matches 'project:WebKit'"),
+            )
+            self.assertEqual(
+                bugzilla.Tracker(self.URL, redact={'component:Text': True}).issue(1).redacted,
+                bugzilla.Tracker.Redaction(True, "matches 'component:Text'"),
+            )
+            self.assertEqual(
+                bugzilla.Tracker(self.URL, redact={'version:Other': True}).issue(1).redacted,
+                bugzilla.Tracker.Redaction(True, "matches 'version:Other'"),
+            )
+
+    def test_cc_no_radar(self):
+        with OutputCapture(level=logging.INFO), mocks.Bugzilla(self.URL.split('://')[1], environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), users=mocks.USERS, issues=mocks.ISSUES, projects=mocks.PROJECTS):
+            issue = bugzilla.Tracker(self.URL, radar_importer=mocks.USERS['Radar WebKit Bug Importer']).issue(1)
+            self.assertEqual(issue.references, [])
+            self.assertIsNone(issue.cc_radar(block=True))
+
+    def test_cc_no_importer(self):
+        with OutputCapture(level=logging.INFO), mocks.Bugzilla(self.URL.split('://')[1], environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), users=mocks.USERS, issues=mocks.ISSUES, projects=mocks.PROJECTS), mocks.NoRadar():
+            radar_tracker = radar.Tracker()
+            bugzilla_tracker = bugzilla.Tracker(self.URL)
+
+            with patch('webkitbugspy.Tracker._trackers', [radar_tracker, bugzilla_tracker]):
+                issue = bugzilla_tracker.issue(1)
+                self.assertEqual(issue.references, [])
+                self.assertIsNone(issue.cc_radar(block=True))
+
+    def test_cc_with_radar(self):
+        with OutputCapture(level=logging.INFO), mocks.Bugzilla(self.URL.split('://')[1], environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), users=mocks.USERS, issues=mocks.ISSUES, projects=mocks.PROJECTS), mocks.NoRadar():
+            radar_tracker = radar.Tracker()
+            bugzilla_tracker = bugzilla.Tracker(self.URL, radar_importer=mocks.USERS['Radar WebKit Bug Importer'])
+
+            with patch('webkitbugspy.Tracker._trackers', [radar_tracker, bugzilla_tracker]):
+                issue = bugzilla_tracker.issue(1)
+                self.assertEqual(issue.references, [])
+                self.assertIsNotNone(issue.cc_radar(block=True))
+                self.assertEqual(len(issue.references), 1)
+                self.assertEqual(issue.references[0].link, 'rdar://1')
+                self.assertEqual(issue.references[0].title, None)
+
+    def test_cc_with_radarclient(self):
+        with OutputCapture(level=logging.INFO), mocks.Bugzilla(self.URL.split('://')[1], environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), users=mocks.USERS, issues=mocks.ISSUES, projects=mocks.PROJECTS), mocks.Radar(
+            users=mocks.USERS, issues=mocks.ISSUES, projects=mocks.PROJECTS,
+        ):
+            radar_tracker = radar.Tracker()
+            bugzilla_tracker = bugzilla.Tracker(self.URL, radar_importer=mocks.USERS['Radar WebKit Bug Importer'])
+
+            with patch('webkitbugspy.Tracker._trackers', [radar_tracker, bugzilla_tracker]):
+                issue = bugzilla_tracker.issue(1)
+                self.assertEqual(issue.references, [])
+                self.assertIsNotNone(issue.cc_radar(block=True))
+                self.assertEqual(len(issue.references), 1)
+                self.assertEqual(issue.references[0].link, 'rdar://4')
+                self.assertEqual(issue.references[0].title, 'An example issue for testing (1)')
+
+    def test_cc_existing_radar(self):
+        with OutputCapture(level=logging.INFO), mocks.Bugzilla(self.URL.split('://')[1], environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), users=mocks.USERS, issues=mocks.ISSUES, projects=mocks.PROJECTS), mocks.Radar(
+            users=mocks.USERS, issues=mocks.ISSUES, projects=mocks.PROJECTS,
+        ), wkmocks.Time:
+            radar_tracker = radar.Tracker()
+            bugzilla_tracker = bugzilla.Tracker(self.URL, radar_importer=mocks.USERS['Radar WebKit Bug Importer'])
+
+            with patch('webkitbugspy.Tracker._trackers', [radar_tracker, bugzilla_tracker]):
+                issue = bugzilla_tracker.issue(1)
+                self.assertEqual(issue.references, [])
+                self.assertIsNotNone(issue.cc_radar(block=True, radar=Tracker.from_string('<rdar://1>')))
+                self.assertEqual(issue.comments[-1].content, '<rdar://problem/1>')
+                self.assertEqual(len(issue.references), 1)
+                self.assertEqual(issue.references[0].link, 'rdar://1')
+                self.assertEqual(issue.references[0].title, 'Example issue 1')

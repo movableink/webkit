@@ -1585,7 +1585,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 #endif
 
 #if ENABLE(REMOTE_INSPECTOR)
-    _private->page->setRemoteInspectionAllowed(true);
+    _private->page->setInspectable(true);
 #endif
 
     _private->page->setCanStartMedia([self window]);
@@ -1870,7 +1870,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
     _private->page->setGroupName(groupName);
 
 #if ENABLE(REMOTE_INSPECTOR)
-    _private->page->setRemoteInspectionAllowed(isInternalInstall());
+    _private->page->setInspectable(isInternalInstall());
 #endif
 
     [self _updateScreenScaleFromWindow];
@@ -1922,8 +1922,11 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 - (void)updateLayoutIgnorePendingStyleSheets
 {
     WebThreadRun(^{
-        for (auto* frame = [self _mainCoreFrame]; frame; frame = frame->tree().traverseNext()) {
-            auto *document = frame->document();
+        for (WebCore::AbstractFrame* frame = [self _mainCoreFrame]; frame; frame = frame->tree().traverseNext()) {
+            auto* localFrame = dynamicDowncast<WebCore::LocalFrame>(frame);
+            if (!localFrame)
+                continue;
+            auto *document = localFrame->document();
             if (document)
                 document->updateLayoutIgnorePendingStylesheets();
         }
@@ -2012,21 +2015,21 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 {
     WebThreadLock();
     auto dragData = [self dragDataForSession:session client:clientPosition global:globalPosition operation:operation];
-    return kit(_private->page->dragController().dragEntered(dragData));
+    return kit(_private->page->dragController().dragEntered(WTFMove(dragData)));
 }
 
 - (uint64_t)_updatedDataInteraction:(id <UIDropSession>)session client:(CGPoint)clientPosition global:(CGPoint)globalPosition operation:(uint64_t)operation
 {
     WebThreadLock();
     auto dragData = [self dragDataForSession:session client:clientPosition global:globalPosition operation:operation];
-    return kit(_private->page->dragController().dragUpdated(dragData));
+    return kit(_private->page->dragController().dragUpdated(WTFMove(dragData)));
 }
 
 - (void)_exitedDataInteraction:(id <UIDropSession>)session client:(CGPoint)clientPosition global:(CGPoint)globalPosition operation:(uint64_t)operation
 {
     WebThreadLock();
     auto dragData = [self dragDataForSession:session client:clientPosition global:globalPosition operation:operation];
-    _private->page->dragController().dragExited(dragData);
+    _private->page->dragController().dragExited(WTFMove(dragData));
 }
 
 - (void)_performDataInteraction:(id <UIDropSession>)session client:(CGPoint)clientPosition global:(CGPoint)globalPosition operation:(uint64_t)operation
@@ -2038,7 +2041,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 {
     WebThreadLock();
     auto dragData = [self dragDataForSession:session client:clientPosition global:globalPosition operation:operation];
-    return _private->page->dragController().performDragOperation(dragData);
+    return _private->page->dragController().performDragOperation(WTFMove(dragData));
 }
 
 - (void)_endedDataInteraction:(CGPoint)clientPosition global:(CGPoint)globalPosition
@@ -2687,12 +2690,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (BOOL)allowsRemoteInspection
 {
-    return _private->page->remoteInspectionAllowed();
+    return _private->page->inspectable();
 }
 
 - (void)setAllowsRemoteInspection:(BOOL)allow
 {
-    _private->page->setRemoteInspectionAllowed(allow);
+    _private->page->setInspectable(allow);
 }
 
 - (void)setShowingInspectorIndication:(BOOL)showing
@@ -2967,7 +2970,7 @@ static bool needsSelfRetainWhileLoadingQuirk()
 #endif
 
     // FIXME: Is this relevent to WebKitLegacy? If not, we should remove it.
-    WebCore::DeprecatedGlobalSettings::setResourceLoadStatisticsEnabled([preferences resourceLoadStatisticsEnabled]);
+    WebCore::DeprecatedGlobalSettings::setTrackingPreventionEnabled([preferences resourceLoadStatisticsEnabled]);
 
     // Application Cache Preferences are stored on the global cache storage manager, not in Settings.
     [WebApplicationCache setDefaultOriginQuota:[preferences applicationCacheDefaultOriginQuota]];
@@ -3527,16 +3530,6 @@ IGNORE_WARNINGS_END
 
 #endif /* ENABLE(DASHBOARD_SUPPORT) */
 
-+ (void)_setShouldUseFontSmoothing:(BOOL)f
-{
-    WebCore::FontCascade::setShouldUseSmoothing(f);
-}
-
-+ (BOOL)_shouldUseFontSmoothing
-{
-    return WebCore::FontCascade::shouldUseSmoothing();
-}
-
 #if !PLATFORM(IOS_FAMILY)
 + (void)_setUsesTestModeFocusRingColor:(BOOL)f
 {
@@ -3808,7 +3801,7 @@ IGNORE_WARNINGS_END
     WebThreadLock();
 
     auto* mainCoreFrame = [self _mainCoreFrame];
-    for (auto* frame = mainCoreFrame; frame; frame = frame->tree().traverseNext()) {
+    for (auto* frame = mainCoreFrame; frame; frame = dynamicDowncast<WebCore::LocalFrame>(frame->tree().traverseNext())) {
         auto* coreView = frame ? frame->view() : 0;
         if (!coreView)
             continue;
@@ -3839,14 +3832,22 @@ IGNORE_WARNINGS_END
 
 - (void)_attachScriptDebuggerToAllFrames
 {
-    for (auto* frame = [self _mainCoreFrame]; frame; frame = frame->tree().traverseNext())
-        [kit(frame) _attachScriptDebugger];
+    for (WebCore::AbstractFrame* frame = [self _mainCoreFrame]; frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<WebCore::LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        [kit(localFrame) _attachScriptDebugger];
+    }
 }
 
 - (void)_detachScriptDebuggerFromAllFrames
 {
-    for (auto* frame = [self _mainCoreFrame]; frame; frame = frame->tree().traverseNext())
-        [kit(frame) _detachScriptDebugger];
+    for (WebCore::AbstractFrame* frame = [self _mainCoreFrame]; frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<WebCore::LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        [kit(localFrame) _detachScriptDebugger];
+    }
 }
 
 #if !PLATFORM(IOS_FAMILY)
@@ -4163,8 +4164,11 @@ IGNORE_WARNINGS_END
 - (BOOL)_isUsingAcceleratedCompositing
 {
     auto* coreFrame = [self _mainCoreFrame];
-    for (auto* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
-        NSView *documentView = [[kit(frame) frameView] documentView];
+    for (WebCore::AbstractFrame* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
+        auto* localFrame = dynamicDowncast<WebCore::LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        NSView *documentView = [[kit(localFrame) frameView] documentView];
         if ([documentView isKindOfClass:[WebHTMLView class]] && [(WebHTMLView *)documentView _isUsingAcceleratedCompositing])
             return YES;
     }
@@ -4212,8 +4216,11 @@ IGNORE_WARNINGS_END
 - (BOOL)_isSoftwareRenderable
 {
     auto* coreFrame = [self _mainCoreFrame];
-    for (auto* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
-        if (auto* view = frame->view()) {
+    for (WebCore::AbstractFrame* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
+        auto* localFrame = dynamicDowncast<WebCore::LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        if (auto* view = localFrame->view()) {
             if (!view->isSoftwareRenderable())
                 return NO;
         }
@@ -6276,16 +6283,24 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 
     auto* coreFrame = [self _mainCoreFrame];
 #if !PLATFORM(IOS_FAMILY)
-    for (auto* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame))
-        [[[kit(frame) frameView] documentView] viewWillMoveToHostWindow:hostWindow];
+    for (WebCore::AbstractFrame* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
+        auto* localFrame = dynamicDowncast<WebCore::LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        [[[kit(localFrame) frameView] documentView] viewWillMoveToHostWindow:hostWindow];
+    }
     if (_private->hostWindow && [self window] != _private->hostWindow)
         [[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowWillCloseNotification object:_private->hostWindow.get()];
     if (hostWindow)
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_windowWillClose:) name:NSWindowWillCloseNotification object:hostWindow];
 #endif
     _private->hostWindow = hostWindow;
-    for (auto* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame))
-        [[[kit(frame) frameView] documentView] viewDidMoveToHostWindow];
+    for (WebCore::AbstractFrame* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
+        auto* localFrame = dynamicDowncast<WebCore::LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        [[[kit(localFrame) frameView] documentView] viewDidMoveToHostWindow];
+    }
 #if !PLATFORM(IOS_FAMILY)
     _private->page->setDeviceScaleFactor([self _deviceScaleFactor]);
 #endif
@@ -6366,7 +6381,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     WebCore::IntPoint global(WebCore::globalPoint([draggingInfo draggingLocation], [self window]));
 
     WebCore::DragData dragData(draggingInfo, client, global, coreDragOperationMask([draggingInfo draggingSourceOperationMask]), [self _applicationFlagsForDrag:draggingInfo], [self actionMaskForDraggingInfo:draggingInfo]);
-    return kit(core(self)->dragController().dragEntered(dragData));
+    return kit(core(self)->dragController().dragEntered(WTFMove(dragData)));
 }
 
 - (NSDragOperation)draggingUpdated:(id <NSDraggingInfo>)draggingInfo
@@ -6379,7 +6394,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     WebCore::IntPoint global(WebCore::globalPoint([draggingInfo draggingLocation], [self window]));
 
     WebCore::DragData dragData(draggingInfo, client, global, coreDragOperationMask([draggingInfo draggingSourceOperationMask]), [self _applicationFlagsForDrag:draggingInfo], [self actionMaskForDraggingInfo:draggingInfo]);
-    return kit(page->dragController().dragUpdated(dragData));
+    return kit(page->dragController().dragUpdated(WTFMove(dragData)));
 }
 
 - (void)draggingExited:(id <NSDraggingInfo>)draggingInfo
@@ -6391,7 +6406,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     WebCore::IntPoint client([draggingInfo draggingLocation]);
     WebCore::IntPoint global(WebCore::globalPoint([draggingInfo draggingLocation], [self window]));
     WebCore::DragData dragData(draggingInfo, client, global, coreDragOperationMask([draggingInfo draggingSourceOperationMask]), [self _applicationFlagsForDrag:draggingInfo]);
-    page->dragController().dragExited(dragData);
+    page->dragController().dragExited(WTFMove(dragData));
 }
 
 - (BOOL)prepareForDragOperation:(id <NSDraggingInfo>)draggingInfo
@@ -6439,7 +6454,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
                     fileNames->append(path.get());
                     if (fileNames->size() == fileCount) {
                         dragData->setFileNames(*fileNames);
-                        core(self)->dragController().performDragOperation(*dragData);
+                        core(self)->dragController().performDragOperation(WebCore::DragData { *dragData });
                         delete dragData;
                         delete fileNames;
                     }
@@ -6449,7 +6464,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 
         return true;
     }
-    bool returnValue = core(self)->dragController().performDragOperation(*dragData);
+    bool returnValue = core(self)->dragController().performDragOperation(WebCore::DragData { *dragData });
     delete dragData;
 
     return returnValue;
@@ -6544,8 +6559,8 @@ static WebFrame *incrementFrame(WebFrame *frame, WebFindOptions options = 0)
     auto* coreFrame = core(frame);
     WebCore::CanWrap canWrap = options & WebFindOptionsWrapAround ? WebCore::CanWrap::Yes : WebCore::CanWrap::No;
     return kit((options & WebFindOptionsBackwards)
-        ? coreFrame->tree().traversePrevious(canWrap)
-        : coreFrame->tree().traverseNext(canWrap));
+        ? dynamicDowncast<WebCore::LocalFrame>(coreFrame->tree().traversePrevious(canWrap))
+        : dynamicDowncast<WebCore::LocalFrame>(coreFrame->tree().traverseNext(canWrap)));
 }
 
 - (BOOL)searchFor:(NSString *)string direction:(BOOL)forward caseSensitive:(BOOL)caseFlag wrap:(BOOL)wrapFlag
@@ -9099,7 +9114,7 @@ bool LayerFlushController::flushLayers()
 
 - (id)_animationControllerForDictionaryLookupPopupInfo:(const WebCore::DictionaryPopupInfo&)dictionaryPopupInfo
 {
-    if (!dictionaryPopupInfo.attributedString)
+    if (!dictionaryPopupInfo.platformData.attributedString)
         return nil;
 
     [self _prepareForDictionaryLookup];
@@ -9167,7 +9182,7 @@ bool LayerFlushController::flushLayers()
 
 - (void)_showDictionaryLookupPopup:(const WebCore::DictionaryPopupInfo&)dictionaryPopupInfo
 {
-    if (!dictionaryPopupInfo.attributedString)
+    if (!dictionaryPopupInfo.platformData.attributedString)
         return;
 
     [self _prepareForDictionaryLookup];
@@ -9769,12 +9784,12 @@ static NSTextAlignment nsTextAlignmentFromRenderStyle(const WebCore::RenderStyle
     return nil;
 }
 
-- (void)_notificationDidShow:(uint64_t)notificationID
+- (void)_notificationDidShow:(NSString *)notificationID
 {
     [[self _notificationProvider] webView:self didShowNotification:notificationID];
 }
 
-- (void)_notificationDidClick:(uint64_t)notificationID
+- (void)_notificationDidClick:(NSString *)notificationID
 {
     [[self _notificationProvider] webView:self didClickNotification:notificationID];
 }
@@ -9784,7 +9799,7 @@ static NSTextAlignment nsTextAlignmentFromRenderStyle(const WebCore::RenderStyle
     [[self _notificationProvider] webView:self didCloseNotifications:notificationIDs];
 }
 
-- (uint64_t)_notificationIDForTesting:(JSValueRef)jsNotification
+- (NSString *)_notificationIDForTesting:(JSValueRef)jsNotification
 {
 #if ENABLE(NOTIFICATIONS)
     auto* page = _private->page;
@@ -9792,9 +9807,9 @@ static NSTextAlignment nsTextAlignmentFromRenderStyle(const WebCore::RenderStyle
         return 0;
     JSContextRef context = [[self mainFrame] globalContext];
     auto* notification = WebCore::JSNotification::toWrapped(toJS(context)->vm(), toJS(toJS(context), jsNotification));
-    return static_cast<WebNotificationClient*>(WebCore::NotificationController::clientFrom(*page))->notificationIDForTesting(notification);
+    return notification->identifier().toString();
 #else
-    return 0;
+    return nil;
 #endif
 }
 

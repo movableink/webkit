@@ -29,10 +29,10 @@
 #include "AnimationEffect.h"
 #include "AnimationEffectPhase.h"
 #include "CSSAnimation.h"
-#include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyNames.h"
 #include "CSSTransition.h"
 #include "CSSValue.h"
+#include "ComputedStyleExtractor.h"
 #include "DeclarativeAnimation.h"
 #include "Element.h"
 #include "Event.h"
@@ -153,8 +153,7 @@ static Ref<JSON::ArrayOf<Protocol::Animation::Keyframe>> buildObjectForKeyframes
                 if (cssPropertyId == CSSPropertyCustom)
                     continue;
 
-                stylePayloadBuilder.append(getPropertyNameString(cssPropertyId));
-                stylePayloadBuilder.append(": ");
+                stylePayloadBuilder.append(nameString(cssPropertyId), ": ");
                 if (auto value = computedStyleExtractor.valueForPropertyInStyle(style, cssPropertyId, renderer))
                     stylePayloadBuilder.append(value->cssText());
                 stylePayloadBuilder.append(';');

@@ -37,55 +37,6 @@
 namespace IPC {
 
 template<typename Encoder>
-void ArgumentCoder<WallTime>::encode(Encoder& encoder, const WallTime& time)
-{
-    encoder << time.secondsSinceEpoch().value();
-}
-template
-void ArgumentCoder<WallTime>::encode<Encoder>(Encoder&, const WallTime&);
-template
-void ArgumentCoder<WallTime>::encode<WebKit::Daemon::Encoder>(WebKit::Daemon::Encoder&, const WallTime&);
-
-WARN_UNUSED_RETURN bool ArgumentCoder<WallTime>::decode(Decoder& decoder, WallTime& time)
-{
-    double value;
-    if (!decoder.decode(value))
-        return false;
-
-    time = WallTime::fromRawSeconds(value);
-    return true;
-}
-
-template<typename Decoder>
-WARN_UNUSED_RETURN std::optional<WallTime> ArgumentCoder<WallTime>::decode(Decoder& decoder)
-{
-    std::optional<double> time;
-    decoder >> time;
-    if (!time)
-        return std::nullopt;
-    return WallTime::fromRawSeconds(*time);
-}
-template
-std::optional<WallTime> ArgumentCoder<WallTime>::decode<Decoder>(Decoder&);
-template
-std::optional<WallTime> ArgumentCoder<WallTime>::decode<WebKit::Daemon::Decoder>(WebKit::Daemon::Decoder&);
-
-void ArgumentCoder<AtomString>::encode(Encoder& encoder, const AtomString& atomString)
-{
-    encoder << atomString.string();
-}
-
-WARN_UNUSED_RETURN bool ArgumentCoder<AtomString>::decode(Decoder& decoder, AtomString& atomString)
-{
-    String string;
-    if (!decoder.decode(string))
-        return false;
-
-    atomString = AtomString { string };
-    return true;
-}
-
-template<typename Encoder>
 void ArgumentCoder<CString>::encode(Encoder& encoder, const CString& string)
 {
     // Special case the null string.
@@ -99,7 +50,6 @@ void ArgumentCoder<CString>::encode(Encoder& encoder, const CString& string)
     encoder.encodeFixedLengthData(string.dataAsUInt8Ptr(), length, 1);
 }
 template void ArgumentCoder<CString>::encode<Encoder>(Encoder&, const CString&);
-template void ArgumentCoder<CString>::encode<WebKit::Daemon::Encoder>(WebKit::Daemon::Encoder&, const CString&);
 
 template<typename Decoder>
 std::optional<CString> ArgumentCoder<CString>::decode(Decoder& decoder)
@@ -127,8 +77,6 @@ std::optional<CString> ArgumentCoder<CString>::decode(Decoder& decoder)
 }
 template
 std::optional<CString> ArgumentCoder<CString>::decode<Decoder>(Decoder&);
-template
-std::optional<CString> ArgumentCoder<CString>::decode<WebKit::Daemon::Decoder>(WebKit::Daemon::Decoder&);
 
 template<typename Encoder>
 void ArgumentCoder<String>::encode(Encoder& encoder, const String& string)
@@ -153,8 +101,6 @@ template
 void ArgumentCoder<String>::encode<Encoder>(Encoder&, const String&);
 template
 void ArgumentCoder<String>::encode<StreamConnectionEncoder>(StreamConnectionEncoder&, const String&);
-template
-void ArgumentCoder<String>::encode<WebKit::Daemon::Encoder>(WebKit::Daemon::Encoder&, const String&);
 
 template<typename CharacterType, typename Decoder>
 static inline std::optional<String> decodeStringText(Decoder& decoder, uint32_t length)
@@ -195,18 +141,6 @@ WARN_UNUSED_RETURN std::optional<String> ArgumentCoder<String>::decode(Decoder& 
 }
 template
 std::optional<String> ArgumentCoder<String>::decode<Decoder>(Decoder&);
-template
-std::optional<String> ArgumentCoder<String>::decode<WebKit::Daemon::Decoder>(WebKit::Daemon::Decoder&);
-
-WARN_UNUSED_RETURN bool ArgumentCoder<String>::decode(Decoder& decoder, String& result)
-{
-    std::optional<String> string;
-    decoder >> string;
-    if (!string)
-        return false;
-    result = WTFMove(*string);
-    return true;
-}
 
 template<typename Encoder>
 void ArgumentCoder<StringView>::encode(Encoder& encoder, StringView string)
@@ -231,17 +165,18 @@ template
 void ArgumentCoder<StringView>::encode<Encoder>(Encoder&, StringView);
 template
 void ArgumentCoder<StringView>::encode<StreamConnectionEncoder>(StreamConnectionEncoder&, StringView);
-template
-void ArgumentCoder<StringView>::encode<WebKit::Daemon::Encoder>(WebKit::Daemon::Encoder&, StringView);
 
 void ArgumentCoder<SHA1::Digest>::encode(Encoder& encoder, const SHA1::Digest& digest)
 {
     encoder.encodeFixedLengthData(digest.data(), sizeof(digest), 1);
 }
 
-WARN_UNUSED_RETURN bool ArgumentCoder<SHA1::Digest>::decode(Decoder& decoder, SHA1::Digest& digest)
+std::optional<SHA1::Digest> ArgumentCoder<SHA1::Digest>::decode(Decoder& decoder)
 {
-    return decoder.decodeFixedLengthData(digest.data(), sizeof(digest), 1);
+    SHA1::Digest digest;
+    if (!decoder.decodeFixedLengthData(digest.data(), sizeof(digest), 1))
+        return std::nullopt;
+    return digest;
 }
 
 #if HAVE(AUDIT_TOKEN)

@@ -13,7 +13,6 @@
 
 #include "compiler/translator/Compiler.h"
 #include "compiler/translator/InitializeDll.h"
-#include "compiler/translator/glslang_wrapper.h"
 #include "compiler/translator/length_limits.h"
 #ifdef ANGLE_ENABLE_HLSL
 #    include "compiler/translator/TranslatorHLSL.h"
@@ -28,17 +27,6 @@ namespace
 {
 
 bool isInitialized = false;
-
-// glslang can only be initialized/finalized once per process. Otherwise, the following EGL commands
-// will call GlslangFinalize() without ever being able to GlslangInitialize() again, leading to
-// crashes since GlslangFinalize() cleans up glslang for the entire process.
-//   dpy1 = eglGetPlatformDisplay()   |
-//   eglInitialize(dpy1)              | GlslangInitialize()
-//   dpy2 = eglGetPlatformDisplay()   |
-//   eglInitialize(dpy2)              | GlslangInitialize()
-//   eglTerminate(dpy2)               | GlslangFinalize()
-//   eglInitialize(dpy1)              | Display::isInitialized() == true, no GlslangInitialize()
-int initializeGlslangRefCount = 0;
 
 //
 // This is the platform independent interface between an OGL driver
@@ -383,6 +371,13 @@ void Destruct(ShHandle handle)
 
     if (base->getAsCompiler())
         DeleteCompiler(base->getAsCompiler());
+}
+
+ShBuiltInResources GetBuiltInResources(const ShHandle handle)
+{
+    TCompiler *compiler = GetCompilerFromHandle(handle);
+    ASSERT(compiler);
+    return compiler->getBuiltInResources();
 }
 
 const std::string &GetBuiltInResourcesString(const ShHandle handle)
@@ -946,26 +941,6 @@ uint32_t GetAdvancedBlendEquations(const ShHandle handle)
     return compiler->getAdvancedBlendEquations().bits();
 }
 
-void InitializeGlslang()
-{
-    if (initializeGlslangRefCount == 0)
-    {
-        GlslangInitialize();
-    }
-    ++initializeGlslangRefCount;
-    ASSERT(initializeGlslangRefCount < std::numeric_limits<int>::max());
-}
-
-void FinalizeGlslang()
-{
-    --initializeGlslangRefCount;
-    ASSERT(initializeGlslangRefCount >= 0);
-    if (initializeGlslangRefCount == 0)
-    {
-        GlslangFinalize();
-    }
-}
-
 // Can't prefix with just _ because then we might introduce a double underscore, which is not safe
 // in GLSL (ESSL 3.00.6 section 3.8: All identifiers containing a double underscore are reserved for
 // use by the underlying implementation). u is short for user-defined.
@@ -1052,3 +1027,33 @@ const char *InterpolationTypeToString(InterpolationType type)
     }
 }
 }  // namespace sh
+
+ShCompileOptions::ShCompileOptions()
+{
+    memset(this, 0, sizeof(*this));
+}
+
+ShCompileOptions::ShCompileOptions(const ShCompileOptions &other)
+{
+    memcpy(this, &other, sizeof(*this));
+}
+ShCompileOptions &ShCompileOptions::operator=(const ShCompileOptions &other)
+{
+    memcpy(this, &other, sizeof(*this));
+    return *this;
+}
+
+ShBuiltInResources::ShBuiltInResources()
+{
+    memset(this, 0, sizeof(*this));
+}
+
+ShBuiltInResources::ShBuiltInResources(const ShBuiltInResources &other)
+{
+    memcpy(this, &other, sizeof(*this));
+}
+ShBuiltInResources &ShBuiltInResources::operator=(const ShBuiltInResources &other)
+{
+    memcpy(this, &other, sizeof(*this));
+    return *this;
+}

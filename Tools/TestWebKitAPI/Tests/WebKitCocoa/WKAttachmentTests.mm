@@ -24,7 +24,6 @@
  */
 
 #import "config.h"
-#import "Test.h"
 
 #if PLATFORM(MAC) || PLATFORM(IOS)
 
@@ -32,6 +31,7 @@
 #import "InstanceMethodSwizzler.h"
 #import "NSItemProviderAdditions.h"
 #import "PlatformUtilities.h"
+#import "Test.h"
 #import "TestNavigationDelegate.h"
 #import "TestProtocol.h"
 #import "TestWKWebView.h"
@@ -1771,6 +1771,40 @@ TEST(WKAttachmentTests, CloneImageWithAttachment)
     EXPECT_WK_STREQ([attachment uniqueIdentifier], clonedAttachmentIdentifier);
 }
 
+TEST(WKAttachmentTests, DuplicateImageWithAttachment)
+{
+    platformCopyPNG();
+    auto webView = webViewForTestingAttachments();
+
+    RetainPtr originalAttachment = [&] {
+        ObserveAttachmentUpdatesForScope observer(webView.get());
+        [webView _synchronouslyExecuteEditCommand:@"Paste" argument:nil];
+        return observer.observer().inserted.firstObject;
+    }();
+
+    RetainPtr newAttachment = [&] {
+        ObserveAttachmentUpdatesForScope observer(webView.get());
+        [webView stringByEvaluatingJavaScript:@"(function() {"
+            "    const original = document.querySelector('img');"
+            "    const clone = original.cloneNode();"
+            "    clone.id = 'clone';"
+            "    document.body.appendChild(clone);"
+            "})()"];
+        [webView waitForNextPresentationUpdate];
+        return observer.observer().inserted.firstObject;
+    }();
+
+    RetainPtr newAttachmentID = [webView stringByEvaluatingJavaScript:@"document.getElementById('clone').attachmentIdentifier"];
+    EXPECT_WK_STREQ([newAttachment uniqueIdentifier], newAttachmentID.get());
+    EXPECT_FALSE([[originalAttachment uniqueIdentifier] isEqualToString:newAttachmentID.get()]);
+
+    auto originalInfo = [originalAttachment info];
+    auto newInfo = [newAttachment info];
+    EXPECT_TRUE([originalInfo.data isEqualToData:newInfo.data]);
+    EXPECT_WK_STREQ(originalInfo.contentType, newInfo.contentType);
+    EXPECT_WK_STREQ(originalInfo.name, newInfo.name);
+}
+
 TEST(WKAttachmentTests, SetFileWrapperForPDFImageAttachment)
 {
     auto webView = webViewForTestingAttachments();
@@ -1915,6 +1949,25 @@ TEST(WKAttachmentTests, UserDragNonePreventsDragOnAttachmentElement)
 #else
     EXPECT_EQ(0U, [simulator sourceItemProviders].count);
 #endif
+}
+
+TEST(WKAttachmentTests, PasteRawUnnamedPDFData)
+{
+    RetainPtr pdfData = testPDFData();
+#if PLATFORM(MAC)
+    [NSPasteboard.generalPasteboard declareTypes:@[(__bridge NSString *)kUTTypePDF] owner:nil];
+    [NSPasteboard.generalPasteboard setData:pdfData.get() forType:(__bridge NSString *)kUTTypePDF];
+#else
+    [UIPasteboard.generalPasteboard setData:pdfData.get() forPasteboardType:UTTypePDF.identifier];
+#endif
+
+    auto webView = webViewForTestingAttachments();
+    ObserveAttachmentUpdatesForScope observer(webView.get());
+    [webView _synchronouslyExecuteEditCommand:@"Paste" argument:nil];
+    EXPECT_EQ(1U, observer.observer().inserted.count);
+    _WKAttachment *attachment = observer.observer().inserted[0];
+    EXPECT_WK_STREQ("application/pdf", attachment.info.contentType);
+    EXPECT_TRUE([pdfData isEqualToData:attachment.info.data]);
 }
 
 #pragma mark - Platform-specific tests
@@ -2138,6 +2191,25 @@ TEST(WKAttachmentTestsMac, DragDirectoryAttachment)
     auto attachment = retainPtr([webView synchronouslyInsertAttachmentWithFileWrapper:fileWrapper.get() contentType:nil]);
     [simulator runFrom:[webView attachmentElementMidPoint] to:CGPointMake(300, 300)];
     TestWebKitAPI::Util::run(&didLoadIcon);
+}
+
+TEST(WKAttachmentTestsMac, CallAcceptsFirstMouseWhileDraggingAttachment)
+{
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration _setAttachmentElementEnabled:YES];
+    auto simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebViewFrame:NSMakeRect(0, 0, 400, 400) configuration:configuration.get()]);
+    TestWKWebView *webView = [simulator webView];
+    [webView synchronouslyLoadHTMLString:attachmentEditingTestMarkup];
+
+    auto fileWrapper = adoptNS([[NSFileWrapper alloc] initWithURL:testPDFFileURL() options:0 error:nil]);
+    RetainPtr attachment = [webView synchronouslyInsertAttachmentWithFileWrapper:fileWrapper.get() contentType:@"application/pdf"];
+    [simulator setWillBeginDraggingHandler:^{
+        [webView acceptsFirstMouseAtPoint:NSMakePoint(100, 100)];
+    }];
+    [simulator runFrom:webView.attachmentElementMidPoint to:CGPointMake(300, 300)];
+
+    auto pasteboard = [simulator draggingInfo].draggingPasteboard;
+    EXPECT_WK_STREQ("com.adobe.pdf", [pasteboard stringForType:(__bridge NSString *)kPasteboardTypeFilePromiseContent]);
 }
 
 #endif // PLATFORM(MAC)
@@ -2654,6 +2726,20 @@ TEST(WKAttachmentTestsIOS, CopyAttachmentUsingElementAction)
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
+}
+
+TEST(WKAttachmentTestsIOS, PasteRichTextCopiedFromNotes)
+{
+    UIPasteboard.generalPasteboard.items = @[@{
+        @"com.apple.notes.richtext" : [@"foo" dataUsingEncoding:NSUTF8StringEncoding],
+        UTTypeHTML.identifier : [@"<p>foo</p>" dataUsingEncoding:NSUTF8StringEncoding]
+    }];
+
+    auto webView = webViewForTestingAttachments();
+    ObserveAttachmentUpdatesForScope observer(webView.get());
+    [webView _synchronouslyExecuteEditCommand:@"Paste" argument:nil];
+    EXPECT_EQ(0U, observer.observer().inserted.count);
+    EXPECT_WK_STREQ("foo", [webView contentsAsString]);
 }
 
 #endif // PLATFORM(IOS_FAMILY)

@@ -59,6 +59,7 @@
 #include "WebUserContentControllerProxy.h"
 #include <WebCore/ActivityState.h>
 #include <WebCore/CairoUtilities.h>
+#include <WebCore/GRefPtrGtk.h>
 #include <WebCore/GUniquePtrGtk.h>
 #include <WebCore/GtkUtilities.h>
 #include <WebCore/GtkVersioning.h>
@@ -74,6 +75,7 @@
 #include <glib/gi18n-lib.h>
 #include <memory>
 #include <pal/system/SleepDisabler.h>
+#include <utility>
 #include <wtf/Compiler.h>
 #include <wtf/HashMap.h>
 #include <wtf/MathExtras.h>
@@ -151,7 +153,7 @@ private:
 #endif
 
 struct MotionEvent {
-    MotionEvent(const FloatPoint& position, const FloatPoint& globalPosition, WebMouseEvent::Button button, unsigned short buttons, OptionSet<WebEvent::Modifier> modifiers)
+    MotionEvent(const FloatPoint& position, const FloatPoint& globalPosition, WebMouseEventButton button, unsigned short buttons, OptionSet<WebEventModifier> modifiers)
         : position(position)
         , globalPosition(globalPosition)
         , button(button)
@@ -184,24 +186,24 @@ struct MotionEvent {
         , globalPosition(WTFMove(globalPosition))
     {
         if (state & GDK_CONTROL_MASK)
-            modifiers.add(WebEvent::Modifier::ControlKey);
+            modifiers.add(WebEventModifier::ControlKey);
         if (state & GDK_SHIFT_MASK)
-            modifiers.add(WebEvent::Modifier::ShiftKey);
+            modifiers.add(WebEventModifier::ShiftKey);
         if (state & GDK_MOD1_MASK)
-            modifiers.add(WebEvent::Modifier::AltKey);
+            modifiers.add(WebEventModifier::AltKey);
         if (state & GDK_META_MASK)
-            modifiers.add(WebEvent::Modifier::MetaKey);
+            modifiers.add(WebEventModifier::MetaKey);
 
         if (state & GDK_BUTTON1_MASK) {
-            button = WebMouseEvent::LeftButton;
+            button = WebMouseEventButton::LeftButton;
             buttons |= 1;
         }
         if (state & GDK_BUTTON2_MASK) {
-            button = WebMouseEvent::MiddleButton;
+            button = WebMouseEventButton::MiddleButton;
             buttons |= 4;
         }
         if (state & GDK_BUTTON3_MASK) {
-            button = WebMouseEvent::RightButton;
+            button = WebMouseEventButton::RightButton;
             buttons |= 2;
         }
     }
@@ -215,15 +217,17 @@ struct MotionEvent {
 
     FloatPoint position;
     FloatPoint globalPosition;
-    WebMouseEvent::Button button { WebMouseEvent::NoButton };
+    WebMouseEventButton button { WebMouseEventButton::NoButton };
     unsigned short buttons { 0 };
-    OptionSet<WebEvent::Modifier> modifiers;
+    OptionSet<WebEventModifier> modifiers;
 };
 
 #if !USE(GTK4)
 typedef HashMap<GtkWidget*, IntRect> WebKitWebViewChildrenMap;
-#endif
 typedef HashMap<uint32_t, GUniquePtr<GdkEvent>> TouchEventsMap;
+#else
+typedef HashMap<uint32_t, GRefPtr<GdkEvent>> TouchEventsMap;
+#endif
 
 struct _WebKitWebViewBasePrivate {
     _WebKitWebViewBasePrivate()
@@ -280,7 +284,11 @@ struct _WebKitWebViewBasePrivate {
     GtkWidget* inspectorView { nullptr };
     AttachmentSide inspectorAttachmentSide { AttachmentSide::Bottom };
     unsigned inspectorViewSize { 0 };
+#if USE(GTK4)
+    GRefPtr<GdkEvent> contextMenuEvent;
+#else
     GUniquePtr<GdkEvent> contextMenuEvent;
+#endif
     WebContextMenuProxyGtk* activeContextMenuProxy { nullptr };
     InputMethodFilter inputMethodFilter;
     KeyBindingTranslator keyBindingTranslator;
@@ -1220,7 +1228,7 @@ static void webkitWebViewBaseButtonPressed(WebKitWebViewBase* webViewBase, int c
 
     // If it's a right click event save it as a possible context menu event.
     if (button == GDK_BUTTON_SECONDARY)
-        priv->contextMenuEvent.reset(gdk_event_copy(event));
+        priv->contextMenuEvent = event;
 
     priv->pageProxy->handleMouseEvent(NativeWebMouseEvent(event, { clampToInteger(x), clampToInteger(y) }, clickCount, std::nullopt));
 }
@@ -1597,14 +1605,22 @@ static gboolean webkitWebViewBaseTouchEvent(GtkWidget* widget, GdkEventTouch* ev
         if (priv->touchEvents.isEmpty())
             priv->pageGrabbedTouch = false;
         ASSERT(!priv->touchEvents.contains(sequence));
+#if USE(GTK4)
+        GRefPtr<GdkEvent> event = touchEvent;
+#else
         GUniquePtr<GdkEvent> event(gdk_event_copy(touchEvent));
+#endif
         priv->touchEvents.add(sequence, WTFMove(event));
         break;
     }
     case GDK_TOUCH_UPDATE: {
         auto it = priv->touchEvents.find(sequence);
         ASSERT(it != priv->touchEvents.end());
+#if USE(GTK4)
+        it->value = touchEvent;
+#else
         it->value.reset(gdk_event_copy(touchEvent));
+#endif
         break;
     }
     case GDK_TOUCH_CANCEL:
@@ -1864,6 +1880,16 @@ static gboolean webkitWebViewBaseGrabFocus(GtkWidget* widget)
 }
 #endif
 
+#if USE(GTK4)
+static void webkitWebViewBaseMoveFocus(GtkWidget* widget, GtkDirectionType direction)
+{
+    WebKitWebViewBasePrivate* priv = WEBKIT_WEB_VIEW_BASE(widget)->priv;
+    if (priv->dialog)
+        g_signal_emit_by_name(priv->dialog, "move-focus", direction);
+
+    GTK_WIDGET_CLASS(webkit_web_view_base_parent_class)->move_focus(widget, direction);
+}
+#else
 static gboolean webkitWebViewBaseFocus(GtkWidget* widget, GtkDirectionType direction)
 {
     // If a dialog is active, we need to forward focus events there. This
@@ -1877,6 +1903,7 @@ static gboolean webkitWebViewBaseFocus(GtkWidget* widget, GtkDirectionType direc
 
     return GTK_WIDGET_CLASS(webkit_web_view_base_parent_class)->focus(widget, direction);
 }
+#endif
 
 #if USE(GTK4)
 static void webkitWebViewBaseCssChanged(GtkWidget* widget, GtkCssStyleChange* change)
@@ -2224,7 +2251,11 @@ static void webkit_web_view_base_class_init(WebKitWebViewBaseClass* webkitWebVie
 #endif
     widgetClass->map = webkitWebViewBaseMap;
     widgetClass->unmap = webkitWebViewBaseUnmap;
+#if USE(GTK4)
+    widgetClass->move_focus = webkitWebViewBaseMoveFocus;
+#else
     widgetClass->focus = webkitWebViewBaseFocus;
+#endif
 #if USE(GTK4)
     widgetClass->grab_focus = webkitWebViewBaseGrabFocus;
 #else
@@ -2432,10 +2463,17 @@ WebContextMenuProxyGtk* webkitWebViewBaseGetActiveContextMenuProxy(WebKitWebView
     return webkitWebViewBase->priv->activeContextMenuProxy;
 }
 
-GdkEvent* webkitWebViewBaseTakeContextMenuEvent(WebKitWebViewBase* webkitWebViewBase)
+#if USE(GTK4)
+GRefPtr<GdkEvent> webkitWebViewBaseTakeContextMenuEvent(WebKitWebViewBase* webkitWebViewBase)
 {
-    return webkitWebViewBase->priv->contextMenuEvent.release();
+    return std::exchange(webkitWebViewBase->priv->contextMenuEvent, nullptr);
 }
+#else
+GUniquePtr<GdkEvent> webkitWebViewBaseTakeContextMenuEvent(WebKitWebViewBase* webkitWebViewBase)
+{
+    return WTFMove(webkitWebViewBase->priv->contextMenuEvent);
+}
+#endif
 
 void webkitWebViewBaseSetFocus(WebKitWebViewBase* webViewBase, bool focused)
 {
@@ -2551,10 +2589,10 @@ void webkitWebViewBaseSetInputMethodState(WebKitWebViewBase* webkitWebViewBase, 
 void webkitWebViewBaseUpdateTextInputState(WebKitWebViewBase* webkitWebViewBase)
 {
     const auto& editorState = webkitWebViewBase->priv->pageProxy->editorState();
-    if (!editorState.isMissingPostLayoutData) {
-        webkitWebViewBase->priv->inputMethodFilter.notifyCursorRect(editorState.postLayoutData().caretRectAtStart);
-        webkitWebViewBase->priv->inputMethodFilter.notifySurrounding(editorState.postLayoutData().surroundingContext, editorState.postLayoutData().surroundingContextCursorPosition,
-            editorState.postLayoutData().surroundingContextSelectionPosition);
+    if (editorState.hasPostLayoutAndVisualData()) {
+        webkitWebViewBase->priv->inputMethodFilter.notifyCursorRect(editorState.visualData->caretRectAtStart);
+        webkitWebViewBase->priv->inputMethodFilter.notifySurrounding(editorState.postLayoutData->surroundingContext, editorState.postLayoutData->surroundingContextCursorPosition,
+            editorState.postLayoutData->surroundingContextSelectionPosition);
     }
 }
 
@@ -2826,19 +2864,19 @@ void webkitWebViewBaseSynthesizeCompositionKeyPress(WebKitWebViewBase* webViewBa
     webViewBase->priv->pageProxy->handleKeyboardEvent(NativeWebKeyboardEvent(text, WTFMove(underlines), WTFMove(selectionRange)));
 }
 
-static inline OptionSet<WebEvent::Modifier> toWebKitModifiers(unsigned modifiers)
+static inline OptionSet<WebEventModifier> toWebKitModifiers(unsigned modifiers)
 {
-    OptionSet<WebEvent::Modifier> webEventModifiers;
+    OptionSet<WebEventModifier> webEventModifiers;
     if (modifiers & GDK_CONTROL_MASK)
-        webEventModifiers.add(WebEvent::Modifier::ControlKey);
+        webEventModifiers.add(WebEventModifier::ControlKey);
     if (modifiers & GDK_SHIFT_MASK)
-        webEventModifiers.add(WebEvent::Modifier::ShiftKey);
+        webEventModifiers.add(WebEventModifier::ShiftKey);
     if (modifiers & GDK_MOD1_MASK)
-        webEventModifiers.add(WebEvent::Modifier::AltKey);
+        webEventModifiers.add(WebEventModifier::AltKey);
     if (modifiers & GDK_META_MASK)
-        webEventModifiers.add(WebEvent::Modifier::MetaKey);
+        webEventModifiers.add(WebEventModifier::MetaKey);
     if (PlatformKeyboardEvent::modifiersContainCapsLock(modifiers))
-        webEventModifiers.add(WebEvent::Modifier::CapsLockKey);
+        webEventModifiers.add(WebEventModifier::CapsLockKey);
     return webEventModifiers;
 }
 
@@ -2864,19 +2902,19 @@ void webkitWebViewBaseSynthesizeMouseEvent(WebKitWebViewBase* webViewBase, Mouse
         return;
     }
 
-    WebMouseEvent::Button webEventButton = WebMouseEvent::NoButton;
+    WebMouseEventButton webEventButton = WebMouseEventButton::NoButton;
     switch (button) {
     case 0:
-        webEventButton = WebMouseEvent::NoButton;
+        webEventButton = WebMouseEventButton::NoButton;
         break;
     case 1:
-        webEventButton = WebMouseEvent::LeftButton;
+        webEventButton = WebMouseEventButton::LeftButton;
         break;
     case 2:
-        webEventButton = WebMouseEvent::MiddleButton;
+        webEventButton = WebMouseEventButton::MiddleButton;
         break;
     case 3:
-        webEventButton = WebMouseEvent::RightButton;
+        webEventButton = WebMouseEventButton::RightButton;
         break;
     }
 
@@ -2895,7 +2933,7 @@ void webkitWebViewBaseSynthesizeMouseEvent(WebKitWebViewBase* webViewBase, Mouse
         webEventType = WebEvent::MouseDown;
         priv->inputMethodFilter.cancelComposition();
 #if !USE(GTK4)
-        if (webEventButton == WebMouseEvent::RightButton) {
+        if (webEventButton == WebMouseEventButton::RightButton) {
             GUniquePtr<GdkEvent> event(gdk_event_new(GDK_BUTTON_PRESS));
             event->button.window = gtk_widget_get_window(GTK_WIDGET(webViewBase));
             g_object_ref(event->button.window);
@@ -2924,11 +2962,11 @@ void webkitWebViewBaseSynthesizeMouseEvent(WebKitWebViewBase* webViewBase, Mouse
     case MouseEventType::Motion:
         webEventType = WebEvent::MouseMove;
         if (buttons & GDK_BUTTON1_MASK)
-            webEventButton = WebMouseEvent::LeftButton;
+            webEventButton = WebMouseEventButton::LeftButton;
         else if (buttons & GDK_BUTTON2_MASK)
-            webEventButton = WebMouseEvent::MiddleButton;
+            webEventButton = WebMouseEventButton::MiddleButton;
         else if (buttons & GDK_BUTTON3_MASK)
-            webEventButton = WebMouseEvent::RightButton;
+            webEventButton = WebMouseEventButton::RightButton;
 
         if (priv->lastMotionEvent)
             movementDelta = FloatPoint(x, y) - priv->lastMotionEvent->globalPosition;
@@ -3011,22 +3049,22 @@ void webkitWebViewBaseSynthesizeKeyEvent(WebKitWebViewBase* webViewBase, KeyEven
         switch (keyval) {
         case GDK_KEY_Control_L:
         case GDK_KEY_Control_R:
-            webEventModifiers.add(WebEvent::Modifier::ControlKey);
+            webEventModifiers.add(WebEventModifier::ControlKey);
             break;
         case GDK_KEY_Shift_L:
         case GDK_KEY_Shift_R:
-            webEventModifiers.add(WebEvent::Modifier::ShiftKey);
+            webEventModifiers.add(WebEventModifier::ShiftKey);
             break;
         case GDK_KEY_Alt_L:
         case GDK_KEY_Alt_R:
-            webEventModifiers.add(WebEvent::Modifier::AltKey);
+            webEventModifiers.add(WebEventModifier::AltKey);
             break;
         case GDK_KEY_Meta_L:
         case GDK_KEY_Meta_R:
-            webEventModifiers.add(WebEvent::Modifier::MetaKey);
+            webEventModifiers.add(WebEventModifier::MetaKey);
             break;
         case GDK_KEY_Caps_Lock:
-            webEventModifiers.add(WebEvent::Modifier::CapsLockKey);
+            webEventModifiers.add(WebEventModifier::CapsLockKey);
             break;
         }
 

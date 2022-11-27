@@ -41,6 +41,7 @@ from webkitcorepy import decorators
 
 class WPEPort(GLibPort):
     port_name = "wpe"
+    supports_localhost_aliases = True
 
     def __init__(self, *args, **kwargs):
         super(WPEPort, self).__init__(*args, **kwargs)
@@ -121,13 +122,11 @@ class WPEPort(GLibPort):
             return "cog"
         return "minibrowser"
 
-    def browser_env(self):
-        env = os.environ.copy()
+    def setup_environ_for_minibrowser(self):
+        env = super(WPEPort, self).setup_environ_for_minibrowser()
 
         if self.browser_name() == "cog":
-            env.update({'WEBKIT_EXEC_PATH': self._build_path('bin'),
-                        'COG_MODULEDIR': self.cog_path_to('platform'),
-                        'WEBKIT_INJECTED_BUNDLE_PATH': self._build_path('lib')})
+            env['COG_MODULEDIR'] = self.cog_path_to('platform')
 
         return env
 
@@ -142,7 +141,6 @@ class WPEPort(GLibPort):
                 miniBrowser = None
             else:
                 print("Using Cog as MiniBrowser")
-                env = self.browser_env()
                 has_platform_arg = any((a == "-P" or a.startswith("--platform=") for a in args))
                 if not has_platform_arg:
                     args.insert(0, "--platform=gtk4")
@@ -159,4 +157,4 @@ class WPEPort(GLibPort):
 
         if self._should_use_jhbuild():
             command = self._jhbuild_wrapper + command
-        return self._executive.run_command(command + args, cwd=self.webkit_base(), stdout=None, return_stderr=False, decode_output=False, env=env)
+        return self._executive.run_command(command + args, cwd=self.webkit_base(), stdout=None, return_stderr=False, decode_output=False, env=self.setup_environ_for_minibrowser())

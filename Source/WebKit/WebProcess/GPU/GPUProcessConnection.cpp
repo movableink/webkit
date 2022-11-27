@@ -136,9 +136,9 @@ RefPtr<GPUProcessConnection> GPUProcessConnection::create(IPC::Connection& paren
 }
 
 GPUProcessConnection::GPUProcessConnection(IPC::Connection::Identifier&& connectionIdentifier)
-    : m_connection(IPC::Connection::createServerConnection(connectionIdentifier, *this))
+    : m_connection(IPC::Connection::createServerConnection(connectionIdentifier))
 {
-    m_connection->open();
+    m_connection->open(*this);
 
     addLanguageChangeObserver(this, languagesChanged);
 
@@ -258,11 +258,6 @@ bool GPUProcessConnection::dispatchMessage(IPC::Connection& connection, IPC::Dec
 #endif
     if (messageReceiverMap().dispatchMessage(connection, decoder))
         return true;
-
-#if ENABLE(WEBGL)
-    if (decoder.messageReceiverName() == Messages::RemoteGraphicsContextGLProxy::messageReceiverName())
-        return RemoteGraphicsContextGLProxy::handleMessageToRemovedDestination(connection, decoder);
-#endif
 
 #if USE(AUDIO_SESSION)
     if (decoder.messageReceiverName() == Messages::RemoteAudioSession::messageReceiverName()) {

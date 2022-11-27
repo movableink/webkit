@@ -38,6 +38,7 @@
 struct _UIWebTouchEvent;
 #endif
 #elif PLATFORM(GTK)
+#include <WebCore/GRefPtrGtk.h>
 #include <WebCore/GUniquePtrGtk.h>
 #elif PLATFORM(QT)
 #include <QTouchEvent>
@@ -73,7 +74,9 @@ private:
     Vector<WebPlatformTouchPoint> extractWebTouchPoint(const _UIWebTouchEvent*);
 #endif
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) && USE(GTK4)
+    GRefPtr<GdkEvent> m_nativeEvent;
+#elif PLATFORM(GTK)
     GUniquePtr<GdkEvent> m_nativeEvent;
 #elif PLATFORM(QT)
     const QTouchEvent m_nativeEvent;
@@ -85,7 +88,7 @@ private:
 #endif // ENABLE(TOUCH_EVENTS)
 
 #if PLATFORM(IOS_FAMILY) && defined(__OBJC__)
-OptionSet<WebEvent::Modifier> webEventModifierFlags(UIKeyModifierFlags);
+OptionSet<WebEventModifier> webEventModifierFlags(UIKeyModifierFlags);
 #endif
 
 } // namespace WebKit

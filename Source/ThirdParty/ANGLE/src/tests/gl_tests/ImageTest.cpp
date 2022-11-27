@@ -828,10 +828,32 @@ class ImageTest : public ANGLETest<>
                           referenceColor[3], 1);
     }
 
+    void verifyResultsTextureLeftAndRight(GLTexture &texture,
+                                          const GLubyte leftColor[4],
+                                          const GLubyte rightColor[4],
+                                          GLenum textureTarget,
+                                          GLuint program,
+                                          GLuint textureUniform)
+    {
+        verifyResultsTexture(texture, leftColor, textureTarget, program, textureUniform);
+
+        // verifyResultsTexture only verifies top-left. Here also verifies top-right.
+        EXPECT_PIXEL_NEAR(getWindowWidth() - 1, 0, rightColor[0], rightColor[1], rightColor[2],
+                          rightColor[3], 1);
+    }
+
     void verifyResults2D(GLTexture &texture, const GLubyte data[4])
     {
         verifyResultsTexture(texture, data, GL_TEXTURE_2D, mTextureProgram,
                              mTextureUniformLocation);
+    }
+
+    void verifyResults2DLeftAndRight(GLTexture &texture,
+                                     const GLubyte left[4],
+                                     const GLubyte right[4])
+    {
+        verifyResultsTextureLeftAndRight(texture, left, right, GL_TEXTURE_2D, mTextureProgram,
+                                         mTextureUniformLocation);
     }
 
     void verifyResults2DArray(GLTexture &texture, const GLubyte data[4], uint32_t layerIndex = 0)
@@ -1119,6 +1141,120 @@ class ImageTest : public ANGLETest<>
 
         colorspace3DAttribs[1] = static_cast<EGLint>(layer);
         return colorspace3DAttribs;
+    }
+
+    void externalTextureTracerTestHelper(const EGLint *attribsToRecoverInMEC)
+    {
+        const EGLWindow *eglWindow = getEGLWindow();
+        // Frame 1 begins
+        // Create the Image
+        GLTexture sourceTexture1;
+        EGLImageKHR image1;
+
+        GLubyte data[] = {132, 55, 219, 255};
+        // Create a source 2D texture
+        glBindTexture(GL_TEXTURE_2D, sourceTexture1);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, static_cast<GLsizei>(1), static_cast<GLsizei>(1), 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+        // Disable mipmapping
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+        ASSERT_GL_NO_ERROR();
+
+        image1 = eglCreateImageKHR(
+            eglWindow->getDisplay(), eglWindow->getContext(), EGL_GL_TEXTURE_2D_KHR,
+            reinterpretHelper<EGLClientBuffer>(sourceTexture1.get()), attribsToRecoverInMEC);
+
+        ASSERT_EGL_SUCCESS();
+
+        // Create the target
+        GLTexture targetTexture1;
+        // Create a target texture from the image
+        glBindTexture(GL_TEXTURE_EXTERNAL_OES, targetTexture1);
+        glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image1);
+
+        // Disable mipmapping
+        glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+        ASSERT_GL_NO_ERROR();
+
+        // Calls On EndFrame(), with MidExecutionSetup to restore external texture targetTexture1
+        // above
+        EGLDisplay display = eglWindow->getDisplay();
+        EGLSurface surface = eglWindow->getSurface();
+        eglSwapBuffers(display, surface);
+        // Frame 1 ends
+
+        // Frame 2 begins
+        // Create another eglImage with another associated texture
+        // Draw using the eglImage texture targetTexture1 created in frame 1
+        GLTexture sourceTexture2;
+        EGLImageKHR image2;
+
+        // Create a source 2D texture
+        glBindTexture(GL_TEXTURE_2D, sourceTexture2);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, static_cast<GLsizei>(1), static_cast<GLsizei>(1), 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+        // Disable mipmapping
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+        ASSERT_GL_NO_ERROR();
+
+        constexpr EGLint defaultAttribs[] = {
+            EGL_IMAGE_PRESERVED,
+            EGL_TRUE,
+            EGL_NONE,
+        };
+        image2 = eglCreateImageKHR(
+            eglWindow->getDisplay(), eglWindow->getContext(), EGL_GL_TEXTURE_2D_KHR,
+            reinterpretHelper<EGLClientBuffer>(sourceTexture2.get()), defaultAttribs);
+
+        ASSERT_EGL_SUCCESS();
+
+        // Create the target
+        GLTexture targetTexture2;
+        // Create a target texture from the image
+        glBindTexture(GL_TEXTURE_EXTERNAL_OES, targetTexture2);
+        glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image2);
+
+        // Disable mipmapping
+        glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+        ASSERT_GL_NO_ERROR();
+        glUseProgram(mTextureExternalProgram);
+        glBindTexture(GL_TEXTURE_EXTERNAL_OES, targetTexture1);
+        glUniform1i(mTextureExternalUniformLocation, 0);
+
+        drawQuad(mTextureExternalProgram, "position", 0.5f);
+
+        // Calls On EndFrame() to save the gl calls creating external texture targetTexture2;
+        // We use this as a reference to check the gl calls we restore for targetTexture1
+        // in MidExecutionSetup
+        eglSwapBuffers(display, surface);
+        // Frame 2 ends
+
+        // Frame 3 begins
+        // Draw a quad with the targetTexture2
+        glUseProgram(mTextureExternalProgram);
+        glBindTexture(GL_TEXTURE_EXTERNAL_OES, targetTexture2);
+        glUniform1i(mTextureExternalUniformLocation, 0);
+
+        drawQuad(mTextureExternalProgram, "position", 0.5f);
+
+        eglSwapBuffers(display, surface);
+        // Frame 3 ends
+
+        // Clean up
+        eglDestroyImageKHR(eglWindow->getDisplay(), image1);
+        eglDestroyImageKHR(eglWindow->getDisplay(), image2);
     }
 
     EGLint default3DAttribs[5] = {
@@ -3430,6 +3566,173 @@ TEST_P(ImageTestES3, RGBXAHBImportPreservesData)
     destroyAndroidHardwareBuffer(ahb);
 }
 
+// Test that RGBX data are preserved when importing from AHB created with sRGB color space.
+TEST_P(ImageTestES3, RGBXAHBImportPreservesData_Colorspace)
+{
+    EGLWindow *window = getEGLWindow();
+
+    ANGLE_SKIP_TEST_IF(!hasOESExt() || !hasBaseExt() || !has2DTextureExt());
+    ANGLE_SKIP_TEST_IF(!hasAndroidImageNativeBufferExt() || !hasAndroidHardwareBufferSupport());
+
+    const GLubyte kRed50SRGB[]   = {188, 0, 0, 255};
+    const GLubyte kRed50Linear[] = {128, 0, 0, 255};
+
+    // Create the Image
+    AHardwareBuffer *ahb;
+    EGLImageKHR ahbImage;
+    createEGLImageAndroidHardwareBufferSource(1, 1, 1, AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM,
+                                              kDefaultAHBUsage, kColorspaceAttribs,
+                                              {{kRed50SRGB, 4}}, &ahb, &ahbImage);
+
+    GLTexture ahbTexture;
+    createEGLImageTargetTexture2D(ahbImage, ahbTexture);
+
+    verifyResults2D(ahbTexture, kRed50Linear);
+    verifyResultAHB(ahb, {{kRed50SRGB, 4}});
+
+    // Clean up
+    eglDestroyImageKHR(window->getDisplay(), ahbImage);
+    destroyAndroidHardwareBuffer(ahb);
+}
+
+// Test that RGBA data are preserved when importing from AHB and glTexSubImage is able to update
+// data.
+TEST_P(ImageTestES3, RGBAAHBUploadData)
+{
+    EGLWindow *window = getEGLWindow();
+
+    ANGLE_SKIP_TEST_IF(!hasOESExt() || !hasBaseExt() || !has2DTextureExt());
+    ANGLE_SKIP_TEST_IF(!hasAndroidImageNativeBufferExt() || !hasAndroidHardwareBufferSupport());
+
+    const GLubyte kGarbage[]     = {123, 123, 123, 123};
+    const GLubyte kRed50Linear[] = {128, 0, 0, 127};
+
+    // Create the Image
+    AHardwareBuffer *ahb;
+    EGLImageKHR ahbImage;
+    createEGLImageAndroidHardwareBufferSource(1, 1, 1, AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM,
+                                              kDefaultAHBUsage, kDefaultAttribs, {{kGarbage, 4}},
+                                              &ahb, &ahbImage);
+
+    GLTexture ahbTexture;
+    createEGLImageTargetTexture2D(ahbImage, ahbTexture);
+
+    glBindTexture(GL_TEXTURE_2D, ahbTexture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, kRed50Linear);
+    glFinish();
+
+    verifyResults2D(ahbTexture, kRed50Linear);
+    verifyResultAHB(ahb, {{kRed50Linear, 4}});
+
+    // Clean up
+    eglDestroyImageKHR(window->getDisplay(), ahbImage);
+    destroyAndroidHardwareBuffer(ahb);
+}
+
+// Test that RGBA data are preserved when importing from AHB with sRGB color space and glTexSubImage
+// is able to update data.
+TEST_P(ImageTestES3, RGBAAHBUploadDataColorspace)
+{
+    EGLWindow *window = getEGLWindow();
+
+    ANGLE_SKIP_TEST_IF(!hasOESExt() || !hasBaseExt() || !has2DTextureExt());
+    ANGLE_SKIP_TEST_IF(!hasAndroidImageNativeBufferExt() || !hasAndroidHardwareBufferSupport());
+
+    const GLubyte kGarbage[]     = {123, 123, 123, 123};
+    const GLubyte kRed50SRGB[]   = {188, 0, 0, 128};
+    const GLubyte kRed50Linear[] = {128, 0, 0, 127};
+
+    // Create the Image
+    AHardwareBuffer *ahb;
+    EGLImageKHR ahbImage;
+    createEGLImageAndroidHardwareBufferSource(1, 1, 1, AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM,
+                                              kDefaultAHBUsage, kColorspaceAttribs, {{kGarbage, 4}},
+                                              &ahb, &ahbImage);
+
+    GLTexture ahbTexture;
+    createEGLImageTargetTexture2D(ahbImage, ahbTexture);
+
+    glBindTexture(GL_TEXTURE_2D, ahbTexture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, kRed50SRGB);
+    glFinish();
+
+    verifyResults2D(ahbTexture, kRed50Linear);
+    verifyResultAHB(ahb, {{kRed50SRGB, 4}});
+
+    // Clean up
+    eglDestroyImageKHR(window->getDisplay(), ahbImage);
+    destroyAndroidHardwareBuffer(ahb);
+}
+
+// Test that RGBX data are preserved when importing from AHB and glTexSubImage is able to update
+// data.
+TEST_P(ImageTestES3, RGBXAHBUploadData)
+{
+    EGLWindow *window = getEGLWindow();
+
+    ANGLE_SKIP_TEST_IF(!hasOESExt() || !hasBaseExt() || !has2DTextureExt());
+    ANGLE_SKIP_TEST_IF(!hasAndroidImageNativeBufferExt() || !hasAndroidHardwareBufferSupport());
+
+    const GLubyte kGarbage[]     = {123, 123, 123, 123};
+    const GLubyte kRed50Linear[] = {128, 0, 0, 255};
+
+    // Create the Image
+    AHardwareBuffer *ahb;
+    EGLImageKHR ahbImage;
+    createEGLImageAndroidHardwareBufferSource(1, 1, 1, AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM,
+                                              kDefaultAHBUsage, kDefaultAttribs, {{kGarbage, 4}},
+                                              &ahb, &ahbImage);
+
+    GLTexture ahbTexture;
+    createEGLImageTargetTexture2D(ahbImage, ahbTexture);
+
+    glBindTexture(GL_TEXTURE_2D, ahbTexture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, kRed50Linear);
+    glFinish();
+
+    verifyResults2D(ahbTexture, kRed50Linear);
+    verifyResultAHB(ahb, {{kRed50Linear, 4}});
+
+    // Clean up
+    eglDestroyImageKHR(window->getDisplay(), ahbImage);
+    destroyAndroidHardwareBuffer(ahb);
+}
+
+// Test that RGBX data are preserved when importing from AHB created with sRGB color space and
+// glTexSubImage is able to update data.
+TEST_P(ImageTestES3, RGBXAHBUploadDataColorspace)
+{
+    EGLWindow *window = getEGLWindow();
+
+    ANGLE_SKIP_TEST_IF(!hasOESExt() || !hasBaseExt() || !has2DTextureExt());
+    ANGLE_SKIP_TEST_IF(!hasAndroidImageNativeBufferExt() || !hasAndroidHardwareBufferSupport());
+
+    const GLubyte kGarbage[]     = {123, 123, 123, 123};
+    const GLubyte kRed50SRGB[]   = {188, 0, 0, 255};
+    const GLubyte kRed50Linear[] = {128, 0, 0, 255};
+
+    // Create the Image
+    AHardwareBuffer *ahb;
+    EGLImageKHR ahbImage;
+    createEGLImageAndroidHardwareBufferSource(1, 1, 1, AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM,
+                                              kDefaultAHBUsage, kColorspaceAttribs, {{kGarbage, 4}},
+                                              &ahb, &ahbImage);
+
+    GLTexture ahbTexture;
+    createEGLImageTargetTexture2D(ahbImage, ahbTexture);
+
+    glBindTexture(GL_TEXTURE_2D, ahbTexture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, kRed50SRGB);
+    glFinish();
+
+    verifyResults2D(ahbTexture, kRed50Linear);
+    verifyResultAHB(ahb, {{kRed50SRGB, 4}});
+
+    // Clean up
+    eglDestroyImageKHR(window->getDisplay(), ahbImage);
+    destroyAndroidHardwareBuffer(ahb);
+}
+
 // Test that RGBX data are preserved when importing from AHB.  Tests interaction of emulated channel
 // being cleared with no GPU_FRAMEBUFFER usage specified.
 TEST_P(ImageTestES3, RGBXAHBImportNoFramebufferUsage)
@@ -3656,13 +3959,13 @@ TEST_P(ImageTestES3, RGBXAHBImportThenUpload)
 
     // Upload data
     const GLubyte kUploadColor[] = {63, 127, 191, 55};
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, kUploadColor);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 1, 0, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, kUploadColor);
     ASSERT_GL_NO_ERROR();
 
     // RGBX doesn't have alpha, so readback should return 255.
-    const GLubyte kExpectedColorLeft[]  = {kUploadColor[0], kUploadColor[1], kUploadColor[2], 255};
-    const GLubyte kExpectedColorRight[] = {kInitColor[0], kInitColor[1], kInitColor[2], 255};
-    verifyResults2D(ahbTexture, kExpectedColorLeft);
+    const GLubyte kExpectedColorRight[] = {kUploadColor[0], kUploadColor[1], kUploadColor[2], 255};
+    const GLubyte kExpectedColorLeft[]  = {kInitColor[0], kInitColor[1], kInitColor[2], 255};
+    verifyResults2DLeftAndRight(ahbTexture, kExpectedColorLeft, kExpectedColorRight);
     verifyResultAHB(ahb, {{kExpectedColorLeft, 4}}, AHBVerifyRegion::LeftHalf);
     verifyResultAHB(ahb, {{kExpectedColorRight, 4}}, AHBVerifyRegion::RightHalf);
 
@@ -5540,9 +5843,8 @@ TEST_P(ImageTest, SourceCubeAndSameTargetTextureWithEachCubeFace)
 //      adb shell setprop debug.angle.capture.frame_end 2
 //      adb shell setprop debug.angle.capture.label external_textures
 //      adb shell setprop debug.angle.capture.out_dir /data/data/externaltextures/angle_capture/
-TEST_P(ImageTest, AppTraceExternalTextureUseCase)
+TEST_P(ImageTest, AppTraceExternalTextureDefaultAttribs)
 {
-    EGLWindow *window = getEGLWindow();
     ANGLE_SKIP_TEST_IF(!hasOESExt() || !hasBaseExt() || !has2DTextureExt() ||
                        !hasExternalESSL3Ext());
 
@@ -5552,101 +5854,31 @@ TEST_P(ImageTest, AppTraceExternalTextureUseCase)
         EGL_NONE,
     };
 
-    // Create the Image
-    GLTexture sourceTexture1;
-    EGLImageKHR image1;
+    externalTextureTracerTestHelper(attribs);
+}
 
-    GLubyte data[] = {132, 55, 219, 255};
-    // Create a source 2D texture
-    glBindTexture(GL_TEXTURE_2D, sourceTexture1);
+// Same as AppTraceExternalTextureUseCase, except we will pass additional attrib_list values in
+// EGLAttrib* for eglCreateImageKHR calls
+TEST_P(ImageTest, AppTraceExternalTextureOtherAttribs)
+{
+    ANGLE_SKIP_TEST_IF(!hasOESExt() || !hasBaseExt() || !has2DTextureExt() ||
+                       !hasExternalESSL3Ext());
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, static_cast<GLsizei>(1), static_cast<GLsizei>(1), 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, data);
+    constexpr EGLint attribs[] = {
+        EGL_IMAGE_PRESERVED, EGL_TRUE, EGL_GL_TEXTURE_LEVEL, 0, EGL_NONE,
+    };
 
-    // Disable mipmapping
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    externalTextureTracerTestHelper(attribs);
+}
 
-    ASSERT_GL_NO_ERROR();
+// Same as AppTraceExternalTextureUseCase, except we will pass nullptr as EGLAttrib* for
+// eglCreateImageKHR calls
+TEST_P(ImageTest, AppTraceExternalTextureNullAttribs)
+{
+    ANGLE_SKIP_TEST_IF(!hasOESExt() || !hasBaseExt() || !has2DTextureExt() ||
+                       !hasExternalESSL3Ext());
 
-    image1 = eglCreateImageKHR(window->getDisplay(), window->getContext(), EGL_GL_TEXTURE_2D_KHR,
-                               reinterpretHelper<EGLClientBuffer>(sourceTexture1.get()), attribs);
-
-    ASSERT_EGL_SUCCESS();
-
-    // Create the target
-    GLTexture targetTexture1;
-    // Create a target texture from the image
-    glBindTexture(GL_TEXTURE_EXTERNAL_OES, targetTexture1);
-    glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image1);
-
-    // Disable mipmapping
-    glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    ASSERT_GL_NO_ERROR();
-
-    // Calls On EndFrame(), with MidExecutionSetup to restore external texture targetTexture1 above
-    EGLDisplay display = getEGLWindow()->getDisplay();
-    EGLSurface surface = getEGLWindow()->getSurface();
-    eglSwapBuffers(display, surface);
-
-    // Create another eglImage with another associated texture
-    // Draw using the eglImage texture targetTexture1 created in frame 1
-    GLTexture sourceTexture2;
-    EGLImageKHR image2;
-
-    // Create a source 2D texture
-    glBindTexture(GL_TEXTURE_2D, sourceTexture2);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, static_cast<GLsizei>(1), static_cast<GLsizei>(1), 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, data);
-
-    // Disable mipmapping
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    ASSERT_GL_NO_ERROR();
-
-    image2 = eglCreateImageKHR(window->getDisplay(), window->getContext(), EGL_GL_TEXTURE_2D_KHR,
-                               reinterpretHelper<EGLClientBuffer>(sourceTexture2.get()), attribs);
-
-    ASSERT_EGL_SUCCESS();
-
-    // Create the target
-    GLTexture targetTexture2;
-    // Create a target texture from the image
-    glBindTexture(GL_TEXTURE_EXTERNAL_OES, targetTexture2);
-    glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image2);
-
-    // Disable mipmapping
-    glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    ASSERT_GL_NO_ERROR();
-    glUseProgram(mTextureExternalProgram);
-    glBindTexture(GL_TEXTURE_EXTERNAL_OES, targetTexture1);
-    glUniform1i(mTextureExternalUniformLocation, 0);
-
-    drawQuad(mTextureExternalProgram, "position", 0.5f);
-
-    // Calls On EndFrame() to save the gl calls creating external texture targetTexture2;
-    // We use this as a reference to check the gl calls we restore for targetTexture1
-    // in MidExecutionSetup
-    eglSwapBuffers(display, surface);
-
-    // Draw a quad with the targetTexture2
-    glUseProgram(mTextureExternalProgram);
-    glBindTexture(GL_TEXTURE_EXTERNAL_OES, targetTexture2);
-    glUniform1i(mTextureExternalUniformLocation, 0);
-
-    drawQuad(mTextureExternalProgram, "position", 0.5f);
-
-    eglSwapBuffers(display, surface);
-
-    // Clean up
-    eglDestroyImageKHR(window->getDisplay(), image1);
-    eglDestroyImageKHR(window->getDisplay(), image2);
+    externalTextureTracerTestHelper(nullptr);
 }
 
 // Alternate case for testing External Texture (created with AHB) support in MEC.
@@ -5723,5 +5955,7 @@ ANGLE_INSTANTIATE_TEST_ES2_AND_ES3(ImageTest);
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(ImageTestES3);
 ANGLE_INSTANTIATE_TEST_ES3(ImageTestES3);
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(ImageTestES31);
 ANGLE_INSTANTIATE_TEST_ES31(ImageTestES31);
 }  // namespace angle

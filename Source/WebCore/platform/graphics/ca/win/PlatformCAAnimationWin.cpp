@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 #include <QuartzCore/CACFTimingFunction.h>
 #include <QuartzCore/CACFValueFunction.h>
 #include <QuartzCore/CACFVector.h>
+#include <wtf/cf/VectorCF.h>
 #include <wtf/text/WTFString.h>
 
 using namespace WebCore;
@@ -120,25 +121,25 @@ static PlatformCAAnimation::ValueFunctionType fromCACFValueFunctionType(CFString
     return PlatformCAAnimation::NoValueFunction;
 }
 
-static RetainPtr<CACFTimingFunctionRef> toCACFTimingFunction(const TimingFunction* timingFunction, bool reverse)
+static RetainPtr<CACFTimingFunctionRef> toCACFTimingFunction(const TimingFunction& timingFunction, bool reverse)
 {
-    ASSERT(timingFunction);
-    if (timingFunction->isCubicBezierTimingFunction()) {
+    if (is<CubicBezierTimingFunction>(timingFunction)) {
         RefPtr<CubicBezierTimingFunction> reversed;
-        const CubicBezierTimingFunction* ctf = static_cast<const CubicBezierTimingFunction*>(timingFunction);
+        std::reference_wrapper<const CubicBezierTimingFunction> function = downcast<CubicBezierTimingFunction>(timingFunction);
 
         if (reverse) {
-            reversed = ctf->createReversed();
-            ctf = reversed.get();
+            reversed = function.get().createReversed();
+            function = *reversed;
         }
 
-        float x1 = static_cast<float>(ctf->x1());
-        float y1 = static_cast<float>(ctf->y1());
-        float x2 = static_cast<float>(ctf->x2());
-        float y2 = static_cast<float>(ctf->y2());
+        float x1 = static_cast<float>(function.get().x1());
+        float y1 = static_cast<float>(function.get().y1());
+        float x2 = static_cast<float>(function.get().x2());
+        float y2 = static_cast<float>(function.get().y2());
         return adoptCF(CACFTimingFunctionCreate(x1, y1, x2, y2));
     }
-    
+
+    ASSERT(timingFunction.type() == TimingFunction::TimingFunctionType::LinearFunction);
     return CACFTimingFunctionGetFunctionWithName(kCACFTimingFunctionLinear);
 }
 
@@ -293,10 +294,10 @@ void PlatformCAAnimationWin::setFillMode(FillModeType value)
     CACFAnimationSetFillMode(m_animation.get(), toCACFFillModeType(value));
 }
 
-void PlatformCAAnimationWin::setTimingFunction(const TimingFunction* value, bool reverse)
+void PlatformCAAnimationWin::setTimingFunction(const TimingFunction* timingFunction, bool reverse)
 {
-    UNUSED_PARAM(reverse);
-    CACFAnimationSetTimingFunction(m_animation.get(), toCACFTimingFunction(value, reverse).get());
+    ASSERT(timingFunction);
+    CACFAnimationSetTimingFunction(m_animation.get(), toCACFTimingFunction(*timingFunction, reverse).get());
 }
 
 void PlatformCAAnimationWin::copyTimingFunctionFrom(const PlatformCAAnimation& value)
@@ -443,63 +444,45 @@ void PlatformCAAnimationWin::copyToValueFrom(const PlatformCAAnimation& value)
 }
 
 // Keyframe-animation properties.
-void PlatformCAAnimationWin::setValues(const Vector<float>& value)
+void PlatformCAAnimationWin::setValues(const Vector<float>& values)
 {
     if (animationType() != Keyframe)
         return;
 
-    RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
-    for (size_t i = 0; i < value.size(); ++i) {
-        RetainPtr<CFNumberRef> v = adoptCF(CFNumberCreate(0, kCFNumberFloatType, &value[i]));
-        CFArrayAppendValue(array.get(), v.get());
-    }
-
-    CACFAnimationSetValues(m_animation.get(), array.get());
+    CACFAnimationSetValues(m_animation.get(), createCFArray(values).get());
 }
 
-void PlatformCAAnimationWin::setValues(const Vector<WebCore::TransformationMatrix>& value)
+void PlatformCAAnimationWin::setValues(const Vector<WebCore::TransformationMatrix>& values)
 {
     if (animationType() != Keyframe)
         return;
 
-    RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
-    for (size_t i = 0; i < value.size(); ++i) {
-        RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreateTransform(value[i]));
-        CFArrayAppendValue(array.get(), v.get());
-    }
-
-    CACFAnimationSetValues(m_animation.get(), array.get());
+    CACFAnimationSetValues(m_animation.get(), createCFArray(values, [] (auto& matrix) {
+        return adoptCF(CACFVectorCreateTransform(matrix));
+    }).get());
 }
 
-void PlatformCAAnimationWin::setValues(const Vector<FloatPoint3D>& value)
+void PlatformCAAnimationWin::setValues(const Vector<FloatPoint3D>& values)
 {
     if (animationType() != Keyframe)
         return;
-        
-    RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
-    for (size_t i = 0; i < value.size(); ++i) {
-        CGFloat a[3] = { value[i].x(), value[i].y(), value[i].z() };
-        RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(3, a));
-        CFArrayAppendValue(array.get(), v.get());
-    }
 
-    CACFAnimationSetValues(m_animation.get(), array.get());
+    CACFAnimationSetValues(m_animation.get(), createCFArray(values, [] (auto& point) {
+        CGFloat a[3] = { point.x(), point.y(), point.z() };
+        return adoptCF(CACFVectorCreate(3, a));
+    }).get());
 }
 
-void PlatformCAAnimationWin::setValues(const Vector<WebCore::Color>& value)
+void PlatformCAAnimationWin::setValues(const Vector<WebCore::Color>& values)
 {
     if (animationType() != Keyframe)
         return;
-        
-    RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
-    for (size_t i = 0; i < value.size(); ++i) {
-        auto components = value[i].toColorTypeLossy<SRGBA<uint8_t>>().resolved();
-        CGFloat a[4] = { components.red, components.green, components.blue, components.alpha };
-        RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(4, a));
-        CFArrayAppendValue(array.get(), v.get());
-    }
 
-    CACFAnimationSetValues(m_animation.get(), array.get());
+    CACFAnimationSetValues(m_animation.get(), createCFArray(values, [] (auto& color) {
+        auto [r, g, b, a] = color.template toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+        CGFloat components[4] = { r, g, b, a };
+        return adoptCF(CACFVectorCreate(4, components));
+    }).get());
 }
 
 void PlatformCAAnimationWin::setValues(const Vector<RefPtr<FilterOperation> >&, int)
@@ -515,18 +498,12 @@ void PlatformCAAnimationWin::copyValuesFrom(const PlatformCAAnimation& value)
     CACFAnimationSetValues(m_animation.get(), CACFAnimationGetValues(downcast<PlatformCAAnimationWin>(value).platformAnimation()));
 }
 
-void PlatformCAAnimationWin::setKeyTimes(const Vector<float>& value)
+void PlatformCAAnimationWin::setKeyTimes(const Vector<float>& values)
 {
     if (animationType() != Keyframe)
         return;
-        
-    RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
-    for (size_t i = 0; i < value.size(); ++i) {
-        RetainPtr<CFNumberRef> v = adoptCF(CFNumberCreate(0, kCFNumberFloatType, &value[i]));
-        CFArrayAppendValue(array.get(), v.get());
-    }
 
-    CACFAnimationSetKeyTimes(m_animation.get(), array.get());
+    CACFAnimationSetKeyTimes(m_animation.get(), createCFArray(values).get());
 }
 
 void PlatformCAAnimationWin::copyKeyTimesFrom(const PlatformCAAnimation& value)
@@ -537,19 +514,14 @@ void PlatformCAAnimationWin::copyKeyTimesFrom(const PlatformCAAnimation& value)
     CACFAnimationSetKeyTimes(m_animation.get(), CACFAnimationGetKeyTimes(downcast<PlatformCAAnimationWin>(value).platformAnimation()));
 }
 
-void PlatformCAAnimationWin::setTimingFunctions(const Vector<const TimingFunction*>& value, bool reverse)
+void PlatformCAAnimationWin::setTimingFunctions(const Vector<Ref<const TimingFunction>>& timingFunctions, bool reverse)
 {
-    UNUSED_PARAM(reverse);
     if (animationType() != Keyframe)
         return;
 
-    RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
-    for (size_t i = 0; i < value.size(); ++i) {
-        RetainPtr<CFNumberRef> v = adoptCF(CFNumberCreate(0, kCFNumberFloatType, &value[i]));
-        CFArrayAppendValue(array.get(), toCACFTimingFunction(value[i], reverse).get());
-    }
-
-    CACFAnimationSetTimingFunctions(m_animation.get(), array.get());
+    CACFAnimationSetTimingFunctions(m_animation.get(), createCFArray(timingFunctions, [&] (auto& function) {
+        return toCACFTimingFunction(function.get(), reverse);
+    }).get());
 }
 
 void PlatformCAAnimationWin::copyTimingFunctionsFrom(const PlatformCAAnimation& value)
@@ -557,15 +529,13 @@ void PlatformCAAnimationWin::copyTimingFunctionsFrom(const PlatformCAAnimation& 
     CACFAnimationSetTimingFunctions(m_animation.get(), CACFAnimationGetTimingFunctions(downcast<PlatformCAAnimationWin>(value).platformAnimation()));
 }
 
-void PlatformCAAnimationWin::setAnimations(const Vector<RefPtr<PlatformCAAnimation>>& value)
+void PlatformCAAnimationWin::setAnimations(const Vector<RefPtr<PlatformCAAnimation>>& values)
 {
-    auto array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
-    for (auto& animation : value) {
+    CACFAnimationSetAnimations(m_animation.get(), createCFArray(values, [&] (auto& animation) -> CACFAnimationRef {
         if (is<PlatformCAAnimationWin>(animation))
-            CFArrayAppendValue(array.get(), downcast<PlatformCAAnimationWin>(*animation).m_animation.get());
-    }
-
-    CACFAnimationSetAnimations(m_animation.get(), array.get());
+            return downcast<PlatformCAAnimationWin>(*animation).m_animation.get();
+        return nullptr;
+    }).get());
 }
 
 void PlatformCAAnimationWin::copyAnimationsFrom(const PlatformCAAnimation& value)

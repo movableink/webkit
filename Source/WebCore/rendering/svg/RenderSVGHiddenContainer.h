@@ -48,10 +48,12 @@ private:
 
     void absoluteRects(Vector<IntRect>&, const LayoutPoint&) const final { }
     void absoluteQuads(Vector<FloatQuad>&, bool*) const final { }
-    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint&, const RenderLayerModelObject* = nullptr) final { }
+    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint&, const RenderLayerModelObject* = nullptr) const final { }
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint&, HitTestAction) final { return false; }
     void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect&, OptionSet<RenderStyle::TransformOperationOption> = RenderStyle::allTransformOperations) const final { }
+    void updateFromStyle() final { }
+    bool needsHasSVGTransformFlags() const final { return false; }
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
 };
 

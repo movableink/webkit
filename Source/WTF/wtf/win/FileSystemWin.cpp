@@ -37,6 +37,7 @@
 #include <windows.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/win/WCharStringExtras.h>
@@ -110,6 +111,18 @@ std::optional<uint64_t> fileSize(PlatformFileHandle fileHandle)
         return std::nullopt;
 
     return getFileSizeFromByHandleFileInformationStructure(fileInformation);
+}
+
+std::optional<PlatformFileID> fileID(PlatformFileHandle fileHandle)
+{
+    // FIXME (246118): Implement this function properly.
+    return std::nullopt;
+}
+
+bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b)
+{
+    // FIXME (246118): Implement this function properly.
+    return true;
 }
 
 std::optional<WallTime> fileCreationTime(const String& path)

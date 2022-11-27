@@ -311,7 +311,8 @@ OutputHLSL::OutputHLSL(sh::GLenum shaderType,
                        TSymbolTable *symbolTable,
                        PerformanceDiagnostics *perfDiagnostics,
                        const std::map<int, const TInterfaceBlock *> &uniformBlockOptimizedMap,
-                       const std::vector<InterfaceBlock> &shaderStorageBlocks)
+                       const std::vector<InterfaceBlock> &shaderStorageBlocks,
+                       bool isEarlyFragmentTestsSpecified)
     : TIntermTraverser(true, true, true, symbolTable),
       mShaderType(shaderType),
       mShaderSpec(shaderSpec),
@@ -328,8 +329,11 @@ OutputHLSL::OutputHLSL(sh::GLenum shaderType,
       mCurrentFunctionMetadata(nullptr),
       mWorkGroupSize(workGroupSize),
       mPerfDiagnostics(perfDiagnostics),
+      mIsEarlyFragmentTestsSpecified(isEarlyFragmentTestsSpecified),
       mNeedStructMapping(false)
 {
+    mUsesClipDistance     = false;
+    mUsesCullDistance     = false;
     mUsesFragColor        = false;
     mUsesFragData         = false;
     mUsesDepthRange       = false;
@@ -376,11 +380,18 @@ OutputHLSL::OutputHLSL(sh::GLenum shaderType,
 
     if (mOutputType == SH_HLSL_3_0_OUTPUT)
     {
-        // Fragment shaders need dx_DepthRange, dx_ViewCoords and dx_DepthFront.
+        // Fragment shaders need dx_DepthRange, dx_ViewCoords, dx_DepthFront,
+        // and dx_FragCoordOffset.
         // Vertex shaders need a slightly different set: dx_DepthRange, dx_ViewCoords and
         // dx_ViewAdjust.
-        // In both cases total 3 uniform registers need to be reserved.
-        mResourcesHLSL->reserveUniformRegisters(3);
+        if (mShaderType == GL_VERTEX_SHADER)
+        {
+            mResourcesHLSL->reserveUniformRegisters(3);
+        }
+        else
+        {
+            mResourcesHLSL->reserveUniformRegisters(4);
+        }
     }
 
     // Reserve registers for the default uniform block and driver constants
@@ -830,6 +841,7 @@ void OutputHLSL::header(TInfoSinkBase &out,
             if (mUsesFragCoord)
             {
                 out << "    float4 dx_ViewCoords : packoffset(c1);\n";
+                out << "    float2 dx_FragCoordOffset : packoffset(c3);\n";
             }
 
             if (mUsesFragCoord || mUsesFrontFacing)
@@ -841,19 +853,19 @@ void OutputHLSL::header(TInfoSinkBase &out,
             {
                 // dx_ViewScale is only used in the fragment shader to correct
                 // the value for glFragCoord if necessary
-                out << "    float2 dx_ViewScale : packoffset(c3);\n";
+                out << "    float2 dx_ViewScale : packoffset(c3.z);\n";
             }
 
             if (mHasMultiviewExtensionEnabled)
             {
                 // We have to add a value which we can use to keep track of which multi-view code
                 // path is to be selected in the GS.
-                out << "    float multiviewSelectViewportIndex : packoffset(c3.z);\n";
+                out << "    float multiviewSelectViewportIndex : packoffset(c4.x);\n";
             }
 
             if (mOutputType == SH_HLSL_4_1_OUTPUT)
             {
-                unsigned int registerIndex = 4;
+                unsigned int registerIndex = 5;
                 mResourcesHLSL->samplerMetadataUniforms(out, registerIndex);
                 // Sampler metadata struct must be two 4-vec, 32 bytes.
                 registerIndex += mResourcesHLSL->getSamplerCount() * 2;
@@ -882,6 +894,7 @@ void OutputHLSL::header(TInfoSinkBase &out,
             if (mUsesFragCoord || mUsesFrontFacing)
             {
                 out << "uniform float3 dx_DepthFront : register(c2);\n";
+                out << "uniform float2 dx_FragCoordOffset : register(c3);\n";
             }
         }
 
@@ -892,6 +905,20 @@ void OutputHLSL::header(TInfoSinkBase &out,
             out << "static gl_DepthRangeParameters gl_DepthRange = {dx_DepthRange.x, "
                    "dx_DepthRange.y, dx_DepthRange.z};\n"
                    "\n";
+        }
+
+        if (mUsesClipDistance)
+        {
+            out << (mUsesCullDistance
+                        ? "static float gl_ClipDistance[4] = {0, 0, 0, 0};\n"
+                        : "static float gl_ClipDistance[8] = {0, 0, 0, 0, 0, 0, 0, 0};\n");
+        }
+
+        if (mUsesCullDistance)
+        {
+            out << (mUsesClipDistance
+                        ? "static float gl_CullDistance[4] = {0, 0, 0, 0};\n"
+                        : "static float gl_CullDistance[8] = {0, 0, 0, 0, 0, 0, 0, 0};\n");
         }
 
         if (usingMRTExtension && mNumRenderTargets > 1)
@@ -920,6 +947,20 @@ void OutputHLSL::header(TInfoSinkBase &out,
         writeReferencedAttributes(out);
         out << "\n"
                "static float4 gl_Position = float4(0, 0, 0, 0);\n";
+
+        if (mUsesClipDistance)
+        {
+            out << (mUsesCullDistance
+                        ? "static float gl_ClipDistance[4] = {0, 0, 0, 0};\n"
+                        : "static float gl_ClipDistance[8] = {0, 0, 0, 0, 0, 0, 0, 0};\n");
+        }
+
+        if (mUsesCullDistance)
+        {
+            out << (mUsesClipDistance
+                        ? "static float gl_CullDistance[4] = {0, 0, 0, 0};\n"
+                        : "static float gl_CullDistance[8] = {0, 0, 0, 0, 0, 0, 0, 0};\n");
+        }
 
         if (mUsesPointSize)
         {
@@ -988,6 +1029,11 @@ void OutputHLSL::header(TInfoSinkBase &out,
             if (mUsesVertexID)
             {
                 out << "    uint dx_VertexID : packoffset(c4.y);\n";
+            }
+
+            if (mUsesClipDistance)
+            {
+                out << "    uint clipDistancesEnabled : packoffset(c4.z);\n";
             }
 
             out << "};\n"
@@ -1095,6 +1141,16 @@ void OutputHLSL::header(TInfoSinkBase &out,
     mTextureFunctionHLSL->textureFunctionHeader(out, mOutputType, getDimensionsIgnoresBaseLevel);
     mImageFunctionHLSL->imageFunctionHeader(out);
     mAtomicCounterFunctionHLSL->atomicCounterFunctionHeader(out);
+
+    if (mUsesClipDistance)
+    {
+        out << "#define GL_USES_CLIP_DISTANCE\n";
+    }
+
+    if (mUsesCullDistance)
+    {
+        out << "#define GL_USES_CULL_DISTANCE\n";
+    }
 
     if (mUsesFragCoord)
     {
@@ -1252,6 +1308,16 @@ void OutputHLSL::visitSymbol(TIntermSymbol *node)
         {
             mReferencedOutputVariables[uniqueId.get()] = &variable;
             out << "out_" << name;
+        }
+        else if (qualifier == EvqClipDistance)
+        {
+            mUsesClipDistance = true;
+            out << name;
+        }
+        else if (qualifier == EvqCullDistance)
+        {
+            mUsesCullDistance = true;
+            out << name;
         }
         else if (qualifier == EvqFragColor)
         {
@@ -2200,8 +2266,12 @@ bool OutputHLSL::visitFunctionDefinition(Visit visit, TIntermFunctionDefinition 
                     << "VS_OUTPUT main(VS_INPUT input)";
                 break;
             case GL_FRAGMENT_SHADER:
-                out << "@@ PIXEL OUTPUT @@\n\n"
-                    << "PS_OUTPUT main(@@ PIXEL MAIN PARAMETERS @@)";
+                out << "@@ PIXEL OUTPUT @@\n\n";
+                if (mIsEarlyFragmentTestsSpecified)
+                {
+                    out << "[earlydepthstencil]\n";
+                }
+                out << "PS_OUTPUT main(@@ PIXEL MAIN PARAMETERS @@)";
                 break;
             case GL_COMPUTE_SHADER:
                 out << "[numthreads(" << mWorkGroupSize[0] << ", " << mWorkGroupSize[1] << ", "

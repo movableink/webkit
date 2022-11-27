@@ -57,7 +57,7 @@ public:
 
     RemoteGPUProxy& root() { return *this; }
 
-    IPC::StreamClientConnection& streamClientConnection() { return m_streamConnection; }
+    IPC::StreamClientConnection& streamClientConnection() { return *m_streamConnection; }
 
 private:
     friend class WebGPU::DowncastConvertToBackingContext;
@@ -89,9 +89,9 @@ private:
         return root().streamClientConnection().send(WTFMove(message), backing(), defaultSendTimeout);
     }
     template<typename T>
-    WARN_UNUSED_RETURN IPC::Connection::SendSyncResult sendSync(T&& message, typename T::Reply&& reply)
+    WARN_UNUSED_RETURN IPC::Connection::SendSyncResult<T> sendSync(T&& message)
     {
-        return root().streamClientConnection().sendSync(WTFMove(message), WTFMove(reply), backing(), defaultSendTimeout);
+        return root().streamClientConnection().sendSync(WTFMove(message), backing(), defaultSendTimeout);
     }
     IPC::Connection& connection() const { return m_gpuProcessConnection->connection(); }
 
@@ -106,7 +106,7 @@ private:
     GPUProcessConnection* m_gpuProcessConnection;
     bool m_didInitialize { false };
     bool m_lost { false };
-    IPC::StreamClientConnection m_streamConnection;
+    std::unique_ptr<IPC::StreamClientConnection> m_streamConnection;
 };
 
 } // namespace WebKit

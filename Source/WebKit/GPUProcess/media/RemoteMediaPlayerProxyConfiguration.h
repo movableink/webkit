@@ -53,11 +53,13 @@ struct RemoteMediaPlayerProxyConfiguration {
     Vector<WebCore::PlatformTextTrackData> outOfBandTrackData;
 #endif
     WebCore::SecurityOriginData documentSecurityOrigin;
+    WebCore::IntSize presentationSize { };
     uint64_t logIdentifier { 0 };
     bool shouldUsePersistentCache { false };
     bool isVideo { false };
     bool renderingCanBeAccelerated { false };
     bool prefersSandboxedParsing { false };
+    bool shouldDisableHDR { false };
 
     template<class Encoder>
     void encode(Encoder& encoder) const
@@ -78,11 +80,13 @@ struct RemoteMediaPlayerProxyConfiguration {
         encoder << outOfBandTrackData;
 #endif
         encoder << documentSecurityOrigin;
+        encoder << presentationSize;
         encoder << logIdentifier;
         encoder << shouldUsePersistentCache;
         encoder << isVideo;
         encoder << renderingCanBeAccelerated;
         encoder << prefersSandboxedParsing;
+        encoder << shouldDisableHDR;
     }
 
     template <class Decoder>
@@ -104,11 +108,13 @@ struct RemoteMediaPlayerProxyConfiguration {
             && decoder.decode(configuration.outOfBandTrackData)
 #endif
             && decoder.decode(configuration.documentSecurityOrigin)
+            && decoder.decode(configuration.presentationSize)
             && decoder.decode(configuration.logIdentifier)
             && decoder.decode(configuration.shouldUsePersistentCache)
             && decoder.decode(configuration.isVideo)
             && decoder.decode(configuration.renderingCanBeAccelerated)
-            && decoder.decode(configuration.prefersSandboxedParsing);
+            && decoder.decode(configuration.prefersSandboxedParsing)
+            && decoder.decode(configuration.shouldDisableHDR);
     }
 };
 

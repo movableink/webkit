@@ -160,6 +160,8 @@ struct InternalFormat
                                          GLint imageHeight,
                                          GLuint *resultOut) const;
 
+    [[nodiscard]] bool computePalettedImageRowPitch(GLsizei width, GLuint *resultOut) const;
+
     [[nodiscard]] bool computeCompressedImageSize(const Extents &size, GLuint *resultOut) const;
 
     [[nodiscard]] std::pair<GLuint, GLuint> getCompressedImageMinBlocks() const;
@@ -231,6 +233,9 @@ struct InternalFormat
     GLuint compressedBlockWidth;
     GLuint compressedBlockHeight;
     GLuint compressedBlockDepth;
+
+    bool paletted;
+    GLuint paletteBits;
 
     GLenum format;
     GLenum type;
@@ -304,6 +309,10 @@ ANGLE_INLINE int GetNativeVisualID(const InternalFormat &internalFormat)
     nativeVisualId =
         angle::android::GLInternalFormatToNativePixelFormat(internalFormat.internalFormat);
 #endif
+#if defined(ANGLE_PLATFORM_LINUX) && defined(ANGLE_USES_GBM)
+    nativeVisualId = angle::GLInternalFormatToGbmFourCCFormat(internalFormat.internalFormat);
+#endif
+
     return nativeVisualId;
 }
 

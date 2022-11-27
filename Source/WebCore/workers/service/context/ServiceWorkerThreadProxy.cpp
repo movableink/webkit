@@ -83,7 +83,7 @@ ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(UniqueRef<Page>&& page, Servi
     allServiceWorkerThreadProxies().add(this);
 
 #if ENABLE(REMOTE_INSPECTOR)
-    m_remoteDebuggable->setRemoteDebuggingAllowed(true);
+    m_remoteDebuggable->setInspectable(true);
     m_remoteDebuggable->init();
 #endif
 }
@@ -116,6 +116,11 @@ bool ServiceWorkerThreadProxy::postTaskForModeToWorkerOrWorkletGlobalScope(Scrip
 
     m_serviceWorkerThread->runLoop().postTaskForMode(WTFMove(task), mode);
     return true;
+}
+
+ScriptExecutionContextIdentifier ServiceWorkerThreadProxy::loaderContextIdentifier() const
+{
+    return m_document->identifier();
 }
 
 void ServiceWorkerThreadProxy::postTaskToLoader(ScriptExecutionContext::Task&& task)

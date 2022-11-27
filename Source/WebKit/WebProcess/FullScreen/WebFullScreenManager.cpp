@@ -52,6 +52,9 @@
 #endif
 
 namespace WebKit {
+using namespace WebCore;
+
+using WebCore::FloatSize;
 
 static WebCore::IntRect screenRectOfContents(WebCore::Element* element)
 {
@@ -60,7 +63,7 @@ static WebCore::IntRect screenRectOfContents(WebCore::Element* element)
         return { };
 
     if (element->renderer() && element->renderer()->hasLayer() && element->renderer()->enclosingLayer()->isComposited()) {
-        WebCore::FloatQuad contentsBox = static_cast<WebCore::FloatRect>(element->renderer()->enclosingLayer()->backing()->contentsBox());
+        WebCore::FloatQuad contentsBox = static_cast<WebCore::FloatRect>(element->renderer()->enclosingLayer()->backing()->compositedBounds());
         contentsBox = element->renderer()->localToAbsoluteQuad(contentsBox);
         return element->renderer()->view().frameView().contentsToScreen(contentsBox.enclosingBoundingBox());
     }
@@ -84,6 +87,7 @@ WebFullScreenManager::WebFullScreenManager(WebPage* page)
     
 WebFullScreenManager::~WebFullScreenManager()
 {
+    clearElement();
 }
 
 WebCore::Element* WebFullScreenManager::element() 
@@ -137,26 +141,36 @@ bool WebFullScreenManager::supportsFullScreen(bool withKeyboard)
     return m_page->injectedBundleFullScreenClient().supportsFullScreen(m_page.get(), withKeyboard);
 }
 
-void WebFullScreenManager::setElement(WebCore::Element& element)
+static auto& eventsToObserve()
 {
-    if (m_element == &element)
-        return;
-
     static NeverDestroyed eventsToObserve = std::array {
         WebCore::eventNames().playEvent,
         WebCore::eventNames().pauseEvent,
         WebCore::eventNames().loadedmetadataEvent,
     };
+    return eventsToObserve.get();
+}
 
-    if (m_element) {
-        for (auto& eventName : eventsToObserve.get())
-            m_element->removeEventListener(eventName, *this, { true });
-    }
+void WebFullScreenManager::setElement(WebCore::Element& element)
+{
+    if (m_element == &element)
+        return;
+
+    clearElement();
 
     m_element = &element;
 
-    for (auto& eventName : eventsToObserve.get())
+    for (auto& eventName : eventsToObserve())
         m_element->addEventListener(eventName, *this, { true });
+}
+
+void WebFullScreenManager::clearElement()
+{
+    if (!m_element)
+        return;
+    for (auto& eventName : eventsToObserve())
+        m_element->removeEventListener(eventName, *this, { true });
+    m_element = nullptr;
 }
 
 void WebFullScreenManager::enterFullScreenForElement(WebCore::Element* element)
@@ -169,13 +183,23 @@ void WebFullScreenManager::enterFullScreenForElement(WebCore::Element* element)
 
     setElement(*element);
 
+    bool isVideoElementWithControls = false;
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+    if (auto* videoElement = dynamicDowncast<HTMLVideoElement>(element))
+        isVideoElementWithControls = videoElement->controls();
+
     if (auto* currentPlaybackControlsElement = m_page->playbackSessionManager().currentPlaybackControlsElement())
         currentPlaybackControlsElement->prepareForVideoFullscreenStandby();
 #endif
 
     m_initialFrame = screenRectOfContents(m_element.get());
-    m_page->injectedBundleFullScreenClient().enterFullScreenForElement(m_page.get(), element, m_element->document().quirks().blocksReturnToFullscreenFromPictureInPictureQuirk());
+#if ENABLE(VIDEO)
+    updateMainVideoElement();
+    auto videoDimensions = m_mainVideoElement ? FloatSize(m_mainVideoElement->videoWidth(), m_mainVideoElement->videoHeight()) : FloatSize(m_initialFrame.width(), m_initialFrame.height());
+#else
+    FloatSize videoDimensions;
+#endif
+    m_page->injectedBundleFullScreenClient().enterFullScreenForElement(m_page.get(), element, m_element->document().quirks().blocksReturnToFullscreenFromPictureInPictureQuirk(), isVideoElementWithControls, videoDimensions);
 }
 
 void WebFullScreenManager::exitFullScreenForElement(WebCore::Element* element)
@@ -295,6 +319,7 @@ void WebFullScreenManager::didExitFullScreen()
     setFullscreenInsets(WebCore::FloatBoxExtent());
     setFullscreenAutoHideDuration(0_s);
     m_element->document().fullscreenManager().didExitFullscreen();
+    clearElement();
 }
 
 void WebFullScreenManager::setAnimatingFullScreen(bool animating)
@@ -312,7 +337,7 @@ void WebFullScreenManager::requestEnterFullScreen()
         return;
 
     WebCore::UserGestureIndicator gestureIndicator(WebCore::ProcessingUserGesture);
-    m_element->document().fullscreenManager().requestFullscreenForElement(*m_element, WebCore::FullscreenManager::ExemptIFrameAllowFullscreenRequirement);
+    m_element->document().fullscreenManager().requestFullscreenForElement(*m_element, nullptr, WebCore::FullscreenManager::ExemptIFrameAllowFullscreenRequirement);
 }
 
 void WebFullScreenManager::requestExitFullScreen()
@@ -341,6 +366,7 @@ void WebFullScreenManager::close()
 #if ENABLE(VIDEO)
     setMainVideoElement(nullptr);
 #endif
+    clearElement();
     m_closing = false;
 }
 

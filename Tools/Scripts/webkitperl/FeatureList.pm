@@ -87,6 +87,7 @@ my (
     $downloadAttributeSupport,
     $dragSupportSupport,
     $encryptedMediaSupport,
+    $fatalWarnings,
     $filtersLevel2Support,
     $ftlJITSupport,
     $ftpDirSupport,
@@ -103,7 +104,6 @@ my (
     $inputTypeWeekSupport,
     $inspectorAlternateDispatchersSupport,
     $inspectorTelemetrySupport,
-    $intelligentTrackingPrevention,
     $iosGestureEventsSupport,
     $iosTouchEventsSupport,
     $jitSupport,
@@ -163,6 +163,7 @@ my (
     $threeDTransformsSupport,
     $touchEventsSupport,
     $touchSliderSupport,
+    $trackingPrevention,
     $unifiedBuildsSupport,
     $userMessageHandlersSupport,
     $userselectAllSupport,
@@ -176,6 +177,7 @@ my (
     $webAssemblyB3JITSupport,
     $webAudioSupport,
     $webAuthNSupport,
+    $webCodecsSupport,
     $webCryptoSupport,
     $webRTCSupport,
     $webdriverKeyboardInteractionsSupport,
@@ -193,6 +195,9 @@ my (
 sub isQtGstreamer { return isQt() && !isAnyWindows() && !isDarwin() }
 
 my @features = (
+    { option => "fatal-warnings", desc => "Toggle warnings as errors (CMake only)",
+      define => "DEVELOPER_MODE_FATAL_WARNINGS", value => \$fatalWarnings },
+
     { option => "3d-rendering", desc => "Toggle 3D rendering support",
       define => "ENABLE_3D_TRANSFORMS", value => \$threeDTransformsSupport },
 
@@ -336,9 +341,6 @@ my @features = (
 
     { option => "inspector-telemetry", desc => "Toggle inspector telemetry support",
       define => "ENABLE_INSPECTOR_TELEMETRY", value => \$inspectorTelemetrySupport },
-
-    { option => "intelligent-tracking-prevention", desc => "Toggle intelligent tracking prevention support",
-      define => "ENABLE_INTELLIGENT_TRACKING_PREVENTION", value => \$intelligentTrackingPrevention },
 
     { option => "ios-gesture-events", desc => "Toggle iOS gesture events support",
       define => "ENABLE_IOS_GESTURE_EVENTS", value => \$iosGestureEventsSupport },
@@ -496,6 +498,9 @@ my @features = (
     { option => "touch-slider", desc => "Toggle Touch Slider support",
       define => "ENABLE_TOUCH_SLIDER", value => \$touchSliderSupport },
 
+    { option => "tracking-prevention", desc => "Toggle tracking prevention support",
+      define => "ENABLE_TRACKING_PREVENTION", value => \$trackingPrevention },
+
     { option => "unified-builds", desc => "Toggle unified builds",
       define => "ENABLE_UNIFIED_BUILDS", value => \$unifiedBuildsSupport },
 
@@ -555,6 +560,9 @@ my @features = (
 
     { option => "web-crypto", desc => "Toggle WebCrypto Subtle-Crypto support",
       define => "ENABLE_WEB_CRYPTO", value => \$webCryptoSupport },
+
+    { option => "web-codecs", desc => "Toggle WebCodecs support",
+      define => "ENABLE_WEB_CODECS", value => \$webCodecsSupport },
 
     { option => "web-rtc", desc => "Toggle WebRTC support",
       define => "ENABLE_WEB_RTC", value => \$webRTCSupport },

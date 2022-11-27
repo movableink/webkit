@@ -26,11 +26,14 @@
 #include "config.h"
 #include "ElementInternals.h"
 
+#include "AXObjectCache.h"
 #include "ElementRareData.h"
 #include "ShadowRoot.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+using namespace HTMLNames;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(ElementInternals);
 
@@ -43,6 +46,74 @@ ShadowRoot* ElementInternals::shadowRoot() const
     if (!shadowRoot || !shadowRoot->isAvailableToElementInternals())
         return nullptr;
     return shadowRoot;
+}
+
+static const AtomString& computeValueForAttribute(Element& element, const QualifiedName& name)
+{
+    auto& value = element.attributeWithoutSynchronization(name);
+    if (auto* defaultARIA = element.customElementDefaultARIAIfExists(); value.isNull() && defaultARIA)
+        return defaultARIA->valueForAttribute(element, name);
+    return value;
+}
+
+void ElementInternals::setAttributeWithoutSynchronization(const QualifiedName& name, const AtomString& value)
+{
+    RefPtr element = m_element.get();
+    auto oldValue = computeValueForAttribute(*element, name);
+
+    element->customElementDefaultARIA().setValueForAttribute(name, value);
+
+    if (AXObjectCache* cache = element->document().existingAXObjectCache())
+        cache->deferAttributeChangeIfNeeded(element.get(), name, oldValue, computeValueForAttribute(*element, name));
+}
+
+const AtomString& ElementInternals::attributeWithoutSynchronization(const QualifiedName& name) const
+{
+    RefPtr element = m_element.get();
+    auto* defaultARIA = element->customElementDefaultARIAIfExists();
+    if (!defaultARIA)
+        return nullAtom();
+    return defaultARIA->valueForAttribute(*element, name);
+}
+
+Element* ElementInternals::getElementAttribute(const QualifiedName& name) const
+{
+    RefPtr element = m_element.get();
+    auto* defaultARIA = m_element->customElementDefaultARIAIfExists();
+    if (!defaultARIA)
+        return nullptr;
+    return defaultARIA->elementForAttribute(*element, name);
+}
+
+void ElementInternals::setElementAttribute(const QualifiedName& name, Element* value)
+{
+    RefPtr element = m_element.get();
+    auto oldValue = computeValueForAttribute(*element, name);
+
+    element->customElementDefaultARIA().setElementForAttribute(name, value);
+
+    if (AXObjectCache* cache = element->document().existingAXObjectCache())
+        cache->deferAttributeChangeIfNeeded(element.get(), name, oldValue, computeValueForAttribute(*element, name));
+}
+
+std::optional<Vector<RefPtr<Element>>> ElementInternals::getElementsArrayAttribute(const QualifiedName& name) const
+{
+    RefPtr element = m_element.get();
+    auto* defaultARIA = m_element->customElementDefaultARIAIfExists();
+    if (!defaultARIA)
+        return std::nullopt;
+    return defaultARIA->elementsForAttribute(*element, name);
+}
+
+void ElementInternals::setElementsArrayAttribute(const QualifiedName& name, std::optional<Vector<RefPtr<Element>>>&& value)
+{
+    RefPtr element = m_element.get();
+    auto oldValue = computeValueForAttribute(*element, name);
+
+    element->customElementDefaultARIA().setElementsForAttribute(name, WTFMove(value));
+
+    if (AXObjectCache* cache = element->document().existingAXObjectCache())
+        cache->deferAttributeChangeIfNeeded(element.get(), name, oldValue, computeValueForAttribute(*element, name));
 }
 
 } // namespace WebCore

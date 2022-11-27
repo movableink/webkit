@@ -44,9 +44,9 @@
 #include "IntRect.h"
 #include "JSDOMWindowBase.h"
 #include "LegacyRenderSVGRoot.h"
-#include "LibWebRTCProvider.h"
 #include "Page.h"
 #include "PageConfiguration.h"
+#include "RenderSVGRoot.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
@@ -125,39 +125,54 @@ void SVGImage::setContainerSize(const FloatSize& size)
         return;
 
     auto rootElement = this->rootElement();
-    if (!rootElement)
-        return;
-    auto* renderer = downcast<LegacyRenderSVGRoot>(rootElement->renderer());
-    if (!renderer)
+    if (!rootElement || !rootElement->renderer() || !rootElement->renderer()->isSVGRootOrLegacySVGRoot())
         return;
 
     RefPtr view = frameView();
-    view->resize(this->containerSize());
+    view->resize(containerSize());
 
-    renderer->setContainerSize(IntSize(size));
+    if (auto* renderer = dynamicDowncast<LegacyRenderSVGRoot>(rootElement->renderer())) {
+        renderer->setContainerSize(IntSize(size));
+        return;
+    }
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (auto* renderer = dynamicDowncast<RenderSVGRoot>(rootElement->renderer())) {
+        renderer->setContainerSize(IntSize(size));
+        return;
+    }
+#endif
 }
 
 IntSize SVGImage::containerSize() const
 {
     auto rootElement = this->rootElement();
-    if (!rootElement)
-        return IntSize();
-
-    auto* renderer = downcast<LegacyRenderSVGRoot>(rootElement->renderer());
-    if (!renderer)
-        return IntSize();
+    if (!rootElement || !rootElement->renderer() || !rootElement->renderer()->isSVGRootOrLegacySVGRoot())
+        return { };
 
     // If a container size is available it has precedence.
-    IntSize containerSize = renderer->containerSize();
+    auto computeContainerSize = [&]() -> IntSize {
+        if (auto* renderer = dynamicDowncast<LegacyRenderSVGRoot>(rootElement->renderer()))
+            return renderer->containerSize();
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (auto* renderer = dynamicDowncast<RenderSVGRoot>(rootElement->renderer()))
+            return renderer->containerSize();
+#endif
+
+        return { };
+    };
+
+    auto containerSize = computeContainerSize();
     if (!containerSize.isEmpty())
         return containerSize;
 
     // Assure that a container size is always given for a non-identity zoom level.
-    ASSERT(renderer->style().effectiveZoom() == 1);
+    ASSERT(rootElement->renderer()->style().effectiveZoom() == 1);
 
     FloatSize currentSize;
     if (rootElement->hasIntrinsicWidth() && rootElement->hasIntrinsicHeight())
-        currentSize = rootElement->currentViewportSize();
+        currentSize = rootElement->currentViewportSizeExcludingZoom();
     else
         currentSize = rootElement->currentViewBoxRect().size();
 
@@ -385,6 +400,14 @@ void SVGImage::startAnimation()
     rootElement->setCurrentTime(0);
 }
 
+void SVGImage::resumeAnimation()
+{
+    auto rootElement = this->rootElement();
+    if (!rootElement || !rootElement->animationsPaused())
+        return;
+    rootElement->unpauseAnimations();
+}
+
 void SVGImage::stopAnimation()
 {
     m_startAnimationTimer.stop();
@@ -447,6 +470,11 @@ EncodedDataStatus SVGImage::dataChanged(bool allDataReceived)
         m_page->settings().setPluginsEnabled(false);
         m_page->settings().setAcceleratedCompositingEnabled(false);
         m_page->settings().setShouldAllowUserInstalledFonts(false);
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (auto* observer = imageObserver())
+            m_page->settings().setLayerBasedSVGEngineEnabled(observer->layerBasedSVGEngineEnabled());
+#endif
 
         Frame& frame = m_page->mainFrame();
         frame.setView(FrameView::create(frame));

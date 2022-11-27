@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2004-2005 Allan Sandfeld Jensen (kde@carewolf.com)
  * Copyright (C) 2006, 2007 Nicholas Shanks (webkit@nickshanks.com)
- * Copyright (C) 2005-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007, 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
@@ -34,8 +34,10 @@
 #include "DOMTokenList.h"
 #include "DOMWindow.h"
 #include "ElementInlines.h"
+#include "ElementName.h"
 #include "EventNames.h"
 #include "FrameView.h"
+#include "HTMLBodyElement.h"
 #include "HTMLDialogElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLInputElement.h"
@@ -52,6 +54,7 @@
 #include "RenderBox.h"
 #include "RenderStyle.h"
 #include "RenderTheme.h"
+#include "RenderView.h"
 #include "SVGElement.h"
 #include "SVGGraphicsElement.h"
 #include "SVGNames.h"
@@ -59,6 +62,7 @@
 #include "SVGURIReference.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
+#include "StyleUpdate.h"
 #include "Text.h"
 #include "WebAnimationTypes.h"
 #include <wtf/RobinHoodHashSet.h>
@@ -108,7 +112,7 @@ static void addIntrinsicMargins(RenderStyle& style)
 }
 #endif
 
-static DisplayType equivalentBlockDisplay(const RenderStyle& style, const Document& document)
+static DisplayType equivalentBlockDisplay(const RenderStyle& style)
 {
     switch (auto display = style.display()) {
     case DisplayType::Block:
@@ -117,12 +121,7 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style, const Docume
     case DisplayType::Flex:
     case DisplayType::Grid:
     case DisplayType::FlowRoot:
-        return display;
-
     case DisplayType::ListItem:
-        // It is a WinIE bug that floated list items lose their bullets, so we'll emulate the quirk, but only in quirks mode.
-        if (document.inQuirksMode() && style.isFloating())
-            return DisplayType::Block;
         return display;
     case DisplayType::InlineTable:
         return DisplayType::Table;
@@ -284,30 +283,6 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
     if (style.display() != DisplayType::None && style.display() != DisplayType::Contents) {
         if (m_element) {
-            // If we have a <td> that specifies a float property, in quirks mode we just drop the float
-            // property.
-            // Sites also commonly use display:inline/block on <td>s and <table>s. In quirks mode we force
-            // these tags to retain their display types.
-            if (m_document.inQuirksMode()) {
-                if (m_element->hasTagName(tdTag)) {
-                    style.setEffectiveDisplay(DisplayType::TableCell);
-                    style.setFloating(Float::None);
-                } else if (is<HTMLTableElement>(*m_element))
-                    style.setEffectiveDisplay(style.isDisplayInlineType() ? DisplayType::InlineTable : DisplayType::Table);
-            }
-
-            if (m_element->hasTagName(tdTag) || m_element->hasTagName(thTag)) {
-                if (style.whiteSpace() == WhiteSpace::KHTMLNoWrap) {
-                    // Figure out if we are really nowrapping or if we should just
-                    // use normal instead. If the width of the cell is fixed, then
-                    // we don't actually use WhiteSpace::NoWrap.
-                    if (style.width().isFixed())
-                        style.setWhiteSpace(WhiteSpace::Normal);
-                    else
-                        style.setWhiteSpace(WhiteSpace::NoWrap);
-                }
-            }
-
             // Tables never support the -webkit-* values for text-align and will reset back to the default.
             if (is<HTMLTableElement>(*m_element) && (style.textAlign() == TextAlignMode::WebKitLeft || style.textAlign() == TextAlignMode::WebKitCenter || style.textAlign() == TextAlignMode::WebKitRight))
                 style.setTextAlign(TextAlignMode::Start);
@@ -326,7 +301,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             }
 
             if (m_element->hasTagName(legendTag))
-                style.setEffectiveDisplay(DisplayType::Block);
+                style.setEffectiveDisplay(equivalentBlockDisplay(style));
         }
 
         // Top layer elements are always position: absolute; unless the position is set to fixed.
@@ -336,7 +311,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
         // Absolute/fixed positioned elements, floating elements and the document element need block-like outside display.
         if (style.hasOutOfFlowPosition() || style.isFloating() || (m_element && m_document.documentElement() == m_element))
-            style.setEffectiveDisplay(equivalentBlockDisplay(style, m_document));
+            style.setEffectiveDisplay(equivalentBlockDisplay(style));
 
         // FIXME: Don't support this mutation for pseudo styles like first-letter or first-line, since it's not completely
         // clear how that should work.
@@ -368,7 +343,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         // "A parent with a grid or flex display value blockifies the box’s display type."
         if (m_parentBoxStyle.isDisplayFlexibleOrGridBox()) {
             style.setFloating(Float::None);
-            style.setEffectiveDisplay(equivalentBlockDisplay(style, m_document));
+            style.setEffectiveDisplay(equivalentBlockDisplay(style));
         }
     }
 
@@ -619,38 +594,15 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         }
     }
 
+    if (style.contentVisibility() == ContentVisibility::Hidden)
+        style.setEffectiveSkipsContent(true);
+
     adjustForSiteSpecificQuirks(style);
 }
 
 static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
 {
-    // https://drafts.csswg.org/css-display-3/#unbox-html
-    static NeverDestroyed<MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>> tagNames = [] {
-        static const HTMLQualifiedName* const tagList[] = {
-            &brTag.get(),
-            &wbrTag.get(),
-            &meterTag.get(),
-            &appletTag.get(),
-            &progressTag.get(),
-            &canvasTag.get(),
-            &embedTag.get(),
-            &objectTag.get(),
-            &audioTag.get(),
-            &iframeTag.get(),
-            &imgTag.get(),
-            &videoTag.get(),
-            &frameTag.get(),
-            &framesetTag.get(),
-            &inputTag.get(),
-            &textareaTag.get(),
-            &selectTag.get(),
-        };
-        MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> set;
-        set.reserveInitialCapacity(sizeof(tagList));
-        for (auto& name : tagList)
-            set.add(name->localName());
-        return set;
-    }();
+    using namespace ElementNames;
 
     // https://drafts.csswg.org/css-display-3/#unbox-svg
     // FIXME: <g>, <use> and <tspan> have special (?) behavior for display:contents in the current draft spec.
@@ -663,7 +615,32 @@ static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
 #endif // ENABLE(MATHML)
     if (!is<HTMLElement>(element))
         return false;
-    return tagNames.get().contains(element.localName());
+
+    // https://drafts.csswg.org/css-display-3/#unbox-html
+    switch (element.tagQName().elementName()) {
+    case HTML::br:
+    case HTML::wbr:
+    case HTML::meter:
+    case HTML::applet:
+    case HTML::progress:
+    case HTML::canvas:
+    case HTML::embed:
+    case HTML::object:
+    case HTML::audio:
+    case HTML::iframe:
+    case HTML::img:
+    case HTML::video:
+    case HTML::frame:
+    case HTML::frameset:
+    case HTML::input:
+    case HTML::textarea:
+    case HTML::select:
+        return true;
+    default:
+        break;
+    }
+
+    return false;
 }
 
 void Adjuster::adjustDisplayContentsStyle(RenderStyle& style) const
@@ -709,7 +686,8 @@ void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgEl
         ASSERT(!style.clipPath());
         ASSERT(!style.hasFilter());
 
-        if (svgElement.hasTagName(SVGNames::foreignObjectTag)
+        if (svgElement.isOutermostSVGSVGElement()
+            || svgElement.hasTagName(SVGNames::foreignObjectTag)
             || svgElement.hasTagName(SVGNames::imageTag)
             || svgElement.hasTagName(SVGNames::markerTag)
             || svgElement.hasTagName(SVGNames::maskTag)
@@ -793,6 +771,78 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
         }
     }
 #endif
+}
+
+void Adjuster::propagateToDocumentElementAndInitialContainingBlock(Update& update, const Document& document)
+{
+    auto* body = document.body();
+    auto* bodyStyle = body ? update.elementStyle(*body) : nullptr;
+    auto* documentElementStyle = update.elementStyle(*document.documentElement());
+
+    if (!documentElementStyle)
+        return;
+
+    // https://drafts.csswg.org/css-contain-2/#contain-property
+    // "Additionally, when any containments are active on either the HTML html or body elements, propagation of
+    // properties from the body element to the initial containing block, the viewport, or the canvas background, is disabled."
+    auto shouldPropagateFromBody = [&] {
+        if (bodyStyle && !bodyStyle->effectiveContainment().isEmpty())
+            return false;
+        return documentElementStyle->effectiveContainment().isEmpty();
+    }();
+
+    auto writingMode = [&] {
+        // FIXME: The spec says body should win.
+        if (documentElementStyle->hasExplicitlySetWritingMode())
+            return documentElementStyle->writingMode();
+        if (shouldPropagateFromBody && bodyStyle && bodyStyle->hasExplicitlySetWritingMode())
+            return bodyStyle->writingMode();
+        return RenderStyle::initialWritingMode();
+    }();
+
+    auto direction = [&] {
+        if (documentElementStyle->hasExplicitlySetDirection())
+            return documentElementStyle->direction();
+        if (shouldPropagateFromBody && bodyStyle && bodyStyle->hasExplicitlySetDirection())
+            return bodyStyle->direction();
+        return RenderStyle::initialDirection();
+    }();
+
+    // https://drafts.csswg.org/css-writing-modes-3/#icb
+    auto& viewStyle = document.renderView()->style();
+    if (writingMode != viewStyle.writingMode() || direction != viewStyle.direction()) {
+        auto newRootStyle = RenderStyle::clonePtr(viewStyle);
+        newRootStyle->setWritingMode(writingMode);
+        newRootStyle->setDirection(direction);
+        newRootStyle->setColumnStylesFromPaginationMode(document.view()->pagination().mode);
+        update.addInitialContainingBlockUpdate(WTFMove(newRootStyle));
+    }
+
+    // https://drafts.csswg.org/css-writing-modes-3/#principal-flow
+    if (writingMode != documentElementStyle->writingMode() || direction != documentElementStyle->direction()) {
+        auto* documentElementUpdate = update.elementUpdate(*document.documentElement());
+        if (!documentElementUpdate) {
+            update.addElement(*document.documentElement(), nullptr, { RenderStyle::clonePtr(*documentElementStyle) });
+            documentElementUpdate = update.elementUpdate(*document.documentElement());
+        }
+        documentElementUpdate->style->setWritingMode(writingMode);
+        documentElementUpdate->style->setDirection(direction);
+        documentElementUpdate->change = determineChange(*documentElementStyle, *documentElementUpdate->style);
+    }
+}
+
+std::unique_ptr<RenderStyle> Adjuster::restoreUsedDocumentElementStyleToComputed(const RenderStyle& style)
+{
+    if (style.writingMode() == RenderStyle::initialWritingMode() && style.direction() == RenderStyle::initialDirection())
+        return { };
+
+    auto adjusted = RenderStyle::clonePtr(style);
+    if (!style.hasExplicitlySetWritingMode())
+        adjusted->setWritingMode(RenderStyle::initialWritingMode());
+    if (!style.hasExplicitlySetDirection())
+        adjusted->setDirection(RenderStyle::initialDirection());
+
+    return adjusted;
 }
 
 #if ENABLE(TEXT_AUTOSIZING)

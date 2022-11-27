@@ -60,6 +60,7 @@ struct GlslangSpirvOptions
     bool isTransformFeedbackStage       = false;
     bool isTransformFeedbackEmulated    = false;
     bool isMultisampledFramebufferFetch = false;
+    bool validate                       = true;
 };
 
 struct UniformBindingInfo final
@@ -118,11 +119,6 @@ struct ShaderInterfaceVariableInfo
     // Used for transform feedback extension to decorate vertex shader output.
     ShaderInterfaceVariableXfbInfo xfb;
     std::vector<ShaderInterfaceVariableXfbInfo> fieldXfb;
-    // Indicates that the precision needs to be modified in the generated SPIR-V
-    // to support only transferring medium precision data when there's a precision
-    // mismatch between the shaders. For example, either the VS casts highp->mediump
-    // or the FS casts mediump->highp.
-    bool useRelaxedPrecision = false;
     // Indicate if varying is input or output, or both (in case of for example gl_Position in a
     // geometry shader)
     bool builtinIsInput  = false;

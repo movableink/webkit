@@ -66,20 +66,21 @@ ContextNULL::ContextNULL(const gl::State &state,
 {
     ASSERT(mAllocationTracker != nullptr);
 
-    mExtensions                                      = gl::Extensions();
-    mExtensions.copyCompressedTextureCHROMIUM        = true;
-    mExtensions.copyTextureCHROMIUM                  = true;
-    mExtensions.debugMarkerEXT                       = true;
-    mExtensions.fenceNV                              = true;
-    mExtensions.framebufferBlitANGLE                 = true;
-    mExtensions.framebufferBlitNV                    = true;
-    mExtensions.instancedArraysANGLE                 = true;
-    mExtensions.instancedArraysEXT                   = true;
-    mExtensions.mapBufferRangeEXT                    = true;
-    mExtensions.mapbufferOES                         = true;
-    mExtensions.pixelBufferObjectNV                  = true;
-    mExtensions.shaderPixelLocalStorageANGLE         = true;
-    mExtensions.shaderPixelLocalStorageCoherentANGLE = true;
+    mExtensions                               = gl::Extensions();
+    mExtensions.copyCompressedTextureCHROMIUM = true;
+    mExtensions.copyTextureCHROMIUM           = true;
+    mExtensions.debugMarkerEXT                = true;
+    mExtensions.drawBuffersIndexedOES         = true;
+    mExtensions.fenceNV                       = true;
+    mExtensions.framebufferBlitANGLE          = true;
+    mExtensions.framebufferBlitNV             = true;
+    mExtensions.instancedArraysANGLE          = true;
+    mExtensions.instancedArraysEXT            = true;
+    mExtensions.mapBufferRangeEXT             = true;
+    mExtensions.mapbufferOES                  = true;
+    mExtensions.pixelBufferObjectNV           = true;
+    mExtensions.shaderPixelLocalStorageANGLE  = state.getClientVersion() >= gl::Version(3, 0);
+    mExtensions.shaderPixelLocalStorageCoherentANGLE = mExtensions.shaderPixelLocalStorageANGLE;
     mExtensions.textureRectangleANGLE                = true;
     mExtensions.textureUsageANGLE                    = true;
     mExtensions.translatedShaderSourceANGLE          = true;
@@ -405,6 +406,13 @@ const gl::Extensions &ContextNULL::getNativeExtensions() const
 const gl::Limitations &ContextNULL::getNativeLimitations() const
 {
     return mLimitations;
+}
+
+ShPixelLocalStorageType ContextNULL::getNativePixelLocalStorageType() const
+{
+    return getNativeExtensions().shaderPixelLocalStorageANGLE
+               ? ShPixelLocalStorageType::FramebufferFetch
+               : ShPixelLocalStorageType::NotSupported;
 }
 
 CompilerImpl *ContextNULL::createCompiler()

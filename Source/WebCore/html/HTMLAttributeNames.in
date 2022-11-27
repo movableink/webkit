@@ -250,6 +250,8 @@ onfocus
 onfocusin
 onfocusout
 onformdata
+onfullscreenchange
+onfullscreenerror
 ongamepadconnected
 ongamepaddisconnected
 ongesturechange
@@ -269,6 +271,7 @@ onloadedmetadata
 onloadstart
 onlostpointercapture
 onmessage
+onmessageerror
 onmousedown
 onmouseenter
 onmouseleave
@@ -389,6 +392,8 @@ scrolldelay
 scrolling
 select
 selected
+shadowroot
+shadowrootdelegatesfocus
 shape
 size
 sizes

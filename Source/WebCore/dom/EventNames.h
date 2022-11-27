@@ -102,6 +102,7 @@ namespace WebCore {
     macro(dataavailable) \
     macro(datachannel) \
     macro(dblclick) \
+    macro(dequeue) \
     macro(devicechange) \
     macro(devicemotion) \
     macro(deviceorientation) \
@@ -131,6 +132,8 @@ namespace WebCore {
     macro(focusin) \
     macro(focusout) \
     macro(formdata) \
+    macro(fullscreenchange) \
+    macro(fullscreenerror) \
     macro(gamepadconnected) \
     macro(gamepaddisconnected) \
     macro(gatheringstatechange) \
@@ -223,6 +226,7 @@ namespace WebCore {
     macro(ratechange) \
     macro(readystatechange) \
     macro(rejectionhandled) \
+    macro(release) \
     macro(remove) \
     macro(removesourcebuffer) \
     macro(removestream) \

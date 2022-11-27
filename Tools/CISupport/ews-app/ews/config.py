@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+# Copyright (C) 2018-2022 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -22,16 +22,24 @@
 
 import os
 
+import ews.common.util as util
+
 is_test_mode_enabled = os.getenv('EWS_PRODUCTION') is None
+is_dev_instance = (os.getenv('DEV_INSTANCE', '').lower() == 'true')
 
 BUG_SERVER_HOST = 'bugs.webkit.org'
 BUG_SERVER_URL = 'https://{}/'.format(BUG_SERVER_HOST)
 PATCH_FOLDER = '/tmp/'
 
-if is_test_mode_enabled:
+if is_dev_instance:
+    BUILDBOT_SERVER_HOST = 'ews-build.webkit-uat.org'
+elif is_test_mode_enabled:
     BUILDBOT_SERVER_HOST = 'localhost'
 else:
     BUILDBOT_SERVER_HOST = 'ews-build.webkit.org'
+
+BUILDBOT_TRY_HOST = util.load_password('BUILDBOT_TRY_HOST', default=BUILDBOT_SERVER_HOST)
+
 BUILDBOT_SERVER_PORT = '5555'
 COMMIT_QUEUE_PORT = '5557'
 BUILDBOT_TRY_USERNAME = os.getenv('BUILDBOT_TRY_USERNAME', 'sampleuser')

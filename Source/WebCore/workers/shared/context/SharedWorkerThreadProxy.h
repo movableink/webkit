@@ -67,13 +67,12 @@ private:
     void postMessageToWorkerObject(MessageWithMessagePorts&&) final { }
     void workerGlobalScopeDestroyed() final { }
     void workerGlobalScopeClosed() final;
-    void confirmMessageFromWorkerObject(bool) final { }
-    void reportPendingActivity(bool) final { }
 
     // WorkerLoaderProxy.
     RefPtr<CacheStorageConnection> createCacheStorageConnection() final;
     RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() final;
     void postTaskToLoader(ScriptExecutionContext::Task&&) final;
+    ScriptExecutionContextIdentifier loaderContextIdentifier() const final;
 
     // WorkerDebuggerProxy.
     void postMessageToDebugger(const String&) final;

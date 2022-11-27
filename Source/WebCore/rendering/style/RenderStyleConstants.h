@@ -705,7 +705,6 @@ enum class WhiteSpace : uint8_t {
     PreWrap,
     PreLine,
     NoWrap,
-    KHTMLNoWrap,
     BreakSpaces
 };
 
@@ -1152,13 +1151,6 @@ enum class ScrollSnapStop : uint8_t {
     Normal,
     Always,
 };
-
-#if ENABLE(CSS_TRAILING_WORD)
-enum class TrailingWord : uint8_t {
-    Auto,
-    PartiallyBalanced
-};
-#endif
 
 // These are all minimized combinations of paint-order.
 enum class PaintOrder : uint8_t {

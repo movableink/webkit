@@ -26,10 +26,9 @@
 #pragma once
 
 #include "LayoutBoxGeometry.h"
-#include "LayoutContainerBox.h"
+#include "LayoutElementBox.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/OptionSet.h>
-#include <wtf/Ref.h>
 
 namespace WebCore {
 
@@ -41,29 +40,30 @@ class FloatingContext;
 class LayoutState;
 class Rect;
 
-// FloatingState holds the floating boxes per formatting context.
-class FloatingState : public RefCounted<FloatingState> {
+// FloatingState holds the floating boxes for BFC using the BFC's inline direction.
+// FloatingState may be inherited by nested IFCs with mismataching inline direction. In such cases floating boxes
+// are added to the FloatingState as if they had matching inline direction.
+class FloatingState {
     WTF_MAKE_ISO_ALLOCATED(FloatingState);
 public:
-    static Ref<FloatingState> create(LayoutState& layoutState, const ContainerBox& formattingContextRoot) { return adoptRef(*new FloatingState(layoutState, formattingContextRoot)); }
+    FloatingState(LayoutState&, const ElementBox& blockFormattingContextRoot);
 
-    const ContainerBox& root() const { return m_formattingContextRoot; }
+    const ElementBox& root() const { return m_blockFormattingContextRoot; }
 
     class FloatItem {
     public:
-        FloatItem(const Box&, BoxGeometry absoluteBoxGeometry);
-
         // FIXME: This c'tor is only used by the render tree integation codepath.
         enum class Position { Left, Right };
         FloatItem(Position, BoxGeometry absoluteBoxGeometry);
+        FloatItem(const Box&, Position, BoxGeometry absoluteBoxGeometry);
 
         bool isLeftPositioned() const { return m_position == Position::Left; }
         bool isRightPositioned() const { return m_position == Position::Right; }
-        bool isInFormattingContextOf(const ContainerBox& formattingContextRoot) const { return m_layoutBox->isInFormattingContextOf(formattingContextRoot); }
+        bool isInFormattingContextOf(const ElementBox& formattingContextRoot) const;
 
         Rect rectWithMargin() const { return BoxGeometry::marginBoxRect(m_absoluteBoxGeometry); }
         BoxGeometry::HorizontalMargin horizontalMargin() const { return m_absoluteBoxGeometry.horizontalMargin(); }
-        PositionInContextRoot bottom() const { return { BoxGeometry::borderBoxRect(m_absoluteBoxGeometry).bottom() }; }
+        PositionInContextRoot bottom() const { return { rectWithMargin().bottom() }; }
 
 #if ASSERT_ENABLED
         const Box* floatBox() const { return m_layoutBox.get(); }
@@ -84,19 +84,24 @@ public:
     bool hasLeftPositioned() const;
     bool hasRightPositioned() const;
 
+    bool isLeftToRightDirection() const { return m_isLeftToRightDirection; }
+    // FIXME: This should always be floatingState's root().style().isLeftToRightDirection() if we used the actual containing block of the intrusive
+    // floats to initiate the floating state in the integration codepath (i.e. when the float comes from the parent BFC).
+    void setIsLeftToRightDirection(bool isLeftToRightDirection) { m_isLeftToRightDirection = isLeftToRightDirection; }
+
 private:
     friend class FloatingContext;
-    FloatingState(LayoutState&, const ContainerBox& formattingContextRoot);
     LayoutState& layoutState() const { return m_layoutState; }
 
     LayoutState& m_layoutState;
-    CheckedRef<const ContainerBox> m_formattingContextRoot;
+    CheckedRef<const ElementBox> m_blockFormattingContextRoot;
     FloatList m_floats;
     enum class PositionType {
         Left = 1 << 0,
         Right  = 1 << 1
     };
     OptionSet<PositionType> m_positionTypes;
+    bool m_isLeftToRightDirection { true };
 };
 
 inline bool FloatingState::hasLeftPositioned() const

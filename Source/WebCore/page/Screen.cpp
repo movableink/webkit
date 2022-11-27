@@ -39,6 +39,7 @@
 #include "PlatformScreen.h"
 #include "Quirks.h"
 #include "ResourceLoadObserver.h"
+#include "ScreenOrientation.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -50,13 +51,15 @@ Screen::Screen(DOMWindow& window)
 {
 }
 
+Screen::~Screen() = default;
+
 unsigned Screen::height() const
 {
     auto* frame = this->frame();
     if (!frame)
         return 0;
     if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ResourceLoadStatistics::ScreenAPI::Height);
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::Height);
     return static_cast<unsigned>(frame->screenSize().height());
 }
 
@@ -66,7 +69,7 @@ unsigned Screen::width() const
     if (!frame)
         return 0;
     if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ResourceLoadStatistics::ScreenAPI::Width);
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::Width);
     return static_cast<unsigned>(frame->screenSize().width());
 }
 
@@ -76,7 +79,7 @@ unsigned Screen::colorDepth() const
     if (!frame)
         return 0;
     if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ResourceLoadStatistics::ScreenAPI::ColorDepth);
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::ColorDepth);
     return static_cast<unsigned>(screenDepth(frame->view()));
 }
 
@@ -86,7 +89,7 @@ unsigned Screen::pixelDepth() const
     if (!frame)
         return 0;
     if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ResourceLoadStatistics::ScreenAPI::PixelDepth);
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::PixelDepth);
 
     auto* document = window()->document();
     if (!document || !document->quirks().needsHDRPixelDepthQuirk() || !screenSupportsHighDynamicRange(frame->view()))
@@ -101,7 +104,7 @@ int Screen::availLeft() const
     if (!frame)
         return 0;
     if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ResourceLoadStatistics::ScreenAPI::AvailLeft);
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailLeft);
     return static_cast<int>(screenAvailableRect(frame->view()).x());
 }
 
@@ -111,7 +114,7 @@ int Screen::availTop() const
     if (!frame)
         return 0;
     if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ResourceLoadStatistics::ScreenAPI::AvailTop);
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailTop);
     return static_cast<int>(screenAvailableRect(frame->view()).y());
 }
 
@@ -121,7 +124,7 @@ unsigned Screen::availHeight() const
     if (!frame)
         return 0;
     if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ResourceLoadStatistics::ScreenAPI::AvailHeight);
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailHeight);
     return static_cast<unsigned>(screenAvailableRect(frame->view()).height());
 }
 
@@ -131,8 +134,15 @@ unsigned Screen::availWidth() const
     if (!frame)
         return 0;
     if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ResourceLoadStatistics::ScreenAPI::AvailWidth);
+        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailWidth);
     return static_cast<unsigned>(screenAvailableRect(frame->view()).width());
+}
+
+ScreenOrientation& Screen::orientation()
+{
+    if (!m_screenOrientation)
+        m_screenOrientation = ScreenOrientation::create(window() ? window()->document() : nullptr);
+    return *m_screenOrientation;
 }
 
 } // namespace WebCore

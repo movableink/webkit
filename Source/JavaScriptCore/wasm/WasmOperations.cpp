@@ -32,12 +32,15 @@
 #include "FrameTracers.h"
 #include "IteratorOperations.h"
 #include "JITExceptions.h"
+#include "JSArrayBufferViewInlines.h"
 #include "JSCJSValueInlines.h"
 #include "JSGlobalObjectInlines.h"
+#include "JSWebAssemblyArray.h"
 #include "JSWebAssemblyException.h"
 #include "JSWebAssemblyHelpers.h"
 #include "JSWebAssemblyInstance.h"
 #include "JSWebAssemblyRuntimeError.h"
+#include "JSWebAssemblyStruct.h"
 #include "ProbeContext.h"
 #include "ReleaseHeapAccessScope.h"
 #include "TypedArrayController.h"
@@ -175,9 +178,9 @@ static void doOSREntry(Instance* instance, Probe::Context& context, BBQCallee& c
     loadValuesIntoBuffer(context, osrEntryData.values(), buffer);
 
     // 2. Restore callee saves.
-    RegisterSet dontRestoreRegisters = RegisterSet::stackRegisters();
+    auto dontRestoreRegisters = RegisterSetBuilder::stackRegisters();
     for (const RegisterAtOffset& entry : *callee.calleeSaveRegisters()) {
-        if (dontRestoreRegisters.get(entry.reg()))
+        if (dontRestoreRegisters.contains(entry.reg(), IgnoreVectors))
             continue;
         if (entry.reg().isGPR())
             context.gpr(entry.reg().gpr()) = *bitwise_cast<UCPURegister*>(bitwise_cast<uint8_t*>(context.fp()) + entry.offset());
@@ -533,8 +536,11 @@ JSC_DEFINE_JIT_OPERATION(operationIterateResults, void, (CallFrame* callFrame, I
     MarkedArgumentBuffer buffer;
     JSValue result = JSValue::decode(encResult);
     forEachInIterable(globalObject, result, [&] (VM&, JSGlobalObject*, JSValue value) -> void {
-        if (buffer.size() < signature->returnCount())
+        if (buffer.size() < signature->returnCount()) {
             buffer.append(value);
+            if (UNLIKELY(buffer.hasOverflowed()))
+                throwOutOfMemoryError(globalObject, scope);
+        }
         ++iterationCount;
     });
     RETURN_IF_EXCEPTION(scope, void());
@@ -581,12 +587,12 @@ JSC_DEFINE_JIT_OPERATION(operationIterateResults, void, (CallFrame* callFrame, I
         RETURN_IF_EXCEPTION(scope, void());
 
         auto rep = wasmCallInfo.results[index];
-        if (rep.isGPR())
-            registerResults[registerResultOffsets.find(rep.jsr().payloadGPR())->offset() / sizeof(uint64_t)] = unboxedValue;
-        else if (rep.isFPR())
-            registerResults[registerResultOffsets.find(rep.fpr())->offset() / sizeof(uint64_t)] = unboxedValue;
+        if (rep.location.isGPR())
+            registerResults[registerResultOffsets.find(rep.location.jsr().payloadGPR())->offset() / sizeof(uint64_t)] = unboxedValue;
+        else if (rep.location.isFPR())
+            registerResults[registerResultOffsets.find(rep.location.fpr())->offset() / sizeof(uint64_t)] = unboxedValue;
         else
-            calleeFramePointer[rep.offsetFromFP() / sizeof(uint64_t)] = unboxedValue;
+            calleeFramePointer[rep.location.offsetFromFP() / sizeof(uint64_t)] = unboxedValue;
     }
 }
 
@@ -611,7 +617,7 @@ JSC_DEFINE_JIT_OPERATION(operationAllocateResultsArray, JSArray*, (CallFrame* ca
     RegisterAtOffsetList registerResults = wasmCallInfo.computeResultsOffsetList();
 
     for (unsigned i = 0; i < signature->returnCount(); ++i) {
-        ValueLocation loc = wasmCallInfo.results[i];
+        ValueLocation loc = wasmCallInfo.results[i].location;
         JSValue value;
         if (loc.isGPR()) {
 #if USE(JSVALE32_64)
@@ -625,7 +631,6 @@ JSC_DEFINE_JIT_OPERATION(operationAllocateResultsArray, JSArray*, (CallFrame* ca
         result->initializeIndex(initializationScope, i, value);
     }
 
-    ASSERT(result->indexingType() == indexingType);
     return result;
 }
 
@@ -657,11 +662,11 @@ JSC_DEFINE_JIT_OPERATION(operationGrowMemory, int32_t, (void* callFrame, Instanc
     auto grown = instance->memory()->grow(instance->vm(), PageCount(delta));
     if (!grown) {
         switch (grown.error()) {
-        case Memory::GrowFailReason::InvalidDelta:
-        case Memory::GrowFailReason::InvalidGrowSize:
-        case Memory::GrowFailReason::WouldExceedMaximum:
-        case Memory::GrowFailReason::OutOfMemory:
-        case Memory::GrowFailReason::GrowSharedUnavailable:
+        case GrowFailReason::InvalidDelta:
+        case GrowFailReason::InvalidGrowSize:
+        case GrowFailReason::WouldExceedMaximum:
+        case GrowFailReason::OutOfMemory:
+        case GrowFailReason::GrowSharedUnavailable:
             return -1;
         }
         RELEASE_ASSERT_NOT_REACHED();
@@ -829,6 +834,48 @@ JSC_DEFINE_JIT_OPERATION(operationWasmRefFunc, EncodedJSValue, (Instance* instan
     return JSValue::encode(value);
 }
 
+JSC_DEFINE_JIT_OPERATION(operationWasmStructNew, EncodedJSValue, (Instance* instance, uint32_t typeIndex, uint64_t* arguments))
+{
+    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
+    JSGlobalObject* globalObject = jsInstance->globalObject();
+    Ref<TypeDefinition> structTypeDefinition = jsInstance->instance().module().moduleInformation().typeSignatures[typeIndex];
+    const StructType& structType = *structTypeDefinition->as<StructType>();
+
+    JSWebAssemblyStruct* structValue = JSWebAssemblyStruct::tryCreate(globalObject, globalObject->webAssemblyStructStructure(), jsInstance, typeIndex);
+    for (unsigned i = 0; i < structType.fieldCount(); ++i)
+        structValue->set(globalObject, i, toJSValue(globalObject, structType.field(i).type, arguments[i]));
+    return JSValue::encode(structValue);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmStructNewEmpty, EncodedJSValue, (Instance* instance, uint32_t typeIndex))
+{
+    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
+    JSGlobalObject* globalObject = jsInstance->globalObject();
+    return JSValue::encode(JSWebAssemblyStruct::tryCreate(globalObject, globalObject->webAssemblyStructStructure(), jsInstance, typeIndex));
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmStructGet, EncodedJSValue, (EncodedJSValue encodedStructReference, uint32_t fieldIndex))
+{
+    auto structReference = JSValue::decode(encodedStructReference);
+    ASSERT(structReference.isObject());
+    JSObject* structureAsObject = jsCast<JSObject*>(structReference);
+    ASSERT(structureAsObject->inherits<JSWebAssemblyStruct>());
+    JSWebAssemblyStruct* structPointer = jsCast<JSWebAssemblyStruct*>(structureAsObject);
+    return structPointer->get(fieldIndex);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmStructSet, void, (Instance* instance, EncodedJSValue encodedStructReference, uint32_t fieldIndex, EncodedJSValue argument))
+{
+    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
+    auto structReference = JSValue::decode(encodedStructReference);
+    ASSERT(structReference.isObject());
+    JSObject* structureAsObject = jsCast<JSObject*>(structReference);
+    ASSERT(structureAsObject->inherits<JSWebAssemblyStruct>());
+    JSWebAssemblyStruct* structPointer = jsCast<JSWebAssemblyStruct*>(structureAsObject);
+    const auto fieldType = structPointer->structType()->field(fieldIndex).type;
+    return structPointer->set(jsInstance->globalObject(), fieldIndex, toJSValue(jsInstance->globalObject(), fieldType, argument));
+}
+
 JSC_DEFINE_JIT_OPERATION(operationGetWasmTableSize, int32_t, (Instance* instance, unsigned tableIndex))
 {
     return instance->table(tableIndex)->length();
@@ -941,8 +988,13 @@ JSC_DEFINE_JIT_OPERATION(operationWasmThrow, void*, (Instance* instance, CallFra
     for (unsigned i = 0; i < tag.parameterCount(); ++i)
         values[i] = arguments[i];
 
-    JSWebAssemblyException* exception = JSWebAssemblyException::create(vm, globalObject->webAssemblyExceptionStructure(), tag, WTFMove(values));
-    throwException(globalObject, throwScope, exception);
+    if (tag.type().numVectors()) {
+        // Note: the spec is still in flux on what to do here, so we conservatively just disallow throwing any vectors.
+        throwException(globalObject, throwScope, createTypeError(globalObject, errorMessageForExceptionType(Wasm::ExceptionType::TypeErrorInvalidV128Use)));
+    } else {
+        JSWebAssemblyException* exception = JSWebAssemblyException::create(vm, globalObject->webAssemblyExceptionStructure(), tag, WTFMove(values));
+        throwException(globalObject, throwScope, exception);
+    }
 
     genericUnwind(vm, callFrame);
     ASSERT(!!vm.callFrameForCatch);
@@ -1002,6 +1054,8 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSException, void*, (CallFrame* callFram
         JSObject* error;
         if (type == ExceptionType::StackOverflow)
             error = createStackOverflowError(globalObject);
+        else if (isTypeErrorExceptionType(type))
+            error = createTypeError(globalObject, Wasm::errorMessageForExceptionType(type));
         else
             error = createJSWebAssemblyRuntimeError(globalObject, vm, type);
         throwException(globalObject, throwScope, error);
@@ -1052,6 +1106,79 @@ JSC_DEFINE_JIT_OPERATION(operationWasmRetrieveAndClearExceptionIfCatchable, Poin
     UNUSED_PARAM(instance);
     return { nullptr, nullptr };
 #endif
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmArrayNew, EncodedJSValue, (Instance* instance, uint32_t typeIndex, uint32_t size, EncodedJSValue encValue))
+{
+    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
+    JSGlobalObject* globalObject = jsInstance->globalObject();
+    VM& vm = globalObject->vm();
+
+    ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
+
+    Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex];
+    ASSERT(arraySignature.is<ArrayType>());
+    Wasm::FieldType fieldType = arraySignature.as<ArrayType>()->elementType();
+
+    JSWebAssemblyArray* array = nullptr;
+    switch (fieldType.type.kind) {
+    case Wasm::TypeKind::I32:
+    case Wasm::TypeKind::F32: {
+        FixedVector<uint32_t> values(size);
+        for (unsigned i = 0; i < size; i++)
+            values[i] = static_cast<uint32_t>(encValue);
+        array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType.type, size, WTFMove(values));
+        break;
+    }
+    default: {
+        FixedVector<uint64_t> values(size);
+        for (unsigned i = 0; i < size; i++)
+            values[i] = static_cast<uint64_t>(encValue);
+        array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType.type, size, WTFMove(values));
+        break;
+    }
+    }
+
+    return JSValue::encode(JSValue(array));
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmArrayGet, EncodedJSValue, (Instance* instance, uint32_t typeIndex, EncodedJSValue arrayValue, uint32_t index))
+{
+#if ASSERT_ENABLED
+    ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
+    Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex];
+    ASSERT(arraySignature.is<ArrayType>());
+#else
+    UNUSED_PARAM(instance);
+    UNUSED_PARAM(typeIndex);
+#endif
+
+    JSValue arrayRef = JSValue::decode(arrayValue);
+    ASSERT(arrayRef.isObject());
+    JSWebAssemblyArray* arrayObject = jsCast<JSWebAssemblyArray*>(arrayRef.getObject());
+
+    return arrayObject->get(index);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmArraySet, void, (Instance* instance, uint32_t typeIndex, EncodedJSValue arrayValue, uint32_t index, EncodedJSValue value))
+{
+    ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
+    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
+    JSGlobalObject* globalObject = jsInstance->globalObject();
+    VM& vm = globalObject->vm();
+
+#if ASSERT_ENABLED
+    Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex];
+    ASSERT(arraySignature.is<ArrayType>());
+#else
+    UNUSED_PARAM(typeIndex);
+#endif
+
+    JSValue arrayRef = JSValue::decode(arrayValue);
+    ASSERT(arrayRef.isObject());
+    JSWebAssemblyArray* arrayObject = jsCast<JSWebAssemblyArray*>(arrayRef.getObject());
+
+    arrayObject->set(vm, index, value);
 }
 
 } } // namespace JSC::Wasm

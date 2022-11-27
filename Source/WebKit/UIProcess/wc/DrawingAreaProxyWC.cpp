@@ -29,6 +29,8 @@
 #include "config.h"
 #include "DrawingAreaProxyWC.h"
 
+#if USE(GRAPHICS_LAYER_WC)
+
 #include "DrawingAreaMessages.h"
 #include "UpdateInfo.h"
 #include "WebCoreArgumentCoders.h"
@@ -68,7 +70,7 @@ void DrawingAreaProxyWC::update(uint64_t backingStoreStateID, const UpdateInfo& 
 {
     if (backingStoreStateID == m_currentBackingStoreStateID)
         incorporateUpdate(updateInfo);
-    send(Messages::DrawingArea::DidUpdate());
+    send(Messages::DrawingArea::DisplayDidRefresh());
 }
 
 void DrawingAreaProxyWC::enterAcceleratedCompositingMode(uint64_t backingStoreStateID, const LayerTreeContext&)
@@ -101,3 +103,5 @@ void DrawingAreaProxyWC::discardBackingStore()
 }
 
 } // namespace WebKit
+
+#endif // USE(GRAPHICS_LAYER_WC)

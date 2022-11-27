@@ -60,7 +60,7 @@ static WorkerParameters generateWorkerParameters(const WorkerFetchResult& worker
 {
     RELEASE_ASSERT(document.sessionID());
     return {
-        workerFetchResult.lastRequestURL,
+        workerFetchResult.responseURL,
         document.url(),
         workerOptions.name,
         "sharedworker:" + Inspector::IdentifiersFactory::createIdentifier(),
@@ -159,6 +159,11 @@ RefPtr<RTCDataChannelRemoteHandlerConnection> SharedWorkerThreadProxy::createRTC
 {
     ASSERT(isMainThread());
     return m_page->webRTCProvider().createRTCDataChannelRemoteHandlerConnection();
+}
+
+ScriptExecutionContextIdentifier SharedWorkerThreadProxy::loaderContextIdentifier() const
+{
+    return m_document->identifier();
 }
 
 void SharedWorkerThreadProxy::postTaskToLoader(ScriptExecutionContext::Task&& task)

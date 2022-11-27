@@ -420,6 +420,10 @@ void DeleteSelectionCommand::saveTypingStyleState()
         return;
     }
 
+    RefPtr<Node> startNode = m_selectionToDelete.start().deprecatedNode();
+    if (!startNode->isTextNode() && !startNode->hasTagName(imgTag) && !startNode->hasTagName(brTag))
+        return;
+
     // Figure out the typing style in effect before the delete is done.
     m_typingStyle = EditingStyle::create(m_selectionToDelete.start(), EditingStyle::EditingPropertiesInEffect);
     m_typingStyle->removeStyleAddedByNode(enclosingAnchorElement(m_selectionToDelete.start()));
@@ -1063,7 +1067,7 @@ void DeleteSelectionCommand::doApply()
     if (!originalString.isEmpty())
         document().editor().deletedAutocorrectionAtPosition(m_endingPosition, originalString);
 
-    setEndingSelection(VisibleSelection(m_endingPosition, affinity, endingSelection().isDirectional()));
+    setEndingSelection(VisibleSelection(VisiblePosition(m_endingPosition, affinity), endingSelection().isDirectional()));
     clearTransientState();
 }
 

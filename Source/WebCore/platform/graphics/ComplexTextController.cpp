@@ -329,13 +329,15 @@ void ComplexTextController::collectComplexTextRuns()
         // We need a 16-bit string to pass to Core Text.
         if (!m_run.is8Bit())
             return m_run.characters16();
-        String stringFor8BitRun = String::make16BitFrom8BitSource(m_run.characters8(), m_run.length());
-        m_stringsFor8BitRuns.append(WTFMove(stringFor8BitRun));
-        return m_stringsFor8BitRuns.last().characters16();
+        String stringConvertedTo16Bit = m_run.textAsString();
+        stringConvertedTo16Bit.convertTo16Bit();
+        auto characters = stringConvertedTo16Bit.characters16();
+        m_stringsFor8BitRuns.append(WTFMove(stringConvertedTo16Bit));
+        return characters;
     }();
 
     auto fontVariantCaps = m_font.fontDescription().variantCaps();
-    bool dontSynthesizeSmallCaps = !static_cast<bool>(m_font.fontDescription().fontSynthesis() & FontSynthesisSmallCaps);
+    bool dontSynthesizeSmallCaps = !m_font.fontDescription().hasAutoFontSynthesisSmallCaps();
     bool engageAllSmallCapsProcessing = fontVariantCaps == FontVariantCaps::AllSmall || fontVariantCaps == FontVariantCaps::AllPetite;
     bool engageSmallCapsProcessing = engageAllSmallCapsProcessing || fontVariantCaps == FontVariantCaps::Small || fontVariantCaps == FontVariantCaps::Petite;
 

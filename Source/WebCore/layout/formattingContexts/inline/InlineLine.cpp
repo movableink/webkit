@@ -47,10 +47,9 @@ Line::~Line()
 {
 }
 
-void Line::initialize(const Vector<InlineItem>& lineSpanningInlineBoxes, bool collapseLeadingNonBreakingSpace)
+void Line::initialize(const Vector<InlineItem>& lineSpanningInlineBoxes)
 {
     m_contentIsTruncated = false;
-    m_collapseLeadingNonBreakingSpace = collapseLeadingNonBreakingSpace;
     m_inlineBoxListWithClonedDecorationEnd.clear();
     m_clonedEndDecorationWidthForInlineBoxRuns = { };
     m_nonSpanningInlineLevelBoxCount = 0;
@@ -192,25 +191,65 @@ void Line::truncate(InlineLayoutUnit logicalRight)
     }
 }
 
-void Line::removeTrailingTrimmableContent(ShouldApplyTrailingWhiteSpaceFollowedByBRQuirk shouldApplyTrailingWhiteSpaceFollowedByBRQuirk)
+void Line::handleTrailingTrimmableContent(TrailingContentAction trailingTrimmableContentAction)
 {
     if (m_trimmableTrailingContent.isEmpty() || m_runs.isEmpty())
         return;
 
-    if (shouldApplyTrailingWhiteSpaceFollowedByBRQuirk == ShouldApplyTrailingWhiteSpaceFollowedByBRQuirk::Yes) {
-        auto isTextAlignRight = [&] {
-            auto textAlign = formattingContext().root().style().textAlign();
-            return textAlign == TextAlignMode::Right
-                || textAlign == TextAlignMode::WebKitRight
-                || textAlign == TextAlignMode::End;
-            }();
+    if (trailingTrimmableContentAction == TrailingContentAction::Preserve)
+        return m_trimmableTrailingContent.reset();
 
-        if (m_runs.last().isLineBreak() && !isTextAlignRight) {
-            m_trimmableTrailingContent.reset();
-            return;
-        }
-    }
     m_contentLogicalWidth -= m_trimmableTrailingContent.remove();
+}
+
+void Line::handleOverflowingNonBreakingSpace(TrailingContentAction trailingContentAction, InlineLayoutUnit overflowingWidth)
+{
+    ASSERT(m_trimmableTrailingContent.isEmpty());
+    ASSERT(overflowingWidth > 0);
+
+    auto startIndex = [&] () -> size_t {
+        auto trimmedContentWidth = InlineLayoutUnit { };
+        for (auto index = m_runs.size(); index--;) {
+            auto& run = m_runs[index];
+            if (run.isLineBreak() || run.isInlineBox() || run.isWordBreakOpportunity() || run.isWordSeparator()) {
+                // It's ok to trim/remove non-breaking spaces across inline boxes.
+                continue;
+            }
+            if (!run.isNonBreakingSpace()) {
+                // Only trim/remove trailign non-breaking space.
+                return index;
+            }
+            trimmedContentWidth += run.logicalWidth();
+            if (trimmedContentWidth >= overflowingWidth) {
+                // This is how much non-breakable space needs to be removed or trimmed.
+                return index;
+            }
+        }
+        return 0;
+    };
+
+    auto index = startIndex();
+    auto removedOrCollapsedContentWidth = InlineLayoutUnit { };
+    while (index < m_runs.size()) {
+        auto& run = m_runs[index];
+
+        if (!run.isNonBreakingSpace()) {
+            run.moveHorizontally(-removedOrCollapsedContentWidth);
+            ++index;
+            continue;
+        }
+        if (trailingContentAction == TrailingContentAction::Preserve) {
+            run.moveHorizontally(-removedOrCollapsedContentWidth);
+            removedOrCollapsedContentWidth += run.logicalWidth();
+            run.shrinkHorizontally(run.logicalWidth());
+            ++index;
+            continue;
+        }
+
+        removedOrCollapsedContentWidth += run.logicalWidth();
+        m_runs.remove(index);
+    }
+    m_contentLogicalWidth -= removedOrCollapsedContentWidth;
 }
 
 void Line::removeHangingGlyphs()
@@ -227,6 +266,7 @@ void Line::resetBidiLevelForTrailingWhitespace(UBiDiLevel rootBidiLevel)
         return;
     // UAX#9 L1: trailing whitespace should use paragraph direction.
     // see https://unicode.org/reports/tr9/#L1
+    auto trailingNonWhitespaceOnlyRunIndex = std::optional<size_t> { };
     for (auto index = m_runs.size(); index--;) {
         auto& run = m_runs[index];
         if (run.isBox() || run.isLineBreak() || (run.isText() && !run.hasTrailingWhitespace()))
@@ -236,20 +276,33 @@ void Line::resetBidiLevelForTrailingWhitespace(UBiDiLevel rootBidiLevel)
             // Skip non-content type of runs e.g. <span>
             continue;
         }
-
-        if (run.isWhitespaceOnly())
-            run.setBidiLevel(rootBidiLevel);
-        else {
-            auto detachedTrailingRun = *run.detachTrailingWhitespace();
-            detachedTrailingRun.setBidiLevel(rootBidiLevel);
-            if (index == m_runs.size() - 1)
-                m_runs.append(detachedTrailingRun);
-            else
-                m_runs.insert(index + 1, detachedTrailingRun);
-            // There can't be any trailing whitespace in front of this partially whitespace content.
+        // No need to adjust the bidi level unless the directionality is different.
+        // e.g. rtl root dir with trailing whitespace attached to an rtl run.
+        auto sameInlineDirection = run.bidiLevel() % 2 == rootBidiLevel % 2;
+        if (!run.isWhitespaceOnly()) {
+            trailingNonWhitespaceOnlyRunIndex = !sameInlineDirection ? std::make_optional(index) : std::nullopt;
+            // There can't be any trailing whitespace in front of this non-whitespace/whitespace content.
             break;
         }
+        // Whitespace only runs just need simple bidi level reset.
+        if (!sameInlineDirection)
+            run.setBidiLevel(rootBidiLevel);
     }
+
+    auto detachTrailingWhitespaceIfNeeded = [&] {
+        if (!trailingNonWhitespaceOnlyRunIndex)
+            return;
+        auto runIndex = *trailingNonWhitespaceOnlyRunIndex;
+        auto& run = m_runs[runIndex];
+        auto detachedTrailingRun = *run.detachTrailingWhitespace();
+        detachedTrailingRun.setBidiLevel(rootBidiLevel);
+        if (runIndex == m_runs.size() - 1) {
+            m_runs.append(detachedTrailingRun);
+            return;
+        }
+        m_runs.insert(runIndex + 1, detachedTrailingRun);
+    };
+    detachTrailingWhitespaceIfNeeded();
 }
 
 void Line::append(const InlineItem& inlineItem, const RenderStyle& style, InlineLayoutUnit logicalWidth)
@@ -317,19 +370,8 @@ void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderS
             // Some generated content initiates empty text items. They are truly collapsible.
             return true;
         }
-        if (!inlineTextItem.isWhitespace()) {
-            auto isLeadingCollapsibleNonBreakingSpace = [&] {
-                // Let's check for leading non-breaking space collapsing to match legacy line layout quirk.
-                if (!inlineTextItem.isCollapsibleNonBreakingSpace() || !m_collapseLeadingNonBreakingSpace)
-                    return false;
-                for (auto& run : makeReversedRange(m_runs)) {
-                    if (run.isBox() || run.isText())
-                        return false;
-                }
-                return true;
-            };
-            return isLeadingCollapsibleNonBreakingSpace();
-        }
+        if (!inlineTextItem.isWhitespace())
+            return false;
         if (InlineTextItem::shouldPreserveSpacesAndTabs(inlineTextItem))
             return false;
         // This content is collapsible. Let's check if the last item is collapsed.
@@ -367,6 +409,8 @@ void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderS
             return true;
         if (inlineTextItem.isZeroWidthSpaceSeparator())
             return true;
+        if (inlineTextItem.isQuirkNonBreakingSpace() || lastRun.isNonBreakingSpace())
+            return true;
         return false;
     }();
     auto oldContentLogicalWidth = contentLogicalWidth();
@@ -401,27 +445,39 @@ void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderS
         m_contentLogicalWidth = std::max(contentWidthWithoutLastTextRun, lastRunLogicalRight + logicalWidth);
     }
 
-    // Handle trailing content, specifically whitespace and letter spacing.
     auto lastRunIndex = m_runs.size() - 1;
-    if (inlineTextItem.isWhitespace()) {
-        if (InlineTextItem::shouldPreserveSpacesAndTabs(inlineTextItem)) {
-            m_trimmableTrailingContent.reset();
-            if (m_runs[lastRunIndex].shouldTrailingWhitespaceHang())
-                m_hangingTrailingContent.add(inlineTextItem, logicalWidth);
-        } else  {
-            m_hangingTrailingContent.reset();
+    m_trailingSoftHyphenWidth = { };
+    // Handle trailing content, specifically whitespace and letter spacing.
+    auto updateTrimmableStatus = [&] {
+        if (inlineTextItem.isFullyTrimmable()) {
             auto trimmableWidth = logicalWidth;
             auto trimmableContentOffset = (contentLogicalWidth() - oldContentLogicalWidth) - trimmableWidth;
             m_trimmableTrailingContent.addFullyTrimmableContent(lastRunIndex, trimmableContentOffset, trimmableWidth);
+            return true;
         }
-        m_trailingSoftHyphenWidth = { };
-    } else {
-        resetTrailingContent();
-        if (style.letterSpacing() > 0 && !formattingContext().layoutState().shouldIgnoreTrailingLetterSpacing())
+        // FIXME: Move it to InlineTextItem after removing the integration codepath check.
+        auto isPartiallyTrimmable = !inlineTextItem.isWhitespace() && style.letterSpacing() > 0 && !formattingContext().layoutState().shouldIgnoreTrailingLetterSpacing();
+        if (isPartiallyTrimmable) {
             m_trimmableTrailingContent.addPartiallyTrimmableContent(lastRunIndex, style.letterSpacing());
-        if (inlineTextItem.hasTrailingSoftHyphen())
-            m_trailingSoftHyphenWidth = style.fontCascade().width(TextRun { StringView { style.hyphenString() } });
-    }
+            return true;
+        }
+        m_trimmableTrailingContent.reset();
+        return false;
+    };
+    auto isTrimmable = updateTrimmableStatus();
+
+    auto updateHangingStatus = [&] {
+        if (isTrimmable || !inlineTextItem.isWhitespace() || !m_runs[lastRunIndex].shouldTrailingWhitespaceHang()) {
+            m_hangingTrailingContent.reset();
+            return;
+        }
+        m_hangingTrailingContent.add(inlineTextItem, logicalWidth);
+    };
+    updateHangingStatus();
+
+    if (inlineTextItem.hasTrailingSoftHyphen())
+        m_trailingSoftHyphenWidth = style.fontCascade().width(TextRun { StringView { style.hyphenString() } });
+
 }
 
 void Line::appendNonReplacedInlineLevelBox(const InlineItem& inlineItem, const RenderStyle& style, InlineLayoutUnit marginBoxLogicalWidth)
@@ -561,7 +617,7 @@ InlineLayoutUnit Line::TrimmableTrailingContent::remove()
     // e.g. <div>text is followed by trimmable content    <span> </span></div>
     // When the [text...] run is trimmed (trailing whitespace is removed), both "<span>" and "</span>" runs
     // need to be moved horizontally to catch up with the [text...] run. Note that the whitespace inside the <span> does
-    // not produce a run since in ::appendText() we see it as a fully collapsible run.
+    // not produce a run since in ::appendText() we see it as a fully trimmable run.
     for (auto index = *m_firstTrimmableRunIndex + 1; index < m_runs.size(); ++index) {
         auto& run = m_runs[index];
         ASSERT(run.isWordBreakOpportunity() || run.isLineSpanningInlineBoxStart() || run.isInlineBoxStart() || run.isInlineBoxEnd() || run.isLineBreak());
@@ -665,7 +721,7 @@ Line::Run::Run(const InlineSoftLineBreakItem& softLineBreakItem, const RenderSty
 }
 
 Line::Run::Run(const InlineTextItem& inlineTextItem, const RenderStyle& style, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth)
-    : m_type(inlineTextItem.isWordSeparator() ? Type::WordSeparator : Type::Text)
+    : m_type(inlineTextItem.isWordSeparator() ? Type::WordSeparator : inlineTextItem.isQuirkNonBreakingSpace() ? Type::NonBreakingSpace : Type::Text)
     , m_layoutBox(&inlineTextItem.layoutBox())
     , m_style(style)
     , m_logicalLeft(logicalLeft)

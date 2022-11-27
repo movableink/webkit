@@ -58,6 +58,7 @@ struct Renderer11DeviceCaps
                                                  // when multisampled.  Textures will need to be
                                                  // resolved before reading. crbug.com/656989
     bool supportsTypedUAVLoadAdditionalFormats;  //
+    bool supportsRasterizerOrderViews;
     bool allowES3OnFL10_0;
     UINT B5G6R5support;     // Bitfield of D3D11_FORMAT_SUPPORT values for DXGI_FORMAT_B5G6R5_UNORM
     UINT B5G6R5maxSamples;  // Maximum number of samples supported by DXGI_FORMAT_B5G6R5_UNORM
@@ -322,7 +323,7 @@ class Renderer11 : public RendererD3D
 
     Blit11 *getBlitter() { return mBlit; }
     Clear11 *getClearer() { return mClear; }
-    gl::DebugAnnotator *getAnnotator();
+    DebugAnnotatorContext11 *getDebugAnnotatorContext();
 
     // Buffer-to-texture and Texture-to-buffer copies
     bool supportsFastCopyBufferToTexture(GLenum internalFormat) const override;
@@ -619,7 +620,7 @@ class Renderer11 : public RendererD3D
 
     angle::ScratchBuffer mScratchMemoryBuffer;
 
-    DebugAnnotator11 mAnnotator;
+    DebugAnnotatorContext11 mAnnotatorContext;
 
     mutable Optional<bool> mSupportsShareHandles;
     ResourceManager11 mResourceManager11;

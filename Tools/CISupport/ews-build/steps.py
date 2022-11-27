@@ -61,6 +61,7 @@ GITHUB_URL = 'https://github.com/'
 GITHUB_PROJECTS = ['WebKit/WebKit', 'apple/WebKit', 'WebKit/WebKit-security']
 HASH_LENGTH_TO_DISPLAY = 8
 DEFAULT_BRANCH = 'main'
+DEFAULT_REMOTE = 'origin'
 LAYOUT_TESTS_URL = '{}{}/blob/{}/LayoutTests/'.format(GITHUB_URL, GITHUB_PROJECTS[0], DEFAULT_BRANCH)
 
 
@@ -157,9 +158,13 @@ class GitHubMixin(object):
     addURLs = False
     pr_open_states = ['open']
     pr_closed_states = ['closed']
+    SKIP_EWS_LABEL = 'skip-ews'
     BLOCKED_LABEL = 'merging-blocked'
     MERGE_QUEUE_LABEL = 'merge-queue'
     UNSAFE_MERGE_QUEUE_LABEL = 'unsafe-merge-queue'
+    REQUEST_MERGE_QUEUE_LABEL = 'request-merge-queue'
+    PER_PAGE_LIMIT = 100
+    NUM_PAGE_LIMIT = 10
 
     def fetch_data_from_url_with_authentication_github(self, url):
         response = None
@@ -196,7 +201,7 @@ class GitHubMixin(object):
                     return pr_json
             except Exception as e:
                 self._addToLog('stdio', 'Failed to get pull request data from {}, error: {}'.format(pr_url, e))
-            
+
             self._addToLog('stdio', 'Unable to fetch pull request {}.\n'.format(pr_number))
             if attempt > retry:
                 return None
@@ -211,17 +216,35 @@ class GitHubMixin(object):
         if not api_url:
             return []
 
-        reviews_url = f'{api_url}/pulls/{pr_number}/reviews'
-        content = self.fetch_data_from_url_with_authentication_github(reviews_url)
-        if not content:
-            return []
+        reviews = []
+        reviews_url = f'{api_url}/pulls/{pr_number}/reviews?per_page={self.PER_PAGE_LIMIT}'
+        for page in range(1, self.NUM_PAGE_LIMIT + 1):
+            content = self.fetch_data_from_url_with_authentication_github(
+                f'{api_url}/pulls/{pr_number}/reviews?per_page={self.PER_PAGE_LIMIT}&page={page}'
+            )
+            if not content:
+                break
+            response_content = content.json() or []
+            if not isinstance(response_content, list):
+                self._addToLog('stdio', f"Malformed response when listing reviews with '{url}'\n")
+                break
+            reviews += response_content
+            if len(response_content) < self.PER_PAGE_LIMIT:
+                break
+            page += 1
 
-        result = []
-        for review in (content.json() or []):
+        last_approved = dict()
+        last_rejected = dict()
+        for review in reviews:
             reviewer = review.get('user', {}).get('login')
-            if reviewer and review.get('state') == 'APPROVED':
-                result.append(reviewer)
-        return result
+            if not reviewer:
+                continue
+            review_id = review.get('id', 0)
+            if review.get('state') == 'APPROVED':
+                last_approved[reviewer] = max(review_id, last_approved.get(reviewer, 0))
+            elif review.get('state') == 'CHANGES_REQUESTED':
+                last_rejected[reviewer] = max(review_id, last_rejected.get(reviewer, 0))
+        return sorted([reviewer for reviewer, _id in last_approved.items() if _id > last_rejected.get(reviewer, 0)])
 
     def _is_pr_closed(self, pr_json):
         if not pr_json or not pr_json.get('state'):
@@ -241,6 +264,12 @@ class GitHubMixin(object):
     def _is_pr_blocked(self, pr_json):
         for label in (pr_json or {}).get('labels', {}):
             if label.get('name', '') == self.BLOCKED_LABEL:
+                return 1
+        return 0
+
+    def _does_pr_has_skip_label(self, pr_json):
+        for label in (pr_json or {}).get('labels', {}):
+            if label.get('name', '') == self.SKIP_EWS_LABEL:
                 return 1
         return 0
 
@@ -578,7 +607,7 @@ class ConfigureBuild(buildstep.BuildStep, AddToLogMixin):
 
         project = self.getProperty('project')
         if project == GITHUB_PROJECTS[0]:
-            self.setProperty('remote', 'origin')
+            self.setProperty('remote', DEFAULT_REMOTE)
             self.setProperty('sensitive', False)
         elif project in GITHUB_PROJECTS:
             self.setProperty('remote', project.split('-')[-1] if '-' in project else project.split('/')[0])
@@ -705,11 +734,11 @@ class FetchBranches(steps.ShellSequence, ShellMixin):
         super(FetchBranches, self).__init__(timeout=5 * 60, logEnviron=False, **kwargs)
 
     def run(self):
-        self.commands = [util.ShellArg(command=['git', 'fetch', 'origin', '--prune'], logname='stdio')]
+        self.commands = [util.ShellArg(command=['git', 'fetch', DEFAULT_REMOTE, '--prune'], logname='stdio')]
 
         project = self.getProperty('project', GITHUB_PROJECTS[0])
-        remote = self.getProperty('remote', 'origin')
-        if remote != 'origin':
+        remote = self.getProperty('remote', DEFAULT_REMOTE)
+        if remote != DEFAULT_REMOTE:
             for command in [
                 ['git', 'config', 'credential.helper', '!echo_credentials() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_PASSWORD}"; }; echo_credentials'],
                 self.shell_command('git remote add {} {}{}.git || {}'.format(remote, GITHUB_URL, project, self.shell_exit_0())),
@@ -766,8 +795,8 @@ class ShowIdentifier(shell.ShellCommand):
             if identifier:
                 identifier = identifier.replace('master', DEFAULT_BRANCH)
             self.setProperty('identifier', identifier)
-            ews_revision = self.getProperty('ews_revision')
-            if ews_revision:
+            if self.getProperty('ews_revision', False) and not self.getProperty('github.number', False):
+                # Note that this if condition matches with CheckOutSpecificRevision.doStepIf
                 step = self.getLastBuildStepByName(CheckOutSpecificRevision.name)
             else:
                 step = self.getLastBuildStepByName(CheckOutSource.name)
@@ -832,7 +861,7 @@ class UpdateWorkingDirectory(steps.ShellSequence, ShellMixin):
 
     @defer.inlineCallbacks
     def run(self):
-        remote = self.getProperty('remote', 'origin')
+        remote = self.getProperty('remote', DEFAULT_REMOTE)
         base = self.getProperty('github.base.ref', DEFAULT_BRANCH)
 
         commands = [
@@ -842,7 +871,7 @@ class UpdateWorkingDirectory(steps.ShellSequence, ShellMixin):
         ]
         if base != DEFAULT_BRANCH:
             commands.append(self.shell_command('git branch -D {} || {}'.format(DEFAULT_BRANCH, self.shell_exit_0())))
-            commands.append(['git', 'branch', '--track', DEFAULT_BRANCH, 'remotes/origin/{}'.format(DEFAULT_BRANCH)])
+            commands.append(['git', 'branch', '--track', DEFAULT_BRANCH, f'remotes/{DEFAULT_REMOTE}/{DEFAULT_BRANCH}'])
 
         self.commands = []
         for command in commands:
@@ -988,7 +1017,7 @@ class CheckOutPullRequest(steps.ShellSequence, ShellMixin):
     def run(self):
         self.commands = []
 
-        remote = self.getProperty('github.head.repo.full_name', 'origin').split('/')[0]
+        remote = self.getProperty('github.head.repo.full_name', DEFAULT_REMOTE).split('/')[0]
         project = self.getProperty('github.head.repo.full_name', self.getProperty('project'))
         pr_branch = self.getProperty('github.head.ref', DEFAULT_BRANCH)
         rebase_target_hash = self.getProperty('ews_revision') or self.getProperty('got_revision')
@@ -1104,6 +1133,7 @@ class CheckChangeRelevance(AnalyzeChange):
         re.compile(rb'Tools/Scripts/libraries', re.IGNORECASE),
         re.compile(rb'Tools/Scripts/commit-log-editor', re.IGNORECASE),
         re.compile(rb'Source/WebKit/Scripts', re.IGNORECASE),
+        re.compile(rb'metadata/contributors.json', re.IGNORECASE),
     ]
 
     group_to_paths_mapping = {
@@ -1507,6 +1537,7 @@ class ValidateChange(buildstep.BuildStep, BugzillaMixin, GitHubMixin):
         verifycqplus=False,
         verifyMergeQueue=False,
         verifyNoDraftForMergeQueue=False,
+        enableSkipEWSLabel=True,
     ):
         self.verifyObsolete = verifyObsolete
         self.verifyBugClosed = verifyBugClosed
@@ -1514,6 +1545,7 @@ class ValidateChange(buildstep.BuildStep, BugzillaMixin, GitHubMixin):
         self.verifycqplus = verifycqplus
         self.verifyMergeQueue = verifyMergeQueue
         self.verifyNoDraftForMergeQueue = verifyNoDraftForMergeQueue
+        self.enableSkipEWSLabel = enableSkipEWSLabel
         self.addURLs = addURLs
         buildstep.BuildStep.__init__(self)
 
@@ -1573,6 +1605,8 @@ class ValidateChange(buildstep.BuildStep, BugzillaMixin, GitHubMixin):
             self._addToLog('stdio', 'Change is not a draft.\n')
         if self.verifyMergeQueue and pr_number:
             self._addToLog('stdio', 'Change is in merge queue.\n')
+        if self.enableSkipEWSLabel and pr_number:
+            self._addToLog('stdio', f'PR does not have {self.SKIP_EWS_LABEL} label.\n')
         self.finished(SUCCESS)
         return None
 
@@ -1631,10 +1665,15 @@ class ValidateChange(buildstep.BuildStep, BugzillaMixin, GitHubMixin):
             self.skip_build("PR {} has been marked as '{}'".format(pr_number, self.BLOCKED_LABEL))
             return False
 
+        skip_ews = self._does_pr_has_skip_label(pr_json) if self.enableSkipEWSLabel else 0
+        if skip_ews == 1:
+            self.skip_build(f'Skipping as PR {pr_number} has {self.SKIP_EWS_LABEL} label')
+            return False
+
         if self.verifyMergeQueue:
             if not pr_json:
                 self.send_email_for_github_failure()
-                self.skip_build("Infrastructure issue: unable to check PR status")
+                self.skip_build('Infrastructure issue: unable to check PR status, please contact an admin')
                 return False
             merge_queue = self._is_pr_in_merge_queue(pr_json)
             if merge_queue == 0:
@@ -1688,6 +1727,10 @@ class ValidateChange(buildstep.BuildStep, BugzillaMixin, GitHubMixin):
 class ValidateCommitterAndReviewer(buildstep.BuildStep, GitHubMixin, AddToLogMixin):
     name = 'validate-commiter-and-reviewer'
     descriptionDone = ['Validated commiter and reviewer']
+    VALIDATORS_FOR = {
+        # FIXME: This should be a bot, for now validation is manual
+        'apple': ['geoffreygaren', 'markcgee', 'rjepstein', 'jbedard', 'ryanhaddad'],
+    }
 
     def __init__(self, *args, **kwargs):
         super(ValidateCommitterAndReviewer, self).__init__(*args, **kwargs)
@@ -1698,7 +1741,7 @@ class ValidateCommitterAndReviewer(buildstep.BuildStep, GitHubMixin, AddToLogMix
             return {'step': self.descriptionDone}
         return buildstep.BuildStep.getResultSummary(self)
 
-    def fail_build(self, email_or_username, status):
+    def fail_build_due_to_invalid_status(self, email_or_username, status):
         patch_id = self.getProperty('patch_id', '')
         pr_number = self.getProperty('github.number', '')
 
@@ -1709,6 +1752,28 @@ class ValidateCommitterAndReviewer(buildstep.BuildStep, GitHubMixin, AddToLogMix
         elif pr_number:
             comment += f'\n\nIf you do have {status} permmissions, please ensure that your GitHub username is added to contributors.json.'
             comment += f'\n\nRejecting {self.getProperty("github.head.sha", f"#{pr_number}")} from merge queue.'
+        return self.fail_build(reason, comment)
+
+    def fail_build_due_to_no_validators(self, validators):
+        patch_id = self.getProperty('patch_id', '')
+        pr_number = self.getProperty('github.number', '')
+        remote = self.getProperty('remote', DEFAULT_REMOTE)
+
+        user_prefix = "@" if pr_number else ""
+        if len(validators) == 1:
+            validator_list = f'{user_prefix}{validators[0]}'
+        else:
+            validator_list = f'{", ".join(f"{user_prefix}{v}" for v in validators[:-1])} or {user_prefix}{validators[-1]}'
+        reason = f"Landing changes on '{remote}' remote requires validation from {validator_list}"
+        comment = reason
+        if patch_id:
+            comment += f'\n\nRejecting attachment {patch_id} from commit queue.'
+        elif pr_number:
+            comment += f'\n\nRejecting {self.getProperty("github.head.sha", f"#{pr_number}")} from merge queue.'
+
+        return self.fail_build(reason, comment)
+
+    def fail_build(self, reason, comment):
         self.setProperty('comment_text', comment)
 
         self._addToLog('stdio', reason)
@@ -1751,17 +1816,24 @@ class ValidateCommitterAndReviewer(buildstep.BuildStep, GitHubMixin, AddToLogMix
             committer = self.getProperty('patch_committer', '').lower()
 
         if not self.is_committer(committer):
-            self.fail_build(committer, 'committer')
+            self.fail_build_due_to_invalid_status(committer, 'committer')
             return None
         self._addToLog('stdio', f'{committer} is a valid commiter.\n')
 
         if pr_number:
             reviewers = self.get_reviewers(pr_number, self.getProperty('repository', ''))
-            if any([self.is_reviewer(reviewer) for reviewer in reviewers]):
-                reviewers = list(filter(self.is_reviewer, reviewers))
         else:
             reviewer = self.getProperty('reviewer', '').lower()
             reviewers = [reviewer] if reviewer else []
+
+        remote = self.getProperty('remote', DEFAULT_REMOTE)
+        validators = self.VALIDATORS_FOR.get(remote, [])
+        if validators and not any([validator in reviewers for validator in validators]):
+            self.fail_build_due_to_no_validators(validators)
+            return None
+
+        if any([self.is_reviewer(reviewer) for reviewer in reviewers]):
+            reviewers = list(filter(self.is_reviewer, reviewers))
         reviewers = set(reviewers)
 
         if not reviewers:
@@ -1773,7 +1845,7 @@ class ValidateCommitterAndReviewer(buildstep.BuildStep, GitHubMixin, AddToLogMix
 
         for reviewer in reviewers:
             if not self.is_reviewer(reviewer):
-                self.fail_build(reviewer, 'reviewer')
+                self.fail_build_due_to_invalid_status(reviewer, 'reviewer')
                 return None
             self._addToLog('stdio', f'{reviewer} is a valid reviewer.\n')
         self.setProperty('reviewers_full_names', [self.full_name_from_email(reviewer) for reviewer in reviewers])
@@ -1826,7 +1898,7 @@ class BlockPullRequest(buildstep.BuildStep, GitHubMixin, AddToLogMixin):
             repository_url = self.getProperty('repository', '')
             rc = SUCCESS
             if any((
-                not self.remove_labels(pr_number, [self.MERGE_QUEUE_LABEL, self.UNSAFE_MERGE_QUEUE_LABEL], repository_url=repository_url),
+                not self.remove_labels(pr_number, [self.MERGE_QUEUE_LABEL, self.UNSAFE_MERGE_QUEUE_LABEL, self.REQUEST_MERGE_QUEUE_LABEL], repository_url=repository_url),
                 not self.add_label(pr_number, self.BLOCKED_LABEL, repository_url=repository_url),
             )):
                 rc = FAILURE
@@ -1888,6 +1960,7 @@ class RemoveLabelsFromPullRequest(buildstep.BuildStep, GitHubMixin, AddToLogMixi
         GitHubMixin.MERGE_QUEUE_LABEL,
         GitHubMixin.UNSAFE_MERGE_QUEUE_LABEL,
         GitHubMixin.BLOCKED_LABEL,
+        GitHubMixin.REQUEST_MERGE_QUEUE_LABEL,
     ]
 
     def start(self):
@@ -1935,33 +2008,6 @@ class CloseBug(buildstep.BuildStep, BugzillaMixin):
 
     def doStepIf(self, step):
         return self.getProperty('bug_id') and not self.getProperty('is_test_gardening')
-
-    def hideStepIf(self, results, step):
-        return not self.doStepIf(step)
-
-
-class ClosePullRequest(buildstep.BuildStep, GitHubMixin, AddToLogMixin):
-    name = 'close-pull-request'
-    flunkOnFailure = False
-    haltOnFailure = False
-
-    def start(self):
-        self.pr_number = self.getProperty('github.number', '')
-        if self.close_pr(self.pr_number, self.getProperty('repository')):
-            self.finished(SUCCESS)
-        else:
-            self.finished(FAILURE)
-        return None
-
-    def getResultSummary(self):
-        if self.results == FAILURE:
-            return {'step': f'Failed to close PR {self.pr_number}'}
-        if self.results == SUCCESS:
-            return {'step': f'Closed PR {self.pr_number}'}
-        return buildstep.BuildStep.getResultSummary(self)
-
-    def doStepIf(self, step):
-        return self.getProperty('github.number')
 
     def hideStepIf(self, results, step):
         return not self.doStepIf(step)
@@ -2049,6 +2095,14 @@ class RevertPullRequestChanges(steps.ShellSequence):
             ['git', 'checkout', self.getProperty('ews_revision') or self.getProperty('got_revision')],
         ]:
             self.commands.append(util.ShellArg(command=command, logname='stdio'))
+
+        platform = self.getProperty('platform')
+        if platform in ('gtk', 'wpe'):
+            # Force cmake reconfigure to ensure the recovery after patches breaking cmake configure step
+            platform = platform.upper()
+            config = self.getProperty('configuration').capitalize()
+            target = os.path.join("WebKitBuild", platform, config, "build-webkit-options.txt")
+            self.commands.append(util.ShellArg(command=['rm', '-f', target], logname='stdio'))
         return super(RevertPullRequestChanges, self).run()
 
     def doStepIf(self, step):
@@ -2364,7 +2418,7 @@ class RunWebKitPyPython2Tests(WebKitPyTest):
     description = ['webkitpy-tests running ({})'.format(language)]
     jsonFileName = 'webkitpy_test_{}_results.json'.format(language)
     logfiles = {'json': jsonFileName}
-    command = ['python', 'Tools/Scripts/test-webkitpy', '--all', '--verbose', '--json-output={0}'.format(jsonFileName)]
+    command = ['python', 'Tools/Scripts/test-webkitpy', '--verbose', '--json-output={0}'.format(jsonFileName)]
 
 
 class RunWebKitPyPython3Tests(WebKitPyTest):
@@ -2373,7 +2427,7 @@ class RunWebKitPyPython3Tests(WebKitPyTest):
     description = ['webkitpy-tests running ({})'.format(language)]
     jsonFileName = 'webkitpy_test_{}_results.json'.format(language)
     logfiles = {'json': jsonFileName}
-    command = ['python3', 'Tools/Scripts/test-webkitpy', '--all', '--verbose', '--json-output={0}'.format(jsonFileName)]
+    command = ['python3', 'Tools/Scripts/test-webkitpy', '--verbose', '--json-output={0}'.format(jsonFileName)]
 
 
 class InstallGtkDependencies(shell.ShellCommand):
@@ -2450,9 +2504,6 @@ class CompileWebKit(shell.Compile, AddToLogMixin):
 
     def __init__(self, skipUpload=False, **kwargs):
         self.skipUpload = skipUpload
-        # https://bugs.webkit.org/show_bug.cgi?id=239455: The timeout needs to be >20 min to work
-        # around log output delays on slower machines.
-        kwargs.setdefault('timeout', 60 * 30)
         super(CompileWebKit, self).__init__(logEnviron=False, **kwargs)
 
     def doStepIf(self, step):
@@ -2496,6 +2547,17 @@ class CompileWebKit(shell.Compile, AddToLogMixin):
         appendCustomBuildFlags(self, platform, self.getProperty('fullPlatform'))
 
         return shell.Compile.start(self)
+
+    def buildCommandKwargs(self, warnings):
+        kwargs = super(CompileWebKit, self).buildCommandKwargs(warnings)
+        # https://bugs.webkit.org/show_bug.cgi?id=239455: The timeout needs to be >20 min to
+        # work around log output delays on slower machines.
+        # https://bugs.webkit.org/show_bug.cgi?id=247506: Only applies to Xcode 12.x.
+        if self.getProperty('fullPlatform') == 'mac-bigsur':
+            kwargs['timeout'] = 60 * 60
+        else:
+            kwargs['timeout'] = 60 * 30
+        return kwargs
 
     def errorReceived(self, error):
         self._addToLog('errors', error + '\n')
@@ -2594,6 +2656,13 @@ class AnalyzeCompileWebKitResults(buildstep.BuildStep, BugzillaMixin, GitHubMixi
         pr_number = self.getProperty('github.number')
 
         if compile_without_patch_result == FAILURE:
+            if pr_number and self.getProperty('github.base.ref') != 'main':
+                message = 'Unable to build WebKit without PR, please check manually'
+                self.descriptionDone = message
+                self.finished(FAILURE)
+                self.build.buildFinished([message], FAILURE)
+                return defer.succeed(None)
+
             message = 'Unable to build WebKit without {}, retrying build'.format('PR' if pr_number else 'patch')
             self.descriptionDone = message
             self.send_email_for_preexisting_build_failure()
@@ -4492,7 +4561,7 @@ class CleanGitRepo(steps.ShellSequence, ShellMixin):
     flunkOnFailure = False
     logEnviron = False
 
-    def __init__(self, default_branch=DEFAULT_BRANCH, remote='origin', **kwargs):
+    def __init__(self, default_branch=DEFAULT_BRANCH, remote=DEFAULT_REMOTE, **kwargs):
         super(CleanGitRepo, self).__init__(timeout=5 * 60, **kwargs)
         self.default_branch = default_branch
         self.git_remote = remote
@@ -4591,7 +4660,7 @@ class PushCommitToWebKitRepo(shell.ShellCommand):
                 DetermineLandedIdentifier(),
                 LeaveComment(),
                 RemoveFlagsOnPatch(), RemoveLabelsFromPullRequest(),
-                CloseBug(), ClosePullRequest(),
+                CloseBug(),
             ]
             self.build.addStepsAfterCurrentStep(steps_to_add)
 
@@ -4608,7 +4677,7 @@ class PushCommitToWebKitRepo(shell.ShellCommand):
                         ShowIdentifier(),
                         CheckOutPullRequest(),
                         AddReviewerToCommitMessage(),
-                        ValidateChange(verifyMergeQueue=True, verifyNoDraftForMergeQueue=True, verifyObsolete=False),
+                        ValidateChange(verifyMergeQueue=True, verifyNoDraftForMergeQueue=True, verifyObsolete=False, enableSkipEWSLabel=False),
                         Canonicalize(),
                         PushPullRequestBranch(),
                         UpdatePullRequest(),
@@ -4778,13 +4847,13 @@ class ValidateRemote(shell.ShellCommand):
         super(ValidateRemote, self).__init__(logEnviron=False, **kwargs)
 
     def start(self, BufferLogObserverClass=logobserver.BufferLogObserver):
-        base_ref = self.getProperty('github.base.ref', f'origin/{DEFAULT_BRANCH}')
-        remote = self.getProperty('remote', 'origin')
+        base_ref = self.getProperty('github.base.ref', f'{DEFAULT_REMOTE}/{DEFAULT_BRANCH}')
+        remote = self.getProperty('remote', DEFAULT_REMOTE)
 
         self.command = [
             'git', 'merge-base', '--is-ancestor',
             f'remotes/{remote}/{base_ref}',
-            f'remotes/origin/{base_ref}',
+            f'remotes/{DEFAULT_REMOTE}/{base_ref}',
         ]
 
         return super(ValidateRemote, self).start()
@@ -4795,7 +4864,7 @@ class ValidateRemote(shell.ShellCommand):
         return super(ValidateRemote, self).getResultSummary()
 
     def evaluateCommand(self, cmd):
-        base_ref = self.getProperty('github.base.ref', f'origin/{DEFAULT_BRANCH}')
+        base_ref = self.getProperty('github.base.ref', f'{DEFAULT_REMOTE}/{DEFAULT_BRANCH}')
         rc = super(ValidateRemote, self).evaluateCommand(cmd)
 
         if rc == SUCCESS:
@@ -4821,7 +4890,82 @@ class ValidateRemote(shell.ShellCommand):
         remote = self.getProperty('remote', None)
         if not remote:
             return False
-        return remote != 'origin'
+        return remote != DEFAULT_REMOTE
+
+    def hideStepIf(self, results, step):
+        return not self.doStepIf(step)
+
+
+# There are cases where we have a branch alias tracking a more traditional static branch.
+# We want contributors to be able to land changes on the branch alias instead of the possibly
+# changing branch.
+class MapBranchAlias(shell.ShellCommand):
+    name = 'map-branch-alias'
+    haltOnFailure = False
+    flunkOnFailure = True
+    DEV_BRANCHES = re.compile(r'.*[(eng)(dev)(bug)]/.+')
+    PROD_BRANCHES = re.compile(r'\S+-[\d+\.]+-branch')
+
+    def __init__(self, **kwargs):
+        self.summary = ''
+        super(MapBranchAlias, self).__init__(logEnviron=False, timeout=60, **kwargs)
+
+    def start(self, BufferLogObserverClass=logobserver.BufferLogObserver):
+        base_ref = self.getProperty('github.base.ref', DEFAULT_BRANCH)
+        remote = self.getProperty('remote', DEFAULT_REMOTE)
+
+        self.command = ['git', 'branch', '-a', '--contains', f'remotes/{remote}/{base_ref}']
+
+        self.log_observer = BufferLogObserverClass(wantStderr=True)
+        self.addLogObserver('stdio', self.log_observer)
+
+        return super(MapBranchAlias, self).start()
+
+    def getResultSummary(self):
+        if self.results in (FAILURE, SUCCESS):
+            return {'step': self.summary}
+        return super(MapBranchAlias, self).getResultSummary()
+
+    def evaluateCommand(self, cmd):
+        remote = self.getProperty('remote', DEFAULT_REMOTE)
+        branch = self.getProperty('github.base.ref', DEFAULT_BRANCH)
+        rc = super(MapBranchAlias, self).evaluateCommand(cmd)
+
+        if rc == FAILURE:
+            self.summary = f"Failed to query checkout for aliases of '{branch}'"
+            return FAILURE
+        elif rc != SUCCESS:
+            return rc
+
+        aliases = set()
+        log_text = self.log_observer.getStdout()
+        for line in log_text.splitlines():
+            line = line.lstrip().rstrip()
+            if not line.startswith(f'remotes/{remote}'):
+                continue
+            candidate = line.split('/', 2)[-1]
+            if self.DEV_BRANCHES.match(candidate):
+                continue
+            aliases.add(candidate)
+
+        if DEFAULT_BRANCH in aliases:
+            branch = DEFAULT_BRANCH
+        if branch != DEFAULT_BRANCH and self.DEV_BRANCHES.match(branch) and aliases:
+            branch = next(iter(aliases))
+        if branch != DEFAULT_BRANCH and not self.PROD_BRANCHES.match(branch):
+            for alias in aliases:
+                if self.PROD_BRANCHES.match(alias):
+                    branch = alias
+                    break
+
+        self.summary = f"'{branch}' is the prevailing alias"
+        self.setProperty('github.base.ref', branch)
+        return rc
+
+    def doStepIf(self, step):
+        if not self.getProperty('github.number'):
+            return False
+        return self.getProperty('github.base.ref', DEFAULT_BRANCH) != DEFAULT_BRANCH
 
     def hideStepIf(self, results, step):
         return not self.doStepIf(step)
@@ -4837,7 +4981,7 @@ class ValidateSquashed(shell.ShellCommand):
         super(ValidateSquashed, self).__init__(logEnviron=False, **kwargs)
 
     def start(self, BufferLogObserverClass=logobserver.BufferLogObserver):
-        base_ref = self.getProperty('github.base.ref', f'origin/{DEFAULT_BRANCH}')
+        base_ref = self.getProperty('github.base.ref', f'{DEFAULT_REMOTE}/{DEFAULT_BRANCH}')
         head_ref = self.getProperty('github.head.ref', 'HEAD')
         self.command = ['git', 'log', '--oneline', head_ref, f'^{base_ref}', '--max-count=2']
 
@@ -4929,7 +5073,7 @@ class AddReviewerToCommitMessage(shell.ShellCommand, AddReviewerMixin):
         super(AddReviewerToCommitMessage, self).__init__(logEnviron=False, timeout=60, **kwargs)
 
     def start(self, BufferLogObserverClass=logobserver.BufferLogObserver):
-        base_ref = self.getProperty('github.base.ref', f'origin/{DEFAULT_BRANCH}')
+        base_ref = self.getProperty('github.base.ref', f'{DEFAULT_REMOTE}/{DEFAULT_BRANCH}')
         head_ref = self.getProperty('github.head.ref', 'HEAD')
 
         gmtoffset = int(time.localtime().tm_gmtoff * 100 / (60 * 60))
@@ -5013,7 +5157,7 @@ class ValidateCommitMessage(steps.ShellSequence, ShellMixin, AddToLogMixin):
 
     @defer.inlineCallbacks
     def run(self, BufferLogObserverClass=logobserver.BufferLogObserver):
-        base_ref = self.getProperty('github.base.ref', f'origin/{DEFAULT_BRANCH}')
+        base_ref = self.getProperty('github.base.ref', f'{DEFAULT_REMOTE}/{DEFAULT_BRANCH}')
         head_ref = self.getProperty('github.head.ref', 'HEAD')
         reviewers = self.getProperty('reviewers_full_names', None)
         reviewer_error_msg = '' if reviewers else ' and no reviewer found'
@@ -5117,8 +5261,6 @@ class Canonicalize(steps.ShellSequence, ShellMixin, AddToLogMixin):
             commands += [['git', 'checkout', base_ref]]
         commands.append(['python3', 'Tools/Scripts/git-webkit', 'canonicalize', '-n', '1' if self.rebase_enabled else '3'])
 
-        
-
         if self.getProperty('github.number', ''):
             committer = (self.getProperty('owners', []) or [''])[0]
         else:
@@ -5138,9 +5280,6 @@ class Canonicalize(steps.ShellSequence, ShellMixin, AddToLogMixin):
 
         for command in commands:
             self.commands.append(util.ShellArg(command=command, logname='stdio', haltOnFailure=True))
-
-        
-
         return super(Canonicalize, self).run()
 
     def getResultSummary(self):
@@ -5277,3 +5416,16 @@ class UpdatePullRequest(shell.ShellCommand, GitHubMixin, AddToLogMixin):
 
     def hideStepIf(self, results, step):
         return not self.doStepIf(step)
+
+
+class DeleteStaleBuildFiles(shell.ShellCommand):
+    name = 'delete-stale-build-files'
+    description = ['Deleting stale build files']
+    descriptionDone = ['Deleted stale build files']
+    command = ['python3', 'Tools/CISupport/delete-stale-build-files', WithProperties('--platform=%(fullPlatform)s')]
+    haltOnFailure = False
+    flunkOnFailure = False
+    warnOnFailure = False
+
+    def __init__(self, **kwargs):
+        super(DeleteStaleBuildFiles, self).__init__(logEnviron=False, timeout=600, **kwargs)

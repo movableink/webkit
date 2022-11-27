@@ -47,7 +47,7 @@
 #import "PageClientImplMac.h"
 #import "PasteboardTypes.h"
 #import "PlaybackSessionManagerProxy.h"
-#import "RemoteLayerTreeDrawingAreaProxy.h"
+#import "RemoteLayerTreeDrawingAreaProxyMac.h"
 #import "RemoteObjectRegistry.h"
 #import "RemoteObjectRegistryMessages.h"
 #import "StringUtilities.h"
@@ -259,14 +259,7 @@ WTF_DECLARE_CF_TYPE_TRAIT(CGImage);
 
 @end
 
-@interface WKWindowVisibilityObserver : NSObject {
-    NSView *_view;
-    WebKit::WebViewImpl *_impl;
-
-    BOOL _didRegisterForLookupPopoverCloseNotifications;
-    BOOL _shouldObserveFontPanel;
-}
-
+@interface WKWindowVisibilityObserver : NSObject
 - (instancetype)initWithView:(NSView *)view impl:(WebKit::WebViewImpl&)impl;
 - (void)startObserving:(NSWindow *)window;
 - (void)stopObserving:(NSWindow *)window;
@@ -274,7 +267,13 @@ WTF_DECLARE_CF_TYPE_TRAIT(CGImage);
 - (void)startObservingLookupDismissalIfNeeded;
 @end
 
-@implementation WKWindowVisibilityObserver
+@implementation WKWindowVisibilityObserver {
+    NSView *_view;
+    WebKit::WebViewImpl *_impl;
+
+    BOOL _didRegisterForLookupPopoverCloseNotifications;
+    BOOL _shouldObserveFontPanel;
+}
 
 - (instancetype)initWithView:(NSView *)view impl:(WebKit::WebViewImpl&)impl
 {
@@ -362,6 +361,7 @@ static void* keyValueObservingContext = &keyValueObservingContext;
 
     if (_shouldObserveFontPanel)
         [[NSFontPanel sharedFontPanel] removeObserver:self forKeyPath:@"visible" context:keyValueObservingContext];
+
     [window removeObserver:self forKeyPath:@"contentLayoutRect" context:keyValueObservingContext];
     [window removeObserver:self forKeyPath:@"titlebarAppearsTransparent" context:keyValueObservingContext];
 }
@@ -1659,7 +1659,7 @@ std::unique_ptr<WebKit::DrawingAreaProxy> WebViewImpl::createDrawingAreaProxy(We
     case DrawingAreaType::TiledCoreAnimation:
         return makeUnique<TiledCoreAnimationDrawingAreaProxy>(m_page, process);
     case DrawingAreaType::RemoteLayerTree:
-        return makeUnique<RemoteLayerTreeDrawingAreaProxy>(m_page, process);
+        return makeUnique<RemoteLayerTreeDrawingAreaProxyMac>(m_page, process);
     }
 
     ASSERT_NOT_REACHED();
@@ -2074,9 +2074,9 @@ bool WebViewImpl::acceptsFirstMouse(NSEvent *event)
     if (![m_view hitTest:event.locationInWindow])
         return false;
 
-    setLastMouseDownEvent(event);
+    auto previousEvent = setLastMouseDownEvent(event);
     bool result = m_page->acceptsFirstMouse(event.eventNumber, WebEventFactory::createWebMouseEvent(event, m_lastPressureEvent.get(), m_view.getAutoreleased()));
-    setLastMouseDownEvent(nil);
+    setLastMouseDownEvent(previousEvent.get());
     return result;
 }
 
@@ -2093,9 +2093,9 @@ bool WebViewImpl::shouldDelayWindowOrderingForEvent(NSEvent *event)
     if (![m_view hitTest:event.locationInWindow])
         return false;
 
-    setLastMouseDownEvent(event);
+    auto previousEvent = setLastMouseDownEvent(event);
     bool result = m_page->shouldDelayWindowOrderingForEvent(WebEventFactory::createWebMouseEvent(event, m_lastPressureEvent.get(), m_view.getAutoreleased()));
-    setLastMouseDownEvent(nil);
+    setLastMouseDownEvent(previousEvent.get());
     return result;
 }
 
@@ -2109,7 +2109,7 @@ bool WebViewImpl::windowResizeMouseLocationIsInVisibleScrollerThumb(CGPoint poin
 void WebViewImpl::viewWillMoveToWindowImpl(NSWindow *window)
 {
     // If we're in the middle of preparing to move to a window, we should only be moved to that window.
-    ASSERT(!m_targetWindowForMovePreparation || (m_targetWindowForMovePreparation == window));
+    ASSERT_IMPLIES(m_targetWindowForMovePreparation, m_targetWindowForMovePreparation == window);
 
     NSWindow *currentWindow = [m_view window];
     if (window == currentWindow)
@@ -2117,9 +2117,11 @@ void WebViewImpl::viewWillMoveToWindowImpl(NSWindow *window)
 
     clearAllEditCommands();
 
-    NSWindow *stopObservingWindow = m_targetWindowForMovePreparation ? m_targetWindowForMovePreparation.get() : [m_view window];
-    [m_windowVisibilityObserver stopObserving:stopObservingWindow];
-    [m_windowVisibilityObserver startObserving:window];
+    if (!m_isPreparingToUnparentView) {
+        NSWindow *stopObservingWindow = m_targetWindowForMovePreparation.get() ?: [m_view window];
+        [m_windowVisibilityObserver stopObserving:stopObservingWindow];
+        [m_windowVisibilityObserver startObserving:window];
+    }
 
 #if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
     if (m_isRegisteredScrollViewSeparatorTrackingAdapter) {
@@ -2133,6 +2135,7 @@ void WebViewImpl::viewWillMoveToWindow(NSWindow *window)
 {
     viewWillMoveToWindowImpl(window);
     m_targetWindowForMovePreparation = nil;
+    m_isPreparingToUnparentView = false;
 }
 
 void WebViewImpl::viewDidMoveToWindow()
@@ -2389,6 +2392,7 @@ void WebViewImpl::prepareForMoveToWindow(NSWindow *targetWindow, WTF::Function<v
 {
     m_shouldDeferViewInWindowChanges = true;
     viewWillMoveToWindowImpl(targetWindow);
+    m_isPreparingToUnparentView = !targetWindow;
     m_targetWindowForMovePreparation = targetWindow;
     viewDidMoveToWindow();
 
@@ -2400,6 +2404,24 @@ void WebViewImpl::prepareForMoveToWindow(NSWindow *targetWindow, WTF::Function<v
     dispatchSetTopContentInset();
     m_page->activityStateDidChange(WebCore::ActivityState::IsInWindow, WebPageProxy::ActivityStateChangeDispatchMode::Immediate);
     m_viewInWindowChangeWasDeferred = false;
+}
+
+void WebViewImpl::setFontForWebView(NSFont *font, id sender)
+{
+    NSFontManager *fontManager = [NSFontManager sharedFontManager];
+    NSFontTraitMask fontTraits = [fontManager traitsOfFont:font];
+
+    WebCore::FontChanges changes;
+    changes.setFontFamily(font.familyName);
+    changes.setFontName(font.fontName);
+    changes.setFontSize(font.pointSize);
+    changes.setBold(fontTraits & NSBoldFontMask);
+    changes.setItalic(fontTraits & NSItalicFontMask);
+
+    if (NSString *textStyleAttribute = [font.fontDescriptor objectForKey:(__bridge NSString *)kCTFontDescriptorTextStyleAttribute])
+        changes.setFontFamily(textStyleAttribute);
+
+    m_page->changeFont(WTFMove(changes));
 }
 
 void WebViewImpl::updateSecureInputState()
@@ -2664,7 +2686,7 @@ void WebViewImpl::selectionDidChange()
         m_softSpaceRange = NSMakeRange(NSNotFound, 0);
 #if HAVE(TOUCH_BAR)
     updateTouchBar();
-    if (!m_page->editorState().isMissingPostLayoutData)
+    if (m_page->editorState().hasPostLayoutData())
         requestCandidatesForSelectionIfNeeded();
 #endif
 
@@ -3119,10 +3141,10 @@ void WebViewImpl::requestCandidatesForSelectionIfNeeded()
     if (!editorState.isContentEditable)
         return;
 
-    if (editorState.isMissingPostLayoutData)
+    if (!editorState.hasPostLayoutData())
         return;
 
-    auto& postLayoutData = editorState.postLayoutData();
+    auto& postLayoutData = *editorState.postLayoutData;
     m_lastStringForCandidateRequest = postLayoutData.stringForCandidateRequest;
 
     NSRange selectedRange = NSMakeRange(postLayoutData.candidateRequestStartPosition, postLayoutData.selectedTextLength);
@@ -3151,10 +3173,10 @@ void WebViewImpl::handleRequestedCandidates(NSInteger sequenceNumber, NSArray<NS
 
     // FIXME: It's pretty lame that we have to depend on the most recent EditorState having post layout data,
     // and that we just bail if it is missing.
-    if (editorState.isMissingPostLayoutData)
+    if (!editorState.hasPostLayoutData())
         return;
 
-    auto& postLayoutData = editorState.postLayoutData();
+    auto& postLayoutData = *editorState.postLayoutData;
     if (m_lastStringForCandidateRequest != postLayoutData.stringForCandidateRequest)
         return;
 
@@ -3200,10 +3222,10 @@ void WebViewImpl::handleAcceptedCandidate(NSTextCheckingResult *acceptedCandidat
 
     // FIXME: It's pretty lame that we have to depend on the most recent EditorState having post layout data,
     // and that we just bail if it is missing.
-    if (editorState.isMissingPostLayoutData)
+    if (!editorState.hasPostLayoutData())
         return;
 
-    auto& postLayoutData = editorState.postLayoutData();
+    auto& postLayoutData = *editorState.postLayoutData;
     if (m_lastStringForCandidateRequest != postLayoutData.stringForCandidateRequest)
         return;
 
@@ -4005,7 +4027,7 @@ void WebViewImpl::startWindowDrag()
     [[m_view window] performWindowDragWithEvent:m_lastMouseDownEvent.get()];
 }
 
-void WebViewImpl::startDrag(const WebCore::DragItem& item, const ShareableBitmap::Handle& dragImageHandle)
+void WebViewImpl::startDrag(const WebCore::DragItem& item, const ShareableBitmapHandle& dragImageHandle)
 {
     auto dragImageAsBitmap = ShareableBitmap::create(dragImageHandle);
     if (!dragImageAsBitmap) {
@@ -4044,6 +4066,12 @@ void WebViewImpl::startDrag(const WebCore::DragItem& item, const ShareableBitmap
         [provider setUserInfo:context.get()];
         auto draggingItem = adoptNS([[NSDraggingItem alloc] initWithPasteboardWriter:provider.get()]);
         [draggingItem setDraggingFrame:NSMakeRect(clientDragLocation.x(), clientDragLocation.y() - size.height(), size.width(), size.height()) contents:dragNSImage.get()];
+
+        if (!m_lastMouseDownEvent) {
+            m_page->dragCancelled();
+            return;
+        }
+
         [m_view beginDraggingSessionWithItems:@[draggingItem.get()] event:m_lastMouseDownEvent.get() source:(id <NSDraggingSource>)m_view.getAutoreleased()];
 
         ASSERT(info.additionalTypes.size() == info.additionalData.size());
@@ -4524,14 +4552,11 @@ void WebViewImpl::smartMagnifyWithEvent(NSEvent *event)
     ensureGestureController().handleSmartMagnificationGesture([m_view convertPoint:event.locationInWindow fromView:nil]);
 }
 
-void WebViewImpl::setLastMouseDownEvent(NSEvent *event)
+RetainPtr<NSEvent> WebViewImpl::setLastMouseDownEvent(NSEvent *event)
 {
     ASSERT(!event || event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown);
 
-    if (event == m_lastMouseDownEvent.get())
-        return;
-
-    m_lastMouseDownEvent = event;
+    return std::exchange(m_lastMouseDownEvent, event);
 }
 
 #if ENABLE(MAC_GESTURE_EVENTS)
@@ -5599,13 +5624,13 @@ void WebViewImpl::updateTextTouchBar()
     // the text when changing selection throughout the document.
     if (isRichlyEditableForTouchBar()) {
         const EditorState& editorState = m_page->editorState();
-        if (!editorState.isMissingPostLayoutData) {
-            [m_textTouchBarItemController setTextIsBold:(bool)(m_page->editorState().postLayoutData().typingAttributes & AttributeBold)];
-            [m_textTouchBarItemController setTextIsItalic:(bool)(m_page->editorState().postLayoutData().typingAttributes & AttributeItalics)];
-            [m_textTouchBarItemController setTextIsUnderlined:(bool)(m_page->editorState().postLayoutData().typingAttributes & AttributeUnderline)];
-            [m_textTouchBarItemController setTextColor:cocoaColor(editorState.postLayoutData().textColor).get()];
-            [[m_textTouchBarItemController textListTouchBarViewController] setCurrentListType:(ListType)m_page->editorState().postLayoutData().enclosingListType];
-            [m_textTouchBarItemController setCurrentTextAlignment:nsTextAlignmentFromTextAlignment((TextAlignment)editorState.postLayoutData().textAlignment)];
+        if (editorState.hasPostLayoutData()) {
+            [m_textTouchBarItemController setTextIsBold:(bool)(m_page->editorState().postLayoutData->typingAttributes & AttributeBold)];
+            [m_textTouchBarItemController setTextIsItalic:(bool)(m_page->editorState().postLayoutData->typingAttributes & AttributeItalics)];
+            [m_textTouchBarItemController setTextIsUnderlined:(bool)(m_page->editorState().postLayoutData->typingAttributes & AttributeUnderline)];
+            [m_textTouchBarItemController setTextColor:cocoaColor(editorState.postLayoutData->textColor).get()];
+            [[m_textTouchBarItemController textListTouchBarViewController] setCurrentListType:(ListType)m_page->editorState().postLayoutData->enclosingListType];
+            [m_textTouchBarItemController setCurrentTextAlignment:nsTextAlignmentFromTextAlignment((TextAlignment)editorState.postLayoutData->textAlignment)];
         }
         BOOL isShowingCandidateListItem = [textTouchBar.defaultItemIdentifiers containsObject:NSTouchBarItemIdentifierCandidateList] && [NSSpellChecker isAutomaticTextReplacementEnabled];
         [m_textTouchBarItemController setUsesNarrowTextStyleItem:isShowingCombinedTextFormatItem && isShowingCandidateListItem];
@@ -5875,7 +5900,7 @@ static RetainPtr<CocoaImageAnalyzerRequest> createImageAnalyzerRequest(CGImageRe
     return request;
 }
 
-void WebViewImpl::requestTextRecognition(const URL& imageURL, const ShareableBitmap::Handle& imageData, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier, CompletionHandler<void(WebCore::TextRecognitionResult&&)>&& completion)
+void WebViewImpl::requestTextRecognition(const URL& imageURL, const ShareableBitmapHandle& imageData, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier, CompletionHandler<void(WebCore::TextRecognitionResult&&)>&& completion)
 {
     if (!isLiveTextAvailableAndEnabled()) {
         completion({ });
@@ -5939,7 +5964,7 @@ bool WebViewImpl::imageAnalysisOverlayViewHasCursorAtPoint(NSPoint locationInVie
 #endif
 }
 
-void WebViewImpl::beginTextRecognitionForVideoInElementFullscreen(const ShareableBitmap::Handle& bitmapHandle, WebCore::FloatRect bounds)
+void WebViewImpl::beginTextRecognitionForVideoInElementFullscreen(const ShareableBitmapHandle& bitmapHandle, WebCore::FloatRect bounds)
 {
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
     auto imageBitmap = ShareableBitmap::create(bitmapHandle);

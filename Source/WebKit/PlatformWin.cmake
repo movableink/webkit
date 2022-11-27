@@ -7,7 +7,7 @@ set(PluginProcess_OUTPUT_NAME WebKitPluginProcess)
 include(Headers.cmake)
 
 list(APPEND WebKit_SOURCES
-    GPUProcess/graphics/RemoteGraphicsContextGLWin.cpp
+    GPUProcess/graphics/RemoteGraphicsContextGLWC.cpp
 
     GPUProcess/graphics/wc/RemoteWCLayerTreeHost.cpp
     GPUProcess/graphics/wc/WCContentBufferManager.cpp
@@ -22,7 +22,6 @@ list(APPEND WebKit_SOURCES
     NetworkProcess/Classifier/WebResourceLoadStatisticsStore.cpp
 
     Platform/IPC/win/ArgumentCodersWin.cpp
-    Platform/IPC/win/AttachmentWin.cpp
     Platform/IPC/win/ConnectionWin.cpp
     Platform/IPC/win/IPCSemaphoreWin.cpp
 
@@ -193,10 +192,7 @@ if (${WTF_PLATFORM_WIN_CAIRO})
     )
 
     list(APPEND WebKit_PRIVATE_LIBRARIES
-        MediaFoundation
-        OpenSSL::SSL
-        mfuuid.lib
-        strmiids.lib
+        comctl32
     )
 endif ()
 

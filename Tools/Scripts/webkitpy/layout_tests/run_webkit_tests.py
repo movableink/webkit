@@ -139,7 +139,7 @@ def parse_args(args):
         optparse.make_option("--threaded", action="store_true", default=False,
             help="Run a concurrent JavaScript thread with each test"),
         optparse.make_option("--dump-render-tree", "-1", action="store_false", default=True, dest="webkit_test_runner",
-            help="Use DumpRenderTree rather than WebKitTestRunner."),
+            help="Use DumpRenderTree rather than WebKitTestRunner. This runs the wk1 single-process architecture."),
         # FIXME: We should merge this w/ --build-directory and only have one flag.
         optparse.make_option("--root", action="store",
             help="Path to a directory containing the executables needed to run tests."),
@@ -312,6 +312,7 @@ def parse_args(args):
         optparse.make_option("--world-leaks", action="store_true", default=False, help="Check for world leaks (currently, only documents). Differs from --leaks in that this uses internal instrumentation, rather than external tools."),
         optparse.make_option("--accessibility-isolated-tree", action="store_true", default=False, help="Runs tests in accessibility isolated tree mode."),
         optparse.make_option("--allowed-host", type="string", action="append", default=[], help="If specified, tests are allowed to make requests to the specified hostname."),
+        optparse.make_option("--disable-expected-crash-logs-gathering", action="store_false", default=True, dest="gather-expected-crash-logs", help="Disable crash logs gathering for tests expected to crash.")
     ]))
 
     option_group_definitions.append(("iOS Options", [
@@ -348,6 +349,7 @@ def parse_args(args):
     ]))
 
     option_group_definitions.append(("Web Platform Test Server Options", [
+        optparse.make_option("--disable-wpt-hostname-aliases", action="store_true", default=False, help="Disable running tests from WPT against the web-platform.test domain, if the port supports it."),
         optparse.make_option("--wptserver-doc-root", type="string", help=("Set web platform server document root, relative to LayoutTests directory")),
     ]))
 
@@ -371,7 +373,6 @@ def parse_args(args):
     if options.use_gpu_process:
         host = Host()
         host.initialize_scm()
-        options.additional_expectations.insert(0, host.filesystem.join(host.scm().checkout_root, 'LayoutTests/gpu-process/TestExpectations'))
         if not options.internal_feature:
             options.internal_feature = []
         options.internal_feature.append('CaptureAudioInGPUProcessEnabled')
@@ -435,6 +436,14 @@ def _set_up_derived_options(port, options):
         options.time_out_ms = str(port.default_timeout_ms())
 
     options.slow_time_out_ms = str(5 * int(options.time_out_ms))
+
+    if port.port_name == "mac" and options.use_gpu_process and options.remote_layer_tree:
+        host = Host()
+        host.initialize_scm()
+        options.additional_expectations.insert(0, port.host.filesystem.join(host.scm().checkout_root, 'LayoutTests/platform/mac-gpup/TestExpectations'))
+        if not options.additional_platform_directory:
+            options.additional_platform_directory = []
+        options.additional_platform_directory.insert(0, port.host.filesystem.join(host.scm().checkout_root, 'LayoutTests/platform/mac-gpup'))
 
     if options.additional_platform_directory:
         additional_platform_directories = []

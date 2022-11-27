@@ -30,8 +30,7 @@
 #include "config.h"
 #include "CSSUnitValue.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
+#include "CSSCalcPrimitiveValueNode.h"
 #include "CSSParserToken.h"
 #include "CSSPrimitiveValue.h"
 #include <wtf/IsoMallocInlines.h>
@@ -158,14 +157,13 @@ auto CSSUnitValue::toSumValue() const -> std::optional<SumValue>
         switch (category) {
         case CSSUnitCategory::Percent:
             return CSSUnitType::CSS_PERCENTAGE;
-        case CSSUnitCategory::Other:
-            if (unit == CSSUnitType::CSS_FR)
-                return CSSUnitType::CSS_FR;
-            break;
+        case CSSUnitCategory::Flex:
+            return CSSUnitType::CSS_FR;
         default:
             break;
         }
-        return canonicalUnitTypeForCategory(category);
+        auto result = canonicalUnitTypeForCategory(category);
+        return result == CSSUnitType::CSS_UNKNOWN ? unit : result;
     } (m_unit);
     auto convertedValue = m_value * conversionToCanonicalUnitsScaleFactor(unitEnum()) / conversionToCanonicalUnitsScaleFactor(canonicalUnit);
 
@@ -183,6 +181,14 @@ bool CSSUnitValue::equals(const CSSNumericValue& other) const
     return m_value == otherUnitValue->m_value && m_unit == otherUnitValue->m_unit;
 }
 
-} // namespace WebCore
+RefPtr<CSSValue> CSSUnitValue::toCSSValue() const
+{
+    return CSSPrimitiveValue::create(m_value, m_unit);
+}
 
-#endif
+RefPtr<CSSCalcExpressionNode> CSSUnitValue::toCalcExpressionNode() const
+{
+    return CSSCalcPrimitiveValueNode::create(CSSPrimitiveValue::create(m_value, m_unit));
+}
+
+} // namespace WebCore

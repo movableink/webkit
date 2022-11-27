@@ -26,7 +26,6 @@ Modules/WebGPU/GPUAdapter.cpp
 Modules/WebGPU/GPUBindGroup.cpp
 Modules/WebGPU/GPUBindGroupLayout.cpp
 Modules/WebGPU/GPUBuffer.cpp
-Modules/WebGPU/GPUCanvasContext.cpp
 Modules/WebGPU/GPUCommandBuffer.cpp
 Modules/WebGPU/GPUCommandEncoder.cpp
 Modules/WebGPU/GPUCompilationInfo.cpp
@@ -47,6 +46,8 @@ Modules/WebGPU/GPUSampler.cpp
 Modules/WebGPU/GPUShaderModule.cpp
 Modules/WebGPU/GPUSupportedFeatures.cpp
 Modules/WebGPU/GPUSupportedLimits.cpp
+Modules/WebGPU/GPUSurface.cpp
+Modules/WebGPU/GPUSwapChain.cpp
 Modules/WebGPU/GPUTexture.cpp
 Modules/WebGPU/GPUTextureView.cpp
 Modules/WebGPU/GPUUncapturedErrorEvent.cpp
@@ -230,14 +231,6 @@ Modules/mediastream/SFrameUtils.cpp
 Modules/mediastream/STUNMessageParsing.cpp
 Modules/mediastream/UserMediaController.cpp
 Modules/mediastream/UserMediaRequest.cpp
-Modules/mediastream/libwebrtc/LibWebRTCCertificateGenerator.cpp
-Modules/mediastream/libwebrtc/LibWebRTCDtlsTransportBackend.cpp
-Modules/mediastream/libwebrtc/LibWebRTCIceTransportBackend.cpp
-Modules/mediastream/libwebrtc/LibWebRTCRtpReceiverTransformBackend.cpp
-Modules/mediastream/libwebrtc/LibWebRTCRtpSenderTransformBackend.cpp
-Modules/mediastream/libwebrtc/LibWebRTCRtpTransformBackend.cpp
-Modules/mediastream/libwebrtc/LibWebRTCRtpTransformableFrame.cpp
-Modules/mediastream/libwebrtc/LibWebRTCSctpTransportBackend.cpp
 Modules/model-element/HTMLModelElement.cpp
 Modules/model-element/ModelPlayer.cpp
 Modules/model-element/ModelPlayerClient.cpp
@@ -257,6 +250,7 @@ Modules/paymentrequest/PaymentRequest.cpp
 Modules/paymentrequest/PaymentRequestUpdateEvent.cpp
 Modules/paymentrequest/PaymentRequestUtilities.cpp
 Modules/paymentrequest/PaymentResponse.cpp
+Modules/permissions/MainThreadPermissionObserver.cpp
 Modules/permissions/NavigatorPermissions.cpp
 Modules/permissions/PermissionController.cpp
 Modules/permissions/PermissionStatus.cpp
@@ -278,11 +272,16 @@ Modules/push-api/PushSubscriptionOptions.cpp
 Modules/push-api/PushManager.cpp
 Modules/push-api/ServiceWorkerRegistrationPushAPI.cpp
 Modules/remoteplayback/RemotePlayback.cpp
+Modules/reporting/DeprecationReportBody.cpp
 Modules/reporting/Report.cpp
 Modules/reporting/ReportBody.cpp
 Modules/reporting/ReportingObserver.cpp
 Modules/reporting/ReportingScope.cpp
 Modules/reporting/TestReportBody.cpp
+Modules/screen-wake-lock/NavigatorScreenWakeLock.cpp
+Modules/screen-wake-lock/WakeLock.cpp
+Modules/screen-wake-lock/WakeLockManager.cpp
+Modules/screen-wake-lock/WakeLockSentinel.cpp
 Modules/speech/SpeechRecognition.cpp
 Modules/speech/SpeechRecognitionAlternative.cpp
 Modules/speech/SpeechRecognitionErrorEvent.cpp
@@ -387,6 +386,11 @@ Modules/webauthn/fido/FidoParsingUtils.cpp
 Modules/webauthn/fido/Pin.cpp
 Modules/webauthn/fido/U2fCommandConstructor.cpp
 Modules/webauthn/fido/U2fResponseConverter.cpp
+Modules/webcodecs/WebCodecsEncodedVideoChunk.cpp
+Modules/webcodecs/WebCodecsVideoDecoder.cpp
+Modules/webcodecs/WebCodecsVideoEncoder.cpp
+Modules/webcodecs/WebCodecsVideoFrame.cpp
+Modules/webcodecs/WebCodecsVideoFrameAlgorithms.cpp
 Modules/webdatabase/ChangeVersionWrapper.cpp
 Modules/webdatabase/DOMWindowWebDatabase.cpp
 Modules/webdatabase/Database.cpp
@@ -482,6 +486,7 @@ accessibility/AccessibilityTreeItem.cpp
 accessibility/isolatedtree/AXIsolatedObject.cpp
 accessibility/isolatedtree/AXIsolatedTree.cpp
 animation/AnimationEffect.cpp
+animation/AnimationEvent.cpp
 animation/AnimationEventBase.cpp
 animation/AnimationPlaybackEvent.cpp
 animation/AnimationTimeline.cpp
@@ -497,6 +502,7 @@ animation/ElementAnimationRareData.cpp
 animation/FrameRateAligner.cpp
 animation/KeyframeEffect.cpp
 animation/KeyframeEffectStack.cpp
+animation/TransitionEvent.cpp
 animation/WebAnimation.cpp
 animation/WebAnimationUtilities.cpp
 bindings/js/CachedModuleScriptLoader.cpp
@@ -556,6 +562,7 @@ bindings/js/JSDeprecatedCSSOMValueCustom.cpp
 bindings/js/JSDocumentCustom.cpp
 bindings/js/JSDocumentFragmentCustom.cpp
 bindings/js/JSElementCustom.cpp
+bindings/js/JSElementInternalsCustom.cpp
 bindings/js/JSErrorEventCustom.cpp
 bindings/js/JSErrorHandler.cpp
 bindings/js/JSEventCustom.cpp
@@ -565,8 +572,6 @@ bindings/js/JSExecState.cpp
 bindings/js/JSExtendableMessageEventCustom.cpp
 bindings/js/JSFetchEventCustom.cpp
 bindings/js/JSFileSystemEntryCustom.cpp
-bindings/js/JSFileSystemDirectoryHandleCustom.cpp
-bindings/js/JSFileSystemDirectoryHandleIterator.cpp
 bindings/js/JSFileSystemHandleCustom.cpp
 bindings/js/JSHTMLAllCollectionCustom.cpp
 bindings/js/JSHTMLCanvasElementCustom.cpp
@@ -597,6 +602,7 @@ bindings/js/JSNavigatorCustom.cpp
 bindings/js/JSNodeCustom.cpp
 bindings/js/JSNodeIteratorCustom.cpp
 bindings/js/JSNodeListCustom.cpp
+bindings/js/JSObservableArray.cpp
 bindings/js/JSOffscreenCanvasRenderingContext2DCustom.cpp
 bindings/js/JSPaintRenderingContext2DCustom.cpp
 bindings/js/JSPaintWorkletGlobalScopeCustom.cpp
@@ -619,6 +625,7 @@ bindings/js/JSSVGPathSegCustom.cpp
 bindings/js/JSSVGViewSpecCustom.cpp
 bindings/js/JSServiceWorkerClientCustom.cpp
 bindings/js/JSServiceWorkerGlobalScopeCustom.cpp
+bindings/js/JSShadowRootCustom.cpp
 bindings/js/JSStaticRangeCustom.cpp
 bindings/js/JSStyleSheetCustom.cpp
 bindings/js/JSTextCustom.cpp
@@ -717,6 +724,7 @@ crypto/keys/CryptoKeyRSA.cpp
 crypto/keys/CryptoKeyRSAComponents.cpp
 crypto/keys/CryptoKeyRaw.cpp
 css/BasicShapeFunctions.cpp
+css/ComputedStyleExtractor.cpp
 css/ContainerQuery.cpp
 css/ContainerQueryParser.cpp
 css/CSSAspectRatioValue.cpp
@@ -741,12 +749,14 @@ css/CSSFontFaceSet.cpp
 css/CSSFontFaceSource.cpp
 css/CSSFontFaceSrcValue.cpp
 css/CSSFontFeatureValue.cpp
+css/CSSFontFeatureValuesRule.cpp
 css/CSSFontPaletteValuesOverrideColorsValue.cpp
 css/CSSFontPaletteValuesRule.cpp
 css/CSSFontSelector.cpp
 css/CSSFontStyleRangeValue.cpp
-css/CSSFontStyleValue.cpp
+css/CSSFontStyleWithAngleValue.cpp
 css/CSSFontValue.cpp
+css/CSSFontVariantAlternatesValue.cpp
 css/CSSFontVariationValue.cpp
 css/CSSFunctionValue.cpp
 css/CSSGradientValue.cpp
@@ -755,7 +765,6 @@ css/CSSGridIntegerRepeatValue.cpp
 css/CSSGridLineNamesValue.cpp
 css/CSSGridTemplateAreasValue.cpp
 css/CSSGroupingRule.cpp
-css/CSSImageGeneratorValue.cpp
 css/CSSImageSetValue.cpp
 css/CSSImageValue.cpp
 css/CSSImportRule.cpp
@@ -786,11 +795,13 @@ css/CSSShadowValue.cpp
 css/CSSStyleDeclaration.cpp
 css/CSSStyleRule.cpp
 css/CSSStyleSheet.cpp
+css/CSSStyleSheetObservableArray.cpp
 css/CSSSubgridValue.cpp
 css/CSSSupportsRule.cpp
 css/CSSTimingFunctionValue.cpp
 css/CSSToLengthConversionData.cpp
 css/CSSToStyleMap.cpp
+css/CSSTransformListValue.cpp
 css/CSSUnicodeRangeValue.cpp
 css/CSSUnits.cpp
 css/CSSValue.cpp
@@ -810,10 +821,10 @@ css/DeprecatedCSSOMValueList.cpp
 css/FontFace.cpp
 css/FontFaceSet.cpp
 css/FontVariantBuilder.cpp
+css/LegacyMediaQueryEvaluator.cpp
+css/LegacyMediaQuery.cpp
 css/MediaFeatureNames.cpp
 css/MediaList.cpp
-css/MediaQuery.cpp
-css/MediaQueryEvaluator.cpp
 css/MediaQueryExpression.cpp
 css/MediaQueryList.cpp
 css/MediaQueryListEvent.cpp
@@ -860,12 +871,17 @@ css/parser/CSSSupportsParser.cpp
 css/parser/CSSTokenizer.cpp
 css/parser/CSSTokenizerInputStream.cpp
 css/parser/CSSVariableParser.cpp
+css/parser/LegacyMediaQueryParser.cpp
 css/parser/MediaQueryBlockWatcher.cpp
-css/parser/MediaQueryParser.cpp
 css/parser/SizesAttributeParser.cpp
 css/parser/SizesCalcParser.cpp
+css/query/ContainerQueryFeatures.cpp
 css/query/GenericMediaQueryEvaluator.cpp
 css/query/GenericMediaQueryParser.cpp
+css/query/GenericMediaQuerySerialization.cpp
+css/query/MediaQueryEvaluator.cpp
+css/query/MediaQueryFeatures.cpp
+css/query/MediaQueryParser.cpp
 css/typedom/ComputedStylePropertyMapReadOnly.cpp
 css/typedom/StylePropertyMapReadOnly.cpp
 css/typedom/CSSKeywordValue.cpp
@@ -877,7 +893,11 @@ css/typedom/CSSStyleValueFactory.cpp
 css/typedom/CSSUnitValue.cpp
 css/typedom/CSSUnparsedValue.cpp
 css/typedom/CSSOMVariableReferenceValue.cpp
+css/typedom/DeclaredStylePropertyMap.cpp
+css/typedom/MainThreadStylePropertyMapReadOnly.cpp
+css/typedom/StylePropertyMap.cpp
 css/typedom/color/CSSColor.cpp
+css/typedom/color/CSSColorValue.cpp
 css/typedom/color/CSSHSL.cpp
 css/typedom/color/CSSHWB.cpp
 css/typedom/color/CSSLCH.cpp
@@ -931,7 +951,6 @@ dom/AbstractRange.cpp
 dom/ActiveDOMCallback.cpp
 dom/ActiveDOMObject.cpp
 dom/AllDescendantsCollection.cpp
-dom/AnimationEvent.cpp
 dom/Attr.cpp
 dom/BeforeTextInsertedEvent.cpp
 dom/BeforeUnloadEvent.cpp
@@ -951,6 +970,7 @@ dom/ConstantPropertyMap.cpp
 dom/ContainerNode.cpp
 dom/ContainerNodeAlgorithms.cpp
 dom/ContextDestructionObserver.cpp
+dom/CustomElementDefaultARIA.cpp
 dom/CustomElementReactionQueue.cpp
 dom/CustomElementRegistry.cpp
 dom/CustomEvent.cpp
@@ -976,7 +996,9 @@ dom/DeviceOrientationEvent.cpp
 dom/Document.cpp
 dom/DocumentFontLoader.cpp
 dom/DocumentFragment.cpp
+dom/DocumentFullscreen.cpp
 dom/DocumentMarkerController.cpp
+dom/DocumentOrShadowRootFullscreen.cpp
 dom/DocumentParser.cpp
 dom/DocumentSharedObjectPool.cpp
 dom/DocumentStorageAccess.cpp
@@ -1016,6 +1038,7 @@ dom/InputEvent.cpp
 dom/KeyboardEvent.cpp
 dom/LiveNodeList.cpp
 dom/LoadableClassicScript.cpp
+dom/LoadableImportMap.cpp
 dom/LoadableModuleScript.cpp
 dom/LoadableScript.cpp
 dom/MessageChannel.cpp
@@ -1088,7 +1111,6 @@ dom/Touch.cpp @no-unify
 dom/TouchEvent.cpp @no-unify
 dom/TouchList.cpp @no-unify
 dom/TransformSourceLibxslt.cpp
-dom/TransitionEvent.cpp
 dom/Traversal.cpp
 dom/TreeScope.cpp
 dom/TreeScopeOrderedMap.cpp
@@ -1190,9 +1212,9 @@ fileapi/FileReaderLoader.cpp
 fileapi/FileReaderSync.cpp
 fileapi/NetworkSendQueue.cpp
 fileapi/ThreadableBlobRegistry.cpp
+fileapi/URLKeepingBlobAlive.cpp
 history/BackForwardCache.cpp
 history/BackForwardController.cpp
-history/BackForwardItemIdentifier.cpp
 history/CachedFrame.cpp
 history/CachedPage.cpp
 history/HistoryItem.cpp
@@ -1220,8 +1242,8 @@ html/EnterKeyHint.cpp
 html/FTPDirectoryDocument.cpp
 html/FeaturePolicy.cpp
 html/FileInputType.cpp
-html/FormAssociatedElement.cpp
 html/FormController.cpp
+html/FormListedElement.cpp
 html/GenericCachedHTMLCollection.cpp
 html/HTMLAllCollection.cpp
 html/HTMLAnchorElement.cpp
@@ -1337,6 +1359,7 @@ html/MediaElementSession.cpp
 html/MediaFragmentURIParser.cpp
 html/ModelDocument.cpp
 html/MonthInputType.cpp
+html/NavigatorUserActivation.cpp
 html/NumberInputType.cpp
 html/OffscreenCanvas.cpp
 html/PasswordInputType.cpp
@@ -1364,6 +1387,7 @@ html/URLDecomposition.cpp
 html/URLInputType.cpp
 html/URLRegistry.cpp
 html/URLSearchParams.cpp
+html/UserActivation.cpp
 html/ValidationMessage.cpp
 html/WeekInputType.cpp
 html/canvas/ANGLEInstancedArrays.cpp
@@ -1386,6 +1410,7 @@ html/canvas/EXTTextureFilterAnisotropic.cpp
 html/canvas/EXTTextureNorm16.cpp
 html/canvas/EXTsRGB.cpp
 html/canvas/GPUBasedCanvasRenderingContext.cpp
+html/canvas/GPUCanvasContext.cpp
 html/canvas/ImageBitmapRenderingContext.cpp
 html/canvas/KHRParallelShaderCompile.cpp
 html/canvas/OESDrawBuffersIndexed.cpp
@@ -1406,7 +1431,6 @@ html/canvas/WebGL2RenderingContext.cpp
 html/canvas/WebGLBuffer.cpp
 html/canvas/WebGLColorBufferFloat.cpp
 html/canvas/WebGLCompressedTextureASTC.cpp
-html/canvas/WebGLCompressedTextureATC.cpp
 html/canvas/WebGLCompressedTextureETC.cpp
 html/canvas/WebGLCompressedTextureETC1.cpp
 html/canvas/WebGLCompressedTexturePVRTC.cpp
@@ -1427,6 +1451,7 @@ html/canvas/WebGLMultiDraw.cpp
 html/canvas/WebGLMultiDrawInstancedBaseVertexBaseInstance.cpp
 html/canvas/WebGLObject.cpp
 html/canvas/WebGLProgram.cpp
+html/canvas/WebGLProvokingVertex.cpp
 html/canvas/WebGLQuery.cpp
 html/canvas/WebGLRenderbuffer.cpp
 html/canvas/WebGLRenderingContext.cpp
@@ -1623,13 +1648,10 @@ layout/integration/inline/LayoutIntegrationPagination.cpp
 layout/integration/LayoutIntegrationBoxTree.cpp
 layout/integration/LayoutIntegrationCoverage.cpp
 layout/layouttree/LayoutBox.cpp
-layout/layouttree/LayoutContainerBox.cpp
 layout/layouttree/LayoutBoxGeometry.cpp
+layout/layouttree/LayoutElementBox.cpp
 layout/layouttree/LayoutInitialContainingBlock.cpp
 layout/layouttree/LayoutInlineTextBox.cpp
-layout/layouttree/LayoutLineBreakBox.cpp
-layout/layouttree/LayoutListMarkerBox.cpp
-layout/layouttree/LayoutReplacedBox.cpp
 layout/layouttree/LayoutTreeBuilder.cpp
 layout/formattingContexts/table/TableFormattingContext.cpp
 layout/formattingContexts/table/TableFormattingGeometry.cpp
@@ -1638,6 +1660,9 @@ layout/formattingContexts/table/TableFormattingState.cpp
 layout/formattingContexts/table/TableGrid.cpp
 layout/formattingContexts/table/TableLayout.cpp
 loader/ApplicationManifestLoader.cpp
+loader/AttributionTriggerData.cpp
+loader/COEPInheritenceViolationReportBody.cpp
+loader/CORPViolationReportBody.cpp
 loader/CanvasActivityRecord.cpp
 loader/ContentFilter.cpp
 loader/CookieJar.cpp
@@ -1675,6 +1700,7 @@ loader/NavigationScheduler.cpp
 loader/NetscapePlugInStreamLoader.cpp
 loader/PingLoader.cpp
 loader/PolicyChecker.cpp
+loader/PolicyContainer.cpp
 loader/PrivateClickMeasurement.cpp
 loader/ProgressTracker.cpp
 loader/ResourceCryptographicDigest.cpp
@@ -1831,6 +1857,7 @@ page/ResizeObserver.cpp
 page/ResourceUsageOverlay.cpp
 page/ResourceUsageThread.cpp
 page/Screen.cpp
+page/ScreenOrientation.cpp
 page/ScrollBehavior.cpp
 page/SecurityOrigin.cpp
 page/SecurityOriginData.cpp
@@ -1883,16 +1910,21 @@ page/scrolling/ScrollingStateStickyNode.cpp
 page/scrolling/ScrollingStateTree.cpp
 page/scrolling/ScrollingThread.cpp
 page/scrolling/ScrollingTree.cpp
+page/scrolling/ScrollingTreeFixedNode.cpp
 page/scrolling/ScrollingTreeFrameHostingNode.cpp
 page/scrolling/ScrollingTreeFrameScrollingNode.cpp
 page/scrolling/ScrollingTreeGestureState.cpp
 page/scrolling/ScrollingTreeLatchingController.cpp
 page/scrolling/ScrollingTreeNode.cpp
+page/scrolling/ScrollingTreeOverflowScrollProxyNode.cpp
 page/scrolling/ScrollingTreeOverflowScrollingNode.cpp
+page/scrolling/ScrollingTreePositionedNode.cpp
 page/scrolling/ScrollingTreeScrollingNode.cpp
 page/scrolling/ScrollingTreeScrollingNodeDelegate.cpp
 page/scrolling/ScrollingTreeStickyNode.cpp
+page/scrolling/ThreadedScrollingCoordinator.cpp
 page/scrolling/ThreadedScrollingTree.cpp
+page/scrolling/ThreadedScrollingTreeScrollingNodeDelegate.cpp
 platform/CommonAtomStrings.cpp
 platform/ContentType.cpp
 platform/ContextMenu.cpp
@@ -1943,9 +1975,11 @@ platform/ProcessIdentity.cpp
 platform/ReferrerPolicy.cpp
 platform/RemoteCommandListener.cpp
 platform/RuntimeApplicationChecks.cpp
-platform/SSLKeyGenerator.cpp
+platform/ScreenOrientationManager.cpp
+platform/ScreenOrientationProvider.cpp
 platform/ScrollAlignment.cpp
 platform/ScrollAnimation.cpp
+platform/ScrollAnimationKeyboard.cpp
 platform/ScrollAnimationKinetic.cpp
 platform/ScrollAnimationMomentum.cpp
 platform/ScrollAnimationSmooth.cpp
@@ -1974,8 +2008,12 @@ platform/ThreadGlobalData.cpp
 platform/ThreadTimers.cpp
 platform/Timer.cpp
 platform/UserActivity.cpp
+platform/VideoEncoder.cpp
+platform/VideoDecoder.cpp
 platform/VideoFrame.cpp
+platform/VideoPixelFormat.cpp
 platform/WebCoreCrossThreadCopier.cpp
+platform/WebCorePersistentCoders.cpp
 platform/WebGLStateTracker.cpp
 platform/Widget.cpp
 platform/animation/Animation.cpp
@@ -1983,6 +2021,7 @@ platform/animation/AnimationList.cpp
 platform/animation/TimingFunction.cpp
 platform/audio/AudioBus.cpp
 platform/audio/AudioChannel.cpp
+platform/audio/AudioDestinationResampler.cpp
 platform/audio/AudioDSPKernelProcessor.cpp
 platform/audio/AudioHardwareListener.cpp
 platform/audio/AudioResampler.cpp
@@ -2077,6 +2116,7 @@ platform/graphics/FontCascadeDescription.cpp
 platform/graphics/FontCascadeFonts.cpp
 platform/graphics/FontDescription.cpp
 platform/graphics/FontFamilySpecificationNull.cpp
+platform/graphics/FontFeatureValues.cpp
 platform/graphics/FontGenericFamilies.cpp
 platform/graphics/FontPlatformData.cpp
 platform/graphics/FontRanges.cpp
@@ -2097,6 +2137,7 @@ platform/graphics/GraphicsLayer.cpp
 platform/graphics/GraphicsLayerContentsDisplayDelegate.cpp
 platform/graphics/GraphicsLayerTransform.cpp
 platform/graphics/GraphicsLayerUpdater.cpp
+platform/graphics/GraphicsStyle.cpp
 platform/graphics/GraphicsTypes.cpp
 platform/graphics/HEVCUtilities.cpp
 platform/graphics/Icon.cpp
@@ -2184,9 +2225,11 @@ platform/graphics/filters/Filter.cpp
 platform/graphics/filters/FilterEffect.cpp
 platform/graphics/filters/FilterFunction.cpp
 platform/graphics/filters/FilterImage.cpp
+platform/graphics/filters/FilterImageTargetSwitcher.cpp
 platform/graphics/filters/FilterOperation.cpp
 platform/graphics/filters/FilterOperations.cpp
 platform/graphics/filters/FilterResults.cpp
+platform/graphics/filters/FilterTargetSwitcher.cpp
 platform/graphics/filters/PointLightSource.cpp
 platform/graphics/filters/SourceAlpha.cpp
 platform/graphics/filters/SourceGraphic.cpp
@@ -2254,9 +2297,6 @@ platform/mediastream/RealtimeOutgoingVideoSource.cpp
 platform/mediastream/RealtimeVideoCaptureSource.cpp
 platform/mediastream/RealtimeVideoSource.cpp
 platform/mediastream/WebRTCProvider.cpp
-platform/mediastream/libwebrtc/LibWebRTCDTMFSenderBackend.cpp
-platform/mediastream/libwebrtc/LibWebRTCProvider.cpp
-platform/mediastream/libwebrtc/VideoFrameLibWebRTC.cpp
 platform/mock/DeviceOrientationClientMock.cpp
 platform/mock/GeolocationClientMock.cpp
 platform/mock/MediaEngineConfigurationFactoryMock.cpp
@@ -2298,6 +2338,8 @@ platform/network/ParsedContentRange.cpp
 platform/network/ParsedContentType.cpp
 platform/network/ParsedRequestRange.cpp
 platform/network/ProtectionSpaceBase.cpp
+platform/network/RFC7230.cpp
+platform/network/RFC8941.cpp
 platform/network/ResourceErrorBase.cpp
 platform/network/ResourceHandle.cpp
 platform/network/ResourceHandleClient.cpp
@@ -2400,7 +2442,6 @@ rendering/RenderFragmentedFlow.cpp
 rendering/RenderFrame.cpp
 rendering/RenderFrameBase.cpp
 rendering/RenderFrameSet.cpp
-rendering/RenderFullScreen.cpp
 rendering/RenderGeometryMap.cpp
 rendering/RenderGrid.cpp
 rendering/RenderHTMLCanvas.cpp
@@ -2498,6 +2539,7 @@ rendering/shapes/Shape.cpp
 rendering/shapes/ShapeOutsideInfo.cpp
 rendering/style/BasicShapes.cpp
 rendering/style/BorderData.cpp
+rendering/style/BorderValue.cpp
 rendering/style/ContentData.cpp
 rendering/style/FillLayer.cpp
 rendering/style/GapLength.cpp
@@ -2517,12 +2559,16 @@ rendering/style/ShapeValue.cpp
 rendering/style/StyleBackgroundData.cpp
 rendering/style/StyleBoxData.cpp
 rendering/style/StyleCachedImage.cpp
+rendering/style/StyleCanvasImage.cpp
 rendering/style/StyleContentAlignmentData.cpp
+rendering/style/StyleCrossfadeImage.cpp
 rendering/style/StyleCursorImage.cpp
 rendering/style/StyleDeprecatedFlexibleBoxData.cpp
 rendering/style/StyleFilterData.cpp
+rendering/style/StyleFilterImage.cpp
 rendering/style/StyleFlexibleBoxData.cpp
 rendering/style/StyleGeneratedImage.cpp
+rendering/style/StyleGradientImage.cpp
 rendering/style/StyleGridData.cpp
 rendering/style/StyleGridItemData.cpp
 rendering/style/StyleImageSet.cpp
@@ -2530,6 +2576,8 @@ rendering/style/StyleInheritedData.cpp
 rendering/style/StyleMarqueeData.cpp
 rendering/style/StyleMultiColData.cpp
 rendering/style/StyleMultiImage.cpp
+rendering/style/StyleNamedImage.cpp
+rendering/style/StylePaintImage.cpp
 rendering/style/StyleRareInheritedData.cpp
 rendering/style/StyleRareNonInheritedData.cpp
 rendering/style/StyleSelfAlignmentData.cpp
@@ -2609,7 +2657,6 @@ rendering/updating/RenderTreeBuilderBlockFlow.cpp
 rendering/updating/RenderTreeBuilderContinuation.cpp
 rendering/updating/RenderTreeBuilderFirstLetter.cpp
 rendering/updating/RenderTreeBuilderFormControls.cpp
-rendering/updating/RenderTreeBuilderFullScreen.cpp
 rendering/updating/RenderTreeBuilderInline.cpp
 rendering/updating/RenderTreeBuilderList.cpp
 rendering/updating/RenderTreeBuilderMathML.cpp
@@ -2630,8 +2677,10 @@ storage/StorageQuotaManager.cpp
 style/AttributeChangeInvalidation.cpp
 style/ChildChangeInvalidation.cpp
 style/ClassChangeInvalidation.cpp
+style/ColorFromPrimitiveValue.cpp
 style/ContainerQueryEvaluator.cpp
 style/ElementRuleCollector.cpp
+style/FilterOperationsBuilder.cpp
 style/HasSelectorFilter.cpp
 style/IdChangeInvalidation.cpp
 style/InlineTextBoxStyle.cpp
@@ -2791,7 +2840,6 @@ svg/SVGVKernElement.cpp
 svg/SVGViewElement.cpp
 svg/SVGViewSpec.cpp
 svg/SVGZoomAndPan.cpp
-svg/SVGZoomEvent.cpp
 svg/animation/SMILTime.cpp
 svg/animation/SMILTimeContainer.cpp
 svg/animation/SVGSMILElement.cpp
@@ -2816,6 +2864,7 @@ workers/WorkerGlobalScope.cpp
 workers/WorkerInspectorProxy.cpp
 workers/WorkerLocation.cpp
 workers/WorkerMessagingProxy.cpp
+workers/WorkerNotificationClient.cpp
 workers/WorkerOrWorkletGlobalScope.cpp
 workers/WorkerOrWorkletScriptController.cpp
 workers/WorkerOrWorkletThread.cpp
@@ -2908,6 +2957,7 @@ xml/parser/XMLDocumentParserScope.cpp
 
 // Derived Sources
 
+CSSPropertyParsing.cpp
 CSSValueKeywords.cpp
 ColorData.cpp
 EventFactory.cpp
@@ -2996,6 +3046,8 @@ JSBeforeUnloadEvent.cpp
 JSBiquadFilterNode.cpp
 JSBiquadFilterOptions.cpp
 JSBiquadFilterType.cpp
+JSAvcEncoderConfig.cpp
+JSBitrateMode.cpp
 JSBlob.cpp
 JSBlobCallback.cpp
 JSBlobEvent.cpp
@@ -3009,6 +3061,7 @@ JSCSSConditionRule.cpp
 JSCSSContainerRule.cpp
 JSCSSCounterStyleRule.cpp
 JSCSSFontFaceRule.cpp
+JSCSSFontFeatureValuesRule.cpp
 JSCSSFontPaletteValuesRule.cpp
 JSCSSGroupingRule.cpp
 JSCSSImportRule.cpp
@@ -3029,6 +3082,8 @@ JSCSSStyleSheet.cpp
 JSCSSSupportsRule.cpp
 JSCSSTransition.cpp
 JSCSSUnknownRule.cpp
+JSCOEPInheritenceViolationReportBody.cpp
+JSCORPViolationReportBody.cpp
 JSCacheQueryOptions.cpp
 JSCanvasCaptureMediaStreamTrack.cpp
 JSCanvasCompositing.cpp
@@ -3156,6 +3211,7 @@ JSDeprecatedCSSOMRGBColor.cpp
 JSDeprecatedCSSOMRect.cpp
 JSDeprecatedCSSOMValue.cpp
 JSDeprecatedCSSOMValueList.cpp
+JSDeprecationReportBody.cpp
 JSDeviceMotionEvent.cpp
 JSDeviceOrientationEvent.cpp
 JSDeviceOrientationOrMotionPermissionState.cpp
@@ -3209,6 +3265,7 @@ JSFetchReferrerPolicy.cpp
 JSFetchRequest.cpp
 JSFetchRequestCache.cpp
 JSFetchRequestCredentials.cpp
+JSFetchRequestDestination.cpp
 JSFetchRequestInit.cpp
 JSFetchRequestMode.cpp
 JSFetchRequestRedirect.cpp
@@ -3462,6 +3519,7 @@ JSHTMLTrackElement.cpp
 JSHTMLUListElement.cpp
 JSHTMLUnknownElement.cpp
 JSHTMLVideoElement.cpp
+JSHardwareAcceleration.cpp
 JSHashChangeEvent.cpp
 JSHdrMetadataType.cpp
 JSHighlightRegister.cpp
@@ -3509,6 +3567,7 @@ JSKeyboardEvent.cpp
 JSKeyframeAnimationOptions.cpp
 JSKeyframeEffect.cpp
 JSKeyframeEffectOptions.cpp
+JSLatencyMode.cpp
 JSLocation.cpp
 JSLongRange.cpp
 JSMathMLElement.cpp
@@ -3573,6 +3632,7 @@ JSMessageEvent.cpp
 JSMessagePort.cpp
 JSMouseEvent.cpp
 JSMouseEventInit.cpp
+JSMultiCacheQueryOptions.cpp
 JSMutationCallback.cpp
 JSMutationEvent.cpp
 JSMutationObserver.cpp
@@ -3625,6 +3685,7 @@ JSPannerNode.cpp
 JSPannerOptions.cpp
 JSPanningModelType.cpp
 JSParentNode.cpp
+JSParseFromStringOptions.cpp
 JSPath2D.cpp
 JSPayerErrorFields.cpp
 JSPaymentAddress.cpp
@@ -3672,6 +3733,7 @@ JSPermissionStatus.cpp
 JSPermissions.cpp
 JSPictureInPictureEvent.cpp
 JSPictureInPictureWindow.cpp
+JSPlaneLayout.cpp
 JSPlaybackDirection.cpp
 JSPointerEvent.cpp
 JSPopStateEvent.cpp
@@ -3804,9 +3866,6 @@ JSSQLTransaction.cpp
 JSSQLTransactionCallback.cpp
 JSSQLTransactionErrorCallback.cpp
 JSSVGAElement.cpp
-JSSVGAltGlyphDefElement.cpp
-JSSVGAltGlyphElement.cpp
-JSSVGAltGlyphItemElement.cpp
 JSSVGAngle.cpp
 JSSVGAnimateColorElement.cpp
 JSSVGAnimateElement.cpp
@@ -3828,7 +3887,6 @@ JSSVGAnimationElement.cpp
 JSSVGCircleElement.cpp
 JSSVGClipPathElement.cpp
 JSSVGComponentTransferFunctionElement.cpp
-JSSVGCursorElement.cpp
 JSSVGDefsElement.cpp
 JSSVGDescElement.cpp
 JSSVGElement.cpp
@@ -3861,20 +3919,11 @@ JSSVGFETurbulenceElement.cpp
 JSSVGFilterElement.cpp
 JSSVGFilterPrimitiveStandardAttributes.cpp
 JSSVGFitToViewBox.cpp
-JSSVGFontElement.cpp
-JSSVGFontFaceElement.cpp
-JSSVGFontFaceFormatElement.cpp
-JSSVGFontFaceNameElement.cpp
-JSSVGFontFaceSrcElement.cpp
-JSSVGFontFaceUriElement.cpp
 JSSVGForeignObjectElement.cpp
 JSSVGGElement.cpp
 JSSVGGeometryElement.cpp
-JSSVGGlyphElement.cpp
-JSSVGGlyphRefElement.cpp
 JSSVGGradientElement.cpp
 JSSVGGraphicsElement.cpp
-JSSVGHKernElement.cpp
 JSSVGImageElement.cpp
 JSSVGLength.cpp
 JSSVGLengthList.cpp
@@ -3885,7 +3934,6 @@ JSSVGMarkerElement.cpp
 JSSVGMaskElement.cpp
 JSSVGMatrix.cpp
 JSSVGMetadataElement.cpp
-JSSVGMissingGlyphElement.cpp
 JSSVGNumber.cpp
 JSSVGNumberList.cpp
 JSSVGPathElement.cpp
@@ -3928,7 +3976,6 @@ JSSVGStringList.cpp
 JSSVGStyleElement.cpp
 JSSVGSwitchElement.cpp
 JSSVGSymbolElement.cpp
-JSSVGTRefElement.cpp
 JSSVGTSpanElement.cpp
 JSSVGTests.cpp
 JSSVGTextContentElement.cpp
@@ -3941,12 +3988,11 @@ JSSVGTransformList.cpp
 JSSVGURIReference.cpp
 JSSVGUnitTypes.cpp
 JSSVGUseElement.cpp
-JSSVGVKernElement.cpp
 JSSVGViewElement.cpp
 JSSVGViewSpec.cpp
 JSSVGZoomAndPan.cpp
-JSSVGZoomEvent.cpp
 JSScreen.cpp
+JSScreenOrientation.cpp
 JSScriptProcessorNode.cpp
 JSScrollBehavior.cpp
 JSScrollIntoViewOptions.cpp
@@ -4062,9 +4108,11 @@ JSCSSTranslate.cpp
 JSCSSStyleValue.cpp
 JSCSSUnitValue.cpp
 JSCSSUnparsedValue.cpp
+JSFullscreenOptions.cpp
 JSUIEvent.cpp
 JSUIEventInit.cpp
 JSURLSearchParams.cpp
+JSUserActivation.cpp
 JSUndoItem.cpp
 JSUndoManager.cpp
 JSUserMessageHandler.cpp
@@ -4081,6 +4129,7 @@ JSVideoConfiguration.cpp
 JSVideoFrameMetadata.cpp
 JSVideoFrameRequestCallback.cpp
 JSVideoMatrixCoefficients.cpp
+JSVideoPixelFormat.cpp
 JSVideoPlaybackQuality.cpp
 JSVideoTrack.cpp
 JSVideoTrackConfiguration.cpp
@@ -4089,15 +4138,33 @@ JSVideoTransferCharacteristics.cpp
 JSVisibilityState.cpp
 JSVisualViewport.cpp
 JSVoidCallback.cpp
+JSWakeLock.cpp
+JSWakeLockSentinel.cpp
+JSWakeLockType.cpp
 JSWaveShaperNode.cpp
 JSWaveShaperOptions.cpp
 JSWebAnimation.cpp
+JSWebCodecsAlphaOption.cpp
+JSWebCodecsEncodedVideoChunk.cpp
+JSWebCodecsEncodedVideoChunkMetadata.cpp
+JSWebCodecsEncodedVideoChunkOutputCallback.cpp
+JSWebCodecsEncodedVideoChunkType.cpp
+JSWebCodecsErrorCallback.cpp
+JSWebCodecsCodecState.cpp
+JSWebCodecsVideoDecoder.cpp
+JSWebCodecsVideoDecoderConfig.cpp
+JSWebCodecsVideoDecoderSupport.cpp
+JSWebCodecsVideoEncoder.cpp
+JSWebCodecsVideoEncoderConfig.cpp
+JSWebCodecsVideoEncoderEncodeOptions.cpp
+JSWebCodecsVideoEncoderSupport.cpp
+JSWebCodecsVideoFrameOutputCallback.cpp
+JSWebCodecsVideoFrame.cpp
 JSWebGL2RenderingContext.cpp
 JSWebGLActiveInfo.cpp
 JSWebGLBuffer.cpp
 JSWebGLColorBufferFloat.cpp
 JSWebGLCompressedTextureASTC.cpp
-JSWebGLCompressedTextureATC.cpp
 JSWebGLCompressedTextureETC.cpp
 JSWebGLCompressedTextureETC1.cpp
 JSWebGLCompressedTexturePVRTC.cpp
@@ -4115,6 +4182,7 @@ JSWebGLLoseContext.cpp
 JSWebGLMultiDraw.cpp
 JSWebGLMultiDrawInstancedBaseVertexBaseInstance.cpp
 JSWebGLProgram.cpp
+JSWebGLProvokingVertex.cpp
 JSWebGLQuery.cpp
 JSWebGLRenderbuffer.cpp
 JSWebGLRenderingContext.cpp

@@ -3,7 +3,7 @@
 
 /*---
 esid: sec-temporal.plaindate.protoype.tostring
-description: Should always call 'toString' on the calendar once.
+description: Number of observable 'toString' calls on the calendar for each value of calendarName
 features: [Temporal]
 ---*/
 
@@ -16,13 +16,14 @@ const customCalendar = {
 };
 const date = new Temporal.PlainDate(2000, 5, 2, customCalendar);
 [
-  ["always", "2000-05-02[u-ca=custom]"],
-  ["auto", "2000-05-02[u-ca=custom]"],
-  ["never", "2000-05-02"],
-  [undefined, "2000-05-02[u-ca=custom]"],
-].forEach(([calendarName, expected]) => {
+  ["always", "2000-05-02[u-ca=custom]", 1],
+  ["auto", "2000-05-02[u-ca=custom]", 1],
+  ["critical", "2000-05-02[!u-ca=custom]", 1],
+  ["never", "2000-05-02", 0],
+  [undefined, "2000-05-02[u-ca=custom]", 1],
+].forEach(([calendarName, expectedResult, expectedCalls]) => {
   calls = 0;
   const result = date.toString({ calendarName });
-  assert.sameValue(result, expected, `calendarName = ${calendarName}: expected ${expected}`);
-  assert.sameValue(calls, 1, `calendarName = ${calendarName}: expected one call to 'toString'`);
+  assert.sameValue(result, expectedResult, `toString output for calendarName = ${calendarName}`);
+  assert.sameValue(calls, expectedCalls, `calls to toString for calendarName = ${calendarName}`);
 });

@@ -26,8 +26,7 @@
 #include "config.h"
 #include "CSSMathClamp.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
+#include "CSSCalcOperationNode.h"
 #include "CSSNumericValue.h"
 #include "ExceptionOr.h"
 #include <wtf/IsoMallocInlines.h>
@@ -76,8 +75,22 @@ void CSSMathClamp::serialize(StringBuilder& builder, OptionSet<SerializationArgu
 
 auto CSSMathClamp::toSumValue() const -> std::optional<SumValue>
 {
-    // FIXME: Implement.
-    return std::nullopt;
+    auto validateSumValue = [](const std::optional<SumValue>& sumValue, const UnitMap* expectedUnits) {
+        return sumValue && sumValue->size() == 1 && (!expectedUnits || *expectedUnits == sumValue->first().units);
+    };
+
+    auto lower = m_lower->toSumValue();
+    if (!validateSumValue(lower, nullptr))
+        return std::nullopt;
+    auto value = m_value->toSumValue();
+    if (!validateSumValue(value, &lower->first().units))
+        return std::nullopt;
+    auto upper = m_upper->toSumValue();
+    if (!validateSumValue(upper, &lower->first().units))
+        return std::nullopt;
+
+    value->first().value = std::max(lower->first().value, std::min(value->first().value, upper->first().value));
+    return value;
 }
 
 bool CSSMathClamp::equals(const CSSNumericValue& other) const
@@ -91,6 +104,16 @@ bool CSSMathClamp::equals(const CSSNumericValue& other) const
         && m_upper->equals(otherClamp->m_upper);
 }
 
-} // namespace WebCore
+RefPtr<CSSCalcExpressionNode> CSSMathClamp::toCalcExpressionNode() const
+{
+    Vector<Ref<CSSCalcExpressionNode>> values;
+    for (auto& value : { m_lower, m_value, m_upper }) {
+        auto valueNode = value->toCalcExpressionNode();
+        if (!valueNode)
+            return nullptr;
+        values.append(valueNode.releaseNonNull());
+    }
+    return CSSCalcOperationNode::createMinOrMaxOrClamp(CalcOperator::Clamp, WTFMove(values), CalculationCategory::Length);
+}
 
-#endif
+} // namespace WebCore

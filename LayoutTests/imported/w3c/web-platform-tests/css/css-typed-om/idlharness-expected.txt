@@ -53,26 +53,26 @@ PASS StylePropertyMap interface object name
 PASS StylePropertyMap interface: existence and properties of interface prototype object
 PASS StylePropertyMap interface: existence and properties of interface prototype object's "constructor" property
 PASS StylePropertyMap interface: existence and properties of interface prototype object's @@unscopables property
-FAIL StylePropertyMap interface: operation set(USVString, (CSSStyleValue or USVString)...) assert_own_property: interface prototype object missing non-static operation expected property "set" missing
-FAIL StylePropertyMap interface: operation append(USVString, (CSSStyleValue or USVString)...) assert_own_property: interface prototype object missing non-static operation expected property "append" missing
-FAIL StylePropertyMap interface: operation delete(USVString) assert_own_property: interface prototype object missing non-static operation expected property "delete" missing
-FAIL StylePropertyMap interface: operation clear() assert_own_property: interface prototype object missing non-static operation expected property "clear" missing
-FAIL StylePropertyMap must be primary interface of styleMap assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL Stringification of styleMap assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMap interface: styleMap must inherit property "set(USVString, (CSSStyleValue or USVString)...)" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMap interface: calling set(USVString, (CSSStyleValue or USVString)...) on styleMap with too few arguments must throw TypeError assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMap interface: styleMap must inherit property "append(USVString, (CSSStyleValue or USVString)...)" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMap interface: calling append(USVString, (CSSStyleValue or USVString)...) on styleMap with too few arguments must throw TypeError assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMap interface: styleMap must inherit property "delete(USVString)" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMap interface: calling delete(USVString) on styleMap with too few arguments must throw TypeError assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMap interface: styleMap must inherit property "clear()" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMapReadOnly interface: styleMap must inherit property "get(USVString)" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMapReadOnly interface: calling get(USVString) on styleMap with too few arguments must throw TypeError assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMapReadOnly interface: styleMap must inherit property "getAll(USVString)" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMapReadOnly interface: calling getAll(USVString) on styleMap with too few arguments must throw TypeError assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMapReadOnly interface: styleMap must inherit property "has(USVString)" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMapReadOnly interface: calling has(USVString) on styleMap with too few arguments must throw TypeError assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL StylePropertyMapReadOnly interface: styleMap must inherit property "size" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
+PASS StylePropertyMap interface: operation set(USVString, (CSSStyleValue or USVString)...)
+PASS StylePropertyMap interface: operation append(USVString, (CSSStyleValue or USVString)...)
+PASS StylePropertyMap interface: operation delete(USVString)
+PASS StylePropertyMap interface: operation clear()
+PASS StylePropertyMap must be primary interface of styleMap
+PASS Stringification of styleMap
+PASS StylePropertyMap interface: styleMap must inherit property "set(USVString, (CSSStyleValue or USVString)...)" with the proper type
+PASS StylePropertyMap interface: calling set(USVString, (CSSStyleValue or USVString)...) on styleMap with too few arguments must throw TypeError
+PASS StylePropertyMap interface: styleMap must inherit property "append(USVString, (CSSStyleValue or USVString)...)" with the proper type
+PASS StylePropertyMap interface: calling append(USVString, (CSSStyleValue or USVString)...) on styleMap with too few arguments must throw TypeError
+PASS StylePropertyMap interface: styleMap must inherit property "delete(USVString)" with the proper type
+PASS StylePropertyMap interface: calling delete(USVString) on styleMap with too few arguments must throw TypeError
+PASS StylePropertyMap interface: styleMap must inherit property "clear()" with the proper type
+PASS StylePropertyMapReadOnly interface: styleMap must inherit property "get(USVString)" with the proper type
+PASS StylePropertyMapReadOnly interface: calling get(USVString) on styleMap with too few arguments must throw TypeError
+PASS StylePropertyMapReadOnly interface: styleMap must inherit property "getAll(USVString)" with the proper type
+PASS StylePropertyMapReadOnly interface: calling getAll(USVString) on styleMap with too few arguments must throw TypeError
+PASS StylePropertyMapReadOnly interface: styleMap must inherit property "has(USVString)" with the proper type
+PASS StylePropertyMapReadOnly interface: calling has(USVString) on styleMap with too few arguments must throw TypeError
+PASS StylePropertyMapReadOnly interface: styleMap must inherit property "size" with the proper type
 PASS CSSUnparsedValue interface: existence and properties of interface object
 PASS CSSUnparsedValue interface object length
 PASS CSSUnparsedValue interface object name
@@ -234,13 +234,9 @@ PASS CSSMathClamp interface object name
 PASS CSSMathClamp interface: existence and properties of interface prototype object
 PASS CSSMathClamp interface: existence and properties of interface prototype object's "constructor" property
 PASS CSSMathClamp interface: existence and properties of interface prototype object's @@unscopables property
-FAIL CSSMathClamp interface: attribute min assert_throws_js: getting property on prototype object must throw TypeError function "function () {
-    [native code]
-}" did not throw
-FAIL CSSMathClamp interface: attribute val assert_true: The prototype object must have a property "val" expected true got false
-FAIL CSSMathClamp interface: attribute max assert_throws_js: getting property on prototype object must throw TypeError function "function () {
-    [native code]
-}" did not throw
+PASS CSSMathClamp interface: attribute lower
+PASS CSSMathClamp interface: attribute value
+PASS CSSMathClamp interface: attribute upper
 PASS CSSNumericArray interface: existence and properties of interface object
 PASS CSSNumericArray interface object length
 PASS CSSNumericArray interface object name
@@ -259,15 +255,15 @@ PASS CSSTransformValue interface: iterable<CSSTransformComponent>
 PASS CSSTransformValue interface: attribute length
 PASS CSSTransformValue interface: attribute is2D
 PASS CSSTransformValue interface: operation toMatrix()
-FAIL CSSTransformValue must be primary interface of transformValue assert_equals: transformValue's prototype is not CSSTransformValue.prototype expected [stringifying object threw TypeError: Can only call CSSStyleValue.toString on instances of CSSStyleValue with type object] but got [stringifying object threw TypeError: Can only call CSSStyleValue.toString on instances of CSSStyleValue with type object]
-FAIL Stringification of transformValue assert_class_string: class string of transformValue expected "[object CSSTransformValue]" but got "[object CSSStyleValue]"
-FAIL CSSTransformValue interface: transformValue must inherit property "length" with the proper type assert_inherits: property "length" not found in prototype chain
-FAIL CSSTransformValue interface: transformValue must inherit property "is2D" with the proper type assert_inherits: property "is2D" not found in prototype chain
-FAIL CSSTransformValue interface: transformValue must inherit property "toMatrix()" with the proper type assert_inherits: property "toMatrix" not found in prototype chain
+PASS CSSTransformValue must be primary interface of transformValue
+PASS Stringification of transformValue
+PASS CSSTransformValue interface: transformValue must inherit property "length" with the proper type
+PASS CSSTransformValue interface: transformValue must inherit property "is2D" with the proper type
+PASS CSSTransformValue interface: transformValue must inherit property "toMatrix()" with the proper type
 PASS CSSStyleValue interface: transformValue must inherit property "parse(USVString, USVString)" with the proper type
-PASS CSSStyleValue interface: calling parse(USVString, USVString) on transformValue with too few arguments must throw TypeError
+FAIL CSSStyleValue interface: calling parse(USVString, USVString) on transformValue with too few arguments must throw TypeError assert_own_property: interface object must have static operation as own property expected property "parse" missing
 PASS CSSStyleValue interface: transformValue must inherit property "parseAll(USVString, USVString)" with the proper type
-PASS CSSStyleValue interface: calling parseAll(USVString, USVString) on transformValue with too few arguments must throw TypeError
+FAIL CSSStyleValue interface: calling parseAll(USVString, USVString) on transformValue with too few arguments must throw TypeError assert_own_property: interface object must have static operation as own property expected property "parseAll" missing
 PASS CSSTransformComponent interface: existence and properties of interface object
 PASS CSSTransformComponent interface object length
 PASS CSSTransformComponent interface object name
@@ -286,13 +282,13 @@ PASS CSSTranslate interface: existence and properties of interface prototype obj
 PASS CSSTranslate interface: attribute x
 PASS CSSTranslate interface: attribute y
 PASS CSSTranslate interface: attribute z
-FAIL CSSTranslate must be primary interface of transformValue[0] assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL Stringification of transformValue[0] assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTranslate interface: transformValue[0] must inherit property "x" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTranslate interface: transformValue[0] must inherit property "y" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTranslate interface: transformValue[0] must inherit property "z" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: transformValue[0] must inherit property "is2D" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: transformValue[0] must inherit property "toMatrix()" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
+PASS CSSTranslate must be primary interface of transformValue[0]
+PASS Stringification of transformValue[0]
+PASS CSSTranslate interface: transformValue[0] must inherit property "x" with the proper type
+PASS CSSTranslate interface: transformValue[0] must inherit property "y" with the proper type
+PASS CSSTranslate interface: transformValue[0] must inherit property "z" with the proper type
+PASS CSSTransformComponent interface: transformValue[0] must inherit property "is2D" with the proper type
+PASS CSSTransformComponent interface: transformValue[0] must inherit property "toMatrix()" with the proper type
 PASS CSSRotate interface: existence and properties of interface object
 PASS CSSRotate interface object length
 PASS CSSRotate interface object name
@@ -303,14 +299,14 @@ PASS CSSRotate interface: attribute x
 PASS CSSRotate interface: attribute y
 PASS CSSRotate interface: attribute z
 PASS CSSRotate interface: attribute angle
-FAIL CSSRotate must be primary interface of rotate assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL Stringification of rotate assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSRotate interface: rotate must inherit property "x" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSRotate interface: rotate must inherit property "y" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSRotate interface: rotate must inherit property "z" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSRotate interface: rotate must inherit property "angle" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: rotate must inherit property "is2D" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: rotate must inherit property "toMatrix()" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
+PASS CSSRotate must be primary interface of rotate
+PASS Stringification of rotate
+PASS CSSRotate interface: rotate must inherit property "x" with the proper type
+PASS CSSRotate interface: rotate must inherit property "y" with the proper type
+PASS CSSRotate interface: rotate must inherit property "z" with the proper type
+PASS CSSRotate interface: rotate must inherit property "angle" with the proper type
+PASS CSSTransformComponent interface: rotate must inherit property "is2D" with the proper type
+PASS CSSTransformComponent interface: rotate must inherit property "toMatrix()" with the proper type
 PASS CSSScale interface: existence and properties of interface object
 PASS CSSScale interface object length
 PASS CSSScale interface object name
@@ -320,13 +316,13 @@ PASS CSSScale interface: existence and properties of interface prototype object'
 PASS CSSScale interface: attribute x
 PASS CSSScale interface: attribute y
 PASS CSSScale interface: attribute z
-FAIL CSSScale must be primary interface of scale assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL Stringification of scale assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSScale interface: scale must inherit property "x" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSScale interface: scale must inherit property "y" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSScale interface: scale must inherit property "z" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: scale must inherit property "is2D" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: scale must inherit property "toMatrix()" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
+PASS CSSScale must be primary interface of scale
+PASS Stringification of scale
+PASS CSSScale interface: scale must inherit property "x" with the proper type
+PASS CSSScale interface: scale must inherit property "y" with the proper type
+PASS CSSScale interface: scale must inherit property "z" with the proper type
+PASS CSSTransformComponent interface: scale must inherit property "is2D" with the proper type
+PASS CSSTransformComponent interface: scale must inherit property "toMatrix()" with the proper type
 PASS CSSSkew interface: existence and properties of interface object
 PASS CSSSkew interface object length
 PASS CSSSkew interface object name
@@ -335,12 +331,12 @@ PASS CSSSkew interface: existence and properties of interface prototype object's
 PASS CSSSkew interface: existence and properties of interface prototype object's @@unscopables property
 PASS CSSSkew interface: attribute ax
 PASS CSSSkew interface: attribute ay
-FAIL CSSSkew must be primary interface of skew assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL Stringification of skew assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSSkew interface: skew must inherit property "ax" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSSkew interface: skew must inherit property "ay" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: skew must inherit property "is2D" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: skew must inherit property "toMatrix()" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
+PASS CSSSkew must be primary interface of skew
+PASS Stringification of skew
+PASS CSSSkew interface: skew must inherit property "ax" with the proper type
+PASS CSSSkew interface: skew must inherit property "ay" with the proper type
+PASS CSSTransformComponent interface: skew must inherit property "is2D" with the proper type
+PASS CSSTransformComponent interface: skew must inherit property "toMatrix()" with the proper type
 PASS CSSSkewX interface: existence and properties of interface object
 PASS CSSSkewX interface object length
 PASS CSSSkewX interface object name
@@ -348,11 +344,11 @@ PASS CSSSkewX interface: existence and properties of interface prototype object
 PASS CSSSkewX interface: existence and properties of interface prototype object's "constructor" property
 PASS CSSSkewX interface: existence and properties of interface prototype object's @@unscopables property
 PASS CSSSkewX interface: attribute ax
-FAIL CSSSkewX must be primary interface of skewX assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL Stringification of skewX assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSSkewX interface: skewX must inherit property "ax" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: skewX must inherit property "is2D" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: skewX must inherit property "toMatrix()" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
+PASS CSSSkewX must be primary interface of skewX
+PASS Stringification of skewX
+PASS CSSSkewX interface: skewX must inherit property "ax" with the proper type
+PASS CSSTransformComponent interface: skewX must inherit property "is2D" with the proper type
+PASS CSSTransformComponent interface: skewX must inherit property "toMatrix()" with the proper type
 PASS CSSSkewY interface: existence and properties of interface object
 PASS CSSSkewY interface object length
 PASS CSSSkewY interface object name
@@ -360,11 +356,11 @@ PASS CSSSkewY interface: existence and properties of interface prototype object
 PASS CSSSkewY interface: existence and properties of interface prototype object's "constructor" property
 PASS CSSSkewY interface: existence and properties of interface prototype object's @@unscopables property
 PASS CSSSkewY interface: attribute ay
-FAIL CSSSkewY must be primary interface of skewY assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL Stringification of skewY assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSSkewY interface: skewY must inherit property "ay" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: skewY must inherit property "is2D" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: skewY must inherit property "toMatrix()" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
+PASS CSSSkewY must be primary interface of skewY
+PASS Stringification of skewY
+PASS CSSSkewY interface: skewY must inherit property "ay" with the proper type
+PASS CSSTransformComponent interface: skewY must inherit property "is2D" with the proper type
+PASS CSSTransformComponent interface: skewY must inherit property "toMatrix()" with the proper type
 PASS CSSPerspective interface: existence and properties of interface object
 PASS CSSPerspective interface object length
 PASS CSSPerspective interface object name
@@ -372,11 +368,11 @@ PASS CSSPerspective interface: existence and properties of interface prototype o
 PASS CSSPerspective interface: existence and properties of interface prototype object's "constructor" property
 PASS CSSPerspective interface: existence and properties of interface prototype object's @@unscopables property
 PASS CSSPerspective interface: attribute length
-FAIL CSSPerspective must be primary interface of perspective assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL Stringification of perspective assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSPerspective interface: perspective must inherit property "length" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: perspective must inherit property "is2D" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: perspective must inherit property "toMatrix()" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
+PASS CSSPerspective must be primary interface of perspective
+PASS Stringification of perspective
+PASS CSSPerspective interface: perspective must inherit property "length" with the proper type
+PASS CSSTransformComponent interface: perspective must inherit property "is2D" with the proper type
+PASS CSSTransformComponent interface: perspective must inherit property "toMatrix()" with the proper type
 PASS CSSMatrixComponent interface: existence and properties of interface object
 PASS CSSMatrixComponent interface object length
 PASS CSSMatrixComponent interface object name
@@ -384,11 +380,11 @@ PASS CSSMatrixComponent interface: existence and properties of interface prototy
 PASS CSSMatrixComponent interface: existence and properties of interface prototype object's "constructor" property
 PASS CSSMatrixComponent interface: existence and properties of interface prototype object's @@unscopables property
 PASS CSSMatrixComponent interface: attribute matrix
-FAIL CSSMatrixComponent must be primary interface of matrix assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL Stringification of matrix assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSMatrixComponent interface: matrix must inherit property "matrix" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: matrix must inherit property "is2D" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
-FAIL CSSTransformComponent interface: matrix must inherit property "toMatrix()" with the proper type assert_equals: wrong typeof object expected "object" but got "undefined"
+PASS CSSMatrixComponent must be primary interface of matrix
+PASS Stringification of matrix
+PASS CSSMatrixComponent interface: matrix must inherit property "matrix" with the proper type
+PASS CSSTransformComponent interface: matrix must inherit property "is2D" with the proper type
+PASS CSSTransformComponent interface: matrix must inherit property "toMatrix()" with the proper type
 PASS CSSImageValue interface: existence and properties of interface object
 PASS CSSImageValue interface object length
 PASS CSSImageValue interface object name
@@ -401,8 +397,6 @@ PASS CSSColorValue interface object name
 PASS CSSColorValue interface: existence and properties of interface prototype object
 PASS CSSColorValue interface: existence and properties of interface prototype object's "constructor" property
 PASS CSSColorValue interface: existence and properties of interface prototype object's @@unscopables property
-PASS CSSColorValue interface: attribute colorSpace
-PASS CSSColorValue interface: operation to(CSSKeywordish)
 PASS CSSColorValue interface: operation parse(USVString)
 PASS CSSRGB interface: existence and properties of interface object
 PASS CSSRGB interface object length
@@ -434,16 +428,6 @@ PASS CSSHWB interface: attribute h
 PASS CSSHWB interface: attribute w
 PASS CSSHWB interface: attribute b
 PASS CSSHWB interface: attribute alpha
-PASS CSSLCH interface: existence and properties of interface object
-PASS CSSLCH interface object length
-PASS CSSLCH interface object name
-PASS CSSLCH interface: existence and properties of interface prototype object
-PASS CSSLCH interface: existence and properties of interface prototype object's "constructor" property
-PASS CSSLCH interface: existence and properties of interface prototype object's @@unscopables property
-PASS CSSLCH interface: attribute l
-PASS CSSLCH interface: attribute c
-PASS CSSLCH interface: attribute h
-PASS CSSLCH interface: attribute alpha
 PASS CSSLab interface: existence and properties of interface object
 PASS CSSLab interface object length
 PASS CSSLab interface object name
@@ -454,24 +438,46 @@ PASS CSSLab interface: attribute l
 PASS CSSLab interface: attribute a
 PASS CSSLab interface: attribute b
 PASS CSSLab interface: attribute alpha
+PASS CSSLCH interface: existence and properties of interface object
+PASS CSSLCH interface object length
+PASS CSSLCH interface object name
+PASS CSSLCH interface: existence and properties of interface prototype object
+PASS CSSLCH interface: existence and properties of interface prototype object's "constructor" property
+PASS CSSLCH interface: existence and properties of interface prototype object's @@unscopables property
+PASS CSSLCH interface: attribute l
+PASS CSSLCH interface: attribute c
+PASS CSSLCH interface: attribute h
+PASS CSSLCH interface: attribute alpha
+PASS CSSOKLab interface: existence and properties of interface object
+PASS CSSOKLab interface object length
+PASS CSSOKLab interface object name
+PASS CSSOKLab interface: existence and properties of interface prototype object
+PASS CSSOKLab interface: existence and properties of interface prototype object's "constructor" property
+PASS CSSOKLab interface: existence and properties of interface prototype object's @@unscopables property
+PASS CSSOKLab interface: attribute l
+PASS CSSOKLab interface: attribute a
+PASS CSSOKLab interface: attribute b
+PASS CSSOKLab interface: attribute alpha
+PASS CSSOKLCH interface: existence and properties of interface object
+PASS CSSOKLCH interface object length
+PASS CSSOKLCH interface object name
+PASS CSSOKLCH interface: existence and properties of interface prototype object
+PASS CSSOKLCH interface: existence and properties of interface prototype object's "constructor" property
+PASS CSSOKLCH interface: existence and properties of interface prototype object's @@unscopables property
+PASS CSSOKLCH interface: attribute l
+PASS CSSOKLCH interface: attribute c
+PASS CSSOKLCH interface: attribute h
+PASS CSSOKLCH interface: attribute alpha
 PASS CSSColor interface: existence and properties of interface object
-FAIL CSSColor interface object length assert_equals: wrong value for CSSColor.length expected 1 but got 2
+PASS CSSColor interface object length
 PASS CSSColor interface object name
 PASS CSSColor interface: existence and properties of interface prototype object
 PASS CSSColor interface: existence and properties of interface prototype object's "constructor" property
 PASS CSSColor interface: existence and properties of interface prototype object's @@unscopables property
-FAIL CSSDeviceCMYK interface: existence and properties of interface object assert_own_property: self does not have own property "CSSDeviceCMYK" expected property "CSSDeviceCMYK" missing
-FAIL CSSDeviceCMYK interface object length assert_own_property: self does not have own property "CSSDeviceCMYK" expected property "CSSDeviceCMYK" missing
-FAIL CSSDeviceCMYK interface object name assert_own_property: self does not have own property "CSSDeviceCMYK" expected property "CSSDeviceCMYK" missing
-FAIL CSSDeviceCMYK interface: existence and properties of interface prototype object assert_own_property: self does not have own property "CSSDeviceCMYK" expected property "CSSDeviceCMYK" missing
-FAIL CSSDeviceCMYK interface: existence and properties of interface prototype object's "constructor" property assert_own_property: self does not have own property "CSSDeviceCMYK" expected property "CSSDeviceCMYK" missing
-FAIL CSSDeviceCMYK interface: existence and properties of interface prototype object's @@unscopables property assert_own_property: self does not have own property "CSSDeviceCMYK" expected property "CSSDeviceCMYK" missing
-FAIL CSSDeviceCMYK interface: attribute c assert_own_property: self does not have own property "CSSDeviceCMYK" expected property "CSSDeviceCMYK" missing
-FAIL CSSDeviceCMYK interface: attribute m assert_own_property: self does not have own property "CSSDeviceCMYK" expected property "CSSDeviceCMYK" missing
-FAIL CSSDeviceCMYK interface: attribute y assert_own_property: self does not have own property "CSSDeviceCMYK" expected property "CSSDeviceCMYK" missing
-FAIL CSSDeviceCMYK interface: attribute k assert_own_property: self does not have own property "CSSDeviceCMYK" expected property "CSSDeviceCMYK" missing
-FAIL CSSDeviceCMYK interface: attribute alpha assert_own_property: self does not have own property "CSSDeviceCMYK" expected property "CSSDeviceCMYK" missing
-FAIL CSSStyleRule interface: attribute styleMap assert_true: The prototype object must have a property "styleMap" expected true got false
+PASS CSSColor interface: attribute colorSpace
+FAIL CSSColor interface: attribute channels assert_true: The prototype object must have a property "channels" expected true got false
+PASS CSSColor interface: attribute alpha
+PASS CSSStyleRule interface: attribute styleMap
 PASS CSS namespace: operation escape(CSSOMString)
 PASS CSS namespace: operation number(double)
 PASS CSS namespace: operation percent(double)
@@ -488,6 +494,30 @@ PASS CSS namespace: operation vi(double)
 PASS CSS namespace: operation vb(double)
 PASS CSS namespace: operation vmin(double)
 PASS CSS namespace: operation vmax(double)
+PASS CSS namespace: operation svw(double)
+PASS CSS namespace: operation svh(double)
+PASS CSS namespace: operation svi(double)
+PASS CSS namespace: operation svb(double)
+PASS CSS namespace: operation svmin(double)
+PASS CSS namespace: operation svmax(double)
+PASS CSS namespace: operation lvw(double)
+PASS CSS namespace: operation lvh(double)
+PASS CSS namespace: operation lvi(double)
+PASS CSS namespace: operation lvb(double)
+PASS CSS namespace: operation lvmin(double)
+PASS CSS namespace: operation lvmax(double)
+PASS CSS namespace: operation dvw(double)
+PASS CSS namespace: operation dvh(double)
+PASS CSS namespace: operation dvi(double)
+PASS CSS namespace: operation dvb(double)
+PASS CSS namespace: operation dvmin(double)
+PASS CSS namespace: operation dvmax(double)
+PASS CSS namespace: operation cqw(double)
+PASS CSS namespace: operation cqh(double)
+PASS CSS namespace: operation cqi(double)
+PASS CSS namespace: operation cqb(double)
+PASS CSS namespace: operation cqmin(double)
+PASS CSS namespace: operation cqmax(double)
 PASS CSS namespace: operation cm(double)
 PASS CSS namespace: operation mm(double)
 PASS CSS namespace: operation Q(double)

@@ -389,6 +389,11 @@ VkDevice Context::getDevice() const
     return mRenderer->getDevice();
 }
 
+const angle::FeaturesVk &Context::getFeatures() const
+{
+    return mRenderer->getFeatures();
+}
+
 // MemoryProperties implementation.
 MemoryProperties::MemoryProperties() : mMemoryProperties{} {}
 
@@ -641,10 +646,10 @@ angle::Result AllocateBufferMemoryWithRequirements(Context *context,
                                               buffer, deviceMemoryOut);
 }
 
-angle::Result InitShaderAndSerial(Context *context,
-                                  ShaderAndSerial *shaderAndSerial,
-                                  const uint32_t *shaderCode,
-                                  size_t shaderCodeSize)
+angle::Result InitShaderModule(Context *context,
+                               ShaderModule *shaderModule,
+                               const uint32_t *shaderCode,
+                               size_t shaderCodeSize)
 {
     VkShaderModuleCreateInfo createInfo = {};
     createInfo.sType                    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -652,8 +657,7 @@ angle::Result InitShaderAndSerial(Context *context,
     createInfo.codeSize                 = shaderCodeSize;
     createInfo.pCode                    = shaderCode;
 
-    ANGLE_VK_TRY(context, shaderAndSerial->get().init(context->getDevice(), createInfo));
-    shaderAndSerial->updateSerial(context->getRenderer()->issueShaderSerial());
+    ANGLE_VK_TRY(context, shaderModule->init(context->getDevice(), createInfo));
     return angle::Result::Continue;
 }
 
@@ -1038,6 +1042,9 @@ PFN_vkCmdSetRasterizerDiscardEnableEXT vkCmdSetRasterizerDiscardEnableEXT = null
 PFN_vkGetPhysicalDeviceFragmentShadingRatesKHR vkGetPhysicalDeviceFragmentShadingRatesKHR = nullptr;
 PFN_vkCmdSetFragmentShadingRateKHR vkCmdSetFragmentShadingRateKHR                         = nullptr;
 
+// VK_GOOGLE_display_timing
+PFN_vkGetPastPresentationTimingGOOGLE vkGetPastPresentationTimingGOOGLE = nullptr;
+
 void InitDebugUtilsEXTFunctions(VkInstance instance)
 {
     GET_INSTANCE_FUNC(vkCreateDebugUtilsMessengerEXT);
@@ -1188,10 +1195,20 @@ void InitExtendedDynamicState2EXTFunctions(VkDevice device)
 }
 
 // VK_KHR_fragment_shading_rate
-void InitFragmentShadingRateKHRFunctions(VkDevice device)
+void InitFragmentShadingRateKHRInstanceFunction(VkInstance instance)
 {
-    GET_DEVICE_FUNC(vkGetPhysicalDeviceFragmentShadingRatesKHR);
+    GET_INSTANCE_FUNC(vkGetPhysicalDeviceExternalSemaphorePropertiesKHR);
+}
+
+void InitFragmentShadingRateKHRDeviceFunction(VkDevice device)
+{
     GET_DEVICE_FUNC(vkCmdSetFragmentShadingRateKHR);
+}
+
+// VK_GOOGLE_display_timing
+void InitGetPastPresentationTimingGoogleFunction(VkDevice device)
+{
+    GET_DEVICE_FUNC(vkGetPastPresentationTimingGOOGLE);
 }
 
 #    undef GET_INSTANCE_FUNC
@@ -1453,6 +1470,12 @@ VkStencilOp GetStencilOp(GLenum compareOp)
             UNREACHABLE();
             return VK_STENCIL_OP_KEEP;
     }
+}
+
+VkLogicOp GetLogicOp(const GLenum logicOp)
+{
+    // GL's logic op values are 0x1500 + op, where op is the same value as Vulkan's VkLogicOp.
+    return static_cast<VkLogicOp>(logicOp - GL_CLEAR);
 }
 
 void GetOffset(const gl::Offset &glOffset, VkOffset3D *vkOffset)

@@ -79,8 +79,6 @@ CSSStyleDeclaration& StyledElement::cssomStyle()
     return ensureMutableInlineStyle().ensureInlineCSSStyleDeclaration(*this);
 }
 
-#if ENABLE(CSS_TYPED_OM)
-
 class StyledElementInlineStylePropertyMap final : public StylePropertyMap {
 public:
     static Ref<StylePropertyMap> create(StyledElement& element)
@@ -89,36 +87,91 @@ public:
     }
 
 private:
-    ExceptionOr<RefPtr<CSSStyleValue>> get(const AtomString& property) const final
+    RefPtr<CSSValue> propertyValue(CSSPropertyID propertyID) const final
     {
-        ASSERT(m_element); // Hitting this assertion would imply a GC bug. Element is collected while this property map is alive.
-        if (!m_element)
-            return nullptr;
-        return extractInlineProperty(property, *m_element);
+        if (auto* inlineStyle = m_element ? m_element->inlineStyle() : nullptr)
+            return inlineStyle->getPropertyCSSValue(propertyID);
+        return nullptr;
     }
 
-    ExceptionOr<Vector<RefPtr<CSSStyleValue>>> getAll(const AtomString&) const final
+    RefPtr<CSSValue> customPropertyValue(const AtomString& property) const final
     {
-        // FIXME: implement.
-        return Vector<RefPtr<CSSStyleValue>>();
+        if (auto* inlineStyle = m_element ? m_element->inlineStyle() : nullptr)
+            return inlineStyle->getCustomPropertyCSSValue(property.string());
+        return nullptr;
     }
 
     unsigned size() const final
     {
-        // FIXME: implement.
-        return 0;
+        auto* inlineStyle = m_element ? m_element->inlineStyle() : nullptr;
+        return inlineStyle ? inlineStyle->propertyCount() : 0;
     }
 
-    Vector<StylePropertyMapEntry> entries() const final
+    Vector<StylePropertyMapEntry> entries(ScriptExecutionContext* context) const final
     {
-        // FIXME: implement.
-        return { };
+        if (!m_element || !context)
+            return { };
+
+        auto& document = downcast<Document>(*context);
+        Vector<StylePropertyMapEntry> result;
+        auto* inlineStyle = m_element->inlineStyle();
+        if (!inlineStyle)
+            return { };
+
+        result.reserveInitialCapacity(inlineStyle->propertyCount());
+        for (unsigned i = 0; i < inlineStyle->propertyCount(); ++i) {
+            auto propertyReference = inlineStyle->propertyAt(i);
+            result.uncheckedAppend(makeKeyValuePair(propertyReference.cssName(), reifyValueToVector(RefPtr<CSSValue> { propertyReference.value() }, document)));
+        }
+        return result;
     }
 
-    ExceptionOr<bool> has(const AtomString&) const final
+    void removeProperty(CSSPropertyID propertyID) final
     {
-        // FIXME: implement.
-        return false;
+        if (m_element)
+            m_element->removeInlineStyleProperty(propertyID);
+    }
+
+    bool setShorthandProperty(CSSPropertyID propertyID, const String& value) final
+    {
+        if (!m_element)
+            return false;
+        bool didFailParsing = false;
+        bool important = false;
+        m_element->setInlineStyleProperty(propertyID, value, important, &didFailParsing);
+        return !didFailParsing;
+    }
+
+    bool setProperty(CSSPropertyID propertyID, Ref<CSSValue>&& value) final
+    {
+        if (!m_element)
+            return false;
+        bool didFailParsing = false;
+        bool important = false;
+        m_element->setInlineStyleProperty(propertyID, value->cssText(), important, &didFailParsing);
+        return !didFailParsing;
+    }
+
+    bool setCustomProperty(Document&, const AtomString& property, Ref<CSSVariableReferenceValue>&& value) final
+    {
+        if (!m_element)
+            return false;
+
+        auto customPropertyValue = CSSCustomPropertyValue::createUnresolved(property, WTFMove(value));
+        m_element->setInlineStyleCustomProperty(WTFMove(customPropertyValue));
+        return true;
+    }
+
+    void removeCustomProperty(const AtomString& property) final
+    {
+        if (m_element)
+            m_element->removeInlineStyleCustomProperty(property);
+    }
+
+    void clear() final
+    {
+        if (m_element)
+            m_element->removeAllInlineStyleProperties();
     }
 
     explicit StyledElementInlineStylePropertyMap(StyledElement& element)
@@ -127,31 +180,6 @@ private:
     }
 
     void clearElement() override { m_element = nullptr; }
-
-    static RefPtr<CSSStyleValue> extractInlineProperty(const AtomString& name, StyledElement& element)
-    {
-        if (!element.inlineStyle())
-            return nullptr;
-
-        if (isCustomPropertyName(name)) {
-            auto value = element.inlineStyle()->getCustomPropertyCSSValue(name);
-            return StylePropertyMapReadOnly::customPropertyValueOrDefault(name, element.document(), value.get(), &element);
-        }
-
-        CSSPropertyID propertyID = cssPropertyID(name);
-
-        auto shorthand = shorthandForProperty(propertyID);
-        for (auto longhand : shorthand) {
-            if (auto cssValue = element.inlineStyle()->getPropertyCSSValue(longhand))
-                return StylePropertyMapReadOnly::reifyValue(cssValue.get(), element.document(), &element);
-        }
-        
-        if (!propertyID)
-            return nullptr;
-
-        auto value = element.inlineStyle()->getPropertyCSSValue(propertyID);
-        return StylePropertyMapReadOnly::reifyValue(value.get(), element.document(), &element);
-    }
 
     StyledElement* m_element { nullptr };
 };
@@ -162,7 +190,6 @@ StylePropertyMap& StyledElement::ensureAttributeStyleMap()
         setAttributeStyleMap(StyledElementInlineStylePropertyMap::create(*this));
     return *attributeStyleMap();
 }
-#endif
 
 MutableStyleProperties& StyledElement::ensureMutableInlineStyle()
 {
@@ -230,7 +257,9 @@ void StyledElement::styleAttributeChanged(const AtomString& newStyleString, Attr
     if (document().scriptableDocumentParser() && !document().isInDocumentWrite())
         startLineNumber = document().scriptableDocumentParser()->textPosition().m_line;
 
-    if (reason == ModifiedByCloning || document().contentSecurityPolicy()->allowInlineStyle(document().url().string(), startLineNumber, newStyleString.string(), CheckUnsafeHashes::Yes, *this, nonce(), isInUserAgentShadowTree()))
+    if (newStyleString.isNull())
+        ensureMutableInlineStyle().clear();
+    else if (reason == ModifiedByCloning || document().contentSecurityPolicy()->allowInlineStyle(document().url().string(), startLineNumber, newStyleString.string(), CheckUnsafeHashes::Yes, *this, nonce(), isInUserAgentShadowTree()))
         setInlineStyleFromString(newStyleString);
 
     elementData()->setStyleAttributeIsDirty(false);
@@ -287,12 +316,34 @@ bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, double valu
     return true;
 }
 
-bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, const String& value, bool important)
+bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, Ref<CSSValue>&& value, bool important)
 {
-    bool changes = ensureMutableInlineStyle().setProperty(propertyID, value, important, CSSParserContext(document()));
+    ensureMutableInlineStyle().setProperty(propertyID, WTFMove(value), important);
+    inlineStyleChanged();
+    return true;
+}
+
+bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, const String& value, bool important, bool* didFailParsing)
+{
+    bool changes = ensureMutableInlineStyle().setProperty(propertyID, value, important, CSSParserContext(document()), didFailParsing);
     if (changes)
         inlineStyleChanged();
     return changes;
+}
+
+bool StyledElement::setInlineStyleCustomProperty(const AtomString& property, const String& value, bool important)
+{
+    bool changes = ensureMutableInlineStyle().setCustomProperty(&document(), property.string(), value, important, CSSParserContext(document()));
+    if (changes)
+        inlineStyleChanged();
+    return changes;
+}
+
+bool StyledElement::setInlineStyleCustomProperty(Ref<CSSValue>&& customPropertyValue, bool important)
+{
+    ensureMutableInlineStyle().addParsedProperty(CSSProperty(CSSPropertyCustom, WTFMove(customPropertyValue), important));
+    inlineStyleChanged();
+    return true;
 }
 
 bool StyledElement::removeInlineStyleProperty(CSSPropertyID propertyID)
@@ -300,6 +351,16 @@ bool StyledElement::removeInlineStyleProperty(CSSPropertyID propertyID)
     if (!inlineStyle())
         return false;
     bool changes = ensureMutableInlineStyle().removeProperty(propertyID);
+    if (changes)
+        inlineStyleChanged();
+    return changes;
+}
+
+bool StyledElement::removeInlineStyleCustomProperty(const AtomString& property)
+{
+    if (!inlineStyle())
+        return false;
+    bool changes = ensureMutableInlineStyle().removeCustomProperty(property);
     if (changes)
         inlineStyleChanged();
     return changes;

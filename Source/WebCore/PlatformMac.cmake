@@ -371,7 +371,7 @@ list(APPEND WebCore_SOURCES
     platform/mac/PlatformScreenMac.mm
     platform/mac/PowerObserverMac.cpp
     platform/mac/PublicSuffixMac.mm
-    platform/mac/SSLKeyGeneratorMac.mm
+    platform/mac/RevealUtilities.mm
     platform/mac/ScrollAnimatorMac.mm
     platform/mac/ScrollingEffectsController.mm
     platform/mac/ScrollViewMac.mm
@@ -555,9 +555,9 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     page/scrolling/ScrollingStateOverflowScrollProxyNode.h
 
-    page/scrolling/cocoa/ScrollingTreeFixedNode.h
-    page/scrolling/cocoa/ScrollingTreeOverflowScrollProxyNode.h
-    page/scrolling/cocoa/ScrollingTreePositionedNode.h
+    page/scrolling/cocoa/ScrollingTreeFixedNodeCocoa.h
+    page/scrolling/cocoa/ScrollingTreeOverflowScrollProxyNodeCocoa.h
+    page/scrolling/cocoa/ScrollingTreePositionedNodeCocoa.h
     page/scrolling/cocoa/ScrollingTreeStickyNodeCocoa.h
 
     page/scrolling/mac/ScrollingCoordinatorMac.h
@@ -668,7 +668,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/cocoa/FontFamilySpecificationCoreText.h
     platform/graphics/cocoa/FontFamilySpecificationCoreTextCache.h
     platform/graphics/cocoa/GraphicsContextGLCocoa.h
-    platform/graphics/cocoa/GraphicsContextGLOpenGL.h
     platform/graphics/cocoa/GraphicsContextGLIOSurfaceSwapChain.h
     platform/graphics/cocoa/IOSurface.h
     platform/graphics/cocoa/MediaPlaybackTargetContext.h
@@ -710,6 +709,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/mac/PlaybackSessionInterfaceMac.h
     platform/mac/PluginBlocklist.h
     platform/mac/PowerObserverMac.h
+    platform/mac/RevealUtilities.h
     platform/mac/SerializedPlatformDataCueMac.h
     platform/mac/ScrollbarThemeMac.h
     platform/mac/StringUtilities.h

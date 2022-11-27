@@ -58,6 +58,8 @@ public:
     Seconds maximumBufferingTime;
     WebCore::FetchOptions options;
     std::optional<WebCore::ContentSecurityPolicyResponseHeaders> cspResponseHeaders;
+    URL parentFrameURL;
+    URL frameURL;
     WebCore::CrossOriginEmbedderPolicy parentCrossOriginEmbedderPolicy;
     WebCore::CrossOriginEmbedderPolicy crossOriginEmbedderPolicy;
     WebCore::HTTPHeaderMap originalRequestHeaders;
@@ -71,6 +73,7 @@ public:
     URL documentURL;
 
     bool isCrossOriginOpenerPolicyEnabled { false };
+    bool isClearSiteDataHeaderEnabled { false };
     bool isDisplayingInitialEmptyDocument { false };
     WebCore::SandboxFlags effectiveSandboxFlags { WebCore::SandboxNone };
     URL openerURL;
@@ -87,7 +90,6 @@ public:
 
 #if ENABLE(CONTENT_EXTENSIONS)
     URL mainDocumentURL;
-    URL frameURL;
     std::optional<UserContentControllerIdentifier> userContentControllerIdentifier;
 #endif
     

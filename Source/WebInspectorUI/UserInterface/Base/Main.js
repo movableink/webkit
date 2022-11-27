@@ -641,7 +641,7 @@ WI.initializeTarget = function(target)
                 target.PageAgent.overrideSetting(setting, value);
         }
 
-        // COMPATIBILITY (iOS 11.3): Page.setShowRuleers did not exist yet.
+        // COMPATIBILITY (iOS 13.4): Page.setShowRulers was removed.
         if (target.hasCommand("Page.setShowRulers") && WI.settings.showRulers.value)
             target.PageAgent.setShowRulers(true);
     }
@@ -3579,6 +3579,11 @@ WI.reset = async function()
 };
 
 WI.isEngineeringBuild = false;
+WI.inspectorFrontendHostAllowsEngineeringSettings = InspectorFrontendHost.engineeringSettingsAllowed();
+
+WI.engineeringSettingsAllowed = function() {
+    return WI.isEngineeringBuild || WI.inspectorFrontendHostAllowsEngineeringSettings;
+}
 
 // OpenResourceDialog delegate
 

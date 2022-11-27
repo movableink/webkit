@@ -55,14 +55,10 @@ Ref<WebInspectorUI> WebInspectorUI::create(WebPage& page)
 
 void WebInspectorUI::enableFrontendFeatures(WebPage& page)
 {
-    // FIXME: These should be enabled in the UIProcess by the preferences for the inspector page's WKWebView.
-    DeprecatedGlobalSettings::setImageBitmapEnabled(true);
 #if ENABLE(WEBGL2)
     page.corePage()->settings().setWebGL2Enabled(true);
 #endif
-#if ENABLE(CSS_TYPED_OM)
     page.corePage()->settings().setCSSTypedOMEnabled(true);
-#endif
 }
 
 WebInspectorUI::WebInspectorUI(WebPage& page)
@@ -104,8 +100,8 @@ void WebInspectorUI::updateConnection()
     if (!connectionIdentifiers)
         return;
 
-    m_backendConnection = IPC::Connection::createServerConnection(connectionIdentifiers->server, *this);
-    m_backendConnection->open();
+    m_backendConnection = IPC::Connection::createServerConnection(connectionIdentifiers->server);
+    m_backendConnection->open(*this);
 
     WebProcess::singleton().parentProcessConnection()->send(Messages::WebInspectorUIProxy::SetFrontendConnection(connectionIdentifiers->client), m_inspectedPageIdentifier);
 }

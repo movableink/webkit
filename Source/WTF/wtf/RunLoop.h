@@ -37,7 +37,9 @@
 #include <wtf/Observer.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Seconds.h>
+#include <wtf/ThreadSafetyAnalysis.h>
 #include <wtf/ThreadSpecific.h>
+#include <wtf/Threading.h>
 #include <wtf/ThreadingPrimitives.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
@@ -75,7 +77,7 @@ using RunLoopMode = unsigned;
 #define DefaultRunLoopMode 0
 #endif
 
-class RunLoop final : public FunctionDispatcher, public ThreadSafeRefCounted<RunLoop> {
+class WTF_CAPABILITY("is current") RunLoop final : public SerialFunctionDispatcher, public ThreadSafeRefCounted<RunLoop> {
     WTF_MAKE_NONCOPYABLE(RunLoop);
 public:
     // Must be called from the main thread.
@@ -90,7 +92,10 @@ public:
     WTF_EXPORT_PRIVATE static RunLoop& web();
     WTF_EXPORT_PRIVATE static RunLoop* webIfExists();
 #endif
-    WTF_EXPORT_PRIVATE static bool isMain();
+    WTF_EXPORT_PRIVATE static Ref<RunLoop> create(const char* threadName, ThreadType = ThreadType::Unknown, Thread::QOS = Thread::QOS::UserInitiated);
+
+    static bool isMain() { return main().isCurrent(); }
+    WTF_EXPORT_PRIVATE bool isCurrent() const;
     WTF_EXPORT_PRIVATE ~RunLoop() final;
 
     WTF_EXPORT_PRIVATE void dispatch(Function<void()>&&) final;
@@ -110,6 +115,10 @@ public:
 
     WTF_EXPORT_PRIVATE void threadWillExit();
 
+#if ASSERT_ENABLED
+    void assertIsCurrent() const final;
+#endif
+
 #if USE(GLIB_EVENT_LOOP)
     WTF_EXPORT_PRIVATE GMainContext* mainContext() const { return m_mainContext.get(); }
     enum class Event { WillDispatch, DidDispatch };
@@ -118,8 +127,6 @@ public:
 #endif
 
 #if USE(GENERIC_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
-    // Run the single iteration of the RunLoop. It consumes the pending tasks and expired timers, but it won't be blocked.
-    WTF_EXPORT_PRIVATE static void iterate();
     WTF_EXPORT_PRIVATE static void setWakeUpCallback(WTF::Function<void()>&&);
 #endif
 
@@ -303,10 +310,16 @@ private:
 #endif
 };
 
+inline void assertIsCurrent(const RunLoop& runLoop) WTF_ASSERTS_ACQUIRED_CAPABILITY(runLoop)
+{
+    ASSERT_UNUSED(runLoop, runLoop.isCurrent());
+}
+
 } // namespace WTF
 
 using WTF::RunLoop;
 using WTF::RunLoopMode;
+using WTF::assertIsCurrent;
 
 #if PLATFORM(QT)
 Q_DECLARE_METATYPE(WTF::RunLoop::TimerBase*)

@@ -115,12 +115,12 @@ void PlatformParameters::initDefaultParameters()
     eglParameters.debugLayersEnabled = EGL_TRUE;
 }
 
-bool PlatformParameters::isEnabled(Feature feature) const
+bool PlatformParameters::isEnableRequested(Feature feature) const
 {
     return HasFeatureOverride(eglParameters.enabledFeatureOverrides, feature);
 }
 
-bool PlatformParameters::isDisabled(Feature feature) const
+bool PlatformParameters::isDisableRequested(Feature feature) const
 {
     return HasFeatureOverride(eglParameters.disabledFeatureOverrides, feature);
 }
@@ -220,6 +220,9 @@ std::ostream &operator<<(std::ostream &stream, const PlatformParameters &pp)
             break;
         case GLESDriverType::SystemEGL:
             stream << "EGL";
+            break;
+        case GLESDriverType::ZinkEGL:
+            stream << "Zink";
             break;
         default:
             stream << "Error";
@@ -873,6 +876,11 @@ PlatformParameters ES3_WGL()
     return PlatformParameters(EGL_OPENGL_ES_API, 3, 0, 0, GLESDriverType::SystemWGL);
 }
 
+PlatformParameters ES1_EGL()
+{
+    return PlatformParameters(EGL_OPENGL_ES_API, 1, 0, 0, GLESDriverType::SystemEGL);
+}
+
 PlatformParameters ES2_EGL()
 {
     return PlatformParameters(EGL_OPENGL_ES_API, 2, 0, 0, GLESDriverType::SystemEGL);
@@ -882,4 +890,30 @@ PlatformParameters ES3_EGL()
 {
     return PlatformParameters(EGL_OPENGL_ES_API, 3, 0, 0, GLESDriverType::SystemEGL);
 }
+
+PlatformParameters ES1_Zink()
+{
+    return PlatformParameters(EGL_OPENGL_ES_API, 1, 0, 0, GLESDriverType::ZinkEGL);
+}
+
+PlatformParameters ES2_Zink()
+{
+    return PlatformParameters(EGL_OPENGL_ES_API, 2, 0, 0, GLESDriverType::ZinkEGL);
+}
+
+PlatformParameters ES3_Zink()
+{
+    return PlatformParameters(EGL_OPENGL_ES_API, 3, 0, 0, GLESDriverType::ZinkEGL);
+}
+
+PlatformParameters ES31_Zink()
+{
+    return PlatformParameters(EGL_OPENGL_ES_API, 3, 1, 0, GLESDriverType::ZinkEGL);
+}
+
+PlatformParameters ES32_Zink()
+{
+    return PlatformParameters(EGL_OPENGL_ES_API, 3, 2, 0, GLESDriverType::ZinkEGL);
+}
+
 }  // namespace angle

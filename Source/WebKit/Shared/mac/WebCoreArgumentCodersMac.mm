@@ -29,8 +29,6 @@
 
 #import "ArgumentCodersCF.h"
 #import "ArgumentCodersCocoa.h"
-#import "DaemonDecoder.h"
-#import "DaemonEncoder.h"
 #import "DataReference.h"
 #import <WebCore/CertificateInfo.h>
 #import <WebCore/ContentFilterUnblockHandler.h>
@@ -49,72 +47,17 @@ namespace IPC {
 template<>
 void ArgumentCoder<WebCore::CertificateInfo>::encode(Encoder& encoder, const WebCore::CertificateInfo& certificateInfo)
 {
-    encoder << certificateInfo.type();
-
-    switch (certificateInfo.type()) {
-#if HAVE(SEC_TRUST_SERIALIZATION)
-    case WebCore::CertificateInfo::Type::Trust:
-        encoder << certificateInfo.trust();
-        break;
-#endif
-    case WebCore::CertificateInfo::Type::CertificateChain:
-        encoder << certificateInfo.certificateChain();
-        break;
-    case WebCore::CertificateInfo::Type::None:
-        // Do nothing.
-        break;
-    }
-}
-
-template<>
-void ArgumentCoder<WebCore::CertificateInfo>::encode(WebKit::Daemon::Encoder& encoder, const WebCore::CertificateInfo& certificateInfo)
-{
-    ASSERT(certificateInfo.type() == WebCore::CertificateInfo::Type::Trust);
     encoder << certificateInfo.trust();
 }
 
 template<>
 std::optional<WebCore::CertificateInfo> ArgumentCoder<WebCore::CertificateInfo>::decode(Decoder& decoder)
 {
-    std::optional<WebCore::CertificateInfo::Type> certificateInfoType;
-    decoder >> certificateInfoType;
-    if (!certificateInfoType)
-        return std::nullopt;
-
-    switch (*certificateInfoType) {
-#if HAVE(SEC_TRUST_SERIALIZATION)
-    case WebCore::CertificateInfo::Type::Trust: {
-        std::optional<RetainPtr<SecTrustRef>> trust;
-        decoder >> trust;
-        if (!trust || !*trust)
-            return std::nullopt;
-
-        return WebCore::CertificateInfo(WTFMove(*trust));
-    }
-#endif
-    case WebCore::CertificateInfo::Type::CertificateChain: {
-        std::optional<RetainPtr<CFArrayRef>> certificateChain;
-        decoder >> certificateChain;
-        if (!certificateChain || !*certificateChain)
-            return std::nullopt;
-
-        return WebCore::CertificateInfo(WTFMove(*certificateChain));
-    }
-    case WebCore::CertificateInfo::Type::None:
-        // Do nothing.
-        break;
-    }
-
-    return {{ }};
-}
-
-template<>
-std::optional<WebCore::CertificateInfo> ArgumentCoder<WebCore::CertificateInfo>::decode(WebKit::Daemon::Decoder& decoder)
-{
     std::optional<RetainPtr<SecTrustRef>> trust;
     decoder >> trust;
-    if (!trust || !*trust)
+    if (!trust)
         return std::nullopt;
+
     return WebCore::CertificateInfo(WTFMove(*trust));
 }
 
@@ -184,10 +127,8 @@ static void encodeNSError(Encoder& encoder, NSError *nsError)
     if (peerCertificateChain)
         CFDictionarySetValue(filteredUserInfo.get(), CFSTR("NSErrorPeerCertificateChainKey"), (__bridge CFTypeRef)peerCertificateChain);
 
-#if HAVE(SEC_TRUST_SERIALIZATION)
     if (SecTrustRef peerTrust = (__bridge SecTrustRef)[userInfo objectForKey:NSURLErrorFailingURLPeerTrustErrorKey])
         CFDictionarySetValue(filteredUserInfo.get(), (__bridge CFStringRef)NSURLErrorFailingURLPeerTrustErrorKey, peerTrust);
-#endif
 
     encoder << static_cast<CFDictionaryRef>(filteredUserInfo.get());
 

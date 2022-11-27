@@ -191,6 +191,13 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
 
     if (!m_graph.m_plan.inlineCallFrames()->isEmpty())
         m_jitCode->common.inlineCallFrames = m_graph.m_plan.inlineCallFrames();
+    if (!m_graph.m_stringSearchTable8.isEmpty()) {
+        FixedVector<std::unique_ptr<BoyerMooreHorspoolTable<uint8_t>>> tables(m_graph.m_stringSearchTable8.size());
+        unsigned index = 0;
+        for (auto& entry : m_graph.m_stringSearchTable8)
+            tables[index++] = WTFMove(entry.value);
+        m_jitCode->common.m_stringSearchTable8 = WTFMove(tables);
+    }
 
 #if USE(JSVALUE32_64)
     m_jitCode->common.doubleConstants = WTFMove(m_graph.m_doubleConstants);
@@ -281,10 +288,11 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
     }
 
     for (auto& record : m_jsCalls) {
-        auto& info = *record.info;
-        info.setCodeLocations(
-            linkBuffer.locationOf<JSInternalPtrTag>(record.slowPathStart),
-            linkBuffer.locationOf<JSInternalPtrTag>(record.doneLocation));
+        std::visit([&](auto* info) {
+            info->setCodeLocations(
+                linkBuffer.locationOf<JSInternalPtrTag>(record.slowPathStart),
+                linkBuffer.locationOf<JSInternalPtrTag>(record.doneLocation));
+        }, record.info);
     }
     
     for (auto& record : m_jsDirectCalls) {
@@ -293,6 +301,14 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
             linkBuffer.locationOf<JSInternalPtrTag>(record.slowPath),
             CodeLocationLabel<JSInternalPtrTag>());
     }
+
+    if (m_graph.m_plan.isUnlinked()) {
+        m_jitCode->m_unlinkedCallLinkInfos = FixedVector<UnlinkedCallLinkInfo>(m_unlinkedCallLinkInfos.size());
+        if (m_jitCode->m_unlinkedCallLinkInfos.size())
+            std::move(m_unlinkedCallLinkInfos.begin(), m_unlinkedCallLinkInfos.end(), m_jitCode->m_unlinkedCallLinkInfos.begin());
+        ASSERT(m_jitCode->common.m_callLinkInfos.isEmpty());
+    }
+
 
     if (!m_exceptionChecks.empty())
         linkBuffer.link(m_exceptionChecks, CodeLocationLabel(vm().getCTIStub(handleExceptionGenerator).retaggedCode<NoPtrTag>()));
@@ -364,7 +380,7 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
     if (m_pcToCodeOriginMapBuilder.didBuildMapping())
         m_jitCode->common.m_pcToCodeOriginMap = makeUnique<PCToCodeOriginMap>(WTFMove(m_pcToCodeOriginMapBuilder), linkBuffer);
 
-    m_jitCode->m_linkerIR = LinkerIR(WTFMove(m_constantPool));
+    m_jitCode->m_linkerIR = LinkerIR(WTFMove(m_graph.m_constantPool));
 }
 
 static void emitStackOverflowCheck(JITCompiler& jit, MacroAssembler::JumpList& stackOverflow)
@@ -752,6 +768,15 @@ JITCompiler::LinkableConstant::LinkableConstant(JITCompiler& jit, void* pointer,
     m_pointer = pointer;
 }
 
+JITCompiler::LinkableConstant::LinkableConstant(JITCompiler& jit, GlobalObjectTag, CodeOrigin codeOrigin)
+{
+    if (jit.m_graph.m_plan.isUnlinked()) {
+        m_index = jit.addToConstantPool(LinkerIR::Type::GlobalObject, nullptr);
+        return;
+    }
+    m_pointer = jit.m_graph.globalObjectFor(codeOrigin);
+}
+
 void JITCompiler::LinkableConstant::materialize(CCallHelpers& jit, GPRReg resultGPR)
 {
 #if USE(JSVALUE64)
@@ -777,9 +802,9 @@ void JITCompiler::LinkableConstant::store(CCallHelpers& jit, CCallHelpers::Addre
 LinkerIR::Constant JITCompiler::addToConstantPool(LinkerIR::Type type, void* payload)
 {
     LinkerIR::Value value { payload, type };
-    auto result = m_constantPoolMap.add(value, m_constantPoolMap.size());
+    auto result = m_graph.m_constantPoolMap.add(value, m_graph.m_constantPoolMap.size());
     if (result.isNewEntry)
-        m_constantPool.append(value);
+        m_graph.m_constantPool.append(value);
     return result.iterator->value;
 }
 
@@ -794,6 +819,20 @@ std::tuple<CompileTimeStructureStubInfo, JITCompiler::LinkableConstant> JITCompi
     StructureStubInfo* stubInfo = jitCode()->common.m_stubInfos.add();
     return std::tuple { stubInfo, LinkableConstant() };
 }
+
+std::tuple<CompileTimeCallLinkInfo, JITCompiler::LinkableConstant> JITCompiler::addCallLinkInfo(CodeOrigin codeOrigin)
+{
+    if (m_graph.m_plan.isUnlinked()) {
+        void* unlinkedCallLinkInfoIndex = bitwise_cast<void*>(static_cast<uintptr_t>(m_unlinkedCallLinkInfos.size()));
+        UnlinkedCallLinkInfo* callLinkInfo = &m_unlinkedCallLinkInfos.alloc();
+        callLinkInfo->codeOrigin = codeOrigin;
+        LinkerIR::Constant callLinkInfoIndex = addToConstantPool(LinkerIR::Type::CallLinkInfo, unlinkedCallLinkInfoIndex);
+        return std::tuple { callLinkInfo, LinkableConstant(callLinkInfoIndex) };
+    }
+    auto* callLinkInfo = jitCode()->common.m_callLinkInfos.add(codeOrigin, CallLinkInfo::UseDataIC::No);
+    return std::tuple { callLinkInfo, LinkableConstant::nonCellPointer(*this, callLinkInfo) };
+}
+
 
 } } // namespace JSC::DFG
 

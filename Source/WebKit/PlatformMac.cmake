@@ -258,6 +258,10 @@ list(APPEND WebKit_MESSAGES_IN_FILES
     WebProcess/cocoa/VideoFullscreenManager
 )
 
+list(APPEND WebKit_SERIALIZATION_IN_FILES
+    Shared/Cocoa/WebCoreArgumentCodersCocoa.serialization.in
+)
+
 list(APPEND WebKit_PUBLIC_FRAMEWORK_HEADERS
     Shared/API/Cocoa/RemoteObjectInvocation.h
     Shared/API/Cocoa/RemoteObjectRegistry.h
@@ -463,10 +467,6 @@ list(APPEND WebKit_PUBLIC_FRAMEWORK_HEADERS
     UIProcess/API/Cocoa/_WKTextManipulationItem.h
     UIProcess/API/Cocoa/_WKTextManipulationToken.h
     UIProcess/API/Cocoa/_WKThumbnailView.h
-    UIProcess/API/Cocoa/_WKUserContentExtensionStore.h
-    UIProcess/API/Cocoa/_WKUserContentExtensionStorePrivate.h
-    UIProcess/API/Cocoa/_WKUserContentFilter.h
-    UIProcess/API/Cocoa/_WKUserContentFilterPrivate.h
     UIProcess/API/Cocoa/_WKUserContentWorld.h
     UIProcess/API/Cocoa/_WKUserInitiatedAction.h
     UIProcess/API/Cocoa/_WKUserStyleSheet.h

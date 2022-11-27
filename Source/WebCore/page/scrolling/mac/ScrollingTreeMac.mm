@@ -29,12 +29,12 @@
 #import "Logging.h"
 #import "PlatformCALayer.h"
 #import "PlatformCALayerContentsDelayedReleaser.h"
-#import "ScrollingTreeFixedNode.h"
+#import "ScrollingTreeFixedNodeCocoa.h"
 #import "ScrollingTreeFrameHostingNode.h"
 #import "ScrollingTreeFrameScrollingNodeMac.h"
-#import "ScrollingTreeOverflowScrollProxyNode.h"
+#import "ScrollingTreeOverflowScrollProxyNodeCocoa.h"
 #import "ScrollingTreeOverflowScrollingNodeMac.h"
-#import "ScrollingTreePositionedNode.h"
+#import "ScrollingTreePositionedNodeCocoa.h"
 #import "ScrollingTreeStickyNodeCocoa.h"
 #import "WebCoreCALayerExtras.h"
 #import "WebLayer.h"
@@ -67,16 +67,16 @@ Ref<ScrollingTreeNode> ScrollingTreeMac::createScrollingTreeNode(ScrollingNodeTy
     case ScrollingNodeType::Overflow:
         return ScrollingTreeOverflowScrollingNodeMac::create(*this, nodeID);
     case ScrollingNodeType::OverflowProxy:
-        return ScrollingTreeOverflowScrollProxyNode::create(*this, nodeID);
+        return ScrollingTreeOverflowScrollProxyNodeCocoa::create(*this, nodeID);
     case ScrollingNodeType::Fixed:
-        return ScrollingTreeFixedNode::create(*this, nodeID);
+        return ScrollingTreeFixedNodeCocoa::create(*this, nodeID);
     case ScrollingNodeType::Sticky:
         return ScrollingTreeStickyNodeCocoa::create(*this, nodeID);
     case ScrollingNodeType::Positioned:
-        return ScrollingTreePositionedNode::create(*this, nodeID);
+        return ScrollingTreePositionedNodeCocoa::create(*this, nodeID);
     }
     ASSERT_NOT_REACHED();
-    return ScrollingTreeFixedNode::create(*this, nodeID);
+    return ScrollingTreeFixedNodeCocoa::create(*this, nodeID);
 }
 
 using LayerAndPoint = std::pair<CALayer *, FloatPoint>;
@@ -232,16 +232,6 @@ OptionSet<EventListenerRegionType> ScrollingTreeMac::eventListenerRegionTypesFor
 }
 #endif
 
-void ScrollingTreeMac::lockLayersForHitTesting()
-{
-    m_layerHitTestMutex.lock();
-}
-
-void ScrollingTreeMac::unlockLayersForHitTesting()
-{
-    m_layerHitTestMutex.unlock();
-}
-
 void ScrollingTreeMac::didCompleteRenderingUpdate()
 {
     bool hasActiveCATransaction = [CATransaction currentState];
@@ -271,38 +261,6 @@ void ScrollingTreeMac::registerForPlatformRenderingUpdateCallback()
     [CATransaction addCommitHandler:[] {
         PlatformCALayerContentsDelayedReleaser::singleton().scrollingThreadCommitDidEnd();
     } forPhase:kCATransactionPhasePostCommit];
-}
-
-void ScrollingTreeMac::setWheelEventTestMonitor(RefPtr<WheelEventTestMonitor>&& monitor)
-{
-    m_wheelEventTestMonitor = WTFMove(monitor);
-}
-
-void ScrollingTreeMac::receivedWheelEvent(const PlatformWheelEvent& event)
-{
-    auto monitor = m_wheelEventTestMonitor;
-    if (monitor)
-        monitor->receivedWheelEvent(event);
-}
-
-void ScrollingTreeMac::deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier identifier, WheelEventTestMonitor::DeferReason reason)
-{
-    auto monitor = m_wheelEventTestMonitor;
-    if (!monitor)
-        return;
-
-    LOG_WITH_STREAM(WheelEventTestMonitor, stream << "    (!) ScrollingTreeMac::deferForReason: Deferring on " << identifier << " for reason " << reason);
-    monitor->deferForReason(identifier, reason);
-}
-
-void ScrollingTreeMac::removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier identifier, WheelEventTestMonitor::DeferReason reason)
-{
-    auto monitor = m_wheelEventTestMonitor;
-    if (!monitor)
-        return;
-
-    LOG_WITH_STREAM(WheelEventTestMonitor, stream << "    (!) ScrollingTreeMac::removeDeferralForReason: Removing deferral on " << identifier << " for reason " << reason);
-    monitor->removeDeferralForReason(identifier, reason);
 }
 
 #endif // ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)

@@ -56,26 +56,12 @@ private:
     explicit WebPermissionController(WebProcess&);
 
     // WebCore::PermissionController
-    void query(WebCore::ClientOrigin&&, WebCore::PermissionDescriptor, WebCore::Page*, WebCore::PermissionQuerySource, CompletionHandler<void(std::optional<WebCore::PermissionState>)>&&) final;
+    void query(WebCore::ClientOrigin&&, WebCore::PermissionDescriptor, const WeakPtr<WebCore::Page>&, WebCore::PermissionQuerySource, CompletionHandler<void(std::optional<WebCore::PermissionState>)>&&) final;
     void addObserver(WebCore::PermissionObserver&) final;
     void removeObserver(WebCore::PermissionObserver&) final;
     void permissionChanged(WebCore::PermissionName, const WebCore::SecurityOriginData&) final;
 
-    void tryProcessingRequests();
-
     WeakHashSet<WebCore::PermissionObserver> m_observers;
-
-    using PermissionEntry = std::pair<WebCore::PermissionDescriptor, WebCore::PermissionState>;
-
-    struct PermissionRequest {
-        WebCore::ClientOrigin origin;
-        WebCore::PermissionDescriptor descriptor;
-        std::optional<WebPageProxyIdentifier> identifier;
-        WebCore::PermissionQuerySource source;
-        CompletionHandler<void(std::optional<WebCore::PermissionState>)> completionHandler;
-        bool isWaitingForReply { false };
-    };
-    Deque<PermissionRequest> m_requests;
 };
 
 } // namespace WebCore

@@ -37,7 +37,9 @@
 #include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/CString.h>
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) && USE(GTK4)
+#include <webkit/webkit-web-extension.h>
+#elif PLATFORM(GTK)
 #include <webkit2/webkit-web-extension.h>
 #elif PLATFORM(WPE)
 #include <wpe/webkit-web-extension.h>
@@ -270,6 +272,10 @@ static GVariant* serializeNode(JSCValue* node)
 
 static gboolean contextMenuCallback(WebKitWebPage* page, WebKitContextMenu* menu, WebKitWebHitTestResult* hitTestResult, gpointer)
 {
+#if PLATFORM(GTK)
+    g_assert_null(webkit_context_menu_get_event(menu));
+#endif
+
     const char* pageURI = webkit_web_page_get_uri(page);
     if (!g_strcmp0(pageURI, "ContextMenuTestDefault")) {
         webkit_context_menu_set_user_data(menu, serializeContextMenu(menu));
@@ -301,22 +307,6 @@ static gboolean contextMenuCallback(WebKitWebPage* page, WebKitContextMenu* menu
     }
 
     return FALSE;
-}
-
-static void consoleMessageSentCallback(WebKitWebPage* webPage, WebKitConsoleMessage* consoleMessage)
-{
-    g_assert_nonnull(consoleMessage);
-    GRefPtr<GVariant> variant = g_variant_new("(uusus)", webkit_console_message_get_source(consoleMessage),
-        webkit_console_message_get_level(consoleMessage), webkit_console_message_get_text(consoleMessage),
-        webkit_console_message_get_line(consoleMessage), webkit_console_message_get_source_id(consoleMessage));
-    GUniquePtr<char> messageString(g_variant_print(variant.get(), FALSE));
-    GRefPtr<JSCContext> jsContext = adoptGRef(webkit_frame_get_js_context(webkit_web_page_get_main_frame(webPage)));
-    GRefPtr<JSCValue> console = adoptGRef(jsc_context_evaluate(jsContext.get(), "window.webkit.messageHandlers.console", -1));
-    g_assert_true(JSC_IS_VALUE(console.get()));
-    if (jsc_value_is_object(console.get())) {
-        GRefPtr<JSCValue> result = adoptGRef(jsc_value_object_invoke_method(console.get(), "postMessage", G_TYPE_STRING, messageString.get(), G_TYPE_NONE));
-        g_assert_true(JSC_IS_VALUE(result.get()));
-    }
 }
 
 static void emitFormControlsAssociated(GDBusConnection* connection, const char* formIds)
@@ -516,7 +506,6 @@ static void pageCreatedCallback(WebKitWebExtension* extension, WebKitWebPage* we
     g_signal_connect(webPage, "document-loaded", G_CALLBACK(documentLoadedCallback), extension);
     g_signal_connect(webPage, "notify::uri", G_CALLBACK(uriChangedCallback), extension);
     g_signal_connect(webPage, "send-request", G_CALLBACK(sendRequestCallback), nullptr);
-    g_signal_connect(webPage, "console-message-sent", G_CALLBACK(consoleMessageSentCallback), nullptr);
     g_signal_connect(webPage, "context-menu", G_CALLBACK(contextMenuCallback), nullptr);
     g_signal_connect(webPage, "form-controls-associated-for-frame", G_CALLBACK(formControlsAssociatedForFrameCallback), extension);
     g_signal_connect(webPage, "will-submit-form", G_CALLBACK(willSubmitFormCallback), extension);

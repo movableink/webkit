@@ -552,17 +552,17 @@ const TagOffset = constexpr TagOffset
 const PayloadOffset = constexpr PayloadOffset
 
 # Constant for reasoning about butterflies.
-const IsArray                      = constexpr IsArray
-const IndexingShapeMask            = constexpr IndexingShapeMask
-const IndexingTypeMask             = constexpr IndexingTypeMask
-const NoIndexingShape              = constexpr NoIndexingShape
-const Int32Shape                   = constexpr Int32Shape
-const DoubleShape                  = constexpr DoubleShape
-const ContiguousShape              = constexpr ContiguousShape
-const AlwaysSlowPutContiguousShape = constexpr AlwaysSlowPutContiguousShape
-const ArrayStorageShape            = constexpr ArrayStorageShape
-const CopyOnWrite                  = constexpr CopyOnWrite
-const ArrayWithUndecided           = constexpr ArrayWithUndecided
+const IsArray                  = constexpr IsArray
+const IndexingShapeMask        = constexpr IndexingShapeMask
+const IndexingTypeMask         = constexpr IndexingTypeMask
+const NoIndexingShape          = constexpr NoIndexingShape
+const Int32Shape               = constexpr Int32Shape
+const DoubleShape              = constexpr DoubleShape
+const ContiguousShape          = constexpr ContiguousShape
+const ArrayStorageShape        = constexpr ArrayStorageShape
+const SlowPutArrayStorageShape = constexpr SlowPutArrayStorageShape
+const CopyOnWrite              = constexpr CopyOnWrite
+const ArrayWithUndecided       = constexpr ArrayWithUndecided
 
 # Type constants.
 const StructureType = constexpr StructureType
@@ -779,8 +779,8 @@ const CalleeRegisterSaveSize = CalleeSaveRegisterCount * MachineRegisterSize
 const VMEntryTotalFrameSize = (CalleeRegisterSaveSize + sizeof VMEntryRecord + StackAlignment - 1) & ~StackAlignmentMask
 
 macro pushCalleeSaves()
-    # Note: Only registers that are in RegisterSet::calleeSaveRegisters(),
-    # but are not in RegisterSet::vmCalleeSaveRegisters() need to be saved here,
+    # Note: Only registers that are in RegisterSetBuilder::calleeSaveRegisters(),
+    # but are not in RegisterSetBuilder::vmCalleeSaveRegisters() need to be saved here,
     # i.e.: only those registers that are callee save in the C ABI, but are not
     # callee save in the JIT ABI.
     if C_LOOP or C_LOOP_WIN or ARM64 or ARM64E or X86_64 or X86_64_WIN or RISCV64
@@ -1357,32 +1357,23 @@ macro getByValTypedArray(base, index, finishIntGetByVal, finishDoubleGetByVal, s
     
     # Sweet, now we know that we have a typed array. Do some basic things now.
 
-    if ARM64E
-        const length = t6
-        const scratch = t7
-        if LARGE_TYPED_ARRAYS
-            loadq JSArrayBufferView::m_length[base], length
-            bqaeq index, length, slowPath
-        else
-            loadi JSArrayBufferView::m_length[base], length
-            biaeq index, length, slowPath
-        end
-    else
-        # length and scratch are intentionally undefined on this branch because they are not used on other platforms.
-        if LARGE_TYPED_ARRAYS
-            bqaeq index, JSArrayBufferView::m_length[base], slowPath
-        else
-            biaeq index, JSArrayBufferView::m_length[base], slowPath
-        end
-    end
-
+    btbnz JSArrayBufferView::m_mode[base], (constexpr isResizableOrGrowableSharedMode), slowPath
     if LARGE_TYPED_ARRAYS
+        bqaeq index, JSArrayBufferView::m_length[base], slowPath
         bqbeq index, SmallTypedArrayMaxLength, .smallTypedArray
-        setLargeTypedArray()
+        setLargeTypedArray(t3)
 .smallTypedArray:
+    else
+        biaeq index, JSArrayBufferView::m_length[base], slowPath
     end
 
     loadp JSArrayBufferView::m_vector[base], t3
+    # length and scratch are intentionally undefined on this branch because they are not used on other platforms.
+    if ARM64E
+        const length = t6
+        const scratch = t7
+        loadq JSArrayBufferView::m_length[base], length
+    end
     cagedPrimitive(t3, length, base, scratch)
 
     # Now bisect through the various types:
@@ -1478,7 +1469,7 @@ end
 macro varReadOnlyCheck(slowPath, scratch)
     loadp CodeBlock[cfr], scratch
     loadp CodeBlock::m_globalObject[scratch], scratch
-    loadp JSGlobalObject::m_varReadOnlyWatchpoint[scratch], scratch
+    loadp JSGlobalObject::m_varReadOnlyWatchpointSet[scratch], scratch
     bbeq WatchpointSet::m_state[scratch], IsInvalidated, slowPath
 end
 
@@ -2115,6 +2106,7 @@ slowPathOp(is_callable)
 slowPathOp(is_constructor)
 slowPathOp(new_array_buffer)
 slowPathOp(new_array_with_spread)
+slowPathOp(new_array_with_species)
 slowPathOp(push_with_scope)
 slowPathOp(put_by_id_with_this)
 slowPathOp(put_by_val_with_this)
@@ -2425,37 +2417,37 @@ end)
 # and a PC to call, and that PC may be a dummy thunk that just
 # returns the JS value that the eval returned.
 
-_llint_op_call_eval:
+_llint_op_call_direct_eval:
     slowPathForCommonCall(
-        op_call_eval,
+        op_call_direct_eval,
         narrow,
-        OpCallEval,
-        macro () dispatchOp(narrow, op_call_eval) end,
-        _llint_slow_path_call_eval,
+        OpCallDirectEval,
+        macro () dispatchOp(narrow, op_call_direct_eval) end,
+        _llint_slow_path_call_direct_eval,
         prepareForRegularCall)
 
-_llint_op_call_eval_wide16:
+_llint_op_call_direct_eval_wide16:
     slowPathForCommonCall(
-        op_call_eval,
+        op_call_direct_eval,
         wide16,
-        OpCallEval,
-        macro () dispatchOp(wide16, op_call_eval) end,
-        _llint_slow_path_call_eval_wide16,
+        OpCallDirectEval,
+        macro () dispatchOp(wide16, op_call_direct_eval) end,
+        _llint_slow_path_call_direct_eval_wide16,
         prepareForRegularCall)
 
-_llint_op_call_eval_wide32:
+_llint_op_call_direct_eval_wide32:
     slowPathForCommonCall(
-        op_call_eval,
+        op_call_direct_eval,
         wide32,
-        OpCallEval,
-        macro () dispatchOp(wide32, op_call_eval) end,
-        _llint_slow_path_call_eval_wide32,
+        OpCallDirectEval,
+        macro () dispatchOp(wide32, op_call_direct_eval) end,
+        _llint_slow_path_call_direct_eval_wide32,
         prepareForRegularCall)
 
 
 commonOp(llint_generic_return_point, macro () end, macro (size)
-    dispatchAfterCall(size, OpCallEval, m_profile, m_dst, macro ()
-        dispatchOp(size, op_call_eval)
+    dispatchAfterCall(size, OpCallDirectEval, m_profile, m_dst, macro ()
+        dispatchOp(size, op_call_direct_eval)
     end)
 end)
 

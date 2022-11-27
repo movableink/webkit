@@ -34,7 +34,7 @@
 #include "OpenGLShimsQt.h"
 #define glIsEnabled(...) m_functions->glIsEnabled(__VA_ARGS__)
 #elif USE(LIBEPOXY)
-#include "EpoxyShims.h"
+#include <epoxy/gl.h>
 
 #elif PLATFORM(COCOA)
 

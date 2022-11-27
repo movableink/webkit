@@ -177,6 +177,7 @@ class DisplayVk : public DisplayImpl, public vk::Context
 
     gl::Version getMaxSupportedESVersion() const override;
     gl::Version getMaxConformantESVersion() const override;
+    Optional<gl::Version> getMaxSupportedDesktopVersion() const override;
 
     egl::Error validateImageClientBuffer(const gl::Context *context,
                                          EGLenum target,
@@ -214,6 +215,11 @@ class DisplayVk : public DisplayImpl, public vk::Context
 
     ShareGroupImpl *createShareGroup() override;
 
+    bool isConfigFormatSupported(VkFormat format) const;
+    bool isSurfaceFormatColorspacePairSupported(VkSurfaceKHR surface,
+                                                VkFormat format,
+                                                VkColorSpaceKHR colorspace) const;
+
   protected:
     void generateExtensions(egl::DisplayExtensions *outExtensions) const override;
 
@@ -224,9 +230,15 @@ class DisplayVk : public DisplayImpl, public vk::Context
 
     virtual angle::Result waitNativeImpl();
 
+    bool isColorspaceSupported(VkColorSpaceKHR colorspace) const;
+    void initSupportedSurfaceFormatColorspaces();
+
     mutable angle::ScratchBuffer mScratchBuffer;
 
     vk::Error mSavedError;
+
+    // Map of supported colorspace and associated surface format set.
+    angle::HashMap<VkColorSpaceKHR, std::unordered_set<VkFormat>> mSupportedColorspaceFormatsMap;
 };
 
 }  // namespace rx

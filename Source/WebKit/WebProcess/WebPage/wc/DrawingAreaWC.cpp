@@ -26,6 +26,8 @@
 #include "config.h"
 #include "DrawingAreaWC.h"
 
+#if USE(GRAPHICS_LAYER_WC)
+
 #include "DrawingAreaProxyMessages.h"
 #include "GraphicsLayerWC.h"
 #include "PlatformImageBufferShareableBackend.h"
@@ -257,7 +259,7 @@ void DrawingAreaWC::sendUpdateAC()
                     send(Messages::DrawingAreaProxy::Update(m_backingStoreStateID, WTFMove(*updateInfo)));
                     return;
                 }
-                didUpdate();
+                displayDidRefresh();
             });
         });
     });
@@ -285,7 +287,7 @@ static bool shouldPaintBoundsRect(const IntRect& bounds, const Vector<IntRect, 1
 void DrawingAreaWC::sendUpdateNonAC()
 {
     if (m_dirtyRegion.isEmpty()) {
-        didUpdate();
+        displayDidRefresh();
         return;
     }
     IntRect bounds = m_dirtyRegion.bounds();
@@ -326,7 +328,7 @@ void DrawingAreaWC::sendUpdateNonAC()
             if (!weakThis)
                 return;
             if (stateID != m_backingStoreStateID) {
-                didUpdate();
+                displayDidRefresh();
                 return;
             }
 
@@ -336,7 +338,7 @@ void DrawingAreaWC::sendUpdateNonAC()
                 if (is<ImageBufferBackendHandleSharing>(sharing))
                     handle = downcast<ImageBufferBackendHandleSharing>(*sharing).createBackendHandle();
             }
-            updateInfo.bitmapHandle = std::get<ShareableBitmap::Handle>(WTFMove(handle));
+            updateInfo.bitmapHandle = std::get<ShareableBitmapHandle>(WTFMove(handle));
             send(Messages::DrawingAreaProxy::Update(stateID, WTFMove(updateInfo)));
         });
     });
@@ -366,7 +368,7 @@ RefPtr<ImageBuffer> DrawingAreaWC::createImageBuffer(FloatSize size)
     return ImageBuffer::create<UnacceleratedImageBufferShareableBackend>(size, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, RenderingPurpose::DOM, nullptr);
 }
 
-void DrawingAreaWC::didUpdate()
+void DrawingAreaWC::displayDidRefresh()
 {
     m_waitDidUpdate = false;
     if (m_forceRepaintCompletionHandler) {
@@ -382,3 +384,5 @@ void DrawingAreaWC::didUpdate()
 }
 
 } // namespace WebKit
+
+#endif // USE(GRAPHICS_LAYER_WC)

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSMathValue.h"
 
 namespace WebCore {
@@ -38,6 +36,8 @@ public:
     const CSSNumericValue& lower() const { return m_lower.get(); }
     const CSSNumericValue& value() const { return m_value.get(); }
     const CSSNumericValue& upper() const { return m_upper.get(); }
+
+    RefPtr<CSSCalcExpressionNode> toCalcExpressionNode() const final;
 
 private:
     CSSMathOperator getOperator() const final { return CSSMathOperator::Clamp; }
@@ -60,5 +60,3 @@ static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue
 static bool isType(const WebCore::CSSNumericValue& numericValue) { return numericValue.getType() == WebCore::CSSStyleValueType::CSSMathClamp; }
 static bool isType(const WebCore::CSSMathValue& mathValue) { return mathValue.getType() == WebCore::CSSStyleValueType::CSSMathClamp; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

@@ -557,11 +557,30 @@
 (allow mach-lookup
     (global-name "com.apple.system.notification_center")
     (apply-message-filter
-        (deny mach-message-send)
+        (deny mach-message-send (with telemetry))
         (deny mach-message-send (with no-report) (message-number 1023))
         (allow mach-message-send (message-number
-            1002 1011 1012 1016 1017 1018 1021 1025 1026 1028 1029 1030 1031 1032))))
-
+            1002
+            1009
+            1010
+            1011
+            1012
+            1016
+            1017
+            1018
+            1019
+            1021
+            1022
+            1025
+            1026
+            1028
+            1029
+            1030
+            1031
+            1032
+        ))
+    )
+)
 (allow ipc-posix-shm-read*
        (ipc-posix-name "apple.shm.notification_center"))
 
@@ -869,11 +888,12 @@
 (media-accessibility-support)
 
 (deny mach-lookup (with no-report)
-    (global-name "com.apple.SystemConfiguration.configd")
-    (global-name "com.apple.aggregated")
-    (global-name "com.apple.diagnosticd")
-    (global-name "com.apple.fontservicesd")
-)
+    (global-name
+        "com.apple.SystemConfiguration.configd"
+        "com.apple.aggregated"
+        "com.apple.analyticsd"
+        "com.apple.diagnosticd"
+        "com.apple.fontservicesd"))
 
 (deny mach-lookup (with telemetry)
     (global-name "com.apple.PowerManagement.control"))
@@ -1210,6 +1230,9 @@
 
 (deny syscall-unix (with no-report) (syscall-number
     SYS_connect
+#if !PLATFORM(WATCHOS)
+    SYS_sigreturn
+#endif
     SYS_socket))
 
 (when (defined? 'SYS_map_with_linking_np)
@@ -1315,23 +1338,22 @@
             (allow mach-message-send
                 (mach-bootstrap-message-numbers)))))
 
+(allow-mach-bootstrap-with-filter)
+
 #if HAVE(SANDBOX_STATE_FLAGS)
-(if (require-ancestor-with-entitlement "com.apple.private.security.enable-state-flags")
+(with-filter
+    (require-all
+        (require-ancestor-with-entitlement "com.apple.private.security.enable-state-flags")
+        (state-flag "WebContentProcessLaunched")
+        (require-not (state-flag "EnableMachBootstrap")))
     (allow mach-bootstrap
+        (require-not (state-flag "EnableExperimentalSandbox"))
         (apply-message-filter
             (deny mach-message-send (with telemetry-backtrace))
             (allow mach-message-send (with telemetry-backtrace)
                 (mach-bootstrap-message-numbers-post-launch))))
-;; else
-    (allow-mach-bootstrap-with-filter))
-
-(with-filter
-    (require-any
-        (require-not (state-flag "WebContentProcessLaunched"))
-        (state-flag "EnableMachBootstrap"))
-    (allow-mach-bootstrap-with-filter))
-#else
-(allow-mach-bootstrap-with-filter)
+    (deny mach-bootstrap (with telemetry-backtrace)
+        (state-flag "EnableExperimentalSandbox")))
 #endif
 
 (define (syscall-mach-only-in-use-during-launch)

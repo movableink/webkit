@@ -32,6 +32,7 @@
 
 namespace WebCore {
 
+struct AttachmentLayout;
 class BorderData;
 class Element;
 class FileList;
@@ -251,7 +252,7 @@ public:
 #endif
 
 protected:
-    virtual bool canPaint(const PaintInfo&, const Settings&) const { return true; }
+    virtual bool canPaint(const PaintInfo&, const Settings&, ControlPart) const { return true; }
 
     // The platform selection color.
     virtual Color platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
@@ -332,6 +333,7 @@ protected:
 
 #if ENABLE(ATTACHMENT_ELEMENT)
     virtual bool paintAttachment(const RenderObject&, const PaintInfo&, const IntRect&);
+    virtual void paintAttachmentText(GraphicsContext&, AttachmentLayout*) { }
 #endif
 
 #if ENABLE(DATALIST_ELEMENT)
@@ -416,7 +418,7 @@ protected:
     virtual ColorCache& colorCache(OptionSet<StyleColorOptions>) const;
 
 private:
-    ControlPart autoAppearanceForElement(const Element*) const;
+    ControlPart autoAppearanceForElement(RenderStyle&, const Element*) const;
     ControlPart adjustAppearanceForElement(RenderStyle&, const Element*, ControlPart) const;
 
     mutable HashMap<uint8_t, ColorCache, DefaultHash<uint8_t>, WTF::UnsignedWithZeroKeyHashTraits<uint8_t>> m_colorCacheMap;

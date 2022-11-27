@@ -67,6 +67,7 @@
 #include "Settings.h"
 #include "SystemSoundManager.h"
 #include "UserGestureIndicator.h"
+#include "WebCorePersistentCoders.h"
 #include <JavaScriptCore/ScriptFunctionCall.h>
 #include <pal/system/Sound.h>
 #include <wtf/CompletionHandler.h>
@@ -74,6 +75,10 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/persistence/PersistentDecoder.h>
 #include <wtf/text/Base64.h>
+
+#if PLATFORM(COCOA)
+#include <wtf/spi/darwin/OSVariantSPI.h>
+#endif
 
 namespace WebCore {
 
@@ -636,6 +641,21 @@ void InspectorFrontendHost::setAllowsInspectingInspector(bool allow)
         m_client->setInspectorPageDeveloperExtrasEnabled(m_frontendPage->settings().developerExtrasEnabled());
 }
 
+bool InspectorFrontendHost::engineeringSettingsAllowed()
+{
+    if (!m_frontendPage)
+        return false;
+
+    if (!m_frontendPage->settings().webInspectorEngineeringSettingsAllowed())
+        return false;
+#if PLATFORM(COCOA)
+    static bool allowsInternalSecurityPolicies = os_variant_allows_internal_security_policies("com.apple.WebKit");
+    if (!allowsInternalSecurityPolicies)
+        return false;
+#endif
+    return true;
+}
+
 bool InspectorFrontendHost::supportsShowCertificate() const
 {
 #if PLATFORM(COCOA)
@@ -746,11 +766,11 @@ void InspectorFrontendHost::didShowExtensionTab(const String& extensionID, const
     if (!m_client)
         return;
 
-    Frame* frame = extensionFrameElement.contentFrame();
+    auto* frame = extensionFrameElement.contentFrame();
     if (!frame)
         return;
 
-    m_client->didShowExtensionTab(extensionID, extensionTabID, valueOrDefault(frame->frameID()));
+    m_client->didShowExtensionTab(extensionID, extensionTabID, frame->frameID());
 }
 
 void InspectorFrontendHost::didHideExtensionTab(const String& extensionID, const String& extensionTabID)

@@ -33,6 +33,8 @@
 #import <crt_externs.h>
 #import <mach-o/dyld.h>
 #import <mach/mach_error.h>
+#import <mach/mach_init.h>
+#import <mach/mach_traps.h>
 #import <mach/machine.h>
 #import <pal/spi/cocoa/ServersSPI.h>
 #import <spawn.h>
@@ -57,7 +59,7 @@ namespace WebKit {
 
 static const char* webContentServiceName(bool nonValidInjectedCodeAllowed, ProcessLauncher::Client* client)
 {
-    if (client && client->shouldEnableCaptivePortalMode())
+    if (client && client->shouldEnableLockdownMode())
         return "com.apple.WebKit.WebContent.CaptivePortal";
 
     return nonValidInjectedCodeAllowed ? "com.apple.WebKit.WebContent.Development" : "com.apple.WebKit.WebContent";
@@ -75,23 +77,6 @@ static const char* serviceName(const ProcessLauncher::LaunchOptions& launchOptio
         return "com.apple.WebKit.GPU";
 #endif
     }
-}
-
-static bool shouldLeakBoost(const ProcessLauncher::LaunchOptions& launchOptions)
-{
-#if PLATFORM(IOS_FAMILY)
-    UNUSED_PARAM(launchOptions);
-    // On iOS, we don't need to leak a boost message because RunningBoard process assertions give us the
-    // right priorities.
-    return false;
-#else
-    // On Mac, leak a boost onto the NetworkProcess and GPUProcess.
-#if ENABLE(GPU_PROCESS)
-    if (launchOptions.processType == ProcessLauncher::ProcessType::GPU)
-        return true;
-#endif
-    return launchOptions.processType == ProcessLauncher::ProcessType::Network;
-#endif
 }
 
 void ProcessLauncher::launchProcess()
@@ -142,12 +127,6 @@ void ProcessLauncher::launchProcess()
 #endif
     xpc_connection_set_bootstrap(m_xpcConnection.get(), initializationMessage.get());
 
-    if (shouldLeakBoost(m_launchOptions)) {
-        auto preBootstrapMessage = adoptOSObject(xpc_dictionary_create(nullptr, nullptr, 0));
-        xpc_dictionary_set_string(preBootstrapMessage.get(), "message-name", "pre-bootstrap");
-        xpc_connection_send_message(m_xpcConnection.get(), preBootstrapMessage.get());
-    }
-
     // Create the listening port.
     mach_port_t listeningPort = MACH_PORT_NULL;
     auto kr = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &listeningPort);
@@ -185,7 +164,7 @@ void ProcessLauncher::launchProcess()
             xpc_dictionary_set_bool(bootstrapMessage.get(), "disable-jit", true);
         if (m_client->shouldEnableSharedArrayBuffer())
             xpc_dictionary_set_bool(bootstrapMessage.get(), "enable-shared-array-buffer", true);
-        if (m_client->shouldEnableCaptivePortalMode())
+        if (m_client->shouldEnableLockdownMode())
             xpc_dictionary_set_bool(bootstrapMessage.get(), "enable-captive-portal-mode", true);
     }
 
@@ -215,7 +194,7 @@ void ProcessLauncher::launchProcess()
 
     xpc_dictionary_set_value(bootstrapMessage.get(), "extra-initialization-data", extraInitializationData.get());
 
-    auto errorHandlerImpl = [weakProcessLauncher = WeakPtr { *this }, listeningPort, logName = CString(name)] (xpc_object_t event) {
+    auto errorHandlerImpl = [weakProcessLauncher = ThreadSafeWeakPtr { *this }, listeningPort, logName = CString(name)] (xpc_object_t event) {
         ASSERT(!event || xpc_get_type(event) == XPC_TYPE_ERROR);
 
         auto processLauncher = weakProcessLauncher.get();

@@ -4,9 +4,11 @@
 
 import contextlib
 import datetime
+import json
 import importlib
 import io
 import logging
+import os
 import signal
 import subprocess
 import sys
@@ -19,6 +21,9 @@ import angle_path_util
 angle_path_util.AddDepsDirToPath('testing/scripts')
 import common
 import xvfb
+
+
+ANGLE_TRACE_TEST_SUITE = 'angle_trace_tests'
 
 
 def Initialize(suite_name):
@@ -146,22 +151,47 @@ def run_command_with_output(argv, stdoutfile, env=None, cwd=None, log=True):
 def RunTestSuite(test_suite,
                  cmd_args,
                  env,
-                 runner_args=None,
                  show_test_stdout=True,
                  use_xvfb=False):
     if android_helper.IsAndroid():
-        result, output = android_helper.RunTests(test_suite, cmd_args, log_output=show_test_stdout)
-        return result, output.decode()
+        result, output, json_results = android_helper.RunTests(
+            test_suite, cmd_args, log_output=show_test_stdout)
+        return result, output, json_results
 
-    runner_cmd = [ExecutablePathInCurrentDir(test_suite)] + cmd_args + (runner_args or [])
+    cmd = ExecutablePathInCurrentDir(test_suite) if os.path.exists(
+        os.path.basename(test_suite)) else test_suite
+    runner_cmd = [cmd] + cmd_args
 
     logging.debug(' '.join(runner_cmd))
-    with common.temporary_file() as tempfile_path:
+    with contextlib.ExitStack() as stack:
+        stdout_path = stack.enter_context(common.temporary_file())
+
+        flag_matches = [a for a in cmd_args if a.startswith('--isolated-script-test-output=')]
+        if flag_matches:
+            results_path = flag_matches[0].split('=')[1]
+        else:
+            results_path = stack.enter_context(common.temporary_file())
+            runner_cmd += ['--isolated-script-test-output=%s' % results_path]
+
         if use_xvfb:
-            exit_code = xvfb.run_executable(runner_cmd, env, stdoutfile=tempfile_path)
+            xvfb_whd = '3120x3120x24'  # Max screen dimensions from traces, as per:
+            # % egrep 'Width|Height' src/tests/restricted_traces/*/*.json | awk '{print $3 $2}' | sort -n
+            exit_code = xvfb.run_executable(
+                runner_cmd, env, stdoutfile=stdout_path, xvfb_whd=xvfb_whd)
         else:
             exit_code = run_command_with_output(
-                runner_cmd, env=env, stdoutfile=tempfile_path, log=show_test_stdout)
-        with open(tempfile_path) as f:
+                runner_cmd, env=env, stdoutfile=stdout_path, log=show_test_stdout)
+        with open(stdout_path) as f:
             output = f.read()
-    return exit_code, output
+        with open(results_path) as f:
+            data = f.read()
+            json_results = json.loads(data) if data else None  # --list-tests => empty file
+
+    return exit_code, output, json_results
+
+
+def GetTestsFromOutput(output):
+    out_lines = output.split('\n')
+    start = out_lines.index('Tests list:')
+    end = out_lines.index('End tests list.')
+    return out_lines[start + 1:end]

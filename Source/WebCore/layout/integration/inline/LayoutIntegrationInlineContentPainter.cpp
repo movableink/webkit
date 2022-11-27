@@ -67,8 +67,7 @@ void InlineContentPainter::paintDisplayBox(const InlineDisplay::Box& box)
         return m_damageRect.maxY() > rect.y() && m_damageRect.y() < rect.maxY();
     };
 
-    auto isVisuallyHidden = box.isVisuallyHidden() == InlineDisplay::Box::IsVisuallyHidden::Yes || box.style().visibility() != Visibility::Visible;
-    if (isVisuallyHidden || box.isLineBreak())
+    if (!box.isVisible() || box.isLineBreak())
         return;
 
     if (box.isInlineBox()) {
@@ -183,7 +182,7 @@ bool LayerPaintScope::includes(const InlineDisplay::Box& box)
     bool hasSelfPaintingLayer = renderer && renderer->hasSelfPaintingLayer();
 
     if (hasSelfPaintingLayer && box.isNonRootInlineBox())
-        m_currentExcludedInlineBox = &downcast<Layout::ContainerBox>(box.layoutBox());
+        m_currentExcludedInlineBox = &downcast<Layout::ElementBox>(box.layoutBox());
 
     return !hasSelfPaintingLayer;
 }

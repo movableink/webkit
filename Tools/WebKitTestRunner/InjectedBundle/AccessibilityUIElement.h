@@ -42,6 +42,7 @@
 OBJC_CLASS NSArray;
 OBJC_CLASS NSString;
 #include <wtf/RetainPtr.h>
+#include <wtf/WeakObjCPtr.h>
 using PlatformUIElement = id;
 #elif USE(ATSPI)
 namespace WebCore {
@@ -73,7 +74,7 @@ public:
     ~AccessibilityUIElement();
 
 #if PLATFORM(COCOA)
-    id platformUIElement() { return m_element.get(); }
+    id platformUIElement() { return m_element.getAutoreleased(); }
 #elif USE(ATSPI)
     PlatformUIElement platformUIElement() { return m_element.get(); }
 #else
@@ -243,17 +244,19 @@ public:
     RefPtr<AccessibilityUIElement> disclosedRowAtIndex(unsigned);
     RefPtr<AccessibilityUIElement> rowAtIndex(unsigned);
 
-    JSValueRef detailsElements() const;
-    JSValueRef errorMessageElements() const;
     // ARIA specific
     RefPtr<AccessibilityUIElement> ariaOwnsElementAtIndex(unsigned);
     RefPtr<AccessibilityUIElement> ariaFlowToElementAtIndex(unsigned);
     RefPtr<AccessibilityUIElement> ariaControlsElementAtIndex(unsigned);
 #if PLATFORM(COCOA) || USE(ATSPI)
+    JSValueRef detailsElements() const;
     RefPtr<AccessibilityUIElement> ariaDetailsElementAtIndex(unsigned);
+    JSValueRef errorMessageElements() const;
     RefPtr<AccessibilityUIElement> ariaErrorMessageElementAtIndex(unsigned);
 #else
+    JSValueRef detailsElements() const { return { }; }
     RefPtr<AccessibilityUIElement> ariaDetailsElementAtIndex(unsigned) { return nullptr; }
+    JSValueRef errorMessageElements() const { return { }; }
     RefPtr<AccessibilityUIElement> ariaErrorMessageElementAtIndex(unsigned) { return nullptr; }
 #endif
 
@@ -430,7 +433,7 @@ private:
     // A retained, platform specific object used to help manage notifications for this object.
 #if ENABLE(ACCESSIBILITY)
 #if PLATFORM(COCOA)
-    RetainPtr<id> m_element;
+    WeakObjCPtr<id> m_element;
     RetainPtr<id> m_notificationHandler;
     static RefPtr<AccessibilityController> s_controller;
 

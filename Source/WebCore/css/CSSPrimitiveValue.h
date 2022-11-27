@@ -87,6 +87,7 @@ public:
     bool isCounter() const { return primitiveUnitType() == CSSUnitType::CSS_COUNTER; }
     bool isFontIndependentLength() const { return isFontIndependentLength(primitiveUnitType()); }
     bool isFontRelativeLength() const { return isFontRelativeLength(primitiveUnitType()); }
+    bool isParentFontRelativeLength() const { return isPercentage() || (isFontRelativeLength() && primitiveType() != CSSUnitType::CSS_REMS && primitiveType() != CSSUnitType::CSS_RLHS); }
     bool isQuirkyEms() const { return primitiveType() == CSSUnitType::CSS_QUIRKY_EMS; }
     bool isLength() const { return isLength(static_cast<CSSUnitType>(primitiveType())); }
     bool isNumber() const { return primitiveType() == CSSUnitType::CSS_NUMBER; }
@@ -190,7 +191,7 @@ public:
 
     template<typename T> inline operator T() const; // Defined in CSSPrimitiveValueMappings.h
 
-    String customCSSText(Document* = nullptr) const;
+    String customCSSText() const;
 
     bool equals(const CSSPrimitiveValue&) const;
 
@@ -206,6 +207,8 @@ public:
 
     void collectDirectComputationalDependencies(HashSet<CSSPropertyID>&) const;
     void collectDirectRootComputationalDependencies(HashSet<CSSPropertyID>&) const;
+
+    static void setUseLegacyPrecision(bool useLegacyPrecision) { s_useLegacyPrecision = useLegacyPrecision; }
 
 private:
     friend class CSSValuePool;
@@ -260,6 +263,8 @@ private:
     static constexpr bool isFontRelativeLength(CSSUnitType);
     static constexpr bool isResolution(CSSUnitType);
     static constexpr bool isViewportPercentageLength(CSSUnitType);
+
+    static bool s_useLegacyPrecision;
 
     union {
         CSSPropertyID propertyID;

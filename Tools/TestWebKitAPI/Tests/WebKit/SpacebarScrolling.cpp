@@ -32,11 +32,14 @@
 #include "PlatformWebView.h"
 #include <WebKit/WKPreferencesRefPrivate.h>
 #include <WebKit/WKRetainPtr.h>
+#include <WebKit/WKSerializedScriptValue.h>
 
 namespace TestWebKitAPI {
 
 static bool didFinishLoad;
 static bool didNotHandleKeyDownEvent;
+static bool javascriptRun;
+static bool isScrolled;
 
 static void didFinishNavigation(WKPageRef, WKNavigationRef, WKTypeRef, const void*)
 {
@@ -49,15 +52,26 @@ static void didNotHandleKeyEventCallback(WKPageRef, WKNativeEventPtr event, cons
         didNotHandleKeyDownEvent = true;
 }
 
+
+static void didRunJavascript(WKSerializedScriptValueRef serializedScriptValue, WKErrorRef error, void* context)
+{
+    JSGlobalContextRef scriptContext = JSGlobalContextCreate(0);
+    JSValueRef jsValue = WKSerializedScriptValueDeserialize(serializedScriptValue, scriptContext, 0);
+    isScrolled = JSValueToBoolean(scriptContext, jsValue);
+
+    javascriptRun = true;
+
+    JSGlobalContextRelease(scriptContext);
+}
+
 TEST(WebKit, SpacebarScrolling)
 {
     WKRetainPtr<WKContextRef> context = adoptWK(Util::createContextWithInjectedBundle());
 
-    // Turn off threaded scrolling; synchronously waiting for the main thread scroll position to
-    // update using WKPageForceRepaint would be better, but for some reason the test still fails occasionally.
-    WKRetainPtr<WKPageGroupRef> pageGroup = adoptWK(WKPageGroupCreateWithIdentifier(Util::toWK("NoThreadedScrollingPageGroup").get()));
+    WKRetainPtr<WKPageGroupRef> pageGroup = adoptWK(WKPageGroupCreateWithIdentifier(Util::toWK("AsyncScrollingPageGroup").get()));
     WKPreferencesRef preferences = WKPageGroupGetPreferences(pageGroup.get());
-    WKPreferencesSetThreadedScrollingEnabled(preferences, false);
+    WKPreferencesSetThreadedScrollingEnabled(preferences, true);
+    WKPreferencesSetInternalDebugFeatureForKey(preferences, true, Util::toWK("AsyncFrameScrollingEnabled").get());
 
     PlatformWebView webView(context.get(), pageGroup.get());
 
@@ -100,6 +114,12 @@ TEST(WebKit, SpacebarScrolling)
 
     didNotHandleKeyDownEvent = false;
     webView.simulateSpacebarKeyPress();
+
+    while (!isScrolled) {
+        javascriptRun = false;
+        WKPageRunJavaScriptInMainFrame(webView.page(), Util::toWK("isDocumentScrolled()").get(), 0, didRunJavascript);
+        Util::run(&javascriptRun);
+    }
 
     EXPECT_JS_TRUE(webView.page(), "isDocumentScrolled()");
     EXPECT_JS_TRUE(webView.page(), "textFieldContainsSpace()");

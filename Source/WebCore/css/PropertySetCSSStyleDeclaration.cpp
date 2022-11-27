@@ -33,6 +33,7 @@
 #include "JSDOMWindowBase.h"
 #include "MutationObserverInterestGroup.h"
 #include "MutationRecord.h"
+#include "Quirks.h"
 #include "StyleProperties.h"
 #include "StyleSheetContents.h"
 #include "StyledElement.h"
@@ -152,7 +153,7 @@ unsigned PropertySetCSSStyleDeclaration::length() const
 {
     unsigned exposed = 0;
     for (unsigned i = 0; i < m_propertySet->propertyCount(); i++) {
-        if (isCSSPropertyExposed(m_propertySet->propertyAt(i).id()))
+        if (isExposed(m_propertySet->propertyAt(i).id()))
             exposed++;
     }
     return exposed;
@@ -161,7 +162,7 @@ unsigned PropertySetCSSStyleDeclaration::length() const
 String PropertySetCSSStyleDeclaration::item(unsigned i) const
 {
     for (unsigned j = 0; j <= i && j < m_propertySet->propertyCount(); j++) {
-        if (!isCSSPropertyExposed(m_propertySet->propertyAt(j).id()))
+        if (!isExposed(m_propertySet->propertyAt(j).id()))
             i++;
     }
 
@@ -200,7 +201,7 @@ RefPtr<DeprecatedCSSOMValue> PropertySetCSSStyleDeclaration::getPropertyCSSValue
     }
     
     CSSPropertyID propertyID = cssPropertyID(propertyName);
-    if (!propertyID || !isCSSPropertyExposed(propertyID))
+    if (!isExposed(propertyID))
         return nullptr;
     return wrapForDeprecatedCSSOM(getPropertyCSSValueInternal(propertyID).get());
 }
@@ -211,7 +212,7 @@ String PropertySetCSSStyleDeclaration::getPropertyValue(const String& propertyNa
         return m_propertySet->getCustomPropertyValue(propertyName);
 
     CSSPropertyID propertyID = cssPropertyID(propertyName);
-    if (!propertyID || !isCSSPropertyExposed(propertyID))
+    if (!isExposed(propertyID))
         return String();
     return getPropertyValueInternal(propertyID);
 }
@@ -222,7 +223,7 @@ String PropertySetCSSStyleDeclaration::getPropertyPriority(const String& propert
         return m_propertySet->customPropertyIsImportant(propertyName) ? "important"_s : emptyString();
 
     CSSPropertyID propertyID = cssPropertyID(propertyName);
-    if (!propertyID || !isCSSPropertyExposed(propertyID))
+    if (!isExposed(propertyID))
         return emptyString();
     return m_propertySet->propertyIsImportant(propertyID) ? "important"_s : emptyString();
 }
@@ -230,17 +231,14 @@ String PropertySetCSSStyleDeclaration::getPropertyPriority(const String& propert
 String PropertySetCSSStyleDeclaration::getPropertyShorthand(const String& propertyName)
 {
     CSSPropertyID propertyID = cssPropertyID(propertyName);
-    if (!propertyID || !isCSSPropertyExposed(propertyID))
+    if (!isExposed(propertyID))
         return String();
     return m_propertySet->getPropertyShorthand(propertyID);
 }
 
 bool PropertySetCSSStyleDeclaration::isPropertyImplicit(const String& propertyName)
 {
-    CSSPropertyID propertyID = cssPropertyID(propertyName);
-    if (!propertyID || !isCSSPropertyExposed(propertyID))
-        return false;
-    return m_propertySet->isPropertyImplicit(propertyID);
+    return m_propertySet->isPropertyImplicit(cssPropertyID(propertyName));
 }
 
 ExceptionOr<void> PropertySetCSSStyleDeclaration::setProperty(const String& propertyName, const String& value, const String& priority)
@@ -251,7 +249,7 @@ ExceptionOr<void> PropertySetCSSStyleDeclaration::setProperty(const String& prop
     if (isCustomPropertyName(propertyName))
         propertyID = CSSPropertyCustom;
 
-    if (!propertyID || !isCSSPropertyExposed(propertyID))
+    if (!isExposed(propertyID))
         return { };
 
     if (!willMutate())
@@ -291,7 +289,7 @@ ExceptionOr<String> PropertySetCSSStyleDeclaration::removeProperty(const String&
     CSSPropertyID propertyID = cssPropertyID(propertyName);
     if (isCustomPropertyName(propertyName))
         propertyID = CSSPropertyCustom;
-    if (!propertyID || !isCSSPropertyExposed(propertyID))
+    if (!isExposed(propertyID))
         return String();
 
     if (!willMutate())
@@ -314,19 +312,19 @@ RefPtr<CSSValue> PropertySetCSSStyleDeclaration::getPropertyCSSValueInternal(CSS
 
 String PropertySetCSSStyleDeclaration::getPropertyValueInternal(CSSPropertyID propertyID)
 {
-    if (!propertyID || !isCSSPropertyExposed(propertyID))
+    if (!isExposed(propertyID))
         return { };
 
-    Document* doc = nullptr;
-    JSDOMObject* wrap = wrapper();
-    if (wrap) {
-        JSDOMGlobalObject* global = wrap->globalObject();
-        if (global) {
-            DOMWindow& window = activeDOMWindow(*global);
-            doc = window.document();
+    if (auto* wrapper = this->wrapper()) {
+        if (auto* globalObject = wrapper->globalObject()) {
+            if (auto* document = activeDOMWindow(*globalObject).document())
+                CSSPrimitiveValue::setUseLegacyPrecision(document->quirks().needsFlightAwareSerializationQuirk());
         }
     }
-    String value = m_propertySet->getPropertyValue(propertyID, doc);
+
+    auto value = m_propertySet->getPropertyValue(propertyID);
+
+    CSSPrimitiveValue::setUseLegacyPrecision(false);
 
     if (!value.isEmpty())
         return value;
@@ -340,7 +338,7 @@ ExceptionOr<void> PropertySetCSSStyleDeclaration::setPropertyInternal(CSSPropert
     if (!willMutate())
         return { };
 
-    if (!propertyID || !isCSSPropertyExposed(propertyID))
+    if (!isExposed(propertyID))
         return { };
 
     if (m_propertySet->setProperty(propertyID, value, important, cssParserContext())) {
@@ -352,12 +350,15 @@ ExceptionOr<void> PropertySetCSSStyleDeclaration::setPropertyInternal(CSSPropert
     return { };
 }
 
-bool PropertySetCSSStyleDeclaration::isCSSPropertyExposed(CSSPropertyID propertyID) const
+bool PropertySetCSSStyleDeclaration::isExposed(CSSPropertyID propertyID) const
 {
+    if (propertyID == CSSPropertyInvalid)
+        return false;
+
     auto parserContext = cssParserContext();
     bool parsingDescriptor = parserContext.enclosingRuleType && *parserContext.enclosingRuleType != StyleRuleType::Style;
 
-    return WebCore::isCSSPropertyExposed(propertyID, &parserContext.propertySettings)
+    return WebCore::isExposed(propertyID, &parserContext.propertySettings)
         && (!CSSProperty::isDescriptorOnly(propertyID) || parsingDescriptor);
 }
 

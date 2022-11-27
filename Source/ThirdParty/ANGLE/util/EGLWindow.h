@@ -13,6 +13,7 @@
 #include <string>
 
 #include "common/Optional.h"
+#include "common/PackedEnums.h"
 #include "common/angleutils.h"
 #include "util/EGLPlatformParameters.h"
 #include "util/util_export.h"
@@ -125,6 +126,7 @@ class ANGLE_UTIL_EXPORT GLWindowBase : angle::NonCopyable
                                  const AttribKHR *attrib_list)          = 0;
     virtual EGLBoolean destroyImage(Image image)                        = 0;
     virtual EGLBoolean destroyImageKHR(Image image)                     = 0;
+    virtual EGLint getEGLError()                                        = 0;
     virtual Surface createPbufferSurface(const EGLint *attrib_list)     = 0;
     virtual EGLBoolean destroySurface(Surface surface)                  = 0;
 
@@ -141,6 +143,8 @@ class ANGLE_UTIL_EXPORT GLWindowBase : angle::NonCopyable
     const EGLPlatformParameters &getPlatform() const { return mPlatform; }
     const ConfigParameters &getConfigParams() const { return mConfigParams; }
 
+    virtual bool isFeatureEnabled(angle::Feature feature) { return false; }
+
   protected:
     GLWindowBase(EGLenum clientType,
                  EGLint glesMajorVersion,
@@ -155,6 +159,14 @@ class ANGLE_UTIL_EXPORT GLWindowBase : angle::NonCopyable
     EGLPlatformParameters mPlatform;
     ConfigParameters mConfigParams;
 };
+
+enum class ANGLEFeatureStatus
+{
+    Enabled,
+    Disabled,
+    Unknown,
+};
+using ANGLEFeatureArray = angle::PackedEnumMap<angle::Feature, ANGLEFeatureStatus>;
 
 class ANGLE_UTIL_EXPORT EGLWindow : public GLWindowBase
 {
@@ -225,6 +237,7 @@ class ANGLE_UTIL_EXPORT EGLWindow : public GLWindowBase
                          const AttribKHR *attrib_list) override;
     EGLBoolean destroyImage(Image image) override;
     EGLBoolean destroyImageKHR(Image image) override;
+    EGLint getEGLError() override;
     Surface createPbufferSurface(const EGLint *attrib_list) override;
     EGLBoolean destroySurface(Surface surface) override;
 
@@ -240,6 +253,12 @@ class ANGLE_UTIL_EXPORT EGLWindow : public GLWindowBase
 
     bool isDisplayInitialized() const { return mDisplay != EGL_NO_DISPLAY; }
 
+    // Get the status of features and cache them in mFeatures.
+    void queryFeatures();
+    // Return whether a feature is enabled.  Features that don't exist in the backend have Unknown
+    // status, and are considered disabled for the purposes of this function.
+    bool isFeatureEnabled(angle::Feature feature) override;
+
   private:
     EGLWindow(EGLenum clientType,
               EGLint glesMajorVersion,
@@ -254,6 +273,8 @@ class ANGLE_UTIL_EXPORT EGLWindow : public GLWindowBase
 
     EGLint mEGLMajorVersion;
     EGLint mEGLMinorVersion;
+
+    ANGLEFeatureArray mFeatures;
 };
 
 #endif  // UTIL_EGLWINDOW_H_

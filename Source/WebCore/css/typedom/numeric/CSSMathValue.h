@@ -25,11 +25,11 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
+#include "CSSCalcExpressionNode.h"
 #include "CSSMathOperator.h"
 #include "CSSNumericArray.h"
 #include "CSSNumericValue.h"
+#include "CSSPrimitiveValue.h"
 #include "CSSStyleValue.h"
 
 namespace WebCore {
@@ -61,10 +61,15 @@ public:
         }
 
         return true;
+    }
 
+    RefPtr<CSSValue> toCSSValue() const final
+    {
+        auto node = toCalcExpressionNode();
+        if (!node)
+            return nullptr;
+        return CSSPrimitiveValue::create(node->doubleValue(node->primitiveType()), node->primitiveType());
     }
 };
 
 } // namespace WebCore
-
-#endif

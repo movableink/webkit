@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "PlatformExportMacros.h"
 #include <algorithm>
 #include <wtf/JSONValues.h>
 #include <wtf/Forward.h>
@@ -126,10 +127,14 @@ public:
 
     void clampToMinimumSize(const IntSize& minimumSize)
     {
-        if (m_width < minimumSize.width())
-            m_width = minimumSize.width();
-        if (m_height < minimumSize.height())
-            m_height = minimumSize.height();
+        m_width = std::max(m_width, minimumSize.width());
+        m_height = std::max(m_height, minimumSize.height());
+    }
+
+    void clampToMaximumSize(const IntSize& maximumSize)
+    {
+        m_width = std::min(m_width, maximumSize.width());
+        m_height = std::min(m_height, maximumSize.height());
     }
 
     WEBCORE_EXPORT IntSize constrainedBetween(const IntSize& min, const IntSize& max) const;

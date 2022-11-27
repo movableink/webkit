@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -77,7 +77,6 @@ class WebArchiveResource;
 namespace WebKit {
 
 class ObjCObjectGraph;
-class WebCertificateInfo;
 class WebConnection;
 class WebContextMenuItem;
 class WebImage;
@@ -91,7 +90,6 @@ template<typename ImplType> struct ImplTypeInfo;
 
 WK_ADD_API_MAPPING(WKArrayRef, API::Array)
 WK_ADD_API_MAPPING(WKBooleanRef, API::Boolean)
-WK_ADD_API_MAPPING(WKCertificateInfoRef, WebCertificateInfo)
 WK_ADD_API_MAPPING(WKConnectionRef, WebConnection)
 WK_ADD_API_MAPPING(WKContextMenuItemRef, WebContextMenuItem)
 WK_ADD_API_MAPPING(WKDataRef, API::Data)
@@ -292,37 +290,53 @@ inline WKTypeID toAPI(API::Object::Type type)
     return static_cast<WKTypeID>(type);
 }
 
-inline WKEventModifiers toAPI(OptionSet<WebEvent::Modifier> modifiers)
+inline OptionSet<WebEventModifier> fromAPI(WKEventModifiers wkModifiers)
+{
+    OptionSet<WebEventModifier> modifiers;
+    if (wkModifiers & kWKEventModifiersShiftKey)
+        modifiers.add(WebEventModifier::ShiftKey);
+    if (wkModifiers & kWKEventModifiersControlKey)
+        modifiers.add(WebEventModifier::ControlKey);
+    if (wkModifiers & kWKEventModifiersAltKey)
+        modifiers.add(WebEventModifier::AltKey);
+    if (wkModifiers & kWKEventModifiersMetaKey)
+        modifiers.add(WebEventModifier::MetaKey);
+    if (wkModifiers & kWKEventModifiersCapsLockKey)
+        modifiers.add(WebEventModifier::CapsLockKey);
+    return modifiers;
+}
+
+inline WKEventModifiers toAPI(OptionSet<WebEventModifier> modifiers)
 {
     WKEventModifiers wkModifiers = 0;
-    if (modifiers.contains(WebEvent::Modifier::ShiftKey))
+    if (modifiers.contains(WebEventModifier::ShiftKey))
         wkModifiers |= kWKEventModifiersShiftKey;
-    if (modifiers.contains(WebEvent::Modifier::ControlKey))
+    if (modifiers.contains(WebEventModifier::ControlKey))
         wkModifiers |= kWKEventModifiersControlKey;
-    if (modifiers.contains(WebEvent::Modifier::AltKey))
+    if (modifiers.contains(WebEventModifier::AltKey))
         wkModifiers |= kWKEventModifiersAltKey;
-    if (modifiers.contains(WebEvent::Modifier::MetaKey))
+    if (modifiers.contains(WebEventModifier::MetaKey))
         wkModifiers |= kWKEventModifiersMetaKey;
-    if (modifiers.contains(WebEvent::Modifier::CapsLockKey))
+    if (modifiers.contains(WebEventModifier::CapsLockKey))
         wkModifiers |= kWKEventModifiersCapsLockKey;
     return wkModifiers;
 }
 
-inline WKEventMouseButton toAPI(WebMouseEvent::Button mouseButton)
+inline WKEventMouseButton toAPI(WebMouseEventButton mouseButton)
 {
     WKEventMouseButton wkMouseButton = kWKEventMouseButtonNoButton;
 
     switch (mouseButton) {
-    case WebMouseEvent::NoButton:
+    case WebMouseEventButton::NoButton:
         wkMouseButton = kWKEventMouseButtonNoButton;
         break;
-    case WebMouseEvent::LeftButton:
+    case WebMouseEventButton::LeftButton:
         wkMouseButton = kWKEventMouseButtonLeftButton;
         break;
-    case WebMouseEvent::MiddleButton:
+    case WebMouseEventButton::MiddleButton:
         wkMouseButton = kWKEventMouseButtonMiddleButton;
         break;
-    case WebMouseEvent::RightButton:
+    case WebMouseEventButton::RightButton:
         wkMouseButton = kWKEventMouseButtonRightButton;
         break;
     }
@@ -369,6 +383,10 @@ inline WKContextMenuItemTag toAPI(WebCore::ContextMenuAction action)
         return kWKContextMenuItemTagDownloadImageToDisk;
     case WebCore::ContextMenuItemTagCopyImageToClipboard:
         return kWKContextMenuItemTagCopyImageToClipboard;
+    case WebCore::ContextMenuItemTagPlayAllAnimations:
+        return kWKContextMenuItemTagPlayAllAnimations;
+    case WebCore::ContextMenuItemTagPauseAllAnimations:
+        return kWKContextMenuItemTagPauseAllAnimations;
 #if PLATFORM(GTK) || PLATFORM(QT)
     case WebCore::ContextMenuItemTagCopyImageUrlToClipboard:
         return kWKContextMenuItemTagCopyImageUrlToClipboard;
@@ -577,6 +595,10 @@ inline WebCore::ContextMenuAction toImpl(WKContextMenuItemTag tag)
         return WebCore::ContextMenuItemTagDownloadImageToDisk;
     case kWKContextMenuItemTagCopyImageToClipboard:
         return WebCore::ContextMenuItemTagCopyImageToClipboard;
+    case kWKContextMenuItemTagPlayAllAnimations:
+        return WebCore::ContextMenuItemTagPlayAllAnimations;
+    case kWKContextMenuItemTagPauseAllAnimations:
+        return WebCore::ContextMenuItemTagPauseAllAnimations;
     case kWKContextMenuItemTagOpenFrameInNewWindow:
 #if PLATFORM(GTK) || PLATFORM(QT)
     case kWKContextMenuItemTagCopyImageUrlToClipboard:

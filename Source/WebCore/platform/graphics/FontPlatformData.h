@@ -101,7 +101,7 @@ class FontPlatformData {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     struct CreationData;
-    
+
     struct FontVariationAxis {
         FontVariationAxis(const String& name, const String& tag, float defaultValue, float minimumValue, float maximumValue)
             : m_name(name)
@@ -111,7 +111,7 @@ public:
             , m_maximumValue(maximumValue)
         {
         }
-        
+
         const String& name() const { return m_name; }
         const String& tag() const { return m_tag; }
         float defaultValue() const { return m_defaultValue; }
@@ -159,7 +159,9 @@ public:
 
     static FontPlatformData cloneWithOrientation(const FontPlatformData&, FontOrientation);
     static FontPlatformData cloneWithSyntheticOblique(const FontPlatformData&, bool);
+
     static FontPlatformData cloneWithSize(const FontPlatformData&, float);
+    void updateSizeWithFontSizeAdjust(const std::optional<float>& fontSizeAdjust);
 
 #if PLATFORM(WIN)
     HFONT hfont() const { return m_font ? m_font->get() : 0; }
@@ -268,6 +270,8 @@ public:
 
 private:
     bool platformIsEqual(const FontPlatformData&) const;
+    //  updateSize to be implemented by each platform since it needs to re-instantiate the platform font object.
+    void updateSize(float);
 
 #if PLATFORM(COCOA)
     CGFloat ctFontSize() const;

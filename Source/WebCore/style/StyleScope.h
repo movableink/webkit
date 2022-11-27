@@ -28,7 +28,7 @@
 #pragma once
 
 #include "LayoutSize.h"
-#include "MediaQueryEvaluator.h"
+#include "LegacyMediaQueryEvaluator.h"
 #include "StyleScopeOrdinal.h"
 #include "Timer.h"
 #include <memory>
@@ -185,6 +185,8 @@ private:
 
     void pendingUpdateTimerFired();
     void clearPendingUpdate();
+
+    TreeScope& treeScope();
 
     Document& m_document;
     ShadowRoot* m_shadowRoot { nullptr };

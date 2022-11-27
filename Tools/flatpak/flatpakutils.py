@@ -80,7 +80,7 @@ SANDBOX_SOURCE_ROOT = "/app/webkit"
 
 # Our SDK branch matches with the FDO SDK branch. When updating the FDO SDK release branch
 # in our SDK build definitions please don't forget to update the version here as well.
-SDK_BRANCH = "21.08"
+SDK_BRANCH = "22.08"
 
 WEBKIT_SDK_FLATPAK_REPO_URL = "https://software.igalia.com/flatpak-refs/webkit-sdk.flatpakrepo"
 WEBKIT_SDK_GPG_PUBKEY_URL = "https://software.igalia.com/flatpak-refs/webkit-sdk-pubkey.gpg"
@@ -276,6 +276,7 @@ class FlatpakObject:
                     tmpfile.flush()
                     self.flatpak("remote-modify", "--gpg-import=" + tmpfile.name, remote)
 
+        self.flatpak("repair", comment="Ensuring the local Flatpak repository is not corrupted")
         self.flatpak("update", comment="Updating Flatpak environment")
 
 class FlatpakPackages(FlatpakObject):
@@ -800,7 +801,7 @@ class WebkitFlatpak:
         sandbox_build_path = os.path.join(SANDBOX_SOURCE_ROOT, BUILD_ROOT_DIR_NAME, self.build_type)
         sandbox_environment = {
             "TEST_RUNNER_INJECTED_BUNDLE_FILENAME": os.path.join(sandbox_build_path, "lib/libTestRunnerInjectedBundle.so"),
-            "PATH": "/usr/lib/sdk/llvm14/bin:/usr/bin:/usr/lib/sdk/rust/bin/",
+            "PATH": "/usr/lib/sdk/llvm14/bin:/usr/bin:/usr/lib/sdk/rust-stable/bin/",
         }
 
         if not args:
@@ -995,14 +996,6 @@ class WebkitFlatpak:
                 "NUMBER_OF_PROCESSORS": n_cores,
             })
 
-        # Set PKG_CONFIG_PATH in sandbox so uninstalled WebKit.pc files can be used.
-        pkg_config_path = os.environ.get("PKG_CONFIG_PATH")
-        if pkg_config_path:
-            pkg_config_path = "%s:%s" % (self.build_path, pkg_config_path)
-        else:
-            pkg_config_path = self.build_path
-        sandbox_environment["PKG_CONFIG_PATH"] = pkg_config_path
-
         if not building_local_deps and args[0] != "sccache":
             # Merge local dependencies build env vars in sandbox environment, without overriding
             # previously set PATH values.
@@ -1088,6 +1081,9 @@ class WebkitFlatpak:
                     Console.message("New SDK version available, removing local UserFlatpak directory before switching to new version")
                     shutil.rmtree(self.flatpak_build_path)
 
+                    Console.message("Removing webkitpy auto-installed dependencies, new Python runtime might be incompatible with them.")
+                    shutil.rmtree(os.path.join(WEBKIT_SOURCE_DIR, 'Tools', 'Scripts', 'libraries', 'autoinstalled'))
+
                     Console.message("Forcing next WebKit build to re-run CMake")
                     for platform in ('GTK', 'WPE'):
                         for build_type in ('Release', 'Debug'):
@@ -1095,6 +1091,12 @@ class WebkitFlatpak:
                             if os.path.isfile(cache_path):
                                 Console.message("Removing %s", cache_path)
                                 os.remove(cache_path)
+
+                            if platform == 'WPE':
+                                cog_build_dir = os.path.join(get_build_dir(platform, build_type), 'Tools', 'cog-prefix')
+                                if os.path.isdir(cog_build_dir):
+                                    Console.message("Removing Cog build directory %s", cog_build_dir)
+                                    shutil.rmtree(cog_build_dir)
 
                     self._reset_repository()
                     break
@@ -1262,6 +1264,8 @@ class WebkitFlatpak:
         packages.append(FlatpakPackage('org.webkit.Sdk.Debug', SDK_BRANCH,
                                        self.sdk_repo, arch))
         packages.append(FlatpakPackage("org.freedesktop.Sdk.Extension.llvm14", SDK_BRANCH,
+                                       self.flathub_repo, arch))
+        packages.append(FlatpakPackage("org.freedesktop.Sdk.Extension.rust-stable", SDK_BRANCH,
                                        self.flathub_repo, arch))
         packages.append(FlatpakPackage("org.freedesktop.Platform.GL.default", SDK_BRANCH,
                                        self.flathub_repo, arch))

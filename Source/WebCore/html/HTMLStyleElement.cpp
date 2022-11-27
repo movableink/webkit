@@ -31,7 +31,7 @@
 #include "EventSender.h"
 #include "HTMLNames.h"
 #include "MediaList.h"
-#include "MediaQueryParser.h"
+#include "MediaQueryParserContext.h"
 #include "ScriptableDocumentParser.h"
 #include "ShadowRoot.h"
 #include "StyleScope.h"
@@ -47,7 +47,7 @@ using namespace HTMLNames;
 
 static StyleEventSender& styleLoadEventSender()
 {
-    static NeverDestroyed<StyleEventSender> sharedLoadEventSender(eventNames().loadEvent);
+    static NeverDestroyed<StyleEventSender> sharedLoadEventSender;
     return sharedLoadEventSender;
 }
 
@@ -128,19 +128,16 @@ void HTMLStyleElement::dispatchPendingLoadEvents(Page* page)
     styleLoadEventSender().dispatchPendingEvents(page);
 }
 
-void HTMLStyleElement::dispatchPendingEvent(StyleEventSender* eventSender)
+void HTMLStyleElement::dispatchPendingEvent(StyleEventSender* eventSender, const AtomString& eventType)
 {
     ASSERT_UNUSED(eventSender, eventSender == &styleLoadEventSender());
-    if (m_loadedSheet)
-        dispatchEvent(Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
-    else
-        dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    dispatchEvent(Event::create(eventType, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void HTMLStyleElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOccurred)
 {
     m_loadedSheet = !errorOccurred;
-    styleLoadEventSender().dispatchEventSoon(*this);
+    styleLoadEventSender().dispatchEventSoon(*this, m_loadedSheet ? eventNames().loadEvent : eventNames().errorEvent);
 }
 
 void HTMLStyleElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const

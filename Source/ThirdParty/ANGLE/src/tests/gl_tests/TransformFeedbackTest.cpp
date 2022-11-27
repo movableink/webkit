@@ -77,7 +77,7 @@ class TransformFeedbackTest : public TransformFeedbackTestBase
         ASSERT_EQ(0u, mProgram);
 
         mProgram = CompileProgramWithTransformFeedback(
-            essl1_shaders::vs::Simple(), essl1_shaders::fs::Red(), tfVaryings, bufferMode);
+            essl1_shaders::vs::SimpleForPoints(), essl1_shaders::fs::Red(), tfVaryings, bufferMode);
         ASSERT_NE(0u, mProgram);
     }
 
@@ -1829,7 +1829,8 @@ TEST_P(TransformFeedbackTestES31, DifferentArrayElementVaryings)
 {
     // When transform feedback extension is used, capturing array elements is not supported.
     // http://anglebug.com/4140
-    ANGLE_SKIP_TEST_IF(IsVulkan() && !GetParam().isEnabled(Feature::EmulateTransformFeedback));
+    ANGLE_SKIP_TEST_IF(IsVulkan() &&
+                       !getEGLWindow()->isFeatureEnabled(Feature::EmulateTransformFeedback));
 
     constexpr char kVS[] =
         "#version 310 es\n"
@@ -1895,7 +1896,8 @@ TEST_P(TransformFeedbackTestES31, DifferentArrayElementVaryingsNonZeroIndex)
 {
     // When transform feedback extension is used, capturing array elements is not supported.
     // http://anglebug.com/4140
-    ANGLE_SKIP_TEST_IF(IsVulkan() && !GetParam().isEnabled(Feature::EmulateTransformFeedback));
+    ANGLE_SKIP_TEST_IF(IsVulkan() &&
+                       !getEGLWindow()->isFeatureEnabled(Feature::EmulateTransformFeedback));
 
     constexpr char kVS[] =
         "#version 310 es\n"
@@ -2521,7 +2523,6 @@ void VerifyVertexFloats(const GLfloat *mapPtrFloat,
 // Tests that stopping XFB works as expected.
 TEST_P(TransformFeedbackTest, Overrun)
 {
-
     // TODO(anglebug.com/4533) This fails after the upgrade to the 26.20.100.7870 driver.
     ANGLE_SKIP_TEST_IF(IsWindows() && IsIntel() && IsVulkan());
 
@@ -2551,7 +2552,6 @@ TEST_P(TransformFeedbackTest, Overrun)
 // Similar to the overrun test but with Pause instead of End.
 TEST_P(TransformFeedbackTest, OverrunWithPause)
 {
-
     // TODO(anglebug.com/4533) This fails after the upgrade to the 26.20.100.7870 driver.
     ANGLE_SKIP_TEST_IF(IsWindows() && IsIntel() && IsVulkan());
 
@@ -2586,7 +2586,6 @@ TEST_P(TransformFeedbackTest, OverrunWithPause)
 // Similar to the overrun test but with Pause instead of End.
 TEST_P(TransformFeedbackTest, OverrunWithPauseAndResume)
 {
-
     // TODO(anglebug.com/4533) This fails after the upgrade to the 26.20.100.7870 driver.
     ANGLE_SKIP_TEST_IF(IsWindows() && IsIntel() && IsVulkan());
 
@@ -2628,7 +2627,6 @@ TEST_P(TransformFeedbackTest, OverrunWithPauseAndResume)
 // Similar to the overrun Pause/Resume test but with more than one Pause and Resume.
 TEST_P(TransformFeedbackTest, OverrunWithMultiplePauseAndResume)
 {
-
     // TODO(anglebug.com/4533) This fails after the upgrade to the 26.20.100.7870 driver.
     ANGLE_SKIP_TEST_IF(IsWindows() && IsIntel() && IsVulkan());
 

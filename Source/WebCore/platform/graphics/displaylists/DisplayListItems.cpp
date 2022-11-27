@@ -102,7 +102,7 @@ SetState::SetState(const GraphicsContextState& state)
 
 void SetState::apply(GraphicsContext& context)
 {
-    context.updateState(m_state);
+    context.mergeLastChanges(m_state);
 }
 
 void SetLineCap::apply(GraphicsContext& context) const
@@ -635,6 +635,7 @@ void dumpItem(TextStream& ts, const DrawGlyphs& item, OptionSet<AsTextFlag>)
     // FIXME: dump more stuff.
     ts.dumpProperty("local-anchor", item.localAnchor());
     ts.dumpProperty("anchor-point", item.anchorPoint());
+    ts.dumpProperty("font-smoothing-mode", item.fontSmoothingMode());
     ts.dumpProperty("length", item.glyphs().size());
 }
 

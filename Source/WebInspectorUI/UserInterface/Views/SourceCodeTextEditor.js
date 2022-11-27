@@ -555,19 +555,6 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
         if (this._contentPopulated)
             return;
 
-        if (this._supportsDebugging) {
-            this._removeBreakpointWidgets();
-
-            this._breakpointMap = {};
-
-            for (let breakpoint of WI.debuggerManager.breakpointsForSourceCode(this._sourceCode)) {
-                console.assert(this._matchesBreakpoint(breakpoint));
-                var lineInfo = this._editorLineInfoForSourceCodeLocation(breakpoint.sourceCodeLocation);
-                this._addBreakpointWithEditorLineInfo(breakpoint, lineInfo);
-                this.setBreakpointInfoForLineAndColumn(lineInfo.lineNumber, lineInfo.columnNumber, this._breakpointInfoForBreakpoint(breakpoint));
-            }
-        }
-
         if (this._sourceCode instanceof WI.Resource)
             this.mimeType = this._sourceCode.syntheticMIMEType;
         else if (this._sourceCode instanceof WI.Script)
@@ -580,6 +567,19 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
         if (this.canBeFormatted() && isTextLikelyMinified(content)) {
             this._autoFormat = true;
             this._isProbablyMinified = true;
+        }
+
+        if (this._supportsDebugging) {
+            this._removeBreakpointWidgets();
+
+            this._breakpointMap = {};
+
+            for (let breakpoint of WI.debuggerManager.breakpointsForSourceCode(this._sourceCode)) {
+                console.assert(this._matchesBreakpoint(breakpoint));
+                var lineInfo = this._editorLineInfoForSourceCodeLocation(breakpoint.sourceCodeLocation);
+                this._addBreakpointWithEditorLineInfo(breakpoint, lineInfo);
+                this.setBreakpointInfoForLineAndColumn(lineInfo.lineNumber, lineInfo.columnNumber, this._breakpointInfoForBreakpoint(breakpoint));
+            }
         }
     }
 
@@ -743,14 +743,23 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
         if (!script)
             return;
 
-        let endPosition = this.currentPositionToOriginalPosition(new WI.SourceCodePosition(lineNumber + 1, 0));
+        // If the current content is minified code, only show pause locations within 100 characters.
+        let limitLocations = this._isProbablyMinified && !this.formatterSourceMap;
+        let endPosition = this.currentPositionToOriginalPosition(new WI.SourceCodePosition(limitLocations ? lineNumber : (lineNumber + 1), limitLocations ? 100 : 0));
         console.assert(script === this._getAssociatedScript(endPosition), script);
 
         let locations = await script.breakpointLocations(startPosition, endPosition);
         for (let location of locations) {
+            let position = this.originalPositionToCurrentPosition(location.position());
+
+            // Don't show an inline widget when there is only one breakpoint location on the line
+            // and it's at the start of the line.
+            if (locations.length === 1 && position.lineNumber === lineNumber && !this.line(lineNumber).slice(0, position.columnNumber).trim().length)
+                continue;
+
             console.assert(!Array.from(this._inlineBreakpointDataForLine.values()).some(({widget}) => widget.sourceCodeLocation.isEqual(location)), location, this._inlineBreakpointDataForLine);
             let inlineBreakpointWidget = new WI.BreakpointInlineWidget(WI.debuggerManager.breakpointsForSourceCodeLocation(location).firstValue || location);
-            let bookmark = this.setInlineWidget(this.originalPositionToCurrentPosition(location.position()), inlineBreakpointWidget.element);
+            let bookmark = this.setInlineWidget(position, inlineBreakpointWidget.element);
             this._inlineBreakpointDataForLine.add(lineNumber, {bookmark, widget: inlineBreakpointWidget});
         }
     }

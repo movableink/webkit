@@ -72,42 +72,6 @@ enum class BoxSideFlag : uint8_t;
 using BoxSideSet = OptionSet<BoxSideFlag>;
 using BorderEdges = RectEdges<BorderEdge>;
 
-class BackgroundImageGeometry {
-public:
-    BackgroundImageGeometry(const LayoutRect& destinationRect, const LayoutSize& tile, const LayoutSize& phase, const LayoutSize& space, bool fixedAttachment)
-        : m_destRect(destinationRect)
-        , m_destOrigin(m_destRect.location())
-        , m_tileSize(tile)
-        , m_phase(phase)
-        , m_space(space)
-        , m_hasNonLocalGeometry(fixedAttachment)
-    {
-    }
-
-    LayoutRect destRect() const { return m_destRect; }
-    LayoutSize phase() const { return m_phase; }
-    LayoutSize tileSize() const { return m_tileSize; }
-    LayoutSize spaceSize() const { return m_space; }
-    bool hasNonLocalGeometry() const { return m_hasNonLocalGeometry; }
-
-    LayoutSize relativePhase() const
-    {
-        LayoutSize phase = m_phase;
-        phase += m_destRect.location() - m_destOrigin;
-        return phase;
-    }
-
-    void clip(const LayoutRect& clipRect) { m_destRect.intersect(clipRect); }
-
-private:
-    LayoutRect m_destRect;
-    LayoutPoint m_destOrigin;
-    LayoutSize m_tileSize;
-    LayoutSize m_phase;
-    LayoutSize m_space;
-    bool m_hasNonLocalGeometry; // Has background-attachment: fixed. Implies that we can't always cheaply compute destRect.
-};
-
 // This class is the base for all objects that adhere to the CSS box model as described
 // at http://www.w3.org/TR/CSS21/box.html
 
@@ -216,10 +180,6 @@ public:
 
     virtual LayoutUnit containingBlockLogicalWidthForContent() const;
 
-    void paintBoxShadow(const PaintInfo&, const LayoutRect&, const RenderStyle&, ShadowStyle, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true);
-
-    virtual bool boxShadowShouldBeAppliedToBackground(const LayoutPoint& absolutePaintPostion, BackgroundBleedAvoidance, const InlineIterator::InlineBoxIterator&) const;
-
     // Overridden by subclasses to determine line height and baseline position.
     virtual LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const = 0;
     virtual LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const = 0;
@@ -230,7 +190,6 @@ public:
 
     bool canHaveBoxInfoInFragment() const { return !isFloating() && !isReplacedOrInlineBlock() && !isInline() && !isTableCell() && isRenderBlock() && !isRenderSVGBlock(); }
 
-    void getGeometryForBackgroundImage(const RenderLayerModelObject* paintContainer, const LayoutPoint& paintOffset, FloatRect& destRect, FloatSize& phase, FloatSize& tileSize) const;
     void contentChanged(ContentChangeType);
     bool hasAcceleratedCompositing() const;
 
@@ -241,8 +200,6 @@ public:
 
     void insertIntoContinuationChainAfter(RenderBoxModelObject&);
     void removeFromContinuationChain();
-
-    virtual LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) { return LayoutRect(); };
 
     bool hasRunningAcceleratedAnimations() const;
 
@@ -264,14 +221,11 @@ protected:
     bool hasVisibleBoxDecorationStyle() const;
     bool borderObscuresBackgroundEdge(const FloatSize& contextScale) const;
     bool borderObscuresBackground() const;
-    RoundedRect backgroundRoundedRectAdjustedForBleedAvoidance(const GraphicsContext&, const LayoutRect&, BackgroundBleedAvoidance, const InlineIterator::InlineBoxIterator&, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const;
 
     bool hasAutoHeightOrContainingBlockWithAutoHeight() const;
 
 public:
-    BackgroundImageGeometry calculateBackgroundImageGeometry(const RenderLayerModelObject* paintContainer, const FillLayer&, const LayoutPoint& paintOffset,
-        const LayoutRect& paintRect, RenderElement* = nullptr) const;
-
+    bool fixedBackgroundPaintsInLocalCoordinates() const;
     InterpolationQuality chooseInterpolationQuality(GraphicsContext&, Image&, const void*, const LayoutSize&) const;
     DecodingMode decodingModeForImageDraw(const Image&, const PaintInfo&) const;
 
@@ -311,10 +265,6 @@ private:
     ContinuationChainNode& ensureContinuationChainNode();
     
     virtual LayoutRect frameRectForStickyPositioning() const = 0;
-
-    LayoutSize calculateFillTileSize(const FillLayer&, const LayoutSize& scaledPositioningAreaSize) const;
-
-    bool fixedBackgroundPaintsInLocalCoordinates() const;
 };
 
 } // namespace WebCore

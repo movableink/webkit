@@ -71,6 +71,7 @@ OBJC_CLASS AVPlayerViewController;
 OBJC_CLASS CALayer;
 OBJC_CLASS NSFileWrapper;
 OBJC_CLASS NSMenu;
+OBJC_CLASS NSObject;
 OBJC_CLASS NSSet;
 OBJC_CLASS NSTextAlternatives;
 OBJC_CLASS UIGestureRecognizer;
@@ -203,6 +204,10 @@ class InstallMissingMediaPluginsPermissionRequest;
 using LayerHostingContextID = uint32_t;
 #endif
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
+class WebKitWebResourceLoadManager;
+#endif
+
 class PageClient : public CanMakeWeakPtr<PageClient> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -232,7 +237,7 @@ public:
     // Return whether the view is visible.
     virtual bool isViewVisible() = 0;
 
-#if PLATFORM(IOS_FAMILY)
+#if USE(RUNNINGBOARD)
     virtual bool canTakeForegroundAssertions() = 0;
 #endif
 
@@ -297,7 +302,7 @@ public:
 #if PLATFORM(GTK) || PLATFORM(QT)
     virtual void startDrag(WebCore::SelectionData&&, OptionSet<WebCore::DragOperation>, RefPtr<ShareableBitmap>&& dragImage, WebCore::IntPoint&& dragImageHotspot) = 0;
 #else
-    virtual void startDrag(const WebCore::DragItem&, const ShareableBitmap::Handle&) { }
+    virtual void startDrag(const WebCore::DragItem&, const ShareableBitmapHandle&) { }
 #endif
     virtual void didPerformDragOperation(bool) { }
     virtual void didPerformDragControllerAction() { }
@@ -521,12 +526,12 @@ public:
     virtual WebCore::Color contentViewBackgroundColor() = 0;
     virtual String sceneID() = 0;
 
-    virtual void beginTextRecognitionForFullscreenVideo(const ShareableBitmap::Handle&, AVPlayerViewController *) = 0;
+    virtual void beginTextRecognitionForFullscreenVideo(const ShareableBitmapHandle&, AVPlayerViewController *) = 0;
     virtual void cancelTextRecognitionForFullscreenVideo(AVPlayerViewController *) = 0;
 #endif
     virtual bool isTextRecognitionInFullscreenVideoEnabled() const { return false; }
 
-    virtual void beginTextRecognitionForVideoInElementFullscreen(const ShareableBitmap::Handle&, WebCore::FloatRect) { }
+    virtual void beginTextRecognitionForVideoInElementFullscreen(const ShareableBitmapHandle&, WebCore::FloatRect) { }
     virtual void cancelTextRecognitionForVideoInElementFullscreen() { }
 
     // Auxiliary Client Creation
@@ -563,6 +568,7 @@ public:
 
     virtual void pinnedStateWillChange() { }
     virtual void pinnedStateDidChange() { }
+    virtual void drawPageBorderForPrinting(WebCore::FloatSize&& size) { }
     virtual bool scrollingUpdatesDisabledForTesting() { return false; }
 
     virtual bool hasSafeBrowsingWarning() const { return false; }
@@ -576,7 +582,7 @@ public:
     virtual bool hasResizableWindows() const { return false; }
 
 #if ENABLE(IMAGE_ANALYSIS)
-    virtual void requestTextRecognition(const URL& imageURL, const ShareableBitmap::Handle& imageData, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier, CompletionHandler<void(WebCore::TextRecognitionResult&&)>&& completion) { completion({ }); }
+    virtual void requestTextRecognition(const URL& imageURL, const ShareableBitmapHandle& imageData, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier, CompletionHandler<void(WebCore::TextRecognitionResult&&)>&& completion) { completion({ }); }
     virtual void computeHasVisualSearchResults(const URL&, ShareableBitmap&, CompletionHandler<void(bool)>&& completion) { completion(false); }
 #endif
 
@@ -660,7 +666,7 @@ public:
 #endif
 
 #if USE(WPE_RENDERER)
-    virtual IPC::Attachment hostFileDescriptor() = 0;
+    virtual UnixFileDescriptor hostFileDescriptor() = 0;
 #endif
 
     virtual void didChangeWebPageID() const { }
@@ -681,6 +687,10 @@ public:
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     virtual void didEnterFullscreen() = 0;
     virtual void didExitFullscreen() = 0;
+#endif
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    virtual WebKitWebResourceLoadManager* webResourceLoadManager() = 0;
 #endif
 };
 

@@ -326,18 +326,28 @@ void ThreadedScrollingTree::handleWheelEventPhase(ScrollingNodeID nodeID, Platfo
         scrollingCoordinator->handleWheelEventPhase(nodeID, phase);
     });
 }
+#endif
 
 void ThreadedScrollingTree::setActiveScrollSnapIndices(ScrollingNodeID nodeID, std::optional<unsigned> horizontalIndex, std::optional<unsigned> verticalIndex)
 {
     auto scrollingCoordinator = m_scrollingCoordinator;
     if (!scrollingCoordinator)
         return;
-    
+
     RunLoop::main().dispatch([scrollingCoordinator = WTFMove(scrollingCoordinator), nodeID, horizontalIndex, verticalIndex] {
         scrollingCoordinator->setActiveScrollSnapIndices(nodeID, horizontalIndex, verticalIndex);
     });
 }
-#endif
+
+void ThreadedScrollingTree::lockLayersForHitTesting()
+{
+    m_layerHitTestMutex.lock();
+}
+
+void ThreadedScrollingTree::unlockLayersForHitTesting()
+{
+    m_layerHitTestMutex.unlock();
+}
 
 bool ThreadedScrollingTree::scrollingThreadIsActive()
 {
@@ -394,19 +404,6 @@ void ThreadedScrollingTree::hasNodeWithAnimatedScrollChanged(bool hasNodeWithAni
     RunLoop::main().dispatch([scrollingCoordinator = WTFMove(scrollingCoordinator), hasNodeWithAnimatedScroll] {
         scrollingCoordinator->hasNodeWithAnimatedScrollChanged(hasNodeWithAnimatedScroll);
     });
-}
-
-void ThreadedScrollingTree::serviceScrollAnimations(MonotonicTime currentTime)
-{
-    ASSERT(ScrollingThread::isCurrentThread());
-
-    for (auto nodeID : nodesWithActiveScrollAnimations()) {
-        RefPtr targetNode = nodeForID(nodeID);
-        if (!is<ScrollingTreeScrollingNode>(targetNode))
-            continue;
-
-        downcast<ScrollingTreeScrollingNode>(*targetNode).serviceScrollAnimation(currentTime);
-    }
 }
 
 // This code allows the main thread about half a frame to complete its rendering udpate. If the main thread

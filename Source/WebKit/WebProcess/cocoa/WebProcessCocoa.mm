@@ -106,12 +106,14 @@
 #import <wtf/FileSystem.h>
 #import <wtf/Language.h>
 #import <wtf/LogInitialization.h>
+#import <wtf/MemoryPressureHandler.h>
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/cocoa/NSURLExtras.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
+#import <wtf/spi/cocoa/OSLogSPI.h>
 
 #if ENABLE(REMOTE_INSPECTOR)
 #import <JavaScriptCore/RemoteInspector.h>
@@ -170,6 +172,15 @@
 #import <WebKitAdditions/VideoToolboxAdditions.h>
 #endif
 
+#if __has_include(<WebKitAdditions/InternalBuildAdditions.h>)
+#include <WebKitAdditions/InternalBuildAdditions.h>
+#else
+static bool isInternalBuild()
+{
+    return false;
+}
+#endif
+
 #if HAVE(CATALYST_USER_INTERFACE_IDIOM_AND_SCALE_FACTOR)
 // FIXME: This is only for binary compatibility with versions of UIKit in macOS 11 that are missing the change in <rdar://problem/68524148>.
 SOFT_LINK_FRAMEWORK(UIKit)
@@ -224,7 +235,8 @@ static Boolean isAXAuthenticatedCallback(audit_token_t auditToken)
     bool authenticated = false;
     // IPC must be done on the main runloop, so dispatch it to avoid crashes when the secondary AX thread handles this callback.
     callOnMainRunLoopAndWait([&authenticated, auditToken] {
-        WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebProcessProxy::IsAXAuthenticated(auditToken), Messages::WebProcessProxy::IsAXAuthenticated::Reply(authenticated), 0);
+        auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebProcessProxy::IsAXAuthenticated(auditToken), 0);
+        std::tie(authenticated) = sendResult.takeReplyOr(false);
     });
     return authenticated;
 }
@@ -240,20 +252,27 @@ static void softlinkDataDetectorsFrameworks()
 #endif // ENABLE(DATA_DETECTION)
 }
 
-static void initializeXPCConnectionToLogd()
+static void initializeLogd()
 {
+    if (isInternalBuild())
+        os_trace_set_mode(OS_TRACE_MODE_INFO | OS_TRACE_MODE_DEBUG | OS_TRACE_MODE_STREAM_LIVE);
+    else
+        os_trace_set_mode(OS_TRACE_MODE_INFO | OS_TRACE_MODE_DEBUG);
+
     // Log a long message to make sure the XPC connection to the log daemon for oversized messages is opened.
     // This is needed to block launchd after the WebContent process has launched, since access to launchd is
     // required when opening new XPC connections.
     char stringWithSpaces[1024];
     memset(stringWithSpaces, ' ', sizeof(stringWithSpaces));
     stringWithSpaces[sizeof(stringWithSpaces) - 1] = 0;
-    RELEASE_LOG(Process, "WebProcess::platformInitializeWebProcess %s", stringWithSpaces);
+    RELEASE_LOG(Process, "Initialized logd %s", stringWithSpaces);
 }
 
 void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& parameters)
 {
-    initializeXPCConnectionToLogd();
+    WEBPROCESS_RELEASE_LOG(Process, "WebProcess::platformInitializeWebProcess");
+
+    initializeLogd();
     
     applyProcessCreationParameters(parameters.auxiliaryProcessParameters);
 
@@ -334,7 +353,10 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     // We don't need to talk to the Dock.
     [NSApplication _preventDockConnections];
 
-    [[NSUserDefaults standardUserDefaults] registerDefaults:@{ @"NSApplicationCrashOnExceptions" : @YES, @"ApplePersistence" : @NO }];
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{
+        @"NSApplicationCrashOnExceptions": @YES,
+        @"ApplePersistence": @(-1) // Number -1 means NO + no logging to log and console. See <rdar://7749927>.
+    }];
 
     // rdar://9118639 accessibilityFocusedUIElement in NSApplication defaults to use the keyWindow. Since there's
     // no window in WK2, NSApplication needs to use the focused page's focused element.
@@ -451,11 +473,11 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     if (canLoad_HIServices__AXSetAuditTokenIsAuthenticatedCallback())
         softLink_HIServices__AXSetAuditTokenIsAuthenticatedCallback(isAXAuthenticatedCallback);
 #endif
-    
-    if (!parameters.maximumIOSurfaceSize.isEmpty())
-        WebCore::IOSurface::setMaximumSize(parameters.maximumIOSurfaceSize);
 
+#if HAVE(IOSURFACE)
+    WebCore::IOSurface::setMaximumSize(parameters.maximumIOSurfaceSize);
     WebCore::IOSurface::setBytesPerRowAlignment(parameters.bytesPerRowIOSurfaceAlignment);
+#endif
 
     accessibilityPreferencesDidChange(parameters.accessibilityPreferences);
 #if PLATFORM(IOS_FAMILY)
@@ -623,6 +645,8 @@ RetainPtr<NSDictionary> WebProcess::additionalStateForDiagnosticReport() const
 
         return [NSDate dateWithTimeIntervalSince1970:page->loadCommitTime().secondsSinceEpoch().seconds()];
     });
+    auto websamStateDescription = MemoryPressureHandler::processStateDescription().createNSString();
+    [stateDictionary setObject:websamStateDescription.get() forKey:@"Websam State"];
 
     // Adding an empty array to the process state may provide an
     // indication of the existance of private sessions, which we'd like
@@ -635,6 +659,13 @@ RetainPtr<NSDictionary> WebProcess::additionalStateForDiagnosticReport() const
 }
 
 #endif // USE(OS_STATE)
+
+#if ENABLE(WEBCONTENT_CRASH_TESTING)
+NEVER_INLINE NO_RETURN_DUE_TO_CRASH static void deliberateCrashForTesting()
+{
+    CRASH();
+}
+#endif
 
 void WebProcess::platformInitializeProcess(const AuxiliaryProcessInitializationParameters& parameters)
 {
@@ -662,6 +693,11 @@ void WebProcess::platformInitializeProcess(const AuxiliaryProcessInitializationP
         m_processType = ProcessType::PrewarmedWebContent;
     else
         m_processType = ProcessType::WebContent;
+
+#if ENABLE(WEBCONTENT_CRASH_TESTING)
+    if (parameters.extraInitializationData.get<HashTranslatorASCIILiteral>("is-webcontent-crashy"_s) == "1"_s)
+        deliberateCrashForTesting();
+#endif
 
 #if USE(OS_STATE)
     registerWithStateDumper("WebContent state"_s);
@@ -735,10 +771,10 @@ static NSURL *origin(WebPage& page)
     URL mainFrameURL = mainFrame.url();
     Ref<SecurityOrigin> mainFrameOrigin = SecurityOrigin::create(mainFrameURL);
     String mainFrameOriginString;
-    if (!mainFrameOrigin->isUnique())
+    if (!mainFrameOrigin->isOpaque())
         mainFrameOriginString = mainFrameOrigin->toRawString();
     else
-        mainFrameOriginString = makeString(mainFrameURL.protocol(), ':'); // toRawString() is not supposed to work with unique origins, and would just return "://".
+        mainFrameOriginString = makeString(mainFrameURL.protocol(), ':'); // toRawString() is not supposed to work with opaque origins, and would just return "://".
 
     // +[NSURL URLWithString:] returns nil when its argument is malformed. It's unclear when we would have a malformed URL here,
     // but it happens in practice according to <rdar://problem/14173389>. Leaving an assertion in to catch a reproducible case.
@@ -1051,8 +1087,11 @@ void WebProcess::accessibilityPreferencesDidChange(const AccessibilityPreference
     if (_AXSInvertColorsEnabledApp(appID) != invertColorsEnabled)
         _AXSInvertColorsSetEnabledApp(invertColorsEnabled, appID);
 #endif
+    m_imageAnimationEnabled = preferences.imageAnimationEnabled;
     setOverrideEnhanceTextLegibility(preferences.enhanceTextLegibilityOverall);
     FontCache::invalidateAllFontCaches();
+    for (auto& page : m_pageMap.values())
+        page->updateImageAnimationEnabled();
 }
 
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
@@ -1203,7 +1242,7 @@ void WebProcess::switchFromStaticFontRegistryToUserFontRegistry(WebKit::SandboxE
 #endif
 }
 
-void WebProcess::setScreenProperties(const ScreenProperties& properties)
+void WebProcess::setScreenProperties(const WebCore::ScreenProperties& properties)
 {
     WebCore::setScreenProperties(properties);
     for (auto& page : m_pageMap.values())

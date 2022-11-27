@@ -118,9 +118,15 @@ void RenderFileUploadControl::paintObject(PaintInfo& paintInfo, const LayoutPoin
     if (style().visibility() != Visibility::Visible)
         return;
     
-    if (paintInfo.context().paintingDisabled())
-        return;
+    if (!paintInfo.context().paintingDisabled())
+        paintControl(paintInfo, paintOffset);
 
+    // Paint the children.
+    RenderBlockFlow::paintObject(paintInfo, paintOffset);
+}
+
+void RenderFileUploadControl::paintControl(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
+{
     // Push a clip.
     GraphicsContextStateSaver stateSaver(paintInfo.context(), false);
     if (paintInfo.phase == PaintPhase::Foreground || paintInfo.phase == PaintPhase::ChildBlockBackgrounds) {
@@ -178,7 +184,7 @@ void RenderFileUploadControl::paintObject(PaintInfo& paintInfo, const LayoutPoin
             else
                 iconX = contentLeft + contentWidth() - buttonWidth - afterButtonSpacing - iconWidth;
 
-#if PLATFORM(IOS_FAMILY)
+#if PLATFORM(COCOA)
             if (RenderButton* buttonRenderer = downcast<RenderButton>(button->renderer())) {
                 // Draw the file icon and decorations.
                 IntRect iconRect(iconX, iconY, iconWidth, iconHeight);
@@ -191,15 +197,17 @@ void RenderFileUploadControl::paintObject(PaintInfo& paintInfo, const LayoutPoin
 #endif
         }
     }
-
-    // Paint the children.
-    RenderBlockFlow::paintObject(paintInfo, paintOffset);
 }
 
 void RenderFileUploadControl::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
-    if (shouldApplySizeContainment())
+    if (shouldApplySizeContainment()) {
+        if (auto width = explicitIntrinsicInnerLogicalWidth()) {
+            minLogicalWidth = width.value();
+            maxLogicalWidth = width.value();
+        }
         return;
+    }
     // Figure out how big the filename space needs to be for a given number of characters
     // (using "0" as the nominal character).
     const UChar character = '0';
@@ -260,8 +268,12 @@ String RenderFileUploadControl::fileTextValue() const
     auto& input = inputElement();
     if (!input.files())
         return { };
-    if (input.files()->length() && !input.displayString().isEmpty())
+    if (input.files()->length() && !input.displayString().isEmpty()) {
+        if (input.files()->length() == 1)
+            return StringTruncator::centerTruncate(input.displayString(), maxFilenameWidth(), style().fontCascade());
+
         return StringTruncator::rightTruncate(input.displayString(), maxFilenameWidth(), style().fontCascade());
+    }
     return theme().fileListNameForWidth(input.files(), style().fontCascade(), maxFilenameWidth(), input.multiple());
 }
     

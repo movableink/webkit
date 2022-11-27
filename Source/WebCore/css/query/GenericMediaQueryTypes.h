@@ -24,13 +24,24 @@
 
 #pragma once
 
+#include "CSSToLengthConversionData.h"
 #include "CSSValue.h"
+#include "CSSValueKeywords.h"
+#include <wtf/OptionSet.h>
+#include <wtf/text/AtomString.h>
 
-namespace WebCore::MQ {
+namespace WebCore {
+
+class RenderElement;
+
+namespace MQ {
 
 enum class LogicalOperator : uint8_t { And, Or, Not };
 enum class ComparisonOperator : uint8_t { LessThan, LessThanOrEqual, Equal, GreaterThan, GreaterThanOrEqual };
 enum class Syntax : uint8_t { Boolean, Plain, Range };
+
+struct Condition;
+struct FeatureSchema;
 
 struct Comparison {
     ComparisonOperator op;
@@ -42,6 +53,73 @@ struct Feature {
     Syntax syntax;
     std::optional<Comparison> leftComparison;
     std::optional<Comparison> rightComparison;
+
+    const FeatureSchema* schema { nullptr };
 };
 
+struct GeneralEnclosed {
+    String name;
+    String text;
+};
+
+using QueryInParens = std::variant<Condition, Feature, GeneralEnclosed>;
+
+struct Condition {
+    LogicalOperator logicalOperator { LogicalOperator::And };
+    Vector<QueryInParens> queries;
+};
+
+enum class EvaluationResult : uint8_t { False, True, Unknown };
+
+struct FeatureEvaluationContext {
+    const Document& document;
+    CSSToLengthConversionData conversionData { };
+    const RenderElement* renderer { nullptr };
+};
+
+struct FeatureSchema {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
+    enum class Type : uint8_t { Discrete, Range };
+    enum class ValueType : uint8_t { Integer, Number, Length, Ratio, Resolution, Identifier };
+
+    AtomString name;
+    Type type;
+    ValueType valueType;
+    Vector<CSSValueID> valueIdentifiers;
+
+    virtual EvaluationResult evaluate(const Feature&, const FeatureEvaluationContext&) const { return EvaluationResult::Unknown; }
+
+    FeatureSchema(const AtomString& name, Type type, ValueType valueType, Vector<CSSValueID>&& valueIdentifiers = { })
+        : name(name)
+        , type(type)
+        , valueType(valueType)
+        , valueIdentifiers(WTFMove(valueIdentifiers))
+    { }
+    virtual ~FeatureSchema() = default;
+};
+
+template<typename TraverseFunction> void traverseFeatures(const Condition&, TraverseFunction&&);
+
+template<typename TraverseFunction>
+void traverseFeatures(const QueryInParens& queryInParens, TraverseFunction&& function)
+{
+    return WTF::switchOn(queryInParens, [&](const Condition& condition) {
+        traverseFeatures(condition, function);
+    }, [&](const MQ::Feature& feature) {
+        function(feature);
+    }, [&](const MQ::GeneralEnclosed&) {
+        return;
+    });
+}
+
+template<typename TraverseFunction>
+void traverseFeatures(const Condition& condition, TraverseFunction&& function)
+{
+    for (auto& queryInParens : condition.queries)
+        traverseFeatures(queryInParens, function);
+}
+
+
+}
 }

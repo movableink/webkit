@@ -160,7 +160,7 @@ TEST(IPCTestingAPI, CanDetectNilReplyBlocks)
         // mostly zero objects + "v@?c" (objective-C method signature)
         "0x0,0x0,0x1,0x0,0x0,0x0,0x2c,0x0,0x0,0x0,0x59,0x1,0x0,0x0,0x0,0x9b,0x0,0x0,0x4,0x0,0x0,0x0,0x1,0x76,0x40,0x3f,0x63,0x0,]);"
         "for(var x=0; x<100; x++) IPC.sendMessage('UI', x, IPC.messages.RemoteObjectRegistry_InvokeMethod.name, [buf]);</script>"];
-    TestWebKitAPI::Util::runFor(&done, 1);
+    TestWebKitAPI::Util::runFor(&done, 1_s);
 
     // Make sure sayHello was not called, as the reply block was nil.
     EXPECT_FALSE([delegate.get() sayHelloWasCalled]);
@@ -177,7 +177,7 @@ TEST(IPCTestingAPI, CanSendAlert)
 
     done = false;
     [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>IPC.sendSyncMessage('UI', IPC.webPageProxyID, IPC.messages.WebPageProxy_RunJavaScriptAlert.name, 100,"
-        "[{type: 'uint64_t', value: IPC.frameID}, {type: 'FrameInfoData', value: IPC}, {'type': 'String', 'value': 'hi'}]);</script>"];
+        "[{type: 'FrameID', value: IPC.frameID}, {type: 'FrameInfoData', value: IPC}, {'type': 'String', 'value': 'hi'}]);</script>"];
     TestWebKitAPI::Util::run(&done);
 
     EXPECT_STREQ([alertMessage UTF8String], "hi");
@@ -222,7 +222,7 @@ TEST(IPCTestingAPI, CanSendInvalidSyncMessageToUIProcessWithoutTermination)
 
     done = false;
     [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>"
-        "IPC.sendSyncMessage('UI', IPC.webPageProxyID, IPC.messages.WebPageProxy_RunJavaScriptAlert.name, 100, [{type: 'uint64_t', value: IPC.frameID}]);"
+        "IPC.sendSyncMessage('UI', IPC.webPageProxyID, IPC.messages.WebPageProxy_RunJavaScriptAlert.name, 100, [{type: 'FrameID', value: IPC.frameID}]);"
         "alert('hi')</script>"];
     TestWebKitAPI::Util::run(&done);
 
@@ -347,14 +347,14 @@ TEST(IPCTestingAPI, DecodesReplyArgumentsForPrompt)
     done = false;
     promptResult = @"foo";
     [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>result = IPC.sendSyncMessage('UI', IPC.webPageProxyID, IPC.messages.WebPageProxy_RunJavaScriptPrompt.name, 100,"
-        "[{type: 'uint64_t', value: IPC.frameID}, {type: 'FrameInfoData', value: IPC}, {'type': 'String', 'value': 'hi'}, {'type': 'String', 'value': 'bar'}]);</script>"];
+        "[{type: 'FrameID', value: IPC.frameID}, {type: 'FrameInfoData', value: IPC}, {'type': 'String', 'value': 'hi'}, {'type': 'String', 'value': 'bar'}]);</script>"];
     TestWebKitAPI::Util::run(&done);
 
     EXPECT_STREQ([promptDefault UTF8String], "bar");
     EXPECT_STREQ([[webView stringByEvaluatingJavaScript:@"JSON.stringify(result.arguments)"] UTF8String], "[{\"type\":\"String\",\"value\":\"foo\"}]");
 }
 
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
 TEST(IPCTestingAPI, DecodesReplyArgumentsForAsyncMessage)
 {
     auto webView = createWebViewWithIPCTestingAPI();
@@ -365,7 +365,7 @@ TEST(IPCTestingAPI, DecodesReplyArgumentsForAsyncMessage)
     done = false;
     promptResult = @"foo";
     [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>IPC.sendMessage(\"Networking\", 0, IPC.messages.NetworkConnectionToWebProcess_HasStorageAccess.name,"
-        "[{type: 'RegistrableDomain', value: 'https://ipctestingapi.com'}, {type: 'RegistrableDomain', value: 'https://webkit.org'}, {type: 'uint64_t', value: IPC.frameID},"
+        "[{type: 'RegistrableDomain', value: 'https://ipctestingapi.com'}, {type: 'RegistrableDomain', value: 'https://webkit.org'}, {type: 'FrameID', value: IPC.frameID},"
         "{type: 'uint64_t', value: IPC.pageID}]).then((result) => alert(JSON.stringify(result.arguments)));</script>"];
     TestWebKitAPI::Util::run(&done);
 
@@ -406,8 +406,8 @@ TEST(IPCTestingAPI, CanInterceptAlert)
     EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"messages = messages.filter((message) => message.name == IPC.messages.WebPageProxy_RunJavaScriptAlert.name); messages.length"].UTF8String, "1");
     EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"messages[0].description"].UTF8String, "WebPageProxy_RunJavaScriptAlert");
     EXPECT_EQ([webView stringByEvaluatingJavaScript:@"args = messages[0].arguments; args.length"].intValue, 3);
-    EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"args[0].type"].UTF8String, "uint64_t");
-    EXPECT_EQ([webView stringByEvaluatingJavaScript:@"args[0].value"].intValue, [webView stringByEvaluatingJavaScript:@"IPC.frameID.toString()"].intValue);
+    EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"args[0].type"].UTF8String, "(null)");
+    EXPECT_EQ([webView stringByEvaluatingJavaScript:@"args[0].value"].intValue, 0);
     EXPECT_EQ([webView stringByEvaluatingJavaScript:@"args[1] instanceof ArrayBuffer"].boolValue, YES);
     EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"args[2].type"].UTF8String, "String");
     EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"args[2].value"].UTF8String, "ok");
@@ -416,7 +416,7 @@ TEST(IPCTestingAPI, CanInterceptAlert)
         [webView stringByEvaluatingJavaScript:@"IPC.webPageProxyID.toString()"].intValue);
 }
 
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
 TEST(IPCTestingAPI, CanInterceptHasStorageAccess)
 {
     auto webView = createWebViewWithIPCTestingAPI();
@@ -429,7 +429,7 @@ TEST(IPCTestingAPI, CanInterceptHasStorageAccess)
     [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html><script>let targetMessage = {}; const messageName = IPC.messages.NetworkConnectionToWebProcess_HasStorageAccess.name;"
         "IPC.addOutgoingMessageListener('Networking', (currentMessage) => { if (currentMessage.name == messageName) targetMessage = currentMessage; });"
         "IPC.sendMessage('Networking', 0, messageName, [{type: 'RegistrableDomain', value: 'https://ipctestingapi.com'}, {type: 'RegistrableDomain', value: 'https://webkit.org'},"
-        "{type: 'uint64_t', value: IPC.frameID}, {type: 'uint64_t', value: IPC.pageID}]).then((result) => alert(JSON.stringify(result.arguments)));</script>"];
+        "{type: 'FrameID', value: IPC.frameID}, {type: 'uint64_t', value: IPC.pageID}]).then((result) => alert(JSON.stringify(result.arguments)));</script>"];
     TestWebKitAPI::Util::run(&done);
 
     EXPECT_STREQ([alertMessage UTF8String], "[{\"type\":\"bool\",\"value\":false}]");
@@ -439,8 +439,8 @@ TEST(IPCTestingAPI, CanInterceptHasStorageAccess)
     EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"targetMessage.arguments[0].value"].UTF8String, "ipctestingapi.com");
     EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"targetMessage.arguments[1].type"].UTF8String, "RegistrableDomain");
     EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"targetMessage.arguments[1].value"].UTF8String, "webkit.org");
-    EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"targetMessage.arguments[2].type"].UTF8String, "uint64_t");
-    EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"targetMessage.arguments[2].value"].UTF8String, [webView stringByEvaluatingJavaScript:@"IPC.frameID.toString()"].UTF8String);
+    EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"targetMessage.arguments[2].type"].UTF8String, "(null)");
+    EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"targetMessage.arguments[2].value"].UTF8String, "(null)");
     EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"targetMessage.arguments[3].type"].UTF8String, "uint64_t");
     EXPECT_EQ([webView stringByEvaluatingJavaScript:@"targetMessage.arguments[3].value"].intValue, [webView stringByEvaluatingJavaScript:@"IPC.pageID.toString()"].intValue);
     EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"typeof(targetMessage.syncRequestID)"].UTF8String, "undefined");
@@ -481,12 +481,122 @@ TEST(IPCTestingAPI, CanInterceptFindString)
         [webView stringByEvaluatingJavaScript:@"IPC.webPageProxyID.toString()"].intValue);
 }
 
+static NSSet<NSString *> *splitTypeFromList(NSString *input, bool firstTypeOnly)
+{
+    NSMutableSet *set = NSMutableSet.set;
+    size_t nestedTypeDepth { 0 };
+    bool atComma { false };
+    size_t previousTypeEnd { 0 };
+    for (size_t i = 0; i < input.length; i++) {
+        auto c = [input characterAtIndex:i];
+        if (c == '<')
+            nestedTypeDepth++;
+        if (c == '>')
+            nestedTypeDepth--;
+        if (c == ',') {
+            atComma = true;
+            continue;
+        }
+        if (c == ' ' && !nestedTypeDepth && atComma) {
+            [set addObject:[input substringWithRange:NSMakeRange(previousTypeEnd, i - 1 - previousTypeEnd)]];
+            if (firstTypeOnly)
+                return set;
+            previousTypeEnd = i + 1;
+        }
+        atComma = false;
+    }
+    [set addObject:[input substringWithRange:NSMakeRange(previousTypeEnd, input.length - previousTypeEnd)]];
+    return set;
+}
+
+static NSMutableSet<NSString *> *extractTypesFromContainers(NSSet<NSString *> *inputSet)
+{
+    NSMutableSet *outputSet = NSMutableSet.set;
+    for (NSString *input in inputSet) {
+        BOOL foundContainer = NO;
+        NSArray<NSString *> *containerTypes = @[
+            @"Expected",
+            @"HashMap",
+            @"std::pair",
+            @"IPC::ArrayReferenceTuple",
+            @"IPC::ArrayReference",
+            @"std::variant",
+            @"std::unique_ptr",
+            @"Vector",
+            @"HashSet",
+            @"Ref",
+            @"RefPtr",
+            @"std::optional",
+            @"OptionSet",
+            @"RetainPtr",
+            @"WebCore::RectEdges"
+        ];
+        for (NSString *container in containerTypes) {
+            if ([input hasPrefix:[container stringByAppendingString:@"<"]]
+                && [input hasSuffix:@">"]) {
+                NSString *containedTypes = [input substringWithRange:NSMakeRange(container.length + 1, input.length - container.length - 2)];
+                for (NSString *type : extractTypesFromContainers(splitTypeFromList(containedTypes, [container isEqualToString:@"IPC::ArrayReference"])))
+                    [outputSet addObject:type];
+                foundContainer = YES;
+            }
+        }
+        if (!foundContainer)
+            [outputSet addObject:input];
+    }
+    return outputSet;
+}
+
 TEST(IPCTestingAPI, SerializedTypeInfo)
 {
     auto webView = createWebViewWithIPCTestingAPI();
     NSDictionary *typeInfo = [webView objectByEvaluatingJavaScript:@"IPC.serializedTypeInfo"];
     NSArray *expectedArray = @[@"bool", @"bool", @"bool", @"String"];
     EXPECT_TRUE([typeInfo[@"WebCore::CacheQueryOptions"] isEqualToArray:expectedArray]);
+    NSDictionary *expectedDictionary = @{
+        @"isOptionSet" : @1,
+        @"size" : @1,
+        @"validValues" : @[@1, @2]
+    };
+
+    NSDictionary *enumInfo = [webView objectByEvaluatingJavaScript:@"IPC.serializedEnumInfo"];
+    EXPECT_TRUE([enumInfo[@"WebKit::WebsiteDataFetchOption"] isEqualToDictionary:expectedDictionary]);
+
+    NSArray *objectIdentifiers = [webView objectByEvaluatingJavaScript:@"IPC.objectIdentifiers"];
+    EXPECT_TRUE([objectIdentifiers containsObject:@"WebCore::PageIdentifier"]);
+
+    NSMutableSet<NSString *> *typesNeedingDescriptions = NSMutableSet.set;
+    NSDictionary *messages = [webView objectByEvaluatingJavaScript:@"IPC.messages"];
+    for (NSDictionary *message in messages.allValues) {
+        if (![message isKindOfClass:NSDictionary.class])
+            continue;
+        for (NSString *key in @[@"arguments", @"replyArguments"]) {
+            NSArray *arguments = message[key];
+            if (![arguments isKindOfClass:NSArray.class])
+                continue;
+            for (NSDictionary *argument in arguments) {
+                if (![argument isKindOfClass:NSDictionary.class])
+                    continue;
+                [typesNeedingDescriptions addObject:argument[@"type"]];
+            }
+        }
+    }
+    for (NSArray *memberTypes in typeInfo.allValues) {
+        for (NSString *memberType in memberTypes)
+            [typesNeedingDescriptions addObject:memberType];
+    }
+
+    typesNeedingDescriptions = extractTypesFromContainers(typesNeedingDescriptions);
+
+    NSMutableSet<NSString *> *typesHavingDescriptions = NSMutableSet.set;
+    for (NSString *describedType in typeInfo.keyEnumerator)
+        [typesHavingDescriptions addObject:describedType];
+    for (NSString *describedType in enumInfo.keyEnumerator)
+        [typesHavingDescriptions addObject:describedType];
+    for (NSString *objectIdentifier in objectIdentifiers)
+        [typesHavingDescriptions addObject:objectIdentifier];
+
+    [typesNeedingDescriptions minusSet:typesHavingDescriptions];
+
 }
 
 #endif

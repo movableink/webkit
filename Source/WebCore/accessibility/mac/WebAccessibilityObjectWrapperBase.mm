@@ -329,14 +329,6 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 - (void)detachIsolatedObject:(AccessibilityDetachmentType)detachmentType
 {
-    ASSERT_WITH_MESSAGE_UNUSED(
-        detachmentType,
-        detachmentType == AccessibilityDetachmentType::ElementChanged ? _identifier.isValid() && m_axObject : true,
-        "isolated object was detached due to element change, but ID %s was invalid (%d) and/or m_axObject was nullptr (%d)",
-        _identifier.loggingString().utf8().data(),
-        !_identifier.isValid(),
-        !m_axObject
-    );
     m_isolatedObject = nullptr;
 }
 #endif
@@ -414,7 +406,7 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 #if HAVE(ACCESSIBILITY_FRAMEWORK)
 - (NSArray<AXCustomContent *> *)accessibilityCustomContent
 {
-    auto* backingObject = [self baseUpdateBackingStore];
+    RefPtr<AXCoreObject> backingObject = [self baseUpdateBackingStore];
     if (!backingObject)
         return nil;
     
@@ -1030,14 +1022,14 @@ static NSDictionary *dictionaryRemovingNonSupportedTypes(NSDictionary *dictionar
 
 - (NSString *)innerHTML
 {
-    if (auto* backingObject = self.axBackingObject)
+    if (RefPtr<AXCoreObject> backingObject = self.axBackingObject)
         return backingObject->innerHTML();
     return nil;
 }
 
 - (NSString *)outerHTML
 {
-    if (auto* backingObject = self.axBackingObject)
+    if (RefPtr<AXCoreObject> backingObject = self.axBackingObject)
         return backingObject->outerHTML();
     return nil;
 }

@@ -90,10 +90,10 @@ public:
     PropertyReference propertyAt(unsigned) const;
 
     WEBCORE_EXPORT RefPtr<CSSValue> getPropertyCSSValue(CSSPropertyID) const;
-    WEBCORE_EXPORT String getPropertyValue(CSSPropertyID, Document* = nullptr) const;
+    WEBCORE_EXPORT String getPropertyValue(CSSPropertyID) const;
 
     WEBCORE_EXPORT std::optional<Color> propertyAsColor(CSSPropertyID) const;
-    WEBCORE_EXPORT CSSValueID propertyAsValueID(CSSPropertyID) const;
+    WEBCORE_EXPORT std::optional<CSSValueID> propertyAsValueID(CSSPropertyID) const;
 
     bool propertyIsImportant(CSSPropertyID) const;
     String getPropertyShorthand(CSSPropertyID) const;
@@ -150,25 +150,26 @@ protected:
 
 private:
     String getGridShorthandValue(const StylePropertyShorthand&) const;
+    String getGridRowColumnShorthandValue(const StylePropertyShorthand&) const;
+    String getGridAreaShorthandValue() const;
     String getGridTemplateValue() const;
     String getGridValue() const;
     String getShorthandValue(const StylePropertyShorthand&, const char* separator = " ") const;
     String getCommonValue(const StylePropertyShorthand&) const;
     String getAlignmentShorthandValue(const StylePropertyShorthand&) const;
-    String borderImagePropertyValue(CSSPropertyID) const;
+    String borderImagePropertyValue(const StylePropertyShorthand&) const;
     String borderPropertyValue(const StylePropertyShorthand&, const StylePropertyShorthand&, const StylePropertyShorthand&) const;
     String pageBreakPropertyValue(const StylePropertyShorthand&) const;
     String getLayeredShorthandValue(const StylePropertyShorthand&) const;
     String get2Values(const StylePropertyShorthand&) const;
     String get4Values(const StylePropertyShorthand&) const;
     String borderSpacingValue(const StylePropertyShorthand&) const;
-    String fontValue() const;
-    String fontVariantValue() const;
+    String fontValue(const StylePropertyShorthand&) const;
+    String fontVariantValue(const StylePropertyShorthand&) const;
+    String fontSynthesisValue() const;
     String textDecorationSkipValue() const;
     String offsetValue() const;
-    void appendFontLonghandValueIfExplicit(CSSPropertyID, StringBuilder& result, String& value) const;
-    std::optional<CSSValueID> isSingleFontShorthand() const;
-    bool shorthandHasVariableReference(CSSPropertyID, String&) const;
+    String commonShorthandChecks(const StylePropertyShorthand&) const;
     StringBuilder asTextInternal() const;
 
     friend class PropertySetCSSStyleDeclaration;
@@ -225,8 +226,8 @@ public:
     bool addParsedProperty(const CSSProperty&);
 
     // These expand shorthand properties into multiple properties.
-    bool setProperty(CSSPropertyID, const String& value, bool important, CSSParserContext);
-    bool setProperty(CSSPropertyID, const String& value, bool important = false);
+    bool setProperty(CSSPropertyID, const String& value, bool important, CSSParserContext, bool* didFailParsing = nullptr);
+    bool setProperty(CSSPropertyID, const String& value, bool important = false, bool* didFailParsing = nullptr);
     void setProperty(CSSPropertyID, RefPtr<CSSValue>&&, bool important = false);
 
     // These do not. FIXME: This is too messy, we can do better.

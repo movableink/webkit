@@ -45,9 +45,6 @@
 webkit.org/b/156612 http/tests/security/contentSecurityPolicy/embed-redirect-blocked3.html [ Failure ]
 webkit.org/b/156612 http/tests/security/contentSecurityPolicy/object-redirect-blocked3.html [ Failure ]
 
-# AX tests that require hit testing do not work in WK2.
-webkit.org/b/71298 accessibility/loading-iframe-updates-axtree.html
-
 # This test has been skipped for a long time. Temporarily marking as flaky to see what bots think.
 webkit.org/b/48354 compositing/iframes/iframe-src-change.html [ Pass Failure ]
 
@@ -825,6 +822,9 @@ http/tests/security/contentSecurityPolicy/extensions/manifest-v3/script-src/mani
 # Flaky CSP console logging
 http/tests/security/contentSecurityPolicy/extensions/manifest-v3/script-src/manifest-v3-script-src-block-partial-wildcard.html [ DumpJSConsoleLogInStdErr ]
 
+# Fullscreen callback dumps are WK2 only
+fullscreen/fullscreen-enter-bottom-padding-animation.html [ Pass ]
+
 ### END OF (5) Progressions, expected successes that are expected failures in WebKit1.
 ########################################
 
@@ -847,9 +847,6 @@ webkit.org/b/183140 fast/selectors/querySelector-window-inactive.html
 
 webkit.org/b/186406 compositing/iframes/display-none-subframe.html [ Pass Failure ]
 
-# Newly imported test that is flaky on WebKit2 only.
-imported/w3c/web-platform-tests/html/browsers/the-window-object/apis-for-creating-and-navigating-browsing-contexts-by-name/no_window_open_when_term_nesting_level_nonzero.window.html [ Pass Failure ]
-
 # Newly imported test that is flaky on WK2 because the order of cookies is not consistent.
 imported/w3c/web-platform-tests/cookies/attributes/attributes-ctl.sub.html [ Pass Failure ]
 
@@ -859,10 +856,6 @@ webkit.org/b/231350 [ Release ] imported/w3c/web-platform-tests/file-system-acce
 
 # Closed port web socket delays are only supported on wk2.
 http/tests/websocket/tests/hybi/closed-port-delay.html [ Pass ]
-
-# Newly imported tests that fail on WebKit2 only.
-webkit.org/b/243681 imported/w3c/web-platform-tests/IndexedDB/structured-clone.any.html?101-last [ Failure ]
-webkit.org/b/243681 imported/w3c/web-platform-tests/IndexedDB/structured-clone.any.worker.html?101-last [ Failure ]
 
 # WebKit2 only.
 js/throw-large-string-oom.html [ Pass ]
@@ -874,6 +867,7 @@ fast/speechrecognition/start-second-recognition.html [ Pass ]
 fullscreen/full-screen-enter-while-exiting.html [ Pass ]
 imported/w3c/web-platform-tests/permissions/ [ Pass ]
 http/tests/notifications/permission/ [ Pass ]
+http/tests/permissions/ [ Pass ]
 imported/w3c/web-platform-tests/storage/ [ Pass ]
 imported/w3c/web-platform-tests/file-system-access/ [ Pass ]
 storage/filesystemaccess/ [ Pass ]

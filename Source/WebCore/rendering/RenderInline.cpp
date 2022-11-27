@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -37,7 +37,6 @@
 #include "RenderBlock.h"
 #include "RenderChildIterator.h"
 #include "RenderFragmentedFlow.h"
-#include "RenderFullScreen.h"
 #include "RenderGeometryMap.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
@@ -882,16 +881,10 @@ LayoutSize RenderInline::offsetForInFlowPositionedInline(const RenderBox* child)
         blockPosition = layer()->staticBlockPosition();
     }
 
+    // Per http://www.w3.org/TR/CSS2/visudet.html#abs-non-replaced-width an absolute positioned box with a static position
+    // should locate itself as though it is a normal flow box in relation to its containing block.
     if (!child->style().hasStaticInlinePosition(style().isHorizontalWritingMode()))
         logicalOffset.setWidth(inlinePosition);
-
-    // This is not terribly intuitive, but we have to match other browsers.  Despite being a block display type inside
-    // an inline, we still keep our x locked to the left of the relative positioned inline.  Arguably the correct
-    // behavior would be to go flush left to the block that contains the inline, but that isn't what other browsers
-    // do.
-    else if (!child->style().isOriginalDisplayInlineType())
-        // Avoid adding in the left border/padding of the containing block twice.  Subtract it out.
-        logicalOffset.setWidth(inlinePosition - child->containingBlock()->borderAndPaddingLogicalLeft());
 
     if (!child->style().hasStaticBlockPosition(style().isHorizontalWritingMode()))
         logicalOffset.setHeight(blockPosition);
@@ -908,7 +901,7 @@ void RenderInline::imageChanged(WrappedImagePtr, const IntRect*)
     repaint();
 }
 
-void RenderInline::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer)
+void RenderInline::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer) const
 {
     AbsoluteRectsGeneratorContext context(rects, additionalOffset);
     generateLineBoxRects(context);
@@ -957,8 +950,6 @@ void RenderInline::paintOutline(PaintInfo& paintInfo, const LayoutPoint& paintOf
         return;
 
     Vector<LayoutRect> rects;
-    rects.append(LayoutRect());
-
     for (auto box = InlineIterator::firstInlineBoxFor(*this); box; box.traverseNextInlineBox()) {
         auto lineBox = box->lineBox();
         auto top = LayoutUnit { std::max(lineBox->contentLogicalTop(), box->logicalTop()) };
@@ -966,159 +957,7 @@ void RenderInline::paintOutline(PaintInfo& paintInfo, const LayoutPoint& paintOf
         // FIXME: This is mixing physical and logical coordinates.
         rects.append({ LayoutUnit(box->visualRectIgnoringBlockDirection().x()), top, LayoutUnit(box->logicalWidth()), bottom - top });
     }
-    rects.append(LayoutRect());
-
-    Color outlineColor = styleToUse.visitedDependentColorWithColorFilter(CSSPropertyOutlineColor);
-    bool useTransparencyLayer = !outlineColor.isOpaque();
-    if (useTransparencyLayer) {
-        graphicsContext.beginTransparencyLayer(outlineColor.alphaAsFloat());
-        outlineColor = outlineColor.opaqueColor();
-    }
-
-    for (unsigned i = 1; i < rects.size() - 1; i++)
-        paintOutlineForLine(graphicsContext, paintOffset, rects.at(i - 1), rects.at(i), rects.at(i + 1), outlineColor);
-
-    if (useTransparencyLayer)
-        graphicsContext.endTransparencyLayer();
-}
-
-void RenderInline::paintOutlineForLine(GraphicsContext& graphicsContext, const LayoutPoint& paintOffset,
-    const LayoutRect& previousLine, const LayoutRect& thisLine, const LayoutRect& nextLine, const Color& outlineColor)
-{
-    const auto& styleToUse = style();
-    float outlineOffset = styleToUse.outlineOffset();
-    LayoutRect outlineBoxRect = thisLine;
-    outlineBoxRect.inflate(outlineOffset);
-    outlineBoxRect.moveBy(paintOffset);
-    if (outlineBoxRect.isEmpty())
-        return;
-
-    float outlineWidth = styleToUse.outlineWidth();
-    BorderStyle outlineStyle = styleToUse.outlineStyle();
-    bool antialias = BorderPainter::shouldAntialiasLines(graphicsContext);
-
-    auto adjustedPreviousLine = previousLine;
-    adjustedPreviousLine.moveBy(paintOffset);
-    auto adjustedNextLine = nextLine;
-    adjustedNextLine.moveBy(paintOffset);
-    
-    float adjacentWidth1 = 0;
-    float adjacentWidth2 = 0;
-    // left edge
-    auto topLeft = outlineBoxRect.minXMinYCorner();
-    if (previousLine.isEmpty() || thisLine.x() < previousLine.x() || (previousLine.maxX()) <= thisLine.x()) {
-        topLeft.move(-outlineWidth, -outlineWidth);
-        adjacentWidth1 = outlineWidth;
-    } else {
-        topLeft.move(-outlineWidth, 2 * outlineOffset);
-        adjacentWidth1 = -outlineWidth;
-    }
-    auto bottomRight = outlineBoxRect.minXMaxYCorner();
-    if (nextLine.isEmpty() || thisLine.x() <= nextLine.x() || (nextLine.maxX()) <= thisLine.x()) {
-        bottomRight.move(0, outlineWidth);
-        adjacentWidth2 = outlineWidth;
-    } else {
-        bottomRight.move(0, -2 * outlineOffset);
-        adjacentWidth2 = -outlineWidth;
-    }
-    drawLineForBoxSide(graphicsContext, FloatRect(topLeft, bottomRight), BoxSide::Left, outlineColor, outlineStyle, adjacentWidth1, adjacentWidth2, antialias);
-    
-    // right edge
-    topLeft = outlineBoxRect.maxXMinYCorner();
-    if (previousLine.isEmpty() || previousLine.maxX() < thisLine.maxX() || thisLine.maxX() <= previousLine.x()) {
-        topLeft.move(0, -outlineWidth);
-        adjacentWidth1 = outlineWidth;
-    } else {
-        topLeft.move(0, 2 * outlineOffset);
-        adjacentWidth1 = -outlineWidth;
-    }
-    bottomRight = outlineBoxRect.maxXMaxYCorner();
-    if (nextLine.isEmpty() || nextLine.maxX() <= thisLine.maxX() || thisLine.maxX() <= nextLine.x()) {
-        bottomRight.move(outlineWidth, outlineWidth);
-        adjacentWidth2 = outlineWidth;
-    } else {
-        bottomRight.move(outlineWidth, -2 * outlineOffset);
-        adjacentWidth2 = -outlineWidth;
-    }
-    drawLineForBoxSide(graphicsContext, FloatRect(topLeft, bottomRight), BoxSide::Right, outlineColor, outlineStyle, adjacentWidth1, adjacentWidth2, antialias);
-
-    // upper edge
-    if (thisLine.x() < previousLine.x()) {
-        topLeft = outlineBoxRect.minXMinYCorner();
-        topLeft.move(-outlineWidth, -outlineWidth);
-        adjacentWidth1 = outlineWidth;
-        bottomRight = outlineBoxRect.maxXMinYCorner();
-        bottomRight.move(outlineWidth, 0);
-        if (!previousLine.isEmpty() && adjustedPreviousLine.x() < bottomRight.x()) {
-            bottomRight.setX(adjustedPreviousLine.x() - outlineOffset);
-            adjacentWidth2 = -outlineWidth;
-        } else
-            adjacentWidth2 = outlineWidth;
-        drawLineForBoxSide(graphicsContext, FloatRect(topLeft, bottomRight), BoxSide::Top, outlineColor, outlineStyle, adjacentWidth1, adjacentWidth2, antialias);
-    }
-    
-    if (previousLine.maxX() < thisLine.maxX()) {
-        topLeft = outlineBoxRect.minXMinYCorner();
-        topLeft.move(-outlineWidth, -outlineWidth);
-        if (!previousLine.isEmpty() && adjustedPreviousLine.maxX() > topLeft.x()) {
-            topLeft.setX(adjustedPreviousLine.maxX() + outlineOffset);
-            adjacentWidth1 = -outlineWidth;
-        } else
-            adjacentWidth1 = outlineWidth;
-        bottomRight = outlineBoxRect.maxXMinYCorner();
-        bottomRight.move(outlineWidth, 0);
-        adjacentWidth2 = outlineWidth;
-        drawLineForBoxSide(graphicsContext, FloatRect(topLeft, bottomRight), BoxSide::Top, outlineColor, outlineStyle, adjacentWidth1, adjacentWidth2, antialias);
-    }
-
-    if (thisLine.x() == thisLine.maxX()) {
-        topLeft = outlineBoxRect.minXMinYCorner();
-        topLeft.move(-outlineWidth, -outlineWidth);
-        adjacentWidth1 = outlineWidth;
-        bottomRight = outlineBoxRect.maxXMinYCorner();
-        bottomRight.move(outlineWidth, 0);
-        adjacentWidth2 = outlineWidth;
-        drawLineForBoxSide(graphicsContext, FloatRect(topLeft, bottomRight), BoxSide::Top, outlineColor, outlineStyle, adjacentWidth1, adjacentWidth2, antialias);
-    }
-
-    // lower edge
-    if (thisLine.x() < nextLine.x()) {
-        topLeft = outlineBoxRect.minXMaxYCorner();
-        topLeft.move(-outlineWidth, 0);
-        adjacentWidth1 = outlineWidth;
-        bottomRight = outlineBoxRect.maxXMaxYCorner();
-        bottomRight.move(outlineWidth, outlineWidth);
-        if (!nextLine.isEmpty() && (adjustedNextLine.x() < bottomRight.x())) {
-            bottomRight.setX(adjustedNextLine.x() - outlineOffset);
-            adjacentWidth2 = -outlineWidth;
-        } else
-            adjacentWidth2 = outlineWidth;
-        drawLineForBoxSide(graphicsContext, FloatRect(topLeft, bottomRight), BoxSide::Bottom, outlineColor, outlineStyle, adjacentWidth1, adjacentWidth2, antialias);
-    }
-    
-    if (nextLine.maxX() < thisLine.maxX()) {
-        topLeft = outlineBoxRect.minXMaxYCorner();
-        topLeft.move(-outlineWidth, 0);
-        if (!nextLine.isEmpty() && adjustedNextLine.maxX() > topLeft.x()) {
-            topLeft.setX(adjustedNextLine.maxX() + outlineOffset);
-            adjacentWidth1 = -outlineWidth;
-        } else
-            adjacentWidth1 = outlineWidth;
-        bottomRight = outlineBoxRect.maxXMaxYCorner();
-        bottomRight.move(outlineWidth, outlineWidth);
-        adjacentWidth2 = outlineWidth;
-        drawLineForBoxSide(graphicsContext, FloatRect(topLeft, bottomRight), BoxSide::Bottom, outlineColor, outlineStyle, adjacentWidth1, adjacentWidth2, antialias);
-    }
-
-    if (thisLine.x() == thisLine.maxX()) {
-        topLeft = outlineBoxRect.minXMaxYCorner();
-        topLeft.move(-outlineWidth, 0);
-        adjacentWidth1 = outlineWidth;
-        bottomRight = outlineBoxRect.maxXMaxYCorner();
-        bottomRight.move(outlineWidth, outlineWidth);
-        adjacentWidth2 = outlineWidth;
-        drawLineForBoxSide(graphicsContext, FloatRect(topLeft, bottomRight), BoxSide::Bottom, outlineColor, outlineStyle, adjacentWidth1, adjacentWidth2, antialias);
-    }
+    BorderPainter { *this, paintInfo }.paintOutline(paintOffset, rects);
 }
 
 bool isEmptyInline(const RenderInline& renderer)

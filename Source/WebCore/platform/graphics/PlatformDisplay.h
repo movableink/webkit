@@ -105,7 +105,6 @@ public:
 #endif
 
 #if USE(ATSPI)
-    void setAccessibilityBusAddress(String&& address) { m_accessibilityBusAddress = WTFMove(address); }
     const String& accessibilityBusAddress() const;
 #endif
 
@@ -138,7 +137,7 @@ protected:
 #endif
 
 #if USE(ATSPI)
-    virtual String plartformAccessibilityBusAddress() const { return { }; }
+    virtual String platformAccessibilityBusAddress() const { return { }; }
 
     mutable std::optional<String> m_accessibilityBusAddress;
 #endif

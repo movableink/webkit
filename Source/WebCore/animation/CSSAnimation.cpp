@@ -178,7 +178,7 @@ void CSSAnimation::setBindingsEffect(RefPtr<AnimationEffect>&& newEffect)
     }
 }
 
-void CSSAnimation::setBindingsStartTime(std::optional<double> startTime)
+ExceptionOr<void> CSSAnimation::setBindingsStartTime(const std::optional<CSSNumberish>& startTime)
 {
     // https://drafts.csswg.org/css-animations-2/#animations
 
@@ -187,10 +187,14 @@ void CSSAnimation::setBindingsStartTime(std::optional<double> startTime)
     // change to the animation-play-state will no longer cause the CSSAnimation to be played or paused.
 
     auto previousPlayState = playState();
-    DeclarativeAnimation::setBindingsStartTime(startTime);
+    auto result = DeclarativeAnimation::setBindingsStartTime(startTime);
+    if (result.hasException())
+        return result.releaseException();
     auto currentPlayState = playState();
     if (currentPlayState != previousPlayState && (currentPlayState == PlayState::Paused || previousPlayState == PlayState::Paused))
         m_overriddenProperties.add(Property::PlayState);
+
+    return { };
 }
 
 ExceptionOr<void> CSSAnimation::bindingsReverse()
@@ -277,9 +281,9 @@ void CSSAnimation::updateKeyframesIfNeeded(const RenderStyle* oldStyle, const Re
         keyframeEffect.computeDeclarativeAnimationBlendingKeyframes(oldStyle, newStyle, resolutionContext);
 }
 
-Ref<AnimationEventBase> CSSAnimation::createEvent(const AtomString& eventType, double elapsedTime, const String& pseudoId, std::optional<Seconds> timelineTime)
+Ref<AnimationEventBase> CSSAnimation::createEvent(const AtomString& eventType, double elapsedTime, const String& pseudoId)
 {
-    return AnimationEvent::create(eventType, m_animationName, elapsedTime, pseudoId, timelineTime, this);
+    return AnimationEvent::create(eventType, this, elapsedTime, m_animationName, pseudoId);
 }
 
 } // namespace WebCore

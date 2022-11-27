@@ -44,6 +44,12 @@ class MachSendRight;
 }
 #endif
 
+namespace WebCore {
+enum class DelegatedScrollingMode : uint8_t;
+using FramesPerSecond = unsigned;
+using PlatformDisplayID = uint32_t;
+}
+
 namespace WebKit {
 
 class LayerTreeContext;
@@ -66,7 +72,11 @@ public:
 
     void startReceivingMessages();
 
+    virtual WebCore::DelegatedScrollingMode delegatedScrollingMode() const;
+
     virtual void deviceScaleFactorDidChange() = 0;
+    virtual void colorSpaceDidChange() { }
+    virtual void windowScreenDidChange(WebCore::PlatformDisplayID, std::optional<WebCore::FramesPerSecond> /* nominalFramesPerSecond */) { }
 
     // FIXME: These should be pure virtual.
     virtual void setBackingStoreIsDiscardable(bool) { }
@@ -82,7 +92,6 @@ public:
     virtual void targetRefreshRateDidChange(unsigned) { }
 #endif
 
-    virtual void colorSpaceDidChange() { }
     virtual void minimumSizeForAutoLayoutDidChange() { }
     virtual void sizeToContentAutoSizeMaximumSizeDidChange() { }
     virtual void windowKindDidChange() { }
@@ -119,6 +128,8 @@ public:
 
     virtual void dispatchPresentationCallbacksAfterFlushingLayers(const Vector<CallbackID>&) { }
 
+    virtual bool shouldCoalesceVisualEditorStateUpdates() const { return false; }
+
     WebPageProxy& page() const { return m_webPageProxy; }
     WebProcessProxy& process() { return m_process.get(); }
     const WebProcessProxy& process() const { return m_process.get(); }
@@ -142,7 +153,8 @@ private:
 
     IPC::Connection* messageSenderConnection() const final;
     uint64_t messageSenderDestinationID() const final { return m_identifier.toUInt64(); }
-    bool sendMessage(UniqueRef<IPC::Encoder>&&, OptionSet<IPC::SendOption>, std::optional<std::pair<CompletionHandler<void(IPC::Decoder*)>, uint64_t>>&&) final;
+    bool sendMessage(UniqueRef<IPC::Encoder>&&, OptionSet<IPC::SendOption>) final;
+    bool sendMessageWithAsyncReply(UniqueRef<IPC::Encoder>&&, AsyncReplyHandler, OptionSet<IPC::SendOption>) final;
 
     // Message handlers.
     // FIXME: These should be pure virtual.

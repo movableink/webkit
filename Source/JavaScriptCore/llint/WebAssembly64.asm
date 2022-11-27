@@ -107,6 +107,7 @@ end)
 wasmOp(get_global, WasmGetGlobal, macro(ctx)
     loadp Wasm::Instance::m_globals[wasmInstance], t0
     wgetu(ctx, m_globalIndex, t1)
+    lshiftp 1, t1
     loadq [t0, t1, 8], t0
     returnq(ctx, t0)
 end)
@@ -114,6 +115,7 @@ end)
 wasmOp(set_global, WasmSetGlobal, macro(ctx)
     loadp Wasm::Instance::m_globals[wasmInstance], t0
     wgetu(ctx, m_globalIndex, t1)
+    lshiftp 1, t1
     mloadq(ctx, m_value, t2)
     storeq t2, [t0, t1, 8]
     dispatch(ctx)
@@ -122,6 +124,7 @@ end)
 wasmOp(get_global_portable_binding, WasmGetGlobalPortableBinding, macro(ctx)
     loadp Wasm::Instance::m_globals[wasmInstance], t0
     wgetu(ctx, m_globalIndex, t1)
+    lshiftp 1, t1
     loadq [t0, t1, 8], t0
     loadq [t0], t0
     returnq(ctx, t0)
@@ -130,6 +133,7 @@ end)
 wasmOp(set_global_portable_binding, WasmSetGlobalPortableBinding, macro(ctx)
     loadp Wasm::Instance::m_globals[wasmInstance], t0
     wgetu(ctx, m_globalIndex, t1)
+    lshiftp 1, t1
     mloadq(ctx, m_value, t2)
     loadq [t0, t1, 8], t0
     storeq t2, [t0]
@@ -212,7 +216,7 @@ wasmOp(i32_rem_s, WasmI32RemS, macro (ctx)
         muli t1, t2
         subi t0, t2, t2
     elsif RISCV64
-        remis t1, t0
+        remis t0, t1, t2
     else
         error
     end
@@ -238,7 +242,7 @@ wasmOp(i32_rem_u, WasmI32RemU, macro (ctx)
         muli t1, t2
         subi t0, t2, t2
     elsif RISCV64
-        remi t1, t0
+        remi t0, t1, t2
     else
         error
     end
@@ -343,7 +347,7 @@ wasmOp(i64_rem_s, WasmI64RemS, macro (ctx)
         mulq t1, t2
         subq t0, t2, t2
     elsif RISCV64
-        remqs t1, t0
+        remqs t0, t1, t2
     else
         error
     end
@@ -369,7 +373,7 @@ wasmOp(i64_rem_u, WasmI64RemU, macro (ctx)
         mulq t1, t2
         subq t0, t2, t2
     elsif RISCV64
-        remq t1, t0
+        remq t0, t1, t2
     else
         error
     end
@@ -1284,4 +1288,14 @@ wasmOp(i31_get_u, WasmI31GetU, macro(ctx)
 
 .throw:
     throwException(NullI31Get)
+end)
+
+wasmOp(array_len, WasmArrayLen, macro(ctx)
+    mloadp(ctx, m_arrayref, t0)
+    bqeq t0, ValueNull, .nullArray
+    loadi JSWebAssemblyArray::m_size[t0], t0
+    returni(ctx, t0)
+
+.nullArray:
+    throwException(NullArrayLen)
 end)

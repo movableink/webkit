@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "MediaQuery.h"
 #include "RuleSet.h"
 
 namespace WebCore {
@@ -29,14 +30,14 @@ namespace Style {
 class RuleSetBuilder {
 public:
     enum class ShrinkToFit { Enable, Disable };
-    RuleSetBuilder(RuleSet&, const MediaQueryEvaluator&, Resolver* = nullptr, ShrinkToFit = ShrinkToFit::Enable);
+    RuleSetBuilder(RuleSet&, const LegacyMediaQueryEvaluator&, Resolver* = nullptr, ShrinkToFit = ShrinkToFit::Enable);
     ~RuleSetBuilder();
 
     void addRulesFromSheet(const StyleSheetContents&, const MediaQuerySet* sheetQuery = nullptr);
     void addStyleRule(const StyleRule&);
 
 private:
-    RuleSetBuilder(const MediaQueryEvaluator&);
+    RuleSetBuilder(const LegacyMediaQueryEvaluator&);
 
     void addRulesFromSheetContents(const StyleSheetContents&);
     void addChildRules(const Vector<RefPtr<StyleRuleBase>>&);
@@ -52,7 +53,7 @@ private:
     struct MediaQueryCollector {
         ~MediaQueryCollector();
 
-        const MediaQueryEvaluator& evaluator;
+        const LegacyMediaQueryEvaluator& evaluator;
         bool collectDynamic { false };
 
         struct DynamicContext {
@@ -63,7 +64,7 @@ private:
         Vector<DynamicContext> dynamicContextStack { };
 
         Vector<RuleSet::DynamicMediaQueryRules> dynamicMediaQueryRules { };
-        bool hasViewportDependentMediaQueries { false };
+        OptionSet<MQ::MediaQueryDynamicDependency> allDynamicDependencies { };
 
         bool pushAndEvaluate(const MediaQuerySet*);
         void pop(const MediaQuerySet*);

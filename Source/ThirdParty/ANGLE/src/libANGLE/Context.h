@@ -1,4 +1,5 @@
 //
+//
 // Copyright 2002 The ANGLE Project Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -31,13 +32,13 @@
 #include "libANGLE/Context_gles_3_2_autogen.h"
 #include "libANGLE/Context_gles_ext_autogen.h"
 #include "libANGLE/Error.h"
+#include "libANGLE/Framebuffer.h"
 #include "libANGLE/HandleAllocator.h"
 #include "libANGLE/RefCountObject.h"
 #include "libANGLE/ResourceManager.h"
 #include "libANGLE/ResourceMap.h"
 #include "libANGLE/State.h"
 #include "libANGLE/VertexAttribute.h"
-#include "libANGLE/WorkerThread.h"
 #include "libANGLE/angletypes.h"
 
 namespace angle
@@ -66,10 +67,11 @@ namespace gl
 class Buffer;
 class Compiler;
 class FenceNV;
-class Framebuffer;
 class GLES1Renderer;
 class MemoryProgramCache;
+class MemoryShaderCache;
 class MemoryObject;
+class PixelLocalStoragePlane;
 class Program;
 class ProgramPipeline;
 class Query;
@@ -372,6 +374,7 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
             TextureManager *shareTextures,
             SemaphoreManager *shareSemaphores,
             MemoryProgramCache *memoryProgramCache,
+            MemoryShaderCache *memoryShaderCache,
             const EGLenum clientType,
             const egl::AttributeMap &attribs,
             const egl::DisplayExtensions &displayExtensions,
@@ -493,6 +496,8 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     GLenum getGraphicsResetStrategy() const { return mResetStrategy; }
     bool isResetNotificationEnabled() const;
 
+    bool isRobustnessEnabled() const;
+
     const egl::Config *getConfig() const;
     EGLenum getClientType() const;
     EGLenum getRenderBuffer() const;
@@ -522,6 +527,8 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     angle::Result prepareForInvalidate(GLenum target);
 
     MemoryProgramCache *getMemoryProgramCache() const { return mMemoryProgramCache; }
+    MemoryShaderCache *getMemoryShaderCache() const { return mMemoryShaderCache; }
+
     std::mutex &getProgramCacheMutex() const;
 
     bool hasBeenCurrent() const { return mHasBeenCurrent; }
@@ -608,20 +615,10 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     static int TexCoordArrayIndex(unsigned int unit);
 
     // GL_KHR_parallel_shader_compile
-    std::shared_ptr<angle::WorkerThreadPool> getShaderCompileThreadPool() const
-    {
-        if (mState.mExtensions.parallelShaderCompileKHR)
-        {
-            return mMultiThreadPool;
-        }
-        return mSingleThreadPool;
-    }
+    std::shared_ptr<angle::WorkerThreadPool> getShaderCompileThreadPool() const;
 
     // Generic multithread pool.
-    std::shared_ptr<angle::WorkerThreadPool> getWorkerThreadPool() const
-    {
-        return mMultiThreadPool;
-    }
+    std::shared_ptr<angle::WorkerThreadPool> getWorkerThreadPool() const;
 
     const StateCache &getStateCache() const { return mStateCache; }
     StateCache &getStateCache() { return mStateCache; }
@@ -643,7 +640,7 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
         return mTransformFeedbackMap;
     }
 
-    void onPreSwap() const;
+    void onPreSwap();
 
     Program *getActiveLinkedProgram() const;
 
@@ -670,10 +667,27 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     bool isDestroyed() const { return mIsDestroyed; }
     void setIsDestroyed() { mIsDestroyed = true; }
 
+    void setLogicOpEnabled(bool enabled) { mState.setLogicOpEnabled(enabled); }
+    void setLogicOp(LogicalOperation opcode) { mState.setLogicOp(opcode); }
+
     // Needed by capture serialization logic that works with a "const" Context pointer.
     void finishImmutable() const;
 
     const angle::PerfMonitorCounterGroups &getPerfMonitorCounterGroups() const;
+
+    // Enables GL_SHADER_PIXEL_LOCAL_STORAGE_EXT and polyfills load operations for
+    // ANGLE_shader_pixel_local_storage using a fullscreen draw.
+    //
+    // The implementation's ShPixelLocalStorageType must be "PixelLocalStorageEXT".
+    void drawPixelLocalStorageEXTEnable(GLsizei n,
+                                        const PixelLocalStoragePlane[],
+                                        const GLenum loadops[]);
+
+    // Stores texture-backed PLS planes via fullscreen draw and disables
+    // GL_SHADER_PIXEL_LOCAL_STORAGE_EXT.
+    //
+    // The implementation's ShPixelLocalStorageType must be "PixelLocalStorageEXT".
+    void drawPixelLocalStorageEXTDisable(const PixelLocalStoragePlane[], const GLenum storeops[]);
 
   private:
     void initializeDefaultResources();
@@ -689,7 +703,7 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     angle::Result syncDirtyObjects(const State::DirtyObjects &objectMask, Command command);
     angle::Result syncStateForReadPixels();
     angle::Result syncStateForTexImage();
-    angle::Result syncStateForBlit();
+    angle::Result syncStateForBlit(GLbitfield mask);
     angle::Result syncStateForClear();
     angle::Result syncTextureForCopy(Texture *texture);
 
@@ -788,7 +802,6 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     GraphicsResetStatus mResetStatus;
     bool mContextLostForced;
     GLenum mResetStrategy;
-    const bool mRobustAccess;
     const bool mSurfacelessSupported;
     egl::Surface *mCurrentDrawSurface;
     egl::Surface *mCurrentReadSurface;
@@ -797,6 +810,7 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     bool mBufferAccessValidationEnabled;
     const bool mExtensionsEnabled;
     MemoryProgramCache *mMemoryProgramCache;
+    MemoryShaderCache *mMemoryShaderCache;
 
     State::DirtyObjects mDrawDirtyObjects;
 
@@ -817,6 +831,8 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     State::DirtyObjects mCopyImageDirtyObjects;
     State::DirtyBits mReadInvalidateDirtyBits;
     State::DirtyBits mDrawInvalidateDirtyBits;
+    State::DirtyBits mPixelLocalStorageEXTEnableDisableDirtyBits;
+    State::DirtyObjects mPixelLocalStorageEXTEnableDisableDirtyObjects;
 
     // Binding to container objects that use dependent state updates.
     angle::ObserverBinding mVertexArrayObserverBinding;
@@ -833,12 +849,6 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     mutable Optional<angle::ScratchBuffer> mScratchBuffer;
     mutable Optional<angle::ScratchBuffer> mZeroFilledBuffer;
 
-    // Single-threaded pool may not always be initialized. It currently depends on the extension
-    // GL_KHR_parallel_shader_compile being disabled.
-    std::shared_ptr<angle::WorkerThreadPool> mSingleThreadPool;
-    // Multithreaded pool will always be initialized so it can be used for more generic work.
-    std::shared_ptr<angle::WorkerThreadPool> mMultiThreadPool;
-
     // Note: we use a raw pointer here so we can exclude frame capture sources from the build.
     std::unique_ptr<angle::FrameCapture> mFrameCapture;
 
@@ -853,6 +863,8 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     const bool mSaveAndRestoreState;
 
     bool mIsDestroyed;
+
+    std::unique_ptr<Framebuffer> mDefaultFramebuffer;
 };
 
 class [[nodiscard]] ScopedContextRef

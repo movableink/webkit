@@ -68,18 +68,25 @@ class Encoder;
 //   FIXME: Maybe would be simpler implementation if it would use the "wrap" flag instead of the hole as the indicator.
 //   This would move the alignedSpan implementation to the StreamConnectionBuffer.
 // * All atomic variable loads are untrusted, so they're clamped. Violations are not reported, though.
-// See SharedDisplayListHandle.
 class StreamConnectionBuffer {
+    WTF_MAKE_NONCOPYABLE(StreamConnectionBuffer);
 public:
     explicit StreamConnectionBuffer(size_t memorySize);
     StreamConnectionBuffer(StreamConnectionBuffer&&);
     ~StreamConnectionBuffer();
-    StreamConnectionBuffer& operator=(StreamConnectionBuffer&&);
+
+    struct Handle {
+        WebKit::SharedMemory::Handle memory;
+        void encode(Encoder&) const;
+        static std::optional<Handle> decode(Decoder&);
+    };
+    static std::optional<StreamConnectionBuffer> map(Handle&&);
+    Handle createHandle();
 
     size_t wrapOffset(size_t offset) const
     {
         ASSERT(offset <= dataSize());
-        if (offset == dataSize())
+        if (offset >= dataSize())
             return 0;
         return offset;
     }
@@ -113,8 +120,6 @@ public:
     size_t dataSize() const { return m_dataSize; }
 
     static constexpr size_t maximumSize() { return std::min(static_cast<size_t>(ClientOffset::serverIsSleepingTag), static_cast<size_t>(ClientOffset::serverIsSleepingTag)) - 1; }
-    void encode(Encoder&) const;
-    static std::optional<StreamConnectionBuffer> decode(Decoder&);
 
     Span<uint8_t> headerForTesting();
     Span<uint8_t> dataForTesting();
@@ -126,10 +131,16 @@ private:
         Atomic<ServerOffset> serverOffset;
         // Padding so that the variables mostly accessed by different processes do not share a cache line.
         // This is an attempt to avoid cache-line induced reduction of parallel access.
-        alignas(sizeof(uint64_t[2])) Atomic<ClientOffset> clientOffset;
+        // Use 128 bytes since that's the cache line size on ARM64, and enough to cover other platforms where 64 bytes is common.
+        alignas(128) Atomic<ClientOffset> clientOffset;
     };
+
+#undef HEADER_POINTER_ALIGNMENT
+
     Header& header() const { return *reinterpret_cast<Header*>(m_sharedMemory->data()); }
     static constexpr size_t headerSize() { return roundUpToMultipleOf<alignof(std::max_align_t)>(sizeof(Header)); }
+
+    static constexpr bool sharedMemorySizeIsValid(size_t size) { return headerSize() < size && size <= headerSize() + maximumSize(); }
 
     size_t m_dataSize { 0 };
     Ref<WebKit::SharedMemory> m_sharedMemory;

@@ -217,10 +217,6 @@ public:
 
     WTF_EXPORT_PRIVATE void dump(PrintStream&) const;
 
-    template<typename Encoder> void encode(Encoder&) const;
-    template<typename Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, URL&);
-    template<typename Decoder> static std::optional<URL> decode(Decoder&);
-
     WTF_EXPORT_PRIVATE bool hasSpecialScheme() const;
     WTF_EXPORT_PRIVATE bool hasLocalScheme() const;
 
@@ -314,29 +310,6 @@ template<> struct DefaultHash<URL>;
 template<> struct HashTraits<URL>;
 
 // Function template and inline function definitions.
-
-template<typename Encoder> void URL::encode(Encoder& encoder) const
-{
-    encoder << m_string;
-}
-
-template<typename Decoder> bool URL::decode(Decoder& decoder, URL& url)
-{
-    auto optionalURL = decode(decoder);
-    if (!optionalURL)
-        return false;
-    url = WTFMove(*optionalURL);
-    return true;
-}
-
-template<typename Decoder> std::optional<URL> URL::decode(Decoder& decoder)
-{
-    std::optional<String> string;
-    decoder >> string;
-    if (!string)
-        return std::nullopt;
-    return URL(WTFMove(*string));
-}
 
 inline bool operator==(const URL& a, const URL& b)
 {

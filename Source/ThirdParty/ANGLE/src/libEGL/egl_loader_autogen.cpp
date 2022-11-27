@@ -10,6 +10,7 @@
 
 #include "egl_loader_autogen.h"
 
+extern "C" {
 PFNEGLCHOOSECONFIGPROC l_EGL_ChooseConfig;
 PFNEGLCOPYBUFFERSPROC l_EGL_CopyBuffers;
 PFNEGLCREATECONTEXTPROC l_EGL_CreateContext;
@@ -68,6 +69,7 @@ PFNEGLCREATEDEVICEANGLEPROC l_EGL_CreateDeviceANGLE;
 PFNEGLRELEASEDEVICEANGLEPROC l_EGL_ReleaseDeviceANGLE;
 PFNEGLQUERYDISPLAYATTRIBANGLEPROC l_EGL_QueryDisplayAttribANGLE;
 PFNEGLQUERYSTRINGIANGLEPROC l_EGL_QueryStringiANGLE;
+PFNEGLCOPYMETALSHAREDEVENTANGLEPROC l_EGL_CopyMetalSharedEventANGLE;
 PFNEGLFORCEGPUSWITCHANGLEPROC l_EGL_ForceGPUSwitchANGLE;
 PFNEGLHANDLEGPUSWITCHANGLEPROC l_EGL_HandleGPUSwitchANGLE;
 PFNEGLREACQUIREHIGHPOWERGPUANGLEPROC l_EGL_ReacquireHighPowerGPUANGLE;
@@ -119,9 +121,7 @@ PFNEGLWAITSYNCKHRPROC l_EGL_WaitSyncKHR;
 PFNEGLPOSTSUBBUFFERNVPROC l_EGL_PostSubBufferNV;
 PFNEGLSTREAMCONSUMERGLTEXTUREEXTERNALATTRIBSNVPROC l_EGL_StreamConsumerGLTextureExternalAttribsNV;
 
-namespace angle
-{
-void LoadEGL_EGL(LoadProc loadProc)
+void LoadLibEGL_EGL(LoadProc loadProc)
 {
     l_EGL_ChooseConfig  = reinterpret_cast<PFNEGLCHOOSECONFIGPROC>(loadProc("EGL_ChooseConfig"));
     l_EGL_CopyBuffers   = reinterpret_cast<PFNEGLCOPYBUFFERSPROC>(loadProc("EGL_CopyBuffers"));
@@ -214,6 +214,8 @@ void LoadEGL_EGL(LoadProc loadProc)
         loadProc("EGL_QueryDisplayAttribANGLE"));
     l_EGL_QueryStringiANGLE =
         reinterpret_cast<PFNEGLQUERYSTRINGIANGLEPROC>(loadProc("EGL_QueryStringiANGLE"));
+    l_EGL_CopyMetalSharedEventANGLE = reinterpret_cast<PFNEGLCOPYMETALSHAREDEVENTANGLEPROC>(
+        loadProc("EGL_CopyMetalSharedEventANGLE"));
     l_EGL_ForceGPUSwitchANGLE =
         reinterpret_cast<PFNEGLFORCEGPUSWITCHANGLEPROC>(loadProc("EGL_ForceGPUSwitchANGLE"));
     l_EGL_HandleGPUSwitchANGLE =
@@ -317,4 +319,4 @@ void LoadEGL_EGL(LoadProc loadProc)
         reinterpret_cast<PFNEGLSTREAMCONSUMERGLTEXTUREEXTERNALATTRIBSNVPROC>(
             loadProc("EGL_StreamConsumerGLTextureExternalAttribsNV"));
 }
-}  // namespace angle
+}  // extern "C"

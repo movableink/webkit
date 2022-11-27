@@ -3627,8 +3627,8 @@ static Frame *incrementFrame(Frame *curr, bool forward, bool wrapFlag)
 {
     CanWrap canWrap = wrapFlag ? CanWrap::Yes : CanWrap::No;
     return forward
-        ? curr->tree().traverseNext(canWrap)
-        : curr->tree().traversePrevious(canWrap);
+        ? dynamicDowncast<LocalFrame>(curr->tree().traverseNext(canWrap))
+        : dynamicDowncast<LocalFrame>(curr->tree().traversePrevious(canWrap));
 }
 
 HRESULT WebView::searchFor(_In_ BSTR str, BOOL forward, BOOL caseFlag, BOOL wrapFlag, _Out_ BOOL* found)
@@ -5624,7 +5624,7 @@ HRESULT WebView::DragEnter(IDataObject* pDataObject, DWORD grfKeyState, POINTL p
     ::ScreenToClient(m_viewWindow, (LPPOINT)&localpt);
     DragData data(pDataObject, IntPoint(localpt.x, localpt.y), 
         IntPoint(pt.x, pt.y), keyStateToDragOperation(grfKeyState));
-    *pdwEffect = dragOperationToDragCursor(m_page->dragController().dragEntered(data));
+    *pdwEffect = dragOperationToDragCursor(m_page->dragController().dragEntered(WTFMove(data)));
 
     m_lastDropEffect = *pdwEffect;
     m_dragData = pDataObject;
@@ -5642,7 +5642,7 @@ HRESULT WebView::DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect)
         ::ScreenToClient(m_viewWindow, (LPPOINT)&localpt);
         DragData data(m_dragData.get(), IntPoint(localpt.x, localpt.y), 
             IntPoint(pt.x, pt.y), keyStateToDragOperation(grfKeyState));
-        *pdwEffect = dragOperationToDragCursor(m_page->dragController().dragUpdated(data));
+        *pdwEffect = dragOperationToDragCursor(m_page->dragController().dragUpdated(WTFMove(data)));
     } else
         *pdwEffect = DROPEFFECT_NONE;
 
@@ -5657,7 +5657,7 @@ HRESULT WebView::DragLeave()
 
     if (m_dragData) {
         DragData data(m_dragData.get(), IntPoint(), IntPoint(), { });
-        m_page->dragController().dragExited(data);
+        m_page->dragController().dragExited(WTFMove(data));
         m_dragData = 0;
     }
     return S_OK;
@@ -5674,7 +5674,7 @@ HRESULT WebView::Drop(IDataObject* pDataObject, DWORD grfKeyState, POINTL pt, DW
     ::ScreenToClient(m_viewWindow, (LPPOINT)&localpt);
     DragData data(pDataObject, IntPoint(localpt.x, localpt.y), 
         IntPoint(pt.x, pt.y), keyStateToDragOperation(grfKeyState));
-    m_page->dragController().performDragOperation(data);
+    m_page->dragController().performDragOperation(WTFMove(data));
     return S_OK;
 }
 
@@ -6217,7 +6217,7 @@ LRESULT WebView::onIMERequestReconvertString(Frame* targetFrame, RECONVERTSTRING
     reconvertString->dwStrLen = text.length();
     reconvertString->dwTargetStrLen = text.length();
     reconvertString->dwStrOffset = sizeof(RECONVERTSTRING);
-    StringView(text).getCharactersWithUpconvert(reinterpret_cast<UChar*>(reconvertString + 1));
+    StringView(text).getCharacters(reinterpret_cast<UChar*>(reconvertString + 1));
     return totalSize;
 }
 
@@ -6302,7 +6302,7 @@ bool WebView::paintCompositedContentToHDC(HDC deviceContext)
 #if USE(CA)
     m_layerTreeHost->flushPendingLayerChangesNow();
 #elif USE(TEXTURE_MAPPER_GL)
-    m_acceleratedCompositingContext->flushAndRenderLayers();
+    m_acceleratedCompositingContext->flushPendingLayerChanges();
 #endif
 
     // Flushing might have taken us out of compositing mode.
@@ -6311,6 +6311,8 @@ bool WebView::paintCompositedContentToHDC(HDC deviceContext)
 
 #if USE(CA)
     m_layerTreeHost->paint(deviceContext);
+#elif USE(TEXTURE_MAPPER_GL)
+    m_acceleratedCompositingContext->paint(deviceContext);
 #endif
 
     return true;

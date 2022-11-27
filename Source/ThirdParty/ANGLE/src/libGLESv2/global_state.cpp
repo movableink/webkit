@@ -44,6 +44,13 @@ void SetContextToAndroidOpenGLTLSSlot(gl::Context *value)
 #endif
 }
 
+// Called only on Android platform
+[[maybe_unused]] void ThreadCleanupCallback(void *ptr)
+{
+    ANGLE_SCOPED_GLOBAL_LOCK();
+    angle::PthreadKeyDestructorCallback(ptr);
+}
+
 Thread *AllocateCurrentThread()
 {
     Thread *thread;
@@ -73,7 +80,7 @@ Thread *AllocateCurrentThread()
 
     // Create thread cleanup TLS slot
     auto CreateThreadCleanupTLSIndex = []() {
-        gThreadCleanupTLSIndex = CreateTLSIndex(angle::PthreadKeyDestructorCallback);
+        gThreadCleanupTLSIndex = CreateTLSIndex(ThreadCleanupCallback);
     };
     pthread_once(&keyOnce, CreateThreadCleanupTLSIndex);
     ASSERT(gThreadCleanupTLSIndex != TLS_INVALID_INDEX);
@@ -218,7 +225,7 @@ void GenerateContextLostErrorOnContext(Context *context)
 {
     if (context && context->isContextLost())
     {
-        context->validationError(angle::EntryPoint::GLInvalid, GL_CONTEXT_LOST, err::kContextLost);
+        context->validationError(angle::EntryPoint::Invalid, GL_CONTEXT_LOST, err::kContextLost);
     }
 }
 

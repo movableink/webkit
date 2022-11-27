@@ -1,0 +1,3 @@
+
+PASS Element#requestFullscreen() when the document is not the active document
+

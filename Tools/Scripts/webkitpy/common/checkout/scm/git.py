@@ -373,7 +373,6 @@ class Git(SCM, SVNRepository):
             command += ['-O', order_file]
 
         if git_index:
-            assert command[1] == 'diff'
             command += ['--cached']
         elif git_commit:
             command += [merge_base]
@@ -559,6 +558,12 @@ class Git(SCM, SVNRepository):
             repository = local.Git(self.checkout_root)
             branch_point = branch.Branch.branch_point(repository, limit=10)
             if branch_point:
+                # First, look for a remote branch that contains the branch point
+                for remote in repository.source_remotes():
+                    if branch_point.branch in repository.branches_for(hash=branch_point.hash, remote=remote, cached=True):
+                        return 'refs/remotes/{}/{}'.format(remote, branch_point.branch)
+
+                # If that doesn't work, just find any remote that has the specified branch
                 for remote in repository.source_remotes():
                     if branch_point.branch in repository.branches_for(remote=remote, cached=True):
                         return 'refs/remotes/{}/{}'.format(remote, branch_point.branch)

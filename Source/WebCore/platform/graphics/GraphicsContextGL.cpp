@@ -27,7 +27,6 @@
 
 #include "config.h"
 #include "GraphicsContextGL.h"
-#include "GraphicsContextGLOpenGL.h"
 
 #if ENABLE(WEBGL)
 
@@ -599,6 +598,10 @@ bool GraphicsContextGL::extractTextureData(unsigned width, unsigned height, GCGL
         return false;
 
     return true;
+}
+
+void GraphicsContextGL::setDrawingBufferColorSpace(const DestinationColorSpace&)
+{
 }
 
 void GraphicsContextGL::markContextChanged()

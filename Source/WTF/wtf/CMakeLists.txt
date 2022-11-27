@@ -217,8 +217,6 @@ set(WTF_PUBLIC_HEADERS
     PtrTag.h
     RAMSize.h
     RandomDevice.h
-    RandomNumber.h
-    RandomNumberSeed.h
     Range.h
     RangeSet.h
     RawHex.h
@@ -295,6 +293,7 @@ set(WTF_PUBLIC_HEADERS
     ThreadMessage.h
     ThreadSafetyAnalysis.h
     ThreadSafeRefCounted.h
+    ThreadSafeWeakPtr.h
     ThreadSanitizerSupport.h
     ThreadSpecific.h
     Threading.h
@@ -318,7 +317,7 @@ set(WTF_PUBLIC_HEADERS
     UnionFind.h
     UniqueArray.h
     UniqueRef.h
-    UnsafePointer.h
+    UniqueRefVector.h
     VMTags.h
     ValueCheck.h
     Vector.h
@@ -332,6 +331,7 @@ set(WTF_PUBLIC_HEADERS
     WeakHashSet.h
     WeakPtr.h
     WeakRandom.h
+    WeakRandomNumber.h
     WindowsExtras.h
     WordLock.h
     WorkQueue.h
@@ -349,7 +349,6 @@ set(WTF_PUBLIC_HEADERS
     dtoa/strtod.h
     dtoa/utils.h
 
-    persistence/PersistentCoder.h
     persistence/PersistentCoders.h
     persistence/PersistentDecoder.h
     persistence/PersistentEncoder.h
@@ -383,6 +382,7 @@ set(WTF_PUBLIC_HEADERS
     text/StringImpl.h
     text/StringOperators.h
     text/StringParsingBuffer.h
+    text/StringSearch.h
     text/StringToIntegerConversion.h
     text/StringView.h
     text/SymbolImpl.h
@@ -470,7 +470,6 @@ set(WTF_SOURCES
     ProcessPrivilege.cpp
     RAMSize.cpp
     RandomDevice.cpp
-    RandomNumber.cpp
     ReadWriteLock.cpp
     RefCounted.cpp
     RefCountedLeakCounter.cpp
@@ -502,6 +501,7 @@ set(WTF_SOURCES
     WTFAssertions.cpp
     WTFConfig.cpp
     WallTime.cpp
+    WeakRandomNumber.cpp
     WordLock.cpp
     WorkQueue.cpp
     WorkerPool.cpp

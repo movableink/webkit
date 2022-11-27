@@ -324,12 +324,13 @@ void RenderSVGText::layout()
     // textElement().updateLengthContext();
 
     bool updateCachedBoundariesInParents = false;
-    if (!isLayerBasedSVGEngineEnabled()) {
-        if (m_needsTransformUpdate) {
-            m_localTransform = textElement().animatedLocalTransform();
-            m_needsTransformUpdate = false;
-            updateCachedBoundariesInParents = true;
-        }
+    auto previousReferenceBoxRect = transformReferenceBoxRect();
+
+    // We update the transform now because updateScaledFont() needs it, but we do it a second time at the end of the layout,
+    // since the transform reference box may change because of the font change.
+    if (!isLayerBasedSVGEngineEnabled() && m_needsTransformUpdate) {
+        m_localTransform = textElement().animatedLocalTransform();
+        updateCachedBoundariesInParents = true;
     }
 
     if (!everHadLayout()) {
@@ -415,8 +416,15 @@ void RenderSVGText::layout()
     if (isLayerBasedSVGEngineEnabled()) {
         updateLayerTransform();
         updateCachedBoundariesInParents = false; // No longer needed for LBSE.
-    } else if (!updateCachedBoundariesInParents)
-        updateCachedBoundariesInParents = oldBoundaries != objectBoundingBox();
+    } else {
+        if (m_needsTransformUpdate) {
+            if (previousReferenceBoxRect != transformReferenceBoxRect())
+                m_localTransform = textElement().animatedLocalTransform();
+            m_needsTransformUpdate = false;
+        }
+        if (!updateCachedBoundariesInParents)
+            updateCachedBoundariesInParents = oldBoundaries != objectBoundingBox();
+    }
 
     // Invalidate all resources of this client if our layout changed.
     if (layoutChanged)
@@ -480,6 +488,12 @@ bool RenderSVGText::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
 
     return false;
 }
+
+void RenderSVGText::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
+{
+    ASSERT(document().settings().layerBasedSVGEngineEnabled());
+    applySVGTransform(transform, textElement(), style, boundingBox, std::nullopt, std::nullopt, options);
+}
 #endif
 
 VisiblePosition RenderSVGText::positionForPoint(const LayoutPoint& pointInContents, const RenderFragmentContainer* fragment)
@@ -502,7 +516,7 @@ void RenderSVGText::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled()) {
-        StdUnorderedSet<PaintPhase> relevantPaintPhases { PaintPhase::Foreground, PaintPhase::ClippingMask, PaintPhase::Mask, PaintPhase::Outline, PaintPhase::SelfOutline };
+        OptionSet<PaintPhase> relevantPaintPhases { PaintPhase::Foreground, PaintPhase::ClippingMask, PaintPhase::Mask, PaintPhase::Outline, PaintPhase::SelfOutline };
         if (!shouldPaintSVGRenderer(paintInfo, relevantPaintPhases))
             return;
 

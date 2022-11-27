@@ -2823,9 +2823,6 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(WhiteSpace e)
     case WhiteSpace::NoWrap:
         m_value.valueID = CSSValueNowrap;
         break;
-    case WhiteSpace::KHTMLNoWrap:
-        m_value.valueID = CSSValueWebkitNowrap;
-        break;
     case WhiteSpace::BreakSpaces:
         m_value.valueID = CSSValueBreakSpaces;
         break;
@@ -2837,8 +2834,6 @@ template<> inline CSSPrimitiveValue::operator WhiteSpace() const
     ASSERT(isValueID());
 
     switch (m_value.valueID) {
-    case CSSValueWebkitNowrap:
-        return WhiteSpace::KHTMLNoWrap;
     case CSSValueNowrap:
         return WhiteSpace::NoWrap;
     case CSSValuePre:
@@ -5191,40 +5186,6 @@ template<> inline CSSPrimitiveValue::operator ScrollSnapStop() const
     }
 }
 
-#if ENABLE(CSS_TRAILING_WORD)
-template<> inline CSSPrimitiveValue::CSSPrimitiveValue(TrailingWord e)
-    : CSSValue(PrimitiveClass)
-{
-    setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
-    switch (e) {
-    case TrailingWord::Auto:
-        m_value.valueID = CSSValueAuto;
-        break;
-    case TrailingWord::PartiallyBalanced:
-        m_value.valueID = CSSValueWebkitPartiallyBalanced;
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-}
-
-template<> inline CSSPrimitiveValue::operator TrailingWord() const
-{
-    ASSERT(isValueID());
-    switch (m_value.valueID) {
-    case CSSValueAuto:
-        return TrailingWord::Auto;
-    case CSSValueWebkitPartiallyBalanced:
-        return TrailingWord::PartiallyBalanced;
-    default:
-        break;
-    }
-    ASSERT_NOT_REACHED();
-    return TrailingWord::Auto;
-}
-#endif
-
 #if ENABLE(APPLE_PAY)
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ApplePayButtonStyle e)
     : CSSValue(PrimitiveClass)
@@ -5459,38 +5420,6 @@ template<> inline CSSPrimitiveValue::operator FontVariantCaps() const
     return FontVariantCaps::Normal;
 }
 
-template<> inline CSSPrimitiveValue::CSSPrimitiveValue(FontVariantAlternates alternates)
-    : CSSValue(PrimitiveClass)
-{
-    setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
-    switch (alternates) {
-    case FontVariantAlternates::Normal:
-        m_value.valueID = CSSValueNormal;
-        break;
-    case FontVariantAlternates::HistoricalForms:
-        m_value.valueID = CSSValueHistoricalForms;
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-}
-
-template<> inline CSSPrimitiveValue::operator FontVariantAlternates() const
-{
-    ASSERT(isValueID());
-    switch (m_value.valueID) {
-    case CSSValueNormal:
-        return FontVariantAlternates::Normal;
-    case CSSValueHistoricalForms:
-        return FontVariantAlternates::HistoricalForms;
-    default:
-        break;
-    }
-    ASSERT_NOT_REACHED();
-    return FontVariantAlternates::Normal;
-}
-
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(FontOpticalSizing sizing)
     : CSSValue(PrimitiveClass)
 {
@@ -5522,6 +5451,60 @@ template<> inline CSSPrimitiveValue::operator FontOpticalSizing() const
     ASSERT_NOT_REACHED();
     return FontOpticalSizing::Enabled;
 }
+
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(FontSynthesisLonghandValue value)
+    : CSSValue(PrimitiveClass)
+{
+    setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
+    switch (value) {
+    case FontSynthesisLonghandValue::Auto:
+        m_value.valueID = CSSValueAuto;
+        break;
+    case FontSynthesisLonghandValue::None:
+        m_value.valueID = CSSValueNone;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator FontSynthesisLonghandValue() const
+{
+    ASSERT(isValueID());
+    switch (m_value.valueID) {
+    case CSSValueAuto:
+        return FontSynthesisLonghandValue::Auto;
+    case CSSValueNone:
+        return FontSynthesisLonghandValue::None;
+    default:
+        break;
+    }
+    ASSERT_NOT_REACHED();
+    return FontSynthesisLonghandValue::Auto;
+}
+
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(std::optional<float> sizeAdjust)
+    : CSSValue(PrimitiveClass)
+{
+    if (!sizeAdjust.has_value()) {
+        setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
+        m_value.valueID = CSSValueNone;
+        return;
+    }
+
+    setPrimitiveUnitType(CSSUnitType::CSS_NUMBER);
+    m_value.num = static_cast<double>(sizeAdjust.value());
+}
+
+template<> inline CSSPrimitiveValue::operator std::optional<float>() const
+{
+    if (!isNumber())
+        return std::nullopt;
+
+    return floatValue();
+}
+
 
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(FontLoadingBehavior behavior)
     : CSSValue(PrimitiveClass)

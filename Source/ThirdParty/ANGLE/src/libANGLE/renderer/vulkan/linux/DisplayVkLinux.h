@@ -21,6 +21,8 @@ class DisplayVkLinux : public DisplayVk
   public:
     DisplayVkLinux(const egl::DisplayState &state);
 
+    DeviceImpl *createDevice() override;
+
     ExternalImageSiblingImpl *createExternalImageSibling(const gl::Context *context,
                                                          EGLenum target,
                                                          EGLClientBuffer buffer,
@@ -41,6 +43,8 @@ class DisplayVkLinux : public DisplayVk
   private:
     // Supported DRM formats
     std::vector<EGLint> mDrmFormats;
+
+    bool mDrmFormatsInitialized;
 };
 
 }  // namespace rx

@@ -172,6 +172,8 @@ OBJECT_LUT_HEADERS = \
     IntlDateTimeFormatPrototype.lut.h \
     IntlDisplayNamesConstructor.lut.h \
     IntlDisplayNamesPrototype.lut.h \
+    IntlDurationFormatConstructor.lut.h \
+    IntlDurationFormatPrototype.lut.h \
     IntlListFormatConstructor.lut.h \
     IntlListFormatPrototype.lut.h \
     IntlLocalePrototype.lut.h \
@@ -219,6 +221,8 @@ OBJECT_LUT_HEADERS = \
     TemporalPlainTimePrototype.lut.h \
     TemporalTimeZoneConstructor.lut.h \
     TemporalTimeZonePrototype.lut.h \
+    WebAssemblyArrayConstructor.lut.h \
+    WebAssemblyArrayPrototype.lut.h \
     WebAssemblyCompileErrorConstructor.lut.h \
     WebAssemblyCompileErrorPrototype.lut.h \
     WebAssemblyExceptionConstructor.lut.h \
@@ -235,6 +239,8 @@ OBJECT_LUT_HEADERS = \
     WebAssemblyModulePrototype.lut.h \
     WebAssemblyRuntimeErrorConstructor.lut.h \
     WebAssemblyRuntimeErrorPrototype.lut.h \
+    WebAssemblyStructConstructor.lut.h \
+    WebAssemblyStructPrototype.lut.h \
     WebAssemblyTableConstructor.lut.h \
     WebAssemblyTablePrototype.lut.h \
     WebAssemblyTagConstructor.lut.h \

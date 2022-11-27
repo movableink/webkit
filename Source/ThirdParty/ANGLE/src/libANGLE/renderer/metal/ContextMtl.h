@@ -17,6 +17,7 @@
 #include "libANGLE/Context.h"
 #include "libANGLE/renderer/ContextImpl.h"
 #include "libANGLE/renderer/metal/ProvokingVertexHelper.h"
+#include "libANGLE/renderer/metal/mtl_buffer_manager.h"
 #include "libANGLE/renderer/metal/mtl_buffer_pool.h"
 #include "libANGLE/renderer/metal/mtl_command_buffer.h"
 #include "libANGLE/renderer/metal/mtl_context_device.h"
@@ -207,6 +208,7 @@ class ContextMtl : public ContextImpl, public mtl::Context
     const gl::TextureCapsMap &getNativeTextureCaps() const override;
     const gl::Extensions &getNativeExtensions() const override;
     const gl::Limitations &getNativeLimitations() const override;
+    ShPixelLocalStorageType getNativePixelLocalStorageType() const override;
 
     const ProgramMtl *getProgram() const { return mProgram; }
 
@@ -373,8 +375,15 @@ class ContextMtl : public ContextImpl, public mtl::Context
     // command encoder is already started.
     mtl::ComputeCommandEncoder *getComputeCommandEncoder();
 
+    // Because this backend uses an intermediate representation for the rendering
+    // commands, a render encoder can coexist with blit/compute command encoders.
+    mtl::BlitCommandEncoder *getBlitCommandEncoderWithoutEndingRenderEncoder();
+    mtl::ComputeCommandEncoder *getComputeCommandEncoderWithoutEndingRenderEncoder();
+
     // Get the provoking vertex command encoder.
     mtl::ComputeCommandEncoder *getIndexPreprocessingCommandEncoder();
+
+    bool isCurrentRenderEncoderSerial(uint64_t serial);
 
     const mtl::ContextDevice &getMetalDevice() const { return mContextDevice; }
 
@@ -385,9 +394,13 @@ class ContextMtl : public ContextImpl, public mtl::Context
                                                     const mtl::MipmapNativeLevel &mipNativeLevel,
                                                     uint32_t layerIndex);
     const mtl::BufferRef &getWorkBuffer() const { return mWorkBuffer; }
+    mtl::BufferManager &getBufferManager() { return mBufferManager; }
+
+    angle::ImageLoadContext getImageLoadContext() const;
 
   private:
     void ensureCommandBufferReady();
+    void endBlitAndComputeEncoding();
     angle::Result ensureIncompleteTexturesCreated(const gl::Context *context);
     angle::Result setupDraw(const gl::Context *context,
                             gl::PrimitiveMode mode,
@@ -563,6 +576,7 @@ class ContextMtl : public ContextImpl, public mtl::Context
     mtl::RenderCommandEncoder mRenderEncoder;
     mtl::BlitCommandEncoder mBlitEncoder;
     mtl::ComputeCommandEncoder mComputeEncoder;
+    bool mHasMetalSharedEvents = false;
 
     // Cached back-end objects
     FramebufferMtl *mDrawFramebuffer = nullptr;
@@ -593,6 +607,8 @@ class ContextMtl : public ContextImpl, public mtl::Context
     MTLWinding mWinding;
     MTLCullMode mCullMode;
     bool mCullAllPolygons = false;
+
+    mtl::BufferManager mBufferManager;
 
     // Lineloop and TriFan index buffer
     mtl::BufferPool mLineLoopIndexBuffer;

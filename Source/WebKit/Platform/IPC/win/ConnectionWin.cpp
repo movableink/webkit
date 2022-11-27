@@ -29,22 +29,22 @@
 #include "DataReference.h"
 #include "Decoder.h"
 #include "Encoder.h"
+#include "IPCUtilities.h"
 #include <wtf/ArgumentCoder.h>
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HexNumber.h>
-#include <wtf/RandomNumber.h>
 
 namespace IPC {
 
 // FIXME: Rename this or use a different constant on windows.
 static const size_t inlineMessageMaxSize = 4096;
 
-bool Connection::createServerAndClientIdentifiers(HANDLE& serverIdentifier, HANDLE& clientIdentifier)
+bool createServerAndClientIdentifiers(HANDLE& serverIdentifier, HANDLE& clientIdentifier)
 {
     String pipeName;
 
     do {
-        unsigned uniqueID = randomNumber() * std::numeric_limits<unsigned>::max();
-        pipeName = makeString("\\\\.\\pipe\\com.apple.WebKit.", hex(uniqueID));
+        pipeName = makeString("\\\\.\\pipe\\com.apple.WebKit.", hex(cryptographicallyRandomNumber<unsigned>()));
 
         serverIdentifier = ::CreateNamedPipe(pipeName.wideCharacters().data(),
             PIPE_ACCESS_DUPLEX | FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED,
@@ -249,7 +249,7 @@ void Connection::invokeWriteEventHandler()
     });
 }
 
-bool Connection::open()
+void Connection::platformOpen()
 {
     // We connected the two ends of the pipe in createServerAndClientIdentifiers.
     m_isConnected = true;
@@ -265,7 +265,6 @@ bool Connection::open()
 
     // Schedule a read.
     invokeReadEventHandler();
-    return true;
 }
 
 bool Connection::platformCanSendOutgoingMessages() const
@@ -368,11 +367,11 @@ std::optional<Connection::ConnectionIdentifierPair> Connection::createConnection
 {
     HANDLE serverIdentifier;
     HANDLE clientIdentifier;
-    if (!Connection::createServerAndClientIdentifiers(serverIdentifier, clientIdentifier)) {
+    if (!createServerAndClientIdentifiers(serverIdentifier, clientIdentifier)) {
         LOG_ERROR("Failed to create server and client identifiers");
         return std::nullopt;
     }
-    return ConnectionIdentifierPair { Identifier { serverIdentifier }, Attachment { Win32Handle { clientIdentifier } } };
+    return ConnectionIdentifierPair { Identifier { Win32Handle { serverIdentifier } }, Win32Handle { clientIdentifier } };
 }
 
 } // namespace IPC

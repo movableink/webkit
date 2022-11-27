@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,9 @@
 
 #if USE(APPLE_INTERNAL_SDK)
 
+#import <CoreSVG/CGSVGDocument.h>
 #import <UIKit/NSTextAlternatives.h>
+#import <UIKit/UIActivityViewController_Private.h>
 #import <UIKit/UIAlertController_Private.h>
 #import <UIKit/UIApplication_Private.h>
 #import <UIKit/UIBarButtonItem_Private.h>
@@ -348,6 +350,10 @@ typedef id<NSCoding, NSCopying> _UITextSearchDocumentIdentifier;
 
 - (void)clearAllDecoratedFoundText;
 
+@optional
+
+- (BOOL)supportsTextReplacement;
+
 @end
 
 @interface _UIFindInteraction : NSObject <UIInteraction>
@@ -394,10 +400,13 @@ typedef enum {
 @property (nonatomic, setter=_setShowsFileSizePicker:) BOOL _showsFileSizePicker;
 @end
 
+typedef struct CGSVGDocument *CGSVGDocumentRef;
+
 @interface UIImage ()
 - (id)initWithCGImage:(CGImageRef)CGImage imageOrientation:(UIImageOrientation)imageOrientation;
 - (UIImage *)_flatImageWithColor:(UIColor *)color;
 + (UIImage *)_systemImageNamed:(NSString *)name;
++ (UIImage *)_imageWithCGSVGDocument:(CGSVGDocumentRef)cgSVGDocument;
 @end
 
 @interface UIKeyCommand ()
@@ -727,6 +736,10 @@ typedef enum {
 - (void)setOperation:(UINavigationControllerOperation)operation;
 @optional
 - (UIWindow *)window;
+@end
+
+@interface UIActivityViewController ()
+@property (nonatomic) BOOL allowsCustomPresentationStyle;
 @end
 
 typedef NS_ENUM (NSInteger, _UIBackdropMaskViewFlags) {
@@ -1414,6 +1427,16 @@ typedef NS_ENUM(NSUInteger, UIMenuOptionsPrivate) {
 
 #endif // HAVE(UIKIT_RESIZABLE_WINDOWS)
 
+#if HAVE(UI_WINDOW_SCENE_LIVE_RESIZE)
+
+@interface UIWindowScene ()
+@property (nonatomic, readonly, getter=_isInLiveResize) BOOL _inLiveResize;
+@end
+
+extern NSNotificationName const _UIWindowSceneDidEndLiveResizeNotification;
+
+#endif // HAVE(UI_WINDOW_SCENE_LIVE_RESIZE)
+
 #endif // USE(APPLE_INTERNAL_SDK)
 
 #if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
@@ -1445,12 +1468,6 @@ typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
 
 #if USE(UICONTEXTMENU)
 
-@interface UIAction (IPI)
-- (void)_performActionWithSender:(id)sender;
-@end
-
-#if HAVE(LINK_PREVIEW)
-
 @interface UIContextMenuConfiguration (IPI)
 @property (nonatomic, copy) UIContextMenuContentPreviewProvider previewProvider;
 @property (nonatomic, copy) UIContextMenuActionProvider actionProvider;
@@ -1468,8 +1485,6 @@ typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
 @interface UIContextMenuInteraction (IPI)
 @property (nonatomic, strong) _UIClickPresentationInteraction *presentationInteraction;
 @end
-
-#endif // HAVE(LINK_PREVIEW)
 
 #endif // USE(UICONTEXTMENU)
 
@@ -1549,6 +1564,10 @@ typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
 - (void)_preserveFocusWithToken:(id <NSCopying, NSSecureCoding>)token destructively:(BOOL)destructively;
 @end
 #endif
+
+@interface UIPasteboard ()
++ (void)_performAsDataOwner:(_UIDataOwner)dataOwner block:(void(^ NS_NOESCAPE)(void))block;
+@end
 
 @interface UIResponder ()
 - (UIResponder *)firstResponder;
@@ -1674,6 +1693,7 @@ extern NSString * const NSTextSizeMultiplierDocumentOption;
 
 extern NSNotificationName const _UISceneWillBeginSystemSnapshotSequence;
 extern NSNotificationName const _UISceneDidCompleteSystemSnapshotSequence;
+extern NSNotificationName const _UIWindowSceneEnhancedWindowingModeChanged;
 
 extern CGRect UIRectInsetEdges(CGRect, UIRectEdge edges, CGFloat v);
 extern CGRect UIRectInset(CGRect, CGFloat top, CGFloat right, CGFloat bottom, CGFloat left);

@@ -79,7 +79,7 @@
 #import "WKSafeBrowsingWarning.h"
 #import "WKSecurityOriginInternal.h"
 #import "WKSharedAPICast.h"
-#import "WKSnapshotConfiguration.h"
+#import "WKSnapshotConfigurationPrivate.h"
 #import "WKUIDelegate.h"
 #import "WKUIDelegatePrivate.h"
 #import "WKUserContentControllerInternal.h"
@@ -89,7 +89,6 @@
 #import "WKWebpagePreferencesInternal.h"
 #import "WKWebsiteDataStoreInternal.h"
 #import "WebBackForwardList.h"
-#import "WebCertificateInfo.h"
 #import "WebFullScreenManagerProxy.h"
 #import "WebPageGroup.h"
 #import "WebPageInspectorController.h"
@@ -160,6 +159,10 @@
 
 #if ENABLE(DATA_DETECTION)
 #import "WKDataDetectorTypesInternal.h"
+#endif
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+#import "_WKWebExtensionControllerInternal.h"
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -390,7 +393,7 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
     else
         [self _updateScrollViewBackground];
 
-    [self _frameOrBoundsChanged];
+    [self _frameOrBoundsMayHaveChanged];
     [self _registerForNotifications];
 
     _page->contentSizeCategoryDidChange([self _contentSizeCategory]);
@@ -456,6 +459,14 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
     pageConfiguration->setVisitedLinkStore([_configuration _visitedLinkStore]->_visitedLinkStore.get());
     pageConfiguration->setWebsiteDataStore([_configuration websiteDataStore]->_websiteDataStore.get());
     pageConfiguration->setDefaultWebsitePolicies([_configuration defaultWebpagePreferences]->_websitePolicies.get());
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+    if (auto *controller = _configuration.get()._strongWebExtensionController)
+        pageConfiguration->setWebExtensionController(&controller._webExtensionController);
+
+    if (auto *controller = _configuration.get()._weakWebExtensionController)
+        pageConfiguration->setWeakWebExtensionController(&controller._webExtensionController);
+#endif
 
 #if PLATFORM(MAC)
     if (auto pageGroup = WebKit::toImpl([_configuration _pageGroup]))
@@ -847,15 +858,7 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
 
 - (SecTrustRef)serverTrust
 {
-#if HAVE(SEC_TRUST_SERIALIZATION)
-    auto certificateInfo = _page->pageLoadState().certificateInfo();
-    if (!certificateInfo)
-        return nil;
-
-    return certificateInfo->certificateInfo().trust();
-#else
-    return nil;
-#endif
+    return _page->pageLoadState().certificateInfo().trust();
 }
 
 - (BOOL)canGoBack
@@ -1158,8 +1161,8 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
     
     std::optional<WebCore::FrameIdentifier> frameID;
     if (frame) {
-        if (uint64_t identifier = frame._handle.frameID)
-            frameID = makeObjectIdentifier<WebCore::FrameIdentifierType>(identifier);
+        if (frame._handle.frameID)
+            frameID = frame._handle->_frameHandle->frameID();
     }
 
     _page->runJavaScriptInFrameInScriptWorld({ javaScriptString, sourceURL, !!asAsyncFunction, WTFMove(argumentsMap), !!forceUserGesture }, frameID, *world->_contentWorld.get(), [handler] (auto&& result) {
@@ -1218,11 +1221,15 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
     WebCore::IntSize bitmapSize(snapshotWidth, imageHeight);
     bitmapSize.scale(deviceScale, deviceScale);
 
+    WebKit::SnapshotOptions snapshotOptions = WebKit::SnapshotOptionsInViewCoordinates;
+    if (!snapshotConfiguration._includesSelectionHighlighting)
+        snapshotOptions |= WebKit::SnapshotOptionsExcludeSelectionHighlighting;
+
     // Software snapshot will not capture elements rendered with hardware acceleration (WebGL, video, etc).
     // This code doesn't consider snapshotConfiguration.afterScreenUpdates since the software snapshot always
     // contains recent updates. If we ever have a UI-side snapshot mechanism on macOS, we will need to factor
     // in snapshotConfiguration.afterScreenUpdates at that time.
-    _page->takeSnapshot(WebCore::enclosingIntRect(rectInViewCoordinates), bitmapSize, WebKit::SnapshotOptionsInViewCoordinates, [handler, snapshotWidth, imageHeight](const WebKit::ShareableBitmap::Handle& imageHandle) {
+    _page->takeSnapshot(WebCore::enclosingIntRect(rectInViewCoordinates), bitmapSize, snapshotOptions, [handler, snapshotWidth, imageHeight](const WebKit::ShareableBitmapHandle& imageHandle) {
         if (imageHandle.isNull()) {
             tracePoint(TakeSnapshotEnd, snapshotFailedTraceValue);
             handler(nil, createNSError(WKErrorUnknown).get());
@@ -1429,6 +1436,25 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
     if (!WebKit::decodeSessionState((NSData *)(interactionState), sessionState))
         return;
     _page->restoreFromSessionState(sessionState, true);
+}
+
+- (BOOL)inspectable
+{
+#if ENABLE(REMOTE_INSPECTOR)
+    // FIXME: <http://webkit.org/b/246237> Local inspection should be controlled by `inspectable` API.
+    return _page->inspectable();
+#else
+    return NO;
+#endif
+}
+
+- (void)setInspectable:(BOOL)inspectable
+{
+    THROW_IF_SUSPENDED;
+#if ENABLE(REMOTE_INSPECTOR)
+    // FIXME: <http://webkit.org/b/246237> Local inspection should be controlled by `inspectable` API.
+    _page->setInspectable(inspectable);
+#endif
 }
 
 #pragma mark - iOS API
@@ -1721,12 +1747,6 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
     return _page.get();
 }
 
-- (id <WKURLSchemeHandler>)urlSchemeHandlerForURLScheme:(NSString *)urlScheme
-{
-    auto* handler = static_cast<WebKit::WebURLSchemeHandlerCocoa*>(_page->urlSchemeHandlerForScheme(urlScheme));
-    return handler ? handler->apiHandler() : nil;
-}
-
 - (std::optional<BOOL>)_resolutionForShareSheetImmediateCompletionForTesting
 {
     return _resolutionForShareSheetImmediateCompletionForTesting;
@@ -1768,10 +1788,10 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
 
 static NSDictionary *dictionaryRepresentationForEditorState(const WebKit::EditorState& state)
 {
-    if (state.isMissingPostLayoutData)
+    if (!state.hasPostLayoutData())
         return @{ @"post-layout-data" : @NO };
 
-    auto& postLayoutData = state.postLayoutData();
+    auto& postLayoutData = *state.postLayoutData;
     return @{
         @"post-layout-data" : @YES,
         @"bold": postLayoutData.typingAttributes & WebKit::AttributeBold ? @YES : @NO,
@@ -2111,6 +2131,11 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(FORWARD_ACTION_TO_WKCONTENTVIEW)
 - (BOOL)_negotiatedLegacyTLS
 {
     return _page->pageLoadState().hasNegotiatedLegacyTLS();
+}
+
+- (BOOL)_wasPrivateRelayed
+{
+    return _page->pageLoadState().wasPrivateRelayed();
 }
 
 - (void)_frames:(void (^)(_WKFrameTreeNode *))completionHandler
@@ -2576,15 +2601,20 @@ static void convertAndAddHighlight(Vector<Ref<WebKit::SharedMemory>>& buffers, N
     return wrapper(_page->loadRequest(request, policy));
 }
 
-- (void)_loadServiceWorker:(NSURL *)url  completionHandler:(void (^)(BOOL success))completionHandler
+- (void)_loadServiceWorker:(NSURL *)url usingModules:(BOOL)usingModules completionHandler:(void (^)(BOOL success))completionHandler
 {
     THROW_IF_SUSPENDED;
     if (_page->isServiceWorkerPage())
         [NSException raise:NSInternalInconsistencyException format:@"The WKWebView was already used to load a service worker"];
 
-    _page->loadServiceWorker(url, [completionHandler = makeBlockPtr(completionHandler)](bool success) mutable {
+    _page->loadServiceWorker(url, usingModules, [completionHandler = makeBlockPtr(completionHandler)](bool success) mutable {
         completionHandler(success);
     });
+}
+
+- (void)_loadServiceWorker:(NSURL *)url completionHandler:(void (^)(BOOL success))completionHandler
+{
+    [self _loadServiceWorker:url usingModules:NO completionHandler:completionHandler];
 }
 
 - (void)_grantAccessToAssetServices
@@ -2656,7 +2686,7 @@ static void convertAndAddHighlight(Vector<Ref<WebKit::SharedMemory>>& buffers, N
 - (NSArray *)_certificateChain
 {
     if (WebKit::WebFrameProxy* mainFrame = _page->mainFrame())
-        return mainFrame->certificateInfo() ? (__bridge NSArray *)mainFrame->certificateInfo()->certificateInfo().certificateChain() : nil;
+        return (__bridge NSArray *)WebCore::CertificateInfo::certificateChainFromSecTrust(mainFrame->certificateInfo().trust()).autorelease();
 
     return nil;
 }
@@ -3048,19 +3078,12 @@ static void convertAndAddHighlight(Vector<Ref<WebKit::SharedMemory>>& buffers, N
 
 - (BOOL)_allowsRemoteInspection
 {
-#if ENABLE(REMOTE_INSPECTOR)
-    return _page->allowsRemoteInspection();
-#else
-    return NO;
-#endif
+    return self.inspectable;
 }
 
 - (void)_setAllowsRemoteInspection:(BOOL)allow
 {
-    THROW_IF_SUSPENDED;
-#if ENABLE(REMOTE_INSPECTOR)
-    _page->setAllowsRemoteInspection(allow);
-#endif
+    self.inspectable = allow;
 }
 
 - (NSString *)_remoteInspectionNameOverride
@@ -3956,11 +3979,7 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
 
 - (NSArray *)certificateChain
 {
-    auto certificateInfo = _page->pageLoadState().certificateInfo();
-    if (!certificateInfo)
-        return @[ ];
-
-    return (__bridge NSArray *)certificateInfo->certificateInfo().certificateChain() ?: @[ ];
+    return (__bridge NSArray *)WebCore::CertificateInfo::certificateChainFromSecTrust(_page->pageLoadState().certificateInfo().trust()).autorelease() ?: @[ ];
 }
 
 @end

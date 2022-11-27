@@ -43,52 +43,49 @@ StreamConnectionBuffer::StreamConnectionBuffer(size_t memorySize)
     : m_dataSize(memorySize - headerSize())
     , m_sharedMemory(createMemory(memorySize))
 {
-    ASSERT(m_dataSize > 0);
-    ASSERT(m_dataSize <= maximumSize());
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(sharedMemorySizeIsValid(m_sharedMemory->size()));
 }
 
 StreamConnectionBuffer::StreamConnectionBuffer(Ref<WebKit::SharedMemory>&& memory)
     : m_dataSize(memory->size() - headerSize())
     , m_sharedMemory(WTFMove(memory))
 {
-    ASSERT(m_dataSize > 0);
-    ASSERT(m_dataSize <= maximumSize());
+    ASSERT(sharedMemorySizeIsValid(m_sharedMemory->size()));
 }
 
-StreamConnectionBuffer::StreamConnectionBuffer(StreamConnectionBuffer&& other) = default;
+StreamConnectionBuffer::StreamConnectionBuffer(StreamConnectionBuffer&&) = default;
 
 StreamConnectionBuffer::~StreamConnectionBuffer() = default;
 
-StreamConnectionBuffer& StreamConnectionBuffer::operator=(StreamConnectionBuffer&& other)
+std::optional<StreamConnectionBuffer> StreamConnectionBuffer::map(Handle&& handle)
 {
-    if (this != &other) {
-        m_dataSize = other.m_dataSize;
-        m_sharedMemory = WTFMove(other.m_sharedMemory);
-    }
-    return *this;
+    auto sharedMemory = WebKit::SharedMemory::map(handle.memory, WebKit::SharedMemory::Protection::ReadWrite);
+    if (UNLIKELY(!sharedMemory))
+        return std::nullopt;
+    return StreamConnectionBuffer { sharedMemory.releaseNonNull() };
 }
 
-void StreamConnectionBuffer::encode(Encoder& encoder) const
+StreamConnectionBuffer::Handle StreamConnectionBuffer::createHandle()
 {
-    WebKit::SharedMemory::Handle handle;
-    if (!m_sharedMemory->createHandle(handle, WebKit::SharedMemory::Protection::ReadWrite))
+    auto handle = m_sharedMemory->createHandle(WebKit::SharedMemory::Protection::ReadWrite);
+    if (!handle)
         CRASH();
-    encoder << handle;
+    return { WTFMove(*handle) };
 }
 
-std::optional<StreamConnectionBuffer> StreamConnectionBuffer::decode(Decoder& decoder)
+void StreamConnectionBuffer::Handle::encode(Encoder& encoder) const
+{
+    encoder << memory;
+}
+
+std::optional<StreamConnectionBuffer::Handle> StreamConnectionBuffer::Handle::decode(Decoder& decoder)
 {
     auto handle = decoder.decode<WebKit::SharedMemory::Handle>();
     if (UNLIKELY(!decoder.isValid()))
         return std::nullopt;
-    if (UNLIKELY(handle->size() <= headerSize()))
+    if (UNLIKELY(!sharedMemorySizeIsValid(handle->size())))
         return std::nullopt;
-    if (UNLIKELY(handle->size() > headerSize() + maximumSize()))
-        return std::nullopt;
-    auto sharedMemory = WebKit::SharedMemory::map(*handle, WebKit::SharedMemory::Protection::ReadWrite);
-    if (UNLIKELY(!sharedMemory))
-        return std::nullopt;
-    return StreamConnectionBuffer { sharedMemory.releaseNonNull() };
+    return Handle { WTFMove(*handle) };
 }
 
 Span<uint8_t> StreamConnectionBuffer::headerForTesting()

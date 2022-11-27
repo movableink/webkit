@@ -11,10 +11,10 @@
 #include "libGLESv2/entry_points_gles_1_0_autogen.h"
 
 #include "common/entry_points_enum_autogen.h"
+#include "common/gl_enum_utils.h"
 #include "libANGLE/Context.h"
 #include "libANGLE/Context.inl.h"
 #include "libANGLE/capture/capture_gles_1_0_autogen.h"
-#include "libANGLE/capture/gl_enum_utils.h"
 #include "libANGLE/entry_points_utils.h"
 #include "libANGLE/validationES1.h"
 #include "libGLESv2/global_state.h"
@@ -26,7 +26,7 @@ void GL_APIENTRY GL_AlphaFunc(GLenum func, GLfloat ref)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLAlphaFunc, "context = %d, func = %s, ref = %f", CID(context),
-          GLenumToString(GLenumGroup::AlphaFunction, func), ref);
+          GLenumToString(GLESEnum::AlphaFunction, func), ref);
 
     if (context)
     {
@@ -34,7 +34,8 @@ void GL_APIENTRY GL_AlphaFunc(GLenum func, GLfloat ref)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateAlphaFunc(context, angle::EntryPoint::GLAlphaFunc, funcPacked, ref));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLAlphaFunc) &&
+              ValidateAlphaFunc(context, angle::EntryPoint::GLAlphaFunc, funcPacked, ref)));
         if (isCallValid)
         {
             context->alphaFunc(funcPacked, ref);
@@ -51,7 +52,7 @@ void GL_APIENTRY GL_AlphaFuncx(GLenum func, GLfixed ref)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLAlphaFuncx, "context = %d, func = %s, ref = 0x%X", CID(context),
-          GLenumToString(GLenumGroup::AlphaFunction, func), ref);
+          GLenumToString(GLESEnum::AlphaFunction, func), ref);
 
     if (context)
     {
@@ -59,7 +60,8 @@ void GL_APIENTRY GL_AlphaFuncx(GLenum func, GLfixed ref)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateAlphaFuncx(context, angle::EntryPoint::GLAlphaFuncx, funcPacked, ref));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLAlphaFuncx) &&
+              ValidateAlphaFuncx(context, angle::EntryPoint::GLAlphaFuncx, funcPacked, ref)));
         if (isCallValid)
         {
             context->alphaFuncx(funcPacked, ref);
@@ -82,9 +84,11 @@ void GL_APIENTRY GL_ClearColorx(GLfixed red, GLfixed green, GLfixed blue, GLfixe
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateClearColorx(context, angle::EntryPoint::GLClearColorx, red,
-                                                green, blue, alpha));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLClearColorx) &&
+              ValidateClearColorx(context, angle::EntryPoint::GLClearColorx, red, green, blue,
+                                  alpha)));
         if (isCallValid)
         {
             context->clearColorx(red, green, blue, alpha);
@@ -105,8 +109,10 @@ void GL_APIENTRY GL_ClearDepthx(GLfixed depth)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateClearDepthx(context, angle::EntryPoint::GLClearDepthx, depth));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLClearDepthx) &&
+              ValidateClearDepthx(context, angle::EntryPoint::GLClearDepthx, depth)));
         if (isCallValid)
         {
             context->clearDepthx(depth);
@@ -123,14 +129,16 @@ void GL_APIENTRY GL_ClientActiveTexture(GLenum texture)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClientActiveTexture, "context = %d, texture = %s", CID(context),
-          GLenumToString(GLenumGroup::TextureUnit, texture));
+          GLenumToString(GLESEnum::TextureUnit, texture));
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid = (context->skipValidation() ||
-                            ValidateClientActiveTexture(
-                                context, angle::EntryPoint::GLClientActiveTexture, texture));
+                            (ValidatePixelLocalStorageInactive(
+                                 context, angle::EntryPoint::GLClientActiveTexture) &&
+                             ValidateClientActiveTexture(
+                                 context, angle::EntryPoint::GLClientActiveTexture, texture)));
         if (isCallValid)
         {
             context->clientActiveTexture(texture);
@@ -147,13 +155,15 @@ void GL_APIENTRY GL_ClipPlanef(GLenum p, const GLfloat *eqn)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClipPlanef, "context = %d, p = %s, eqn = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::ClipPlaneName, p), (uintptr_t)eqn);
+          GLenumToString(GLESEnum::ClipPlaneName, p), (uintptr_t)eqn);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateClipPlanef(context, angle::EntryPoint::GLClipPlanef, p, eqn));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLClipPlanef) &&
+              ValidateClipPlanef(context, angle::EntryPoint::GLClipPlanef, p, eqn)));
         if (isCallValid)
         {
             context->clipPlanef(p, eqn);
@@ -170,14 +180,15 @@ void GL_APIENTRY GL_ClipPlanex(GLenum plane, const GLfixed *equation)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLClipPlanex, "context = %d, plane = %s, equation = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::ClipPlaneName, plane), (uintptr_t)equation);
+          CID(context), GLenumToString(GLESEnum::ClipPlaneName, plane), (uintptr_t)equation);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateClipPlanex(context, angle::EntryPoint::GLClipPlanex, plane, equation));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLClipPlanex) &&
+              ValidateClipPlanex(context, angle::EntryPoint::GLClipPlanex, plane, equation)));
         if (isCallValid)
         {
             context->clipPlanex(plane, equation);
@@ -201,7 +212,8 @@ void GL_APIENTRY GL_Color4f(GLfloat red, GLfloat green, GLfloat blue, GLfloat al
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateColor4f(context, angle::EntryPoint::GLColor4f, red, green, blue, alpha));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLColor4f) &&
+              ValidateColor4f(context, angle::EntryPoint::GLColor4f, red, green, blue, alpha)));
         if (isCallValid)
         {
             context->color4f(red, green, blue, alpha);
@@ -225,7 +237,8 @@ void GL_APIENTRY GL_Color4ub(GLubyte red, GLubyte green, GLubyte blue, GLubyte a
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateColor4ub(context, angle::EntryPoint::GLColor4ub, red, green, blue, alpha));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLColor4ub) &&
+              ValidateColor4ub(context, angle::EntryPoint::GLColor4ub, red, green, blue, alpha)));
         if (isCallValid)
         {
             context->color4ub(red, green, blue, alpha);
@@ -249,7 +262,8 @@ void GL_APIENTRY GL_Color4x(GLfixed red, GLfixed green, GLfixed blue, GLfixed al
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateColor4x(context, angle::EntryPoint::GLColor4x, red, green, blue, alpha));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLColor4x) &&
+              ValidateColor4x(context, angle::EntryPoint::GLColor4x, red, green, blue, alpha)));
         if (isCallValid)
         {
             context->color4x(red, green, blue, alpha);
@@ -267,16 +281,18 @@ void GL_APIENTRY GL_ColorPointer(GLint size, GLenum type, GLsizei stride, const 
     Context *context = GetValidGlobalContext();
     EVENT(context, GLColorPointer,
           "context = %d, size = %d, type = %s, stride = %d, pointer = 0x%016" PRIxPTR "",
-          CID(context), size, GLenumToString(GLenumGroup::ColorPointerType, type), stride,
+          CID(context), size, GLenumToString(GLESEnum::ColorPointerType, type), stride,
           (uintptr_t)pointer);
 
     if (context)
     {
         VertexAttribType typePacked = PackParam<VertexAttribType>(type);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateColorPointer(context, angle::EntryPoint::GLColorPointer, size,
-                                                 typePacked, stride, pointer));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLColorPointer) &&
+              ValidateColorPointer(context, angle::EntryPoint::GLColorPointer, size, typePacked,
+                                   stride, pointer)));
         if (isCallValid)
         {
             context->colorPointer(size, typePacked, stride, pointer);
@@ -297,8 +313,10 @@ void GL_APIENTRY GL_DepthRangex(GLfixed n, GLfixed f)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateDepthRangex(context, angle::EntryPoint::GLDepthRangex, n, f));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLDepthRangex) &&
+              ValidateDepthRangex(context, angle::EntryPoint::GLDepthRangex, n, f)));
         if (isCallValid)
         {
             context->depthRangex(n, f);
@@ -315,15 +333,17 @@ void GL_APIENTRY GL_DisableClientState(GLenum array)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLDisableClientState, "context = %d, array = %s", CID(context),
-          GLenumToString(GLenumGroup::EnableCap, array));
+          GLenumToString(GLESEnum::EnableCap, array));
 
     if (context)
     {
         ClientVertexArrayType arrayPacked = PackParam<ClientVertexArrayType>(array);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateDisableClientState(
-                                context, angle::EntryPoint::GLDisableClientState, arrayPacked));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLDisableClientState) &&
+              ValidateDisableClientState(context, angle::EntryPoint::GLDisableClientState,
+                                         arrayPacked)));
         if (isCallValid)
         {
             context->disableClientState(arrayPacked);
@@ -340,7 +360,7 @@ void GL_APIENTRY GL_EnableClientState(GLenum array)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLEnableClientState, "context = %d, array = %s", CID(context),
-          GLenumToString(GLenumGroup::EnableCap, array));
+          GLenumToString(GLESEnum::EnableCap, array));
 
     if (context)
     {
@@ -365,13 +385,15 @@ void GL_APIENTRY GL_Fogf(GLenum pname, GLfloat param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFogf, "context = %d, pname = %s, param = %f", CID(context),
-          GLenumToString(GLenumGroup::FogParameter, pname), param);
+          GLenumToString(GLESEnum::FogParameter, pname), param);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateFogf(context, angle::EntryPoint::GLFogf, pname, param));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLFogf) &&
+              ValidateFogf(context, angle::EntryPoint::GLFogf, pname, param)));
         if (isCallValid)
         {
             context->fogf(pname, param);
@@ -388,13 +410,15 @@ void GL_APIENTRY GL_Fogfv(GLenum pname, const GLfloat *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFogfv, "context = %d, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::FogParameter, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::FogParameter, pname), (uintptr_t)params);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateFogfv(context, angle::EntryPoint::GLFogfv, pname, params));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLFogfv) &&
+              ValidateFogfv(context, angle::EntryPoint::GLFogfv, pname, params)));
         if (isCallValid)
         {
             context->fogfv(pname, params);
@@ -411,13 +435,15 @@ void GL_APIENTRY GL_Fogx(GLenum pname, GLfixed param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFogx, "context = %d, pname = %s, param = 0x%X", CID(context),
-          GLenumToString(GLenumGroup::FogPName, pname), param);
+          GLenumToString(GLESEnum::FogPName, pname), param);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateFogx(context, angle::EntryPoint::GLFogx, pname, param));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLFogx) &&
+              ValidateFogx(context, angle::EntryPoint::GLFogx, pname, param)));
         if (isCallValid)
         {
             context->fogx(pname, param);
@@ -434,13 +460,15 @@ void GL_APIENTRY GL_Fogxv(GLenum pname, const GLfixed *param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLFogxv, "context = %d, pname = %s, param = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::FogPName, pname), (uintptr_t)param);
+          GLenumToString(GLESEnum::FogPName, pname), (uintptr_t)param);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateFogxv(context, angle::EntryPoint::GLFogxv, pname, param));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLFogxv) &&
+              ValidateFogxv(context, angle::EntryPoint::GLFogxv, pname, param)));
         if (isCallValid)
         {
             context->fogxv(pname, param);
@@ -464,7 +492,8 @@ void GL_APIENTRY GL_Frustumf(GLfloat l, GLfloat r, GLfloat b, GLfloat t, GLfloat
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateFrustumf(context, angle::EntryPoint::GLFrustumf, l, r, b, t, n, f));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLFrustumf) &&
+              ValidateFrustumf(context, angle::EntryPoint::GLFrustumf, l, r, b, t, n, f)));
         if (isCallValid)
         {
             context->frustumf(l, r, b, t, n, f);
@@ -489,7 +518,8 @@ void GL_APIENTRY GL_Frustumx(GLfixed l, GLfixed r, GLfixed b, GLfixed t, GLfixed
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateFrustumx(context, angle::EntryPoint::GLFrustumx, l, r, b, t, n, f));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLFrustumx) &&
+              ValidateFrustumx(context, angle::EntryPoint::GLFrustumx, l, r, b, t, n, f)));
         if (isCallValid)
         {
             context->frustumx(l, r, b, t, n, f);
@@ -506,7 +536,7 @@ void GL_APIENTRY GL_GetClipPlanef(GLenum plane, GLfloat *equation)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetClipPlanef, "context = %d, plane = %s, equation = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::ClipPlaneName, plane), (uintptr_t)equation);
+          CID(context), GLenumToString(GLESEnum::ClipPlaneName, plane), (uintptr_t)equation);
 
     if (context)
     {
@@ -530,7 +560,7 @@ void GL_APIENTRY GL_GetClipPlanex(GLenum plane, GLfixed *equation)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetClipPlanex, "context = %d, plane = %s, equation = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::ClipPlaneName, plane), (uintptr_t)equation);
+          CID(context), GLenumToString(GLESEnum::ClipPlaneName, plane), (uintptr_t)equation);
 
     if (context)
     {
@@ -554,7 +584,7 @@ void GL_APIENTRY GL_GetFixedv(GLenum pname, GLfixed *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetFixedv, "context = %d, pname = %s, params = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::GetPName, pname), (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::GetPName, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -578,8 +608,8 @@ void GL_APIENTRY GL_GetLightfv(GLenum light, GLenum pname, GLfloat *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetLightfv, "context = %d, light = %s, pname = %s, params = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::LightName, light),
-          GLenumToString(GLenumGroup::LightParameter, pname), (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::LightName, light),
+          GLenumToString(GLESEnum::LightParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -604,8 +634,8 @@ void GL_APIENTRY GL_GetLightxv(GLenum light, GLenum pname, GLfixed *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetLightxv, "context = %d, light = %s, pname = %s, params = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::LightName, light),
-          GLenumToString(GLenumGroup::LightParameter, pname), (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::LightName, light),
+          GLenumToString(GLESEnum::LightParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -631,8 +661,8 @@ void GL_APIENTRY GL_GetMaterialfv(GLenum face, GLenum pname, GLfloat *params)
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetMaterialfv,
           "context = %d, face = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::MaterialFace, face),
-          GLenumToString(GLenumGroup::MaterialParameter, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::TriangleFace, face),
+          GLenumToString(GLESEnum::MaterialParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -658,8 +688,8 @@ void GL_APIENTRY GL_GetMaterialxv(GLenum face, GLenum pname, GLfixed *params)
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetMaterialxv,
           "context = %d, face = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::MaterialFace, face),
-          GLenumToString(GLenumGroup::MaterialParameter, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::TriangleFace, face),
+          GLenumToString(GLESEnum::MaterialParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -685,8 +715,8 @@ void GL_APIENTRY GL_GetTexEnvfv(GLenum target, GLenum pname, GLfloat *params)
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetTexEnvfv,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::TextureEnvTarget, target),
-          GLenumToString(GLenumGroup::TextureEnvParameter, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::TextureEnvTarget, target),
+          GLenumToString(GLESEnum::TextureEnvParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -713,8 +743,8 @@ void GL_APIENTRY GL_GetTexEnviv(GLenum target, GLenum pname, GLint *params)
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetTexEnviv,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::TextureEnvTarget, target),
-          GLenumToString(GLenumGroup::TextureEnvParameter, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::TextureEnvTarget, target),
+          GLenumToString(GLESEnum::TextureEnvParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -741,8 +771,8 @@ void GL_APIENTRY GL_GetTexEnvxv(GLenum target, GLenum pname, GLfixed *params)
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetTexEnvxv,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::TextureEnvTarget, target),
-          GLenumToString(GLenumGroup::TextureEnvParameter, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::TextureEnvTarget, target),
+          GLenumToString(GLESEnum::TextureEnvParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -769,8 +799,8 @@ void GL_APIENTRY GL_GetTexParameterxv(GLenum target, GLenum pname, GLfixed *para
     Context *context = GetValidGlobalContext();
     EVENT(context, GLGetTexParameterxv,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::TextureTarget, target),
-          GLenumToString(GLenumGroup::GetTextureParameter, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::TextureTarget, target),
+          GLenumToString(GLESEnum::GetTextureParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -796,14 +826,15 @@ void GL_APIENTRY GL_LightModelf(GLenum pname, GLfloat param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightModelf, "context = %d, pname = %s, param = %f", CID(context),
-          GLenumToString(GLenumGroup::LightModelParameter, pname), param);
+          GLenumToString(GLESEnum::LightModelParameter, pname), param);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateLightModelf(context, angle::EntryPoint::GLLightModelf, pname, param));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLightModelf) &&
+              ValidateLightModelf(context, angle::EntryPoint::GLLightModelf, pname, param)));
         if (isCallValid)
         {
             context->lightModelf(pname, param);
@@ -820,14 +851,15 @@ void GL_APIENTRY GL_LightModelfv(GLenum pname, const GLfloat *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightModelfv, "context = %d, pname = %s, params = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::LightModelParameter, pname), (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::LightModelParameter, pname), (uintptr_t)params);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateLightModelfv(context, angle::EntryPoint::GLLightModelfv, pname, params));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLightModelfv) &&
+              ValidateLightModelfv(context, angle::EntryPoint::GLLightModelfv, pname, params)));
         if (isCallValid)
         {
             context->lightModelfv(pname, params);
@@ -844,14 +876,15 @@ void GL_APIENTRY GL_LightModelx(GLenum pname, GLfixed param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightModelx, "context = %d, pname = %s, param = 0x%X", CID(context),
-          GLenumToString(GLenumGroup::LightModelParameter, pname), param);
+          GLenumToString(GLESEnum::LightModelParameter, pname), param);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateLightModelx(context, angle::EntryPoint::GLLightModelx, pname, param));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLightModelx) &&
+              ValidateLightModelx(context, angle::EntryPoint::GLLightModelx, pname, param)));
         if (isCallValid)
         {
             context->lightModelx(pname, param);
@@ -868,14 +901,15 @@ void GL_APIENTRY GL_LightModelxv(GLenum pname, const GLfixed *param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightModelxv, "context = %d, pname = %s, param = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::LightModelParameter, pname), (uintptr_t)param);
+          CID(context), GLenumToString(GLESEnum::LightModelParameter, pname), (uintptr_t)param);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateLightModelxv(context, angle::EntryPoint::GLLightModelxv, pname, param));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLightModelxv) &&
+              ValidateLightModelxv(context, angle::EntryPoint::GLLightModelxv, pname, param)));
         if (isCallValid)
         {
             context->lightModelxv(pname, param);
@@ -892,8 +926,8 @@ void GL_APIENTRY GL_Lightf(GLenum light, GLenum pname, GLfloat param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightf, "context = %d, light = %s, pname = %s, param = %f", CID(context),
-          GLenumToString(GLenumGroup::LightName, light),
-          GLenumToString(GLenumGroup::LightParameter, pname), param);
+          GLenumToString(GLESEnum::LightName, light),
+          GLenumToString(GLESEnum::LightParameter, pname), param);
 
     if (context)
     {
@@ -901,7 +935,8 @@ void GL_APIENTRY GL_Lightf(GLenum light, GLenum pname, GLfloat param)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateLightf(context, angle::EntryPoint::GLLightf, light, pnamePacked, param));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLightf) &&
+              ValidateLightf(context, angle::EntryPoint::GLLightf, light, pnamePacked, param)));
         if (isCallValid)
         {
             context->lightf(light, pnamePacked, param);
@@ -918,8 +953,8 @@ void GL_APIENTRY GL_Lightfv(GLenum light, GLenum pname, const GLfloat *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightfv, "context = %d, light = %s, pname = %s, params = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::LightName, light),
-          GLenumToString(GLenumGroup::LightParameter, pname), (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::LightName, light),
+          GLenumToString(GLESEnum::LightParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -927,7 +962,8 @@ void GL_APIENTRY GL_Lightfv(GLenum light, GLenum pname, const GLfloat *params)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateLightfv(context, angle::EntryPoint::GLLightfv, light, pnamePacked, params));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLightfv) &&
+              ValidateLightfv(context, angle::EntryPoint::GLLightfv, light, pnamePacked, params)));
         if (isCallValid)
         {
             context->lightfv(light, pnamePacked, params);
@@ -944,8 +980,8 @@ void GL_APIENTRY GL_Lightx(GLenum light, GLenum pname, GLfixed param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightx, "context = %d, light = %s, pname = %s, param = 0x%X", CID(context),
-          GLenumToString(GLenumGroup::LightName, light),
-          GLenumToString(GLenumGroup::LightParameter, pname), param);
+          GLenumToString(GLESEnum::LightName, light),
+          GLenumToString(GLESEnum::LightParameter, pname), param);
 
     if (context)
     {
@@ -953,7 +989,8 @@ void GL_APIENTRY GL_Lightx(GLenum light, GLenum pname, GLfixed param)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateLightx(context, angle::EntryPoint::GLLightx, light, pnamePacked, param));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLightx) &&
+              ValidateLightx(context, angle::EntryPoint::GLLightx, light, pnamePacked, param)));
         if (isCallValid)
         {
             context->lightx(light, pnamePacked, param);
@@ -970,8 +1007,8 @@ void GL_APIENTRY GL_Lightxv(GLenum light, GLenum pname, const GLfixed *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLightxv, "context = %d, light = %s, pname = %s, params = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::LightName, light),
-          GLenumToString(GLenumGroup::LightParameter, pname), (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::LightName, light),
+          GLenumToString(GLESEnum::LightParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -979,7 +1016,8 @@ void GL_APIENTRY GL_Lightxv(GLenum light, GLenum pname, const GLfixed *params)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateLightxv(context, angle::EntryPoint::GLLightxv, light, pnamePacked, params));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLightxv) &&
+              ValidateLightxv(context, angle::EntryPoint::GLLightxv, light, pnamePacked, params)));
         if (isCallValid)
         {
             context->lightxv(light, pnamePacked, params);
@@ -1000,8 +1038,10 @@ void GL_APIENTRY GL_LineWidthx(GLfixed width)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLineWidthx(context, angle::EntryPoint::GLLineWidthx, width));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLineWidthx) &&
+              ValidateLineWidthx(context, angle::EntryPoint::GLLineWidthx, width)));
         if (isCallValid)
         {
             context->lineWidthx(width);
@@ -1022,8 +1062,10 @@ void GL_APIENTRY GL_LoadIdentity()
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLoadIdentity(context, angle::EntryPoint::GLLoadIdentity));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLoadIdentity) &&
+              ValidateLoadIdentity(context, angle::EntryPoint::GLLoadIdentity)));
         if (isCallValid)
         {
             context->loadIdentity();
@@ -1045,8 +1087,10 @@ void GL_APIENTRY GL_LoadMatrixf(const GLfloat *m)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLoadMatrixf(context, angle::EntryPoint::GLLoadMatrixf, m));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLoadMatrixf) &&
+              ValidateLoadMatrixf(context, angle::EntryPoint::GLLoadMatrixf, m)));
         if (isCallValid)
         {
             context->loadMatrixf(m);
@@ -1068,8 +1112,10 @@ void GL_APIENTRY GL_LoadMatrixx(const GLfixed *m)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLoadMatrixx(context, angle::EntryPoint::GLLoadMatrixx, m));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLoadMatrixx) &&
+              ValidateLoadMatrixx(context, angle::EntryPoint::GLLoadMatrixx, m)));
         if (isCallValid)
         {
             context->loadMatrixx(m);
@@ -1086,14 +1132,16 @@ void GL_APIENTRY GL_LogicOp(GLenum opcode)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLLogicOp, "context = %d, opcode = %s", CID(context),
-          GLenumToString(GLenumGroup::LogicOp, opcode));
+          GLenumToString(GLESEnum::LogicOp, opcode));
 
     if (context)
     {
         LogicalOperation opcodePacked = PackParam<LogicalOperation>(opcode);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateLogicOp(context, angle::EntryPoint::GLLogicOp, opcodePacked));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLLogicOp) &&
+              ValidateLogicOp(context, angle::EntryPoint::GLLogicOp, opcodePacked)));
         if (isCallValid)
         {
             context->logicOp(opcodePacked);
@@ -1110,8 +1158,8 @@ void GL_APIENTRY GL_Materialf(GLenum face, GLenum pname, GLfloat param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMaterialf, "context = %d, face = %s, pname = %s, param = %f", CID(context),
-          GLenumToString(GLenumGroup::MaterialFace, face),
-          GLenumToString(GLenumGroup::MaterialParameter, pname), param);
+          GLenumToString(GLESEnum::TriangleFace, face),
+          GLenumToString(GLESEnum::MaterialParameter, pname), param);
 
     if (context)
     {
@@ -1119,7 +1167,9 @@ void GL_APIENTRY GL_Materialf(GLenum face, GLenum pname, GLfloat param)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateMaterialf(context, angle::EntryPoint::GLMaterialf, face, pnamePacked, param));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLMaterialf) &&
+              ValidateMaterialf(context, angle::EntryPoint::GLMaterialf, face, pnamePacked,
+                                param)));
         if (isCallValid)
         {
             context->materialf(face, pnamePacked, param);
@@ -1136,16 +1186,18 @@ void GL_APIENTRY GL_Materialfv(GLenum face, GLenum pname, const GLfloat *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMaterialfv, "context = %d, face = %s, pname = %s, params = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::MaterialFace, face),
-          GLenumToString(GLenumGroup::MaterialParameter, pname), (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::TriangleFace, face),
+          GLenumToString(GLESEnum::MaterialParameter, pname), (uintptr_t)params);
 
     if (context)
     {
         MaterialParameter pnamePacked = PackParam<MaterialParameter>(pname);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateMaterialfv(context, angle::EntryPoint::GLMaterialfv, face,
-                                               pnamePacked, params));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLMaterialfv) &&
+              ValidateMaterialfv(context, angle::EntryPoint::GLMaterialfv, face, pnamePacked,
+                                 params)));
         if (isCallValid)
         {
             context->materialfv(face, pnamePacked, params);
@@ -1162,8 +1214,8 @@ void GL_APIENTRY GL_Materialx(GLenum face, GLenum pname, GLfixed param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMaterialx, "context = %d, face = %s, pname = %s, param = 0x%X", CID(context),
-          GLenumToString(GLenumGroup::MaterialFace, face),
-          GLenumToString(GLenumGroup::MaterialParameter, pname), param);
+          GLenumToString(GLESEnum::TriangleFace, face),
+          GLenumToString(GLESEnum::MaterialParameter, pname), param);
 
     if (context)
     {
@@ -1171,7 +1223,9 @@ void GL_APIENTRY GL_Materialx(GLenum face, GLenum pname, GLfixed param)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateMaterialx(context, angle::EntryPoint::GLMaterialx, face, pnamePacked, param));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLMaterialx) &&
+              ValidateMaterialx(context, angle::EntryPoint::GLMaterialx, face, pnamePacked,
+                                param)));
         if (isCallValid)
         {
             context->materialx(face, pnamePacked, param);
@@ -1188,16 +1242,18 @@ void GL_APIENTRY GL_Materialxv(GLenum face, GLenum pname, const GLfixed *param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMaterialxv, "context = %d, face = %s, pname = %s, param = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::MaterialFace, face),
-          GLenumToString(GLenumGroup::MaterialParameter, pname), (uintptr_t)param);
+          CID(context), GLenumToString(GLESEnum::TriangleFace, face),
+          GLenumToString(GLESEnum::MaterialParameter, pname), (uintptr_t)param);
 
     if (context)
     {
         MaterialParameter pnamePacked = PackParam<MaterialParameter>(pname);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateMaterialxv(context, angle::EntryPoint::GLMaterialxv, face,
-                                               pnamePacked, param));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLMaterialxv) &&
+              ValidateMaterialxv(context, angle::EntryPoint::GLMaterialxv, face, pnamePacked,
+                                 param)));
         if (isCallValid)
         {
             context->materialxv(face, pnamePacked, param);
@@ -1214,7 +1270,7 @@ void GL_APIENTRY GL_MatrixMode(GLenum mode)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMatrixMode, "context = %d, mode = %s", CID(context),
-          GLenumToString(GLenumGroup::MatrixMode, mode));
+          GLenumToString(GLESEnum::MatrixMode, mode));
 
     if (context)
     {
@@ -1222,7 +1278,8 @@ void GL_APIENTRY GL_MatrixMode(GLenum mode)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateMatrixMode(context, angle::EntryPoint::GLMatrixMode, modePacked));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLMatrixMode) &&
+              ValidateMatrixMode(context, angle::EntryPoint::GLMatrixMode, modePacked)));
         if (isCallValid)
         {
             context->matrixMode(modePacked);
@@ -1244,8 +1301,10 @@ void GL_APIENTRY GL_MultMatrixf(const GLfloat *m)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateMultMatrixf(context, angle::EntryPoint::GLMultMatrixf, m));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLMultMatrixf) &&
+              ValidateMultMatrixf(context, angle::EntryPoint::GLMultMatrixf, m)));
         if (isCallValid)
         {
             context->multMatrixf(m);
@@ -1267,8 +1326,10 @@ void GL_APIENTRY GL_MultMatrixx(const GLfixed *m)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateMultMatrixx(context, angle::EntryPoint::GLMultMatrixx, m));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLMultMatrixx) &&
+              ValidateMultMatrixx(context, angle::EntryPoint::GLMultMatrixx, m)));
         if (isCallValid)
         {
             context->multMatrixx(m);
@@ -1285,14 +1346,16 @@ void GL_APIENTRY GL_MultiTexCoord4f(GLenum target, GLfloat s, GLfloat t, GLfloat
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMultiTexCoord4f, "context = %d, target = %s, s = %f, t = %f, r = %f, q = %f",
-          CID(context), GLenumToString(GLenumGroup::TextureUnit, target), s, t, r, q);
+          CID(context), GLenumToString(GLESEnum::TextureUnit, target), s, t, r, q);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateMultiTexCoord4f(context, angle::EntryPoint::GLMultiTexCoord4f,
-                                                    target, s, t, r, q));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLMultiTexCoord4f) &&
+              ValidateMultiTexCoord4f(context, angle::EntryPoint::GLMultiTexCoord4f, target, s, t,
+                                      r, q)));
         if (isCallValid)
         {
             context->multiTexCoord4f(target, s, t, r, q);
@@ -1310,14 +1373,16 @@ void GL_APIENTRY GL_MultiTexCoord4x(GLenum texture, GLfixed s, GLfixed t, GLfixe
     Context *context = GetValidGlobalContext();
     EVENT(context, GLMultiTexCoord4x,
           "context = %d, texture = %s, s = 0x%X, t = 0x%X, r = 0x%X, q = 0x%X", CID(context),
-          GLenumToString(GLenumGroup::TextureUnit, texture), s, t, r, q);
+          GLenumToString(GLESEnum::TextureUnit, texture), s, t, r, q);
 
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateMultiTexCoord4x(context, angle::EntryPoint::GLMultiTexCoord4x,
-                                                    texture, s, t, r, q));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLMultiTexCoord4x) &&
+              ValidateMultiTexCoord4x(context, angle::EntryPoint::GLMultiTexCoord4x, texture, s, t,
+                                      r, q)));
         if (isCallValid)
         {
             context->multiTexCoord4x(texture, s, t, r, q);
@@ -1338,8 +1403,10 @@ void GL_APIENTRY GL_Normal3f(GLfloat nx, GLfloat ny, GLfloat nz)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateNormal3f(context, angle::EntryPoint::GLNormal3f, nx, ny, nz));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLNormal3f) &&
+              ValidateNormal3f(context, angle::EntryPoint::GLNormal3f, nx, ny, nz)));
         if (isCallValid)
         {
             context->normal3f(nx, ny, nz);
@@ -1361,8 +1428,10 @@ void GL_APIENTRY GL_Normal3x(GLfixed nx, GLfixed ny, GLfixed nz)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateNormal3x(context, angle::EntryPoint::GLNormal3x, nx, ny, nz));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLNormal3x) &&
+              ValidateNormal3x(context, angle::EntryPoint::GLNormal3x, nx, ny, nz)));
         if (isCallValid)
         {
             context->normal3x(nx, ny, nz);
@@ -1380,15 +1449,17 @@ void GL_APIENTRY GL_NormalPointer(GLenum type, GLsizei stride, const void *point
     Context *context = GetValidGlobalContext();
     EVENT(context, GLNormalPointer,
           "context = %d, type = %s, stride = %d, pointer = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::NormalPointerType, type), stride, (uintptr_t)pointer);
+          GLenumToString(GLESEnum::NormalPointerType, type), stride, (uintptr_t)pointer);
 
     if (context)
     {
         VertexAttribType typePacked = PackParam<VertexAttribType>(type);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateNormalPointer(context, angle::EntryPoint::GLNormalPointer,
-                                                  typePacked, stride, pointer));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLNormalPointer) &&
+              ValidateNormalPointer(context, angle::EntryPoint::GLNormalPointer, typePacked, stride,
+                                    pointer)));
         if (isCallValid)
         {
             context->normalPointer(typePacked, stride, pointer);
@@ -1410,8 +1481,10 @@ void GL_APIENTRY GL_Orthof(GLfloat l, GLfloat r, GLfloat b, GLfloat t, GLfloat n
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateOrthof(context, angle::EntryPoint::GLOrthof, l, r, b, t, n, f));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLOrthof) &&
+              ValidateOrthof(context, angle::EntryPoint::GLOrthof, l, r, b, t, n, f)));
         if (isCallValid)
         {
             context->orthof(l, r, b, t, n, f);
@@ -1434,8 +1507,10 @@ void GL_APIENTRY GL_Orthox(GLfixed l, GLfixed r, GLfixed b, GLfixed t, GLfixed n
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateOrthox(context, angle::EntryPoint::GLOrthox, l, r, b, t, n, f));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLOrthox) &&
+              ValidateOrthox(context, angle::EntryPoint::GLOrthox, l, r, b, t, n, f)));
         if (isCallValid)
         {
             context->orthox(l, r, b, t, n, f);
@@ -1452,15 +1527,17 @@ void GL_APIENTRY GL_PointParameterf(GLenum pname, GLfloat param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPointParameterf, "context = %d, pname = %s, param = %f", CID(context),
-          GLenumToString(GLenumGroup::DefaultGroup, pname), param);
+          GLenumToString(GLESEnum::AllEnums, pname), param);
 
     if (context)
     {
         PointParameter pnamePacked = PackParam<PointParameter>(pname);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidatePointParameterf(context, angle::EntryPoint::GLPointParameterf,
-                                                    pnamePacked, param));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLPointParameterf) &&
+              ValidatePointParameterf(context, angle::EntryPoint::GLPointParameterf, pnamePacked,
+                                      param)));
         if (isCallValid)
         {
             context->pointParameterf(pnamePacked, param);
@@ -1477,15 +1554,17 @@ void GL_APIENTRY GL_PointParameterfv(GLenum pname, const GLfloat *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPointParameterfv, "context = %d, pname = %s, params = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::DefaultGroup, pname), (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::AllEnums, pname), (uintptr_t)params);
 
     if (context)
     {
         PointParameter pnamePacked = PackParam<PointParameter>(pname);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidatePointParameterfv(context, angle::EntryPoint::GLPointParameterfv,
-                                                     pnamePacked, params));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLPointParameterfv) &&
+              ValidatePointParameterfv(context, angle::EntryPoint::GLPointParameterfv, pnamePacked,
+                                       params)));
         if (isCallValid)
         {
             context->pointParameterfv(pnamePacked, params);
@@ -1502,15 +1581,17 @@ void GL_APIENTRY GL_PointParameterx(GLenum pname, GLfixed param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPointParameterx, "context = %d, pname = %s, param = 0x%X", CID(context),
-          GLenumToString(GLenumGroup::DefaultGroup, pname), param);
+          GLenumToString(GLESEnum::AllEnums, pname), param);
 
     if (context)
     {
         PointParameter pnamePacked = PackParam<PointParameter>(pname);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidatePointParameterx(context, angle::EntryPoint::GLPointParameterx,
-                                                    pnamePacked, param));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLPointParameterx) &&
+              ValidatePointParameterx(context, angle::EntryPoint::GLPointParameterx, pnamePacked,
+                                      param)));
         if (isCallValid)
         {
             context->pointParameterx(pnamePacked, param);
@@ -1527,15 +1608,17 @@ void GL_APIENTRY GL_PointParameterxv(GLenum pname, const GLfixed *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLPointParameterxv, "context = %d, pname = %s, params = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::DefaultGroup, pname), (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::AllEnums, pname), (uintptr_t)params);
 
     if (context)
     {
         PointParameter pnamePacked = PackParam<PointParameter>(pname);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidatePointParameterxv(context, angle::EntryPoint::GLPointParameterxv,
-                                                     pnamePacked, params));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLPointParameterxv) &&
+              ValidatePointParameterxv(context, angle::EntryPoint::GLPointParameterxv, pnamePacked,
+                                       params)));
         if (isCallValid)
         {
             context->pointParameterxv(pnamePacked, params);
@@ -1556,8 +1639,10 @@ void GL_APIENTRY GL_PointSize(GLfloat size)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidatePointSize(context, angle::EntryPoint::GLPointSize, size));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLPointSize) &&
+              ValidatePointSize(context, angle::EntryPoint::GLPointSize, size)));
         if (isCallValid)
         {
             context->pointSize(size);
@@ -1578,8 +1663,10 @@ void GL_APIENTRY GL_PointSizex(GLfixed size)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidatePointSizex(context, angle::EntryPoint::GLPointSizex, size));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLPointSizex) &&
+              ValidatePointSizex(context, angle::EntryPoint::GLPointSizex, size)));
         if (isCallValid)
         {
             context->pointSizex(size);
@@ -1603,7 +1690,8 @@ void GL_APIENTRY GL_PolygonOffsetx(GLfixed factor, GLfixed units)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidatePolygonOffsetx(context, angle::EntryPoint::GLPolygonOffsetx, factor, units));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLPolygonOffsetx) &&
+              ValidatePolygonOffsetx(context, angle::EntryPoint::GLPolygonOffsetx, factor, units)));
         if (isCallValid)
         {
             context->polygonOffsetx(factor, units);
@@ -1624,8 +1712,10 @@ void GL_APIENTRY GL_PopMatrix()
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidatePopMatrix(context, angle::EntryPoint::GLPopMatrix));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLPopMatrix) &&
+              ValidatePopMatrix(context, angle::EntryPoint::GLPopMatrix)));
         if (isCallValid)
         {
             context->popMatrix();
@@ -1646,8 +1736,10 @@ void GL_APIENTRY GL_PushMatrix()
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidatePushMatrix(context, angle::EntryPoint::GLPushMatrix));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLPushMatrix) &&
+              ValidatePushMatrix(context, angle::EntryPoint::GLPushMatrix)));
         if (isCallValid)
         {
             context->pushMatrix();
@@ -1669,8 +1761,10 @@ void GL_APIENTRY GL_Rotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateRotatef(context, angle::EntryPoint::GLRotatef, angle, x, y, z));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLRotatef) &&
+              ValidateRotatef(context, angle::EntryPoint::GLRotatef, angle, x, y, z)));
         if (isCallValid)
         {
             context->rotatef(angle, x, y, z);
@@ -1692,8 +1786,10 @@ void GL_APIENTRY GL_Rotatex(GLfixed angle, GLfixed x, GLfixed y, GLfixed z)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateRotatex(context, angle::EntryPoint::GLRotatex, angle, x, y, z));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLRotatex) &&
+              ValidateRotatex(context, angle::EntryPoint::GLRotatex, angle, x, y, z)));
         if (isCallValid)
         {
             context->rotatex(angle, x, y, z);
@@ -1717,7 +1813,9 @@ void GL_APIENTRY GL_SampleCoveragex(GLclampx value, GLboolean invert)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateSampleCoveragex(context, angle::EntryPoint::GLSampleCoveragex, value, invert));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLSampleCoveragex) &&
+              ValidateSampleCoveragex(context, angle::EntryPoint::GLSampleCoveragex, value,
+                                      invert)));
         if (isCallValid)
         {
             context->sampleCoveragex(value, invert);
@@ -1738,8 +1836,10 @@ void GL_APIENTRY GL_Scalef(GLfloat x, GLfloat y, GLfloat z)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateScalef(context, angle::EntryPoint::GLScalef, x, y, z));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLScalef) &&
+              ValidateScalef(context, angle::EntryPoint::GLScalef, x, y, z)));
         if (isCallValid)
         {
             context->scalef(x, y, z);
@@ -1760,8 +1860,10 @@ void GL_APIENTRY GL_Scalex(GLfixed x, GLfixed y, GLfixed z)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateScalex(context, angle::EntryPoint::GLScalex, x, y, z));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLScalex) &&
+              ValidateScalex(context, angle::EntryPoint::GLScalex, x, y, z)));
         if (isCallValid)
         {
             context->scalex(x, y, z);
@@ -1778,7 +1880,7 @@ void GL_APIENTRY GL_ShadeModel(GLenum mode)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLShadeModel, "context = %d, mode = %s", CID(context),
-          GLenumToString(GLenumGroup::ShadingModel, mode));
+          GLenumToString(GLESEnum::ShadingModel, mode));
 
     if (context)
     {
@@ -1786,7 +1888,8 @@ void GL_APIENTRY GL_ShadeModel(GLenum mode)
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
             (context->skipValidation() ||
-             ValidateShadeModel(context, angle::EntryPoint::GLShadeModel, modePacked));
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLShadeModel) &&
+              ValidateShadeModel(context, angle::EntryPoint::GLShadeModel, modePacked)));
         if (isCallValid)
         {
             context->shadeModel(modePacked);
@@ -1804,16 +1907,18 @@ void GL_APIENTRY GL_TexCoordPointer(GLint size, GLenum type, GLsizei stride, con
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexCoordPointer,
           "context = %d, size = %d, type = %s, stride = %d, pointer = 0x%016" PRIxPTR "",
-          CID(context), size, GLenumToString(GLenumGroup::TexCoordPointerType, type), stride,
+          CID(context), size, GLenumToString(GLESEnum::TexCoordPointerType, type), stride,
           (uintptr_t)pointer);
 
     if (context)
     {
         VertexAttribType typePacked = PackParam<VertexAttribType>(type);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateTexCoordPointer(context, angle::EntryPoint::GLTexCoordPointer,
-                                                    size, typePacked, stride, pointer));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTexCoordPointer) &&
+              ValidateTexCoordPointer(context, angle::EntryPoint::GLTexCoordPointer, size,
+                                      typePacked, stride, pointer)));
         if (isCallValid)
         {
             context->texCoordPointer(size, typePacked, stride, pointer);
@@ -1830,8 +1935,8 @@ void GL_APIENTRY GL_TexEnvf(GLenum target, GLenum pname, GLfloat param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexEnvf, "context = %d, target = %s, pname = %s, param = %f", CID(context),
-          GLenumToString(GLenumGroup::TextureEnvTarget, target),
-          GLenumToString(GLenumGroup::TextureEnvParameter, pname), param);
+          GLenumToString(GLESEnum::TextureEnvTarget, target),
+          GLenumToString(GLESEnum::TextureEnvParameter, pname), param);
 
     if (context)
     {
@@ -1839,8 +1944,10 @@ void GL_APIENTRY GL_TexEnvf(GLenum target, GLenum pname, GLfloat param)
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
-            (context->skipValidation() || ValidateTexEnvf(context, angle::EntryPoint::GLTexEnvf,
-                                                          targetPacked, pnamePacked, param));
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTexEnvf) &&
+              ValidateTexEnvf(context, angle::EntryPoint::GLTexEnvf, targetPacked, pnamePacked,
+                              param)));
         if (isCallValid)
         {
             context->texEnvf(targetPacked, pnamePacked, param);
@@ -1857,8 +1964,8 @@ void GL_APIENTRY GL_TexEnvfv(GLenum target, GLenum pname, const GLfloat *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexEnvfv, "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::TextureEnvTarget, target),
-          GLenumToString(GLenumGroup::TextureEnvParameter, pname), (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::TextureEnvTarget, target),
+          GLenumToString(GLESEnum::TextureEnvParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1866,8 +1973,10 @@ void GL_APIENTRY GL_TexEnvfv(GLenum target, GLenum pname, const GLfloat *params)
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
-            (context->skipValidation() || ValidateTexEnvfv(context, angle::EntryPoint::GLTexEnvfv,
-                                                           targetPacked, pnamePacked, params));
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTexEnvfv) &&
+              ValidateTexEnvfv(context, angle::EntryPoint::GLTexEnvfv, targetPacked, pnamePacked,
+                               params)));
         if (isCallValid)
         {
             context->texEnvfv(targetPacked, pnamePacked, params);
@@ -1884,8 +1993,8 @@ void GL_APIENTRY GL_TexEnvi(GLenum target, GLenum pname, GLint param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexEnvi, "context = %d, target = %s, pname = %s, param = %d", CID(context),
-          GLenumToString(GLenumGroup::TextureEnvTarget, target),
-          GLenumToString(GLenumGroup::TextureEnvParameter, pname), param);
+          GLenumToString(GLESEnum::TextureEnvTarget, target),
+          GLenumToString(GLESEnum::TextureEnvParameter, pname), param);
 
     if (context)
     {
@@ -1893,8 +2002,10 @@ void GL_APIENTRY GL_TexEnvi(GLenum target, GLenum pname, GLint param)
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
-            (context->skipValidation() || ValidateTexEnvi(context, angle::EntryPoint::GLTexEnvi,
-                                                          targetPacked, pnamePacked, param));
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTexEnvi) &&
+              ValidateTexEnvi(context, angle::EntryPoint::GLTexEnvi, targetPacked, pnamePacked,
+                              param)));
         if (isCallValid)
         {
             context->texEnvi(targetPacked, pnamePacked, param);
@@ -1911,8 +2022,8 @@ void GL_APIENTRY GL_TexEnviv(GLenum target, GLenum pname, const GLint *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexEnviv, "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::TextureEnvTarget, target),
-          GLenumToString(GLenumGroup::TextureEnvParameter, pname), (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::TextureEnvTarget, target),
+          GLenumToString(GLESEnum::TextureEnvParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1920,8 +2031,10 @@ void GL_APIENTRY GL_TexEnviv(GLenum target, GLenum pname, const GLint *params)
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
-            (context->skipValidation() || ValidateTexEnviv(context, angle::EntryPoint::GLTexEnviv,
-                                                           targetPacked, pnamePacked, params));
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTexEnviv) &&
+              ValidateTexEnviv(context, angle::EntryPoint::GLTexEnviv, targetPacked, pnamePacked,
+                               params)));
         if (isCallValid)
         {
             context->texEnviv(targetPacked, pnamePacked, params);
@@ -1938,8 +2051,8 @@ void GL_APIENTRY GL_TexEnvx(GLenum target, GLenum pname, GLfixed param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexEnvx, "context = %d, target = %s, pname = %s, param = 0x%X", CID(context),
-          GLenumToString(GLenumGroup::TextureEnvTarget, target),
-          GLenumToString(GLenumGroup::TextureEnvParameter, pname), param);
+          GLenumToString(GLESEnum::TextureEnvTarget, target),
+          GLenumToString(GLESEnum::TextureEnvParameter, pname), param);
 
     if (context)
     {
@@ -1947,8 +2060,10 @@ void GL_APIENTRY GL_TexEnvx(GLenum target, GLenum pname, GLfixed param)
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
-            (context->skipValidation() || ValidateTexEnvx(context, angle::EntryPoint::GLTexEnvx,
-                                                          targetPacked, pnamePacked, param));
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTexEnvx) &&
+              ValidateTexEnvx(context, angle::EntryPoint::GLTexEnvx, targetPacked, pnamePacked,
+                              param)));
         if (isCallValid)
         {
             context->texEnvx(targetPacked, pnamePacked, param);
@@ -1965,8 +2080,8 @@ void GL_APIENTRY GL_TexEnvxv(GLenum target, GLenum pname, const GLfixed *params)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexEnvxv, "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "",
-          CID(context), GLenumToString(GLenumGroup::TextureEnvTarget, target),
-          GLenumToString(GLenumGroup::TextureEnvParameter, pname), (uintptr_t)params);
+          CID(context), GLenumToString(GLESEnum::TextureEnvTarget, target),
+          GLenumToString(GLESEnum::TextureEnvParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -1974,8 +2089,10 @@ void GL_APIENTRY GL_TexEnvxv(GLenum target, GLenum pname, const GLfixed *params)
         TextureEnvParameter pnamePacked = PackParam<TextureEnvParameter>(pname);
         SCOPED_SHARE_CONTEXT_LOCK(context);
         bool isCallValid =
-            (context->skipValidation() || ValidateTexEnvxv(context, angle::EntryPoint::GLTexEnvxv,
-                                                           targetPacked, pnamePacked, params));
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTexEnvxv) &&
+              ValidateTexEnvxv(context, angle::EntryPoint::GLTexEnvxv, targetPacked, pnamePacked,
+                               params)));
         if (isCallValid)
         {
             context->texEnvxv(targetPacked, pnamePacked, params);
@@ -1992,8 +2109,8 @@ void GL_APIENTRY GL_TexParameterx(GLenum target, GLenum pname, GLfixed param)
 {
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexParameterx, "context = %d, target = %s, pname = %s, param = 0x%X",
-          CID(context), GLenumToString(GLenumGroup::TextureTarget, target),
-          GLenumToString(GLenumGroup::GetTextureParameter, pname), param);
+          CID(context), GLenumToString(GLESEnum::TextureTarget, target),
+          GLenumToString(GLESEnum::GetTextureParameter, pname), param);
 
     if (context)
     {
@@ -2019,8 +2136,8 @@ void GL_APIENTRY GL_TexParameterxv(GLenum target, GLenum pname, const GLfixed *p
     Context *context = GetValidGlobalContext();
     EVENT(context, GLTexParameterxv,
           "context = %d, target = %s, pname = %s, params = 0x%016" PRIxPTR "", CID(context),
-          GLenumToString(GLenumGroup::TextureTarget, target),
-          GLenumToString(GLenumGroup::GetTextureParameter, pname), (uintptr_t)params);
+          GLenumToString(GLESEnum::TextureTarget, target),
+          GLenumToString(GLESEnum::GetTextureParameter, pname), (uintptr_t)params);
 
     if (context)
     {
@@ -2049,8 +2166,10 @@ void GL_APIENTRY GL_Translatef(GLfloat x, GLfloat y, GLfloat z)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateTranslatef(context, angle::EntryPoint::GLTranslatef, x, y, z));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTranslatef) &&
+              ValidateTranslatef(context, angle::EntryPoint::GLTranslatef, x, y, z)));
         if (isCallValid)
         {
             context->translatef(x, y, z);
@@ -2072,8 +2191,10 @@ void GL_APIENTRY GL_Translatex(GLfixed x, GLfixed y, GLfixed z)
     if (context)
     {
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateTranslatex(context, angle::EntryPoint::GLTranslatex, x, y, z));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLTranslatex) &&
+              ValidateTranslatex(context, angle::EntryPoint::GLTranslatex, x, y, z)));
         if (isCallValid)
         {
             context->translatex(x, y, z);
@@ -2091,16 +2212,18 @@ void GL_APIENTRY GL_VertexPointer(GLint size, GLenum type, GLsizei stride, const
     Context *context = GetValidGlobalContext();
     EVENT(context, GLVertexPointer,
           "context = %d, size = %d, type = %s, stride = %d, pointer = 0x%016" PRIxPTR "",
-          CID(context), size, GLenumToString(GLenumGroup::VertexPointerType, type), stride,
+          CID(context), size, GLenumToString(GLESEnum::VertexPointerType, type), stride,
           (uintptr_t)pointer);
 
     if (context)
     {
         VertexAttribType typePacked = PackParam<VertexAttribType>(type);
         SCOPED_SHARE_CONTEXT_LOCK(context);
-        bool isCallValid = (context->skipValidation() ||
-                            ValidateVertexPointer(context, angle::EntryPoint::GLVertexPointer, size,
-                                                  typePacked, stride, pointer));
+        bool isCallValid =
+            (context->skipValidation() ||
+             (ValidatePixelLocalStorageInactive(context, angle::EntryPoint::GLVertexPointer) &&
+              ValidateVertexPointer(context, angle::EntryPoint::GLVertexPointer, size, typePacked,
+                                    stride, pointer)));
         if (isCallValid)
         {
             context->vertexPointer(size, typePacked, stride, pointer);

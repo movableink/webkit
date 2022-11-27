@@ -14,7 +14,7 @@
 if (self.testRunner) {
     testRunner.dumpAsText();
     testRunner.waitUntilDone();
-    testRunner.grantWebNotificationPermission("http://localhost:8800");
+    testRunner.grantWebNotificationPermission(self.origin);
     // Let's restrict calling testharness timeout() to wptserve tests for the moment.
     // That will limit the impact to a small number of tests.
     // The risk is that testharness timeout() might be called to late on slow bots to finish properly.

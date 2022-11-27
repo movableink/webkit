@@ -42,6 +42,7 @@
 #include <mutex>
 #include <wtf/CrossThreadQueue.h>
 #include <wtf/CrossThreadTask.h>
+#include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
 #include <wtf/MainThread.h>
 #include <wtf/RefPtr.h>
@@ -210,8 +211,8 @@ RefPtr<SecurityOrigin> ThreadableBlobRegistry::getCachedOrigin(const URL& url)
     if (!url.protocolIsBlob() || !isBlobURLContainsNullOrigin(url))
         return nullptr;
 
-    // If we do not have a cached origin for null blob URLs, we use a unique origin.
-    return SecurityOrigin::createUnique();
+    // If we do not have a cached origin for null blob URLs, we use an opaque origin.
+    return SecurityOrigin::createOpaque();
 }
 
 } // namespace WebCore

@@ -131,6 +131,11 @@ bool DisplayImpl::isWayland() const
     return false;
 }
 
+bool DisplayImpl::isGBM() const
+{
+    return false;
+}
+
 bool DisplayImpl::supportsDmaBufFormat(EGLint format) const
 {
     UNREACHABLE();
@@ -152,12 +157,4 @@ egl::Error DisplayImpl::queryDmaBufModifiers(EGLint format,
     UNREACHABLE();
     return egl::NoError();
 }
-
-GLuint DisplayImpl::getNextSurfaceID()
-{
-    uint64_t id = mNextSurfaceID.generate().getValue();
-    ASSERT(id <= 0xfffffffful);
-    return static_cast<GLuint>(id);
-}
-
 }  // namespace rx

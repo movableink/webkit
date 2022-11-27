@@ -31,16 +31,17 @@
 
 #include "CSSFontSelector.h"
 #include "CSSKeyframesRule.h"
-#include "MediaQueryEvaluator.h"
+#include "LegacyMediaQueryEvaluator.h"
 #include "StyleResolver.h"
 #include "StyleRuleImport.h"
 #include "StyleSheetContents.h"
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 namespace Style {
 
-RuleSetBuilder::RuleSetBuilder(RuleSet& ruleSet, const MediaQueryEvaluator& evaluator, Resolver* resolver, ShrinkToFit shrinkToFit)
+RuleSetBuilder::RuleSetBuilder(RuleSet& ruleSet, const LegacyMediaQueryEvaluator& evaluator, Resolver* resolver, ShrinkToFit shrinkToFit)
     : m_ruleSet(&ruleSet)
     , m_mediaQueryCollector({ evaluator })
     , m_resolver(resolver)
@@ -48,7 +49,7 @@ RuleSetBuilder::RuleSetBuilder(RuleSet& ruleSet, const MediaQueryEvaluator& eval
 {
 }
 
-RuleSetBuilder::RuleSetBuilder(const MediaQueryEvaluator& evaluator)
+RuleSetBuilder::RuleSetBuilder(const LegacyMediaQueryEvaluator& evaluator)
     : m_mediaQueryCollector({ evaluator, true })
 {
 }
@@ -137,7 +138,7 @@ void RuleSetBuilder::addChildRules(const Vector<RefPtr<StyleRuleBase>>& rules)
             popCascadeLayer(layerRule.name());
             continue;
         }
-        if (is<StyleRuleFontFace>(*rule) || is<StyleRuleFontPaletteValues>(*rule) || is<StyleRuleKeyframes>(*rule)) {
+        if (is<StyleRuleFontFace>(*rule) || is<StyleRuleFontPaletteValues>(*rule) || is<StyleRuleFontFeatureValues>(*rule) || is<StyleRuleKeyframes>(*rule)) {
             disallowDynamicMediaQueryEvaluationIfNeeded();
 
             if (m_resolver)
@@ -224,8 +225,7 @@ void RuleSetBuilder::pushCascadeLayer(const CascadeLayerName& name)
     auto nameResolvingAnonymous = [&] {
         if (name.isEmpty()) {
             // Make unique name for an anonymous layer.
-            unsigned long long random = randomNumber() * std::numeric_limits<unsigned long long>::max();
-            return CascadeLayerName { makeAtomString("anon_"_s, random) };
+            return CascadeLayerName { makeAtomString("anon_"_s, cryptographicallyRandomNumber<uint64_t>()) };
         }
         return name;
     };
@@ -335,6 +335,11 @@ void RuleSetBuilder::addMutatingRulesToResolver()
             m_resolver->invalidateMatchedDeclarationsCache();
             continue;
         }
+        if (is<StyleRuleFontFeatureValues>(rule)) {
+            m_resolver->document().fontSelector().addFontFeatureValuesRule(downcast<StyleRuleFontFeatureValues>(rule.get()));
+            m_resolver->invalidateMatchedDeclarationsCache();
+            continue;
+        }
         if (is<StyleRuleKeyframes>(rule)) {
             m_resolver->addKeyframeStyle(downcast<StyleRuleKeyframes>(rule.get()));
             continue;
@@ -344,7 +349,7 @@ void RuleSetBuilder::addMutatingRulesToResolver()
 
 void RuleSetBuilder::updateDynamicMediaQueries()
 {
-    if (m_mediaQueryCollector.hasViewportDependentMediaQueries)
+    if (m_mediaQueryCollector.allDynamicDependencies.contains(MQ::MediaQueryDynamicDependency::Viewport))
         m_ruleSet->m_hasViewportDependentMediaQueries = true;
 
     if (!m_mediaQueryCollector.dynamicMediaQueryRules.isEmpty()) {
@@ -363,19 +368,17 @@ bool RuleSetBuilder::MediaQueryCollector::pushAndEvaluate(const MediaQuerySet* s
     if (!set)
         return true;
 
-    // Only evaluate static expressions that require style rebuild.
-    MediaQueryDynamicResults dynamicResults;
-    auto mode = collectDynamic ? MediaQueryEvaluator::Mode::AlwaysMatchDynamic : MediaQueryEvaluator::Mode::Normal;
+    auto dynamicDependencies = mediaQueryDynamicDependencies(*set, evaluator);
 
-    bool result = evaluator.evaluate(*set, &dynamicResults, mode);
+    allDynamicDependencies.add(dynamicDependencies);
 
-    if (!dynamicResults.viewport.isEmpty())
-        hasViewportDependentMediaQueries = true;
-
-    if (!dynamicResults.isEmpty())
+    if (!dynamicDependencies.isEmpty()) {
         dynamicContextStack.append({ *set });
+        if (collectDynamic)
+            return true;
+    }
 
-    return result;
+    return evaluator.evaluate(*set);
 }
 
 void RuleSetBuilder::MediaQueryCollector::pop(const MediaQuerySet* set)

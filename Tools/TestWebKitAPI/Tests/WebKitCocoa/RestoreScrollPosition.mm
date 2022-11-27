@@ -32,9 +32,45 @@
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 
+#if PLATFORM(IOS_FAMILY)
+@interface RestoreScrollPositionWithLargeContentInsetWebView : TestWKWebView
+@end
+
+@implementation RestoreScrollPositionWithLargeContentInsetWebView
+- (UIEdgeInsets)safeAreaInsets
+{
+    return UIEdgeInsetsMake(141, 0, 0, 0);
+}
+@end
+#endif
+
 namespace TestWebKitAPI {
 
 #if PLATFORM(IOS_FAMILY)
+
+TEST(RestoreScrollPositionTests, RestoreScrollPositionWithLargeContentInset)
+{
+    auto topInset = 1165;
+
+    auto webView = adoptNS([[RestoreScrollPositionWithLargeContentInsetWebView alloc] initWithFrame:CGRectMake(0, 0, 375, 1024)]);
+    
+    [webView synchronouslyLoadTestPageNamed:@"simple-tall"];
+    
+    auto insets = UIEdgeInsetsMake(topInset, 0, 0, 0);
+    [webView scrollView].contentInset = insets;
+    [webView _setObscuredInsets:UIEdgeInsetsMake(141, 0, 0, 0)];
+    [webView scrollView].contentOffset = CGPointMake(0, -topInset);
+    
+    [webView waitForNextPresentationUpdate];
+    [webView _overrideLayoutParametersWithMinimumLayoutSize:CGSizeMake(375, 727) maximumUnobscuredSizeOverride:CGSizeMake(375, 727)];
+
+    [webView scrollView].contentInset = UIEdgeInsetsMake(1024, 0, 0, 0);
+    [webView waitForNextPresentationUpdate];
+    
+    CGPoint contentOffsetAfterScrolling = [webView scrollView].contentOffset;
+    
+    EXPECT_EQ(-topInset, contentOffsetAfterScrolling.y);
+}
 
 TEST(RestoreScrollPositionTests, RestoreScrollPositionDuringResize)
 {
@@ -70,14 +106,14 @@ TEST(RestoreScrollPositionTests, RestoreScrollPositionDuringResize)
     }];
     [webView synchronouslyGoBack];
 
-    TestWebKitAPI::Util::sleep(0.5);
+    TestWebKitAPI::Util::runFor(0.5_s);
     [webView _endAnimatedResize];
 
     // Should restore the scroll position.
     int timeout = 0;
     do {
         if (timeout)
-            TestWebKitAPI::Util::sleep(0.1);
+            TestWebKitAPI::Util::runFor(0.1_s);
     } while ([webView scrollView].contentOffset.y != 1000 && ++timeout <= 30);
 
     CGPoint contentOffsetAfterBack = [webView scrollView].contentOffset;

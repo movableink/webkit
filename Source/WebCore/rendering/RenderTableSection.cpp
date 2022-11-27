@@ -243,8 +243,13 @@ LayoutUnit RenderTableSection::calcRowLogicalHeight()
         m_grid[r].baseline = 0;
         LayoutUnit baselineDescent;
 
+        if (m_grid[r].logicalHeight.isSpecified()) {
         // Our base size is the biggest logical height from our cells' styles (excluding row spanning cells).
-        m_rowPos[r + 1] = std::max(m_rowPos[r] + resolveLogicalHeightForRow(m_grid[r].logicalHeight), 0_lu);
+            m_rowPos[r + 1] = std::max(m_rowPos[r] + resolveLogicalHeightForRow(m_grid[r].logicalHeight), 0_lu);
+        } else {
+        // Non-specified lengths are ignored because the row already accounts for the cells intrinsic logical height.
+            m_rowPos[r + 1] = std::max(m_rowPos[r], 0_lu);
+        }
 
         Row& row = m_grid[r].row;
         unsigned totalCols = row.size();
@@ -555,7 +560,8 @@ void RenderTableSection::layoutRows()
         if (RenderTableRow* rowRenderer = m_grid[r].rowRenderer) {
             // FIXME: the x() position of the row should be table()->hBorderSpacing() so that it can 
             // report the correct offsetLeft. However, that will require a lot of rebaselining of test results.
-            rowRenderer->setLocation(LayoutPoint(0_lu, m_rowPos[r]));
+            rowRenderer->setLogicalLeft(0_lu);
+            rowRenderer->setLogicalTop(m_rowPos[r]);
             rowRenderer->setLogicalWidth(logicalWidth());
             rowRenderer->setLogicalHeight(m_rowPos[r + 1] - m_rowPos[r] - vspacing);
             rowRenderer->updateLayerTransform();
@@ -624,6 +630,8 @@ void RenderTableSection::layoutRows()
     ASSERT(!needsLayout());
 
     setLogicalHeight(m_rowPos[totalRows]);
+
+    updateLayerTransform();
 
     computeOverflowFromCells(totalRows, nEffCols);
 }
@@ -875,10 +883,28 @@ std::optional<LayoutUnit> RenderTableSection::firstLineBaseline() const
     if (firstLineBaseline)
         return firstLineBaseline + m_rowPos[0];
 
+    return baselineFromCellContentEdges(ItemPosition::Baseline);
+}
+
+std::optional<LayoutUnit> RenderTableSection::lastLineBaseline() const
+{
+    if (!m_grid.size())
+        return  { };
+    
+    if (auto lastLineBaseline = m_grid[m_grid.size() - 1].baseline)
+        return lastLineBaseline + m_rowPos[m_grid.size() - 1];
+
+    return baselineFromCellContentEdges(ItemPosition::LastBaseline);
+}
+
+std::optional<LayoutUnit> RenderTableSection::baselineFromCellContentEdges(ItemPosition alignment) const
+{
+    ASSERT(alignment == ItemPosition::Baseline || alignment == ItemPosition::LastBaseline);
+    auto row = alignment == ItemPosition::Baseline ? m_grid[0].row : m_grid[m_grid.size() - 1].row;
+    
     std::optional<LayoutUnit> result;
-    const Row& firstRow = m_grid[0].row;
-    for (size_t i = 0; i < firstRow.size(); ++i) {
-        const CellStruct& cs = firstRow.at(i);
+    for (size_t i = 0; i < row.size(); ++i) {
+        const CellStruct& cs = row.at(i);
         const RenderTableCell* cell = cs.primaryCell();
         // Only cells with content have a baseline
         if (cell && cell->contentLogicalHeight()) {
@@ -886,7 +912,6 @@ std::optional<LayoutUnit> RenderTableSection::firstLineBaseline() const
             result = std::max(result.value_or(candidate), candidate);
         }
     }
-
     return result;
 }
 
@@ -1077,7 +1102,7 @@ void RenderTableSection::paintRowGroupBorder(const PaintInfo& paintInfo, bool an
     rect.intersect(paintInfo.rect);
     if (rect.isEmpty())
         return;
-    drawLineForBoxSide(paintInfo.context(), rect, side, style().visitedDependentColorWithColorFilter(borderColor), borderStyle, 0, 0, antialias);
+    BorderPainter::drawLineForBoxSide(paintInfo.context(), document(), rect, side, style().visitedDependentColorWithColorFilter(borderColor), borderStyle, 0, 0, antialias);
 }
 
 LayoutUnit RenderTableSection::offsetLeftForRowGroupBorder(RenderTableCell* cell, const LayoutRect& rowGroupRect, unsigned row)

@@ -64,10 +64,11 @@ public:
     bool imageComplete() const { return m_imageComplete; }
 
     CachedImage* image() const { return m_image.get(); }
+    void clearImage(); // Cancels pending load events, and doesn't dispatch new ones.
+    
 #if PLATFORM(QT)
     void setImage(CachedImage*);
 #endif
-    void clearImage(); // Cancels pending beforeload and load events, and doesn't dispatch new ones.
     
     size_t pendingDecodePromisesCountForTesting() const { return m_decodingPromises.size(); }
     void decode(Ref<DeferredPromise>&&);
@@ -78,11 +79,9 @@ public:
     bool hasPendingBeforeLoadEvent() const { return m_hasPendingBeforeLoadEvent; }
     bool hasPendingActivity() const { return m_hasPendingLoadEvent || m_hasPendingErrorEvent; }
 
-    void dispatchPendingEvent(ImageEventSender*);
+    void dispatchPendingEvent(ImageEventSender*, const AtomString& eventType);
 
-    static void dispatchPendingBeforeLoadEvents(Page*);
     static void dispatchPendingLoadEvents(Page*);
-    static void dispatchPendingErrorEvents(Page*);
 
     void loadDeferredImage();
 
@@ -130,6 +129,7 @@ private:
     Timer m_derefElementTimer;
     RefPtr<Element> m_protectedElement;
     AtomString m_failedLoadURL;
+    AtomString m_pendingURL;
     Vector<RefPtr<DeferredPromise>> m_decodingPromises;
     bool m_hasPendingBeforeLoadEvent : 1;
     bool m_hasPendingLoadEvent : 1;

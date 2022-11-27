@@ -996,126 +996,6 @@ public:
     }
 };
 
-class AlwaysSlowPutContiguousObject : public JSDestructibleObject {
-public:
-    using Base = JSDestructibleObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags;
-
-    AlwaysSlowPutContiguousObject(VM& vm, Structure* structure, Butterfly* butterfly)
-        : Base(vm, structure, butterfly)
-    {
-        DollarVMAssertScope assertScope;
-    }
-
-    template<typename CellType, SubspaceAccess>
-    static CompleteSubspace* subspaceFor(VM& vm)
-    {
-        return &vm.cellSpace();
-    }
-
-    DECLARE_INFO;
-
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject)
-    {
-        DollarVMAssertScope assertScope;
-        return Structure::create(vm, globalObject, globalObject->objectPrototype(), TypeInfo(ObjectType, StructureFlags), info(), NonArrayWithAlwaysSlowPutContiguous);
-    }
-
-    static AlwaysSlowPutContiguousObject* create(VM& vm, Structure* structure, Butterfly* butterfly)
-    {
-        DollarVMAssertScope assertScope;
-        AlwaysSlowPutContiguousObject* result = new (NotNull, allocateCell<AlwaysSlowPutContiguousObject>(vm)) AlwaysSlowPutContiguousObject(vm, structure, butterfly);
-        result->finishCreation(vm);
-        return result;
-    }
-};
-
-class AlwaysSlowPutContiguousObjectWithOverrides : public JSDestructibleObject {
-public:
-    using Base = JSDestructibleObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesPut;
-
-    AlwaysSlowPutContiguousObjectWithOverrides(VM& vm, Structure* structure, Butterfly* butterfly)
-        : Base(vm, structure, butterfly)
-    {
-        DollarVMAssertScope assertScope;
-    }
-
-    template<typename CellType, SubspaceAccess>
-    static CompleteSubspace* subspaceFor(VM& vm)
-    {
-        return &vm.cellSpace();
-    }
-
-    DECLARE_INFO;
-
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject)
-    {
-        DollarVMAssertScope assertScope;
-        return Structure::create(vm, globalObject, globalObject->objectPrototype(), TypeInfo(ObjectType, StructureFlags), info(), NonArrayWithAlwaysSlowPutContiguous | MayHaveIndexedAccessors);
-    }
-
-    static AlwaysSlowPutContiguousObjectWithOverrides* create(VM& vm, Structure* structure, Butterfly* butterfly)
-    {
-        DollarVMAssertScope assertScope;
-        AlwaysSlowPutContiguousObjectWithOverrides* result = new (NotNull, allocateCell<AlwaysSlowPutContiguousObjectWithOverrides>(vm)) AlwaysSlowPutContiguousObjectWithOverrides(vm, structure, butterfly);
-        result->finishCreation(vm);
-        return result;
-    }
-
-    static bool put(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
-    {
-        DollarVMAssertScope assertScope;
-        auto* thisObject = jsCast<AlwaysSlowPutContiguousObjectWithOverrides*>(cell);
-        if (std::optional<uint32_t> index = parseIndex(propertyName))
-            return thisObject->methodTable()->putByIndex(thisObject, globalObject, index.value(), value, slot.isStrictMode());
-
-        return Base::put(cell, globalObject, propertyName, value, slot);
-    }
-
-    static bool putByIndex(JSCell* cell, JSGlobalObject* globalObject, unsigned propertyName, JSValue value, bool shouldThrow)
-    {
-        DollarVMAssertScope assertScope;
-        VM& vm = globalObject->vm();
-        auto* thisObject = jsCast<AlwaysSlowPutContiguousObjectWithOverrides*>(cell);
-        thisObject->increment(vm, Identifier::fromString(vm, "putByIndexCalls"_s));
-        return Base::putByIndex(cell, globalObject, propertyName, value, shouldThrow);
-    }
-
-    static bool deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
-    {
-        DollarVMAssertScope assertScope;
-        auto* thisObject = jsCast<AlwaysSlowPutContiguousObjectWithOverrides*>(cell);
-        if (std::optional<uint32_t> index = parseIndex(propertyName))
-            return thisObject->methodTable()->deletePropertyByIndex(thisObject, globalObject, index.value());
-        return Base::deleteProperty(cell, globalObject, propertyName, slot);
-    }
-
-    static bool deletePropertyByIndex(JSCell* cell, JSGlobalObject* globalObject, unsigned propertyName)
-    {
-        DollarVMAssertScope assertScope;
-        VM& vm = globalObject->vm();
-        auto* thisObject = jsCast<AlwaysSlowPutContiguousObjectWithOverrides*>(cell);
-        thisObject->increment(vm, Identifier::fromString(vm, "deleteByIndexCalls"_s));
-        return Base::deletePropertyByIndex(cell, globalObject, propertyName);
-    }
-
-    void finishCreation(VM& vm)
-    {
-        DollarVMAssertScope assertScope;
-        Base::finishCreation(vm);
-        putDirect(vm, Identifier::fromString(vm, "putByIndexCalls"_s), jsNumber(0), static_cast<unsigned>(PropertyAttribute::DontEnum));
-        putDirect(vm, Identifier::fromString(vm, "deleteByIndexCalls"_s), jsNumber(0), static_cast<unsigned>(PropertyAttribute::DontEnum));
-    }
-
-    void increment(VM& vm, const Identifier& identifier)
-    {
-        DollarVMAssertScope assertScope;
-        uint32_t calls = getDirect(vm, identifier).asUInt32();
-        putDirect(vm, identifier, jsNumber(calls + 1), static_cast<unsigned>(PropertyAttribute::DontEnum));
-    }
-};
-
 class DOMJITNode : public JSNonFinalObject {
 public:
     DOMJITNode(VM& vm, Structure* structure)
@@ -1991,8 +1871,6 @@ const ClassInfo StaticCustomAccessor::s_info = { "StaticCustomAccessor"_s, &Base
 const ClassInfo StaticCustomValue::s_info = { "StaticCustomValue"_s, &Base::s_info, &staticCustomValueTable, nullptr, CREATE_METHOD_TABLE(StaticCustomValue) };
 const ClassInfo StaticDontDeleteDontEnum::s_info = { "StaticDontDeleteDontEnum"_s, &Base::s_info, &staticDontDeleteDontEnumTable, nullptr, CREATE_METHOD_TABLE(StaticDontDeleteDontEnum) };
 const ClassInfo ObjectDoingSideEffectPutWithoutCorrectSlotStatus::s_info = { "ObjectDoingSideEffectPutWithoutCorrectSlotStatus"_s, &Base::s_info, &staticCustomAccessorTable, nullptr, CREATE_METHOD_TABLE(ObjectDoingSideEffectPutWithoutCorrectSlotStatus) };
-const ClassInfo AlwaysSlowPutContiguousObject::s_info = { "AlwaysSlowPutContiguousObject"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AlwaysSlowPutContiguousObject) };
-const ClassInfo AlwaysSlowPutContiguousObjectWithOverrides::s_info = { "AlwaysSlowPutContiguousObjectWithOverrides"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AlwaysSlowPutContiguousObjectWithOverrides) };
 
 ElementHandleOwner* Element::handleOwner()
 {
@@ -2214,6 +2092,7 @@ namespace JSC {
 
 static NO_RETURN_DUE_TO_CRASH JSC_DECLARE_HOST_FUNCTION(functionCrash);
 static JSC_DECLARE_HOST_FUNCTION(functionBreakpoint);
+static JSC_DECLARE_HOST_FUNCTION(functionExit);
 static JSC_DECLARE_HOST_FUNCTION(functionDFGTrue);
 static JSC_DECLARE_HOST_FUNCTION(functionFTLTrue);
 static JSC_DECLARE_HOST_FUNCTION(functionCpuMfence);
@@ -2270,8 +2149,6 @@ static JSC_DECLARE_HOST_FUNCTION(functionCreateStaticCustomAccessor);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateStaticCustomValue);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateStaticDontDeleteDontEnum);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateObjectDoingSideEffectPutWithoutCorrectSlotStatus);
-static JSC_DECLARE_HOST_FUNCTION(functionCreateAlwaysSlowPutContiguousObject);
-static JSC_DECLARE_HOST_FUNCTION(functionCreateAlwaysSlowPutContiguousObjectWithOverrides);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateEmptyFunctionWithName);
 static JSC_DECLARE_HOST_FUNCTION(functionSetImpureGetterDelegate);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateBuiltin);
@@ -2331,8 +2208,8 @@ static JSC_DECLARE_HOST_FUNCTION(functionDumpJITSizeStatistics);
 static JSC_DECLARE_HOST_FUNCTION(functionResetJITSizeStatistics);
 #endif
 
+static JSC_DECLARE_HOST_FUNCTION(functionAllowDoubleShape);
 static JSC_DECLARE_HOST_FUNCTION(functionEnsureArrayStorage);
-static JSC_DECLARE_HOST_FUNCTION(functionHasSparseModeArrayStorage);
 #if PLATFORM(COCOA)
 static JSC_DECLARE_HOST_FUNCTION(functionSetCrashLogMessage);;
 #endif
@@ -2396,6 +2273,14 @@ JSC_DEFINE_HOST_FUNCTION(functionBreakpoint, (JSGlobalObject* globalObject, Call
         WTFBreakpointTrap();
 
     return encodedJSUndefined();
+}
+
+// Executes exit(EXIT_SUCCESS).
+// Usage: $vm.exit()
+JSC_DEFINE_HOST_FUNCTION(functionExit, (JSGlobalObject*, CallFrame*))
+{
+    DollarVMAssertScope assertScope;
+    exit(EXIT_SUCCESS);
 }
 
 // Returns true if the current frame is a DFG frame.
@@ -3222,6 +3107,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForCompile, (JSGloba
     auto compiler = WasmStreamingCompiler::create(vm, globalObject, Wasm::CompilerMode::Validation, nullptr);
     MarkedArgumentBuffer args;
     args.append(compiler);
+    ASSERT(!args.hasOverflowed());
     call(globalObject, callback, jsUndefined(), args, "You shouldn't see this..."_s);
     if (UNLIKELY(scope.exception()))
         scope.clearException();
@@ -3249,6 +3135,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForInstantiate, (JSG
     auto compiler = WasmStreamingCompiler::create(vm, globalObject, Wasm::CompilerMode::FullCompile, importObject);
     MarkedArgumentBuffer args;
     args.append(compiler);
+    ASSERT(!args.hasOverflowed());
     call(globalObject, callback, jsUndefined(), args, "You shouldn't see this..."_s);
     if (UNLIKELY(scope.exception()))
         scope.clearException();
@@ -3298,43 +3185,6 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateObjectDoingSideEffectPutWithoutCorrectSlo
     RELEASE_ASSERT(dollarVM);
     auto* result = ObjectDoingSideEffectPutWithoutCorrectSlotStatus::create(vm, dollarVM->objectDoingSideEffectPutWithoutCorrectSlotStatusStructure());
     return JSValue::encode(result);
-}
-
-template<typename T>
-static JSValue createAlwaysSlowPutContiguousObject(JSGlobalObject* globalObject, CallFrame* callFrame)
-{
-    VM& vm = globalObject->vm();
-    JSLockHolder lock(vm);
-
-    uint32_t length = callFrame->argument(0).asUInt32();
-
-    Structure* structure = T::createStructure(vm, globalObject);
-
-    IndexingHeader indexingHeader;
-    indexingHeader.setVectorLength(length);
-    indexingHeader.setPublicLength(length);
-    Butterfly* butterfly = Butterfly::tryCreate(vm, nullptr, 0, structure->outOfLineCapacity(), true, indexingHeader, length * sizeof(EncodedJSValue));
-    if (!butterfly)
-        return jsUndefined();
-
-    for (uint32_t i = length; i--;)
-        butterfly->contiguous().atUnsafe(i).clear();
-
-    T* result = T::create(vm, structure, butterfly);
-    result->putDirect(vm, vm.propertyNames->length, jsNumber(length), static_cast<unsigned>(PropertyAttribute::DontEnum));
-    return result;
-}
-
-JSC_DEFINE_HOST_FUNCTION(functionCreateAlwaysSlowPutContiguousObject, (JSGlobalObject* globalObject, CallFrame* callFrame))
-{
-    DollarVMAssertScope assertScope;
-    return JSValue::encode(createAlwaysSlowPutContiguousObject<AlwaysSlowPutContiguousObject>(globalObject, callFrame));
-}
-
-JSC_DEFINE_HOST_FUNCTION(functionCreateAlwaysSlowPutContiguousObjectWithOverrides, (JSGlobalObject* globalObject, CallFrame* callFrame))
-{
-    DollarVMAssertScope assertScope;
-    return JSValue::encode(createAlwaysSlowPutContiguousObject<AlwaysSlowPutContiguousObjectWithOverrides>(globalObject, callFrame));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionCreateEmptyFunctionWithName, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3691,7 +3541,7 @@ JSC_DEFINE_HOST_FUNCTION(functionGlobalObjectForObject, (JSGlobalObject*, CallFr
     RELEASE_ASSERT(value.isObject());
     JSGlobalObject* result = jsCast<JSObject*>(value)->globalObject();
     RELEASE_ASSERT(result);
-    return JSValue::encode(result);
+    return JSValue::encode(result->globalThis());
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionGetGetterSetter, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3800,12 +3650,8 @@ JSC_DEFINE_HOST_FUNCTION(functionMake16BitStringIfPossible, (JSGlobalObject* glo
     auto scope = DECLARE_THROW_SCOPE(vm);
     String string = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    if (!string.is8Bit())
-        return JSValue::encode(jsString(vm, WTFMove(string)));
-    Vector<UChar> buffer;
-    buffer.resize(string.length());
-    StringImpl::copyCharacters(buffer.data(), string.characters8(), string.length());
-    return JSValue::encode(jsString(vm, String::adopt(WTFMove(buffer))));
+    string.convertTo16Bit();
+    return JSValue::encode(jsString(vm, WTFMove(string)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionGetStructureTransitionList, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -4076,6 +3922,14 @@ JSC_DEFINE_HOST_FUNCTION(functionResetJITSizeStatistics, (JSGlobalObject* global
 }
 #endif
 
+// Checks if DoubleShape is allowed.
+// Usage: var allowed = $vm.allowDoubleShape()
+JSC_DEFINE_HOST_FUNCTION(functionAllowDoubleShape, (JSGlobalObject*, CallFrame*))
+{
+    DollarVMAssertScope assertScope;
+    return JSValue::encode(jsBoolean(Options::allowDoubleShape()));
+}
+
 JSC_DEFINE_HOST_FUNCTION(functionEnsureArrayStorage, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     DollarVMAssertScope assertScope;
@@ -4088,17 +3942,6 @@ JSC_DEFINE_HOST_FUNCTION(functionEnsureArrayStorage, (JSGlobalObject* globalObje
     return JSValue::encode(jsUndefined());
 }
 
-JSC_DEFINE_HOST_FUNCTION(functionHasSparseModeArrayStorage, (JSGlobalObject*, CallFrame* callFrame))
-{
-    DollarVMAssertScope assertScope;
-
-    if (JSObject* object = callFrame->argument(0).getObject()) {
-        if (hasAnyArrayStorage(object->indexingMode()))
-            return JSValue::encode(jsBoolean(object->butterfly()->arrayStorage()->inSparseMode()));
-    }
-
-    return JSValue::encode(jsBoolean(false));
-}
 
 #if PLATFORM(COCOA)
 JSC_DEFINE_HOST_FUNCTION(functionSetCrashLogMessage, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -4137,6 +3980,7 @@ void JSDollarVM::finishCreation(VM& vm)
     addFunction(vm, "abort"_s, functionCrash, 0);
     addFunction(vm, "crash"_s, functionCrash, 0);
     addFunction(vm, "breakpoint"_s, functionBreakpoint, 0);
+    addFunction(vm, "exit"_s, functionExit, 0);
 
     putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "dfgTrue"_s), 0, functionDFGTrue, ImplementationVisibility::Public, DFGTrueIntrinsic, jsDollarVMPropertyAttributes);
     putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "ftlTrue"_s), 0, functionFTLTrue, ImplementationVisibility::Public, FTLTrueIntrinsic, jsDollarVMPropertyAttributes);
@@ -4207,8 +4051,6 @@ void JSDollarVM::finishCreation(VM& vm)
     addFunction(vm, "createStaticCustomValue"_s, functionCreateStaticCustomValue, 0);
     addFunction(vm, "createStaticDontDeleteDontEnum"_s, functionCreateStaticDontDeleteDontEnum, 0);
     addFunction(vm, "createObjectDoingSideEffectPutWithoutCorrectSlotStatus"_s, functionCreateObjectDoingSideEffectPutWithoutCorrectSlotStatus, 0);
-    addFunction(vm, "createAlwaysSlowPutContiguousObject"_s, functionCreateAlwaysSlowPutContiguousObject, 0);
-    addFunction(vm, "createAlwaysSlowPutContiguousObjectWithOverrides"_s, functionCreateAlwaysSlowPutContiguousObjectWithOverrides, 0);
     addFunction(vm, "createEmptyFunctionWithName"_s, functionCreateEmptyFunctionWithName, 1);
     addFunction(vm, "getPrivateProperty"_s, functionGetPrivateProperty, 2);
     addFunction(vm, "setImpureGetterDelegate"_s, functionSetImpureGetterDelegate, 2);
@@ -4291,8 +4133,8 @@ void JSDollarVM::finishCreation(VM& vm)
     addFunction(vm, "resetJITSizeStatistics"_s, functionResetJITSizeStatistics, 0);
 #endif
 
+    addFunction(vm, "allowDoubleShape"_s, functionAllowDoubleShape, 0);
     addFunction(vm, "ensureArrayStorage"_s, functionEnsureArrayStorage, 1);
-    addFunction(vm, "hasSparseModeArrayStorage"_s, functionHasSparseModeArrayStorage, 1);
 
 #if PLATFORM(COCOA)
     addFunction(vm, "setCrashLogMessage"_s, functionSetCrashLogMessage, 1);

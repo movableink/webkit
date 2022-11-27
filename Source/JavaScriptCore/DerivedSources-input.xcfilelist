@@ -151,6 +151,8 @@ $(PROJECT_DIR)/runtime/IntlDateTimeFormatConstructor.cpp
 $(PROJECT_DIR)/runtime/IntlDateTimeFormatPrototype.cpp
 $(PROJECT_DIR)/runtime/IntlDisplayNamesConstructor.cpp
 $(PROJECT_DIR)/runtime/IntlDisplayNamesPrototype.cpp
+$(PROJECT_DIR)/runtime/IntlDurationFormatConstructor.cpp
+$(PROJECT_DIR)/runtime/IntlDurationFormatPrototype.cpp
 $(PROJECT_DIR)/runtime/IntlListFormatConstructor.cpp
 $(PROJECT_DIR)/runtime/IntlListFormatPrototype.cpp
 $(PROJECT_DIR)/runtime/IntlLocalePrototype.cpp
@@ -216,6 +218,8 @@ $(PROJECT_DIR)/wasm/generateWasm.py
 $(PROJECT_DIR)/wasm/generateWasmB3IRGeneratorInlinesHeader.py
 $(PROJECT_DIR)/wasm/generateWasmOpsHeader.py
 $(PROJECT_DIR)/wasm/js/JSWebAssembly.cpp
+$(PROJECT_DIR)/wasm/js/WebAssemblyArrayConstructor.cpp
+$(PROJECT_DIR)/wasm/js/WebAssemblyArrayPrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyCompileErrorConstructor.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyCompileErrorPrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyExceptionConstructor.cpp
@@ -232,6 +236,8 @@ $(PROJECT_DIR)/wasm/js/WebAssemblyModuleConstructor.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyModulePrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyRuntimeErrorConstructor.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyRuntimeErrorPrototype.cpp
+$(PROJECT_DIR)/wasm/js/WebAssemblyStructConstructor.cpp
+$(PROJECT_DIR)/wasm/js/WebAssemblyStructPrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyTableConstructor.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyTablePrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyTagConstructor.cpp

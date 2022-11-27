@@ -165,27 +165,22 @@
 
 #if QT_VERSION >= QT_VERSION_CHECK(5,8,0)
 #include <QtGui/qtguiglobal.h>
-#endif
+#endif // QT_VERSION >= QT_VERSION_CHECK(5,8,0)
 
 #include <QtNetwork/qtnetwork-config.h>
 #if !QT_CONFIG(bearermanagement)
 #ifndef QT_NO_BEARERMANAGEMENT
 #define QT_NO_BEARERMANAGEMENT
-#endif
-#endif
+#endif // QT_NO_BEARERMANAGEMENT
+#endif // !QT_CONFIG(bearermanagement)
 
-#endif
+#endif // ifdef __cplusplus
+
 #if defined(QT_OPENGL_ES_2) && !defined(USE_OPENGL_ES_2)
 #define USE_OPENGL_ES_2 1
-#endif
+#endif // defined(QT_OPENGL_ES_2) && !defined(USE_OPENGL_ES_2)
 
-#if PLATFORM(COCOA) && ENABLE(WEBGL)
-#define USE_ANGLE 1
-#ifndef GL_SILENCE_DEPRECATION
-#define GL_SILENCE_DEPRECATION 1
-#endif
-#endif
-#endif
+#endif // PLATFORM(QT)
 
 /* FIXME: This is used to "turn on a specific feature of WebKit", so should be converted to an ENABLE macro. */
 #if (PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)) && ENABLE(ACCESSIBILITY)

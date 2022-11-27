@@ -15,6 +15,7 @@
 #include <set>
 #include <vector>
 
+#include "common/WorkerThread.h"
 #include "libANGLE/AttributeMap.h"
 #include "libANGLE/BlobCache.h"
 #include "libANGLE/Caps.h"
@@ -24,6 +25,7 @@
 #include "libANGLE/Error.h"
 #include "libANGLE/LoggingAnnotator.h"
 #include "libANGLE/MemoryProgramCache.h"
+#include "libANGLE/MemoryShaderCache.h"
 #include "libANGLE/Observer.h"
 #include "libANGLE/Version.h"
 #include "platform/Feature.h"
@@ -151,7 +153,7 @@ class Display final : public LabeledObject,
 
     // Helpers to maintain active thread set to assist with freeing invalid EGL objects.
     void addActiveThread(Thread *thread);
-    void removeActiveThreadAndPerformCleanup(Thread *thread);
+    void threadCleanup(Thread *thread);
 
     static Display *GetDisplayFromDevice(Device *device, const AttributeMap &attribMap);
     static Display *GetDisplayFromNativeDisplay(EGLenum platform,
@@ -219,9 +221,9 @@ class Display final : public LabeledObject,
 
     bool isInitialized() const;
     bool isValidConfig(const Config *config) const;
-    bool isValidContext(const gl::Context *context) const;
-    bool isValidSurface(const Surface *surface) const;
-    bool isValidImage(const Image *image) const;
+    bool isValidContext(gl::ContextID contextID) const;
+    bool isValidSurface(SurfaceID surfaceID) const;
+    bool isValidImage(ImageID imageID) const;
     bool isValidStream(const Stream *stream) const;
     bool isValidSync(const Sync *sync) const;
     bool isValidNativeWindow(EGLNativeWindowType window) const;
@@ -263,6 +265,7 @@ class Display final : public LabeledObject,
     const std::string &getExtensionString() const;
     const std::string &getVendorString() const;
     const std::string &getVersionString() const;
+    const std::string &getClientAPIString() const;
 
     std::string getBackendRendererDescription() const;
     std::string getBackendVendorString() const;
@@ -313,6 +316,8 @@ class Display final : public LabeledObject,
     std::mutex &getDisplayGlobalMutex() { return mDisplayGlobalMutex; }
     std::mutex &getProgramCacheMutex() { return mProgramCacheMutex; }
 
+    gl::MemoryShaderCache *getMemoryShaderCache() { return &mMemoryShaderCache; }
+
     // Installs LoggingAnnotator as the global DebugAnnotator, for back-ends that do not implement
     // their own DebugAnnotator.
     void setGlobalDebugAnnotator() { gl::InitializeDebugAnnotations(&mAnnotator); }
@@ -325,21 +330,35 @@ class Display final : public LabeledObject,
                                EGLBoolean *external_only,
                                EGLint *num_modifiers);
 
+    std::shared_ptr<angle::WorkerThreadPool> getSingleThreadPool() const
+    {
+        return mSingleThreadPool;
+    }
+    std::shared_ptr<angle::WorkerThreadPool> getMultiThreadPool() const { return mMultiThreadPool; }
+
+    angle::ImageLoadContext getImageLoadContext() const;
+
+    const gl::Context *getContext(gl::ContextID contextID) const;
+    const egl::Surface *getSurface(egl::SurfaceID surfaceID) const;
+    const egl::Image *getImage(egl::ImageID imageID) const;
+    gl::Context *getContext(gl::ContextID contextID);
+    egl::Surface *getSurface(egl::SurfaceID surfaceID);
+    egl::Image *getImage(egl::ImageID imageID);
+
   private:
     Display(EGLenum platform, EGLNativeDisplayType displayId, Device *eglDevice);
 
     void setAttributes(const AttributeMap &attribMap) { mAttributeMap = attribMap; }
-
     void setupDisplayPlatform(rx::DisplayImpl *impl);
-
-    void updateAttribsFromEnvironment(const AttributeMap &attribMap);
 
     Error restoreLostDevice();
     Error releaseContext(gl::Context *context, Thread *thread);
+    Error releaseContextImpl(gl::Context *context, ContextSet *contexts);
 
     void initDisplayExtensions();
     void initVendorString();
     void initVersionString();
+    void initClientAPIString();
     void initializeFrontendFeatures();
 
     angle::ScratchBuffer requestScratchBufferImpl(std::vector<angle::ScratchBuffer> *bufferVector);
@@ -370,7 +389,7 @@ class Display final : public LabeledObject,
     Error destroySurfaceImpl(Surface *surface, SurfaceSet *surfaces);
     void destroySyncImpl(Sync *sync, SyncSet *syncs);
 
-    std::mutex mInvalidEglObjectsMutex;
+    ContextSet mInvalidContextSet;
     ImageSet mInvalidImageSet;
     StreamSet mInvalidStreamSet;
     SurfaceSet mInvalidSurfaceSet;
@@ -386,6 +405,7 @@ class Display final : public LabeledObject,
 
     std::string mVendorString;
     std::string mVersionString;
+    std::string mClientAPIString;
 
     Device *mDevice;
     Surface *mSurface;
@@ -396,8 +416,12 @@ class Display final : public LabeledObject,
     gl::SemaphoreManager *mSemaphoreManager;
     BlobCache mBlobCache;
     gl::MemoryProgramCache mMemoryProgramCache;
+    gl::MemoryShaderCache mMemoryShaderCache;
     size_t mGlobalTextureShareGroupUsers;
     size_t mGlobalSemaphoreShareGroupUsers;
+
+    gl::HandleAllocator mImageHandleAllocator;
+    gl::HandleAllocator mSurfaceHandleAllocator;
 
     angle::FrontendFeatures mFrontendFeatures;
 
@@ -410,9 +434,13 @@ class Display final : public LabeledObject,
     std::mutex mDisplayGlobalMutex;
     std::mutex mProgramCacheMutex;
 
-    std::atomic<bool> mTerminatedByApi;
-    std::mutex mActiveThreadsMutex;
+    bool mTerminatedByApi;
     ThreadSet mActiveThreads;
+
+    // Single-threaded and multithread pools for use by various parts of ANGLE, such as shader
+    // compilation.  These pools are internally synchronized.
+    std::shared_ptr<angle::WorkerThreadPool> mSingleThreadPool;
+    std::shared_ptr<angle::WorkerThreadPool> mMultiThreadPool;
 };
 
 }  // namespace egl

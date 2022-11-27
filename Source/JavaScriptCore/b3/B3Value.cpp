@@ -62,7 +62,7 @@ String Value::generateCompilerConstructionSite()
     int frames = framesToShow + framesToSkip;
 
     WTFGetBacktrace(samples, &frames);
-    StackTrace stackTrace(samples + framesToSkip, frames - framesToSkip, "");
+    StackTraceSymbolResolver stackTrace({ samples + framesToSkip, static_cast<size_t>(frames - framesToSkip) });
 
     s.print("[");
     bool firstPrinted = false;
@@ -922,6 +922,7 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
             return Int32;
         case Void:
         case Tuple:
+        case V128:
             ASSERT_NOT_REACHED();
         }
         return Void;

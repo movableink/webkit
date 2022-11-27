@@ -56,6 +56,7 @@
 #import <WebKit/WebDeviceOrientationProviderMock.h>
 #import <WebKit/WebFrame.h>
 #import <WebKit/WebFrameLoadDelegate.h>
+#import <WebKit/WebFramePrivate.h>
 #import <WebKit/WebFrameViewPrivate.h>
 #import <WebKit/WebGeolocationPosition.h>
 #import <WebKit/WebHTMLRepresentation.h>
@@ -555,9 +556,14 @@ void TestRunner::dispatchPendingLoadRequests()
     [[mainFrame webView] _dispatchPendingLoadRequests];
 }
 
-void TestRunner::removeAllCookies()
+void TestRunner::removeAllCookies(JSValueRef callback)
 {
-    [WebPreferences _clearNetworkLoaderSession];
+    static uint64_t callbackIDGenerator = 0;
+    auto callbackID = ++callbackIDGenerator;
+    cacheTestRunnerCallback(callbackID, callback);
+    [WebPreferences _clearNetworkLoaderSession:^{
+        callTestRunnerCallback(callbackID);
+    }];
 }
 
 void TestRunner::removeAllVisitedLinks()
@@ -1166,7 +1172,7 @@ void TestRunner::removeAllWebNotificationPermissions()
 
 void TestRunner::simulateWebNotificationClick(JSValueRef jsNotification)
 {
-    uint64_t notificationID = [[mainFrame webView] _notificationIDForTesting:jsNotification];
+    NSString *notificationID = [[mainFrame webView] _notificationIDForTesting:jsNotification];
     m_hasPendingWebNotificationClick = true;
     dispatch_async(dispatch_get_main_queue(), ^{
         if (!m_hasPendingWebNotificationClick)
@@ -1210,6 +1216,17 @@ unsigned TestRunner::imageCountInGeneralPasteboard() const
         return 0;
     
     return imagesArray.count;
+}
+
+
+void TestRunner::generateTestReport(JSStringRef message, JSStringRef group)
+{
+    ASSERT(message);
+    auto messageCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, message));
+    RetainPtr<CFStringRef> groupCF;
+    if (group)
+        groupCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, group));
+    [mainFrame _generateTestReport:(__bridge NSString *)messageCF.get() withGroup:(__bridge NSString *)groupCF.get()];
 }
 
 #if PLATFORM(MAC)

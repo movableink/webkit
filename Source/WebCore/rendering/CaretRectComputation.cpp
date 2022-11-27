@@ -29,6 +29,7 @@
 #include "Editing.h"
 #include "InlineIteratorLineBox.h"
 #include "InlineIteratorTextBox.h"
+#include "LayoutIntegrationLineLayout.h"
 #include "LineSelection.h"
 #include "RenderBlockFlow.h"
 #include "RenderInline.h"
@@ -40,7 +41,7 @@ namespace WebCore {
 
 static LayoutRect computeCaretRectForEmptyElement(const RenderBoxModelObject& renderer, LayoutUnit width, LayoutUnit textIndentOffset, CaretRectMode caretRectMode)
 {
-    ASSERT(!renderer.firstChild());
+    ASSERT(!renderer.firstChild() || renderer.firstChild()->isPseudoElement());
 
     // FIXME: This does not take into account either :first-line or :first-letter
     // However, as soon as some content is entered, the line boxes will be
@@ -112,7 +113,7 @@ static LayoutRect computeCaretRectForEmptyElement(const RenderBoxModelObject& re
 
 static LayoutRect computeCaretRectForLinePosition(const InlineIterator::LineBoxIterator& lineBox, float logicalLeftPosition, CaretRectMode caretRectMode)
 {
-    auto& containingBlock = lineBox->containingBlock();
+    auto& root = lineBox->formattingContextRoot();
     auto lineSelectionRect = LineSelection::logicalRect(*lineBox);
 
     int height = lineSelectionRect.height();
@@ -129,7 +130,7 @@ static LayoutRect computeCaretRectForLinePosition(const InlineIterator::LineBoxI
     float lineRight = lineSelectionRect.maxX();
 
     bool rightAligned = false;
-    switch (containingBlock.style().textAlign()) {
+    switch (root.style().textAlign()) {
     case TextAlignMode::Right:
     case TextAlignMode::WebKitRight:
         rightAligned = true;
@@ -141,15 +142,15 @@ static LayoutRect computeCaretRectForLinePosition(const InlineIterator::LineBoxI
         break;
     case TextAlignMode::Justify:
     case TextAlignMode::Start:
-        rightAligned = !containingBlock.style().isLeftToRightDirection();
+        rightAligned = !root.style().isLeftToRightDirection();
         break;
     case TextAlignMode::End:
-        rightAligned = containingBlock.style().isLeftToRightDirection();
+        rightAligned = root.style().isLeftToRightDirection();
         break;
     }
 
     float leftEdge = std::min<float>(0, lineLeft);
-    float rightEdge = std::max<float>(containingBlock.logicalWidth(), lineRight);
+    float rightEdge = std::max<float>(root.logicalWidth(), lineRight);
 
     if (rightAligned) {
         left = std::max(left, leftEdge);
@@ -164,7 +165,7 @@ static LayoutRect computeCaretRectForLinePosition(const InlineIterator::LineBoxI
     if (caretRectMode == CaretRectMode::ExpandToEndOfLine)
         rect.shiftMaxXEdgeTo(lineRight);
 
-    return containingBlock.style().isHorizontalWritingMode() ? rect : rect.transposedRect();
+    return root.style().isHorizontalWritingMode() ? rect : rect.transposedRect();
 }
 
 static LayoutRect computeCaretRectForText(const InlineBoxAndOffset& boxAndOffset, CaretRectMode caretRectMode)
@@ -266,7 +267,7 @@ static LayoutRect computeCaretRectForBox(const RenderBox& renderer, const Inline
 static LayoutRect computeCaretRectForBlock(const RenderBlock& renderer, const InlineBoxAndOffset& boxAndOffset, CaretRectMode caretRectMode)
 {
     // Do the normal calculation in most cases.
-    if (renderer.firstChild())
+    if (renderer.firstChild() && !renderer.firstChild()->isPseudoElement())
         return computeCaretRectForBox(renderer, boxAndOffset, caretRectMode);
 
     return computeCaretRectForEmptyElement(renderer, renderer.width(), renderer.textIndentOffset(), caretRectMode);
@@ -285,8 +286,8 @@ static LayoutRect computeCaretRectForInline(const RenderInline& renderer)
 
     LayoutRect caretRect = computeCaretRectForEmptyElement(renderer, renderer.horizontalBorderAndPaddingExtent(), 0, CaretRectMode::Normal);
 
-    if (LegacyInlineBox* firstBox = renderer.firstLineBox())
-        caretRect.moveBy(LayoutPoint(firstBox->topLeft()));
+    if (auto firstInlineBox = InlineIterator::firstInlineBoxFor(renderer))
+        caretRect.moveBy(LayoutPoint { firstInlineBox->visualRectIgnoringBlockDirection().location() });
 
     return caretRect;
 }

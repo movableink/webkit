@@ -592,11 +592,11 @@ void GL_APIENTRY glScissor(GLint x, GLint y, GLsizei width, GLsizei height)
 
 void GL_APIENTRY glShaderBinary(GLsizei count,
                                 const GLuint *shaders,
-                                GLenum binaryformat,
+                                GLenum binaryFormat,
                                 const void *binary,
                                 GLsizei length)
 {
-    return GL_ShaderBinary(count, shaders, binaryformat, binary, length);
+    return GL_ShaderBinary(count, shaders, binaryFormat, binary, length);
 }
 
 void GL_APIENTRY glShaderSource(GLuint shader,
@@ -1147,10 +1147,10 @@ void GL_APIENTRY glGetIntegeri_v(GLenum target, GLuint index, GLint *data)
 void GL_APIENTRY glGetInternalformativ(GLenum target,
                                        GLenum internalformat,
                                        GLenum pname,
-                                       GLsizei bufSize,
+                                       GLsizei count,
                                        GLint *params)
 {
-    return GL_GetInternalformativ(target, internalformat, pname, bufSize, params);
+    return GL_GetInternalformativ(target, internalformat, pname, count, params);
 }
 
 void GL_APIENTRY glGetProgramBinary(GLuint program,
@@ -1188,9 +1188,9 @@ const GLubyte *GL_APIENTRY glGetStringi(GLenum name, GLuint index)
 }
 
 void GL_APIENTRY
-glGetSynciv(GLsync sync, GLenum pname, GLsizei bufSize, GLsizei *length, GLint *values)
+glGetSynciv(GLsync sync, GLenum pname, GLsizei count, GLsizei *length, GLint *values)
 {
-    return GL_GetSynciv(sync, pname, bufSize, length, values);
+    return GL_GetSynciv(sync, pname, count, length, values);
 }
 
 void GL_APIENTRY glGetTransformFeedbackVarying(GLuint program,
@@ -1666,11 +1666,11 @@ void GL_APIENTRY glGetProgramResourceiv(GLuint program,
                                         GLuint index,
                                         GLsizei propCount,
                                         const GLenum *props,
-                                        GLsizei bufSize,
+                                        GLsizei count,
                                         GLsizei *length,
                                         GLint *params)
 {
-    return GL_GetProgramResourceiv(program, programInterface, index, propCount, props, bufSize,
+    return GL_GetProgramResourceiv(program, programInterface, index, propCount, props, count,
                                    length, params);
 }
 
@@ -2976,6 +2976,12 @@ void GL_APIENTRY glVertexAttribDivisorANGLE(GLuint index, GLuint divisor)
     return GL_VertexAttribDivisorANGLE(index, divisor);
 }
 
+// GL_ANGLE_logic_op
+void GL_APIENTRY glLogicOpANGLE(GLenum opcode)
+{
+    return GL_LogicOpANGLE(opcode);
+}
+
 // GL_ANGLE_memory_object_flags
 void GL_APIENTRY glTexStorageMemFlags2DANGLE(GLenum target,
                                              GLsizei levels,
@@ -3762,6 +3768,64 @@ void GL_APIENTRY glImportSemaphoreZirconHandleANGLE(GLuint semaphore,
     return GL_ImportSemaphoreZirconHandleANGLE(semaphore, handleType, handle);
 }
 
+// GL_ANGLE_shader_pixel_local_storage
+void GL_APIENTRY glFramebufferMemorylessPixelLocalStorageANGLE(GLint plane, GLenum internalformat)
+{
+    return GL_FramebufferMemorylessPixelLocalStorageANGLE(plane, internalformat);
+}
+
+void GL_APIENTRY glFramebufferTexturePixelLocalStorageANGLE(GLint plane,
+                                                            GLuint backingtexture,
+                                                            GLint level,
+                                                            GLint layer)
+{
+    return GL_FramebufferTexturePixelLocalStorageANGLE(plane, backingtexture, level, layer);
+}
+
+void GL_APIENTRY glFramebufferPixelLocalClearValuefvANGLE(GLint plane, const GLfloat *value)
+{
+    return GL_FramebufferPixelLocalClearValuefvANGLE(plane, value);
+}
+
+void GL_APIENTRY glFramebufferPixelLocalClearValueivANGLE(GLint plane, const GLint *value)
+{
+    return GL_FramebufferPixelLocalClearValueivANGLE(plane, value);
+}
+
+void GL_APIENTRY glFramebufferPixelLocalClearValueuivANGLE(GLint plane, const GLuint *value)
+{
+    return GL_FramebufferPixelLocalClearValueuivANGLE(plane, value);
+}
+
+void GL_APIENTRY glBeginPixelLocalStorageANGLE(GLsizei n, const GLenum *loadops)
+{
+    return GL_BeginPixelLocalStorageANGLE(n, loadops);
+}
+
+void GL_APIENTRY glEndPixelLocalStorageANGLE(GLsizei n, const GLenum *storeops)
+{
+    return GL_EndPixelLocalStorageANGLE(n, storeops);
+}
+
+void GL_APIENTRY glPixelLocalStorageBarrierANGLE()
+{
+    return GL_PixelLocalStorageBarrierANGLE();
+}
+
+void GL_APIENTRY glGetFramebufferPixelLocalStorageParameterfvANGLE(GLint plane,
+                                                                   GLenum pname,
+                                                                   GLfloat *params)
+{
+    return GL_GetFramebufferPixelLocalStorageParameterfvANGLE(plane, pname, params);
+}
+
+void GL_APIENTRY glGetFramebufferPixelLocalStorageParameterivANGLE(GLint plane,
+                                                                   GLenum pname,
+                                                                   GLint *params)
+{
+    return GL_GetFramebufferPixelLocalStorageParameterivANGLE(plane, pname, params);
+}
+
 // GL_ANGLE_texture_compression_dxt3
 
 // GL_ANGLE_texture_compression_dxt5
@@ -3811,11 +3875,11 @@ void GL_APIENTRY glSampleMaskiANGLE(GLuint maskNumber, GLbitfield mask)
 
 // GL_ANGLE_translated_shader_source
 void GL_APIENTRY glGetTranslatedShaderSourceANGLE(GLuint shader,
-                                                  GLsizei bufsize,
+                                                  GLsizei bufSize,
                                                   GLsizei *length,
                                                   GLchar *source)
 {
-    return GL_GetTranslatedShaderSourceANGLE(shader, bufsize, length, source);
+    return GL_GetTranslatedShaderSourceANGLE(shader, bufSize, length, source);
 }
 
 // GL_ANGLE_vulkan_image
@@ -4200,10 +4264,10 @@ void GL_APIENTRY glMultiDrawElementsBaseVertexEXT(GLenum mode,
                                                   const GLsizei *count,
                                                   GLenum type,
                                                   const void *const *indices,
-                                                  GLsizei primcount,
+                                                  GLsizei drawcount,
                                                   const GLint *basevertex)
 {
-    return GL_MultiDrawElementsBaseVertexEXT(mode, count, type, indices, primcount, basevertex);
+    return GL_MultiDrawElementsBaseVertexEXT(mode, count, type, indices, drawcount, basevertex);
 }
 
 // GL_EXT_external_buffer
@@ -4416,6 +4480,8 @@ void GL_APIENTRY glRenderbufferStorageMultisampleEXT(GLenum target,
 {
     return GL_RenderbufferStorageMultisampleEXT(target, samples, internalformat, width, height);
 }
+
+// GL_EXT_multisampled_render_to_texture2
 
 // GL_EXT_occlusion_query_boolean
 
@@ -5173,6 +5239,8 @@ void GL_APIENTRY glEGLImageTargetTexture2DOES(GLenum target, GLeglImageOES image
 // GL_OES_EGL_image_external_essl3
 
 // GL_OES_compressed_ETC1_RGB8_texture
+
+// GL_OES_compressed_paletted_texture
 
 // GL_OES_copy_image
 void GL_APIENTRY glCopyImageSubDataOES(GLuint srcName,
@@ -8110,21 +8178,21 @@ void GL_APIENTRY glEndQueryIndexed(GLenum target, GLuint index)
 void GL_APIENTRY glGetActiveSubroutineName(GLuint program,
                                            GLenum shadertype,
                                            GLuint index,
-                                           GLsizei bufsize,
+                                           GLsizei bufSize,
                                            GLsizei *length,
                                            GLchar *name)
 {
-    return GL_GetActiveSubroutineName(program, shadertype, index, bufsize, length, name);
+    return GL_GetActiveSubroutineName(program, shadertype, index, bufSize, length, name);
 }
 
 void GL_APIENTRY glGetActiveSubroutineUniformName(GLuint program,
                                                   GLenum shadertype,
                                                   GLuint index,
-                                                  GLsizei bufsize,
+                                                  GLsizei bufSize,
                                                   GLsizei *length,
                                                   GLchar *name)
 {
-    return GL_GetActiveSubroutineUniformName(program, shadertype, index, bufsize, length, name);
+    return GL_GetActiveSubroutineUniformName(program, shadertype, index, bufSize, length, name);
 }
 
 void GL_APIENTRY glGetActiveSubroutineUniformiv(GLuint program,
@@ -8615,10 +8683,10 @@ void GL_APIENTRY glClearBufferSubData(GLenum target,
 void GL_APIENTRY glGetInternalformati64v(GLenum target,
                                          GLenum internalformat,
                                          GLenum pname,
-                                         GLsizei bufSize,
+                                         GLsizei count,
                                          GLint64 *params)
 {
-    return GL_GetInternalformati64v(target, internalformat, pname, bufSize, params);
+    return GL_GetInternalformati64v(target, internalformat, pname, count, params);
 }
 
 GLint GL_APIENTRY glGetProgramResourceLocationIndex(GLuint program,

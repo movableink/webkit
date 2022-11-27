@@ -16,7 +16,7 @@
 #include <vector>
 
 #include <EGL/eglext.h>
-#include <platform/Platform.h>
+#include <platform/PlatformMethods.h>
 
 #include "anglebase/no_destructor.h"
 #include "common/android_util.h"
@@ -28,6 +28,7 @@
 #include "common/tls.h"
 #include "common/utilities.h"
 #include "gpu_info_util/SystemInfo.h"
+#include "image_util/loadimage.h"
 #include "libANGLE/Context.h"
 #include "libANGLE/Device.h"
 #include "libANGLE/EGLSync.h"
@@ -80,6 +81,20 @@
 #if defined(ANGLE_ENABLE_METAL)
 #    include "libANGLE/renderer/metal/DisplayMtl_api.h"
 #endif  // defined(ANGLE_ENABLE_METAL)
+
+template <typename T, typename IDType, typename SetT>
+T GetResourceFromHashSet(IDType id, SetT &hashSet)
+{
+    for (T resource : hashSet)
+    {
+        if (resource->id() == id)
+        {
+            return resource;
+        }
+    }
+
+    return nullptr;
+}
 
 namespace egl
 {
@@ -617,6 +632,11 @@ void ShareGroup::finishAllContexts()
 void ShareGroup::addSharedContext(gl::Context *context)
 {
     mContexts.insert(context);
+
+    if (context->isRobustnessEnabled())
+    {
+        mImplementation->onRobustContextAdd();
+    }
 }
 
 void ShareGroup::removeSharedContext(gl::Context *context)
@@ -846,6 +866,7 @@ Display::Display(EGLenum platform, EGLNativeDisplayType displayId, Device *eglDe
       mAttributeMap(),
       mConfigSet(),
       mStreamSet(),
+      mInvalidContextSet(),
       mInvalidImageSet(),
       mInvalidStreamSet(),
       mInvalidSurfaceSet(),
@@ -864,10 +885,13 @@ Display::Display(EGLenum platform, EGLNativeDisplayType displayId, Device *eglDe
       mSemaphoreManager(nullptr),
       mBlobCache(gl::kDefaultMaxProgramCacheMemoryBytes),
       mMemoryProgramCache(mBlobCache),
+      mMemoryShaderCache(mBlobCache),
       mGlobalTextureShareGroupUsers(0),
       mGlobalSemaphoreShareGroupUsers(0),
       mTerminatedByApi(false),
-      mActiveThreads()
+      mActiveThreads(),
+      mSingleThreadPool(nullptr),
+      mMultiThreadPool(nullptr)
 {}
 
 Display::~Display()
@@ -1033,6 +1057,7 @@ Error Display::initialize()
     initDisplayExtensions();
     initVendorString();
     initVersionString();
+    initClientAPIString();
 
     // Populate the Display's EGLDeviceEXT if the Display wasn't created using one
     if (mPlatform == EGL_PLATFORM_DEVICE_EXT)
@@ -1062,6 +1087,9 @@ Error Display::initialize()
         mDevice = nullptr;
     }
 
+    mSingleThreadPool = angle::WorkerThreadPool::Create(1, ANGLEPlatformCurrent());
+    mMultiThreadPool  = angle::WorkerThreadPool::Create(0, ANGLEPlatformCurrent());
+
     mInitialized = true;
 
     return NoError();
@@ -1070,44 +1098,31 @@ Error Display::initialize()
 Error Display::destroyInvalidEglObjects()
 {
     // Destroy invalid EGL objects
-
-    ImageSet images     = {};
-    StreamSet streams   = {};
-    SurfaceSet surfaces = {};
-    SyncSet syncs       = {};
+    while (!mInvalidContextSet.empty())
     {
-        // Retrieve objects to be destroyed
-        std::lock_guard<std::mutex> lock(mInvalidEglObjectsMutex);
-        images   = std::move(mInvalidImageSet);
-        streams  = std::move(mInvalidStreamSet);
-        surfaces = std::move(mInvalidSurfaceSet);
-        syncs    = std::move(mInvalidSyncSet);
-
-        // Update invalid object sets
-        mInvalidImageSet.clear();
-        mInvalidStreamSet.clear();
-        mInvalidSurfaceSet.clear();
-        mInvalidSyncSet.clear();
+        gl::Context *context = *mInvalidContextSet.begin();
+        context->setIsDestroyed();
+        ANGLE_TRY(releaseContextImpl(context, &mInvalidContextSet));
     }
 
-    while (!images.empty())
+    while (!mInvalidImageSet.empty())
     {
-        destroyImageImpl(*images.begin(), &images);
+        destroyImageImpl(*mInvalidImageSet.begin(), &mInvalidImageSet);
     }
 
-    while (!streams.empty())
+    while (!mInvalidStreamSet.empty())
     {
-        destroyStreamImpl(*streams.begin(), &streams);
+        destroyStreamImpl(*mInvalidStreamSet.begin(), &mInvalidStreamSet);
     }
 
-    while (!surfaces.empty())
+    while (!mInvalidSurfaceSet.empty())
     {
-        ANGLE_TRY(destroySurfaceImpl(*surfaces.begin(), &surfaces));
+        ANGLE_TRY(destroySurfaceImpl(*mInvalidSurfaceSet.begin(), &mInvalidSurfaceSet));
     }
 
-    while (!syncs.empty())
+    while (!mInvalidSyncSet.empty())
     {
-        destroySyncImpl(*syncs.begin(), &syncs);
+        destroySyncImpl(*mInvalidSyncSet.begin(), &mInvalidSyncSet);
     }
 
     return NoError();
@@ -1120,7 +1135,9 @@ Error Display::terminate(Thread *thread, TerminateReason terminateReason)
         mTerminatedByApi = true;
     }
 
-    if (!mInitialized)
+    // All subsequent calls assume the display to be valid and terminated by app.
+    // If it is not terminated or if it isn't even initialized, early return.
+    if (!mTerminatedByApi || !mInitialized)
     {
         return NoError();
     }
@@ -1129,29 +1146,32 @@ Error Display::terminate(Thread *thread, TerminateReason terminateReason)
     // 3.2 Initialization
     // Termination marks all EGL-specific resources, such as contexts and surfaces, associated
     // with the specified display for deletion. Handles to all such resources are invalid as soon
-    // as eglTerminate returns
-    // Cache EGL objects that are no longer valid
-    // TODO (http://www.anglebug.com/6798): Invalidate context handles as well.
-    if (mTerminatedByApi)
-    {
-        std::lock_guard<std::mutex> lock(mInvalidEglObjectsMutex);
+    // as eglTerminate returns. Cache EGL objects that are no longer valid.
+    //
+    // It is fairly common for apps to call eglTerminate while some contexts and/or surfaces are
+    // still current on some thread. Since objects are refCounted, trying to destroy them right away
+    // would only result in a decRef. We instead cache such invalid objects and use other EGL
+    // entrypoints like eglReleaseThread or thread exit events (on the Android platform) to
+    // perform the necessary cleanup.
+    mInvalidImageSet.insert(mImageSet.begin(), mImageSet.end());
+    mImageSet.clear();
 
-        mInvalidImageSet.insert(mImageSet.begin(), mImageSet.end());
-        mImageSet.clear();
+    mInvalidStreamSet.insert(mStreamSet.begin(), mStreamSet.end());
+    mStreamSet.clear();
 
-        mInvalidStreamSet.insert(mStreamSet.begin(), mStreamSet.end());
-        mStreamSet.clear();
+    mInvalidSurfaceSet.insert(mState.surfaceSet.begin(), mState.surfaceSet.end());
+    mState.surfaceSet.clear();
 
-        mInvalidSurfaceSet.insert(mState.surfaceSet.begin(), mState.surfaceSet.end());
-        mState.surfaceSet.clear();
+    mInvalidSyncSet.insert(mSyncSet.begin(), mSyncSet.end());
+    mSyncSet.clear();
 
-        mInvalidSyncSet.insert(mSyncSet.begin(), mSyncSet.end());
-        mSyncSet.clear();
-    }
+    // Cache total number of contexts before invalidation. This is used as a check to verify that
+    // no context is "lost" while being moved between the various sets.
+    size_t contextSetSizeBeforeInvalidation = mState.contextSet.size() + mInvalidContextSet.size();
 
-    // All EGL objects, except contexts, have been marked invalid by the block above and will be
-    // cleaned up by "destroyInvalidEglObjects". If app called eglTerminate and no active threads
-    // remain, perform the cleanup right away.
+    // If app called eglTerminate and no active threads remain,
+    // force realease any context that is still current.
+    ContextSet contextsStillCurrent = {};
     for (gl::Context *context : mState.contextSet)
     {
         if (context->getRefCount() > 0)
@@ -1164,20 +1184,36 @@ Error Display::terminate(Thread *thread, TerminateReason terminateReason)
             }
             else
             {
-                return NoError();
+                contextsStillCurrent.emplace(context);
+                continue;
             }
         }
+
+        // Add context that is not current to mInvalidContextSet for cleanup.
+        mInvalidContextSet.emplace(context);
     }
 
-    // Destroy all of the Contexts for this Display, since none of them are current anymore.
-    while (!mState.contextSet.empty())
+    // There are many methods that require contexts that are still current to be present in
+    // display's contextSet like during context release or to notify of state changes in a subject.
+    // So as to not interrupt this flow, do not remove contexts that are still current on some
+    // thread from display's contextSet even though eglTerminate marks such contexts as invalid.
+    //
+    // "mState.contextSet" will now contain only those contexts that are still current on some
+    // thread.
+    mState.contextSet = std::move(contextsStillCurrent);
+
+    // Assert that the total number of contexts is the same before and after context invalidation.
+    ASSERT(contextSetSizeBeforeInvalidation ==
+           mState.contextSet.size() + mInvalidContextSet.size());
+
+    if (!mState.contextSet.empty())
     {
-        gl::Context *context = *mState.contextSet.begin();
-        context->setIsDestroyed();
-        ANGLE_TRY(releaseContext(context, thread));
+        // There was atleast 1 context that was current on some thread, early return.
+        return NoError();
     }
 
     mMemoryProgramCache.clear();
+    mMemoryShaderCache.clear();
     mBlobCache.setBlobCacheFuncs(nullptr, nullptr);
 
     // The global texture and semaphore managers should be deleted with the last context that uses
@@ -1185,7 +1221,7 @@ Error Display::terminate(Thread *thread, TerminateReason terminateReason)
     ASSERT(mGlobalTextureShareGroupUsers == 0 && mTextureManager == nullptr);
     ASSERT(mGlobalSemaphoreShareGroupUsers == 0 && mSemaphoreManager == nullptr);
 
-    // Now that contexts have been destroyed, clean up any remaining invalid objects
+    // Clean up all invalid objects
     ANGLE_TRY(destroyInvalidEglObjects());
 
     mConfigSet.clear();
@@ -1198,6 +1234,9 @@ Error Display::terminate(Thread *thread, TerminateReason terminateReason)
     }
 
     mImplementation->terminate();
+
+    mSingleThreadPool.reset();
+    mMultiThreadPool.reset();
 
     mDeviceLost = false;
 
@@ -1224,18 +1263,16 @@ Error Display::releaseThread()
 
 void Display::addActiveThread(Thread *thread)
 {
-    std::lock_guard<std::mutex> lock(mActiveThreadsMutex);
     mActiveThreads.insert(thread);
 }
 
-void Display::removeActiveThreadAndPerformCleanup(Thread *thread)
+void Display::threadCleanup(Thread *thread)
 {
-    std::lock_guard<std::mutex> lock(mActiveThreadsMutex);
     mActiveThreads.erase(thread);
-    if (mTerminatedByApi && mActiveThreads.size() == 0)
-    {
-        (void)terminate(thread, TerminateReason::NoActiveThreads);
-    }
+    const bool noActiveThreads = mActiveThreads.size() == 0;
+
+    (void)terminate(thread, noActiveThreads ? TerminateReason::NoActiveThreads
+                                            : TerminateReason::InternalCleanup);
 }
 
 std::vector<const Config *> Display::getConfigs(const egl::AttributeMap &attribs) const
@@ -1280,7 +1317,8 @@ Error Display::createWindowSurface(const Config *configuration,
         ANGLE_TRY(restoreLostDevice());
     }
 
-    SurfacePointer surface(new WindowSurface(mImplementation, configuration, window, attribs,
+    SurfaceID id = {mSurfaceHandleAllocator.allocate()};
+    SurfacePointer surface(new WindowSurface(mImplementation, id, configuration, window, attribs,
                                              mFrontendFeatures.forceRobustResourceInit.enabled),
                            this);
     ANGLE_TRY(surface->initialize(this));
@@ -1309,7 +1347,8 @@ Error Display::createPbufferSurface(const Config *configuration,
         ANGLE_TRY(restoreLostDevice());
     }
 
-    SurfacePointer surface(new PbufferSurface(mImplementation, configuration, attribs,
+    SurfaceID id = {mSurfaceHandleAllocator.allocate()};
+    SurfacePointer surface(new PbufferSurface(mImplementation, id, configuration, attribs,
                                               mFrontendFeatures.forceRobustResourceInit.enabled),
                            this);
     ANGLE_TRY(surface->initialize(this));
@@ -1334,8 +1373,9 @@ Error Display::createPbufferFromClientBuffer(const Config *configuration,
         ANGLE_TRY(restoreLostDevice());
     }
 
+    SurfaceID id = {mSurfaceHandleAllocator.allocate()};
     SurfacePointer surface(
-        new PbufferSurface(mImplementation, configuration, buftype, clientBuffer, attribs,
+        new PbufferSurface(mImplementation, id, configuration, buftype, clientBuffer, attribs,
                            mFrontendFeatures.forceRobustResourceInit.enabled),
         this);
     ANGLE_TRY(surface->initialize(this));
@@ -1359,9 +1399,11 @@ Error Display::createPixmapSurface(const Config *configuration,
         ANGLE_TRY(restoreLostDevice());
     }
 
-    SurfacePointer surface(new PixmapSurface(mImplementation, configuration, nativePixmap, attribs,
-                                             mFrontendFeatures.forceRobustResourceInit.enabled),
-                           this);
+    SurfaceID id = {mSurfaceHandleAllocator.allocate()};
+    SurfacePointer surface(
+        new PixmapSurface(mImplementation, id, configuration, nativePixmap, attribs,
+                          mFrontendFeatures.forceRobustResourceInit.enabled),
+        this);
     ANGLE_TRY(surface->initialize(this));
 
     ASSERT(outSurface != nullptr);
@@ -1403,8 +1445,9 @@ Error Display::createImage(const gl::Context *context,
     }
     ASSERT(sibling != nullptr);
 
+    ImageID id = {mImageHandleAllocator.allocate()};
     angle::UniqueObjectPointer<Image, Display> imagePtr(
-        new Image(mImplementation, context, target, sibling, attribs), this);
+        new Image(mImplementation, id, context, target, sibling, attribs), this);
     ANGLE_TRY(imagePtr->initialize(this));
 
     Image *image = imagePtr.release();
@@ -1482,8 +1525,7 @@ Error Display::createContext(const Config *configuration,
         shareSemaphores = mSemaphoreManager;
     }
 
-    gl::MemoryProgramCache *cachePointer = &mMemoryProgramCache;
-
+    gl::MemoryProgramCache *programCachePointer = &mMemoryProgramCache;
     // Check context creation attributes to see if we are using EGL_ANGLE_program_cache_control.
     // If not, keep caching enabled for EGL_ANDROID_blob_cache, which can have its callbacks set
     // at any time.
@@ -1495,14 +1537,21 @@ Error Display::createContext(const Config *configuration,
         // A program cache size of zero indicates it should be disabled.
         if (!programCacheControlEnabled || mMemoryProgramCache.maxSize() == 0)
         {
-            cachePointer = nullptr;
+            programCachePointer = nullptr;
         }
     }
 
-    gl::Context *context = new gl::Context(this, configuration, shareContext, shareTextures,
-                                           shareSemaphores, cachePointer, clientType, attribs,
-                                           mDisplayExtensions, GetClientExtensions());
-    Error error          = context->initialize();
+    gl::MemoryShaderCache *shaderCachePointer = &mMemoryShaderCache;
+    // Check if shader caching frontend feature is enabled.
+    if (!mFrontendFeatures.cacheCompiledShader.enabled)
+    {
+        shaderCachePointer = nullptr;
+    }
+
+    gl::Context *context = new gl::Context(
+        this, configuration, shareContext, shareTextures, shareSemaphores, programCachePointer,
+        shaderCachePointer, clientType, attribs, mDisplayExtensions, GetClientExtensions());
+    Error error = context->initialize();
     if (error.isError())
     {
         delete context;
@@ -1646,6 +1695,7 @@ Error Display::destroySurfaceImpl(Surface *surface, SurfaceSet *surfaces)
 
     auto iter = surfaces->find(surface);
     ASSERT(iter != surfaces->end());
+    mSurfaceHandleAllocator.release(surface->id().value);
     surfaces->erase(iter);
     ANGLE_TRY(surface->onDestroy(this));
     return NoError();
@@ -1655,6 +1705,7 @@ void Display::destroyImageImpl(Image *image, ImageSet *images)
 {
     auto iter = images->find(image);
     ASSERT(iter != images->end());
+    mImageHandleAllocator.release(image->id().value);
     (*iter)->release(this);
     images->erase(iter);
 }
@@ -1671,12 +1722,17 @@ void Display::destroyStreamImpl(Stream *stream, StreamSet *streams)
 // as part of destruction.
 Error Display::releaseContext(gl::Context *context, Thread *thread)
 {
+    return releaseContextImpl(context, &mState.contextSet);
+}
+
+Error Display::releaseContextImpl(gl::Context *context, ContextSet *contexts)
+{
     ASSERT(context->getRefCount() == 0);
 
     // Use scoped_ptr to make sure the context is always freed.
     std::unique_ptr<gl::Context> unique_context(context);
-    ASSERT(mState.contextSet.find(context) != mState.contextSet.end());
-    mState.contextSet.erase(context);
+    ASSERT(contexts->find(context) != contexts->end());
+    contexts->erase(context);
 
     if (context->usingDisplayTextureShareGroup())
     {
@@ -1891,19 +1947,19 @@ bool Display::isValidConfig(const Config *config) const
     return mConfigSet.contains(config);
 }
 
-bool Display::isValidContext(const gl::Context *context) const
+bool Display::isValidContext(const gl::ContextID contextID) const
 {
-    return mState.contextSet.find(const_cast<gl::Context *>(context)) != mState.contextSet.end();
+    return getContext(contextID) != nullptr;
 }
 
-bool Display::isValidSurface(const Surface *surface) const
+bool Display::isValidSurface(SurfaceID surfaceID) const
 {
-    return mState.surfaceSet.find(const_cast<Surface *>(surface)) != mState.surfaceSet.end();
+    return getSurface(surfaceID) != nullptr;
 }
 
-bool Display::isValidImage(const Image *image) const
+bool Display::isValidImage(ImageID imageID) const
 {
-    return mImageSet.find(const_cast<Image *>(image)) != mImageSet.end();
+    return getImage(imageID) != nullptr;
 }
 
 bool Display::isValidStream(const Stream *stream) const
@@ -2158,6 +2214,19 @@ void Display::initVersionString()
     mVersionString = mImplementation->getVersionString(true);
 }
 
+void Display::initClientAPIString()
+{
+    // If the max supported desktop version is not None, we support a desktop GL frontend.
+    if (mImplementation->getMaxSupportedDesktopVersion().valid())
+    {
+        mClientAPIString = "OpenGL_ES OpenGL";
+    }
+    else
+    {
+        mClientAPIString = "OpenGL_ES";
+    }
+}
+
 void Display::initializeFrontendFeatures()
 {
     // Enable on all Impls
@@ -2197,6 +2266,11 @@ const std::string &Display::getVendorString() const
 const std::string &Display::getVersionString() const
 {
     return mVersionString;
+}
+
+const std::string &Display::getClientAPIString() const
+{
+    return mClientAPIString;
 }
 
 std::string Display::getBackendRendererDescription() const
@@ -2460,4 +2534,43 @@ Error Display::queryDmaBufModifiers(EGLint format,
     return NoError();
 }
 
+angle::ImageLoadContext Display::getImageLoadContext() const
+{
+    angle::ImageLoadContext imageLoadContext;
+
+    imageLoadContext.singleThreadPool = mSingleThreadPool;
+    imageLoadContext.multiThreadPool =
+        mFrontendFeatures.singleThreadedTextureDecompression.enabled ? nullptr : mMultiThreadPool;
+
+    return imageLoadContext;
+}
+
+const gl::Context *Display::getContext(gl::ContextID contextID) const
+{
+    return GetResourceFromHashSet<const gl::Context *>(contextID, mState.contextSet);
+}
+
+const egl::Surface *Display::getSurface(egl::SurfaceID surfaceID) const
+{
+    return GetResourceFromHashSet<const egl::Surface *>(surfaceID, mState.surfaceSet);
+}
+
+const egl::Image *Display::getImage(egl::ImageID imageID) const
+{
+    return GetResourceFromHashSet<const egl::Image *>(imageID, mImageSet);
+}
+
+gl::Context *Display::getContext(gl::ContextID contextID)
+{
+    return GetResourceFromHashSet<gl::Context *>(contextID, mState.contextSet);
+}
+
+egl::Surface *Display::getSurface(egl::SurfaceID surfaceID)
+{
+    return GetResourceFromHashSet<egl::Surface *>(surfaceID, mState.surfaceSet);
+}
+egl::Image *Display::getImage(egl::ImageID imageID)
+{
+    return GetResourceFromHashSet<egl::Image *>(imageID, mImageSet);
+}
 }  // namespace egl

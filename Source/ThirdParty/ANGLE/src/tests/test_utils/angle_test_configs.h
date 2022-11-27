@@ -65,8 +65,8 @@ struct PlatformParameters
         eglParameters.disable(feature);
         return *this;
     }
-    bool isEnabled(Feature feature) const;
-    bool isDisabled(Feature feature) const;
+    bool isEnableRequested(Feature feature) const;
+    bool isDisableRequested(Feature feature) const;
 
     GLESDriverType driver;
     bool noFixture;
@@ -215,8 +215,15 @@ PlatformParameters ES3_METAL();
 PlatformParameters ES2_WGL();
 PlatformParameters ES3_WGL();
 
+PlatformParameters ES1_EGL();
 PlatformParameters ES2_EGL();
 PlatformParameters ES3_EGL();
+
+PlatformParameters ES1_Zink();
+PlatformParameters ES2_Zink();
+PlatformParameters ES3_Zink();
+PlatformParameters ES31_Zink();
+PlatformParameters ES32_Zink();
 
 const char *GetNativeEGLLibraryNameWithExtension();
 

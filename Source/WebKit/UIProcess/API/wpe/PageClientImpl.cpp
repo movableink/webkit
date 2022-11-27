@@ -57,9 +57,9 @@ struct wpe_view_backend* PageClientImpl::viewBackend()
     return m_view.backend();
 }
 
-IPC::Attachment PageClientImpl::hostFileDescriptor()
+UnixFileDescriptor PageClientImpl::hostFileDescriptor()
 {
-    return IPC::Attachment(UnixFileDescriptor(wpe_view_backend_get_renderer_host_fd(m_view.backend()), UnixFileDescriptor::Adopt));
+    return UnixFileDescriptor { wpe_view_backend_get_renderer_host_fd(m_view.backend()), UnixFileDescriptor::Adopt };
 }
 
 std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy(WebProcessProxy& process)
@@ -445,6 +445,11 @@ void PageClientImpl::setInputMethodState(std::optional<InputMethodState>&& state
 void PageClientImpl::selectionDidChange()
 {
     m_view.selectionDidChange();
+}
+
+WebKitWebResourceLoadManager* PageClientImpl::webResourceLoadManager()
+{
+    return m_view.webResourceLoadManager();
 }
 
 } // namespace WebKit

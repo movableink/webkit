@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 from io import BytesIO
 from unittest import mock
 
@@ -116,6 +118,16 @@ def make_test_object(test_name,
 
     test = next(iter(tests[index][2])) if iterate else tests[index][2].pop()
     return wpttest.from_manifest(tests, test, inherit_metadata, test_metadata.get_test(test.id))
+
+
+def test_run_info():
+    run_info = wpttest.get_run_info("/", "fake-product", debug=False)
+    assert isinstance(run_info["bits"], int)
+    assert isinstance(run_info["os"], str)
+    assert isinstance(run_info["os_version"], str)
+    assert isinstance(run_info["processor"], str)
+    assert isinstance(run_info["product"], str)
+    assert isinstance(run_info["python_version"], int)
 
 
 def test_metadata_inherit():

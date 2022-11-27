@@ -26,6 +26,7 @@
 #import "config.h"
 #import "WebPage.h"
 
+#import "EditorState.h"
 #import "InsertTextOptions.h"
 #import "LoadParameters.h"
 #import "PluginView.h"
@@ -35,7 +36,7 @@
 #import "WebPasteboardOverrides.h"
 #import "WebPaymentCoordinator.h"
 #import "WebRemoteObjectRegistry.h"
-#import <pal/spi/cocoa/LaunchServicesSPI.h>
+#import <WebCore/DeprecatedGlobalSettings.h>
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/DocumentMarkerController.h>
 #import <WebCore/Editing.h>
@@ -60,10 +61,13 @@
 #import <WebCore/RenderElement.h>
 #import <WebCore/RenderedDocumentMarker.h>
 #import <WebCore/TextIterator.h>
+#import <pal/spi/cocoa/LaunchServicesSPI.h>
 
 #if PLATFORM(IOS)
 #import <WebCore/ParentalControlsContentFilter.h>
 #endif
+
+#define WEBPAGE_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [webPageID=%" PRIu64 "] WebPage::" fmt, this, m_identifier.toUInt64(), ##__VA_ARGS__)
 
 #if PLATFORM(COCOA)
 
@@ -185,7 +189,7 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(Frame& frame, const Sim
     const RenderStyle* style = range.startContainer().renderStyle();
     float scaledAscent = style ? style->metricsOfPrimaryFont().ascent() * pageScaleFactor() : 0;
     dictionaryPopupInfo.origin = FloatPoint(rangeRect.x(), rangeRect.y() + scaledAscent);
-    dictionaryPopupInfo.options = options;
+    dictionaryPopupInfo.platformData.options = options;
 
 #if PLATFORM(MAC)
     auto attributedString = editingAttributedString(range, IncludeImages::No).string;
@@ -217,9 +221,9 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(Frame& frame, const Sim
 
     dictionaryPopupInfo.textIndicator = textIndicator->data();
 #if PLATFORM(MAC)
-    dictionaryPopupInfo.attributedString = scaledAttributedString;
+    dictionaryPopupInfo.platformData.attributedString = scaledAttributedString;
 #elif PLATFORM(MACCATALYST)
-    dictionaryPopupInfo.attributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:plainText(range)]);
+    dictionaryPopupInfo.platformData.attributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:plainText(range)]);
 #endif
 
     editor.setIsGettingDictionaryPopupInfo(false);
@@ -436,7 +440,7 @@ void WebPage::getProcessDisplayName(CompletionHandler<void(String&&)>&& completi
 
 void WebPage::getPlatformEditorStateCommon(const Frame& frame, EditorState& result) const
 {
-    if (result.isMissingPostLayoutData)
+    if (!result.hasPostLayoutAndVisualData())
         return;
 
     const auto& selection = frame.selection().selection();
@@ -444,7 +448,7 @@ void WebPage::getPlatformEditorStateCommon(const Frame& frame, EditorState& resu
     if (!result.isContentEditable || selection.isNone())
         return;
 
-    auto& postLayoutData = result.postLayoutData();
+    auto& postLayoutData = *result.postLayoutData;
     if (auto editingStyle = EditingStyle::styleAtSelectionStart(selection)) {
         if (editingStyle->hasStyle(CSSPropertyFontWeight, "bold"_s))
             postLayoutData.typingAttributes |= AttributeBold;
@@ -457,7 +461,7 @@ void WebPage::getPlatformEditorStateCommon(const Frame& frame, EditorState& resu
 
         if (auto* styleProperties = editingStyle->style()) {
             bool isLeftToRight = styleProperties->propertyAsValueID(CSSPropertyDirection) == CSSValueLtr;
-            switch (styleProperties->propertyAsValueID(CSSPropertyTextAlign)) {
+            switch (styleProperties->propertyAsValueID(CSSPropertyTextAlign).value_or(CSSValueInvalid)) {
             case CSSValueRight:
             case CSSValueWebkitRight:
                 postLayoutData.textAlignment = RightAlignment;
@@ -647,6 +651,15 @@ void WebPage::readSelectionFromPasteboard(const String& pasteboardName, Completi
     frame.editor().readSelectionFromPasteboard(pasteboardName);
     completionHandler(true);
 }
+
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WebPageCocoaAdditions.mm>)
+#include <WebKitAdditions/WebPageCocoaAdditions.mm>
+#else
+URL WebPage::sanitizeForCopyOrShare(const URL& url) const
+{
+    return url;
+}
+#endif
 
 } // namespace WebKit
 

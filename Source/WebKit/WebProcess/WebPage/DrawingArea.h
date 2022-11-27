@@ -57,6 +57,7 @@ class FrameView;
 class GraphicsLayer;
 class GraphicsLayerFactory;
 struct ViewportAttributes;
+enum class DelegatedScrollingMode : uint8_t;
 }
 
 namespace WebKit {
@@ -109,8 +110,11 @@ public:
     virtual void mainFrameScrollabilityChanged(bool) { }
 
     virtual bool supportsAsyncScrolling() const { return false; }
-    virtual bool usesDelegatedScrolling() const { return false; }
     virtual bool usesDelegatedPageScaling() const { return false; }
+    virtual WebCore::DelegatedScrollingMode delegatedScrollingMode() const;
+
+    virtual void registerScrollingTree() { }
+    virtual void unregisterScrollingTree() { }
 
     virtual bool shouldUseTiledBackingForFrameView(const WebCore::FrameView&) const { return false; }
 
@@ -128,6 +132,8 @@ public:
     virtual void attachViewOverlayGraphicsLayer(WebCore::GraphicsLayer*) { }
 
     virtual void setShouldScaleViewToFitDocument(bool) { }
+
+    virtual std::optional<WebCore::DestinationColorSpace> displayColorSpace() const { return { }; }
 
     virtual bool addMilestonesToDispatch(OptionSet<WebCore::LayoutMilestone>) { return false; }
 
@@ -177,13 +183,12 @@ private:
                                          const WebCore::IntSize& /*scrollOffset*/) { }
     virtual void targetRefreshRateDidChange(unsigned /*rate*/) { }
 #endif
-    virtual void didUpdate() { }
+    virtual void displayDidRefresh() { }
 
     // DisplayRefreshMonitorFactory.
     RefPtr<WebCore::DisplayRefreshMonitor> createDisplayRefreshMonitor(WebCore::PlatformDisplayID) override;
 
 #if PLATFORM(COCOA)
-    // Used by TiledCoreAnimationDrawingArea.
     virtual void setDeviceScaleFactor(float) { }
     virtual void setColorSpace(std::optional<WebCore::DestinationColorSpace>) { }
 

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSPropertyNames.h"
 #include "CSSValue.h"
 #include "ScriptWrappable.h"
@@ -124,6 +122,8 @@ IGNORE_GCC_WARNINGS_END
     static Ref<CSSStyleValue> create(RefPtr<CSSValue>&&, String&& = String());
     static Ref<CSSStyleValue> create();
 
+    virtual RefPtr<CSSValue> toCSSValue() const { return m_propertyValue; }
+
 protected:
     CSSStyleValue(RefPtr<CSSValue>&&, String&& = String());
     CSSStyleValue() = default;
@@ -133,5 +133,3 @@ protected:
 };
 
 } // namespace WebCore
-
-#endif

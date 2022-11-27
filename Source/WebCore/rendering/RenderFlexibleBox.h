@@ -54,6 +54,8 @@ public:
 
     LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
     std::optional<LayoutUnit> firstLineBaseline() const override;
+    std::optional<LayoutUnit> lastLineBaseline() const override;
+    RenderBox* getBaselineChild(ItemPosition alignment) const;
     std::optional<LayoutUnit> inlineBlockBaseline(LineDirectionMode) const override;
 
     void styleDidChange(StyleDifference, const RenderStyle*) override;
@@ -78,7 +80,7 @@ public:
     void clearCachedChildIntrinsicContentLogicalHeight(const RenderBox& child);
 
     LayoutUnit staticMainAxisPositionForPositionedChild(const RenderBox&);
-    LayoutUnit staticCrossAxisPositionForPositionedChild(const RenderBox&) const;
+    LayoutUnit staticCrossAxisPositionForPositionedChild(const RenderBox&);
     
     LayoutUnit staticInlinePositionForPositionedChild(const RenderBox&);
     LayoutUnit staticBlockPositionForPositionedChild(const RenderBox&);
@@ -91,6 +93,8 @@ public:
     LayoutUnit computeGap(GapType) const;
 
     bool shouldApplyMinBlockSizeAutoForChild(const RenderBox&) const;
+
+    bool isComputingFlexBaseSizes() const { return m_isComputingFlexBaseSizes; }
 
 protected:
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
@@ -179,7 +183,7 @@ private:
     bool updateAutoMarginsInCrossAxis(RenderBox& child, LayoutUnit availableAlignmentSpace);
     void repositionLogicalHeightDependentFlexItems(Vector<LineContext>&, LayoutUnit gapBetweenLines);
     
-    LayoutUnit availableAlignmentSpaceForChild(const LayoutUnit lineCrossAxisExtent, const RenderBox& child) const;
+    LayoutUnit availableAlignmentSpaceForChild(LayoutUnit lineCrossAxisExtent, const RenderBox& child);
     LayoutUnit marginBoxAscentForChild(const RenderBox& child);
     
     LayoutUnit computeChildMarginValue(Length margin);
@@ -228,12 +232,14 @@ private:
     HashSet<const RenderBox*> m_relaidOutChildren;
 
     mutable OrderIterator m_orderIterator { *this };
-    int m_numberOfInFlowChildrenOnFirstLine { -1 };
-    
+    std::optional<size_t> m_numberOfInFlowChildrenOnFirstLine { };
+    std::optional<size_t> m_numberOfInFlowChildrenOnLastLine { };
+
     // This is SizeIsUnknown outside of layoutBlock()
     SizeDefiniteness m_hasDefiniteHeight { SizeDefiniteness::Unknown };
     bool m_inLayout { false };
     bool m_shouldResetChildLogicalHeightBeforeLayout { false };
+    bool m_isComputingFlexBaseSizes { false };
 };
 
 } // namespace WebCore

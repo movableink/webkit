@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if USE(GRAPHICS_LAYER_WC)
+
 #include "BackingStore.h"
 #include "DrawingAreaProxy.h"
 
@@ -46,8 +48,8 @@ private:
     void sizeDidChange() override;
     void dispatchAfterEnsuringDrawing(WTF::Function<void(CallbackBase::Error)>&&) override;
     // message handers
-    void update(uint64_t, const UpdateInfo&);
-    void enterAcceleratedCompositingMode(uint64_t, const LayerTreeContext&);
+    void update(uint64_t, const UpdateInfo&) override;
+    void enterAcceleratedCompositingMode(uint64_t, const LayerTreeContext&) override;
 
     void incorporateUpdate(const UpdateInfo&);
     void discardBackingStore();
@@ -57,3 +59,5 @@ private:
 };
 
 } // namespace WebKit
+
+#endif // USE(GRAPHICS_LAYER_WC)

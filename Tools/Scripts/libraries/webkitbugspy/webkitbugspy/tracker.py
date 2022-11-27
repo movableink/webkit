@@ -43,6 +43,39 @@ class Tracker(object):
                 return super(Tracker.Encoder, self).default(obj)
             return obj.Encoder.default(obj)
 
+    class Redaction(object):
+        def __init__(self, redacted=False, reason=None):
+            self.redacted = redacted
+            self.reason = reason
+
+        def __bool__(self):
+            return self.redacted
+
+        def __nonzero__(self):
+            return self.redacted
+
+        def __repr__(self):
+            if not self.redacted:
+                return 'is not redacted'
+            if self.reason:
+                return '{} and is thus redacted'.format(self.reason)
+            return 'is redacted for an unknown reason'
+
+        def __str__(self):
+            return self.__repr__()
+
+        def __eq__(self, other):
+            if isinstance(other, str):
+                return str(self) == other
+            elif isinstance(other, bool):
+                return self.redacted == other
+            elif isinstance(other, Tracker.Redaction):
+                return self.redacted == other.redacted and self.reason == other.reason
+            return False
+
+        def __ne__(self, other):
+            return not self.__eq__(other)
+
     @classmethod
     def from_json(cls, data):
         from . import bugzilla, github, radar
@@ -50,23 +83,29 @@ class Tracker(object):
         data = data if isinstance(data, (dict, list, tuple)) else json.loads(data)
         if isinstance(data, (list, tuple)):
             return [cls.from_json(datum) for datum in data]
-        if data.get('type') in ('bugzilla', 'github'):
-            return dict(
-                bugzilla=bugzilla.Tracker,
-                github=github.Tracker
-            )[data['type']](
-                url=data.get('url'),
-                res=[re.compile(r) for r in data.get('res', [])],
-                redact=data.get('redact'),
-            )
-        if data.get('type') == 'radar':
-            return radar.Tracker(
-                project=data.get('project', None),
-                projects=data.get('projects', []),
-                redact=data.get('redact'),
-            )
-        raise TypeError("'{}' is not a recognized tracker type".format(data.get('type')))
 
+        if data.get('type') not in ('bugzilla', 'github', 'radar'):
+            raise TypeError("'{}' is not a recognized tracker type".format(data.get('type')))
+
+        unpacked = dict(
+            redact=data.get('redact'),
+        )
+        if data.get('type') in ('bugzilla', 'github'):
+            unpacked['url'] = data.get('url')
+            unpacked['res'] = [re.compile(r) for r in data.get('res', [])]
+        if data.get('type') == 'bugzilla':
+            unpacked['radar_importer'] = data.get('radar_importer')
+
+        if data.get('type') == 'radar':
+            unpacked['project'] = data.get('project', None)
+            unpacked['projects'] = data.get('projects', [])
+            unpacked['project'] = data.get('project', None)
+
+        return dict(
+            bugzilla=bugzilla.Tracker,
+            github=github.Tracker,
+            radar=radar.Tracker,
+        )[data['type']](**unpacked)
 
     @classmethod
     def register(cls, tracker):
@@ -133,4 +172,7 @@ class Tracker(object):
         raise NotImplementedError()
 
     def create(self, title, description, **kwargs):
+        raise NotImplementedError()
+
+    def cc_radar(self, issue, block=False, timeout=None, radar=None):
         raise NotImplementedError()

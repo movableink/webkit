@@ -141,6 +141,10 @@ WKRetainPtr<WKMutableDictionaryRef> TestInvocation::createTestSettingsDictionary
     setValue(beginTestMessageBody, "Timeout", static_cast<uint64_t>(m_timeout.milliseconds()));
     setValue(beginTestMessageBody, "DumpJSConsoleLogInStdErr", m_dumpJSConsoleLogInStdErr);
     setValue(beginTestMessageBody, "additionalSupportedImageTypes", options().additionalSupportedImageTypes().c_str());
+    auto allowedHostsValue = adoptWK(WKMutableArrayCreate());
+    for (auto& host : TestController::singleton().allowedHosts())
+        WKArrayAppendItem(allowedHostsValue.get(), toWK(host.c_str()).get());
+    setValue(beginTestMessageBody, "AllowedHosts", allowedHostsValue);
     return beginTestMessageBody;
 }
 
@@ -411,6 +415,11 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
 
     if (WKStringIsEqualToUTF8CString(messageName, "SetGeolocationPermission")) {
         TestController::singleton().setGeolocationPermission(booleanValue(messageBody));
+        return;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SetScreenWakeLockPermission")) {
+        TestController::singleton().setScreenWakeLockPermission(booleanValue(messageBody));
         return;
     }
 
@@ -726,6 +735,16 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
         return;
     }
 
+    if (WKStringIsEqualToUTF8CString(messageName, "DumpPolicyDelegateCallbacks")) {
+        TestController::singleton().dumpPolicyDelegateCallbacks();
+        return;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "RemoveAllCookies")) {
+        TestController::singleton().removeAllCookies();
+        return;
+    }
+
     if (WKStringIsEqualToUTF8CString(messageName, "StatisticsClearInMemoryAndPersistentStore")) {
         TestController::singleton().statisticsClearInMemoryAndPersistentStore();
         return;
@@ -820,6 +839,17 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
     if (WKStringIsEqualToUTF8CString(messageName, "SetAppBoundDomains")) {
         ASSERT(WKGetTypeID(messageBody) == WKArrayGetTypeID());
         TestController::singleton().setAppBoundDomains(static_cast<WKArrayRef>(messageBody));
+        return;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SetManagedDomains")) {
+        ASSERT(WKGetTypeID(messageBody) == WKArrayGetTypeID());
+        TestController::singleton().setManagedDomains(static_cast<WKArrayRef>(messageBody));
+        return;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SkipPolicyDelegateNotifyDone")) {
+        TestController::singleton().skipPolicyDelegateNotifyDone();
         return;
     }
 
@@ -952,6 +982,14 @@ WKRetainPtr<WKTypeRef> TestInvocation::didReceiveSynchronousMessageFromInjectedB
 
     if (WKStringIsEqualToUTF8CString(messageName, "ResetMockMediaDevices")) {
         TestController::singleton().resetMockMediaDevices();
+        return nullptr;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SetMockMediaDeviceIsEphemeral")) {
+        auto messageBodyDictionary = dictionaryValue(messageBody);
+        auto persistentID = stringValue(messageBodyDictionary, "PersistentID");
+        bool isEphemeral = booleanValue(messageBodyDictionary, "IsEphemeral");
+        TestController::singleton().setMockMediaDeviceIsEphemeral(persistentID, isEphemeral);
         return nullptr;
     }
 
@@ -1623,6 +1661,11 @@ void TestInvocation::didSetHasHadUserInteraction()
     postPageMessage("CallDidSetHasHadUserInteraction");
 }
 
+void TestInvocation::didRemoveAllCookies()
+{
+    postPageMessage("CallDidRemoveAllCookies");
+}
+
 void TestInvocation::didReceiveAllStorageAccessEntries(Vector<String>&& domains)
 {
     auto messageBody = adoptWK(WKMutableArrayCreate());
@@ -1647,6 +1690,11 @@ void TestInvocation::didRemoveAllSessionCredentials()
 void TestInvocation::didSetAppBoundDomains()
 {
     postPageMessage("CallDidSetAppBoundDomains");
+}
+
+void TestInvocation::didSetManagedDomains()
+{
+    postPageMessage("CallDidSetManagedDomains");
 }
 
 void TestInvocation::dumpResourceLoadStatistics()

@@ -104,6 +104,9 @@
 // Test timeout due to it loops so many glTexStorageMultisample calls
 5806 VULKAN NVIDIA : KHR-GLES31.core.texture_storage_multisample.APIDependencies.fbo_with_renderbuffer_and_multisample_texture_attachments_with_different_number_of_samples = SKIP
 
+// New test in VK-GL-CTS roll 2022-08-19
+7592 ANDROID VULKAN : KHR-GLES31.core.shader_atomic_counters.negative-large-offset = FAIL
+
 // Pixel 4 expectations.
 5990 PIXEL4ORXL VULKAN : KHR-GLES31.core.compute_shader.built-in-variables = SKIP
 5990 PIXEL4ORXL VULKAN : KHR-GLES31.core.compute_shader.resource-ubo = SKIP
@@ -252,15 +255,6 @@
 5990 PIXEL4ORXL VULKAN : KHR-GLES31.core.sample_variables.mask.rgba8ui.samples_4.mask_6 = SKIP
 5990 PIXEL4ORXL VULKAN : KHR-GLES31.core.sample_variables.mask.rgba8ui.samples_4.mask_7 = SKIP
 5990 PIXEL4ORXL VULKAN : KHR-GLES31.core.sample_variables.mask.rgba8ui.samples_4.mask_zero = SKIP
-
-// Pixel 6 expectations.
-
-// These fail on the Android S bots, but pass on pre-release Android T drivers:
-6918 PIXEL6 VULKAN : KHR-GLES31.core.compute_shader.resources-max = FAIL
-6918 PIXEL6 VULKAN : KHR-GLES31.core.geometry_shader.constant_variables.constant_variables = FAIL
-6918 PIXEL6 VULKAN : KHR-GLES31.core.geometry_shader.primitive_queries.* = FAIL
-6918 PIXEL6 VULKAN : KHR-GLES31.core.shader_storage_buffer_object.advanced-usage-operators-cs = FAIL
-6918 PIXEL6 VULKAN : KHR-GLES31.core.shader_storage_buffer_object.basic-operations-case1-cs = FAIL
 
 // Slow tests
 5755 SWIFTSHADER : KHR-GLES31.core.arrays_of_arrays.SizedDeclarationsPrimitive = TIMEOUT

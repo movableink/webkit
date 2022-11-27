@@ -114,6 +114,8 @@ public:
 
     WebCore::FloatSize size() const { return m_parameters.size; }
     float scale() const { return m_parameters.scale; }
+    bool usesDeepColorBackingStore() const;
+    WebCore::DestinationColorSpace colorSpace() const;
     WebCore::PixelFormat pixelFormat() const;
     Type type() const { return m_parameters.type; }
     bool isOpaque() const { return m_parameters.isOpaque; }
@@ -195,7 +197,7 @@ private:
 
     // Used in the UI Process.
     std::optional<ImageBufferBackendHandle> m_bufferHandle;
-    // FIXME: This should be removed and m_bufferHandle should be used to ref the buffer once ShareableBitmap::Handle
+    // FIXME: This should be removed and m_bufferHandle should be used to ref the buffer once ShareableBitmapHandle
     // can be encoded multiple times. http://webkit.org/b/234169
     std::optional<MachSendRight> m_contentsBufferHandle;
 

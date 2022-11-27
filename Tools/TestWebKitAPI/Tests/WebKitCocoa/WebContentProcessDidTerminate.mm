@@ -210,7 +210,7 @@ TEST(WKNavigation, AutomaticVisibleViewReloadAfterWebProcessCrash)
 
     // WebKit should not attempt to reload again.
     EXPECT_FALSE(startedLoad);
-    TestWebKitAPI::Util::sleep(0.5);
+    TestWebKitAPI::Util::runFor(0.5_s);
     EXPECT_FALSE(startedLoad);
 }
 
@@ -237,7 +237,7 @@ TEST(WKNavigation, AutomaticHiddenViewDelayedReloadAfterWebProcessCrash)
     // Simulate crash.
     [webView _killWebContentProcess];
 
-    TestWebKitAPI::Util::sleep(0.5);
+    TestWebKitAPI::Util::runFor(0.5_s);
 
     // WebKit should not have attempted a reload since the view is not visible.
     EXPECT_FALSE(startedLoad);
@@ -319,7 +319,7 @@ TEST(WKNavigation, ProcessCrashDuringCallback)
     [webView _killWebContentProcess];
 
     TestWebKitAPI::Util::run(&calledAllCallbacks);
-    TestWebKitAPI::Util::sleep(0.5);
+    TestWebKitAPI::Util::runFor(0.5_s);
     EXPECT_EQ(6U, callbackCount);
 }
 
@@ -553,4 +553,42 @@ TEST(WKNavigation, MultipleProcessCrashesRelatedWebViews)
 
     EXPECT_NE([webView1 _webProcessIdentifier], 0);
     EXPECT_NE([webView2 _webProcessIdentifier], 0);
+}
+
+TEST(WKNavigation, CrashRecoveryRightAfterLoadRequest)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/index.html"_s, { "foo"_s } },
+    });
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 100, 100) configuration:configuration.get() addToWindow:YES]);
+
+    auto navigationDelegate = adoptNS([[BasicNavigationDelegateWithoutCrashHandler alloc] init]);
+    [webView setNavigationDelegate:navigationDelegate.get()];
+
+    // This is to make sure that a WebProcess is launched since we sometimes delay the launch of the
+    // WebProcess until it is actually needed.
+    __block bool done = false;
+    [webView _isJITEnabled:^(BOOL enabled) {
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+
+    auto webProcessPID = [webView _webProcessIdentifier];
+    EXPECT_NE(webProcessPID, 0);
+
+    finishedLoad = false;
+
+    // Issue a kill and then a loadRequest.
+    kill(webProcessPID, 9);
+    auto request = server.request("/index.html"_s);
+    [webView loadRequest:[NSURLRequest requestWithURL:request.URL]];
+
+    // Navigation should complete.
+    TestWebKitAPI::Util::run(&finishedLoad);
+
+    EXPECT_WK_STREQ([webView URL].absoluteString, request.URL.absoluteString);
+    EXPECT_EQ([webView backForwardList].backList.count, 0U);
+    EXPECT_EQ([webView backForwardList].forwardList.count, 0U);
 }

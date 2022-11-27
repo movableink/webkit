@@ -78,6 +78,7 @@ class Tracker(GenericTracker):
     NOT_APPLICABLE = 'Not Applicable'
 
     REPRODUCIBILITY = [NOT_APPLICABLE, ALWAYS, SOMETIMES, RARELY, UNABLE, DIDNT_TRY]
+    NAME = 'Radar'
 
     class Encoder(GenericTracker.Encoder):
         @decorators.hybridmethod
@@ -148,9 +149,11 @@ class Tracker(GenericTracker):
             elif name:
                 found = self.library.AppleDirectoryQuery.user_entry_for_attribute_value('cn', name)
             if not found:
-                raise RuntimeError("Failed to find '{}'".format(User(
-                    name, username, [email],
-                )))
+                return self.users.create(
+                    name=name,
+                    username=None,
+                    emails=[email],
+                )
             name = '{} {}'.format(found.first_name(), found.last_name())
             username = found.dsid()
             email = found.email()
@@ -169,7 +172,7 @@ class Tracker(GenericTracker):
         return Issue(id=int(id), tracker=self)
 
     def populate(self, issue, member=None):
-        issue._link = '<rdar://{}>'.format(issue.id)
+        issue._link = 'rdar://{}'.format(issue.id)
         issue._labels = []
         if (not self.client or not self.library) and member:
             sys.stderr.write('radarclient inaccessible on this machine\n')
@@ -455,3 +458,7 @@ class Tracker(GenericTracker):
         if assign:
             result.assign(self.me())
         return result
+
+    def cc_radar(self, issue, block=False, timeout=None, radar=None):
+        # cc-ing radar is a no-op for radar
+        return issue

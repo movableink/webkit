@@ -28,6 +28,7 @@
 #pragma once
 
 #include "CrossOriginEmbedderPolicy.h"
+#include "CrossOriginOpenerPolicy.h"
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
@@ -95,11 +96,14 @@ public:
     const CrossOriginEmbedderPolicy& crossOriginEmbedderPolicy() const { return m_crossOriginEmbedderPolicy; }
     void setCrossOriginEmbedderPolicy(const CrossOriginEmbedderPolicy& crossOriginEmbedderPolicy) { m_crossOriginEmbedderPolicy = crossOriginEmbedderPolicy; }
 
-    virtual const CrossOriginOpenerPolicy& crossOriginOpenerPolicy() const;
+    virtual const CrossOriginOpenerPolicy& crossOriginOpenerPolicy() const { return m_crossOriginOpenerPolicy; }
+    void setCrossOriginOpenerPolicy(const CrossOriginOpenerPolicy& crossOriginOpenerPolicy) { m_crossOriginOpenerPolicy = crossOriginOpenerPolicy; }
 
-    virtual ReferrerPolicy referrerPolicy() const = 0;
+    virtual ReferrerPolicy referrerPolicy() const { return m_referrerPolicy; }
+    void setReferrerPolicy(ReferrerPolicy);
 
-    PolicyContainer policyContainer() const;
+    WEBCORE_EXPORT PolicyContainer policyContainer() const;
+    virtual void inheritPolicyContainerFrom(const PolicyContainer&);
 
     WEBCORE_EXPORT SecurityOrigin* securityOrigin() const;
 
@@ -114,6 +118,8 @@ public:
     bool usedLegacyTLS() const { return m_usedLegacyTLS; }
     void setUsedLegacyTLS(bool used) { m_usedLegacyTLS = used; }
     const OptionSet<MixedContentType>& foundMixedContent() const { return m_mixedContentTypes; }
+    bool wasPrivateRelayed() const { return m_wasPrivateRelayed; }
+    void setWasPrivateRelayed(bool privateRelayed) { m_wasPrivateRelayed = privateRelayed; }
     void setFoundMixedContent(MixedContentType type) { m_mixedContentTypes.add(type); }
     bool geolocationAccessed() const { return m_geolocationAccessed; }
     void setGeolocationAccessed() { m_geolocationAccessed = true; }
@@ -145,6 +151,8 @@ private:
     RefPtr<SecurityOriginPolicy> m_securityOriginPolicy;
     std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
     CrossOriginEmbedderPolicy m_crossOriginEmbedderPolicy;
+    CrossOriginOpenerPolicy m_crossOriginOpenerPolicy;
+    ReferrerPolicy m_referrerPolicy { ReferrerPolicy::Default };
     SandboxFlags m_creationSandboxFlags { SandboxNone };
     SandboxFlags m_sandboxFlags { SandboxNone };
     OptionSet<MixedContentType> m_mixedContentTypes;
@@ -153,6 +161,7 @@ private:
     bool m_secureCookiesAccessed { false };
     bool m_isStrictMixedContentMode { false };
     bool m_usedLegacyTLS { false };
+    bool m_wasPrivateRelayed { false };
 };
 
 } // namespace WebCore

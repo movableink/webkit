@@ -236,6 +236,18 @@ op :new_array_with_spread,
         bitVector: unsigned,
     }
 
+op :new_array_with_species,
+    args: {
+        dst: VirtualRegister,
+        length: VirtualRegister,
+        array: VirtualRegister,
+    },
+    metadata: {
+        arrayAllocationProfile: ArrayAllocationProfile,
+        arrayProfile: ArrayProfile,
+        profile: ValueProfile,
+    }
+
 op :spread,
     args: {
         dst: VirtualRegister,
@@ -862,12 +874,14 @@ op :tail_call,
         profile: ValueProfile,
     }
 
-op :call_eval,
+op :call_direct_eval,
     args: {
         dst: VirtualRegister,
         callee: VirtualRegister,
         argc: unsigned,
         argv: unsigned,
+        thisValue: VirtualRegister,
+        scope: VirtualRegister,
         ecmaMode: ECMAMode,
     },
     metadata: {
@@ -1464,7 +1478,7 @@ op :op_iterator_next_slow_return_location
 op :op_tail_call_slow_return_location
 op :op_tail_call_forward_arguments_slow_return_location
 op :op_tail_call_varargs_slow_return_location
-op :op_call_eval_slow_return_location
+op :op_call_direct_eval_slow_return_location
 
 op :js_trampoline_op_call
 op :js_trampoline_op_construct
@@ -1479,7 +1493,7 @@ op :js_trampoline_op_call_varargs_slow
 op :js_trampoline_op_tail_call_varargs_slow
 op :js_trampoline_op_tail_call_forward_arguments_slow
 op :js_trampoline_op_construct_varargs_slow
-op :js_trampoline_op_call_eval_slow
+op :js_trampoline_op_call_direct_eval_slow
 op :js_trampoline_op_iterator_next_slow
 op :js_trampoline_op_iterator_open_slow
 op :js_trampoline_llint_function_for_call_arity_check_untag
@@ -1910,6 +1924,64 @@ op :i31_get_u,
     args: {
         dst: VirtualRegister,
         ref: VirtualRegister,
+    }
+
+op :array_new,
+    args: {
+        dst: VirtualRegister,
+        size: VirtualRegister,
+        value: VirtualRegister,
+        typeIndex: unsigned,
+    }
+
+op :array_new_default,
+    args: {
+        dst: VirtualRegister,
+        size: VirtualRegister,
+        typeIndex: unsigned,
+    }
+
+op :array_get,
+    args: {
+        dst: VirtualRegister,
+        arrayref: VirtualRegister,
+        index: VirtualRegister,
+        typeIndex: unsigned,
+    }
+
+op :array_set,
+    args: {
+        arrayref: VirtualRegister,
+        index: VirtualRegister,
+        value: VirtualRegister,
+        typeIndex: unsigned,
+    }
+
+op :array_len,
+    args: {
+        dst: VirtualRegister,
+        arrayref: VirtualRegister,
+    }
+
+op :struct_new,
+    args: {
+        dst: VirtualRegister,
+        typeIndex: unsigned,
+        firstValue: VirtualRegister,
+    }
+
+op :struct_get,
+    args: {
+        dst: VirtualRegister,
+        structReference: VirtualRegister,
+        fieldIndex: unsigned,
+    }
+
+op :struct_set,
+    args: {
+        structReference: VirtualRegister,
+        fieldIndex: unsigned,
+        value: VirtualRegister,
     }
 
 end_section :Wasm

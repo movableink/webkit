@@ -265,7 +265,11 @@ TemporarySelectionChange::~TemporarySelectionChange()
 
 void TemporarySelectionChange::setSelection(const VisibleSelection& selection, IsTemporarySelection isTemporarySelection)
 {
-    auto options = FrameSelection::defaultSetSelectionOptions(m_options.contains(TemporarySelectionOption::UserTriggered) ? UserTriggered : NotUserTriggered);
+    auto options = FrameSelection::defaultSetSelectionOptions();
+
+    if (m_options & TemporarySelectionOption::UserTriggered)
+        options.add(FrameSelection::IsUserTriggered);
+
     if (m_options & TemporarySelectionOption::DoNotSetFocus)
         options.add(FrameSelection::DoNotSetFocus);
 
@@ -278,6 +282,8 @@ void TemporarySelectionChange::setSelection(const VisibleSelection& selection, I
             options.add(FrameSelection::SmoothScroll);
         if (m_options & TemporarySelectionOption::RevealSelectionBounds)
             options.add(FrameSelection::RevealSelectionBounds);
+        if (m_options & TemporarySelectionOption::ForceCenterScroll)
+            options.add(FrameSelection::ForceCenterScroll);
     }
 
     m_document->selection().setSelection(selection, options);
@@ -749,7 +755,7 @@ void Editor::replaceSelectionWithFragment(DocumentFragment& fragment, SelectRepl
         return;
 
     auto rangeToCheck = makeRangeSelectingNodeContents(*nodeToCheck);
-    if (auto request = SpellCheckRequest::create(resolveTextCheckingTypeMask(*nodeToCheck, { TextCheckingType::Spelling, TextCheckingType::Grammar }), TextCheckingProcessBatch, rangeToCheck, rangeToCheck, rangeToCheck))
+    if (auto request = SpellCheckRequest::create(resolveTextCheckingTypeMask(*nodeToCheck, { TextCheckingType::Spelling, TextCheckingType::Grammar }), TextCheckingProcessType::TextCheckingProcessBatch, rangeToCheck, rangeToCheck, rangeToCheck))
         m_spellChecker->requestCheckingFor(request.releaseNonNull());
 }
 
@@ -1439,7 +1445,7 @@ void Editor::copyFont(FromMenuOrKeyBinding fromMenuOrKeyBinding)
     SetForScope copyScope { m_copyingFromMenuOrKeyBinding, fromMenuOrKeyBinding == FromMenuOrKeyBinding::Yes };
     if (tryDHTMLCopy())
         return; // DHTML did the whole operation
-    if (!canCopy()) {
+    if (!canCopyFont()) {
         SystemSoundManager::singleton().systemBeep();
         return;
     }
@@ -1447,6 +1453,14 @@ void Editor::copyFont(FromMenuOrKeyBinding fromMenuOrKeyBinding)
     willWriteSelectionToPasteboard(selectedRange());
     platformCopyFont();
     didWriteSelectionToPasteboard();
+}
+
+bool Editor::canCopyFont() const
+{
+    auto& selection = m_document.selection().selection();
+    if (selection.isNone() || (selection.isInPasswordField() && !selection.isInAutoFilledAndViewableField()))
+        return false;
+    return selection.isRange() || selection.isContentEditable();
 }
 
 void Editor::postTextStateChangeNotificationForCut(const String& text, const VisibleSelection& selection)
@@ -1633,12 +1647,16 @@ void Editor::copyURL(const URL& url, const String& title)
 
 void Editor::copyURL(const URL& url, const String& title, Pasteboard& pasteboard)
 {
+    auto sanitizedURL = url;
+    if (auto* page = m_document.page())
+        sanitizedURL = page->sanitizeForCopyOrShare(url);
+
     PasteboardURL pasteboardURL;
-    pasteboardURL.url = url;
+    pasteboardURL.url = sanitizedURL;
     pasteboardURL.title = title;
 
 #if PLATFORM(MAC)
-    pasteboardURL.userVisibleForm = userVisibleString(url);
+    pasteboardURL.userVisibleForm = userVisibleString(sanitizedURL);
 #endif
 
     pasteboard.write(pasteboardURL);
@@ -2782,7 +2800,7 @@ void Editor::markAllMisspellingsAndBadGrammarInRanges(OptionSet<TextCheckingType
     auto& paragraphRange = paragraphToCheck.paragraphRange();
     auto& checkingRange = asynchronous ? paragraphRange : rangeToCheck;
     auto& textReplacementRange = automaticReplacementRange ? *automaticReplacementRange : rangeToCheck;
-    auto request = SpellCheckRequest::create(resolvedOptions, TextCheckingProcessIncremental, checkingRange, textReplacementRange, paragraphRange);
+    auto request = SpellCheckRequest::create(resolvedOptions, TextCheckingProcessType::TextCheckingProcessIncremental, checkingRange, textReplacementRange, paragraphRange);
     if (!request)
         return;
 
@@ -3320,8 +3338,7 @@ void Editor::changeSelectionAfterCommand(const VisibleSelection& newSelection, O
 {
     Ref<Document> protectedDocument(m_document);
 
-    // If the new selection is orphaned, then don't update the selection.
-    if (newSelection.start().isOrphan() || newSelection.end().isOrphan())
+    if (newSelection.isOrphan())
         return;
 
     // If there is no selection change, don't bother sending shouldChangeSelection, but still call setSelection,

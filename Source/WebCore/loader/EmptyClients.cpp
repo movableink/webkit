@@ -60,7 +60,6 @@
 #include "HistoryItem.h"
 #include "IDBConnectionToServer.h"
 #include "InspectorClient.h"
-#include "LibWebRTCAudioModule.h"
 #include "MediaRecorderPrivate.h"
 #include "MediaRecorderProvider.h"
 #include "ModalContainerTypes.h"
@@ -211,7 +210,7 @@ class EmptyDatabaseProvider final : public DatabaseProvider {
         void establishTransaction(uint64_t, const IDBTransactionInfo&) final { }
         void databaseConnectionPendingClose(uint64_t) final { }
         void databaseConnectionClosed(uint64_t) final { }
-        void abortOpenAndUpgradeNeeded(uint64_t, const IDBResourceIdentifier&) final { }
+        void abortOpenAndUpgradeNeeded(uint64_t, const std::optional<IDBResourceIdentifier>&) final { }
         void didFireVersionChangeEvent(uint64_t, const IDBResourceIdentifier&, const IndexedDB::ConnectionClosedOnBehalfOfServer) final { }
         void openDBRequestCancelled(const IDBRequestData&) final { }
         void getAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, const ClientOrigin&) final { }
@@ -643,11 +642,6 @@ RefPtr<Widget> EmptyFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInEl
     return nullptr;
 }
 
-std::optional<FrameIdentifier> EmptyFrameLoaderClient::frameID() const
-{
-    return std::nullopt;
-}
-
 std::optional<PageIdentifier> EmptyFrameLoaderClient::pageID() const
 {
     return std::nullopt;
@@ -799,7 +793,7 @@ void EmptyFrameLoaderClient::dispatchDidReceiveTitle(const StringWithDirection&)
 {
 }
 
-void EmptyFrameLoaderClient::dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<UsedLegacyTLS>)
+void EmptyFrameLoaderClient::dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<UsedLegacyTLS>, std::optional<WasPrivateRelayed>)
 {
 }
 
@@ -1056,9 +1050,6 @@ void EmptyFrameLoaderClient::didRunInsecureContent(SecurityOrigin&, const URL&)
 {
 }
 
-void EmptyFrameLoaderClient::didDetectXSS(const URL&, bool)
-{
-}
 
 ObjectContentType EmptyFrameLoaderClient::objectContentType(const URL&, const String&)
 {
@@ -1119,7 +1110,7 @@ RefPtr<LegacyPreviewLoaderClient> EmptyFrameLoaderClient::createPreviewLoaderCli
 
 #endif
 
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
 
 bool EmptyFrameLoaderClient::hasFrameSpecificStorageAccess()
 {

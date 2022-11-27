@@ -560,12 +560,7 @@ TEST(WebKit, WebAudioAndGetUserMedia)
 #endif
 
 #if ENABLE(GPU_PROCESS)
-// FIXME: https://bugs.webkit.org/show_bug.cgi?id=243412
-#if PLATFORM(IOS)
-TEST(WebKit2, DISABLED_CrashGPUProcessWhileCapturing)
-#else 
 TEST(WebKit2, CrashGPUProcessWhileCapturing)
-#endif
 {
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     auto preferences = [configuration preferences];
@@ -602,7 +597,7 @@ TEST(WebKit2, CrashGPUProcessWhileCapturing)
     auto* processPool = configuration.get().processPool;
     unsigned timeout = 0;
     while (![processPool _gpuProcessIdentifier] && timeout++ < 100)
-        TestWebKitAPI::Util::sleep(0.1);
+        TestWebKitAPI::Util::runFor(0.1_s);
 
     EXPECT_NE([processPool _gpuProcessIdentifier], 0);
     if (![processPool _gpuProcessIdentifier])
@@ -615,7 +610,7 @@ TEST(WebKit2, CrashGPUProcessWhileCapturing)
     // GPU Process should get relaunched.
     timeout = 0;
     while ((![processPool _gpuProcessIdentifier] || [processPool _gpuProcessIdentifier] == gpuProcessPID) && timeout++ < 100)
-        TestWebKitAPI::Util::sleep(0.1);
+        TestWebKitAPI::Util::runFor(0.1_s);
     EXPECT_NE([processPool _gpuProcessIdentifier], 0);
     EXPECT_NE([processPool _gpuProcessIdentifier], gpuProcessPID);
     gpuProcessPID = [processPool _gpuProcessIdentifier];
@@ -683,7 +678,7 @@ TEST(WebKit2, CrashGPUProcessAfterApplyingConstraints)
     auto* processPool = configuration.get().processPool;
     unsigned timeout = 0;
     while (![processPool _gpuProcessIdentifier] && timeout++ < 100)
-        TestWebKitAPI::Util::sleep(0.1);
+        TestWebKitAPI::Util::runFor(0.1_s);
 
     EXPECT_NE([processPool _gpuProcessIdentifier], 0);
     if (![processPool _gpuProcessIdentifier])
@@ -696,7 +691,7 @@ TEST(WebKit2, CrashGPUProcessAfterApplyingConstraints)
     // GPU Process should get relaunched.
     timeout = 0;
     while ((![processPool _gpuProcessIdentifier] || [processPool _gpuProcessIdentifier] == gpuProcessPID) && timeout++ < 100)
-        TestWebKitAPI::Util::sleep(0.1);
+        TestWebKitAPI::Util::runFor(0.1_s);
     EXPECT_NE([processPool _gpuProcessIdentifier], 0);
     EXPECT_NE([processPool _gpuProcessIdentifier], gpuProcessPID);
     gpuProcessPID = [processPool _gpuProcessIdentifier];
@@ -712,12 +707,7 @@ TEST(WebKit2, CrashGPUProcessAfterApplyingConstraints)
     EXPECT_EQ(webViewPID, [webView _webProcessIdentifier]);
 }
 
-// FIXME: https://bugs.webkit.org/show_bug.cgi?id=243412
-#if PLATFORM(IOS)
-TEST(WebKit2, DISABLED_CrashGPUProcessWhileCapturingAndCalling)
-#else
 TEST(WebKit2, CrashGPUProcessWhileCapturingAndCalling)
-#endif
 {
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     auto preferences = [configuration preferences];
@@ -766,7 +756,7 @@ TEST(WebKit2, CrashGPUProcessWhileCapturingAndCalling)
     auto* processPool = configuration.get().processPool;
     unsigned timeout = 0;
     while (![processPool _gpuProcessIdentifier] && timeout++ < 100)
-        TestWebKitAPI::Util::sleep(0.1);
+        TestWebKitAPI::Util::runFor(0.1_s);
 
     EXPECT_NE([processPool _gpuProcessIdentifier], 0);
     if (![processPool _gpuProcessIdentifier])
@@ -779,7 +769,7 @@ TEST(WebKit2, CrashGPUProcessWhileCapturingAndCalling)
     // GPU Process should get relaunched.
     timeout = 0;
     while ((![processPool _gpuProcessIdentifier] || [processPool _gpuProcessIdentifier] == gpuProcessPID) && timeout++ < 100)
-        TestWebKitAPI::Util::sleep(0.1);
+        TestWebKitAPI::Util::runFor(0.1_s);
     EXPECT_NE([processPool _gpuProcessIdentifier], 0);
     EXPECT_NE([processPool _gpuProcessIdentifier], gpuProcessPID);
     gpuProcessPID = [processPool _gpuProcessIdentifier];
@@ -848,6 +838,17 @@ function doTest()
     });
 }
 
+function hasSleepDisabler()
+{
+    return window.internals ? internals.hasSleepDisabler() : false;
+}
+
+function stop()
+{
+    if (localVideo.srcObject)
+        localVideo.srcObject.getVideoTracks()[0].stop();
+    window.webkit.messageHandlers.gum.postMessage("PASS");
+}
 </script>
 </body></html>
 )DOCDOCDOC"_s;
@@ -886,6 +887,9 @@ TEST(WebKit, AutoplayOnVisibilityChange)
     [webView stringByEvaluatingJavaScript:@"capture()"];
     TestWebKitAPI::Util::run(&done);
 
+    bool hasSleepDisabler = [webView stringByEvaluatingJavaScript:@"hasSleepDisabler()"].boolValue;
+    EXPECT_TRUE(hasSleepDisabler);
+
     done = false;
     [hostWindow deminiaturize:hostWindow];
     TestWebKitAPI::Util::run(&done);
@@ -893,6 +897,13 @@ TEST(WebKit, AutoplayOnVisibilityChange)
     done = false;
     [webView stringByEvaluatingJavaScript:@"doTest()"];
     TestWebKitAPI::Util::run(&done);
+
+    done = false;
+    [webView stringByEvaluatingJavaScript:@"stop()"];
+    TestWebKitAPI::Util::run(&done);
+
+    hasSleepDisabler = [webView stringByEvaluatingJavaScript:@"hasSleepDisabler()"].boolValue;
+    EXPECT_FALSE(hasSleepDisabler);
 }
 
 static constexpr auto getUserMediaFocusText = R"DOCDOCDOC(
@@ -1105,7 +1116,7 @@ TEST(WebKit2, EnumerateDevicesAfterMuting)
     [webView setMicrophoneCaptureState:WKMediaCaptureStateMuted completionHandler:nil];
 
     // Sleep long enough for the reprompt timer to fire and clear cached state.
-    Util::sleep(1);
+    Util::runFor(1_s);
 
     // Verify enumerateDevices still works fine.
     done = false;

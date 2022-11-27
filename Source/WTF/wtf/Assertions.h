@@ -69,7 +69,7 @@ extern "C" void _ReadWriteBarrier(void);
 #endif
 #endif
 
-/* ASSERT_ENABLED is defined in Platform.h. */
+/* ASSERT_ENABLED is defined in PlatformEnable.h. */
 
 #ifndef BACKTRACE_DISABLED
 #define BACKTRACE_DISABLED !ASSERT_ENABLED
@@ -228,7 +228,7 @@ WTF_EXPORT_PRIVATE void WTFLogWithLevel(WTFLogChannel*, WTFLogLevel, const char*
 WTF_EXPORT_PRIVATE void WTFSetLogChannelLevel(WTFLogChannel*, WTFLogLevel);
 WTF_EXPORT_PRIVATE bool WTFWillLogWithLevel(WTFLogChannel*, WTFLogLevel);
 
-WTF_EXPORT_PRIVATE void WTFGetBacktrace(void** stack, int* size);
+WTF_EXPORT_PRIVATE NEVER_INLINE void WTFGetBacktrace(void** stack, int* size);
 WTF_EXPORT_PRIVATE void WTFReportBacktraceWithPrefix(const char*);
 WTF_EXPORT_PRIVATE void WTFReportBacktrace(void);
 #ifdef __cplusplus
@@ -257,7 +257,7 @@ WTF_EXPORT_PRIVATE bool WTFIsDebuggerAttached(void);
 #endif
 
 #if COMPILER(MSVC)
-#define WTFBreakpointTrapUnderConstexprContext() __debugbreak()
+#define WTFBreakpointTrapUnderConstexprContext() ((void) 0)
 #else
 #define WTFBreakpointTrapUnderConstexprContext() __builtin_trap()
 #endif
@@ -822,7 +822,7 @@ inline void compilerFenceForCrash()
 // This would be a macro except that its use of #pragma works best around
 // a function. Hence it uses macro naming convention.
 IGNORE_WARNINGS_BEGIN("missing-noreturn")
-static inline void UNREACHABLE_FOR_PLATFORM()
+static inline void UNREACHABLE_FOR_PLATFORM(void)
 {
     // This *MUST* be a release assert. We use it in places where it's better to crash than to keep
     // going.

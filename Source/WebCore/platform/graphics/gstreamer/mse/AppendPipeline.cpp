@@ -668,24 +668,69 @@ void AppendPipeline::handleAppsinkNewSampleFromStreamingThread(GstElement*)
 static GRefPtr<GstElement>
 createOptionalParserForFormat(const AtomString& trackId, const GstCaps* caps)
 {
+    // Parser elements have either or both of two functions:
+    //
+    // a) Framing: Several popular formats (notably MPEG Audio) can be used without a container.
+    //    MSE supports such formats when operating in "sequence" mode. When using these formats,
+    //    the parser is an essential element, as it receives buffers of arbitrary byte sizes
+    //    and identifies where each frame starts and ends, splitting them into separate GstBuffer
+    //    objects, and reassembling frames that were split between two appends.
+    //
+    // b) Metadata filling: Even when framing is taken care of by a container, sometimes there is
+    //    important metadata missing. This may be the case because the container format does not
+    //    require such metadata, or it may be because of broken files. Either way, parsers allow
+    //    us to recover potentially missing metadata from the binary contents of audio or video
+    //    frames.
+    //
+    // NOTE: Please add and keep comments updated with the rationale for each parser.
+
     GstStructure* structure = gst_caps_get_structure(caps, 0);
     const char* mediaType = gst_structure_get_name(structure);
     auto parserName = makeString(trackId, "_parser"_s);
+    // Since parsers are not needed in every case, we can use an identity element as pass-through
+    // parser for cases where a parser is not needed, making the management of elements and pads
+    // more orthogonal.
     const char* elementClass = "identity";
 
-    if (!g_strcmp0(mediaType, "audio/x-opus"))
+    if (!g_strcmp0(mediaType, "audio/x-opus")) {
+        // Necessary for: metadata filling.
+        // Frame durations are optional in Matroska/WebM. Although frame durations are not required
+        // for regular playback, they're necessary for MSE, especially handling replacement of frames
+        // during quality changes.
+        // An example of an Opus audio file lacking durations is car_opus_low.webm
+        // https://storage.googleapis.com/ytlr-cert.appspot.com/test/materials/media/car_opus_low.webm
         elementClass = "opusparse";
-    else if (!g_strcmp0(mediaType, "video/x-h264"))
+    } else if (!g_strcmp0(mediaType, "video/x-h264")) {
+        // Necessary for: metadata filling.
+        // Some dubiously muxed content lacks the bit specifying what frames are key frames or not.
+        // Without this bit, seeks will most often than not cause corrupted output in the decoder,
+        // as the browser will be unaware of any dependencies of those frames and they won't be fed
+        // to the decoder.
+        // An example of such a stream: http://orange-opensource.github.io/hasplayer.js/1.2.0/player.html?url=http://playready.directtaps.net/smoothstreaming/SSWSS720H264/SuperSpeedway_720.ism/Manifest
         elementClass = "h264parse";
-    else if (!g_strcmp0(mediaType, "audio/mpeg")) {
+    } else if (!g_strcmp0(mediaType, "audio/mpeg")) {
+        // Necessary for: framing.
+        // The Media Source Extensions Byte Stream Format Registry includes MPEG Audio Byte Stream Format
+        // as the (as of writing) only one spec-defined format that has the "Generate Timestamps Flag" set
+        // to false, i.e. is used without a demuxer, in "sequence" mode.
+        // We need a parser to take care of extracting the frames from the byte stream.
         int mpegversion = 0;
         gst_structure_get_int(structure, "mpegversion", &mpegversion);
         switch (mpegversion) {
         case 1:
+            // MPEG-1 Part 3 Audio (ISO 11172-3) Layer I -- MP1, archaic
+            // MPEG-1 Part 3 Audio (ISO 11172-3) Layer II -- MP2, common in audio broadcasting, e.g. DVB
+            // MPEG-1 Part 3 Audio (ISO 11172-3) Layer III -- MP3, the only one of the three most people actually know
             elementClass = "mpegaudioparse";
             break;
         case 2:
+            // MPEG-2 Part 7 Advanced Audio Coding (ISO 13818-7) -- MPEG-2 AAC, the original AAC format, widely used,
+            // has extensions retrofitted.
         case 4:
+            // MPEG-4 Part 3 Audio (ISO 14496-3) -- MPEG-4 Audio, which more often than not also contains AAC audio,
+            // defines several extensions to the original AAC, also widely used.
+            // Not to be confused with the MP4 file format, which is a container format, not an audio stream format,
+            // and can incidentally contain MPEG-4 audio.
             elementClass = "aacparse";
             break;
         default:
@@ -693,7 +738,16 @@ createOptionalParserForFormat(const AtomString& trackId, const GstCaps* caps)
         }
     }
     GST_DEBUG("Creating %s parser for stream with caps %" GST_PTR_FORMAT, elementClass, caps);
-    return GRefPtr<GstElement>(makeGStreamerElement(elementClass, parserName.ascii().data()));
+    GRefPtr<GstElement> result(makeGStreamerElement(elementClass, parserName.ascii().data()));
+    if (!result) {
+        if (g_strcmp0(elementClass, "identity")) {
+            GST_WARNING("Couldn't create %s, there might be problems processing some MSE streams. "
+                "Continue at your own risk and consider adding %s to your build.", elementClass, elementClass);
+            result = makeGStreamerElement("identity", parserName.ascii().data());
+        } else
+            GST_ERROR("Couldn't create identity");
+    }
+    return result;
 }
 
 AtomString AppendPipeline::generateTrackId(StreamType streamType, int padIndex)
@@ -793,6 +847,7 @@ bool AppendPipeline::recycleTrackForPad(GstPad* demuxerSrcPad)
         if (peer.get() != demuxerSrcPad) {
             GST_DEBUG_OBJECT(peer.get(), "Unlinking from track %s", matchingTrack->trackId.string().ascii().data());
             gst_pad_unlink(peer.get(), matchingTrack->entryPad.get());
+            matchingTrack->emplaceOptionalParserForFormat(GST_BIN_CAST(m_pipeline.get()), parsedCaps);
             linkPadWithTrack(demuxerSrcPad, *matchingTrack);
             matchingTrack->caps = WTFMove(parsedCaps);
             matchingTrack->presentationSize = presentationSize;
@@ -851,6 +906,36 @@ Ref<WebCore::TrackPrivateBase> AppendPipeline::makeWebKitTrack(int trackIndex)
     return track.releaseNonNull();
 }
 
+void AppendPipeline::Track::emplaceOptionalParserForFormat(GstBin* bin, const GRefPtr<GstCaps>& newCaps)
+{
+    // Some audio files unhelpfully omit the duration of frames in the container. We need to parse
+    // the contained audio streams in order to know the duration of the frames.
+    // This is known to be an issue with YouTube WebM files containing Opus audio as of YTTV2018.
+    // If no parser is needed, a GstIdentity element will be created instead.
+
+    if (parser) {
+        ASSERT(caps);
+        // When switching from encrypted to unencrypted content the caps can change and we need to replace the parser.
+        if (g_str_equal(gst_structure_get_name(gst_caps_get_structure(caps.get(), 0)), gst_structure_get_name(gst_caps_get_structure(newCaps.get(), 0)))) {
+            GST_TRACE_OBJECT(bin, "caps are compatible, bailing out");
+            return;
+        }
+
+        GST_TRACE_OBJECT(bin, "caps are not compatible, replacing parser");
+        auto locker = GstStateLocker(bin);
+        gst_element_unlink(parser.get(), appsink.get());
+        gst_element_set_state(parser.get(), GST_STATE_NULL);
+        gst_bin_remove(bin, parser.get());
+    }
+
+    parser = createOptionalParserForFormat(trackId, newCaps.get());
+    gst_bin_add(bin, parser.get());
+    gst_element_sync_state_with_parent(parser.get());
+    gst_element_link(parser.get(), appsink.get());
+    ASSERT(GST_PAD_IS_LINKED(appsinkPad.get()));
+    entryPad = adoptGRef(gst_element_get_static_pad(parser.get(), "sink"));
+}
+
 void AppendPipeline::Track::initializeElements(AppendPipeline* appendPipeline, GstBin* bin)
 {
     appsink = makeGStreamerElement("appsink", nullptr);
@@ -876,16 +961,7 @@ void AppendPipeline::Track::initializeElements(AppendPipeline* appendPipeline, G
     appsinkPadEventProbeInformation.probeId = gst_pad_add_probe(appsinkPad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, reinterpret_cast<GstPadProbeCallback>(appendPipelineAppsinkPadEventProbe), &appsinkPadEventProbeInformation, nullptr);
 #endif
 
-    // Some audio files unhelpfully omit the duration of frames in the container. We need to parse
-    // the contained audio streams in order to know the duration of the frames.
-    // This is known to be an issue with YouTube WebM files containing Opus audio as of YTTV2018.
-    // If no parser is needed, a GstIdentity element will be created instead.
-    parser = createOptionalParserForFormat(trackId, caps.get());
-    gst_bin_add(bin, parser.get());
-    gst_element_sync_state_with_parent(parser.get());
-    gst_element_link(parser.get(), appsink.get());
-    ASSERT(GST_PAD_IS_LINKED(appsinkPad.get()));
-    entryPad = adoptGRef(gst_element_get_static_pad(parser.get(), "sink"));
+    emplaceOptionalParserForFormat(bin, caps);
 }
 
 void AppendPipeline::hookTrackEvents(Track& track)

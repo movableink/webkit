@@ -21,6 +21,11 @@ import time
 
 import angle_path_util
 
+from angle_test_util import ANGLE_TRACE_TEST_SUITE
+
+# Currently we only support a single test package name.
+TEST_PACKAGE_NAME = 'com.android.angle.test'
+
 
 class _Global(object):
     initialized = False
@@ -32,13 +37,42 @@ def _ApkPath(suite_name):
     return os.path.join('%s_apk' % suite_name, '%s-debug.apk' % suite_name)
 
 
+@functools.lru_cache()
+def _FindAapt():
+    build_tools = (
+        pathlib.Path(angle_path_util.ANGLE_ROOT_DIR) / 'third_party' / 'android_sdk' / 'public' /
+        'build-tools' / '33.0.0')
+    aapt = str(build_tools / 'aapt') if build_tools.exists() else 'aapt'
+    aapt_info = subprocess.check_output([aapt, 'version']).decode()
+    logging.info('aapt version: %s', aapt_info.strip())
+    return aapt
+
+
+def _RemovePrefix(str, prefix):
+    assert str.startswith(prefix)
+    return str[len(prefix):]
+
+
+def _FindPackageName(apk_path):
+    aapt = _FindAapt()
+    badging = subprocess.check_output([aapt, 'dump', 'badging', apk_path]).decode()
+    package_name = next(
+        _RemovePrefix(item, 'name=').strip('\'')
+        for item in badging.split()
+        if item.startswith('name='))
+    logging.debug('Package name: %s' % package_name)
+    return package_name
+
+
 def Initialize(suite_name):
     if _Global.initialized:
         return
 
-    if os.path.exists(_ApkPath(suite_name)):
+    apk_path = _ApkPath(suite_name)
+    if os.path.exists(apk_path):
         _Global.is_android = True
         _GetAdbRoot()
+        assert _FindPackageName(apk_path) == TEST_PACKAGE_NAME
 
     _Global.initialized = True
 
@@ -73,15 +107,9 @@ def _FindAdb():
     platform_tools = (
         pathlib.Path(angle_path_util.ANGLE_ROOT_DIR) / 'third_party' / 'android_sdk' / 'public' /
         'platform-tools')
-
-    if platform_tools.exists():
-        adb = str(platform_tools / 'adb')
-    else:
-        adb = 'adb'
-
-    adb_info = subprocess.check_output([adb, '--version']).decode()
+    adb = str(platform_tools / 'adb') if platform_tools.exists() else 'adb'
+    adb_info = ', '.join(subprocess.check_output([adb, '--version']).decode().strip().split('\n'))
     logging.info('adb --version: %s', adb_info)
-
     return adb
 
 
@@ -133,32 +161,14 @@ def _AddRestrictedTracesJson():
     _AdbShell('r=/sdcard/chromium_tests_root; tar -xf $r/t.tar -C $r/ && rm $r/t.tar')
 
 
-def _PrepareTestSuite(suite_name):
-    apk_path = _ApkPath(suite_name)
-    logging.info('Installing apk path=%s size=%s' % (apk_path, os.path.getsize(apk_path)))
-
-    _AdbRun(['install', '-r', '-d', apk_path])
-
-    permissions = [
-        'android.permission.CAMERA', 'android.permission.CHANGE_CONFIGURATION',
-        'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.RECORD_AUDIO',
-        'android.permission.WRITE_EXTERNAL_STORAGE'
-    ]
-    _AdbShell('p=com.android.angle.test;'
-              'for q in %s;do pm grant "$p" "$q";done;' % ' '.join(permissions))
-
-    _AdbShell('appops set com.android.angle.test MANAGE_EXTERNAL_STORAGE allow || true')
-
-    _AdbShell('mkdir -p /sdcard/chromium_tests_root/')
-
-    if suite_name == 'angle_perftests':
-        _AddRestrictedTracesJson()
-
-    if suite_name == 'angle_end2end_tests':
-        _AdbRun([
-            'push', '../../src/tests/angle_end2end_tests_expectations.txt',
-            '/sdcard/chromium_tests_root/src/tests/angle_end2end_tests_expectations.txt'
-        ])
+def _GetDeviceApkPath():
+    pm_path = _AdbShell('pm path %s || true' % TEST_PACKAGE_NAME).decode().strip()
+    if not pm_path:
+        logging.debug('No installed path found for %s' % TEST_PACKAGE_NAME)
+        return None
+    device_apk_path = _RemovePrefix(pm_path, 'package:')
+    logging.debug('Device APK path is %s' % device_apk_path)
+    return device_apk_path
 
 
 def _CompareHashes(local_path, device_path):
@@ -174,7 +184,40 @@ def _CompareHashes(local_path, device_path):
     return h.hexdigest() == device_hash
 
 
-def PrepareRestrictedTraces(traces, check_hash=False):
+def _PrepareTestSuite(suite_name):
+    apk_path = _ApkPath(suite_name)
+    device_apk_path = _GetDeviceApkPath()
+
+    if device_apk_path and _CompareHashes(apk_path, device_apk_path):
+        logging.info('Skipping APK install because host and device hashes match')
+    else:
+        logging.info('Installing apk path=%s size=%s' % (apk_path, os.path.getsize(apk_path)))
+        _AdbRun(['install', '-r', '-d', apk_path])
+
+    permissions = [
+        'android.permission.CAMERA', 'android.permission.CHANGE_CONFIGURATION',
+        'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.RECORD_AUDIO',
+        'android.permission.WRITE_EXTERNAL_STORAGE'
+    ]
+    _AdbShell('p=%s;'
+              'for q in %s;do pm grant "$p" "$q";done;' %
+              (TEST_PACKAGE_NAME, ' '.join(permissions)))
+
+    _AdbShell('appops set %s MANAGE_EXTERNAL_STORAGE allow || true' % TEST_PACKAGE_NAME)
+
+    _AdbShell('mkdir -p /sdcard/chromium_tests_root/')
+
+    if suite_name == ANGLE_TRACE_TEST_SUITE:
+        _AddRestrictedTracesJson()
+
+    if suite_name == 'angle_end2end_tests':
+        _AdbRun([
+            'push', '../../src/tests/angle_end2end_tests_expectations.txt',
+            '/sdcard/chromium_tests_root/src/tests/angle_end2end_tests_expectations.txt'
+        ])
+
+
+def PrepareRestrictedTraces(traces):
     start = time.time()
     total_size = 0
     skipped = 0
@@ -182,7 +225,7 @@ def PrepareRestrictedTraces(traces, check_hash=False):
         path_from_root = 'src/tests/restricted_traces/' + trace + '/' + trace + '.angledata.gz'
         local_path = '../../' + path_from_root
         device_path = '/sdcard/chromium_tests_root/' + path_from_root
-        if check_hash and _CompareHashes(local_path, device_path):
+        if _CompareHashes(local_path, device_path):
             skipped += 1
         else:
             total_size += os.path.getsize(local_path)
@@ -229,7 +272,7 @@ def _TempLocalFile():
 def _RunInstrumentation(flags):
     with _TempDeviceFile() as temp_device_file:
         cmd = ' '.join([
-            'p=com.android.angle.test;',
+            'p=%s;' % TEST_PACKAGE_NAME,
             'ntr=org.chromium.native_test.NativeTestInstrumentationTestRunner;',
             'am instrument -w',
             '-e $ntr.NativeTestActivity "$p".AngleUnitTestActivity',
@@ -286,14 +329,8 @@ def AngleSystemInfo(args):
         return json.loads(_ReadDeviceFile(output_file))
 
 
-def ListTests(suite_name):
-    _EnsureTestSuite(suite_name)
-
-    out_lines = _RunInstrumentation(["--list-tests"]).decode('ascii').split('\n')
-
-    start = out_lines.index('Tests list:')
-    end = out_lines.index('End tests list.')
-    return out_lines[start + 1:end]
+def GetBuildFingerprint():
+    return _AdbShell('getprop ro.build.fingerprint').decode('ascii').strip()
 
 
 def _PullDir(device_dir, local_dir):
@@ -317,14 +354,18 @@ def _RemoveFlag(args, f):
 
 
 def RunSmokeTest():
-    _EnsureTestSuite('angle_perftests')
+    _EnsureTestSuite(ANGLE_TRACE_TEST_SUITE)
 
-    test_name = 'TracePerfTest.Run/vulkan_words_with_friends_2'
+    test_name = 'TraceTest.words_with_friends_2'
     run_instrumentation_timeout = 60
 
     logging.info('Running smoke test (%s)', test_name)
 
-    PrepareRestrictedTraces([GetTraceFromTestName(test_name)])
+    trace_name = GetTraceFromTestName(test_name)
+    if not trace_name:
+        raise Exception('Cannot find trace name from %s.' % test_name)
+
+    PrepareRestrictedTraces([trace_name])
 
     with _TempDeviceFile() as device_test_output_path:
         flags = [
@@ -332,7 +373,7 @@ def RunSmokeTest():
             '1', '--isolated-script-test-output=' + device_test_output_path
         ]
         try:
-            _RunInstrumentationWithTimeout(flags, run_instrumentation_timeout)
+            output = _RunInstrumentationWithTimeout(flags, run_instrumentation_timeout)
         except TimeoutError:
             raise Exception('Smoke test did not finish in %s seconds' %
                             run_instrumentation_timeout)
@@ -341,7 +382,7 @@ def RunSmokeTest():
 
     output_json = json.loads(test_output)
     if output_json['tests'][test_name]['actual'] != 'PASS':
-        raise Exception('Smoke test (%s) failed' % test_name)
+        raise Exception('Smoke test (%s) failed. Output:\n%s' % (test_name, output))
 
     logging.info('Smoke test passed')
 
@@ -356,6 +397,7 @@ def RunTests(test_suite, args, stdoutfile=None, log_output=True):
 
     result = 0
     output = b''
+    output_json = {}
     try:
         with contextlib.ExitStack() as stack:
             device_test_output_path = stack.enter_context(_TempDeviceFile())
@@ -371,7 +413,12 @@ def RunTests(test_suite, args, stdoutfile=None, log_output=True):
 
             output = _RunInstrumentationWithTimeout(args, timeout=10 * 60)
 
-            test_output = _ReadDeviceFile(device_test_output_path)
+            if '--list-tests' in args:
+                # When listing tests, there may be no output file. We parse stdout anyways.
+                test_output = '{"interrupted": false}'
+            else:
+                test_output = _ReadDeviceFile(device_test_output_path)
+
             if test_output_path:
                 with open(test_output_path, 'wb') as f:
                     f.write(test_output)
@@ -400,15 +447,10 @@ def RunTests(test_suite, args, stdoutfile=None, log_output=True):
         logging.exception(e)
         result = 1
 
-    return result, output
+    return result, output.decode(), output_json
 
 
 def GetTraceFromTestName(test_name):
-    m = re.search(r'TracePerfTest.Run/(native|vulkan)_(.*)', test_name)
-    if m:
-        return m.group(2)
-
-    if test_name.startswith('TracePerfTest.Run/'):
-        raise Exception('Unexpected test: %s' % test_name)
-
+    if test_name.startswith('TraceTest.'):
+        return test_name[len('TraceTest.'):]
     return None

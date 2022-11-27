@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,22 @@
 
 namespace WebKit {
 
+OptionSet<WebCore::PlatformEvent::Modifier> platform(OptionSet<WebEventModifier> modifiers)
+{
+    OptionSet<WebCore::PlatformEvent::Modifier> result;
+    if (modifiers.contains(WebEventModifier::ShiftKey))
+        result.add(WebCore::PlatformEvent::Modifier::ShiftKey);
+    if (modifiers.contains(WebEventModifier::ControlKey))
+        result.add(WebCore::PlatformEvent::Modifier::ControlKey);
+    if (modifiers.contains(WebEventModifier::AltKey))
+        result.add(WebCore::PlatformEvent::Modifier::AltKey);
+    if (modifiers.contains(WebEventModifier::MetaKey))
+        result.add(WebCore::PlatformEvent::Modifier::MetaKey);
+    if (modifiers.contains(WebEventModifier::CapsLockKey))
+        result.add(WebCore::PlatformEvent::Modifier::CapsLockKey);
+    return result;
+}
+
 class WebKit2PlatformMouseEvent : public WebCore::PlatformMouseEvent {
 public:
     WebKit2PlatformMouseEvent(const WebMouseEvent& webEvent)
@@ -71,31 +87,22 @@ public:
             ASSERT_NOT_REACHED();
         }
 
-        if (webEvent.shiftKey())
-            m_modifiers.add(Modifier::ShiftKey);
-        if (webEvent.controlKey())
-            m_modifiers.add(Modifier::ControlKey);
-        if (webEvent.altKey())
-            m_modifiers.add(Modifier::AltKey);
-        if (webEvent.metaKey())
-            m_modifiers.add(Modifier::MetaKey);
-        if (webEvent.capsLockKey())
-            m_modifiers.add(Modifier::CapsLockKey);
+        m_modifiers = platform(webEvent.modifiers());
 
         m_timestamp = webEvent.timestamp();
 
         // PlatformMouseEvent
         switch (webEvent.button()) {
-        case WebMouseEvent::NoButton:
+        case WebMouseEventButton::NoButton:
             m_button = WebCore::NoButton;
             break;
-        case WebMouseEvent::LeftButton:
+        case WebMouseEventButton::LeftButton:
             m_button = WebCore::LeftButton;
             break;
-        case WebMouseEvent::MiddleButton:
+        case WebMouseEventButton::MiddleButton:
             m_button = WebCore::MiddleButton;
             break;
-        case WebMouseEvent::RightButton:
+        case WebMouseEventButton::RightButton:
             m_button = WebCore::RightButton;
             break;
         default:
@@ -116,13 +123,13 @@ public:
 #endif
         m_modifierFlags = 0;
         if (webEvent.shiftKey())
-            m_modifierFlags |= static_cast<unsigned>(WebEvent::Modifier::ShiftKey);
+            m_modifierFlags |= static_cast<unsigned>(WebEventModifier::ShiftKey);
         if (webEvent.controlKey())
-            m_modifierFlags |= static_cast<unsigned>(WebEvent::Modifier::ControlKey);
+            m_modifierFlags |= static_cast<unsigned>(WebEventModifier::ControlKey);
         if (webEvent.altKey())
-            m_modifierFlags |= static_cast<unsigned>(WebEvent::Modifier::AltKey);
+            m_modifierFlags |= static_cast<unsigned>(WebEventModifier::AltKey);
         if (webEvent.metaKey())
-            m_modifierFlags |= static_cast<unsigned>(WebEvent::Modifier::MetaKey);
+            m_modifierFlags |= static_cast<unsigned>(WebEventModifier::MetaKey);
 
         m_pointerId = webEvent.pointerId();
         m_pointerType = webEvent.pointerType();
@@ -141,16 +148,7 @@ public:
         // PlatformEvent
         m_type = PlatformEvent::Wheel;
 
-        if (webEvent.shiftKey())
-            m_modifiers.add(Modifier::ShiftKey);
-        if (webEvent.controlKey())
-            m_modifiers.add(Modifier::ControlKey);
-        if (webEvent.altKey())
-            m_modifiers.add(Modifier::AltKey);
-        if (webEvent.metaKey())
-            m_modifiers.add(Modifier::MetaKey);
-        if (webEvent.capsLockKey())
-            m_modifiers.add(Modifier::CapsLockKey);
+        m_modifiers = platform(webEvent.modifiers());
 
         m_timestamp = webEvent.timestamp();
 
@@ -207,16 +205,7 @@ public:
             ASSERT_NOT_REACHED();
         }
 
-        if (webEvent.shiftKey())
-            m_modifiers.add(Modifier::ShiftKey);
-        if (webEvent.controlKey())
-            m_modifiers.add(Modifier::ControlKey);
-        if (webEvent.altKey())
-            m_modifiers.add(Modifier::AltKey);
-        if (webEvent.metaKey())
-            m_modifiers.add(Modifier::MetaKey);
-        if (webEvent.capsLockKey())
-            m_modifiers.add(Modifier::CapsLockKey);
+        m_modifiers = platform(webEvent.modifiers());
 
         m_timestamp = webEvent.timestamp();
 
@@ -393,16 +382,7 @@ public:
             ASSERT_NOT_REACHED();
         }
 
-        if (webEvent.shiftKey())
-            m_modifiers.add(Modifier::ShiftKey);
-        if (webEvent.controlKey())
-            m_modifiers.add(Modifier::ControlKey);
-        if (webEvent.altKey())
-            m_modifiers.add(Modifier::AltKey);
-        if (webEvent.metaKey())
-            m_modifiers.add(Modifier::MetaKey);
-        if (webEvent.capsLockKey())
-            m_modifiers.add(Modifier::CapsLockKey);
+        m_modifiers = platform(webEvent.modifiers());
 
         m_timestamp = webEvent.timestamp();
 
@@ -452,16 +432,7 @@ public:
             ASSERT_NOT_REACHED();
         }
 
-        if (webEvent.shiftKey())
-            m_modifiers.add(Modifier::ShiftKey);
-        if (webEvent.controlKey())
-            m_modifiers.add(Modifier::ControlKey);
-        if (webEvent.altKey())
-            m_modifiers.add(Modifier::AltKey);
-        if (webEvent.metaKey())
-            m_modifiers.add(Modifier::MetaKey);
-        if (webEvent.capsLockKey())
-            m_modifiers.add(Modifier::CapsLockKey);
+        m_modifiers = platform(webEvent.modifiers());
 
         m_timestamp = webEvent.timestamp();
 

@@ -81,10 +81,10 @@ namespace WebKit {
 using namespace WebCore;
 
 NetworkProcessConnection::NetworkProcessConnection(IPC::Connection::Identifier connectionIdentifier, HTTPCookieAcceptPolicy cookieAcceptPolicy)
-    : m_connection(IPC::Connection::createClientConnection(connectionIdentifier, *this))
+    : m_connection(IPC::Connection::createClientConnection(connectionIdentifier))
     , m_cookieAcceptPolicy(cookieAcceptPolicy)
 {
-    m_connection->open();
+    m_connection->open(*this);
 
     if (WebRTCProvider::webRTCAvailable())
         WebProcess::singleton().libWebRTCNetwork().setConnection(m_connection.copyRef());
@@ -333,19 +333,18 @@ void NetworkProcessConnection::messagesAvailableForPort(const WebCore::MessagePo
     WebProcess::singleton().messagesAvailableForPort(messagePortIdentifier);
 }
 
-void NetworkProcessConnection::checkProcessLocalPortForActivity(const WebCore::MessagePortIdentifier& messagePortIdentifier, CompletionHandler<void(MessagePortChannelProvider::HasActivity)>&& callback)
+void NetworkProcessConnection::deleteWebsiteDataForOrigins(OptionSet<WebsiteDataType> dataTypes, const Vector<WebCore::SecurityOriginData>& origins, CompletionHandler<void()>&& completionHandler)
 {
-    callback(WebCore::MessagePort::isExistingMessagePortLocallyReachable(messagePortIdentifier) ? MessagePortChannelProvider::HasActivity::Yes : MessagePortChannelProvider::HasActivity::No);
+    WebProcess::singleton().deleteWebsiteDataForOrigins(dataTypes, origins, WTFMove(completionHandler));
 }
 
 void NetworkProcessConnection::broadcastConsoleMessage(MessageSource source, MessageLevel level, const String& message)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
 
-    for (auto* frame : WebProcess::singleton().webFrames()) {
-        if (frame->isMainFrame())
-            frame->addConsoleMessage(source, level, message);
-    }
+    Page::forEachPage([&] (Page& page) {
+        WebPage::fromCorePage(page).mainWebFrame().addConsoleMessage(source, level, message);
+    });
 }
 
 #if ENABLE(WEB_RTC)

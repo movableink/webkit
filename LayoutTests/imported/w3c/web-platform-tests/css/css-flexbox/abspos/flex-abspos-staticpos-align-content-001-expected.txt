@@ -11,9 +11,7 @@
 
 PASS .container > div 1
 PASS .container > div 2
-FAIL .container > div 3 assert_equals:
-<div class="container" style="align-content: last baseline"><div data-offset-x="2" data-offset-y="5"></div></div>
-offsetTop expected 5 but got 1
+PASS .container > div 3
 PASS .container > div 4
 PASS .container > div 5
 PASS .container > div 6
@@ -25,9 +23,7 @@ PASS .container > div 11
 PASS .container > div 12
 PASS .container > div 13
 PASS .container > div 14
-FAIL .container > div 15 assert_equals:
-<div class="container" style="align-content: last baseline"><div data-offset-x="2" data-offset-y="-3"></div></div>
-offsetTop expected -3 but got 1
+PASS .container > div 15
 PASS .container > div 16
 PASS .container > div 17
 PASS .container > div 18

@@ -68,17 +68,20 @@ std::unique_ptr<IOSurface> IOSurface::create(IOSurfacePool* pool, IntSize size, 
     return surface;
 }
 
-std::unique_ptr<IOSurface> IOSurface::createFromSendRight(const MachSendRight&& sendRight, const DestinationColorSpace& colorSpace)
+std::unique_ptr<IOSurface> IOSurface::createFromSendRight(const MachSendRight&& sendRight)
 {
     ASSERT(ProcessCapabilities::canUseAcceleratedBuffers());
 
     auto surface = adoptCF(IOSurfaceLookupFromMachPort(sendRight.sendRight()));
-    return IOSurface::createFromSurface(surface.get(), colorSpace);
+    return IOSurface::createFromSurface(surface.get(), { });
 }
 
-std::unique_ptr<IOSurface> IOSurface::createFromSurface(IOSurfaceRef surface, const DestinationColorSpace& colorSpace)
+std::unique_ptr<IOSurface> IOSurface::createFromSurface(IOSurfaceRef surface, std::optional<DestinationColorSpace>&& colorSpace)
 {
-    return std::unique_ptr<IOSurface>(new IOSurface(surface, colorSpace));
+    if (!surface)
+        return nullptr;
+
+    return std::unique_ptr<IOSurface>(new IOSurface(surface, WTFMove(colorSpace)));
 }
 
 std::unique_ptr<IOSurface> IOSurface::createFromImage(IOSurfacePool* pool, CGImageRef image)
@@ -203,46 +206,52 @@ IOSurface::IOSurface(IntSize size, const DestinationColorSpace& colorSpace, Form
     }
     m_surface = adoptCF(IOSurfaceCreate((CFDictionaryRef)options));
     success = !!m_surface;
-    if (success)
+    if (success) {
+        setColorSpaceProperty();
         m_totalBytes = IOSurfaceGetAllocSize(m_surface.get());
-    else
+    } else
         RELEASE_LOG_ERROR(Layers, "IOSurface creation failed for size: (%d %d) and format: (%d)", size.width(), size.height(), format);
 }
 
-IOSurface::IOSurface(IOSurfaceRef surface, const DestinationColorSpace& colorSpace)
-    : m_colorSpace(colorSpace)
+IOSurface::IOSurface(IOSurfaceRef surface, std::optional<DestinationColorSpace>&& colorSpace)
+    : m_colorSpace(WTFMove(colorSpace))
     , m_surface(surface)
 {
     m_size = IntSize(IOSurfaceGetWidth(surface), IOSurfaceGetHeight(surface));
     m_totalBytes = IOSurfaceGetAllocSize(surface);
+
+    if (m_colorSpace)
+        setColorSpaceProperty();
 }
 
 IOSurface::~IOSurface() = default;
 
-static constexpr IntSize maxSurfaceDimensionCA()
+static constexpr IntSize fallbackMaxSurfaceDimension()
 {
     // Match limits imposed by Core Animation. FIXME: should have API for this <rdar://problem/25454148>
-#if PLATFORM(IOS_FAMILY)
-    constexpr int maxSurfaceDimension = 8 * 1024;
-#else
-    // IOSurface::maximumSize() can return { INT_MAX, INT_MAX } when hardware acceleration is unavailable.
+#if PLATFORM(WATCHOS)
+    constexpr int maxSurfaceDimension = 4 * 1024;
+#elif PLATFORM(MAC)
     constexpr int maxSurfaceDimension = 32 * 1024;
+#else
+    constexpr int maxSurfaceDimension = 8 * 1024;
 #endif
     return { maxSurfaceDimension, maxSurfaceDimension };
 }
 
 static IntSize computeMaximumSurfaceSize()
 {
-#if PLATFORM(IOS)
-    return maxSurfaceDimensionCA();
-#else
-    IntSize maxSize(clampToInteger(IOSurfaceGetPropertyMaximum(kIOSurfaceWidth)), clampToInteger(IOSurfaceGetPropertyMaximum(kIOSurfaceHeight)));
+    auto maxSize = IntSize { clampToInteger(IOSurfaceGetPropertyMaximum(kIOSurfaceWidth)), clampToInteger(IOSurfaceGetPropertyMaximum(kIOSurfaceHeight)) };
 
-    // Protect against maxSize being { 0, 0 }.
-    constexpr int maxSurfaceDimensionLowerBound = 1024;
-
-    return maxSize.constrainedBetween({ maxSurfaceDimensionLowerBound, maxSurfaceDimensionLowerBound }, maxSurfaceDimensionCA() );
+#if PLATFORM(IOS_FAMILY)
+    // On iOS, there's an additional 8K clamp in CA (rdar://101936907).
+    maxSize.clampToMaximumSize(fallbackMaxSurfaceDimension());
 #endif
+
+    if (maxSize.isZero())
+        maxSize = fallbackMaxSurfaceDimension();
+
+    return maxSize;
 }
 
 static WTF::Atomic<IntSize>& surfaceMaximumSize()
@@ -315,15 +324,11 @@ RetainPtr<CGImageRef> IOSurface::sinkIntoImage(std::unique_ptr<IOSurface> surfac
     return adoptCF(CGIOSurfaceContextCreateImageReference(surface->ensurePlatformContext()));
 }
 
-CGContextRef IOSurface::ensurePlatformContext(const HostWindow* hostWindow)
+IOSurface::BitmapConfiguration IOSurface::bitmapConfiguration() const
 {
-    if (m_cgContext)
-        return m_cgContext.get();
-
-    CGBitmapInfo bitmapInfo = static_cast<CGBitmapInfo>(kCGImageAlphaPremultipliedFirst) | static_cast<CGBitmapInfo>(kCGBitmapByteOrder32Host);
+    auto bitmapInfo = static_cast<CGBitmapInfo>(kCGImageAlphaPremultipliedFirst) | static_cast<CGBitmapInfo>(kCGBitmapByteOrder32Host);
 
     size_t bitsPerComponent = 8;
-    size_t bitsPerPixel = 32;
     
     switch (format()) {
     case Format::BGRA:
@@ -334,7 +339,6 @@ CGContextRef IOSurface::ensurePlatformContext(const HostWindow* hostWindow)
         // A half-float format will be used if CG needs to read back the IOSurface contents,
         // but for an IOSurface-to-IOSurface copy, there should be no conversion.
         bitsPerComponent = 16;
-        bitsPerPixel = 64;
         bitmapInfo = static_cast<CGBitmapInfo>(kCGImageAlphaPremultipliedLast) | static_cast<CGBitmapInfo>(kCGBitmapByteOrder16Host) | static_cast<CGBitmapInfo>(kCGBitmapFloatComponents);
         break;
 #endif
@@ -342,8 +346,30 @@ CGContextRef IOSurface::ensurePlatformContext(const HostWindow* hostWindow)
         ASSERT_NOT_REACHED();
         break;
     }
-    
-    m_cgContext = adoptCF(CGIOSurfaceContextCreate(m_surface.get(), m_size.width(), m_size.height(), bitsPerComponent, bitsPerPixel, m_colorSpace.platformColorSpace(), bitmapInfo));
+
+    return { bitmapInfo, bitsPerComponent };
+}
+
+RetainPtr<CGContextRef> IOSurface::createCompatibleBitmap(unsigned width, unsigned height)
+{
+    auto configuration = bitmapConfiguration();
+    auto bitsPerPixel = configuration.bitsPerComponent * 4;
+    auto bytesPerRow = width * bitsPerPixel;
+
+    ensureColorSpace();
+    return adoptCF(CGBitmapContextCreate(NULL, width, height, configuration.bitsPerComponent, bytesPerRow, m_colorSpace->platformColorSpace(), configuration.bitmapInfo));
+}
+
+CGContextRef IOSurface::ensurePlatformContext(const HostWindow* hostWindow)
+{
+    if (m_cgContext)
+        return m_cgContext.get();
+
+    auto configuration = bitmapConfiguration();
+    auto bitsPerPixel = configuration.bitsPerComponent * 4;
+
+    ensureColorSpace();
+    m_cgContext = adoptCF(CGIOSurfaceContextCreate(m_surface.get(), m_size.width(), m_size.height(), configuration.bitsPerComponent, bitsPerPixel, m_colorSpace->platformColorSpace(), configuration.bitmapInfo));
 
 #if PLATFORM(MAC)
     if (auto displayMask = primaryOpenGLDisplayMask()) {
@@ -405,6 +431,12 @@ SetNonVolatileResult IOSurface::setVolatile(bool isVolatile)
         return SetNonVolatileResult::Empty;
 
     return SetNonVolatileResult::Valid;
+}
+
+DestinationColorSpace IOSurface::colorSpace()
+{
+    ensureColorSpace();
+    return *m_colorSpace;
 }
 
 IOSurface::Format IOSurface::format() const
@@ -539,10 +571,32 @@ void IOSurface::setOwnershipIdentity(IOSurfaceRef surface, const ProcessIdentity
 #endif
 }
 
-void IOSurface::migrateColorSpaceToProperties()
+void IOSurface::setColorSpaceProperty()
 {
-    auto colorSpaceProperties = adoptCF(CGColorSpaceCopyPropertyList(m_colorSpace.platformColorSpace()));
+    ASSERT(m_colorSpace);
+    auto colorSpaceProperties = adoptCF(CGColorSpaceCopyPropertyList(m_colorSpace->platformColorSpace()));
     IOSurfaceSetValue(m_surface.get(), kIOSurfaceColorSpace, colorSpaceProperties.get());
+}
+
+void IOSurface::ensureColorSpace()
+{
+    if (m_colorSpace)
+        return;
+
+    m_colorSpace = surfaceColorSpace().value_or(DestinationColorSpace::SRGB());
+}
+
+std::optional<DestinationColorSpace> IOSurface::surfaceColorSpace() const
+{
+    auto propertyList = adoptCF(IOSurfaceCopyValue(m_surface.get(), kIOSurfaceColorSpace));
+    if (!propertyList)
+        return { };
+    
+    auto colorSpaceCF = adoptCF(CGColorSpaceCreateWithPropertyList(propertyList.get()));
+    if (!colorSpaceCF)
+        return { };
+    
+    return DestinationColorSpace { colorSpaceCF };
 }
 
 IOSurface::Format IOSurface::formatForPixelFormat(PixelFormat format)

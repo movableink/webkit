@@ -25,8 +25,10 @@
 #include "config.h"
 #include "GenericMediaQueryParser.h"
 
+#include "CSSAspectRatioValue.h"
 #include "CSSPropertyParserHelpers.h"
 #include "CSSValue.h"
+#include "MediaQueryParserContext.h"
 
 namespace WebCore {
 namespace MQ {
@@ -41,8 +43,8 @@ static AtomString consumeFeatureName(CSSParserTokenRange& range)
 std::optional<Feature> GenericMediaQueryParserBase::consumeFeature(CSSParserTokenRange& range)
 {
     auto rangeCopy = range;
-    if (auto sizeFeature = consumeBooleanOrPlainFeature(range))
-        return sizeFeature;
+    if (auto feature = consumeBooleanOrPlainFeature(range))
+        return feature;
 
     range = rangeCopy;
     return consumeRangeFeature(range);
@@ -58,6 +60,10 @@ std::optional<Feature> GenericMediaQueryParserBase::consumeBooleanOrPlainFeature
             return { StringView(name).substring(4).toAtomString(), ComparisonOperator::GreaterThanOrEqual };
         if (name.startsWith("max-"_s))
             return { StringView(name).substring(4).toAtomString(), ComparisonOperator::LessThanOrEqual };
+        if (name.startsWith("-webkit-min-"_s))
+            return { "-webkit-"_s + StringView(name).substring(12), ComparisonOperator::GreaterThanOrEqual };
+        if (name.startsWith("-webkit-max-"_s))
+            return { "-webkit-"_s + StringView(name).substring(12), ComparisonOperator::LessThanOrEqual };
 
         return { name, ComparisonOperator::Equal };
     };
@@ -190,11 +196,90 @@ RefPtr<CSSValue> GenericMediaQueryParserBase::consumeValue(CSSParserTokenRange& 
         return nullptr;
     if (auto value = CSSPropertyParserHelpers::consumeIdent(range))
         return value;
-    if (auto value = CSSPropertyParserHelpers::consumeLength(range, m_context.mode, ValueRange::All))
+    auto rangeCopy = range;
+    if (auto value = CSSPropertyParserHelpers::consumeInteger(range)) {
+        if (range.atEnd())
+            return value;
+        range = rangeCopy;
+    }
+    if (auto value = CSSPropertyParserHelpers::consumeLength(range, HTMLStandardMode, ValueRange::All))
         return value;
     if (auto value = CSSPropertyParserHelpers::consumeAspectRatioValue(range))
         return value;
+    if (auto value = CSSPropertyParserHelpers::consumeResolution(range))
+        return value;
+    if (auto value = CSSPropertyParserHelpers::consumeNumber(range, ValueRange::All))
+        return value;
+
     return nullptr;
+}
+
+bool GenericMediaQueryParserBase::validateFeatureAgainstSchema(Feature& feature, const FeatureSchema& schema)
+{
+    auto validateValue = [&](auto& value) {
+        auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value.get());
+        switch (schema.valueType) {
+        case FeatureSchema::ValueType::Integer:
+            return primitiveValue && primitiveValue->isInteger();
+
+        case FeatureSchema::ValueType::Number:
+            return primitiveValue && primitiveValue->isNumberOrInteger();
+
+        case FeatureSchema::ValueType::Length:
+            if (!primitiveValue)
+                return false;
+            if (primitiveValue->isInteger() && !primitiveValue->intValue())
+                return true;
+            return primitiveValue->isLength();
+
+        case FeatureSchema::ValueType::Resolution:
+            return primitiveValue && primitiveValue->isResolution();
+
+        case FeatureSchema::ValueType::Identifier:
+            return primitiveValue && primitiveValue->isValueID() && schema.valueIdentifiers.contains(primitiveValue->valueID());
+
+        case FeatureSchema::ValueType::Ratio:
+            if (primitiveValue && primitiveValue->isNumberOrInteger()) {
+                value = CSSAspectRatioValue::create(primitiveValue->floatValue(), 1);
+                return true;
+            }
+            if (auto* list = dynamicDowncast<CSSValueList>(value.get())) {
+                if (list->length() != 2 || list->separator() != CSSValue::SlashSeparator)
+                    return false;
+                auto first = dynamicDowncast<CSSPrimitiveValue>(list->item(0));
+                auto second = dynamicDowncast<CSSPrimitiveValue>(list->item(1));
+                if (first && second && first->isNumberOrInteger() && second->isNumberOrInteger()) {
+                    value = CSSAspectRatioValue::create(first->floatValue(), second->floatValue());
+                    return true;
+                }
+            }
+            return false;
+        }
+        ASSERT_NOT_REACHED();
+        return false;
+    };
+
+    auto isValid = [&] {
+        if (schema.type == FeatureSchema::Type::Discrete) {
+            if (feature.syntax == Syntax::Range)
+                return false;
+            if (feature.rightComparison && feature.rightComparison->op != ComparisonOperator::Equal)
+                return false;
+        }
+
+        if (feature.leftComparison) {
+            if (!validateValue(feature.leftComparison->value))
+                return false;
+        }
+        if (feature.rightComparison) {
+            if (!validateValue(feature.rightComparison->value))
+                return false;
+        }
+        return true;
+    }();
+
+    feature.schema = isValid ? &schema : nullptr;
+    return isValid;
 }
 
 }

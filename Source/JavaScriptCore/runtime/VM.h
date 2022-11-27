@@ -284,6 +284,9 @@ private:
     ScratchBuffer* m_scratchBuffer;
 };
 
+enum VMIdentifierType { };
+using VMIdentifier = ObjectIdentifier<VMIdentifierType>;
+
 class VM : public ThreadSafeRefCounted<VM>, public DoublyLinkedListNode<VM> {
 public:
     // WebCore has a one-to-one mapping of threads to VMs;
@@ -330,8 +333,7 @@ public:
     FuzzerAgent* fuzzerAgent() const { return m_fuzzerAgent.get(); }
     void setFuzzerAgent(std::unique_ptr<FuzzerAgent>&&);
 
-    static unsigned numberOfIDs() { return s_numberOfIDs.load(); }
-    unsigned id() const { return m_id; }
+    VMIdentifier identifier() const { return m_identifier; }
     bool isEntered() const { return !!entryScope; }
 
     inline CallFrame* topJSCallFrame() const;
@@ -375,13 +377,15 @@ public:
     void throwTerminationException();
 
 private:
-    unsigned nextID();
-
-    static Atomic<unsigned> s_numberOfIDs;
-
-    unsigned m_id;
+    VMIdentifier m_identifier;
     RefPtr<JSLock> m_apiLock;
     Ref<WTF::RunLoop> m_runLoop;
+
+    // Keep super frequently accessed fields top in VM.
+    void* m_softStackLimit { nullptr };
+    Exception* m_exception { nullptr };
+    Exception* m_terminationException { nullptr };
+    Exception* m_lastException { nullptr };
 
     WeakRandom m_random;
     WeakRandom m_heapRandom;
@@ -652,6 +656,11 @@ public:
     static ptrdiff_t offsetOfHeapMutatorShouldBeFenced()
     {
         return OBJECT_OFFSETOF(VM, heap) + OBJECT_OFFSETOF(Heap, m_mutatorShouldBeFenced);
+    }
+
+    static ptrdiff_t offsetOfSoftStackLimit()
+    {
+        return OBJECT_OFFSETOF(VM, m_softStackLimit);
     }
 
     void clearLastException() { m_lastException = nullptr; }
@@ -961,15 +970,11 @@ private:
     void* m_stackPointerAtVMEntry { nullptr };
     size_t m_currentSoftReservedZoneSize;
     void* m_stackLimit { nullptr };
-    void* m_softStackLimit { nullptr };
 #if ENABLE(C_LOOP)
     void* m_cloopStackLimit { nullptr };
 #endif
     void* m_lastStackTop { nullptr };
 
-    Exception* m_exception { nullptr };
-    Exception* m_terminationException { nullptr };
-    Exception* m_lastException { nullptr };
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
     ExceptionScope* m_topExceptionScope { nullptr };
     ExceptionEventLocation m_simulatedThrowPointLocation;

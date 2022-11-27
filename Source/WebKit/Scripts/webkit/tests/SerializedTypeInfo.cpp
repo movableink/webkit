@@ -25,6 +25,25 @@
 #include "config.h"
 #include "SerializedTypeInfo.h"
 
+#if ENABLE(TEST_FEATURE)
+#include "FirstMemberType.h"
+#endif
+#include "HeaderWithoutCondition"
+#if ENABLE(TEST_FEATURE)
+#include "SecondMemberType.h"
+#endif
+#if ENABLE(TEST_FEATURE)
+#include "StructHeader.h"
+#endif
+#include <Namespace/EmptyConstructorNullable.h>
+#include <Namespace/EmptyConstructorStruct.h>
+#include <Namespace/ReturnRefClass.h>
+#include <WebCore/FloatBoxExtent.h>
+#include <WebCore/InheritanceGrandchild.h>
+#include <WebCore/InheritsFrom.h>
+#include <wtf/CreateUsingClass.h>
+#include <wtf/Seconds.h>
+
 #if ENABLE(IPC_TESTING_API)
 
 namespace WebKit {
@@ -41,6 +60,7 @@ Vector<SerializedTypeInfo> allSerializedTypes()
             "bool"_s,
             "int"_s,
             "bool"_s,
+            "RetainPtr<NSArray>"_s,
         } },
         { "Namespace::ReturnRefClass"_s, {
             "double"_s,
@@ -61,6 +81,55 @@ Vector<SerializedTypeInfo> allSerializedTypes()
         } },
         { "WithoutNamespaceWithAttributes"_s, {
             "int"_s,
+        } },
+        { "WebCore::InheritsFrom"_s, {
+            "float"_s,
+        } },
+        { "WebCore::InheritanceGrandchild"_s, {
+            "double"_s,
+        } },
+        { "Seconds"_s, {
+            "double"_s,
+        } },
+        { "CreateUsingClass"_s, {
+            "double"_s,
+        } },
+        { "WebCore::FloatBoxExtent"_s, {
+            "float"_s,
+            "float"_s,
+            "float"_s,
+            "float"_s,
+        } },
+    };
+}
+
+Vector<SerializedEnumInfo> allSerializedEnums()
+{
+    return {
+#if ENABLE(BOOL_ENUM)
+        { "EnumNamespace::BoolEnumType"_s, sizeof(EnumNamespace::BoolEnumType), false, {
+            0, 1
+        } },
+#endif
+        { "EnumWithoutNamespace"_s, sizeof(EnumWithoutNamespace), false, {
+            static_cast<uint64_t>(EnumWithoutNamespace::Value1),
+            static_cast<uint64_t>(EnumWithoutNamespace::Value2),
+            static_cast<uint64_t>(EnumWithoutNamespace::Value3),
+        } },
+#if ENABLE(UINT16_ENUM)
+        { "EnumNamespace::EnumType"_s, sizeof(EnumNamespace::EnumType), false, {
+            static_cast<uint64_t>(EnumNamespace::EnumType::FirstValue),
+#if ENABLE(ENUM_VALUE_CONDITION)
+            static_cast<uint64_t>(EnumNamespace::EnumType::SecondValue),
+#endif
+        } },
+#endif
+        { "EnumNamespace2::OptionSetEnumType"_s, sizeof(EnumNamespace2::OptionSetEnumType), true, {
+            static_cast<uint64_t>(EnumNamespace2::OptionSetEnumType::OptionSetFirstValue),
+#if ENABLE(OPTION_SET_SECOND_VALUE)
+            static_cast<uint64_t>(EnumNamespace2::OptionSetEnumType::OptionSetSecondValue),
+#endif
+            static_cast<uint64_t>(EnumNamespace2::OptionSetEnumType::OptionSetThirdValue),
         } },
     };
 }

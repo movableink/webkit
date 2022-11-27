@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "CustomElementDefaultARIA.h"
 #include "CustomElementReactionQueue.h"
 #include "DOMTokenList.h"
 #include "DatasetDOMStringMap.h"
@@ -66,6 +67,9 @@ public:
     CustomElementReactionQueue* customElementReactionQueue() { return m_customElementReactionQueue.get(); }
     void setCustomElementReactionQueue(std::unique_ptr<CustomElementReactionQueue>&& queue) { m_customElementReactionQueue = WTFMove(queue); }
 
+    CustomElementDefaultARIA* customElementDefaultARIA() { return m_customElementDefaultARIA.get(); }
+    void setCustomElementDefaultARIA(std::unique_ptr<CustomElementDefaultARIA>&& defaultARIA) { m_customElementDefaultARIA = WTFMove(defaultARIA); }
+
     NamedNodeMap* attributeMap() const { return m_attributeMap.get(); }
     void setAttributeMap(std::unique_ptr<NamedNodeMap> attributeMap) { m_attributeMap = WTFMove(attributeMap); }
 
@@ -102,13 +106,11 @@ public:
     const AtomString& nonce() const { return m_nonce; }
     void setNonce(const AtomString& value) { m_nonce = value; }
 
-#if ENABLE(CSS_TYPED_OM)
     StylePropertyMap* attributeStyleMap() { return m_attributeStyleMap.get(); }
     void setAttributeStyleMap(Ref<StylePropertyMap>&& map) { m_attributeStyleMap = WTFMove(map); }
 
     StylePropertyMapReadOnly* computedStyleMap() { return m_computedStyleMap.get(); }
     void setComputedStyleMap(Ref<StylePropertyMapReadOnly>&& map) { m_computedStyleMap = WTFMove(map); }
-#endif
 
     ExplicitlySetAttrElementsMap& explicitlySetAttrElementsMap() { return m_explicitlySetAttrElementsMap; }
 
@@ -131,7 +133,9 @@ public:
         if (m_shadowRoot)
             result.add(UseType::ShadowRoot);
         if (m_customElementReactionQueue)
-            result.add(UseType::CustomElementQueue);
+            result.add(UseType::CustomElementReactionQueue);
+        if (m_customElementDefaultARIA)
+            result.add(UseType::CustomElementDefaultARIA);
         if (m_attributeMap)
             result.add(UseType::AttributeMap);
         if (m_intersectionObserverData)
@@ -142,12 +146,10 @@ public:
             result.add(UseType::Animations);
         if (m_beforePseudoElement || m_afterPseudoElement)
             result.add(UseType::PseudoElements);
-#if ENABLE(CSS_TYPED_OM)
         if (m_attributeStyleMap)
             result.add(UseType::StyleMap);
         if (m_computedStyleMap)
             result.add(UseType::ComputedStyleMap);
-#endif
         if (m_partList)
             result.add(UseType::PartList);
         if (!m_partNames.isEmpty())
@@ -169,6 +171,7 @@ private:
     std::unique_ptr<DOMTokenList> m_classList;
     RefPtr<ShadowRoot> m_shadowRoot;
     std::unique_ptr<CustomElementReactionQueue> m_customElementReactionQueue;
+    std::unique_ptr<CustomElementDefaultARIA> m_customElementDefaultARIA;
     std::unique_ptr<NamedNodeMap> m_attributeMap;
 
     std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
@@ -180,10 +183,8 @@ private:
     RefPtr<PseudoElement> m_beforePseudoElement;
     RefPtr<PseudoElement> m_afterPseudoElement;
 
-#if ENABLE(CSS_TYPED_OM)
     RefPtr<StylePropertyMap> m_attributeStyleMap;
     RefPtr<StylePropertyMapReadOnly> m_computedStyleMap;
-#endif
 
     std::unique_ptr<DOMTokenList> m_partList;
     SpaceSplitString m_partNames;

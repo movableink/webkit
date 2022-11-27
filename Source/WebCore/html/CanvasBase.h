@@ -49,7 +49,7 @@ class CanvasObserver : public CanMakeWeakPtr<CanvasObserver> {
 public:
     virtual ~CanvasObserver() = default;
 
-    virtual bool isCanvasObserverProxy() const { return false; }
+    virtual bool isStyleCanvasImage() const { return false; }
 
     virtual void canvasChanged(CanvasBase&, const std::optional<FloatRect>& changedRect) = 0;
     virtual void canvasResized(CanvasBase&) = 0;
@@ -79,6 +79,8 @@ public:
     const IntSize& size() const { return m_size; }
 
     ImageBuffer* buffer() const;
+
+    virtual void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&) { }
 
     virtual AffineTransform baseTransform() const;
 
