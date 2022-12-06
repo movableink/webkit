@@ -419,6 +419,7 @@ else ()
     find_package(SQLite3 REQUIRED)
 endif ()
 
+find_package(Freetype 2.4.2 REQUIRED)
 find_package(HarfBuzz 0.9.18 REQUIRED COMPONENTS ICU)
 find_package(Threads REQUIRED)
 
