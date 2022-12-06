@@ -1322,7 +1322,7 @@ RefPtr<Widget> FrameLoaderClientQt::createPlugin(const IntSize& pluginSize, HTML
             for (unsigned i = 0; i < numqStyleSheetProperties; ++i) {
                 CSSPropertyID property = qstyleSheetProperties[i];
 
-                styleSheet.append(getPropertyName(property));
+                styleSheet.append(nameString(property));
                 styleSheet.append(':');
                 styleSheet.append(QStyleHelpers::getComputedStyleProperty(element, property));
                 styleSheet.append(';');
