@@ -71,7 +71,7 @@ void FontPlatformDataPrivate::platformDataInit(FontPlatformData& q, float size, 
 {
     // ASSERT(qFuzzyCompare(static_cast<float>(rawFont.pixelSize()), size));
     q.m_data = adoptRef(new FontPlatformDataPrivate(rawFont));
-    q.m_size = size;
+    q.updateSize(size);
 }
 
 FontPlatformData::FontPlatformData(const FontDescription& description, const AtomString& familyName)
@@ -111,6 +111,11 @@ FontPlatformData FontPlatformData::cloneWithSize(const FontPlatformData& source,
     copyFont.setPixelSize(size); // Detaches
     FontPlatformDataPrivate::platformDataInit(copy, size, copyFont);
     return copy;
+}
+
+void FontPlatformData::updateSize(float size)
+{
+    m_size = size;
 }
 
 QRawFont FontPlatformData::rawFont() const
