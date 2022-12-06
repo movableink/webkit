@@ -78,7 +78,6 @@ public:
     void makeRepresentation(DocumentLoader*) override { }
 
     std::optional<PageIdentifier> pageID() const final;
-    std::optional<FrameIdentifier> frameID() const final;
 
     void forceLayoutForNonHTML() override;
 
@@ -111,7 +110,7 @@ public:
     void dispatchDidReceiveIcon() override;
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const StringWithDirection&) override;
-    void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>) override;
+    void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>, std::optional<WebCore::WasPrivateRelayed>) override;
     void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) override;
     void dispatchDidFailLoad(const WebCore::ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
@@ -149,7 +148,6 @@ public:
     bool shouldGoToHistoryItem(HistoryItem&) const override;
     void didDisplayInsecureContent() override;
     void didRunInsecureContent(SecurityOrigin&, const URL&) override;
-    void didDetectXSS(const URL&, bool didBlockEntirePage) override;
 
     ResourceError cancelledError(const ResourceRequest&) const override;
     ResourceError blockedError(const ResourceRequest&) const override;

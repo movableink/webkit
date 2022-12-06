@@ -242,12 +242,7 @@ std::optional<PageIdentifier> FrameLoaderClientQt::pageID() const
     return std::nullopt;
 }
 
-std::optional<FrameIdentifier> FrameLoaderClientQt::frameID() const
-{
-    return std::nullopt;
-}
-
-void FrameLoaderClientQt::savePlatformDataToCachedFrame(CachedFrame*) 
+void FrameLoaderClientQt::savePlatformDataToCachedFrame(CachedFrame*)
 {
     notImplemented();
 }
@@ -364,7 +359,7 @@ void FrameLoaderClientQt::dispatchDidNavigateWithinPage()
     if (!loaderCompleted)
         return;
 
-    dispatchDidCommitLoad(std::nullopt, std::nullopt); // QTFIXME
+    dispatchDidCommitLoad(std::nullopt, std::nullopt, std::nullopt); // QTFIXME
     dispatchDidFinishLoad();
 }
 
@@ -438,7 +433,7 @@ void FrameLoaderClientQt::dispatchDidReceiveTitle(const StringWithDirection& tit
 }
 
 
-void FrameLoaderClientQt::dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>)
+void FrameLoaderClientQt::dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>, std::optional<WebCore::WasPrivateRelayed>)
 {
     if (dumpFrameLoaderCallbacks)
         printf("%s - didCommitLoadForFrame\n", qPrintable(drtDescriptionSuitableForTestResult(m_frame)));
@@ -732,14 +727,6 @@ void FrameLoaderClientQt::didRunInsecureContent(SecurityOrigin&, const URL&)
 {
     if (dumpFrameLoaderCallbacks)
         printf("didRunInsecureContent\n");
-
-    notImplemented();
-}
-
-void FrameLoaderClientQt::didDetectXSS(const URL&, bool)
-{
-    if (dumpFrameLoaderCallbacks)
-        printf("didDetectXSS\n");
 
     notImplemented();
 }
