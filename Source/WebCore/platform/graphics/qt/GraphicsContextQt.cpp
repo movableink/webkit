@@ -1330,34 +1330,6 @@ void GraphicsContextQt::drawDotsForDocumentMarker(const FloatRect& rect, Documen
     p->setPen(originalPen);
 }
 
-FloatRect GraphicsContextQt::roundToDevicePixels(const FloatRect& frect, RoundingMode)
-{
-    // It is not enough just to round to pixels in device space. The rotation part of the
-    // affine transform matrix to device space can mess with this conversion if we have a
-    // rotating image like the hands of the world clock widget. We just need the scale, so
-    // we get the affine transform matrix and extract the scale.
-    QPainter* p = painter();
-    QTransform deviceTransform = p->deviceTransform();
-    if (deviceTransform.isIdentity())
-        return frect;
-
-    qreal deviceScaleX = sqrtf(deviceTransform.m11() * deviceTransform.m11() + deviceTransform.m12() * deviceTransform.m12());
-    qreal deviceScaleY = sqrtf(deviceTransform.m21() * deviceTransform.m21() + deviceTransform.m22() * deviceTransform.m22());
-
-    QPoint deviceOrigin(frect.x() * deviceScaleX, frect.y() * deviceScaleY);
-    QPoint deviceLowerRight(frect.maxX() * deviceScaleX, frect.maxY() * deviceScaleY);
-
-    // Don't let the height or width round to 0 unless either was originally 0
-    if (deviceOrigin.y() == deviceLowerRight.y() && frect.height())
-        deviceLowerRight.setY(deviceLowerRight.y() + 1);
-    if (deviceOrigin.x() == deviceLowerRight.x() && frect.width())
-        deviceLowerRight.setX(deviceLowerRight.x() + 1);
-
-    FloatPoint roundedOrigin = FloatPoint(deviceOrigin.x() / deviceScaleX, deviceOrigin.y() / deviceScaleY);
-    FloatPoint roundedLowerRight = FloatPoint(deviceLowerRight.x() / deviceScaleX, deviceLowerRight.y() / deviceScaleY);
-    return FloatRect(roundedOrigin, roundedLowerRight - roundedOrigin);
-}
-
 void GraphicsContextQt::pushTransparencyLayerInternal(const QRect &rect, qreal opacity, const QImage& originalAlphaMask)
 {
     QPainter* p = m_data->p();

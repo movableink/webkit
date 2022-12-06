@@ -45,8 +45,6 @@ public:
 
     void didUpdateState(GraphicsContextState&);
 
-    FloatRect roundToDevicePixels(const FloatRect&, GraphicsContext::RoundingMode = RoundAllSides) final;
-
     void drawRect(const FloatRect&, float borderThickness = 1) final;
     void drawLine(const FloatPoint&, const FloatPoint&) final;
     void drawEllipse(const FloatRect&) final;
