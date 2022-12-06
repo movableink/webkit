@@ -677,9 +677,12 @@ QList<QObject*> QWebFrameAdapter::childFrames() const
 {
     QList<QObject*> originatingObjects;
     if (frame) {
-        for (Frame* child = frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
-            FrameLoader& loader = child->loader();
-            originatingObjects.append(loader.networkingContext()->originatingObject());
+        for (AbstractFrame* child = frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
+            auto* childLocalFrame = dynamicDowncast<WebCore::LocalFrame>(child);
+            if (childLocalFrame) {
+                FrameLoader& loader = childLocalFrame->loader();
+                originatingObjects.append(loader.networkingContext()->originatingObject());
+            }
         }
     }
     return originatingObjects;
