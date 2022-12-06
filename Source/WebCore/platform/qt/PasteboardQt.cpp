@@ -176,7 +176,7 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(Frame& frame, const Simple
     if (mimeData->hasHtml()) {
         QString html = mimeData->html();
         if (!html.isEmpty()) {
-            RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(*frame.document(), html, ""_s, DisallowScriptingAndPluginContent);
+            RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(*frame.document(), html, ""_s, { });
             if (fragment)
                 return fragment;
         }
@@ -190,7 +190,7 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(Frame& frame, const Simple
                 title = QStringLiteral(" title=\"") + title + QStringLiteral("\"");
             if (urls.count() == 1) {
                 QString html = QStringLiteral("<img src=\"") + urls.first().toString(QUrl::FullyEncoded) + QStringLiteral("\"") + title + QStringLiteral(">");
-                RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(*frame.document(), html, ""_s, DisallowScriptingAndPluginContent);
+                RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(*frame.document(), html, ""_s, { });
                 if (fragment)
                     return fragment;
             }
