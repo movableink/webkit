@@ -677,25 +677,25 @@ void QWebPageAdapter::wheelEvent(QWheelEvent *ev, int wheelScrollLines)
 Qt::DropAction QWebPageAdapter::dragEntered(const QMimeData *data, const QPoint &pos, Qt::DropActions possibleActions)
 {
     DragData dragData(data, pos, QCursor::pos(), dropActionToDragOp(possibleActions));
-    return dragOpToDropAction(page->dragController().dragEntered(dragData));
+    return dragOpToDropAction(page->dragController().dragEntered(WTFMove(dragData)));
 }
 
 void QWebPageAdapter::dragLeaveEvent()
 {
     DragData dragData(0, IntPoint(), QCursor::pos(), DragOperation::Generic);
-    page->dragController().dragExited(dragData);
+    page->dragController().dragExited(WTFMove(dragData));
 }
 
 Qt::DropAction QWebPageAdapter::dragUpdated(const QMimeData *data, const QPoint &pos, Qt::DropActions possibleActions)
 {
     DragData dragData(data, pos, QCursor::pos(), dropActionToDragOp(possibleActions));
-    return dragOpToDropAction(page->dragController().dragUpdated(dragData));
+    return dragOpToDropAction(page->dragController().dragUpdated(WTFMove(dragData)));
 }
 
 bool QWebPageAdapter::performDrag(const QMimeData *data, const QPoint &pos, Qt::DropActions possibleActions)
 {
     DragData dragData(data, pos, QCursor::pos(), dropActionToDragOp(possibleActions));
-    return page->dragController().performDragOperation(dragData);
+    return page->dragController().performDragOperation(WTFMove(dragData));
 }
 
 #endif // ENABLE(DRAG_SUPPORT)
