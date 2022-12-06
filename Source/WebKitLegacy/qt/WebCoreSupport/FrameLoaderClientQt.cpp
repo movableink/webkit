@@ -283,7 +283,7 @@ void FrameLoaderClientQt::transitionToCommittedForNewPage()
         bool resizesToContents = m_webFrame->pageAdapter->client->viewResizesToContentsEnabled();
 
         m_frame->view()->setPaintsEntireContents(resizesToContents);
-        m_frame->view()->setDelegatesScrolling(resizesToContents);
+        m_frame->view()->setDelegatedScrollingMode(resizesToContents ? DelegatedScrollingMode::DelegatedToNativeScrollView : DelegatedScrollingMode::NotDelegated);
     }
 }
 

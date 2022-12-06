@@ -972,5 +972,5 @@ void QWebFrameAdapter::setDelegatesScrolling(bool resizesToContents)
 {
     ASSERT(&pageAdapter->mainFrameAdapter() == this);
     ASSERT(frame->view());
-    frame->view()->setDelegatesScrolling(resizesToContents);
+    frame->view()->setDelegatedScrollingMode(resizesToContents ? DelegatedScrollingMode::DelegatedToNativeScrollView : DelegatedScrollingMode::NotDelegated);
 }
