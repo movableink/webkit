@@ -233,6 +233,16 @@ String contextMenuItemTagMediaUnmute()
     return QCoreApplication::translate("QWebPage", "Unmute", "Media Unmute context menu item");
 }
 
+String contextMenuItemTagPlayAllAnimations()
+{
+    return QCoreApplication::translate("QWebPage", "Play All Animations", "Play all animations context menu item");
+}
+
+String contextMenuItemTagPauseAllAnimations()
+{
+    return QCoreApplication::translate("QWebPage", "Pause All Animations", "Pause all animations context menu item");
+}
+
 String contextMenuItemTagOpenFrameInNewWindow()
 {
     return QCoreApplication::translate("QWebPage", "Open Frame", "Open Frame in New Window context menu item");
@@ -408,6 +418,12 @@ String searchMenuClearRecentSearchesText()
 {
     return QCoreApplication::translate("QWebPage", "Clear recent searches", "menu item in Recent Searches menu that empties menu's contents");
 }
+
+String pdfDocumentTypeDescription()
+{
+    return QCoreApplication::translate("QWebPage", "Portable Document Format", "Description of the primary type supported by the PDF pseudo plug-in.");
+}
+
 
 String AXWebAreaText()
 {

@@ -163,6 +163,7 @@ namespace WebCore {
     String contextMenuItemTagExitVideoFullscreen();
 #if PLATFORM(QT)
     String contextMenuItemTagToggleVideoFullscreen();
+    String contextMenuItemTagMediaUnmute();
 #endif
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
     String contextMenuItemTagEnterVideoEnhancedFullscreen();
