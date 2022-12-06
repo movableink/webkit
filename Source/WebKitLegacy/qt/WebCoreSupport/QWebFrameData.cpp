@@ -44,6 +44,4 @@ QWebFrameData::QWebFrameData(WebCore::Page* parentPage, WebCore::Frame* parentFr
 
     // FIXME: All of the below should probably be moved over into WebCore
     frame->tree().setName(AtomString(String(name)));
-    if (parentFrame)
-        parentFrame->tree().appendChild(*frame);
 }
