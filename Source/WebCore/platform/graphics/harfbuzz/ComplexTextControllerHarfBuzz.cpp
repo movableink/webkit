@@ -36,9 +36,9 @@
 #include "HbUniquePtr.h"
 #include "SurrogatePairAwareTextIterator.h"
 #include "text/TextFlags.h"
-#include <hb-ft.h>
-#include <hb-icu.h>
-#include <hb-ot.h>
+#include <harfbuzz/hb-ft.h>
+#include <harfbuzz/hb-icu.h>
+#include <harfbuzz/hb-ot.h>
 
 #if PLATFORM(QT)
 #include <QtGui/private/qharfbuzzng_p.h>
