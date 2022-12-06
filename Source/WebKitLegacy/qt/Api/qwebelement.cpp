@@ -904,7 +904,7 @@ void QWebElement::appendInside(const QString &markup)
     if (!m_element)
         return;
 
-    auto createFragmentResult = createContextualFragment(*m_element, markup, AllowScriptingContent);
+    auto createFragmentResult = createContextualFragment(*m_element, markup, ParserContentPolicy::AllowScriptingContent);
     if (createFragmentResult.hasException())
         return;
 
@@ -945,7 +945,7 @@ void QWebElement::prependInside(const QString &markup)
     if (!m_element)
         return;
 
-    auto createFragmentResult = createContextualFragment(*m_element, markup, AllowScriptingContent);
+    auto createFragmentResult = createContextualFragment(*m_element, markup, ParserContentPolicy::AllowScriptingContent);
     if (createFragmentResult.hasException())
         return;
 
@@ -996,7 +996,7 @@ void QWebElement::prependOutside(const QString &markup)
     if (!parent->isElementNode())
         return;
 
-    auto createFragmentResult = createContextualFragment(downcast<Element>(*parent), markup, AllowScriptingContent);
+    auto createFragmentResult = createContextualFragment(downcast<Element>(*parent), markup, ParserContentPolicy::AllowScriptingContent);
     if (createFragmentResult.hasException())
         return;
 
@@ -1046,7 +1046,7 @@ void QWebElement::appendOutside(const QString &markup)
     if (!parent->isElementNode())
         return;
 
-    auto createFragmentResult = createContextualFragment(downcast<Element>(*parent), markup, AllowScriptingContent);
+    auto createFragmentResult = createContextualFragment(downcast<Element>(*parent), markup, ParserContentPolicy::AllowScriptingContent);
     if (createFragmentResult.hasException())
         return;
 
@@ -1178,7 +1178,7 @@ void QWebElement::encloseContentsWith(const QString &markup)
     if (!m_element->parentNode())
         return;
 
-    auto createFragmentResult = createContextualFragment(*m_element, markup, AllowScriptingContent);
+    auto createFragmentResult = createContextualFragment(*m_element, markup, ParserContentPolicy::AllowScriptingContent);
     if (createFragmentResult.hasException())
         return;
 
@@ -1253,7 +1253,7 @@ void QWebElement::encloseWith(const QString &markup)
     if (!parent->isElementNode())
         return;
 
-    auto createFragmentResult = createContextualFragment(downcast<Element>(*parent), markup, AllowScriptingContent);
+    auto createFragmentResult = createContextualFragment(downcast<Element>(*parent), markup, ParserContentPolicy::AllowScriptingContent);
     if (createFragmentResult.hasException())
         return;
 
