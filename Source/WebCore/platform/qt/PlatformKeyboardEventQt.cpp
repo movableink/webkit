@@ -960,19 +960,10 @@ void PlatformKeyboardEvent::disambiguateKeyDownEvent(Type type, bool)
     }
 }
 
-bool PlatformKeyboardEvent::currentCapsLockState()
+OptionSet<PlatformEvent::Modifier> PlatformKeyboardEvent::currentStateOfModifierKeys()
 {
     notImplemented();
-    return false;
-}
-
-void PlatformKeyboardEvent::getCurrentModifierState(bool& shiftKey, bool& ctrlKey, bool& altKey, bool& metaKey)
-{
-    notImplemented();
-    shiftKey = false;
-    ctrlKey = false;
-    altKey = false;
-    metaKey = false;
+    return { };
 }
 
 uint32_t PlatformKeyboardEvent::nativeModifiers() const
