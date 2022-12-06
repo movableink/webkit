@@ -197,7 +197,7 @@ public:
     static bool trackRepaintRects(QWebFrameAdapter*);
     static void getTrackedRepaintRects(QWebFrameAdapter*, QVector<QRectF>& result);
 
-    static void setShouldUseFontSmoothing(bool);
+    static void setDisableFontSubpixelAntialiasingForTesting(bool);
 
     static QString frameRenderTreeDump(QWebFrameAdapter*);
     static void clearNotificationPermissions();

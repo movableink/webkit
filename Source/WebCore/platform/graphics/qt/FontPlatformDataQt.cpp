@@ -84,7 +84,7 @@ FontPlatformData::FontPlatformData(const FontDescription& description, const Ato
     font.setItalic(isItalic(description.italic()));
     font.setWeight(toQFontWeight(description.weight()));
 
-    if (!FontCascade::shouldUseSmoothing())
+    if (FontCascade::shouldDisableFontSubpixelAntialiasingForTesting())
         font.setStyleStrategy(static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::ForceOutline));
     else
         font.setStyleStrategy(QFont::ForceOutline);

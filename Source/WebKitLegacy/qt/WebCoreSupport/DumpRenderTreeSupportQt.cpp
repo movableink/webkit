@@ -832,9 +832,9 @@ void DumpRenderTreeSupportQt::getTrackedRepaintRects(QWebFrameAdapter* adapter, 
         result.append(rects[i]);
 }
 
-void DumpRenderTreeSupportQt::setShouldUseFontSmoothing(bool enabled)
+void DumpRenderTreeSupportQt::setDisableFontSubpixelAntialiasingForTesting(bool enabled)
 {
-    WebCore::FontCascade::setShouldUseSmoothing(enabled);
+    WebCore::FontCascade::setDisableFontSubpixelAntialiasingForTesting(enabled);
 }
 
 QString DumpRenderTreeSupportQt::frameRenderTreeDump(QWebFrameAdapter* adapter)
