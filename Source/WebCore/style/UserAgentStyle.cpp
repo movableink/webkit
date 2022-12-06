@@ -187,7 +187,7 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
             if (!mediaControlsStyleSheet) {
                 String mediaRules = RenderTheme::singleton().mediaControlsStyleSheet();
                 if (mediaRules.isEmpty())
-                    mediaRules = String(StringImpl::createWithoutCopying(mediaControlsUserAgentStyleSheet, sizeof(mediaControlsUserAgentStyleSheet))) + RenderTheme::singleton().extraMediaControlsStyleSheet();
+                    mediaRules = String(StringImpl::createWithoutCopying(mediaControlsBaseUserAgentStyleSheet, sizeof(mediaControlsBaseUserAgentStyleSheet))) + RenderTheme::singleton().extraMediaControlsStyleSheet();
                 mediaControlsStyleSheet = parseUASheet(mediaRules);
                 addToDefaultStyle(*mediaControlsStyleSheet);
 
