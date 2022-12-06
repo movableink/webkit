@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CertificateInfo_h
-#define CertificateInfo_h
+#pragma once
 
 #include "CertificateSummary.h"
 #include "NotImplemented.h"
@@ -50,24 +49,3 @@ public:
 };
 
 } // namespace WebCore
-
-namespace WTF {
-namespace Persistence {
-
-template<> struct Coder<WebCore::CertificateInfo> {
-    static void encode(Encoder&, const WebCore::CertificateInfo&)
-    {
-        notImplemented();
-    }
-
-    static std::optional<WebCore::CertificateInfo> decode(Decoder&)
-    {
-        notImplemented();
-        return std::nullopt;
-    }
-};
-
-} // namespace WTF::Persistence
-} // namespace WTF
-
-#endif
