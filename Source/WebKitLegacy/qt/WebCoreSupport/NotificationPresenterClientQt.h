@@ -37,8 +37,10 @@
 #include <QScopedPointer>
 #include <wtf/CompletionHandler.h>
 #include <WebCore/NotificationClient.h>
+#include <WebCore/NotificationData.h>
 #include <WebCore/NotificationPermission.h>
 #include <WebCore/Timer.h>
+#include <wtf/UUID.h>
 
 class QWebFrameAdapter;
 class QWebPageAdapter;
@@ -52,7 +54,7 @@ class ScriptExecutionContext;
 class NotificationWrapper final : public QObject, public QWebNotificationData {
     Q_OBJECT
 public:
-    NotificationWrapper();
+    NotificationWrapper(NotificationData&&);
     ~NotificationWrapper() { }
 
     void close();
@@ -62,12 +64,15 @@ public:
     const QUrl iconUrl() const final;
     const QUrl openerPageUrl() const final;
 
+    const NotificationData& notification() { return m_notification; };
+
 public Q_SLOTS:
     void notificationClosed();
     void notificationClicked();
 
 private:
     std::unique_ptr<QWebNotificationPresenter> m_presenter;
+    const NotificationData m_notification;
     Timer m_closeTimer;
     Timer m_displayEventTimer;
 
@@ -76,7 +81,7 @@ private:
 
 #if ENABLE(NOTIFICATIONS)
 
-typedef QHash <Notification*, NotificationWrapper*> NotificationsQueue;
+typedef QHash <UUID, NotificationWrapper*> NotificationsQueue;
 
 class NotificationPresenterClientQt final : public NotificationClient {
 public:
@@ -84,9 +89,9 @@ public:
     ~NotificationPresenterClientQt();
 
     /* WebCore::NotificationClient interface */
-    bool show(Notification&, CompletionHandler<void()>&&) override;
-    void cancel(Notification&) override;
-    void notificationObjectDestroyed(Notification&) override;
+    bool show(ScriptExecutionContext&, NotificationData&&, RefPtr<NotificationResources>&&, CompletionHandler<void()>&&) override;
+    void cancel(NotificationData&&) override;
+    void notificationObjectDestroyed(NotificationData&&) override;
     void notificationControllerDestroyed() override;
     void requestPermission(ScriptExecutionContext&, PermissionHandler&&) override;
     NotificationClient::Permission checkPermission(ScriptExecutionContext*) override;
@@ -105,7 +110,6 @@ public:
     void removeClient();
     static NotificationPresenterClientQt* notificationPresenter();
 
-    Notification* notificationForWrapper(const NotificationWrapper*) const;
     void notificationClicked(NotificationWrapper*);
     void notificationClicked(const QString& title);
     void sendDisplayEvent(NotificationWrapper*);
@@ -113,12 +117,11 @@ public:
     void clearCachedPermissions();
 
 private:
-    void sendEvent(Notification*, const AtomString& eventName);
-    void displayNotification(Notification&);
-    void removeReplacedNotificationFromQueue(Notification*);
-    void detachNotification(Notification*);
-    void dumpReplacedIdText(Notification*);
-    void dumpShowText(Notification&);
+    void displayNotification(NotificationData&&);
+    void removeReplacedNotificationFromQueue(const NotificationData&);
+    void dumpReplacedIdText(const NotificationData&);
+    void dumpShowText(const NotificationData&);
+    void detachNotification(UUID);
     QWebPageAdapter* toPage(ScriptExecutionContext&);
     QWebFrameAdapter* toFrame(ScriptExecutionContext&);
 

@@ -40,9 +40,11 @@
 #include <WebCore/EventNames.h>
 #include <WebCore/Frame.h>
 #include <WebCore/Notification.h>
+#include <WebCore/NotificationData.h>
 #include <WebCore/Page.h>
 #include <WebCore/ScriptExecutionContext.h>
 #include <WebCore/FrameDestructionObserverInlines.h>
+#include <wtf/UUID.h>
 
 namespace WebCore {
 
@@ -65,8 +67,9 @@ NotificationPresenterClientQt* NotificationPresenterClientQt::notificationPresen
 
 #endif
 
-NotificationWrapper::NotificationWrapper()
-    : m_closeTimer(*this, &NotificationWrapper::close)
+NotificationWrapper::NotificationWrapper(NotificationData&& notification)
+    : m_notification(WTFMove(notification))
+    , m_closeTimer(*this, &NotificationWrapper::close)
     , m_displayEventTimer(*this, &NotificationWrapper::sendDisplayEvent)
 {
 #if ENABLE(NOTIFICATIONS)
@@ -91,9 +94,7 @@ void NotificationWrapper::sendDisplayEvent()
 const QString NotificationWrapper::title() const
 {
 #if ENABLE(NOTIFICATIONS)
-    Notification* notification = NotificationPresenterClientQt::notificationPresenter()->notificationForWrapper(this);
-    if (notification)
-        return notification->title();
+    return m_notification.title;
 #endif
     return QString();
 }
@@ -101,9 +102,7 @@ const QString NotificationWrapper::title() const
 const QString NotificationWrapper::message() const
 {
 #if ENABLE(NOTIFICATIONS)
-    Notification* notification = NotificationPresenterClientQt::notificationPresenter()->notificationForWrapper(this);
-    if (notification)
-        return notification->body();
+    return m_notification.body;
 #endif
     return QString();
 }
@@ -111,9 +110,7 @@ const QString NotificationWrapper::message() const
 const QUrl NotificationWrapper::iconUrl() const
 {
 #if ENABLE(NOTIFICATIONS)
-    Notification* notification = NotificationPresenterClientQt::notificationPresenter()->notificationForWrapper(this);
-    if (notification)
-        return notification->icon();
+    return QUrl(m_notification.iconURL);
 #endif
     return QUrl();
 }
@@ -122,11 +119,14 @@ const QUrl NotificationWrapper::openerPageUrl() const
 {
     QUrl url;
 #if ENABLE(NOTIFICATIONS)
-    Notification* notification = NotificationPresenterClientQt::notificationPresenter()->notificationForWrapper(this);
-    if (notification) {
-        if (notification->scriptExecutionContext()) 
-            url = static_cast<Document*>(notification->scriptExecutionContext())->page()->mainFrame().document()->url();
-    }
+    // FIXME: No longer possible to get scriptExecutionContext here
+    //
+    // Notification
+    // NotificationData* notification = NotificationPresenterClientQt::notificationPresenter()->notificationForWrapper(this);
+    // if (notification) {
+    //     if (notification->scriptExecutionContext())
+    //         url = static_cast<Document*>(notification->scriptExecutionContext())->page()->mainFrame().document()->url();
+    // }
 #endif
     return url;
 }
@@ -168,28 +168,26 @@ void NotificationPresenterClientQt::removeClient()
     }
 }
 
-bool NotificationPresenterClientQt::show(Notification& notification, CompletionHandler<void()>&& completionHandler)
+bool NotificationPresenterClientQt::show(ScriptExecutionContext& context, NotificationData&& notification, RefPtr<NotificationResources>&&, CompletionHandler<void()>&& completionHandler)
 {
-    // FIXME: workers based notifications are not supported yet.
-    if (notification.scriptExecutionContext()->isWorkerGlobalScope()) {
-        completionHandler();
-        return false;
-    }
-    if (!notification.tag().isEmpty())
-        removeReplacedNotificationFromQueue(&notification);
+    if (!notification.tag.isEmpty())
+        removeReplacedNotificationFromQueue(notification);
     if (dumpNotification)
         dumpShowText(notification);
-    displayNotification(notification);
+
+    displayNotification(WTFMove(notification));
     completionHandler();
+
     return true;
 }
 
-void NotificationPresenterClientQt::displayNotification(Notification& notification)
+void NotificationPresenterClientQt::displayNotification(NotificationData&& notification)
 {
-    NotificationWrapper* wrapper = new NotificationWrapper();
-    m_notifications.insert(&notification, wrapper);
-    QString title = notification.title();
-    QString message = notification.body();
+    NotificationWrapper* wrapper = new NotificationWrapper(WTFMove(notification));
+    m_notifications.insert(notification.notificationID, wrapper);
+
+    QString title = notification.title;
+    QString message = notification.body;
 
     if (m_platformPlugin.plugin() && m_platformPlugin.plugin()->supportsExtension(QWebKitPlatformPlugin::Notifications))
         wrapper->m_presenter = m_platformPlugin.createNotificationPresenter();
@@ -204,7 +202,7 @@ void NotificationPresenterClientQt::displayNotification(Notification& notificati
     wrapper->m_displayEventTimer.startOneShot(0_s);
 
     // Make sure the notification was not cancelled during handling the display event
-    if (m_notifications.find(&notification) == m_notifications.end())
+    if (!m_notifications.contains(notification.notificationID))
         return;
 
     if (wrapper->m_presenter) {
@@ -217,37 +215,38 @@ void NotificationPresenterClientQt::displayNotification(Notification& notificati
 #ifndef QT_NO_SYSTEMTRAYICON
     wrapper->connect(m_systemTrayIcon.data(), SIGNAL(messageClicked()), wrapper, SLOT(notificationClicked()));
     QMetaObject::invokeMethod(m_systemTrayIcon.data(), "show");
-    QMetaObject::invokeMethod(m_systemTrayIcon.data(), "showMessage", Q_ARG(QString, notification.title()), Q_ARG(QString, notification.body()));
+    QMetaObject::invokeMethod(m_systemTrayIcon.data(), "showMessage", Q_ARG(QString, notification.title), Q_ARG(QString, notification.body));
 #endif
 }
 
-void NotificationPresenterClientQt::cancel(Notification& notification)
+void NotificationPresenterClientQt::cancel(NotificationData&& notification)
 {
-    if (dumpNotification && notification.scriptExecutionContext())
-        printf("DESKTOP NOTIFICATION CLOSED: %s\n", QString(notification.title()).toUtf8().constData());
+    if (dumpNotification)
+        printf("DESKTOP NOTIFICATION CLOSED: %s\n", QString(notification.title).toUtf8().constData());
 
-    NotificationsQueue::Iterator iter = m_notifications.find(&notification);
+    NotificationsQueue::Iterator iter = m_notifications.find(notification.notificationID);
     if (iter != m_notifications.end()) {
-        sendEvent(&notification, eventNames().closeEvent);
-        detachNotification(&notification);
+        cancel(iter.value());
+        detachNotification(notification.notificationID);
     }
 }
 
 void NotificationPresenterClientQt::cancel(NotificationWrapper* wrapper)
 {
-    Notification* notification = notificationForWrapper(wrapper);
-    if (notification)
-        cancel(*notification);
+    Notification::ensureOnNotificationThread(wrapper->notification(), [](auto* notification) {
+       if (notification)
+           notification->dispatchCloseEvent();
+    });
 }
 
 void NotificationPresenterClientQt::notificationClicked(NotificationWrapper* wrapper)
 {
-    Notification* notification =  notificationForWrapper(wrapper);
-    if (notification) {
-        // Make sure clicks on notifications are treated as user gestures.
-        UserGestureIndicator gestureIndicator(ProcessingUserGesture);
-        sendEvent(notification, eventNames().clickEvent);
-    }
+    Notification::ensureOnNotificationThread(wrapper->notification(), [](auto* notification) {
+        if (notification) {
+            UserGestureIndicator gestureIndicator(ProcessingUserGesture);
+            notification->dispatchClickEvent();
+        }
+    });
 }
 
 void NotificationPresenterClientQt::notificationClicked(const QString& title)
@@ -256,35 +255,25 @@ void NotificationPresenterClientQt::notificationClicked(const QString& title)
         return;
     NotificationsQueue::ConstIterator end = m_notifications.end();
     NotificationsQueue::ConstIterator iter = m_notifications.begin();
-    Notification* notification = 0;
+    NotificationWrapper* notificationWrapper = 0;
     while (iter != end) {
-        notification = iter.key();
-        QString notificationTitle = notification->title();
+        notificationWrapper = iter.value();
+        QString notificationTitle = notificationWrapper->title();
         if (notificationTitle == title)
             break;
         iter++;
     }
-    if (notification)
-        sendEvent(notification, eventNames().clickEvent);
+
+    if (notificationWrapper)
+        notificationClicked(notificationWrapper);
 }
 
-Notification* NotificationPresenterClientQt::notificationForWrapper(const NotificationWrapper* wrapper) const
-{
-    NotificationsQueue::ConstIterator end = m_notifications.end();
-    NotificationsQueue::ConstIterator iter = m_notifications.begin();
-    while (iter != end && iter.value() != wrapper)
-        iter++;
-    if (iter != end)
-        return iter.key();
-    return 0;
-}
-
-void NotificationPresenterClientQt::notificationObjectDestroyed(Notification& notification)
+void NotificationPresenterClientQt::notificationObjectDestroyed(NotificationData&& notification)
 {
     // Called from ~Notification(), Remove the entry from the notifications list and delete the icon.
-    NotificationsQueue::Iterator iter = m_notifications.find(&notification);
+    NotificationsQueue::Iterator iter = m_notifications.find(notification.notificationID);
     if (iter != m_notifications.end())
-        delete m_notifications.take(&notification);
+        delete m_notifications.take(notification.notificationID);
 }
 
 void NotificationPresenterClientQt::notificationControllerDestroyed()
@@ -323,15 +312,10 @@ void NotificationPresenterClientQt::setNotificationsAllowedForFrame(Frame* frame
 
 void NotificationPresenterClientQt::sendDisplayEvent(NotificationWrapper* wrapper)
 {
-    Notification* notification = notificationForWrapper(wrapper);
-    if (notification)
-        sendEvent(notification, "show"_s);
-}
-
-void NotificationPresenterClientQt::sendEvent(Notification* notification, const AtomString& eventName)
-{
-    if (notification->scriptExecutionContext())
-        notification->dispatchEvent(Event::create(eventName, Event::CanBubble::No, Event::IsCancelable::Yes));
+    Notification::ensureOnNotificationThread(wrapper->notification(), [](auto* notification) {
+       if (notification)
+           notification->dispatchShowEvent();
+    });
 }
 
 void NotificationPresenterClientQt::clearCachedPermissions()
@@ -339,46 +323,44 @@ void NotificationPresenterClientQt::clearCachedPermissions()
     m_cachedPermissions.clear();
 }
 
-void NotificationPresenterClientQt::removeReplacedNotificationFromQueue(Notification* notification)
+void NotificationPresenterClientQt::removeReplacedNotificationFromQueue(const NotificationData& notification)
 {
-    Notification* oldNotification = 0;
+    NotificationWrapper* oldNotificationWrapper = 0;
     NotificationsQueue::Iterator end = m_notifications.end();
     NotificationsQueue::Iterator iter = m_notifications.begin();
 
     while (iter != end) {
-        Notification* existingNotification = iter.key();
-        if (existingNotification->tag() == notification->tag()) {
-            oldNotification = iter.key();
+        if (iter.value()->notification().tag == notification.tag) {
+            oldNotificationWrapper = iter.value();
             break;
         }
         iter++;
     }
 
-    if (oldNotification) {
+    if (oldNotificationWrapper) {
         if (dumpNotification)
-            dumpReplacedIdText(oldNotification);
-        sendEvent(oldNotification, eventNames().closeEvent);
-        detachNotification(oldNotification);
+            dumpReplacedIdText(oldNotificationWrapper->notification());
+        cancel(oldNotificationWrapper);
+        detachNotification(oldNotificationWrapper->notification().notificationID);
     }
 }
 
-void NotificationPresenterClientQt::detachNotification(Notification* notification)
+void NotificationPresenterClientQt::detachNotification(UUID notificationID)
 {
-    delete m_notifications.take(notification);
+    delete m_notifications.take(notificationID);
 }
 
-void NotificationPresenterClientQt::dumpReplacedIdText(Notification* notification)
+void NotificationPresenterClientQt::dumpReplacedIdText(const NotificationData& notification)
 {
-    if (notification)
-        printf("REPLACING NOTIFICATION %s\n", QString(notification->title()).toUtf8().constData());
+    printf("REPLACING NOTIFICATION %s\n", QString(notification.title).toUtf8().constData());
 }
 
-void NotificationPresenterClientQt::dumpShowText(Notification& notification)
+void NotificationPresenterClientQt::dumpShowText(const NotificationData& notification)
 {
     printf("DESKTOP NOTIFICATION:%s icon %s, title %s, text %s\n",
-        notification.dir() == NotificationDirection::Rtl ? "(RTL)" : "",
-        QString(notification.icon().string()).toUtf8().constData(), QString(notification.title()).toUtf8().constData(),
-        QString(notification.body()).toUtf8().constData());
+        notification.direction == NotificationDirection::Rtl ? "(RTL)" : "",
+        QString(notification.iconURL).toUtf8().constData(), QString(notification.title).toUtf8().constData(),
+        QString(notification.body).toUtf8().constData());
 }
 
 QWebPageAdapter* NotificationPresenterClientQt::toPage(ScriptExecutionContext& context)
