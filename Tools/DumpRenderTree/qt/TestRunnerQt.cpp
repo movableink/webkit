@@ -780,8 +780,11 @@ void TestRunner::addDisallowedURL(JSStringRef url)
 {
 }
 
-void TestRunner::removeAllCookies()
+void TestRunner::removeAllCookies(JSValueRef callback)
 {
+    static uint64_t callbackIDGenerator = 0;
+    auto callbackID = ++callbackIDGenerator;
+    cacheTestRunnerCallback(callbackID, callback);
 }
 
 void TestRunner::queueLoad(JSStringRef url, JSStringRef target)
@@ -1173,6 +1176,14 @@ JSContextRef TestRunner::mainFrameJSContext()
 void TestRunner::stopLoading()
 {
     // QTFIXME
+}
+
+void TestRunner::generateTestReport(JSStringRef message, JSStringRef group)
+{
+    UNUSED_PARAM(message);
+    UNUSED_PARAM(group);
+
+    fprintf(testResult, "ERROR: TestRunner::generateTestReport() not implemented\n");
 }
 
 #include "moc_DumpRenderTreeQt.cpp"
