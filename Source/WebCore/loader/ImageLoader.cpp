@@ -150,17 +150,10 @@ void ImageLoader::setImageWithoutConsideringPendingLoadEvent(CachedImage* newIma
     CachedImage* oldImage = m_image.get();
     if (newImage != oldImage) {
         m_image = newImage;
-        if (m_hasPendingBeforeLoadEvent) {
-            beforeLoadEventSender().cancelEvent(*this);
-            m_hasPendingBeforeLoadEvent = false;
-        }
-        if (m_hasPendingLoadEvent) {
+        m_hasPendingBeforeLoadEvent = false;
+        if (m_hasPendingLoadEvent || m_hasPendingErrorEvent) {
             loadEventSender().cancelEvent(*this);
-            m_hasPendingLoadEvent = false;
-        }
-        if (m_hasPendingErrorEvent) {
-            errorEventSender().cancelEvent(*this);
-            m_hasPendingErrorEvent = false;
+            m_hasPendingLoadEvent = m_hasPendingErrorEvent = false;
         }
         m_imageComplete = true;
         if (newImage)
