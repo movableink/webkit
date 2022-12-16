@@ -192,6 +192,7 @@ public:
     virtual QWebPageAdapter* createWindow(bool /*dialog*/) = 0;
     virtual QObject* handle() = 0;
     virtual void consoleMessageReceived(MessageSource, MessageLevel, const QString& message, int lineNumber, const QString& sourceID) = 0;
+    virtual void consoleMessageReceived(MessageSource, MessageLevel, const QString& message, int lineNumber, int columnNumber, const QString& sourceID) = 0;
     virtual void javaScriptAlert(QWebFrameAdapter*, const QString& msg) = 0;
     virtual bool javaScriptConfirm(QWebFrameAdapter*, const QString& msg) = 0;
     virtual bool javaScriptPrompt(QWebFrameAdapter*, const QString& msg, const QString& defaultValue, QString* result) = 0;

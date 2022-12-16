@@ -306,8 +306,9 @@ void ChromeClientQt::addMessageToConsole(MessageSource source, MessageLevel leve
 {
     QString x = message;
     QString y = sourceID;
-    UNUSED_PARAM(columnNumber);
+
     m_webPage->consoleMessageReceived(convertSource(source), convertLevel(level), x, lineNumber, y);
+    m_webPage->consoleMessageReceived(convertSource(source), convertLevel(level), x, lineNumber, columnNumber, y);
 }
 
 void ChromeClientQt::chromeDestroyed()
