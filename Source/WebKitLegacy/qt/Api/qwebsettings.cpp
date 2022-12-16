@@ -175,8 +175,10 @@ void QWebSettingsPrivate::apply()
         settings->setMediaSourceEnabled(value);
 #endif
 
+#if ENABLE(VIDEO)
         value = attributes.value(QWebSettings::MediaEnabled, global->attributes.value(QWebSettings::MediaEnabled));
         settings->setMediaEnabled(value);
+#endif
 
         value = attributes.value(QWebSettings::HyperlinkAuditingEnabled,
                                  global->attributes.value(QWebSettings::HyperlinkAuditingEnabled));
