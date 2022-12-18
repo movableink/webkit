@@ -305,7 +305,7 @@ void TextDecorationPainter::paintForegroundDecorations(const ForegroundDecoratio
 void TextDecorationPainter::paintLineThrough(const ForegroundDecorationGeometry& foregroundDecorationGeometry, const Color& color, const Styles& decorationStyle)
 {
     auto rect = FloatRect { foregroundDecorationGeometry.boxOrigin, FloatSize { foregroundDecorationGeometry.textBoxWidth, foregroundDecorationGeometry.textDecorationThickness } };
-    rect.move(0.f, foregroundDecorationGeometry.linethroughCenter - 1.0);
+    rect.move(0.f, foregroundDecorationGeometry.linethroughCenter);
 
     m_context.setStrokeColor(color);
 
