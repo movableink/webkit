@@ -55,7 +55,7 @@ ImageBufferQtBackend::ImageBufferQtBackend(const Parameters& parameters, std::un
     , m_image(WTFMove(image))
 {}
 
-std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const ImageBuffer::CreationContext&)
+std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const ImageBufferCreationContext&)
 {
     IntSize backendSize = calculateBackendSize(parameters);
     if (backendSize.isEmpty())

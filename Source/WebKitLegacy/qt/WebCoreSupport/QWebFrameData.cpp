@@ -38,7 +38,7 @@ QWebFrameData::QWebFrameData(WebCore::Page* parentPage, WebCore::Frame* parentFr
     if (!parentFrame || !ownerElement) {
         frame = &parentPage->mainFrame();
     } else {
-        frame = Frame::create(page, ownerElement, makeUniqueRef<FrameLoaderClientQt>());
+        frame = Frame::create(page, ownerElement, makeUniqueRef<FrameLoaderClientQt>(), WebCore::FrameIdentifier::generate());
     }
     frameLoaderClient = static_cast<FrameLoaderClientQt*>(&frame->loader().client());
 

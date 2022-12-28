@@ -192,7 +192,7 @@ public:
     void redirectDataToPlugin(Widget& pluginWidget) override;
 
     ObjectContentType objectContentType(const URL&, const String& mimeTypeIn) override;
-    String overrideMediaType() const override;
+    AtomString overrideMediaType() const override;
 
     void dispatchDidClearWindowObjectInWorld(DOMWrapperWorld&) override;
 

@@ -1364,12 +1364,12 @@ void FrameLoaderClientQt::redirectDataToPlugin(Widget& pluginWidget)
 {
 }
 
-String FrameLoaderClientQt::overrideMediaType() const
+AtomString FrameLoaderClientQt::overrideMediaType() const
 {
     if (m_webFrame && m_webFrame->pageAdapter && m_webFrame->pageAdapter->settings)
         return m_webFrame->pageAdapter->settings->cssMediaType();
 
-    return String();
+    return AtomString();
 }
 
 Ref<FrameNetworkingContext> FrameLoaderClientQt::createNetworkingContext()

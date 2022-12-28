@@ -72,6 +72,7 @@
 #include <WebCore/DummySpeechRecognitionProvider.h>
 #include <WebCore/DummyStorageProvider.h>
 #include <WebCore/Editor.h>
+#include <WebCore/EmptyBadgeClient.h>
 #include <WebCore/EventHandler.h>
 #include <WebCore/FocusController.h>
 #include <WebCore/FrameLoadRequest.h>
@@ -281,7 +282,8 @@ void QWebPageAdapter::initializeWebCorePage()
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate(isPrivateBrowsingEnabled),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
-        makeUniqueRef<WebCore::DummyModelPlayerProvider>()
+        makeUniqueRef<WebCore::DummyModelPlayerProvider>(),
+        EmptyBadgeClient::create()
     };
     pageConfiguration.applicationCacheStorage = ApplicationCacheStorage::create({ }, { }); // QTFIXME
     pageConfiguration.chromeClient = new ChromeClientQt(this);

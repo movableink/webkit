@@ -41,7 +41,7 @@ public:
     ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContext>&& context, std::unique_ptr<QImage>&& nativeImage, Ref<Image> image);
     ~ImageBufferQtBackend() { context().platformContext()->painter()->end(); }
 
-    static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const ImageBuffer::CreationContext&);
+    static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const ImageBufferCreationContext&);
     static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const GraphicsContext &);
 
     IntSize backendSize() const override;
