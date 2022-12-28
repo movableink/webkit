@@ -4,6 +4,7 @@ set(QtTestBrowser_INCLUDE_DIRECTORIES
     "${CMAKE_BINARY_DIR}/include/QtWebKit"
     "${CMAKE_BINARY_DIR}/include/QtWebKitWidgets"
     "${WTF_FRAMEWORK_HEADERS_DIR}"
+    "${WebKitWidgets_FRAMEWORK_HEADERS_DIR}"
 )
 
 set(QtTestBrowser_SOURCES
@@ -19,6 +20,19 @@ set(QtTestBrowser_SOURCES
     webpage.cpp
     webview.cpp
 )
+
+set(QtTestBrowser_FRAMEWORKS
+    JavaScriptCore
+    PAL
+    WTF
+    WebCore
+    WebCoreTestSupport
+    WebKitLegacy
+)
+
+if (NOT USE_SYSTEM_MALLOC)
+    list(APPEND QtTestBrowser_FRAMEWORKS bmalloc)
+endif ()
 
 set(QtTestBrowser_SYSTEM_INCLUDE_DIRECTORIES
     ${Qt5Gui_INCLUDE_DIRS}

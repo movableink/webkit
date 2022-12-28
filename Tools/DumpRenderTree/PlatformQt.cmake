@@ -1,6 +1,7 @@
 list(APPEND DumpRenderTree_INCLUDE_DIRECTORIES
     "${QtWebKit_FRAMEWORK_HEADERS_DIR}"
     "${QtWebKitWidgets_FRAMEWORK_HEADERS_DIR}"
+    "${WebKitWidgets_FRAMEWORK_HEADERS_DIR}"
     "${WEBKITLEGACY_DIR}/qt/WidgetSupport"
     "${DumpRenderTree_DIR}/qt"
 )
@@ -36,6 +37,11 @@ list(APPEND DumpRenderTree_LIBRARIES
     ${Qt5PrintSupport_LIBRARIES}
     ${Qt5Test_LIBRARIES}
     ${Qt5Widgets_LIBRARIES}
+    WebKitWidgets
+)
+
+list(APPEND DumpRenderTree_FRAMEWORKS
+    WebKitLegacy
     WebKitWidgets
 )
 

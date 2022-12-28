@@ -468,13 +468,6 @@ set(WebKit_FORWARDING_HEADERS_DIRECTORIES
     WebProcess/InjectedBundle/API/c
 )
 
-WEBKIT_MAKE_FORWARDING_HEADERS(WebKit
-    TARGET_NAME WebKitFrameworkHeaders
-    DESTINATION ${WebKit_FRAMEWORK_HEADERS_DIR}/WebKit
-    FILES ${WebKit_PUBLIC_FRAMEWORK_HEADERS}
-    FLATTENED
-)
-
 file(GLOB WebKit_PRIVATE_HEADERS UIProcess/API/qt/*_p.h)
 install(
     FILES

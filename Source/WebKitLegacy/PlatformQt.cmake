@@ -206,13 +206,11 @@ set(QtWebKit_PUBLIC_FRAMEWORK_HEADERS
     qt/Api/qwebsettings.h
 )
 
-WEBKIT_MAKE_FORWARDING_HEADERS(WebKitLegacy
-    TARGET_NAME QtWebKitFrameworkHeaders
+WEBKIT_COPY_FILES(QtWebKit_CopyHeaders
     DESTINATION ${QtWebKit_FRAMEWORK_HEADERS_DIR}
     FILES ${QtWebKit_PUBLIC_FRAMEWORK_HEADERS}
     FLATTENED
 )
-#add_dependencies(QtWebKitFrameworkHeaders WebCorePrivateFrameworkHeaders)
 
 ecm_generate_headers(
     QtWebKit_FORWARDING_HEADERS
@@ -554,14 +552,6 @@ set(QtWebKitWidgets_PUBLIC_FRAMEWORK_HEADERS
     qt/WidgetApi/qwebview.h
 )
 
-WEBKIT_MAKE_FORWARDING_HEADERS(WebKitWidgets
-    TARGET_NAME QtWebKitWidgetsFrameworkHeaders
-    DESTINATION ${QtWebKitWidgets_FRAMEWORK_HEADERS_DIR}
-    FILES ${QtWebKitWidgets_PUBLIC_FRAMEWORK_HEADERS}
-    FLATTENED
-)
-add_dependencies(QtWebKitWidgetsFrameworkHeaders QtWebKitFrameworkHeaders)
-
 ecm_generate_headers(
     QtWebKitWidgets_FORWARDING_HEADERS
     HEADER_NAMES
@@ -609,6 +599,12 @@ generate_header("${QtWebKitWidgets_FRAMEWORK_HEADERS_DIR}/QtWebKitWidgetsDepends
 #include <QtWebKit/QtWebKit>
 #endif
 ")
+
+WEBKIT_COPY_FILES(QtWebKitWidgets_CopyHeaders
+    DESTINATION ${QtWebKitWidgets_FRAMEWORK_HEADERS_DIR}
+    FILES ${QtWebKitWidgets_PUBLIC_FRAMEWORK_HEADERS}
+    FLATTENED
+)
 
 install(
     FILES
@@ -741,6 +737,12 @@ if (MSVC)
 endif ()
 
 set(WebKitWidgets_PRIVATE_HEADERS_LOCATION Headers/${PROJECT_VERSION}/QtWebKitWidgets/private)
+
+WEBKIT_COPY_FILES(WebKitWidgets_CopyHeaders
+    DESTINATION ${WebKitWidgets_FRAMEWORK_HEADERS_DIR}
+    FILES ${WebKitWidgets_PUBLIC_HEADERS}
+    FLATTENED
+)
 
 WEBKIT_FRAMEWORK(WebKitWidgets)
 add_dependencies(WebKitWidgets WebKitLegacy)
