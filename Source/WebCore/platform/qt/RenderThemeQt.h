@@ -156,7 +156,7 @@ protected:
     virtual bool paintMediaVolumeSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&);
     virtual String formatMediaControlsCurrentTime(float currentTime, float duration) const override;
     virtual String formatMediaControlsRemainingTime(float currentTime, float duration) const override;
-    virtual bool hasOwnDisabledStateHandlingFor(ControlPart) const { return true; }
+    virtual bool hasOwnDisabledStateHandlingFor(ControlPartType) const { return true; }
 
     void paintMediaBackground(QPainter*, const IntRect&) const;
     double mediaControlsBaselineOpacity() const;
@@ -175,7 +175,7 @@ protected:
 
     virtual QSharedPointer<StylePainter> getStylePainter(const PaintInfo&) = 0;
 
-    bool supportsFocus(ControlPart) const;
+    bool supportsFocus(ControlPartType) const;
 
 //    IntRect convertToPaintingRect(const RenderObject& inputRenderer, const RenderObject& partRenderer, IntRect partRect, const IntRect& localOffset) const;
 

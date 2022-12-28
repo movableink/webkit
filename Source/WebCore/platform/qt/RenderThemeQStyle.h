@@ -102,7 +102,7 @@ protected:
     QPalette colorPalette() const final;
 
 private:
-    ControlPart initializeCommonQStyleOptions(QStyleFacadeOption&, const RenderObject&) const;
+    ControlPartType initializeCommonQStyleOptions(QStyleFacadeOption&, const RenderObject&) const;
 
     void setButtonPadding(RenderStyle&) const;
 
@@ -127,7 +127,7 @@ public:
 
     QStyleFacade* qStyle;
     QStyleFacadeOption styleOption;
-    ControlPart appearance;
+    ControlPartType appearance;
 
     void paintButton(QStyleFacade::ButtonType type)
     { qStyle->paintButton(painter, type, styleOption); }

@@ -107,7 +107,7 @@ RenderTheme& RenderTheme::singleton()
 bool RenderThemeQt::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
 {
     switch (style.appearance()) {
-    case SearchFieldPart:
+    case ControlPartType::SearchField:
         // Test the style to see if the UA border and background match.
         return (style.border() != userAgentStyle.border()
                 || style.backgroundLayers() != userAgentStyle.backgroundLayers()
@@ -138,23 +138,23 @@ bool RenderThemeQt::supportsHover(const RenderStyle&) const
 bool RenderThemeQt::supportsFocusRing(const RenderStyle& style) const
 {
     switch (style.appearance()) {
-    case CheckboxPart:
-    case RadioPart:
-    case PushButtonPart:
-    case SquareButtonPart:
-    case ButtonPart:
-    case ListboxPart:
-    case MenulistPart:
-    case MenulistButtonPart:
-    case SliderHorizontalPart:
-    case SliderVerticalPart:
-    case SliderThumbHorizontalPart:
-    case SliderThumbVerticalPart:
-    case SearchFieldPart:
-    case SearchFieldResultsButtonPart:
-    case SearchFieldCancelButtonPart:
-    case TextFieldPart:
-    case TextAreaPart:
+    case ControlPartType::Checkbox:
+    case ControlPartType::Radio:
+    case ControlPartType::PushButton:
+    case ControlPartType::SquareButton:
+    case ControlPartType::Button:
+    case ControlPartType::Listbox:
+    case ControlPartType::Menulist:
+    case ControlPartType::MenulistButton:
+    case ControlPartType::SliderHorizontal:
+    case ControlPartType::SliderVertical:
+    case ControlPartType::SliderThumbHorizontal:
+    case ControlPartType::SliderThumbVertical:
+    case ControlPartType::SearchField:
+    case ControlPartType::SearchFieldResultsButton:
+    case ControlPartType::SearchFieldCancelButton:
+    case ControlPartType::TextField:
+    case ControlPartType::TextArea:
         return true;
     default:
         return false;
@@ -166,7 +166,7 @@ int RenderThemeQt::baselinePosition(const RenderBox& o) const
     if (!o.isBox())
         return 0;
 
-    if (o.style().appearance() == CheckboxPart || o.style().appearance() == RadioPart)
+    if (o.style().appearance() == ControlPartType::Checkbox || o.style().appearance() == ControlPartType::Radio)
         return o.marginTop() + o.height() - 2; // Same as in old khtml
     return RenderTheme::baselinePosition(o);
 }
@@ -177,7 +177,7 @@ bool RenderThemeQt::controlSupportsTints(const RenderObject& o) const
         return false;
 
     // Checkboxes only have tint when checked.
-    if (o.style().appearance() == CheckboxPart)
+    if (o.style().appearance() == ControlPartType::Checkbox)
         return isChecked(o);
 
     // For now assume other controls have tint if enabled.
@@ -210,19 +210,19 @@ void RenderThemeQt::computeControlRect(QStyleFacade::ButtonType, FloatRect&) con
 void RenderThemeQt::adjustRepaintRect(const RenderObject& o, FloatRect& rect)
 {
     switch (o.style().appearance()) {
-    case CheckboxPart:
+    case ControlPartType::Checkbox:
         computeControlRect(QStyleFacade::CheckBox, rect);
         break;
-    case RadioPart:
+    case ControlPartType::Radio:
         computeControlRect(QStyleFacade::RadioButton, rect);
         break;
-    case PushButtonPart:
-    case ButtonPart: {
+    case ControlPartType::PushButton:
+    case ControlPartType::Button: {
         QRectF inflatedRect = inflateButtonRect(rect);
         rect = FloatRect(inflatedRect.x(), inflatedRect.y(), inflatedRect.width(), inflatedRect.height());
         break;
     }
-    case MenulistPart:
+    case ControlPartType::Menulist:
         break;
     default:
         break;
@@ -502,19 +502,19 @@ void RenderThemeQt::adjustInnerSpinButtonStyle(RenderStyle& style, const Element
 }
 #endif
 
-bool RenderThemeQt::supportsFocus(ControlPart appearance) const
+bool RenderThemeQt::supportsFocus(ControlPartType appearance) const
 {
     switch (appearance) {
-    case PushButtonPart:
-    case ButtonPart:
-    case TextFieldPart:
-    case TextAreaPart:
-    case ListboxPart:
-    case MenulistPart:
-    case RadioPart:
-    case CheckboxPart:
-    case SliderHorizontalPart:
-    case SliderVerticalPart:
+    case ControlPartType::PushButton:
+    case ControlPartType::Button:
+    case ControlPartType::TextField:
+    case ControlPartType::TextArea:
+    case ControlPartType::Listbox:
+    case ControlPartType::Menulist:
+    case ControlPartType::Radio:
+    case ControlPartType::Checkbox:
+    case ControlPartType::SliderHorizontal:
+    case ControlPartType::SliderVertical:
         return true;
     default: // No for all others...
         return false;
@@ -595,7 +595,7 @@ static bool mediaElementCanPlay(RenderObject& o)
 
     return mediaElement->readyState() > HTMLMediaElement::HAVE_METADATA
            || (mediaElement->readyState() == HTMLMediaElement::HAVE_NOTHING
-               && o.style().appearance() == MediaPlayButtonPart && mediaElement->preload() == "none");
+               && o.style().appearance() == ControlPartType::MediaPlayButton && mediaElement->preload() == "none");
 }
 
 QColor RenderThemeQt::getMediaControlForegroundColor(RenderObject& o) const

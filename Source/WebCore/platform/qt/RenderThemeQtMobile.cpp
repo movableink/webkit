@@ -648,8 +648,8 @@ RenderThemeQtMobile::~RenderThemeQtMobile()
 bool RenderThemeQtMobile::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
 {
     switch (style.appearance()) {
-    case CheckboxPart:
-    case RadioPart:
+    case ControlPartType::Checkbox:
+    case ControlPartType::Radio:
         return false;
     default:
         return RenderThemeQt::isControlStyled(style, userAgentStyle);
@@ -666,9 +666,9 @@ void RenderThemeQtMobile::computeSizeBasedOnStyle(RenderStyle& renderStyle) cons
     QSize size(0, 0);
 
     switch (renderStyle.appearance()) {
-    case TextAreaPart:
-    case SearchFieldPart:
-    case TextFieldPart: {
+    case ControlPartType::TextArea:
+    case ControlPartType::SearchField:
+    case ControlPartType::TextField: {
         int padding = frameWidth;
         renderStyle.setPaddingLeft(Length(padding, LengthType::Fixed));
         renderStyle.setPaddingRight(Length(padding, LengthType::Fixed));
@@ -685,21 +685,21 @@ void RenderThemeQtMobile::computeSizeBasedOnStyle(RenderStyle& renderStyle) cons
         return;
 
     switch (renderStyle.appearance()) {
-    case CheckboxPart: {
+    case ControlPartType::Checkbox: {
         const int w = checkBoxWidth * renderStyle.effectiveZoom();
         size = QSize(w, w);
         break;
     }
-    case RadioPart: {
+    case ControlPartType::Radio: {
         const int w = radioWidth * renderStyle.effectiveZoom();
         size = QSize(w, w);
         break;
     }
-    case PushButtonPart:
-    case SquareButtonPart:
-    case DefaultButtonPart:
-    case ButtonPart:
-    case MenulistPart: {
+    case ControlPartType::PushButton:
+    case ControlPartType::SquareButton:
+    case ControlPartType::DefaultButton:
+    case ControlPartType::Button:
+    case ControlPartType::Menulist: {
         const int height = renderStyle.metricsOfPrimaryFont().height() * buttonHeightRatio * renderStyle.effectiveZoom();
         size = QSize(renderStyle.width().value(), height);
         break;
@@ -746,12 +746,12 @@ bool RenderThemeQtMobile::paintButton(const RenderObject& o, const PaintInfo& i,
     if (!p.isValid())
        return true;
 
-    ControlPart appearance = o.style().appearance();
-    if (appearance == PushButtonPart || appearance == ButtonPart) {
+    ControlPartType appearance = o.style().appearance();
+    if (appearance == ControlPartType::PushButton || appearance == ControlPartType::Button) {
         p.drawPushButton(r, isPressed(o), isEnabled(o));
-    } else if (appearance == RadioPart)
+    } else if (appearance == ControlPartType::Radio)
        p.drawRadioButton(r, isChecked(o), isEnabled(o));
-    else if (appearance == CheckboxPart)
+    else if (appearance == ControlPartType::Checkbox)
        p.drawCheckBox(r, isChecked(o), isEnabled(o));
 
     return false;
@@ -782,14 +782,14 @@ bool RenderThemeQtMobile::paintTextField(const RenderObject& o, const PaintInfo&
     if (!p.isValid())
         return true;
 
-    ControlPart appearance = o.style().appearance();
-    if (appearance != TextFieldPart
-        && appearance != SearchFieldPart
-        && appearance != TextAreaPart)
+    ControlPartType appearance = o.style().appearance();
+    if (appearance != ControlPartType::TextField
+        && appearance != ControlPartType::SearchField
+        && appearance != ControlPartType::TextArea)
         return true;
 
     // Now paint the text field.
-    if (appearance == TextAreaPart) {
+    if (appearance == ControlPartType::TextArea) {
         const bool previousAntialiasing = p.painter->testRenderHint(QPainter::Antialiasing);
         p.painter->setRenderHint(QPainter::Antialiasing);
         p.painter->setPen(borderPen());
@@ -892,7 +892,7 @@ bool RenderThemeQtMobile::paintSliderTrack(const RenderObject& o, const PaintInf
     const double progress = (max - min > 0) ? (slider->valueAsNumber() - min) / (max - min) : 0;
 
     QRect rect(r);
-    const bool vertical = (o.style().appearance() == SliderVerticalPart);
+    const bool vertical = (o.style().appearance() == ControlPartType::SliderVertical);
     const int groovePadding = vertical ? r.width() * sliderGrooveBorderRatio : r.height() * sliderGrooveBorderRatio;
     if (vertical) {
         rect.adjust(groovePadding, 0, -groovePadding, 0);
@@ -927,8 +927,8 @@ bool RenderThemeQtMobile::checkMultiple(const RenderObject& o) const
 
 void RenderThemeQtMobile::adjustSliderThumbSize(RenderStyle& style, const Element* element) const
 {
-    const ControlPart part = style.appearance();
-    if (part == SliderThumbHorizontalPart || part == SliderThumbVerticalPart) {
+    const ControlPartType part = style.appearance();
+    if (part == ControlPartType::SliderThumbHorizontal || part == ControlPartType::SliderThumbVertical) {
         const int size = sliderSize * style.effectiveZoom();
         style.setWidth(Length(size, LengthType::Fixed));
         style.setHeight(Length(size, LengthType::Fixed));
