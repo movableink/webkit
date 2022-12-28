@@ -205,9 +205,22 @@ MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunk()
     static std::once_flag onceKey;
     std::call_once(onceKey, [&] {
         if (Wasm::Context::useFastTLS())
-            codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(wasm_function_prologue, "function for call"));
+            codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(wasm_function_prologue, "function for wasm call"));
         else
-            codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(wasm_function_prologue_no_tls, "function for call"));
+            codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(wasm_function_prologue_no_tls, "function for wasm call"));
+    });
+    return codeRef;
+}
+
+MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunkSIMD()
+{
+    static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        if (Wasm::Context::useFastTLS())
+            codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(wasm_function_prologue_simd, "function for wasm SIMD call"));
+        else
+            codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(wasm_function_prologue_no_tls_simd, "function for wasm SIMD call"));
     });
     return codeRef;
 }
@@ -442,6 +455,18 @@ MacroAssemblerCodeRef<NativeToJITGatePtrTag> createTailCallGate(PtrTag tag, bool
 
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::LLIntThunk);
     return FINALIZE_THUNK(patchBuffer, NativeToJITGatePtrTag, "LLInt tail call gate thunk");
+}
+
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> createWasmTailCallGate(PtrTag tag)
+{
+    CCallHelpers jit;
+
+    jit.untagPtr(GPRInfo::wasmScratchGPR2, ARM64Registers::lr);
+    jit.validateUntaggedPtr(ARM64Registers::lr, GPRInfo::wasmScratchGPR2);
+    jit.farJump(GPRInfo::wasmScratchGPR0, tag);
+
+    LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::LLIntThunk);
+    return FINALIZE_THUNK(patchBuffer, NativeToJITGatePtrTag, "LLInt wasm tail call gate thunk");
 }
 
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> loopOSREntryGateThunk()

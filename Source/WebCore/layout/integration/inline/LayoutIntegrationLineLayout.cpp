@@ -115,11 +115,21 @@ LineLayout* LineLayout::containing(RenderObject& renderer)
         return nullptr;
 
     if (!renderer.isInline()) {
-        // FIXME: See canUseForChild on out-of-flow nested boxes.
-        if (!renderer.isFloatingOrOutOfFlowPositioned() || renderer.parent() != renderer.containingBlock())
-            return nullptr;
-        if (auto* containingBlock = renderer.containingBlock(); containingBlock && is<RenderBlockFlow>(*containingBlock))
-            return downcast<RenderBlockFlow>(*containingBlock).modernLineLayout();
+        // IFC may contain block level boxes (floats and out-of-flow boxes).
+
+        auto adjustedContainingBlock = [&] {
+            RenderElement* containingBlock = nullptr;
+            if (renderer.isOutOfFlowPositioned()) {
+                // Here we are looking for the containing block as if the out-of-flow box was inflow (for static position purpose).
+                containingBlock = renderer.parent();
+                if (is<RenderInline>(containingBlock))
+                    containingBlock = containingBlock->containingBlock();
+            } else if (renderer.isFloating())
+                containingBlock = renderer.containingBlock();
+            return dynamicDowncast<RenderBlockFlow>(containingBlock);
+        };
+        if (auto* blockContainer = adjustedContainingBlock())
+            return blockContainer->modernLineLayout();
         return nullptr;
     }
 
@@ -473,6 +483,19 @@ static inline std::optional<Layout::BlockLayoutState::LineClamp> lineClamp(const
     return { };
 }
 
+static inline Layout::BlockLayoutState::LeadingTrim leadingTrim(const RenderBlockFlow& rootRenderer)
+{
+    auto* layoutState = rootRenderer.view().frameView().layoutContext().layoutState();
+    if (!layoutState)
+        return { };
+    auto leadingTrimForIFC = Layout::BlockLayoutState::LeadingTrim { };
+    if (layoutState->hasLeadingTrimStart())
+        leadingTrimForIFC.add(Layout::BlockLayoutState::LeadingTrimSide::Start);
+    if (layoutState->hasLeadingTrimEnd(rootRenderer))
+        leadingTrimForIFC.add(Layout::BlockLayoutState::LeadingTrimSide::End);
+    return leadingTrimForIFC;
+}
+
 void LineLayout::layout()
 {
     auto& rootLayoutBox = this->rootLayoutBox();
@@ -485,7 +508,7 @@ void LineLayout::layout()
     // FIXME: Do not clear the lines and boxes here unconditionally, but consult with the damage object instead.
     clearInlineContent();
     ASSERT(m_inlineContentConstraints);
-    auto blockLayoutState = Layout::BlockLayoutState { m_blockFormattingState.floatingState(), lineClamp(flow()) };
+    auto blockLayoutState = Layout::BlockLayoutState { m_blockFormattingState.floatingState(), lineClamp(flow()), leadingTrim(flow()) };
     Layout::InlineFormattingContext { rootLayoutBox, m_inlineFormattingState, m_lineDamage.get() }.layoutInFlowContentForIntegration(*m_inlineContentConstraints, blockLayoutState);
 
     constructContent();

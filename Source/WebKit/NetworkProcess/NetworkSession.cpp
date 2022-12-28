@@ -119,6 +119,7 @@ static Ref<NetworkStorageManager> createNetworkStorageManager(IPC::Connection* c
 
 NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
     : m_sessionID(parameters.sessionID)
+    , m_dataStoreIdentifier(parameters.dataStoreIdentifier)
     , m_networkProcess(networkProcess)
 #if ENABLE(TRACKING_PREVENTION)
     , m_resourceLoadStatisticsDirectory(parameters.resourceLoadStatisticsParameters.directory)
@@ -218,8 +219,9 @@ void NetworkSession::destroyResourceLoadStatistics(CompletionHandler<void()>&& c
 
 void NetworkSession::invalidateAndCancel()
 {
-    for (auto& task : m_dataTaskSet)
+    m_dataTaskSet.forEach([] (auto& task) {
         task.invalidateAndCancel();
+    });
 #if ENABLE(TRACKING_PREVENTION)
     if (m_resourceLoadStatistics)
         m_resourceLoadStatistics->invalidateAndCancel();
@@ -228,6 +230,12 @@ void NetworkSession::invalidateAndCancel()
 #if ASSERT_ENABLED
     m_isInvalidated = true;
 #endif
+
+    if (m_cache) {
+        auto networkCacheDirectory = m_cache->storageDirectory();
+        m_cache = nullptr;
+        FileSystem::markPurgeable(networkCacheDirectory);
+    }
 }
 
 void NetworkSession::destroyPrivateClickMeasurementStore(CompletionHandler<void()>&& completionHandler)
@@ -572,16 +580,13 @@ std::unique_ptr<WebSocketTask> NetworkSession::createWebSocketTask(WebPageProxyI
 
 void NetworkSession::registerNetworkDataTask(NetworkDataTask& task)
 {
+    // Unregistration happens automatically in ThreadSafeWeakHashSet::amortizedCleanupIfNeeded.
     m_dataTaskSet.add(task);
 
+    // FIXME: This is not in a good place. It should probably be in the NetworkDataTask constructor.
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
     task.setEmulatedConditions(m_bytesPerSecondLimit);
 #endif
-}
-
-void NetworkSession::unregisterNetworkDataTask(NetworkDataTask& task)
-{
-    m_dataTaskSet.remove(task);
 }
 
 NetworkLoadScheduler& NetworkSession::networkLoadScheduler()
@@ -667,7 +672,11 @@ SWServer& NetworkSession::ensureSWServer()
             m_networkProcess->parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::EstablishRemoteWorkerContextConnectionToNetworkProcess { RemoteWorkerType::ServiceWorker, registrableDomain, requestingProcessIdentifier, serviceWorkerPageIdentifier, m_sessionID }, [completionHandler = WTFMove(completionHandler)] (auto) mutable {
                 completionHandler();
             }, 0);
-        }, WTFMove(appBoundDomainsCallback), [this](auto webProcessIdentifier, auto&& firstPartyForCookies) {
+        }, WTFMove(appBoundDomainsCallback), [this](auto webProcessIdentifier, auto requestingProcessIdentifier, auto&& firstPartyForCookies) {
+            if (requestingProcessIdentifier && (requestingProcessIdentifier != webProcessIdentifier) && !m_networkProcess->allowsFirstPartyForCookies(requestingProcessIdentifier.value(), firstPartyForCookies)) {
+                ASSERT_NOT_REACHED();
+                return;
+            }
             m_networkProcess->addAllowedFirstPartyForCookies(webProcessIdentifier, WTFMove(firstPartyForCookies), [] { });
         });
     }
@@ -707,8 +716,9 @@ void NetworkSession::setEmulatedConditions(std::optional<int64_t>&& bytesPerSeco
 {
     m_bytesPerSecondLimit = WTFMove(bytesPerSecondLimit);
 
-    for (auto& task : m_dataTaskSet)
+    m_dataTaskSet.forEach([&] (auto& task) {
         task.setEmulatedConditions(m_bytesPerSecondLimit);
+    });
 }
 
 #endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)

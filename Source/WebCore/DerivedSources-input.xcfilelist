@@ -37,6 +37,7 @@ $(PROJECT_DIR)/DerivedSources.make
 $(PROJECT_DIR)/Modules/WebGPU/GPU.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUAdapter.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUAddressMode.idl
+$(PROJECT_DIR)/Modules/WebGPU/GPUAutoLayoutMode.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUBindGroup.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUBindGroupDescriptor.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUBindGroupEntry.idl
@@ -228,6 +229,10 @@ $(PROJECT_DIR)/Modules/applepay/paymentrequest/ApplePayRequest.idl
 $(PROJECT_DIR)/Modules/async-clipboard/Clipboard.idl
 $(PROJECT_DIR)/Modules/async-clipboard/ClipboardItem.idl
 $(PROJECT_DIR)/Modules/async-clipboard/Navigator+Clipboard.idl
+$(PROJECT_DIR)/Modules/audiosession/DOMAudioSession.idl
+$(PROJECT_DIR)/Modules/audiosession/Navigator+AudioSession.idl
+$(PROJECT_DIR)/Modules/badge/Navigator+Badge.idl
+$(PROJECT_DIR)/Modules/badge/NavigatorBadge.idl
 $(PROJECT_DIR)/Modules/beacon/Navigator+Beacon.idl
 $(PROJECT_DIR)/Modules/cache/CacheQueryOptions.idl
 $(PROJECT_DIR)/Modules/cache/DOMCache.idl
@@ -873,7 +878,9 @@ $(PROJECT_DIR)/animation/AnimationPlaybackEvent.idl
 $(PROJECT_DIR)/animation/AnimationPlaybackEventInit.idl
 $(PROJECT_DIR)/animation/AnimationTimeline.idl
 $(PROJECT_DIR)/animation/CSSAnimation.idl
+$(PROJECT_DIR)/animation/CSSAnimationEvent.idl
 $(PROJECT_DIR)/animation/CSSTransition.idl
+$(PROJECT_DIR)/animation/CSSTransitionEvent.idl
 $(PROJECT_DIR)/animation/CompositeOperation.idl
 $(PROJECT_DIR)/animation/CompositeOperationOrAuto.idl
 $(PROJECT_DIR)/animation/ComputedEffectTiming.idl
@@ -954,6 +961,7 @@ $(PROJECT_DIR)/css/CSSPageRule.idl
 $(PROJECT_DIR)/css/CSSPaintCallback.idl
 $(PROJECT_DIR)/css/CSSPaintSize.idl
 $(PROJECT_DIR)/css/CSSProperties.json
+$(PROJECT_DIR)/css/CSSPropertyRule.idl
 $(PROJECT_DIR)/css/CSSRule.idl
 $(PROJECT_DIR)/css/CSSRuleList.idl
 $(PROJECT_DIR)/css/CSSStyleDeclaration.idl

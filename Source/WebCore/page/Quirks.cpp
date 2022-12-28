@@ -26,6 +26,7 @@
 #include "config.h"
 #include "Quirks.h"
 
+#include "AllowedFonts.h"
 #include "Attr.h"
 #include "DOMTokenList.h"
 #include "DOMWindow.h"
@@ -149,19 +150,6 @@ bool Quirks::needsPerDocumentAutoplayBehavior() const
 #endif
 }
 
-bool Quirks::shouldAutoplayForArbitraryUserGesture() const
-{
-#if PLATFORM(MAC)
-    return needsQuirks() && allowedAutoplayQuirks(*m_document).contains(AutoplayQuirk::ArbitraryUserGestures);
-#else
-    if (!needsQuirks())
-        return false;
-
-    auto domain = RegistrableDomain { m_document->topDocument().url() };
-    return domain == "twitter.com"_s || domain == "facebook.com"_s;
-#endif
-}
-
 bool Quirks::shouldAutoplayWebAudioForArbitraryUserGesture() const
 {
     if (!needsQuirks())
@@ -233,15 +221,6 @@ bool Quirks::needsMillisecondResolutionForHighResTimeStamp() const
     // webkit.org/b/210527
     auto host = m_document->url().host();
     return equalLettersIgnoringASCIICase(host, "www.icourse163.org"_s);
-}
-
-bool Quirks::shouldStripQuotationMarkInFontFaceSetFamily() const
-{
-    if (!needsQuirks())
-        return false;
-
-    auto host = m_document->topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "docs.google.com"_s);
 }
 
 bool Quirks::isTouchBarUpdateSupressedForHiddenContentEditable() const
@@ -1287,34 +1266,6 @@ bool Quirks::needsHDRPixelDepthQuirk() const
     return *m_needsHDRPixelDepthQuirk;
 }
 
-// FIXME: remove this once rdar://66739450 has been fixed.
-bool Quirks::needsAkamaiMediaPlayerQuirk(const HTMLVideoElement& element) const
-{
-#if PLATFORM(IOS_FAMILY)
-    // Akamai Media Player begins polling `webkitDisplayingFullscreen` every 100ms immediately after calling
-    // `webkitEnterFullscreen` and exits fullscreen as soon as it returns false. r262456 changed the HTMLMediaPlayer state
-    // machine so `webkitDisplayingFullscreen` doesn't return true until the fullscreen window has been opened in the
-    // UI process, which causes Akamai Media Player to frequently exit fullscreen mode immediately.
-
-    static NeverDestroyed<const AtomString> akamaiHTML5(MAKE_STATIC_STRING_IMPL("akamai-html5"));
-    static NeverDestroyed<const AtomString> akamaiMediaElement(MAKE_STATIC_STRING_IMPL("akamai-media-element"));
-    static NeverDestroyed<const AtomString> ampHTML5(MAKE_STATIC_STRING_IMPL("amp-html5"));
-    static NeverDestroyed<const AtomString> ampMediaElement(MAKE_STATIC_STRING_IMPL("amp-media-element"));
-
-    if (!needsQuirks())
-        return false;
-
-    if (!element.hasClass())
-        return false;
-
-    auto& classNames = element.classNames();
-    return (classNames.contains(akamaiHTML5) && classNames.contains(akamaiMediaElement)) || (classNames.contains(ampHTML5) && classNames.contains(ampMediaElement));
-#else
-    UNUSED_PARAM(element);
-    return false;
-#endif
-}
-
 // FIXME: remove this once rdar://92531240 has been fixed.
 bool Quirks::needsFlightAwareSerializationQuirk() const
 {
@@ -1325,21 +1276,6 @@ bool Quirks::needsFlightAwareSerializationQuirk() const
         m_needsFlightAwareSerializationQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "flightaware.com"_s);
 
     return *m_needsFlightAwareSerializationQuirk;
-}
-
-bool Quirks::needsBlackFullscreenBackgroundQuirk() const
-{
-    // MLB.com sets a black background-color on the :backdrop pseudo element, which WebKit does not yet support. This
-    // quirk can be removed once support for :backdrop psedue element is added.
-    if (!needsQuirks())
-        return false;
-
-    if (!m_needsBlackFullscreenBackgroundQuirk) {
-        auto host = m_document->topDocument().url().host();
-        m_needsBlackFullscreenBackgroundQuirk = equalLettersIgnoringASCIICase(host, "mlb.com"_s) || host.endsWithIgnoringASCIICase(".mlb.com"_s);
-    }
-
-    return *m_needsBlackFullscreenBackgroundQuirk;
 }
 
 bool Quirks::requiresUserGestureToPauseInPictureInPicture() const
@@ -1489,7 +1425,7 @@ bool Quirks::shouldEnableApplicationCacheQuirk() const
 
 bool Quirks::shouldEnableFontLoadingAPIQuirk() const
 {
-    if (!needsQuirks() || m_document->settings().downloadableBinaryFontsEnabled())
+    if (!needsQuirks() || m_document->settings().downloadableBinaryFontAllowedTypes() == DownloadableBinaryFontAllowedTypes::Any)
         return false;
 
     if (!m_shouldEnableFontLoadingAPIQuirk)
@@ -1518,9 +1454,28 @@ bool Quirks::shouldExposeShowModalDialog() const
         return false;
     if (!m_shouldExposeShowModalDialog) {
         auto domain = RegistrableDomain(m_document->url()).string();
-        m_shouldExposeShowModalDialog = domain == "pandora.com"_s || domain == "marcus.com"_s;
+        // Marcus: <rdar://101086391>.
+        // Pandora: <rdar://100243111>.
+        // Soundcloud: <rdar://102913500>.
+        m_shouldExposeShowModalDialog = domain == "pandora.com"_s || domain == "marcus.com"_s || domain == "soundcloud.com"_s;
     }
     return *m_shouldExposeShowModalDialog;
+}
+
+bool Quirks::shouldNavigatorPluginsBeEmpty() const
+{
+#if PLATFORM(IOS_FAMILY)
+    if (!needsQuirks())
+        return false;
+    if (!m_shouldNavigatorPluginsBeEmpty) {
+        auto domain = RegistrableDomain(m_document->url()).string();
+        // Marcus login issue: <rdar://103011164>.
+        m_shouldNavigatorPluginsBeEmpty = domain == "marcus.com"_s;
+    }
+    return *m_shouldNavigatorPluginsBeEmpty;
+#else
+    return false;
+#endif
 }
 
 bool Quirks::shouldDisableLazyImageLoadingQuirk() const

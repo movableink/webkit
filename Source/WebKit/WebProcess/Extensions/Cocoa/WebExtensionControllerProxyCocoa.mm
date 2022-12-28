@@ -36,8 +36,10 @@
 #include "JSWebExtensionWrapper.h"
 #include "WebExtensionAPINamespace.h"
 #include "WebExtensionContextProxy.h"
+#include "WebExtensionControllerMessages.h"
 #include "WebFrame.h"
 #include "WebPage.h"
+#include "WebProcess.h"
 
 namespace WebKit {
 
@@ -62,6 +64,8 @@ void WebExtensionControllerProxy::globalObjectIsAvailableForFrame(WebPage& page,
     auto namespaceObject = JSObjectGetProperty(context, globalObject, toJSString("browser").get(), nullptr);
     if (namespaceObject && JSValueIsObject(context, namespaceObject))
         return;
+
+    extension->addFrameWithExtensionContent(frame);
 
     if (!isMainWorld)
         extension->setContentScriptWorld(&world);
@@ -90,10 +94,17 @@ void WebExtensionControllerProxy::serviceWorkerGlobalObjectIsAvailableForFrame(W
     if (namespaceObject && JSValueIsObject(context, namespaceObject))
         return;
 
+    extension->addFrameWithExtensionContent(frame);
+
     namespaceObject = toJS(context, WebExtensionAPINamespace::create(WebExtensionAPINamespace::ForMainWorld::Yes, *extension).ptr());
 
     JSObjectSetProperty(context, globalObject, toJSString("browser").get(), namespaceObject, kJSPropertyAttributeNone, nullptr);
     JSObjectSetProperty(context, globalObject, toJSString("chrome").get(), namespaceObject, kJSPropertyAttributeNone, nullptr);
+}
+
+void WebExtensionControllerProxy::didStartProvisionalLoadForFrame(WebPage& page, WebFrame& frame, const URL& url)
+{
+    WebProcess::singleton().send(Messages::WebExtensionController::DidStartProvisionalLoadForFrame(page.webPageProxyIdentifier(), frame.frameID(), url), identifier());
 }
 
 } // namespace WebKit

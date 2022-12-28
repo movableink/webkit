@@ -28,7 +28,9 @@
 #if ENABLE(WK_WEB_EXTENSIONS)
 
 #include "JSWebExtensionAPITest.h"
+#include "WebExtensionAPIEvent.h"
 #include "WebExtensionAPIObject.h"
+#include "WebExtensionAPIWebNavigationEvent.h"
 
 OBJC_CLASS NSString;
 
@@ -59,6 +61,16 @@ public:
 
     JSValue *assertRejects(JSContextRef, JSValue *promise, JSValue *expectedError, NSString *message);
     void assertThrows(JSContextRef, JSValue *function, JSValue *expectedError, NSString *message);
+
+    WebExtensionAPIWebNavigationEvent& testWebNavigationEvent();
+    void fireTestWebNavigationEvent(NSString *urlString);
+
+    WebExtensionAPIEvent& testEvent();
+    void fireTestEvent();
+
+private:
+    RefPtr<WebExtensionAPIWebNavigationEvent> m_webNavigationEvent;
+    RefPtr<WebExtensionAPIEvent> m_event;
 #endif
 };
 

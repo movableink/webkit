@@ -781,6 +781,30 @@ enum class TextUnderlinePosition : uint8_t {
     FromFont
 };
 
+enum class LeadingTrim : uint8_t {
+    Normal,
+    Start,
+    End,
+    Both
+};
+
+enum class MarginTrimType : uint8_t {
+    BlockStart = 1 << 0,
+    BlockEnd = 1 << 1,
+    InlineStart = 1 << 2,
+    InlineEnd = 1 << 3
+};
+
+enum class TextEdgeType : uint8_t {
+    Leading,
+    Text,
+    CapHeight,
+    ExHeight,
+    Alphabetic,
+    CJKIdeographic,
+    CJKIdeographicInk
+};
+
 enum class TextZoom : uint8_t {
     Normal,
     Reset
@@ -1085,6 +1109,16 @@ enum GridAutoFlow {
     AutoFlowColumnDense = InternalAutoFlowAlgorithmDense | InternalAutoFlowDirectionColumn
 };
 
+enum class MasonryAutoFlowPlacementAlgorithm {
+    Pack,
+    Next
+};
+
+enum class MasonryAutoFlowPlacementOrder {
+    DefiniteFirst,
+    Ordered
+};
+
 enum class AutoRepeatType : uint8_t {
     None,
     Fill,
@@ -1276,6 +1310,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, LineBreak);
 WTF::TextStream& operator<<(WTF::TextStream&, LineSnap);
 WTF::TextStream& operator<<(WTF::TextStream&, ListStylePosition);
 WTF::TextStream& operator<<(WTF::TextStream&, ListStyleType);
+WTF::TextStream& operator<<(WTF::TextStream&, MarginTrimType);
 WTF::TextStream& operator<<(WTF::TextStream&, MarqueeBehavior);
 WTF::TextStream& operator<<(WTF::TextStream&, MarqueeDirection);
 WTF::TextStream& operator<<(WTF::TextStream&, MaskMode);
@@ -1316,6 +1351,8 @@ WTF::TextStream& operator<<(WTF::TextStream&, TextOverflow);
 WTF::TextStream& operator<<(WTF::TextStream&, TextSecurity);
 WTF::TextStream& operator<<(WTF::TextStream&, TextTransform);
 WTF::TextStream& operator<<(WTF::TextStream&, TextUnderlinePosition);
+WTF::TextStream& operator<<(WTF::TextStream&, LeadingTrim);
+WTF::TextStream& operator<<(WTF::TextStream&, TextEdgeType);
 WTF::TextStream& operator<<(WTF::TextStream&, TextZoom);
 WTF::TextStream& operator<<(WTF::TextStream&, TransformBox);
 WTF::TextStream& operator<<(WTF::TextStream&, TransformStyle3D);

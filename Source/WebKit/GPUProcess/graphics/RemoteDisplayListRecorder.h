@@ -33,6 +33,7 @@
 #include "RemoteRenderingBackend.h"
 #include "StreamMessageReceiver.h"
 #include "StreamServerConnection.h"
+#include <WebCore/ControlFactory.h>
 #include <WebCore/DisplayListItems.h>
 #include <WebCore/ProcessIdentifier.h>
 #include <wtf/RefCounted.h>
@@ -85,7 +86,7 @@ public:
     void drawFilteredImageBuffer(std::optional<WebCore::RenderingResourceIdentifier> sourceImageIdentifier, const WebCore::FloatRect& sourceImageRect, IPC::FilterReference);
     void drawImageBuffer(WebCore::RenderingResourceIdentifier imageBufferIdentifier, const WebCore::FloatRect& destinationRect, const WebCore::FloatRect& srcRect, const WebCore::ImagePaintingOptions&);
     void drawNativeImage(WebCore::RenderingResourceIdentifier imageIdentifier, const WebCore::FloatSize& imageSize, const WebCore::FloatRect& destRect, const WebCore::FloatRect& srcRect, const WebCore::ImagePaintingOptions&);
-    void drawSystemImage(WebCore::SystemImage&, const WebCore::FloatRect&);
+    void drawSystemImage(Ref<WebCore::SystemImage>, const WebCore::FloatRect&);
     void drawPattern(WebCore::RenderingResourceIdentifier imageIdentifier, const WebCore::FloatRect& destRect, const WebCore::FloatRect& tileRect, const WebCore::AffineTransform&, const WebCore::FloatPoint&, const WebCore::FloatSize& spacing, const WebCore::ImagePaintingOptions&);
     void beginTransparencyLayer(float opacity);
     void endTransparencyLayer();
@@ -125,6 +126,7 @@ public:
     void strokePath(const WebCore::Path&);
     void strokeEllipse(const WebCore::FloatRect&);
     void clearRect(const WebCore::FloatRect&);
+    void drawControlPart(Ref<WebCore::ControlPart>, const WebCore::FloatRect&, float deviceScaleFactor, const WebCore::ControlStyle&);
 #if USE(CG)
     void applyStrokePattern();
     void applyFillPattern();
@@ -162,6 +164,7 @@ private:
     QualifiedRenderingResourceIdentifier m_imageBufferIdentifier;
     WebCore::ProcessIdentifier m_webProcessIdentifier;
     RefPtr<RemoteRenderingBackend> m_renderingBackend;
+    std::unique_ptr<WebCore::ControlFactory> m_controlFactory;
 };
 
 } // namespace WebKit

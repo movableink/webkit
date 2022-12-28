@@ -1,14 +1,8 @@
 if (${WTF_PLATFORM_WIN_CAIRO})
     add_definitions(-DUSE_CAIRO=1 -DUSE_CURL=1 -DWEBKIT_EXPORTS=1)
-    list(APPEND WebKitLegacy_PRIVATE_INCLUDE_DIRECTORIES
-        "${WEBKIT_LIBRARIES_DIR}/include"
-    )
     list(APPEND WebKitLegacy_SOURCES_Classes
         win/WebDownloadCURL.cpp
         win/WebURLAuthenticationChallengeSenderCURL.cpp
-    )
-    list(APPEND WebKitLegacy_PRIVATE_LIBRARIES
-        $<TARGET_OBJECTS:WebCore>
     )
 else ()
     list(APPEND WebKitLegacy_SOURCES_Classes
@@ -16,15 +10,15 @@ else ()
         win/WebURLAuthenticationChallengeSenderCFNet.cpp
     )
     list(APPEND WebKitLegacy_PRIVATE_LIBRARIES
-        CFNetwork${DEBUG_SUFFIX}
-        CoreGraphics${DEBUG_SUFFIX}
-        CoreText${DEBUG_SUFFIX}
-        QuartzCore${DEBUG_SUFFIX}
-        libdispatch${DEBUG_SUFFIX}
-        libxml2${DEBUG_SUFFIX}
-        libxslt${DEBUG_SUFFIX}
-        zdll${DEBUG_SUFFIX}
-        SQLite3${DEBUG_SUFFIX}
+        Apple::CFNetwork
+        Apple::CoreGraphics
+        Apple::CoreText
+        Apple::QuartzCore
+        Apple::libdispatch
+        LibXml2::LibXml2
+        LibXslt::LibXslt
+        SQLite::SQLite3
+        ZLIB::ZLIB
     )
 endif ()
 
@@ -225,7 +219,7 @@ if (USE_CF)
     )
 
     list(APPEND WebKitLegacy_LIBRARIES
-        ${COREFOUNDATION_LIBRARY}
+        Apple::CoreFoundation
     )
 endif ()
 
@@ -420,6 +414,7 @@ add_library(WebKitLegacyGUID STATIC
 )
 set_target_properties(WebKitLegacyGUID PROPERTIES OUTPUT_NAME WebKitGUID${DEBUG_SUFFIX})
 
+list(APPEND WebKitLegacy_LIBRARIES WebKitLegacyGUID)
 list(APPEND WebKitLegacy_PRIVATE_LIBRARIES
     Comctl32
     Comsupp
@@ -474,21 +469,6 @@ set(WebKitLegacy_PUBLIC_FRAMEWORK_HEADERS
     win/WebKitCOMAPI.h
 )
 
-WEBKIT_MAKE_FORWARDING_HEADERS(WebKitLegacyGUID
-    TARGET_NAME WebKitLegacyFrameworkHeaders
-    DESTINATION ${WebKitLegacy_FRAMEWORK_HEADERS_DIR}/WebKitLegacy
-    FILES ${WebKitLegacy_PUBLIC_FRAMEWORK_HEADERS}
-    FLATTENED
-)
-if (NOT INTERNAL_BUILD)
-    add_dependencies(WebKitLegacyFrameworkHeaders WebCore_CopyPrivateHeaders)
-endif ()
-
 set(WebKitLegacy_OUTPUT_NAME
     WebKit${DEBUG_SUFFIX}
-)
-
-list(APPEND WebKitLegacy_PRIVATE_DEFINITIONS
-    STATICALLY_LINKED_WITH_PAL
-    STATICALLY_LINKED_WITH_WebCore
 )

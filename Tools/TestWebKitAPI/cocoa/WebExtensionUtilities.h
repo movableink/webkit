@@ -29,6 +29,7 @@
 #include "Utilities.h"
 #include "WTFTestUtilities.h"
 #include <WebKit/_WKWebExtensionContextPrivate.h>
+#include <WebKit/_WKWebExtensionControllerConfigurationPrivate.h>
 #include <WebKit/_WKWebExtensionControllerDelegatePrivate.h>
 #include <WebKit/_WKWebExtensionControllerPrivate.h>
 #include <WebKit/_WKWebExtensionPrivate.h>
@@ -37,7 +38,7 @@
 
 @interface TestWebExtensionManager : NSObject
 
-- (instancetype)initWithExtension:(_WKWebExtension *)extension;
+- (instancetype)initForExtension:(_WKWebExtension *)extension;
 
 @property (nonatomic, strong) _WKWebExtension *extension;
 @property (nonatomic, strong) _WKWebExtensionContext *context;

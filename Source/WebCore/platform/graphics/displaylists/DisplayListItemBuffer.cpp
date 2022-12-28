@@ -223,6 +223,9 @@ void ItemHandle::apply(GraphicsContext& context)
     case ItemType::ClearRect:
         get<ClearRect>().apply(context);
         return;
+    case ItemType::DrawControlPart:
+        get<DrawControlPart>().apply(context);
+        return;
     case ItemType::BeginTransparencyLayer:
         get<BeginTransparencyLayer>().apply(context);
         return;
@@ -251,6 +254,9 @@ void ItemHandle::destroy()
         return;
     case ItemType::ClipPath:
         get<ClipPath>().~ClipPath();
+        return;
+    case ItemType::DrawControlPart:
+        get<DrawControlPart>().~DrawControlPart();
         return;
     case ItemType::DrawFilteredImageBuffer:
         get<DrawFilteredImageBuffer>().~DrawFilteredImageBuffer();
@@ -447,15 +453,14 @@ template<typename, typename = void> inline constexpr bool HasIsValid = false;
 template<typename T> inline constexpr bool HasIsValid<T, std::void_t<decltype(std::declval<T>().isValid())>> = true;
 
 template<typename Item>
-static inline typename std::enable_if_t<!HasIsValid<Item>, bool> isValid(const Item&)
+static inline bool isValid(const Item& item)
 {
-    return true;
-}
-
-template<typename Item>
-static inline typename std::enable_if_t<HasIsValid<Item>, bool> isValid(const Item& item)
-{
-    return item.isValid();
+    if constexpr (HasIsValid<Item>)
+        return item.isValid();
+    else {
+        UNUSED_PARAM(item);
+        return true;
+    }
 }
 
 template<typename Item>
@@ -481,6 +486,8 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
         return copyInto<ClipOutToPath>(itemOffset, *this);
     case ItemType::ClipPath:
         return copyInto<ClipPath>(itemOffset, *this);
+    case ItemType::DrawControlPart:
+        return copyInto<DrawControlPart>(itemOffset, *this);
     case ItemType::DrawFilteredImageBuffer:
         return copyInto<DrawFilteredImageBuffer>(itemOffset, *this);
     case ItemType::DrawFocusRingPath:

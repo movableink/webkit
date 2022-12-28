@@ -31,6 +31,7 @@
 #include "AppHighlight.h"
 #include "ApplicationCacheStorage.h"
 #include "BackForwardClient.h"
+#include "BadgeClient.h"
 #include "BroadcastChannelRegistry.h"
 #include "CacheStorageProvider.h"
 #include "ColorChooser.h"
@@ -50,8 +51,8 @@
 #include "DummyStorageProvider.h"
 #include "EditorClient.h"
 #include "EmptyAttachmentElementClient.h"
+#include "EmptyBadgeClient.h"
 #include "EmptyFrameLoaderClient.h"
-#include "FileChooser.h"
 #include "FormState.h"
 #include "Frame.h"
 #include "FrameLoaderClient.h"
@@ -1056,9 +1057,9 @@ ObjectContentType EmptyFrameLoaderClient::objectContentType(const URL&, const St
     return ObjectContentType::None;
 }
 
-String EmptyFrameLoaderClient::overrideMediaType() const
+AtomString EmptyFrameLoaderClient::overrideMediaType() const
 {
-    return { };
+    return nullAtom();
 }
 
 void EmptyFrameLoaderClient::redirectDataToPlugin(Widget&)
@@ -1206,7 +1207,8 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
         makeUniqueRef<EmptyMediaRecorderProvider>(),
         EmptyBroadcastChannelRegistry::create(),
         makeUniqueRef<DummyStorageProvider>(),
-        makeUniqueRef<DummyModelPlayerProvider>()
+        makeUniqueRef<DummyModelPlayerProvider>(),
+        EmptyBadgeClient::create()
     };
 
     static NeverDestroyed<EmptyChromeClient> dummyChromeClient;

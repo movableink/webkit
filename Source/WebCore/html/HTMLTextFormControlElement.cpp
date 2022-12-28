@@ -232,14 +232,15 @@ void HTMLTextFormControlElement::dispatchFormControlChangeEvent()
         setTextAsOfLastFormControlChangeEvent(value());
     }
     setChangedSinceLastFormControlChangeEvent(false);
+    setInteractedWithSinceLastFormSubmitEvent(true);
 }
 
-ExceptionOr<void> HTMLTextFormControlElement::setRangeText(const String& replacement)
+ExceptionOr<void> HTMLTextFormControlElement::setRangeText(StringView replacement)
 {
     return setRangeText(replacement, selectionStart(), selectionEnd(), String());
 }
 
-ExceptionOr<void> HTMLTextFormControlElement::setRangeText(const String& replacement, unsigned start, unsigned end, const String& selectionMode)
+ExceptionOr<void> HTMLTextFormControlElement::setRangeText(StringView replacement, unsigned start, unsigned end, const String& selectionMode)
 {
     if (start > end)
         return Exception { IndexSizeError };
@@ -733,7 +734,7 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
         return value();
 
     auto innerText = innerTextElement();
-    if (!innerText)
+    if (!innerText || innerText->textContent().isEmpty())
         return value();
 
     RenderTextControlInnerBlock* renderer = innerText->renderer();

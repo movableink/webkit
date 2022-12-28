@@ -29,15 +29,20 @@
 
 #include "ImageBufferBackendHandle.h"
 #include "RemoteDisplayListRecorderProxy.h"
+#include "RemoteSerializedImageBufferIdentifier.h"
+#include "RenderingBackendIdentifier.h"
 #include <WebCore/ImageBuffer.h>
+#include <WebCore/ImageBufferBackend.h>
 #include <wtf/Condition.h>
 #include <wtf/Lock.h>
 
 namespace WebKit {
 
 class RemoteRenderingBackendProxy;
+class RemoteImageBufferProxyFlushState;
 
 class RemoteImageBufferProxy : public WebCore::ImageBuffer {
+    friend class RemoteSerializedImageBufferProxy;
 public:
     template<typename BackendType>
     static RefPtr<RemoteImageBufferProxy> create(const WebCore::FloatSize& size, float resolutionScale, const WebCore::DestinationColorSpace& colorSpace, WebCore::PixelFormat pixelFormat, WebCore::RenderingPurpose purpose, RemoteRenderingBackendProxy& remoteRenderingBackendProxy, bool avoidBackendSizeCheck = false)
@@ -49,30 +54,36 @@ public:
         return adoptRef(new RemoteImageBufferProxy(parameters, info, remoteRenderingBackendProxy));
     }
 
+    static RefPtr<RemoteImageBufferProxy> create(const WebCore::ImageBufferBackend::Parameters& parameters, const WebCore::ImageBufferBackend::Info& info, RemoteRenderingBackendProxy& remoteRenderingBackendProxy, std::unique_ptr<WebCore::ImageBufferBackend>&& backend, WebCore::RenderingResourceIdentifier identifier)
+    {
+        return adoptRef(new RemoteImageBufferProxy(parameters, info, remoteRenderingBackendProxy, WTFMove(backend), identifier));
+    }
+
     ~RemoteImageBufferProxy();
 
     DisplayListRecorderFlushIdentifier lastSentFlushIdentifier() const { return m_sentFlushIdentifier; }
 
-    void waitForDidFlushOnSecondaryThread(DisplayListRecorderFlushIdentifier);
-
     WebCore::ImageBufferBackend* ensureBackendCreated() const final;
-    void didFlush(DisplayListRecorderFlushIdentifier);
 
     void clearBackend();
     void backingStoreWillChange();
     void didCreateImageBufferBackend(ImageBufferBackendHandle&&);
-private:
-    RemoteImageBufferProxy(const WebCore::ImageBufferBackend::Parameters&, const WebCore::ImageBufferBackend::Info&, RemoteRenderingBackendProxy&);
 
-    // It is safe to access m_receivedFlushIdentifier from the main thread without locking since it
-    // only gets modified on the main thread.
-    bool hasPendingFlush() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS;
+    std::unique_ptr<WebCore::SerializedImageBuffer> sinkIntoSerializedImageBuffer() final;
+
+private:
+    RemoteImageBufferProxy(const WebCore::ImageBufferBackend::Parameters&, const WebCore::ImageBufferBackend::Info&, RemoteRenderingBackendProxy&, std::unique_ptr<WebCore::ImageBufferBackend>&& = nullptr, WebCore::RenderingResourceIdentifier = WebCore::RenderingResourceIdentifier::generate());
+
+    bool hasPendingFlush() const;
 
     void waitForDidFlushWithTimeout();
 
     RefPtr<WebCore::NativeImage> copyNativeImage(WebCore::BackingStoreCopy = WebCore::CopyBackingStore) const final;
     RefPtr<WebCore::NativeImage> copyNativeImageForDrawing(WebCore::BackingStoreCopy = WebCore::CopyBackingStore) const final;
     RefPtr<WebCore::NativeImage> sinkIntoNativeImage() final;
+
+    RefPtr<ImageBuffer> sinkIntoBufferForDifferentThread() final;
+    RefPtr<ImageBuffer> cloneForDifferentThread() final;
 
     RefPtr<WebCore::Image> filteredImage(WebCore::Filter&) final;
 
@@ -85,7 +96,7 @@ private:
 
     void convertToLuminanceMask() final;
     void transformToColorSpace(const WebCore::DestinationColorSpace&) final;
-    
+
     bool prefersPreparationForDisplay() final { return true; }
     
     void flushContext() final;
@@ -95,15 +106,70 @@ private:
     std::unique_ptr<WebCore::ThreadSafeImageBufferFlusher> createFlusher() final;
     void prepareForBackingStoreChange();
 
+    void assertDispatcherIsCurrent() const;
+
     DisplayListRecorderFlushIdentifier m_sentFlushIdentifier;
-    Lock m_receivedFlushIdentifierLock;
-    Condition m_receivedFlushIdentifierChangedCondition;
-    DisplayListRecorderFlushIdentifier m_receivedFlushIdentifier WTF_GUARDED_BY_LOCK(m_receivedFlushIdentifierLock); // Only modified on the main thread but may get queried on a secondary thread.
+    Ref<RemoteImageBufferProxyFlushState> m_flushState;
     WeakPtr<RemoteRenderingBackendProxy> m_remoteRenderingBackendProxy;
     RemoteDisplayListRecorderProxy m_remoteDisplayList;
     bool m_needsFlush { false };
 };
 
+class RemoteImageBufferProxyFlushState : public ThreadSafeRefCounted<RemoteImageBufferProxyFlushState> {
+    WTF_MAKE_NONCOPYABLE(RemoteImageBufferProxyFlushState);
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    RemoteImageBufferProxyFlushState() = default;
+    void waitForDidFlushOnSecondaryThread(DisplayListRecorderFlushIdentifier);
+    void markCompletedFlush(DisplayListRecorderFlushIdentifier);
+    void cancel();
+    DisplayListRecorderFlushIdentifier identifierForCompletedFlush() const;
+
+private:
+    mutable Lock m_lock;
+    Condition m_condition;
+    DisplayListRecorderFlushIdentifier m_identifier WTF_GUARDED_BY_LOCK(m_lock);
+};
+
+class RemoteSerializedImageBufferProxy : public WebCore::SerializedImageBuffer {
+    friend class RemoteRenderingBackendProxy;
+public:
+    ~RemoteSerializedImageBufferProxy();
+
+    static RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<RemoteSerializedImageBufferProxy>, RemoteRenderingBackendProxy&);
+
+    WebCore::RenderingResourceIdentifier renderingResourceIdentifier() { return m_renderingResourceIdentifier; }
+
+    RemoteSerializedImageBufferProxy(const WebCore::ImageBufferBackend::Parameters&, const WebCore::ImageBufferBackend::Info&, const WebCore::RenderingResourceIdentifier&, RemoteRenderingBackendProxy&);
+
+    size_t memoryCost() final
+    {
+        return m_info.memoryCost;
+    }
+
+private:
+    RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer() final
+    {
+        ASSERT_NOT_REACHED();
+        return nullptr;
+    }
+
+    bool isRemoteSerializedImageBufferProxy() const final { return true; }
+
+    RemoteSerializedImageBufferReferenceTracker m_referenceTracker;
+
+    WebCore::ImageBufferBackend::Parameters m_parameters;
+    WebCore::ImageBufferBackend::Info m_info;
+
+    WebCore::RenderingResourceIdentifier m_renderingResourceIdentifier;
+    RefPtr<IPC::Connection> m_connection;
+};
+
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RemoteSerializedImageBufferProxy)
+    static bool isType(const WebCore::SerializedImageBuffer& buffer) { return buffer.isRemoteSerializedImageBufferProxy(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
 
 #endif // ENABLE(GPU_PROCESS)

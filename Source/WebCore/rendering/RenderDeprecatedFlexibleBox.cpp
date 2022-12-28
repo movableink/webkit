@@ -1051,8 +1051,26 @@ bool RenderDeprecatedFlexibleBox::applyModernLineClamp(FlexBoxIterator& iterator
         layoutState.setVisibleLineCountForLineClamp(currentLineClamp->second);
     });
 
-    // FIXME: Add support for percent values.
-    layoutState.setMaximumLineCountForLineClamp(style().lineClamp().value());
+    auto lineCountForLineClamp = [&]() -> size_t {
+        auto lineClamp = style().lineClamp();
+        if (!lineClamp.isPercentage())
+            return lineClamp.value();
+
+        size_t numberOfLines = 0;
+        for (auto* child = iterator.first(); child; child = iterator.next()) {
+            if (childDoesNotAffectWidthOrFlexing(child))
+                continue;
+
+            child->layoutIfNeeded();
+            if (is<RenderBlockFlow>(*child))
+                numberOfLines += lineCountFor(downcast<RenderBlockFlow>(*child));
+            // FIXME: This should be turned into a partial damange.
+            child->setChildNeedsLayout(MarkOnlyThis);
+        }
+        return std::max<size_t>(1, (numberOfLines + 1) * lineClamp.value() / 100.f);
+    };
+
+    layoutState.setMaximumLineCountForLineClamp(lineCountForLineClamp());
     layoutState.setVisibleLineCountForLineClamp({ });
     for (auto* child = iterator.first(); child; child = iterator.next()) {
         if (childDoesNotAffectWidthOrFlexing(child))
@@ -1170,6 +1188,10 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
         LayoutUnit blockRightEdge = destBlock.logicalRightOffsetForLine(LayoutUnit(lastVisibleLine->y()), DoNotIndentText);
         if (!lastVisibleLine->lineCanAccommodateEllipsis(leftToRight, blockRightEdge, lastVisibleLine->x() + lastVisibleLine->logicalWidth(), totalWidth))
             continue;
+
+        // text-overflow: ellipsis may have added an ellipsis already, give priority to potentially clickable line-clamp.
+        if (lastVisibleLine->hasEllipsisBox())
+            lastVisibleLine->clearTruncation();
 
         // Let the truncation code kick in.
         // FIXME: the text alignment should be recomputed after the width changes due to truncation.

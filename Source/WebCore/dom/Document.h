@@ -28,10 +28,10 @@
 #pragma once
 
 #include "CSSPropertyNames.h"
-#include "CSSRegisteredCustomProperty.h"
 #include "CanvasBase.h"
 #include "ClientOrigin.h"
 #include "ContainerNode.h"
+#include "DOMAudioSession.h"
 #include "DisabledAdaptations.h"
 #include "DocumentEventTiming.h"
 #include "FocusOptions.h"
@@ -283,6 +283,7 @@ using MediaProducerMutedStateFlags = OptionSet<MediaProducerMutedState>;
 using PlatformDisplayID = uint32_t;
 
 namespace Style {
+class CustomPropertyRegistry;
 class Resolver;
 class Scope;
 class Update;
@@ -591,6 +592,8 @@ public:
     ExtensionStyleSheets& extensionStyleSheets() { return *m_extensionStyleSheets; }
     const ExtensionStyleSheets& extensionStyleSheets() const { return *m_extensionStyleSheets; }
 
+    const Style::CustomPropertyRegistry& customPropertyRegistry() const;
+
     bool gotoAnchorNeededAfterStylesheetsLoad() { return m_gotoAnchorNeededAfterStylesheetsLoad; }
     void setGotoAnchorNeededAfterStylesheetsLoad(bool b) { m_gotoAnchorNeededAfterStylesheetsLoad = b; }
 
@@ -630,7 +633,7 @@ public:
     Ref<Text> createEditingTextNode(String&&);
 
     enum class ResolveStyleType { Normal, Rebuild };
-    void resolveStyle(ResolveStyleType = ResolveStyleType::Normal);
+    WEBCORE_EXPORT void resolveStyle(ResolveStyleType = ResolveStyleType::Normal);
     WEBCORE_EXPORT bool updateStyleIfNeeded();
     bool needsStyleRecalc() const;
     unsigned lastStyleUpdateSizeForTesting() const { return m_lastStyleUpdateSizeForTesting; }
@@ -657,7 +660,7 @@ public:
 
     void didBecomeCurrentDocumentInFrame();
     void destroyRenderTree();
-    void willBeRemovedFromFrame();
+    WEBCORE_EXPORT void willBeRemovedFromFrame();
 
     // Override ScriptExecutionContext methods to do additional work
     WEBCORE_EXPORT bool shouldBypassMainWorldContentSecurityPolicy() const final;
@@ -722,7 +725,9 @@ public:
 
     const URL& url() const final { return m_url; }
     void setURL(const URL&);
-    const URL& urlForBindings() const { return m_url.url().isEmpty() ? aboutBlankURL() : m_url.url(); }
+    WEBCORE_EXPORT const URL& urlForBindings() const;
+
+    URL adjustedURL() const;
 
     const URL& creationURL() const { return m_creationURL; }
 
@@ -944,8 +949,6 @@ public:
     bool hasMutationObservers() const { return !m_mutationObserverTypes.isEmpty(); }
     void addMutationObserverTypes(MutationObserverOptions types) { m_mutationObserverTypes.add(types); }
 
-    CSSStyleDeclaration* getOverrideStyle(Element*, const String&) { return nullptr; }
-
     // Handles an HTTP header equivalent set by a meta tag using <meta http-equiv="..." content="...">. This is called
     // when a meta tag is encountered during document parsing, and also when a script dynamically changes or adds a meta
     // tag. This enables scripts to use meta tags to perform refreshes and set expiry dates in addition to them being
@@ -1151,6 +1154,8 @@ public:
     void serviceRequestAnimationFrameCallbacks();
     void serviceRequestVideoFrameCallbacks();
 
+    void serviceCaretAnimation();
+
     void windowScreenDidChange(PlatformDisplayID);
 
     void finishedParsing();
@@ -1288,6 +1293,8 @@ public:
 
     void didAddWheelEventHandler(Node&);
     void didRemoveWheelEventHandler(Node&, EventHandlerRemoval = EventHandlerRemoval::One);
+
+    void didAddOrRemoveMouseEventHandler(Node&);
 
     MonotonicTime lastHandledUserGestureTimestamp() const { return m_lastHandledUserGestureTimestamp; }
     bool hasHadUserInteraction() const { return static_cast<bool>(m_lastHandledUserGestureTimestamp); }
@@ -1620,9 +1627,6 @@ public:
     void updateMainArticleElementAfterLayout();
     bool hasMainArticleElement() const { return !!m_mainArticleElement; }
 
-    const CSSRegisteredCustomPropertySet& getCSSRegisteredCustomPropertySet() const { return m_CSSRegisteredPropertySet; }
-    bool registerCSSProperty(CSSRegisteredCustomProperty&&);
-
     const FixedVector<CSSPropertyID>& exposedComputedCSSPropertyIDs();
 
 #if ENABLE(CSS_PAINTING_API)
@@ -1725,6 +1729,11 @@ public:
 
     // This should be used over the settings lazy loading image flag due to a quirk, which may occur causing website images to fail to load properly.
     bool lazyImageLoadingEnabled() const;
+
+#if ENABLE(DOM_AUDIO_SESSION)
+    void setAudioSessionType(DOMAudioSession::Type type) { m_audioSessionType = type; }
+    DOMAudioSession::Type audioSessionType() const { return m_audioSessionType; }
+#endif
 
 protected:
     enum ConstructionFlags { Synthesized = 1, NonRenderedPlaceholder = 1 << 1 };
@@ -1877,6 +1886,7 @@ private:
     URL m_cookieURL; // The URL to use for cookie access.
     URL m_firstPartyForCookies; // The policy URL for third-party cookie blocking.
     URL m_siteForCookies; // The policy URL for Same-Site cookies.
+    URL m_adjustedURL; // The URL to return for bindings after a cross-site navigation when the "network connection integrity" setting is enabled.
 
     // Document.documentURI:
     // Although URL-like, Document.documentURI can actually be set to any
@@ -2279,8 +2289,6 @@ private:
     String m_referrerOverride;
 #endif
     
-    CSSRegisteredCustomPropertySet m_CSSRegisteredPropertySet;
-
     std::optional<FixedVector<CSSPropertyID>> m_exposedComputedCSSPropertyIDs;
 
 #if ENABLE(CSS_PAINTING_API)
@@ -2330,6 +2338,10 @@ private:
     std::unique_ptr<WakeLockManager> m_wakeLockManager;
 
     std::unique_ptr<SleepDisabler> m_sleepDisabler;
+
+#if ENABLE(DOM_AUDIO_SESSION)
+    DOMAudioSession::Type m_audioSessionType { DOMAudioSession::Type::Auto };
+#endif
 };
 
 Element* eventTargetElementForDocument(Document*);

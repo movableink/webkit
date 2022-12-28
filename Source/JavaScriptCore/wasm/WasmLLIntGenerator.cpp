@@ -47,6 +47,7 @@ namespace JSC { namespace Wasm {
 class LLIntGenerator : public BytecodeGeneratorBase<GeneratorTraits> {
 public:
     using ExpressionType = VirtualRegister;
+    using CallType = CallLinkInfo::CallType;
 
     static constexpr bool tierSupportsSIMD = false;
 
@@ -256,10 +257,12 @@ public:
     }
 
     void didPopValueFromStack() { --m_stackSize; }
+    void notifyFunctionUsesSIMD() { ASSERT(Options::useWebAssemblySIMD()); m_usesSIMD = true; }
 
     PartialResult WARN_UNUSED_RETURN addArguments(const TypeDefinition&);
     PartialResult WARN_UNUSED_RETURN addLocal(Type, uint32_t);
     ExpressionType addConstant(Type, int64_t);
+    ExpressionType addConstantWithoutPush(Type, int64_t);
 
     // References
     PartialResult WARN_UNUSED_RETURN addRefIsNull(ExpressionType value, ExpressionType& result);
@@ -319,10 +322,14 @@ public:
     PartialResult WARN_UNUSED_RETURN addStructSet(ExpressionType structReference, const StructType&, uint32_t fieldIndex, ExpressionType value);
 
     // Basic operators
-    template<OpType>
-    PartialResult WARN_UNUSED_RETURN addOp(ExpressionType arg, ExpressionType& result);
-    template<OpType>
-    PartialResult WARN_UNUSED_RETURN addOp(ExpressionType left, ExpressionType right, ExpressionType& result);
+#define X(name, opcode, short, idx, ...) \
+    PartialResult WARN_UNUSED_RETURN add##name(ExpressionType arg, ExpressionType& result);
+    FOR_EACH_WASM_UNARY_OP(X)
+#undef X
+#define X(name, opcode, short, idx, ...) \
+    PartialResult WARN_UNUSED_RETURN add##name(ExpressionType left, ExpressionType right, ExpressionType& result);
+    FOR_EACH_WASM_BINARY_OP(X)
+#undef X
     PartialResult WARN_UNUSED_RETURN addSelect(ExpressionType condition, ExpressionType nonZero, ExpressionType zero, ExpressionType& result);
 
     // Control flow
@@ -351,10 +358,11 @@ public:
     PartialResult WARN_UNUSED_RETURN endTopLevel(BlockSignature, const Stack&);
 
     // Calls
-    PartialResult WARN_UNUSED_RETURN addCall(uint32_t calleeIndex, const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results);
-    PartialResult WARN_UNUSED_RETURN addCallIndirect(unsigned tableIndex, const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results);
+    PartialResult WARN_UNUSED_RETURN addCall(uint32_t calleeIndex, const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results, CallType = CallType::Call);
+    PartialResult WARN_UNUSED_RETURN addCallIndirect(unsigned tableIndex, const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results, CallType = CallType::Call);
     PartialResult WARN_UNUSED_RETURN addCallRef(const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results);
     PartialResult WARN_UNUSED_RETURN addUnreachable();
+    PartialResult WARN_UNUSED_RETURN addCrash();
 
     void didFinishParsingLocals();
 
@@ -520,6 +528,8 @@ private:
 
     void finalizePreviousBlockForCatch(ControlType&, Stack&);
 
+    void addCallBuiltin(LLIntBuiltin, const Vector<ExpressionType> args, ResultList& results);
+
     struct SwitchEntry {
         WasmInstructionStream::Offset offset;
         int* jumpTarget;
@@ -545,6 +555,7 @@ private:
     Checked<unsigned> m_maxStackSize { 0 };
     Checked<unsigned> m_tryDepth { 0 };
     bool m_usesExceptions { false };
+    bool m_usesSIMD { false };
 };
 
 Expected<std::unique_ptr<FunctionCodeBlockGenerator>, String> parseAndCompileBytecode(const uint8_t* functionStart, size_t functionLength, const TypeDefinition& signature, ModuleInformation& info, uint32_t functionIndex)
@@ -616,8 +627,8 @@ auto LLIntGenerator::callInformationForCaller(const FunctionSignature& signature
 {
     // This function sets up the stack layout for calls. The desired stack layout is:
 
-    // FPRn
-    // ...
+    // FPRn                        |
+    // ...                         v stack-growth towards lower memory
     // FPR1
     // FPR0
     // ---
@@ -634,7 +645,7 @@ auto LLIntGenerator::callInformationForCaller(const FunctionSignature& signature
     // call frame header
 
     // We need to allocate at least space for all GPRs and FPRs.
-    // Return values use the same allocation layout.
+    // Return value stack0 is at stackN - stackReturnValues
 
     const auto initialStackSize = m_stackSize;
 
@@ -642,59 +653,17 @@ auto LLIntGenerator::callInformationForCaller(const FunctionSignature& signature
     const uint32_t gprCount = callingConvention.jsrArgs.size();
     const uint32_t fprCount = callingConvention.fprArgs.size();
 
-    uint32_t stackCount = 0;
+    uint32_t stackResults = callingConvention.numberOfStackResults(signature);
+    uint32_t stackCountAligned = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), std::max(callingConvention.numberOfStackArguments(signature), stackResults));
     uint32_t gprIndex = 0;
     uint32_t fprIndex = 0;
     uint32_t stackIndex = 0;
 
-    auto allocateStackRegister = [&](Type type) {
-        switch (type.kind) {
-        case TypeKind::I32:
-        case TypeKind::I64:
-        case TypeKind::Externref:
-        case TypeKind::Funcref:
-        case TypeKind::RefNull:
-        case TypeKind::Ref:
-            if (gprIndex < gprCount)
-                ++gprIndex;
-            else if (stackIndex++ >= stackCount)
-                ++stackCount;
-            break;
-        case TypeKind::F32:
-        case TypeKind::F64:
-        case TypeKind::V128:
-            if (fprIndex < fprCount)
-                ++fprIndex;
-            else if (stackIndex++ >= stackCount)
-                ++stackCount;
-            break;
-        case TypeKind::Void:
-        case TypeKind::Func:
-        case TypeKind::Struct:
-        case TypeKind::Array:
-        case TypeKind::Arrayref:
-        case TypeKind::I31ref:
-        case TypeKind::Rec:
-        case TypeKind::Sub:
-            RELEASE_ASSERT_NOT_REACHED();
-        }
-    };
-
-
-    for (uint32_t i = 0; i < signature.argumentCount(); i++)
-        allocateStackRegister(signature.argumentType(i));
-
-    gprIndex = 0;
-    fprIndex = 0;
-    stackIndex = 0;
-    for (uint32_t i = 0; i < signature.returnCount(); i++)
-        allocateStackRegister(signature.returnType(i));
-
+    m_stackSize = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), m_stackSize.value());
     // FIXME: we are allocating the extra space for the argument/return count in order to avoid interference, but we could do better
     // NOTE: We increase arg count by 1 for the case of indirect calls
-    m_stackSize += std::max(signature.argumentCount() + 1, signature.returnCount()) + gprCount + fprCount + stackCount + CallFrame::headerSizeInRegisters + 1;
-    if (m_stackSize.value() % stackAlignmentRegisters())
-        ++m_stackSize;
+    m_stackSize += std::max(signature.argumentCount() + 1, signature.returnCount()) + gprCount + fprCount + stackCountAligned + CallFrame::headerSizeInRegisters + 1;
+    m_stackSize = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), m_stackSize.value());
     if (m_maxStackSize < m_stackSize)
         m_maxStackSize = m_stackSize;
 
@@ -705,11 +674,11 @@ auto LLIntGenerator::callInformationForCaller(const FunctionSignature& signature
     const unsigned stackOffset = m_stackSize;
     const unsigned base = stackOffset - CallFrame::headerSizeInRegisters - 1;
 
-    const uint32_t gprLimit = base - stackCount - gprCount;
+    const uint32_t gprLimit = base - stackCountAligned - gprCount;
     const uint32_t fprLimit = gprLimit - fprCount;
 
     stackIndex = base;
-    gprIndex = base - stackCount;
+    gprIndex = base - stackCountAligned;
     fprIndex = gprIndex - gprCount;
     for (uint32_t i = 0; i < signature.argumentCount(); i++) {
         switch (signature.argumentType(i).kind) {
@@ -744,8 +713,8 @@ auto LLIntGenerator::callInformationForCaller(const FunctionSignature& signature
         }
     }
 
-    stackIndex = base;
-    gprIndex = base - stackCount;
+    gprIndex = base - stackCountAligned;
+    stackIndex = gprIndex + stackResults;
     fprIndex = gprIndex - gprCount;
     for (uint32_t i = 0; i < signature.returnCount(); i++) {
         switch (signature.returnType(i).kind) {
@@ -791,7 +760,7 @@ auto LLIntGenerator::callInformationForCaller(const FunctionSignature& signature
         }
     };
 
-    return LLIntCallInformation { stackOffset, stackCount, WTFMove(arguments), WTFMove(commitResults) };
+    return LLIntCallInformation { stackOffset, stackCountAligned, WTFMove(arguments), WTFMove(commitResults) };
 }
 
 auto LLIntGenerator::callInformationForCallee(const FunctionSignature& signature) -> Vector<VirtualRegister, 2>
@@ -807,9 +776,11 @@ auto LLIntGenerator::callInformationForCallee(const FunctionSignature& signature
 
     uint32_t gprIndex = 0;
     uint32_t fprIndex = gprCount;
-    uint32_t stackIndex = 1;
     const uint32_t maxGPRIndex = gprCount;
     const uint32_t maxFPRIndex = maxGPRIndex + fprCount;
+    uint32_t stackResults = callingConvention.numberOfStackResults(signature);
+    uint32_t stackCountAligned = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), std::max(callingConvention.numberOfStackArguments(signature), stackResults));
+    uint32_t stackIndex = 1 + stackCountAligned - stackResults;
 
     for (uint32_t i = 0; i < signature.returnCount(); i++) {
         switch (signature.returnType(i).kind) {
@@ -930,27 +901,29 @@ void LLIntGenerator::didFinishParsingLocals()
     m_unitializedLocals.clear();
 }
 
+auto LLIntGenerator::addConstantWithoutPush(Type type, int64_t value) -> ExpressionType
+{
+    if (!value)
+        return zeroConstant();
+
+    if (value == JSValue::encode(jsNull()))
+        return jsNullConstant();
+
+    VirtualRegister source(FirstConstantRegisterIndex + m_codeBlock->m_constants.size());
+    auto result = m_constantMap.add(value, source);
+    if (!result.isNewEntry)
+        return result.iterator->value;
+    m_codeBlock->m_constants.append(value);
+    if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
+        m_codeBlock->m_constantTypes.append(type);
+    return source;
+}
+
 auto LLIntGenerator::addConstant(Type type, int64_t value) -> ExpressionType
 {
-    auto constant = [&] {
-        if (!value)
-            return zeroConstant();
-
-        if (value == JSValue::encode(jsNull()))
-            return jsNullConstant();
-
-        VirtualRegister source(FirstConstantRegisterIndex + m_codeBlock->m_constants.size());
-        auto result = m_constantMap.add(value, source);
-        if (!result.isNewEntry)
-            return result.iterator->value;
-        m_codeBlock->m_constants.append(value);
-        if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
-            m_codeBlock->m_constantTypes.append(type);
-        return source;
-    };
     // leave a hole if we need to materialize the constant
     push();
-    return constant();
+    return addConstantWithoutPush(type, value);
 }
 
 auto LLIntGenerator::getLocal(uint32_t index, ExpressionType& result) -> PartialResult
@@ -1381,6 +1354,9 @@ auto LLIntGenerator::addEndToUnreachable(ControlEntry& entry, Stack& expressionS
 auto LLIntGenerator::endTopLevel(BlockSignature signature, const Stack& expressionStack) -> PartialResult
 {
     RELEASE_ASSERT(expressionStack.size() == signature->as<FunctionSignature>()->returnCount());
+    if (m_usesSIMD)
+        m_info.addSIMDFunction(m_functionIndex);
+    m_info.doneSeeingFunction(m_functionIndex);
 
     if (!signature->as<FunctionSignature>()->returnCount()) {
         WasmRetVoid::emit(this);
@@ -1394,22 +1370,42 @@ auto LLIntGenerator::endTopLevel(BlockSignature signature, const Stack& expressi
     return { };
 }
 
-auto LLIntGenerator::addCall(uint32_t functionIndex, const TypeDefinition& signature, Vector<ExpressionType>& args, ResultList& results) -> PartialResult
+auto LLIntGenerator::addCall(uint32_t functionIndex, const TypeDefinition& signature, Vector<ExpressionType>& args, ResultList& results, CallType callType) -> PartialResult
 {
+    bool isTailCall = callType == CallType::TailCall;
+    ASSERT(callType == CallType::Call || isTailCall);
     ASSERT(signature.as<FunctionSignature>()->argumentCount() == args.size());
-    LLIntCallInformation info = callInformationForCaller(*signature.as<FunctionSignature>());
-    unifyValuesWithBlock(info.arguments, args);
-    if (Context::useFastTLS())
-        WasmCall::emit(this, functionIndex, info.stackOffset, info.numberOfStackArguments);
+    LLIntCallInformation wasmCalleeInfo = callInformationForCaller(*signature.as<FunctionSignature>());
+
+    unifyValuesWithBlock(wasmCalleeInfo.arguments, args);
+
+    if (isTailCall) {
+        m_codeBlock->setTailCall(functionIndex, m_info.isImportedFunctionFromFunctionIndexSpace(functionIndex));
+
+        const auto& callingConvention = wasmCallingConvention();
+        const TypeIndex callerTypeIndex = m_info.internalFunctionTypeIndices[m_functionIndex];
+        const TypeDefinition& callerTypeDefinition = TypeInformation::get(callerTypeIndex);
+        uint32_t callerStackArgs = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), callingConvention.numberOfStackValues(*callerTypeDefinition.as<FunctionSignature>()));
+
+        if (Context::useFastTLS())
+            WasmTailCall::emit(this, functionIndex, wasmCalleeInfo.stackOffset, wasmCalleeInfo.numberOfStackArguments, callerStackArgs);
+        else
+            WasmTailCallNoTls::emit(this, functionIndex, wasmCalleeInfo.stackOffset, wasmCalleeInfo.numberOfStackArguments, callerStackArgs);
+
+    } else if (Context::useFastTLS())
+        WasmCall::emit(this, functionIndex, wasmCalleeInfo.stackOffset, wasmCalleeInfo.numberOfStackArguments);
     else
-        WasmCallNoTls::emit(this, functionIndex, info.stackOffset, info.numberOfStackArguments);
-    info.commitResults(results);
+        WasmCallNoTls::emit(this, functionIndex, wasmCalleeInfo.stackOffset, wasmCalleeInfo.numberOfStackArguments);
+
+    wasmCalleeInfo.commitResults(results);
 
     return { };
 }
 
-auto LLIntGenerator::addCallIndirect(unsigned tableIndex, const TypeDefinition& signature, Vector<ExpressionType>& args, ResultList& results) -> PartialResult
+auto LLIntGenerator::addCallIndirect(unsigned tableIndex, const TypeDefinition& signature, Vector<ExpressionType>& args, ResultList& results, CallType callType) -> PartialResult
 {
+    bool isTailCall = callType == CallType::TailCall;
+    ASSERT(callType == CallType::Call || isTailCall);
     ExpressionType calleeIndex = args.takeLast();
 
     const auto& functionSignature = *signature.expand().as<FunctionSignature>();
@@ -1417,13 +1413,29 @@ auto LLIntGenerator::addCallIndirect(unsigned tableIndex, const TypeDefinition& 
     ASSERT(m_info.tableCount() > tableIndex);
     ASSERT(m_info.tables[tableIndex].type() == TableElementType::Funcref);
 
-    LLIntCallInformation info = callInformationForCaller(functionSignature);
-    unifyValuesWithBlock(info.arguments, args);
-    if (Context::useFastTLS())
-        WasmCallIndirect::emit(this, calleeIndex, m_codeBlock->addSignature(signature), info.stackOffset, info.numberOfStackArguments, tableIndex);
+    LLIntCallInformation calleeInfo = callInformationForCaller(functionSignature);
+
+    unifyValuesWithBlock(calleeInfo.arguments, args);
+
+    if (isTailCall) {
+        m_codeBlock->setTailCallClobbersInstance(true);
+
+        const auto& callingConvention = wasmCallingConvention();
+        const TypeIndex callerTypeIndex = m_info.internalFunctionTypeIndices[m_functionIndex];
+        const TypeDefinition& callerTypeDefinition = TypeInformation::get(callerTypeIndex);
+        uint32_t callerStackArgs = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), callingConvention.numberOfStackValues(*callerTypeDefinition.as<FunctionSignature>()));
+
+        if (Context::useFastTLS())
+            WasmTailCallIndirect::emit(this, calleeIndex, m_codeBlock->addSignature(signature), calleeInfo.stackOffset, calleeInfo.numberOfStackArguments, callerStackArgs, tableIndex);
+        else
+            WasmTailCallIndirectNoTls::emit(this, calleeIndex, m_codeBlock->addSignature(signature), calleeInfo.stackOffset, calleeInfo.numberOfStackArguments, callerStackArgs, tableIndex);
+
+    } else if (Context::useFastTLS())
+        WasmCallIndirect::emit(this, calleeIndex, m_codeBlock->addSignature(signature), calleeInfo.stackOffset, calleeInfo.numberOfStackArguments, tableIndex);
     else
-        WasmCallIndirectNoTls::emit(this, calleeIndex, m_codeBlock->addSignature(signature), info.stackOffset, info.numberOfStackArguments, tableIndex);
-    info.commitResults(results);
+        WasmCallIndirectNoTls::emit(this, calleeIndex, m_codeBlock->addSignature(signature), calleeInfo.stackOffset, calleeInfo.numberOfStackArguments, tableIndex);
+
+    calleeInfo.commitResults(results);
 
     return { };
 }
@@ -1484,16 +1496,16 @@ auto LLIntGenerator::addTableInit(unsigned elementIndex, unsigned tableIndex, Ex
 
 auto LLIntGenerator::addElemDrop(unsigned elementIndex) -> PartialResult
 {
-    WasmElemDrop::emit(this, elementIndex);
-
+    ResultList results;
+    addCallBuiltin(LLIntBuiltin::ElemDrop, { addConstantWithoutPush(Types::I32, elementIndex) }, results);
     return { };
 }
 
 auto LLIntGenerator::addTableSize(unsigned tableIndex, ExpressionType& result) -> PartialResult
 {
-    result = push();
-    WasmTableSize::emit(this, result, tableIndex);
-
+    ResultList results;
+    addCallBuiltin(LLIntBuiltin::TableSize, { addConstantWithoutPush(Types::I32, tableIndex) }, results);
+    result = results.at(0);
     return { };
 }
 
@@ -1514,7 +1526,8 @@ auto LLIntGenerator::addTableFill(unsigned tableIndex, ExpressionType offset, Ex
 
 auto LLIntGenerator::addTableCopy(unsigned dstTableIndex, unsigned srcTableIndex, ExpressionType dstOffset, ExpressionType srcOffset, ExpressionType length) -> PartialResult
 {
-    WasmTableCopy::emit(this, dstOffset, srcOffset, length, dstTableIndex, srcTableIndex);
+    ResultList results;
+    addCallBuiltin(LLIntBuiltin::TableCopy, { dstOffset, srcOffset, length, addConstantWithoutPush(Types::I32, dstTableIndex), addConstantWithoutPush(Types::I32, srcTableIndex) }, results);
     return { };
 }
 
@@ -1525,25 +1538,43 @@ auto LLIntGenerator::addUnreachable() -> PartialResult
     return { };
 }
 
+auto LLIntGenerator::addCrash() -> PartialResult
+{
+    WasmUnreachable::emit(this);
+
+    return { };
+}
+
+void LLIntGenerator::addCallBuiltin(LLIntBuiltin builtin, const Vector<ExpressionType> args, ResultList& results)
+{
+    const TypeDefinition& signature = TypeInformation::signatureForLLIntBuiltin(builtin);
+    ASSERT(signature.as<FunctionSignature>()->argumentCount() == args.size());
+    LLIntCallInformation info = callInformationForCaller(*signature.as<FunctionSignature>());
+    unifyValuesWithBlock(info.arguments, args);
+    WasmCallBuiltin::emit(this, static_cast<uint32_t>(builtin), info.stackOffset, info.numberOfStackArguments);
+    info.commitResults(results);
+    ASSERT(signature.as<FunctionSignature>()->returnCount() == results.size());
+}
+
 auto LLIntGenerator::addCurrentMemory(ExpressionType& result) -> PartialResult
 {
-    result = push();
-    WasmCurrentMemory::emit(this, result);
-
+    ResultList results;
+    addCallBuiltin(LLIntBuiltin::CurrentMemory, { }, results);
+    result = results.at(0);
     return { };
 }
 
 auto LLIntGenerator::addMemoryInit(unsigned dataSegmentIndex, ExpressionType dstAddress, ExpressionType srcAddress, ExpressionType length) -> PartialResult
 {
-    WasmMemoryInit::emit(this, dstAddress, srcAddress, length, dataSegmentIndex);
-
+    ResultList results;
+    addCallBuiltin(LLIntBuiltin::MemoryInit, { dstAddress, srcAddress, length, addConstantWithoutPush(Types::I32, dataSegmentIndex) }, results);
     return { };
 }
 
 auto LLIntGenerator::addDataDrop(unsigned dataSegmentIndex) -> PartialResult
 {
-    WasmDataDrop::emit(this, dataSegmentIndex);
-
+    ResultList results;
+    addCallBuiltin(LLIntBuiltin::DataDrop, { addConstantWithoutPush(Types::I32, dataSegmentIndex) }, results);
     return { };
 }
 
@@ -1557,13 +1588,15 @@ auto LLIntGenerator::addGrowMemory(ExpressionType delta, ExpressionType& result)
 
 auto LLIntGenerator::addMemoryFill(ExpressionType dstAddress, ExpressionType targetValue, ExpressionType count) -> PartialResult
 {
-    WasmMemoryFill::emit(this, dstAddress, targetValue, count);
+    ResultList results;
+    addCallBuiltin(LLIntBuiltin::MemoryFill, { dstAddress, targetValue, count }, results);
     return { };
 }
 
 auto LLIntGenerator::addMemoryCopy(ExpressionType dstAddress, ExpressionType srcAddress, ExpressionType count) -> PartialResult
 {
-    WasmMemoryCopy::emit(this, dstAddress, srcAddress, count);
+    ResultList results;
+    addCallBuiltin(LLIntBuiltin::MemoryCopy, { dstAddress, srcAddress, count }, results);
     return { };
 }
 
@@ -1911,7 +1944,7 @@ auto LLIntGenerator::addI31New(ExpressionType value, ExpressionType& result) -> 
 auto LLIntGenerator::addI31GetS(ExpressionType ref, ExpressionType& result) -> PartialResult
 {
     result = push();
-    WasmI31GetS::emit(this, result, ref);
+    WasmI31Get::emit(this, result, ref, true /* isSigned */);
 
     return { };
 }
@@ -1919,7 +1952,7 @@ auto LLIntGenerator::addI31GetS(ExpressionType ref, ExpressionType& result) -> P
 auto LLIntGenerator::addI31GetU(ExpressionType ref, ExpressionType& result) -> PartialResult
 {
     result = push();
-    WasmI31GetU::emit(this, result, ref);
+    WasmI31Get::emit(this, result, ref, false /* isSigned */);
 
     return { };
 }
@@ -1927,7 +1960,7 @@ auto LLIntGenerator::addI31GetU(ExpressionType ref, ExpressionType& result) -> P
 auto LLIntGenerator::addArrayNew(uint32_t index, ExpressionType size, ExpressionType value, ExpressionType& result) -> PartialResult
 {
     result = push();
-    WasmArrayNew::emit(this, result, size, value, index);
+    WasmArrayNew::emit(this, result, size, value, index, false /* useDefault */);
 
     return { };
 }
@@ -1935,7 +1968,7 @@ auto LLIntGenerator::addArrayNew(uint32_t index, ExpressionType size, Expression
 auto LLIntGenerator::addArrayNewDefault(uint32_t index, ExpressionType size, ExpressionType& result) -> PartialResult
 {
     result = push();
-    WasmArrayNewDefault::emit(this, result, size, index);
+    WasmArrayNew::emit(this, result, size, ExpressionType(), index, true /* useDefault */);
 
     return { };
 }

@@ -227,6 +227,7 @@ public:
 
     void setCrossOrigin();
     bool isCrossOrigin() const;
+    bool isCORSCrossOrigin() const;
     bool isCORSSameOrigin() const;
     ResourceResponse::Tainting responseTainting() const { return m_responseTainting; }
 
@@ -234,7 +235,7 @@ public:
 
     const SecurityOrigin* origin() const { return m_origin.get(); }
     SecurityOrigin* origin() { return m_origin.get(); }
-    AtomString initiatorName() const { return m_initiatorName; }
+    AtomString initiatorType() const { return m_initiatorType; }
 
     bool canDelete() const { return !hasClients() && !m_loader && !m_preloadCount && !m_handleCount && !m_resourceToRevalidate && !m_proxyResource; }
     bool hasOneHandle() const { return m_handleCount == 1; }
@@ -370,7 +371,7 @@ private:
 
     ResourceError m_error;
     RefPtr<SecurityOrigin> m_origin;
-    AtomString m_initiatorName;
+    AtomString m_initiatorType;
 
     unsigned m_encodedSize { 0 };
     unsigned m_decodedSize { 0 };

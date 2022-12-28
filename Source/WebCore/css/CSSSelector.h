@@ -155,12 +155,12 @@ struct PossiblyQuotedIdentifier {
             PseudoClassSingleButton,
             PseudoClassNoButton,
 #if ENABLE(FULLSCREEN_API)
-            PseudoClassFullScreen,
+            PseudoClassFullscreen,
+            PseudoClassWebkitFullScreen,
             PseudoClassFullScreenDocument,
             PseudoClassFullScreenAncestor,
             PseudoClassAnimatingFullScreenTransition,
             PseudoClassFullScreenControlsHidden,
-            PseudoClassFullScreenParent,
 #endif
 #if ENABLE(PICTURE_IN_PICTURE_API)
             PseudoClassPictureInPicture,
@@ -185,6 +185,9 @@ struct PossiblyQuotedIdentifier {
             PseudoClassHasAttachment,
 #endif
             PseudoClassModal,
+            PseudoClassUserInvalid,
+            PseudoClassUserValid,
+            PseudoClassParent,
         };
 
         enum PseudoElementType {

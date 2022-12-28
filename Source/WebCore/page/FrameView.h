@@ -330,8 +330,8 @@ public:
     WEBCORE_EXPORT void resumeVisibleImageAnimationsIncludingSubframes();
     void updatePlayStateForAllAnimationsIncludingSubframes();
 
-    String mediaType() const;
-    WEBCORE_EXPORT void setMediaType(const String&);
+    AtomString mediaType() const;
+    WEBCORE_EXPORT void setMediaType(const AtomString&);
     void adjustMediaTypeForPrinting(bool printing);
 
     void setCannotBlitToWindow();
@@ -594,6 +594,10 @@ public:
     WEBCORE_EXPORT bool removeScrollableArea(ScrollableArea*);
     bool containsScrollableArea(ScrollableArea*) const;
     const ScrollableAreaSet* scrollableAreas() const { return m_scrollableAreas.get(); }
+    
+    void addScrollableAreaForAnimatedScroll(ScrollableArea*);
+    void removeScrollableAreaForAnimatedScroll(ScrollableArea*);
+    const ScrollableAreaSet* scrollableAreasForAnimatedScroll() const { return m_scrollableAreasForAnimatedScroll.get(); }
 
     WEBCORE_EXPORT void addChild(Widget&) final;
     WEBCORE_EXPORT void removeChild(Widget&) final;
@@ -939,8 +943,8 @@ private:
     Color m_baseBackgroundColor { Color::white };
     IntSize m_lastViewportSize;
 
-    String m_mediaType { "screen"_s };
-    String m_mediaTypeWhenNotPrinting;
+    AtomString m_mediaType { screenAtom() };
+    AtomString m_mediaTypeWhenNotPrinting;
 
     Vector<FloatRect> m_trackedRepaintRects;
     
@@ -981,6 +985,7 @@ private:
     IntSize m_autoSizeContentSize;
 
     std::unique_ptr<ScrollableAreaSet> m_scrollableAreas;
+    std::unique_ptr<ScrollableAreaSet> m_scrollableAreasForAnimatedScroll;
     std::unique_ptr<WeakHashSet<RenderLayerModelObject>> m_viewportConstrainedObjects;
 
     OptionSet<LayoutMilestone> m_milestonesPendingPaint;

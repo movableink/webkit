@@ -97,17 +97,22 @@ void AudioSession::addAudioSessionChangedObserver(const ChangedObserver& observe
 
 bool AudioSession::tryToSetActive(bool active)
 {
+    bool previousIsActive = isActive();
     if (!tryToSetActiveInternal(active))
         return false;
 
+    bool hasActiveChanged = previousIsActive != isActive();
     m_active = active;
     if (m_isInterrupted && m_active) {
-        callOnMainThread([] {
+        callOnMainThread([hasActiveChanged] {
             auto& session = sharedSession();
             if (session.m_isInterrupted && session.m_active)
                 session.endInterruption(MayResume::Yes);
+            if (hasActiveChanged)
+                session.activeStateChanged();
         });
-    }
+    } else if (hasActiveChanged)
+        activeStateChanged();
 
     return true;
 }
@@ -145,6 +150,12 @@ void AudioSession::endInterruption(MayResume mayResume)
         observer.endAudioSessionInterruption(mayResume);
 }
 
+void AudioSession::activeStateChanged()
+{
+    for (auto& observer : m_interruptionObservers)
+        observer.activeStateChanged();
+}
+
 void AudioSession::setCategory(CategoryType, RouteSharingPolicy)
 {
     notImplemented();
@@ -156,7 +167,8 @@ void AudioSession::setCategoryOverride(CategoryType category)
         return;
 
     m_categoryOverride = category;
-    setCategory(category, RouteSharingPolicy::Default);
+    if (category != CategoryType::None)
+        setCategory(category, RouteSharingPolicy::Default);
 }
 
 AudioSession::CategoryType AudioSession::categoryOverride() const

@@ -1292,7 +1292,7 @@ GstClockTime MediaPlayerPrivateGStreamer::gstreamerPositionFromSinks() const
         GST_TRACE_OBJECT(pipeline(), "Audio position %" GST_TIME_FORMAT, GST_TIME_ARGS(audioPosition));
         query = adoptGRef(gst_query_new_position(GST_FORMAT_TIME));
     }
-    if (m_videoSink && gst_element_query(m_videoSink.get(), query.get())) {
+    if (m_player->isVideoPlayer() && gst_element_query(m_videoSink.get(), query.get())) {
         gint64 videoPosition = GST_CLOCK_TIME_NONE;
         gst_query_parse_position(query.get(), 0, &videoPosition);
         GST_TRACE_OBJECT(pipeline(), "Video position %" GST_TIME_FORMAT, GST_TIME_ARGS(videoPosition));
@@ -2337,9 +2337,12 @@ void MediaPlayerPrivateGStreamer::updateStates()
                 GRefPtr<GstQuery> query = adoptGRef(gst_query_new_buffering(GST_FORMAT_PERCENT));
 
                 m_isBuffering = m_bufferingPercentage < 100;
-                if (gst_element_query(m_pipeline.get(), query.get())) {
+                if ((m_audioSink && gst_element_query(m_audioSink.get(), query.get()))
+                    || (m_videoSink && gst_element_query(m_videoSink.get(), query.get()))
+                    || gst_element_query(m_pipeline.get(), query.get())) {
                     gboolean isBuffering = m_isBuffering;
                     gst_query_parse_buffering_percent(query.get(), &isBuffering, nullptr);
+                    GST_TRACE_OBJECT(pipeline(), "[Buffering] m_isBuffering forcefully updated from %d to %d", m_isBuffering, isBuffering);
                     m_isBuffering = isBuffering;
                 }
 
@@ -3388,18 +3391,21 @@ static ImageOrientation getVideoOrientation(const GstTagList* tagList)
 void MediaPlayerPrivateGStreamer::updateVideoOrientation(const GstTagList* tagList)
 {
     GST_DEBUG_OBJECT(pipeline(), "Updating orientation from %" GST_PTR_FORMAT, tagList);
-    setVideoSourceOrientation(getVideoOrientation(tagList));
+    auto sizeActuallyChanged = setVideoSourceOrientation(getVideoOrientation(tagList));
+
+    if (!sizeActuallyChanged)
+        return;
 
     // If the video is tagged as rotated 90 or 270 degrees, swap width and height.
     if (m_videoSourceOrientation.usesWidthAsHeight())
         m_videoSize = m_videoSize.transposedSize();
 
-    GST_DEBUG("Enqueuing and waiting for main-thread task to call sizeChanged()...");
+    GST_DEBUG_OBJECT(pipeline(), "Enqueuing and waiting for main-thread task to call sizeChanged()...");
     bool sizeChangedProcessed = m_sinkTaskQueue.enqueueTaskAndWait<AbortableTaskQueue::Void>([this] {
         m_player->sizeChanged();
         return AbortableTaskQueue::Void();
     }).has_value();
-    GST_DEBUG("Finished waiting for main-thread task to call sizeChanged()... %s", sizeChangedProcessed ? "sizeChanged() was called." : "task queue aborted by flush");
+    GST_DEBUG_OBJECT(pipeline(), "Finished waiting for main-thread task to call sizeChanged()... %s", sizeChangedProcessed ? "sizeChanged() was called." : "task queue aborted by flush");
 }
 
 void MediaPlayerPrivateGStreamer::updateVideoSizeAndOrientationFromCaps(const GstCaps* caps)
@@ -3696,15 +3702,28 @@ RefPtr<NativeImage> MediaPlayerPrivateGStreamer::nativeImageForCurrentTime()
 }
 #endif // USE(GSTREAMER_GL)
 
-void MediaPlayerPrivateGStreamer::setVideoSourceOrientation(ImageOrientation orientation)
+RefPtr<VideoFrame> MediaPlayerPrivateGStreamer::videoFrameForCurrentTime()
+{
+    Locker sampleLocker { m_sampleMutex };
+
+    if (!GST_IS_SAMPLE(m_sample.get()))
+        return nullptr;
+
+    GRefPtr<GstSample> sample = m_sample;
+    auto size = getVideoResolutionFromCaps(gst_sample_get_caps(sample.get())).value_or(FloatSize { 0, 0 });
+    return VideoFrameGStreamer::create(WTFMove(sample), size);
+}
+
+bool MediaPlayerPrivateGStreamer::setVideoSourceOrientation(ImageOrientation orientation)
 {
     if (m_videoSourceOrientation == orientation)
-        return;
+        return false;
 
     m_videoSourceOrientation = orientation;
 #if USE(TEXTURE_MAPPER_GL)
     updateTextureMapperFlags();
 #endif
+    return true;
 }
 
 #if USE(TEXTURE_MAPPER_GL)

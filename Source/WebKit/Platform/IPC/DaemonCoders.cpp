@@ -116,7 +116,7 @@ std::optional<WTF::WallTime> Coder<WTF::WallTime>::decode(Decoder& decoder)
 void Coder<WebCore::CertificateInfo>::encode(Encoder& encoder, const WebCore::CertificateInfo& instance)
 {
 #if PLATFORM(COCOA)
-    auto data = adoptCF(SecTrustSerialize(instance.trust(), nullptr));
+    auto data = adoptCF(SecTrustSerialize(instance.trust().get(), nullptr));
     if (!data) {
         encoder << false;
         return;
@@ -355,30 +355,17 @@ std::optional<WebCore::PCM::AttributionTriggerData> Coder<WebCore::PCM::Attribut
 
 void Coder<WebPushD::WebPushDaemonConnectionConfiguration, void>::encode(Encoder& encoder, const WebPushD::WebPushDaemonConnectionConfiguration& instance)
 {
-    encoder << instance.useMockBundlesForTesting << instance.hostAppAuditTokenData;
+    instance.encode(encoder);
 }
 
 std::optional<WebPushD::WebPushDaemonConnectionConfiguration> Coder<WebPushD::WebPushDaemonConnectionConfiguration, void>::decode(Decoder& decoder)
 {
-    std::optional<bool> useMockBundlesForTesting;
-    decoder >> useMockBundlesForTesting;
-    if (!useMockBundlesForTesting)
-        return std::nullopt;
-
-    std::optional<std::optional<Vector<uint8_t>>> hostAppAuditTokenData;
-    decoder >> hostAppAuditTokenData;
-    if (!hostAppAuditTokenData)
-        return std::nullopt;
-
-    return { {
-        WTFMove(*useMockBundlesForTesting),
-        WTFMove(*hostAppAuditTokenData)
-    } };
+    return WebPushD::WebPushDaemonConnectionConfiguration::decode(decoder);
 }
 
 void Coder<WebPushMessage, void>::encode(Encoder& encoder, const WebPushMessage& instance)
 {
-    encoder << instance.pushData << instance.registrationURL;
+    encoder << instance.pushData << instance.registrationURL << instance.pushPartitionString;
 }
 
 std::optional<WebPushMessage> Coder<WebPushMessage, void>::decode(Decoder& decoder)
@@ -393,8 +380,14 @@ std::optional<WebPushMessage> Coder<WebPushMessage, void>::decode(Decoder& decod
     if (!registrationURL)
         return std::nullopt;
 
+    std::optional<String> pushPartitionString;
+    decoder >> pushPartitionString;
+    if (!pushPartitionString)
+        return std::nullopt;
+
     return { {
         WTFMove(*pushData),
+        WTFMove(*pushPartitionString),
         WTFMove(*registrationURL)
     } };
 }

@@ -28,7 +28,9 @@
 #endif
 
 #import "config.h"
+#import "CocoaHelpers.h"
 #import "WebExtensionAPINamespace.h"
+#import <WebKit/_WKWebExtensionPermission.h>
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
@@ -39,6 +41,9 @@ bool WebExtensionAPINamespace::isPropertyAllowed(String name, WebPage*)
     // This property is only allowed in testing contexts.
     if (name == "test"_s)
         return extensionContext().inTestingMode();
+
+    if (name == "webNavigation"_s)
+        return [objectForKey<NSArray>(extensionContext().manifest(), @"permissions", true, NSString.class) containsObject:_WKWebExtensionPermissionWebNavigation];
 
     ASSERT_NOT_REACHED();
     return false;
@@ -63,6 +68,13 @@ WebExtensionAPITest& WebExtensionAPINamespace::test()
     if (!m_test)
         m_test = WebExtensionAPITest::create(forMainWorld(), runtime(), extensionContext());
     return *m_test;
+}
+
+WebExtensionAPIWebNavigation& WebExtensionAPINamespace::webNavigation()
+{
+    if (!m_webNavigation)
+        m_webNavigation = WebExtensionAPIWebNavigation::create(forMainWorld(), runtime(), extensionContext());
+    return *m_webNavigation;
 }
 
 } // namespace WebKit

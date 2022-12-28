@@ -197,11 +197,11 @@ public:
     bool isValid() const;
 
 #if PLATFORM(WIN)
-    IntRect(const RECT&);
-    operator RECT() const;
+    WEBCORE_EXPORT IntRect(const RECT&);
+    WEBCORE_EXPORT operator RECT() const;
 #elif PLATFORM(QT)
-    IntRect(const QRect&);
-    operator QRect() const;
+    WEBCORE_EXPORT IntRect(const QRect&);
+    WEBCORE_EXPORT operator QRect() const;
 #endif
 
 #if USE(CAIRO)

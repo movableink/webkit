@@ -101,14 +101,11 @@ FloatRect FilterEffect::calculateImageRect(const Filter& filter, Span<const Floa
 
 std::unique_ptr<FilterEffectApplier> FilterEffect::createApplier(const Filter& filter) const
 {
-    if (filter.filterRenderingMode() == FilterRenderingMode::Accelerated)
+    if (filter.filterRenderingModes().contains(FilterRenderingMode::Accelerated))
         return createAcceleratedApplier();
 
-    if (filter.filterRenderingMode() == FilterRenderingMode::Software)
-        return createSoftwareApplier();
-
-    ASSERT_NOT_REACHED();
-    return nullptr;
+    ASSERT(filter.filterRenderingModes() == FilterRenderingMode::Software);
+    return createSoftwareApplier();
 }
 
 void FilterEffect::transformInputsColorSpace(const FilterImageVector& inputs) const
@@ -173,6 +170,22 @@ RefPtr<FilterImage> FilterEffect::apply(const Filter& filter, const FilterImageV
 
     results.setEffectResult(*this, inputs, { *result });
     return result;
+}
+
+FilterStyleVector FilterEffect::createFilterStyles(const Filter& filter, const FilterStyle& input) const
+{
+    return { createFilterStyle(filter, input) };
+}
+
+FilterStyle FilterEffect::createFilterStyle(const Filter& filter, const FilterStyle& input, const std::optional<FilterEffectGeometry>& geometry) const
+{
+    ASSERT(supportedFilterRenderingModes().contains(FilterRenderingMode::GraphicsContext));
+
+    auto primitiveSubregion = calculatePrimitiveSubregion(filter, { &input.primitiveSubregion, 1 }, geometry);
+    auto imageRect = calculateImageRect(filter, { &input.imageRect, 1 }, primitiveSubregion);
+
+    auto style = createGraphicsStyle(filter);
+    return FilterStyle { style, primitiveSubregion, imageRect };
 }
 
 TextStream& FilterEffect::externalRepresentation(TextStream& ts, FilterRepresentation representation) const

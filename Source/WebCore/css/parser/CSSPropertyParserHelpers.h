@@ -108,7 +108,7 @@ RefPtr<CSSPrimitiveValue> consumeNumber(CSSParserTokenRange&, ValueRange);
 RefPtr<CSSPrimitiveValue> consumeNumberOrPercent(CSSParserTokenRange&, ValueRange);
 
 RefPtr<CSSPrimitiveValue> consumeLength(CSSParserTokenRange&, CSSParserMode, ValueRange, UnitlessQuirk = UnitlessQuirk::Forbid);
-RefPtr<CSSPrimitiveValue> consumeLengthOrPercent(CSSParserTokenRange&, CSSParserMode, ValueRange, UnitlessQuirk = UnitlessQuirk::Forbid, NegativePercentagePolicy = NegativePercentagePolicy::Forbid);
+RefPtr<CSSPrimitiveValue> consumeLengthOrPercent(CSSParserTokenRange&, CSSParserMode, ValueRange, UnitlessQuirk = UnitlessQuirk::Forbid, UnitlessZeroQuirk = UnitlessZeroQuirk::Allow, NegativePercentagePolicy = NegativePercentagePolicy::Forbid);
 
 RefPtr<CSSPrimitiveValue> consumePercent(CSSParserTokenRange&, ValueRange);
 RefPtr<CSSPrimitiveValue> consumePercentWorkerSafe(CSSParserTokenRange&, ValueRange, CSSValuePool&);
@@ -234,26 +234,19 @@ RefPtr<CSSValue> consumeFontVariantNumeric(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeFontWeight(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeFontFamily(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeFontFamilyDescriptor(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeCounterIncrement(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeCounterReset(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeSize(CSSParserTokenRange&, CSSParserMode);
 RefPtr<CSSValue> consumeTextIndent(CSSParserTokenRange&, CSSParserMode);
 RefPtr<CSSValue> consumeMarginSide(CSSParserTokenRange&, CSSPropertyID currentShorthand, CSSParserMode);
+RefPtr<CSSValue> consumeMarginTrim(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeSide(CSSParserTokenRange&, CSSPropertyID currentShorthand, CSSParserMode);
 RefPtr<CSSValue> consumeClip(CSSParserTokenRange&, CSSParserMode);
 RefPtr<CSSValue> consumeTouchAction(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeAnimationIterationCount(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeAnimationName(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeTransitionProperty(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeSteps(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeCubicBezier(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeSpringFunction(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeAnimationTimingFunction(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeAnimationValue(CSSPropertyID, CSSParserTokenRange&, const CSSParserContext&);
-bool isValidAnimationPropertyList(CSSPropertyID, const CSSValueList&);
-RefPtr<CSSValue> consumeAnimationPropertyList(CSSPropertyID, CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeShadow(CSSParserTokenRange&, const CSSParserContext&, bool isBoxShadowProperty);
+RefPtr<CSSValue> consumeKeyframesName(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeSingleTransitionPropertyOrNone(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeSingleTransitionProperty(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeTimingFunction(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeTextShadow(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeBoxShadow(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeWebkitBoxShadow(CSSParserTokenRange&, const CSSParserContext&);
@@ -261,13 +254,14 @@ RefPtr<CSSValue> consumeTextDecorationLine(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeTextEmphasisStyle(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeBorderWidth(CSSParserTokenRange&, CSSPropertyID currentShorthand, const CSSParserContext&);
 RefPtr<CSSValue> consumeBorderColor(CSSParserTokenRange&, CSSPropertyID currentShorthand, const CSSParserContext&);
-RefPtr<CSSValue> consumeTransformValue(CSSParserTokenRange&, CSSParserMode);
-RefPtr<CSSValue> consumeTransform(CSSParserTokenRange&, CSSParserMode);
+RefPtr<CSSValue> consumeTransform(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeTransformFunction(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeTranslate(CSSParserTokenRange&, CSSParserMode);
 RefPtr<CSSValue> consumeScale(CSSParserTokenRange&, CSSParserMode);
 RefPtr<CSSValue> consumeRotate(CSSParserTokenRange&, CSSParserMode);
-RefPtr<CSSValue> consumePositionX(CSSParserTokenRange&, CSSParserMode);
-RefPtr<CSSValue> consumePositionY(CSSParserTokenRange&, CSSParserMode);
+RefPtr<CSSValue> consumeRepeatStyle(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumePositionX(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumePositionY(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumePaintStroke(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumePaintOrder(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeStrokeDasharray(CSSParserTokenRange&);
@@ -275,15 +269,14 @@ RefPtr<CSSValue> consumeCursor(CSSParserTokenRange&, const CSSParserContext&, bo
 RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, const CSSParserContext&);
 RefPtr<CSSValue> consumeCounterContent(CSSParserTokenRange args, bool counters);
 RefPtr<CSSValue> consumeContent(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumePerspective(CSSParserTokenRange&, CSSParserMode);
 RefPtr<CSSValue> consumeScrollSnapAlign(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeScrollSnapType(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeTextEdge(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeBorderRadiusCorner(CSSParserTokenRange&, CSSParserMode);
 bool consumeRadii(RefPtr<CSSPrimitiveValue> horizontalRadii[4], RefPtr<CSSPrimitiveValue> verticalRadii[4], CSSParserTokenRange&, CSSParserMode, bool useLegacyParsing);
 enum class ConsumeRay { Include, Exclude };
 RefPtr<CSSValue> consumePathOperation(CSSParserTokenRange&, const CSSParserContext&, ConsumeRay);
 RefPtr<CSSValue> consumeShapeOutside(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeBaselineKeyword(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeContentDistributionOverflowPosition(CSSParserTokenRange&, IsPositionKeyword);
 RefPtr<CSSValue> consumeJustifyContent(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeBorderImageRepeat(CSSParserTokenRange&);
@@ -293,21 +286,12 @@ RefPtr<CSSValue> consumeBorderImageWidth(CSSPropertyID, CSSParserTokenRange&);
 bool consumeBorderImageComponents(CSSPropertyID, CSSParserTokenRange&, const CSSParserContext&, RefPtr<CSSValue>&, RefPtr<CSSValue>&, RefPtr<CSSValue>&, RefPtr<CSSValue>&, RefPtr<CSSValue>&);
 RefPtr<CSSValue> consumeWebkitBorderImage(CSSPropertyID, CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeReflect(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeBackgroundBlendMode(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeBackgroundAttachment(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeBackgroundBox(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeMaskClip(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeBackgroundClip(CSSParserTokenRange&);
-RefPtr<CSSValue> consumePrefixedMaskComposite(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeMaskComposite(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeWebkitMaskSourceType(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeWebkitMaskMode(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeBackgroundSize(CSSPropertyID, CSSParserTokenRange&, CSSParserMode);
 RefPtr<CSSValue> consumeGridAutoFlow(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeRepeatStyle(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeBackgroundComponent(CSSPropertyID, CSSParserTokenRange&, const CSSParserContext&);
-void addBackgroundValue(RefPtr<CSSValue>&, Ref<CSSValue>&&);
-RefPtr<CSSValue> consumeCommaSeparatedBackgroundComponent(CSSPropertyID, CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValueList> consumeMasonryAutoFlow(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeSingleBackgroundSize(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeSingleMaskSize(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeSingleWebkitBackgroundSize(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeSelfPositionOverflowPosition(CSSParserTokenRange&, IsPositionKeyword);
 RefPtr<CSSValue> consumeAlignItems(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeJustifyItems(CSSParserTokenRange&);
@@ -332,6 +316,30 @@ RefPtr<CSSValue> consumeTextEmphasisPosition(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeColorScheme(CSSParserTokenRange&);
 #endif
 RefPtr<CSSValue> consumeOffsetRotate(CSSParserTokenRange&, CSSParserMode);
+
+
+// @font-face descriptor consumers:
+
+RefPtr<CSSValue> consumeFontFaceFontFamily(CSSParserTokenRange&);
+
+// @font-palette-values descriptor consumers:
+
+RefPtr<CSSValue> consumeFontPaletteValuesOverrideColors(CSSParserTokenRange&, const CSSParserContext&);
+
+// @counter-style descriptor consumers:
+
+RefPtr<CSSValue> consumeCounterStyleSystem(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeCounterStyleSymbol(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeCounterStyleNegative(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeCounterStyleRange(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeCounterStylePad(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeCounterStyleSymbols(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeCounterStyleAdditiveSymbols(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeCounterStyleSpeakAs(CSSParserTokenRange&);
+
+// @property descriptor consumers:
+
+RefPtr<CSSValue> consumePropertyInitialValue(CSSParserTokenRange&);
 
 
 // Template and inline implementations are at the bottom of the file for readability.
@@ -411,6 +419,47 @@ template<typename... Args>
 Ref<CSSPrimitiveValue> createPrimitiveValuePair(Args&&... args)
 {
     return CSSValuePool::singleton().createValue(Pair::create(std::forward<Args>(args)...));
+}
+
+inline void assignOrDowngradeToListAndAppend(RefPtr<CSSValue>& result, Ref<CSSValue>&& value)
+{
+    if (result) {
+        if (!result->isBaseValueList()) {
+            auto firstValue = result.releaseNonNull();
+            result = CSSValueList::createCommaSeparated();
+            downcast<CSSValueList>(*result).append(WTFMove(firstValue));
+        }
+        downcast<CSSValueList>(*result).append(WTFMove(value));
+    } else
+        result = WTFMove(value);
+}
+
+template<typename SubConsumer, typename... Args>
+RefPtr<CSSValue> consumeCommaSeparatedListWithSingleValueOptimization(CSSParserTokenRange& range, SubConsumer&& subConsumer, Args&&... args)
+{
+    RefPtr<CSSValue> result;
+    do {
+        auto value = std::invoke(subConsumer, range, std::forward<Args>(args)...);
+        if (!value)
+            return nullptr;
+        assignOrDowngradeToListAndAppend(result, value.releaseNonNull());
+    } while (consumeCommaIncludingWhitespace(range));
+
+    return result;
+}
+
+template<typename SubConsumer, typename... Args>
+RefPtr<CSSValueList> consumeCommaSeparatedListWithoutSingleValueOptimization(CSSParserTokenRange& range, SubConsumer&& subConsumer, Args&&... args)
+{
+    auto result = CSSValueList::createCommaSeparated();
+    do {
+        auto value = std::invoke(subConsumer, range, std::forward<Args>(args)...);
+        if (!value)
+            return nullptr;
+        result->append(value.releaseNonNull());
+    } while (consumeCommaIncludingWhitespace(range));
+
+    return result;
 }
 
 } // namespace CSSPropertyParserHelpers

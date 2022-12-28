@@ -55,13 +55,7 @@ public:
         WebAssembly,
     };
 
-    ~SharedArrayBufferContents()
-    {
-        if (m_destructor) {
-            // FIXME: we shouldn't use getUnsafe here https://bugs.webkit.org/show_bug.cgi?id=197698
-            m_destructor->run(m_data.getUnsafe());
-        }
-    }
+    JS_EXPORT_PRIVATE ~SharedArrayBufferContents();
 
     static Ref<SharedArrayBufferContents> create(void* data, size_t size, std::optional<size_t> maxByteLength, RefPtr<BufferMemoryHandle> memoryHandle, ArrayBufferDestructorFunction&& destructor, Mode mode)
     {
@@ -84,8 +78,8 @@ public:
 
     Mode mode() const { return m_mode; }
 
-    Expected<void, GrowFailReason> grow(VM&, size_t newByteLength);
-    Expected<void, GrowFailReason> grow(const AbstractLocker&, VM&, size_t newByteLength);
+    Expected<int64_t, GrowFailReason> grow(VM&, size_t newByteLength);
+    Expected<int64_t, GrowFailReason> grow(const AbstractLocker&, VM&, size_t newByteLength);
 
     void updateSize(size_t sizeInBytes, std::memory_order order = std::memory_order_seq_cst)
     {
@@ -136,15 +130,20 @@ public:
         RELEASE_ASSERT(m_sizeInBytes <= MAX_ARRAY_BUFFER_SIZE);
     }
 
-    ArrayBufferContents(void* data, size_t sizeInBytes, std::optional<size_t> maxByteLength, Ref<SharedArrayBufferContents>&& shared)
-        : m_data(data, maxByteLength.value_or(sizeInBytes))
-        , m_shared(WTFMove(shared))
+    ArrayBufferContents(Ref<SharedArrayBufferContents>&& shared)
+        : m_shared(WTFMove(shared))
         , m_memoryHandle(m_shared->memoryHandle())
-        , m_sizeInBytes(sizeInBytes)
-        , m_maxByteLength(maxByteLength.value_or(sizeInBytes))
-        , m_hasMaxByteLength(!!maxByteLength)
+        , m_sizeInBytes(m_shared->sizeInBytes(std::memory_order_seq_cst))
     {
         RELEASE_ASSERT(m_sizeInBytes <= MAX_ARRAY_BUFFER_SIZE);
+        if (m_shared->mode() == SharedArrayBufferContents::Mode::WebAssembly) {
+            m_hasMaxByteLength = false;
+            m_maxByteLength = m_sizeInBytes;
+        } else {
+            m_hasMaxByteLength = !!m_shared->maxByteLength();
+            m_maxByteLength = m_shared->maxByteLength().value_or(m_sizeInBytes);
+        }
+        m_data = DataType { m_shared->data(), m_maxByteLength };
     }
 
     ArrayBufferContents(void* data, size_t sizeInBytes, size_t maxByteLength, Ref<BufferMemoryHandle>&& memoryHandle)
@@ -184,7 +183,7 @@ public:
     size_t sizeInBytes(std::memory_order order = std::memory_order_seq_cst) const
     {
         if (m_hasMaxByteLength) {
-            if (m_shared && m_shared->mode() == SharedArrayBufferContents::Mode::Default)
+            if (m_shared)
                 return m_shared->sizeInBytes(order);
         }
         return m_sizeInBytes;
@@ -318,15 +317,14 @@ public:
 
     JS_EXPORT_PRIVATE static Ref<SharedTask<void(void*)>> primitiveGigacageDestructor();
 
-    Expected<void, GrowFailReason> grow(VM&, size_t newByteLength);
-    Expected<void, GrowFailReason> resize(VM&, size_t newByteLength);
+    Expected<int64_t, GrowFailReason> grow(VM&, size_t newByteLength);
+    Expected<int64_t, GrowFailReason> resize(VM&, size_t newByteLength);
 
 private:
     static Ref<ArrayBuffer> create(size_t numElements, unsigned elementByteSize, ArrayBufferContents::InitializationPolicy);
     static Ref<ArrayBuffer> createInternal(ArrayBufferContents&&, const void*, size_t);
     static RefPtr<ArrayBuffer> tryCreate(size_t numElements, unsigned elementByteSize, std::optional<size_t> maxByteLength, ArrayBufferContents::InitializationPolicy);
     ArrayBuffer(ArrayBufferContents&&);
-    static Ref<ArrayBuffer> createResizable(Ref<BufferMemoryHandle>&&);
     inline size_t clampIndex(double index) const;
     static inline size_t clampValue(double x, size_t left, size_t right);
 

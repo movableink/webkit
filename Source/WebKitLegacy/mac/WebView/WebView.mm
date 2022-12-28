@@ -154,6 +154,7 @@
 #import <WebCore/DummyStorageProvider.h>
 #import <WebCore/Editing.h>
 #import <WebCore/Editor.h>
+#import <WebCore/EmptyBadgeClient.h>
 #import <WebCore/Event.h>
 #import <WebCore/EventHandler.h>
 #import <WebCore/FocusController.h>
@@ -1539,7 +1540,8 @@ static void WebKitInitializeGamepadProviderIfNecessary()
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate([[self preferences] privateBrowsingEnabled]),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
-        makeUniqueRef<WebCore::DummyModelPlayerProvider>()
+        makeUniqueRef<WebCore::DummyModelPlayerProvider>(),
+        WebCore::EmptyBadgeClient::create()
     );
 #if !PLATFORM(IOS_FAMILY)
     pageConfiguration.chromeClient = new WebChromeClient(self);
@@ -1819,7 +1821,8 @@ static void WebKitInitializeGamepadProviderIfNecessary()
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate([[self preferences] privateBrowsingEnabled]),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
-        makeUniqueRef<WebCore::DummyModelPlayerProvider>()
+        makeUniqueRef<WebCore::DummyModelPlayerProvider>(),
+        WebCore::EmptyBadgeClient::create()
     );
     pageConfiguration.chromeClient = new WebChromeClientIOS(self);
 #if ENABLE(DRAG_SUPPORT)
@@ -4695,20 +4698,11 @@ IGNORE_WARNINGS_END
 
 - (void)_setPaginationLineGridEnabled:(BOOL)lineGridEnabled
 {
-    auto* page = core(self);
-    if (!page)
-        return;
-
-    page->setPaginationLineGridEnabled(lineGridEnabled);
 }
 
 - (BOOL)_paginationLineGridEnabled
 {
-    auto* page = core(self);
-    if (!page)
-        return NO;
-
-    return page->paginationLineGridEnabled();
+    return NO;
 }
 
 - (NSUInteger)_pageCount

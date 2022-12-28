@@ -26,6 +26,7 @@
 #include "config.h"
 #include "FontFace.h"
 
+#include "AllowedFonts.h"
 #include "CSSFontFaceSource.h"
 #include "CSSFontSelector.h"
 #include "CSSPrimitiveValueMappings.h"
@@ -35,7 +36,6 @@
 #include "DOMPromiseProxy.h"
 #include "Document.h"
 #include "JSFontFace.h"
-#include "Quirks.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <JavaScriptCore/JSCInlines.h>
@@ -69,7 +69,7 @@ Ref<FontFace> FontFace::create(ScriptExecutionContext& context, const String& fa
         return result;
     }
 
-    bool allowDownloading = context.settingsValues().downloadableBinaryFontsEnabled;
+    auto fontAllowedTypes = context.settingsValues().downloadableBinaryFontAllowedTypes;
     auto sourceConversionResult = WTF::switchOn(source,
         [&] (String& string) -> ExceptionOr<void> {
             auto value = CSSPropertyParserWorkerSafe::parseFontFaceSrc(string, is<Document>(context) ? CSSParserContext(downcast<Document>(context)) : HTMLStandardMode);
@@ -78,15 +78,15 @@ Ref<FontFace> FontFace::create(ScriptExecutionContext& context, const String& fa
             CSSFontFace::appendSources(result->backing(), *value, &context, false);
             return { };
         },
-        [&, allowDownloading] (RefPtr<ArrayBufferView>& arrayBufferView) -> ExceptionOr<void> {
-            if (!allowDownloading)
+        [&, fontAllowedTypes] (RefPtr<ArrayBufferView>& arrayBufferView) -> ExceptionOr<void> {
+            if (!arrayBufferView || !isFontBinaryAllowed(arrayBufferView->data(), arrayBufferView->byteLength(), fontAllowedTypes))
                 return { };
 
             dataRequiresAsynchronousLoading = populateFontFaceWithArrayBuffer(result->backing(), arrayBufferView.releaseNonNull());
             return { };
         },
-        [&, allowDownloading] (RefPtr<ArrayBuffer>& arrayBuffer) -> ExceptionOr<void> {
-            if (!allowDownloading)
+        [&, fontAllowedTypes] (RefPtr<ArrayBuffer>& arrayBuffer) -> ExceptionOr<void> {
+            if (!arrayBuffer || !isFontBinaryAllowed(arrayBuffer->data(), arrayBuffer->byteLength(), fontAllowedTypes))
                 return { };
 
             unsigned byteLength = arrayBuffer->byteLength();
@@ -175,14 +175,9 @@ ExceptionOr<void> FontFace::setFamily(ScriptExecutionContext& context, const Str
     if (family.isEmpty())
         return Exception { SyntaxError };
 
-    String familyNameToUse = family;
-    // FIXME: Quirks currently aren't present on workers, would be better to inherit from the parent document where applicable.
-    if (familyNameToUse.contains('\'') && is<Document>(context) && downcast<Document>(context).quirks().shouldStripQuotationMarkInFontFaceSetFamily())
-        familyNameToUse = family.removeCharacters([](auto character) { return character == '\''; });
-
     // FIXME: Don't use a list here. https://bugs.webkit.org/show_bug.cgi?id=196381
     auto list = CSSValueList::createCommaSeparated();
-    list->append(context.cssValuePool().createFontFamilyValue(familyNameToUse));
+    list->append(context.cssValuePool().createFontFamilyValue(family));
     m_backing->setFamilies(list);
     return { };
 }

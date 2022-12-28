@@ -32,18 +32,18 @@
 #include "MessageReceiver.h"
 #include "WebExtensionContext.h"
 #include "WebExtensionContextIdentifier.h"
+#include "WebExtensionControllerConfiguration.h"
 #include "WebExtensionControllerIdentifier.h"
 #include "WebExtensionURLSchemeHandler.h"
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
+#include "WebUserContentControllerProxy.h"
 #include <wtf/Forward.h>
 #include <wtf/URLHash.h>
 #include <wtf/WeakHashSet.h>
 
-#if PLATFORM(COCOA)
 OBJC_CLASS NSError;
 OBJC_CLASS _WKWebExtensionController;
-#endif
 
 namespace WebKit {
 
@@ -56,23 +56,34 @@ class WebExtensionController : public API::ObjectImpl<API::Object::Type::WebExte
     WTF_MAKE_NONCOPYABLE(WebExtensionController);
 
 public:
-    static Ref<WebExtensionController> create() { return adoptRef(*new WebExtensionController); }
+    static Ref<WebExtensionController> create(Ref<WebExtensionControllerConfiguration> configuration) { return adoptRef(*new WebExtensionController(configuration)); }
     static WebExtensionController* get(WebExtensionControllerIdentifier);
 
-    explicit WebExtensionController();
+    explicit WebExtensionController(Ref<WebExtensionControllerConfiguration>);
     ~WebExtensionController();
 
     using WebExtensionContextSet = HashSet<Ref<WebExtensionContext>>;
     using WebExtensionSet = HashSet<Ref<WebExtension>>;
     using WebExtensionContextBaseURLMap = HashMap<URL, Ref<WebExtensionContext>>;
+    using WebExtensionURLSchemeHandlerMap = HashMap<String, Ref<WebExtensionURLSchemeHandler>>;
 
+    using WebProcessProxySet = WeakHashSet<WebProcessProxy>;
+    using WebProcessPoolSet = WeakHashSet<WebProcessPool>;
+    using WebPageProxySet = WeakHashSet<WebPageProxy>;
+    using UserContentControllerProxySet = WeakHashSet<WebUserContentControllerProxy>;
+
+    WebExtensionControllerConfiguration& configuration() const { return m_configuration.get(); }
     WebExtensionControllerIdentifier identifier() const { return m_identifier; }
     WebExtensionControllerParameters parameters() const;
 
     bool operator==(const WebExtensionController& other) const { return (this == &other); }
     bool operator!=(const WebExtensionController& other) const { return !(this == &other); }
 
-#if PLATFORM(COCOA)
+    bool storageIsPersistent() const { return m_configuration->storageIsPersistent(); }
+    String storageDirectory(WebExtensionContext&) const;
+
+    bool hasLoadedContexts() const { return !m_extensionContexts.isEmpty(); }
+
     bool load(WebExtensionContext&, NSError ** = nullptr);
     bool unload(WebExtensionContext&, NSError ** = nullptr);
 
@@ -80,6 +91,12 @@ public:
 
     void addPage(WebPageProxy&);
     void removePage(WebPageProxy&);
+
+    WebPageProxySet allPages() const { return m_pages; }
+    UserContentControllerProxySet allUserContentControllers() const { return m_userContentControllers; }
+
+    WebProcessPoolSet allProcessPools() const { return m_processPools; }
+    WebProcessProxySet allProcesses() const;
 
     RefPtr<WebExtensionContext> extensionContext(const WebExtension&) const;
     RefPtr<WebExtensionContext> extensionContext(const URL&) const;
@@ -93,36 +110,35 @@ public:
 #ifdef __OBJC__
     _WKWebExtensionController *wrapper() const { return (_WKWebExtensionController *)API::ObjectImpl<API::Object::Type::WebExtensionController>::wrapper(); }
 #endif
-#endif
 
 private:
     // IPC::MessageReceiver.
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
+    void addProcessPool(WebProcessPool&);
+    void removeProcessPool(WebProcessPool&);
+
+    void addUserContentController(WebUserContentControllerProxy&);
+    void removeUserContentController(WebUserContentControllerProxy&);
+
+    // MARK: webNavigation support.
+    void didStartProvisionalLoadForFrame(WebPageProxyIdentifier, WebCore::FrameIdentifier, URL targetURL);
+
+    Ref<WebExtensionControllerConfiguration> m_configuration;
     WebExtensionControllerIdentifier m_identifier;
 
-#if PLATFORM(COCOA)
     WebExtensionContextSet m_extensionContexts;
     WebExtensionContextBaseURLMap m_extensionContextBaseURLMap;
-    WeakHashSet<WebPageProxy> m_pages;
-    WeakHashSet<WebProcessPool> m_processPools;
-    HashMap<String, Ref<WebExtensionURLSchemeHandler>> m_registeredSchemeHandlers;
-#endif
+    WebPageProxySet m_pages;
+    WebProcessPoolSet m_processPools;
+    UserContentControllerProxySet m_userContentControllers;
+    WebExtensionURLSchemeHandlerMap m_registeredSchemeHandlers;
 };
 
 template<typename T, typename U>
 void WebExtensionController::sendToAllProcesses(const T& message, ObjectIdentifier<U> destinationID)
 {
-    HashSet<WebProcessProxy*> seenProcesses;
-    seenProcesses.reserveInitialCapacity(m_pages.capacity());
-
-    for (auto& page : m_pages) {
-        auto& process = page.process();
-        if (seenProcesses.contains(&process))
-            continue;
-
-        seenProcesses.add(&process);
-
+    for (auto& process : allProcesses()) {
         if (process.canSendMessage())
             process.send(T(message), destinationID);
     }

@@ -593,7 +593,7 @@ void InspectorInstrumentation::applyUserAgentOverrideImpl(InstrumentingAgents& i
         pageAgent->applyUserAgentOverride(userAgent);
 }
 
-void InspectorInstrumentation::applyEmulatedMediaImpl(InstrumentingAgents& instrumentingAgents, String& media)
+void InspectorInstrumentation::applyEmulatedMediaImpl(InstrumentingAgents& instrumentingAgents, AtomString& media)
 {
     if (auto* pageAgent = instrumentingAgents.enabledPageAgent())
         pageAgent->applyEmulatedMedia(media);
@@ -844,11 +844,17 @@ void InspectorInstrumentation::frameClearedScheduledNavigationImpl(Instrumenting
         inspectorPageAgent->frameClearedScheduledNavigation(frame);
 }
 
-#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-void InspectorInstrumentation::defaultAppearanceDidChangeImpl(InstrumentingAgents& instrumentingAgents, bool useDarkAppearance)
+void InspectorInstrumentation::accessibilitySettingsDidChangeImpl(InstrumentingAgents& instrumentingAgents)
 {
     if (auto* inspectorPageAgent = instrumentingAgents.enabledPageAgent())
-        inspectorPageAgent->defaultAppearanceDidChange(useDarkAppearance);
+        inspectorPageAgent->accessibilitySettingsDidChange();
+}
+
+#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
+void InspectorInstrumentation::defaultAppearanceDidChangeImpl(InstrumentingAgents& instrumentingAgents)
+{
+    if (auto* inspectorPageAgent = instrumentingAgents.enabledPageAgent())
+        inspectorPageAgent->defaultAppearanceDidChange();
 }
 #endif
 

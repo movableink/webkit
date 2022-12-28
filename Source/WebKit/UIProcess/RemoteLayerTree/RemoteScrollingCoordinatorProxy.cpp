@@ -34,6 +34,7 @@
 #include "RemoteScrollingCoordinatorTransaction.h"
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
+#include <WebCore/PerformanceLoggingClient.h>
 #include <WebCore/RuntimeApplicationChecks.h>
 #include <WebCore/ScrollingStateTree.h>
 #include <WebCore/ScrollingTreeFrameScrollingNode.h>
@@ -93,21 +94,24 @@ std::optional<RequestedScrollData> RemoteScrollingCoordinatorProxy::commitScroll
     return std::exchange(m_requestedScroll, { });
 }
 
-bool RemoteScrollingCoordinatorProxy::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
+WheelEventHandlingResult RemoteScrollingCoordinatorProxy::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
 {
     if (!m_scrollingTree)
-        return false;
+        return WheelEventHandlingResult::unhandled();
 
     auto processingSteps = m_scrollingTree->determineWheelEventProcessing(wheelEvent);
     if (processingSteps.containsAny({ WheelEventProcessingSteps::MainThreadForScrolling, WheelEventProcessingSteps::MainThreadForNonBlockingDOMEventDispatch, WheelEventProcessingSteps::MainThreadForBlockingDOMEventDispatch }))
-        return false;
+        return WheelEventHandlingResult::unhandled(processingSteps);
 
     if (m_scrollingTree->willWheelEventStartSwipeGesture(wheelEvent))
-        return false;
+        return WheelEventHandlingResult::unhandled();
 
-    auto result = m_scrollingTree->handleWheelEvent(wheelEvent);
+    m_scrollingTree->willProcessWheelEvent();
+
+    auto filteredEvent = filteredWheelEvent(wheelEvent);
+    auto result = m_scrollingTree->handleWheelEvent(filteredEvent);
     didReceiveWheelEvent(result.wasHandled);
-    return result.wasHandled;
+    return result;
 }
 
 void RemoteScrollingCoordinatorProxy::handleMouseEvent(const WebCore::PlatformMouseEvent& event)
@@ -270,6 +274,21 @@ void RemoteScrollingCoordinatorProxy::resetStateAfterProcessExited()
     m_currentHorizontalSnapPointIndex = 0;
     m_currentVerticalSnapPointIndex = 0;
     m_uiState.reset();
+}
+
+void RemoteScrollingCoordinatorProxy::reportExposedUnfilledArea(MonotonicTime timestamp, unsigned unfilledArea)
+{
+    m_webPageProxy.logScrollingEvent(static_cast<uint32_t>(PerformanceLoggingClient::ScrollingEvent::ExposedTilelessArea), timestamp, unfilledArea);
+}
+
+void RemoteScrollingCoordinatorProxy::reportSynchronousScrollingReasonsChanged(MonotonicTime timestamp, OptionSet<SynchronousScrollingReason> reasons)
+{
+    m_webPageProxy.logScrollingEvent(static_cast<uint32_t>(PerformanceLoggingClient::ScrollingEvent::SwitchedScrollingMode), timestamp, reasons.toRaw());
+}
+
+void RemoteScrollingCoordinatorProxy::startMonitoringWheelEventsForTesting()
+{
+    m_scrollingTree->setIsMonitoringWheelEvents(true);
 }
 
 } // namespace WebKit

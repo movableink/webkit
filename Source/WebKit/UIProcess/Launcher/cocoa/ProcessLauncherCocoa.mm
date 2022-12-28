@@ -40,6 +40,7 @@
 #import <spawn.h>
 #import <sys/param.h>
 #import <sys/stat.h>
+#import <wtf/BlockPtr.h>
 #import <wtf/FileSystem.h>
 #import <wtf/MachSendRight.h>
 #import <wtf/RunLoop.h>
@@ -194,7 +195,7 @@ void ProcessLauncher::launchProcess()
 
     xpc_dictionary_set_value(bootstrapMessage.get(), "extra-initialization-data", extraInitializationData.get());
 
-    auto errorHandlerImpl = [weakProcessLauncher = ThreadSafeWeakPtr { *this }, listeningPort, logName = CString(name)] (xpc_object_t event) {
+    Function<void(xpc_object_t)> errorHandlerImpl = [weakProcessLauncher = ThreadSafeWeakPtr { *this }, listeningPort, logName = CString(name)] (xpc_object_t event) {
         ASSERT(!event || xpc_get_type(event) == XPC_TYPE_ERROR);
 
         auto processLauncher = weakProcessLauncher.get();
@@ -232,28 +233,32 @@ void ProcessLauncher::launchProcess()
         processLauncher->didFinishLaunchingProcess(0, IPC::Connection::Identifier());
     };
 
-    auto eventHandler = [errorHandlerImpl = WTFMove(errorHandlerImpl), eventHandler = m_client->xpcEventHandler()] (xpc_object_t event) mutable {
+    Function<void(xpc_object_t)> eventHandler = [errorHandlerImpl = WTFMove(errorHandlerImpl), xpcEventHandler = m_client->xpcEventHandler()] (xpc_object_t event) mutable {
 
         if (!event || xpc_get_type(event) == XPC_TYPE_ERROR) {
-            RunLoop::main().dispatch([errorHandlerImpl = WTFMove(errorHandlerImpl), event = OSObjectPtr(event)] {
-                errorHandlerImpl(event.get());
+            RunLoop::main().dispatch([errorHandlerImpl = std::exchange(errorHandlerImpl, nullptr), event = OSObjectPtr(event)] {
+                if (errorHandlerImpl)
+                    errorHandlerImpl(event.get());
+                else if (event.get() != XPC_ERROR_CONNECTION_INVALID)
+                    LOG_ERROR("Multiple errors while launching: %@", event.get());
             });
             return;
         }
 
-        if (eventHandler) {
-            RunLoop::main().dispatch([eventHandler = eventHandler, event = OSObjectPtr(event)] {
-                eventHandler->handleXPCEvent(event.get());
+        if (xpcEventHandler) {
+            RunLoop::main().dispatch([xpcEventHandler = xpcEventHandler, event = OSObjectPtr(event)] {
+                xpcEventHandler->handleXPCEvent(event.get());
             });
         }
     };
 
-    xpc_connection_set_event_handler(m_xpcConnection.get(), eventHandler);
+    auto eventHandlerBlock = makeBlockPtr(WTFMove(eventHandler));
+    xpc_connection_set_event_handler(m_xpcConnection.get(), eventHandlerBlock.get());
 
     xpc_connection_resume(m_xpcConnection.get());
 
     if (UNLIKELY(m_launchOptions.shouldMakeProcessLaunchFailForTesting)) {
-        eventHandler(nullptr);
+        eventHandlerBlock(nullptr);
         return;
     }
 

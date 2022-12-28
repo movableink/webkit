@@ -377,6 +377,7 @@ public:
 
     std::optional<int> tabIndexSetExplicitly() const;
     bool shouldBeIgnoredInSequentialFocusNavigation() const { return defaultTabIndex() < 0 && !supportsFocus(); }
+    bool hasFocusableStyle() const;
     virtual bool supportsFocus() const;
     virtual bool isFocusable() const;
     virtual bool isKeyboardFocusable(KeyboardEvent*) const;
@@ -402,8 +403,6 @@ public:
     const RenderStyle* computedStyleForEditability();
 
     bool needsStyleInvalidation() const;
-
-    bool isFocusableWithoutResolvingFullStyle() const;
 
     // Methods for indicating the style is affected by dynamic updates (e.g., children changing, our position changing in our sibling list, etc.)
     bool styleAffectedByEmpty() const { return hasStyleFlag(NodeStyleFlag::StyleAffectedByEmpty); }
@@ -544,13 +543,13 @@ public:
     bool hasKeyframeEffects(PseudoId) const;
 
     const AnimationCollection* animations(PseudoId) const;
-    bool hasCompletedTransitionForProperty(PseudoId, CSSPropertyID) const;
-    bool hasRunningTransitionForProperty(PseudoId, CSSPropertyID) const;
+    bool hasCompletedTransitionForProperty(PseudoId, AnimatableProperty) const;
+    bool hasRunningTransitionForProperty(PseudoId, AnimatableProperty) const;
     bool hasRunningTransitions(PseudoId) const;
     AnimationCollection& ensureAnimations(PseudoId);
 
-    PropertyToTransitionMap& ensureCompletedTransitionsByProperty(PseudoId);
-    PropertyToTransitionMap& ensureRunningTransitionsByProperty(PseudoId);
+    AnimatablePropertyToTransitionMap& ensureCompletedTransitionsByProperty(PseudoId);
+    AnimatablePropertyToTransitionMap& ensureRunningTransitionsByProperty(PseudoId);
     CSSAnimationCollection& animationsCreatedByMarkup(PseudoId);
     void setAnimationsCreatedByMarkup(PseudoId, CSSAnimationCollection&&);
 
@@ -566,9 +565,10 @@ public:
     void removeFromTopLayer();
 
 #if ENABLE(FULLSCREEN_API)
-    bool containsFullScreenElement() const { return hasNodeFlag(NodeFlag::ContainsFullScreenElement); }
-    void setContainsFullScreenElement(bool);
-    void setContainsFullScreenElementOnAncestorsCrossingFrameBoundaries(bool);
+    bool hasFullscreenFlag() const { return hasNodeFlag(NodeFlag::IsFullscreen); }
+    bool hasIFrameFullscreenFlag() const { return hasNodeFlag(NodeFlag::IsIFrameFullscreen); }
+    void setFullscreenFlag(bool);
+    void setIFrameFullscreenFlag(bool);
     WEBCORE_EXPORT void webkitRequestFullscreen();
     virtual void requestFullscreen(FullscreenOptions&&, RefPtr<DeferredPromise>&&);
 #endif
@@ -791,6 +791,7 @@ private:
 
     // The cloneNode function is private so that non-virtual cloneElementWith/WithoutChildren are used instead.
     Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
+    void cloneShadowTreeIfPossible(Element& newHost);
     virtual Ref<Element> cloneElementWithoutAttributesAndChildren(Document&);
 
     void removeShadowRoot();

@@ -28,6 +28,7 @@
 #if PLATFORM(MAC) && ENABLE(UI_SIDE_COMPOSITING)
 
 #include "RemoteScrollingCoordinatorProxy.h"
+#include <WebCore/WheelEventDeltaFilter.h>
 
 namespace WebKit {
 
@@ -36,6 +37,8 @@ public:
     explicit RemoteScrollingCoordinatorProxyMac(WebPageProxy&);
 
 private:
+    WebCore::PlatformWheelEvent filteredWheelEvent(const WebCore::PlatformWheelEvent&) override;
+
     void didReceiveWheelEvent(bool) override;
     bool scrollingTreeNodeRequestsScroll(WebCore::ScrollingNodeID, const WebCore::RequestedScrollData&) override;
     void hasNodeWithAnimatedScrollChanged(bool) override;
@@ -43,6 +46,8 @@ private:
 
     void connectStateNodeLayers(WebCore::ScrollingStateTree&, const RemoteLayerTreeHost&) override;
     void establishLayerTreeScrollingRelations(const RemoteLayerTreeHost&) override;
+
+    std::unique_ptr<WebCore::WheelEventDeltaFilter> m_recentWheelEventDeltaFilter;
 };
 
 } // namespace WebKit

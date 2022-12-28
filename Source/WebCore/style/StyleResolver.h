@@ -25,8 +25,8 @@
 #include "Document.h"
 #include "ElementRuleCollector.h"
 #include "InspectorCSSOMWrappers.h"
-#include "LegacyMediaQueryEvaluator.h"
 #include "MatchedDeclarationsCache.h"
+#include "MediaQueryEvaluator.h"
 #include "RenderStyle.h"
 #include "RuleSet.h"
 #include "StyleBuilderState.h"
@@ -114,7 +114,7 @@ public:
     ScopeRuleSets& ruleSets() { return m_ruleSets; }
     const ScopeRuleSets& ruleSets() const { return m_ruleSets; }
 
-    const LegacyMediaQueryEvaluator& mediaQueryEvaluator() const { return m_mediaQueryEvaluator; }
+    const MQ::MediaQueryEvaluator& mediaQueryEvaluator() const { return m_mediaQueryEvaluator; }
 
     void addCurrentSVGFontFaceRules();
 
@@ -152,6 +152,8 @@ public:
     bool isSharedBetweenShadowTrees() const { return m_isSharedBetweenShadowTrees; }
     void setSharedBetweenShadowTrees() { m_isSharedBetweenShadowTrees = true; }
 
+    const RenderStyle* rootDefaultStyle() const { return m_rootDefaultStyle.get(); }
+
 private:
     Resolver(Document&);
 
@@ -166,7 +168,7 @@ private:
     typedef HashMap<AtomString, RefPtr<StyleRuleKeyframes>> KeyframesRuleMap;
     KeyframesRuleMap m_keyframesRuleMap;
 
-    LegacyMediaQueryEvaluator m_mediaQueryEvaluator;
+    MQ::MediaQueryEvaluator m_mediaQueryEvaluator;
     std::unique_ptr<RenderStyle> m_rootDefaultStyle;
 
     Document& m_document;

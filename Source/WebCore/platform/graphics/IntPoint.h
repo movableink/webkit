@@ -137,9 +137,9 @@ public:
 #endif // !PLATFORM(IOS_FAMILY)
 
 #if PLATFORM(WIN)
-    IntPoint(const POINT&);
-    operator POINT() const;
-    IntPoint(const POINTS&);
+    WEBCORE_EXPORT IntPoint(const POINT&);
+    WEBCORE_EXPORT operator POINT() const;
+    WEBCORE_EXPORT IntPoint(const POINTS&);
     operator POINTS() const;
 #elif PLATFORM(QT)
     IntPoint(const QPoint&);

@@ -108,19 +108,35 @@ static NSString * const optionalPermissionsManifestKey = @"optional_permissions"
 static NSString * const hostPermissionsManifestKey = @"host_permissions";
 static NSString * const optionalHostPermissionsManifestKey = @"optional_host_permissions";
 
-WebExtension::WebExtension(NSBundle *appExtensionBundle)
+WebExtension::WebExtension(NSBundle *appExtensionBundle, NSError **outError)
     : m_bundle(appExtensionBundle)
     , m_resourceBaseURL(appExtensionBundle.resourceURL.URLByStandardizingPath.absoluteURL)
 {
     ASSERT(appExtensionBundle);
+
+    if (outError)
+        *outError = nil;
+
+    if (!manifestParsedSuccessfully()) {
+        ASSERT(m_errors.get().count);
+        *outError = m_errors.get().lastObject;
+    }
 }
 
-WebExtension::WebExtension(NSURL *resourceBaseURL)
+WebExtension::WebExtension(NSURL *resourceBaseURL, NSError **outError)
     : m_resourceBaseURL(resourceBaseURL.URLByStandardizingPath.absoluteURL)
 {
     ASSERT(resourceBaseURL);
     ASSERT([resourceBaseURL isFileURL]);
     ASSERT([resourceBaseURL hasDirectoryPath]);
+
+    if (outError)
+        *outError = nil;
+
+    if (!manifestParsedSuccessfully()) {
+        ASSERT(m_errors.get().count);
+        *outError = m_errors.get().lastObject;
+    }
 }
 
 WebExtension::WebExtension(NSDictionary *manifest, NSDictionary *resources)
@@ -265,6 +281,36 @@ NSURL *WebExtension::resourceFileURLForPath(NSString *path)
     return resourceURL;
 }
 
+NSString *WebExtension::resourceStringForPath(NSString *path, CacheResult cacheResult)
+{
+    ASSERT(path);
+
+    // Remove leading slash to normalize the path for lookup/storage in the cache dictionary.
+    if ([path hasPrefix:@"/"])
+        path = [path substringFromIndex:1];
+
+    if (NSString *cachedString = objectForKey<NSString>(m_resources, path))
+        return cachedString;
+
+    if ([path isEqualToString:generatedBackgroundPageFilename])
+        return generatedBackgroundContent();
+
+    NSData *data = resourceDataForPath(path, CacheResult::No);
+
+    NSString *string;
+    [NSString stringEncodingForData:data encodingOptions:nil convertedString:&string usedLossyConversion:nil];
+    if (!string)
+        return nil;
+
+    if (cacheResult == CacheResult::Yes) {
+        if (!m_resources)
+            m_resources = [NSMutableDictionary dictionary];
+        [m_resources setObject:string forKey:path];
+    }
+
+    return string;
+}
+
 NSData *WebExtension::resourceDataForPath(NSString *path, CacheResult cacheResult)
 {
     ASSERT(path);
@@ -276,23 +322,15 @@ NSData *WebExtension::resourceDataForPath(NSString *path, CacheResult cacheResul
     if (NSData *cachedData = objectForKey<NSData>(m_resources, path))
         return cachedData;
 
-    if (NSString *cachedString = objectForKey<NSString>(m_resources, path)) {
-        NSData *cachedData = [cachedString dataUsingEncoding:NSUTF8StringEncoding];
-        ASSERT(cachedData);
-        [m_resources setObject:cachedData forKey:path];
-        return cachedData;
-    }
+    if (NSString *cachedString = objectForKey<NSString>(m_resources, path))
+        return [cachedString dataUsingEncoding:NSUTF8StringEncoding];
 
     if ([path isEqualToString:generatedBackgroundPageFilename])
         return [generatedBackgroundContent() dataUsingEncoding:NSUTF8StringEncoding];
 
     NSURL *resourceURL = resourceFileURLForPath(path);
     if (!resourceURL) {
-        if (m_resources)
-            recordError(createError(Error::ResourceNotFound, WEB_UI_FORMAT_CFSTRING("Unable to find \"%@\" in the extension’s resources.", "WKWebExtensionErrorResourceNotFound description with file name", (__bridge CFStringRef)path)));
-        else
-            recordError(createError(Error::ResourceNotFound, WEB_UI_FORMAT_CFSTRING("Unable to find \"%@\" in the extension’s resources. It is an invalid path.", "WKWebExtensionErrorResourceNotFound description with invalid file path", (__bridge CFStringRef)path)));
-
+        recordError(createError(Error::ResourceNotFound, WEB_UI_FORMAT_CFSTRING("Unable to find \"%@\" in the extension’s resources. It is an invalid path.", "WKWebExtensionErrorResourceNotFound description with invalid file path", (__bridge CFStringRef)path)));
         return nil;
     }
 
@@ -398,14 +436,14 @@ NSError *WebExtension::createError(Error error, NSString *customLocalizedDescrip
         break;
 
     case Error::InvalidAction:
-        if (usesManifestVersion(3))
+        if (supportsManifestVersion(3))
             localizedDescription = WEB_UI_STRING("Missing or empty `action` manifest entry.", "WKWebExtensionErrorInvalidManifestEntry description for action only");
         else
             localizedDescription = WEB_UI_STRING("Missing or empty `browser_action` or `page_action` manifest entry.", "WKWebExtensionErrorInvalidManifestEntry description for browser_action or page_action");
         break;
 
     case Error::InvalidActionIcon:
-        if (usesManifestVersion(3))
+        if (supportsManifestVersion(3))
             localizedDescription = WEB_UI_STRING("Empty or invalid `default_icon` for the `action` manifest entry.", "WKWebExtensionErrorInvalidManifestEntry description for default_icon in action only");
         else
             localizedDescription = WEB_UI_STRING("Empty or invalid `default_icon` for the `browser_action` or `page_action` manifest entry.", "WKWebExtensionErrorInvalidManifestEntry description for default_icon in browser_action or page_action");
@@ -499,8 +537,8 @@ void WebExtension::removeError(Error error, SuppressNotification suppressNotific
     if (suppressNotification == SuppressNotification::Yes)
         return;
 
-    dispatch_async(dispatch_get_main_queue(), makeBlockPtr([&, protectedThis = Ref { *this }]() {
-        [NSNotificationCenter.defaultCenter postNotificationName:_WKWebExtensionErrorsWereUpdatedNotification object:WebKit::wrapper(this) userInfo:nil];
+    dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }]() {
+        [NSNotificationCenter.defaultCenter postNotificationName:_WKWebExtensionErrorsWereUpdatedNotification object:wrapper() userInfo:nil];
     }).get());
 }
 
@@ -516,8 +554,8 @@ void WebExtension::recordError(NSError *error, SuppressNotification suppressNoti
     if (suppressNotification == SuppressNotification::Yes)
         return;
 
-    dispatch_async(dispatch_get_main_queue(), makeBlockPtr([&, protectedThis = Ref { *this }]() {
-        [NSNotificationCenter.defaultCenter postNotificationName:_WKWebExtensionErrorsWereUpdatedNotification object:WebKit::wrapper(this) userInfo:nil];
+    dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }]() {
+        [NSNotificationCenter.defaultCenter postNotificationName:_WKWebExtensionErrorsWereUpdatedNotification object:wrapper() userInfo:nil];
     }).get());
 }
 
@@ -531,7 +569,7 @@ NSArray *WebExtension::errors()
     populateContentScriptPropertiesIfNeeded();
     populatePermissionsPropertiesIfNeeded();
 
-    return [m_errors copy];
+    return [m_errors copy] ?: @[ ];
 }
 
 NSString *WebExtension::webProcessDisplayName()
@@ -632,7 +670,7 @@ CocoaImage *WebExtension::actionIcon(CGSize size)
     populateActionPropertiesIfNeeded();
 
     NSString *localizedErrorDescription;
-    if (usesManifestVersion(3))
+    if (supportsManifestVersion(3))
         localizedErrorDescription = WEB_UI_STRING("Failed to load images in `default_icon` for the `action` manifest entry.", "WKWebExtensionErrorInvalidActionIcon description for failing to load images for action only");
     else
         localizedErrorDescription = WEB_UI_STRING("Failed to load images in `default_icon` for the `browser_action` or `page_action` manifest entry.", "WKWebExtensionErrorInvalidActionIcon description for failing to load images for browser_action or page_action");
@@ -666,7 +704,7 @@ void WebExtension::populateActionPropertiesIfNeeded()
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/manifest.json/browser_action
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/manifest.json/page_action
 
-    if (usesManifestVersion(3))
+    if (supportsManifestVersion(3))
         m_actionDictionary = objectForKey<NSDictionary>(m_manifest, actionManifestKey);
     else {
         m_actionDictionary = objectForKey<NSDictionary>(m_manifest, browserActionManifestKey);
@@ -684,7 +722,7 @@ void WebExtension::populateActionPropertiesIfNeeded()
 
         if (!m_actionIcon) {
             NSString *localizedErrorDescription;
-            if (usesManifestVersion(3))
+            if (supportsManifestVersion(3))
                 localizedErrorDescription = WEB_UI_STRING("Failed to load image for `default_icon` in the `action` manifest entry.", "WKWebExtensionErrorInvalidActionIcon description for failing to load single image for action");
             else
                 localizedErrorDescription = WEB_UI_STRING("Failed to load image for `default_icon` in the `browser_action` or `page_action` manifest entry.", "WKWebExtensionErrorInvalidActionIcon description for failing to load single image for browser_action or page_action");
@@ -968,9 +1006,9 @@ void WebExtension::populateBackgroundPropertiesIfNeeded()
         recordError(createError(Error::InvalidBackgroundContent, WEB_UI_STRING("Manifest `background` entry has missing or empty required key `scripts`, `page`, or `service_worker`.", "WKWebExtensionErrorInvalidBackgroundContent description for missing background required keys")));
 
     NSNumber *persistentBoolean = objectForKey<NSNumber>(backgroundManifestDictionary, backgroundPersistentManifestKey);
-    m_backgroundContentIsPersistent = persistentBoolean ? persistentBoolean.boolValue : !(usesManifestVersion(3) || m_backgroundServiceWorkerPath);
+    m_backgroundContentIsPersistent = persistentBoolean ? persistentBoolean.boolValue : !(supportsManifestVersion(3) || m_backgroundServiceWorkerPath);
 
-    if (m_backgroundContentIsPersistent && usesManifestVersion(3)) {
+    if (m_backgroundContentIsPersistent && supportsManifestVersion(3)) {
         recordError(createError(Error::InvalidBackgroundPersistence, WEB_UI_STRING("Invalid `persistent` manifest entry. A `manifest_version` greater-than or equal to `3` must be non-persistent.", "WKWebExtensionErrorInvalidBackgroundPersistence description for manifest v3")));
         m_backgroundContentIsPersistent = false;
     }
@@ -989,19 +1027,19 @@ void WebExtension::populateBackgroundPropertiesIfNeeded()
 #endif
 }
 
-const Vector<WebExtension::InjectedContentData>& WebExtension::injectedContents()
+const Vector<WebExtension::InjectedContentData>& WebExtension::staticInjectedContents()
 {
     populateContentScriptPropertiesIfNeeded();
-    return m_injectedContents;
+    return m_staticInjectedContents;
 }
 
-bool WebExtension::hasInjectedContentForURL(NSURL *url)
+bool WebExtension::hasStaticInjectedContentForURL(NSURL *url)
 {
     ASSERT(url);
 
     populateContentScriptPropertiesIfNeeded();
 
-    for (auto& injectedContent : m_injectedContents) {
+    for (auto& injectedContent : m_staticInjectedContents) {
         // FIXME: <https://webkit.org/b/246492> Add support for exclude globs.
         bool isExcluded = false;
         for (auto& excludeMatchPattern : injectedContent.excludeMatchPatterns) {
@@ -1145,7 +1183,7 @@ void WebExtension::populateContentScriptPropertiesIfNeeded()
         else
             recordError(createError(Error::InvalidContentScripts, WEB_UI_STRING("Manifest `content_scripts` entry has unknown `run_at` value.", "WKWebExtensionErrorInvalidContentScripts description for unknown 'run_at' value")));
 
-        m_injectedContents.append({ WTFMove(includeMatchPatterns), WTFMove(excludeMatchPatterns), injectionTime, matchesAboutBlank, injectsIntoAllFrames, scriptPaths, styleSheetPaths, includeGlobPatternStrings, excludeGlobPatternStrings });
+        m_staticInjectedContents.append({ WTFMove(includeMatchPatterns), WTFMove(excludeMatchPatterns), injectionTime, matchesAboutBlank, injectsIntoAllFrames, false, scriptPaths, styleSheetPaths, includeGlobPatternStrings, excludeGlobPatternStrings });
     };
 
     for (NSDictionary<NSString *, id> *contentScriptsManifestEntry in contentScriptsManifestArray)
@@ -1197,7 +1235,7 @@ WebExtension::MatchPatternSet WebExtension::allRequestedMatchPatterns()
 
     // FIXME: <https://webkit.org/b/246491> Add externally connectable match patterns.
 
-    for (auto& injectedContent : m_injectedContents) {
+    for (auto& injectedContent : m_staticInjectedContents) {
         for (auto& matchPattern : injectedContent.includeMatchPatterns)
             result.add(matchPattern);
     }
@@ -1215,7 +1253,7 @@ void WebExtension::populatePermissionsPropertiesIfNeeded()
 
     m_parsedManifestPermissionProperties = YES;
 
-    bool findMatchPatternsInPermissions = !usesManifestVersion(3);
+    bool findMatchPatternsInPermissions = !supportsManifestVersion(3);
 
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/manifest.json/permissions
 

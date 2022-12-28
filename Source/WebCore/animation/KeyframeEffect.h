@@ -135,6 +135,7 @@ public:
 
     void willChangeRenderer();
 
+    Document* document() const override;
     RenderElement* renderer() const override;
     const RenderStyle& currentStyle() const override;
     bool triggersStackingContext() const { return m_triggersStackingContext; }
@@ -152,10 +153,9 @@ public:
 
     void computeDeclarativeAnimationBlendingKeyframes(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
     const KeyframeList& blendingKeyframes() const { return m_blendingKeyframes; }
-    const HashSet<CSSPropertyID>& animatedProperties();
-    const HashSet<AtomString>& animatedCustomProperties();
+    const HashSet<AnimatableProperty>& animatedProperties();
     const HashSet<CSSPropertyID>& inheritedProperties() const { return m_inheritedProperties; }
-    bool animatesProperty(CSSPropertyID) const;
+    bool animatesProperty(AnimatableProperty) const;
     bool animatesDirectionAwareProperty() const;
 
     bool computeExtentOfTransformAnimation(LayoutRect&) const;
@@ -203,7 +203,6 @@ private:
         bool m_couldOriginallyPreventAcceleration;
     };
 
-    Document* document() const;
     void updateEffectStackMembership();
     void copyPropertiesFromSource(Ref<KeyframeEffect>&&);
     void didChangeTargetStyleable(const std::optional<const Styleable>&);
@@ -244,8 +243,7 @@ private:
 
     AtomString m_keyframesName;
     KeyframeList m_blendingKeyframes { emptyAtom() };
-    HashSet<CSSPropertyID> m_animatedProperties;
-    HashSet<AtomString> m_animatedCustomProperties;
+    HashSet<AnimatableProperty> m_animatedProperties;
     HashSet<CSSPropertyID> m_inheritedProperties;
     Vector<ParsedKeyframe> m_parsedKeyframes;
     Vector<AcceleratedAction> m_pendingAcceleratedActions;

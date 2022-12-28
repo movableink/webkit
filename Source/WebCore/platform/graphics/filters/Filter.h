@@ -37,15 +37,15 @@ class FilterResults;
 
 class Filter : public FilterFunction {
     using FilterFunction::apply;
+    using FilterFunction::createFilterStyles;
 
 public:
     enum class ClipOperation { Intersect, Unite };
 
     RenderingMode renderingMode() const;
 
-    FilterRenderingMode filterRenderingMode() const { return m_filterRenderingMode; }
-    void setFilterRenderingMode(FilterRenderingMode filterRenderingMode) { m_filterRenderingMode = filterRenderingMode; }
-    void setFilterRenderingMode(OptionSet<FilterRenderingMode> preferredFilterRenderingMode);
+    OptionSet<FilterRenderingMode> filterRenderingModes() const { return m_filterRenderingModes; }
+    WEBCORE_EXPORT void setFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes);
 
     FloatSize filterScale() const { return m_filterScale; }
     void setFilterScale(const FloatSize& filterScale) { m_filterScale = filterScale; }
@@ -70,15 +70,18 @@ public:
 
     bool clampFilterRegionIfNeeded();
 
-    virtual RefPtr<FilterImage> apply(FilterImage* sourceImage, FilterResults&) = 0;
     WEBCORE_EXPORT RefPtr<FilterImage> apply(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, FilterResults&);
+    WEBCORE_EXPORT FilterStyleVector createFilterStyles(const FloatRect& sourceImageRect) const;
 
 protected:
     using FilterFunction::FilterFunction;
     Filter(Filter::Type, const FloatSize& filterScale, ClipOperation, const FloatRect& filterRegion = { });
 
+    virtual RefPtr<FilterImage> apply(FilterImage* sourceImage, FilterResults&) = 0;
+    virtual FilterStyleVector createFilterStyles(const FilterStyle& sourceStyle) const = 0;
+
 private:
-    FilterRenderingMode m_filterRenderingMode { FilterRenderingMode::Software };
+    OptionSet<FilterRenderingMode> m_filterRenderingModes { FilterRenderingMode::Software };
     FloatSize m_filterScale;
     ClipOperation m_clipOperation;
     FloatRect m_filterRegion;

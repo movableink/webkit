@@ -173,7 +173,7 @@ const GridTrackSize& GridTrackSizingAlgorithm::rawGridTrackSize(GridTrackSizingD
 {
     bool isRowAxis = direction == ForColumns;
     auto& renderStyle = m_renderGrid->style();
-    auto& trackStyles = isRowAxis ? renderStyle.gridColumns() : renderStyle.gridRows();
+    auto& trackStyles = isRowAxis ? renderStyle.gridColumnTrackSizes() : renderStyle.gridRowTrackSizes();
     auto& autoRepeatTrackStyles = isRowAxis ? renderStyle.gridAutoRepeatColumns() : renderStyle.gridAutoRepeatRows();
     auto& autoTrackStyles = isRowAxis ? renderStyle.gridAutoColumns() : renderStyle.gridAutoRows();
     unsigned insertionPoint = isRowAxis ? renderStyle.gridAutoRepeatColumnsInsertionPoint() : renderStyle.gridAutoRepeatRowsInsertionPoint();
@@ -211,6 +211,9 @@ const GridTrackSize& GridTrackSizingAlgorithm::rawGridTrackSize(GridTrackSizingD
 
 LayoutUnit GridTrackSizingAlgorithm::computeTrackBasedSize() const
 {
+    if (isDirectionInMasonryDirection())
+        return m_renderGrid->masonryContentSize();
+    
     LayoutUnit size;
     auto& allTracks = tracks(m_direction);
     for (auto& track : allTracks)
@@ -1678,6 +1681,11 @@ GridTrackSizingAlgorithm::StateMachine::~StateMachine()
 {
     m_algorithm.advanceNextState();
     m_algorithm.m_needsSetup = true;
+}
+
+bool GridTrackSizingAlgorithm::isDirectionInMasonryDirection() const
+{
+    return (m_renderGrid->areMasonryRows() && m_direction == ForRows) || (m_renderGrid->areMasonryColumns() && m_direction == ForColumns);
 }
 
 } // namespace WebCore

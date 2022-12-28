@@ -29,6 +29,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class _WKWebExtension;
+
 /*! @abstract Indicates a @link WKWebExtensionMatchPattern @/link error. */
 WK_EXTERN NSErrorDomain const _WKWebExtensionMatchPatternErrorDomain WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
 
@@ -66,10 +68,19 @@ typedef NS_OPTIONS(NSUInteger, _WKWebExtensionMatchPatternOptions) {
  consist of three parts: scheme, host, and path.
  */
 WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
+NS_SWIFT_NAME(_WKWebExtension.MatchPattern)
 @interface _WKWebExtensionMatchPattern : NSObject <NSSecureCoding, NSCopying>
 
 + (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
+
+/*!
+ @abstract Registers a custom URL scheme that can be used in match patterns.
+ @discussion This method should be used to register any custom URL schemes used by the app for the extension base URLs,
+ other than `webkit-extension`, or if extensions should have access to other supported URL schemes when using `<all_urls>`.
+ @param urlScheme The custom URL scheme to register.
+*/
++ (void)registerCustomURLScheme:(NSString *)urlScheme;
 
 /*! @abstract Returns a pattern object for `<all_urls>`. */
 + (instancetype)allURLsMatchPattern;
@@ -78,28 +89,21 @@ WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
 + (instancetype)allHostsAndSchemesMatchPattern;
 
 /*!
- @abstract Returns a pattern object for the speficied pattern string.
+ @abstract Returns a pattern object for the specified pattern string.
  @result Returns `nil` if the pattern string is invalid.
  @seealso initWithString:error:
  */
-+ (nullable instancetype)matchPatternWithString:(NSString *)string NS_SWIFT_UNAVAILABLE("Use error version");
++ (nullable instancetype)matchPatternWithString:(NSString *)string;
 
 /*!
- @abstract Returns a pattern object for the speficied scheme, host, and path strings.
+ @abstract Returns a pattern object for the specified scheme, host, and path strings.
  @result A pattern object, or `nil` if any of the strings are invalid.
  @seealso initWithScheme:host:path:error:
  */
-+ (nullable instancetype)matchPatternWithScheme:(NSString *)scheme host:(NSString *)host path:(NSString *)path NS_SWIFT_UNAVAILABLE("Use error version");
++ (nullable instancetype)matchPatternWithScheme:(NSString *)scheme host:(NSString *)host path:(NSString *)path;
 
 /*!
- @abstract Returns a pattern object for the speficied pattern string.
- @result A pattern object, or `nil` if the pattern string is invalid.
- @seealso initWithString:error:
- */
-- (nullable instancetype)initWithString:(NSString *)string NS_SWIFT_UNAVAILABLE("Use error version");
-
-/*!
- @abstract Returns a pattern object for the speficied pattern string.
+ @abstract Returns a pattern object for the specified pattern string.
  @param error Set to \c nil or an \c NSError instance if an error occurred.
  @result A pattern object, or `nil` if the pattern string is invalid and `error` will be set.
  @seealso initWithString:
@@ -107,14 +111,7 @@ WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
 - (nullable instancetype)initWithString:(NSString *)string error:(NSError **)error NS_DESIGNATED_INITIALIZER;
 
 /*!
- @abstract Returns a pattern object for the speficied scheme, host, and path strings.
- @result A pattern object, or `nil` if any of the strings are invalid.
- @seealso initWithScheme:host:path:error:
- */
-- (nullable instancetype)initWithScheme:(NSString *)scheme host:(NSString *)host path:(NSString *)path NS_SWIFT_UNAVAILABLE("Use error version");
-
-/*!
- @abstract Returns a pattern object for the speficied scheme, host, and path strings.
+ @abstract Returns a pattern object for the specified scheme, host, and path strings.
  @param error Set to \c nil or an \c NSError instance if an error occurred.
  @result A pattern object, or `nil` if any of the strings are invalid and `error` will be set.
  @seealso initWithScheme:host:path:
@@ -142,19 +139,19 @@ WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
 /*!
  @abstract Matches the reciever pattern against the specified URL.
  @param url The URL to match the against the reciever pattern.
- @result A Boolean value indicating if pattern matches the speficied URL.
+ @result A Boolean value indicating if pattern matches the specified URL.
  @seealso matchesURL:options:
  */
-- (BOOL)matchesURL:(NSURL *)url NS_SWIFT_NAME(matches(url:));
+- (BOOL)matchesURL:(NSURL *)url NS_SWIFT_UNAVAILABLE("Use options version with empty options set");
 
 /*!
  @abstract Matches the reciever pattern against the specified URL with options.
  @param url The URL to match the against the reciever pattern.
  @param options The options to use while matching.
- @result A Boolean value indicating if pattern matches the speficied URL.
+ @result A Boolean value indicating if pattern matches the specified URL.
  @seealso matchesURL:
  */
-- (BOOL)matchesURL:(NSURL *)url options:(_WKWebExtensionMatchPatternOptions)options NS_SWIFT_NAME(matches(url:options:));
+- (BOOL)matchesURL:(NSURL *)url options:(_WKWebExtensionMatchPatternOptions)options NS_SWIFT_NAME(matches(_:options:));
 
 /*!
  @abstract Matches the receiver pattern against the specified pattern.
@@ -162,7 +159,7 @@ WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
  @result A Boolean value indicating if receiver pattern matches the specified pattern.
  @seealso matchesPattern:options:
  */
-- (BOOL)matchesPattern:(_WKWebExtensionMatchPattern *)pattern NS_SWIFT_NAME(matches(pattern:));
+- (BOOL)matchesPattern:(_WKWebExtensionMatchPattern *)pattern NS_SWIFT_UNAVAILABLE("Use options version with empty options set");
 
 /*!
  @abstract Matches the receiver pattern against the specified pattern with options.
@@ -171,7 +168,7 @@ WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
  @result A Boolean value indicating if receiver pattern matches the specified pattern.
  @seealso matchesPattern:
  */
-- (BOOL)matchesPattern:(_WKWebExtensionMatchPattern *)pattern options:(_WKWebExtensionMatchPatternOptions)options NS_SWIFT_NAME(matches(pattern:options:));
+- (BOOL)matchesPattern:(_WKWebExtensionMatchPattern *)pattern options:(_WKWebExtensionMatchPatternOptions)options NS_SWIFT_NAME(matches(_:options:));
 
 @end
 

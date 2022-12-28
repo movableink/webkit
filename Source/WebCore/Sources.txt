@@ -60,6 +60,8 @@ Modules/async-clipboard/ClipboardItem.cpp
 Modules/async-clipboard/ClipboardItemBindingsDataSource.cpp
 Modules/async-clipboard/ClipboardItemPasteboardDataSource.cpp
 Modules/async-clipboard/NavigatorClipboard.cpp
+Modules/audiosession/DOMAudioSession.cpp
+Modules/audiosession/NavigatorAudioSession.cpp
 Modules/beacon/NavigatorBeacon.cpp
 Modules/cache/CacheStorageConnection.cpp
 Modules/cache/DOMCache.cpp
@@ -268,6 +270,7 @@ Modules/push-api/PushMessageData.cpp
 Modules/push-api/PushSubscription.cpp
 Modules/push-api/PushSubscriptionChangeEvent.cpp
 Modules/push-api/PushSubscriptionData.cpp
+Modules/push-api/PushSubscriptionIdentifier.cpp
 Modules/push-api/PushSubscriptionOptions.cpp
 Modules/push-api/PushManager.cpp
 Modules/push-api/ServiceWorkerRegistrationPushAPI.cpp
@@ -486,23 +489,24 @@ accessibility/AccessibilityTreeItem.cpp
 accessibility/isolatedtree/AXIsolatedObject.cpp
 accessibility/isolatedtree/AXIsolatedTree.cpp
 animation/AnimationEffect.cpp
-animation/AnimationEvent.cpp
 animation/AnimationEventBase.cpp
 animation/AnimationPlaybackEvent.cpp
 animation/AnimationTimeline.cpp
 animation/CSSAnimation.cpp
+animation/CSSAnimationEvent.cpp
 animation/CSSPropertyAnimation.cpp
 animation/CSSTransition.cpp
+animation/CSSTransitionEvent.cpp
 animation/CompositeOperation.cpp
 animation/CustomEffect.cpp
 animation/DeclarativeAnimation.cpp
+animation/DeclarativeAnimationEvent.cpp
 animation/DocumentTimeline.cpp
 animation/DocumentTimelinesController.cpp
 animation/ElementAnimationRareData.cpp
 animation/FrameRateAligner.cpp
 animation/KeyframeEffect.cpp
 animation/KeyframeEffectStack.cpp
-animation/TransitionEvent.cpp
 animation/WebAnimation.cpp
 animation/WebAnimationUtilities.cpp
 bindings/js/CachedModuleScriptLoader.cpp
@@ -782,6 +786,7 @@ css/CSSPageRule.cpp
 css/CSSPaintImageValue.cpp
 css/CSSPrimitiveValue.cpp
 css/CSSProperty.cpp
+css/CSSPropertyRule.cpp
 css/CSSPropertySourceData.cpp
 css/CSSRayValue.cpp
 css/CSSReflectValue.cpp
@@ -821,11 +826,7 @@ css/DeprecatedCSSOMValueList.cpp
 css/FontFace.cpp
 css/FontFaceSet.cpp
 css/FontVariantBuilder.cpp
-css/LegacyMediaQueryEvaluator.cpp
-css/LegacyMediaQuery.cpp
-css/MediaFeatureNames.cpp
 css/MediaList.cpp
-css/MediaQueryExpression.cpp
 css/MediaQueryList.cpp
 css/MediaQueryListEvent.cpp
 css/MediaQueryMatcher.cpp
@@ -854,6 +855,7 @@ css/calc/CSSCalcPrimitiveValueNode.cpp
 css/calc/CSSCalcSymbolTable.cpp
 css/calc/CSSCalcValue.cpp
 css/parser/CSSAtRuleID.cpp
+css/parser/CSSCustomPropertySyntax.cpp
 css/parser/CSSParser.cpp
 css/parser/CSSParserContext.cpp
 css/parser/CSSParserFastPaths.cpp
@@ -871,7 +873,6 @@ css/parser/CSSSupportsParser.cpp
 css/parser/CSSTokenizer.cpp
 css/parser/CSSTokenizerInputStream.cpp
 css/parser/CSSVariableParser.cpp
-css/parser/LegacyMediaQueryParser.cpp
 css/parser/MediaQueryBlockWatcher.cpp
 css/parser/SizesAttributeParser.cpp
 css/parser/SizesCalcParser.cpp
@@ -883,6 +884,7 @@ css/query/MediaQueryEvaluator.cpp
 css/query/MediaQueryFeatures.cpp
 css/query/MediaQueryParser.cpp
 css/typedom/ComputedStylePropertyMapReadOnly.cpp
+css/typedom/InlineStylePropertyMap.cpp
 css/typedom/StylePropertyMapReadOnly.cpp
 css/typedom/CSSKeywordValue.cpp
 css/typedom/CSSStyleImageValue.cpp
@@ -894,6 +896,7 @@ css/typedom/CSSUnitValue.cpp
 css/typedom/CSSUnparsedValue.cpp
 css/typedom/CSSOMVariableReferenceValue.cpp
 css/typedom/DeclaredStylePropertyMap.cpp
+css/typedom/HashMapStylePropertyMapReadOnly.cpp
 css/typedom/MainThreadStylePropertyMapReadOnly.cpp
 css/typedom/StylePropertyMap.cpp
 css/typedom/color/CSSColor.cpp
@@ -1735,6 +1738,7 @@ loader/archive/ArchiveResource.cpp
 loader/archive/ArchiveResourceCollection.cpp
 loader/archive/mhtml/MHTMLArchive.cpp
 loader/archive/mhtml/MHTMLParser.cpp
+loader/cache/AllowedFonts.cpp
 loader/cache/CachedApplicationManifest.cpp
 loader/cache/CachedCSSStyleSheet.cpp
 loader/cache/CachedFont.cpp
@@ -1744,7 +1748,7 @@ loader/cache/CachedResource.cpp
 loader/cache/CachedResourceHandle.cpp
 loader/cache/CachedResourceLoader.cpp
 loader/cache/CachedResourceRequest.cpp
-loader/cache/CachedResourceRequestInitiators.cpp
+loader/cache/CachedResourceRequestInitiatorTypes.cpp
 loader/cache/CachedSVGDocument.cpp
 loader/cache/CachedSVGDocumentReference.cpp
 loader/cache/CachedSVGFont.cpp
@@ -1897,6 +1901,7 @@ page/scrolling/ScrollAnchoringController.cpp
 page/scrolling/ScrollSnapOffsetsInfo.cpp
 page/scrolling/ScrollLatchingController.cpp
 page/scrolling/ScrollingConstraints.cpp
+page/scrolling/ScrollingCoordinatorTypes.cpp
 page/scrolling/ScrollingCoordinator.cpp
 page/scrolling/ScrollingStateFixedNode.cpp
 page/scrolling/ScrollingStateFrameHostingNode.cpp
@@ -1925,6 +1930,7 @@ page/scrolling/ScrollingTreeStickyNode.cpp
 page/scrolling/ThreadedScrollingCoordinator.cpp
 page/scrolling/ThreadedScrollingTree.cpp
 page/scrolling/ThreadedScrollingTreeScrollingNodeDelegate.cpp
+platform/CaretAnimator.cpp
 platform/CommonAtomStrings.cpp
 platform/ContentType.cpp
 platform/ContextMenu.cpp
@@ -1998,6 +2004,7 @@ platform/SerializedPlatformDataCue.cpp
 platform/SharedBuffer.cpp
 platform/SharedBufferChunkReader.cpp
 platform/SharedStringHash.cpp
+platform/SimpleCaretAnimator.cpp
 platform/SleepDisabler.cpp
 platform/SleepDisablerClient.cpp
 platform/SystemSoundManager.cpp
@@ -2191,6 +2198,11 @@ platform/graphics/VelocityData.cpp
 platform/graphics/WebMResourceClient.cpp
 platform/graphics/WOFFFileFormat.cpp
 platform/graphics/WidthIterator.cpp
+platform/graphics/controls/ControlFactory.cpp
+platform/graphics/controls/ControlPart.cpp
+platform/graphics/controls/ControlPartType.cpp
+platform/graphics/controls/ControlStyle.cpp
+platform/graphics/controls/MeterPart.cpp
 platform/graphics/cpu/arm/filters/FEBlendNeonApplier.cpp
 platform/graphics/displaylists/DisplayList.cpp
 platform/graphics/displaylists/DisplayListDrawingContext.cpp
@@ -2229,6 +2241,7 @@ platform/graphics/filters/FilterImageTargetSwitcher.cpp
 platform/graphics/filters/FilterOperation.cpp
 platform/graphics/filters/FilterOperations.cpp
 platform/graphics/filters/FilterResults.cpp
+platform/graphics/filters/FilterStyleTargetSwitcher.cpp
 platform/graphics/filters/FilterTargetSwitcher.cpp
 platform/graphics/filters/PointLightSource.cpp
 platform/graphics/filters/SourceAlpha.cpp
@@ -2262,6 +2275,7 @@ platform/graphics/iso/ISOTrackEncryptionBox.cpp
 platform/graphics/iso/ISOVTTCue.cpp
 platform/graphics/opentype/OpenTypeMathData.cpp
 platform/graphics/transforms/AffineTransform.cpp
+platform/graphics/transforms/IdentityTransformOperation.cpp
 platform/graphics/transforms/Matrix3DTransformOperation.cpp
 platform/graphics/transforms/MatrixTransformOperation.cpp
 platform/graphics/transforms/PerspectiveTransformOperation.cpp
@@ -2397,6 +2411,7 @@ rendering/FloatingObjects.cpp
 rendering/Grid.cpp
 rendering/GridBaselineAlignment.cpp
 rendering/GridLayoutFunctions.cpp
+rendering/GridMasonryLayout.cpp
 rendering/GridTrackSizingAlgorithm.cpp
 rendering/GlyphDisplayListCache.cpp
 rendering/HighlightData.cpp
@@ -2679,6 +2694,7 @@ style/ChildChangeInvalidation.cpp
 style/ClassChangeInvalidation.cpp
 style/ColorFromPrimitiveValue.cpp
 style/ContainerQueryEvaluator.cpp
+style/CustomPropertyRegistry.cpp
 style/ElementRuleCollector.cpp
 style/FilterOperationsBuilder.cpp
 style/HasSelectorFilter.cpp
@@ -2994,7 +3010,6 @@ JSAesKeyParams.cpp
 JSAnalyserNode.cpp
 JSAnalyserOptions.cpp
 JSAnimationEffect.cpp
-JSAnimationEvent.cpp
 JSAnimationFrameRatePreset.cpp
 JSAnimationPlaybackEvent.cpp
 JSAnimationPlaybackEventInit.cpp
@@ -3057,6 +3072,7 @@ JSByteLengthQueuingStrategy.cpp
 JSCDATASection.cpp
 JSCSPViolationReportBody.cpp
 JSCSSAnimation.cpp
+JSCSSAnimationEvent.cpp
 JSCSSConditionRule.cpp
 JSCSSContainerRule.cpp
 JSCSSCounterStyleRule.cpp
@@ -3074,6 +3090,7 @@ JSCSSNamespaceRule.cpp
 JSCSSPageRule.cpp
 JSCSSPaintCallback.cpp
 JSCSSPaintSize.cpp
+JSCSSPropertyRule.cpp
 JSCSSRule.cpp
 JSCSSRuleList.cpp
 JSCSSStyleDeclaration.cpp
@@ -3081,6 +3098,7 @@ JSCSSStyleRule.cpp
 JSCSSStyleSheet.cpp
 JSCSSSupportsRule.cpp
 JSCSSTransition.cpp
+JSCSSTransitionEvent.cpp
 JSCSSUnknownRule.cpp
 JSCOEPInheritenceViolationReportBody.cpp
 JSCORPViolationReportBody.cpp
@@ -3162,6 +3180,7 @@ JSCustomEffectCallback.cpp
 JSCustomElementRegistry.cpp
 JSCustomEvent.cpp
 JSDOMApplicationCache.cpp
+JSDOMAudioSession.cpp
 JSDOMCSSCustomPropertyDescriptor.cpp
 JSDOMCSSNamespace.cpp
 JSDOMCache.cpp
@@ -3294,6 +3313,7 @@ JSFormDataEvent.cpp
 JSGPU.cpp
 JSGPUAdapter.cpp
 JSGPUAddressMode.cpp
+JSGPUAutoLayoutMode.cpp
 JSGPUBindGroup.cpp
 JSGPUBindGroupDescriptor.cpp
 JSGPUBindGroupEntry.cpp
@@ -4067,7 +4087,6 @@ JSTrackEvent.cpp
 JSTransferFunction.cpp
 JSTransformStream.cpp
 JSTransformStreamDefaultController.cpp
-JSTransitionEvent.cpp
 JSTreeWalker.cpp
 JSCSSKeywordValue.cpp
 JSCSSStyleImageValue.cpp

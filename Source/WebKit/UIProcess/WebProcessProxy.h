@@ -95,6 +95,7 @@ namespace WebKit {
 class AudioSessionRoutingArbitratorProxy;
 class ObjCObjectGraph;
 class PageClient;
+class ProvisionalFrameProxy;
 class ProvisionalPageProxy;
 class UserMediaCaptureManagerProxy;
 class VisitedLinkStore;
@@ -136,8 +137,8 @@ enum class CheckBackForwardList : bool { No, Yes };
 
 class WebProcessProxy : public AuxiliaryProcessProxy, private ProcessThrottlerClient {
 public:
-    // FIXME: This should be a WeakPtr<WebPageProxy> as the key.
-    typedef HashMap<WebPageProxyIdentifier, WebPageProxy*> WebPageProxyMap;
+    using WebPageProxyMap = HashMap<WebPageProxyIdentifier, WeakPtr<WebPageProxy>>;
+    typedef HashMap<WebCore::FrameIdentifier, WeakPtr<WebFrameProxy>> WebFrameProxyMap;
     typedef HashMap<uint64_t, RefPtr<API::UserInitiatedAction>> UserInitiatedActionMap;
 
     enum class IsPrewarmed {
@@ -188,9 +189,9 @@ public:
     static bool hasReachedProcessCountLimit();
     static void setProcessCountLimit(unsigned);
 
-    static WebProcessProxy* processForIdentifier(WebCore::ProcessIdentifier);
-    static WebPageProxy* webPage(WebPageProxyIdentifier);
-    static WebPageProxy* audioCapturingWebPage();
+    static RefPtr<WebProcessProxy> processForIdentifier(WebCore::ProcessIdentifier);
+    static RefPtr<WebPageProxy> webPage(WebPageProxyIdentifier);
+    static RefPtr<WebPageProxy> audioCapturingWebPage();
     Ref<WebPageProxy> createWebPage(PageClient&, Ref<API::PageConfiguration>&&);
 
     enum class BeginsUsingDataStore : bool { No, Yes };
@@ -201,8 +202,12 @@ public:
 
     void addProvisionalPageProxy(ProvisionalPageProxy&);
     void removeProvisionalPageProxy(ProvisionalPageProxy&);
-    
-    typename WebPageProxyMap::ValuesConstIteratorRange pages() const { return m_pageMap.values(); }
+    void addProvisionalFrameProxy(ProvisionalFrameProxy&);
+    void removeProvisionalFrameProxy(ProvisionalFrameProxy&);
+    void provisionalFrameCommitted(WebFrameProxy&);
+    void removeFrameWithRemoteFrameProcess(WebFrameProxy&);
+
+    Vector<RefPtr<WebPageProxy>> pages() const;
     unsigned pageCount() const { return m_pageMap.size(); }
     unsigned provisionalPageCount() const { return m_provisionalPages.computeSize(); }
     unsigned visiblePageCount() const { return m_visiblePageCounter.value(); }
@@ -447,6 +452,9 @@ public:
 #endif
     void getNotifications(const URL&, const String&, CompletionHandler<void(Vector<WebCore::NotificationData>&&)>&&);
 
+    void setAppBadge(std::optional<WebPageProxyIdentifier>, const WebCore::SecurityOriginData&, std::optional<uint64_t> badge);
+    void setClientBadge(WebPageProxyIdentifier, const WebCore::SecurityOriginData&, std::optional<uint64_t> badge);
+
     WebCore::CrossOriginMode crossOriginMode() const { return m_crossOriginMode; }
     LockdownMode lockdownMode() const { return m_lockdownMode; }
 
@@ -497,7 +505,9 @@ protected:
 #endif
 
 private:
-    static HashMap<WebCore::ProcessIdentifier, WebProcessProxy*>& allProcesses();
+    using WebProcessProxyMap = HashMap<WebCore::ProcessIdentifier, WeakPtr<WebProcessProxy>>;
+    static WebProcessProxyMap& allProcessMap();
+    static Vector<RefPtr<WebProcessProxy>> allProcesses();
 
     void platformInitialize();
     void platformDestroy();
@@ -531,7 +541,7 @@ private:
     friend class WebConnectionToWebProcess;
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
     bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) override;
-    void didClose(IPC::Connection&) override;
+    void didClose(IPC::Connection&) final;
     void didReceiveInvalidMessage(IPC::Connection&, IPC::MessageName) override;
 
     // ResponsivenessTimer::Client
@@ -575,6 +585,8 @@ private:
     bool messageSourceIsValidWebContentProcess();
 #endif
 
+    bool shouldTakeSuspendedAssertion() const;
+
     enum class IsWeak { No, Yes };
     template<typename T> class WeakOrStrongPtr {
     public:
@@ -617,7 +629,9 @@ private:
     HashSet<String> m_previouslyApprovedFilePaths;
 
     WebPageProxyMap m_pageMap;
+    WebFrameProxyMap m_frameMap;
     WeakHashSet<ProvisionalPageProxy> m_provisionalPages;
+    WeakHashSet<ProvisionalFrameProxy> m_provisionalFrames;
     UserInitiatedActionMap m_userInitiatedActionMap;
 
     HashMap<VisitedLinkStore*, HashSet<WebPageProxyIdentifier>> m_visitedLinkStoresWithUsers;

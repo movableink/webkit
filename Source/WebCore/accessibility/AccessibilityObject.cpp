@@ -575,7 +575,7 @@ static void appendAccessibilityObject(RefPtr<AXCoreObject> object, Accessibility
         results.append(object);
 }
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
 static bool isTableComponent(AXCoreObject& axObject)
 {
     return axObject.isTable() || axObject.isTableColumn() || axObject.isTableRow() || axObject.isTableCell();
@@ -2729,7 +2729,12 @@ bool AccessibilityObject::isInlineText() const
     return is<RenderInline>(renderer());
 }
 
-const String AccessibilityObject::keyShortcutsValue() const
+bool AccessibilityObject::supportsKeyShortcuts() const
+{
+    return hasAttribute(aria_keyshortcutsAttr);
+}
+
+String AccessibilityObject::keyShortcuts() const
 {
     return getAttribute(aria_keyshortcutsAttr);
 }

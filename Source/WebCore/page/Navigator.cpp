@@ -23,6 +23,7 @@
 #include "config.h"
 #include "Navigator.h"
 
+#include "BadgeClient.h"
 #include "Chrome.h"
 #include "CookieJar.h"
 #include "DOMMimeType.h"
@@ -259,7 +260,10 @@ void Navigator::initializePluginAndMimeTypeArrays()
         return;
 
     auto* frame = this->frame();
-    if (!frame || !frame->page()) {
+    bool needsEmptyNavigatorPluginsQuirk = frame && frame->document() && frame->document()->quirks().shouldNavigatorPluginsBeEmpty();
+    if (!frame || !frame->page() || needsEmptyNavigatorPluginsQuirk) {
+        if (needsEmptyNavigatorPluginsQuirk)
+            frame->document()->addConsoleMessage(MessageSource::Other, MessageLevel::Info, "QUIRK: Navigator plugins / mimeTypes empty on marcus.com. More information at https://bugs.webkit.org/show_bug.cgi?id=248798"_s);
         m_plugins = DOMPluginArray::create(*this);
         m_mimeTypes = DOMMimeTypeArray::create(*this);
         return;
@@ -379,5 +383,55 @@ GPU* Navigator::gpu()
 
     return m_gpuForWebGPU.get();
 }
+
+#if ENABLE(BADGING)
+
+void Navigator::setAppBadge(std::optional<unsigned long long> badge, Ref<DeferredPromise>&& promise)
+{
+    auto* frame = this->frame();
+    if (!frame) {
+        promise->reject();
+        return;
+    }
+
+    auto* page = frame->page();
+    if (!page) {
+        promise->reject();
+        return;
+    }
+
+    page->badgeClient().setAppBadge(page, SecurityOriginData::fromFrame(frame), badge);
+    promise->resolve();
+}
+
+void Navigator::clearAppBadge(Ref<DeferredPromise>&& promise)
+{
+    setAppBadge(0, WTFMove(promise));
+}
+
+void Navigator::setClientBadge(std::optional<unsigned long long> badge, Ref<DeferredPromise>&& promise)
+{
+    auto* frame = this->frame();
+    if (!frame) {
+        promise->reject();
+        return;
+    }
+
+    auto* page = frame->page();
+    if (!page) {
+        promise->reject();
+        return;
+    }
+
+    page->badgeClient().setClientBadge(*page, SecurityOriginData::fromFrame(frame), badge);
+    promise->resolve();
+}
+
+void Navigator::clearClientBadge(Ref<DeferredPromise>&& promise)
+{
+    setClientBadge(0, WTFMove(promise));
+}
+
+#endif
 
 } // namespace WebCore

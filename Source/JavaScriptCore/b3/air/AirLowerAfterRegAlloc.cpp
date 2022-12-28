@@ -113,7 +113,7 @@ void lowerAfterRegAlloc(Code& code)
     {
         RegisterSetBuilder disallowed;
         if (code.stackIsAllocated()) {
-            disallowed = RegisterSetBuilder::calleeSaveRegisters();
+            disallowed = RegisterSetBuilder::vmCalleeSaveRegisters();
             ASSERT(!disallowed.hasAnyWideRegisters());
             disallowed.exclude(code.calleeSaveRegisters());
         }
@@ -135,7 +135,7 @@ void lowerAfterRegAlloc(Code& code)
             if (!found) {
                 StackSlot*& slot = slots[bank][i];
                 if (!slot)
-                    slot = code.addStackSlot(Options::useWebAssemblySIMD() ? conservativeRegisterBytes(bank) : conservativeRegisterBytesWithoutVectors(bank), StackSlotKind::Spill);
+                    slot = code.addStackSlot(code.usesSIMD() ? conservativeRegisterBytes(bank) : conservativeRegisterBytesWithoutVectors(bank), StackSlotKind::Spill);
                 result[i] = Arg::stack(slots[bank][i]);
             }
         }
@@ -178,6 +178,8 @@ void lowerAfterRegAlloc(Code& code)
             }
 
             case ColdCCall: {
+                if constexpr (is32Bit())
+                    UNREACHABLE_FOR_PLATFORM(); // Needs porting when used
                 CCallValue* value = inst.origin->as<CCallValue>();
                 Kind oldKind = inst.kind;
 
@@ -191,7 +193,7 @@ void lowerAfterRegAlloc(Code& code)
                 ScalarRegisterSet preUsed = liveRegs.buildScalarRegisterSet();
                 ScalarRegisterSet postUsed = preUsed;
                 Vector<Arg> destinations = computeCCallingConvention(code, value);
-                Tmp result = cCallResult(value->type());
+                Tmp result = cCallResult(value, 0);
                 Arg originalResult = result ? inst.args[1] : Arg();
                 
                 Vector<ShufflePair> pairs;

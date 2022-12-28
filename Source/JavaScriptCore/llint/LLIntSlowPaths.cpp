@@ -333,11 +333,11 @@ LLINT_SLOW_PATH_DECL(trace)
             pc->name(),
             pc);
     if (opcodeID == op_enter) {
-        dataLogF("Frame will eventually return to %p\n", callFrame->returnPC().value());
-        *removeCodePtrTag<volatile char*>(callFrame->returnPC().value());
+        dataLogF("Frame will eventually return to %p\n", callFrame->returnPCForInspection());
+        *bitwise_cast<volatile char*>(callFrame->returnPCForInspection());
     }
     if (opcodeID == op_ret) {
-        dataLogF("Will be returning to %p\n", callFrame->returnPC().value());
+        dataLogF("Will be returning to %p\n", callFrame->returnPCForInspection());
         dataLogF("The new cfr will be %p\n", callFrame->callerFrame());
     }
     LLINT_END_IMPL();
@@ -2060,7 +2060,7 @@ inline SlowPathReturnType varargsSetup(CallFrame* callFrame, const JSInstruction
     calleeFrame->uncheckedR(VirtualRegister(CallFrameSlot::callee)) = calleeAsValue;
     callFrame->setCurrentVPC(pc);
 
-    metadata.m_callLinkInfo.updateMaxArgumentCountIncludingThis(argumentCountIncludingThis);
+    metadata.m_callLinkInfo.updateMaxArgumentCountIncludingThisForVarargs(argumentCountIncludingThis);
 
     auto* callerSP = calleeFrame + CallerFrameAndPC::sizeInRegisters;
     LLINT_RETURN_TWO(pc, callerSP);

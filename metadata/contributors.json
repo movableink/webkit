@@ -1005,7 +1005,8 @@
       "name" : "Asumu Takikawa",
       "nicks" : [
          "asumu"
-      ]
+      ],
+      "status" : "committer"
    },
    {
       "emails" : [
@@ -1485,7 +1486,7 @@
    },
    {
       "emails" : [
-         "charles_wolfe@apple.com"
+         "charliew@apple.com"
       ],
       "github" : "charliewolfe",
       "name" : "Charlie Wolfe"
@@ -4667,10 +4668,13 @@
    },
    {
       "emails" : [
-         "lingho@apple.com"
+         "lingho@apple.com",
+         "ling@aliko.com"
       ],
       "expertise" : "webkit.org admin",
-      "name" : "Ling Ho"
+      "github" : "lingcherd",
+      "name" : "Ling Ho",
+      "status" : "committer"
    },
    {
       "emails" : [
@@ -5013,7 +5017,7 @@
       "nicks" : [
          "mattwoodrow"
       ],
-      "status" : "committer"
+      "status" : "reviewer"
    },
    {
       "emails" : [
@@ -5166,7 +5170,8 @@
          "miguel_salinas@apple.com"
       ],
       "github" : "salinas-miguel",
-      "name" : "Miguel Salinas"
+      "name" : "Miguel Salinas",
+      "status" : "committer"
    },
    {
       "emails" : [
@@ -7137,7 +7142,8 @@
       "name" : "Vitor Roriz",
       "nicks" : [
          "vitorroriz"
-      ]
+      ],
+      "status" : "committer"
    },
    {
       "emails" : [
@@ -7422,6 +7428,14 @@
          "ykimoto"
       ],
       "status" : "committer"
+   },
+   {
+      "emails" : [
+         "yuki.sekiguchi@access-company.com",
+         "yukiseki712@gmail.com"
+      ],
+      "github" : "aYukiSekiguchi",
+      "name" : "Yuki Sekiguchi"
    },
    {
       "emails" : [

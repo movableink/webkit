@@ -1037,6 +1037,11 @@ private:
         else
             return false;
 
+        if (UNLIKELY(jsCast<JSArrayBufferView*>(obj)->isOutOfBounds())) {
+            code = SerializationReturnCode::DataCloneError;
+            return true;
+        }
+
         RefPtr<ArrayBufferView> arrayBufferView = toPossiblySharedArrayBufferView(vm, obj);
         if (arrayBufferView->isResizableOrGrowableShared()) {
             uint64_t byteOffset = arrayBufferView->byteOffsetRaw();
@@ -3464,8 +3469,10 @@ private:
             return JSValue();
         }
 
-        if (!m_imageBitmaps[index])
+        if (!m_imageBitmaps[index]) {
+            m_backingStores.at(index)->connect(*executionContext(m_lexicalGlobalObject));
             m_imageBitmaps[index] = ImageBitmap::create(WTFMove(m_backingStores.at(index)));
+        }
 
         auto bitmap = m_imageBitmaps[index].get();
         return getJSValue(bitmap);
@@ -3578,7 +3585,7 @@ private:
         }
 
         if (!m_videoFrames[index])
-            m_videoFrames[index] = WebCodecsVideoFrame::create(WTFMove(m_serializedVideoFrames.at(index)));
+            m_videoFrames[index] = WebCodecsVideoFrame::create(*executionContext(m_lexicalGlobalObject), WTFMove(m_serializedVideoFrames.at(index)));
 
         return getJSValue(m_videoFrames[index].get());
     }

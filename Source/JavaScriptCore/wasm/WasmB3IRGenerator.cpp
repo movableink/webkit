@@ -32,11 +32,13 @@
 #include "AllowMacroScratchRegisterUsageIf.h"
 #include "B3BasicBlockInlines.h"
 #include "B3CCallValue.h"
+#include "B3Const128Value.h"
 #include "B3ConstPtrValue.h"
 #include "B3EstimateStaticExecutionCounts.h"
 #include "B3FixSSA.h"
 #include "B3Generate.h"
 #include "B3InsertionSet.h"
+#include "B3SIMDValue.h"
 #include "B3StackmapGenerationParams.h"
 #include "B3SwitchValue.h"
 #include "B3UpsilonValue.h"
@@ -65,6 +67,7 @@
 #include "WasmOSREntryData.h"
 #include "WasmOpcodeOrigin.h"
 #include "WasmOperations.h"
+#include "WasmSIMDOpcodes.h"
 #include "WasmThunks.h"
 #include "WasmTypeDefinitionInlines.h"
 #include <limits>
@@ -80,6 +83,8 @@ void dumpProcedure(void* ptr)
     proc->dump(WTF::dataFile());
 }
 
+#if USE(JSVALUE64)
+
 namespace JSC { namespace Wasm {
 
 using namespace B3;
@@ -94,8 +99,9 @@ class B3IRGenerator {
 public:
     using ExpressionType = Variable*;
     using ResultList = Vector<ExpressionType, 8>;
+    using CallType = CallLinkInfo::CallType;
 
-    static constexpr bool tierSupportsSIMD = false;
+    static constexpr bool tierSupportsSIMD = true;
 
     struct ControlData {
         ControlData(Procedure& proc, Origin origin, BlockSignature signature, BlockType type, unsigned stackSize, BasicBlock* continuation, BasicBlock* special = nullptr)
@@ -309,6 +315,188 @@ public:
 
     B3IRGenerator(const ModuleInformation&, Procedure&, InternalFunction*, Vector<UnlinkedWasmToWasmCall>&, unsigned& osrEntryScratchBufferSize, MemoryMode, CompilationMode, unsigned functionIndex, std::optional<bool> hasExceptionHandlers, unsigned loopIndexForOSREntry, TierUpCount*);
 
+    // SIMD
+    void notifyFunctionUsesSIMD() { ASSERT(m_info.isSIMDFunction(m_functionIndex)); }
+    PartialResult WARN_UNUSED_RETURN addSIMDLoad(ExpressionType pointer, uint32_t offset, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addSIMDStore(ExpressionType value, ExpressionType pointer, uint32_t offset);
+    PartialResult WARN_UNUSED_RETURN addSIMDSplat(SIMDLane, ExpressionType scalar, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addSIMDShuffle(v128_t imm, ExpressionType a, ExpressionType b, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addSIMDShift(SIMDLaneOperation, SIMDInfo, ExpressionType v, ExpressionType shift, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addSIMDExtmul(SIMDLaneOperation, SIMDInfo, ExpressionType lhs, ExpressionType rhs, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addSIMDLoadSplat(SIMDLaneOperation, ExpressionType pointer, uint32_t offset, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addSIMDLoadLane(SIMDLaneOperation, ExpressionType pointer, ExpressionType vector, uint32_t offset, uint8_t laneIndex, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addSIMDStoreLane(SIMDLaneOperation, ExpressionType pointer, ExpressionType vector, uint32_t offset, uint8_t laneIndex);
+    PartialResult WARN_UNUSED_RETURN addSIMDLoadExtend(SIMDLaneOperation, ExpressionType pointer, uint32_t offset, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addSIMDLoadPad(SIMDLaneOperation, ExpressionType pointer, uint32_t offset, ExpressionType& result);
+
+    ExpressionType WARN_UNUSED_RETURN addConstant(v128_t value)
+    {
+        return push(m_currentBlock->appendNew<Const128Value>(m_proc, origin(), value));
+    }
+
+    // SIMD generated
+
+    #define B3_OP_CASE(OP) \
+    else if (op == SIMDLaneOperation::OP) b3Op = B3::Vector##OP;
+
+    #define B3_OP_CASES() \
+    B3::Opcode b3Op = B3::Oops; \
+    if (false) { }
+
+    auto addExtractLane(SIMDInfo info, uint8_t lane, ExpressionType v, ExpressionType& result) -> PartialResult
+    {
+        result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), B3::VectorExtractLane, toB3Type(simdScalarType(info.lane)), info,
+            lane,
+            get(v)));
+        return { };
+    }
+
+    auto addReplaceLane(SIMDInfo info, uint8_t lane, ExpressionType v, ExpressionType s, ExpressionType& result) -> PartialResult
+    {
+        result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), B3::VectorReplaceLane, B3::V128, info,
+            lane,
+            get(v),
+            get(s)));
+        return { };
+    }
+
+    auto addSIMDI_V(SIMDLaneOperation op, SIMDInfo info, ExpressionType v, ExpressionType& result) -> PartialResult
+    {
+        B3_OP_CASES()
+        B3_OP_CASE(Bitmask)
+        B3_OP_CASE(AnyTrue)
+        B3_OP_CASE(AllTrue)
+        result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), b3Op, B3::Int32, info,
+            get(v)));
+        return { };
+    }
+
+    auto addSIMDV_V(SIMDLaneOperation op, SIMDInfo info, ExpressionType v, ExpressionType& result) -> PartialResult
+    {
+        B3_OP_CASES()
+        B3_OP_CASE(Demote)
+        B3_OP_CASE(Promote)
+        B3_OP_CASE(Abs)
+        B3_OP_CASE(Popcnt)
+        B3_OP_CASE(Ceil)
+        B3_OP_CASE(Floor)
+        B3_OP_CASE(Trunc)
+        B3_OP_CASE(Nearest)
+        B3_OP_CASE(Sqrt)
+        B3_OP_CASE(ExtaddPairwise)
+        B3_OP_CASE(Convert)
+        B3_OP_CASE(ConvertLow)
+        B3_OP_CASE(ExtendHigh)
+        B3_OP_CASE(ExtendLow)
+        B3_OP_CASE(TruncSat)
+        B3_OP_CASE(Not)
+        B3_OP_CASE(Neg)
+        result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), b3Op, B3::V128, info,
+            get(v)));
+        return { };
+    }
+
+    auto addSIMDBitwiseSelect(ExpressionType v1, ExpressionType v2, ExpressionType c, ExpressionType& result) -> PartialResult
+    {
+        auto b3Op = B3::VectorBitwiseSelect;
+        result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), b3Op, B3::V128, SIMDInfo { SIMDLane::v128, SIMDSignMode::None },
+            get(v1), get(v2), get(c)));
+        return { };
+    }
+
+    auto addSIMDRelOp(SIMDLaneOperation, SIMDInfo info, ExpressionType lhs, ExpressionType rhs, Air::Arg relOp, ExpressionType& result) -> PartialResult
+    {
+        B3::Opcode b3Op = Oops;
+        if (scalarTypeIsIntegral(info.lane)) {
+            switch (relOp.asRelationalCondition()) {
+            case MacroAssembler::Equal: 
+                b3Op = VectorEqual;
+                break;
+            case MacroAssembler::NotEqual: 
+                b3Op = VectorNotEqual;
+                break;
+            case MacroAssembler::LessThan: 
+                b3Op = VectorLessThan;
+                break;
+            case MacroAssembler::LessThanOrEqual: 
+                b3Op = VectorLessThanOrEqual;
+                break;
+            case MacroAssembler::Below: 
+                b3Op = VectorBelow;
+                break;
+            case MacroAssembler::BelowOrEqual: 
+                b3Op = VectorBelowOrEqual;
+                break;
+            case MacroAssembler::GreaterThan: 
+                b3Op = VectorGreaterThan;
+                break;
+            case MacroAssembler::GreaterThanOrEqual: 
+                b3Op = VectorGreaterThanOrEqual;
+                break;
+            case MacroAssembler::Above: 
+                b3Op = VectorAbove;
+                break;
+            case MacroAssembler::AboveOrEqual: 
+                b3Op = VectorAboveOrEqual;
+                break;
+            }
+        } else {
+            switch (relOp.asDoubleCondition()) {
+            case MacroAssembler::DoubleEqualAndOrdered: 
+                b3Op = VectorEqual;
+                break;
+            case MacroAssembler::DoubleNotEqualOrUnordered: 
+                b3Op = VectorNotEqual;
+                break;
+            case MacroAssembler::DoubleLessThanAndOrdered: 
+                b3Op = VectorLessThan;
+                break;
+            case MacroAssembler::DoubleLessThanOrEqualAndOrdered: 
+                b3Op = VectorLessThanOrEqual;
+                break;
+            case MacroAssembler::DoubleGreaterThanAndOrdered: 
+                b3Op = VectorGreaterThan;
+                break;
+            case MacroAssembler::DoubleGreaterThanOrEqualAndOrdered: 
+                b3Op = VectorGreaterThanOrEqual;
+                break;
+            default:
+                RELEASE_ASSERT_NOT_REACHED();
+                break;
+            }
+        }
+        result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), b3Op, B3::V128, info,
+            get(lhs), get(rhs)));
+        return { };
+    }
+
+    auto addSIMDV_VV(SIMDLaneOperation op, SIMDInfo info, ExpressionType a, ExpressionType b, ExpressionType& result) -> PartialResult
+    {
+        B3_OP_CASES()
+        B3_OP_CASE(And)
+        B3_OP_CASE(Andnot)
+        B3_OP_CASE(AvgRound)
+        B3_OP_CASE(DotProduct)
+        B3_OP_CASE(Add)
+        B3_OP_CASE(Mul)
+        B3_OP_CASE(MulSat)
+        B3_OP_CASE(Sub)
+        B3_OP_CASE(Div)
+        B3_OP_CASE(Pmax)
+        B3_OP_CASE(Pmin)
+        B3_OP_CASE(Or)
+        B3_OP_CASE(Swizzle)
+        B3_OP_CASE(Xor)
+        B3_OP_CASE(Narrow)
+        B3_OP_CASE(AddSat)
+        B3_OP_CASE(SubSat)
+        B3_OP_CASE(Max)
+        B3_OP_CASE(Min)
+        result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), b3Op, B3::V128, info,
+            get(a), get(b)));
+        return { };
+    }
+
     PartialResult WARN_UNUSED_RETURN addArguments(const TypeDefinition&);
     PartialResult WARN_UNUSED_RETURN addLocal(Type, uint32_t);
     ExpressionType addConstant(Type, uint64_t);
@@ -372,10 +560,15 @@ public:
     PartialResult WARN_UNUSED_RETURN addStructSet(ExpressionType structReference, const StructType&, uint32_t fieldIndex, ExpressionType value);
 
     // Basic operators
-    template<OpType>
-    PartialResult WARN_UNUSED_RETURN addOp(ExpressionType arg, ExpressionType& result);
-    template<OpType>
-    PartialResult WARN_UNUSED_RETURN addOp(ExpressionType left, ExpressionType right, ExpressionType& result);
+#define X(name, opcode, short, idx, ...) \
+    PartialResult WARN_UNUSED_RETURN add##name(ExpressionType arg, ExpressionType& result);
+    FOR_EACH_WASM_UNARY_OP(X)
+#undef X
+#define X(name, opcode, short, idx, ...) \
+    PartialResult WARN_UNUSED_RETURN add##name(ExpressionType left, ExpressionType right, ExpressionType& result);
+    FOR_EACH_WASM_BINARY_OP(X)
+#undef X
+
     PartialResult WARN_UNUSED_RETURN addSelect(ExpressionType condition, ExpressionType nonZero, ExpressionType zero, ExpressionType& result);
 
     // Control flow
@@ -405,12 +598,14 @@ public:
     PartialResult WARN_UNUSED_RETURN endTopLevel(BlockSignature, const Stack&) { return { }; }
 
     // Calls
-    PartialResult WARN_UNUSED_RETURN addCall(uint32_t calleeIndex, const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results);
-    PartialResult WARN_UNUSED_RETURN addCallIndirect(unsigned tableIndex, const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results);
+    PartialResult WARN_UNUSED_RETURN addCall(uint32_t calleeIndex, const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results, CallType = CallType::Call);
+    PartialResult WARN_UNUSED_RETURN addCallIndirect(unsigned tableIndex, const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results, CallType = CallType::Call);
     PartialResult WARN_UNUSED_RETURN addCallRef(const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results);
     PartialResult WARN_UNUSED_RETURN addUnreachable();
-    PartialResult WARN_UNUSED_RETURN emitIndirectCall(Value* calleeInstance, Value* calleeCode, const TypeDefinition&, Vector<ExpressionType>& args, ResultList&);
-    B3::Value* createCallPatchpoint(BasicBlock*, Origin, const TypeDefinition&, Vector<ExpressionType>& args, const ScopedLambda<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>& patchpointFunctor);
+    PartialResult WARN_UNUSED_RETURN addCrash();
+    PartialResult WARN_UNUSED_RETURN emitIndirectCall(Value* calleeInstance, Value* calleeCode, const TypeDefinition&, const Vector<ExpressionType>& args, ResultList&, CallType = CallType::Call);
+    B3::PatchpointValue* createCallPatchpoint(BasicBlock*, B3::Type, const CallInformation&, const Vector<ExpressionType>& tmpArgs, const ScopedLambda<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>& patchpointFunctor);
+    B3::PatchpointValue* createTailCallPatchpoint(BasicBlock*, const Vector<ArgumentLocation>&, const Vector<ExpressionType>& tmpArgs, const Checked<int32_t>& tailCallStackOffsetFromFP, const ScopedLambda<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>& patchpointFunctor);
 
     void dump(const ControlStack&, const Stack* expressionStack);
     void setParser(FunctionParser<B3IRGenerator>* parser) { m_parser = parser; };
@@ -418,6 +613,7 @@ public:
     void didPopValueFromStack() { --m_stackSize; }
 
     Value* constant(B3::Type, uint64_t bits, std::optional<Origin> = std::nullopt);
+    Value* constant(B3::Type, v128_t bits, std::optional<Origin> = std::nullopt);
     Value* framePointer();
     void insertEntrySwitch();
     void insertConstants();
@@ -576,6 +772,11 @@ private:
     GPRReg m_boundsCheckingSizeGPR { InvalidGPRReg };
     GPRReg m_wasmContextInstanceGPR { InvalidGPRReg };
     bool m_makesCalls { false };
+    bool m_makesTailCalls { false };
+
+    // This tracks the maximum stack offset for a tail call, to be used in the stack overflow check.
+    Checked<int32_t> m_tailCallStackOffsetFromFP { 0 };
+
     std::optional<bool> m_hasExceptionHandlers;
 
     Value* m_instanceValue { nullptr }; // Always use the accessor below to ensure the instance value is materialized when used.
@@ -747,6 +948,7 @@ B3IRGenerator::B3IRGenerator(const ModuleInformation& info, Procedure& procedure
         stackOverflowCheck->numGPScratchRegisters = 2;
         stackOverflowCheck->setGenerator([=, this] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
             const Checked<int32_t> wasmFrameSize = params.proc().frameSize();
+            const Checked<int32_t> wasmTailCallFrameSize = -m_tailCallStackOffsetFromFP;
             const unsigned minimumParentCheckSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), 1024);
             const unsigned extraFrameSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), std::max<uint32_t>(
                 // This allows us to elide stack checks for functions that are terminal nodes in the call
@@ -761,9 +963,22 @@ B3IRGenerator::B3IRGenerator(const ModuleInformation& info, Procedure& procedure
                 // stack that such a stub would use.
                 Checked<uint32_t>(m_maxNumJSCallArguments) * sizeof(Register) + JSCallingConvention::headerSizeInBytes
             ));
-            const int32_t checkSize = m_makesCalls ? (wasmFrameSize + extraFrameSize).value() : wasmFrameSize.value();
+
+            int32_t checkSize = wasmFrameSize.value();
+            bool frameSizeNeedsOverflowCheck = checkSize >= static_cast<int32_t>(minimumParentCheckSize);
+            bool needsOverflowCheck = frameSizeNeedsOverflowCheck;
+
+            if (m_makesCalls) {
+                needsOverflowCheck = true;
+                checkSize = checkedSum<int32_t>(checkSize, extraFrameSize).value();
+            } else if (m_makesTailCalls) {
+                Checked<int32_t> tailCallCheckSize = std::max<Checked<int32_t>>(wasmTailCallFrameSize + extraFrameSize, 0);
+                checkSize = frameSizeNeedsOverflowCheck ? std::max<Checked<int32_t>>(tailCallCheckSize, wasmFrameSize).value() : tailCallCheckSize.value();
+                needsOverflowCheck = needsOverflowCheck || checkSize >= static_cast<int32_t>(minimumParentCheckSize);
+            }
+
             bool needUnderflowCheck = static_cast<unsigned>(checkSize) > Options::reservedZoneSize();
-            bool needsOverflowCheck = m_makesCalls || wasmFrameSize >= static_cast<int32_t>(minimumParentCheckSize) || needUnderflowCheck;
+            needsOverflowCheck = needsOverflowCheck || needUnderflowCheck;
 
             // This allows leaf functions to not do stack checks if their frame size is within
             // certain limits since their caller would have already done the check.
@@ -847,11 +1062,25 @@ void B3IRGenerator::emitExceptionCheck(CCallHelpers& jit, ExceptionType type)
 Value* B3IRGenerator::constant(B3::Type type, uint64_t bits, std::optional<Origin> maybeOrigin)
 {
     auto result = m_constantPool.ensure(ValueKey(opcodeForConstant(type), type, static_cast<int64_t>(bits)), [&] {
-        Value* result = m_proc.addConstant(maybeOrigin ? *maybeOrigin : origin(), type, bits);
+        Value* result = nullptr;
+        if (type.kind() == B3::V128) {
+            v128_t vector { };
+            vector.u64x2[0] = bits;
+            vector.u64x2[1] = 0;
+            result = m_proc.addConstant(maybeOrigin ? *maybeOrigin : origin(), type, vector);
+        } else
+            result = m_proc.addConstant(maybeOrigin ? *maybeOrigin : origin(), type, bits);
         m_constantInsertionValues.insertValue(0, result);
         return result;
     });
     return result.iterator->value;
+}
+
+Value* B3IRGenerator::constant(B3::Type type, v128_t bits, std::optional<Origin> maybeOrigin)
+{
+    Value* result = m_proc.addConstant(maybeOrigin ? *maybeOrigin : origin(), type, bits);
+    m_constantInsertionValues.insertValue(0, result);
+    return result;
 }
 
 Value* B3IRGenerator::framePointer()
@@ -932,8 +1161,12 @@ auto B3IRGenerator::addLocal(Type type, uint32_t count) -> PartialResult
     for (uint32_t i = 0; i < count; ++i) {
         Variable* local = m_proc.addVariable(toB3Type(type));
         m_locals.uncheckedAppend(local);
-        auto val = isRefType(type) ? JSValue::encode(jsNull()) : 0;
-        m_currentBlock->appendNew<VariableValue>(m_proc, Set, Origin(), local, constant(toB3Type(type), val, Origin()));
+        if (type.isV128())
+            m_currentBlock->appendNew<VariableValue>(m_proc, Set, Origin(), local, constant(toB3Type(type), v128_t { }, Origin()));
+        else {
+            auto val = isRefType(type) ? JSValue::encode(jsNull()) : 0;
+            m_currentBlock->appendNew<VariableValue>(m_proc, Set, Origin(), local, constant(toB3Type(type), val, Origin()));
+        }
     }
     return { };
 }
@@ -955,7 +1188,13 @@ auto B3IRGenerator::addArguments(const TypeDefinition& signature) -> PartialResu
             if (type == B3::Int32)
                 argument = m_currentBlock->appendNew<B3::Value>(m_proc, B3::Trunc, Origin(), argument);
         } else if (rep.location.isFPR()) {
-            argument = m_currentBlock->appendNew<B3::ArgumentRegValue>(m_proc, Origin(), rep.location.fpr());
+            if (type.isVector()) {
+                ASSERT(rep.width == Width128);
+                argument = m_currentBlock->appendNew<B3::ArgumentRegValue>(m_proc, Origin(), rep.location.fpr(), B3::ArgumentRegValue::UsesVectorArgs);
+            } else {
+                ASSERT(rep.width != Width128);
+                argument = m_currentBlock->appendNew<B3::ArgumentRegValue>(m_proc, Origin(), rep.location.fpr());
+            }
             if (type == B3::Float)
                 argument = m_currentBlock->appendNew<B3::Value>(m_proc, B3::Trunc, Origin(), argument);
         } else {
@@ -1138,8 +1377,20 @@ auto B3IRGenerator::addUnreachable() -> PartialResult
     return { };
 }
 
-auto B3IRGenerator::emitIndirectCall(Value* calleeInstance, Value* calleeCode, const TypeDefinition& signature, Vector<ExpressionType>& args, ResultList& results) -> PartialResult
+auto B3IRGenerator::addCrash() -> PartialResult
 {
+    B3::PatchpointValue* unreachable = m_currentBlock->appendNew<B3::PatchpointValue>(m_proc, B3::Void, origin());
+    unreachable->setGenerator([] (CCallHelpers& jit, const B3::StackmapGenerationParams&) {
+        jit.breakpoint();
+    });
+    unreachable->effects.terminal = true;
+    return { };
+}
+
+auto B3IRGenerator::emitIndirectCall(Value* calleeInstance, Value* calleeCode, const TypeDefinition& signature, const Vector<ExpressionType>& args, ResultList& results, CallType callType) -> PartialResult
+{
+    bool isTailCall = callType == CallType::TailCall;
+    ASSERT(callType == CallType::Call || isTailCall);
     // Do a context switch if needed.
     {
         BasicBlock* continuation = m_proc.addBlock();
@@ -1186,11 +1437,41 @@ auto B3IRGenerator::emitIndirectCall(Value* calleeInstance, Value* calleeCode, c
         m_currentBlock = continuation;
     }
 
+    const auto& callingConvention = wasmCallingConvention();
+    CallInformation wasmCalleeInfo = callingConvention.callInformationFor(signature, CallRole::Caller);
+    Checked<int32_t> calleeStackSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), wasmCalleeInfo.headerAndArgumentStackSizeInBytes);
+    const Vector<ArgumentLocation>& locations = wasmCalleeInfo.params;
+
+    m_proc.requestCallArgAreaSizeInBytes(calleeStackSize);
+
+    if (isTailCall) {
+        m_makesTailCalls = true;
+
+        const TypeIndex callerTypeIndex = m_info.internalFunctionTypeIndices[m_functionIndex];
+        const TypeDefinition& callerTypeDefinition = TypeInformation::get(callerTypeIndex);
+        CallInformation wasmCallerInfo = callingConvention.callInformationFor(callerTypeDefinition, CallRole::Callee);
+        Checked<int32_t> callerStackSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), wasmCallerInfo.headerAndArgumentStackSizeInBytes);
+        Checked<int32_t> tailCallStackOffsetFromFP = callerStackSize - calleeStackSize;
+        m_tailCallStackOffsetFromFP = std::min(m_tailCallStackOffsetFromFP, tailCallStackOffsetFromFP);
+
+        createTailCallPatchpoint(m_currentBlock, locations, args, tailCallStackOffsetFromFP,
+            scopedLambdaRef<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>([=, this](PatchpointValue* patchpoint, Box<PatchpointExceptionHandle> handle) -> void {
+                patchpoint->append(calleeCode, ValueRep(GPRInfo::wasmScratchGPR0));
+                patchpoint->setGenerator([this, tailCallStackOffsetFromFP, handle](CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
+                    AllowMacroScratchRegisterUsage allowScratch(jit);
+                    prepareForTailCall(jit, params, tailCallStackOffsetFromFP);
+                    handle->generate(jit, params, this);
+                    jit.farJump(params[0].gpr(), WasmEntryPtrTag);
+                });
+            }));
+        return { };
+    }
+
+    m_makesCalls = true;
+
     B3::Type returnType = toB3ResultType(&signature);
-    Value* callResult = createCallPatchpoint(m_currentBlock, origin(), signature, args,
-        scopedLambdaRef<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>([=, this] (PatchpointValue* patchpoint, Box<PatchpointExceptionHandle> handle) -> void {
-            patchpoint->effects.writesPinned = true;
-            patchpoint->effects.readsPinned = true;
+    Value* callResult = createCallPatchpoint(m_currentBlock, returnType, wasmCalleeInfo, args,
+        scopedLambdaRef<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>([=, this](PatchpointValue* patchpoint, Box<PatchpointExceptionHandle> handle) -> void {
             // We need to clobber all potential pinned registers since we might be leaving the instance.
             // We pessimistically assume we're always calling something that is bounds checking so
             // because the wasm->wasm thunk unconditionally overrides the size registers.
@@ -2622,6 +2903,262 @@ B3IRGenerator::ExpressionType B3IRGenerator::addConstant(Type type, uint64_t val
     return push(constant(toB3Type(type), value));
 }
 
+auto B3IRGenerator::addSIMDSplat(SIMDLane lane, ExpressionType scalar, ExpressionType& result) -> PartialResult
+{
+    Value* toSplat = get(scalar);
+    result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), B3::VectorSplat, B3::V128, lane, SIMDSignMode::None, toSplat));
+    return { };
+}
+
+auto B3IRGenerator::addSIMDShift(SIMDLaneOperation op, SIMDInfo info, ExpressionType v, ExpressionType shift, ExpressionType& result) -> PartialResult
+{
+    result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(),
+        op == SIMDLaneOperation::Shr ? B3::VectorShr : B3::VectorShl, B3::V128, info, get(v), get(shift)));
+    return { };
+}
+
+auto B3IRGenerator::addSIMDExtmul(SIMDLaneOperation op, SIMDInfo info, ExpressionType lhs, ExpressionType rhs, ExpressionType& result) -> PartialResult
+{
+    ASSERT(info.signMode != SIMDSignMode::None);
+
+    auto extOp = op == SIMDLaneOperation::ExtmulLow ? VectorExtendLow : VectorExtendHigh;
+    Value* extLhs = m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), extOp, B3::V128, info, get(lhs));
+    Value* extRhs = m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), extOp, B3::V128, info, get(rhs));
+    result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), VectorMul, B3::V128, info, extLhs, extRhs));
+
+    return { };
+}
+
+auto B3IRGenerator::addSIMDShuffle(v128_t imm, ExpressionType a, ExpressionType b, ExpressionType& result) -> PartialResult
+{
+    result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), VectorShuffle, B3::V128, SIMDLane::i8x16, SIMDSignMode::None, 
+        imm, get(a), get(b)));
+
+    return { };
+}
+
+auto B3IRGenerator::addSIMDLoad(ExpressionType pointerVariable, uint32_t uoffset, ExpressionType& result) -> PartialResult
+{
+    Value* ptr = emitCheckAndPreparePointer(get(pointerVariable), uoffset, 16);
+    int32_t offset = fixupPointerPlusOffset(ptr, uoffset);
+    result = push(m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load), B3::V128, origin(), ptr, offset));
+
+    return { };
+}
+
+auto B3IRGenerator::addSIMDStore(ExpressionType value, ExpressionType pointerVariable, uint32_t uoffset) -> PartialResult
+{
+    Value* ptr = emitCheckAndPreparePointer(get(pointerVariable), uoffset, 16);
+    int32_t offset = fixupPointerPlusOffset(ptr, uoffset);
+    m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Store), origin(), get(value), ptr, offset);
+
+    return { };
+}
+
+auto B3IRGenerator::addSIMDLoadSplat(SIMDLaneOperation op, ExpressionType pointerVariable, uint32_t uoffset, ExpressionType& result) -> PartialResult
+{
+    size_t byteSize;
+
+    B3::Opcode loadOp;
+    B3::Type type;
+    SIMDLane lane;
+    switch (op) {
+    case SIMDLaneOperation::LoadSplat8:
+        loadOp = Load8Z;
+        type = B3::Int32;
+        lane = SIMDLane::i8x16;
+        byteSize = 1;
+        break;
+    case SIMDLaneOperation::LoadSplat16:
+        loadOp = Load16Z;
+        type = B3::Int32;
+        lane = SIMDLane::i16x8;
+        byteSize = 2;
+        break;
+    case SIMDLaneOperation::LoadSplat32:
+        loadOp = Load;
+        type = B3::Int32;
+        lane = SIMDLane::i32x4;
+        byteSize = 4;
+        break;
+    case SIMDLaneOperation::LoadSplat64:
+        loadOp = Load;
+        type = B3::Int64;
+        lane = SIMDLane::i64x2;
+        byteSize = 8;
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    Value* ptr = emitCheckAndPreparePointer(get(pointerVariable), uoffset, byteSize);
+    int32_t offset = fixupPointerPlusOffset(ptr, uoffset);
+    Value* memLoad = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(loadOp), type, origin(), ptr, offset);
+    result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), B3::VectorSplat, B3::V128, lane, SIMDSignMode::None, memLoad));
+
+    return { };
+}
+
+auto B3IRGenerator::addSIMDLoadLane(SIMDLaneOperation op, ExpressionType pointerVariable, ExpressionType vectorVariable, uint32_t uoffset, uint8_t laneIndex, ExpressionType& result) -> PartialResult 
+{
+    size_t byteSize;
+    B3::Opcode loadOp;
+    B3::Type type;
+    SIMDLane lane;
+    switch (op) {
+    case SIMDLaneOperation::LoadLane8:
+        loadOp = Load8Z;
+        type = B3::Int32;
+        lane = SIMDLane::i8x16;
+        byteSize = 1;
+        break;
+    case SIMDLaneOperation::LoadLane16:
+        loadOp = Load16Z;
+        type = B3::Int32;
+        lane = SIMDLane::i16x8;
+        byteSize = 2;
+        break;
+    case SIMDLaneOperation::LoadLane32:
+        loadOp = Load;
+        type = B3::Int32;
+        lane = SIMDLane::i32x4;
+        byteSize = 4;
+        break;
+    case SIMDLaneOperation::LoadLane64:
+        loadOp = Load;
+        type = B3::Int64;
+        lane = SIMDLane::i64x2;
+        byteSize = 8;
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    Value* ptr = emitCheckAndPreparePointer(get(pointerVariable), uoffset, byteSize);
+    int32_t offset = fixupPointerPlusOffset(ptr, uoffset);
+    Value* memLoad = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(loadOp), type, origin(), ptr, offset);
+    result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), B3::VectorReplaceLane, B3::V128, lane, SIMDSignMode::None, laneIndex, get(vectorVariable), memLoad));
+
+    return { };
+}
+
+auto B3IRGenerator::addSIMDStoreLane(SIMDLaneOperation op, ExpressionType pointerVariable, ExpressionType vectorVariable, uint32_t uoffset, uint8_t laneIndex) -> PartialResult 
+{
+    size_t byteSize;
+    B3::Opcode storeOp;
+    B3::Type type;
+    SIMDLane lane;
+    switch (op) {
+    case SIMDLaneOperation::StoreLane8:
+        storeOp = Store8;
+        type = B3::Int32;
+        lane = SIMDLane::i8x16;
+        byteSize = 1;
+        break;
+    case SIMDLaneOperation::StoreLane16:
+        storeOp = Store16;
+        type = B3::Int32;
+        lane = SIMDLane::i16x8;
+        byteSize = 2;
+        break;
+    case SIMDLaneOperation::StoreLane32:
+        storeOp = Store;
+        type = B3::Int32;
+        lane = SIMDLane::i32x4;
+        byteSize = 4;
+        break;
+    case SIMDLaneOperation::StoreLane64:
+        storeOp = Store;
+        type = B3::Int64;
+        lane = SIMDLane::i64x2;
+        byteSize = 8;
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    Value* ptr = emitCheckAndPreparePointer(get(pointerVariable), uoffset, byteSize);
+    int32_t offset = fixupPointerPlusOffset(ptr, uoffset);
+    Value* laneValue = m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), B3::VectorExtractLane, type, lane, byteSize < 4 ? SIMDSignMode::Unsigned : SIMDSignMode::None, laneIndex, get(vectorVariable));
+    m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(storeOp), origin(), laneValue, ptr, offset);
+
+    return { };
+}
+
+auto B3IRGenerator::addSIMDLoadExtend(SIMDLaneOperation op, ExpressionType pointerVariable, uint32_t uoffset, ExpressionType& result) -> PartialResult 
+{
+    B3::Opcode loadOp = Load;
+    size_t byteSize = 8;
+    SIMDLane lane;
+    SIMDSignMode signMode;
+    switch (op) {
+    case SIMDLaneOperation::LoadExtend8U:
+        lane = SIMDLane::i16x8;
+        signMode = SIMDSignMode::Unsigned;
+        break;
+    case SIMDLaneOperation::LoadExtend8S:
+        lane = SIMDLane::i16x8;
+        signMode = SIMDSignMode::Signed;
+        break;
+    case SIMDLaneOperation::LoadExtend16U:
+        lane = SIMDLane::i32x4;
+        signMode = SIMDSignMode::Unsigned;
+        break;
+    case SIMDLaneOperation::LoadExtend16S:
+        lane = SIMDLane::i32x4;
+        signMode = SIMDSignMode::Signed;
+        break;
+    case SIMDLaneOperation::LoadExtend32U:
+        lane = SIMDLane::i64x2;
+        signMode = SIMDSignMode::Unsigned;
+        break;
+    case SIMDLaneOperation::LoadExtend32S:
+        lane = SIMDLane::i64x2;
+        signMode = SIMDSignMode::Signed;
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    Value* ptr = emitCheckAndPreparePointer(get(pointerVariable), uoffset, byteSize);
+    int32_t offset = fixupPointerPlusOffset(ptr, uoffset);
+    Value* memLoad = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(loadOp), B3::Double, origin(), ptr, offset);
+    result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), VectorExtendLow, B3::V128, SIMDInfo { lane, signMode }, memLoad));
+
+    return { };
+}
+
+auto B3IRGenerator::addSIMDLoadPad(SIMDLaneOperation op, ExpressionType pointerVariable, uint32_t uoffset, ExpressionType& result) -> PartialResult 
+{
+    B3::Type loadType;
+    unsigned byteSize;
+    SIMDLane lane;
+    uint8_t idx = 0;
+    switch (op) {
+    case SIMDLaneOperation::LoadPad32:
+        loadType = B3::Float;
+        byteSize = 4;
+        lane = SIMDLane::f32x4;
+        break;
+    case SIMDLaneOperation::LoadPad64:
+        loadType = B3::Double;
+        byteSize = 8;
+        lane = SIMDLane::f64x2;
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    Value* ptr = emitCheckAndPreparePointer(get(pointerVariable), uoffset, byteSize);
+    int32_t offset = fixupPointerPlusOffset(ptr, uoffset);
+    Value* memLoad = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load), loadType, origin(), ptr, offset);
+    result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), B3::VectorReplaceLane, B3::V128, lane, SIMDSignMode::None, idx,
+        m_currentBlock->appendNew<Const128Value>(m_proc, origin(), v128_t { }), 
+        memLoad));
+
+    return { };
+}
+
 void B3IRGenerator::emitEntryTierUpCheck()
 {
     if (!m_tierUp)
@@ -2658,8 +3195,9 @@ void B3IRGenerator::emitEntryTierUpCheck()
             ScratchRegisterAllocator::restoreRegistersFromStackForCall(jit, registersToSpill, { }, numberOfStackBytesUsedForRegisterPreservation, extraPaddingBytes);
             jit.jump(tierUpResume);
 
+            bool isSIMD = m_proc.usesSIMD();
             jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-                MacroAssembler::repatchNearCall(linkBuffer.locationOfNearCall<NoPtrTag>(call), CodeLocationLabel<JITThunkPtrTag>(Thunks::singleton().stub(triggerOMGEntryTierUpThunkGenerator).code()));
+                MacroAssembler::repatchNearCall(linkBuffer.locationOfNearCall<NoPtrTag>(call), CodeLocationLabel<JITThunkPtrTag>(Thunks::singleton().stub(triggerOMGEntryTierUpThunkGenerator(isSIMD)).code()));
             });
         });
     });
@@ -2983,7 +3521,7 @@ Value* B3IRGenerator::emitCatchImpl(CatchKind kind, ControlType& data, unsigned 
     PatchpointValue* result = m_currentBlock->appendNew<PatchpointValue>(m_proc, m_proc.addTuple({ pointerType(), pointerType() }), origin());
     result->effects.exitsSideways = true;
     result->clobber(RegisterSetBuilder::macroClobberedRegisters());
-    auto clobberLate = RegisterSetBuilder::registersToSaveForJSCall(RegisterSetBuilder::allScalarRegisters());
+    auto clobberLate = RegisterSetBuilder::registersToSaveForJSCall(m_proc.usesSIMD() ? RegisterSetBuilder::allRegisters() : RegisterSetBuilder::allScalarRegisters());
     clobberLate.add(GPRInfo::argumentGPR0, IgnoreVectors);
     result->clobberLate(clobberLate);
     result->append(instanceValue(), ValueRep::SomeRegister);
@@ -3027,7 +3565,7 @@ auto B3IRGenerator::addThrow(unsigned exceptionIndex, Vector<ExpressionType>& ar
     patch->append(framePointer(), ValueRep::reg(GPRInfo::argumentGPR1));
     for (unsigned i = 0; i < args.size(); ++i)
         patch->append(get(args[i]), ValueRep::stackArgument(i * sizeof(EncodedJSValue)));
-    patch->clobber(RegisterSetBuilder::registersToSaveForJSCall(RegisterSetBuilder::allScalarRegisters()));
+    patch->clobber(RegisterSetBuilder::registersToSaveForJSCall(m_proc.usesSIMD() ? RegisterSetBuilder::allRegisters() : RegisterSetBuilder::allScalarRegisters()));
     PatchpointExceptionHandle handle = preparePatchpointForExceptions(m_currentBlock, patch);
     patch->setGenerator([this, exceptionIndex, handle] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
         AllowMacroScratchRegisterUsage allowScratch(jit);
@@ -3042,7 +3580,7 @@ auto B3IRGenerator::addThrow(unsigned exceptionIndex, Vector<ExpressionType>& ar
 auto B3IRGenerator::addRethrow(unsigned, ControlType& data) -> PartialResult
 {
     PatchpointValue* patch = m_proc.add<PatchpointValue>(B3::Void, origin());
-    patch->clobber(RegisterSetBuilder::registersToSaveForJSCall(RegisterSetBuilder::allScalarRegisters()));
+    patch->clobber(RegisterSetBuilder::registersToSaveForJSCall(m_proc.usesSIMD() ? RegisterSetBuilder::allRegisters() : RegisterSetBuilder::allScalarRegisters()));
     patch->effects.terminal = true;
     patch->append(instanceValue(), ValueRep::reg(GPRInfo::argumentGPR0));
     patch->append(framePointer(), ValueRep::reg(GPRInfo::argumentGPR1));
@@ -3065,6 +3603,11 @@ auto B3IRGenerator::addReturn(const ControlData&, const Stack& returnValues) -> 
     PatchpointValue* patch = m_proc.add<PatchpointValue>(B3::Void, origin());
     patch->setGenerator([] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
         auto calleeSaves = params.code().calleeSaveRegisterAtOffsetList();
+
+        // NOTE: on ARM64, if the callee saves have bigger offsets due to a potential tail call,
+        // the macro assembler might assert scratch register usage on load operations emitted by emitRestore.
+        AllowMacroScratchRegisterUsageIf allowScratch(jit, isARM64() || isARM64E());
+
         jit.emitRestore(calleeSaves);
         jit.emitFunctionEpilogue();
         jit.ret();
@@ -3192,29 +3735,28 @@ auto B3IRGenerator::addEndToUnreachable(ControlEntry& entry, const Stack& expres
 }
 
 
-B3::Value* B3IRGenerator::createCallPatchpoint(BasicBlock* block, Origin origin, const TypeDefinition& signature, Vector<ExpressionType>& args, const ScopedLambda<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>& patchpointFunctor)
+B3::PatchpointValue* B3IRGenerator::createCallPatchpoint(BasicBlock* block, B3::Type returnType, const CallInformation& wasmCalleeInfo, const Vector<ExpressionType>& tmpArgs, const ScopedLambda<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>& patchpointFunctor)
 {
-    Vector<B3::ConstrainedValue> constrainedArguments;
-    CallInformation wasmCallInfo = wasmCallingConvention().callInformationFor(signature);
-    for (unsigned i = 0; i < args.size(); ++i)
-        constrainedArguments.append(B3::ConstrainedValue(get(block, args[i]), wasmCallInfo.params[i]));
-
-    m_proc.requestCallArgAreaSizeInBytes(WTF::roundUpToMultipleOf(stackAlignmentBytes(), wasmCallInfo.headerAndArgumentStackSizeInBytes));
+    Vector<B3::ConstrainedValue> constrainedPatchArgs;
+    for (unsigned i = 0; i < tmpArgs.size(); ++i)
+        constrainedPatchArgs.append(B3::ConstrainedValue(get(block, tmpArgs[i]), wasmCalleeInfo.params[i]));
 
     Box<PatchpointExceptionHandle> exceptionHandle = Box<PatchpointExceptionHandle>::create(m_hasExceptionHandlers);
 
-    B3::Type returnType = toB3ResultType(&signature);
-    PatchpointValue* patchpoint = m_proc.add<PatchpointValue>(returnType, origin);
+    PatchpointValue* patchpoint = m_proc.add<PatchpointValue>(returnType, origin());
+    patchpoint->effects.writesPinned = true;
+    patchpoint->effects.readsPinned = true;
     patchpoint->clobberEarly(RegisterSetBuilder::macroClobberedRegisters());
-    patchpoint->clobberLate(RegisterSetBuilder::registersToSaveForJSCall(RegisterSetBuilder::allScalarRegisters()));
+    patchpoint->clobberLate(RegisterSetBuilder::registersToSaveForJSCall(m_proc.usesSIMD() ? RegisterSetBuilder::allRegisters() : RegisterSetBuilder::allScalarRegisters()));
     patchpointFunctor(patchpoint, exceptionHandle);
-    patchpoint->appendVector(constrainedArguments);
+    patchpoint->appendVector(constrainedPatchArgs);
 
     *exceptionHandle = preparePatchpointForExceptions(block, patchpoint);
 
+    const Vector<ArgumentLocation, 1> &constrainedResultLocations = wasmCalleeInfo.results;
     if (returnType != B3::Void) {
         Vector<B3::ValueRep, 1> resultConstraints;
-        for (auto valueLocation : wasmCallInfo.results)
+        for (auto valueLocation : constrainedResultLocations)
             resultConstraints.append(B3::ValueRep(valueLocation.location));
         patchpoint->resultConstraints = WTFMove(resultConstraints);
     }
@@ -3222,12 +3764,159 @@ B3::Value* B3IRGenerator::createCallPatchpoint(BasicBlock* block, Origin origin,
     return patchpoint;
 }
 
-auto B3IRGenerator::addCall(uint32_t functionIndex, const TypeDefinition& signature, Vector<ExpressionType>& args, ResultList& results) -> PartialResult
+B3::PatchpointValue* B3IRGenerator::createTailCallPatchpoint(BasicBlock* block, const Vector<ArgumentLocation>& constrainedArgLocations, const Vector<ExpressionType>& tmpArgs, const Checked<int32_t>& tailCallStackOffsetFromFP, const ScopedLambda<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>& patchpointFunctor)
 {
+    //    Layout of stack right before tail call F -> G
+    //
+    //
+    //    |          ......            |                                                                      |          ......            |
+    //    +----------------------------+ <-- 0x5501ff4ff0                                                     +----------------------------+ <-- 0x5501ff4ff0
+    //    |           F.argN           |    |                                    +-------------------->       |           G.argM           |    |
+    //    +----------------------------+    | lower address                      |                            +----------------------------+    | lower address
+    //    |           F.arg1           |    v                                    |                            |           arg1             |    v
+    //    +----------------------------+                                         |                            +----------------------------+
+    //    |           F.arg0           |                                         |                            |           arg0             |
+    //    +----------------------------+                                         |                            +----------------------------+
+    //    |           F.this           |                                         |                            |           this'            |
+    //    +----------------------------+                                         |                            +----------------------------+
+    //    | argumentCountIncludingThis |                                         |                            |          A.C.I.T.'         |
+    //    +----------------------------+                                         |                            +----------------------------+
+    //    |  F.callee (aka F, unused in wasm) |                                  |                            |        G.callee            |
+    //    +----------------------------+                                         |                            +----------------------------+
+    //    |        F.codeBlock         |                               (shuffleStackArgs...)                  |        G.codeBlock         |
+    //    +----------------------------+                                         |                            +----------------------------+
+    //    | return-address after F     |                                         |                            |   return-address after F   |
+    //    +----------------------------+                                         |        SP at G prologue -> +----------------------------+
+    //    |          F.caller.FP       |                                         |                            |          F.caller.FP       |
+    //    +----------------------------+  <- F.FP                                |    G.FP after G prologue-> +----------------------------+
+    //    |          callee saves      |                                         |                            |          callee saves      |
+    //    +----------------------------+   <----+   argM to G  ------------------+                            +----------------------------+
+    //    |          F.local0          |        |   ....                                                      |          G.local0          |
+    //    +----------------------------+        |   arg0 to G                                                 +----------------------------+
+    //    |          F.local1          |        |                                                             |          G.local1          |
+    //    +----------------------------+        |                                                             +----------------------------+
+    //    |          F.localN          |        |                                                             |          G.localM          |
+    //    +----------------------------|        |                                                             +----------------------------+
+    //    |          ......            |        |                                                             |          ......            |
+    //    +----------------------------|  <- SP |                                       SP after G prologue-> +----------------------------+
+    //                                          |
+    //                                          +- New tmp stack slots are eventually allocated here
+    //
+    //  See https://leaningtech.com/fantastic-tail-calls-and-how-to-implement-them/ for a more in-depth explanation.
+
+    auto shuffleStackArg = [this, block, tailCallStackOffsetFromFP](Value* value, int32_t offsetFromSP) {
+        Checked<int32_t> offsetFromFP = tailCallStackOffsetFromFP + offsetFromSP;
+
+        if (offsetFromFP < 0) {
+            Air::StackSlot* stackSlot = m_proc.addStackSlot(sizeof(Register));
+            stackSlot->setOffsetFromFP(offsetFromFP);
+            Value* address = block->appendNew<SlotBaseValue>(m_proc, Origin(), stackSlot);
+            block->appendNew<B3::MemoryValue>(m_proc, B3::Store, Origin(), value, address);
+            return;
+        }
+
+        B3::Value* address = block->appendNew<B3::Value>(m_proc, B3::Add, Origin(), framePointer(), constant(pointerType(), offsetFromFP));
+        block->appendNew<B3::MemoryValue>(m_proc, B3::Store, Origin(), value, address);
+    };
+
+    Value* returnAddress = block->appendNew<MemoryValue>(m_proc, B3::Load, pointerType(), origin(), framePointer(), safeCast<int32_t>(CallFrame::returnPCOffset()));
+    shuffleStackArg(returnAddress, -static_cast<int32_t>(sizeof(Register)));
+    Value* previousFramePointer = block->appendNew<MemoryValue>(m_proc, Load, pointerType(), origin(), framePointer());
+
+    Vector<B3::ConstrainedValue> constrainedArguments;
+    for (unsigned i = 0; i < tmpArgs.size(); ++i) {
+        if (constrainedArgLocations[i].location.isStackArgument()) {
+            shuffleStackArg(get(block, tmpArgs[i]), constrainedArgLocations[i].location.offsetFromSP());
+            continue;
+        }
+        constrainedArguments.append(B3::ConstrainedValue(get(block, tmpArgs[i]), constrainedArgLocations[i]));
+    }
+    constrainedArguments.append(B3::ConstrainedValue(previousFramePointer, ValueRep(MacroAssembler::framePointerRegister)));
+
+    Box<PatchpointExceptionHandle> exceptionHandle = Box<PatchpointExceptionHandle>::create(m_hasExceptionHandlers);
+
+    PatchpointValue* patchpoint = m_proc.add<PatchpointValue>(B3::Void, origin());
+
+    patchpoint->effects.terminal = true;
+    patchpoint->effects.writesPinned = true;
+    patchpoint->effects.readsPinned = true;
+
+    RegisterSetBuilder clobbers;
+    clobbers.merge(RegisterSetBuilder::calleeSaveRegisters());
+    clobbers.exclude(RegisterSetBuilder::stackRegisters());
+    patchpoint->clobber(clobbers);
+    patchpoint->clobberEarly(RegisterSetBuilder::macroClobberedRegisters());
+
+    patchpointFunctor(patchpoint, exceptionHandle);
+    patchpoint->appendVector(WTFMove(constrainedArguments));
+
+    *exceptionHandle = preparePatchpointForExceptions(block, patchpoint);
+
+    block->append(patchpoint);
+    return patchpoint;
+}
+
+auto B3IRGenerator::addCall(uint32_t functionIndex, const TypeDefinition& signature, Vector<ExpressionType>& args, ResultList& results, CallType callType) -> PartialResult
+{
+    bool isTailCall = callType == CallType::TailCall;
+    ASSERT(callType == CallType::Call || isTailCall);
     ASSERT(signature.as<FunctionSignature>()->argumentCount() == args.size());
 
-    m_makesCalls = true;
-    B3::Type returnType = toB3ResultType(&signature);
+    const auto& callingConvention = wasmCallingConvention();
+    Checked<int32_t> tailCallStackOffsetFromFP;
+    CallInformation wasmCalleeInfo = callingConvention.callInformationFor(signature, CallRole::Caller);
+    Checked<int32_t> calleeStackSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), wasmCalleeInfo.headerAndArgumentStackSizeInBytes);
+
+    B3::Type returnType;
+    Value* jumpDestination = nullptr;
+
+    if (isTailCall) {
+        m_makesTailCalls = true;
+
+        const TypeIndex callerTypeIndex = m_info.internalFunctionTypeIndices[m_functionIndex];
+        const TypeDefinition& callerTypeDefinition = TypeInformation::get(callerTypeIndex);
+        CallInformation wasmCallerInfo = callingConvention.callInformationFor(callerTypeDefinition, CallRole::Callee);
+        Checked<int32_t> callerStackSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), wasmCallerInfo.headerAndArgumentStackSizeInBytes);
+        tailCallStackOffsetFromFP = callerStackSize - calleeStackSize;
+
+        m_tailCallStackOffsetFromFP = std::min(m_tailCallStackOffsetFromFP, tailCallStackOffsetFromFP);
+    } else {
+        m_makesCalls = true;
+        returnType = toB3ResultType(&signature);
+    }
+
+    Vector<UnlinkedWasmToWasmCall>* unlinkedWasmToWasmCalls = &m_unlinkedWasmToWasmCalls;
+
+    auto emitUnlinkedWasmToWasmCall = [&, this](PatchpointValue* patchpoint, Box<PatchpointExceptionHandle> handle) -> void {
+        patchpoint->setGenerator([this, handle, unlinkedWasmToWasmCalls, functionIndex, isTailCall, tailCallStackOffsetFromFP](CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
+            AllowMacroScratchRegisterUsage allowScratch(jit);
+            if (isTailCall)
+                prepareForTailCall(jit, params, tailCallStackOffsetFromFP);
+            handle->generate(jit, params, this);
+            CCallHelpers::Call call = isTailCall ? jit.threadSafePatchableNearTailCall() : jit.threadSafePatchableNearCall();
+            jit.addLinkTask([unlinkedWasmToWasmCalls, call, functionIndex](LinkBuffer& linkBuffer) {
+                unlinkedWasmToWasmCalls->append({ linkBuffer.locationOfNearCall<WasmEntryPtrTag>(call), functionIndex });
+            });
+        });
+    };
+
+    auto emitCallToEmbedder = [&, this](PatchpointValue* patchpoint, Box<PatchpointExceptionHandle> handle) -> void {
+        patchpoint->append(jumpDestination, ValueRep(GPRInfo::wasmScratchGPR0));
+        // We need to clobber all potential pinned registers since we might be leaving the instance.
+        // We pessimistically assume we could be calling to something that is bounds checking.
+        // FIXME: We shouldn't have to do this: https://bugs.webkit.org/show_bug.cgi?id=172181
+        patchpoint->clobberLate(PinnedRegisterInfo::get().toSave(MemoryMode::BoundsChecking));
+        patchpoint->setGenerator([this, handle, returnType, isTailCall, tailCallStackOffsetFromFP](CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
+            AllowMacroScratchRegisterUsage allowScratch(jit);
+            if (isTailCall)
+                prepareForTailCall(jit, params, tailCallStackOffsetFromFP);
+            handle->generate(jit, params, this);
+            if (isTailCall)
+                jit.farJump(params[0].gpr(), WasmEntryPtrTag);
+            else
+                jit.call(params[params.proc().resultCount(returnType)].gpr(), WasmEntryPtrTag);
+        });
+    };
 
     auto fillResults = [&] (Value* callResult) {
         ASSERT(returnType == callResult->type());
@@ -3250,7 +3939,7 @@ auto B3IRGenerator::addCall(uint32_t functionIndex, const TypeDefinition& signat
         }
     };
 
-    Vector<UnlinkedWasmToWasmCall>* unlinkedWasmToWasmCalls = &m_unlinkedWasmToWasmCalls;
+    m_proc.requestCallArgAreaSizeInBytes(calleeStackSize);
 
     if (m_info.isImportedFunctionFromFunctionIndexSpace(functionIndex)) {
         m_maxNumJSCallArguments = std::max(m_maxNumJSCallArguments, static_cast<uint32_t>(args.size()));
@@ -3262,97 +3951,86 @@ auto B3IRGenerator::addCall(uint32_t functionIndex, const TypeDefinition& signat
 
         BasicBlock* isWasmBlock = m_proc.addBlock();
         BasicBlock* isEmbedderBlock = m_proc.addBlock();
-        BasicBlock* continuation = m_proc.addBlock();
         m_currentBlock->appendNewControlValue(m_proc, B3::Branch, origin(), isWasmCall, FrequentedBlock(isWasmBlock), FrequentedBlock(isEmbedderBlock));
 
-        Value* wasmCallResult = createCallPatchpoint(isWasmBlock, origin(), signature, args,
-            scopedLambdaRef<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>([=, this] (PatchpointValue* patchpoint, Box<PatchpointExceptionHandle> handle) -> void {
-                patchpoint->effects.writesPinned = true;
-                patchpoint->effects.readsPinned = true;
-                // We need to clobber all potential pinned registers since we might be leaving the instance.
-                // We pessimistically assume we could be calling to something that is bounds checking.
-                // FIXME: We shouldn't have to do this: https://bugs.webkit.org/show_bug.cgi?id=172181
-                patchpoint->clobberLate(PinnedRegisterInfo::get().toSave(MemoryMode::BoundsChecking));
-                patchpoint->setGenerator([this, handle, unlinkedWasmToWasmCalls, functionIndex] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
-                    AllowMacroScratchRegisterUsage allowScratch(jit);
-                    handle->generate(jit, params, this);
-                    CCallHelpers::Call call = jit.threadSafePatchableNearCall();
-                    jit.addLinkTask([unlinkedWasmToWasmCalls, call, functionIndex] (LinkBuffer& linkBuffer) {
-                        unlinkedWasmToWasmCalls->append({ linkBuffer.locationOfNearCall<WasmEntryPtrTag>(call), functionIndex });
-                    });
-                });
-            }));
-        UpsilonValue* wasmCallResultUpsilon = returnType == B3::Void ? nullptr : isWasmBlock->appendNew<UpsilonValue>(m_proc, origin(), wasmCallResult);
-        isWasmBlock->appendNewControlValue(m_proc, Jump, origin(), continuation);
+        PatchpointValue* wasmCallResult = nullptr;
+        if (isTailCall) {
+            wasmCallResult = createTailCallPatchpoint(isWasmBlock, wasmCalleeInfo.params, args, tailCallStackOffsetFromFP,
+                scopedLambdaRef<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>(emitUnlinkedWasmToWasmCall));
+        } else {
+            wasmCallResult = createCallPatchpoint(isWasmBlock, returnType, wasmCalleeInfo, args,
+                scopedLambdaRef<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>(emitUnlinkedWasmToWasmCall));
+            // We need to clobber all potential pinned registers since we might be leaving the instance.
+            // We pessimistically assume we could be calling to something that is bounds checking.
+            // FIXME: We shouldn't have to do this: https://bugs.webkit.org/show_bug.cgi?id=172181
+            wasmCallResult->clobberLate(PinnedRegisterInfo::get().toSave(MemoryMode::BoundsChecking));
+        }
 
         // FIXME: Let's remove this indirection by creating a PIC friendly IC
         // for calls out to the embedder. This shouldn't be that hard to do. We could probably
         // implement the IC to be over Context*.
         // https://bugs.webkit.org/show_bug.cgi?id=170375
-        Value* jumpDestination = isEmbedderBlock->appendNew<MemoryValue>(m_proc,
+        jumpDestination = isEmbedderBlock->appendNew<MemoryValue>(m_proc,
             Load, pointerType(), origin(), instanceValue(), safeCast<int32_t>(Instance::offsetOfWasmToEmbedderStub(functionIndex)));
 
-        Value* embedderCallResult = createCallPatchpoint(isEmbedderBlock, origin(), signature, args,
-            scopedLambdaRef<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>([=, this] (PatchpointValue* patchpoint, Box<PatchpointExceptionHandle> handle) -> void {
-                patchpoint->effects.writesPinned = true;
-                patchpoint->effects.readsPinned = true;
-                patchpoint->append(jumpDestination, ValueRep::SomeRegister);
-                // We need to clobber all potential pinned registers since we might be leaving the instance.
-                // We pessimistically assume we could be calling to something that is bounds checking.
-                // FIXME: We shouldn't have to do this: https://bugs.webkit.org/show_bug.cgi?id=172181
-                patchpoint->clobberLate(PinnedRegisterInfo::get().toSave(MemoryMode::BoundsChecking));
-                patchpoint->setGenerator([this, handle, returnType] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
-                    AllowMacroScratchRegisterUsage allowScratch(jit);
-                    handle->generate(jit, params, this);
-                    jit.call(params[params.proc().resultCount(returnType)].gpr(), WasmEntryPtrTag);
-                });
-            }));
-        UpsilonValue* embedderCallResultUpsilon = returnType == B3::Void ? nullptr : isEmbedderBlock->appendNew<UpsilonValue>(m_proc, origin(), embedderCallResult);
-        isEmbedderBlock->appendNewControlValue(m_proc, Jump, origin(), continuation);
+        if (isTailCall) {
+            createTailCallPatchpoint(isEmbedderBlock, wasmCalleeInfo.params, args, tailCallStackOffsetFromFP,
+                scopedLambdaRef<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>(emitCallToEmbedder));
+            return { };
+        }
 
+        Value* embedderCallResult = createCallPatchpoint(isEmbedderBlock, returnType, wasmCalleeInfo, args,
+            scopedLambdaRef<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>(emitCallToEmbedder));
+
+        BasicBlock* continuation = m_proc.addBlock();
         m_currentBlock = continuation;
 
         if (returnType != B3::Void) {
+            UpsilonValue* wasmCallResultUpsilon = isWasmBlock->appendNew<UpsilonValue>(m_proc, origin(), wasmCallResult);
+            UpsilonValue* embedderCallResultUpsilon = isEmbedderBlock->appendNew<UpsilonValue>(m_proc, origin(), embedderCallResult);
             Value* phi = continuation->appendNew<Value>(m_proc, Phi, returnType, origin());
             wasmCallResultUpsilon->setPhi(phi);
             embedderCallResultUpsilon->setPhi(phi);
             fillResults(phi);
         }
 
+        isWasmBlock->appendNewControlValue(m_proc, Jump, origin(), continuation);
+        isEmbedderBlock->appendNewControlValue(m_proc, Jump, origin(), continuation);
+
         // The call could have been to another WebAssembly instance, and / or could have modified our Memory.
         restoreWebAssemblyGlobalState(RestoreCachedStackLimit::Yes, m_info.memory, instanceValue(), m_proc, continuation);
-    } else {
 
-        Value* patch = createCallPatchpoint(m_currentBlock, origin(), signature, args,
-            scopedLambdaRef<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>([=, this] (PatchpointValue* patchpoint, Box<PatchpointExceptionHandle> handle) -> void {
-                patchpoint->effects.writesPinned = true;
-                patchpoint->effects.readsPinned = true;
+        return { };
 
-                // We need to clobber the size register since the LLInt always bounds checks
-                if (useSignalingMemory() || m_info.memory.isShared())
-                    patchpoint->clobberLate(RegisterSetBuilder { PinnedRegisterInfo::get().boundsCheckingSizeRegister });
-                patchpoint->setGenerator([this, handle, unlinkedWasmToWasmCalls, functionIndex] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
-                    AllowMacroScratchRegisterUsage allowScratch(jit);
-                    handle->generate(jit, params, this);
-                    CCallHelpers::Call call = jit.threadSafePatchableNearCall();
-                    jit.addLinkTask([unlinkedWasmToWasmCalls, call, functionIndex] (LinkBuffer& linkBuffer) {
-                        unlinkedWasmToWasmCalls->append({ linkBuffer.locationOfNearCall<WasmEntryPtrTag>(call), functionIndex });
-                    });
-                });
-            }));
-        fillResults(patch);
+    } // isImportedFunctionFromFunctionIndexSpace
+
+    if (isTailCall) {
+        createTailCallPatchpoint(m_currentBlock, wasmCalleeInfo.params, args, tailCallStackOffsetFromFP,
+            scopedLambdaRef<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>(emitUnlinkedWasmToWasmCall));
+        return { };
     }
+
+    PatchpointValue* callResult = createCallPatchpoint(m_currentBlock, returnType, wasmCalleeInfo, args,
+        scopedLambdaRef<void(PatchpointValue*, Box<PatchpointExceptionHandle>)>(emitUnlinkedWasmToWasmCall));
+    // We need to clobber the size register since the LLInt always bounds checks
+    if (useSignalingMemory() || m_info.memory.isShared())
+        callResult->clobberLate(RegisterSetBuilder { PinnedRegisterInfo::get().boundsCheckingSizeRegister });
+
+
+    fillResults(callResult);
+
+    if (m_info.callCanClobberInstance(functionIndex))
+        restoreWebAssemblyGlobalState(RestoreCachedStackLimit::Yes, m_info.memory, instanceValue(), m_proc, m_currentBlock);
 
     return { };
 }
 
-auto B3IRGenerator::addCallIndirect(unsigned tableIndex, const TypeDefinition& originalSignature, Vector<ExpressionType>& args, ResultList& results) -> PartialResult
+auto B3IRGenerator::addCallIndirect(unsigned tableIndex, const TypeDefinition& originalSignature, Vector<ExpressionType>& args, ResultList& results, CallType callType) -> PartialResult
 {
     Value* calleeIndex = get(args.takeLast());
     const TypeDefinition& signature = originalSignature.expand();
     ASSERT(signature.as<FunctionSignature>()->argumentCount() == args.size());
 
-    m_makesCalls = true;
     // Note: call indirect can call either WebAssemblyFunction or WebAssemblyWrapperFunction. Because
     // WebAssemblyWrapperFunction is like calling into the embedder, we conservatively assume all call indirects
     // can be to the embedder for our stack check calculation.
@@ -3426,7 +4104,7 @@ auto B3IRGenerator::addCallIndirect(unsigned tableIndex, const TypeDefinition& o
         m_currentBlock->appendNew<MemoryValue>(m_proc, Load, pointerType(), origin(), callableFunction,
             safeCast<int32_t>(WasmToWasmImportableFunction::offsetOfEntrypointLoadLocation())));
 
-    return emitIndirectCall(calleeInstance, calleeCode, signature, args, results);
+    return emitIndirectCall(calleeInstance, calleeCode, signature, args, results, callType);
 }
 
 auto B3IRGenerator::addCallRef(const TypeDefinition& originalSignature, Vector<ExpressionType>& args, ResultList& results) -> PartialResult
@@ -3532,7 +4210,7 @@ Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileB3(Compilatio
     auto result = makeUnique<InternalFunction>();
 
     compilationContext.wasmEntrypointJIT = makeUnique<CCallHelpers>();
-    compilationContext.procedure = makeUnique<Procedure>();
+    compilationContext.procedure = makeUnique<Procedure>(info.isSIMDFunction(functionIndex));
 
     Procedure& procedure = *compilationContext.procedure;
     if (shouldDumpIRFor(functionIndex + info.importFunctionCount()))
@@ -3596,14 +4274,6 @@ Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileB3(Compilatio
     return result;
 }
 
-void computePCToCodeOriginMap(CompilationContext& context, LinkBuffer& linkBuffer)
-{
-    if (context.procedure && context.procedure->needsPCToOriginMap()) {
-        B3::PCToOriginMap originMap = context.procedure->releasePCToOriginMap();
-        context.pcToCodeOriginMap = Box<PCToCodeOriginMap>::create(PCToCodeOriginMapBuilder(PCToCodeOriginMapBuilder::WasmCodeOriginMap, WTFMove(originMap)), linkBuffer);
-    }
-}
-
 // Custom wasm ops. These are the ones too messy to do in wasm.json.
 
 void B3IRGenerator::emitChecksForModOrDiv(B3::Opcode operation, Value* left, Value* right)
@@ -3634,8 +4304,7 @@ void B3IRGenerator::emitChecksForModOrDiv(B3::Opcode operation, Value* left, Val
     }
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I32DivS>(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI32DivS(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
 {
     const B3::Opcode op = Div;
     Value* left = get(leftVar);
@@ -3645,8 +4314,7 @@ auto B3IRGenerator::addOp<OpType::I32DivS>(ExpressionType leftVar, ExpressionTyp
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I32RemS>(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI32RemS(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
 {
     const B3::Opcode op = Mod;
     Value* left = get(leftVar);
@@ -3656,8 +4324,7 @@ auto B3IRGenerator::addOp<OpType::I32RemS>(ExpressionType leftVar, ExpressionTyp
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I32DivU>(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI32DivU(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
 {
     const B3::Opcode op = UDiv;
     Value* left = get(leftVar);
@@ -3667,8 +4334,7 @@ auto B3IRGenerator::addOp<OpType::I32DivU>(ExpressionType leftVar, ExpressionTyp
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I32RemU>(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI32RemU(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
 {
     const B3::Opcode op = UMod;
     Value* left = get(leftVar);
@@ -3678,8 +4344,7 @@ auto B3IRGenerator::addOp<OpType::I32RemU>(ExpressionType leftVar, ExpressionTyp
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I64DivS>(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI64DivS(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
 {
     const B3::Opcode op = Div;
     Value* left = get(leftVar);
@@ -3689,8 +4354,7 @@ auto B3IRGenerator::addOp<OpType::I64DivS>(ExpressionType leftVar, ExpressionTyp
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I64RemS>(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI64RemS(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
 {
     const B3::Opcode op = Mod;
     Value* left = get(leftVar);
@@ -3700,8 +4364,7 @@ auto B3IRGenerator::addOp<OpType::I64RemS>(ExpressionType leftVar, ExpressionTyp
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I64DivU>(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI64DivU(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
 {
     const B3::Opcode op = UDiv;
     Value* left = get(leftVar);
@@ -3711,8 +4374,7 @@ auto B3IRGenerator::addOp<OpType::I64DivU>(ExpressionType leftVar, ExpressionTyp
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I64RemU>(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI64RemU(ExpressionType leftVar, ExpressionType rightVar, ExpressionType& result) -> PartialResult
 {
     const B3::Opcode op = UMod;
     Value* left = get(leftVar);
@@ -3722,8 +4384,7 @@ auto B3IRGenerator::addOp<OpType::I64RemU>(ExpressionType leftVar, ExpressionTyp
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I32Ctz>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI32Ctz(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Int32, origin());
@@ -3736,8 +4397,7 @@ auto B3IRGenerator::addOp<OpType::I32Ctz>(ExpressionType argVar, ExpressionType&
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I64Ctz>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI64Ctz(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Int64, origin());
@@ -3750,8 +4410,7 @@ auto B3IRGenerator::addOp<OpType::I64Ctz>(ExpressionType argVar, ExpressionType&
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I32Popcnt>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI32Popcnt(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
 #if CPU(X86_64)
@@ -3772,8 +4431,7 @@ auto B3IRGenerator::addOp<OpType::I32Popcnt>(ExpressionType argVar, ExpressionTy
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I64Popcnt>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI64Popcnt(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
 #if CPU(X86_64)
@@ -3794,8 +4452,7 @@ auto B3IRGenerator::addOp<OpType::I64Popcnt>(ExpressionType argVar, ExpressionTy
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<F64ConvertUI64>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addF64ConvertUI64(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Double, origin());
@@ -3816,8 +4473,7 @@ auto B3IRGenerator::addOp<F64ConvertUI64>(ExpressionType argVar, ExpressionType&
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::F32ConvertUI64>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addF32ConvertUI64(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Float, origin());
@@ -3838,8 +4494,7 @@ auto B3IRGenerator::addOp<OpType::F32ConvertUI64>(ExpressionType argVar, Express
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::F64Nearest>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addF64Nearest(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Double, origin());
@@ -3852,8 +4507,7 @@ auto B3IRGenerator::addOp<OpType::F64Nearest>(ExpressionType argVar, ExpressionT
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::F32Nearest>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addF32Nearest(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Float, origin());
@@ -3866,8 +4520,7 @@ auto B3IRGenerator::addOp<OpType::F32Nearest>(ExpressionType argVar, ExpressionT
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::F64Trunc>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addF64Trunc(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Double, origin());
@@ -3880,8 +4533,7 @@ auto B3IRGenerator::addOp<OpType::F64Trunc>(ExpressionType argVar, ExpressionTyp
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::F32Trunc>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addF32Trunc(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Float, origin());
@@ -3894,8 +4546,7 @@ auto B3IRGenerator::addOp<OpType::F32Trunc>(ExpressionType argVar, ExpressionTyp
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I32TruncSF64>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI32TruncSF64(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     Value* max = constant(Double, bitwise_cast<uint64_t>(-static_cast<double>(std::numeric_limits<int32_t>::min())));
@@ -3918,8 +4569,7 @@ auto B3IRGenerator::addOp<OpType::I32TruncSF64>(ExpressionType argVar, Expressio
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I32TruncSF32>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI32TruncSF32(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     Value* max = constant(Float, bitwise_cast<uint32_t>(-static_cast<float>(std::numeric_limits<int32_t>::min())));
@@ -3943,8 +4593,7 @@ auto B3IRGenerator::addOp<OpType::I32TruncSF32>(ExpressionType argVar, Expressio
 }
 
 
-template<>
-auto B3IRGenerator::addOp<OpType::I32TruncUF64>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI32TruncUF64(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     Value* max = constant(Double, bitwise_cast<uint64_t>(static_cast<double>(std::numeric_limits<int32_t>::min()) * -2.0));
@@ -3967,8 +4616,7 @@ auto B3IRGenerator::addOp<OpType::I32TruncUF64>(ExpressionType argVar, Expressio
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I32TruncUF32>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI32TruncUF32(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     Value* max = constant(Float, bitwise_cast<uint32_t>(static_cast<float>(std::numeric_limits<int32_t>::min()) * static_cast<float>(-2.0)));
@@ -3991,8 +4639,7 @@ auto B3IRGenerator::addOp<OpType::I32TruncUF32>(ExpressionType argVar, Expressio
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I64TruncSF64>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI64TruncSF64(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     Value* max = constant(Double, bitwise_cast<uint64_t>(-static_cast<double>(std::numeric_limits<int64_t>::min())));
@@ -4015,8 +4662,7 @@ auto B3IRGenerator::addOp<OpType::I64TruncSF64>(ExpressionType argVar, Expressio
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I64TruncUF64>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI64TruncUF64(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     Value* max = constant(Double, bitwise_cast<uint64_t>(static_cast<double>(std::numeric_limits<int64_t>::min()) * -2.0));
@@ -4059,8 +4705,7 @@ auto B3IRGenerator::addOp<OpType::I64TruncUF64>(ExpressionType argVar, Expressio
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I64TruncSF32>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI64TruncSF32(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     Value* max = constant(Float, bitwise_cast<uint32_t>(-static_cast<float>(std::numeric_limits<int64_t>::min())));
@@ -4083,8 +4728,7 @@ auto B3IRGenerator::addOp<OpType::I64TruncSF32>(ExpressionType argVar, Expressio
     return { };
 }
 
-template<>
-auto B3IRGenerator::addOp<OpType::I64TruncUF32>(ExpressionType argVar, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addI64TruncUF32(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
     Value* max = constant(Float, bitwise_cast<uint32_t>(static_cast<float>(std::numeric_limits<int64_t>::min()) * static_cast<float>(-2.0)));
@@ -4130,5 +4774,31 @@ auto B3IRGenerator::addOp<OpType::I64TruncUF32>(ExpressionType argVar, Expressio
 } } // namespace JSC::Wasm
 
 #include "WasmB3IRGeneratorInlines.h"
+
+#endif // USE(JSVALUE64)
+
+namespace JSC { namespace Wasm {
+
+using namespace B3;
+
+#if !USE(JSVALUE64)
+// On 32-bit platforms, we stub out the entire B3 generator
+
+Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileB3(CompilationContext&, const FunctionData&, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>&, const ModuleInformation&, MemoryMode, CompilationMode, uint32_t, std::optional<bool>, uint32_t, TierUpCount*)
+{
+    UNREACHABLE_FOR_PLATFORM();
+}
+
+#endif
+
+void computePCToCodeOriginMap(CompilationContext& context, LinkBuffer& linkBuffer)
+{
+    if (context.procedure && context.procedure->needsPCToOriginMap()) {
+        B3::PCToOriginMap originMap = context.procedure->releasePCToOriginMap();
+        context.pcToCodeOriginMap = Box<PCToCodeOriginMap>::create(PCToCodeOriginMapBuilder(PCToCodeOriginMapBuilder::WasmCodeOriginMap, WTFMove(originMap)), linkBuffer);
+    }
+}
+
+} } // namespace JSC::Wasm
 
 #endif // ENABLE(WEBASSEMBLY_B3JIT)

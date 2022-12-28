@@ -1649,7 +1649,7 @@ void Editor::copyURL(const URL& url, const String& title, Pasteboard& pasteboard
 {
     auto sanitizedURL = url;
     if (auto* page = m_document.page())
-        sanitizedURL = page->sanitizeForCopyOrShare(url);
+        sanitizedURL = page->sanitizeLookalikeCharacters(url);
 
     PasteboardURL pasteboardURL;
     pasteboardURL.url = sanitizedURL;
@@ -3320,7 +3320,7 @@ void Editor::addTextToKillRing(const String& text, KillRingInsertionMode mode)
 
 void Editor::startAlternativeTextUITimer()
 {
-    m_alternativeTextController->startAlternativeTextUITimer(AlternativeTextTypeCorrection);
+    m_alternativeTextController->startAlternativeTextUITimer(AlternativeTextType::Correction);
 }
 
 void Editor::handleAlternativeTextUIResult(const String& correction)
@@ -3367,12 +3367,12 @@ void Editor::changeSelectionAfterCommand(const VisibleSelection& newSelection, O
 
 String Editor::selectedText() const
 {
-    return selectedText(TextIteratorBehavior::TraversesFlatTree);
+    return selectedText({ TextIteratorBehavior::TraversesFlatTree, TextIteratorBehavior::IgnoresUserSelectNone });
 }
 
 String Editor::selectedTextForDataTransfer() const
 {
-    return selectedText(OptionSet { TextIteratorBehavior::EmitsImageAltText, TextIteratorBehavior::TraversesFlatTree });
+    return selectedText(OptionSet { TextIteratorBehavior::EmitsImageAltText, TextIteratorBehavior::TraversesFlatTree, TextIteratorBehavior::IgnoresUserSelectNone });
 }
 
 String Editor::selectedText(TextIteratorBehaviors behaviors) const
@@ -3430,9 +3430,9 @@ void Editor::removeTextPlaceholder(TextPlaceholderElement& placeholder)
 static inline void collapseCaretWidth(IntRect& rect)
 {
     // FIXME: Width adjustment doesn't work for rotated text.
-    if (rect.width() == caretWidth)
+    if (rect.width() == caretWidth())
         rect.setWidth(0);
-    else if (rect.height() == caretWidth)
+    else if (rect.height() == caretWidth())
         rect.setHeight(0);
 }
 
@@ -4172,10 +4172,10 @@ FontAttributes Editor::fontAttributesAtSelectionStart()
     if (typingStyle && typingStyle->style()) {
         auto value = typingStyle->style()->getPropertyCSSValue(CSSPropertyWebkitTextDecorationsInEffect);
         if (value && value->isValueList()) {
-            CSSValueList& valueList = downcast<CSSValueList>(*value);
-            if (valueList.hasValue(CSSValuePool::singleton().createIdentifierValue(CSSValueLineThrough).ptr()))
+            auto& valueList = downcast<CSSValueList>(*value);
+            if (valueList.hasValue(CSSValueLineThrough))
                 attributes.hasStrikeThrough = true;
-            if (valueList.hasValue(CSSValuePool::singleton().createIdentifierValue(CSSValueUnderline).ptr()))
+            if (valueList.hasValue(CSSValueUnderline))
                 attributes.hasUnderline = true;
         }
     } else {

@@ -300,6 +300,14 @@ bool AXObjectCache::modalElementHasAccessibleContent(Element& element)
             if (auto* axObject = getOrCreate(node)) {
                 if (!axObject->computeAccessibilityIsIgnored())
                     return true;
+
+#if USE(ATSPI)
+                // When using ATSPI, an accessibility object with 'StaticText' role is ignored.
+                // Its content is exposed by its parent.
+                // Treat such elements as having accessible content.
+                if (axObject->roleValue() == AccessibilityRole::StaticText)
+                    return true;
+#endif
             }
 
             // Don't descend into subtrees for non-visible nodes.
@@ -1233,7 +1241,7 @@ void AXObjectCache::notificationPostTimerFired()
         if (note.first->isDetached() || !note.first->axObjectCache())
             continue;
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
         // Make sure none of the render views are in the process of being layed out.
         // Notifications should only be sent after the renderer has finished
         if (is<AccessibilityRenderObject>(*note.first)) {
@@ -2097,6 +2105,8 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
         postNotification(element, AXFlowToChanged);
     else if (attrName == aria_grabbedAttr)
         postNotification(element, AXGrabbedStateChanged);
+    else if (attrName == aria_keyshortcutsAttr)
+        postNotification(element, AXKeyShortcutsChanged);
     else if (attrName == aria_levelAttr)
         postNotification(element, AXLevelChanged);
     else if (attrName == aria_liveAttr)
@@ -2455,7 +2465,7 @@ static Node* resetNodeAndOffsetForReplacedNode(Node& replacedNode, int& offset, 
     return replacedNode.parentNode();
 }
 
-static std::optional<BoundaryPoint> boundaryPoint(const CharacterOffset& characterOffset, bool isStart)
+static std::optional<BoundaryPoint> boundaryPoint(const CharacterOffset& characterOffset)
 {
     if (characterOffset.isNull())
         return std::nullopt;
@@ -2463,25 +2473,17 @@ static std::optional<BoundaryPoint> boundaryPoint(const CharacterOffset& charact
     int offset = characterOffset.startIndex + characterOffset.offset;
     Node* node = characterOffset.node;
     ASSERT(node);
-
-    bool replacedNodeOrBR = isReplacedNodeOrBR(node);
-    // For the non text node that has no children, we should create the range with its parent, otherwise the range would be collapsed.
-    // Example: <div contenteditable="true"></div>, we want the range to include the div element.
-    bool noChildren = !replacedNodeOrBR && !node->isTextNode() && !node->hasChildNodes();
-    int characterCount = noChildren ? (isStart ? 0 : 1) : characterOffset.offset;
-
-    if (replacedNodeOrBR || noChildren)
-        node = resetNodeAndOffsetForReplacedNode(*node, offset, characterCount);
+    if (isReplacedNodeOrBR(node))
+        node = resetNodeAndOffsetForReplacedNode(*node, offset, characterOffset.offset);
 
     if (!node)
         return std::nullopt;
-
     return { { *node, static_cast<unsigned>(offset) } };
 }
 
 static bool setRangeStartOrEndWithCharacterOffset(SimpleRange& range, const CharacterOffset& characterOffset, bool isStart)
 {
-    auto point = boundaryPoint(characterOffset, isStart);
+    auto point = boundaryPoint(characterOffset);
     if (!point)
         return false;
     if (isStart)
@@ -2494,11 +2496,11 @@ static bool setRangeStartOrEndWithCharacterOffset(SimpleRange& range, const Char
 std::optional<SimpleRange> AXObjectCache::rangeForUnorderedCharacterOffsets(const CharacterOffset& characterOffset1, const CharacterOffset& characterOffset2)
 {
     bool alreadyInOrder = characterOffsetsInOrder(characterOffset1, characterOffset2);
-    auto start = boundaryPoint(alreadyInOrder ? characterOffset1 : characterOffset2, true);
-    auto end = boundaryPoint(alreadyInOrder ? characterOffset2 : characterOffset1, false);
+    auto start = boundaryPoint(alreadyInOrder ? characterOffset1 : characterOffset2);
+    auto end = boundaryPoint(alreadyInOrder ? characterOffset2 : characterOffset1);
     if (!start || !end)
         return std::nullopt;
-    return { { *start, * end } };
+    return { { *start, *end } };
 }
 
 void AXObjectCache::setTextMarkerDataWithCharacterOffset(TextMarkerData& textMarkerData, const CharacterOffset& characterOffset)
@@ -3699,26 +3701,22 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<RefPtr<Accessibili
             tree->updateNodeProperty(*notification.first, AXPropertyName::AXColumnIndex);
             break;
         case AXDisabledStateChanged:
-            tree->updateNodeProperty(*notification.first, AXPropertyName::CanSetFocusAttribute);
-            tree->updateNodeProperty(*notification.first, AXPropertyName::IsEnabled);
+            tree->updatePropertiesForSelfAndDescendants(*notification.first, { AXPropertyName::CanSetFocusAttribute, AXPropertyName::IsEnabled });
             break;
         case AXExpandedChanged:
             tree->updateNodeProperty(*notification.first, AXPropertyName::IsExpanded);
             break;
         case AXMaximumValueChanged:
-            tree->updateNodeProperty(*notification.first, AXPropertyName::MaxValueForRange);
-            tree->updateNodeProperty(*notification.first, AXPropertyName::ValueForRange);
+            tree->updateNodeProperties(*notification.first, { AXPropertyName::MaxValueForRange, AXPropertyName::ValueForRange });
             break;
         case AXMinimumValueChanged:
-            tree->updateNodeProperty(*notification.first, AXPropertyName::MinValueForRange);
-            tree->updateNodeProperty(*notification.first, AXPropertyName::ValueForRange);
+            tree->updateNodeProperties(*notification.first, { AXPropertyName::MinValueForRange, AXPropertyName::ValueForRange });
             break;
         case AXOrientationChanged:
             tree->updateNodeProperty(*notification.first, AXPropertyName::Orientation);
             break;
         case AXPositionInSetChanged:
-            tree->updateNodeProperty(*notification.first, AXPropertyName::PosInSet);
-            tree->updateNodeProperty(*notification.first, AXPropertyName::SupportsPosInSet);
+            tree->updateNodeProperties(*notification.first, { AXPropertyName::PosInSet, AXPropertyName::SupportsPosInSet });
             break;
         case AXSortDirectionChanged:
             tree->updateNodeProperty(*notification.first, AXPropertyName::SortDirection);
@@ -3727,8 +3725,7 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<RefPtr<Accessibili
             tree->updateNodeProperty(*notification.first, AXPropertyName::IdentifierAttribute);
             break;
         case AXReadOnlyStatusChanged:
-            tree->updateNodeProperty(*notification.first, AXPropertyName::CanSetValueAttribute);
-            tree->updateNodeProperty(*notification.first, AXPropertyName::ReadOnlyValue);
+            tree->updateNodeProperties(*notification.first, { AXPropertyName::CanSetValueAttribute, AXPropertyName::ReadOnlyValue });
             break;
         case AXRequiredStatusChanged:
             tree->updateNodeProperty(*notification.first, AXPropertyName::IsRequired);
@@ -3744,14 +3741,16 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<RefPtr<Accessibili
             tree->updateNodeProperty(*notification.first, AXPropertyName::IsSelected);
             break;
         case AXSetSizeChanged:
-            tree->updateNodeProperty(*notification.first, AXPropertyName::SetSize);
-            tree->updateNodeProperty(*notification.first, AXPropertyName::SupportsSetSize);
+            tree->updateNodeProperties(*notification.first, { AXPropertyName::SetSize, AXPropertyName::SupportsSetSize });
             break;
         case AXTableHeadersChanged:
             tree->updateNodeProperty(*notification.first, AXPropertyName::ColumnHeaders);
             break;
         case AXURLChanged:
             tree->updateNodeProperty(*notification.first, AXPropertyName::URL);
+            break;
+        case AXKeyShortcutsChanged:
+            tree->updateNodeProperty(*notification.first, AXPropertyName::KeyShortcuts);
             break;
         case AXActiveDescendantChanged:
         case AXRoleChanged:

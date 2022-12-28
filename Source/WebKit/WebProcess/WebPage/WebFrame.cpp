@@ -48,6 +48,7 @@
 #include "WebPage.h"
 #include "WebPageProxyMessages.h"
 #include "WebProcess.h"
+#include "WebRemoteFrameClient.h"
 #include "WebsitePoliciesData.h"
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/JSContextRef.h>
@@ -78,6 +79,8 @@
 #include <WebCore/JSRange.h>
 #include <WebCore/Page.h>
 #include <WebCore/PluginDocument.h>
+#include <WebCore/RemoteDOMWindow.h>
+#include <WebCore/RemoteFrame.h>
 #include <WebCore/RenderLayerCompositor.h>
 #include <WebCore/RenderTreeAsText.h>
 #include <WebCore/RenderView.h>
@@ -108,14 +111,15 @@ static uint64_t generateListenerID()
     return uniqueListenerID++;
 }
 
-void WebFrame::initWithCoreMainFrame(WebPage& page, Frame& coreFrame)
+void WebFrame::initWithCoreMainFrame(WebPage& page, Frame& coreFrame, bool receivedMainFrameIdentifierFromUIProcess)
 {
     ASSERT(!m_frameID);
     m_frameID = coreFrame.frameID();
     WebProcess::singleton().addMessageReceiver(Messages::WebFrame::messageReceiverName(), m_frameID.object(), *this);
     WebProcess::singleton().addWebFrame(frameID(), this);
 
-    page.send(Messages::WebPageProxy::DidCreateMainFrame(frameID()));
+    if (!receivedMainFrameIdentifierFromUIProcess)
+        page.send(Messages::WebPageProxy::DidCreateMainFrame(frameID()));
 
     m_coreFrame = coreFrame;
     m_coreFrame->tree().setName(nullAtom());
@@ -125,7 +129,7 @@ void WebFrame::initWithCoreMainFrame(WebPage& page, Frame& coreFrame)
 Ref<WebFrame> WebFrame::createSubframe(WebPage& page, WebFrame& parent, const AtomString& frameName, HTMLFrameOwnerElement& ownerElement)
 {
     auto frame = create(page);
-    auto coreFrame = Frame::create(page.corePage(), &ownerElement, makeUniqueRef<WebFrameLoaderClient>(frame.get()));
+    auto coreFrame = Frame::create(page.corePage(), &ownerElement, makeUniqueRef<WebFrameLoaderClient>(frame.get()), WebCore::FrameIdentifier::generate());
     frame->m_coreFrame = coreFrame.get();
 
     ASSERT(!frame->m_frameID);
@@ -183,14 +187,17 @@ WebPage* WebFrame::page() const
 
 WebFrame* WebFrame::fromCoreFrame(const AbstractFrame& frame)
 {
-    auto* localFrame = dynamicDowncast<LocalFrame>(frame);
-    if (!localFrame)
-        return nullptr;
-    auto* webFrameLoaderClient = toWebFrameLoaderClient(localFrame->loader().client());
-    if (!webFrameLoaderClient)
-        return nullptr;
-
-    return &webFrameLoaderClient->webFrame();
+    if (auto* localFrame = dynamicDowncast<LocalFrame>(frame)) {
+        auto* webFrameLoaderClient = toWebFrameLoaderClient(localFrame->loader().client());
+        if (!webFrameLoaderClient)
+            return nullptr;
+        return &webFrameLoaderClient->webFrame();
+    }
+    if (auto* remoteFrame = dynamicDowncast<RemoteFrame>(frame)) {
+        auto& client = static_cast<const WebRemoteFrameClient&>(remoteFrame->client());
+        return &client.webFrame();
+    }
+    return nullptr;
 }
 
 WebCore::Frame* WebFrame::coreFrame() const
@@ -213,6 +220,11 @@ FrameInfoData WebFrame::info() const
     };
 
     return info;
+}
+
+void WebFrame::getFrameInfo(CompletionHandler<void(FrameInfoData&&)>&& completionHandler)
+{
+    completionHandler(info());
 }
 
 WebCore::FrameIdentifier WebFrame::frameID() const
@@ -251,6 +263,46 @@ void WebFrame::continueWillSubmitForm(FormSubmitListenerIdentifier listenerID)
     Ref<WebFrame> protectedThis(*this);
     if (auto completionHandler = m_willSubmitFormCompletionHandlers.take(listenerID))
         completionHandler();
+}
+
+void WebFrame::didCommitLoadInAnotherProcess()
+{
+    RefPtr coreFrame = m_coreFrame.get();
+    if (!coreFrame)
+        return;
+
+    RefPtr webPage = m_page.get();
+    if (!webPage)
+        return;
+
+    auto* corePage = webPage->corePage();
+    if (!corePage)
+        return;
+
+    RefPtr parent = coreFrame->tree().parent();
+    if (!parent)
+        return;
+
+    auto* localFrame = dynamicDowncast<WebCore::LocalFrame>(coreFrame.get());
+    if (auto* document = localFrame ? localFrame->document() : nullptr)
+        document->willBeRemovedFromFrame();
+
+    RefPtr ownerElement = coreFrame->ownerElement();
+    parent->tree().removeChild(*coreFrame);
+    coreFrame->disconnectOwnerElement();
+    auto client = makeUniqueRef<WebRemoteFrameClient>(*this);
+    auto newFrame = WebCore::RemoteFrame::create(*corePage, m_frameID, ownerElement.get(), WTFMove(client));
+    m_coreFrame = newFrame.get();
+    if (ownerElement) {
+        // FIXME: This is also done in the WebCore::Frame constructor. Move one to make this more symmetric.
+        ownerElement->setContentFrame(*m_coreFrame);
+    }
+}
+
+void WebFrame::didFinishLoadInAnotherProcess()
+{
+    if (auto* remoteFrame = dynamicDowncast<WebCore::RemoteFrame>(m_coreFrame.get()))
+        remoteFrame->didFinishLoadInAnotherProcess();
 }
 
 void WebFrame::invalidatePolicyListeners()

@@ -64,15 +64,14 @@ struct AttachmentLayout {
     };
     
     FloatRect subtitleTextRect;
-    
     Vector<LabelLine> lines;
     
     CGFloat contentYOrigin { 0 };
-    void layOutSubtitle(const RenderAttachment& attachment);
-    void layOutTitle(const RenderAttachment& attachment);
-    void buildWrappedLines(String& text, CTFontRef font, NSDictionary* textAttributes, unsigned maximumLineCount);
-    void buildSingleLine(const String& text, CTFontRef font, NSDictionary* textAttributes);
-    void addLine(CTFontRef font, CTLineRef line, bool isSubtitle);
+    void layOutSubtitle(const RenderAttachment&);
+    void layOutTitle(const RenderAttachment&);
+    void buildWrappedLines(String&, CTFontRef, NSDictionary*, unsigned);
+    void buildSingleLine(const String&, CTFontRef, NSDictionary*);
+    void addLine(CTFontRef, CTLineRef, bool);
 };
 
 } // namespace WebCore

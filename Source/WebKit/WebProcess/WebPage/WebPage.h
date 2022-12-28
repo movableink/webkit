@@ -92,6 +92,7 @@
 #include <WebCore/SimpleRange.h>
 #include <WebCore/SubstituteData.h>
 #include <WebCore/TextManipulationController.h>
+#include <WebCore/TextManipulationItem.h>
 #include <WebCore/UserActivity.h>
 #include <WebCore/UserContentTypes.h>
 #include <WebCore/UserInterfaceLayoutDirection.h>
@@ -651,7 +652,6 @@ public:
     void setPaginationBehavesLikeColumns(bool);
     void setPageLength(double);
     void setGapBetweenPages(double);
-    void setPaginationLineGridEnabled(bool);
     
     void postInjectedBundleMessage(const String& messageName, const UserData&);
 
@@ -706,6 +706,9 @@ public:
     void setBottomOverhangImage(WebImage*);
 
     void setUseSystemAppearance(bool);
+
+    void setUseFormSemanticContext(bool);
+    void semanticContextDidChange(bool);
 
     void didEndMagnificationGesture();
 #endif
@@ -1144,6 +1147,8 @@ public:
 #if PLATFORM(QT)
     void setUserScripts(const Vector<String>&);
 #endif
+    
+    void handleWheelEvent(const WebWheelEvent&, const OptionSet<WebCore::WheelEventProcessingSteps>&);
     bool wheelEvent(const WebWheelEvent&, OptionSet<WebCore::WheelEventProcessingSteps>, EventDispatcher::WheelEventOrigin);
 
     void wheelEventHandlersChanged(bool);
@@ -1335,8 +1340,6 @@ public:
     void didConcludeDrop();
 #endif
 
-    void updateImageAnimationEnabled();
-
     void didFinishLoadingImageForElement(WebCore::HTMLImageElement&);
 
     WebURLSchemeHandlerProxy* urlSchemeHandlerForScheme(StringView);
@@ -1434,7 +1437,7 @@ public:
     std::optional<WebCore::ElementContext> contextForElement(WebCore::Element&) const;
 
     void startTextManipulations(Vector<WebCore::TextManipulationController::ExclusionRule>&&, CompletionHandler<void()>&&);
-    void completeTextManipulation(const Vector<WebCore::TextManipulationController::ManipulationItem>&, CompletionHandler<void(bool allFailed, const Vector<WebCore::TextManipulationController::ManipulationFailure>&)>&&);
+    void completeTextManipulation(const Vector<WebCore::TextManipulationItem>&, CompletionHandler<void(bool allFailed, const Vector<WebCore::TextManipulationController::ManipulationFailure>&)>&&);
 
 #if ENABLE(APPLE_PAY)
     WebPaymentCoordinator* paymentCoordinator();
@@ -1480,7 +1483,7 @@ public:
     void requestPasswordForQuickLookDocumentInMainFrame(const String& fileName, CompletionHandler<void(const String&)>&&);
 #endif
 
-    const String& overriddenMediaType() const { return m_overriddenMediaType; }
+    const AtomString& overriddenMediaType() const { return m_overriddenMediaType; }
     void setOverriddenMediaType(const String&);
 
     void updateCORSDisablingPatterns(Vector<String>&&);
@@ -1496,8 +1499,6 @@ public:
     WebCore::AllowsContentJavaScript allowsContentJavaScriptFromMostRecentNavigation() const { return m_allowsContentJavaScriptFromMostRecentNavigation; }
     void setAllowsContentJavaScriptFromMostRecentNavigation(WebCore::AllowsContentJavaScript allows) { m_allowsContentJavaScriptFromMostRecentNavigation = allows; }
 
-    void getAllFrames(CompletionHandler<void(FrameTreeNodeData&&)>&&);
-
 #if ENABLE(APP_BOUND_DOMAINS)
     void notifyPageOfAppBoundBehavior();
     void setIsNavigatingToAppBoundDomain(std::optional<NavigatingToAppBoundDomain>, WebFrame*);
@@ -1512,7 +1513,7 @@ public:
 
     void isPlayingMediaDidChange(WebCore::MediaProducerMediaStateFlags);
 
-    URL sanitizeForCopyOrShare(const URL&) const;
+    URL sanitizeLookalikeCharacters(const URL&) const;
 
 #if ENABLE(IMAGE_ANALYSIS)
     void requestTextRecognition(WebCore::Element&, WebCore::TextRecognitionOptions&&, CompletionHandler<void(RefPtr<WebCore::Element>&&)>&& = { });
@@ -1609,6 +1610,15 @@ public:
 #endif
 
     void generateTestReport(String&& message, String&& group);
+    
+    bool isUsingUISideCompositing() const;
+
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+    void updateImageAnimationEnabled();
+#endif
+
+    bool shouldSkipDecidePolicyForResponse(const WebCore::ResourceResponse&, const WebCore::ResourceRequest&) const;
+    void setSkipDecidePolicyForResponseIfPossible(bool value) { m_skipDecidePolicyForResponseIfPossible = value; }
 
 private:
     WebPage(WebCore::PageIdentifier, WebPageCreationParameters&&);
@@ -1665,6 +1675,10 @@ private:
     void clearSelectionAfterTapIfNeeded();
 #endif
 
+#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
+    void setLookalikeCharacterStrings(Vector<String>&&);
+#endif
+
 #if ENABLE(META_VIEWPORT)
     void resetViewportDefaultConfiguration(WebFrame* mainFrame, bool hasMobileDocType = false);
     enum class ZoomToInitialScale { No, Yes };
@@ -1719,7 +1733,7 @@ private:
     void tryClose(CompletionHandler<void(bool)>&&);
     void platformDidReceiveLoadParameters(const LoadParameters&);
     void loadRequest(LoadParameters&&);
-    NO_RETURN void loadRequestWaitingForProcessLaunch(LoadParameters&&, URL&&, WebPageProxyIdentifier, bool);
+    [[noreturn]] void loadRequestWaitingForProcessLaunch(LoadParameters&&, URL&&, WebPageProxyIdentifier, bool);
     void loadData(LoadParameters&&);
     void loadAlternateHTML(LoadParameters&&);
     void loadSimulatedRequestAndResponse(LoadParameters&&, WebCore::ResourceResponse&&);
@@ -2196,7 +2210,7 @@ private:
     RefPtr<PageBanner> m_footerBanner;
 #endif
 
-    RunLoop::Timer<WebPage> m_setCanStartMediaTimer;
+    RunLoop::Timer m_setCanStartMediaTimer;
     bool m_mayStartMediaWhenInWindow { false };
 
     HashMap<WebUndoStepID, RefPtr<WebUndoStep>> m_undoStepMap;
@@ -2519,7 +2533,7 @@ private:
     HashSet<WebCore::RegistrableDomain> m_loadedSubresourceDomains;
 #endif
 
-    String m_overriddenMediaType;
+    AtomString m_overriddenMediaType;
     String m_processDisplayName;
     WebCore::AllowsContentJavaScript m_allowsContentJavaScriptFromMostRecentNavigation { WebCore::AllowsContentJavaScript::Yes };
 
@@ -2538,6 +2552,7 @@ private:
 
     bool m_didUpdateRenderingAfterCommittingLoad { false };
     bool m_isStoppingLoadingDueToProcessSwap { false };
+    bool m_skipDecidePolicyForResponseIfPossible { false };
 
 #if ENABLE(ARKIT_INLINE_PREVIEW)
     bool m_useARKitForModel { false };
@@ -2577,7 +2592,7 @@ private:
 #endif
 
 #if ENABLE(NETWORK_CONNECTION_INTEGRITY)
-    bool m_sanitizeLookalikeCharactersInLinksEnabled { false };
+    HashSet<String> m_lookalikeCharacterStrings;
 #endif
 
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
@@ -2596,7 +2611,7 @@ inline bool WebPage::shouldAvoidComputingPostLayoutDataForEditorState() const { 
 #endif
 
 #if !PLATFORM(COCOA)
-inline URL WebPage::sanitizeForCopyOrShare(const URL& url) const { return url; }
+inline URL WebPage::sanitizeLookalikeCharacters(const URL& url) const { return url; }
 #endif
 
 #if PLATFORM(IOS_FAMILY)

@@ -22,6 +22,7 @@
 
 #include "ActivityState.h"
 #include "AnimationFrameRate.h"
+#include "BadgeClient.h"
 #include "Color.h"
 #include "ContentSecurityPolicy.h"
 #include "DisabledAdaptations.h"
@@ -234,6 +235,7 @@ enum class RenderingUpdateStep : uint32_t {
     FlushAutofocusCandidates        = 1 << 14,
     VideoFrameCallbacks             = 1 << 15,
     PrepareCanvasesForDisplay       = 1 << 16,
+    CaretAnimation                  = 1 << 17,
 };
 
 constexpr OptionSet<RenderingUpdateStep> updateRenderingSteps = {
@@ -251,6 +253,7 @@ constexpr OptionSet<RenderingUpdateStep> updateRenderingSteps = {
     RenderingUpdateStep::CursorUpdate,
     RenderingUpdateStep::EventRegionUpdate,
     RenderingUpdateStep::PrepareCanvasesForDisplay,
+    RenderingUpdateStep::CaretAnimation,
 };
 
 constexpr auto allRenderingUpdateSteps = updateRenderingSteps | OptionSet<RenderingUpdateStep> {
@@ -543,8 +546,6 @@ public:
     // FrameView.
     const Pagination& pagination() const { return m_pagination; }
     WEBCORE_EXPORT void setPagination(const Pagination&);
-    bool paginationLineGridEnabled() const { return m_paginationLineGridEnabled; }
-    WEBCORE_EXPORT void setPaginationLineGridEnabled(bool flag);
 
     WEBCORE_EXPORT unsigned pageCount() const;
 
@@ -656,7 +657,9 @@ public:
     WEBCORE_EXPORT void resumeScriptedAnimations();
     bool scriptedAnimationsSuspended() const { return m_scriptedAnimationsSuspended; }
 
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
     WEBCORE_EXPORT void setImageAnimationEnabled(bool);
+#endif
     bool imageAnimationEnabled() const { return m_imageAnimationEnabled; }
 
     void userStyleSheetLocationChanged();
@@ -692,7 +695,10 @@ public:
     // This seems like a reasonable upper bound, and otherwise mutually
     // recursive frameset pages can quickly bring the program to its knees
     // with exponential growth in the number of frames.
-    static const int maxNumberOfFrames = 1000;
+    static constexpr int maxNumberOfFrames = 1000;
+
+    // Don't allow more than a certain frame depth to avoid stack exhaustion.
+    static constexpr int maxFrameDepth = 32;
 
     void setEditable(bool isEditable) { m_isEditable = isEditable; }
     bool isEditable() const { return m_isEditable; }
@@ -947,8 +953,8 @@ public:
 
     bool httpsUpgradeEnabled() const { return m_httpsUpgradeEnabled; }
 
-    URL sanitizeForCopyOrShare(const URL&) const;
-    String sanitizeForCopyOrShare(const String&) const;
+    URL sanitizeLookalikeCharacters(const URL&) const;
+    String sanitizeLookalikeCharacters(const String&) const;
 
     LoadSchedulingMode loadSchedulingMode() const { return m_loadSchedulingMode; }
     void setLoadSchedulingMode(LoadSchedulingMode);
@@ -989,6 +995,9 @@ public:
 #if ENABLE(IMAGE_ANALYSIS)
     WEBCORE_EXPORT void analyzeImagesForFindInPage(Function<void()>&& callback);
 #endif
+
+    BadgeClient& badgeClient() { return m_badgeClient.get(); }
+
 private:
     struct Navigation {
         RegistrableDomain domain;
@@ -1137,7 +1146,6 @@ private:
     ScrollElasticity m_horizontalScrollElasticity { ScrollElasticity::Allowed };
 
     Pagination m_pagination;
-    bool m_paginationLineGridEnabled { false };
 
     String m_userStyleSheetPath;
     mutable String m_userStyleSheet;
@@ -1350,6 +1358,8 @@ private:
 #endif
 
     ContentSecurityPolicyModeForExtension m_contentSecurityPolicyModeForExtension { ContentSecurityPolicyModeForExtension::None };
+
+    Ref<BadgeClient> m_badgeClient;
 };
 
 inline PageGroup& Page::group()

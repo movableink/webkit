@@ -113,6 +113,8 @@ localizedStrings["720p"] = "720p";
 /* Text indicating that the local override will block the network activity with an access error. */
 localizedStrings["Access Control @ Local Override Type"] = "Access Control";
 localizedStrings["Accessibility"] = "Accessibility";
+/* Header for section with accessibility user preferences. */
+localizedStrings["Accessibility @ User Preferences Overrides"] = "Accessibility";
 localizedStrings["Action"] = "Action";
 /* Tooltip for a time range bar that represents when a CSS animation/transition is running */
 localizedStrings["Active"] = "Active";
@@ -192,6 +194,8 @@ localizedStrings["Anonymous Script %d"] = "Anonymous Script %d";
 localizedStrings["Anonymous Scripts"] = "Anonymous Scripts";
 localizedStrings["Anonymous Style Sheet %d"] = "Anonymous Style Sheet %d";
 localizedStrings["Anonymous Style Sheets"] = "Anonymous Style Sheets";
+/* Header for section with appearance user preferences. */
+localizedStrings["Appearance @ User Preferences Overrides"] = "Appearance";
 localizedStrings["Appearance:"] = "Appearance:";
 localizedStrings["Application Cache"] = "Application Cache";
 /* Approximate count of events */
@@ -370,6 +374,8 @@ localizedStrings["Code"] = "Code";
 localizedStrings["Collapse All"] = "Collapse All";
 localizedStrings["Collapse columns"] = "Collapse columns";
 localizedStrings["Collect garbage"] = "Collect garbage";
+/* Label for input to override the preference for color scheme. */
+localizedStrings["Color scheme @ User Preferences Overrides"] = "Color scheme";
 /* Section header for the group of CSS variables with colors as values */
 localizedStrings["Colors @ Computed Style variables section"] = "Colors";
 localizedStrings["Comment"] = "Comment";
@@ -463,6 +469,8 @@ localizedStrings["DSL"] = "DSL";
 localizedStrings["Damping"] = "Damping";
 /* Label of dropdown item used for forcing Web Inspector to be shown using a dark theme */
 localizedStrings["Dark @ Settings General Appearance"] = "Dark";
+/* Label for the dark color scheme preference. */
+localizedStrings["Dark @ User Preferences Overrides"] = "Dark";
 localizedStrings["Data"] = "Data";
 localizedStrings["Data Bindings"] = "Data Bindings";
 localizedStrings["Data returned from the database is too large."] = "Data returned from the database is too large.";
@@ -730,8 +738,6 @@ localizedStrings["Font was synthesized to be bold because no bold font is availa
 /* A warning that is shown in the Font Details Sidebar when the font had to be synthesized to support the provided style. */
 localizedStrings["Font was synthesized to be oblique because no oblique font is available."] = "Font was synthesized to be oblique because no oblique font is available.";
 localizedStrings["Fonts"] = "Fonts";
-localizedStrings["Force Dark Appearance"] = "Force Dark Appearance";
-localizedStrings["Force Light Appearance"] = "Force Light Appearance";
 localizedStrings["Force print media styles"] = "Force print media styles";
 /* Layout phase records that were imperative (forced) */
 localizedStrings["Forced Layout"] = "Forced Layout";
@@ -855,6 +861,8 @@ localizedStrings["Imported \u2014 %s"] = "Imported \u2014 %s";
 localizedStrings["Include original request data"] = "Include original request data";
 localizedStrings["Include original response data"] = "Include original response data";
 localizedStrings["Incomplete"] = "Incomplete";
+/* Label for input to override the preference for high contrast. */
+localizedStrings["Increase contrast @ User Preferences Overrides"] = "Increase contrast";
 localizedStrings["Indent width:"] = "Indent width:";
 localizedStrings["Index"] = "Index";
 localizedStrings["Index Key \u2014 %s"] = "Index Key \u2014 %s";
@@ -920,6 +928,8 @@ localizedStrings["Layout Invalidated"] = "Layout Invalidated";
 localizedStrings["Ligatures @ Font Details Sidebar Property"] = "Ligatures";
 /* Label of dropdown item used for forcing Web Inspector to be shown using a light theme */
 localizedStrings["Light @ Settings General Appearance"] = "Light";
+/* Label for the light color scheme preference. */
+localizedStrings["Light @ User Preferences Overrides"] = "Light";
 localizedStrings["Line %d"] = "Line %d";
 localizedStrings["Line %d:%d"] = "Line %d:%d";
 localizedStrings["Line Number"] = "Line Number";
@@ -1100,12 +1110,16 @@ localizedStrings["Observer Callback"] = "Observer Callback";
 localizedStrings["Observer Handlers:"] = "Observer Handlers:";
 localizedStrings["Observers:"] = "Observers:";
 localizedStrings["Off"] = "Off";
+/* Label for a preference that is turned off. */
+localizedStrings["Off @ User Preferences Overrides"] = "Off";
 /* Input label for the x-axis of the offset of a CSS box shadow */
 localizedStrings["Offset X @ Box Shadow Editor"] = "Offset X";
 /* Input label for the y-axis of the offset of a CSS box shadow */
 localizedStrings["Offset Y @ Box Shadow Editor"] = "Offset Y";
 /* Property value for `font-variant-numeric: oldstyle-nums`. */
 localizedStrings["Old-Style Numerals @ Font Details Sidebar Property Value"] = "Old-Style Numerals";
+/* Label for a preference that is turned on. */
+localizedStrings["On @ User Preferences Overrides"] = "On";
 localizedStrings["Once"] = "Once";
 localizedStrings["Online"] = "Online";
 localizedStrings["Only show resources with issues"] = "Only show resources with issues";
@@ -1138,6 +1152,7 @@ localizedStrings["Outgoing message"] = "Outgoing message";
 localizedStrings["Output: "] = "Output: ";
 localizedStrings["Over 1 ms"] = "Over 1 ms";
 localizedStrings["Over 15 ms"] = "Over 15 ms";
+localizedStrings["Override user preferences"] = "Override user preferences";
 localizedStrings["Overview"] = "Overview";
 localizedStrings["Owns"] = "Owns";
 localizedStrings["PDF"] = "PDF";
@@ -1251,6 +1266,8 @@ localizedStrings["Recordings"] = "Recordings";
 localizedStrings["Redirect"] = "Redirect";
 localizedStrings["Redirect Response"] = "Redirect Response";
 localizedStrings["Redirects"] = "Redirects";
+/* Label for input to override the preference for reduced motion. */
+localizedStrings["Reduce motion @ User Preferences Overrides"] = "Reduce motion";
 localizedStrings["Reduction"] = "Reduction";
 localizedStrings["Reference Issue"] = "Reference Issue";
 localizedStrings["Reflection"] = "Reflection";
@@ -1569,6 +1586,8 @@ localizedStrings["Symbol"] = "Symbol";
 localizedStrings["Symbolic Breakpoint\u2026 @ Sources Navigation Sidebar Panel"] = "Symbolic Breakpoint\u2026";
 /* Label of dropdown item used for forcing Web Inspector to be shown using the system's theme */
 localizedStrings["System @ Settings General Appearance"] = "System";
+/* Label for a preference that matches the default system value. The system value is shown in parentheses. */
+localizedStrings["System @ User Preferences Overrides"] = "System (%s)";
 localizedStrings["TCP"] = "TCP";
 localizedStrings["TIFF"] = "TIFF";
 localizedStrings["Tab width:"] = "Tab width:";
@@ -1721,13 +1740,13 @@ localizedStrings["Update Font"] = "Update Font";
 localizedStrings["Update Image"] = "Update Image";
 localizedStrings["Update Local Override"] = "Update Local Override";
 localizedStrings["Usage: %s"] = "Usage: %s";
-localizedStrings["Use Default Appearance"] = "Use Default Appearance";
 localizedStrings["Use Mock Capture Devices"] = "Use Mock Capture Devices";
 localizedStrings["Use default media styles"] = "Use default media styles";
 localizedStrings["User Agent"] = "User Agent";
 localizedStrings["User Agent Style Sheet"] = "User Agent Style Sheet";
 localizedStrings["User Agent:"] = "User Agent:";
 localizedStrings["User Style Sheet"] = "User Style Sheet";
+localizedStrings["User preferences overriden"] = "User preferences overriden";
 localizedStrings["Valid From"] = "Valid From";
 localizedStrings["Valid Until"] = "Valid Until";
 localizedStrings["Value"] = "Value";

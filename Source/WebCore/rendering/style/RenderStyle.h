@@ -125,6 +125,8 @@ class TransformationMatrix;
 struct ScrollSnapAlign;
 struct ScrollSnapType;
 
+struct TextEdge;
+
 using PseudoStyleCache = Vector<std::unique_ptr<RenderStyle>, 4>;
 
 template<typename T, typename U> inline bool compareEqual(const T& t, const U& u) { return t == static_cast<const T&>(u); }
@@ -221,8 +223,8 @@ public:
     bool hasEntirelyFixedBackground() const;
     bool hasAnyLocalBackground() const { return backgroundLayers().hasImageWithAttachment(FillAttachment::LocalBackground); }
 
-    bool hasAppearance() const { return appearance() != NoControlPart; }
-    bool hasEffectiveAppearance() const { return effectiveAppearance() != NoControlPart; }
+    bool hasAppearance() const { return appearance() != ControlPartType::NoControl; }
+    bool hasEffectiveAppearance() const { return effectiveAppearance() != ControlPartType::NoControl; }
 
     bool hasBackground() const;
     
@@ -396,6 +398,11 @@ public:
     TextIndentType textIndentType() const { return static_cast<TextIndentType>(m_rareInheritedData->textIndentType); }
     TextJustify textJustify() const { return static_cast<TextJustify>(m_rareInheritedData->textJustify); }
 
+    LeadingTrim leadingTrim() const { return static_cast<LeadingTrim>(m_rareNonInheritedData->leadingTrim); }
+    TextEdge textEdge() const;
+
+    OptionSet<MarginTrimType> marginTrim() const { return m_rareNonInheritedData->marginTrim; }
+
     const Length& wordSpacing() const;
     float letterSpacing() const;
 
@@ -517,11 +524,23 @@ public:
     float textStrokeWidth() const { return m_rareInheritedData->textStrokeWidth; }
     float opacity() const { return m_rareNonInheritedData->opacity; }
     bool hasOpacity() const { return m_rareNonInheritedData->opacity < 1; }
-    ControlPart appearance() const { return static_cast<ControlPart>(m_rareNonInheritedData->appearance); }
-    ControlPart effectiveAppearance() const { return static_cast<ControlPart>(m_rareNonInheritedData->effectiveAppearance); }
+    ControlPartType appearance() const { return static_cast<ControlPartType>(m_rareNonInheritedData->appearance); }
+    ControlPartType effectiveAppearance() const { return static_cast<ControlPartType>(m_rareNonInheritedData->effectiveAppearance); }
     AspectRatioType aspectRatioType() const { return static_cast<AspectRatioType>(m_rareNonInheritedData->aspectRatioType); }
     double aspectRatioWidth() const { return m_rareNonInheritedData->aspectRatioWidth; }
     double aspectRatioHeight() const { return m_rareNonInheritedData->aspectRatioHeight; }
+    double aspectRatioLogicalWidth() const
+    {
+        if (isHorizontalWritingMode())
+            return aspectRatioWidth();
+        return aspectRatioHeight();
+    }
+    double aspectRatioLogicalHeight() const
+    {
+        if (isHorizontalWritingMode())
+            return aspectRatioHeight();
+        return aspectRatioWidth();
+    }
     double logicalAspectRatio() const
     {
         ASSERT(aspectRatioType() != AspectRatioType::Auto);
@@ -581,8 +600,8 @@ public:
     const StyleSelfAlignmentData& justifyItems() const { return m_rareNonInheritedData->justifyItems; }
     const StyleSelfAlignmentData& justifySelf() const { return m_rareNonInheritedData->justifySelf; }
 
-    const Vector<GridTrackSize>& gridColumns() const { return m_rareNonInheritedData->grid->gridColumns(); }
-    const Vector<GridTrackSize>& gridRows() const { return m_rareNonInheritedData->grid->gridRows(); }
+    const Vector<GridTrackSize>& gridColumnTrackSizes() const { return m_rareNonInheritedData->grid->gridColumnTrackSizes(); }
+    const Vector<GridTrackSize>& gridRowTrackSizes() const { return m_rareNonInheritedData->grid->gridRowTrackSizes(); }
     const GridTrackList& gridColumnList() const { return m_rareNonInheritedData->grid->columns(); }
     const GridTrackList& gridRowList() const { return m_rareNonInheritedData->grid->rows(); }
     const Vector<GridTrackSize>& gridAutoRepeatColumns() const { return m_rareNonInheritedData->grid->gridAutoRepeatColumns(); }
@@ -605,6 +624,7 @@ public:
     size_t namedGridAreaRowCount() const { return m_rareNonInheritedData->grid->namedGridAreaRowCount; }
     size_t namedGridAreaColumnCount() const { return m_rareNonInheritedData->grid->namedGridAreaColumnCount; }
     GridAutoFlow gridAutoFlow() const { return static_cast<GridAutoFlow>(m_rareNonInheritedData->grid->gridAutoFlow); }
+    MasonryAutoFlow masonryAutoFlow() const { return m_rareNonInheritedData->grid->masonryAutoFlow; }
     bool gridSubgridRows() const { return m_rareNonInheritedData->grid->subgridRows(); }
     bool gridSubgridColumns() const { return m_rareNonInheritedData->grid->subgridColumns(); }
     bool gridMasonryRows() const { return m_rareNonInheritedData->grid->masonryRows(); }
@@ -1053,6 +1073,11 @@ public:
     void setTextIndentType(TextIndentType v) { SET_VAR(m_rareInheritedData, textIndentType, static_cast<unsigned>(v)); }
     void setTextJustify(TextJustify v) { SET_VAR(m_rareInheritedData, textJustify, static_cast<unsigned>(v)); }
 
+    void setLeadingTrim(LeadingTrim value) { SET_VAR(m_rareNonInheritedData, leadingTrim, static_cast<unsigned>(value)); }
+    void setTextEdge(TextEdge);
+
+    void setMarginTrim(OptionSet<MarginTrimType> value) { SET_VAR(m_rareNonInheritedData, marginTrim, value); }
+
 #if ENABLE(TEXT_AUTOSIZING)
     void setSpecifiedLineHeight(Length&&);
 #endif
@@ -1196,9 +1221,8 @@ public:
     void setAccentColor(const StyleColor& c) { SET_VAR(m_rareInheritedData, accentColor, c); SET_VAR(m_rareInheritedData, hasAutoAccentColor, false);  }
     void setHasAutoAccentColor() { SET_VAR(m_rareInheritedData, hasAutoAccentColor, true); SET_VAR(m_rareInheritedData, accentColor, currentColor()); }
     void setOpacity(float f) { float v = clampTo<float>(f, 0.f, 1.f); SET_VAR(m_rareNonInheritedData, opacity, v); }
-    static_assert(largestControlPart < 1 << appearanceBitWidth, "Control part must fit in storage bits");
-    void setAppearance(ControlPart a) { SET_VAR(m_rareNonInheritedData, appearance, a); SET_VAR(m_rareNonInheritedData, effectiveAppearance, a); }
-    void setEffectiveAppearance(ControlPart a) { SET_VAR(m_rareNonInheritedData, effectiveAppearance, a); }
+    void setAppearance(ControlPartType a) { SET_VAR(m_rareNonInheritedData, appearance, static_cast<unsigned>(a)); SET_VAR(m_rareNonInheritedData, effectiveAppearance, static_cast<unsigned>(a)); }
+    void setEffectiveAppearance(ControlPartType a) { SET_VAR(m_rareNonInheritedData, effectiveAppearance, static_cast<unsigned>(a)); }
     // For valid values of box-align see http://www.w3.org/TR/2009/WD-css3-flexbox-20090723/#alignment
     void setBoxAlign(BoxAlignment a) { SET_NESTED_VAR(m_rareNonInheritedData, deprecatedFlexibleBox, align, static_cast<unsigned>(a)); }
     void setBoxDirection(BoxDirection d) { m_inheritedFlags.boxDirection = static_cast<unsigned>(d); }
@@ -1254,6 +1278,7 @@ public:
     void setGridItemColumnEnd(const GridPosition& columnEndPosition) { SET_NESTED_VAR(m_rareNonInheritedData, gridItem, gridColumnEnd, columnEndPosition); }
     void setGridItemRowStart(const GridPosition& rowStartPosition) { SET_NESTED_VAR(m_rareNonInheritedData, gridItem, gridRowStart, rowStartPosition); }
     void setGridItemRowEnd(const GridPosition& rowEndPosition) { SET_NESTED_VAR(m_rareNonInheritedData, gridItem, gridRowEnd, rowEndPosition); }
+    void setMasonryAutoFlow(MasonryAutoFlow flow) { SET_NESTED_VAR(m_rareNonInheritedData, grid, masonryAutoFlow, flow); };
 
     void setMarqueeIncrement(Length&& length) { SET_NESTED_VAR(m_rareNonInheritedData, marquee, increment, WTFMove(length)); }
     void setMarqueeSpeed(int f) { SET_NESTED_VAR(m_rareNonInheritedData, marquee, speed, f); }
@@ -1628,7 +1653,6 @@ public:
     static BorderCollapse initialBorderCollapse() { return BorderCollapse::Separate; }
     static BorderStyle initialBorderStyle() { return BorderStyle::None; }
     static OutlineIsAuto initialOutlineStyleIsAuto() { return OutlineIsAuto::Off; }
-    static NinePieceImage initialNinePieceImage() { return NinePieceImage(); }
     static LengthSize initialBorderRadius() { return { { 0, LengthType::Fixed }, { 0, LengthType::Fixed } }; }
     static CaptionSide initialCaptionSide() { return CaptionSide::Top; }
     static ColumnAxis initialColumnAxis() { return ColumnAxis::Auto; }
@@ -1664,8 +1688,11 @@ public:
     static Length initialOffset() { return Length(); }
     static Length initialRadius() { return Length(); }
     static Length initialMargin() { return Length(LengthType::Fixed); }
+    static OptionSet<MarginTrimType> initialMarginTrim() { return { }; }
     static Length initialPadding() { return Length(LengthType::Fixed); }
     static Length initialTextIndent() { return Length(LengthType::Fixed); }
+    static LeadingTrim initialLeadingTrim() { return LeadingTrim::Normal; }
+    static TextEdge initialTextEdge();
     static Length initialZeroLength() { return Length(LengthType::Fixed); }
     static Length initialOneLength() { return Length(1, LengthType::Fixed); }
     static unsigned short initialWidows() { return 2; }
@@ -1725,7 +1752,7 @@ public:
     static short initialHyphenationLimitLines() { return -1; }
     static const AtomString& initialHyphenationString() { return nullAtom(); }
     static Resize initialResize() { return Resize::None; }
-    static ControlPart initialAppearance() { return NoControlPart; }
+    static ControlPartType initialAppearance() { return ControlPartType::NoControl; }
     static AspectRatioType initialAspectRatioType() { return AspectRatioType::Auto; }
     static OptionSet<Containment> initialContainment() { return OptionSet<Containment> { }; }
     static OptionSet<Containment> strictContainment() { return OptionSet<Containment> { Containment::Size, Containment::Layout, Containment::Paint, Containment::Style }; }
@@ -1815,14 +1842,15 @@ public:
 #endif
 
     // The initial value is 'none' for grid tracks.
-    static Vector<GridTrackSize> initialGridColumns() { return Vector<GridTrackSize>(); }
-    static Vector<GridTrackSize> initialGridRows() { return Vector<GridTrackSize>(); }
+    static Vector<GridTrackSize> initialGridColumnTrackSizes() { return Vector<GridTrackSize>(); }
+    static Vector<GridTrackSize> initialGridRowTrackSizes() { return Vector<GridTrackSize>(); }
 
     static Vector<GridTrackSize> initialGridAutoRepeatTracks() { return Vector<GridTrackSize>(); }
     static unsigned initialGridAutoRepeatInsertionPoint() { return 0; }
     static AutoRepeatType initialGridAutoRepeatType() { return AutoRepeatType::None; }
 
     static GridAutoFlow initialGridAutoFlow() { return AutoFlowRow; }
+    static MasonryAutoFlow initialMasonryAutoFlow() { return { MasonryAutoFlowPlacementAlgorithm::Pack, MasonryAutoFlowPlacementOrder::DefiniteFirst }; }
 
     static Vector<GridTrackSize> initialGridAutoColumns() { return { GridTrackSize(Length(LengthType::Auto)) }; }
     static Vector<GridTrackSize> initialGridAutoRows() { return { GridTrackSize(Length(LengthType::Auto)) }; }

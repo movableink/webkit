@@ -595,8 +595,9 @@ sub AddToIncludesForIDLType
         return;
     }
 
-    if ($codeGenerator->IsBufferSourceType($type)) {
+    if ($codeGenerator->IsBufferSourceType($type) || $type->extendedAttributes->{AllowShared}) {
         AddToIncludes("JSDOMConvertBufferSource.h", $includesRef, $conditional);
+        AddToIncludes("JSDOMConvertUnion.h", $includesRef, $conditional);
         return;
     }
 
@@ -4954,9 +4955,9 @@ sub GenerateImplementation
     my $isGlobal = IsDOMGlobalObject($interface);
     push(@implContent, "    return WebCore::subspaceForImpl<${className}, UseCustomHeapCellType::" . ($isGlobal ? "Yes" : "No") . ">(vm,\n");
     push(@implContent, "        [] (auto& spaces) { return spaces.m_clientSubspaceFor${interfaceName}.get(); },\n");
-    push(@implContent, "        [] (auto& spaces, auto&& space) { spaces.m_clientSubspaceFor${interfaceName} = WTFMove(space); },\n");
+    push(@implContent, "        [] (auto& spaces, auto&& space) { spaces.m_clientSubspaceFor${interfaceName} = std::forward<decltype(space)>(space); },\n");
     push(@implContent, "        [] (auto& spaces) { return spaces.m_subspaceFor${interfaceName}.get(); },\n");
-    push(@implContent, "        [] (auto& spaces, auto&& space) { spaces.m_subspaceFor${interfaceName} = WTFMove(space); }" . ($isGlobal ? "," : "") . "\n");
+    push(@implContent, "        [] (auto& spaces, auto&& space) { spaces.m_subspaceFor${interfaceName} = std::forward<decltype(space)>(space); }" . ($isGlobal ? "," : "") . "\n");
     push(@implContent, "        [] (auto& server) -> JSC::HeapCellType& { return server.m_heapCellTypeFor${className}; }\n") if $isGlobal;
     push(@implContent, "    );\n");
     push(@implContent, "}\n\n");
@@ -6684,7 +6685,8 @@ sub GenerateCallbackImplementationContent
                 push(@$contentRef, "        auto throwScope = DECLARE_THROW_SCOPE(vm);\n");
                 push(@$contentRef, "        throwException(&lexicalGlobalObject, throwScope, returnedException);\n");
             } else {
-                push(@$contentRef, "        reportException(&lexicalGlobalObject, returnedException);\n");
+                push(@$contentRef, "        UNUSED_PARAM(lexicalGlobalObject);\n");
+                push(@$contentRef, "        reportException(m_data->callback()->globalObject(), returnedException);\n");
             }
             push(@$contentRef, "        return CallbackResultType::ExceptionThrown;\n");
             push(@$contentRef, "     }\n\n");
@@ -6873,9 +6875,9 @@ public:
             return nullptr;
         return WebCore::subspaceForImpl<${iteratorName}, UseCustomHeapCellType::No>(vm,
             [] (auto& spaces) { return spaces.m_clientSubspaceFor${iteratorName}.get(); },
-            [] (auto& spaces, auto&& space) { spaces.m_clientSubspaceFor${iteratorName} = WTFMove(space); },
+            [] (auto& spaces, auto&& space) { spaces.m_clientSubspaceFor${iteratorName} = std::forward<decltype(space)>(space); },
             [] (auto& spaces) { return spaces.m_subspaceFor${iteratorName}.get(); },
-            [] (auto& spaces, auto&& space) { spaces.m_subspaceFor${iteratorName} = WTFMove(space); }
+            [] (auto& spaces, auto&& space) { spaces.m_subspaceFor${iteratorName} = std::forward<decltype(space)>(space); }
         );
     }
 

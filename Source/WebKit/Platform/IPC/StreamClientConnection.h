@@ -54,12 +54,12 @@ namespace IPC {
 // The whole IPC::Connection message order is not preserved.
 //
 // The StreamClientConnection trusts the StreamServerConnection.
-class StreamClientConnection final {
+class StreamClientConnection final : public ThreadSafeRefCounted<StreamClientConnection> {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(StreamClientConnection);
 public:
     struct StreamConnectionPair {
-        std::unique_ptr<StreamClientConnection> streamConnection;
+        RefPtr<StreamClientConnection> streamConnection;
         IPC::StreamServerConnection::Handle connectionHandle;
     };
 
@@ -77,10 +77,14 @@ public:
         wakeUpServer(WakeUpServer::Yes);
     }
 
-    void open(MessageReceiver&, SerialFunctionDispatcher& = RunLoop::current());
+    void open(Connection::Client&, SerialFunctionDispatcher& = RunLoop::current());
     void invalidate();
 
     template<typename T, typename U> bool send(T&& message, ObjectIdentifier<U> destinationID, Timeout);
+
+    using AsyncReplyID = Connection::AsyncReplyID;
+    template<typename T, typename C, typename U>
+    AsyncReplyID sendWithAsyncReply(T&& message, C&& completionHandler, ObjectIdentifier<U> destinationID, Timeout);
 
     template<typename T> using SendSyncResult = Connection::SendSyncResult<T>;
     template<typename T, typename U>
@@ -88,6 +92,7 @@ public:
 
     template<typename T, typename U>
     bool waitForAndDispatchImmediately(ObjectIdentifier<U> destinationID, Timeout, OptionSet<WaitForOption> = { });
+
 
     StreamConnectionBuffer& bufferForTesting();
     Connection& connectionForTesting();
@@ -101,8 +106,8 @@ private:
     };
     static constexpr size_t minimumMessageSize = StreamConnectionEncoder::minimumMessageSize;
     static constexpr size_t messageAlignment = StreamConnectionEncoder::messageAlignment;
-    template<typename T>
-    bool trySendStream(T& message, Span&);
+    template<typename T, typename... AdditionalData>
+    bool trySendStream(Span&, T& message, AdditionalData&&...);
     template<typename T>
     std::optional<SendSyncResult<T>> trySendSyncStream(T& message, Timeout, Span&);
     bool trySendDestinationIDIfNeeded(uint64_t destinationID, Timeout);
@@ -136,14 +141,14 @@ private:
     class DedicatedConnectionClient final : public Connection::Client {
         WTF_MAKE_NONCOPYABLE(DedicatedConnectionClient);
     public:
-        DedicatedConnectionClient(MessageReceiver&);
+        DedicatedConnectionClient(Connection::Client&);
         // Connection::Client overrides.
         void didReceiveMessage(Connection&, Decoder&) final;
         bool didReceiveSyncMessage(Connection&, Decoder&, UniqueRef<Encoder>&) final;
         void didClose(Connection&) final;
         void didReceiveInvalidMessage(Connection&, MessageName) final;
     private:
-        MessageReceiver& m_receiver;
+        Connection::Client& m_receiver;
     };
     std::optional<DedicatedConnectionClient> m_dedicatedConnectionClient;
     uint64_t m_currentDestinationID { 0 };
@@ -170,7 +175,7 @@ bool StreamClientConnection::send(T&& message, ObjectIdentifier<U> destinationID
     if (!span)
         return false;
     if constexpr(T::isStreamEncodable) {
-        if (trySendStream(message, *span))
+        if (trySendStream(*span, message))
             return true;
     }
     sendProcessOutOfStreamMessage(WTFMove(*span));
@@ -179,11 +184,45 @@ bool StreamClientConnection::send(T&& message, ObjectIdentifier<U> destinationID
     return true;
 }
 
-template<typename T>
-bool StreamClientConnection::trySendStream(T& message, Span& span)
+template<typename T, typename C, typename U>
+StreamClientConnection::AsyncReplyID StreamClientConnection::sendWithAsyncReply(T&& message, C&& completionHandler, ObjectIdentifier<U> destinationID, Timeout timeout)
+{
+    static_assert(!T::isSync, "Message is sync!");
+    if (!trySendDestinationIDIfNeeded(destinationID.toUInt64(), timeout))
+        return { };
+
+    auto span = tryAcquire(timeout);
+    if (!span)
+        return { };
+    auto handler = Connection::makeAsyncReplyHandler<T>(WTFMove(completionHandler));
+    auto replyID = handler.replyID;
+    m_connection->addAsyncReplyHandler(WTFMove(handler));
+    if constexpr(T::isStreamEncodable) {
+        if (trySendStream(*span, message, replyID))
+            return replyID;
+    }
+    sendProcessOutOfStreamMessage(WTFMove(*span));
+    auto encoder = makeUniqueRef<Encoder>(T::name(), destinationID.toUInt64());
+    encoder.get() << message.arguments() << replyID;
+    if (m_connection->sendMessage(WTFMove(encoder), IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply, { }))
+        return replyID;
+    // replyHandlerToCancel might be already cancelled if invalidate() happened in-between.
+    if (auto replyHandlerToCancel = m_connection->takeAsyncReplyHandler(replyID)) {
+        // FIXME(https://bugs.webkit.org/show_bug.cgi?id=248947): Current contract is that completionHandler
+        // is called on the connection run loop.
+        // This does not make sense. However, this needs a change that is done later.
+        RunLoop::main().dispatch([completionHandler = WTFMove(replyHandlerToCancel)]() mutable {
+            completionHandler(nullptr);
+        });
+    }
+    return { };
+}
+
+template<typename T, typename... AdditionalData>
+bool StreamClientConnection::trySendStream(Span& span, T& message, AdditionalData&&... args)
 {
     StreamConnectionEncoder messageEncoder { T::name(), span.data, span.size };
-    if (messageEncoder << message.arguments()) {
+    if (((messageEncoder << message.arguments()) << ... << std::forward<decltype(args)>(args))) {
         auto wakeUpResult = release(messageEncoder.size());
         if constexpr(T::isStreamBatched)
             wakeUpServerBatched(wakeUpResult);

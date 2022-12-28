@@ -152,7 +152,7 @@ public:
     void startPanScrolling(RenderElement&);
 #endif
 
-    void stopAutoscrollTimer(bool rendererIsBeingDestroyed = false);
+    WEBCORE_EXPORT void stopAutoscrollTimer(bool rendererIsBeingDestroyed = false);
     RenderBox* autoscrollRenderer() const;
     void updateAutoscrollRenderer();
     bool autoscrollInProgress() const;
@@ -197,7 +197,7 @@ public:
     IntPoint targetPositionInWindowForSelectionAutoscroll() const;
     bool shouldUpdateAutoscroll();
 
-    static RefPtr<Frame> subframeForTargetNode(Node*);
+    WEBCORE_EXPORT static RefPtr<Frame> subframeForTargetNode(Node*);
     static RefPtr<Frame> subframeForHitTestResult(const MouseEventWithHitTestResults&);
 
     WEBCORE_EXPORT bool scrollOverflow(ScrollDirection, ScrollGranularity, Node* startingNode = nullptr);
@@ -210,7 +210,7 @@ public:
     WEBCORE_EXPORT bool mouseMoved(const PlatformMouseEvent&);
     WEBCORE_EXPORT bool passMouseMovedEventToScrollbars(const PlatformMouseEvent&);
 
-    void lostMouseCapture();
+    WEBCORE_EXPORT void lostMouseCapture();
 
     WEBCORE_EXPORT bool handleMousePressEvent(const PlatformMouseEvent&);
     bool handleMouseMoveEvent(const PlatformMouseEvent&, HitTestResult* = nullptr, bool onlyUpdateScrollbars = false);

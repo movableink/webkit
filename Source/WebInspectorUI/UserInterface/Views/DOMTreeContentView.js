@@ -53,10 +53,12 @@ WI.DOMTreeContentView = class DOMTreeContentView extends WI.ContentView
         this._showPrintStylesButtonNavigationItem.visibilityPriority = WI.NavigationItem.VisibilityPriority.Low;
         this._showPrintStylesChanged();
 
-        this._forceAppearanceButtonNavigationItem = new WI.ActivateButtonNavigationItem("appearance", WI.UIString("Force Dark Appearance"), WI.UIString("Use Default Appearance"), "Images/Appearance.svg", 16, 16);
-        this._forceAppearanceButtonNavigationItem.addEventListener(WI.ButtonNavigationItem.Event.Clicked, this._toggleAppearance, this);
-        this._forceAppearanceButtonNavigationItem.visibilityPriority = WI.NavigationItem.VisibilityPriority.Low;
-        this._forceAppearanceButtonNavigationItem.enabled = WI.cssManager.canForceAppearance();
+        // COMPATIBILITY (macOS 13.0, iOS 16.0): `Page.overrideUserPreference` did not exist yet.
+        this._overrideUserPreferencesNavigationItem = new WI.ActivateButtonNavigationItem("toggle-user-preferences", WI.UIString("Override user preferences"), WI.UIString("User preferences overriden"), "Images/AppearanceOverride.svg", 16, 16);
+        this._overrideUserPreferencesNavigationItem.addEventListener(WI.ButtonNavigationItem.Event.Clicked, this._handleOverrideUserPreferencesButtonClicked, this);
+        // COMPATIBILITY (macOS 13, iOS 16.0): `Page.setForcedAppearance()` was removed in favor of `Page.overrideUserPreference()`
+        this._overrideUserPreferencesNavigationItem.enabled = WI.cssManager.supportsOverrideUserPreference || WI.cssManager.supportsOverrideColorScheme;
+        this._overrideUserPreferencesNavigationItem.visibilityPriority = WI.NavigationItem.VisibilityPriority.Low;
 
         this._compositingBordersButtonNavigationItem = new WI.ActivateButtonNavigationItem("layer-borders", WI.UIString("Show compositing borders"), WI.UIString("Hide compositing borders"), "Images/LayerBorders.svg", 13, 13);
         this._compositingBordersButtonNavigationItem.addEventListener(WI.ButtonNavigationItem.Event.Clicked, this._handleCompositingBordersButtonClicked, this);
@@ -85,17 +87,16 @@ WI.DOMTreeContentView = class DOMTreeContentView extends WI.ContentView
         WI.domManager.addEventListener(WI.DOMManager.Event.AttributeRemoved, this._domNodeChanged, this);
         WI.domManager.addEventListener(WI.DOMManager.Event.CharacterDataModified, this._domNodeChanged, this);
 
-        WI.cssManager.addEventListener(WI.CSSManager.Event.DefaultAppearanceDidChange, this._defaultAppearanceDidChange, this);
+        WI.cssManager.addEventListener(WI.CSSManager.Event.DefaultUserPreferencesDidChange, this._defaultUserPreferencesDidChange, this);
+        WI.cssManager.addEventListener(WI.CSSManager.Event.OverridenUserPreferencesDidChange, this._overridenUserPreferencesDidChange, this);
 
         this._lastSelectedNodePathSetting = new WI.Setting("last-selected-node-path", null);
-        this._lastKnownDefaultAppearance = null;
 
         this._numberOfSearchResults = null;
 
         this._breakpointGutterEnabled = false;
         this._pendingBreakpointNodes = new Set;
 
-        this._defaultAppearanceDidChange();
 
         if (WI.domDebuggerManager.supported) {
             WI.debuggerManager.addEventListener(WI.DebuggerManager.Event.BreakpointsEnabledDidChange, this._breakpointsEnabledDidChange, this);
@@ -122,7 +123,7 @@ WI.DOMTreeContentView = class DOMTreeContentView extends WI.ContentView
             this._configureDOMTreeBadgesNavigationItem,
             this._showRulersButtonNavigationItem,
             this._showPrintStylesButtonNavigationItem,
-            this._forceAppearanceButtonNavigationItem,
+            this._overrideUserPreferencesNavigationItem,
             this._compositingBordersButtonNavigationItem,
             this._paintFlashingButtonNavigationItem,
         ];
@@ -161,8 +162,6 @@ WI.DOMTreeContentView = class DOMTreeContentView extends WI.ContentView
         WI.domManager.removeEventListener(WI.DOMManager.Event.AttributeModified, this._domNodeChanged, this);
         WI.domManager.removeEventListener(WI.DOMManager.Event.AttributeRemoved, this._domNodeChanged, this);
         WI.domManager.removeEventListener(WI.DOMManager.Event.CharacterDataModified, this._domNodeChanged, this);
-
-        WI.cssManager.removeEventListener(WI.CSSManager.Event.DefaultAppearanceDidChange, this._defaultAppearanceDidChange, this);
 
         if (WI.domDebuggerManager.supported) {
             WI.debuggerManager.removeEventListener(WI.DebuggerManager.Event.BreakpointsEnabledDidChange, this._breakpointsEnabledDidChange, this);
@@ -694,54 +693,23 @@ WI.DOMTreeContentView = class DOMTreeContentView extends WI.ContentView
         this._showPrintStylesChanged();
     }
 
-    _defaultAppearanceDidChange()
+    _handleOverrideUserPreferencesButtonClicked()
     {
-        // Don't update the navigation item if there is currently a forced appearance.
-        // The user will need to toggle it off to update it based on the new default appearance.
-        if (WI.cssManager.forcedAppearance)
-            return;
+        if (this._userPreferencesOverridesPopover)
+            return; // Clicking the button while the popover is shown will automatically dismiss the popover.
 
-        let defaultAppearance = WI.cssManager.defaultAppearance;
-        switch (defaultAppearance) {
-        case WI.CSSManager.Appearance.Light:
-        case null: // if there is no default appearance, the navigation item will be disabled
-            this._forceAppearanceButtonNavigationItem.defaultToolTip = WI.UIString("Force Dark Appearance");
-            break;
-        case WI.CSSManager.Appearance.Dark:
-            this._forceAppearanceButtonNavigationItem.defaultToolTip = WI.UIString("Force Light Appearance");
-            break;
-        }
-
-        this._lastKnownDefaultAppearance = defaultAppearance;
-
-        this._forceAppearanceButtonNavigationItem.activated = !!WI.cssManager.forcedAppearance;
+        this._userPreferencesOverridesPopover = new WI.OverrideUserPreferencesPopover(this);
+        this._userPreferencesOverridesPopover.show(this._overrideUserPreferencesNavigationItem.element);
     }
 
-    _toggleAppearance(event)
+    _overridenUserPreferencesDidChange()
     {
-        console.assert(WI.cssManager.canForceAppearance());
+        this._overrideUserPreferencesNavigationItem.activated = WI.cssManager.overridenUserPreferences.size > 0;
+    }
 
-        // Use the last known default appearance, since that is the appearance this navigation item was generated for.
-        let appearanceToForce = null;
-        switch (this._lastKnownDefaultAppearance) {
-        case WI.CSSManager.Appearance.Light:
-        case null:
-            appearanceToForce = WI.CSSManager.Appearance.Dark;
-            break;
-        case WI.CSSManager.Appearance.Dark:
-            appearanceToForce = WI.CSSManager.Appearance.Light;
-            break;
-        }
-
-        console.assert(appearanceToForce);
-        WI.cssManager.forcedAppearance = WI.cssManager.forcedAppearance === appearanceToForce ? null : appearanceToForce;
-
-        // When no longer forcing an appearance, if the last known default appearance is different than the current
-        // default appearance, then update the navigation button now. Otherwise just toggle the activated state.
-        if (!WI.cssManager.forcedAppearance && this._lastKnownDefaultAppearance !== WI.cssManager.defaultAppearance)
-            this._defaultAppearanceDidChange();
-        else
-            this._forceAppearanceButtonNavigationItem.activated = !!WI.cssManager.forcedAppearance;
+    _defaultUserPreferencesDidChange()
+    {
+        this._overrideUserPreferencesNavigationItem.enabled = WI.cssManager.supportsOverrideUserPreference || WI.cssManager.supportsOverrideColorScheme;
     }
 
     _showRulersChanged()
@@ -886,4 +854,12 @@ WI.DOMTreeContentView = class DOMTreeContentView extends WI.ContentView
     {
         this._updateDOMTreeDeemphasizesNodesThatAreNotRendered()
     }
+
+    // Popover delegate
+
+    didDismissPopover(popover)
+    {
+        if (popover === this._userPreferencesOverridesPopover)
+            this._userPreferencesOverridesPopover = null;
+    };
 };

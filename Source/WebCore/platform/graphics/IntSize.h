@@ -170,8 +170,8 @@ public:
 #endif
 
 #if PLATFORM(WIN)
-    IntSize(const SIZE&);
-    operator SIZE() const;
+    WEBCORE_EXPORT IntSize(const SIZE&);
+    WEBCORE_EXPORT operator SIZE() const;
 #endif
 
 #if PLATFORM(QT)

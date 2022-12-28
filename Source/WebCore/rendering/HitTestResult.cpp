@@ -284,23 +284,21 @@ String HitTestResult::title(TextDirection& dir) const
 
 String HitTestResult::innerTextIfTruncated(TextDirection& dir) const
 {
-    for (Node* truncatedNode = m_innerNode.get(); truncatedNode; truncatedNode = truncatedNode->parentInComposedTree()) {
+    for (auto* truncatedNode = m_innerNode.get(); truncatedNode; truncatedNode = truncatedNode->parentInComposedTree()) {
         if (!is<Element>(*truncatedNode))
             continue;
 
-        if (auto renderer = downcast<Element>(*truncatedNode).renderer()) {
-            if (is<RenderBlockFlow>(*renderer)) {
-                RenderBlockFlow& block = downcast<RenderBlockFlow>(*renderer);
-                if (block.style().textOverflow() == TextOverflow::Ellipsis) {
-                    for (auto* line = block.firstRootBox(); line; line = line->nextRootBox()) {
-                        if (line->hasEllipsisBox()) {
-                            dir = block.style().direction();
-                            return downcast<Element>(*truncatedNode).innerText();
-                        }
+        if (auto* renderer = downcast<Element>(*truncatedNode).renderer(); renderer && is<RenderBlockFlow>(*renderer)) {
+            auto& block = downcast<RenderBlockFlow>(*renderer);
+            if (block.style().textOverflow() == TextOverflow::Ellipsis) {
+                for (auto lineBox = InlineIterator::firstLineBoxFor(block); lineBox; lineBox.traverseNext()) {
+                    if (lineBox->hasEllipsis()) {
+                        dir = block.style().direction();
+                        return downcast<Element>(*truncatedNode).innerText();
                     }
                 }
-                break;
             }
+            break;
         }
     }
 
@@ -393,7 +391,7 @@ URL HitTestResult::absoluteImageURL() const
         || is<SVGImageElement>(*imageNode)) {
         auto imageURL = imageNode->document().completeURL(downcast<Element>(*imageNode).imageSourceURL());
         if (auto* page = imageNode->document().page())
-            return page->sanitizeForCopyOrShare(imageURL);
+            return page->sanitizeLookalikeCharacters(imageURL);
         return imageURL;
     }
 
@@ -424,7 +422,7 @@ URL HitTestResult::absoluteMediaURL() const
     if (auto* element = mediaElement()) {
         auto sourceURL = element->currentSrc();
         if (auto* page = element->document().page())
-            return page->sanitizeForCopyOrShare(sourceURL);
+            return page->sanitizeLookalikeCharacters(sourceURL);
         return sourceURL;
     }
 #endif
@@ -636,7 +634,7 @@ URL HitTestResult::absoluteLinkURL() const
 
     auto url = m_innerURLElement->absoluteLinkURL();
     if (auto* page = m_innerURLElement->document().page())
-        return page->sanitizeForCopyOrShare(url);
+        return page->sanitizeLookalikeCharacters(url);
 
     return url;
 }

@@ -240,11 +240,31 @@ TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextBox& inlineTextBox, 
                 return index;
             };
 
+            auto trySimplifiedBreakingPosition = [&] (auto start) -> std::optional<WordBreakLeft> {
+                auto mayUseSimplifiedBreakingPositionForFixedPitch = fontCascade.isFixedPitch() && inlineTextBox.canUseSimplifiedContentMeasuring();
+                if (!mayUseSimplifiedBreakingPositionForFixedPitch)
+                    return { };
+                // FIXME: Check if we could bring webkit.org/b/221581 back for system monospace fonts.
+                auto monospaceCharacterWidth = fontCascade.widthOfSpaceString();
+                size_t estimatedCharacterCount = floorf(availableWidth / monospaceCharacterWidth);
+                auto end = userPerceivedCharacterBoundaryAlignedIndex(std::min(start + estimatedCharacterCount, start + length - 1));
+                auto underflowWidth = TextUtil::width(inlineTextBox, fontCascade, start, end, contentLogicalLeft);
+                if (underflowWidth > availableWidth || underflowWidth + monospaceCharacterWidth < availableWidth) {
+                    // This does not look like a real fixed pitch font. Let's just fall back to regular bisect.
+                    // In some edge cases (float precision) using monospaceCharacterWidth here may produce an incorrect off-by-one visual overflow.
+                    return { };
+                }
+                return { WordBreakLeft { end - start, underflowWidth } };
+            };
+            if (auto leftSide = trySimplifiedBreakingPosition(startPosition))
+                return *leftSide;
+
             auto left = startPosition;
             auto right = left + length - 1;
             // Pathological case of (extremely)long string and narrow lines.
             // Adjust the range so that we can pick a reasonable midpoint.
             auto averageCharacterWidth = InlineLayoutUnit { textWidth / length };
+            // Overshot the midpoint so that biscection starts at the left side of the content.
             size_t startOffset = 2 * availableWidth / averageCharacterWidth;
             right = userPerceivedCharacterBoundaryAlignedIndex(std::min(left + startOffset, right));
             // Preserve the left width for the final split position so that we don't need to remeasure the left side again.
@@ -266,7 +286,7 @@ TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextBox& inlineTextBox, 
                 }
             }
             RELEASE_ASSERT(right >= startPosition);
-            return TextUtil::WordBreakLeft { right - startPosition, leftSideWidth };
+            return WordBreakLeft { right - startPosition, leftSideWidth };
         };
         return findBreakingPositionInSimpleText();
     }
@@ -281,7 +301,7 @@ TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextBox& inlineTextBox, 
     }
     // This content is not supposed to fit availableWidth.
     ASSERT_NOT_REACHED();
-    return { };
+    return leftSide;
 }
 
 unsigned TextUtil::findNextBreakablePosition(LazyLineBreakIterator& lineBreakIterator, unsigned startPosition, const RenderStyle& style)
@@ -412,6 +432,57 @@ TextRun TextUtil::ellipsisTextRun(bool isHorizontal)
     return TextRun { verticalEllipsisStr->string() };
 }
 
+bool TextUtil::hasHangablePunctuationStart(const InlineTextItem& inlineTextItem, const RenderStyle& style)
+{
+    ASSERT(inlineTextItem.length());
+    if (!style.hangingPunctuation().contains(HangingPunctuation::First))
+        return false;
+    auto leadingCharacter = inlineTextItem.inlineTextBox().content()[inlineTextItem.start()];
+    return U_GET_GC_MASK(leadingCharacter) & (U_GC_PS_MASK | U_GC_PI_MASK | U_GC_PF_MASK);
+}
+
+float TextUtil::hangablePunctuationStartWidth(const InlineTextItem& inlineTextItem, const RenderStyle& style)
+{
+    ASSERT(inlineTextItem.length());
+    if (!hasHangablePunctuationStart(inlineTextItem, style))
+        return { };
+    auto leadingPosition = inlineTextItem.start();
+    return width(inlineTextItem, style.fontCascade(), leadingPosition, leadingPosition + 1, { });
+}
+
+bool TextUtil::hasHangablePunctuationEnd(const InlineTextItem& inlineTextItem, const RenderStyle& style)
+{
+    ASSERT(inlineTextItem.length());
+    if (!style.hangingPunctuation().contains(HangingPunctuation::Last))
+        return false;
+    auto trailingCharacter = inlineTextItem.inlineTextBox().content()[inlineTextItem.end() - 1];
+    return U_GET_GC_MASK(trailingCharacter) & (U_GC_PE_MASK | U_GC_PI_MASK | U_GC_PF_MASK);
+}
+
+float TextUtil::hangablePunctuationEndWidth(const InlineTextItem& inlineTextItem, const RenderStyle& style)
+{
+    ASSERT(inlineTextItem.length());
+    if (!hasHangablePunctuationEnd(inlineTextItem, style))
+        return { };
+    auto trailingPosition = inlineTextItem.end() - 1;
+    return width(inlineTextItem, style.fontCascade(), trailingPosition, trailingPosition + 1, { });
+}
+
+float TextUtil::hangableStopOrCommaEndWidth(const InlineTextItem& inlineTextItem, const RenderStyle& style)
+{
+    auto trailingPosition = inlineTextItem.end() - 1;
+    auto trailingCharacter = inlineTextItem.inlineTextBox().content()[trailingPosition];
+    auto isHangableStopOrComma = trailingCharacter == 0x002C
+        || trailingCharacter == 0x002E || trailingCharacter == 0x060C
+        || trailingCharacter == 0x06D4 || trailingCharacter == 0x3001
+        || trailingCharacter == 0x3002 || trailingCharacter == 0xFF0C
+        || trailingCharacter == 0xFF0E || trailingCharacter == 0xFE50
+        || trailingCharacter == 0xFE51 || trailingCharacter == 0xFE52
+        || trailingCharacter == 0xFF61 || trailingCharacter == 0xFF64;
+    if (!isHangableStopOrComma)
+        return { };
+    return width(inlineTextItem, style.fontCascade(), trailingPosition, trailingPosition + 1, { });
+}
 
 }
 }

@@ -288,6 +288,13 @@ GPUConnectionToWebProcess::GPUConnectionToWebProcess(GPUProcess& gpuProcess, Web
         hasVP9HardwareDecoder = WebCore::vp9HardwareDecoderAvailable();
         gpuProcess.send(Messages::GPUProcessProxy::SetHasVP9HardwareDecoder(hasVP9HardwareDecoder));
     }
+    bool hasVP9ExtensionSupport;
+    if (parameters.hasVP9ExtensionSupport)
+        hasVP9ExtensionSupport = *parameters.hasVP9ExtensionSupport;
+    else {
+        hasVP9ExtensionSupport = WebCore::hasVP9ExtensionSupport();
+        gpuProcess.send(Messages::GPUProcessProxy::SetHasVP9ExtensionSupport(hasVP9ExtensionSupport));
+    }
 #endif
 
     WebKit::GPUProcessConnectionInfo info {
@@ -295,7 +302,8 @@ GPUConnectionToWebProcess::GPUConnectionToWebProcess(GPUProcess& gpuProcess, Web
         gpuProcess.parentProcessConnection()->getAuditToken(),
 #endif
 #if ENABLE(VP9)
-        hasVP9HardwareDecoder
+        hasVP9HardwareDecoder,
+        hasVP9ExtensionSupport
 #endif
     };
     m_connection->send(Messages::GPUProcessConnection::DidInitialize(info), 0);
@@ -569,6 +577,11 @@ void GPUConnectionToWebProcess::releaseRenderingBackend(RenderingBackendIdentifi
     gpuProcess().tryExitIfUnusedAndUnderMemoryPressure();
 }
 
+void GPUConnectionToWebProcess::releaseSerializedImageBuffer(RemoteSerializedImageBufferWriteReference&& reference)
+{
+    m_remoteSerializedImageBufferObjectHeap.retireRemove(WTFMove(reference));
+}
+
 #if ENABLE(WEBGL)
 void GPUConnectionToWebProcess::createGraphicsContextGL(WebCore::GraphicsContextGLAttributes attributes, GraphicsContextGLIdentifier graphicsContextGLIdentifier, RenderingBackendIdentifier renderingBackendIdentifier, IPC::StreamServerConnection::Handle&& connectionHandle)
 {
@@ -599,6 +612,14 @@ void GPUConnectionToWebProcess::releaseGraphicsContextGLForTesting(GraphicsConte
     releaseGraphicsContextGL(identifier);
 }
 #endif
+
+RemoteRenderingBackend* GPUConnectionToWebProcess::remoteRenderingBackend(RenderingBackendIdentifier renderingBackendIdentifier)
+{
+    auto it = m_remoteRenderingBackendMap.find(renderingBackendIdentifier);
+    if (it == m_remoteRenderingBackendMap.end())
+        return nullptr;
+    return it->value.get();
+}
 
 void GPUConnectionToWebProcess::createRemoteGPU(WebGPUIdentifier identifier, RenderingBackendIdentifier renderingBackendIdentifier, IPC::StreamServerConnection::Handle&& connectionHandle)
 {

@@ -62,6 +62,7 @@
 #include "StyleBuilderState.h"
 #include "StyleGridData.h"
 #include "StyleScrollSnapPoints.h"
+#include "StyleTextEdge.h"
 #include "TabSize.h"
 #include "TouchAction.h"
 #include "TransformFunctions.h"
@@ -77,6 +78,7 @@ public:
     static Length convertLengthOrAutoOrContent(const BuilderState&, const CSSValue&);
     static Length convertLengthSizing(const BuilderState&, const CSSValue&);
     static Length convertLengthMaxSizing(const BuilderState&, const CSSValue&);
+    static Length convertLengthAllowingNumber(const BuilderState&, const CSSValue&); // Assumes unit is 'px' if input is a number.
     static TabSize convertTabSize(const BuilderState&, const CSSValue&);
     template<typename T> static T convertComputedLength(BuilderState&, const CSSValue&);
     template<typename T> static T convertLineWidth(BuilderState&, const CSSValue&);
@@ -88,7 +90,6 @@ public:
     template<typename T> static T convertNumber(BuilderState&, const CSSValue&);
     template<typename T> static T convertNumberOrAuto(BuilderState&, const CSSValue&);
     static short convertWebkitHyphenateLimitLines(BuilderState&, const CSSValue&);
-    template<CSSPropertyID> static NinePieceImage convertBorderMask(BuilderState&, CSSValue&);
     template<CSSPropertyID> static RefPtr<StyleImage> convertStyleImage(BuilderState&, CSSValue&);
     static ImageOrientation convertImageOrientation(BuilderState&, const CSSValue&);
     static TransformOperations convertTransform(BuilderState&, const CSSValue&);
@@ -115,6 +116,7 @@ public:
     static TextUnderlineOffset convertTextUnderlineOffset(BuilderState&, const CSSValue&);
     static TextDecorationThickness convertTextDecorationThickness(BuilderState&, const CSSValue&);
     static RefPtr<StyleReflection> convertReflection(BuilderState&, const CSSValue&);
+    static TextEdge convertTextEdge(BuilderState&, const CSSValue&);
     static IntSize convertInitialLetter(BuilderState&, const CSSValue&);
     static float convertTextStrokeWidth(BuilderState&, const CSSValue&);
     static OptionSet<LineBoxContain> convertLineBoxContain(BuilderState&, const CSSValue&);
@@ -126,6 +128,7 @@ public:
     static Vector<GridTrackSize> convertGridTrackSizeList(BuilderState&, const CSSValue&);
     static std::optional<GridPosition> convertGridPosition(BuilderState&, const CSSValue&);
     static GridAutoFlow convertGridAutoFlow(BuilderState&, const CSSValue&);
+    static MasonryAutoFlow convertMasonryAutoFlow(BuilderState&, const CSSValue&);
     static std::optional<Length> convertWordSpacing(BuilderState&, const CSSValue&);
     static std::optional<float> convertPerspective(BuilderState&, const CSSValue&);
     static std::optional<Length> convertMarqueeIncrement(BuilderState&, const CSSValue&);
@@ -150,8 +153,8 @@ public:
     static FontSelectionValue convertFontStretch(BuilderState&, const CSSValue&);
     static FontSelectionValue convertFontStyle(BuilderState&, const CSSValue&);
     static FontVariationSettings convertFontVariationSettings(BuilderState&, const CSSValue&);
-    static SVGLengthValue convertSVGLengthValue(BuilderState&, const CSSValue&);
-    static Vector<SVGLengthValue> convertSVGLengthVector(BuilderState&, const CSSValue&);
+    static SVGLengthValue convertSVGLengthValue(BuilderState&, const CSSValue&, ShouldConvertNumberToPxLength = ShouldConvertNumberToPxLength::No);
+    static Vector<SVGLengthValue> convertSVGLengthVector(BuilderState&, const CSSValue&, ShouldConvertNumberToPxLength = ShouldConvertNumberToPxLength::No);
     static Vector<SVGLengthValue> convertStrokeDashArray(BuilderState&, const CSSValue&);
     static PaintOrder convertPaintOrder(BuilderState&, const CSSValue&);
     static float convertOpacity(BuilderState&, const CSSValue&);
@@ -179,6 +182,8 @@ public:
 
     static OffsetRotation convertOffsetRotate(BuilderState&, const CSSValue&);
     static Vector<AtomString> convertContainerName(BuilderState&, const CSSValue&);
+
+    static OptionSet<MarginTrimType> convertMarginTrim(BuilderState&, const CSSValue&);
     
 private:
     friend class BuilderCustom;
@@ -223,6 +228,14 @@ inline Length BuilderConverter::convertLength(const BuilderState& builderState, 
 
     ASSERT_NOT_REACHED();
     return Length(0, LengthType::Fixed);
+}
+
+inline Length BuilderConverter::convertLengthAllowingNumber(const BuilderState& builderState, const CSSValue& value)
+{
+    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
+    if (primitiveValue.isNumberOrInteger())
+        return convertLength(builderState, CSSPrimitiveValue::create(primitiveValue.doubleValue(), CSSUnitType::CSS_PX));
+    return convertLength(builderState, value);
 }
 
 inline Length BuilderConverter::convertLengthOrAuto(const BuilderState& builderState, const CSSValue& value)
@@ -468,14 +481,6 @@ inline short BuilderConverter::convertWebkitHyphenateLimitLines(BuilderState&, c
     return primitiveValue.value<short>(CSSUnitType::CSS_NUMBER);
 }
 
-template<CSSPropertyID property>
-inline NinePieceImage BuilderConverter::convertBorderMask(BuilderState& builderState, CSSValue& value)
-{
-    NinePieceImage image(NinePieceImage::Type::Mask);
-    builderState.styleMap().mapNinePieceImage(&value, image);
-    return image;
-}
-
 template<CSSPropertyID>
 inline RefPtr<StyleImage> BuilderConverter::convertStyleImage(BuilderState& builderState, CSSValue& value)
 {
@@ -492,9 +497,10 @@ inline ImageOrientation BuilderConverter::convertImageOrientation(BuilderState&,
 
 inline TransformOperations BuilderConverter::convertTransform(BuilderState& builderState, const CSSValue& value)
 {
-    TransformOperations operations;
-    transformsForValue(value, builderState.cssToLengthConversionData(), operations);
-    return operations;
+    auto operations = transformsForValue(value, builderState.cssToLengthConversionData());
+    if (!operations)
+        return TransformOperations { };
+    return *operations;
 }
 
 inline RefPtr<TranslateTransformOperation> BuilderConverter::convertTranslate(BuilderState& builderState, const CSSValue& value)
@@ -842,6 +848,59 @@ inline RefPtr<StyleReflection> BuilderConverter::convertReflection(BuilderState&
     return reflection;
 }
 
+inline TextEdge BuilderConverter::convertTextEdge(BuilderState&, const CSSValue& value)
+{
+    auto& values = downcast<CSSValueList>(value);
+    auto& firstValue = downcast<CSSPrimitiveValue>(*values.item(0));
+
+    auto overValue = [&] {
+        switch (firstValue.valueID()) {
+        case CSSValueLeading:
+            return TextEdgeType::Leading;
+        case CSSValueText:
+            return TextEdgeType::Text;
+        case CSSValueCap:
+            return TextEdgeType::CapHeight;
+        case CSSValueEx:
+            return TextEdgeType::ExHeight;
+        case CSSValueIdeographic:
+            return TextEdgeType::CJKIdeographic;
+        case CSSValueIdeographicInk:
+            return TextEdgeType::CJKIdeographicInk;
+        default:
+            ASSERT_NOT_REACHED();
+            return TextEdgeType::Leading;
+        }
+    };
+
+    auto underValue = [&] {
+        if (firstValue.valueID() == CSSValueLeading)
+            return TextEdgeType::Leading;
+        if (values.length() == 1) {
+            // https://www.w3.org/TR/css-inline-3/#text-edges
+            // "If only one value is specified, both edges are assigned that same keyword if possible; else text is assumed as the missing value."
+            // FIXME: Figure out what "if possible" means here.
+            return TextEdgeType::Text;
+        }
+
+        auto& secondValue = downcast<CSSPrimitiveValue>(*values.item(1));
+        switch (secondValue.valueID()) {
+        case CSSValueText:
+            return TextEdgeType::Text;
+        case CSSValueAlphabetic:
+            return TextEdgeType::Alphabetic;
+        case CSSValueIdeographic:
+            return TextEdgeType::CJKIdeographic;
+        case CSSValueIdeographicInk:
+            return TextEdgeType::CJKIdeographicInk;
+        default:
+            ASSERT_NOT_REACHED();
+            return TextEdgeType::Leading;
+        }
+    };
+    return { overValue(), underValue() };
+}
+
 inline IntSize BuilderConverter::convertInitialLetter(BuilderState&, const CSSValue& value)
 {
     auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
@@ -1001,6 +1060,7 @@ inline GridTrackSize BuilderConverter::createGridTrackSize(const CSSValue& value
 
 inline bool BuilderConverter::createGridTrackList(const CSSValue& value, GridTrackList& trackList, BuilderState& builderState)
 {
+    RefPtr<const CSSValueList> valueList;
     // Handle 'none' or 'masonry'.
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         if (primitiveValue->valueID() == CSSValueMasonry) {
@@ -1008,14 +1068,22 @@ inline bool BuilderConverter::createGridTrackList(const CSSValue& value, GridTra
             trackList.append(GridTrackEntryMasonry());
             return true;
         }
-        return primitiveValue->valueID() == CSSValueNone;
-    }
+        // Values coming from CSS Typed OM may not have been converted to a CSSValueList yet.
+        if (primitiveValue->valueID() == CSSValueNone)
+            return true;
 
-    if (!is<CSSValueList>(value))
+        auto newList = CSSValueList::createSpaceSeparated();
+        newList->append(const_cast<CSSValue&>(value));
+        valueList = WTFMove(newList);
+    } else if (is<CSSValueList>(value))
+        valueList = &downcast<CSSValueList>(value);
+    else
         return false;
 
+    ASSERT(valueList);
+
     bool isSubgrid = false;
-    if (is<CSSSubgridValue>(value)) {
+    if (is<CSSSubgridValue>(*valueList)) {
         isSubgrid = true;
         trackList.append(GridTrackEntrySubgrid());
     }
@@ -1047,7 +1115,7 @@ inline bool BuilderConverter::createGridTrackList(const CSSValue& value, GridTra
             ensureLineNames(repeatList);
     };
 
-    for (auto& currentValue : downcast<CSSValueList>(value)) {
+    for (auto& currentValue : *valueList) {
         if (is<CSSGridLineNamesValue>(currentValue)) {
             Vector<String> names;
             for (auto& namedGridLineValue : downcast<CSSGridLineNamesValue>(currentValue.get()))
@@ -1152,21 +1220,30 @@ inline void BuilderConverter::createImplicitNamedGridLinesFromGridArea(const Nam
 
 inline Vector<GridTrackSize> BuilderConverter::convertGridTrackSizeList(BuilderState& builderState, const CSSValue& value)
 {
-    if (is<CSSPrimitiveValue>(value)) {
-        ASSERT(downcast<CSSPrimitiveValue>(value).isValueID() && downcast<CSSPrimitiveValue>(value).valueID() == CSSValueAuto);
-        return RenderStyle::initialGridAutoRows();
+    auto validateValueAndAppend = [&builderState](Vector<GridTrackSize>& trackSizes, const CSSValue& value) {
+        ASSERT(!value.isGridLineNamesValue());
+        ASSERT(!value.isGridAutoRepeatValue());
+        ASSERT(!value.isGridIntegerRepeatValue());
+        trackSizes.uncheckedAppend(convertGridTrackSize(builderState, value));
+    };
+
+    if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
+        if (primitiveValue->isValueID()) {
+            ASSERT(primitiveValue->valueID() == CSSValueAuto);
+            return RenderStyle::initialGridAutoRows();
+        }
+        // Values coming from CSS Typed OM may not have been converted to a CSSValueList yet.
+        Vector<GridTrackSize> trackSizes;
+        trackSizes.reserveInitialCapacity(1);
+        validateValueAndAppend(trackSizes, *primitiveValue);
+        return trackSizes;
     }
 
-    ASSERT(value.isValueList());
     auto& valueList = downcast<CSSValueList>(value);
     Vector<GridTrackSize> trackSizes;
     trackSizes.reserveInitialCapacity(valueList.length());
-    for (auto& currValue : valueList) {
-        ASSERT(!currValue->isGridLineNamesValue());
-        ASSERT(!currValue->isGridAutoRepeatValue());
-        ASSERT(!currValue->isGridIntegerRepeatValue());
-        trackSizes.uncheckedAppend(convertGridTrackSize(builderState, currValue));
-    }
+    for (auto& currentValue : valueList)
+        validateValueAndAppend(trackSizes, currentValue);
     return trackSizes;
 }
 
@@ -1224,6 +1301,42 @@ inline GridAutoFlow BuilderConverter::convertGridAutoFlow(BuilderState&, const C
     }
 
     return autoFlow;
+}
+
+inline MasonryAutoFlow BuilderConverter::convertMasonryAutoFlow(BuilderState&, const CSSValue& value)
+{
+    auto& valueList = downcast<CSSValueList>(value);
+    ASSERT(valueList.size() == 1 || valueList.size() == 2);
+    if (!(valueList.size() == 1 || valueList.size() == 2))
+        return RenderStyle::initialMasonryAutoFlow();
+
+    auto* firstValue = downcast<CSSPrimitiveValue>(valueList.item(0));
+    auto* secondValue = downcast<CSSPrimitiveValue>(valueList.length() == 2 ? valueList.item(1) : nullptr);
+    MasonryAutoFlow masonryAutoFlow;
+    if (valueList.size() == 2 && firstValue && secondValue) {
+        ASSERT(firstValue->valueID() == CSSValueID::CSSValuePack || firstValue->valueID() == CSSValueID::CSSValueNext);
+        ASSERT(secondValue->valueID() == CSSValueID::CSSValueOrdered);
+        if (firstValue->valueID() == CSSValueID::CSSValuePack)
+            masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Pack, MasonryAutoFlowPlacementOrder::Ordered };
+        else
+            masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Next, MasonryAutoFlowPlacementOrder::Ordered };
+
+    } else if (valueList.size() == 1 && firstValue)  {
+        if (firstValue->valueID() == CSSValueID::CSSValuePack)
+            masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Pack, MasonryAutoFlowPlacementOrder::DefiniteFirst };
+        else if (firstValue->valueID() == CSSValueID::CSSValueNext)
+            masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Next, MasonryAutoFlowPlacementOrder::DefiniteFirst };
+        else if (firstValue->valueID() == CSSValueID::CSSValueOrdered)
+            masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Pack, MasonryAutoFlowPlacementOrder::Ordered };
+        else {
+            ASSERT_NOT_REACHED();
+            return RenderStyle::initialMasonryAutoFlow();
+        }
+    } else {
+        ASSERT_NOT_REACHED();
+        return RenderStyle::initialMasonryAutoFlow();
+    }
+    return masonryAutoFlow;
 }
 
 inline float zoomWithTextZoomFactor(BuilderState& builderState)
@@ -1440,31 +1553,34 @@ inline bool BuilderConverter::convertSmoothScrolling(BuilderState&, const CSSVal
     return downcast<CSSPrimitiveValue>(value).valueID() == CSSValueSmooth;
 }
 
-inline SVGLengthValue BuilderConverter::convertSVGLengthValue(BuilderState&, const CSSValue& value)
+inline SVGLengthValue BuilderConverter::convertSVGLengthValue(BuilderState&, const CSSValue& value, ShouldConvertNumberToPxLength shouldConvertNumberToPxLength)
 {
-    return SVGLengthValue::fromCSSPrimitiveValue(downcast<CSSPrimitiveValue>(value));
+    return SVGLengthValue::fromCSSPrimitiveValue(downcast<CSSPrimitiveValue>(value), shouldConvertNumberToPxLength);
 }
 
-inline Vector<SVGLengthValue> BuilderConverter::convertSVGLengthVector(BuilderState& builderState, const CSSValue& value)
+inline Vector<SVGLengthValue> BuilderConverter::convertSVGLengthVector(BuilderState& builderState, const CSSValue& value, ShouldConvertNumberToPxLength shouldConvertNumberToPxLength)
 {
     auto& valueList = downcast<CSSValueList>(value);
 
     Vector<SVGLengthValue> svgLengths;
     svgLengths.reserveInitialCapacity(valueList.length());
     for (auto& item : valueList)
-        svgLengths.uncheckedAppend(convertSVGLengthValue(builderState, item));
+        svgLengths.uncheckedAppend(convertSVGLengthValue(builderState, item, shouldConvertNumberToPxLength));
 
     return svgLengths;
 }
 
 inline Vector<SVGLengthValue> BuilderConverter::convertStrokeDashArray(BuilderState& builderState, const CSSValue& value)
 {
-    if (is<CSSPrimitiveValue>(value)) {
-        ASSERT(downcast<CSSPrimitiveValue>(value).valueID() == CSSValueNone);
-        return SVGRenderStyle::initialStrokeDashArray();
+    if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
+        if (primitiveValue->valueID() == CSSValueNone)
+            return SVGRenderStyle::initialStrokeDashArray();
+
+        // Values coming from CSS-Typed-OM may not have been converted to a CSSValueList yet.
+        return Vector { convertSVGLengthValue(builderState, value, ShouldConvertNumberToPxLength::Yes) };
     }
 
-    return convertSVGLengthVector(builderState, value);
+    return convertSVGLengthVector(builderState, value, ShouldConvertNumberToPxLength::Yes);
 }
 
 inline PaintOrder BuilderConverter::convertPaintOrder(BuilderState&, const CSSValue& value)
@@ -1648,15 +1764,27 @@ inline GapLength BuilderConverter::convertGapLength(BuilderState& builderState, 
 
 inline OffsetRotation BuilderConverter::convertOffsetRotate(BuilderState&, const CSSValue& value)
 {
+    RefPtr<const CSSPrimitiveValue> modifierValue;
+    RefPtr<const CSSPrimitiveValue> angleValue;
+
+    if (auto* offsetRotateValue = dynamicDowncast<CSSOffsetRotateValue>(value)) {
+        modifierValue = offsetRotateValue->modifier();
+        angleValue = offsetRotateValue->angle();
+    } else if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
+        // Values coming from CSSTypedOM didn't go through the parser and may not have been converted to a CSSOffsetRotateValue.
+        if (primitiveValue->valueID() == CSSValueAuto || primitiveValue->valueID() == CSSValueReverse)
+            modifierValue = primitiveValue;
+        else if (primitiveValue->isAngle())
+            angleValue = primitiveValue;
+    }
+
     bool hasAuto = false;
     float angleInDegrees = 0;
 
-    const auto& offsetRotateValue = downcast<CSSOffsetRotateValue>(value);
-
-    if (auto* angleValue = offsetRotateValue.angle())
+    if (angleValue)
         angleInDegrees = static_cast<float>(angleValue->computeDegrees());
 
-    if (auto* modifierValue = offsetRotateValue.modifier()) {
+    if (modifierValue) {
         switch (modifierValue->valueID()) {
         case CSSValueAuto:
             hasAuto = true;
@@ -1685,6 +1813,34 @@ inline Vector<AtomString> BuilderConverter::convertContainerName(BuilderState&, 
     return WTF::map(downcast<CSSValueList>(value), [](auto& item) {
         return AtomString { downcast<CSSPrimitiveValue>(item.get()).stringValue() };
     });
+}
+
+inline OptionSet<MarginTrimType> BuilderConverter::convertMarginTrim(BuilderState&, const CSSValue& value)
+{
+    // See if value is "block" or "inline" before trying to parse a list
+    if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
+        if (primitiveValue->valueID() == CSSValueBlock)
+            return { MarginTrimType::BlockStart, MarginTrimType::BlockEnd };
+        if (primitiveValue->valueID() == CSSValueInline)
+            return { MarginTrimType::InlineStart, MarginTrimType::InlineEnd };
+    }
+    auto list = dynamicDowncast<CSSValueList>(value);
+    if (!list || !list->size())
+        return RenderStyle::initialMarginTrim();
+    OptionSet<MarginTrimType> marginTrim;
+    ASSERT(list->size() <= 4);
+    for (auto item : *list) {
+        auto& primitiveValue = downcast<CSSPrimitiveValue>(item.get());
+        if (primitiveValue.valueID() == CSSValueBlockStart)
+            marginTrim.add(MarginTrimType::BlockStart);
+        if (primitiveValue.valueID() == CSSValueBlockEnd)
+            marginTrim.add(MarginTrimType::BlockEnd);
+        if (primitiveValue.valueID() == CSSValueInlineStart)
+            marginTrim.add(MarginTrimType::InlineStart);
+        if (primitiveValue.valueID() == CSSValueInlineEnd)
+            marginTrim.add(MarginTrimType::InlineEnd);
+    }
+    return marginTrim;
 }
 
 } // namespace Style

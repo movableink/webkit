@@ -51,6 +51,7 @@
 #include "WebKitJavascriptResultPrivate.h"
 #include "WebKitNavigationClient.h"
 #include "WebKitNotificationPrivate.h"
+#include "WebKitPermissionStateQueryPrivate.h"
 #include "WebKitPrivate.h"
 #include "WebKitResponsePolicyDecision.h"
 #include "WebKitScriptDialogPrivate.h"
@@ -71,11 +72,12 @@
 #include "WebPageMessages.h"
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/JSRetainPtr.h>
-#include <jsc/JSCContextPrivate.h>
 #include <WebCore/CertificateInfo.h>
 #include <WebCore/JSDOMExceptionHandling.h>
+#include <WebCore/SharedBuffer.h>
 #include <WebCore/URLSoup.h>
 #include <glib/gi18n-lib.h>
+#include <jsc/JSCContextPrivate.h>
 #include <libsoup/soup.h>
 #include <wtf/SetForScope.h>
 #include <wtf/URL.h>
@@ -169,6 +171,8 @@ enum {
     SHOW_OPTION_MENU,
 
     USER_MESSAGE_RECEIVED,
+
+    QUERY_PERMISSION_STATE,
 
     LAST_SIGNAL
 };
@@ -2248,6 +2252,33 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
         g_cclosure_marshal_generic,
         G_TYPE_BOOLEAN, 1,
         WEBKIT_TYPE_USER_MESSAGE);
+
+    /**
+     * WebKitWebView::query-permission-state:
+     * @web_view: the #WebKitWebView on which the signal is emitted
+     * @query: the #WebKitPermissionStateQuery
+     *
+     * This signal allows the User-Agent to respond to permission requests for powerful features, as
+     * specified by the [Permissions W3C Specification](https://w3c.github.io/permissions/).
+     * You can reply to the query using webkit_permission_state_query_finish().
+     *
+     * You can handle the query asynchronously by calling webkit_permission_state_query_ref() on
+     * @query and returning %TRUE. If the last reference of @query is removed and the query has not
+     * been handled, the query result will be set to %WEBKIT_QUERY_PERMISSION_PROMPT.
+     *
+     * Returns: %TRUE if the message was handled, or %FALSE otherwise.
+     *
+     * Since: 2.40
+     */
+    signals[QUERY_PERMISSION_STATE] = g_signal_new(
+        "query-permission-state",
+        G_TYPE_FROM_CLASS(webViewClass),
+        G_SIGNAL_RUN_LAST,
+        G_STRUCT_OFFSET(WebKitWebViewClass, query_permission_state),
+        g_signal_accumulator_true_handled, nullptr /* accumulator data */,
+        g_cclosure_marshal_generic,
+        G_TYPE_BOOLEAN, 1, /* number of parameters */
+        WEBKIT_TYPE_PERMISSION_STATE_QUERY);
 }
 
 static void webkitWebViewCompleteAuthenticationRequest(WebKitWebView* webView)
@@ -2844,6 +2875,12 @@ bool webkitWebViewShowOptionMenu(WebKitWebView* webView, const IntRect& rect, We
 }
 #endif
 
+void webkitWebViewPermissionStateQuery(WebKitWebView* webView, WebKitPermissionStateQuery* query)
+{
+    gboolean result;
+    g_signal_emit(webView, signals[QUERY_PERMISSION_STATE], 0, query, &result);
+}
+
 #if PLATFORM(WPE)
 /**
  * webkit_web_view_get_backend:
@@ -3063,7 +3100,7 @@ void webkit_web_view_load_alternate_html(WebKitWebView* webView, const gchar* co
     g_return_if_fail(content);
     g_return_if_fail(contentURI);
 
-    getPage(webView).loadAlternateHTML({ reinterpret_cast<const uint8_t*>(content), content ? strlen(content) : 0 }, "UTF-8"_s, URL { String::fromUTF8(baseURI) }, URL { String::fromUTF8(contentURI) });
+    getPage(webView).loadAlternateHTML(WebCore::DataSegment::create(Vector<uint8_t>(reinterpret_cast<const uint8_t*>(content), content ? strlen(content) : 0)), "UTF-8"_s, URL { String::fromUTF8(baseURI) }, URL { String::fromUTF8(contentURI) });
 }
 
 /**
@@ -4458,7 +4495,7 @@ gboolean webkit_web_view_get_tls_info(WebKitWebView* webView, GTlsCertificate** 
 
     const auto& certificateInfo = mainFrame->certificateInfo();
     if (certificate)
-        *certificate = certificateInfo.certificate();
+        *certificate = certificateInfo.certificate().get();
     if (errors)
         *errors = certificateInfo.tlsErrors();
 

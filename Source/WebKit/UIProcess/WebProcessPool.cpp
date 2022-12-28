@@ -553,7 +553,7 @@ void WebProcessPool::establishRemoteWorkerContextConnectionToNetworkProcess(Remo
     if (serviceWorkerPageIdentifier) {
         ASSERT(workerType == RemoteWorkerType::ServiceWorker);
         // This is a service worker for a service worker page so we need to make sure we use use the page's WebProcess for the service worker.
-        if (RefPtr process = WebProcessProxy::processForIdentifier(serviceWorkerPageIdentifier->processIdentifier()))
+        if (auto process = WebProcessProxy::processForIdentifier(serviceWorkerPageIdentifier->processIdentifier()))
             useProcessForRemoteWorkers(*process);
     }
 
@@ -591,8 +591,21 @@ void WebProcessPool::establishRemoteWorkerContextConnectionToNetworkProcess(Remo
 
     remoteWorkerProcesses().add(*remoteWorkerProcessProxy);
 
-    auto& preferencesStore = processPool->m_remoteWorkerPreferences ? processPool->m_remoteWorkerPreferences.value() : processPool->m_defaultPageGroup->preferences().store();
-    remoteWorkerProcessProxy->establishRemoteWorkerContext(workerType, preferencesStore, registrableDomain, serviceWorkerPageIdentifier, [completionHandler = WTFMove(completionHandler), remoteProcessIdentifier = remoteWorkerProcessProxy->coreProcessIdentifier()] () mutable {
+    const WebPreferencesStore* preferencesStore = nullptr;
+    if (workerType == RemoteWorkerType::ServiceWorker) {
+        if (auto* preferences = websiteDataStore->serviceWorkerOverridePreferences())
+            preferencesStore = &preferences->store();
+    }
+
+    if (!preferencesStore && processPool->m_remoteWorkerPreferences)
+        preferencesStore = &processPool->m_remoteWorkerPreferences.value();
+
+    if (!preferencesStore)
+        preferencesStore = &processPool->m_defaultPageGroup->preferences().store();
+
+    ASSERT(preferencesStore);
+
+    remoteWorkerProcessProxy->establishRemoteWorkerContext(workerType, *preferencesStore, registrableDomain, serviceWorkerPageIdentifier, [completionHandler = WTFMove(completionHandler), remoteProcessIdentifier = remoteWorkerProcessProxy->coreProcessIdentifier()] () mutable {
         completionHandler(remoteProcessIdentifier);
     });
 
@@ -849,7 +862,10 @@ void WebProcessPool::initializeNewWebProcess(WebProcessProxy& process, WebsiteDa
 
 #if ENABLE(NOTIFICATIONS)
     // FIXME: There should be a generic way for supplements to add to the intialization parameters.
-    parameters.notificationPermissions = supplement<WebNotificationManagerProxy>()->notificationPermissions();
+    if (websiteDataStore)
+        parameters.notificationPermissions = websiteDataStore->client().notificationPermissions();
+    if (parameters.notificationPermissions.isEmpty())
+        parameters.notificationPermissions = supplement<WebNotificationManagerProxy>()->notificationPermissions();
 #endif
 
     parameters.memoryCacheDisabled = m_memoryCacheDisabled;
@@ -1645,8 +1661,9 @@ void WebProcessPool::startedUsingGamepads(IPC::Connection& connection)
     proxy->send(Messages::WebProcess::SetInitialGamepads(UIGamepadProvider::singleton().snapshotGamepads()), 0);
 }
 
-void WebProcessPool::stoppedUsingGamepads(IPC::Connection& connection)
+void WebProcessPool::stoppedUsingGamepads(IPC::Connection& connection, CompletionHandler<void()>&& completionHandler)
 {
+    CompletionHandlerCallingScope callCompletionHandlerOnExit(WTFMove(completionHandler));
     auto* proxy = webProcessProxyFromConnection(connection, m_processes);
     if (!proxy)
         return;
@@ -1915,7 +1932,7 @@ void WebProcessPool::processForNavigationInternal(WebPageProxy& page, const API:
             });
         }
 
-        if (RefPtr<WebProcessProxy> process = WebProcessProxy::processForIdentifier(targetItem->lastProcessIdentifier())) {
+        if (auto process = WebProcessProxy::processForIdentifier(targetItem->lastProcessIdentifier())) {
             if (process->state() != WebProcessProxy::State::Terminated) {
                 // Make sure we remove the process from the cache if it is in there since we're about to use it.
                 if (process->isInProcessCache()) {

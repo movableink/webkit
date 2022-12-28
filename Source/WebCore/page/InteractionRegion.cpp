@@ -130,6 +130,9 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
 
     auto& renderer = *element->renderer();
 
+    if (renderer.style().effectivePointerEvents() == PointerEvents::None)
+        return std::nullopt;
+
     // FIXME: Consider also allowing elements that only receive touch events.
     if (!renderer.style().eventListenerRegionTypes().contains(EventListenerRegionType::MouseClick))
         return std::nullopt;
@@ -144,8 +147,17 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
         bounds.inflate(regionRenderer.document().settings().interactionRegionInlinePadding());
 
     float borderRadius = 0;
-    if (const auto& renderBox = dynamicDowncast<RenderBox>(renderer))
+    if (auto* renderBox = dynamicDowncast<RenderBox>(renderer)) {
         borderRadius = renderBox->borderRadii().minimumRadius();
+
+        auto* input = dynamicDowncast<HTMLInputElement>(element);
+        if (input && input->containerElement()) {
+            auto borderBoxRect = renderBox->borderBoxRect();
+            auto contentBoxRect = renderBox->contentBoxRect();
+            bounds.move(IntSize(borderBoxRect.location() - contentBoxRect.location()));
+            bounds.expand(IntSize(borderBoxRect.size() - contentBoxRect.size()));
+        }
+    }
 
     Region boundsRegion;
     boundsRegion.unite(bounds);

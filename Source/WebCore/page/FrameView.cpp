@@ -1407,15 +1407,15 @@ void FrameView::removeEmbeddedObjectToUpdate(RenderEmbeddedObject& embeddedObjec
     m_embeddedObjectsToUpdate->remove(&embeddedObject);
 }
 
-void FrameView::setMediaType(const String& mediaType)
+void FrameView::setMediaType(const AtomString& mediaType)
 {
     m_mediaType = mediaType;
 }
 
-String FrameView::mediaType() const
+AtomString FrameView::mediaType() const
 {
     // See if we have an override type.
-    String overrideType = frame().loader().client().overrideMediaType();
+    auto overrideType = frame().loader().client().overrideMediaType();
     InspectorInstrumentation::applyEmulatedMedia(frame(), overrideType);
     if (!overrideType.isNull())
         return overrideType;
@@ -1427,11 +1427,11 @@ void FrameView::adjustMediaTypeForPrinting(bool printing)
     if (printing) {
         if (m_mediaTypeWhenNotPrinting.isNull())
             m_mediaTypeWhenNotPrinting = mediaType();
-        setMediaType("print"_s);
+        setMediaType(printAtom());
     } else {
         if (!m_mediaTypeWhenNotPrinting.isNull())
             setMediaType(m_mediaTypeWhenNotPrinting);
-        m_mediaTypeWhenNotPrinting = String();
+        m_mediaTypeWhenNotPrinting = nullAtom();
     }
 }
 
@@ -2095,7 +2095,7 @@ void FrameView::viewportContentsChanged()
 IntRect FrameView::viewRectExpandedByContentInsets() const
 {
     FloatRect viewRect;
-    if (delegatesScrolling() && platformWidget())
+    if (delegatesScrollingToNativeView() && platformWidget())
         viewRect = unobscuredContentRect();
     else
         viewRect = visualViewportRect();
@@ -2735,7 +2735,7 @@ void FrameView::scrollRectToVisibleInTopLevelView(const LayoutRect& absoluteRect
 void FrameView::contentsResized()
 {
     // For non-delegated scrolling, updateTiledBackingAdaptiveSizing() is called via addedOrRemovedScrollbar() which occurs less often.
-    if (delegatesScrolling())
+    if (delegatesScrollingToNativeView())
         updateTiledBackingAdaptiveSizing();
 }
 
@@ -3209,7 +3209,7 @@ TiledBacking::Scrollability FrameView::computeScrollability() const
         clippedByAncestorView |= page->enclosedInScrollableAncestorView();
 #endif
 
-    if (delegatesScrolling()) {
+    if (delegatesScrollingToNativeView()) {
         IntSize documentSize = contentsSize();
         IntSize visibleSize = this->visibleSize();
 
@@ -5252,7 +5252,7 @@ IntPoint FrameView::convertFromContainingViewToRenderer(const RenderElement* ren
     IntPoint point = viewPoint;
 
     // Convert from FrameView coords into page ("absolute") coordinates.
-    if (!delegatesScrolling())
+    if (!delegatesScrollingToNativeView())
         point = viewToContents(point);
 
     return roundedIntPoint(renderer->absoluteToLocal(point, UseTransforms));
@@ -5541,6 +5541,20 @@ String FrameView::trackedRepaintRectsAsText() const
     return ts.release();
 }
 
+void FrameView::addScrollableAreaForAnimatedScroll(ScrollableArea* scrollableArea)
+{
+    if (!m_scrollableAreasForAnimatedScroll)
+        m_scrollableAreasForAnimatedScroll = makeUnique<ScrollableAreaSet>();
+    
+    m_scrollableAreasForAnimatedScroll->add(scrollableArea);
+}
+
+void FrameView::removeScrollableAreaForAnimatedScroll(ScrollableArea* scrollableArea)
+{
+    if (m_scrollableAreasForAnimatedScroll)
+        m_scrollableAreasForAnimatedScroll->remove(scrollableArea);
+}
+
 bool FrameView::addScrollableArea(ScrollableArea* scrollableArea)
 {
     if (!m_scrollableAreas)
@@ -5608,7 +5622,7 @@ bool FrameView::handleWheelEventForScrolling(const PlatformWheelEvent& wheelEven
         return false;
 #endif
 
-    if (delegatesScrolling()) {
+    if (delegatesScrollingToNativeView()) {
         ScrollPosition oldPosition = scrollPosition();
         ScrollPosition newPosition = oldPosition - IntSize(wheelEvent.deltaX(), wheelEvent.deltaY());
         if (oldPosition != newPosition) {
@@ -5628,8 +5642,11 @@ bool FrameView::handleWheelEventForScrolling(const PlatformWheelEvent& wheelEven
 
 #if ENABLE(ASYNC_SCROLLING)
     if (auto scrollingCoordinator = this->scrollingCoordinator()) {
-        if (scrollingCoordinator->coordinatesScrollingForFrameView(*this))
-            return scrollingCoordinator->handleWheelEventForScrolling(wheelEvent, scrollingNodeID(), gestureState);
+        if (scrollingCoordinator->coordinatesScrollingForFrameView(*this)) {
+            auto result = scrollingCoordinator->handleWheelEventForScrolling(wheelEvent, scrollingNodeID(), gestureState);
+            if (!result.needsMainThreadProcessing())
+                return result.wasHandled;
+        }
     }
 #endif
 

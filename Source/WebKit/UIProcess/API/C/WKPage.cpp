@@ -254,6 +254,13 @@ static IPC::DataReference dataFrom(const String& string)
     return { string.characters8(), string.length() * sizeof(LChar) };
 }
 
+static Ref<WebCore::DataSegment> dataReferenceFrom(const String& string)
+{
+    if (string.isNull() || !string.is8Bit())
+        return WebCore::DataSegment::create(Vector<uint8_t>(reinterpret_cast<const uint8_t*>(string.characters16()), string.length() * sizeof(UChar)));
+    return WebCore::DataSegment::create(Vector<uint8_t>(string.characters8(), string.length() * sizeof(LChar)));
+}
+
 static void loadString(WKPageRef pageRef, WKStringRef stringRef, const String& mimeType, const String& baseURL, WKTypeRef userDataRef)
 {
     String string = toWTFString(stringRef);
@@ -282,7 +289,7 @@ void WKPageLoadAlternateHTMLStringWithUserData(WKPageRef pageRef, WKStringRef ht
 {
     CRASH_IF_SUSPENDED;
     String string = toWTFString(htmlStringRef);
-    toImpl(pageRef)->loadAlternateHTML(dataFrom(string), encodingOf(string), URL { toWTFString(baseURLRef) }, URL { toWTFString(unreachableURLRef) }, toImpl(userDataRef));
+    toImpl(pageRef)->loadAlternateHTML(dataReferenceFrom(string), encodingOf(string), URL { toWTFString(baseURLRef) }, URL { toWTFString(unreachableURLRef) }, toImpl(userDataRef));
 }
 
 void WKPageLoadPlainTextString(WKPageRef pageRef, WKStringRef plainTextStringRef)
@@ -871,15 +878,13 @@ double WKPageGetGapBetweenPages(WKPageRef pageRef)
     return toImpl(pageRef)->gapBetweenPages();
 }
 
-void WKPageSetPaginationLineGridEnabled(WKPageRef pageRef, bool lineGridEnabled)
+void WKPageSetPaginationLineGridEnabled(WKPageRef, bool)
 {
-    CRASH_IF_SUSPENDED;
-    toImpl(pageRef)->setPaginationLineGridEnabled(lineGridEnabled);
 }
 
-bool WKPageGetPaginationLineGridEnabled(WKPageRef pageRef)
+bool WKPageGetPaginationLineGridEnabled(WKPageRef)
 {
-    return toImpl(pageRef)->paginationLineGridEnabled();
+    return false;
 }
 
 unsigned WKPageGetPageCount(WKPageRef pageRef)
@@ -2875,7 +2880,7 @@ WKArrayRef WKPageCopyRelatedPages(WKPageRef pageRef)
     Vector<RefPtr<API::Object>> relatedPages;
 
     for (auto& page : toImpl(pageRef)->process().pages()) {
-        if (page != toImpl(pageRef))
+        if (page.get() != toImpl(pageRef))
             relatedPages.append(page);
     }
 

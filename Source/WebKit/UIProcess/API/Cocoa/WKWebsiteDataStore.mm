@@ -44,6 +44,7 @@
 #import "WebPushMessage.h"
 #import "WebResourceLoadStatisticsStore.h"
 #import "WebsiteDataFetchOption.h"
+#import "_WKNotificationDataInternal.h"
 #import "_WKResourceLoadStatisticsThirdPartyInternal.h"
 #import "_WKWebsiteDataStoreConfigurationInternal.h"
 #import "_WKWebsiteDataStoreDelegate.h"
@@ -64,6 +65,9 @@ public:
         , m_hasRequestStorageSpaceSelector([m_delegate.get() respondsToSelector:@selector(requestStorageSpace: frameOrigin: quota: currentSize: spaceRequired: decisionHandler:)])
         , m_hasAuthenticationChallengeSelector([m_delegate.get() respondsToSelector:@selector(didReceiveAuthenticationChallenge: completionHandler:)])
         , m_hasOpenWindowSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:openWindow:fromServiceWorkerOrigin:completionHandler:)])
+        , m_hasShowNotificationSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:showNotification:)])
+        , m_hasNotificationPermissionsSelector([m_delegate.get() respondsToSelector:@selector(notificationPermissionsForWebsiteDataStore:)])
+        , m_hasWorkerUpdatedAppBadgeSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:workerOrigin:updatedAppBadge:)])
     {
     }
 
@@ -129,11 +133,53 @@ private:
         [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() openWindow:nsURL fromServiceWorkerOrigin:wrapper(apiOrigin.get()) completionHandler:completionHandler.get()];
     }
 
+    bool showNotification(const WebCore::NotificationData& data) final
+    {
+        if (!m_hasShowNotificationSelector || !m_delegate || !m_dataStore)
+            return false;
+
+        RetainPtr<_WKNotificationData> notification = adoptNS([[_WKNotificationData alloc] initWithCoreData:data dataStore:m_dataStore.getAutoreleased()]);
+        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() showNotification:notification.get()];
+        return true;
+    }
+
+    HashMap<WTF::String, bool> notificationPermissions() final
+    {
+        if (!m_hasNotificationPermissionsSelector || !m_delegate || !m_dataStore)
+            return { };
+
+        HashMap<WTF::String, bool> result;
+        NSDictionary<NSString *, NSNumber *> *permissions = [m_delegate.getAutoreleased() notificationPermissionsForWebsiteDataStore:m_dataStore.getAutoreleased()];
+        for (NSString *key in permissions) {
+            NSNumber *value = permissions[key];
+            auto origin = WebCore::SecurityOriginData::fromURL(URL(key));
+            result.set(origin.toString(), value.boolValue);
+        }
+
+        return result;
+    }
+
+    void workerUpdatedAppBadge(const WebCore::SecurityOriginData& origin, std::optional<uint64_t> badge) final
+    {
+        if (!m_hasWorkerUpdatedAppBadgeSelector || !m_delegate || !m_dataStore)
+            return;
+
+        auto apiOrigin = API::SecurityOrigin::create(origin);
+        NSNumber *nsBadge = nil;
+        if (badge)
+            nsBadge = @(*badge);
+
+        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() workerOrigin:wrapper(apiOrigin.get()) updatedAppBadge:(NSNumber *)nsBadge];
+    }
+
     WeakObjCPtr<WKWebsiteDataStore> m_dataStore;
     WeakObjCPtr<id <_WKWebsiteDataStoreDelegate> > m_delegate;
     bool m_hasRequestStorageSpaceSelector { false };
     bool m_hasAuthenticationChallengeSelector { false };
     bool m_hasOpenWindowSelector { false };
+    bool m_hasShowNotificationSelector { false };
+    bool m_hasNotificationPermissionsSelector { false };
+    bool m_hasWorkerUpdatedAppBadgeSelector { false };
 };
 
 @implementation WKWebsiteDataStore
@@ -903,6 +949,13 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 #endif
 }
 
+-(void)_setServiceWorkerOverridePreferences:(WKPreferences *)preferences
+{
+#if ENABLE(SERVICE_WORKER)
+    _websiteDataStore->setServiceWorkerOverridePreferences(preferences ? preferences->_preferences.get() : nullptr);
+#endif
+}
+
 -(void)_deletePushAndNotificationRegistration:(WKSecurityOrigin *)securityOrigin completionHandler:(void(^)(NSError *))completionHandler
 {
     auto completionHandlerCopy = makeBlockPtr(completionHandler);
@@ -919,18 +972,6 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 {
     auto completionHandlerCopy = makeBlockPtr(completionHandler);
     _websiteDataStore->networkProcess().getOriginsWithPushAndNotificationPermissions(_websiteDataStore->sessionID(), [completionHandlerCopy](const Vector<WebCore::SecurityOriginData>& origins) {
-        auto set = adoptNS([[NSMutableSet alloc] initWithCapacity:origins.size()]);
-        for (auto& origin : origins) {
-            auto apiOrigin = API::SecurityOrigin::create(origin);
-            [set addObject:wrapper(apiOrigin.get())];
-        }
-        completionHandlerCopy(set.get());
-    });
-}
-
-- (void)_getOriginsWithPushSubscriptions:(void(^)(NSSet<WKSecurityOrigin *> *))completionHandler {
-    auto completionHandlerCopy = makeBlockPtr(completionHandler);
-    _websiteDataStore->networkProcess().getOriginsWithPushSubscriptions(_websiteDataStore->sessionID(), [completionHandlerCopy](const Vector<WebCore::SecurityOriginData>& origins) {
         auto set = adoptNS([[NSMutableSet alloc] initWithCapacity:origins.size()]);
         for (auto& origin : origins) {
             auto apiOrigin = API::SecurityOrigin::create(origin);

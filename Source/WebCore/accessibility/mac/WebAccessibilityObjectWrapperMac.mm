@@ -243,6 +243,10 @@ using namespace WebCore;
 #define NSAccessibilityARIACurrentAttribute @"AXARIACurrent"
 #endif
 
+#ifndef NSAccessibilityKeyShortcutsAttribute
+#define NSAccessibilityKeyShortcutsAttribute @"AXKeyShortcutsValue"
+#endif
+
 // Table/grid attributes
 #ifndef NSAccessibilityARIAColumnIndexAttribute
 #define NSAccessibilityARIAColumnIndexAttribute @"AXARIAColumnIndex"
@@ -1187,6 +1191,9 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     if (backingObject->supportsPosInSet())
         [additional addObject:NSAccessibilityARIAPosInSetAttribute];
 
+    if (backingObject->supportsKeyShortcuts())
+        [additional addObject:NSAccessibilityKeyShortcutsAttribute];
+
     AccessibilitySortDirection sortDirection = backingObject->sortDirection();
     if (sortDirection != AccessibilitySortDirection::None && sortDirection != AccessibilitySortDirection::Invalid)
         [additional addObject:NSAccessibilitySortDirectionAttribute];
@@ -1897,13 +1904,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     });
 }
 
-- (void)logMissingBackingObject
-{
-    TextStream stream;
-    stream << "No backingObject for wrapper " << &self << "!";
-    AXLOG(stream.release());
-}
-
 // FIXME: split up this function in a better way.
 // suggestions: Use a hash table that maps attribute names to function calls,
 // or maybe pointers to member functions
@@ -1915,7 +1915,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
     RefPtr<AXCoreObject> backingObject = self.updateObjectBackingStore;
     if (!backingObject) {
-        [self logMissingBackingObject];
+        AXLOG(makeString("No backingObject for wrapper ", hex(reinterpret_cast<uintptr_t>(self))));
         return nil;
     }
 
@@ -2594,8 +2594,8 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     if ([attributeName isEqualToString:NSAccessibilityPopupValueAttribute])
         return backingObject->popupValue();
 
-    if ([attributeName isEqualToString:@"AXKeyShortcutsValue"])
-        return backingObject->keyShortcutsValue();
+    if ([attributeName isEqualToString:NSAccessibilityKeyShortcutsAttribute])
+        return backingObject->keyShortcuts();
 
     if ([attributeName isEqualToString:@"AXARIAPressedIsPresent"])
         return [NSNumber numberWithBool:backingObject->pressedIsPresent()];
@@ -2948,9 +2948,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)accessibilityPerformShowMenuAction
 {
+    AXTRACE("WebAccessibilityObjectWrapper accessibilityPerformShowMenuAction"_s);
+
     auto* backingObject = self.axBackingObject;
     if (!backingObject) {
-        [self logMissingBackingObject];
+        AXLOG(makeString("No backingObject for wrapper ", hex(reinterpret_cast<uintptr_t>(self))));
         return;
     }
 
@@ -2968,11 +2970,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)_accessibilityShowContextMenu
 {
+    AXTRACE("WebAccessibilityObjectWrapper _accessibilityShowContextMenu"_s);
     ASSERT(isMainThread());
 
     RefPtr<AXCoreObject> backingObject = self.axBackingObject;
     if (!backingObject) {
-        [self logMissingBackingObject];
+        AXLOG(makeString("No backingObject for wrapper ", hex(reinterpret_cast<uintptr_t>(self))));
         return;
     }
 
@@ -3079,7 +3082,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
     RefPtr<AXCoreObject> backingObject = self.updateObjectBackingStore;
     if (!backingObject) {
-        [self logMissingBackingObject];
+        AXLOG(makeString("No backingObject for wrapper ", hex(reinterpret_cast<uintptr_t>(self))));
         return;
     }
 

@@ -77,9 +77,10 @@ JSC_DEFINE_HOST_FUNCTION(callWebAssemblyFunction, (JSGlobalObject* globalObject,
     JSWebAssemblyInstance* instance = wasmFunction->instance();
     Wasm::Instance* wasmInstance = &instance->instance();
 
+    if (signature.argumentsOrResultsIncludeV128())
+        return throwVMTypeError(globalObject, scope, Wasm::errorMessageForExceptionType(Wasm::ExceptionType::TypeErrorInvalidV128Use));
+
     for (unsigned argIndex = 0; argIndex < signature.argumentCount(); ++argIndex) {
-        if (signature.argumentType(argIndex).isV128())
-            return JSValue::encode(throwException(globalObject, scope, createTypeError(globalObject, Wasm::errorMessageForExceptionType(Wasm::ExceptionType::TypeErrorInvalidV128Use))));
         uint64_t value = fromJSValue(globalObject, signature.argumentType(argIndex), callFrame->argument(argIndex));
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
         boxedArgs.append(JSValue::decode(value));
@@ -143,7 +144,7 @@ RegisterSet WebAssemblyFunction::calleeSaves() const
     // Pessimistically save callee saves in BoundsChecking mode since the LLInt always bounds checks
     RegisterSetBuilder result = Wasm::PinnedRegisterInfo::get().toSave(MemoryMode::BoundsChecking);
     if (usesTagRegisters()) {
-        RegisterSetBuilder tagCalleeSaves = RegisterSetBuilder::calleeSaveRegisters();
+        RegisterSetBuilder tagCalleeSaves = RegisterSetBuilder::vmCalleeSaveRegisters();
         tagCalleeSaves.filter(RegisterSetBuilder::runtimeTagRegisters());
         result.merge(tagCalleeSaves);
     }
@@ -423,6 +424,9 @@ CodePtr<JSEntryPtrTag> WebAssemblyFunction::jsCallEntrypointSlow()
     // https://bugs.webkit.org/show_bug.cgi?id=196570
     jit.loadPtr(entrypointLoadLocation(), scratchJSR.payloadGPR());
     jit.call(scratchJSR.payloadGPR(), WasmEntryPtrTag);
+
+    // Restore stack pointer after call
+    jit.addPtr(MacroAssembler::TrustedImm32(-static_cast<int32_t>(totalFrameSize)), MacroAssembler::framePointerRegister, MacroAssembler::stackPointerRegister);
 
     marshallJSResult(jit, typeDefinition, wasmCallInfo, savedResultRegisters);
 

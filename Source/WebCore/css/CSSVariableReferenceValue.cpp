@@ -30,8 +30,10 @@
 #include "config.h"
 #include "CSSVariableReferenceValue.h"
 
+#include "CSSRegisteredCustomProperty.h"
 #include "CSSVariableData.h"
 #include "ConstantPropertyMap.h"
+#include "CustomPropertyRegistry.h"
 #include "RenderStyle.h"
 #include "StyleBuilder.h"
 #include "StyleResolver.h"
@@ -82,7 +84,6 @@ static bool resolveVariableReference(CSSParserTokenRange range, CSSValueID funct
 {
     ASSERT(functionId == CSSValueVar || functionId == CSSValueEnv);
 
-    auto& registeredProperties = builderState.document().getCSSRegisteredCustomPropertySet();
     auto& style = builderState.style();
 
     range.consumeWhitespace();
@@ -97,12 +98,12 @@ static bool resolveVariableReference(CSSParserTokenRange range, CSSValueID funct
     Vector<CSSParserToken> fallbackResult;
     bool fallbackReturn = resolveVariableFallback(CSSParserTokenRange(range), fallbackResult, builderState);
 
-
     auto* property = functionId == CSSValueVar
         ? style.getCustomProperty(variableName)
         : builderState.document().constantProperties().values().get(variableName);
+
     if (!property || property->isUnset()) {
-        auto* registered = registeredProperties.get(variableName);
+        auto* registered = builderState.document().customPropertyRegistry().get(variableName);
         if (registered && registered->initialValue())
             property = registered->initialValue();
     }

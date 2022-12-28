@@ -32,6 +32,7 @@
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"
 #include "ComputedStyleExtractor.h"
+#include "HostWindow.h"
 #include "ImageBuffer.h"
 #include "NullGraphicsContext.h"
 #include "RenderElement.h"
@@ -135,12 +136,11 @@ RefPtr<Image> StyleFilterImage::image(const RenderElement* renderer, const Float
     if (!sourceImage)
         return &Image::nullImage();
 
-    sourceImage->context().drawImage(*image, sourceImageRect);
+    auto filteredImage = sourceImage->filteredImage(*cssFilter, [&](GraphicsContext& context) {
+        context.drawImage(*image, sourceImageRect);
+    });
 
-    if (auto image = sourceImage->filteredImage(*cssFilter))
-        return image;
-
-    return &Image::nullImage();
+    return filteredImage ? filteredImage : &Image::nullImage();
 }
 
 bool StyleFilterImage::knownToBeOpaque(const RenderElement&) const

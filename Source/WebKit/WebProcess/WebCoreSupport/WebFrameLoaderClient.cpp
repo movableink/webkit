@@ -100,6 +100,10 @@
 #include <wtf/ProcessID.h>
 #include <wtf/ProcessPrivilege.h>
 
+#if ENABLE(FULLSCREEN_API)
+#include <WebCore/FullscreenManager.h>
+#endif
+
 #define PREFIX_PARAMETERS "%p - [webFrame=%p, webFrameID=%" PRIu64 ", webPage=%p, webPageID=%" PRIu64 "] WebFrameLoaderClient::"
 #define WEBFRAME (&webFrame())
 #define WEBFRAMEID (webFrame().frameID().object().toUInt64())
@@ -519,14 +523,13 @@ void WebFrameLoaderClient::dispatchDidStartProvisionalLoad()
         return;
 
 #if ENABLE(FULLSCREEN_API)
-    Element* documentElement = m_frame->coreFrame()->document()->documentElement();
-    if (documentElement && documentElement->containsFullScreenElement())
+    auto* document = m_frame->coreFrame()->document();
+    if (document && document->fullscreenManager().fullscreenElement())
         webPage->fullScreenManager()->exitFullScreenForElement(webPage->fullScreenManager()->element());
 #endif
 
     webPage->findController().hideFindUI();
     webPage->sandboxExtensionTracker().didStartProvisionalLoad(m_frame.ptr());
-
 
     RefPtr<API::Object> userData;
 
@@ -539,6 +542,13 @@ void WebFrameLoaderClient::dispatchDidStartProvisionalLoad()
     
     auto& url = provisionalLoader->url();
     auto& unreachableURL = provisionalLoader->unreachableURL();
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+    // Notify the extensions controller.
+    if (auto* extensionControllerProxy = webPage->webExtensionControllerProxy())
+        extensionControllerProxy->didStartProvisionalLoadForFrame(*webPage, m_frame, url);
+#endif
+
     // Notify the UIProcess.
     webPage->send(Messages::WebPageProxy::DidStartProvisionalLoadForFrame(m_frame->frameID(), m_frame->info(), provisionalLoader->request(), provisionalLoader->navigationID(), url, unreachableURL, UserData(WebProcess::singleton().transformObjectsToHandles(userData.get()).get())));
 }
@@ -842,6 +852,12 @@ void WebFrameLoaderClient::dispatchDecidePolicyForResponse(const ResourceRespons
 
     if (!request.url().string()) {
         WEBFRAMELOADERCLIENT_RELEASE_LOG(Network, "dispatchDecidePolicyForResponse: continuing because the url string is null");
+        function(PolicyAction::Use, identifier);
+        return;
+    }
+
+    if (webPage->shouldSkipDecidePolicyForResponse(response, request)) {
+        WEBFRAMELOADERCLIENT_RELEASE_LOG(Network, "dispatchDecidePolicyForResponse: continuing because injected bundle says so");
         function(PolicyAction::Use, identifier);
         return;
     }
@@ -1720,12 +1736,12 @@ ObjectContentType WebFrameLoaderClient::objectContentType(const URL& url, const 
     return ObjectContentType::None;
 }
 
-String WebFrameLoaderClient::overrideMediaType() const
+AtomString WebFrameLoaderClient::overrideMediaType() const
 {
     if (auto* page = m_frame->page())
         return page->overriddenMediaType();
 
-    return String();
+    return nullAtom();
 }
 
 void WebFrameLoaderClient::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld& world)

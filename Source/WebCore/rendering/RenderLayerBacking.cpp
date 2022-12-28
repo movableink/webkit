@@ -205,10 +205,24 @@ RenderLayerBacking::RenderLayerBacking(RenderLayer& layer)
         m_isMainFrameRenderViewLayer = renderer().frame().isMainFrame();
         m_isFrameLayerWithTiledBacking = renderer().page().chrome().client().shouldUseTiledBackingForFrameView(renderer().view().frameView());
     }
-    
+
     createPrimaryGraphicsLayer();
 #if ENABLE(FULLSCREEN_API)
-    setRequiresBackgroundLayer(layer.renderer().isRenderFullScreen());
+    auto isFullsizeBackdrop = [](const RenderElement& renderer) -> bool {
+        auto& style = renderer.style();
+        if (style.styleType() != PseudoId::Backdrop || style.position() != PositionType::Fixed)
+            return false;
+
+        if (style.hasTransform() || style.hasClip() || style.hasMask())
+            return false;
+
+        if (!is<RenderBox>(renderer))
+            return false;
+
+        auto rendererRect = downcast<RenderBox>(renderer).frameRect();
+        return rendererRect == renderer.view().frameRect();
+    };
+    setRequiresBackgroundLayer(isFullsizeBackdrop(layer.renderer()));
 #endif
 
     if (auto* tiledBacking = this->tiledBacking()) {
@@ -594,6 +608,7 @@ void RenderLayerBacking::destroyGraphicsLayers()
     if (m_overflowControlsHostLayerAncestorClippingStack)
         removeClippingStackLayers(*m_overflowControlsHostLayerAncestorClippingStack);
 
+    GraphicsLayer::unparentAndClear(m_transformFlatteningLayer);
     GraphicsLayer::unparentAndClear(m_viewportAnchorLayer);
     GraphicsLayer::unparentAndClear(m_contentsContainmentLayer);
     GraphicsLayer::unparentAndClear(m_foregroundLayer);
@@ -997,6 +1012,9 @@ bool RenderLayerBacking::updateConfiguration(const RenderLayer* compositingAnces
     bool layerConfigChanged = false;
     auto& compositor = this->compositor();
 
+    if (updateTransformFlatteningLayer(compositingAncestor))
+        layerConfigChanged = true;
+
     if (updateViewportConstrainedAnchorLayer(compositor.isViewportConstrainedFixedOrStickyLayer(m_owningLayer)))
         layerConfigChanged = true;
 
@@ -1099,7 +1117,7 @@ bool RenderLayerBacking::updateConfiguration(const RenderLayer* compositingAnces
     else if (shouldSetContentsDisplayDelegate()) {
         auto* canvas = downcast<HTMLCanvasElement>(renderer().element());
         if (auto* context = canvas->renderingContext())
-            m_graphicsLayer->setContentsDisplayDelegate(context->layerContentsDisplayDelegate(), GraphicsLayer::ContentsLayerPurpose::Canvas);
+            context->setContentsToLayer(*m_graphicsLayer);
 
         layerConfigChanged = true;
     }
@@ -1146,7 +1164,7 @@ static bool subpixelOffsetFromRendererChanged(const LayoutSize& oldSubpixelOffse
     FloatSize current = snapSizeToDevicePixel(newSubpixelOffsetFromRenderer, LayoutPoint(), deviceScaleFactor);
     return previous != current;
 }
-    
+
 static FloatSize subpixelForLayerPainting(const LayoutPoint& point, float pixelSnappingFactor)
 {
     LayoutUnit x = point.x();
@@ -1169,12 +1187,12 @@ static OffsetFromRenderer computeOffsetFromRenderer(const LayoutSize& offset, fl
     offsetFromRenderer.m_devicePixelOffset = offset - offsetFromRenderer.m_subpixelOffset;
     return offsetFromRenderer;
 }
-    
+
 struct SnappedRectInfo {
     LayoutRect m_snappedRect;
     LayoutSize m_snapDelta;
 };
-    
+
 static SnappedRectInfo snappedGraphicsLayer(const LayoutSize& offset, const LayoutSize& size, const RenderLayerModelObject& renderer)
 {
     SnappedRectInfo snappedGraphicsLayer;
@@ -1663,7 +1681,7 @@ void RenderLayerBacking::updateInternalHierarchy()
         lastClippingLayer = m_ancestorClippingStack->lastLayer();
     }
 
-    constexpr size_t maxOrderedLayers = 5;
+    constexpr size_t maxOrderedLayers = 6;
     Vector<GraphicsLayer*, maxOrderedLayers> orderedLayers;
 
     if (lastClippingLayer)
@@ -1684,6 +1702,15 @@ void RenderLayerBacking::updateInternalHierarchy()
 
     orderedLayers.append(m_graphicsLayer.get());
 
+    // The transform flattening layer is outside the clipping stack, so we need
+    // to make sure we add the first layer in the clipping stack as its child.
+    if (m_transformFlatteningLayer) {
+        if (lastClippingLayer)
+            m_transformFlatteningLayer->addChild(*m_ancestorClippingStack->firstLayer());
+        else
+            m_transformFlatteningLayer->addChild(*orderedLayers[0]);
+    }
+
     if (m_childContainmentLayer)
         orderedLayers.append(m_childContainmentLayer.get());
 
@@ -1694,7 +1721,7 @@ void RenderLayerBacking::updateInternalHierarchy()
     for (auto* layer : orderedLayers) {
         if (previousLayer)
             previousLayer->addChild(*layer);
-    
+
         previousLayer = layer;
     }
 
@@ -2239,6 +2266,44 @@ void RenderLayerBacking::positionOverflowControlsLayers()
         layer->setSize(cornerRect.size());
         layer->setDrawsContent(!cornerRect.isEmpty());
     }
+}
+
+static bool ancestorLayerIsDOMParent(RenderLayer& layer, const RenderLayer* compositingAncestor)
+{
+    if (!compositingAncestor)
+        return false;
+    if (!layer.renderer().element() || !layer.renderer().element()->parentElement())
+        return false;
+    return compositingAncestor->renderer().element() == layer.renderer().element()->parentElement();
+}
+
+static bool ancestorLayerWillCombineTransform(const RenderLayer* compositingAncestor)
+{
+    if (!compositingAncestor)
+        return false;
+    return compositingAncestor->preserves3D() || compositingAncestor->hasPerspective();
+}
+
+bool RenderLayerBacking::updateTransformFlatteningLayer(const RenderLayer* compositingAncestor)
+{
+    bool needsFlatteningLayer = false;
+    // If our parent layer has preserve-3d or perspective, and it's not our DOM parent, then we need a flattening layer to block that from being applied in 3d.
+    if (useCSS3DTransformInteroperability() && ancestorLayerWillCombineTransform(compositingAncestor) && !ancestorLayerIsDOMParent(m_owningLayer, compositingAncestor))
+        needsFlatteningLayer = true;
+
+    bool layerChanged = false;
+    if (needsFlatteningLayer) {
+        if (!m_transformFlatteningLayer) {
+            m_transformFlatteningLayer = createGraphicsLayer(makeString(m_owningLayer.name(), " (3d flattening)"));
+            layerChanged = true;
+        }
+    } else if (m_transformFlatteningLayer) {
+        willDestroyLayer(m_transformFlatteningLayer.get());
+        GraphicsLayer::unparentAndClear(m_transformFlatteningLayer);
+        layerChanged = true;
+    }
+
+    return layerChanged;
 }
 
 bool RenderLayerBacking::updateViewportConstrainedAnchorLayer(bool needsAnchorLayer)
@@ -3136,6 +3201,9 @@ GraphicsLayer* RenderLayerBacking::parentForSublayers() const
 
 GraphicsLayer* RenderLayerBacking::childForSuperlayers() const
 {
+    if (m_transformFlatteningLayer)
+        return m_transformFlatteningLayer.get();
+
     if (m_ancestorClippingStack)
         return m_ancestorClippingStack->firstLayer();
 
@@ -3749,6 +3817,11 @@ bool RenderLayerBacking::shouldTemporarilyRetainTileCohorts(const GraphicsLayer*
 bool RenderLayerBacking::useGiantTiles() const
 {
     return renderer().settings().useGiantTiles();
+}
+
+bool RenderLayerBacking::useCSS3DTransformInteroperability() const
+{
+    return renderer().settings().css3DTransformInteroperabilityEnabled();
 }
 
 void RenderLayerBacking::logFilledVisibleFreshTile(unsigned blankPixelCount)

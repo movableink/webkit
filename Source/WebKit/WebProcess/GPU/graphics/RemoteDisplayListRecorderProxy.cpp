@@ -32,6 +32,7 @@
 #include "RemoteDisplayListRecorderMessages.h"
 #include "RemoteImageBufferProxy.h"
 #include "RemoteRenderingBackendProxy.h"
+#include "StreamClientConnection.h"
 #include "WebCoreArgumentCoders.h"
 #include <WebCore/DisplayList.h>
 #include <WebCore/DisplayListDrawingContext.h>
@@ -71,7 +72,7 @@ ALWAYS_INLINE void RemoteDisplayListRecorderProxy::send(T&& message)
         return;
 
     m_imageBuffer->backingStoreWillChange();
-    m_renderingBackend->sendToStream(WTFMove(message), m_destinationBufferIdentifier);
+    m_renderingBackend->streamConnection().send(WTFMove(message), m_destinationBufferIdentifier, defaultSendTimeout);
 }
 
 RenderingMode RemoteDisplayListRecorderProxy::renderingMode() const
@@ -390,6 +391,11 @@ void RemoteDisplayListRecorderProxy::recordClearRect(const FloatRect& rect)
     send(Messages::RemoteDisplayListRecorder::ClearRect(rect));
 }
 
+void RemoteDisplayListRecorderProxy::recordDrawControlPart(ControlPart& part, const FloatRect& rect, float deviceScaleFactor, const ControlStyle& style)
+{
+    send(Messages::RemoteDisplayListRecorder::DrawControlPart(part, rect, deviceScaleFactor, style));
+}
+
 #if USE(CG)
 
 void RemoteDisplayListRecorderProxy::recordApplyStrokePattern()
@@ -497,6 +503,11 @@ RefPtr<ImageBuffer> RemoteDisplayListRecorderProxy::createAlignedImageBuffer(con
 {
     auto renderingMode = !renderingMethod ? this->renderingMode() : RenderingMode::Unaccelerated;
     return GraphicsContext::createScaledImageBuffer(rect, scaleFactor(), colorSpace, renderingMode, renderingMethod);
+}
+
+void RemoteDisplayListRecorderProxy::disconnect()
+{
+    m_renderingBackend = nullptr;
 }
 
 } // namespace WebCore

@@ -33,7 +33,7 @@
 
 namespace JSC { namespace B3 {
 
-void ValueRep::addUsedRegistersTo(RegisterSetBuilder& set) const
+void ValueRep::addUsedRegistersTo(bool isSIMDContext, RegisterSetBuilder& set) const
 {
     switch (m_kind) {
     case WarmAny:
@@ -47,7 +47,7 @@ void ValueRep::addUsedRegistersTo(RegisterSetBuilder& set) const
         return;
     case LateRegister:
     case Register:
-        set.add(reg(), Options::useWebAssemblySIMD() ? conservativeWidth(reg()) : conservativeWidthWithoutVectors(reg()));
+        set.add(reg(), isSIMDContext ? conservativeWidth(reg()) : conservativeWidthWithoutVectors(reg()));
         return;
     case Stack:
     case StackArgument:
@@ -58,10 +58,10 @@ void ValueRep::addUsedRegistersTo(RegisterSetBuilder& set) const
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-RegisterSetBuilder ValueRep::usedRegisters() const
+RegisterSetBuilder ValueRep::usedRegisters(bool isSIMDContext) const
 {
     RegisterSetBuilder result;
-    addUsedRegistersTo(result);
+    addUsedRegistersTo(isSIMDContext, result);
     return result;
 }
 
@@ -93,6 +93,13 @@ void ValueRep::dump(PrintStream& out) const
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
+
+// We use `B3::ValueRep` for bookkeeping in the BBQ wasm backend, including on
+// 32-bit platforms, but not for code generation (yet!), so we don't actually
+// want to provide these symbols until they are properly supported on those
+// platforms.
+
+#if USE(JSVALUE64)
 
 void ValueRep::emitRestore(AssemblyHelpers& jit, Reg reg) const
 {
@@ -157,6 +164,8 @@ ValueRecovery ValueRep::recoveryForJSValue() const
         return { };
     }
 }
+
+#endif // USE(JSVALUE64) [see note above]
 
 } } // namespace JSC::B3
 

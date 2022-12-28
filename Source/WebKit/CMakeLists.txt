@@ -77,7 +77,6 @@ set(WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/UIProcess/WebAuthentication/Mock"
     "${WEBKIT_DIR}/UIProcess/WebsiteData"
     "${WEBKIT_DIR}/UIProcess/XR"
-    "${WEBKIT_DIR}/WebAuthnProcess"
     "${WEBKIT_DIR}/WebProcess"
     "${WEBKIT_DIR}/WebProcess/ApplePay"
     "${WEBKIT_DIR}/WebProcess/ApplicationCache"
@@ -355,7 +354,6 @@ set(WebProcess_LIBRARIES WebKit)
 set(NetworkProcess_LIBRARIES WebKit)
 set(GPUProcess_LIBRARIES WebKit)
 set(PluginProcess_LIBRARIES WebKit)
-set(WebAuthnProcess_LIBRARIES WebKit)
 
 if (ENABLE_ENCRYPTED_MEDIA AND ENABLE_OPENCDM)
   list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
@@ -422,6 +420,8 @@ macro(ADD_WEBKIT_PREFIX_HEADER _target)
             set(OLD_COMPILE_FLAGS "")
         endif ()
         set_target_properties(${_target} PROPERTIES COMPILE_FLAGS "${OLD_COMPILE_FLAGS} -include ${WEBKIT_DIR}/WebKit2Prefix.h")
+    else ()
+        target_precompile_headers(${_target} PRIVATE WebKit2Prefix.h)
     endif ()
 endmacro()
 
@@ -448,11 +448,6 @@ endif ()
 if (ENABLE_PLUGIN_PROCESS)
     WEBKIT_EXECUTABLE_DECLARE(PluginProcess)
     list(APPEND WebKit_INTERFACE_DEPENDENCIES PluginProcess)
-endif ()
-
-if (ENABLE_WEB_AUTHN)
-    WEBKIT_EXECUTABLE_DECLARE(WebAuthnProcess)
-    list(APPEND WebKit_INTERFACE_DEPENDENCIES WebAuthnProcess)
 endif ()
 
 WEBKIT_FRAMEWORK_DECLARE(WebKit)
@@ -488,7 +483,6 @@ macro(GENERATE_MESSAGE_SOURCES _output_source _inputs)
         list(APPEND _outputs
             ${WebKit_DERIVED_SOURCES_DIR}/${_name}MessageReceiver.cpp
             ${WebKit_DERIVED_SOURCES_DIR}/${_name}Messages.h
-            ${WebKit_DERIVED_SOURCES_DIR}/${_name}MessagesReplies.h
         )
 
 if (${PORT} STREQUAL "Qt")
@@ -547,11 +541,15 @@ set(WebKit_SERIALIZATION_IN_FILES
     Shared/WTFArgumentCoders.serialization.in
     Shared/WebCoreArgumentCoders.serialization.in
     Shared/WebEvent.serialization.in
+    Shared/WebHitTestResultData.serialization.in
+    Shared/WebPopupItem.serialization.in
     Shared/WebPushDaemonConnectionConfiguration.serialization.in
     Shared/WebPushMessage.serialization.in
     Shared/WebsiteDataStoreParameters.serialization.in
 
     Shared/API/APIGeometry.serialization.in
+
+    Shared/Databases/IndexedDB/WebIDBResult.serialization.in
 
     Shared/WebGPU/WebGPUBindGroupDescriptor.serialization.in
     Shared/WebGPU/WebGPUBindGroupEntry.serialization.in
@@ -630,6 +628,7 @@ set(WebKit_SERIALIZATION_IN_FILES
 list(APPEND WebKit_DERIVED_SOURCES
     ${WebKit_DERIVED_SOURCES_DIR}/GeneratedSerializers.h
     ${WebKit_DERIVED_SOURCES_DIR}/GeneratedSerializers.cpp
+    ${WebKit_DERIVED_SOURCES_DIR}/SerializedTypeInfo.cpp
 )
 
 add_custom_command(
@@ -640,7 +639,7 @@ add_custom_command(
     MAIN_DEPENDENCY ${WEBKIT_DIR}/Scripts/generate-serializers.py
     DEPENDS
         ${WebKit_SERIALIZATION_IN_FILES}
-    COMMAND ${PYTHON_EXECUTABLE} ${WEBKIT_DIR}/Scripts/generate-serializers.py ${WEBKIT_DIR}/ ${WebKit_SERIALIZATION_IN_FILES}
+    COMMAND ${PYTHON_EXECUTABLE} ${WEBKIT_DIR}/Scripts/generate-serializers.py cpp ${WEBKIT_DIR}/ ${WebKit_SERIALIZATION_IN_FILES}
     WORKING_DIRECTORY ${WebKit_DERIVED_SOURCES_DIR}
     VERBATIM
 )
@@ -740,7 +739,6 @@ list(APPEND WebKit_SOURCES ${WebKit_DERIVED_SOURCES})
 
 WEBKIT_COMPUTE_SOURCES(WebKit)
 WEBKIT_FRAMEWORK(WebKit)
-WEBKIT_FRAMEWORK_TARGET(WebKit)
 ADD_WEBKIT_PREFIX_HEADER(WebKit)
 
 QT_ADD_EXTRA_WEBKIT_TARGET_EXPORT(WebKit2)
@@ -765,12 +763,6 @@ if (ENABLE_PLUGIN_PROCESS)
     ADD_WEBKIT_PREFIX_HEADER(PluginProcess)
 endif ()
 
-if (ENABLE_WEB_AUTHN)
-    list(APPEND WebAuthnProcess_PRIVATE_INCLUDE_DIRECTORIES $<TARGET_PROPERTY:WebKit,INCLUDE_DIRECTORIES>)
-    WEBKIT_EXECUTABLE(WebAuthnProcess)
-    ADD_WEBKIT_PREFIX_HEADER(WebAuthnProcess)
-endif ()
-
 if (COMPILER_IS_GCC_OR_CLANG)
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebKit -Wno-unused-parameter)
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebProcess -Wno-unused-parameter)
@@ -780,9 +772,6 @@ if (COMPILER_IS_GCC_OR_CLANG)
     endif ()
     if (ENABLE_PLUGIN_PROCESS)
         WEBKIT_ADD_TARGET_CXX_FLAGS(PluginProcess -Wno-unused-parameter)
-    endif ()
-    if (ENABLE_WEB_AUTHN)
-        WEBKIT_ADD_TARGET_CXX_FLAGS(WebAuthnProcess -Wno-unused-parameter)
     endif ()
 endif ()
 

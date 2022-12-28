@@ -45,6 +45,12 @@ private:
 
     enum class UnicodeParseContext : uint8_t { PatternCodePoint, GroupName };
 
+    enum class TokenType : uint8_t {
+        NotAtom = 0,
+        Atom = 1,
+        Lookbehind = 2
+    };
+
     /*
      * CharacterClassParserDelegate:
      *
@@ -263,7 +269,7 @@ private:
      * interpreted as assertions).
      */
     template<bool inCharacterClass, class EscapeDelegate>
-    bool parseEscape(EscapeDelegate& delegate)
+    TokenType parseEscape(EscapeDelegate& delegate)
     {
         ASSERT(!hasError(m_errorCode));
         ASSERT(peek() == '\\');
@@ -271,7 +277,7 @@ private:
 
         if (atEndOfPattern()) {
             m_errorCode = ErrorCode::EscapeUnterminated;
-            return false;
+            return TokenType::NotAtom;
         }
 
         switch (peek()) {
@@ -282,7 +288,7 @@ private:
                 delegate.atomPatternCharacter('\b');
             else {
                 delegate.assertionWordBoundary(false);
-                return false;
+                return TokenType::NotAtom;
             }
             break;
         case 'B':
@@ -294,7 +300,7 @@ private:
                 delegate.atomPatternCharacter('B');
             } else {
                 delegate.assertionWordBoundary(true);
-                return false;
+                return TokenType::NotAtom;
             }
             break;
 
@@ -531,7 +537,7 @@ private:
             delegate.atomPatternCharacter(consume());
         }
         
-        return true;
+        return TokenType::Atom;
     }
 
     template<UnicodeParseContext context>
@@ -558,7 +564,7 @@ private:
      *
      * These methods alias to parseEscape().
      */
-    bool parseAtomEscape()
+    TokenType parseAtomEscape()
     {
         return parseEscape<false>(m_delegate);
     }
@@ -631,12 +637,12 @@ private:
                 break;
             
             case '=':
-                m_delegate.atomParentheticalAssertionBegin();
+                m_delegate.atomParentheticalAssertionBegin(false, Forward);
                 type = ParenthesesType::Assertion;
                 break;
 
             case '!':
-                m_delegate.atomParentheticalAssertionBegin(true);
+                m_delegate.atomParentheticalAssertionBegin(true, Forward);
                 type = ParenthesesType::Assertion;
                 break;
 
@@ -656,8 +662,20 @@ private:
                         m_delegate.atomParenthesesSubpatternBegin(true, groupName);
                     else
                         m_errorCode = ErrorCode::DuplicateGroupName;
-                } else
+                } else {
+                    if (tryConsume('=')) {
+                        m_delegate.atomParentheticalAssertionBegin(false, Backward);
+                        type = ParenthesesType::LookbehindAssertion;
+                        break;
+                    }
+
+                    if (tryConsume('!')) {
+                        m_delegate.atomParentheticalAssertionBegin(true, Backward);
+                        type = ParenthesesType::LookbehindAssertion;
+                        break;
+                    }
                     m_errorCode = ErrorCode::InvalidGroupName;
+                }
 
                 break;
             }
@@ -683,7 +701,7 @@ private:
      * was either an Atom or, for web compatibility reasons, QuantifiableAssertion
      * in non-Unicode pattern.
      */
-    bool parseParenthesesEnd()
+    TokenType parseParenthesesEnd()
     {
         ASSERT(!hasError(m_errorCode));
         ASSERT(peek() == ')');
@@ -691,12 +709,18 @@ private:
 
         if (m_parenthesesStack.isEmpty()) {
             m_errorCode = ErrorCode::ParenthesesUnmatched;
-            return false;
+            return TokenType::NotAtom;
         }
 
         m_delegate.atomParenthesesEnd();
         auto type = m_parenthesesStack.takeLast();
-        return type == ParenthesesType::Subpattern || !m_isUnicode;
+        if (type == ParenthesesType::LookbehindAssertion)
+            return TokenType::Lookbehind;
+
+        if (type == ParenthesesType::Subpattern || !m_isUnicode)
+            return TokenType::Atom;
+
+        return TokenType::NotAtom;
     }
 
     /*
@@ -704,7 +728,7 @@ private:
      *
      * Helper for parseTokens(); checks for parse errors and non-greedy quantifiers.
      */
-    void parseQuantifier(bool lastTokenWasAnAtom, unsigned min, unsigned max)
+    void parseQuantifier(TokenType lastTokenType, unsigned min, unsigned max)
     {
         ASSERT(!hasError(m_errorCode));
         ASSERT(min <= max);
@@ -714,8 +738,10 @@ private:
             return;
         }
 
-        if (lastTokenWasAnAtom)
+        if (lastTokenType == TokenType::Atom)
             m_delegate.quantifyAtom(min, max, !tryConsume('?'));
+        else if (lastTokenType == TokenType::Lookbehind)
+            m_errorCode = ErrorCode::CantQuantifyAtom;
         else
             m_errorCode = ErrorCode::QuantifierWithoutAtom;
     }
@@ -731,46 +757,46 @@ private:
      */
     void parseTokens()
     {
-        bool lastTokenWasAnAtom = false;
+        TokenType lastTokenType = TokenType::NotAtom;
 
         while (!atEndOfPattern()) {
             switch (peek()) {
             case '|':
                 consume();
                 m_delegate.disjunction();
-                lastTokenWasAnAtom = false;
+                lastTokenType = TokenType::NotAtom;
                 break;
 
             case '(':
                 parseParenthesesBegin();
-                lastTokenWasAnAtom = false;
+                lastTokenType = TokenType::NotAtom;
                 break;
 
             case ')':
-                lastTokenWasAnAtom = parseParenthesesEnd();
+                lastTokenType = parseParenthesesEnd();
                 break;
 
             case '^':
                 consume();
                 m_delegate.assertionBOL();
-                lastTokenWasAnAtom = false;
+                lastTokenType = TokenType::NotAtom;
                 break;
 
             case '$':
                 consume();
                 m_delegate.assertionEOL();
-                lastTokenWasAnAtom = false;
+                lastTokenType = TokenType::NotAtom;
                 break;
 
             case '.':
                 consume();
                 m_delegate.atomBuiltInCharacterClass(BuiltInCharacterClassID::DotClassID, false);
-                lastTokenWasAnAtom = true;
+                lastTokenType = TokenType::Atom;
                 break;
 
             case '[':
                 parseCharacterClass();
-                lastTokenWasAnAtom = true;
+                lastTokenType = TokenType::Atom;
                 break;
 
             case ']':
@@ -781,29 +807,29 @@ private:
                 }
 
                 m_delegate.atomPatternCharacter(consume());
-                lastTokenWasAnAtom = true;
+                lastTokenType = TokenType::Atom;
                 break;
 
             case '\\':
-                lastTokenWasAnAtom = parseAtomEscape();
+                lastTokenType = parseAtomEscape();
                 break;
 
             case '*':
                 consume();
-                parseQuantifier(lastTokenWasAnAtom, 0, quantifyInfinite);
-                lastTokenWasAnAtom = false;
+                parseQuantifier(lastTokenType, 0, quantifyInfinite);
+                lastTokenType = TokenType::NotAtom;
                 break;
 
             case '+':
                 consume();
-                parseQuantifier(lastTokenWasAnAtom, 1, quantifyInfinite);
-                lastTokenWasAnAtom = false;
+                parseQuantifier(lastTokenType, 1, quantifyInfinite);
+                lastTokenType = TokenType::NotAtom;
                 break;
 
             case '?':
                 consume();
-                parseQuantifier(lastTokenWasAnAtom, 0, 1);
-                lastTokenWasAnAtom = false;
+                parseQuantifier(lastTokenType, 0, 1);
+                lastTokenType = TokenType::NotAtom;
                 break;
 
             case '{': {
@@ -819,10 +845,10 @@ private:
 
                     if (tryConsume('}')) {
                         if (min <= max)
-                            parseQuantifier(lastTokenWasAnAtom, min, max);
+                            parseQuantifier(lastTokenType, min, max);
                         else
                             m_errorCode = ErrorCode::QuantifierOutOfOrder;
-                        lastTokenWasAnAtom = false;
+                        lastTokenType = TokenType::NotAtom;
                         break;
                     }
                 }
@@ -839,7 +865,7 @@ private:
 
             default:
                 m_delegate.atomPatternCharacter(consumePossibleSurrogatePair<UnicodeParseContext::PatternCodePoint>());
-                lastTokenWasAnAtom = true;
+                lastTokenType = TokenType::Atom;
             }
 
             if (hasError(m_errorCode))
@@ -1202,7 +1228,7 @@ private:
         return std::nullopt;
     }
 
-    enum class ParenthesesType : uint8_t { Subpattern, Assertion };
+    enum class ParenthesesType : uint8_t { Subpattern, Assertion, LookbehindAssertion };
 
     Delegate& m_delegate;
     ErrorCode m_errorCode { ErrorCode::NoError };
@@ -1245,7 +1271,7 @@ private:
  *    void atomCharacterClassBuiltIn(BuiltInCharacterClassID classID, bool invert)
  *    void atomCharacterClassEnd()
  *    void atomParenthesesSubpatternBegin(bool capture = true, std::optional<String> groupName);
- *    void atomParentheticalAssertionBegin(bool invert = false);
+ *    void atomParentheticalAssertionBegin(bool invert, MatchDirection matchDirection);
  *    void atomParenthesesEnd();
  *    void atomBackReference(unsigned subpatternId);
  *    void atomNamedBackReference(const String& subpatternName);

@@ -599,7 +599,7 @@ void PageClientImpl::enterAcceleratedCompositingMode(const LayerTreeContext& lay
 {
     ASSERT(!layerTreeContext.isEmpty());
 
-    CALayer *renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID];
+    CALayer *renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID shouldPreserveFlip:NO];
     m_impl->enterAcceleratedCompositingWithRootLayer(renderLayer);
 }
 
@@ -607,7 +607,7 @@ void PageClientImpl::didFirstLayerFlush(const LayerTreeContext& layerTreeContext
 {
     ASSERT(!layerTreeContext.isEmpty());
 
-    CALayer *renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID];
+    CALayer *renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID shouldPreserveFlip:NO];
     m_impl->setAcceleratedCompositingRootLayer(renderLayer);
 }
 
@@ -620,7 +620,7 @@ void PageClientImpl::updateAcceleratedCompositingMode(const LayerTreeContext& la
 {
     ASSERT(!layerTreeContext.isEmpty());
 
-    CALayer *renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID];
+    CALayer *renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID shouldPreserveFlip:NO];
     m_impl->setAcceleratedCompositingRootLayer(renderLayer);
 }
 
@@ -996,6 +996,11 @@ bool PageClientImpl::effectiveAppearanceIsDark() const
 bool PageClientImpl::effectiveUserInterfaceLevelIsElevated() const
 {
     return m_impl->effectiveUserInterfaceLevelIsElevated();
+}
+
+bool PageClientImpl::useFormSemanticContext() const
+{
+    return m_impl->useFormSemanticContext();
 }
 
 void PageClientImpl::takeFocus(WebCore::FocusDirection direction)

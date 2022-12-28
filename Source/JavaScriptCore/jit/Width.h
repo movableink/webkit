@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "CPU.h"
+
 #include <wtf/PrintStream.h>
 
 namespace JSC {
@@ -81,6 +83,24 @@ ALWAYS_INLINE constexpr unsigned bytesForWidth(Width width)
     return 0;
 }
 
+ALWAYS_INLINE constexpr unsigned alignmentForWidth(Width width)
+{
+    switch (width) {
+    case Width8:
+        return 1;
+    case Width16:
+        return 2;
+    case Width32:
+        return 4;
+    case Width64:
+        return 8;
+    case Width128:
+        return 8;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return 0;
+}
+
 inline constexpr uint64_t mask(Width width)
 {
     switch (width) {
@@ -102,7 +122,14 @@ inline constexpr uint64_t mask(Width width)
 
 constexpr Width pointerWidth()
 {
-    if (sizeof(void*) == 8)
+    if (isAddress64Bit())
+        return Width64;
+    return Width32;
+}
+
+constexpr Width registerWidth()
+{
+    if (isRegister64Bit())
         return Width64;
     return Width32;
 }

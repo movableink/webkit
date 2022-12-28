@@ -129,6 +129,7 @@ public:
     virtual void dispatchPresentationCallbacksAfterFlushingLayers(const Vector<CallbackID>&) { }
 
     virtual bool shouldCoalesceVisualEditorStateUpdates() const { return false; }
+    virtual bool shouldSendWheelEventsToEventDispatcher() const { return false; }
 
     WebPageProxy& page() const { return m_webPageProxy; }
     WebProcessProxy& process() { return m_process.get(); }
@@ -165,7 +166,7 @@ private:
     virtual void didUpdateGeometry() { }
 
 #if PLATFORM(MAC)
-    RunLoop::Timer<DrawingAreaProxy> m_viewExposedRectChangedTimer;
+    RunLoop::Timer m_viewExposedRectChangedTimer;
     std::optional<WebCore::FloatRect> m_lastSentViewExposedRect;
 #endif // PLATFORM(MAC)
 #endif

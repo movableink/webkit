@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include <sys/types.h>
 #include <time.h>
 #include <utility>
 #include <wtf/Forward.h>
@@ -121,6 +122,7 @@ WTF_EXPORT_PRIVATE bool deleteEmptyDirectory(const String&);
 WTF_EXPORT_PRIVATE bool moveFile(const String& oldPath, const String& newPath);
 WTF_EXPORT_PRIVATE std::optional<uint64_t> fileSize(const String&); // Follows symlinks.
 WTF_EXPORT_PRIVATE std::optional<uint64_t> fileSize(PlatformFileHandle);
+WTF_EXPORT_PRIVATE std::optional<uint64_t> directorySize(const String&);
 WTF_EXPORT_PRIVATE std::optional<WallTime> fileModificationTime(const String&);
 WTF_EXPORT_PRIVATE std::optional<PlatformFileID> fileID(PlatformFileHandle);
 WTF_EXPORT_PRIVATE bool fileIDsAreEqual(std::optional<PlatformFileID>, std::optional<PlatformFileID>);
@@ -145,6 +147,7 @@ WTF_EXPORT_PRIVATE std::optional<FileType> fileTypeFollowingSymlinks(const Strin
 
 WTF_EXPORT_PRIVATE void setMetadataURL(const String& path, const String& urlString, const String& referrer = { });
 WTF_EXPORT_PRIVATE bool setExcludedFromBackup(const String&, bool); // Returns true if successful.
+WTF_EXPORT_PRIVATE bool markPurgeable(const String&);
 
 WTF_EXPORT_PRIVATE Vector<String> listDirectory(const String& path); // Returns file names, not full paths.
 

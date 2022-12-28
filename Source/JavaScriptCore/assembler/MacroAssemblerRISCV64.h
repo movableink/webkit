@@ -1784,10 +1784,12 @@ public:
     MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtractLaneUnsignedInt8);
     MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtractLaneFloat64);
     MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtractLaneFloat32);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplat8);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplat16);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplat32);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplat64);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplatInt8);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplatInt16);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplatInt32);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplatInt64);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplatFloat32);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplatFloat64);
     MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(compareFloatingPointVector);
     MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(compareIntegerVector);
     MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(compareIntegerVectorWithZero);
@@ -1829,7 +1831,7 @@ public:
     MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtaddPairwise);
     MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorAvgRound);
     MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorMulSat);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorDotProductInt32);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorDotProduct);
     MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSwizzle);
     MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorShuffle);
 
@@ -1992,6 +1994,16 @@ public:
                 m_assembler.jalInsn(RISCV64Registers::x1, Imm::J<0>());
             });
         return Call(label, Call::LinkableNear);
+    }
+
+    Call threadSafePatchableNearTailCall()
+    {
+        auto label = m_assembler.label();
+        m_assembler.nearCallPlaceholder(
+            [&] {
+                m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<0>());
+            });
+        return Call(label, Call::LinkableNearTail);
     }
 
     void ret()

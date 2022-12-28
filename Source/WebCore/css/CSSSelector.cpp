@@ -32,11 +32,13 @@
 #include "DeprecatedGlobalSettings.h"
 #include "HTMLNames.h"
 #include "SelectorPseudoTypeMap.h"
+#include <memory>
 #include <wtf/Assertions.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -163,6 +165,9 @@ SelectorSpecificity simpleSelectorSpecificity(const CSSSelector& simpleSelector)
             return SelectorSpecificityIncrement::ClassB + maxSpecificity(simpleSelector.selectorList());
         case CSSSelector::PseudoClassRelativeScope:
             return 0;
+        case CSSSelector::PseudoClassParent:
+            ASSERT_NOT_REACHED();
+            return { };
         default:
             return SelectorSpecificityIncrement::ClassB;
         }
@@ -463,7 +468,10 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
                 builder.append(":-webkit-full-page-media");
                 break;
 #if ENABLE(FULLSCREEN_API)
-            case CSSSelector::PseudoClassFullScreen:
+            case CSSSelector::PseudoClassFullscreen:
+                builder.append(":fullscreen");
+                break;
+            case CSSSelector::PseudoClassWebkitFullScreen:
                 builder.append(":-webkit-full-screen");
                 break;
             case CSSSelector::PseudoClassFullScreenAncestor:
@@ -474,9 +482,6 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
                 break;
             case CSSSelector::PseudoClassFullScreenControlsHidden:
                 builder.append(":-webkit-full-screen-controls-hidden");
-                break;
-            case CSSSelector::PseudoClassFullScreenParent:
-                builder.append(":-webkit-full-screen-parent");
                 break;
 #endif
 #if ENABLE(PICTURE_IN_PICTURE_API)
@@ -648,6 +653,9 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
             case CSSSelector::PseudoClassOptional:
                 builder.append(":optional");
                 break;
+            case CSSSelector::PseudoClassParent:
+                builder.append('&');
+                break;
             case CSSSelector::PseudoClassIs: {
                 builder.append(":is(");
                 cs->selectorList()->buildSelectorsText(builder);
@@ -703,6 +711,12 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
                 break;
             case CSSSelector::PseudoClassTarget:
                 builder.append(":target");
+                break;
+            case CSSSelector::PseudoClassUserInvalid:
+                builder.append(":user-invalid");
+                break;
+            case CSSSelector::PseudoClassUserValid:
+                builder.append(":user-valid");
                 break;
             case CSSSelector::PseudoClassValid:
                 builder.append(":valid");

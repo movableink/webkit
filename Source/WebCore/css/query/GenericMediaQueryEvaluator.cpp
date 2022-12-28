@@ -110,12 +110,12 @@ static EvaluationResult evaluateIntegerComparison(int number, const std::optiona
     return toEvaluationResult(compare(comparison->op, left, right));
 };
 
-static EvaluationResult evaluateResolutionComparison(double resolution, const std::optional<Comparison>& comparison, Side side)
+static EvaluationResult evaluateResolutionComparison(float resolution, const std::optional<Comparison>& comparison, Side side)
 {
     if (!comparison)
         return EvaluationResult::True;
 
-    auto expressionResolution = dynamicDowncast<CSSPrimitiveValue>(comparison->value.get())->doubleValue(CSSUnitType::CSS_DPPX);
+    auto expressionResolution = dynamicDowncast<CSSPrimitiveValue>(comparison->value.get())->floatValue(CSSUnitType::CSS_DPPX);
 
     auto left = side == Side::Left ? expressionResolution : resolution;
     auto right = side == Side::Left ? resolution : expressionResolution;
@@ -134,7 +134,7 @@ EvaluationResult evaluateLengthFeature(const Feature& feature, LayoutUnit length
     return leftResult & rightResult;
 };
 
-static EvaluationResult evaluateRatioComparison(double ratio, const std::optional<Comparison>& comparison, Side side)
+static EvaluationResult evaluateRatioComparison(FloatSize size, const std::optional<Comparison>& comparison, Side side)
 {
     if (!comparison)
         return EvaluationResult::True;
@@ -143,21 +143,26 @@ static EvaluationResult evaluateRatioComparison(double ratio, const std::optiona
         return EvaluationResult::Unknown;
 
     auto& ratioValue = downcast<CSSAspectRatioValue>(*comparison->value);
-    auto expressionRatio = ratioValue.numeratorValue() / ratioValue.denominatorValue();
 
-    auto left = side == Side::Left ? expressionRatio : ratio;
-    auto right = side == Side::Left ? ratio : expressionRatio;
+    // Ratio with zero denominator is infinite and compares greater to any value.
+    auto denominator = ratioValue.denominatorValue();
+
+    auto comparisonA = denominator ? size.height() * ratioValue.numeratorValue() : 1.f;
+    auto comparisonB = denominator ? size.width() * denominator : 0.f;
+
+    auto left = side == Side::Left ? comparisonA : comparisonB;
+    auto right = side == Side::Left ? comparisonB : comparisonA;
 
     return toEvaluationResult(compare(comparison->op, left, right));
 };
 
-EvaluationResult evaluateRatioFeature(const Feature& feature, double ratio)
+EvaluationResult evaluateRatioFeature(const Feature& feature, FloatSize size)
 {
     if (!feature.leftComparison && !feature.rightComparison)
-        return toEvaluationResult(!!ratio);
+        return toEvaluationResult(size.width());
 
-    auto leftResult = evaluateRatioComparison(ratio, feature.leftComparison, Side::Left);
-    auto rightResult = evaluateRatioComparison(ratio, feature.rightComparison, Side::Right);
+    auto leftResult = evaluateRatioComparison(size, feature.leftComparison, Side::Left);
+    auto rightResult = evaluateRatioComparison(size, feature.rightComparison, Side::Right);
 
     return leftResult & rightResult;
 }
@@ -198,7 +203,7 @@ EvaluationResult evaluateNumberFeature(const Feature& feature, double currentVal
     return leftResult & rightResult;
 }
 
-EvaluationResult evaluateResolutionFeature(const Feature& feature, double currentValue)
+EvaluationResult evaluateResolutionFeature(const Feature& feature, float currentValue)
 {
     if (!feature.leftComparison && !feature.rightComparison)
         return toEvaluationResult(!!currentValue);

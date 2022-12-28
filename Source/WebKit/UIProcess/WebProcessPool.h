@@ -551,7 +551,7 @@ private:
 
 #if ENABLE(GAMEPAD)
     void startedUsingGamepads(IPC::Connection&);
-    void stoppedUsingGamepads(IPC::Connection&);
+    void stoppedUsingGamepads(IPC::Connection&, CompletionHandler<void()>&&);
 
     void processStoppedUsingGamepads(WebProcessProxy&);
 #endif
@@ -595,7 +595,7 @@ private:
 #endif
 
 #if PLATFORM(COCOA)
-    static void lockdownModeConfigUpdateCallback(CFNotificationCenterRef, void* observer, CFStringRef name, const void* postingObject, CFDictionaryRef userInfo);
+    static void lockdownModeConfigurationUpdateCallback(CFNotificationCenterRef, void* observer, CFStringRef name, const void* postingObject, CFDictionaryRef userInfo);
 #endif
     
 #if PLATFORM(COCOA)
@@ -731,10 +731,10 @@ private:
     UserObservablePageCounter m_userObservablePageCounter;
     ProcessSuppressionDisabledCounter m_processSuppressionDisabledForPageCounter;
     HiddenPageThrottlingAutoIncreasesCounter m_hiddenPageThrottlingAutoIncreasesCounter;
-    RunLoop::Timer<WebProcessPool> m_hiddenPageThrottlingTimer;
+    RunLoop::Timer m_hiddenPageThrottlingTimer;
 
 #if ENABLE(GPU_PROCESS)
-    RunLoop::Timer<WebProcessPool> m_resetGPUProcessCrashCountTimer;
+    RunLoop::Timer m_resetGPUProcessCrashCountTimer;
     unsigned m_recentGPUProcessCrashCount { 0 };
 #endif
 

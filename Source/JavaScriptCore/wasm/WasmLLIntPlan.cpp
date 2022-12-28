@@ -39,6 +39,7 @@
 #include "WasmCallee.h"
 #include "WasmLLIntGenerator.h"
 #include "WasmTypeDefinitionInlines.h"
+#include <wtf/GraphNodeWorklist.h>
 
 namespace JSC { namespace Wasm {
 
@@ -97,6 +98,14 @@ void LLIntPlan::compileFunction(uint32_t functionIndex)
         return;
     }
 
+    Locker locker { m_lock };
+
+    for (auto successor : parseAndCompileResult->get()->tailCallSuccessors())
+        addTailCallEdge(m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex(), successor);
+
+    if (parseAndCompileResult->get()->tailCallClobbersInstance())
+        m_moduleInformation->addClobberingTailCall(m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex());
+
     m_wasmInternalFunctions[functionIndex] = WTFMove(*parseAndCompileResult);
 }
 
@@ -116,7 +125,11 @@ void LLIntPlan::didCompleteCompilation()
                 BytecodeDumper::dumpBlock(m_wasmInternalFunctions[i].get(), m_moduleInformation, WTF::dataFile());
 
             m_calleesVector[i] = LLIntCallee::create(*m_wasmInternalFunctions[i], functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace));
+            ASSERT(!m_calleesVector[i]->entrypoint());
             entrypoints[i] = jit.label();
+            if (m_moduleInformation->isSIMDFunction(i))
+                JIT_COMMENT(jit, "SIMD function entrypoint");
+            JIT_COMMENT(jit, "Entrypoint for function[", i, "]");
 #if CPU(X86_64)
             CCallHelpers::Address calleeSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register)) - sizeof(CPURegister));
 #elif CPU(ARM64) || CPU(RISCV64) || CPU(ARM)
@@ -139,11 +152,16 @@ void LLIntPlan::didCompleteCompilation()
 
         for (unsigned i = 0; i < functionCount; ++i) {
             m_calleesVector[i]->setEntrypoint(linkBuffer.locationOf<WasmEntryPtrTag>(entrypoints[i]));
-            linkBuffer.link<JITThunkPtrTag>(jumps[i], CodeLocationLabel<JITThunkPtrTag>(LLInt::wasmFunctionEntryThunk().code()));
+            if (m_moduleInformation->isSIMDFunction(i))
+                linkBuffer.link<JITThunkPtrTag>(jumps[i], CodeLocationLabel<JITThunkPtrTag>(LLInt::wasmFunctionEntryThunkSIMD().code()));
+            else
+                linkBuffer.link<JITThunkPtrTag>(jumps[i], CodeLocationLabel<JITThunkPtrTag>(LLInt::wasmFunctionEntryThunk().code()));
         }
 
         m_entryThunks = FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "Wasm LLInt entry thunks");
         m_callees = m_calleesVector.data();
+        if (!m_moduleInformation->clobberingTailCalls().isEmpty())
+            computeTransitiveTailCalls();
     }
 
     if (m_compilerMode == CompilerMode::Validation)
@@ -231,6 +249,34 @@ bool LLIntPlan::didReceiveFunctionData(unsigned, const FunctionData&)
     return true;
 }
 
+void LLIntPlan::addTailCallEdge(uint32_t callerIndex, uint32_t calleeIndex)
+{
+    auto it = m_tailCallGraph.find(calleeIndex);
+    if (it == m_tailCallGraph.end())
+        it = m_tailCallGraph.add(calleeIndex, TailCallGraph::MappedType()).iterator;
+    it->value.add(callerIndex);
+}
+
+void LLIntPlan::computeTransitiveTailCalls() const
+{
+    GraphNodeWorklist<uint32_t, HashSet<uint32_t, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>> worklist;
+
+    for (auto clobberingTailCall : m_moduleInformation->clobberingTailCalls())
+        worklist.push(clobberingTailCall);
+
+    while (worklist.notEmpty()) {
+        auto node = worklist.pop();
+        auto it = m_tailCallGraph.find(node);
+        if (it == m_tailCallGraph.end())
+            continue;
+        for (const auto &successor : it->value) {
+            if (worklist.saw(successor))
+                continue;
+            m_moduleInformation->addClobberingTailCall(successor);
+            worklist.push(successor);
+        }
+    }
+}
 } } // namespace JSC::Wasm
 
 #endif // ENABLE(WEBASSEMBLY)

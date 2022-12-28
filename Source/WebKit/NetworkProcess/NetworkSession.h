@@ -47,8 +47,9 @@
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
 #include <wtf/Seconds.h>
+#include <wtf/ThreadSafeWeakHashSet.h>
+#include <wtf/UUID.h>
 #include <wtf/UniqueRef.h>
-#include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -112,11 +113,11 @@ public:
     virtual void clearAlternativeServices(WallTime) { }
 
     PAL::SessionID sessionID() const { return m_sessionID; }
+    std::optional<UUID> dataStoreIdentifier() const { return m_dataStoreIdentifier; }
     NetworkProcess& networkProcess() { return m_networkProcess; }
     WebCore::NetworkStorageSession* networkStorageSession() const;
 
     void registerNetworkDataTask(NetworkDataTask&);
-    void unregisterNetworkDataTask(NetworkDataTask&);
 
     void destroyPrivateClickMeasurementStore(CompletionHandler<void()>&&);
 
@@ -260,8 +261,9 @@ protected:
 #endif
 
     PAL::SessionID m_sessionID;
+    std::optional<UUID> m_dataStoreIdentifier;
     Ref<NetworkProcess> m_networkProcess;
-    WeakHashSet<NetworkDataTask> m_dataTaskSet;
+    ThreadSafeWeakHashSet<NetworkDataTask> m_dataTaskSet;
 #if ENABLE(TRACKING_PREVENTION)
     String m_resourceLoadStatisticsDirectory;
     RefPtr<WebResourceLoadStatisticsStore> m_resourceLoadStatistics;

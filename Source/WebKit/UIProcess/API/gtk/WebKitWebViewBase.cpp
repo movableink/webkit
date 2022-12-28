@@ -313,7 +313,7 @@ struct _WebKitWebViewBasePrivate {
     // View State.
     OptionSet<ActivityState::Flag> activityState;
     OptionSet<ActivityState::Flag> activityStateFlagsToUpdate;
-    RunLoop::Timer<WebKitWebViewBasePrivate> updateActivityStateTimer;
+    RunLoop::Timer updateActivityStateTimer;
 
 #if ENABLE(FULLSCREEN_API)
     bool fullScreenModeActive { false };
@@ -334,7 +334,7 @@ struct _WebKitWebViewBasePrivate {
 #if GTK_CHECK_VERSION(3, 24, 0)
     GtkWidget* emojiChooser;
     CompletionHandler<void(String)> emojiChooserCompletionHandler;
-    RunLoop::Timer<WebKitWebViewBasePrivate> releaseEmojiChooserTimer;
+    RunLoop::Timer releaseEmojiChooserTimer;
 #endif
 
     // Touch gestures state
@@ -2716,6 +2716,8 @@ RefPtr<WebKit::ViewSnapshot> webkitWebViewBaseTakeViewSnapshot(WebKitWebViewBase
         gtk_snapshot_pop(snapshot.get());
 
     GRefPtr<GskRenderNode> renderNode = adoptGRef(gtk_snapshot_to_node(snapshot.get()));
+    if (!renderNode)
+        return nullptr;
 
     graphene_rect_t viewport = { 0, 0, static_cast<float>(size.width()), static_cast<float>(size.height()) };
     GdkTexture* texture = gsk_renderer_render_texture(renderer, renderNode.get(), &viewport);

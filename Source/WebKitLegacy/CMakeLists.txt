@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.16)
 
 include(WebKitCommon)
 include(target/TargetWTF)
@@ -32,22 +32,30 @@ set(WebKitLegacy_PRIVATE_INCLUDE_DIRECTORIES
     "${WebKitLegacy_DERIVED_SOURCES_DIR}"
 )
 
-set(WebKitLegacy_PRIVATE_LIBRARIES
-    WebKit::JavaScriptCore
-    WebKit::PAL
-    WebKit::WebCore
+set(WebKitLegacy_FRAMEWORKS
+    JavaScriptCore
+    PAL
+    WTF
+    WebCore
 )
+if (NOT USE_SYSTEM_MALLOC)
+    list(APPEND WebKit_FRAMEWORKS bmalloc)
+endif ()
+
+set(WebKitLegacy_INTERFACE_LIBRARIES WebKitLegacy)
+set(WebKitLegacy_INTERFACE_INCLUDE_DIRECTORIES ${WebKitLegacy_FRAMEWORK_HEADERS_DIR})
+set(WebKitLegacy_INTERFACE_DEPENDENCIES WebKitLegacy_CopyHeaders)
 
 WEBKIT_FRAMEWORK_DECLARE(WebKitLegacy)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
 if (MSVC)
     if (NOT ${PORT} STREQUAL "Qt")
-        WEBKIT_ADD_PRECOMPILED_HEADER("WebKitPrefix.h" "win/WebKitPrefix.cpp" WebKitLegacy_SOURCES)
+        target_precompile_headers(WebKitLegacy PRIVATE win/WebKitPrefix.h)
         list(APPEND WebKitLegacy_SOURCES win/WebKit.resources/WebKit.rc)
         add_definitions(/DWEBKIT_EXPORTS /DFRAMEWORK_NAME=WebKitLegacy)
     else ()
-        WEBKIT_ADD_PRECOMPILED_HEADER("WebKitPrefix.h" "qt/WebKitPrefix.cpp" WebKitLegacy_SOURCES)
+        target_precompile_headers(WebKitLegacy PRIVATE qt/WebKitPrefix.h)
     endif ()
 endif ()
 
@@ -99,6 +107,11 @@ endif ()
 if (TARGET WebKitLegacyGUID)
     add_dependencies(WebKitLegacy WebKitLegacyGUID)
 endif ()
+WEBKIT_COPY_FILES(WebKitLegacy_CopyHeaders
+    DESTINATION ${WebKitLegacy_FRAMEWORK_HEADERS_DIR}/WebKitLegacy
+    FILES ${WebKitLegacy_PUBLIC_FRAMEWORK_HEADERS}
+    FLATTENED
+)
 
 if (APPLE AND NOT ${PORT} STREQUAL "Qt")
     set_target_properties(WebKitLegacy PROPERTIES LINK_FLAGS "-umbrella WebKit")

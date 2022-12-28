@@ -29,6 +29,7 @@
 #include "FilterEffect.h"
 #include "FilterImage.h"
 #include "FilterResults.h"
+#include "FilterStyle.h"
 #include "ImageBuffer.h"
 
 namespace WebCore {
@@ -83,31 +84,17 @@ bool Filter::clampFilterRegionIfNeeded()
 
 RenderingMode Filter::renderingMode() const
 {
-    if (m_filterRenderingMode == FilterRenderingMode::Software)
-        return RenderingMode::Unaccelerated;
-    
-    if (m_filterRenderingMode == FilterRenderingMode::Accelerated)
+    if (m_filterRenderingModes.contains(FilterRenderingMode::Accelerated))
         return RenderingMode::Accelerated;
     
-    ASSERT_NOT_REACHED();
+    ASSERT(m_filterRenderingModes.contains(FilterRenderingMode::Software));
     return RenderingMode::Unaccelerated;
 }
 
-void Filter::setFilterRenderingMode(OptionSet<FilterRenderingMode> preferredFilterRenderingModes)
+void Filter::setFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes)
 {
-    auto filterRenderingModes = preferredFilterRenderingModes & supportedFilterRenderingModes();
-
-    if (filterRenderingModes.contains(FilterRenderingMode::GraphicsContext)) {
-        setFilterRenderingMode(FilterRenderingMode::GraphicsContext);
-        return;
-    }
-
-    if (filterRenderingModes.contains(FilterRenderingMode::Accelerated)) {
-        setFilterRenderingMode(FilterRenderingMode::Accelerated);
-        return;
-    }
-
-    setFilterRenderingMode(FilterRenderingMode::Software);
+    m_filterRenderingModes = preferredFilterRenderingModes & supportedFilterRenderingModes();
+    ASSERT(m_filterRenderingModes.contains(FilterRenderingMode::Software));
 }
 
 RefPtr<FilterImage> Filter::apply(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, FilterResults& results)
@@ -127,6 +114,18 @@ RefPtr<FilterImage> Filter::apply(ImageBuffer* sourceImage, const FloatRect& sou
 
     result->correctPremultipliedPixelBuffer();
     result->transformToColorSpace(DestinationColorSpace::SRGB());
+    return result;
+}
+
+FilterStyleVector Filter::createFilterStyles(const FloatRect& sourceImageRect) const
+{
+    auto input = FilterStyle { std::nullopt, m_filterRegion, sourceImageRect };
+    auto result = createFilterStyles(input);
+    if (result.isEmpty())
+        return { };
+
+    result.reverse();
+    result.shrinkToFit();
     return result;
 }
 

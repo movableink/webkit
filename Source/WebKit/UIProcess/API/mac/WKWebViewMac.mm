@@ -29,9 +29,7 @@
 #if PLATFORM(MAC)
 
 #import "AppKitSPI.h"
-#import "WKContentViewMac.h"
 #import "WKSafeBrowsingWarning.h"
-#import "WKScrollViewMac.h"
 #import "WKTextFinderClient.h"
 #import <WebKit/WKUIDelegatePrivate.h>
 #import "WebBackForwardList.h"
@@ -41,6 +39,7 @@
 #import "_WKFrameHandleInternal.h"
 #import "_WKHitTestResultInternal.h"
 #import <pal/spi/mac/NSTextFinderSPI.h>
+#import <pal/spi/mac/NSViewSPI.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
 _WKOverlayScrollbarStyle toAPIScrollbarStyle(std::optional<WebCore::ScrollbarOverlayStyle> coreScrollbarStyle)
@@ -150,6 +149,23 @@ std::optional<WebCore::ScrollbarOverlayStyle> toCoreScrollbarStyle(_WKOverlayScr
     if (_impl)
         _impl->setUserInterfaceLayoutDirection(userInterfaceLayoutDirection);
 }
+
+#if USE(NSVIEW_SEMANTICCONTEXT)
+
+- (void)_setSemanticContext:(NSViewSemanticContext)semanticContext
+{
+    auto wasUsingFormSemanticContext = _impl ? _impl->useFormSemanticContext() : false;
+
+    [super _setSemanticContext:semanticContext];
+
+    if (!_impl)
+        return;
+
+    if (wasUsingFormSemanticContext != _impl->useFormSemanticContext())
+        _impl->semanticContextDidChange();
+}
+
+#endif
 
 ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (void)renewGState
@@ -1218,18 +1234,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     _impl->insertText(string, replacementRange);
 }
 
-#pragma mark - WKScrollViewDelegate
-
-- (void)scrollViewDidScroll:(NSScrollView *)scrollView
-{
-    // Only called with UI-side compositing.
-}
-
-- (void)scrollViewContentInsetsDidChange:(NSScrollView *)scrollView
-{
-    // Only called with UI-side compositing.
-}
-
 #pragma mark - QLPreviewPanelController
 
 - (BOOL)acceptsPreviewPanelControl:(QLPreviewPanel *)panel
@@ -1245,22 +1249,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 - (void)endPreviewPanelControl:(QLPreviewPanel *)panel
 {
     _impl->endPreviewPanelControl(panel);
-}
-
-#pragma mark -
-
-- (void)_setupScrollAndContentViews
-{
-    if (!_impl->isUsingUISideCompositing())
-        return;
-
-    _scrollView = adoptNS([[WKScrollView alloc] initWithFrame:[self bounds]]);
-    [_scrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-    [self addSubview:_scrollView.get() positioned:NSWindowBelow relativeTo:nil];
-
-    // The content view will get resized to fit the content.
-    [_scrollView setDocumentView:_contentView.get()];
-    [_scrollView setDelegate:self];
 }
 
 @end

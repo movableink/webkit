@@ -162,12 +162,18 @@ public:
             static_cast<unsigned>(WTF::roundUpToMultipleOf(stackAlignmentBytes(), size)));
     }
 
-    unsigned frameSize() const { return m_frameSize; }
+    unsigned frameSize() const
+    {
+        ASSERT(!((m_frameSize + sizeof(CallerFrameAndPC)) % stackAlignmentBytes()));
+        return m_frameSize;
+    }
 
     // Only phases that do stack allocation are allowed to set this. Currently, only
     // Air::allocateStack() does this.
     void setFrameSize(unsigned frameSize)
     {
+        // 'aligned SP' + 'functionPrologue' + 'm_frameSize' should yield an aligned SP.
+        ASSERT(!((frameSize + sizeof(CallerFrameAndPC)) % stackAlignmentBytes()));
         m_frameSize = frameSize;
     }
 
@@ -344,6 +350,8 @@ public:
     bool shouldPreserveB3Origins() const { return m_preserveB3Origins; }
     void forcePreservationOfB3Origins() { m_preserveB3Origins = true; }
 
+    bool usesSIMD() const;
+
     void setDisassembler(std::unique_ptr<Disassembler>&& disassembler)
     {
         m_disassembler = WTFMove(disassembler);
@@ -394,7 +402,7 @@ private:
     CCallSpecial* m_cCallSpecial { nullptr };
     unsigned m_numGPTmps { 0 };
     unsigned m_numFPTmps { 0 };
-    unsigned m_frameSize { 0 };
+    unsigned m_frameSize { stackAdjustmentForAlignment() };
     unsigned m_callArgAreaSize { 0 };
     unsigned m_optLevel { defaultOptLevel() };
     bool m_stackIsAllocated { false };

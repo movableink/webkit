@@ -132,7 +132,7 @@ public:
     WEBCORE_EXPORT void setCachePolicy(ResourceRequestCachePolicy cachePolicy);
     
     WEBCORE_EXPORT double timeoutInterval() const; // May return 0 when using platform default.
-    void setTimeoutInterval(double timeoutInterval);
+    WEBCORE_EXPORT void setTimeoutInterval(double);
     
     WEBCORE_EXPORT const URL& firstPartyForCookies() const;
     WEBCORE_EXPORT void setFirstPartyForCookies(const URL&);
@@ -212,7 +212,7 @@ public:
     bool platformRequestUpdated() const { return m_platformRequestUpdated; }
 
     WEBCORE_EXPORT bool allowCookies() const;
-    void setAllowCookies(bool allowCookies);
+    WEBCORE_EXPORT void setAllowCookies(bool);
 
     WEBCORE_EXPORT ResourceLoadPriority priority() const;
     WEBCORE_EXPORT void setPriority(ResourceLoadPriority);
@@ -322,7 +322,7 @@ WEBCORE_EXPORT void initializeHTTPConnectionSettingsOnStartup();
 
 namespace WTF {
 
-template<> struct EnumTraits<WebCore::ResourceRequestCachePolicy> {
+template<> struct EnumTraitsForPersistence<WebCore::ResourceRequestCachePolicy> {
     using values = EnumValues<
         WebCore::ResourceRequestCachePolicy,
         WebCore::ResourceRequestCachePolicy::UseProtocolCachePolicy,
@@ -334,7 +334,7 @@ template<> struct EnumTraits<WebCore::ResourceRequestCachePolicy> {
     >;
 };
 
-template<> struct EnumTraits<WebCore::ResourceRequestBase::SameSiteDisposition> {
+template<> struct EnumTraitsForPersistence<WebCore::ResourceRequestBase::SameSiteDisposition> {
     using values = EnumValues<
         WebCore::ResourceRequestBase::SameSiteDisposition,
         WebCore::ResourceRequestBase::SameSiteDisposition::Unspecified,
@@ -343,7 +343,7 @@ template<> struct EnumTraits<WebCore::ResourceRequestBase::SameSiteDisposition> 
     >;
 };
 
-template<> struct EnumTraits<WebCore::ResourceRequestRequester> {
+template<> struct EnumTraitsForPersistence<WebCore::ResourceRequestRequester> {
     using values = EnumValues<
         WebCore::ResourceRequestRequester,
         WebCore::ResourceRequestRequester::Unspecified,

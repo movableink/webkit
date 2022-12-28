@@ -24,7 +24,7 @@
 - path: wasm/stress
   cmd: runWebAssemblySuite unless parseRunCommands
 - path: wasm/wast-tests/
-  cmd: runWebAssemblyWithHarness
+  cmd: runWebAssemblyWithHarness unless parseRunCommands
 - path: wasm/js-api/
   cmd: runWebAssemblySuite unless parseRunCommands
 - path: wasm/noJIT/
@@ -48,7 +48,9 @@
 - path: wasm/self-test/
   cmd: runWebAssemblySuite unless parseRunCommands
 - path: wasm/v8/
-  cmd: runWebAssemblySuite(:no_module, "mjsunit.js") unless parseRunCommands
+  cmd: runV8WebAssemblySuite(:no_module, "mjsunit.js") unless parseRunCommands
+- path: wasm/v8/regress/
+  cmd: runV8WebAssemblySuite(:no_module, "mjsunit.js") unless parseRunCommands
 - path: wasm/branch-hints
   cmd: runWebAssemblySuite unless parseRunCommands
 
@@ -415,6 +417,13 @@
   cmd: runWebAssemblySIMDSpecTest :normal
 - path: wasm/spec-tests/simd_store8_lane.wast.js
   cmd: runWebAssemblySIMDSpecTest :normal
+
+- path: wasm/tail-call
+  cmd: if $architecture == 'arm'; skip; else runWebAssemblySuite("--useWebAssemblyTailCalls=true"); end
+- path: wasm/tail-call-spec-tests/tail_call.wast.js
+  cmd: if $architecture == 'arm'; skip; else runWebAssemblyTailCallSpecTest :normal; end
+- path: wasm/tail-call-spec-tests/tail_call_indirect.wast.js
+  cmd: if $architecture == 'arm'; skip; else runWebAssemblyTailCallSpecTest :normal; end
 
 - path: wasm/modules/run-from-wasm.wasm
   cmd: runWebAssembly

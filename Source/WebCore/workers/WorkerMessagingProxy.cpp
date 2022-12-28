@@ -29,6 +29,7 @@
 #include "WorkerMessagingProxy.h"
 
 #include "CacheStorageProvider.h"
+#include "Chrome.h"
 #include "ContentSecurityPolicy.h"
 #include "DOMWindow.h"
 #include "DedicatedWorkerGlobalScope.h"
@@ -139,16 +140,27 @@ void WorkerMessagingProxy::startWorkerGlobalScope(const URL& scriptURL, PAL::Ses
 
     bool isOnline = parentWorkerGlobalScope ? parentWorkerGlobalScope->isOnline() : platformStrategies()->loaderStrategy()->isOnLine();
 
+    m_scriptURL = scriptURL;
+
     WorkerParameters params { scriptURL, m_scriptExecutionContext->url(), name, identifier, WTFMove(initializationData.userAgent), isOnline, contentSecurityPolicyResponseHeaders, shouldBypassMainWorldContentSecurityPolicy, crossOriginEmbedderPolicy, timeOrigin, referrerPolicy, workerType, credentials, m_scriptExecutionContext->settingsValues(), WorkerThreadMode::CreateNewThread, sessionID,
 #if ENABLE(SERVICE_WORKER)
         WTFMove(initializationData.serviceWorkerData),
 #endif
         initializationData.clientIdentifier.value_or(ScriptExecutionContextIdentifier { })
     };
-    auto thread = DedicatedWorkerThread::create(params, sourceCode, *this, *this, *this, startMode, m_scriptExecutionContext->topOrigin(), proxy, socketProvider, runtimeFlags);
+    auto thread = DedicatedWorkerThread::create(params, sourceCode, *this, *this, *this, *this, startMode, m_scriptExecutionContext->topOrigin(), proxy, socketProvider, runtimeFlags);
 
-    if (parentWorkerGlobalScope)
+    if (parentWorkerGlobalScope) {
         parentWorkerGlobalScope->thread().addChildThread(thread);
+        if (parentWorkerGlobalScope->thread().workerClient())
+            thread->setWorkerClient(parentWorkerGlobalScope->thread().workerClient()->clone(thread.get()));
+    } else if (is<Document>(m_scriptExecutionContext.get())) {
+        auto& document = downcast<Document>(*m_scriptExecutionContext);
+        if (auto* page = document.page()) {
+            if (auto workerClient = page->chrome().createWorkerClient(thread.get()))
+                thread->setWorkerClient(WTFMove(workerClient));
+        }
+    }
 
     workerThreadCreated(thread.get());
     thread->start();
@@ -424,6 +436,27 @@ void WorkerMessagingProxy::terminateWorkerGlobalScope()
         m_workerThread->stop(nullptr);
     else
         m_scriptExecutionContext = nullptr;
+}
+
+void WorkerMessagingProxy::setAppBadge(std::optional<uint64_t> badge)
+{
+    ASSERT(!isMainThread());
+
+    if (!m_scriptExecutionContext)
+        return;
+
+    postTaskToLoader([badge = WTFMove(badge), this, protectedThis = Ref { *this }] (auto& context) {
+        ASSERT(isMainThread());
+
+        if (m_scriptURL.isEmpty())
+            return;
+
+        auto* document = downcast<Document>(&context);
+        if (!document || !document->page())
+            return;
+
+        document->page()->badgeClient().setAppBadge(nullptr, SecurityOriginData::fromURL(m_scriptURL), badge);
+    });
 }
 
 } // namespace WebCore

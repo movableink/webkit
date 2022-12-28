@@ -90,39 +90,6 @@ macro(WEBKIT_ADD_SOURCE_DEPENDENCIES _source _deps)
     unset(_tmp)
 endmacro()
 
-macro(WEBKIT_ADD_PRECOMPILED_HEADER _header _cpp _source)
-    if (MSVC AND (ENABLE_PCH OR NOT PORT STREQUAL "Qt"))
-        get_filename_component(PrecompiledBasename ${_cpp} NAME_WE)
-        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${_source}")
-        set(PrecompiledBinary "${CMAKE_CURRENT_BINARY_DIR}/${_source}/${PrecompiledBasename}.pch")
-        set(_sources ${${_source}})
-
-        # clang-cl requires /FI with /Yc
-        if (COMPILER_IS_CLANG_CL)
-            set_source_files_properties(${_cpp}
-                PROPERTIES COMPILE_FLAGS "/Yc\"${_header}\" /Fp\"${PrecompiledBinary}\" /FI\"${_header}\""
-                OBJECT_OUTPUTS "${PrecompiledBinary}")
-        else ()
-            set_source_files_properties(${_cpp}
-                PROPERTIES COMPILE_FLAGS "/Yc\"${_header}\" /Fp\"${PrecompiledBinary}\""
-                OBJECT_OUTPUTS "${PrecompiledBinary}")
-        endif ()
-        set_source_files_properties(${_sources}
-            PROPERTIES COMPILE_FLAGS "/Yu\"${_header}\" /FI\"${_header}\" /Fp\"${PrecompiledBinary}\"")
-
-        foreach (_src ${_sources})
-            WEBKIT_ADD_SOURCE_DEPENDENCIES(${_src} ${PrecompiledBinary})
-        endforeach ()
-
-        list(APPEND ${_source} ${_cpp})
-    endif ()
-    if (MSVC AND NOT ENABLE_PCH AND PORT STREQUAL "Qt")
-        set(_sources ${${_source}})
-        set_source_files_properties(${_sources} PROPERTIES COMPILE_FLAGS "/FI\"${_header}\"")
-    endif ()
-    #FIXME: Add support for Xcode.
-endmacro()
-
 macro(WEBKIT_FRAMEWORK_DECLARE _target)
     # add_library() without any source files triggers CMake warning
     # Addition of dummy "source" file does not result in any changes in generated build.ninja file
@@ -344,14 +311,13 @@ macro(WEBKIT_FRAMEWORK _target)
         endif ()
         install(TARGETS ${_target} FRAMEWORK DESTINATION ${LIB_INSTALL_DIR})
     endif ()
-endmacro()
 
-# FIXME Move into WEBKIT_FRAMEWORK after all libraries are using this macro
-macro(WEBKIT_FRAMEWORK_TARGET _target)
     add_library(${_target}_PostBuild INTERFACE)
     target_link_libraries(${_target}_PostBuild INTERFACE ${${_target}_INTERFACE_LIBRARIES})
     target_include_directories(${_target}_PostBuild INTERFACE ${${_target}_INTERFACE_INCLUDE_DIRECTORIES})
-    add_dependencies(${_target}_PostBuild ${${_target}_INTERFACE_DEPENDENCIES})
+    if (${_target}_INTERFACE_DEPENDENCIES)
+        add_dependencies(${_target}_PostBuild ${${_target}_INTERFACE_DEPENDENCIES})
+    endif ()
     if (NOT ${_target}_LIBRARY_TYPE STREQUAL "SHARED")
         target_compile_definitions(${_target}_PostBuild INTERFACE "STATICALLY_LINKED_WITH_${_target}")
     endif ()
@@ -410,70 +376,6 @@ macro(WEBKIT_WRAP_EXECUTABLE _target)
     set(${_target}_LIBRARIES ${opt_LIBRARIES})
     set(${_target}_DEPENDENCIES ${_wrapped_target_name})
 endmacro()
-
-macro(WEBKIT_CREATE_FORWARDING_HEADER _target_directory _file)
-    get_filename_component(_source_path "${CMAKE_SOURCE_DIR}/Source/" ABSOLUTE)
-    get_filename_component(_absolute "${_file}" ABSOLUTE)
-    get_filename_component(_name "${_file}" NAME)
-    set(_target_filename "${_target_directory}/${_name}")
-
-    # Try to make the path in the forwarding header relative to the Source directory
-    # so that these forwarding headers are compatible with the ones created by the
-    # WebKit2 generate-forwarding-headers script.
-    string(REGEX REPLACE "${_source_path}/" "" _relative ${_absolute})
-
-    set(_content "#include \"${_relative}\"\n")
-
-    if (EXISTS "${_target_filename}")
-        file(READ "${_target_filename}" _old_content)
-    endif ()
-
-    if (NOT _old_content STREQUAL _content)
-        file(WRITE "${_target_filename}" "${_content}")
-    endif ()
-endmacro()
-
-function(WEBKIT_MAKE_FORWARDING_HEADERS framework)
-    set(options FLATTENED)
-    set(oneValueArgs DESTINATION TARGET_NAME)
-    set(multiValueArgs DIRECTORIES FILES)
-    cmake_parse_arguments(opt "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-    set(headers ${opt_FILES})
-    file(MAKE_DIRECTORY ${opt_DESTINATION})
-    foreach (dir IN LISTS opt_DIRECTORIES)
-        file(GLOB files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${dir}/*.h)
-        list(APPEND headers ${files})
-    endforeach ()
-    set(fwd_headers)
-    foreach (header IN LISTS headers)
-        if (IS_ABSOLUTE ${header})
-            set(src_header ${header})
-        else ()
-            set(src_header ${CMAKE_CURRENT_SOURCE_DIR}/${header})
-        endif ()
-        if (opt_FLATTENED)
-            get_filename_component(header_filename ${header} NAME)
-            set(fwd_header ${opt_DESTINATION}/${header_filename})
-        else ()
-            get_filename_component(header_dir ${header} DIRECTORY)
-            file(MAKE_DIRECTORY ${opt_DESTINATION}/${header_dir})
-            set(fwd_header ${opt_DESTINATION}/${header})
-        endif ()
-        add_custom_command(OUTPUT ${fwd_header}
-            COMMAND ${CMAKE_COMMAND} -E copy ${src_header} ${fwd_header}
-            MAIN_DEPENDENCY ${header}
-            VERBATIM
-        )
-        list(APPEND fwd_headers ${fwd_header})
-    endforeach ()
-    if (opt_TARGET_NAME)
-        set(target_name ${opt_TARGET_NAME})
-    else ()
-        set(target_name ${framework}ForwardingHeaders)
-    endif ()
-    add_custom_target(${target_name} DEPENDS ${fwd_headers})
-    add_dependencies(${framework} ${target_name})
-endfunction()
 
 function(WEBKIT_COPY_FILES target_name)
     set(options FLATTENED)

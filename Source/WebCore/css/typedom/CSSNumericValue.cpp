@@ -67,19 +67,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(CSSNumericValue);
         return resultOrException.releaseException(); \
     auto resultVariable = resultOrException.releaseReturnValue()
 
-static CalcOperator canonicalOperator(CalcOperator calcOperator)
-{
-    if (calcOperator == CalcOperator::Add || calcOperator == CalcOperator::Subtract)
-        return CalcOperator::Add;
-    return CalcOperator::Multiply;
-}
-
-static bool canCombineNodes(const CSSCalcOperationNode& root, const CSSCalcExpressionNode& node)
-{
-    auto operationNode = dynamicDowncast<CSSCalcOperationNode>(node);
-    return operationNode && canonicalOperator(root.calcOperator()) == canonicalOperator(operationNode->calcOperator());
-}
-
 static Ref<CSSNumericValue> negateOrInvertIfRequired(CalcOperator parentOperator, Ref<CSSNumericValue>&& value)
 {
     if (parentOperator == CalcOperator::Subtract)
@@ -100,8 +87,6 @@ template<typename T> static ExceptionOr<Ref<CSSNumericValue>> convertToException
     return static_reference_cast<CSSNumericValue>(WTFMove(input));
 }
 
-static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalcExpressionNode&);
-
 static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalcPrimitiveValueNode& root)
 {
     auto unit = root.primitiveType();
@@ -110,13 +95,13 @@ static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalcPrimit
 
 static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalcNegateNode& root)
 {
-    CSS_NUMERIC_RETURN_IF_EXCEPTION(child, reifyMathExpression(root.child()));
+    CSS_NUMERIC_RETURN_IF_EXCEPTION(child, CSSNumericValue::reifyMathExpression(root.child()));
     return convertToExceptionOrNumericValue(CSSMathNegate::create(WTFMove(child)));
 }
 
 static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalcInvertNode& root)
 {
-    CSS_NUMERIC_RETURN_IF_EXCEPTION(child, reifyMathExpression(root.child()));
+    CSS_NUMERIC_RETURN_IF_EXCEPTION(child, CSSNumericValue::reifyMathExpression(root.child()));
     return convertToExceptionOrNumericValue(CSSMathInvert::create(WTFMove(child)));
 }
 
@@ -125,7 +110,7 @@ static ExceptionOr<Vector<Ref<CSSNumericValue>>> reifyMathExpressions(const Vect
     Vector<Ref<CSSNumericValue>> values;
     values.reserveInitialCapacity(nodes.size());
     for (auto& node : nodes) {
-        CSS_NUMERIC_RETURN_IF_EXCEPTION(value, reifyMathExpression(node));
+        CSS_NUMERIC_RETURN_IF_EXCEPTION(value, CSSNumericValue::reifyMathExpression(node));
         values.uncheckedAppend(WTFMove(value));
     }
     return values;
@@ -147,37 +132,28 @@ static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalcOperat
     }
 
     Vector<Ref<CSSNumericValue>> values;
-    const CSSCalcExpressionNode* currentNode = &root;
-    do {
-        auto* binaryOperation = downcast<CSSCalcOperationNode>(currentNode);
-        ASSERT(binaryOperation->children().size() == 2);
-        CSS_NUMERIC_RETURN_IF_EXCEPTION(value, reifyMathExpression(binaryOperation->children()[1].get()));
-        values.append(negateOrInvertIfRequired(binaryOperation->calcOperator(), WTFMove(value)));
-        currentNode = binaryOperation->children()[0].ptr();
-    } while (canCombineNodes(root, *currentNode));
-
-    ASSERT(currentNode);
-    CSS_NUMERIC_RETURN_IF_EXCEPTION(reifiedCurrentNode, reifyMathExpression(*currentNode));
-    values.append(WTFMove(reifiedCurrentNode));
-
-    std::reverse(values.begin(), values.end());
+    values.reserveInitialCapacity(root.children().size());
+    for (auto& child : root.children()) {
+        CSS_NUMERIC_RETURN_IF_EXCEPTION(value, CSSNumericValue::reifyMathExpression(child.get()));
+        values.uncheckedAppend(negateOrInvertIfRequired(root.calcOperator(), WTFMove(value)));
+    }
     if (root.calcOperator() == CalcOperator::Add || root.calcOperator() == CalcOperator::Subtract)
         return convertToExceptionOrNumericValue(CSSMathSum::create(WTFMove(values)));
     return convertToExceptionOrNumericValue(CSSMathProduct::create(WTFMove(values)));
 }
 
 // https://drafts.css-houdini.org/css-typed-om/#reify-a-math-expression
-static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalcExpressionNode& root)
+ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::reifyMathExpression(const CSSCalcExpressionNode& root)
 {
     switch (root.type()) {
     case CSSCalcExpressionNode::CssCalcPrimitiveValue:
-        return reifyMathExpression(downcast<CSSCalcPrimitiveValueNode>(root));
+        return WebCore::reifyMathExpression(downcast<CSSCalcPrimitiveValueNode>(root));
     case CSSCalcExpressionNode::CssCalcOperation:
-        return reifyMathExpression(downcast<CSSCalcOperationNode>(root));
+        return WebCore::reifyMathExpression(downcast<CSSCalcOperationNode>(root));
     case CSSCalcExpressionNode::CssCalcNegate:
-        return reifyMathExpression(downcast<CSSCalcNegateNode>(root));
+        return WebCore::reifyMathExpression(downcast<CSSCalcNegateNode>(root));
     case CSSCalcExpressionNode::CssCalcInvert:
-        return reifyMathExpression(downcast<CSSCalcInvertNode>(root));
+        return WebCore::reifyMathExpression(downcast<CSSCalcInvertNode>(root));
     }
     ASSERT_NOT_REACHED();
     return Exception { SyntaxError };

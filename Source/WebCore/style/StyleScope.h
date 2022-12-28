@@ -28,7 +28,6 @@
 #pragma once
 
 #include "LayoutSize.h"
-#include "LegacyMediaQueryEvaluator.h"
 #include "StyleScopeOrdinal.h"
 #include "Timer.h"
 #include <memory>
@@ -38,6 +37,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/RefPtr.h>
+#include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashMap.h>
 #include <wtf/WeakHashSet.h>
@@ -60,6 +60,7 @@ class TreeScope;
 
 namespace Style {
 
+class CustomPropertyRegistry;
 class Resolver;
 
 class Scope : public CanMakeWeakPtr<Scope> {
@@ -139,6 +140,9 @@ public:
     };
     bool updateQueryContainerState(QueryContainerUpdateContext&);
 
+    const CustomPropertyRegistry& customPropertyRegistry() const { return m_customPropertyRegistry.get(); }
+    CustomPropertyRegistry& customPropertyRegistry() { return m_customPropertyRegistry.get(); }
+
 private:
     Scope& documentScope();
     bool isForUserAgentShadowTree() const;
@@ -188,6 +192,9 @@ private:
 
     TreeScope& treeScope();
 
+    using MediaQueryViewportState = std::tuple<IntSize, float, bool>;
+    static MediaQueryViewportState mediaQueryViewportStateForDocument(const Document&);
+
     Document& m_document;
     ShadowRoot* m_shadowRoot { nullptr };
 
@@ -221,6 +228,8 @@ private:
 
     std::optional<MediaQueryViewportState> m_viewportStateOnPreviousMediaQueryEvaluation;
     WeakHashMap<Element, LayoutSize, WeakPtrImplWithEventTargetData> m_queryContainerStates;
+
+    UniqueRef<CustomPropertyRegistry> m_customPropertyRegistry;
 
     // FIXME: These (and some things above) are only relevant for the root scope.
     HashMap<ResolverSharingKey, Ref<Resolver>> m_sharedShadowTreeResolvers;

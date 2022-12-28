@@ -21,22 +21,15 @@
 ; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 ; THE POSSIBILITY OF SUCH DAMAGE.
 
-#if USE(SANDBOX_VERSION_2)
-(version 2)
-#else
-(version 1)
-#endif
-(deny default)
+#include "Shared/Sandbox/macOS/common.sb"
+#include "Shared/Sandbox/preferences.sb"
 
 (allow system-privilege (with grant)
     (require-all
         (privilege-id PRIV_NET_PRIVILEGED_SOCKET_DELEGATE)
         (require-entitlement "com.apple.private.network.socket-delegate")))
 
-#include "Shared/Sandbox/macOS/common.sb"
-#include "Shared/Sandbox/preferences.sb"
-
-#if USE(SANDBOX_VERSION_2)
+#if USE(SANDBOX_VERSION_3)
 (with-filter (mac-policy-name "Sandbox")
     (allow system-mac-syscall (mac-syscall-number 5)))
 
@@ -70,8 +63,8 @@
 
 (allow socket-ioctl)
 
-(allow socket-option-set (with report))
-(allow socket-option-get (with report))
+(allow socket-option-set (with telemetry) (with report))
+(allow socket-option-get (with telemetry) (with report))
 
 (allow socket-option-set
     (require-all
@@ -129,7 +122,7 @@
 (allow file-link
     (extension-class "com.apple.app-sandbox.read-write")
     (extension "com.apple.app-sandbox.read-write"))
-#endif // USE(SANDBOX_VERSION_2)
+#endif // USE(SANDBOX_VERSION_3)
 
 #if PLATFORM(MAC)
 (deny mach-register (local-name-prefix ""))
@@ -363,6 +356,7 @@
     (global-name "com.apple.logd")
     (global-name "com.apple.logd.events")
     (global-name "com.apple.lsd.mapdb")
+    (global-name "com.apple.mobileasset.autoasset") ;; <rdar://problem/101780002>
     (global-name "com.apple.nesessionmanager.flow-divert-token")
     (global-name "com.apple.nesessionmanager.content-filter") ;; <rdar://problem/47598758>
     (global-name "com.apple.system.notification_center"))
@@ -749,3 +743,7 @@
         (allow syscall-mach
             (machtrap-number MSC_mach_msg2_trap))))
 #endif // HAVE(SANDBOX_MESSAGE_FILTERING)
+
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/com.apple.WebKit.NetworkingAdditions.sb.in>)
+#include <WebKitAdditions/com.apple.WebKit.NetworkingAdditions.sb.in>
+#endif

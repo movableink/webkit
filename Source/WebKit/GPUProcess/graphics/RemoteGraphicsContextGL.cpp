@@ -82,6 +82,7 @@ RemoteGraphicsContextGL::RemoteGraphicsContextGL(GPUConnectionToWebProcess& gpuC
 #endif
     , m_renderingResourcesRequest(ScopedWebGLRenderingResourcesRequest::acquire())
     , m_webProcessIdentifier(gpuConnectionToWebProcess.webProcessIdentifier())
+    , m_resourceOwner(gpuConnectionToWebProcess.webProcessIdentity())
 {
     assertIsMainRunLoop();
 }
@@ -95,21 +96,16 @@ RemoteGraphicsContextGL::~RemoteGraphicsContextGL()
 void RemoteGraphicsContextGL::initialize(GraphicsContextGLAttributes&& attributes)
 {
     assertIsMainRunLoop();
-    m_streamConnection->open();
     remoteGraphicsContextGLStreamWorkQueue().dispatch([attributes = WTFMove(attributes), protectedThis = Ref { *this }]() mutable {
         protectedThis->workQueueInitialize(WTFMove(attributes));
     });
-    m_streamConnection->startReceivingMessages(*this, Messages::RemoteGraphicsContextGL::messageReceiverName(), m_graphicsContextGLIdentifier.toUInt64());
 }
 
 void RemoteGraphicsContextGL::stopListeningForIPC(Ref<RemoteGraphicsContextGL>&& refFromConnection)
 {
     assertIsMainRunLoop();
-    m_streamConnection->invalidate();
-    m_streamConnection->stopReceivingMessages(Messages::RemoteGraphicsContextGL::messageReceiverName(), m_graphicsContextGLIdentifier.toUInt64());
     remoteGraphicsContextGLStreamWorkQueue().dispatch([protectedThis = WTFMove(refFromConnection)]() {
         protectedThis->workQueueUninitialize();
-        protectedThis->m_renderingResourcesRequest = { };
     });
 }
 
@@ -128,11 +124,13 @@ void RemoteGraphicsContextGL::workQueueInitialize(WebCore::GraphicsContextGLAttr
 {
     assertIsCurrent(workQueue());
     platformWorkQueueInitialize(WTFMove(attributes));
+    m_streamConnection->open();
     if (m_context) {
         m_context->setClient(this);
         String extensions = m_context->getString(GraphicsContextGL::EXTENSIONS);
         String requestableExtensions = m_context->getString(GraphicsContextGL::REQUESTABLE_EXTENSIONS_ANGLE);
         send(Messages::RemoteGraphicsContextGLProxy::WasCreated(true, remoteGraphicsContextGLStreamWorkQueue().wakeUpSemaphore(), m_streamConnection->clientWaitSemaphore(), extensions, requestableExtensions));
+        m_streamConnection->startReceivingMessages(*this, Messages::RemoteGraphicsContextGL::messageReceiverName(), m_graphicsContextGLIdentifier.toUInt64());
     } else
         send(Messages::RemoteGraphicsContextGLProxy::WasCreated(false, { }, { }, emptyString(), emptyString()));
 }
@@ -140,9 +138,14 @@ void RemoteGraphicsContextGL::workQueueInitialize(WebCore::GraphicsContextGLAttr
 void RemoteGraphicsContextGL::workQueueUninitialize()
 {
     assertIsCurrent(workQueue());
-    m_context->setClient(nullptr);
-    m_context = nullptr;
+    m_streamConnection->invalidate();
+    if (m_context) {
+        m_context->setClient(nullptr);
+        m_context = nullptr;
+        m_streamConnection->stopReceivingMessages(Messages::RemoteGraphicsContextGL::messageReceiverName(), m_graphicsContextGLIdentifier.toUInt64());
+    }
     m_streamConnection = nullptr;
+    m_renderingResourcesRequest = { };
 }
 
 void RemoteGraphicsContextGL::didComposite()
@@ -322,6 +325,21 @@ void RemoteGraphicsContextGL::readnPixels1(int32_t x, int32_t y, int32_t width, 
 {
     assertIsCurrent(workQueue());
     m_context->readnPixels(x, y, width, height, format, type, static_cast<GCGLintptr>(offset));
+}
+
+void RemoteGraphicsContextGL::readnPixels2(int32_t x, int32_t y, int32_t width, int32_t height, uint32_t format, uint32_t type, SharedMemory::Handle handle, CompletionHandler<void(bool)>&& completionHandler)
+{
+    assertIsCurrent(workQueue());
+    bool success = false;
+    if (!handle.isNull()) {
+        handle.setOwnershipOfMemory(m_resourceOwner, WebKit::MemoryLedger::Default);
+        if (auto buffer = SharedMemory::map(WTFMove(handle), SharedMemory::Protection::ReadWrite))
+            success = m_context->readnPixelsWithStatus(x, y, width, height, format, type, GCGLSpan<void> { buffer->data(), buffer->size() });
+        else
+            m_context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION);
+    } else
+        m_context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION);
+    completionHandler(success);
 }
 
 void RemoteGraphicsContextGL::multiDrawArraysANGLE(uint32_t mode, IPC::ArrayReferenceTuple<int32_t, int32_t>&& firstsAndCounts)

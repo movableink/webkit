@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.16)
 
 include(WebKitCommon)
 include(target/TargetWTF)
@@ -24,6 +24,8 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/applepay/paymentrequest"
     "${WEBCORE_DIR}/Modules/applicationmanifest"
     "${WEBCORE_DIR}/Modules/async-clipboard"
+    "${WEBCORE_DIR}/Modules/audiosession"
+    "${WEBCORE_DIR}/Modules/badge"
     "${WEBCORE_DIR}/Modules/beacon"
     "${WEBCORE_DIR}/Modules/cache"
     "${WEBCORE_DIR}/Modules/compression"
@@ -150,6 +152,7 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/graphics/displaylists"
     "${WEBCORE_DIR}/platform/graphics/filters"
     "${WEBCORE_DIR}/platform/graphics/filters/software"
+    "${WEBCORE_DIR}/platform/graphics/controls"
     "${WEBCORE_DIR}/platform/graphics/iso"
     "${WEBCORE_DIR}/platform/graphics/opentype"
     "${WEBCORE_DIR}/platform/graphics/transforms"
@@ -207,6 +210,7 @@ set(WebCore_IDL_INCLUDES
 
     Modules/WebGPU
     Modules/airplay
+    Modules/badge
     Modules/cache
     Modules/compression
     Modules/credentialmanagement
@@ -255,6 +259,12 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/async-clipboard/Clipboard.idl
     Modules/async-clipboard/ClipboardItem.idl
     Modules/async-clipboard/Navigator+Clipboard.idl
+
+    Modules/audiosession/DOMAudioSession.idl
+    Modules/audiosession/Navigator+AudioSession.idl
+
+    Modules/badge/Navigator+Badge.idl
+    Modules/badge/NavigatorBadge.idl
 
     Modules/beacon/Navigator+Beacon.idl
 
@@ -751,14 +761,15 @@ set(WebCore_NON_SVG_IDL_FILES
 
     animation/Animatable.idl
     animation/AnimationEffect.idl
-    animation/AnimationEvent.idl
     animation/AnimationFrameProvider.idl
     animation/AnimationFrameRatePreset.idl
     animation/AnimationPlaybackEvent.idl
     animation/AnimationPlaybackEventInit.idl
     animation/AnimationTimeline.idl
     animation/CSSAnimation.idl
+    animation/CSSAnimationEvent.idl
     animation/CSSTransition.idl
+    animation/CSSTransitionEvent.idl
     animation/CompositeOperation.idl
     animation/CompositeOperationOrAuto.idl
     animation/ComputedEffectTiming.idl
@@ -780,7 +791,6 @@ set(WebCore_NON_SVG_IDL_FILES
     animation/KeyframeEffectOptions.idl
     animation/OptionalEffectTiming.idl
     animation/PlaybackDirection.idl
-    animation/TransitionEvent.idl
     animation/WebAnimation.idl
 
     crypto/CryptoAlgorithmParameters.idl
@@ -832,6 +842,7 @@ set(WebCore_NON_SVG_IDL_FILES
     css/CSSPaintCallback.idl
     css/CSSPaintSize.idl
     css/CSSPageRule.idl
+    css/CSSPropertyRule.idl
     css/CSSRule.idl
     css/CSSRuleList.idl
     css/CSSStyleDeclaration.idl
@@ -1571,6 +1582,7 @@ list(APPEND WebCore_NON_SVG_IDL_FILES
     Modules/WebGPU/GPU.idl
     Modules/WebGPU/GPUAdapter.idl
     Modules/WebGPU/GPUAddressMode.idl
+    Modules/WebGPU/GPUAutoLayoutMode.idl
     Modules/WebGPU/GPUBindGroup.idl
     Modules/WebGPU/GPUBindGroupDescriptor.idl
     Modules/WebGPU/GPUBindGroupEntry.idl
@@ -2598,9 +2610,7 @@ list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/Namespace.cpp)
 
 WEBKIT_COMPUTE_SOURCES(WebCore)
 
-if (MSVC)
-    WEBKIT_ADD_PRECOMPILED_HEADER("WebCorePrefix.h" "WebCorePrefix.cpp" WebCore_SOURCES)
-endif ()
+target_precompile_headers(WebCore PRIVATE WebCorePrefix.h)
 
 WEBKIT_COPY_FILES(WebCore_CopyPrivateHeaders
     DESTINATION ${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}/WebCore
@@ -2621,7 +2631,6 @@ ADD_PREFIX_HEADER(WebCoreTestSupport "testing/js/WebCoreTestSupportPrefix.h")
 endif ()
 
 WEBKIT_FRAMEWORK(WebCore)
-WEBKIT_FRAMEWORK_TARGET(WebCore)
 
 if (NOT MSVC AND WIN32 AND ${PORT} STREQUAL "Qt")
     ADD_PREFIX_HEADER(WebCore "${WEBCORE_DIR}/WebCorePrefix.h")
@@ -2639,9 +2648,7 @@ if (CMAKE_COMPILER_IS_GNUCXX AND "${LOWERCASE_CMAKE_HOST_SYSTEM_PROCESSOR}" MATC
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebCore -fno-tree-sra)
 endif ()
 
-if (MSVC)
-    WEBKIT_ADD_PRECOMPILED_HEADER("WebCoreTestSupportPrefix.h" "testing/js/WebCoreTestSupportPrefix.cpp" WebCoreTestSupport_SOURCES)
-endif ()
+target_precompile_headers(WebCoreTestSupport PRIVATE testing/js/WebCoreTestSupportPrefix.h)
 
 WEBKIT_COPY_FILES(Copy_WebCoreTestSupportPrivateHeaders
     DESTINATION ${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}/WebCoreTestSupport
@@ -2663,7 +2670,6 @@ else ()
 endif ()
 
 WEBKIT_FRAMEWORK(WebCoreTestSupport)
-WEBKIT_FRAMEWORK_TARGET(WebCoreTestSupport)
 
 if (${WebCore_LIBRARY_TYPE} MATCHES "SHARED")
     set_target_properties(WebCore PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR})

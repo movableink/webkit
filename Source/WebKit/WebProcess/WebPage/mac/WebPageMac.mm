@@ -93,6 +93,7 @@
 #import <WebCore/ScrollView.h>
 #import <WebCore/StyleInheritedData.h>
 #import <WebCore/TextIterator.h>
+#import <WebCore/ThemeMac.h>
 #import <WebCore/VisibleUnits.h>
 #import <WebCore/WindowsKeyboardCodes.h>
 #import <pal/spi/cocoa/NSAccessibilitySPI.h>
@@ -596,6 +597,17 @@ void WebPage::setBottomOverhangImage(WebImage* image)
     layer->platformLayer().contents = (__bridge id)nativeImage->platformImage().get();
 }
 
+void WebPage::setUseFormSemanticContext(bool useFormSemanticContext)
+{
+    ThemeMac::setUseFormSemanticContext(useFormSemanticContext);
+}
+
+void WebPage::semanticContextDidChange(bool useFormSemanticContext)
+{
+    setUseFormSemanticContext(useFormSemanticContext);
+    m_page->scheduleRenderingUpdate({ });
+}
+
 void WebPage::updateHeaderAndFooterLayersForDeviceScaleChange(float scaleFactor)
 {    
     if (m_headerBanner)
@@ -863,19 +875,19 @@ void WebPage::performImmediateActionHitTestAtLocation(WebCore::FloatPoint locati
             continue;
 
         pageOverlayDidOverrideDataDetectors = true;
-        immediateActionResult.detectedDataActionContext = actionContext->context.get();
-        immediateActionResult.detectedDataBoundingBox = view->contentsToWindow(enclosingIntRect(unitedBoundingBoxes(RenderObject::absoluteTextQuads(actionContext->range))));
-        immediateActionResult.detectedDataTextIndicator = TextIndicator::createWithRange(actionContext->range, indicatorOptions(actionContext->range), TextIndicatorPresentationTransition::FadeIn);
-        immediateActionResult.detectedDataOriginatingPageOverlay = overlay->pageOverlayID();
+        immediateActionResult.platformData.detectedDataActionContext = actionContext->context.get();
+        immediateActionResult.platformData.detectedDataBoundingBox = view->contentsToWindow(enclosingIntRect(unitedBoundingBoxes(RenderObject::absoluteTextQuads(actionContext->range))));
+        immediateActionResult.platformData.detectedDataTextIndicator = TextIndicator::createWithRange(actionContext->range, indicatorOptions(actionContext->range), TextIndicatorPresentationTransition::FadeIn);
+        immediateActionResult.platformData.detectedDataOriginatingPageOverlay = overlay->pageOverlayID();
         break;
     }
 
     // FIXME: Avoid scanning if we will just throw away the result (e.g. we're over a link).
     if (!pageOverlayDidOverrideDataDetectors && hitTestResult.innerNode() && (hitTestResult.innerNode()->isTextNode() || hitTestResult.isOverTextInsideFormControlElement())) {
         if (auto result = DataDetection::detectItemAroundHitTestResult(hitTestResult)) {
-            immediateActionResult.detectedDataActionContext = WTFMove(result->actionContext);
-            immediateActionResult.detectedDataBoundingBox = result->boundingBox;
-            immediateActionResult.detectedDataTextIndicator = TextIndicator::createWithRange(result->range, indicatorOptions(result->range), TextIndicatorPresentationTransition::FadeIn);
+            immediateActionResult.platformData.detectedDataActionContext = WTFMove(result->actionContext);
+            immediateActionResult.platformData.detectedDataBoundingBox = result->boundingBox;
+            immediateActionResult.platformData.detectedDataTextIndicator = TextIndicator::createWithRange(result->range, indicatorOptions(result->range), TextIndicatorPresentationTransition::FadeIn);
         }
     }
 

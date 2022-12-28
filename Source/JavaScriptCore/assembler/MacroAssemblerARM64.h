@@ -2630,6 +2630,11 @@ public:
         m_assembler.fmov<64>(reg, ARM64Registers::zr);
     }
 
+    void moveZeroToFloat(FPRegisterID reg)
+    {
+        m_assembler.fmov<32>(reg, ARM64Registers::zr);
+    }
+
     void moveDoubleTo64(FPRegisterID src, RegisterID dest)
     {
         m_assembler.fmov<64>(dest, src);
@@ -4139,6 +4144,13 @@ public:
         return Call(m_assembler.labelIgnoringWatchpoints(), Call::LinkableNear);
     }
 
+    ALWAYS_INLINE Call threadSafePatchableNearTailCall()
+    {
+        AssemblerLabel label = m_assembler.label();
+        m_assembler.b();
+        return Call(label, Call::LinkableNearTail);
+    }
+
     ALWAYS_INLINE void ret()
     {
         m_assembler.ret();
@@ -4920,28 +4932,31 @@ public:
         }
     }
 
-    void vectorPmin(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest)
+    void vectorPmin(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest, FPRegisterID scratch)
     {
         ASSERT(scalarTypeIsFloatingPoint(simdInfo.lane));
-        ASSERT(left != dest);
-        ASSERT(right != dest);
+        ASSERT(left != scratch);
+        ASSERT(right != scratch);
         // right < left ? right : left <=>
         // left > right, dest = right
 
         // each bit in lane is 1 if left > right
-        m_assembler.fcmgt(dest, left, right, simdInfo.lane);
+        m_assembler.fcmgt(scratch, left, right, simdInfo.lane);
         // 1 means use left
-        m_assembler.bsl(dest, right, left);
+        m_assembler.bsl(scratch, right, left);
+        moveVector(scratch, dest);
+
     }
 
-    void vectorPmax(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest)
+    void vectorPmax(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest, FPRegisterID scratch)
     {
         ASSERT(scalarTypeIsFloatingPoint(simdInfo.lane));
-        ASSERT(left != dest);
-        ASSERT(right != dest);
+        ASSERT(left != scratch);
+        ASSERT(right != scratch);
         // right > left, dest = left
-        m_assembler.fcmgt(dest, right, left, simdInfo.lane);
-        m_assembler.bsl(dest, right, left);
+        m_assembler.fcmgt(scratch, right, left, simdInfo.lane);
+        m_assembler.bsl(scratch, right, left);
+        moveVector(scratch, dest);
     }
 
     void vectorBitwiseSelect(FPRegisterID left, FPRegisterID right, FPRegisterID inputBitsAndDest)
@@ -4977,6 +4992,11 @@ public:
     {
         ASSERT_UNUSED(simdInfo, simdInfo.lane == SIMDLane::v128);
         m_assembler.vectorEor(dest, left, right);
+    }
+
+    void moveZeroToVector(FPRegisterID dest)
+    {
+        vectorXor({ SIMDLane::v128, SIMDSignMode::None }, dest, dest, dest);
     }
 
     void vectorAbs(SIMDInfo simdInfo, FPRegisterID input, FPRegisterID dest)
@@ -5078,17 +5098,19 @@ public:
         m_assembler.fcvtn(dest, input, simdInfo.lane);
     }
 
-    void vectorNarrow(SIMDInfo simdInfo, FPRegisterID lower, FPRegisterID upper, FPRegisterID dest)
+    void vectorNarrow(SIMDInfo simdInfo, FPRegisterID lower, FPRegisterID upper, FPRegisterID dest, FPRegisterID scratch)
     {
         ASSERT(simdInfo.signMode != SIMDSignMode::None);
         ASSERT(scalarTypeIsIntegral(simdInfo.lane));
+        ASSERT(scratch != upper);
         if (simdInfo.signMode == SIMDSignMode::Signed) {
-            m_assembler.sqxtn(dest, lower, simdInfo.lane);
-            m_assembler.sqxtn2(dest, upper, simdInfo.lane);
+            m_assembler.sqxtn(scratch, lower, simdInfo.lane);
+            m_assembler.sqxtn2(scratch, upper, simdInfo.lane);
         } else {
-            m_assembler.sqxtun(dest, lower, simdInfo.lane);
-            m_assembler.sqxtun2(dest, upper, simdInfo.lane);
+            m_assembler.sqxtun(scratch, lower, simdInfo.lane);
+            m_assembler.sqxtun2(scratch, upper, simdInfo.lane);
         }
+        moveVector(scratch, dest);
     }
 
     void vectorConvert(SIMDInfo simdInfo, FPRegisterID input, FPRegisterID dest)
@@ -5127,7 +5149,7 @@ public:
         m_assembler.sshl(dest, input, shift, simdInfo.lane);
     }
 
-    void vectorSshr(SIMDInfo simdInfo, FPRegisterID input, TrustedImm32 shift, FPRegisterID dest)
+    void vectorSshr8(SIMDInfo simdInfo, FPRegisterID input, TrustedImm32 shift, FPRegisterID dest)
     {
         ASSERT(scalarTypeIsIntegral(simdInfo.lane));
         m_assembler.sshr_vi(dest, input, shift.m_value, simdInfo.lane);
@@ -5174,10 +5196,18 @@ public:
         m_assembler.dupGeneral(dest, src, lane);
     }
 
-    void vectorSplat8(RegisterID src, FPRegisterID dest) { vectorSplat(SIMDLane::i8x16, src, dest); }
-    void vectorSplat16(RegisterID src, FPRegisterID dest) { vectorSplat(SIMDLane::i16x8, src, dest); }
-    void vectorSplat32(RegisterID src, FPRegisterID dest) { vectorSplat(SIMDLane::i32x4, src, dest); }
-    void vectorSplat64(RegisterID src, FPRegisterID dest) { vectorSplat(SIMDLane::i64x2, src, dest); }
+    void vectorSplat(SIMDLane lane, FPRegisterID src, FPRegisterID dest)
+    {
+        ASSERT(scalarTypeIsFloatingPoint(lane));
+        m_assembler.dupElement(dest, src, lane, 0);
+    }
+
+    void vectorSplatInt8(RegisterID src, FPRegisterID dest) { vectorSplat(SIMDLane::i8x16, src, dest); }
+    void vectorSplatInt16(RegisterID src, FPRegisterID dest) { vectorSplat(SIMDLane::i16x8, src, dest); }
+    void vectorSplatInt32(RegisterID src, FPRegisterID dest) { vectorSplat(SIMDLane::i32x4, src, dest); }
+    void vectorSplatInt64(RegisterID src, FPRegisterID dest) { vectorSplat(SIMDLane::i64x2, src, dest); }
+    void vectorSplatFloat32(FPRegisterID src, FPRegisterID dest) { vectorSplat(SIMDLane::f32x4, src, dest); }
+    void vectorSplatFloat64(FPRegisterID src, FPRegisterID dest) { vectorSplat(SIMDLane::f64x2, src, dest); }
 
     void vectorAddSat(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest)
     {
@@ -5294,15 +5324,14 @@ public:
     void vectorMulSat(FPRegisterID a, FPRegisterID b, FPRegisterID dest)
     {
         // (i_1 * i_2 + 2^14) >> 15
-        // <=> 
+        // <=>
         // (i_1 * i_2 * 2 + 2^15) >> 16
         // <=>
         // i_1 * i_2 * 2 + 2^15 (high half)
-        vectorXor({ SIMDLane::v128, SIMDSignMode::None }, dest, dest, dest);
-        m_assembler.sqrdmlahv(dest, a, b, SIMDLane::i16x8);
+        m_assembler.sqrdmulhv(dest, a, b, SIMDLane::i16x8);
     }
 
-    void vectorDotProductInt32(FPRegisterID a, FPRegisterID b, FPRegisterID dest, FPRegisterID scratch) 
+    void vectorDotProduct(FPRegisterID a, FPRegisterID b, FPRegisterID dest, FPRegisterID scratch) 
     {
         m_assembler.smullv(scratch, a, b, SIMDLane::i16x8);
         m_assembler.smull2v(dest, a, b, SIMDLane::i16x8);

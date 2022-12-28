@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2006, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -145,6 +146,9 @@ void InsertListCommand::doApply()
             VisiblePosition endOfSelection = selection.visibleEnd();
             VisiblePosition startOfLastParagraph = startOfParagraph(endOfSelection, CanSkipOverEditingBoundary);
 
+            RefPtr<ContainerNode> startScope;
+            int startIndex = indexForVisiblePosition(startOfSelection, startScope);
+
             if (startOfLastParagraph.isNotNull() && startOfParagraph(startOfSelection, CanSkipOverEditingBoundary) != startOfLastParagraph) {
                 bool forceCreateList = !selectionHasListOfType(selection, listTag);
 
@@ -175,7 +179,7 @@ void InsertListCommand::doApply()
                         // If endOfSelection is null, then some contents have been deleted from the document.
                         // This should never happen and if it did, exit early immediately because we've lost the loop invariant.
                         ASSERT(endOfSelection.isNotNull());
-                        if (endOfSelection.isNull())
+                        if (endOfSelection.isNull() || !endOfSelection.rootEditableElement())
                             return;
                         startOfLastParagraph = startOfParagraph(endOfSelection, CanSkipOverEditingBoundary);
                     }
@@ -193,6 +197,8 @@ void InsertListCommand::doApply()
                 doApplyForSingleParagraph(forceCreateList, listTag, currentSelection);
                 // Fetch the end of the selection, for the reason mentioned above.
                 endOfSelection = endingSelection().visibleEnd();
+                if (startOfSelection.isOrphan())
+                    startOfSelection = visiblePositionForIndex(startIndex, startScope.get());
                 setEndingSelection(VisibleSelection(startOfSelection, endOfSelection, endingSelection().isDirectional()));
                 return;
             }
@@ -268,7 +274,8 @@ void InsertListCommand::doApplyForSingleParagraph(bool forceCreateList, const HT
             if (rangeEndIsInList && newList)
                 currentSelection.end = makeBoundaryPointAfterNodeContents(*newList);
 
-            setEndingSelection(VisiblePosition(firstPositionInNode(newList.get())));
+            setEndingSelection(VisibleSelection(makeContainerOffsetPosition(currentSelection.start),
+                makeContainerOffsetPosition(currentSelection.end)));
 
             return;
         }

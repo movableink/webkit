@@ -163,10 +163,9 @@ void RemoteRenderingBackend::didCreateImageBufferBackend(ImageBufferBackendHandl
     send(Messages::RemoteRenderingBackendProxy::DidCreateImageBufferBackend(WTFMove(handle), renderingResourceIdentifier.object()), m_renderingBackendIdentifier);
 }
 
-void RemoteRenderingBackend::didFlush(DisplayListRecorderFlushIdentifier flushIdentifier, QualifiedRenderingResourceIdentifier renderingResourceIdentifier)
+void RemoteRenderingBackend::didFlush(DisplayListRecorderFlushIdentifier flushIdentifier)
 {
-    MESSAGE_CHECK(renderingResourceIdentifier.processIdentifier() == m_gpuConnectionToWebProcess->webProcessIdentifier(), "Sending didFlush() message to the wrong web process.");
-    send(Messages::RemoteRenderingBackendProxy::DidFlush(flushIdentifier, renderingResourceIdentifier.object()), m_renderingBackendIdentifier);
+    send(Messages::RemoteRenderingBackendProxy::DidFlush(flushIdentifier));
 }
 
 void RemoteRenderingBackend::createImageBuffer(const FloatSize& logicalSize, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingResourceIdentifier imageBufferResourceIdentifier)
@@ -176,11 +175,36 @@ void RemoteRenderingBackend::createImageBuffer(const FloatSize& logicalSize, Ren
     createImageBufferWithQualifiedIdentifier(logicalSize, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat, { imageBufferResourceIdentifier, m_gpuConnectionToWebProcess->webProcessIdentifier() });
 }
 
+void RemoteRenderingBackend::moveToSerializedBuffer(WebCore::RenderingResourceIdentifier identifier, RemoteSerializedImageBufferWriteReference&& reference)
+{
+    // This transfers onwership of the ImageBufferBackend to the GPUConnectionToWebProcess's heap, and lets the RemoteImageBuffer be released.
+    // That's because the RemoteImageBuffer also has a RemoteDisplayList, which is an IPC object and can't easily be transferred to a different
+    // WorkQueue/StreamServerConnection.
+    QualifiedRenderingResourceIdentifier qualifiedIdentifier { identifier, m_gpuConnectionToWebProcess->webProcessIdentifier() };
+    auto imageBuffer = m_remoteResourceCache.takeImageBuffer(qualifiedIdentifier);
+    auto data = imageBuffer ? adoptRef(new RemoteSerializedImageBuffer(imageBuffer->takeBackend(), imageBuffer->backendInfo())) : nullptr;
+    m_gpuConnectionToWebProcess->serializedImageBufferHeap().retire(WTFMove(reference), WTFMove(data), std::nullopt);
+}
+
+void RemoteRenderingBackend::moveToImageBuffer(RemoteSerializedImageBufferWriteReference&& reference, WebCore::RenderingResourceIdentifier identifier)
+{
+    QualifiedRenderingResourceIdentifier qualifiedIdentifier { identifier, m_gpuConnectionToWebProcess->webProcessIdentifier() };
+    RemoteSerializedImageBufferReadReference readReference(reference.reference());
+    auto data = m_gpuConnectionToWebProcess->serializedImageBufferHeap().retire(WTFMove(readReference), IPC::Timeout::infinity());
+    m_gpuConnectionToWebProcess->serializedImageBufferHeap().retireRemove(WTFMove(reference));
+
+    if (!data)
+        return;
+
+    auto imageBuffer = RemoteImageBuffer::createTransfer(WTFMove(data->m_backend), data->m_info, *this, qualifiedIdentifier);
+    m_remoteResourceCache.cacheImageBuffer(*imageBuffer, qualifiedIdentifier);
+}
+
 void RemoteRenderingBackend::createImageBufferWithQualifiedIdentifier(const FloatSize& logicalSize, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, QualifiedRenderingResourceIdentifier imageBufferResourceIdentifier)
 {
     ASSERT(!RunLoop::isMain());
 
-    RefPtr<ImageBuffer> imageBuffer;
+    RefPtr<RemoteImageBuffer> imageBuffer;
 
     if (renderingMode == RenderingMode::Accelerated) {
         if (auto acceleratedImageBuffer = RemoteImageBuffer::create<AcceleratedImageBufferShareableMappedBackend>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, *this, imageBufferResourceIdentifier)) {

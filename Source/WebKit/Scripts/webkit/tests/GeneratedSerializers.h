@@ -51,6 +51,8 @@ namespace WebCore {
 template<typename> class RectEdges;
 using FloatBoxExtent = RectEdges<float>;
 }
+struct NullableSoftLinkedMember;
+namespace WebCore { class TimingFunction; }
 
 namespace IPC {
 
@@ -115,6 +117,16 @@ template<> struct ArgumentCoder<WTF::CreateUsingClass> {
 template<> struct ArgumentCoder<WebCore::FloatBoxExtent> {
     static void encode(Encoder&, const WebCore::FloatBoxExtent&);
     static std::optional<WebCore::FloatBoxExtent> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<NullableSoftLinkedMember> {
+    static void encode(Encoder&, const NullableSoftLinkedMember&);
+    static std::optional<NullableSoftLinkedMember> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebCore::TimingFunction> {
+    static void encode(Encoder&, const WebCore::TimingFunction&);
+    static std::optional<Ref<WebCore::TimingFunction>> decode(Decoder&);
 };
 
 } // namespace IPC

@@ -245,6 +245,23 @@ class Port(object):
             return factory.get(target_port).default_baseline_search_path()
         return []
 
+    def all_baseline_search_paths(self, device_type=None):
+        paths = (
+            set(self.get_option("additional_platform_directory", []))
+            | set(self._compare_baseline())
+            | set(self._filesystem.glob(self._webkit_baseline_path("*")))
+        )
+
+        assert {p for p in paths if self._filesystem.isdir(p)}.issuperset(
+            {
+                p
+                for p in self.baseline_search_path(device_type=device_type)
+                if self._filesystem.isdir(p)
+            }
+        )
+
+        return paths
+
     def check_build(self):
         """This routine is used to ensure that the build is up to date
         and all the needed binaries are present."""
@@ -675,9 +692,11 @@ class Port(object):
     def perf_tests_dir(self):
         return self._webkit_finder.perf_tests_dir()
 
-    def skipped_layout_tests(self, test_list, device_type=None):
+    def skipped_layout_tests(self, device_type=None):
         """Returns tests skipped outside of the TestExpectations files."""
-        return set(self._tests_for_other_platforms(device_type=device_type)).union(self._skipped_tests_for_unsupported_features(test_list))
+        return set(self._tests_for_other_platforms(device_type=device_type)) | set(
+            self.get_option("ignore_tests", [])
+        )
 
     @memoized
     def skipped_perf_tests(self):
@@ -1482,16 +1501,13 @@ class Port(object):
         # that isn't in our baseline search path (this mirrors what
         # old-run-webkit-tests does in findTestsToRun()).
         # Note this returns LayoutTests/platform/*, not platform/*/*.
-        entries = self._filesystem.glob(self._webkit_baseline_path('*'))
+        entries = self.all_baseline_search_paths(device_type=device_type)
         dirs_to_skip = []
         for entry in entries:
             if self._filesystem.isdir(entry) and entry not in self.test_search_path(device_type=device_type):
                 basename = self._filesystem.basename(entry)
                 dirs_to_skip.append('platform/%s' % basename)
         return dirs_to_skip
-
-    def _skipped_tests_for_unsupported_features(self, test_list):
-        return []
 
     def _wk2_port_name(self):
         # By current convention, the WebKit2 name is always mac-wk2, win-wk2, not mac-leopard-wk2, etc,

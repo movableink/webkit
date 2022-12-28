@@ -45,11 +45,7 @@
 #import <WebCore/GeometryUtilities.h>
 #import <WebCore/IntRect.h>
 #import <WebCore/LocalizedStrings.h>
-#if HAVE(PIP_CONTROLLER)
-#import <WebCore/VideoFullscreenInterfacePiP.h>
-#else
 #import <WebCore/VideoFullscreenInterfaceAVKit.h>
-#endif
 #import <WebCore/VideoFullscreenModel.h>
 #import <WebCore/ViewportArguments.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
@@ -165,7 +161,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 static constexpr NSTimeInterval kAnimationDuration = 0.2;
 #if HAVE(UIKIT_WEBKIT_INTERNALS)
 static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
-static constexpr CGFloat kTargetWindowAspectRatio = 1.7778;
 #endif
 
 #pragma mark -
@@ -564,14 +559,16 @@ static constexpr CGFloat kTargetWindowAspectRatio = 1.7778;
     [_window setWindowLevel:UIWindowLevelNormal - 1];
     [_window setHidden:NO];
 #if HAVE(UIKIT_WEBKIT_INTERNALS)
-    CGFloat preferredWidth = page->preferences().mediaPreferredFullscreenWidth();
-    CGFloat preferredHeight = preferredWidth / kTargetWindowAspectRatio;
-    CGFloat videoAspectRatio = videoDimensions.height ? (videoDimensions.width / videoDimensions.height) : kTargetWindowAspectRatio;
+    auto screenSize = page->overrideScreenSize();
+    CGFloat preferredWidth = screenSize.width();
+    CGFloat preferredHeight = screenSize.height();
+    CGFloat preferredAspectRatio = preferredWidth / preferredHeight;
+    CGFloat videoAspectRatio = videoDimensions.height ? (videoDimensions.width / videoDimensions.height) : preferredAspectRatio;
 
     CGFloat targetWidth = preferredWidth;
     CGFloat targetHeight = preferredHeight;
     if (videoDimensions.height && videoDimensions.width) {
-        if (videoAspectRatio > kTargetWindowAspectRatio)
+        if (videoAspectRatio > preferredAspectRatio)
             targetHeight = videoDimensions.height * preferredWidth / videoDimensions.width;
         else
             targetWidth = videoDimensions.width * preferredHeight / videoDimensions.height;
@@ -774,7 +771,7 @@ static constexpr CGFloat kTargetWindowAspectRatio = 1.7778;
     }];
 }
 
-- (void)requestEnterFullScreen
+- (void)requestRestoreFullScreen
 {
     if (_fullScreenState != WebKit::NotInFullScreen)
         return;
@@ -784,7 +781,7 @@ static constexpr CGFloat kTargetWindowAspectRatio = 1.7778;
         page->fullscreenMayReturnToInline();
 
     if (auto* manager = self._manager) {
-        manager->requestEnterFullScreen();
+        manager->requestRestoreFullScreen();
         return;
     }
 
@@ -936,7 +933,7 @@ static constexpr CGFloat kTargetWindowAspectRatio = 1.7778;
         _exitingFullScreen = NO;
         if (_enterRequested) {
             _enterRequested = NO;
-            [self requestEnterFullScreen];
+            [self requestRestoreFullScreen];
         }
     });
 
@@ -997,7 +994,7 @@ static constexpr CGFloat kTargetWindowAspectRatio = 1.7778;
                 if (_fullScreenState == WebKit::InFullScreen)
                     videoFullscreenInterface->preparedToReturnToStandby();
                 else
-                    [self requestEnterFullScreen];
+                    [self requestRestoreFullScreen];
             } else
                 _enterRequested = YES;
 

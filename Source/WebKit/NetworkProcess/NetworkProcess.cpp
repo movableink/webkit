@@ -106,6 +106,7 @@
 #if PLATFORM(COCOA)
 #include "CookieStorageUtilsCF.h"
 #include "LaunchServicesDatabaseObserver.h"
+#include "NetworkConnectionIntegrityHelpers.h"
 #include "NetworkSessionCocoa.h"
 #include <wtf/cocoa/Entitlements.h>
 #endif
@@ -396,24 +397,31 @@ void NetworkProcess::addAllowedFirstPartyForCookies(WebCore::ProcessIdentifier p
 
 bool NetworkProcess::allowsFirstPartyForCookies(WebCore::ProcessIdentifier processIdentifier, const URL& firstParty)
 {
-    if (!decltype(m_allowedFirstPartiesForCookies)::isValidKey(processIdentifier)) {
-        ASSERT_NOT_REACHED();
-        return false;
-    }
-
     // FIXME: This should probably not be necessary. If about:blank is the first party for cookies,
     // we should set it to be the inherited origin then remove this exception.
     if (firstParty.isAboutBlank())
         return true;
+
+    if (firstParty.isNull())
+        return true; // FIXME: This shouldn't be allowed.
+
+    RegistrableDomain firstPartyDomain(firstParty);
+    return allowsFirstPartyForCookies(processIdentifier, firstPartyDomain);
+}
+
+bool NetworkProcess::allowsFirstPartyForCookies(WebCore::ProcessIdentifier processIdentifier, const RegistrableDomain& firstPartyDomain)
+{
+    if (!decltype(m_allowedFirstPartiesForCookies)::isValidKey(processIdentifier)) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
 
     auto iterator = m_allowedFirstPartiesForCookies.find(processIdentifier);
     if (iterator == m_allowedFirstPartiesForCookies.end()) {
         ASSERT_NOT_REACHED();
         return false;
     }
-    if (firstParty.isNull())
-        return true; // FIXME: This shouldn't be allowed.
-    RegistrableDomain firstPartyDomain(firstParty);
+
     if (!decltype(iterator->value)::isValidValue(firstPartyDomain)) {
         ASSERT_NOT_REACHED();
         return false;
@@ -956,11 +964,11 @@ void NetworkProcess::domainIDExistsInDatabase(PAL::SessionID sessionID, int doma
     }
 }
 
-void NetworkProcess::mergeStatisticForTesting(PAL::SessionID sessionID, RegistrableDomain&& domain, RegistrableDomain&& topFrameDomain1, RegistrableDomain&& topFrameDomain2, Seconds lastSeen, bool hadUserInteraction, Seconds mostRecentUserInteraction, bool isGrandfathered, bool isPrevalent, bool isVeryPrevalent, unsigned dataRecordsRemoved, CompletionHandler<void()>&& completionHandler)
+void NetworkProcess::mergeStatisticForTesting(PAL::SessionID sessionID, RegistrableDomain&& domain, RegistrableDomain&& topFrameDomain1, RegistrableDomain&& topFrameDomain2, Seconds lastSeen, bool hadUserInteraction, Seconds mostRecentUserInteraction, bool isGrandfathered, bool isPrevalent, bool isVeryPrevalent, uint64_t dataRecordsRemoved, CompletionHandler<void()>&& completionHandler)
 {
     if (auto* session = networkSession(sessionID)) {
         if (auto* resourceLoadStatistics = session->resourceLoadStatistics())
-            resourceLoadStatistics->mergeStatisticForTesting(WTFMove(domain), WTFMove(topFrameDomain1), WTFMove(topFrameDomain2), lastSeen, hadUserInteraction, mostRecentUserInteraction, isGrandfathered, isPrevalent, isVeryPrevalent, dataRecordsRemoved, WTFMove(completionHandler));
+            resourceLoadStatistics->mergeStatisticForTesting(WTFMove(domain), WTFMove(topFrameDomain1), WTFMove(topFrameDomain2), lastSeen, hadUserInteraction, mostRecentUserInteraction, isGrandfathered, isPrevalent, isVeryPrevalent, unsigned(dataRecordsRemoved), WTFMove(completionHandler));
         else
             completionHandler();
     } else {
@@ -969,11 +977,11 @@ void NetworkProcess::mergeStatisticForTesting(PAL::SessionID sessionID, Registra
     }
 }
 
-void NetworkProcess::insertExpiredStatisticForTesting(PAL::SessionID sessionID, RegistrableDomain&& domain, unsigned numberOfOperatingDaysPassed, bool hadUserInteraction, bool isScheduledForAllButCookieDataRemoval, bool isPrevalent, CompletionHandler<void()>&& completionHandler)
+void NetworkProcess::insertExpiredStatisticForTesting(PAL::SessionID sessionID, RegistrableDomain&& domain, uint64_t numberOfOperatingDaysPassed, bool hadUserInteraction, bool isScheduledForAllButCookieDataRemoval, bool isPrevalent, CompletionHandler<void()>&& completionHandler)
 {
     if (auto* session = networkSession(sessionID)) {
         if (auto* resourceLoadStatistics = session->resourceLoadStatistics())
-            resourceLoadStatistics->insertExpiredStatisticForTesting(WTFMove(domain), numberOfOperatingDaysPassed, hadUserInteraction, isScheduledForAllButCookieDataRemoval, isPrevalent, WTFMove(completionHandler));
+            resourceLoadStatistics->insertExpiredStatisticForTesting(WTFMove(domain), unsigned(numberOfOperatingDaysPassed), hadUserInteraction, isScheduledForAllButCookieDataRemoval, isPrevalent, WTFMove(completionHandler));
         else
             completionHandler();
     } else {
@@ -1060,7 +1068,7 @@ void NetworkProcess::hasLocalStorage(PAL::SessionID sessionID, const Registrable
         return completionHandler(false);
 
     auto types = OptionSet<WebsiteDataType> { WebsiteDataType::LocalStorage };
-    session->storageManager().fetchData(types, [domain, completionHandler = WTFMove(completionHandler)](auto entries) mutable {
+    session->storageManager().fetchData(types, NetworkStorageManager::ShouldComputeSize::No, [domain, completionHandler = WTFMove(completionHandler)](auto entries) mutable {
         completionHandler(WTF::anyOf(entries, [&domain](auto& entry) {
             return domain.matches(entry.origin);
         }));
@@ -1548,7 +1556,8 @@ void NetworkProcess::fetchWebsiteData(PAL::SessionID sessionID, OptionSet<Websit
 #endif
 
     if (NetworkStorageManager::canHandleTypes(websiteDataTypes) && session) {
-        session->storageManager().fetchData(websiteDataTypes, [callbackAggregator](auto entries) mutable {
+        auto shouldComputeSize = fetchOptions.contains(WebsiteDataFetchOption::ComputeSizes) ? NetworkStorageManager::ShouldComputeSize::Yes : NetworkStorageManager::ShouldComputeSize::No;
+        session->storageManager().fetchData(websiteDataTypes, shouldComputeSize, [callbackAggregator](auto entries) mutable {
             callbackAggregator->m_websiteData.entries.appendVector(WTFMove(entries));
         });
     }
@@ -2051,7 +2060,7 @@ void NetworkProcess::registrableDomainsWithWebsiteData(PAL::SessionID sessionID,
     }
 
     if (session) {
-        session->storageManager().fetchData(websiteDataTypes, [callbackAggregator](auto entries) mutable {
+        session->storageManager().fetchData(websiteDataTypes, NetworkStorageManager::ShouldComputeSize::No, [callbackAggregator](auto entries) mutable {
             callbackAggregator->m_websiteData.entries.appendVector(WTFMove(entries));
         });
     }
@@ -2476,17 +2485,6 @@ void NetworkProcess::getOriginsWithPushAndNotificationPermissions(PAL::SessionID
     callback({ });
 }
 
-void NetworkProcess::getOriginsWithPushSubscriptions(PAL::SessionID sessionID, CompletionHandler<void(const Vector<WebCore::SecurityOriginData>&)>&& callback)
-{
-#if ENABLE(BUILT_IN_NOTIFICATIONS)
-    if (auto* session = networkSession(sessionID)) {
-        session->notificationManager().getOriginsWithPushSubscriptions(WTFMove(callback));
-        return;
-    }
-#endif
-    callback({ });
-}
-
 void NetworkProcess::hasPushSubscriptionForTesting(PAL::SessionID sessionID, URL&& scopeURL, CompletionHandler<void(bool)>&& callback)
 {
 #if ENABLE(BUILT_IN_NOTIFICATIONS)
@@ -2871,5 +2869,14 @@ void NetworkProcess::countNonDefaultSessionSets(PAL::SessionID sessionID, Comple
     auto* session = networkSession(sessionID);
     completionHandler(session ? session->countNonDefaultSessionSets() : 0);
 }
+
+#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
+
+void NetworkProcess::requestLookalikeCharacterStrings(CompletionHandler<void(const Vector<String>&)>&& completionHandler)
+{
+    WebKit::requestLookalikeCharacterStrings(WTFMove(completionHandler));
+}
+
+#endif
 
 } // namespace WebKit

@@ -62,10 +62,8 @@ public:
     bool needsAutoplayPlayPauseEvents() const;
     bool needsSeekingSupportDisabled() const;
     bool needsPerDocumentAutoplayBehavior() const;
-    bool shouldAutoplayForArbitraryUserGesture() const;
     bool shouldAutoplayWebAudioForArbitraryUserGesture() const;
     bool hasBrokenEncryptedMediaAPISupportQuirk() const;
-    bool shouldStripQuotationMarkInFontFaceSetFamily() const;
 #if ENABLE(TOUCH_EVENTS)
     bool shouldDispatchSimulatedMouseEvents(const EventTarget*) const;
     bool shouldDispatchedSimulatedMouseEventsAssumeDefaultPrevented(EventTarget*) const;
@@ -84,6 +82,7 @@ public:
     bool shouldTooltipPreventFromProceedingWithClick(const Element&) const;
     bool shouldHideSearchFieldResultsButton() const;
     bool shouldExposeShowModalDialog() const;
+    bool shouldNavigatorPluginsBeEmpty() const;
 
     bool needsMillisecondResolutionForHighResTimeStamp() const;
 
@@ -134,10 +133,7 @@ public:
     bool needsVP9FullRangeFlagQuirk() const;
     bool needsHDRPixelDepthQuirk() const;
     
-    bool needsAkamaiMediaPlayerQuirk(const HTMLVideoElement&) const;
     bool needsFlightAwareSerializationQuirk() const;
-
-    bool needsBlackFullscreenBackgroundQuirk() const;
 
     bool requiresUserGestureToPauseInPictureInPicture() const;
     bool requiresUserGestureToLoadInPictureInPicture() const;
@@ -222,6 +218,9 @@ private:
     mutable std::optional<bool> m_shouldEnableFontLoadingAPIQuirk;
     mutable std::optional<bool> m_needsVideoShouldMaintainAspectRatioQuirk;
     mutable std::optional<bool> m_shouldExposeShowModalDialog;
+#if PLATFORM(IOS_FAMILY)
+    mutable std::optional<bool> m_shouldNavigatorPluginsBeEmpty;
+#endif
     mutable std::optional<bool> m_shouldDisableLazyImageLoadingQuirk;
 };
 

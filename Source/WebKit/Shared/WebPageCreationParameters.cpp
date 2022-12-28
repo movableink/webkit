@@ -54,7 +54,6 @@ void WebPageCreationParameters::encode(IPC::Encoder& encoder) const
     encoder << paginationBehavesLikeColumns;
     encoder << pageLength;
     encoder << gapBetweenPages;
-    encoder << paginationLineGridEnabled;
     encoder << userAgent;
     encoder << itemStatesWereRestoredByAPIRequest;
     encoder << itemStates;
@@ -89,6 +88,7 @@ void WebPageCreationParameters::encode(IPC::Encoder& encoder) const
 #if PLATFORM(MAC)
     encoder << colorSpace;
     encoder << useSystemAppearance;
+    encoder << useFormSemanticContext;
 #endif
 
 #if ENABLE(META_VIEWPORT)
@@ -199,6 +199,11 @@ void WebPageCreationParameters::encode(IPC::Encoder& encoder) const
 #endif
 
     encoder << contentSecurityPolicyModeForExtension;
+    encoder << mainFrameIdentifier;
+
+#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
+    encoder << lookalikeCharacterStrings;
+#endif
 }
 
 std::optional<WebPageCreationParameters> WebPageCreationParameters::decode(IPC::Decoder& decoder)
@@ -255,8 +260,6 @@ std::optional<WebPageCreationParameters> WebPageCreationParameters::decode(IPC::
     if (!decoder.decode(parameters.pageLength))
         return std::nullopt;
     if (!decoder.decode(parameters.gapBetweenPages))
-        return std::nullopt;
-    if (!decoder.decode(parameters.paginationLineGridEnabled))
         return std::nullopt;
 
     std::optional<String> userAgent;
@@ -353,6 +356,8 @@ std::optional<WebPageCreationParameters> WebPageCreationParameters::decode(IPC::
         return std::nullopt;
     parameters.colorSpace = WTFMove(*colorSpace);
     if (!decoder.decode(parameters.useSystemAppearance))
+        return std::nullopt;
+    if (!decoder.decode(parameters.useFormSemanticContext))
         return std::nullopt;
 #endif
 
@@ -631,7 +636,18 @@ std::optional<WebPageCreationParameters> WebPageCreationParameters::decode(IPC::
     if (!decoder.decode(parameters.contentSecurityPolicyModeForExtension))
         return std::nullopt;
 
-    return parameters;
+    if (!decoder.decode(parameters.mainFrameIdentifier))
+        return std::nullopt;
+
+#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
+    std::optional<Vector<String>> lookalikeCharacterStrings;
+    decoder >> lookalikeCharacterStrings;
+    if (!lookalikeCharacterStrings)
+        return std::nullopt;
+    parameters.lookalikeCharacterStrings = WTFMove(*lookalikeCharacterStrings);
+#endif
+
+    return { WTFMove(parameters) };
 }
 
 } // namespace WebKit

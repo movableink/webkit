@@ -41,7 +41,7 @@ public:
 protected:
     virtual Color pictureFrameColor(const RenderObject&);
 #if ENABLE(ATTACHMENT_ELEMENT)
-    int attachmentBaseline(const RenderAttachment& attachment) const final;
+    int attachmentBaseline(const RenderAttachment&) const final;
     void paintAttachmentText(GraphicsContext&, AttachmentLayout*) final;
 #endif
 

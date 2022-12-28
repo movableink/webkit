@@ -92,7 +92,7 @@ CachedResource::CachedResource(CachedResourceRequest&& request, Type type, PAL::
     , m_responseTimestamp(WallTime::now())
     , m_fragmentIdentifierForRequest(request.releaseFragmentIdentifier())
     , m_origin(request.releaseOrigin())
-    , m_initiatorName(request.initiatorName())
+    , m_initiatorType(request.initiatorType())
     , m_type(type)
     , m_preloadResult(PreloadResult::PreloadNotReferenced)
     , m_responseTainting(ResourceResponse::Tainting::Basic)
@@ -154,8 +154,10 @@ CachedResource::~CachedResource()
     ASSERT(!m_deleted);
     ASSERT(url().isNull() || !allowsCaching() || MemoryCache::singleton().resourceForRequest(resourceRequest(), sessionID()) != this);
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     m_deleted = true;
+#endif
+#ifndef NDEBUG
     cachedResourceLeakCounter.decrement();
 #endif
 }
@@ -392,6 +394,11 @@ void CachedResource::setCrossOrigin()
 bool CachedResource::isCrossOrigin() const
 {
     return m_responseTainting != ResourceResponse::Tainting::Basic;
+}
+
+bool CachedResource::isCORSCrossOrigin() const
+{
+    return m_responseTainting == ResourceResponse::Tainting::Opaque || m_responseTainting == ResourceResponse::Tainting::Opaqueredirect;
 }
 
 bool CachedResource::isCORSSameOrigin() const

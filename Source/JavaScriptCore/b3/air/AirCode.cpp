@@ -45,9 +45,13 @@ const char* const tierName = "Air ";
 static void defaultPrologueGenerator(CCallHelpers& jit, Code& code)
 {
     jit.emitFunctionPrologue();
+
+    // NOTE: on ARM64, if the callee saves have bigger offsets due to a potential tail call,
+    // the macro assembler might assert scratch register usage on store operations emitted by emitSave.
+    AllowMacroScratchRegisterUsageIf allowScratch(jit, isARM64() || isARM64E() || isARM());
+
     if (code.frameSize()) {
-        AllowMacroScratchRegisterUsageIf allowScratch(jit, isARM64());
-        jit.addPtr(MacroAssembler::TrustedImm32(-code.frameSize()), MacroAssembler::framePointerRegister,  MacroAssembler::stackPointerRegister);
+        jit.subPtr(MacroAssembler::TrustedImm32(code.frameSize()), MacroAssembler::stackPointerRegister);
     }
     
     jit.emitSave(code.calleeSaveRegisterAtOffsetList());
@@ -72,7 +76,23 @@ Code::Code(Procedure& proc)
             RegisterSetBuilder all = bank == GP ? RegisterSetBuilder::allGPRs() : RegisterSetBuilder::allFPRs();
             all.exclude(RegisterSetBuilder::stackRegisters());
             all.exclude(RegisterSetBuilder::reservedHardwareRegisters());
-            auto calleeSave = RegisterSetBuilder::calleeSaveRegisters();
+#if CPU(ARM)
+            // FIXME https://bugs.webkit.org/show_bug.cgi?id=243888
+            // Unfortunately, the extra registers provided by the neon/vfpv3
+            // extensions can't be used by Air right now, because they are
+            // invalid as f32 operands, and Air doesn't know about anything
+            // other than a single class of FP registers.
+#if CPU(ARM_NEON) || CPU(ARM_VFP_V3_D32)
+            if (bank == FP) {
+                for (auto reg = ARMRegisters::d16; reg <= ARMRegisters::d31; reg = MacroAssembler::nextFPRegister(reg))
+                    all.remove(reg);
+            }
+#endif
+            // FIXME https://bugs.webkit.org/show_bug.cgi?id=243890
+            // Our use of DisallowMacroScratchRegisterUsage is not quite right, so for now...
+            all.exclude(RegisterSetBuilder::macroClobberedRegisters());
+#endif // CPU(ARM)
+            auto calleeSave = RegisterSetBuilder::vmCalleeSaveRegisters();
             all.buildAndValidate().forEach(
                 [&] (Reg reg) {
                     if (!calleeSave.contains(reg, IgnoreVectors))
@@ -91,7 +111,8 @@ Code::Code(Procedure& proc)
             Vector<Reg> result;
             result.appendVector(volatileRegs);
             result.appendVector(fullCalleeSaveRegs);
-            result.appendVector(calleeSaveRegs);
+            if (!usesSIMD())
+                result.appendVector(calleeSaveRegs);
             setRegsInPriorityOrder(bank, result);
         });
 
@@ -163,9 +184,9 @@ StackSlot* Code::addStackSlot(uint64_t byteSize, StackSlotKind kind)
     StackSlot* result = m_stackSlots.addNew(byteSize, kind);
     if (m_stackIsAllocated) {
         // FIXME: This is unnecessarily awful. Fortunately, it doesn't run often.
-        unsigned extent = WTF::roundUpToMultipleOf(result->alignment(), frameSize() + byteSize);
+        unsigned extent = WTF::roundUpToMultipleOf(result->alignment(), frameSize() - stackAdjustmentForAlignment() + byteSize);
         result->setOffsetFromFP(-static_cast<ptrdiff_t>(extent));
-        setFrameSize(WTF::roundUpToMultipleOf(stackAlignmentBytes(), extent));
+        setFrameSize(WTF::roundUpToMultipleOf(stackAlignmentBytes(), extent) + stackAdjustmentForAlignment());
     }
     return result;
 }
@@ -180,7 +201,7 @@ CCallSpecial* Code::cCallSpecial()
 {
     if (!m_cCallSpecial) {
         m_cCallSpecial = static_cast<CCallSpecial*>(
-            addSpecial(makeUnique<CCallSpecial>()));
+            addSpecial(makeUnique<CCallSpecial>(usesSIMD())));
     }
 
     return m_cCallSpecial;
@@ -214,7 +235,7 @@ void Code::setCalleeSaveRegisterAtOffsetList(RegisterAtOffsetList&& registerAtOf
 {
     m_uncorrectedCalleeSaveRegisterAtOffsetList = WTFMove(registerAtOffsetList);
     for (const RegisterAtOffset& registerAtOffset : m_uncorrectedCalleeSaveRegisterAtOffsetList) {
-        ASSERT(registerAtOffset.width() == Width64);
+        ASSERT(registerAtOffset.width() <= Width64);
         m_calleeSaveRegisters.add(registerAtOffset.reg(), registerAtOffset.width());
     }
     m_calleeSaveStackSlot = slot;
@@ -325,6 +346,11 @@ unsigned Code::jsHash() const
 void Code::setNumEntrypoints(unsigned numEntryPoints)
 {
     m_prologueGenerators = { numEntryPoints, m_defaultPrologueGenerator.copyRef() };
+}
+
+bool Code::usesSIMD() const
+{
+    return m_proc.usesSIMD();
 }
 
 } } } // namespace JSC::B3::Air

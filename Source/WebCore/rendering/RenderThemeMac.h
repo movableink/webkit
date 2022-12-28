@@ -67,7 +67,7 @@ public:
     Color platformAnnotationHighlightColor(OptionSet<StyleColorOptions>) const final;
     Color platformDefaultButtonTextColor(OptionSet<StyleColorOptions>) const final;
 
-    ScrollbarControlSize scrollbarControlSizeForPart(ControlPart) final { return ScrollbarControlSize::Small; }
+    ScrollbarControlSize scrollbarControlSizeForPart(ControlPartType) final { return ScrollbarControlSize::Small; }
 
     int minimumMenuListSize(const RenderStyle&) const final;
 
@@ -83,9 +83,8 @@ public:
 
     bool popsMenuByArrowKeys() const final { return true; }
 
-    IntSize meterSizeForBounds(const RenderMeter&, const IntRect&) const final;
-    bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) final;
-    bool supportsMeter(ControlPart, const HTMLMeterElement&) const final;
+    FloatSize meterSizeForBounds(const RenderMeter&, const FloatRect&) const final;
+    bool supportsMeter(ControlPartType, const HTMLMeterElement&) const final;
 
     // Returns the repeat interval of the animation for the progress bar.
     Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const final;
@@ -101,12 +100,15 @@ public:
 private:
     RenderThemeMac();
 
-    bool canPaint(const PaintInfo&, const Settings&, ControlPart) const final;
+    bool canPaint(const PaintInfo&, const Settings&, ControlPartType) const final;
+    bool canCreateControlPartForRenderer(const RenderObject&) const final;
+    bool canCreateControlPartForBorderOnly(const RenderObject&) const final;
 
-    bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
+    bool useFormSemanticContext() const final;
+    bool supportsLargeFormControls() const final;
+
     void adjustTextFieldStyle(RenderStyle&, const Element*) const final;
 
-    bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) final;
     void adjustTextAreaStyle(RenderStyle&, const Element*) const final;
 
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) final;
@@ -156,8 +158,6 @@ private:
 private:
     String fileListNameForWidth(const FileList*, const FontCascade&, int width, bool multipleFilesAllowed) const final;
 
-    bool shouldPaintCustomTextField(const RenderObject&) const;
-
     Color systemColor(CSSValueID, OptionSet<StyleColorOptions>) const final;
 
     // Get the control size based off the font. Used by some of the controls (like buttons).
@@ -196,12 +196,9 @@ private:
     NSMenu *searchMenuTemplate() const;
     NSSliderCell *sliderThumbHorizontal() const;
     NSSliderCell *sliderThumbVertical() const;
-    NSTextFieldCell *textField() const;
 #if ENABLE(DATALIST_ELEMENT)
     NSCell *listButton() const;
 #endif
-
-    NSLevelIndicatorCell *levelIndicatorFor(const RenderMeter&) const;
 
     int minimumProgressBarHeight(const RenderStyle&) const;
     const IntSize* progressBarSizes() const;
@@ -220,8 +217,6 @@ private:
     mutable RetainPtr<NSMenu> m_searchMenuTemplate;
     mutable RetainPtr<NSSliderCell> m_sliderThumbHorizontal;
     mutable RetainPtr<NSSliderCell> m_sliderThumbVertical;
-    mutable RetainPtr<NSLevelIndicatorCell> m_levelIndicator;
-    mutable RetainPtr<NSTextFieldCell> m_textField;
 #if ENABLE(SERVICE_CONTROLS)
     mutable RetainPtr<NSServicesRolloverButtonCell> m_servicesRolloverButton;
 #endif

@@ -37,14 +37,14 @@
     bool _done;
 }
 
-- (instancetype)initWithExtension:(_WKWebExtension *)extension
+- (instancetype)initForExtension:(_WKWebExtension *)extension
 {
     if (!(self = [super init]))
         return nil;
 
     _extension = extension;
-    _context = [[_WKWebExtensionContext alloc] initWithExtension:extension];
-    _controller = [[_WKWebExtensionController alloc] init];
+    _context = [[_WKWebExtensionContext alloc] initForExtension:extension];
+    _controller = [[_WKWebExtensionController alloc] initWithConfiguration:_WKWebExtensionControllerConfiguration.nonPersistentConfiguration];
 
     _context._testingMode = YES;
 
@@ -140,7 +140,7 @@ namespace Util {
 
 RetainPtr<TestWebExtensionManager> loadAndRunExtension(_WKWebExtension *extension)
 {
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initWithExtension:extension]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension]);
     [manager loadAndRun];
     return manager;
 }
@@ -157,7 +157,7 @@ RetainPtr<TestWebExtensionManager> loadAndRunExtension(NSDictionary *resources)
 
 RetainPtr<TestWebExtensionManager> loadAndRunExtension(NSURL *baseURL)
 {
-    return loadAndRunExtension([[_WKWebExtension alloc] initWithResourceBaseURL:baseURL]);
+    return loadAndRunExtension([[_WKWebExtension alloc] initWithResourceBaseURL:baseURL error:nullptr]);
 }
 
 } // namespace Util

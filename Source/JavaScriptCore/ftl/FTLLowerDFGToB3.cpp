@@ -3018,7 +3018,7 @@ private:
                 m_out.storeDouble(value, m_out.baseIndex(m_heaps.indexedDoubleProperties, buffer, m_out.constInt32(index), jsNumber(index)));
             }
 
-            setDouble(m_out.callWithoutSideEffects(Double, m_node->op() == ArithMin ? operationArithMinMultipleDouble : operationArithMaxMultipleDouble, buffer, m_out.constInt32(m_node->numChildren())));
+            setDouble(vmCall(Double, m_node->op() == ArithMin ? operationArithMinMultipleDouble : operationArithMaxMultipleDouble, buffer, m_out.constInt32(m_node->numChildren())));
             break;
         }
             
@@ -10686,7 +10686,7 @@ IGNORE_CLANG_WARNINGS_END
                     jit.jump().linkTo(mainPath, &jit);
                     callLinkInfo->setExecutableDuringCompilation(executable);
                     if (numAllocatedArgs > numPassedArgs)
-                        callLinkInfo->setMaxArgumentCountIncludingThis(numAllocatedArgs);
+                        callLinkInfo->setDirectCallMaxArgumentCountIncludingThis(numAllocatedArgs);
                     
                     jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
                         callLinkInfo->setCodeLocations(
@@ -10711,7 +10711,7 @@ IGNORE_CLANG_WARNINGS_END
                 
                 callLinkInfo->setExecutableDuringCompilation(executable);
                 if (numAllocatedArgs > numPassedArgs)
-                    callLinkInfo->setMaxArgumentCountIncludingThis(numAllocatedArgs);
+                    callLinkInfo->setDirectCallMaxArgumentCountIncludingThis(numAllocatedArgs);
                 
                 params.addLatePath(
                     [=] (CCallHelpers& jit) {
@@ -20574,18 +20574,18 @@ IGNORE_CLANG_WARNINGS_END
         LValue value = lowJSValue(edge, ManualOperandSpeculation);
         LValue doubleValue = unboxDouble(value);
         
-        LBasicBlock intCase = m_out.newBlock();
+        LBasicBlock intOrNaNCase = m_out.newBlock();
         LBasicBlock continuation = m_out.newBlock();
         
         m_out.branch(
             m_out.doubleEqual(doubleValue, doubleValue),
-            usually(continuation), rarely(intCase));
+            usually(continuation), rarely(intOrNaNCase));
         
-        LBasicBlock lastNext = m_out.appendTo(intCase, continuation);
+        LBasicBlock lastNext = m_out.appendTo(intOrNaNCase, continuation);
         
         typeCheck(
             jsValueValue(value), m_node->child1(), SpecBytecodeRealNumber,
-            isNotInt32(value, provenType(m_node->child1()) & ~SpecFullDouble));
+            isNotInt32(value, provenType(m_node->child1()) & ~SpecDoubleReal));
         m_out.jump(continuation);
 
         m_out.appendTo(continuation, lastNext);
@@ -21501,13 +21501,18 @@ IGNORE_CLANG_WARNINGS_END
     {
         PatchpointValue* result = m_out.patchpoint(Void);
         result->effects.writesLocalState = true;
-        result->append(value, ValueRep::reg(GPRInfo::regT0));
         Type valueType = value->type();
+        if (valueType == Double)
+            result->append(value, ValueRep::reg(FPRInfo::fpRegT0));
+        else
+            result->append(value, ValueRep::reg(GPRInfo::regT0));
         result->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams&) {
             AllowMacroScratchRegisterUsage allowScratch(jit);
 
             jit.probeDebug([=] (Probe::Context& context) {
-                if (valueType == Int32)
+                if (valueType == Double)
+                    dataLogLn(prefix, context.fpr<double>(FPRInfo::fpRegT0));
+                else if (valueType == Int32)
                     dataLogLn(prefix, context.gpr<int32_t>(GPRInfo::regT0));
                 else
                     dataLogLn(prefix, context.gpr<JSValue>(GPRInfo::regT0));

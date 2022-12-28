@@ -27,6 +27,7 @@
 #pragma once
 
 #include "Grid.h"
+#include "GridMasonryLayout.h"
 #include "GridTrackSizingAlgorithm.h"
 #include "RenderBlock.h"
 
@@ -102,6 +103,9 @@ public:
     // nested subgrids, where ancestor may not be our direct parent.
     bool isSubgridOf(GridTrackSizingDirection, const RenderGrid& ancestor);
 
+    bool areMasonryRows() const;
+    bool areMasonryColumns() const;
+
     const Grid& currentGrid() const;
     Grid& currentGrid();
 
@@ -113,8 +117,10 @@ public:
     LayoutUnit gridGap(GridTrackSizingDirection) const;
     LayoutUnit gridGap(GridTrackSizingDirection, std::optional<LayoutUnit> availableSize) const;
 
+    LayoutUnit masonryContentSize() const;
 private:
     friend class GridTrackSizingAlgorithm;
+    friend class GridMasonryLayout;
 
     ItemPosition selfAlignmentNormalBehavior(const RenderBox* child = nullptr) const override
     {
@@ -147,10 +153,17 @@ private:
     std::unique_ptr<GridArea> createEmptyGridAreaAtSpecifiedPositionsOutsideGrid(const RenderBox&, GridTrackSizingDirection, const GridSpan&) const;
     void placeSpecifiedMajorAxisItemsOnGrid(const Vector<RenderBox*>&);
     void placeAutoMajorAxisItemsOnGrid(const Vector<RenderBox*>&);
+    void placeItemUsingMasonryPositioning(Grid&, RenderBox*) const;
     typedef std::pair<unsigned, unsigned> AutoPlacementCursor;
     void placeAutoMajorAxisItemOnGrid(RenderBox&, AutoPlacementCursor&);
     GridTrackSizingDirection autoPlacementMajorAxisDirection() const;
     GridTrackSizingDirection autoPlacementMinorAxisDirection() const;
+
+    static bool itemGridAreaIsWithinImplicitGrid(const GridArea& area, unsigned gridAxisLinesCount, GridTrackSizingDirection gridAxisDirection)
+    {
+        auto itemSpan = gridAxisDirection == ForColumns ? area.columns : area.rows;
+        return itemSpan.startLine() <  gridAxisLinesCount && itemSpan.endLine() < gridAxisLinesCount;
+    }
 
     bool canPerformSimplifiedLayout() const final;
     void prepareChildForPositionedLayout(RenderBox&);
@@ -225,6 +238,9 @@ private:
 
     bool computeGridPositionsForOutOfFlowChild(const RenderBox&, GridTrackSizingDirection, int&, bool&, int&, bool&) const;
 
+    AutoRepeatType autoRepeatColumnsType() const;
+    AutoRepeatType autoRepeatRowsType() const;
+
     class GridWrapper {
         Grid m_layoutGrid;
     public:
@@ -239,6 +255,8 @@ private:
     Vector<LayoutUnit> m_rowPositions;
     ContentAlignmentData m_offsetBetweenColumns;
     ContentAlignmentData m_offsetBetweenRows;
+
+    mutable GridMasonryLayout m_masonryLayout;
 
     typedef HashMap<const RenderBox*, std::optional<size_t>> OutOfFlowPositionsMap;
     OutOfFlowPositionsMap m_outOfFlowItemColumn;

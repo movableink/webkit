@@ -1221,8 +1221,8 @@ void WebsiteDataStore::setIsRunningResourceLoadStatisticsTest(bool value, Comple
 
 void WebsiteDataStore::getAllStorageAccessEntries(WebPageProxyIdentifier pageID, CompletionHandler<void(Vector<String>&& domains)>&& completionHandler)
 {
-    auto* webPage = WebProcessProxy::webPage(pageID);
-    if (!webPage) {
+    auto page = WebProcessProxy::webPage(pageID);
+    if (!page) {
         completionHandler({ });
         return;
     }
@@ -1843,6 +1843,7 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
 
     NetworkSessionCreationParameters networkSessionParameters;
     networkSessionParameters.sessionID = m_sessionID;
+    networkSessionParameters.dataStoreIdentifier = configuration().identifier();
     networkSessionParameters.boundInterfaceIdentifier = configuration().boundInterfaceIdentifier();
     networkSessionParameters.allowsCellularAccess = configuration().allowsCellularAccess() ? AllowsCellularAccess::Yes : AllowsCellularAccess::No;
     networkSessionParameters.deviceManagementRestrictionsEnabled = m_configuration->deviceManagementRestrictionsEnabled();
@@ -1868,6 +1869,7 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
     networkSessionParameters.allowsHSTSWithUntrustedRootCertificate = m_configuration->allowsHSTSWithUntrustedRootCertificate();
     networkSessionParameters.pcmMachServiceName = m_configuration->pcmMachServiceName();
     networkSessionParameters.webPushMachServiceName = m_configuration->webPushMachServiceName();
+    networkSessionParameters.webPushPartitionString = m_configuration->webPushPartitionString();
 #if !HAVE(NSURLSESSION_WEBSOCKET)
     networkSessionParameters.shouldAcceptInsecureCertificatesForWebSockets = m_configuration->shouldAcceptInsecureCertificatesForWebSockets();
 #endif
@@ -2122,6 +2124,9 @@ bool WebsiteDataStore::shouldMakeNextNetworkProcessLaunchFailForTesting()
 
 void WebsiteDataStore::showServiceWorkerNotification(IPC::Connection& connection, const WebCore::NotificationData& notificationData)
 {
+    if (m_client->showNotification(notificationData))
+        return;
+
     WebNotificationManagerProxy::sharedServiceWorkerManager().show(nullptr, connection, notificationData, nullptr);
 }
 
@@ -2161,6 +2166,11 @@ void WebsiteDataStore::openWindowFromServiceWorker(const String& urlString, cons
     };
 
     m_client->openWindowFromServiceWorker(urlString, serviceWorkerOrigin, WTFMove(innerCallback));
+}
+
+void WebsiteDataStore::workerUpdatedAppBadge(const WebCore::SecurityOriginData& origin, std::optional<uint64_t> badge)
+{
+    m_client->workerUpdatedAppBadge(origin, badge);
 }
 
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)

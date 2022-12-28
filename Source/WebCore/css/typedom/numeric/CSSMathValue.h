@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CSSCalcExpressionNode.h"
+#include "CSSCalcValue.h"
 #include "CSSMathOperator.h"
 #include "CSSNumericArray.h"
 #include "CSSNumericValue.h"
@@ -68,8 +69,12 @@ public:
         auto node = toCalcExpressionNode();
         if (!node)
             return nullptr;
-        return CSSPrimitiveValue::create(node->doubleValue(node->primitiveType()), node->primitiveType());
+        return CSSPrimitiveValue::create(CSSCalcValue::create(node.releaseNonNull()));
     }
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSMathValue)
+static bool isType(const WebCore::CSSStyleValue& styleValue) { return WebCore::isCSSMathValue(styleValue.getType()); }
+SPECIALIZE_TYPE_TRAITS_END()

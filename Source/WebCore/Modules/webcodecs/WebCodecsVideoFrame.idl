@@ -42,9 +42,9 @@ typedef (HTMLImageElement or HTMLCanvasElement or ImageBitmap
     InterfaceName=VideoFrame,
     ReportExtraMemoryCost,
 ] interface WebCodecsVideoFrame {
-    constructor(CanvasImageSource image, optional VideoFrameInit init = {});
-    constructor(WebCodecsVideoFrame image, optional VideoFrameInit init = {});
-    constructor([AllowShared] BufferSource data, VideoFrameBufferInit init);
+    [CallWith=CurrentScriptExecutionContext] constructor(CanvasImageSource image, optional VideoFrameInit init = {});
+    [CallWith=CurrentScriptExecutionContext] constructor(WebCodecsVideoFrame image, optional VideoFrameInit init = {});
+    [CallWith=CurrentScriptExecutionContext] constructor([AllowShared] (ArrayBufferView or ArrayBuffer) data, VideoFrameBufferInit init);
 
     readonly attribute VideoPixelFormat? format;
     readonly attribute unsigned long codedWidth;
@@ -58,8 +58,8 @@ typedef (HTMLImageElement or HTMLCanvasElement or ImageBitmap
     readonly attribute VideoColorSpace colorSpace;
 
     unsigned long allocationSize(optional VideoFrameCopyToOptions options = {});
-    Promise<sequence<PlaneLayout>> copyTo([AllowShared] BufferSource destination, optional VideoFrameCopyToOptions options = {});
-    WebCodecsVideoFrame clone();
+    Promise<sequence<PlaneLayout>> copyTo([AllowShared] (ArrayBufferView or ArrayBuffer) destination, optional VideoFrameCopyToOptions options = {});
+    [CallWith=CurrentScriptExecutionContext] WebCodecsVideoFrame clone();
     undefined close();
 };
 

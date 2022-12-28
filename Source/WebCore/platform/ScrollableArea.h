@@ -77,7 +77,7 @@ public:
     WEBCORE_EXPORT void scrollToPositionWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
 
     WEBCORE_EXPORT void scrollToOffsetWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
-    void scrollToOffsetWithoutAnimation(ScrollbarOrientation, float offset);
+    WEBCORE_EXPORT void scrollToOffsetWithoutAnimation(ScrollbarOrientation, float offset);
 
     // Should be called when the scroll position changes externally, for example if the scroll layer position
     // is updated on the scrolling thread and we need to notify the main thread.
@@ -248,8 +248,8 @@ public:
     bool scrollOriginChanged() const { return m_scrollOriginChanged; }
 
     virtual ScrollPosition scrollPosition() const = 0;
-    virtual ScrollPosition minimumScrollPosition() const;
-    virtual ScrollPosition maximumScrollPosition() const;
+    WEBCORE_EXPORT virtual ScrollPosition minimumScrollPosition() const;
+    WEBCORE_EXPORT virtual ScrollPosition maximumScrollPosition() const;
 
     ScrollPosition constrainedScrollPosition(const ScrollPosition& position) const
     {
@@ -287,6 +287,7 @@ public:
     // This reflects animated scrolls triggered by CSS OM View "smooth" scrolls.
     ScrollAnimationStatus scrollAnimationStatus() { return m_scrollAnimationStatus; }
     void setScrollAnimationStatus(ScrollAnimationStatus status) { m_scrollAnimationStatus = status; }
+    virtual void animatedScrollDidEnd() { };
 
     bool scrollShouldClearLatchedState() const { return m_scrollShouldClearLatchedState; }
     void setScrollShouldClearLatchedState(bool shouldClear) { m_scrollShouldClearLatchedState = shouldClear; }
@@ -394,6 +395,7 @@ public:
     bool shouldBlockScrollPropagation(const FloatSize&) const;
     FloatSize deltaForPropagation(const FloatSize&) const;
     WEBCORE_EXPORT virtual float adjustVerticalPageScrollStepForFixedContent(float step);
+    virtual bool needsAnimatedScroll() const { return false; }
 
 protected:
     WEBCORE_EXPORT ScrollableArea();

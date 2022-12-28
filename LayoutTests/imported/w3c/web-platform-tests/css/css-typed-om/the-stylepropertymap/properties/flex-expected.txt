@@ -1,5 +1,6 @@
-CONSOLE MESSAGE: ReferenceError: Can't find variable: CSSPositionValue
 
-Harness Error (FAIL), message = ReferenceError: Can't find variable: CSSPositionValue
-
+PASS 'flex' does not support 'auto'
+PASS 'flex' does not support '2'
+PASS 'flex' does not support '1 30px'
+PASS 'flex' does not support '2 2 10%'
 

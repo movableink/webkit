@@ -50,6 +50,7 @@ namespace WebCore {
 
 class AffineTransform;
 class Color;
+class ControlPart;
 class Cursor;
 class Document;
 class HitTestLocation;
@@ -84,12 +85,6 @@ struct InlineBoxAndOffset;
 struct PaintInfo;
 struct SimpleRange;
 
-#if PLATFORM(IOS_FAMILY)
-const int caretWidth = 2; // This value should be kept in sync with UIKit. See <rdar://problem/15580601>.
-#else
-const int caretWidth = 1;
-#endif
-
 struct ScrollRectToVisibleOptions;
 
 namespace Layout {
@@ -105,6 +100,7 @@ class RenderObject : public CachedImageClient {
     WTF_MAKE_ISO_ALLOCATED(RenderObject);
     friend class RenderBlock;
     friend class RenderBlockFlow;
+    friend class RenderBox;
     friend class RenderElement;
     friend class RenderLayer;
     friend class RenderLayerScrollableArea;
@@ -263,10 +259,6 @@ public:
 #if ENABLE(ATTACHMENT_ELEMENT)
     virtual bool isAttachment() const { return false; }
 #endif
-#if ENABLE(FULLSCREEN_API)
-    virtual bool isRenderFullScreen() const { return false; }
-    virtual bool isRenderFullScreenPlaceholder() const { return false; }
-#endif
     virtual bool isRenderGrid() const { return false; }
 
     virtual bool isMultiColumnBlockFlow() const { return false; }
@@ -414,7 +406,7 @@ public:
     // rest of the rendering tree will move to a similar model.
     virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction);
 
-    bool hasIntrinsicAspectRatio() const { return isReplacedOrInlineBlock() && (isImage() || isVideo() || isCanvas()); }
+    virtual bool hasIntrinsicAspectRatio() const { return isReplacedOrInlineBlock() && (isImage() || isVideo() || isCanvas()); }
     bool isAnonymous() const { return m_bitfields.isAnonymous(); }
     bool isAnonymousBlock() const;
     bool isBlockContainer() const;
@@ -605,7 +597,7 @@ public:
     // different offsets apply at different points, so return the offset that applies to the given point.
     virtual LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const;
     // Return the offset from an object up the container() chain. Asserts that none of the intermediate objects have transforms.
-    LayoutSize offsetFromAncestorContainer(RenderElement&) const;
+    LayoutSize offsetFromAncestorContainer(const RenderElement&) const;
 
 #if PLATFORM(IOS_FAMILY)
     virtual void collectSelectionGeometries(Vector<SelectionGeometry>&, unsigned startOffset = 0, unsigned endOffset = std::numeric_limits<unsigned>::max());
@@ -781,6 +773,11 @@ public:
     bool shouldUseTransformFromContainer(const RenderObject* container) const;
     void getTransformFromContainer(const RenderObject* container, const LayoutSize& offsetInContainer, TransformationMatrix&) const;
     
+    void pushOntoTransformState(TransformState&, OptionSet<MapCoordinatesMode>, const RenderLayerModelObject* repaintContainer, const RenderElement* container, const LayoutSize& offsetInContainer, bool containerSkipped) const;
+    void pushOntoGeometryMap(RenderGeometryMap&, const RenderLayerModelObject* repaintContainer, RenderElement* container, bool containerSkipped) const;
+
+    bool participatesInPreserve3D(const RenderElement* container) const;
+
     virtual void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& /* additionalOffset */, const RenderLayerModelObject* /* paintContainer */ = nullptr) const { };
 
     LayoutRect absoluteOutlineBounds() const { return outlineBoundsForRepaint(nullptr); }
@@ -1009,6 +1006,9 @@ private:
         // From RenderElement
         std::unique_ptr<ReferencedSVGResources> referencedSVGResources;
         WeakPtr<RenderBlockFlow> backdropRenderer;
+
+        // From RenderBox
+        RefPtr<ControlPart> controlPart;
     };
     
     WEBCORE_EXPORT const RenderObject::RenderObjectRareData& rareData() const;
@@ -1154,10 +1154,6 @@ inline bool RenderObject::isAnonymousBlock() const
         && (style().display() == DisplayType::Block || style().display() == DisplayType::Box)
         && style().styleType() == PseudoId::None
         && isRenderBlock()
-#if ENABLE(FULLSCREEN_API)
-        && !isRenderFullScreen()
-        && !isRenderFullScreenPlaceholder()
-#endif
 #if ENABLE(MATHML)
         && !isRenderMathMLBlock()
 #endif

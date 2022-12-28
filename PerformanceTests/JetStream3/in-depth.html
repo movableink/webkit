@@ -259,10 +259,26 @@
 
         <dt id="raytrace">raytrace</dt>
         <dd>
-        <a href="https://en.wikipedia.org/wiki/Ray_tracing_(graphics)">Ray tracer</a> written in JavaScript using prototype.js. Tests object construction performance
-         and floating point math.
+         <a href="https://en.wikipedia.org/wiki/Ray_tracing_(graphics)">Ray tracer</a> written in JavaScript using ES6 classes.
+         Tests object construction performance and floating point math.
          A similar version of this benchmark was previously published in Octane version 2.
          Source code: <a href="Octane/raytrace.js">raytrace.js</a>
+        </dd>
+
+        <dt id="raytrace-private-class-fields">raytrace-private-class-fields</dt>
+        <dd>
+         <a href="https://en.wikipedia.org/wiki/Ray_tracing_(graphics)">Ray tracer</a> written in JavaScript using ES6 classes and private fields.
+         Tests object construction performance, along with setting default values of private fields, their access speed, and floating point math.
+         A similar version of this benchmark was previously published in Octane version 2.
+         Source code: <a href="class-fields/raytrace-private-class-fields.js">raytrace-private-class-fields.js</a>
+        </dd>
+
+        <dt id="raytrace-public-class-fields">raytrace-public-class-fields</dt>
+        <dd>
+         <a href="https://en.wikipedia.org/wiki/Ray_tracing_(graphics)">Ray tracer</a> written in JavaScript using ES6 classes and public fields.
+         Tests object construction performance, along with setting default values of public fields, and floating point math.
+         A similar version of this benchmark was previously published in Octane version 2.
+         Source code: <a href="class-fields/raytrace-public-class-fields.js">raytrace-public-class-fields.js</a>
         </dd>
 
         <dt id="quicksort-wasm">quicksort-wasm</dt>
@@ -653,6 +669,68 @@
          short-running code.
          A similar version of this benchmark was previously published in SunSpider.
          Source code: <a href="SunSpider/3d-cube.js">3d-cube.js</a>
+        </dd>
+
+        <dt id="bigint-noble-bls12-381">bigint-noble-bls12-381</dt>
+        <dd>
+         <a href="https://hackmd.io/@benjaminion/bls12-381">BLS12-381</a>, pairing-friendly
+         Barreto-Lynn-Scott elliptic curve construction,
+         <a href="https://github.com/paulmillr/noble-bls12-381">implemented in JavaScript</a>
+         by Paul Miller. Tests typed arrays and arithmetic operations on BigInt.
+         Source code: <a href="bigint/noble-bls12-381-bundle.js">noble-bls12-381-bundle.js</a>
+        </dd>
+
+        <dt id="bigint-noble-secp256k1">bigint-noble-secp256k1</dt>
+        <dd>
+         <a href="https://www.secg.org/sec2-v2.pdf">secp256k1</a>, an elliptic curve that could
+         be used for asymmetric encryption, ECDH key agreement protocol and signature schemes,
+         <a href="https://github.com/paulmillr/noble-secp256k1">implemented in JavaScript</a>
+         by Paul Miller. Tests typed arrays and arithmetic operations on BigInt.
+         Source code: <a href="bigint/noble-secp256k1-bundle.js">noble-secp256k1-bundle.js</a>
+        </dd>
+
+        <dt id="bigint-noble-ed25519">bigint-noble-ed25519</dt>
+        <dd>
+         <a href="https://en.wikipedia.org/wiki/EdDSA">ed25519</a>, an elliptic curve that could
+         be used for EDDSA signature scheme and X25519 ECDH key agreement,
+         <a href="https://github.com/paulmillr/noble-ed25519">implemented in JavaScript</a>
+         by Paul Miller. Tests typed arrays and arithmetic operations on BigInt.
+         Source code: <a href="bigint/noble-ed25519-bundle.js">noble-ed25519-bundle.js</a>
+        </dd>
+
+        <dt id="bigint-paillier">bigint-paillier</dt>
+        <dd>
+         <a href="https://en.wikipedia.org/wiki/Paillier_cryptosystem">Paillier cryptosystem</a>,
+         a probabilistic asymmetric algorithm for public key cryptography,
+         <a href="https://github.com/juanelas/paillier-bigint">implemented in JavaScript</a>
+         by Juan Hernández Serrano. Tests arithmetic operations on BigInt.
+         Source code: <a href="bigint/paillier-bundle.js">paillier-bundle.js</a>
+        </dd>
+
+        <dt id="bigint-bigdenary">bigint-bigdenary</dt>
+        <dd>
+         <a href="https://github.com/uzyn/bigdenary">BigDenary</a>, an arbitrary-precision
+         decimal arithmetic, implemented in JavaScript by U-Zyn Chua.
+         Tests arithmetic operations on BigInt.
+         Source code: <a href="bigint/bigdenary-bundle.js">bigdenary-bundle.js</a>
+        </dd>
+
+        <dt id="proxy-mobx">proxy-mobx</dt>
+        <dd>
+         A super minimal, store-only implementation of Reminders.app, written in MobX.
+         Heavily relies on computed getters and utilizes Map / Set collections.
+         Synchronously re-renders into text on every data manipulation.
+         Tests get / set Proxy traps, as well as various Array methods.
+         Source code: <a href="proxy/mobx-benchmark.js">mobx-benchmark.js</a>
+        </dd>
+
+        <dt id="proxy-vue">proxy-vue</dt>
+        <dd>
+         A super minimal, store-only implementation of Reminders.app, written using reactivity
+         API of Vue.js 3.0. Heavily relies on computed getters and utilizes Map / Set collections.
+         Synchronously re-renders into text on every data manipulation.
+         Tests get / set Proxy traps, as well as various Array methods.
+         Source code: <a href="proxy/vue-benchmark.js">vue-benchmark.js</a>
         </dd>
 
         </dl>

@@ -560,18 +560,37 @@ Ref<Node> Element::cloneNodeInternal(Document& targetDocument, CloningOperation 
 {
     switch (type) {
     case CloningOperation::OnlySelf:
-    case CloningOperation::SelfWithTemplateContent:
         return cloneElementWithoutChildren(targetDocument);
+    case CloningOperation::SelfWithTemplateContent: {
+        Ref clone = cloneElementWithoutChildren(targetDocument);
+        ScriptDisallowedScope::EventAllowedScope eventAllowedScope { clone };
+        cloneShadowTreeIfPossible(clone);
+        return clone;
+    }
     case CloningOperation::Everything:
         break;
     }
     return cloneElementWithChildren(targetDocument);
 }
 
+void Element::cloneShadowTreeIfPossible(Element& newHost)
+{
+    RefPtr oldShadowRoot = this->shadowRoot();
+    if (!oldShadowRoot || !oldShadowRoot->isCloneable())
+        return;
+
+    Ref clone = oldShadowRoot->cloneNodeInternal(newHost.document(), Node::CloningOperation::SelfWithTemplateContent);
+    RELEASE_ASSERT(is<ShadowRoot>(clone));
+    auto& clonedShadowRoot = downcast<ShadowRoot>(clone.get());
+    newHost.addShadowRoot(clonedShadowRoot);
+    oldShadowRoot->cloneChildNodes(clonedShadowRoot);
+}
+
 Ref<Element> Element::cloneElementWithChildren(Document& targetDocument)
 {
     Ref<Element> clone = cloneElementWithoutChildren(targetDocument);
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { clone };
+    cloneShadowTreeIfPossible(clone);
     cloneChildNodes(clone);
     return clone;
 }
@@ -742,6 +761,24 @@ Vector<String> Element::getAttributeNames() const
     return attributesVector;
 }
 
+bool Element::hasFocusableStyle() const
+{
+    if (renderer() && renderer()->isSkippedContent())
+        return false;
+
+    auto isFocusableStyle = [](const RenderStyle* style) {
+        return style && style->display() != DisplayType::None && style->display() != DisplayType::Contents
+            && style->visibility() == Visibility::Visible && !style->effectiveInert();
+    };
+
+    if (renderStyle())
+        return isFocusableStyle(renderStyle());
+
+    // Compute style in yet unstyled subtree without resolving full style.
+    auto* style = const_cast<Element&>(*this).resolveComputedStyle(ResolveComputedStyleMode::RenderedOnly);
+    return isFocusableStyle(style);
+}
+
 bool Element::isFocusable() const
 {
     if (!isConnected() || !supportsFocus())
@@ -750,12 +787,12 @@ bool Element::isFocusable() const
     if (!renderer()) {
         // Elements in canvas fallback content are not rendered, but they are allowed to be
         // focusable as long as their canvas is displayed and visible.
-        if (auto* canvas = ancestorsOfType<HTMLCanvasElement>(*this).first())
-            return canvas->isFocusableWithoutResolvingFullStyle();
-    } else if (renderer()->isSkippedContent())
-        return false;
+        RefPtr canvas = ancestorsOfType<HTMLCanvasElement>(*this).first();
+        if (canvas && !canvas->hasFocusableStyle())
+            return false;
+    }
 
-    return isFocusableWithoutResolvingFullStyle();
+    return hasFocusableStyle();
 }
 
 bool Element::isUserActionElementInActiveChain() const
@@ -2503,11 +2540,6 @@ Node::InsertedIntoAncestorResult Element::insertedIntoAncestor(InsertionType ins
 {
     ContainerNode::insertedIntoAncestor(insertionType, parentOfInsertedTree);
 
-#if ENABLE(FULLSCREEN_API)
-    if (containsFullScreenElement() && parentElement() && !parentElement()->containsFullScreenElement())
-        setContainsFullScreenElementOnAncestorsCrossingFrameBoundaries(true);
-#endif
-
     if (parentOfInsertedTree.isInTreeScope()) {
         bool becomeConnected = insertionType.connectedToDocument;
         auto* newScope = &parentOfInsertedTree.treeScope();
@@ -2558,11 +2590,6 @@ Node::InsertedIntoAncestorResult Element::insertedIntoAncestor(InsertionType ins
 
 void Element::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
-#if ENABLE(FULLSCREEN_API)
-    if (containsFullScreenElement())
-        setContainsFullScreenElementOnAncestorsCrossingFrameBoundaries(false);
-#endif
-
     if (auto* page = document().page()) {
 #if ENABLE(POINTER_LOCK)
         page->pointerLockController().elementWasRemoved(*this);
@@ -2613,6 +2640,10 @@ void Element::removedFromAncestor(RemovalType removalType, ContainerNode& oldPar
     clearAfterPseudoElement();
 
     ContainerNode::removedFromAncestor(removalType, oldParentOfRemovedTree);
+
+#if ENABLE(FULLSCREEN_API)
+    document().fullscreenManager().exitRemovedFullscreenElementIfNeeded(*this);
+#endif
 
     if (UNLIKELY(hasRareData()) && !elementRareData()->effectiveLang().isNull()) {
         if (auto* parent = parentOrShadowHostElement(); langFromAttribute().isNull()
@@ -2732,7 +2763,10 @@ ExceptionOr<ShadowRoot&> Element::attachShadow(const ShadowRootInit& init)
     }
     if (init.mode == ShadowRootMode::UserAgent)
         return Exception { TypeError };
-    auto shadow = ShadowRoot::create(document(), init.mode, init.slotAssignment, init.delegatesFocus ? ShadowRoot::DelegatesFocus::Yes : ShadowRoot::DelegatesFocus::No, isPrecustomizedOrDefinedCustomElement() ? ShadowRoot::AvailableToElementInternals::Yes : ShadowRoot::AvailableToElementInternals::No);
+    auto shadow = ShadowRoot::create(document(), init.mode, init.slotAssignment,
+        init.delegatesFocus ? ShadowRoot::DelegatesFocus::Yes : ShadowRoot::DelegatesFocus::No,
+        init.cloneable ? ShadowRoot::Cloneable::Yes : ShadowRoot::Cloneable::No,
+        isPrecustomizedOrDefinedCustomElement() ? ShadowRoot::AvailableToElementInternals::Yes : ShadowRoot::AvailableToElementInternals::No);
     auto& result = shadow.get();
     addShadowRoot(WTFMove(shadow));
     return result;
@@ -2740,7 +2774,7 @@ ExceptionOr<ShadowRoot&> Element::attachShadow(const ShadowRootInit& init)
 
 ExceptionOr<ShadowRoot&> Element::attachDeclarativeShadow(ShadowRootMode mode, bool delegatesFocus)
 {
-    auto exceptionOrShadowRoot = attachShadow({ mode, delegatesFocus });
+    auto exceptionOrShadowRoot = attachShadow({ mode, delegatesFocus, /* cloneable */ true });
     if (exceptionOrShadowRoot.hasException())
         return exceptionOrShadowRoot.releaseException();
     auto& shadowRoot = exceptionOrShadowRoot.releaseReturnValue();
@@ -3827,24 +3861,6 @@ const RenderStyle* Element::resolveComputedStyle(ResolveComputedStyleMode mode)
     return computedStyle;
 }
 
-bool Element::isFocusableWithoutResolvingFullStyle() const
-{
-    auto isFocusableStyle = [](const RenderStyle* style) {
-        return style
-            && style->display() != DisplayType::None
-            && style->display() != DisplayType::Contents
-            && style->visibility() == Visibility::Visible
-            && !style->effectiveInert();
-    };
-
-    if (renderStyle())
-        return isFocusableStyle(renderStyle());
-
-    // Compute style in yet unstyled subtree.
-    auto* style = const_cast<Element&>(*this).resolveComputedStyle(ResolveComputedStyleMode::RenderedOnly);
-    return isFocusableStyle(style);
-}
-
 const RenderStyle& Element::resolvePseudoElementStyle(PseudoId pseudoElementSpecifier)
 {
     ASSERT(!isPseudoElement());
@@ -4162,14 +4178,6 @@ bool Element::childShouldCreateRenderer(const Node& child) const
 
 #if ENABLE(FULLSCREEN_API)
 
-static Element* parentCrossingFrameBoundaries(const Element* element)
-{
-    ASSERT(element);
-    if (auto* parent = element->parentElementInComposedTree())
-        return parent;
-    return element->document().ownerElement();
-}
-
 void Element::webkitRequestFullscreen()
 {
     requestFullscreen({ }, nullptr);
@@ -4181,20 +4189,23 @@ void Element::requestFullscreen(FullscreenOptions&&, RefPtr<DeferredPromise>&& p
     document().fullscreenManager().requestFullscreenForElement(*this, WTFMove(promise), FullscreenManager::EnforceIFrameAllowFullscreenRequirement);
 }
 
-void Element::setContainsFullScreenElement(bool flag)
+void Element::setFullscreenFlag(bool flag)
 {
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, { { CSSSelector::PseudoClassFullscreen, flag }, { CSSSelector::PseudoClassModal, flag } });
     if (flag)
-        setNodeFlag(NodeFlag::ContainsFullScreenElement);
+        setNodeFlag(NodeFlag::IsFullscreen);
     else
-        clearNodeFlag(NodeFlag::ContainsFullScreenElement);
-    invalidateStyleAndLayerComposition();
+        clearNodeFlag(NodeFlag::IsFullscreen);
+
+    clearNodeFlag(NodeFlag::IsIFrameFullscreen);
 }
 
-void Element::setContainsFullScreenElementOnAncestorsCrossingFrameBoundaries(bool flag)
+void Element::setIFrameFullscreenFlag(bool flag)
 {
-    Element* element = this;
-    while ((element = parentCrossingFrameBoundaries(element)))
-        element->setContainsFullScreenElement(flag);
+    if (flag)
+        setNodeFlag(NodeFlag::IsIFrameFullscreen);
+    else
+        clearNodeFlag(NodeFlag::IsIFrameFullscreen);
 }
 
 #endif
@@ -4300,14 +4311,14 @@ const AnimationCollection* Element::animations(PseudoId pseudoId) const
     return nullptr;
 }
 
-bool Element::hasCompletedTransitionForProperty(PseudoId pseudoId, CSSPropertyID property) const
+bool Element::hasCompletedTransitionForProperty(PseudoId pseudoId, AnimatableProperty property) const
 {
     if (auto* animationData = animationRareData(pseudoId))
         return animationData->completedTransitionsByProperty().contains(property);
     return false;
 }
 
-bool Element::hasRunningTransitionForProperty(PseudoId pseudoId, CSSPropertyID property) const
+bool Element::hasRunningTransitionForProperty(PseudoId pseudoId, AnimatableProperty property) const
 {
     if (auto* animationData = animationRareData(pseudoId))
         return animationData->runningTransitionsByProperty().contains(property);
@@ -4338,12 +4349,12 @@ void Element::setAnimationsCreatedByMarkup(PseudoId pseudoId, CSSAnimationCollec
     ensureAnimationRareData(pseudoId).setAnimationsCreatedByMarkup(WTFMove(animations));
 }
 
-PropertyToTransitionMap& Element::ensureCompletedTransitionsByProperty(PseudoId pseudoId)
+AnimatablePropertyToTransitionMap& Element::ensureCompletedTransitionsByProperty(PseudoId pseudoId)
 {
     return ensureAnimationRareData(pseudoId).completedTransitionsByProperty();
 }
 
-PropertyToTransitionMap& Element::ensureRunningTransitionsByProperty(PseudoId pseudoId)
+AnimatablePropertyToTransitionMap& Element::ensureRunningTransitionsByProperty(PseudoId pseudoId)
 {
     return ensureAnimationRareData(pseudoId).runningTransitionsByProperty();
 }

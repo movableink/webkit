@@ -156,6 +156,7 @@ UIProcess/API/glib/WebKitNotificationProvider.cpp @no-unify
 UIProcess/API/glib/WebKitOptionMenu.cpp @no-unify
 UIProcess/API/glib/WebKitOptionMenuItem.cpp @no-unify
 UIProcess/API/glib/WebKitPermissionRequest.cpp @no-unify
+UIProcess/API/glib/WebKitPermissionStateQuery.cpp @no-unify
 UIProcess/API/glib/WebKitPlugin.cpp @no-unify
 UIProcess/API/glib/WebKitPolicyDecision.cpp @no-unify
 UIProcess/API/glib/WebKitPrivate.cpp @no-unify
@@ -261,6 +262,7 @@ WebProcess/InjectedBundle/API/glib/WebKitFrame.cpp @no-unify
 WebProcess/InjectedBundle/API/glib/WebKitScriptWorld.cpp @no-unify
 WebProcess/InjectedBundle/API/glib/WebKitWebEditor.cpp @no-unify
 WebProcess/InjectedBundle/API/glib/WebKitWebExtension.cpp @no-unify
+WebProcess/InjectedBundle/API/glib/WebKitWebFormManager.cpp @no-unify
 WebProcess/InjectedBundle/API/glib/WebKitWebHitTestResult.cpp @no-unify
 WebProcess/InjectedBundle/API/glib/WebKitWebPage.cpp @no-unify
 

@@ -42,6 +42,7 @@
 #include <WebCore/IndexedDB.h>
 #include <pal/SessionID.h>
 #include <wtf/Forward.h>
+#include <wtf/ThreadSafeWeakHashSet.h>
 
 namespace IPC {
 class SharedFileHandle;
@@ -84,7 +85,8 @@ public:
     void clearStorageForTesting(CompletionHandler<void()>&&);
     void clearStorageForWebPage(WebPageProxyIdentifier);
     void didIncreaseQuota(WebCore::ClientOrigin&&, QuotaIncreaseRequestIdentifier, std::optional<uint64_t> newQuota);
-    void fetchData(OptionSet<WebsiteDataType>, CompletionHandler<void(Vector<WebsiteData::Entry>&&)>&&);
+    enum class ShouldComputeSize : bool { No, Yes };
+    void fetchData(OptionSet<WebsiteDataType>, ShouldComputeSize, CompletionHandler<void(Vector<WebsiteData::Entry>&&)>&&);
     void deleteData(OptionSet<WebsiteDataType>, const Vector<WebCore::SecurityOriginData>&, CompletionHandler<void()>&&);
     void deleteDataModifiedSince(OptionSet<WebsiteDataType>, WallTime, CompletionHandler<void()>&&);
     void deleteDataForRegistrableDomains(OptionSet<WebsiteDataType>, const Vector<WebCore::RegistrableDomain>&, CompletionHandler<void(HashSet<WebCore::RegistrableDomain>&&)>&&);
@@ -112,7 +114,7 @@ private:
 
     void forEachOriginDirectory(const Function<void(const String&)>&);
     HashSet<WebCore::ClientOrigin> getAllOrigins();
-    Vector<WebsiteData::Entry> fetchDataFromDisk(OptionSet<WebsiteDataType>);
+    Vector<WebsiteData::Entry> fetchDataFromDisk(OptionSet<WebsiteDataType>, ShouldComputeSize);
     HashSet<WebCore::ClientOrigin> deleteDataOnDisk(OptionSet<WebsiteDataType>, WallTime, const Function<bool(const WebCore::ClientOrigin&)>&);
 #if PLATFORM(IOS_FAMILY)
     void includeOriginInBackupIfNecessary(OriginStorageManager&);
@@ -186,7 +188,7 @@ private:
     FileSystem::Salt m_salt;
     bool m_closed { false };
     HashMap<WebCore::ClientOrigin, std::unique_ptr<OriginStorageManager>> m_originStorageManagers;
-    WeakHashSet<IPC::Connection> m_connections; // Main thread only.
+    ThreadSafeWeakHashSet<IPC::Connection> m_connections;
     std::unique_ptr<FileSystemStorageHandleRegistry> m_fileSystemStorageHandleRegistry;
     std::unique_ptr<StorageAreaRegistry> m_storageAreaRegistry;
     std::unique_ptr<IDBStorageRegistry> m_idbStorageRegistry;

@@ -83,11 +83,38 @@ public:
         const CSSValue* m_value;
     };
 
+    template<typename T>
+    struct Iterator {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = PropertyReference;
+        using difference_type = ptrdiff_t;
+        using pointer = PropertyReference;
+        using reference = PropertyReference;
+
+        Iterator(const T& properties)
+            : properties { properties }
+        {
+        }
+
+        PropertyReference operator*() const { return properties.propertyAt(index); }
+        Iterator& operator++() { ++index; return *this; }
+        bool operator==(std::nullptr_t) const { return index >= properties.propertyCount(); }
+        bool operator!=(std::nullptr_t) const { return index < properties.propertyCount(); }
+
+    private:
+        const T& properties;
+        unsigned index { 0 };
+    };
+
     StylePropertiesType type() const { return static_cast<StylePropertiesType>(m_type); }
 
     unsigned propertyCount() const;
     bool isEmpty() const { return !propertyCount(); }
     PropertyReference propertyAt(unsigned) const;
+
+    Iterator<StyleProperties> begin() const { return { *this }; }
+    static constexpr std::nullptr_t end() { return nullptr; }
+    unsigned size() const { return propertyCount(); }
 
     WEBCORE_EXPORT RefPtr<CSSValue> getPropertyCSSValue(CSSPropertyID) const;
     WEBCORE_EXPORT String getPropertyValue(CSSPropertyID) const;
@@ -128,6 +155,8 @@ public:
 
     bool propertyMatches(CSSPropertyID, const CSSValue*) const;
 
+    StyleProperties() = default;
+
 protected:
     StyleProperties(CSSParserMode cssParserMode, StylePropertiesType type)
         : m_cssParserMode(cssParserMode)
@@ -159,15 +188,17 @@ private:
     String getAlignmentShorthandValue(const StylePropertyShorthand&) const;
     String borderImagePropertyValue(const StylePropertyShorthand&) const;
     String borderPropertyValue(const StylePropertyShorthand&, const StylePropertyShorthand&, const StylePropertyShorthand&) const;
-    String pageBreakPropertyValue(const StylePropertyShorthand&) const;
+    String borderRadiusShorthandValue(const StylePropertyShorthand&) const;
+    String breakInsideShorthandValue(const StylePropertyShorthand&) const;
+    String pageBreakValue(const StylePropertyShorthand&) const;
+    String webkitColumnBreakValue(const StylePropertyShorthand&) const;
     String getLayeredShorthandValue(const StylePropertyShorthand&) const;
     String get2Values(const StylePropertyShorthand&) const;
     String get4Values(const StylePropertyShorthand&) const;
     String borderSpacingValue(const StylePropertyShorthand&) const;
     String fontValue(const StylePropertyShorthand&) const;
-    String fontVariantValue(const StylePropertyShorthand&) const;
+    String fontVariantValue() const;
     String fontSynthesisValue() const;
-    String textDecorationSkipValue() const;
     String offsetValue() const;
     String commonShorthandChecks(const StylePropertyShorthand&) const;
     StringBuilder asTextInternal() const;
@@ -185,6 +216,10 @@ public:
     unsigned propertyCount() const { return m_arraySize; }
     bool isEmpty() const { return !propertyCount(); }
     PropertyReference propertyAt(unsigned index) const;
+
+    Iterator<ImmutableStyleProperties> begin() const { return { *this }; }
+    static constexpr std::nullptr_t end() { return nullptr; }
+    unsigned size() const { return propertyCount(); }
 
     int findPropertyIndex(CSSPropertyID) const;
     int findCustomPropertyIndex(const String& propertyName) const;
@@ -213,12 +248,17 @@ class MutableStyleProperties final : public StyleProperties {
 public:
     WEBCORE_EXPORT static Ref<MutableStyleProperties> create(CSSParserMode = HTMLQuirksMode);
     static Ref<MutableStyleProperties> create(Vector<CSSProperty>&&);
+    static Ref<MutableStyleProperties> createEmpty();
 
     WEBCORE_EXPORT ~MutableStyleProperties();
 
     unsigned propertyCount() const { return m_propertyVector.size(); }
     bool isEmpty() const { return !propertyCount(); }
     PropertyReference propertyAt(unsigned index) const;
+
+    Iterator<MutableStyleProperties> begin() const { return { *this }; }
+    static constexpr std::nullptr_t end() { return nullptr; }
+    unsigned size() const { return propertyCount(); }
 
     PropertySetCSSStyleDeclaration* cssStyleDeclaration();
 

@@ -142,18 +142,6 @@ AudioDescriptionsEnabled:
     WebCore:
       default: false
 
-BlankAnchorTargetImpliesNoOpenerEnabled:
-  type: bool
-  humanReadableName: "Blank anchor target implies rel=noopener"
-  humanReadableDescription: "target=_blank on anchor elements implies rel=noopener"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 # We would have to partition BroadcastChannel based on PageGroups if we wanted to enable this for WebKitLegacy.
 BroadcastChannelEnabled:
   type: bool
@@ -208,11 +196,11 @@ CSS3DTransformInteroperabilityEnabled:
   humanReadableDescription: "Enable 3D transform behavior that is specification-compliant but backwards incompatible"
   defaultValue:
     WebKitLegacy:
-      default: false
+      default: true
     WebKit:
-      default: false
+      default: true
     WebCore:
-      default: false
+      default: true
 
 CSSCascadeLayersEnabled:
   type: bool
@@ -394,6 +382,30 @@ CSSInputSecurityEnabled:
     WebCore:
       default: false
 
+CSSLeadingTrimEnabled:
+  type: bool
+  humanReadableName: "CSS leading-trim property"
+  humanReadableDescription: "Enable leading-trim"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
+CSSMarginTrimEnabled:
+  type: bool
+  humanReadableName: "CSS margin-trim property"
+  humanReadableDescription: "Enable margin-trim CSS property"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 CSSMotionPathEnabled:
   type: bool
   humanReadableName: "CSS Motion Path"
@@ -405,6 +417,18 @@ CSSMotionPathEnabled:
       default: true
     WebCore:
       default: true
+
+CSSNestingEnabled:
+  type: bool
+  humanReadableName: "CSS Nesting"
+  humanReadableDescription: "Enable support for CSS nesting https://www.w3.org/TR/css-nesting-1/"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
 
 CSSOMViewSmoothScrollingEnabled:
   type: bool
@@ -475,6 +499,19 @@ CSSTextJustifyEnabled:
     WebKitLegacy:
       default: false
     WebKit:
+      default: false
+    WebCore:
+      default: false
+
+CSSTypedOMColorEnabled:
+  type: bool
+  humanReadableName: "CSS Typed OM: Color Support"
+  humanReadableDescription: "Enable the CSS Typed OM Color support"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      "ENABLE(EXPERIMENTAL_FEATURES)": true
       default: false
     WebCore:
       default: false
@@ -605,6 +642,19 @@ CrossOriginOpenerPolicyEnabled:
     WebCore:
       default: false
 
+DOMAudioSessionEnabled:
+  condition: ENABLE(DOM_AUDIO_SESSION)
+  type: bool
+  humanReadableName: "AudioSession"
+  humanReadableDescription: "Enable AudioSession"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 DeclarativeShadowDOMEnabled:
   type: bool
   humanReadableName: "Declarative Shadow DOM"
@@ -664,19 +714,6 @@ DirPseudoEnabled:
       default: true
     WebCore:
       default: true
-
-# FIXME: Starting the preference name with "Disable" is inconsistent with most other preferences and should be changed.
-DisableMediaExperiencePIDInheritance:
-  type: bool
-  webcoreBinding: DeprecatedGlobalSettings
-  humanReadableName: "Disable Media Experience PID Inheritance"
-  humanReadableDescription: "Disable Media Experience PID Inheritance"
-  condition: HAVE(CELESTIAL)
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: false
 
 DisallowSyncXHRDuringPageDismissalEnabled:
   type: bool
@@ -820,19 +857,6 @@ GoogleAntiFlickerOptimizationQuirkEnabled:
     WebCore:
       default: true
 
-# FIXME: This is on by default in WebKit2. Perhaps we should consider turning it on for WebKitLegacy as well.
-HDRMediaCapabilitiesEnabled:
-  type: bool
-  humanReadableName: "HDR Media Capabilities"
-  humanReadableDescription: "HDR Media Capabilities"
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: true
-    WebCore:
-      default: false
-
 HasPseudoClassEnabled:
   type: bool
   humanReadableName: ":has() pseudo-class"
@@ -858,9 +882,9 @@ HighlightAPIEnabled:
 
 ImageAnimationControlEnabled:
   type: bool
-  webcoreOnChange: setImageAnimationControlEnabledChanged
   humanReadableName: "Image Animation Control Enabled"
   humanReadableDescription: "Control image animations."
+  condition: ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
   defaultValue:
     WebKitLegacy:
       default: false
@@ -880,19 +904,6 @@ ImperativeSlotAPIEnabled:
       default: true
     WebCore:
       default: true
-
-# FIXME: This is not relevent for WebKitLegacy, so should be excluded from WebKitLegacy entirely.
-InProcessCookieCacheEnabled:
-  type: bool
-  humanReadableName: "In-Process Cookie Cache"
-  humanReadableDescription: "In-Process DOM Cookie Cache"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: false
 
 InertAttributeEnabled:
   type: bool
@@ -1297,7 +1308,7 @@ PermissionsAPIEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      "PLATFORM(COCOA)" : true
+      "PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)" : true
       default: false
     WebCore:
       default: false
@@ -1719,11 +1730,11 @@ UnprefixedFullscreenAPIEnabled:
   humanReadableDescription: "Enable Unprefixed Fullscreen API"
   defaultValue:
     WebKitLegacy:
-      default: false
+      default: true
     WebKit:
-      default: false
+      default: true
     WebCore:
-      default: false
+      default: true
 
 UseGPUProcessForDOMRenderingEnabled:
   type: bool
@@ -1749,23 +1760,6 @@ UseGPUProcessForDisplayCapture:
     WebKit:
       default: true
 
-UseGPUProcessForWebGLEnabled:
-  type: bool
-  humanReadableName: "GPU Process: WebGL"
-  humanReadableDescription: "Process all WebGL operations in GPU Process"
-  condition: ENABLE(GPU_PROCESS) && ENABLE(WEBGL)
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      "ENABLE(GPU_PROCESS_BY_DEFAULT) && PLATFORM(IOS_FAMILY) && !HAVE(UIKIT_WEBKIT_INTERNALS)": true
-      "PLATFORM(WIN)": true
-      default: false
-    WebCore:
-      "ENABLE(GPU_PROCESS_BY_DEFAULT) && PLATFORM(IOS_FAMILY) && !HAVE(UIKIT_WEBKIT_INTERNALS)": true
-      "PLATFORM(WIN)": true
-      default: false
-
 UserActivationAPIEnabled:
    type: bool
    humanReadableName: "User Activation API"
@@ -1774,7 +1768,7 @@ UserActivationAPIEnabled:
      WebKitLegacy:
        default: false
      WebKit:
-       default: false
+       default: true
      WebCore:
        default: false
 
@@ -1890,11 +1884,11 @@ WebAnimationsIterationCompositeEnabled:
   humanReadableDescription: "Support for the KeyframeEffect.iterationComposite property"
   defaultValue:
     WebKitLegacy:
-      default: false
+      default: true
     WebKit:
-      default: false
+      default: true
     WebCore:
-      default: false
+      default: true
 
 WebAnimationsMutableTimelinesEnabled:
   type: bool
@@ -1934,6 +1928,19 @@ WebAuthenticationEnabled:
       default: true
     WebCore:
       default: true
+
+WebCodecsAV1Enabled:
+  type: bool
+  humanReadableName: "WebCodecs AV1 codec"
+  humanReadableDescription: WebCodecs
+  condition: ENABLE(WEB_CODECS)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
 
 WebCodecsEnabled:
   type: bool
@@ -2002,6 +2009,19 @@ WebLocksAPIEnabled:
       default: true
     WebCore:
       default: true
+
+WebRTCAV1CodecEnabled:
+  type: bool
+  humanReadableName: "WebRTC AV1 codec"
+  humanReadableDescription: "Enable WebRTC AV1 codec"
+  condition: ENABLE(WEB_RTC)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
 
 WebRTCEncodedTransformEnabled:
   type: bool

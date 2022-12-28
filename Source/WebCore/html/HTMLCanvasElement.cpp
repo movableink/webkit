@@ -47,6 +47,7 @@
 #include "GraphicsContext.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "HostWindow.h"
 #include "ImageBitmapRenderingContext.h"
 #include "ImageBitmapRenderingContextSettings.h"
 #include "ImageBuffer.h"
@@ -1032,8 +1033,8 @@ void HTMLCanvasElement::createImageBuffer() const
             return std::pair { m_context->colorSpace(), m_context->pixelFormat() };
         return std::pair { DestinationColorSpace::SRGB(), PixelFormat::BGRA8 };
     }();
-    ImageBuffer::CreationContext context = { };
-    context.hostWindow = hostWindow;
+    ImageBufferCreationContext context = { };
+    context.graphicsClient = hostWindow;
     context.avoidIOSurfaceSizeCheckInWebProcessForTesting = m_avoidBackendSizeCheckForTesting;
     setImageBuffer(ImageBuffer::create(size(), RenderingPurpose::Canvas, 1, colorSpace, pixelFormat, bufferOptions, context));
 

@@ -41,6 +41,7 @@
 #include <WebCore/FloatBoxExtent.h>
 #include <WebCore/InheritanceGrandchild.h>
 #include <WebCore/InheritsFrom.h>
+#include <WebCore/TimingFunction.h>
 #include <wtf/CreateUsingClass.h>
 #include <wtf/Seconds.h>
 
@@ -99,6 +100,10 @@ Vector<SerializedTypeInfo> allSerializedTypes()
             "float"_s,
             "float"_s,
             "float"_s,
+        } },
+        { "NullableSoftLinkedMember"_s, {
+            "RetainPtr<DDActionContext>"_s,
+            "RetainPtr<DDActionContext>"_s,
         } },
     };
 }

@@ -36,11 +36,11 @@ class RenderElement;
 namespace MQ {
 
 EvaluationResult evaluateLengthFeature(const Feature&, LayoutUnit, const CSSToLengthConversionData&);
-EvaluationResult evaluateRatioFeature(const Feature&, double);
+EvaluationResult evaluateRatioFeature(const Feature&, FloatSize);
 EvaluationResult evaluateBooleanFeature(const Feature&, bool);
 EvaluationResult evaluateIntegerFeature(const Feature&, int);
 EvaluationResult evaluateNumberFeature(const Feature&, double);
-EvaluationResult evaluateResolutionFeature(const Feature&, double);
+EvaluationResult evaluateResolutionFeature(const Feature&, float);
 EvaluationResult evaluateIdentifierFeature(const Feature&, CSSValueID);
 
 template<typename ConcreteEvaluator>

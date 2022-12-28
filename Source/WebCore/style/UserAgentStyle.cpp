@@ -44,12 +44,13 @@
 #include "HTMLHtmlElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLMediaElement.h"
+#include "HTMLMeterElement.h"
 #include "HTMLObjectElement.h"
+#include "HTMLProgressElement.h"
 #include "HTMLSpanElement.h"
-#include "LegacyMediaQueryEvaluator.h"
 #include "MathMLElement.h"
+#include "MediaQueryEvaluator.h"
 #include "Page.h"
-#include "Quirks.h"
 #include "RenderTheme.h"
 #include "RuleSetBuilder.h"
 #include "SVGElement.h"
@@ -73,13 +74,15 @@ StyleSheetContents* UserAgentStyle::dialogStyleSheet;
 StyleSheetContents* UserAgentStyle::svgStyleSheet;
 StyleSheetContents* UserAgentStyle::mathMLStyleSheet;
 StyleSheetContents* UserAgentStyle::mediaControlsStyleSheet;
-StyleSheetContents* UserAgentStyle::fullscreenStyleSheet;
+StyleSheetContents* UserAgentStyle::mediaQueryStyleSheet;
 StyleSheetContents* UserAgentStyle::plugInsStyleSheet;
 StyleSheetContents* UserAgentStyle::horizontalFormControlsStyleSheet;
+#if ENABLE(FULLSCREEN_API)
+StyleSheetContents* UserAgentStyle::fullscreenStyleSheet;
+#endif
 #if ENABLE(SERVICE_CONTROLS)
 StyleSheetContents* UserAgentStyle::imageControlsStyleSheet;
 #endif
-StyleSheetContents* UserAgentStyle::mediaQueryStyleSheet;
 #if ENABLE(ATTACHMENT_ELEMENT)
 StyleSheetContents* UserAgentStyle::attachmentStyleSheet;
 #endif
@@ -96,15 +99,15 @@ StyleSheetContents* UserAgentStyle::legacyFormControlsIOSStyleSheet;
 StyleSheetContents* UserAgentStyle::alternateFormControlDesignStyleSheet;
 #endif
 
-static const LegacyMediaQueryEvaluator& screenEval()
+static const MQ::MediaQueryEvaluator& screenEval()
 {
-    static NeverDestroyed<const LegacyMediaQueryEvaluator> staticScreenEval(String(MAKE_STATIC_STRING_IMPL("screen")));
+    static NeverDestroyed<const MQ::MediaQueryEvaluator> staticScreenEval(screenAtom());
     return staticScreenEval;
 }
 
-static const LegacyMediaQueryEvaluator& printEval()
+static const MQ::MediaQueryEvaluator& printEval()
 {
-    static NeverDestroyed<const LegacyMediaQueryEvaluator> staticPrintEval(String(MAKE_STATIC_STRING_IMPL("print")));
+    static NeverDestroyed<const MQ::MediaQueryEvaluator> staticPrintEval(printAtom());
     return staticPrintEval;
 }
 
@@ -231,12 +234,7 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
 
 #if ENABLE(FULLSCREEN_API)
     if (!fullscreenStyleSheet && element.document().fullscreenManager().isFullscreen()) {
-        StringBuilder fullscreenRules;
-        fullscreenRules.appendCharacters(fullscreenUserAgentStyleSheet, sizeof(fullscreenUserAgentStyleSheet));
-        fullscreenRules.append(RenderTheme::singleton().extraFullScreenStyleSheet());
-        if (element.document().quirks().needsBlackFullscreenBackgroundQuirk())
-            fullscreenRules.append(":-webkit-full-screen { background-color: black; }"_s);
-        fullscreenStyleSheet = parseUASheet(fullscreenRules.toString());
+        fullscreenStyleSheet = parseUASheet(StringImpl::createWithoutCopying(fullscreenUserAgentStyleSheet, sizeof(fullscreenUserAgentStyleSheet)));
         addToDefaultStyle(*fullscreenStyleSheet);
     }
 #endif // ENABLE(FULLSCREEN_API)

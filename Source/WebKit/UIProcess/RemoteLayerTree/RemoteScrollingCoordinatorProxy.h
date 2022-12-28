@@ -33,6 +33,7 @@
 #include "RemoteScrollingUIState.h"
 #include <WebCore/GraphicsLayer.h>
 #include <WebCore/ScrollSnapOffsetsInfo.h>
+#include <WebCore/WheelEventTestMonitor.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 #include <wtf/WeakPtr.h>
@@ -91,8 +92,10 @@ public:
     void currentSnapPointIndicesDidChange(WebCore::ScrollingNodeID, std::optional<unsigned> horizontal, std::optional<unsigned> vertical);
 
     // FIXME: expose the tree and pass this to that?
-    bool handleWheelEvent(const WebCore::PlatformWheelEvent&);
+    WebCore::WheelEventHandlingResult handleWheelEvent(const WebCore::PlatformWheelEvent&);
     void handleMouseEvent(const WebCore::PlatformMouseEvent&);
+    
+    virtual WebCore::PlatformWheelEvent filteredWheelEvent(const WebCore::PlatformWheelEvent& wheelEvent) { return wheelEvent; }
 
     WebCore::ScrollingNodeID rootScrollingNodeID() const;
 
@@ -119,6 +122,10 @@ public:
     WebCore::ScrollingTreeScrollingNode* rootNode() const;
 
     virtual void displayDidRefresh(WebCore::PlatformDisplayID);
+    void reportExposedUnfilledArea(MonotonicTime, unsigned unfilledArea);
+    void reportSynchronousScrollingReasonsChanged(MonotonicTime, OptionSet<WebCore::SynchronousScrollingReason>);
+
+    void startMonitoringWheelEventsForTesting();
 
 protected:
     RemoteScrollingTree* scrollingTree() const { return m_scrollingTree.get(); }

@@ -40,6 +40,7 @@
 #include <WebCore/ContentSecurityPolicy.h>
 #include <WebCore/DestinationColorSpace.h>
 #include <WebCore/FloatSize.h>
+#include <WebCore/FrameIdentifier.h>
 #include <WebCore/HighlightVisibility.h>
 #include <WebCore/IntSize.h>
 #include <WebCore/LayoutMilestone.h>
@@ -104,7 +105,6 @@ struct WebPageCreationParameters {
     bool paginationBehavesLikeColumns;
     double pageLength;
     double gapBetweenPages;
-    bool paginationLineGridEnabled;
     
     String userAgent;
 
@@ -156,7 +156,8 @@ struct WebPageCreationParameters {
 
 #if PLATFORM(MAC)
     std::optional<WebCore::DestinationColorSpace> colorSpace;
-    bool useSystemAppearance;
+    bool useSystemAppearance { false };
+    bool useFormSemanticContext { false };
 #endif
 #if ENABLE(META_VIEWPORT)
     bool ignoresViewportScaleLimits;
@@ -278,6 +279,12 @@ struct WebPageCreationParameters {
     bool hasResizableWindows { false };
 
     WebCore::ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension { WebCore::ContentSecurityPolicyModeForExtension::None };
+
+    std::optional<WebCore::FrameIdentifier> mainFrameIdentifier;
+
+#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
+    Vector<String> lookalikeCharacterStrings;
+#endif
 };
 
 } // namespace WebKit

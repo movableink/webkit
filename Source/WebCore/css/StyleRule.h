@@ -22,10 +22,13 @@
 #pragma once
 
 #include "CSSSelectorList.h"
+#include "CSSVariableData.h"
 #include "CompiledSelector.h"
 #include "ContainerQuery.h"
 #include "FontFeatureValues.h"
 #include "FontPaletteValues.h"
+#include "MediaQuery.h"
+#include "StyleProperties.h"
 #include "StyleRuleType.h"
 #include <map>
 #include <variant>
@@ -38,7 +41,6 @@ namespace WebCore {
 class CSSRule;
 class CSSGroupingRule;
 class CSSStyleSheet;
-class MediaQuerySet;
 class MutableStyleProperties;
 class StyleRuleKeyframe;
 class StyleProperties;
@@ -68,6 +70,7 @@ public:
     bool isImportRule() const { return type() == StyleRuleType::Import; }
     bool isLayerRule() const { return type() == StyleRuleType::LayerBlock || type() == StyleRuleType::LayerStatement; }
     bool isContainerRule() const { return type() == StyleRuleType::Container; }
+    bool isPropertyRule() const { return type() == StyleRuleType::Property; }
 
     Ref<StyleRuleBase> copy() const;
 
@@ -101,7 +104,8 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRule);
 class StyleRule final : public StyleRuleBase {
     WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRule);
 public:
-    static Ref<StyleRule> create(Ref<StyleProperties>&&, bool hasDocumentSecurityOrigin, CSSSelectorList&&);
+    static Ref<StyleRule> create(bool hasDocumentSecurityOrigin, CSSSelectorList&&);
+    static Ref<StyleRule> create(Ref<StyleProperties>&&, bool hasDocumentSecurityOrigin, CSSSelectorList&&, Vector<Ref<StyleRule>>&& nestedRules);
     Ref<StyleRule> copy() const;
     ~StyleRule();
 
@@ -127,15 +131,23 @@ public:
 #endif
 
     static unsigned averageSizeInBytes();
+    void setProperties(Ref<StyleProperties> properties) { m_properties = properties; }
+    void setNestedRules(Vector<Ref<StyleRule>> nestedRules) { m_nestedRules = nestedRules; }
+    const Vector<Ref<StyleRule>>& nestedRules() const { return m_nestedRules; }
+    void appendNestedRule(Ref<StyleRule> rule) { m_nestedRules.append(rule); }
 
 private:
-    StyleRule(Ref<StyleProperties>&&, bool hasDocumentSecurityOrigin, CSSSelectorList&&);
+    StyleRule(Ref<StyleProperties>&&, bool hasDocumentSecurityOrigin, CSSSelectorList&&, Vector<Ref<StyleRule>>&&);
+    StyleRule(bool hasDocumentSecurityOrigin, CSSSelectorList&&);
     StyleRule(const StyleRule&);
 
     static Ref<StyleRule> createForSplitting(const Vector<const CSSSelector*>&, Ref<StyleProperties>&&, bool hasDocumentSecurityOrigin);
 
     mutable Ref<StyleProperties> m_properties;
     CSSSelectorList m_selectorList;
+
+    // CSS Nesting
+    Vector<Ref<StyleRule>> m_nestedRules;
 
 #if ENABLE(CSS_SELECTOR_JIT)
     mutable UniqueArray<CompiledSelector> m_compiledSelectors;
@@ -264,16 +276,17 @@ private:
 
 class StyleRuleMedia final : public StyleRuleGroup {
 public:
-    static Ref<StyleRuleMedia> create(Ref<MediaQuerySet>&&, Vector<RefPtr<StyleRuleBase>>&&);
+    static Ref<StyleRuleMedia> create(MQ::MediaQueryList&&, Vector<RefPtr<StyleRuleBase>>&&);
     Ref<StyleRuleMedia> copy() const;
 
-    MediaQuerySet& mediaQueries() const { return m_mediaQueries; }
+    const MQ::MediaQueryList& mediaQueries() const { return m_mediaQueries; }
+    void setMediaQueries(MQ::MediaQueryList&& queries) { m_mediaQueries = WTFMove(queries); }
 
 private:
-    StyleRuleMedia(Ref<MediaQuerySet>&&, Vector<RefPtr<StyleRuleBase>>&&);
+    StyleRuleMedia(MQ::MediaQueryList&&, Vector<RefPtr<StyleRuleBase>>&&);
     StyleRuleMedia(const StyleRuleMedia&);
 
-    Ref<MediaQuerySet> m_mediaQueries;
+    MQ::MediaQueryList m_mediaQueries;
 };
 
 class StyleRuleSupports final : public StyleRuleGroup {
@@ -323,6 +336,26 @@ private:
     StyleRuleContainer(const StyleRuleContainer&) = default;
 
     CQ::ContainerQuery m_containerQuery;
+};
+
+class StyleRuleProperty final : public StyleRuleBase {
+public:
+    struct Descriptor {
+        AtomString name;
+        String syntax { };
+        std::optional<bool> inherits { };
+        RefPtr<CSSVariableData> initialValue { };
+    };
+    static Ref<StyleRuleProperty> create(Descriptor&&);
+    Ref<StyleRuleProperty> copy() const { return adoptRef(*new StyleRuleProperty(*this)); }
+
+    const Descriptor& descriptor() const { return m_descriptor; }
+
+private:
+    StyleRuleProperty(Descriptor&&);
+    StyleRuleProperty(const StyleRuleProperty&) = default;
+
+    Descriptor m_descriptor;
 };
 
 // This is only used by the CSS parser.
@@ -442,3 +475,8 @@ SPECIALIZE_TYPE_TRAITS_END()
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleContainer)
     static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isContainerRule(); }
 SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleProperty)
+    static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isPropertyRule(); }
+SPECIALIZE_TYPE_TRAITS_END()
+

@@ -492,6 +492,10 @@ fast/events/mouseover-button.html [ Skip ]
 # TODO Accept header is handled by the browser
 http/tests/misc/image-checks-for-accept.html [ Skip ]
 
+# Failing since added in https://bugs.webkit.org/show_bug.cgi?id=249283.
+accessibility/color-input-value-changes.html [ Skip ]
+accessibility/progress-element-value-changes.html [ Skip ]
+
 # Failing since added in https://bugs.webkit.org/show_bug.cgi?id=244126.
 accessibility/dynamically-unignored-contenteditable.html [ Skip ]
 
@@ -1685,6 +1689,7 @@ accessibility/aria-table-with-presentational-elements.html [ Skip ]
 webkit.org/b/149177 accessibility/ax-value-with-search.html [ Skip ]
 
 accessibility/aria-roles-unignored.html [ Skip ]
+accessibility/aria-keyshortcuts.html [ Skip ]
 
 # Accessibility tests for notifications that don't exist or aren't needed on Mac OS X (or Windows)
 accessibility/aria-checkbox-sends-notification.html [ Skip ]
@@ -2448,7 +2453,6 @@ fast/dom/adopt-node-crash-2.html [ Skip ] # Debug Assertion
 ################             Forms Issues                   ####################
 ################################################################################
 # Not putting 'focused' text
-fast/forms/legend-access-key.html [ Failure ]
 webkit.org/b/143739 fast/forms/listbox-visible-size.html [ Failure ]
 
 webkit.org/b/97026 fast/forms/state-restore-broken-state.html [ Failure ]
@@ -3399,6 +3403,10 @@ webkit.org/b/149592 fast/shadow-dom/touch-event-ios.html [ Skip ]
 # Imperative slot API isn't enabled on Windows yet.
 fast/shadow-dom/manual-assignment-multiple-shadow-roots.html [ Failure ]
 fast/shadow-dom/imperative-named-slot-mixture.html [ Failure ]
+
+# Declarative shadow DOM isn't enabled on Windows yet.
+fast/shadow-dom/cloneable-shadow-root.html [ Failure ]
+fast/shadow-dom/element-internals-exposes-declarative-shadow-root.html [ Failure ]
 
 # The SVG -> OTF Font converter outputs 'kern' tables instead of 'GPOS' tables.
 webkit.org/b/137204 fast/text/svg-font-face-with-kerning.html [ Failure ]
@@ -4409,6 +4417,8 @@ imported/w3c/web-platform-tests/content-security-policy/connect-src/connect-src-
 css-custom-properties-api [ Skip ]
 fast/css-custom-paint [ Skip ]
 css-typedom [ Skip ]
+fast/css/css-typed-om [ Skip ]
+http/wpt/css/css-typed-om [ Skip ]
 
 editing/pasteboard/drag-and-drop-color-input-events.html [ Skip ]
 
@@ -5221,3 +5231,8 @@ fast/css/aspect-ratio-min-height-replaced.html [ ImageOnlyFailure ]
 
 # navigator.userActivation is not implemented on Windows.
 fast/frames/consume_transient_activation.html [ Skip ]
+
+# OffscreenCanvas isn't enabled on win by default
+fast/canvas/offscreen-enabled.html [ Skip ]
+http/wpt/offscreen-canvas [ Skip ]
+imported/w3c/web-platform-tests/html/canvas/offscreen [ Skip ]

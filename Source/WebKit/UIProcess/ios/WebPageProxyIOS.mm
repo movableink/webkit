@@ -85,6 +85,10 @@
 
 #define WEBPAGEPROXY_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [pageProxyID=%llu, webPageID=%llu, PID=%i] WebPageProxy::" fmt, this, m_identifier.toUInt64(), m_webPageID.toUInt64(), m_process->processIdentifier(), ##__VA_ARGS__)
 
+#if HAVE(UIKIT_WEBKIT_INTERNALS)
+static constexpr CGFloat kTargetFullscreenAspectRatio = 1.7778;
+#endif
+
 namespace WebKit {
 using namespace WebCore;
 
@@ -891,6 +895,13 @@ FloatSize WebPageProxy::availableScreenSize()
 
 FloatSize WebPageProxy::overrideScreenSize()
 {
+#if HAVE(UIKIT_WEBKIT_INTERNALS)
+    // Report screen dimensions based on fullscreen preferences.
+    CGFloat preferredWidth = m_preferences->mediaPreferredFullscreenWidth();
+    CGFloat preferredHeight = preferredWidth / kTargetFullscreenAspectRatio;
+    return FloatSize(CGSizeMake(preferredWidth, preferredHeight));
+#endif
+
     return WebCore::overrideScreenSize();
 }
 
@@ -1075,11 +1086,11 @@ size_t WebPageProxy::computePagesForPrintingiOS(FrameIdentifier frameID, const P
     return pageCount;
 }
 
-uint64_t WebPageProxy::drawToPDFiOS(FrameIdentifier frameID, const PrintInfo& printInfo, size_t pageCount, CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&& completionHandler)
+IPC::Connection::AsyncReplyID WebPageProxy::drawToPDFiOS(FrameIdentifier frameID, const PrintInfo& printInfo, size_t pageCount, CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&& completionHandler)
 {
     if (!hasRunningProcess()) {
         completionHandler({ });
-        return 0;
+        return { };
     }
 
     return sendWithAsyncReply(Messages::WebPage::DrawToPDFiOS(frameID, printInfo, pageCount), WTFMove(completionHandler));

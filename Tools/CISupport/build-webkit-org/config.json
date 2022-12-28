@@ -87,14 +87,18 @@
                     { "name": "bot547", "platform": "win" },
                     { "name": "bot548", "platform": "win" },
 
-                    { "name": "wincairo-wkl-release-build-01", "platform": "wincairo" },
-                    { "name": "wincairo-wkl-release-tests-01", "platform": "wincairo" },
-                    { "name": "wincairo-wkl-release-tests-02", "platform": "wincairo" },
+                    { "name": "wincairo-debug-build-01", "platform": "wincairo" },
+                    { "name": "wincairo-debug-tests-01", "platform": "wincairo" },
+                    { "name": "wincairo-debug-tests-02", "platform": "wincairo" },
+                    { "name": "wincairo-jsc-debug-tests-01", "platform": "wincairo" },
                     { "name": "wincairo-jsc-release-tests-01", "platform": "wincairo" },
-                    { "name": "wincairo-wkl-debug-build-01", "platform": "wincairo" },
+                    { "name": "wincairo-release-build-01", "platform": "wincairo" },
+                    { "name": "wincairo-release-tests-01", "platform": "wincairo" },
+                    { "name": "wincairo-release-tests-02", "platform": "wincairo" },
                     { "name": "wincairo-wkl-debug-tests-01", "platform": "wincairo" },
                     { "name": "wincairo-wkl-debug-tests-02", "platform": "wincairo" },
-                    { "name": "wincairo-jsc-debug-tests-01", "platform": "wincairo" },
+                    { "name": "wincairo-wkl-release-tests-01", "platform": "wincairo" },
+                    { "name": "wincairo-wkl-release-tests-02", "platform": "wincairo" },
 
                     { "name": "playstation-release-build-01", "platform": "playstation" },
                     { "name": "playstation-debug-build-01", "platform": "playstation" },
@@ -136,7 +140,9 @@
                     { "name": "wpe-linux-bot-9", "platform": "wpe" },
                     { "name": "wpe-linux-bot-10", "platform": "wpe" },
                     { "name": "wpe-linux-bot-11", "platform": "wpe" },
-                    { "name": "wpe-linux-bot-12", "platform": "wpe" }
+                    { "name": "wpe-linux-bot-12", "platform": "wpe" },
+                    { "name": "wpe-linux-bot-13", "platform": "wpe" },
+                    { "name": "wpe-linux-bot-14", "platform": "wpe" }
                   ],
 
     "builders":   [
@@ -144,7 +150,8 @@
                     "platform": "mac-ventura", "configuration": "release", "architectures": ["x86_64", "arm64"],
                     "triggers": [
                         "ventura-release-tests-wk1", "ventura-release-tests-wk2",
-                        "ventura-release-applesilicon-tests-wk1", "ventura-release-applesilicon-tests-wk2"
+                        "ventura-release-applesilicon-tests-wk1", "ventura-release-applesilicon-tests-wk2",
+                        "ventura-applesilicon-release-tests-test262"
                     ],
                     "workernames": ["bot245", "bot246"]
                     },
@@ -204,13 +211,13 @@
                     { "name": "Apple-Monterey-Release-Build", "factory": "BuildFactory",
                       "platform": "mac-monterey", "configuration": "release", "architectures": ["x86_64", "arm64"],
                       "triggers": [
-                          "monterey-applesilicon-release-tests-test262" ,"monterey-release-tests-test262", "monterey-release-tests-wk1", "monterey-release-tests-wk2",
+                          "monterey-release-tests-test262", "monterey-release-tests-wk1", "monterey-release-tests-wk2",
                           "monterey-release-applesilicon-tests-wk1", "monterey-release-applesilicon-tests-wk2", "monterey-applesilicon-release-tests-jsc",
                           "monterey-release-tests-wk2-accessibility-isolated-tree"
                       ],
                       "workernames": ["bot185", "bot187"]
                     },
-                    { "name": "Apple-Monterey-AppleSilicon-Release-Test262-Tests", "factory": "Test262Factory",
+                    { "name": "Apple-Ventura-AppleSilicon-Release-Test262-Tests", "factory": "Test262Factory",
                       "platform": "mac-monterey", "configuration": "release", "architectures": ["x86_64", "arm64"],
                       "workernames": ["bot165"]
                     },
@@ -537,10 +544,10 @@
                       "workernames": ["gtk-linux-bot-20"]
                     },
                     {
-                      "name": "WinCairo-64-bit-WKL-Release-Build", "factory": "BuildFactory",
+                      "name": "WinCairo-64-bit-Release-Build", "factory": "BuildFactory",
                       "platform": "wincairo", "configuration": "release", "architectures": ["x86_64"],
-                      "triggers": ["wincairo-wkl-release-tests", "wincairo-jsc-release-tests"],
-                      "workernames": ["wincairo-wkl-release-build-01"]
+                      "triggers": ["wincairo-release-tests", "wincairo-jsc-release-tests", "wincairo-wkl-release-tests"],
+                      "workernames": ["wincairo-release-build-01"]
                     },
                     {
                       "name": "WinCairo-64-bit-WKL-Release-Tests", "factory": "TestWebKit1AllButJSCFactory",
@@ -548,20 +555,30 @@
                       "workernames": ["wincairo-wkl-release-tests-01", "wincairo-wkl-release-tests-02"]
                     },
                     {
+                      "name": "WinCairo-64-bit-Release-Tests", "factory": "TestAllButJSCFactory",
+                      "platform": "wincairo", "configuration": "release", "architectures": ["x86_64"],
+                      "workernames": ["wincairo-release-tests-01", "wincairo-release-tests-02"]
+                    },
+                    {
                       "name": "WinCairo-64-bit-JSC-Release-Tests", "factory": "TestJSCFactory",
                       "platform": "wincairo", "configuration": "release", "architectures": ["x86_64"],
                       "workernames": ["wincairo-jsc-release-tests-01"]
                     },
                     {
-                      "name": "WinCairo-64-bit-WKL-Debug-Build", "factory": "BuildFactory",
+                      "name": "WinCairo-64-bit-Debug-Build", "factory": "BuildFactory",
                       "platform": "wincairo", "configuration": "debug", "architectures": ["x86_64"],
-                      "triggers": ["wincairo-wkl-debug-tests", "wincairo-jsc-debug-tests"],
-                      "workernames": ["wincairo-wkl-debug-build-01"]
+                      "triggers": ["wincairo-debug-tests", "wincairo-jsc-debug-tests", "wincairo-wkl-debug-tests"],
+                      "workernames": ["wincairo-debug-build-01"]
                     },
                     {
                       "name": "WinCairo-64-bit-WKL-Debug-Tests", "factory": "TestWebKit1AllButJSCFactory",
                       "platform": "wincairo", "configuration": "debug", "architectures": ["x86_64"],
                       "workernames": ["wincairo-wkl-debug-tests-01", "wincairo-wkl-debug-tests-02"]
+                    },
+                    {
+                      "name": "WinCairo-64-bit-Debug-Tests", "factory": "TestAllButJSCFactory",
+                      "platform": "wincairo", "configuration": "debug", "architectures": ["x86_64"],
+                      "workernames": ["wincairo-debug-tests-01", "wincairo-debug-tests-02"]
                     },
                     {
                       "name": "WinCairo-64-bit-JSC-Debug-Tests", "factory": "TestJSCFactory",
@@ -596,7 +613,7 @@
                     {
                       "name": "WPE-Linux-64-bit-Release-Build", "factory": "BuildFactory",
                       "platform": "wpe", "configuration": "release", "architectures": ["x86_64"],
-                      "triggers": ["wpe-linux-64-release-tests", "wpe-linux-64-release-tests-js"],
+                      "triggers": ["wpe-linux-64-release-tests", "wpe-linux-64-release-tests-js", "wpe-linux-64-release-tests-webdriver"],
                       "workernames": ["wpe-linux-bot-1"]
                     },
                     {
@@ -612,7 +629,7 @@
                     {
                       "name": "WPE-Linux-64-bit-Debug-Build", "factory": "BuildFactory",
                       "platform": "wpe", "configuration": "debug", "architectures": ["x86_64"],
-                      "triggers": ["wpe-linux-64-debug-tests", "wpe-linux-64-debug-tests-js"],
+                      "triggers": ["wpe-linux-64-debug-tests", "wpe-linux-64-debug-tests-js", "wpe-linux-64-debug-tests-webdriver"],
                       "workernames": ["wpe-linux-bot-3"]
                     },
                     {
@@ -653,6 +670,16 @@
                       "name": "WPE-Linux-64-bit-Release-Clang-Build", "factory": "BuildFactory",
                       "platform": "wpe", "configuration": "release", "architectures": ["x86_64"],
                       "workernames": ["wpe-linux-bot-12"]
+                    },
+                    {
+                      "name": "WPE-Linux-64-bit-Release-WebDriver-Tests", "factory": "TestWebDriverFactory",
+                      "platform": "wpe", "configuration": "release", "architectures": ["x86_64"],
+                      "workernames": ["wpe-linux-bot-13"]
+                    },
+                    {
+                      "name": "WPE-Linux-64-bit-Debug-WebDriver-Tests", "factory": "TestWebDriverFactory",
+                      "platform": "wpe", "configuration": "debug", "architectures": ["x86_64"],
+                      "workernames": ["wpe-linux-bot-14"]
                     }
                   ],
 
@@ -668,7 +695,7 @@
                                        "JSCOnly-Linux-AArch64-Release",
                                        "JSCOnly-Linux-ARMv7-Thumb2-Release",
                                        "JSCOnly-Linux-MIPS32el-Release", "PlayStation-Release-Build", "PlayStation-Debug-Build",
-                                       "WinCairo-64-bit-WKL-Release-Build", "WinCairo-64-bit-WKL-Debug-Build",
+                                       "WinCairo-64-bit-Release-Build", "WinCairo-64-bit-Debug-Build",
                                        "WPE-Linux-64-bit-Release-Build", "WPE-Linux-64-bit-Debug-Build",
                                        "WPE-Linux-64-bit-Release-Clang-Build",
                                        "WPE-Linux-64-bit-Release-Non-Unified-Build"]
@@ -740,8 +767,8 @@
                     { "type": "Triggerable", "name": "monterey-release-tests-test262",
                       "builderNames": ["Apple-Monterey-Release-Test262-Tests"]
                     },
-                    { "type": "Triggerable", "name": "monterey-applesilicon-release-tests-test262",
-                      "builderNames": ["Apple-Monterey-AppleSilicon-Release-Test262-Tests"]
+                    { "type": "Triggerable", "name": "ventura-applesilicon-release-tests-test262",
+                      "builderNames": ["Apple-Ventura-AppleSilicon-Release-Test262-Tests"]
                     },
                     { "type": "Triggerable", "name": "monterey-applesilicon-debug-tests-jsc",
                       "builderNames": ["Apple-Monterey-AppleSilicon-Debug-JSC-Tests"]
@@ -851,11 +878,17 @@
                     { "type": "Triggerable", "name": "wincairo-wkl-release-tests",
                       "builderNames": ["WinCairo-64-bit-WKL-Release-Tests"]
                     },
+                    { "type": "Triggerable", "name": "wincairo-release-tests",
+                      "builderNames": ["WinCairo-64-bit-Release-Tests"]
+                    },
                     { "type": "Triggerable", "name": "wincairo-jsc-release-tests",
                       "builderNames": ["WinCairo-64-bit-JSC-Release-Tests"]
                     },
                     { "type": "Triggerable", "name": "wincairo-wkl-debug-tests",
                       "builderNames": ["WinCairo-64-bit-WKL-Debug-Tests"]
+                    },
+                    { "type": "Triggerable", "name": "wincairo-debug-tests",
+                      "builderNames": ["WinCairo-64-bit-Debug-Tests"]
                     },
                     { "type": "Triggerable", "name": "wincairo-jsc-debug-tests",
                       "builderNames": ["WinCairo-64-bit-JSC-Debug-Tests"]
@@ -866,11 +899,17 @@
                     { "type": "Triggerable", "name": "wpe-linux-64-release-tests-js",
                       "builderNames": ["WPE-Linux-64-bit-Release-JS-Tests"]
                     },
+                    { "type": "Triggerable", "name": "wpe-linux-64-release-tests-webdriver",
+                      "builderNames": ["WPE-Linux-64-bit-Release-WebDriver-Tests"]
+                    },
                     { "type": "Triggerable", "name": "wpe-linux-64-debug-tests",
                       "builderNames": ["WPE-Linux-64-bit-Debug-Tests"]
                     },
                     { "type": "Triggerable", "name": "wpe-linux-64-debug-tests-js",
                       "builderNames": ["WPE-Linux-64-bit-Debug-JS-Tests"]
+                    },
+                    { "type": "Triggerable", "name": "wpe-linux-64-debug-tests-webdriver",
+                      "builderNames": ["WPE-Linux-64-bit-Debug-WebDriver-Tests"]
                     },
                     { "type": "Nightly", "name": "NightlyScheduler", "change_filter": "main_filter",
                       "branch": "main", "hour": 22, "minute": 0,

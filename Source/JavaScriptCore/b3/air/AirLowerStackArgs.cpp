@@ -48,8 +48,7 @@ void lowerStackArgs(Code& code)
                     // such an awesome assumption.
                     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=150454
                     ASSERT(arg.offset() >= 0);
-                    ASSERT(!arg.canRepresent(V128));
-                    code.requestCallArgAreaSizeInBytes(arg.offset() + conservativeRegisterBytesWithoutVectors(arg.bank()));
+                    code.requestCallArgAreaSizeInBytes(arg.offset() + (code.usesSIMD() ? conservativeRegisterBytes(arg.bank()) : conservativeRegisterBytesWithoutVectors(arg.bank())));
                 }
             }
         }
@@ -127,6 +126,10 @@ void lowerStackArgs(Code& code)
                         result = Arg::addr(Air::Tmp(MacroAssembler::stackPointerRegister), offsetFromSP);
                         if (result.isValidForm(width))
                             return result;
+
+                        if (inst.kind.opcode == Patch)
+                            return Arg::extendedOffsetAddr(offsetFromFP);
+
 #if CPU(ARM64) || CPU(RISCV64)
                         Air::Tmp tmp = Air::Tmp(extendedOffsetAddrRegister());
 
@@ -134,6 +137,10 @@ void lowerStackArgs(Code& code)
                         insertionSet.insert(instIndex, Move, inst.origin, largeOffset, tmp);
                         insertionSet.insert(instIndex, Add64, inst.origin, Air::Tmp(MacroAssembler::stackPointerRegister), tmp);
                         result = Arg::addr(tmp, 0);
+                        return result;
+#elif CPU(ARM)
+                        // We solve this from the macro assembler for now
+                        UNUSED_PARAM(instIndex);
                         return result;
 #elif CPU(X86_64)
                         UNUSED_PARAM(instIndex);
@@ -161,7 +168,7 @@ void lowerStackArgs(Code& code)
                             Air::Opcode storeOpcode = Store32;
                             Air::Arg::Kind operandKind = Arg::ZeroReg;
                             Air::Arg operand = Arg::zeroReg();
-#elif CPU(X86_64)
+#elif CPU(X86_64) || CPU(ARM)
                             Air::Opcode storeOpcode = Move32;
                             Air::Arg::Kind operandKind = Arg::Imm;
                             Air::Arg operand = Arg::imm(0);

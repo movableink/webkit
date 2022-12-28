@@ -26,8 +26,8 @@
 #import "config.h"
 #import "RenderThemeCocoa.h"
 
-#import "AttachmentLayout.h"
 #import "ApplePayLogoSystemImage.h"
+#import "AttachmentLayout.h"
 #import "DrawGlyphsRecorder.h"
 #import "FloatRoundedRect.h"
 #import "FontCacheCoreText.h"

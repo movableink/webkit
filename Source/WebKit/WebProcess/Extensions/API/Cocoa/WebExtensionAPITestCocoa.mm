@@ -30,7 +30,9 @@
 #import "config.h"
 #import "WebExtensionAPITest.h"
 
+#import "WebExtensionAPINamespace.h"
 #import "WebExtensionContextMessages.h"
+#import "WebExtensionEventListenerType.h"
 #import "WebProcess.h"
 #import <JavaScriptCore/APICast.h>
 #import <JavaScriptCore/ScriptCallStack.h>
@@ -182,6 +184,35 @@ void WebExtensionAPITest::assertThrows(JSContextRef context, JSValue *function, 
     }
 
     assertTrue(context, [expectedError isEqualWithTypeCoercionToObject:exceptionMessageValue], [NSString stringWithFormat:@"Function throw an exception (%@) that didn't equal %@.", debugString(exceptionMessageValue), debugString(expectedError)]);
+}
+
+WebExtensionAPIWebNavigationEvent& WebExtensionAPITest::testWebNavigationEvent()
+{
+    if (!m_webNavigationEvent)
+        m_webNavigationEvent = WebExtensionAPIWebNavigationEvent::create(forMainWorld(), runtime(), extensionContext(), WebExtensionEventListenerType::WebNavigationOnCompleted);
+
+    return *m_webNavigationEvent;
+}
+
+void WebExtensionAPITest::fireTestWebNavigationEvent(NSString *urlString)
+{
+    NSURL *targetURL = [NSURL URLWithString:urlString];
+
+    WebExtensionAPIWebNavigationEvent& testEvent = testWebNavigationEvent();
+    testEvent.invokeListenersWithArgument(@{ @"url": urlString }, targetURL);
+}
+
+WebExtensionAPIEvent& WebExtensionAPITest::testEvent()
+{
+    if (!m_event)
+        m_event = WebExtensionAPIEvent::create(forMainWorld(), runtime(), extensionContext(), WebExtensionEventListenerType::ActionOnClicked);
+
+    return *m_event;
+}
+
+void WebExtensionAPITest::fireTestEvent()
+{
+    testEvent().invokeListeners();
 }
 
 } // namespace WebKit

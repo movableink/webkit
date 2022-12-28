@@ -36,12 +36,14 @@
 #include "CSSPendingSubstitutionValue.h"
 #include "CSSPropertyParser.h"
 #include "CSSPropertyParserHelpers.h"
+#include "CSSRegisteredCustomProperty.h"
 #include "CSSSelectorParser.h"
 #include "CSSSupportsParser.h"
 #include "CSSTokenizer.h"
 #include "CSSValuePool.h"
 #include "CSSVariableData.h"
 #include "CSSVariableReferenceValue.h"
+#include "CustomPropertyRegistry.h"
 #include "Document.h"
 #include "Element.h"
 #include "Page.h"
@@ -171,7 +173,7 @@ CSSParser::ParseResult CSSParser::parseValue(MutableStyleProperties& declaration
 
 std::optional<CSSSelectorList> CSSParser::parseSelector(const String& string, StyleSheetContents* styleSheet)
 {
-    return parseCSSSelector(CSSTokenizer(string).tokenRange(), m_context, styleSheet);
+    return parseCSSSelector(CSSTokenizer(string).tokenRange(), m_context, styleSheet, CSSSelectorParser::IsNestedContext::No);
 }
 
 Ref<ImmutableStyleProperties> CSSParser::parseInlineStyleDeclaration(const String& string, const Element* element)
@@ -227,8 +229,8 @@ RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propI
     const auto& valueWithReferences = std::get<Ref<CSSVariableReferenceValue>>(customPropValue.value()).get();
 
     auto& name = downcast<CSSCustomPropertyValue>(value).name();
-    auto* registered = builderState.document().getCSSRegisteredCustomPropertySet().get(name);
-    auto& syntax = registered ? registered->syntax : "*"_s;
+    auto* registered = builderState.document().customPropertyRegistry().get(name);
+    auto& syntax = registered ? registered->syntax : CSSCustomPropertySyntax::universal();
     auto resolvedData = valueWithReferences.resolveVariableReferences(builderState);
     if (!resolvedData)
         return nullptr;

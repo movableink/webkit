@@ -224,7 +224,8 @@ private:
     Vector<String> classList() const override;
     AccessibilityCurrentState currentState() const override { return static_cast<AccessibilityCurrentState>(intAttributeValue(AXPropertyName::CurrentState)); }
     bool supportsCurrent() const override { return boolAttributeValue(AXPropertyName::SupportsCurrent); }
-    const String keyShortcutsValue() const override { return stringAttributeValue(AXPropertyName::KeyShortcutsValue); }
+    bool supportsKeyShortcuts() const override { return boolAttributeValue(AXPropertyName::SupportsKeyShortcuts); }
+    String keyShortcuts() const override { return stringAttributeValue(AXPropertyName::KeyShortcuts); }
     bool supportsSetSize() const override { return boolAttributeValue(AXPropertyName::SupportsSetSize); }
     bool supportsPosInSet() const override { return boolAttributeValue(AXPropertyName::SupportsPosInSet); }
     int setSize() const override { return intAttributeValue(AXPropertyName::SetSize); }
@@ -352,7 +353,7 @@ private:
     String documentURI() const override;
     String documentEncoding() const override;
 #if PLATFORM(COCOA)
-    bool preventKeyboardDOMEventDispatch() const override;
+    bool preventKeyboardDOMEventDispatch() const override { return boolAttributeValue(AXPropertyName::PreventKeyboardDOMEventDispatch); }
 #endif
 
     // PlainTextRange support.
@@ -536,7 +537,7 @@ private:
     String innerHTML() const override;
     String outerHTML() const override;
 
-    // Ideally this would be a WeakPtr<AXIsolatedTree>, but WebKit's WeakPtr is not currently thread-safe.
+    // FIXME: Make this a ThreadSafeWeakPtr<AXIsolatedTree>.
     RefPtr<AXIsolatedTree> m_cachedTree;
     AXID m_parentID;
     Vector<AXID> m_childrenIDs;

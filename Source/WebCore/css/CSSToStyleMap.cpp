@@ -36,6 +36,7 @@
 #include "CSSImageValue.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPrimitiveValueMappings.h"
+#include "CSSPropertyParser.h"
 #include "CSSTimingFunctionValue.h"
 #include "CSSValueKeywords.h"
 #include "CompositeOperation.h"
@@ -438,8 +439,12 @@ void CSSToStyleMap::mapAnimationProperty(Animation& animation, const CSSValue& v
         return;
     }
     if (primitiveValue.propertyID() == CSSPropertyInvalid) {
-        animation.setProperty({ Animation::TransitionMode::UnknownProperty, CSSPropertyInvalid });
-        animation.setUnknownProperty(primitiveValue.stringValue());
+        auto stringValue = primitiveValue.stringValue();
+        if (isCustomPropertyName(stringValue))
+            animation.setProperty({ Animation::TransitionMode::CustomProperty, CSSPropertyCustom });
+        else
+            animation.setProperty({ Animation::TransitionMode::UnknownProperty, CSSPropertyInvalid });
+        animation.setCustomOrUnknownProperty(stringValue);
         return;
     }
 
@@ -554,8 +559,19 @@ LengthBox CSSToStyleMap::mapNinePieceImageQuad(CSSValue& value)
 
     // Retrieve the primitive value.
     auto& borderWidths = downcast<CSSPrimitiveValue>(value);
+    if (LIKELY(borderWidths.quadValue()))
+        return mapNinePieceImageQuad(*borderWidths.quadValue());
 
-    return mapNinePieceImageQuad(*borderWidths.quadValue());
+    // Values coming from CSS Type OM may not have been converted to a Quad yet.
+    if (!borderWidths.isNumber() && !borderWidths.isLength())
+        return LengthBox();
+
+    auto quad = Quad::create();
+    quad->setTop(&borderWidths);
+    quad->setRight(&borderWidths);
+    quad->setBottom(&borderWidths);
+    quad->setLeft(&borderWidths);
+    return mapNinePieceImageQuad(quad);
 }
 
 LengthBox CSSToStyleMap::mapNinePieceImageQuad(Quad& quad)

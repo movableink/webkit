@@ -30,6 +30,7 @@
 
 #include "ImageBufferShareableAllocator.h"
 #include "RemoteDisplayListRecorderMessages.h"
+#include "RemoteImageBuffer.h"
 #include <WebCore/BitmapImage.h>
 #include <WebCore/FilterResults.h>
 
@@ -317,11 +318,11 @@ void RemoteDisplayListRecorder::drawNativeImageWithQualifiedIdentifier(Qualified
     handleItem(DisplayList::DrawNativeImage(imageIdentifier.object(), imageSize, destRect, srcRect, options), *image);
 }
 
-void RemoteDisplayListRecorder::drawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
+void RemoteDisplayListRecorder::drawSystemImage(Ref<SystemImage> systemImage, const FloatRect& destinationRect)
 {
 #if USE(SYSTEM_PREVIEW)
-    if (is<ARKitBadgeSystemImage>(systemImage)) {
-        ARKitBadgeSystemImage& badge = downcast<ARKitBadgeSystemImage>(systemImage);
+    if (is<ARKitBadgeSystemImage>(systemImage.get())) {
+        ARKitBadgeSystemImage& badge = downcast<ARKitBadgeSystemImage>(systemImage.get());
         RefPtr nativeImage = resourceCache().cachedNativeImage({ badge.imageIdentifier(), m_webProcessIdentifier });
         if (!nativeImage) {
             ASSERT_NOT_REACHED();
@@ -534,6 +535,14 @@ void RemoteDisplayListRecorder::clearRect(const FloatRect& rect)
     handleItem(DisplayList::ClearRect(rect));
 }
 
+void RemoteDisplayListRecorder::drawControlPart(Ref<ControlPart> part, const FloatRect& rect, float deviceScaleFactor, const ControlStyle& style)
+{
+    if (!m_controlFactory)
+        m_controlFactory = ControlFactory::createControlFactory();
+    part->setControlFactory(m_controlFactory.get());
+    handleItem(DisplayList::DrawControlPart(WTFMove(part), rect, deviceScaleFactor, style));
+}
+
 #if USE(CG)
 
 void RemoteDisplayListRecorder::applyStrokePattern()
@@ -556,7 +565,7 @@ void RemoteDisplayListRecorder::applyDeviceScaleFactor(float scaleFactor)
 void RemoteDisplayListRecorder::flushContext(DisplayListRecorderFlushIdentifier identifier)
 {
     m_imageBuffer->flushContext();
-    m_renderingBackend->didFlush(identifier, m_imageBufferIdentifier);
+    m_renderingBackend->didFlush(identifier);
 }
 
 } // namespace WebKit

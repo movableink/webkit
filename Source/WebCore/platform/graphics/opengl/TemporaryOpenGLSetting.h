@@ -51,11 +51,11 @@ class TemporaryOpenGLSetting {
     WTF_MAKE_NONCOPYABLE(TemporaryOpenGLSetting);
 public:
 #if PLATFORM(QT)
-    TemporaryOpenGLSetting(QOpenGLExtensions*, GC3Denum capability, GC3Denum scopedState);
+    WEBCORE_EXPORT TemporaryOpenGLSetting(QOpenGLExtensions*, GC3Denum capability, GC3Denum scopedState);
 #else
-    TemporaryOpenGLSetting(GCGLenum capability, GCGLenum scopedState);
+    WEBCORE_EXPORT TemporaryOpenGLSetting(GCGLenum capability, GCGLenum scopedState);
 #endif
-    ~TemporaryOpenGLSetting();
+    WEBCORE_EXPORT ~TemporaryOpenGLSetting();
 
 private:
     const GCGLenum m_capability;

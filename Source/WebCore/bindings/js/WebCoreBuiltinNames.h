@@ -83,6 +83,7 @@ namespace WebCore {
     macro(AudioParamMap) \
     macro(AudioProcessingEvent) \
     macro(AudioScheduledSourceNode) \
+    macro(AudioSession) \
     macro(AudioWorklet) \
     macro(AudioWorkletGlobalScope) \
     macro(AudioWorkletNode) \
@@ -226,6 +227,7 @@ namespace WebCore {
     macro(HTMLAudioElement) \
     macro(HTMLDialogElement) \
     macro(HTMLDataListElement) \
+    macro(HTMLEmbedElement) \
     macro(HTMLMenuItemElement) \
     macro(HTMLModelElement) \
     macro(Headers) \
@@ -462,6 +464,7 @@ namespace WebCore {
     macro(XRWebGLLayer) \
     macro(abortAlgorithm) \
     macro(abortSteps) \
+    macro(addAbortAlgorithmToSignal) \
     macro(appendFromJS) \
     macro(applicationCache) \
     macro(associatedReadableByteStreamController) \
@@ -492,6 +495,7 @@ namespace WebCore {
     macro(consumeChunk) \
     macro(controlledReadableStream) \
     macro(controller) \
+    macro(createAbortSignal) \
     macro(createImageBitmap) \
     macro(createReadableStream) \
     macro(createWritableStreamFromInternal) \
@@ -588,6 +592,7 @@ namespace WebCore {
     macro(reader) \
     macro(readyPromise) \
     macro(readyPromiseCapability) \
+    macro(removeAbortAlgorithmFromSignal) \
     macro(requestAnimationFrame) \
     macro(requestIdleCallback) \
     macro(response) \
@@ -598,6 +603,8 @@ namespace WebCore {
     macro(setBodyFromInputRequest) \
     macro(setStatus) \
     macro(showModalDialog) \
+    macro(signal) \
+    macro(signalAbort) \
     macro(SpeechSynthesis) \
     macro(SpeechSynthesisErrorEvent) \
     macro(SpeechSynthesisEvent) \
@@ -647,7 +654,6 @@ namespace WebCore {
     macro(webkitOfflineAudioContext) \
     macro(webkitOscillatorNode) \
     macro(webkitSpeechRecognition) \
-    macro(whenSignalAborted) \
     macro(window) \
     macro(writable) \
     macro(writeAlgorithm) \

@@ -392,6 +392,11 @@ void GraphicsContext::drawPattern(ImageBuffer& image, const FloatRect& destRect,
     image.drawPattern(*this, destRect, tileRect, patternTransform, phase, spacing, options);
 }
 
+void GraphicsContext::drawControlPart(ControlPart& part, const FloatRect& rect, float deviceScaleFactor, const ControlStyle& style)
+{
+    part.draw(*this, rect, deviceScaleFactor, style);
+}
+
 void GraphicsContext::clipRoundedRect(const FloatRoundedRect& rect)
 {
     Path path;

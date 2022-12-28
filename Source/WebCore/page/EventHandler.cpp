@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov (ap@webkit.org)
  * Copyright (C) 2015 The Qt Company Ltd
  *
@@ -436,7 +437,7 @@ void EventHandler::clear()
 
 void EventHandler::nodeWillBeRemoved(Node& nodeToBeRemoved)
 {
-    if (nodeToBeRemoved.contains(m_clickNode.get()))
+    if (nodeToBeRemoved.containsIncludingShadowDOM(m_clickNode.get()))
         m_clickNode = nullptr;
 }
 
@@ -705,6 +706,7 @@ bool EventHandler::handleMousePressEventSingleClick(const MouseEventWithHitTestR
                     baseNode = newSelection.base().containerNode();
                 if (baseNode) {
                     auto expandedBaseSelection = expandSelectionToRespectSelectOnMouseDown(*baseNode, VisibleSelection { newSelection.visibleBase() });
+                    expandedBaseSelection.expandUsingGranularity(m_frame.selection().granularity());
                     if (expandedBaseSelection.isRange()) {
                         if (newSelection.isBaseFirst() && pos < newSelection.start())
                             newSelection.setBase(expandedBaseSelection.end());
@@ -1754,6 +1756,9 @@ bool EventHandler::handleMousePressEvent(const PlatformMouseEvent& platformMouse
 #if !ENABLE(IOS_TOUCH_EVENTS)
     cancelFakeMouseMoveEvent();
 #endif
+    if (m_eventHandlerWillResetCapturingMouseEventsElement)
+        m_capturingMouseEventsElement = nullptr;
+
     m_mousePressed = true;
     m_capturesDragging = true;
     setLastKnownMousePosition(platformMouseEvent);
@@ -2355,7 +2360,7 @@ static std::pair<bool, RefPtr<Frame>> contentFrameForNode(Node* target)
     if (!is<HTMLFrameElementBase>(target))
         return { false, nullptr };
 
-    return { true, downcast<HTMLFrameElementBase>(*target).contentFrame() };
+    return { true, dynamicDowncast<LocalFrame>(downcast<HTMLFrameElementBase>(*target).contentFrame()) };
 }
 
 static std::optional<DragOperation> convertDropZoneOperationToDragOperation(const String& dragOperation)
@@ -3033,7 +3038,7 @@ bool EventHandler::handleWheelEventInternal(const PlatformWheelEvent& event, Opt
     LOG_WITH_STREAM(Scrolling, stream << "EventHandler::handleWheelEvent " << event << " processing steps " << processingSteps);
     auto monitor = m_frame.page()->wheelEventTestMonitor();
     if (monitor)
-        monitor->receivedWheelEvent(event);
+        monitor->receivedWheelEventWithPhases(event.phase(), event.momentumPhase());
 
     auto deferrer = WheelEventTestMonitorCompletionDeferrer { monitor.get(), this, WheelEventTestMonitor::DeferReason::HandlingWheelEventOnMainThread };
 #endif
@@ -4726,7 +4731,7 @@ bool EventHandler::focusedScrollableAreaShouldUseSmoothKeyboardScrolling()
 
 bool EventHandler::shouldUseSmoothKeyboardScrollingForFocusedScrollableArea()
 {
-    return m_frame.settings().eventHandlerDrivenSmoothKeyboardScrollingEnabled() && focusedScrollableAreaShouldUseSmoothKeyboardScrolling();
+    return m_frame.settings().eventHandlerDrivenSmoothKeyboardScrollingEnabled() && focusedScrollableAreaShouldUseSmoothKeyboardScrolling() && m_frame.settings().scrollAnimatorEnabled();
 }
 
 bool EventHandler::keyboardScrollRecursively(std::optional<ScrollDirection> direction, std::optional<ScrollGranularity> granularity, Node* startingNode)

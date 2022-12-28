@@ -24,8 +24,13 @@
 
 import argparse
 import json
-import requests
+import os
 import sys
+import twisted
+import re
+
+from twisted_additions import TwistedAdditions
+from twisted.internet import defer, reactor
 
 
 class ResultsDatabase(object):
@@ -33,6 +38,7 @@ class ResultsDatabase(object):
     # TODO: Support more suites (Note, the API we're talking to already does)
     SUITE = 'layout-tests'
     PERCENT_THRESHOLD = 10
+    PERECENT_SUCCESS_RATE_FOR_PRE_EXISTING_FAILURE = 80
     CONFIGURATION_KEYS = [
         'architecture',
         'platform',
@@ -46,40 +52,85 @@ class ResultsDatabase(object):
     ]
 
     @classmethod
-    def get_results_summary(cls, test, commit=None, configuration=None):
+    @defer.inlineCallbacks
+    def get_results_summary(cls, test, commit=None, configuration=None, logger=None):
+        logger = logger or (lambda log: None)
         params = dict()
+        if not test:
+            logger('Test name not provided\n')
+            defer.returnValue({})
+            return
+        if not configuration:
+            configuration = {}
         for key, value in configuration.items():
             if key not in cls.CONFIGURATION_KEYS:
-                sys.stderr.write(f"'{key}' is not a valid configuration key\n")
+                logger(f"'{key}' is not a valid configuration key\n")
             params[key] = value
         if commit:
             params['ref'] = commit
-        response = requests.get(f'{cls.HOSTNAME}/api/results-summary/{cls.SUITE}/{test}', params=params)
-        if response.status_code != 200:
-            sys.stderr.write(f"Failed to query results summary with status code '{response.status_code}'\n")
-            return None
-        try:
-            return response.json()
-        except json.decoder.JSONDecodeError:
-            sys.stderr.write('Non-json response from results summary query\n')
-            return None
+
+        response = yield TwistedAdditions.request(f'{cls.HOSTNAME}/api/results-summary/{cls.SUITE}/{test}', params=params, logger=logger)
+
+        if not response:
+            logger(f'No response from {cls.HOSTNAME}\n')
+        elif response.status_code == 200:
+            defer.returnValue(response.json())
+            return
+        else:
+            logger(f'Failed to query results summary with status code {response.status_code}\n')
+
+        defer.returnValue({})
 
     @classmethod
-    def is_test_expected_to(cls, test, result_type=None, commit=None, configuration=None, log=False):
-        data = cls.get_results_summary(test, commit=commit, configuration=configuration)
-        if log:
-            print(test)
-            for key, value in (data or dict()).items():
-                if not value:
-                    continue
-                print(f'    {key}: {value}%')
-            if not data:
-                print('    No historic data found for query')
+    @defer.inlineCallbacks
+    def is_test_pre_existing_failure(cls, test, commit=None, configuration=None):
+        logs = []
+        data = yield cls.get_results_summary(test, commit, configuration, logger=lambda log: logs.append(log))
+        pass_rate = data.get('pass', 100) + data.get('warning', 0)
+        is_existing_failure = (pass_rate <= cls.PERECENT_SUCCESS_RATE_FOR_PRE_EXISTING_FAILURE)
+        output = {
+            'is_existing_failure': is_existing_failure,
+            'pass_rate': data.get('pass', 'Unknown'),
+            'raw_data': data,
+            'logs': ''.join(logs),
+        }
+        defer.returnValue(output)
+
+    @classmethod
+    @defer.inlineCallbacks
+    def is_test_expected_to(cls, test, result_type=None, commit=None, configuration=None, logger=None):
+        logger = logger or (lambda log: None)
+        has_commit = False
+        if commit:
+            has_commit = yield cls.has_commit(commit=commit)
+            if not has_commit:
+                logger(f"'{commit}' is not registered on '{cls.HOSTNAME}'\n")
+
+        data = yield cls.get_results_summary(
+            test, configuration=configuration, logger=logger,
+            commit=commit if has_commit else None,
+        )
+        logger(f'{test}\n')
+        for key, value in (data or dict()).items():
+            if not value:
+                continue
+            logger(f'    {key}: {value}%\n')
         if not data:
-            return -1
+            logger('    No historic data found for query\n')
+        if not data:
+            return defer.returnValue(-1)
         if result_type:
-            return data.get(result_type.lower(), 0) > cls.PERCENT_THRESHOLD
-        return 100 - (data.get('pass', 0) + data.get('warning', 0)) > cls.PERCENT_THRESHOLD
+            return defer.returnValue(data.get(result_type.lower(), 0) > cls.PERCENT_THRESHOLD)
+        return defer.returnValue(100 - (data.get('pass', 0) + data.get('warning', 0)) > cls.PERCENT_THRESHOLD)
+
+    @classmethod
+    @defer.inlineCallbacks
+    def has_commit(cls, commit, logger=None):
+        response = yield TwistedAdditions.request(f'{cls.HOSTNAME}/api/commits', params=dict(ref=commit), logger=logger)
+        if not response or response.status_code != 200:
+            defer.returnValue(False)
+        else:
+            defer.returnValue(True)
 
     @classmethod
     def main(cls, args=None):
@@ -134,11 +185,18 @@ class ResultsDatabase(object):
             if attr:
                 configuration[key] = attr
 
-        if cls.is_test_expected_to(parsed.test, result_type=parsed.result, commit=parsed.commit, log=True, configuration=configuration):
-            print('EXPECTED')
-        else:
-            print('UNEXPECTED')
-        return 0
+        d = cls.is_test_expected_to(parsed.test, result_type=parsed.result, commit=parsed.commit, logger=sys.stdout.write, configuration=configuration)
+
+        def callback(result):
+            if result:
+                print('EXPECTED')
+            else:
+                print('UNEXPECTED')
+
+        d.addCallback(callback)
+        d.addBoth(lambda _: reactor.stop())
+
+        return reactor.run()
 
 
 if __name__ == '__main__':

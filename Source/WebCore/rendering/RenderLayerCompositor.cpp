@@ -1677,6 +1677,12 @@ static bool recompositeChangeRequiresGeometryUpdate(const RenderStyle& oldStyle,
         || oldStyle.overscrollBehaviorY() != newStyle.overscrollBehaviorY();
 }
 
+static bool recompositeChangeRequiresChildrenGeometryUpdate(const RenderStyle& oldStyle, const RenderStyle& newStyle)
+{
+    return oldStyle.hasPerspective() != newStyle.hasPerspective()
+        || oldStyle.usedTransformStyle3D() != newStyle.usedTransformStyle3D();
+}
+
 void RenderLayerCompositor::layerStyleChanged(StyleDifference diff, RenderLayer& layer, const RenderStyle* oldStyle)
 {
     if (diff == StyleDifference::Equal)
@@ -1792,6 +1798,8 @@ void RenderLayerCompositor::layerStyleChanged(StyleDifference diff, RenderLayer&
             layer.setNeedsPostLayoutCompositingUpdate();
             layer.setNeedsCompositingGeometryUpdate();
         }
+        if (m_renderView.settings().css3DTransformInteroperabilityEnabled() && oldStyle && recompositeChangeRequiresChildrenGeometryUpdate(*oldStyle, newStyle))
+            layer.setChildrenNeedCompositingGeometryUpdate();
     }
 }
 
@@ -2661,6 +2669,10 @@ static FullScreenDescendant isDescendantOfFullScreenLayer(const RenderLayer& lay
     auto* fullScreenLayer = fullScreenRenderer->layer();
     if (!fullScreenRenderer || !fullScreenLayer)
         return FullScreenDescendant::NotApplicable;
+
+    auto backdropRenderer = fullScreenRenderer->backdropRenderer();
+    if (backdropRenderer && backdropRenderer.get() == &layer.renderer())
+        return FullScreenDescendant::Yes;
 
     return layer.isDescendantOf(*fullScreenLayer) ? FullScreenDescendant::Yes : FullScreenDescendant::No;
 }
@@ -4514,8 +4526,11 @@ FixedPositionViewportConstraints RenderLayerCompositor::computeFixedViewportCons
 {
     ASSERT(layer.isComposited());
 
-    ASSERT(layer.backing()->viewportAnchorLayer());
     auto* anchorLayer = layer.backing()->viewportAnchorLayer();
+    if (!anchorLayer) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
 
     FixedPositionViewportConstraints constraints;
     constraints.setLayerPositionAtLastLayout(anchorLayer->position());
@@ -4552,8 +4567,11 @@ StickyPositionViewportConstraints RenderLayerCompositor::computeStickyViewportCo
 
     auto& renderer = downcast<RenderBoxModelObject>(layer.renderer());
 
-    ASSERT(layer.backing()->viewportAnchorLayer());
     auto* anchorLayer = layer.backing()->viewportAnchorLayer();
+    if (!anchorLayer) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
 
     StickyPositionViewportConstraints constraints;
     renderer.computeStickyPositionConstraints(constraints, renderer.constrainingRectForStickyPosition());

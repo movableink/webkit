@@ -49,7 +49,7 @@
 
 namespace WebCore {
 
-static inline bool isSimpleLengthPropertyID(CSSPropertyID propertyId, bool& acceptsNegativeNumbers)
+bool CSSParserFastPaths::isSimpleLengthPropertyID(CSSPropertyID propertyId, bool& acceptsNegativeNumbers)
 {
     switch (propertyId) {
     case CSSPropertyFontSize:
@@ -158,7 +158,7 @@ static RefPtr<CSSValue> parseSimpleLengthValue(CSSPropertyID propertyId, StringV
     bool acceptsNegativeNumbers = false;
 
     // In @viewport, width and height are shorthands, not simple length values.
-    if (isCSSViewportParsingEnabledForMode(cssParserMode) || !isSimpleLengthPropertyID(propertyId, acceptsNegativeNumbers))
+    if (isCSSViewportParsingEnabledForMode(cssParserMode) || !CSSParserFastPaths::isSimpleLengthPropertyID(propertyId, acceptsNegativeNumbers))
         return nullptr;
 
     unsigned length = string.length();
@@ -586,14 +586,14 @@ std::optional<SRGBA<uint8_t>> CSSParserFastPaths::parseNamedColor(StringView str
     return parseNamedColorInternal(string.characters16(), string.length());
 }
 
-bool CSSParserFastPaths::isValidKeywordPropertyAndValue(CSSPropertyID property, CSSValueID value, const CSSParserContext& context)
+bool CSSParserFastPaths::isKeywordValidForStyleProperty(CSSPropertyID property, CSSValueID value, const CSSParserContext& context)
 {
-    return CSSPropertyParsing::isKeywordValidForProperty(property, value, context);
+    return CSSPropertyParsing::isKeywordValidForStyleProperty(property, value, context);
 }
 
-bool CSSParserFastPaths::isKeywordPropertyID(CSSPropertyID property)
+bool CSSParserFastPaths::isKeywordFastPathEligibleStyleProperty(CSSPropertyID property)
 {
-    return CSSPropertyParsing::isKeywordProperty(property);
+    return CSSPropertyParsing::isKeywordFastPathEligibleStyleProperty(property);
 }
 
 static bool isUniversalKeyword(StringView string)
@@ -614,7 +614,7 @@ static RefPtr<CSSValue> parseKeywordValue(CSSPropertyID propertyId, StringView s
     // FIXME: The "!context.enclosingRuleType" is suspicious.
     ASSERT(!CSSProperty::isDescriptorOnly(propertyId) || parsingDescriptor || !context.enclosingRuleType);
 
-    if (!CSSParserFastPaths::isKeywordPropertyID(propertyId)) {
+    if (!CSSParserFastPaths::isKeywordFastPathEligibleStyleProperty(propertyId)) {
         // All properties, including non-keyword properties, accept the CSS-wide keywords.
         if (!isUniversalKeyword(string))
             return nullptr;
@@ -636,7 +636,7 @@ static RefPtr<CSSValue> parseKeywordValue(CSSPropertyID propertyId, StringView s
     if (!parsingDescriptor && isCSSWideKeyword(valueID))
         return CSSValuePool::singleton().createIdentifierValue(valueID);
 
-    if (CSSParserFastPaths::isValidKeywordPropertyAndValue(propertyId, valueID, context))
+    if (CSSParserFastPaths::isKeywordValidForStyleProperty(propertyId, valueID, context))
         return CSSValuePool::singleton().createIdentifierValue(valueID);
     return nullptr;
 }

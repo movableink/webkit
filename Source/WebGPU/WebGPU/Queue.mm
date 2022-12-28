@@ -128,11 +128,14 @@ void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
             ++(protectedThis->m_completedCommandBufferCount);
             for (auto& callback : protectedThis->m_onSubmittedWorkDoneCallbacks.take(protectedThis->m_completedCommandBufferCount))
                 callback(WGPUQueueWorkDoneStatus_Success);
-        }, CompletionHandlerCallThread::MainThread));
+        }, CompletionHandlerCallThread::AnyThread));
     }];
 
     [commandBuffer commit];
     ++m_submittedCommandBufferCount;
+
+    if ([MTLCaptureManager sharedCaptureManager].isCapturing)
+        [[MTLCaptureManager sharedCaptureManager] stopCapture];
 }
 
 void Queue::submit(Vector<std::reference_wrapper<const CommandBuffer>>&& commands)

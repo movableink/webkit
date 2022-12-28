@@ -35,12 +35,12 @@ typedef struct __CFBundle* CFBundleRef;
 namespace WebCore {
 
 #if USE(CF)
-CFBundleRef webKitBundle();
+WEBCORE_EXPORT CFBundleRef webKitBundle();
 #endif
 
-String webKitBundlePath();
-String webKitBundlePath(StringView path);
-String webKitBundlePath(StringView name, StringView type, StringView directory);
-String webKitBundlePath(const Vector<StringView>& components);
+WEBCORE_EXPORT String webKitBundlePath();
+WEBCORE_EXPORT String webKitBundlePath(StringView path);
+WEBCORE_EXPORT String webKitBundlePath(StringView name, StringView type, StringView directory);
+WEBCORE_EXPORT String webKitBundlePath(const Vector<StringView>& components);
 
 }

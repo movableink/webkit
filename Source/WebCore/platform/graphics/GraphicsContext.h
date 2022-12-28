@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "ControlPart.h"
 #include "DashArray.h"
 #include "DestinationColorSpace.h"
 #include "FloatRect.h"
@@ -120,6 +121,9 @@ public:
     bool hasVisibleShadow() const { return dropShadow().isVisible(); }
     bool hasBlurredShadow() const { return dropShadow().isBlurred(); }
     bool hasShadow() const { return dropShadow().hasOutsets(); }
+
+    std::optional<GraphicsStyle> style() const { return m_state.style(); }
+    void setStyle(const std::optional<GraphicsStyle>& style) { m_state.setStyle(style); didUpdateState(m_state); }
 
     CompositeMode compositeMode() const { return m_state.compositeMode(); }
     CompositeOperator compositeOperation() const { return compositeMode().operation; }
@@ -230,7 +234,7 @@ public:
     virtual void setLineJoin(LineJoin) = 0;
     virtual void setMiterLimit(float) = 0;
 
-    // Images, Patterns, and Media
+    // Images, Patterns, ControlParts, and Media
 
     IntSize compatibleImageBufferSize(const FloatSize&) const;
 
@@ -265,6 +269,8 @@ public:
 
     virtual void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) = 0;
     WEBCORE_EXPORT virtual void drawPattern(ImageBuffer&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { });
+
+    WEBCORE_EXPORT virtual void drawControlPart(ControlPart&, const FloatRect&, float deviceScaleFactor, const ControlStyle&);
 
 #if ENABLE(VIDEO)
     WEBCORE_EXPORT virtual void paintFrameForMedia(MediaPlayer&, const FloatRect& destination);
@@ -376,8 +382,8 @@ private:
     virtual bool supportsTransparencyLayers() const { return true; }
 
 protected:
-    void fillEllipseAsPath(const FloatRect&);
-    void strokeEllipseAsPath(const FloatRect&);
+    WEBCORE_EXPORT void fillEllipseAsPath(const FloatRect&);
+    WEBCORE_EXPORT void strokeEllipseAsPath(const FloatRect&);
 
     FloatRect computeLineBoundsAndAntialiasingModeForText(const FloatRect&, bool printing, Color&);
 

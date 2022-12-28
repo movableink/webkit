@@ -56,7 +56,7 @@ RefPtr<CSSFilter> CSSFilter::create(RenderElement& renderer, const FilterOperati
 
     LOG_WITH_STREAM(Filters, stream << "CSSFilter::create built filter " << filter.get() << " for " << operations);
 
-    filter->setFilterRenderingMode(preferredFilterRenderingModes);
+    filter->setFilterRenderingModes(preferredFilterRenderingModes);
     return filter;
 }
 
@@ -339,6 +339,28 @@ RefPtr<FilterImage> CSSFilter::apply(FilterImage* sourceImage, FilterResults& re
     }
 
     return result;
+}
+
+FilterStyleVector CSSFilter::createFilterStyles(const FilterStyle& sourceStyle) const
+{
+    ASSERT(supportedFilterRenderingModes().contains(FilterRenderingMode::GraphicsContext));
+
+    FilterStyleVector styles;
+    FilterStyle lastStyle = sourceStyle;
+
+    for (auto& function : m_functions) {
+        if (function->filterType() == FilterEffect::Type::SourceGraphic)
+            continue;
+
+        auto result = function->createFilterStyles(*this, lastStyle);
+        if (result.isEmpty())
+            return { };
+
+        lastStyle = result.last();
+        styles.appendVector(WTFMove(result));
+    }
+
+    return styles;
 }
 
 void CSSFilter::setFilterRegion(const FloatRect& filterRegion)

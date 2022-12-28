@@ -28,6 +28,7 @@
 
 #if HAVE(IOSURFACE)
 
+#include "GraphicsClient.h"
 #include "GraphicsContextCG.h"
 #include "IOSurface.h"
 #include "IOSurfacePool.h"
@@ -83,7 +84,7 @@ RetainPtr<CGColorSpaceRef> ImageBufferIOSurfaceBackend::contextColorSpace(const 
     return ImageBufferCGBackend::contextColorSpace(context);
 }
 
-std::unique_ptr<ImageBufferIOSurfaceBackend> ImageBufferIOSurfaceBackend::create(const Parameters& parameters, const ImageBuffer::CreationContext& creationContext)
+std::unique_ptr<ImageBufferIOSurfaceBackend> ImageBufferIOSurfaceBackend::create(const Parameters& parameters, const ImageBufferCreationContext& creationContext)
 {
     IntSize backendSize = calculateSafeBackendSize(parameters);
     if (backendSize.isEmpty())
@@ -93,7 +94,7 @@ std::unique_ptr<ImageBufferIOSurfaceBackend> ImageBufferIOSurfaceBackend::create
     if (!surface)
         return nullptr;
 
-    RetainPtr<CGContextRef> cgContext = surface->ensurePlatformContext(creationContext.hostWindow);
+    RetainPtr<CGContextRef> cgContext = surface->ensurePlatformContext(creationContext.graphicsClient ? creationContext.graphicsClient->displayID() : 0);
     if (!cgContext)
         return nullptr;
 
@@ -152,6 +153,11 @@ IntSize ImageBufferIOSurfaceBackend::backendSize() const
 unsigned ImageBufferIOSurfaceBackend::bytesPerRow() const
 {
     return m_surface->bytesPerRow();
+}
+
+void ImageBufferIOSurfaceBackend::transferToNewContext(const ImageBufferCreationContext& creationContext)
+{
+    m_ioSurfacePool = creationContext.surfacePool;
 }
 
 void ImageBufferIOSurfaceBackend::invalidateCachedNativeImage() const

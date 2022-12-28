@@ -27,13 +27,35 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
+#import "HTTPServer.h"
 #import "TestCocoa.h"
+#import "TestNavigationDelegate.h"
+#import "WebExtensionUtilities.h"
 #import <WebKit/WKFoundation.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/_WKWebExtensionContextPrivate.h>
 #import <WebKit/_WKWebExtensionControllerPrivate.h>
 #import <WebKit/_WKWebExtensionPrivate.h>
 
 namespace TestWebKitAPI {
+
+TEST(WKWebExtensionController, Configuration)
+{
+    _WKWebExtensionController *testController = [[_WKWebExtensionController alloc] init];
+    EXPECT_TRUE(testController.configuration.persistent);
+    EXPECT_NULL(testController.configuration.identifier);
+
+    testController = [[_WKWebExtensionController alloc] initWithConfiguration:_WKWebExtensionControllerConfiguration.nonPersistentConfiguration];
+    EXPECT_FALSE(testController.configuration.persistent);
+    EXPECT_NULL(testController.configuration.identifier);
+
+    NSUUID *identifier = [NSUUID UUID];
+    _WKWebExtensionControllerConfiguration *configuration = [_WKWebExtensionControllerConfiguration configurationWithIdentifier:identifier];
+
+    testController = [[_WKWebExtensionController alloc] initWithConfiguration:configuration];
+    EXPECT_TRUE(testController.configuration.persistent);
+    EXPECT_NS_EQUAL(testController.configuration.identifier, identifier);
+}
 
 TEST(WKWebExtensionController, LoadingAndUnloadingContexts)
 {
@@ -43,16 +65,16 @@ TEST(WKWebExtensionController, LoadingAndUnloadingContexts)
     EXPECT_EQ(testController.extensionContexts.count, 0ul);
 
     _WKWebExtension *testExtensionOne = [[_WKWebExtension alloc] _initWithManifestDictionary:@{ @"manifest_version": @2, @"name": @"Test One", @"description": @"Test One", @"version": @"1.0" }];
-    _WKWebExtensionContext *testContextOne = [[_WKWebExtensionContext alloc] initWithExtension:testExtensionOne];
+    _WKWebExtensionContext *testContextOne = [[_WKWebExtensionContext alloc] initForExtension:testExtensionOne];
 
-    EXPECT_NULL(testExtensionOne.errors);
+    EXPECT_EQ(testExtensionOne.errors.count, 0ul);
     EXPECT_FALSE(testContextOne.loaded);
     EXPECT_NULL([testController extensionContextForExtension:testExtensionOne]);
 
     _WKWebExtension *testExtensionTwo = [[_WKWebExtension alloc] _initWithManifestDictionary:@{ @"manifest_version": @2, @"name": @"Test Two", @"description": @"Test Two", @"version": @"1.0" }];
-    _WKWebExtensionContext *testContextTwo = [[_WKWebExtensionContext alloc] initWithExtension:testExtensionTwo];
+    _WKWebExtensionContext *testContextTwo = [[_WKWebExtensionContext alloc] initForExtension:testExtensionTwo];
 
-    EXPECT_NULL(testExtensionTwo.errors);
+    EXPECT_EQ(testExtensionTwo.errors.count, 0ul);
     EXPECT_FALSE(testContextTwo.loaded);
     EXPECT_NULL([testController extensionContextForExtension:testExtensionTwo]);
 
@@ -60,7 +82,7 @@ TEST(WKWebExtensionController, LoadingAndUnloadingContexts)
     EXPECT_TRUE([testController loadExtensionContext:testContextOne error:&error]);
     EXPECT_NULL(error);
 
-    EXPECT_NULL(testExtensionOne.errors);
+    EXPECT_EQ(testExtensionOne.errors.count, 0ul);
     EXPECT_TRUE(testContextOne.loaded);
 
     EXPECT_EQ(testController.extensions.count, 1ul);
@@ -71,7 +93,7 @@ TEST(WKWebExtensionController, LoadingAndUnloadingContexts)
     EXPECT_NS_EQUAL(error.domain, _WKWebExtensionContextErrorDomain);
     EXPECT_EQ(error.code, _WKWebExtensionContextErrorAlreadyLoaded);
 
-    EXPECT_NULL(testExtensionOne.errors);
+    EXPECT_EQ(testExtensionOne.errors.count, 0ul);
     EXPECT_TRUE(testContextOne.loaded);
 
     EXPECT_EQ(testController.extensions.count, 1ul);
@@ -80,7 +102,7 @@ TEST(WKWebExtensionController, LoadingAndUnloadingContexts)
     EXPECT_TRUE([testController loadExtensionContext:testContextTwo error:&error]);
     EXPECT_NULL(error);
 
-    EXPECT_NULL(testExtensionTwo.errors);
+    EXPECT_EQ(testExtensionTwo.errors.count, 0ul);
     EXPECT_TRUE(testContextTwo.loaded);
 
     EXPECT_EQ(testController.extensions.count, 2ul);
@@ -89,7 +111,7 @@ TEST(WKWebExtensionController, LoadingAndUnloadingContexts)
     EXPECT_TRUE([testController unloadExtensionContext:testContextOne error:&error]);
     EXPECT_NULL(error);
 
-    EXPECT_NULL(testExtensionTwo.errors);
+    EXPECT_EQ(testExtensionTwo.errors.count, 0ul);
     EXPECT_FALSE(testContextOne.loaded);
 
     EXPECT_EQ(testController.extensions.count, 1ul);
@@ -98,7 +120,7 @@ TEST(WKWebExtensionController, LoadingAndUnloadingContexts)
     EXPECT_TRUE([testController unloadExtensionContext:testContextTwo error:&error]);
     EXPECT_NULL(error);
 
-    EXPECT_NULL(testExtensionTwo.errors);
+    EXPECT_EQ(testExtensionTwo.errors.count, 0ul);
     EXPECT_FALSE(testContextTwo.loaded);
 
     EXPECT_EQ(testController.extensions.count, 0ul);
@@ -109,7 +131,7 @@ TEST(WKWebExtensionController, LoadingAndUnloadingContexts)
     EXPECT_NS_EQUAL(error.domain, _WKWebExtensionContextErrorDomain);
     EXPECT_EQ(error.code, _WKWebExtensionContextErrorNotLoaded);
 
-    EXPECT_NULL(testExtensionTwo.errors);
+    EXPECT_EQ(testExtensionTwo.errors.count, 0ul);
     EXPECT_FALSE(testContextOne.loaded);
 }
 
@@ -123,10 +145,10 @@ TEST(WKWebExtensionController, BackgroundPageLoading)
     NSMutableDictionary *manifest = [@{ @"manifest_version": @2, @"name": @"Test One", @"description": @"Test One", @"version": @"1.0", @"background": @{ @"page": @"background.html", @"persistent": @NO } } mutableCopy];
 
     _WKWebExtension *testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources];
-    _WKWebExtensionContext *testContext = [[_WKWebExtensionContext alloc] initWithExtension:testExtension];
+    _WKWebExtensionContext *testContext = [[_WKWebExtensionContext alloc] initForExtension:testExtension];
     _WKWebExtensionController *testController = [[_WKWebExtensionController alloc] init];
 
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
 
     NSError *error;
     EXPECT_TRUE([testController loadExtensionContext:testContext error:&error]);
@@ -136,19 +158,19 @@ TEST(WKWebExtensionController, BackgroundPageLoading)
     TestWebKitAPI::Util::runFor(4_s);
 
     // No errors means success.
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
 
     EXPECT_TRUE([testController unloadExtensionContext:testContext error:&error]);
     EXPECT_NULL(error);
 
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
 
     manifest[@"background"] = @{ @"service_worker": @"background.js" };
 
     testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources];
-    testContext = [[_WKWebExtensionContext alloc] initWithExtension:testExtension];
+    testContext = [[_WKWebExtensionContext alloc] initForExtension:testExtension];
 
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
 
     EXPECT_TRUE([testController loadExtensionContext:testContext error:&error]);
     EXPECT_NULL(error);
@@ -157,12 +179,12 @@ TEST(WKWebExtensionController, BackgroundPageLoading)
     TestWebKitAPI::Util::runFor(4_s);
 
     // No errors means success.
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
 
     EXPECT_TRUE([testController unloadExtensionContext:testContext error:&error]);
     EXPECT_NULL(error);
 
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
 
     testContext.baseURL = [NSURL URLWithString:@"test-extension://aaabbbcccddd"];
 
@@ -173,12 +195,12 @@ TEST(WKWebExtensionController, BackgroundPageLoading)
     TestWebKitAPI::Util::runFor(4_s);
 
     // No errors means success.
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
 
     EXPECT_TRUE([testController unloadExtensionContext:testContext error:&error]);
     EXPECT_NULL(error);
 
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
 }
 
 TEST(WKWebExtensionController, BackgroundPageWithModulesLoading)
@@ -191,10 +213,10 @@ TEST(WKWebExtensionController, BackgroundPageWithModulesLoading)
     NSMutableDictionary *manifest = [@{ @"manifest_version": @2, @"name": @"Test One", @"description": @"Test One", @"version": @"1.0", @"background": @{ @"scripts": @[ @"main.js", @"exports.js" ], @"type": @"module", @"persistent": @NO } } mutableCopy];
 
     _WKWebExtension *testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources];
-    _WKWebExtensionContext *testContext = [[_WKWebExtensionContext alloc] initWithExtension:testExtension];
+    _WKWebExtensionContext *testContext = [[_WKWebExtensionContext alloc] initForExtension:testExtension];
     _WKWebExtensionController *testController = [[_WKWebExtensionController alloc] init];
 
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
 
     NSError *error;
     EXPECT_TRUE([testController loadExtensionContext:testContext error:&error]);
@@ -204,19 +226,19 @@ TEST(WKWebExtensionController, BackgroundPageWithModulesLoading)
     TestWebKitAPI::Util::runFor(4_s);
 
     // No errors means success.
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
 
     EXPECT_TRUE([testController unloadExtensionContext:testContext error:&error]);
     EXPECT_NULL(error);
 
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
 
     manifest[@"background"] = @{ @"service_worker": @"main.js", @"type": @"module" };
 
     testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources];
-    testContext = [[_WKWebExtensionContext alloc] initWithExtension:testExtension];
+    testContext = [[_WKWebExtensionContext alloc] initForExtension:testExtension];
 
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
 
     EXPECT_TRUE([testController loadExtensionContext:testContext error:&error]);
     EXPECT_NULL(error);
@@ -225,7 +247,53 @@ TEST(WKWebExtensionController, BackgroundPageWithModulesLoading)
     TestWebKitAPI::Util::runFor(4_s);
 
     // No errors means success.
-    EXPECT_NULL(testExtension.errors);
+    EXPECT_EQ(testExtension.errors.count, 0ul);;
+}
+
+TEST(WKWebExtensionController, ContentScriptLoading)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, "Hello World"_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Https);
+
+    auto *manifest = @{ @"manifest_version": @3, @"content_scripts": @[ @{ @"js": @[ @"content.js" ], @"matches": @[ @"*://localhost/*" ] } ] };
+
+    auto *contentScript = Util::constructScript(@[
+        // Exposed to content scripts
+        @"browser.test.assertEq(typeof browser.runtime.id, 'string')",
+        @"browser.test.assertEq(typeof browser.runtime.getManifest(), 'object')",
+        @"browser.test.assertEq(typeof browser.runtime.getURL(''), 'string')",
+
+        // Not exposed to content scripts
+        @"browser.test.assertEq(browser.runtime.getPlatformInfo, undefined)",
+        @"browser.test.assertEq(browser.runtime.lastError, undefined)",
+
+        // Finish
+        @"browser.test.notifyPass()"
+    ]);
+
+    auto extension = adoptNS([[_WKWebExtension alloc] _initWithManifestDictionary:manifest resources:@{ @"content.js": contentScript }]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+
+    _WKWebExtensionMatchPattern *matchPattern = [_WKWebExtensionMatchPattern matchPatternWithString:@"*://localhost/*"];
+    [manager.get().context setPermissionStatus:_WKWebExtensionContextPermissionStatusGrantedExplicitly forMatchPattern:matchPattern];
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    configuration.get()._webExtensionController = manager.get().controller;
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSZeroRect configuration:configuration.get()]);
+    auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
+
+    navigationDelegate.get().didReceiveAuthenticationChallenge = ^(WKWebView *, NSURLAuthenticationChallenge *challenge, void (^callback)(NSURLSessionAuthChallengeDisposition, NSURLCredential *)) {
+        EXPECT_WK_STREQ(challenge.protectionSpace.authenticationMethod, NSURLAuthenticationMethodServerTrust);
+        callback(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust]);
+    };
+
+    webView.get().navigationDelegate = navigationDelegate.get();
+
+    [webView loadRequest:server.requestWithLocalhost()];
+
+    [manager loadAndRun];
 }
 
 } // namespace TestWebKitAPI

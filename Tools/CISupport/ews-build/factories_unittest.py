@@ -140,7 +140,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
-        'macOS-AppleSilicon-Big-Sur-Debug-Build-EWS': [
+        'macOS-AppleSilicon-Ventura-Debug-Build-EWS': [
             'configure-build',
             'check-change-relevance',
             'validate-change',
@@ -155,7 +155,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'kill-old-processes',
             'compile-webkit'
         ],
-        'macOS-AppleSilicon-Big-Sur-Debug-WK2-Tests-EWS': [
+        'macOS-AppleSilicon-Ventura-Debug-WK2-Tests-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -250,42 +250,6 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'wait-for-crash-collection',
             'kill-old-processes',
             'run-layout-tests-in-stress-mode',
-            'trigger-crash-log-submission',
-            'set-build-summary'
-        ],
-        'macOS-BigSur-Debug-Build-EWS': [
-            'configure-build',
-            'validate-change',
-            'configuration',
-            'clean-up-git-repo',
-            'checkout-source',
-            'fetch-branch-references',
-            'checkout-specific-revision',
-            'show-identifier',
-            'apply-patch',
-            'checkout-pull-request',
-            'kill-old-processes',
-            'compile-webkit'
-        ],
-        'macOS-BigSur-Debug-WK1-Tests-EWS': [
-            'configure-build',
-            'check-change-relevance',
-            'validate-change',
-            'configuration',
-            'clean-up-git-repo',
-            'checkout-source',
-            'fetch-branch-references',
-            'checkout-specific-revision',
-            'show-identifier',
-            'apply-patch',
-            'checkout-pull-request',
-            'download-built-product',
-            'extract-built-product',
-            'wait-for-crash-collection',
-            'kill-old-processes',
-            'find-modified-layout-tests',
-            'run-layout-tests-in-stress-mode',
-            'layout-tests',
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
@@ -392,6 +356,22 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'kill-old-processes',
             'jhbuild',
             'compile-webkit'
+        ],
+        'JSC-Tests-arm64-EWS': [
+            'configure-build',
+            'check-change-relevance',
+            'validate-change',
+            'configuration',
+            'clean-up-git-repo',
+            'checkout-source',
+            'fetch-branch-references',
+            'checkout-specific-revision',
+            'show-identifier',
+            'apply-patch',
+            'checkout-pull-request',
+            'kill-old-processes',
+            'compile-jsc',
+            'jscore-test'
         ],
         'JSC-Tests-EWS': [
             'configure-build',

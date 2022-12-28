@@ -81,7 +81,7 @@ class Procedure {
     WTF_MAKE_FAST_ALLOCATED;
 public:
 
-    JS_EXPORT_PRIVATE Procedure();
+    JS_EXPORT_PRIVATE Procedure(bool usesSIMD = false);
     JS_EXPORT_PRIVATE ~Procedure();
 
     template<typename Callback>
@@ -136,6 +136,7 @@ public:
 
     // bits is a bitwise_cast of the constant you want.
     JS_EXPORT_PRIVATE Value* addConstant(Origin, Type, uint64_t bits);
+    JS_EXPORT_PRIVATE Value* addConstant(Origin, Type, v128_t bits);
 
     // You're guaranteed that bottom is zero.
     Value* addBottom(Origin, Type);
@@ -282,6 +283,24 @@ public:
     bool shouldDumpIR() const { return m_shouldDumpIR; }
     void setShouldDumpIR();
 
+    void setUsessSIMD()
+    { 
+        RELEASE_ASSERT(Options::useWebAssemblySIMD());
+        m_usesSIMD = true;
+    }
+    bool usesSIMD() const
+    {
+        if (!Options::useWebAssemblySIMD())
+            return false;
+        // The LLInt is responsible for discovering this.
+        // If we can't run using it, then we should be conservative.
+        if (!Options::useWasmLLInt())
+            return true;
+        if (Options::forceAllFunctionsToUseSIMD())
+            return true;
+        return m_usesSIMD;
+    }
+
 private:
     friend class BlockInsertionSet;
 
@@ -310,6 +329,7 @@ private:
     bool m_hasQuirks { false };
     bool m_needsPCToOriginMap { false };
     bool m_shouldDumpIR { false };
+    bool m_usesSIMD { false };
 };
     
 } } // namespace JSC::B3

@@ -79,6 +79,8 @@ static void wipeAlphaChannelFromPixels(int width, int height, unsigned char* pix
 
 bool GraphicsContextGLANGLE::initialize()
 {
+    if (contextAttributes().failPlatformContextCreationForTesting)
+        return false;
     if (!platformInitializeContext())
         return false;
     String extensionsString = String::fromLatin1(reinterpret_cast<const char*>(GL_GetString(GL_EXTENSIONS)));
@@ -468,15 +470,20 @@ void GraphicsContextGLANGLE::readnPixels(GCGLint x, GCGLint y, GCGLsizei width, 
     readnPixelsImpl(x, y, width, height, format, type, data.size(), nullptr, nullptr, nullptr, data.data(), false);
 }
 
+bool GraphicsContextGLANGLE::readnPixelsWithStatus(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLSpan<GCGLvoid> data)
+{
+    return readnPixelsImpl(x, y, width, height, format, type, data.size(), nullptr, nullptr, nullptr, data.data(), false);
+}
+
 void GraphicsContextGLANGLE::readnPixels(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLintptr offset)
 {
     readnPixelsImpl(x, y, width, height, format, type, 0, nullptr, nullptr, nullptr, reinterpret_cast<GCGLvoid*>(offset), true);
 }
 
-void GraphicsContextGLANGLE::readnPixelsImpl(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLsizei bufSize, GCGLsizei* length, GCGLsizei* columns, GCGLsizei* rows, GCGLvoid* data, bool readingToPixelBufferObject)
+bool GraphicsContextGLANGLE::readnPixelsImpl(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLsizei bufSize, GCGLsizei* length, GCGLsizei* columns, GCGLsizei* rows, GCGLvoid* data, bool readingToPixelBufferObject)
 {
     if (!makeContextCurrent())
-        return;
+        return false;
 
     // FIXME: remove the two glFlush calls when the driver bug is fixed, i.e.,
     // all previous rendering calls should be done before reading pixels.
@@ -498,7 +505,7 @@ void GraphicsContextGLANGLE::readnPixelsImpl(GCGLint x, GCGLint y, GCGLsizei wid
         // ANGLE detected a failure during the ReadnPixelsRobustANGLE operation. Surface this in the
         // synthetic error list, and skip the alpha channel fixup below.
         synthesizeGLError(error);
-        return;
+        return false;
     }
 
 
@@ -508,6 +515,7 @@ void GraphicsContextGLANGLE::readnPixelsImpl(GCGLint x, GCGLint y, GCGLsizei wid
 #else
     UNUSED_PARAM(readingToPixelBufferObject);
 #endif
+    return true;
 }
 
 // The contents of GraphicsContextGLANGLECommon follow, ported to use ANGLE.
@@ -3049,12 +3057,12 @@ void GraphicsContextGLANGLE::multiDrawElementsInstancedBaseVertexBaseInstanceANG
     checkGPUStatus();
 }
 
-void GraphicsContextGLANGLE::provokingVertexANGLE(GCGLenum mode)
+void GraphicsContextGLANGLE::provokingVertexANGLE(GCGLenum provokeMode)
 {
     if (!makeContextCurrent())
         return;
 
-    GL_ProvokingVertexANGLE(mode);
+    GL_ProvokingVertexANGLE(provokeMode);
 }
 
 bool GraphicsContextGLANGLE::waitAndUpdateOldestFrame()

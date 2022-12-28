@@ -1,5 +1,5 @@
-CONSOLE MESSAGE: ReferenceError: Can't find variable: CSSPositionValue
 
-Harness Error (FAIL), message = ReferenceError: Can't find variable: CSSPositionValue
-
+PASS 'flex-flow' does not support 'row'
+PASS 'flex-flow' does not support 'column wrap'
+PASS 'flex-flow' does not support 'row-reverse wrap-reverse'
 

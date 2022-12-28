@@ -152,8 +152,8 @@ void PropertySetCSSStyleDeclaration::deref()
 unsigned PropertySetCSSStyleDeclaration::length() const
 {
     unsigned exposed = 0;
-    for (unsigned i = 0; i < m_propertySet->propertyCount(); i++) {
-        if (isExposed(m_propertySet->propertyAt(i).id()))
+    for (auto property : *m_propertySet) {
+        if (isExposed(property.id()))
             exposed++;
     }
     return exposed;
@@ -397,7 +397,7 @@ Ref<MutableStyleProperties> PropertySetCSSStyleDeclaration::copyProperties() con
 StyleRuleCSSStyleDeclaration::StyleRuleCSSStyleDeclaration(MutableStyleProperties& propertySet, CSSRule& parentRule)
     : PropertySetCSSStyleDeclaration(propertySet)
     , m_refCount(1)
-    , m_parentRuleType(static_cast<StyleRuleType>(parentRule.type()))
+    , m_parentRuleType(parentRule.styleRuleType())
     , m_parentRule(&parentRule)
 {
     m_propertySet->ref();
