@@ -73,6 +73,7 @@ class PlatformWheelEvent;
 class PseudoElement;
 class RenderStyle;
 class RenderTreePosition;
+class ResizeObserverSize;
 class SpaceSplitString;
 class StylePropertyMap;
 class StylePropertyMapReadOnly;
@@ -680,6 +681,10 @@ public:
     ResizeObserverData& ensureResizeObserverData();
     ResizeObserverData* resizeObserverData();
 
+    ResizeObserverSize* lastRememberedSize() const;
+    void setLastRememberedSize(Ref<ResizeObserverSize>&&);
+    void clearLastRememberedSize();
+
     Element* findAnchorElementForLink(String& outAnchorName);
 
     ExceptionOr<Ref<WebAnimation>> animate(JSC::JSGlobalObject&, JSC::Strong<JSC::JSObject>&&, std::optional<std::variant<double, KeyframeAnimationOptions>>&&);
@@ -691,8 +696,8 @@ public:
     String description() const override;
     String debugDescription() const override;
 
-    bool hasDuplicateAttribute() const { return m_hasDuplicateAttribute; };
-    void setHasDuplicateAttribute(bool hasDuplicateAttribute) { m_hasDuplicateAttribute = hasDuplicateAttribute; };
+    bool hasDuplicateAttribute() const;
+    void setHasDuplicateAttribute(bool);
 
     virtual void updateUserAgentShadowTree() { }
 
@@ -701,8 +706,8 @@ public:
     ExplicitlySetAttrElementsMap& explicitlySetAttrElementsMap();
     ExplicitlySetAttrElementsMap* explicitlySetAttrElementsMapIfExists() const;
 
-    bool displayContentsChanged() const { return m_displayContentsChanged; }
-    void setDisplayContentsChanged(bool changed = true) { m_displayContentsChanged = changed; }
+    bool displayContentsChanged() const;
+    void setDisplayContentsChanged(bool = true);
 
 protected:
     Element(const QualifiedName&, Document&, ConstructionType);
@@ -826,11 +831,6 @@ private:
 
     QualifiedName m_tagName;
     RefPtr<ElementData> m_elementData;
-
-    // FIXME: these flags should move somewhere else and then we should have a static assert on
-    // Element size and ideally stick to that size.
-    bool m_hasDuplicateAttribute { false };
-    bool m_displayContentsChanged { false };
 };
 
 inline void Element::setSavedLayerScrollPosition(const IntPoint& position)

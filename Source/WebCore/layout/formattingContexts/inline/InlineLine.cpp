@@ -56,6 +56,7 @@ void Line::initialize(const Vector<InlineItem>& lineSpanningInlineBoxes, bool is
     m_nonSpanningInlineLevelBoxCount = 0;
     m_hasNonDefaultBidiLevelRun = false;
     m_contentLogicalWidth = { };
+    m_inlineBoxLogicalLeftStack.clear();
     m_runs.clear();
     resetTrailingContent();
     auto appendLineSpanningInlineBoxes = [&] {
@@ -97,10 +98,7 @@ void Line::applyRunExpansion(InlineLayoutUnit horizontalAvailableSpace)
     // the last line before a forced break or the end of the block is start-aligned.
     if (m_runs.isEmpty() || m_runs.last().isLineBreak())
         return;
-    // A hanging glyph is still enclosed inside its parent inline box and still participates in text justification:
-    // its character advance is just not measured when determining how much content fits on the line, how much the line’s contents
-    // need to be expanded or compressed for justification, or how to position the content within the line box for text alignment.
-    auto spaceToDistribute = horizontalAvailableSpace - contentLogicalWidth() + m_hangingContent.width();
+    auto spaceToDistribute = horizontalAvailableSpace - contentLogicalWidth() + m_hangingContent.trailingWhitespaceWidth();
     if (spaceToDistribute <= 0)
         return;
     // Collect and distribute the expansion opportunities.
@@ -111,24 +109,36 @@ void Line::applyRunExpansion(InlineLayoutUnit horizontalAvailableSpace)
 
     // Line start behaves as if we had an expansion here (i.e. fist runs should not start with allowing left expansion).
     auto runIsAfterExpansion = true;
-    auto hangingContentLength = m_hangingContent.length();
+    auto hangingTrailingWhitespaceLength = m_hangingContent.trailingWhitespaceLength();
+    auto lastTextRunIndexForTrimming = [&]() -> std::optional<size_t> {
+        if (!hangingTrailingWhitespaceLength)
+            return { };
+        for (auto index = m_runs.size(); index--;) {
+            if (m_runs[index].isText())
+                return index;
+        }
+        return { };
+    }();
     for (size_t runIndex = 0; runIndex < m_runs.size(); ++runIndex) {
         auto& run = m_runs[runIndex];
         auto expansionBehavior = ExpansionBehavior::defaultBehavior();
         size_t expansionOpportunitiesInRun = 0;
 
-        // FIXME: Check why we don't apply expansion when whitespace is preserved.
-        if (run.isText() && (!TextUtil::shouldPreserveSpacesAndTabs(run.layoutBox()) || hangingContentLength)) {
+        // According to the CSS3 spec, a UA can determine whether or not
+        // it wishes to apply text-align: justify to text with collapsible spaces (and this behavior matches Blink).
+        auto mayAlterSpacingWithinText = !TextUtil::shouldPreserveSpacesAndTabs(run.layoutBox()) || hangingTrailingWhitespaceLength;
+        if (run.isText() && mayAlterSpacingWithinText) {
             if (run.hasTextCombine())
                 expansionBehavior = ExpansionBehavior::forbidAll();
             else {
                 expansionBehavior.left = runIsAfterExpansion ? ExpansionBehavior::Behavior::Forbid : ExpansionBehavior::Behavior::Allow;
                 expansionBehavior.right = ExpansionBehavior::Behavior::Allow;
                 auto& textContent = *run.textContent();
-                // Trailing hanging whitespace sequence is ignored when computing the expansion opportunities.
-                auto hangingContentInCurrentRun = std::min(textContent.length, hangingContentLength);
-                auto length = textContent.length - hangingContentInCurrentRun;
-                hangingContentLength -= hangingContentInCurrentRun;
+                auto length = textContent.length;
+                if (lastTextRunIndexForTrimming && runIndex == *lastTextRunIndexForTrimming) {
+                    // Trailing hanging whitespace sequence is ignored when computing the expansion opportunities.
+                    length -= hangingTrailingWhitespaceLength;
+                }
                 std::tie(expansionOpportunitiesInRun, runIsAfterExpansion) = FontCascade::expansionOpportunityCount(StringView(downcast<InlineTextBox>(run.layoutBox()).content()).substring(textContent.start, length), run.inlineDirection(), expansionBehavior);
             }
         } else if (run.isBox())
@@ -255,45 +265,40 @@ void Line::handleOverflowingNonBreakingSpace(TrailingContentAction trailingConte
 
 void Line::handleTrailingHangingContent(std::optional<IntrinsicWidthMode> intrinsicWidthMode, InlineLayoutUnit horizontalAvailableSpaceForContent, bool isLastFormattedLine)
 {
-    if (!isLastFormattedLine)
-        m_hangingContent.resetTrailingPunctuation();
+    // https://drafts.csswg.org/css-text/#hanging
+    if (!m_hangingContent.trailingWidth())
+        return;
 
-    auto trimmTrailingHangingGlyphsIfApplicable = [&] {
-        if (!m_hangingContent.trailingWidth()) {
-            // Nothing to trim here.
-            return;
-        }
-        if (!intrinsicWidthMode) {
-            // Only trim such content during preferred width computation.
-            return;
-        }
+    if (m_hangingContent.isTrailingContentPunctuation() && !isLastFormattedLine)
+        m_hangingContent.resetTrailingContent();
 
-        // 1. The hanging glyph is also not taken into account when computing intrinsic sizes (min-content size and max-content size)
+    auto hangingTrailingContentIsConditional = [&] {
+        auto lineEndsWithForcedLineBreak = isLastFormattedLine || (!runs().isEmpty() && runs().last().isLineBreak());
+        return m_hangingContent.isTrailingContentConditional() || (m_hangingContent.isTrailingContentConditionalWhenFollowedByForcedLineBreak() && lineEndsWithForcedLineBreak);
+    }();
+
+    if (!intrinsicWidthMode) {
+        // Make sure when the conditionally hanging content actually fits we don't hang the content anymore during normal layout.
+        if (hangingTrailingContentIsConditional) {
+            // In some cases, a glyph at the end of a line can conditionally hang: it hangs only if it does not otherwise fit in the line prior to justification.
+            auto doesTrailingHangingContentFit = m_contentLogicalWidth <= horizontalAvailableSpaceForContent;
+            if (doesTrailingHangingContentFit) {
+                // Reset here means the trailing content is not hanging anymore -i.e. part of the line content.
+                m_hangingContent.resetTrailingContent();
+            }
+        }
+        return;
+    }
+
+    if (intrinsicWidthMode) {
+        // 1. The hanging glyph is not taken into account when computing intrinsic sizes (min-content size and max-content size)
         // 2. Glyphs that conditionally hang are not taken into account when computing min-content sizes, but they are taken into account for max-content sizes.
-        // https://drafts.csswg.org/css-text/#hanging
-        auto trimmTrailingHangingGlyphs = [&] {
+        if (*intrinsicWidthMode == IntrinsicWidthMode::Minimum || !hangingTrailingContentIsConditional) {
             ASSERT(m_trimmableTrailingContent.isEmpty());
             m_contentLogicalWidth -= m_hangingContent.trailingWidth();
             m_hangingContent.resetTrailingContent();
-        };
-
-        if (*intrinsicWidthMode == IntrinsicWidthMode::Minimum)
-            trimmTrailingHangingGlyphs();
-        else {
-            // A glyph at the end of a line can conditionally hang: it hangs only if it does not otherwise fit in the line prior to justification
-            auto isTrailingHangingContentConditional = m_contentLogicalWidth > horizontalAvailableSpaceForContent;
-            // If white-space is set to pre-wrap, the UA must (unconditionally) hang this sequence, unless the sequence is followed
-            // by a forced line break, in which case it must conditionally hang the sequence is instead.
-            // Note that end of last line in a paragraph is considered a forced break.
-            auto lineEndsWithLineBreak = !runs().isEmpty() && runs().last().isLineBreak();
-            auto hasConditionalTrailingHangingWhitespace = m_hangingContent.trailingWhitespaceWidth() && (isLastFormattedLine || lineEndsWithLineBreak);
-
-            auto isConditionalHanging = hasConditionalTrailingHangingWhitespace || isTrailingHangingContentConditional;
-            if (!isConditionalHanging)
-                trimmTrailingHangingGlyphs();
         }
-    };
-    trimmTrailingHangingGlyphsIfApplicable();
+    }
 }
 
 void Line::resetBidiLevelForTrailingWhitespace(UBiDiLevel rootBidiLevel)
@@ -377,12 +382,18 @@ void Line::appendInlineBoxStart(const InlineItem& inlineItem, const RenderStyle&
     m_contentLogicalWidth = std::max(m_contentLogicalWidth, logicalLeft + logicalWidth);
 
     auto marginStart = inlineBoxGeometry.marginStart();
-    if (marginStart >= 0) {
-        m_runs.append({ inlineItem, style, logicalLeft, logicalWidth - borderAndPaddingEndForDecorationClone });
-        return;
+    if (marginStart < 0) {
+        // Negative margin-start pulls the content to the logical left direction.
+        logicalLeft += marginStart;
+        logicalWidth -= marginStart;
     }
-    // Negative margin-start pulls the content to the logical left direction.
-    m_runs.append({ inlineItem, style, logicalLeft + marginStart, logicalWidth - marginStart - borderAndPaddingEndForDecorationClone });
+    logicalWidth -= borderAndPaddingEndForDecorationClone;
+
+    auto mayPullNonInlineBoxContentToLogicalLeft = style.letterSpacing() < 0;
+    if (mayPullNonInlineBoxContentToLogicalLeft)
+        m_inlineBoxLogicalLeftStack.append(logicalLeft);
+
+    m_runs.append({ inlineItem, style, logicalLeft, logicalWidth });
 }
 
 void Line::appendInlineBoxEnd(const InlineItem& inlineItem, const RenderStyle& style, InlineLayoutUnit logicalWidth)
@@ -400,6 +411,12 @@ void Line::appendInlineBoxEnd(const InlineItem& inlineItem, const RenderStyle& s
     removeTrailingLetterSpacing();
     m_contentLogicalWidth -= removeBorderAndPaddingEndForInlineBoxDecorationClone(inlineItem);
     auto logicalLeft = lastRunLogicalRight();
+    auto mayPullNonInlineBoxContentToLogicalLeft = style.letterSpacing() < 0;
+    if (mayPullNonInlineBoxContentToLogicalLeft) {
+        // Do not let negative spacing pull content to the left of the inline box logical left.
+        // e.g. <span style="border-left: solid red; letter-spacing: -200px;">content</span>This should not be to the left of the red border)
+        logicalLeft = std::max(logicalLeft, m_inlineBoxLogicalLeftStack.isEmpty() ? 0.f : m_inlineBoxLogicalLeftStack.takeLast());
+    }
     m_runs.append({ inlineItem, style, logicalLeft, logicalWidth });
     // Do not let negative margin make the content shorter than it already is.
     m_contentLogicalWidth = std::max(m_contentLogicalWidth, logicalLeft + logicalWidth);
@@ -518,15 +535,17 @@ void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderS
             m_hangingContent.setLeadingPunctuation(TextUtil::hangablePunctuationStartWidth(inlineTextItem, style));
 
         auto runHasHangableWhitespaceEnd = inlineTextItem.isWhitespace() && !isTrimmable && m_runs[lastRunIndex].shouldTrailingWhitespaceHang();
-        auto runHasHangablePunctuationEnd = TextUtil::hasHangablePunctuationEnd(inlineTextItem, style);
         if (runHasHangableWhitespaceEnd) {
-            ASSERT(!runHasHangablePunctuationEnd);
             m_hangingContent.setTrailingWhitespace(inlineTextItem.length(), logicalWidth);
             return;
         }
-        if (runHasHangablePunctuationEnd) {
-            ASSERT(!runHasHangableWhitespaceEnd);
+        if (TextUtil::hasHangablePunctuationEnd(inlineTextItem, style)) {
             m_hangingContent.setTrailingPunctuation(TextUtil::hangablePunctuationEndWidth(inlineTextItem, style));
+            return;
+        }
+        if (TextUtil::hasHangableStopOrCommaEnd(inlineTextItem, style)) {
+            auto isConditionalHanging = style.hangingPunctuation().contains(HangingPunctuation::AllowEnd);
+            m_hangingContent.setTrailingStopOrComma(TextUtil::hangableStopOrCommaEndWidth(inlineTextItem, style), isConditionalHanging);
             return;
         }
         m_hangingContent.resetTrailingContent();

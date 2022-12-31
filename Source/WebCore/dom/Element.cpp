@@ -148,6 +148,13 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Element);
 
+struct SameSizeAsElement : public ContainerNode {
+    QualifiedName tagName;
+    void* elementData;
+};
+
+static_assert(sizeof(Element) == sizeof(SameSizeAsElement), "Element should stay small");
+
 using namespace HTMLNames;
 using namespace XMLNames;
 
@@ -2779,6 +2786,7 @@ ExceptionOr<ShadowRoot&> Element::attachDeclarativeShadow(ShadowRootMode mode, b
         return exceptionOrShadowRoot.releaseException();
     auto& shadowRoot = exceptionOrShadowRoot.releaseReturnValue();
     shadowRoot.setIsDeclarativeShadowRoot(true);
+    shadowRoot.setIsAvailableToElementInternals(true);
     return shadowRoot;
 }
 
@@ -3618,6 +3626,9 @@ String Element::innerText()
     if (!renderer())
         return textContent(true);
 
+    if (renderer()->isSkippedContent())
+        return String();
+
     return plainText(makeRangeSelectingNodeContents(*this));
 }
 
@@ -4414,6 +4425,22 @@ ResizeObserverData* Element::resizeObserverData()
     return hasRareData() ? elementRareData()->resizeObserverData() : nullptr;
 }
 
+ResizeObserverSize* Element::lastRememberedSize() const
+{
+    return hasRareData() ? elementRareData()->lastRememberedSize() : nullptr;
+}
+
+void Element::setLastRememberedSize(Ref<ResizeObserverSize>&& size)
+{
+    ensureElementRareData().setLastRememberedSize(WTFMove(size));
+}
+
+void Element::clearLastRememberedSize()
+{
+    if (hasRareData())
+        elementRareData()->clearLastRememberedSize();
+}
+
 bool Element::isSpellCheckingEnabled() const
 {
     for (auto* ancestor = this; ancestor; ancestor = ancestor->parentOrShadowHostElement()) {
@@ -5119,6 +5146,26 @@ StylePropertyMapReadOnly* Element::computedStyleMap()
     auto map = ComputedStylePropertyMapReadOnly::create(*this);
     rareData.setComputedStyleMap(WTFMove(map));
     return rareData.computedStyleMap();
+}
+
+bool Element::hasDuplicateAttribute() const
+{
+    return hasEventTargetFlag(EventTargetFlag::HasDuplicateAttribute);
+}
+
+void Element::setHasDuplicateAttribute(bool hasDuplicateAttribute)
+{
+    setEventTargetFlag(EventTargetFlag::HasDuplicateAttribute, hasDuplicateAttribute);
+}
+
+bool Element::displayContentsChanged() const
+{
+    return hasEventTargetFlag(EventTargetFlag::DisplayContentsChanged);
+}
+
+void Element::setDisplayContentsChanged(bool changed)
+{
+    setEventTargetFlag(EventTargetFlag::DisplayContentsChanged, changed);
 }
 
 } // namespace WebCore

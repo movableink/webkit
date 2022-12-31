@@ -254,6 +254,7 @@ static bool isValueOutOfRangeForProperty(CSSPropertyID propertyID, double value,
     case CSSPropertyStrokeDasharray:
     case CSSPropertyStrokeMiterlimit:
     case CSSPropertyStrokeWidth:
+    case CSSPropertyTransitionDuration:
         return value < 0;
     case CSSPropertyFontWeight:
         return value < 1 || value > 1000;
@@ -271,7 +272,7 @@ RefPtr<CSSValue> CSSUnitValue::toCSSValueWithProperty(CSSPropertyID propertyID) 
         auto sumNode = CSSCalcOperationNode::createSum(Vector { node.releaseNonNull() });
         if (!sumNode)
             return nullptr;
-        return CSSPrimitiveValue::create(CSSCalcValue::create(sumNode.releaseNonNull(), true /* allowsNegativePercentage */));
+        return CSSPrimitiveValue::create(CSSCalcValue::create(sumNode.releaseNonNull()));
     }
     return toCSSValue();
 }

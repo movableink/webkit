@@ -441,6 +441,11 @@ public:
     bool shouldTriggerRenderingUpdate(unsigned rescheduledRenderingUpdateCount) const;
     void finalizeRenderingUpdate(OptionSet<WebCore::FinalizeRenderingUpdateFlags>);
 
+    void willStartRenderingUpdateDisplay();
+    void didCompleteRenderingUpdateDisplay();
+    // Called after didCompleteRenderingUpdateDisplay, but in the same run loop iteration.
+    void didCompleteRenderingFrame();
+
     void releaseMemory(WTF::Critical);
 
     unsigned remoteImagesCountForTesting() const;
@@ -1462,9 +1467,6 @@ public:
 
     bool userIsInteracting() const { return m_userIsInteracting; }
     void setUserIsInteracting(bool userIsInteracting) { m_userIsInteracting = userIsInteracting; }
-
-    bool firstFlushAfterCommit() const { return m_firstFlushAfterCommit; }
-    void setFirstFlushAfterCommit(bool f) { m_firstFlushAfterCommit = f; }
 
 #if PLATFORM(IOS_FAMILY)
     // This excludes layout overflow, includes borders.

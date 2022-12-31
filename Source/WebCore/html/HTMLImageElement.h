@@ -144,6 +144,8 @@ public:
     AtomString srcsetForBindings() const;
     void setSrcsetForBindings(const AtomString&);
 
+    bool usesSrcsetOrPicture() const;
+
     const AtomString& loadingForBindings() const;
     void setLoadingForBindings(const AtomString&);
 

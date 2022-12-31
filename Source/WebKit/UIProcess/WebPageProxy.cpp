@@ -8954,6 +8954,11 @@ void WebPageProxy::didNegotiateModernTLS(const URL& url)
     m_navigationClient->didNegotiateModernTLS(url);
 }
 
+void WebPageProxy::didFailLoadDueToNetworkConnectionIntegrity(const URL& url) 
+{
+    m_navigationClient->didFailLoadDueToNetworkConnectionIntegrity(*this, url);
+}
+
 void WebPageProxy::exceededDatabaseQuota(FrameIdentifier frameID, const String& originIdentifier, const String& databaseName, const String& displayName, uint64_t currentQuota, uint64_t currentOriginUsage, uint64_t currentDatabaseUsage, uint64_t expectedUsage, CompletionHandler<void(uint64_t)>&& reply)
 {
     requestStorageSpace(frameID, originIdentifier, databaseName, displayName, currentQuota, currentOriginUsage, currentDatabaseUsage, expectedUsage, [reply = WTFMove(reply)](auto quota) mutable {
@@ -9781,6 +9786,11 @@ void WebPageProxy::handleAlternativeTextUIResult(const String& result)
 void WebPageProxy::setEditableElementIsFocused(bool editableElementIsFocused)
 {
     pageClient().setEditableElementIsFocused(editableElementIsFocused);
+}
+
+void WebPageProxy::setCaretDecorationVisibility(bool visibility)
+{
+    pageClient().setCaretDecorationVisibility(visibility);
 }
 
 #endif // PLATFORM(MAC)

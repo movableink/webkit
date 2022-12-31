@@ -189,6 +189,11 @@
         "the property name. For instance, if 'font-size' requires a custom parser, it",
         "would be named 'consumeFontSize'.",
         "",
+        "* custom-parser-allows-number-or-integer-input:",
+        "Indicates that the properties allows <number> or <integer> as input. We'd",
+        "normally rely on the grammar to detect this but it is not available when using",
+        "custom parsing",
+        "",
         "* parser-function:",
         "Indicates that the property requires a custom parser and that the parser function",
         "will be named whatever string is provided as the value.",
@@ -469,6 +474,7 @@
         "font-weight": {
             "inherited": true,
             "codegen-properties": {
+                "custom-parser-allows-number-or-integer-input": true,
                 "name-for-methods": "Weight",
                 "font-property": true,
                 "high-priority": true,
@@ -1894,7 +1900,8 @@
         "border-image-outset": {
             "codegen-properties": {
                 "custom": "All",
-                "custom-parser": true
+                "custom-parser": true,
+                "custom-parser-allows-number-or-integer-input": true
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -1915,6 +1922,7 @@
             "codegen-properties": {
                 "custom": "All",
                 "custom-parser": true,
+                "custom-parser-allows-number-or-integer-input": true,
                 "parser-requires-current-property": true
             },
             "specification": {
@@ -1936,6 +1944,7 @@
             "codegen-properties": {
                 "custom": "All",
                 "custom-parser": true,
+                "custom-parser-allows-number-or-integer-input": true,
                 "parser-requires-current-property": true
             },
             "specification": {
@@ -4876,7 +4885,8 @@
                 "name-for-methods": "StrokeDashArray",
                 "converter": "StrokeDashArray",
                 "svg": true,
-                "custom-parser": true
+                "custom-parser": true,
+                "custom-parser-allows-number-or-integer-input": true
             },
             "specification": {
                 "category": "svg",
@@ -5124,6 +5134,23 @@
             "specification": {
                 "category": "css-22",
                 "url": "https://www.w3.org/TR/CSS2/text.html#propdef-text-decoration"
+            }
+        },
+        "text-group-align": {
+            "values": [
+                "none",
+                "start",
+                "end",
+                "left",
+                "right",
+                "center"
+            ],
+            "codegen-properties": {
+                "settings-flag": "cssTextGroupAlignEnabled"
+            },
+            "specification": {
+                "category": "css-text",
+                "url": "https://drafts.csswg.org/css-text-4/#text-group-align-property"
             }
         },
         "text-indent": {
@@ -5387,6 +5414,23 @@
             "specification": {
                 "category": "css3-text",
                 "url": "https://www.w3.org/TR/2003/CR-css3-text-20030514/#text-underline-width"
+            }
+        },
+        "text-wrap": {
+            "inherited": true,
+            "values": [
+                "wrap",
+                "nowrap",
+                "balance",
+                "stable",
+                "pretty"
+            ],
+            "codegen-properties": {
+                "settings-flag": "cssTextWrapEnabled"
+            },
+            "specification": {
+                "category": "css-text",
+                "url": "https://www.w3.org/TR/css-text-4/#text-wrap"
             }
         },
         "top": {
@@ -8943,7 +8987,7 @@
             "initial-value": {
                 "codegen-properties": {
                     "settings-flag": "cssCustomPropertiesAndValuesEnabled",
-                    "parser-function": "consumePropertyInitialValue"
+                    "parser-grammar": "<declaration-value>"
                 },
                 "specification": {
                     "category": "css-properties-and-values",
@@ -9228,11 +9272,8 @@
             }
         },
         "<-webkit-absolute-size>": {
-            "grammar": {
-                "kind": "keyword",
-                "value": "-webkit-xxx-large",
-                "aliased-to": "xxx-large"
-            },
+            "grammar": "-webkit-xxx-large",
+            "aliased-to": "xxx-large",
             "status": "non-standard"
         },
         "<relative-size>": {
