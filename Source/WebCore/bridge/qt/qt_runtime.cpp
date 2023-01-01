@@ -559,9 +559,13 @@ QVariant convertValueToQVariant(JSContextRef context, JSValueRef value, QMetaTyp
                     if (!dt.isValid())
                         dt = QDateTime::fromString(qstring, Qt::TextDate);
                     if (!dt.isValid())
-                        dt = QDateTime::fromString(qstring, Qt::SystemLocaleDate);
+                        dt = QLocale::system().toDateTime(qstring, QLocale::ShortFormat);
                     if (!dt.isValid())
-                        dt = QDateTime::fromString(qstring, Qt::LocaleDate);
+                        dt = QLocale::system().toDateTime(qstring, QLocale::LongFormat);
+                    if (!dt.isValid())
+                        dt = QLocale().toDateTime(qstring, QLocale::ShortFormat);
+                    if (!dt.isValid())
+                        dt = QLocale().toDateTime(qstring, QLocale::LongFormat);
                     if (dt.isValid()) {
                         ret = dt;
                         dist = 2;
@@ -571,9 +575,13 @@ QVariant convertValueToQVariant(JSContextRef context, JSValueRef value, QMetaTyp
                     if (!dt.isValid())
                         dt = QDate::fromString(qstring, Qt::TextDate);
                     if (!dt.isValid())
-                        dt = QDate::fromString(qstring, Qt::SystemLocaleDate);
+                        dt = QLocale::system().toDate(qstring, QLocale::ShortFormat);
                     if (!dt.isValid())
-                        dt = QDate::fromString(qstring, Qt::LocaleDate);
+                        dt = QLocale::system().toDate(qstring, QLocale::LongFormat);
+                    if (!dt.isValid())
+                        dt = QLocale().toDate(qstring, QLocale::ShortFormat);
+                    if (!dt.isValid())
+                        dt = QLocale().toDate(qstring, QLocale::LongFormat);
                     if (dt.isValid()) {
                         ret = dt;
                         dist = 3;
@@ -583,9 +591,13 @@ QVariant convertValueToQVariant(JSContextRef context, JSValueRef value, QMetaTyp
                     if (!dt.isValid())
                         dt = QTime::fromString(qstring, Qt::TextDate);
                     if (!dt.isValid())
-                        dt = QTime::fromString(qstring, Qt::SystemLocaleDate);
+                        dt = QLocale::system().toTime(qstring, QLocale::ShortFormat);
                     if (!dt.isValid())
-                        dt = QTime::fromString(qstring, Qt::LocaleDate);
+                        dt = QLocale::system().toTime(qstring, QLocale::LongFormat);
+                    if (!dt.isValid())
+                        dt = QLocale().toTime(qstring, QLocale::ShortFormat);
+                    if (!dt.isValid())
+                        dt = QLocale().toTime(qstring, QLocale::LongFormat);
                     if (dt.isValid()) {
                         ret = dt;
                         dist = 3;
