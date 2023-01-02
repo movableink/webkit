@@ -2079,18 +2079,18 @@ static int getintenv(const char* variable)
 
 static QSize queryDeviceSizeForScreenContainingWidget(const QWidget* widget)
 {
-    QDesktopWidget* desktop = QApplication::desktop();
-    if (!desktop)
+    QScreen* screen;
+    if (widget) {
+        screen = QGuiApplication::screenAt(widget->pos());
+    } else
+        screen = QGuiApplication::screens().at(0);
+
+    if (!screen)
         return QSize();
 
-    QSize size;
-
-    if (widget) {
-        // Returns the available geometry of the screen which contains widget.
-        // NOTE: this must be the the full screen size including any fixed status areas etc.
-        size = desktop->availableGeometry(widget).size();
-    } else
-        size = desktop->availableGeometry().size();
+    // Returns the available geometry of the screen which contains widget.
+    // NOTE: this must be the the full screen size including any fixed status areas etc.
+    QSize size = screen->size();
 
     // This must be in portrait mode, adjust if not.
     if (size.width() > size.height()) {
