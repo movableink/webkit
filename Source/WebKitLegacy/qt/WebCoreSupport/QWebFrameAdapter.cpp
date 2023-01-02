@@ -276,7 +276,7 @@ void QWebFrameAdapter::setHtml(const QString &html, const QUrl &baseUrl)
 QMultiMap<QString, QString> QWebFrameAdapter::metaData() const
 {
     if (!frame->document())
-        return QMap<QString, QString>();
+        return {};
 
     QMultiMap<QString, QString> map;
     Document* doc = frame->document();

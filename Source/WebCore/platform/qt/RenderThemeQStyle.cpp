@@ -49,6 +49,7 @@
 #include "UserAgentStyleSheets.h"
 
 #include <QPainter>
+#include <QVariant>
 
 namespace WebCore {
 

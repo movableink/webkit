@@ -48,7 +48,7 @@ public Q_SLOTS:
     void dismiss()
     {
         m_dismissed = true;
-        emit dismissed();
+        Q_EMIT dismissed();
     }
 
 Q_SIGNALS:
@@ -79,8 +79,8 @@ public:
     QString defaultValue() const { return m_defaultValue; }
 
 public Q_SLOTS:
-    void accept(const QString& result = QString()) { emit accepted(result); }
-    void reject() { emit rejected(); }
+    void accept(const QString& result = QString()) { Q_EMIT accepted(result); }
+    void reject() { Q_EMIT rejected(); }
 
 Q_SIGNALS:
     void accepted(const QString& result);
@@ -110,8 +110,8 @@ public:
     QString prefilledUsername() const { return m_prefilledUsername; }
 
 public Q_SLOTS:
-    void accept(const QString& username, const QString& password) { emit accepted(username, password); }
-    void reject() { emit rejected(); }
+    void accept(const QString& username, const QString& password) { Q_EMIT accepted(username, password); }
+    void reject() { Q_EMIT rejected(); }
 
 Q_SIGNALS:
     void accepted(const QString& username, const QString& password);
@@ -172,8 +172,8 @@ public:
     QString hostname() const { return m_hostname; }
 
 public Q_SLOTS:
-    void accept() { emit accepted(); }
-    void reject() { emit rejected(); }
+    void accept() { Q_EMIT accepted(); }
+    void reject() { Q_EMIT rejected(); }
 
 Q_SIGNALS:
     void accepted();
@@ -202,20 +202,20 @@ public:
     bool allowMultipleFiles() const { return m_allowMultiple;}
 
 public Q_SLOTS:
-    void reject() { emit rejected();}
+    void reject() { Q_EMIT rejected();}
     void accept(const QVariant& path)
     {
         QStringList filesPath = path.toStringList();
 
         if (filesPath.isEmpty()) {
-            emit rejected();
+            Q_EMIT rejected();
             return;
         }
 
         // For single file upload, send only the first element if there are more than one file paths
         if (!m_allowMultiple && filesPath.count() > 1)
             filesPath = QStringList(filesPath.at(0));
-        emit fileSelected(filesPath);
+        Q_EMIT fileSelected(filesPath);
     }
 
 Q_SIGNALS:
@@ -267,8 +267,8 @@ public:
     QtWebSecurityOrigin* securityOrigin() { return &m_securityOrigin; }
 
 public Q_SLOTS:
-    void accept(quint64 size) { emit accepted(size); }
-    void reject() { emit rejected(); }
+    void accept(quint64 size) { Q_EMIT accepted(size); }
+    void reject() { Q_EMIT rejected(); }
 
 Q_SIGNALS:
     void accepted(quint64 size);

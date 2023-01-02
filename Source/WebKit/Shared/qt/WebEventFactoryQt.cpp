@@ -52,7 +52,7 @@ static inline WallTime currentTimeForEvent(const QInputEvent* event)
     return WTF::WallTime::now();
 }
 
-static inline unsigned short buttonsForEvent(QMouseEvent* event)
+static inline unsigned short buttonsForEvent(const QMouseEvent* event)
 {
     unsigned short buttons = 0;
 
@@ -68,13 +68,13 @@ static inline unsigned short buttonsForEvent(QMouseEvent* event)
     return buttons;
 }
 
-static WebMouseEvent::Button mouseButtonForEvent(QMouseEvent *event)
+static WebMouseEvent::Button mouseButtonForEvent(const QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton || (event->buttons() & Qt::LeftButton))
         return WebMouseEvent::LeftButton;
     if (event->button() == Qt::RightButton || (event->buttons() & Qt::RightButton))
         return WebMouseEvent::RightButton;
-    if (event->button() == Qt::MidButton || (event->buttons() & Qt::MidButton))
+    if (event->button() == Qt::MiddleButton || (event->buttons() & Qt::MiddleButton))
         return WebMouseEvent::MiddleButton;
     return WebMouseEvent::NoButton;
 }
@@ -127,7 +127,7 @@ static inline OptionSet<WebEvent::Modifier> modifiersForEvent(Qt::KeyboardModifi
     return result;
 }
 
-WebMouseEvent WebEventFactory::createWebMouseEvent(QMouseEvent* event, const QTransform& fromItemTransform, int eventClickCount)
+WebMouseEvent WebEventFactory::createWebMouseEvent(const QMouseEvent* event, const QTransform& fromItemTransform, int eventClickCount)
 {
     static FloatPoint lastPos = FloatPoint(0, 0);
 
@@ -144,7 +144,7 @@ WebMouseEvent WebEventFactory::createWebMouseEvent(QMouseEvent* event, const QTr
     return WebMouseEvent(type, button, buttons, fromItemTransform.map(event->localPos()).toPoint(), event->screenPos().toPoint(), deltaX, deltaY, 0.0f, clickCount, modifiers, timestamp);
 }
 
-    WebWheelEvent WebEventFactory::createWebWheelEvent(QWheelEvent* e, const QTransform& fromItemTransform)
+    WebWheelEvent WebEventFactory::createWebWheelEvent(const QWheelEvent* e, const QTransform& fromItemTransform)
 {
     float deltaX                            = 0;
     float deltaY                            = 0;
@@ -154,13 +154,10 @@ WebMouseEvent WebEventFactory::createWebMouseEvent(QMouseEvent* event, const QTr
     OptionSet<WebEvent::Modifier> modifiers           = modifiersForEvent(e->modifiers());
     WallTime timestamp                        = currentTimeForEvent(e);
 
-    if (e->orientation() == Qt::Horizontal) {
-        deltaX = e->delta();
-        wheelTicksX = deltaX / 120.0f;
-    } else {
-        deltaY = e->delta();
-        wheelTicksY = deltaY / 120.0f;
-    }
+    deltaX = e->angleDelta().x();
+    wheelTicksX = deltaX / 120.0f;
+    deltaY = e->angleDelta().y();
+    wheelTicksY = deltaY / 120.0f;
 
     // Since we report the scroll by the pixel, convert the delta to pixel distance using standard scroll step.
     // Use the same single scroll step as QTextEdit (in QTextEditPrivate::init [h,v]bar->setSingleStep)
@@ -171,15 +168,15 @@ WebMouseEvent WebEventFactory::createWebMouseEvent(QMouseEvent* event, const QTr
     deltaY = wheelTicksY * wheelScrollLines * cDefaultQtScrollStep;
 
     // Transform the position and the pixel scrolling distance.
-    QLineF transformedScroll = fromItemTransform.map(QLineF(e->posF(), e->posF() + QPointF(deltaX, deltaY)));
+    QLineF transformedScroll = fromItemTransform.map(QLineF(e->position(), e->position() + QPointF(deltaX, deltaY)));
     IntPoint transformedPoint = transformedScroll.p1().toPoint();
-    IntPoint globalPoint = e->globalPosF().toPoint();
+    IntPoint globalPoint = e->globalPosition().toPoint();
     FloatSize transformedDelta(transformedScroll.dx(), transformedScroll.dy());
     FloatSize wheelTicks(wheelTicksX, wheelTicksY);
     return WebWheelEvent(WebEvent::Wheel, transformedPoint, globalPoint, transformedDelta, wheelTicks, granularity, modifiers, timestamp);
 }
 
-WebKeyboardEvent WebEventFactory::createWebKeyboardEvent(QKeyEvent* event)
+WebKeyboardEvent WebEventFactory::createWebKeyboardEvent(const QKeyEvent* event)
 {
     const int state                 = event->modifiers();
     WebEvent::Type type             = webEventTypeForEvent(event);

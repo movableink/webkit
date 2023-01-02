@@ -62,7 +62,7 @@ void ProgressTrackerClientQt::progressStarted(Frame& originatingProgressFrame)
 void ProgressTrackerClientQt::progressEstimateChanged(Frame& originatingProgressFrame)
 {
     ASSERT(m_webPage == QWebFrameAdapter::kit(&originatingProgressFrame)->pageAdapter);
-    emit loadProgress(qRound(originatingProgressFrame.page()->progress().estimatedProgress() * 100));
+    Q_EMIT loadProgress(qRound(originatingProgressFrame.page()->progress().estimatedProgress() * 100));
 }
 
 void ProgressTrackerClientQt::progressFinished(Frame& originatingProgressFrame)

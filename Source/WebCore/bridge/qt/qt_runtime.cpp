@@ -1042,7 +1042,7 @@ static int findMethodIndex(JSContextRef context,
     QVector<int> tooFewArgs;
     QVector<int> conversionFailed;
 
-    foreach(int index, matchingIndices) {
+    Q_FOREACH(int index, matchingIndices) {
         QMetaMethod method = meta->method(index);
 
         QVector<QtMethodMatchType> types;
@@ -1112,7 +1112,7 @@ static int findMethodIndex(JSContextRef context,
 
         QtMethodMatchType retType = types[0];
         if (retType.typeId() != QMetaType::Void)
-            args[0] = QVariant(retType.typeId(), (void *)0); // the return value
+            args[0] = QVariant(QMetaType(retType.typeId()), (void *)0); // the return value
 
         bool converted = true;
         int matchDistance = 0;
@@ -1471,7 +1471,7 @@ JSValueRef QtRuntimeMethod::connectOrDisconnect(JSContextRef context, JSObjectRe
     // Now to find our previous connection object.
     QList<QtConnectionObject*> conns = QtConnectionObject::connections.values(sender);
 
-    foreach (QtConnectionObject* conn, conns) {
+    Q_FOREACH (QtConnectionObject* conn, conns) {
         // Is this the right connection?
         if (!conn->match(context, sender, signalIndex, targetObject, targetFunction))
             continue;
@@ -1518,19 +1518,18 @@ QtConnectionObject::~QtConnectionObject()
 
 // Begin moc-generated code -- modify with care! Check "HAND EDIT" parts
 struct qt_meta_stringdata_QtConnectionObject_t {
-    QByteArrayData data[3];
-    char stringdata[44];
+    const uint offsetsAndSize[6];
+    char stringdata0[44];
 };
-#define QT_MOC_LITERAL(idx, ofs, len) { \
-    Q_REFCOUNT_INITIALIZE_STATIC, len, 0, 0, \
-    offsetof(qt_meta_stringdata_QtConnectionObject_t, stringdata) + ofs \
-        - idx * sizeof(QByteArrayData) \
-    }
+
+#define QT_MOC_LITERAL(ofs, len) \
+    uint(offsetof(qt_meta_stringdata_QtConnectionObject_t, stringdata0) + ofs), len 
+
 static const qt_meta_stringdata_QtConnectionObject_t qt_meta_stringdata_QtConnectionObject = {
     {
-QT_MOC_LITERAL(0, 0, 33),
-QT_MOC_LITERAL(1, 34, 7),
-QT_MOC_LITERAL(2, 42, 0)
+QT_MOC_LITERAL(0, 33),
+QT_MOC_LITERAL(34, 7),
+QT_MOC_LITERAL(42, 0)
     },
     "JSC::Bindings::QtConnectionObject\0"
     "execute\0\0"
@@ -1571,10 +1570,23 @@ void QtConnectionObject::qt_static_metacall(QObject *_o, QMetaObject::Call _c, i
     }
 }
 
-const QMetaObject QtConnectionObject::staticMetaObject = {
-    { &QObject::staticMetaObject, qt_meta_stringdata_QtConnectionObject.data,
-      qt_meta_data_QtConnectionObject, qt_static_metacall, 0, 0 }
-};
+//const QMetaObject QtConnectionObject::staticMetaObject = {
+//    { &QObject::staticMetaObject, qt_meta_stringdata_QtConnectionObject.data,
+//      qt_meta_data_QtConnectionObject, qt_static_metacall, 0, 0 }
+//};
+
+const QMetaObject QtConnectionObject::staticMetaObject = { {
+    QMetaObject::SuperData::link<QObject::staticMetaObject>(),
+    qt_meta_stringdata_QtConnectionObject.offsetsAndSize,
+    qt_meta_data_QtConnectionObject,
+    qt_static_metacall,
+    nullptr,
+qt_incomplete_metaTypeArray<qt_meta_stringdata_QtConnectionObject_t
+, QtPrivate::TypeAndForceComplete<QtConnectionObject, std::true_type>
+, QtPrivate::TypeAndForceComplete<void, std::false_type>
+>,
+    nullptr
+} };
 
 const QMetaObject *QtConnectionObject::metaObject() const
 {
@@ -1584,7 +1596,7 @@ const QMetaObject *QtConnectionObject::metaObject() const
 void *QtConnectionObject::qt_metacast(const char *_clname)
 {
     if (!_clname) return 0;
-    if (!strcmp(_clname, qt_meta_stringdata_QtConnectionObject.stringdata))
+    if (!strcmp(_clname, qt_meta_stringdata_QtConnectionObject.stringdata0))
         return static_cast<void*>(const_cast<QtConnectionObject*>(this));
     return QObject::qt_metacast(_clname);
 }
@@ -1616,7 +1628,7 @@ void QtConnectionObject::execute(void** argv)
     WTF::Vector<JSValueRef> args(argc);
 
     for (int i = 0; i < argc; i++) {
-        int argType = method.parameterType(i);
+        QMetaType argType = QMetaType(method.parameterType(i));
         args[i] = convertQVariantToValue(m_context, m_rootObject.get(), QVariant(argType, argv[i+1]), ignoredException);
     }
 

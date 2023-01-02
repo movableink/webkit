@@ -30,9 +30,15 @@
 
 namespace WebKit {
 
+NativeWebKeyboardEvent::NativeWebKeyboardEvent(const NativeWebKeyboardEvent& other)
+    : WebKeyboardEvent(WebEventFactory::createWebKeyboardEvent(other.nativeEvent()))
+    , m_nativeEvent(other.nativeEvent()->clone())
+{
+}
+
 NativeWebKeyboardEvent::NativeWebKeyboardEvent(QKeyEvent* event)
     : WebKeyboardEvent(WebEventFactory::createWebKeyboardEvent(event))
-    , m_nativeEvent(*event)
+    , m_nativeEvent(event->clone())
 {
 }
 

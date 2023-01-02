@@ -1,0 +1,13 @@
+@PACKAGE_INIT@
+@QTWEBKIT_PACKAGE_INIT@
+
+find_dependency_with_major_and_minor(Qt6Core @Qt6_VERSION_MAJOR@ @Qt6_VERSION_MINOR@)
+find_dependency_with_major_and_minor(Qt6Gui @Qt6_VERSION_MAJOR@ @Qt6_VERSION_MINOR@)
+find_dependency_with_major_and_minor(Qt6Network @Qt6_VERSION_MAJOR@ @Qt6_VERSION_MINOR@)
+
+include("${CMAKE_CURRENT_LIST_DIR}/WebKitTargets.cmake")
+
+set(_Qt6WebKit_MODULE_DEPENDENCIES "Gui;Network;Core")
+set(Qt6WebKit_DEFINITIONS -DQT_WEBKIT_LIB)
+
+@QTWEBKIT_PACKAGE_FOOTER@

@@ -61,7 +61,7 @@ void SharedCookieJarQt::destroy()
 void SharedCookieJarQt::getHostnamesWithCookies(HashSet<String>& hostnames)
 {
     QList<QNetworkCookie> cookies = allCookies();
-    foreach (const QNetworkCookie& networkCookie, cookies)
+    Q_FOREACH (const QNetworkCookie& networkCookie, cookies)
         hostnames.add(networkCookie.domain());
 }
 
@@ -179,7 +179,7 @@ bool SharedCookieJarQt::setCookiesFromUrl(const QList<QNetworkCookie>& cookieLis
 
     SQLiteTransaction transaction(m_database);
     transaction.begin();
-    foreach (const QNetworkCookie &cookie, cookiesForUrl(url)) {
+    Q_FOREACH (const QNetworkCookie &cookie, cookiesForUrl(url)) {
         if (cookie.isSessionCookie())
             continue;
         sqlQuery->bindText(1, String(cookie.domain().append(QLatin1String(cookie.name()))));

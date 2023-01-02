@@ -68,7 +68,7 @@ static QStyle::SubControl convertToQStyleSubControl(QStyleFacade::SubControl sc)
 static void initGenericStyleOption(QStyleOption* option, QWidget* widget, const QStyleFacadeOption& facadeOption)
 {
     if (widget)
-        option->init(widget);
+        option->initFrom(widget);
     else
         // If a widget is not directly available for rendering, we fallback to default
         // value for an active widget.
