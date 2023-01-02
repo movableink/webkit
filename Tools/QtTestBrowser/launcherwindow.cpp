@@ -1154,7 +1154,7 @@ void LauncherWindow::showUserAgentDialog()
 
 #ifndef QT_NO_COMBOBOX
     QComboBox* combo = new QComboBox(dialog);
-    combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLength);
+    combo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
     combo->setEditable(true);
     combo->insertItems(0, items);
     layout->addWidget(combo);
