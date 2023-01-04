@@ -118,7 +118,7 @@ else ()
         check_include_files("GL/glx.h" OpenGL_GLX_FOUND)
         CMAKE_POP_CHECK_STATE()
 
-        if (OpenGL_GLX_FOUND)
+        if (OpenGL_GLX_FOUND AND NOT TARGET OpenGL::GLX)
             # XXX: Should this actually check that the OpenGL library contains the GLX symbols?
             add_library(OpenGL::GLX INTERFACE IMPORTED GLOBAL)
             set_property(TARGET OpenGL::GLX PROPERTY
