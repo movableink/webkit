@@ -40,11 +40,18 @@ String::String(const QString& qstr)
     m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(qstr.constData()), qstr.length());
 }
 
-String::String(QStringView view)
+String::String(const QLatin1StringView& view)
 {
     if (view.isNull())
         return;
-    m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(view.utf16()), view.length());
+    m_impl = StringImpl::create(reinterpret_cast_ptr<const LChar*>(view.data()), view.length());
+}
+
+String::String(const QStringView& view)
+{
+    if (view.isNull())
+        return;
+    m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(view.data()), view.length());
 }
 
 String::operator QString() const
