@@ -225,7 +225,7 @@ void EventSender::beginDragWithFiles(const QStringList& files)
     m_currentDragData.clear();
     QList<QUrl> fileUrls;
     QUrl baseUrl = m_page->mainFrame()->baseUrl();
-    foreach (const QString& file, files) {
+    for (const QString& file : files) {
         QUrl resolvedUrl = baseUrl.resolved(file);
         fileUrls.append(resolvedUrl);
     }
