@@ -219,7 +219,7 @@ private:
 #if !defined(QT_NO_FILEDIALOG) && !defined(QT_NO_MESSAGEBOX)
     QNetworkReply* m_reply { nullptr };
 #endif
-    QList<QMutableEventPoint> m_touchPoints;
+    QList<QEventPoint> m_touchPoints;
     QList<HighlightedElement> m_highlightedElements;
     bool m_touchMocking;
 

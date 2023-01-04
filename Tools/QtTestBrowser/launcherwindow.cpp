@@ -629,11 +629,7 @@ void LauncherWindow::sendTouchEvent()
 
     const QPointingDevice *device = nullptr;
     Qt::KeyboardModifiers modifiers = Qt::NoModifier;
-    QList<QEventPoint> touchPoints;
-    for (const QMutableEventPoint & ep: m_touchPoints) {
-         touchPoints.append(ep);
-    }
-    QTouchEvent touchEv(type, device, modifiers, touchPoints);
+    QTouchEvent touchEv(type, device, modifiers, m_touchPoints);
     QCoreApplication::sendEvent(page(), &touchEv);
 
     // After sending the event, remove all touchpoints that were released
@@ -679,7 +675,7 @@ bool LauncherWindow::eventFilter(QObject* obj, QEvent* event)
             state = QEventPoint::Released;
         QPointF scenePosition = ev->scenePosition();
         QPointF globalPosition = ev->globalPosition();
-        QMutableEventPoint touchPoint(pointId, state, scenePosition, globalPosition);
+        QEventPoint touchPoint(pointId, state, scenePosition, globalPosition);
         //touchPoint.setPressure(1);
 
         // If the point already exists, update it. Otherwise create it.
@@ -698,23 +694,18 @@ bool LauncherWindow::eventFilter(QObject* obj, QEvent* event)
         // If the keyboard point is already pressed, release it.
         // Otherwise create it and append to m_touchPoints.
         if (m_touchPoints.size() > 0 && m_touchPoints[0].id() == 1) {
-            m_touchPoints[0].setState(QEventPoint::Released);
+            QMutableEventPoint::setState(m_touchPoints[0], QEventPoint::Released);
             sendTouchEvent();
         } else if (m_touchPoints.size() > 1 && m_touchPoints[1].id() == 1) {
-            m_touchPoints[1].setState(QEventPoint::Released);
+            QMutableEventPoint::setState(m_touchPoints[1], QEventPoint::Released);
             sendTouchEvent();
         } else {
-            QMutableEventPoint touchPoint;
-            touchPoint.setState(QEventPoint::Pressed);
-            touchPoint.setId(1);
-            touchPoint.setScreenPos(QCursor::pos());
-            touchPoint.setPos(m_view->mapFromGlobal(QCursor::pos()));
-            touchPoint.setPressure(1);
+            QEventPoint touchPoint(1, QEventPoint::Pressed, m_view->mapFromGlobal(QCursor::pos()), QCursor::pos());
             m_touchPoints.append(touchPoint);
             sendTouchEvent();
 
             // After sending the event, change the touchpoint state to stationary
-            m_touchPoints.last().setState(QEventPoint::Stationary);
+            QMutableEventPoint::setState(m_touchPoints.last(), QEventPoint::Stationary);
         }
     }
 
