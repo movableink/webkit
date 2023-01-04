@@ -64,7 +64,7 @@
 #include <QPrinter>
 #endif
 #include <QProgressBar>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QUndoStack>
 #include <QUrl>
 #include <limits.h>
@@ -723,7 +723,7 @@ void DumpRenderTree::processLine(const QString &input)
 
             // Try to be smart about where the test is located
             if (currentDir.dirName() == QLatin1String("LayoutTests"))
-                fi = QFileInfo(currentDir, pathOrURL.replace(QRegExp(".*?LayoutTests/(.*)"), "\\1"));
+                fi = QFileInfo(currentDir, pathOrURL.replace(QRegularExpression(".*?LayoutTests/(.*)"), "\\1"));
             else if (!pathOrURL.contains(QLatin1String("LayoutTests")))
                 fi = QFileInfo(currentDir, pathOrURL.prepend(QLatin1String("LayoutTests/")));
 

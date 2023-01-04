@@ -458,8 +458,8 @@ QString DumpRenderTreeSupportQt::viewportAsText(QWebPageAdapter* adapter, int de
     WebCore::restrictScaleFactorToInitialScaleIfNotUserScalable(conf);
 
     return QLatin1String("viewport size %1x%2 scale %3 with limits [%4, %5] and userScalable %6\n")
-        .arg(static_cast<int>(conf.layoutSize.width()))
-        .arg(static_cast<int>(conf.layoutSize.height()))
+        .arg(QByteArray::number(conf.layoutSize.width()))
+        .arg(QByteArray::number(conf.layoutSize.height()))
         .arg(conf.initialScale)
         .arg(conf.minimumScale)
         .arg(conf.maximumScale)
