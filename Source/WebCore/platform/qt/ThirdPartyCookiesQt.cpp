@@ -23,44 +23,13 @@
 
 #include "Document.h"
 #include "NetworkStorageSession.h"
+#include "RegistrableDomain.h"
 
 #include <QList>
-#include <QNetworkAccessManager>
 #include <QNetworkCookie>
 #include <QNetworkCookieJar>
-#include <private/qtldurl_p.h>
-
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-Q_NETWORK_EXPORT QString qTopLevelDomain(QString domain);
-#endif
 
 namespace WebCore {
-
-inline void removeTopLevelDomain(QString* domain, const QString& topLevelDomain)
-{
-    domain->remove(domain->length() - topLevelDomain.length(), topLevelDomain.length());
-    domain->prepend(QLatin1Char('.'));
-}
-
-static bool urlsShareSameDomain(const QUrl& url, const QUrl& firstPartyUrl)
-{
-    QString firstPartyTLD = qTopLevelDomain(firstPartyUrl.host());
-    QString requestTLD = qTopLevelDomain(url.host());
-
-    if (firstPartyTLD != requestTLD)
-        return false;
-
-    QString firstPartyDomain = QString(firstPartyUrl.host().toLower());
-    QString requestDomain = QString(url.host().toLower());
-
-    removeTopLevelDomain(&firstPartyDomain, firstPartyTLD);
-    removeTopLevelDomain(&requestDomain, requestTLD);
-
-    if (firstPartyDomain.section(QLatin1Char('.'), -1) == requestDomain.section(QLatin1Char('.'), -1))
-        return true;
-
-    return false;
-}
 
 bool thirdPartyCookiePolicyPermits(const NetworkStorageSession* storageSession, const QUrl& url, const QUrl& firstPartyUrl)
 {
@@ -74,7 +43,7 @@ bool thirdPartyCookiePolicyPermits(const NetworkStorageSession* storageSession, 
     if (firstPartyUrl.isEmpty())
         return true;
 
-    if (urlsShareSameDomain(url, firstPartyUrl))
+    if (RegistrableDomain(URL(url)).matches(firstPartyUrl))
         return true;
 
     switch (storageSession->thirdPartyCookiePolicy()) {
