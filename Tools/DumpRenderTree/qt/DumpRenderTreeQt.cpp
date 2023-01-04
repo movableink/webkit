@@ -654,7 +654,7 @@ void DumpRenderTree::readLine()
         m_stdin->open(stdin, QFile::ReadOnly);
 
         if (!m_stdin->isReadable()) {
-            emit quit();
+            Q_EMIT quit();
             return;
         }
     }
@@ -662,7 +662,7 @@ void DumpRenderTree::readLine()
     QByteArray line = m_stdin->readLine().trimmed();
 
     if (line.isEmpty()) {
-        emit quit();
+        Q_EMIT quit();
         return;
     }
 
@@ -696,7 +696,7 @@ void DumpRenderTree::processArgsLine(const QStringList &args)
 void DumpRenderTree::loadNextTestInStandAloneMode()
 {
     if (m_standAloneModeTestList.isEmpty()) {
-        emit quit();
+        Q_EMIT quit();
         return;
     }
     QString first = m_standAloneModeTestList.takeFirst();
@@ -728,7 +728,7 @@ void DumpRenderTree::processLine(const QString &input)
                 fi = QFileInfo(currentDir, pathOrURL.prepend(QLatin1String("LayoutTests/")));
 
             if (!fi.exists()) {
-                emit ready();
+                Q_EMIT ready();
                 return;
             }
         }
@@ -1093,7 +1093,7 @@ void DumpRenderTree::dump()
     fflush(stdout);
     fflush(stderr);
 
-     emit ready();
+     Q_EMIT ready();
 }
 
 void DumpRenderTree::titleChanged(const QString &s)

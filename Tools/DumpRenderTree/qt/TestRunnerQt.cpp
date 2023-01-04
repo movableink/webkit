@@ -97,7 +97,7 @@ void TestRunnerQt::reset()
     removeAllWebNotificationPermissions();
     // The default state for DRT is to block third-party cookies, mimicing the Mac port
     setAlwaysAcceptCookies(false);
-    emit hidePage();
+    Q_EMIT hidePage();
 }
 
 void TestRunnerQt::dumpNotifications()
@@ -111,7 +111,7 @@ void TestRunnerQt::processWork()
 
     // if we didn't start a new load, then we finished all the commands, so we're ready to dump state
     if (DRT::WorkQueue::singleton().processWork() && !shouldWaitUntilDone()) {
-        emit done();
+        Q_EMIT done();
         m_hasDumped = true;
     }
 }
@@ -143,7 +143,7 @@ void TestRunnerQt::maybeDump(bool /*success*/)
     if (DRT::WorkQueue::singleton().count())
         QTimer::singleShot(0, this, SLOT(processWork()));
     else if (!shouldWaitUntilDone()) {
-        emit done();
+        Q_EMIT done();
         m_hasDumped = true;
     }
 }
@@ -196,7 +196,7 @@ void TestRunnerQt::notifyDone()
     if (!m_loadFinished)
         return;
 
-    emit done();
+    Q_EMIT done();
 
     // FIXME: investigate why always resetting these result in timeouts
     m_hasDumped = true;
@@ -238,7 +238,7 @@ void TestRunnerQt::simulateLegacyWebNotificationClick(const QString& title)
 void TestRunnerQt::display()
 {
     DumpRenderTreeSupportQt::setTrackRepaintRects(m_topLoadingFrame->handle(), true);
-    emit showPage();
+    Q_EMIT showPage();
 }
 
 void TestRunnerQt::displayInvalidatedRegion()
