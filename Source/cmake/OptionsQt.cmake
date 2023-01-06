@@ -250,7 +250,7 @@ add_library(OpenGL::GL INTERFACE IMPORTED)
 set_target_properties(OpenGL::GL PROPERTIES
   IMPORTED_LOCATION "${OPENGL_LIBRARIES}")
         
-find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS Core Gui Core5Compat)
+find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS Core Gui)
 message("OPENGL_FOUND: ${OPENGL_FOUND}")
 message("OPENGL_GLU_FOUND: ${OPENGL_GLU_FOUND}")
 message("OpenGL_OpenGL_FOUND: ${OpenGL_OpenGL_FOUND}")

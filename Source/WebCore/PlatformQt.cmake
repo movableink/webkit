@@ -305,7 +305,6 @@ list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
     ${Qt6Network_INCLUDE_DIRS}
     ${Qt6Network_PRIVATE_INCLUDE_DIRS}
     ${Qt6Sensors_INCLUDE_DIRS}
-    ${Qt6Core5Compat_INCLUDE_DIRS}
     ${SQLITE_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIRS}
 )
@@ -321,7 +320,6 @@ list(APPEND WebCore_LIBRARIES
     ${Qt6Gui_LIBRARIES}
     ${Qt6Network_LIBRARIES}
     ${Qt6Sensors_LIBRARIES}
-    ${Qt6Core5Compat_LIBRARIES}
     ${SQLITE_LIBRARIES}
     ${X11_X11_LIB}
     ${ZLIB_LIBRARIES}
