@@ -70,6 +70,10 @@ if (ENABLE_TEST_SUPPORT)
     add_definitions(-DHAVE_QTTESTSUPPORT)
 endif ()
 
+if (NOT TARGET Qt6::StateMachine)
+    add_definitions(-DQT_NO_ANIMATION)
+endif ()
+
 include_directories(${QtTestBrowser_INCLUDE_DIRECTORIES})
 include_directories(SYSTEM ${QtTestBrowser_SYSTEM_INCLUDE_DIRECTORIES})
 add_executable(QtTestBrowser ${QtTestBrowser_SOURCES})

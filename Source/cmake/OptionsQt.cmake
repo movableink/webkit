@@ -529,7 +529,8 @@ if (ENABLE_API_TESTS OR ENABLE_TEST_SUPPORT)
 endif ()
 
 if (ENABLE_WEBKIT_LEGACY)
-    list(APPEND QT_REQUIRED_COMPONENTS
+    # Without StateMachine, some animations will be disabled
+    list(APPEND QT_OPTIONAL_COMPONENTS
         StateMachine
     )
 endif ()
