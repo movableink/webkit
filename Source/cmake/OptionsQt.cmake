@@ -545,11 +545,10 @@ if (ENABLE_DEVICE_ORIENTATION)
     SET_AND_EXPOSE_TO_BUILD(HAVE_QTSENSORS 1)
 endif ()
 
-# Qt6 : QOpenGLWidget is now in its separate library
-# It seem to be required even when building with ENABLE_OPENGL=OFF
-list(APPEND QT_REQUIRED_COMPONENTS OpenGLWidgets)
-
 if (ENABLE_OPENGL)
+    # Qt6 : QOpenGLWidget is now in its separate library
+    list(APPEND QT_REQUIRED_COMPONENTS OpenGLWidgets)
+
     # Note: Gui module is already found
     # Warning: quotes are sinificant here!
     if (NOT DEFINED Qt6Gui_OPENGL_IMPLEMENTATION OR "${Qt6Gui_OPENGL_IMPLEMENTATION}" STREQUAL "")
@@ -574,6 +573,8 @@ if (ENABLE_OPENGL)
     message(STATUS "Qt OpenGL implementation: ${Qt6Gui_OPENGL_IMPLEMENTATION}")
     message(STATUS "Qt OpenGL libraries: ${Qt6Gui_OPENGL_LIBRARIES}")
     message(STATUS "Qt EGL libraries: ${Qt6Gui_EGL_LIBRARIES}")
+else ()
+    add_definitions(-DQT_NO_OPENGL)
 endif ()
 
 if (ENABLE_PRINT_SUPPORT)

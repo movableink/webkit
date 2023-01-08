@@ -27,7 +27,7 @@
 #include <QX11Info>
 #endif
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+#ifndef QT_NO_OPENGL
 #include <QOpenGLWidget>
 #endif
 
@@ -180,17 +180,15 @@ void PageClientQGraphicsWidget::repaintViewport()
 
 bool PageClientQGraphicsWidget::makeOpenGLContextCurrentIfAvailable()
 {
-#if USE(TEXTURE_MAPPER_GL)
+#ifndef QT_NO_OPENGL
     QGraphicsView* graphicsView = firstGraphicsView();
     if (graphicsView && graphicsView->viewport()) {
         QWidget* widget = graphicsView->viewport();
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
         if (widget->inherits("QOpenGLWidget")) {
             QOpenGLWidget* qoglWidget = static_cast<QOpenGLWidget*>(widget);
             qoglWidget->makeCurrent();
             return true;
         }
-#endif
     }
 #endif
     return false;
@@ -198,16 +196,14 @@ bool PageClientQGraphicsWidget::makeOpenGLContextCurrentIfAvailable()
 
 QOpenGLContext* PageClientQGraphicsWidget::openGLContextIfAvailable()
 {
-#if USE(TEXTURE_MAPPER_GL)
+#ifndef QT_NO_OPENGL
     QGraphicsView* graphicsView = firstGraphicsView();
     if (graphicsView && graphicsView->viewport()) {
         QWidget* widget = graphicsView->viewport();
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
         if (widget->inherits("QOpenGLWidget")) {
             QOpenGLWidget* qoglWidget = static_cast<QOpenGLWidget*>(widget);
             return qoglWidget->context();
         }
-#endif
     }
 #endif
     return 0;

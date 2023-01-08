@@ -35,7 +35,7 @@
 
 #include <QtNetwork/QNetworkRequest>
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+#ifndef QT_NO_OPENGL
 #include <QOpenGLWidget>
 #endif
 
