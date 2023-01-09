@@ -30,9 +30,10 @@
 
 namespace WebCore {
 
-ImageGStreamer::ImageGStreamer(GstSample* sample)
+ImageGStreamer::ImageGStreamer(GRefPtr<GstSample>&& sample)
+    : m_sample(WTFMove(sample))
 {
-    GstCaps* caps = gst_sample_get_caps(sample);
+    GstCaps* caps = gst_sample_get_caps(m_sample.get());
     GstVideoInfo videoInfo;
     gst_video_info_init(&videoInfo);
     if (!gst_video_info_from_caps(&videoInfo, caps))
@@ -42,7 +43,7 @@ ImageGStreamer::ImageGStreamer(GstSample* sample)
     // Right now the TextureMapper only supports chromas with one plane
     ASSERT(GST_VIDEO_INFO_N_PLANES(&videoInfo) == 1);
 
-    GstBuffer* buffer = gst_sample_get_buffer(sample);
+    GstBuffer* buffer = gst_sample_get_buffer(m_sample.get());
     if (UNLIKELY(!GST_IS_BUFFER(buffer)))
         return;
 
