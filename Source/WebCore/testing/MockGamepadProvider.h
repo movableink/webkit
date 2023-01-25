@@ -43,13 +43,15 @@ public:
     WEBCORE_TESTSUPPORT_EXPORT void stopMonitoringGamepads(GamepadProviderClient&) final;
     const Vector<PlatformGamepad*>& platformGamepads() final { return m_connectedGamepadVector; }
     bool isMockGamepadProvider() const final { return true; }
+    void playEffect(unsigned, const String&, GamepadHapticEffectType, const GamepadEffectParameters&, CompletionHandler<void(bool)>&&) final;
+    void stopEffects(unsigned, const String&, CompletionHandler<void()>&&) final;
+    void clearGamepadsForTesting() final;
 
-    void setMockGamepadDetails(unsigned index, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount);
+    void setMockGamepadDetails(unsigned index, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount, bool supportsDualRumble);
     bool setMockGamepadAxisValue(unsigned index, unsigned axisIndex, double value);
     bool setMockGamepadButtonValue(unsigned index, unsigned buttonIndex, double value);
     bool connectMockGamepad(unsigned index);
     bool disconnectMockGamepad(unsigned index);
-    void clearMockGamepads();
 
 private:
     MockGamepadProvider();

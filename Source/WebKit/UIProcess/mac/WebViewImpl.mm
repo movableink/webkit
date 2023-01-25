@@ -1164,7 +1164,8 @@ WebViewImpl::WebViewImpl(NSView <WebViewImplDelegate> *view, WKWebView *outerWeb
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanCommunicateWithWindowServer));
     [NSApp registerServicesMenuSendTypes:PasteboardTypes::forSelection() returnTypes:PasteboardTypes::forEditing()];
 
-    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"WebKit2UseRemoteLayerTreeDrawingArea"] boolValue])
+    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"WebKit2UseRemoteLayerTreeDrawingArea"] boolValue]
+        || m_page->preferences().siteIsolationEnabled())
         m_drawingAreaType = DrawingAreaType::RemoteLayerTree;
 
     [view addTrackingArea:m_primaryTrackingArea.get()];
@@ -1665,7 +1666,7 @@ std::unique_ptr<WebKit::DrawingAreaProxy> WebViewImpl::createDrawingAreaProxy(We
 {
     switch (m_drawingAreaType) {
     case DrawingAreaType::TiledCoreAnimation:
-        return makeUnique<TiledCoreAnimationDrawingAreaProxy>(m_page, process);
+        return makeUnique<TiledCoreAnimationDrawingAreaProxy>(m_page);
     case DrawingAreaType::RemoteLayerTree:
         return makeUnique<RemoteLayerTreeDrawingAreaProxyMac>(m_page, process);
     }
@@ -2576,8 +2577,6 @@ static const SelectorNameMap& selectorExceptionMap()
         { @selector(pageDownAndModifySelection:), "MovePageDownAndModifySelection"_s },
         { @selector(pageUp:), "MovePageUp"_s },
         { @selector(pageUpAndModifySelection:), "MovePageUpAndModifySelection"_s },
-        { @selector(scrollPageDown:), "ScrollPageForward"_s },
-        { @selector(scrollPageUp:), "ScrollPageBackward"_s },
         { @selector(_pasteAsQuotation:), "PasteAsQuotation"_s },
     };
 
@@ -2696,6 +2695,9 @@ void WebViewImpl::selectionDidChange()
     if (m_page->editorState().hasPostLayoutData())
         requestCandidatesForSelectionIfNeeded();
 #endif
+
+    if (m_page->editorState().hasPostLayoutData())
+        updateCaretDecorationPlacement();
 
     NSWindow *window = [m_view window];
     if (window.firstResponder == m_view.get().get()) {
@@ -5798,6 +5800,10 @@ void WebViewImpl::setEditableElementIsFocused(bool editableElementIsFocused)
 
 #if !USE(APPLE_INTERNAL_SDK)
 void WebViewImpl::setCaretDecorationVisibility(bool)
+{
+}
+
+void WebViewImpl::updateCaretDecorationPlacement()
 {
 }
 #endif

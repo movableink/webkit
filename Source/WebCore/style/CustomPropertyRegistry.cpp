@@ -27,6 +27,7 @@
 
 #include "CSSPropertyParser.h"
 #include "CSSRegisteredCustomProperty.h"
+#include "Document.h"
 #include "StyleBuilder.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
@@ -41,6 +42,8 @@ CustomPropertyRegistry::CustomPropertyRegistry(Scope& scope)
 
 const CSSRegisteredCustomProperty* CustomPropertyRegistry::get(const AtomString& name) const
 {
+    ASSERT(isCustomPropertyName(name));
+
     // API wins.
     // https://drafts.css-houdini.org/css-properties-values-api/#determining-registration
     if (auto* property = m_propertiesFromAPI.get(name))
@@ -48,6 +51,13 @@ const CSSRegisteredCustomProperty* CustomPropertyRegistry::get(const AtomString&
 
     return m_propertiesFromStylesheet.get(name);
 }
+
+bool CustomPropertyRegistry::isInherited(const AtomString& name) const
+{
+    auto* registered = get(name);
+    return registered ? registered->inherits : true;
+}
+
 
 bool CustomPropertyRegistry::registerFromAPI(CSSRegisteredCustomProperty&& property)
 {
@@ -92,15 +102,15 @@ void CustomPropertyRegistry::registerFromStylesheet(const StyleRuleProperty::Des
         auto tokenRange = descriptor.initialValue->tokenRange();
 
         // FIXME: This parses twice.
-        HashSet<CSSPropertyID> dependencies;
-        CSSPropertyParser::collectParsedCustomPropertyValueDependencies(*syntax, true /* isInitial */, dependencies, tokenRange, strictCSSParserContext());
+        auto dependencies = CSSPropertyParser::collectParsedCustomPropertyValueDependencies(*syntax, tokenRange, strictCSSParserContext());
         if (!dependencies.isEmpty())
             return nullptr;
 
-        auto style = RenderStyle::clone(*m_scope.resolver().rootDefaultStyle());
-        Style::Builder dummyBuilder(style, { document, style }, { }, { });
+        // We don't need to provide a real context style since only computationally independent values are allowed (no 'em' etc).
+        auto placeholderStyle = RenderStyle::create();
+        Style::Builder builder { placeholderStyle, { document, RenderStyle::defaultStyle() }, { }, { } };
 
-        return CSSPropertyParser::parseTypedCustomPropertyInitialValue(descriptor.name, *syntax, tokenRange, dummyBuilder.state(), { document });
+        return CSSPropertyParser::parseTypedCustomPropertyInitialValue(descriptor.name, *syntax, tokenRange, builder.state(), { document });
     }();
 
     if (!initialValue)
@@ -116,6 +126,9 @@ void CustomPropertyRegistry::registerFromStylesheet(const StyleRuleProperty::Des
     // Last rule wins.
     // https://drafts.css-houdini.org/css-properties-values-api/#determining-registration
     m_propertiesFromStylesheet.set(property.name, makeUnique<const CSSRegisteredCustomProperty>(WTFMove(property)));
+
+    // Changing property registration may affect computed property values in the cache.
+    m_scope.invalidateMatchedDeclarationsCache();
 }
 
 void CustomPropertyRegistry::clearRegisteredFromStylesheets()

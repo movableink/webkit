@@ -26,9 +26,41 @@
 #include "config.h"
 #include "WGSL.h"
 
+#include "CallGraph.h"
+#include "EntryPointRewriter.h"
+#include "Metal/MetalCodeGenerator.h"
 #include "Parser.h"
+#include "PhaseTimer.h"
+#include "ResolveTypeReferences.h"
 
 namespace WGSL {
+
+#define CHECK_PASS(name, pass, ...) \
+    dumpASTBetweenEachPassIfNeeded(ast, "AST before " # pass); \
+    auto name##Expected = [&]() { \
+        PhaseTimer phaseTimer(#pass, phaseTimes); \
+        return pass(__VA_ARGS__); \
+    }(); \
+    if (!name##Expected) { \
+        if (dumpPassFailure) \
+            dataLogLn("failed pass: " # pass, toString(name##Expected.error())); \
+        return makeUnexpected(name##Expected.error()); \
+    } \
+    auto& name = *name##Expected; \
+
+#define RUN_PASS(pass, ...) \
+    do { \
+        PhaseTimer phaseTimer(#pass, phaseTimes); \
+        dumpASTBetweenEachPassIfNeeded(ast, "AST before " # pass); \
+        pass(__VA_ARGS__); \
+    } while (0)
+
+#define RUN_PASS_WITH_RESULT(name, pass, ...) \
+    dumpASTBetweenEachPassIfNeeded(ast, "AST before " # pass); \
+    auto name = [&]() { \
+        PhaseTimer phaseTimer(#pass, phaseTimes); \
+        return pass(__VA_ARGS__); \
+    }();
 
 std::variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std::optional<SourceMap>&)
 {
@@ -54,19 +86,37 @@ SuccessfulCheck::SuccessfulCheck(Vector<Warning>&& messages, UniqueRef<AST::Shad
 
 SuccessfulCheck::~SuccessfulCheck() = default;
 
-PrepareResult prepare(const AST::ShaderModule& ast, const HashMap<String, PipelineLayout>& pipelineLayouts)
+PrepareResult prepare(AST::ShaderModule& ast, const HashMap<String, PipelineLayout>& pipelineLayouts)
 {
-    UNUSED_PARAM(ast);
     UNUSED_PARAM(pipelineLayouts);
-    return { String(), { } };
+    PhaseTimes phaseTimes;
+    Metal::RenderMetalCode generatedCode;
+
+    {
+        PhaseTimer phaseTimer("prepare total", phaseTimes);
+
+        RUN_PASS_WITH_RESULT(callGraph, buildCallGraph, ast);
+        RUN_PASS(resolveTypeReferences, ast);
+        RUN_PASS(rewriteEntryPoints, callGraph);
+
+        dumpASTAtEndIfNeeded(ast);
+
+        {
+            PhaseTimer phaseTimer("generateMetalCode", phaseTimes);
+            generatedCode = Metal::generateMetalCode(ast);
+        }
+    }
+
+    logPhaseTimes(phaseTimes);
+    return { generatedCode.metalSource.toString(), { } };
 }
 
-PrepareResult prepare(const AST::ShaderModule& ast, const String& entryPointName, const std::optional<PipelineLayout>& pipelineLayouts)
+PrepareResult prepare(AST::ShaderModule& ast, const String& entryPointName, const std::optional<PipelineLayout>& pipelineLayouts)
 {
-    UNUSED_PARAM(ast);
     UNUSED_PARAM(entryPointName);
     UNUSED_PARAM(pipelineLayouts);
-    return { String(), { } };
+    Metal::RenderMetalCode metalCode = Metal::generateMetalCode(ast);
+    return { metalCode.metalSource.toString(), { } };
 }
 
 }

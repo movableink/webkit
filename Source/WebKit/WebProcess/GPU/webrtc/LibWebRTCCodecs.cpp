@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,15 +31,16 @@
 #include "GPUProcessConnection.h"
 #include "LibWebRTCCodecsMessages.h"
 #include "LibWebRTCCodecsProxyMessages.h"
+#include "LibWebRTCProvider.h"
 #include "Logging.h"
 #include "RemoteVideoFrameObjectHeapProxy.h"
 #include "RemoteVideoFrameProxy.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebProcess.h"
 #include <WebCore/CVUtilities.h>
-#include <WebCore/DeprecatedGlobalSettings.h>
 #include <WebCore/LibWebRTCDav1dDecoder.h>
 #include <WebCore/LibWebRTCMacros.h>
+#include <WebCore/Page.h>
 #include <WebCore/PlatformMediaSessionManager.h>
 #include <WebCore/VP9UtilitiesCocoa.h>
 #include <WebCore/VideoFrameCV.h>
@@ -94,6 +95,11 @@ std::optional<VideoCodecType> LibWebRTCCodecs::videoCodecTypeFromWebCodec(const 
 
     // FIXME: Expose H265 if available.
     return { };
+}
+
+void LibWebRTCCodecs::setHasVP9ExtensionSupport(bool hasVP9ExtensionSupport)
+{
+    m_hasVP9ExtensionSupport = hasVP9ExtensionSupport;
 }
 
 #endif
@@ -151,9 +157,9 @@ static inline VideoFrame::Rotation toVideoRotation(webrtc::VideoRotation rotatio
     return VideoFrame::Rotation::None;
 }
 
-static void createRemoteDecoder(LibWebRTCCodecs::Decoder& decoder, IPC::Connection& connection, bool useRemoteFrames)
+static void createRemoteDecoder(LibWebRTCCodecs::Decoder& decoder, IPC::Connection& connection, bool useRemoteFrames, bool enableAdditionalLogging)
 {
-    connection.send(Messages::LibWebRTCCodecsProxy::CreateDecoder { decoder.identifier, decoder.type, useRemoteFrames }, 0);
+    connection.send(Messages::LibWebRTCCodecsProxy::CreateDecoder { decoder.identifier, decoder.type, useRemoteFrames, enableAdditionalLogging }, 0);
 }
 
 static int32_t encodeVideoFrame(webrtc::WebKitVideoEncoder encoder, const webrtc::VideoFrame& frame, bool shouldEncodeAsKeyFrame)
@@ -182,6 +188,21 @@ Ref<LibWebRTCCodecs> LibWebRTCCodecs::create()
 LibWebRTCCodecs::LibWebRTCCodecs()
     : m_queue(WorkQueue::create("LibWebRTCCodecs", WorkQueue::QOS::UserInteractive))
 {
+}
+
+void LibWebRTCCodecs::initializeIfNeeded()
+{
+    // Let's create the GPUProcess connection once to know whether we should do VP9 in GPUProcess.
+    static std::once_flag doInitializationOnce;
+    std::call_once(doInitializationOnce, [] {
+        callOnMainRunLoopAndWait([] {
+#if HAVE(AUDIT_TOKEN)
+            WebProcess::singleton().ensureGPUProcessConnection().auditToken();
+#else
+            WebProcess::singleton().ensureGPUProcessConnection();
+#endif
+        });
+    });
 }
 
 void LibWebRTCCodecs::ensureGPUProcessConnectionOnMainThreadWithLock()
@@ -243,22 +264,29 @@ void LibWebRTCCodecs::setCallbacks(bool useGPUProcess, bool useRemoteFrames)
 {
     ASSERT(isMainRunLoop());
 
-    if (!useGPUProcess) {
-        webrtc::setVideoDecoderCallbacks(nullptr, nullptr, nullptr, nullptr);
-        webrtc::setVideoEncoderCallbacks(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+    if (!LibWebRTCProvider::webRTCAvailable())
         return;
-    }
 
-    // Let's create WebProcess libWebRTCCodecs since it may be called from various threads.
-    WebProcess::singleton().libWebRTCCodecs().m_useRemoteFrames = useRemoteFrames;
+    // We can enable GPUProcess but disable it is difficult once enabled since callbacks may be used in background threads.
+    if (!useGPUProcess)
+        return;
 
-#if ENABLE(VP9)
-    WebProcess::singleton().libWebRTCCodecs().setVP9VTBSupport(WebProcess::singleton().ensureGPUProcessConnection().hasVP9HardwareDecoder());
-    WebProcess::singleton().libWebRTCCodecs().setHasVP9ExtensionSupport(WebProcess::singleton().ensureGPUProcessConnection().hasVP9ExtensionSupport());
-#endif
+    auto& libWebRTCCodecs = WebProcess::singleton().libWebRTCCodecs();
+    libWebRTCCodecs.m_useRemoteFrames = useRemoteFrames;
+    if (libWebRTCCodecs.m_useGPUProcess)
+        return;
+
+    libWebRTCCodecs.m_useGPUProcess = useGPUProcess;
 
     webrtc::setVideoDecoderCallbacks(createVideoDecoder, releaseVideoDecoder, decodeVideoFrame, registerDecodeCompleteCallback);
     webrtc::setVideoEncoderCallbacks(createVideoEncoder, releaseVideoEncoder, initializeVideoEncoder, encodeVideoFrame, registerEncodeCompleteCallback, setEncodeRatesCallback);
+}
+
+void LibWebRTCCodecs::setWebRTCMediaPipelineAdditionalLoggingEnabled(bool enabled)
+{
+    if (!LibWebRTCProvider::webRTCAvailable())
+        return;
+    WebProcess::singleton().libWebRTCCodecs().m_enableAdditionalLogging = enabled;
 }
 
 // May be called on any thread.
@@ -285,7 +313,7 @@ LibWebRTCCodecs::Decoder* LibWebRTCCodecs::createDecoderInternal(VideoCodecType 
         auto* decodePointer = decoder.get();
         {
             Locker locker { m_connectionLock };
-            createRemoteDecoder(*decoder, *m_connection, m_useRemoteFrames);
+            createRemoteDecoder(*decoder, *m_connection, m_useRemoteFrames, m_enableAdditionalLogging);
             setDecoderConnection(*decoder, m_connection.get());
 
             auto decoderIdentifier = decoder->identifier;
@@ -744,7 +772,7 @@ void LibWebRTCCodecs::gpuProcessConnectionDidClose(GPUProcessConnection&)
                     while (!decoder->flushCallbacks.isEmpty())
                         decoder->flushCallbacks.takeFirst()();
                 }
-                createRemoteDecoder(*decoder, *connection, m_useRemoteFrames);
+                createRemoteDecoder(*decoder, *connection, m_useRemoteFrames, m_enableAdditionalLogging);
                 setDecoderConnection(*decoder, connection.get());
             }
         }

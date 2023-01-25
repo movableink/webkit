@@ -372,7 +372,7 @@ void WebProcessProxy::setIsInProcessCache(bool value, WillShutDown willShutDown)
     if (value) {
         RELEASE_ASSERT(m_pageMap.isEmpty());
         RELEASE_ASSERT(!m_suspendedPageCount);
-        RELEASE_ASSERT(m_provisionalPages.computesEmpty());
+        RELEASE_ASSERT(m_provisionalPages.isEmptyIgnoringNullReferences());
         m_previouslyApprovedFilePaths.clear();
     }
 
@@ -442,7 +442,7 @@ void WebProcessProxy::removeProvisionalPageProxy(ProvisionalPageProxy& provision
     ASSERT(m_provisionalPages.contains(provisionalPage));
     m_provisionalPages.remove(provisionalPage);
     updateRegistrationWithDataStore();
-    if (m_provisionalPages.computesEmpty())
+    if (m_provisionalPages.isEmptyIgnoringNullReferences())
         maybeShutDown();
 }
 
@@ -464,7 +464,7 @@ void WebProcessProxy::removeProvisionalFrameProxy(ProvisionalFrameProxy& provisi
     ASSERT(m_provisionalFrames.contains(provisionalFrame));
     m_provisionalFrames.remove(provisionalFrame);
     updateRegistrationWithDataStore();
-    if (m_provisionalFrames.computesEmpty())
+    if (m_provisionalFrames.isEmptyIgnoringNullReferences())
         maybeShutDown();
 }
 
@@ -604,6 +604,7 @@ void WebProcessProxy::shutDown()
     m_backgroundResponsivenessTimer.invalidate();
     m_activityForHoldingLockedFiles = nullptr;
     m_audibleMediaActivity = std::nullopt;
+    m_mediaStreamingActivity = std::nullopt;
 
     for (auto& page : pages()) {
         if (page)
@@ -748,6 +749,7 @@ void WebProcessProxy::removeWebPage(WebPageProxy& webPage, EndsUsingDataStore en
     removeVisitedLinkStoreUser(webPage.visitedLinkStore(), webPage.identifier());
     updateRegistrationWithDataStore();
     updateAudibleMediaAssertions();
+    updateMediaStreamingActivity();
     updateBackgroundResponsivenessTimer();
 
     maybeShutDown();
@@ -1303,8 +1305,8 @@ bool WebProcessProxy::canTerminateAuxiliaryProcess()
     if (!m_pageMap.isEmpty()
         || !m_frameMap.isEmpty()
         || m_suspendedPageCount
-        || !m_provisionalPages.computesEmpty()
-        || !m_provisionalFrames.computesEmpty()
+        || !m_provisionalPages.isEmptyIgnoringNullReferences()
+        || !m_provisionalFrames.isEmptyIgnoringNullReferences()
         || m_isInProcessCache
         || m_shutdownPreventingScopeCounter.value()) {
         WEBPROCESSPROXY_RELEASE_LOG(Process, "canTerminateAuxiliaryProcess: returns false (pageCount=%u, provisionalPageCount=%u, m_suspendedPageCount=%u, m_isInProcessCache=%d, m_shutdownPreventingScopeCounter=%lu)", m_pageMap.size(), m_provisionalPages.computeSize(), m_suspendedPageCount, m_isInProcessCache, m_shutdownPreventingScopeCounter.value());
@@ -1559,8 +1561,17 @@ void WebProcessProxy::sendProcessDidResume(ResumeReason)
         send(Messages::WebProcess::ProcessDidResume(), 0);
 }
 
+void WebProcessProxy::setThrottleStateForTesting(ProcessThrottleState state)
+{
+    m_areThrottleStateChangesEnabled = true;
+    didChangeThrottleState(state);
+    m_areThrottleStateChangesEnabled = false;
+}
+
 void WebProcessProxy::didChangeThrottleState(ProcessThrottleState type)
 {
+    if (UNLIKELY(!m_areThrottleStateChangesEnabled))
+        return;
     WEBPROCESSPROXY_RELEASE_LOG(ProcessSuspension, "didChangeThrottleState: type=%u", (unsigned)type);
 
     if (isStandaloneServiceWorkerProcess()) {
@@ -1609,15 +1620,14 @@ void WebProcessProxy::didChangeThrottleState(ProcessThrottleState type)
 
 void WebProcessProxy::updateAudibleMediaAssertions()
 {
-    bool newHasAudibleWebPage = WTF::anyOf(pages(), [] (auto& page) {
+    bool hasAudibleWebPage = WTF::anyOf(pages(), [] (auto& page) {
         return page && page->isPlayingAudio();
     });
 
-    bool hasAudibleMediaActivity = !!m_audibleMediaActivity;
-    if (hasAudibleMediaActivity == newHasAudibleWebPage)
+    if (!!m_audibleMediaActivity == hasAudibleWebPage)
         return;
 
-    if (newHasAudibleWebPage) {
+    if (hasAudibleWebPage) {
         WEBPROCESSPROXY_RELEASE_LOG(ProcessSuspension, "updateAudibleMediaAssertions: Taking MediaPlayback assertion for WebProcess");
         m_audibleMediaActivity = AudibleMediaActivity {
             ProcessAssertion::create(processIdentifier(), "WebKit Media Playback"_s, ProcessAssertionType::MediaPlayback),
@@ -1626,6 +1636,24 @@ void WebProcessProxy::updateAudibleMediaAssertions()
     } else {
         WEBPROCESSPROXY_RELEASE_LOG(ProcessSuspension, "updateAudibleMediaAssertions: Releasing MediaPlayback assertion for WebProcess");
         m_audibleMediaActivity = std::nullopt;
+    }
+}
+
+void WebProcessProxy::updateMediaStreamingActivity()
+{
+    bool hasMediaStreamingWebPage = WTF::anyOf(pages(), [] (auto& page) {
+        return page && page->hasMediaStreaming();
+    });
+
+    if (!!m_mediaStreamingActivity == hasMediaStreamingWebPage)
+        return;
+
+    if (hasMediaStreamingWebPage) {
+        WEBPROCESSPROXY_RELEASE_LOG(ProcessSuspension, "updateMediaStreamingActivity: Start Media Networking Activity for WebProcess");
+        m_mediaStreamingActivity = processPool().webProcessWithMediaStreamingToken();
+    } else {
+        WEBPROCESSPROXY_RELEASE_LOG(ProcessSuspension, "updateMediaStreamingActivity: Stop Media Networking Activity for WebProcess");
+        m_mediaStreamingActivity = std::nullopt;
     }
 }
 

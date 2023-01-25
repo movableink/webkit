@@ -413,7 +413,8 @@ JSC_DEFINE_JIT_OPERATION(operationObjectToStringUntyped, JSString*, (JSGlobalObj
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
 
-    return objectPrototypeToString(globalObject, JSValue::decode(encodedValue));
+    JSValue thisValue = JSValue::decode(encodedValue).toThis(globalObject, ECMAMode::strict());
+    return objectPrototypeToString(globalObject, thisValue);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationObjectToStringObjectSlow, JSString*, (JSGlobalObject* globalObject, JSObject* object))
@@ -422,7 +423,8 @@ JSC_DEFINE_JIT_OPERATION(operationObjectToStringObjectSlow, JSString*, (JSGlobal
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
 
-    return objectPrototypeToStringSlow(globalObject, object);
+    JSValue thisValue = JSValue(object).toThis(globalObject, ECMAMode::strict());
+    return objectPrototypeToString(globalObject, thisValue);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCreateThis, JSCell*, (JSGlobalObject* globalObject, JSObject* constructor, uint32_t inlineCapacity))
@@ -3604,6 +3606,22 @@ JSC_DEFINE_JIT_OPERATION(operationMapSet, JSCell*, (JSGlobalObject* globalObject
     if (!bucket)
         return vm.sentinelMapBucket();
     return bucket;
+}
+
+JSC_DEFINE_JIT_OPERATION(operationSetDelete, size_t, (JSGlobalObject* globalObject, JSCell* set, EncodedJSValue key, int32_t hash))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    return jsCast<JSSet*>(set)->removeNormalized(globalObject, JSValue::decode(key), hash);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationMapDelete, size_t, (JSGlobalObject* globalObject, JSCell* map, EncodedJSValue key, int32_t hash))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    return jsCast<JSMap*>(map)->removeNormalized(globalObject, JSValue::decode(key), hash);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWeakSetAdd, void, (JSGlobalObject* globalObject, JSCell* set, JSCell* key, int32_t hash))

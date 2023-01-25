@@ -64,7 +64,7 @@ UnixFileDescriptor PageClientImpl::hostFileDescriptor()
 
 std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy(WebProcessProxy& process)
 {
-    return makeUnique<DrawingAreaProxyCoordinatedGraphics>(m_view.page(), process);
+    return makeUnique<DrawingAreaProxyCoordinatedGraphics>(m_view.page());
 }
 
 void PageClientImpl::setViewNeedsDisplay(const WebCore::Region&)
@@ -127,11 +127,6 @@ void PageClientImpl::toolTipChanged(const String&, const String&)
 
 void PageClientImpl::didCommitLoadForMainFrame(const String&, bool)
 {
-}
-
-void PageClientImpl::handleDownloadRequest(DownloadProxy& download)
-{
-    m_view.handleDownloadRequest(download);
 }
 
 void PageClientImpl::didChangeContentSize(const WebCore::IntSize&)
@@ -343,13 +338,6 @@ void PageClientImpl::refView()
 void PageClientImpl::derefView()
 {
 }
-
-#if ENABLE(VIDEO) && USE(GSTREAMER)
-bool PageClientImpl::decidePolicyForInstallMissingMediaPluginsPermissionRequest(InstallMissingMediaPluginsPermissionRequest&)
-{
-    return false;
-}
-#endif
 
 void PageClientImpl::didRestoreScrollPosition()
 {

@@ -1326,12 +1326,12 @@ String PlatformKeyboardEvent::singleCharacterString(unsigned val)
 
 void PlatformKeyboardEvent::disambiguateKeyDownEvent(Type type, bool backwardsCompatibility)
 {
-    ASSERT(m_type == KeyDown);
+    ASSERT(m_type == PlatformEvent::Type::KeyDown);
     m_type = type;
     if (backwardsCompatibility || m_handledByInputMethod)
         return;
 
-    if (type == PlatformEvent::RawKeyDown) {
+    if (type == PlatformEvent::Type::RawKeyDown) {
         m_text = String();
         m_unmodifiedText = String();
     } else {

@@ -279,6 +279,8 @@ public:
     bool didLoadAppInitiatedRequest();
     bool didLoadNonAppInitiatedRequest();
 
+    void reloadFromOrigin();
+
     void updateBundleIdentifierInNetworkProcess(const std::string& bundleIdentifier);
     void clearBundleIdentifierInNetworkProcess();
 
@@ -297,6 +299,7 @@ public:
     void terminateServiceWorkers();
 
     void resetQuota();
+    void resetStoragePersistedState();
     void clearStorage();
 
     void removeAllSessionCredentials();

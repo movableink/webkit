@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -156,6 +157,7 @@
 #if ENABLE(MEDIA_SOURCE)
 #include "DOMWindow.h"
 #include "MediaSource.h"
+#include "SourceBufferList.h"
 #endif
 
 #if ENABLE(MEDIA_STREAM)
@@ -245,7 +247,7 @@ String convertEnumerationToString(HTMLMediaElement::ReadyState enumerationValue)
     static_assert(static_cast<size_t>(HTMLMediaElementEnums::HAVE_CURRENT_DATA) == 2, "HTMLMediaElementEnums::HAVE_CURRENT_DATA is not 2 as expected");
     static_assert(static_cast<size_t>(HTMLMediaElementEnums::HAVE_FUTURE_DATA) == 3, "HTMLMediaElementEnums::HAVE_FUTURE_DATA is not 3 as expected");
     static_assert(static_cast<size_t>(HTMLMediaElementEnums::HAVE_ENOUGH_DATA) == 4, "HTMLMediaElementEnums::HAVE_ENOUGH_DATA is not 4 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -261,7 +263,7 @@ String convertEnumerationToString(HTMLMediaElement::NetworkState enumerationValu
     static_assert(static_cast<size_t>(HTMLMediaElementEnums::NETWORK_IDLE) == 1, "HTMLMediaElementEnums::NETWORK_IDLE is not 1 as expected");
     static_assert(static_cast<size_t>(HTMLMediaElementEnums::NETWORK_LOADING) == 2, "HTMLMediaElementEnums::NETWORK_LOADING is not 2 as expected");
     static_assert(static_cast<size_t>(HTMLMediaElementEnums::NETWORK_NO_SOURCE) == 3, "HTMLMediaElementEnums::NETWORK_NO_SOURCE is not 3 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -277,7 +279,7 @@ String convertEnumerationToString(HTMLMediaElement::AutoplayEventPlaybackState e
     static_assert(static_cast<size_t>(HTMLMediaElement::AutoplayEventPlaybackState::PreventedAutoplay) == 1, "AutoplayEventPlaybackState::PreventedAutoplay is not 1 as expected");
     static_assert(static_cast<size_t>(HTMLMediaElement::AutoplayEventPlaybackState::StartedWithUserGesture) == 2, "AutoplayEventPlaybackState::StartedWithUserGesture is not 2 as expected");
     static_assert(static_cast<size_t>(HTMLMediaElement::AutoplayEventPlaybackState::StartedWithoutUserGesture) == 3, "AutoplayEventPlaybackState::StartedWithoutUserGesture is not 3 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -289,7 +291,7 @@ String convertEnumerationToString(HTMLMediaElement::TextTrackVisibilityCheckType
     };
     static_assert(static_cast<size_t>(HTMLMediaElement::TextTrackVisibilityCheckType::CheckTextTrackVisibility) == 0, "TextTrackVisibilityCheckType::CheckTextTrackVisibility is not 0 as expected");
     static_assert(static_cast<size_t>(HTMLMediaElement::TextTrackVisibilityCheckType::AssumeTextTrackVisibilityChanged) == 1, "TextTrackVisibilityCheckType::AssumeTextTrackVisibilityChanged is not 1 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -305,7 +307,7 @@ String convertEnumerationToString(HTMLMediaElement::SpeechSynthesisState enumera
     static_assert(static_cast<size_t>(HTMLMediaElement::SpeechSynthesisState::Speaking) == 1, "SpeechSynthesisState::Speaking is not 1 as expected");
     static_assert(static_cast<size_t>(HTMLMediaElement::SpeechSynthesisState::CompletingExtendedDescription) == 2, "SpeechSynthesisState::CompletingExtendedDescription is not 2 as expected");
     static_assert(static_cast<size_t>(HTMLMediaElement::SpeechSynthesisState::Paused) == 3, "SpeechSynthesisState::Paused is not 3 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -433,6 +435,7 @@ HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document& docum
     , m_scanTimer(*this, &HTMLMediaElement::scanTimerFired)
     , m_playbackControlsManagerBehaviorRestrictionsTimer(*this, &HTMLMediaElement::playbackControlsManagerBehaviorRestrictionsTimerFired)
     , m_seekToPlaybackPositionEndedTimer(*this, &HTMLMediaElement::seekToPlaybackPositionEndedTimerFired)
+    , m_currentIdentifier(MediaUniqueIdentifier::generate())
     , m_lastTimeUpdateEventMovieTime(MediaTime::positiveInfiniteTime())
     , m_firstTimePlaying(true)
     , m_playing(false)
@@ -470,8 +473,8 @@ HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document& docum
     , m_tracksAreReady(true)
     , m_haveVisibleTextTrack(false)
     , m_processingPreferenceChange(false)
-    , m_shouldAudioPlaybackRequireUserGesture(document.topDocument().audioPlaybackRequiresUserGesture() && !processingUserGestureForMedia())
-    , m_shouldVideoPlaybackRequireUserGesture(document.topDocument().videoPlaybackRequiresUserGesture() && !processingUserGestureForMedia())
+    , m_shouldAudioPlaybackRequireUserGesture(document.topDocument().requiresUserGestureForAudioPlayback() && !processingUserGestureForMedia())
+    , m_shouldVideoPlaybackRequireUserGesture(document.topDocument().requiresUserGestureForVideoPlayback() && !processingUserGestureForMedia())
     , m_volumeLocked(defaultVolumeLocked())
     , m_opaqueRootProvider([this] { return opaqueRoot(); })
 #if USE(AUDIO_SESSION)
@@ -542,8 +545,8 @@ void HTMLMediaElement::initializeMediaSession()
     }
 
 #if PLATFORM(IOS_FAMILY)
-    if (!document.settings().videoPlaybackRequiresUserGesture() && !document.settings().audioPlaybackRequiresUserGesture()) {
-        // Relax RequireUserGestureForFullscreen when videoPlaybackRequiresUserGesture and audioPlaybackRequiresUserGesture is not set:
+    if (!document.requiresUserGestureForVideoPlayback() && !document.requiresUserGestureForAudioPlayback()) {
+        // Relax RequireUserGestureForFullscreen when requiresUserGestureForVideoPlayback and requiresUserGestureForAudioPlayback is not set:
         m_mediaSession->removeBehaviorRestriction(MediaElementSession::RequireUserGestureForFullscreen);
     }
 #endif
@@ -827,10 +830,6 @@ void HTMLMediaElement::parseAttribute(const QualifiedName& name, const AtomStrin
     }
     else
         HTMLElement::parseAttribute(name, value);
-
-    // Changing the "muted" attribue could affect ":muted"
-    if (name == mutedAttr)
-        invalidateStyle();
 }
 
 void HTMLMediaElement::finishParsingChildren()
@@ -1776,7 +1775,7 @@ void HTMLMediaElement::updateActiveTextTrackCues(const MediaTime& movieTime)
     // fired as part of the overall process of changing the current playback
     // position.)
     if (!m_paused && m_lastSeekTime <= lastTime)
-        scheduleTimeupdateEvent(false);
+        scheduleTimeupdateEvent(true);
 
     // Explicitly cache vector sizes, as their content is constant from here.
     size_t currentCuesSize = currentCues.size();
@@ -2611,7 +2610,8 @@ void HTMLMediaElement::setNetworkState(MediaPlayer::NetworkState state)
     if (state == MediaPlayer::NetworkState::Empty) {
         // Just update the cached state and leave, we can't do anything.
         m_networkState = NETWORK_EMPTY;
-        invalidateStyle();
+        updateBufferingState();
+        updateStalledState();
         return;
     }
 
@@ -2641,7 +2641,8 @@ void HTMLMediaElement::setNetworkState(MediaPlayer::NetworkState state)
         m_completelyLoaded = true;
     }
 
-    invalidateStyle();
+    updateBufferingState();
+    updateStalledState();
 }
 
 void HTMLMediaElement::changeNetworkStateFromLoadingToIdle()
@@ -2924,7 +2925,8 @@ void HTMLMediaElement::setReadyState(MediaPlayer::ReadyState state)
     updateMediaController();
     updateActiveTextTrackCues(currentMediaTime());
 
-    invalidateStyle();
+    updateBufferingState();
+    updateStalledState();
 }
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
@@ -3276,13 +3278,13 @@ void HTMLMediaElement::progressEventTimerFired()
             m_previousProgressTime = time;
             if (m_sentStalledEvent) {
                 m_sentStalledEvent = false;
-                invalidateStyle();
+                updateStalledState();
             }
             updateRenderer();
         } else if (timedelta > 3_s && !m_sentStalledEvent) {
             scheduleEvent(eventNames().stalledEvent);
             m_sentStalledEvent = true;
-            invalidateStyle();
+            updateStalledState();
             setShouldDelayLoadEvent(false);
         }
     });
@@ -3802,8 +3804,8 @@ void HTMLMediaElement::setPaused(bool paused)
         { CSSSelector::PseudoClassPlaying, !paused },
     });
     m_paused = paused;
-    // FIXME: Use PseudoClassChangeInvalidation for :buffering/:stalling and remove the line below.
-    invalidateStyle();
+    updateBufferingState();
+    updateStalledState();
 }
 
 double HTMLMediaElement::defaultPlaybackRate() const
@@ -4286,7 +4288,7 @@ void HTMLMediaElement::setVolumeLocked(bool locked)
     m_volumeLocked = locked;
 }
 
-bool HTMLMediaElement::buffering() const
+void HTMLMediaElement::updateBufferingState()
 {
     // CSS Selectors Level 4; Editor's Draft, 2 July 2021
     // <https://drafts.csswg.org/selectors/>
@@ -4297,10 +4299,14 @@ bool HTMLMediaElement::buffering() const
     // but has not yet obtained enough data to resume playback. (Note that the element is still considered
     // to be “playing” when it is “buffering”. Whenever :buffering matches an element, :playing also
     // matches the element.)
-    return !paused() && m_networkState == NETWORK_LOADING && m_readyState <= HAVE_CURRENT_DATA;
+    bool buffering = !paused() && m_networkState == NETWORK_LOADING && m_readyState <= HAVE_CURRENT_DATA;
+    if (m_buffering != buffering) {
+        Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassBuffering, buffering);
+        m_buffering = buffering;
+    }
 }
 
-bool HTMLMediaElement::stalled() const
+void HTMLMediaElement::updateStalledState()
 {
     // CSS Selectors Level 4; Editor's Draft, 2 July 2021
     // <https://drafts.csswg.org/selectors/>
@@ -4312,7 +4318,11 @@ bool HTMLMediaElement::stalled() const
     // stall timeout. [HTML] (Note that, like with the :buffering pseudo-class, the element is still
     // considered to be “playing” when it is “stalled”. Whenever :stalled matches an element, :playing
     // also matches the element.)
-    return !paused() && m_networkState == NETWORK_LOADING && m_readyState <= HAVE_CURRENT_DATA && m_sentStalledEvent;
+    bool stalled = !paused() && m_networkState == NETWORK_LOADING && m_readyState <= HAVE_CURRENT_DATA && m_sentStalledEvent;
+    if (m_stalled != stalled) {
+        Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassStalled, stalled);
+        m_stalled = stalled;
+    }
 }
 
 #if USE(AUDIO_SESSION) && PLATFORM(MAC)
@@ -6614,6 +6624,13 @@ double HTMLMediaElement::maxFastForwardRate() const
     return m_player ? m_player->maxFastForwardRate() : 0;
 }
 
+bool HTMLMediaElement::taintsOrigin(const SecurityOrigin& origin) const
+{
+    if (didPassCORSAccessCheck())
+        return false;
+    return m_player && m_player->isCrossOrigin(origin);
+}
+
 bool HTMLMediaElement::isFullscreen() const
 {
 #if ENABLE(FULLSCREEN_API)
@@ -7840,16 +7857,6 @@ bool HTMLMediaElement::mediaPlayerPrefersSandboxedParsing() const
     return document().settings().preferSandboxedMediaParsing();
 }
 
-#if USE(GSTREAMER)
-void HTMLMediaElement::requestInstallMissingPlugins(const String& details, const String& description, MediaPlayerRequestInstallMissingPluginsCallback& callback)
-{
-    if (!document().page())
-        return;
-
-    document().page()->chrome().client().requestInstallMissingMediaPlugins(details, description, callback);
-}
-#endif
-
 void HTMLMediaElement::removeBehaviorRestrictionsAfterFirstUserGesture(MediaElementSession::BehaviorRestrictions mask)
 {
     MediaElementSession::BehaviorRestrictions restrictionsToRemove = mask &
@@ -7878,12 +7885,12 @@ void HTMLMediaElement::updateRateChangeRestrictions()
         return;
 
     const auto& topDocument = document.topDocument();
-    if (topDocument.videoPlaybackRequiresUserGesture())
+    if (topDocument.requiresUserGestureForVideoPlayback())
         mediaSession().addBehaviorRestriction(MediaElementSession::RequireUserGestureForVideoRateChange);
     else
         mediaSession().removeBehaviorRestriction(MediaElementSession::RequireUserGestureForVideoRateChange);
 
-    if (topDocument.audioPlaybackRequiresUserGesture())
+    if (topDocument.requiresUserGestureForAudioPlayback())
         mediaSession().addBehaviorRestriction(MediaElementSession::RequireUserGestureForAudioRateChange);
     else
         mediaSession().removeBehaviorRestriction(MediaElementSession::RequireUserGestureForAudioRateChange);
@@ -8442,6 +8449,8 @@ void HTMLMediaElement::scheduleUpdateMediaState()
     });
 }
 
+#endif
+
 void HTMLMediaElement::updateMediaState()
 {
     MediaProducerMediaStateFlags state = mediaState();
@@ -8449,11 +8458,12 @@ void HTMLMediaElement::updateMediaState()
         return;
 
     m_mediaState = state;
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
     mediaSession().mediaStateDidChange(m_mediaState);
+#endif
 
     document().updateIsPlayingMedia();
 }
-#endif
 
 MediaProducerMediaStateFlags HTMLMediaElement::mediaState() const
 {
@@ -8482,6 +8492,12 @@ MediaProducerMediaStateFlags HTMLMediaElement::mediaState() const
         state.add(MediaProducerMediaState::DidPlayToEnd);
 #else
     UNUSED_VARIABLE(hasAudio);
+#endif
+
+#if ENABLE(MEDIA_SOURCE)
+    // We can assume that if we have active source buffers, later networking activity (such as stream or XHR requests) will be media related.
+    if (m_mediaSource && m_mediaSource->activeSourceBuffers() && m_mediaSource->activeSourceBuffers()->length())
+        state.add(MediaProducerMediaState::HasStreamingActivity);
 #endif
 
     if (!isPlaying())

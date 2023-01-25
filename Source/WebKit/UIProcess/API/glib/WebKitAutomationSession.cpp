@@ -69,7 +69,7 @@ struct _WebKitAutomationSessionPrivate {
 
 static guint signals[LAST_SIGNAL] = { 0, };
 
-WEBKIT_DEFINE_TYPE(WebKitAutomationSession, webkit_automation_session, G_TYPE_OBJECT)
+WEBKIT_DEFINE_FINAL_TYPE_IN_2022_API(WebKitAutomationSession, webkit_automation_session, G_TYPE_OBJECT)
 
 class AutomationSessionClient final : public API::AutomationSessionClient {
     WTF_MAKE_FAST_ALLOCATED;
@@ -280,8 +280,7 @@ static void webkit_automation_session_class_init(WebKitAutomationSessionClass* s
         PROP_ID,
         g_param_spec_string(
             "id",
-            _("Identifier"),
-            _("The automation session identifier"),
+            nullptr, nullptr,
             nullptr,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY)));
 

@@ -535,13 +535,13 @@ static String stringForSSLCipher(SSLCipherSuite cipher)
         return;
     }
 
-    auto* body = networkDataTask->firstRequest().httpBody();
+    auto body = networkDataTask->firstRequest().httpBody();
     if (!body) {
         completionHandler(nil);
         return;
     }
 
-    completionHandler(WebCore::createHTTPBodyNSInputStream(*body).get());
+    completionHandler(WebCore::createHTTPBodyNSInputStream(body.releaseNonNull()).get());
 }
 
 #if ENABLE(TRACKING_PREVENTION)
@@ -1158,6 +1158,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         configuration._connectionCacheMinimumFastLanePriority = toPlatformRequestPriority(WebCore::ResourceLoadPriority::Medium);
         configuration._connectionCacheNumFastLanes = 1;
     }
+#endif
+
+#if ENABLE(NETWORK_ISSUE_REPORTING)
+    if ([configuration respondsToSelector:@selector(set_skipsStackTraceCapture:)])
+        configuration._skipsStackTraceCapture = YES;
 #endif
 
     return configuration;

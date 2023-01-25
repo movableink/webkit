@@ -237,6 +237,7 @@ Ref<PlatformCAAnimation> PlatformCAAnimationRemote::copy() const
 PlatformCAAnimationRemote::PlatformCAAnimationRemote(AnimationType type, const String& keyPath)
     : PlatformCAAnimation(type)
 {
+    ASSERT(PlatformCAAnimation::isValidKeyPath(keyPath, type));
     m_properties.keyPath = keyPath;
     m_properties.animationType = type;
 }
@@ -401,7 +402,7 @@ void PlatformCAAnimationRemote::setFromValue(const Color& value)
     m_properties.keyValues[0] = KeyframeValue(value);
 }
 
-void PlatformCAAnimationRemote::setFromValue(const FilterOperation* operation, int internalFilterPropertyIndex)
+void PlatformCAAnimationRemote::setFromValue(const FilterOperation* operation)
 {
     if (animationType() != Basic)
         return;
@@ -457,12 +458,11 @@ void PlatformCAAnimationRemote::setToValue(const Color& value)
     m_properties.keyValues[1] = KeyframeValue(value);
 }
 
-void PlatformCAAnimationRemote::setToValue(const FilterOperation* operation, int internalFilterPropertyIndex)
+void PlatformCAAnimationRemote::setToValue(const FilterOperation* operation)
 {
     if (animationType() != Basic)
         return;
     
-    UNUSED_PARAM(internalFilterPropertyIndex);
     ASSERT(operation);
     m_properties.keyValues.resize(2);
     m_properties.keyValues[1] = KeyframeValue(operation->clone());
@@ -511,10 +511,8 @@ void PlatformCAAnimationRemote::setValues(const Vector<Color>& values)
     m_properties.keyValues = toKeyframeValueVector(values);
 }
 
-void PlatformCAAnimationRemote::setValues(const Vector<RefPtr<FilterOperation>>& values, int internalFilterPropertyIndex)
+void PlatformCAAnimationRemote::setValues(const Vector<RefPtr<FilterOperation>>& values)
 {
-    UNUSED_PARAM(internalFilterPropertyIndex);
-    
     if (animationType() != Keyframe)
         return;
 
@@ -580,7 +578,7 @@ static RetainPtr<NSObject> animationValueFromKeyframeValue(const PlatformCAAnima
             return [NSValue valueWithCATransform3D:matrix];
         },
         [&](const RefPtr<WebCore::FilterOperation> filter) -> RetainPtr<NSObject> {
-            return PlatformCAFilters::filterValueForOperation(filter.get(), 0 /* unused */);
+            return PlatformCAFilters::filterValueForOperation(filter.get());
         }
     );
 }
@@ -700,7 +698,13 @@ static RetainPtr<CAAnimation> createAnimation(CALayer *layer, RemoteLayerTreeHos
 
 static void addAnimationToLayer(CALayer *layer, RemoteLayerTreeHost* layerTreeHost, const String& key, const PlatformCAAnimationRemote::Properties& properties)
 {
+    if (!PlatformCAAnimation::isValidKeyPath(properties.keyPath, properties.animationType)) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
     [layer addAnimation:createAnimation(layer, layerTreeHost, properties).get() forKey:key];
+    [layer setInheritsTiming:NO];
 }
 
 void PlatformCAAnimationRemote::updateLayerAnimations(CALayer *layer, RemoteLayerTreeHost* layerTreeHost, const AnimationsList& animationsToAdd, const HashSet<String>& animationsToRemove)

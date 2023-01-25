@@ -38,7 +38,7 @@ namespace WebKit {
 
 class DrawingAreaProxyWC final : public DrawingAreaProxy {
 public:
-    DrawingAreaProxyWC(WebPageProxy&, WebProcessProxy&);
+    DrawingAreaProxyWC(WebPageProxy&);
 
     void paint(BackingStore::PlatformGraphicsContext, const WebCore::IntRect&, WebCore::Region& unpaintedRegion);
 
@@ -47,6 +47,8 @@ private:
     void deviceScaleFactorDidChange() override { }
     void sizeDidChange() override;
     void dispatchAfterEnsuringDrawing(WTF::Function<void(CallbackBase::Error)>&&) override;
+    void attachToProvisionalFrameProcess(WebProcessProxy&) final { ASSERT_NOT_REACHED(); }
+
     // message handers
     void update(uint64_t, const UpdateInfo&) override;
     void enterAcceleratedCompositingMode(uint64_t, const LayerTreeContext&) override;

@@ -39,7 +39,6 @@
 #include "IntRect.h"
 #include "Logging.h"
 #include "MediaPlayer.h"
-#include "MediaPlayerRequestInstallMissingPluginsCallback.h"
 #include "MIMETypeRegistry.h"
 #include "NotImplemented.h"
 #include "SecurityOrigin.h"
@@ -227,11 +226,6 @@ MediaPlayerPrivateGStreamer::~MediaPlayerPrivateGStreamer()
         m_fillTimer.stop();
 
     m_readyTimerHandler.stop();
-    for (auto& missingPluginCallback : m_missingPluginCallbacks) {
-        if (missingPluginCallback)
-            missingPluginCallback->invalidate();
-    }
-    m_missingPluginCallbacks.clear();
 
     if (m_videoSink) {
         GRefPtr<GstPad> videoSinkPad = adoptGRef(gst_element_get_static_pad(m_videoSink.get(), "sink"));
@@ -351,7 +345,6 @@ void MediaPlayerPrivateGStreamer::load(const String& urlString)
     m_readyState = MediaPlayer::ReadyState::HaveNothing;
     m_player->readyStateChanged();
     m_areVolumeAndMuteInitialized = false;
-    m_hasTaintedOrigin = std::nullopt;
 
     if (!m_isDelayingLoad)
         commitLoad();
@@ -807,36 +800,10 @@ unsigned long long MediaPlayerPrivateGStreamer::totalBytes() const
     return m_totalBytes;
 }
 
-bool MediaPlayerPrivateGStreamer::hasSingleSecurityOrigin() const
+std::optional<bool> MediaPlayerPrivateGStreamer::isCrossOrigin(const SecurityOrigin& origin) const
 {
-    if (!m_source)
-        return false;
-
-    if (!WEBKIT_IS_WEB_SRC(m_source.get()))
-        return true;
-
-    GUniqueOutPtr<char> originalURI, resolvedURI;
-    g_object_get(m_source.get(), "location", &originalURI.outPtr(), "resolved-location", &resolvedURI.outPtr(), nullptr);
-    if (!originalURI || !resolvedURI)
-        return false;
-    if (!g_strcmp0(originalURI.get(), resolvedURI.get()))
-        return true;
-
-    Ref<SecurityOrigin> resolvedOrigin(SecurityOrigin::createFromString(String::fromUTF8(resolvedURI.get())));
-    Ref<SecurityOrigin> requestedOrigin(SecurityOrigin::createFromString(String::fromUTF8(originalURI.get())));
-    return resolvedOrigin->isSameSchemeHostPort(requestedOrigin.get());
-}
-
-std::optional<bool> MediaPlayerPrivateGStreamer::wouldTaintOrigin(const SecurityOrigin& origin) const
-{
-    GST_TRACE_OBJECT(pipeline(), "Checking %u origins", m_origins.size());
-    for (auto& responseOrigin : m_origins) {
-        if (!origin.isSameOriginDomain(*responseOrigin)) {
-            GST_DEBUG_OBJECT(pipeline(), "Found reachable response origin");
-            return true;
-        }
-    }
-    GST_DEBUG_OBJECT(pipeline(), "No valid response origin found");
+    if (WEBKIT_IS_WEB_SRC(m_source.get()))
+        return webKitSrcIsCrossOrigin(WEBKIT_WEB_SRC(m_source.get()), origin);
     return false;
 }
 
@@ -1740,7 +1707,7 @@ void MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
         gst_message_parse_error(message, &err.outPtr(), &debug.outPtr());
         GST_ERROR_OBJECT(pipeline(), "%s (url=%s) (code=%d)", err->message, m_url.string().utf8().data(), err->code);
 
-        if (m_shouldResetPipeline || !m_missingPluginCallbacks.isEmpty() || m_didErrorOccur)
+        if (m_shouldResetPipeline || m_didErrorOccur)
             break;
 
         m_errorMessage = String::fromLatin1(err->message);
@@ -1881,42 +1848,16 @@ void MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
         gst_bin_recalculate_latency(GST_BIN(m_pipeline.get()));
         break;
     case GST_MESSAGE_ELEMENT:
-        if (gst_is_missing_plugin_message(message)) {
-#if !USE(GSTREAMER_FULL)
-            if (gst_install_plugins_supported()) {
-                auto missingPluginCallback = MediaPlayerRequestInstallMissingPluginsCallback::create([weakThis = WeakPtr { *this }](uint32_t result, MediaPlayerRequestInstallMissingPluginsCallback& missingPluginCallback) {
-                    if (!weakThis) {
-                        GST_INFO("got missing pluging installation callback in destroyed player with result %u", result);
-                        return;
-                    }
-
-                    GST_DEBUG("got missing plugin installation callback with result %u", result);
-                    RefPtr<MediaPlayerRequestInstallMissingPluginsCallback> protectedMissingPluginCallback = &missingPluginCallback;
-                    weakThis->m_missingPluginCallbacks.removeFirst(protectedMissingPluginCallback);
-                    if (result != GST_INSTALL_PLUGINS_SUCCESS)
-                        return;
-
-                    weakThis->changePipelineState(GST_STATE_READY);
-                    weakThis->changePipelineState(GST_STATE_PAUSED);
-                });
-                m_missingPluginCallbacks.append(missingPluginCallback.copyRef());
-                GUniquePtr<char> detail(gst_missing_plugin_message_get_installer_detail(message));
-                GUniquePtr<char> description(gst_missing_plugin_message_get_description(message));
-                m_player->requestInstallMissingPlugins(String::fromUTF8(detail.get()), String::fromUTF8(description.get()), missingPluginCallback.get());
-            }
-#endif
-        }
 #if USE(GSTREAMER_MPEGTS)
-        else if (GstMpegtsSection* section = gst_message_parse_mpegts_section(message)) {
+        if (GstMpegtsSection* section = gst_message_parse_mpegts_section(message)) {
             processMpegTsSection(section);
             gst_mpegts_section_unref(section);
-        }
+        } else
 #endif
-        else if (gst_structure_has_name(structure, "http-headers")) {
+        if (gst_structure_has_name(structure, "http-headers")) {
             GST_DEBUG_OBJECT(pipeline(), "Processing HTTP headers: %" GST_PTR_FORMAT, structure);
             if (const char* uri = gst_structure_get_string(structure, "uri")) {
                 URL url { String::fromLatin1(uri) };
-                m_origins.add(SecurityOrigin::create(url));
 
                 if (url != m_url) {
                     GST_DEBUG_OBJECT(pipeline(), "Ignoring HTTP response headers for non-main URI.");
@@ -2911,7 +2852,15 @@ void MediaPlayerPrivateGStreamer::configureVideoDecoder(GstElement* decoder)
             auto* query = GST_QUERY_CAST(GST_PAD_PROBE_INFO_DATA(info));
             auto* structure = gst_query_writable_structure(query);
             if (gst_structure_has_name(structure, "webkit-video-decoder-stats")) {
-                gst_structure_set(structure, "decoded-frames", G_TYPE_UINT64, player->decodedVideoFramesCount(), nullptr);
+                gst_structure_set(structure, "frames-decoded", G_TYPE_UINT64, player->decodedVideoFramesCount(), nullptr);
+
+                if (player->updateVideoSinkStatistics())
+                    gst_structure_set(structure, "frames-dropped", G_TYPE_UINT64, player->m_droppedVideoFrames, nullptr);
+
+                auto naturalSize = roundedIntSize(player->naturalSize());
+                if (naturalSize.width() && naturalSize.height())
+                    gst_structure_set(structure, "frame-width", G_TYPE_UINT, naturalSize.width(), "frame-height", G_TYPE_UINT, naturalSize.height(), nullptr);
+
                 GST_PAD_PROBE_INFO_DATA(info) = query;
                 return GST_PAD_PROBE_HANDLED;
             }
@@ -3958,10 +3907,10 @@ void MediaPlayerPrivateGStreamer::setStreamVolumeElement(GstStreamVolume* volume
     g_signal_connect_swapped(m_volumeElement.get(), "notify::mute", G_CALLBACK(muteChangedCallback), this);
 }
 
-std::optional<VideoPlaybackQualityMetrics> MediaPlayerPrivateGStreamer::videoPlaybackQualityMetrics()
+bool MediaPlayerPrivateGStreamer::updateVideoSinkStatistics()
 {
     if (!webkitGstCheckVersion(1, 18, 0) && !m_fpsSink)
-        return std::nullopt;
+        return false;
 
     uint64_t totalVideoFrames = 0;
     uint64_t droppedVideoFrames = 0;
@@ -3970,10 +3919,10 @@ std::optional<VideoPlaybackQualityMetrics> MediaPlayerPrivateGStreamer::videoPla
         g_object_get(m_videoSink.get(), "stats", &stats.outPtr(), nullptr);
 
         if (!gst_structure_get_uint64(stats.get(), "rendered", &totalVideoFrames))
-            return std::nullopt;
+            return false;
 
         if (!gst_structure_get_uint64(stats.get(), "dropped", &droppedVideoFrames))
-            return std::nullopt;
+            return false;
     } else if (m_fpsSink) {
         unsigned renderedFrames, droppedFrames;
         g_object_get(m_fpsSink.get(), "frames-rendered", &renderedFrames, "frames-dropped", &droppedFrames, nullptr);
@@ -3981,23 +3930,25 @@ std::optional<VideoPlaybackQualityMetrics> MediaPlayerPrivateGStreamer::videoPla
         droppedVideoFrames = droppedFrames;
     }
 
-    // Cache or reuse cached statistics. Caching is required so that metrics queries performed
-    // after EOS still return valid values.
+    // Caching is required so that metrics queries performed after EOS still return valid values.
     if (totalVideoFrames)
         m_totalVideoFrames = totalVideoFrames;
-    else if (m_totalVideoFrames)
-        totalVideoFrames = m_totalVideoFrames;
     if (droppedVideoFrames)
         m_droppedVideoFrames = droppedVideoFrames;
-    else if (m_droppedVideoFrames)
-        droppedVideoFrames = m_droppedVideoFrames;
+    return true;
+}
+
+std::optional<VideoPlaybackQualityMetrics> MediaPlayerPrivateGStreamer::videoPlaybackQualityMetrics()
+{
+    if (!updateVideoSinkStatistics())
+        return std::nullopt;
 
     uint32_t corruptedVideoFrames = 0;
     double totalFrameDelay = 0;
     uint32_t displayCompositedVideoFrames = 0;
     return VideoPlaybackQualityMetrics {
-        static_cast<uint32_t>(totalVideoFrames),
-        static_cast<uint32_t>(droppedVideoFrames),
+        static_cast<uint32_t>(m_totalVideoFrames),
+        static_cast<uint32_t>(m_droppedVideoFrames),
         corruptedVideoFrames,
         totalFrameDelay,
         displayCompositedVideoFrames,

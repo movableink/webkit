@@ -54,6 +54,8 @@ class Int32Literal;
 class StructureAccess;
 class Uint32Literal;
 class UnaryExpression;
+class BinaryExpression;
+class PointerDereference;
 
 class Statement;
 class AssignmentStatement;
@@ -65,6 +67,8 @@ class TypeDecl;
 class ArrayType;
 class NamedType;
 class ParameterizedType;
+class StructType;
+class TypeReference;
 
 class Parameter;
 class StructMember;

@@ -40,18 +40,6 @@ Expected<void, Error> Visitor::result()
     return m_expectedError;
 }
 
-template<typename T> void Visitor::checkErrorAndVisit(T& x)
-{
-    if (!hasError())
-        visit(x);
-}
-
-template<typename T> void Visitor::maybeCheckErrorAndVisit(T* x)
-{
-    if (!hasError() && x)
-        visit(*x);
-}
-
 // Shader Module
 
 void Visitor::visit(ShaderModule& shaderModule)
@@ -201,6 +189,12 @@ void Visitor::visit(Expression& expression)
     case Expression::Kind::UnaryExpression:
         checkErrorAndVisit(downcast<UnaryExpression>(expression));
         break;
+    case Expression::Kind::BinaryExpression:
+        checkErrorAndVisit(downcast<BinaryExpression>(expression));
+        break;
+    case Expression::Kind::PointerDereference:
+        checkErrorAndVisit(downcast<PointerDereference>(expression));
+        break;
     default:
         ASSERT_NOT_REACHED("Unhandled expression kind");
     }
@@ -255,6 +249,17 @@ void Visitor::visit(Uint32Literal&)
 void Visitor::visit(UnaryExpression& unaryExpression)
 {
     checkErrorAndVisit(unaryExpression.expression());
+}
+
+void Visitor::visit(BinaryExpression& binaryExpression)
+{
+    checkErrorAndVisit(binaryExpression.lhs());
+    checkErrorAndVisit(binaryExpression.rhs());
+}
+
+void Visitor::visit(PointerDereference& pointerDereference)
+{
+    checkErrorAndVisit(pointerDereference.target());
 }
 
 // Statement
@@ -315,6 +320,12 @@ void Visitor::visit(TypeDecl& typeDecl)
     case Node::Kind::ParameterizedType:
         checkErrorAndVisit(downcast<ParameterizedType>(typeDecl));
         break;
+    case Node::Kind::StructType:
+        checkErrorAndVisit(downcast<StructType>(typeDecl));
+        break;
+    case Node::Kind::TypeReference:
+        checkErrorAndVisit(downcast<TypeReference>(typeDecl));
+        break;
     default:
         ASSERT_NOT_REACHED("Unhandled type declaration kind");
     }
@@ -333,6 +344,14 @@ void Visitor::visit(NamedType&)
 void Visitor::visit(ParameterizedType& parameterizedType)
 {
     checkErrorAndVisit(parameterizedType.elementType());
+}
+
+void Visitor::visit(StructType&)
+{
+}
+
+void Visitor::visit(TypeReference&)
+{
 }
 
 //

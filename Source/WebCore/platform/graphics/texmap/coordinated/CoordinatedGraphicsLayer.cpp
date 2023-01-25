@@ -188,7 +188,7 @@ Nicosia::PlatformLayer::LayerID CoordinatedGraphicsLayer::id() const
 
 auto CoordinatedGraphicsLayer::primaryLayerID() const -> PlatformLayerID
 {
-    return id();
+    return { makeObjectIdentifier<PlatformLayerIDType>(id()), Process::identifier() };
 }
 
 bool CoordinatedGraphicsLayer::setChildren(Vector<Ref<GraphicsLayer>>&& children)
@@ -538,7 +538,7 @@ bool CoordinatedGraphicsLayer::filtersCanBeComposited(const FilterOperations& fi
         return false;
 
     for (const auto& filterOperation : filters.operations()) {
-        if (filterOperation->type() == FilterOperation::REFERENCE)
+        if (filterOperation->type() == FilterOperation::Type::Reference)
             return false;
     }
 
@@ -1390,22 +1390,22 @@ void CoordinatedGraphicsLayer::computeTransformedVisibleRect()
 bool CoordinatedGraphicsLayer::shouldHaveBackingStore() const
 {
     // If the CSS opacity value is 0 and there's no animation over the opacity property, the layer is invisible.
-    bool isInvisibleBecauseOpacityZero = !opacity() && !m_animations.hasActiveAnimationsOfType(AnimatedPropertyOpacity);
+    bool isInvisibleBecauseOpacityZero = !opacity() && !m_animations.hasActiveAnimationsOfType(AnimatedProperty::Opacity);
 
     // Check if there's a filter that sets the opacity to zero.
     bool hasOpacityZeroFilter = notFound != filters().operations().findIf([&](const auto& operation) {
-        return operation->type() == FilterOperation::OperationType::OPACITY && !downcast<BasicComponentTransferFilterOperation>(*operation).amount();
+        return operation->type() == FilterOperation::Type::Opacity && !downcast<BasicComponentTransferFilterOperation>(*operation).amount();
     });
 
     // If there's a filter that sets opacity to 0 and the filters are not being animated, the layer is invisible.
-    isInvisibleBecauseOpacityZero |= hasOpacityZeroFilter && !m_animations.hasActiveAnimationsOfType(AnimatedPropertyFilter);
+    isInvisibleBecauseOpacityZero |= hasOpacityZeroFilter && !m_animations.hasActiveAnimationsOfType(AnimatedProperty::Filter);
 
     return drawsContent() && contentsAreVisible() && !m_size.isEmpty() && !isInvisibleBecauseOpacityZero;
 }
 
 bool CoordinatedGraphicsLayer::selfOrAncestorHasActiveTransformAnimation() const
 {
-    if (m_animations.hasActiveAnimationsOfType(AnimatedPropertyTransform))
+    if (m_animations.hasActiveAnimationsOfType(AnimatedProperty::Transform))
         return true;
 
     if (!parent())
@@ -1434,9 +1434,9 @@ bool CoordinatedGraphicsLayer::addAnimation(const KeyframeValueList& valueList, 
 
     switch (valueList.property()) {
 #if ENABLE(FILTERS_LEVEL_2)
-    case AnimatedPropertyWebkitBackdropFilter:
+    case AnimatedProperty::WebkitBackdropFilter:
 #endif
-    case AnimatedPropertyFilter: {
+    case AnimatedProperty::Filter: {
         int listIndex = validateFilterOperations(valueList);
         if (listIndex < 0)
             return false;
@@ -1446,8 +1446,8 @@ bool CoordinatedGraphicsLayer::addAnimation(const KeyframeValueList& valueList, 
             return false;
         break;
     }
-    case AnimatedPropertyOpacity:
-    case AnimatedPropertyTransform:
+    case AnimatedProperty::Opacity:
+    case AnimatedProperty::Transform:
         break;
     default:
         return false;

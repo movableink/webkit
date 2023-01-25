@@ -2,7 +2,7 @@
  *  Copyright (C) 2000 Harri Porten (porten@kde.org)
  *  Copyright (c) 2000 Daniel Molkentin (molkentin@kde.org)
  *  Copyright (c) 2000 Stefan Schimanski (schimmi@kde.org)
- *  Copyright (C) 2003-2022 Apple Inc.
+ *  Copyright (C) 2003-2023 Apple Inc.
  *  Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  *  This library is free software; you can redistribute it and/or
@@ -30,7 +30,6 @@
 #include "DOMMimeTypeArray.h"
 #include "DOMPlugin.h"
 #include "DOMPluginArray.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "FeaturePolicy.h"
 #include "Frame.h"
@@ -75,7 +74,7 @@ String Navigator::appVersion() const
     auto* frame = this->frame();
     if (!frame)
         return String();
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
+    if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::AppVersion);
     return NavigatorBase::appVersion();
 }
@@ -85,7 +84,7 @@ const String& Navigator::userAgent() const
     auto* frame = this->frame();
     if (!frame || !frame->page())
         return m_userAgent;
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
+    if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::UserAgent);
     if (m_userAgent.isNull())
         m_userAgent = frame->loader().userAgent(frame->document()->url());
@@ -302,20 +301,18 @@ void Navigator::initializePluginAndMimeTypeArrays()
 
 DOMPluginArray& Navigator::plugins()
 {
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled()) {
-        if (auto* frame = this->frame())
-            ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::Plugins);
-    }
+    if (auto* frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
+        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::Plugins);
+
     initializePluginAndMimeTypeArrays();
     return *m_plugins;
 }
 
 DOMMimeTypeArray& Navigator::mimeTypes()
 {
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled()) {
-        if (auto* frame = this->frame())
-            ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::MimeTypes);
-    }
+    if (auto* frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
+        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::MimeTypes);
+
     initializePluginAndMimeTypeArrays();
     return *m_mimeTypes;
 }
@@ -333,13 +330,13 @@ bool Navigator::cookieEnabled() const
     if (!frame)
         return false;
 
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
+    if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::CookieEnabled);
 
     auto* page = frame->page();
     if (!page)
         return false;
-    
+
     if (!page->settings().cookieEnabled())
         return false;
 
@@ -377,11 +374,16 @@ GPU* Navigator::gpu()
         if (!gpu)
             return nullptr;
 
-        m_gpuForWebGPU = GPU::create();
-        m_gpuForWebGPU->setBacking(*gpu);
+        m_gpuForWebGPU = GPU::create(*gpu);
     }
 
     return m_gpuForWebGPU.get();
+}
+
+Document* Navigator::document()
+{
+    auto* frame = this->frame();
+    return frame ? frame->document() : nullptr;
 }
 
 #if ENABLE(BADGING)

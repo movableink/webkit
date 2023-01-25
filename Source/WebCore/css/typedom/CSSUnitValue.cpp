@@ -49,14 +49,6 @@ CSSUnitType CSSUnitValue::parseUnit(const String& unit)
         return CSSUnitType::CSS_NUMBER;
     if (unit == "percent"_s)
         return CSSUnitType::CSS_PERCENTAGE;
-
-    // FIXME: Remove these when LineHeightUnitsEnabled is changed back to true or removed
-    // https://bugs.webkit.org/show_bug.cgi?id=211351
-    if (unit == "lh"_s)
-        return CSSUnitType::CSS_LHS;
-    if (unit == "rlh"_s)
-        return CSSUnitType::CSS_RLHS;
-
     return CSSParserToken::stringToUnitType(unit);
 }
 
@@ -272,7 +264,10 @@ RefPtr<CSSValue> CSSUnitValue::toCSSValueWithProperty(CSSPropertyID propertyID) 
         auto sumNode = CSSCalcOperationNode::createSum(Vector { node.releaseNonNull() });
         if (!sumNode)
             return nullptr;
-        return CSSPrimitiveValue::create(CSSCalcValue::create(sumNode.releaseNonNull()));
+        auto value = CSSCalcValue::create(sumNode.releaseNonNull());
+        if (!value)
+            return nullptr;
+        return CSSPrimitiveValue::create(value.releaseNonNull());
     }
     return toCSSValue();
 }

@@ -27,6 +27,7 @@
 
 #include "ExceptionOr.h"
 #include "RenderStyleConstants.h"
+#include "WebAnimationTypes.h"
 #include <wtf/Forward.h>
 #include <wtf/Markable.h>
 #include <wtf/Seconds.h>
@@ -59,6 +60,7 @@ bool compareAnimationsByCompositeOrder(const WebAnimation&, const WebAnimation&)
 bool compareAnimationEventsByCompositeOrder(const AnimationEventBase&, const AnimationEventBase&);
 String pseudoIdAsString(PseudoId);
 ExceptionOr<PseudoId> pseudoIdFromString(const String&);
+AtomString animatablePropertyAsString(AnimatableProperty);
 
 } // namespace WebCore
 

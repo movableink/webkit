@@ -96,7 +96,7 @@ class Port(object):
     # Test names resemble unix relative paths, and use '/' as a directory separator.
     TEST_PATH_SEPARATOR = '/'
 
-    ALL_BUILD_TYPES = ('debug', 'release')
+    ALL_BUILD_TYPES = ('debug', 'release', 'guard-malloc', 'asan')
 
     DEFAULT_ARCHITECTURE = 'x86'
     DEVICE_TYPE = None
@@ -422,14 +422,17 @@ class Port(object):
         baseline_search_path = self.baseline_search_path(device_type=device_type) + [self.layout_tests_dir()]
         fs = self._filesystem
 
+        variant = ''
+        if '?' in test_name:
+            (test_name, variant) = test_name.split('?', 1)
+        if '#' in test_name:
+            (test_name, variant) = test_name.split('#', 1)
+
         baseline_ext_parts = fs.splitext(test_name)
 
         baseline_name_root = baseline_ext_parts[0]
-        if len(baseline_ext_parts) > 1:
-            if '?' in baseline_ext_parts[1]:
-                baseline_name_root += '_' + baseline_ext_parts[1].split('?')[1]
-            if '#' in baseline_ext_parts[1]:
-                baseline_name_root += '_' + baseline_ext_parts[1].split('#')[1]
+        if len(variant):
+            baseline_name_root += "_" + re.sub(r'[|* <>:]', '_', variant)
         baseline_name_root += '-expected'
 
         baselines = []
@@ -1094,7 +1097,13 @@ class Port(object):
     def test_configuration(self):
         """Returns the current TestConfiguration for the port."""
         if not self._test_configuration:
-            self._test_configuration = TestConfiguration(self.version_name(), self.architecture(), self._options.configuration.lower())
+            if self.get_option('guard_malloc'):
+                style = 'guard-malloc'
+            elif self._config.asan:
+                style = 'asan'
+            else:
+                style = self._options.configuration.lower()
+            self._test_configuration = TestConfiguration(self.version_name(), self.architecture(), style)
         return self._test_configuration
 
     # FIXME: Belongs on a Platform object.

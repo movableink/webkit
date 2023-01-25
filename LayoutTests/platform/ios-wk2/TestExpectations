@@ -155,6 +155,10 @@ webkit.org/b/235072 imported/w3c/web-platform-tests/video-rvfc/request-video-fra
 
 webanimations/frame-rate [ Pass ]
 
+imported/w3c/web-platform-tests/file-system-access/ [ Pass ]
+imported/w3c/web-platform-tests/fs/ [ Pass ]
+storage/filesystemaccess/ [ Pass ]
+
 #//////////////////////////////////////////////////////////////////////////////////////////
 # End platform-specific directories.
 #//////////////////////////////////////////////////////////////////////////////////////////
@@ -440,8 +444,6 @@ http/tests/navigation/navigation-interrupted-by-fragment.html
 http/tests/security/aboutBlank/xss-DENIED-navigate-opener-document-write.html
 http/tests/security/aboutBlank/xss-DENIED-navigate-opener-javascript-url.html
 http/tests/security/aboutBlank/xss-DENIED-set-opener.html
-http/tests/security/canvas-remote-read-remote-video-allowed-anonymous.html [ Failure ]
-http/tests/security/canvas-remote-read-remote-video-allowed-with-credentials.html [ Failure ]
 http/tests/security/isolatedWorld/cross-origin-xhr.html
 http/tests/security/javascriptURL/xss-ALLOWED-from-javascript-url-window-open.html
 http/tests/security/javascriptURL/xss-ALLOWED-to-javascript-url-window-open.html
@@ -537,8 +539,6 @@ fast/text/basic/generic-family-reset.html [ Failure ]
 fast/text/international/002.html [ Failure ]
 fast/text/international/003.html [ Failure ]
 fast/text/international/bidi-layout-across-linebreak.html [ Failure ]
-fast/text/international/hebrew-vowels.html [ Failure ]
-fast/text/international/text-combine-image-test.html [ Failure ]
 fast/text/international/thai-line-breaks.html [ Failure ]
 fast/text/whitespace/024.html [ Failure ]
 fast/writing-mode/Kusa-Makura-background-canvas.html [ Failure ]
@@ -1173,7 +1173,6 @@ webkit.org/b/161631 imported/w3c/web-platform-tests/html/browsers/browsing-the-w
 # Newly imported WPT tests that are timing out on iOS.
 imported/w3c/web-platform-tests/html/semantics/forms/the-button-element/button-activate-keyup-prevented.html [ Skip ]
 imported/w3c/web-platform-tests/html/user-activation/activation-trigger-mouse-right.html [ Skip ]
-imported/w3c/web-platform-tests/html/user-activation/activation-trigger-pointerevent.html [ Skip ]
 imported/w3c/web-platform-tests/uievents/click/auxclick_event.html [ Skip ]
 imported/w3c/web-platform-tests/uievents/click/click_event_target_child_parent.html [ Skip ]
 imported/w3c/web-platform-tests/uievents/click/click_event_target_siblings.html [ Skip ]
@@ -2321,8 +2320,6 @@ webkit.org/b/244297 [ Release arm64 ] svg/transforms/transformed-text-fill-gradi
 imported/w3c/web-platform-tests/clear-site-data/navigation-insecure.html [ Skip ]
 imported/w3c/web-platform-tests/clear-site-data/resource.html [ Skip ]
 
-webkit.org/b/244639 [ Release arm64 ] imported/w3c/web-platform-tests/mimesniff/mime-types/charset-parameter.window.html [ Pass Failure ]
-
 webkit.org/b/244674 [ Release ] imported/w3c/web-platform-tests/IndexedDB/idbfactory-databases-opaque-origin.html [ Pass Failure ]
 webkit.org/b/244674 [ Release ] imported/w3c/web-platform-tests/IndexedDB/idbfactory-deleteDatabase-opaque-origin.html [ Pass Failure ]
 
@@ -2376,8 +2373,6 @@ webkit.org/b/245994 imported/w3c/web-platform-tests/streams/readable-byte-stream
 # webkit.org/b/243681  Newly imported tests that fail on iOS16
 imported/w3c/web-platform-tests/IndexedDB/structured-clone.any.html?101-last [ Failure ]
 imported/w3c/web-platform-tests/IndexedDB/structured-clone.any.worker.html?101-last [ Failure ]
-
-webkit.org/b/246547 animations/steps-transform-rendering-updates.html [ Pass Failure ]
 
 # webkit.org/b/246701 Flaky failure only on iOS
 imported/w3c/web-platform-tests/screen-orientation/active-lock.html [ Pass Failure ]

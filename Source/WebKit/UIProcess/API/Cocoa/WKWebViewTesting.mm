@@ -293,11 +293,6 @@
     });
 }
 
-- (void)_startMonitoringWheelEvents
-{
-    _page->startMonitoringWheelEventsForTesting();
-}
-
 + (void)_setApplicationBundleIdentifier:(NSString *)bundleIdentifier
 {
     WebCore::setApplicationBundleIdentifierOverride(String(bundleIdentifier));
@@ -468,17 +463,6 @@
 {
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     WebKit::WindowServerConnection::singleton().hardwareConsoleStateChanged(connected ? WebKit::WindowServerConnection::HardwareConsoleState::Connected : WebKit::WindowServerConnection::HardwareConsoleState::Disconnected);
-#endif
-}
-
-+ (void)_setLookalikeCharacterStringsForTesting:(NSArray<NSString *> *)strings
-{
-    // FIXME: Remove this method and simply swizzle out the appropriate platform API, once we're able to
-    // call into the API from within the application process.
-#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
-    WebKit::WebPageProxy::cachedLookalikeStrings() = makeVector<String>(strings);
-#else
-    UNUSED_PARAM(strings);
 #endif
 }
 

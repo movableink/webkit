@@ -76,6 +76,10 @@ public:
 #endif
     }
 
+#if ENABLE(WEBASSEMBLY)
+    void prepareWasmCallOperation(GPRReg instanceGPR);
+#endif
+
     void checkStackPointerAlignment()
     {
         // This check is both unneeded and harder to write correctly for ARM64
@@ -1968,10 +1972,7 @@ public:
 #endif
 
 #if ENABLE(WEBASSEMBLY)
-    void loadWasmContextInstance(GPRReg dst);
     void storeWasmContextInstance(GPRReg src);
-    static bool loadWasmContextInstanceNeedsMacroScratchRegister();
-    static bool storeWasmContextInstanceNeedsMacroScratchRegister();
 #endif
 
     void emitFillStorageWithJSEmpty(GPRReg baseGPR, ptrdiff_t initialOffset, unsigned count, GPRReg scratchGPR)

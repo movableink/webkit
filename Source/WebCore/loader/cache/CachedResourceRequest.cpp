@@ -26,6 +26,7 @@
 #include "config.h"
 #include "CachedResourceRequest.h"
 
+#include "CachePolicy.h"
 #include "CachedResourceLoader.h"
 #include "ContentExtensionsBackend.h"
 #include "CrossOriginAccessControl.h"
@@ -182,6 +183,12 @@ void CachedResourceRequest::setAcceptHeaderIfNone(CachedResource::Type type)
         m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::Accept, acceptHeaderValueFromType(type));
 }
 
+void CachedResourceRequest::disableCachingIfNeeded()
+{
+    if (m_options.cache == FetchOptions::Cache::NoStore)
+        m_options.cachingPolicy = CachingPolicy::DisallowCaching;
+}
+
 void CachedResourceRequest::updateAccordingCacheMode()
 {
     if (m_options.cache == FetchOptions::Cache::Default
@@ -198,7 +205,6 @@ void CachedResourceRequest::updateAccordingCacheMode()
         m_resourceRequest.addHTTPHeaderFieldIfNotPresent(HTTPHeaderName::CacheControl, HTTPHeaderValues::maxAge0());
         break;
     case FetchOptions::Cache::NoStore:
-        m_options.cachingPolicy = CachingPolicy::DisallowCaching;
         m_resourceRequest.setCachePolicy(ResourceRequestCachePolicy::DoNotUseAnyCache);
         m_resourceRequest.addHTTPHeaderFieldIfNotPresent(HTTPHeaderName::Pragma, HTTPHeaderValues::noCache());
         m_resourceRequest.addHTTPHeaderFieldIfNotPresent(HTTPHeaderName::CacheControl, HTTPHeaderValues::noCache());
@@ -217,6 +223,12 @@ void CachedResourceRequest::updateAccordingCacheMode()
         m_resourceRequest.setCachePolicy(ResourceRequestCachePolicy::ReturnCacheDataDontLoad);
         break;
     }
+}
+
+void CachedResourceRequest::updateCacheModeIfNeeded(CachePolicy cachePolicy)
+{
+    if (cachePolicy == CachePolicy::Reload && m_options.cache == FetchOptions::Cache::Default && m_options.cachingPolicy == CachingPolicy::AllowCaching)
+        m_options.cache = FetchOptions::Cache::Reload;
 }
 
 void CachedResourceRequest::updateAcceptEncodingHeader()

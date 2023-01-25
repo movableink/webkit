@@ -656,12 +656,9 @@ void RenderImage::paintAreaElementFocusRing(PaintInfo& paintInfo, const LayoutPo
     path.translate(toFloatSize(adjustedOffset));
 
 #if PLATFORM(MAC)
-    bool needsRepaint;
-    paintInfo.context().drawFocusRing(path, page().focusController().timeSinceFocusWasSet().seconds(), needsRepaint, RenderTheme::singleton().focusRingColor(styleColorOptions()));
-    if (needsRepaint)
-        page().focusController().setFocusedElementNeedsRepaint();
+    paintInfo.context().drawFocusRing(path, outlineWidth, RenderTheme::singleton().focusRingColor(styleColorOptions()));
 #else
-    paintInfo.context().drawFocusRing(path, outlineWidth, areaElementStyle->outlineOffset(), areaElementStyle->visitedDependentColorWithColorFilter(CSSPropertyOutlineColor));
+    paintInfo.context().drawFocusRing(path, outlineWidth, areaElementStyle->visitedDependentColorWithColorFilter(CSSPropertyOutlineColor));
 #endif // PLATFORM(MAC)
 }
 
@@ -847,7 +844,7 @@ void RenderImage::layoutShadowContent(const LayoutSize& oldSize)
         // When calling layout() on a child node, a parent must either push a LayoutStateMaintainer, or
         // instantiate LayoutStateDisabler. Since using a LayoutStateMaintainer is slightly more efficient,
         // and this method might be called many times per second during video playback, use a LayoutStateMaintainer:
-        LayoutStateMaintainer statePusher(*this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
+        LayoutStateMaintainer statePusher(*this, locationOffset(), isTransformed() || hasReflection() || style().isFlippedBlocksWritingMode());
         renderBox.setLocation(LayoutPoint(borderLeft(), borderTop()) + LayoutSize(paddingLeft(), paddingTop()));
         renderBox.mutableStyle().setHeight(Length(newSize.height(), LengthType::Fixed));
         renderBox.mutableStyle().setWidth(Length(newSize.width(), LengthType::Fixed));

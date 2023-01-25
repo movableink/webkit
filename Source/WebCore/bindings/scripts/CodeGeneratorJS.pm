@@ -12,6 +12,7 @@
 # Copyright (C) 2007, 2008, 2009, 2012 Google Inc.
 # Copyright (C) 2013 Samsung Electronics. All rights reserved.
 # Copyright (C) 2015, 2016 Canon Inc. All rights reserved.
+# Copyright (C) 2023 Tetsuharu Ohzeki <tetsuharu.ohzeki@gmail.com>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Library General Public
@@ -739,7 +740,7 @@ sub AddToIncludes
 sub IsReadonly
 {
     my $attribute = shift;
-    return $attribute->isReadOnly && !$attribute->extendedAttributes->{Replaceable} && !$attribute->extendedAttributes->{PutForwards};
+    return $attribute->isReadOnly && !$attribute->extendedAttributes->{Replaceable} && !$attribute->extendedAttributes->{PutForwards} && !$attribute->extendedAttributes->{LegacyLenientSetter};
 }
 
 sub AddClassForwardIfNeeded
@@ -2012,9 +2013,8 @@ sub NeedsRuntimeCheck
 sub NeedsRuntimeReadWriteCheck
 {
     my ($interface, $context) = @_;
-    
-    return $context->extendedAttributes->{EnabledConditionallyReadWriteByDeprecatedGlobalSetting}
-        || $context->extendedAttributes->{EnabledConditionallyReadWriteBySetting}
+
+    return $context->extendedAttributes->{EnabledConditionallyReadWriteBySetting}
 }
 
 # https://webidl.spec.whatwg.org/#es-operations
@@ -2388,7 +2388,7 @@ sub GenerateEnumerationImplementationContent
         $result .= "    static_assert(static_cast<size_t>(${className}::$enumerationValueName) == $index, \"${className}::$enumerationValueName is not $index as expected\");\n";
         $index++;
     }
-    $result .= "    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));\n";
+    $result .= "    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));\n";
     $result .= "    return values[static_cast<size_t>(enumerationValue)];\n";
     $result .= "}\n\n";
 
@@ -4155,17 +4155,6 @@ sub GenerateRuntimeEnableConditionalString
         }
     }
 
-    if ($context->extendedAttributes->{EnabledConditionallyReadWriteByDeprecatedGlobalSetting}) {
-        assert("Must specify value for EnabledConditionallyReadWriteByDeprecatedGlobalSetting.") if $context->extendedAttributes->{EnabledConditionallyReadWriteByDeprecatedGlobalSetting} eq "VALUE_IS_MISSING";
-
-        AddToImplIncludes("DeprecatedGlobalSettings.h");
-
-        my @flags = split(/&/, $context->extendedAttributes->{EnabledConditionallyReadWriteByDeprecatedGlobalSetting});
-        foreach my $flag (@flags) {
-            push(@conjuncts, "DeprecatedGlobalSettings::" . ToMethodName($flag) . "()");
-        }
-    }
-
     if ($context->extendedAttributes->{EnabledForContext}) {
         assert("Must not specify value for EnabledForContext.") unless $context->extendedAttributes->{EnabledForContext} eq "VALUE_IS_MISSING";
         assert("EnabledForContext must be an interface or constructor attribute.") unless $codeGenerator->IsConstructorType($context->type);
@@ -5468,8 +5457,9 @@ sub GenerateAttributeSetterBodyDefinition
     my $hasCustomSetter = HasCustomSetter($attribute);
     my $isEventHandler = $attribute->type->name eq "EventHandler";
     my $isReplaceable = $attribute->extendedAttributes->{Replaceable};
+    my $isLegacyLenientSetter = $attribute->extendedAttributes->{LegacyLenientSetter};
 
-    my $needThrowScope = $needSecurityCheck || (!$hasCustomSetter && !$isEventHandler && !$isReplaceable);
+    my $needThrowScope = $needSecurityCheck || (!$hasCustomSetter && !$isEventHandler && !$isReplaceable && !$isLegacyLenientSetter);
 
     push(@$outputArray, "static inline bool ${attributeSetterBodyName}(" . join(", ", @signatureArguments) . ")\n");
     push(@$outputArray, "{\n");
@@ -5541,6 +5531,16 @@ sub GenerateAttributeSetterBodyDefinition
         push(@$outputArray, "    asObject(valueToForwardTo)->methodTable()->put(asObject(valueToForwardTo), &lexicalGlobalObject, forwardId, value, slot);\n");
         push(@$outputArray, "    RETURN_IF_EXCEPTION(throwScope, false);\n");
         
+        push(@$outputArray, "    return true;\n");
+    } elsif ($isLegacyLenientSetter) {
+        # https://webidl.spec.whatwg.org/#LegacyLenientSetter
+        assert("[LegacyLenientSetter] must be set with readonly") if !$attribute->isReadOnly;
+        assert("[LegacyLenientSetter] must not be with [PutForwards]") if $attribute->extendedAttributes->{PutForwards};
+        assert("[LegacyLenientSetter] must not be with [Replaceable]") if $attribute->extendedAttributes->{Replaceable};
+
+        push(@$outputArray, "    UNUSED_PARAM(lexicalGlobalObject);\n");
+        push(@$outputArray, "    UNUSED_PARAM(thisObject);\n");
+        push(@$outputArray, "    UNUSED_PARAM(value);\n");
         push(@$outputArray, "    return true;\n");
     } else {
         push(@$outputArray, "    auto& impl = thisObject.wrapped();\n") if !$attribute->isStatic;

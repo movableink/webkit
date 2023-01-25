@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2010 Torch Mobile (Beijing) Co. Ltd. All rights reserved.
  *
@@ -34,7 +34,6 @@
 #include "CanvasPattern.h"
 #include "CanvasRenderingContext2D.h"
 #include "CanvasRenderingContext2DSettings.h"
-#include "DeprecatedGlobalSettings.h"
 #include "DisplayListDrawingContext.h"
 #include "Document.h"
 #include "ElementInlines.h"
@@ -260,13 +259,11 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
         }
 #endif
 
-#if HAVE(WEBGPU_IMPLEMENTATION)
         if (m_context->isWebGPU()) {
             if (!isWebGPUType(contextId))
                 return { std::nullopt };
             return { downcast<GPUCanvasContext>(m_context.get()) };
         }
-#endif
 
         ASSERT_NOT_REACHED();
         return std::optional<RenderingContext> { std::nullopt };
@@ -313,14 +310,12 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
     }
 #endif
 
-#if HAVE(WEBGPU_IMPLEMENTATION)
     if (isWebGPUType(contextId)) {
         auto context = createContextWebGPU(contextId);
         if (!context)
             return { std::nullopt };
         return { context };
     }
-#endif
 
     return std::optional<RenderingContext> { std::nullopt };
 }
@@ -338,10 +333,8 @@ CanvasRenderingContext* HTMLCanvasElement::getContext(const String& type)
         return getContextWebGL(HTMLCanvasElement::toWebGLVersion(type));
 #endif
 
-#if HAVE(WEBGPU_IMPLEMENTATION)
     if (HTMLCanvasElement::isWebGPUType(type))
         return getContextWebGPU(type);
-#endif
 
     return nullptr;
 }
@@ -527,7 +520,6 @@ bool HTMLCanvasElement::isWebGPUType(const String& type)
     return type == "webgpu"_s;
 }
 
-#if HAVE(WEBGPU_IMPLEMENTATION)
 GPUCanvasContext* HTMLCanvasElement::createContextWebGPU(const String& type)
 {
     ASSERT_UNUSED(type, HTMLCanvasElement::isWebGPUType(type));
@@ -565,7 +557,6 @@ GPUCanvasContext* HTMLCanvasElement::getContextWebGPU(const String& type)
 
     return static_cast<GPUCanvasContext*>(m_context.get());
 }
-#endif // HAVE(WEBGPU_IMPLEMENTATION)
 
 void HTMLCanvasElement::didDraw(const std::optional<FloatRect>& rect)
 {
@@ -748,7 +739,7 @@ ExceptionOr<UncachedString> HTMLCanvasElement::toDataURL(const String& mimeType,
 
     if (size().isEmpty() || !buffer())
         return UncachedString { "data:,"_s };
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
+    if (document().settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logCanvasRead(document());
 
     auto encodingMIMEType = toEncodingMimeType(mimeType);
@@ -779,7 +770,7 @@ ExceptionOr<void> HTMLCanvasElement::toBlob(Ref<BlobCallback>&& callback, const 
         callback->scheduleCallback(document(), nullptr);
         return { };
     }
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
+    if (document().settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logCanvasRead(document());
 
     auto encodingMIMEType = toEncodingMimeType(mimeType);
@@ -826,7 +817,7 @@ RefPtr<ImageData> HTMLCanvasElement::getImageData()
     if (!is<WebGLRenderingContextBase>(m_context))
         return nullptr;
 
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
+    if (document().settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logCanvasRead(document());
 
     auto pixelBuffer = downcast<WebGLRenderingContextBase>(*m_context).paintRenderingResultsToPixelBuffer();
@@ -846,7 +837,7 @@ RefPtr<VideoFrame> HTMLCanvasElement::toVideoFrame()
 #if PLATFORM(COCOA) || USE(GSTREAMER)
 #if ENABLE(WEBGL)
     if (is<WebGLRenderingContextBase>(m_context.get())) {
-        if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
+        if (document().settings().webAPIStatisticsEnabled())
             ResourceLoadObserver::shared().logCanvasRead(document());
         return downcast<WebGLRenderingContextBase>(*m_context).paintCompositedResultsToVideoFrame();
     }
@@ -854,7 +845,7 @@ RefPtr<VideoFrame> HTMLCanvasElement::toVideoFrame()
     auto* imageBuffer = buffer();
     if (!imageBuffer)
         return nullptr;
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
+    if (document().settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logCanvasRead(document());
 
     makeRenderingResultsAvailable();
@@ -885,7 +876,7 @@ ExceptionOr<Ref<MediaStream>> HTMLCanvasElement::captureStream(std::optional<dou
 {
     if (!originClean())
         return Exception(SecurityError, "Canvas is tainted"_s);
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
+    if (document().settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logCanvasRead(this->document());
 
     if (frameRequestRate && frameRequestRate.value() < 0)

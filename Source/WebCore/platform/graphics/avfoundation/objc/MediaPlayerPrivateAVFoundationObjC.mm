@@ -40,7 +40,6 @@
 #import "ColorSpaceCG.h"
 #import "ContentTypeUtilities.h"
 #import "Cookie.h"
-#import "DeprecatedGlobalSettings.h"
 #import "FloatConversion.h"
 #import "FourCC.h"
 #import "GraphicsContext.h"
@@ -221,7 +220,7 @@ static String convertEnumerationToString(AVPlayerTimeControlStatus enumerationVa
     static_assert(!static_cast<size_t>(AVPlayerTimeControlStatusPaused), "AVPlayerTimeControlStatusPaused is not 0 as expected");
     static_assert(static_cast<size_t>(AVPlayerTimeControlStatusWaitingToPlayAtSpecifiedRate) == 1, "AVPlayerTimeControlStatusWaitingToPlayAtSpecifiedRate is not 1 as expected");
     static_assert(static_cast<size_t>(AVPlayerTimeControlStatusPlaying) == 2, "AVPlayerTimeControlStatusPlaying is not 2 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 }
@@ -1389,6 +1388,8 @@ String MediaPlayerPrivateAVFoundationObjC::errorLog() const
 void MediaPlayerPrivateAVFoundationObjC::didEnd()
 {
     m_requestedPlaying = false;
+    m_timeControlStatusAtCachedCurrentTime = AVPlayerTimeControlStatusPaused;
+    m_wallClockAtCachedCurrentTime = std::nullopt;
     MediaPlayerPrivateAVFoundation::didEnd();
 }
 
@@ -2617,12 +2618,12 @@ bool MediaPlayerPrivateAVFoundationObjC::didPassCORSAccessCheck() const
     return false;
 }
 
-std::optional<bool> MediaPlayerPrivateAVFoundationObjC::wouldTaintOrigin(const SecurityOrigin& origin) const
+std::optional<bool> MediaPlayerPrivateAVFoundationObjC::isCrossOrigin(const SecurityOrigin& origin) const
 {
     AVAssetResourceLoader *resourceLoader = m_avAsset.get().resourceLoader;
     WebCoreNSURLSession *session = (WebCoreNSURLSession *)resourceLoader.URLSession;
     if ([session isKindOfClass:[WebCoreNSURLSession class]])
-        return [session wouldTaintOrigin:origin];
+        return [session isCrossOrigin:origin];
 
     return std::nullopt;
 }

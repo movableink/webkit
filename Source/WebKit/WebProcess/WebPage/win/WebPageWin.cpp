@@ -195,10 +195,10 @@ const char* WebPage::interpretKeyEvent(const WebCore::KeyboardEvent* evt)
         keyDownCommandsMap = new HashMap<int, const char*>;
         keyPressCommandsMap = new HashMap<int, const char*>;
 
-        for (size_t i = 0; i < WTF_ARRAY_LENGTH(keyDownEntries); ++i)
+        for (size_t i = 0; i < std::size(keyDownEntries); ++i)
             keyDownCommandsMap->set(keyDownEntries[i].modifiers << 16 | keyDownEntries[i].virtualKey, keyDownEntries[i].name);
 
-        for (size_t i = 0; i < WTF_ARRAY_LENGTH(keyPressEntries); ++i)
+        for (size_t i = 0; i < std::size(keyPressEntries); ++i)
             keyPressCommandsMap->set(keyPressEntries[i].modifiers << 16 | keyPressEntries[i].charCode, keyPressEntries[i].name);
     }
 
@@ -233,7 +233,7 @@ bool WebPage::handleEditingKeyboardEvent(WebCore::KeyboardEvent& event)
 
     auto command = frame->editor().command(String::fromLatin1(interpretKeyEvent(&event)));
 
-    if (keyEvent->type() == PlatformEvent::RawKeyDown) {
+    if (keyEvent->type() == PlatformEvent::Type::RawKeyDown) {
         // WebKit doesn't have enough information about mode to decide
         // how commands that just insert text if executed via Editor
         // should be treated, so we leave it upon WebCore to either

@@ -33,6 +33,7 @@ namespace WebCore {
 class ControlPart;
 class GraphicsContext;
 class FloatRect;
+class FloatRoundedRect;
 
 class PlatformControl {
     WTF_MAKE_FAST_ALLOCATED;
@@ -50,8 +51,10 @@ public:
     virtual void updateCellStates(const FloatRect&, const ControlStyle&) { }
 
     virtual FloatSize sizeForBounds(const FloatRect& bounds) const { return bounds.size(); }
-    
-    virtual void draw(GraphicsContext&, const FloatRect&, float, const ControlStyle&) { }
+
+    virtual FloatRect rectForBounds(const FloatRect& bounds, const ControlStyle&) const { return bounds; }
+
+    virtual void draw(GraphicsContext&, const FloatRoundedRect&, float, const ControlStyle&) { }
 
 protected:
     ControlPart& m_owningPart;

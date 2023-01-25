@@ -1329,15 +1329,22 @@ bool isEqualIgnoringQueryAndFragments(const URL& a, const URL& b)
     return substringIgnoringQueryAndFragments(a) == substringIgnoringQueryAndFragments(b);
 }
 
-void removeQueryParameters(URL& url, const HashSet<String>& keysToRemove)
+Vector<String> removeQueryParameters(URL& url, const HashSet<String>& keysToRemove)
 {
     if (keysToRemove.isEmpty())
-        return;
+        return { };
 
+    return removeQueryParameters(url, [&](auto& parameter) {
+        return keysToRemove.contains(parameter);
+    });
+}
+
+Vector<String> removeQueryParameters(URL& url, Function<bool(const String&)>&& shouldRemove) 
+{
     if (!url.hasQuery())
-        return;
+        return { };
 
-    bool removedAnyKey = false;
+    Vector<String> removedParameters;
     StringBuilder queryWithoutRemovalKeys;
     for (auto bytes : url.query().split('&')) {
         auto nameAndValue = URLParser::parseQueryNameAndValue(bytes);
@@ -1348,16 +1355,18 @@ void removeQueryParameters(URL& url, const HashSet<String>& keysToRemove)
         if (key.isEmpty())
             continue;
 
-        if (keysToRemove.contains(key)) {
-            removedAnyKey = true;
+        if (shouldRemove(key)) {
+            removedParameters.append(key);
             continue;
         }
 
         queryWithoutRemovalKeys.append(queryWithoutRemovalKeys.isEmpty() ? "" : "&", bytes);
     }
 
-    if (removedAnyKey)
+    if (!removedParameters.isEmpty())
         url.setQuery(queryWithoutRemovalKeys);
+
+    return removedParameters;
 }
 
 } // namespace WTF

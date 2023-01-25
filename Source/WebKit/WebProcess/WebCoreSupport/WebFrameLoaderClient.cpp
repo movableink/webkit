@@ -119,13 +119,13 @@ using namespace WebCore;
 
 WebFrameLoaderClient::WebFrameLoaderClient(Ref<WebFrame>&& frame)
     : m_frame(WTFMove(frame))
+    , m_frameInvalidator(makeScopeExit<Function<void()>>([frame = m_frame] {
+        frame->invalidate();
+    }))
 {
 }
 
-WebFrameLoaderClient::~WebFrameLoaderClient()
-{
-    m_frame->invalidate();
-}
+WebFrameLoaderClient::~WebFrameLoaderClient() = default;
 
 std::optional<WebPageProxyIdentifier> WebFrameLoaderClient::webPageProxyID() const
 {
@@ -432,10 +432,10 @@ void WebFrameLoaderClient::dispatchDidChangeLocationWithinPage()
     auto navigationID = static_cast<WebDocumentLoader&>(*m_frame->coreFrame()->loader().documentLoader()).navigationID();
 
     // Notify the bundle client.
-    webPage->injectedBundleLoaderClient().didSameDocumentNavigationForFrame(*webPage, m_frame, SameDocumentNavigationAnchorNavigation, userData);
+    webPage->injectedBundleLoaderClient().didSameDocumentNavigationForFrame(*webPage, m_frame, SameDocumentNavigationType::AnchorNavigation, userData);
 
     // Notify the UIProcess.
-    webPage->send(Messages::WebPageProxy::DidSameDocumentNavigationForFrame(m_frame->frameID(), navigationID, SameDocumentNavigationAnchorNavigation, m_frame->coreFrame()->document()->url(), UserData(WebProcess::singleton().transformObjectsToHandles(userData.get()).get())));
+    webPage->send(Messages::WebPageProxy::DidSameDocumentNavigationForFrame(m_frame->frameID(), navigationID, SameDocumentNavigationType::AnchorNavigation, m_frame->coreFrame()->document()->url(), UserData(WebProcess::singleton().transformObjectsToHandles(userData.get()).get())));
 }
 
 void WebFrameLoaderClient::dispatchDidChangeMainDocument()
@@ -474,12 +474,35 @@ void WebFrameLoaderClient::didSameDocumentNavigationForFrameViaJSHistoryAPI(Same
     RefPtr<API::Object> userData;
 
     // Notify the bundle client.
-    webPage->injectedBundleLoaderClient().didSameDocumentNavigationForFrame(*webPage, m_frame, SameDocumentNavigationSessionStatePush, userData);
+    webPage->injectedBundleLoaderClient().didSameDocumentNavigationForFrame(*webPage, m_frame, SameDocumentNavigationType::SessionStatePush, userData);
 
-    NavigationActionData navigationActionData;
-    navigationActionData.userGestureTokenIdentifier = WebProcess::singleton().userGestureTokenIdentifier(UserGestureIndicator::currentUserGesture());
-    navigationActionData.canHandleRequest = true;
-    navigationActionData.treatAsSameOriginNavigation = true;
+    NavigationActionData navigationActionData {
+        WebCore::NavigationType::Other,
+        { }, /* modifiers */
+        WebMouseEventButton::NoButton,
+        WebMouseEventSyntheticClickType::NoTap,
+        WebProcess::singleton().userGestureTokenIdentifier(UserGestureIndicator::currentUserGesture()),
+        true, /* canHandleRequest */
+        WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow,
+        { }, /* downloadAttribute */
+        { }, /* clickLocationInRootViewCoordinates */
+        false, /* isRedirect */
+        true, /* treatAsSameOriginNavigation */
+        false, /* hasOpenedFrames */
+        false, /* openedByDOMWithOpener */
+        !!m_frame->coreFrame()->loader().opener(), /* hasOpener */
+        { }, /* requesterOrigin */
+        std::nullopt, /* targetBackForwardItemIdentifier */
+        std::nullopt, /* sourceBackForwardItemIdentifier */
+        WebCore::LockHistory::No,
+        WebCore::LockBackForwardList::No,
+        { }, /* clientRedirectSourceForHistory */
+        0, /* effectiveSandboxFlags */
+        std::nullopt, /* privateClickMeasurement */
+#if PLATFORM(MAC) || HAVE(UIKIT_WITH_MOUSE_SUPPORT)
+        std::nullopt, /* webHitTestResultData */
+#endif
+    };
 
     // Notify the UIProcess.
     webPage->send(Messages::WebPageProxy::DidSameDocumentNavigationForFrameViaJSHistoryAPI(m_frame->frameID(), navigationType, m_frame->coreFrame()->document()->url(), navigationActionData, UserData(WebProcess::singleton().transformObjectsToHandles(userData.get()).get())));
@@ -488,17 +511,17 @@ void WebFrameLoaderClient::didSameDocumentNavigationForFrameViaJSHistoryAPI(Same
 
 void WebFrameLoaderClient::dispatchDidPushStateWithinPage()
 {
-    didSameDocumentNavigationForFrameViaJSHistoryAPI(SameDocumentNavigationSessionStatePush);
+    didSameDocumentNavigationForFrameViaJSHistoryAPI(SameDocumentNavigationType::SessionStatePush);
 }
 
 void WebFrameLoaderClient::dispatchDidReplaceStateWithinPage()
 {
-    didSameDocumentNavigationForFrameViaJSHistoryAPI(SameDocumentNavigationSessionStateReplace);
+    didSameDocumentNavigationForFrameViaJSHistoryAPI(SameDocumentNavigationType::SessionStateReplace);
 }
 
 void WebFrameLoaderClient::dispatchDidPopStateWithinPage()
 {
-    didSameDocumentNavigationForFrameViaJSHistoryAPI(SameDocumentNavigationSessionStatePop);
+    didSameDocumentNavigationForFrameViaJSHistoryAPI(SameDocumentNavigationType::SessionStatePop);
 }
 
 void WebFrameLoaderClient::dispatchWillClose()
@@ -594,9 +617,20 @@ void WebFrameLoaderClient::dispatchDidCommitLoad(std::optional<HasInsecureConten
     bool wasPrivateRelayed = documentLoader.response().wasPrivateRelayed();
     if (!wasPrivateRelayed && wasPrivateRelayedFromPageCache)
         wasPrivateRelayed = wasPrivateRelayedFromPageCache == WasPrivateRelayed::Yes;
-    
+
+    auto certificateInfo = valueOrCompute(documentLoader.response().certificateInfo(), [] {
+        return CertificateInfo();
+    });
+    hasInsecureContent = hasInsecureContent ? *hasInsecureContent : (certificateInfo.containsNonRootSHA1SignedCertificate() ? HasInsecureContent::Yes : HasInsecureContent::No);
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+    // Notify the extensions controller.
+    if (auto* extensionControllerProxy = webPage->webExtensionControllerProxy())
+        extensionControllerProxy->didCommitLoadForFrame(*webPage, m_frame, m_frame->url());
+#endif
+
     // Notify the UIProcess.
-    webPage->send(Messages::WebPageProxy::DidCommitLoadForFrame(m_frame->frameID(), m_frame->info(), documentLoader.request(), documentLoader.navigationID(), documentLoader.response().mimeType(), m_frameHasCustomContentProvider, m_frame->coreFrame()->loader().loadType(), valueOrCompute(documentLoader.response().certificateInfo(), [] { return CertificateInfo(); }), usedLegacyTLS, wasPrivateRelayed, m_frame->coreFrame()->document()->isPluginDocument(), hasInsecureContent, documentLoader.mouseEventPolicy(), UserData(WebProcess::singleton().transformObjectsToHandles(userData.get()).get())));
+    webPage->send(Messages::WebPageProxy::DidCommitLoadForFrame(m_frame->frameID(), m_frame->info(), documentLoader.request(), documentLoader.navigationID(), documentLoader.response().mimeType(), m_frameHasCustomContentProvider, m_frame->coreFrame()->loader().loadType(), certificateInfo, usedLegacyTLS, wasPrivateRelayed, m_frame->coreFrame()->document()->isPluginDocument(), *hasInsecureContent, documentLoader.mouseEventPolicy(), UserData(WebProcess::singleton().transformObjectsToHandles(userData.get()).get())));
     webPage->didCommitLoad(m_frame.ptr());
 }
 
@@ -661,6 +695,12 @@ void WebFrameLoaderClient::dispatchDidFailLoad(const ResourceError& error)
     // Notify the bundle client.
     webPage->injectedBundleLoaderClient().didFailLoadWithErrorForFrame(*webPage, m_frame, error, userData);
 
+#if ENABLE(WK_WEB_EXTENSIONS)
+    // Notify the extensions controller.
+    if (auto* extensionControllerProxy = webPage->webExtensionControllerProxy())
+        extensionControllerProxy->didFailLoadForFrame(*webPage, m_frame, m_frame->url());
+#endif
+
     // Notify the UIProcess.
     webPage->send(Messages::WebPageProxy::DidFailLoadForFrame(m_frame->frameID(), m_frame->info(), documentLoader.request(), navigationID, error, UserData(WebProcess::singleton().transformObjectsToHandles(userData.get()).get())));
 
@@ -701,6 +741,12 @@ void WebFrameLoaderClient::dispatchDidFinishLoad()
 
     // Notify the bundle client.
     webPage->injectedBundleLoaderClient().didFinishLoadForFrame(*webPage, m_frame, userData);
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+    // Notify the extensions controller.
+    if (auto* extensionControllerProxy = webPage->webExtensionControllerProxy())
+        extensionControllerProxy->didFinishLoadForFrame(*webPage, m_frame, m_frame->url());
+#endif
 
     // Notify the UIProcess.
     webPage->send(Messages::WebPageProxy::DidFinishLoadForFrame(m_frame->frameID(), m_frame->info(), documentLoader->request(), navigationID, UserData(WebProcess::singleton().transformObjectsToHandles(userData.get()).get())));
@@ -877,17 +923,19 @@ void WebFrameLoaderClient::dispatchDecidePolicyForResponse(const ResourceRespons
 }
 
 #if PLATFORM(MAC) || HAVE(UIKIT_WITH_MOUSE_SUPPORT)
-static void setWebHitTestResultDataInNavigationActionDataIfNecessary(const NavigationAction& navigationAction, NavigationActionData& navigationActionData, WebCore::Frame& coreFrame)
+static std::optional<WebKit::WebHitTestResultData> webHitTestResultDataInNavigationActionData(const NavigationAction& navigationAction, NavigationActionData& navigationActionData, WebCore::Frame* coreFrame)
 {
+    if (!coreFrame)
+        return std::nullopt;
+
     auto mouseEventData = navigationAction.mouseEventData();
     if (!mouseEventData)
-        return;
+        return std::nullopt;
 
     constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::AllowChildFrameContent };
-    HitTestResult hitTestResult = coreFrame.eventHandler().hitTestResultAtPoint(mouseEventData->absoluteLocation, hitType);
+    HitTestResult hitTestResult = coreFrame->eventHandler().hitTestResultAtPoint(mouseEventData->absoluteLocation, hitType);
 
-    WebKit::WebHitTestResultData webHitTestResultData(hitTestResult, false);
-    navigationActionData.webHitTestResultData = WTFMove(webHitTestResultData);
+    return WebKit::WebHitTestResultData(hitTestResult, false);
 }
 #endif
 
@@ -902,23 +950,34 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const Navigati
 
     uint64_t listenerID = m_frame->setUpPolicyListener(identifier, WTFMove(function), WebFrame::ForNavigationAction::No);
 
-    NavigationActionData navigationActionData;
-    navigationActionData.navigationType = navigationAction.type();
-    navigationActionData.modifiers = modifiersForNavigationAction(navigationAction);
-    navigationActionData.mouseButton = mouseButton(navigationAction);
-    navigationActionData.syntheticClickType = syntheticClickType(navigationAction);
-    if (auto& data = navigationAction.mouseEventData())
-        navigationActionData.clickLocationInRootViewCoordinates = data->locationInRootViewCoordinates;
-    navigationActionData.userGestureTokenIdentifier = WebProcess::singleton().userGestureTokenIdentifier(navigationAction.userGestureToken());
-    navigationActionData.canHandleRequest = webPage->canHandleRequest(request);
-    navigationActionData.shouldOpenExternalURLsPolicy = navigationAction.shouldOpenExternalURLsPolicy();
-    navigationActionData.downloadAttribute = navigationAction.downloadAttribute();
-    navigationActionData.privateClickMeasurement = navigationAction.privateClickMeasurement();
-
+    auto& mouseEventData = navigationAction.mouseEventData();
+    NavigationActionData navigationActionData {
+        navigationAction.type(),
+        modifiersForNavigationAction(navigationAction),
+        mouseButton(navigationAction),
+        syntheticClickType(navigationAction),
+        WebProcess::singleton().userGestureTokenIdentifier(navigationAction.userGestureToken()),
+        webPage->canHandleRequest(request),
+        navigationAction.shouldOpenExternalURLsPolicy(),
+        navigationAction.downloadAttribute(),
+        mouseEventData ? mouseEventData->locationInRootViewCoordinates : FloatPoint(),
+        false, /* isRedirect */
+        false, /* treatAsSameOriginNavigation */
+        false, /* hasOpenedFrames */
+        false, /* openedByDOMWithOpener */
+        navigationAction.newFrameOpenerPolicy() == NewFrameOpenerPolicy::Allow, /* hasOpener */
+        { }, /* requesterOrigin */
+        std::nullopt, /* targetBackForwardItemIdentifier */
+        std::nullopt, /* sourceBackForwardItemIdentifier */
+        WebCore::LockHistory::No,
+        WebCore::LockBackForwardList::No,
+        { }, /* clientRedirectSourceForHistory */
+        0, /* effectiveSandboxFlags */
+        navigationAction.privateClickMeasurement(),
 #if PLATFORM(MAC) || HAVE(UIKIT_WITH_MOUSE_SUPPORT)
-    if (auto* coreFrame = m_frame->coreFrame())
-        setWebHitTestResultDataInNavigationActionDataIfNecessary(navigationAction, navigationActionData, *coreFrame);
+        webHitTestResultDataInNavigationActionData(navigationAction, navigationActionData, m_frame->coreFrame()),
 #endif
+    };
 
     webPage->send(Messages::WebPageProxy::DecidePolicyForNewWindowAction(m_frame->frameID(), m_frame->info(), identifier, navigationActionData, request,
         frameName, listenerID));
@@ -994,35 +1053,9 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const Navigat
             originatingPageID = webPage->webPageProxyIdentifier();
     }
 
-    NavigationActionData navigationActionData;
-    navigationActionData.navigationType = navigationAction.type();
-    navigationActionData.modifiers = modifiersForNavigationAction(navigationAction);
-    navigationActionData.mouseButton = mouseButton(navigationAction);
-    navigationActionData.syntheticClickType = syntheticClickType(navigationAction);
-    if (auto& data = navigationAction.mouseEventData())
-        navigationActionData.clickLocationInRootViewCoordinates = data->locationInRootViewCoordinates;
-    navigationActionData.userGestureTokenIdentifier = WebProcess::singleton().userGestureTokenIdentifier(navigationAction.userGestureToken());
-    navigationActionData.canHandleRequest = webPage->canHandleRequest(request);
-    navigationActionData.shouldOpenExternalURLsPolicy = navigationAction.shouldOpenExternalURLsPolicy();
-    navigationActionData.downloadAttribute = navigationAction.downloadAttribute();
-    navigationActionData.isRedirect = !redirectResponse.isNull();
-    navigationActionData.treatAsSameOriginNavigation = navigationAction.treatAsSameOriginNavigation();
-    navigationActionData.hasOpenedFrames = navigationAction.hasOpenedFrames();
-    navigationActionData.openedByDOMWithOpener = navigationAction.openedByDOMWithOpener();
-    navigationActionData.requesterOrigin = requester.securityOrigin->data();
-    navigationActionData.targetBackForwardItemIdentifier = navigationAction.targetBackForwardItemIdentifier();
-    navigationActionData.sourceBackForwardItemIdentifier = navigationAction.sourceBackForwardItemIdentifier();
-    navigationActionData.lockHistory = navigationAction.lockHistory();
-    navigationActionData.lockBackForwardList = navigationAction.lockBackForwardList();
-    navigationActionData.privateClickMeasurement = navigationAction.privateClickMeasurement();
-
-    auto* coreFrame = m_frame->coreFrame();
+    RefPtr coreFrame = m_frame->coreFrame();
     if (!coreFrame)
         return function(PolicyAction::Ignore, requestIdentifier);
-
-#if PLATFORM(MAC) || HAVE(UIKIT_WITH_MOUSE_SUPPORT)
-    setWebHitTestResultDataInNavigationActionDataIfNecessary(navigationAction, navigationActionData, *coreFrame);
-#endif
 
     WebDocumentLoader* documentLoader = static_cast<WebDocumentLoader*>(coreFrame->loader().policyDocumentLoader());
     if (!documentLoader) {
@@ -1033,12 +1066,36 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const Navigat
     if (!documentLoader)
         documentLoader = static_cast<WebDocumentLoader*>(coreFrame->loader().documentLoader());
 
-    navigationActionData.clientRedirectSourceForHistory = documentLoader->clientRedirectSourceForHistory();
-    navigationActionData.effectiveSandboxFlags = coreFrame->loader().effectiveSandboxFlags();
+    auto& mouseEventData = navigationAction.mouseEventData();
+    NavigationActionData navigationActionData {
+        navigationAction.type(),
+        modifiersForNavigationAction(navigationAction),
+        mouseButton(navigationAction),
+        syntheticClickType(navigationAction),
+        WebProcess::singleton().userGestureTokenIdentifier(navigationAction.userGestureToken()),
+        webPage->canHandleRequest(request),
+        navigationAction.shouldOpenExternalURLsPolicy(),
+        navigationAction.downloadAttribute(),
+        mouseEventData ? mouseEventData->locationInRootViewCoordinates : FloatPoint(),
+        !redirectResponse.isNull(), /* isRedirect */
+        navigationAction.treatAsSameOriginNavigation(),
+        navigationAction.hasOpenedFrames(),
+        navigationAction.openedByDOMWithOpener(),
+        !!coreFrame->loader().opener(), /* hasOpener */
+        requester.securityOrigin->data(),
+        navigationAction.targetBackForwardItemIdentifier(),
+        navigationAction.sourceBackForwardItemIdentifier(),
+        navigationAction.lockHistory(),
+        navigationAction.lockBackForwardList(),
+        documentLoader->clientRedirectSourceForHistory(),
+        coreFrame->loader().effectiveSandboxFlags(),
+        navigationAction.privateClickMeasurement(),
+#if PLATFORM(MAC) || HAVE(UIKIT_WITH_MOUSE_SUPPORT)
+        webHitTestResultDataInNavigationActionData(navigationAction, navigationActionData, coreFrame.get()),
+#endif
+    };
 
     // Notify the UIProcess.
-    Ref protector { *coreFrame };
-
     if (policyDecisionMode == PolicyDecisionMode::Synchronous) {
         auto sendResult = webPage->sendSync(Messages::WebPageProxy::DecidePolicyForNavigationActionSync(m_frame->frameID(), m_frame->isMainFrame(), m_frame->info(), requestIdentifier, documentLoader->navigationID(), navigationActionData, originatingFrameInfoData, originatingPageID, navigationAction.resourceRequest(), request, IPC::FormDataReference { request.httpBody() }, redirectResponse));
         if (!sendResult) {

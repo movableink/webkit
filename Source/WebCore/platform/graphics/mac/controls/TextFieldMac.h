@@ -31,6 +31,8 @@
 
 namespace WebCore {
 
+class TextFieldPart;
+
 class TextFieldMac final : public ControlMac {
 public:
     TextFieldMac(TextFieldPart& owningPart, ControlFactoryMac&, NSTextFieldCell *);
@@ -38,7 +40,7 @@ public:
 private:
     static bool shouldPaintCustomTextField(const ControlStyle&);
 
-    void draw(GraphicsContext&, const FloatRect&, float deviceScaleFactor, const ControlStyle&) final;
+    void draw(GraphicsContext&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&) override;
 
     RetainPtr<NSTextFieldCell> m_textFieldCell;
 };

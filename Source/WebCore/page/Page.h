@@ -238,6 +238,12 @@ enum class RenderingUpdateStep : uint32_t {
     CaretAnimation                  = 1 << 17,
 };
 
+enum LookalikeCharacterSanitizationTrigger : uint8_t {
+    Unspecified,
+    Navigation,
+    Copy,
+};
+
 constexpr OptionSet<RenderingUpdateStep> updateRenderingSteps = {
     RenderingUpdateStep::FlushAutofocusCandidates,
     RenderingUpdateStep::Resize,
@@ -551,7 +557,7 @@ public:
 
     WEBCORE_EXPORT DiagnosticLoggingClient& diagnosticLoggingClient() const;
 
-    WEBCORE_EXPORT void logMediaDiagnosticMessage(const FormData*) const;
+    WEBCORE_EXPORT void logMediaDiagnosticMessage(const RefPtr<FormData>&) const;
 
     PerformanceLoggingClient* performanceLoggingClient() const { return m_performanceLoggingClient.get(); }
 
@@ -662,6 +668,8 @@ public:
 
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
     WEBCORE_EXPORT void setImageAnimationEnabled(bool);
+    void addIndividuallyPlayingAnimationElement(HTMLImageElement&);
+    void removeIndividuallyPlayingAnimationElement(HTMLImageElement&);
 #endif
     bool imageAnimationEnabled() const { return m_imageAnimationEnabled; }
 
@@ -956,8 +964,8 @@ public:
 
     bool httpsUpgradeEnabled() const { return m_httpsUpgradeEnabled; }
 
-    URL sanitizeLookalikeCharacters(const URL&) const;
-    String sanitizeLookalikeCharacters(const String&) const;
+    URL sanitizeLookalikeCharacters(const URL&, LookalikeCharacterSanitizationTrigger) const;
+    String sanitizeLookalikeCharacters(const String&, LookalikeCharacterSanitizationTrigger) const;
 
     LoadSchedulingMode loadSchedulingMode() const { return m_loadSchedulingMode; }
     void setLoadSchedulingMode(LoadSchedulingMode);
@@ -1167,6 +1175,8 @@ private:
 
     bool m_canStartMedia { true };
     bool m_imageAnimationEnabled { true };
+    // Elements containing animations that are individually playing (potentially overriding the page-wide m_imageAnimationEnabled state).
+    WeakHashSet<HTMLImageElement, WeakPtrImplWithEventTargetData> m_individuallyPlayingAnimationElements;
 
     TimerThrottlingState m_timerThrottlingState { TimerThrottlingState::Disabled };
     MonotonicTime m_timerThrottlingStateLastChangedTime;

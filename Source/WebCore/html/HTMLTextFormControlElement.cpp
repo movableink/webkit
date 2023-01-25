@@ -2,8 +2,9 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -69,7 +70,7 @@ using namespace HTMLNames;
 static Position positionForIndex(TextControlInnerTextElement*, unsigned);
 
 HTMLTextFormControlElement::HTMLTextFormControlElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
-    : HTMLFormControlElementWithState(tagName, document, form)
+    : HTMLFormControlElement(tagName, document, form)
     , m_cachedSelectionDirection(document.frame() && document.frame()->editor().behavior().shouldConsiderSelectionAsDirectional() ? SelectionHasForwardDirection : SelectionHasNoDirection)
     , m_lastChangeWasUserEdit(false)
     , m_isPlaceholderVisible(false)
@@ -86,13 +87,13 @@ bool HTMLTextFormControlElement::childShouldCreateRenderer(const Node& child) co
     // FIXME: We shouldn't force the pseudo elements down into the shadow, but
     // this perserves the current behavior of WebKit.
     if (child.isPseudoElement())
-        return HTMLFormControlElementWithState::childShouldCreateRenderer(child);
-    return hasShadowRootParent(child) && HTMLFormControlElementWithState::childShouldCreateRenderer(child);
+        return HTMLFormControlElement::childShouldCreateRenderer(child);
+    return hasShadowRootParent(child) && HTMLFormControlElement::childShouldCreateRenderer(child);
 }
 
 Node::InsertedIntoAncestorResult HTMLTextFormControlElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    InsertedIntoAncestorResult InsertedIntoAncestorResult = HTMLFormControlElementWithState::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    InsertedIntoAncestorResult InsertedIntoAncestorResult = HTMLFormControlElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (insertionType.connectedToDocument) {
         String initialValue = value();
         setTextAsOfLastFormControlChangeEvent(initialValue.isNull() ? emptyString() : initialValue);
@@ -130,7 +131,7 @@ void HTMLTextFormControlElement::dispatchFocusEvent(RefPtr<Element>&& oldFocused
     if (supportsPlaceholder())
         updatePlaceholderVisibility();
     handleFocusEvent(oldFocusedElement.get(), options.direction);
-    HTMLFormControlElementWithState::dispatchFocusEvent(WTFMove(oldFocusedElement), options);
+    HTMLFormControlElement::dispatchFocusEvent(WTFMove(oldFocusedElement), options);
 }
 
 void HTMLTextFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedElement)
@@ -139,7 +140,7 @@ void HTMLTextFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedE
         updatePlaceholderVisibility();
     // Match the order in Document::setFocusedElement.
     handleBlurEvent();
-    HTMLFormControlElementWithState::dispatchBlurEvent(WTFMove(newFocusedElement));
+    HTMLFormControlElement::dispatchBlurEvent(WTFMove(newFocusedElement));
 }
 
 void HTMLTextFormControlElement::didEditInnerTextValue()
@@ -228,8 +229,8 @@ String HTMLTextFormControlElement::selectedText() const
 void HTMLTextFormControlElement::dispatchFormControlChangeEvent()
 {
     if (m_textAsOfLastFormControlChangeEvent != value()) {
-        dispatchChangeEvent();
         setTextAsOfLastFormControlChangeEvent(value());
+        dispatchChangeEvent();
     }
     setChangedSinceLastFormControlChangeEvent(false);
     setInteractedWithSinceLastFormSubmitEvent(true);
@@ -552,18 +553,18 @@ void HTMLTextFormControlElement::parseAttribute(const QualifiedName& name, const
         updatePlaceholderText();
         updatePlaceholderVisibility();
     } else
-        HTMLFormControlElementWithState::parseAttribute(name, value);
+        HTMLFormControlElement::parseAttribute(name, value);
 }
 
 void HTMLTextFormControlElement::disabledStateChanged()
 {
-    HTMLFormControlElementWithState::disabledStateChanged();
+    HTMLFormControlElement::disabledStateChanged();
     updateInnerTextElementEditability();
 }
 
 void HTMLTextFormControlElement::readOnlyStateChanged()
 {
-    HTMLFormControlElementWithState::readOnlyStateChanged();
+    HTMLFormControlElement::readOnlyStateChanged();
     updateInnerTextElementEditability();
 }
 
@@ -741,27 +742,26 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
     if (!renderer)
         return value();
 
-    Node* softLineBreakNode = nullptr;
-    unsigned softLineBreakOffset = 0;
+    Node* breakNode = nullptr;
+    unsigned breakOffset = 0;
     auto currentLineBox = InlineIterator::firstLineBoxFor(*renderer);
     if (!currentLineBox)
         return value();
 
     auto skipToNextSoftLineBreakPosition = [&] {
-        for (; currentLineBox; currentLineBox.traverseNext()) {
+        while (currentLineBox) {
             auto lastRun = currentLineBox->lastLeafBox();
             ASSERT(lastRun);
-            auto& renderer = lastRun->renderer();
-            auto lineEndsWithBR = is<RenderLineBreak>(renderer) && !downcast<RenderLineBreak>(renderer).isWBR();
-            if (!lineEndsWithBR) {
-                softLineBreakNode = renderer.node();
-                softLineBreakOffset = lastRun->maximumCaretOffset();
-                currentLineBox.traverseNext();
+            // Skip last line.
+            currentLineBox.traverseNext();
+            if (currentLineBox && !lastRun->isLineBreak()) {
+                breakNode = lastRun->renderer().node();
+                breakOffset = lastRun->maximumCaretOffset();
                 return;
             }
         }
-        softLineBreakNode = nullptr;
-        softLineBreakOffset = 0;
+        breakNode = nullptr;
+        breakOffset = 0;
     };
 
     skipToNextSoftLineBreakPosition();
@@ -774,17 +774,17 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
             String data = downcast<Text>(*node).data();
             unsigned length = data.length();
             unsigned position = 0;
-            while (softLineBreakNode == node && softLineBreakOffset <= length) {
-                if (softLineBreakOffset > position) {
-                    result.appendSubstring(data, position, softLineBreakOffset - position);
-                    position = softLineBreakOffset;
+            while (breakNode == node && breakOffset <= length) {
+                if (breakOffset > position) {
+                    result.appendSubstring(data, position, breakOffset - position);
+                    position = breakOffset;
                     result.append(newlineCharacter);
                 }
                 skipToNextSoftLineBreakPosition();
             }
             result.appendSubstring(data, position, length - position);
         }
-        while (softLineBreakNode == node)
+        while (breakNode == node)
             skipToNextSoftLineBreakPosition();
     }
     stripTrailingNewline(result);

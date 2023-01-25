@@ -36,6 +36,7 @@
 #include "AXIsolatedObject.h"
 #include "AXIsolatedTree.h"
 #include "AXLogger.h"
+#include "AXTextMarker.h"
 #include "AccessibilityARIAGrid.h"
 #include "AccessibilityARIAGridCell.h"
 #include "AccessibilityARIAGridRow.h"
@@ -244,11 +245,14 @@ AXObjectCache::AXObjectCache(Document& document)
     if (loadingProgress <= 0)
         loadingProgress = 1;
     m_loadingProgress = loadingProgress;
+
+    AXTreeStore::add(m_id, this);
 }
 
 AXObjectCache::~AXObjectCache()
 {
     AXTRACE(makeString("AXObjectCache::~AXObjectCache 0x"_s, hex(reinterpret_cast<uintptr_t>(this))));
+
     m_notificationPostTimer.stop();
     m_liveRegionChangedPostTimer.stop();
     m_performCacheUpdateTimer.stop();
@@ -260,6 +264,8 @@ AXObjectCache::~AXObjectCache()
     if (m_pageID)
         AXIsolatedTree::removeTreeForPageID(*m_pageID);
 #endif
+
+    AXTreeStore::remove(m_id);
 }
 
 bool AXObjectCache::isModalElement(Element& element) const
@@ -988,18 +994,6 @@ void AXObjectCache::remove(Widget* view)
         return;
     remove(m_widgetObjectMapping.take(view));
 }
-    
-    
-#if !PLATFORM(WIN)
-AXID AXObjectCache::platformGenerateAXID() const
-{
-    AXID objID;
-    do {
-        objID = AXID::generate();
-    } while (!objID.isValid() || m_idsInUse.contains(objID));
-    return objID;
-}
-#endif
 
 Vector<RefPtr<AXCoreObject>> AXObjectCache::objectsForIDs(const Vector<AXID>& axIDs) const
 {
@@ -1015,21 +1009,19 @@ Vector<RefPtr<AXCoreObject>> AXObjectCache::objectsForIDs(const Vector<AXID>& ax
     return result;
 }
 
-AXID AXObjectCache::getAXID(AccessibilityObject* obj)
+AXID AXObjectCache::getAXID(AccessibilityObject* object)
 {
     // check for already-assigned ID
-    AXID objID = obj->objectID();
-    if (objID) {
-        ASSERT(m_idsInUse.contains(objID));
-        return objID;
+    AXID objectID = object->objectID();
+    if (objectID.isValid()) {
+        ASSERT(m_idsInUse.contains(objectID));
+        return objectID;
     }
 
-    objID = platformGenerateAXID();
-
-    m_idsInUse.add(objID);
-    obj->setObjectID(objID);
-    
-    return objID;
+    objectID = generateNewID();
+    m_idsInUse.add(objectID);
+    object->setObjectID(objectID);
+    return objectID;
 }
 
 void AXObjectCache::handleTextChanged(AccessibilityObject* object)
@@ -1895,7 +1887,8 @@ void AXObjectCache::handleAriaExpandedChange(Node* node)
 
 void AXObjectCache::handleActiveDescendantChanged(Element& element)
 {
-    if (!document().frame()->selection().isFocusedAndActive())
+    // Use the element's document instead of the cache's document in case we're inside a frame that's managing focus.
+    if (!element.document().frame()->selection().isFocusedAndActive())
         return;
 
     auto* object = getOrCreate(&element);
@@ -1907,25 +1900,37 @@ void AXObjectCache::handleActiveDescendantChanged(Element& element)
 #endif
 
     // Notify active descendant changes only for the focused element.
-    if (document().focusedElement() != &element)
+    if (element.document().focusedElement() != &element)
         return;
 
     auto* activeDescendant = object->activeDescendant();
-    // We want to notify that the combo box has changed its active descendant,
-    // but we do not want to change the focus, because focus should remain with the combo box.
-    if (activeDescendant && (object->isComboBox() || object->shouldFocusActiveDescendant())) {
-        auto* target = object;
+    if (!activeDescendant)
+        return;
 
+    // Handle active-descendant changes when the target allows for it, or the controlled object allows for it.
+    AccessibilityObject* target = nullptr;
+    if (object->shouldFocusActiveDescendant())
+        target = object;
+    else if (object->isComboBox()) {
 #if PLATFORM(COCOA)
         // If the combobox's activeDescendant is inside a descendant owned or controlled by the combobox, that descendant should be the target of the notification and not the combobox itself.
-        if (object->isComboBox()) {
-            if (auto* ownedObject = Accessibility::findRelatedObjectInAncestry(*object, AXRelationType::OwnerFor, *activeDescendant))
-                target = ownedObject;
-            else if (auto* controlledObject = Accessibility::findRelatedObjectInAncestry(*object, AXRelationType::ControllerFor, *activeDescendant))
-                target = controlledObject;
-        }
+        if (auto* ownedObject = Accessibility::findRelatedObjectInAncestry(*object, AXRelationType::OwnerFor, *activeDescendant))
+            target = ownedObject;
+        else if (auto* controlledObject = Accessibility::findRelatedObjectInAncestry(*object, AXRelationType::ControllerFor, *activeDescendant))
+            target = controlledObject;
 #endif
+    } else {
+        // Check to see if the active descendant is a child of the controlled object. Then we have to use that
+        // controlled object as the target we use in notifications.
+        auto controlledObjects = object->relatedObjects(AXRelationType::ControllerFor);
+        if (controlledObjects.size()) {
+            target = Accessibility::findAncestor(*activeDescendant, false, [&controlledObjects] (const auto& activeDescendantAncestor) {
+                return controlledObjects.contains(&activeDescendantAncestor);
+            });
+        }
+    }
 
+    if (target) {
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
         if (target != object)
             updateIsolatedTree(target, AXNotification::AXActiveDescendantChanged);
@@ -2028,7 +2033,7 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
         return;
 
     if (relationAttributes().contains(attrName))
-        relationsNeedUpdate(true);
+        updateRelations(*element, attrName);
 
     if (attrName == roleAttr)
         handleRoleChanged(element, oldValue, newValue);
@@ -2081,6 +2086,8 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
         postNotification(element, AXIsAtomicChanged);
     else if (attrName == aria_busyAttr)
         postNotification(element, AXObjectCache::AXElementBusyChanged);
+    else if (attrName == aria_controlsAttr)
+        postNotification(element, AXControlledObjectsChanged);
     else if (attrName == aria_valuenowAttr || attrName == aria_valuetextAttr)
         postNotification(element, AXObjectCache::AXValueChanged);
     else if (attrName == aria_labelAttr || attrName == aria_labeledbyAttr || attrName == aria_labelledbyAttr)
@@ -2209,7 +2216,7 @@ void AXObjectCache::stopCachingComputedObjectAttributes()
     m_computedObjectAttributeCache = nullptr;
 }
 
-VisiblePosition AXObjectCache::visiblePositionForTextMarkerData(TextMarkerData& textMarkerData)
+VisiblePosition AXObjectCache::visiblePositionForTextMarkerData(const TextMarkerData& textMarkerData)
 {
     if (!isNodeInUse(textMarkerData.node)
         || textMarkerData.node->isPseudoElement())
@@ -2225,7 +2232,7 @@ VisiblePosition AXObjectCache::visiblePositionForTextMarkerData(TextMarkerData& 
         return { };
 
     auto* cache = renderer->document().axObjectCache();
-    if (cache && !cache->m_idsInUse.contains(textMarkerData.axID))
+    if (cache && !cache->m_idsInUse.contains(textMarkerData.axObjectID()))
         return { };
 
     return visiblePosition;
@@ -2233,13 +2240,10 @@ VisiblePosition AXObjectCache::visiblePositionForTextMarkerData(TextMarkerData& 
 
 CharacterOffset AXObjectCache::characterOffsetForTextMarkerData(TextMarkerData& textMarkerData)
 {
-    if (!isNodeInUse(textMarkerData.node))
-        return CharacterOffset();
-    
-    if (textMarkerData.ignored)
-        return CharacterOffset();
-    
-    CharacterOffset result = CharacterOffset(textMarkerData.node, textMarkerData.characterStartIndex, textMarkerData.characterOffset);
+    if (textMarkerData.ignored || !isNodeInUse(textMarkerData.node))
+        return { };
+
+    CharacterOffset result(textMarkerData.node, textMarkerData.characterStart, textMarkerData.characterOffset);
     // When we are at a line wrap and the VisiblePosition is upstream, it means the text marker is at the end of the previous line.
     // We use the previous CharacterOffset so that it will match the Range.
     if (textMarkerData.affinity == Affinity::Upstream)
@@ -2503,37 +2507,17 @@ std::optional<SimpleRange> AXObjectCache::rangeForUnorderedCharacterOffsets(cons
     return { { *start, *end } };
 }
 
-void AXObjectCache::setTextMarkerDataWithCharacterOffset(TextMarkerData& textMarkerData, const CharacterOffset& characterOffset)
+TextMarkerData AXObjectCache::textMarkerDataForCharacterOffset(const CharacterOffset& characterOffset)
 {
     if (characterOffset.isNull())
-        return;
-    
-    Node* domNode = characterOffset.node;
-    if (is<HTMLInputElement>(*domNode) && downcast<HTMLInputElement>(*domNode).isPasswordField()) {
-        textMarkerData.ignored = true;
-        return;
-    }
-    
-    RefPtr<AccessibilityObject> obj = this->getOrCreate(domNode);
-    if (!obj)
-        return;
-    
-    // Convert to visible position.
-    VisiblePosition visiblePosition = visiblePositionFromCharacterOffset(characterOffset);
-    int vpOffset = 0;
-    if (!visiblePosition.isNull()) {
-        Position deepPos = visiblePosition.deepEquivalent();
-        vpOffset = deepPos.deprecatedEditingOffset();
-    }
-    
-    textMarkerData.axID = obj->objectID();
-    textMarkerData.node = domNode;
-    textMarkerData.characterOffset = characterOffset.offset;
-    textMarkerData.characterStartIndex = characterOffset.startIndex;
-    textMarkerData.offset = vpOffset;
-    textMarkerData.affinity = visiblePosition.affinity();
-    
-    this->setNodeInUse(domNode);
+        return { };
+
+    if (is<HTMLInputElement>(characterOffset.node)
+        && downcast<HTMLInputElement>(*characterOffset.node).isPasswordField())
+        return { *this, { }, true };
+
+    setNodeInUse(characterOffset.node);
+    return { *this, characterOffset, false };
 }
 
 CharacterOffset AXObjectCache::startOrEndCharacterOffsetForRange(const SimpleRange& range, bool isStart, bool enterTextControls)
@@ -2567,17 +2551,12 @@ CharacterOffset AXObjectCache::startOrEndCharacterOffsetForRange(const SimpleRan
     return traverseToOffsetInRange(copyRange, offset, options, stayWithinRange);
 }
 
-void AXObjectCache::startOrEndTextMarkerDataForRange(TextMarkerData& textMarkerData, const SimpleRange& range, bool isStart)
+TextMarkerData AXObjectCache::startOrEndTextMarkerDataForRange(const SimpleRange& range, bool isStart)
 {
-    // This memory must be zero'd so instances of TextMarkerData can be tested for byte-equivalence.
-    // Warning: This is risky and bad because TextMarkerData is a nontrivial type.
-    memset(static_cast<void*>(&textMarkerData), 0, sizeof(TextMarkerData));
-    
-    CharacterOffset characterOffset = startOrEndCharacterOffsetForRange(range, isStart);
+    auto characterOffset = startOrEndCharacterOffsetForRange(range, isStart);
     if (characterOffset.isNull())
-        return;
-    
-    setTextMarkerDataWithCharacterOffset(textMarkerData, characterOffset);
+        return { };
+    return textMarkerDataForCharacterOffset(characterOffset);
 }
 
 CharacterOffset AXObjectCache::characterOffsetForNodeAndOffset(Node& node, int offset, TraverseOption option)
@@ -2626,15 +2605,6 @@ CharacterOffset AXObjectCache::characterOffsetForNodeAndOffset(Node& node, int o
     return characterOffset;
 }
 
-void AXObjectCache::textMarkerDataForCharacterOffset(TextMarkerData& textMarkerData, const CharacterOffset& characterOffset)
-{
-    // This memory must be zero'd so instances of TextMarkerData can be tested for byte-equivalence.
-    // Warning: This is risky and bad because TextMarkerData is a nontrivial type.
-    memset(static_cast<void*>(&textMarkerData), 0, sizeof(TextMarkerData));
-
-    setTextMarkerDataWithCharacterOffset(textMarkerData, characterOffset);
-}
-
 bool AXObjectCache::shouldSkipBoundary(const CharacterOffset& previous, const CharacterOffset& next)
 {
     // Match the behavior of VisiblePosition, we should skip the node boundary when there's no visual space or new line character.
@@ -2653,41 +2623,57 @@ bool AXObjectCache::shouldSkipBoundary(const CharacterOffset& previous, const Ch
     
     return true;
 }
-    
-void AXObjectCache::textMarkerDataForNextCharacterOffset(TextMarkerData& textMarkerData, const CharacterOffset& characterOffset)
+
+TextMarkerData AXObjectCache::textMarkerDataForNextCharacterOffset(const CharacterOffset& characterOffset)
 {
-    CharacterOffset next = characterOffset;
-    CharacterOffset previous = characterOffset;
+    TextMarkerData data;
+    auto next = characterOffset;
+    auto previous = characterOffset;
     bool shouldContinue;
     do {
         shouldContinue = false;
         next = nextCharacterOffset(next, false);
         if (shouldSkipBoundary(previous, next))
             next = nextCharacterOffset(next, false);
-        textMarkerDataForCharacterOffset(textMarkerData, next);
-        
+        data = textMarkerDataForCharacterOffset(next);
+
         // We should skip next CharacterOffset if it's visually the same.
         if (!lengthForRange(rangeForUnorderedCharacterOffsets(previous, next)))
             shouldContinue = true;
         previous = next;
-    } while (textMarkerData.ignored || shouldContinue);
+    } while (data.ignored || shouldContinue);
+    return data;
 }
 
-void AXObjectCache::textMarkerDataForPreviousCharacterOffset(TextMarkerData& textMarkerData, const CharacterOffset& characterOffset)
+AXTextMarker AXObjectCache::nextTextMarker(const AXTextMarker& marker)
 {
-    CharacterOffset previous = characterOffset;
-    CharacterOffset next = characterOffset;
+    ASSERT(m_id == marker.treeID());
+    return textMarkerDataForNextCharacterOffset(marker);
+}
+
+TextMarkerData AXObjectCache::textMarkerDataForPreviousCharacterOffset(const CharacterOffset& characterOffset)
+{
+    TextMarkerData data;
+    auto previous = characterOffset;
+    auto next = characterOffset;
     bool shouldContinue;
     do {
         shouldContinue = false;
         previous = previousCharacterOffset(previous, false);
-        textMarkerDataForCharacterOffset(textMarkerData, previous);
-        
+        data = textMarkerDataForCharacterOffset(previous);
+
         // We should skip previous CharacterOffset if it's visually the same.
         if (!lengthForRange(rangeForUnorderedCharacterOffsets(previous, next)))
             shouldContinue = true;
         next = previous;
-    } while (textMarkerData.ignored || shouldContinue);
+    } while (data.ignored || shouldContinue);
+    return data;
+}
+
+AXTextMarker AXObjectCache::previousTextMarker(const AXTextMarker& marker)
+{
+    ASSERT(m_id == marker.treeID());
+    return textMarkerDataForPreviousCharacterOffset(marker);
 }
 
 Node* AXObjectCache::nextNode(Node* node) const
@@ -2785,79 +2771,45 @@ AccessibilityObject* AXObjectCache::accessibilityObjectForTextMarkerData(TextMar
     return this->getOrCreate(domNode);
 }
 
-std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(const VisiblePosition& visiblePos)
+std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(const VisiblePosition& visiblePosition)
 {
-    if (visiblePos.isNull())
+    if (visiblePosition.isNull())
         return std::nullopt;
 
-    Position deepPos = visiblePos.deepEquivalent();
-    Node* domNode = deepPos.anchorNode();
-    ASSERT(domNode);
-    if (!domNode)
+    Position position = visiblePosition.deepEquivalent();
+    Node* node = position.anchorNode();
+    ASSERT(node);
+    if (!node)
         return std::nullopt;
 
-    if (is<HTMLInputElement>(*domNode) && downcast<HTMLInputElement>(*domNode).isPasswordField())
+    if (is<HTMLInputElement>(node) && downcast<HTMLInputElement>(*node).isPasswordField())
         return std::nullopt;
 
     // If the visible position has an anchor type referring to a node other than the anchored node, we should
     // set the text marker data with CharacterOffset so that the offset will correspond to the node.
-    CharacterOffset characterOffset = characterOffsetFromVisiblePosition(visiblePos);
-    if (deepPos.anchorType() == Position::PositionIsAfterAnchor || deepPos.anchorType() == Position::PositionIsAfterChildren) {
-        TextMarkerData textMarkerData;
-        textMarkerDataForCharacterOffset(textMarkerData, characterOffset);
-        return textMarkerData;
-    }
+    auto characterOffset = characterOffsetFromVisiblePosition(visiblePosition);
+    if (position.anchorType() == Position::PositionIsAfterAnchor || position.anchorType() == Position::PositionIsAfterChildren)
+        return textMarkerDataForCharacterOffset(characterOffset);
 
-    // find or create an accessibility object for this node
-    AXObjectCache* cache = domNode->document().axObjectCache();
+    auto* cache = node->document().axObjectCache();
     if (!cache)
         return std::nullopt;
-    RefPtr<AccessibilityObject> obj = cache->getOrCreate(domNode);
-
-    // This memory must be zero'd so instances of TextMarkerData can be tested for byte-equivalence.
-    // Warning: This is risky and bad because TextMarkerData is a nontrivial type.
-    TextMarkerData textMarkerData;
-    memset(static_cast<void*>(&textMarkerData), 0, sizeof(TextMarkerData));
-    
-    textMarkerData.axID = obj->objectID();
-    textMarkerData.node = domNode;
-    textMarkerData.offset = deepPos.deprecatedEditingOffset();
-    textMarkerData.anchorType = deepPos.anchorType();
-    textMarkerData.affinity = visiblePos.affinity();
-
-    textMarkerData.characterOffset = characterOffset.offset;
-    textMarkerData.characterStartIndex = characterOffset.startIndex;
-
-    cache->setNodeInUse(domNode);
-
-    return textMarkerData;
+    cache->setNodeInUse(node);
+    return { { *cache, node, visiblePosition,
+        characterOffset.startIndex, characterOffset.offset, false } };
 }
 
-// This function exits as a performance optimization to avoid a synchronous layout.
+// This function exists as a performance optimization to avoid a synchronous layout.
 std::optional<TextMarkerData> AXObjectCache::textMarkerDataForFirstPositionInTextControl(HTMLTextFormControlElement& textControl)
 {
     if (is<HTMLInputElement>(textControl) && downcast<HTMLInputElement>(textControl).isPasswordField())
         return std::nullopt;
 
-    AXObjectCache* cache = textControl.document().axObjectCache();
+    auto* cache = textControl.document().axObjectCache();
     if (!cache)
         return std::nullopt;
-
-    RefPtr<AccessibilityObject> obj = cache->getOrCreate(&textControl);
-    if (!obj)
-        return std::nullopt;
-
-    // This memory must be zero'd so instances of TextMarkerData can be tested for byte-equivalence.
-    // Warning: This is risky and bad because TextMarkerData is a nontrivial type.
-    TextMarkerData textMarkerData;
-    memset(static_cast<void*>(&textMarkerData), 0, sizeof(TextMarkerData));
-    
-    textMarkerData.axID = obj->objectID();
-    textMarkerData.node = &textControl;
-
     cache->setNodeInUse(&textControl);
-
-    return textMarkerData;
+    return { { *cache, &textControl, { }, false } };
 }
 
 CharacterOffset AXObjectCache::nextCharacterOffset(const CharacterOffset& characterOffset, bool ignoreNextNodeStart)
@@ -3671,7 +3623,7 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<RefPtr<Accessibili
         bool node { false };
     };
     HashMap<AXID, UpdatedFields> updatedObjects;
-    auto updateNode = [&] (RefPtr<AXCoreObject> axObject) {
+    auto updateNode = [&] (RefPtr<AccessibilityObject> axObject) {
         auto updatedFields = updatedObjects.get(axObject->objectID());
         if (!updatedFields.node) {
             updatedObjects.set(axObject->objectID(), UpdatedFields { updatedFields.children, true });
@@ -3755,6 +3707,7 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<RefPtr<Accessibili
         case AXActiveDescendantChanged:
         case AXRoleChanged:
         case AXColumnSpanChanged:
+        case AXControlledObjectsChanged:
         case AXDescribedByChanged:
         case AXDropEffectChanged:
         case AXElementBusyChanged:
@@ -4061,6 +4014,40 @@ void AXObjectCache::addRelation(AccessibilityObject* origin, AccessibilityObject
     }
 }
 
+void AXObjectCache::removeRelations(Element& origin, AXRelationType relationType)
+{
+    auto* object = get(&origin);
+    if (!object)
+        return;
+
+    auto relationsIterator = m_relations.find(object->objectID());
+    if (relationsIterator == m_relations.end())
+        return;
+
+    auto targetIDs = relationsIterator->value.take(static_cast<uint8_t>(relationType));
+    auto symmetric = symmetricRelation(relationType);
+    if (symmetric == AXRelationType::None)
+        return;
+
+    for (AXID targetID : targetIDs)
+        removeRelationByID(targetID, object->objectID(), symmetric);
+}
+
+void AXObjectCache::removeRelationByID(AXID originID, AXID targetID, AXRelationType relationType)
+{
+    auto relationsIterator = m_relations.find(originID);
+    if (relationsIterator == m_relations.end())
+        return;
+
+    auto targetsIterator = relationsIterator->value.find(static_cast<uint8_t>(relationType));
+    if (targetsIterator == relationsIterator->value.end())
+        return;
+
+    targetsIterator->value.removeAllMatching([targetID] (const AXID axID) {
+        return axID == targetID;
+    });
+}
+
 void AXObjectCache::updateRelationsIfNeeded()
 {
     if (!m_relationsNeedUpdate)
@@ -4074,69 +4061,76 @@ void AXObjectCache::updateRelationsIfNeeded()
 void AXObjectCache::updateRelationsForTree(ContainerNode& rootNode)
 {
     ASSERT(!rootNode.parentNode());
-    struct RelationOrigin {
-        RefPtr<Element> originElement;
-        AtomString targetID;
-        AXRelationType relationType;
-    };
-
-    struct RelationTarget {
-        RefPtr<Element> targetElement;
-        AtomString targetID;
-    };
-
-    Vector<RelationOrigin> origins;
-    Vector<RelationTarget> targets;
     for (auto& element : descendantsOfType<Element>(rootNode)) {
+        if (element.hasTagName(metaTag) || element.hasTagName(headTag) || element.hasTagName(scriptTag))
+            continue;
+
         if (RefPtr shadowRoot = element.shadowRoot(); shadowRoot && shadowRoot->mode() != ShadowRootMode::UserAgent)
             updateRelationsForTree(*shadowRoot);
-        // Collect all possible origins, i.e., elements with non-empty relation attributes.
-        for (const auto& attribute : relationAttributes()) {
-            if (m_document.settings().ariaReflectionForElementReferencesEnabled()) {
-                if (Element::isElementReflectionAttribute(attribute)) {
-                    if (auto reflectedElement = element.getElementAttribute(attribute)) {
-                        addRelation(&element, reflectedElement, attributeToRelationType(attribute));
-                        continue;
-                    }
-                } else if (Element::isElementsArrayReflectionAttribute(attribute)) {
-                    if (auto reflectedElements = element.getElementsArrayAttribute(attribute)) {
-                        for (auto reflectedElement : reflectedElements.value())
-                            addRelation(&element, reflectedElement.get(), attributeToRelationType(attribute));
-                        continue;
-                    }
-                }
-            }
-
-            auto& idsString = element.attributeWithoutSynchronization(attribute);
-            if (idsString.isNull()) {
-                if (auto* defaultARIA = element.customElementDefaultARIAIfExists()) {
-                    for (auto& targetElement : defaultARIA->elementsForAttribute(element, attribute))
-                        addRelation(&element, targetElement.get(), attributeToRelationType(attribute));
-                }
-                continue;
-            }
-            SpaceSplitString ids(idsString, SpaceSplitString::ShouldFoldCase::No);
-            for (size_t i = 0; i < ids.size(); ++i)
-                origins.append({ &element, ids[i], attributeToRelationType(attribute) });
+        if (auto* frameOwnerElement = dynamicDowncast<HTMLFrameOwnerElement>(element)) {
+            if (auto* document = frameOwnerElement->contentDocument())
+                updateRelationsForTree(*document);
         }
 
-        // Collect all possible targets, i.e., elements with a non-empty id attribute.
-        auto elementID = element.attributeWithoutSynchronization(idAttr);
-        if (!elementID.isEmpty())
-            targets.append({ &element, elementID });
+        for (const auto& attribute : relationAttributes())
+            addRelations(element, attribute);
     }
+}
 
-    for (const auto& origin : origins) {
-        for (const auto& target : targets) {
-            if (origin.originElement == target.targetElement) {
-                // Relationship should be between different elements.
-                continue;
+void AXObjectCache::addRelations(Element& origin, const QualifiedName& attribute)
+{
+    if (m_document.settings().ariaReflectionForElementReferencesEnabled()) {
+        if (Element::isElementReflectionAttribute(attribute)) {
+            if (auto reflectedElement = origin.getElementAttribute(attribute)) {
+                addRelation(&origin, reflectedElement, attributeToRelationType(attribute));
+                return;
             }
-
-            if (origin.targetID == target.targetID)
-                addRelation(origin.originElement.get(), target.targetElement.get(), origin.relationType);
+        } else if (Element::isElementsArrayReflectionAttribute(attribute)) {
+            if (auto reflectedElements = origin.getElementsArrayAttribute(attribute)) {
+                for (auto reflectedElement : reflectedElements.value())
+                    addRelation(&origin, reflectedElement.get(), attributeToRelationType(attribute));
+                return;
+            }
         }
     }
+
+    auto& value = origin.attributeWithoutSynchronization(attribute);
+    if (value.isNull()) {
+        if (auto* defaultARIA = origin.customElementDefaultARIAIfExists()) {
+            for (auto& target : defaultARIA->elementsForAttribute(origin, attribute))
+                addRelation(&origin, target.get(), attributeToRelationType(attribute));
+        }
+        return;
+    }
+
+    SpaceSplitString ids(value, SpaceSplitString::ShouldFoldCase::No);
+    for (size_t i = 0; i < ids.size(); ++i) {
+        auto* target = origin.treeScope().getElementById(ids[i]);
+        if (!target || target == &origin)
+            continue;
+
+        addRelation(&origin, target, attributeToRelationType(attribute));
+    }
+}
+
+void AXObjectCache::updateRelations(Element& origin, const QualifiedName& attribute)
+{
+    if (origin.hasTagName(metaTag) || origin.hasTagName(headTag) || origin.hasTagName(scriptTag))
+        return;
+
+    auto relationType = attributeToRelationType(attribute);
+    if (relationType == AXRelationType::None) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    removeRelations(origin, relationType);
+    addRelations(origin, attribute);
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (auto tree = AXIsolatedTree::treeForPageID(m_pageID))
+        tree->relationsNeedUpdate(true);
+#endif
 }
 
 void AXObjectCache::relationsNeedUpdate(bool needUpdate)

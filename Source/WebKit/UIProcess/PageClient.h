@@ -145,7 +145,6 @@ enum class UndoOrRedo : bool;
 enum class TapHandlingResult : uint8_t;
 
 class ContextMenuContextData;
-class DownloadProxy;
 class DrawingAreaProxy;
 class NativeWebGestureEvent;
 class NativeWebKeyboardEvent;
@@ -284,8 +283,6 @@ public:
     virtual void removeAllPDFHUDs() = 0;
 #endif
     
-    virtual void handleDownloadRequest(DownloadProxy&) = 0;
-
     virtual bool handleRunOpenPanel(WebPageProxy*, WebFrameProxy*, const FrameInfoData&, API::OpenPanelParameters*, WebOpenPanelResultListenerProxy*) { return false; }
     virtual bool showShareSheet(const WebCore::ShareDataWithParsedURL&, WTF::CompletionHandler<void (bool)>&&) { return false; }
     virtual void showContactPicker(const WebCore::ContactsRequestData&, WTF::CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)>&& completionHandler) { completionHandler(std::nullopt); }
@@ -480,12 +477,14 @@ public:
     virtual void setCaretDecorationVisibility(bool) = 0;
 #endif // PLATFORM(MAC)
 
+#if PLATFORM(COCOA)
+    virtual void didCommitLayerTree(const RemoteLayerTreeTransaction&) = 0;
+    virtual void layerTreeCommitComplete() = 0;
+#endif
+
 #if PLATFORM(IOS_FAMILY)
     virtual void commitPotentialTapFailed() = 0;
     virtual void didGetTapHighlightGeometries(WebKit::TapIdentifier requestID, const WebCore::Color&, const Vector<WebCore::FloatQuad>& highlightedQuads, const WebCore::IntSize& topLeftRadius, const WebCore::IntSize& topRightRadius, const WebCore::IntSize& bottomLeftRadius, const WebCore::IntSize& bottomRightRadius, bool nodeHasBuiltInClickHandling) = 0;
-
-    virtual void didCommitLayerTree(const RemoteLayerTreeTransaction&) = 0;
-    virtual void layerTreeCommitComplete() = 0;
 
     virtual void couldNotRestorePageState() = 0;
     virtual void restorePageState(std::optional<WebCore::FloatPoint> scrollPosition, const WebCore::FloatPoint& scrollOrigin, const WebCore::FloatBoxExtent& obscuredInsetsOnSave, double scale) = 0;
@@ -619,10 +618,6 @@ public:
 
     virtual void refView() = 0;
     virtual void derefView() = 0;
-
-#if ENABLE(VIDEO) && USE(GSTREAMER)
-    virtual bool decidePolicyForInstallMissingMediaPluginsPermissionRequest(InstallMissingMediaPluginsPermissionRequest&) = 0;
-#endif
 
     virtual void pageDidScroll(const WebCore::IntPoint&) { }
 

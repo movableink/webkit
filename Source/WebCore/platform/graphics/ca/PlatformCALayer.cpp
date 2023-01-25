@@ -42,19 +42,13 @@
 
 namespace WebCore {
 
-static GraphicsLayer::PlatformLayerID generateLayerID()
-{
-    static GraphicsLayer::PlatformLayerID layerID;
-    return ++layerID;
-}
-
 #if COMPILER(MSVC)
 const float PlatformCALayer::webLayerWastedSpaceThreshold = 0.75f;
 #endif
 
 PlatformCALayer::PlatformCALayer(LayerType layerType, PlatformCALayerClient* owner)
     : m_layerType(layerType)
-    , m_layerID(generateLayerID())
+    , m_layerID(GraphicsLayer::PlatformLayerID::generate())
     , m_owner(owner)
 {
 }
@@ -160,7 +154,7 @@ void PlatformCALayer::drawTextAtPoint(CGContextRef context, CGFloat x, CGFloat y
         strokeCGColor.get(),
     };
 
-    auto attributes = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, keys, values, WTF_ARRAY_LENGTH(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+    auto attributes = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, keys, values, std::size(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
     auto string = adoptCF(CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, reinterpret_cast<const UInt8*>(text), length, kCFStringEncodingUTF8, false, kCFAllocatorNull));
     auto attributedString = adoptCF(CFAttributedStringCreate(kCFAllocatorDefault, string.get(), attributes.get()));
     auto line = adoptCF(CTLineCreateWithAttributedString(attributedString.get()));

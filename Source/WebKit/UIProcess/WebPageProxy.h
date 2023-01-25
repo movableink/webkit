@@ -89,6 +89,7 @@
 #include <WebCore/DragActions.h>
 #include <WebCore/EventTrackingRegions.h>
 #include <WebCore/ExceptionDetails.h>
+#include <WebCore/FocusDirection.h>
 #include <WebCore/FontAttributes.h>
 #include <WebCore/FrameLoaderTypes.h>
 #include <WebCore/FrameView.h> // FIXME: Move LayoutViewportConstraint to its own file and stop including this.
@@ -367,6 +368,7 @@ class NativeWebMouseEvent;
 class NativeWebWheelEvent;
 class PageClient;
 class MediaSessionCoordinatorProxyPrivate;
+class NetworkIssueReporter;
 class ProvisionalPageProxy;
 class RemoteLayerTreeHost;
 class RemoteLayerTreeScrollingPerformanceData;
@@ -967,6 +969,7 @@ public:
     void didConcludeDrop();
 #endif
 #endif // PLATFORM(IOS_FAMILY)
+
 #if ENABLE(DATA_DETECTION)
     void setDataDetectionResult(const DataDetectionResult&);
     void handleClickForDataDetectionResult(const WebCore::DataDetectorElementInfo&, const WebCore::IntPoint&);
@@ -1081,7 +1084,6 @@ public:
 
     bool isProcessingWheelEvents() const;
     void handleWheelEvent(const NativeWebWheelEvent&);
-    void startMonitoringWheelEventsForTesting();
 
     bool isProcessingKeyboardEvents() const;
     bool handleKeyboardEvent(const NativeWebKeyboardEvent&);
@@ -1469,7 +1471,6 @@ public:
 
     WebPageCreationParameters creationParameters(WebProcessProxy&, DrawingAreaProxy&, RefPtr<API::WebsitePolicies>&& = nullptr);
 
-    void handleDownloadRequest(DownloadProxy&);
     void resumeDownload(const API::Data& resumeData, const String& path, CompletionHandler<void(DownloadProxy*)>&&);
     void downloadRequest(WebCore::ResourceRequest&&, CompletionHandler<void(DownloadProxy*)>&&);
     void dataTaskWithRequest(WebCore::ResourceRequest&&, CompletionHandler<void(API::DataTask&)>&&);
@@ -1597,6 +1598,7 @@ public:
     void didNegotiateModernTLS(const URL&);
 
     void didFailLoadDueToNetworkConnectionIntegrity(const URL&);
+    void didChangeLookalikeCharacters(const URL&, const URL&);
 
     SpellDocumentTag spellDocumentTag();
 
@@ -1644,6 +1646,7 @@ public:
     bool isShowingNavigationGestureSnapshot() const { return m_isShowingNavigationGestureSnapshot; }
 
     bool isPlayingAudio() const { return !!(m_mediaState & WebCore::MediaProducerMediaState::IsPlayingAudio); }
+    bool hasMediaStreaming() const { return !!(m_mediaState & WebCore::MediaProducerMediaState::HasStreamingActivity); }
     void isPlayingMediaDidChange(WebCore::MediaProducerMediaStateFlags);
     void updateReportedMediaCaptureState();
 
@@ -1881,7 +1884,7 @@ public:
     void updateCurrentModifierState();
 
     ProvisionalPageProxy* provisionalPageProxy() const { return m_provisionalPage.get(); }
-    void commitProvisionalPage(WebCore::FrameIdentifier, FrameInfoData&&, WebCore::ResourceRequest&&, uint64_t navigationID, const String& mimeType, bool frameHasCustomContentProvider, WebCore::FrameLoadType, const WebCore::CertificateInfo&, bool usedLegacyTLS, bool privateRelayed, bool containsPluginDocument, std::optional<WebCore::HasInsecureContent> forcedHasInsecureContent, WebCore::MouseEventPolicy, const UserData&);
+    void commitProvisionalPage(WebCore::FrameIdentifier, FrameInfoData&&, WebCore::ResourceRequest&&, uint64_t navigationID, const String& mimeType, bool frameHasCustomContentProvider, WebCore::FrameLoadType, const WebCore::CertificateInfo&, bool usedLegacyTLS, bool privateRelayed, bool containsPluginDocument, WebCore::HasInsecureContent, WebCore::MouseEventPolicy, const UserData&);
     void destroyProvisionalPage();
 
     // Logic shared between the WebPageProxy and the ProvisionalPageProxy.
@@ -2131,10 +2134,6 @@ public:
     void createMediaSessionCoordinator(Ref<MediaSessionCoordinatorProxyPrivate>&&, CompletionHandler<void(bool)>&&);
 #endif
 
-#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
-    static Vector<String>& cachedLookalikeStrings();
-#endif
-
     bool lastNavigationWasAppInitiated() const { return m_lastNavigationWasAppInitiated; }
 
 #if PLATFORM(COCOA)
@@ -2209,10 +2208,21 @@ public:
     void didDestroyFrame(WebCore::FrameIdentifier);
     void disconnectFramesFromPage();
 
-    void didCommitLoadForFrame(WebCore::FrameIdentifier, FrameInfoData&&, WebCore::ResourceRequest&&, uint64_t navigationID, const String& mimeType, bool frameHasCustomContentProvider, WebCore::FrameLoadType, const WebCore::CertificateInfo&, bool usedLegacyTLS, bool wasPrivateRelayed, bool containsPluginDocument, std::optional<WebCore::HasInsecureContent> forcedHasInsecureContent, WebCore::MouseEventPolicy, const UserData&);
+    void didCommitLoadForFrame(WebCore::FrameIdentifier, FrameInfoData&&, WebCore::ResourceRequest&&, uint64_t navigationID, const String& mimeType, bool frameHasCustomContentProvider, WebCore::FrameLoadType, const WebCore::CertificateInfo&, bool usedLegacyTLS, bool wasPrivateRelayed, bool containsPluginDocument, WebCore::HasInsecureContent, WebCore::MouseEventPolicy, const UserData&);
 
 #if PLATFORM(MAC)
     void setCaretDecorationVisibility(bool);
+#endif
+
+#if ENABLE(NETWORK_ISSUE_REPORTING)
+    void reportNetworkIssue(const URL&);
+#endif
+
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+    void pauseAllAnimations(CompletionHandler<void()>&&);
+    void playAllAnimations(CompletionHandler<void()>&&);
+    bool allowsAnyAnimationToPlay() { return m_allowsAnyAnimationToPlay; }
+    void isAnyAnimationAllowedToPlayDidChange(bool anyAnimationCanPlay) { m_allowsAnyAnimationToPlay = anyAnimationCanPlay; }
 #endif
 
 private:
@@ -2282,8 +2292,8 @@ private:
     void didFinishDocumentLoadForFrame(WebCore::FrameIdentifier, uint64_t navigationID, const UserData&);
     void didFinishLoadForFrame(WebCore::FrameIdentifier, FrameInfoData&&, WebCore::ResourceRequest&&, uint64_t navigationID, const UserData&);
     void didFailLoadForFrame(WebCore::FrameIdentifier, FrameInfoData&&, WebCore::ResourceRequest&&, uint64_t navigationID, const WebCore::ResourceError&, const UserData&);
-    void didSameDocumentNavigationForFrame(WebCore::FrameIdentifier, uint64_t navigationID, uint32_t sameDocumentNavigationType, URL&&, const UserData&);
-    void didSameDocumentNavigationForFrameViaJSHistoryAPI(WebCore::FrameIdentifier, uint32_t type, URL, NavigationActionData&&, const UserData&);
+    void didSameDocumentNavigationForFrame(WebCore::FrameIdentifier, uint64_t navigationID, SameDocumentNavigationType, URL&&, const UserData&);
+    void didSameDocumentNavigationForFrameViaJSHistoryAPI(WebCore::FrameIdentifier, SameDocumentNavigationType, URL, NavigationActionData&&, const UserData&);
     void didChangeMainDocument(WebCore::FrameIdentifier);
     void didExplicitOpenForFrame(WebCore::FrameIdentifier, URL&&, String&& mimeType);
 
@@ -2532,14 +2542,14 @@ private:
     void ignoreWord(const String& word);
     void requestCheckingOfString(TextCheckerRequestID, const WebCore::TextCheckingRequestData&, int32_t insertionPoint);
 
-    void takeFocus(uint8_t direction);
+    void takeFocus(WebCore::FocusDirection);
     void setToolTip(const String&);
     void setCursor(const WebCore::Cursor&);
     void setCursorHiddenUntilMouseMoves(bool);
 
     void discardQueuedMouseEvents();
 
-    void didReceiveEvent(uint32_t opaqueType, bool handled);
+    void didReceiveEvent(WebEventType, bool handled);
     void didUpdateRenderingAfterCommittingLoad();
 #if PLATFORM(IOS_FAMILY)
     void interpretKeyEvent(const EditorState&, bool isCharEvent, CompletionHandler<void(bool)>&&);
@@ -2766,8 +2776,10 @@ private:
     static bool isInHardwareKeyboardMode();
 #endif
 
+    void waitForInitialLookalikeCharacterStrings(WebFramePolicyListenerProxy&);
+    void sendCachedLookalikeCharacterStrings();
 #if ENABLE(NETWORK_CONNECTION_INTEGRITY)
-    void updateLookalikeCharacterStringsIfNeeded();
+    static Vector<String>& cachedLookalikeStrings();
 #endif
 
 #if USE(RUNNINGBOARD)
@@ -2785,6 +2797,8 @@ private:
     static Vector<SandboxExtension::Handle> createNetworkExtensionsSandboxExtensions(WebProcessProxy&);
 #endif
 
+    void prepareToLoadWebPage(WebProcessProxy&, LoadParameters&);
+
     void didUpdateEditorState(const EditorState& oldEditorState, const EditorState& newEditorState);
 
     void runModalJavaScriptDialog(RefPtr<WebFrameProxy>&&, FrameInfoData&&, const String& message, CompletionHandler<void(WebPageProxy&, WebFrameProxy*, FrameInfoData&&, const String&, CompletionHandler<void()>&&)>&&);
@@ -2801,6 +2815,8 @@ private:
     void updateFullscreenVideoTextRecognition();
     void fullscreenVideoTextRecognitionTimerFired();
 #endif
+
+    bool useGPUProcessForDOMRenderingEnabled() const;
 
     const Identifier m_identifier;
     WebCore::PageIdentifier m_webPageID;
@@ -2831,6 +2847,7 @@ private:
     std::unique_ptr<DrawingAreaProxy> m_drawingArea;
 #if PLATFORM(COCOA)
     std::unique_ptr<RemoteLayerTreeHost> m_frozenRemoteLayerTreeHost;
+    TransactionID m_firstLayerTreeTransactionIdAfterDidCommitLoad;
 #if ENABLE(ASYNC_SCROLLING)
     std::unique_ptr<RemoteScrollingCoordinatorProxy> m_scrollingCoordinatorProxy;
 #endif
@@ -2883,7 +2900,6 @@ private:
 
 #if PLATFORM(IOS_FAMILY)
     std::optional<WebCore::InputMode> m_pendingInputModeChange;
-    TransactionID m_firstLayerTreeTransactionIdAfterDidCommitLoad;
     int32_t m_deviceOrientation { 0 };
     bool m_hasNetworkRequestsOnSuspended { false };
     bool m_isKeyboardAnimatingIn { false };
@@ -3236,6 +3252,8 @@ private:
     Vector<CompletionHandler<void()>> m_nextActivityStateChangeCallbacks;
 
     WebCore::MediaProducerMediaStateFlags m_mediaState;
+    // Assume animations are allowed to play by default. If this is not the case, we will be notified by the web process.
+    bool m_allowsAnyAnimationToPlay { true };
 
     // To make sure capture indicators are visible long enough, m_reportedMediaCaptureState is the same as m_mediaState except that we might delay a bit transition from capturing to not-capturing.
     WebCore::MediaProducerMediaStateFlags m_reportedMediaCaptureState;
@@ -3390,7 +3408,7 @@ private:
     bool m_isLockdownModeExplicitlySet { false };
 
 #if ENABLE(NETWORK_CONNECTION_INTEGRITY)
-    bool m_shouldUpdateLookalikeCharacterStrings { false };
+    bool m_needsInitialLookalikeCharacterStrings { true };
 #endif
 
     std::optional<PrivateClickMeasurementAndMetadata> m_privateClickMeasurement;
@@ -3421,6 +3439,12 @@ private:
     RunLoop::Timer m_fullscreenVideoTextRecognitionTimer;
 #endif
     bool m_isPerformingTextRecognitionInElementFullScreen { false };
+
+#if ENABLE(NETWORK_ISSUE_REPORTING)
+    std::unique_ptr<NetworkIssueReporter> m_networkIssueReporter;
+#endif
+
+    RefPtr<WebKit::WebPageProxy> m_pageToCloneSessionStorageFrom;
 };
 
 #ifdef __OBJC__

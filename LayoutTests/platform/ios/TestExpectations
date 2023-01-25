@@ -123,6 +123,7 @@ compositing/video/video-background-color.html [ WontFix ]
 # Not supported on iOS
 fast/speechsynthesis
 gamepad
+imported/w3c/web-platform-tests/gamepad
 mhtml
 
 # ENABLE(MEDIA_CAPTURE) is not enabled
@@ -1769,7 +1770,6 @@ fast/text/glyph-reordering.html [ Failure ]
 fast/text/international/001.html [ Failure ]
 fast/text/international/cjk-segmentation.html [ Failure ]
 fast/text/international/thai-cursor-position.html [ Failure ]
-fast/text/international/vertical-text-glyph-test.html [ Failure ]
 fast/text/international/vertical-text-metrics-test.html [ Failure ]
 fast/text/international/wrap-CJK-001.html [ Failure ]
 fast/text/justify-ideograph-complex.html [ Failure ]
@@ -2020,14 +2020,6 @@ fast/text/fallback-language-han.html [ Skip ]
 
 # Pasteboard tests failing due to extra -webkit-text-size-adjust: auto.
 editing/pasteboard/copy-null-characters.html [ Failure ]
-editing/pasteboard/copy-resolves-urls.html [ Failure ]
-editing/pasteboard/copy-text-with-wrapped-tag.html [ Failure ]
-editing/pasteboard/do-not-copy-unnecessary-styles-2.html [ Failure ]
-editing/pasteboard/paste-noscript-svg.html [ Failure ]
-editing/pasteboard/paste-noscript-xhtml.xhtml [ Failure ]
-editing/pasteboard/paste-noscript.html [ Failure ]
-editing/pasteboard/paste-visible-script.html [ Failure ]
-editing/pasteboard/paste-wrapped-blockquote-into-nonblockquote.html [ Failure ]
 
 # Failing pasteboard to triage
 editing/pasteboard/4242293-1.html [ Failure ]
@@ -2166,6 +2158,7 @@ accessibility/menu-list-crash2.html [ Pass ]
 accessibility/multiple-attribute-change-crash.html [ Pass ]
 accessibility/node-only-inert-object.html [ Pass ]
 accessibility/node-only-object-element-rect.html [ Pass ]
+accessibility/page-reload-deadlock.html [ Pass ]
 accessibility/placeholder.html [ Pass ]
 accessibility/progress-indeterminate-value.html [ Pass ]
 accessibility/slider-with-lost-renderer.html [ Pass ]
@@ -2494,6 +2487,10 @@ fast/text/variations [ Pass Failure ImageOnlyFailure ]
 animations/font-variations [ Pass Failure ImageOnlyFailure Timeout ]
 
 webkit.org/b/158836 imported/w3c/web-platform-tests/encrypted-media [ Skip ]
+
+# These tests fail which are related to browser support of slnt and ital axes in variable fonts and failing due to underlying bug
+webkit.org/b/189483 imported/w3c/web-platform-tests/css/css-fonts/variations/slnt-variable.html [ ImageOnlyFailure ]
+webkit.org/b/189483 imported/w3c/web-platform-tests/css/css-fonts/variations/slnt-backslant-variable.html [ ImageOnlyFailure ]
 
 # Only Mac has implemented DictionaryLookup
 fast/layers/prevent-hit-test-during-layout.html [ Skip ]
@@ -3192,7 +3189,13 @@ webkit.org/b/209734 imported/w3c/web-platform-tests/css/selectors/focus-visible-
 webkit.org/b/209734 imported/w3c/web-platform-tests/css/selectors/focus-visible-script-focus-017.tentative.html [ Skip ]
 webkit.org/b/209734 imported/w3c/web-platform-tests/css/selectors/focus-visible-script-focus-018.html [ Skip ]
 webkit.org/b/209734 imported/w3c/web-platform-tests/css/selectors/focus-visible-script-focus-019.html [ Skip ]
-webkit.org/b/209734 imported/w3c/web-platform-tests/css/selectors/hover-002.html [ Skip ]
+
+webkit.org/b/250767 imported/w3c/web-platform-tests/html/user-activation/activation-trigger-pointerevent.html?mouse [ Skip ]
+webkit.org/b/250767 imported/w3c/web-platform-tests/html/user-activation/activation-trigger-pointerevent.html?pen [ Skip ]
+
+# :hover simulation not working on iOS
+imported/w3c/web-platform-tests/css/selectors/hover-002.html [ Skip ]
+imported/w3c/web-platform-tests/css/css-text-decor/invalidation/text-decoration-thickness.html [ Skip ]
 
 # Certain versions of iOS use different text security characters.
 webkit.org/b/209692 platform/ios/fast/text/text-security-disc-bullet-pua-ios-new.html [ Pass ]
@@ -3454,8 +3457,6 @@ webkit.org/b/229397 imported/w3c/web-platform-tests/css/css-writing-modes/clip-r
 webkit.org/b/229397 imported/w3c/web-platform-tests/css/css-writing-modes/clip-rect-vrl-004.xht [ ImageOnlyFailure ]
 webkit.org/b/229397 imported/w3c/web-platform-tests/css/css-writing-modes/clip-rect-vrl-006.xht [ ImageOnlyFailure ]
 webkit.org/b/229397 imported/w3c/web-platform-tests/css/css-writing-modes/clip-rect-vrl-008.xht [ ImageOnlyFailure ]
-
-webkit.org/b/232181 imported/w3c/web-platform-tests/file-system-access/sandboxed_FileSystemSyncAccessHandle-close.https.tentative.worker.html [ Pass Failure ]
 
 # These three tests will be fixed by rdar://80384564.
 editing/selection/ios/change-selection-by-tapping-with-existing-selection.html  [ Pass Failure ]
@@ -3777,17 +3778,9 @@ webkit.org/b/203451 imported/w3c/web-platform-tests/css/css-position/static-posi
 webkit.org/b/244208 imported/w3c/web-platform-tests/mediacapture-record/MediaRecorder-no-sink.https.html [ Pass Failure Slow ]
 webkit.org/b/244208 imported/w3c/web-platform-tests/mediacapture-record/MediaRecorder-peerconnection.https.html [ Pass Failure Slow ]
 
-webkit.org/b/244346 imported/w3c/web-platform-tests/html/cross-origin-opener-policy/iframe-popup-same-origin-allow-popups-to-unsafe-none.https.html [ Pass Failure ]
-
-webkit.org/b/244358 imported/w3c/web-platform-tests/html/cross-origin-opener-policy/iframe-popup-same-origin-to-same-origin.https.html [ Pass Failure Timeout ]
-webkit.org/b/244358 imported/w3c/web-platform-tests/html/cross-origin-opener-policy/iframe-popup-same-origin-to-unsafe-none.https.html [ Pass Failure ]
-webkit.org/b/244358 imported/w3c/web-platform-tests/html/cross-origin-opener-policy/tentative/restrict-properties/iframe-popup.https.html [ Pass Failure Timeout ]
-
 webkit.org/b/244501 [ Debug ] webgl/2.0.y/conformance2/state/gl-object-get-calls.html [ Pass Timeout ]
 
 webkit.org/b/244619 editing/selection/ios/tap-to-set-selection-in-editable-web-view.html [ Pass Timeout ]
-
-webkit.org/b/244740 http/wpt/cross-origin-opener-policy/non-secure-to-secure-context-navigation.https.html [ Pass Failure ]
 
 webkit.org/b/248062 imported/w3c/web-platform-tests/webcodecs/full-cycle-test.https.any.html?h264_avc [ Pass Failure ]
 
@@ -3796,14 +3789,79 @@ webkit.org/b/248065 imported/w3c/web-platform-tests/service-workers/cache-storag
 imported/w3c/web-platform-tests/css/selectors/selection-image-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/selectors/selection-image-002.html [ ImageOnlyFailure ]
 
+# No Websocket H2 support.
+imported/w3c/web-platform-tests/websockets/binary/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/binary/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/binary/004.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/binary/005.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/closing-handshake/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/closing-handshake/003.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/closing-handshake/004.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/004.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/005.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/006.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/007.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/009.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/010.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/011.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/012.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/013.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/017.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/018.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/019.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/020.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/021.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/022.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/cookies/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/cookies/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/cookies/003.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/cookies/006.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/cookies/007.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/extended-payload-length.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/CloseEvent/clean-close.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/bufferedAmount/bufferedAmount-arraybuffer.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/bufferedAmount/bufferedAmount-blob.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/bufferedAmount/bufferedAmount-getting.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/bufferedAmount/bufferedAmount-large.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/bufferedAmount/bufferedAmount-unicode.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/007.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/015.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/016.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/017.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/018.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/send/006.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/send/007.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/send/009.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/send/011.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/send/012.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/keeping-connection-open/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/opening-handshake/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/opening-handshake/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/unload-a-document/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/unload-a-document/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/unload-a-document/005.html?wpt_flags=h2 [ Skip ]
+
+# The following test only works with LBSE activated -- text transform changes fail to repaint using the legacy engine.
+svg/repaint/text-repainting-after-modifying-transform.html [ ImageOnlyFailure ]
+
 # These tests have similar harness errors and timeouts. See webkit.org/b/244900
 [ Debug ] imported/w3c/web-platform-tests/dom/nodes/NodeList-static-length-getter-tampered-indexOf-1.html [ Pass Timeout Failure ]
 [ Debug ] imported/w3c/web-platform-tests/dom/nodes/NodeList-static-length-getter-tampered-indexOf-2.html [ Pass Timeout Failure ]
 [ Debug ] imported/w3c/web-platform-tests/dom/nodes/NodeList-static-length-getter-tampered-indexOf-3.html [ Pass Timeout Failure ]
 
 # AVIF tests
+webkit.org/b/247831 fast/images/avif-as-image.html [ ImageOnlyFailure ]
+webkit.org/b/247831 fast/images/avif-heif-container-as-image.html [ ImageOnlyFailure ]
 webkit.org/b/247831 fast/images/avif-image-decoding.html [ Failure ]
 webkit.org/b/247831 fast/images/animated-avif.html [ Timeout ]
+
+# MSE isn't supported on iPhone at this time.
+media/mediacapabilities/mediacapabilities-allowed-codecs.html [ Failure ]
+media/mediacapabilities/mediacapabilities-allowed-containers.html [ Failure ]
 
 # Screen Orientation API doesn't support nested frames yet
 imported/w3c/web-platform-tests/screen-orientation/onchange-event-subframe.html [ Skip ]
@@ -3814,4 +3872,16 @@ webkit.org/b/249367 imported/w3c/web-platform-tests/html/canvas/offscreen/manual
 
 webkit.org/b/249407 media/audioSession/getUserMedia.html [ Failure ]
 
+# Per-process limit is only for WK2
+http/tests/websocket/tests/hybi/multiple-connections-limit.html [ Skip ]
+
 webkit.org/b/249486 media/audioSession/audioSessionType.html [ Failure ]
+
+# webkit.org/b/250885 CSS3/filters/effect-contrast-hw.html is a constant image failure
+[ Release arm64 ] css3/filters/effect-contrast-hw.html [ ImageOnlyFailure ]
+
+webkit.org/b/250922 imported/w3c/web-platform-tests/webstorage/storage_local_window_open.window.html [ Pass Timeout ]
+
+webkit.org/b/251040 [ Debug ] fast/forms/ios/remove-view-after-focus.html [ Pass Crash ]
+
+webkit.org/b/251047 [ Debug ] fast/loader/crash-replacing-location-before-load.html [ Pass Crash ]

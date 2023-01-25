@@ -31,6 +31,7 @@
 #include "DisplayListRecorderFlushIdentifier.h"
 #include "QualifiedRenderingResourceIdentifier.h"
 #include "RemoteRenderingBackend.h"
+#include "SharedVideoFrame.h"
 #include "StreamMessageReceiver.h"
 #include "StreamServerConnection.h"
 #include <WebCore/ControlFactory.h>
@@ -96,8 +97,8 @@ public:
     void drawDotsForDocumentMarker(const WebCore::FloatRect&, const WebCore::DocumentMarkerLineStyle&);
     void drawEllipse(const WebCore::FloatRect&);
     void drawPath(const WebCore::Path&);
-    void drawFocusRingPath(const WebCore::Path&, float width, float offset, const WebCore::Color&);
-    void drawFocusRingRects(const Vector<WebCore::FloatRect>& rects, float width, float offset, const WebCore::Color&);
+    void drawFocusRingPath(const WebCore::Path&, float outlineWidth, const WebCore::Color&);
+    void drawFocusRingRects(const Vector<WebCore::FloatRect>&, float outlineOffset, float outlineWidth, const WebCore::Color&);
     void fillRect(const WebCore::FloatRect&);
     void fillRectWithColor(const WebCore::FloatRect&, const WebCore::Color&);
     void fillRectWithGradient(WebCore::DisplayList::FillRectWithGradient&&);
@@ -126,7 +127,7 @@ public:
     void strokePath(const WebCore::Path&);
     void strokeEllipse(const WebCore::FloatRect&);
     void clearRect(const WebCore::FloatRect&);
-    void drawControlPart(Ref<WebCore::ControlPart>, const WebCore::FloatRect&, float deviceScaleFactor, const WebCore::ControlStyle&);
+    void drawControlPart(Ref<WebCore::ControlPart>, const WebCore::FloatRoundedRect& borderRect, float deviceScaleFactor, const WebCore::ControlStyle&);
 #if USE(CG)
     void applyStrokePattern();
     void applyFillPattern();
@@ -160,11 +161,20 @@ private:
     void startListeningForIPC();
     void didReceiveStreamMessage(IPC::StreamServerConnection&, IPC::Decoder&) final;
 
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+    void paintVideoFrame(SharedVideoFrame&&, const WebCore::FloatRect&, bool shouldDiscardAlpha);
+    void setSharedVideoFrameSemaphore(IPC::Semaphore&&);
+    void setSharedVideoFrameMemory(const SharedMemory::Handle&);
+#endif
+
     WeakPtr<WebCore::ImageBuffer> m_imageBuffer;
     QualifiedRenderingResourceIdentifier m_imageBufferIdentifier;
     WebCore::ProcessIdentifier m_webProcessIdentifier;
     RefPtr<RemoteRenderingBackend> m_renderingBackend;
     std::unique_ptr<WebCore::ControlFactory> m_controlFactory;
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+    SharedVideoFrameReader m_sharedVideoFrameReader;
+#endif
 };
 
 } // namespace WebKit

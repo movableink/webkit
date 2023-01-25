@@ -26,7 +26,9 @@
 #pragma once
 
 #include "AXIsolatedTree.h"
+#include "AXTextMarker.h"
 #include "AXTextStateChangeIntent.h"
+#include "AXTreeStore.h"
 #include "AccessibilityObject.h"
 #include "SimpleRange.h"
 #include "Timer.h"
@@ -55,19 +57,6 @@ class RenderText;
 class ScrollView;
 class VisiblePosition;
 class Widget;
-
-struct TextMarkerData {
-    AXID axID;
-
-    Node* node { nullptr };
-    unsigned offset { 0 };
-    Position::AnchorType anchorType { Position::PositionIsOffsetInAnchor };
-    Affinity affinity { Affinity::Downstream };
-
-    int characterStartIndex { 0 };
-    int characterOffset { 0 };
-    bool ignored { false };
-};
 
 struct CharacterOffset {
     Node* node;
@@ -143,8 +132,10 @@ enum AXTextChange { AXTextInserted, AXTextDeleted, AXTextAttributesChanged };
 
 enum class PostTarget { Element, ObservableParent };
 
-class AXObjectCache : public CanMakeWeakPtr<AXObjectCache> {
-    WTF_MAKE_NONCOPYABLE(AXObjectCache); WTF_MAKE_FAST_ALLOCATED;
+class AXObjectCache : public CanMakeWeakPtr<AXObjectCache>
+    , public AXTreeStore<AXObjectCache> {
+    WTF_MAKE_NONCOPYABLE(AXObjectCache);
+    WTF_MAKE_FAST_ALLOCATED;
     friend class AXIsolatedTree;
     friend WTF::TextStream& operator<<(WTF::TextStream&, AXObjectCache&);
 public:
@@ -227,22 +218,23 @@ public:
     const Element* rootAXEditableElement(const Node*);
     bool nodeIsTextControl(const Node*);
 
-    AXID platformGenerateAXID() const;
     AccessibilityObject* objectForID(const AXID& id) const { return m_objects.get(id); }
     Vector<RefPtr<AXCoreObject>> objectsForIDs(const Vector<AXID>&) const;
 
     // Text marker utilities.
     std::optional<TextMarkerData> textMarkerDataForVisiblePosition(const VisiblePosition&);
     std::optional<TextMarkerData> textMarkerDataForFirstPositionInTextControl(HTMLTextFormControlElement&);
-    void textMarkerDataForCharacterOffset(TextMarkerData&, const CharacterOffset&);
-    void textMarkerDataForNextCharacterOffset(TextMarkerData&, const CharacterOffset&);
-    void textMarkerDataForPreviousCharacterOffset(TextMarkerData&, const CharacterOffset&);
-    VisiblePosition visiblePositionForTextMarkerData(TextMarkerData&);
+    TextMarkerData textMarkerDataForCharacterOffset(const CharacterOffset&);
+    TextMarkerData textMarkerDataForNextCharacterOffset(const CharacterOffset&);
+    AXTextMarker nextTextMarker(const AXTextMarker&);
+    TextMarkerData textMarkerDataForPreviousCharacterOffset(const CharacterOffset&);
+    AXTextMarker previousTextMarker(const AXTextMarker&);
+    VisiblePosition visiblePositionForTextMarkerData(const TextMarkerData&);
     CharacterOffset characterOffsetForTextMarkerData(TextMarkerData&);
     // Use ignoreNextNodeStart/ignorePreviousNodeEnd to determine the behavior when we are at node boundary. 
     CharacterOffset nextCharacterOffset(const CharacterOffset&, bool ignoreNextNodeStart = true);
     CharacterOffset previousCharacterOffset(const CharacterOffset&, bool ignorePreviousNodeEnd = true);
-    void startOrEndTextMarkerDataForRange(TextMarkerData&, const SimpleRange&, bool);
+    TextMarkerData startOrEndTextMarkerDataForRange(const SimpleRange&, bool);
     CharacterOffset startOrEndCharacterOffsetForRange(const SimpleRange&, bool, bool enterTextControls = false);
     AccessibilityObject* accessibilityObjectForTextMarkerData(TextMarkerData&);
     std::optional<SimpleRange> rangeForUnorderedCharacterOffsets(const CharacterOffset&, const CharacterOffset&);
@@ -286,6 +278,7 @@ public:
         AXColumnCountChanged,
         AXColumnIndexChanged,
         AXColumnSpanChanged,
+        AXControlledObjectsChanged,
         AXCurrentStateChanged,
         AXDescribedByChanged,
         AXDisabledStateChanged,
@@ -452,9 +445,10 @@ protected:
     Node* nextNode(Node*) const;
     Node* previousNode(Node*) const;
     CharacterOffset traverseToOffsetInRange(const SimpleRange&, int, TraverseOption = TraverseOptionDefault, bool stayWithinRange = false);
+public:
     VisiblePosition visiblePositionFromCharacterOffset(const CharacterOffset&);
+protected:
     CharacterOffset characterOffsetFromVisiblePosition(const VisiblePosition&);
-    void setTextMarkerDataWithCharacterOffset(TextMarkerData&, const CharacterOffset&);
     UChar32 characterAfter(const CharacterOffset&);
     UChar32 characterBefore(const CharacterOffset&);
     CharacterOffset characterOffsetForNodeAndOffset(Node&, int, TraverseOption = TraverseOptionDefault);
@@ -526,6 +520,10 @@ private:
     static AXRelationType symmetricRelation(AXRelationType);
     void addRelation(Element*, Element*, AXRelationType);
     void addRelation(AccessibilityObject*, AccessibilityObject*, AXRelationType, AddingSymmetricRelation = AddingSymmetricRelation::No);
+    void removeRelationByID(AXID originID, AXID targetID, AXRelationType);
+    void addRelations(Element&, const QualifiedName&);
+    void updateRelations(Element&, const QualifiedName&);
+    void removeRelations(Element&, AXRelationType);
     void updateRelationsIfNeeded();
     void updateRelationsForTree(ContainerNode&);
     void relationsNeedUpdate(bool);
@@ -718,6 +716,10 @@ inline CharacterOffset AXObjectCache::startOrEndCharacterOffsetForRange(const Si
 inline CharacterOffset AXObjectCache::endCharacterOffsetOfLine(const CharacterOffset&) { return CharacterOffset(); }
 inline CharacterOffset AXObjectCache::nextCharacterOffset(const CharacterOffset&, bool) { return CharacterOffset(); }
 inline CharacterOffset AXObjectCache::previousCharacterOffset(const CharacterOffset&, bool) { return CharacterOffset(); }
+inline std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(const VisiblePosition&) { return std::nullopt; }
+inline TextMarkerData AXObjectCache::textMarkerDataForCharacterOffset(const CharacterOffset&) { return { }; }
+inline VisiblePosition AXObjectCache::visiblePositionForTextMarkerData(const TextMarkerData&) { return { }; }
+inline VisiblePosition AXObjectCache::visiblePositionFromCharacterOffset(const CharacterOffset&) { return { }; }
 #if PLATFORM(COCOA)
 inline void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject*, const AXTextStateChangeIntent&, const VisibleSelection&) { }
 inline void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject*, AXTextEditType, const String&, const VisiblePosition&) { }

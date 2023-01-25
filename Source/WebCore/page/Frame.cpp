@@ -35,6 +35,7 @@
 #include "BackForwardController.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyNames.h"
+#include "CSSValuePool.h"
 #include "CachedCSSStyleSheet.h"
 #include "CachedResourceLoader.h"
 #include "Chrome.h"
@@ -162,6 +163,7 @@ Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, UniqueRef<FrameLoa
     , m_eventHandler(makeUniqueRef<EventHandler>(*this))
 {
     ProcessWarming::initializeNames();
+    StaticCSSValuePool::init();
 
     if (ownerElement) {
         m_mainFrame.selfOnlyRef();
@@ -436,7 +438,7 @@ String Frame::searchForLabelsBeforeElement(const Vector<String>& labels, Element
     Node* n;
     for (n = NodeTraversal::previous(*element); n && lengthSearched < charsSearchedThreshold; n = NodeTraversal::previous(*n)) {
         // We hit another form element or the start of the form - bail out
-        if (is<HTMLFormElement>(*n) || is<HTMLFormControlElement>(*n))
+        if (is<HTMLFormElement>(*n) || (is<Element>(*n) && downcast<Element>(*n).isValidatedFormListedElement()))
             break;
 
         if (n->hasTagName(tdTag) && !startingTableCell)

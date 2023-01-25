@@ -40,6 +40,7 @@ bool defaultPassiveTouchListenersAsDefaultOnDocument();
 bool defaultCSSOMViewScrollingAPIEnabled();
 bool defaultShouldPrintBackgrounds();
 bool defaultAlternateFormControlDesignEnabled();
+bool defaultVideoFullscreenRequiresElementFullscreen();
 #if ENABLE(TEXT_AUTOSIZING)
 bool defaultTextAutosizingUsesIdempotentMode();
 #endif
@@ -85,6 +86,11 @@ bool defaultVisualTranslationEnabled();
 bool defaultRemoveBackgroundEnabled();
 #endif
 
+#if ENABLE(GAMEPAD)
+bool defaultGamepadVibrationActuatorEnabled();
+#endif
+
+bool defaultShouldTakeSuspendedAssertions();
 bool defaultShowModalDialogEnabled();
 
 } // namespace WebKit

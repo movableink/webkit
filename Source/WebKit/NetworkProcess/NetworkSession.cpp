@@ -27,6 +27,7 @@
 #include "NetworkSession.h"
 
 #include "CacheStorageEngine.h"
+#include "LoadedWebArchive.h"
 #include "Logging.h"
 #include "NetworkBroadcastChannelRegistry.h"
 #include "NetworkLoadScheduler.h"
@@ -114,7 +115,7 @@ static Ref<NetworkStorageManager> createNetworkStorageManager(IPC::Connection* c
     IPC::Connection::UniqueID connectionID;
     if (connection)
         connectionID = connection->uniqueID();
-    return NetworkStorageManager::create(parameters.sessionID, connectionID, parameters.generalStorageDirectory, parameters.localStorageDirectory, parameters.indexedDBDirectory, parameters.cacheStorageDirectory, parameters.perOriginStorageQuota, parameters.perThirdPartyOriginStorageQuota, parameters.shouldUseCustomStoragePaths);
+    return NetworkStorageManager::create(parameters.sessionID, connectionID, parameters.generalStorageDirectory, parameters.localStorageDirectory, parameters.indexedDBDirectory, parameters.cacheStorageDirectory, parameters.perOriginStorageQuota, parameters.perThirdPartyOriginStorageQuota, parameters.unifiedOriginStorageLevel);
 }
 
 NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
@@ -601,6 +602,15 @@ String NetworkSession::attributedBundleIdentifierFromPageIdentifier(WebPageProxy
     return m_attributedBundleIdentifierFromPageIdentifiers.get(identifier);
 }
 
+#if ENABLE(NETWORK_ISSUE_REPORTING)
+
+void NetworkSession::reportNetworkIssue(WebPageProxyIdentifier pageIdentifier, const URL& requestURL)
+{
+    m_networkProcess->parentProcessConnection()->send(Messages::NetworkProcessProxy::ReportNetworkIssue(pageIdentifier, requestURL), 0);
+}
+
+#endif // ENABLE(NETWORK_ISSUE_REPORTING)
+
 void NetworkSession::lowMemoryHandler(Critical)
 {
     clearPrefetchCache();
@@ -677,7 +687,7 @@ SWServer& NetworkSession::ensureSWServer()
                 ASSERT_NOT_REACHED();
                 return;
             }
-            m_networkProcess->addAllowedFirstPartyForCookies(webProcessIdentifier, WTFMove(firstPartyForCookies), [] { });
+            m_networkProcess->addAllowedFirstPartyForCookies(webProcessIdentifier, WTFMove(firstPartyForCookies), LoadedWebArchive::No, [] { });
         });
     }
     return *m_swServer;

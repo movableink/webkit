@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,8 +36,9 @@
 
 namespace PAL::WebGPU {
 
-SurfaceImpl::SurfaceImpl(WGPUSurface surface)
+SurfaceImpl::SurfaceImpl(WGPUSurface surface, ConvertToBackingContext& convertToBackingContext)
     : m_backing(surface)
+    , m_convertToBackingContext(convertToBackingContext)
 {
 }
 
@@ -48,18 +49,15 @@ SurfaceImpl::~SurfaceImpl()
 
 void SurfaceImpl::destroy()
 {
+    if (!m_backing)
+        return;
+
     wgpuSurfaceRelease(m_backing);
+    m_backing = nullptr;
 }
 
-void SurfaceImpl::setLabelInternal(const String& label)
+void SurfaceImpl::setLabelInternal(const String&)
 {
-    UNUSED_PARAM(label);
-}
-
-MachSendRight SurfaceImpl::displayBufferHandle() const
-{
-    IOSurfaceRef displayBuffer = wgpuSurfaceCocoaCustomSurfaceGetDisplayBuffer(m_backing);
-    return MachSendRight::adopt(IOSurfaceCreateMachPort(displayBuffer));
 }
 
 IOSurfaceRef SurfaceImpl::drawingBuffer() const

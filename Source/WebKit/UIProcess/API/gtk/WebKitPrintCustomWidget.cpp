@@ -39,8 +39,19 @@
  * webkit_print_custom_widget_new() and returning it from there. You can later
  * use webkit_print_operation_run_dialog() to display the dialog.
  *
+ * Unfortunately, use of custom widgets is incompatible with modern
+ * containerized application frameworks like Flatpak. A print dialog
+ * constructed in the application process will not have access to host
+ * printers, so instead it must be constructed by a desktop portal service
+ * running on the host system. Because this print dialog runs in a separate
+ * process, it's not possible to attach a custom widget.
+ *
  * Since: 2.16
+ *
+ * Deprecated: 2.40
  */
+
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 
 enum {
     APPLY,
@@ -109,14 +120,15 @@ static void webkit_print_custom_widget_class_init(WebKitPrintCustomWidgetClass* 
      * The custom #GtkWidget that will be embedded in the dialog.
      *
      * Since: 2.16
+     *
+     * Deprecated: 2.40
      */
     g_object_class_install_property(
         objectClass,
         PROP_WIDGET,
         g_param_spec_object(
             "widget",
-            _("Widget"),
-            _("Widget that will be added to the print dialog."),
+            nullptr, nullptr,
             GTK_TYPE_WIDGET,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY)));
 
@@ -126,14 +138,15 @@ static void webkit_print_custom_widget_class_init(WebKitPrintCustomWidgetClass* 
      * The title of the custom widget.
      *
      * Since: 2.16
+     *
+     * Deprecated: 2.40
      */
     g_object_class_install_property(
         objectClass,
         PROP_TITLE,
         g_param_spec_string(
             "title",
-            _("Title"),
-            _("Title of the widget that will be added to the print dialog."),
+            nullptr, nullptr,
             nullptr,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY)));
 
@@ -148,6 +161,8 @@ static void webkit_print_custom_widget_class_init(WebKitPrintCustomWidgetClass* 
      * according to their values.
      *
      * Since: 2.16
+     *
+     * Deprecated: 2.40
      */
     signals[UPDATE] =
         g_signal_new(
@@ -169,6 +184,8 @@ static void webkit_print_custom_widget_class_init(WebKitPrintCustomWidgetClass* 
      * is not guaranteed to be valid at a later time.
      *
      * Since: 2.16
+     *
+     * Deprecated: 2.40
      */
     signals[APPLY] =
         g_signal_new(
@@ -196,6 +213,8 @@ static void webkit_print_custom_widget_class_init(WebKitPrintCustomWidgetClass* 
  * Returns: (transfer full): a new #WebKitPrintOperation.
  *
  * Since: 2.16
+ *
+ * Deprecated: 2.40
  */
 WebKitPrintCustomWidget* webkit_print_custom_widget_new(GtkWidget* widget, const char* title)
 {
@@ -220,6 +239,8 @@ WebKitPrintCustomWidget* webkit_print_custom_widget_new(GtkWidget* widget, const
  * Returns: (transfer none): a #GtkWidget.
  *
  * Since: 2.16
+ *
+ * Deprecated: 2.40
  */
 GtkWidget* webkit_print_custom_widget_get_widget(WebKitPrintCustomWidget* printCustomWidget)
 {
@@ -240,6 +261,8 @@ GtkWidget* webkit_print_custom_widget_get_widget(WebKitPrintCustomWidget* printC
  * Returns: Title of the @print_custom_widget.
  *
  * Since: 2.16
+ *
+ * Deprecated: 2.40
  */
 const gchar* webkit_print_custom_widget_get_title(WebKitPrintCustomWidget* printCustomWidget)
 {
@@ -258,3 +281,5 @@ void webkitPrintCustomWidgetEmitUpdateCustomWidgetSignal(WebKitPrintCustomWidget
 {
     g_signal_emit(printCustomWidget, signals[UPDATE], 0, pageSetup, printSettings);
 }
+
+ALLOW_DEPRECATED_DECLARATIONS_END

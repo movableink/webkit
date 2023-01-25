@@ -23,6 +23,7 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/Vector.h>
 #include <wtf/text/ASCIILiteral.h>
 
 namespace WebCore {
@@ -32,6 +33,14 @@ class CachedResource;
 class DeprecatedCSSOMValue;
 
 enum CSSPropertyID : uint16_t;
+
+struct ComputedStyleDependencies {
+    Vector<CSSPropertyID> properties;
+    Vector<CSSPropertyID> rootProperties;
+    bool containerDimensions { false };
+
+    bool isEmpty() const { return properties.isEmpty() && rootProperties.isEmpty() && !containerDimensions; }
+};
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSValue);
 class CSSValue {
@@ -77,15 +86,7 @@ public:
     bool isNamedImageValue() const { return m_classType == NamedImageClass; }
     bool isImageSetValue() const { return m_classType == ImageSetClass; }
     bool isImageValue() const { return m_classType == ImageClass; }
-    bool isImplicitInitialValue() const;
-    bool isInheritValue() const;
-    bool isInitialValue() const;
-    bool isUnsetValue() const;
-    bool isRevertValue() const;
-    bool isRevertLayerValue() const;
-    bool isCSSWideKeyword() const;
-    bool treatAsInitialValue(CSSPropertyID) const;
-    bool treatAsInheritedValue(CSSPropertyID) const;
+    bool isImplicitInitialValue() const { return m_isImplicitInitialValue; }
     bool isLinearGradientValue() const { return m_classType == LinearGradientClass; }
     bool isRadialGradientValue() const { return m_classType == RadialGradientClass; }
     bool isConicGradientValue() const { return m_classType == ConicGradientClass; }
@@ -130,9 +131,8 @@ public:
     bool traverseSubresources(const Function<bool(const CachedResource&)>&) const;
 
     // What properties does this value rely on (eg, font-size for em units)
-    void collectDirectComputationalDependencies(HashSet<CSSPropertyID>&) const;
-    // What properties in the root element does this value rely on (eg. font-size for rem units)
-    void collectDirectRootComputationalDependencies(HashSet<CSSPropertyID>&) const;
+    ComputedStyleDependencies computedStyleDependencies() const;
+    void collectComputedStyleDependencies(ComputedStyleDependencies&) const;
 
     bool equals(const CSSValue&) const;
     bool operator==(const CSSValue& other) const { return equals(other); }
@@ -257,8 +257,7 @@ protected:
     // CSSPrimitiveValue:
     unsigned m_primitiveUnitType : 7 { 0 }; // CSSUnitType
     mutable unsigned m_hasCachedCSSText : 1 { false };
-    mutable unsigned m_cachedCSSTextUsesLegacyPrecision : 1 { false };
-    unsigned m_isImplicit : 1 { false };
+    unsigned m_isImplicitInitialValue : 1 { false };
 
     // CSSValueList and CSSValuePair:
     unsigned m_valueSeparator : ValueSeparatorBits { 0 };

@@ -265,6 +265,22 @@ void StringDumper::visit(UnaryExpression& expression)
     visit(expression.expression());
 }
 
+void StringDumper::visit(BinaryExpression& expression)
+{
+    constexpr ASCIILiteral binaryOperator[] = { "+"_s, "*"_s };
+    auto op = WTF::enumToUnderlyingType(expression.operation());
+    visit(expression.lhs());
+    m_out.print(" ", binaryOperator[op], " ");
+    visit(expression.rhs());
+}
+
+void StringDumper::visit(PointerDereference& pointerDereference)
+{
+    m_out.print("(*");
+    visit(pointerDereference.target());
+    m_out.print(")");
+}
+
 // Statement
 void StringDumper::visit(AssignmentStatement& statement)
 {
@@ -348,6 +364,16 @@ void StringDumper::visit(ParameterizedType& type)
     m_out.print(base[b], "<");
     visit(type.elementType());
     m_out.print(">");
+}
+
+void StringDumper::visit(StructType& type)
+{
+    m_out.print(type.structDecl().name());
+}
+
+void StringDumper::visit(TypeReference& type)
+{
+    visit(type.type());
 }
 
 void StringDumper::visit(Parameter& parameter)

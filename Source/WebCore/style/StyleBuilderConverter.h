@@ -128,6 +128,7 @@ public:
     static Vector<GridTrackSize> convertGridTrackSizeList(BuilderState&, const CSSValue&);
     static std::optional<GridPosition> convertGridPosition(BuilderState&, const CSSValue&);
     static GridAutoFlow convertGridAutoFlow(BuilderState&, const CSSValue&);
+    static Vector<StyleContentAlignmentData> convertContentAlignmentDataList(BuilderState&, const CSSValue&);
     static MasonryAutoFlow convertMasonryAutoFlow(BuilderState&, const CSSValue&);
     static std::optional<Length> convertWordSpacing(BuilderState&, const CSSValue&);
     static std::optional<float> convertPerspective(BuilderState&, const CSSValue&);
@@ -930,7 +931,7 @@ inline float BuilderConverter::convertTextStrokeWidth(BuilderState& builderState
             result *= 3;
         else if (primitiveValue.valueID() == CSSValueThick)
             result *= 5;
-        Ref<CSSPrimitiveValue> emsValue(CSSPrimitiveValue::create(result, CSSUnitType::CSS_EMS));
+        auto emsValue = CSSPrimitiveValue::create(result, CSSUnitType::CSS_EMS);
         width = convertComputedLength<float>(builderState, emsValue);
         break;
     }
@@ -1303,6 +1304,21 @@ inline GridAutoFlow BuilderConverter::convertGridAutoFlow(BuilderState&, const C
     return autoFlow;
 }
 
+inline Vector<StyleContentAlignmentData> BuilderConverter::convertContentAlignmentDataList(BuilderState& builder, const CSSValue& value)
+{
+    auto& list = downcast<CSSValueList>(value);
+
+    Vector<StyleContentAlignmentData> tracks;
+    tracks.reserveInitialCapacity(list.length());
+
+    for (auto value : list) {
+        auto& contentDistributionValue = downcast<CSSContentDistributionValue>(value.get());
+        tracks.append(convertContentAlignmentData(builder, contentDistributionValue));
+    }
+
+    return tracks;
+}
+
 inline MasonryAutoFlow BuilderConverter::convertMasonryAutoFlow(BuilderState&, const CSSValue& value)
 {
     auto& valueList = downcast<CSSValueList>(value);
@@ -1650,12 +1666,12 @@ inline StyleContentAlignmentData BuilderConverter::convertContentAlignmentData(B
     if (!is<CSSContentDistributionValue>(value))
         return alignmentData;
     auto& contentValue = downcast<CSSContentDistributionValue>(value);
-    if (contentValue.distribution()->valueID() != CSSValueInvalid)
-        alignmentData.setDistribution(contentValue.distribution().get());
-    if (contentValue.position()->valueID() != CSSValueInvalid)
-        alignmentData.setPosition(contentValue.position().get());
-    if (contentValue.overflow()->valueID() != CSSValueInvalid)
-        alignmentData.setOverflow(contentValue.overflow().get());
+    if (contentValue.distribution() != CSSValueInvalid)
+        alignmentData.setDistribution(fromCSSValueID<ContentDistribution>(contentValue.distribution()));
+    if (contentValue.position() != CSSValueInvalid)
+        alignmentData.setPosition(fromCSSValueID<ContentPosition>(contentValue.position()));
+    if (contentValue.overflow() != CSSValueInvalid)
+        alignmentData.setOverflow(fromCSSValueID<OverflowAlignment>(contentValue.overflow()));
     return alignmentData;
 }
 

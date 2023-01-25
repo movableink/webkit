@@ -319,7 +319,7 @@ void RenderTable::updateLogicalWidth()
             containerLogicalWidthForAutoMargins = containingBlockAvailableLineWidthInFragment(0); // FIXME: Work with regions someday.
         ComputedMarginValues marginValues;
         bool hasInvertedDirection =  cb.style().isLeftToRightDirection() == style().isLeftToRightDirection();
-        computeInlineDirectionMargins(cb, containerLogicalWidthForAutoMargins, logicalWidth(),
+        computeInlineDirectionMargins(cb, availableLogicalWidth, containerLogicalWidthForAutoMargins, logicalWidth(),
             hasInvertedDirection ? marginValues.m_start : marginValues.m_end,
             hasInvertedDirection ? marginValues.m_end : marginValues.m_start);
         setMarginStart(marginValues.m_start);
@@ -422,6 +422,7 @@ void RenderTable::simplifiedNormalFlowLayout()
         section->layoutIfNeeded();
         section->layoutRows();
         section->computeOverflowFromCells();
+        section->addVisualEffectOverflow();
     }
 }
 
@@ -452,7 +453,7 @@ void RenderTable::layout()
 
     LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
     {
-        LayoutStateMaintainer statePusher(*this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
+        LayoutStateMaintainer statePusher(*this, locationOffset(), isTransformed() || hasReflection() || style().isFlippedBlocksWritingMode());
 
         LayoutUnit oldLogicalWidth = logicalWidth();
         LayoutUnit oldLogicalHeight = logicalHeight();
@@ -561,6 +562,8 @@ void RenderTable::layout()
             section->setLogicalLocation(LayoutPoint(sectionLogicalLeft, logicalHeight()));
 
             setLogicalHeight(logicalHeight() + section->logicalHeight());
+            section->addVisualEffectOverflow();
+            
             section = sectionBelow(section);
         }
 

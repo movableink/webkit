@@ -333,9 +333,11 @@ const OpcodeIDWide16SizeWasm = 2 # Wide16 Prefix + OpcodeID(1 byte)
 const OpcodeIDWide32SizeWasm = 2 # Wide32 Prefix + OpcodeID(1 byte)
 
 if X86_64_WIN or C_LOOP_WIN
+    const WTFConfig = _g_wtfConfig
     const GigacageConfig = _g_gigacageConfig
     const JSCConfig = _g_jscConfig
 else
+    const WTFConfig = _g_config + constexpr WTF::startOffsetOfWTFConfig
     const GigacageConfig = _g_config + constexpr Gigacage::startOffsetOfGigacageConfig
     const JSCConfig = _g_config + constexpr WTF::offsetOfWTFConfigExtension
 end
@@ -1495,7 +1497,7 @@ macro assertNotConstant(size, index)
     end)
 end
 
-macro convertCalleeToVM(callee)
+macro convertJSCalleeToVM(callee)
     btpnz callee, (constexpr PreciseAllocation::halfAlignment), .preciseAllocation
     andp MarkedBlockMask, callee
     loadp MarkedBlockHeaderOffset + MarkedBlock::Header::m_vm[callee], callee
@@ -1503,6 +1505,30 @@ macro convertCalleeToVM(callee)
 .preciseAllocation:
     loadp PreciseAllocationVMOffset[callee], callee
 .done:
+end
+
+macro getVMFromCallFrame(vm, scratch)
+if WEBASSEMBLY
+        if JSVALUE64
+            loadq Callee[cfr], vm
+            move vm, scratch
+            andq (constexpr JSValue::WasmMask), scratch
+            bqeq scratch, (constexpr JSValue::WasmTag), .isWasmCallee
+        else
+            loadi Callee + TagOffset[cfr], scratch
+            bieq scratch, (constexpr JSValue::WasmTag), .isWasmCallee
+            loadp Callee + PayloadOffset[cfr], vm
+        end
+        convertJSCalleeToVM(vm)
+        jmp .loaded
+    .isWasmCallee:
+        loadp CodeBlock + PayloadOffset[cfr], vm
+        loadp Wasm::Instance::m_vm[vm], vm
+    .loaded:
+else
+    loadp Callee + PayloadOffset[cfr], vm
+    convertJSCalleeToVM(vm)
+end
 end
 
 # Do the bare minimum required to execute code. Sets up the PC, leave the CodeBlock*
@@ -2746,48 +2772,25 @@ op(wasm_function_prologue, macro ()
     crash()
 end)
 
-op(wasm_function_prologue_no_tls, macro ()
-    crash()
-end)
-
 op(wasm_function_prologue_simd, macro ()
     crash()
 end)
 
-op(wasm_function_prologue_no_tls_simd, macro ()
-    crash()
-end)
-
 _wasm_trampoline_wasm_call:
-_wasm_trampoline_wasm_call_no_tls:
 _wasm_trampoline_wasm_call_indirect:
-_wasm_trampoline_wasm_call_indirect_no_tls:
 _wasm_trampoline_wasm_call_ref:
-_wasm_trampoline_wasm_call_ref_no_tls:
 _wasm_trampoline_wasm_call_wide16:
-_wasm_trampoline_wasm_call_no_tls_wide16:
 _wasm_trampoline_wasm_call_indirect_wide16:
-_wasm_trampoline_wasm_call_indirect_no_tls_wide16:
 _wasm_trampoline_wasm_call_ref_wide16:
-_wasm_trampoline_wasm_call_ref_no_tls_wide16:
 _wasm_trampoline_wasm_call_wide32:
-_wasm_trampoline_wasm_call_no_tls_wide32:
 _wasm_trampoline_wasm_call_indirect_wide32:
-_wasm_trampoline_wasm_call_indirect_no_tls_wide32:
 _wasm_trampoline_wasm_call_ref_wide32:
-_wasm_trampoline_wasm_call_ref_no_tls_wide32:
 _wasm_trampoline_wasm_tail_call:
-_wasm_trampoline_wasm_tail_call_no_tls:
 _wasm_trampoline_wasm_tail_call_indirect:
-_wasm_trampoline_wasm_tail_call_indirect_no_tls:
 _wasm_trampoline_wasm_tail_call_wide16:
-_wasm_trampoline_wasm_tail_call_no_tls_wide16:
 _wasm_trampoline_wasm_tail_call_indirect_wide16:
-_wasm_trampoline_wasm_tail_call_indirect_no_tls_wide16:
 _wasm_trampoline_wasm_tail_call_wide32:
-_wasm_trampoline_wasm_tail_call_no_tls_wide32:
 _wasm_trampoline_wasm_tail_call_indirect_wide32:
-_wasm_trampoline_wasm_tail_call_indirect_no_tls_wide32:
     crash()
 
 end

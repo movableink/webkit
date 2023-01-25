@@ -48,7 +48,6 @@
 
 #include "Chrome.h"
 #include "DebugPageOverlays.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Editor.h"
 #include "ElementRuleCollector.h"
 #include "EventHandler.h"
@@ -829,19 +828,16 @@ void RenderLayerScrollableArea::invalidateScrollCornerRect(const IntRect& rect)
         m_resizer->repaintRectangle(rect);
 }
 
-static bool scrollbarHiddenByStyle(Scrollbar* scrollbar)
+NativeScrollbarVisibility RenderLayerScrollableArea::horizontalNativeScrollbarVisibility() const
 {
-    return scrollbar && scrollbar->isHiddenByStyle();
+    auto scrollbar = horizontalScrollbar();
+    return Scrollbar::nativeScrollbarVisibility(scrollbar);
 }
 
-bool RenderLayerScrollableArea::horizontalScrollbarHiddenByStyle() const
+NativeScrollbarVisibility RenderLayerScrollableArea::verticalNativeScrollbarVisibility() const
 {
-    return scrollbarHiddenByStyle(horizontalScrollbar());
-}
-
-bool RenderLayerScrollableArea::verticalScrollbarHiddenByStyle() const
-{
-    return scrollbarHiddenByStyle(verticalScrollbar());
+    auto scrollbar = verticalScrollbar();
+    return Scrollbar::nativeScrollbarVisibility(scrollbar);
 }
 
 bool RenderLayerScrollableArea::canShowNonOverlayScrollbars() const
@@ -993,14 +989,14 @@ int RenderLayerScrollableArea::horizontalScrollbarHeight(OverlayScrollbarSizeRel
 
 OverscrollBehavior RenderLayerScrollableArea::horizontalOverscrollBehavior() const
 {
-    if (m_layer.renderBox() && m_layer.renderBox()->canBeScrolledAndHasScrollableArea())
+    if (m_layer.renderBox())
         return m_layer.renderer().style().overscrollBehaviorX();
     return OverscrollBehavior::Auto;
 }
 
 OverscrollBehavior RenderLayerScrollableArea::verticalOverscrollBehavior() const
 {
-    if (m_layer.renderBox() && m_layer.renderBox()->canBeScrolledAndHasScrollableArea())
+    if (m_layer.renderBox())
         return m_layer.renderer().style().overscrollBehaviorY();
     return OverscrollBehavior::Auto;
 }
@@ -1189,7 +1185,7 @@ void RenderLayerScrollableArea::updateScrollbarsAfterStyleChange(const RenderSty
         return;
 
     // List box parts handle the scrollbars by themselves so we have nothing to do.
-    if (box->style().effectiveAppearance() == ControlPartType::Listbox)
+    if (box->style().effectiveAppearance() == StyleAppearance::Listbox)
         return;
 
     bool hadVerticalScrollbar = hasVerticalScrollbar();
@@ -1209,7 +1205,7 @@ void RenderLayerScrollableArea::updateScrollbarsAfterLayout()
     ASSERT(box);
 
     // List box parts handle the scrollbars by themselves so we have nothing to do.
-    if (box->style().effectiveAppearance() == ControlPartType::Listbox)
+    if (box->style().effectiveAppearance() == StyleAppearance::Listbox)
         return;
 
     bool hadHorizontalScrollbar = hasHorizontalScrollbar();

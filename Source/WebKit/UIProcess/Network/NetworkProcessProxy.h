@@ -126,7 +126,7 @@ public:
     
     void getNetworkProcessConnection(WebProcessProxy&, CompletionHandler<void(NetworkProcessConnectionInfo&&)>&&);
 
-    DownloadProxy& createDownloadProxy(WebsiteDataStore&, WebProcessPool&, const WebCore::ResourceRequest&, const FrameInfoData&, WebPageProxy* originatingPage);
+    DownloadProxy& createDownloadProxy(WebsiteDataStore&, Ref<API::DownloadClient>&&, const WebCore::ResourceRequest&, const FrameInfoData&, WebPageProxy* originatingPage);
     void dataTaskWithRequest(WebPageProxy&, PAL::SessionID, WebCore::ResourceRequest&&, CompletionHandler<void(API::DataTask&)>&&);
 
     void fetchWebsiteData(PAL::SessionID, OptionSet<WebsiteDataType>, OptionSet<WebsiteDataFetchOption>, CompletionHandler<void(WebsiteData)>&&);
@@ -213,8 +213,6 @@ public:
     void setDomainsWithCrossPageStorageAccess(HashMap<TopFrameDomain, SubResourceDomain>&&, CompletionHandler<void()>&&);
 #endif
 
-    void requestLookalikeCharacterStrings(CompletionHandler<void(Vector<String>&&)>&&);
-
     void setPrivateClickMeasurementDebugMode(PAL::SessionID, bool);
     
     void synthesizeAppIsBackground(bool background);
@@ -252,9 +250,13 @@ public:
     void networkProcessDidTerminate(ProcessTerminationReason);
     
     void resetQuota(PAL::SessionID, CompletionHandler<void()>&&);
-    void clearStorage(PAL::SessionID, CompletionHandler<void()>&&);
+    void resetStoragePersistedState(PAL::SessionID, CompletionHandler<void()>&&);
 #if PLATFORM(IOS_FAMILY)
     void setBackupExclusionPeriodForTesting(PAL::SessionID, Seconds, CompletionHandler<void()>&&);
+#endif
+
+#if ENABLE(NETWORK_ISSUE_REPORTING)
+    void reportNetworkIssue(WebPageProxyIdentifier, const URL&);
 #endif
 
     void resourceLoadDidSendRequest(WebPageProxyIdentifier, ResourceLoadInfo&&, WebCore::ResourceRequest&&, std::optional<IPC::FormDataReference>&&);
@@ -313,6 +315,8 @@ public:
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
     void setEmulatedConditions(PAL::SessionID, std::optional<int64_t>&& bytesPerSecondLimit);
 #endif
+
+    void notifyMediaStreamingActivity(bool);
 
 private:
     explicit NetworkProcessProxy();

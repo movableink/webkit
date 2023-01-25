@@ -17,6 +17,7 @@ PASS syntax:'*', initialValue:'([ brackets ]) { yay (??)}' is valid
 PASS syntax:'*', initialValue:'yep 'this is valid too'' is valid
 PASS syntax:'*', initialValue:'unmatched opening bracket is valid :(' is valid
 PASS syntax:'*', initialValue:'"' is valid
+PASS syntax:'*', initialValue:'default' is valid
 PASS syntax:'<length>', initialValue:'0' is valid
 PASS syntax:'<length>', initialValue:'10px /*:)*/' is valid
 PASS syntax:'<length>', initialValue:' calc(-2px)' is valid
@@ -58,6 +59,32 @@ PASS syntax:'<color>', initialValue:'lightgoldenrodyellow' is valid
 PASS syntax:'<image>', initialValue:'url(a)' is valid
 PASS syntax:'<image>', initialValue:'linear-gradient(yellow, blue)' is valid
 PASS syntax:'<url>', initialValue:'url(a)' is valid
+PASS syntax:'<color>+', initialValue:'yellow blue' is valid
+PASS syntax:'<color>+ | <color>', initialValue:'yellow blue' is valid
+PASS syntax:'<color> | <color>+', initialValue:'yellow blue' is valid
+PASS syntax:'<color># | <color>', initialValue:'yellow, blue' is valid
+PASS syntax:'<color> | <color>#', initialValue:'yellow, blue' is valid
+PASS syntax:'<color># | <color>+', initialValue:'yellow blue' is valid
+PASS syntax:'<color>+ | <color>#', initialValue:'yellow, blue' is valid
+PASS syntax:'<color>+ | yellow', initialValue:'yellow blue' is valid
+PASS syntax:'yellow', initialValue:'yellow' is valid
+PASS syntax:'yellow | <color>+', initialValue:'yellow blue' is valid
+PASS syntax:'<color># | yellow', initialValue:'yellow, blue' is valid
+PASS syntax:'yellow | <color>#', initialValue:'yellow, blue' is valid
+PASS syntax:'<transform-list> | <transform-function> ', initialValue:'scale(2) rotate(90deg)' is valid
+PASS syntax:'<transform-function> | <transform-list>', initialValue:'scale(2) rotate(90deg)' is valid
+PASS syntax:'<transform-list> | <transform-function>+ ', initialValue:'scale(2) rotate(90deg)' is valid
+PASS syntax:'<transform-function>+ | <transform-list>', initialValue:'scale(2) rotate(90deg)' is valid
+PASS syntax:'<transform-list> | <transform-function># ', initialValue:'scale(2) rotate(90deg)' is valid
+PASS syntax:'<transform-function># | <transform-list>', initialValue:'scale(2) rotate(90deg)' is valid
+PASS syntax:'<transform-list> | <transform-function># ', initialValue:'scale(2), rotate(90deg)' is valid
+PASS syntax:'<transform-function># | <transform-list>', initialValue:'scale(2), rotate(90deg)' is valid
+PASS syntax:'<integer>+ | <percentage>+ | <length>+ ', initialValue:'1' is valid
+PASS syntax:'<integer>+ | <percentage>+ | <length>+ ', initialValue:'1 1' is valid
+PASS syntax:'<integer>+ | <percentage>+ | <length>+ ', initialValue:'1%' is valid
+PASS syntax:'<integer>+ | <percentage>+ | <length>+ ', initialValue:'1% 1%' is valid
+PASS syntax:'<integer>+ | <percentage>+ | <length>+ ', initialValue:'1px' is valid
+PASS syntax:'<integer>+ | <percentage>+ | <length>+ ', initialValue:'1px 1px' is valid
 PASS syntax:'banana', initialValue:'banana' is valid
 PASS syntax:'bAnAnA', initialValue:'bAnAnA' is valid
 PASS syntax:'ba-na-nya', initialValue:'ba-na-nya' is valid
@@ -108,6 +135,12 @@ PASS syntax:'foo § bar', initialValue:'foo § bar' is invalid
 PASS syntax:'foo \1F914 bar', initialValue:'foo \1F914 bar' is invalid
 PASS syntax:'<length> <number>', initialValue:'0px 0' is invalid
 PASS syntax:'<length> <length> <length>', initialValue:'0px 0px 0px' is invalid
+PASS syntax:'<integer>+ | <percentage>+ | <length>+ ', initialValue:'1 1%' is invalid
+PASS syntax:'<integer>+ | <percentage>+ | <length>+ ', initialValue:'1% 1' is invalid
+PASS syntax:'<integer>+ | <percentage>+ | <length>+ ', initialValue:'1px 1' is invalid
+PASS syntax:'<integer>+ | <percentage>+ | <length>+ ', initialValue:'1 1px' is invalid
+PASS syntax:'<integer>+ | <percentage>+ | <length>+ ', initialValue:'1px 1%' is invalid
+PASS syntax:'<integer>+ | <percentage>+ | <length>+ ', initialValue:'1% 1px' is invalid
 PASS syntax:'initial', initialValue:'initial' is invalid
 PASS syntax:'inherit', initialValue:'inherit' is invalid
 PASS syntax:'unset', initialValue:'unset' is invalid
@@ -124,7 +157,6 @@ PASS syntax:'*', initialValue:'inherit' is invalid
 PASS syntax:'*', initialValue:'unset' is invalid
 PASS syntax:'*', initialValue:'revert' is invalid
 PASS syntax:'*', initialValue:'revert-layer' is invalid
-FAIL syntax:'*', initialValue:'default' is invalid assert_throws_dom: function "() => CSS.registerProperty({name: name, syntax: syntax, initialValue: initialValue, inherits: false})" did not throw
 PASS syntax:'<custom-ident>', initialValue:'initial' is invalid
 PASS syntax:'<custom-ident>', initialValue:'inherit' is invalid
 PASS syntax:'<custom-ident>', initialValue:'unset' is invalid

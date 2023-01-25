@@ -79,7 +79,7 @@
 
 #if ENABLE(WEBASSEMBLY)
 #include "JSWebAssemblyInstance.h"
-#include "WasmContextInlines.h"
+#include "WasmContext.h"
 #include "WebAssemblyFunction.h"
 #endif
 
@@ -605,9 +605,9 @@ public:
         if (m_catchableFromWasm && callee.isWasm()) {
             Wasm::Callee* wasmCallee = callee.asWasmCallee();
             if (wasmCallee->hasExceptionHandlers()) {
-                JSWebAssemblyInstance* jsInstance = jsCast<JSWebAssemblyInstance*>(m_callFrame->thisValue());
+                Wasm::Instance* instance = m_callFrame->wasmInstance();
                 unsigned exceptionHandlerIndex = m_callFrame->callSiteIndex().bits();
-                m_handler = { wasmCallee->handlerForIndex(jsInstance->instance(), exceptionHandlerIndex, m_wasmTag), wasmCallee };
+                m_handler = { wasmCallee->handlerForIndex(*instance, exceptionHandlerIndex, m_wasmTag), wasmCallee };
                 if (m_handler.m_valid)
                     return IterationStatus::Done;
             }
@@ -621,14 +621,6 @@ public:
         }
 
         notifyDebuggerOfUnwinding(m_vm, m_callFrame);
-
-#if ENABLE(WEBASSEMBLY)
-        if (callee.isWasm()) {
-            Wasm::Callee* wasmCallee = callee.asWasmCallee();
-            if (wasmCallee->compilationMode() == Wasm::CompilationMode::JSToWasmICMode)
-                m_vm.wasmContext.store(static_cast<Wasm::JSToWasmICCallee*>(wasmCallee)->previousInstance(m_callFrame));
-        }
-#endif
 
         copyCalleeSavesToEntryFrameCalleeSavesBuffer(visitor);
 
@@ -661,7 +653,7 @@ private:
             RegisterAtOffset* calleeSavesEntry = allCalleeSaves->find(currentEntry.reg());
 
             if (!calleeSavesEntry) {
-                if constexpr (!isARM())
+                if constexpr (!isARM_THUMB2())
                     RELEASE_ASSERT_NOT_REACHED();
                 // This can happen on ARMv7, because there are more callee save
                 // registers in the system convention than in the VM convention,
@@ -696,7 +688,7 @@ private:
         auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
         SuspendExceptionScope scope(vm);
-        if (callFrame->isAnyWasmCallee()
+        if (callFrame->isWasmFrame()
             || (callFrame->callee().isCell() && callFrame->callee().asCell()->inherits<JSFunction>()))
             debugger->unwindEvent(callFrame);
         else
@@ -773,7 +765,7 @@ NEVER_INLINE CatchInfo Interpreter::unwind(VM& vm, CallFrame*& callFrame, Except
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     ASSERT(reinterpret_cast<void*>(callFrame) != vm.topEntryFrame);
-    CodeBlock* codeBlock = callFrame->isAnyWasmCallee() ? nullptr : callFrame->codeBlock();
+    CodeBlock* codeBlock = callFrame->isWasmFrame() ? nullptr : callFrame->codeBlock();
 
     JSValue exceptionValue = exception->value();
     ASSERT(!exceptionValue.isEmpty());

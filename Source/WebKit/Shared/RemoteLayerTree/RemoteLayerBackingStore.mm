@@ -196,29 +196,19 @@ bool RemoteLayerBackingStore::usesDeepColorBackingStore() const
     return false;
 }
 
-DestinationColorSpace RemoteLayerBackingStore::colorSpace() const
-{
-#if PLATFORM(MAC)
-    if (auto* context = m_layer->context())
-        return context->displayColorSpace().value_or(DestinationColorSpace::SRGB());
-#else
-    if (usesDeepColorBackingStore())
-        return DestinationColorSpace { extendedSRGBColorSpaceRef() };
-#endif
-    return DestinationColorSpace::SRGB();
-}
-
 PixelFormat RemoteLayerBackingStore::pixelFormat() const
 {
     if (usesDeepColorBackingStore())
         return m_parameters.isOpaque ? PixelFormat::RGB10 : PixelFormat::RGB10A8;
-    return PixelFormat::BGRA8;
+
+    return m_parameters.isOpaque ? PixelFormat::BGRX8 : PixelFormat::BGRA8;
 }
 
 unsigned RemoteLayerBackingStore::bytesPerPixel() const
 {
     switch (pixelFormat()) {
     case PixelFormat::RGBA8: return 4;
+    case PixelFormat::BGRX8: return 4;
     case PixelFormat::BGRA8: return 4;
     case PixelFormat::RGB10: return 4;
     case PixelFormat::RGB10A8: return 5;
@@ -438,8 +428,15 @@ void RemoteLayerBackingStore::paintContents()
 
 #if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
     if (m_parameters.includeDisplayList == IncludeDisplayList::Yes) {
-        BifurcatedGraphicsContext context(m_frontBuffer.imageBuffer->context(), m_displayListBuffer->context());
-        drawInContext(context);
+        auto& displayListContext = m_displayListBuffer->context();
+
+        BifurcatedGraphicsContext context(m_frontBuffer.imageBuffer->context(), displayListContext);
+        drawInContext(context, [&] {
+#if HAVE(CG_DISPLAY_LIST_RESPECTING_CONTENTS_FLIPPED)
+            displayListContext.scale(FloatSize(1, -1));
+            displayListContext.translate(0, -m_parameters.size.height());
+#endif
+        });
         return;
     }
 #endif
@@ -448,9 +445,12 @@ void RemoteLayerBackingStore::paintContents()
     drawInContext(context);
 }
 
-void RemoteLayerBackingStore::drawInContext(GraphicsContext& context)
+void RemoteLayerBackingStore::drawInContext(GraphicsContext& context, WTF::Function<void()>&& additionalContextSetupCallback)
 {
     GraphicsContextStateSaver stateSaver(context);
+
+    if (additionalContextSetupCallback)
+        additionalContextSetupCallback();
 
     // If we have less than webLayerMaxRectsToPaint rects to paint and they cover less
     // than webLayerWastedSpaceThreshold of the total dirty area, we'll repaint each rect separately.

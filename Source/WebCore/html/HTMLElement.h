@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "ColorTypes.h"
 #include "HTMLNames.h"
 #include "InputMode.h"
 #include "StyledElement.h"
@@ -37,6 +38,7 @@ class FormListedElement;
 class FormAssociatedElement;
 class HTMLFormElement;
 class VisibleSelection;
+
 struct SimpleRange;
 struct TextRecognitionResult;
 
@@ -83,8 +85,6 @@ public:
 
     bool rendererIsEverNeeded() final;
 
-    WEBCORE_EXPORT virtual HTMLFormElement* form() const;
-
     WEBCORE_EXPORT const AtomString& dir() const;
     WEBCORE_EXPORT void setDir(const AtomString&);
 
@@ -98,9 +98,11 @@ public:
     bool willRespondToMouseMoveEvents() const override;
     bool willRespondToMouseClickEventsWithEditability(Editability) const override;
 
+    // Represents "labelable element": https://html.spec.whatwg.org/multipage/forms.html#category-label
     virtual bool isLabelable() const { return false; }
+    WEBCORE_EXPORT RefPtr<NodeList> labels();
+
     virtual FormAssociatedElement* asFormAssociatedElement();
-    virtual FormListedElement* asFormListedElement();
 
     virtual bool isInteractiveContent() const { return false; }
 

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2006-2008, 2014, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2017 Google Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2009 Igalia S.L.
  *
@@ -1011,22 +1012,6 @@ static bool executeRemoveFormat(Frame& frame, Event*, EditorCommandSource, const
     return true;
 }
 
-static bool executeScrollPageBackward(Frame& frame, Event*, EditorCommandSource, const String&)
-{
-    if (frame.eventHandler().shouldUseSmoothKeyboardScrollingForFocusedScrollableArea())
-        return frame.eventHandler().keyboardScrollRecursively(ScrollDirection::ScrollUp, ScrollGranularity::Page, nullptr);
-
-    return frame.eventHandler().logicalScrollRecursively(ScrollBlockDirectionBackward, ScrollGranularity::Page);
-}
-
-static bool executeScrollPageForward(Frame& frame, Event*, EditorCommandSource, const String&)
-{
-    if (frame.eventHandler().shouldUseSmoothKeyboardScrollingForFocusedScrollableArea())
-        return frame.eventHandler().keyboardScrollRecursively(ScrollDirection::ScrollDown, ScrollGranularity::Page, nullptr);
-
-    return frame.eventHandler().logicalScrollRecursively(ScrollBlockDirectionForward, ScrollGranularity::Page);
-}
-
 static bool executeScrollLineUp(Frame& frame, Event*, EditorCommandSource, const String&)
 {
     return frame.eventHandler().scrollRecursively(ScrollUp, ScrollGranularity::Line);
@@ -1558,6 +1543,14 @@ static String valueNull(Frame&, Event*)
     return String();
 }
 
+// The command has no value.
+// https://w3c.github.io/editing/execCommand.html#querycommandvalue()
+// > ... or has no value, return the empty string.
+static String valueAsEmptyString(Frame&, Event*)
+{
+    return emptyString();
+}
+
 static String valueBackColor(Frame& frame, Event*)
 {
     return valueStyle(frame, CSSPropertyBackgroundColor);
@@ -1762,8 +1755,6 @@ static const CommandMap& createCommandMap()
         { "Print"_s, { executePrint, supported, enabled, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "Redo"_s, { executeRedo, supported, enabledRedo, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "RemoveFormat"_s, { executeRemoveFormat, supported, enabledRangeInEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
-        { "ScrollPageBackward"_s, { executeScrollPageBackward, supportedFromMenuOrKeyBinding, enabled, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
-        { "ScrollPageForward"_s, { executeScrollPageForward, supportedFromMenuOrKeyBinding, enabled, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "ScrollLineUp"_s, { executeScrollLineUp, supportedFromMenuOrKeyBinding, enabled, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "ScrollLineDown"_s, { executeScrollLineDown, supportedFromMenuOrKeyBinding, enabled, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "ScrollToBeginningOfDocument"_s, { executeScrollToBeginningOfDocument, supportedFromMenuOrKeyBinding, enabled, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
@@ -1776,7 +1767,7 @@ static const CommandMap& createCommandMap()
         { "SelectWord"_s, { executeSelectWord, supportedFromMenuOrKeyBinding, enabledVisibleSelection, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "SetMark"_s, { executeSetMark, supportedFromMenuOrKeyBinding, enabledVisibleSelection, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "Strikethrough"_s, { executeStrikethrough, supported, enabledInRichlyEditableText, stateStrikethrough, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
-        { "StyleWithCSS"_s, { executeStyleWithCSS, supported, enabled, stateStyleWithCSS, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
+        { "StyleWithCSS"_s, { executeStyleWithCSS, supported, enabled, stateStyleWithCSS, valueAsEmptyString, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "Subscript"_s, { executeSubscript, supported, enabledInRichlyEditableText, stateSubscript, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "Superscript"_s, { executeSuperscript, supported, enabledInRichlyEditableText, stateSuperscript, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "SwapWithMark"_s, { executeSwapWithMark, supportedFromMenuOrKeyBinding, enabledVisibleSelectionAndMark, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },

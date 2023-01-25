@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,20 +36,25 @@
 
 namespace PAL::WebGPU {
 
-SwapChainImpl::SwapChainImpl(WGPUSurface surface, WGPUSwapChain swapChain)
+SwapChainImpl::SwapChainImpl(WGPUSurface surface, WGPUSwapChain swapChain, ConvertToBackingContext& convertToBackingContext)
     : m_backing(swapChain)
     , m_surface(surface)
+    , m_convertToBackingContext(convertToBackingContext)
 {
 }
 
 SwapChainImpl::~SwapChainImpl()
 {
-    wgpuSwapChainRelease(m_backing);
+    destroy();
 }
 
 void SwapChainImpl::destroy()
 {
+    if (!m_backing)
+        return;
+
     wgpuSwapChainRelease(m_backing);
+    m_backing = nullptr;
 }
 
 void SwapChainImpl::prepareForDisplay(CompletionHandler<void(WTF::MachSendRight&&)>&& completionHandler)

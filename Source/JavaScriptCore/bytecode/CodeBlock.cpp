@@ -2370,7 +2370,7 @@ void CodeBlock::noticeIncomingCall(CallFrame* callerFrame)
 {
     RELEASE_ASSERT(!m_isJettisoned);
 
-    CodeBlock* callerCodeBlock = callerFrame->isAnyWasmCallee() ? nullptr : callerFrame->codeBlock();
+    CodeBlock* callerCodeBlock = callerFrame->isWasmFrame() ? nullptr : callerFrame->codeBlock();
     
     dataLogLnIf(Options::verboseCallLink(), "Noticing call link from ", pointerDump(callerCodeBlock), " to ", *this);
     
@@ -2425,8 +2425,9 @@ void CodeBlock::noticeIncomingCall(CallFrame* callerFrame)
     }
 
     // Recursive calls won't be inlined.
+    VM& vm = this->vm();
     RecursionCheckFunctor functor(callerFrame, this, Options::maximumInliningDepth());
-    vm().topCallFrame->iterate(vm(), functor);
+    StackVisitor::visit(vm.topCallFrame, vm, functor);
 
     if (functor.didRecurse()) {
         dataLogLnIf(Options::verboseCallLink(), "    Clearing SABI because recursion was detected.");
@@ -3156,12 +3157,9 @@ String CodeBlock::nameForRegister(VirtualRegister virtualRegister)
             }
         }
     }
-    if (virtualRegister == thisRegister())
-        return "this"_s;
-    if (virtualRegister.isArgument())
-        return makeString("arguments[", pad(' ', 3, virtualRegister.toArgument()), ']');
-
-    return emptyString();
+    StringPrintStream out;
+    out.print(virtualRegister);
+    return out.toString();
 }
 
 ValueProfile* CodeBlock::tryGetValueProfileForBytecodeIndex(BytecodeIndex bytecodeIndex)

@@ -44,6 +44,7 @@
 #include "GamepadData.h"
 #include "HighPerformanceGraphicsUsageSampler.h"
 #include "LegacyGlobalSettings.h"
+#include "LoadedWebArchive.h"
 #include "Logging.h"
 #include "NetworkProcessCreationParameters.h"
 #include "NetworkProcessMessages.h"
@@ -83,6 +84,7 @@
 #include "WebsiteDataStoreParameters.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <WebCore/ApplicationCacheStorage.h>
+#include <WebCore/GamepadProvider.h>
 #include <WebCore/MockRealtimeMediaSourceCenter.h>
 #include <WebCore/NetworkStorageSession.h>
 #include <WebCore/PlatformScreen.h>
@@ -227,6 +229,7 @@ WebProcessPool::WebProcessPool(API::ProcessPoolConfiguration& configuration)
     , m_backForwardCache(makeUniqueRef<WebBackForwardCache>(*this))
     , m_webProcessCache(makeUniqueRef<WebProcessCache>(*this))
     , m_webProcessWithAudibleMediaCounter([this](RefCounterEvent) { updateAudibleMediaAssertions(); })
+    , m_webProcessWithMediaStreamingCounter([this](RefCounterEvent) { updateMediaStreamingActivity(); })
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -315,7 +318,7 @@ WebProcessPool::~WebProcessPool()
 #endif
 
 #if ENABLE(GAMEPAD)
-    if (!m_processesUsingGamepads.computesEmpty())
+    if (!m_processesUsingGamepads.isEmptyIgnoringNullReferences())
         UIGamepadProvider::singleton().processPoolStoppedUsingGamepads(*this);
 #endif
 
@@ -1214,52 +1217,20 @@ bool WebProcessPool::hasPagesUsingWebsiteDataStore(WebsiteDataStore& dataStore) 
 DownloadProxy& WebProcessPool::download(WebsiteDataStore& dataStore, WebPageProxy* initiatingPage, const ResourceRequest& request, const String& suggestedFilename)
 {
     auto& downloadProxy = createDownloadProxy(dataStore, request, initiatingPage, { });
-
-    std::optional<NavigatingToAppBoundDomain> isAppBound = NavigatingToAppBoundDomain::No;
-    if (initiatingPage) {
-        initiatingPage->handleDownloadRequest(downloadProxy);
-#if ENABLE(APP_BOUND_DOMAINS)
-        isAppBound = initiatingPage->isTopFrameNavigatingToAppBoundDomain();
-#endif
-    }
-
-    ResourceRequest updatedRequest(request);
-    // Request's firstPartyForCookies will be used as Original URL of the download request.
-    // We set the value to top level document's URL.
-    if (initiatingPage) {
-        URL initiatingPageURL = URL { initiatingPage->pageLoadState().url() };
-        updatedRequest.setFirstPartyForCookies(initiatingPageURL);
-        updatedRequest.setIsSameSite(areRegistrableDomainsEqual(initiatingPageURL, request.url()));
-        if (!updatedRequest.hasHTTPHeaderField(HTTPHeaderName::UserAgent))
-            updatedRequest.setHTTPUserAgent(initiatingPage->userAgentForURL(request.url()));
-    } else {
-        updatedRequest.setFirstPartyForCookies(URL());
-        updatedRequest.setIsSameSite(false);
-        if (!updatedRequest.hasHTTPHeaderField(HTTPHeaderName::UserAgent))
-            updatedRequest.setHTTPUserAgent(WebPageProxy::standardUserAgent());
-    }
-    updatedRequest.setIsTopSite(false);
-    dataStore.networkProcess().send(Messages::NetworkProcess::DownloadRequest(dataStore.sessionID(), downloadProxy.downloadID(), updatedRequest, isAppBound, suggestedFilename), 0);
-
+    dataStore.download(downloadProxy, suggestedFilename);
+    
 #if PLATFORM(QT)
     ASSERT(initiatingPage); // Our design does not suppport downloads without a WebPage.
     initiatingPage->handleDownloadRequest(downloadProxy);
 #endif
-
+    
     return downloadProxy;
 }
 
 DownloadProxy& WebProcessPool::resumeDownload(WebsiteDataStore& dataStore, WebPageProxy* initiatingPage, const API::Data& resumeData, const String& path, CallDownloadDidStart callDownloadDidStart)
 {
     auto& downloadProxy = createDownloadProxy(dataStore, ResourceRequest(), initiatingPage, { });
-
-    SandboxExtension::Handle sandboxExtensionHandle;
-    if (!path.isEmpty()) {
-        if (auto handle = SandboxExtension::createHandle(path, SandboxExtension::Type::ReadWrite))
-            sandboxExtensionHandle = WTFMove(*handle);
-    }
-
-    dataStore.networkProcess().send(Messages::NetworkProcess::ResumeDownload(dataStore.sessionID(), downloadProxy.downloadID(), resumeData.dataReference(), path, sandboxExtensionHandle, callDownloadDidStart), 0);
+    dataStore.resumeDownload(downloadProxy, resumeData, path, callDownloadDidStart);
     return downloadProxy;
 }
 
@@ -1473,7 +1444,8 @@ void WebProcessPool::setDefaultRequestTimeoutInterval(double timeoutInterval)
 
 DownloadProxy& WebProcessPool::createDownloadProxy(WebsiteDataStore& dataStore, const ResourceRequest& request, WebPageProxy* originatingPage, const FrameInfoData& frameInfo)
 {
-    return dataStore.networkProcess().createDownloadProxy(dataStore, *this, request, frameInfo, originatingPage);
+    auto client = m_legacyDownloadClient ? Ref<API::DownloadClient>(*m_legacyDownloadClient) : adoptRef(*new API::DownloadClient);
+    return dataStore.createDownloadProxy(WTFMove(client), request, originatingPage, frameInfo);
 }
 
 void WebProcessPool::addMessageReceiver(IPC::ReceiverName messageReceiverName, IPC::MessageReceiver& messageReceiver)
@@ -1650,7 +1622,7 @@ void WebProcessPool::startedUsingGamepads(IPC::Connection& connection)
     if (!proxy)
         return;
 
-    bool wereAnyProcessesUsingGamepads = !m_processesUsingGamepads.computesEmpty();
+    bool wereAnyProcessesUsingGamepads = !m_processesUsingGamepads.isEmptyIgnoringNullReferences();
 
     ASSERT(!m_processesUsingGamepads.contains(*proxy));
     m_processesUsingGamepads.add(*proxy);
@@ -1672,14 +1644,24 @@ void WebProcessPool::stoppedUsingGamepads(IPC::Connection& connection, Completio
     processStoppedUsingGamepads(*proxy);
 }
 
+void WebProcessPool::playGamepadEffect(unsigned gamepadIndex, const String& gamepadID, WebCore::GamepadHapticEffectType type, const WebCore::GamepadEffectParameters& parameters, CompletionHandler<void(bool)>&& completionHandler)
+{
+    GamepadProvider::singleton().playEffect(gamepadIndex, gamepadID, type, parameters, WTFMove(completionHandler));
+}
+
+void WebProcessPool::stopGamepadEffects(unsigned gamepadIndex, const String& gamepadID, CompletionHandler<void()>&& completionHandler)
+{
+    GamepadProvider::singleton().stopEffects(gamepadIndex, gamepadID, WTFMove(completionHandler));
+}
+
 void WebProcessPool::processStoppedUsingGamepads(WebProcessProxy& process)
 {
-    bool wereAnyProcessesUsingGamepads = !m_processesUsingGamepads.computesEmpty();
+    bool wereAnyProcessesUsingGamepads = !m_processesUsingGamepads.isEmptyIgnoringNullReferences();
 
     ASSERT(m_processesUsingGamepads.contains(process));
     m_processesUsingGamepads.remove(process);
 
-    if (wereAnyProcessesUsingGamepads && m_processesUsingGamepads.computesEmpty())
+    if (wereAnyProcessesUsingGamepads && m_processesUsingGamepads.isEmptyIgnoringNullReferences())
         UIGamepadProvider::singleton().processPoolStoppedUsingGamepads(*this);
 }
 
@@ -1877,8 +1859,14 @@ void WebProcessPool::processForNavigation(WebPageProxy& page, const API::Navigat
             LOG(ProcessSwapping, "(ProcessSwapping) Navigating from %s to %s, keeping around old process. Now holding on to old processes for %u origins.", sourceURL.string().utf8().data(), navigation->currentRequest().url().string().utf8().data(), m_swappedProcessesPerRegistrableDomain.size());
         }
 
+        auto loadedWebArchive = LoadedWebArchive::No;
+#if ENABLE(WEB_ARCHIVE)
+        if (auto& substituteData = navigation->substituteData(); substituteData && equalIgnoringASCIICase(substituteData->MIMEType, "application/x-webarchive"_s))
+            loadedWebArchive = LoadedWebArchive::Yes;
+#endif
+
         auto processIdentifier = process->coreProcessIdentifier();
-        page->websiteDataStore().networkProcess().sendWithAsyncReply(Messages::NetworkProcess::AddAllowedFirstPartyForCookies(processIdentifier, RegistrableDomain(navigation->currentRequest().url())), [completionHandler = WTFMove(completionHandler), process = WTFMove(process), suspendedPage = WTFMove(suspendedPage), reason] () mutable {
+        page->websiteDataStore().networkProcess().sendWithAsyncReply(Messages::NetworkProcess::AddAllowedFirstPartyForCookies(processIdentifier, RegistrableDomain(navigation->currentRequest().url()), loadedWebArchive), [completionHandler = WTFMove(completionHandler), process = WTFMove(process), suspendedPage = WTFMove(suspendedPage), reason] () mutable {
             completionHandler(WTFMove(process), suspendedPage, reason);
         });
     });
@@ -2148,6 +2136,34 @@ void WebProcessPool::updateAudibleMediaAssertions()
         , gpuProcess() ? RefPtr<ProcessAssertion> { ProcessAssertion::create(gpuProcess()->processIdentifier(), "WebKit Media Playback"_s, ProcessAssertionType::MediaPlayback) } : nullptr
 #endif
     };
+}
+
+WebProcessWithMediaStreamingToken WebProcessPool::webProcessWithMediaStreamingToken() const
+{
+    return m_webProcessWithMediaStreamingCounter.count();
+}
+
+void WebProcessPool::updateMediaStreamingActivity()
+{
+    if (!m_webProcessWithMediaStreamingCounter.value()) {
+        WEBPROCESSPOOL_RELEASE_LOG(ProcessSuspension, "updateMediaStreamingActivity: The number of processes with media networking now zero. Notify network.");
+        m_mediaStreamingActivity = false;
+        notifyMediaStreamingActivity(false);
+        return;
+    }
+
+    if (m_mediaStreamingActivity)
+        return;
+
+    WEBPROCESSPOOL_RELEASE_LOG(ProcessSuspension, "updateMediaStreamingActivity: The number of processes with media networking is now greater than zero. Notify network.");
+    m_mediaStreamingActivity = true;
+    notifyMediaStreamingActivity(true);
+}
+
+void WebProcessPool::notifyMediaStreamingActivity(bool activity)
+{
+    if (auto& networkProcess = NetworkProcessProxy::defaultNetworkProcess())
+        networkProcess->notifyMediaStreamingActivity(activity);
 }
 
 void WebProcessPool::setUseSeparateServiceWorkerProcess(bool useSeparateServiceWorkerProcess)

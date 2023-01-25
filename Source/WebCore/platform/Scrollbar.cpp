@@ -500,4 +500,14 @@ bool Scrollbar::supportsUpdateOnSecondaryThread() const
 #endif
 }
 
+NativeScrollbarVisibility Scrollbar::nativeScrollbarVisibility(const Scrollbar* scrollbar)
+{
+    if (scrollbar && scrollbar->isHiddenByStyle())
+        return NativeScrollbarVisibility::HiddenByStyle;
+    if (scrollbar && scrollbar->isCustomScrollbar())
+        return NativeScrollbarVisibility::ReplacedByCustomScrollbar;
+    return NativeScrollbarVisibility::Visible;
+}
+
+
 } // namespace WebCore

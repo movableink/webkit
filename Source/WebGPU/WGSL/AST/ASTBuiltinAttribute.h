@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ASTAttribute.h"
+#include <wtf/text/WTFString.h>
 
 namespace WGSL::AST {
 
@@ -33,17 +34,17 @@ class BuiltinAttribute final : public Attribute {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    BuiltinAttribute(SourceSpan span, StringView name)
+    BuiltinAttribute(SourceSpan span, const String& name)
         : Attribute(span)
         , m_name(name)
     {
     }
 
     Kind kind() const override;
-    const StringView& name() const { return m_name; }
+    const String& name() const { return m_name; }
 
 private:
-    StringView m_name;
+    String m_name;
 };
 
 } // namespace WGSL::AST

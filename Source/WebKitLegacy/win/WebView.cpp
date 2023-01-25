@@ -1910,9 +1910,9 @@ bool WebView::mouseWheel(WPARAM wParam, LPARAM lParam, bool isMouseHWheel)
         WCHAR className[256];
 
         // Make sure truncation won't affect the comparison.
-        ASSERT(WTF_ARRAY_LENGTH(className) > wcslen(PopupMenuWin::popupClassName()));
+        ASSERT(std::size(className) > wcslen(PopupMenuWin::popupClassName()));
 
-        if (GetClassNameW(focusedWindow, className, WTF_ARRAY_LENGTH(className)) && !wcscmp(className, PopupMenuWin::popupClassName())) {
+        if (GetClassNameW(focusedWindow, className, std::size(className)) && !wcscmp(className, PopupMenuWin::popupClassName())) {
             // We don't let the WebView scroll here for two reasons - 1) To match Firefox behavior, 2) If we do scroll, we lose the
             // focus ring around the select menu.
             SetFocus(m_viewWindow);
@@ -2004,7 +2004,7 @@ bool WebView::execCommand(WPARAM wParam, LPARAM /*lParam*/)
 
 bool WebView::keyUp(WPARAM virtualKeyCode, LPARAM keyData, bool systemKeyDown)
 {
-    PlatformKeyboardEvent keyEvent(m_viewWindow, virtualKeyCode, keyData, PlatformEvent::KeyUp, systemKeyDown);
+    PlatformKeyboardEvent keyEvent(m_viewWindow, virtualKeyCode, keyData, PlatformEvent::Type::KeyUp, systemKeyDown);
 
     Frame& frame = m_page->focusController().focusedOrMainFrame();
     m_currentCharacterCode = 0;
@@ -2109,10 +2109,10 @@ const char* WebView::interpretKeyEvent(const KeyboardEvent* evt)
         keyDownCommandsMap = new HashMap<int, const char*>;
         keyPressCommandsMap = new HashMap<int, const char*>;
 
-        for (size_t i = 0; i < WTF_ARRAY_LENGTH(keyDownEntries); ++i)
+        for (size_t i = 0; i < std::size(keyDownEntries); ++i)
             keyDownCommandsMap->set(keyDownEntries[i].modifiers << 16 | keyDownEntries[i].virtualKey, keyDownEntries[i].name);
 
-        for (size_t i = 0; i < WTF_ARRAY_LENGTH(keyPressEntries); ++i)
+        for (size_t i = 0; i < std::size(keyPressEntries); ++i)
             keyPressCommandsMap->set(keyPressEntries[i].modifiers << 16 | keyPressEntries[i].charCode, keyPressEntries[i].name);
     }
 
@@ -2147,7 +2147,7 @@ bool WebView::handleEditingKeyboardEvent(KeyboardEvent& event)
 
     auto command = frame->editor().command(String::fromLatin1(interpretKeyEvent(&event)));
 
-    if (keyEvent->type() == PlatformEvent::RawKeyDown) {
+    if (keyEvent->type() == PlatformEvent::Type::RawKeyDown) {
         // WebKit doesn't have enough information about mode to decide how commands that just insert text if executed via Editor should be treated,
         // so we leave it upon WebCore to either handle them immediately (e.g. Tab that changes focus) or let a keypress event be generated
         // (e.g. Tab that inserts a Tab character, or Enter).
@@ -2184,7 +2184,7 @@ bool WebView::keyDown(WPARAM virtualKeyCode, LPARAM keyData, bool systemKeyDown)
             pendingCharEvents.append(msg);
     }
 
-    PlatformKeyboardEvent keyEvent(m_viewWindow, virtualKeyCode, keyData, PlatformEvent::RawKeyDown, systemKeyDown);
+    PlatformKeyboardEvent keyEvent(m_viewWindow, virtualKeyCode, keyData, PlatformEvent::Type::RawKeyDown, systemKeyDown);
     bool handled = frame.eventHandler().keyEvent(keyEvent);
 
     // These events cannot be canceled, and we have no default handling for them.
@@ -2260,7 +2260,7 @@ bool WebView::keyPress(WPARAM charCode, LPARAM keyData, bool systemKeyDown)
 {
     Frame& frame = m_page->focusController().focusedOrMainFrame();
 
-    PlatformKeyboardEvent keyEvent(m_viewWindow, charCode, keyData, PlatformEvent::Char, systemKeyDown);
+    PlatformKeyboardEvent keyEvent(m_viewWindow, charCode, keyData, PlatformEvent::Type::Char, systemKeyDown);
     // IE does not dispatch keypress event for WM_SYSCHAR.
     if (systemKeyDown)
         return frame.eventHandler().handleAccessKey(keyEvent);
@@ -5013,7 +5013,7 @@ HRESULT WebView::notifyPreferencesChanged(IWebNotification* notification)
     hr = prefsPrivate->menuItemElementEnabled(&enabled);
     if (FAILED(hr))
         return hr;
-    DeprecatedGlobalSettings::setMenuItemElementEnabled(!!enabled);
+    settings.setMenuItemElementEnabled(!!enabled);
 
     hr = prefsPrivate->webAnimationsCompositeOperationsEnabled(&enabled);
     if (FAILED(hr))
@@ -5322,8 +5322,8 @@ HRESULT WebView::notifyPreferencesChanged(IWebNotification* notification)
     hr = prefsPrivate->mediaPlaybackRequiresUserGesture(&enabled);
     if (FAILED(hr))
         return hr;
-    settings.setVideoPlaybackRequiresUserGesture(enabled);
-    settings.setAudioPlaybackRequiresUserGesture(enabled);
+    settings.setRequiresUserGestureForVideoPlayback(enabled);
+    settings.setRequiresUserGestureForAudioPlayback(enabled);
 
     hr = prefsPrivate->mediaPlaybackAllowsInline(&enabled);
     if (FAILED(hr))

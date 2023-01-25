@@ -28,10 +28,11 @@
 #if PLATFORM(MAC)
 
 #import "ControlMac.h"
+#import "MeterPart.h"
 
 namespace WebCore {
 
-class MeterMac : public ControlMac {
+class MeterMac final : public ControlMac {
 public:
     MeterMac(MeterPart& owningMeterPart, ControlFactoryMac&, NSLevelIndicatorCell*);
 
@@ -42,7 +43,7 @@ private:
 
     FloatSize sizeForBounds(const FloatRect& bounds) const override;
 
-    void draw(GraphicsContext&, const FloatRect&, float deviceScaleFactor, const ControlStyle&) override;
+    void draw(GraphicsContext&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&) override;
 
     RetainPtr<NSLevelIndicatorCell> m_levelIndicatorCell;
 };

@@ -31,10 +31,13 @@
 #if ENABLE(WEBGL)
 
 #include "FormatConverter.h"
+#include "GCGLSpan.h"
+#include "GraphicsContext.h"
 #include "HostWindow.h"
 #include "Image.h"
 #include "ImageObserver.h"
 #include "PixelBuffer.h"
+#include "VideoFrame.h"
 
 namespace WebCore {
 
@@ -600,6 +603,48 @@ bool GraphicsContextGL::extractTextureData(unsigned width, unsigned height, GCGL
     return true;
 }
 
+GCGLfloat GraphicsContextGL::getFloat(GCGLenum pname)
+{
+    GCGLfloat value[1] { };
+    getFloatv(pname, value);
+    return value[0];
+}
+
+GCGLboolean GraphicsContextGL::getBoolean(GCGLenum pname)
+{
+    GCGLboolean value[1] { };
+    getBooleanv(pname, value);
+    return value[0];
+}
+
+GCGLint GraphicsContextGL::getInteger(GCGLenum pname)
+{
+    GCGLint value[1] { };
+    getIntegerv(pname, value);
+    return value[0];
+}
+
+GCGLint GraphicsContextGL::getIntegeri(GCGLenum pname, GCGLuint index)
+{
+    GCGLint value[4] { };
+    getIntegeri_v(pname, index, value);
+    return value[0];
+}
+
+GCGLint GraphicsContextGL::getActiveUniformBlocki(GCGLuint program, GCGLuint uniformBlockIndex, GCGLenum pname)
+{
+    GCGLint value[1] { };
+    getActiveUniformBlockiv(program, uniformBlockIndex, pname, value);
+    return value[0];
+}
+
+GCGLint GraphicsContextGL::getInternalformati(GCGLenum target, GCGLenum internalformat, GCGLenum pname)
+{
+    GCGLint value[1] { };
+    getInternalformativ(target, internalformat, pname, value);
+    return value[0];
+}
+
 void GraphicsContextGL::setDrawingBufferColorSpace(const DestinationColorSpace&)
 {
 }
@@ -652,6 +697,19 @@ void GraphicsContextGL::dispatchContextChangedNotification()
     if (m_client)
         m_client->dispatchContextChangedNotification();
 }
+
+#if ENABLE(VIDEO)
+RefPtr<Image> GraphicsContextGL::videoFrameToImage(VideoFrame& frame)
+{
+    IntSize size { static_cast<int>(frame.presentationSize().width()), static_cast<int>(frame.presentationSize().height()) };
+    auto imageBuffer = ImageBuffer::create(size, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    if (!imageBuffer)
+        return { };
+
+    imageBuffer->context().paintVideoFrame(frame, { { }, size }, true);
+    return imageBuffer->copyImage(DontCopyBackingStore);
+}
+#endif
 
 } // namespace WebCore
 

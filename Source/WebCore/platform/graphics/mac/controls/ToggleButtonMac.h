@@ -28,22 +28,22 @@
 #if PLATFORM(MAC)
 
 #import "ButtonControlMac.h"
-#import "ToggleButtonPart.h"
 
 namespace WebCore {
+
+class ToggleButtonPart;
 
 class ToggleButtonMac final : public ButtonControlMac {
 public:
     ToggleButtonMac(ToggleButtonPart& owningPart, ControlFactoryMac&, NSButtonCell *);
 
 private:
-    IntSize cellSize(NSControlSize, const ControlStyle&) const final;
-    IntOutsets cellOutsets(NSControlSize, const ControlStyle&) const final;
+    IntSize cellSize(NSControlSize, const ControlStyle&) const override;
+    IntOutsets cellOutsets(NSControlSize, const ControlStyle&) const override;
 
-    void draw(GraphicsContext&, const FloatRect&, float deviceScaleFactor, const ControlStyle&) final;
+    void draw(GraphicsContext&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&) override;
 };
 
 } // namespace WebCore
 
 #endif // PLATFORM(MAC)
-

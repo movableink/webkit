@@ -38,11 +38,14 @@ class ContentType;
 
 class GStreamerRegistryScanner {
 public:
+    static bool singletonNeedsInitialization();
     static GStreamerRegistryScanner& singleton();
     static void getSupportedDecodingTypes(HashSet<String, ASCIICaseInsensitiveHash>&);
 
     explicit GStreamerRegistryScanner(bool isMediaSource = false);
     ~GStreamerRegistryScanner() = default;
+
+    void refresh();
 
     enum Configuration {
         Decoding = 0,
@@ -99,6 +102,8 @@ public:
     MediaPlayerEnums::SupportsType isContentTypeSupported(Configuration, const ContentType&, const Vector<ContentType>& contentTypesRequiringHardwareSupport) const;
     bool areAllCodecsSupported(Configuration, const Vector<String>& codecs, bool shouldCheckForHardwareUse = false) const;
 
+    CodecLookupResult areCapsSupported(Configuration, const GRefPtr<GstCaps>&, bool shouldCheckForHardwareUse);
+
 #if USE(GSTREAMER_WEBRTC)
     RTCRtpCapabilities audioRtpCapabilities(Configuration);
     RTCRtpCapabilities videoRtpCapabilities(Configuration);
@@ -130,6 +135,7 @@ protected:
 
         enum class CheckHardwareClassifier { No, Yes };
         RegistryLookupResult hasElementForMediaType(Type, const char* capsString, CheckHardwareClassifier = CheckHardwareClassifier::No, std::optional<Vector<String>> disallowedList = std::nullopt) const;
+        RegistryLookupResult hasElementForCaps(Type, const GRefPtr<GstCaps>&, CheckHardwareClassifier = CheckHardwareClassifier::No, std::optional<Vector<String>> disallowedList = std::nullopt) const;
 
         GList* audioDecoderFactories { nullptr };
         GList* audioParserFactories { nullptr };

@@ -36,9 +36,11 @@
 #import "InsertTextOptions.h"
 #import "LoadParameters.h"
 #import "ModalContainerControlClassifier.h"
+#import "NetworkConnectionIntegrityHelpers.h"
 #import "PageClient.h"
 #import "PlaybackSessionManagerProxy.h"
 #import "QuickLookThumbnailLoader.h"
+#import "RemoteLayerTreeTransaction.h"
 #import "SafeBrowsingSPI.h"
 #import "SafeBrowsingWarning.h"
 #import "SharedBufferReference.h"
@@ -122,6 +124,41 @@ namespace WebKit {
 using namespace WebCore;
 
 constexpr IntSize iconSize = IntSize(400, 400);
+
+static bool exceedsRenderTreeSizeSizeThreshold(uint64_t thresholdSize, uint64_t committedSize)
+{
+    const double thesholdSizeFraction = 0.5; // Empirically-derived.
+    return committedSize > thresholdSize * thesholdSizeFraction;
+}
+
+void WebPageProxy::didCommitLayerTree(const WebKit::RemoteLayerTreeTransaction& layerTreeTransaction)
+{
+    themeColorChanged(layerTreeTransaction.themeColor());
+    pageExtendedBackgroundColorDidChange(layerTreeTransaction.pageExtendedBackgroundColor());
+    sampledPageTopColorChanged(layerTreeTransaction.sampledPageTopColor());
+
+    if (!m_hasUpdatedRenderingAfterDidCommitLoad) {
+        if (layerTreeTransaction.transactionID() >= m_firstLayerTreeTransactionIdAfterDidCommitLoad) {
+            m_hasUpdatedRenderingAfterDidCommitLoad = true;
+            stopMakingViewBlankDueToLackOfRenderingUpdateIfNecessary();
+            m_lastVisibleContentRectUpdate = VisibleContentRectUpdateInfo();
+        }
+    }
+
+    pageClient().didCommitLayerTree(layerTreeTransaction);
+
+    // FIXME: Remove this special mechanism and fold it into the transaction's layout milestones.
+    if (m_observedLayoutMilestones.contains(WebCore::ReachedSessionRestorationRenderTreeSizeThreshold) && !m_hitRenderTreeSizeThreshold
+        && exceedsRenderTreeSizeSizeThreshold(m_sessionRestorationRenderTreeSize, layerTreeTransaction.renderTreeSize())) {
+        m_hitRenderTreeSizeThreshold = true;
+        didReachLayoutMilestone(WebCore::ReachedSessionRestorationRenderTreeSizeThreshold);
+    }
+}
+
+void WebPageProxy::layerTreeCommitComplete()
+{
+    pageClient().layerTreeCommitComplete();
+}
 
 #if ENABLE(DATA_DETECTION)
 
@@ -820,7 +857,8 @@ Vector<SandboxExtension::Handle> WebPageProxy::createNetworkExtensionsSandboxExt
         process.markHasNetworkExtensionSandboxAccess();
         constexpr ASCIILiteral neHelperService { "com.apple.nehelper"_s };
         constexpr ASCIILiteral neSessionManagerService { "com.apple.nesessionmanager.content-filter"_s };
-        return SandboxExtension::createHandlesForMachLookup({ neHelperService, neSessionManagerService }, std::nullopt);
+        auto auditToken = process.hasConnection() ? process.connection()->getAuditToken();
+        return SandboxExtension::createHandlesForMachLookup({ neHelperService, neSessionManagerService }, auditToken, );
     }
 #endif
     return { };
@@ -867,10 +905,8 @@ void WebPageProxy::lastNavigationWasAppInitiated(CompletionHandler<void(bool)>&&
 
 void WebPageProxy::grantAccessToAssetServices()
 {
-    SandboxExtension::Handle mobileAssetHandleV2;
-    if (auto handle = SandboxExtension::createHandleForMachLookup("com.apple.mobileassetd.v2"_s, process().auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap))
-        mobileAssetHandleV2 = WTFMove(*handle);
-    process().send(Messages::WebProcess::GrantAccessToAssetServices(mobileAssetHandleV2), 0);
+    auto handles = SandboxExtension::createHandlesForMachLookup({ "com.apple.mobileassetd.v2"_s }, process().auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap);
+    process().send(Messages::WebProcess::GrantAccessToAssetServices(handles), 0);
 }
 
 void WebPageProxy::revokeAccessToAssetServices()
@@ -885,7 +921,7 @@ void WebPageProxy::disableURLSchemeCheckInDataDetectors() const
 
 void WebPageProxy::switchFromStaticFontRegistryToUserFontRegistry()
 {
-    process().send(Messages::WebProcess::SwitchFromStaticFontRegistryToUserFontRegistry(process().fontdMachExtensionHandle(SandboxExtension::MachBootstrapOptions::EnableMachBootstrap)), 0);
+    process().send(Messages::WebProcess::SwitchFromStaticFontRegistryToUserFontRegistry(process().fontdMachExtensionHandles(SandboxExtension::MachBootstrapOptions::EnableMachBootstrap)), 0);
 }
 
 NSDictionary *WebPageProxy::contentsOfUserInterfaceItem(NSString *userInterfaceItem)
@@ -956,6 +992,14 @@ void WebPageProxy::replaceImageForRemoveBackground(const ElementContext& element
 }
 
 #endif
+
+bool WebPageProxy::useGPUProcessForDOMRenderingEnabled() const
+{
+    if (id useGPUProcessForDOMRendering = [[NSUserDefaults standardUserDefaults] objectForKey:@"WebKit2GPUProcessForDOMRendering"])
+        return [useGPUProcessForDOMRendering boolValue];
+
+    return preferences().useGPUProcessForDOMRenderingEnabled();
+}
 
 } // namespace WebKit
 

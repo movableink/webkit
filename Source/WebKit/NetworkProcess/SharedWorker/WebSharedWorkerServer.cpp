@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebSharedWorkerServer.h"
 
+#include "LoadedWebArchive.h"
 #include "Logging.h"
 #include "NetworkProcess.h"
 #include "NetworkProcessProxyMessages.h"
@@ -77,8 +78,17 @@ void WebSharedWorkerServer::requestSharedWorker(WebCore::SharedWorkerKey&& share
         if (sharedWorker->isRunning()) {
             auto* contextConnection = sharedWorker->contextConnection();
             ASSERT(contextConnection);
-            if (contextConnection)
-                contextConnection->postConnectEvent(*sharedWorker, port);
+            if (contextConnection) {
+                contextConnection->postConnectEvent(*sharedWorker, port, [this, weakThis = WeakPtr { *this }, sharedWorkerKey, sharedWorkerObjectIdentifier, sharedWorkerIdentifier = sharedWorker->identifier(), port, workerOptions](bool success) mutable {
+                    if (success || !weakThis)
+                        return;
+                    // We failed to connect to the existing shared worker, likely because it just terminated.
+                    RELEASE_LOG_ERROR(SharedWorker, "WebSharedWorkerServer::requestSharedWorker: Failed to connect to existing shared worker %" PRIu64 ", will create a new one instead.", sharedWorkerIdentifier.toUInt64());
+                    if (auto it = m_sharedWorkers.find(sharedWorkerKey); it != m_sharedWorkers.end() && it->value->identifier() == sharedWorkerIdentifier)
+                        m_sharedWorkers.remove(it);
+                    requestSharedWorker(WTFMove(sharedWorkerKey), sharedWorkerObjectIdentifier, WTFMove(port), WTFMove(workerOptions));
+                });
+            }
         }
         return;
     }
@@ -142,7 +152,7 @@ void WebSharedWorkerServer::createContextConnection(const WebCore::RegistrableDo
         RELEASE_LOG(SharedWorker, "WebSharedWorkerServer::createContextConnection should now have created a connection");
 
         // FIXME: Add a check that the process this firstPartyForCookies came from was allowed to use it as a firstPartyForCookies.
-        m_session.networkProcess().addAllowedFirstPartyForCookies(remoteProcessIdentifier, WebCore::RegistrableDomain(firstPartyForCookies), [] { });
+        m_session.networkProcess().addAllowedFirstPartyForCookies(remoteProcessIdentifier, WebCore::RegistrableDomain(firstPartyForCookies), LoadedWebArchive::No, [] { });
 
         ASSERT(m_pendingContextConnectionDomains.contains(registrableDomain));
         m_pendingContextConnectionDomains.remove(registrableDomain);
@@ -278,6 +288,14 @@ void WebSharedWorkerServer::postExceptionToWorkerObject(WebCore::SharedWorkerIde
     sharedWorker->forEachSharedWorkerObject([&](auto sharedWorkerObjectIdentifier, auto&) {
         if (auto* serverConnection = m_connections.get(sharedWorkerObjectIdentifier.processIdentifier()))
             serverConnection->postExceptionToWorkerObject(sharedWorkerObjectIdentifier, errorMessage, lineNumber, columnNumber, sourceURL);
+    });
+}
+
+void WebSharedWorkerServer::sharedWorkerTerminated(WebCore::SharedWorkerIdentifier sharedWorkerIdentifier)
+{
+    RELEASE_LOG_ERROR(SharedWorker, "WebSharedWorkerServer::sharedWorkerTerminated: sharedWorkerIdentifier=%" PRIu64, sharedWorkerIdentifier.toUInt64());
+    m_sharedWorkers.removeIf([sharedWorkerIdentifier] (auto& iterator) {
+        return iterator.value->identifier() == sharedWorkerIdentifier;
     });
 }
 

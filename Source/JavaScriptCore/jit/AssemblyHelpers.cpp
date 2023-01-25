@@ -41,8 +41,9 @@
 #include "UnlinkedCodeBlock.h"
 
 #if ENABLE(WEBASSEMBLY)
+#include "WasmContext.h"
 #include "WasmMemoryInformation.h"
-#include "WasmContextInlines.h"
+#include "WasmInstance.h"
 #endif
 
 namespace JSC {
@@ -1062,48 +1063,19 @@ AssemblyHelpers::JumpList AssemblyHelpers::branchIfValue(VM& vm, JSValueRegs val
 }
 
 #if ENABLE(WEBASSEMBLY)
-void AssemblyHelpers::loadWasmContextInstance(GPRReg dst)
-{
-    JIT_COMMENT(*this, "Load wasm context instance to ", dst);
-#if ENABLE(FAST_TLS_JIT)
-    if (Wasm::Context::useFastTLS()) {
-        loadFromTLSPtr(fastTLSOffsetForKey(WTF_WASM_CONTEXT_KEY), dst);
-        return;
-    }
-#endif
-    move(Wasm::PinnedRegisterInfo::get().wasmContextInstancePointer, dst);
-    JIT_COMMENT(*this, "Load wasm instance done");
-}
-
 void AssemblyHelpers::storeWasmContextInstance(GPRReg src)
 {
     JIT_COMMENT(*this, "Store wasm context instance from", src);
-#if ENABLE(FAST_TLS_JIT)
-    if (Wasm::Context::useFastTLS()) {
-        storeToTLSPtr(src, fastTLSOffsetForKey(WTF_WASM_CONTEXT_KEY));
-        return;
-    }
-#endif
-    move(src, Wasm::PinnedRegisterInfo::get().wasmContextInstancePointer);
+    move(src, GPRInfo::wasmContextInstancePointer);
     JIT_COMMENT(*this, "Store wasm context instance done");
 }
 
-bool AssemblyHelpers::loadWasmContextInstanceNeedsMacroScratchRegister()
+void AssemblyHelpers::prepareWasmCallOperation(GPRReg instanceGPR)
 {
-#if ENABLE(FAST_TLS_JIT)
-    if (Wasm::Context::useFastTLS())
-        return loadFromTLSPtrNeedsMacroScratchRegister();
+    UNUSED_PARAM(instanceGPR);
+#if !USE(BUILTIN_FRAME_ADDRESS) || ASSERT_ENABLED
+    storePtr(GPRInfo::callFrameRegister, Address(instanceGPR, Wasm::Instance::offsetOfTemporaryCallFrame()));
 #endif
-    return false;
-}
-
-bool AssemblyHelpers::storeWasmContextInstanceNeedsMacroScratchRegister()
-{
-#if ENABLE(FAST_TLS_JIT)
-    if (Wasm::Context::useFastTLS())
-        return storeToTLSPtrNeedsMacroScratchRegister();
-#endif
-    return false;
 }
 
 #endif // ENABLE(WEBASSEMBLY)

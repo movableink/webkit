@@ -120,21 +120,10 @@ public:
 
     Test()
     {
-        GUniquePtr<char> localStorageDirectory(g_build_filename(dataDirectory(), "local-storage", nullptr));
-        GUniquePtr<char> indexedDBDirectory(g_build_filename(dataDirectory(), "indexeddb", nullptr));
-        GUniquePtr<char> diskCacheDirectory(g_build_filename(dataDirectory(), "disk-cache", nullptr));
-        GUniquePtr<char> applicationCacheDirectory(g_build_filename(dataDirectory(), "appcache", nullptr));
-        GUniquePtr<char> webSQLDirectory(g_build_filename(dataDirectory(), "websql", nullptr));
-        GUniquePtr<char> hstsDirectory(g_build_filename(dataDirectory(), "hsts", nullptr));
-        GUniquePtr<char> itpDirectory(g_build_filename(dataDirectory(), "itp", nullptr));
-        GUniquePtr<char> swRegistrationsDirectory(g_build_filename(dataDirectory(), "serviceworkers", nullptr));
-        GUniquePtr<char> domCacheDirectory(g_build_filename(dataDirectory(), "dom-cache", nullptr));
         GRefPtr<WebKitWebsiteDataManager> websiteDataManager = adoptGRef(webkit_website_data_manager_new(
-            "local-storage-directory", localStorageDirectory.get(), "indexeddb-directory", indexedDBDirectory.get(),
-            "disk-cache-directory", diskCacheDirectory.get(), "offline-application-cache-directory", applicationCacheDirectory.get(),
-            "websql-directory", webSQLDirectory.get(), "hsts-cache-directory", hstsDirectory.get(),
-            "itp-directory", itpDirectory.get(), "service-worker-registrations-directory", swRegistrationsDirectory.get(),
-            "dom-cache-directory", domCacheDirectory.get(), nullptr));
+            "base-data-directory", dataDirectory(),
+            "base-cache-directory", dataDirectory(),
+            nullptr));
 
         m_webContext = adoptGRef(WEBKIT_WEB_CONTEXT(g_object_new(WEBKIT_TYPE_WEB_CONTEXT,
             "website-data-manager", websiteDataManager.get(),
@@ -197,11 +186,12 @@ public:
 
     static WebKitWebView* createWebView(WebKitWebContext* context)
     {
-#if PLATFORM(GTK)
-        return WEBKIT_WEB_VIEW(webkit_web_view_new_with_context(context));
-#elif PLATFORM(WPE)
-        return webkit_web_view_new_with_context(createWebViewBackend(), context);
+        return WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+#if PLATFORM(WPE)
+                                            "backend", createWebViewBackend(),
 #endif
+                                            "web-context", context,
+                                            nullptr));
     }
 
     static WebKitWebView* createWebView(WebKitWebView* relatedView)
@@ -215,20 +205,22 @@ public:
 
     static WebKitWebView* createWebView(WebKitUserContentManager* contentManager)
     {
-#if PLATFORM(GTK)
-        return WEBKIT_WEB_VIEW(webkit_web_view_new_with_user_content_manager(contentManager));
-#elif PLATFORM(WPE)
-        return webkit_web_view_new_with_user_content_manager(createWebViewBackend(), contentManager);
+        return WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+#if PLATFORM(WPE)
+                                            "backend", createWebViewBackend(),
 #endif
+                                            "user-content-manager", contentManager,
+                                            nullptr));
     }
 
     static WebKitWebView* createWebView(WebKitSettings* settings)
     {
-#if PLATFORM(GTK)
-        return WEBKIT_WEB_VIEW(webkit_web_view_new_with_settings(settings));
-#elif PLATFORM(WPE)
-        return webkit_web_view_new_with_settings(createWebViewBackend(), settings);
+        return WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+#if PLATFORM(WPE)
+                                            "backend", createWebViewBackend(),
 #endif
+                                            "settings", settings,
+                                            nullptr));
     }
 
     static void objectFinalized(Test* test, GObject* finalizedObject)

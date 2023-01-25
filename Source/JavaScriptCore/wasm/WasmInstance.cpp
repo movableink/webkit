@@ -39,19 +39,12 @@
 
 namespace JSC { namespace Wasm {
 
-namespace {
-size_t globalMemoryByteSize(Module& module)
-{
-    return Checked<size_t>(module.moduleInformation().globals.size()) * sizeof(Global::Value);
-}
-}
-
-Instance::Instance(VM& vm, Ref<Module>&& module)
+Instance::Instance(VM& vm, JSGlobalObject* globalObject, Ref<Module>&& module)
     : m_vm(&vm)
+    , m_globalObject(globalObject)
     , m_module(WTFMove(module))
-    , m_globals(MallocPtr<Global::Value, VMMalloc>::malloc(globalMemoryByteSize(m_module.get())))
-    , m_globalsToMark(m_module.get().moduleInformation().globals.size())
-    , m_globalsToBinding(m_module.get().moduleInformation().globals.size())
+    , m_globalsToMark(m_module.get().moduleInformation().globalCount())
+    , m_globalsToBinding(m_module.get().moduleInformation().globalCount())
     , m_numImportFunctions(m_module->moduleInformation().importFunctionCount())
     , m_passiveElements(m_module->moduleInformation().elementCount())
     , m_passiveDataSegments(m_module->moduleInformation().dataSegmentsCount())
@@ -60,7 +53,8 @@ Instance::Instance(VM& vm, Ref<Module>&& module)
     ASSERT(static_cast<ptrdiff_t>(Instance::offsetOfCachedMemory() + sizeof(void*)) == Instance::offsetOfCachedBoundsCheckingSize());
     for (unsigned i = 0; i < m_numImportFunctions; ++i)
         new (importFunctionInfo(i)) ImportFunctionInfo();
-    memset(static_cast<void*>(m_globals.get()), 0, globalMemoryByteSize(m_module.get()));
+    m_globals = bitwise_cast<Global::Value*>(bitwise_cast<char*>(this) + offsetOfGlobalPtr(m_numImportFunctions, m_module->moduleInformation().tableCount(), 0));
+    memset(bitwise_cast<char*>(m_globals), 0, m_module->moduleInformation().globalCount() * sizeof(Global::Value));
     for (unsigned i = 0; i < m_module->moduleInformation().globals.size(); ++i) {
         const Wasm::GlobalInformation& global = m_module.get().moduleInformation().globals[i];
         if (global.bindingMode == Wasm::GlobalInformation::BindingMode::Portable) {
@@ -85,32 +79,31 @@ Instance::Instance(VM& vm, Ref<Module>&& module)
     }
 }
 
-Ref<Instance> Instance::create(VM& vm, Ref<Module>&& module)
+Ref<Instance> Instance::create(VM& vm, JSGlobalObject* globalObject, Ref<Module>&& module)
 {
-    return adoptRef(*new (NotNull, fastMalloc(allocationSize(module->moduleInformation().importFunctionCount(), module->moduleInformation().tableCount()))) Instance(vm, WTFMove(module)));
+    ASSERT(allocationSize(maxImports, maxTables, maxGlobals) <= INT32_MAX);
+    return adoptRef(*new (NotNull, fastMalloc(allocationSize(module->moduleInformation().importFunctionCount(), module->moduleInformation().tableCount(), module->moduleInformation().globalCount()))) Instance(vm, globalObject, WTFMove(module)));
 }
 
-Instance::~Instance()
-{
-}
+Instance::~Instance() = default;
 
 size_t Instance::extraMemoryAllocated() const
 {
-    return globalMemoryByteSize(m_module.get()) + allocationSize(m_numImportFunctions, m_module->moduleInformation().tableCount());
+    return allocationSize(m_numImportFunctions, m_module->moduleInformation().tableCount(), m_module->moduleInformation().globalCount());
 }
 
 void Instance::setGlobal(unsigned i, JSValue value)
 {
-    Global::Value* slot = m_globals.get() + i;
+    Global::Value& slot = m_globals[i];
     if (m_globalsToBinding.get(i)) {
         Wasm::Global* global = getGlobalBinding(i);
         if (!global)
             return;
-        global->valuePointer()->m_externref.set(vm(), global->owner<JSWebAssemblyGlobal>(), value);
+        global->valuePointer()->m_externref.set(vm(), global->owner(), value);
         return;
     }
     ASSERT(m_owner);
-    slot->m_externref.set(vm(), owner<JSWebAssemblyInstance>(), value);
+    slot.m_externref.set(vm(), owner(), value);
 }
 
 JSValue Instance::getFunctionWrapper(unsigned i) const
@@ -126,8 +119,8 @@ void Instance::setFunctionWrapper(unsigned i, JSValue value)
     ASSERT(m_owner);
     ASSERT(value.isCallable());
     ASSERT(!m_functionWrappers.contains(i));
-    Locker locker { owner<JSWebAssemblyInstance>()->cellLock() };
-    m_functionWrappers.set(i, WriteBarrier<Unknown>(vm(), owner<JSWebAssemblyInstance>(), value));
+    Locker locker { owner()->cellLock() };
+    m_functionWrappers.set(i, WriteBarrier<Unknown>(vm(), owner(), value));
     ASSERT(getFunctionWrapper(i) == value);
 }
 
@@ -211,7 +204,7 @@ void Instance::initElementSegment(uint32_t tableIndex, const Element& segment, u
 {
     RELEASE_ASSERT(length <= segment.length());
 
-    JSWebAssemblyInstance* jsInstance = owner<JSWebAssemblyInstance>();
+    JSWebAssemblyInstance* jsInstance = owner();
     JSWebAssemblyTable* jsTable = jsInstance->table(tableIndex);
     JSGlobalObject* globalObject = jsInstance->globalObject();
     VM& vm = globalObject->vm();
@@ -232,7 +225,7 @@ void Instance::initElementSegment(uint32_t tableIndex, const Element& segment, u
         uint32_t functionIndex = segment.functionIndices[srcIndex];
         TypeIndex typeIndex = m_module->typeIndexFromFunctionIndexSpace(functionIndex);
         if (isImportFunction(functionIndex)) {
-            JSObject* functionImport = importFunction<WriteBarrier<JSObject>>(functionIndex)->get();
+            JSObject* functionImport = importFunction(functionIndex).get();
             if (isWebAssemblyHostFunction(functionImport)) {
                 WebAssemblyFunction* wasmFunction = jsDynamicCast<WebAssemblyFunction*>(functionImport);
                 // If we ever import a WebAssemblyWrapperFunction, we set the import as the unwrapped value.
@@ -266,7 +259,7 @@ void Instance::initElementSegment(uint32_t tableIndex, const Element& segment, u
             globalObject,
             globalObject->webAssemblyFunctionStructure(),
             signature.argumentCount(),
-            String(),
+            WTF::makeString(functionIndex),
             jsInstance,
             embedderEntrypointCallee,
             entrypointLoadLocation,
@@ -295,7 +288,7 @@ void Instance::setTable(unsigned i, Ref<Table>&& table)
 
 void Instance::linkGlobal(unsigned i, Ref<Global>&& global)
 {
-    m_globals.get()[i].m_pointer = global->valuePointer();
+    m_globals[i].m_pointer = global->valuePointer();
     m_linkedGlobals.set(i, WTFMove(global));
 }
 

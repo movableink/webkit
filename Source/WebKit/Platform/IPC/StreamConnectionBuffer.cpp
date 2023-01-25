@@ -31,21 +31,6 @@
 
 namespace IPC {
 
-static Ref<WebKit::SharedMemory> createMemory(size_t size)
-{
-    auto memory = WebKit::SharedMemory::allocate(size);
-    if (!memory)
-        CRASH();
-    return memory.releaseNonNull();
-}
-
-StreamConnectionBuffer::StreamConnectionBuffer(size_t memorySize)
-    : m_dataSize(memorySize - headerSize())
-    , m_sharedMemory(createMemory(memorySize))
-{
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(sharedMemorySizeIsValid(m_sharedMemory->size()));
-}
-
 StreamConnectionBuffer::StreamConnectionBuffer(Ref<WebKit::SharedMemory>&& memory)
     : m_dataSize(memory->size() - headerSize())
     , m_sharedMemory(WTFMove(memory))
@@ -53,17 +38,7 @@ StreamConnectionBuffer::StreamConnectionBuffer(Ref<WebKit::SharedMemory>&& memor
     ASSERT(sharedMemorySizeIsValid(m_sharedMemory->size()));
 }
 
-StreamConnectionBuffer::StreamConnectionBuffer(StreamConnectionBuffer&&) = default;
-
 StreamConnectionBuffer::~StreamConnectionBuffer() = default;
-
-std::optional<StreamConnectionBuffer> StreamConnectionBuffer::map(Handle&& handle)
-{
-    auto sharedMemory = WebKit::SharedMemory::map(handle.memory, WebKit::SharedMemory::Protection::ReadWrite);
-    if (UNLIKELY(!sharedMemory))
-        return std::nullopt;
-    return StreamConnectionBuffer { sharedMemory.releaseNonNull() };
-}
 
 StreamConnectionBuffer::Handle StreamConnectionBuffer::createHandle()
 {

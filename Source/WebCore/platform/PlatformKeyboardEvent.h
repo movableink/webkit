@@ -53,7 +53,7 @@ namespace WebCore {
         WTF_MAKE_FAST_ALLOCATED;
     public:
         PlatformKeyboardEvent()
-            : PlatformEvent(PlatformEvent::KeyDown)
+            : PlatformEvent(PlatformEvent::Type::KeyDown)
 #if PLATFORM(QT)
             , m_qtEvent(0)
             , m_useNativeVirtualKeyAsDOMKey(false)

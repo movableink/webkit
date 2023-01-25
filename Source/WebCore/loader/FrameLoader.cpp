@@ -1158,13 +1158,13 @@ void FrameLoader::loadInSameDocument(URL url, RefPtr<SerializedScriptValue> stat
         // we have already saved away the scroll and doc state for the long slow load,
         // but it's not an obvious case.
 
+        history().updateBackForwardListForFragmentScroll();
+
         auto* document = m_frame.document();
         if (document && !document->hasRecentUserInteractionForNavigationFromJS() && !documentLoader()->triggeringAction().isRequestFromClientOrUserInput()) {
             if (auto* currentItem = history().currentItem())
                 currentItem->setWasCreatedByJSWithoutUserInteraction(true);
         }
-
-        history().updateBackForwardListForFragmentScroll();
     }
 
     bool hashChange = equalIgnoringFragmentIdentifier(url, oldURL) && !equalRespectingNullity(url.fragmentIdentifier(), oldURL.fragmentIdentifier());
@@ -1412,6 +1412,7 @@ void FrameLoader::loadURL(FrameLoadRequest&& frameLoadRequest, const String& ref
     action.setLockBackForwardList(frameLoadRequest.lockBackForwardList());
     action.setShouldReplaceDocumentIfJavaScriptURL(frameLoadRequest.shouldReplaceDocumentIfJavaScriptURL());
     action.setIsInitialFrameSrcLoad(frameLoadRequest.isInitialFrameSrcLoad());
+    action.setNewFrameOpenerPolicy(frameLoadRequest.newFrameOpenerPolicy());
     if (privateClickMeasurement && m_frame.isMainFrame())
         action.setPrivateClickMeasurement(WTFMove(*privateClickMeasurement));
 
@@ -1509,6 +1510,7 @@ void FrameLoader::load(FrameLoadRequest&& request)
 
     if (request.shouldCheckNewWindowPolicy()) {
         NavigationAction action { request.requester(), request.resourceRequest(), InitiatedByMainFrame::Unknown, NavigationType::Other, request.shouldOpenExternalURLsPolicy() };
+        action.setNewFrameOpenerPolicy(request.newFrameOpenerPolicy());
         policyChecker().checkNewWindowPolicy(WTFMove(action), WTFMove(request.resourceRequest()), { }, request.frameName(), [this] (const ResourceRequest& request, WeakPtr<FormState>&& formState, const AtomString& frameName, const NavigationAction& action, ShouldContinuePolicyCheck shouldContinue) {
             continueLoadAfterNewWindowPolicy(request, formState.get(), frameName, action, shouldContinue, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Suppress);
         });
@@ -1698,7 +1700,7 @@ void FrameLoader::clearProvisionalLoadForPolicyCheck()
 
 bool FrameLoader::hasOpenedFrames() const
 {
-    return !m_openedFrames.computesEmpty();
+    return !m_openedFrames.isEmptyIgnoringNullReferences();
 }
 
 void FrameLoader::reportLocalLoadFailed(Frame* frame, const String& url)
@@ -2667,7 +2669,7 @@ void FrameLoader::checkLoadCompleteForThisFrame()
             FRAMELOADER_RELEASE_LOG(ResourceLoading, "checkLoadCompleteForThisFrame: Finished frame load");
 #if ENABLE(DATA_DETECTION)
             auto document = m_frame.document();
-            auto types = OptionSet<DataDetectorType> { m_frame.settings().dataDetectorTypes() };
+            OptionSet<DataDetectorType> types = m_frame.settings().dataDetectorTypes();
             if (document && types) {
                 auto documentLevelResults = retainPtr(DataDetection::detectContentInRange(makeRangeSelectingNodeContents(*document), types, m_client->dataDetectionContext()));
                 m_frame.dataDetectionResults().setDocumentLevelResults(documentLevelResults.get());
@@ -3164,6 +3166,7 @@ void FrameLoader::loadPostRequest(FrameLoadRequest&& request, const String& refe
     NavigationAction action { request.requester(), workingResourceRequest, request.initiatedByMainFrame(), loadType, true, event, request.shouldOpenExternalURLsPolicy(), { } };
     action.setLockHistory(lockHistory);
     action.setShouldReplaceDocumentIfJavaScriptURL(request.shouldReplaceDocumentIfJavaScriptURL());
+    action.setNewFrameOpenerPolicy(request.newFrameOpenerPolicy());
 
     if (!frameName.isEmpty()) {
         // The search for a target frame is done earlier in the case of form submission.
@@ -4293,6 +4296,7 @@ RefPtr<Frame> createWindow(Frame& openerFrame, Frame& lookupFrame, FrameLoadRequ
 
     ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy = shouldOpenExternalURLsPolicyToApply(openerFrame, request);
     NavigationAction action { request.requester(), request.resourceRequest(), request.initiatedByMainFrame(), NavigationType::Other, shouldOpenExternalURLsPolicy };
+    action.setNewFrameOpenerPolicy(features.noopener || features.noreferrer ? NewFrameOpenerPolicy::Suppress : NewFrameOpenerPolicy::Allow);
     Page* page = oldPage->chrome().createWindow(openerFrame, features, action);
     if (!page)
         return nullptr;

@@ -28,8 +28,12 @@
 
 #if ENABLE(WEB_CODECS)
 
-#if USE(LIBWEBRTC)
+#if USE(LIBWEBRTC) && PLATFORM(COCOA)
 #include "LibWebRTCVPXVideoEncoder.h"
+#endif
+
+#if USE(GSTREAMER)
+#include "VideoEncoderGStreamer.h"
 #endif
 
 namespace WebCore {
@@ -52,7 +56,7 @@ void VideoEncoder::create(const String& codecName, const Config& config, CreateC
 
 void VideoEncoder::createLocalEncoder(const String& codecName, const Config& config, CreateCallback&& callback, DescriptionCallback&& descriptionCallback, OutputCallback&& outputCallback, PostTaskCallback&& postCallback)
 {
-#if USE(LIBWEBRTC)
+#if USE(LIBWEBRTC) && PLATFORM(COCOA)
     if (codecName == "vp8"_s) {
         LibWebRTCVPXVideoEncoder::create(LibWebRTCVPXVideoEncoder::Type::VP8, config, WTFMove(callback), WTFMove(descriptionCallback), WTFMove(outputCallback), WTFMove(postCallback));
         return;
@@ -65,6 +69,9 @@ void VideoEncoder::createLocalEncoder(const String& codecName, const Config& con
         LibWebRTCVPXVideoEncoder::create(LibWebRTCVPXVideoEncoder::Type::AV1, config, WTFMove(callback), WTFMove(descriptionCallback), WTFMove(outputCallback), WTFMove(postCallback));
         return;
     }
+#elif USE(GSTREAMER)
+    GStreamerVideoEncoder::create(codecName, config, WTFMove(callback), WTFMove(descriptionCallback), WTFMove(outputCallback), WTFMove(postCallback));
+    return;
 #else
     UNUSED_PARAM(codecName);
     UNUSED_PARAM(outputCallback);

@@ -32,6 +32,8 @@
 
 #include "CSSFontSelector.h"
 #include "CSSPaintImageValue.h"
+#include "CSSPendingSubstitutionValue.h"
+#include "CSSPropertyParser.h"
 #include "CSSRegisteredCustomProperty.h"
 #include "CSSValuePool.h"
 #include "CustomPropertyRegistry.h"
@@ -77,8 +79,8 @@ inline bool isValidVisitedLinkProperty(CSSPropertyID id)
     return false;
 }
 
-Builder::Builder(RenderStyle& style, BuilderContext&& context, const MatchResult& matchResult, CascadeLevel cascadeLevel, PropertyCascade::IncludedProperties includedProperties)
-    : m_cascade(matchResult, cascadeLevel, includedProperties)
+Builder::Builder(RenderStyle& style, BuilderContext&& context, const MatchResult& matchResult, CascadeLevel cascadeLevel, PropertyCascade::IncludedProperties includedProperties, const HashSet<AnimatableProperty>* animatedPropertes)
+    : m_cascade(matchResult, cascadeLevel, includedProperties, animatedPropertes)
     , m_state(*this, style, WTFMove(context))
 {
 }
@@ -87,6 +89,9 @@ Builder::~Builder() = default;
 
 void Builder::applyAllProperties()
 {
+    if (m_cascade.isEmpty())
+        return;
+
     applyTopPriorityProperties();
     applyHighPriorityProperties();
     applyNonHighPriorityProperties();
@@ -265,25 +270,25 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
         return applyProperty(newId, valueToApply.get(), linkMatchMask);
     }
 
+    auto valueID = WebCore::valueID(valueToApply.get());
+
     const CSSCustomPropertyValue* customPropertyValue = nullptr;
-    CSSValueID customPropertyValueID = CSSValueInvalid;
     const CSSRegisteredCustomProperty* registeredCustomProperty = nullptr;
 
     if (id == CSSPropertyCustom) {
         customPropertyValue = downcast<CSSCustomPropertyValue>(valueToApply.ptr());
         ASSERT(customPropertyValue->isResolved());
         if (std::holds_alternative<CSSValueID>(customPropertyValue->value()))
-            customPropertyValueID = std::get<CSSValueID>(customPropertyValue->value());
+            valueID = std::get<CSSValueID>(customPropertyValue->value());
         auto& name = customPropertyValue->name();
         registeredCustomProperty = m_state.document().customPropertyRegistry().get(name);
     }
 
-    bool isInherit = valueToApply->isInheritValue() || customPropertyValueID == CSSValueInherit;
-    bool isInitial = valueToApply->isInitialValue() || customPropertyValueID == CSSValueInitial;
-
-    bool isUnset = valueToApply->isUnsetValue() || customPropertyValueID == CSSValueUnset;
-    bool isRevert = valueToApply->isRevertValue() || customPropertyValueID == CSSValueRevert;
-    bool isRevertLayer = valueToApply->isRevertLayerValue() || customPropertyValueID == CSSValueRevertLayer;
+    bool isInherit = valueID == CSSValueInherit;
+    bool isInitial = valueID == CSSValueInitial;
+    bool isUnset = valueID == CSSValueUnset;
+    bool isRevert = valueID == CSSValueRevert;
+    bool isRevertLayer = valueID == CSSValueRevertLayer;
 
     if (isRevert || isRevertLayer) {
         // In @keyframes, 'revert-layer' rolls back the cascaded value to the author level.
@@ -361,12 +366,39 @@ Ref<CSSValue> Builder::resolveVariableReferences(CSSPropertyID propertyID, CSSVa
     if (!value.hasVariableReferences())
         return value;
 
-    auto variableValue = CSSParser { m_state.document() }.parseValueWithVariableReferences(propertyID, value, m_state);
+    auto variableValue = [&]() -> RefPtr<CSSValue> {
+        if (is<CSSPendingSubstitutionValue>(value)) {
+            auto& substitution = downcast<CSSPendingSubstitutionValue>(value);
+            auto shorthandID = substitution.shorthandPropertyId();
+
+            auto resolvedData = substitution.shorthandValue().resolveVariableReferences(m_state);
+            if (!resolvedData)
+                return nullptr;
+
+            ParsedPropertyVector parsedProperties;
+            if (!CSSPropertyParser::parseValue(shorthandID, false, resolvedData->tokens(), substitution.shorthandValue().context(), parsedProperties, StyleRuleType::Style))
+                return nullptr;
+
+            for (auto& property : parsedProperties) {
+                if (property.id() == propertyID)
+                    return property.value();
+            }
+
+            return nullptr;
+        }
+
+        auto& variableReferenceValue = downcast<CSSVariableReferenceValue>(value);
+        auto resolvedData = variableReferenceValue.resolveVariableReferences(m_state);
+        if (!resolvedData)
+            return nullptr;
+
+        return CSSPropertyParser::parseSingleValue(propertyID, resolvedData->tokens(), variableReferenceValue.context());
+    }();
 
     // https://drafts.csswg.org/css-variables-2/#invalid-variables
     // ...as if the property’s value had been specified as the unset keyword.
     if (!variableValue || m_state.m_inUnitCycleProperties.get(propertyID))
-        return CSSValuePool::singleton().createValue(CSSValueUnset);
+        return CSSPrimitiveValue::create(CSSValueUnset);
 
     return *variableValue;
 }
@@ -375,7 +407,46 @@ RefPtr<CSSCustomPropertyValue> Builder::resolveCustomPropertyValueWithVariableRe
 {
     if (!std::holds_alternative<Ref<CSSVariableReferenceValue>>(value.value()))
         return &value;
-    return CSSParser { m_state.document() }.parseCustomPropertyValueWithVariableReferences(value, m_state);
+
+    auto& variableReferenceValue = std::get<Ref<CSSVariableReferenceValue>>(value.value()).get();
+
+    auto name = value.name();
+    auto* registered = m_state.document().customPropertyRegistry().get(name);
+    auto& syntax = registered ? registered->syntax : CSSCustomPropertySyntax::universal();
+
+    auto resolvedData = variableReferenceValue.resolveVariableReferences(m_state);
+    if (!resolvedData)
+        return nullptr;
+
+    auto dependencies = CSSPropertyParser::collectParsedCustomPropertyValueDependencies(syntax, resolvedData->tokens(), variableReferenceValue.context());
+
+    // https://drafts.css-houdini.org/css-properties-values-api/#dependency-cycles
+    bool hasCycles = false;
+    bool isFontDependent = false;
+
+    auto checkDependencies = [&](auto& propertyDependencies) {
+        for (auto property : propertyDependencies) {
+            if (m_state.m_inProgressProperties.get(property)) {
+                m_state.m_inUnitCycleProperties.set(property);
+                hasCycles = true;
+            }
+            if (property == CSSPropertyFontSize)
+                isFontDependent = true;
+        }
+    };
+
+    checkDependencies(dependencies.properties);
+
+    if (m_state.element() == m_state.document().documentElement())
+        checkDependencies(dependencies.rootProperties);
+
+    if (hasCycles)
+        return nullptr;
+
+    if (isFontDependent)
+        m_state.updateFont();
+
+    return CSSPropertyParser::parseTypedCustomPropertyValue(name, syntax, resolvedData->tokens(), m_state, variableReferenceValue.context());
 }
 
 const PropertyCascade* Builder::ensureRollbackCascadeForRevert()

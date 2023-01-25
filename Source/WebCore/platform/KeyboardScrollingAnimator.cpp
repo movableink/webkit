@@ -46,8 +46,8 @@ const std::optional<KeyboardScrollingKey> keyboardScrollingKeyForKeyboardEvent(c
     if (!platformEvent)
         return { };
 
-    // PlatformEvent::Char is a "keypress" event.
-    if (!(platformEvent->type() == PlatformEvent::RawKeyDown || platformEvent->type() == PlatformEvent::Char))
+    // PlatformEvent::Type::Char is a "keypress" event.
+    if (!(platformEvent->type() == PlatformEvent::Type::RawKeyDown || platformEvent->type() == PlatformEvent::Type::Char))
         return { };
 
     static constexpr std::pair<PackedASCIILiteral<uint64_t>, KeyboardScrollingKey> mappings[] = {
@@ -109,30 +109,32 @@ const std::optional<ScrollGranularity> scrollGranularityForKeyboardEvent(const K
         return { };
 
     // FIXME (bug 227459): This logic does not account for writing-mode.
-    auto granularity = [&] {
-        switch (key.value()) {
-        case KeyboardScrollingKey::LeftArrow:
-        case KeyboardScrollingKey::RightArrow:
-            return event.altKey() ? ScrollGranularity::Page : ScrollGranularity::Line;
-        case KeyboardScrollingKey::UpArrow:
-        case KeyboardScrollingKey::DownArrow:
-            if (event.metaKey())
-                return ScrollGranularity::Document;
-            if (event.altKey())
-                return ScrollGranularity::Page;
-            return ScrollGranularity::Line;
-        case KeyboardScrollingKey::Space:
-        case KeyboardScrollingKey::PageUp:
-        case KeyboardScrollingKey::PageDown:
+    switch (key.value()) {
+    case KeyboardScrollingKey::LeftArrow:
+    case KeyboardScrollingKey::RightArrow:
+        if (event.shiftKey() || event.metaKey())
+            return { };
+        if (event.altKey())
             return ScrollGranularity::Page;
-        case KeyboardScrollingKey::Home:
-        case KeyboardScrollingKey::End:
+        return ScrollGranularity::Line;
+    case KeyboardScrollingKey::UpArrow:
+    case KeyboardScrollingKey::DownArrow:
+        if (event.metaKey())
             return ScrollGranularity::Document;
-        };
-        RELEASE_ASSERT_NOT_REACHED();
-    }();
+        if (event.altKey())
+            return ScrollGranularity::Page;
+        return ScrollGranularity::Line;
+    case KeyboardScrollingKey::Space:
+    case KeyboardScrollingKey::PageUp:
+    case KeyboardScrollingKey::PageDown:
+        return ScrollGranularity::Page;
+    case KeyboardScrollingKey::Home:
+    case KeyboardScrollingKey::End:
+        return ScrollGranularity::Document;
+    };
 
-    return granularity;
+    RELEASE_ASSERT_NOT_REACHED();
+    return { };
 }
 
 float KeyboardScrollingAnimator::scrollDistance(ScrollDirection direction, ScrollGranularity granularity) const
@@ -194,7 +196,7 @@ std::optional<KeyboardScroll> KeyboardScrollingAnimator::makeKeyboardScroll(Scro
     return scroll;
 }
 
-bool KeyboardScrollingAnimator::beginKeyboardScrollGesture(ScrollDirection direction, ScrollGranularity granularity)
+bool KeyboardScrollingAnimator::beginKeyboardScrollGesture(ScrollDirection direction, ScrollGranularity granularity, bool isKeyRepeat)
 {
     auto scroll = makeKeyboardScroll(direction, granularity);
     if (!scroll)
@@ -206,7 +208,7 @@ bool KeyboardScrollingAnimator::beginKeyboardScrollGesture(ScrollDirection direc
     if (!rubberbandableDirections().at(boxSideForDirection(direction)))
         return false;
 
-    if (granularity == ScrollGranularity::Document) {
+    if (granularity == ScrollGranularity::Document || (!isKeyRepeat && granularity == ScrollGranularity::Page)) {
         m_scrollableArea.endKeyboardScroll(false);
         auto newPosition = IntPoint(m_scrollableArea.scrollAnimator().currentPosition() + scroll->offset);
         m_scrollableArea.scrollAnimator().scrollToPositionWithAnimation(newPosition);

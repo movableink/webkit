@@ -267,6 +267,7 @@ namespace JSC { namespace DFG {
     macro(GetVectorLength, NodeResultInt32) \
     macro(GetTypedArrayByteOffset, NodeResultInt32) \
     macro(GetTypedArrayByteOffsetAsInt52, NodeResultInt52) \
+    macro(GetWebAssemblyInstanceExports, NodeResultJS) \
     macro(GetScope, NodeResultJS) \
     macro(SkipScope, NodeResultJS) \
     macro(ResolveScope, NodeResultJS | NodeMustGenerate) \
@@ -364,6 +365,7 @@ namespace JSC { namespace DFG {
     macro(TailCallVarargsInlinedCaller, NodeResultJS | NodeMustGenerate) \
     macro(TailCallForwardVarargsInlinedCaller, NodeResultJS | NodeMustGenerate) \
     macro(CallDirectEval, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
+    macro(CallWasm, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     \
     /* Shadow Chicken */\
     macro(LogShadowChickenPrologue, NodeMustGenerate) \
@@ -531,6 +533,7 @@ namespace JSC { namespace DFG {
     macro(LoadValueFromMapBucket, NodeResultJS) \
     macro(SetAdd, NodeMustGenerate | NodeResultJS) \
     macro(MapSet, NodeMustGenerate | NodeHasVarArgs | NodeResultJS) \
+    macro(MapOrSetDelete, NodeMustGenerate | NodeResultBoolean) \
     /* Nodes for JSWeakMap and JSWeakSet */ \
     macro(WeakMapGet, NodeResultJS) \
     macro(WeakSetAdd, NodeMustGenerate) \

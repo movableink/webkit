@@ -3165,7 +3165,6 @@
 				532424B1254905FE00A6975B /* Check For Inappropriate Files In Framework */,
 				537CF83A22EFBFB100C6EBB3 /* Check .xcfilelists */,
 				650473452789431C00AF78A2 /* Create Symlink to Alt Root Path */,
-				6517572027CEE91400D9FE40 /* Copy Frameworks to Secondary Path */,
 			);
 			buildRules = (
 				DDF74C9F27EE3D6D0011F633 /* PBXBuildRule */,
@@ -3400,24 +3399,6 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${SRCROOT}/scripts/create-symlink-to-altroot.sh\"\n";
 		};
-		6517572027CEE91400D9FE40 /* Copy Frameworks to Secondary Path */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 8;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Copy Frameworks to Secondary Path";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 1;
-			shellPath = /bin/sh;
-			shellScript = "export FRAMEWORKS_TO_COPY_TO_SECONDARY_PATH=\"WebKitLegacy\"\n\"${SRCROOT}/scripts/copy-frameworks-to-secondary-path.sh\"\n";
-		};
 		7C02321B251B9A8A00BA7BB6 /* Generate Preferences */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -3426,10 +3407,7 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
-				"$(WTF_BUILD_SCRIPTS_DIR)/Preferences/WebPreferences.yaml",
-				"$(WTF_BUILD_SCRIPTS_DIR)/Preferences/WebPreferencesDebug.yaml",
-				"$(WTF_BUILD_SCRIPTS_DIR)/Preferences/WebPreferencesExperimental.yaml",
-				"$(WTF_BUILD_SCRIPTS_DIR)/Preferences/WebPreferencesInternal.yaml",
+				"$(WTF_BUILD_SCRIPTS_DIR)/Preferences/UnifiedWebPreferences.yaml",
 				"$(WTF_BUILD_SCRIPTS_DIR)/GeneratePreferences.rb",
 				"$(SRCROOT)/mac/Scripts/PreferencesTemplates/WebPreferencesDefinitions.h.erb",
 				"$(SRCROOT)/mac/Scripts/PreferencesTemplates/WebPreferencesExperimentalFeatures.mm.erb",

@@ -237,14 +237,14 @@ void RecorderImpl::recordDrawPath(const Path& path)
     append<DrawPath>(path);
 }
 
-void RecorderImpl::recordDrawFocusRingPath(const Path& path, float width, float offset, const Color& color)
+void RecorderImpl::recordDrawFocusRingPath(const Path& path, float outlineWidth, const Color& color)
 {
-    append<DrawFocusRingPath>(path, width, offset, color);
+    append<DrawFocusRingPath>(path, outlineWidth, color);
 }
 
-void RecorderImpl::recordDrawFocusRingRects(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
+void RecorderImpl::recordDrawFocusRingRects(const Vector<FloatRect>& rects, float outlineOffset, float outlineWidth, const Color& color)
 {
-    append<DrawFocusRingRects>(rects, width, offset, color);
+    append<DrawFocusRingRects>(rects, outlineOffset, outlineWidth, color);
 }
 
 void RecorderImpl::recordFillRect(const FloatRect& rect)
@@ -316,6 +316,11 @@ void RecorderImpl::recordPaintFrameForMedia(MediaPlayer& player, const FloatRect
 {
     append<PaintFrameForMedia>(player, destination);
 }
+
+void RecorderImpl::recordPaintVideoFrame(VideoFrame&, const FloatRect&, bool /* shouldDiscardAlpha */)
+{
+    // FIXME: TODO
+}
 #endif // ENABLE(VIDEO)
 
 void RecorderImpl::recordStrokeRect(const FloatRect& rect, float width)
@@ -369,9 +374,9 @@ void RecorderImpl::recordClearRect(const FloatRect& rect)
     append<ClearRect>(rect);
 }
 
-void RecorderImpl::recordDrawControlPart(ControlPart& part, const FloatRect& rect, float deviceScaleFactor, const ControlStyle& style)
+void RecorderImpl::recordDrawControlPart(ControlPart& part, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle& style)
 {
-    append<DrawControlPart>(part, rect, deviceScaleFactor, style);
+    append<DrawControlPart>(part, borderRect, deviceScaleFactor, style);
 }
 
 #if USE(CG)

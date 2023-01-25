@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -253,7 +253,7 @@ bool WebChromeClient::canTakeFocus(FocusDirection)
 
 void WebChromeClient::takeFocus(FocusDirection direction)
 {
-    m_page.send(Messages::WebPageProxy::TakeFocus(static_cast<uint8_t>(direction)));
+    m_page.send(Messages::WebPageProxy::TakeFocus(direction));
 }
 
 void WebChromeClient::focusedElementChanged(Element* element)
@@ -300,22 +300,39 @@ Page* WebChromeClient::createWindow(Frame& frame, const WindowFeatures& windowFe
 
     auto& webProcess = WebProcess::singleton();
 
-    NavigationActionData navigationActionData;
-    navigationActionData.navigationType = navigationAction.type();
-    navigationActionData.modifiers = modifiersForNavigationAction(navigationAction);
-    navigationActionData.mouseButton = mouseButton(navigationAction);
-    navigationActionData.syntheticClickType = syntheticClickType(navigationAction);
-    if (auto& data = navigationAction.mouseEventData())
-        navigationActionData.clickLocationInRootViewCoordinates = data->locationInRootViewCoordinates;
-    navigationActionData.userGestureTokenIdentifier = webProcess.userGestureTokenIdentifier(navigationAction.userGestureToken());
-    navigationActionData.canHandleRequest = m_page.canHandleRequest(navigationAction.resourceRequest());
-    navigationActionData.shouldOpenExternalURLsPolicy = navigationAction.shouldOpenExternalURLsPolicy();
-    navigationActionData.downloadAttribute = navigationAction.downloadAttribute();
-    navigationActionData.privateClickMeasurement = navigationAction.privateClickMeasurement();
+    auto& mouseEventData = navigationAction.mouseEventData();
+
+    NavigationActionData navigationActionData {
+        navigationAction.type(),
+        modifiersForNavigationAction(navigationAction),
+        mouseButton(navigationAction),
+        syntheticClickType(navigationAction),
+        webProcess.userGestureTokenIdentifier(navigationAction.userGestureToken()),
+        m_page.canHandleRequest(navigationAction.resourceRequest()),
+        navigationAction.shouldOpenExternalURLsPolicy(),
+        navigationAction.downloadAttribute(),
+        mouseEventData ? mouseEventData->locationInRootViewCoordinates : FloatPoint { },
+        false, /* isRedirect */
+        false, /* treatAsSameOriginNavigation */
+        false, /* hasOpenedFrames */
+        false, /* openedByDOMWithOpener */
+        navigationAction.newFrameOpenerPolicy() == NewFrameOpenerPolicy::Allow, /* hasOpener */
+        { }, /* requesterOrigin */
+        std::nullopt, /* targetBackForwardItemIdentifier */
+        std::nullopt, /* sourceBackForwardItemIdentifier */
+        WebCore::LockHistory::No,
+        WebCore::LockBackForwardList::No,
+        { }, /* clientRedirectSourceForHistory */
+        0, /* effectiveSandboxFlags */
+        navigationAction.privateClickMeasurement(),
+#if PLATFORM(MAC) || HAVE(UIKIT_WITH_MOUSE_SUPPORT)
+        std::nullopt, /* webHitTestResultData */
+#endif
+    };
 
     WebFrame* webFrame = WebFrame::fromCoreFrame(frame);
 
-    auto sendResult = webProcess.parentProcessConnection()->sendSync(Messages::WebPageProxy::CreateNewPage(webFrame->info(), webFrame->page()->webPageProxyIdentifier(), navigationAction.resourceRequest(), windowFeatures, navigationActionData), m_page.identifier(), IPC::Timeout::infinity(), IPC::SendSyncOption::MaintainOrderingWithAsyncMessages);
+    auto sendResult = webProcess.parentProcessConnection()->sendSync(Messages::WebPageProxy::CreateNewPage(webFrame->info(), webFrame->page()->webPageProxyIdentifier(), navigationAction.resourceRequest(), windowFeatures, navigationActionData), m_page.identifier(), IPC::Timeout::infinity(), { IPC::SendSyncOption::MaintainOrderingWithAsyncMessages, IPC::SendSyncOption::InformPlatformProcessWillSuspend });
     if (!sendResult)
         return nullptr;
 
@@ -932,7 +949,7 @@ RefPtr<GraphicsContextGL> WebChromeClient::createGraphicsContextGL(const Graphic
 {
 #if ENABLE(GPU_PROCESS)
     if (WebProcess::singleton().shouldUseRemoteRenderingForWebGL())
-        return RemoteGraphicsContextGLProxy::create(WebProcess::singleton().ensureGPUProcessConnection().connection(), attributes, m_page.ensureRemoteRenderingBackendProxy());
+        return RemoteGraphicsContextGLProxy::create(WebProcess::singleton().ensureGPUProcessConnection().connection(), attributes, m_page.ensureRemoteRenderingBackendProxy(), WebProcess::singleton().ensureGPUProcessConnection().videoFrameObjectHeapProxy());
 #endif
     return WebCore::createWebProcessGraphicsContextGL(attributes);
 }
@@ -940,14 +957,12 @@ RefPtr<GraphicsContextGL> WebChromeClient::createGraphicsContextGL(const Graphic
 
 RefPtr<PAL::WebGPU::GPU> WebChromeClient::createGPUForWebGPU() const
 {
-#if HAVE(WEBGPU_IMPLEMENTATION)
 #if ENABLE(GPU_PROCESS)
     return RemoteGPUProxy::create(WebProcess::singleton().ensureGPUProcessConnection(), WebGPU::DowncastConvertToBackingContext::create(), WebGPUIdentifier::generate(), m_page.ensureRemoteRenderingBackendProxy().ensureBackendCreated());
-#else
+#elif HAVE(WEBGPU_IMPLEMENTATION)
     return PAL::WebGPU::create([](PAL::WebGPU::WorkItem&& workItem) {
         callOnMainRunLoop(WTFMove(workItem));
     });
-#endif
 #else
     return nullptr;
 #endif
@@ -1258,6 +1273,13 @@ bool WebChromeClient::shouldUseTiledBackingForFrameView(const FrameView& frameVi
     return m_page.drawingArea()->shouldUseTiledBackingForFrameView(frameView);
 }
 
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+void WebChromeClient::isAnyAnimationAllowedToPlayDidChange(bool anyAnimationCanPlay)
+{
+    m_page.isAnyAnimationAllowedToPlayDidChange(anyAnimationCanPlay);
+}
+#endif
+
 void WebChromeClient::isPlayingMediaDidChange(MediaProducerMediaStateFlags state)
 {
     m_page.isPlayingMediaDidChange(state);
@@ -1424,15 +1446,6 @@ void WebChromeClient::imageOrMediaDocumentSizeChanged(const IntSize& newSize)
     m_page.imageOrMediaDocumentSizeChanged(newSize);
 }
 
-#if ENABLE(VIDEO) && USE(GSTREAMER)
-
-void WebChromeClient::requestInstallMissingMediaPlugins(const String& details, const String& description, MediaPlayerRequestInstallMissingPluginsCallback& callback)
-{
-    m_page.requestInstallMissingMediaPlugins(details, description, callback);
-}
-
-#endif
-
 void WebChromeClient::didInvalidateDocumentMarkerRects()
 {
     m_page.findController().didInvalidateDocumentMarkerRects();
@@ -1519,9 +1532,9 @@ void WebChromeClient::requestTextRecognition(Element& element, TextRecognitionOp
 
 #endif
 
-URL WebChromeClient::sanitizeLookalikeCharacters(const URL& url) const
+URL WebChromeClient::sanitizeLookalikeCharacters(const URL& url, LookalikeCharacterSanitizationTrigger trigger) const
 {
-    return m_page.sanitizeLookalikeCharacters(url);
+    return m_page.sanitizeLookalikeCharacters(url, trigger);
 }
 
 #if ENABLE(TEXT_AUTOSIZING)

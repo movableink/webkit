@@ -65,6 +65,11 @@ bool defaultAlternateFormControlDesignEnabled()
 {
     return false;
 }
+
+bool defaultVideoFullscreenRequiresElementFullscreen()
+{
+    return false;
+}
 #endif
 
 #endif
@@ -179,6 +184,16 @@ bool defaultMediaSessionCoordinatorEnabled()
 }
 #endif
 
+bool defaultShouldTakeSuspendedAssertions()
+{
+#if PLATFORM(IOS_FAMILY)
+    static bool newSDK = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::FullySuspendsBackgroundContent);
+    return !newSDK;
+#else
+    return true;
+#endif
+}
+
 bool defaultShowModalDialogEnabled()
 {
 #if PLATFORM(COCOA)
@@ -188,5 +203,16 @@ bool defaultShowModalDialogEnabled()
     return false;
 #endif
 }
+
+#if ENABLE(GAMEPAD)
+bool defaultGamepadVibrationActuatorEnabled()
+{
+#if HAVE(WIDE_GAMECONTROLLER_SUPPORT)
+    return true;
+#else
+    return false;
+#endif
+}
+#endif
 
 } // namespace WebKit

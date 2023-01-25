@@ -237,6 +237,7 @@ static RetainPtr<NSFileWrapper> fileWrapperForElement(HTMLImageElement&);
 - (void)setIgnoresOrientation:(BOOL)flag;
 - (void)setBounds:(CGRect)bounds;
 - (BOOL)ignoresOrientation;
+@property (strong) NSString *accessibilityLabel;
 @end
 
 #endif
@@ -593,7 +594,7 @@ String HTMLConverterCaches::propertyValueForNode(Node& node, CSSPropertyID prope
 
     if (RefPtr<CSSValue> value = inlineStylePropertyForElement(element, propertyId)) {
         String result;
-        if (value->isInheritValue())
+        if (isValueID(*value, CSSValueInherit))
             inherit = true;
         else if (stringFromCSSValue(*value, result))
             return result;
@@ -741,7 +742,7 @@ bool HTMLConverterCaches::floatPropertyValueForNode(Node& node, CSSPropertyID pr
     if (RefPtr<CSSValue> value = inlineStylePropertyForElement(element, propertyId)) {
         if (is<CSSPrimitiveValue>(*value) && floatValueFromPrimitiveValue(downcast<CSSPrimitiveValue>(*value), result))
             return true;
-        if (value->isInheritValue())
+        if (isValueID(*value, CSSValueInherit))
             inherit = true;
     }
 
@@ -883,7 +884,7 @@ Color HTMLConverterCaches::colorPropertyValueForNode(Node& node, CSSPropertyID p
     if (RefPtr<CSSValue> value = inlineStylePropertyForElement(element, propertyId)) {
         if (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).isRGBColor())
             return normalizedColor(downcast<CSSPrimitiveValue>(*value).color(), ignoreDefaultColor, element);
-        if (value->isInheritValue())
+        if (isValueID(*value, CSSValueInherit))
             inherit = true;
     }
 
@@ -1316,6 +1317,12 @@ BOOL HTMLConverter::_addAttachmentForElement(Element& element, NSURL *url, BOOL 
     if (fileWrapper || usePlaceholder) {
         NSUInteger textLength = [_attrStr length];
         RetainPtr<NSTextAttachment> attachment = adoptNS([[PlatformNSTextAttachment alloc] initWithFileWrapper:fileWrapper.get()]);
+
+        if (auto& ariaLabel = element.getAttribute("aria-label"_s); !ariaLabel.isEmpty())
+            attachment.get().accessibilityLabel = ariaLabel;
+        if (auto& altText = element.getAttribute("alt"_s); !altText.isEmpty())
+            attachment.get().accessibilityLabel = altText;
+
 #if PLATFORM(IOS_FAMILY)
         float verticalAlign = 0.0;
         _caches->floatPropertyValueForNode(element, CSSPropertyVerticalAlign, verticalAlign);

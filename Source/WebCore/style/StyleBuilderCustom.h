@@ -26,8 +26,9 @@
 
 #pragma once
 
+#include "CSSCounterStyleRegistry.h"
+#include "CSSCounterStyleRule.h"
 #include "CSSCursorImageValue.h"
-#include "CSSFontFamily.h"
 #include "CSSFontValue.h"
 #include "CSSFontVariantAlternatesValue.h"
 #include "CSSGradientValue.h"
@@ -52,6 +53,7 @@
 #include "StyleGeneratedImage.h"
 #include "StyleImageSet.h"
 #include "StyleResolver.h"
+#include "StyleScope.h"
 #include "WillChangeData.h"
 
 namespace WebCore {
@@ -238,14 +240,12 @@ inline void BuilderCustom::applyValueZoom(BuilderState& builderState, CSSValue& 
 
 inline Length BuilderCustom::mmLength(double mm)
 {
-    Ref<CSSPrimitiveValue> value(CSSPrimitiveValue::create(mm, CSSUnitType::CSS_MM));
-    return value.get().computeLength<Length>({ });
+    return CSSPrimitiveValue::create(mm, CSSUnitType::CSS_MM).get().computeLength<Length>({ });
 }
 
 inline Length BuilderCustom::inchLength(double inch)
 {
-    Ref<CSSPrimitiveValue> value(CSSPrimitiveValue::create(inch, CSSUnitType::CSS_IN));
-    return value.get().computeLength<Length>({ });
+    return CSSPrimitiveValue::create(inch, CSSUnitType::CSS_IN).get().computeLength<Length>({ });
 }
 
 bool BuilderCustom::getPageSizeFromName(CSSPrimitiveValue* pageSizeName, CSSPrimitiveValue* pageOrientation, Length& width, Length& height)
@@ -777,6 +777,13 @@ inline void BuilderCustom::applyValueListStyleType(BuilderState& builderState, C
         builderState.style().setListStyleStringValue(RenderStyle::initialListStyleStringValue());
         return;
     }
+    // FIXME: handle counter-style: rdar://102988393.
+    // We should skip handling counter style until we can represent all systems with CSSCounterStyle::text(). We currently don't accept custom-ident in list-style-type parser-grammar (CSSProperties.json).
+    if (primitiveValue.isCustomIdent()) {
+        builderState.style().setListStyleType(ListStyleType::CustomCounterStyle);
+        builderState.style().setListStyleStringValue(makeAtomString(primitiveValue.stringValue()));
+        return;
+    }
     builderState.style().setListStyleType(ListStyleType::String);
     builderState.style().setListStyleStringValue(AtomString { primitiveValue.stringValue() });
 }
@@ -1053,8 +1060,7 @@ inline void BuilderCustom::applyValueFontFamily(BuilderState& builderState, CSSV
         AtomString family = SystemFontDatabase::singleton().systemFontShorthandFamily(CSSPropertyParserHelpers::lowerFontShorthand(valueID));
         ASSERT(!family.isEmpty());
         fontDescription.setIsSpecifiedFont(false);
-        families.reserveInitialCapacity(1);
-        families.uncheckedAppend(family);
+        families = Vector<AtomString>::from(WTFMove(family));
     } else {
         auto& valueList = downcast<CSSValueList>(value);
         families.reserveInitialCapacity(valueList.length());
@@ -1062,30 +1068,24 @@ inline void BuilderCustom::applyValueFontFamily(BuilderState& builderState, CSSV
             auto& contentValue = downcast<CSSPrimitiveValue>(item.get());
             AtomString family;
             bool isGenericFamily = false;
-            if (contentValue.isFontFamily()) {
-                const CSSFontFamily& fontFamily = contentValue.fontFamily();
-                family = AtomString { fontFamily.familyName };
-                // If the family name was resolved by the CSS parser from a system font ID, then it is generic.
-                isGenericFamily = fontFamily.fromSystemFontID;
-            } else {
-                if (contentValue.valueID() == CSSValueWebkitBody)
-                    family = AtomString { builderState.document().settings().standardFontFamily() };
-                else {
-                    isGenericFamily = true;
-                    family = CSSPropertyParserHelpers::genericFontFamily(contentValue.valueID());
-                }
+            if (contentValue.isFontFamily())
+                family = AtomString { contentValue.stringValue() };
+            else if (contentValue.valueID() == CSSValueWebkitBody)
+                family = AtomString { builderState.document().settings().standardFontFamily() };
+            else {
+                isGenericFamily = true;
+                family = CSSPropertyParserHelpers::genericFontFamily(contentValue.valueID());
             }
-
             if (family.isEmpty())
                 continue;
             if (families.isEmpty())
                 fontDescription.setIsSpecifiedFont(!isGenericFamily);
-            families.uncheckedAppend(family);
+            families.uncheckedAppend(WTFMove(family));
         }
+        if (families.isEmpty())
+            return;
     }
 
-    if (families.isEmpty())
-        return;
     fontDescription.setFamilies(families);
 
     if (fontDescription.useFixedDefaultSize() != oldFamilyUsedFixedDefaultSize) {
@@ -1601,6 +1601,7 @@ inline void BuilderCustom::applyValueContent(BuilderState& builderState, CSSValu
             // Register the fact that the attribute value affects the style.
             builderState.registerContentAttribute(attr.localName());
         } else if (contentValue.isCounter()) {
+            // FIXME: counter-style: we probably want to review this for custom counter-style.
             auto* counterValue = contentValue.counterValue();
             ListStyleType listStyleType = ListStyleType::None;
             CSSValueID listStyleIdent = counterValue->listStyleIdent();
@@ -2147,9 +2148,8 @@ inline void BuilderCustom::applyValueColor(BuilderState& builderState, CSSValue&
 
 inline void BuilderCustom::applyInitialCustomProperty(BuilderState& builderState, const CSSRegisteredCustomProperty* registered, const AtomString& name)
 {
-    if (registered && registered->initialValue()) {
-        auto initialValue = registered->initialValueCopy();
-        applyValueCustomProperty(builderState, registered, *initialValue);
+    if (registered && registered->initialValue) {
+        applyValueCustomProperty(builderState, registered, const_cast<CSSCustomPropertyValue&>(*registered->initialValue));
         return;
     }
 

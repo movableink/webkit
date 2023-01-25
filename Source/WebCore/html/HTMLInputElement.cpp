@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  * Copyright (C) 2007 Samuel Weinig (sam@webkit.org)
  * Copyright (C) 2010-2021 Google Inc. All rights reserved.
@@ -634,9 +634,7 @@ const AtomString& HTMLInputElement::formControlType() const
 
 bool HTMLInputElement::shouldSaveAndRestoreFormControlState() const
 {
-    if (!m_inputType->shouldSaveAndRestoreFormControlState())
-        return false;
-    return HTMLTextFormControlElement::shouldSaveAndRestoreFormControlState();
+    return m_inputType->shouldSaveAndRestoreFormControlState();
 }
 
 FormControlState HTMLInputElement::saveFormControlState() const
@@ -792,7 +790,7 @@ void HTMLInputElement::parseAttribute(const QualifiedName& name, const AtomStrin
         m_maxResults = value.isNull() ? -1 : std::min(parseHTMLInteger(value).value_or(0), maxSavedResults);
     else if (name == autosaveAttr || name == incrementalAttr)
         invalidateStyleForSubtree();
-    else if (name == maxAttr || name == minAttr || name == multipleAttr || name == patternAttr || name == precisionAttr || name == stepAttr)
+    else if (name == maxAttr || name == minAttr || name == multipleAttr || name == patternAttr || name == stepAttr)
         updateValidity();
 #if ENABLE(DATALIST_ELEMENT)
     else if (name == listAttr) {
@@ -1722,7 +1720,8 @@ void HTMLInputElement::resetListAttributeTargetObserver()
 
 void HTMLInputElement::dataListMayHaveChanged()
 {
-    m_inputType->dataListMayHaveChanged();
+    auto protectedInputType = m_inputType;
+    protectedInputType->dataListMayHaveChanged();
 }
 
 bool HTMLInputElement::isFocusingWithDataListDropdown() const
@@ -1859,9 +1858,9 @@ bool HTMLInputElement::isEnumeratable() const
     return m_inputType->isEnumeratable();
 }
 
-bool HTMLInputElement::supportLabels() const
+bool HTMLInputElement::isLabelable() const
 {
-    return m_inputType->supportLabels();
+    return m_inputType->isLabelable();
 }
 
 bool HTMLInputElement::shouldAppearChecked() const
@@ -2039,7 +2038,10 @@ ListAttributeTargetObserver::ListAttributeTargetObserver(const AtomString& id, H
 
 void ListAttributeTargetObserver::idTargetChanged()
 {
-    m_element->dataListMayHaveChanged();
+    m_element->document().eventLoop().queueTask(TaskSource::DOMManipulation, [element = m_element] {
+        if (element)
+            element->dataListMayHaveChanged();
+    });
 }
 #endif
 
@@ -2130,14 +2132,14 @@ ExceptionOr<void> HTMLInputElement::setSelectionRangeForBindings(unsigned start,
 static Ref<StyleGradientImage> autoFillStrongPasswordMaskImage()
 {
     Vector<StyleGradientImage::Stop> stops {
-        { Color::black, CSSValuePool::singleton().createValue(50, CSSUnitType::CSS_PERCENTAGE) },
-        { Color::transparentBlack, CSSValuePool::singleton().createValue(100, CSSUnitType::CSS_PERCENTAGE) }
+        { Color::black, CSSPrimitiveValue::create(50, CSSUnitType::CSS_PERCENTAGE) },
+        { Color::transparentBlack, CSSPrimitiveValue::create(100, CSSUnitType::CSS_PERCENTAGE) }
     };
 
     return StyleGradientImage::create(
         StyleGradientImage::LinearData {
             {
-                CSSLinearGradientValue::Angle { CSSValuePool::singleton().createValue(90, CSSUnitType::CSS_DEG) }
+                CSSLinearGradientValue::Angle { CSSPrimitiveValue::create(90, CSSUnitType::CSS_DEG) }
             },
             CSSGradientRepeat::NonRepeating
         },

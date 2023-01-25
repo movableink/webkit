@@ -34,6 +34,7 @@
 #include "RenderStyleConstants.h"
 #include "Timer.h"
 #include "WKContentObservation.h"
+#include "WebAnimationTypes.h"
 #include <wtf/HashSet.h>
 #include <wtf/Seconds.h>
 #include <wtf/WeakPtr.h>
@@ -138,7 +139,6 @@ private:
     void setShouldObserveDOMTimerSchedulingAndTransitions(bool);
     bool isObservingDOMTimerScheduling() const { return m_isObservingDOMTimerScheduling; }
     bool isObservingTransitions() const { return m_isObservingTransitions; }
-    bool isObservedPropertyForTransition(CSSPropertyID propertyId) const { return propertyId == CSSPropertyLeft || propertyId == CSSPropertyOpacity; }
     void domTimerExecuteDidStart(const DOMTimer&);
     void domTimerExecuteDidFinish(const DOMTimer&);
     void registerDOMTimer(const DOMTimer&);
@@ -163,7 +163,7 @@ private:
 
     bool hasVisibleChangeState() const { return observedContentChange() == WKContentVisibilityChange; }
     bool hasObservedDOMTimer() const;
-    bool hasObservedTransition() const { return !m_elementsWithTransition.computesEmpty(); }
+    bool hasObservedTransition() const { return !m_elementsWithTransition.isEmptyIgnoringNullReferences(); }
 
     void setIsBetweenTouchEndAndMouseMoved(bool isBetween) { m_isBetweenTouchEndAndMouseMoved = isBetween; }
     bool isBetweenTouchEndAndMouseMoved() const { return m_isBetweenTouchEndAndMouseMoved; }
@@ -184,6 +184,8 @@ private:
 
     enum class ElementHadRenderer { No, Yes };
     bool isConsideredActionableContent(const Element&, ElementHadRenderer) const;
+    
+    bool isContentChangeObserverEnabled();
 
     enum class Event {
         StartedTouchStartEventDispatching,

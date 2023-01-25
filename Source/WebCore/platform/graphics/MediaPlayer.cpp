@@ -172,8 +172,6 @@ public:
 
     void paint(GraphicsContext&, const FloatRect&) final { }
     DestinationColorSpace colorSpace() final { return DestinationColorSpace::SRGB(); }
-
-    bool hasSingleSecurityOrigin() const final { return true; }
 };
 
 #if !RELEASE_LOG_DISABLED
@@ -1270,20 +1268,15 @@ void MediaPlayer::setShouldMaintainAspectRatio(bool maintainAspectRatio)
     m_private->setShouldMaintainAspectRatio(maintainAspectRatio);
 }
 
-bool MediaPlayer::hasSingleSecurityOrigin() const
-{
-    return m_private->hasSingleSecurityOrigin();
-}
-
 bool MediaPlayer::didPassCORSAccessCheck() const
 {
     return m_private->didPassCORSAccessCheck();
 }
 
-bool MediaPlayer::wouldTaintOrigin(const SecurityOrigin& origin) const
+bool MediaPlayer::isCrossOrigin(const SecurityOrigin& origin) const
 {
-    if (auto wouldTaint = m_private->wouldTaintOrigin(origin))
-        return *wouldTaint;
+    if (auto crossOrigin = m_private->isCrossOrigin(origin))
+        return *crossOrigin;
 
     if (m_url.protocolIsData())
         return false;
@@ -1913,7 +1906,7 @@ String convertEnumerationToString(MediaPlayer::ReadyState enumerationValue)
     static_assert(static_cast<size_t>(MediaPlayer::ReadyState::HaveCurrentData) == 2, "MediaPlayer::ReadyState::HaveCurrentData is not 2 as expected");
     static_assert(static_cast<size_t>(MediaPlayer::ReadyState::HaveFutureData) == 3, "MediaPlayer::ReadyState::HaveFutureData is not 3 as expected");
     static_assert(static_cast<size_t>(MediaPlayer::ReadyState::HaveEnoughData) == 4, "MediaPlayer::ReadyState::HaveEnoughData is not 4 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -1935,7 +1928,7 @@ String convertEnumerationToString(MediaPlayer::NetworkState enumerationValue)
     static_assert(static_cast<size_t>(MediaPlayer::NetworkState::FormatError) == 4, "MediaPlayer::NetworkState::FormatError is not 4 as expected");
     static_assert(static_cast<size_t>(MediaPlayer::NetworkState::NetworkError) == 5, "MediaPlayer::NetworkError is not 5 as expected");
     static_assert(static_cast<size_t>(MediaPlayer::NetworkState::DecodeError) == 6, "MediaPlayer::NetworkState::DecodeError is not 6 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -1949,7 +1942,7 @@ String convertEnumerationToString(MediaPlayer::Preload enumerationValue)
     static_assert(!static_cast<size_t>(MediaPlayer::Preload::None), "MediaPlayer::Preload::None is not 0 as expected");
     static_assert(static_cast<size_t>(MediaPlayer::Preload::MetaData) == 1, "MediaPlayer::Preload::MetaData is not 1 as expected");
     static_assert(static_cast<size_t>(MediaPlayer::Preload::Auto) == 2, "MediaPlayer::Preload::Auto is not 2 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -1963,7 +1956,7 @@ String convertEnumerationToString(MediaPlayer::SupportsType enumerationValue)
     static_assert(!static_cast<size_t>(MediaPlayer::SupportsType::IsNotSupported), "MediaPlayer::SupportsType::IsNotSupported is not 0 as expected");
     static_assert(static_cast<size_t>(MediaPlayer::SupportsType::IsSupported) == 1, "MediaPlayer::SupportsType::IsSupported is not 1 as expected");
     static_assert(static_cast<size_t>(MediaPlayer::SupportsType::MayBeSupported) == 2, "MediaPlayer::SupportsType::MayBeSupported is not 2 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -1979,7 +1972,7 @@ String convertEnumerationToString(MediaPlayer::BufferingPolicy enumerationValue)
     static_assert(static_cast<size_t>(MediaPlayer::BufferingPolicy::LimitReadAhead) == 1, "MediaPlayer::LimitReadAhead is not 1 as expected");
     static_assert(static_cast<size_t>(MediaPlayer::BufferingPolicy::MakeResourcesPurgeable) == 2, "MediaPlayer::MakeResourcesPurgeable is not 2 as expected");
     static_assert(static_cast<size_t>(MediaPlayer::BufferingPolicy::PurgeResources) == 3, "MediaPlayer::PurgeResources is not 3 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 

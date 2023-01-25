@@ -60,7 +60,7 @@ public:
 
     String title() const override;
     virtual bool supportsMarkers() const { return false; }
-    bool hasRelativeLengths() const { return !m_elementsWithRelativeLengths.computesEmpty(); }
+    bool hasRelativeLengths() const { return !m_elementsWithRelativeLengths.isEmptyIgnoringNullReferences(); }
     virtual bool needsPendingResourceHandling() const { return true; }
     bool instanceUpdatesBlocked() const;
     void setInstanceUpdatesBlocked(bool);
@@ -114,7 +114,7 @@ public:
 
     void setCorrespondingElement(SVGElement*);
 
-    std::optional<Style::ElementStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle) override;
+    std::optional<Style::ResolvedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle) override;
 
     static QualifiedName animatableAttributeForName(const AtomString&);
 #ifndef NDEBUG

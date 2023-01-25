@@ -48,13 +48,13 @@ PageClientImpl::PageClientImpl(WebView& view)
 }
 
 // PageClient's pure virtual functions
-std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy(WebProcessProxy& process)
+std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy(WebProcessProxy&)
 {
 #if USE(GRAPHICS_LAYER_WC)
     if (m_view.page()->preferences().useGPUProcessForWebGLEnabled())
-        return makeUnique<DrawingAreaProxyWC>(*m_view.page(), process);
+        return makeUnique<DrawingAreaProxyWC>(*m_view.page());
 #endif
-    return makeUnique<DrawingAreaProxyCoordinatedGraphics>(*m_view.page(), process);
+    return makeUnique<DrawingAreaProxyCoordinatedGraphics>(*m_view.page());
 }
 
 void PageClientImpl::setViewNeedsDisplay(const WebCore::Region& region)
@@ -233,11 +233,6 @@ void PageClientImpl::preferencesDidChange()
 }
 
 void PageClientImpl::didChangeContentSize(const IntSize& size)
-{
-    notImplemented();
-}
-
-void PageClientImpl::handleDownloadRequest(DownloadProxy& download)
 {
     notImplemented();
 }

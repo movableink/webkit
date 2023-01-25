@@ -27,6 +27,7 @@
 #include "ProvisionalFrameProxy.h"
 
 #include "APIWebsitePolicies.h"
+#include "DrawingAreaProxy.h"
 #include "FrameInfoData.h"
 #include "HandleMessage.h"
 #include "LoadParameters.h"
@@ -55,8 +56,12 @@ ProvisionalFrameProxy::ProvisionalFrameProxy(WebFrameProxy& frame, Ref<WebProces
 
     m_process->addMessageReceiver(Messages::WebFrameProxy::messageReceiverName(), m_frame.frameID().object(), *this);
 
+    ASSERT(m_frame.page());
     auto& page = *m_frame.page();
-    auto parameters = page.creationParameters(m_process, *page.drawingArea());
+    auto* drawingArea = page.drawingArea();
+    ASSERT(drawingArea);
+
+    auto parameters = page.creationParameters(m_process, *drawingArea);
     parameters.isProcessSwap = true; // FIXME: This should be a parameter to creationParameters rather than doctoring up the parameters afterwards.
     parameters.mainFrameIdentifier = frame.frameID();
     m_process->send(Messages::WebProcess::CreateWebPage(m_pageID, parameters), 0);
@@ -107,13 +112,13 @@ void ProvisionalFrameProxy::decidePolicyForResponse(WebCore::FrameIdentifier fra
         page->decidePolicyForResponseShared(m_process.copyRef(), m_pageID, frameID, WTFMove(frameInfo), identifier, navigationID, response, request, canShowMIMEType, downloadAttribute, listenerID);
 }
 
-void ProvisionalFrameProxy::didCommitLoadForFrame(WebCore::FrameIdentifier frameID, FrameInfoData&& frameInfo, WebCore::ResourceRequest&& request, uint64_t navigationID, const String& mimeType, bool frameHasCustomContentProvider, WebCore::FrameLoadType frameLoadType, const WebCore::CertificateInfo& certificateInfo, bool usedLegacyTLS, bool privateRelayed, bool containsPluginDocument, std::optional<WebCore::HasInsecureContent> forcedHasInsecureContent, WebCore::MouseEventPolicy mouseEventPolicy, const UserData& userData)
+void ProvisionalFrameProxy::didCommitLoadForFrame(WebCore::FrameIdentifier frameID, FrameInfoData&& frameInfo, WebCore::ResourceRequest&& request, uint64_t navigationID, const String& mimeType, bool frameHasCustomContentProvider, WebCore::FrameLoadType frameLoadType, const WebCore::CertificateInfo& certificateInfo, bool usedLegacyTLS, bool privateRelayed, bool containsPluginDocument, WebCore::HasInsecureContent hasInsecureContent, WebCore::MouseEventPolicy mouseEventPolicy, const UserData& userData)
 {
     m_process->removeMessageReceiver(Messages::WebPageProxy::messageReceiverName(), m_pageID);
     m_process->removeMessageReceiver(Messages::WebFrameProxy::messageReceiverName(), m_frame.frameID().object());
     m_wasCommitted = true;
 
-    m_frame.commitProvisionalFrame(frameID, WTFMove(frameInfo), WTFMove(request), navigationID, mimeType, frameHasCustomContentProvider, frameLoadType, certificateInfo, usedLegacyTLS, privateRelayed, containsPluginDocument, forcedHasInsecureContent, mouseEventPolicy, userData); // Will delete |this|.
+    m_frame.commitProvisionalFrame(frameID, WTFMove(frameInfo), WTFMove(request), navigationID, mimeType, frameHasCustomContentProvider, frameLoadType, certificateInfo, usedLegacyTLS, privateRelayed, containsPluginDocument, hasInsecureContent, mouseEventPolicy, userData); // Will delete |this|.
 }
 
 IPC::Connection* ProvisionalFrameProxy::messageSenderConnection() const

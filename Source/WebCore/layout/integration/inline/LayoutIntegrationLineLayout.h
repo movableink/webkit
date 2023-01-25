@@ -93,7 +93,7 @@ public:
     Vector<FloatRect> collectInlineBoxRects(const RenderInline&) const;
 
     bool isPaginated() const { return m_isPaginatedContent; }
-    LayoutUnit contentLogicalHeight() const;
+    LayoutUnit contentBoxLogicalHeight() const;
     size_t lineCount() const;
     bool hasVisualOverflow() const;
     LayoutUnit firstLinePhysicalBaseline() const;
@@ -142,6 +142,7 @@ private:
     Layout::ElementBox& rootLayoutBox();
     void clearInlineContent();
     void releaseCaches();
+    std::optional<size_t> lastLineIndexForContentHeight() const;
 
     LayoutUnit physicalBaselineForLine(LayoutIntegration::Line&) const;
     

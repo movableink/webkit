@@ -268,7 +268,7 @@ public:
     JSObjectRef createJSWrapper(JSContextRef);
     static JSIPCStreamConnectionBuffer* toWrapped(JSContextRef, JSValueRef);
 
-    void encode(IPC::Encoder& encoder) const { m_streamConnection->connection().streamBuffer().createHandle().encode(encoder); }
+    void encode(IPC::Encoder& encoder) const { m_streamConnection->connection().bufferForTesting().createHandle().encode(encoder); }
 
 private:
     JSIPCStreamConnectionBuffer(JSIPCStreamClientConnection& streamConnection)
@@ -1031,7 +1031,7 @@ bool JSIPCStreamClientConnection::prepareToSendOutOfStreamMessage(JSContextRef c
     if (!streamConnection.trySendDestinationIDIfNeeded(destinationID, timeout))
         return false;
 
-    auto span = streamConnection.tryAcquire(timeout);
+    auto span = streamConnection.bufferForTesting().tryAcquire(timeout);
     if (!span)
         return false;
 
@@ -2457,12 +2457,12 @@ JSValueRef JSIPC::createStreamClientConnection(JSContextRef context, JSObjectRef
         return JSValueMakeUndefined(context);
     }
 
-    auto bufferSize = argumentCount ? convertToUint64(toJS(globalObject, arguments[0])) : std::optional<uint64_t> { };
-    if (!bufferSize) {
+    auto bufferSizeLog2 = argumentCount ? convertToUint64(toJS(globalObject, arguments[0])) : std::optional<uint64_t> { };
+    if (!bufferSizeLog2) {
         *exception = createTypeError(context, "Must specify the size"_s);
         return JSValueMakeUndefined(context);
     }
-    auto connectionPair = IPC::StreamClientConnection::create(*bufferSize);
+    auto connectionPair = IPC::StreamClientConnection::create(*bufferSizeLog2);
     auto& vm = globalObject->vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
     JSC::JSObject* connectionPairObject = JSC::constructEmptyArray(globalObject, nullptr);
@@ -2549,7 +2549,16 @@ JSValueRef JSIPC::serializedTypeInfo(JSContextRef context, JSObjectRef thisObjec
         RETURN_IF_EXCEPTION(scope, JSValueMakeUndefined(context));
 
         for (size_t i = 0; i < type.members.size(); i++) {
-            membersArray->putDirectIndex(globalObject, i, JSC::jsNontrivialString(vm, type.members[i]));
+            JSC::JSObject* entry = constructEmptyObject(globalObject, globalObject->objectPrototype());
+            RETURN_IF_EXCEPTION(scope, JSValueMakeUndefined(context));
+
+            entry->putDirect(vm, JSC::Identifier::fromString(vm, "type"_s), JSC::jsString(vm, String(type.members[i].type)));
+            RETURN_IF_EXCEPTION(scope, JSValueMakeUndefined(context));
+            
+            entry->putDirect(vm, JSC::Identifier::fromString(vm, "name"_s), JSC::jsString(vm, String(type.members[i].name)));
+            RETURN_IF_EXCEPTION(scope, JSValueMakeUndefined(context));
+
+            membersArray->putDirectIndex(globalObject, i, entry);
             RETURN_IF_EXCEPTION(scope, JSValueMakeUndefined(context));
         }
 
@@ -2864,7 +2873,7 @@ void JSMessageListener::willSendMessage(const IPC::Encoder& encoder, OptionSet<I
     auto* description = jsDescriptionFromDecoder(globalObject, *decoder);
 
     JSValueRef arguments[] = { description ? toRef(globalObject, description) : JSValueMakeUndefined(m_context) };
-    JSObjectCallAsFunction(m_context, m_callback, m_callback, WTF_ARRAY_LENGTH(arguments), arguments, nullptr);
+    JSObjectCallAsFunction(m_context, m_callback, m_callback, std::size(arguments), arguments, nullptr);
 }
 
 JSC::JSObject* JSMessageListener::jsDescriptionFromDecoder(JSC::JSGlobalObject* globalObject, IPC::Decoder& decoder)

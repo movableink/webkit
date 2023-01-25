@@ -109,13 +109,15 @@ public:
 #if PLATFORM(IOS_FAMILY)
         ContextMenuElementInfo,
 #endif
+#if PLATFORM(MAC)
+        ContextMenuElementInfoMac,
+#endif
         ContextMenuListener,
         CustomHeaderFields,
-        InternalDebugFeature,
         DataTask,
         DebuggableInfo,
         Download,
-        ExperimentalFeature,
+        Feature,
         FormSubmissionListener,
         Frame,
         FrameInfo,
@@ -364,13 +366,15 @@ template<> struct EnumTraits<API::Object::Type> {
 #if PLATFORM(IOS_FAMILY)
         API::Object::Type::ContextMenuElementInfo,
 #endif
+#if PLATFORM(MAC)
+        API::Object::Type::ContextMenuElementInfoMac,
+#endif
         API::Object::Type::ContextMenuListener,
         API::Object::Type::CustomHeaderFields,
-        API::Object::Type::InternalDebugFeature,
         API::Object::Type::DataTask,
         API::Object::Type::DebuggableInfo,
         API::Object::Type::Download,
-        API::Object::Type::ExperimentalFeature,
+        API::Object::Type::Feature,
         API::Object::Type::FormSubmissionListener,
         API::Object::Type::Frame,
         API::Object::Type::FrameInfo,

@@ -149,8 +149,8 @@ public:
     friend AirIRGeneratorBase<AirIRGenerator32, TypedTmp>;
     using ExpressionType = TypedTmp;
 
-    AirIRGenerator32(const ModuleInformation& info, B3::Procedure& procedure, InternalFunction* compilation, Vector<UnlinkedWasmToWasmCall>& unlinkedWasmToWasmCalls, MemoryMode mode, unsigned functionIndex, std::optional<bool> hasExceptionHandlers, TierUpCount* tierUp, const TypeDefinition& originalSignature, unsigned& osrEntryScratchBufferSize)
-        : AirIRGeneratorBase(info, procedure, compilation, unlinkedWasmToWasmCalls, mode, functionIndex, hasExceptionHandlers, tierUp, originalSignature, osrEntryScratchBufferSize)
+    AirIRGenerator32(const ModuleInformation& info, Callee& callee, B3::Procedure& procedure, Vector<UnlinkedWasmToWasmCall>& unlinkedWasmToWasmCalls, MemoryMode mode, unsigned functionIndex, std::optional<bool> hasExceptionHandlers, TierUpCount* tierUp, const TypeDefinition& originalSignature, unsigned& osrEntryScratchBufferSize)
+        : AirIRGeneratorBase(info, callee, procedure, unlinkedWasmToWasmCalls, mode, functionIndex, hasExceptionHandlers, tierUp, originalSignature, osrEntryScratchBufferSize)
     {
     }
 
@@ -230,7 +230,7 @@ private:
     TypedTmp appendStrongCAS(ExtAtomicOpType, TypedTmp expected, TypedTmp value, Arg addrArg, TypedTmp result);
 
     template<size_t inlineCapacity>
-    PatchpointExceptionHandle preparePatchpointForExceptions(B3::PatchpointValue*, Vector<ConstrainedTmp, inlineCapacity>& args);
+    Box<PatchpointExceptionHandle> preparePatchpointForExceptions(B3::PatchpointValue*, Vector<ConstrainedTmp, inlineCapacity>& args);
 
 public:
     ExpressionType addConstant(Type, uint64_t);
@@ -863,11 +863,11 @@ auto AirIRGenerator32::store(StoreOpType op, ExpressionType pointer, ExpressionT
 }
 
 template<size_t inlineCapacity>
-PatchpointExceptionHandle AirIRGenerator32::preparePatchpointForExceptions(B3::PatchpointValue* patch, Vector<ConstrainedTmp, inlineCapacity>& args)
+Box<PatchpointExceptionHandle> AirIRGenerator32::preparePatchpointForExceptions(B3::PatchpointValue* patch, Vector<ConstrainedTmp, inlineCapacity>& args)
 {
     ++m_callSiteIndex;
     if (!m_tryCatchDepth)
-        return { m_hasExceptionHandlers };
+        return Box<PatchpointExceptionHandle>::create(m_hasExceptionHandlers);
 
     unsigned numLiveValues = 0;
     forEachLiveValue([&](TypedTmp tmp) {
@@ -883,7 +883,7 @@ PatchpointExceptionHandle AirIRGenerator32::preparePatchpointForExceptions(B3::P
 
     patch->effects.exitsSideways = true;
 
-    return { m_hasExceptionHandlers, m_callSiteIndex, numLiveValues };
+    return Box<PatchpointExceptionHandle>::create(m_hasExceptionHandlers, m_callSiteIndex, numLiveValues);
 }
 
 Tmp AirIRGenerator32::emitCatchImpl(CatchKind kind, ControlType& data, unsigned exceptionIndex)
@@ -938,13 +938,14 @@ Tmp AirIRGenerator32::emitCatchImpl(CatchKind kind, ControlType& data, unsigned 
     patch->resultConstraints.append(B3::ValueRep::reg(GPRInfo::returnValueGPR));
     patch->resultConstraints.append(B3::ValueRep::SomeRegister);
     patch->resultConstraints.append(B3::ValueRep::SomeRegister); // result Tag
-    patch->setGenerator([=] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
+    patch->setGenerator([=](CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
         AllowMacroScratchRegisterUsage allowScratch(jit);
         // Returning one EncodedJSValue on the stack
         constexpr int32_t resultSpace = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(static_cast<int32_t>(sizeof(EncodedJSValue)));
         jit.subPtr(CCallHelpers::TrustedImm32(resultSpace), MacroAssembler::stackPointerRegister);
         jit.move(params[3].gpr(), GPRInfo::argumentGPR0);
         jit.move(MacroAssembler::stackPointerRegister, GPRInfo::argumentGPR1);
+        jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
         CCallHelpers::Call call = jit.call(OperationPtrTag);
         jit.addLinkTask([call] (LinkBuffer& linkBuffer) {
             linkBuffer.link<OperationPtrTag>(call, operationWasmRetrieveAndClearExceptionIfCatchable);
@@ -1125,7 +1126,6 @@ auto AirIRGenerator32::addThrow(unsigned exceptionIndex, Vector<ExpressionType>&
 
     Vector<ConstrainedTmp, 8> patchArgs;
     patchArgs.append(ConstrainedTmp(instanceValue(), B3::ValueRep::reg(GPRInfo::argumentGPR0)));
-    patchArgs.append(ConstrainedTmp(TypedTmp(Tmp(GPRInfo::callFrameRegister), Types::I32), B3::ValueRep::reg(GPRInfo::argumentGPR1)));
     for (unsigned i = 0; i < args.size(); ++i) {
         if (args[i].isGPPair()) {
             patchArgs.append(ConstrainedTmp(TypedTmp(args[i].lo(), Types::I32), B3::ValueRep::stackArgument(i * sizeof(EncodedJSValue) + PayloadOffset)));
@@ -1135,11 +1135,12 @@ auto AirIRGenerator32::addThrow(unsigned exceptionIndex, Vector<ExpressionType>&
         patchArgs.append(ConstrainedTmp(args[i], B3::ValueRep::stackArgument(i * sizeof(EncodedJSValue))));
     }
 
-    PatchpointExceptionHandle handle = preparePatchpointForExceptions(patch, patchArgs);
+    auto handle = preparePatchpointForExceptions(patch, patchArgs);
 
     patch->setGenerator([this, exceptionIndex, handle] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
         AllowMacroScratchRegisterUsage allowScratch(jit);
-        handle.generate(jit, params, this);
+        if (handle)
+            handle->generate(jit, params, this);
         emitThrowImpl(jit, exceptionIndex);
     });
 
@@ -1154,16 +1155,25 @@ auto AirIRGenerator32::addRethrow(unsigned, ControlType& data) -> PartialResult
     patch->clobber(RegisterSetBuilder::registersToSaveForJSCall(RegisterSetBuilder::allScalarRegisters()));
     patch->effects.terminal = true;
 
+    // Unfortunately, this operation doesn't use `emitCCall` because of the
+    // extra support in `preparePatchpointForExceptions`--as a result, this
+    // chunk below is platform specific and unlikely to work on architectures
+    // other than arm32
+
     Vector<ConstrainedTmp, 3> patchArgs;
+#if CPU(ARM_THUMB2)
     patchArgs.append(ConstrainedTmp(instanceValue(), B3::ValueRep::reg(GPRInfo::argumentGPR0)));
-    patchArgs.append(ConstrainedTmp(TypedTmp(Tmp(GPRInfo::callFrameRegister), Types::I32), B3::ValueRep::reg(GPRInfo::argumentGPR1)));
     patchArgs.append(ConstrainedTmp(TypedTmp(data.exception().lo(), Types::I32), B3::ValueRep::reg(GPRInfo::argumentGPR2)));
     patchArgs.append(ConstrainedTmp(TypedTmp(data.exception().hi(), Types::I32), B3::ValueRep::reg(GPRInfo::argumentGPR3)));
+#else
+#  error "Unsupported architecture" // see comment above
+#endif
 
-    PatchpointExceptionHandle handle = preparePatchpointForExceptions(patch, patchArgs);
+    auto handle = preparePatchpointForExceptions(patch, patchArgs);
     patch->setGenerator([this, handle] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
         AllowMacroScratchRegisterUsage allowScratch(jit);
-        handle.generate(jit, params, this);
+        if (handle)
+            handle->generate(jit, params, this);
         emitRethrowImpl(jit);
     });
 
@@ -1228,9 +1238,9 @@ auto AirIRGenerator32::emitCallPatchpoint(BasicBlock*block, B3::Type returnType,
         patchpoint->resultConstraints = WTFMove(resultConstraints);
     } else
         ASSERT(!results.size());
-    PatchpointExceptionHandle exceptionHandle = preparePatchpointForExceptions(patchpoint, patchArgs);
+    auto exceptionHandle = preparePatchpointForExceptions(patchpoint, patchArgs);
     emitPatchpoint(block, patchpoint, patchResults, WTFMove(patchArgs));
-    return { patchpoint, exceptionHandle };
+    return { patchpoint, WTFMove(exceptionHandle) };
 }
 
 auto AirIRGenerator32::emitTailCallPatchpoint(BasicBlock* block, const Checked<int32_t>& tailCallStackOffsetFromFP, const Vector<ArgumentLocation>& constrainedArgLocations, const Vector<TypedTmp>& tmpArgs, Vector<ConstrainedTmp> patchArgs) -> CallPatchpointData
@@ -1362,7 +1372,7 @@ TypedTmp AirIRGenerator32::appendGeneralAtomic(ExtAtomicOpType op, B3::Air::Opco
     beginBlock->setSuccessors(reloopBlock);
     m_currentBlock = reloopBlock;
 
-    RELEASE_ASSERT(isARM());
+    RELEASE_ASSERT(isARM_THUMB2());
 
     if (accessWidth == Width64)
         appendEffectful(LoadLinkPair32, address, oldValue.lo(), oldValue.hi());
@@ -1788,7 +1798,7 @@ void AirIRGenerator32::emitModOrDiv(bool isDiv, ExpressionType lhs, ExpressionTy
 
     result = sizeof(IntType) == 4 ? g32() : g64();
 
-    if (isARM()) {
+    if (isARM_THUMB2()) {
         // FIXME: use ARMv7 sdiv/udiv if available
         if (isDiv)
             emitCCall(getSoftDiv<IntType>(), result, lhs, rhs);
@@ -2141,9 +2151,9 @@ auto AirIRGenerator32::addI31GetU(ExpressionType ref, ExpressionType& result) ->
     return { };
 }
 
-Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileAir(CompilationContext& compilationContext, const FunctionData& function, const TypeDefinition& signature, Vector<UnlinkedWasmToWasmCall>& unlinkedWasmToWasmCalls, const ModuleInformation& info, MemoryMode mode, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, TierUpCount* tierUp)
+Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileAir(CompilationContext& compilationContext, Callee& callee, const FunctionData& function, const TypeDefinition& signature, Vector<UnlinkedWasmToWasmCall>& unlinkedWasmToWasmCalls, const ModuleInformation& info, MemoryMode mode, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, TierUpCount* tierUp)
 {
-    return parseAndCompileAirImpl<AirIRGenerator32>(compilationContext, function, signature, unlinkedWasmToWasmCalls, info, mode, functionIndex, hasExceptionHandlers, tierUp);
+    return parseAndCompileAirImpl<AirIRGenerator32>(compilationContext, callee, function, signature, unlinkedWasmToWasmCalls, info, mode, functionIndex, hasExceptionHandlers, tierUp);
 }
 
 }

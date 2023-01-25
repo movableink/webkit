@@ -136,11 +136,9 @@ bool Styleable::computeAnimationExtent(LayoutRect& bounds) const
 
     KeyframeEffect* matchingEffect = nullptr;
     for (const auto& animation : *animations) {
-        auto* effect = animation->effect();
-        if (is<KeyframeEffect>(effect)) {
-            auto* keyframeEffect = downcast<KeyframeEffect>(effect);
+        if (auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(animation->effect())) {
             if (keyframeEffect->animatedProperties().contains(CSSPropertyTransform))
-                matchingEffect = downcast<KeyframeEffect>(effect);
+                matchingEffect = keyframeEffect;
         }
     }
 
@@ -204,13 +202,13 @@ bool Styleable::runningAnimationsAreAllAccelerated() const
 
 void Styleable::animationWasAdded(WebAnimation& animation) const
 {
-    ensureAnimations().add(&animation);
+    ensureAnimations().add(animation);
 }
 
 static inline bool removeCSSTransitionFromMap(CSSTransition& transition, AnimatablePropertyToTransitionMap& cssTransitionsByProperty)
 {
     auto transitionIterator = cssTransitionsByProperty.find(transition.property());
-    if (transitionIterator == cssTransitionsByProperty.end() || transitionIterator->value != &transition)
+    if (transitionIterator == cssTransitionsByProperty.end() || transitionIterator->value.ptr() != &transition)
         return false;
 
     cssTransitionsByProperty.remove(transitionIterator);
@@ -221,16 +219,15 @@ void Styleable::removeDeclarativeAnimationFromListsForOwningElement(WebAnimation
 {
     ASSERT(is<DeclarativeAnimation>(animation));
 
-    if (is<CSSTransition>(animation)) {
-        auto& transition = downcast<CSSTransition>(animation);
-        if (!removeCSSTransitionFromMap(transition, ensureRunningTransitionsByProperty()))
-            removeCSSTransitionFromMap(transition, ensureCompletedTransitionsByProperty());
+    if (auto* transition = dynamicDowncast<CSSTransition>(animation)) {
+        if (!removeCSSTransitionFromMap(*transition, ensureRunningTransitionsByProperty()))
+            removeCSSTransitionFromMap(*transition, ensureCompletedTransitionsByProperty());
     }
 }
 
 void Styleable::animationWasRemoved(WebAnimation& animation) const
 {
-    ensureAnimations().remove(&animation);
+    ensureAnimations().remove(animation);
 
     // Now, if we're dealing with a CSS Transition, we remove it from the m_elementToRunningCSSTransitionByAnimatableProperty map.
     // We don't need to do this for CSS Animations because their timing can be set via CSS to end, which would cause this
@@ -257,8 +254,8 @@ void Styleable::cancelDeclarativeAnimations() const
 {
     if (auto* animations = this->animations()) {
         for (auto& animation : *animations) {
-            if (is<DeclarativeAnimation>(animation))
-                downcast<DeclarativeAnimation>(*animation).cancelFromStyle();
+            if (auto* declarativeAnimation = dynamicDowncast<DeclarativeAnimation>(animation.get()))
+                declarativeAnimation->cancelFromStyle();
         }
     }
 
@@ -404,34 +401,38 @@ static bool transitionMatchesProperty(const Animation& transition, AnimatablePro
     if (transition.isPropertyFilled())
         return false;
 
-    auto mode = transition.property().mode;
-    if (mode == Animation::TransitionMode::None || mode == Animation::TransitionMode::UnknownProperty)
+    switch (transition.property().mode) {
+    case Animation::TransitionMode::All:
+        return true;
+    case Animation::TransitionMode::None:
+    case Animation::TransitionMode::UnknownProperty:
         return false;
-
-    if (mode == Animation::TransitionMode::CustomProperty) {
-        return WTF::switchOn(property,
-            [] (CSSPropertyID) {
+    case Animation::TransitionMode::SingleProperty: {
+        return WTF::switchOn(transition.property().animatableProperty,
+            [&] (CSSPropertyID propertyId) {
+                if (!std::holds_alternative<CSSPropertyID>(property))
+                    return false;
+                auto propertyIdToMatch = std::get<CSSPropertyID>(property);
+                auto resolvedPropertyId = CSSProperty::resolveDirectionAwareProperty(propertyId, style.direction(), style.writingMode());
+                if (resolvedPropertyId == propertyIdToMatch)
+                    return true;
+                for (auto longhand : shorthandForProperty(resolvedPropertyId)) {
+                    if (longhand == propertyIdToMatch)
+                        return true;
+                }
                 return false;
             },
             [&] (const AtomString& customProperty) {
-                return customProperty == transition.customOrUnknownProperty();
+                if (!std::holds_alternative<AtomString>(property))
+                    return false;
+                return std::get<AtomString>(property) == customProperty;
             }
         );
     }
-
-    if (mode == Animation::TransitionMode::SingleProperty && std::holds_alternative<CSSPropertyID>(property)) {
-        auto cssPropertyId = std::get<CSSPropertyID>(property);
-        auto transitionProperty = CSSProperty::resolveDirectionAwareProperty(transition.property().id, style.direction(), style.writingMode());
-        if (transitionProperty != cssPropertyId) {
-            for (auto longhand : shorthandForProperty(transitionProperty)) {
-                if (longhand == cssPropertyId)
-                    return true;
-            }
-            return false;
-        }
     }
 
-    return true;
+    ASSERT_NOT_REACHED();
+    return false;
 }
 
 static void compileTransitionPropertiesInStyle(const RenderStyle& style, HashSet<AnimatableProperty>& transitionProperties, bool& transitionPropertiesContainAll)
@@ -443,20 +444,30 @@ static void compileTransitionPropertiesInStyle(const RenderStyle& style, HashSet
     if (!transitions)
         return;
 
-    for (const auto& animation : *transitions) {
-        auto mode = animation->property().mode;
-        if (mode == Animation::TransitionMode::SingleProperty) {
-            auto property = CSSProperty::resolveDirectionAwareProperty(animation->property().id, style.direction(), style.writingMode());
-            if (isShorthandCSSProperty(property)) {
-                for (auto longhand : shorthandForProperty(property))
-                    transitionProperties.add(longhand);
-            } else if (property != CSSPropertyInvalid)
-                transitionProperties.add(property);
-        } else if (mode == Animation::TransitionMode::CustomProperty)
-            transitionProperties.add(AtomString { animation->customOrUnknownProperty() });
-        else if (mode == Animation::TransitionMode::All) {
+    for (const auto& transition : *transitions) {
+        auto transitionProperty = transition->property();
+        switch (transitionProperty.mode) {
+        case Animation::TransitionMode::All:
             transitionPropertiesContainAll = true;
             return;
+        case Animation::TransitionMode::None:
+        case Animation::TransitionMode::UnknownProperty:
+            continue;
+        case Animation::TransitionMode::SingleProperty: {
+            WTF::switchOn(transitionProperty.animatableProperty,
+                [&] (CSSPropertyID propertyId) {
+                    auto resolvedPropertyId = CSSProperty::resolveDirectionAwareProperty(propertyId, style.direction(), style.writingMode());
+                    if (isShorthandCSSProperty(resolvedPropertyId)) {
+                        for (auto longhand : shorthandForProperty(resolvedPropertyId))
+                            transitionProperties.add(longhand);
+                    } else if (resolvedPropertyId != CSSPropertyInvalid)
+                        transitionProperties.add(resolvedPropertyId);
+                },
+                [&] (const AtomString& customProperty) {
+                    transitionProperties.add(customProperty);
+                }
+            );
+        }
         }
     }
 }
@@ -467,8 +478,8 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
     auto* animation = keyframeEffect ? keyframeEffect->animation() : nullptr;
 
     bool isDeclarative = false;
-    if (is<DeclarativeAnimation>(animation)) {
-        if (auto owningElement = downcast<DeclarativeAnimation>(*animation).owningElement())
+    if (auto* declarativeAnimation = dynamicDowncast<DeclarativeAnimation>(animation)) {
+        if (auto owningElement = declarativeAnimation->owningElement())
             isDeclarative = *owningElement == styleable;
     }
 

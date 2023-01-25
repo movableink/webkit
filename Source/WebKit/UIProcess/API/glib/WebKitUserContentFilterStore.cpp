@@ -85,7 +85,7 @@ struct _WebKitUserContentFilterStorePrivate {
 #endif
 };
 
-WEBKIT_DEFINE_TYPE(WebKitUserContentFilterStore, webkit_user_content_filter_store, G_TYPE_OBJECT)
+WEBKIT_DEFINE_FINAL_TYPE_IN_2022_API(WebKitUserContentFilterStore, webkit_user_content_filter_store, G_TYPE_OBJECT)
 
 static void webkitUserContentFilterStoreGetProperty(GObject* object, guint propID, GValue* value, GParamSpec* paramSpec)
 {
@@ -146,8 +146,7 @@ static void webkit_user_content_filter_store_class_init(WebKitUserContentFilterS
         PROP_PATH,
         g_param_spec_string(
             "path",
-            _("Storage directory path"),
-            _("The directory where user content filters are stored"),
+            nullptr, nullptr,
             nullptr,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY)));
 }

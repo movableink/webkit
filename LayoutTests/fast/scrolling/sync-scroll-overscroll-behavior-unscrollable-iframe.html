@@ -2,6 +2,7 @@
 <script src="../../resources/testharness.js"></script>
 <script src="../../resources/testharnessreport.js"></script>
 <script src="resources/overscroll-behavior-support.js"></script>
+<script src="../../resources/ui-helper.js"></script>
 <link rel="help" href="https://drafts.csswg.org/css-overscroll-behavior">
 <style>
     .scrolling {
@@ -46,7 +47,7 @@ function startTest() {
             var y = scroller.clientHeight / 2;
             var delta = getDeltas("right");
             return mouseWheelScrollAndWait(x, y, delta.X, delta.Y, delta.X, delta.Y).then(() => {
-                assert_equals(root.scrollLeft > 0, true, 'Propagate horizontal scroll');
+                assert_equals(root.scrollLeft == 0, true, 'Should not propagate horizontal scroll');
             });
         }, 'Unscrollable iframe horizontal scroll test with overscroll-behavior: none.');
 
@@ -56,7 +57,7 @@ function startTest() {
             var y = scroller.clientHeight / 2;
             var delta = getDeltas("down");
             return mouseWheelScrollAndWait(x, y, delta.X, delta.Y, delta.X, delta.Y).then(() => {
-                assert_equals(root.scrollTop > 0, true, 'Propagate vertical scroll');
+                assert_equals(root.scrollTop == 0, true, 'Should not propagate vertical scroll');
             });
         }, 'Unscrollable iframe vertical scroll test with overscroll-behavior: none.');
 }

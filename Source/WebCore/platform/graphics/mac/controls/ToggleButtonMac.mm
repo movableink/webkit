@@ -40,7 +40,7 @@ namespace WebCore {
 ToggleButtonMac::ToggleButtonMac(ToggleButtonPart& owningPart, ControlFactoryMac& controlFactory, NSButtonCell *buttonCell)
     : ButtonControlMac(owningPart, controlFactory, buttonCell)
 {
-    ASSERT(m_owningPart.type() == ControlPartType::Checkbox || m_owningPart.type() == ControlPartType::Radio);
+    ASSERT(m_owningPart.type() == StyleAppearance::Checkbox || m_owningPart.type() == StyleAppearance::Radio);
 }
 
 IntSize ToggleButtonMac::cellSize(NSControlSize controlSize, const ControlStyle& style) const
@@ -67,7 +67,7 @@ IntSize ToggleButtonMac::cellSize(NSControlSize controlSize, const ControlStyle&
         IntSize { 16, 16 }
     };
 
-    if (m_owningPart.type() == ControlPartType::Checkbox)
+    if (m_owningPart.type() == StyleAppearance::Checkbox)
         return checkboxSizes[controlSize];
 
     if (style.states.contains(ControlStyle::State::LargeControls))
@@ -92,10 +92,10 @@ IntOutsets ToggleButtonMac::cellOutsets(NSControlSize controlSize, const Control
         { 0, 0, 1, 1 },
         { 1, 0, 1, 2 },
     };
-    return (m_owningPart.type() == ControlPartType::Checkbox ? checkboxOutsets : radioOutsets)[controlSize];
+    return (m_owningPart.type() == StyleAppearance::Checkbox ? checkboxOutsets : radioOutsets)[controlSize];
 }
 
-void ToggleButtonMac::draw(GraphicsContext& context, const FloatRect& rect, float deviceScaleFactor, const ControlStyle& style)
+void ToggleButtonMac::draw(GraphicsContext& context, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle& style)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
 
@@ -114,7 +114,7 @@ void ToggleButtonMac::draw(GraphicsContext& context, const FloatRect& rect, floa
         outsets.left() * style.zoomFactor
     };
 
-    auto logicalRect = rect;
+    auto logicalRect = borderRect.rect();
     logicalRect.setSize(zoomedSize);
     logicalRect.expand(zoomedOutsets);
 
@@ -125,7 +125,7 @@ void ToggleButtonMac::draw(GraphicsContext& context, const FloatRect& rect, floa
 
     LocalDefaultSystemAppearance localAppearance(style.states.contains(ControlStyle::State::DarkAppearance), style.accentColor);
 
-    auto *view = m_controlFactory.drawingView(rect, style);
+    auto *view = m_controlFactory.drawingView(borderRect.rect(), style);
 
     if ([m_buttonCell _stateAnimationRunning]) {
         context.translate(logicalRect.location());

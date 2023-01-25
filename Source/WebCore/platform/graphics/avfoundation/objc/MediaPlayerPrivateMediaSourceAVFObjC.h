@@ -166,6 +166,7 @@ public:
 #endif
 
     enum SeekState {
+        WaitingToSeek,
         Seeking,
         WaitingForAvailableFame,
         SeekCompleted,
@@ -248,7 +249,6 @@ private:
     // NOTE: Because the only way for MSE to recieve data is through an ArrayBuffer provided by
     // javascript running in the page, the video will, by necessity, always be CORS correct and
     // in the page's origin.
-    bool hasSingleSecurityOrigin() const override { return true; }
     bool didPassCORSAccessCheck() const override { return true; }
 
     MediaPlayer::MovieLoadType movieLoadType() const override;
@@ -353,7 +353,7 @@ private:
     FloatSize m_naturalSize;
     double m_rate;
     bool m_playing;
-    bool m_seeking;
+    bool m_synchronizerSeeking;
     SeekState m_seekCompleted { SeekCompleted };
     mutable bool m_loadingProgressed;
 #if !HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)

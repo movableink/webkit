@@ -1,4 +1,4 @@
-// Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+// Copyright (C) 2017-2023 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -126,6 +126,7 @@ Modules/speech/cocoa/WebSpeechRecognizerTask.mm
 Modules/speech/cocoa/WebSpeechRecognizerTaskMock.mm
 Modules/system-preview/ARKitBadgeSystemImage.mm
 Modules/webdatabase/cocoa/DatabaseManagerCocoa.mm
+accessibility/cocoa/AXTextMarkerCocoa.mm
 accessibility/ios/AXObjectCacheIOS.mm
 accessibility/ios/AccessibilityObjectIOS.mm
 accessibility/ios/WebAccessibilityObjectWrapperIOS.mm
@@ -151,6 +152,7 @@ crypto/mac/CryptoAlgorithmAES_GCMMac.cpp
 crypto/mac/CryptoAlgorithmAES_KWMac.cpp
 crypto/mac/CryptoAlgorithmECDHMac.cpp
 crypto/mac/CryptoAlgorithmECDSAMac.cpp
+crypto/mac/CryptoAlgorithmEd25519Cocoa.cpp
 crypto/mac/CryptoAlgorithmHKDFMac.cpp
 crypto/mac/CryptoAlgorithmHMACMac.cpp
 crypto/mac/CryptoAlgorithmPBKDF2Mac.cpp
@@ -160,6 +162,7 @@ crypto/mac/CryptoAlgorithmRSA_OAEPMac.cpp
 crypto/mac/CryptoAlgorithmRSA_PSSMac.cpp
 crypto/mac/CryptoAlgorithmRegistryMac.cpp
 crypto/mac/CryptoKeyECMac.cpp
+crypto/mac/CryptoKeyOKPCocoa.cpp
 crypto/mac/CryptoKeyMac.cpp
 crypto/mac/CryptoKeyRSAMac.cpp
 crypto/mac/CryptoUtilitiesCocoa.cpp
@@ -193,6 +196,7 @@ editing/mac/TextAlternativeWithRange.mm @no-unify
 editing/mac/TextUndoInsertionMarkupMac.mm
 fileapi/FileCocoa.mm
 history/mac/HistoryItemMac.mm
+html/canvas/GPUCanvasContextCocoa.cpp
 html/shadow/YouTubeEmbedShadowElement.cpp
 inspector/mac/PageDebuggerMac.mm
 loader/archive/cf/LegacyWebArchive.cpp
@@ -462,10 +466,22 @@ platform/graphics/mac/SimpleFontDataCoreText.cpp
 platform/graphics/mac/SwitchingGPUClient.cpp
 platform/graphics/mac/WebKitNSImageExtras.mm
 platform/graphics/mac/WebLayer.mm
+platform/graphics/mac/controls/ButtonMac.mm
 platform/graphics/mac/controls/ButtonControlMac.mm
+platform/graphics/mac/controls/ColorWellMac.mm
 platform/graphics/mac/controls/ControlFactoryMac.mm
 platform/graphics/mac/controls/ControlMac.mm
+platform/graphics/mac/controls/ImageControlsButtonMac.mm
+platform/graphics/mac/controls/InnerSpinButtonMac.mm
+platform/graphics/mac/controls/MenuListButtonMac.mm
+platform/graphics/mac/controls/MenuListMac.mm
 platform/graphics/mac/controls/MeterMac.mm
+platform/graphics/mac/controls/ProgressBarMac.mm
+platform/graphics/mac/controls/SearchControlMac.mm
+platform/graphics/mac/controls/SearchFieldCancelButtonMac.mm
+platform/graphics/mac/controls/SearchFieldMac.mm
+platform/graphics/mac/controls/SliderThumbMac.mm
+platform/graphics/mac/controls/SliderTrackMac.mm
 platform/graphics/mac/controls/TextAreaMac.mm
 platform/graphics/mac/controls/TextFieldMac.mm
 platform/graphics/mac/controls/ToggleButtonMac.mm

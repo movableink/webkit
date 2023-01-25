@@ -37,14 +37,12 @@ namespace JSC { namespace Wasm {
 Callee::Callee(Wasm::CompilationMode compilationMode)
     : m_compilationMode(compilationMode)
 {
-    CalleeRegistry::singleton().registerCallee(this);
 }
 
 Callee::Callee(Wasm::CompilationMode compilationMode, size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name)
     : m_compilationMode(compilationMode)
     , m_indexOrName(index, WTFMove(name))
 {
-    CalleeRegistry::singleton().registerCallee(this);
 }
 
 template<typename Func>
@@ -79,6 +77,9 @@ inline void Callee::runWithDowncast(const Func& func)
         break;
     case CompilationMode::JSToWasmICMode:
         func(static_cast<JSToWasmICCallee*>(this));
+        break;
+    case CompilationMode::WasmToJSMode:
+        func(static_cast<WasmToJSCallee*>(this));
         break;
     }
 }
@@ -141,43 +142,21 @@ JITCallee::JITCallee(Wasm::CompilationMode compilationMode)
 {
 }
 
-JITCallee::JITCallee(Wasm::CompilationMode compilationMode, Entrypoint&& entrypoint)
-    : Callee(compilationMode)
-    , m_entrypoint(WTFMove(entrypoint))
-{
-}
-
-JITCallee::JITCallee(Wasm::CompilationMode compilationMode, Entrypoint&& entrypoint, size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name, Vector<UnlinkedWasmToWasmCall>&& unlinkedCalls)
+JITCallee::JITCallee(Wasm::CompilationMode compilationMode, size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name)
     : Callee(compilationMode, index, WTFMove(name))
-    , m_wasmToWasmCallsites(WTFMove(unlinkedCalls))
-    , m_entrypoint(WTFMove(entrypoint))
 {
 }
 
-ptrdiff_t JSToWasmICCallee::previousInstanceOffset(const RegisterAtOffsetList& calleeSaveRegisters)
+void JITCallee::setEntrypoint(Wasm::Entrypoint&& entrypoint)
 {
-    ptrdiff_t result = calleeSaveRegisters.registerCount() * sizeof(CPURegister);
-    result = -result - sizeof(CPURegister);
-#if ASSERT_ENABLED
-    ptrdiff_t minOffset = 1;
-    for (const RegisterAtOffset& regAtOffset : calleeSaveRegisters) {
-        ptrdiff_t offset = regAtOffset.offset();
-        ASSERT(offset < 0);
-        minOffset = std::min(offset, minOffset);
-#if USE(JSVALUE32_64)
-        ASSERT(!regAtOffset.reg().isFPR()); // Because FPRs are wider than sizeof(CPURegister)
-#endif
-    }
-    ASSERT(minOffset - static_cast<ptrdiff_t>(sizeof(CPURegister)) == result);
-#endif
-    return result;
+    m_entrypoint = WTFMove(entrypoint);
+    CalleeRegistry::singleton().registerCallee(this);
 }
 
-Wasm::Instance* JSToWasmICCallee::previousInstance(CallFrame* callFrame)
+WasmToJSCallee::WasmToJSCallee()
+    : Callee(Wasm::CompilationMode::WasmToJSMode)
 {
-    ASSERT(callFrame->callee().asWasmCallee() == this);
-    auto* result = *bitwise_cast<Wasm::Instance**>(bitwise_cast<char*>(callFrame) + previousInstanceOffset(m_entrypoint.calleeSaveRegisters));
-    return result;
+    CalleeRegistry::singleton().registerCallee(this);
 }
 
 LLIntCallee::LLIntCallee(FunctionCodeBlockGenerator& generator, size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name)
@@ -211,6 +190,13 @@ LLIntCallee::LLIntCallee(FunctionCodeBlockGenerator& generator, size_t index, st
             handler.initialize(unlinkedHandler, target);
         }
     }
+}
+
+void LLIntCallee::setEntrypoint(CodePtr<WasmEntryPtrTag> entrypoint)
+{
+    ASSERT(!m_entrypoint);
+    m_entrypoint = entrypoint;
+    CalleeRegistry::singleton().registerCallee(this);
 }
 
 RegisterAtOffsetList* LLIntCallee::calleeSaveRegistersImpl()

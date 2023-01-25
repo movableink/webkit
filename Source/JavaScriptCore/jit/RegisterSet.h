@@ -30,6 +30,7 @@
 #include "FPRInfo.h"
 #include "GPRInfo.h"
 #include "MacroAssembler.h"
+#include "MemoryMode.h"
 #include "Reg.h"
 #include "Width.h"
 #include <wtf/Bitmap.h>
@@ -122,10 +123,6 @@ public:
     {
         m_bits.exclude(other.m_bits);
         m_upperBits.exclude(other.m_upperBits);
-        // we have to filter the upper bits to maintain an invariant:
-        // m_upperBits & m_bits = m_upperBits
-        // that is, upper bits cannot be set without their matching lower bit
-        m_upperBits.filter(m_bits);
         return *this;
     }
 
@@ -135,6 +132,22 @@ public:
     inline constexpr size_t numberOfSetRegisters() const;
     inline size_t numberOfSetGPRs() const;
     inline size_t numberOfSetFPRs() const;
+
+    template<typename Func>
+    inline constexpr void forEachWithWidthAndPreserved(const Func& func) const
+    {
+        auto allBits = m_bits;
+        allBits.merge(m_upperBits);
+        allBits.forEachSetBit(
+            [&] (size_t index) {
+                Reg reg = Reg::fromIndex(index);
+                Width includedWidth = m_upperBits.get(index) ? conservativeWidth(reg) : conservativeWidthWithoutVectors(reg);
+                PreservedWidth preservedWidth = PreservesNothing;
+                if (!m_bits.get(index))
+                    preservedWidth = Preserves64;
+                func(reg, includedWidth, preservedWidth);
+            });
+    }
 
     void dump(PrintStream& out) const
     {
@@ -195,6 +208,9 @@ public:
     JS_EXPORT_PRIVATE static RegisterSet ftlCalleeSaveRegisters(); // Registers that might be saved and used by the FTL JIT.
     JS_EXPORT_PRIVATE static RegisterSet stubUnavailableRegisters(); // The union of callee saves and special registers.
     JS_EXPORT_PRIVATE static RegisterSet argumentGPRS();
+#if ENABLE(WEBASSEMBLY)
+    JS_EXPORT_PRIVATE static RegisterSet wasmPinnedRegisters(MemoryMode);
+#endif
     JS_EXPORT_PRIVATE static RegisterSetBuilder registersToSaveForJSCall(RegisterSetBuilder live);
     JS_EXPORT_PRIVATE static RegisterSetBuilder registersToSaveForCCall(RegisterSetBuilder live);
 };

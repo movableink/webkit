@@ -30,6 +30,7 @@
 
 #include "GamepadProviderClient.h"
 #include "MockGamepad.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -55,15 +56,15 @@ void MockGamepadProvider::stopMonitoringGamepads(GamepadProviderClient& client)
     m_clients.remove(&client);
 }
 
-void MockGamepadProvider::setMockGamepadDetails(unsigned index, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount)
+void MockGamepadProvider::setMockGamepadDetails(unsigned index, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount, bool supportsDualRumble)
 {
     if (index >= m_mockGamepadVector.size())
         m_mockGamepadVector.resize(index + 1);
 
     if (m_mockGamepadVector[index])
-        m_mockGamepadVector[index]->updateDetails(gamepadID, mapping, axisCount, buttonCount);
+        m_mockGamepadVector[index]->updateDetails(gamepadID, mapping, axisCount, buttonCount, supportsDualRumble);
     else
-        m_mockGamepadVector[index] = makeUnique<MockGamepad>(index, gamepadID, mapping, axisCount, buttonCount);
+        m_mockGamepadVector[index] = makeUnique<MockGamepad>(index, gamepadID, mapping, axisCount, buttonCount, supportsDualRumble);
 }
 
 bool MockGamepadProvider::connectMockGamepad(unsigned index)
@@ -149,7 +150,7 @@ void MockGamepadProvider::gamepadInputActivity()
     });
 }
 
-void MockGamepadProvider::clearMockGamepads()
+void MockGamepadProvider::clearGamepadsForTesting()
 {
     // Disconnect any remaining connected gamepads.
     for (size_t i = 0; i < m_connectedGamepadVector.size(); ++i) {
@@ -157,6 +158,16 @@ void MockGamepadProvider::clearMockGamepads()
             disconnectMockGamepad(i);
     }
     m_mockGamepadVector.clear();
+}
+
+void MockGamepadProvider::playEffect(unsigned, const String&, GamepadHapticEffectType, const GamepadEffectParameters&, CompletionHandler<void(bool)>&& completionHandler)
+{
+    completionHandler(true);
+}
+
+void MockGamepadProvider::stopEffects(unsigned, const String&, CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
 }
 
 } // namespace WebCore

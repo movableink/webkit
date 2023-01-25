@@ -172,15 +172,6 @@
 #import <WebKitAdditions/VideoToolboxAdditions.h>
 #endif
 
-#if __has_include(<WebKitAdditions/InternalBuildAdditions.h>)
-#include <WebKitAdditions/InternalBuildAdditions.h>
-#else
-static bool isInternalBuild()
-{
-    return false;
-}
-#endif
-
 #if HAVE(CATALYST_USER_INTERFACE_IDIOM_AND_SCALE_FACTOR)
 // FIXME: This is only for binary compatibility with versions of UIKit in macOS 11 that are missing the change in <rdar://problem/68524148>.
 SOFT_LINK_FRAMEWORK(UIKit)
@@ -254,10 +245,7 @@ static void softlinkDataDetectorsFrameworks()
 
 static void initializeLogd()
 {
-    if (isInternalBuild())
-        os_trace_set_mode(OS_TRACE_MODE_INFO | OS_TRACE_MODE_DEBUG | OS_TRACE_MODE_STREAM_LIVE);
-    else
-        os_trace_set_mode(OS_TRACE_MODE_INFO | OS_TRACE_MODE_DEBUG);
+    os_trace_set_mode(OS_TRACE_MODE_INFO | OS_TRACE_MODE_DEBUG);
 
     // Log a long message to make sure the XPC connection to the log daemon for oversized messages is opened.
     // This is needed to block launchd after the WebContent process has launched, since access to launchd is
@@ -297,7 +285,7 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     SandboxExtension::consumePermanently(parameters.audioCaptureExtensionHandle);
 #endif
 #if PLATFORM(COCOA) && ENABLE(REMOTE_INSPECTOR)
-    Inspector::RemoteInspector::setNeedMachSandboxExtension(!SandboxExtension::consumePermanently(parameters.enableRemoteWebInspectorExtensionHandle));
+    Inspector::RemoteInspector::setNeedMachSandboxExtension(!SandboxExtension::consumePermanently(parameters.enableRemoteWebInspectorExtensionHandles));
 #endif
 #endif
 
@@ -1212,20 +1200,24 @@ void WebProcess::notifyPreferencesChanged(const String& domain, const String& ke
 }
 #endif
 
-void WebProcess::grantAccessToAssetServices(WebKit::SandboxExtension::Handle&& mobileAssetV2Handle)
+void WebProcess::grantAccessToAssetServices(Vector<WebKit::SandboxExtension::Handle>&& assetServicesHandles)
 {
-    if (m_assetServiceV2Extension)
+    if (m_assetServicesExtensions.size())
         return;
-    m_assetServiceV2Extension = SandboxExtension::create(WTFMove(mobileAssetV2Handle));
-    m_assetServiceV2Extension->consume();
+    for (auto& handle : assetServicesHandles) {
+        auto extension = SandboxExtension::create(WTFMove(handle));
+        if (!extension)
+            continue;
+        extension->consume();
+        m_assetServicesExtensions.append(extension);
+    }
 }
 
 void WebProcess::revokeAccessToAssetServices()
 {
-    if (!m_assetServiceV2Extension)
-        return;
-    m_assetServiceV2Extension->revoke();
-    m_assetServiceV2Extension = nullptr;
+    for (auto extension : m_assetServicesExtensions)
+        extension->revoke();
+    m_assetServicesExtensions.clear();
 }
 
 void WebProcess::disableURLSchemeCheckInDataDetectors() const
@@ -1236,9 +1228,9 @@ void WebProcess::disableURLSchemeCheckInDataDetectors() const
 #endif
 }
 
-void WebProcess::switchFromStaticFontRegistryToUserFontRegistry(WebKit::SandboxExtension::Handle&& fontMachExtensionHandle)
+void WebProcess::switchFromStaticFontRegistryToUserFontRegistry(Vector<WebKit::SandboxExtension::Handle>&& fontMachExtensionHandles)
 {
-    SandboxExtension::consumePermanently(fontMachExtensionHandle);
+    SandboxExtension::consumePermanently(fontMachExtensionHandles);
 #if HAVE(STATIC_FONT_REGISTRY)
     CTFontManagerEnableAllUserFonts(true);
 #endif
@@ -1327,9 +1319,17 @@ void WebProcess::systemDidWake()
 #endif
 
 #if PLATFORM(MAC)
-void WebProcess::openDirectoryCacheInvalidated(SandboxExtension::Handle&& handle)
+void WebProcess::openDirectoryCacheInvalidated(SandboxExtension::Handle&& handle, SandboxExtension::Handle&& machBootstrapHandle)
 {
+    auto bootstrapExtension = SandboxExtension::create(WTFMove(machBootstrapHandle));
+
+    if (bootstrapExtension)
+        bootstrapExtension->consume();
+    
     AuxiliaryProcess::openDirectoryCacheInvalidated(WTFMove(handle));
+    
+    if (bootstrapExtension)
+        bootstrapExtension->revoke();
 }
 #endif
 

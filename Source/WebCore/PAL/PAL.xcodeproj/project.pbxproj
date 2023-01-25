@@ -80,6 +80,7 @@
 		31647FB0251759DD0010F8FB /* OpenGLSoftLinkCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 31647FAE251759DB0010F8FB /* OpenGLSoftLinkCocoa.mm */; };
 		3CBEEDE928A1861D00221FAE /* BarcodeSupportSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 3C963637289DC1C600570DD6 /* BarcodeSupportSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		416E995323DAE6BE00E871CB /* AudioToolboxSoftLink.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 416E995123DAE6BD00E871CB /* AudioToolboxSoftLink.cpp */; };
+		4177B3DA296CB8C3009711F0 /* CoreCryptoSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 4177B3D9296CB8C3009711F0 /* CoreCryptoSPI.h */; };
 		41E1F344248A6A000022D5DE /* VideoToolboxSoftLink.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 416E995523DAEFF700E871CB /* VideoToolboxSoftLink.cpp */; };
 		41E9EE2328BB57A0006A2298 /* MediaExperienceAVSystemControllerSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 41E9EE2228BB57A0006A2298 /* MediaExperienceAVSystemControllerSPI.h */; };
 		41E9EE2628BCA19E006A2298 /* SBSStatusBarSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 41E9EE2528BCA19E006A2298 /* SBSStatusBarSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -527,18 +528,18 @@
 /* End PBXBuildRule section */
 
 /* Begin PBXContainerItemProxy section */
-		1C4FAEA028FC83DC00FFE212 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 1C4FAE9628FC83DC00FFE212 /* libavif.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 1C4FAE8F28FC83DC00FFE212;
-			remoteInfo = libavif;
-		};
-		1C9CD59828FC8D37005A2EAF /* PBXContainerItemProxy */ = {
+		1C122B19296A4B6900814381 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1C4FAE9628FC83DC00FFE212 /* libavif.xcodeproj */;
 			proxyType = 1;
 			remoteGlobalIDString = 1C4FAE8E28FC83DC00FFE212;
+			remoteInfo = libavif;
+		};
+		1C2D0DF7296A44CC00BE33A3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1C4FAE9628FC83DC00FFE212 /* libavif.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 1C4FAE8F28FC83DC00FFE212;
 			remoteInfo = libavif;
 		};
 /* End PBXContainerItemProxy section */
@@ -907,6 +908,7 @@
 		416E995223DAE6BE00E871CB /* AudioToolboxSoftLink.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioToolboxSoftLink.h; sourceTree = "<group>"; };
 		416E995523DAEFF700E871CB /* VideoToolboxSoftLink.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VideoToolboxSoftLink.cpp; sourceTree = "<group>"; };
 		416E995623DAEFF700E871CB /* VideoToolboxSoftLink.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoToolboxSoftLink.h; sourceTree = "<group>"; };
+		4177B3D9296CB8C3009711F0 /* CoreCryptoSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CoreCryptoSPI.h; sourceTree = "<group>"; };
 		41B99E4525DD70150007829A /* AVStreamDataParserSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AVStreamDataParserSPI.h; sourceTree = "<group>"; };
 		41E9EE2228BB57A0006A2298 /* MediaExperienceAVSystemControllerSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MediaExperienceAVSystemControllerSPI.h; sourceTree = "<group>"; };
 		41E9EE2528BCA19E006A2298 /* SBSStatusBarSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SBSStatusBarSPI.h; sourceTree = "<group>"; };
@@ -936,6 +938,7 @@
 		63E369F921AFA83F001C14BC /* NSProgressSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSProgressSPI.h; sourceTree = "<group>"; };
 		71B1141F26823ACD004D6701 /* SystemPreviewSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SystemPreviewSPI.h; sourceTree = "<group>"; };
 		72BA2A872951462500678507 /* NSTextFieldCellSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSTextFieldCellSPI.h; sourceTree = "<group>"; };
+		72C9483A2959517C006ECB96 /* NSSearchFieldCellSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSSearchFieldCellSPI.h; sourceTree = "<group>"; };
 		7A36D0F8223AD9AB00B0522E /* CommonCryptoSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommonCryptoSPI.h; sourceTree = "<group>"; };
 		7A3A6A7F20CADB4600317AAE /* NSImageSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSImageSPI.h; sourceTree = "<group>"; };
 		7B47F2A128587B9700E793C8 /* CoreGraphicsSoftLink.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CoreGraphicsSoftLink.h; sourceTree = "<group>"; };
@@ -1104,6 +1107,7 @@
 				29CDEB9E2548D055007C07B7 /* AXSpeechManagerSPI.h */,
 				0C2DA1231F3BEB4900DBC317 /* CFNSURLConnectionSPI.h */,
 				7A36D0F8223AD9AB00B0522E /* CommonCryptoSPI.h */,
+				4177B3D9296CB8C3009711F0 /* CoreCryptoSPI.h */,
 				ABCA536724895DB900361BFF /* CoreMotionSPI.h */,
 				C138EA1A2436447200656DF1 /* CoreServicesSPI.h */,
 				DF83E208263734F1000825EF /* CryptoKitPrivateSPI.h */,
@@ -1207,6 +1211,7 @@
 				0C77857D1F45130F00F4EBB6 /* NSScrollingInputFilterSPI.h */,
 				0C77857E1F45130F00F4EBB6 /* NSScrollingMomentumCalculatorSPI.h */,
 				A1175B591F6B4A8400C4B9F0 /* NSScrollViewSPI.h */,
+				72C9483A2959517C006ECB96 /* NSSearchFieldCellSPI.h */,
 				44EEA0FE2747438900594A83 /* NSServicesRolloverButtonCellSPI.h */,
 				0C77857F1F45130F00F4EBB6 /* NSSharingServicePickerSPI.h */,
 				0C7785801F45130F00F4EBB6 /* NSSharingServiceSPI.h */,
@@ -1248,7 +1253,7 @@
 		1C09D0341E31C32800725F18 = {
 			isa = PBXGroup;
 			children = (
-				1C4FAE9628FC83DC00FFE212 /* libavif.xcodeproj */,
+				1C2D0DF2296A448200BE33A3 /* ThirdParty */,
 				1C09D05C1E31C73300725F18 /* Configurations */,
 				DDE99321278D103900F60D26 /* Frameworks */,
 				1C09D03F1E31C32800725F18 /* pal */,
@@ -1384,6 +1389,22 @@
 			path = Impl;
 			sourceTree = "<group>";
 		};
+		1C2D0DF2296A448200BE33A3 /* ThirdParty */ = {
+			isa = PBXGroup;
+			children = (
+				1C4FAE9628FC83DC00FFE212 /* libavif.xcodeproj */,
+			);
+			path = ThirdParty;
+			sourceTree = "<group>";
+		};
+		1C2D0DF4296A44CC00BE33A3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1C2D0DF8296A44CC00BE33A3 /* libavif.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 		1C4876DE1F8D831300CCEEBD /* cocoa */ = {
 			isa = PBXGroup;
 			children = (
@@ -1421,14 +1442,6 @@
 				F46B8C4C26740918007A6554 /* VisionKitCoreSoftLink.mm */,
 			);
 			path = cocoa;
-			sourceTree = "<group>";
-		};
-		1C4FAE9728FC83DC00FFE212 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				1C4FAEA128FC83DC00FFE212 /* libavif.a */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 		1C5C57E527573105003B540D /* ios */ = {
@@ -1773,6 +1786,7 @@
 				DD20DDE027BC90D70093D175 /* CommonCryptoSPI.h in Headers */,
 				DD20DE6527BC90F90093D175 /* config.h in Headers */,
 				DD20DDCE27BC90D70093D175 /* CoreAudioSPI.h in Headers */,
+				4177B3DA296CB8C3009711F0 /* CoreCryptoSPI.h in Headers */,
 				7B47F2A328587B9700E793C8 /* CoreGraphicsSoftLink.h in Headers */,
 				DD20DDD327BC90D70093D175 /* CoreGraphicsSPI.h in Headers */,
 				DD20DD1627BC90D60093D175 /* CoreMediaSoftLink.h in Headers */,
@@ -2127,7 +2141,7 @@
 				DD20DD0627BC7F290093D175 /* PBXBuildRule */,
 			);
 			dependencies = (
-				1C9CD59928FC8D37005A2EAF /* PBXTargetDependency */,
+				1C122B1A296A4B6900814381 /* PBXTargetDependency */,
 			);
 			name = PAL;
 			productName = PAL;
@@ -2167,7 +2181,7 @@
 			projectDirPath = "";
 			projectReferences = (
 				{
-					ProductGroup = 1C4FAE9728FC83DC00FFE212 /* Products */;
+					ProductGroup = 1C2D0DF4296A44CC00BE33A3 /* Products */;
 					ProjectRef = 1C4FAE9628FC83DC00FFE212 /* libavif.xcodeproj */;
 				},
 			);
@@ -2179,11 +2193,11 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
-		1C4FAEA128FC83DC00FFE212 /* libavif.a */ = {
+		1C2D0DF8296A44CC00BE33A3 /* libavif.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
 			path = libavif.a;
-			remoteRef = 1C4FAEA028FC83DC00FFE212 /* PBXContainerItemProxy */;
+			remoteRef = 1C2D0DF7296A44CC00BE33A3 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -2317,10 +2331,10 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		1C9CD59928FC8D37005A2EAF /* PBXTargetDependency */ = {
+		1C122B1A296A4B6900814381 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = libavif;
-			targetProxy = 1C9CD59828FC8D37005A2EAF /* PBXContainerItemProxy */;
+			targetProxy = 1C122B19296A4B6900814381 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

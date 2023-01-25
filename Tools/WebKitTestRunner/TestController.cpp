@@ -1110,17 +1110,13 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
 
     WKHTTPCookieStoreDeleteAllCookies(WKWebsiteDataStoreGetHTTPCookieStore(websiteDataStore()), nullptr, nullptr);
 
-    clearIndexedDatabases();
-    clearLocalStorage();
-
-    clearServiceWorkerRegistrations();
-    clearDOMCaches();
-
-    resetQuota();
     clearStorage();
+    resetQuota();
+    resetStoragePersistedState();
 
     WKContextClearCurrentModifierStateForTesting(TestController::singleton().context());
     WKContextSetUseSeparateServiceWorkerProcess(TestController::singleton().context(), false);
+    WKContextClearMockGamepadsForTesting(TestController::singleton().context());
 
     WKPageSetMockCameraOrientation(m_mainWebView->page(), 0);
     resetMockMediaDevices();
@@ -1858,11 +1854,6 @@ void TestController::didReceiveMessageFromInjectedBundle(WKStringRef messageName
             auto phase = uint64Value(dictionary, "Phase");
             auto momentum = uint64Value(dictionary, "Momentum");
             m_eventSenderProxy->mouseScrollByWithWheelAndMomentumPhases(x, y, phase, momentum);
-            return;
-        }
-
-        if (WKStringIsEqualToUTF8CString(subMessageName, "MonitorWheelEvents")) {
-            m_eventSenderProxy->monitorWheelEvents();
             return;
         }
 
@@ -3198,6 +3189,11 @@ void TestController::clearLoadedSubresourceDomains()
 
 #endif // !PLATFORM(COCOA)
 
+void TestController::reloadFromOrigin()
+{
+    WKPageReloadFromOrigin(m_mainWebView->page());
+}
+
 struct GenericVoidContext {
     explicit GenericVoidContext(TestController& controller)
         : testController(controller)
@@ -3307,6 +3303,13 @@ void TestController::resetQuota()
 {
     StorageVoidCallbackContext context(*this);
     WKWebsiteDataStoreResetQuota(TestController::websiteDataStore(), &context, StorageVoidCallback);
+    runUntil(context.done, noTimeout);
+}
+
+void TestController::resetStoragePersistedState()
+{
+    StorageVoidCallbackContext context(*this);
+    WKWebsiteDataStoreResetStoragePersistedState(TestController::websiteDataStore(), &context, StorageVoidCallback);
     runUntil(context.done, noTimeout);
 }
 

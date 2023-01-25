@@ -140,7 +140,7 @@ String convertEnumerationToString(TestObj::EnumType enumerationValue)
     static_assert(static_cast<size_t>(TestObj::EnumType::EnumValue1) == 1, "TestObj::EnumType::EnumValue1 is not 1 as expected");
     static_assert(static_cast<size_t>(TestObj::EnumType::EnumValue2) == 2, "TestObj::EnumType::EnumValue2 is not 2 as expected");
     static_assert(static_cast<size_t>(TestObj::EnumType::EnumValue3) == 3, "TestObj::EnumType::EnumValue3 is not 3 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -182,7 +182,7 @@ String convertEnumerationToString(TestObj::EnumTrailingComma enumerationValue)
     };
     static_assert(static_cast<size_t>(TestObj::EnumTrailingComma::EnumValue1) == 0, "TestObj::EnumTrailingComma::EnumValue1 is not 0 as expected");
     static_assert(static_cast<size_t>(TestObj::EnumTrailingComma::EnumValue2) == 1, "TestObj::EnumTrailingComma::EnumValue2 is not 1 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -225,7 +225,7 @@ String convertEnumerationToString(TestObj::Optional enumerationValue)
     static_assert(static_cast<size_t>(TestObj::Optional::OptionalValue1) == 1, "TestObj::Optional::OptionalValue1 is not 1 as expected");
     static_assert(static_cast<size_t>(TestObj::Optional::OptionalValue2) == 2, "TestObj::Optional::OptionalValue2 is not 2 as expected");
     static_assert(static_cast<size_t>(TestObj::Optional::OptionalValue3) == 3, "TestObj::Optional::OptionalValue3 is not 3 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -267,7 +267,7 @@ String convertEnumerationToString(AlternateEnumName enumerationValue)
     };
     static_assert(static_cast<size_t>(AlternateEnumName::EnumValue1) == 0, "AlternateEnumName::EnumValue1 is not 0 as expected");
     static_assert(static_cast<size_t>(AlternateEnumName::EnumValue2) == 1, "AlternateEnumName::EnumValue2 is not 1 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -306,7 +306,7 @@ String convertEnumerationToString(TestObj::EnumA enumerationValue)
         MAKE_STATIC_STRING_IMPL("A"),
     };
     static_assert(static_cast<size_t>(TestObj::EnumA::A) == 0, "TestObj::EnumA::A is not 0 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -346,7 +346,7 @@ String convertEnumerationToString(TestObj::EnumB enumerationValue)
         MAKE_STATIC_STRING_IMPL("B"),
     };
     static_assert(static_cast<size_t>(TestObj::EnumB::B) == 0, "TestObj::EnumB::B is not 0 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -386,7 +386,7 @@ String convertEnumerationToString(TestObj::EnumC enumerationValue)
         MAKE_STATIC_STRING_IMPL("C"),
     };
     static_assert(static_cast<size_t>(TestObj::EnumC::C) == 0, "TestObj::EnumC::C is not 0 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -426,7 +426,7 @@ String convertEnumerationToString(TestObj::Kind enumerationValue)
     };
     static_assert(static_cast<size_t>(TestObj::Kind::Quick) == 0, "TestObj::Kind::Quick is not 0 as expected");
     static_assert(static_cast<size_t>(TestObj::Kind::Dead) == 1, "TestObj::Kind::Dead is not 1 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -465,7 +465,7 @@ String convertEnumerationToString(TestObj::Size enumerationValue)
     };
     static_assert(static_cast<size_t>(TestObj::Size::Small) == 0, "TestObj::Size::Small is not 0 as expected");
     static_assert(static_cast<size_t>(TestObj::Size::MuchMuchLarger) == 1, "TestObj::Size::MuchMuchLarger is not 1 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -504,7 +504,7 @@ String convertEnumerationToString(TestObj::Confidence enumerationValue)
     };
     static_assert(static_cast<size_t>(TestObj::Confidence::High) == 0, "TestObj::Confidence::High is not 0 as expected");
     static_assert(static_cast<size_t>(TestObj::Confidence::KindaLow) == 1, "TestObj::Confidence::KindaLow is not 1 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -1816,6 +1816,8 @@ static JSC_DECLARE_CUSTOM_GETTER(jsTestObj_testObjAttr);
 static JSC_DECLARE_CUSTOM_SETTER(setJSTestObj_testObjAttr);
 static JSC_DECLARE_CUSTOM_GETTER(jsTestObj_testNullableObjAttr);
 static JSC_DECLARE_CUSTOM_SETTER(setJSTestObj_testNullableObjAttr);
+static JSC_DECLARE_CUSTOM_GETTER(jsTestObj_legacyLenientSetterTestAttr);
+static JSC_DECLARE_CUSTOM_SETTER(setJSTestObj_legacyLenientSetterTestAttr);
 static JSC_DECLARE_CUSTOM_GETTER(jsTestObj_lenientTestObjAttr);
 static JSC_DECLARE_CUSTOM_SETTER(setJSTestObj_lenientTestObjAttr);
 static JSC_DECLARE_CUSTOM_GETTER(jsTestObj_unforgeableAttr);
@@ -2215,6 +2217,7 @@ static const HashTableValue JSTestObjPrototypeTableValues[] =
     { "usvstringAttr"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestObj_usvstringAttr, setJSTestObj_usvstringAttr } },
     { "testObjAttr"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestObj_testObjAttr, setJSTestObj_testObjAttr } },
     { "testNullableObjAttr"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestObj_testNullableObjAttr, setJSTestObj_testNullableObjAttr } },
+    { "legacyLenientSetterTestAttr"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestObj_legacyLenientSetterTestAttr, setJSTestObj_legacyLenientSetterTestAttr } },
     { "lenientTestObjAttr"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestObj_lenientTestObjAttr, setJSTestObj_lenientTestObjAttr } },
     { "stringAttrTreatingNullAsEmptyString"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestObj_stringAttrTreatingNullAsEmptyString, setJSTestObj_stringAttrTreatingNullAsEmptyString } },
     { "usvstringAttrTreatingNullAsEmptyString"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestObj_usvstringAttrTreatingNullAsEmptyString, setJSTestObj_usvstringAttrTreatingNullAsEmptyString } },
@@ -3287,6 +3290,34 @@ static inline bool setJSTestObj_testNullableObjAttrSetter(JSGlobalObject& lexica
 JSC_DEFINE_CUSTOM_SETTER(setJSTestObj_testNullableObjAttr, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, EncodedJSValue encodedValue, PropertyName attributeName))
 {
     return IDLAttribute<JSTestObj>::set<setJSTestObj_testNullableObjAttrSetter>(*lexicalGlobalObject, thisValue, encodedValue, attributeName);
+}
+
+static inline JSValue jsTestObj_legacyLenientSetterTestAttrGetter(JSGlobalObject& lexicalGlobalObject, JSTestObj& thisObject)
+{
+    auto& vm = JSC::getVM(&lexicalGlobalObject);
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+    auto& impl = thisObject.wrapped();
+    RELEASE_AND_RETURN(throwScope, (toJS<IDLDOMString>(lexicalGlobalObject, throwScope, impl.legacyLenientSetterTestAttr())));
+}
+
+JSC_DEFINE_CUSTOM_GETTER(jsTestObj_legacyLenientSetterTestAttr, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName attributeName))
+{
+    return IDLAttribute<JSTestObj>::get<jsTestObj_legacyLenientSetterTestAttrGetter, CastedThisErrorBehavior::Assert>(*lexicalGlobalObject, thisValue, attributeName);
+}
+
+static inline bool setJSTestObj_legacyLenientSetterTestAttrSetter(JSGlobalObject& lexicalGlobalObject, JSTestObj& thisObject, JSValue value)
+{
+    auto& vm = JSC::getVM(&lexicalGlobalObject);
+    UNUSED_PARAM(vm);
+    UNUSED_PARAM(lexicalGlobalObject);
+    UNUSED_PARAM(thisObject);
+    UNUSED_PARAM(value);
+    return true;
+}
+
+JSC_DEFINE_CUSTOM_SETTER(setJSTestObj_legacyLenientSetterTestAttr, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, EncodedJSValue encodedValue, PropertyName attributeName))
+{
+    return IDLAttribute<JSTestObj>::set<setJSTestObj_legacyLenientSetterTestAttrSetter>(*lexicalGlobalObject, thisValue, encodedValue, attributeName);
 }
 
 static inline JSValue jsTestObj_lenientTestObjAttrGetter(JSGlobalObject& lexicalGlobalObject, JSTestObj& thisObject)

@@ -170,6 +170,8 @@ static CFStringRef AppleColorPreferencesChangedNotification = CFSTR("AppleColorP
 
 static NSString * const WebKitSuppressMemoryPressureHandlerDefaultsKey = @"WebKitSuppressMemoryPressureHandler";
 
+static NSString * const WebKitMediaStreamingActivity = @"WebKitMediaStreamingActivity";
+
 #if ENABLE(TRACKING_PREVENTION) && !RELEASE_LOG_DISABLED
 static NSString * const WebKitLogCookieInformationDefaultsKey = @"WebKitLogCookieInformation";
 #endif
@@ -417,8 +419,8 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
 
 #if PLATFORM(COCOA) && ENABLE(REMOTE_INSPECTOR)
     if (WebProcessProxy::shouldEnableRemoteInspector()) {
-        if (auto handle = SandboxExtension::createHandleForMachLookup("com.apple.webinspector"_s, process.auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap))
-            parameters.enableRemoteWebInspectorExtensionHandle = WTFMove(*handle);
+        auto handles = SandboxExtension::createHandlesForMachLookup({ "com.apple.webinspector"_s }, process.auditToken());
+        parameters.enableRemoteWebInspectorExtensionHandles = WTFMove(handles);
     }
 #endif
 
@@ -506,7 +508,7 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
 
 #if HAVE(VIDEO_RESTRICTED_DECODING)
 #if PLATFORM(MAC)
-    if (!isFullWebBrowser()) {
+    if (!isFullWebBrowser() || isRunningTest(WebCore::applicationBundleIdentifier())) {
         if (auto trustdExtensionHandle = SandboxExtension::createHandleForMachLookup("com.apple.trustd.agent"_s, std::nullopt))
             parameters.trustdExtensionHandle = WTFMove(*trustdExtensionHandle);
         parameters.enableDecodingHEIC = true;
@@ -779,10 +781,11 @@ void WebProcessPool::registerNotificationObservers()
             for (auto& process : m_processes) {
                 if (!process->canSendMessage())
                     continue;
-                auto handle = SandboxExtension::createHandleForMachLookup("com.apple.system.opendirectoryd.libinfo"_s, process->auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap);
+                auto handle = SandboxExtension::createHandleForMachLookup("com.apple.system.opendirectoryd.libinfo"_s, std::nullopt);
                 if (!handle)
                     continue;
-                process->send(Messages::WebProcess::OpenDirectoryCacheInvalidated(*handle), 0);
+                auto bootstrapHandle = SandboxExtension::createHandleForMachBootstrapExtension();
+                process->send(Messages::WebProcess::OpenDirectoryCacheInvalidated(*handle, bootstrapHandle), 0);
             }
         });
         m_openDirectoryNotifyTokens.append(notifyToken);

@@ -202,6 +202,7 @@ bool doesGC(Graph& graph, Node* node)
     case GetTypedArrayByteOffset:
     case GetTypedArrayByteOffsetAsInt52:
     case GetPrototypeOf:
+    case GetWebAssemblyInstanceExports:
     case PutStructure:
     case GetByOffset:
     case GetGetterSetterByOffset:
@@ -289,6 +290,7 @@ bool doesGC(Graph& graph, Node* node)
     case DirectConstruct:
     case DirectTailCall:
     case DirectTailCallInlinedCaller:
+    case CallWasm:
     case ForceOSRExit:
     case FunctionToString:
     case GetById:
@@ -414,6 +416,7 @@ bool doesGC(Graph& graph, Node* node)
     case ParseInt: // We might resolve a rope even though we don't clobber anything.
     case SetAdd:
     case MapSet:
+    case MapOrSetDelete:
     case ValueBitAnd:
     case ValueBitOr:
     case ValueBitXor:

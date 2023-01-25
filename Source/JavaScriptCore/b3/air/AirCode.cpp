@@ -48,7 +48,7 @@ static void defaultPrologueGenerator(CCallHelpers& jit, Code& code)
 
     // NOTE: on ARM64, if the callee saves have bigger offsets due to a potential tail call,
     // the macro assembler might assert scratch register usage on store operations emitted by emitSave.
-    AllowMacroScratchRegisterUsageIf allowScratch(jit, isARM64() || isARM64E() || isARM());
+    AllowMacroScratchRegisterUsageIf allowScratch(jit, isARM64() || isARM_THUMB2());
 
     if (code.frameSize()) {
         jit.subPtr(MacroAssembler::TrustedImm32(code.frameSize()), MacroAssembler::stackPointerRegister);
@@ -100,17 +100,14 @@ Code::Code(Procedure& proc)
                     else if (calleeSave.contains(reg, conservativeWidthWithoutVectors(reg)))
                         calleeSaveRegs.append(reg);
                 });
-            if (Options::airRandomizeRegs()) {
-                WeakRandom random(Options::airRandomizeRegsSeed() ? Options::airRandomizeRegsSeed() : weakRandom->getUint32());
-                shuffleVector(volatileRegs, [&] (unsigned limit) { return random.getUint32(limit); });
-                shuffleVector(calleeSaveRegs, [&] (unsigned limit) { return random.getUint32(limit); });
-                shuffleVector(fullCalleeSaveRegs, [&] (unsigned limit) { return random.getUint32(limit); });
-            }
             Vector<Reg> result;
             result.appendVector(volatileRegs);
             result.appendVector(fullCalleeSaveRegs);
-            if (!usesSIMD())
-                result.appendVector(calleeSaveRegs);
+            result.appendVector(calleeSaveRegs);
+            if (Options::airRandomizeRegs()) {
+                WeakRandom random(Options::airRandomizeRegsSeed() ? Options::airRandomizeRegsSeed() : weakRandom->getUint32());
+                shuffleVector(result, [&] (unsigned limit) { return random.getUint32(limit); });
+            }
             setRegsInPriorityOrder(bank, result);
         });
 

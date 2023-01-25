@@ -56,6 +56,7 @@
 #include "HTMLFieldSetElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
+#include "HTMLMaybeFormAssociatedCustomElement.h"
 #include "HTMLMediaElement.h"
 #include "HTMLNames.h"
 #include "HTMLOptGroupElement.h"
@@ -66,6 +67,7 @@
 #include "HTMLTextFormControlElement.h"
 #include "ImageOverlay.h"
 #include "JSHTMLElement.h"
+#include "LabelsNodeList.h"
 #include "MediaControlsHost.h"
 #include "NodeTraversal.h"
 #include "PseudoClassChangeInvalidation.h"
@@ -576,10 +578,10 @@ void HTMLElement::applyAspectRatioWithoutDimensionalRulesFromWidthAndHeightAttri
 void HTMLElement::addParsedWidthAndHeightToAspectRatioList(double width, double height, MutableStyleProperties& style)
 {
     auto ratioList = CSSValueList::createSlashSeparated();
-    ratioList->append(CSSValuePool::singleton().createValue(width, CSSUnitType::CSS_NUMBER));
-    ratioList->append(CSSValuePool::singleton().createValue(height, CSSUnitType::CSS_NUMBER));
+    ratioList->append(CSSPrimitiveValue::create(width, CSSUnitType::CSS_NUMBER));
+    ratioList->append(CSSPrimitiveValue::create(height, CSSUnitType::CSS_NUMBER));
     auto list = CSSValueList::createSpaceSeparated();
-    list->append(CSSValuePool::singleton().createIdentifierValue(CSSValueAuto));
+    list->append(CSSPrimitiveValue::create(CSSValueAuto));
     list->append(ratioList);
 
     style.setProperty(CSSPropertyAspectRatio, RefPtr<CSSValue>(WTFMove(list)));
@@ -757,17 +759,7 @@ bool HTMLElement::rendererIsEverNeeded()
     return StyledElement::rendererIsEverNeeded();
 }
 
-HTMLFormElement* HTMLElement::form() const
-{
-    return HTMLFormElement::findClosestFormAncestor(*this);
-}
-
 FormAssociatedElement* HTMLElement::asFormAssociatedElement()
-{
-    return nullptr;
-}
-
-FormListedElement* HTMLElement::asFormListedElement()
 {
     return nullptr;
 }
@@ -854,7 +846,8 @@ void HTMLElement::dirAttributeChanged(const AtomString& value)
     RefPtr<Element> parent = parentOrShadowHostElement();
     bool isValid = true;
 
-    switch (parseTextDirection(value)) {
+    auto direction = parseTextDirection(value);
+    switch (direction) {
     case TextDirectionDirective::Invalid:
         isValid = false;
         if (selfOrPrecedingNodesAffectDirAuto() && (!parent || !parent->selfOrPrecedingNodesAffectDirAuto()) && !is<HTMLBDIElement>(*this))
@@ -884,7 +877,7 @@ void HTMLElement::dirAttributeChanged(const AtomString& value)
     }
 
     if (is<HTMLElement>(parent) && parent->selfOrPrecedingNodesAffectDirAuto()) {
-        if (isValid)
+        if (isValid && direction != TextDirectionDirective::Auto)
             setHasDirAutoFlagRecursively(this, false);
         downcast<HTMLElement>(*parent).adjustDirectionalityIfNeededAfterChildAttributeChanged(this);
     }
@@ -1101,12 +1094,21 @@ bool HTMLElement::canBeActuallyDisabled() const
         || is<HTMLTextAreaElement>(*this)
         || is<HTMLOptGroupElement>(*this)
         || is<HTMLOptionElement>(*this)
-        || is<HTMLFieldSetElement>(*this);
+        || is<HTMLFieldSetElement>(*this)
+        || (is<HTMLMaybeFormAssociatedCustomElement>(*this) && downcast<HTMLMaybeFormAssociatedCustomElement>(*this).isFormAssociatedCustomElement());
 }
 
 bool HTMLElement::isActuallyDisabled() const
 {
     return canBeActuallyDisabled() && isDisabledFormControl();
+}
+
+RefPtr<NodeList> HTMLElement::labels()
+{
+    if (!isLabelable())
+        return nullptr;
+
+    return ensureRareData().ensureNodeLists().addCacheWithAtomName<LabelsNodeList>(*this, starAtom());
 }
 
 #if ENABLE(AUTOCAPITALIZE)

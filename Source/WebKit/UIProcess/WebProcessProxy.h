@@ -133,6 +133,9 @@ typedef BackgroundWebProcessCounter::Token BackgroundWebProcessToken;
 enum WebProcessWithAudibleMediaCounterType { };
 using WebProcessWithAudibleMediaCounter = RefCounter<WebProcessWithAudibleMediaCounterType>;
 using WebProcessWithAudibleMediaToken = WebProcessWithAudibleMediaCounter::Token;
+enum WebProcessWithMediaStreamingCounterType { };
+using WebProcessWithMediaStreamingCounter = RefCounter<WebProcessWithMediaStreamingCounterType>;
+using WebProcessWithMediaStreamingToken = WebProcessWithMediaStreamingCounter::Token;
 enum class CheckBackForwardList : bool { No, Yes };
 
 class WebProcessProxy : public AuxiliaryProcessProxy, private ProcessThrottlerClient {
@@ -383,6 +386,7 @@ public:
 #endif
 
     void updateAudibleMediaAssertions();
+    void updateMediaStreamingActivity();
 
     void setRemoteWorkerUserAgent(const String&);
     void updateRemoteWorkerPreferencesStore(const WebPreferencesStore&);
@@ -397,7 +401,7 @@ public:
     void startServiceWorkerBackgroundProcessing();
     void endServiceWorkerBackgroundProcessing();
 #endif
-    void setThrottleStateForTesting(ProcessThrottleState state) { didChangeThrottleState(state); }
+    void setThrottleStateForTesting(ProcessThrottleState);
 
 #if PLATFORM(COCOA) && ENABLE(MEDIA_STREAM)
     UserMediaCaptureManagerProxy* userMediaCaptureManagerProxy() { return m_userMediaCaptureManagerProxy.get(); }
@@ -460,7 +464,7 @@ public:
 
 #if PLATFORM(COCOA)
     std::optional<audit_token_t> auditToken() const;
-    SandboxExtension::Handle fontdMachExtensionHandle(SandboxExtension::MachBootstrapOptions) const;
+    Vector<SandboxExtension::Handle> fontdMachExtensionHandles(SandboxExtension::MachBootstrapOptions) const;
 #endif
 
     bool isConnectedToHardwareConsole() const { return m_isConnectedToHardwareConsole; }
@@ -642,6 +646,7 @@ private:
     std::unique_ptr<ProcessThrottler::BackgroundActivity> m_activityForHoldingLockedFiles;
     ForegroundWebProcessToken m_foregroundToken;
     BackgroundWebProcessToken m_backgroundToken;
+    bool m_areThrottleStateChangesEnabled { true };
 
 #if HAVE(CVDISPLAYLINK)
     DisplayLinkProcessProxyClient m_displayLinkClient;
@@ -716,6 +721,8 @@ private:
         WebProcessWithAudibleMediaToken token;
     };
     std::optional<AudibleMediaActivity> m_audibleMediaActivity;
+
+    std::optional<WebProcessWithMediaStreamingToken> m_mediaStreamingActivity;
 
     ShutdownPreventingScopeCounter m_shutdownPreventingScopeCounter;
 

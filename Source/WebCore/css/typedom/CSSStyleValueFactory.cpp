@@ -163,6 +163,19 @@ ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::parseStyleValue(co
     return results;
 }
 
+static bool mayConvertCSSValueListToSingleValue(std::optional<CSSPropertyID> propertyID)
+{
+    if (!propertyID)
+        return true;
+
+    // Even though the CSS Parser uses a CSSValueList to represent these, they are not
+    // really lists and CSS-Typed-OM does not expect them to treat them as such.
+    return *propertyID != CSSPropertyGridRowStart
+        && *propertyID != CSSPropertyGridRowEnd
+        && *propertyID != CSSPropertyGridColumnStart
+        && *propertyID != CSSPropertyGridColumnEnd;
+}
+
 ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Ref<CSSValue> cssValue, std::optional<CSSPropertyID> propertyID, Document* document)
 {
     if (is<CSSPrimitiveValue>(cssValue)) {
@@ -276,6 +289,16 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Ref<CSSValue> c
             return reifyValue(CSSVariableReferenceValue::create(WTFMove(value)), propertyID);
         }, [&](const CSSValueID&) {
             return ExceptionOr<Ref<CSSStyleValue>> { CSSStyleValue::create(WTFMove(cssValue)) };
+        }, [&](const CSSCustomPropertyValue::SyntaxValue& syntaxValue) -> ExceptionOr<Ref<CSSStyleValue>> {
+            if (auto styleValue = constructStyleValueForCustomPropertySyntaxValue(syntaxValue))
+                return { *styleValue };
+            CSSTokenizer tokenizer(downcast<CSSCustomPropertyValue>(cssValue.get()).customCSSText());
+            return { CSSUnparsedValue::create(tokenizer.tokenRange()) };
+        }, [&](const CSSCustomPropertyValue::SyntaxValueList& syntaxValueList) -> ExceptionOr<Ref<CSSStyleValue>> {
+            if (auto styleValue = constructStyleValueForCustomPropertySyntaxValue(syntaxValueList.values[0]))
+                return { *styleValue };
+            CSSTokenizer tokenizer(downcast<CSSCustomPropertyValue>(cssValue.get()).customCSSText());
+            return { CSSUnparsedValue::create(tokenizer.tokenRange()) };
         }, [&](auto&) {
             CSSTokenizer tokenizer(downcast<CSSCustomPropertyValue>(cssValue.get()).customCSSText());
             return ExceptionOr<Ref<CSSStyleValue>> { CSSUnparsedValue::create(tokenizer.tokenRange()) };
@@ -293,11 +316,39 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Ref<CSSValue> c
         auto valueList = downcast<CSSValueList>(cssValue.ptr());
         if (!valueList->length())
             return Exception { TypeError, "The CSSValueList should not be empty."_s };
-        if (valueList->length() == 1 || (propertyID && CSSProperty::isListValuedProperty(*propertyID)))
+        if ((valueList->length() == 1 && mayConvertCSSValueListToSingleValue(propertyID)) || (propertyID && CSSProperty::isListValuedProperty(*propertyID)))
             return reifyValue(*valueList->begin(), propertyID, document);
     }
     
     return CSSStyleValue::create(WTFMove(cssValue));
+}
+
+RefPtr<CSSStyleValue> CSSStyleValueFactory::constructStyleValueForCustomPropertySyntaxValue(const CSSCustomPropertyValue::SyntaxValue& syntaxValue)
+{
+    return WTF::switchOn(syntaxValue, [&](const Length& length) -> RefPtr<CSSStyleValue> {
+        if (length.isFixed())
+            return CSSUnitValue::create(length.value(), CSSUnitType::CSS_PX);
+        if (length.isPercent())
+            return CSSUnitValue::create(length.percent(), CSSUnitType::CSS_PERCENTAGE);
+        // FIXME: Calc.
+        return nullptr;
+    }, [&](const CSSCustomPropertyValue::NumericSyntaxValue& numericValue) -> RefPtr<CSSStyleValue>  {
+        return CSSUnitValue::create(numericValue.value, numericValue.unitType);
+    }, [&](const StyleColor& colorValue) -> RefPtr<CSSStyleValue> {
+        if (colorValue.isCurrentColor())
+            return CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueCurrentcolor));
+        return CSSStyleValue::create(CSSValuePool::singleton().createColorValue(colorValue.absoluteColor()));
+    }, [&](const URL& urlValue) -> RefPtr<CSSStyleValue> {
+        return CSSStyleValue::create(CSSPrimitiveValue::create(urlValue.string(), CSSUnitType::CSS_URI));
+    }, [&](const String& identValue) -> RefPtr<CSSStyleValue> {
+        return CSSKeywordValue::rectifyKeywordish(identValue);
+    }, [&](const RefPtr<StyleImage>&) -> RefPtr<CSSStyleValue>  {
+        // FIXME: <image>.
+        return nullptr;
+    }, [&](const CSSCustomPropertyValue::TransformSyntaxValue&) -> RefPtr<CSSStyleValue>  {
+        // FIXME: <transform>, <transform-list>.
+        return nullptr;
+    });
 }
 
 ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::vectorFromStyleValuesOrStrings(const AtomString& property, FixedVector<std::variant<RefPtr<CSSStyleValue>, String>>&& values)

@@ -168,7 +168,7 @@ static unsigned computeCurrencyDigits(const String& currency)
         { "XOF", 0 },
         { "XPF", 0 }
     };
-    auto* currencyMinorUnit = tryBinarySearch<std::pair<const char*, unsigned>>(currencyMinorUnits, WTF_ARRAY_LENGTH(currencyMinorUnits), computeCurrencySortKey(currency), extractCurrencySortKey);
+    auto* currencyMinorUnit = tryBinarySearch<std::pair<const char*, unsigned>>(currencyMinorUnits, std::size(currencyMinorUnits), computeCurrencySortKey(currency), extractCurrencySortKey);
     if (currencyMinorUnit)
         return currencyMinorUnit->second;
     return 2;
@@ -765,6 +765,8 @@ JSValue IntlNumberFormat::format(JSGlobalObject* globalObject, double value) con
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
+
+    value = purifyNaN(value);
 
     Vector<UChar, 32> buffer;
 #if HAVE(ICU_U_NUMBER_FORMATTER)
@@ -1519,6 +1521,8 @@ JSValue IntlNumberFormat::formatToParts(JSGlobalObject* globalObject, double val
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
+
+    value = purifyNaN(value);
 
     UErrorCode status = U_ZERO_ERROR;
     auto fieldItr = std::unique_ptr<UFieldPositionIterator, UFieldPositionIteratorDeleter>(ufieldpositer_open(&status));

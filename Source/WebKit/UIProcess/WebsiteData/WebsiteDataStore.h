@@ -68,12 +68,15 @@
 #endif
 
 namespace API {
+class Data;
+class DownloadClient;
 class HTTPCookieStore;
 }
 
 namespace WebCore {
 class CertificateInfo;
 class RegistrableDomain;
+class ResourceRequest;
 class SecurityOrigin;
 class LocalWebLockRegistry;
 class PrivateClickMeasurement;
@@ -88,6 +91,7 @@ class AuthenticatorManager;
 class AuxiliaryProcessProxy;
 class SecKeyProxyStore;
 class DeviceIdHashSaltStorage;
+class DownloadProxy;
 class NetworkProcessProxy;
 class SOAuthorizationCoordinator;
 class VirtualAuthenticatorManager;
@@ -96,6 +100,8 @@ class WebProcessPool;
 class WebProcessProxy;
 class WebResourceLoadStatisticsStore;
 enum class CacheModel : uint8_t;
+enum class CallDownloadDidStart : bool;
+enum class UnifiedOriginStorageLevel : uint8_t;
 enum class WebsiteDataFetchOption : uint8_t;
 enum class WebsiteDataType : uint32_t;
 
@@ -372,10 +378,10 @@ public:
     static String defaultJavaScriptConfigurationDirectory(const String& baseDataDirectory = nullString());
 
     static constexpr uint64_t defaultPerOriginQuota() { return 1000 * MB; }
-    static bool defaultShouldUseCustomStoragePaths();
+    static UnifiedOriginStorageLevel defaultUnifiedOriginStorageLevel();
 
     void resetQuota(CompletionHandler<void()>&&);
-    void clearStorage(CompletionHandler<void()>&&);
+    void resetStoragePersistedState(CompletionHandler<void()>&&);
 #if PLATFORM(IOS_FAMILY)
     void setBackupExclusionPeriodForTesting(Seconds, CompletionHandler<void()>&&);
 #endif
@@ -419,6 +425,10 @@ public:
 
     void setServiceWorkerOverridePreferences(WebPreferences* preferences) { m_serviceWorkerOverridePreferences = preferences; }
     WebPreferences* serviceWorkerOverridePreferences() const { return m_serviceWorkerOverridePreferences.get(); }
+
+    DownloadProxy& createDownloadProxy(Ref<API::DownloadClient>&&, const WebCore::ResourceRequest&, WebPageProxy* originatingPage, const FrameInfoData&);
+    void download(const DownloadProxy&, const String& suggestedFilename);
+    void resumeDownload(const DownloadProxy&, const API::Data&, const String& path, CallDownloadDidStart);
 
 private:
     enum class ForceReinitialization : bool { No, Yes };

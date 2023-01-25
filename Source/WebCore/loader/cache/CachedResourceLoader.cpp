@@ -708,7 +708,8 @@ bool CachedResourceLoader::updateRequestAfterRedirection(CachedResource::Type ty
     // FIXME: We might want to align the checks done here with the ones done in CachedResourceLoader::requestResource, content extensions blocking in particular.
 
 #if ENABLE(PUBLIC_SUFFIX_LIST)
-    if (m_documentLoader->frame()->settings().fetchMetadataEnabled()) {
+    auto* frame = m_documentLoader ? m_documentLoader->frame() : nullptr;
+    if (frame && frame->settings().fetchMetadataEnabled()) {
         auto requestOrigin = SecurityOrigin::create(request.url());
 
         // In the case of a protocol downgrade we strip all FetchMetadata headers.
@@ -890,6 +891,8 @@ void CachedResourceLoader::updateHTTPRequestHeaders(FrameLoader& frameLoader, Ca
 #endif // ENABLE(PUBLIC_SUFFIX_LIST)
     request.updateUserAgentHeader(frameLoader);
 
+    if (frameLoader.frame().loader().loadType() == FrameLoadType::ReloadFromOrigin)
+        request.updateCacheModeIfNeeded(cachePolicy(type, request.resourceRequest().url()));
     request.updateAccordingCacheMode();
     request.updateAcceptEncodingHeader();
 }
@@ -1070,6 +1073,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
 
     if (request.resourceRequest().url().protocolIsInHTTPFamily())
         updateHTTPRequestHeaders(frame.loader(), type, request);
+    request.disableCachingIfNeeded();
 
     auto& memoryCache = MemoryCache::singleton();
     if (request.allowsCaching() && memoryCache.disabled())

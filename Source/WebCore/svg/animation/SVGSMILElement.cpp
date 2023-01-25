@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1024,7 +1025,9 @@ float SVGSMILElement::calculateAnimationPercentAndRepeat(SMILTime elapsed, unsig
     SMILTime activeTime = elapsed - m_intervalBegin;
     SMILTime repeatingDuration = this->repeatingDuration();
     if (elapsed >= m_intervalEnd || activeTime > repeatingDuration) {
-        repeat = static_cast<unsigned>(repeatingDuration.value() / simpleDuration.value()) - 1;
+        repeat = static_cast<unsigned>(repeatingDuration.value() / simpleDuration.value());
+        if (!fmod(repeatingDuration.value(), simpleDuration.value()))
+            --repeat;
 
         double percent = (m_intervalEnd.value() - m_intervalBegin.value()) / simpleDuration.value();
         percent = percent - floor(percent);
@@ -1082,13 +1085,15 @@ bool SVGSMILElement::progress(SMILTime elapsed, SVGSMILElement& firstAnimation, 
 
     if (elapsed < m_intervalBegin) {
         ASSERT(m_activeState != Active);
-        if (m_activeState == Frozen) {
+        bool isFrozen = (m_activeState == Frozen);
+        if (isFrozen) {
             if (this == &firstAnimation)
                 startAnimation();
             updateAnimation(m_lastPercent, m_lastRepeat);
         }
         m_nextProgressTime = m_intervalBegin;
-        return false;
+        // If the animation is frozen, it's still contributing.
+        return isFrozen;
     }
 
     m_previousIntervalBegin = m_intervalBegin;

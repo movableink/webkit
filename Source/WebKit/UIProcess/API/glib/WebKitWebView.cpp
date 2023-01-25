@@ -47,7 +47,6 @@
 #include "WebKitHitTestResultPrivate.h"
 #include "WebKitIconLoadingClient.h"
 #include "WebKitInputMethodContextPrivate.h"
-#include "WebKitInstallMissingMediaPluginsPermissionRequestPrivate.h"
 #include "WebKitJavascriptResultPrivate.h"
 #include "WebKitNavigationClient.h"
 #include "WebKitNotificationPrivate.h"
@@ -460,11 +459,6 @@ GRefPtr<WebKitOptionMenu> WebKitWebViewClient::showOptionMenu(WebKitPopupMenu& p
     return nullptr;
 }
 
-void WebKitWebViewClient::handleDownloadRequest(WKWPE::View&, DownloadProxy& downloadProxy)
-{
-    webkitWebViewHandleDownloadRequest(m_webView, &downloadProxy);
-}
-
 void WebKitWebViewClient::frameDisplayed(WKWPE::View&)
 {
     {
@@ -507,7 +501,9 @@ WebKitWebResourceLoadManager* WebKitWebViewClient::webResourceLoadManager()
 static gboolean webkitWebViewLoadFail(WebKitWebView* webView, WebKitLoadEvent, const char* failingURI, GError* error)
 {
     if (g_error_matches(error, WEBKIT_NETWORK_ERROR, WEBKIT_NETWORK_ERROR_CANCELLED)
-#if !ENABLE(2022_GLIB_API)
+#if ENABLE(2022_GLIB_API)
+        || g_error_matches(error, WEBKIT_MEDIA_ERROR, WEBKIT_MEDIA_ERROR_WILL_HANDLE_LOAD)
+#else
         || g_error_matches(error, WEBKIT_PLUGIN_ERROR, WEBKIT_PLUGIN_ERROR_WILL_HANDLE_LOAD)
 #endif
         || g_error_matches(error, WEBKIT_POLICY_ERROR, WEBKIT_POLICY_ERROR_FRAME_LOAD_INTERRUPTED_BY_POLICY_CHANGE))
@@ -1027,8 +1023,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_BACKEND] =
         g_param_spec_boxed(
             "backend",
-            _("Backend"),
-            _("The backend for the web view"),
+            nullptr, nullptr,
             WEBKIT_TYPE_WEB_VIEW_BACKEND,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 #endif
@@ -1041,8 +1036,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_WEB_CONTEXT] =
         g_param_spec_object(
             "web-context",
-            _("Web Context"),
-            _("The web context for the view"),
+            nullptr, nullptr,
             WEBKIT_TYPE_WEB_CONTEXT,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
     /**
@@ -1057,8 +1051,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_RELATED_VIEW] =
         g_param_spec_object(
             "related-view",
-            _("Related WebView"),
-            _("The related WebKitWebView used when creating the view to share the same web process"),
+            nullptr, nullptr,
             WEBKIT_TYPE_WEB_VIEW,
             static_cast<GParamFlags>(WEBKIT_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
@@ -1072,8 +1065,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_SETTINGS] =
         g_param_spec_object(
             "settings",
-            _("WebView settings"),
-            _("The WebKitSettings of the view"),
+            nullptr, nullptr,
             WEBKIT_TYPE_SETTINGS,
             static_cast<GParamFlags>(WEBKIT_PARAM_WRITABLE | G_PARAM_CONSTRUCT));
 
@@ -1087,8 +1079,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_USER_CONTENT_MANAGER] =
         g_param_spec_object(
             "user-content-manager",
-            _("WebView user content manager"),
-            _("The WebKitUserContentManager of the view"),
+            nullptr, nullptr,
             WEBKIT_TYPE_USER_CONTENT_MANAGER,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
@@ -1101,8 +1092,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_TITLE] =
         g_param_spec_string(
             "title",
-            _("Title"),
-            _("Main frame document title"),
+            nullptr, nullptr,
             nullptr,
             WEBKIT_PARAM_READABLE);
 
@@ -1120,8 +1110,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_ESTIMATED_LOAD_PROGRESS] =
         g_param_spec_double(
             "estimated-load-progress",
-            _("Estimated Load Progress"),
-            _("An estimate of the percent completion for a document load"),
+            nullptr, nullptr,
             0.0, 1.0, 0.0,
             WEBKIT_PARAM_READABLE);
 
@@ -1135,8 +1124,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_FAVICON] =
         g_param_spec_pointer(
             "favicon",
-            _("Favicon"),
-            _("The favicon associated to the view, if any"),
+            nullptr, nullptr,
             WEBKIT_PARAM_READABLE);
 #endif
 
@@ -1149,8 +1137,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_URI] =
         g_param_spec_string(
             "uri",
-            _("URI"),
-            _("The current active URI of the view"),
+            nullptr, nullptr,
             nullptr,
             WEBKIT_PARAM_READABLE);
 
@@ -1163,8 +1150,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_ZOOM_LEVEL] =
         g_param_spec_double(
             "zoom-level",
-            _("Zoom level"),
-            _("The zoom level of the view content"),
+            nullptr, nullptr,
             0, G_MAXDOUBLE, 1,
             WEBKIT_PARAM_READWRITE);
 
@@ -1181,8 +1167,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_IS_LOADING] =
         g_param_spec_boolean(
             "is-loading",
-            _("Is Loading"),
-            _("Whether the view is loading a page"),
+            nullptr, nullptr,
             FALSE,
             WEBKIT_PARAM_READABLE);
 
@@ -1199,8 +1184,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_IS_PLAYING_AUDIO] =
         g_param_spec_boolean(
             "is-playing-audio",
-            "Is Playing Audio",
-            _("Whether the view is playing audio"),
+            nullptr, nullptr,
             FALSE,
             WEBKIT_PARAM_READABLE);
 
@@ -1225,8 +1209,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_IS_EPHEMERAL] =
         g_param_spec_boolean(
             "is-ephemeral",
-            "Is Ephemeral",
-            _("Whether the web view is ephemeral"),
+            nullptr, nullptr,
             FALSE,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
@@ -1242,8 +1225,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_IS_CONTROLLED_BY_AUTOMATION] =
         g_param_spec_boolean(
             "is-controlled-by-automation",
-            "Is Controlled By Automation",
-            _("Whether the web view is controlled by automation"),
+            nullptr, nullptr,
             FALSE,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
@@ -1260,8 +1242,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_AUTOMATION_PRESENTATION_TYPE] =
         g_param_spec_enum(
             "automation-presentation-type",
-            "Automation Presentation Type",
-            _("The browsing context presentation type for automation"),
+            nullptr, nullptr,
             WEBKIT_TYPE_AUTOMATION_BROWSING_CONTEXT_PRESENTATION,
             WEBKIT_AUTOMATION_BROWSING_CONTEXT_PRESENTATION_WINDOW,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
@@ -1277,8 +1258,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_EDITABLE] =
         g_param_spec_boolean(
             "editable",
-            _("Editable"),
-            _("Whether the content can be modified by the user."),
+            nullptr, nullptr,
             FALSE,
             WEBKIT_PARAM_READWRITE);
 
@@ -1292,8 +1272,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_PAGE_ID] =
         g_param_spec_uint64(
             "page-id",
-            _("Page Identifier"),
-            _("The page identifier."),
+            nullptr, nullptr,
             0, G_MAXUINT64, 0,
             WEBKIT_PARAM_READABLE);
 
@@ -1308,8 +1287,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_IS_MUTED] =
         g_param_spec_boolean(
             "is-muted",
-            "Is Muted",
-            _("Whether the view audio is muted"),
+            nullptr, nullptr,
             FALSE,
             WEBKIT_PARAM_READWRITE);
 
@@ -1323,8 +1301,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_WEBSITE_POLICIES] =
         g_param_spec_object(
             "website-policies",
-            _("Default Website Policies"),
-            _("The default policy object for sites loaded in this view"),
+            nullptr, nullptr,
             WEBKIT_TYPE_WEBSITE_POLICIES,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
@@ -1338,8 +1315,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     sObjProperties[PROP_IS_WEB_PROCESS_RESPONSIVE] =
         g_param_spec_boolean(
             "is-web-process-responsive",
-            "Is Web Process Responsive",
-            _("Whether the web process currently associated to the web view is responsive"),
+            nullptr, nullptr,
             TRUE,
             WEBKIT_PARAM_READABLE);
 
@@ -1362,8 +1338,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
      */
     sObjProperties[PROP_CAMERA_CAPTURE_STATE] = g_param_spec_enum(
         "camera-capture-state",
-        "Camera Capture State",
-        _("The capture state of the camera device"),
+        nullptr, nullptr,
         WEBKIT_TYPE_MEDIA_CAPTURE_STATE,
         WEBKIT_MEDIA_CAPTURE_STATE_NONE,
         WEBKIT_PARAM_READWRITE);
@@ -1387,8 +1362,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
      */
     sObjProperties[PROP_MICROPHONE_CAPTURE_STATE] = g_param_spec_enum(
         "microphone-capture-state",
-        "Microphone Capture State",
-        _("The capture state of the microphone device"),
+        nullptr, nullptr,
         WEBKIT_TYPE_MEDIA_CAPTURE_STATE,
         WEBKIT_MEDIA_CAPTURE_STATE_NONE,
         WEBKIT_PARAM_READWRITE);
@@ -1412,8 +1386,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
      */
     sObjProperties[PROP_DISPLAY_CAPTURE_STATE] = g_param_spec_enum(
         "display-capture-state",
-        "Display Capture State",
-        _("The capture state of the display device"),
+        nullptr, nullptr,
         WEBKIT_TYPE_MEDIA_CAPTURE_STATE,
         WEBKIT_MEDIA_CAPTURE_STATE_NONE,
         WEBKIT_PARAM_READWRITE);
@@ -1433,8 +1406,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
      */
     sObjProperties[PROP_WEB_EXTENSION_MODE] = g_param_spec_enum(
         "web-extension-mode",
-        "WebExtension Mode",
-        _("Enables WebExtension mode"),
+        nullptr, nullptr,
         WEBKIT_TYPE_WEB_EXTENSION_MODE,
         WEBKIT_WEB_EXTENSION_MODE_NONE,
         static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
@@ -1457,8 +1429,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
      */
     sObjProperties[PROP_DEFAULT_CONTENT_SECURITY_POLICY] = g_param_spec_string(
         "default-content-security-policy",
-        "Default Content-Security-Policy",
-        _("The default Content-Security-Policy"),
+        nullptr, nullptr,
         nullptr,
         static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
@@ -2615,13 +2586,6 @@ void webkitWebViewMouseTargetChanged(WebKitWebView* webView, const WebHitTestRes
     g_signal_emit(webView, signals[MOUSE_TARGET_CHANGED], 0, priv->mouseTargetHitTestResult.get(), toPlatformModifiers(modifiers));
 }
 
-void webkitWebViewHandleDownloadRequest(WebKitWebView* webView, DownloadProxy* downloadProxy)
-{
-    ASSERT(downloadProxy);
-    GRefPtr<WebKitDownload> download = webkitWebContextGetOrCreateDownload(downloadProxy);
-    webkitDownloadSetWebView(download.get(), webView);
-}
-
 #if PLATFORM(GTK)
 void webkitWebViewPrintFrame(WebKitWebView* webView, WebFrameProxy* frame)
 {
@@ -2772,16 +2736,6 @@ void webkitWebViewSelectionDidChange(WebKitWebView* webView)
         return;
 
     webkitEditorStateChanged(webView->priv->editorState.get(), getPage(webView).editorState());
-}
-
-void webkitWebViewRequestInstallMissingMediaPlugins(WebKitWebView* webView, InstallMissingMediaPluginsPermissionRequest& request)
-{
-#if ENABLE(VIDEO) && !USE(GSTREAMER_FULL)
-    GRefPtr<WebKitInstallMissingMediaPluginsPermissionRequest> installMediaPluginsPermissionRequest = adoptGRef(webkitInstallMissingMediaPluginsPermissionRequestCreate(request));
-    webkitWebViewMakePermissionRequest(webView, WEBKIT_PERMISSION_REQUEST(installMediaPluginsPermissionRequest.get()));
-#else
-    ASSERT_NOT_REACHED();
-#endif
 }
 
 WebKitWebsiteDataManager* webkitWebViewGetWebsiteDataManager(WebKitWebView* webView)
@@ -4457,7 +4411,17 @@ WebKitDownload* webkit_web_view_download_uri(WebKitWebView* webView, const char*
     g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), nullptr);
     g_return_val_if_fail(uri, nullptr);
 
-    GRefPtr<WebKitDownload> download = webkitWebContextStartDownload(webView->priv->context.get(), uri, &getPage(webView));
+    auto& page = getPage(webView);
+    auto& downloadProxy = page.process().processPool().download(page.websiteDataStore(), &page, ResourceRequest { String::fromUTF8(uri) });
+    auto download = webkitDownloadCreate(downloadProxy, webView);
+    downloadProxy.setDidStartCallback([context = GRefPtr<WebKitWebContext> { webView->priv->context }, download = download.get()](auto* downloadProxy) {
+        if (!downloadProxy)
+            return;
+
+        webkitDownloadStarted(download);
+        webkitWebContextDownloadStarted(context.get(), download);
+    });
+
     return download.leakRef();
 }
 

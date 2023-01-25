@@ -63,6 +63,8 @@ public:
         StructureAccess,
         Uint32Literal,
         UnaryExpression,
+        BinaryExpression,
+        PointerDereference,
 
         ShaderModule,
 
@@ -76,6 +78,8 @@ public:
         ArrayType,
         NamedType,
         ParameterizedType,
+        StructType,
+        TypeReference,
 
         Parameter,
         StructMember,

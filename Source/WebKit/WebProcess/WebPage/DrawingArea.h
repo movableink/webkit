@@ -99,8 +99,8 @@ public:
     virtual void setViewExposedRect(std::optional<WebCore::FloatRect>) = 0;
     virtual std::optional<WebCore::FloatRect> viewExposedRect() const = 0;
 
-    virtual void acceleratedAnimationDidStart(uint64_t /*layerID*/, const String& /*key*/, MonotonicTime /*startTime*/) { }
-    virtual void acceleratedAnimationDidEnd(uint64_t /*layerID*/, const String& /*key*/) { }
+    virtual void acceleratedAnimationDidStart(WebCore::GraphicsLayer::PlatformLayerID, const String& /*key*/, MonotonicTime /*startTime*/) { }
+    virtual void acceleratedAnimationDidEnd(WebCore::GraphicsLayer::PlatformLayerID, const String& /*key*/) { }
     virtual void addFence(const WTF::MachSendRight&) { }
 
     virtual WebCore::FloatRect exposedContentRect() const = 0;
@@ -136,8 +136,6 @@ public:
 
     virtual void attachViewOverlayGraphicsLayer(WebCore::GraphicsLayer*) { }
 
-    virtual void setShouldScaleViewToFitDocument(bool) { }
-
     virtual std::optional<WebCore::DestinationColorSpace> displayColorSpace() const { return { }; }
 
     virtual bool addMilestonesToDispatch(OptionSet<WebCore::LayoutMilestone>) { return false; }
@@ -163,6 +161,11 @@ public:
     virtual void adoptDisplayRefreshMonitorsFromDrawingArea(DrawingArea&) { }
 
     void removeMessageReceiverIfNeeded();
+    
+    WebCore::TiledBacking* mainFrameTiledBacking() const;
+    void prepopulateRectForZoom(double scale, WebCore::FloatPoint origin);
+    void setShouldScaleViewToFitDocument(bool);
+    void scaleViewToFitDocumentIfNeeded();
 
 protected:
     DrawingArea(DrawingAreaType, DrawingAreaIdentifier, WebPage&);
@@ -175,6 +178,10 @@ protected:
     const DrawingAreaType m_type;
     DrawingAreaIdentifier m_identifier;
     WebPage& m_webPage;
+    WebCore::IntSize m_lastViewSizeForScaleToFit;
+    WebCore::IntSize m_lastDocumentSizeForScaleToFit;
+    bool m_isScalingViewToFitDocument { false };
+    bool m_shouldScaleViewToFitDocument { false };
 
 private:
     // IPC::MessageReceiver.

@@ -320,24 +320,13 @@ static RefPtr<TransformOperation> blendFunc(TransformOperation* from, TransformO
 
 static inline RefPtr<PathOperation> blendFunc(PathOperation* from, PathOperation* to, const CSSPropertyBlendingContext& context)
 {
-    if (is<ShapePathOperation>(from) && is<ShapePathOperation>(to)) {
-        auto& fromShape = downcast<ShapePathOperation>(*from).basicShape();
-        auto& toShape = downcast<ShapePathOperation>(*to).basicShape();
-
-        if (fromShape.canBlend(toShape))
-            return ShapePathOperation::create(toShape.blend(fromShape, context));
+    if (context.isDiscrete) {
+        ASSERT(!context.progress || context.progress == 1);
+        return context.progress ? to : from;
     }
 
-    if (is<RayPathOperation>(from) && is<RayPathOperation>(to)) {
-        auto& fromRay = downcast<RayPathOperation>(*from);
-        auto& toRay = downcast<RayPathOperation>(*to);
-
-        if (fromRay.canBlend(toRay))
-            return fromRay.blend(toRay, context);
-    }
-
-    // fall back to discrete animation.
-    return context.progress < 0.5 ? from : to;
+    ASSERT(from && to);
+    return from->blend(to, context);
 }
 
 static inline RefPtr<ShapeValue> blendFunc(ShapeValue* from, ShapeValue* to, const CSSPropertyBlendingContext& context)
@@ -348,9 +337,7 @@ static inline RefPtr<ShapeValue> blendFunc(ShapeValue* from, ShapeValue* to, con
     }
 
     ASSERT(from && to);
-    const BasicShape& fromShape = *from->shape();
-    const BasicShape& toShape = *to->shape();
-    return ShapeValue::create(toShape.blend(fromShape, context), to->cssBox());
+    return from->blend(*to, context);
 }
 
 static inline RefPtr<FilterOperation> blendFunc(FilterOperation* from, FilterOperation* to, const CSSPropertyBlendingContext& context, bool blendToPassthrough = false)
@@ -359,50 +346,14 @@ static inline RefPtr<FilterOperation> blendFunc(FilterOperation* from, FilterOpe
     return to->blend(from, context, blendToPassthrough);
 }
 
-static inline FilterOperations blendFilterOperations(const FilterOperations& from, const FilterOperations& to, const CSSPropertyBlendingContext& context)
-{
-    if (context.compositeOperation == CompositeOperation::Add) {
-        ASSERT(context.progress == 1.0);
-        FilterOperations resultOperations;
-        resultOperations.operations().appendVector(from.operations());
-        resultOperations.operations().appendVector(to.operations());
-        return resultOperations;
-    }
-
-    if (context.isDiscrete) {
-        ASSERT(!context.progress || context.progress == 1.0);
-        return context.progress ? to : from;
-    }
-
-    FilterOperations result;
-    size_t fromSize = from.operations().size();
-    size_t toSize = to.operations().size();
-    size_t size = std::max(fromSize, toSize);
-    for (size_t i = 0; i < size; i++) {
-        RefPtr<FilterOperation> fromOp = (i < fromSize) ? from.operations()[i].get() : nullptr;
-        RefPtr<FilterOperation> toOp = (i < toSize) ? to.operations()[i].get() : nullptr;
-        RefPtr<FilterOperation> blendedOp = toOp ? blendFunc(fromOp.get(), toOp.get(), context) : (fromOp ? blendFunc(0, fromOp.get(), context, true) : nullptr);
-        if (blendedOp)
-            result.operations().append(blendedOp);
-        else {
-            auto identityOp = PassthroughFilterOperation::create();
-            if (context.progress > 0.5)
-                result.operations().append(toOp ? toOp : WTFMove(identityOp));
-            else
-                result.operations().append(fromOp ? fromOp : WTFMove(identityOp));
-        }
-    }
-    return result;
-}
-
 static inline FilterOperations blendFunc(const FilterOperations& from, const FilterOperations& to, const CSSPropertyBlendingContext& context)
 {
-    return blendFilterOperations(from, to, context);
+    return from.blend(to, context);
 }
 
 static inline RefPtr<StyleImage> blendFilter(RefPtr<StyleImage> inputImage, const FilterOperations& from, const FilterOperations& to, const CSSPropertyBlendingContext& context)
 {
-    auto filterResult = blendFilterOperations(from, to, context);
+    auto filterResult = from.blend(to, context);
     return StyleFilterImage::create(WTFMove(inputImage), WTFMove(filterResult));
 }
 
@@ -592,18 +543,6 @@ static inline FontSelectionValue blendFunc(FontSelectionValue from, FontSelectio
 static inline std::optional<FontSelectionValue> blendFunc(std::optional<FontSelectionValue> from, std::optional<FontSelectionValue> to, const CSSPropertyBlendingContext& context)
 {
     return blendFunc(*from, *to, context);
-}
-
-static inline OffsetRotation blendFunc(const OffsetRotation& from, const OffsetRotation& to, const CSSPropertyBlendingContext& context)
-{
-    if (context.isDiscrete) {
-        ASSERT(!context.progress || context.progress == 1.0);
-        return context.progress ? to : from;
-    }
-
-    ASSERT(from.hasAuto() == to.hasAuto());
-
-    return OffsetRotation(from.hasAuto(), clampTo<float>(blend(from.angle(), to.angle(), context)));
 }
 
 static inline bool canInterpolate(const GridTrackList& from, const GridTrackList& to)
@@ -810,27 +749,23 @@ protected:
     void (RenderStyle::*m_setter)(T);
 };
 
-class OffsetRotatePropertyWrapper final : public PropertyWrapperGetter<OffsetRotation> {
+class OffsetRotateWrapper final : public PropertyWrapperGetter<OffsetRotation> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    OffsetRotatePropertyWrapper(CSSPropertyID property, OffsetRotation (RenderStyle::*getter)() const, void (RenderStyle::*setter)(OffsetRotation&&))
-        : PropertyWrapperGetter(property, getter)
-        , m_setter(setter)
+    OffsetRotateWrapper()
+        : PropertyWrapperGetter(CSSPropertyOffsetRotate, &RenderStyle::offsetRotate)
     {
     }
 
     bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation) const final
     {
-        return value(from).hasAuto() == value(to).hasAuto();
+        return value(from).canBlend(value(to));
     }
 
     void blend(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const CSSPropertyBlendingContext& context) const final
     {
-        (destination.*m_setter)(blendFunc(value(from), value(to), context));
+        destination.setOffsetRotate(value(from).blend(value(to), context));
     }
-
-private:
-    void (RenderStyle::*m_setter)(OffsetRotation&&);
 };
 
 template <typename T>
@@ -1292,24 +1227,9 @@ public:
 private:
     bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation) const override
     {
-        auto fromPath = value(from);
-        auto toPath = value(to);
-
-        if (is<ShapePathOperation>(fromPath) && is<ShapePathOperation>(toPath)) {
-            auto& fromShape = downcast<ShapePathOperation>(*fromPath).basicShape();
-            auto& toShape = downcast<ShapePathOperation>(*toPath).basicShape();
-
-            return fromShape.canBlend(toShape);
-        }
-
-        if (is<RayPathOperation>(fromPath) && is<RayPathOperation>(toPath)) {
-            auto& fromRay = downcast<RayPathOperation>(*fromPath);
-            auto& toRay = downcast<RayPathOperation>(*toPath);
-
-            return fromRay.canBlend(toRay);
-        }
-
-        return false;
+        auto* fromPath = value(from);
+        auto* toPath = value(to);
+        return fromPath && toPath && fromPath->canBlend(*toPath);
     }
 
     bool equals(const RenderStyle& a, const RenderStyle& b) const final
@@ -1393,17 +1313,7 @@ private:
     {
         auto* fromShape = value(from);
         auto* toShape = value(to);
-
-        if (!fromShape || !toShape)
-            return false;
-
-        if (fromShape->type() != ShapeValue::Type::Shape || toShape->type() != ShapeValue::Type::Shape)
-            return false;
-
-        if (fromShape->cssBox() != toShape->cssBox())
-            return false;
-
-        return fromShape->shape()->canBlend(*toShape->shape());
+        return fromShape && toShape && fromShape->canBlend(*toShape);
     }
 };
 
@@ -1493,7 +1403,7 @@ private:
 
         auto listContainsReference = [](auto& filterOperations) {
             return filterOperations.operations().findIf([](auto& filterOperation) {
-                return filterOperation->type() == FilterOperation::OperationType::REFERENCE;
+                return filterOperation->type() == FilterOperation::Type::Reference;
             }) != notFound;
         };
 
@@ -3465,12 +3375,12 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new ContainIntrinsiclLengthPropertyWrapper(CSSPropertyContainIntrinsicHeight, &RenderStyle::containIntrinsicHeight, &RenderStyle::setContainIntrinsicHeight, &RenderStyle::containIntrinsicHeightType, &RenderStyle::setContainIntrinsicHeightType),
 
         // FIXME: The following properties are currently not animatable but should be:
-        // background-blend-mode, clip-rule, color-interpolation,
+        // align-tracks, background-blend-mode, clip-rule, color-interpolation,
         // color-interpolation-filters, counter-increment, counter-reset, dominant-baseline,
         // fill-rule, font-family, font-feature-settings, font-kerning, font-language-override,
         // font-synthesis, font-variant-alternates, font-variant-caps, font-variant-east-asian,
         // font-variant-ligatures, font-variant-numeric, font-variant-position, grid-template-areas,
-        // ime-mode, marker-end, marker-mid, marker-start, mask, mask-clip, mask-composite, mask-image,
+        // ime-mode, justify-tracks, marker-end, marker-mid, marker-start, mask, mask-clip, mask-composite, mask-image,
         // mask-mode, mask-origin, mask-repeat, mask-type, offset-distance, perspective-origin, quotes,
         // ruby-align, scroll-behavior, shape-rendering, stroke-linecap, stroke-linejoin,
         // text-anchor, text-emphasis-style, text-rendering, vector-effect
@@ -3568,7 +3478,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new LengthPointOrAutoPropertyWrapper(CSSPropertyOffsetPosition, &RenderStyle::offsetPosition, &RenderStyle::setOffsetPosition),
         new LengthPointOrAutoPropertyWrapper(CSSPropertyOffsetAnchor, &RenderStyle::offsetAnchor, &RenderStyle::setOffsetAnchor),
         new PropertyWrapperContent,
-        new OffsetRotatePropertyWrapper(CSSPropertyOffsetRotate, &RenderStyle::offsetRotate, &RenderStyle::setOffsetRotate),
+        new OffsetRotateWrapper,
         new DiscretePropertyWrapper<TextDecorationSkipInk>(CSSPropertyTextDecorationSkipInk, &RenderStyle::textDecorationSkipInk, &RenderStyle::setTextDecorationSkipInk),
         new DiscreteSVGPropertyWrapper<ColorInterpolation>(CSSPropertyColorInterpolation, &SVGRenderStyle::colorInterpolation, &SVGRenderStyle::setColorInterpolation),
         new DiscreteFontDescriptionTypedWrapper<Kerning>(CSSPropertyFontKerning, &FontCascadeDescription::kerning, &FontCascadeDescription::setKerning),
@@ -3603,7 +3513,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new DiscreteSVGPropertyWrapper<const String&>(CSSPropertyMarkerMid, &SVGRenderStyle::markerMidResource, &SVGRenderStyle::setMarkerMidResource),
         new DiscreteSVGPropertyWrapper<const String&>(CSSPropertyMarkerStart, &SVGRenderStyle::markerStartResource, &SVGRenderStyle::setMarkerStartResource)
     };
-    const unsigned animatableLonghandPropertiesCount = WTF_ARRAY_LENGTH(animatableLonghandPropertyWrappers);
+    const unsigned animatableLonghandPropertiesCount = std::size(animatableLonghandPropertyWrappers);
 
     static const CSSPropertyID animatableShorthandProperties[] = {
         CSSPropertyAll,
@@ -3640,7 +3550,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         CSSPropertyFontSynthesis,
         CSSPropertyContainIntrinsicSize
     };
-    const unsigned animatableShorthandPropertiesCount = WTF_ARRAY_LENGTH(animatableShorthandProperties);
+    const unsigned animatableShorthandPropertiesCount = std::size(animatableShorthandProperties);
 
     // Make sure unused slots have a value
     for (int i = 0; i < numCSSProperties; ++i)
@@ -3705,6 +3615,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
 #endif
         case CSSPropertyWebkitTextZoom:
         case CSSPropertyAlignmentBaseline:
+        case CSSPropertyAlignTracks:
         case CSSPropertyAlt:
         case CSSPropertyAnimation:
         case CSSPropertyAnimationComposition:
@@ -3755,6 +3666,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         case CSSPropertyInsetInline:
         case CSSPropertyInsetInlineEnd:
         case CSSPropertyInsetInlineStart:
+        case CSSPropertyJustifyTracks:
         case CSSPropertyListStyle:
         case CSSPropertyMarginBlock: // logical shorthand
         case CSSPropertyMarginInline: // logical shorthand
@@ -4023,40 +3935,30 @@ static Ref<CSSCustomPropertyValue> blendedCSSCustomPropertyValue(const RenderSty
     return CSSCustomPropertyValue::create(blendingContext.progress < 0.5 ? from : to);
 }
 
-static std::pair<const CSSCustomPropertyValue*, const CSSCustomPropertyValue*> customPropertyValuesForBlending(const Document* document, const AtomString& customProperty, const CSSCustomPropertyValue* fromValue, const CSSCustomPropertyValue* toValue)
+static std::pair<const CSSCustomPropertyValue*, const CSSCustomPropertyValue*> customPropertyValuesForBlending(const Document* document, const AtomString& customProperty, const RenderStyle& fromStyle, const RenderStyle& toStyle)
 {
-    // FIXME: it would be convenient if RenderStyle stored the initialValue
-    // for a custom property that was not explicitly set.
-    auto initialValue = [&]() -> const CSSCustomPropertyValue* {
-        if (document) {
-            if (auto registered = document->customPropertyRegistry().get(customProperty))
-                return registered->initialValue();
-        }
-        return nullptr;
-    };
+    // FIXME: When would there be no document?
+    if (!document)
+        return { };
 
-    if (!!fromValue == !!toValue)
-        return { fromValue, toValue };
-    if (!fromValue)
-        return { initialValue(), toValue };
-    return { fromValue, initialValue() };
+    return {
+        fromStyle.customPropertyValue(customProperty, document->customPropertyRegistry()),
+        toStyle.customPropertyValue(customProperty, document->customPropertyRegistry())
+    };
 }
 
 static void blendCustomProperty(const CSSPropertyBlendingClient& client, const AtomString& customProperty, RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, double progress, CompositeOperation compositeOperation, IterationCompositeOperation iterationCompositeOperation, double currentIteration)
 {
     CSSPropertyBlendingContext blendingContext { progress, false, compositeOperation, client, customProperty, iterationCompositeOperation, currentIteration };
 
-    {
-        auto [fromValue, toValue] = customPropertyValuesForBlending(client.document(), customProperty, from.nonInheritedCustomProperties().get(customProperty), to.nonInheritedCustomProperties().get(customProperty));
-        if (fromValue && toValue)
-            destination.setNonInheritedCustomPropertyValue(customProperty, blendedCSSCustomPropertyValue(from, to, *fromValue, *toValue, blendingContext));
-    }
+    auto [fromValue, toValue] = customPropertyValuesForBlending(client.document(), customProperty, from, to);
+    if (!fromValue || !toValue)
+        return;
 
-    {
-        auto [fromValue, toValue] = customPropertyValuesForBlending(client.document(), customProperty, from.inheritedCustomProperties().get(customProperty), to.inheritedCustomProperties().get(customProperty));
-        if (fromValue && toValue)
-            destination.setInheritedCustomPropertyValue(customProperty, blendedCSSCustomPropertyValue(from, to, *fromValue, *toValue, blendingContext));
-    }
+    if (client.document()->customPropertyRegistry().isInherited(customProperty))
+        destination.setInheritedCustomPropertyValue(customProperty, blendedCSSCustomPropertyValue(from, to, *fromValue, *toValue, blendingContext));
+    else
+        destination.setNonInheritedCustomPropertyValue(customProperty, blendedCSSCustomPropertyValue(from, to, *fromValue, *toValue, blendingContext));
 }
 
 void CSSPropertyAnimation::blendProperty(const CSSPropertyBlendingClient& client, AnimatableProperty property, RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, double progress, CompositeOperation compositeOperation, IterationCompositeOperation iterationCompositeOperation, double currentIteration)
@@ -4102,7 +4004,7 @@ bool CSSPropertyAnimation::propertyRequiresBlendingForAccumulativeIteration(cons
                 return wrapper->requiresBlendingForAccumulativeIteration(a, b);
             return false;
         }, [&] (const AtomString& customProperty) {
-            auto [from, to] = customPropertyValuesForBlending(client.document(), customProperty, a.getCustomProperty(customProperty), b.getCustomProperty(customProperty));
+            auto [from, to] = customPropertyValuesForBlending(client.document(), customProperty, a, b);
             if (!from || !to)
                 return false;
 
@@ -4144,7 +4046,7 @@ bool CSSPropertyAnimation::propertiesEqual(AnimatableProperty property, const Re
                 return wrapper->equals(a, b);
             return true;
         }, [&] (const AtomString& customProperty) {
-            auto [aCustomPropertyValue, bCustomPropertyValue] = customPropertyValuesForBlending(&document, customProperty, a.getCustomProperty(customProperty), b.getCustomProperty(customProperty));
+            auto [aCustomPropertyValue, bCustomPropertyValue] = customPropertyValuesForBlending(&document, customProperty, a, b);
             if (!aCustomPropertyValue && !bCustomPropertyValue)
                 return true;
             if (!aCustomPropertyValue || !bCustomPropertyValue)
@@ -4190,7 +4092,7 @@ bool CSSPropertyAnimation::canPropertyBeInterpolated(AnimatableProperty property
                 return wrapper->canInterpolate(a, b, CompositeOperation::Replace);
             return true;
         }, [&] (const AtomString& customProperty) {
-            auto [aCustomPropertyValue, bCustomPropertyValue] = customPropertyValuesForBlending(&document, customProperty, a.getCustomProperty(customProperty), b.getCustomProperty(customProperty));
+            auto [aCustomPropertyValue, bCustomPropertyValue] = customPropertyValuesForBlending(&document, customProperty, a, b);
             if (!aCustomPropertyValue || !bCustomPropertyValue || aCustomPropertyValue == bCustomPropertyValue)
                 return false;
             auto& aVariantValue = aCustomPropertyValue->value();

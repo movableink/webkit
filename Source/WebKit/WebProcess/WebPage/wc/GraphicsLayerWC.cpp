@@ -155,13 +155,6 @@ GraphicsLayerWC::~GraphicsLayerWC()
         m_observer->graphicsLayerRemoved(*this);
 }
 
-GraphicsLayer::PlatformLayerID GraphicsLayerWC::generateLayerID()
-{
-    // 0 and max can't be used for hash keys
-    static GraphicsLayer::PlatformLayerID id = 1;
-    return id++;
-}
-
 GraphicsLayer::PlatformLayerID GraphicsLayerWC::primaryLayerID() const
 {
     return m_layerID;
@@ -449,7 +442,7 @@ static bool filtersCanBeComposited(const FilterOperations& filters)
     if (!filters.size())
         return false;
     for (const auto& filterOperation : filters.operations()) {
-        if (filterOperation->type() == FilterOperation::REFERENCE)
+        if (filterOperation->type() == FilterOperation::Type::Reference)
             return false;
     }
     return true;

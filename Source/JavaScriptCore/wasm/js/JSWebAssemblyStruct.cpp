@@ -38,7 +38,7 @@ namespace JSC {
 
 const ClassInfo JSWebAssemblyStruct::s_info = { "WebAssembly.Struct"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyStruct) };
 
-JSWebAssemblyStruct::JSWebAssemblyStruct(VM& vm, Structure* structure, Ref<Wasm::TypeDefinition>&& type)
+JSWebAssemblyStruct::JSWebAssemblyStruct(VM& vm, Structure* structure, Ref<const Wasm::TypeDefinition>&& type)
     : Base(vm, structure)
     , m_type(WTFMove(type))
     , m_payload(structType()->instancePayloadSize())
@@ -51,7 +51,7 @@ JSWebAssemblyStruct* JSWebAssemblyStruct::tryCreate(JSGlobalObject* globalObject
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    Ref<Wasm::TypeDefinition> type = instance->instance().module().moduleInformation().typeSignatures[typeIndex];
+    Ref<const Wasm::TypeDefinition> type = instance->instance().module().moduleInformation().typeSignatures[typeIndex]->expand();
 
     if (!globalObject->webAssemblyEnabled()) {
         throwException(globalObject, throwScope, createEvalError(globalObject, globalObject->webAssemblyDisabledErrorMessage()));
@@ -83,7 +83,12 @@ uint64_t JSWebAssemblyStruct::get(uint32_t fieldIndex) const
     using Wasm::TypeKind;
 
     const uint8_t* targetPointer = fieldPointer(fieldIndex);
-    switch (fieldType(fieldIndex).type.kind) {
+
+    // FIXME: packed types in structs not supported yet:
+    // https://bugs.webkit.org/show_bug.cgi?id=246981
+    ASSERT(fieldType(fieldIndex).type.is<Wasm::Type>());
+
+    switch (fieldType(fieldIndex).type.as<Wasm::Type>().kind) {
     case TypeKind::I32:
     case TypeKind::F32:
         return *bitwise_cast<uint32_t*>(targetPointer);
@@ -106,7 +111,12 @@ void JSWebAssemblyStruct::set(JSGlobalObject* globalObject, uint32_t fieldIndex,
     using Wasm::TypeKind;
 
     uint8_t* targetPointer = fieldPointer(fieldIndex);
-    switch (fieldType(fieldIndex).type.kind) {
+
+    // FIXME: packed types in structs not supported yet:
+    // https://bugs.webkit.org/show_bug.cgi?id=246981
+    ASSERT(fieldType(fieldIndex).type.is<Wasm::Type>());
+
+    switch (fieldType(fieldIndex).type.as<Wasm::Type>().kind) {
     case TypeKind::I32: {
         *bitwise_cast<int32_t*>(targetPointer) = argument.toInt32(globalObject);
         return;
@@ -124,6 +134,7 @@ void JSWebAssemblyStruct::set(JSGlobalObject* globalObject, uint32_t fieldIndex,
         return;
     }
     case TypeKind::Arrayref:
+    case TypeKind::Structref:
     case TypeKind::Externref:
     case TypeKind::Funcref:
     case TypeKind::Ref:

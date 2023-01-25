@@ -376,7 +376,7 @@ RegisterSetBuilder RegisterSetBuilder::registersToSaveForJSCall(RegisterSetBuild
     result.exclude(RegisterSetBuilder::vmCalleeSaveRegisters());
     result.exclude(RegisterSetBuilder::stackRegisters());
     result.exclude(RegisterSetBuilder::reservedHardwareRegisters());
-    return result.buildWithLowerBits();
+    return result;
 }
 
 RegisterSetBuilder RegisterSetBuilder::registersToSaveForCCall(RegisterSetBuilder liveRegisters)
@@ -385,7 +385,7 @@ RegisterSetBuilder RegisterSetBuilder::registersToSaveForCCall(RegisterSetBuilde
     result.exclude(RegisterSetBuilder::calleeSaveRegisters());
     result.exclude(RegisterSetBuilder::stackRegisters());
     result.exclude(RegisterSetBuilder::reservedHardwareRegisters());
-    return result.buildWithLowerBits();
+    return result;
 }
 
 RegisterSet RegisterSetBuilder::allGPRs()
@@ -420,6 +420,22 @@ RegisterSet RegisterSetBuilder::allScalarRegisters()
     result.m_upperBits.clearAll();
     return result;
 }
+
+#if ENABLE(WEBASSEMBLY)
+RegisterSet RegisterSetBuilder::wasmPinnedRegisters(MemoryMode memoryMode)
+{
+    RegisterSet result;
+    if constexpr (GPRInfo::wasmBaseMemoryPointer != InvalidGPRReg)
+        result.add(GPRInfo::wasmBaseMemoryPointer, IgnoreVectors);
+    if constexpr (GPRInfo::wasmContextInstancePointer != InvalidGPRReg)
+        result.add(GPRInfo::wasmContextInstancePointer, IgnoreVectors);
+    if constexpr (GPRInfo::wasmBoundsCheckingSizeRegister != InvalidGPRReg) {
+        if (memoryMode == MemoryMode::BoundsChecking)
+            result.add(GPRInfo::wasmBoundsCheckingSizeRegister, IgnoreVectors);
+    }
+    return result;
+}
+#endif
 
 } // namespace JSC
 

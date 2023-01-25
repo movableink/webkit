@@ -326,6 +326,7 @@ public:
     void queueLoad(JSStringRef url, JSStringRef target, bool shouldOpenExternalURLs);
     void queueLoadHTMLString(JSStringRef content, JSStringRef baseURL, JSStringRef unreachableURL);
     void queueReload();
+    void reloadFromOrigin();
     void queueLoadingScript(JSStringRef script);
     void queueNonLoadingScript(JSStringRef script);
 
@@ -373,7 +374,7 @@ public:
     // Gamepads
     void connectMockGamepad(unsigned index);
     void disconnectMockGamepad(unsigned index);
-    void setMockGamepadDetails(unsigned index, JSStringRef gamepadID, JSStringRef mapping, unsigned axisCount, unsigned buttonCount);
+    void setMockGamepadDetails(unsigned index, JSStringRef gamepadID, JSStringRef mapping, unsigned axisCount, unsigned buttonCount, bool supportsDualRumble);
     void setMockGamepadAxisValue(unsigned index, unsigned axisIndex, double value);
     void setMockGamepadButtonValue(unsigned index, unsigned buttonIndex, double value);
     

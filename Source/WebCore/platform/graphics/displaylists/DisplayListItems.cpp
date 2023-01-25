@@ -276,20 +276,12 @@ void DrawPath::apply(GraphicsContext& context) const
 
 void DrawFocusRingPath::apply(GraphicsContext& context) const
 {
-    context.drawFocusRing(m_path, m_width, m_offset, m_color);
-}
-
-DrawFocusRingRects::DrawFocusRingRects(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
-    : m_rects(rects)
-    , m_width(width)
-    , m_offset(offset)
-    , m_color(color)
-{
+    context.drawFocusRing(m_path, m_outlineWidth, m_color);
 }
 
 void DrawFocusRingRects::apply(GraphicsContext& context) const
 {
-    context.drawFocusRing(m_rects, m_width, m_offset, m_color);
+    context.drawFocusRing(m_rects, m_outlineOffset, m_outlineWidth, m_color);
 }
 
 void FillRect::apply(GraphicsContext& context) const
@@ -421,9 +413,9 @@ void ClearRect::apply(GraphicsContext& context) const
     context.clearRect(m_rect);
 }
 
-DrawControlPart::DrawControlPart(ControlPart& part, const FloatRect& rect, float deviceScaleFactor, const ControlStyle& style)
+DrawControlPart::DrawControlPart(ControlPart& part, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle& style)
     : m_part(part)
-    , m_rect(rect)
+    , m_borderRect(borderRect)
     , m_deviceScaleFactor(deviceScaleFactor)
     , m_style(style)
 {
@@ -431,7 +423,7 @@ DrawControlPart::DrawControlPart(ControlPart& part, const FloatRect& rect, float
 
 void DrawControlPart::apply(GraphicsContext& context)
 {
-    context.drawControlPart(m_part, m_rect, m_deviceScaleFactor, m_style);
+    context.drawControlPart(m_part, m_borderRect, m_deviceScaleFactor, m_style);
 }
 
 void BeginTransparencyLayer::apply(GraphicsContext& context) const
@@ -736,16 +728,15 @@ void dumpItem(TextStream& ts, const DrawPath& item, OptionSet<AsTextFlag>)
 void dumpItem(TextStream& ts, const DrawFocusRingPath& item, OptionSet<AsTextFlag>)
 {
     ts.dumpProperty("path", item.path());
-    ts.dumpProperty("width", item.width());
-    ts.dumpProperty("offset", item.offset());
+    ts.dumpProperty("outline-width", item.outlineWidth());
     ts.dumpProperty("color", item.color());
 }
 
 void dumpItem(TextStream& ts, const DrawFocusRingRects& item, OptionSet<AsTextFlag>)
 {
     ts.dumpProperty("rects", item.rects());
-    ts.dumpProperty("width", item.width());
-    ts.dumpProperty("offset", item.offset());
+    ts.dumpProperty("outline-offset", item.outlineOffset());
+    ts.dumpProperty("outline-width", item.outlineWidth());
     ts.dumpProperty("color", item.color());
 }
 
@@ -877,7 +868,7 @@ void dumpItem(TextStream& ts, const ClearRect& item, OptionSet<AsTextFlag>)
 void dumpItem(TextStream& ts, const DrawControlPart& item, OptionSet<AsTextFlag>)
 {
     ts.dumpProperty("type", item.type());
-    ts.dumpProperty("rect", item.rect());
+    ts.dumpProperty("border-rect", item.borderRect());
     ts.dumpProperty("device-scale-factor", item.deviceScaleFactor());
     ts.dumpProperty("style", item.style());
 }

@@ -1798,6 +1798,11 @@ void TestRunner::loadedSubresourceDomains(JSValueRef callback)
     postMessage("LoadedSubresourceDomains");
 }
 
+void TestRunner::reloadFromOrigin()
+{
+    InjectedBundle::singleton().reloadFromOrigin();
+}
+
 void TestRunner::callDidReceiveLoadedSubresourceDomainsCallback(Vector<String>&& domains)
 {
     auto result = makeDomainsValue(domains);
@@ -1886,7 +1891,7 @@ void TestRunner::disconnectMockGamepad(unsigned index)
     postSynchronousMessage("DisconnectMockGamepad", index);
 }
 
-void TestRunner::setMockGamepadDetails(unsigned index, JSStringRef gamepadID, JSStringRef mapping, unsigned axisCount, unsigned buttonCount)
+void TestRunner::setMockGamepadDetails(unsigned index, JSStringRef gamepadID, JSStringRef mapping, unsigned axisCount, unsigned buttonCount, bool supportsDualRumble)
 {
     postSynchronousMessage("SetMockGamepadDetails", createWKDictionary({
         { "GamepadID", toWK(gamepadID) },
@@ -1894,6 +1899,7 @@ void TestRunner::setMockGamepadDetails(unsigned index, JSStringRef gamepadID, JS
         { "GamepadIndex", adoptWK(WKUInt64Create(index)) },
         { "AxisCount", adoptWK(WKUInt64Create(axisCount)) },
         { "ButtonCount", adoptWK(WKUInt64Create(buttonCount)) },
+        { "SupportsDualRumble", adoptWK(WKBooleanCreate(supportsDualRumble)) },
     }));
 }
 
@@ -1925,7 +1931,7 @@ void TestRunner::disconnectMockGamepad(unsigned)
 {
 }
 
-void TestRunner::setMockGamepadDetails(unsigned, JSStringRef, JSStringRef, unsigned, unsigned)
+void TestRunner::setMockGamepadDetails(unsigned, JSStringRef, JSStringRef, unsigned, unsigned, bool)
 {
 }
 

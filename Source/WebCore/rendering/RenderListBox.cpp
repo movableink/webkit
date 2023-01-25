@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *               2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,7 +33,6 @@
 
 #include "AXObjectCache.h"
 #include "CSSFontSelector.h"
-#include "DeprecatedGlobalSettings.h"
 #include "DocumentInlines.h"
 #include "EventHandler.h"
 #include "FocusController.h"
@@ -685,12 +685,6 @@ bool RenderListBox::logicalScroll(ScrollLogicalDirection direction, ScrollGranul
     return ScrollableArea::scroll(logicalToPhysical(direction, style().isHorizontalWritingMode(), style().isFlippedBlocksWritingMode()), granularity, stepCount);
 }
 
-void RenderListBox::valueChanged(unsigned listIndex)
-{
-    selectElement().setSelectedIndex(selectElement().listToOptionIndex(listIndex));
-    selectElement().dispatchFormControlChangeEvent();
-}
-
 ScrollPosition RenderListBox::scrollPosition() const
 {
     return { 0, m_indexOffset };
@@ -981,7 +975,7 @@ Ref<Scrollbar> RenderListBox::createScrollbar()
     if (hasCustomScrollbarStyle)
         widget = RenderScrollbar::createCustomScrollbar(*this, ScrollbarOrientation::Vertical, &selectElement());
     else {
-        widget = Scrollbar::createNativeScrollbar(*this, ScrollbarOrientation::Vertical, theme().scrollbarControlSizeForPart(ControlPartType::Listbox));
+        widget = Scrollbar::createNativeScrollbar(*this, ScrollbarOrientation::Vertical, theme().scrollbarControlSizeForPart(StyleAppearance::Listbox));
         didAddScrollbar(widget.get(), ScrollbarOrientation::Vertical);
         if (page().isMonitoringWheelEvents())
             scrollAnimator().setWheelEventTestMonitor(page().wheelEventTestMonitor());

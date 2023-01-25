@@ -101,8 +101,8 @@ protected:
     virtual void recordDrawDotsForDocumentMarker(const FloatRect&, const DocumentMarkerLineStyle&) = 0;
     virtual void recordDrawEllipse(const FloatRect&) = 0;
     virtual void recordDrawPath(const Path&) = 0;
-    virtual void recordDrawFocusRingPath(const Path&, float width, float offset, const Color&) = 0;
-    virtual void recordDrawFocusRingRects(const Vector<FloatRect>&, float width, float offset, const Color&) = 0;
+    virtual void recordDrawFocusRingPath(const Path&, float outlineWidth, const Color&) = 0;
+    virtual void recordDrawFocusRingRects(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) = 0;
     virtual void recordFillRect(const FloatRect&) = 0;
     virtual void recordFillRectWithColor(const FloatRect&, const Color&) = 0;
     virtual void recordFillRectWithGradient(const FloatRect&, Gradient&) = 0;
@@ -119,6 +119,7 @@ protected:
     virtual void recordFillEllipse(const FloatRect&) = 0;
 #if ENABLE(VIDEO)
     virtual void recordPaintFrameForMedia(MediaPlayer&, const FloatRect& destination) = 0;
+    virtual void recordPaintVideoFrame(VideoFrame&, const FloatRect& destination, bool shouldDiscardAlpha) = 0;
 #endif
     virtual void recordStrokeRect(const FloatRect&, float) = 0;
 #if ENABLE(INLINE_PATH_DATA)
@@ -132,7 +133,7 @@ protected:
     virtual void recordStrokeEllipse(const FloatRect&) = 0;
     virtual void recordClearRect(const FloatRect&) = 0;
 
-    virtual void recordDrawControlPart(ControlPart&, const FloatRect&, float deviceScaleFactor, const ControlStyle&) = 0;
+    virtual void recordDrawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&) = 0;
 
 #if USE(CG)
     virtual void recordApplyStrokePattern() = 0;
@@ -221,7 +222,7 @@ private:
     WEBCORE_EXPORT void applyFillPattern() final;
 #endif
 
-    WEBCORE_EXPORT void drawControlPart(ControlPart&, const FloatRect&, float deviceScaleFactor, const ControlStyle&) final;
+    WEBCORE_EXPORT void drawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&) final;
 
     WEBCORE_EXPORT void drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter&, FilterResults&) final;
 
@@ -243,13 +244,8 @@ private:
 
     WEBCORE_EXPORT void drawPath(const Path&) final;
 
-    WEBCORE_EXPORT void drawFocusRing(const Path&, float width, float offset, const Color&) final;
-    WEBCORE_EXPORT void drawFocusRing(const Vector<FloatRect>&, float width, float offset, const Color&) final;
-
-#if PLATFORM(MAC)
-    WEBCORE_EXPORT void drawFocusRing(const Path&, double timeOffset, bool& needsRedraw, const Color&) final;
-    WEBCORE_EXPORT void drawFocusRing(const Vector<FloatRect>&, double timeOffset, bool& needsRedraw, const Color&) final;
-#endif
+    WEBCORE_EXPORT void drawFocusRing(const Path&, float outlineWidth, const Color&) final;
+    WEBCORE_EXPORT void drawFocusRing(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) final;
 
     WEBCORE_EXPORT void save() final;
     WEBCORE_EXPORT void restore() final;
@@ -273,8 +269,6 @@ private:
 
 #if ENABLE(VIDEO)
     WEBCORE_EXPORT void paintFrameForMedia(MediaPlayer&, const FloatRect& destination) final;
-#endif
-#if ENABLE(WEB_CODECS)
     WEBCORE_EXPORT void paintVideoFrame(VideoFrame&, const FloatRect&, bool shouldDiscardAlpha) final;
 #endif
 

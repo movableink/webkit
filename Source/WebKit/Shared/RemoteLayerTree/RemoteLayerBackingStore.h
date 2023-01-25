@@ -58,7 +58,7 @@ public:
     RemoteLayerBackingStore(PlatformCALayerRemote*);
     ~RemoteLayerBackingStore();
 
-    enum class Type : uint8_t {
+    enum class Type : bool {
         IOSurface,
         Bitmap
     };
@@ -70,6 +70,7 @@ public:
     struct Parameters {
         Type type { Type::Bitmap };
         WebCore::FloatSize size;
+        WebCore::DestinationColorSpace colorSpace { WebCore::DestinationColorSpace::SRGB() };
         float scale { 1.0f };
         bool deepColor { false };
         bool isOpaque { false };
@@ -86,6 +87,7 @@ public:
         {
             return (type == other.type
                 && size == other.size
+                && colorSpace == other.colorSpace
                 && scale == other.scale
                 && deepColor == other.deepColor
                 && isOpaque == other.isOpaque
@@ -115,7 +117,7 @@ public:
     WebCore::FloatSize size() const { return m_parameters.size; }
     float scale() const { return m_parameters.scale; }
     bool usesDeepColorBackingStore() const;
-    WebCore::DestinationColorSpace colorSpace() const;
+    WebCore::DestinationColorSpace colorSpace() const { return m_parameters.colorSpace; }
     WebCore::PixelFormat pixelFormat() const;
     Type type() const { return m_parameters.type; }
     bool isOpaque() const { return m_parameters.isOpaque; }
@@ -166,7 +168,7 @@ public:
 private:
     RemoteLayerBackingStoreCollection* backingStoreCollection() const;
 
-    void drawInContext(WebCore::GraphicsContext&);
+    void drawInContext(WebCore::GraphicsContext&, WTF::Function<void()>&& additionalContextSetupCallback = nullptr);
 
     struct Buffer {
         RefPtr<WebCore::ImageBuffer> imageBuffer;
@@ -216,15 +218,3 @@ private:
 };
 
 } // namespace WebKit
-
-namespace WTF {
-
-template<> struct EnumTraits<WebKit::RemoteLayerBackingStore::Type> {
-    using values = EnumValues<
-        WebKit::RemoteLayerBackingStore::Type,
-        WebKit::RemoteLayerBackingStore::Type::IOSurface,
-        WebKit::RemoteLayerBackingStore::Type::Bitmap
-    >;
-};
-
-} // namespace WTF

@@ -220,7 +220,6 @@ class IgnoreSelectionChangeForScope;
 class IntPoint;
 class KeyboardEvent;
 class MediaPlaybackTargetContext;
-class MediaPlayerRequestInstallMissingPluginsCallback;
 class MediaSessionCoordinator;
 class Page;
 class PrintContext;
@@ -1018,6 +1017,11 @@ public:
     void addDictationAlternative(const String& text, WebCore::DictationContext, CompletionHandler<void(bool)>&&);
     void dictationAlternativesAtSelection(CompletionHandler<void(Vector<WebCore::DictationContext>&&)>&&);
     void clearDictationAlternatives(Vector<WebCore::DictationContext>&&);
+
+    WebCore::Node* clickableNodeAtLocation(const WebCore::FloatPoint&, WebCore::FloatPoint&) const;
+    bool isTransparentOrFullyClipped(const WebCore::Element&) const;
+
+    Vector<WebCore::FloatRect> getEvasionRectsAroundSelection(const Vector<WebCore::FloatPoint>&, bool = true) const;
 #endif // PLATFORM(COCOA)
 
 #if PLATFORM(MAC)
@@ -1298,9 +1302,6 @@ public:
 
     void imageOrMediaDocumentSizeChanged(const WebCore::IntSize&);
 
-#if ENABLE(VIDEO) && USE(GSTREAMER)
-    void requestInstallMissingMediaPlugins(const String& details, const String& description, WebCore::MediaPlayerRequestInstallMissingPluginsCallback&);
-#endif
 #if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
     void setOrientationForMediaCapture(uint64_t rotation);
     void setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted);
@@ -1515,7 +1516,7 @@ public:
 
     void isPlayingMediaDidChange(WebCore::MediaProducerMediaStateFlags);
 
-    URL sanitizeLookalikeCharacters(const URL&) const;
+    URL sanitizeLookalikeCharacters(const URL&, WebCore::LookalikeCharacterSanitizationTrigger);
 
 #if ENABLE(IMAGE_ANALYSIS)
     void requestTextRecognition(WebCore::Element&, WebCore::TextRecognitionOptions&&, CompletionHandler<void(RefPtr<WebCore::Element>&&)>&& = { });
@@ -1617,6 +1618,9 @@ public:
 
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
     void updateImageAnimationEnabled();
+    void pauseAllAnimations(CompletionHandler<void()>&&);
+    void playAllAnimations(CompletionHandler<void()>&&);
+    void isAnyAnimationAllowedToPlayDidChange(bool /* anyAnimationCanPlay */);
 #endif
 
     bool shouldSkipDecidePolicyForResponse(const WebCore::ResourceResponse&, const WebCore::ResourceRequest&) const;
@@ -1939,8 +1943,7 @@ private:
     void didCancelForOpenPanel();
 
 #if PLATFORM(IOS_FAMILY)
-    void didChooseFilesForOpenPanelWithDisplayStringAndIcon(const Vector<String>&, const String& displayString, const IPC::DataReference& iconData, WebKit::SandboxExtension::Handle&&, WebKit::SandboxExtension::Handle&&);
-    bool isTransparentOrFullyClipped(const WebCore::Element&) const;
+    void didChooseFilesForOpenPanelWithDisplayStringAndIcon(const Vector<String>&, const String& displayString, const IPC::DataReference& iconData, WebKit::SandboxExtension::Handle&&, WebKit::SandboxExtension::Handle&&, WebKit::SandboxExtension::Handle&&);
 #endif
 
 #if ENABLE(SANDBOX_EXTENSIONS)
@@ -1950,7 +1953,7 @@ private:
     void didReceiveGeolocationPermissionDecision(GeolocationIdentifier, const String& authorizationToken);
 
 #if ENABLE(MEDIA_STREAM)
-    void userMediaAccessWasGranted(WebCore::UserMediaRequestIdentifier, WebCore::CaptureDevice&& audioDeviceUID, WebCore::CaptureDevice&& videoDeviceUID, WebCore::MediaDeviceHashSalts&& mediaDeviceIdentifierHashSalt, SandboxExtension::Handle&&, CompletionHandler<void()>&&);
+    void userMediaAccessWasGranted(WebCore::UserMediaRequestIdentifier, WebCore::CaptureDevice&& audioDeviceUID, WebCore::CaptureDevice&& videoDeviceUID, WebCore::MediaDeviceHashSalts&& mediaDeviceIdentifierHashSalt, Vector<SandboxExtension::Handle>&&, CompletionHandler<void()>&&);
     void userMediaAccessWasDenied(WebCore::UserMediaRequestIdentifier, uint64_t reason, String&& invalidConstraint);
 #endif
 
@@ -2035,10 +2038,6 @@ private:
     void setShouldScaleViewToFitDocument(bool);
 
     void pageStoppedScrolling();
-
-#if ENABLE(VIDEO) && USE(GSTREAMER)
-    void didEndRequestInstallMissingMediaPlugins(uint32_t result);
-#endif
 
     void setUserInterfaceLayoutDirection(uint32_t);
 
@@ -2491,10 +2490,6 @@ private:
     std::optional<InputMethodState> m_inputMethodState;
 #endif
 
-#if ENABLE(VIDEO) && USE(GSTREAMER)
-    RefPtr<WebCore::MediaPlayerRequestInstallMissingPluginsCallback> m_installMediaPluginsCallback;
-#endif
-
 #if USE(OS_STATE)
     WallTime m_loadCommitTime;
 #endif
@@ -2613,7 +2608,7 @@ inline bool WebPage::shouldAvoidComputingPostLayoutDataForEditorState() const { 
 #endif
 
 #if !PLATFORM(COCOA)
-inline URL WebPage::sanitizeLookalikeCharacters(const URL& url) const { return url; }
+inline URL WebPage::sanitizeLookalikeCharacters(const URL& url, WebCore::LookalikeCharacterSanitizationTrigger) { return url; }
 #endif
 
 #if PLATFORM(IOS_FAMILY)

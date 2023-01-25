@@ -48,9 +48,9 @@ namespace WebCore {
     M(ClipRects) \
     M(Compositing) \
     M(CompositingOverlap) \
-    M(ContentExtensions) \
     M(ContentFiltering) \
     M(ContentObservation) \
+    M(Crypto) \
     M(DatabaseTracker) \
     M(DisplayLink) \
     M(DisplayLists) \

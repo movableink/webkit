@@ -222,28 +222,23 @@ bool CSSValue::traverseSubresources(const Function<bool(const CachedResource&)>&
     });
 }
 
-void CSSValue::collectDirectComputationalDependencies(HashSet<CSSPropertyID>& values) const
+ComputedStyleDependencies CSSValue::computedStyleDependencies() const
 {
-    if (auto* asList = dynamicDowncast<CSSValueList>(*this)) {
-        for (auto& listValue : *asList)
-            listValue->collectDirectComputationalDependencies(values);
-        return;
-    }
-
-    if (is<CSSPrimitiveValue>(*this))
-        downcast<CSSPrimitiveValue>(*this).collectDirectComputationalDependencies(values);
+    ComputedStyleDependencies dependencies;
+    collectComputedStyleDependencies(dependencies);
+    return dependencies;
 }
 
-void CSSValue::collectDirectRootComputationalDependencies(HashSet<CSSPropertyID>& values) const
+void CSSValue::collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const
 {
     if (auto* asList = dynamicDowncast<CSSValueList>(*this)) {
         for (auto& listValue : *asList)
-            listValue->collectDirectRootComputationalDependencies(values);
+            listValue->collectComputedStyleDependencies(dependencies);
         return;
     }
 
     if (is<CSSPrimitiveValue>(*this))
-        downcast<CSSPrimitiveValue>(*this).collectDirectRootComputationalDependencies(values);
+        downcast<CSSPrimitiveValue>(*this).collectComputedStyleDependencies(dependencies);
 }
 
 bool CSSValue::equals(const CSSValue& other) const
@@ -304,51 +299,5 @@ Ref<DeprecatedCSSOMValue> CSSValue::createDeprecatedCSSOMWrapper(CSSStyleDeclara
         return DeprecatedCSSOMValueList::create(downcast<CSSValueList>(*this), styleDeclaration);
     return DeprecatedCSSOMComplexValue::create(*this, styleDeclaration);
 }
-
-bool CSSValue::treatAsInheritedValue(CSSPropertyID propertyID) const
-{
-    return isInheritValue() || (isUnsetValue() && CSSProperty::isInheritedProperty(propertyID));
-}
-
-bool CSSValue::treatAsInitialValue(CSSPropertyID propertyID) const
-{
-    return isInitialValue() || (isUnsetValue() && !CSSProperty::isInheritedProperty(propertyID));
-}
-
-bool CSSValue::isInitialValue() const
-{
-    return is<CSSPrimitiveValue>(*this) && downcast<CSSPrimitiveValue>(*this).isInitialValue();
-}
-
-bool CSSValue::isImplicitInitialValue() const
-{
-    return is<CSSPrimitiveValue>(*this) && downcast<CSSPrimitiveValue>(*this).isImplicitInitialValue();
-}
-
-bool CSSValue::isInheritValue() const
-{
-    return is<CSSPrimitiveValue>(*this) && downcast<CSSPrimitiveValue>(*this).isInheritValue();
-}
-
-bool CSSValue::isUnsetValue() const
-{
-    return is<CSSPrimitiveValue>(*this) && downcast<CSSPrimitiveValue>(*this).isUnsetValue();
-}
-
-bool CSSValue::isRevertValue() const
-{
-    return is<CSSPrimitiveValue>(*this) && downcast<CSSPrimitiveValue>(*this).isRevertValue();
-}
-
-bool CSSValue::isRevertLayerValue() const
-{
-    return is<CSSPrimitiveValue>(*this) && downcast<CSSPrimitiveValue>(*this).isRevertLayerValue();
-}
-
-bool CSSValue::isCSSWideKeyword() const
-{
-    return is<CSSPrimitiveValue>(*this) && downcast<CSSPrimitiveValue>(*this).isCSSWideKeyword();
-}
-
 
 }

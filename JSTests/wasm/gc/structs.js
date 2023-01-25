@@ -44,6 +44,13 @@ function testStructDeclaration() {
     )
   `);
 
+  instantiate(`
+    (module
+      (type (struct (field i32)))
+      (func (result structref) (ref.null 0))
+    )
+  `);
+
   /*
    * too many fields
    * (module
@@ -88,6 +95,33 @@ function testStructDeclaration() {
     WebAssembly.CompileError,
     "WebAssembly.Module doesn't parse at byte 15: number of fields for struct type at position 0 is too big 720896 maximum 10000 (evaluating 'new WebAssembly.Module(buffer)')"
   );
+
+  // Invalid subtyping for structref.
+  assert.throws(
+    () =>
+      compile(`
+        (module
+          (type (array i32))
+          (func (result structref) (ref.null 0))
+        )
+      `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't validate: control flow returns with unexpected type. (I32, mutable) is not a Structref, in function at index 0 (evaluating 'new WebAssembly.Module(binary)')"
+  );
+
+  // Invalid subtyping for structref.
+  assert.throws(
+    () =>
+      compile(`
+        (module
+          (type (struct))
+          (func (result structref) (ref.null 0))
+          (func (result (ref null 0)) (call 0))
+        )
+      `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't validate: control flow returns with unexpected type. Structref is not a (), in function at index 1 (evaluating 'new WebAssembly.Module(binary)')"
+  );
 }
 
 function testStructJS() {
@@ -103,7 +137,7 @@ function testStructJS() {
       `);
       m.exports.f();
     },
-    WebAssembly.RuntimeError,
+    TypeError,
     "Unsupported use of struct or array type"
   )
 
@@ -117,7 +151,7 @@ function testStructJS() {
       `);
       m.exports.f(null);
     },
-    WebAssembly.RuntimeError,
+    TypeError,
     "Unsupported use of struct or array type"
   )
 
@@ -132,7 +166,7 @@ function testStructJS() {
       `, { m: { f: (x) => { return; } } });
       m.exports.g();
     },
-    WebAssembly.RuntimeError,
+    TypeError,
     "Unsupported use of struct or array type"
   )
 
@@ -147,7 +181,7 @@ function testStructJS() {
       `, { m: { f: (x) => { return null; } } });
       m.exports.g();
     },
-    WebAssembly.RuntimeError,
+    TypeError,
     "Unsupported use of struct or array type"
   )
 
@@ -162,7 +196,7 @@ function testStructJS() {
       `);
       m.exports.g.value = 42;
     },
-    WebAssembly.RuntimeError,
+    TypeError,
     "Unsupported use of struct or array type"
   )
 }
@@ -186,6 +220,19 @@ function testStructNew() {
   instantiate(`
     (module
       (type $Empty (struct))
+      (func (export "main")
+        (drop
+          (struct.new_canon $Empty)
+        )
+      )
+    )
+  `).exports.main();
+
+  instantiate(`
+    (module
+      ;; Also test with subtype.
+      (type (struct))
+      (type $Empty (sub 0 (struct)))
       (func (export "main")
         (drop
           (struct.new_canon $Empty)
@@ -272,6 +319,87 @@ function testStructNew() {
   `);
 }
 
+function testStructNewDefault() {
+  instantiate(`
+    (module
+      (type $Empty (struct))
+      (func (export "main")
+        (drop
+          (struct.new_canon_default $Empty)
+        )
+      )
+    )
+  `).exports.main();
+
+  instantiate(`
+    (module
+      ;; Also test with subtype.
+      (type (struct))
+      (type $Empty (sub 0 (struct)))
+      (func (export "main")
+        (drop
+          (struct.new_canon_default $Empty)
+        )
+      )
+    )
+  `).exports.main();
+
+  instantiate(`
+     (module
+       (type $Point (struct (field $x i32) (field $y i32)))
+       (func (export "main")
+         (drop
+           (struct.new_canon_default $Point)
+         )
+       )
+     )
+  `).exports.main();
+
+  assert.throws(
+    () => compile(`
+            (module
+              (type $Point (struct (field $x (ref func))))
+              (func (export "main")
+                (drop
+                  (struct.new_canon_default $Point)
+                )
+              )
+            )
+         `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't parse at byte 4: struct.new_default 0 requires all fields to be defaultable, but field 0 has type Ref, in function at index 0"
+  )
+
+  assert.throws(
+    () => compile(`
+            (module
+              (type $Point (struct (field $x i32) (field $y i32)))
+              (func (export "main")
+                (drop
+                  (struct.new_canon_default 3)
+                )
+              )
+            )
+         `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't validate: struct.new_default index 3 is out of bound, in function at index 0 (evaluating 'new WebAssembly.Module(binary)')"
+  )
+
+  assert.throws(
+    () => compile(`
+            (module
+              (type $Point (struct (field $x i32) (field $y i32)))
+              (func (export "main")
+                unreachable
+                struct.new_canon_default 2
+              )
+            )
+         `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't validate: struct.new_default index 2 is out of bound, in function at index 0 (evaluating 'new WebAssembly.Module(binary)')"
+  )
+}
+
 function testStructGet() {
   {
     /*
@@ -305,6 +433,36 @@ function testStructGet() {
   }
 
   {
+    let main = instantiate(`
+      (module
+        (type $Point (struct (field $x i32)))
+         (func (export "main") (result i32)
+           (struct.get $Point $x
+             (struct.new_canon_default $Point)
+           )
+         )
+      )
+    `).exports.main;
+    assert.eq(main(), 0);
+  }
+
+  {
+    let main = instantiate(`
+      (module
+        ;; Test subtype case as well.
+        (type (struct (field i32)))
+        (type $Point (sub 0 (struct (field $x i32))))
+         (func (export "main") (result i32)
+           (struct.get $Point $x
+             (struct.new_canon $Point (i32.const 37))
+           )
+         )
+      )
+    `).exports.main;
+    assert.eq(main(), 37);
+  }
+
+  {
     /*
      * Point(f32)
      *
@@ -319,6 +477,20 @@ function testStructGet() {
     */
     let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x09\x02\x5f\x01\x7d\x00\x60\x00\x01\x7d\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x10\x01\x0e\x00\x43\x00\x00\x14\x42\xfb\x07\x00\xfb\x03\x00\x00\x0b"));
     assert.eq(instance.exports.main(), 37);
+  }
+
+  {
+    let main = instantiate(`
+      (module
+        (type $Point (struct (field $x f32)))
+         (func (export "main") (result f32)
+           (struct.get $Point $x
+             (struct.new_canon_default $Point)
+           )
+         )
+      )
+    `).exports.main;
+    assert.eq(main(), 0);
   }
 
   {
@@ -342,6 +514,23 @@ function testStructGet() {
   }
 
   {
+    let main = instantiate(`
+      (module
+        (type $Point (struct (field $x i64)))
+        (func (export "main") (result i32)
+          (i64.eq
+            (i64.const 0)
+            (struct.get $Point $x
+              (struct.new_canon_default $Point)
+            )
+          )
+        )
+      )
+    `).exports.main;
+    assert.eq(main(), 1);
+  }
+
+  {
     /*
      * Point(f64)
      *
@@ -356,6 +545,20 @@ function testStructGet() {
     */
     let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x09\x02\x5f\x01\x7c\x00\x60\x00\x01\x7c\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x14\x01\x12\x00\x44\x00\x00\x00\x00\x00\x80\x42\x40\xfb\x07\x00\xfb\x03\x00\x00\x0b"));
     assert.eq(instance.exports.main(), 37);
+  }
+
+  {
+    let main = instantiate(`
+      (module
+        (type $Point (struct (field $x f64)))
+         (func (export "main") (result f64)
+           (struct.get $Point $x
+             (struct.new_canon_default $Point)
+           )
+         )
+      )
+    `).exports.main;
+    assert.eq(main(), 0);
   }
 
   {
@@ -374,6 +577,20 @@ function testStructGet() {
     let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x5f\x01\x6f\x00\x60\x01\x6f\x01\x6f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0d\x01\x0b\x00\x20\x00\xfb\x07\x00\xfb\x03\x00\x00\x0b"));
     let obj = {};
     assert.eq(instance.exports.main(obj), obj);
+  }
+
+  {
+    let main = instantiate(`
+      (module
+        (type $Point (struct (field $x externref)))
+        (func (export "main") (result externref)
+          (struct.get $Point $x
+            (struct.new_canon_default $Point)
+          )
+        )
+      )
+    `).exports.main;
+    assert.eq(main(), null);
   }
 
   {
@@ -399,6 +616,20 @@ function testStructGet() {
     let instance2 = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x5f\x01\x70\x00\x60\x01\x70\x01\x70\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0d\x01\x0b\x00\x20\x00\xfb\x07\x00\xfb\x03\x00\x00\x0b"));
     let foo = instance1.exports.f;
     assert.eq(instance2.exports.main(foo), foo);
+  }
+
+  {
+    let main = instantiate(`
+      (module
+        (type $Point (struct (field $x funcref)))
+        (func (export "main") (result funcref)
+          (struct.get $Point $x
+            (struct.new_canon_default $Point)
+          )
+        )
+      )
+    `).exports.main;
+    assert.eq(main(), null);
   }
 
   {
@@ -496,6 +727,45 @@ function testStructGet() {
       "WebAssembly.Module doesn't validate: struct.get index 3 is out of bound, in function at index 0 (evaluating 'new WebAssembly.Module(buffer)')"
     );
   }
+
+  // Test error message for invalid struct.get index.
+  assert.throws(
+    () =>
+      compile(`
+        (module
+          (func (result i32) (struct.get 5 0 (ref.null 0)))
+        )
+      `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't validate: struct.get index 5 is out of bound, in function at index 0 (evaluating 'new WebAssembly.Module(binary)')"
+  );
+
+  // Test error message for invalid struct.get index.
+  assert.throws(
+    () =>
+      compile(`
+        (module
+          (type (func))
+          (func (result i32) (struct.get 0 0 (ref.null 0)))
+        )
+      `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't validate: struct.get: invalid type index 0, in function at index 0 (evaluating 'new WebAssembly.Module(binary)')"
+  );
+
+  // Cannot struct.get from a structref.
+  assert.throws(
+    () =>
+      compile(`
+        (module
+          (type $s (struct (field i32)))
+          (func (result structref) (ref.null 0))
+          (func (result i32) (struct.get 0 0 (call 0)))
+        )
+      `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't validate: struct.get invalid index: Structref, in function at index 1 (evaluating 'new WebAssembly.Module(binary)')"
+  );
 }
 
 function testStructSet() {
@@ -544,6 +814,57 @@ function testStructSet() {
           (call $doTest
             (struct.new_canon $Point (i32.const 0))
           )
+        )
+      )
+    `).exports.main;
+    assert.eq(main(), 37);
+  }
+
+  {
+    let main = instantiate(`
+      (module
+        ;; Test subtype case as well.
+        (type (struct (field (mut i32))))
+        (type $Point (sub 0 (struct (field $x (mut i32)))))
+        (func $doTest (param $p (ref $Point)) (result i32)
+          (struct.set $Point $x
+            (local.get $p)
+            (i32.const 37)
+          )
+          (struct.get $Point $x
+            (local.get $p)
+          )
+        )
+
+        (func (export "main") (result i32)
+          (call $doTest
+            (struct.new_canon $Point (i32.const 0))
+          )
+        )
+      )
+    `).exports.main;
+    assert.eq(main(), 37);
+  }
+
+  // Test actually passing a point that is a subtype to a $Point interface.
+  {
+    let main = instantiate(`
+      (module
+        (type $Point (struct (field $x (mut i32))))
+        (type $Sub (sub 0 (struct (field (mut i32) (mut i32)))))
+        (func $doTest (result i32) (local $p (ref null $Sub))
+          (local.set $p (struct.new_canon $Sub (i32.const 0) (i32.const 1)))
+          (struct.set $Point $x
+            (local.get $p)
+            (i32.const 37)
+          )
+          (struct.get $Point $x
+            (local.get $p)
+          )
+        )
+
+        (func (export "main") (result i32)
+          (call $doTest)
         )
       )
     `).exports.main;
@@ -832,10 +1153,23 @@ function testStructSet() {
       "WebAssembly.Module doesn't validate: struct.get index 5 is out of bound, in function at index 0 (evaluating 'new WebAssembly.Module(buffer)')"
     );
   }
+
+  // Test error message for invalid struct.set index.
+  assert.throws(
+    () =>
+      compile(`
+        (module
+          (func (result i32) (struct.set 5 0 (ref.null 0) (i32.const 42)))
+        )
+      `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't validate: struct.set index 5 is out of bound, in function at index 0 (evaluating 'new WebAssembly.Module(binary)')"
+  );
 }
 
 testStructDeclaration();
 testStructJS();
 testStructNew();
+testStructNewDefault();
 testStructGet();
 testStructSet();

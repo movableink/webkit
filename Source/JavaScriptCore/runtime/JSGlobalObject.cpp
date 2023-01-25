@@ -442,7 +442,7 @@ JSC_DEFINE_HOST_FUNCTION(assertCall, (JSGlobalObject* globalObject, CallFrame* c
     bool iteratedOnce = false;
     CodeBlock* codeBlock = nullptr;
     unsigned line;
-    callFrame->iterate(globalObject->vm(), [&] (StackVisitor& visitor) {
+    StackVisitor::visit(callFrame, globalObject->vm(), [&] (StackVisitor& visitor) {
         if (!iteratedOnce) {
             iteratedOnce = true;
             return IterationStatus::Continue;
@@ -779,7 +779,7 @@ SUPPRESS_ASAN inline void JSGlobalObject::initStaticGlobals(VM& vm)
         GlobalPropertyInfo(vm.propertyNames->builtinNames().assertPrivateName(), JSFunction::create(vm, this, 1, String(), assertCall, ImplementationVisibility::Public), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
 #endif
     };
-    addStaticGlobals(staticGlobals, WTF_ARRAY_LENGTH(staticGlobals));
+    addStaticGlobals(staticGlobals, std::size(staticGlobals));
 }
 
 void JSGlobalObject::init(VM& vm)
@@ -2552,7 +2552,7 @@ SUPPRESS_ASAN void JSGlobalObject::exposeDollarVM(VM& vm)
     GlobalPropertyInfo extraStaticGlobals[] = {
         GlobalPropertyInfo(vm.propertyNames->builtinNames().dollarVMPrivateName(), dollarVM, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
     };
-    addStaticGlobals(extraStaticGlobals, WTF_ARRAY_LENGTH(extraStaticGlobals));
+    addStaticGlobals(extraStaticGlobals, std::size(extraStaticGlobals));
 
     putDirect(vm, Identifier::fromString(vm, "$vm"_s), dollarVM, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }

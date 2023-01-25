@@ -81,7 +81,7 @@ void WKPreferencesEnableAllExperimentalFeatures(WKPreferencesRef preferencesRef)
 
 void WKPreferencesSetExperimentalFeatureForKey(WKPreferencesRef preferencesRef, bool value, WKStringRef experimentalFeatureKey)
 {
-    toImpl(preferencesRef)->setExperimentalFeatureEnabledForKey(toWTFString(experimentalFeatureKey), value);
+    toImpl(preferencesRef)->setFeatureEnabledForKey(toWTFString(experimentalFeatureKey), value);
 }
 
 WKArrayRef WKPreferencesCopyInternalDebugFeatures(WKPreferencesRef preferencesRef)
@@ -97,27 +97,27 @@ void WKPreferencesResetAllInternalDebugFeatures(WKPreferencesRef preferencesRef)
 
 void WKPreferencesSetInternalDebugFeatureForKey(WKPreferencesRef preferencesRef, bool value, WKStringRef internalDebugFeatureKey)
 {
-    toImpl(preferencesRef)->setInternalDebugFeatureEnabledForKey(toWTFString(internalDebugFeatureKey), value);
+    toImpl(preferencesRef)->setFeatureEnabledForKey(toWTFString(internalDebugFeatureKey), value);
 }
 
 void WKPreferencesSetBoolValueForKeyForTesting(WKPreferencesRef preferencesRef, bool value, WKStringRef key)
 {
-    toImpl(preferencesRef)->setBoolValueForKey(toWTFString(key), value);
+    toImpl(preferencesRef)->setBoolValueForKey(toWTFString(key), value, true);
 }
 
 void WKPreferencesSetDoubleValueForKeyForTesting(WKPreferencesRef preferencesRef, double value, WKStringRef key)
 {
-    toImpl(preferencesRef)->setBoolValueForKey(toWTFString(key), value);
+    toImpl(preferencesRef)->setBoolValueForKey(toWTFString(key), value, true);
 }
 
 void WKPreferencesSetUInt32ValueForKeyForTesting(WKPreferencesRef preferencesRef, uint32_t value, WKStringRef key)
 {
-    toImpl(preferencesRef)->setUInt32ValueForKey(toWTFString(key), value);
+    toImpl(preferencesRef)->setUInt32ValueForKey(toWTFString(key), value, true);
 }
 
 void WKPreferencesSetStringValueForKeyForTesting(WKPreferencesRef preferencesRef, WKStringRef value, WKStringRef key)
 {
-    toImpl(preferencesRef)->setStringValueForKey(toWTFString(key), toWTFString(value));
+    toImpl(preferencesRef)->setStringValueForKey(toWTFString(key), toWTFString(value), true);
 }
 
 void WKPreferencesResetTestRunnerOverrides(WKPreferencesRef preferencesRef)
@@ -1277,16 +1277,6 @@ bool WKPreferencesGetPeerConnectionEnabled(WKPreferencesRef preferencesRef)
     return toImpl(preferencesRef)->peerConnectionEnabled();
 }
 
-void WKPreferencesSetWebRTCMDNSICECandidatesEnabled(WKPreferencesRef preferencesRef, bool enabled)
-{
-    toImpl(preferencesRef)->setWebRTCMDNSICECandidatesEnabled(enabled);
-}
-
-bool WKPreferencesGetWebRTCMDNSICECandidatesEnabled(WKPreferencesRef preferencesRef)
-{
-    return toImpl(preferencesRef)->webRTCMDNSICECandidatesEnabled();
-}
-
 void WKPreferencesSetSpatialNavigationEnabled(WKPreferencesRef preferencesRef, bool enabled)
 {
     toImpl(preferencesRef)->setSpatialNavigationEnabled(enabled);
@@ -1775,16 +1765,6 @@ void WKPreferencesSetStorageAccessAPIEnabled(WKPreferencesRef preferencesRef, bo
 bool WKPreferencesGetStorageAccessAPIEnabled(WKPreferencesRef preferencesRef)
 {
     return toImpl(preferencesRef)->storageAccessAPIEnabled();
-}
-
-void WKPreferencesSetAccessibilityObjectModelEnabled(WKPreferencesRef preferencesRef, bool flag)
-{
-    toImpl(preferencesRef)->setAccessibilityObjectModelEnabled(flag);
-}
-
-bool WKPreferencesGetAccessibilityObjectModelEnabled(WKPreferencesRef preferencesRef)
-{
-    return toImpl(preferencesRef)->accessibilityObjectModelEnabled();
 }
 
 void WKPreferencesSetSyntheticEditingCommandsEnabled(WKPreferencesRef preferencesRef, bool flag)

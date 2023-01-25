@@ -1,4 +1,4 @@
-# Copyright (C) 2019, 2022 Apple Inc. All rights reserved.
+# Copyright (C) 2019-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -33,66 +33,18 @@ from buildbot.util import httpclientservice, service
 from buildbot.www.hooks.github import GitHubEventHandler
 from steps import GitHub
 from twisted.internet import defer
-from twisted.internet import reactor
 from twisted.internet.defer import succeed
 from twisted.python import log
-from twisted.web.client import Agent
-from twisted.web.http_headers import Headers
-from twisted.web.iweb import IBodyProducer
-from zope.interface import implementer
+
+from twisted_additions import TwistedAdditions
 
 custom_suffix = '-uat' if os.getenv('BUILDBOT_UAT') else ''
-
-@implementer(IBodyProducer)
-class JSONProducer(object):
-    """
-    Perform JSON asynchronously as to not lock the buildbot main event loop
-    """
-
-    def __init__(self, data):
-        try:
-            self.body = json.dumps(data, default=self.json_serialize_datetime).encode('utf-8')
-        except TypeError:
-            self.body = ''
-        self.length = len(self.body)
-
-    def startProducing(self, consumer):
-        if self.body:
-            consumer.write(self.body)
-        return succeed(None)
-
-    def pauseProducing(self):
-        pass
-
-    def stopProducing(self):
-        pass
-
-    def json_serialize_datetime(self, obj):
-        """
-        Serializing buildbot dates into UNIX epoch timestamps.
-        """
-        if isinstance(obj, datetime.datetime):
-            return int(calendar.timegm(obj.timetuple()))
-
-        raise TypeError("Type %s not serializable" % type(obj))
 
 
 class Events(service.BuildbotService):
 
-    EVENT_SERVER_ENDPOINT = 'https://ews.webkit{}.org/results/'.format(custom_suffix).encode()
+    EVENT_SERVER_ENDPOINT = 'https://ews.webkit{}.org/results/'.format(custom_suffix)
     MAX_GITHUB_DESCRIPTION = 140
-    SHORT_STEPS = (
-        'configure-build',
-        'validate-change',
-        'configuration',
-        'clean-up-git-repo',
-        'fetch-branch-references',
-        'show-identifier',
-        'update-working-directory',
-        'apply-patch',
-        'kill-old-processes',
-        'set-build-summary',
-    )
 
     def __init__(self, master_hostname, type_prefix='', name='Events'):
         """
@@ -111,10 +63,13 @@ class Events(service.BuildbotService):
     def sendDataToEWS(self, data):
         if os.getenv('EWS_API_KEY', None):
             data['EWS_API_KEY'] = os.getenv('EWS_API_KEY')
-        agent = Agent(reactor)
-        body = JSONProducer(data)
 
-        agent.request(b'POST', self.EVENT_SERVER_ENDPOINT, Headers({'Content-Type': ['application/json']}), body)
+        TwistedAdditions.request(
+            url=self.EVENT_SERVER_ENDPOINT,
+            type=b'POST',
+            headers={'Content-Type': ['application/json']},
+            json=data,
+        )
 
     def sendDataToGitHub(self, repository, sha, data, user=None):
         username, access_token = GitHub.credentials(user=user)
@@ -125,14 +80,16 @@ class Events(service.BuildbotService):
 
         auth_header = b64encode('{}:{}'.format(username, access_token).encode('utf-8')).decode('utf-8')
 
-        agent = Agent(reactor)
-        body = JSONProducer(data)
-        d = agent.request(b'POST', GitHub.commit_status_url(sha, repository).encode('utf-8'), Headers({
-            'Authorization': ['Basic {}'.format(auth_header)],
-            'User-Agent': ['python-twisted/{}'.format(twisted.__version__)],
-            'Accept': ['application/vnd.github.v3+json'],
-            'Content-Type': ['application/json'],
-        }), body)
+        TwistedAdditions.request(
+            url=GitHub.commit_status_url(sha, repository),
+            type=b'POST',
+            headers={
+                'Authorization': ['Basic {}'.format(auth_header)],
+                'User-Agent': ['python-twisted/{}'.format(twisted.__version__)],
+                'Accept': ['application/vnd.github.v3+json'],
+                'Content-Type': ['application/json'],
+            }, json=data,
+        )
 
     def getBuilderName(self, build):
         if not (build and 'properties' in build):
@@ -235,49 +192,10 @@ class Events(service.BuildbotService):
         self.sendDataToEWS(data)
 
     @defer.inlineCallbacks
-    def stepStartedGitHub(self, build, state_string):
-        sha = self.extractProperty(build, 'github.head.sha')
-        repository = self.extractProperty(build, 'repository')
-        if not sha or not repository:
-            print('Pull request number defined, but sha is {} and repository {}, which are invalid'.format(sha, repository))
-            print('Not reporting step started to GitHub')
-            return
-
-        if 'WebKit/WebKit' in repository:
-            # Do not report status directly to GitHub for WebKit/WebKit, since we have status-bubbles for that.
-            return
-
-        builder = yield self.master.db.builders.getBuilder(build.get('builderid'))
-
-        data_to_send = dict(
-            owner=(self.extractProperty(build, 'owners') or [None])[0],
-            repo=(self.extractProperty(build, 'github.head.repo.full_name') or '').split('/')[-1],
-            sha=sha,
-            target_url='{}#/builders/{}/builds/{}'.format(self.master.config.buildbotURL, build.get('builderid'), build.get('number')),
-            state={
-                SUCCESS: 'pending',
-                WARNINGS: 'pending',
-                FAILURE: 'failure',
-                EXCEPTION: 'error',
-            }.get(build.get('results'), 'pending'),
-            description=state_string,
-            context=builder.get('description', '?') + custom_suffix,
-        )
-        self.sendDataToGitHub(repository, sha, data_to_send, user=GitHub.user_for_queue(self.extractProperty(build, 'buildername')))
-
-    @defer.inlineCallbacks
     def stepStarted(self, key, step):
         state_string = step.get('state_string')
         if state_string == 'pending':
             state_string = 'Running {}'.format(step.get('name'))
-
-        build = yield self.master.db.builds.getBuild(step.get('buildid'))
-        if not build.get('properties'):
-            build['properties'] = yield self.master.db.builds.getBuildProperties(step.get('buildid'))
-
-        # We need to force the defered properties to resolve
-        if build['properties'].get('github.number') and build.get('step') not in self.SHORT_STEPS:
-            self.stepStartedGitHub(build, state_string)
 
         data = {
             "type": self.type_prefix + "step",
@@ -346,29 +264,40 @@ class GitHubEventHandlerNoEdits(GitHubEventHandler):
 
     @defer.inlineCallbacks
     def _get_pr_files(self, repo, number):
-        # Copied from https://github.com/buildbot/buildbot/blob/v2.10.5/master/buildbot/www/hooks/github.py to include added/modified/deleted
-        headers = {"User-Agent": "Buildbot"}
+        # Heavy modification of https://github.com/buildbot/buildbot/blob/v2.10.5/master/buildbot/www/hooks/github.py
+        PER_PAGE_LIMIT = 100  # GitHub will list a maximum of 100 files in a single response
+        NUM_PAGE_LIMIT = 30  # GitHub stops returning files in a PR after 3000 files
+
+        headers = {}
         if self._token:
             headers["Authorization"] = "token " + self._token
 
-        url = "/repos/{}/pulls/{}/files".format(repo, number)
-        http = yield httpclientservice.HTTPClientService.getService(
-            self.master,
-            self.github_api_endpoint,
-            headers=headers,
-            debug=self.debug,
-            verify=self.verify,
-        )
-        res = yield http.get(url)
-        if 200 <= res.code < 300:
-            data = yield res.json()
-            return [self.file_with_status_sign(f) for f in data]
+        page = 1
+        files = []
+        while page < NUM_PAGE_LIMIT:
+            response = yield TwistedAdditions.request(
+                url="{}/repos/{}/pulls/{}/files".format(self.github_api_endpoint, repo, number),
+                type=b'GET',
+                params=dict(
+                    per_page=PER_PAGE_LIMIT,
+                    page=page,
+                ), headers=headers,
+                logger=log.msg,
+            )
+            if not response or response.status_code // 100 != 2:
+                break
+            data = response.json()
+            files += [self.file_with_status_sign(f) for f in data]
+            if len(data) < PER_PAGE_LIMIT:
+                break
+            page += 1
 
-        log.msg('Failed fetching PR files: response code {}'.format(res.code))
-        return []
+        if not files:
+            log.msg('Failed fetching files for PR #{}: response code {}'.format(number, response.status_code if response else '?'))
+        return defer.returnValue(files)
 
     def extractProperties(self, payload):
-        result = super(GitHubEventHandlerNoEdits, self).extractProperties(payload)
+        result = super().extractProperties(payload)
         if payload.get('base', {}).get('repo', {}).get('full_name') not in self.PUBLIC_REPOS:
             for field in self.SENSATIVE_FIELDS:
                 if field in result:
@@ -391,16 +320,16 @@ class GitHubEventHandlerNoEdits(GitHubEventHandler):
             # 'labeled' is usually an ignored action, override it to force build
             payload['action'] = 'synchronize'
             time.sleep(self.LABEL_PROCESS_DELAY)
-            return super(GitHubEventHandlerNoEdits, self).handle_pull_request(payload, 'unsafe_merge_queue')
+            return super().handle_pull_request(payload, 'unsafe_merge_queue')
         if action == 'labeled' and self.MERGE_QUEUE_LABEL in labels:
             log.msg("PR #{} was labeled for merge-queue".format(pr_number))
             # 'labeled' is usually an ignored action, override it to force build
             payload['action'] = 'synchronize'
             time.sleep(self.LABEL_PROCESS_DELAY)
-            return super(GitHubEventHandlerNoEdits, self).handle_pull_request(payload, 'merge_queue')
+            return super().handle_pull_request(payload, 'merge_queue')
 
         if sender in self.ACCOUNTS_TO_IGNORE:
             log.msg(f"PR #{pr_number} was updated by '{sender}', ignore it")
             return ([], 'git')
 
-        return super(GitHubEventHandlerNoEdits, self).handle_pull_request(payload, event)
+        return super().handle_pull_request(payload, event)

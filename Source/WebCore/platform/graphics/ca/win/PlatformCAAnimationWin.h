@@ -38,7 +38,6 @@ namespace WebCore {
 class PlatformCAAnimationWin final : public PlatformCAAnimation {
 public:
     static Ref<PlatformCAAnimation> create(AnimationType, const String& keyPath);
-    static Ref<PlatformCAAnimation> create(PlatformAnimationRef);
 
     virtual ~PlatformCAAnimationWin();
 
@@ -88,14 +87,14 @@ public:
     void setFromValue(const WebCore::TransformationMatrix&) override;
     void setFromValue(const FloatPoint3D&) override;
     void setFromValue(const WebCore::Color&) override;
-    void setFromValue(const FilterOperation*, int internalFilterPropertyIndex) override;
+    void setFromValue(const FilterOperation*) override;
     void copyFromValueFrom(const PlatformCAAnimation&) override;
 
     void setToValue(float) override;
     void setToValue(const WebCore::TransformationMatrix&) override;
     void setToValue(const FloatPoint3D&) override;
     void setToValue(const WebCore::Color&) override;
-    void setToValue(const FilterOperation*, int internalFilterPropertyIndex) override;
+    void setToValue(const FilterOperation*) override;
     void copyToValueFrom(const PlatformCAAnimation&) override;
 
     // Keyframe-animation properties.
@@ -103,7 +102,7 @@ public:
     void setValues(const Vector<WebCore::TransformationMatrix>&) override;
     void setValues(const Vector<FloatPoint3D>&) override;
     void setValues(const Vector<WebCore::Color>&) override;
-    void setValues(const Vector<RefPtr<FilterOperation>>&, int internalFilterPropertyIndex) override;
+    void setValues(const Vector<RefPtr<FilterOperation>>&) override;
     void copyValuesFrom(const PlatformCAAnimation&) override;
 
     void setKeyTimes(const Vector<float>&) override;
@@ -118,7 +117,6 @@ public:
 
 private:
     PlatformCAAnimationWin(AnimationType, const String& keyPath);
-    PlatformCAAnimationWin(PlatformAnimationRef);
 
     RetainPtr<CACFAnimationRef> m_animation;
 };

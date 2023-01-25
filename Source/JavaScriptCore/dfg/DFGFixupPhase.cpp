@@ -2686,6 +2686,12 @@ private:
             break;
         }
 
+        case MapOrSetDelete: {
+            ASSERT(node->child1().useKind() == MapObjectUse || node->child1().useKind() == SetObjectUse);
+            fixEdge<Int32Use>(node->child3());
+            break;
+        }
+
         case WeakSetAdd: {
             fixEdge<WeakSetObjectUse>(node->child1());
             if (node->child2()->shouldSpeculateObject())
@@ -2947,6 +2953,7 @@ private:
         case ConstructForwardVarargs:
         case TailCallForwardVarargs:
         case TailCallForwardVarargsInlinedCaller:
+        case CallWasm:
         case VarargsLength:
         case ProfileControlFlow:
         case NewObject:
@@ -3005,6 +3012,7 @@ private:
         case FilterSetPrivateBrandStatus:
         case InvalidationPoint:
         case CreateArgumentsButterfly:
+        case GetWebAssemblyInstanceExports:
             break;
 #else // not ASSERT_ENABLED
         default:

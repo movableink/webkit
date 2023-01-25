@@ -336,8 +336,12 @@ public:
 
     bool volumeLocked() const { return m_volumeLocked; }
     WEBCORE_EXPORT void setVolumeLocked(bool);
-    bool buffering() const;
-    bool stalled() const;
+
+    bool buffering() const { return m_buffering; }
+    void updateBufferingState();
+
+    bool stalled() const { return m_stalled; }
+    void updateStalledState();
 
     WEBCORE_EXPORT void togglePlayState();
     WEBCORE_EXPORT void beginScrubbing() override;
@@ -455,9 +459,8 @@ public:
     // of one of them here.
     using HTMLElement::scriptExecutionContext;
 
-    bool hasSingleSecurityOrigin() const { return !m_player || m_player->hasSingleSecurityOrigin(); }
     bool didPassCORSAccessCheck() const { return m_player && m_player->didPassCORSAccessCheck(); }
-    bool wouldTaintOrigin(const SecurityOrigin& origin) const { return m_player && m_player->wouldTaintOrigin(origin); }
+    bool taintsOrigin(const SecurityOrigin&) const;
     
     WEBCORE_EXPORT bool isFullscreen() const override;
     bool isStandardFullscreen() const;
@@ -625,6 +628,8 @@ public:
 #endif
 
     bool hasSource() const { return hasCurrentSrc() || srcObject(); }
+
+    void updateMediaState();
 
 protected:
     HTMLMediaElement(const QualifiedName&, Document&, bool createdByParser);
@@ -809,10 +814,6 @@ private:
 
     bool mediaPlayerShouldDisableHDR() const final { return shouldDisableHDR(); }
 
-#if USE(GSTREAMER)
-    void requestInstallMissingPlugins(const String& details, const String& description, MediaPlayerRequestInstallMissingPluginsCallback&) final;
-#endif
-
     void pendingActionTimerFired();
     void progressEventTimerFired();
     void playbackProgressTimerFired();
@@ -981,7 +982,6 @@ private:
     void resumeFromDocumentSuspension() final;
 
     void scheduleUpdateMediaState();
-    void updateMediaState();
     bool hasPlaybackTargetAvailabilityListeners() const { return m_hasPlaybackTargetAvailabilityListeners; }
 #endif
 
@@ -1156,6 +1156,8 @@ private:
     bool m_initiallyMuted : 1;
     bool m_paused : 1;
     bool m_seeking : 1;
+    bool m_buffering : 1;
+    bool m_stalled : 1;
     bool m_seekRequested : 1;
     bool m_wasPlayingBeforeSeeking : 1;
 
@@ -1264,8 +1266,9 @@ private:
     bool m_settingMediaStreamSrcObject { false };
 #endif
 
-#if ENABLE(WIRELESS_PLAYBACK_TARGET)
     MediaProducerMediaStateFlags m_mediaState;
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
     MonotonicTime m_currentPlaybackTargetIsWirelessEventFiredTime;
     bool m_hasPlaybackTargetAvailabilityListeners { false };
     bool m_failedToPlayToWirelessTarget { false };

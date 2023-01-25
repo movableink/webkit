@@ -360,6 +360,9 @@ private:
 
     bool shouldUseTiledBackingForFrameView(const WebCore::FrameView&) const final;
 
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+    void isAnyAnimationAllowedToPlayDidChange(bool /* anyAnimationCanPlay */) final;
+#endif
     void isPlayingMediaDidChange(WebCore::MediaProducerMediaStateFlags) final;
     void handleAutoplayEvent(WebCore::AutoplayEvent, OptionSet<WebCore::AutoplayEventFlags>) final;
 
@@ -409,10 +412,6 @@ private:
 
     RefPtr<WebCore::Icon> createIconForFiles(const Vector<String>& filenames) final;
 
-#if ENABLE(VIDEO) && USE(GSTREAMER)
-    void requestInstallMissingMediaPlugins(const String& /*details*/, const String& /*description*/, WebCore::MediaPlayerRequestInstallMissingPluginsCallback&) final;
-#endif
-
     void didInvalidateDocumentMarkerRects() final;
 
 #if ENABLE(TRACKING_PREVENTION)
@@ -455,7 +454,7 @@ private:
     void textAutosizingUsesIdempotentModeChanged() final;
 #endif
 
-    URL sanitizeLookalikeCharacters(const URL&) const final;
+    URL sanitizeLookalikeCharacters(const URL&, WebCore::LookalikeCharacterSanitizationTrigger) const final;
 
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS) && USE(UICONTEXTMENU)
     void showMediaControlsContextMenu(WebCore::FloatRect&&, Vector<WebCore::MediaControlsContextMenuItem>&&, CompletionHandler<void(WebCore::MediaControlsContextMenuItem::ID)>&&) final;

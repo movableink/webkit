@@ -94,6 +94,8 @@ class PageConfiguration;
 namespace WebCore {
 class RegistrableDomain;
 enum class EventMakesGamepadsVisible : bool;
+enum class GamepadHapticEffectType : uint8_t;
+struct GamepadEffectParameters;
 struct MockMediaDevice;
 #if PLATFORM(COCOA)
 class PowerSourceNotifier;
@@ -295,7 +297,6 @@ public:
     
     // Downloads.
     DownloadProxy& createDownloadProxy(WebsiteDataStore&, const WebCore::ResourceRequest&, WebPageProxy* originatingPage, const FrameInfoData&);
-    API::DownloadClient* legacyDownloadClient() { return m_legacyDownloadClient.get(); }
 
     API::LegacyContextHistoryClient& historyClient() { return *m_historyClient; }
     WebContextClient& client() { return m_client; }
@@ -403,6 +404,8 @@ public:
     static void registerGlobalURLSchemeAsHavingCustomProtocolHandlers(const String&);
     static void unregisterGlobalURLSchemeAsHavingCustomProtocolHandlers(const String&);
 
+    void notifyMediaStreamingActivity(bool);
+
 #if PLATFORM(COCOA)
     void updateProcessSuppressionState();
 
@@ -494,6 +497,7 @@ public:
 #endif
 
     WebProcessWithAudibleMediaToken webProcessWithAudibleMediaToken() const;
+    WebProcessWithMediaStreamingToken webProcessWithMediaStreamingToken() const;
 
     void disableDelayedWebProcessLaunch() { m_isDelayedWebProcessLaunchDisabled = true; }
 
@@ -552,12 +556,15 @@ private:
 #if ENABLE(GAMEPAD)
     void startedUsingGamepads(IPC::Connection&);
     void stoppedUsingGamepads(IPC::Connection&, CompletionHandler<void()>&&);
+    void playGamepadEffect(unsigned gamepadIndex, const String& gamepadID, WebCore::GamepadHapticEffectType, const WebCore::GamepadEffectParameters&, CompletionHandler<void(bool)>&&);
+    void stopGamepadEffects(unsigned gamepadIndex, const String& gamepadID, CompletionHandler<void()>&&);
 
     void processStoppedUsingGamepads(WebProcessProxy&);
 #endif
 
     void updateProcessAssertions();
     void updateAudibleMediaAssertions();
+    void updateMediaStreamingActivity();
 
     // IPC::MessageReceiver.
     // Implemented in generated WebProcessPoolMessageReceiver.cpp
@@ -804,6 +811,9 @@ private:
 #endif
     };
     std::optional<AudibleMediaActivity> m_audibleMediaActivity;
+
+    WebProcessWithMediaStreamingCounter m_webProcessWithMediaStreamingCounter;
+    bool m_mediaStreamingActivity { false };
 
 #if PLATFORM(PLAYSTATION)
     int32_t m_userId { -1 };

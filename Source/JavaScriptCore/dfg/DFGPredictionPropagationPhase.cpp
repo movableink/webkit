@@ -916,6 +916,7 @@ private:
         case CallForwardVarargs:
         case ConstructForwardVarargs:
         case TailCallForwardVarargsInlinedCaller:
+        case CallWasm:
         case GetGlobalVar:
         case GetGlobalLexicalVariable:
         case GetClosureVar:
@@ -941,6 +942,11 @@ private:
         case DataViewGetFloat:
         case DateGetInt32OrNaN: {
             setPrediction(m_currentNode->getHeapPrediction());
+            break;
+        }
+
+        case GetWebAssemblyInstanceExports: {
+            setPrediction(SpecFinalObject);
             break;
         }
 
@@ -1054,6 +1060,8 @@ private:
             setPrediction(SpecDoubleReal);
             break;
         }
+
+        case MapOrSetDelete:
         case DeleteByVal:
         case DeleteById:
         case MultiDeleteByOffset:

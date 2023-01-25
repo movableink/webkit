@@ -68,6 +68,8 @@ public:
     ~LibWebRTCCodecs();
 
     static void setCallbacks(bool useGPUProcess, bool useRemoteFrames);
+    static void setWebRTCMediaPipelineAdditionalLoggingEnabled(bool);
+    static void initializeIfNeeded();
 
     std::optional<VideoCodecType> videoCodecTypeFromWebCodec(const String&);
 
@@ -146,7 +148,7 @@ public:
     bool supportVP9VTB() const { return m_supportVP9VTB; }
     void setLoggingLevel(WTFLogLevel);
 
-    void setHasVP9ExtensionSupport(bool hasVP9ExtensionSupport) { m_hasVP9ExtensionSupport = hasVP9ExtensionSupport; }
+    void setHasVP9ExtensionSupport(bool);
     bool hasVP9ExtensionSupport() const { return m_hasVP9ExtensionSupport; }
 
 private:
@@ -199,8 +201,10 @@ private:
     size_t m_pixelBufferPoolHeight { 0 };
     bool m_supportVP9VTB { false };
     std::optional<WTFLogLevel> m_loggingLevel;
+    bool m_useGPUProcess { false };
     bool m_useRemoteFrames { false };
     bool m_hasVP9ExtensionSupport { false };
+    bool m_enableAdditionalLogging { false };
 };
 
 } // namespace WebKit

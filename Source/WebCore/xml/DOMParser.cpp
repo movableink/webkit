@@ -20,6 +20,7 @@
 #include "DOMParser.h"
 
 #include "DOMImplementation.h"
+#include "FragmentScriptingPermission.h"
 #include "SecurityOriginPolicy.h"
 #include "Settings.h"
 
@@ -45,7 +46,7 @@ ExceptionOr<Ref<Document>> DOMParser::parseFromString(const String& string, cons
     auto document = DOMImplementation::createDocument(contentType, nullptr, m_settings, URL { });
     if (m_contextDocument)
         document->setContextDocument(*m_contextDocument.get());
-    if (options.includeShadowRoots)
+    if (options.includeShadowRoots && document->settings().declarativeShadowDOMInDOMParserEnabled())
         document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent, ParserContentPolicy::AllowDeclarativeShadowDOM });
     else
         document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });

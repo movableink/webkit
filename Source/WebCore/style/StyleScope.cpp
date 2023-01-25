@@ -28,6 +28,7 @@
 #include "config.h"
 #include "StyleScope.h"
 
+#include "CSSCounterStyleRegistry.h"
 #include "CSSFontSelector.h"
 #include "CSSStyleSheet.h"
 #include "CustomPropertyRegistry.h"
@@ -68,6 +69,7 @@ Scope::Scope(Document& document)
     : m_document(document)
     , m_pendingUpdateTimer(*this, &Scope::pendingUpdateTimerFired)
     , m_customPropertyRegistry(makeUniqueRef<CustomPropertyRegistry>(*this))
+    , m_counterStyleRegistry(makeUniqueRef<CSSCounterStyleRegistry>())
 {
 }
 
@@ -76,6 +78,7 @@ Scope::Scope(ShadowRoot& shadowRoot)
     , m_shadowRoot(&shadowRoot)
     , m_pendingUpdateTimer(*this, &Scope::pendingUpdateTimerFired)
     , m_customPropertyRegistry(makeUniqueRef<CustomPropertyRegistry>(*this))
+    , m_counterStyleRegistry(makeUniqueRef<CSSCounterStyleRegistry>())
 {
 }
 
@@ -105,7 +108,7 @@ void Scope::createDocumentResolver()
 
     SetForScope isUpdatingStyleResolver { m_isUpdatingStyleResolver, true };
 
-    m_resolver = Resolver::create(m_document);
+    m_resolver = Resolver::create(m_document, Resolver::ScopeType::Document);
 
     m_document.fontSelector().buildStarted();
 
@@ -126,7 +129,7 @@ void Scope::createOrFindSharedShadowTreeResolver()
     auto result = documentScope().m_sharedShadowTreeResolvers.ensure(WTFMove(key), [&] {
         SetForScope isUpdatingStyleResolver { m_isUpdatingStyleResolver, true };
 
-        m_resolver = Resolver::create(m_document);
+        m_resolver = Resolver::create(m_document, Resolver::ScopeType::ShadowTree);
 
         m_resolver->ruleSets().setUsesSharedUserStyle(!isForUserAgentShadowTree());
         m_resolver->appendAuthorStyleSheets(m_activeStyleSheets);
@@ -265,17 +268,17 @@ void Scope::removePendingSheet(const ProcessingInstruction& processingInstructio
 
 bool Scope::hasPendingSheets() const
 {
-    return hasPendingSheetsBeforeBody() || !m_elementsInBodyWithPendingSheets.computesEmpty();
+    return hasPendingSheetsBeforeBody() || !m_elementsInBodyWithPendingSheets.isEmptyIgnoringNullReferences();
 }
 
 bool Scope::hasPendingSheetsBeforeBody() const
 {
-    return !m_elementsInHeadWithPendingSheets.computesEmpty() || !m_processingInstructionsWithPendingSheets.computesEmpty();
+    return !m_elementsInHeadWithPendingSheets.isEmptyIgnoringNullReferences() || !m_processingInstructionsWithPendingSheets.isEmptyIgnoringNullReferences();
 }
 
 bool Scope::hasPendingSheetsInBody() const
 {
-    return !m_elementsInBodyWithPendingSheets.computesEmpty();
+    return !m_elementsInBodyWithPendingSheets.isEmptyIgnoringNullReferences();
 }
 
 void Scope::didRemovePendingStylesheet()

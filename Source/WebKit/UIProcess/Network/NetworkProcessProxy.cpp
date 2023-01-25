@@ -332,12 +332,12 @@ void NetworkProcessProxy::synthesizeAppIsBackground(bool background)
         applicationWillEnterForeground();
 }
 
-DownloadProxy& NetworkProcessProxy::createDownloadProxy(WebsiteDataStore& dataStore, WebProcessPool& processPool, const ResourceRequest& resourceRequest, const FrameInfoData& frameInfo, WebPageProxy* originatingPage)
+DownloadProxy& NetworkProcessProxy::createDownloadProxy(WebsiteDataStore& dataStore, Ref<API::DownloadClient>&& client, const ResourceRequest& resourceRequest, const FrameInfoData& frameInfo, WebPageProxy* originatingPage)
 {
     if (!m_downloadProxyMap)
         m_downloadProxyMap = makeUnique<DownloadProxyMap>(*this);
 
-    return m_downloadProxyMap->createDownloadProxy(dataStore, processPool, resourceRequest, frameInfo, originatingPage);
+    return m_downloadProxyMap->createDownloadProxy(dataStore, WTFMove(client), resourceRequest, frameInfo, originatingPage);
 }
 
 void NetworkProcessProxy::dataTaskWithRequest(WebPageProxy& page, PAL::SessionID sessionID, WebCore::ResourceRequest&& request, CompletionHandler<void(API::DataTask&)>&& completionHandler)
@@ -1433,7 +1433,7 @@ void NetworkProcessProxy::removeSession(WebsiteDataStore& websiteDataStore)
     if (canSendMessage())
         send(Messages::NetworkProcess::DestroySession { websiteDataStore.sessionID() }, 0);
 
-    if (m_websiteDataStores.computesEmpty())
+    if (m_websiteDataStores.isEmptyIgnoringNullReferences())
         defaultNetworkProcess() = nullptr;
 }
 
@@ -1690,9 +1690,9 @@ void NetworkProcessProxy::resetQuota(PAL::SessionID sessionID, CompletionHandler
     sendWithAsyncReply(Messages::NetworkProcess::ResetQuota(sessionID), WTFMove(completionHandler));
 }
 
-void NetworkProcessProxy::clearStorage(PAL::SessionID sessionID, CompletionHandler<void()>&& completionHandler)
+void NetworkProcessProxy::resetStoragePersistedState(PAL::SessionID sessionID, CompletionHandler<void()>&& completionHandler)
 {
-    sendWithAsyncReply(Messages::NetworkProcess::ClearStorage(sessionID), WTFMove(completionHandler));
+    sendWithAsyncReply(Messages::NetworkProcess::ResetStoragePersistedState(sessionID), WTFMove(completionHandler));
 }
 
 #if ENABLE(APP_BOUND_DOMAINS)
@@ -1869,6 +1869,24 @@ void NetworkProcessProxy::cookiesDidChange(PAL::SessionID sessionID)
         websiteDataStore->cookieStore().cookiesDidChange();
 }
 
+void NetworkProcessProxy::notifyMediaStreamingActivity(bool activity)
+{
+    if (!canSendMessage())
+        return;
+
+    send(Messages::NetworkProcess::NotifyMediaStreamingActivity(activity), 0);
+}
+
+#if ENABLE(NETWORK_ISSUE_REPORTING)
+
+void NetworkProcessProxy::reportNetworkIssue(WebPageProxyIdentifier pageIdentifier, const URL& requestURL)
+{
+    if (auto page = WebProcessProxy::webPage(pageIdentifier))
+        page->reportNetworkIssue(requestURL);
+}
+
+#endif // ENABLE(NETWORK_ISSUE_REPORTING)
+
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
 
 void NetworkProcessProxy::setEmulatedConditions(PAL::SessionID sessionID, std::optional<int64_t>&& bytesPerSecondLimit)
@@ -1880,15 +1898,6 @@ void NetworkProcessProxy::setEmulatedConditions(PAL::SessionID sessionID, std::o
 }
 
 #endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
-
-#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
-
-void NetworkProcessProxy::requestLookalikeCharacterStrings(CompletionHandler<void(Vector<String>&&)>&& completion)
-{
-    sendWithAsyncReply(Messages::NetworkProcess::RequestLookalikeCharacterStrings(), WTFMove(completion), 0);
-}
-
-#endif // ENABLE(NETWORK_CONNECTION_INTEGRITY)
 
 } // namespace WebKit
 

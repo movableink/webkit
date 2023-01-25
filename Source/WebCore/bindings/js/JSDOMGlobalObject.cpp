@@ -75,6 +75,10 @@
 #include <JavaScriptCore/WeakGCMapInlines.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 
+#if ENABLE(REMOTE_INSPECTOR)
+#include <JavaScriptCore/JSRemoteInspector.h>
+#endif
+
 namespace WebCore {
 using namespace JSC;
 
@@ -283,27 +287,45 @@ SUPPRESS_ASAN void JSDOMGlobalObject::addBuiltinGlobals(VM& vm)
         JSDOMGlobalObject::GlobalPropertyInfo(builtinNames.getInternalWritableStreamPrivateName(), JSFunction::create(vm, this, 1, String(), getInternalWritableStream, ImplementationVisibility::Public), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
         JSDOMGlobalObject::GlobalPropertyInfo(builtinNames.createWritableStreamFromInternalPrivateName(), JSFunction::create(vm, this, 1, String(), createWritableStreamFromInternal, ImplementationVisibility::Public), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly),
     };
-    addStaticGlobals(staticGlobals, WTF_ARRAY_LENGTH(staticGlobals));
+    addStaticGlobals(staticGlobals, std::size(staticGlobals));
 }
 
 void JSDOMGlobalObject::finishCreation(VM& vm)
 {
+#if ENABLE(REMOTE_INSPECTOR)
+    bool inspectionPreviouslyFollowedInternalPolicies = JSRemoteInspectorGetInspectionFollowsInternalPolicies();
+    JSRemoteInspectorSetInspectionFollowsInternalPolicies(false);
+#endif
+
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
 
     addBuiltinGlobals(vm);
 
     RELEASE_ASSERT(classInfo());
+
+#if ENABLE(REMOTE_INSPECTOR)
+    JSRemoteInspectorSetInspectionFollowsInternalPolicies(inspectionPreviouslyFollowedInternalPolicies);
+#endif
 }
 
 void JSDOMGlobalObject::finishCreation(VM& vm, JSObject* thisValue)
 {
+#if ENABLE(REMOTE_INSPECTOR)
+    bool inspectionPreviouslyFollowedInternalPolicies = JSRemoteInspectorGetInspectionFollowsInternalPolicies();
+    JSRemoteInspectorSetInspectionFollowsInternalPolicies(false);
+#endif
+
     Base::finishCreation(vm, thisValue);
     ASSERT(inherits(info()));
 
     addBuiltinGlobals(vm);
 
     RELEASE_ASSERT(classInfo());
+
+#if ENABLE(REMOTE_INSPECTOR)
+    JSRemoteInspectorSetInspectionFollowsInternalPolicies(inspectionPreviouslyFollowedInternalPolicies);
+#endif
 }
 
 ScriptExecutionContext* JSDOMGlobalObject::scriptExecutionContext() const
@@ -735,7 +757,7 @@ static JSDOMGlobalObject& callerGlobalObject(JSC::JSGlobalObject& lexicalGlobalO
         };
 
         GetCallerGlobalObjectFunctor iter(skipFirstFrame);
-        callFrame->iterate(vm, iter);
+        StackVisitor::visit(callFrame, vm, iter);
         if (iter.globalObject())
             return *jsCast<JSDOMGlobalObject*>(iter.globalObject());
     }

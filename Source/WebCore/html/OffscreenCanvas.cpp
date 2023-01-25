@@ -31,7 +31,6 @@
 #include "CSSValuePool.h"
 #include "CanvasRenderingContext.h"
 #include "Chrome.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "HTMLCanvasElement.h"
 #include "ImageBitmap.h"
@@ -95,7 +94,7 @@ bool OffscreenCanvas::enabledForContext(ScriptExecutionContext& context)
 
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     if (context.isWorkerGlobalScope())
-        return DeprecatedGlobalSettings::offscreenCanvasInWorkersEnabled();
+        return context.settingsValues().offscreenCanvasInWorkersEnabled;
 #endif
 
     ASSERT(context.isDocument());
@@ -193,15 +192,23 @@ static bool requiresAcceleratedCompositingForWebGL()
 #endif
 }
 
-static bool shouldEnableWebGL(bool webGLEnabled, bool acceleratedCompositingEnabled)
+static bool shouldEnableWebGL(const Settings::Values& settings, bool isWorker)
 {
-    if (!webGLEnabled)
+    if (!settings.webGLEnabled)
         return false;
+
+    if (isWorker && !settings.allowWebGLInWorkers)
+        return false;
+
+#if PLATFORM(IOS_FAMILY) || PLATFORM(MAC)
+    if (isWorker && !settings.useGPUProcessForWebGLEnabled)
+        return false;
+#endif
 
     if (!requiresAcceleratedCompositingForWebGL())
         return true;
 
-    return acceleratedCompositingEnabled;
+    return settings.acceleratedCompositingEnabled;
 }
 
 void OffscreenCanvas::createContextWebGL(RenderingContextType contextType, WebGLContextAttributes&& attrs)
@@ -211,11 +218,11 @@ void OffscreenCanvas::createContextWebGL(RenderingContextType contextType, WebGL
     auto scriptExecutionContext = this->scriptExecutionContext();
     if (scriptExecutionContext->isWorkerGlobalScope()) {
         WorkerGlobalScope& workerGlobalScope = downcast<WorkerGlobalScope>(*scriptExecutionContext);
-        if (!shouldEnableWebGL(workerGlobalScope.settingsValues().webGLEnabled, workerGlobalScope.settingsValues().acceleratedCompositingEnabled))
+        if (!shouldEnableWebGL(workerGlobalScope.settingsValues(), true))
             return;
     } else if (scriptExecutionContext->isDocument()) {
         auto& settings = downcast<Document>(*scriptExecutionContext).settings();
-        if (!shouldEnableWebGL(settings.webGLEnabled(), settings.acceleratedCompositingEnabled()))
+        if (!shouldEnableWebGL(settings.values(), false))
             return;
     } else
         return;
@@ -523,16 +530,6 @@ void OffscreenCanvas::scheduleCommitToPlaceholderCanvas()
             commitToPlaceholderCanvas();
         });
     }
-}
-
-CSSValuePool& OffscreenCanvas::cssValuePool()
-{
-    auto* scriptExecutionContext = canvasBaseScriptExecutionContext();
-    if (scriptExecutionContext->isWorkerGlobalScope())
-        return downcast<WorkerGlobalScope>(*scriptExecutionContext).cssValuePool();
-
-    ASSERT(scriptExecutionContext->isDocument());
-    return CSSValuePool::singleton();
 }
 
 void OffscreenCanvas::createImageBuffer() const

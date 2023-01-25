@@ -73,7 +73,6 @@ public:
     void setWheelHasPreciseDeltas(bool);
 #endif
     void continuousMouseScrollBy(int x, int y, bool paged);
-    void monitorWheelEvents();
 
 #if PLATFORM(MAC)
     enum class WheelEventPhase : uint8_t {

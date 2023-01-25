@@ -3,9 +3,9 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2006 Alexey Proskuryakov (ap@webkit.org)
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
- * Copyright (C) 2008, 2009, 2011, 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2008-2014 Google Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) Research In Motion Limited 2010-2011. All rights reserved.
  *
@@ -58,6 +58,7 @@
 #include "CustomElementReactionQueue.h"
 #include "CustomElementRegistry.h"
 #include "CustomEvent.h"
+#include "DOMAudioSession.h"
 #include "DOMCSSPaintWorklet.h"
 #include "DOMImplementation.h"
 #include "DOMWindow.h"
@@ -92,6 +93,7 @@
 #include "GCReachableRef.h"
 #include "GPUCanvasContext.h"
 #include "GenericCachedHTMLCollection.h"
+#include "GraphicsTypes.h"
 #include "HTMLAllCollection.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLAttachmentElement.h"
@@ -112,6 +114,7 @@
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLLinkElement.h"
+#include "HTMLMaybeFormAssociatedCustomElement.h"
 #include "HTMLMediaElement.h"
 #include "HTMLMetaElement.h"
 #include "HTMLNameCollection.h"
@@ -588,12 +591,16 @@ Document::Document(Frame* frame, const Settings& settings, const URL& url, Docum
     , m_socketProvider(page() ? &page()->socketProvider() : nullptr)
     , m_isSynthesized(constructionFlags & Synthesized)
     , m_isNonRenderedPlaceholder(constructionFlags & NonRenderedPlaceholder)
+    , m_latestFocusTrigger { FocusTrigger::Other }
     , m_orientationNotifier(currentOrientation(frame))
     , m_undoManager(UndoManager::create(*this))
     , m_editor(makeUniqueRef<Editor>(*this))
     , m_selection(makeUniqueRef<FrameSelection>(this))
     , m_whitespaceCache(makeUniqueRef<WhitespaceCache>())
     , m_reportingScope(ReportingScope::create(*this))
+#if ENABLE(DOM_AUDIO_SESSION)
+    , m_audioSessionType { DOMAudioSession::Type::Auto }
+#endif
 {
     addToDocumentsMap();
 
@@ -815,14 +822,14 @@ void Document::commonTeardown()
     m_documentFragmentForInnerOuterHTML = nullptr;
 
     auto intersectionObservers = m_intersectionObservers;
-    for (auto& intersectionObserver : intersectionObservers) {
-        if (intersectionObserver)
+    for (auto& weakIntersectionObserver : intersectionObservers) {
+        if (RefPtr intersectionObserver = weakIntersectionObserver.get())
             intersectionObserver->disconnect();
     }
 
     auto resizeObservers = m_resizeObservers;
-    for (auto& resizeObserver : resizeObservers) {
-        if (resizeObserver)
+    for (auto& weakResizeObserver : resizeObservers) {
+        if (RefPtr resizeObserver = weakResizeObserver.get())
             resizeObserver->disconnect();
     }
 
@@ -1005,7 +1012,7 @@ static ALWAYS_INLINE Ref<HTMLElement> createUpgradeCandidateElement(Document& do
     if (Document::validateCustomElementName(name.localName()) != CustomElementNameValidationStatus::Valid)
         return HTMLUnknownElement::create(name, document);
 
-    auto element = HTMLElement::create(name, document);
+    auto element = HTMLMaybeFormAssociatedCustomElement::create(name, document);
     element->setIsCustomElementUpgradeCandidate();
     return element;
 }
@@ -1206,7 +1213,7 @@ static Ref<HTMLElement> createFallbackHTMLElement(Document& document, const Qual
         auto* registry = window->customElementRegistry();
         if (UNLIKELY(registry)) {
             if (RefPtr elementInterface = registry->findInterface(name)) {
-                auto element = HTMLElement::create(name, document);
+                auto element = elementInterface->createElement(document);
                 element->setIsCustomElementUpgradeCandidate();
                 element->enqueueToUpgrade(*elementInterface);
                 return element;
@@ -2320,8 +2327,12 @@ std::unique_ptr<RenderStyle> Document::styleForElementIgnoringPendingStylesheets
     SetForScope change(m_ignorePendingStylesheets, true);
     auto& resolver = element.styleResolver();
 
-    if (pseudoElementSpecifier != PseudoId::None)
-        return resolver.pseudoStyleForElement(element, { pseudoElementSpecifier }, { parentStyle });
+    if (pseudoElementSpecifier != PseudoId::None) {
+        auto style = resolver.styleForPseudoElement(element, { pseudoElementSpecifier }, { parentStyle });
+        if (!style)
+            return nullptr;
+        return WTFMove(style->style);
+    }
 
     auto elementStyle = resolver.styleForElement(element, { parentStyle });
     if (elementStyle.relations) {
@@ -2329,7 +2340,7 @@ std::unique_ptr<RenderStyle> Document::styleForElementIgnoringPendingStylesheets
         Style::commitRelations(WTFMove(elementStyle.relations), emptyUpdate);
     }
 
-    return WTFMove(elementStyle.renderStyle);
+    return WTFMove(elementStyle.style);
 }
 
 bool Document::updateLayoutIfDimensionsOutOfDate(Element& element, DimensionsCheck dimensionsCheck)
@@ -4750,6 +4761,11 @@ void Document::invalidateRenderingDependentRegions()
 #endif
 }
 
+bool Document::setFocusedElement(Element* element)
+{
+    return setFocusedElement(element, { });
+}
+
 bool Document::setFocusedElement(Element* element, const FocusOptions& options)
 {
     RefPtr<Element> newFocusedElement = element;
@@ -4977,6 +4993,11 @@ void Document::setCSSTarget(Element* newTarget)
     if (newTarget)
         emplace(newInvalidation, *newTarget, { { CSSSelector::PseudoClassTarget, true } });
     m_cssTarget = newTarget;
+}
+
+Element* Document::cssTarget() const
+{
+    return m_cssTarget.get();
 }
 
 void Document::registerNodeListForInvalidation(LiveNodeList& list)
@@ -5365,13 +5386,13 @@ ExceptionOr<Ref<Event>> Document::createEvent(const String& type)
 bool Document::hasListenerTypeForEventType(PlatformEvent::Type eventType) const
 {
     switch (eventType) {
-    case PlatformEvent::MouseForceChanged:
+    case PlatformEvent::Type::MouseForceChanged:
         return m_listenerTypes & Document::FORCECHANGED_LISTENER;
-    case PlatformEvent::MouseForceDown:
+    case PlatformEvent::Type::MouseForceDown:
         return m_listenerTypes & Document::FORCEDOWN_LISTENER;
-    case PlatformEvent::MouseForceUp:
+    case PlatformEvent::Type::MouseForceUp:
         return m_listenerTypes & Document::FORCEUP_LISTENER;
-    case PlatformEvent::MouseScroll:
+    case PlatformEvent::Type::MouseScroll:
         return m_listenerTypes & Document::SCROLL_LISTENER;
     default:
         return false;
@@ -5590,16 +5611,11 @@ static bool isValidNameNonASCII(const LChar* characters, unsigned length)
 
 static bool isValidNameNonASCII(const UChar* characters, unsigned length)
 {
-    unsigned i = 0;
-
-    UChar32 c;
-    U16_NEXT(characters, i, length, c);
-    if (!isValidNameStart(c))
-        return false;
-
-    while (i < length) {
-        U16_NEXT(characters, i, length, c);
-        if (!isValidNamePart(c))
+    for (unsigned i = 0; i < length;) {
+        bool first = !i;
+        UChar32 c;
+        U16_NEXT(characters, i, length, c); // Increments i.
+        if (first ? !isValidNameStart(c) : !isValidNamePart(c))
             return false;
     }
 
@@ -5908,7 +5924,7 @@ void Document::unregisterForDocumentSuspensionCallbacks(Element& element)
     m_documentSuspensionCallbackElements.remove(element);
 }
 
-bool Document::audioPlaybackRequiresUserGesture() const
+bool Document::requiresUserGestureForAudioPlayback() const
 {
     if (DocumentLoader* loader = this->loader()) {
         // If an audio playback policy was set during navigation, use it. If not, use the global settings.
@@ -5917,10 +5933,10 @@ bool Document::audioPlaybackRequiresUserGesture() const
             return policy == AutoplayPolicy::AllowWithoutSound || policy == AutoplayPolicy::Deny;
     }
 
-    return settings().audioPlaybackRequiresUserGesture();
+    return settings().requiresUserGestureForAudioPlayback();
 }
 
-bool Document::videoPlaybackRequiresUserGesture() const
+bool Document::requiresUserGestureForVideoPlayback() const
 {
     if (DocumentLoader* loader = this->loader()) {
         // If a video playback policy was set during navigation, use it. If not, use the global settings.
@@ -5929,7 +5945,7 @@ bool Document::videoPlaybackRequiresUserGesture() const
             return policy == AutoplayPolicy::Deny;
     }
 
-    return settings().videoPlaybackRequiresUserGesture();
+    return settings().requiresUserGestureForVideoPlayback();
 }
 
 bool Document::mediaDataLoadsAutomatically() const
@@ -6635,7 +6651,7 @@ bool Document::isSecureContext() const
 {
     if (!m_frame)
         return true;
-    if (!DeprecatedGlobalSettings::secureContextChecksEnabled())
+    if (!settings().secureContextChecksEnabled())
         return true;
     if (page() && page()->isServiceWorkerPage())
         return true;
@@ -6707,10 +6723,8 @@ std::optional<RenderingContext> Document::getCSSCanvasContext(const String& type
     if (is<ImageBitmapRenderingContext>(*context))
         return RenderingContext { RefPtr<ImageBitmapRenderingContext> { &downcast<ImageBitmapRenderingContext>(*context) } };
 
-#if HAVE(WEBGPU_IMPLEMENTATION)
     if (is<GPUCanvasContext>(*context))
         return RenderingContext { RefPtr<GPUCanvasContext> { &downcast<GPUCanvasContext>(*context) } };
-#endif
 
     return RenderingContext { RefPtr<CanvasRenderingContext2D> { &downcast<CanvasRenderingContext2D>(*context) } };
 }
@@ -7028,7 +7042,7 @@ void Document::removeMediaCanStartListener(MediaCanStartListener& listener)
 
 MediaCanStartListener* Document::takeAnyMediaCanStartListener()
 {
-    if (m_mediaCanStartListeners.computesEmpty())
+    if (m_mediaCanStartListeners.isEmptyIgnoringNullReferences())
         return nullptr;
 
     MediaCanStartListener* listener = m_mediaCanStartListeners.begin().get();
@@ -9018,6 +9032,16 @@ void Document::navigateFromServiceWorker(const URL& url, CompletionHandler<void(
 const Style::CustomPropertyRegistry& Document::customPropertyRegistry() const
 {
     return styleScope().customPropertyRegistry();
+}
+
+const CSSCounterStyleRegistry& Document::counterStyleRegistry() const
+{
+    return styleScope().counterStyleRegistry();
+}
+
+CSSCounterStyleRegistry& Document::counterStyleRegistry()
+{
+    return styleScope().counterStyleRegistry();
 }
 
 const FixedVector<CSSPropertyID>& Document::exposedComputedCSSPropertyIDs()

@@ -104,6 +104,14 @@ inline bool isRefType(Type type)
     return type.isFuncref() || type.isExternref();
 }
 
+// If this is a type, returns true iff it's a ref type; if it's a packed type, returns false
+inline bool isRefType(StorageType type)
+{
+    if (type.is<Type>())
+        return isRefType(type.as<Type>());
+    return false;
+}
+
 inline bool isExternref(Type type)
 {
     if (Options::useWebAssemblyTypedFunctionReferences())
@@ -132,6 +140,13 @@ inline bool isArrayref(Type type)
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Arrayref);
 }
 
+inline bool isStructref(Type type)
+{
+    if (!Options::useWebAssemblyGC())
+        return false;
+    return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Structref);
+}
+
 inline Type funcrefType()
 {
     if (Options::useWebAssemblyTypedFunctionReferences())
@@ -151,11 +166,11 @@ inline bool isRefWithTypeIndex(Type type)
     if (!Options::useWebAssemblyTypedFunctionReferences())
         return false;
 
-    return isRefType(type) && !isExternref(type) && !isFuncref(type) && !isI31ref(type) && !isArrayref(type);
+    return isRefType(type) && !typeIndexIsType(type.index);
 }
 
 // Determine if the ref type has a placeholder type index that is used
-// for an unresoled recursive reference in a recursion group.
+// for an unresolved recursive reference in a recursion group.
 inline bool isRefWithRecursiveReference(Type type)
 {
     if (!Options::useWebAssemblyGC())
@@ -168,6 +183,14 @@ inline bool isRefWithRecursiveReference(Type type)
     }
 
     return false;
+}
+
+inline bool isRefWithRecursiveReference(StorageType storageType)
+{
+    if (storageType.is<PackedType>())
+        return false;
+
+    return isRefWithRecursiveReference(storageType.as<Type>());
 }
 
 inline bool isTypeIndexHeapType(int32_t heapType)
@@ -199,6 +222,9 @@ inline bool isSubtype(Type sub, Type parent)
         if (TypeInformation::get(sub.index).expand().is<ArrayType>() && isArrayref(parent))
             return true;
 
+        if (TypeInformation::get(sub.index).expand().is<StructType>() && isStructref(parent))
+            return true;
+
         if (TypeInformation::get(sub.index).expand().is<FunctionSignature>() && isFuncref(parent))
             return true;
 
@@ -212,6 +238,15 @@ inline bool isSubtype(Type sub, Type parent)
     return sub == parent;
 }
 
+inline bool isSubtype(StorageType sub, StorageType parent)
+{
+    if (sub.is<PackedType>() || parent.is<PackedType>())
+        return sub == parent;
+
+    ASSERT(sub.is<Type>() && parent.is<Type>());
+    return isSubtype(sub.as<Type>(), parent.as<Type>());
+}
+
 inline bool isValidHeapTypeKind(TypeKind kind)
 {
     switch (kind) {
@@ -220,6 +255,7 @@ inline bool isValidHeapTypeKind(TypeKind kind)
         return true;
     case TypeKind::I31ref:
     case TypeKind::Arrayref:
+    case TypeKind::Structref:
         return Options::useWebAssemblyGC();
     default:
         break;
@@ -230,6 +266,14 @@ inline bool isValidHeapTypeKind(TypeKind kind)
 inline bool isDefaultableType(Type type)
 {
     return !type.isRef();
+}
+
+inline bool isDefaultableType(StorageType type)
+{
+    if (type.is<Type>())
+        return !type.as<Type>().isRef();
+    // All packed types are defaultable.
+    return true;
 }
 
 enum class ExternalKind : uint8_t {
@@ -391,8 +435,7 @@ struct Segment {
 struct Element {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
-    // nullFuncIndex represents the case when an element segment (of type funcref)
-    // contains a null element.
+    // nullFuncIndex represents the case when an element segment contains a null element.
     constexpr static uint32_t nullFuncIndex = UINT32_MAX;
 
     enum class Kind : uint8_t {
@@ -499,7 +542,6 @@ struct Entrypoint {
 
 struct InternalFunction {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
-    Vector<CodeLocationDataLabelPtr<WasmEntryPtrTag>> calleeMoveLocations;
 #if ENABLE(WEBASSEMBLY_B3JIT)
     StackMaps stackmaps;
 #endif
@@ -524,5 +566,11 @@ struct WasmToWasmImportableFunction {
 using FunctionIndexSpace = Vector<WasmToWasmImportableFunction>;
 
 } } // namespace JSC::Wasm
+
+namespace WTF {
+
+void printInternal(PrintStream&, JSC::Wasm::TableElementType);
+
+} // namespace WTF
 
 #endif // ENABLE(WEBASSEMBLY)

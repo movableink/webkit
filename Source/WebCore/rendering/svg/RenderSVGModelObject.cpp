@@ -157,7 +157,7 @@ void RenderSVGModelObject::mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>
 {
     ASSERT(style().position() == PositionType::Static);
 
-    if (hasTransform())
+    if (isTransformed())
         mode.remove(IsFixed);
 
     auto* container = parent();
@@ -251,6 +251,10 @@ bool RenderSVGModelObject::applyCachedClipAndScrollPosition(LayoutRect& rect, co
         return true;
 
     LayoutRect clipRect(LayoutPoint(), cachedSizeForOverflowClip());
+    if (effectiveOverflowX() == Overflow::Visible)
+        clipRect.expandToInfiniteX();
+    if (effectiveOverflowY() == Overflow::Visible)
+        clipRect.expandToInfiniteY();
     bool intersects;
     if (context.options.contains(VisibleRectContextOption::UseEdgeInclusiveIntersection))
         intersects = rect.edgeInclusiveIntersect(clipRect);

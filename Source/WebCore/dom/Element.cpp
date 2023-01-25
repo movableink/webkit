@@ -59,6 +59,7 @@
 #include "EventNames.h"
 #include "FocusController.h"
 #include "FocusEvent.h"
+#include "FormAssociatedCustomElement.h"
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "FrameView.h"
@@ -420,7 +421,7 @@ bool Element::shouldUseInputMethod()
 
 static bool isForceEvent(const PlatformMouseEvent& platformEvent)
 {
-    return platformEvent.type() == PlatformEvent::MouseForceChanged || platformEvent.type() == PlatformEvent::MouseForceDown || platformEvent.type() == PlatformEvent::MouseForceUp;
+    return platformEvent.type() == PlatformEvent::Type::MouseForceChanged || platformEvent.type() == PlatformEvent::Type::MouseForceDown || platformEvent.type() == PlatformEvent::Type::MouseForceUp;
 }
 
 static bool isCompatibilityMouseEvent(const MouseEvent& mouseEvent)
@@ -836,6 +837,16 @@ bool Element::isUserActionElementHasFocusVisible() const
 {
     ASSERT(isUserActionElement());
     return document().userActionElements().hasFocusVisible(*this);
+}
+
+FormListedElement* Element::asFormListedElement()
+{
+    return nullptr;
+}
+
+ValidatedFormListedElement* Element::asValidatedFormListedElement()
+{
+    return nullptr;
 }
 
 bool Element::isUserActionElementHasFocusWithin() const
@@ -2305,7 +2316,7 @@ Style::Resolver& Element::styleResolver()
     return document().styleScope().resolver();
 }
 
-Style::ElementStyle Element::resolveStyle(const Style::ResolutionContext& resolutionContext)
+Style::ResolvedStyle Element::resolveStyle(const Style::ResolutionContext& resolutionContext)
 {
     return styleResolver().styleForElement(*this, resolutionContext);
 }
@@ -2889,7 +2900,6 @@ CustomElementReactionQueue* Element::reactionQueue() const
     if (isFailedOrPrecustomizedCustomElement()) {
         auto* queue = elementRareData()->customElementReactionQueue();
         ASSERT(queue);
-        ASSERT(queue->isEmpty() || queue->hasJustUpgradeReaction());
     }
 #endif
     if (!hasRareData())
@@ -3516,7 +3526,7 @@ bool Element::dispatchMouseForceWillBegin()
     if (!frame)
         return false;
 
-    PlatformMouseEvent platformMouseEvent { frame->eventHandler().lastKnownMousePosition(), frame->eventHandler().lastKnownMouseGlobalPosition(), NoButton, PlatformEvent::NoType, 1, { }, WallTime::now(), ForceAtClick, NoTap };
+    PlatformMouseEvent platformMouseEvent { frame->eventHandler().lastKnownMousePosition(), frame->eventHandler().lastKnownMouseGlobalPosition(), NoButton, PlatformEvent::Type::NoType, 1, { }, WallTime::now(), ForceAtClick, NoTap };
     auto mouseForceWillBeginEvent = MouseEvent::create(eventNames().webkitmouseforcewillbeginEvent, document().windowProxy(), platformMouseEvent, 0, nullptr);
     mouseForceWillBeginEvent->setTarget(Ref { *this });
     dispatchEvent(mouseForceWillBeginEvent);
@@ -4057,6 +4067,16 @@ bool Element::matchesValidPseudoClass() const
 }
 
 bool Element::matchesInvalidPseudoClass() const
+{
+    return false;
+}
+
+bool Element::matchesUserValidPseudoClass() const
+{
+    return false;
+}
+
+bool Element::matchesUserInvalidPseudoClass() const
 {
     return false;
 }
@@ -4790,7 +4810,7 @@ void Element::didDetachRenderers()
     ASSERT(hasCustomStyleResolveCallbacks());
 }
 
-std::optional<Style::ElementStyle> Element::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*)
+std::optional<Style::ResolvedStyle> Element::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*)
 {
     ASSERT(hasCustomStyleResolveCallbacks());
     return std::nullopt;
@@ -5135,6 +5155,23 @@ StylePropertyMap* Element::attributeStyleMap()
 void Element::setAttributeStyleMap(Ref<StylePropertyMap>&& map)
 {
     ensureElementRareData().setAttributeStyleMap(WTFMove(map));
+}
+
+void Element::ensureFormAssociatedCustomElement()
+{
+    RELEASE_ASSERT(is<HTMLMaybeFormAssociatedCustomElement>(*this));
+    auto& data = ensureElementRareData();
+    if (!data.formAssociatedCustomElement())
+        data.setFormAssociatedCustomElement(makeUnique<FormAssociatedCustomElement>(downcast<HTMLMaybeFormAssociatedCustomElement>(*this)));
+}
+
+FormAssociatedCustomElement& Element::formAssociatedCustomElementUnsafe() const
+{
+    RELEASE_ASSERT(is<HTMLMaybeFormAssociatedCustomElement>(*this));
+    ASSERT(hasRareData());
+    auto* customElement = elementRareData()->formAssociatedCustomElement();
+    ASSERT(customElement);
+    return *customElement;
 }
 
 StylePropertyMapReadOnly* Element::computedStyleMap()

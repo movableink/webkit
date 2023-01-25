@@ -46,6 +46,9 @@ RemoteDisplayListRecorder::RemoteDisplayListRecorder(ImageBuffer& imageBuffer, Q
     , m_imageBufferIdentifier(imageBufferIdentifier)
     , m_webProcessIdentifier(webProcessIdentifier)
     , m_renderingBackend(&renderingBackend)
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+    , m_sharedVideoFrameReader(Ref { renderingBackend.gpuConnectionToWebProcess().videoFrameObjectHeap() }, renderingBackend.gpuConnectionToWebProcess().webProcessIdentity())
+#endif
 {
 }
 
@@ -392,14 +395,14 @@ void RemoteDisplayListRecorder::drawPath(const Path& path)
     handleItem(DisplayList::DrawPath(path));
 }
 
-void RemoteDisplayListRecorder::drawFocusRingPath(const Path& path, float width, float offset, const Color& color)
+void RemoteDisplayListRecorder::drawFocusRingPath(const Path& path, float outlineWidth, const Color& color)
 {
-    handleItem(DisplayList::DrawFocusRingPath(path, width, offset, color));
+    handleItem(DisplayList::DrawFocusRingPath(path, outlineWidth, color));
 }
 
-void RemoteDisplayListRecorder::drawFocusRingRects(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
+void RemoteDisplayListRecorder::drawFocusRingRects(const Vector<FloatRect>& rects, float outlineOffset, float outlineWidth, const Color& color)
 {
-    handleItem(DisplayList::DrawFocusRingRects(rects, width, offset, color));
+    handleItem(DisplayList::DrawFocusRingRects(rects, outlineOffset, outlineWidth, color));
 }
 
 void RemoteDisplayListRecorder::fillRect(const FloatRect& rect)
@@ -484,6 +487,24 @@ void RemoteDisplayListRecorder::paintFrameForMedia(MediaPlayerIdentifier identif
     });
 }
 
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+void RemoteDisplayListRecorder::paintVideoFrame(SharedVideoFrame&& frame, const WebCore::FloatRect& destination, bool shouldDiscardAlpha)
+{
+    if (auto videoFrame = m_sharedVideoFrameReader.read(WTFMove(frame)))
+        drawingContext().paintVideoFrame(*videoFrame, destination, shouldDiscardAlpha);
+}
+
+void RemoteDisplayListRecorder::setSharedVideoFrameSemaphore(IPC::Semaphore&& semaphore)
+{
+    m_sharedVideoFrameReader.setSemaphore(WTFMove(semaphore));
+}
+
+void RemoteDisplayListRecorder::setSharedVideoFrameMemory(const SharedMemory::Handle& handle)
+{
+    m_sharedVideoFrameReader.setSharedMemory(handle);
+}
+#endif // PLATFORM(COCOA) && ENABLE(VIDEO)
+
 void RemoteDisplayListRecorder::strokeRect(const FloatRect& rect, float lineWidth)
 {
     handleItem(DisplayList::StrokeRect(rect, lineWidth));
@@ -535,12 +556,12 @@ void RemoteDisplayListRecorder::clearRect(const FloatRect& rect)
     handleItem(DisplayList::ClearRect(rect));
 }
 
-void RemoteDisplayListRecorder::drawControlPart(Ref<ControlPart> part, const FloatRect& rect, float deviceScaleFactor, const ControlStyle& style)
+void RemoteDisplayListRecorder::drawControlPart(Ref<ControlPart> part, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle& style)
 {
     if (!m_controlFactory)
         m_controlFactory = ControlFactory::createControlFactory();
     part->setControlFactory(m_controlFactory.get());
-    handleItem(DisplayList::DrawControlPart(WTFMove(part), rect, deviceScaleFactor, style));
+    handleItem(DisplayList::DrawControlPart(WTFMove(part), borderRect, deviceScaleFactor, style));
 }
 
 #if USE(CG)

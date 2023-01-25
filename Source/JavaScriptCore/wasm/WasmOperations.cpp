@@ -43,17 +43,17 @@
 #include "JSWebAssemblyStruct.h"
 #include "ProbeContext.h"
 #include "ReleaseHeapAccessScope.h"
-#include "TypedArrayController.h"
-#include "WaiterListManager.h"
 #include "WasmCallee.h"
 #include "WasmCallingConvention.h"
-#include "WasmContextInlines.h"
+#include "WasmContext.h"
 #include "WasmInstance.h"
+#include "WasmLLIntGenerator.h"
 #include "WasmMemory.h"
 #include "WasmModuleInformation.h"
 #include "WasmOMGPlan.h"
 #include "WasmOSREntryData.h"
 #include "WasmOSREntryPlan.h"
+#include "WasmOperationsInlines.h"
 #include "WasmWorklist.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/DataLog.h>
@@ -274,9 +274,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmTriggerOSREntryNow, void, (Probe::Context&
     OSREntryData& osrEntryData = *context.arg<OSREntryData*>();
     uint32_t functionIndex = osrEntryData.functionIndex();
     uint32_t loopIndex = osrEntryData.loopIndex();
-    Instance* instance = Wasm::Context::tryLoadInstanceFromTLS();
-    if (!instance)
-        instance = context.gpr<Instance*>(Wasm::PinnedRegisterInfo::get().wasmContextInstancePointer);
+    Instance* instance = context.gpr<Instance*>(GPRInfo::wasmContextInstancePointer);
 
     auto returnWithoutOSREntry = [&] {
         context.gpr(GPRInfo::argumentGPR0) = 0;
@@ -499,70 +497,87 @@ JSC_DEFINE_JIT_OPERATION(operationWasmTriggerTierUpNow, void, (Instance* instanc
 }
 #endif
 
-JSC_DEFINE_JIT_OPERATION(operationWasmUnwind, void, (CallFrame* callFrame))
+JSC_DEFINE_JIT_OPERATION(operationWasmUnwind, void*, (Instance* instance))
 {
-    // FIXME: Consider passing JSWebAssemblyInstance* instead.
-    // https://bugs.webkit.org/show_bug.cgi?id=203206
-    VM& vm = callFrame->deprecatedVM();
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
     genericUnwind(vm, callFrame);
     ASSERT(!!vm.callFrameForCatch);
+    ASSERT(!!vm.targetMachinePCForThrow);
+    return vm.targetMachinePCForThrow;
 }
 
-JSC_DEFINE_JIT_OPERATION(operationConvertToI64, int64_t, (CallFrame* callFrame, EncodedJSValue v))
+JSC_DEFINE_JIT_OPERATION(operationConvertToI64, int64_t, (Instance* instance, EncodedJSValue v))
 {
-    // FIXME: Consider passing JSWebAssemblyInstance* instead.
-    // https://bugs.webkit.org/show_bug.cgi?id=203206
-    VM& vm = callFrame->deprecatedVM();
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    JSGlobalObject* globalObject = instance->globalObject();
     NativeCallFrameTracer tracer(vm, callFrame);
-    return JSValue::decode(v).toBigInt64(callFrame->lexicalGlobalObject(vm));
+    return JSValue::decode(v).toBigInt64(globalObject);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationConvertToF64, double, (CallFrame* callFrame, EncodedJSValue v))
+JSC_DEFINE_JIT_OPERATION(operationConvertToF64, double, (Instance* instance, EncodedJSValue v))
 {
-    // FIXME: Consider passing JSWebAssemblyInstance* instead.
-    // https://bugs.webkit.org/show_bug.cgi?id=203206
-    VM& vm = callFrame->deprecatedVM();
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    JSGlobalObject* globalObject = instance->globalObject();
     NativeCallFrameTracer tracer(vm, callFrame);
-    return JSValue::decode(v).toNumber(callFrame->lexicalGlobalObject(vm));
+    return JSValue::decode(v).toNumber(globalObject);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationConvertToI32, int32_t, (CallFrame* callFrame, EncodedJSValue v))
+JSC_DEFINE_JIT_OPERATION(operationConvertToI32, int32_t, (Instance* instance, EncodedJSValue v))
 {
-    // FIXME: Consider passing JSWebAssemblyInstance* instead.
-    // https://bugs.webkit.org/show_bug.cgi?id=203206
-    VM& vm = callFrame->deprecatedVM();
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    JSGlobalObject* globalObject = instance->globalObject();
     NativeCallFrameTracer tracer(vm, callFrame);
-    return JSValue::decode(v).toInt32(callFrame->lexicalGlobalObject(vm));
+    return JSValue::decode(v).toInt32(globalObject);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationConvertToF32, float, (CallFrame* callFrame, EncodedJSValue v))
+JSC_DEFINE_JIT_OPERATION(operationConvertToF32, float, (Instance* instance, EncodedJSValue v))
 {
-    // FIXME: Consider passing JSWebAssemblyInstance* instead.
-    // https://bugs.webkit.org/show_bug.cgi?id=203206
-    VM& vm = callFrame->deprecatedVM();
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    JSGlobalObject* globalObject = instance->globalObject();
     NativeCallFrameTracer tracer(vm, callFrame);
-    return static_cast<float>(JSValue::decode(v).toNumber(callFrame->lexicalGlobalObject(vm)));
+    return static_cast<float>(JSValue::decode(v).toNumber(globalObject));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationConvertToBigInt, EncodedJSValue, (CallFrame* callFrame, Instance* instance, EncodedWasmValue value))
+JSC_DEFINE_JIT_OPERATION(operationConvertToFuncref, EncodedJSValue, (Instance* instance, EncodedJSValue v))
 {
-    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
-    JSGlobalObject* globalObject = jsInstance->globalObject();
-    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    JSGlobalObject* globalObject = instance->globalObject();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue value = JSValue::decode(v);
+    WebAssemblyFunction* wasmFunction = nullptr;
+    WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
+    if (UNLIKELY(!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull())) {
+        throwTypeError(globalObject, scope, "Funcref value is not a function"_s);
+        return { };
+    }
+    return v;
+}
+
+JSC_DEFINE_JIT_OPERATION(operationConvertToBigInt, EncodedJSValue, (Instance* instance, EncodedWasmValue value))
+{
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    JSGlobalObject* globalObject = instance->globalObject();
     NativeCallFrameTracer tracer(vm, callFrame);
     return JSValue::encode(JSBigInt::makeHeapBigIntOrBigInt32(globalObject, value));
 }
 
 // https://webassembly.github.io/multi-value/js-api/index.html#run-a-host-function
-JSC_DEFINE_JIT_OPERATION(operationIterateResults, void, (CallFrame* callFrame, Instance* instance, const TypeDefinition* type, EncodedJSValue encResult, uint64_t* registerResults, uint64_t* calleeFramePointer))
+JSC_DEFINE_JIT_OPERATION(operationIterateResults, void, (Instance* instance, const TypeDefinition* type, EncodedJSValue encResult, uint64_t* registerResults, uint64_t* calleeFramePointer))
 {
-    // FIXME: Consider passing JSWebAssemblyInstance* instead.
-    // https://bugs.webkit.org/show_bug.cgi?id=203206
-    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
-    JSGlobalObject* globalObject = jsInstance->globalObject();
-    VM& vm = globalObject->vm();
-    NativeCallFrameTracer(vm, callFrame);
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    JSGlobalObject* globalObject = instance->globalObject();
+    NativeCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     const FunctionSignature* signature = type->as<FunctionSignature>();
@@ -612,14 +627,19 @@ JSC_DEFINE_JIT_OPERATION(operationIterateResults, void, (CallFrame* callFrame, I
             unboxedValue = bitwise_cast<uint64_t>(value.toNumber(globalObject));
             break;
         default: {
-            if (isFuncref(returnType) || isExternref(returnType)) {
-                if (isFuncref(returnType) && !value.isCallable()) {
+            if (isExternref(returnType))
+                ASSERT(returnType.isNullable());
+            else if (isFuncref(returnType)) {
+                ASSERT(returnType.isNullable());
+                WebAssemblyFunction* wasmFunction = nullptr;
+                WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
+                if (UNLIKELY(!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull())) {
                     throwTypeError(globalObject, scope, "Funcref value is not a function"_s);
                     return;
                 }
-                unboxedValue = bitwise_cast<uint64_t>(value);
             } else
                 RELEASE_ASSERT_NOT_REACHED();
+            unboxedValue = bitwise_cast<uint64_t>(value);
         }
         }
         RETURN_IF_EXCEPTION(scope, void());
@@ -637,14 +657,14 @@ JSC_DEFINE_JIT_OPERATION(operationIterateResults, void, (CallFrame* callFrame, I
 // FIXME: It would be much easier to inline this when we have a global GC, which could probably mean we could avoid
 // spilling the results onto the stack.
 // Saved result registers should be placed on the stack just above the last stack result.
-JSC_DEFINE_JIT_OPERATION(operationAllocateResultsArray, JSArray*, (CallFrame* callFrame, Wasm::Instance* instance, const TypeDefinition* type, IndexingType indexingType, JSValue* stackPointerFromCallee))
+JSC_DEFINE_JIT_OPERATION(operationAllocateResultsArray, JSArray*, (Wasm::Instance* instance, const TypeDefinition* type, IndexingType indexingType, JSValue* stackPointerFromCallee))
 {
-    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
-    VM& vm = jsInstance->vm();
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    JSGlobalObject* globalObject = instance->globalObject();
     NativeCallFrameTracer tracer(vm, callFrame);
 
-    JSGlobalObject* globalObject = jsInstance->globalObject();
-    ObjectInitializationScope initializationScope(globalObject->vm());
+    ObjectInitializationScope initializationScope(vm);
     const FunctionSignature* signature = type->as<FunctionSignature>();
     JSArray* result = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, globalObject->arrayStructureForIndexingTypeDuringAllocation(indexingType), signature->returnCount());
 
@@ -690,319 +710,133 @@ JSC_DEFINE_JIT_OPERATION(operationPopcount64, uint64_t, (int64_t value))
     return __builtin_popcountll(value);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationGrowMemory, int32_t, (void* callFrame, Instance* instance, int32_t delta))
+JSC_DEFINE_JIT_OPERATION(operationGrowMemory, int32_t, (Instance* instance, int32_t delta))
 {
-    instance->storeTopCallFrame(callFrame);
-
-    if (delta < 0)
-        return -1;
-
-    auto grown = instance->memory()->grow(instance->vm(), PageCount(delta));
-    if (!grown) {
-        switch (grown.error()) {
-        case GrowFailReason::InvalidDelta:
-        case GrowFailReason::InvalidGrowSize:
-        case GrowFailReason::WouldExceedMaximum:
-        case GrowFailReason::OutOfMemory:
-        case GrowFailReason::GrowSharedUnavailable:
-            return -1;
-        }
-        RELEASE_ASSERT_NOT_REACHED();
-    }
-
-    return grown.value().pageCount();
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    return growMemory(instance, delta);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmMemoryFill, size_t, (Instance* instance, uint32_t dstAddress, uint32_t targetValue, uint32_t count))
 {
-    return instance->memory()->fill(dstAddress, static_cast<uint8_t>(targetValue), count);
+    return memoryFill(instance, dstAddress, targetValue, count);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmMemoryCopy, size_t, (Instance* instance, uint32_t dstAddress, uint32_t srcAddress, uint32_t count))
 {
-    return instance->memory()->copy(dstAddress, srcAddress, count);
+    return memoryCopy(instance, dstAddress, srcAddress, count);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationGetWasmTableElement, EncodedJSValue, (Instance* instance, unsigned tableIndex, int32_t signedIndex))
 {
-    ASSERT(tableIndex < instance->module().moduleInformation().tableCount());
-    if (signedIndex < 0)
-        return 0;
-
-    uint32_t index = signedIndex;
-    if (index >= instance->table(tableIndex)->length())
-        return 0;
-
-    return JSValue::encode(instance->table(tableIndex)->get(index));
-}
-
-static bool setWasmTableElement(Instance* instance, unsigned tableIndex, uint32_t index, EncodedJSValue encValue)
-{
-    ASSERT(tableIndex < instance->module().moduleInformation().tableCount());
-
-    if (index >= instance->table(tableIndex)->length())
-        return false;
-
-    JSValue value = JSValue::decode(encValue);
-    if (instance->table(tableIndex)->type() == Wasm::TableElementType::Externref)
-        instance->table(tableIndex)->set(index, value);
-    else if (instance->table(tableIndex)->type() == Wasm::TableElementType::Funcref) {
-        WebAssemblyFunction* wasmFunction;
-        WebAssemblyWrapperFunction* wasmWrapperFunction;
-
-        if (isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction)) {
-            ASSERT(!!wasmFunction || !!wasmWrapperFunction);
-            if (wasmFunction)
-                instance->table(tableIndex)->asFuncrefTable()->setFunction(index, jsCast<JSObject*>(value), wasmFunction->importableFunction(), &wasmFunction->instance()->instance());
-            else
-                instance->table(tableIndex)->asFuncrefTable()->setFunction(index, jsCast<JSObject*>(value), wasmWrapperFunction->importableFunction(), &wasmWrapperFunction->instance()->instance());
-        } else if (value.isNull())
-            instance->table(tableIndex)->clear(index);
-        else
-            ASSERT_NOT_REACHED();
-    } else
-        ASSERT_NOT_REACHED();
-
-    return true;
+    return tableGet(instance, tableIndex, signedIndex);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationSetWasmTableElement, uint32_t, (Instance* instance, unsigned tableIndex, uint32_t signedIndex, EncodedJSValue encValue))
 {
-    return setWasmTableElement(instance, tableIndex, signedIndex, encValue);
+    return tableSet(instance, tableIndex, signedIndex, encValue);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmTableInit, size_t, (Instance* instance, unsigned elementIndex, unsigned tableIndex, uint32_t dstOffset, uint32_t srcOffset, uint32_t length))
 {
-    ASSERT(elementIndex < instance->module().moduleInformation().elementCount());
-    ASSERT(tableIndex < instance->module().moduleInformation().tableCount());
-
-    if (WTF::sumOverflows<uint32_t>(srcOffset, length))
-        return false;
-
-    if (WTF::sumOverflows<uint32_t>(dstOffset, length))
-        return false;
-
-    if (dstOffset + length > instance->table(tableIndex)->length())
-        return false;
-
-    const uint32_t lengthOfElementSegment = instance->elementAt(elementIndex) ? instance->elementAt(elementIndex)->length() : 0U;
-    if (srcOffset + length > lengthOfElementSegment)
-        return false;
-
-    if (!lengthOfElementSegment)
-        return true;
-
-    instance->tableInit(dstOffset, srcOffset, length, elementIndex, tableIndex);
-    return true;
+    return tableInit(instance, elementIndex, tableIndex, dstOffset, srcOffset, length);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmElemDrop, void, (Instance* instance, unsigned elementIndex))
 {
-    ASSERT(elementIndex < instance->module().moduleInformation().elementCount());
-    instance->elemDrop(elementIndex);
+    return elemDrop(instance, elementIndex);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmTableGrow, int32_t, (Instance* instance, unsigned tableIndex, EncodedJSValue fill, uint32_t delta))
 {
-    ASSERT(tableIndex < instance->module().moduleInformation().tableCount());
-    auto oldSize = instance->table(tableIndex)->length();
-    auto newSize = instance->table(tableIndex)->grow(delta, jsNull());
-    if (!newSize)
-        return -1;
-
-    for (unsigned i = oldSize; i < instance->table(tableIndex)->length(); ++i)
-        setWasmTableElement(instance, tableIndex, i, fill);
-
-    return oldSize;
+    return tableGrow(instance, tableIndex, fill, delta);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmTableFill, size_t, (Instance* instance, unsigned tableIndex, uint32_t offset, EncodedJSValue fill, uint32_t count))
 {
-    ASSERT(tableIndex < instance->module().moduleInformation().tableCount());
-
-    if (WTF::sumOverflows<uint32_t>(offset, count))
-        return false;
-
-    if (offset + count > instance->table(tableIndex)->length())
-        return false;
-
-    for (uint32_t index = 0; index < count; ++index)
-        setWasmTableElement(instance, tableIndex, offset + index, fill);
-
-    return true;
+    return tableFill(instance, tableIndex, offset, fill, count);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmTableCopy, size_t, (Instance* instance, unsigned dstTableIndex, unsigned srcTableIndex, int32_t dstOffset, int32_t srcOffset, int32_t length))
 {
-    ASSERT(dstTableIndex < instance->module().moduleInformation().tableCount());
-    ASSERT(srcTableIndex < instance->module().moduleInformation().tableCount());
-    const Table* dstTable = instance->table(dstTableIndex);
-    const Table* srcTable = instance->table(srcTableIndex);
-    ASSERT(dstTable->type() == srcTable->type());
-
-    if ((srcOffset < 0) || (dstOffset < 0) || (length < 0))
-        return false;
-
-    CheckedUint32 lastDstElementIndexChecked = static_cast<uint32_t>(dstOffset);
-    lastDstElementIndexChecked += static_cast<uint32_t>(length);
-
-    if (lastDstElementIndexChecked.hasOverflowed())
-        return false;
-
-    if (lastDstElementIndexChecked > dstTable->length())
-        return false;
-
-    CheckedUint32 lastSrcElementIndexChecked = static_cast<uint32_t>(srcOffset);
-    lastSrcElementIndexChecked += static_cast<uint32_t>(length);
-
-    if (lastSrcElementIndexChecked.hasOverflowed())
-        return false;
-
-    if (lastSrcElementIndexChecked > srcTable->length())
-        return false;
-
-    instance->tableCopy(dstOffset, srcOffset, length, dstTableIndex, srcTableIndex);
-    return true;
+    return tableCopy(instance, dstTableIndex, srcTableIndex, dstOffset, srcOffset, length);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmRefFunc, EncodedJSValue, (Instance* instance, uint32_t index))
 {
-    JSValue value = instance->getFunctionWrapper(index);
-    ASSERT(value.isCallable());
-    return JSValue::encode(value);
+    return refFunc(instance, index);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationWasmStructNew, EncodedJSValue, (Instance* instance, uint32_t typeIndex, uint64_t* arguments))
+JSC_DEFINE_JIT_OPERATION(operationWasmStructNew, EncodedJSValue, (Instance* instance, uint32_t typeIndex, bool useDefault, uint64_t* arguments))
 {
-    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
-    JSGlobalObject* globalObject = jsInstance->globalObject();
-    Ref<TypeDefinition> structTypeDefinition = jsInstance->instance().module().moduleInformation().typeSignatures[typeIndex];
-    const StructType& structType = *structTypeDefinition->as<StructType>();
-
-    JSWebAssemblyStruct* structValue = JSWebAssemblyStruct::tryCreate(globalObject, globalObject->webAssemblyStructStructure(), jsInstance, typeIndex);
-    for (unsigned i = 0; i < structType.fieldCount(); ++i)
-        structValue->set(globalObject, i, toJSValue(globalObject, structType.field(i).type, arguments[i]));
-    return JSValue::encode(structValue);
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    return structNew(instance, typeIndex, useDefault, arguments);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmStructNewEmpty, EncodedJSValue, (Instance* instance, uint32_t typeIndex))
 {
-    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
-    JSGlobalObject* globalObject = jsInstance->globalObject();
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    JSWebAssemblyInstance* jsInstance = instance->owner();
+    JSGlobalObject* globalObject = instance->globalObject();
     return JSValue::encode(JSWebAssemblyStruct::tryCreate(globalObject, globalObject->webAssemblyStructStructure(), jsInstance, typeIndex));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmStructGet, EncodedJSValue, (EncodedJSValue encodedStructReference, uint32_t fieldIndex))
 {
-    auto structReference = JSValue::decode(encodedStructReference);
-    ASSERT(structReference.isObject());
-    JSObject* structureAsObject = jsCast<JSObject*>(structReference);
-    ASSERT(structureAsObject->inherits<JSWebAssemblyStruct>());
-    JSWebAssemblyStruct* structPointer = jsCast<JSWebAssemblyStruct*>(structureAsObject);
-    return structPointer->get(fieldIndex);
+    return structGet(encodedStructReference, fieldIndex);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmStructSet, void, (Instance* instance, EncodedJSValue encodedStructReference, uint32_t fieldIndex, EncodedJSValue argument))
 {
-    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
-    auto structReference = JSValue::decode(encodedStructReference);
-    ASSERT(structReference.isObject());
-    JSObject* structureAsObject = jsCast<JSObject*>(structReference);
-    ASSERT(structureAsObject->inherits<JSWebAssemblyStruct>());
-    JSWebAssemblyStruct* structPointer = jsCast<JSWebAssemblyStruct*>(structureAsObject);
-    const auto fieldType = structPointer->structType()->field(fieldIndex).type;
-    return structPointer->set(jsInstance->globalObject(), fieldIndex, toJSValue(jsInstance->globalObject(), fieldType, argument));
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    return structSet(instance, encodedStructReference, fieldIndex, argument);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationGetWasmTableSize, int32_t, (Instance* instance, unsigned tableIndex))
 {
-    return instance->table(tableIndex)->length();
-}
-
-template<typename ValueType>
-static int32_t wait(VM& vm, ValueType* pointer, ValueType expectedValue, int64_t timeoutInNanoseconds)
-{
-    Seconds timeout = Seconds::infinity();
-    if (timeoutInNanoseconds >= 0)
-        timeout = Seconds::fromNanoseconds(timeoutInNanoseconds);
-    return static_cast<int32_t>(WaiterListManager::singleton().waitSync(vm, pointer, expectedValue, timeout));
+    return tableSize(instance, tableIndex);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationMemoryAtomicWait32, int32_t, (Instance* instance, unsigned base, unsigned offset, int32_t value, int64_t timeoutInNanoseconds))
 {
-    VM& vm = instance->vm();
-    uint64_t offsetInMemory = static_cast<uint64_t>(base) + offset;
-    if (offsetInMemory & (0x4 - 1))
-        return -1;
-    if (!instance->memory())
-        return -1;
-    if (offsetInMemory >= instance->memory()->size())
-        return -1;
-    if (instance->memory()->sharingMode() != MemorySharingMode::Shared)
-        return -1;
-    if (!vm.m_typedArrayController->isAtomicsWaitAllowedOnCurrentThread())
-        return -1;
-    int32_t* pointer = bitwise_cast<int32_t*>(bitwise_cast<uint8_t*>(instance->memory()->memory()) + offsetInMemory);
-    return wait<int32_t>(vm, pointer, value, timeoutInNanoseconds);
+    return memoryAtomicWait32(instance, base, offset, value, timeoutInNanoseconds);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationMemoryAtomicWait64, int32_t, (Instance* instance, unsigned base, unsigned offset, int64_t value, int64_t timeoutInNanoseconds))
 {
-    VM& vm = instance->vm();
-    uint64_t offsetInMemory = static_cast<uint64_t>(base) + offset;
-    if (offsetInMemory & (0x8 - 1))
-        return -1;
-    if (!instance->memory())
-        return -1;
-    if (offsetInMemory >= instance->memory()->size())
-        return -1;
-    if (instance->memory()->sharingMode() != MemorySharingMode::Shared)
-        return -1;
-    if (!vm.m_typedArrayController->isAtomicsWaitAllowedOnCurrentThread())
-        return -1;
-    int64_t* pointer = bitwise_cast<int64_t*>(bitwise_cast<uint8_t*>(instance->memory()->memory()) + offsetInMemory);
-    return wait<int64_t>(vm, pointer, value, timeoutInNanoseconds);
+    return memoryAtomicWait64(instance, base, offset, value, timeoutInNanoseconds);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationMemoryAtomicNotify, int32_t, (Instance* instance, unsigned base, unsigned offset, int32_t countValue))
 {
-    uint64_t offsetInMemory = static_cast<uint64_t>(base) + offset;
-    if (offsetInMemory & (0x4 - 1))
-        return -1;
-    if (!instance->memory())
-        return -1;
-    if (offsetInMemory >= instance->memory()->size())
-        return -1;
-    if (instance->memory()->sharingMode() != MemorySharingMode::Shared)
-        return 0;
-    uint8_t* pointer = bitwise_cast<uint8_t*>(instance->memory()->memory()) + offsetInMemory;
-    unsigned count = UINT_MAX;
-    if (countValue >= 0)
-        count = static_cast<unsigned>(countValue);
-
-    return static_cast<int32_t>(WaiterListManager::singleton().notifyWaiter(pointer, count));
+    return memoryAtomicNotify(instance, base, offset, countValue);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmMemoryInit, size_t, (Instance* instance, unsigned dataSegmentIndex, uint32_t dstAddress, uint32_t srcAddress, uint32_t length))
 {
-    ASSERT(dataSegmentIndex < instance->module().moduleInformation().dataSegmentsCount());
-    return instance->memoryInit(dstAddress, srcAddress, length, dataSegmentIndex);
+    return memoryInit(instance, dataSegmentIndex, dstAddress, srcAddress, length);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmDataDrop, void, (Instance* instance, unsigned dataSegmentIndex))
 {
-    ASSERT(dataSegmentIndex < instance->module().moduleInformation().dataSegmentsCount());
-    instance->dataDrop(dataSegmentIndex);
+    return dataDrop(instance, dataSegmentIndex);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationWasmThrow, void*, (Instance* instance, CallFrame* callFrame, unsigned exceptionIndex, uint64_t* arguments))
+JSC_DEFINE_JIT_OPERATION(operationWasmThrow, void*, (Instance* instance, unsigned exceptionIndex, uint64_t* arguments))
 {
-    instance->storeTopCallFrame(callFrame);
-
-    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
-    JSGlobalObject* globalObject = jsInstance->globalObject();
-    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    JSGlobalObject* globalObject = instance->globalObject();
 
     const Wasm::Tag& tag = instance->tag(exceptionIndex);
 
@@ -1022,91 +856,39 @@ JSC_DEFINE_JIT_OPERATION(operationWasmThrow, void*, (Instance* instance, CallFra
     genericUnwind(vm, callFrame);
     ASSERT(!!vm.callFrameForCatch);
     ASSERT(!!vm.targetMachinePCForThrow);
-    // FIXME: We could make this better:
-    // This is a total hack, but the llint (both op_catch and llint_handle_uncaught_exception)
-    // require a cell in the callee field to load the VM. (The baseline JIT does not require
-    // this since it is compiled with a constant VM pointer.) We could make the calling convention
-    // for exceptions first load callFrameForCatch info call frame register before jumping
-    // to the exception handler. If we did this, we could remove this terrible hack.
-    // https://bugs.webkit.org/show_bug.cgi?id=170440
-    vm.calleeForWasmCatch = callFrame->callee();
-    Register* calleeSlot = bitwise_cast<Register*>(callFrame) + static_cast<int>(CallFrameSlot::callee);
-    *calleeSlot = bitwise_cast<JSCell*>(jsInstance->module());
     return vm.targetMachinePCForThrow;
 }
 
-JSC_DEFINE_JIT_OPERATION(operationWasmRethrow, void*, (Instance* instance, CallFrame* callFrame, EncodedJSValue thrownValue))
+JSC_DEFINE_JIT_OPERATION(operationWasmRethrow, void*, (Instance* instance, EncodedJSValue thrownValue))
 {
-    instance->storeTopCallFrame(callFrame);
-
-    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
-    JSGlobalObject* globalObject = jsInstance->globalObject();
-    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    JSGlobalObject* globalObject = instance->globalObject();
 
     throwException(globalObject, throwScope, JSValue::decode(thrownValue));
 
     genericUnwind(vm, callFrame);
     ASSERT(!!vm.callFrameForCatch);
     ASSERT(!!vm.targetMachinePCForThrow);
-    // FIXME: We could make this better:
-    // This is a total hack, but the llint (both op_catch and llint_handle_uncaught_exception)
-    // require a cell in the callee field to load the VM. (The baseline JIT does not require
-    // this since it is compiled with a constant VM pointer.) We could make the calling convention
-    // for exceptions first load callFrameForCatch info call frame register before jumping
-    // to the exception handler. If we did this, we could remove this terrible hack.
-    // https://bugs.webkit.org/show_bug.cgi?id=170440
-    vm.calleeForWasmCatch = callFrame->callee();
-    Register* calleeSlot = bitwise_cast<Register*>(callFrame) + static_cast<int>(CallFrameSlot::callee);
-    *calleeSlot = bitwise_cast<JSCell*>(jsInstance->module());
     return vm.targetMachinePCForThrow;
 }
 
-JSC_DEFINE_JIT_OPERATION(operationWasmToJSException, void*, (CallFrame* callFrame, Wasm::ExceptionType type, Instance* wasmInstance))
+JSC_DEFINE_JIT_OPERATION(operationWasmToJSException, void*, (Instance* instance, Wasm::ExceptionType type))
 {
-    wasmInstance->storeTopCallFrame(callFrame);
-    JSWebAssemblyInstance* instance = wasmInstance->owner<JSWebAssemblyInstance>();
-    JSGlobalObject* globalObject = instance->globalObject();
-
-    // Do not retrieve VM& from CallFrame since CallFrame's callee is not a JSCell.
-    VM& vm = globalObject->vm();
-
-    {
-        auto throwScope = DECLARE_THROW_SCOPE(vm);
-
-        JSObject* error;
-        if (type == ExceptionType::StackOverflow)
-            error = createStackOverflowError(globalObject);
-        else if (isTypeErrorExceptionType(type))
-            error = createTypeError(globalObject, Wasm::errorMessageForExceptionType(type));
-        else
-            error = createJSWebAssemblyRuntimeError(globalObject, vm, type);
-        throwException(globalObject, throwScope, error);
-    }
-
-    genericUnwind(vm, callFrame);
-    ASSERT(!!vm.callFrameForCatch);
-    ASSERT(!!vm.targetMachinePCForThrow);
-    // FIXME: We could make this better:
-    // This is a total hack, but the llint (both op_catch and llint_handle_uncaught_exception)
-    // require a cell in the callee field to load the VM. (The baseline JIT does not require
-    // this since it is compiled with a constant VM pointer.) We could make the calling convention
-    // for exceptions first load callFrameForCatch info call frame register before jumping
-    // to the exception handler. If we did this, we could remove this terrible hack.
-    // https://bugs.webkit.org/show_bug.cgi?id=170440
-    vm.calleeForWasmCatch = callFrame->callee();
-    Register* calleeSlot = bitwise_cast<Register*>(callFrame) + static_cast<int>(CallFrameSlot::callee);
-    *calleeSlot = bitwise_cast<JSCell*>(instance->module());
-    return vm.targetMachinePCForThrow;
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    return throwWasmToJSException(callFrame, type, instance);
 }
 
 namespace WasmOperationsInternal {
 
 static ThrownExceptionInfo retrieveAndClearExceptionIfCatchableImpl(Instance* instance)
 {
-    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
-    JSGlobalObject* globalObject = jsInstance->globalObject();
-    VM& vm = globalObject->vm();
+    VM& vm = instance->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     RELEASE_ASSERT(!!throwScope.exception());
@@ -1144,75 +926,26 @@ JSC_DEFINE_JIT_OPERATION(operationWasmRetrieveAndClearExceptionIfCatchable, void
 
 JSC_DEFINE_JIT_OPERATION(operationWasmArrayNew, EncodedJSValue, (Instance* instance, uint32_t typeIndex, uint32_t size, EncodedJSValue encValue))
 {
-    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
-    JSGlobalObject* globalObject = jsInstance->globalObject();
-    VM& vm = globalObject->vm();
-
-    ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
-
-    Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex];
-    ASSERT(arraySignature.is<ArrayType>());
-    Wasm::FieldType fieldType = arraySignature.as<ArrayType>()->elementType();
-
-    JSWebAssemblyArray* array = nullptr;
-    switch (fieldType.type.kind) {
-    case Wasm::TypeKind::I32:
-    case Wasm::TypeKind::F32: {
-        FixedVector<uint32_t> values(size);
-        for (unsigned i = 0; i < size; i++)
-            values[i] = static_cast<uint32_t>(encValue);
-        array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType.type, size, WTFMove(values));
-        break;
-    }
-    default: {
-        FixedVector<uint64_t> values(size);
-        for (unsigned i = 0; i < size; i++)
-            values[i] = static_cast<uint64_t>(encValue);
-        array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType.type, size, WTFMove(values));
-        break;
-    }
-    }
-
-    return JSValue::encode(JSValue(array));
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    return arrayNew(instance, typeIndex, size, encValue);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmArrayGet, EncodedJSValue, (Instance* instance, uint32_t typeIndex, EncodedJSValue arrayValue, uint32_t index))
 {
-#if ASSERT_ENABLED
-    ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
-    Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex];
-    ASSERT(arraySignature.is<ArrayType>());
-#else
-    UNUSED_PARAM(instance);
-    UNUSED_PARAM(typeIndex);
-#endif
-
-    JSValue arrayRef = JSValue::decode(arrayValue);
-    ASSERT(arrayRef.isObject());
-    JSWebAssemblyArray* arrayObject = jsCast<JSWebAssemblyArray*>(arrayRef.getObject());
-
-    return arrayObject->get(index);
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    return arrayGet(instance, typeIndex, arrayValue, index);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmArraySet, void, (Instance* instance, uint32_t typeIndex, EncodedJSValue arrayValue, uint32_t index, EncodedJSValue value))
 {
-    ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
-    JSWebAssemblyInstance* jsInstance = instance->owner<JSWebAssemblyInstance>();
-    JSGlobalObject* globalObject = jsInstance->globalObject();
-    VM& vm = globalObject->vm();
-
-#if ASSERT_ENABLED
-    Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex];
-    ASSERT(arraySignature.is<ArrayType>());
-#else
-    UNUSED_PARAM(typeIndex);
-#endif
-
-    JSValue arrayRef = JSValue::decode(arrayValue);
-    ASSERT(arrayRef.isObject());
-    JSWebAssemblyArray* arrayObject = jsCast<JSWebAssemblyArray*>(arrayRef.getObject());
-
-    arrayObject->set(vm, index, value);
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    return arraySet(instance, typeIndex, arrayValue, index, value);
 }
 
 } } // namespace JSC::Wasm

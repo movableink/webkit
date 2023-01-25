@@ -37,12 +37,14 @@
 #include <WebCore/AuthenticationChallenge.h>
 #include <WebCore/AuthenticationChallenge.h>
 #include <WebCore/BlobPart.h>
+#include <WebCore/ButtonPart.h>
 #include <WebCore/ByteArrayPixelBuffer.h>
 #include <WebCore/COEPInheritenceViolationReportBody.h>
 #include <WebCore/CORPViolationReportBody.h>
 #include <WebCore/CSPViolationReportBody.h>
 #include <WebCore/CacheQueryOptions.h>
 #include <WebCore/CacheStorageConnection.h>
+#include <WebCore/ColorWellPart.h>
 #include <WebCore/CompositionUnderline.h>
 #include <WebCore/ControlPart.h>
 #include <WebCore/Credential.h>
@@ -63,23 +65,27 @@
 #include <WebCore/FilterOperations.h>
 #include <WebCore/FloatQuad.h>
 #include <WebCore/Font.h>
-#include <WebCore/FontAttributes.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/GraphicsLayer.h>
 #include <WebCore/IDBGetResult.h>
 #include <WebCore/IdentityTransformOperation.h>
 #include <WebCore/Image.h>
+#include <WebCore/ImageControlsButtonPart.h>
+#include <WebCore/InnerSpinButtonPart.h>
 #include <WebCore/JSDOMExceptionHandling.h>
 #include <WebCore/Length.h>
 #include <WebCore/LengthBox.h>
 #include <WebCore/Matrix3DTransformOperation.h>
 #include <WebCore/MatrixTransformOperation.h>
 #include <WebCore/MediaSelectionOption.h>
+#include <WebCore/MenuListButtonPart.h>
+#include <WebCore/MenuListPart.h>
 #include <WebCore/MeterPart.h>
 #include <WebCore/NotificationResources.h>
 #include <WebCore/Pasteboard.h>
 #include <WebCore/PerspectiveTransformOperation.h>
 #include <WebCore/PluginData.h>
+#include <WebCore/ProgressBarPart.h>
 #include <WebCore/PromisedAttachmentInfo.h>
 #include <WebCore/ProtectionSpace.h>
 #include <WebCore/RectEdges.h>
@@ -96,6 +102,8 @@
 #include <WebCore/ScriptExecutionContextIdentifier.h>
 #include <WebCore/ScrollingConstraints.h>
 #include <WebCore/ScrollingCoordinator.h>
+#include <WebCore/SearchFieldCancelButtonPart.h>
+#include <WebCore/SearchFieldPart.h>
 #include <WebCore/SearchPopupMenu.h>
 #include <WebCore/SecurityOrigin.h>
 #include <WebCore/SerializedAttachmentData.h>
@@ -106,6 +114,8 @@
 #include <WebCore/ShareData.h>
 #include <WebCore/SharedBuffer.h>
 #include <WebCore/SkewTransformOperation.h>
+#include <WebCore/SliderThumbPart.h>
+#include <WebCore/SliderTrackPart.h>
 #include <WebCore/SystemImage.h>
 #include <WebCore/TestReportBody.h>
 #include <WebCore/TextAreaPart.h>
@@ -175,7 +185,7 @@ void ArgumentCoder<DOMCacheEngine::Record>::encode(Encoder& encoder, const DOMCa
     }, [&](const Ref<FormData>& formData) {
         encoder << false;
         encoder << true;
-        formData->encode(encoder);
+        encoder << formData;
     }, [&](const std::nullptr_t&) {
         encoder << false;
         encoder << false;
@@ -236,10 +246,11 @@ std::optional<DOMCacheEngine::Record> ArgumentCoder<DOMCacheEngine::Record>::dec
         if (!decoder.decode(hasFormDataBody))
             return std::nullopt;
         if (hasFormDataBody) {
-            auto formData = FormData::decode(decoder);
+            std::optional<Ref<WebCore::FormData>> formData;
+            decoder >> formData;
             if (!formData)
                 return std::nullopt;
-            responseBody = formData.releaseNonNull();
+            responseBody = *formData;
         }
     }
 
@@ -811,39 +822,39 @@ void ArgumentCoder<FilterOperation>::encode(Encoder& encoder, const FilterOperat
     encoder << filter.type();
 
     switch (filter.type()) {
-    case FilterOperation::NONE:
-    case FilterOperation::REFERENCE:
+    case FilterOperation::Type::None:
+    case FilterOperation::Type::Reference:
         ASSERT_NOT_REACHED();
         return;
-    case FilterOperation::GRAYSCALE:
-    case FilterOperation::SEPIA:
-    case FilterOperation::SATURATE:
-    case FilterOperation::HUE_ROTATE:
+    case FilterOperation::Type::Grayscale:
+    case FilterOperation::Type::Sepia:
+    case FilterOperation::Type::Saturate:
+    case FilterOperation::Type::HueRotate:
         encoder << downcast<BasicColorMatrixFilterOperation>(filter).amount();
         return;
-    case FilterOperation::INVERT:
-    case FilterOperation::OPACITY:
-    case FilterOperation::BRIGHTNESS:
-    case FilterOperation::CONTRAST:
+    case FilterOperation::Type::Invert:
+    case FilterOperation::Type::Opacity:
+    case FilterOperation::Type::Brightness:
+    case FilterOperation::Type::Contrast:
         encoder << downcast<BasicComponentTransferFilterOperation>(filter).amount();
         return;
-    case FilterOperation::APPLE_INVERT_LIGHTNESS:
-        ASSERT_NOT_REACHED(); // APPLE_INVERT_LIGHTNESS is only used in -apple-color-filter.
+    case FilterOperation::Type::AppleInvertLightness:
+        ASSERT_NOT_REACHED(); // AppleInvertLightness is only used in -apple-color-filter.
         return;
-    case FilterOperation::BLUR:
+    case FilterOperation::Type::Blur:
         encoder << downcast<BlurFilterOperation>(filter).stdDeviation();
         return;
-    case FilterOperation::DROP_SHADOW: {
+    case FilterOperation::Type::DropShadow: {
         const auto& dropShadowFilter = downcast<DropShadowFilterOperation>(filter);
         encoder << dropShadowFilter.location();
         encoder << dropShadowFilter.stdDeviation();
         encoder << dropShadowFilter.color();
         return;
     }
-    case FilterOperation::DEFAULT:
+    case FilterOperation::Type::Default:
         encoder << downcast<DefaultFilterOperation>(filter).representedType();
         return;
-    case FilterOperation::PASSTHROUGH:
+    case FilterOperation::Type::Passthrough:
         return;
     }
 
@@ -852,46 +863,46 @@ void ArgumentCoder<FilterOperation>::encode(Encoder& encoder, const FilterOperat
 
 bool decodeFilterOperation(Decoder& decoder, RefPtr<FilterOperation>& filter)
 {
-    FilterOperation::OperationType type;
+    FilterOperation::Type type;
     if (!decoder.decode(type))
         return false;
 
     switch (type) {
-    case FilterOperation::NONE:
-    case FilterOperation::REFERENCE:
+    case FilterOperation::Type::None:
+    case FilterOperation::Type::Reference:
         ASSERT_NOT_REACHED();
         return false;
-    case FilterOperation::GRAYSCALE:
-    case FilterOperation::SEPIA:
-    case FilterOperation::SATURATE:
-    case FilterOperation::HUE_ROTATE: {
+    case FilterOperation::Type::Grayscale:
+    case FilterOperation::Type::Sepia:
+    case FilterOperation::Type::Saturate:
+    case FilterOperation::Type::HueRotate: {
         double amount;
         if (!decoder.decode(amount))
             return false;
         filter = BasicColorMatrixFilterOperation::create(amount, type);
         return true;
     }
-    case FilterOperation::INVERT:
-    case FilterOperation::OPACITY:
-    case FilterOperation::BRIGHTNESS:
-    case FilterOperation::CONTRAST: {
+    case FilterOperation::Type::Invert:
+    case FilterOperation::Type::Opacity:
+    case FilterOperation::Type::Brightness:
+    case FilterOperation::Type::Contrast: {
         double amount;
         if (!decoder.decode(amount))
             return false;
         filter = BasicComponentTransferFilterOperation::create(amount, type);
         return true;
     }
-    case FilterOperation::APPLE_INVERT_LIGHTNESS:
-        ASSERT_NOT_REACHED(); // APPLE_INVERT_LIGHTNESS is only used in -apple-color-filter.
+    case FilterOperation::Type::AppleInvertLightness:
+        ASSERT_NOT_REACHED(); // AppleInvertLightness is only used in -apple-color-filter.
         return false;
-    case FilterOperation::BLUR: {
+    case FilterOperation::Type::Blur: {
         Length stdDeviation;
         if (!decoder.decode(stdDeviation))
             return false;
         filter = BlurFilterOperation::create(stdDeviation);
         return true;
     }
-    case FilterOperation::DROP_SHADOW: {
+    case FilterOperation::Type::DropShadow: {
         IntPoint location;
         int stdDeviation;
         Color color;
@@ -904,14 +915,14 @@ bool decodeFilterOperation(Decoder& decoder, RefPtr<FilterOperation>& filter)
         filter = DropShadowFilterOperation::create(location, stdDeviation, color);
         return true;
     }
-    case FilterOperation::DEFAULT: {
-        FilterOperation::OperationType representedType;
+    case FilterOperation::Type::Default: {
+        FilterOperation::Type representedType;
         if (!decoder.decode(representedType))
             return false;
         filter = DefaultFilterOperation::create(representedType);
         return true;
     }
-    case FilterOperation::PASSTHROUGH:
+    case FilterOperation::Type::Passthrough:
         filter = PassthroughFilterOperation::create();
         return true;
     }
@@ -1150,101 +1161,6 @@ bool ArgumentCoder<ServiceWorkerOrClientIdentifier>::decode(Decoder& decoder, Se
 
 #endif
 
-void ArgumentCoder<RefPtr<SecurityOrigin>>::encode(Encoder& encoder, const RefPtr<SecurityOrigin>& origin)
-{
-    encoder << *origin;
-}
-
-std::optional<RefPtr<SecurityOrigin>> ArgumentCoder<RefPtr<SecurityOrigin>>::decode(Decoder& decoder)
-{
-    auto origin = SecurityOrigin::decode(decoder);
-    if (!origin)
-        return std::nullopt;
-    return origin;
-}
-
-void ArgumentCoder<Ref<SecurityOrigin>>::encode(Encoder& encoder, const Ref<SecurityOrigin>& origin)
-{
-    encoder << origin.get();
-}
-
-std::optional<Ref<SecurityOrigin>> ArgumentCoder<Ref<SecurityOrigin>>::decode(Decoder& decoder)
-{
-    auto origin = SecurityOrigin::decode(decoder);
-    if (!origin)
-        return std::nullopt;
-    return origin.releaseNonNull();
-}
-
-void ArgumentCoder<FontAttributes>::encode(Encoder& encoder, const FontAttributes& attributes)
-{
-    encoder << attributes.backgroundColor;
-    encoder << attributes.foregroundColor;
-    encoder << attributes.fontShadow;
-    encoder << attributes.hasUnderline;
-    encoder << attributes.hasStrikeThrough;
-    encoder << attributes.hasMultipleFonts;
-    encoder << attributes.textLists;
-    encoder << attributes.horizontalAlignment;
-    encoder << attributes.subscriptOrSuperscript;
-    encoder << attributes.font;
-}
-
-std::optional<FontAttributes> ArgumentCoder<FontAttributes>::decode(Decoder& decoder)
-{
-    std::optional<Color> backgroundColor;
-    decoder >> backgroundColor;
-    if (!backgroundColor)
-        return std::nullopt;
-
-    std::optional<Color> foregroundColor;
-    decoder >> foregroundColor;
-    if (!foregroundColor)
-        return std::nullopt;
-
-    std::optional<FontShadow> fontShadow;
-    decoder >> fontShadow;
-    if (!fontShadow)
-        return std::nullopt;
-
-    std::optional<bool> hasUnderline;
-    decoder >> hasUnderline;
-    if (!hasUnderline)
-        return std::nullopt;
-
-    std::optional<bool> hasStrikeThrough;
-    decoder >> hasStrikeThrough;
-    if (!hasStrikeThrough)
-        return std::nullopt;
-
-    std::optional<bool> hasMultipleFonts;
-    decoder >> hasMultipleFonts;
-    if (!hasMultipleFonts)
-        return std::nullopt;
-
-    std::optional<Vector<TextList>> textLists;
-    decoder >> textLists;
-    if (!textLists)
-        return std::nullopt;
-
-    std::optional<FontAttributes::HorizontalAlignment> horizontalAlignment;
-    decoder >> horizontalAlignment;
-    if (!horizontalAlignment)
-        return std::nullopt;
-
-    std::optional<FontAttributes::SubscriptOrSuperscript> subscriptOrSuperscript;
-    decoder >> subscriptOrSuperscript;
-    if (!subscriptOrSuperscript)
-        return std::nullopt;
-
-    std::optional<RefPtr<Font>> font;
-    decoder >> font;
-    if (!font)
-        return std::nullopt;
-
-    return { { WTFMove(*font), WTFMove(*backgroundColor), WTFMove(*foregroundColor), WTFMove(*fontShadow), *subscriptOrSuperscript, *horizontalAlignment, WTFMove(*textLists), *hasUnderline, *hasStrikeThrough, *hasMultipleFonts } };
-}
-
 #if ENABLE(ATTACHMENT_ELEMENT)
 
 void ArgumentCoder<SerializedAttachmentData>::encode(IPC::Encoder& encoder, const WebCore::SerializedAttachmentData& data)
@@ -1308,7 +1224,7 @@ static constexpr size_t minimumPageSize = 4096;
 
 void ArgumentCoder<WebCore::FragmentedSharedBuffer>::encode(Encoder& encoder, const WebCore::FragmentedSharedBuffer& buffer)
 {
-    uint64_t bufferSize = buffer.size();
+    size_t bufferSize = buffer.size();
     encoder << bufferSize;
     if (!bufferSize)
         return;
@@ -1320,7 +1236,7 @@ void ArgumentCoder<WebCore::FragmentedSharedBuffer>::encode(Encoder& encoder, co
         // over the IPC. ConnectionUnix.cpp already uses shared memory to send any IPC message that is
         // too large. See https://bugs.webkit.org/show_bug.cgi?id=208571.
         for (const auto& element : buffer)
-            encoder.encodeFixedLengthData(element.segment->data(), element.segment->size(), 1);
+            encoder.encodeSpan(Span { element.segment->data(), element.segment->size() });
     } else {
         SharedMemory::Handle handle;
         {
@@ -1334,7 +1250,7 @@ void ArgumentCoder<WebCore::FragmentedSharedBuffer>::encode(Encoder& encoder, co
 
 std::optional<Ref<WebCore::FragmentedSharedBuffer>> ArgumentCoder<WebCore::FragmentedSharedBuffer>::decode(Decoder& decoder)
 {
-    uint64_t bufferSize = 0;
+    size_t bufferSize = 0;
     if (!decoder.decode(bufferSize))
         return std::nullopt;
 
@@ -1342,15 +1258,10 @@ std::optional<Ref<WebCore::FragmentedSharedBuffer>> ArgumentCoder<WebCore::Fragm
         return SharedBuffer::create();
 
     if (useUnixDomainSockets() || bufferSize < minimumPageSize) {
-        if (!decoder.bufferIsLargeEnoughToContain<uint8_t>(bufferSize))
+        auto data = decoder.decodeSpan<uint8_t>(bufferSize);
+        if (!data.data())
             return std::nullopt;
-
-        Vector<uint8_t> data;
-        data.grow(bufferSize);
-        if (!decoder.decodeFixedLengthData(data.data(), data.size(), 1))
-            return std::nullopt;
-
-        return SharedBuffer::create(WTFMove(data));
+        return SharedBuffer::create(data);
     }
 
     SharedMemory::Handle handle;
@@ -1527,55 +1438,61 @@ void ArgumentCoder<ControlPart>::encode(Encoder& encoder, const ControlPart& par
     encoder << part.type();
 
     switch (part.type()) {
-    case WebCore::ControlPartType::NoControl:
-    case WebCore::ControlPartType::Auto:
+    case WebCore::StyleAppearance::None:
+    case WebCore::StyleAppearance::Auto:
         break;
 
-    case WebCore::ControlPartType::Checkbox:
-    case WebCore::ControlPartType::Radio:
-    case WebCore::ControlPartType::PushButton:
-    case WebCore::ControlPartType::SquareButton:
-    case WebCore::ControlPartType::Button:
-    case WebCore::ControlPartType::DefaultButton:
-    case WebCore::ControlPartType::Listbox:
-    case WebCore::ControlPartType::Menulist:
-    case WebCore::ControlPartType::MenulistButton:
+    case WebCore::StyleAppearance::Checkbox:
+    case WebCore::StyleAppearance::Radio:
+    case WebCore::StyleAppearance::PushButton:
+    case WebCore::StyleAppearance::SquareButton:
+    case WebCore::StyleAppearance::Button:
+    case WebCore::StyleAppearance::DefaultButton:
+    case WebCore::StyleAppearance::Listbox:
+    case WebCore::StyleAppearance::Menulist:
+    case WebCore::StyleAppearance::MenulistButton:
         break;
 
-    case WebCore::ControlPartType::Meter:
+    case WebCore::StyleAppearance::Meter:
         encoder << downcast<WebCore::MeterPart>(part);
         break;
 
-    case WebCore::ControlPartType::ProgressBar:
-    case WebCore::ControlPartType::SliderHorizontal:
-    case WebCore::ControlPartType::SliderVertical:
-    case WebCore::ControlPartType::SearchField:
+    case WebCore::StyleAppearance::ProgressBar:
+        encoder << downcast<WebCore::ProgressBarPart>(part);
+        break;
+
+    case WebCore::StyleAppearance::SliderHorizontal:
+    case WebCore::StyleAppearance::SliderVertical:
+        encoder << downcast<WebCore::SliderTrackPart>(part);
+        break;
+
+    case WebCore::StyleAppearance::SearchField:
 #if ENABLE(APPLE_PAY)
-    case WebCore::ControlPartType::ApplePayButton:
+    case WebCore::StyleAppearance::ApplePayButton:
 #endif
 #if ENABLE(ATTACHMENT_ELEMENT)
-    case WebCore::ControlPartType::Attachment:
-    case WebCore::ControlPartType::BorderlessAttachment:
+    case WebCore::StyleAppearance::Attachment:
+    case WebCore::StyleAppearance::BorderlessAttachment:
 #endif
-    case WebCore::ControlPartType::TextArea:
-    case WebCore::ControlPartType::TextField:
-    case WebCore::ControlPartType::CapsLockIndicator:
+    case WebCore::StyleAppearance::TextArea:
+    case WebCore::StyleAppearance::TextField:
+    case WebCore::StyleAppearance::CapsLockIndicator:
 #if ENABLE(INPUT_TYPE_COLOR)
-    case WebCore::ControlPartType::ColorWell:
+    case WebCore::StyleAppearance::ColorWell:
 #endif
 #if ENABLE(SERVICE_CONTROLS)
-    case WebCore::ControlPartType::ImageControlsButton:
+    case WebCore::StyleAppearance::ImageControlsButton:
 #endif
-    case WebCore::ControlPartType::InnerSpinButton:
+    case WebCore::StyleAppearance::InnerSpinButton:
 #if ENABLE(DATALIST_ELEMENT)
-    case WebCore::ControlPartType::ListButton:
+    case WebCore::StyleAppearance::ListButton:
 #endif
-    case WebCore::ControlPartType::SearchFieldDecoration:
-    case WebCore::ControlPartType::SearchFieldResultsDecoration:
-    case WebCore::ControlPartType::SearchFieldResultsButton:
-    case WebCore::ControlPartType::SearchFieldCancelButton:
-    case WebCore::ControlPartType::SliderThumbHorizontal:
-    case WebCore::ControlPartType::SliderThumbVertical:
+    case WebCore::StyleAppearance::SearchFieldDecoration:
+    case WebCore::StyleAppearance::SearchFieldResultsDecoration:
+    case WebCore::StyleAppearance::SearchFieldResultsButton:
+    case WebCore::StyleAppearance::SearchFieldCancelButton:
+    case WebCore::StyleAppearance::SliderThumbHorizontal:
+    case WebCore::StyleAppearance::SliderThumbVertical:
         break;
     }
 }
@@ -1587,29 +1504,33 @@ void ArgumentCoder<ControlPart>::encode<StreamConnectionEncoder>(StreamConnectio
 
 std::optional<Ref<ControlPart>> ArgumentCoder<ControlPart>::decode(Decoder& decoder)
 {
-    std::optional<WebCore::ControlPartType> type;
+    std::optional<WebCore::StyleAppearance> type;
     decoder >> type;
     if (!type)
         return std::nullopt;
 
     switch (*type) {
-    case WebCore::ControlPartType::NoControl:
-    case WebCore::ControlPartType::Auto:
+    case WebCore::StyleAppearance::None:
+    case WebCore::StyleAppearance::Auto:
         break;
 
-    case WebCore::ControlPartType::Checkbox:
-    case WebCore::ControlPartType::Radio:
+    case WebCore::StyleAppearance::Checkbox:
+    case WebCore::StyleAppearance::Radio:
         return WebCore::ToggleButtonPart::create(*type);
 
-    case WebCore::ControlPartType::PushButton:
-    case WebCore::ControlPartType::SquareButton:
-    case WebCore::ControlPartType::Button:
-    case WebCore::ControlPartType::DefaultButton:
-    case WebCore::ControlPartType::Menulist:
-    case WebCore::ControlPartType::MenulistButton:
-        break;
+    case WebCore::StyleAppearance::PushButton:
+    case WebCore::StyleAppearance::SquareButton:
+    case WebCore::StyleAppearance::Button:
+    case WebCore::StyleAppearance::DefaultButton:
+        return WebCore::ButtonPart::create(*type);
 
-    case WebCore::ControlPartType::Meter: {
+    case WebCore::StyleAppearance::Menulist:
+        return WebCore::MenuListPart::create();
+
+    case WebCore::StyleAppearance::MenulistButton:
+        return WebCore::MenuListButtonPart::create();
+
+    case WebCore::StyleAppearance::Meter: {
         std::optional<Ref<WebCore::MeterPart>> meterPart;
         decoder >> meterPart;
         if (meterPart)
@@ -1617,44 +1538,73 @@ std::optional<Ref<ControlPart>> ArgumentCoder<ControlPart>::decode(Decoder& deco
         break;
     }
 
-    case WebCore::ControlPartType::ProgressBar:
-    case WebCore::ControlPartType::SliderHorizontal:
-    case WebCore::ControlPartType::SliderVertical:
-    case WebCore::ControlPartType::SearchField:
+    case WebCore::StyleAppearance::ProgressBar: {
+        std::optional<Ref<WebCore::ProgressBarPart>> progressBarPart;
+        decoder >> progressBarPart;
+        if (progressBarPart)
+            return WTFMove(*progressBarPart);
+        break;
+    }
+
+    case WebCore::StyleAppearance::SliderHorizontal:
+    case WebCore::StyleAppearance::SliderVertical: {
+        std::optional<Ref<WebCore::SliderTrackPart>> sliderTrackPart;
+        decoder >> sliderTrackPart;
+        if (sliderTrackPart)
+            return WTFMove(*sliderTrackPart);
+        break;
+    }
+
+    case WebCore::StyleAppearance::SearchField:
+        return WebCore::SearchFieldPart::create();
+
 #if ENABLE(APPLE_PAY)
-    case WebCore::ControlPartType::ApplePayButton:
+    case WebCore::StyleAppearance::ApplePayButton:
 #endif
 #if ENABLE(ATTACHMENT_ELEMENT)
-    case WebCore::ControlPartType::Attachment:
-    case WebCore::ControlPartType::BorderlessAttachment:
+    case WebCore::StyleAppearance::Attachment:
+    case WebCore::StyleAppearance::BorderlessAttachment:
 #endif
         break;
 
-    case WebCore::ControlPartType::Listbox:
-    case WebCore::ControlPartType::TextArea:
+    case WebCore::StyleAppearance::Listbox:
+    case WebCore::StyleAppearance::TextArea:
         return WebCore::TextAreaPart::create(*type);
 
-    case WebCore::ControlPartType::TextField:
+    case WebCore::StyleAppearance::TextField:
         return WebCore::TextFieldPart::create();
 
-    case WebCore::ControlPartType::CapsLockIndicator:
+    case WebCore::StyleAppearance::CapsLockIndicator:
+        break;
+
 #if ENABLE(INPUT_TYPE_COLOR)
-    case WebCore::ControlPartType::ColorWell:
+    case WebCore::StyleAppearance::ColorWell:
+        return WebCore::ColorWellPart::create();
 #endif
 #if ENABLE(SERVICE_CONTROLS)
-    case WebCore::ControlPartType::ImageControlsButton:
+    case WebCore::StyleAppearance::ImageControlsButton:
+        return WebCore::ImageControlsButtonPart::create();
 #endif
-    case WebCore::ControlPartType::InnerSpinButton:
+
+    case WebCore::StyleAppearance::InnerSpinButton:
+        return WebCore::InnerSpinButtonPart::create();
+
 #if ENABLE(DATALIST_ELEMENT)
-    case WebCore::ControlPartType::ListButton:
-#endif
-    case WebCore::ControlPartType::SearchFieldDecoration:
-    case WebCore::ControlPartType::SearchFieldResultsDecoration:
-    case WebCore::ControlPartType::SearchFieldResultsButton:
-    case WebCore::ControlPartType::SearchFieldCancelButton:
-    case WebCore::ControlPartType::SliderThumbHorizontal:
-    case WebCore::ControlPartType::SliderThumbVertical:
+    case WebCore::StyleAppearance::ListButton:
         break;
+#endif
+
+    case WebCore::StyleAppearance::SearchFieldDecoration:
+    case WebCore::StyleAppearance::SearchFieldResultsDecoration:
+    case WebCore::StyleAppearance::SearchFieldResultsButton:
+        break;
+
+    case WebCore::StyleAppearance::SearchFieldCancelButton:
+        return WebCore::SearchFieldCancelButtonPart::create();
+
+    case WebCore::StyleAppearance::SliderThumbHorizontal:
+    case WebCore::StyleAppearance::SliderThumbVertical:
+        return WebCore::SliderThumbPart::create(*type);
     }
 
     ASSERT_NOT_REACHED();

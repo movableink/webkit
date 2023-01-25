@@ -35,10 +35,12 @@
 
 namespace WebGPU {
 
-RenderPassEncoder::RenderPassEncoder(id<MTLRenderCommandEncoder> renderCommandEncoder, NSUInteger visibilityResultBufferSize, Device& device)
+RenderPassEncoder::RenderPassEncoder(id<MTLRenderCommandEncoder> renderCommandEncoder, NSUInteger visibilityResultBufferSize, bool depthReadOnly, bool stencilReadOnly, Device& device)
     : m_renderCommandEncoder(renderCommandEncoder)
     , m_device(device)
     , m_visibilityResultBufferSize(visibilityResultBufferSize)
+    , m_depthReadOnly(depthReadOnly)
+    , m_stencilReadOnly(stencilReadOnly)
 {
 }
 
@@ -181,7 +183,7 @@ void RenderPassEncoder::setBindGroup(uint32_t groupIndex, const BindGroup& group
 
 void RenderPassEncoder::setBlendConstant(const WGPUColor& color)
 {
-    UNUSED_PARAM(color);
+    [m_renderCommandEncoder setBlendColorRed:color.r green:color.g blue:color.b alpha:color.a];
 }
 
 void RenderPassEncoder::setIndexBuffer(const Buffer& buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size)
@@ -196,10 +198,14 @@ void RenderPassEncoder::setPipeline(const RenderPipeline& pipeline)
 {
     // FIXME: validation according to
     // https://gpuweb.github.io/gpuweb/#dom-gpurendercommandsmixin-setpipeline.
+    if (!pipeline.validateDepthStencilState(m_depthReadOnly, m_stencilReadOnly))
+        return;
+
     m_primitiveType = pipeline.primitiveType();
     m_vertexShaderInputBufferCount = pipeline.vertexShaderInputBufferCount();
 
-    [m_renderCommandEncoder setRenderPipelineState:pipeline.renderPipelineState()];
+    if (pipeline.renderPipelineState())
+        [m_renderCommandEncoder setRenderPipelineState:pipeline.renderPipelineState()];
     if (pipeline.depthStencilState())
         [m_renderCommandEncoder setDepthStencilState:pipeline.depthStencilState()];
     [m_renderCommandEncoder setCullMode:pipeline.cullMode()];

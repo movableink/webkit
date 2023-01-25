@@ -84,7 +84,6 @@ private:
     void toolTipChanged(const String&, const String&) override;
 
     void didCommitLoadForMainFrame(const String&, bool) override;
-    void handleDownloadRequest(DownloadProxy&) override;
 
     void didChangeContentSize(const WebCore::IntSize&) override;
 
@@ -140,10 +139,6 @@ private:
 
     void refView() override;
     void derefView() override;
-
-#if ENABLE(VIDEO) && USE(GSTREAMER)
-    bool decidePolicyForInstallMissingMediaPluginsPermissionRequest(InstallMissingMediaPluginsPermissionRequest&) override;
-#endif
 
     void didRestoreScrollPosition() override;
 

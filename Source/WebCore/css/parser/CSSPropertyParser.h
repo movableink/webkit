@@ -52,7 +52,8 @@ public:
 
     static RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyInitialValue(const AtomString&, const CSSCustomPropertySyntax&, CSSParserTokenRange, Style::BuilderState&, const CSSParserContext&);
     static RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyValue(const AtomString& name, const CSSCustomPropertySyntax&, const CSSParserTokenRange&, Style::BuilderState&, const CSSParserContext&);
-    static void collectParsedCustomPropertyValueDependencies(const CSSCustomPropertySyntax&, bool isRoot, HashSet<CSSPropertyID>& dependencies, const CSSParserTokenRange&, const CSSParserContext&);
+    static ComputedStyleDependencies collectParsedCustomPropertyValueDependencies(const CSSCustomPropertySyntax&, const CSSParserTokenRange&, const CSSParserContext&);
+    static bool isValidCustomPropertyValueForSyntax(const CSSCustomPropertySyntax&, CSSParserTokenRange, const CSSParserContext&);
 
     static RefPtr<CSSValue> parseCounterStyleDescriptor(CSSPropertyID, CSSParserTokenRange&, const CSSParserContext&);
 
@@ -66,7 +67,7 @@ private:
     
     std::pair<RefPtr<CSSValue>, CSSCustomPropertySyntax::Type> consumeCustomPropertyValueWithSyntax(const CSSCustomPropertySyntax&);
     RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyValue(const AtomString& name, const CSSCustomPropertySyntax&, Style::BuilderState&);
-    void collectParsedCustomPropertyValueDependencies(const CSSCustomPropertySyntax&, bool isInitial, HashSet<CSSPropertyID>& dependencies);
+    ComputedStyleDependencies collectParsedCustomPropertyValueDependencies(const CSSCustomPropertySyntax&);
 
     bool inQuirksMode() const { return m_context.mode == HTMLQuirksMode; }
 
@@ -86,9 +87,8 @@ private:
     // @property descriptors.
     bool parsePropertyDescriptor(CSSPropertyID);
 
-    void addProperty(CSSPropertyID longhand, CSSPropertyID shorthand, Ref<CSSValue>&&, bool important, bool implicit = false);
-    void addPropertyWithImplicitDefault(CSSPropertyID longhand, CSSPropertyID shorthand, RefPtr<CSSValue>&&, Ref<CSSValue>&& implicitDefault, bool important);
-    void addExpandedPropertyForValue(CSSPropertyID propId, Ref<CSSValue>&&, bool);
+    void addProperty(CSSPropertyID longhand, CSSPropertyID shorthand, RefPtr<CSSValue>&&, bool important, bool implicit = false);
+    void addExpandedProperty(CSSPropertyID shorthand, RefPtr<CSSValue>&&, bool important, bool implicit = false);
 
     // Shorthand Parsing.
 
@@ -97,7 +97,7 @@ private:
     bool consume2ValueShorthand(const StylePropertyShorthand&, bool important);
     bool consume4ValueShorthand(const StylePropertyShorthand&, bool important);
 
-    bool consumeBorder(RefPtr<CSSValue>& width, RefPtr<CSSValue>& style, RefPtr<CSSValue>& color);
+    bool consumeBorderShorthand(CSSPropertyID widthProperty, CSSPropertyID styleProperty, CSSPropertyID colorProperty, bool important);
 
     // Legacy parsing allows <string>s for animation-name
     bool consumeAnimationShorthand(const StylePropertyShorthand&, bool important);
@@ -153,6 +153,10 @@ private:
 
 CSSPropertyID cssPropertyID(StringView);
 WEBCORE_EXPORT CSSValueID cssValueKeywordID(StringView);
-bool isCustomPropertyName(const String&);
+bool isCustomPropertyName(StringView);
+
+bool isInitialValueForLonghand(CSSPropertyID, const CSSValue&);
+ASCIILiteral initialValueTextForLonghand(CSSPropertyID);
+CSSValueID initialValueIDForLonghand(CSSPropertyID); // Returns CSSPropertyInvalid if not a keyword.
 
 } // namespace WebCore

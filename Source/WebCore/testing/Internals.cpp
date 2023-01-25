@@ -40,6 +40,7 @@
 #include "Blob.h"
 #include "CSSKeyframesRule.h"
 #include "CSSMediaRule.h"
+#include "CSSParser.h"
 #include "CSSPropertyParser.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
@@ -197,6 +198,7 @@
 #include "ScrollingCoordinator.h"
 #include "ScrollingMomentumCalculator.h"
 #include "SecurityOrigin.h"
+#include "SelectorFilter.h"
 #include "SerializedScriptValue.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerProvider.h"
@@ -395,10 +397,6 @@
 
 #if ENABLE(SERVICE_CONTROLS)
 #include "ImageControlsMac.h"
-#endif
-
-#if ENABLE(GAMEPAD)
-#include "MockGamepadProvider.h"
 #endif
 
 using JSC::CallData;
@@ -738,10 +736,6 @@ Internals::Internals(Document& document)
     VP9TestingOverrides::singleton().setHardwareDecoderDisabled(std::nullopt);
     VP9TestingOverrides::singleton().setVP9DecoderDisabled(std::nullopt);
     VP9TestingOverrides::singleton().setVP9ScreenSizeAndScale(std::nullopt);
-#endif
-
-#if ENABLE(GAMEPAD)
-    MockGamepadProvider::singleton().clearMockGamepads();
 #endif
 }
 
@@ -2555,7 +2549,7 @@ String Internals::parserMetaData(JSC::JSValue code)
     ScriptExecutable* executable;
     if (!code || code.isNull() || code.isUndefined()) {
         GetCallerCodeBlockFunctor iter;
-        callFrame->iterate(vm, iter);
+        StackVisitor::visit(callFrame, vm, iter);
         executable = iter.codeBlock()->ownerExecutable();
     } else if (code.isCallable())
         executable = JSC::jsCast<JSFunction*>(code.toObject(globalObject))->jsExecutable();
@@ -3060,7 +3054,7 @@ ExceptionOr<uint64_t> Internals::layerIDForElement(Element& element)
         return Exception { NotFoundError };
 
     auto* backing = layerModelObject.layer()->backing();
-    return backing->graphicsLayer()->primaryLayerID();
+    return backing->graphicsLayer()->primaryLayerID().object().toUInt64();
 }
 
 static OptionSet<PlatformLayerTreeAsTextFlags> toPlatformLayerTreeFlags(unsigned short flags)
@@ -6373,11 +6367,11 @@ String Internals::highlightPseudoElementColor(const AtomString& highlightName, E
     if (!parentStyle)
         return { };
 
-    auto style = styleResolver.pseudoStyleForElement(element, { PseudoId::Highlight, highlightName }, { parentStyle });
-    if (!style)
+    auto resolvedStyle = styleResolver.styleForPseudoElement(element, { PseudoId::Highlight, highlightName }, { parentStyle });
+    if (!resolvedStyle)
         return { };
 
-    return serializationForCSS(style->color());
+    return serializationForCSS(resolvedStyle->style->color());
 }
     
 Internals::TextIndicatorInfo::TextIndicatorInfo()
@@ -7011,6 +7005,18 @@ bool Internals::hasSleepDisabler() const
 void Internals::acceptTypedArrays(Int32Array&)
 {
     // Do nothing.
+}
+
+Internals::SelectorFilterHashCounts Internals::selectorFilterHashCounts(const String& selector)
+{
+    auto parser = CSSParser { { *contextDocument() } };
+    auto selectorList = parser.parseSelector(selector);
+    if (!selectorList)
+        return { };
+    
+    auto hashes = SelectorFilter::collectHashesForTesting(*selectorList->first());
+
+    return { hashes.ids.size(), hashes.classes.size(), hashes.tags.size(), hashes.attributes.size() };
 }
 
 } // namespace WebCore

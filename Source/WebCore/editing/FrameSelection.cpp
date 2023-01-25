@@ -749,6 +749,14 @@ TextDirection FrameSelection::directionOfSelection()
     return directionOfEnclosingBlock();
 }
 
+static bool selectionIsOrphanedOrBelongsToWrongDocument(const VisibleSelection& selection, RefPtr<Document>&& document)
+{
+    if (selection.isOrphan())
+        return true;
+    RefPtr documentOfSelection = selection.document();
+    return document && documentOfSelection && document != documentOfSelection;
+}
+
 void FrameSelection::willBeModified(EAlteration alter, SelectionDirection direction)
 {
     if (alter != AlterationExtend)
@@ -796,6 +804,8 @@ void FrameSelection::willBeModified(EAlteration alter, SelectionDirection direct
         m_selection.setBase(end);
         m_selection.setExtent(start);
     }
+    if (selectionIsOrphanedOrBelongsToWrongDocument(m_selection, m_document.get()))
+        clear();
 }
 
 VisiblePosition FrameSelection::positionForPlatform(bool isGetStart) const
@@ -1943,71 +1953,6 @@ Document* FrameSelection::document()
     return m_document.get();
 }
 
-void FrameSelection::debugRenderer(RenderObject* renderer, bool selected) const
-{
-    if (is<Element>(*renderer->node())) {
-        Element& element = downcast<Element>(*renderer->node());
-        fprintf(stderr, "%s%s\n", selected ? "==> " : "    ", element.localName().string().utf8().data());
-    } else if (is<RenderText>(*renderer)) {
-        RenderText& textRenderer = downcast<RenderText>(*renderer);
-        if (textRenderer.text().isEmpty() || !textRenderer.firstTextBox()) {
-            fprintf(stderr, "%s#text (empty)\n", selected ? "==> " : "    ");
-            return;
-        }
-        
-        static const int max = 36;
-        String text = textRenderer.text();
-        int textLength = text.length();
-        if (selected) {
-            int offset = 0;
-            if (renderer->node() == m_selection.start().containerNode())
-                offset = m_selection.start().computeOffsetInContainerNode();
-            else if (renderer->node() == m_selection.end().containerNode())
-                offset = m_selection.end().computeOffsetInContainerNode();
-
-            int pos;
-            LegacyInlineTextBox* box = textRenderer.findNextInlineTextBox(offset, pos);
-            text = text.substring(box->start(), box->len());
-            
-            String show;
-            int mid = max / 2;
-            int caret = 0;
-            
-            // text is shorter than max
-            if (textLength < max) {
-                show = text;
-                caret = pos;
-            } else if (pos - mid < 0) {
-                // too few characters to left
-                show = makeString(StringView(text).left(max - 3), "...");
-                caret = pos;
-            } else if (pos - mid >= 0 && pos + mid <= textLength) {
-                // enough characters on each side
-                show = makeString("...", StringView(text).substring(pos - mid + 3, max - 6), "...");
-                caret = mid;
-            } else {
-                // too few characters on right
-                show = makeString("...", StringView(text).right(max - 3));
-                caret = pos - (textLength - show.length());
-            }
-            
-            show = makeStringByReplacingAll(show, '\n', ' ');
-            show = makeStringByReplacingAll(show, '\r', ' ');
-            fprintf(stderr, "==> #text : \"%s\" at offset %d\n", show.utf8().data(), pos);
-            fprintf(stderr, "           ");
-            for (int i = 0; i < caret; i++)
-                fprintf(stderr, " ");
-            fprintf(stderr, "^\n");
-        } else {
-            if ((int)text.length() > max)
-                text = text.left(max - 3) + "...";
-            else
-                text = text.left(max);
-            fprintf(stderr, "    #text : \"%s\"\n", text.utf8().data());
-        }
-    }
-}
-
 bool FrameSelection::contains(const LayoutPoint& point) const
 {
     // Treat a collapsed selection like no selection.
@@ -2490,14 +2435,23 @@ static HTMLFormElement* scanForForm(Element* start)
     for (auto& element : descendantsOfType<HTMLElement>(start->document())) {
         if (is<HTMLFormElement>(element))
             return &downcast<HTMLFormElement>(element);
-        if (is<HTMLFormControlElement>(element))
-            return downcast<HTMLFormControlElement>(element).form();
+        if (element.isFormListedElement())
+            return element.asFormListedElement()->form();
         if (is<HTMLFrameElementBase>(element)) {
             if (auto* contentDocument = downcast<HTMLFrameElementBase>(element).contentDocument()) {
                 if (auto* frameResult = scanForForm(contentDocument->documentElement()))
                     return frameResult;
             }
         }
+    }
+    return nullptr;
+}
+
+static ValidatedFormListedElement* findFormControlElementAncestor(Element& element)
+{
+    for (auto& ancestor : lineageOfType<Element>(element)) {
+        if (auto* formControlAncestor = ancestor.asValidatedFormListedElement())
+            return formControlAncestor;
     }
     return nullptr;
 }
@@ -2514,7 +2468,7 @@ HTMLFormElement* FrameSelection::currentForm() const
 
     if (auto form = lineageOfType<HTMLFormElement>(*start).first())
         return form;
-    if (auto formControl = lineageOfType<HTMLFormControlElement>(*start).first())
+    if (auto* formControl = findFormControlElementAncestor(*start))
         return formControl->form();
 
     // Try walking forward in the node tree to find a form element.

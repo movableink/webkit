@@ -219,12 +219,12 @@ void RemoteLayerTreeDrawingArea::forceRepaint()
     updateRendering();
 }
 
-void RemoteLayerTreeDrawingArea::acceleratedAnimationDidStart(uint64_t layerID, const String& key, MonotonicTime startTime)
+void RemoteLayerTreeDrawingArea::acceleratedAnimationDidStart(WebCore::GraphicsLayer::PlatformLayerID layerID, const String& key, MonotonicTime startTime)
 {
     m_remoteLayerTreeContext->animationDidStart(layerID, key, startTime);
 }
 
-void RemoteLayerTreeDrawingArea::acceleratedAnimationDidEnd(uint64_t layerID, const String& key)
+void RemoteLayerTreeDrawingArea::acceleratedAnimationDidEnd(WebCore::GraphicsLayer::PlatformLayerID layerID, const String& key)
 {
     m_remoteLayerTreeContext->animationDidEnd(layerID, key);
 }
@@ -256,12 +256,6 @@ void RemoteLayerTreeDrawingArea::setExposedContentRect(const FloatRect& exposedC
 
     frameView->setExposedContentRect(exposedContentRect);
     triggerRenderingUpdate();
-}
-
-TiledBacking* RemoteLayerTreeDrawingArea::mainFrameTiledBacking() const
-{
-    FrameView* frameView = m_webPage.mainFrameView();
-    return frameView ? frameView->tiledBacking() : nullptr;
 }
 
 void RemoteLayerTreeDrawingArea::startRenderingUpdateTimer()
@@ -296,6 +290,8 @@ void RemoteLayerTreeDrawingArea::updateRendering()
     // This function is not reentrant, e.g. a rAF callback may force repaint.
     if (m_inUpdateRendering)
         return;
+    
+    scaleViewToFitDocumentIfNeeded();
 
     SetForScope change(m_inUpdateRendering, true);
     m_webPage.updateRendering();
@@ -397,9 +393,11 @@ void RemoteLayerTreeDrawingArea::displayDidRefresh()
         m_deferredRenderingUpdateWhileWaitingForBackingStoreSwap = false;
     }
 
-    // This empty transaction serves to trigger CA's garbage collection of IOSurfaces. See <rdar://problem/16110687>
-    [CATransaction begin];
-    [CATransaction commit];
+    if (!WebProcess::singleton().shouldUseRemoteRenderingFor(WebCore::RenderingPurpose::DOM)) {
+        // This empty transaction serves to trigger CA's garbage collection of IOSurfaces. See <rdar://problem/16110687>
+        [CATransaction begin];
+        [CATransaction commit];
+    }
 
     HashSet<RemoteLayerTreeDisplayRefreshMonitor*> monitorsToNotify = m_displayRefreshMonitors;
     ASSERT(!m_displayRefreshMonitorsToNotify);

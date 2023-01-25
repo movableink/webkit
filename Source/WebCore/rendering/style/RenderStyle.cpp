@@ -30,6 +30,7 @@
 #include "ComputedStyleExtractor.h"
 #include "ContentData.h"
 #include "CursorList.h"
+#include "CustomPropertyRegistry.h"
 #include "FloatRoundedRect.h"
 #include "FontCascade.h"
 #include "FontSelector.h"
@@ -889,6 +890,9 @@ static bool rareInheritedDataChangeRequiresLayout(const StyleRareInheritedData& 
 
 bool RenderStyle::changeRequiresLayout(const RenderStyle& other, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties) const
 {
+    if (m_svgStyle->changeRequiresLayout(other.m_svgStyle))
+        return true;
+
     if (m_boxData.ptr() != other.m_boxData.ptr()) {
         if (m_boxData->width() != other.m_boxData->width()
             || m_boxData->minWidth() != other.m_boxData->minWidth()
@@ -1165,13 +1169,11 @@ inline static bool changedCustomPaintWatchedProperty(const RenderStyle& a, const
 
         for (auto& watchPropertiesMap : { propertiesA, propertiesB }) {
             for (auto& name : watchPropertiesMap) {
-                RefPtr<CSSValue> valueA;
-                RefPtr<CSSValue> valueB;
+                RefPtr<const CSSValue> valueA;
+                RefPtr<const CSSValue> valueB;
                 if (isCustomPropertyName(name)) {
-                    if (a.getCustomProperty(name))
-                        valueA = CSSCustomPropertyValue::create(*a.getCustomProperty(name));
-                    if (b.getCustomProperty(name))
-                        valueB = CSSCustomPropertyValue::create(*b.getCustomProperty(name));
+                    valueA = a.customPropertyValueWithoutResolvingInitial(name);
+                    valueB = b.customPropertyValueWithoutResolvingInitial(name);
                 } else {
                     CSSPropertyID propertyID = cssPropertyID(name);
                     if (!propertyID)
@@ -1198,6 +1200,11 @@ inline static bool changedCustomPaintWatchedProperty(const RenderStyle& a, const
 
 bool RenderStyle::changeRequiresRepaint(const RenderStyle& other, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties) const
 {
+    bool currentColorDiffers = m_inheritedData->color != other.m_inheritedData->color;
+
+    if (m_svgStyle->changeRequiresRepaint(other.m_svgStyle, currentColorDiffers))
+        return true;
+
     if (!requiresPainting(*this) && !requiresPainting(other))
         return false;
 
@@ -1208,7 +1215,6 @@ bool RenderStyle::changeRequiresRepaint(const RenderStyle& other, OptionSet<Styl
         return true;
 
 
-    bool currentColorDiffers = m_inheritedData->color != other.m_inheritedData->color;
     if (m_backgroundData.ptr() != other.m_backgroundData.ptr()) {
         if (!m_backgroundData->isEquivalentForPainting(*other.m_backgroundData, currentColorDiffers))
             return true;
@@ -1242,6 +1248,7 @@ bool RenderStyle::changeRequiresRepaintIfText(const RenderStyle& other, OptionSe
         || m_visualData->textDecorationLine != other.m_visualData->textDecorationLine
         || m_rareNonInheritedData->textDecorationStyle != other.m_rareNonInheritedData->textDecorationStyle
         || m_rareNonInheritedData->textDecorationColor != other.m_rareNonInheritedData->textDecorationColor
+        || m_rareNonInheritedData->textDecorationThickness != other.m_rareNonInheritedData->textDecorationThickness
         || m_rareInheritedData->textDecorationSkipInk != other.m_rareInheritedData->textDecorationSkipInk
         || m_rareInheritedData->textFillColor != other.m_rareInheritedData->textFillColor
         || m_rareInheritedData->textStrokeColor != other.m_rareInheritedData->textStrokeColor
@@ -1277,22 +1284,8 @@ StyleDifference RenderStyle::diff(const RenderStyle& other, OptionSet<StyleDiffe
 {
     changedContextSensitiveProperties = OptionSet<StyleDifferenceContextSensitiveProperty>();
 
-    StyleDifference svgChange = StyleDifference::Equal;
-    if (m_svgStyle != other.m_svgStyle) {
-        svgChange = m_svgStyle->diff(other.m_svgStyle.get());
-        if (svgChange == StyleDifference::Layout)
-            return svgChange;
-    }
-
     if (changeRequiresLayout(other, changedContextSensitiveProperties))
         return StyleDifference::Layout;
-
-    // SVGRenderStyle::diff() might have returned StyleDifference::Repaint, eg. if fill changes.
-    // If eg. the font-size changed at the same time, we're not allowed to return StyleDifference::Repaint,
-    // but have to return StyleDifference::Layout, that's why  this if branch comes after all branches
-    // that are relevant for SVG and might return StyleDifference::Layout.
-    if (svgChange != StyleDifference::Equal)
-        return svgChange;
 
     if (changeRequiresPositionedLayoutOnly(other, changedContextSensitiveProperties))
         return StyleDifference::LayoutPositionedMovementOnly;
@@ -2669,6 +2662,31 @@ void RenderStyle::setNonInheritedCustomPropertyValue(const AtomString& name, Ref
     m_rareNonInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value));
 }
 
+const CSSCustomPropertyValue* RenderStyle::customPropertyValue(const AtomString& name, const Style::CustomPropertyRegistry& registry) const
+{
+    if (auto* value = customPropertyValueWithoutResolvingInitial(name))
+        return value;
+
+    // Alternatively we could just initialize the registered initial values to each RenderStyle.
+    auto* registered = registry.get(name);
+    return registered ? registered->initialValue.get() : nullptr;
+}
+
+const CSSCustomPropertyValue* RenderStyle::customPropertyValueWithoutResolvingInitial(const AtomString& name) const
+{
+    for (auto* map : { &nonInheritedCustomProperties(), &inheritedCustomProperties() }) {
+        if (auto* value = map->get(name))
+            return value;
+    }
+    return nullptr;
+}
+
+bool RenderStyle::customPropertiesEqual(const RenderStyle& other) const
+{
+    return m_rareNonInheritedData->customProperties == other.m_rareNonInheritedData->customProperties
+        && m_rareInheritedData->customProperties == other.m_rareInheritedData->customProperties;
+}
+
 const LengthBox& RenderStyle::scrollMargin() const
 {
     return m_rareNonInheritedData->scrollMargin;
@@ -2830,7 +2848,7 @@ bool RenderStyle::hasReferenceFilterOnly() const
     if (!hasFilter())
         return false;
     auto& filterOperations = m_rareNonInheritedData->filter->operations;
-    return filterOperations.size() == 1 && filterOperations.at(0)->type() == FilterOperation::REFERENCE;
+    return filterOperations.size() == 1 && filterOperations.at(0)->type() == FilterOperation::Type::Reference;
 }
 
 float RenderStyle::outlineWidth() const

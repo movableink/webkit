@@ -34,7 +34,7 @@
 #include "LLIntPCRanges.h"
 #include "VMEntryRecord.h"
 #include "VMEntryScope.h"
-#include "WasmContextInlines.h"
+#include "WasmContext.h"
 #include "WasmInstance.h"
 #include <wtf/StringPrintStream.h>
 
@@ -160,19 +160,6 @@ Register* CallFrame::topOfFrameInternal()
     return registers() + codeBlock->stackPointerOffset();
 }
 
-bool CallFrame::isAnyWasmCallee() const
-{
-    CalleeBits callee = this->callee();
-    if (callee.isWasm())
-        return true;
-
-    ASSERT(callee.isCell());
-    if (!!callee.rawPtr() && isWebAssemblyModule(callee.asCell()))
-        return true;
-
-    return false;
-}
-
 CallFrame* CallFrame::callerFrame(EntryFrame*& currEntryFrame) const
 {
     if (callerFrameOrEntryFrame() == currEntryFrame) {
@@ -264,7 +251,7 @@ JSGlobalObject* CallFrame::globalObjectOfClosestCodeBlock(VM& vm, CallFrame* cal
 
 String CallFrame::friendlyFunctionName()
 {
-    if (this->isAnyWasmCallee())
+    if (this->isWasmFrame())
         return emptyString();
 
     CodeBlock* codeBlock = this->codeBlock();
@@ -290,23 +277,32 @@ String CallFrame::friendlyFunctionName()
 
 void CallFrame::dump(PrintStream& out) const
 {
-    if (!this->isAnyWasmCallee()) {
-        if (CodeBlock* codeBlock = this->codeBlock()) {
-            out.print(codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), " [", codeBlock->jitType(), " ", bytecodeIndex(), "]");
+    if (this->isWasmFrame()) {
+#if ENABLE(WEBASSEMBLY)
+        Wasm::Callee* wasmCallee = callee().asWasmCallee();
+        out.print(Wasm::makeString(wasmCallee->indexOrName()), " [", Wasm::makeString(wasmCallee->compilationMode()), "]");
+        out.print("(Wasm::Instance: ", RawPointer(wasmInstance()), ")");
+#else
+        out.print(RawPointer(returnPCForInspection()));
+#endif
+        return;
+    }
 
-            out.print("(");
-            thisValue().dumpForBacktrace(out);
+    if (CodeBlock* codeBlock = this->codeBlock()) {
+        out.print(codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), " [", codeBlock->jitType(), " ", bytecodeIndex(), "]");
 
-            for (size_t i = 0; i < argumentCount(); ++i) {
-                out.print(", ");
-                JSValue value = argument(i);
-                value.dumpForBacktrace(out);
-            }
+        out.print("(");
+        thisValue().dumpForBacktrace(out);
 
-            out.print(")");
-
-            return;
+        for (size_t i = 0; i < argumentCount(); ++i) {
+            out.print(", ");
+            JSValue value = argument(i);
+            value.dumpForBacktrace(out);
         }
+
+        out.print(")");
+
+        return;
     }
 
     out.print(RawPointer(returnPCForInspection()));
@@ -351,9 +347,9 @@ void CallFrame::convertToStackOverflowFrame(VM& vm, CodeBlock* codeBlockToKeepAl
 }
 
 #if ENABLE(WEBASSEMBLY)
-JSGlobalObject* CallFrame::lexicalGlobalObjectFromWasmCallee(VM& vm) const
+JSGlobalObject* CallFrame::lexicalGlobalObjectFromWasmCallee(VM&) const
 {
-    return vm.wasmContext.load()->owner<JSWebAssemblyInstance>()->globalObject();
+    return wasmInstance()->globalObject();
 }
 #endif
 

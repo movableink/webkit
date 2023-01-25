@@ -148,11 +148,6 @@ Ref<PlatformCAAnimation> PlatformCAAnimationWin::create(AnimationType type, cons
     return adoptRef(*new PlatformCAAnimationWin(type, keyPath));
 }
 
-Ref<PlatformCAAnimation> PlatformCAAnimationWin::create(PlatformAnimationRef animation)
-{
-    return adoptRef(*new PlatformCAAnimationWin(animation));
-}
-
 PlatformCAAnimationWin::PlatformCAAnimationWin(AnimationType type, const String& keyPath)
     : PlatformCAAnimation(type)
 {
@@ -164,22 +159,6 @@ PlatformCAAnimationWin::PlatformCAAnimationWin(AnimationType type, const String&
         m_animation = adoptCF(CACFAnimationCreate(kCACFAnimationGroup));
     
     CACFAnimationSetKeyPath(m_animation.get(), keyPath.createCFString().get());
-}
-
-PlatformCAAnimationWin::PlatformCAAnimationWin(PlatformAnimationRef animation)
-{
-    if (CACFAnimationGetClass(animation) == kCACFBasicAnimation)
-        setType(Basic);
-    else if (CACFAnimationGetClass(animation) == kCACFKeyframeAnimation)
-        setType(Keyframe);
-    else if (CACFAnimationGetClass(animation) == kCACFAnimationGroup)
-        setType(Group);
-    else {
-        ASSERT_NOT_REACHED();
-        return;
-    }
-    
-    m_animation = animation;
 }
 
 Ref<PlatformCAAnimation> PlatformCAAnimationWin::copy() const
@@ -378,7 +357,7 @@ void PlatformCAAnimationWin::setFromValue(const WebCore::Color& value)
     CACFAnimationSetFromValue(m_animation.get(), v.get());
 }
 
-void PlatformCAAnimationWin::setFromValue(const FilterOperation*, int)
+void PlatformCAAnimationWin::setFromValue(const FilterOperation*)
 {
     // FIXME: Hardware filter animation not implemented on Windows
 }
@@ -430,7 +409,7 @@ void PlatformCAAnimationWin::setToValue(const WebCore::Color& value)
     CACFAnimationSetToValue(m_animation.get(), v.get());
 }
 
-void PlatformCAAnimationWin::setToValue(const FilterOperation*, int)
+void PlatformCAAnimationWin::setToValue(const FilterOperation*)
 {
     // FIXME: Hardware filter animation not implemented on Windows
 }
@@ -485,7 +464,7 @@ void PlatformCAAnimationWin::setValues(const Vector<WebCore::Color>& values)
     }).get());
 }
 
-void PlatformCAAnimationWin::setValues(const Vector<RefPtr<FilterOperation> >&, int)
+void PlatformCAAnimationWin::setValues(const Vector<RefPtr<FilterOperation> >&)
 {
     // FIXME: Hardware filter animation not implemented on Windows
 }

@@ -25,7 +25,7 @@ messages -> NetworkProcess LegacyReceiver {
 
     CreateNetworkConnectionToWebProcess(WebCore::ProcessIdentifier processIdentifier, PAL::SessionID sessionID) -> (std::optional<IPC::Connection::Handle> connectionHandle, enum:uint8_t WebCore::HTTPCookieAcceptPolicy cookieAcceptPolicy) AllowedWhenWaitingForSyncReply
 
-    AddAllowedFirstPartyForCookies(WebCore::ProcessIdentifier processIdentifier, WebCore::RegistrableDomain firstPartyForCookies) -> ()
+    AddAllowedFirstPartyForCookies(WebCore::ProcessIdentifier processIdentifier, WebCore::RegistrableDomain firstPartyForCookies, enum:bool WebKit::LoadedWebArchive loadedWebArchive) -> ()
 
 #if USE(SOUP)
     SetIgnoreTLSErrors(PAL::SessionID sessionID, bool ignoreTLSErrors)
@@ -70,7 +70,7 @@ messages -> NetworkProcess LegacyReceiver {
 
     FlushCookies(PAL::SessionID sessionID) -> ()
 
-    AllowSpecificHTTPSCertificateForHost(WebCore::CertificateInfo certificate, String host)
+    AllowSpecificHTTPSCertificateForHost(PAL::SessionID sessionID, WebCore::CertificateInfo certificate, String host)
     AllowTLSCertificateChainForLocalPCMTesting(PAL::SessionID sessionID, WebCore::CertificateInfo certificate)
 
     SetCacheModel(enum:uint8_t WebKit::CacheModel cacheModel)
@@ -79,6 +79,8 @@ messages -> NetworkProcess LegacyReceiver {
     ProcessWillSuspendImminentlyForTestingSync() -> () Synchronous
     PrepareToSuspend(bool isSuspensionImminent, MonotonicTime estimatedSuspendTime) -> ()
     ProcessDidResume(bool forForegroundActivity)
+
+    NotifyMediaStreamingActivity(bool activity)
 
     PreconnectTo(PAL::SessionID sessionID, WebKit::WebPageProxyIdentifier webPageProxyID, WebCore::PageIdentifier webPageID, URL url, String userAgent, enum:uint8_t WebCore::StoredCredentialsPolicy storedCredentialsPolicy, std::optional<WebKit::NavigatingToAppBoundDomain> isNavigatingToAppBoundDomain, enum:bool WebKit::LastNavigationWasAppInitiated lastNavigationWasAppInitiated);
 
@@ -188,7 +190,8 @@ messages -> NetworkProcess LegacyReceiver {
 #if PLATFORM(IOS_FAMILY)
     SetBackupExclusionPeriodForTesting(PAL::SessionID sessionID, Seconds period) -> ()
 #endif
-    ClearStorage(PAL::SessionID sessionID) -> ()
+    ResetStoragePersistedState(PAL::SessionID sessionID) -> ()
+    CloneSessionStorageForWebPage(PAL::SessionID sessionID, WebKit::WebPageProxyIdentifier sourcePage, WebKit::WebPageProxyIdentifier destinationPage)
     DidIncreaseQuota(PAL::SessionID sessionID, struct WebCore::ClientOrigin origin, WebKit::QuotaIncreaseRequestIdentifier identifier, std::optional<uint64_t> newQuota)
     
 #if ENABLE(APP_BOUND_DOMAINS)
@@ -230,9 +233,5 @@ messages -> NetworkProcess LegacyReceiver {
 
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
     SetEmulatedConditions(PAL::SessionID sessionID, std::optional<int64_t> bytesPerSecondLimit)
-#endif
-
-#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
-    RequestLookalikeCharacterStrings() -> (Vector<String> strings)
 #endif
 }

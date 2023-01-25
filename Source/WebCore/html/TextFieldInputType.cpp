@@ -36,7 +36,6 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DOMFormData.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Editor.h"
 #include "ElementInlines.h"
 #include "ElementRareData.h"
@@ -483,7 +482,9 @@ void TextFieldInputType::createDataListDropdownIndicator()
     ASSERT(!m_dataListDropdownIndicator);
     if (!m_container)
         createContainer();
-
+    if (!element())
+        return;
+    
     ScriptDisallowedScope::EventAllowedScope allowedScope(*m_container);
     m_dataListDropdownIndicator = DataListButtonElement::create(element()->document(), *this);
     m_container->appendChild(*m_dataListDropdownIndicator);
@@ -642,7 +643,7 @@ void TextFieldInputType::handleBeforeTextInsertedEvent(BeforeTextInsertedEvent& 
 bool TextFieldInputType::shouldRespectListAttribute()
 {
 #if ENABLE(DATALIST_ELEMENT)
-    return DeprecatedGlobalSettings::dataListElementEnabled();
+    return element() && element()->document().settings().dataListElementEnabled();
 #else
     return InputType::themeSupportsDataListUI(this);
 #endif
@@ -849,7 +850,7 @@ void TextFieldInputType::createContainer(PreserveSelectionRange preserveSelectio
             if (selection.start().deprecatedNode() != element->userAgentShadowRoot())
                 return;
 
-            auto [selectionStart, selectionEnd, selectionDirection] = selectionState;
+            auto& [selectionStart, selectionEnd, selectionDirection] = selectionState;
             element->setSelectionRange(selectionStart, selectionEnd, selectionDirection);
         });
     }
@@ -915,7 +916,8 @@ void TextFieldInputType::dataListMayHaveChanged()
 
     if (!m_dataListDropdownIndicator)
         createDataListDropdownIndicator();
-
+    if (!element())
+        return;
     if (!shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited())
         m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, element()->list() ? CSSValueBlock : CSSValueNone, true);
 }

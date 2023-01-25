@@ -12,7 +12,6 @@ editing/execCommand/mac [ Pass ]
 editing/input/cocoa [ Pass ]
 editing/mac [ Pass ]
 editing/pasteboard/mac [ Pass ]
-fast/attachment/mac [ Pass ]
 fast/dom/Range/mac [ Pass ]
 fast/scrolling/latching [ Pass ]
 model-element [ Pass ]
@@ -106,10 +105,6 @@ fast/images/heic-as-background-image.html [ Pass ]
 
 # Enabled in rdar://102830993
 fast/images/mac/play-all-pause-all-animations-context-menu-items.html [ Skip ]
-
-# AVIF tests
-[ Ventura+ ] fast/images/avif-as-image.html [ Pass ]
-[ Ventura+ ] fast/images/avif-heif-container-as-image.html [ Pass ]
 
 # <rdar://problem/5647952> fast/events/mouseout-on-window.html needs mac DRT to issue mouse out events
 fast/events/mouseout-on-window.html [ Failure ]
@@ -335,11 +330,6 @@ webkit.org/b/82972 plugins/multiple-plugins.html [ Pass Failure ]
 
 webkit.org/b/82979 fast/canvas/2d.text.draw.fill.maxWidth.gradient.html [ Pass Failure ]
 
-
-# No CORS support for media elements is implemented yet.
-http/tests/security/canvas-remote-read-remote-video-allowed-anonymous.html [ Failure ]
-http/tests/security/canvas-remote-read-remote-video-allowed-with-credentials.html [ Failure ]
-http/tests/security/video-cross-origin-readback.html
 http/tests/security/video-cross-origin-accessfailure.html
 
 # Random crash, like in many media tests.
@@ -1338,6 +1328,10 @@ fast/text/system-font-japanese-synthetic-italic.html [ Pass ImageOnlyFailure ]
 # we should delete the test.
 fast/text/font-variations-feature-detection.html [ ImageOnlyFailure ]
 
+# These tests fail which are related to browser support of slnt and ital axes in variable fonts and failing due to underlying bug
+webkit.org/b/189483 imported/w3c/web-platform-tests/css/css-fonts/variations/slnt-variable.html [ ImageOnlyFailure ]
+webkit.org/b/189483 imported/w3c/web-platform-tests/css/css-fonts/variations/slnt-backslant-variable.html [ ImageOnlyFailure ]
+
 # <rdar://problem/33731086>
 media/modern-media-controls/time-labels-support/elapsed-time.html [ Skip ]
 
@@ -1639,8 +1633,6 @@ webkit.org/b/207046 imported/w3c/web-platform-tests/html/semantics/embedded-cont
 
 webkit.org/b/207723 http/tests/contentextensions/hide-on-ping-with-ping-that-redirects.html [ Pass Failure ]
 
-webkit.org/b/207726 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-canvas-element/security.pattern.fillStyle.sub.html [ Pass Failure ]
-
 webkit.org/b/207978 imported/w3c/web-platform-tests/service-workers/service-worker/resource-timing.sub.https.html [ Pass Failure ]
 
 webkit.org/b/208219 compositing/video/video-clip-change-src.html [ Pass ImageOnlyFailure ]
@@ -1795,7 +1787,7 @@ webkit.org/b/209692 [ BigSur+ ] platform/mac/fast/text/text-security-disc-bullet
 webkit.org/b/209692 [ BigSur+ ] fast/text/text-security-disc-bullet-pua.html [ ImageOnlyFailure ]
 
 # rdar://63094384 (REGRESSION: (r261413): [ Guard-Malloc ] webgl/2.0.0/conformance2/textures/misc/tex-unpack-params.html is crashing consistently with - libGLImage.dylib: void glgConvertTo_32<GLGConverter_RGB8_ARGB8, (GLGMemory)1>)
-[ BigSur+ ] webgl/2.0.0/conformance2/textures/misc/tex-unpack-params.html [ Skip ]
+[ Guard-Malloc ] webgl/2.0.0/conformance2/textures/misc/tex-unpack-params.html [ Skip ]
 
 # <rdar://problem/63399079> [ Debug ] imported/w3c/web-platform-tests/xhr/access-control-basic-post-success-no-content-type.htm is a flaky failure
 [ BigSur+ ] imported/w3c/web-platform-tests/xhr/access-control-basic-post-success-no-content-type.htm [ Pass Failure ]
@@ -1972,8 +1964,6 @@ webkit.org/b/219965 [ BigSur+ ] imported/w3c/web-platform-tests/fetch/content-ty
 
 webkit.org/b/217621 media/video-buffering-allowed.html [ Pass Timeout ]
 
-webkit.org/b/220332 [ BigSur+ ] imported/w3c/web-platform-tests/mimesniff/mime-types/charset-parameter.window.html [ Pass Failure ]
-
 # The system font does not handle all the various width values on older OSes.
 [ BigSur ] fast/text/system-font-width-4.html [ ImageOnlyFailure ]
 [ BigSur ] fast/text/system-font-width-6.html [ ImageOnlyFailure ]
@@ -2062,7 +2052,8 @@ fast/canvas/webgl/webgl-compressed-texture-astc.html [ Skip ]
 
 webkit.org/b/223820 inspector/debugger/csp-exceptions.html [ Pass Failure Timeout ]
 
-webkit.org/b/223949 crypto/crypto-random-values-oom.html [ Pass Timeout ]
+webkit.org/b/223949 [ Release Debug ] crypto/crypto-random-values-oom.html [ Pass Timeout ]
+[ Guard-Malloc ] crypto/crypto-random-values-oom.html [ Skip ]
 
 webkit.org/b/223973 [ Debug ] imported/w3c/web-platform-tests/xhr/xhr-timeout-longtask.any.worker.html [ Pass Failure ]
 
@@ -2284,8 +2275,6 @@ webkit.org/b/231757 [ BigSur ] inspector/canvas/updateShader-webgl.html [ Pass F
 
 webkit.org/b/237840 [ Monterey ] webgl/2.0.0/conformance2/glsl3/bool-type-cast-bug-uint-ivec-uvec.html [ Pass Crash ]
 
-webkit.org/b/238917 [ Monterey ] fast/text/khmer-lao-font.html [ Failure ]
-
 webkit.org/b/231924 inspector/css/modify-css-property.html [ Pass Failure ]
 
 webkit.org/b/237172 imported/w3c/web-platform-tests/speech-api/SpeechSynthesis-speak-twice.html [ Pass Failure Crash ]
@@ -2358,11 +2347,11 @@ webkit.org/b/243515 svg/compositing/svg-poster-circle.html [ Pass ImageOnlyFailu
 webkit.org/b/243515 [ Monterey+ ] svg/compositing/outermost-svg-with-border-padding.html [ Pass ImageOnlyFailure ]
 webkit.org/b/243515 [ Monterey+ ] svg/compositing/outermost-svg-directly-composited-transformed-group-child.html [ Pass ImageOnlyFailure ]
 
+# The following test only works with LBSE activated -- text transform changes fail to repaint using the legacy engine.
+svg/repaint/text-repainting-after-modifying-transform.html [ ImageOnlyFailure ]
+
 webkit.org/b/246356 imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/autoplay-allowed-by-feature-policy.https.sub.html [ Pass Failure ]
 webkit.org/b/246356 imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/autoplay-default-feature-policy.https.sub.html [ Pass Failure ]
-
-# The following test only fail on Mac EWS bots.
-webkit.org/b/244012 imported/w3c/web-platform-tests/css/css-transforms/transform-3d-rotateY-stair-below-001.xht [ Pass ImageOnlyFailure ]
 
 # These tests are flaky due to "Blocked access to external URL" messages because we don't support WPT domains.
 imported/w3c/web-platform-tests/feature-policy/feature-policy-frame-policy-allowed-for-all.https.sub.html [ DumpJSConsoleLogInStdErr Failure Pass ]
@@ -2371,14 +2360,15 @@ imported/w3c/web-platform-tests/feature-policy/feature-policy-frame-policy-allow
 imported/w3c/web-platform-tests/feature-policy/feature-policy-frame-policy-allowed-for-some.https.sub.html [ DumpJSConsoleLogInStdErr Failure Pass ]
 imported/w3c/web-platform-tests/feature-policy/feature-policy-frame-policy-disallowed-for-all.https.sub.html [ DumpJSConsoleLogInStdErr Failure Pass ]
 
-webkit.org/b/244928 http/tests/media/fairplay/fps-mse-unmuxed-multiple-keys.html [ Pass Failure ]
-
 webkit.org/b/245092 webaudio/offlineaudiocontext-gc.html [ Pass Failure ]
 
 webkit.org/b/245994 imported/w3c/web-platform-tests/streams/readable-byte-streams/construct-byob-request.any.worker.html [ Pass Failure ]
 
 webkit.org/b/214290 [ BigSur Monterey ] imported/w3c/web-platform-tests/css/css-text/line-break/line-break-anywhere-overrides-uax-behavior-009.html [ ImageOnlyFailure ]
 webkit.org/b/214290 [ BigSur Monterey ] imported/w3c/web-platform-tests/css/css-text/line-break/line-break-anywhere-overrides-uax-behavior-010.html [ ImageOnlyFailure ]
+
+# The following test fails on Big Sur EWS bots.
+webkit.org/b/244012 [ BigSur ] imported/w3c/web-platform-tests/css/css-transforms/transform-3d-rotateY-stair-below-001.xht [ Pass ImageOnlyFailure ]
 
 # SVG tests that are broken in the legacy SVG engine, but pass using LBSE.
 svg/transforms/layout-tiny-elements-in-scaled-group.svg [ ImageOnlyFailure ]
@@ -2393,12 +2383,74 @@ svg/transforms/translation-tiny-element.svg [ ImageOnlyFailure ]
 [ BigSur ] http/wpt/cache-storage [ Skip ]
 [ BigSur ] imported/w3c/web-platform-tests/service-workers/cache-storage [ Skip ]
 
+# No Websocket H2 support.
+imported/w3c/web-platform-tests/websockets/binary/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/binary/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/binary/004.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/binary/005.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/closing-handshake/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/closing-handshake/003.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/closing-handshake/004.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/004.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/005.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/006.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/007.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/009.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/010.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/011.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/012.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/013.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/017.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/018.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/019.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/020.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/021.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/constructor/022.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/cookies/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/cookies/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/cookies/003.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/cookies/006.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/cookies/007.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/extended-payload-length.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/CloseEvent/clean-close.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/bufferedAmount/bufferedAmount-arraybuffer.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/bufferedAmount/bufferedAmount-blob.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/bufferedAmount/bufferedAmount-getting.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/bufferedAmount/bufferedAmount-large.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/bufferedAmount/bufferedAmount-unicode.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/007.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/015.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/016.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/017.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/events/018.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/send/006.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/send/007.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/send/009.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/send/011.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/interfaces/WebSocket/send/012.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/keeping-connection-open/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/opening-handshake/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/opening-handshake/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/unload-a-document/001.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/unload-a-document/002.html?wpt_flags=h2 [ Skip ]
+imported/w3c/web-platform-tests/websockets/unload-a-document/005.html?wpt_flags=h2 [ Skip ]
+
+# Timing out since its import.
+imported/w3c/web-platform-tests/html/user-activation/activation-trigger-pointerevent.html?touch [ Skip ]
 
 # webkit.org/b/243681  Newly imported tests that fail on BigSur+
 [ BigSur+ Debug ] imported/w3c/web-platform-tests/IndexedDB/structured-clone.any.html?101-last [ Failure ]
 [ BigSur+ Release ] imported/w3c/web-platform-tests/IndexedDB/structured-clone.any.html?101-last [ Pass Failure ]
 [ BigSur+ Debug ] imported/w3c/web-platform-tests/IndexedDB/structured-clone.any.worker.html?101-last [ Failure ]
 [ BigSur+ Release ] imported/w3c/web-platform-tests/IndexedDB/structured-clone.any.worker.html?101-last [ Pass Failure ]
+
+# These tests have been flaky on macOS since their import.
+imported/w3c/web-platform-tests/websockets/cookies/005.html?wss&wpt_flags=https [ Pass Failure ]
+imported/w3c/web-platform-tests/websockets/cookies/007.html?wss&wpt_flags=https [ Pass Failure ]
 
 #webkit.org/b/248537 Batch mark expectations for Ventura test failures
 [ BigSur+ ] imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/autoplay-disabled-by-feature-policy.https.sub.html [ Pass Failure ]
@@ -2432,3 +2484,4 @@ svg/transforms/translation-tiny-element.svg [ ImageOnlyFailure ]
 
 webkit.org/b/242804 media/track/track-forced-subtitles-in-band.html [ Pass Failure ]
 
+webkit.org/b/251051 [ BigSur+ Debug ] storage/indexeddb/modern/deleteindex-4-private.html [ Crash ]

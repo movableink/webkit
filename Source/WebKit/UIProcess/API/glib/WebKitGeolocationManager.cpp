@@ -245,7 +245,7 @@ struct _WebKitGeolocationManagerPrivate {
 
 static guint signals[LAST_SIGNAL] = { 0, };
 
-WEBKIT_DEFINE_TYPE(WebKitGeolocationManager, webkit_geolocation_manager, G_TYPE_OBJECT)
+WEBKIT_DEFINE_FINAL_TYPE_IN_2022_API(WebKitGeolocationManager, webkit_geolocation_manager, G_TYPE_OBJECT)
 
 static void webkitGeolocationManagerStart(WebKitGeolocationManager* manager)
 {
@@ -362,8 +362,7 @@ static void webkit_geolocation_manager_class_init(WebKitGeolocationManagerClass*
     sObjProperties[PROP_ENABLE_HIGH_ACCURACY] =
         g_param_spec_boolean(
             "enable-high-accuracy",
-            _("Enable high accuracy"),
-            _("Whether high accuracy is enabled"),
+            nullptr, nullptr,
             FALSE,
             WEBKIT_PARAM_READABLE);
 

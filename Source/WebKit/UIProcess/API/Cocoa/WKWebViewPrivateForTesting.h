@@ -91,7 +91,6 @@ struct WKAppPrivacyReportTestingData {
 - (void)_setThrottleStateForTesting:(int)type;
 
 - (void)_doAfterProcessingAllPendingMouseEvents:(dispatch_block_t)action;
-- (void)_startMonitoringWheelEvents;
 
 + (void)_setApplicationBundleIdentifier:(NSString *)bundleIdentifier;
 + (void)_clearApplicationBundleIdentifierTestingOverride;
@@ -123,8 +122,6 @@ struct WKAppPrivacyReportTestingData {
 - (void)_computePagesForPrinting:(_WKFrameHandle *)handle completionHandler:(void(^)(void))completionHandler WK_API_AVAILABLE(macos(13.0), ios(16.0));
 
 - (void)_setConnectedToHardwareConsoleForTesting:(BOOL)connected;
-
-+ (void)_setLookalikeCharacterStringsForTesting:(NSArray<NSString *> *)strings;
 
 @end
 

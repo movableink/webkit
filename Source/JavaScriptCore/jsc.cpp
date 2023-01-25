@@ -97,6 +97,7 @@
 #include <wtf/StringPrintStream.h>
 #include <wtf/URL.h>
 #include <wtf/WallTime.h>
+#include <wtf/text/Base64.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/threads/BinarySemaphore.h>
 #include <wtf/threads/Signals.h>
@@ -278,6 +279,9 @@ private:
     Deque<String> m_reports;
 };
 
+
+static JSC_DECLARE_HOST_FUNCTION(functionAtob);
+static JSC_DECLARE_HOST_FUNCTION(functionBtoa);
 
 static JSC_DECLARE_HOST_FUNCTION(functionCreateGlobalObject);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateHeapBigInt);
@@ -540,6 +544,8 @@ private:
         Base::finishCreation(vm);
         JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 
+        addFunction(vm, "atob"_s, functionAtob, 1);
+        addFunction(vm, "btoa"_s, functionBtoa, 1);
         addFunction(vm, "debug"_s, functionDebug, 1);
         addFunction(vm, "describe"_s, functionDescribe, 1);
         addFunction(vm, "describeArray"_s, functionDescribeArray, 1);
@@ -1383,6 +1389,56 @@ JSC_DEFINE_HOST_FUNCTION(functionPrettyPrint, (JSGlobalObject* globalObject, Cal
     return printInternal(globalObject, callFrame, stdout, true);
 }
 
+JSC_DEFINE_HOST_FUNCTION(functionAtob, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!callFrame->argumentCount())
+        return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Missing input for atob."_s)));
+
+    JSValue jsValue = callFrame->argument(0);
+    if (jsValue.isUndefined())
+        return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Invalid character in argument for atob."_s)));
+
+    auto* string = jsValue.toString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    String encodedString = string->value(globalObject);
+
+    if (encodedString.isNull())
+        return JSValue::encode(jsEmptyString(vm));
+
+    auto decodedData = base64Decode(encodedString, { Base64DecodeOptions::ValidatePadding, Base64DecodeOptions::IgnoreSpacesAndNewLines, Base64DecodeOptions::DiscardVerticalTab });
+    if (!decodedData)
+        return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Invalid character in argument for atob."_s)));
+
+    return JSValue::encode(jsString(vm, String(decodedData->data(), decodedData->size())));
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionBtoa, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!callFrame->argumentCount())
+        return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Missing input for btoa."_s)));
+
+    auto* string = callFrame->argument(0).toString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    String stringToEncode = string->value(globalObject);
+
+    if (stringToEncode.isNull())
+        return JSValue::encode(jsEmptyString(vm));
+
+    if (!stringToEncode.isAllLatin1())
+        return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Invalid character in argument for btoa."_s)));
+
+    String encodedString = base64EncodeToString(stringToEncode.latin1());
+    return JSValue::encode(jsString(vm, encodedString));
+}
+
 JSC_DEFINE_HOST_FUNCTION(functionDebug, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
@@ -1456,7 +1512,7 @@ JSC_DEFINE_HOST_FUNCTION(functionJSCStack, (JSGlobalObject* globalObject, CallFr
     trace.append("--> Stack trace:\n");
 
     FunctionJSCStackFunctor functor(trace);
-    callFrame->iterate(vm, functor);
+    StackVisitor::visit(callFrame, vm, functor);
     fprintf(stderr, "%s", trace.toString().utf8().data());
     return JSValue::encode(jsUndefined());
 }
@@ -2010,11 +2066,11 @@ JSC_DEFINE_HOST_FUNCTION(functionCallerIsBBQOrOMGCompiled, (JSGlobalObject* glob
 
     CallerFunctor wasmToJSFrame;
     StackVisitor::visit(callFrame, vm, wasmToJSFrame);
-    if (!wasmToJSFrame.callerFrame() || !wasmToJSFrame.callerFrame()->isAnyWasmCallee())
+    if (!wasmToJSFrame.callerFrame() || !wasmToJSFrame.callerFrame()->isWasmFrame())
         return throwVMError(globalObject, scope, "caller is not a wasm->js import function"_s);
 
     // We have a wrapper frame that we generate for imports. If we ever can direct call from wasm we would need to change this.
-    ASSERT(!wasmToJSFrame.callerFrame()->callee().isWasm());
+    ASSERT(wasmToJSFrame.callerFrame()->callee().isWasm());
     CallerFunctor wasmFrame;
     StackVisitor::visit(wasmToJSFrame.callerFrame(), vm, wasmFrame);
     ASSERT(wasmFrame.callerFrame()->callee().isWasm());

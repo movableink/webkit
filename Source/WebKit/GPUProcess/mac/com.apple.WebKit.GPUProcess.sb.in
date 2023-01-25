@@ -855,6 +855,9 @@
 #if __MAC_OS_X_VERSION_MIN_REQUIRED > 120000
     (global-name "com.apple.coremedia.samplebufferconsumer.xpc")
 #endif
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 130000
+    (global-name "com.apple.coremedia.shaphelper.xpc")
+#endif
     (global-name "com.apple.coremedia.volumecontroller.xpc")
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 130000
     (global-name "com.apple.timesync.expositor")
@@ -1153,6 +1156,7 @@
         SYS_statfs64
         SYS_thread_selfid
         SYS_ulock_wait
+        SYS_ulock_wait2
         SYS_ulock_wake
         SYS_work_interval_ctl
         SYS_workq_kernreturn)))

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,8 +89,6 @@ static bool isValidSampleLocation(Document& document, const IntPoint& location)
             return false;
         if (auto* animations = styleable.animations()) {
             for (auto& animation : *animations) {
-                if (!animation)
-                    continue;
                 if (animation->playState() == WebAnimation::PlayState::Running)
                     return false;
             }
@@ -102,7 +100,7 @@ static bool isValidSampleLocation(Document& document, const IntPoint& location)
             return false;
 
         // Skip 3rd-party `<iframe>` as the content likely won't match the rest of the page.
-        if (is<HTMLIFrameElement>(element) && !areRegistrableDomainsEqual(downcast<HTMLIFrameElement>(element).location(), document.url()))
+        if (is<HTMLIFrameElement>(element))
             return false;
     }
 

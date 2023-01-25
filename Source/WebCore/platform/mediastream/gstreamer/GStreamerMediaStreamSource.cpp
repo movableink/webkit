@@ -369,13 +369,13 @@ public:
 
     void audioSamplesAvailable(const MediaTime&, const PlatformAudioData& audioData, const AudioStreamDescription&, size_t) final
     {
-        if (!m_parent)
+        if (!m_parent || !m_isObserving)
             return;
 
         const auto& data = static_cast<const GStreamerAudioData&>(audioData);
         auto sample = data.getSample();
         if (m_trackEnabled.load()) {
-            GST_TRACE_OBJECT(m_parent, "Pushing audio sample from enabled track");
+            GST_TRACE_OBJECT(m_src.get(), "Pushing audio sample from enabled track");
             pushSample(sample.get());
             return;
         }
@@ -392,7 +392,7 @@ public:
             m_silentSample = adoptGRef(gst_sample_new(buffer.get(), caps.get(), nullptr, nullptr));
         }
 
-        GST_TRACE_OBJECT(m_parent, "Pushing audio silence from disabled track");
+        GST_TRACE_OBJECT(m_src.get(), "Pushing audio silence from disabled track");
         pushSample(m_silentSample.get());
     }
 
@@ -410,17 +410,14 @@ public:
         return m_eosPending;
     }
 
-    std::optional<uint64_t> queryDecodedVideoFramesCount()
+    GUniquePtr<GstStructure> queryAdditionalStats()
     {
         auto query = adoptGRef(gst_query_new_custom(GST_QUERY_CUSTOM, gst_structure_new_empty("webkit-video-decoder-stats")));
         auto pad = adoptGRef(gst_element_get_static_pad(m_src.get(), "src"));
-        if (gst_pad_peer_query(pad.get(), query.get())) {
-            uint64_t decodedFramesCount;
-            if (gst_structure_get_uint64(gst_query_get_structure(query.get()), "decoded-frames", &decodedFramesCount))
-                return decodedFramesCount;
-        }
+        if (gst_pad_peer_query(pad.get(), query.get()))
+            return GUniquePtr<GstStructure>(gst_structure_copy(gst_query_get_structure(query.get())));
 
-        return { };
+        return nullptr;
     }
 
 private:
@@ -670,7 +667,7 @@ static void webkit_media_stream_src_class_init(WebKitMediaStreamSrcClass* klass)
     gobjectClass->get_property = webkitMediaStreamSrcGetProperty;
     gobjectClass->set_property = webkitMediaStreamSrcSetProperty;
 
-    g_object_class_install_property(gobjectClass, PROP_IS_LIVE, g_param_spec_boolean("is-live", "Is Live", "Let playbin3 know we are a live source.",
+    g_object_class_install_property(gobjectClass, PROP_IS_LIVE, g_param_spec_boolean("is-live", nullptr, nullptr,
         TRUE, static_cast<GParamFlags>(G_PARAM_READABLE | G_PARAM_STATIC_STRINGS)));
 
     gstElementClass->change_state = GST_DEBUG_FUNCPTR(webkitMediaStreamSrcChangeState);

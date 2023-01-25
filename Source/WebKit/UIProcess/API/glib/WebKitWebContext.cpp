@@ -21,7 +21,6 @@
 #include "WebKitWebContext.h"
 
 #include "APIAutomationClient.h"
-#include "APIDownloadClient.h"
 #include "APIInjectedBundleClient.h"
 #include "APIPageConfiguration.h"
 #include "APIProcessPoolConfiguration.h"
@@ -32,7 +31,6 @@
 #include "TextCheckerState.h"
 #include "WebAutomationSession.h"
 #include "WebKitAutomationSessionPrivate.h"
-#include "WebKitDownloadClient.h"
 #include "WebKitDownloadPrivate.h"
 #include "WebKitFaviconDatabasePrivate.h"
 #include "WebKitGeolocationManagerPrivate.h"
@@ -61,6 +59,7 @@
 #include <JavaScriptCore/RemoteInspector.h>
 #include <WebCore/ContentSecurityPolicy.h>
 #include <WebCore/ResourceLoaderIdentifier.h>
+#include <cstdlib>
 #include <glib/gi18n-lib.h>
 #include <libintl.h>
 #include <memory>
@@ -92,9 +91,8 @@ using namespace WebKit;
  * The #WebKitWebContext manages all aspects common to all
  * #WebKitWebView<!-- -->s.
  *
- * You can define the #WebKitCacheModel and #WebKitProcessModel with
- * webkit_web_context_set_cache_model() and
- * webkit_web_context_set_process_model(), depending on the needs of
+ * You can define the #WebKitCacheModel with
+ * webkit_web_context_set_cache_model(), depending on the needs of
  * your application. You can access the #WebKitSecurityManager to specify
  * the behaviour of your application regarding security using
  * webkit_web_context_get_security_manager().
@@ -222,7 +220,6 @@ struct _WebKitWebContextPrivate {
     GRefPtr<WebKitWebsiteDataManager> websiteDataManager;
 
     CString faviconDatabaseDirectory;
-    WebKitProcessModel processModel;
 
     HashMap<WebPageProxyIdentifier, WebKitWebView*> webViews;
 
@@ -303,7 +300,7 @@ void webkitWebContextWillCloseAutomationSession(WebKitWebContext* webContext)
 }
 #endif // ENABLE(REMOTE_INSPECTOR)
 
-WEBKIT_DEFINE_TYPE(WebKitWebContext, webkit_web_context, G_TYPE_OBJECT)
+WEBKIT_DEFINE_FINAL_TYPE_IN_2022_API(WebKitWebContext, webkit_web_context, G_TYPE_OBJECT)
 
 #if PLATFORM(GTK)
 #define INJECTED_BUNDLE_FILENAME "libwebkit" WEBKITGTK_API_INFIX "gtkinjectedbundle.so"
@@ -422,8 +419,13 @@ static void webkitWebContextConstructed(GObject* object)
     }
     configuration.setTimeZoneOverride(String::fromUTF8(priv->timeZoneOverride.data(), priv->timeZoneOverride.length()));
 
-    if (!priv->websiteDataManager)
-        priv->websiteDataManager = adoptGRef(webkit_website_data_manager_new("local-storage-directory", priv->localStorageDirectory.data(), nullptr));
+    if (!priv->websiteDataManager) {
+        priv->websiteDataManager = adoptGRef(webkit_website_data_manager_new(
+#if !ENABLE(2022_GLIB_API)
+                    "local-storage-directory", priv->localStorageDirectory.data(),
+#endif
+        nullptr));
+    }
 
     priv->processPool = WebProcessPool::create(configuration);
     priv->processPool->setUserMessageHandler([webContext](UserMessage&& message, CompletionHandler<void(UserMessage&&)>&& completionHandler) {
@@ -433,7 +435,9 @@ static void webkitWebContextConstructed(GObject* object)
         g_signal_emit(webContext, signals[USER_MESSAGE_RECEIVED], 0, userMessage.get(), &returnValue);
     });
 
-    priv->processModel = WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES;
+#if ENABLE(2022_GLIB_API)
+    priv->processPool->setSandboxEnabled(true);
+#endif
 
 #if ENABLE(MEMORY_SAMPLER)
     if (getenv("WEBKIT_SAMPLE_MEMORY"))
@@ -441,7 +445,6 @@ static void webkitWebContextConstructed(GObject* object)
 #endif
 
     attachInjectedBundleClientToContext(webContext);
-    attachDownloadClientToContext(webContext);
 
     priv->geolocationManager = adoptGRef(webkitGeolocationManagerCreate(priv->processPool->supplement<WebGeolocationManagerProxy>()));
     priv->notificationProvider = makeUnique<WebKitNotificationProvider>(priv->processPool->supplement<WebNotificationManagerProxy>(), webContext);
@@ -457,7 +460,6 @@ static void webkitWebContextDispose(GObject* object)
     if (!priv->clientsDetached) {
         priv->clientsDetached = true;
         priv->processPool->setInjectedBundleClient(nullptr);
-        priv->processPool->setLegacyDownloadClient(nullptr);
     }
 
     if (priv->faviconDatabase) {
@@ -502,8 +504,7 @@ static void webkit_web_context_class_init(WebKitWebContextClass* webContextClass
     sObjProperties[PROP_LOCAL_STORAGE_DIRECTORY] =
         g_param_spec_string(
             "local-storage-directory",
-            _("Local Storage Directory"),
-            _("The directory where local storage data will be saved"),
+            nullptr, nullptr,
             nullptr,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 #endif
@@ -518,8 +519,7 @@ static void webkit_web_context_class_init(WebKitWebContextClass* webContextClass
     sObjProperties[PROP_WEBSITE_DATA_MANAGER] =
         g_param_spec_object(
             "website-data-manager",
-            _("Website Data Manager"),
-            _("The WebKitWebsiteDataManager associated with this context"),
+            nullptr, nullptr,
             WEBKIT_TYPE_WEBSITE_DATA_MANAGER,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
@@ -540,8 +540,7 @@ static void webkit_web_context_class_init(WebKitWebContextClass* webContextClass
     sObjProperties[PROP_PSON_ENABLED] =
         g_param_spec_boolean(
             "process-swap-on-cross-site-navigation-enabled",
-            _("Swap Processes on Cross-Site Navigation"),
-            _("Whether swap Web processes on cross-site navigations is enabled"),
+            nullptr, nullptr,
             FALSE,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
@@ -559,8 +558,7 @@ static void webkit_web_context_class_init(WebKitWebContextClass* webContextClass
     sObjProperties[PROP_USE_SYSTEM_APPEARANCE_FOR_SCROLLBARS] =
         g_param_spec_boolean(
             "use-system-appearance-for-scrollbars",
-            _("Use system appearance for scrollbars"),
-            _("Whether to use system appearance for rendering scrollbars"),
+            nullptr, nullptr,
             TRUE,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT));
 #endif
@@ -575,8 +573,7 @@ static void webkit_web_context_class_init(WebKitWebContextClass* webContextClass
     sObjProperties[PROP_MEMORY_PRESSURE_SETTINGS] =
         g_param_spec_boxed(
             "memory-pressure-settings",
-            _("Memory Pressure Settings"),
-            _("The WebKitMemoryPressureSettings applied to the web processes created by this context"),
+            nullptr, nullptr,
             WEBKIT_TYPE_MEMORY_PRESSURE_SETTINGS,
             static_cast<GParamFlags>(WEBKIT_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
@@ -597,8 +594,7 @@ static void webkit_web_context_class_init(WebKitWebContextClass* webContextClass
     sObjProperties[PROP_TIME_ZONE_OVERRIDE] =
         g_param_spec_string(
             "time-zone-override",
-            _("Time Zone Override"),
-            _("The time zone to use instead of the system one"),
+            nullptr, nullptr,
             nullptr,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
@@ -1004,14 +1000,6 @@ void webkit_web_context_set_network_proxy_settings(WebKitWebContext* context, We
 }
 #endif
 
-typedef HashMap<DownloadProxy*, GRefPtr<WebKitDownload> > DownloadsMap;
-
-static DownloadsMap& downloadsMap()
-{
-    static NeverDestroyed<DownloadsMap> downloads;
-    return downloads;
-}
-
 /**
  * webkit_web_context_download_uri:
  * @context: a #WebKitWebContext
@@ -1031,7 +1019,17 @@ WebKitDownload* webkit_web_context_download_uri(WebKitWebContext* context, const
     g_return_val_if_fail(WEBKIT_IS_WEB_CONTEXT(context), nullptr);
     g_return_val_if_fail(uri, nullptr);
 
-    GRefPtr<WebKitDownload> download = webkitWebContextStartDownload(context, uri, nullptr);
+    WebCore::ResourceRequest request(String::fromUTF8(uri));
+    auto& websiteDataStore = webkitWebsiteDataManagerGetDataStore(context->priv->websiteDataManager.get());
+    auto& downloadProxy = context->priv->processPool->download(websiteDataStore, nullptr, request);
+    auto download = webkitDownloadCreate(downloadProxy);
+    downloadProxy.setDidStartCallback([context = GRefPtr<WebKitWebContext> { context }, download = download.get()](auto* downloadProxy) {
+        if (!downloadProxy)
+            return;
+
+        webkitDownloadStarted(download);
+        webkitWebContextDownloadStarted(context.get(), download);
+    });
     return download.leakRef();
 }
 
@@ -1321,6 +1319,7 @@ void webkit_web_context_register_uri_scheme(WebKitWebContext* context, const cha
         g_critical("Cannot register URI scheme %s more than once", scheme);
 }
 
+#if !ENABLE(2022_GLIB_API)
 /**
  * webkit_web_context_set_sandbox_enabled:
  * @context: a #WebKitWebContext
@@ -1345,6 +1344,27 @@ void webkit_web_context_set_sandbox_enabled(WebKitWebContext* context, gboolean 
 
     context->priv->processPool->setSandboxEnabled(enabled);
 }
+#endif
+
+static bool pathIsHomeDirectory(const char* path)
+{
+    std::unique_ptr<char, decltype(free)*> resolvedPath(realpath(path, nullptr), free);
+    if (!resolvedPath) {
+        g_warning("Failed to canonicalize path %s: %s", path, g_strerror(errno));
+        return true;
+    }
+
+    if (!strcmp(resolvedPath.get(), "/home"))
+        return true;
+
+    std::unique_ptr<char, decltype(free)*> resolvedHomeDirectory(realpath(g_get_home_dir(), nullptr), free);
+    if (!resolvedPath) {
+        g_warning("Failed to canonicalize path %s: %s", g_get_home_dir(), g_strerror(errno));
+        return true;
+    }
+
+    return !strcmp(resolvedPath.get(), resolvedHomeDirectory.get());
+}
 
 static bool pathIsBlocked(const char* path)
 {
@@ -1355,6 +1375,9 @@ static bool pathIsBlocked(const char* path)
     };
 
     if (!g_path_is_absolute(path))
+        return true;
+
+    if (pathIsHomeDirectory(path))
         return true;
 
     GUniquePtr<char*> splitPath(g_strsplit(path, G_DIR_SEPARATOR_S, 3));
@@ -1369,12 +1392,13 @@ static bool pathIsBlocked(const char* path)
  *
  * Adds a path to be mounted in the sandbox.
  *
- * @path must exist before any web process
- * has been created otherwise it will be silently ignored. It is a fatal error to
- * add paths after a web process has been spawned.
+ * @path must exist before any web process has been created; otherwise,
+ * it will be silently ignored. It is a fatal error to add paths after
+ * a web process has been spawned.
  *
- * Paths in directories such as `/sys`, `/proc`, and `/dev` or all of `/`
- * are not valid.
+ * Paths under `/sys`, `/proc`, and `/dev` are invalid. Attempting to
+ * add all of `/` is not valid. Since 2.40, adding the user's entire
+ * home directory or /home is also not valid.
  *
  * See also webkit_web_context_set_sandbox_enabled()
  *
@@ -1396,6 +1420,7 @@ void webkit_web_context_add_path_to_sandbox(WebKitWebContext* context, const cha
     context->priv->processPool->addSandboxPath(path, permission);
 }
 
+#if !ENABLE(2022_GLIB_API)
 /**
  * webkit_web_context_get_sandbox_enabled:
  * @context: a #WebKitWebContext
@@ -1412,6 +1437,7 @@ gboolean webkit_web_context_get_sandbox_enabled(WebKitWebContext* context)
 
     return context->priv->processPool->sandboxEnabled();
 }
+#endif
 
 /**
  * webkit_web_context_get_spell_checking_enabled:
@@ -1692,69 +1718,51 @@ void webkit_web_context_allow_tls_certificate_for_host(WebKitWebContext* context
     websiteDataStore.allowSpecificHTTPSCertificateForHost(certificateInfo, String::fromUTF8(host));
 }
 
+#if !ENABLE(2022_GLIB_API)
 /**
  * webkit_web_context_set_process_model:
  * @context: the #WebKitWebContext
  * @process_model: a #WebKitProcessModel
  *
- * Specifies a process model for WebViews.
- *
- * Specifies a process model for WebViews, which WebKit will use to
- * determine how auxiliary processes are handled.
- *
- * %WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES will use
- * one process per view most of the time, while still allowing for web
- * views to share a process when needed (for example when different
- * views interact with each other). Using this model, when a process
- * hangs or crashes, only the WebViews using it stop working, while
- * the rest of the WebViews in the application will still function
- * normally.
- *
- * %WEBKIT_PROCESS_MODEL_SHARED_SECONDARY_PROCESS is deprecated since 2.26,
- * using it has no effect for security reasons.
- *
- * This method **must be called before any web process has been created**,
- * as early as possible in your application. Calling it later will make
- * your application crash.
+ * This function previously allowed specifying the process model to use.
+ * However, since 2.26, the only allowed process model is
+ * %WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES, so this function
+ * does nothing.
  *
  * Since: 2.4
+ *
+ * Deprecated: 2.40
  */
 void webkit_web_context_set_process_model(WebKitWebContext* context, WebKitProcessModel processModel)
 {
     g_return_if_fail(WEBKIT_IS_WEB_CONTEXT(context));
 
-    if (processModel == WEBKIT_PROCESS_MODEL_SHARED_SECONDARY_PROCESS) {
+    if (processModel == WEBKIT_PROCESS_MODEL_SHARED_SECONDARY_PROCESS)
         g_warning("WEBKIT_PROCESS_MODEL_SHARED_SECONDARY_PROCESS is deprecated and has no effect");
-        return;
-    }
-
-    if (processModel == context->priv->processModel)
-        return;
-
-    context->priv->processModel = processModel;
 }
 
 /**
  * webkit_web_context_get_process_model:
  * @context: the #WebKitWebContext
  *
- * Returns the current process model.
+ * Returns %WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES.
  *
- * For more information about this value
+ * For more information about why this function is deprecated,
  * see webkit_web_context_set_process_model().
  *
- * Returns: the current #WebKitProcessModel
+ * Returns: %WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES
  *
  * Since: 2.4
+ *
+ * Deprecated: 2.40
  */
 WebKitProcessModel webkit_web_context_get_process_model(WebKitWebContext* context)
 {
     g_return_val_if_fail(WEBKIT_IS_WEB_CONTEXT(context), WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
 
-    return context->priv->processModel;
+    return WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES;
 }
 
-#if !ENABLE(2022_GLIB_API)
 /**
  * webkit_web_context_set_web_process_count_limit:
  * @context: the #WebKitWebContext
@@ -1929,29 +1937,6 @@ const gchar* webkit_web_context_get_time_zone_override(WebKitWebContext* context
 void webkitWebContextInitializeNotificationPermissions(WebKitWebContext* context)
 {
     g_signal_emit(context, signals[INITIALIZE_NOTIFICATION_PERMISSIONS], 0);
-}
-
-WebKitDownload* webkitWebContextGetOrCreateDownload(DownloadProxy* downloadProxy)
-{
-    GRefPtr<WebKitDownload> download = downloadsMap().get(downloadProxy);
-    if (download)
-        return download.get();
-
-    download = adoptGRef(webkitDownloadCreate(downloadProxy));
-    downloadsMap().set(downloadProxy, download.get());
-    return download.get();
-}
-
-WebKitDownload* webkitWebContextStartDownload(WebKitWebContext* context, const char* uri, WebPageProxy* initiatingPage)
-{
-    WebCore::ResourceRequest request(String::fromUTF8(uri));
-    auto& websiteDataStore = webkitWebsiteDataManagerGetDataStore(context->priv->websiteDataManager.get());
-    return webkitWebContextGetOrCreateDownload(&context->priv->processPool->download(websiteDataStore, initiatingPage, request));
-}
-
-void webkitWebContextRemoveDownload(DownloadProxy* downloadProxy)
-{
-    downloadsMap().remove(downloadProxy);
 }
 
 void webkitWebContextDownloadStarted(WebKitWebContext* context, WebKitDownload* download)

@@ -1292,6 +1292,14 @@
    },
    {
       "emails" : [
+         "bug-bridge@webkit.org"
+      ],
+      "github" : "webkit-bug-bridge",
+      "name" : "Bug Bridge",
+      "status" : "bot"
+   },
+   {
+      "emails" : [
          "font@but.tw"
       ],
       "github" : "ButTaiwan",
@@ -1489,7 +1497,8 @@
          "charliew@apple.com"
       ],
       "github" : "charliewolfe",
-      "name" : "Charlie Wolfe"
+      "name" : "Charlie Wolfe",
+      "status" : "committer"
    },
    {
       "emails" : [
@@ -2393,6 +2402,14 @@
       "github" : "webkit-ews-buildbot",
       "name" : "EWS buildbot",
       "status" : "bot"
+   },
+   {
+      "emails" : [
+         "eddy_wong@apple.com",
+         "eddydas@gmail.com"
+      ],
+      "github" : "eddydas",
+      "name" : "Eddy Wong"
    },
    {
       "emails" : [
@@ -3304,6 +3321,14 @@
    },
    {
       "emails" : [
+         "joncarlo@apple.com",
+         "joncarloalvarado@gmail.com"
+      ],
+      "github" : "jace0x21",
+      "name" : "JC Alvarado"
+   },
+   {
+      "emails" : [
          "jfbastien@apple.com",
          "jfb@chromium.org"
       ],
@@ -4176,6 +4201,18 @@
    },
    {
       "emails" : [
+         "karlcow@apple.com",
+         "karl+webkit@la-grange.net"
+      ],
+      "github" : "karlcow",
+      "name" : "Karl Dubost",
+      "nicks" : [
+         "karlcow"
+      ],
+      "status" : "committer"
+   },
+   {
+      "emails" : [
          "rackler@apple.com"
       ],
       "github" : "karlrackler",
@@ -4387,7 +4424,8 @@
       ],
       "expertise" : "Safari Extensions, Web Extensions",
       "github" : "kiaraarose",
-      "name" : "Kiara Rose"
+      "name" : "Kiara Rose",
+      "status" : "committer"
    },
    {
       "emails" : [
@@ -5588,7 +5626,7 @@
       "nicks" : [
          "obrufau"
       ],
-      "status" : "committer"
+      "status" : "reviewer"
    },
    {
       "emails" : [
@@ -6660,6 +6698,7 @@
       "emails" : [
          "tzagallo@apple.com"
       ],
+      "github" : "tadeuzagallo",
       "name" : "Tadeu Zagallo",
       "nicks" : [
          "tadeuzagallo"

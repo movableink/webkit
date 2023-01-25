@@ -111,7 +111,7 @@ void StackVisitor::readFrame(CallFrame* callFrame)
         return;
     }
 
-    if (callFrame->isAnyWasmCallee()) {
+    if (callFrame->isWasmFrame()) {
         readNonInlinedFrame(callFrame);
         return;
     }
@@ -167,13 +167,13 @@ void StackVisitor::readNonInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOri
     m_frame.m_inlineCallFrame = nullptr;
 #endif
 
-    m_frame.m_codeBlock = callFrame->isAnyWasmCallee() ? nullptr : callFrame->codeBlock();
+    m_frame.m_codeBlock = callFrame->isWasmFrame() ? nullptr : callFrame->codeBlock();
     m_frame.m_bytecodeIndex = !m_frame.codeBlock() ? BytecodeIndex(0)
         : codeOrigin ? codeOrigin->bytecodeIndex()
         : callFrame->bytecodeIndex();
 
 #if ENABLE(WEBASSEMBLY)
-    if (callFrame->isAnyWasmCallee()) {
+    if (callFrame->isWasmFrame()) {
         m_frame.m_isWasmFrame = true;
         m_frame.m_codeBlock = nullptr;
 
@@ -260,11 +260,13 @@ std::optional<RegisterAtOffsetList> StackVisitor::Frame::calleeSaveRegistersForU
 #if ENABLE(WEBASSEMBLY)
     if (isWasmFrame()) {
         if (callee().isCell()) {
-            RELEASE_ASSERT(isWebAssemblyModule(callee().asCell()));
+            RELEASE_ASSERT(isWebAssemblyInstance(callee().asCell()));
             return std::nullopt;
         }
         Wasm::Callee* wasmCallee = callee().asWasmCallee();
-        return *wasmCallee->calleeSaveRegisters();
+        if (auto* calleeSaveRegisters = wasmCallee->calleeSaveRegisters())
+            return *calleeSaveRegisters;
+        return std::nullopt;
     }
 #endif // ENABLE(WEBASSEMBLY)
 

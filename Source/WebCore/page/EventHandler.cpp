@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Google Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov (ap@webkit.org)
  * Copyright (C) 2015 The Qt Company Ltd
@@ -259,16 +259,16 @@ public:
         m_force = forceDefaultValue;
 
         PlatformEvent::Type type = event.type();
-        ASSERT(type == PlatformEvent::MouseMoved || type == PlatformEvent::MousePressed || type == PlatformEvent::MouseReleased);
+        ASSERT(type == PlatformEvent::Type::MouseMoved || type == PlatformEvent::Type::MousePressed || type == PlatformEvent::Type::MouseReleased);
 
         switch (type) {
-        case PlatformEvent::MouseMoved:
+        case PlatformEvent::Type::MouseMoved:
             m_state = TouchMoved;
             break;
-        case PlatformEvent::MousePressed:
+        case PlatformEvent::Type::MousePressed:
             m_state = TouchPressed;
             break;
-        case PlatformEvent::MouseReleased:
+        case PlatformEvent::Type::MouseReleased:
             m_state = TouchReleased;
             break;
         default:
@@ -283,18 +283,18 @@ public:
     explicit SyntheticSingleTouchEvent(const PlatformMouseEvent& event)
     {
         switch (event.type()) {
-        case PlatformEvent::MouseMoved:
-            m_type = TouchMove;
+        case PlatformEvent::Type::MouseMoved:
+            m_type = Type::TouchMove;
             break;
-        case PlatformEvent::MousePressed:
-            m_type = TouchStart;
+        case PlatformEvent::Type::MousePressed:
+            m_type = Type::TouchStart;
             break;
-        case PlatformEvent::MouseReleased:
-            m_type = TouchEnd;
+        case PlatformEvent::Type::MouseReleased:
+            m_type = Type::TouchEnd;
             break;
         default:
             ASSERT_NOT_REACHED();
-            m_type = NoType;
+            m_type = Type::NoType;
             break;
         }
         m_timestamp = event.timestamp();
@@ -430,6 +430,7 @@ void EventHandler::clear()
     m_originatingTouchPointTargets.clear();
     m_originatingTouchPointDocument = nullptr;
     m_originatingTouchPointTargetKey = 0;
+    m_touchPressed = false;
 #endif
     m_maxMouseMovedDuration = 0;
     m_didStartDrag = false;
@@ -2241,9 +2242,9 @@ bool EventHandler::handleMouseForceEvent(const PlatformMouseEvent& event)
 #if ENABLE(POINTER_LOCK)
     if (m_frame.page()->pointerLockController().isLocked()) {
         m_frame.page()->pointerLockController().dispatchLockedMouseEvent(event, eventNames().webkitmouseforcechangedEvent);
-        if (event.type() == PlatformEvent::MouseForceDown)
+        if (event.type() == PlatformEvent::Type::MouseForceDown)
             m_frame.page()->pointerLockController().dispatchLockedMouseEvent(event, eventNames().webkitmouseforcedownEvent);
-        if (event.type() == PlatformEvent::MouseForceUp)
+        if (event.type() == PlatformEvent::Type::MouseForceUp)
             m_frame.page()->pointerLockController().dispatchLockedMouseEvent(event, eventNames().webkitmouseforceupEvent);
         return true;
     }
@@ -2259,9 +2260,9 @@ bool EventHandler::handleMouseForceEvent(const PlatformMouseEvent& event)
     auto mouseEvent = prepareMouseEvent(hitType, event);
 
     bool swallowedEvent = !dispatchMouseEvent(eventNames().webkitmouseforcechangedEvent, mouseEvent.targetNode(), 0, event, FireMouseOverOut::No);
-    if (event.type() == PlatformEvent::MouseForceDown)
+    if (event.type() == PlatformEvent::Type::MouseForceDown)
         swallowedEvent |= !dispatchMouseEvent(eventNames().webkitmouseforcedownEvent, mouseEvent.targetNode(), 0, event, FireMouseOverOut::No);
-    if (event.type() == PlatformEvent::MouseForceUp)
+    if (event.type() == PlatformEvent::Type::MouseForceUp)
         swallowedEvent |= !dispatchMouseEvent(eventNames().webkitmouseforceupEvent, mouseEvent.targetNode(), 0, event, FireMouseOverOut::No);
 
     return swallowedEvent;
@@ -2292,10 +2293,10 @@ bool EventHandler::handlePasteGlobalSelection(const PlatformMouseEvent& platform
     // clears the text box. So it's important this happens after the event
     // handlers have been fired.
 #if PLATFORM(GTK)
-    if (platformMouseEvent.type() != PlatformEvent::MousePressed)
+    if (platformMouseEvent.type() != PlatformEvent::Type::MousePressed)
         return false;
 #else
-    if (platformMouseEvent.type() != PlatformEvent::MouseReleased)
+    if (platformMouseEvent.type() != PlatformEvent::Type::MouseReleased)
         return false;
 #endif
 
@@ -3580,9 +3581,9 @@ bool EventHandler::sendContextMenuEventForKey()
     // This is required for web compatibility.
 
 #if OS(WINDOWS)
-    PlatformEvent::Type eventType = PlatformEvent::MouseReleased;
+    PlatformEvent::Type eventType = PlatformEvent::Type::MouseReleased;
 #else
-    PlatformEvent::Type eventType = PlatformEvent::MousePressed;
+    PlatformEvent::Type eventType = PlatformEvent::Type::MousePressed;
 #endif
     PlatformMouseEvent platformMouseEvent(position, globalPosition, RightButton, eventType, 1, { }, WallTime::now(), ForceAtClick, NoTap);
 
@@ -3693,7 +3694,7 @@ void EventHandler::fakeMouseMoveEventTimerFired()
         return;
 
     auto modifiers = PlatformKeyboardEvent::currentStateOfModifierKeys();
-    PlatformMouseEvent fakeMouseMoveEvent(valueOrDefault(m_lastKnownMousePosition), m_lastKnownMouseGlobalPosition, NoButton, PlatformEvent::MouseMoved, 0, modifiers, WallTime::now(), 0, NoTap);
+    PlatformMouseEvent fakeMouseMoveEvent(valueOrDefault(m_lastKnownMousePosition), m_lastKnownMouseGlobalPosition, NoButton, PlatformEvent::Type::MouseMoved, 0, modifiers, WallTime::now(), 0, NoTap);
     mouseMoved(fakeMouseMoveEvent);
 }
 #endif // !ENABLE(IOS_TOUCH_EVENTS)
@@ -3773,7 +3774,7 @@ bool EventHandler::isKeyEventAllowedInFullScreen(const PlatformKeyboardEvent& ke
     if (document->fullscreenManager().isFullscreenKeyboardInputAllowed())
         return true;
 
-    if (keyEvent.type() == PlatformKeyboardEvent::Char) {
+    if (keyEvent.type() == PlatformKeyboardEvent::Type::Char) {
         if (keyEvent.text().length() != 1)
             return false;
         UChar character = keyEvent.text()[0];
@@ -3830,12 +3831,12 @@ bool EventHandler::internalKeyEvent(const PlatformKeyboardEvent& initialKeyEvent
     LOG(Editing, "EventHandler %p keyEvent (text %s keyIdentifier %s)", this, initialKeyEvent.text().utf8().data(), initialKeyEvent.keyIdentifier().utf8().data());
 
 #if ENABLE(POINTER_LOCK)
-    if (initialKeyEvent.type() == PlatformEvent::KeyDown && initialKeyEvent.windowsVirtualKeyCode() == VK_ESCAPE && m_frame.page()->pointerLockController().element()) {
+    if (initialKeyEvent.type() == PlatformEvent::Type::KeyDown && initialKeyEvent.windowsVirtualKeyCode() == VK_ESCAPE && m_frame.page()->pointerLockController().element()) {
         m_frame.page()->pointerLockController().requestPointerUnlockAndForceCursorVisible();
     }
 #endif
 
-    if (initialKeyEvent.type() == PlatformEvent::KeyDown && initialKeyEvent.windowsVirtualKeyCode() == VK_ESCAPE) {
+    if (initialKeyEvent.type() == PlatformEvent::Type::KeyDown && initialKeyEvent.windowsVirtualKeyCode() == VK_ESCAPE) {
         if (auto* page = m_frame.page()) {
             if (auto* validationMessageClient = page->validationMessageClient())
                 validationMessageClient->hideAnyValidationMessage();
@@ -3844,7 +3845,7 @@ bool EventHandler::internalKeyEvent(const PlatformKeyboardEvent& initialKeyEvent
 
 #if ENABLE(FULLSCREEN_API)
     if (m_frame.document()->fullscreenManager().isFullscreen()) {
-        if (initialKeyEvent.type() == PlatformEvent::KeyDown && initialKeyEvent.windowsVirtualKeyCode() == VK_ESCAPE) {
+        if (initialKeyEvent.type() == PlatformEvent::Type::KeyDown && initialKeyEvent.windowsVirtualKeyCode() == VK_ESCAPE) {
             m_frame.document()->fullscreenManager().cancelFullscreen();
             return true;
         }
@@ -3860,7 +3861,7 @@ bool EventHandler::internalKeyEvent(const PlatformKeyboardEvent& initialKeyEvent
 #if ENABLE(PAN_SCROLLING)
     if (Ref(m_frame.mainFrame())->eventHandler().panScrollInProgress()) {
         // If a key is pressed while the panScroll is in progress then we want to stop
-        if (initialKeyEvent.type() == PlatformEvent::KeyDown || initialKeyEvent.type() == PlatformEvent::RawKeyDown)
+        if (initialKeyEvent.type() == PlatformEvent::Type::KeyDown || initialKeyEvent.type() == PlatformEvent::Type::RawKeyDown)
             stopAutoscrollTimer();
 
         // If we were in panscroll mode, we swallow the key event
@@ -3890,18 +3891,18 @@ bool EventHandler::internalKeyEvent(const PlatformKeyboardEvent& initialKeyEvent
     // On Windows, WebKit explicitly calls handleAccessKey() instead of dispatching a keypress event for WM_SYSCHAR messages.
     // Other platforms currently match either Mac or Windows behavior, depending on whether they send combined KeyDown events.
     bool matchedAnAccessKey = false;
-    if (initialKeyEvent.type() == PlatformEvent::KeyDown)
+    if (initialKeyEvent.type() == PlatformEvent::Type::KeyDown)
         matchedAnAccessKey = handleAccessKey(initialKeyEvent);
 
     // FIXME: it would be fair to let an input method handle KeyUp events before DOM dispatch.
-    if (initialKeyEvent.type() == PlatformEvent::KeyUp || initialKeyEvent.type() == PlatformEvent::Char)
+    if (initialKeyEvent.type() == PlatformEvent::Type::KeyUp || initialKeyEvent.type() == PlatformEvent::Type::Char)
         return !element->dispatchKeyEvent(initialKeyEvent);
 
     bool backwardCompatibilityMode = needsKeyboardEventDisambiguationQuirks();
 
     PlatformKeyboardEvent keyDownEvent = initialKeyEvent;    
-    if (keyDownEvent.type() != PlatformEvent::RawKeyDown)
-        keyDownEvent.disambiguateKeyDownEvent(PlatformEvent::RawKeyDown, backwardCompatibilityMode);
+    if (keyDownEvent.type() != PlatformEvent::Type::RawKeyDown)
+        keyDownEvent.disambiguateKeyDownEvent(PlatformEvent::Type::RawKeyDown, backwardCompatibilityMode);
     auto keydown = KeyboardEvent::create(keyDownEvent, &m_frame.windowProxy());
     if (matchedAnAccessKey)
         keydown->preventDefault();
@@ -3919,7 +3920,7 @@ bool EventHandler::internalKeyEvent(const PlatformKeyboardEvent& initialKeyEvent
     };
     setHasFocusVisibleIfNeeded(*element);
 
-    if (initialKeyEvent.type() == PlatformEvent::RawKeyDown) {
+    if (initialKeyEvent.type() == PlatformEvent::Type::RawKeyDown) {
         element->dispatchEvent(keydown);
         // If frame changed as a result of keydown dispatch, then return true to avoid sending a subsequent keypress message to the new frame.
         bool changedFocusedFrame = m_frame.page() && &m_frame != &m_frame.page()->focusController().focusedOrMainFrame();
@@ -3971,7 +3972,7 @@ bool EventHandler::internalKeyEvent(const PlatformKeyboardEvent& initialKeyEvent
     }
 
     PlatformKeyboardEvent keyPressEvent = initialKeyEvent;
-    keyPressEvent.disambiguateKeyDownEvent(PlatformEvent::Char, backwardCompatibilityMode);
+    keyPressEvent.disambiguateKeyDownEvent(PlatformEvent::Type::Char, backwardCompatibilityMode);
     if (keyPressEvent.text().isEmpty())
         return keydownResult;
     auto keypress = KeyboardEvent::create(keyPressEvent, &m_frame.windowProxy());
@@ -4122,8 +4123,13 @@ void EventHandler::defaultKeyboardEventHandler(KeyboardEvent& event)
 
     if (event.type() == eventNames().keydownEvent) {
         m_frame.editor().handleKeyboardEvent(event);
+#if PLATFORM(COCOA)
+        if (event.defaultHandled() && !(event.keyIdentifier() == "PageDown"_s || event.keyIdentifier() == "PageUp"_s))
+#else
         if (event.defaultHandled())
+#endif
             return;
+
         if (event.key() == "Escape"_s) {
             if (RefPtr activeModalDialog = m_frame.document()->activeModalDialog())
                 activeModalDialog->queueCancelTask();
@@ -4301,7 +4307,7 @@ RefPtr<Element> EventHandler::draggedElement() const
 
 bool EventHandler::handleDrag(const MouseEventWithHitTestResults& event, CheckDragHysteresis checkDragHysteresis)
 {
-    if (event.event().button() != LeftButton || event.event().type() != PlatformEvent::MouseMoved) {
+    if (event.event().button() != LeftButton || event.event().type() != PlatformEvent::Type::MouseMoved) {
         // If we allowed the other side of the bridge to handle a drag
         // last time, then m_mousePressed might still be set. So we
         // clear it now to make sure the next move after a drag
@@ -4335,7 +4341,7 @@ bool EventHandler::handleDrag(const MouseEventWithHitTestResults& event, CheckDr
     // For drags starting in the selection, the user must wait between the mousedown and mousedrag,
     // or else we bail on the dragging stuff and allow selection to occur
     if (m_mouseDownMayStartDrag && m_dragMayStartSelectionInstead && dragState().type.contains(DragSourceAction::Selection) && event.event().timestamp() - m_mouseDownTimestamp < TextDragDelay) {
-        ASSERT(event.event().type() == PlatformEvent::MouseMoved);
+        ASSERT(event.event().type() == PlatformEvent::Type::MouseMoved);
         if (dragState().type.contains(DragSourceAction::Image)) {
             // ... unless the mouse is over an image, then we start dragging just the image
             dragState().type = DragSourceAction::Image;
@@ -4541,14 +4547,14 @@ void EventHandler::defaultTextInputEventHandler(TextEvent& event)
 bool EventHandler::defaultKeyboardScrollEventHandler(KeyboardEvent& event, ScrollLogicalDirection direction, ScrollGranularity granularity)
 {
     if (shouldUseSmoothKeyboardScrollingForFocusedScrollableArea())
-        return keyboardScrollRecursively(scrollDirectionForKeyboardEvent(event), scrollGranularityForKeyboardEvent(event), nullptr);
+        return keyboardScrollRecursively(scrollDirectionForKeyboardEvent(event), scrollGranularityForKeyboardEvent(event), nullptr, event.repeat());
 
     return logicalScrollRecursively(direction, granularity);
 }
 
 void EventHandler::defaultPageUpDownEventHandler(KeyboardEvent& event)
 {
-#if PLATFORM(GTK) || PLATFORM(WPE) || PLATFORM(WIN_CAIRO)
+#if PLATFORM(GTK) || PLATFORM(WPE) || PLATFORM(WIN_CAIRO) || PLATFORM(COCOA)
     ASSERT(event.type() == eventNames().keydownEvent);
 
     if (event.ctrlKey() || event.metaKey() || event.altKey() || event.altGraphKey() || event.shiftKey())
@@ -4599,7 +4605,7 @@ void EventHandler::defaultSpaceEventHandler(KeyboardEvent& event)
 
     bool defaultHandled = false;
     if (shouldUseSmoothKeyboardScrollingForFocusedScrollableArea())
-        defaultHandled = keyboardScroll(scrollDirectionForKeyboardEvent(event), scrollGranularityForKeyboardEvent(event), nullptr);
+        defaultHandled = keyboardScroll(scrollDirectionForKeyboardEvent(event), scrollGranularityForKeyboardEvent(event), nullptr, event.repeat());
     else
         defaultHandled = view->logicalScroll(direction, ScrollGranularity::Page);
 
@@ -4642,9 +4648,9 @@ void EventHandler::stopKeyboardScrolling()
         animator->handleKeyUpEvent();
 }
 
-bool EventHandler::beginKeyboardScrollGesture(KeyboardScrollingAnimator* animator, ScrollDirection direction, ScrollGranularity granularity)
+bool EventHandler::beginKeyboardScrollGesture(KeyboardScrollingAnimator* animator, ScrollDirection direction, ScrollGranularity granularity, bool isKeyRepeat)
 {
-    if (animator && animator->beginKeyboardScrollGesture(direction, granularity)) {
+    if (animator && animator->beginKeyboardScrollGesture(direction, granularity, isKeyRepeat)) {
         m_frame.page()->setCurrentKeyboardScrollingAnimator(animator);
         return true;
     }
@@ -4652,30 +4658,30 @@ bool EventHandler::beginKeyboardScrollGesture(KeyboardScrollingAnimator* animato
     return false;
 }
 
-bool EventHandler::startKeyboardScrollAnimationOnDocument(ScrollDirection direction, ScrollGranularity granularity)
+bool EventHandler::startKeyboardScrollAnimationOnDocument(ScrollDirection direction, ScrollGranularity granularity, bool isKeyRepeat)
 {
     auto view = m_frame.view();
     if (!view)
         return false;
 
     auto* animator = view->scrollAnimator().keyboardScrollingAnimator();
-    return beginKeyboardScrollGesture(animator, direction, granularity);
+    return beginKeyboardScrollGesture(animator, direction, granularity, isKeyRepeat);
 }
 
-bool EventHandler::startKeyboardScrollAnimationOnRenderBoxLayer(ScrollDirection direction, ScrollGranularity granularity, RenderBox* renderBox)
+bool EventHandler::startKeyboardScrollAnimationOnRenderBoxLayer(ScrollDirection direction, ScrollGranularity granularity, RenderBox* renderBox, bool isKeyRepeat)
 {
     auto* scrollableArea = renderBox->layer() ? renderBox->layer()->scrollableArea() : nullptr;
     if (!scrollableArea)
         return false;
 
     auto* animator = scrollableArea->scrollAnimator().keyboardScrollingAnimator();
-    return beginKeyboardScrollGesture(animator, direction, granularity);
+    return beginKeyboardScrollGesture(animator, direction, granularity, isKeyRepeat);
 }
 
-bool EventHandler::startKeyboardScrollAnimationOnRenderBoxAndItsAncestors(ScrollDirection direction, ScrollGranularity granularity, RenderBox* renderBox)
+bool EventHandler::startKeyboardScrollAnimationOnRenderBoxAndItsAncestors(ScrollDirection direction, ScrollGranularity granularity, RenderBox* renderBox, bool isKeyRepeat)
 {
     while (renderBox && !renderBox->isRenderView()) {
-        if (startKeyboardScrollAnimationOnRenderBoxLayer(direction, granularity, renderBox))
+        if (startKeyboardScrollAnimationOnRenderBoxLayer(direction, granularity, renderBox, isKeyRepeat))
             return true;
         renderBox = renderBox->containingBlock();
     }
@@ -4683,7 +4689,7 @@ bool EventHandler::startKeyboardScrollAnimationOnRenderBoxAndItsAncestors(Scroll
     return false;
 }
 
-bool EventHandler::startKeyboardScrollAnimationOnEnclosingScrollableContainer(ScrollDirection direction, ScrollGranularity granularity, Node* startingNode)
+bool EventHandler::startKeyboardScrollAnimationOnEnclosingScrollableContainer(ScrollDirection direction, ScrollGranularity granularity, Node* startingNode, bool isKeyRepeat)
 {
     RefPtr node = startingNode;
 
@@ -4699,14 +4705,17 @@ bool EventHandler::startKeyboardScrollAnimationOnEnclosingScrollableContainer(Sc
             return false;
 
         RenderBox& renderBox = renderer->enclosingBox();
-        if (!renderer->isListBox() && startKeyboardScrollAnimationOnRenderBoxAndItsAncestors(direction, granularity, &renderBox))
+        if (!renderer->isListBox() && startKeyboardScrollAnimationOnRenderBoxAndItsAncestors(direction, granularity, &renderBox, isKeyRepeat))
             return true;
     }
     return false;
 }
 
-bool EventHandler::focusedScrollableAreaShouldUseSmoothKeyboardScrolling()
+bool EventHandler::shouldUseSmoothKeyboardScrollingForFocusedScrollableArea()
 {
+    if (!m_frame.settings().eventHandlerDrivenSmoothKeyboardScrollingEnabled())
+        return false;
+
     Node* node = m_frame.document()->focusedElement();
     if (!node)
         node = m_mousePressNode.get();
@@ -4721,20 +4730,15 @@ bool EventHandler::focusedScrollableAreaShouldUseSmoothKeyboardScrolling()
 #if PLATFORM(GTK) || PLATFORM(WPE)
     if (!m_frame.settings().asyncFrameScrollingEnabled())
         return false;
+#endif
 
     if (!scrollableArea->scrollAnimatorEnabled())
         return false;
-#endif
 
     return true;
 }
 
-bool EventHandler::shouldUseSmoothKeyboardScrollingForFocusedScrollableArea()
-{
-    return m_frame.settings().eventHandlerDrivenSmoothKeyboardScrollingEnabled() && focusedScrollableAreaShouldUseSmoothKeyboardScrolling() && m_frame.settings().scrollAnimatorEnabled();
-}
-
-bool EventHandler::keyboardScrollRecursively(std::optional<ScrollDirection> direction, std::optional<ScrollGranularity> granularity, Node* startingNode)
+bool EventHandler::keyboardScrollRecursively(std::optional<ScrollDirection> direction, std::optional<ScrollGranularity> granularity, Node* startingNode, bool isKeyRepeat)
 {
     if (!direction || !granularity)
         return false;
@@ -4743,10 +4747,10 @@ bool EventHandler::keyboardScrollRecursively(std::optional<ScrollDirection> dire
 
     m_frame.document()->updateLayoutIgnorePendingStylesheets();
 
-    if (startKeyboardScrollAnimationOnEnclosingScrollableContainer(*direction, *granularity, startingNode))
+    if (startKeyboardScrollAnimationOnEnclosingScrollableContainer(*direction, *granularity, startingNode, isKeyRepeat))
         return true;
 
-    if (startKeyboardScrollAnimationOnDocument(*direction, *granularity))
+    if (startKeyboardScrollAnimationOnDocument(*direction, *granularity, isKeyRepeat))
         return true;
 
     RefPtr frame = &m_frame;
@@ -4757,10 +4761,10 @@ bool EventHandler::keyboardScrollRecursively(std::optional<ScrollDirection> dire
     if (!localParent)
         return false;
 
-    return localParent->eventHandler().keyboardScrollRecursively(direction, granularity, m_frame.ownerElement());
+    return localParent->eventHandler().keyboardScrollRecursively(direction, granularity, m_frame.ownerElement(), isKeyRepeat);
 }
 
-bool EventHandler::keyboardScroll(std::optional<ScrollDirection> direction, std::optional<ScrollGranularity> granularity, Node* startingNode)
+bool EventHandler::keyboardScroll(std::optional<ScrollDirection> direction, std::optional<ScrollGranularity> granularity, Node* startingNode, bool isKeyRepeat)
 {
     if (!direction || !granularity)
         return false;
@@ -4769,10 +4773,10 @@ bool EventHandler::keyboardScroll(std::optional<ScrollDirection> direction, std:
 
     m_frame.document()->updateLayoutIgnorePendingStylesheets();
 
-    if (startKeyboardScrollAnimationOnEnclosingScrollableContainer(*direction, *granularity, startingNode))
+    if (startKeyboardScrollAnimationOnEnclosingScrollableContainer(*direction, *granularity, startingNode, isKeyRepeat))
         return true;
 
-    return startKeyboardScrollAnimationOnDocument(*direction, *granularity);
+    return startKeyboardScrollAnimationOnDocument(*direction, *granularity, isKeyRepeat);
 }
 
 void EventHandler::defaultArrowEventHandler(FocusDirection focusDirection, KeyboardEvent& event)
@@ -5136,7 +5140,7 @@ bool EventHandler::dispatchSyntheticTouchEventIfEnabled(const PlatformMouseEvent
         return false;
 
     PlatformEvent::Type eventType = platformMouseEvent.type();
-    if (eventType != PlatformEvent::MouseMoved && eventType != PlatformEvent::MousePressed && eventType != PlatformEvent::MouseReleased)
+    if (eventType != PlatformEvent::Type::MouseMoved && eventType != PlatformEvent::Type::MousePressed && eventType != PlatformEvent::Type::MouseReleased)
         return false;
 
     constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent };
@@ -5145,7 +5149,7 @@ bool EventHandler::dispatchSyntheticTouchEventIfEnabled(const PlatformMouseEvent
         return false;
 
     // The order is important. This check should follow the subframe test: http://webkit.org/b/111292.
-    if (eventType == PlatformEvent::MouseMoved && !m_touchPressed)
+    if (eventType == PlatformEvent::Type::MouseMoved && !m_touchPressed)
         return true;
 
     SyntheticSingleTouchEvent touchEvent(platformMouseEvent);

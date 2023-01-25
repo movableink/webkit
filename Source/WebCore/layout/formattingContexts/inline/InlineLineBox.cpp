@@ -32,10 +32,9 @@
 namespace WebCore {
 namespace Layout {
 
-LineBox::LineBox(const Box& rootLayoutBox, InlineLayoutUnit rootInlineBoxAlignmentOffset, InlineLayoutUnit contentLogicalWidth, size_t lineIndex, size_t nonSpanningInlineLevelBoxCount)
+LineBox::LineBox(const Box& rootLayoutBox, InlineLayoutUnit contentLogicalLeft, InlineLayoutUnit contentLogicalWidth, size_t lineIndex, size_t nonSpanningInlineLevelBoxCount)
     : m_lineIndex(lineIndex)
-    , m_rootInlineBoxAlignmentOffset(rootInlineBoxAlignmentOffset)
-    , m_rootInlineBox({ rootLayoutBox, !lineIndex ? rootLayoutBox.firstLineStyle() : rootLayoutBox.style(), { }, InlineLayoutSize { contentLogicalWidth, { } }, InlineLevelBox::Type::RootInlineBox })
+    , m_rootInlineBox(InlineLevelBox::createRootInlineBox(rootLayoutBox, !lineIndex ? rootLayoutBox.firstLineStyle() : rootLayoutBox.style(), contentLogicalLeft, contentLogicalWidth))
 {
     m_nonRootInlineLevelBoxList.reserveInitialCapacity(nonSpanningInlineLevelBoxCount);
     m_nonRootInlineLevelBoxMap.reserveInitialCapacity(nonSpanningInlineLevelBoxCount);
@@ -51,17 +50,17 @@ void LineBox::addInlineLevelBox(InlineLevelBox&& inlineLevelBox)
 InlineRect LineBox::logicalRectForTextRun(const Line::Run& run) const
 {
     ASSERT(run.isText() || run.isSoftLineBreak());
-    auto* parentInlineBox = &inlineLevelBoxForLayoutBox(run.layoutBox().parent());
-    ASSERT(parentInlineBox->isInlineBox());
-    auto runlogicalTop = parentInlineBox->logicalTop() - parentInlineBox->inlineBoxContentOffsetForLeadingTrim();
-    InlineLayoutUnit logicalHeight = parentInlineBox->primarymetricsOfPrimaryFont().height();
+    auto* ancestorInlineBox = &parentInlineBox(run);
+    ASSERT(ancestorInlineBox->isInlineBox());
+    auto runlogicalTop = ancestorInlineBox->logicalTop() - ancestorInlineBox->inlineBoxContentOffsetForLeadingTrim();
+    InlineLayoutUnit logicalHeight = ancestorInlineBox->primarymetricsOfPrimaryFont().height();
 
-    while (parentInlineBox != &m_rootInlineBox && !parentInlineBox->hasLineBoxRelativeAlignment()) {
-        parentInlineBox = &inlineLevelBoxForLayoutBox(parentInlineBox->layoutBox().parent());
-        ASSERT(parentInlineBox->isInlineBox());
-        runlogicalTop += (parentInlineBox->logicalTop() - parentInlineBox->inlineBoxContentOffsetForLeadingTrim());
+    while (ancestorInlineBox != &m_rootInlineBox && !ancestorInlineBox->hasLineBoxRelativeAlignment()) {
+        ancestorInlineBox = &parentInlineBox(*ancestorInlineBox);
+        ASSERT(ancestorInlineBox->isInlineBox());
+        runlogicalTop += (ancestorInlineBox->logicalTop() - ancestorInlineBox->inlineBoxContentOffsetForLeadingTrim());
     }
-    return { runlogicalTop, run.logicalLeft(), run.logicalWidth(), logicalHeight };
+    return { runlogicalTop, m_rootInlineBox.logicalLeft() + run.logicalLeft(), run.logicalWidth(), logicalHeight };
 }
 
 InlineRect LineBox::logicalRectForLineBreakBox(const Box& layoutBox) const
@@ -84,7 +83,7 @@ InlineLayoutUnit LineBox::inlineLevelBoxAbsoluteTop(const InlineLevelBox& inline
     // Nested inline content e.g <div><span><img></span></div>
     auto* ancestorInlineBox = &inlineLevelBox;
     while (ancestorInlineBox != &m_rootInlineBox && !ancestorInlineBox->hasLineBoxRelativeAlignment()) {
-        ancestorInlineBox = &inlineLevelBoxForLayoutBox(ancestorInlineBox->layoutBox().parent());
+        ancestorInlineBox = &parentInlineBox(*ancestorInlineBox);
         ASSERT(ancestorInlineBox->isInlineBox());
         top += ancestorInlineBox->logicalTop();
     }
@@ -94,9 +93,13 @@ InlineLayoutUnit LineBox::inlineLevelBoxAbsoluteTop(const InlineLevelBox& inline
 InlineRect LineBox::logicalRectForInlineLevelBox(const Box& layoutBox) const
 {
     ASSERT(layoutBox.isInlineLevelBox() || layoutBox.isLineBreakBox());
-    auto& inlineBox = inlineLevelBoxForLayoutBox(layoutBox);
-    auto inlineBoxLogicalRect = inlineBox.logicalRect();
-    return InlineRect { inlineLevelBoxAbsoluteTop(inlineBox), inlineBoxLogicalRect.left(), inlineBoxLogicalRect.width(), inlineBoxLogicalRect.height() };
+    auto* inlineBox = inlineLevelBoxFor(layoutBox);
+    if (!inlineBox) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+    auto inlineBoxLogicalRect = inlineBox->logicalRect();
+    return InlineRect { inlineLevelBoxAbsoluteTop(*inlineBox), inlineBoxLogicalRect.left(), inlineBoxLogicalRect.width(), inlineBoxLogicalRect.height() };
 }
 
 InlineRect LineBox::logicalBorderBoxForAtomicInlineLevelBox(const Box& layoutBox, const BoxGeometry& boxGeometry) const

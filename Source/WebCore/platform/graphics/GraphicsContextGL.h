@@ -46,6 +46,14 @@
 #endif
 #endif
 
+inline constexpr size_t gcGLSpanDynamicExtent = std::numeric_limits<size_t>::max();
+
+template<typename T, size_t Extent = gcGLSpanDynamicExtent>
+class GCGLSpan;
+
+template<typename... Types>
+struct GCGLSpanTuple;
+
 namespace WebCore {
 class ImageBuffer;
 class PixelBuffer;
@@ -55,8 +63,6 @@ class GraphicsContextGLCV;
 #endif
 #if ENABLE(VIDEO)
 class MediaPlayer;
-#endif
-#if ENABLE(MEDIA_STREAM)
 class VideoFrame;
 #endif
 
@@ -1541,6 +1547,8 @@ public:
 #endif
 #if ENABLE(VIDEO)
     virtual bool copyTextureFromMedia(MediaPlayer&, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY) = 0;
+    virtual bool copyTextureFromVideoFrame(VideoFrame&, PlatformGLObject /* texture */, GCGLenum /* target */, GCGLint /* level */, GCGLenum /* internalFormat */, GCGLenum /* format */, GCGLenum /* type */, bool /* premultiplyAlpha */, bool /* flipY */) { return false; }
+    WEBCORE_EXPORT virtual RefPtr<Image> videoFrameToImage(VideoFrame&);
 #endif
 
     IntSize getInternalFramebufferSize() const { return IntSize(m_currentWidth, m_currentHeight); }
@@ -1603,48 +1611,6 @@ private:
 };
 
 WEBCORE_EXPORT RefPtr<GraphicsContextGL> createWebProcessGraphicsContextGL(const GraphicsContextGLAttributes&, SerialFunctionDispatcher* = nullptr);
-
-inline GCGLfloat GraphicsContextGL::getFloat(GCGLenum pname)
-{
-    GCGLfloat value[1] { };
-    getFloatv(pname, value);
-    return value[0];
-}
-
-inline GCGLboolean GraphicsContextGL::getBoolean(GCGLenum pname)
-{
-    GCGLboolean value[1] { };
-    getBooleanv(pname, value);
-    return value[0];
-}
-
-inline GCGLint GraphicsContextGL::getInteger(GCGLenum pname)
-{
-    GCGLint value[1] { };
-    getIntegerv(pname, value);
-    return value[0];
-}
-
-inline GCGLint GraphicsContextGL::getIntegeri(GCGLenum pname, GCGLuint index)
-{
-    GCGLint value[4] { };
-    getIntegeri_v(pname, index, value);
-    return value[0];
-}
-
-inline GCGLint GraphicsContextGL::getActiveUniformBlocki(GCGLuint program, GCGLuint uniformBlockIndex, GCGLenum pname)
-{
-    GCGLint value[1] { };
-    getActiveUniformBlockiv(program, uniformBlockIndex, pname, value);
-    return value[0];
-}
-
-inline GCGLint GraphicsContextGL::getInternalformati(GCGLenum target, GCGLenum internalformat, GCGLenum pname)
-{
-    GCGLint value[1] { };
-    getInternalformativ(target, internalformat, pname, value);
-    return value[0];
-}
 
 inline GCGLOwned::~GCGLOwned()
 {

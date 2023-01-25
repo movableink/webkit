@@ -37,9 +37,11 @@
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "HTMLElementFactory.h"
+#include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLImageElement.h"
+#include "HTMLMaybeFormAssociatedCustomElement.h"
 #include "HTMLOptGroupElement.h"
 #include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
@@ -534,8 +536,7 @@ void HTMLConstructionSite::insertHTMLElement(AtomHTMLToken&& token)
 
 void HTMLConstructionSite::insertHTMLTemplateElement(AtomHTMLToken&& token)
 {
-    if (m_document.settings().declarativeShadowDOMEnabled() && m_document.settings().streamingDeclarativeShadowDOMEnabled()
-        && m_parserContentPolicy.contains(ParserContentPolicy::AllowDeclarativeShadowDOM)) {
+    if (m_document.settings().declarativeShadowDOMEnabled() && m_parserContentPolicy.contains(ParserContentPolicy::AllowDeclarativeShadowDOM)) {
         std::optional<ShadowRootMode> mode;
         bool delegatesFocus = false;
         for (auto& attribute : token.attributes()) {
@@ -762,12 +763,6 @@ inline Document& HTMLConstructionSite::ownerDocumentForCurrentNode()
     return currentNode().document();
 }
 
-void HTMLConstructionSite::attachDeclarativeShadowRootIfNeeded(Element& shadowHost, HTMLTemplateElement& templateElement)
-{
-    if (m_parserContentPolicy.contains(ParserContentPolicy::AllowDeclarativeShadowDOM) && m_document.settings().declarativeShadowDOMEnabled() && !shadowHost.document().templateDocumentHost())
-        templateElement.attachAsDeclarativeShadowRootIfNeeded(shadowHost);
-}
-
 static inline JSCustomElementInterface* findCustomElementInterface(Document& ownerDocument, const AtomString& localName)
 {
     auto* window = ownerDocument.domWindow();
@@ -796,13 +791,14 @@ RefPtr<HTMLElement> HTMLConstructionSite::createHTMLElementOrFindCustomElementIn
                 *customElementInterface = elementInterface;
                 return nullptr;
             }
-            element = HTMLElement::create(qualifiedNameForHTMLTag(token), ownerDocument);
+            ASSERT(qualifiedNameForHTMLTag(token) == elementInterface->name());
+            element = elementInterface->createElement(ownerDocument);
             element->setIsCustomElementUpgradeCandidate();
             element->enqueueToUpgrade(*elementInterface);
         } else {
             auto qualifiedName = qualifiedNameForHTMLTag(token);
             if (Document::validateCustomElementName(token.name()) == CustomElementNameValidationStatus::Valid) {
-                element = HTMLElement::create(qualifiedName, ownerDocument);
+                element = HTMLMaybeFormAssociatedCustomElement::create(qualifiedName, ownerDocument);
                 element->setIsCustomElementUpgradeCandidate();
             } else
                 element = HTMLUnknownElement::create(qualifiedName, ownerDocument);

@@ -31,7 +31,6 @@
 #import "APIHitTestResult.h"
 #import "AppKitSPI.h"
 #import "DataReference.h"
-#import "DownloadProxy.h"
 #import "DrawingAreaProxy.h"
 #import "Logging.h"
 #import "NativeWebGestureEvent.h"
@@ -290,10 +289,6 @@ void PageClientImpl::didCommitLoadForMainFrame(const String&, bool)
 }
 
 void PageClientImpl::didFinishLoadingDataForCustomContentProvider(const String& suggestedFilename, const IPC::DataReference& dataReference)
-{
-}
-
-void PageClientImpl::handleDownloadRequest(DownloadProxy&)
 {
 }
 
@@ -760,6 +755,14 @@ void PageClientImpl::setCaretDecorationVisibility(bool visibility)
     m_impl->setCaretDecorationVisibility(visibility);
 }
 
+void PageClientImpl::didCommitLayerTree(const RemoteLayerTreeTransaction& layerTreeTransaction)
+{
+}
+
+void PageClientImpl::layerTreeCommitComplete()
+{
+}
+
 #if ENABLE(FULLSCREEN_API)
 
 WebFullScreenManagerProxyClient& PageClientImpl::fullScreenManagerProxyClient()
@@ -1017,7 +1020,6 @@ void PageClientImpl::requestDOMPasteAccess(WebCore::DOMPasteAccessCategory paste
 {
     m_impl->requestDOMPasteAccess(pasteAccessCategory, elementRect, originIdentifier, WTFMove(completion));
 }
-
 
 void PageClientImpl::makeViewBlank(bool makeBlank)
 {

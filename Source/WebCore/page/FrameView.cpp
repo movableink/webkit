@@ -37,7 +37,6 @@
 #include "ColorBlending.h"
 #include "DOMWindow.h"
 #include "DebugPageOverlays.h"
-#include "DeprecatedGlobalSettings.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "DocumentMarkerController.h"
@@ -561,8 +560,8 @@ void FrameView::didDestroyRenderTree()
     // Everything else should have removed itself as the tree was felled.
     ASSERT(!m_embeddedObjectsToUpdate || m_embeddedObjectsToUpdate->isEmpty() || (m_embeddedObjectsToUpdate->size() == 1 && m_embeddedObjectsToUpdate->first() == nullptr));
 
-    ASSERT(!m_viewportConstrainedObjects || m_viewportConstrainedObjects->computesEmpty());
-    ASSERT(!m_slowRepaintObjects || m_slowRepaintObjects->computesEmpty());
+    ASSERT(!m_viewportConstrainedObjects || m_viewportConstrainedObjects->isEmptyIgnoringNullReferences());
+    ASSERT(!m_slowRepaintObjects || m_slowRepaintObjects->isEmptyIgnoringNullReferences());
 }
 
 void FrameView::setContentsSize(const IntSize& size)
@@ -968,7 +967,7 @@ void FrameView::updateScrollingCoordinatorScrollSnapProperties() const
 
 bool FrameView::flushCompositingStateForThisFrame(const Frame& rootFrameForFlush)
 {
-    if (DeprecatedGlobalSettings::layoutFormattingContextEnabled()) {
+    if (m_frame->settings().layoutFormattingContextEnabled()) {
         if (auto* view = existingDisplayView())
             view->flushLayers();
         return true;
@@ -1543,24 +1542,24 @@ bool FrameView::styleHidesScrollbarWithOrientation(ScrollbarOrientation orientat
     return scrollbarStyle && scrollbarStyle->display() == DisplayType::None;
 }
 
-bool FrameView::horizontalScrollbarHiddenByStyle() const
+NativeScrollbarVisibility FrameView::horizontalNativeScrollbarVisibility() const
 {
     if (managesScrollbars()) {
         auto* scrollbar = horizontalScrollbar();
-        return scrollbar && scrollbar->isHiddenByStyle();
+        return Scrollbar::nativeScrollbarVisibility(scrollbar);
     }
 
-    return styleHidesScrollbarWithOrientation(ScrollbarOrientation::Horizontal);
+    return styleHidesScrollbarWithOrientation(ScrollbarOrientation::Horizontal) ? NativeScrollbarVisibility::HiddenByStyle : NativeScrollbarVisibility::Visible;
 }
 
-bool FrameView::verticalScrollbarHiddenByStyle() const
+NativeScrollbarVisibility FrameView::verticalNativeScrollbarVisibility() const
 {
     if (managesScrollbars()) {
         auto* scrollbar = verticalScrollbar();
-        return scrollbar && scrollbar->isHiddenByStyle();
+        return Scrollbar::nativeScrollbarVisibility(scrollbar);
     }
-    
-    return styleHidesScrollbarWithOrientation(ScrollbarOrientation::Vertical);
+
+    return styleHidesScrollbarWithOrientation(ScrollbarOrientation::Vertical) ? NativeScrollbarVisibility::HiddenByStyle : NativeScrollbarVisibility::Visible;
 }
 
 void FrameView::setCannotBlitToWindow()
@@ -1599,7 +1598,7 @@ void FrameView::removeSlowRepaintObject(RenderElement& renderer)
             layer->setNeedsScrollingTreeUpdate();
     }
 
-    if (!m_slowRepaintObjects->computesEmpty())
+    if (!m_slowRepaintObjects->isEmptyIgnoringNullReferences())
         return;
 
     m_slowRepaintObjects = nullptr;
@@ -2165,7 +2164,7 @@ OptionSet<StyleColorOptions> FrameView::styleColorOptions() const
 
 bool FrameView::scrollContentsFastPath(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect)
 {
-    if (!m_viewportConstrainedObjects || m_viewportConstrainedObjects->computesEmpty()) {
+    if (!m_viewportConstrainedObjects || m_viewportConstrainedObjects->isEmptyIgnoringNullReferences()) {
         m_frame->page()->chrome().scroll(scrollDelta, rectToScroll, clipRect);
         return true;
     }
@@ -6207,7 +6206,7 @@ OverscrollBehavior FrameView::horizontalOverscrollBehavior() const
 {
     auto* document = m_frame->document();
     auto scrollingObject = document && document->documentElement() ? document->documentElement()->renderer() : nullptr;
-    if (scrollingObject && renderView() && renderView()->canBeScrolledAndHasScrollableArea())
+    if (scrollingObject && renderView())
         return scrollingObject->style().overscrollBehaviorX();
     return OverscrollBehavior::Auto;
 }
@@ -6216,7 +6215,7 @@ OverscrollBehavior FrameView::verticalOverscrollBehavior()  const
 {
     auto* document = m_frame->document();
     auto scrollingObject = document && document->documentElement() ? document->documentElement()->renderer() : nullptr;
-    if (scrollingObject && renderView() && renderView()->canBeScrolledAndHasScrollableArea())
+    if (scrollingObject && renderView())
         return scrollingObject->style().overscrollBehaviorY();
     return OverscrollBehavior::Auto;
 }

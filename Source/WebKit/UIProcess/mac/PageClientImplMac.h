@@ -91,7 +91,6 @@ private:
     void toolTipChanged(const String& oldToolTip, const String& newToolTip) override;
     void didCommitLoadForMainFrame(const String& mimeType, bool useCustomContentProvider) override;
     void didFinishLoadingDataForCustomContentProvider(const String& suggestedFilename, const IPC::DataReference&) override;
-    void handleDownloadRequest(DownloadProxy&) override;
     void didChangeContentSize(const WebCore::IntSize&) override;
     void setCursor(const WebCore::Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
@@ -198,6 +197,9 @@ private:
     void setEditableElementIsFocused(bool) override;
 
     void setCaretDecorationVisibility(bool) override;
+
+    void didCommitLayerTree(const RemoteLayerTreeTransaction&) override;
+    void layerTreeCommitComplete() override;
 
     void registerInsertionUndoGrouping() override;
 

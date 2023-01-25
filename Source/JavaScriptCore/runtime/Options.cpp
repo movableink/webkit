@@ -596,9 +596,6 @@ void Options::notifyOptionsChanged()
             Options::useFTLJIT() = false;
         }
 
-        if (!Options::useWebAssembly())
-            Options::useFastTLSForWasmContext() = false;
-
         if (Options::dumpDisassembly()
             || Options::asyncDisassembly()
             || Options::dumpDFGDisassembly()
@@ -664,7 +661,7 @@ void Options::notifyOptionsChanged()
         if (!Options::useBBQJIT() && Options::useOMGJIT())
             Options::wasmLLIntTiersUpToBBQ() = false;
 
-#if CPU(X86_64)
+#if CPU(X86_64) && ENABLE(JIT)
         if (!MacroAssembler::supportsAVX())
             Options::useWebAssemblySIMD() = false;
 #endif

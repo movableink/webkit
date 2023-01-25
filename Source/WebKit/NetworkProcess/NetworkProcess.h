@@ -68,6 +68,7 @@
 #endif
 
 #if PLATFORM(COCOA)
+#include <notify.h>
 #include <wtf/OSObjectPtr.h>
 typedef struct OpaqueCFHTTPCookieStorage*  CFHTTPCookieStorageRef;
 #endif
@@ -114,6 +115,7 @@ class NetworkStorageManager;
 class ProcessAssertion;
 class WebPageNetworkParameters;
 enum class CallDownloadDidStart : bool;
+enum class LoadedWebArchive : bool;
 enum class RemoteWorkerType : bool;
 enum class ShouldGrandfatherStatistics : bool;
 enum class StorageAccessStatus : uint8_t;
@@ -282,6 +284,8 @@ public:
     void setThirdPartyCNAMEDomainForTesting(PAL::SessionID, WebCore::RegistrableDomain&&, CompletionHandler<void()>&&);
 #endif
 
+    void notifyMediaStreamingActivity(bool);
+
     void setPrivateClickMeasurementEnabled(bool);
     bool privateClickMeasurementEnabled() const;
     void setPrivateClickMeasurementDebugMode(PAL::SessionID, bool);
@@ -303,7 +307,8 @@ public:
 #if PLATFORM(IOS_FAMILY)
     void setBackupExclusionPeriodForTesting(PAL::SessionID, Seconds, CompletionHandler<void()>&&);
 #endif
-    void clearStorage(PAL::SessionID, CompletionHandler<void()>&&);
+    void resetStoragePersistedState(PAL::SessionID, CompletionHandler<void()>&&);
+    void cloneSessionStorageForWebPage(PAL::SessionID, WebPageProxyIdentifier fromIdentifier, WebPageProxyIdentifier toIdentifier);
     void didIncreaseQuota(PAL::SessionID, WebCore::ClientOrigin&&, QuotaIncreaseRequestIdentifier, std::optional<uint64_t> newQuota);
     void renameOriginInWebsiteData(PAL::SessionID, const URL&, const URL&, OptionSet<WebsiteDataType>, CompletionHandler<void()>&&);
     void websiteDataOriginDirectoryForTesting(PAL::SessionID, const URL&, const URL&, WebsiteDataType, CompletionHandler<void(const String&)>&&);
@@ -404,7 +409,8 @@ public:
 
     bool allowsFirstPartyForCookies(WebCore::ProcessIdentifier, const URL&);
     bool allowsFirstPartyForCookies(WebCore::ProcessIdentifier, const RegistrableDomain&);
-    void addAllowedFirstPartyForCookies(WebCore::ProcessIdentifier, WebCore::RegistrableDomain&&, CompletionHandler<void()>&&);
+    void addAllowedFirstPartyForCookies(WebCore::ProcessIdentifier, WebCore::RegistrableDomain&&, LoadedWebArchive, CompletionHandler<void()>&&);
+    void webProcessWillLoadWebArchive(WebCore::ProcessIdentifier);
 
 private:
     void platformInitializeNetworkProcess(const NetworkProcessCreationParameters&);
@@ -466,7 +472,7 @@ private:
 
     void setCacheModel(CacheModel);
     void setCacheModelSynchronouslyForTesting(CacheModel, CompletionHandler<void()>&&);
-    void allowSpecificHTTPSCertificateForHost(const WebCore::CertificateInfo&, const String& host);
+    void allowSpecificHTTPSCertificateForHost(PAL::SessionID, const WebCore::CertificateInfo&, const String& host);
     void allowTLSCertificateChainForLocalPCMTesting(PAL::SessionID, const WebCore::CertificateInfo&);
     void setAllowsAnySSLCertificateForWebSocket(bool, CompletionHandler<void()>&&);
 
@@ -500,10 +506,6 @@ private:
     void registerURLSchemeAsNoAccess(const String&) const;
     void registerURLSchemeAsCORSEnabled(const String&) const;
 
-#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
-    void requestLookalikeCharacterStrings(CompletionHandler<void(const Vector<String>&)>&&);
-#endif
-
 #if PLATFORM(IOS_FAMILY)
     void setIsHoldingLockedFiles(bool);
 #endif
@@ -525,7 +527,7 @@ private:
 
     HashMap<PAL::SessionID, std::unique_ptr<NetworkSession>> m_networkSessions;
     HashMap<PAL::SessionID, std::unique_ptr<WebCore::NetworkStorageSession>> m_networkStorageSessions;
-    HashMap<WebCore::ProcessIdentifier, HashSet<WebCore::RegistrableDomain>> m_allowedFirstPartiesForCookies;
+    HashMap<WebCore::ProcessIdentifier, std::pair<LoadedWebArchive, HashSet<WebCore::RegistrableDomain>>> m_allowedFirstPartiesForCookies;
 
 #if PLATFORM(COCOA)
     void platformInitializeNetworkProcessCocoa(const NetworkProcessCreationParameters&);
@@ -566,6 +568,9 @@ private:
     bool m_ftpEnabled { false };
     bool m_isSuspended { false };
     bool m_didSyncCookiesForClose { false };
+#if PLATFORM(COCOA)
+    int m_mediaStreamingActivitityToken { NOTIFY_TOKEN_INVALID };
+#endif
 };
 
 #if !PLATFORM(COCOA)

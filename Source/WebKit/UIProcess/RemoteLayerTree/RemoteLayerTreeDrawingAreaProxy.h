@@ -50,8 +50,8 @@ public:
     
     virtual std::unique_ptr<RemoteScrollingCoordinatorProxy> createScrollingCoordinatorProxy() const = 0;
 
-    void acceleratedAnimationDidStart(uint64_t layerID, const String& key, MonotonicTime startTime);
-    void acceleratedAnimationDidEnd(uint64_t layerID, const String& key);
+    void acceleratedAnimationDidStart(WebCore::GraphicsLayer::PlatformLayerID, const String& key, MonotonicTime startTime);
+    void acceleratedAnimationDidEnd(WebCore::GraphicsLayer::PlatformLayerID, const String& key);
 
     TransactionID nextLayerTreeTransactionID() const { return m_pendingLayerTreeTransactionID.next(); }
     TransactionID lastCommittedLayerTreeTransactionID() const { return m_transactionIDForPendingCACommit; }
@@ -61,7 +61,7 @@ public:
     
     bool hasDebugIndicator() const { return !!m_debugIndicatorLayerTreeHost; }
 
-    CALayer *layerWithIDForTesting(uint64_t) const;
+    CALayer *layerWithIDForTesting(WebCore::GraphicsLayer::PlatformLayerID) const;
 
 #if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
     void updateOverlayRegionIDs(const HashSet<WebCore::GraphicsLayer::PlatformLayerID> &overlayRegionIDs) { m_remoteLayerTreeHost->updateOverlayRegionIDs(overlayRegionIDs); }
@@ -77,7 +77,9 @@ private:
     void deviceScaleFactorDidChange() final;
     void windowKindDidChange() final;
     void didUpdateGeometry() final;
-    
+    void attachToProvisionalFrameProcess(WebProcessProxy&) final;
+    void startReceivingRemoteLayerTreeDrawingAreaProxyMessages(WebProcessProxy&);
+
     // For now, all callbacks are called before committing changes, because that's what the only client requires.
     // Once we have other callbacks, it may make sense to have a before-commit/after-commit option.
     void dispatchAfterEnsuringDrawing(WTF::Function<void (CallbackBase::Error)>&&) final;
@@ -90,7 +92,7 @@ private:
     void updateDebugIndicator(WebCore::IntSize contentsSize, bool rootLayerChanged, float scale, const WebCore::IntPoint& scrollPosition);
     void initializeDebugIndicator();
 
-    void waitForDidUpdateActivityState(ActivityStateChangeID) final;
+    void waitForDidUpdateActivityState(ActivityStateChangeID, WebProcessProxy&) final;
     void hideContentUntilPendingUpdate() final;
     void hideContentUntilAnyUpdate() final;
     bool hasVisibleContent() const final;
@@ -130,6 +132,7 @@ private:
     ActivityStateChangeID m_activityStateChangeID { ActivityStateChangeAsynchronous };
 
     CallbackMap m_callbacks;
+    Vector<Ref<WebProcessProxy>> m_processesWithRegisteredRemoteLayerTreeDrawingAreaProxyMessageReceiver;
 };
 
 } // namespace WebKit
