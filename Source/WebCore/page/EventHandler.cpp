@@ -3325,7 +3325,7 @@ bool EventHandler::handleGestureEvent(const PlatformGestureEvent& gestureEvent)
 
     IntPoint adjustedPoint = gestureEvent.position();
     HitTestRequest::HitTestRequestType hitType = HitTestRequest::TouchEvent;
-    if (gestureEvent.type() == PlatformEvent::GestureTap) {
+    if (gestureEvent.type() == PlatformEvent::Type::GestureTap) {
         // The mouseup event synthesized for this gesture will clear the active state of the
         // targeted node, so performing a ReadOnly hit test here is fine.
         hitType |= HitTestRequest::ReadOnly;
@@ -3360,9 +3360,9 @@ bool EventHandler::handleGestureEvent(const PlatformGestureEvent& gestureEvent)
     TemporaryChange<PlatformEvent::Type> baseEventType(m_baseEventType, gestureEvent.type());
 
     switch (gestureEvent.type()) {
-    case PlatformEvent::GestureTap:
+    case PlatformEvent::Type::GestureTap:
         return handleGestureTap(gestureEvent);
-    case PlatformEvent::GestureLongPress:
+    case PlatformEvent::Type::GestureLongPress:
         return handleGestureLongPress(gestureEvent);
     default:
         ASSERT_NOT_REACHED();
@@ -3380,7 +3380,7 @@ bool EventHandler::handleGestureTap(const PlatformGestureEvent& gestureEvent)
 #endif
 
     PlatformMouseEvent fakeMouseMove(adjustedPoint, gestureEvent.globalPosition(),
-        NoButton, PlatformEvent::MouseMoved, /* clickCount */ 0,
+        NoButton, PlatformEvent::Type::MouseMoved, /* clickCount */ 0,
         gestureEvent.shiftKey(), gestureEvent.ctrlKey(), gestureEvent.altKey(), gestureEvent.metaKey(), gestureEvent.timestamp(), ForceAtClick);
     mouseMoved(fakeMouseMove);
 

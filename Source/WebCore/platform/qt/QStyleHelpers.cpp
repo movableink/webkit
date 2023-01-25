@@ -21,6 +21,7 @@
 #include "config.h"
 #include "QStyleHelpers.h"
 
+#include "Document.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyParser.h"
 #include "StyleResolver.h"

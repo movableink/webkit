@@ -76,7 +76,7 @@ QSharedPointer<StylePainter> RenderThemeQStyle::getStylePainter(const PaintInfo&
 StylePainterQStyle::StylePainterQStyle(RenderThemeQStyle* theme, const PaintInfo& paintInfo)
     : StylePainter(paintInfo.context())
     , qStyle(theme->qStyle())
-    , appearance(ControlPartType::NoControl)
+    , appearance(StyleAppearance::None)
 {
     setupStyleOption();
 }
@@ -84,7 +84,7 @@ StylePainterQStyle::StylePainterQStyle(RenderThemeQStyle* theme, const PaintInfo
 StylePainterQStyle::StylePainterQStyle(RenderThemeQStyle* theme, const PaintInfo& paintInfo, const RenderObject& renderObject)
     : StylePainter(paintInfo.context())
     , qStyle(theme->qStyle())
-    , appearance(ControlPartType::NoControl)
+    , appearance(StyleAppearance::None)
 {
     setupStyleOption();
     appearance = theme->initializeCommonQStyleOptions(styleOption, renderObject);
@@ -93,7 +93,7 @@ StylePainterQStyle::StylePainterQStyle(RenderThemeQStyle* theme, const PaintInfo
 StylePainterQStyle::StylePainterQStyle(ScrollbarThemeQStyle* theme, GraphicsContext& context)
     : StylePainter(context)
     , qStyle(theme->qStyle())
-    , appearance(ControlPartType::NoControl)
+    , appearance(StyleAppearance::None)
 {
     setupStyleOption();
 }
@@ -219,9 +219,9 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
     const QFontMetrics fm(renderStyle.fontCascade().syntheticFont());
 
     switch (renderStyle.appearance()) {
-    case ControlPartType::TextArea:
-    case ControlPartType::SearchField:
-    case ControlPartType::TextField: {
+    case StyleAppearance::TextArea:
+    case StyleAppearance::SearchField:
+    case StyleAppearance::TextField: {
         int padding = m_qStyle->findFrameLineWidth();
         renderStyle.setPaddingLeft(Length(extendFixedPadding(renderStyle.paddingLeft(),  padding), LengthType::Fixed));
         renderStyle.setPaddingRight(Length(extendFixedPadding(renderStyle.paddingRight(),  padding), LengthType::Fixed));
@@ -238,20 +238,20 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
         return;
 
     switch (renderStyle.appearance()) {
-    case ControlPartType::Checkbox: {
+    case StyleAppearance::Checkbox: {
         int checkBoxWidth = m_qStyle->simplePixelMetric(QStyleFacade::PM_IndicatorWidth, QStyleFacade::State_Small);
         checkBoxWidth *= renderStyle.effectiveZoom();
         size = QSize(checkBoxWidth, checkBoxWidth);
         break;
     }
-    case ControlPartType::Radio: {
+    case StyleAppearance::Radio: {
         int radioWidth = m_qStyle->simplePixelMetric(QStyleFacade::PM_ExclusiveIndicatorWidth, QStyleFacade::State_Small);
         radioWidth *= renderStyle.effectiveZoom();
         size = QSize(radioWidth, radioWidth);
         break;
     }
-    case ControlPartType::PushButton:
-    case ControlPartType::Button: {
+    case StyleAppearance::PushButton:
+    case StyleAppearance::Button: {
         QSize contentSize = fm.size(Qt::TextShowMnemonic, QString::fromLatin1("X"));
         QSize pushButtonSize = m_qStyle->pushButtonSizeFromContents(QStyleFacade::State_Small, contentSize);
         QRect layoutRect = m_qStyle->buttonSubElementRect(QStyleFacade::PushButtonLayoutItem, QStyleFacade::State_Small, QRect(0, 0, pushButtonSize.width(), pushButtonSize.height()));
@@ -265,7 +265,7 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
 
         break;
     }
-    case ControlPartType::Menulist: {
+    case StyleAppearance::Menulist: {
         int contentHeight = qMax(fm.lineSpacing(), 14) + 2;
         QSize menuListSize = m_qStyle->comboBoxSizeFromContents(QStyleFacade::State_Small, QSize(0, contentHeight));
         size.setHeight(menuListSize.height());
@@ -290,7 +290,7 @@ void RenderThemeQStyle::adjustButtonStyle(RenderStyle& style, const Element*) co
     style.resetBorder();
 
 #ifdef Q_OS_MACOS
-    if (style.appearance() == ControlPartType::PushButton) {
+    if (style.appearance() == StyleAppearance::PushButton) {
         // The Mac ports ignore the specified height for <input type="button"> elements
         // unless a border and/or background CSS property is also specified.
         style.setHeight(Length(LengthType::Auto));
@@ -357,13 +357,13 @@ bool RenderThemeQStyle::paintButton(const RenderObject& o, const PaintInfo& i, c
     p.styleOption.rect = r;
     p.styleOption.state |= QStyleFacade::State_Small;
 
-    if (p.appearance == ControlPartType::PushButton || p.appearance == ControlPartType::Button) {
+    if (p.appearance == StyleAppearance::PushButton || p.appearance == StyleAppearance::Button) {
         p.styleOption.rect = inflateButtonRect(p.styleOption.rect);
         p.paintButton(QStyleFacade::PushButton);
-    } else if (p.appearance == ControlPartType::Radio) {
+    } else if (p.appearance == StyleAppearance::Radio) {
         computeControlRect(QStyleFacade::RadioButton, p.styleOption.rect);
         p.paintButton(QStyleFacade::RadioButton);
-    } else if (p.appearance == ControlPartType::Checkbox) {
+    } else if (p.appearance == StyleAppearance::Checkbox) {
         computeControlRect(QStyleFacade::CheckBox, p.styleOption.rect);
         p.paintButton(QStyleFacade::CheckBox);
     }
@@ -381,10 +381,10 @@ bool RenderThemeQStyle::paintTextField(const RenderObject& o, const PaintInfo& i
     p.styleOption.state |= QStyleFacade::State_Sunken;
 
     // Get the correct theme data for a text field
-    if (p.appearance != ControlPartType::TextField
-        && p.appearance != ControlPartType::SearchField
-        && p.appearance != ControlPartType::TextArea
-        && p.appearance != ControlPartType::Listbox)
+    if (p.appearance != StyleAppearance::TextField
+        && p.appearance != StyleAppearance::SearchField
+        && p.appearance != StyleAppearance::TextArea
+        && p.appearance != StyleAppearance::Listbox)
         return true;
 
     // Now paint the text field.
@@ -491,7 +491,7 @@ bool RenderThemeQStyle::paintSliderTrack(const RenderObject& o, const PaintInfo&
     p.styleOption.rect = r;
     p.styleOption.rect.moveTo(QPoint(0, 0));
 
-    if (p.appearance == ControlPartType::SliderVertical)
+    if (p.appearance == StyleAppearance::SliderVertical)
         p.styleOption.slider.orientation = Qt::Vertical;
 
     if (isPressed(o))
@@ -501,7 +501,7 @@ bool RenderThemeQStyle::paintSliderTrack(const RenderObject& o, const PaintInfo&
     if (is<HTMLInputElement>(o.node())) {
         HTMLInputElement& slider = downcast<HTMLInputElement>(*o.node());
         if (slider.isSteppable()) {
-            p.styleOption.slider.upsideDown = (p.appearance == ControlPartType::SliderHorizontal) && !o.style().isLeftToRightDirection();
+            p.styleOption.slider.upsideDown = (p.appearance == StyleAppearance::SliderHorizontal) && !o.style().isLeftToRightDirection();
             // Use the width as a multiplier in case the slider values are <= 1
             const int width = r.width() > 0 ? r.width() : 100;
             p.styleOption.slider.maximum = slider.maximum() * width;
@@ -536,7 +536,7 @@ bool RenderThemeQStyle::paintSliderThumb(const RenderObject& o, const PaintInfo&
     p.styleOption.rect = r;
     p.styleOption.rect.moveTo(QPoint(0, 0));
     p.styleOption.slider.orientation = Qt::Horizontal;
-    if (p.appearance == ControlPartType::SliderThumbVertical)
+    if (p.appearance == StyleAppearance::SliderThumbVertical)
         p.styleOption.slider.orientation = Qt::Vertical;
     if (isPressed(o))
         p.styleOption.state |= QStyleFacade::State_Sunken;
@@ -596,7 +596,7 @@ bool RenderThemeQStyle::paintInnerSpinButton(const RenderObject& o, const PaintI
 }
 #endif
 
-ControlPartType RenderThemeQStyle::initializeCommonQStyleOptions(QStyleFacadeOption &option, const RenderObject& o) const
+StyleAppearance RenderThemeQStyle::initializeCommonQStyleOptions(QStyleFacadeOption &option, const RenderObject& o) const
 {
     // Default bits: no focus, no mouse over, enabled
     option.state &= ~(QStyleFacade::State_HasFocus | QStyleFacade::State_MouseOver);
@@ -625,7 +625,7 @@ ControlPartType RenderThemeQStyle::initializeCommonQStyleOptions(QStyleFacadeOpt
 
     const RenderStyle& style = o.style();
 
-    ControlPartType result = style.appearance();
+    StyleAppearance result = style.appearance();
     if (supportsFocus(result) && isFocused(o)) {
         option.state |= QStyleFacade::State_HasFocus;
         option.state |= QStyleFacade::State_KeyboardFocusChange;
@@ -635,21 +635,21 @@ ControlPartType RenderThemeQStyle::initializeCommonQStyleOptions(QStyleFacadeOpt
         option.direction = Qt::RightToLeft;
 
     switch (result) {
-    case ControlPartType::PushButton:
-    case ControlPartType::SquareButton:
-    case ControlPartType::Button:
-    case ControlPartType::MenulistButton:
-    case ControlPartType::InnerSpinButton:
-    case ControlPartType::SearchFieldResultsButton:
-    case ControlPartType::SearchFieldCancelButton: {
+    case StyleAppearance::PushButton:
+    case StyleAppearance::SquareButton:
+    case StyleAppearance::Button:
+    case StyleAppearance::MenulistButton:
+    case StyleAppearance::InnerSpinButton:
+    case StyleAppearance::SearchFieldResultsButton:
+    case StyleAppearance::SearchFieldCancelButton: {
         if (isPressed(o))
             option.state |= QStyleFacade::State_Sunken;
-        else if (result == ControlPartType::PushButton || result == ControlPartType::Button)
+        else if (result == StyleAppearance::PushButton || result == StyleAppearance::Button)
             option.state |= QStyleFacade::State_Raised;
         break;
     }
-    case ControlPartType::Radio:
-    case ControlPartType::Checkbox:
+    case StyleAppearance::Radio:
+    case StyleAppearance::Checkbox:
         option.state |= (isChecked(o) ? QStyleFacade::State_On : QStyleFacade::State_Off);
     }
 
@@ -658,10 +658,10 @@ ControlPartType RenderThemeQStyle::initializeCommonQStyleOptions(QStyleFacadeOpt
 
 void RenderThemeQStyle::adjustSliderThumbSize(RenderStyle& style, const Element* element) const
 {
-    const ControlPartType part = style.appearance();
-    if (part == ControlPartType::SliderThumbHorizontal || part == ControlPartType::SliderThumbVertical) {
+    const StyleAppearance part = style.appearance();
+    if (part == StyleAppearance::SliderThumbHorizontal || part == StyleAppearance::SliderThumbVertical) {
         Qt::Orientation orientation = Qt::Horizontal;
-        if (part == ControlPartType::SliderThumbVertical)
+        if (part == StyleAppearance::SliderThumbVertical)
             orientation = Qt::Vertical;
 
         int length = m_qStyle->sliderLength(orientation);

@@ -179,7 +179,7 @@ private:
 class FormDataIODevice final : public QIODevice {
     Q_OBJECT
 public:
-    FormDataIODevice(FormData*);
+    FormDataIODevice(const RefPtr<FormData>&);
     ~FormDataIODevice();
 
     bool isSequential() const final;

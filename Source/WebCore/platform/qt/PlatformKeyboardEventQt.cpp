@@ -902,7 +902,7 @@ inline ToType safeCastOrNull(FromType value)
 PlatformKeyboardEvent::PlatformKeyboardEvent(QKeyEvent* event, bool useNativeVirtualKeyAsDOMKey)
 {
     const auto state = event->modifiers();
-    m_type = (event->type() == QEvent::KeyRelease) ? PlatformEvent::KeyUp : PlatformEvent::KeyDown;
+    m_type = (event->type() == QEvent::KeyRelease) ? PlatformEvent::Type::KeyUp : PlatformEvent::Type::KeyDown;
 
     if ((state & Qt::ShiftModifier) || event->key() == Qt::Key_Backtab) // Simulate Shift+Tab with Key_Backtab
         m_modifiers.add(Modifier::ShiftKey);
@@ -936,10 +936,10 @@ PlatformKeyboardEvent::PlatformKeyboardEvent(QKeyEvent* event, bool useNativeVir
 void PlatformKeyboardEvent::disambiguateKeyDownEvent(Type type, bool)
 {
     // Can only change type from KeyDown to RawKeyDown or Char, as we lack information for other conversions.
-    ASSERT(m_type == PlatformEvent::KeyDown);
+    ASSERT(m_type == PlatformEvent::Type::KeyDown);
     m_type = type;
 
-    if (type == PlatformEvent::RawKeyDown) {
+    if (type == PlatformEvent::Type::RawKeyDown) {
         m_text = String();
         m_unmodifiedText = String();
     } else {

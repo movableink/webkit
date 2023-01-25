@@ -51,24 +51,24 @@ static void mouseEventTypeAndMouseButtonFromQEvent(const QEvent* event, Platform
     switch (event->type()) {
     case QEvent::MouseButtonDblClick:
     case QEvent::MouseButtonPress:
-        mouseEventType = PlatformEvent::MousePressed;
+        mouseEventType = PlatformEvent::Type::MousePressed;
         break;
     case QEvent::MouseButtonRelease:
-        mouseEventType = PlatformEvent::MouseReleased;
+        mouseEventType = PlatformEvent::Type::MouseReleased;
         break;
     case QEvent::MouseMove:
-        mouseEventType = PlatformEvent::MouseMoved;
+        mouseEventType = PlatformEvent::Type::MouseMoved;
         break;
     default:
         ASSERT_NOT_REACHED();
-        mouseEventType = PlatformEvent::MouseMoved;
+        mouseEventType = PlatformEvent::Type::MouseMoved;
         break;
     }
 
     Qt::MouseButtons mouseButtons;
 
     const QMouseEvent* mouseEvent = static_cast<const QMouseEvent*>(event);
-    mouseButtons = mouseEventType == PlatformEvent::MouseMoved ? mouseEvent->buttons() : mouseEvent->button();
+    mouseButtons = mouseEventType == PlatformEvent::Type::MouseMoved ? mouseEvent->buttons() : mouseEvent->button();
 
 
     if (mouseButtons & Qt::LeftButton)
@@ -94,7 +94,7 @@ WebKitPlatformMouseEvent::WebKitPlatformMouseEvent(QInputEvent* event, int click
 #ifndef QT_NO_CONTEXTMENU
     if (event->type() == QEvent::ContextMenu) {
         isContextMenuEvent = true;
-        m_type = PlatformEvent::MousePressed;
+        m_type = PlatformEvent::Type::MousePressed;
         QContextMenuEvent* ce = static_cast<QContextMenuEvent*>(event);
         m_position = IntPoint(ce->pos());
         m_globalPosition = IntPoint(ce->globalPos());
@@ -173,16 +173,16 @@ WebKitPlatformTouchEvent::WebKitPlatformTouchEvent(QTouchEvent* event)
 {
     switch (event->type()) {
     case QEvent::TouchBegin:
-        m_type = PlatformEvent::TouchStart;
+        m_type = PlatformEvent::Type::TouchStart;
         break;
     case QEvent::TouchUpdate:
-        m_type = PlatformEvent::TouchMove;
+        m_type = PlatformEvent::Type::TouchMove;
         break;
     case QEvent::TouchEnd:
-        m_type = PlatformEvent::TouchEnd;
+        m_type = PlatformEvent::Type::TouchEnd;
         break;
     case QEvent::TouchCancel:
-        m_type = PlatformEvent::TouchCancel;
+        m_type = PlatformEvent::Type::TouchCancel;
         break;
     }
 
@@ -207,7 +207,7 @@ WebKitPlatformTouchEvent::WebKitPlatformTouchEvent(QTouchEvent* event)
 
         // Qt does not have a Qt::TouchPointCancelled point state, so if we receive a touch cancel event,
         // simply cancel all touch points here.
-        if (m_type == PlatformEvent::TouchCancel)
+        if (m_type == PlatformEvent::Type::TouchCancel)
             state = PlatformTouchPoint::TouchCancelled;
 
         m_touchPoints.append(WebKitPlatformTouchPoint(points.at(i), state));
@@ -250,12 +250,12 @@ static inline PlatformEvent::Type toPlatformEventType(Qt::GestureType type)
 {
     switch (type) {
     case Qt::TapGesture:
-        return PlatformEvent::GestureTap;
+        return PlatformEvent::Type::GestureTap;
     case Qt::TapAndHoldGesture:
-        return PlatformEvent::GestureLongPress;
+        return PlatformEvent::Type::GestureLongPress;
     default:
         ASSERT_NOT_REACHED();
-        return PlatformEvent::NoType;
+        return PlatformEvent::Type::NoType;
     }
 }
 
