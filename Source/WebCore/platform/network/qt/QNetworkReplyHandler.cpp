@@ -69,7 +69,7 @@ static const int gMaxRedirections = 10;
 
 namespace WebCore {
 
-FormDataIODevice::FormDataIODevice(FormData* data)
+FormDataIODevice::FormDataIODevice(const RefPtr<FormData>& data)
     : m_currentFile(0)
     , m_currentDelta(0)
     , m_fileSize(0)

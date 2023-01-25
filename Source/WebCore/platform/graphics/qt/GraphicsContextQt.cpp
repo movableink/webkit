@@ -1106,7 +1106,7 @@ void drawFocusRingForPath(QPainter* p, const QPainterPath& path, const Color& co
     p->setRenderHint(QPainter::Antialiasing, antiAlias);
 }
 
-void GraphicsContextQt::drawFocusRing(const Path& path, float /* width */, float /* offset */, const Color& color)
+void GraphicsContextQt::drawFocusRing(const Path& path, float /* outlineWidth */, const Color& color)
 {
     // FIXME: Use 'offset' for something? http://webkit.org/b/49909
 
@@ -1121,7 +1121,7 @@ void GraphicsContextQt::drawFocusRing(const Path& path, float /* width */, float
  * RenderTheme handles drawing focus on widgets which 
  * need it. It is still handled here for links.
  */
-void GraphicsContextQt::drawFocusRing(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
+void GraphicsContextQt::drawFocusRing(const Vector<FloatRect>& rects, float outlineOffset, float outlineWidth, const Color& color)
 {
     if (paintingDisabled() || !color.isValid())
         return;
@@ -1131,10 +1131,10 @@ void GraphicsContextQt::drawFocusRing(const Vector<FloatRect>& rects, float widt
     if (!rects.size())
         return;
 
-    float radius = (width - 1) / 2;
+    float radius = (outlineWidth - 1) / 2;
     QPainterPath path;
     for (unsigned i = 0; i < rectCount; ++i) {
-        QRectF rect = QRectF(rects[i]).adjusted(-offset - radius, -offset - radius, offset + radius, offset + radius);
+        QRectF rect = QRectF(rects[i]).adjusted(-outlineOffset - radius, -outlineOffset - radius, outlineOffset + radius, outlineOffset + radius);
         // This is not the most efficient way to add a rect to a path, but if we don't create the tmpPath,
         // we will end up with ugly lines in between rows of text on anchors with multiple lines.
         QPainterPath tmpPath;

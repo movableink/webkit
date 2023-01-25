@@ -84,12 +84,8 @@ public:
     void drawLineForText(const FloatRect&, bool printing, bool doubleLines = false, StrokeStyle = SolidStroke);
     void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) final;
 
-    void drawFocusRing(const Vector<FloatRect>&, float, float, const Color&) final;
-    void drawFocusRing(const Path&, float, float, const Color&) final;
-#if PLATFORM(MAC)
-    void drawFocusRing(const Path&, double, bool&, const Color&) final;
-    void drawFocusRing(const Vector<FloatRect>&, double, bool&, const Color&) final;
-#endif
+    void drawFocusRing(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) final;
+    void drawFocusRing(const Path&, float outlineWidth, const Color&) final;
 
     void setURLForRect(const URL& url, const FloatRect& rect);
     RenderingMode renderingMode() const final;
