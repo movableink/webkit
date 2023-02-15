@@ -209,18 +209,18 @@ static inline Qt::PenJoinStyle toQtLineJoin(LineJoin lj)
 static Qt::PenStyle toQPenStyle(StrokeStyle style)
 {
     switch (style) {
-    case NoStroke:
+    case StrokeStyle::NoStroke:
         return Qt::NoPen;
         break;
-    case SolidStroke:
-    case DoubleStroke:
-    case WavyStroke:
+    case StrokeStyle::SolidStroke:
+    case StrokeStyle::DoubleStroke:
+    case StrokeStyle::WavyStroke:
         return Qt::SolidLine;
         break;
-    case DottedStroke:
+    case StrokeStyle::DottedStroke:
         return Qt::DotLine;
         break;
-    case DashedStroke:
+    case StrokeStyle::DashedStroke:
         return Qt::DashLine;
         break;
     default:
@@ -413,7 +413,7 @@ void GraphicsContextQt::drawLine(const FloatPoint& point1, const FloatPoint& poi
     if (paintingDisabled())
         return;
 
-    if (strokeStyle() == NoStroke)
+    if (strokeStyle() == StrokeStyle::NoStroke)
         return;
 
     const Color& strokeColor = this->strokeColor();
@@ -429,12 +429,12 @@ void GraphicsContextQt::drawLine(const FloatPoint& point1, const FloatPoint& poi
 
     StrokeStyle strokeStyle = this->strokeStyle();
     float cornerWidth = 0;
-    bool drawsDashedLine = strokeStyle == DottedStroke || strokeStyle == DashedStroke;
+    bool drawsDashedLine = strokeStyle == StrokeStyle::DottedStroke || strokeStyle == StrokeStyle::DashedStroke;
 
     if (drawsDashedLine) {
         p->save();
         // Figure out end points to ensure we always paint corners.
-        cornerWidth = strokeStyle == DottedStroke ? thickness : std::min(2 * thickness, std::max(thickness, strokeWidth / 3));
+        cornerWidth = strokeStyle == StrokeStyle::DottedStroke ? thickness : std::min(2 * thickness, std::max(thickness, strokeWidth / 3));
 
         if (isVerticalLine) {
             p->fillRect(FloatRect(point1.x(), point1.y(), thickness, cornerWidth), strokeColor);
@@ -445,7 +445,7 @@ void GraphicsContextQt::drawLine(const FloatPoint& point1, const FloatPoint& poi
         }
 
         strokeWidth -= 2 * cornerWidth;
-        float patternWidth = strokeStyle == DottedStroke ? thickness : std::min(3 * thickness, std::max(thickness, strokeWidth / 3));
+        float patternWidth = strokeStyle == StrokeStyle::DottedStroke ? thickness : std::min(3 * thickness, std::max(thickness, strokeWidth / 3));
         // Check if corner drawing sufficiently covers the line.
         if (strokeWidth <= patternWidth + 1) {
             p->restore();
@@ -758,7 +758,7 @@ const QImage* prescaleImageIfRequired(QPainter* painter, const QImage* image, QI
     return prescaledImage;
 }
 
-void GraphicsContextQt::drawNativeImage(NativeImage& image, const FloatSize&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+void GraphicsContextQt::drawNativeImageInternal(NativeImage& image, const FloatSize&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
     painter()->setRenderHint(QPainter::SmoothPixmapTransform, true);
 
@@ -1316,10 +1316,10 @@ void GraphicsContextQt::drawDotsForDocumentMarker(const FloatRect& rect, Documen
 
     // QTFIXME: Handle dark theme
     switch (style.mode) {
-    case DocumentMarkerLineStyle::Mode::Spelling:
+    case DocumentMarkerLineStyleMode::Spelling:
         p->setPen(Qt::red);
         break;
-    case DocumentMarkerLineStyle::Mode::Grammar:
+    case DocumentMarkerLineStyleMode::Grammar:
         p->setPen(Qt::green);
         break;
     default:

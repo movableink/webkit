@@ -111,7 +111,7 @@ public:
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const StringWithDirection&) override;
     void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>, std::optional<WebCore::WasPrivateRelayed>) override;
-    void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) override;
+    void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading, WillInternallyHandleFailure) override;
     void dispatchDidFailLoad(const WebCore::ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
     void dispatchDidFinishLoad() override;

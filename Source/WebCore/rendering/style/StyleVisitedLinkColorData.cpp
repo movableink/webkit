@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include "RenderStyle.h"
 #include "StyleVisitedLinkColorData.h"
 
 namespace WebCore {

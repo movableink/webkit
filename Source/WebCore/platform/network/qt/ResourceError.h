@@ -45,6 +45,7 @@ public:
 
     void doPlatformIsolatedCopy(const ResourceError&) {}
 
+    WEBCORE_EXPORT ErrorRecoveryMethod errorRecoveryMethod() const { return ErrorRecoveryMethod::NoRecovery; };
 };
 
 }

@@ -31,6 +31,8 @@
 
 #if PLATFORM(WIN)
 #include <wtf/text/WTFString.h>
+#elif PLATFORM(QT)
+#include <QRawFont>
 #elif USE(CORE_TEXT)
 #include <CoreFoundation/CFBase.h>
 #include <wtf/RetainPtr.h>
@@ -59,6 +61,8 @@ struct FontCustomPlatformData {
 public:
 #if PLATFORM(WIN)
     FontCustomPlatformData(const String& name, FontPlatformData::CreationData&&);
+#elif PLATFORM(QT)
+    FontCustomPlatformData() { }
 #elif USE(CORE_TEXT)
     FontCustomPlatformData(CTFontDescriptorRef fontDescriptor, FontPlatformData::CreationData&& creationData)
         : fontDescriptor(fontDescriptor)
@@ -77,6 +81,8 @@ public:
 #if PLATFORM(WIN)
     String name;
     FontPlatformData::CreationData creationData;
+#elif PLATFORM(QT)
+    QRawFont m_rawFont;
 #elif USE(CORE_TEXT)
     RetainPtr<CTFontDescriptorRef> fontDescriptor;
     FontPlatformData::CreationData creationData;

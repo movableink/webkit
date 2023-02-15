@@ -1026,7 +1026,7 @@ bool FrameLoaderClientQt::callErrorPageExtension(const WebCore::ResourceError& e
     return true;
 }
 
-void FrameLoaderClientQt::dispatchDidFailProvisionalLoad(const WebCore::ResourceError& error, WillContinueLoading)
+void FrameLoaderClientQt::dispatchDidFailProvisionalLoad(const WebCore::ResourceError& error, WillContinueLoading, WillInternallyHandleFailure)
 {
     if (dumpFrameLoaderCallbacks)
         printf("%s - didFailProvisionalLoadWithError\n", qPrintable(drtDescriptionSuitableForTestResult(m_frame)));

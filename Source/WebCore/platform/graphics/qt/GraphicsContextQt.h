@@ -67,7 +67,7 @@ public:
     void setLineJoin(LineJoin) final;
     void setMiterLimit(float) final;
 
-    void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
+    void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
     void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
 
     void clip(const FloatRect&) final;
@@ -81,7 +81,7 @@ public:
     void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode);
 
     void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle) final;
-    void drawLineForText(const FloatRect&, bool printing, bool doubleLines = false, StrokeStyle = SolidStroke);
+    void drawLineForText(const FloatRect&, bool printing, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke);
     void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) final;
 
     void drawFocusRing(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) final;

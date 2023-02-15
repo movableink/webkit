@@ -27,6 +27,7 @@
 
 #include "StyleContentAlignmentData.h"
 #include "StyleSelfAlignmentData.h"
+#include "ShadowData.h"
 
 namespace WebCore {
 

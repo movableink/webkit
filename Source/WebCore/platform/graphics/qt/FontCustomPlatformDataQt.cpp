@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription& description, bool& bold, bool& italic, const FontCreationContext&)
+FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription& description, bool /* bold */, bool /* italic */, const FontCreationContext&)
 {
     Q_ASSERT(m_rawFont.isValid());
     int size = description.computedPixelSize();
@@ -61,5 +61,7 @@ bool FontCustomPlatformData::supportsFormat(const String& format)
 #endif
     ;
 }
+
+FontCustomPlatformData::~FontCustomPlatformData() = default;
 
 }
