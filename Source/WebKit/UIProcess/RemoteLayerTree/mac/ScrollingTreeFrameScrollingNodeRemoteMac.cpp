@@ -29,15 +29,14 @@
 #if ENABLE(ASYNC_SCROLLING) && PLATFORM(MAC)
 
 #include "RemoteScrollingTree.h"
-#include "ScrollerPairMac.h"
 
 namespace WebKit {
 using namespace WebCore;
 
 ScrollingTreeFrameScrollingNodeRemoteMac::ScrollingTreeFrameScrollingNodeRemoteMac(ScrollingTree& tree, ScrollingNodeType nodeType, ScrollingNodeID nodeID)
     : ScrollingTreeFrameScrollingNodeMac(tree, nodeType, nodeID)
-    , m_scrollerPair(makeUnique<ScrollerPairMac>(*this))
 {
+    m_delegate->initScrollbars();
 }
 
 ScrollingTreeFrameScrollingNodeRemoteMac::~ScrollingTreeFrameScrollingNodeRemoteMac()
@@ -53,35 +52,25 @@ void ScrollingTreeFrameScrollingNodeRemoteMac::commitStateBeforeChildren(const S
 {
     ScrollingTreeFrameScrollingNodeMac::commitStateBeforeChildren(stateNode);
     const auto& scrollingStateNode = downcast<ScrollingStateFrameScrollingNode>(stateNode);
-    CALayer* horizontalLayer = nullptr;
-    CALayer* verticalLayer = nullptr;
-    m_delegate->getScrollbarLayersForStateNode(scrollingStateNode, &horizontalLayer, &verticalLayer);
-    m_scrollerPair->horizontalScroller().setHostLayer(horizontalLayer);
-    m_scrollerPair->verticalScroller().setHostLayer(verticalLayer);
-    
-    m_scrollerPair->updateValues();
+    m_delegate->updateFromStateNode(scrollingStateNode);
 }
 
 void ScrollingTreeFrameScrollingNodeRemoteMac::repositionRelatedLayers()
 {
     ScrollingTreeFrameScrollingNodeMac::repositionRelatedLayers();
-
-    if (m_scrollerPair)
-        m_scrollerPair->updateValues();
+    m_delegate->updateScrollbarLayers();
 }
 
 WheelEventHandlingResult ScrollingTreeFrameScrollingNodeRemoteMac::handleWheelEvent(const PlatformWheelEvent& wheelEvent, EventTargeting eventTargeting)
 {
     auto result = ScrollingTreeFrameScrollingNodeMac::handleWheelEvent(wheelEvent, eventTargeting);
-    m_scrollerPair->handleWheelEvent(wheelEvent);
+    m_delegate->handleWheelEventForScrollbars(wheelEvent);
     return result;
 }
 
 bool ScrollingTreeFrameScrollingNodeRemoteMac::handleMouseEvent(const PlatformMouseEvent& mouseEvent)
 {
-    if (!m_scrollerPair)
-        return false;
-    return m_scrollerPair->handleMouseEvent(mouseEvent);
+    return m_delegate->handleMouseEventForScrollbars(mouseEvent);
 }
 
 }

@@ -18,8 +18,10 @@
 
 #include "common/PackedEnums.h"
 #include "common/angle_version_info.h"
+#include "common/hash_utils.h"
 #include "common/matrix_utils.h"
 #include "common/platform.h"
+#include "common/string_utils.h"
 #include "common/system_utils.h"
 #include "common/utilities.h"
 #include "image_util/loadimage.h"
@@ -997,7 +999,7 @@ GLuint Context::createShaderProgramv(ShaderType type, GLsizei count, const GLcha
     {
         Shader *shaderObject = getShader(shaderID);
         ASSERT(shaderObject);
-        shaderObject->setSource(count, strings, nullptr);
+        shaderObject->setSource(this, count, strings, nullptr);
         shaderObject->compile(this);
         const ShaderProgramID programID = PackParam<ShaderProgramID>(createProgram());
         if (programID.value)
@@ -6063,7 +6065,12 @@ void Context::pixelStorei(GLenum pname, GLint param)
 
 void Context::polygonOffset(GLfloat factor, GLfloat units)
 {
-    mState.setPolygonOffsetParams(factor, units);
+    mState.setPolygonOffsetParams(factor, units, 0.0f);
+}
+
+void Context::polygonOffsetClamp(GLfloat factor, GLfloat units, GLfloat clamp)
+{
+    mState.setPolygonOffsetParams(factor, units, clamp);
 }
 
 void Context::sampleCoverage(GLfloat value, GLboolean invert)
@@ -6870,6 +6877,12 @@ void Context::multiDrawArrays(PrimitiveMode mode,
                               const GLsizei *counts,
                               GLsizei drawcount)
 {
+    if (noopMultiDraw(drawcount))
+    {
+        ANGLE_CONTEXT_TRY(mImplementation->handleNoopDrawEvent());
+        return;
+    }
+
     ANGLE_CONTEXT_TRY(prepareForDraw(mode));
     ANGLE_CONTEXT_TRY(mImplementation->multiDrawArrays(this, mode, firsts, counts, drawcount));
 }
@@ -6880,6 +6893,12 @@ void Context::multiDrawArraysInstanced(PrimitiveMode mode,
                                        const GLsizei *instanceCounts,
                                        GLsizei drawcount)
 {
+    if (noopMultiDraw(drawcount))
+    {
+        ANGLE_CONTEXT_TRY(mImplementation->handleNoopDrawEvent());
+        return;
+    }
+
     ANGLE_CONTEXT_TRY(prepareForDraw(mode));
     ANGLE_CONTEXT_TRY(mImplementation->multiDrawArraysInstanced(this, mode, firsts, counts,
                                                                 instanceCounts, drawcount));
@@ -6890,6 +6909,12 @@ void Context::multiDrawArraysIndirect(PrimitiveMode mode,
                                       GLsizei drawcount,
                                       GLsizei stride)
 {
+    if (noopMultiDraw(drawcount))
+    {
+        ANGLE_CONTEXT_TRY(mImplementation->handleNoopDrawEvent());
+        return;
+    }
+
     ANGLE_CONTEXT_TRY(prepareForDraw(mode));
     ANGLE_CONTEXT_TRY(
         mImplementation->multiDrawArraysIndirect(this, mode, indirect, drawcount, stride));
@@ -6902,6 +6927,12 @@ void Context::multiDrawElements(PrimitiveMode mode,
                                 const GLvoid *const *indices,
                                 GLsizei drawcount)
 {
+    if (noopMultiDraw(drawcount))
+    {
+        ANGLE_CONTEXT_TRY(mImplementation->handleNoopDrawEvent());
+        return;
+    }
+
     ANGLE_CONTEXT_TRY(prepareForDraw(mode));
     ANGLE_CONTEXT_TRY(
         mImplementation->multiDrawElements(this, mode, counts, type, indices, drawcount));
@@ -6914,6 +6945,12 @@ void Context::multiDrawElementsInstanced(PrimitiveMode mode,
                                          const GLsizei *instanceCounts,
                                          GLsizei drawcount)
 {
+    if (noopMultiDraw(drawcount))
+    {
+        ANGLE_CONTEXT_TRY(mImplementation->handleNoopDrawEvent());
+        return;
+    }
+
     ANGLE_CONTEXT_TRY(prepareForDraw(mode));
     ANGLE_CONTEXT_TRY(mImplementation->multiDrawElementsInstanced(this, mode, counts, type, indices,
                                                                   instanceCounts, drawcount));
@@ -6925,6 +6962,12 @@ void Context::multiDrawElementsIndirect(PrimitiveMode mode,
                                         GLsizei drawcount,
                                         GLsizei stride)
 {
+    if (noopMultiDraw(drawcount))
+    {
+        ANGLE_CONTEXT_TRY(mImplementation->handleNoopDrawEvent());
+        return;
+    }
+
     ANGLE_CONTEXT_TRY(prepareForDraw(mode));
     ANGLE_CONTEXT_TRY(
         mImplementation->multiDrawElementsIndirect(this, mode, type, indirect, drawcount, stride));
@@ -7036,6 +7079,12 @@ void Context::multiDrawArraysInstancedBaseInstance(PrimitiveMode mode,
                                                    const GLuint *baseInstances,
                                                    GLsizei drawcount)
 {
+    if (noopMultiDraw(drawcount))
+    {
+        ANGLE_CONTEXT_TRY(mImplementation->handleNoopDrawEvent());
+        return;
+    }
+
     ANGLE_CONTEXT_TRY(prepareForDraw(mode));
     ANGLE_CONTEXT_TRY(mImplementation->multiDrawArraysInstancedBaseInstance(
         this, mode, firsts, counts, instanceCounts, baseInstances, drawcount));
@@ -7050,6 +7099,12 @@ void Context::multiDrawElementsInstancedBaseVertexBaseInstance(PrimitiveMode mod
                                                                const GLuint *baseInstances,
                                                                GLsizei drawcount)
 {
+    if (noopMultiDraw(drawcount))
+    {
+        ANGLE_CONTEXT_TRY(mImplementation->handleNoopDrawEvent());
+        return;
+    }
+
     ANGLE_CONTEXT_TRY(prepareForDraw(mode));
     ANGLE_CONTEXT_TRY(mImplementation->multiDrawElementsInstancedBaseVertexBaseInstance(
         this, mode, counts, type, indices, instanceCounts, baseVertices, baseInstances, drawcount));
@@ -7573,8 +7628,9 @@ void Context::shaderBinary(GLsizei n,
                            const void *binary,
                            GLsizei length)
 {
-    // No binary shader formats are supported.
-    UNIMPLEMENTED();
+    Shader *shaderObject = getShader(*shaders);
+    ASSERT(shaderObject != nullptr);
+    ANGLE_CONTEXT_TRY(shaderObject->loadShaderBinary(this, binary, length));
 }
 
 void Context::bindFragDataLocationIndexed(ShaderProgramID program,
@@ -7614,7 +7670,7 @@ void Context::shaderSource(ShaderProgramID shader,
 {
     Shader *shaderObject = getShader(shader);
     ASSERT(shaderObject);
-    shaderObject->setSource(count, string, length);
+    shaderObject->setSource(this, count, string, length);
 }
 
 void Context::stencilFunc(GLenum func, GLint ref, GLuint mask)

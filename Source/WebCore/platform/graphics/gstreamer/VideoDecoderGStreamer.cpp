@@ -128,17 +128,7 @@ GStreamerInternalVideoDecoder::GStreamerInternalVideoDecoder(const String& codec
     : m_outputCallback(WTFMove(outputCallback))
     , m_postTaskCallback(WTFMove(postTaskCallback))
 {
-    GUniquePtr<char> elementName(gst_element_get_name(element.get()));
-    auto elementHasProperty = [&](const char* name) -> bool {
-        return g_object_class_find_property(G_OBJECT_GET_CLASS(element.get()), name);
-    };
-    if (g_str_has_prefix(elementName.get(), "avdec")) {
-        if (elementHasProperty("max-threads"))
-            g_object_set(element.get(), "max-threads", 1, nullptr);
-    }
-
-    if (elementHasProperty("max-errors"))
-        g_object_set(element.get(), "max-errors", 0, nullptr);
+    configureVideoDecoderForHarnessing(element);
 
     GST_DEBUG_OBJECT(element.get(), "Configuring decoder for codec %s", codecName.ascii().data());
     GRefPtr<GstCaps> inputCaps;
@@ -207,15 +197,15 @@ void GStreamerInternalVideoDecoder::decode(Span<const uint8_t> frameData, bool i
 
     auto bufferSize = data.size();
     auto bufferData = data.data();
-    auto* buffer = gst_buffer_new_wrapped_full(GST_MEMORY_FLAG_READONLY, bufferData, bufferSize, 0, bufferSize, new Vector<uint8_t>(WTFMove(data)), [](gpointer data) {
+    auto buffer = adoptGRef(gst_buffer_new_wrapped_full(GST_MEMORY_FLAG_READONLY, bufferData, bufferSize, 0, bufferSize, new Vector<uint8_t>(WTFMove(data)), [](gpointer data) {
         delete static_cast<Vector<uint8_t>*>(data);
-    });
+    }));
 
-    GST_BUFFER_DTS(buffer) = GST_BUFFER_PTS(buffer) = timestamp;
+    GST_BUFFER_DTS(buffer.get()) = GST_BUFFER_PTS(buffer.get()) = timestamp;
     if (duration)
-        GST_BUFFER_DURATION(buffer) = *duration;
+        GST_BUFFER_DURATION(buffer.get()) = *duration;
 
-    auto result = m_harness->pushBuffer(buffer);
+    auto result = m_harness->pushBuffer(WTFMove(buffer));
     m_postTaskCallback([protectedThis = Ref { *this }, callback = WTFMove(callback), result]() mutable {
         if (protectedThis->m_isClosed)
             return;

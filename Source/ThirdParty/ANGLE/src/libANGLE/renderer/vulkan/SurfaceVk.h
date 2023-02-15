@@ -13,6 +13,7 @@
 #include "common/CircularBuffer.h"
 #include "common/vulkan/vk_headers.h"
 #include "libANGLE/renderer/SurfaceImpl.h"
+#include "libANGLE/renderer/vulkan/CommandProcessor.h"
 #include "libANGLE/renderer/vulkan/RenderTargetVk.h"
 #include "libANGLE/renderer/vulkan/vk_helpers.h"
 
@@ -268,8 +269,6 @@ class WindowSurfaceVk : public SurfaceVk
                                         const SwapchainResolveMode swapchainResolveMode,
                                         vk::MaybeImagelessFramebuffer *framebufferOut);
 
-    const vk::Semaphore *getAndResetAcquireImageSemaphore();
-
     VkSurfaceTransformFlagBitsKHR getPreTransform() const
     {
         if (mEmulatedPreTransform != VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
@@ -353,6 +352,7 @@ class WindowSurfaceVk : public SurfaceVk
     // This method is called when a swapchain image is presented.  It schedules
     // acquireNextSwapchainImage() to be called later.
     void deferAcquireNextImage();
+    void flushAcquireImageSemaphore(const gl::Context *context);
 
     angle::Result computePresentOutOfDate(vk::Context *context,
                                           VkResult result,
@@ -363,6 +363,7 @@ class WindowSurfaceVk : public SurfaceVk
                           EGLint n_rects,
                           const void *pNextChain,
                           bool *presentOutOfDate);
+    void waitPendingPresent() const;
 
     angle::Result cleanUpPresentHistory(vk::Context *context);
 
@@ -383,6 +384,7 @@ class WindowSurfaceVk : public SurfaceVk
     std::vector<vk::PresentMode> mPresentModes;
 
     VkSwapchainKHR mSwapchain;
+    vk::SwapchainStatus mSwapchainStatus;
     // Cached information used to recreate swapchains.
     vk::PresentMode mSwapchainPresentMode;         // Current swapchain mode
     vk::PresentMode mDesiredSwapchainPresentMode;  // Desired mode set through setSwapInterval()
@@ -390,6 +392,12 @@ class WindowSurfaceVk : public SurfaceVk
     VkSurfaceTransformFlagBitsKHR mPreTransform;
     VkSurfaceTransformFlagBitsKHR mEmulatedPreTransform;
     VkCompositeAlphaFlagBitsKHR mCompositeAlpha;
+
+    // Present modes that are compatible with the current mode.  If mDesiredSwapchainPresentMode is
+    // in this list, mode switch can happen without the need to recreate the swapchain.  Fast
+    // vector's size is 6, as there are currently only 6 possible present modes.
+    static constexpr uint32_t kMaxCompatiblePresentModes = 6;
+    angle::FixedVector<VkPresentModeKHR, kMaxCompatiblePresentModes> mCompatiblePresentModes;
 
     // A circular buffer that stores the serial of the submission fence of the context on every
     // swap. The CPU is throttled by waiting for the 2nd previous serial to finish.  This should

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "DOMPromiseProxy.h"
 #include "EventTarget.h"
 #include "GPUComputePipeline.h"
 #include "GPUDeviceLostInfo.h"
@@ -34,7 +33,7 @@
 #include "GPUErrorFilter.h"
 #include "GPURenderPipeline.h"
 #include "GPUQueue.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include "ScriptExecutionContext.h"
 #include <optional>
 #include <pal/graphics/WebGPU/WebGPUDevice.h>
@@ -60,6 +59,7 @@ class GPURenderPipeline;
 struct GPURenderPipelineDescriptor;
 class GPUPipelineLayout;
 struct GPUPipelineLayoutDescriptor;
+class GPUPresentationContext;
 class GPUQuerySet;
 struct GPUQuerySetDescriptor;
 class GPURenderBundleEncoder;
@@ -72,10 +72,6 @@ class GPUShaderModule;
 struct GPUShaderModuleDescriptor;
 class GPUSupportedFeatures;
 class GPUSupportedLimits;
-class GPUSurface;
-struct GPUSurfaceDescriptor;
-class GPUSwapChain;
-struct GPUSwapChainDescriptor;
 class GPUTexture;
 struct GPUTextureDescriptor;
 
@@ -95,15 +91,12 @@ public:
     Ref<GPUSupportedFeatures> features() const;
     Ref<GPUSupportedLimits> limits() const;
 
-    GPUQueue& queue() const;
+    Ref<GPUQueue> queue() const;
 
     void destroy();
 
     Ref<GPUBuffer> createBuffer(const GPUBufferDescriptor&);
     Ref<GPUTexture> createTexture(const GPUTextureDescriptor&);
-    Ref<GPUTexture> createSurfaceTexture(const GPUTextureDescriptor&, const GPUSurface&);
-    Ref<GPUSurface> createSurface(const GPUSurfaceDescriptor&);
-    Ref<GPUSwapChain> createSwapChain(const GPUSurface&, const GPUSwapChainDescriptor&);
     Ref<GPUSampler> createSampler(const std::optional<GPUSamplerDescriptor>&);
     Ref<GPUExternalTexture> importExternalTexture(const GPUExternalTextureDescriptor&);
 
@@ -150,7 +143,7 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    LostPromise m_lostPromise;
+    UniqueRef<LostPromise> m_lostPromise;
     Ref<PAL::WebGPU::Device> m_backing;
     Ref<GPUQueue> m_queue;
     Ref<GPUPipelineLayout> m_autoPipelineLayout;

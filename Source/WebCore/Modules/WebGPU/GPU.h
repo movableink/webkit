@@ -28,7 +28,7 @@
 #include "GPUAdapter.h"
 #include "GPURequestAdapterOptions.h"
 #include "GPUTextureFormat.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include <optional>
 #include <pal/graphics/WebGPU/WebGPU.h>
 #include <wtf/Deque.h>
@@ -37,13 +37,16 @@
 
 namespace WebCore {
 
+class GPUCompositorIntegration;
+class GPUPresentationContext;
+struct GPUPresentationContextDescriptor;
+
 class GPU : public RefCounted<GPU> {
 public:
     static Ref<GPU> create(Ref<PAL::WebGPU::GPU>&& backing)
     {
         return adoptRef(*new GPU(WTFMove(backing)));
     }
-
     ~GPU();
 
     using RequestAdapterPromise = DOMPromiseDeferred<IDLNullable<IDLInterface<GPUAdapter>>>;
@@ -51,13 +54,14 @@ public:
 
     GPUTextureFormat getPreferredCanvasFormat();
 
+    Ref<GPUPresentationContext> createPresentationContext(const GPUPresentationContextDescriptor&);
+
+    Ref<GPUCompositorIntegration> createCompositorIntegration();
+
 private:
     GPU(Ref<PAL::WebGPU::GPU>&&);
 
-    struct PendingRequestAdapterArguments {
-        std::optional<GPURequestAdapterOptions> options;
-        RequestAdapterPromise promise;
-    };
+    struct PendingRequestAdapterArguments;
     Deque<PendingRequestAdapterArguments> m_pendingRequestAdapterArguments;
     Ref<PAL::WebGPU::GPU> m_backing;
 };

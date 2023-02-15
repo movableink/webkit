@@ -26,13 +26,13 @@
 #pragma once
 
 #include "CSSRule.h"
-#include "StyleProperties.h"
 #include "StyleRule.h"
 
 namespace WebCore {
 
 class CSSStyleDeclaration;
 class CSSKeyframesRule;
+class StyleProperties;
 class StyleRuleCSSStyleDeclaration;
 
 class StyleRuleKeyframe final : public StyleRuleBase {
@@ -58,8 +58,6 @@ public:
     MutableStyleProperties& mutableProperties();
 
     String cssText() const;
-
-    bool containsCSSVariableReferences() const;
 
 private:
     explicit StyleRuleKeyframe(Ref<StyleProperties>&&);

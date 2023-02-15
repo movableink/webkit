@@ -53,6 +53,60 @@ static constexpr bool verbose = false;
 JSC_ANNOTATE_JIT_OPERATION_RETURN(vmEntryToYarrJITAfter);
 #endif
 
+// We should pick the less frequently appearing character as a BM search's anchor to make BM search more and more efficient.
+// This class takes some samples from the passed subject string to put weight on characters so that we can pick an optimal one adaptively.
+class SubjectSampler {
+public:
+    static constexpr unsigned sampleSize = 128;
+
+    explicit SubjectSampler(CharSize charSize)
+        : m_is8Bit(charSize == CharSize::Char8)
+    {
+    }
+
+    int32_t frequency(UChar character) const
+    {
+        if (!m_size)
+            return 1;
+        return static_cast<int32_t>(m_samples[character & BoyerMooreBitmap::mapMask]) * sampleSize / m_size;
+    }
+
+    void sample(StringView string)
+    {
+        unsigned half = string.length() > sampleSize ? (string.length() - sampleSize) / 2 : 0;
+        unsigned end = std::min(string.length(), half + sampleSize);
+        if (string.is8Bit()) {
+            auto* characters8 = string.characters8();
+            for (unsigned i = half; i < end; ++i)
+                add(characters8[i]);
+        } else {
+            auto* characters16 = string.characters16();
+            for (unsigned i = half; i < end; ++i)
+                add(characters16[i]);
+        }
+    }
+
+    void dump() const
+    {
+        dataLogLn("Sampling Results size:(", m_size, ")");
+        for (unsigned i = 0; i < BoyerMooreBitmap::mapSize; ++i)
+            dataLogLn("    [", makeString(pad(' ', 3, i)), "] ", m_samples[i]);
+    }
+
+    bool is8Bit() const { return m_is8Bit; }
+
+private:
+    inline void add(UChar character)
+    {
+        ++m_size;
+        ++m_samples[character & BoyerMooreBitmap::mapMask];
+    }
+
+    std::array<uint8_t, BoyerMooreBitmap::mapSize> m_samples { };
+    uint8_t m_size { };
+    bool m_is8Bit { true };
+};
+
 void BoyerMooreFastCandidates::dump(PrintStream& out) const
 {
     if (!isValid()) {
@@ -78,8 +132,8 @@ public:
     unsigned length() const { return m_characters.size(); }
     void shortenLength(unsigned length)
     {
-        ASSERT(length <= this->length());
-        m_characters.shrink(length);
+        if (length <= this->length())
+            m_characters.shrink(length);
     }
 
     void set(unsigned index, UChar32 character)
@@ -107,19 +161,21 @@ public:
         return makeUniqueRef<BoyerMooreInfo>(charSize, length);
     }
 
-    std::optional<std::tuple<unsigned, unsigned>> findWorthwhileCharacterSequenceForLookahead() const;
+    std::optional<std::tuple<unsigned, unsigned>> findWorthwhileCharacterSequenceForLookahead(const SubjectSampler&) const;
     std::tuple<BoyerMooreBitmap::Map, BoyerMooreFastCandidates> createCandidateBitmap(unsigned begin, unsigned end) const;
 
+    void dump(PrintStream&) const;
+
 private:
-    std::tuple<int, unsigned, unsigned> findBestCharacterSequence(unsigned numberOfCandidatesLimit) const;
+    std::tuple<int32_t, unsigned, unsigned> findBestCharacterSequence(const SubjectSampler&, unsigned numberOfCandidatesLimit) const;
 
     Vector<BoyerMooreBitmap> m_characters;
     CharSize m_charSize;
 };
 
-std::tuple<int, unsigned, unsigned> BoyerMooreInfo::findBestCharacterSequence(unsigned numberOfCandidatesLimit) const
+std::tuple<int32_t, unsigned, unsigned> BoyerMooreInfo::findBestCharacterSequence(const SubjectSampler& sampler, unsigned numberOfCandidatesLimit) const
 {
-    int biggestPoint = 0;
+    int32_t biggestPoint = INT32_MIN;
     unsigned beginResult = 0;
     unsigned endResult = 0;
     for (unsigned index = 0; index < length();) {
@@ -132,13 +188,14 @@ std::tuple<int, unsigned, unsigned> BoyerMooreInfo::findBestCharacterSequence(un
         for (; index < length() && m_characters[index].count() <= numberOfCandidatesLimit; ++index)
             map.merge(m_characters[index].map());
 
-        // If map has many candidates, then point of this sequence is low since it will match too many things.
-        // And if the sequence is longer, then the point of this sequence is higher since it can skip many characters.
-        // FIXME: Currently we are handling all characters equally. But we should have weight per character since e.g. 'e' should appear more frequently than '\v'.
-        // https://bugs.webkit.org/show_bug.cgi?id=228610
-        int frequency = map.count();
-        int matchingProbability = BoyerMooreBitmap::mapSize - frequency;
-        int point = (index - begin) * matchingProbability;
+        int32_t frequency = 0;
+        map.forEachSetBit([&](unsigned index) {
+            frequency += sampler.frequency(index);
+        });
+
+        // Cutoff at 50%. If we could encounter the character more than 50%, then BM search would be useless probably.
+        int32_t matchingProbability = (BoyerMooreBitmap::mapSize / 2) - frequency;
+        int32_t point = (index - begin) * matchingProbability;
         if (point > biggestPoint) {
             biggestPoint = point;
             beginResult = begin;
@@ -148,26 +205,26 @@ std::tuple<int, unsigned, unsigned> BoyerMooreInfo::findBestCharacterSequence(un
     return std::tuple { biggestPoint, beginResult, endResult };
 }
 
-std::optional<std::tuple<unsigned, unsigned>> BoyerMooreInfo::findWorthwhileCharacterSequenceForLookahead() const
+std::optional<std::tuple<unsigned, unsigned>> BoyerMooreInfo::findWorthwhileCharacterSequenceForLookahead(const SubjectSampler& sampler) const
 {
     // If candiates-per-character becomes larger, then sequence is not profitable since this sequence will match against
     // too many characters. But if we limit candiates-per-character smaller, it is possible that we only find very short
     // character sequence. We start with low limit, then enlarging the limit to find more and more profitable
     // character sequence.
-    int biggestPoint = 0;
+    int32_t biggestPoint = INT32_MIN;
     unsigned begin = 0;
     unsigned end = 0;
     constexpr unsigned maxCandidatesPerCharacter = 32;
     static_assert(maxCandidatesPerCharacter < BoyerMooreBitmap::mapSize);
     for (unsigned limit = 4; limit < maxCandidatesPerCharacter; limit *= 2) {
-        auto [newPoint, newBegin, newEnd] = findBestCharacterSequence(limit);
+        auto [newPoint, newBegin, newEnd] = findBestCharacterSequence(sampler, limit);
         if (newPoint > biggestPoint) {
             biggestPoint = newPoint;
             begin = newBegin;
             end = newEnd;
         }
     }
-    if (!biggestPoint)
+    if (biggestPoint < 0)
         return std::nullopt;
     return std::tuple { begin, end };
 }
@@ -182,6 +239,19 @@ std::tuple<BoyerMooreBitmap::Map, BoyerMooreFastCandidates> BoyerMooreInfo::crea
         charactersFastPath.merge(bmBitmap.charactersFastPath());
     }
     return std::tuple { WTFMove(map), WTFMove(charactersFastPath) };
+}
+
+void BoyerMooreInfo::dump(PrintStream& out) const
+{
+    out.println("BoyerMooreInfo size:(", m_characters.size(), ")");
+    unsigned index = 0;
+    for (auto& map : m_characters)
+        out.println("    [", makeString(pad(' ', 3, index++)), "] ", map);
+}
+
+void BoyerMooreBitmap::dump(PrintStream& out) const
+{
+    out.print(m_map);
 }
 
 template<class YarrJITRegs = YarrJITDefaultRegisters>
@@ -2340,7 +2410,7 @@ class YarrGenerator final : public YarrJITInfo {
 
                 // Emit fast skip path with stride if we have BoyerMooreInfo.
                 if (op.m_bmInfo) {
-                    auto range = op.m_bmInfo->findWorthwhileCharacterSequenceForLookahead();
+                    auto range = op.m_bmInfo->findWorthwhileCharacterSequenceForLookahead(m_sampler);
                     if (range) {
                         auto [beginIndex, endIndex] = *range;
                         ASSERT(endIndex <= alternative->m_minimumSize);
@@ -2357,6 +2427,7 @@ class YarrGenerator final : public YarrJITInfo {
                             static_assert(BoyerMooreFastCandidates::maxSize == 2);
                             dataLogLnIf(Options::verboseRegExpCompilation(), "Found characters fastpath lookahead ", charactersFastPath, " range:[", beginIndex, ", ", endIndex, ")");
 
+                            JIT_COMMENT(m_jit, "BMSearch characters fastpath lookahead ", charactersFastPath, " range:[", beginIndex, ", ", endIndex, ")");
                             auto loopHead = m_jit.label();
                             readCharacter(op.m_checkedOffset - endIndex + 1, m_regs.regT0);
                             matched.append(m_jit.branch32(MacroAssembler::Equal, m_regs.regT0, MacroAssembler::TrustedImm32(charactersFastPath.at(0))));
@@ -2367,6 +2438,7 @@ class YarrGenerator final : public YarrJITInfo {
                             const auto* pointer = getBoyerMooreBitmap(map);
                             dataLogLnIf(Options::verboseRegExpCompilation(), "Found bitmap lookahead count:(", mapCount, "),range:[", beginIndex, ", ", endIndex, ")");
 
+                            JIT_COMMENT(m_jit, "BMSearch bitmap lookahead count:(", mapCount, "),range:[", beginIndex, ", ", endIndex, ")");
                             m_jit.move(MacroAssembler::TrustedImmPtr(pointer), m_regs.regT1);
                             auto loopHead = m_jit.label();
                             readCharacter(op.m_checkedOffset - endIndex + 1, m_regs.regT0);
@@ -2425,7 +2497,8 @@ class YarrGenerator final : public YarrJITInfo {
                             } else
                                 setMatchStart(m_regs.index);
                         }
-                    }
+                    } else
+                        dataLogLnIf(Options::verboseRegExpCompilation(), "BM search candidates were not efficient enough. Not using BM search");
                 }
                 break;
             }
@@ -3818,10 +3891,14 @@ class YarrGenerator final : public YarrJITInfo {
         if (disjunction->m_minimumSize && !m_pattern.sticky() && !m_pattern.unicode()) {
             auto bmInfo = BoyerMooreInfo::create(m_charSize, std::min<unsigned>(disjunction->m_minimumSize, BoyerMooreInfo::maxLength));
             if (collectBoyerMooreInfo(disjunction, currentAlternativeIndex, bmInfo.get())) {
+                dataLogLnIf(YarrJITInternal::verbose, bmInfo.get());
                 m_ops.last().m_bmInfo = bmInfo.ptr();
                 m_bmInfos.append(WTFMove(bmInfo));
                 m_usesT2 = true;
-            }
+                if (m_sampleString)
+                    m_sampler.sample(m_sampleString.value());
+            } else
+                dataLogLnIf(YarrJITInternal::verbose, "BM collection failed");
         }
 
         do {
@@ -3852,6 +3929,148 @@ class YarrGenerator final : public YarrJITInfo {
         lastOp.m_checkedOffset = 0;
     }
 
+    std::optional<unsigned> collectBoyerMooreInfoFromTerm(PatternTerm& term, unsigned cursor, BoyerMooreInfo& bmInfo)
+    {
+        switch (term.type) {
+        case PatternTerm::Type::AssertionBOL:
+        case PatternTerm::Type::AssertionEOL:
+        case PatternTerm::Type::AssertionWordBoundary:
+            // Conservatively say any assertions just match.
+            return cursor;
+
+        case PatternTerm::Type::BackReference:
+        case PatternTerm::Type::ForwardReference:
+            return std::nullopt;
+
+        case PatternTerm::Type::ParenthesesSubpattern: {
+            // Right now, we only support /(...)/ or /(...)?/ case.
+            PatternDisjunction* disjunction = term.parentheses.disjunction;
+            if (term.quantityType != QuantifierType::FixedCount && term.quantityType != QuantifierType::Greedy)
+                return std::nullopt;
+            if (term.quantityMaxCount != 1)
+                return std::nullopt;
+            if (term.m_matchDirection != MatchDirection::Forward)
+                return std::nullopt;
+            if (term.m_invert)
+                return std::nullopt;
+
+            auto& alternatives = disjunction->m_alternatives;
+            std::optional<unsigned> minimumCursor;
+            for (unsigned i = 0; i < alternatives.size(); ++i) {
+                PatternAlternative* alternative = alternatives[i].get();
+                unsigned alternativeCursor = cursor;
+                for (unsigned index = 0; index < alternative->m_terms.size() && alternativeCursor < bmInfo.length(); ++index) {
+                    PatternTerm& term = alternative->m_terms[index];
+                    std::optional<unsigned> nextCursor = collectBoyerMooreInfoFromTerm(term, alternativeCursor, bmInfo);
+                    if (!nextCursor) {
+                        dataLogLnIf(YarrJITInternal::verbose, "Shortening to ", alternativeCursor);
+                        bmInfo.shortenLength(alternativeCursor);
+                        break;
+                    }
+                    alternativeCursor = nextCursor.value();
+                }
+                if (!minimumCursor)
+                    minimumCursor = alternativeCursor;
+                else if (minimumCursor.value() != alternativeCursor) {
+                    // Alternatives have different size.
+                    // Let's say we have /(aaa|b)c/. Then, we would like to create BM info,
+                    //
+                    //     offset     0 1
+                    //     characters a a
+                    //                b c
+                    //
+                    // And we do not want to create 2, 3, 4 offsets since it changes based on whether we pick "aaa" or "b".
+                    // So, when we encounter (aaa|b), after applying each alternative to BMInfo, we cut BMInfo candidate length
+                    // with the shortest + 1 size, in this case "2".
+                    if (minimumCursor.value() > alternativeCursor)
+                        minimumCursor = alternativeCursor;
+                    dataLogLnIf(YarrJITInternal::verbose, "Shortening to ", minimumCursor.value() + 1);
+                    bmInfo.shortenLength(minimumCursor.value() + 1);
+                }
+            }
+
+            if (term.quantityType == QuantifierType::FixedCount)
+                cursor = minimumCursor.value();
+            else {
+                // Let's see /(aaaa|bbbb)?c/. In this case, we do not update the cursor since "(aaaa|bbbb)" is optional.
+                // And let's shorten the candidate to "1" in this case since we do not want to apply "c" to all possible subsequent cases.
+                dataLogLnIf(YarrJITInternal::verbose, "Shortening to ", cursor + 1);
+                bmInfo.shortenLength(cursor + 1);
+            }
+            return cursor;
+        }
+
+        case PatternTerm::Type::ParentheticalAssertion:
+            return std::nullopt;
+
+        case PatternTerm::Type::DotStarEnclosure:
+            return std::nullopt;
+
+        case PatternTerm::Type::CharacterClass: {
+            if (term.quantityType != QuantifierType::FixedCount && term.quantityType != QuantifierType::Greedy)
+                return std::nullopt;
+            if (term.quantityMaxCount != 1)
+                return std::nullopt;
+            if (term.inputPosition != cursor)
+                return std::nullopt;
+            auto& characterClass = *term.characterClass;
+            if (term.invert() || characterClass.m_anyCharacter) {
+                bmInfo.setAll(cursor);
+                // If this is greedy one-character pattern "a?", we should not increase cursor.
+                // If we see greedy pattern, then we cut bmInfo here to avoid possibility explosion.
+                if (term.quantityType == QuantifierType::FixedCount)
+                    ++cursor;
+                else
+                    bmInfo.shortenLength(cursor + 1);
+                return cursor;
+            }
+            if (!characterClass.m_rangesUnicode.isEmpty())
+                bmInfo.addRanges(cursor, characterClass.m_rangesUnicode);
+            if (!characterClass.m_matchesUnicode.isEmpty())
+                bmInfo.addCharacters(cursor, characterClass.m_matchesUnicode);
+            if (!characterClass.m_ranges.isEmpty())
+                bmInfo.addRanges(cursor, characterClass.m_ranges);
+            if (!characterClass.m_matches.isEmpty())
+                bmInfo.addCharacters(cursor, characterClass.m_matches);
+
+            // If this is greedy one-character pattern "a?", we should not increase cursor.
+            // If we see greedy pattern, then we cut bmInfo here to avoid possibility explosion.
+            if (term.quantityType == QuantifierType::FixedCount)
+                ++cursor;
+            else
+                bmInfo.shortenLength(cursor + 1);
+            return cursor;
+        }
+        case PatternTerm::Type::PatternCharacter: {
+            if (term.quantityType != QuantifierType::FixedCount && term.quantityType != QuantifierType::Greedy)
+                return std::nullopt;
+            if (term.quantityMaxCount != 1)
+                return std::nullopt;
+            if (term.inputPosition != cursor)
+                return std::nullopt;
+            if (U16_LENGTH(term.patternCharacter) != 1 && m_decodeSurrogatePairs)
+                return std::nullopt;
+            // For case-insesitive compares, non-ascii characters that have different
+            // upper & lower case representations are already converted to a character class.
+            ASSERT(!m_pattern.ignoreCase() || isASCIIAlpha(term.patternCharacter) || isCanonicallyUnique(term.patternCharacter, m_canonicalMode));
+            if (m_pattern.ignoreCase() && isASCIIAlpha(term.patternCharacter)) {
+                bmInfo.set(cursor, toASCIIUpper(term.patternCharacter));
+                bmInfo.set(cursor, toASCIILower(term.patternCharacter));
+            } else
+                bmInfo.set(cursor, term.patternCharacter);
+
+            // If this is greedy one-character pattern "a?", we should not increase cursor.
+            // If we see greedy pattern, then we cut bmInfo here to avoid possibility explosion.
+            if (term.quantityType == QuantifierType::FixedCount)
+                ++cursor;
+            else
+                bmInfo.shortenLength(cursor + 1);
+            return cursor;
+        }
+        }
+        return std::nullopt;
+    }
+
     bool collectBoyerMooreInfo(PatternDisjunction* disjunction, size_t currentAlternativeIndex, BoyerMooreInfo& bmInfo)
     {
         // If we have a searching pattern /abcdef/, then we can check the 6th character against a set of {a, b, c, d, e, f}.
@@ -3869,8 +4088,6 @@ class YarrGenerator final : public YarrJITInfo {
 
         ASSERT(disjunction->m_minimumSize);
 
-        // FIXME: Support nested disjunctions (e.g. /(?:abc|def|g(?:hi|jk))/).
-        // https://bugs.webkit.org/show_bug.cgi?id=228614
         // FIXME: Support non-fixed-sized lookahead (e.g. /.*abc/ and extract "abc" sequence).
         // https://bugs.webkit.org/show_bug.cgi?id=228612
         auto& alternatives = disjunction->m_alternatives;
@@ -3879,60 +4096,13 @@ class YarrGenerator final : public YarrJITInfo {
             PatternAlternative* alternative = alternatives[currentAlternativeIndex].get();
             for (unsigned index = 0; index < alternative->m_terms.size() && cursor < bmInfo.length(); ++index) {
                 PatternTerm& term = alternative->m_terms[index];
-                switch (term.type) {
-                case PatternTerm::Type::AssertionBOL:
-                case PatternTerm::Type::AssertionEOL:
-                case PatternTerm::Type::AssertionWordBoundary:
-                case PatternTerm::Type::BackReference:
-                case PatternTerm::Type::ForwardReference:
-                case PatternTerm::Type::ParenthesesSubpattern:
-                case PatternTerm::Type::ParentheticalAssertion:
-                case PatternTerm::Type::DotStarEnclosure:
+                std::optional<unsigned> nextCursor = collectBoyerMooreInfoFromTerm(term, cursor, bmInfo);
+                if (!nextCursor) {
+                    dataLogLnIf(YarrJITInternal::verbose, "Shortening to ", cursor);
+                    bmInfo.shortenLength(cursor);
                     break;
-                case PatternTerm::Type::CharacterClass: {
-                    if (term.quantityType != QuantifierType::FixedCount || term.quantityMaxCount != 1)
-                        break;
-                    if (term.inputPosition != index)
-                        break;
-                    auto& characterClass = *term.characterClass;
-                    if (term.invert() || characterClass.m_anyCharacter) {
-                        bmInfo.setAll(cursor);
-                        ++cursor;
-                        continue;
-                    }
-                    if (!characterClass.m_rangesUnicode.isEmpty())
-                        bmInfo.addRanges(cursor, characterClass.m_rangesUnicode);
-                    if (!characterClass.m_matchesUnicode.isEmpty())
-                        bmInfo.addCharacters(cursor, characterClass.m_matchesUnicode);
-                    if (!characterClass.m_ranges.isEmpty())
-                        bmInfo.addRanges(cursor, characterClass.m_ranges);
-                    if (!characterClass.m_matches.isEmpty())
-                        bmInfo.addCharacters(cursor, characterClass.m_matches);
-                    ++cursor;
-                    continue;
                 }
-                case PatternTerm::Type::PatternCharacter: {
-                    if (term.quantityType != QuantifierType::FixedCount || term.quantityMaxCount != 1)
-                        break;
-                    if (term.inputPosition != index)
-                        break;
-                    if (U16_LENGTH(term.patternCharacter) != 1 && m_decodeSurrogatePairs)
-                        break;
-                    // For case-insesitive compares, non-ascii characters that have different
-                    // upper & lower case representations are already converted to a character class.
-                    ASSERT(!m_pattern.ignoreCase() || isASCIIAlpha(term.patternCharacter) || isCanonicallyUnique(term.patternCharacter, m_canonicalMode));
-                    if (m_pattern.ignoreCase() && isASCIIAlpha(term.patternCharacter)) {
-                        bmInfo.set(cursor, toASCIIUpper(term.patternCharacter));
-                        bmInfo.set(cursor, toASCIILower(term.patternCharacter));
-                    } else
-                        bmInfo.set(cursor, term.patternCharacter);
-                    ++cursor;
-                    continue;
-                }
-                }
-                dataLogLnIf(YarrJITInternal::verbose, "Shortening to ", cursor);
-                bmInfo.shortenLength(cursor);
-                break;
+                cursor = nextCursor.value();
             }
         }
         return bmInfo.length();
@@ -4108,7 +4278,7 @@ class YarrGenerator final : public YarrJITInfo {
     }
 
 public:
-    YarrGenerator(CCallHelpers& jit, const VM* vm, YarrCodeBlock* codeBlock, const YarrJITRegs& regs, YarrPattern& pattern, StringView patternString, CharSize charSize, JITCompileMode compileMode)
+    YarrGenerator(CCallHelpers& jit, const VM* vm, YarrCodeBlock* codeBlock, const YarrJITRegs& regs, YarrPattern& pattern, StringView patternString, CharSize charSize, JITCompileMode compileMode, std::optional<StringView> sampleString)
         : m_jit(jit)
         , m_vm(vm)
         , m_codeBlock(codeBlock)
@@ -4124,6 +4294,8 @@ public:
 #if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
         , m_parenContextSizes(compileMode == JITCompileMode::IncludeSubpatterns ? m_pattern.m_numSubpatterns : 0, m_pattern.m_body->m_callFrameSize)
 #endif
+        , m_sampleString(sampleString)
+        , m_sampler(charSize)
     {
     }
 
@@ -4143,6 +4315,7 @@ public:
 #if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
         , m_parenContextSizes(compileMode == JITCompileMode::IncludeSubpatterns ? m_pattern.m_numSubpatterns : 0, m_pattern.m_body->m_callFrameSize)
 #endif
+        , m_sampler(charSize)
     {
         if (m_pattern.m_containsBackreferences)
             m_usesT2 = true;
@@ -4712,6 +4885,9 @@ private:
     // offset in the stack if there wasn't enough registers to pass it, e.g.,
     // ARMv7 and MIPS only use 4 registers to pass function arguments.
     unsigned m_pushCountInEnter { 0 };
+
+    std::optional<StringView> m_sampleString;
+    SubjectSampler m_sampler;
 };
 
 static void dumpCompileFailure(JITFailureReason failure)
@@ -4750,14 +4926,14 @@ static void dumpCompileFailure(JITFailureReason failure)
     }
 }
 
-void jitCompile(YarrPattern& pattern, StringView patternString, CharSize charSize, VM* vm, YarrCodeBlock& codeBlock, JITCompileMode mode)
+void jitCompile(YarrPattern& pattern, StringView patternString, CharSize charSize, std::optional<StringView> sampleString, VM* vm, YarrCodeBlock& codeBlock, JITCompileMode mode)
 {
     CCallHelpers masm;
 
     ASSERT(mode == JITCompileMode::MatchOnly || mode == JITCompileMode::IncludeSubpatterns);
 
     YarrJITDefaultRegisters jitRegisters;
-    YarrGenerator<YarrJITDefaultRegisters>(masm, vm, &codeBlock, jitRegisters, pattern, patternString, charSize, mode).compile(codeBlock);
+    YarrGenerator<YarrJITDefaultRegisters>(masm, vm, &codeBlock, jitRegisters, pattern, patternString, charSize, mode, sampleString).compile(codeBlock);
 
     if (auto failureReason = codeBlock.failureReason()) {
         if (UNLIKELY(Options::dumpCompiledRegExpPatterns())) {

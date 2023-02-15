@@ -1239,11 +1239,26 @@ LayoutUnit RenderBlockFlow::collapseMarginsWithChildInfo(RenderBox* child, Rende
     bool childIsSelfCollapsing = child ? child->isSelfCollapsingBlock() : false;
     bool beforeQuirk = child ? hasMarginBeforeQuirk(*child) : false;
     bool afterQuirk = child ? hasMarginAfterQuirk(*child) : false;
+    auto trimChildBlockMargins = [&]() {
+        auto childBlockFlow = dynamicDowncast<RenderBlockFlow>(child);
+        if (childBlockFlow)
+            childBlockFlow->setMaxMarginBeforeValues(0_lu, 0_lu);
+        child->setMarginBefore(0_lu, &style());
+
+        // The margin after for a self collapsing child should also be trimmed so it does not 
+        // influence the margins of the first non collapsing child
+        if (childIsSelfCollapsing) {
+            if (childBlockFlow)
+                childBlockFlow->setMaxMarginAfterValues(0_lu, 0_lu);
+            child->setMarginAfter(0_lu, &style());
+        }
+    };
+    if (marginInfo.atBeforeSideOfBlock() && style().marginTrim().contains(MarginTrimType::BlockStart))
+        trimChildBlockMargins();
 
     // Get the four margin values for the child and cache them.
-    const MarginValues childMargins = child ? marginValuesForChild(*child) : MarginValues(0, 0, 0, 0);
-
-    // Get our max pos and neg top margins.
+    MarginValues childMargins = child ? marginValuesForChild(*child) : MarginValues(0, 0, 0, 0);
+        // Get our max pos and neg top margins.
     LayoutUnit posTop = childMargins.positiveMarginBefore();
     LayoutUnit negTop = childMargins.negativeMarginBefore();
 
@@ -1409,9 +1424,8 @@ LayoutUnit RenderBlockFlow::clearFloatsIfNeeded(RenderBox& child, MarginInfo& ma
     if (marginInfo.canCollapseWithMarginBefore()) {
         // We can no longer collapse with the top of the block since a clear
         // occurred. The empty blocks collapse into the cleared block.
-        // FIXME: This isn't quite correct. Need clarification for what to do
-        // if the height the cleared block is offset by is smaller than the
-        // margins involved.
+        // https://www.w3.org/TR/CSS2/visuren.html#clearance
+        // "CSS2.1 - Computing the clearance of an element on which 'clear' is set is done..."
         setMaxMarginBeforeValues(oldTopPosMargin, oldTopNegMargin);
         marginInfo.setAtBeforeSideOfBlock(false);
     }
@@ -1518,7 +1532,10 @@ void RenderBlockFlow::setCollapsedBottomMargin(const MarginInfo& marginInfo)
     if (marginInfo.canCollapseWithMarginAfter() && !marginInfo.canCollapseWithMarginBefore()) {
         // Update our max pos/neg bottom margins, since we collapsed our bottom margins
         // with our children.
-        setMaxMarginAfterValues(std::max(maxPositiveMarginAfter(), marginInfo.positiveMargin()), std::max(maxNegativeMarginAfter(), marginInfo.negativeMargin()));
+        auto shouldTrimBlockEndMargin = style().marginTrim().contains(MarginTrimType::BlockEnd);
+        auto propagatedPositiveMargin = shouldTrimBlockEndMargin ? 0_lu : marginInfo.positiveMargin();
+        auto propagatedNegativeMargin = shouldTrimBlockEndMargin ? 0_lu : marginInfo.negativeMargin();
+        setMaxMarginAfterValues(std::max(maxPositiveMarginAfter(), propagatedPositiveMargin), std::max(maxNegativeMarginAfter(), propagatedNegativeMargin));
 
         if (!marginInfo.hasMarginAfterQuirk())
             setHasMarginAfterQuirk(false);
@@ -3734,8 +3751,11 @@ void RenderBlockFlow::invalidateLineLayoutPath()
         return;
     case ModernPath: {
         // FIXME: Implement partial invalidation.
-        if (modernLineLayout())
+        if (modernLineLayout()) {
             m_previousModernLineLayoutContentBoxLogicalHeight = modernLineLayout()->contentBoxLogicalHeight();
+            // Since we eagerly remove the display content here, repaints issued between this invalidation (triggered by style change/content mutation) and the subsequent layout would produce empty rects.
+            repaint();
+        }
         auto path = UndeterminedPath;
         if (modernLineLayout() && modernLineLayout()->shouldSwitchToLegacyOnInvalidation())
             path = ForcedLegacyPath;

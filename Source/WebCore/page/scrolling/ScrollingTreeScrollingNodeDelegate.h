@@ -46,14 +46,16 @@ public:
     virtual void serviceScrollAnimation(MonotonicTime) = 0;
 
     virtual void updateFromStateNode(const ScrollingStateScrollingNode&) { }
+    
+    virtual bool handleWheelEventForScrollbars(const PlatformWheelEvent&) { return false; }
+    virtual bool handleMouseEventForScrollbars(const PlatformMouseEvent&) { return false; }
+    
+    virtual void updateScrollbarLayers() { }
+    virtual void initScrollbars() { }
 
     virtual void handleKeyboardScrollRequest(const RequestedKeyboardScrollData&) { }
 
     virtual FloatPoint adjustedScrollPosition(const FloatPoint& scrollPosition) const { return scrollPosition; }
-
-#if PLATFORM(COCOA)
-    virtual void getScrollbarLayersForStateNode(const ScrollingStateScrollingNode&, CALayer**, CALayer**) { }
-#endif
 
 protected:
     WEBCORE_EXPORT ScrollingTree& scrollingTree() const;

@@ -26,9 +26,11 @@
 #include "config.h"
 #include "NetworkStorageSession.h"
 
+#include "ClientOrigin.h"
 #include "Cookie.h"
 #include "CookieJar.h"
 #include "HTTPCookieAcceptPolicy.h"
+#include "NotImplemented.h"
 #include "RuntimeApplicationChecks.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ProcessPrivilege.h>
@@ -388,8 +390,11 @@ void NetworkStorageSession::resetManagedDomains()
 
 std::optional<Seconds> NetworkStorageSession::clientSideCookieCap(const RegistrableDomain& firstParty, std::optional<PageIdentifier> pageID) const
 {
-    auto domainIterator = m_navigatedToWithLinkDecorationByPrevalentResource.find(*pageID);
 #if ENABLE(JS_COOKIE_CHECKING)
+    if (!pageID)
+        return std::nullopt;
+
+    auto domainIterator = m_navigatedToWithLinkDecorationByPrevalentResource.find(*pageID);
     if (domainIterator != m_navigatedToWithLinkDecorationByPrevalentResource.end() && domainIterator->value == firstParty)
         return m_ageCapForClientSideCookiesForLinkDecorationTargetPage;
 
@@ -398,6 +403,7 @@ std::optional<Seconds> NetworkStorageSession::clientSideCookieCap(const Registra
     if (!m_ageCapForClientSideCookies || !pageID || m_navigatedToWithLinkDecorationByPrevalentResource.isEmpty())
         return m_ageCapForClientSideCookies;
 
+    auto domainIterator = m_navigatedToWithLinkDecorationByPrevalentResource.find(*pageID);
     if (domainIterator == m_navigatedToWithLinkDecorationByPrevalentResource.end())
         return m_ageCapForClientSideCookies;
 
@@ -462,5 +468,15 @@ void NetworkStorageSession::deleteCookiesForHostnames(const Vector<String>& cook
 {
     deleteCookiesForHostnames(cookieHostNames, IncludeHttpOnlyCookies::Yes, ScriptWrittenCookiesOnly::No, WTFMove(completionHandler));
 }
+
+#if !PLATFORM(COCOA)
+void NetworkStorageSession::deleteCookies(const ClientOrigin& origin, CompletionHandler<void()>&& completionHandler)
+{
+    // FIXME: Stop ignoring origin.topOrigin.
+    notImplemented();
+
+    deleteCookiesForHostnames(Vector { origin.clientOrigin.host }, WTFMove(completionHandler));
+}
+#endif
 
 }

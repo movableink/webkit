@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc.
+ * Copyright (C) 2016-2023 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -36,6 +36,7 @@
 #include "HTTPParsers.h"
 #include "JSBlob.h"
 #include "JSDOMFormData.h"
+#include "JSDOMPromiseDeferred.h"
 #include "RFC7230.h"
 #include "TextResourceDecoder.h"
 #include <wtf/StringExtras.h>
@@ -126,6 +127,15 @@ static std::optional<MimeType> parseMIMEType(const String& contentType)
     return {{ WTFMove(type), WTFMove(subtype), parseParameters(StringView(input), semicolonIndex + 1) }};
 }
 
+FetchBodyConsumer::FetchBodyConsumer(Type type)
+    : m_type(type)
+{
+}
+
+FetchBodyConsumer::FetchBodyConsumer(FetchBodyConsumer&&) = default;
+FetchBodyConsumer::~FetchBodyConsumer() = default;
+FetchBodyConsumer& FetchBodyConsumer::operator=(FetchBodyConsumer&&) = default;
+
 // https://fetch.spec.whatwg.org/#concept-body-package-data
 RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* context, const String& contentType, const uint8_t* data, size_t length)
 {
@@ -184,7 +194,7 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
         return std::nullopt;
     };
 
-    auto form = DOMFormData::create(PAL::UTF8Encoding());
+    auto form = DOMFormData::create(context, PAL::UTF8Encoding());
     auto mimeType = parseMIMEType(contentType);
     if (auto multipartBoundary = parseMultipartBoundary(mimeType)) {
         auto boundaryWithDashes = makeString("--", *multipartBoundary);

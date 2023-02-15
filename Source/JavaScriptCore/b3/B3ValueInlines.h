@@ -174,6 +174,7 @@ namespace JSC { namespace B3 {
         return MACRO(PatchpointValue); \
     case VectorExtractLane: \
     case VectorReplaceLane: \
+    case VectorDupElement: \
     case VectorEqual: \
     case VectorNotEqual: \
     case VectorLessThan: \
@@ -227,7 +228,7 @@ namespace JSC { namespace B3 {
     case VectorExtaddPairwise: \
     case VectorMulSat: \
     case VectorSwizzle: \
-    case VectorShuffle: \
+    case VectorMulByElement: \
         return MACRO(SIMDValue); \
     default: \
         RELEASE_ASSERT_NOT_REACHED(); \
@@ -382,6 +383,11 @@ inline bool Value::hasV128() const
 inline v128_t Value::asV128() const
 {
     return as<Const128Value>()->value();
+}
+
+inline bool Value::isV128(v128_t value) const
+{
+    return hasV128() && bitEquals(asV128(), value);
 }
 
 inline bool Value::hasNumber() const

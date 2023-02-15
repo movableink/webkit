@@ -865,6 +865,8 @@ public:
     JSFunction* regExpProtoExecFunction() const;
     JSFunction* typedArrayProtoSort() const { return m_typedArrayProtoSort.get(this); }
     JSFunction* stringProtoSubstringFunction() const;
+    JSFunction* performProxyObjectGetFunction() const;
+    JSFunction* performProxyObjectGetFunctionConcurrently() const;
     JSObject* regExpProtoSymbolReplaceFunction() const { return m_regExpProtoSymbolReplace.get(); }
     GetterSetter* regExpProtoGlobalGetter() const;
     GetterSetter* regExpProtoUnicodeGetter() const;
@@ -1089,7 +1091,7 @@ public:
 
     StructureCache& structureCache() { return m_structureCache; }
 
-    void setUnhandledRejectionCallback(VM& vm, JSObject* function) { m_unhandledRejectionCallback.set(vm, function); }
+    inline void setUnhandledRejectionCallback(VM&, JSObject*);
     JSObject* unhandledRejectionCallback() const { return m_unhandledRejectionCallback.get(); }
 
     static void reportUncaughtExceptionAtEventLoop(JSGlobalObject*, Exception*);
@@ -1224,12 +1226,21 @@ public:
         return result;
     }
 
+    template<typename Type>
+    Type linkTimeConstantConcurrently(LinkTimeConstant value) const
+    {
+        JSCell* result = m_linkTimeConstants[static_cast<unsigned>(value)].getConcurrently();
+        if (!result)
+            return nullptr;
+        return jsCast<Type>(result);
+    }
+
     WatchpointSet& masqueradesAsUndefinedWatchpointSet() { return m_masqueradesAsUndefinedWatchpointSet.get(); }
     WatchpointSet& havingABadTimeWatchpointSet() { return m_havingABadTimeWatchpointSet.get(); }
     WatchpointSet& varInjectionWatchpointSet() { return m_varInjectionWatchpointSet.get(); }
     WatchpointSet& varReadOnlyWatchpointSet() { return m_varReadOnlyWatchpointSet.get(); }
     WatchpointSet& regExpRecompiledWatchpointSet() { return m_regExpRecompiledWatchpointSet.get(); }
-        
+
     bool isHavingABadTime() const
     {
         return m_havingABadTimeWatchpointSet->hasBeenInvalidated();

@@ -56,6 +56,7 @@
 #include "HTMLBRElement.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDivElement.h"
+#include "HTMLDocumentParserFastPath.h"
 #include "HTMLHeadElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLImageElement.h"
@@ -65,6 +66,7 @@
 #include "HTMLTextAreaElement.h"
 #include "HTMLTextFormControlElement.h"
 #include "MarkupAccumulator.h"
+#include "MutableStyleProperties.h"
 #include "NodeList.h"
 #include "Page.h"
 #include "PageConfiguration.h"
@@ -74,11 +76,11 @@
 #include "ScriptWrappableInlines.h"
 #include "Settings.h"
 #include "SocketProvider.h"
-#include "StyleProperties.h"
 #include "TextIterator.h"
 #include "TextManipulationController.h"
 #include "VisibleSelection.h"
 #include "VisibleUnits.h"
+#include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
 #include <wtf/URLParser.h>
@@ -1345,7 +1347,16 @@ static ALWAYS_INLINE ExceptionOr<Ref<DocumentFragment>> createFragmentForMarkup(
     auto fragment = mode == DocumentFragmentMode::New ? DocumentFragment::create(document.get()) : document->documentFragmentForInnerOuterHTML();
     ASSERT(!fragment->hasChildNodes());
     if (document->isHTMLDocument()) {
-        fragment->parseHTML(markup, &contextElement, parserContentPolicy);
+        bool parsedUsingFastPath = tryFastParsingHTMLFragment(markup, document, fragment, contextElement, parserContentPolicy);
+        if (parsedUsingFastPath) {
+#if ASSERT_ENABLED
+            // As a sanity check for the fast-path, create another fragment using the full parser and compare the results.
+            auto referenceFragment = DocumentFragment::create(document);
+            referenceFragment->parseHTML(markup, &contextElement, parserContentPolicy);
+            ASSERT(serializeFragment(fragment, SerializedNodes::SubtreesOfChildren) == serializeFragment(referenceFragment, SerializedNodes::SubtreesOfChildren));
+#endif
+        } else
+            fragment->parseHTML(markup, &contextElement, parserContentPolicy);
         return fragment;
     }
 

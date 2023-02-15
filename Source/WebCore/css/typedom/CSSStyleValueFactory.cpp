@@ -47,7 +47,7 @@
 #include "CSSValueList.h"
 #include "CSSVariableData.h"
 #include "CSSVariableReferenceValue.h"
-#include "StyleProperties.h"
+#include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
 #include <wtf/FixedVector.h>
 #include <wtf/IsoMallocInlines.h>
@@ -120,7 +120,7 @@ ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::parseStyleValue(co
     if (propertyID == CSSPropertyInvalid)
         return Exception { TypeError, "Property String is not a valid CSS property."_s };
 
-    if (isShorthandCSSProperty(propertyID)) {
+    if (isShorthand(propertyID)) {
         auto result = extractShorthandCSSValues(propertyID, cssText);
         if (result.hasException())
             return result.releaseException();
@@ -138,9 +138,9 @@ ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::parseStyleValue(co
     if (auto cssValue = result.releaseReturnValue()) {
         // https://drafts.css-houdini.org/css-typed-om/#subdivide-into-iterations
         if (CSSProperty::isListValuedProperty(propertyID)) {
-            if (auto* valueList = dynamicDowncast<CSSValueList>(*cssValue)) {
-                for (size_t i = 0, length = valueList->length(); i < length; ++i)
-                    cssValues.append(*valueList->item(i));
+            if (auto* values = dynamicDowncast<CSSValueContainingVector>(*cssValue)) {
+                for (auto& value : *values)
+                    cssValues.append(value);
             }
         }
         if (cssValues.isEmpty())
@@ -339,7 +339,7 @@ RefPtr<CSSStyleValue> CSSStyleValueFactory::constructStyleValueForCustomProperty
             return CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueCurrentcolor));
         return CSSStyleValue::create(CSSValuePool::singleton().createColorValue(colorValue.absoluteColor()));
     }, [&](const URL& urlValue) -> RefPtr<CSSStyleValue> {
-        return CSSStyleValue::create(CSSPrimitiveValue::create(urlValue.string(), CSSUnitType::CSS_URI));
+        return CSSStyleValue::create(CSSPrimitiveValue::createURI(urlValue.string()));
     }, [&](const String& identValue) -> RefPtr<CSSStyleValue> {
         return CSSKeywordValue::rectifyKeywordish(identValue);
     }, [&](const RefPtr<StyleImage>&) -> RefPtr<CSSStyleValue>  {

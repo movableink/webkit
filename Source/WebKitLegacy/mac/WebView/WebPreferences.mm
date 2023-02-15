@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  *           (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1894,16 +1894,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     [self _setBoolValue:flag forKey:WebKitSpatialNavigationEnabledPreferenceKey];
 }
 
-- (BOOL)paginateDuringLayoutEnabled
-{
-    return [self _boolValueForKey:WebKitPaginateDuringLayoutEnabledPreferenceKey];
-}
-
-- (void)setPaginateDuringLayoutEnabled:(BOOL)flag
-{
-    [self _setBoolValue:flag forKey:WebKitPaginateDuringLayoutEnabledPreferenceKey];
-}
-
 - (BOOL)hyperlinkAuditingEnabled
 {
     return [self _boolValueForKey:WebKitHyperlinkAuditingEnabledPreferenceKey];
@@ -3047,16 +3037,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     [self _setBoolValue:flag forKey:WebKitWebAnimationsMutableTimelinesEnabledPreferenceKey];
 }
 
-- (BOOL)webGL2Enabled
-{
-    return [self _boolValueForKey:WebKitWebGL2EnabledPreferenceKey];
-}
-
-- (void)setWebGL2Enabled:(BOOL)enabled
-{
-    [self _setBoolValue:enabled forKey:WebKitWebGL2EnabledPreferenceKey];
-}
-
 - (BOOL)maskWebGLStringsEnabled
 {
     return [self _boolValueForKey:WebKitMaskWebGLStringsEnabledPreferenceKey];
@@ -3409,6 +3389,15 @@ static RetainPtr<NSString>& classIBCreatorID()
 }
 
 - (void)setSubpixelAntialiasedLayerTextEnabled:(BOOL)enabled
+{
+}
+
+- (BOOL)webGL2Enabled
+{
+    return [self _boolValueForKey:WebKitWebGLEnabledPreferenceKey];
+}
+
+- (void)setWebGL2Enabled:(BOOL)enabled
 {
 }
 

@@ -337,8 +337,8 @@ public:
     API::HTTPCookieStore& cookieStore();
     WebCore::LocalWebLockRegistry& webLockRegistry() { return m_webLockRegistry.get(); }
 
-    void renameOriginInWebsiteData(URL&&, URL&&, OptionSet<WebsiteDataType>, CompletionHandler<void()>&&);
-    void originDirectoryForTesting(URL&&, URL&&, WebsiteDataType, CompletionHandler<void(const String&)>&&);
+    void renameOriginInWebsiteData(WebCore::SecurityOriginData&&, WebCore::SecurityOriginData&&, OptionSet<WebsiteDataType>, CompletionHandler<void()>&&);
+    void originDirectoryForTesting(WebCore::ClientOrigin&&, WebsiteDataType, CompletionHandler<void(const String&)>&&);
 
     bool networkProcessHasEntitlementForTesting(const String&);
 
@@ -379,6 +379,11 @@ public:
 
     static constexpr uint64_t defaultPerOriginQuota() { return 1000 * MB; }
     static UnifiedOriginStorageLevel defaultUnifiedOriginStorageLevel();
+
+#if USE(GLIB)
+    static const String& defaultBaseCacheDirectory();
+    static const String& defaultBaseDataDirectory();
+#endif
 
     void resetQuota(CompletionHandler<void()>&&);
     void resetStoragePersistedState(CompletionHandler<void()>&&);
@@ -473,7 +478,7 @@ private:
 #endif
 
 #if ENABLE(MANAGED_DOMAINS)
-    static std::optional<std::reference_wrapper<HashSet<WebCore::RegistrableDomain>>> managedDomainsIfInitialized();
+    static const HashSet<WebCore::RegistrableDomain>* managedDomainsIfInitialized();
     static void forwardManagedDomainsToITPIfInitialized(CompletionHandler<void()>&&);
     void setManagedDomainsForITP(const HashSet<WebCore::RegistrableDomain>&, CompletionHandler<void()>&&);
 #endif

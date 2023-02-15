@@ -32,6 +32,7 @@
 #include <glib/gi18n-lib.h>
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/GUniquePtr.h>
+#include <wtf/glib/GWeakPtr.h>
 #include <wtf/glib/WTFGType.h>
 #include <wtf/text/CString.h>
 
@@ -72,17 +73,11 @@ enum {
 static GParamSpec* sObjProperties[N_PROPERTIES] = { nullptr, };
 
 struct _WebKitDownloadPrivate {
-    ~_WebKitDownloadPrivate()
-    {
-        if (webView)
-            g_object_remove_weak_pointer(G_OBJECT(webView), reinterpret_cast<void**>(&webView));
-    }
-
     RefPtr<DownloadProxy> download;
 
     GRefPtr<WebKitURIRequest> request;
     GRefPtr<WebKitURIResponse> response;
-    WebKitWebView* webView;
+    GWeakPtr<WebKitWebView> webView;
     CString destinationURI;
     guint64 currentSize;
     bool isCancelled;
@@ -94,7 +89,7 @@ struct _WebKitDownloadPrivate {
 
 static guint signals[LAST_SIGNAL] = { 0, };
 
-WEBKIT_DEFINE_FINAL_TYPE_IN_2022_API(WebKitDownload, webkit_download, G_TYPE_OBJECT)
+WEBKIT_DEFINE_FINAL_TYPE(WebKitDownload, webkit_download, G_TYPE_OBJECT, GObject)
 
 static void webkitDownloadSetProperty(GObject* object, guint propId, const GValue* value, GParamSpec* paramSpec)
 {
@@ -318,10 +313,7 @@ GRefPtr<WebKitDownload> webkitDownloadCreate(DownloadProxy& downloadProxy, WebKi
 {
     GRefPtr<WebKitDownload> download = adoptGRef(WEBKIT_DOWNLOAD(g_object_new(WEBKIT_TYPE_DOWNLOAD, nullptr)));
     download->priv->download = &downloadProxy;
-    if (webView) {
-        download->priv->webView = webView;
-        g_object_add_weak_pointer(G_OBJECT(webView), reinterpret_cast<void**>(&download->priv->webView));
-    }
+    download->priv->webView.reset(webView);
     attachDownloadClientToDownload(GRefPtr<WebKitDownload> { download }, downloadProxy);
     return download;
 }
@@ -628,7 +620,7 @@ WebKitWebView* webkit_download_get_web_view(WebKitDownload* download)
 {
     g_return_val_if_fail(WEBKIT_IS_DOWNLOAD(download), 0);
 
-    return download->priv->webView;
+    return download->priv->webView.get();
 }
 
 /**

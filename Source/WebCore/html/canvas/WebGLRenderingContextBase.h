@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,8 +41,11 @@
 #include "WebGLFramebuffer.h"
 #include "WebGLProgram.h"
 #include "WebGLRenderbuffer.h"
+#include "WebGLSampler.h"
 #include "WebGLStateTracker.h"
 #include "WebGLTexture.h"
+#include "WebGLTransformFeedback.h"
+#include "WebGLVertexArrayObject.h"
 #include "WebGLVertexArrayObjectOES.h"
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <JavaScriptCore/ConsoleTypes.h>
@@ -52,18 +55,8 @@
 #include <wtf/ListHashSet.h>
 #include <wtf/Lock.h>
 
-#if ENABLE(WEB_CODECS)
-#include "WebCodecsVideoFrame.h"
-#endif
-
-#if ENABLE(WEBGL2)
-#include "WebGLSampler.h"
-#include "WebGLTransformFeedback.h"
-#include "WebGLVertexArrayObject.h"
-#endif
-
 #if ENABLE(WEBXR)
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #endif
 
 #include "GCGLSpan.h"
@@ -106,8 +99,10 @@ class OESVertexArrayObject;
 #if ENABLE(OFFSCREEN_CANVAS)
 class OffscreenCanvas;
 #endif
+class WebCodecsVideoFrame;
 class WebCoreOpaqueRoot;
 class WebGLActiveInfo;
+class WebGLClipCullDistance;
 class WebGLColorBufferFloat;
 class WebGLCompressedTextureASTC;
 class WebGLCompressedTextureETC;
@@ -752,6 +747,7 @@ protected:
     RefPtr<OESTextureHalfFloat> m_oesTextureHalfFloat;
     RefPtr<OESTextureHalfFloatLinear> m_oesTextureHalfFloatLinear;
     RefPtr<OESVertexArrayObject> m_oesVertexArrayObject;
+    RefPtr<WebGLClipCullDistance> m_webglClipCullDistance;
     RefPtr<WebGLColorBufferFloat> m_webglColorBufferFloat;
     RefPtr<WebGLCompressedTextureASTC> m_webglCompressedTextureASTC;
     RefPtr<WebGLCompressedTextureETC> m_webglCompressedTextureETC;

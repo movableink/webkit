@@ -29,9 +29,11 @@
 #include "ElementAncestorIterator.h"
 #include "HTMLFormControlElement.h"
 #include "Logging.h"
+#include "Path.h"
 #include "RenderBox.h"
 #include "RenderStyle.h"
 #include "SimpleRange.h"
+#include "WindRule.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -66,6 +68,13 @@ void EventRegionContext::pushClip(const IntRect& clipRect)
         m_clipStack.append(transformedClip);
     else
         m_clipStack.append(intersection(m_clipStack.last(), transformedClip));
+}
+
+void EventRegionContext::pushClip(const Path& path, WindRule)
+{
+    // FIXME: Approximate paths better.
+    auto pathBounds = enclosingIntRect(path.boundingRect());
+    pushClip(pathBounds);
 }
 
 void EventRegionContext::popClip()
@@ -211,6 +220,7 @@ void EventRegion::translate(const IntSize& offset)
 #endif
 }
 
+#if ENABLE(TOUCH_ACTION_REGIONS)
 static inline unsigned toIndex(TouchAction touchAction)
 {
     switch (touchAction) {
@@ -251,7 +261,6 @@ static inline TouchAction toTouchAction(unsigned index)
     return TouchAction::Auto;
 }
 
-#if ENABLE(TOUCH_ACTION_REGIONS)
 void EventRegion::uniteTouchActions(const Region& touchRegion, OptionSet<TouchAction> touchActions)
 {
     for (auto touchAction : touchActions) {

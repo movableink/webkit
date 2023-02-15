@@ -121,7 +121,7 @@ void TestController::cocoaPlatformInitialize(const Options& options)
         [[NSUserDefaults standardUserDefaults] setValue:[NSString stringWithUTF8String:options.webCoreLogChannels.c_str()] forKey:@"WebCoreLogging"];
 
     if (options.webKitLogChannels.length())
-        [[NSUserDefaults standardUserDefaults] setValue:[NSString stringWithUTF8String:options.webKitLogChannels.c_str()] forKey:@"WebKitLogging"];
+        [[NSUserDefaults standardUserDefaults] setValue:[NSString stringWithUTF8String:options.webKitLogChannels.c_str()] forKey:@"WebKit2Logging"];
 }
 
 WKContextRef TestController::platformContext()
@@ -326,8 +326,6 @@ void TestController::cocoaResetStateToConsistentValues(const TestOptions& option
         [platformView.configuration.preferences setTextInteractionEnabled:options.textInteractionEnabled()];
     }
 
-    [globalWebsiteDataStoreDelegateClient() setAllowRaisingQuota:YES];
-
     WebCoreTestSupport::setAdditionalSupportedImageTypesForTesting(String::fromLatin1(options.additionalSupportedImageTypes().c_str()));
 }
 
@@ -516,6 +514,11 @@ bool TestController::keyExistsInKeychain(const String& attrLabel, const String& 
 void TestController::setAllowStorageQuotaIncrease(bool value)
 {
     [globalWebsiteDataStoreDelegateClient() setAllowRaisingQuota: value];
+}
+
+void TestController::setQuota(uint64_t quota)
+{
+    [globalWebsiteDataStoreDelegateClient() setQuota:quota];
 }
 
 void TestController::setAllowsAnySSLCertificate(bool allows)

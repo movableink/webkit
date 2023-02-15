@@ -37,7 +37,6 @@
 #include "CSSValuePool.h"
 #include "GridArea.h"
 #include "Length.h"
-#include "Pair.h"
 #include "StyleColor.h"
 #include "SystemFontDatabase.h"
 #include <variant>
@@ -52,7 +51,7 @@ namespace WebKitFontFamilyNames {
 enum class FamilyNamesIndex;
 }
 
-enum class BoxOrient : uint8_t;
+enum class BoxOrient : bool;
 
 // When these functions are successful, they will consume all the relevant
 // tokens from the range and also consume any whitespace which follows. When
@@ -145,11 +144,11 @@ enum class PositionSyntax {
 };
 
 struct PositionCoordinates {
-    Ref<CSSPrimitiveValue> x;
-    Ref<CSSPrimitiveValue> y;
+    Ref<CSSValue> x;
+    Ref<CSSValue> y;
 };
 
-RefPtr<CSSPrimitiveValue> consumePosition(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk, PositionSyntax);
+RefPtr<CSSValue> consumePosition(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk, PositionSyntax);
 std::optional<PositionCoordinates> consumePositionCoordinates(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk, PositionSyntax, NegativePercentagePolicy = NegativePercentagePolicy::Forbid);
 std::optional<PositionCoordinates> consumeOneOrTwoValuedPositionCoordinates(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk);
 
@@ -261,13 +260,12 @@ RefPtr<CSSValue> consumePaintOrder(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeStrokeDasharray(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeCursor(CSSParserTokenRange&, const CSSParserContext&, bool inQuirksMode);
 RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, const CSSParserContext&);
-RefPtr<CSSValue> consumeCounterContent(CSSParserTokenRange args, bool counters);
 RefPtr<CSSValue> consumeContent(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeScrollSnapAlign(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeScrollSnapType(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeTextEdge(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeBorderRadiusCorner(CSSParserTokenRange&, CSSParserMode);
-bool consumeRadii(RefPtr<CSSPrimitiveValue> horizontalRadii[4], RefPtr<CSSPrimitiveValue> verticalRadii[4], CSSParserTokenRange&, CSSParserMode, bool useLegacyParsing);
+bool consumeRadii(std::array<RefPtr<CSSValue>, 4>& horizontalRadii, std::array<RefPtr<CSSValue>, 4>& verticalRadii, CSSParserTokenRange&, CSSParserMode, bool useLegacyParsing);
 enum class ConsumeRay { Include, Exclude };
 RefPtr<CSSValue> consumePathOperation(CSSParserTokenRange&, const CSSParserContext&, ConsumeRay);
 RefPtr<CSSValue> consumeShapeOutside(CSSParserTokenRange&, const CSSParserContext&);
@@ -310,6 +308,7 @@ RefPtr<CSSValue> consumeTextEmphasisPosition(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeColorScheme(CSSParserTokenRange&);
 #endif
 RefPtr<CSSValue> consumeOffsetRotate(CSSParserTokenRange&, CSSParserMode);
+RefPtr<CSSValue> consumeTextSpacingTrim(CSSParserTokenRange&);
 
 RefPtr<CSSValue> consumeDeclarationValue(CSSParserTokenRange&, const CSSParserContext&);
 
@@ -395,16 +394,10 @@ inline SystemFontDatabase::FontShorthand lowerFontShorthand(CSSValueID valueID)
     return static_cast<SystemFontDatabase::FontShorthand>(valueID - CSSValueCaption);
 }
 
-template<typename... Args>
-Ref<CSSPrimitiveValue> createPrimitiveValuePair(Args&&... args)
-{
-    return CSSPrimitiveValue::create(Pair::create(std::forward<Args>(args)...));
-}
-
 inline void assignOrDowngradeToListAndAppend(RefPtr<CSSValue>& result, Ref<CSSValue>&& value)
 {
     if (result) {
-        if (!result->isBaseValueList()) {
+        if (!is<CSSValueList>(*result)) {
             auto firstValue = result.releaseNonNull();
             result = CSSValueList::createCommaSeparated();
             downcast<CSSValueList>(*result).append(WTFMove(firstValue));

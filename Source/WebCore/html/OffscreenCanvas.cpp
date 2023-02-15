@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,10 +49,7 @@
 #if ENABLE(WEBGL)
 #include "Settings.h"
 #include "WebGLRenderingContext.h"
-
-#if ENABLE(WEBGL2)
 #include "WebGL2RenderingContext.h"
-#endif
 #endif // ENABLE(WEBGL)
 
 namespace WebCore {
@@ -226,12 +223,8 @@ void OffscreenCanvas::createContextWebGL(RenderingContextType contextType, WebGL
             return;
     } else
         return;
-    GraphicsContextGLWebGLVersion webGLVersion = GraphicsContextGLWebGLVersion::WebGL1;
-#if ENABLE(WEBGL2)
-    webGLVersion = (contextType == RenderingContextType::Webgl) ? GraphicsContextGLWebGLVersion::WebGL1 : GraphicsContextGLWebGLVersion::WebGL2;
-#else
-    UNUSED_PARAM(contextType);
-#endif
+
+    auto webGLVersion = (contextType == RenderingContextType::Webgl) ? GraphicsContextGLWebGLVersion::WebGL1 : GraphicsContextGLWebGLVersion::WebGL2;
     m_context = WebGLRenderingContextBase::create(*this, attrs, webGLVersion);
 }
 
@@ -280,10 +273,10 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
         if (m_context) {
             if (is<WebGLRenderingContext>(*m_context))
                 return { { RefPtr<WebGLRenderingContext> { &downcast<WebGLRenderingContext>(*m_context) } } };
-#if ENABLE(WEBGL2)
+
             if (is<WebGL2RenderingContext>(*m_context))
                 return { { RefPtr<WebGL2RenderingContext> { &downcast<WebGL2RenderingContext>(*m_context) } } };
-#endif
+
             return { { std::nullopt } };
         }
 
@@ -295,10 +288,9 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
         if (!m_context)
             return { { std::nullopt } };
 
-#if ENABLE(WEBGL2)
         if (is<WebGL2RenderingContext>(*m_context))
             return { { RefPtr<WebGL2RenderingContext> { &downcast<WebGL2RenderingContext>(*m_context) } } };
-#endif
+
         return { { RefPtr<WebGLRenderingContext> { &downcast<WebGLRenderingContext>(*m_context) } } };
     }
 #endif
@@ -316,7 +308,7 @@ ExceptionOr<RefPtr<ImageBitmap>> OffscreenCanvas::transferToImageBitmap()
             return { RefPtr<ImageBitmap> { nullptr } };
 
         if (!m_hasCreatedImageBuffer) {
-            auto buffer = ImageBitmap::createImageBuffer(*canvasBaseScriptExecutionContext(), size(), m_context->colorSpace());
+            auto buffer = allocateImageBuffer(false, false);
             if (!buffer)
                 return { RefPtr<ImageBitmap> { nullptr } };
             return { ImageBitmap::create(ImageBitmapBacking(WTFMove(buffer))) };
@@ -352,7 +344,7 @@ ExceptionOr<RefPtr<ImageBitmap>> OffscreenCanvas::transferToImageBitmap()
         // store from this canvas (or its context), but for now we'll just
         // create a new bitmap and paint into it.
 
-        auto imageBitmap = ImageBitmap::create(*canvasBaseScriptExecutionContext(), size(), DestinationColorSpace::SRGB());
+        auto imageBitmap = ImageBitmap::create(allocateImageBuffer(false, false));
         if (!imageBitmap->buffer())
             return { RefPtr<ImageBitmap> { nullptr } };
 
@@ -535,7 +527,7 @@ void OffscreenCanvas::scheduleCommitToPlaceholderCanvas()
 void OffscreenCanvas::createImageBuffer() const
 {
     m_hasCreatedImageBuffer = true;
-    CanvasBase::createImageBuffer(false, false);
+    setImageBuffer(allocateImageBuffer(false, false));
 }
 
 void OffscreenCanvas::setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&& buffer)

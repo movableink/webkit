@@ -47,7 +47,7 @@ from steps import (AddReviewerToCommitMessage, AnalyzeAPITestsResults, AnalyzeCo
                    Canonicalize, CheckOutPullRequest, CheckOutSource, CheckOutSpecificRevision, CheckChangeRelevance, CheckStatusOnEWSQueues, CheckStyle,
                    CleanBuild, CleanUpGitIndexLock, CleanGitRepo, CleanWorkingDirectory, CompileJSC, CommitPatch, CompileJSCWithoutChange,
                    CompileWebKit, CompileWebKitWithoutChange, ConfigureBuild, ConfigureBuild, Contributors,
-                   DeleteStaleBuildFiles, DetermineLandedIdentifier, DownloadBuiltProduct, DownloadBuiltProductFromMaster,
+                   DetermineLandedIdentifier, DownloadBuiltProduct, DownloadBuiltProductFromMaster,
                    EWS_BUILD_HOSTNAME, ExtractBuiltProduct, ExtractTestResults,
                    FetchBranches, FindModifiedLayoutTests, GitHub, GitHubMixin,
                    InstallBuiltProduct, InstallGtkDependencies, InstallWpeDependencies,
@@ -328,75 +328,89 @@ class TestGitHubMixin(unittest.TestCase):
         def json(self):
             return json.loads(self.text)
 
+    @defer.inlineCallbacks
     def test_no_reviewers(self):
         logs = dict(stdio=[])
         mixin = GitHubMixin()
-        mixin.fetch_data_from_url_with_authentication_github = lambda url: self.Response.fromJson([])
+        mixin.fetch_data_from_url_with_authentication_github = lambda url: defer.succeed(self.Response.fromJson([]))
         mixin._addToLog = lambda logName, message, logs=logs: logs[logName].append(message)
-        self.assertEqual(mixin.get_reviewers(1234), [])
+        reviewers = yield mixin.get_reviewers(1234)
+        self.assertEqual(reviewers, [])
         self.assertEqual(logs, dict(stdio=[]))
 
+    @defer.inlineCallbacks
     def test_single_review(self):
         logs = dict(stdio=[])
         mixin = GitHubMixin()
-        mixin.fetch_data_from_url_with_authentication_github = lambda url: self.Response.fromJson([
+        mixin.fetch_data_from_url_with_authentication_github = lambda url: defer.succeed(self.Response.fromJson([
             dict(id=1, state='APPROVED', user=dict(login='webkit-reviewer')),
-        ], url=url)
+        ], url=url))
         mixin._addToLog = lambda logName, message, logs=logs: logs[logName].append(message)
-        self.assertEqual(mixin.get_reviewers(1234), ['webkit-reviewer'])
+        reviewers = yield mixin.get_reviewers(1234)
+        self.assertEqual(reviewers, ['webkit-reviewer'])
         self.assertEqual(logs, dict(stdio=[]))
 
+    @defer.inlineCallbacks
     def test_multipe_reviews(self):
         logs = dict(stdio=[])
         mixin = GitHubMixin()
-        mixin.fetch_data_from_url_with_authentication_github = lambda url: self.Response.fromJson([
+        mixin.fetch_data_from_url_with_authentication_github = lambda url: defer.succeed(self.Response.fromJson([
             dict(id=1, state='APPROVED', user=dict(login='webkit-reviewer')),
             dict(id=2, state='COMMENTED', user=dict(login='webkit-committer')),
             dict(id=3, state='APPROVED', user=dict(login='webkit-committer')),
-        ], url=url)
+        ], url=url))
         mixin._addToLog = lambda logName, message, logs=logs: logs[logName].append(message)
-        self.assertEqual(mixin.get_reviewers(1234), ['webkit-committer', 'webkit-reviewer'])
+        reviewers = yield mixin.get_reviewers(1234)
+        self.assertEqual(reviewers, ['webkit-committer', 'webkit-reviewer'])
         self.assertEqual(logs, dict(stdio=[]))
 
+    @defer.inlineCallbacks
     def test_retracted_review(self):
         logs = dict(stdio=[])
         mixin = GitHubMixin()
-        mixin.fetch_data_from_url_with_authentication_github = lambda url: self.Response.fromJson([
+        mixin.fetch_data_from_url_with_authentication_github = lambda url: defer.succeed(self.Response.fromJson([
             dict(id=1, state='APPROVED', user=dict(login='webkit-reviewer')),
             dict(id=2, state='CHANGES_REQUESTED', user=dict(login='webkit-reviewer')),
-        ], url=url)
+        ], url=url))
         mixin._addToLog = lambda logName, message, logs=logs: logs[logName].append(message)
-        self.assertEqual(mixin.get_reviewers(1234), [])
+        reviewers = yield mixin.get_reviewers(1234)
+        self.assertEqual(reviewers, [])
         self.assertEqual(logs, dict(stdio=[]))
 
+    @defer.inlineCallbacks
     def test_pagination(self):
         logs = dict(stdio=[])
         mixin = GitHubMixin()
-        mixin.fetch_data_from_url_with_authentication_github = lambda url: self.Response.fromJson([
+        mixin.fetch_data_from_url_with_authentication_github = lambda url: defer.succeed(self.Response.fromJson([
             dict(id=101, state='APPROVED', user=dict(login='webkit-committer')),
-        ], url=url) if 'page=2' in url else self.Response.fromJson([
+        ], url=url)) if 'page=2' in url else defer.succeed(self.Response.fromJson([
             dict(id=1, state='APPROVED', user=dict(login='webkit-reviewer')),
         ] + [
             dict(id=i, state='COMMENTED', user=dict(login='webkit-reviewer')) for i in range(1, 100)
-        ], url=url)
+        ], url=url))
         mixin._addToLog = lambda logName, message, logs=logs: logs[logName].append(message)
-        self.assertEqual(mixin.get_reviewers(1234), ['webkit-committer', 'webkit-reviewer'])
+        reviewers = yield mixin.get_reviewers(1234)
+        self.assertEqual(reviewers, ['webkit-committer', 'webkit-reviewer'])
         self.assertEqual(logs, dict(stdio=[]))
 
+    @defer.inlineCallbacks
     def test_reviewers_invalid_response(self):
         logs = dict(stdio=[])
         mixin = GitHubMixin()
-        mixin.fetch_data_from_url_with_authentication_github = lambda url: self.Response.fromJson({}, url=url)
+        mixin.fetch_data_from_url_with_authentication_github = lambda url: defer.succeed(self.Response.fromJson({}, url=url))
         mixin._addToLog = lambda logName, message, logs=logs: logs[logName].append(message)
-        self.assertEqual(mixin.get_reviewers(1234), [])
+        reviewers = yield mixin.get_reviewers(1234)
+        self.assertEqual(reviewers, [])
         self.assertEqual(logs, dict(stdio=[]))
 
+    @defer.inlineCallbacks
     def test_reviewers_error(self):
         logs = dict(stdio=[])
         mixin = GitHubMixin()
-        mixin.fetch_data_from_url_with_authentication_github = lambda url: None
+        mixin.fetch_data_from_url_with_authentication_github = lambda url: defer.succeed(None)
         mixin._addToLog = lambda logName, message, logs=logs: logs[logName].append(message)
-        self.assertEqual(mixin.get_reviewers(1234), [])
+        reviewers = yield mixin.get_reviewers(1234)
+        self.assertEqual(reviewers, [])
         self.assertEqual(logs, dict(stdio=[]))
 
 
@@ -1084,9 +1098,9 @@ class TestCleanUpGitIndexLock(BuildStepMixinAdditions, unittest.TestCase):
         self.expectOutcome(result=SUCCESS, state_string='Deleted .git/index.lock')
         return self.runStep()
 
-    def test_success_windows(self):
+    def test_success_ios(self):
         self.setupStep(CleanUpGitIndexLock())
-        self.setProperty('platform', 'win')
+        self.setProperty('platform', 'ios-16')
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         timeout=120,
@@ -3823,10 +3837,10 @@ class TestCheckChangeRelevance(BuildStepMixinAdditions, unittest.TestCase):
             rc = self.runStep()
         return rc
 
-    def test_relevant_windows_wk1_patch(self):
+    def test_relevant_wk1_patch(self):
         CheckChangeRelevance._get_patch = lambda x: b'Sample patch; file: Source/WebKitLegacy'
         self.setupStep(CheckChangeRelevance())
-        self.setProperty('buildername', 'Windows-EWS')
+        self.setProperty('buildername', 'macOS-BigSur-Release-WK1-Tests-EWS')
         self.expectOutcome(result=SUCCESS, state_string='Patch contains relevant changes')
         return self.runStep()
 
@@ -5000,17 +5014,6 @@ class TestPrintConfiguration(BuildStepMixinAdditions, unittest.TestCase):
         self.expectOutcome(result=SUCCESS, state_string='Printed configuration')
         return self.runStep()
 
-    def test_success_win(self):
-        self.setupStep(PrintConfiguration())
-        self.setProperty('platform', 'win')
-
-        self.expectRemoteCommands(
-            ExpectShell(command=['hostname'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
-            ExpectShell(command=['df', '-hl'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
-        )
-        self.expectOutcome(result=SUCCESS, state_string='Printed configuration')
-        return self.runStep()
-
     def test_failure(self):
         self.setupStep(PrintConfiguration())
         self.setProperty('platform', 'ios-12')
@@ -5031,6 +5034,7 @@ class TestPrintConfiguration(BuildStepMixinAdditions, unittest.TestCase):
     func(fullname, *argrest)
 OSError: [Errno 2] No such file or directory'''),
             ExpectShell(command=['system_profiler', 'SPSoftwareDataType', 'SPHardwareDataType'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
+            ExpectShell(command=['/bin/sh', '-c', 'echo TimezoneVers: $(cat /usr/share/zoneinfo/+VERSION)'], workdir='wkdir', timeout=60, logEnviron=False) + 0,
             ExpectShell(command=['xcodebuild', '-sdk', '-version'], workdir='wkdir', timeout=60, logEnviron=False)
             + ExpectShell.log('stdio', stdout='''Upon execvpe xcodebuild ['xcodebuild', '-sdk', '-version'] in environment id 7696545612416
 :Traceback (most recent call last):
@@ -5546,6 +5550,19 @@ class TestValidateCommitterAndReviewer(BuildStepMixinAdditions, unittest.TestCas
         self.assertEqual(self.getProperty('reviewers_full_names'), ['WebKit Reviewer'])
         return rc
 
+    def test_success_pr_validators_not_reviewer(self):
+        self.setupStep(ValidateCommitterAndReviewer())
+        ValidateCommitterAndReviewer.get_reviewers = lambda x, pull_request, repository_url=None: ['webkit-bug-bridge']
+        self.setProperty('github.number', '1234')
+        self.setProperty('owners', ['webkit-commit-queue'])
+        self.setProperty('remote', 'apple')
+        self.expectHidden(False)
+        self.assertEqual(ValidateCommitterAndReviewer.haltOnFailure, False)
+        self.expectOutcome(result=SUCCESS, state_string='Validated committer, reviewer not found')
+        rc = self.runStep()
+        self.assertEqual(self.getProperty('reviewers_full_names'), None)
+        return rc
+
     def test_success_no_pr_validators(self):
         self.setupStep(ValidateCommitterAndReviewer())
         ValidateCommitterAndReviewer.get_reviewers = lambda x, pull_request, repository_url=None: ['webkit-reviewer']
@@ -5567,7 +5584,7 @@ class TestValidateCommitterAndReviewer(BuildStepMixinAdditions, unittest.TestCas
         self.setProperty('remote', 'apple')
         self.expectHidden(False)
         self.assertEqual(ValidateCommitterAndReviewer.haltOnFailure, False)
-        self.expectOutcome(result=FAILURE, state_string="Landing changes on 'apple' remote requires validation from @geoffreygaren, @markcgee, @rjepstein, @JonWBedard, @ryanhaddad, @alancoon or @webkit-bug-bridge")
+        self.expectOutcome(result=FAILURE, state_string="Landing changes on 'apple' remote requires validation from @geoffreygaren, @markcgee, @rjepstein, @JonWBedard, @ryanhaddad or @webkit-bug-bridge")
         return self.runStep()
 
 
@@ -5727,25 +5744,8 @@ class TestDetermineLandedIdentifier(BuildStepMixinAdditions, unittest.TestCase):
             ExpectShell(workdir='wkdir',
                         timeout=300,
                         logEnviron=False,
-                        command=['git', 'log', '-1', '--no-decorate']) +
-                ExpectShell.log('stdio', stdout=''''commit 220797@main (14dbf1155cf56a1dd4d86a847e61af3c3e5d2ca5, r256729)
-Author: Aakash Jain <aakash_jain@apple.com>
-Date:   Mon Feb 17 15:09:42 2020 +0000
-
-    [ews] add SetBuildSummary step for Windows EWS
-    https://bugs.webkit.org/show_bug.cgi?id=207556
-    
-    Reviewed by Jonathan Bedard.
-    
-    * BuildSlaveSupport/ews-build/factories.py:
-    (WindowsFactory.__init__):
-    (GTKBuildAndTestFactory.__init__):
-    * BuildSlaveSupport/ews-build/factories_unittest.py:
-    (TestBuildAndTestsFactory.test_windows_factory): Added unit-test.
-    
-    
-    Canonical link: https://commits.webkit.org/220797@main
-    git-svn-id: https://svn.webkit.org/repository/webkit/trunk@256729 268f45cc-cd09-0410-ab3c-d52691b4dbfc''') +
+                        command=['/bin/sh', '-c', "git log -1 --no-decorate | grep 'Canonical link: https://commits\\.webkit\\.org/'"]) +
+                ExpectShell.log('stdio', stdout='    Canonical link: https://commits.webkit.org/220797@main\n') +
                 0,
             )
             self.expectOutcome(result=SUCCESS, state_string='Identifier: 220797@main')
@@ -5766,22 +5766,8 @@ Date:   Mon Feb 17 15:09:42 2020 +0000
             ExpectShell(workdir='wkdir',
                         timeout=300,
                         logEnviron=False,
-                        command=['git', 'log', '-1', '--no-decorate']) +
-                ExpectShell.log('stdio', stdout=''''commit 5dc27962b4c5bdfd17d17faa785f70abbb0550ed
-Author: Matteo Flores <matteo_flores@apple.com>
-Date:   Fri Apr 22 21:24:12 2022 +0000
-
-    REBASLINE: [ Monterey ] fast/text/khmer-lao-font.html is a constant text failure
-    
-    https://bugs.webkit.org/show_bug.cgi?id=238917
-    
-    Unreviewed test gardening.
-    
-    * platform/mac-bigsur/fast/text/khmer-lao-font-expected.txt: Copied from LayoutTests/platform/mac/fast/text/khmer-lao-font-expected.txt.
-    * platform/mac/fast/text/khmer-lao-font-expected.txt:
-    
-    Canonical link: https://commits.webkit.org/249903@main
-    git-svn-id: https://svn.webkit.org/repository/webkit/trunk@293254 268f45cc-cd09-0410-ab3c-d52691b4dbfc''') +
+                        command=['/bin/sh', '-c', "git log -1 --no-decorate | grep 'Canonical link: https://commits\\.webkit\\.org/'"]) +
+                ExpectShell.log('stdio', stdout='    Canonical link: https://commits.webkit.org/249903@main\n') +
                 0,
             )
             self.expectOutcome(result=SUCCESS, state_string='Identifier: 249903@main')
@@ -5801,9 +5787,9 @@ Date:   Fri Apr 22 21:24:12 2022 +0000
             ExpectShell(workdir='wkdir',
                         timeout=300,
                         logEnviron=False,
-                        command=['git', 'log', '-1', '--no-decorate']) +
+                        command=['/bin/sh', '-c', "git log -1 --no-decorate | grep 'Canonical link: https://commits\\.webkit\\.org/'"]) +
                 ExpectShell.log('stdio', stdout='') +
-                0,
+                1,
             )
             self.expectOutcome(result=SUCCESS, state_string='Identifier: 220797@main')
             with current_hostname(EWS_BUILD_HOSTNAME):
@@ -5822,9 +5808,9 @@ Date:   Fri Apr 22 21:24:12 2022 +0000
             ExpectShell(workdir='wkdir',
                         timeout=300,
                         logEnviron=False,
-                        command=['git', 'log', '-1', '--no-decorate']) +
+                        command=['/bin/sh', '-c', "git log -1 --no-decorate | grep 'Canonical link: https://commits\\.webkit\\.org/'"]) +
                 ExpectShell.log('stdio', stdout='') +
-                0,
+                1,
             )
             self.expectOutcome(result=FAILURE, state_string='Failed to determine identifier')
             with current_hostname(EWS_BUILD_HOSTNAME):
@@ -5843,9 +5829,9 @@ Date:   Fri Apr 22 21:24:12 2022 +0000
             ExpectShell(workdir='wkdir',
                         timeout=300,
                         logEnviron=False,
-                        command=['git', 'log', '-1', '--no-decorate']) +
+                        command=['/bin/sh', '-c', "git log -1 --no-decorate | grep 'Canonical link: https://commits\\.webkit\\.org/'"]) +
                 ExpectShell.log('stdio', stdout='') +
-                0,
+                1,
             )
             self.expectOutcome(result=SUCCESS, state_string='Identifier: 220797@main')
             with current_hostname(EWS_BUILD_HOSTNAME):
@@ -5864,9 +5850,9 @@ Date:   Fri Apr 22 21:24:12 2022 +0000
             ExpectShell(workdir='wkdir',
                         timeout=300,
                         logEnviron=False,
-                        command=['git', 'log', '-1', '--no-decorate']) +
+                        command=['/bin/sh', '-c', "git log -1 --no-decorate | grep 'Canonical link: https://commits\\.webkit\\.org/'"]) +
                 ExpectShell.log('stdio', stdout='') +
-                0,
+                1,
             )
             self.expectOutcome(result=FAILURE, state_string='Failed to determine identifier')
             with current_hostname(EWS_BUILD_HOSTNAME):
@@ -6970,7 +6956,7 @@ Canonical link: <a href="https://commits.webkit.org/249006@main">https://commits
 ''',
             )
 
-            return True
+            return defer.succeed(True)
 
         UpdatePullRequest.update_pr = update_pr
         self.setupStep(UpdatePullRequest())
@@ -7009,6 +6995,7 @@ Date:   Tue Mar 29 16:04:35 2022 -0700
             self.assertEqual(self.getProperty('is_test_gardening'), False)
             return rc
 
+    @defer.inlineCallbacks
     def test_success_gardening(self):
         def update_pr(x, pr_number, title, description, base=None, head=None, repository_url=None):
             self.assertEqual(pr_number, '1234')
@@ -7032,7 +7019,7 @@ Canonical link: <a href="https://commits.webkit.org/249833@main">https://commits
 ''',
             )
 
-            return True
+            return defer.succeed(True)
 
         UpdatePullRequest.update_pr = update_pr
         self.setupStep(UpdatePullRequest())
@@ -7062,14 +7049,15 @@ Date:   Thu Apr 21 00:25:03 2022 +0000
         )
         self.expectOutcome(result=SUCCESS, state_string='Updated pull request')
         with current_hostname(EWS_BUILD_HOSTNAME):
-            rc = self.runStep()
+            rc = yield self.runStep()
             self.assertEqual(self.getProperty('bug_id'), '239577')
             self.assertEqual(self.getProperty('is_test_gardening'), True)
             return rc
 
+    @defer.inlineCallbacks
     def test_failure(self):
         def update_pr(x, pr_number, title, description, base=None, head=None, repository_url=None):
-            return False
+            return defer.succeed(False)
 
         UpdatePullRequest.update_pr = update_pr
         self.setupStep(UpdatePullRequest())
@@ -7103,48 +7091,10 @@ Date:   Tue Mar 29 16:04:35 2022 -0700
         )
         self.expectOutcome(result=FAILURE, state_string='Failed to update pull request')
         with current_hostname(EWS_BUILD_HOSTNAME):
-            rc = self.runStep()
+            rc = yield self.runStep()
             self.assertEqual(self.getProperty('bug_id'), '238553')
             self.assertEqual(self.getProperty('is_test_gardening'), False)
             return rc
-
-
-class TestDeleteStaleBuildFiles(BuildStepMixinAdditions, unittest.TestCase):
-    def setUp(self):
-        self.longMessage = True
-        return self.setUpBuildStep()
-
-    def tearDown(self):
-        return self.tearDownBuildStep()
-
-    def test_success(self):
-        self.setupStep(DeleteStaleBuildFiles())
-        self.setProperty('fullPlatform', 'win')
-        self.expectRemoteCommands(
-            ExpectShell(workdir='wkdir',
-                        command=['python3', 'Tools/CISupport/delete-stale-build-files', '--platform=win'],
-                        logEnviron=False,
-                        timeout=600,
-                        )
-            + 0,
-        )
-        self.expectOutcome(result=SUCCESS, state_string='Deleted stale build files')
-        return self.runStep()
-
-    def test_failure(self):
-        self.setupStep(DeleteStaleBuildFiles())
-        self.setProperty('fullPlatform', 'win')
-        self.expectRemoteCommands(
-            ExpectShell(workdir='wkdir',
-                        command=['python3', 'Tools/CISupport/delete-stale-build-files', '--platform=win'],
-                        logEnviron=False,
-                        timeout=600,
-                        )
-            + ExpectShell.log('stdio', stdout='Unexpected error.')
-            + 2,
-        )
-        self.expectOutcome(result=FAILURE, state_string='Deleted stale build files (failure)')
-        return self.runStep()
 
 
 if __name__ == '__main__':

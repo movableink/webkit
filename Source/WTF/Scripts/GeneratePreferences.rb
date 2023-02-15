@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #
-# Copyright (c) 2017, 2020 Apple Inc. All rights reserved.
+# Copyright (c) 2017-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -47,7 +47,7 @@ end
 
 optparse.parse!
 
-options[:preferenceFiles] = ARGV.slice!(0...)
+options[:preferenceFiles] = ARGV.shift(ARGV.size)
 if options[:preferenceFiles].empty?
   puts optparse
   exit 1
@@ -81,6 +81,7 @@ class Preference
   attr_accessor :type
   attr_accessor :refinedType
   attr_accessor :status
+  attr_accessor :defaultsOverridable
   attr_accessor :humanReadableName
   attr_accessor :humanReadableDescription
   attr_accessor :webcoreBinding
@@ -95,6 +96,7 @@ class Preference
     @type = opts["type"]
     @refinedType = opts["refinedType"]
     @status = opts["status"]
+    @defaultsOverridable = opts["defaultsOverridable"] || false
     @humanReadableName = (opts["humanReadableName"] || "")
     if not humanReadableName.start_with? "WebKitAdditions"
         @humanReadableName = '"' + humanReadableName + '"'
@@ -191,8 +193,8 @@ class Preference
     %w{ unstable internal testable }.include? @status
   end
 
-  def defaultOverridable?
-    %w{ internal }.include? @status
+  def defaultsOverridable?
+    @defaultsOverridable
   end
 
   # FIXME: These names correspond to the "experimental features" and "internal
@@ -211,7 +213,7 @@ class Preference
   
   # Features which should be enabled while running tests
   def testable?
-    %w{ testable preview stable }.include? @status
+    %w{ testable preview stable mature }.include? @status
   end
 end
 
@@ -237,7 +239,7 @@ class Preferences
   end
 
   # Corresponds to WebFeatureStatus enum cases. "developer" and up require human-readable names.
-  STATUSES = %w{ embedder unstable internal developer testable preview stable shipping }
+  STATUSES = %w{ embedder unstable internal developer testable preview stable mature }
 
   def initializeParsedPreferences(parsedPreferences)
     result = []

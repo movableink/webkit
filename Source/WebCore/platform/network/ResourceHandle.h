@@ -34,7 +34,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/text/AtomString.h>
 
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
 #endif
 
@@ -55,14 +55,7 @@ OBJC_CLASS NSURLConnection;
 OBJC_CLASS NSURLRequest;
 #endif
 
-#if USE(CFURLCONNECTION)
-typedef const struct _CFCachedURLResponse* CFCachedURLResponseRef;
-typedef struct _CFURLConnection* CFURLConnectionRef;
-typedef int CFHTTPCookieStorageAcceptPolicy;
-typedef struct OpaqueCFHTTPCookieStorage* CFHTTPCookieStorageRef;
-#endif
-
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
 typedef const struct __CFURLStorageSession* CFURLStorageSessionRef;
 #endif
 
@@ -104,7 +97,7 @@ public:
     WEBCORE_EXPORT static void loadResourceSynchronously(NetworkingContext*, const ResourceRequest&, StoredCredentialsPolicy, SecurityOrigin*, ResourceError&, ResourceResponse&, Vector<uint8_t>& data);
     WEBCORE_EXPORT virtual ~ResourceHandle();
 
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
     void willSendRequest(ResourceRequest&&, ResourceResponse&&, CompletionHandler<void(ResourceRequest&&)>&&);
 #endif
 
@@ -120,7 +113,7 @@ public:
     void receivedChallengeRejection(const AuthenticationChallenge&) override;
 #endif
 
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
     bool tryHandlePasswordBasedAuthentication(const AuthenticationChallenge&);
 #endif
 
@@ -138,15 +131,6 @@ public:
 #if PLATFORM(COCOA)
     void schedule(WTF::SchedulePair&);
     void unschedule(WTF::SchedulePair&);
-#endif
-
-#if USE(CFURLCONNECTION)
-    CFURLStorageSessionRef storageSession() const;
-    CFURLConnectionRef connection() const;
-    WEBCORE_EXPORT RetainPtr<CFURLConnectionRef> releaseConnectionForDownload();
-    const ResourceRequest& currentRequest() const;
-    static void setHostAllowsAnyHTTPSCertificate(const String&);
-    static void setClientCertificate(const String& host, CFDataRef);
 #endif
 
 #if OS(WINDOWS) && USE(CURL)
@@ -205,7 +189,7 @@ public:
     using RefCounted<ResourceHandle>::ref;
     using RefCounted<ResourceHandle>::deref;
 
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
     WEBCORE_EXPORT static CFStringRef synchronousLoadRunLoopMode();
 #endif
 
@@ -239,12 +223,8 @@ private:
     void derefAuthenticationClient() override { deref(); }
 #endif
 
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
     enum class SchedulingBehavior { Asynchronous, Synchronous };
-#endif
-
-#if USE(CFURLCONNECTION)
-    void createCFURLConnection(bool shouldUseCredentialStorage, bool shouldContentSniff, ContentEncodingSniffingPolicy, RefPtr<SynchronousLoaderMessageQueue>&&, CFDictionaryRef clientProperties);
 #endif
 
 #if PLATFORM(MAC)

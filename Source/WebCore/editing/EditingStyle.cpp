@@ -48,6 +48,7 @@
 #include "HTMLInterchange.h"
 #include "HTMLNames.h"
 #include "HTMLSpanElement.h"
+#include "MutableStyleProperties.h"
 #include "Node.h"
 #include "NodeTraversal.h"
 #include "QualifiedName.h"
@@ -56,7 +57,6 @@
 #include "RenderStyle.h"
 #include "SimpleRange.h"
 #include "StyleFontSizeFunctions.h"
-#include "StyleProperties.h"
 #include "StyleResolver.h"
 #include "StyleRule.h"
 #include "StyledElement.h"
@@ -66,7 +66,7 @@ namespace WebCore {
 
 // Editing style properties must be preserved during editing operation.
 // e.g. when a user inserts a new paragraph, all properties listed here must be copied to the new paragraph.
-static const CSSPropertyID editingProperties[] = {
+static constexpr CSSPropertyID editingProperties[] = {
     CSSPropertyCaretColor,
     CSSPropertyColor,
     CSSPropertyFontFamily,
@@ -106,8 +106,8 @@ template <class StyleDeclarationType>
 static Ref<MutableStyleProperties> copyEditingProperties(StyleDeclarationType* style, EditingPropertiesToInclude type)
 {
     if (type == AllEditingProperties)
-        return style->copyPropertiesInSet(editingProperties, numAllEditingProperties);
-    return style->copyPropertiesInSet(editingProperties, numInheritableEditingProperties);
+        return style->copyProperties(editingProperties);
+    return style->copyProperties({ editingProperties, numInheritableEditingProperties });
 }
 
 static inline bool isEditingProperty(int id)
@@ -450,9 +450,8 @@ static Color cssValueToColor(CSSValue* colorValue)
     if (!is<CSSPrimitiveValue>(colorValue))
         return Color::transparentBlack;
     
-    CSSPrimitiveValue& primitiveColor = downcast<CSSPrimitiveValue>(*colorValue);
-    if (primitiveColor.isRGBColor())
-        return primitiveColor.color();
+    if (colorValue->isColor())
+        return colorValue->color();
     
     return CSSParser::parseColorWithoutContext(colorValue->cssText());
 }
@@ -600,16 +599,15 @@ Ref<MutableStyleProperties> EditingStyle::styleWithResolvedTextDecorations() con
 
     Ref<MutableStyleProperties> style = m_mutableStyle ? m_mutableStyle->mutableCopy() : MutableStyleProperties::create();
 
-    Ref<CSSValueList> valueList = CSSValueList::createSpaceSeparated();
+    CSSValueListBuilder valueList;
     if (underlineChange() == TextDecorationChange::Add)
-        valueList->append(CSSPrimitiveValue::create(CSSValueUnderline));
+        valueList.append(CSSPrimitiveValue::create(CSSValueUnderline));
     if (strikeThroughChange() == TextDecorationChange::Add)
-        valueList->append(CSSPrimitiveValue::create(CSSValueLineThrough));
-
-    if (valueList->length())
-        style->setProperty(CSSPropertyTextDecorationLine, valueList.ptr());
-    else
+        valueList.append(CSSPrimitiveValue::create(CSSValueLineThrough));
+    if (valueList.isEmpty())
         style->setProperty(CSSPropertyTextDecorationLine, CSSPrimitiveValue::create(CSSValueNone));
+    else
+        style->setProperty(CSSPropertyTextDecorationLine, CSSValueList::createSpaceSeparated(WTFMove(valueList)));
 
     return style;
 }
@@ -721,16 +719,39 @@ Ref<EditingStyle> EditingStyle::copy() const
     return copy;
 }
 
+// This is the list of properties we want to copy in the copyBlockProperties() function.
+// It is the list of CSS properties that apply specially to block-level elements.
+static constexpr CSSPropertyID blockProperties[] = {
+    CSSPropertyOrphans,
+    CSSPropertyOverflow, // This can be also be applied to replaced elements
+    CSSPropertyColumnCount,
+    CSSPropertyColumnGap,
+    CSSPropertyRowGap,
+    CSSPropertyColumnRuleColor,
+    CSSPropertyColumnRuleStyle,
+    CSSPropertyColumnRuleWidth,
+    CSSPropertyWebkitColumnBreakBefore,
+    CSSPropertyWebkitColumnBreakAfter,
+    CSSPropertyWebkitColumnBreakInside,
+    CSSPropertyColumnWidth,
+    CSSPropertyPageBreakAfter,
+    CSSPropertyPageBreakBefore,
+    CSSPropertyPageBreakInside,
+    CSSPropertyTextAlign,
+    CSSPropertyTextAlignLast,
+    CSSPropertyTextJustify,
+    CSSPropertyTextIndent,
+    CSSPropertyWidows
+};
+
 Ref<EditingStyle> EditingStyle::extractAndRemoveBlockProperties()
 {
-    auto blockProperties = EditingStyle::create();
-    if (!m_mutableStyle)
-        return blockProperties;
-
-    blockProperties->m_mutableStyle = m_mutableStyle->copyBlockProperties();
-    m_mutableStyle->removeBlockProperties();
-
-    return blockProperties;
+    auto result = EditingStyle::create();
+    if (m_mutableStyle) {
+        result->m_mutableStyle = m_mutableStyle->copyProperties(blockProperties);
+        m_mutableStyle->removeProperties(blockProperties);
+    }
+    return result;
 }
 
 Ref<EditingStyle> EditingStyle::extractAndRemoveTextDirection()
@@ -752,7 +773,7 @@ void EditingStyle::removeBlockProperties()
     if (!m_mutableStyle)
         return;
 
-    m_mutableStyle->removeBlockProperties();
+    m_mutableStyle->removeProperties(blockProperties);
 }
 
 void EditingStyle::removeStyleAddedByNode(Node* node)
@@ -819,7 +840,7 @@ TriState EditingStyle::triStateOfStyle(T& styleToCompare, ShouldIgnoreTextOnlyPr
     auto difference = getPropertiesNotIn(*m_mutableStyle, styleToCompare);
 
     if (shouldIgnoreTextOnlyProperties == IgnoreTextOnlyProperties)
-        difference->removePropertiesInSet(textOnlyProperties, std::size(textOnlyProperties));
+        difference->removeProperties(textOnlyProperties);
 
     if (difference->isEmpty())
         return TriState::True;
@@ -1375,9 +1396,9 @@ void EditingStyle::mergeStyleFromRulesForSerialization(StyledElement& element, S
 
 static void removePropertiesInStyle(MutableStyleProperties& styleToRemovePropertiesFrom, MutableStyleProperties& style)
 {
-    auto propertiesToRemove = map(style, [] (auto property) { return property.id(); });
-
-    styleToRemovePropertiesFrom.removePropertiesInSet(propertiesToRemove.data(), propertiesToRemove.size());
+    styleToRemovePropertiesFrom.removeProperties(map(style, [](auto property) {
+        return property.id();
+    }).span());
 }
 
 void EditingStyle::removeStyleFromRulesAndContext(StyledElement& element, Node* context)
@@ -1752,6 +1773,8 @@ StyleChange::StyleChange(EditingStyle* style, const Position& position)
         m_cssStyle = WTFMove(mutableStyle);
 }
 
+StyleChange::~StyleChange() = default;
+
 bool StyleChange::operator==(const StyleChange& other)
 {
     if (m_applyBold != other.m_applyBold
@@ -1926,12 +1949,7 @@ static bool isTransparentColorValue(CSSValue* value)
 {
     if (!value)
         return true;
-    if (!is<CSSPrimitiveValue>(*value))
-        return false;
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(*value);
-    if (primitiveValue.isRGBColor())
-        return !primitiveValue.color().isVisible();
-    return primitiveValue.valueID() == CSSValueTransparent;
+    return value->isColor() ? !value->color().isVisible() : value->valueID() == CSSValueTransparent;
 }
 
 bool hasTransparentBackgroundColor(StyleProperties* style)
@@ -1942,10 +1960,9 @@ bool hasTransparentBackgroundColor(StyleProperties* style)
 RefPtr<CSSValue> backgroundColorInEffect(Node* node)
 {
     for (Node* ancestor = node; ancestor; ancestor = ancestor->parentNode()) {
-        if (auto value = ComputedStyleExtractor(ancestor).propertyValue(CSSPropertyBackgroundColor)) {
-            if (!isTransparentColorValue(value.get()))
-                return value;
-        }
+        auto value = ComputedStyleExtractor(ancestor).propertyValue(CSSPropertyBackgroundColor);
+        if (!isTransparentColorValue(value.get()))
+            return value;
     }
     return nullptr;
 }

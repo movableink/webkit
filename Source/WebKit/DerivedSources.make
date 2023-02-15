@@ -271,12 +271,14 @@ MESSAGE_RECEIVERS = \
 	GPUProcess/graphics/WebGPU/RemoteBuffer \
 	GPUProcess/graphics/WebGPU/RemoteCommandBuffer \
 	GPUProcess/graphics/WebGPU/RemoteCommandEncoder \
+	GPUProcess/graphics/WebGPU/RemoteCompositorIntegration \
 	GPUProcess/graphics/WebGPU/RemoteComputePassEncoder \
 	GPUProcess/graphics/WebGPU/RemoteComputePipeline \
 	GPUProcess/graphics/WebGPU/RemoteDevice \
 	GPUProcess/graphics/WebGPU/RemoteExternalTexture \
 	GPUProcess/graphics/WebGPU/RemoteGPU \
 	GPUProcess/graphics/WebGPU/RemotePipelineLayout \
+	GPUProcess/graphics/WebGPU/RemotePresentationContext \
 	GPUProcess/graphics/WebGPU/RemoteQuerySet \
 	GPUProcess/graphics/WebGPU/RemoteQueue \
 	GPUProcess/graphics/WebGPU/RemoteRenderBundle \
@@ -285,8 +287,6 @@ MESSAGE_RECEIVERS = \
 	GPUProcess/graphics/WebGPU/RemoteRenderPipeline \
 	GPUProcess/graphics/WebGPU/RemoteSampler \
 	GPUProcess/graphics/WebGPU/RemoteShaderModule \
-	GPUProcess/graphics/WebGPU/RemoteSurface \
-	GPUProcess/graphics/WebGPU/RemoteSwapChain \
 	GPUProcess/graphics/WebGPU/RemoteTexture \
 	GPUProcess/graphics/WebGPU/RemoteTextureView \
 	GPUProcess/webrtc/LibWebRTCCodecsProxy \
@@ -461,6 +461,7 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	GPUProcess/graphics/RemoteRenderingBackendCreationParameters.serialization.in \
 	GPUProcess/media/InitializationSegmentInfo.serialization.in \
 	GPUProcess/media/MediaDescriptionInfo.serialization.in \
+	GPUProcess/media/RemoteMediaPlayerProxyConfiguration.serialization.in \
 	GPUProcess/media/TextTrackPrivateRemoteConfiguration.serialization.in \
 	NetworkProcess/NetworkProcessCreationParameters.serialization.in \
 	Shared/API/APIError.serialization.in \
@@ -476,6 +477,7 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/Cocoa/RevealItem.serialization.in \
 	Shared/Cocoa/WebCoreArgumentCodersCocoa.serialization.in \
 	Shared/EditorState.serialization.in \
+	Shared/Extensions/WebExtensionEventListenerType.serialization.in \
 	Shared/FocusedElementInformation.serialization.in \
 	Shared/FrameInfoData.serialization.in \
 	Shared/FrameTreeNodeData.serialization.in \
@@ -533,6 +535,7 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/WebGPU/WebGPUOutOfMemoryError.serialization.in \
 	Shared/WebGPU/WebGPUPipelineDescriptorBase.serialization.in \
 	Shared/WebGPU/WebGPUPipelineLayoutDescriptor.serialization.in \
+	Shared/WebGPU/WebGPUPresentationContextDescriptor.serialization.in \
 	Shared/WebGPU/WebGPUQuerySetDescriptor.serialization.in \
 	Shared/WebGPU/WebGPURenderBundleDescriptor.serialization.in \
 	Shared/WebGPU/WebGPURenderBundleEncoderDescriptor.serialization.in \
@@ -544,8 +547,6 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/WebGPU/WebGPUSamplerDescriptor.serialization.in \
 	Shared/WebGPU/WebGPUShaderModuleCompilationHint.serialization.in \
 	Shared/WebGPU/WebGPUShaderModuleDescriptor.serialization.in \
-	Shared/WebGPU/WebGPUSurfaceDescriptor.serialization.in \
-	Shared/WebGPU/WebGPUSwapChainDescriptor.serialization.in \
 	Shared/WebGPU/WebGPUTextureDescriptor.serialization.in \
 	Shared/WebGPU/WebGPUTextureViewDescriptor.serialization.in \
 	Shared/WebGPU/WebGPUVertexState.serialization.in \
@@ -574,6 +575,7 @@ SERIALIZATION_DESCRIPTION_FILES = \
 	Shared/WebGPU/WebGPUBlendComponent.serialization.in \
 	Shared/WebGPU/WebGPUBindGroupEntry.serialization.in \
 	Shared/XR/XRSystem.serialization.in \
+	WebProcess/GPU/media/RemoteMediaPlayerConfiguration.serialization.in \
 	WebProcess/GPU/media/RemoteMediaPlayerState.serialization.in \
 #
 

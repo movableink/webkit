@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2023 Apple Inc. All rights reserved.
 # Copyright (C) 2021 Igalia S.L. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -154,6 +154,15 @@ wasmOp(ref_is_null, WasmRefIsNull, macro(ctx)
     mload2i(ctx, m_ref, t1, t0) # t0 is unused
     cieq t1, NullTag, t0
     returni(ctx, t0)
+end)
+
+wasmOp(ref_as_non_null, WasmRefAsNonNull, macro(ctx)
+    mload2i(ctx, m_ref, t1, t0)
+    bieq t1, NullTag, .nullRef
+    return2i(ctx, t1, t0)
+
+.nullRef:
+    throwException(NullRefAsNonNull)
 end)
 
 wasmOp(get_global, WasmGetGlobal, macro(ctx)
@@ -569,7 +578,6 @@ wasmOp(i64_lt_s, WasmI64LtS, macro(ctx)
     move 0, t6
     bigt t1, t3, .return
     cib t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -582,7 +590,6 @@ wasmOp(i64_le_s, WasmI64LeS, macro(ctx)
     move 0, t6
     bigt t1, t3, .return
     cibeq t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -595,7 +602,6 @@ wasmOp(i64_lt_u, WasmI64LtU, macro(ctx)
     move 0, t6
     bia t1, t3, .return
     cib t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -608,7 +614,6 @@ wasmOp(i64_le_u, WasmI64LeU, macro(ctx)
     move 0, t6
     bia t1, t3, .return
     cibeq t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -621,7 +626,6 @@ wasmOp(i64_gt_s, WasmI64GtS, macro(ctx)
     move 0, t6
     bilt t1, t3, .return
     cia t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -634,7 +638,6 @@ wasmOp(i64_ge_s, WasmI64GeS, macro(ctx)
     move 0, t6
     bilt t1, t3, .return
     ciaeq t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -647,7 +650,6 @@ wasmOp(i64_gt_u, WasmI64GtU, macro(ctx)
     move 0, t6
     bib t1, t3, .return
     cia t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -660,7 +662,6 @@ wasmOp(i64_ge_u, WasmI64GeU, macro(ctx)
     move 1, t6
     bia t1, t3, .return
     ciaeq t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)

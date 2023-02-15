@@ -763,7 +763,6 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case ToObject:
     case GetPropertyEnumerator:
     case InstanceOfCustom:
-    case ToNumber:
     case ToNumeric:
     case NumberToStringWithRadix:
     case CreateThis:
@@ -777,6 +776,16 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case ObjectToString:
         clobberTop();
         return;
+
+    case ToNumber:
+        switch (node->child1().useKind()) {
+        case StringUse:
+            def(PureValue(node));
+            return;
+        default:
+            clobberTop();
+            return;
+        }
 
     case CallNumberConstructor:
         switch (node->child1().useKind()) {
@@ -1236,9 +1245,11 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
 
     case ParseInt:
         // Note: We would have eliminated a ParseInt that has just a single child as an Int32Use inside fixup.
-        if (node->child1().useKind() == StringUse && (!node->child2() || node->child2().useKind() == Int32Use)) {
-            def(PureValue(node));
-            return;
+        if (node->child1().useKind() == StringUse || node->child1().useKind() == DoubleRepUse || node->child1().useKind() == Int32Use) {
+            if (!node->child2() || node->child2().useKind() == Int32Use) {
+                def(PureValue(node));
+                return;
+            }
         }
 
         clobberTop();

@@ -42,6 +42,7 @@
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/ObjectIdentifier.h>
+#include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -156,6 +157,8 @@ public:
     bool activeDOMObjectsAreStopped() const { return m_activeDOMObjectsAreStopped; }
 
     JSC::ScriptExecutionStatus jscScriptExecutionStatus() const;
+
+    URL currentSourceURL() const;
 
     // Called from the constructor and destructors of ActiveDOMObject.
     void didCreateActiveDOMObject(ActiveDOMObject&);
@@ -273,7 +276,7 @@ public:
         return ensureRejectedPromiseTrackerSlow();
     }
 
-    WEBCORE_EXPORT JSC::JSGlobalObject* globalObject();
+    WEBCORE_EXPORT JSC::JSGlobalObject* globalObject() const;
 
     WEBCORE_EXPORT String domainForCachePartition() const;
     void setDomainForCachePartition(String&& domain) { m_domainForCachePartition = WTFMove(domain); }
@@ -380,8 +383,6 @@ private:
     std::unique_ptr<Vector<std::unique_ptr<PendingException>>> m_pendingExceptions;
     std::unique_ptr<RejectedPromiseTracker> m_rejectedPromiseTracker;
 
-    ReasonForSuspension m_reasonForSuspendingActiveDOMObjects { static_cast<ReasonForSuspension>(-1) };
-
     std::unique_ptr<PublicURLManager> m_publicURLManager;
 
     RefPtr<DatabaseContext> m_databaseContext;
@@ -389,11 +390,6 @@ private:
     int m_circularSequentialID { 0 };
     int m_timerNestingLevel { 0 };
 
-    bool m_activeDOMObjectsAreSuspended { false };
-    bool m_activeDOMObjectsAreStopped { false };
-    bool m_inDispatchErrorEvent { false };
-    mutable bool m_activeDOMObjectAdditionForbidden { false };
-    bool m_willprocessMessageWithMessagePortsSoon { false };
     Vector<CompletionHandler<void()>> m_processMessageWithMessagePortsSoonHandlers;
 
 #if ASSERT_ENABLED
@@ -408,11 +404,18 @@ private:
     String m_domainForCachePartition;
     mutable ScriptExecutionContextIdentifier m_identifier;
 
-    bool m_hasLoggedAuthenticatedEncryptionWarning { false };
-    StorageBlockingPolicy m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll };
-
     HashMap<NotificationCallbackIdentifier, CompletionHandler<void()>> m_notificationCallbacks;
     HashSet<Ref<DeferredPromise>> m_deferredPromises;
+
+    StorageBlockingPolicy m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll };
+    ReasonForSuspension m_reasonForSuspendingActiveDOMObjects { static_cast<ReasonForSuspension>(-1) };
+
+    bool m_activeDOMObjectsAreSuspended { false };
+    bool m_activeDOMObjectsAreStopped { false };
+    bool m_inDispatchErrorEvent { false };
+    mutable bool m_activeDOMObjectAdditionForbidden { false };
+    bool m_willprocessMessageWithMessagePortsSoon { false };
+    bool m_hasLoggedAuthenticatedEncryptionWarning { false };
 };
 
 WebCoreOpaqueRoot root(ScriptExecutionContext*);

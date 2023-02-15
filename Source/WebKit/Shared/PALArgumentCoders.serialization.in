@@ -63,7 +63,6 @@ enum class PAL::WebGPU::TextureFormat : uint8_t {
     Depth24plus,
     Depth24plusStencil8,
     Depth32float,
-    Depth24unormStencil8,
     Depth32floatStencil8,
     Bc1RgbaUnorm,
     Bc1RgbaUnormSRGB,
@@ -127,3 +126,8 @@ enum class PAL::WebGPU::TextureAspect : uint8_t {
 };
 
 enum class PAL::WebGPU::PowerPreference : bool
+
+header: <pal/graphics/WebGPU/WebGPUPredefinedColorSpace.h>
+enum class PAL::WebGPU::PredefinedColorSpace : uint8_t {
+    SRGB
+};

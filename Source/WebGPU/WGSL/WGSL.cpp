@@ -28,10 +28,14 @@
 
 #include "CallGraph.h"
 #include "EntryPointRewriter.h"
+#include "GlobalVariableRewriter.h"
+#include "MangleNames.h"
 #include "Metal/MetalCodeGenerator.h"
 #include "Parser.h"
 #include "PhaseTimer.h"
 #include "ResolveTypeReferences.h"
+#include "TypeCheck.h"
+#include "WGSLShaderModule.h"
 
 namespace WGSL {
 
@@ -62,23 +66,23 @@ namespace WGSL {
         return pass(__VA_ARGS__); \
     }();
 
-std::variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std::optional<SourceMap>&)
+std::variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std::optional<SourceMap>&, const Configuration& configuration)
 {
-    Expected<AST::ShaderModule, Error> parserResult = wgsl.is8Bit() ? parseLChar(wgsl) : parseUChar(wgsl);
-    if (!parserResult.has_value()) {
+    auto shaderModule = makeUniqueRef<ShaderModule>(wgsl, configuration);
+    std::optional<Error> error = parse(shaderModule);
+    if (error.has_value()) {
         // FIXME: Add support for returning multiple errors from the parser.
-        return FailedCheck { { parserResult.error() }, { /* warnings */ } };
+        return FailedCheck { { *error }, { /* warnings */ } };
     }
-    UniqueRef<AST::ShaderModule> shader = makeUniqueRef<AST::ShaderModule>(WTFMove(parserResult.value()));
 
     Vector<Warning> warnings { };
     // FIXME: add validation
-    return std::variant<SuccessfulCheck, FailedCheck>(std::in_place_type<SuccessfulCheck>, WTFMove(warnings), WTFMove(shader));
+    return std::variant<SuccessfulCheck, FailedCheck>(std::in_place_type<SuccessfulCheck>, WTFMove(warnings), WTFMove(shaderModule));
 }
 
 SuccessfulCheck::SuccessfulCheck(SuccessfulCheck&&) = default;
 
-SuccessfulCheck::SuccessfulCheck(Vector<Warning>&& messages, UniqueRef<AST::ShaderModule>&& shader)
+SuccessfulCheck::SuccessfulCheck(Vector<Warning>&& messages, UniqueRef<ShaderModule>&& shader)
     : warnings(WTFMove(messages))
     , ast(WTFMove(shader))
 {
@@ -86,37 +90,46 @@ SuccessfulCheck::SuccessfulCheck(Vector<Warning>&& messages, UniqueRef<AST::Shad
 
 SuccessfulCheck::~SuccessfulCheck() = default;
 
-PrepareResult prepare(AST::ShaderModule& ast, const HashMap<String, PipelineLayout>& pipelineLayouts)
+inline PrepareResult prepareImpl(ShaderModule& ast, const HashMap<String, PipelineLayout>& pipelineLayouts)
 {
-    UNUSED_PARAM(pipelineLayouts);
     PhaseTimes phaseTimes;
-    Metal::RenderMetalCode generatedCode;
+    PrepareResult result;
 
     {
         PhaseTimer phaseTimer("prepare total", phaseTimes);
 
+        // FIXME: this should run as part of staticCheck
+        RUN_PASS(typeCheck, ast);
         RUN_PASS_WITH_RESULT(callGraph, buildCallGraph, ast);
         RUN_PASS(resolveTypeReferences, ast);
-        RUN_PASS(rewriteEntryPoints, callGraph);
+        RUN_PASS(rewriteEntryPoints, callGraph, result);
+        RUN_PASS(rewriteGlobalVariables, callGraph, pipelineLayouts);
+        RUN_PASS(mangleNames, callGraph, result);
 
         dumpASTAtEndIfNeeded(ast);
 
         {
             PhaseTimer phaseTimer("generateMetalCode", phaseTimes);
-            generatedCode = Metal::generateMetalCode(ast);
+            result.msl = Metal::generateMetalCode(ast);
         }
     }
 
     logPhaseTimes(phaseTimes);
-    return { generatedCode.metalSource.toString(), { } };
+
+    return result;
 }
 
-PrepareResult prepare(AST::ShaderModule& ast, const String& entryPointName, const std::optional<PipelineLayout>& pipelineLayouts)
+PrepareResult prepare(ShaderModule& ast, const HashMap<String, PipelineLayout>& pipelineLayouts)
 {
-    UNUSED_PARAM(entryPointName);
-    UNUSED_PARAM(pipelineLayouts);
-    Metal::RenderMetalCode metalCode = Metal::generateMetalCode(ast);
-    return { metalCode.metalSource.toString(), { } };
+    return prepareImpl(ast, pipelineLayouts);
+}
+
+PrepareResult prepare(ShaderModule& ast, const String& entryPointName, const std::optional<PipelineLayout>& pipelineLayout)
+{
+    HashMap<String, PipelineLayout> pipelineLayouts;
+    if (pipelineLayout.has_value())
+        pipelineLayouts.add(entryPointName, *pipelineLayout);
+    return prepareImpl(ast, pipelineLayouts);
 }
 
 }

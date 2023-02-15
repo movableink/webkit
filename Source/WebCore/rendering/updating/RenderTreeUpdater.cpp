@@ -279,7 +279,7 @@ static bool pseudoStyleCacheIsInvalid(RenderElement* renderer, RenderStyle* newS
     if (!pseudoStyleCache)
         return false;
 
-    for (auto& cache : *pseudoStyleCache) {
+    for (auto& cache : pseudoStyleCache->styles) {
         PseudoId pseudoId = cache->styleType();
         std::unique_ptr<RenderStyle> newPseudoStyle = renderer->getUncachedPseudoStyle({ pseudoId }, newStyle, newStyle);
         if (!newPseudoStyle)
@@ -343,7 +343,7 @@ void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::Ele
     if (hasDisplayContents)
         element.storeDisplayContentsStyle(makeUnique<RenderStyle>(WTFMove(elementUpdateStyle)));
     else
-        element.resetComputedStyle();
+        element.clearDisplayContentsStyle();
 
     bool shouldCreateNewRenderer = !element.renderer() && !hasDisplayContents && !(element.isInTopLayer() && renderTreePosition().parent().style().effectiveSkipsContent());
     if (shouldCreateNewRenderer) {
@@ -406,8 +406,8 @@ void RenderTreeUpdater::createRenderer(Element& element, RenderStyle&& style)
     if (UNLIKELY(textManipulationController))
         textManipulationController->didAddOrCreateRendererForNode(element);
 
-    if (AXObjectCache* cache = m_document.axObjectCache())
-        cache->updateCacheAfterNodeIsAttached(&element);
+    if (auto* cache = m_document.axObjectCache())
+        cache->onRendererCreated(element);
 }
 
 bool RenderTreeUpdater::textRendererIsNeeded(const Text& textNode)

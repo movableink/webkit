@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -70,9 +70,15 @@ IPC::ArrayReferenceTuple<Types...> toArrayReferenceTuple(const GCGLSpanTuple<Spa
 
 }
 
-RemoteGraphicsContextGLProxy::RemoteGraphicsContextGLProxy(IPC::Connection& connection, SerialFunctionDispatcher& dispatcher, const GraphicsContextGLAttributes& attributes, RenderingBackendIdentifier renderingBackend, Ref<RemoteVideoFrameObjectHeapProxy>&& videoFrameObjectHeapProxy)
+RemoteGraphicsContextGLProxy::RemoteGraphicsContextGLProxy(IPC::Connection& connection, SerialFunctionDispatcher& dispatcher, const GraphicsContextGLAttributes& attributes, RenderingBackendIdentifier renderingBackend
+#if ENABLE(VIDEO)
+    , Ref<RemoteVideoFrameObjectHeapProxy>&& videoFrameObjectHeapProxy
+#endif
+    )
     : GraphicsContextGL(attributes)
+#if ENABLE(VIDEO)
     , m_videoFrameObjectHeapProxy(WTFMove(videoFrameObjectHeapProxy))
+#endif
 {
     constexpr unsigned connectionBufferSizeLog2 = 21;
     auto [clientConnection, serverConnectionHandle] = IPC::StreamClientConnection::create(connectionBufferSizeLog2);
@@ -97,11 +103,7 @@ void RemoteGraphicsContextGLProxy::setContextVisibility(bool)
 
 bool RemoteGraphicsContextGLProxy::isGLES2Compliant() const
 {
-#if ENABLE(WEBGL2)
     return contextAttributes().webGLVersion == GraphicsContextGLWebGLVersion::WebGL2;
-#else
-    return false;
-#endif
 }
 
 void RemoteGraphicsContextGLProxy::markContextChanged()

@@ -83,6 +83,7 @@ struct FunctionParserTypes {
 
         Type type() const { return m_type; }
 
+        ExpressionType& value() { return m_value; }
         ExpressionType value() const { return m_value; }
         operator ExpressionType() const { return m_value; }
 
@@ -128,6 +129,7 @@ public:
     OpType currentOpcode() const { return m_currentOpcode; }
     size_t currentOpcodeStartingOffset() const { return m_currentOpcodeStartingOffset; }
     const TypeDefinition& signature() const { return m_signature; }
+    const Type& typeOfLocal(uint32_t localIndex) const { return m_locals[localIndex]; }
 
     ControlStack& controlStack() { return m_controlStack; }
     Stack& expressionStack() { return m_expressionStack; }
@@ -611,6 +613,7 @@ template<typename Context>
 template<bool isReachable, typename>
 auto FunctionParser<Context>::simd(SIMDLaneOperation op, SIMDLane lane, SIMDSignMode signMode, B3::Air::Arg optionalRelation) -> PartialResult
 {
+    UNUSED_PARAM(signMode);
     if (!Context::tierSupportsSIMD)
         WASM_TRY_ADD_TO_CONTEXT(addCrash());
     m_context.notifyFunctionUsesSIMD();
@@ -2056,6 +2059,18 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         return { };
     }
 
+    case RefAsNonNull: {
+        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyTypedFunctionReferences(), "function references are not enabled");
+        TypedExpression ref;
+        WASM_TRY_POP_EXPRESSION_STACK_INTO(ref, "ref.as_non_null");
+
+        ExpressionType result;
+        WASM_TRY_ADD_TO_CONTEXT(addRefAsNonNull(ref, result));
+
+        m_expressionStack.constructAndAppend(Type { TypeKind::Ref, ref.type().index }, result);
+        return { };
+    }
+
     case GetLocal: {
         uint32_t index;
         WASM_FAIL_IF_HELPER_FAILS(parseIndexForLocal(index));
@@ -2083,10 +2098,15 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         WASM_FAIL_IF_HELPER_FAILS(parseIndexForLocal(index));
 
         WASM_PARSER_FAIL_IF(m_expressionStack.isEmpty(), "can't tee_local on empty expression stack");
-        TypedExpression value = m_expressionStack.last();
+        TypedExpression value;
+        WASM_TRY_POP_EXPRESSION_STACK_INTO(value, "tee_local");
         WASM_VALIDATOR_FAIL_IF(index >= m_locals.size(), "attempt to tee unknown local ", index, ", the number of locals is ", m_locals.size());
         WASM_VALIDATOR_FAIL_IF(!isSubtype(value.type(), m_locals[index]), "set_local to type ", value.type(), " expected ", m_locals[index]);
         WASM_TRY_ADD_TO_CONTEXT(setLocal(index, value));
+
+        ExpressionType result;
+        WASM_TRY_ADD_TO_CONTEXT(getLocal(index, result));
+        m_expressionStack.constructAndAppend(m_locals[index], result);
         return { };
     }
 
@@ -2178,8 +2198,16 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         WASM_TRY_ADD_TO_CONTEXT(addCall(functionIndex, typeDefinition, args, results));
         RELEASE_ASSERT(calleeSignature.returnCount() == results.size());
 
-        for (unsigned i = 0; i < calleeSignature.returnCount(); ++i)
-            m_expressionStack.constructAndAppend(calleeSignature.returnType(i), results[i]);
+        for (unsigned i = 0; i < calleeSignature.returnCount(); ++i) {
+            Type returnType = calleeSignature.returnType(i);
+            if (returnType.isV128()) {
+                // We care SIMD only when it is not a tail-call: in tail-call case, return values are not visible to this function.
+                m_context.notifyFunctionUsesSIMD();
+                if (!Context::tierSupportsSIMD)
+                    WASM_TRY_ADD_TO_CONTEXT(addCrash());
+            }
+            m_expressionStack.constructAndAppend(returnType, results[i]);
+        }
 
         return { };
     }
@@ -2236,8 +2264,16 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
         WASM_TRY_ADD_TO_CONTEXT(addCallIndirect(tableIndex, typeDefinition, args, results));
 
-        for (unsigned i = 0; i < calleeSignature.returnCount(); ++i)
-            m_expressionStack.constructAndAppend(calleeSignature.returnType(i), results[i]);
+        for (unsigned i = 0; i < calleeSignature.returnCount(); ++i) {
+            Type returnType = calleeSignature.returnType(i);
+            if (returnType.isV128()) {
+                // We care SIMD only when it is not a tail-call: in tail-call case, return values are not visible to this function.
+                m_context.notifyFunctionUsesSIMD();
+                if (!Context::tierSupportsSIMD)
+                    WASM_TRY_ADD_TO_CONTEXT(addCrash());
+            }
+            m_expressionStack.constructAndAppend(returnType, results[i]);
+        }
 
         return { };
     }
@@ -2274,8 +2310,16 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         ResultList results;
         WASM_TRY_ADD_TO_CONTEXT(addCallRef(typeDefinition, args, results));
 
-        for (unsigned i = 0; i < calleeSignature.returnCount(); ++i)
-            m_expressionStack.constructAndAppend(calleeSignature.returnType(i), results[i]);
+        for (unsigned i = 0; i < calleeSignature.returnCount(); ++i) {
+            Type returnType = calleeSignature.returnType(i);
+            if (returnType.isV128()) {
+                // We care SIMD only when it is not a tail-call: in tail-call case, return values are not visible to this function.
+                m_context.notifyFunctionUsesSIMD();
+                if (!Context::tierSupportsSIMD)
+                    WASM_TRY_ADD_TO_CONTEXT(addCrash());
+            }
+            m_expressionStack.constructAndAppend(returnType, results[i]);
+        }
 
         return { };
     }
@@ -2409,8 +2453,15 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         WASM_TRY_ADD_TO_CONTEXT(addCatch(exceptionIndex, exceptionSignature, preCatchStack, controlEntry.controlData, results));
 
         RELEASE_ASSERT(exceptionSignature.as<FunctionSignature>()->argumentCount() == results.size());
-        for (unsigned i = 0; i < exceptionSignature.as<FunctionSignature>()->argumentCount(); ++i)
-            m_expressionStack.constructAndAppend(exceptionSignature.as<FunctionSignature>()->argumentType(i), results[i]);
+        for (unsigned i = 0; i < exceptionSignature.as<FunctionSignature>()->argumentCount(); ++i) {
+            Type argumentType = exceptionSignature.as<FunctionSignature>()->argumentType(i);
+            if (argumentType.isV128()) {
+                m_context.notifyFunctionUsesSIMD();
+                if (!Context::tierSupportsSIMD)
+                    WASM_TRY_ADD_TO_CONTEXT(addCrash());
+            }
+            m_expressionStack.constructAndAppend(argumentType, results[i]);
+        }
         return { };
     }
 
@@ -2572,7 +2623,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
     case Drop: {
         WASM_PARSER_FAIL_IF(!m_expressionStack.size(), "can't drop on empty stack");
-        m_expressionStack.takeLast();
+        WASM_TRY_ADD_TO_CONTEXT(addDrop(m_expressionStack.takeLast()));
         m_context.didPopValueFromStack();
         return { };
     }
@@ -2686,8 +2737,15 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
         WASM_TRY_ADD_TO_CONTEXT(addCatchToUnreachable(exceptionIndex, exceptionSignature, data.controlData, results));
 
         RELEASE_ASSERT(exceptionSignature.as<FunctionSignature>()->argumentCount() == results.size());
-        for (unsigned i = 0; i < exceptionSignature.as<FunctionSignature>()->argumentCount(); ++i)
-            m_expressionStack.constructAndAppend(exceptionSignature.as<FunctionSignature>()->argumentType(i), results[i]);
+        for (unsigned i = 0; i < exceptionSignature.as<FunctionSignature>()->argumentCount(); ++i) {
+            Type argumentType = exceptionSignature.as<FunctionSignature>()->argumentType(i);
+            if (argumentType.isV128()) {
+                m_context.notifyFunctionUsesSIMD();
+                if (!Context::tierSupportsSIMD)
+                    WASM_TRY_ADD_TO_CONTEXT(addCrash());
+            }
+            m_expressionStack.constructAndAppend(argumentType, results[i]);
+        }
         return { };
     }
 
@@ -2942,6 +3000,10 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
     case RefFunc: {
         uint32_t unused;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get immediate for ", m_currentOpcode, " in unreachable context");
+        return { };
+    }
+
+    case RefAsNonNull: {
         return { };
     }
 

@@ -1758,6 +1758,12 @@ arm64: VectorUnsignedMin U:G:Ptr, U:F:128, D:F:128
 64: VectorMul U:G:Ptr, U:F:128, U:F:128, D:F:128
     SIMDInfo, Tmp, Tmp, Tmp
 
+arm64: VectorMulByElementFloat32 U:F:128, U:F:128, U:G:8, D:F:128
+    Tmp, Tmp, Imm, Tmp
+
+arm64: VectorMulByElementFloat64 U:F:128, U:F:128, U:G:8, D:F:128
+    Tmp, Tmp, Imm, Tmp
+
 64: VectorDiv U:G:Ptr, U:F:128, U:F:128, D:F:128
     SIMDInfo, Tmp, Tmp, Tmp
 
@@ -1989,8 +1995,18 @@ x86_64: VectorDotProduct U:F:128, U:F:128, D:F:128
 arm64: VectorSwizzle2 U:F:128, U:F:128, U:F:128, D:F:128
     Tmp, Tmp*, Tmp, Tmp
 
-64: VectorShuffle U:G:64, U:G:64, U:F:128, U:F:128, D:F:128
-    BigImm, BigImm, Tmp, Tmp, Tmp
+arm64: VectorDupElementInt8 U:G:8, U:F:128, D:F:128
+    Imm, Tmp, Tmp
+arm64: VectorDupElementInt16 U:G:8, U:F:128, D:F:128
+    Imm, Tmp, Tmp
+arm64: VectorDupElementInt32 U:G:8, U:F:128, D:F:128
+    Imm, Tmp, Tmp
+arm64: VectorDupElementInt64 U:G:8, U:F:128, D:F:128
+    Imm, Tmp, Tmp
+arm64: VectorDupElementFloat32 U:G:8, U:F:128, D:F:128
+    Imm, Tmp, Tmp
+arm64: VectorDupElementFloat64 U:G:8, U:F:128, D:F:128
+    Imm, Tmp, Tmp
 
 Oops /terminal
 

@@ -16,6 +16,7 @@
 #include <queue>
 #include <thread>
 
+#include "common/FixedQueue.h"
 #include "common/vulkan/vk_headers.h"
 #include "libANGLE/renderer/vulkan/PersistentCommandPool.h"
 #include "libANGLE/renderer/vulkan/vk_helpers.h"
@@ -27,10 +28,51 @@ class CommandProcessor;
 
 namespace vk
 {
+constexpr size_t kMaxCommandProcessorTasksLimit = 16u;
+constexpr size_t kInFlightCommandsLimit         = 50u;
+
 enum class SubmitPolicy
 {
     AllowDeferred,
     EnsureSubmitted,
+};
+
+class FenceRecycler;
+// This is a RAII class manages refcounted vkfence object with auto-release and recycling.
+class SharedFence final
+{
+  public:
+    SharedFence();
+    SharedFence(const SharedFence &other);
+    SharedFence(SharedFence &&other);
+    ~SharedFence();
+    // Copy assignment will add reference count to the underline object
+    SharedFence &operator=(const SharedFence &other);
+    // Move assignment will move reference count from other to this object
+    SharedFence &operator=(SharedFence &&other);
+
+    // Initialize it with a new vkFence either from recycler or create a new one.
+    VkResult init(VkDevice device, FenceRecycler *recycler);
+    // Destroy it immediately (will not recycle).
+    void destroy(VkDevice device);
+    // Release the vkFence (to recycler)
+    void release();
+    // Return true if underline VkFence is valid
+    operator bool() const;
+    const Fence &get() const
+    {
+        ASSERT(mRefCountedFence != nullptr && mRefCountedFence->isReferenced());
+        return mRefCountedFence->get();
+    }
+
+    // The following three APIs can call without lock. Since fence is refcounted and this object has
+    // a refcount to VkFence, No one is able to come in and destroy the VkFence.
+    VkResult getStatus(VkDevice device) const;
+    VkResult wait(VkDevice device, uint64_t timeout) const;
+
+  private:
+    RefCounted<Fence> *mRefCountedFence;
+    FenceRecycler *mRecycler;
 };
 
 class FenceRecycler
@@ -40,21 +82,28 @@ class FenceRecycler
     ~FenceRecycler() {}
     void destroy(Context *context);
 
-    angle::Result newSharedFence(Context *context, Shared<Fence> *sharedFenceOut);
-    inline void resetSharedFence(Shared<Fence> *sharedFenceIn)
-    {
-        std::lock_guard<std::mutex> lock(mMutex);
-        sharedFenceIn->resetAndRecycle(&mRecyler);
-    }
+    void fetch(VkDevice device, Fence *fenceOut);
+    void recycle(Fence &&fence);
 
   private:
     std::mutex mMutex;
     Recycler<Fence> mRecyler;
 };
 
+struct SwapchainStatus
+{
+    mutable std::mutex mutex;
+    mutable std::condition_variable condVar;
+    bool isPending = false;
+
+    VkResult lastPresentResult = VK_NOT_READY;
+};
+
 enum class CustomTask
 {
     Invalid = 0,
+    // Flushes wait semaphores
+    FlushWaitSemaphores,
     // Process SecondaryCommandBuffer commands into the primary CommandBuffer.
     ProcessOutsideRenderPassCommands,
     ProcessRenderPassCommands,
@@ -64,12 +113,6 @@ enum class CustomTask
     OneOffQueueSubmit,
     // Execute QueuePresent
     Present,
-    // do cleanup processing on completed commands
-    // TODO: https://issuetracker.google.com/170312581 - should be able to remove
-    // checkCompletedCommands command with fence refactor.
-    CheckCompletedCommands,
-    // Exit the command processor thread
-    Exit,
 };
 
 // CommandProcessorTask interface
@@ -80,28 +123,30 @@ class CommandProcessorTask
 
     void initTask();
 
-    void initTask(CustomTask command) { mTask = command; }
-
-    void initOutsideRenderPassProcessCommands(bool hasProtectedContent,
+    void initOutsideRenderPassProcessCommands(ProtectionType protectionType,
                                               OutsideRenderPassCommandBufferHelper *commandBuffer);
 
-    void initRenderPassProcessCommands(bool hasProtectedContent,
+    void initRenderPassProcessCommands(ProtectionType protectionType,
                                        RenderPassCommandBufferHelper *commandBuffer,
                                        const RenderPass *renderPass);
 
-    void initPresent(egl::ContextPriority priority, const VkPresentInfoKHR &presentInfo);
+    void initPresent(egl::ContextPriority priority,
+                     const VkPresentInfoKHR &presentInfo,
+                     SwapchainStatus *swapchainStatus);
 
-    void initFlushAndQueueSubmit(const std::vector<VkSemaphore> &waitSemaphores,
-                                 const std::vector<VkPipelineStageFlags> &waitSemaphoreStageMasks,
-                                 const VkSemaphore semaphore,
-                                 bool hasProtectedContent,
+    void initFlushWaitSemaphores(ProtectionType protectionType,
+                                 std::vector<VkSemaphore> &&waitSemaphores,
+                                 std::vector<VkPipelineStageFlags> &&waitSemaphoreStageMasks);
+
+    void initFlushAndQueueSubmit(const VkSemaphore semaphore,
+                                 ProtectionType protectionType,
                                  egl::ContextPriority priority,
                                  SecondaryCommandPools *commandPools,
                                  SecondaryCommandBufferList &&commandBuffersToReset,
                                  const QueueSerial &submitQueueSerial);
 
     void initOneOffQueueSubmit(VkCommandBuffer commandBufferHandle,
-                               bool hasProtectedContent,
+                               ProtectionType protectionType,
                                egl::ContextPriority priority,
                                const Semaphore *waitSemaphore,
                                VkPipelineStageFlags waitSemaphoreStageMask,
@@ -123,17 +168,15 @@ class CommandProcessorTask
         return mWaitSemaphoreStageMasks;
     }
     VkSemaphore getSemaphore() { return mSemaphore; }
-    SecondaryCommandBufferList &&getCommandBuffersToReset()
-    {
-        return std::move(mCommandBuffersToReset);
-    }
+    SecondaryCommandBufferList &getCommandBuffersToReset() { return mCommandBuffersToReset; }
     egl::ContextPriority getPriority() const { return mPriority; }
-    bool hasProtectedContent() const { return mHasProtectedContent; }
+    ProtectionType getProtectionType() const { return mProtectionType; }
     VkCommandBuffer getOneOffCommandBufferVk() const { return mOneOffCommandBufferVk; }
     const Semaphore *getOneOffWaitSemaphore() { return mOneOffWaitSemaphore; }
     VkPipelineStageFlags getOneOffWaitSemaphoreStageMask() { return mOneOffWaitSemaphoreStageMask; }
     const Fence *getOneOffFence() { return mOneOffFence; }
     const VkPresentInfoKHR &getPresentInfo() const { return mPresentInfo; }
+    SwapchainStatus *getSwapchainStatus() const { return mSwapchainStatus; }
     const RenderPass *getRenderPass() const { return mRenderPass; }
     OutsideRenderPassCommandBufferHelper *getOutsideRenderPassCommandBuffer() const
     {
@@ -150,14 +193,16 @@ class CommandProcessorTask
 
     CustomTask mTask;
 
+    // Wait semaphores
+    std::vector<VkSemaphore> mWaitSemaphores;
+    std::vector<VkPipelineStageFlags> mWaitSemaphoreStageMasks;
+
     // ProcessCommands
     OutsideRenderPassCommandBufferHelper *mOutsideRenderPassCommandBuffer;
     RenderPassCommandBufferHelper *mRenderPassCommandBuffer;
     const RenderPass *mRenderPass;
 
     // Flush data
-    std::vector<VkSemaphore> mWaitSemaphores;
-    std::vector<VkPipelineStageFlags> mWaitSemaphoreStageMasks;
     VkSemaphore mSemaphore;
     SecondaryCommandPools *mCommandPools;
     SecondaryCommandBufferList mCommandBuffersToReset;
@@ -178,6 +223,11 @@ class CommandProcessorTask
     VkSwapchainPresentFenceInfoEXT mPresentFenceInfo;
     VkFence mPresentFence;
 
+    VkSwapchainPresentModeInfoEXT mPresentModeInfo;
+    VkPresentModeKHR mPresentMode;
+
+    SwapchainStatus *mSwapchainStatus;
+
     // Used by OneOffQueueSubmit
     VkCommandBuffer mOneOffCommandBufferVk;
     const Semaphore *mOneOffWaitSemaphore;
@@ -186,8 +236,10 @@ class CommandProcessorTask
 
     // Flush, Present & QueueWaitIdle data
     egl::ContextPriority mPriority;
-    bool mHasProtectedContent;
+    ProtectionType mProtectionType;
 };
+using CommandProcessorTaskQueue =
+    angle::FixedQueue<CommandProcessorTask, kMaxCommandProcessorTasksLimit>;
 
 struct CommandBatch final : angle::NonCopyable
 {
@@ -203,10 +255,11 @@ struct CommandBatch final : angle::NonCopyable
     // commandPools is for secondary CommandBuffer allocation
     SecondaryCommandPools *commandPools;
     SecondaryCommandBufferList commandBuffersToReset;
-    Shared<Fence> fence;
+    SharedFence fence;
     QueueSerial queueSerial;
-    bool hasProtectedContent;
+    ProtectionType protectionType;
 };
+using CommandBatchQueue = angle::FixedQueue<CommandBatch, kInFlightCommandsLimit>;
 
 class DeviceQueueMap;
 
@@ -273,6 +326,7 @@ class DeviceQueueMap : public angle::PackedEnumMap<egl::ContextPriority, VkQueue
     angle::PackedEnumMap<egl::ContextPriority, egl::ContextPriority> mPriorities;
 };
 
+// Note all public APIs of CommandQueue class must be thread safe.
 class CommandQueue : angle::NonCopyable
 {
   public:
@@ -284,24 +338,44 @@ class CommandQueue : angle::NonCopyable
 
     void handleDeviceLost(RendererVk *renderer);
 
+    // These public APIs are inherently thread safe. Thread unsafe methods must be protected methods
+    // that are only accessed via ThreadSafeCommandQueue API.
+    egl::ContextPriority getDriverPriority(egl::ContextPriority priority) const
+    {
+        return mQueueMap.getDevicePriority(priority);
+    }
+    uint32_t getDeviceQueueIndex() const { return mQueueMap.getIndex(); }
+
+    VkQueue getQueue(egl::ContextPriority priority) const { return mQueueMap[priority]; }
+
+    // The ResourceUse still have unfinished queue serial by ANGLE or vulkan.
+    bool hasUnfinishedUse(const ResourceUse &use) const { return use > mLastCompletedSerials; }
+    // The ResourceUse still have queue serial not yet submitted to vulkan.
+    bool hasUnsubmittedUse(const ResourceUse &use) const { return use > mLastSubmittedSerials; }
+    Serial getLastSubmittedSerial(SerialIndex index) const { return mLastSubmittedSerials[index]; }
+
+    // Wait until the desired serial has been completed.
+    angle::Result finishResourceUse(Context *context, const ResourceUse &use, uint64_t timeout);
     angle::Result finishQueueSerial(Context *context,
                                     const QueueSerial &queueSerial,
                                     uint64_t timeout);
-    angle::Result finishResourceUse(Context *context, const ResourceUse &use, uint64_t timeout);
     angle::Result waitIdle(Context *context, uint64_t timeout);
+    angle::Result waitForResourceUseToFinishWithUserTimeout(Context *context,
+                                                            const ResourceUse &use,
+                                                            uint64_t timeout,
+                                                            VkResult *result);
+    bool isBusy(RendererVk *renderer) const;
 
     angle::Result submitCommands(Context *context,
-                                 bool hasProtectedContent,
+                                 ProtectionType protectionType,
                                  egl::ContextPriority priority,
-                                 const std::vector<VkSemaphore> &waitSemaphores,
-                                 const std::vector<VkPipelineStageFlags> &waitSemaphoreStageMasks,
                                  const VkSemaphore signalSemaphore,
                                  SecondaryCommandBufferList &&commandBuffersToReset,
                                  SecondaryCommandPools *commandPools,
                                  const QueueSerial &submitQueueSerial);
 
     angle::Result queueSubmitOneOff(Context *context,
-                                    bool hasProtectedContent,
+                                    ProtectionType protectionType,
                                     egl::ContextPriority contextPriority,
                                     VkCommandBuffer commandBufferHandle,
                                     const Semaphore *waitSemaphore,
@@ -311,97 +385,84 @@ class CommandQueue : angle::NonCopyable
                                     const QueueSerial &submitQueueSerial);
 
     VkResult queuePresent(egl::ContextPriority contextPriority,
-                          const VkPresentInfoKHR &presentInfo);
+                          const VkPresentInfoKHR &presentInfo,
+                          SwapchainStatus *swapchainStatus);
 
-    angle::Result waitForResourceUseToFinishWithUserTimeout(Context *context,
-                                                            const ResourceUse &use,
-                                                            uint64_t timeout,
-                                                            VkResult *result);
-
+    // Check to see which batches have finished completion (forward progress for
+    // the last completed serial, for example for when the application busy waits on a query
+    // result). It would be nice if we didn't have to expose this for QueryVk::getResult.
     angle::Result checkCompletedCommands(Context *context);
 
+    void flushWaitSemaphores(ProtectionType protectionType,
+                             std::vector<VkSemaphore> &&waitSemaphores,
+                             std::vector<VkPipelineStageFlags> &&waitSemaphoreStageMasks);
     angle::Result flushOutsideRPCommands(Context *context,
-                                         bool hasProtectedContent,
+                                         ProtectionType protectionType,
                                          OutsideRenderPassCommandBufferHelper **outsideRPCommands);
     angle::Result flushRenderPassCommands(Context *context,
-                                          bool hasProtectedContent,
+                                          ProtectionType protectionType,
                                           const RenderPass &renderPass,
                                           RenderPassCommandBufferHelper **renderPassCommands);
 
-    angle::Result ensureNoPendingWork(Context *context) { return angle::Result::Continue; }
+    const angle::VulkanPerfCounters getPerfCounters() const;
+    void resetPerFramePerfCounters();
 
-    bool isBusy() const;
+  private:
+    // All these private APIs are called with mutex locked, so we must not take lock again.
+    angle::Result checkCompletedCommandCount(Context *context, int *finishedCountOut);
+    angle::Result finishOneCommandBatch(Context *context, uint64_t timeout);
 
+    angle::Result submitCommandsImpl(Context *context,
+                                     ProtectionType protectionType,
+                                     egl::ContextPriority priority,
+                                     const VkSemaphore signalSemaphore,
+                                     SecondaryCommandBufferList &&commandBuffersToReset,
+                                     SecondaryCommandPools *commandPools,
+                                     const QueueSerial &submitQueueSerial);
     angle::Result queueSubmit(Context *context,
+                              std::unique_lock<std::mutex> &&dequeueLock,
                               egl::ContextPriority contextPriority,
                               const VkSubmitInfo &submitInfo,
                               const Fence *fence,
+                              DeviceScoped<CommandBatch> &commandBatch,
                               const QueueSerial &submitQueueSerial);
+    angle::Result postSubmitCheck(Context *context);
 
-    egl::ContextPriority getDriverPriority(egl::ContextPriority priority)
-    {
-        return mQueueMap.getDevicePriority(priority);
-    }
-    uint32_t getDeviceQueueIndex() const { return mQueueMap.getIndex(); }
-
-    VkQueue getQueue(egl::ContextPriority priority) { return mQueueMap[priority]; }
-
-    const angle::VulkanPerfCounters &getPerfCounters() const { return mPerfCounters; }
-    void resetPerFramePerfCounters();
-
-    // The ResourceUse still have unfinished queue serial by ANGLE or vulkan.
-    bool hasUnfinishedUse(const ResourceUse &use) const;
-    // The ResourceUse still have queue serial not yet submitted to vulkan.
-    bool hasUnsubmittedUse(const ResourceUse &use) const;
-    Serial getLastSubmittedSerial(SerialIndex index) const { return mLastSubmittedSerials[index]; }
-
-  private:
-    void releaseToCommandBatch(bool hasProtectedContent,
-                               PrimaryCommandBuffer &&commandBuffer,
-                               SecondaryCommandPools *commandPools,
-                               CommandBatch *batch);
     angle::Result retireFinishedCommands(Context *context, size_t finishedCount);
     angle::Result retireFinishedCommandsAndCleanupGarbage(Context *context, size_t finishedCount);
-    angle::Result ensurePrimaryCommandBufferValid(Context *context, bool hasProtectedContent);
-
-    size_t getBatchCountUpToSerials(RendererVk *renderer,
-                                    const Serials &serials,
-                                    Shared<Fence> **fenceToWaitOnOut);
+    angle::Result ensurePrimaryCommandBufferValid(Context *context, ProtectionType protectionType);
+    // Returns number of CommandBatchs that are smaller than serials
+    size_t getBatchCountUpToSerials(RendererVk *renderer, const Serials &serials);
+    // Returns the last valid SharedFence of the first "count" CommandBatchs in mInflightCommands.
+    const SharedFence &getSharedFenceToWait(size_t count);
 
     // For validation only. Should only be called with ASSERT macro.
     bool allInFlightCommandsAreAfterSerials(const Serials &serials);
 
-    PrimaryCommandBuffer &getCommandBuffer(bool hasProtectedContent)
+    struct CommandsState
     {
-        if (hasProtectedContent)
-        {
-            return mProtectedPrimaryCommands;
-        }
-        else
-        {
-            return mPrimaryCommands;
-        }
+        std::vector<VkSemaphore> waitSemaphores;
+        std::vector<VkPipelineStageFlags> waitSemaphoreStageMasks;
+        PrimaryCommandBuffer primaryCommands;
+        // Keeps a free list of reusable primary command buffers.
+        PersistentCommandPool primaryCommandPool;
+    };
+
+    angle::Result initCommandPool(Context *context, ProtectionType protectionType)
+    {
+        PersistentCommandPool &commandPool = mCommandsStateMap[protectionType].primaryCommandPool;
+        return commandPool.init(context, protectionType, mQueueMap.getIndex());
     }
 
-    PersistentCommandPool &getCommandPool(bool hasProtectedContent)
-    {
-        if (hasProtectedContent)
-        {
-            return mProtectedPrimaryCommandPool;
-        }
-        else
-        {
-            return mPrimaryCommandPool;
-        }
-    }
+    // Protect multi-thread access to mInFlightCommands.pop and ensure ordering of submission.
+    mutable std::mutex mMutex;
+    // Protect multi-thread access to mInFlightCommands.push as well as does lock relay for mMutex
+    // so that we can release mMutex while doing potential lengthy vkQueueSubmit and vkQueuePresent
+    // call.
+    std::mutex mQueueSubmitMutex;
+    CommandBatchQueue mInFlightCommands;
 
-    std::vector<CommandBatch> mInFlightCommands;
-
-    // Keeps a free list of reusable primary command buffers.
-    PrimaryCommandBuffer mPrimaryCommands;
-    PersistentCommandPool mPrimaryCommandPool;
-    PrimaryCommandBuffer mProtectedPrimaryCommands;
-    PersistentCommandPool mProtectedPrimaryCommandPool;
+    angle::PackedEnumMap<ProtectionType, CommandsState> mCommandsStateMap;
 
     // Queue serial management.
     AtomicQueueSerialFixedArray mLastSubmittedSerials;
@@ -417,136 +478,6 @@ class CommandQueue : angle::NonCopyable
 
     angle::VulkanPerfCounters mPerfCounters;
 };
-class ThreadSafeCommandQueue : public CommandQueue
-{
-  public:
-    angle::Result init(Context *context, const DeviceQueueMap &queueMap)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::init(context, queueMap);
-    }
-    void destroy(Context *context)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        CommandQueue::destroy(context);
-    }
-
-    void handleDeviceLost(RendererVk *renderer)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        CommandQueue::handleDeviceLost(renderer);
-    }
-
-    // Wait until the desired serial has been completed.
-    angle::Result finishResourceUse(Context *context, const ResourceUse &use, uint64_t timeout)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::finishResourceUse(context, use, timeout);
-    }
-    angle::Result finishQueueSerial(Context *context,
-                                    const QueueSerial &queueSerial,
-                                    uint64_t timeout)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::finishQueueSerial(context, queueSerial, timeout);
-    }
-    angle::Result waitIdle(Context *context, uint64_t timeout)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::waitIdle(context, timeout);
-    }
-
-    angle::Result submitCommands(Context *context,
-                                 bool hasProtectedContent,
-                                 egl::ContextPriority priority,
-                                 const std::vector<VkSemaphore> &waitSemaphores,
-                                 const std::vector<VkPipelineStageFlags> &waitSemaphoreStageMasks,
-                                 const VkSemaphore signalSemaphore,
-                                 SecondaryCommandBufferList &&commandBuffersToReset,
-                                 SecondaryCommandPools *commandPools,
-                                 const QueueSerial &submitQueueSerial)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::submitCommands(
-            context, hasProtectedContent, priority, waitSemaphores, waitSemaphoreStageMasks,
-            signalSemaphore, std::move(commandBuffersToReset), commandPools, submitQueueSerial);
-    }
-    angle::Result queueSubmitOneOff(Context *context,
-                                    bool hasProtectedContent,
-                                    egl::ContextPriority contextPriority,
-                                    VkCommandBuffer commandBufferHandle,
-                                    const Semaphore *waitSemaphore,
-                                    VkPipelineStageFlags waitSemaphoreStageMask,
-                                    const Fence *fence,
-                                    SubmitPolicy submitPolicy,
-                                    const QueueSerial &submitQueueSerial)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::queueSubmitOneOff(
-            context, hasProtectedContent, contextPriority, commandBufferHandle, waitSemaphore,
-            waitSemaphoreStageMask, fence, submitPolicy, submitQueueSerial);
-    }
-    VkResult queuePresent(egl::ContextPriority contextPriority, const VkPresentInfoKHR &presentInfo)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::queuePresent(contextPriority, presentInfo);
-    }
-    angle::Result waitForResourceUseToFinishWithUserTimeout(Context *context,
-                                                            const ResourceUse &use,
-                                                            uint64_t timeout,
-                                                            VkResult *result)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::waitForResourceUseToFinishWithUserTimeout(context, use, timeout,
-                                                                       result);
-    }
-
-    // Check to see which batches have finished completion (forward progress for
-    // the last completed serial, for example for when the application busy waits on a query
-    // result). It would be nice if we didn't have to expose this for QueryVk::getResult.
-    angle::Result checkCompletedCommands(Context *context)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::checkCompletedCommands(context);
-    }
-    angle::Result flushOutsideRPCommands(Context *context,
-                                         bool hasProtectedContent,
-                                         OutsideRenderPassCommandBufferHelper **outsideRPCommands)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::flushOutsideRPCommands(context, hasProtectedContent,
-                                                    outsideRPCommands);
-    }
-    angle::Result flushRenderPassCommands(Context *context,
-                                          bool hasProtectedContent,
-                                          const RenderPass &renderPass,
-                                          RenderPassCommandBufferHelper **renderPassCommands)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::flushRenderPassCommands(context, hasProtectedContent, renderPass,
-                                                     renderPassCommands);
-    }
-
-    bool isBusy()
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::isBusy();
-    }
-
-    const angle::VulkanPerfCounters getPerfCounters() const
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandQueue::getPerfCounters();
-    }
-    void resetPerFramePerfCounters()
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        CommandQueue::resetPerFramePerfCounters();
-    }
-
-  private:
-    mutable std::mutex mMutex;
-};
 
 // CommandProcessor is used to dispatch work to the GPU when the asyncCommandQueue feature is
 // enabled. Issuing the |destroy| command will cause the worker thread to clean up it's resources
@@ -556,13 +487,8 @@ class ThreadSafeCommandQueue : public CommandQueue
 class CommandProcessor : public Context
 {
   public:
-    CommandProcessor(RendererVk *renderer);
+    CommandProcessor(RendererVk *renderer, CommandQueue *commandQueue);
     ~CommandProcessor() override;
-
-    VkResult getLastPresentResult(VkSwapchainKHR swapchain)
-    {
-        return getLastAndClearPresentResult(swapchain);
-    }
 
     // Context
     void handleError(VkResult result,
@@ -570,31 +496,22 @@ class CommandProcessor : public Context
                      const char *function,
                      unsigned int line) override;
 
-    angle::Result init(Context *context, const DeviceQueueMap &queueMap);
+    angle::Result init();
 
     void destroy(Context *context);
 
     void handleDeviceLost(RendererVk *renderer);
 
-    angle::Result finishQueueSerial(Context *context,
-                                    const QueueSerial &queueSerial,
-                                    uint64_t timeout);
-    angle::Result finishResourceUse(Context *context, const ResourceUse &use, uint64_t timeout);
-
-    angle::Result waitIdle(Context *context, uint64_t timeout);
-
     angle::Result submitCommands(Context *context,
-                                 bool hasProtectedContent,
+                                 ProtectionType protectionType,
                                  egl::ContextPriority priority,
-                                 const std::vector<VkSemaphore> &waitSemaphores,
-                                 const std::vector<VkPipelineStageFlags> &waitSemaphoreStageMasks,
                                  const VkSemaphore signalSemaphore,
                                  SecondaryCommandBufferList &&commandBuffersToReset,
                                  SecondaryCommandPools *commandPools,
                                  const QueueSerial &submitQueueSerial);
 
     angle::Result queueSubmitOneOff(Context *context,
-                                    bool hasProtectedContent,
+                                    ProtectionType protectionType,
                                     egl::ContextPriority contextPriority,
                                     VkCommandBuffer commandBufferHandle,
                                     const Semaphore *waitSemaphore,
@@ -603,51 +520,41 @@ class CommandProcessor : public Context
                                     SubmitPolicy submitPolicy,
                                     const QueueSerial &submitQueueSerial);
     VkResult queuePresent(egl::ContextPriority contextPriority,
-                          const VkPresentInfoKHR &presentInfo);
+                          const VkPresentInfoKHR &presentInfo,
+                          SwapchainStatus *swapchainStatus);
 
-    angle::Result waitForResourceUseToFinishWithUserTimeout(Context *context,
-                                                            const ResourceUse &use,
-                                                            uint64_t timeout,
-                                                            VkResult *result);
-
-    angle::Result checkCompletedCommands(Context *context);
-
+    angle::Result flushWaitSemaphores(ProtectionType protectionType,
+                                      std::vector<VkSemaphore> &&waitSemaphores,
+                                      std::vector<VkPipelineStageFlags> &&waitSemaphoreStageMasks);
     angle::Result flushOutsideRPCommands(Context *context,
-                                         bool hasProtectedContent,
+                                         ProtectionType protectionType,
                                          OutsideRenderPassCommandBufferHelper **outsideRPCommands);
     angle::Result flushRenderPassCommands(Context *context,
-                                          bool hasProtectedContent,
+                                          ProtectionType protectionType,
                                           const RenderPass &renderPass,
                                           RenderPassCommandBufferHelper **renderPassCommands);
 
-    angle::Result ensureNoPendingWork(Context *context);
-
-    bool isBusy() const;
-
-    egl::ContextPriority getDriverPriority(egl::ContextPriority priority)
+    // Wait until the desired serial has been submitted.
+    angle::Result waitForQueueSerialToBeSubmitted(vk::Context *context,
+                                                  const QueueSerial &queueSerial)
     {
-        return mCommandQueue.getDriverPriority(priority);
+        const ResourceUse use(queueSerial);
+        return waitForResourceUseToBeSubmitted(context, use);
     }
-    uint32_t getDeviceQueueIndex() const { return mCommandQueue.getDeviceQueueIndex(); }
-    VkQueue getQueue(egl::ContextPriority priority) { return mCommandQueue.getQueue(priority); }
+    angle::Result waitForResourceUseToBeSubmitted(vk::Context *context, const ResourceUse &use);
+    // Wait for worker thread to submit all outstanding work.
+    angle::Result waitForAllWorkToBeSubmitted(Context *context);
 
-    // Note that due to inheritance from Context, this class has a set of perf counters as well,
-    // but currently only the counters in the member command queue are of interest.
-    const angle::VulkanPerfCounters &getPerfCounters() const
+    bool isBusy(RendererVk *renderer) const
     {
-        return mCommandQueue.getPerfCounters();
-    }
-    void resetPerFramePerfCounters() { mCommandQueue.resetPerFramePerfCounters(); }
-
-    ANGLE_INLINE bool hasUnfinishedUse(const ResourceUse &use) const
-    {
-        return mCommandQueue.hasUnfinishedUse(use);
+        std::lock_guard<std::mutex> workerLock(mWorkerMutex);
+        return !mTasks.empty() || mCommandQueue->isBusy(renderer);
     }
 
     bool hasUnsubmittedUse(const ResourceUse &use) const;
     Serial getLastSubmittedSerial(SerialIndex index) const { return mLastSubmittedSerials[index]; }
 
-  private:
+  protected:
     bool hasPendingError() const
     {
         std::lock_guard<std::mutex> queueLock(mErrorMutex);
@@ -661,7 +568,7 @@ class CommandProcessor : public Context
 
     // Called asynchronously from main thread to queue work that is then processed by the worker
     // thread
-    void queueCommand(CommandProcessorTask &&task);
+    angle::Result queueCommand(CommandProcessorTask &&task);
 
     // Command processor thread, called by processTasks. The loop waits for work to
     // be submitted from a separate thread.
@@ -670,21 +577,20 @@ class CommandProcessor : public Context
     // Command processor thread, process a task
     angle::Result processTask(CommandProcessorTask *task);
 
-    VkResult getLastAndClearPresentResult(VkSwapchainKHR swapchain);
-    VkResult present(egl::ContextPriority priority, const VkPresentInfoKHR &presentInfo);
+    VkResult present(egl::ContextPriority priority,
+                     const VkPresentInfoKHR &presentInfo,
+                     SwapchainStatus *swapchainStatus);
+    void updateSwapchainStatus(SwapchainStatus *swapchainStatus, VkResult presentResult);
 
-    // Used by main thread to wait for worker thread to complete all outstanding work.
-    angle::Result waitForWorkComplete(Context *context);
+    // The mutex lock that serializes dequeue from mTask and submit to mCommandQueue so that only
+    // one mTasks consumer at a time
+    std::mutex mSubmissionMutex;
 
-    std::queue<CommandProcessorTask> mTasks;
+    CommandProcessorTaskQueue mTasks;
     mutable std::mutex mWorkerMutex;
     // Signal worker thread when work is available
     std::condition_variable mWorkAvailableCondition;
-    // Signal main thread when all work completed
-    mutable std::condition_variable mWorkerIdleCondition;
-    // Track worker thread Idle state for assertion purposes
-    bool mWorkerThreadIdle;
-    CommandQueue mCommandQueue;
+    CommandQueue *const mCommandQueue;
 
     // Tracks last serial that was submitted to command processor. Note: this maybe different from
     // mLastSubmittedQueueSerial in CommandQueue since submission from CommandProcessor to
@@ -694,146 +600,9 @@ class CommandProcessor : public Context
     mutable std::mutex mErrorMutex;
     std::queue<Error> mErrors;
 
-    // Track present info
-    std::mutex mSwapchainStatusMutex;
-    std::condition_variable mSwapchainStatusCondition;
-    std::map<VkSwapchainKHR, VkResult> mSwapchainStatus;
-
     // Command queue worker thread.
     std::thread mTaskThread;
-};
-
-class ThreadSafeCommandProcessor : public CommandProcessor
-{
-  public:
-    ThreadSafeCommandProcessor(RendererVk *renderer) : CommandProcessor(renderer) {}
-
-    angle::Result init(Context *context, const DeviceQueueMap &queueMap)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::init(context, queueMap);
-    }
-    void destroy(Context *context)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        CommandProcessor::destroy(context);
-    }
-
-    void handleDeviceLost(RendererVk *renderer)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        CommandProcessor::handleDeviceLost(renderer);
-    }
-
-    // Wait until the desired serial has been completed.
-    angle::Result finishResourceUse(Context *context, const ResourceUse &use, uint64_t timeout)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::finishResourceUse(context, use, timeout);
-    }
-    angle::Result finishQueueSerial(Context *context,
-                                    const QueueSerial &queueSerial,
-                                    uint64_t timeout)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::finishQueueSerial(context, queueSerial, timeout);
-    }
-    angle::Result waitIdle(Context *context, uint64_t timeout)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::waitIdle(context, timeout);
-    }
-
-    angle::Result submitCommands(Context *context,
-                                 bool hasProtectedContent,
-                                 egl::ContextPriority priority,
-                                 const std::vector<VkSemaphore> &waitSemaphores,
-                                 const std::vector<VkPipelineStageFlags> &waitSemaphoreStageMasks,
-                                 const VkSemaphore signalSemaphore,
-                                 SecondaryCommandBufferList &&commandBuffersToReset,
-                                 SecondaryCommandPools *commandPools,
-                                 const QueueSerial &submitQueueSerial)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::submitCommands(
-            context, hasProtectedContent, priority, waitSemaphores, waitSemaphoreStageMasks,
-            signalSemaphore, std::move(commandBuffersToReset), commandPools, submitQueueSerial);
-    }
-    angle::Result queueSubmitOneOff(Context *context,
-                                    bool hasProtectedContent,
-                                    egl::ContextPriority contextPriority,
-                                    VkCommandBuffer commandBufferHandle,
-                                    const Semaphore *waitSemaphore,
-                                    VkPipelineStageFlags waitSemaphoreStageMask,
-                                    const Fence *fence,
-                                    SubmitPolicy submitPolicy,
-                                    const QueueSerial &submitQueueSerial)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::queueSubmitOneOff(
-            context, hasProtectedContent, contextPriority, commandBufferHandle, waitSemaphore,
-            waitSemaphoreStageMask, fence, submitPolicy, submitQueueSerial);
-    }
-    VkResult queuePresent(egl::ContextPriority contextPriority, const VkPresentInfoKHR &presentInfo)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::queuePresent(contextPriority, presentInfo);
-    }
-    angle::Result waitForResourceUseToFinishWithUserTimeout(Context *context,
-                                                            const ResourceUse &use,
-                                                            uint64_t timeout,
-                                                            VkResult *result)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::waitForResourceUseToFinishWithUserTimeout(context, use, timeout,
-                                                                           result);
-    }
-
-    // Check to see which batches have finished completion (forward progress for
-    // the last completed serial, for example for when the application busy waits on a query
-    // result). It would be nice if we didn't have to expose this for QueryVk::getResult.
-    angle::Result checkCompletedCommands(Context *context)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::checkCompletedCommands(context);
-    }
-    angle::Result flushOutsideRPCommands(Context *context,
-                                         bool hasProtectedContent,
-                                         OutsideRenderPassCommandBufferHelper **outsideRPCommands)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::flushOutsideRPCommands(context, hasProtectedContent,
-                                                        outsideRPCommands);
-    }
-    angle::Result flushRenderPassCommands(Context *context,
-                                          bool hasProtectedContent,
-                                          const RenderPass &renderPass,
-                                          RenderPassCommandBufferHelper **renderPassCommands)
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::flushRenderPassCommands(context, hasProtectedContent, renderPass,
-                                                         renderPassCommands);
-    }
-
-    bool isBusy()
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::isBusy();
-    }
-
-    const angle::VulkanPerfCounters getPerfCounters() const
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return CommandProcessor::getPerfCounters();
-    }
-    void resetPerFramePerfCounters()
-    {
-        std::unique_lock<std::mutex> lock(mMutex);
-        CommandProcessor::resetPerFramePerfCounters();
-    }
-
-  private:
-    mutable std::mutex mMutex;
+    bool mTaskThreadShouldExit;
 };
 }  // namespace vk
 

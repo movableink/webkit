@@ -4952,6 +4952,14 @@ public:
 
     DEFINE_SIGNED_SIMD_FUNCS(vectorExtractLane);
 
+    // The behavior is the same to vectorExtractLane on ARM64.
+    void vectorDupElement(SIMDLane simdLane, TrustedImm32 lane, FPRegisterID src, FPRegisterID dest)
+    {
+        m_assembler.dupElement(dest, src, simdLane, lane.m_value);
+    }
+
+    DEFINE_SIMD_FUNCS(vectorDupElement);
+
     void compareFloatingPointVector(DoubleCondition cond, SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest)
     {
         RELEASE_ASSERT(scalarTypeIsFloatingPoint(simdInfo.lane));
@@ -5066,6 +5074,16 @@ public:
             m_assembler.vectorFmul(dest, left, right, simdInfo.lane);
         else
             m_assembler.vectorMul(dest, left, right, simdInfo.lane);
+    }
+
+    void vectorMulByElementFloat32(FPRegisterID left, FPRegisterID right, TrustedImm32 lane, FPRegisterID dest)
+    {
+        m_assembler.vectorFmulByElement(dest, left, right, SIMDLane::f32x4, lane.m_value);
+    }
+
+    void vectorMulByElementFloat64(FPRegisterID left, FPRegisterID right, TrustedImm32 lane, FPRegisterID dest)
+    {
+        m_assembler.vectorFmulByElement(dest, left, right, SIMDLane::f64x2, lane.m_value);
     }
 
     void vectorDiv(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest)
@@ -5510,13 +5528,6 @@ public:
     {
         RELEASE_ASSERT(b == a + 1);
         m_assembler.tbl2(dest, a, b, control);
-    }
-    void vectorShuffle(TrustedImm64, TrustedImm64, FPRegisterID, FPRegisterID, FPRegisterID) 
-    {
-        // This macro should have been lowered by now.
-        bool hideNoReturn = true;
-        if (hideNoReturn)
-            RELEASE_ASSERT_NOT_REACHED();
     }
 
     // Misc helper functions.

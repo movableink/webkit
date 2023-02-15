@@ -27,6 +27,7 @@
 
 #if ENABLE(ASYNC_SCROLLING) && PLATFORM(MAC)
 
+#include "ScrollerPairMac.h"
 #include "ScrollingEffectsController.h"
 #include "ThreadedScrollingTreeScrollingNodeDelegate.h"
 #include <wtf/RunLoop.h>
@@ -41,7 +42,6 @@ class IntPoint;
 class ScrollingStateScrollingNode;
 class ScrollingTreeScrollingNode;
 class ScrollingTree;
-class ScrollerPairMac;
 
 class ScrollingTreeScrollingNodeDelegateMac final : public ThreadedScrollingTreeScrollingNodeDelegate {
 public:
@@ -58,10 +58,15 @@ public:
     bool isRubberBandInProgress() const;
 
     void updateScrollbarPainters();
+    void updateScrollbarLayers() final;
+    
+    bool handleWheelEventForScrollbars(const PlatformWheelEvent&) final;
+    bool handleMouseEventForScrollbars(const PlatformMouseEvent&) final;
+    
+    void initScrollbars() final;
 
 private:
     void updateFromStateNode(const ScrollingStateScrollingNode&) final;
-    void getScrollbarLayersForStateNode(const ScrollingStateScrollingNode& scrollingStateNode, CALayer **horizontalLayer, CALayer **verticalLayer) final;
 
     // ScrollingEffectsControllerClient.
     bool allowsHorizontalStretching(const PlatformWheelEvent&) const final;
@@ -75,10 +80,7 @@ private:
     void rubberBandingStateChanged(bool) final;
     bool scrollPositionIsNotRubberbandingEdge(const FloatPoint&) const;
 
-    void releaseReferencesToScrollerImpsOnTheMainThread();
-
-    RetainPtr<NSScrollerImp> m_verticalScrollerImp;
-    RetainPtr<NSScrollerImp> m_horizontalScrollerImp;
+    ScrollerPairMac m_scrollerPair;
 
     bool m_inMomentumPhase { false };
 };

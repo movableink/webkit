@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,14 +38,15 @@
 #include "RealtimeMediaSourceSettings.h"
 #include "RealtimeVideoUtilities.h"
 #include "Timer.h"
+#include "VideoFrame.h"
 #include <IOSurface/IOSurfaceRef.h>
 #include <pal/avfoundation/MediaTimeAVFoundation.h>
 #include <pal/spi/cf/CoreAudioSPI.h>
 #include <pal/spi/cg/CoreGraphicsSPI.h>
-#include <pal/spi/cocoa/IOSurfaceSPI.h>
 #include <sys/time.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/spi/cocoa/IOSurfaceSPI.h>
 
 #if PLATFORM(IOS)
 #include "ReplayKitCaptureSource.h"
@@ -205,7 +206,6 @@ Seconds DisplayCaptureSourceCocoa::elapsedTime()
 void DisplayCaptureSourceCocoa::updateFrameSize()
 {
     auto intrinsicSize = this->intrinsicSize();
-
     auto frameSize = size();
     if (!frameSize.height())
         frameSize.setHeight(intrinsicSize.height());
@@ -308,11 +308,13 @@ void DisplayCaptureSourceCocoa::emitFrame()
 void DisplayCaptureSourceCocoa::capturerConfigurationChanged()
 {
     m_currentSettings = { };
+    m_capabilities = { };
     auto capturerIntrinsicSize = m_capturer->intrinsicSize();
-    if (this->intrinsicSize() != capturerIntrinsicSize) {
-        m_capabilities = { };
+    if (this->intrinsicSize() != capturerIntrinsicSize)
         setIntrinsicSize(capturerIntrinsicSize);
-    }
+    forEachObserver([](auto& observer) {
+        observer.sourceConfigurationChanged();
+    });
 }
 
 void DisplayCaptureSourceCocoa::setLogger(const Logger& logger, const void* identifier)

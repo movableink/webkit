@@ -42,15 +42,18 @@ class RemoteLayerTreeScrollbars;
 class RemoteLayerTreeNode : public CanMakeWeakPtr<RemoteLayerTreeNode> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    RemoteLayerTreeNode(WebCore::GraphicsLayer::PlatformLayerID, RetainPtr<CALayer>);
+    RemoteLayerTreeNode(WebCore::GraphicsLayer::PlatformLayerID, Markable<WebCore::LayerHostingContextIdentifier>, RetainPtr<CALayer>);
 #if PLATFORM(IOS_FAMILY)
-    RemoteLayerTreeNode(WebCore::GraphicsLayer::PlatformLayerID, RetainPtr<UIView>);
+    RemoteLayerTreeNode(WebCore::GraphicsLayer::PlatformLayerID, Markable<WebCore::LayerHostingContextIdentifier>, RetainPtr<UIView>);
 #endif
     ~RemoteLayerTreeNode();
 
     static std::unique_ptr<RemoteLayerTreeNode> createWithPlainLayer(WebCore::GraphicsLayer::PlatformLayerID);
 
     CALayer *layer() const { return m_layer.get(); }
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    CALayer *interactionRegionsLayer() const { return m_interactionRegionsLayer.get(); }
+#endif
 #if PLATFORM(IOS_FAMILY)
     UIView *uiView() const { return m_uiView.get(); }
 #endif
@@ -80,12 +83,18 @@ public:
     void setScrollingNodeID(WebCore::ScrollingNodeID nodeID) { m_scrollingNodeID = nodeID; }
 #endif
 
+    Markable<WebCore::LayerHostingContextIdentifier> remoteContextHostIdentifier() const { return m_remoteContextHostIdentifier; }
+
 private:
     void initializeLayer();
 
     WebCore::GraphicsLayer::PlatformLayerID m_layerID;
+    Markable<WebCore::LayerHostingContextIdentifier> m_remoteContextHostIdentifier;
 
     RetainPtr<CALayer> m_layer;
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    RetainPtr<CALayer> m_interactionRegionsLayer;
+#endif
 #if PLATFORM(IOS_FAMILY)
     RetainPtr<UIView> m_uiView;
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2016 Apple Inc.  All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc.  All rights reserved.
  * Copyright (C) 2009 Google Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,7 @@
 #include "SocketStreamHandleClient.h"
 #include "StorageSessionProvider.h"
 #include <CFNetwork/CFNetwork.h>
+#include <pal/spi/cf/CFNetworkSPI.h>
 #include <wtf/Condition.h>
 #include <wtf/Lock.h>
 #include <wtf/MainThread.h>
@@ -49,28 +50,12 @@
 #include <wtf/cf/TypeCastsCF.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(WIN)
-#include "LoaderRunLoopCF.h"
-#include <pal/spi/win/CFNetworkSPIWin.h>
-#endif
-
 #if PLATFORM(IOS_FAMILY)
 #include "WebCoreThreadInternal.h"
 #endif
 
-#if PLATFORM(COCOA)
 extern "C" const CFStringRef kCFStreamPropertySourceApplication;
 extern "C" const CFStringRef _kCFStreamSocketSetNoDelay;
-#endif
-
-#if PLATFORM(COCOA)
-#include <pal/spi/cf/CFNetworkSPI.h>
-#endif
-
-#if PLATFORM(WIN)
-SOFT_LINK_LIBRARY(CFNetwork);
-SOFT_LINK_OPTIONAL(CFNetwork, _CFHTTPMessageSetResponseProxyURL, void, __cdecl, (CFHTTPMessageRef, CFURLRef));
-#endif
 
 WTF_DECLARE_CF_TYPE_TRAIT(CFHTTPMessage);
 
@@ -78,9 +63,7 @@ namespace WebCore {
 
 static inline CFRunLoopRef callbacksRunLoop()
 {
-#if PLATFORM(WIN)
-    return loaderRunLoop();
-#elif PLATFORM(IOS_FAMILY)
+#if PLATFORM(IOS_FAMILY)
     return WebThreadRunLoop();
 #else
     return CFRunLoopGetMain();
@@ -89,11 +72,7 @@ static inline CFRunLoopRef callbacksRunLoop()
 
 static inline auto callbacksRunLoopMode()
 {
-#if PLATFORM(WIN)
-    return kCFRunLoopDefaultMode;
-#else
     return kCFRunLoopCommonModes;
-#endif
 }
 
 SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, SocketStreamHandleClient& client, PAL::SessionID sessionID, const String& credentialPartition, SourceApplicationAuditToken&& auditData, const StorageSessionProvider* provider, bool acceptInsecureCertificates)
@@ -113,7 +92,6 @@ SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, SocketStreamHandl
     URL httpsURL { "https://" + m_url.host() };
     m_httpsURL = httpsURL.createCFURL();
 
-#if PLATFORM(COCOA)
     // Don't check for HSTS violation for ephemeral sessions since
     // HSTS state should not transfer between regular and private browsing.
     if (url.protocolIs("ws"_s)
@@ -125,7 +103,6 @@ SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, SocketStreamHandl
         });
         return;
     }
-#endif
 
     createStreams();
     ASSERT(!m_readStream == !m_writeStream);
@@ -325,14 +302,11 @@ void SocketStreamHandleImpl::createStreams()
     CFReadStreamRef readStream = 0;
     CFWriteStreamRef writeStream = 0;
     CFStreamCreatePairWithSocketToHost(0, host.get(), port(), &readStream, &writeStream);
-#if PLATFORM(COCOA)
-    // <rdar://problem/12855587> _kCFStreamSocketSetNoDelay is not exported on Windows
     CFWriteStreamSetProperty(writeStream, _kCFStreamSocketSetNoDelay, kCFBooleanTrue);
     if (m_auditData.sourceApplicationAuditData && m_auditData.sourceApplicationAuditData.get()) {
         CFReadStreamSetProperty(readStream, kCFStreamPropertySourceApplication, m_auditData.sourceApplicationAuditData.get());
         CFWriteStreamSetProperty(writeStream, kCFStreamPropertySourceApplication, m_auditData.sourceApplicationAuditData.get());
     }
-#endif
 
     m_readStream = adoptCF(readStream);
     m_writeStream = adoptCF(writeStream);
@@ -367,11 +341,7 @@ void SocketStreamHandleImpl::createStreams()
         };
         const void* values[] = {
             host.get(),
-#if PLATFORM(COCOA)
             gLegacyTLSEnabled ? kCFStreamSocketSecurityLevelNegotiatedSSL : kCFStreamSocketSecurityLevelTLSv1_2,
-#else
-            kCFStreamSocketSecurityLevelNegotiatedSSL,
-#endif
             validateCertificateChain
         };
         RetainPtr<CFDictionaryRef> settings = adoptCF(CFDictionaryCreate(0, keys, values, std::size(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
@@ -518,12 +488,7 @@ void SocketStreamHandleImpl::writeStreamCallback(CFWriteStreamRef stream, CFStre
 #if !PLATFORM(IOS_FAMILY)
 static void setResponseProxyURL(CFHTTPMessageRef message, CFURLRef proxyURL)
 {
-#if PLATFORM(WIN)
-    if (_CFHTTPMessageSetResponseProxyURLPtr())
-        _CFHTTPMessageSetResponseProxyURLPtr()(message, proxyURL);
-#else
     _CFHTTPMessageSetResponseProxyURL(message, proxyURL);
-#endif
 }
 #endif
 

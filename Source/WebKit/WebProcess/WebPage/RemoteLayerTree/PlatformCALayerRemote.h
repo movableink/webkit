@@ -229,10 +229,14 @@ protected:
     void updateClonedLayerProperties(PlatformCALayerRemote& clone, bool copyContents = true) const;
 
 private:
-    bool isPlatformCALayerRemote() const override { return true; }
+    Type type() const override { return Type::Remote; }
     void ensureBackingStore();
     void updateBackingStore();
     void removeSublayer(PlatformCALayerRemote*);
+
+#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+    RemoteLayerBackingStore::IncludeDisplayList shouldIncludeDisplayListInBackingStore() const;
+#endif
 
     bool requiresCustomAppearanceUpdateOnBoundsChange() const;
 
@@ -252,4 +256,18 @@ private:
 
 } // namespace WebKit
 
-SPECIALIZE_TYPE_TRAITS_PLATFORM_CALAYER(WebKit::PlatformCALayerRemote, isPlatformCALayerRemote())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::PlatformCALayerRemote)
+static bool isType(const WebCore::PlatformCALayer& layer)
+{
+    switch (layer.type()) {
+    case WebCore::PlatformCALayer::Type::Cocoa:
+        break;
+    case WebCore::PlatformCALayer::Type::Remote:
+    case WebCore::PlatformCALayer::Type::RemoteCustom:
+    case WebCore::PlatformCALayer::Type::RemoteHost:
+    case WebCore::PlatformCALayer::Type::RemoteModel:
+        return true;
+    };
+    return false;
+}
+SPECIALIZE_TYPE_TRAITS_END()

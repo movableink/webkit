@@ -197,16 +197,30 @@ bool ValidatedFormListedElement::isFocusingWithValidationMessage() const
     return m_isFocusingWithValidationMessage;
 }
 
-void ValidatedFormListedElement::setDisabledByAncestorFieldset(bool isDisabled)
+void ValidatedFormListedElement::setDisabledByAncestorFieldset(bool newDisabledByAncestorFieldset)
 {
-    ASSERT(computeIsDisabledByFieldsetAncestor() == isDisabled);
-    if (m_disabledByAncestorFieldset == isDisabled)
-        return;
+    ASSERT(computeIsDisabledByFieldsetAncestor() == newDisabledByAncestorFieldset);
+    setDisabledInternal(m_disabled, newDisabledByAncestorFieldset);
+}
 
-    Style::PseudoClassChangeInvalidation disabledInvalidation(asHTMLElement(), { { CSSSelector::PseudoClassDisabled, isDisabled }, { CSSSelector::PseudoClassEnabled, !isDisabled } });
+void ValidatedFormListedElement::setDisabledInternal(bool disabled, bool disabledByAncestorFieldset)
+{
+    bool newDisabledState = disabled || disabledByAncestorFieldset;
+    bool changingDisabledState = newDisabledState != isDisabled();
 
-    m_disabledByAncestorFieldset = isDisabled;
-    disabledStateChanged();
+    std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
+    if (changingDisabledState) {
+        emplace(styleInvalidation, asHTMLElement(), {
+            { CSSSelector::PseudoClassDisabled, newDisabledState },
+            { CSSSelector::PseudoClassEnabled, !newDisabledState },
+        });
+    }
+
+    m_disabled = disabled;
+    m_disabledByAncestorFieldset = disabledByAncestorFieldset;
+
+    if (changingDisabledState)
+        disabledStateChanged();
 }
 
 static void addInvalidElementToAncestorFromInsertionPoint(const HTMLElement& element, ContainerNode* insertionPoint)
@@ -248,13 +262,11 @@ void ValidatedFormListedElement::updateValidity()
 
         if (willValidate) {
             if (!newIsValid) {
-                if (element.isConnected())
-                    addInvalidElementToAncestorFromInsertionPoint(element, element.parentNode());
+                addInvalidElementToAncestorFromInsertionPoint(element, element.parentNode());
                 if (auto* form = this->form())
                     form->addInvalidFormControl(element);
             } else {
-                if (element.isConnected())
-                    removeInvalidElementToAncestorFromInsertionPoint(element, element.parentNode());
+                removeInvalidElementToAncestorFromInsertionPoint(element, element.parentNode());
                 if (auto* form = this->form())
                     form->removeInvalidFormControlIfNeeded(element);
             }
@@ -285,11 +297,7 @@ void ValidatedFormListedElement::parseDisabledAttribute(const AtomString& value)
     ASSERT(asHTMLElement().canBeActuallyDisabled());
 
     bool newDisabled = !value.isNull();
-    if (m_disabled != newDisabled) {
-        Style::PseudoClassChangeInvalidation disabledInvalidation(asHTMLElement(), { { CSSSelector::PseudoClassDisabled, newDisabled }, { CSSSelector::PseudoClassEnabled, !newDisabled } });
-        m_disabled = newDisabled;
-        disabledAttributeChanged();
-    }
+    setDisabledInternal(newDisabled, m_disabledByAncestorFieldset);
 }
 
 void ValidatedFormListedElement::parseReadOnlyAttribute(const AtomString& value)
@@ -303,11 +311,6 @@ void ValidatedFormListedElement::parseReadOnlyAttribute(const AtomString& value)
         m_hasReadOnlyAttribute = newHasReadOnlyAttribute;
         readOnlyStateChanged();
     }
-}
-
-void ValidatedFormListedElement::disabledAttributeChanged()
-{
-    disabledStateChanged();
 }
 
 void ValidatedFormListedElement::insertedIntoAncestor(Node::InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -326,10 +329,11 @@ void ValidatedFormListedElement::setDataListAncestorState(TriState isInsideDataL
 
 void ValidatedFormListedElement::syncWithFieldsetAncestors(ContainerNode* insertionPoint)
 {
+    HTMLElement& element = asHTMLElement();
     if (matchesInvalidPseudoClass())
-        addInvalidElementToAncestorFromInsertionPoint(asHTMLElement(), insertionPoint);
-    if (asHTMLElement().document().hasDisabledFieldsetElement())
-        setDisabledByAncestorFieldset(computeIsDisabledByFieldsetAncestor());
+        addInvalidElementToAncestorFromInsertionPoint(element, insertionPoint);
+    if (element.document().hasDisabledFieldsetElement())
+        setDisabledInternal(m_disabled, computeIsDisabledByFieldsetAncestor());
 }
 
 void ValidatedFormListedElement::removedFromAncestor(Node::RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
@@ -339,7 +343,7 @@ void ValidatedFormListedElement::removedFromAncestor(Node::RemovalType removalTy
 
     m_validationMessage = nullptr;
     if (m_disabledByAncestorFieldset)
-        setDisabledByAncestorFieldset(computeIsDisabledByFieldsetAncestor());
+        setDisabledInternal(m_disabled, computeIsDisabledByFieldsetAncestor());
 
     bool wasInsideDataList = m_isInsideDataList == TriState::True;
     if (wasInsideDataList)

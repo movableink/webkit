@@ -72,6 +72,7 @@ class Locale;
 class PlatformKeyboardEvent;
 class PlatformMouseEvent;
 class PlatformWheelEvent;
+class PopoverData;
 class PseudoElement;
 class RenderStyle;
 class RenderTreePosition;
@@ -439,9 +440,11 @@ public:
     void setStyleIsAffectedByPreviousSibling() { setStyleFlag(NodeStyleFlag::StyleIsAffectedByPreviousSibling); }
     void setChildIndex(unsigned);
 
-    AtomString effectiveLang() const;
-    AtomString langFromAttribute() const;
+    const AtomString& effectiveLang() const;
+    const AtomString& langFromAttribute() const;
     Locale& locale() const;
+
+    void updateEffectiveLangStateAndPropagateToDescendants();
 
     virtual bool accessKeyAction(bool /*sendToAnyEvent*/) { return false; }
 
@@ -458,7 +461,8 @@ public:
     virtual const AtomString& imageSourceURL() const;
     virtual AtomString target() const { return nullAtom(); }
 
-    RefPtr<Element> findFocusDelegate();
+    static RefPtr<Element> findFocusDelegateForTarget(ContainerNode&, FocusTrigger);
+    RefPtr<Element> findFocusDelegate(FocusTrigger = FocusTrigger::Other);
 
     static AXTextStateChangeIntent defaultFocusTextStateChangeIntent() { return AXTextStateChangeIntent(AXTextStateChangeTypeSelectionMove, AXTextSelection { AXTextSelectionDirectionDiscontiguous, AXTextSelectionGranularityUnknown, true }); }
     virtual void focus(const FocusOptions& = { });
@@ -584,6 +588,10 @@ public:
     virtual void requestFullscreen(FullscreenOptions&&, RefPtr<DeferredPromise>&&);
 #endif
 
+    PopoverData* popoverData() const;
+    PopoverData& ensurePopoverData();
+    void clearPopoverData();
+
     ExceptionOr<void> setPointerCapture(int32_t);
     ExceptionOr<void> releasePointerCapture(int32_t);
     bool hasPointerCapture(int32_t);
@@ -681,6 +689,7 @@ public:
 
     bool hasDisplayContents() const;
     void storeDisplayContentsStyle(std::unique_ptr<RenderStyle>);
+    void clearDisplayContentsStyle();
 
     using ContainerNode::setAttributeEventListener;
     void setAttributeEventListener(const AtomString& eventType, const QualifiedName& attributeName, const AtomString& value);
@@ -841,6 +850,24 @@ private:
 #if ASSERT_ENABLED
     WEBCORE_EXPORT bool fastAttributeLookupAllowed(const QualifiedName&) const;
 #endif
+
+    bool hasEffectiveLangState() const;
+    void updateEffectiveLangState();
+    void updateEffectiveLangStateFromParent();
+    void setEffectiveLangStateOnOldDocumentElement();
+    void clearEffectiveLangStateOnNewDocumentElement();
+
+    bool hasLangAttr() const { return hasEventTargetFlag(EventTargetFlag::HasLangAttr); }
+    void setHasLangAttr(bool has) { setEventTargetFlag(EventTargetFlag::HasLangAttr, has); }
+
+    bool hasXMLLangAttr() const { return hasEventTargetFlag(EventTargetFlag::HasXMLLangAttr); }
+    void setHasXMLLangAttr(bool has) { setEventTargetFlag(EventTargetFlag::HasXMLLangAttr, has); }
+
+    bool effectiveLangKnownToMatchDocumentElement() const { return hasEventTargetFlag(EventTargetFlag::EffectiveLangKnownToMatchDocumentElement); }
+    void setEffectiveLangKnownToMatchDocumentElement(bool matches) { setEventTargetFlag(EventTargetFlag::EffectiveLangKnownToMatchDocumentElement, matches); }
+
+    bool hasLanguageAttribute() const { return hasLangAttr() || hasXMLLangAttr(); }
+    bool hasLangAttrKnownToMatchDocumentElement() const { return hasLanguageAttribute() && effectiveLangKnownToMatchDocumentElement(); }
 
     QualifiedName m_tagName;
     RefPtr<ElementData> m_elementData;

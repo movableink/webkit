@@ -39,7 +39,7 @@
 #   debugging, A/B testing.
 #   ON by default. Some platforms may deviate from default behavior due to
 #   support or needed dependencies.
-# shipping::
+# mature::
 #   Already in general use, with no UI to toggle. Features in this status may be
 #   cleaned up and removed altogether.
 #   ON by default. Some platforms may deviate from default behavior due to
@@ -57,8 +57,13 @@
 # == Embedder Controls ==
 # embedder::
 #   Adjusts WebKit behavior for embedding application needs. Not part of a
-#   web platform feature or a "shipping" feature intended to be always-on.
+#   web platform feature or a "mature" feature intended to be always-on.
 #   ANY default value.
+#
+# == Defaults Overridable ==
+#  When features are declared with "defaultsOverridable: true", platform user
+#  defaults may override a default value at runtime, using the preference
+#  name prefixed with "WebKitDebug".
 #
 # FIXME: Currently, default values are unchecked. We should audit and refactor
 # features so that their defaults agree with their status's definition, and use
@@ -66,7 +71,7 @@
 
 AVFoundationEnabled:
   type: bool
-  status: internal
+  status: embedder
   getter: isAVFoundationEnabled
   humanReadableName: "AVFoundation"
   humanReadableDescription: "Enable AVFoundation"
@@ -107,6 +112,7 @@ AcceleratedCompositingForFixedPositionEnabled:
 AcceleratedDrawingEnabled:
   type: bool
   status: internal
+  defaultsOverridable: true
   humanReadableName: "GraphicsLayerCA accelerated drawing"
   humanReadableDescription: "Enable GraphicsLayerCA accelerated drawing"
   defaultValue:
@@ -314,11 +320,14 @@ AllowWebGLInWorkers:
   condition: ENABLE(WEBGL)
   defaultValue:
     WebKitLegacy:
-      default: true
+      "ENABLE(WEBGL_IN_WORKERS)": true
+      default: false
     WebKit:
-      default: true
+      "ENABLE(WEBGL_IN_WORKERS)": true
+      default: false
     WebCore:
-      default: true
+      "ENABLE(WEBGL_IN_WORKERS)": true
+      default: false
 
 AllowsAirPlayForMediaPlayback:
   type: bool
@@ -520,7 +529,7 @@ AriaReflectionForElementReferencesEnabled:
 
 AspectRatioEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "CSS Aspect Ratio"
   humanReadableDescription: "Enable aspect-ratio CSS property"
   defaultValue:
@@ -533,7 +542,7 @@ AspectRatioEnabled:
 
 AspectRatioOfImgFromWidthAndHeightEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Aspect ratio of <img> from width and height"
   humanReadableDescription: "Map HTML attributes width/height to the default aspect ratio of <img>"
   defaultValue:
@@ -547,7 +556,7 @@ AspectRatioOfImgFromWidthAndHeightEnabled:
 # FIXME: This is on by default in WebKit2 PLATFORM(COCOA). Perhaps we should consider turning it on for WebKitLegacy as well.
 AsyncClipboardAPIEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Async clipboard API"
   humanReadableDescription: "Enable the async clipboard API"
   defaultValue:
@@ -686,7 +695,7 @@ BackspaceKeyNavigationEnabled:
 # FIXME: This is on by default in WebKit2. Perhaps we should consider turning it on for WebKitLegacy as well.
 BeaconAPIEnabled:
   type: bool
-  status: shipping
+  status: mature
   humanReadableName: "Beacon API"
   humanReadableDescription: "Beacon API"
   defaultValue:
@@ -788,7 +797,7 @@ CSSCascadeLayersEnabled:
 
 CSSColor4:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "CSS Color 4 Color Types"
   humanReadableDescription: "Enable support for CSS Color 4 Color Types"
   defaultValue:
@@ -944,7 +953,7 @@ CSSGradientPremultipliedAlphaInterpolationEnabled:
 
 CSSIndividualTransformPropertiesEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "CSS Individual Transform Properties"
   humanReadableDescription: "Support for the translate, scale and rotate CSS properties"
   defaultValue:
@@ -1014,11 +1023,11 @@ CSSNestingEnabled:
   humanReadableDescription: "Enable support for CSS nesting https://www.w3.org/TR/css-nesting-1/"
   defaultValue:
     WebKitLegacy:
-      default: true
+      default: false
     WebKit:
-      default: true
+      default: false
     WebCore:
-      default: true
+      default: false
 
 CSSOMViewScrollingAPIEnabled:
   type: bool
@@ -1119,6 +1128,19 @@ CSSTextJustifyEnabled:
   status: testable
   humanReadableName: "CSS text-justify property"
   humanReadableDescription: "Enable the property text-justify, defined in CSS Text 3"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
+CSSTextSpacingEnabled:
+  type: bool
+  status: testable
+  humanReadableName: "CSS text-spacing property"
+  humanReadableDescription: "Enable the property text-spacing, defined in CSS Text 4"
   defaultValue:
     WebKitLegacy:
       default: false
@@ -1298,14 +1320,14 @@ CaretBrowsingEnabled:
 
 ClearSiteDataHTTPHeaderEnabled:
   type: bool
-  status: testable
+  status: stable
   humanReadableName: "Clear-Site-Data HTTP Header"
   humanReadableDescription: "Enable Clear-Site-Data HTTP Header support"
   defaultValue:
     WebKitLegacy:
       default: false
     WebKit:
-      default: false
+      default: true
     WebCore:
       default: false
 
@@ -1339,6 +1361,7 @@ ColorFilterEnabled:
 CompositingBordersVisible:
   type: bool
   status: internal
+  defaultsOverridable: true
   humanReadableName: "Compositing borders visible"
   webKitLegacyPreferenceKey: WebKitShowDebugBorders
   webcoreName: showDebugBorders
@@ -1356,6 +1379,7 @@ CompositingBordersVisible:
 CompositingRepaintCountersVisible:
   type: bool
   status: internal
+  defaultsOverridable: true
   humanReadableName: "Compositing repaint counters visible"
   webKitLegacyPreferenceKey: WebKitShowRepaintCounter
   webcoreName: showRepaintCounter
@@ -1656,7 +1680,7 @@ DataDetectorTypes:
 # FIXME: This is on by default in WebKit2 (for everything but WatchOS). Perhaps we should consider turning it on for WebKitLegacy as well.
 DataListElementEnabled:
   type: bool
-  status: internal
+  status: embedder
   humanReadableName: "DataList Element"
   humanReadableDescription: "Enable datalist elements"
   condition: ENABLE(DATALIST_ELEMENT)
@@ -1792,11 +1816,11 @@ DeprecateRSAESPKCSWebCryptoEnabled:
   humanReadableDescription: "Enable Deprecation of RSAES-PKCS1-v1_5 Web Crypto"
   defaultValue:
     WebKitLegacy:
-      default: false
+      default: true
     WebKit:
-      default: false
+      default: true
     WebCore:
-      default: false
+      default: true
 
 DeprecationReportingEnabled:
   type: bool
@@ -1814,6 +1838,7 @@ DeprecationReportingEnabled:
 DeveloperExtrasEnabled:
   type: bool
   status: embedder
+  defaultsOverridable: true
   webKitLegacyPreferenceKey: WebKitDeveloperExtrasEnabledPreferenceKey
   webKitLegacyBinding: custom
   defaultValue:
@@ -1926,6 +1951,7 @@ DirectoryUploadEnabled:
 DisableScreenSizeOverride:
   type: bool
   status: internal
+  defaultsOverridable: true
   humanReadableName: "Disable screen size override"
   webcoreBinding: DeprecatedGlobalSettings
   condition: PLATFORM(IOS_FAMILY)
@@ -1966,6 +1992,7 @@ DisallowSyncXHRDuringPageDismissalEnabled:
 DisplayListDrawingEnabled:
   type: bool
   status: unstable
+  defaultsOverridable: true
   humanReadableName: "DisplayList Drawing"
   humanReadableDescription: "Enable display-list drawing"
   defaultValue:
@@ -2003,7 +2030,7 @@ EditableLinkBehavior:
 
 EmbedElementEnabled:
   type: bool
-  status: shipping
+  status: mature
   humanReadableName: "Embed Element"
   humanReadableDescription: "Embed Element"
   defaultValue:
@@ -2179,7 +2206,7 @@ FasterClicksEnabled:
 
 FetchAPIEnabled:
   type: bool
-  status: embedder
+  status: mature
   humanReadableName: "Fetch API"
   humanReadableDescription: "Fetch API"
   defaultValue:
@@ -2289,6 +2316,7 @@ FocusVisibleEnabled:
 ForceAlwaysUserScalable:
   type: bool
   status: internal
+  defaultsOverridable: true
   humanReadableName: "Force always user-scalable"
   webcoreBinding: none
   condition: PLATFORM(IOS_FAMILY)
@@ -2356,7 +2384,7 @@ FrameFlatteningEnabled:
 
 FullScreenEnabled:
   type: bool
-  status: internal
+  status: embedder
   humanReadableName: "Fullscreen API"
   humanReadableDescription: "Fullscreen API"
   condition: ENABLE(FULLSCREEN_API)
@@ -2393,6 +2421,20 @@ GStreamerEnabled:
     WebKit:
       default: true
 
+GamepadTriggerRumbleEnabled:
+  type: bool
+  status: testable
+  humanReadableName: "Gamepad trigger vibration support"
+  humanReadableDescription: "Support for Gamepad trigger vibration"
+  condition: ENABLE(GAMEPAD)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 GamepadVibrationActuatorEnabled:
   type: bool
   status: testable
@@ -2424,7 +2466,7 @@ GamepadsEnabled:
 # FIXME: This is on by default in WebKit2. Perhaps we should consider turning it on for WebKitLegacy as well.
 GenericCueAPIEnabled:
   type: bool
-  status: stable
+  status: mature
   condition: ENABLE(VIDEO)
   humanReadableName: "Generic Text Track Cue API"
   humanReadableDescription: "Enable Generic Text Track Cue API"
@@ -2452,7 +2494,7 @@ GetUserMediaRequiresFocus:
 
 GoogleAntiFlickerOptimizationQuirkEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Quirk to prevent delayed initial painting on sites using Google's Anti-Flicker optimization"
   humanReadableDescription: "Quirk to prevent delayed initial painting on sites using Google's Anti-Flicker optimization"
   defaultValue:
@@ -2480,7 +2522,7 @@ GraphicsContextFiltersEnabled:
 
 HTTPEquivEnabled:
   type: bool
-  status: shipping
+  status: mature
   humanReadableName: "http-equiv"
   humanReadableDescription: "Enable http-equiv attribute"
   webcoreName: httpEquivEnabled
@@ -2627,7 +2669,7 @@ ImageAnalysisDuringFindInPageEnabled:
 
 ImageAnimationControlEnabled:
   type: bool
-  status: unstable
+  status: preview
   humanReadableName: "Image Animation Control Enabled"
   humanReadableDescription: "Control image animations."
   condition: ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
@@ -2988,7 +3030,7 @@ InterruptVideoOnPageVisibilityChangeEnabled:
 # FIXME: This is on by default in WebKit2. Perhaps we should consider turning it on for WebKitLegacy as well.
 IntersectionObserverEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Intersection Observer"
   humanReadableDescription: "Enable Intersection Observer support"
   defaultValue:
@@ -3168,7 +3210,7 @@ JavaScriptCanOpenWindowsAutomatically:
 
 JavaScriptEnabled:
   type: bool
-  status: shipping
+  status: mature
   humanReadableName: "JavaScript"
   humanReadableDescription: "Enable JavaScript"
   inspectorOverride: true
@@ -3314,6 +3356,7 @@ LegacyEncryptedMediaAPIEnabled:
 LegacyLineLayoutVisualCoverageEnabled:
   type: bool
   status: internal
+  defaultsOverridable: true
   humanReadableName: "Legacy line layout visual coverage"
   humanReadableDescription: "Enable legacy line layout visual coverage"
   webcoreOnChange: setNeedsRecalcStyleInAllFrames
@@ -3419,16 +3462,16 @@ LinkSanitizerEnabled:
 
 LiveRangeSelectionEnabled:
   type: bool
-  status: unstable
+  status: testable
   humanReadableName: "Live Ranges in Selection"
   humanReadableDescription: "Live range behavior for ranges in the Selection object"
   defaultValue:
     WebKitLegacy:
-      default: false
+      default: true
     WebKit:
-      default: false
+      default: true
     WebCore:
-      default: false
+      default: true
 
 LoadDeferringEnabled:
   type: bool
@@ -3488,7 +3531,7 @@ LocalFileContentSniffingEnabled:
 
 LocalStorageEnabled:
   type: bool
-  status: shipping
+  status: mature
   humanReadableName: "Local Storage"
   humanReadableDescription: "Enable Local Storage"
   webKitLegacyPreferenceKey: WebKitLocalStorageEnabledPreferenceKey
@@ -3503,6 +3546,7 @@ LocalStorageEnabled:
 LogsPageMessagesToSystemConsoleEnabled:
   type: bool
   status: internal
+  defaultsOverridable: true
   humanReadableName: "Log page messages to system console"
   humanReadableDescription: "Enable logging page messages to system console"
   defaultValue:
@@ -3559,12 +3603,26 @@ ManageCaptureStatusBarInGPUProcessEnabled:
     WebCore:
       default: false
 
+ManagedMediaSourceEnabled:
+  type: bool
+  status: unstable
+  humanReadableName: "Managed Media Source API"
+  humanReadableDescription: "Managed Media Source API"
+  condition: ENABLE(MANAGED_MEDIA_SOURCE) && ENABLE(MEDIA_SOURCE)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: WebKit::defaultManagedMediaSourceEnabled()
+    WebCore:
+      default: true
+
 MaskWebGLStringsEnabled:
   type: bool
   status: stable
   humanReadableName: "Mask WebGL Strings"
   humanReadableDescription: "Mask WebGL Vendor, Renderer, Shader Language Strings"
-  condition: ENABLE(WEBGL) || ENABLE(WEBGL2)
+  condition: ENABLE(WEBGL)
   defaultValue:
     WebKitLegacy:
       default: true
@@ -3820,7 +3878,7 @@ MediaSessionCoordinatorEnabled:
 
 MediaSessionEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Media Session API"
   humanReadableDescription: "Media Session API"
   condition: ENABLE(MEDIA_SESSION)
@@ -4108,7 +4166,8 @@ NeedsFrameNameFallbackToIdQuirk:
 
 NeedsInAppBrowserPrivacyQuirks:
   type: bool
-  status: embedder
+  status: internal
+  defaultsOverridable: true
   humanReadableName: "Needs In-App Browser Privacy Quirks"
   humanReadableDescription: "Enable quirks needed to support In-App Browser privacy"
   webcoreBinding: none
@@ -4238,7 +4297,7 @@ OffscreenCanvasInWorkersEnabled:
 
 OpusDecoderEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Opus audio decoder"
   humanReadableDescription: "Enable Opus audio decoder"
   condition: ENABLE(OPUS)
@@ -4311,23 +4370,10 @@ PageVisibilityBasedProcessSuppressionEnabled:
     WebKit:
       default: true
 
-PaginateDuringLayoutEnabled:
-  type: bool
-  status: internal
-  humanReadableName: "Paginate during layout"
-  humanReadableDescription: "Enable pagination during layout"
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: false
-    WebCore:
-      default: false
-
 # FIXME: This is on by default in WebKit2. Perhaps we should consider turning it on for WebKitLegacy as well.
 PaintTimingEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Paint Timing"
   humanReadableDescription: "Enable PaintTiming API"
   webcoreBinding: DeprecatedGlobalSettings
@@ -4441,7 +4487,7 @@ PerElementSpeakerSelectionEnabled:
 
 PerformanceNavigationTimingAPIEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "PerformanceNavigationTiming"
   humanReadableDescription: "Enable PerformanceNavigationTiming API"
   defaultValue:
@@ -4529,6 +4575,19 @@ PluginsEnabled:
   defaultValue:
     WebKitLegacy:
       default: true
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
+PopoverAttributeEnabled:
+  type: bool
+  status: testable
+  humanReadableName: "HTML popover attribute"
+  humanReadableDescription: "Enable HTML popover attribute support"
+  defaultValue:
+    WebKitLegacy:
+      default: false
     WebKit:
       default: false
     WebCore:
@@ -4669,7 +4728,7 @@ ReadableByteStreamAPIEnabled:
 # FIXME: This is on by default in WebKit2. Perhaps we should consider turning it on for WebKitLegacy as well.
 ReferrerPolicyAttributeEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Referrer Policy attribute"
   humanReadableDescription: "Enable Referrer Policy attribute"
   defaultValue:
@@ -4683,7 +4742,7 @@ ReferrerPolicyAttributeEnabled:
 # FIXME: This is on by default in WebKit2. Perhaps we should consider turning it on for WebKitLegacy as well.
 RemotePlaybackEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Remote Playback API"
   humanReadableDescription: "Enable Remote Playback API"
   condition: ENABLE(WIRELESS_PLAYBACK_TARGET)
@@ -4844,7 +4903,7 @@ RequiresUserGestureToLoadVideo:
 
 ResizeObserverEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Resize Observer"
   humanReadableDescription: "Enable Resize Observer support"
   defaultValue:
@@ -4884,6 +4943,7 @@ ResourceLoadSchedulingEnabled:
 ResourceUsageOverlayVisible:
   type: bool
   status: internal
+  defaultsOverridable: true
   humanReadableName: "Resource usage overlay"
   humanReadableDescription: "Make resource usage overlay visible"
   condition: ENABLE(RESOURCE_USAGE)
@@ -5051,7 +5111,7 @@ ScreenWakeLockAPIEnabled:
 
 ScrollAnimatorEnabled:
   type: bool
-  status: internal
+  status: embedder
   humanReadableName: "Scroll animator"
   humanReadableDescription: "Enable scroll animator"
   defaultValue:
@@ -5081,7 +5141,7 @@ ScrollToTextFragmentEnabled:
 
 ScrollToTextFragmentIndicatorEnabled:
   type: bool
-  status: internal
+  status: embedder
   humanReadableName: "Scroll To Text Fragment Indicator"
   humanReadableDescription: "Enable Scroll To Text Fragment Indicator"
   defaultValue:
@@ -5133,9 +5193,22 @@ SelectTrailingWhitespaceEnabled:
     WebCore:
       default: false
 
+SelectionAPIForShadowDOMEnabled:
+  type: bool
+  status: testable
+  humanReadableName: "Selection API for shadow DOM"
+  humanReadableDescription: "Enable selection API for shadow DOM"
+  defaultValue:
+    WebKit:
+      default: false
+    WebKitLegacy:
+      default: false
+    WebCore:
+      default: false
+
 SelectionFlippingEnabled:
   type: bool
-  status: internal
+  status: embedder
   humanReadableName: "Selection Flipping"
   humanReadableDescription: "Enable Selection Flipping"
   webcoreBinding: none
@@ -5572,7 +5645,7 @@ SpeakerSelectionRequiresUserGesture:
 
 SpeechRecognitionEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "SpeechRecognition API"
   humanReadableDescription: "Enable SpeechRecognition of WebSpeech API"
   defaultValue:
@@ -5667,7 +5740,7 @@ StorageAPIEstimateEnabled:
 
 StorageAccessAPIEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Storage Access API"
   humanReadableDescription: "Enable Storage Access API"
   defaultValue:
@@ -5718,7 +5791,7 @@ SuppressesIncrementalRendering:
 
 SyntheticEditingCommandsEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Synthetic Editing Commands"
   humanReadableDescription: "Enable Synthetic Editing Commands"
   defaultValue:
@@ -5869,7 +5942,7 @@ TextRecognitionInVideosEnabled:
 
 ThirdPartyIframeRedirectBlockingEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Block top-level redirects by third-party iframes"
   humanReadableDescription: "Block top-level redirects by third-party iframes"
   defaultValue:
@@ -5879,6 +5952,20 @@ ThirdPartyIframeRedirectBlockingEnabled:
       default: true
     WebCore:
       default: true
+
+ThreadedAnimationResolutionEnabled:
+  type: bool
+  status: unstable
+  humanReadableName: "Threaded animation resolution"
+  humanReadableDescription: "Run accelerated animations on a separate thread"
+  condition: ENABLE(THREADED_ANIMATION_RESOLUTION)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
 
 ThreadedScrollingEnabled:
   type: bool
@@ -5893,6 +5980,7 @@ ThreadedScrollingEnabled:
 TiledScrollingIndicatorVisible:
   type: bool
   status: internal
+  defaultsOverridable: true
   humanReadableName: "Tiled scrolling indicator"
   humanReadableDescription: "Make tiled scrolling indicator visible"
   webcoreName: showTiledScrollingIndicator
@@ -5929,7 +6017,7 @@ TrackConfigurationEnabled:
 
 TransformStreamAPIEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "TransformStream API"
   humanReadableDescription: "Enable Transform Stream API"
   defaultValue:
@@ -6068,7 +6156,7 @@ UseGPUProcessForDisplayCapture:
 
 UseGPUProcessForMediaEnabled:
   type: bool
-  status: internal
+  status: embedder
   humanReadableName: "GPU Process: Media"
   humanReadableDescription: "Do all media loading and playback in the GPU Process"
   webcoreBinding: none
@@ -6302,6 +6390,20 @@ VideoFullscreenRequiresElementFullscreen:
       default: false
     WebCore:
       default: false
+      
+VideoPresentationModeAPIEnabled:
+  type: bool
+  status: embedder
+  defaultValue:
+    WebKitLegacy:
+      "HAVE(UIKIT_WEBKIT_INTERNALS)" : false
+      default: true
+    WebKit:
+      "HAVE(UIKIT_WEBKIT_INTERNALS)" : false
+      default: true
+    WebCore:
+      "HAVE(UIKIT_WEBKIT_INTERNALS)" : false
+      default: true
 
 VideoQualityIncludesDisplayCompositingEnabled:
   type: bool
@@ -6329,6 +6431,7 @@ ViewGestureDebuggingEnabled:
 VisibleDebugOverlayRegions:
   type: uint32_t
   status: embedder
+  defaultsOverridable: true
   webcoreType: DebugOverlayRegions
   defaultValue:
     WebKitLegacy:
@@ -6356,7 +6459,7 @@ VisualTranslationEnabled:
 
 VisualViewportAPIEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Visual Viewport API"
   humanReadableDescription: "Enable Visual Viewport API"
   defaultValue:
@@ -6383,7 +6486,7 @@ VisualViewportEnabled:
 
 VorbisDecoderEnabled:
   type: bool
-  status: stable
+  status: mature
   humanReadableName: "Vorbis audio decoder"
   humanReadableDescription: "Enable Vorbis audio decoder"
   condition: ENABLE(VORBIS)
@@ -6612,20 +6715,6 @@ WebCryptoSafeCurvesEnabled:
     WebCore:
       default: false
 
-WebGL2Enabled:
-  type: bool
-  status: stable
-  humanReadableName: "WebGL 2.0"
-  humanReadableDescription: "WebGL 2 prototype"
-  condition: ENABLE(WEBGL2)
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
 WebGLDraftExtensionsEnabled:
   type: bool
   status: unstable
@@ -6641,7 +6730,7 @@ WebGLDraftExtensionsEnabled:
 
 WebGLEnabled:
   type: bool
-  status: shipping
+  status: mature
   humanReadableName: "WebGL"
   humanReadableDescription: "Enable WebGL"
   defaultValue:
@@ -6688,6 +6777,7 @@ WebGPU:
 WebInspectorEngineeringSettingsAllowed:
   type: bool
   status: internal
+  defaultsOverridable: true
   humanReadableName: "WebInspector engineering settings allowed"
   defaultValue:
     WebKitLegacy:
@@ -6861,7 +6951,7 @@ WebRTCMediaPipelineAdditionalLoggingEnabled:
 # FIXME: This is not relevant for WebKitLegacy, so should be excluded from WebKitLegacy entirely.
 WebRTCPlatformCodecsInGPUProcessEnabled:
   type: bool
-  status: internal
+  status: embedder
   humanReadableName: "GPU Process: WebRTC Platform Codecs"
   humanReadableDescription: "Enable WebRTC Platform Codecs in GPU Process"
   condition: ENABLE(WEB_RTC)
@@ -7092,7 +7182,7 @@ WebXRHandInputModuleEnabled:
 
 WheelEventGesturesBecomeNonBlocking:
   type: bool
-  status: internal
+  status: mature
   humanReadableName: "Wheel Event gestures become non-blocking"
   humanReadableDescription: "preventDefault() is only allowed on the first wheel event in a gesture"
   defaultValue:

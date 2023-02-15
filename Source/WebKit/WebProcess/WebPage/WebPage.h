@@ -152,6 +152,10 @@
 #include <WebCore/PlatformTouchEvent.h>
 #endif
 
+#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
+#include <WebCore/LookalikeCharactersSanitizationData.h>
+#endif
+
 #if ENABLE(MAC_GESTURE_EVENTS)
 #include <WebKitAdditions/PlatformGestureEventMac.h>
 #endif
@@ -1517,6 +1521,7 @@ public:
     void isPlayingMediaDidChange(WebCore::MediaProducerMediaStateFlags);
 
     URL sanitizeLookalikeCharacters(const URL&, WebCore::LookalikeCharacterSanitizationTrigger);
+    URL allowedLookalikeCharacters(const URL&);
 
 #if ENABLE(IMAGE_ANALYSIS)
     void requestTextRecognition(WebCore::Element&, WebCore::TextRecognitionOptions&&, CompletionHandler<void(RefPtr<WebCore::Element>&&)>&& = { });
@@ -1626,6 +1631,8 @@ public:
     bool shouldSkipDecidePolicyForResponse(const WebCore::ResourceResponse&, const WebCore::ResourceRequest&) const;
     void setSkipDecidePolicyForResponseIfPossible(bool value) { m_skipDecidePolicyForResponseIfPossible = value; }
 
+    Markable<WebCore::LayerHostingContextIdentifier> layerHostingContextIdentifier() const { return m_layerHostingContextIdentifier; }
+
 private:
     WebPage(WebCore::PageIdentifier, WebPageCreationParameters&&);
 
@@ -1683,6 +1690,7 @@ private:
 
 #if ENABLE(NETWORK_CONNECTION_INTEGRITY)
     void setLookalikeCharacterStrings(Vector<String>&&);
+    void setAllowedLookalikeCharacterStrings(Vector<WebCore::LookalikeCharactersSanitizationData>&&);
 #endif
 
 #if ENABLE(META_VIEWPORT)
@@ -2561,6 +2569,7 @@ private:
     Vector<String> m_corsDisablingPatterns;
 
     std::unique_ptr<WebCore::CachedPage> m_cachedPage;
+    Markable<WebCore::LayerHostingContextIdentifier> m_layerHostingContextIdentifier;
 
 #if ENABLE(IPC_TESTING_API)
     bool m_ipcTestingAPIEnabled { false };
@@ -2590,6 +2599,7 @@ private:
 
 #if ENABLE(NETWORK_CONNECTION_INTEGRITY)
     HashSet<String> m_lookalikeCharacterStrings;
+    HashMap<WebCore::RegistrableDomain, String> m_allowedLookalikeCharacterStrings;
 #endif
 
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
@@ -2609,6 +2619,7 @@ inline bool WebPage::shouldAvoidComputingPostLayoutDataForEditorState() const { 
 
 #if !PLATFORM(COCOA)
 inline URL WebPage::sanitizeLookalikeCharacters(const URL& url, WebCore::LookalikeCharacterSanitizationTrigger) { return url; }
+inline URL WebPage::allowedLookalikeCharacters(const URL& url) { return url; }
 #endif
 
 #if PLATFORM(IOS_FAMILY)

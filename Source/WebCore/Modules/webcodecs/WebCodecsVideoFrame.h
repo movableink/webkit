@@ -29,7 +29,7 @@
 
 #include "ContextDestructionObserver.h"
 #include "DOMRectReadOnly.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include "PlaneLayout.h"
 #include "VideoColorSpaceInit.h"
 #include "WebCodecsAlphaOption.h"
@@ -37,6 +37,7 @@
 
 namespace WebCore {
 
+class BufferSource;
 class CSSStyleImageValue;
 class DOMRectReadOnly;
 class HTMLCanvasElement;
@@ -46,13 +47,17 @@ class ImageBitmap;
 class ImageBuffer;
 class NativeImage;
 class OffscreenCanvas;
+class SVGImageElement;
 class VideoColorSpace;
 
 class WebCodecsVideoFrame : public RefCounted<WebCodecsVideoFrame>, public ContextDestructionObserver {
 public:
     ~WebCodecsVideoFrame();
 
-    using CanvasImageSource = std::variant<RefPtr<HTMLImageElement>, RefPtr<HTMLCanvasElement>, RefPtr<ImageBitmap>
+    using CanvasImageSource = std::variant<RefPtr<HTMLImageElement>
+        , RefPtr<SVGImageElement>
+        , RefPtr<HTMLCanvasElement>
+        , RefPtr<ImageBitmap>
         , RefPtr<CSSStyleImageValue>
 #if ENABLE(OFFSCREEN_CANVAS)
         , RefPtr<OffscreenCanvas>

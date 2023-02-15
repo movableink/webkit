@@ -25,11 +25,11 @@
 
 #pragma once
 
+#include "GPU.h"
 #include "GPUBasedCanvasRenderingContext.h"
 #include "GPUCanvasConfiguration.h"
 #include "GPUCanvasContext.h"
-#include "GPUSurface.h"
-#include "GPUSwapChain.h"
+#include "GPUPresentationContext.h"
 #include "GPUTexture.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "HTMLCanvasElement.h"
@@ -67,7 +67,7 @@ public:
     {
         return GraphicsLayer::CompositingCoordinatesOrientation::TopDown;
     }
-    void setDisplayBuffer(WTF::MachSendRight&& displayBuffer)
+    void setDisplayBuffer(WTF::MachSendRight& displayBuffer)
     {
         if (!displayBuffer) {
             m_displayBuffer = { };
@@ -99,7 +99,7 @@ public:
     using CanvasType = std::variant<RefPtr<HTMLCanvasElement>>;
 #endif
 
-    static std::unique_ptr<GPUCanvasContextCocoa> create(CanvasBase&);
+    static std::unique_ptr<GPUCanvasContextCocoa> create(CanvasBase&, GPU&);
 
     DestinationColorSpace colorSpace() const override;
     bool compositingResultsNeedUpdating() const override { return m_compositingResultsNeedsUpdating; }
@@ -125,15 +125,31 @@ public:
     }
 
 private:
-    explicit GPUCanvasContextCocoa(CanvasBase&);
+    explicit GPUCanvasContextCocoa(CanvasBase&, GPU&);
 
     void markContextChangedAndNotifyCanvasObservers();
-    void createSwapChainIfNeeded();
 
-    std::optional<GPUCanvasConfiguration> m_configuration;
+    bool isConfigured() const
+    {
+        return static_cast<bool>(m_configuration);
+    }
+
+    struct Configuration {
+        Ref<GPUDevice> device;
+        GPUTextureFormat format { GPUTextureFormat::R8unorm };
+        GPUTextureUsageFlags usage { GPUTextureUsage::RENDER_ATTACHMENT };
+        Vector<GPUTextureFormat> viewFormats;
+        GPUPredefinedColorSpace colorSpace { GPUPredefinedColorSpace::SRGB };
+        GPUCanvasCompositingAlphaMode compositingAlphaMode { GPUCanvasCompositingAlphaMode::Opaque };
+        Vector<MachSendRight> renderBuffers;
+        unsigned frameCount { 0 };
+    };
+    std::optional<Configuration> m_configuration;
+
     Ref<DisplayBufferDisplayDelegate> m_layerContentsDisplayDelegate;
-    RefPtr<GPUSwapChain> m_swapChain;
-    RefPtr<GPUSurface> m_surface;
+    Ref<GPUCompositorIntegration> m_compositorIntegration;
+    Ref<GPUPresentationContext> m_presentationContext;
+    RefPtr<GPUTexture> m_currentTexture;
 
     int m_width { 0 };
     int m_height { 0 };

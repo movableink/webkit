@@ -204,7 +204,6 @@ set(WTF_PUBLIC_HEADERS
     PlatformEnableCocoa.h
     PlatformEnablePlayStation.h
     PlatformEnableQt.h
-    PlatformEnableWinApple.h
     PlatformEnableWinCairo.h
     PlatformHave.h
     PlatformLegacy.h
@@ -236,6 +235,7 @@ set(WTF_PUBLIC_HEADERS
     RefCountedLeakCounter.h
     RefCounter.h
     RefPtr.h
+    RefVector.h
     ResourceUsage.h
     RetainPtr.h
     RobinHoodHashMap.h
@@ -333,6 +333,7 @@ set(WTF_PUBLIC_HEADERS
     WeakHashCountedSet.h
     WeakHashMap.h
     WeakHashSet.h
+    WeakListHashSet.h
     WeakPtr.h
     WeakRandom.h
     WeakRandomNumber.h
@@ -446,6 +447,7 @@ set(WTF_SOURCES
     DataLog.cpp
     DateMath.cpp
     DebugHeap.cpp
+    EmbeddedFixedVector.cpp
     FastBitVector.cpp
     FastFloat.cpp
     FastMalloc.cpp
@@ -622,20 +624,6 @@ WEBKIT_FRAMEWORK(WTF)
 if (MSVC)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
-endif ()
-
-if (USE_VERSION_STAMPER)
-    add_custom_command(
-        TARGET WTF
-        PRE_BUILD
-        COMMAND ${PERL_EXECUTABLE} ${WEBKIT_LIBRARIES_DIR}/tools/scripts/auto-version.pl ${WTF_DERIVED_SOURCES_DIR}
-        VERBATIM)
-
-    add_custom_command(
-        TARGET WTF
-        POST_BUILD
-        COMMAND ${PERL_EXECUTABLE} ${WEBKIT_LIBRARIES_DIR}/tools/scripts/version-stamp.pl ${WTF_DERIVED_SOURCES_DIR} $<TARGET_FILE:WTF>
-        VERBATIM)
 endif ()
 
 QT_ADD_EXTRA_WEBKIT_TARGET_EXPORT(WTF)

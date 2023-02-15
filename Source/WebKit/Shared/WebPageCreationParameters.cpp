@@ -200,9 +200,11 @@ void WebPageCreationParameters::encode(IPC::Encoder& encoder) const
 
     encoder << contentSecurityPolicyModeForExtension;
     encoder << mainFrameIdentifier;
+    encoder << layerHostingContextIdentifier;
 
 #if ENABLE(NETWORK_CONNECTION_INTEGRITY)
     encoder << lookalikeCharacterStrings;
+    encoder << allowedLookalikeCharacterStrings;
 #endif
 
 #if HAVE(MACH_BOOTSTRAP_EXTENSION)
@@ -643,12 +645,21 @@ std::optional<WebPageCreationParameters> WebPageCreationParameters::decode(IPC::
     if (!decoder.decode(parameters.mainFrameIdentifier))
         return std::nullopt;
 
+    if (!decoder.decode(parameters.layerHostingContextIdentifier))
+        return std::nullopt;
+
 #if ENABLE(NETWORK_CONNECTION_INTEGRITY)
     std::optional<Vector<String>> lookalikeCharacterStrings;
     decoder >> lookalikeCharacterStrings;
     if (!lookalikeCharacterStrings)
         return std::nullopt;
     parameters.lookalikeCharacterStrings = WTFMove(*lookalikeCharacterStrings);
+
+    std::optional<Vector<WebCore::LookalikeCharactersSanitizationData>> allowedLookalikeCharacterStrings;
+    decoder >> allowedLookalikeCharacterStrings;
+    if (!allowedLookalikeCharacterStrings)
+        return std::nullopt;
+    parameters.allowedLookalikeCharacterStrings = WTFMove(*allowedLookalikeCharacterStrings);
 #endif
 
 #if HAVE(MACH_BOOTSTRAP_EXTENSION)

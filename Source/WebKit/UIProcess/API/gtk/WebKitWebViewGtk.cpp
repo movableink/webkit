@@ -352,12 +352,15 @@ GtkWidget* webkit_web_view_new_with_context(WebKitWebContext* context)
     g_return_val_if_fail(WEBKIT_IS_WEB_CONTEXT(context), 0);
 
     return GTK_WIDGET(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+#if !ENABLE(2022_GLIB_API)
         "is-ephemeral", webkit_web_context_is_ephemeral(context),
+#endif
         "web-context", context,
         nullptr));
 }
 #endif
 
+#if !ENABLE(2022_GLIB_API)
 /**
  * webkit_web_view_new_with_related_view: (constructor)
  * @web_view: the related #WebKitWebView
@@ -390,7 +393,6 @@ GtkWidget* webkit_web_view_new_with_related_view(WebKitWebView* webView)
         nullptr));
 }
 
-#if !ENABLE(2022_GLIB_API)
 /**
  * webkit_web_view_new_with_settings:
  * @settings: a #WebKitSettings

@@ -97,6 +97,7 @@
 #include "PointerCaptureController.h"
 #include "PointerEvent.h"
 #include "PointerLockController.h"
+#include "PopoverData.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "Quirks.h"
 #include "RenderFragmentedFlow.h"
@@ -265,6 +266,9 @@ Element::~Element()
         if (auto* map = elementRareData()->attributeStyleMap())
             map->clearElement();
     }
+
+    if (hasLangAttrKnownToMatchDocumentElement())
+        document().removeElementWithLangAttrMatchingDocumentElement(*this);
 }
 
 inline ElementRareData& Element::ensureElementRareData()
@@ -2097,31 +2101,14 @@ void Element::attributeChanged(const QualifiedName& name, const AtomString& oldV
                 Style::Invalidator::invalidateShadowParts(*shadowRoot);
             }
         } else if (name == HTMLNames::langAttr || name.matches(XMLNames::langAttr)) {
+            if (name == HTMLNames::langAttr)
+                setHasLangAttr(!newValue.isNull());
+            else
+                setHasXMLLangAttr(!newValue.isNull());
             if (document().documentElement() == this)
-                document().setDocumentElementLanguage(newValue);
-            else {
-                Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassLang, Style::PseudoClassChangeInvalidation::AnyValue);
-                AtomString newValue = langFromAttribute();
-                auto setEffectiveLang = [&](Element& element) {
-                    if (!newValue.isNull())
-                        element.ensureElementRareData().setEffectiveLang(newValue);
-                    else if (element.hasRareData())
-                        element.elementRareData()->setEffectiveLang(nullAtom());
-                };
-                setEffectiveLang(*this);
-                for (auto it = descendantsOfType<Element>(*this).begin(); it;) {
-                    auto& element = *it;
-                    if (auto* elementData = element.elementData()) {
-                        if (elementData->findLanguageAttribute()) {
-                            it.traverseNextSkippingChildren();
-                            continue;
-                        }
-                    }
-                    Style::PseudoClassChangeInvalidation styleInvalidation(element, CSSSelector::PseudoClassLang, Style::PseudoClassChangeInvalidation::AnyValue);
-                    setEffectiveLang(element);
-                    it.traverseNext();
-                }
-            }
+                document().setDocumentElementLanguage(langFromAttribute());
+            else
+                updateEffectiveLangStateAndPropagateToDescendants();
         }
     }
 
@@ -2139,6 +2126,23 @@ void Element::attributeChanged(const QualifiedName& name, const AtomString& oldV
 
     if (AXObjectCache* cache = document().existingAXObjectCache())
         cache->deferAttributeChangeIfNeeded(this, name, oldValue, newValue);
+}
+
+void Element::updateEffectiveLangStateAndPropagateToDescendants()
+{
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassLang, Style::PseudoClassChangeInvalidation::AnyValue);
+    updateEffectiveLangState();
+
+    for (auto it = descendantsOfType<Element>(*this).begin(); it;) {
+        auto& element = *it;
+        if (element.hasLanguageAttribute()) {
+            it.traverseNextSkippingChildren();
+            continue;
+        }
+        Style::PseudoClassChangeInvalidation styleInvalidation(element, CSSSelector::PseudoClassLang, Style::PseudoClassChangeInvalidation::AnyValue);
+        element.updateEffectiveLangStateFromParent();
+        it.traverseNext();
+    }
 }
 
 ExplicitlySetAttrElementsMap& Element::explicitlySetAttrElementsMap()
@@ -2413,16 +2417,27 @@ bool Element::hasDisplayContents() const
     if (!hasRareData())
         return false;
 
-    const RenderStyle* style = elementRareData()->computedStyle();
-    return style && style->display() == DisplayType::Contents;
+    auto* style = elementRareData()->displayContentsStyle();
+    ASSERT(!style || style->display() == DisplayType::Contents);
+    return !!style;
 }
 
 void Element::storeDisplayContentsStyle(std::unique_ptr<RenderStyle> style)
 {
+    // This is used by RenderTreeBuilder to store the style for Elements with display:contents.
+    // Normally style is held in renderers but display:contents doesn't generate one.
+    // This is kept distinct from ElementRareData::computedStyle() which can update outside style resolution.
+    // This way renderOrDisplayContentsStyle() always returns consistent styles matching the rendering state.
     ASSERT(style && style->display() == DisplayType::Contents);
     ASSERT(!renderer() || isPseudoElement());
-    ensureElementRareData().setComputedStyle(WTFMove(style));
-    clearNodeFlag(NodeFlag::IsComputedStyleInvalidFlag);
+    ensureElementRareData().setDisplayContentsStyle(WTFMove(style));
+}
+
+void Element::clearDisplayContentsStyle()
+{
+    if (!hasRareData())
+        return;
+    elementRareData()->setDisplayContentsStyle(nullptr);
 }
 
 // Returns true is the given attribute is an event handler.
@@ -2498,6 +2513,57 @@ void Element::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
             }
         }
     }
+
+    if (hasLangAttrKnownToMatchDocumentElement()) {
+        oldDocument.removeElementWithLangAttrMatchingDocumentElement(*this);
+        setEffectiveLangKnownToMatchDocumentElement(false);
+    }
+
+    updateEffectiveLangState();
+}
+
+void Element::updateEffectiveLangStateFromParent()
+{
+    ASSERT(!hasLanguageAttribute());
+    ASSERT(parentNode() != &document());
+
+    auto* parent = parentOrShadowHostElement();
+
+    if (!parent || parent == document().documentElement()) {
+        setEffectiveLangKnownToMatchDocumentElement(parent);
+        if (hasRareData())
+            elementRareData()->setEffectiveLang(nullAtom());
+        return;
+    }
+
+    setEffectiveLangKnownToMatchDocumentElement(parent->effectiveLangKnownToMatchDocumentElement());
+    if (UNLIKELY(parent->hasRareData()) && !parent->elementRareData()->effectiveLang().isNull())
+        ensureElementRareData().setEffectiveLang(parent->elementRareData()->effectiveLang());
+    else if (hasRareData())
+        elementRareData()->setEffectiveLang(nullAtom());
+}
+
+void Element::updateEffectiveLangState()
+{
+    auto& lang = langFromAttribute();
+    if (!lang) {
+        updateEffectiveLangStateFromParent();
+        return;
+    }
+
+    if (lang == document().effectiveDocumentElementLanguage()) {
+        if (hasRareData())
+            elementRareData()->setEffectiveLang(nullAtom());
+        document().addElementWithLangAttrMatchingDocumentElement(*this);
+        setEffectiveLangKnownToMatchDocumentElement(true);
+        return;
+    }
+
+    if (hasLangAttrKnownToMatchDocumentElement())
+        document().removeElementWithLangAttrMatchingDocumentElement(*this);
+
+    setEffectiveLangKnownToMatchDocumentElement(false);
+    ensureElementRareData().setEffectiveLang(lang);
 }
 
 bool Element::hasAttributes() const
@@ -2597,13 +2663,37 @@ Node::InsertedIntoAncestorResult Element::insertedIntoAncestor(InsertionType ins
             shadowRoot->hostChildElementDidChange(*this);
     }
 
-    if (auto* parent = parentOrShadowHostElement(); parent && parent != document().documentElement() && UNLIKELY(parent->hasRareData())) {
-        auto& lang = parent->elementRareData()->effectiveLang();
-        if (!lang.isNull() && langFromAttribute().isNull())
-            ensureElementRareData().setEffectiveLang(lang);
-    }
+    if (parentNode() == &parentOfInsertedTree && is<Document>(*parentNode())) {
+        clearEffectiveLangStateOnNewDocumentElement();
+        document().setDocumentElementLanguage(langFromAttribute());
+    } else if (!hasLanguageAttribute())
+        updateEffectiveLangStateFromParent();
 
     return InsertedIntoAncestorResult::Done;
+}
+
+void Element::clearEffectiveLangStateOnNewDocumentElement()
+{
+    ASSERT(parentNode() == &document());
+
+    if (hasLangAttrKnownToMatchDocumentElement()) {
+        document().removeElementWithLangAttrMatchingDocumentElement(*this);
+        setEffectiveLangKnownToMatchDocumentElement(false);
+    }
+
+    if (hasRareData())
+        elementRareData()->setEffectiveLang(nullAtom());
+}
+
+void Element::setEffectiveLangStateOnOldDocumentElement()
+{
+    if (auto& lang = langFromAttribute(); !lang.isNull() || hasRareData())
+        ensureElementRareData().setEffectiveLang(lang);
+}
+
+bool Element::hasEffectiveLangState() const
+{
+    return effectiveLangKnownToMatchDocumentElement() || (UNLIKELY(hasRareData()) && !elementRareData()->effectiveLang().isNull());
 }
 
 void Element::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
@@ -2663,16 +2753,35 @@ void Element::removedFromAncestor(RemovalType removalType, ContainerNode& oldPar
     document().fullscreenManager().exitRemovedFullscreenElementIfNeeded(*this);
 #endif
 
-    if (UNLIKELY(hasRareData()) && !elementRareData()->effectiveLang().isNull()) {
-        if (auto* parent = parentOrShadowHostElement(); langFromAttribute().isNull()
-            && !(parent && UNLIKELY(parent->hasRareData()) && !parent->elementRareData()->effectiveLang().isNull()))
-            elementRareData()->setEffectiveLang(nullAtom());
-    }
+    if (!parentNode() && is<Document>(oldParentOfRemovedTree)) {
+        setEffectiveLangStateOnOldDocumentElement();
+        document().setDocumentElementLanguage(nullAtom());
+    } else if (!hasLanguageAttribute())
+        updateEffectiveLangStateFromParent();
 
     Styleable::fromElement(*this).elementWasRemoved();
 
     if (UNLIKELY(isInTopLayer()))
         removeFromTopLayer();
+}
+
+PopoverData* Element::popoverData() const
+{
+    return hasRareData() ? elementRareData()->popoverData() : nullptr;
+}
+
+PopoverData& Element::ensurePopoverData()
+{
+    ElementRareData& data = ensureElementRareData();
+    if (!data.popoverData())
+        data.setPopoverData(makeUnique<PopoverData>());
+    return *data.popoverData();
+}
+
+void Element::clearPopoverData()
+{
+    if (hasRareData())
+        elementRareData()->setPopoverData(nullptr);
 }
 
 void Element::addShadowRoot(Ref<ShadowRoot>&& newShadowRoot)
@@ -3313,34 +3422,50 @@ static bool isProgramaticallyFocusable(Element& element)
     return element.supportsFocus();
 }
 
-static RefPtr<Element> findFocusDelegateInternal(ContainerNode& target);
-
 // https://html.spec.whatwg.org/multipage/interaction.html#autofocus-delegate
-static RefPtr<Element> autoFocusDelegate(ContainerNode& target)
+static RefPtr<Element> autoFocusDelegate(ContainerNode& target, FocusTrigger trigger)
 {
     for (auto& element : descendantsOfType<Element>(target)) {
         if (!element.hasAttributeWithoutSynchronization(HTMLNames::autofocusAttr))
             continue;
         if (auto root = shadowRootWithDelegatesFocus(element)) {
-            if (auto target = findFocusDelegateInternal(*root))
+            if (auto target = Element::findFocusDelegateForTarget(*root, trigger))
                 return target;
         }
-        if (isProgramaticallyFocusable(element))
-            return &element;
+        switch (trigger) {
+        case FocusTrigger::Click:
+            if (element.isMouseFocusable())
+                return &element;
+            break;
+        case FocusTrigger::Other:
+        case FocusTrigger::Bindings:
+            if (isProgramaticallyFocusable(element))
+                return &element;
+            break;
+        }
     }
     return nullptr;
 }
 
 // https://html.spec.whatwg.org/multipage/interaction.html#focus-delegate
-static RefPtr<Element> findFocusDelegateInternal(ContainerNode& target)
+RefPtr<Element> Element::findFocusDelegateForTarget(ContainerNode& target, FocusTrigger trigger)
 {
-    if (auto element = autoFocusDelegate(target))
+    if (auto element = autoFocusDelegate(target, trigger))
         return element;
-    for (auto& element : childrenOfType<Element>(target)) {
-        if (isProgramaticallyFocusable(element))
-            return &element;
+    for (auto& element : descendantsOfType<Element>(target)) {
+        switch (trigger) {
+        case FocusTrigger::Click:
+            if (element.isMouseFocusable())
+                return &element;
+            break;
+        case FocusTrigger::Other:
+        case FocusTrigger::Bindings:
+            if (isProgramaticallyFocusable(element))
+                return &element;
+            break;
+        }
         if (auto root = shadowRootWithDelegatesFocus(element)) {
-            if (auto target = findFocusDelegateInternal(*root))
+            if (auto target = findFocusDelegateForTarget(*root, trigger))
                 return target;
         }
     }
@@ -3348,9 +3473,9 @@ static RefPtr<Element> findFocusDelegateInternal(ContainerNode& target)
 }
 
 // https://html.spec.whatwg.org/multipage/interaction.html#focus-delegate
-RefPtr<Element> Element::findFocusDelegate()
+RefPtr<Element> Element::findFocusDelegate(FocusTrigger trigger)
 {
-    return findFocusDelegateInternal(*this);
+    return findFocusDelegateForTarget(*this, trigger);
 }
 
 void Element::focus(const FocusOptions& options)
@@ -3383,7 +3508,7 @@ void Element::focus(const FocusOptions& options)
             return;
         }
 
-        newTarget = findFocusDelegateInternal(*root);
+        newTarget = findFocusDelegateForTarget(*root, options.trigger);
         if (!newTarget)
             return;
     } else if (!isProgramaticallyFocusable(*newTarget))
@@ -3768,7 +3893,7 @@ const RenderStyle* Element::existingComputedStyle() const
             return style;
     }
 
-    return renderStyle();
+    return renderOrDisplayContentsStyle();
 }
 
 const RenderStyle* Element::renderOrDisplayContentsStyle(PseudoId pseudoId) const
@@ -3777,24 +3902,21 @@ const RenderStyle* Element::renderOrDisplayContentsStyle(PseudoId pseudoId) cons
         if (auto* pseudoElement = beforeOrAfterPseudoElement(*this, pseudoId))
             return pseudoElement->renderOrDisplayContentsStyle();
 
-        if (auto* computedStyle = existingComputedStyle()) {
-            if (auto* cachedPseudoStyle = computedStyle->getCachedPseudoStyle(pseudoId))
+        if (auto* style = renderOrDisplayContentsStyle()) {
+            if (auto* cachedPseudoStyle = style->getCachedPseudoStyle(pseudoId))
                 return cachedPseudoStyle;
         }
-
         return nullptr;
     }
 
-    if (auto* style = renderStyle())
-        return style;
+    if (hasRareData()) {
+        if (auto* style = elementRareData()->displayContentsStyle()) {
+            ASSERT(style->display() == DisplayType::Contents);
+            return style;
+        }
+    }
 
-    if (!hasRareData())
-        return nullptr;
-    auto* style = elementRareData()->computedStyle();
-    if (style && style->display() == DisplayType::Contents)
-        return style;
-
-    return nullptr;
+    return renderStyle();
 }
 
 const RenderStyle* Element::resolveComputedStyle(ResolveComputedStyleMode mode)
@@ -3973,22 +4095,26 @@ unsigned Element::rareDataChildIndex() const
     return elementRareData()->childIndex();
 }
 
-AtomString Element::effectiveLang() const
+const AtomString& Element::effectiveLang() const
 {
+    if (effectiveLangKnownToMatchDocumentElement())
+        return document().effectiveDocumentElementLanguage();
+
     if (hasRareData()) {
-        auto lang = elementRareData()->effectiveLang();
-        if (!lang.isNull())
+        if (auto& lang = elementRareData()->effectiveLang(); !lang.isNull())
             return lang;
     }
+
     return isConnected() ? document().effectiveDocumentElementLanguage() : nullAtom();
 }
 
-AtomString Element::langFromAttribute() const
+const AtomString& Element::langFromAttribute() const
 {
-    if (auto* data = elementData()) {
-        if (auto* attribute = data->findLanguageAttribute())
-            return attribute->value();
-    }
+    // Spec: xml:lang takes precedence over html:lang -- http://www.w3.org/TR/xhtml1/#C_7
+    if (hasXMLLangAttr())
+        return getAttribute(XMLNames::langAttr);
+    if (hasLangAttr())
+        return getAttribute(HTMLNames::langAttr);
     return nullAtom();
 }
 
@@ -4725,7 +4851,7 @@ void Element::resetComputedStyle()
     auto reset = [](Element& element) {
         if (element.hasCustomStyleResolveCallbacks())
             element.willResetComputedStyle();
-        element.elementRareData()->resetComputedStyle();
+        element.elementRareData()->setComputedStyle(nullptr);
     };
     reset(*this);
     for (auto& child : descendantsOfType<Element>(*this)) {

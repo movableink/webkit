@@ -30,6 +30,7 @@
 #include "ClientOrigin.h"
 #include "ExceptionOr.h"
 #include "PageIdentifier.h"
+#include "SWServerDelegate.h"
 #include "SWServerWorker.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "SecurityOriginData.h"
@@ -134,12 +135,12 @@ public:
     using CreateContextConnectionCallback = Function<void(const RegistrableDomain&, std::optional<ProcessIdentifier> requestingProcessIdentifier, std::optional<ScriptExecutionContextIdentifier>, CompletionHandler<void()>&&)>;
     using AppBoundDomainsCallback = Function<void(CompletionHandler<void(HashSet<RegistrableDomain>&&)>&&)>;
     using AddAllowedFirstPartyForCookiesCallback = Function<void(ProcessIdentifier, std::optional<ProcessIdentifier> requestingProcessIdentifier, WebCore::RegistrableDomain&&)>;
-    WEBCORE_EXPORT SWServer(UniqueRef<SWOriginStore>&&, bool processTerminationDelayEnabled, String&& registrationDatabaseDirectory, PAL::SessionID, bool shouldRunServiceWorkersOnMainThreadForTesting, bool hasServiceWorkerEntitlement, std::optional<unsigned> overrideServiceWorkerRegistrationCountTestingValue, SoftUpdateCallback&&, CreateContextConnectionCallback&&, AppBoundDomainsCallback&&, AddAllowedFirstPartyForCookiesCallback&&);
-
+    WEBCORE_EXPORT SWServer(SWServerDelegate&, UniqueRef<SWOriginStore>&&, bool processTerminationDelayEnabled, String&& registrationDatabaseDirectory, PAL::SessionID, bool shouldRunServiceWorkersOnMainThreadForTesting, bool hasServiceWorkerEntitlement, std::optional<unsigned> overrideServiceWorkerRegistrationCountTestingValue);
     WEBCORE_EXPORT ~SWServer();
 
     WEBCORE_EXPORT void clearAll(CompletionHandler<void()>&&);
     WEBCORE_EXPORT void clear(const SecurityOriginData&, CompletionHandler<void()>&&);
+    WEBCORE_EXPORT void clear(const ClientOrigin&, CompletionHandler<void()>&&);
 
     WEBCORE_EXPORT void startSuspension(CompletionHandler<void()>&&);
     WEBCORE_EXPORT void endSuspension();
@@ -271,6 +272,8 @@ private:
 
     void terminatePreinstallationWorker(SWServerWorker&);
 
+    void clearInternal(Function<bool(const ServiceWorkerRegistrationKey&)>&& matches, CompletionHandler<void()>&&);
+
     WEBCORE_EXPORT SWServerRegistration* doRegistrationMatching(const SecurityOriginData& topOrigin, const URL& clientURL);
     bool runServiceWorker(ServiceWorkerIdentifier);
 
@@ -287,6 +290,8 @@ private:
     void whenImportIsCompletedIfNeeded(CompletionHandler<void()>&&);
 
     ResourceRequest createScriptRequest(const URL&, const ServiceWorkerJobData&, SWServerRegistration&);
+
+    WeakPtr<SWServerDelegate> m_delegate;
 
     HashMap<SWServerConnectionIdentifier, std::unique_ptr<Connection>> m_connections;
     HashMap<ServiceWorkerRegistrationKey, WeakPtr<SWServerRegistration>> m_scopeToRegistrationMap;
@@ -318,14 +323,9 @@ private:
     Vector<Function<void(const HashSet<SecurityOriginData>&)>> m_getOriginsWithRegistrationsCallbacks;
     HashMap<RegistrableDomain, SWServerToContextConnection*> m_contextConnections;
 
-    // FIXME: This is a lot of callbacks. Make a delegate interface instead.
-    CreateContextConnectionCallback m_createContextConnectionCallback;
     HashSet<RegistrableDomain> m_pendingConnectionDomains;
     Vector<CompletionHandler<void()>> m_importCompletedCallbacks;
-    SoftUpdateCallback m_softUpdateCallback;
-    AppBoundDomainsCallback m_appBoundDomainsCallback;
-    AddAllowedFirstPartyForCookiesCallback m_addAllowedFirstPartyForCookiesCallback;
-    
+
     HashSet<RegistrableDomain> m_appBoundDomains;
     bool m_shouldRunServiceWorkersOnMainThreadForTesting { false };
     bool m_hasServiceWorkerEntitlement { false };

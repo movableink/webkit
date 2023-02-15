@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,12 +34,14 @@
 #include "RemoteBuffer.h"
 #include "RemoteCommandBuffer.h"
 #include "RemoteCommandEncoder.h"
+#include "RemoteCompositorIntegration.h"
 #include "RemoteComputePassEncoder.h"
 #include "RemoteComputePipeline.h"
 #include "RemoteDevice.h"
 #include "RemoteExternalTexture.h"
 #include "RemoteGPU.h"
 #include "RemotePipelineLayout.h"
+#include "RemotePresentationContext.h"
 #include "RemoteQuerySet.h"
 #include "RemoteQueue.h"
 #include "RemoteRenderBundle.h"
@@ -48,20 +50,14 @@
 #include "RemoteRenderPipeline.h"
 #include "RemoteSampler.h"
 #include "RemoteShaderModule.h"
-#include "RemoteSurface.h"
-#include "RemoteSwapChain.h"
 #include "RemoteTexture.h"
 #include "RemoteTextureView.h"
 
 namespace WebKit::WebGPU {
 
-ObjectHeap::ObjectHeap()
-{
-}
+ObjectHeap::ObjectHeap() = default;
 
-ObjectHeap::~ObjectHeap()
-{
-}
+ObjectHeap::~ObjectHeap() = default;
 
 void ObjectHeap::addObject(WebGPUIdentifier identifier, RemoteAdapter& adapter)
 {
@@ -99,6 +95,12 @@ void ObjectHeap::addObject(WebGPUIdentifier identifier, RemoteCommandEncoder& co
     ASSERT_UNUSED(result, result.isNewEntry);
 }
 
+void ObjectHeap::addObject(WebGPUIdentifier identifier, RemoteCompositorIntegration& querySet)
+{
+    auto result = m_objects.add(identifier, Object { IPC::ScopedActiveMessageReceiveQueue<RemoteCompositorIntegration> { Ref { querySet } } });
+    ASSERT_UNUSED(result, result.isNewEntry);
+}
+
 void ObjectHeap::addObject(WebGPUIdentifier identifier, RemoteComputePassEncoder& computePassEncoder)
 {
     auto result = m_objects.add(identifier, Object { IPC::ScopedActiveMessageReceiveQueue<RemoteComputePassEncoder> { Ref { computePassEncoder } } });
@@ -126,6 +128,12 @@ void ObjectHeap::addObject(WebGPUIdentifier identifier, RemoteExternalTexture& e
 void ObjectHeap::addObject(WebGPUIdentifier identifier, RemotePipelineLayout& pipelineLayout)
 {
     auto result = m_objects.add(identifier, Object { IPC::ScopedActiveMessageReceiveQueue<RemotePipelineLayout> { Ref { pipelineLayout } } });
+    ASSERT_UNUSED(result, result.isNewEntry);
+}
+
+void ObjectHeap::addObject(WebGPUIdentifier identifier, RemotePresentationContext& presentationContext)
+{
+    auto result = m_objects.add(identifier, Object { IPC::ScopedActiveMessageReceiveQueue<RemotePresentationContext> { Ref { presentationContext } } });
     ASSERT_UNUSED(result, result.isNewEntry);
 }
 
@@ -174,18 +182,6 @@ void ObjectHeap::addObject(WebGPUIdentifier identifier, RemoteSampler& sampler)
 void ObjectHeap::addObject(WebGPUIdentifier identifier, RemoteShaderModule& shaderModule)
 {
     auto result = m_objects.add(identifier, Object { IPC::ScopedActiveMessageReceiveQueue<RemoteShaderModule> { Ref { shaderModule } } });
-    ASSERT_UNUSED(result, result.isNewEntry);
-}
-
-void ObjectHeap::addObject(WebGPUIdentifier identifier, RemoteSurface& surface)
-{
-    auto result = m_objects.add(identifier, Object { IPC::ScopedActiveMessageReceiveQueue<RemoteSurface> { Ref { surface } } });
-    ASSERT_UNUSED(result, result.isNewEntry);
-}
-
-void ObjectHeap::addObject(WebGPUIdentifier identifier, RemoteSwapChain& swapChain)
-{
-    auto result = m_objects.add(identifier, Object { IPC::ScopedActiveMessageReceiveQueue<RemoteSwapChain> { Ref { swapChain } } });
     ASSERT_UNUSED(result, result.isNewEntry);
 }
 
@@ -260,6 +256,14 @@ PAL::WebGPU::CommandEncoder* ObjectHeap::convertCommandEncoderFromBacking(WebGPU
     return &std::get<IPC::ScopedActiveMessageReceiveQueue<RemoteCommandEncoder>>(iterator->value)->backing();
 }
 
+PAL::WebGPU::CompositorIntegration* ObjectHeap::convertCompositorIntegrationFromBacking(WebGPUIdentifier identifier)
+{
+    auto iterator = m_objects.find(identifier);
+    if (iterator == m_objects.end() || !std::holds_alternative<IPC::ScopedActiveMessageReceiveQueue<RemoteCompositorIntegration>>(iterator->value))
+        return nullptr;
+    return &std::get<IPC::ScopedActiveMessageReceiveQueue<RemoteCompositorIntegration>>(iterator->value)->backing();
+}
+
 PAL::WebGPU::ComputePassEncoder* ObjectHeap::convertComputePassEncoderFromBacking(WebGPUIdentifier identifier)
 {
     auto iterator = m_objects.find(identifier);
@@ -298,6 +302,14 @@ PAL::WebGPU::PipelineLayout* ObjectHeap::convertPipelineLayoutFromBacking(WebGPU
     if (iterator == m_objects.end() || !std::holds_alternative<IPC::ScopedActiveMessageReceiveQueue<RemotePipelineLayout>>(iterator->value))
         return nullptr;
     return &std::get<IPC::ScopedActiveMessageReceiveQueue<RemotePipelineLayout>>(iterator->value)->backing();
+}
+
+PAL::WebGPU::PresentationContext* ObjectHeap::convertPresentationContextFromBacking(WebGPUIdentifier identifier)
+{
+    auto iterator = m_objects.find(identifier);
+    if (iterator == m_objects.end() || !std::holds_alternative<IPC::ScopedActiveMessageReceiveQueue<RemotePresentationContext>>(iterator->value))
+        return nullptr;
+    return &std::get<IPC::ScopedActiveMessageReceiveQueue<RemotePresentationContext>>(iterator->value)->backing();
 }
 
 PAL::WebGPU::QuerySet* ObjectHeap::convertQuerySetFromBacking(WebGPUIdentifier identifier)
@@ -362,22 +374,6 @@ PAL::WebGPU::ShaderModule* ObjectHeap::convertShaderModuleFromBacking(WebGPUIden
     if (iterator == m_objects.end() || !std::holds_alternative<IPC::ScopedActiveMessageReceiveQueue<RemoteShaderModule>>(iterator->value))
         return nullptr;
     return &std::get<IPC::ScopedActiveMessageReceiveQueue<RemoteShaderModule>>(iterator->value)->backing();
-}
-
-PAL::WebGPU::Surface* ObjectHeap::convertSurfaceFromBacking(WebGPUIdentifier identifier)
-{
-    auto iterator = m_objects.find(identifier);
-    if (iterator == m_objects.end() || !std::holds_alternative<IPC::ScopedActiveMessageReceiveQueue<RemoteSurface>>(iterator->value))
-        return nullptr;
-    return &std::get<IPC::ScopedActiveMessageReceiveQueue<RemoteSurface>>(iterator->value)->backing();
-}
-
-PAL::WebGPU::SwapChain* ObjectHeap::convertSwapChainFromBacking(WebGPUIdentifier identifier)
-{
-    auto iterator = m_objects.find(identifier);
-    if (iterator == m_objects.end() || !std::holds_alternative<IPC::ScopedActiveMessageReceiveQueue<RemoteSwapChain>>(iterator->value))
-        return nullptr;
-    return &std::get<IPC::ScopedActiveMessageReceiveQueue<RemoteSwapChain>>(iterator->value)->backing();
 }
 
 PAL::WebGPU::Texture* ObjectHeap::convertTextureFromBacking(WebGPUIdentifier identifier)

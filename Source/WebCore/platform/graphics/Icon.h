@@ -30,6 +30,15 @@
 #include "NativeImage.h"
 #include "PlatformImage.h"
 #include <CoreGraphics/CoreGraphics.h>
+
+#if USE(APPKIT)
+OBJC_CLASS NSImage;
+using CocoaImage = NSImage;
+#else
+OBJC_CLASS UIImage;
+using CocoaImage = UIImage;
+#endif
+
 #elif PLATFORM(WIN)
 typedef struct HICON__* HICON;
 #elif PLATFORM(QT)
@@ -55,8 +64,10 @@ public:
 #endif
 
 #if PLATFORM(COCOA)
-    WEBCORE_EXPORT static RefPtr<Icon> createIconForImage(PlatformImagePtr&&);
-    RefPtr<NativeImage> image() const { return m_cgImage; }
+    WEBCORE_EXPORT static RefPtr<Icon> create(CocoaImage *);
+    WEBCORE_EXPORT static RefPtr<Icon> create(PlatformImagePtr&&);
+
+    RetainPtr<CocoaImage> image() const { return m_image; };
 #endif
 
 #if PLATFORM(MAC)
@@ -66,8 +77,8 @@ public:
 
 private:
 #if PLATFORM(COCOA)
-    Icon(RefPtr<NativeImage>&&);
-    RefPtr<NativeImage> m_cgImage;
+    Icon(CocoaImage *);
+    RetainPtr<CocoaImage> m_image;
 #elif PLATFORM(WIN)
     Icon(HICON);
     HICON m_hIcon;

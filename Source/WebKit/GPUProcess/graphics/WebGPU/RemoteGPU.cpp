@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,13 +30,17 @@
 
 #include "GPUConnectionToWebProcess.h"
 #include "RemoteAdapter.h"
+#include "RemoteCompositorIntegration.h"
 #include "RemoteGPUMessages.h"
 #include "RemoteGPUProxyMessages.h"
+#include "RemotePresentationContext.h"
 #include "RemoteRenderingBackend.h"
 #include "StreamServerConnection.h"
 #include "WebGPUObjectHeap.h"
 #include <pal/graphics/WebGPU/WebGPU.h>
 #include <pal/graphics/WebGPU/WebGPUAdapter.h>
+#include <pal/graphics/WebGPU/WebGPUPresentationContext.h>
+#include <pal/graphics/WebGPU/WebGPUPresentationContextDescriptor.h>
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
 #import <pal/graphics/WebGPU/Impl/WebGPUCreateImpl.h>
@@ -160,6 +164,31 @@ void RemoteGPU::requestAdapter(const WebGPU::RequestAdapterOptions& options, Web
             limits.maxComputeWorkgroupsPerDimension(),
         }, adapter->isFallbackAdapter() } });
     });
+}
+
+void RemoteGPU::createPresentationContext(const WebGPU::PresentationContextDescriptor& descriptor, WebGPUIdentifier identifier)
+{
+    assertIsCurrent(workQueue());
+    ASSERT(m_backing);
+
+    auto convertedDescriptor = m_objectHeap->convertFromBacking(descriptor);
+    ASSERT(convertedDescriptor);
+    if (!convertedDescriptor)
+        return;
+
+    auto presentationContext = m_backing->createPresentationContext(*convertedDescriptor);
+    auto remotePresentationContext = RemotePresentationContext::create(presentationContext, m_objectHeap, *m_streamConnection, identifier);
+    m_objectHeap->addObject(identifier, remotePresentationContext);
+}
+
+void RemoteGPU::createCompositorIntegration(WebGPUIdentifier identifier)
+{
+    assertIsCurrent(workQueue());
+    ASSERT(m_backing);
+
+    auto compositorIntegration = m_backing->createCompositorIntegration();
+    auto remoteCompositorIntegration = RemoteCompositorIntegration::create(compositorIntegration, m_objectHeap, *m_streamConnection, identifier);
+    m_objectHeap->addObject(identifier, remoteCompositorIntegration);
 }
 
 } // namespace WebKit

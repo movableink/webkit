@@ -27,7 +27,6 @@
 
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
-#include "JSDOMPromiseDeferred.h"
 #include "JSValueInWrappedObject.h"
 #include <wtf/Function.h>
 #include <wtf/Ref.h>
@@ -85,11 +84,11 @@ private:
     void derefEventTarget() final { deref(); }
     void eventListenersDidChange() final;
     
-    bool m_aborted { false };
     Vector<std::pair<uint32_t, Algorithm>> m_algorithms;
-    uint32_t m_algorithmIdentifier { 0 };
     WeakPtr<AbortSignal, WeakPtrImplWithEventTargetData> m_followingSignal;
     JSValueInWrappedObject m_reason;
+    uint32_t m_algorithmIdentifier { 0 };
+    bool m_aborted { false };
     bool m_hasActiveTimeoutTimer { false };
     bool m_hasAbortEventListener { false };
 };

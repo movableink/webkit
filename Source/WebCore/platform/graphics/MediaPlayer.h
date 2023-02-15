@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,8 +38,6 @@
 #include "PlatformTextTrack.h"
 #include "SecurityOriginData.h"
 #include "Timer.h"
-#include "VideoFrame.h"
-#include "VideoFrameMetadata.h"
 #include "VideoPlaybackQualityMetrics.h"
 #include <JavaScriptCore/Forward.h>
 #include <wtf/CompletionHandler.h>
@@ -87,10 +85,12 @@ class PlatformMediaResourceLoader;
 class PlatformTimeRanges;
 class SharedBuffer;
 class TextTrackRepresentation;
+class VideoFrame;
 class VideoTrackPrivate;
 
 struct GraphicsDeviceAdapter;
 struct SecurityOriginData;
+struct VideoFrameMetadata;
 
 struct MediaEngineSupportParameters {
     ContentType type;
@@ -206,10 +206,6 @@ public:
     virtual bool mediaPlayerAcceleratedCompositingEnabled() { return false; }
 
     virtual void mediaPlayerActiveSourceBuffersChanged() { }
-
-#if PLATFORM(WIN) && USE(AVFOUNDATION)
-    virtual GraphicsDeviceAdapter* mediaPlayerGraphicsDeviceAdapter() const { return nullptr; }
-#endif
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     virtual RefPtr<ArrayBuffer> mediaPlayerCachedKeyForKeyId(const String&) const = 0;
@@ -552,10 +548,6 @@ public:
     void acceleratedRenderingStateChanged();
 
     void setShouldMaintainAspectRatio(bool);
-
-#if PLATFORM(WIN) && USE(AVFOUNDATION)
-    GraphicsDeviceAdapter* graphicsDeviceAdapter() const;
-#endif
 
     bool didPassCORSAccessCheck() const;
     bool isCrossOrigin(const SecurityOrigin&) const;

@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2022 Apple Inc. All rights reserved.
+# Copyright (C) 2010-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@ import re
 import sys
 
 from webkit import parser
-from webkit.model import BUILTIN_ATTRIBUTE, SYNCHRONOUS_ATTRIBUTE, ALLOWEDWHENWAITINGFORSYNCREPLY_ATTRIBUTE, ALLOWEDWHENWAITINGFORSYNCREPLYDURINGUNBOUNDEDIPC_ATTRIBUTE, MAINTHREADCALLBACK_ATTRIBUTE, STREAM_ATTRIBUTE, SYNCHRONOUS_ATTRIBUTE, WANTS_CONNECTION_ATTRIBUTE, MessageReceiver, Message
+from webkit.model import BUILTIN_ATTRIBUTE, SYNCHRONOUS_ATTRIBUTE, ALLOWEDWHENWAITINGFORSYNCREPLY_ATTRIBUTE, ALLOWEDWHENWAITINGFORSYNCREPLYDURINGUNBOUNDEDIPC_ATTRIBUTE, MAINTHREADCALLBACK_ATTRIBUTE, STREAM_ATTRIBUTE, CALL_WITH_REPLY_ID_ATTRIBUTE, MessageReceiver, Message
 
 _license_header = """/*
  * Copyright (C) 2021 Apple Inc. All rights reserved.
@@ -235,6 +235,7 @@ def serialized_identifiers():
         'WebCore::FileSystemHandleIdentifier',
         'WebCore::FileSystemSyncAccessHandleIdentifier',
         'WebCore::ImageDecoderIdentifier',
+        'WebCore::LayerHostingContextIdentifier',
         'WebCore::LibWebRTCSocketIdentifier',
         'WebCore::MediaKeySystemRequestIdentifier',
         'WebCore::MediaPlayerIdentifier',
@@ -242,6 +243,7 @@ def serialized_identifiers():
         'WebCore::PageIdentifier',
         'WebCore::PlaybackTargetClientContextIdentifier',
         'WebCore::PushSubscriptionIdentifier',
+        'WebCore::PortIdentifier',
         'WebCore::ProcessIdentifier',
         'WebCore::RealtimeMediaSourceIdentifier',
         'WebCore::RenderingResourceIdentifier',
@@ -313,8 +315,8 @@ def types_that_cannot_be_forward_declared():
     return frozenset([
         'CVPixelBufferRef',
         'GCGLint',
+        'IPC::AsyncReplyID',
         'IPC::DataReference',
-        'IPC::FilterReference',
         'IPC::FontReference',
         'IPC::Semaphore',
         'MachSendRight',
@@ -354,6 +356,7 @@ def types_that_cannot_be_forward_declared():
         'WebKit::DisplayListRecorderFlushIdentifier',
         'WebKit::DownloadID',
         'WebKit::FileSystemStorageError',
+        'WebKit::FileSystemSyncAccessHandleInfo',
         'WebKit::ImageBufferBackendHandle',
         'WebKit::LayerHostingContextID',
         'WebKit::LegacyCustomProtocolID',
@@ -496,9 +499,8 @@ def async_message_statement(receiver, message):
     dispatch_function = 'handleMessage'
     if message.reply_parameters is not None and not message.has_attribute(SYNCHRONOUS_ATTRIBUTE):
         dispatch_function += 'Async'
-
-    if message.has_attribute(WANTS_CONNECTION_ATTRIBUTE):
-        dispatch_function += 'WantsConnection'
+    if message.has_attribute(CALL_WITH_REPLY_ID_ATTRIBUTE):
+        dispatch_function += 'WithReplyID'
 
     connection = 'connection'
     if receiver.has_attribute(STREAM_ATTRIBUTE):
@@ -516,8 +518,6 @@ def sync_message_statement(receiver, message):
         dispatch_function += 'Synchronous'
     elif message.reply_parameters is not None:
         dispatch_function += 'Async'
-    if message.has_attribute(WANTS_CONNECTION_ATTRIBUTE):
-        dispatch_function += 'WantsConnection'
 
     maybe_reply_encoder = ", *replyEncoder"
     if receiver.has_attribute(STREAM_ATTRIBUTE):
@@ -608,6 +608,7 @@ def headers_for_type(type):
         'Inspector::ExtensionError': ['"InspectorExtensionTypes.h"'],
         'Inspector::FrontendChannel::ConnectionType': ['<JavaScriptCore/InspectorFrontendChannel.h>'],
         'Inspector::InspectorTargetType': ['<JavaScriptCore/InspectorTarget.h>'],
+        'IPC::AsyncReplyID': ['"Connection.h"'],
         'IPC::Semaphore': ['"IPCSemaphore.h"'],
         'JSC::MessageLevel': ['<JavaScriptCore/ConsoleTypes.h>'],
         'JSC::MessageSource': ['<JavaScriptCore/ConsoleTypes.h>'],
@@ -790,6 +791,7 @@ def headers_for_type(type):
         'WebCore::ViewportAttributes': ['<WebCore/ViewportArguments.h>'],
         'WebCore::WheelEventProcessingSteps': ['<WebCore/ScrollingCoordinatorTypes.h>'],
         'WebCore::WillContinueLoading': ['<WebCore/FrameLoaderTypes.h>'],
+        'WebCore::WillInternallyHandleFailure': ['<WebCore/FrameLoaderTypes.h>'],
         'WebKit::ActivityStateChangeID': ['"DrawingAreaInfo.h"'],
         'WebKit::AllowOverwrite': ['"DownloadID.h"'],
         'WebKit::AppPrivacyReportTestingData': ['"AppPrivacyReport.h"'],
@@ -863,6 +865,7 @@ def headers_for_type(type):
         'WebKit::WebGPU::OutOfMemoryError': ['"WebGPUOutOfMemoryError.h"'],
         'WebKit::WebGPU::PipelineDescriptorBase': ['"WebGPUPipelineDescriptorBase.h"'],
         'WebKit::WebGPU::PipelineLayoutDescriptor': ['"WebGPUPipelineLayoutDescriptor.h"'],
+        'WebKit::WebGPU::PresentationContextDescriptor': ['"WebGPUPresentationContextDescriptor.h"'],
         'WebKit::WebGPU::PrimitiveState': ['"WebGPUPrimitiveState.h"'],
         'WebKit::WebGPU::ProgrammableStage': ['"WebGPUProgrammableStage.h"'],
         'WebKit::WebGPU::QuerySetDescriptor': ['"WebGPUQuerySetDescriptor.h"'],
@@ -882,8 +885,6 @@ def headers_for_type(type):
         'WebKit::WebGPU::StorageTextureBindingLayout': ['"WebGPUStorageTextureBindingLayout.h"'],
         'WebKit::WebGPU::SupportedFeatures': ['"WebGPUSupportedFeatures.h"'],
         'WebKit::WebGPU::SupportedLimits': ['"WebGPUSupportedLimits.h"'],
-        'WebKit::WebGPU::SurfaceDescriptor': ['"WebGPUSurfaceDescriptor.h"'],
-        'WebKit::WebGPU::SwapChainDescriptor': ['"WebGPUSwapChainDescriptor.h"'],
         'WebKit::WebGPU::TextureBindingLayout': ['"WebGPUTextureBindingLayout.h"'],
         'WebKit::WebGPU::TextureDescriptor': ['"WebGPUTextureDescriptor.h"'],
         'WebKit::WebGPU::TextureViewDescriptor': ['"WebGPUTextureViewDescriptor.h"'],

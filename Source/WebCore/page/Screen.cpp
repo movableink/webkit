@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2015 Google Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +32,7 @@
 
 #include "DOMWindow.h"
 #include "Document.h"
+#include "DocumentLoader.h"
 #include "FloatRect.h"
 #include "Frame.h"
 #include "FrameView.h"
@@ -52,29 +54,39 @@ Screen::Screen(DOMWindow& window)
 
 Screen::~Screen() = default;
 
-unsigned Screen::height() const
+static bool isLoadingInHeadlessMode(const Frame& frame)
 {
-    auto* frame = this->frame();
+    RefPtr mainDocument = frame.mainFrame().document();
+    if (!mainDocument)
+        return false;
+
+    RefPtr loader = mainDocument->loader();
+    return loader && loader->isLoadingInHeadlessMode();
+}
+
+int Screen::height() const
+{
+    RefPtr frame = this->frame();
     if (!frame)
         return 0;
     if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::Height);
-    return static_cast<unsigned>(frame->screenSize().height());
+    return static_cast<int>(frame->screenSize().height());
 }
 
-unsigned Screen::width() const
+int Screen::width() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return 0;
     if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::Width);
-    return static_cast<unsigned>(frame->screenSize().width());
+    return static_cast<int>(frame->screenSize().width());
 }
 
 unsigned Screen::colorDepth() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return 0;
     if (frame->settings().webAPIStatisticsEnabled())
@@ -84,7 +96,7 @@ unsigned Screen::colorDepth() const
 
 unsigned Screen::pixelDepth() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return 0;
     if (frame->settings().webAPIStatisticsEnabled())
@@ -99,42 +111,62 @@ unsigned Screen::pixelDepth() const
 
 int Screen::availLeft() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return 0;
+
     if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailLeft);
+
+    if (isLoadingInHeadlessMode(*frame))
+        return 0;
+
     return static_cast<int>(screenAvailableRect(frame->view()).x());
 }
 
 int Screen::availTop() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return 0;
+
     if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailTop);
+
+    if (isLoadingInHeadlessMode(*frame))
+        return 0;
+
     return static_cast<int>(screenAvailableRect(frame->view()).y());
 }
 
-unsigned Screen::availHeight() const
+int Screen::availHeight() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return 0;
+
     if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailHeight);
-    return static_cast<unsigned>(screenAvailableRect(frame->view()).height());
+
+    if (isLoadingInHeadlessMode(*frame))
+        return static_cast<int>(frame->screenSize().height());
+
+    return static_cast<int>(screenAvailableRect(frame->view()).height());
 }
 
-unsigned Screen::availWidth() const
+int Screen::availWidth() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return 0;
+
     if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailWidth);
-    return static_cast<unsigned>(screenAvailableRect(frame->view()).width());
+
+    if (isLoadingInHeadlessMode(*frame))
+        return static_cast<int>(frame->screenSize().width());
+
+    return static_cast<int>(screenAvailableRect(frame->view()).width());
 }
 
 ScreenOrientation& Screen::orientation()

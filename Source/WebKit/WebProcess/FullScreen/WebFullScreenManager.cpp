@@ -40,6 +40,7 @@
 #include <WebCore/FrameView.h>
 #include <WebCore/FullscreenManager.h>
 #include <WebCore/HTMLVideoElement.h>
+#include <WebCore/JSDOMPromiseDeferred.h>
 #include <WebCore/Quirks.h>
 #include <WebCore/RenderLayerBacking.h>
 #include <WebCore/RenderView.h>
@@ -87,10 +88,19 @@ WebFullScreenManager::WebFullScreenManager(WebPage* page)
     
 WebFullScreenManager::~WebFullScreenManager()
 {
-    clearElement();
+    invalidate();
 }
 
-WebCore::Element* WebFullScreenManager::element() 
+void WebFullScreenManager::invalidate()
+{
+    clearElement();
+#if ENABLE(VIDEO)
+    setMainVideoElement(nullptr);
+    m_mainVideoElementTextRecognitionTimer.stop();
+#endif
+}
+
+WebCore::Element* WebFullScreenManager::element()
 { 
     return m_element.get(); 
 }
@@ -365,10 +375,7 @@ void WebFullScreenManager::close()
     m_closing = true;
     LOG(Fullscreen, "WebFullScreenManager %p close()", this);
     m_page->injectedBundleFullScreenClient().closeFullScreen(m_page.get());
-#if ENABLE(VIDEO)
-    setMainVideoElement(nullptr);
-#endif
-    clearElement();
+    invalidate();
     m_closing = false;
 }
 

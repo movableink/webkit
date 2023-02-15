@@ -740,7 +740,7 @@
       "emails" : [
          "aestes@apple.com"
       ],
-      "expertise" : "Layout and rendering, plug-in loading, HTML parsing, web compatibility",
+      "github" : "aestes",
       "name" : "Andy Estes",
       "nicks" : [
          "estes"
@@ -1252,6 +1252,18 @@
    },
    {
       "emails" : [
+         "bharris9@apple.com",
+         "btashawn@hotmail.com"
+      ],
+      "github" : "btashawn",
+      "name" : "Bri Harris",
+      "nicks" : [
+         "bharris9"
+      ],
+      "status" : "committer"
+   },
+   {
+      "emails" : [
          "brian.holt@samsung.com"
       ],
       "expertise" : "WebKitGTK, memory leak detection",
@@ -1519,7 +1531,8 @@
       "name" : "Chirag M Shah",
       "nicks" : [
          "chirag_m_shah"
-      ]
+      ],
+      "status" : "committer"
    },
    {
       "emails" : [
@@ -2060,7 +2073,8 @@
    },
    {
       "emails" : [
-         "dawn_flores@apple.com, matteo_flores@apple.com"
+         "dawn_flores@apple.com",
+         "matteo_flores@apple.com"
       ],
       "github" : "Smackteo",
       "name" : "Dawn Flores",
@@ -2584,6 +2598,14 @@
       "nicks" : [
          "erynofwales"
       ]
+   },
+   {
+      "emails" : [
+         "sgz@apple.com",
+         "etienne@segonzac.info"
+      ],
+      "github" : "etiennesegonzac",
+      "name" : "Etienne Segonzac"
    },
    {
       "emails" : [

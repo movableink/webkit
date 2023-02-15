@@ -43,6 +43,7 @@
 #include "B3ProcedureInlines.h"
 #include "B3StackmapGenerationParams.h"
 #include "BinarySwitch.h"
+#include "CompilerTimingScope.h"
 #include "JSCJSValueInlines.h"
 #include "JSWebAssemblyArray.h"
 #include "JSWebAssemblyInstance.h"
@@ -353,6 +354,8 @@ struct AirIRGeneratorBase {
 
     void finalizeEntrypoints();
 
+    PartialResult WARN_UNUSED_RETURN addDrop(ExpressionType);
+
     PartialResult WARN_UNUSED_RETURN addArguments(const TypeDefinition&);
     PartialResult WARN_UNUSED_RETURN addLocal(Type, uint32_t);
     //             addConstant (in derived classes)
@@ -362,6 +365,7 @@ struct AirIRGeneratorBase {
     // References
     //                               addRefIsNull (in derived classes)
     PartialResult WARN_UNUSED_RETURN addRefFunc(uint32_t index, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addRefAsNonNull(ExpressionType, ExpressionType&);
 
     // Tables
     PartialResult WARN_UNUSED_RETURN addTableGet(unsigned, ExpressionType index, ExpressionType& result);
@@ -471,7 +475,7 @@ struct AirIRGeneratorBase {
     PartialResult WARN_UNUSED_RETURN addCall(uint32_t calleeIndex, const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results, CallType = CallType::Call);
     PartialResult WARN_UNUSED_RETURN addCallIndirect(unsigned tableIndex, const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results, CallType = CallType::Call);
     PartialResult WARN_UNUSED_RETURN addCallRef(const TypeDefinition&, Vector<ExpressionType>& args, ResultList& results);
-    PartialResult WARN_UNUSED_RETURN emitIndirectCall(ExpressionType calleeInstance, ExpressionType calleeCode, ExpressionType jsCalleeInstance, const TypeDefinition&, const Vector<ExpressionType>& args, ResultList&, CallType = CallType::Call);
+    PartialResult WARN_UNUSED_RETURN emitIndirectCall(ExpressionType calleeInstance, ExpressionType calleeCode, ExpressionType jsCalleeAnchor, const TypeDefinition&, const Vector<ExpressionType>& args, ResultList&, CallType = CallType::Call);
     PartialResult WARN_UNUSED_RETURN addUnreachable();
     PartialResult WARN_UNUSED_RETURN addCrash();
 
@@ -493,8 +497,8 @@ struct AirIRGeneratorBase {
         // are more convenient to specify as a open range.
         //
         // The top endpoint of the range is always excluded, i.e. this value chooses between:
-        // closedLowerEndopint = true    =>   range === [min, max)
-        // closedLowerEndopint = false   =>   range === (min, max)
+        // closedLowerEndpoint = true    =>   range === [min, max)
+        // closedLowerEndpoint = false   =>   range === (min, max)
         bool closedLowerEndpoint;
     };
 
@@ -666,8 +670,18 @@ protected:
                 switch (patch->resultConstraints[i].kind()) {
                 case B3::ValueRep::StackArgument: {
                     Arg arg = Arg::callArg(patch->resultConstraints[i].offsetFromSP());
+                    B3::Air::Opcode opcode = moveForType(m_proc.typeAtOffset(patch->type(), i));
+                    Width width = widthForBytes(sizeofType(m_proc.typeAtOffset(patch->type(), i)));
+                    if (arg.isValidForm(opcode, width))
+                        resultMovs.append(Inst(opcode, nullptr, arg, toTmp(results[i])));
+                    else {
+                        auto immTmp = self().gPtr();
+                        auto newPtr = self().gPtr();
+                        resultMovs.append(Inst(Move, nullptr, Arg::bigImm(arg.offset()), immTmp));
+                        resultMovs.append(Inst(Derived::AddPtr, nullptr, Tmp(MacroAssembler::stackPointerRegister), immTmp, newPtr));
+                        resultMovs.append(Inst(opcode, nullptr, Arg::addr(newPtr), toTmp(results[i])));
+                    }
                     inst.args.append(arg);
-                    resultMovs.append(Inst(B3::Air::moveForType(m_proc.typeAtOffset(patch->type(), i)), nullptr, arg, toTmp(results[i])));
                     break;
                 }
                 case B3::ValueRep::Register: {
@@ -709,11 +723,11 @@ protected:
             case B3::ValueRep::StackArgument: {
                 Arg arg = Arg::callArg(tmp.rep.offsetFromSP());
                 B3::Air::Opcode opcode = moveForType(toB3Type(tmp.tmp.type()));
-                if (arg.isValidForm(opcode, pointerWidth()))
+                if (arg.isValidForm(opcode, tmp.tmp.type().width()))
                     append(basicBlock, opcode, tmp.tmp, arg);
                 else {
-                    typename Derived::ExpressionType immTmp = self().gPtr();
-                    typename Derived::ExpressionType newPtr = self().gPtr();
+                    auto immTmp = self().gPtr();
+                    auto newPtr = self().gPtr();
                     append(basicBlock, Move, Arg::bigImm(arg.offset()), immTmp);
                     append(basicBlock, Derived::AddPtr, Tmp(MacroAssembler::stackPointerRegister), immTmp, newPtr);
                     append(basicBlock, opcode, tmp.tmp, Arg::addr(newPtr));
@@ -1029,7 +1043,7 @@ AirIRGeneratorBase<Derived, ExpressionType>::AirIRGeneratorBase(const ModuleInfo
                 // 1. Emit less code.
                 // 2. Try to speed things up by skipping stack checks.
                 minimumParentCheckSize,
-                // This allows us to elide stack checks in the Wasm -> Embedder call IC stub. Since these will
+                // This allows us to elide stack checks in the Wasm -> JS call IC stub. Since these will
                 // spill all arguments to the stack, we ensure that a stack check here covers the
                 // stack that such a stub would use.
                 Checked<uint32_t>(m_maxNumJSCallArguments) * sizeof(Register) + jsCallingConvention().headerSizeInBytes
@@ -1195,6 +1209,12 @@ void AirIRGeneratorBase<Derived, ExpressionType>::forEachLiveValue(Function&& fu
     }
 }
 
+template<typename Derived, typename ExpressionType>
+auto AirIRGeneratorBase<Derived, ExpressionType>::addDrop(ExpressionType) -> PartialResult
+{
+    return { };
+}
+
 template <typename Derived, typename ExpressionType>
 auto AirIRGeneratorBase<Derived, ExpressionType>::addLocal(Type type, uint32_t count) -> PartialResult
 {
@@ -1242,6 +1262,15 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addRefFunc(uint32_t index, Exp
         result = tmpForType(Types::Funcref);
     emitCCall(&operationWasmRefFunc, result, instanceValue(), self().addConstant(Types::I32, index));
 
+    return { };
+}
+
+template <typename Derived, typename ExpressionType>
+auto AirIRGeneratorBase<Derived, ExpressionType>::addRefAsNonNull(ExpressionType reference, ExpressionType& result) -> PartialResult
+{
+    emitThrowOnNullReference(reference, ExceptionType::NullRefAsNonNull);
+    result = self().tmpForType(Type { TypeKind::Ref, reference.type().index });
+    self().emitMoveWithoutTypeCheck(reference, result);
     return { };
 }
 
@@ -1562,7 +1591,7 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::getGlobal(uint32_t index, Expr
 
     result = tmpForType(type);
 
-    int32_t offset = Instance::offsetOfGlobalPtr(m_numImportFunctions, m_info.tableCount(), index);
+    int32_t offset = Instance::offsetOfGlobalPtr(m_info.importFunctionCount(), m_info.tableCount(), index);
 
     switch (global.bindingMode) {
     case Wasm::GlobalInformation::BindingMode::EmbeddedInInstance:
@@ -2628,6 +2657,8 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addStructNewDefault(uint32_t t
 template <typename Derived, typename ExpressionType>
 auto AirIRGeneratorBase<Derived, ExpressionType>::addStructGet(ExpressionType structReference, const StructType& structType, uint32_t fieldIndex, ExpressionType& result) -> PartialResult
 {
+    emitThrowOnNullReference(structReference, ExceptionType::NullStructGet);
+
     auto payload = self().gPtr();
     auto structBase = self().extractJSValuePointer(structReference);
     self().emitLoad(structBase, JSWebAssemblyStruct::offsetOfPayload(), payload);
@@ -2644,6 +2675,8 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addStructGet(ExpressionType st
 template <typename Derived, typename ExpressionType>
 auto AirIRGeneratorBase<Derived, ExpressionType>::addStructSet(ExpressionType structReference, const StructType& structType, uint32_t fieldIndex, ExpressionType value) -> PartialResult
 {
+    emitThrowOnNullReference(structReference, ExceptionType::NullStructSet);
+
     auto payload = self().gPtr();
     auto structBase = self().extractJSValuePointer(structReference);
     self().emitLoad(structBase, JSWebAssemblyStruct::offsetOfPayload(), payload);
@@ -3154,7 +3187,7 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addCall(uint32_t functionIndex
 
     if (m_info.isImportedFunctionFromFunctionIndexSpace(functionIndex)) {
 
-        auto emitCallToEmbedder = [&, this](CallPatchpointData data) -> void {
+        auto emitCallToImport = [&, this](CallPatchpointData data) -> void {
             CallPatchpointData::first_type patchpoint = data.first;
             CallPatchpointData::second_type handle = data.second;
             // We need to clobber all potential pinned registers since we might be leaving the instance.
@@ -3167,7 +3200,7 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addCall(uint32_t functionIndex
                     prepareForTailCall(jit, params, tailCallStackOffsetFromFP);
                 if (handle)
                     handle->generate(jit, params, this);
-                JIT_COMMENT(jit, "Wasm to embedder imported function call patchpoint");
+                JIT_COMMENT(jit, "Wasm to imported function call patchpoint");
                 if (isTailCall) {
                     // In tail-call, we always configure JSWebAssemblyInstance* in |this| to anchor it from conservative GC roots.
                     CCallHelpers::Address thisSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::thisArgument * static_cast<int>(sizeof(Register)) - prologueStackPointerDelta());
@@ -3187,11 +3220,11 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addCall(uint32_t functionIndex
         append(Move, Arg::addr(jumpDestination), jumpDestination);
 
         if (isTailCall) {
-            emitCallToEmbedder(self().emitTailCallPatchpoint(m_currentBlock, tailCallStackOffsetFromFP, wasmCalleeInfo.params, args, { { jumpDestination, B3::ValueRep(GPRInfo::nonPreservedNonArgumentGPR0) } }));
+            emitCallToImport(self().emitTailCallPatchpoint(m_currentBlock, tailCallStackOffsetFromFP, wasmCalleeInfo.params, args, { { jumpDestination, B3::ValueRep(GPRInfo::nonPreservedNonArgumentGPR0) } }));
             return { };
         }
 
-        emitCallToEmbedder(self().emitCallPatchpoint(m_currentBlock, self().toB3ResultType(&signature), results, args, wasmCalleeInfo, { { jumpDestination, B3::ValueRep(GPRInfo::nonPreservedNonArgumentGPR0) } }));
+        emitCallToImport(self().emitCallPatchpoint(m_currentBlock, self().toB3ResultType(&signature), results, args, wasmCalleeInfo, { { jumpDestination, B3::ValueRep(GPRInfo::nonPreservedNonArgumentGPR0) } }));
 
         // The call could have been to another WebAssembly instance, and / or could have modified our Memory.
         restoreWebAssemblyGlobalState(m_info.memory, currentInstance, m_currentBlock);
@@ -3258,8 +3291,8 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addCallIndirect(unsigned table
     ASSERT(m_info.tables[tableIndex].type() == TableElementType::Funcref);
 
     // Note: call indirect can call either WebAssemblyFunction or WebAssemblyWrapperFunction. Because
-    // WebAssemblyWrapperFunction is like calling into the embedder, we conservatively assume all call indirects
-    // can be to the embedder for our stack check calculation.
+    // WebAssemblyWrapperFunction is like calling into the js, we conservatively assume all call indirects
+    // can be to the js for our stack check calculation.
     m_maxNumJSCallArguments = std::max(m_maxNumJSCallArguments, static_cast<uint32_t>(args.size()));
 
     ExpressionType callableFunctionBuffer = self().gPtr();
@@ -3269,13 +3302,18 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addCallIndirect(unsigned table
         RELEASE_ASSERT(Arg::isValidAddrForm(Move32, FuncRefTable::offsetOfLength(), pointerWidth()));
 
         self().emitLoad(instanceValue().tmp(), Instance::offsetOfTablePtr(m_numImportFunctions, tableIndex), callableFunctionBufferLength);
-        append(Move, Arg::addr(callableFunctionBufferLength, FuncRefTable::offsetOfFunctions()), callableFunctionBuffer);
         ASSERT(tableIndex < m_info.tableCount());
         auto& tableInformation = m_info.table(tableIndex);
-        if (tableInformation.maximum() && tableInformation.maximum().value() == tableInformation.initial())
+        if (tableInformation.maximum() && tableInformation.maximum().value() == tableInformation.initial()) {
+            if (!tableInformation.isImport())
+                append(Derived::AddPtr, Arg::imm(FuncRefTable::offsetOfFunctionsForFixedSizedTable()), callableFunctionBufferLength, callableFunctionBuffer);
+            else
+                append(Move, Arg::addr(callableFunctionBufferLength, FuncRefTable::offsetOfFunctions()), callableFunctionBuffer);
             callableFunctionBufferLength = self().addConstant(Types::I32, tableInformation.initial());
-        else
+        } else {
+            append(Move, Arg::addr(callableFunctionBufferLength, FuncRefTable::offsetOfFunctions()), callableFunctionBuffer);
             append(Move32, Arg::addr(callableFunctionBufferLength, Table::offsetOfLength()), callableFunctionBufferLength);
+        }
     }
 
     append(Move32, calleeIndex, calleeIndex);
@@ -3289,6 +3327,7 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addCallIndirect(unsigned table
 
     ExpressionType calleeCode = self().gPtr();
     ExpressionType calleeInstance = self().gPtr();
+    ExpressionType jsCalleeAnchor = self().gPtr();
     {
         static_assert(sizeof(TypeIndex) == sizeof(void*));
         ExpressionType calleeSignatureIndex = self().gPtr();
@@ -3299,6 +3338,7 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addCallIndirect(unsigned table
 
         append(Move, Arg::addr(calleeSignatureIndex, FuncRefTable::Function::offsetOfFunction() + WasmToWasmImportableFunction::offsetOfEntrypointLoadLocation()), calleeCode); // Pointer to callee code.
         append(Move, Arg::addr(calleeSignatureIndex, FuncRefTable::Function::offsetOfInstance()), calleeInstance);
+        append(Move, Arg::addr(calleeSignatureIndex, FuncRefTable::Function::offsetOfValue()), jsCalleeAnchor);
 
         // FIXME: This seems wasteful to do two checks just for a nicer error message.
         // We should move just to use a single branch and then figure out what
@@ -3322,9 +3362,7 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addCallIndirect(unsigned table
         });
     }
 
-    ExpressionType jsCalleeInstance = self().gPtr();
-    append(Move, Arg::addr(calleeInstance, Instance::offsetOfOwner()), jsCalleeInstance);
-    return self().emitIndirectCall(calleeInstance, calleeCode, jsCalleeInstance, signature, args, results, callType);
+    return self().emitIndirectCall(calleeInstance, calleeCode, jsCalleeAnchor, signature, args, results, callType);
 }
 
 template <typename Derived, typename ExpressionType>
@@ -3332,8 +3370,8 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addCallRef(const TypeDefinitio
 {
     m_makesCalls = true;
     // Note: call ref can call either WebAssemblyFunction or WebAssemblyWrapperFunction. Because
-    // WebAssemblyWrapperFunction is like calling into the embedder, we conservatively assume all call indirects
-    // can be to the embedder for our stack check calculation.
+    // WebAssemblyWrapperFunction is like calling into the js, we conservatively assume all call indirects
+    // can be to the js for our stack check calculation.
     ExpressionType calleeFunction = args.takeLast();
     m_maxNumJSCallArguments = std::max(m_maxNumJSCallArguments, static_cast<uint32_t>(args.size()));
     const TypeDefinition& signature = originalSignature.expand();
@@ -3352,7 +3390,7 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addCallRef(const TypeDefinitio
 }
 
 template<typename Derived, typename ExpressionType>
-auto AirIRGeneratorBase<Derived, ExpressionType>::emitIndirectCall(ExpressionType calleeInstance, ExpressionType calleeCode, ExpressionType jsCalleeInstance, const TypeDefinition& signature, const Vector<ExpressionType>& args, ResultList& results, CallType callType) -> PartialResult
+auto AirIRGeneratorBase<Derived, ExpressionType>::emitIndirectCall(ExpressionType calleeInstance, ExpressionType calleeCode, ExpressionType jsCalleeAnchor, const TypeDefinition& signature, const Vector<ExpressionType>& args, ResultList& results, CallType callType) -> PartialResult
 {
     bool isTailCall = callType == CallType::TailCall;
     ASSERT(callType == CallType::Call || isTailCall);
@@ -3444,7 +3482,7 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::emitIndirectCall(ExpressionTyp
 
     // Since this can switch instance, we need to keep JSWebAssemblyInstance anchored in the stack.
 
-    auto data = self().emitCallPatchpoint(m_currentBlock, self().toB3ResultType(&signature), results, args, wasmCalleeInfo, { { calleeCode, B3::ValueRep::SomeRegister }, { jsCalleeInstance, wasmCalleeInfo.thisArgument } });
+    auto data = self().emitCallPatchpoint(m_currentBlock, self().toB3ResultType(&signature), results, args, wasmCalleeInfo, { { calleeCode, B3::ValueRep::SomeRegister }, { jsCalleeAnchor, wasmCalleeInfo.thisArgument } });
     auto* patchpoint = data.first;
     auto exceptionHandle = data.second;
 
@@ -3514,6 +3552,8 @@ B3::Origin AirIRGeneratorBase<Derived, ExpressionType>::origin()
 template<typename Generator>
 Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileAirImpl(CompilationContext& compilationContext, Callee& callee, const FunctionData& function, const TypeDefinition& signature, Vector<UnlinkedWasmToWasmCall>& unlinkedWasmToWasmCalls, const ModuleInformation& info, MemoryMode mode, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, TierUpCount* tierUp)
 {
+    CompilerTimingScope totalScope("Air", "Total WASM compilation");
+
     auto result = makeUnique<InternalFunction>();
 
     compilationContext.wasmEntrypointJIT = makeUnique<CCallHelpers>();

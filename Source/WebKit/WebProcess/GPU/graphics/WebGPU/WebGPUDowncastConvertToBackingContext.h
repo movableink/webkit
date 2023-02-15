@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,12 +47,15 @@ public:
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::Buffer&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::CommandBuffer&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::CommandEncoder&) final;
+    const RemoteCompositorIntegrationProxy& convertToRawBacking(const PAL::WebGPU::CompositorIntegration&) final;
+    WebGPUIdentifier convertToBacking(const PAL::WebGPU::CompositorIntegration&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::ComputePassEncoder&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::ComputePipeline&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::Device&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::ExternalTexture&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::GPU&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::PipelineLayout&) final;
+    WebGPUIdentifier convertToBacking(const PAL::WebGPU::PresentationContext&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::QuerySet&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::Queue&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::RenderBundleEncoder&) final;
@@ -61,8 +64,6 @@ public:
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::RenderPipeline&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::Sampler&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::ShaderModule&) final;
-    WebGPUIdentifier convertToBacking(const PAL::WebGPU::Surface&) final;
-    WebGPUIdentifier convertToBacking(const PAL::WebGPU::SwapChain&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::Texture&) final;
     WebGPUIdentifier convertToBacking(const PAL::WebGPU::TextureView&) final;
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+# Copyright (C) 2021-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -111,7 +111,7 @@ class PullRequest(Command):
             action=arguments.NoAction,
         )
         parser.add_argument(
-            '--ews', '--no-ews',
+            '--ews', '--skip-ews', '--no-ews',
             dest='ews', default=None,
             help='Explicitly enable or disable EWS on the PR',
             action=arguments.NoAction,
@@ -358,18 +358,27 @@ class PullRequest(Command):
             return 1
 
         commits = list(repository.commits(begin=dict(hash=branch_point.hash), end=dict(branch=repository.branch)))
-        issues = commits[0].issues
+        issues = [
+            issue
+            for commit in commits
+            for issue in commit.issues
+        ]
 
         radar_issue = next(iter(filter(lambda issue: isinstance(issue.tracker, radar.Tracker), issues)), None)
         not_radar = next(iter(filter(lambda issue: not isinstance(issue.tracker, radar.Tracker), issues)), None)
-        if radar_issue and not_radar and radar_issue.tracker.radarclient():
+        radar_cc_default = repository.config().get('webkitscmpy.cc-radar', 'true') == 'true'
+        if radar_issue and not_radar and radar_issue.tracker.radarclient() and (args.cc_radar or (radar_cc_default and args.cc_radar is not False)):
             not_radar.cc_radar(radar=radar_issue)
+        redacted_issue = None
+        for candidate in issues:
+            if candidate.redacted:
+                redacted_issue = candidate
         issue = issues[0] if issues else None
 
         remote_repo = repository.remote(name=source_remote)
-        if isinstance(remote_repo, remote.GitHub) and issue and issue.redacted and args.remote is None:
-            print('{} is considered the primary issue for your pull request'.format(issue.link))
-            print("{} {}".format(issue.link, issue.redacted))
+        if isinstance(remote_repo, remote.GitHub) and redacted_issue and args.remote is None:
+            print('A commit you are uploading references {}'.format(redacted_issue.link))
+            print("{} {}".format(redacted_issue.link, redacted_issue.redacted))
             print("Pull request needs to be sent to a secure remote for review")
             original_remote = source_remote
             if len(repository.source_remotes()) < 2:
@@ -381,7 +390,7 @@ class PullRequest(Command):
                     sys.stderr.write("Failed to create pull request due to unsuitable remote\n")
                     return 1
             else:
-                source_remote = repository.source_remotes()[1]
+                source_remote = repository.source_remotes()[-1]
                 if args.defaults or Terminal.choose(
                     "Would you like to make a pull request against '{}' instead of '{}'? \n".format(source_remote, original_remote),
                     default='Yes',

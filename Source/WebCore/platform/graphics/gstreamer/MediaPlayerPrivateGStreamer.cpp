@@ -926,8 +926,10 @@ static void setSyncOnClock(GstElement *element, bool sync)
 
 void MediaPlayerPrivateGStreamer::syncOnClock(bool sync)
 {
+#if !USE(WESTEROS_SINK)
     setSyncOnClock(videoSink(), sync);
     setSyncOnClock(audioSink(), sync);
+#endif
 }
 
 template <typename TrackPrivateType>
@@ -1211,6 +1213,8 @@ void MediaPlayerPrivateGStreamer::loadingFailed(MediaPlayer::NetworkState networ
 
 GstElement* MediaPlayerPrivateGStreamer::createAudioSink()
 {
+    // For platform specific audio sinks, they need to be properly upranked so that they get properly autoplugged.
+
     auto role = m_player->isVideoPlayer() ? "video"_s : "music"_s;
     GstElement* audioSink = createPlatformAudioSink(role);
     RELEASE_ASSERT(audioSink);
@@ -2111,6 +2115,9 @@ void MediaPlayerPrivateGStreamer::configureElement(GstElement* element)
     auto elementClass = makeString(gst_element_get_metadata(element, GST_ELEMENT_METADATA_KLASS));
     auto classifiers = elementClass.split('/');
 
+    if (g_str_has_prefix(elementName.get(), "urisourcebin") && isMediaSource())
+        g_object_set(element, "use-buffering", FALSE, nullptr);
+
     // Collect processing time metrics for video decoders and converters.
     if ((classifiers.contains("Converter"_s) || classifiers.contains("Decoder"_s)) && classifiers.contains("Video"_s) && !classifiers.contains("Parser"_s))
         webkitGstTraceProcessingTimeForElement(element);
@@ -2793,22 +2800,14 @@ void MediaPlayerPrivateGStreamer::configureDepayloader(GstElement* depayloader)
     if (!isMediaStreamPlayer())
         return;
 
-    auto depayloaderHasProperty = [&depayloader](const char* name) -> bool {
-        return g_object_class_find_property(G_OBJECT_GET_CLASS(depayloader), name);
-    };
-
-    if (depayloaderHasProperty("request-keyframe"))
+    if (gstObjectHasProperty(depayloader, "request-keyframe"))
         g_object_set(depayloader, "request-keyframe", TRUE, nullptr);
-    if (depayloaderHasProperty("wait-for-keyframe"))
+    if (gstObjectHasProperty(depayloader, "wait-for-keyframe"))
         g_object_set(depayloader, "wait-for-keyframe", TRUE, nullptr);
 }
 
 void MediaPlayerPrivateGStreamer::configureVideoDecoder(GstElement* decoder)
 {
-    auto decoderHasProperty = [&decoder](const char* name) -> bool {
-        return g_object_class_find_property(G_OBJECT_GET_CLASS(decoder), name);
-    };
-
     GUniquePtr<char> name(gst_element_get_name(decoder));
     if (g_str_has_prefix(name.get(), "v4l2"))
         m_videoDecoderPlatform = GstVideoDecoderPlatform::Video4Linux;
@@ -2820,7 +2819,7 @@ void MediaPlayerPrivateGStreamer::configureVideoDecoder(GstElement* decoder)
         // Set the decoder maximum number of threads to a low, fixed value, not depending on the
         // platform. This also helps with processing metrics gathering. When using the default value
         // the decoder introduces artificial processing latency reflecting the maximum number of threads.
-        if (decoderHasProperty("max-threads"))
+        if (gstObjectHasProperty(decoder, "max-threads"))
             g_object_set(decoder, "max-threads", 2, nullptr);
     }
 #if USE(TEXTURE_MAPPER_GL)
@@ -2830,15 +2829,14 @@ void MediaPlayerPrivateGStreamer::configureVideoDecoder(GstElement* decoder)
     if (!isMediaStreamPlayer())
         return;
 
-    if (decoderHasProperty("automatic-request-sync-points"))
+    if (gstObjectHasProperty(decoder, "automatic-request-sync-points"))
         g_object_set(decoder, "automatic-request-sync-points", TRUE, nullptr);
-    if (decoderHasProperty("discard-corrupted-frames"))
+    if (gstObjectHasProperty(decoder, "discard-corrupted-frames"))
         g_object_set(decoder, "discard-corrupted-frames", TRUE, nullptr);
-    if (decoderHasProperty("output-corrupt"))
+    if (gstObjectHasProperty(decoder, "output-corrupt"))
         g_object_set(decoder, "output-corrupt", FALSE, nullptr);
-    if (decoderHasProperty("max-errors"))
+    if (gstObjectHasProperty(decoder, "max-errors"))
         g_object_set(decoder, "max-errors", -1, nullptr);
-
 
     auto pad = adoptGRef(gst_element_get_static_pad(decoder, "src"));
     gst_pad_add_probe(pad.get(), static_cast<GstPadProbeType>(GST_PAD_PROBE_TYPE_QUERY_DOWNSTREAM | GST_PAD_PROBE_TYPE_BUFFER), [](GstPad*, GstPadProbeInfo* info, gpointer userData) -> GstPadProbeReturn {
@@ -3314,27 +3312,27 @@ static ImageOrientation getVideoOrientation(const GstTagList* tagList)
     GUniqueOutPtr<gchar> tag;
     if (!gst_tag_list_get_string(tagList, GST_TAG_IMAGE_ORIENTATION, &tag.outPtr())) {
         GST_DEBUG("No image_orientation tag, applying no rotation.");
-        return ImageOrientation::None;
+        return ImageOrientation::Orientation::None;
     }
 
     GST_DEBUG("Found image_orientation tag: %s", tag.get());
     if (!g_strcmp0(tag.get(), "flip-rotate-0"))
-        return ImageOrientation::OriginTopRight;
+        return ImageOrientation::Orientation::OriginTopRight;
     if (!g_strcmp0(tag.get(), "rotate-180"))
-        return ImageOrientation::OriginBottomRight;
+        return ImageOrientation::Orientation::OriginBottomRight;
     if (!g_strcmp0(tag.get(), "flip-rotate-180"))
-        return ImageOrientation::OriginBottomLeft;
+        return ImageOrientation::Orientation::OriginBottomLeft;
     if (!g_strcmp0(tag.get(), "flip-rotate-270"))
-        return ImageOrientation::OriginLeftTop;
+        return ImageOrientation::Orientation::OriginLeftTop;
     if (!g_strcmp0(tag.get(), "rotate-90"))
-        return ImageOrientation::OriginRightTop;
+        return ImageOrientation::Orientation::OriginRightTop;
     if (!g_strcmp0(tag.get(), "flip-rotate-90"))
-        return ImageOrientation::OriginRightBottom;
+        return ImageOrientation::Orientation::OriginRightBottom;
     if (!g_strcmp0(tag.get(), "rotate-270"))
-        return ImageOrientation::OriginLeftBottom;
+        return ImageOrientation::Orientation::OriginLeftBottom;
 
     // Default rotation.
-    return ImageOrientation::None;
+    return ImageOrientation::Orientation::None;
 }
 
 void MediaPlayerPrivateGStreamer::updateVideoOrientation(const GstTagList* tagList)
@@ -3377,11 +3375,11 @@ void MediaPlayerPrivateGStreamer::updateVideoSizeAndOrientationFromCaps(const Gs
     auto pad = adoptGRef(gst_element_get_static_pad(m_videoSink.get(), "sink"));
     ASSERT(pad);
     auto tagsEvent = adoptGRef(gst_pad_get_sticky_event(pad.get(), GST_EVENT_TAG, 0));
-    auto orientation = ImageOrientation::None;
+    auto orientation = ImageOrientation::Orientation::None;
     if (tagsEvent) {
         GstTagList* tagList;
         gst_event_parse_tag(tagsEvent.get(), &tagList);
-        orientation = getVideoOrientation(tagList);
+        orientation = getVideoOrientation(tagList).orientation();
     }
 
     setVideoSourceOrientation(orientation);
@@ -3678,20 +3676,20 @@ bool MediaPlayerPrivateGStreamer::setVideoSourceOrientation(ImageOrientation ori
 #if USE(TEXTURE_MAPPER_GL)
 void MediaPlayerPrivateGStreamer::updateTextureMapperFlags()
 {
-    switch (m_videoSourceOrientation) {
-    case ImageOrientation::OriginTopLeft:
+    switch (m_videoSourceOrientation.orientation()) {
+    case ImageOrientation::Orientation::OriginTopLeft:
         m_textureMapperFlags = 0;
         break;
-    case ImageOrientation::OriginRightTop:
+    case ImageOrientation::Orientation::OriginRightTop:
         m_textureMapperFlags = TextureMapperGL::ShouldRotateTexture90;
         break;
-    case ImageOrientation::OriginBottomRight:
+    case ImageOrientation::Orientation::OriginBottomRight:
         m_textureMapperFlags = TextureMapperGL::ShouldRotateTexture180;
         break;
-    case ImageOrientation::OriginLeftBottom:
+    case ImageOrientation::Orientation::OriginLeftBottom:
         m_textureMapperFlags = TextureMapperGL::ShouldRotateTexture270;
         break;
-    case ImageOrientation::OriginBottomLeft:
+    case ImageOrientation::Orientation::OriginBottomLeft:
         m_textureMapperFlags = TextureMapperGL::ShouldFlipTexture;
         break;
     default:
@@ -3743,6 +3741,10 @@ GstElement* MediaPlayerPrivateGStreamer::createVideoSinkGL()
         GST_INFO("Disabling hardware-accelerated rendering per user request.");
         return nullptr;
     }
+
+    const char* desiredVideoSink = g_getenv("WEBKIT_GST_CUSTOM_VIDEO_SINK");
+    if (desiredVideoSink)
+        return makeGStreamerElement(desiredVideoSink, nullptr);
 
     if (!webKitGLVideoSinkProbePlatform()) {
         g_warning("WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.");
@@ -3872,7 +3874,7 @@ GstElement* MediaPlayerPrivateGStreamer::createVideoSink()
             if (gst_debug_category_get_threshold(webkit_media_player_debug) < GST_LEVEL_TRACE)
                 g_object_set(m_fpsSink.get(), "text-overlay", FALSE , nullptr);
 
-            if (g_object_class_find_property(G_OBJECT_GET_CLASS(m_fpsSink.get()), "video-sink")) {
+            if (gstObjectHasProperty(m_fpsSink.get(), "video-sink")) {
                 g_object_set(m_fpsSink.get(), "video-sink", m_videoSink.get(), nullptr);
                 videoSink = m_fpsSink.get();
             } else

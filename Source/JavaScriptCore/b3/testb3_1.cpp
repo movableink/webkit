@@ -865,6 +865,24 @@ void run(const char* filter)
 
     RUN(testReportUsedRegistersLateUseFollowedByEarlyDefDoesNotMarkUseAsDead());
 
+    if (isARM64() || isX86()) {
+        RUN(testVectorXorOrAllOnesToVectorAndXor());
+        RUN(testVectorXorAndAllOnesToVectorOrXor());
+        RUN(testVectorOrSelf());
+        RUN(testVectorAndSelf());
+        RUN(testVectorXorSelf());
+        RUN_UNARY(testVectorXorOrAllOnesConstantToVectorAndXor, v128Operands());
+        RUN_UNARY(testVectorXorAndAllOnesConstantToVectorOrXor, v128Operands());
+        RUN_BINARY(testVectorOrConstants, v128Operands(), v128Operands());
+        RUN_BINARY(testVectorAndConstants, v128Operands(), v128Operands());
+        RUN_BINARY(testVectorXorConstants, v128Operands(), v128Operands());
+        RUN_BINARY(testVectorAndConstantConstant, v128Operands(), v128Operands());
+        if (isARM64()) {
+            RUN(testVectorFmulByElementFloat());
+            RUN(testVectorFmulByElementDouble());
+        }
+    }
+
     if (tasks.isEmpty())
         usage();
 

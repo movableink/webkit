@@ -105,16 +105,6 @@ static bool writeCachesList(const String& cachesListDirectoryPath, const Vector<
     }
 
     FileSystem::makeAllDirectories(FileSystem::parentPath(cachesListFilePath));
-    auto cachesListHandle = FileSystem::openFile(cachesListFilePath, FileSystem::FileOpenMode::ReadWrite);
-    if (!FileSystem::isHandleValid(cachesListHandle))
-        return false;
-    auto closeFileOnExit = makeScopeExit([&cachesListHandle]() mutable {
-        FileSystem::closeFile(cachesListHandle);
-    });
-
-    if (!FileSystem::truncateFile(cachesListHandle, 0))
-        return false;
-
     WTF::Persistence::Encoder encoder;
     uint64_t count = caches.size();
     if (skippedCachesIndex && *skippedCachesIndex < caches.size())
@@ -126,7 +116,8 @@ static bool writeCachesList(const String& cachesListDirectoryPath, const Vector<
         encoder << caches[index]->name();
         encoder << caches[index]->uniqueName();
     }
-    FileSystem::writeToFile(cachesListHandle, encoder.buffer(), encoder.bufferSize());
+
+    FileSystem::overwriteEntireFile(cachesListFilePath, Span { const_cast<uint8_t*>(encoder.buffer()), encoder.bufferSize() });
     return true;
 }
 
@@ -432,26 +423,26 @@ void CacheStorageManager::dereference(IPC::Connection::UniqueID connection, WebC
 
 void CacheStorageManager::connectionClosed(IPC::Connection::UniqueID connection)
 {
-    HashSet<WebCore::DOMCacheIdentifier> unusedCacheIdentifers;
+    HashSet<WebCore::DOMCacheIdentifier> unusedCacheIdentifiers;
     for (auto& [identifier, refConnections] : m_cacheRefConnections) {
         refConnections.removeAllMatching([&](auto refConnection) {
             return refConnection == connection;
         });
         if (refConnections.isEmpty()) {
             removeUnusedCache(identifier);
-            unusedCacheIdentifers.add(identifier);
+            unusedCacheIdentifiers.add(identifier);
         }
     }
 
-    for (auto& identifier : unusedCacheIdentifers)
+    for (auto& identifier : unusedCacheIdentifiers)
         m_cacheRefConnections.remove(identifier);
 }
 
 void CacheStorageManager::removeUnusedCache(WebCore::DOMCacheIdentifier cacheIdentifier)
 {
-    auto cache = m_removedCaches.take(cacheIdentifier);
-    if (cache) {
+    if (auto cache = m_removedCaches.take(cacheIdentifier)) {
         cache->removeAllRecords();
+        m_registry.unregisterCache(cacheIdentifier);
         return;
     }
 

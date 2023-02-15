@@ -29,25 +29,22 @@
 #include "AST.h"
 #include "ASTVisitor.h"
 #include "CallGraph.h"
+#include "WGSL.h"
+#include "WGSLShaderModule.h"
 
 namespace WGSL {
 
 class EntryPointRewriter {
 public:
-    EntryPointRewriter(AST::ShaderModule& shaderModule, AST::FunctionDecl& functionDecl, AST::StageAttribute::Stage stage)
-        : m_stage(stage)
-        , m_shaderModule(shaderModule)
-        , m_functionDecl(functionDecl)
-        , m_emptySourceSpan(0, 0, 0, 0)
-    {
-    }
+    EntryPointRewriter(ShaderModule&, AST::Function&, AST::StageAttribute::Stage);
 
     void rewrite();
+    Reflection::EntryPointInformation takeEntryPointInformation();
 
 private:
     struct MemberOrParameter {
-        String m_name;
-        Ref<AST::TypeDecl> m_type;
+        AST::Identifier m_name;
+        AST::TypeName::Ref m_type;
         AST::Attribute::List m_attributes;
     };
 
@@ -56,33 +53,49 @@ private:
         Yes = 1,
     };
 
-    static AST::TypeDecl& getResolvedType(AST::TypeDecl&);
+    static AST::TypeName& getResolvedType(AST::TypeName&);
 
     void collectParameters();
+    void checkReturnType();
     void constructInputStruct();
     void materialize(Vector<String>& path, MemberOrParameter&, IsBuiltin);
     void visit(Vector<String>& path, MemberOrParameter&&);
     void appendBuiltins();
 
     AST::StageAttribute::Stage m_stage;
-    AST::ShaderModule& m_shaderModule;
-    AST::FunctionDecl& m_functionDecl;
+    ShaderModule& m_shaderModule;
+    AST::Function& m_function;
 
-    const SourceSpan m_emptySourceSpan;
     Vector<MemberOrParameter> m_builtins;
     Vector<MemberOrParameter> m_parameters;
     AST::Statement::List m_materializations;
     String m_structTypeName;
     String m_structParameterName;
+    Reflection::EntryPointInformation m_information;
 };
 
-AST::TypeDecl& EntryPointRewriter::getResolvedType(AST::TypeDecl& type)
+EntryPointRewriter::EntryPointRewriter(ShaderModule& shaderModule, AST::Function& function, AST::StageAttribute::Stage stage)
+    : m_stage(stage)
+    , m_shaderModule(shaderModule)
+    , m_function(function)
 {
-    if (type.kind() == AST::Node::Kind::TypeReference)
-        return getResolvedType(downcast<AST::TypeReference>(type).type());
+    switch (m_stage) {
+    case AST::StageAttribute::Stage::Compute:
+        m_information.typedEntryPoint = Reflection::Compute { 1, 1, 1 };
+        break;
+    case AST::StageAttribute::Stage::Vertex:
+        m_information.typedEntryPoint = Reflection::Vertex { false };
+        break;
+    case AST::StageAttribute::Stage::Fragment:
+        m_information.typedEntryPoint = Reflection::Fragment { };
+        break;
+    }
+}
 
-    if (type.kind() == AST::Node::Kind::NamedType) {
-        if (auto* resolvedType = downcast<AST::NamedType>(type).maybeResolvedReference())
+AST::TypeName& EntryPointRewriter::getResolvedType(AST::TypeName& type)
+{
+    if (is<AST::NamedTypeName>(type)) {
+        if (auto* resolvedType = downcast<AST::NamedTypeName>(type).maybeResolvedReference())
             return getResolvedType(*resolvedType);
     }
 
@@ -91,10 +104,11 @@ AST::TypeDecl& EntryPointRewriter::getResolvedType(AST::TypeDecl& type)
 
 void EntryPointRewriter::rewrite()
 {
-    m_structTypeName = makeString("__", m_functionDecl.name(), "_inT");
-    m_structParameterName = makeString("__", m_functionDecl.name(), "_in");
+    m_structTypeName = makeString("__", m_function.name(), "_inT");
+    m_structParameterName = makeString("__", m_function.name(), "_in");
 
     collectParameters();
+    checkReturnType();
 
     // nothing to rewrite
     if (m_parameters.isEmpty()) {
@@ -106,67 +120,77 @@ void EntryPointRewriter::rewrite()
     appendBuiltins();
 
     // add parameter to builtins: ${structName} : ${structType}
-    m_functionDecl.parameters().append(makeUniqueRef<AST::Parameter>(
-        m_emptySourceSpan,
-        m_structParameterName,
-        adoptRef(*new AST::NamedType(m_emptySourceSpan, m_structTypeName)),
+    m_function.parameters().append(makeUniqueRef<AST::ParameterValue>(
+        SourceSpan::empty(),
+        AST::Identifier::make(m_structParameterName),
+        adoptRef(*new AST::NamedTypeName(SourceSpan::empty(), AST::Identifier::make(m_structTypeName))),
         AST::Attribute::List { },
         AST::ParameterRole::StageIn
     ));
 
     while (m_materializations.size())
-        m_functionDecl.body().statements().insert(0, m_materializations.takeLast());
+        m_function.body().statements().insert(0, m_materializations.takeLast());
+}
 
-    if (auto* maybeReturnType = m_functionDecl.maybeReturnType()) {
-        auto& returnType = getResolvedType(*maybeReturnType);
-        if (returnType.kind() == AST::Node::Kind::StructType) {
-            auto& structDecl = downcast<AST::StructType>(returnType).structDecl();
-            ASSERT(structDecl.role() == AST::StructRole::UserDefined);
-            structDecl.setRole(AST::StructRole::VertexOutput);
-        }
-    }
+Reflection::EntryPointInformation EntryPointRewriter::takeEntryPointInformation()
+{
+    return WTFMove(m_information);
 }
 
 void EntryPointRewriter::collectParameters()
 {
-    while (m_functionDecl.parameters().size()) {
-        auto parameter = m_functionDecl.parameters().takeLast();
+    while (m_function.parameters().size()) {
+        auto parameter = m_function.parameters().takeLast();
         Vector<String> path;
-        visit(path, MemberOrParameter { parameter->name(), parameter->type(), WTFMove(parameter->attributes()) });
+        visit(path, MemberOrParameter { parameter->name(), parameter->typeName(), WTFMove(parameter->attributes()) });
+    }
+}
+
+void EntryPointRewriter::checkReturnType()
+{
+    if (m_stage != AST::StageAttribute::Stage::Vertex)
+        return;
+
+    // FIXME: we might have to duplicate this struct if it has other uses
+    if (auto* maybeReturnType = m_function.maybeReturnType()) {
+        auto& returnType = getResolvedType(*maybeReturnType);
+        if (is<AST::StructTypeName>(returnType)) {
+            auto& structDecl = downcast<AST::StructTypeName>(returnType).structure();
+            ASSERT(structDecl.role() == AST::StructureRole::UserDefined);
+            structDecl.setRole(AST::StructureRole::VertexOutput);
+        }
     }
 }
 
 void EntryPointRewriter::constructInputStruct()
 {
     // insert `var ${parameter.name()} = ${structName}.${parameter.name()}`
-    AST::StructMember::List structMembers;
+    AST::StructureMember::List structMembers;
     for (auto& parameter : m_parameters) {
-        auto parameterType = adoptRef(*new AST::TypeReference(m_emptySourceSpan, parameter.m_type.copyRef()));
-
-        structMembers.append(makeUniqueRef<AST::StructMember>(
-            m_emptySourceSpan,
-            parameter.m_name,
-            parameterType.copyRef(),
+        structMembers.append(makeUniqueRef<AST::StructureMember>(
+            SourceSpan::empty(),
+            WTFMove(parameter.m_name),
+            WTFMove(parameter.m_type),
             WTFMove(parameter.m_attributes)
         ));
     }
 
-    AST::StructRole role;
+    AST::StructureRole role;
     switch (m_stage) {
     case AST::StageAttribute::Stage::Compute:
-        role = AST::StructRole::ComputeInput;
+        role = AST::StructureRole::ComputeInput;
         break;
     case AST::StageAttribute::Stage::Vertex:
-        role = AST::StructRole::VertexInput;
+        role = AST::StructureRole::VertexInput;
         break;
     case AST::StageAttribute::Stage::Fragment:
-        role = AST::StructRole::FragmentInput;
+        role = AST::StructureRole::FragmentInput;
         break;
     }
 
-    m_shaderModule.structs().append(makeUniqueRef<AST::StructDecl>(
-        m_emptySourceSpan,
-        m_structTypeName,
+    m_shaderModule.structures().append(makeUniqueRef<AST::Structure>(
+        SourceSpan::empty(),
+        AST::Identifier::make(m_structTypeName),
         WTFMove(structMembers),
         AST::Attribute::List { },
         role
@@ -177,21 +201,21 @@ void EntryPointRewriter::materialize(Vector<String>& path, MemberOrParameter& da
 {
     std::unique_ptr<AST::Expression> rhs;
     if (isBuiltin == IsBuiltin::Yes)
-        rhs = makeUnique<AST::IdentifierExpression>(m_emptySourceSpan, data.m_name);
+        rhs = makeUnique<AST::IdentifierExpression>(SourceSpan::empty(), AST::Identifier::make(data.m_name));
     else {
-        rhs = makeUnique<AST::StructureAccess>(
-            m_emptySourceSpan,
-            makeUniqueRef<AST::IdentifierExpression>(m_emptySourceSpan, m_structParameterName),
-            data.m_name
+        rhs = makeUnique<AST::FieldAccessExpression>(
+            SourceSpan::empty(),
+            makeUniqueRef<AST::IdentifierExpression>(SourceSpan::empty(), AST::Identifier::make(m_structParameterName)),
+            AST::Identifier::make(data.m_name)
         );
     }
 
     if (!path.size()) {
         m_materializations.append(makeUniqueRef<AST::VariableStatement>(
-            m_emptySourceSpan,
-            AST::VariableDecl(
-                m_emptySourceSpan,
-                data.m_name,
+            SourceSpan::empty(),
+            makeUniqueRef<AST::Variable>(
+                SourceSpan::empty(),
+                AST::Identifier::make(data.m_name),
                 nullptr, // TODO: do we need a VariableQualifier?
                 data.m_type.copyRef(),
                 WTFMove(rhs),
@@ -203,18 +227,18 @@ void EntryPointRewriter::materialize(Vector<String>& path, MemberOrParameter& da
 
     path.append(data.m_name);
     unsigned i = 0;
-    UniqueRef<AST::Expression> lhs = makeUniqueRef<AST::IdentifierExpression>(m_emptySourceSpan, path[i++]);
+    UniqueRef<AST::Expression> lhs = makeUniqueRef<AST::IdentifierExpression>(SourceSpan::empty(), AST::Identifier::make(path[i++]));
     while (i < path.size()) {
-        lhs = makeUniqueRef<AST::StructureAccess>(
-            m_emptySourceSpan,
+        lhs = makeUniqueRef<AST::FieldAccessExpression>(
+            SourceSpan::empty(),
             WTFMove(lhs),
-            path[i++]
+            AST::Identifier::make(path[i++])
         );
     }
     path.removeLast();
     m_materializations.append(makeUniqueRef<AST::AssignmentStatement>(
-        m_emptySourceSpan,
-        lhs.moveToUniquePtr(),
+        SourceSpan::empty(),
+        WTFMove(lhs),
         makeUniqueRefFromNonNullUniquePtr(WTFMove(rhs))
     ));
 }
@@ -223,12 +247,12 @@ void EntryPointRewriter::visit(Vector<String>& path, MemberOrParameter&& data)
 {
     auto& type = getResolvedType(data.m_type);
 
-    if (type.kind() == AST::Node::Kind::StructType) {
+    if (is<AST::StructTypeName>(type)) {
         m_materializations.append(makeUniqueRef<AST::VariableStatement>(
-            m_emptySourceSpan,
-            AST::VariableDecl(
-                m_emptySourceSpan,
-                data.m_name,
+            SourceSpan::empty(),
+            makeUniqueRef<AST::Variable>(
+                SourceSpan::empty(),
+                AST::Identifier::make(data.m_name),
                 nullptr,
                 &type,
                 nullptr,
@@ -236,7 +260,7 @@ void EntryPointRewriter::visit(Vector<String>& path, MemberOrParameter&& data)
             )
         ));
         path.append(data.m_name);
-        for (auto& member : downcast<AST::StructType>(type).structDecl().members())
+        for (auto& member : downcast<AST::StructTypeName>(type).structure().members())
             visit(path, MemberOrParameter { member.name(), member.type(), member.attributes() });
         path.removeLast();
         return;
@@ -244,7 +268,7 @@ void EntryPointRewriter::visit(Vector<String>& path, MemberOrParameter&& data)
 
     bool isBuiltin = false;
     for (auto& attribute : data.m_attributes) {
-        if (attribute->kind() == AST::Node::Kind::BuiltinAttribute) {
+        if (is<AST::BuiltinAttribute>(attribute)) {
             isBuiltin = true;
             break;
         }
@@ -270,9 +294,9 @@ void EntryPointRewriter::visit(Vector<String>& path, MemberOrParameter&& data)
 void EntryPointRewriter::appendBuiltins()
 {
     for (auto& data : m_builtins) {
-        m_functionDecl.parameters().append(makeUniqueRef<AST::Parameter>(
-            m_emptySourceSpan,
-            data.m_name,
+        m_function.parameters().append(makeUniqueRef<AST::ParameterValue>(
+            SourceSpan::empty(),
+            AST::Identifier::make(data.m_name),
             WTFMove(data.m_type),
             WTFMove(data.m_attributes),
             AST::ParameterRole::UserDefined
@@ -280,10 +304,14 @@ void EntryPointRewriter::appendBuiltins()
     }
 }
 
-void rewriteEntryPoints(CallGraph& callGraph)
+void rewriteEntryPoints(CallGraph& callGraph, PrepareResult& result)
 {
-    for (auto& entryPoint : callGraph.entrypoints())
-        EntryPointRewriter(callGraph.ast(), entryPoint.m_function, entryPoint.m_stage).rewrite();
+    for (auto& entryPoint : callGraph.entrypoints()) {
+        EntryPointRewriter rewriter(callGraph.ast(), entryPoint.m_function, entryPoint.m_stage);
+        rewriter.rewrite();
+        auto addResult = result.entryPoints.add(entryPoint.m_function.name().id(), rewriter.takeEntryPointInformation());
+        ASSERT_UNUSED(addResult, addResult.isNewEntry);
+    }
 }
 
 } // namespace WGSL

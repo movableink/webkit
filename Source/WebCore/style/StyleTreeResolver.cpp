@@ -77,8 +77,8 @@ TreeResolver::Scope::Scope(Document& document)
     document.setIsResolvingTreeStyle(true);
 
     // Ensure all shadow tree resolvers exist so their construction doesn't depend on traversal.
-    for (auto* shadowRoot : document.inDocumentShadowRoots())
-        shadowRoot->styleScope().resolver();
+    for (auto& shadowRoot : document.inDocumentShadowRoots())
+        const_cast<ShadowRoot&>(shadowRoot).styleScope().resolver();
 }
 
 TreeResolver::Scope::Scope(ShadowRoot& shadowRoot, Scope& enclosingScope)
@@ -634,7 +634,7 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(ResolvedStyle&& resolved
     // Deduplication speeds up equality comparisons as the properties inherit to descendants.
     // FIXME: There should be a more general mechanism for this.
     if (oldStyle)
-        newStyle->deduplicateInheritedCustomProperties(*oldStyle);
+        newStyle->deduplicateCustomProperties(*oldStyle);
 
     auto change = oldStyle ? determineChange(*oldStyle, *newStyle) : Change::Renderer;
 
@@ -858,8 +858,7 @@ void TreeResolver::resolveComposedTree()
 
         auto resolutionType = determineResolutionType(element, style, parent.descendantsToResolve, parent.change);
         if (resolutionType) {
-            if (!element.hasDisplayContents())
-                element.resetComputedStyle();
+            element.resetComputedStyle();
             element.resetStyleRelations();
 
             if (element.hasCustomStyleResolveCallbacks())

@@ -29,8 +29,10 @@
 #import "GameControllerGamepadProvider.h"
 #import "GameControllerHapticEngines.h"
 #import "GamepadConstants.h"
+#import "RuntimeApplicationChecks.h"
 #import <GameController/GCControllerElement.h>
 #import <GameController/GameController.h>
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
 #import "GameControllerSoftLink.h"
 
@@ -54,6 +56,12 @@ static void disableDefaultSystemAction(GCControllerButtonInput *button)
 
 void GameControllerGamepad::setupElements()
 {
+#if PLATFORM(IOS_FAMILY)
+    // rdar://103093747 - Backbone controller not recognized by Backbone app
+    if (IOSApplication::isBackboneApp() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::UsesGameControllerPhysicalInputProfile))
+        m_gcController.get().extendedGamepad.valueChangedHandler = ^(GCExtendedGamepad *, GCControllerElement *) { };
+#endif
+
     auto *profile = m_gcController.get().physicalInputProfile;
 
     // The user can expose an already-connected game controller to a web page by expressing explicit intent.
@@ -75,6 +83,10 @@ void GameControllerGamepad::setupElements()
         if (canLoad_GameController_GCHapticsLocalityLeftHandle() && canLoad_GameController_GCHapticsLocalityRightHandle()) {
             if ([haptics.supportedLocalities containsObject:get_GameController_GCHapticsLocalityLeftHandle()] && [haptics.supportedLocalities containsObject:get_GameController_GCHapticsLocalityRightHandle()])
                 m_supportedEffectTypes.add(GamepadHapticEffectType::DualRumble);
+        }
+        if (canLoad_GameController_GCHapticsLocalityLeftTrigger() && canLoad_GameController_GCHapticsLocalityRightTrigger()) {
+            if ([haptics.supportedLocalities containsObject:get_GameController_GCHapticsLocalityLeftTrigger()] && [haptics.supportedLocalities containsObject:get_GameController_GCHapticsLocalityRightTrigger()])
+                m_supportedEffectTypes.add(GamepadHapticEffectType::TriggerRumble);
         }
     }
 #endif

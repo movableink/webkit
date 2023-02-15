@@ -26,6 +26,9 @@
 #include "config.h"
 #include "GPU.h"
 
+#include "GPUPresentationContext.h"
+#include "GPUPresentationContextDescriptor.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSGPUAdapter.h"
 
 namespace WebCore {
@@ -45,11 +48,16 @@ static PAL::WebGPU::RequestAdapterOptions convertToBacking(const std::optional<G
     return options->convertToBacking();
 }
 
+struct GPU::PendingRequestAdapterArguments {
+    std::optional<GPURequestAdapterOptions> options;
+    RequestAdapterPromise promise;
+};
+
 void GPU::requestAdapter(const std::optional<GPURequestAdapterOptions>& options, RequestAdapterPromise&& promise)
 {
     m_backing->requestAdapter(convertToBacking(options), [promise = WTFMove(promise)] (RefPtr<PAL::WebGPU::Adapter>&& adapter) mutable {
         if (!adapter) {
-            promise.reject(nullptr);
+            promise.resolve(nullptr);
             return;
         }
         promise.resolve(GPUAdapter::create(adapter.releaseNonNull()).ptr());
@@ -61,4 +69,14 @@ GPUTextureFormat GPU::getPreferredCanvasFormat()
     return GPUTextureFormat::Bgra8unorm;
 }
 
+Ref<GPUPresentationContext> GPU::createPresentationContext(const GPUPresentationContextDescriptor& presentationContextDescriptor)
+{
+    return GPUPresentationContext::create(m_backing->createPresentationContext(presentationContextDescriptor.convertToBacking()));
 }
+
+Ref<GPUCompositorIntegration> GPU::createCompositorIntegration()
+{
+    return GPUCompositorIntegration::create(m_backing->createCompositorIntegration());
+}
+
+} // namespace WebCore

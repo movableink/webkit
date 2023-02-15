@@ -1,4 +1,4 @@
-// Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+// Copyright (C) 2017-2023 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -30,12 +30,14 @@ Modules/WebGPU/GPUCommandBuffer.cpp
 Modules/WebGPU/GPUCommandEncoder.cpp
 Modules/WebGPU/GPUCompilationInfo.cpp
 Modules/WebGPU/GPUCompilationMessage.cpp
+Modules/WebGPU/GPUCompositorIntegration.cpp
 Modules/WebGPU/GPUComputePassEncoder.cpp
 Modules/WebGPU/GPUComputePipeline.cpp
 Modules/WebGPU/GPUDevice.cpp
 Modules/WebGPU/GPUDeviceLostInfo.cpp
 Modules/WebGPU/GPUExternalTexture.cpp
 Modules/WebGPU/GPUPipelineLayout.cpp
+Modules/WebGPU/GPUPresentationContext.cpp
 Modules/WebGPU/GPUQuerySet.cpp
 Modules/WebGPU/GPUQueue.cpp
 Modules/WebGPU/GPURenderBundle.cpp
@@ -46,8 +48,6 @@ Modules/WebGPU/GPUSampler.cpp
 Modules/WebGPU/GPUShaderModule.cpp
 Modules/WebGPU/GPUSupportedFeatures.cpp
 Modules/WebGPU/GPUSupportedLimits.cpp
-Modules/WebGPU/GPUSurface.cpp
-Modules/WebGPU/GPUSwapChain.cpp
 Modules/WebGPU/GPUTexture.cpp
 Modules/WebGPU/GPUTextureView.cpp
 Modules/WebGPU/GPUUncapturedErrorEvent.cpp
@@ -180,6 +180,8 @@ Modules/mediarecorder/MediaRecorder.cpp
 Modules/mediarecorder/MediaRecorderErrorEvent.cpp
 Modules/mediarecorder/MediaRecorderProvider.cpp
 Modules/mediasource/DOMURLMediaSource.cpp
+Modules/mediasource/ManagedMediaSource.cpp
+Modules/mediasource/ManagedSourceBuffer.cpp
 Modules/mediasource/MediaSource.cpp
 Modules/mediasource/MediaSourceRegistry.cpp
 Modules/mediasource/SampleMap.cpp
@@ -731,9 +733,6 @@ crypto/keys/CryptoKeyRSA.cpp
 crypto/keys/CryptoKeyRSAComponents.cpp
 crypto/keys/CryptoKeyRaw.cpp
 css/BasicShapeFunctions.cpp
-css/ComputedStyleExtractor.cpp
-css/ContainerQuery.cpp
-css/ContainerQueryParser.cpp
 css/CSSAspectRatioValue.cpp
 css/CSSBackgroundRepeatValue.cpp
 css/CSSBasicShapes.cpp
@@ -749,6 +748,7 @@ css/CSSCounterStyle.cpp
 css/CSSCounterStyleDescriptors.cpp
 css/CSSCounterStyleRegistry.cpp
 css/CSSCounterStyleRule.cpp
+css/CSSCounterValue.cpp
 css/CSSCrossfadeValue.cpp
 css/CSSCursorImageValue.cpp
 css/CSSCustomPropertyValue.cpp
@@ -794,7 +794,9 @@ css/CSSPrimitiveValue.cpp
 css/CSSProperty.cpp
 css/CSSPropertyRule.cpp
 css/CSSPropertySourceData.cpp
+css/CSSQuadValue.cpp
 css/CSSRayValue.cpp
+css/CSSRectValue.cpp
 css/CSSReflectValue.cpp
 css/CSSRegisteredCustomProperty.cpp
 css/CSSRule.cpp
@@ -821,6 +823,9 @@ css/CSSValuePair.cpp
 css/CSSValuePool.cpp
 css/CSSVariableData.cpp
 css/CSSVariableReferenceValue.cpp
+css/ComputedStyleExtractor.cpp
+css/ContainerQuery.cpp
+css/ContainerQueryParser.cpp
 css/DOMCSSNamespace.cpp
 css/DOMCSSPaintWorklet.cpp
 css/DOMCSSRegisterCustomProperty.cpp
@@ -832,15 +837,18 @@ css/DeprecatedCSSOMValueList.cpp
 css/FontFace.cpp
 css/FontFaceSet.cpp
 css/FontVariantBuilder.cpp
+css/ImmutableStyleProperties.cpp
 css/MediaList.cpp
 css/MediaQueryList.cpp
 css/MediaQueryListEvent.cpp
 css/MediaQueryMatcher.cpp
 css/MediaQueryParserContext.cpp
+css/MutableStyleProperties.cpp
 css/PropertySetCSSStyleDeclaration.cpp
 css/SVGCSSComputedStyleDeclaration.cpp
 css/SelectorChecker.cpp
 css/SelectorFilter.cpp
+css/ShorthandSerializer.cpp
 css/StyleColor.cpp
 css/StyleMedia.cpp
 css/StyleProperties.cpp
@@ -1442,6 +1450,7 @@ html/canvas/PlaceholderRenderingContext.cpp
 html/canvas/PredefinedColorSpace.cpp
 html/canvas/WebGL2RenderingContext.cpp
 html/canvas/WebGLBuffer.cpp
+html/canvas/WebGLClipCullDistance.cpp
 html/canvas/WebGLColorBufferFloat.cpp
 html/canvas/WebGLCompressedTextureASTC.cpp
 html/canvas/WebGLCompressedTextureETC.cpp
@@ -1473,6 +1482,7 @@ html/canvas/WebGLSampler.cpp
 html/canvas/WebGLShader.cpp
 html/canvas/WebGLShaderPrecisionFormat.cpp
 html/canvas/WebGLSharedObject.cpp
+html/canvas/WebGLStateTracker.cpp
 html/canvas/WebGLSync.cpp
 html/canvas/WebGLTexture.cpp
 html/canvas/WebGLTransformFeedback.cpp
@@ -1484,6 +1494,7 @@ html/forms/FileIconLoader.cpp
 html/parser/CSSPreloadScanner.cpp
 html/parser/HTMLConstructionSite.cpp
 html/parser/HTMLDocumentParser.cpp
+html/parser/HTMLDocumentParserFastPath.cpp
 html/parser/HTMLElementStack.cpp
 html/parser/HTMLEntityParser.cpp
 html/parser/HTMLEntitySearch.cpp
@@ -2032,7 +2043,6 @@ platform/VideoFrame.cpp
 platform/VideoPixelFormat.cpp
 platform/WebCoreCrossThreadCopier.cpp
 platform/WebCorePersistentCoders.cpp
-platform/WebGLStateTracker.cpp
 platform/Widget.cpp
 platform/animation/Animation.cpp
 platform/animation/AnimationList.cpp
@@ -2100,6 +2110,7 @@ platform/graphics/AnimationFrameRate.cpp
 platform/graphics/BifurcatedGraphicsContext.cpp
 platform/graphics/BitmapImage.cpp
 platform/graphics/ByteArrayPixelBuffer.cpp
+platform/graphics/CachedSubimage.cpp
 platform/graphics/Color.cpp
 platform/graphics/ColorBlending.cpp
 platform/graphics/ColorConversion.cpp
@@ -2177,6 +2188,7 @@ platform/graphics/LayoutRect.cpp
 platform/graphics/LayoutSize.cpp
 platform/graphics/MIMETypeCache.cpp
 platform/graphics/MediaPlayer.cpp
+platform/graphics/MediaPlayerPrivate.cpp
 platform/graphics/Model.cpp
 platform/graphics/NamedImageGeneratedImage.cpp
 platform/graphics/NativeImage.cpp
@@ -2209,6 +2221,7 @@ platform/graphics/VelocityData.cpp
 platform/graphics/WebMResourceClient.cpp
 platform/graphics/WOFFFileFormat.cpp
 platform/graphics/WidthIterator.cpp
+platform/graphics/controls/ApplePayButtonPart.cpp
 platform/graphics/controls/ControlFactory.cpp
 platform/graphics/controls/ControlPart.cpp
 platform/graphics/controls/ControlStyle.cpp
@@ -2601,16 +2614,18 @@ rendering/style/StyleGridItemData.cpp
 rendering/style/StyleImageSet.cpp
 rendering/style/StyleInheritedData.cpp
 rendering/style/StyleMarqueeData.cpp
+rendering/style/StyleMiscNonInheritedData.cpp
 rendering/style/StyleMultiColData.cpp
 rendering/style/StyleMultiImage.cpp
 rendering/style/StyleNamedImage.cpp
+rendering/style/StyleNonInheritedData.cpp
 rendering/style/StylePaintImage.cpp
 rendering/style/StyleRareInheritedData.cpp
 rendering/style/StyleRareNonInheritedData.cpp
 rendering/style/StyleSelfAlignmentData.cpp
 rendering/style/StyleSurroundData.cpp
 rendering/style/StyleTransformData.cpp
-rendering/style/StyleVisualData.cpp
+rendering/style/StyleVisitedLinkColorData.cpp
 rendering/style/TextSizeAdjustment.cpp
 rendering/style/WillChangeData.cpp
 rendering/svg/LegacyRenderSVGContainer.cpp
@@ -3391,6 +3406,7 @@ JSGPUImageDataLayout.cpp
 JSGPUIndexFormat.cpp
 JSGPULoadOp.cpp
 JSGPUMapMode.cpp
+JSGPUMipmapFilterMode.cpp
 JSGPUMultisampleState.cpp
 JSGPUObjectBase.cpp
 JSGPUObjectDescriptorBase.cpp
@@ -3608,6 +3624,8 @@ JSLocation.cpp
 JSLongRange.cpp
 JSMathMLElement.cpp
 JSMathMLMathElement.cpp
+JSManagedMediaSource.cpp
+JSManagedSourceBuffer.cpp
 JSMediaCapabilities.cpp
 JSMediaCapabilitiesDecodingInfo.cpp
 JSMediaCapabilitiesEncodingInfo.cpp
@@ -4199,6 +4217,7 @@ JSWebCodecsVideoFrame.cpp
 JSWebGL2RenderingContext.cpp
 JSWebGLActiveInfo.cpp
 JSWebGLBuffer.cpp
+JSWebGLClipCullDistance.cpp
 JSWebGLColorBufferFloat.cpp
 JSWebGLCompressedTextureASTC.cpp
 JSWebGLCompressedTextureETC.cpp

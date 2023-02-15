@@ -1470,6 +1470,7 @@ void GenerateCaps(const FunctionsGL *functions,
                                       functions->hasGLESExtension("GL_EXT_shader_texture_lod");
     extensions->fragDepthEXT = functions->standard == STANDARD_GL_DESKTOP ||
                                functions->hasGLESExtension("GL_EXT_frag_depth");
+    extensions->polygonOffsetClampEXT = functions->hasExtension("GL_EXT_polygon_offset_clamp");
 
     // Support video texture extension on non Android backends.
     // TODO(crbug.com/776222): support Android and Apple devices.
@@ -1492,12 +1493,15 @@ void GenerateCaps(const FunctionsGL *functions,
                                      functions->hasGLExtension("GL_EXT_framebuffer_object") ||
                                      functions->isAtLeastGLES(gl::Version(3, 0)) ||
                                      functions->hasGLESExtension("GL_OES_fbo_render_mipmap");
-    extensions->textureBorderClampOES =
+
+    extensions->textureBorderClampEXT =
         !features.disableTextureClampToBorder.enabled &&
         (functions->standard == STANDARD_GL_DESKTOP ||
-         functions->hasGLESExtension("GL_OES_texture_border_clamp") ||
          functions->hasGLESExtension("GL_EXT_texture_border_clamp") ||
+         functions->hasGLESExtension("GL_OES_texture_border_clamp") ||
          functions->hasGLESExtension("GL_NV_texture_border_clamp"));
+    extensions->textureBorderClampOES = extensions->textureBorderClampEXT;
+
     extensions->multiDrawIndirectEXT = true;
     extensions->instancedArraysANGLE = functions->isAtLeastGL(gl::Version(3, 1)) ||
                                        (functions->hasGLExtension("GL_ARB_instanced_arrays") &&
@@ -1674,6 +1678,8 @@ void GenerateCaps(const FunctionsGL *functions,
     {
         extensions->shaderFramebufferFetchEXT = true;
     }
+
+    // TODO(http://anglebug.com/7882): Support ARM_shader_framebuffer_fetch
 
     // EXT_shader_framebuffer_fetch_non_coherent.
     if (features.supportsShaderFramebufferFetchNonCoherentEXT.enabled)

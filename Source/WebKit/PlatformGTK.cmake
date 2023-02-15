@@ -1,4 +1,4 @@
-include(GLib.cmake)
+include(GLibMacros)
 include(InspectorGResources.cmake)
 
 if (ENABLE_PDFJS)
@@ -38,6 +38,7 @@ add_definitions(-DPKGLIBEXECDIR="${LIBEXEC_INSTALL_DIR}")
 add_definitions(-DLOCALEDIR="${CMAKE_INSTALL_FULL_LOCALEDIR}")
 add_definitions(-DDATADIR="${CMAKE_INSTALL_FULL_DATADIR}")
 add_definitions(-DLIBDIR="${LIB_INSTALL_DIR}")
+add_definitions(-DPKGLIBDIR="${LIB_INSTALL_DIR}/webkit${WEBKITGTK_API_INFIX}gtk-${WEBKITGTK_API_VERSION}")
 
 if (NOT DEVELOPER_MODE AND NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
     WEBKIT_ADD_TARGET_PROPERTIES(WebKit LINK_FLAGS "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/webkitglib-symbols.map")
@@ -182,6 +183,12 @@ set(WebKitGTK_HEADER_TEMPLATES
     ${WEBKIT_DIR}/UIProcess/API/gtk/WebKitWebViewBase.h.in
 )
 
+if (ENABLE_2022_GLIB_API)
+    list(APPEND WebKitGTK_HEADER_TEMPLATES
+        ${WEBKIT_DIR}/UIProcess/API/glib/WebKitNetworkSession.h.in
+    )
+endif ()
+
 set(WebKitGTK_INSTALLED_HEADERS
     ${WebKitGTK_DERIVED_SOURCES_DIR}/webkit/WebKitEnumTypes.h
     ${WebKitGTK_DERIVED_SOURCES_DIR}/webkit/WebKitVersion.h
@@ -196,12 +203,17 @@ set(WebKitWebExtension_HEADER_TEMPLATES
     ${WEBKIT_DIR}/WebProcess/InjectedBundle/API/glib/WebKitScriptWorld.h.in
     ${WEBKIT_DIR}/WebProcess/InjectedBundle/API/glib/WebKitWebEditor.h.in
     ${WEBKIT_DIR}/WebProcess/InjectedBundle/API/glib/WebKitWebExtension.h.in
-    ${WEBKIT_DIR}/WebProcess/InjectedBundle/API/glib/WebKitWebExtensionAutocleanups.h.in
     ${WEBKIT_DIR}/WebProcess/InjectedBundle/API/glib/WebKitWebFormManager.h.in
     ${WEBKIT_DIR}/WebProcess/InjectedBundle/API/glib/WebKitWebHitTestResult.h.in
     ${WEBKIT_DIR}/WebProcess/InjectedBundle/API/glib/WebKitWebPage.h.in
     ${WEBKIT_DIR}/WebProcess/InjectedBundle/API/glib/webkit-web-extension.h.in
 )
+
+if (NOT ENABLE_2022_GLIB_API)
+    list(APPEND WebKitGTK_HEADER_TEMPLATES
+        ${WEBKIT_DIR}/WebProcess/InjectedBundle/API/glib/WebKitWebExtensionAutocleanups.h.in
+    )
+endif ()
 
 set(WebKitGTK_FAKE_API_HEADERS
     ${WebKitGTK_FRAMEWORK_HEADERS_DIR}/webkit
@@ -220,6 +232,10 @@ list(INSERT WebKit_INCLUDE_DIRECTORIES 0
     "${WebKitGTK_FRAMEWORK_HEADERS_DIR}/webkitgtk-webextension"
     "${WebKitGTK_DERIVED_SOURCES_DIR}/webkit"
     "${WebKitGTK_DERIVED_SOURCES_DIR}"
+)
+
+list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
+    "${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}/jsc"
 )
 
 list(APPEND WebKit_INCLUDE_DIRECTORIES
@@ -328,7 +344,7 @@ if (ENABLE_MEDIA_STREAM)
     )
 endif ()
 
-GENERATE_API_HEADERS(WebKitGTK_HEADER_TEMPLATES
+GENERATE_GLIB_API_HEADERS(WebKit WebKitGTK_HEADER_TEMPLATES
     ${WebKitGTK_DERIVED_SOURCES_DIR}/webkit
     WebKitGTK_INSTALLED_HEADERS
     "-DWTF_PLATFORM_GTK=1"
@@ -337,7 +353,7 @@ GENERATE_API_HEADERS(WebKitGTK_HEADER_TEMPLATES
     "-DENABLE_2022_GLIB_API=$<BOOL:${ENABLE_2022_GLIB_API}>"
 )
 
-GENERATE_API_HEADERS(WebKitWebExtension_HEADER_TEMPLATES
+GENERATE_GLIB_API_HEADERS(WebKit WebKitWebExtension_HEADER_TEMPLATES
     ${WebKitGTK_DERIVED_SOURCES_DIR}/webkit
     WebKitWebExtension_INSTALLED_HEADERS
     "-DWTF_PLATFORM_GTK=1"

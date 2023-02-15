@@ -36,34 +36,82 @@ typedef union v128_u {
     uint16_t u16x8[8];
     uint32_t u32x4[4];
     uint64_t u64x2[2] = { 0, 0 };
-    v128_u() = default;
+
+    constexpr v128_u() = default;
+    constexpr v128_u(uint64_t first, uint64_t second)
+        : u64x2 { first, second }
+    { }
 } v128_t;
 
+constexpr v128_t vectorAllOnes()
+{
+    return v128_t { UINT64_MAX, UINT64_MAX };
+}
+
+constexpr v128_t vectorAllZeros()
+{
+    return v128_t { 0, 0 };
+}
+
 // Comparing based on bits. Not using float/double comparison.
-inline bool bitEquals(const v128_t& lhs, const v128_t rhs)
+constexpr bool bitEquals(const v128_t& lhs, const v128_t rhs)
 {
     return lhs.u64x2[0] == rhs.u64x2[0] && lhs.u64x2[1] == rhs.u64x2[1];
 }
 
+constexpr v128_t vectorOr(v128_t lhs, v128_t rhs)
+{
+    return v128_t { lhs.u64x2[0] | rhs.u64x2[0], lhs.u64x2[1] | rhs.u64x2[1] };
+}
+
+constexpr v128_t vectorAnd(v128_t lhs, v128_t rhs)
+{
+    return v128_t { lhs.u64x2[0] & rhs.u64x2[0], lhs.u64x2[1] & rhs.u64x2[1] };
+}
+
+constexpr v128_t vectorXor(v128_t lhs, v128_t rhs)
+{
+    return v128_t { lhs.u64x2[0] ^ rhs.u64x2[0], lhs.u64x2[1] ^ rhs.u64x2[1] };
+}
+
 enum class SIMDLane : uint8_t {
-    v128,
+    v128 = 0,
     i8x16,
     i16x8,
     i32x4,
     i64x2,
     f32x4,
-    f64x2
+    f64x2,
 };
+static constexpr unsigned bitsOfSIMDLane = 6;
 
 enum class SIMDSignMode : uint8_t {
-    None, 
+    None = 0,
     Signed,
-    Unsigned
+    Unsigned,
 };
+static constexpr unsigned bitsOfSIMDSignMode = 2;
 
 struct SIMDInfo {
-    SIMDLane lane { SIMDLane::v128 };
-    SIMDSignMode signMode { SIMDSignMode::None };
+    SIMDLane lane : bitsOfSIMDLane { SIMDLane::v128 };
+    SIMDSignMode signMode : bitsOfSIMDSignMode { SIMDSignMode::None };
+
+    constexpr SIMDInfo(SIMDLane passedLane, SIMDSignMode passedSignMode)
+        : lane(passedLane)
+        , signMode(passedSignMode)
+    { }
+
+    constexpr SIMDInfo() = default;
+
+    friend bool operator==(const SIMDInfo& lhs, const SIMDInfo& rhs)
+    {
+        return lhs.lane == rhs.lane && lhs.signMode == rhs.signMode;
+    }
+
+    friend bool operator!=(const SIMDInfo& lhs, const SIMDInfo& rhs)
+    {
+        return !(lhs == rhs);
+    }
 };
 
 constexpr uint8_t elementCount(SIMDLane lane)
@@ -172,10 +220,10 @@ constexpr unsigned elementByteSize(SIMDLane simdLane)
 
 namespace WTF {
 
-void printInternal(PrintStream& out, JSC::SIMDLane lane);
+JS_EXPORT_PRIVATE void printInternal(PrintStream& out, JSC::SIMDLane);
 
-void printInternal(PrintStream& out, JSC::SIMDSignMode mode);
+JS_EXPORT_PRIVATE void printInternal(PrintStream& out, JSC::SIMDSignMode);
 
-void printInternal(PrintStream& out, JSC::v128_t v);
+JS_EXPORT_PRIVATE void printInternal(PrintStream& out, JSC::v128_t);
 
 } // namespace WTF

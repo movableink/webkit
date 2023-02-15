@@ -54,6 +54,7 @@
 #include <WebCore/COEPInheritenceViolationReportBody.h>
 #include <WebCore/CORPViolationReportBody.h>
 #include <WebCore/CertificateInfo.h>
+#include <WebCore/ClientOrigin.h>
 #include <WebCore/ContentSecurityPolicy.h>
 #include <WebCore/CrossOriginEmbedderPolicy.h>
 #include <WebCore/DiagnosticLoggingKeys.h>
@@ -597,7 +598,7 @@ void NetworkResourceLoader::transferToNewWebProcess(NetworkConnectionToWebProces
     ASSERT(m_responseCompletionHandler || m_cacheEntryWaitingForContinueDidReceiveResponse || m_serviceWorkerFetchTask);
     if (m_serviceWorkerRegistration) {
         if (auto* swConnection = newConnection.swConnection())
-            swConnection->transferServiceWorkerLoadToNewWebProcess(*this, *m_serviceWorkerRegistration);
+            swConnection->transferServiceWorkerLoadToNewWebProcess(*this, *m_serviceWorkerRegistration, m_connection->webProcessIdentifier());
     }
     if (m_workerStart)
         send(Messages::WebResourceLoader::SetWorkerStart { m_workerStart }, coreIdentifier());
@@ -750,42 +751,53 @@ void NetworkResourceLoader::processClearSiteDataHeader(const WebCore::ResourceRe
     if (!m_parameters.isClearSiteDataHeaderEnabled)
         return completionHandler();
 
-    auto headerValue = response.httpHeaderField(HTTPHeaderName::ClearSiteData);
-    if (headerValue.isEmpty())
-        return completionHandler();
-
-    if (!WebCore::shouldTreatAsPotentiallyTrustworthy(response.url()))
-        return completionHandler();
-
+    auto clearSiteDataValues = parseClearSiteDataHeader(response);
     OptionSet<WebsiteDataType> typesToRemove;
-    for (auto value : StringView(headerValue).split(',')) {
-        auto trimmedValue = value.stripLeadingAndTrailingMatchedCharacters(isHTTPSpace);
-        if (trimmedValue == "\"cookies\""_s)
-            typesToRemove.add(WebsiteDataType::Cookies);
-        else if (trimmedValue == "\"cache\""_s)
-            typesToRemove.add({ WebsiteDataType::DiskCache, WebsiteDataType::MemoryCache });
-        else if (trimmedValue == "\"storage\""_s) {
-            typesToRemove.add({ WebsiteDataType::LocalStorage, WebsiteDataType::SessionStorage, WebsiteDataType::IndexedDBDatabases, WebsiteDataType::DOMCache, WebsiteDataType::OfflineWebApplicationCache, WebsiteDataType::FileSystem, WebsiteDataType::WebSQLDatabases });
+    if (clearSiteDataValues.contains(ClearSiteDataValue::Cache))
+        typesToRemove.add({ WebsiteDataType::DiskCache, WebsiteDataType::MemoryCache });
+    if (clearSiteDataValues.contains(ClearSiteDataValue::Cookies))
+        typesToRemove.add(WebsiteDataType::Cookies);
+    if (clearSiteDataValues.contains(ClearSiteDataValue::Storage)) {
+        typesToRemove.add({ WebsiteDataType::LocalStorage, WebsiteDataType::SessionStorage, WebsiteDataType::IndexedDBDatabases, WebsiteDataType::DOMCache, WebsiteDataType::OfflineWebApplicationCache, WebsiteDataType::FileSystem, WebsiteDataType::WebSQLDatabases });
 #if ENABLE(SERVICE_WORKER)
-            typesToRemove.add(WebsiteDataType::ServiceWorkerRegistrations);
+        typesToRemove.add(WebsiteDataType::ServiceWorkerRegistrations);
 #endif
-        } else if (trimmedValue == "\"*\""_s) {
-            typesToRemove.add({ WebsiteDataType::Cookies, WebsiteDataType::DiskCache, WebsiteDataType::MemoryCache, WebsiteDataType::LocalStorage, WebsiteDataType::SessionStorage, WebsiteDataType::IndexedDBDatabases, WebsiteDataType::DOMCache, WebsiteDataType::OfflineWebApplicationCache, WebsiteDataType::FileSystem, WebsiteDataType::WebSQLDatabases });
-#if ENABLE(SERVICE_WORKER)
-            typesToRemove.add(WebsiteDataType::ServiceWorkerRegistrations);
-#endif
-        }
     }
 
-    if (!typesToRemove)
+    bool shouldReloadExecutionContexts = clearSiteDataValues.contains(ClearSiteDataValue::ExecutionContexts);
+    if (!typesToRemove && !shouldReloadExecutionContexts)
         return completionHandler();
 
-    auto callbackAggregator = CallbackAggregator::create(WTFMove(completionHandler));
-    Vector<SecurityOriginData> origins = { SecurityOrigin::create(response.url())->data() };
-    m_connection->networkProcess().deleteWebsiteDataForOrigins(sessionID(), typesToRemove, origins, { response.url().host().toString() }, { }, { }, [callbackAggregator] { });
+    LOADER_RELEASE_LOG("processClearSiteDataHeader: BEGIN");
+
+    auto origin = SecurityOrigin::create(response.url())->data();
+    ClientOrigin clientOrigin {
+        m_parameters.topOrigin ? m_parameters.topOrigin->data() : origin,
+        origin
+    };
+
+    auto callbackAggregator = CallbackAggregator::create([this, weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
+#if RELEASE_LOG_DISABLED
+        UNUSED_PARAM(this);
+#endif
+        if (!weakThis)
+            return completionHandler();
+
+        LOADER_RELEASE_LOG("processClearSiteDataHeader: END");
+        completionHandler();
+    });
+    if (typesToRemove)
+        m_connection->networkProcess().deleteWebsiteDataForOrigin(sessionID(), typesToRemove, clientOrigin, [callbackAggregator] { });
 
     if (WebsiteDataStore::computeWebProcessAccessTypeForDataRemoval(typesToRemove, sessionID().isEphemeral()) != WebsiteDataStore::ProcessAccessType::None)
-        m_connection->deleteWebsiteDataForOrigins(typesToRemove, origins, [callbackAggregator] { });
+        m_connection->networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::DeleteWebsiteDataInWebProcessesForOrigin(typesToRemove, clientOrigin, sessionID(), m_parameters.webPageProxyID), [callbackAggregator] { });
+
+    if (shouldReloadExecutionContexts) {
+        std::optional<WebCore::FrameIdentifier> triggeringFrame;
+        if (isMainResource())
+            triggeringFrame = frameID();
+        m_connection->networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::ReloadExecutionContextsForOrigin(clientOrigin, sessionID(), triggeringFrame), [callbackAggregator] { });
+    }
 }
 
 static BrowsingContextGroupSwitchDecision toBrowsingContextGroupSwitchDecision(const std::optional<CrossOriginOpenerPolicyEnforcementResult>& currentCoopEnforcementResult)
@@ -2000,6 +2012,7 @@ void NetworkResourceLoader::cancelMainResourceLoadForContentFilter(const WebCore
 
 void NetworkResourceLoader::handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, WebCore::SubstituteData& substituteData)
 {
+    m_connection->networkProcess().addAllowedFirstPartyForCookies(m_connection->webProcessIdentifier(), RegistrableDomain { WebCore::ContentFilter::blockedPageURL() }, LoadedWebArchive::No, [] { });
     send(Messages::WebResourceLoader::ContentFilterDidBlockLoad(m_unblockHandler, m_unblockRequestDeniedScript, m_contentFilter->blockedError(), blockedPageURL, substituteData));
 }
 #endif // ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)

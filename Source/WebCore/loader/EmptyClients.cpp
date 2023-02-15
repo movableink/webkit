@@ -800,7 +800,7 @@ void EmptyFrameLoaderClient::dispatchDidCommitLoad(std::optional<HasInsecureCont
 {
 }
 
-void EmptyFrameLoaderClient::dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading)
+void EmptyFrameLoaderClient::dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading, WillInternallyHandleFailure)
 {
 }
 
@@ -1082,15 +1082,6 @@ RemoteAXObjectRef EmptyFrameLoaderClient::accessibilityRemoteObject()
 void EmptyFrameLoaderClient::willCacheResponse(DocumentLoader*, ResourceLoaderIdentifier, NSCachedURLResponse *response, CompletionHandler<void(NSCachedURLResponse *)>&& completionHandler) const
 {
     completionHandler(response);
-}
-
-#endif
-
-#if USE(CFURLCONNECTION)
-
-bool EmptyFrameLoaderClient::shouldCacheResponse(DocumentLoader*, ResourceLoaderIdentifier, const ResourceResponse&, const unsigned char*, unsigned long long)
-{
-    return true;
 }
 
 #endif

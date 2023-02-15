@@ -200,8 +200,8 @@ class GitHubEWS(GitHub):
     ICON_EMPTY_SPACE = u'\U00002003'
     STATUS_BUBBLE_START = u'<!--EWS-Status-Bubble-Start-->'
     STATUS_BUBBLE_END = u'<!--EWS-Status-Bubble-End-->'
-    STATUS_BUBBLE_ROWS = [['style', 'ios', 'mac', 'wpe', 'win'],  # FIXME: generate this list dynamically to have merge queue show up on top
-                          ['bindings', 'ios-sim', 'mac-AS-debug', 'gtk', 'wincairo'],
+    STATUS_BUBBLE_ROWS = [['style', 'ios', 'mac', 'wpe', 'wincairo'],  # FIXME: generate this list dynamically to have merge queue show up on top
+                          ['bindings', 'ios-sim', 'mac-AS-debug', 'gtk', ''],
                           ['webkitperl', 'ios-wk2', 'api-mac', 'gtk-wk2', ''],
                           ['webkitpy', 'api-ios', 'mac-wk1', 'api-gtk', ''],
                           ['jsc', 'tv', 'mac-wk2', 'jsc-armv7', ''],
@@ -320,6 +320,8 @@ class GitHubEWS(GitHub):
                 hover_over_text += ' Pull Request was already closed when EWS attempted to process it.'
             elif re.search(r'Hash .* on PR .* is outdated', build.state_string):
                 hover_over_text += ' Commit was outdated when EWS attempted to process it.'
+            elif re.search(r'Skipping as PR .* has skip-ews label', build.state_string):
+                hover_over_text = 'EWS skipped this build as PR had skip-ews label when EWS attempted to process it.'
         elif build.result == Buildbot.RETRY:
             hover_over_text = 'Build is being retried. Recent messages:' + self._steps_messages(build)
             icon = GitHubEWS.ICON_BUILD_ONGOING

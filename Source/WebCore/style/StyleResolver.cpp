@@ -30,6 +30,7 @@
 #include "config.h"
 #include "StyleResolver.h"
 
+#include "CSSCustomPropertyValue.h"
 #include "CSSFontSelector.h"
 #include "CSSKeyframeRule.h"
 #include "CSSKeyframesRule.h"
@@ -52,7 +53,6 @@
 #include "MediaList.h"
 #include "NodeRenderStyle.h"
 #include "PageRuleCollector.h"
-#include "Pair.h"
 #include "RenderScrollbar.h"
 #include "RenderStyleConstants.h"
 #include "RenderView.h"
@@ -243,8 +243,12 @@ ResolvedStyle Resolver::styleForElement(const Element& element, const Resolution
     auto state = State(element, context.parentStyle, context.documentElementStyle);
 
     if (state.parentStyle()) {
-        state.setStyle(RenderStyle::createPtr());
-        state.style()->inheritFrom(*state.parentStyle());
+        state.setStyle(RenderStyle::createPtrWithRegisteredInitialValues(document().customPropertyRegistry()));
+        if (&element == document().documentElement()) {
+            // Initial values for custom properties are inserted to the document element style. Don't overwrite them.
+            state.style()->inheritIgnoringCustomPropertiesFrom(*state.parentStyle());
+        } else
+            state.style()->inheritFrom(*state.parentStyle());
     } else {
         state.setStyle(defaultStyleForElement(&element));
         state.setParentStyle(RenderStyle::clonePtr(*state.style()));
@@ -430,7 +434,7 @@ Vector<Ref<StyleRuleKeyframe>> Resolver::keyframeRulesForName(const AtomString& 
     return deduplicatedKeyframes;
 }
 
-void Resolver::keyframeStylesForAnimation(const Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, KeyframeList& list, bool& containsCSSVariableReferences)
+void Resolver::keyframeStylesForAnimation(const Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, KeyframeList& list)
 {
     list.clear();
 
@@ -438,7 +442,6 @@ void Resolver::keyframeStylesForAnimation(const Element& element, const RenderSt
     if (keyframeRules.isEmpty())
         return;
 
-    containsCSSVariableReferences = false;
     // Construct and populate the style for each keyframe.
     for (auto& keyframeRule : keyframeRules) {
         // Add this keyframe style to all the indicated key times
@@ -446,8 +449,6 @@ void Resolver::keyframeStylesForAnimation(const Element& element, const RenderSt
             KeyframeValue keyframeValue(0, nullptr);
             keyframeValue.setStyle(styleForKeyframe(element, elementStyle, context, keyframeRule.get(), keyframeValue));
             keyframeValue.setKey(key);
-            if (!containsCSSVariableReferences)
-                containsCSSVariableReferences = keyframeRule->containsCSSVariableReferences();
             if (auto timingFunctionCSSValue = keyframeRule->properties().getPropertyCSSValue(CSSPropertyAnimationTimingFunction))
                 keyframeValue.setTimingFunction(TimingFunction::createFromCSSValue(*timingFunctionCSSValue.get()));
             if (auto compositeOperationCSSValue = keyframeRule->properties().getPropertyCSSValue(CSSPropertyAnimationComposition)) {
@@ -455,6 +456,7 @@ void Resolver::keyframeStylesForAnimation(const Element& element, const RenderSt
                     keyframeValue.setCompositeOperation(*compositeOperation);
             }
             list.insert(WTFMove(keyframeValue));
+            list.updatePropertiesMetadata(keyframeRule->properties());
         }
     }
 }
@@ -464,7 +466,7 @@ std::optional<ResolvedStyle> Resolver::styleForPseudoElement(const Element& elem
     auto state = State(element, context.parentStyle, context.documentElementStyle);
 
     if (state.parentStyle()) {
-        state.setStyle(RenderStyle::createPtr());
+        state.setStyle(RenderStyle::createPtrWithRegisteredInitialValues(document().customPropertyRegistry()));
         state.style()->inheritFrom(*state.parentStyle());
     } else {
         state.setStyle(defaultStyleForElement(&element));
@@ -524,7 +526,7 @@ std::unique_ptr<RenderStyle> Resolver::styleForPage(int pageIndex)
 
 std::unique_ptr<RenderStyle> Resolver::defaultStyleForElement(const Element* element)
 {
-    auto style = RenderStyle::createPtr();
+    auto style = RenderStyle::createPtrWithRegisteredInitialValues(document().customPropertyRegistry());
 
     FontCascadeDescription fontDescription;
     fontDescription.setRenderingMode(settings().fontRenderingMode());

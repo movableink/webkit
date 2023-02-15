@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,6 +60,7 @@ class RenderPipeline;
 struct RenderPipelineDescriptor;
 class PipelineLayout;
 struct PipelineLayoutDescriptor;
+class PresentationContext;
 class QuerySet;
 struct QuerySetDescriptor;
 class Queue;
@@ -72,9 +73,6 @@ struct SamplerDescriptor;
 class ShaderModule;
 struct ShaderModuleDescriptor;
 class Surface;
-struct SurfaceDescriptor;
-class SwapChain;
-struct SwapChainDescriptor;
 class Texture;
 struct TextureDescriptor;
 
@@ -95,15 +93,12 @@ public:
     SupportedLimits& limits() { return m_limits; }
     const SupportedLimits& limits() const { return m_limits; }
 
-    virtual Queue& queue() = 0;
+    virtual Ref<Queue> queue() = 0;
 
     virtual void destroy() = 0;
 
     virtual Ref<Buffer> createBuffer(const BufferDescriptor&) = 0;
     virtual Ref<Texture> createTexture(const TextureDescriptor&) = 0;
-    virtual Ref<Texture> createSurfaceTexture(const TextureDescriptor&, const Surface&) = 0;
-    virtual Ref<Surface> createSurface(const SurfaceDescriptor&) = 0;
-    virtual Ref<SwapChain> createSwapChain(const Surface&, const SwapChainDescriptor&) = 0;
     virtual Ref<Sampler> createSampler(const SamplerDescriptor&) = 0;
     virtual Ref<ExternalTexture> importExternalTexture(const ExternalTextureDescriptor&) = 0;
 

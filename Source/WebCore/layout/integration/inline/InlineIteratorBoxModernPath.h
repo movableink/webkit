@@ -60,22 +60,22 @@ public:
 
     unsigned char bidiLevel() const { return box().bidiLevel(); }
 
-    bool hasHyphen() const { return box().text()->hasHyphen(); }
-    StringView originalText() const { return box().text()->originalContent(); }
-    unsigned start() const { return box().text()->start(); }
-    unsigned end() const { return box().text()->end(); }
-    unsigned length() const { return box().text()->length(); }
+    bool hasHyphen() const { return box().text().hasHyphen(); }
+    StringView originalText() const { return box().text().originalContent(); }
+    unsigned start() const { return box().text().start(); }
+    unsigned end() const { return box().text().end(); }
+    unsigned length() const { return box().text().length(); }
 
     TextBoxSelectableRange selectableRange() const
     {
         auto& box = this->box();
         auto& textContent = box.text();
         auto extraTrailingLength = [&] () -> unsigned {
-            if (textContent->hasHyphen())
+            if (textContent.hasHyphen())
                 return box.style().hyphenString().length();
             if (downcast<Layout::InlineTextBox>(box.layoutBox()).isCombined()) {
-                ASSERT(textContent->renderedContent().length() >= length());
-                return textContent->renderedContent().length() - length();
+                ASSERT(textContent.renderedContent().length() >= length());
+                return textContent.renderedContent().length() - length();
             }
             return 0;
         };
@@ -84,7 +84,7 @@ public:
             length(),
             extraTrailingLength(),
             box.isLineBreak(),
-            textContent->partiallyVisibleContentLength()
+            textContent.partiallyVisibleContentLength()
         };
     }
 
@@ -92,10 +92,13 @@ public:
     {
         auto& style = box().style();
         auto expansion = box().expansion();
-        auto rect = this->visualRectIgnoringBlockDirection();
-        auto xPos = rect.x() - (line().lineBoxLeft() + line().contentVisualOffsetInInlineDirection());
+        auto logicalLeft = [&] {
+            if (style.isLeftToRightDirection())
+                return visualRectIgnoringBlockDirection().x() - (line().lineBoxLeft() + line().contentLogicalLeft());
+            return line().lineBoxRight() - (visualRectIgnoringBlockDirection().maxX() + line().contentLogicalLeft());
+        };
         auto characterScanForCodePath = isText() && !renderText().canUseSimpleFontCodePath();
-        auto textRun = TextRun { mode == TextRunMode::Editing ? originalText() : box().text()->renderedContent(), xPos, expansion.horizontalExpansion, expansion.behavior, direction(), style.rtlOrdering() == Order::Visual, characterScanForCodePath };
+        auto textRun = TextRun { mode == TextRunMode::Editing ? originalText() : box().text().renderedContent(), logicalLeft(), expansion.horizontalExpansion, expansion.behavior, direction(), style.rtlOrdering() == Order::Visual, characterScanForCodePath };
         textRun.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
         return textRun;
     };
@@ -300,7 +303,7 @@ private:
     void setAtEnd() { m_boxIndex = boxes().size(); }
 
     const LayoutIntegration::InlineContent::Boxes& boxes() const { return m_inlineContent->boxes; }
-    const LayoutIntegration::Line& line() const { return m_inlineContent->lineForBox(box()); }
+    const InlineDisplay::Line& line() const { return m_inlineContent->lineForBox(box()); }
 
     const RenderText& renderText() const { return downcast<RenderText>(renderer()); }
 

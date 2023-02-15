@@ -2081,7 +2081,7 @@ def check_function_body(filename, file_extension, clean_lines, line_number, clas
         max_index = min(function_line_count, i + 4)
         partial_function_body = ' '.join(function_body_view.trimmed_lines[min_index:max_index])
 
-        if search(r'[^_]ASSERT_NOT_REACHED\(\);\s*(continue|return(\s+[^;]+)?);', partial_function_body) \
+        if search(r'[^_]ASSERT_NOT_REACHED\(\);\s*(continue|return|break(\s+[^;]+)?);', partial_function_body) \
                 or search(r'[^_]ASSERT_NOT_REACHED\(\);(\s*#endif)?(\s*})+\s*$', partial_function_body) \
                 or search(r'[^_]ASSERT_NOT_REACHED\(\);(\s*completionHandler[^;]+;)?(\s*})+\s*$', partial_function_body) \
                 or search(r'[^_]ASSERT_NOT_REACHED\(\);(\s*[^;]+;)?\s*return(\s+[^;]+)?;', partial_function_body) \
@@ -3352,8 +3352,8 @@ def check_arguments_for_wk_api_available(clean_lines, line_number, error):
     """
 
     @memoized
-    def max_version_for_platform(platform_name):
-        return VersionNameMap.map().max_public_version(platform=platform_name)
+    def max_major_version_for_platform(platform_name):
+        return VersionNameMap.map().max_public_version(platform=platform_name).major
 
     def check_version_string(version_string, platform_name):
         mapping = {
@@ -3375,9 +3375,9 @@ def check_arguments_for_wk_api_available(clean_lines, line_number, error):
             error(line_number, 'build/wk_api_available', 5, '%s(%s) is invalid; version number should have one decimal' % (platform_name, version_string))
             return
 
-        max_version = max_version_for_platform(platform_name)
-        if version > max_version:
-            error(line_number, 'build/wk_api_available', 5, '%s(%s) is invalid; version number should not exceed %s' % (platform_name, version_string, max_version))
+        max_major_version = max_major_version_for_platform(platform_name)
+        if version.major > max_major_version:
+            error(line_number, 'build/wk_api_available', 5, '%s(%s) is invalid; major version number should not exceed %d' % (platform_name, version_string, max_major_version))
             return
 
     line = clean_lines.elided[line_number]  # Get rid of comments and strings.

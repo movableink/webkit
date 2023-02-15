@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WebGL2RenderingContext.h"
 
-#if ENABLE(WEBGL2)
+#if ENABLE(WEBGL)
 
 #include "CachedImage.h"
 #include "EXTColorBufferFloat.h"
@@ -48,9 +48,11 @@
 #include "OESDrawBuffersIndexed.h"
 #include "OESTextureFloatLinear.h"
 #include "RenderBox.h"
+#include "WebCodecsVideoFrame.h"
 #include "WebCoreOpaqueRoot.h"
 #include "WebGLActiveInfo.h"
 #include "WebGLBuffer.h"
+#include "WebGLClipCullDistance.h"
 #include "WebGLCompressedTextureASTC.h"
 #include "WebGLCompressedTextureETC.h"
 #include "WebGLCompressedTextureETC1.h"
@@ -2613,6 +2615,7 @@ WebGLExtension* WebGL2RenderingContext::getExtension(const String& name)
     ENABLE_IF_REQUESTED(KHRParallelShaderCompile, m_khrParallelShaderCompile, "KHR_parallel_shader_compile"_s, KHRParallelShaderCompile::supported(*m_context));
     ENABLE_IF_REQUESTED(OESDrawBuffersIndexed, m_oesDrawBuffersIndexed, "OES_draw_buffers_indexed"_s, OESDrawBuffersIndexed::supported(*m_context));
     ENABLE_IF_REQUESTED(OESTextureFloatLinear, m_oesTextureFloatLinear, "OES_texture_float_linear"_s, OESTextureFloatLinear::supported(*m_context));
+    ENABLE_IF_REQUESTED(WebGLClipCullDistance, m_webglClipCullDistance, "WEBGL_clip_cull_distance"_s, WebGLClipCullDistance::supported(*m_context) && enableDraftExtensions);
     ENABLE_IF_REQUESTED(WebGLCompressedTextureASTC, m_webglCompressedTextureASTC, "WEBGL_compressed_texture_astc"_s, WebGLCompressedTextureASTC::supported(*m_context));
     ENABLE_IF_REQUESTED(WebGLCompressedTextureETC, m_webglCompressedTextureETC, "WEBGL_compressed_texture_etc"_s, WebGLCompressedTextureETC::supported(*m_context));
     ENABLE_IF_REQUESTED(WebGLCompressedTextureETC1, m_webglCompressedTextureETC1, "WEBGL_compressed_texture_etc1"_s, WebGLCompressedTextureETC1::supported(*m_context));
@@ -2626,7 +2629,7 @@ WebGLExtension* WebGL2RenderingContext::getExtension(const String& name)
     ENABLE_IF_REQUESTED(WebGLLoseContext, m_webglLoseContext, "WEBGL_lose_context"_s, true);
     ENABLE_IF_REQUESTED(WebGLMultiDraw, m_webglMultiDraw, "WEBGL_multi_draw"_s, WebGLMultiDraw::supported(*m_context));
     ENABLE_IF_REQUESTED(WebGLMultiDrawInstancedBaseVertexBaseInstance, m_webglMultiDrawInstancedBaseVertexBaseInstance, "WEBGL_multi_draw_instanced_base_vertex_base_instance"_s, WebGLMultiDrawInstancedBaseVertexBaseInstance::supported(*m_context) && enableDraftExtensions);
-    ENABLE_IF_REQUESTED(WebGLProvokingVertex, m_webglProvokingVertex, "WEBGL_provoking_vertex"_s, WebGLProvokingVertex::supported(*m_context) && enableDraftExtensions);
+    ENABLE_IF_REQUESTED(WebGLProvokingVertex, m_webglProvokingVertex, "WEBGL_provoking_vertex"_s, WebGLProvokingVertex::supported(*m_context));
     return nullptr;
 }
 
@@ -2653,6 +2656,7 @@ std::optional<Vector<String>> WebGL2RenderingContext::getSupportedExtensions()
     APPEND_IF_SUPPORTED("KHR_parallel_shader_compile", KHRParallelShaderCompile::supported(*m_context))
     APPEND_IF_SUPPORTED("OES_draw_buffers_indexed", OESDrawBuffersIndexed::supported(*m_context))
     APPEND_IF_SUPPORTED("OES_texture_float_linear", OESTextureFloatLinear::supported(*m_context))
+    APPEND_IF_SUPPORTED("WEBGL_clip_cull_distance", WebGLClipCullDistance::supported(*m_context) && enableDraftExtensions)
     APPEND_IF_SUPPORTED("WEBGL_compressed_texture_astc", WebGLCompressedTextureASTC::supported(*m_context))
     APPEND_IF_SUPPORTED("WEBGL_compressed_texture_etc", WebGLCompressedTextureETC::supported(*m_context))
     APPEND_IF_SUPPORTED("WEBGL_compressed_texture_etc1", WebGLCompressedTextureETC1::supported(*m_context))
@@ -2666,7 +2670,7 @@ std::optional<Vector<String>> WebGL2RenderingContext::getSupportedExtensions()
     APPEND_IF_SUPPORTED("WEBGL_lose_context", true)
     APPEND_IF_SUPPORTED("WEBGL_multi_draw", WebGLMultiDraw::supported(*m_context))
     APPEND_IF_SUPPORTED("WEBGL_multi_draw_instanced_base_vertex_base_instance", WebGLMultiDrawInstancedBaseVertexBaseInstance::supported(*m_context) && enableDraftExtensions)
-    APPEND_IF_SUPPORTED("WEBGL_provoking_vertex", WebGLProvokingVertex::supported(*m_context) && enableDraftExtensions)
+    APPEND_IF_SUPPORTED("WEBGL_provoking_vertex", WebGLProvokingVertex::supported(*m_context))
 
     return result;
 }
@@ -2778,9 +2782,9 @@ WebGLAny WebGL2RenderingContext::getFramebufferAttachmentParameter(GCGLenum targ
         if (attachmentObject->isTexture())
             return static_pointer_cast<WebGLTexture>(WTFMove(attachmentObject));
         return static_pointer_cast<WebGLRenderbuffer>(WTFMove(attachmentObject));
+    case GraphicsContextGL::FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL:
     case GraphicsContextGL::FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE:
     case GraphicsContextGL::FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER:
-    case GraphicsContextGL::FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL:
         if (!attachmentObject->isTexture())
             break;
         FALLTHROUGH;
@@ -2794,13 +2798,13 @@ WebGLAny WebGL2RenderingContext::getFramebufferAttachmentParameter(GCGLenum targ
         return m_context->getFramebufferAttachmentParameteri(target, attachment, pname);
     case GraphicsContextGL::FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE:
         if (attachment == GraphicsContextGL::DEPTH_STENCIL_ATTACHMENT) {
-            synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, functionName, "COMPONENT_TYPE can't be queried for DEPTH_STENCIL_ATTACHMENT");
+            synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, functionName, "component type cannot be queried for DEPTH_STENCIL_ATTACHMENT");
             return nullptr;
         }
         return m_context->getFramebufferAttachmentParameteri(target, attachment, pname);
     }
 
-    synthesizeGLError(GraphicsContextGL::INVALID_ENUM, functionName, "invalid parameter name for attachment");
+    synthesizeGLError(GraphicsContextGL::INVALID_ENUM, functionName, "invalid parameter name");
     return nullptr;
 }
 
@@ -3181,6 +3185,24 @@ WebGLAny WebGL2RenderingContext::getParameter(GCGLenum pname)
         if (m_boundVertexArrayObject->isDefaultObject())
             return nullptr;
         return static_pointer_cast<WebGLVertexArrayObject>(m_boundVertexArrayObject);
+    case GraphicsContextGL::MAX_CLIP_DISTANCES_ANGLE:
+    case GraphicsContextGL::MAX_CULL_DISTANCES_ANGLE:
+    case GraphicsContextGL::MAX_COMBINED_CLIP_AND_CULL_DISTANCES_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE0_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE1_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE2_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE3_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE4_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE5_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE6_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE7_ANGLE:
+        if (m_webglClipCullDistance) {
+            if (pname >= GraphicsContextGL::CLIP_DISTANCE0_ANGLE && pname <= GraphicsContextGL::CLIP_DISTANCE7_ANGLE)
+                return getBooleanParameter(pname);
+            return getUnsignedIntParameter(pname);
+        }
+        synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getParameter", "invalid parameter name, WEBGL_clip_cull_distance not enabled");
+        return nullptr;
     case GraphicsContextGL::PROVOKING_VERTEX_ANGLE:
         if (m_webglProvokingVertex)
             return getUnsignedIntParameter(GraphicsContextGL::PROVOKING_VERTEX_ANGLE);
@@ -3209,6 +3231,18 @@ bool WebGL2RenderingContext::validateBlendEquation(const char* functionName, GCG
 bool WebGL2RenderingContext::validateCapability(const char* functionName, GCGLenum cap)
 {
     switch (cap) {
+    case GraphicsContextGL::CLIP_DISTANCE0_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE1_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE2_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE3_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE4_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE5_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE6_ANGLE:
+    case GraphicsContextGL::CLIP_DISTANCE7_ANGLE:
+        if (m_webglClipCullDistance)
+            return true;
+        synthesizeGLError(GraphicsContextGL::INVALID_ENUM, functionName, "invalid capability, WEBGL_clip_cull_distance not enabled");
+        return false;
     case GraphicsContextGL::RASTERIZER_DISCARD:
         return true;
     default:

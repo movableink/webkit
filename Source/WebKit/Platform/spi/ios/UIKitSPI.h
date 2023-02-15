@@ -128,7 +128,6 @@
 #import <UIKit/UIDragPreviewParameters.h>
 #import <UIKit/UIDragPreview_Private.h>
 #import <UIKit/UIDragSession.h>
-#import <UIKit/UIDragging.h>
 #import <UIKit/UIDropInteraction.h>
 #import <UIKit/UIPreviewInteraction.h>
 #import <UIKit/UIURLDragPreviewView.h>
@@ -136,6 +135,7 @@
 #endif
 
 #if HAVE(UIFINDINTERACTION)
+#import <UIKit/UIFindSession_Private.h>
 #import <UIKit/_UIFindInteraction.h>
 #import <UIKit/_UITextSearching.h>
 #endif
@@ -215,6 +215,7 @@ typedef NS_ENUM(NSInteger, UIPreviewItemType) {
 - (void)_addActionWithTitle:(NSString *)title style:(UIAlertActionStyle)style handler:(void (^)(void))handler;
 - (void)_addActionWithTitle:(NSString *)title style:(UIAlertActionStyle)style handler:(void (^)(void))handler shouldDismissHandler:(BOOL (^)(void))shouldDismissHandler;
 @property (nonatomic) UIAlertControllerStyle preferredStyle;
+@property (nonatomic, assign, setter=_setTitleMaximumLineCount:, getter=_titleMaximumLineCount) NSInteger titleMaximumLineCount;
 @end
 
 WTF_EXTERN_C_BEGIN
@@ -362,6 +363,10 @@ typedef id<NSCoding, NSCopying> _UITextSearchDocumentIdentifier;
 
 @interface UIFindInteraction ()
 @property (class, nonatomic, copy, getter=_globalFindBuffer, setter=_setGlobalFindBuffer:) NSString *_globalFindBuffer;
+@end
+
+@interface UITextSearchingFindSession ()
+@property (nonatomic, readwrite, weak) id<UITextSearching> searchableObject;
 @end
 
 #endif // HAVE(UIFINDINTERACTION)
@@ -1551,6 +1556,15 @@ typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
 @interface _UIRemoteView : _UILayerHostView
 - (instancetype)initWithFrame:(CGRect)frame pid:(pid_t)pid contextID:(uint32_t)contextID;
 @end
+
+@interface _UIVisibilityPropagationView : UIView
+@end
+
+#if HAVE(NON_HOSTING_VISIBILITY_PROPAGATION_VIEW)
+@interface _UINonHostingVisibilityPropagationView : _UIVisibilityPropagationView
+- (instancetype)initWithFrame:(CGRect)frame pid:(pid_t)pid environmentIdentifier:(NSString *)environmentIdentifier;
+@end
+#endif
 
 #if __has_include(<UIKit/UITextInputMultiDocument.h>)
 #import <UIKit/UITextInputMultiDocument.h>

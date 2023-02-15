@@ -410,20 +410,15 @@ using WebCore::LogOverlayScrollbars;
 {
     UNUSED_PARAM(scrollerImp);
 
-    if (!_scrollbar) {
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        return [NSAppearance currentAppearance];
-        ALLOW_DEPRECATED_DECLARATIONS_END
-    }
+    if (!_scrollbar)
+        return [NSAppearance currentDrawingAppearance];
 
     // Keep this in sync with FrameView::paintScrollCorner.
     // The base system does not support dark Aqua, so we might get a null result.
     bool useDarkAppearance = _scrollbar->scrollableArea().useDarkAppearanceForScrollbars();
     if (auto *appearance = [NSAppearance appearanceNamed:useDarkAppearance ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua])
         return appearance;
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    return [NSAppearance currentAppearance];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+    return [NSAppearance currentDrawingAppearance];
 }
 #endif
 
@@ -954,7 +949,8 @@ void ScrollbarsControllerMac::updateScrollerStyle()
 
     NSScrollerStyle newStyle = [m_scrollerImpPair scrollerStyle];
 
-    if (Scrollbar* verticalScrollbar = scrollableArea().verticalScrollbar()) {
+    Scrollbar* verticalScrollbar = scrollableArea().verticalScrollbar();
+    if (verticalScrollbar && !verticalScrollbar->isCustomScrollbar()) {
         verticalScrollbar->invalidate();
 
         NSScrollerImp *oldVerticalPainter = [m_scrollerImpPair verticalScrollerImp];
@@ -971,7 +967,8 @@ void ScrollbarsControllerMac::updateScrollerStyle()
         verticalScrollbar->setFrameRect(IntRect(0, 0, thickness, thickness));
     }
 
-    if (Scrollbar* horizontalScrollbar = scrollableArea().horizontalScrollbar()) {
+    Scrollbar* horizontalScrollbar = scrollableArea().horizontalScrollbar();
+    if (horizontalScrollbar && !horizontalScrollbar->isCustomScrollbar()) {
         horizontalScrollbar->invalidate();
 
         NSScrollerImp *oldHorizontalPainter = [m_scrollerImpPair horizontalScrollerImp];

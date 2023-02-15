@@ -26,11 +26,11 @@ from collections import Counter, defaultdict
 
 BUILTIN_ATTRIBUTE = "Builtin"
 MAINTHREADCALLBACK_ATTRIBUTE = "MainThreadCallback"
+CALL_WITH_REPLY_ID_ATTRIBUTE = "CallWithReplyID"
 ALLOWEDWHENWAITINGFORSYNCREPLY_ATTRIBUTE = "AllowedWhenWaitingForSyncReply"
 ALLOWEDWHENWAITINGFORSYNCREPLYDURINGUNBOUNDEDIPC_ATTRIBUTE = "AllowedWhenWaitingForSyncReplyDuringUnboundedIPC"
 SYNCHRONOUS_ATTRIBUTE = 'Synchronous'
 STREAM_ATTRIBUTE = "Stream"
-WANTS_CONNECTION_ATTRIBUTE = 'WantsConnection'
 
 class MessageReceiver(object):
     def __init__(self, name, superclass, attributes, messages, condition):

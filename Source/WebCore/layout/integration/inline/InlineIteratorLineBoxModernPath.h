@@ -56,14 +56,14 @@ public:
     float inkOverflowBottom() const { return line().inkOverflow().maxY(); }
 
     bool hasEllipsis() const { return line().hasEllipsis(); }
-    FloatRect ellipsisVisualRectIgnoringBlockDirection() const { return line().ellipsisVisualRect(); }
+    FloatRect ellipsisVisualRectIgnoringBlockDirection() const { return *line().ellipsisVisualRect(); }
     TextRun ellipsisText() const { return line().ellipsisText(); }
 
     float contentLogicalTopAdjustedForPrecedingLineBox() const { return !m_lineIndex ? contentLogicalTop() : LineBoxIteratorModernPath(*m_inlineContent, m_lineIndex - 1).contentLogicalBottomAdjustedForFollowingLineBox(); }
     // FIXME: Implement.
     float contentLogicalBottomAdjustedForFollowingLineBox() const { return contentLogicalBottom(); }
 
-    float contentLogicalLeft() const { return line().lineBoxLeft() + line().contentVisualOffsetInInlineDirection(); }
+    float contentLogicalLeft() const { return line().lineBoxLeft() + line().contentLogicalLeftIgnoringInlineDirection(); }
     float contentLogicalRight() const { return contentLogicalLeft() + line().contentLogicalWidth(); }
     bool isHorizontal() const { return line().isHorizontal(); }
     FontBaseline baselineType() const { return line().baselineType(); }
@@ -121,7 +121,7 @@ private:
     void setAtEnd() { m_lineIndex = lines().size(); }
 
     const LayoutIntegration::InlineContent::Lines& lines() const { return m_inlineContent->lines; }
-    const LayoutIntegration::Line& line() const { return lines()[m_lineIndex]; }
+    const InlineDisplay::Line& line() const { return lines()[m_lineIndex]; }
 
     WeakPtr<const LayoutIntegration::InlineContent> m_inlineContent;
     size_t m_lineIndex { 0 };

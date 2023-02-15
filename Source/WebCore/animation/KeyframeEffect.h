@@ -36,7 +36,6 @@
 #include "KeyframeEffectOptions.h"
 #include "KeyframeList.h"
 #include "RenderStyle.h"
-#include "StyleProperties.h"
 #include "Styleable.h"
 #include "WebAnimationTypes.h"
 #include <wtf/Ref.h>
@@ -47,18 +46,17 @@ namespace WebCore {
 
 class Element;
 class FilterOperations;
+class MutableStyleProperties;
 
 namespace Style {
 struct ResolutionContext;
 }
 
-class KeyframeEffect : public AnimationEffect
-    , public CSSPropertyBlendingClient {
+class KeyframeEffect final : public AnimationEffect, public CSSPropertyBlendingClient {
 public:
     static ExceptionOr<Ref<KeyframeEffect>> create(JSC::JSGlobalObject&, Document&, Element*, JSC::Strong<JSC::JSObject>&&, std::optional<std::variant<double, KeyframeEffectOptions>>&&);
     static Ref<KeyframeEffect> create(Ref<KeyframeEffect>&&);
     static Ref<KeyframeEffect> create(const Element&, PseudoId);
-    ~KeyframeEffect() { }
 
     struct BasePropertyIndexedKeyframe {
         std::variant<std::nullptr_t, Vector<std::optional<double>>, double> offset = Vector<std::optional<double>>();
@@ -96,10 +94,8 @@ public:
         RefPtr<TimingFunction> timingFunction;
         Ref<MutableStyleProperties> style;
 
-        ParsedKeyframe()
-            : style(MutableStyleProperties::create())
-        {
-        }
+        ParsedKeyframe();
+        ~ParsedKeyframe();
     };
 
     const Vector<ParsedKeyframe>& parsedKeyframes() const { return m_parsedKeyframes; }
@@ -130,14 +126,15 @@ public:
 
     void animationTimingDidChange();
     void transformRelatedPropertyDidChange();
-    void propertyAffectingKeyframeResolutionDidChange(RenderStyle&, const Style::ResolutionContext&);
+    enum class RecomputationReason : uint8_t { LogicalPropertyChange, Other };
+    std::optional<RecomputationReason> recomputeKeyframesIfNecessary(const RenderStyle* previousUnanimatedStyle, const RenderStyle& unanimatedStyle, const Style::ResolutionContext&);
     void applyPendingAcceleratedActions();
 
     void willChangeRenderer();
 
-    Document* document() const override;
-    RenderElement* renderer() const override;
-    const RenderStyle& currentStyle() const override;
+    Document* document() const final;
+    RenderElement* renderer() const final;
+    const RenderStyle& currentStyle() const final;
     bool triggersStackingContext() const { return m_triggersStackingContext; }
     bool isRunningAccelerated() const { return m_runningAccelerated == RunningAccelerated::Yes; }
 
@@ -149,14 +146,12 @@ public:
     // direct interpolation based on the function list of any two particular keyframes. The prefix serves as a way to
     // make sure that the results of blend(...) can be made to return the same results as rendered by the hardware
     // animation code.
-    std::optional<unsigned> transformFunctionListPrefix() const override { return (!preventsAcceleration()) ? std::optional<unsigned>(m_transformFunctionListsMatchPrefix) : std::nullopt; }
+    std::optional<unsigned> transformFunctionListPrefix() const final { return (!preventsAcceleration()) ? std::optional<unsigned>(m_transformFunctionListsMatchPrefix) : std::nullopt; }
 
     void computeDeclarativeAnimationBlendingKeyframes(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
     const KeyframeList& blendingKeyframes() const { return m_blendingKeyframes; }
     const HashSet<AnimatableProperty>& animatedProperties();
-    const HashSet<CSSPropertyID>& inheritedProperties() const { return m_inheritedProperties; }
     bool animatesProperty(AnimatableProperty) const;
-    bool animatesDirectionAwareProperty() const;
 
     bool computeExtentOfTransformAnimation(LayoutRect&) const;
     bool computeTransformedExtentViaTransformList(const FloatRect&, const RenderStyle&, LayoutRect&) const;
@@ -172,6 +167,7 @@ public:
     bool hasImplicitKeyframes() const;
 
     void keyframesRuleDidChange();
+    void customPropertyRegistrationDidChange(const AtomString&);
 
     bool canBeAccelerated() const;
     bool preventsAcceleration() const;
@@ -181,8 +177,6 @@ public:
     void lastStyleChangeEventStyleDidChange(const RenderStyle* previousStyle, const RenderStyle* currentStyle);
 
     static String CSSPropertyIDToIDLAttributeName(CSSPropertyID);
-
-    bool containsCSSVariableReferences() const { return m_containsCSSVariableReferences; }
 
 private:
     KeyframeEffect(Element*, PseudoId);
@@ -222,11 +216,12 @@ private:
     void computeCSSAnimationBlendingKeyframes(const RenderStyle& unanimatedStyle, const Style::ResolutionContext&);
     void computeCSSTransitionBlendingKeyframes(const RenderStyle& oldStyle, const RenderStyle& newStyle);
     void computeAcceleratedPropertiesState();
-    void setBlendingKeyframes(KeyframeList&);
+    void setBlendingKeyframes(KeyframeList&&);
     bool isTargetingTransformRelatedProperty() const;
     void checkForMatchingTransformFunctionLists();
     void computeHasImplicitKeyframeForAcceleratedProperty();
     void computeHasKeyframeComposingAcceleratedProperty();
+    void computeHasExplicitlyInheritedKeyframeProperty();
     void abilityToBeAcceleratedDidChange();
 
     // AnimationEffect
@@ -240,11 +235,11 @@ private:
     Seconds timeToNextTick(const BasicEffectTiming&) const final;
     bool ticksContinouslyWhileActive() const final;
     std::optional<double> progressUntilNextStep(double) const final;
+    bool preventsAnimationReadiness() const final;
 
     AtomString m_keyframesName;
     KeyframeList m_blendingKeyframes { emptyAtom() };
     HashSet<AnimatableProperty> m_animatedProperties;
-    HashSet<CSSPropertyID> m_inheritedProperties;
     Vector<ParsedKeyframe> m_parsedKeyframes;
     Vector<AcceleratedAction> m_pendingAcceleratedActions;
     RefPtr<Element> m_target;
@@ -264,7 +259,7 @@ private:
     bool m_someKeyframesUseStepsTimingFunction { false };
     bool m_hasImplicitKeyframeForAcceleratedProperty { false };
     bool m_hasKeyframeComposingAcceleratedProperty { false };
-    bool m_containsCSSVariableReferences { false };
+    bool m_hasExplicitlyInheritedKeyframeProperty { false };
 };
 
 } // namespace WebCore

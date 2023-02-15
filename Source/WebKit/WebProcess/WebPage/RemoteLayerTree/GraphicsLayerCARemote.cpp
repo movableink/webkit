@@ -29,11 +29,13 @@
 #include "ImageBufferBackendHandleSharing.h"
 #include "PlatformCAAnimationRemote.h"
 #include "PlatformCALayerRemote.h"
+#include "PlatformCALayerRemoteHost.h"
 #include "RemoteLayerTreeContext.h"
 #include "RemoteLayerTreeDrawingAreaProxyMessages.h"
 #include <WebCore/GraphicsLayerContentsDisplayDelegate.h>
 #include <WebCore/Model.h>
 #include <WebCore/PlatformScreen.h>
+#include <WebCore/RemoteFrame.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -78,6 +80,11 @@ Ref<PlatformCALayer> GraphicsLayerCARemote::createPlatformCALayer(Ref<WebCore::M
 }
 #endif
 
+Ref<PlatformCALayer> GraphicsLayerCARemote::createPlatformCALayerHost(WebCore::LayerHostingContextIdentifier identifier, PlatformCALayerClient* owner)
+{
+    return PlatformCALayerRemoteHost::create(identifier, owner, *m_context);
+}
+
 Ref<PlatformCAAnimation> GraphicsLayerCARemote::createPlatformCAAnimation(PlatformCAAnimation::AnimationType type, const String& keyPath)
 {
     return PlatformCAAnimationRemote::create(type, keyPath);
@@ -91,6 +98,11 @@ void GraphicsLayerCARemote::moveToContext(RemoteLayerTreeContext& context)
     m_context = &context;
 
     context.graphicsLayerDidEnterContext(*this);
+}
+
+Color GraphicsLayerCARemote::pageTiledBackingBorderColor() const
+{
+    return SRGBA<uint8_t> { 28, 74, 120, 128 }; // remote tile cache layer: navy blue
 }
 
 class GraphicsLayerCARemoteAsyncContentsDisplayDelegate : public GraphicsLayerAsyncContentsDisplayDelegate {
@@ -134,6 +146,5 @@ RefPtr<WebCore::GraphicsLayerAsyncContentsDisplayDelegate> GraphicsLayerCARemote
 
     return adoptRef(new GraphicsLayerCARemoteAsyncContentsDisplayDelegate(*WebProcess::singleton().parentProcessConnection(), m_context->drawingAreaIdentifier(), primaryLayerID()));
 }
-
 
 } // namespace WebKit

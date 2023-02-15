@@ -246,7 +246,7 @@ AXObjectCache::AXObjectCache(Document& document)
         loadingProgress = 1;
     m_loadingProgress = loadingProgress;
 
-    AXTreeStore::add(m_id, this);
+    AXTreeStore::add(m_id, WeakPtr { this });
 }
 
 AXObjectCache::~AXObjectCache()
@@ -509,26 +509,22 @@ AccessibilityObject* AXObjectCache::get(Widget* widget)
 {
     if (!widget)
         return nullptr;
-        
+
     AXID axID = m_widgetObjectMapping.get(widget);
     ASSERT(!axID.isHashTableDeletedValue());
-    if (!axID)
-        return nullptr;
-    
-    return m_objects.get(axID);    
+
+    return axID ? m_objects.get(axID) : nullptr;
 }
-    
+
 AccessibilityObject* AXObjectCache::get(RenderObject* renderer)
 {
     if (!renderer)
         return nullptr;
-    
+
     AXID axID = m_renderObjectMapping.get(renderer);
     ASSERT(!axID.isHashTableDeletedValue());
-    if (!axID)
-        return nullptr;
 
-    return m_objects.get(axID);    
+    return axID ? m_objects.get(axID) : nullptr;
 }
 
 AccessibilityObject* AXObjectCache::get(Node* node)
@@ -536,27 +532,15 @@ AccessibilityObject* AXObjectCache::get(Node* node)
     if (!node)
         return nullptr;
 
-    AXID renderID = node->renderer() ? m_renderObjectMapping.get(node->renderer()) : AXID();
+    auto* renderer = node->renderer();
+    AXID renderID = renderer ? m_renderObjectMapping.get(renderer) : AXID();
     ASSERT(!renderID.isHashTableDeletedValue());
+    if (renderID.isValid())
+        return m_objects.get(renderID);
 
     AXID nodeID = m_nodeObjectMapping.get(node);
     ASSERT(!nodeID.isHashTableDeletedValue());
-
-    if (node->renderer() && nodeID && !renderID) {
-        // This can happen if an AccessibilityNodeObject is created for a node that's not
-        // rendered, but later something changes and it gets a renderer (like if it's
-        // reparented).
-        remove(nodeID);
-        return nullptr;
-    }
-
-    if (renderID)
-        return m_objects.get(renderID);
-
-    if (!nodeID)
-        return nullptr;
-
-    return m_objects.get(nodeID);
+    return nodeID.isValid() ? m_objects.get(nodeID) : nullptr;
 }
 
 // FIXME: This probably belongs on Node.
@@ -995,6 +979,15 @@ void AXObjectCache::remove(Widget* view)
     remove(m_widgetObjectMapping.take(view));
 }
 
+AXID AXObjectCache::generateNewObjectID() const
+{
+    AXID axID;
+    do {
+        axID = AXID::generate();
+    } while (!axID.isValid() || m_idsInUse.contains(axID));
+    return axID;
+}
+
 Vector<RefPtr<AXCoreObject>> AXObjectCache::objectsForIDs(const Vector<AXID>& axIDs) const
 {
     ASSERT(isMainThread());
@@ -1018,7 +1011,7 @@ AXID AXObjectCache::getAXID(AccessibilityObject* object)
         return objectID;
     }
 
-    objectID = generateNewID();
+    objectID = generateNewObjectID();
     m_idsInUse.add(objectID);
     object->setObjectID(objectID);
     return objectID;
@@ -1051,11 +1044,25 @@ void AXObjectCache::handleTextChanged(AccessibilityObject* object)
     object->recomputeIsIgnored();
 }
 
-void AXObjectCache::updateCacheAfterNodeIsAttached(Node* node)
+void AXObjectCache::onRendererCreated(Element& element)
 {
-    // Calling get() will update the AX object if we had an AccessibilityNodeObject but now we need
-    // an AccessibilityRenderObject, because it was reparented to a location outside of a canvas.
-    get(node);
+    if (!element.renderer()) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    // If there is already an AXObject that was created for this element,
+    // remove it since there will be a new AXRenderObject created using the renderer.
+    AXID axID = m_nodeObjectMapping.get(&element);
+    if (axID.isValid()) {
+        // The removal needs to be async because this is called during a RenderTree
+        // update and remove(AXID) updates the isolated tree, that in turn calls
+        // parentObjectUnignored() on the object being removed, that may result
+        // in a call to textUnderElement, that can not be called during a layout.
+        m_deferredRemovedObjects.add(axID);
+        if (!m_performCacheUpdateTimer.isActive())
+            m_performCacheUpdateTimer.startOneShot(0_s);
+    }
 }
 
 void AXObjectCache::updateLoadingProgress(double newProgressValue)
@@ -1137,12 +1144,12 @@ void AXObjectCache::handleMenuOpened(Node* node)
     
     postNotification(getOrCreate(node), &document(), AXMenuOpened);
 }
-    
+
 void AXObjectCache::handleLiveRegionCreated(Node* node)
 {
     if (!is<Element>(node) || !node->renderer())
         return;
-    
+
     Element* element = downcast<Element>(node);
     auto liveRegionStatus = element->attributeWithoutSynchronization(aria_liveAttr);
     if (liveRegionStatus.isEmpty()) {
@@ -1150,7 +1157,7 @@ void AXObjectCache::handleLiveRegionCreated(Node* node)
         if (!ariaRole.isEmpty())
             liveRegionStatus = AtomString { AccessibilityObject::defaultLiveRegionStatusForRole(AccessibilityObject::ariaRoleToWebCoreRole(ariaRole)) };
     }
-    
+
     if (AccessibilityObject::liveRegionStatusIsEnabled(liveRegionStatus))
         postNotification(getOrCreate(node), &document(), AXLiveRegionCreated);
 }
@@ -3450,15 +3457,6 @@ void AXObjectCache::performCacheUpdateTimerFired()
     performDeferredCacheUpdate();
 }
 
-void AXObjectCache::processDeferredChildrenChangedList()
-{
-    AXTRACE(makeString("AXObjectCache::processDeferredChildrenChangedList 0x"_s, hex(reinterpret_cast<uintptr_t>(this))));
-    AXLOG(makeString("ChildrenChangedList size ", m_deferredChildrenChangedList.size()));
-    for (auto& child : m_deferredChildrenChangedList)
-        handleChildrenChanged(*child);
-    m_deferredChildrenChangedList.clear();
-}
-
 void AXObjectCache::performDeferredCacheUpdate()
 {
     AXTRACE(makeString("AXObjectCache::performDeferredCacheUpdate 0x"_s, hex(reinterpret_cast<uintptr_t>(this))));
@@ -3468,53 +3466,61 @@ void AXObjectCache::performDeferredCacheUpdate()
     }
     SetForScope performingDeferredCacheUpdate(m_performingDeferredCacheUpdate, true);
 
-    AXLOG(makeString("RecomputeTableIsExposedList size ", m_deferredRecomputeTableIsExposedList.computeSize()));
+    AXLOGDeferredCollection("RemovedObjects"_s, m_deferredRemovedObjects);
+    for (AXID axID : m_deferredRemovedObjects)
+        remove(axID);
+    m_deferredRemovedObjects.clear();
+
+    AXLOGDeferredCollection("RecomputeTableIsExposedList"_s, m_deferredRecomputeTableIsExposedList);
     m_deferredRecomputeTableIsExposedList.forEach([this] (auto& tableElement) {
         if (auto* axTable = dynamicDowncast<AccessibilityTable>(get(&tableElement)))
             axTable->recomputeIsExposable();
     });
     m_deferredRecomputeTableIsExposedList.clear();
 
-    AXLOG(makeString("NodeAddedOrRemovedList size ", m_deferredNodeAddedOrRemovedList.size()));
+    AXLOGDeferredCollection("NodeAddedOrRemovedList"_s, m_deferredNodeAddedOrRemovedList);
     for (auto* nodeChild : m_deferredNodeAddedOrRemovedList) {
         handleMenuOpened(nodeChild);
         handleLiveRegionCreated(nodeChild);
     }
     m_deferredNodeAddedOrRemovedList.clear();
 
-    processDeferredChildrenChangedList();
+    AXLOGDeferredCollection("ChildrenChangedList"_s, m_deferredChildrenChangedList);
+    for (auto& child : m_deferredChildrenChangedList)
+        handleChildrenChanged(*child);
+    m_deferredChildrenChangedList.clear();
 
-    AXLOG(makeString("TextChangedList size ", m_deferredTextChangedList.size()));
+    AXLOGDeferredCollection("TextChangedList"_s, m_deferredTextChangedList);
     for (auto* node : m_deferredTextChangedList)
         handleTextChanged(getOrCreate(node));
     m_deferredTextChangedList.clear();
 
-    AXLOG(makeString("RecomputeIsIgnoredList size ", m_deferredRecomputeIsIgnoredList.computeSize()));
+    AXLOGDeferredCollection("RecomputeIsIgnoredList"_s, m_deferredRecomputeIsIgnoredList);
     m_deferredRecomputeIsIgnoredList.forEach([this] (auto& element) {
         if (auto* renderer = element.renderer())
             recomputeIsIgnored(renderer);
     });
     m_deferredRecomputeIsIgnoredList.clear();
 
-    AXLOG(makeString("SelectedChildredChangedList size ", m_deferredSelectedChildredChangedList.computeSize()));
+    AXLOGDeferredCollection("SelectedChildredChangedList"_s, m_deferredSelectedChildredChangedList);
     m_deferredSelectedChildredChangedList.forEach([this] (auto& selectElement) {
         selectedChildrenChanged(&selectElement);
     });
     m_deferredSelectedChildredChangedList.clear();
 
-    AXLOG(makeString("TextFormControlValue size ", m_deferredTextFormControlValue.size()));
+    AXLOGDeferredCollection("TextFormControlValue"_s, m_deferredTextFormControlValue);
     for (auto& deferredFormControlContext : m_deferredTextFormControlValue) {
         auto& textFormControlElement = downcast<HTMLTextFormControlElement>(*deferredFormControlContext.key);
         postTextReplacementNotificationForTextControl(textFormControlElement, deferredFormControlContext.value, textFormControlElement.innerTextValue());
     }
     m_deferredTextFormControlValue.clear();
 
-    AXLOG(makeString("AttributeChange size ", m_deferredAttributeChange.size()));
+    AXLOGDeferredCollection("AttributeChange"_s, m_deferredAttributeChange);
     for (const auto& attributeChange : m_deferredAttributeChange)
         handleAttributeChange(attributeChange.element, attributeChange.attrName, attributeChange.oldValue, attributeChange.newValue);
     m_deferredAttributeChange.clear();
 
-    AXLOG(makeString("FocusedNodeChange size ", m_deferredFocusedNodeChange.size()));
+    AXLOGDeferredCollection("FocusedNodeChange"_s, m_deferredFocusedNodeChange);
     for (auto& deferredFocusedChangeContext : m_deferredFocusedNodeChange) {
         // Don't recompute the active modal for each individal focus change, as that could cause a lot of expensive tree rebuilding. Instead, we do it once below.
         handleFocusedUIElementChanged(deferredFocusedChangeContext.first, deferredFocusedChangeContext.second, UpdateModal::No);
@@ -3527,7 +3533,7 @@ void AXObjectCache::performDeferredCacheUpdate()
     bool shouldRecomputeModal = updatedFocusedElement;
     m_deferredFocusedNodeChange.clear();
 
-    AXLOG(makeString("ModalChangedList size ", m_deferredModalChangedList.computeSize()));
+    AXLOGDeferredCollection("ModalChangedList"_s, m_deferredModalChangedList);
     for (auto& element : m_deferredModalChangedList) {
         if (!is<HTMLDialogElement>(element) && !nodeHasRole(&element, "dialog"_s) && !nodeHasRole(&element, "alertdialog"_s))
             continue;
@@ -3557,7 +3563,7 @@ void AXObjectCache::performDeferredCacheUpdate()
             focusCurrentModal();
     }
 
-    AXLOG(makeString("MenuListChange size ", m_deferredMenuListChange.computeSize()));
+    AXLOGDeferredCollection("MenuListChange"_s, m_deferredMenuListChange);
     m_deferredMenuListChange.forEach([this] (auto& element) {
         handleMenuListValueChanged(element);
     });

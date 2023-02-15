@@ -191,7 +191,7 @@ Vector<RefPtr<WebPageProxy>> WebProcessProxy::pages() const
 void WebProcessProxy::forWebPagesWithOrigin(PAL::SessionID sessionID, const SecurityOriginData& origin, const Function<void(WebPageProxy&)>& callback)
 {
     for (auto& page : globalPages()) {
-        if (!page || page->sessionID() != sessionID || SecurityOriginData::fromURL(URL { page->currentURL() }) != origin)
+        if (!page || page->sessionID() != sessionID || SecurityOriginData::fromURLWithoutStrictOpaqueness(URL { page->currentURL() }) != origin)
             continue;
         callback(*page);
     }
@@ -563,10 +563,6 @@ void WebProcessProxy::connectionWillOpen(IPC::Connection& connection)
     // Otherwise, the WebProcess would process incoming synchronous IPC while waiting for a synchronous IPC
     // reply from the UIProcess, which would be unsafe.
     connection.setOnlySendMessagesAsDispatchWhenWaitingForSyncReplyWhenProcessingSuchAMessage(true);
-
-#if ENABLE(SEC_ITEM_SHIM)
-    SecItemShimProxy::singleton().initializeConnection(connection);
-#endif
 
 #if HAVE(CVDISPLAYLINK)
     m_displayLinkClient.setConnection(&connection);
@@ -1616,6 +1612,17 @@ void WebProcessProxy::didChangeThrottleState(ProcessThrottleState type)
     }
 
     ASSERT(!m_backgroundToken || !m_foregroundToken);
+}
+
+String WebProcessProxy::environmentIdentifier() const
+{
+    if (m_environmentIdentifier.isEmpty()) {
+        StringBuilder builder;
+        builder.append(clientName());
+        builder.append(processIdentifier());
+        m_environmentIdentifier = builder.toString();
+    }
+    return m_environmentIdentifier;
 }
 
 void WebProcessProxy::updateAudibleMediaAssertions()

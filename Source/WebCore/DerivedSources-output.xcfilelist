@@ -1107,6 +1107,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSGPULoadOp.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSGPULoadOp.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSGPUMapMode.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSGPUMapMode.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSGPUMipmapFilterMode.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSGPUMipmapFilterMode.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSGPUMultisampleState.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSGPUMultisampleState.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSGPUObjectBase.cpp
@@ -1589,6 +1591,10 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSLongRange.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSLongRange.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMallocStatistics.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMallocStatistics.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSManagedMediaSource.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSManagedMediaSource.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSManagedSourceBuffer.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSManagedSourceBuffer.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMathMLElement.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMathMLElement.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSMathMLElementWrapperFactory.cpp
@@ -2735,8 +2741,6 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUserMessageHandlersNamespace.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUserMessageHandlersNamespace.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUserVerificationRequirement.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSUserVerificationRequirement.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSValidityStateFlags.cpp
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSValidityStateFlags.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVTTCue.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVTTCue.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVTTRegion.cpp
@@ -2745,6 +2749,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVTTRegionList.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVTTRegionList.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSValidityState.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSValidityState.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSValidityStateFlags.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSValidityStateFlags.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVideoColorPrimaries.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVideoColorPrimaries.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSVideoColorSpace.cpp
@@ -2835,6 +2841,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLActiveInfo.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLActiveInfo.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLBuffer.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLBuffer.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLClipCullDistance.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLClipCullDistance.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLColorBufferFloat.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLColorBufferFloat.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWebGLCompressedTextureASTC.cpp

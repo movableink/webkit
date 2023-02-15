@@ -352,8 +352,6 @@
 
 #if ENABLE(WEBGL)
 #include "WebGLRenderingContext.h"
-#endif
-#if ENABLE(WEBGL2)
 #include "WebGL2RenderingContext.h"
 #endif
 
@@ -569,7 +567,6 @@ Document::Document(Frame* frame, const Settings& settings, const URL& url, Docum
 #endif
     , m_xmlVersion("1.0"_s)
     , m_constantPropertyMap(makeUnique<ConstantPropertyMap>(*this))
-    , m_documentClasses(documentClasses)
 #if ENABLE(FULLSCREEN_API)
     , m_fullscreenManager { makeUniqueRef<FullscreenManager>(*this) }
 #endif
@@ -589,18 +586,18 @@ Document::Document(Frame* frame, const Settings& settings, const URL& url, Docum
     , m_didAssociateFormControlsTimer(*this, &Document::didAssociateFormControlsTimerFired)
     , m_cookieCacheExpiryTimer(*this, &Document::invalidateDOMCookieCache)
     , m_socketProvider(page() ? &page()->socketProvider() : nullptr)
-    , m_isSynthesized(constructionFlags & Synthesized)
-    , m_isNonRenderedPlaceholder(constructionFlags & NonRenderedPlaceholder)
-    , m_latestFocusTrigger { FocusTrigger::Other }
     , m_orientationNotifier(currentOrientation(frame))
     , m_undoManager(UndoManager::create(*this))
     , m_editor(makeUniqueRef<Editor>(*this))
     , m_selection(makeUniqueRef<FrameSelection>(this))
-    , m_whitespaceCache(makeUniqueRef<WhitespaceCache>())
     , m_reportingScope(ReportingScope::create(*this))
+    , m_documentClasses(documentClasses)
+    , m_latestFocusTrigger { FocusTrigger::Other }
 #if ENABLE(DOM_AUDIO_SESSION)
     , m_audioSessionType { DOMAudioSession::Type::Auto }
 #endif
+    , m_isSynthesized(constructionFlags & Synthesized)
+    , m_isNonRenderedPlaceholder(constructionFlags & NonRenderedPlaceholder)
 {
     addToDocumentsMap();
 
@@ -680,7 +677,7 @@ Document::~Document()
     ASSERT(m_ranges.isEmpty());
     ASSERT(!m_parentTreeScope);
     ASSERT(!m_disabledFieldsetElementsCount);
-    ASSERT(m_inDocumentShadowRoots.isEmpty());
+    ASSERT(m_inDocumentShadowRoots.isEmptyIgnoringNullReferences());
 
 #if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
     m_deviceMotionClient->deviceMotionControllerDestroyed();
@@ -1541,7 +1538,14 @@ void Document::setDocumentElementLanguage(const AtomString& language)
 {
     if (m_documentElementLanguage == language)
         return;
+
+    auto oldEffectiveDocumentElementLangauge = effectiveDocumentElementLanguage();
     m_documentElementLanguage = language;
+
+    if (oldEffectiveDocumentElementLangauge != effectiveDocumentElementLanguage()) {
+        for (auto& element : std::exchange(m_elementsWithLangAttrMatchingDocumentElement, { }))
+            element.updateEffectiveLangStateAndPropagateToDescendants();
+    }
 
     if (m_contentLanguage == language)
         return;
@@ -3542,7 +3546,9 @@ void Document::setURL(const URL& url)
 
     if (SecurityOrigin::shouldIgnoreHost(newURL))
         newURL.setHostAndPort({ });
-    m_url = WTFMove(newURL);
+    // SecurityContext::securityOrigin may not be initialized at this time if setURL() is called in the constructor, therefore calling topOrigin() is not always safe.
+    auto topOrigin = isTopDocument() && !SecurityContext::securityOrigin() ? SecurityOrigin::create(url)->data() : this->topOrigin().data();
+    m_url = { WTFMove(newURL), topOrigin };
 
     m_documentURI = m_url.url().string();
     m_adjustedURL = adjustedURL();
@@ -3552,18 +3558,18 @@ void Document::setURL(const URL& url)
 const URL& Document::urlForBindings() const
 {
     auto shouldAdjustURL = [this] {
-        if (m_url.url().isEmpty() || !loader() || !isTopDocument())
+        if (m_url.url().isEmpty() || !loader() || !isTopDocument() || !frame())
             return false;
 
         auto* topDocumentLoader = topDocument().loader();
-        if (!topDocumentLoader || !topDocumentLoader->networkConnectionIntegrityPolicy().contains(WebCore::NetworkConnectionIntegrity::Enabled))
+        if (!topDocumentLoader || !topDocumentLoader->networkConnectionIntegrityPolicy().contains(NetworkConnectionIntegrity::Enabled))
             return false;
 
         auto preNavigationURL = loader()->originalRequest().httpReferrer();
         if (preNavigationURL.isEmpty() || RegistrableDomain { URL { preNavigationURL } }.matches(securityOrigin().data()))
             return false;
 
-        return true;
+        return mayBeExecutingThirdPartyScript();
     }();
 
     if (shouldAdjustURL)
@@ -3572,14 +3578,10 @@ const URL& Document::urlForBindings() const
     return m_url.url().isEmpty() ? aboutBlankURL() : m_url.url();
 }
 
-#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/DocumentAdditions.cpp>)
-#include <WebKitAdditions/DocumentAdditions.cpp>
-#else
 URL Document::adjustedURL() const
 {
-    return m_url.url();
+    return page() ? page()->chrome().client().allowedLookalikeCharacters(m_url.url()) : m_url.url();
 }
-#endif
 
 // https://html.spec.whatwg.org/#fallback-base-url
 URL Document::fallbackBaseURL() const
@@ -4588,6 +4590,12 @@ void Document::updateIsPlayingMedia()
     state.add(MediaStreamTrack::captureState(*this));
     if (m_activeSpeechRecognition)
         state.add(MediaProducerMediaState::HasActiveAudioCaptureDevice);
+
+    m_activeMediaElementsWithMediaStreamCount = 0;
+    forEachMediaElement([&](auto& element) {
+        if (element.hasMediaStreamSrcObject() && element.isPlaying())
+            ++m_activeMediaElementsWithMediaStreamCount;
+    });
 #endif
 
     if (m_userHasInteractedWithMediaElement)
@@ -6100,6 +6108,15 @@ void Document::popCurrentScript()
     m_currentScriptStack.removeLast();
 }
 
+bool Document::mayBeExecutingThirdPartyScript() const
+{
+    if (!m_hasLoadedThirdPartyScript)
+        return false;
+
+    auto sourceURL = currentSourceURL();
+    return sourceURL.isEmpty() || !RegistrableDomain { sourceURL }.matches(securityOrigin().data());
+}
+
 bool Document::shouldDeferAsynchronousScriptsUntilParsingFinishes() const
 {
     if (!settings().shouldDeferAsynchronousScriptsUntilAfterDocumentLoadOrFirstPaint())
@@ -6714,8 +6731,7 @@ std::optional<RenderingContext> Document::getCSSCanvasContext(const String& type
 #if ENABLE(WEBGL)
     if (is<WebGLRenderingContext>(*context))
         return RenderingContext { RefPtr<WebGLRenderingContext> { &downcast<WebGLRenderingContext>(*context) } };
-#endif
-#if ENABLE(WEBGL2)
+
     if (is<WebGL2RenderingContext>(*context))
         return RenderingContext { RefPtr<WebGL2RenderingContext> { &downcast<WebGL2RenderingContext>(*context) } };
 #endif
@@ -6842,7 +6858,7 @@ void Document::postTask(Task&& task)
     callOnMainThread([documentID = identifier(), task = WTFMove(task)]() mutable {
         ASSERT(isMainThread());
 
-        auto* document = allDocumentsMap().get(documentID);
+        RefPtr document = allDocumentsMap().get(documentID);
         if (!document)
             return;
 
@@ -6856,7 +6872,8 @@ void Document::postTask(Task&& task)
 
 void Document::pendingTasksTimerFired()
 {
-    Vector<Task> pendingTasks = WTFMove(m_pendingTasks);
+    Ref protectedThis { *this };
+    auto pendingTasks = std::exchange(m_pendingTasks, Vector<Task> { });
     for (auto& task : pendingTasks)
         task.performTask(*this);
 }
@@ -7420,6 +7437,9 @@ void Document::updateLastHandledUserGestureTimestamp(MonotonicTime time)
 bool Document::processingUserGestureForMedia() const
 {
     if (UserGestureIndicator::processingUserGestureForMedia())
+        return true;
+
+    if (m_domWindow && m_domWindow->hasTransientActivation())
         return true;
 
     if (m_userActivatedMediaFinishedPlayingTimestamp + maxIntervalForUserGestureForwardingAfterMediaFinishesPlaying >= MonotonicTime::now())
@@ -8520,14 +8540,14 @@ DOMSelection* Document::getSelection()
 void Document::didInsertInDocumentShadowRoot(ShadowRoot& shadowRoot)
 {
     ASSERT(shadowRoot.isConnected());
-    ASSERT(!m_inDocumentShadowRoots.contains(&shadowRoot));
-    m_inDocumentShadowRoots.add(&shadowRoot);
+    ASSERT(!m_inDocumentShadowRoots.contains(shadowRoot));
+    m_inDocumentShadowRoots.add(shadowRoot);
 }
 
 void Document::didRemoveInDocumentShadowRoot(ShadowRoot& shadowRoot)
 {
-    ASSERT(m_inDocumentShadowRoots.contains(&shadowRoot));
-    m_inDocumentShadowRoots.remove(&shadowRoot);
+    ASSERT(m_inDocumentShadowRoots.contains(shadowRoot));
+    m_inDocumentShadowRoots.remove(shadowRoot);
 }
 
 void Document::orientationChanged(int orientation)
@@ -9434,6 +9454,16 @@ void Document::sendReportToEndpoints(const URL& baseURL, const Vector<String>& e
 bool Document::lazyImageLoadingEnabled() const
 {
     return m_settings->lazyImageLoadingEnabled() && !m_quirks->shouldDisableLazyImageLoadingQuirk();
+}
+
+void Document::addElementWithLangAttrMatchingDocumentElement(Element& element)
+{
+    m_elementsWithLangAttrMatchingDocumentElement.add(element);
+}
+
+void Document::removeElementWithLangAttrMatchingDocumentElement(Element& element)
+{
+    m_elementsWithLangAttrMatchingDocumentElement.remove(element);
 }
 
 } // namespace WebCore

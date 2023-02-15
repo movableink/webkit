@@ -26,6 +26,7 @@
 #import "config.h"
 #import "Device.h"
 
+#import "API.h"
 #import "APIConversions.h"
 #import "BindGroup.h"
 #import "BindGroupLayout.h"
@@ -251,6 +252,18 @@ void Device::generateAValidationError(String&& message)
             protectedThis->m_uncapturedErrorCallback(WGPUErrorType_Validation, WTFMove(message));
         });
     }
+}
+
+uint32_t Device::maxBuffersPlusVertexBuffersForVertexStage() const
+{
+    // FIXME: use value in HardwareCapabilities from https://github.com/gpuweb/gpuweb/issues/2749
+    return 8;
+}
+
+uint32_t Device::vertexBufferIndexForBindGroup(uint32_t groupIndex) const
+{
+    auto maxIndex = maxBuffersPlusVertexBuffersForVertexStage();
+    return WGSL::vertexBufferIndexForBindGroup(groupIndex, maxIndex);
 }
 
 void Device::captureFrameIfNeeded() const

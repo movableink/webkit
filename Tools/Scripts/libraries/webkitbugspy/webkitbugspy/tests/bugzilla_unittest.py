@@ -41,6 +41,7 @@ class TestBugzilla(unittest.TestCase):
             )), dict(
                 type='bugzilla',
                 url='https://bugs.example.com',
+                hide_title=False,
                 res=['\\Aexample.com/b/(?P<id>\\d+)\\Z']
             ),
         )
@@ -510,3 +511,13 @@ What component in 'WebKit' should the bug be associated with?:
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
             tracker = bugzilla.Tracker(self.URL)
             self.assertEqual(tracker.issue(1).milestone, None)
+
+    def test_keywords(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
+            tracker = bugzilla.Tracker(self.URL)
+            self.assertEqual(tracker.issue(1).keywords, ['Keyword A'])
+
+    def test_classification(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
+            tracker = bugzilla.Tracker(self.URL)
+            self.assertEqual(tracker.issue(1).classification, '')

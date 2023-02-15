@@ -41,6 +41,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DOMWindow.h"
+#include "DocumentLoader.h"
 #include "DocumentTimelinesController.h"
 #include "DocumentType.h"
 #include "Editing.h"
@@ -131,9 +132,6 @@ static const Seconds scrollFrequency { 1000_s / 60. };
 #endif
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, frameCounter, ("Frame"));
-
-// We prewarm local storage for at most 5 origins in a given page.
-static const unsigned maxlocalStoragePrewarmingCount { 5 };
 
 static inline float parentPageZoomFactor(Frame* frame)
 {
@@ -307,6 +305,11 @@ void Frame::setDocument(RefPtr<Document>&& newDocument)
     InspectorInstrumentation::frameDocumentUpdated(*this);
 
     m_documentIsBeingReplaced = false;
+}
+
+void Frame::frameDetached()
+{
+    m_loader->frameDetached();
 }
 
 void Frame::invalidateContentEventRegionsIfNeeded(InvalidateContentEventRegionsReason reason)
@@ -1042,6 +1045,26 @@ FloatSize Frame::screenSize() const
 {
     if (!m_overrideScreenSize.isEmpty())
         return m_overrideScreenSize;
+
+    auto sizeForHeadlessMode = [&]() -> std::optional<IntSize> {
+        RefPtr document = this->document();
+        if (!document)
+            return std::nullopt;
+
+        RefPtr loader = document->loader();
+        if (!loader || !loader->isLoadingInHeadlessMode())
+            return std::nullopt;
+
+        RefPtr window = this->window();
+        if (!window)
+            return std::nullopt;
+
+        return { { window->innerWidth(), window->innerHeight() } };
+    }();
+
+    if (sizeForHeadlessMode)
+        return *sizeForHeadlessMode;
+
     return screenRect(view()).size();
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,6 +52,7 @@
 #include "JSOESTextureHalfFloatLinear.h"
 #include "JSOESVertexArrayObject.h"
 #include "JSWebGLBuffer.h"
+#include "JSWebGLClipCullDistance.h"
 #include "JSWebGLColorBufferFloat.h"
 #include "JSWebGLCompressedTextureASTC.h"
 #include "JSWebGLCompressedTextureETC.h"
@@ -146,9 +147,7 @@ JSValue convertToJSValue(JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject&
         },
         [&] (const RefPtr<WebGLVertexArrayObjectOES>& array) {
             return toJS(&lexicalGlobalObject, &globalObject, array.get());
-        }
-#if ENABLE(WEBGL2)
-        ,
+        },
         [&] (const RefPtr<WebGLSampler>& sampler) {
             return toJS(&lexicalGlobalObject, &globalObject, sampler.get());
         },
@@ -158,7 +157,6 @@ JSValue convertToJSValue(JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject&
         [&] (const RefPtr<WebGLVertexArrayObject>& array) {
             return toJS(&lexicalGlobalObject, &globalObject, array.get());
         }
-#endif
     );
 }
 
@@ -191,6 +189,7 @@ JSValue convertToJSValue(JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject&
         TO_JS(OESTextureHalfFloat)
         TO_JS(OESTextureHalfFloatLinear)
         TO_JS(OESVertexArrayObject)
+        TO_JS(WebGLClipCullDistance)
         TO_JS(WebGLColorBufferFloat)
         TO_JS(WebGLCompressedTextureASTC)
         TO_JS(WebGLCompressedTextureETC)

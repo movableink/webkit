@@ -1,5 +1,5 @@
 include(GNUInstallDirs)
-include(GLib.cmake)
+include(GLibMacros)
 include(InspectorGResources.cmake)
 
 if (ENABLE_PDFJS)
@@ -145,7 +145,6 @@ set(WPE_API_HEADER_TEMPLATES
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitEditingCommands.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitEditorState.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitError.h.in
-    ${WEBKIT_DIR}/UIProcess/API/glib/WebKitFaviconDatabase.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitFileChooserRequest.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitFindController.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitFormSubmissionRequest.h.in
@@ -194,6 +193,12 @@ set(WPE_API_HEADER_TEMPLATES
     ${WEBKIT_DIR}/UIProcess/API/glib/webkit.h.in
 )
 
+if (ENABLE_2022_GLIB_API)
+    list(APPEND WPE_API_HEADER_TEMPLATES
+        ${WEBKIT_DIR}/UIProcess/API/glib/WebKitNetworkSession.h.in
+    )
+endif ()
+
 set(WPE_API_INSTALLED_HEADERS
     ${DERIVED_SOURCES_WPE_API_DIR}/WebKitEnumTypes.h
     ${DERIVED_SOURCES_WPE_API_DIR}/WebKitVersion.h
@@ -237,7 +242,7 @@ list(APPEND WebKit_DEPENDENCIES
     webkitwpe-forwarding-headers
 )
 
-GENERATE_API_HEADERS(WPE_API_HEADER_TEMPLATES
+GENERATE_GLIB_API_HEADERS(WebKit WPE_API_HEADER_TEMPLATES
     ${DERIVED_SOURCES_WPE_API_DIR}
     WPE_API_INSTALLED_HEADERS
     "-DWTF_PLATFORM_GTK=0"
@@ -246,7 +251,7 @@ GENERATE_API_HEADERS(WPE_API_HEADER_TEMPLATES
     "-DENABLE_2022_GLIB_API=$<BOOL:${ENABLE_2022_GLIB_API}>"
 )
 
-GENERATE_API_HEADERS(WPE_WEB_EXTENSION_API_HEADER_TEMPLATES
+GENERATE_GLIB_API_HEADERS(WebKit WPE_WEB_EXTENSION_API_HEADER_TEMPLATES
     ${DERIVED_SOURCES_WPE_API_DIR}
     WPE_WEB_EXTENSION_API_INSTALLED_HEADERS
     "-DWTF_PLATFORM_GTK=0"
@@ -329,6 +334,7 @@ list(APPEND WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/UIProcess/API/C/glib"
     "${WEBKIT_DIR}/UIProcess/API/C/wpe"
     "${WEBKIT_DIR}/UIProcess/API/glib"
+    "${WEBKIT_DIR}/UIProcess/API/libwpe"
     "${WEBKIT_DIR}/UIProcess/API/wpe"
     "${WEBKIT_DIR}/UIProcess/CoordinatedGraphics"
     "${WEBKIT_DIR}/UIProcess/Inspector/glib"
@@ -348,6 +354,10 @@ list(APPEND WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/WebProcess/WebPage/wpe"
     "${WEBKIT_DIR}/WebProcess/glib"
     "${WEBKIT_DIR}/WebProcess/soup"
+)
+
+list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
+    "${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}/jsc"
 )
 
 list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
@@ -523,17 +533,16 @@ GI_INTROSPECT(WPEJavaScriptCore ${WPE_API_VERSION} jsc/jsc.h
         -I${JavaScriptCoreGLib_FRAMEWORK_HEADERS_DIR}
         -I${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}
     SOURCES
-        ${JAVASCRIPTCORE_DIR}/API/glib/JSCAutocleanups.h
-        ${JAVASCRIPTCORE_DIR}/API/glib/JSCClass.h
-        ${JAVASCRIPTCORE_DIR}/API/glib/JSCContext.h
-        ${JAVASCRIPTCORE_DIR}/API/glib/JSCDefines.h
-        ${JAVASCRIPTCORE_DIR}/API/glib/JSCException.h
         ${JAVASCRIPTCORE_DIR}/API/glib/JSCOptions.h
-        ${JAVASCRIPTCORE_DIR}/API/glib/JSCValue.h
-        ${JAVASCRIPTCORE_DIR}/API/glib/JSCVirtualMachine.h
-        ${JAVASCRIPTCORE_DIR}/API/glib/JSCWeakValue.h
-        ${JAVASCRIPTCORE_DIR}/API/glib/jsc.h
+        ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}/jsc/JSCClass.h
+        ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}/jsc/JSCContext.h
+        ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}/jsc/JSCDefines.h
+        ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}/jsc/JSCException.h
+        ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}/jsc/JSCValue.h
         ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}/jsc/JSCVersion.h
+        ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}/jsc/JSCVirtualMachine.h
+        ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}/jsc/JSCWeakValue.h
+        ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}/jsc/jsc.h
         ${JAVASCRIPTCORE_DIR}/API/glib
     NO_IMPLICIT_SOURCES
 )

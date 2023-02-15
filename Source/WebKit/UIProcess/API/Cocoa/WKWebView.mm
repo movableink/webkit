@@ -1266,8 +1266,15 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
         return;
     }
 
-    _page->callAfterNextPresentationUpdate([callSnapshotRect = WTFMove(callSnapshotRect), handler](WebKit::CallbackBase::Error error) mutable {
-        if (error != WebKit::CallbackBase::Error::None) {
+    if (!_page->hasRunningProcess() || !_page->drawingArea()) {
+        tracePoint(TakeSnapshotEnd, snapshotFailedTraceValue);
+        handler(nil, createNSError(WKErrorUnknown).get());
+        return;
+    }
+
+    _page->callAfterNextPresentationUpdate([callSnapshotRect = WTFMove(callSnapshotRect), handler, page = Ref { *_page }] () mutable {
+
+        if (!page->hasRunningProcess()) {
             tracePoint(TakeSnapshotEnd, snapshotFailedTraceValue);
             handler(nil, createNSError(WKErrorUnknown).get());
             return;
@@ -1436,7 +1443,7 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
     _page->restoreFromSessionState(sessionState, true);
 }
 
-- (BOOL)inspectable
+- (BOOL)isInspectable
 {
 #if ENABLE(REMOTE_INSPECTOR)
     // FIXME: <http://webkit.org/b/246237> Local inspection should be controlled by `inspectable` API.
@@ -1603,7 +1610,7 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
     auto updateBlockCopy = makeBlockPtr(updateBlock);
 
     RetainPtr<WKWebView> strongSelf = self;
-    _page->callAfterNextPresentationUpdate([updateBlockCopy, withoutWaitingForAnimatedResize, strongSelf](WebKit::CallbackBase::Error error) {
+    _page->callAfterNextPresentationUpdate([updateBlockCopy, withoutWaitingForAnimatedResize, strongSelf] {
         if (!updateBlockCopy)
             return;
 
@@ -3735,17 +3742,6 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
 
     _page->setViewportConfigurationViewLayoutSize(_page->viewLayoutSize(), viewScale, _page->minimumEffectiveDeviceWidth());
 #endif
-}
-
-- (NSArray<NSString *> *)_corsDisablingPatterns
-{
-    return createNSArray(_page->corsDisablingPatterns()).autorelease();
-}
-
-- (void)_setCORSDisablingPatterns:(NSArray<NSString *> *)patterns
-{
-    THROW_IF_SUSPENDED;
-    _page->setCORSDisablingPatterns(makeVector<String>(patterns));
 }
 
 - (void)_getProcessDisplayNameWithCompletionHandler:(void (^)(NSString *))completionHandler

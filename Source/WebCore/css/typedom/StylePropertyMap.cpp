@@ -82,7 +82,7 @@ ExceptionOr<void> StylePropertyMap::set(Document& document, const AtomString& pr
     if (!CSSProperty::isListValuedProperty(propertyID) && values.size() > 1)
         return Exception { TypeError, makeString(property, " is not a list-valued property but more than one value was provided"_s) };
 
-    if (isShorthandCSSProperty(propertyID)) {
+    if (isShorthand(propertyID)) {
         if (values.size() != 1)
             return Exception { TypeError, "Wrong number of values for shorthand CSS property"_s };
         String value;
@@ -141,14 +141,13 @@ ExceptionOr<void> StylePropertyMap::append(Document& document, const AtomString&
     if (!CSSProperty::isListValuedProperty(propertyID))
         return Exception { TypeError, makeString(property, " does not support multiple values"_s) };
 
-    RefPtr<CSSValueList> list;
     auto currentValue = propertyValue(propertyID);
-    if (!currentValue || !is<CSSValueList>(*currentValue)) {
+    RefPtr list = dynamicDowncast<CSSValueList>(currentValue.get());
+    if (!list) {
         list = CSSProperty::createListForProperty(propertyID);
         if (currentValue)
             list->append(currentValue.releaseNonNull());
-    } else
-        list = &downcast<CSSValueList>(*currentValue);
+    }
 
     auto styleValuesOrException = CSSStyleValueFactory::vectorFromStyleValuesOrStrings(property, WTFMove(values));
     if (styleValuesOrException.hasException())

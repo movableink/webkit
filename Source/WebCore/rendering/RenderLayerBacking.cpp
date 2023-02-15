@@ -57,6 +57,7 @@
 #include "PerformanceLoggingClient.h"
 #include "PluginViewBase.h"
 #include "ProgressTracker.h"
+#include "RemoteFrame.h"
 #include "RenderAncestorIterator.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderFragmentContainer.h"
@@ -1118,6 +1119,8 @@ bool RenderLayerBacking::updateConfiguration(const RenderLayer* compositingAnces
         updateContentsRects();
     }
 #endif
+    else if (auto* remoteFrame = is<RenderWidget>(renderer()) ? downcast<RenderWidget>(renderer()).remoteFrame() : nullptr)
+        m_graphicsLayer->setContentsToPlatformLayerHost(remoteFrame->layerHostingContextIdentifier());
     else if (shouldSetContentsDisplayDelegate()) {
         auto* canvas = downcast<HTMLCanvasElement>(renderer().element());
         if (auto* context = canvas->renderingContext())
@@ -3010,7 +3013,7 @@ bool RenderLayerBacking::isDirectlyCompositedImage() const
         if (!is<BitmapImage>(image))
             return false;
 
-        if (downcast<BitmapImage>(*image).orientationForCurrentFrame() != ImageOrientation::None)
+        if (downcast<BitmapImage>(*image).orientationForCurrentFrame() != ImageOrientation::Orientation::None)
             return false;
 
 #if (PLATFORM(GTK) || PLATFORM(WPE))
@@ -3026,6 +3029,28 @@ bool RenderLayerBacking::isDirectlyCompositedImage() const
 
     return false;
 }
+
+bool RenderLayerBacking::isBitmapOnly() const
+{
+    if (m_owningLayer.hasVisibleBoxDecorationsOrBackground())
+        return false;
+
+    if (is<RenderHTMLCanvas>(renderer()))
+        return true;
+
+    if (is<RenderImage>(renderer())) {
+        auto& imageRenderer = downcast<RenderImage>(renderer());
+        if (auto* cachedImage = imageRenderer.cachedImage()) {
+            if (!cachedImage->hasImage())
+                return false;
+            return is<BitmapImage>(cachedImage->imageForRenderer(&imageRenderer));
+        }
+        return false;
+    }
+
+    return false;
+}
+
 
 bool RenderLayerBacking::isUnscaledBitmapOnly() const
 {
@@ -3052,7 +3077,7 @@ bool RenderLayerBacking::isUnscaledBitmapOnly() const
             if (!is<BitmapImage>(image))
                 return false;
 
-            if (downcast<BitmapImage>(*image).orientationForCurrentFrame() != ImageOrientation::None)
+            if (downcast<BitmapImage>(*image).orientationForCurrentFrame() != ImageOrientation::Orientation::None)
                 return false;
 
             return contents.size() == image->size();

@@ -58,6 +58,7 @@
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLObjectElement.h"
 #include "HTTPHeaderNames.h"
+#include "HTTPParsers.h"
 #include "HistoryItem.h"
 #include "HistoryController.h"
 #include "IconLoader.h"
@@ -134,6 +135,15 @@
 
 #if USE(APPLE_INTERNAL_SDK)
 #include <WebKitAdditions/DocumentLoaderAdditions.cpp>
+#else
+namespace WebCore {
+
+bool DocumentLoader::isLoadingInHeadlessMode() const
+{
+    return false;
+}
+
+} // namespace WebCore
 #endif
 
 namespace WebCore {
@@ -179,9 +189,9 @@ DocumentLoader::DocumentLoader(const ResourceRequest& request, const SubstituteD
     , m_substituteData(substituteData)
     , m_originalRequestCopy(request)
     , m_request(request)
-    , m_originalSubstituteDataWasValid(substituteData.isValid())
     , m_substituteResourceDeliveryTimer(*this, &DocumentLoader::substituteResourceDeliveryTimerFired)
     , m_applicationCacheHost(makeUnique<ApplicationCacheHost>(*this))
+    , m_originalSubstituteDataWasValid(substituteData.isValid())
 {
 }
 
@@ -560,7 +570,7 @@ bool DocumentLoader::setControllingServiceWorkerRegistration(ServiceWorkerRegist
         return false;
 
     ASSERT(!m_gotFirstByte);
-    m_serviceWorkerRegistrationData = WTFMove(data);
+    m_serviceWorkerRegistrationData = makeUnique<ServiceWorkerRegistrationData>(WTFMove(data));
     return true;
 }
 
@@ -585,15 +595,6 @@ void DocumentLoader::matchRegistration(const URL& url, SWClientConnection::Regis
 
     auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
     connection.matchRegistration(WTFMove(origin), url, WTFMove(callback));
-}
-
-static inline bool areRegistrationsEqual(const std::optional<ServiceWorkerRegistrationData>& a, const std::optional<ServiceWorkerRegistrationData>& b)
-{
-    if (!a)
-        return !b;
-    if (!b)
-        return false;
-    return a->identifier == b->identifier;
 }
 #endif
 
@@ -890,6 +891,9 @@ void DocumentLoader::responseReceived(CachedResource& resource, const ResourceRe
     if (m_frame && m_frame->document() && m_frame->document()->settings().crossOriginOpenerPolicyEnabled())
         m_responseCOOP = obtainCrossOriginOpenerPolicy(response);
 
+    if (m_frame->settings().clearSiteDataHTTPHeaderEnabled())
+        m_responseClearSiteDataValues = parseClearSiteDataHeader(response);
+
 #if ENABLE(TRACKING_PREVENTION)
     // FIXME(218779): Remove this quirk once microsoft.com completes their login flow redesign.
     if (m_frame && m_frame->document()) {
@@ -913,7 +917,8 @@ void DocumentLoader::responseReceived(CachedResource& resource, const ResourceRe
                 completionHandler();
                 return;
             }
-            m_serviceWorkerRegistrationData = WTFMove(registrationData);
+            if (registrationData)
+                m_serviceWorkerRegistrationData = makeUnique<ServiceWorkerRegistrationData>(WTFMove(*registrationData));
             responseReceived(response, WTFMove(completionHandler));
         });
         return;
@@ -1878,7 +1883,7 @@ URL DocumentLoader::urlForHistory() const
     // Return the URL to be used for history and B/F list.
     // Returns nil for WebDataProtocol URLs that aren't alternates
     // for unreachable URLs, because these can't be stored in history.
-    if (m_substituteData.isValid() && !m_substituteData.shouldRevealToSessionHistory())
+    if (m_substituteData.isValid() && m_substituteData.shouldRevealToSessionHistory() != SubstituteData::SessionHistoryVisibility::Visible)
         return unreachableURL();
 
     return m_originalRequestCopy.url();
@@ -2119,7 +2124,8 @@ void DocumentLoader::startLoadingMainResource()
                     return;
                 }
 
-                m_serviceWorkerRegistrationData = WTFMove(registrationData);
+                if (registrationData)
+                    m_serviceWorkerRegistrationData = makeUnique<ServiceWorkerRegistrationData>(WTFMove(*registrationData));
                 // Prefer existing substitute data (from WKWebView.loadData etc) over service worker fetch.
                 if (this->tryLoadingSubstituteData()) {
                     DOCUMENTLOADER_RELEASE_LOG("startLoadingMainResource callback: Load canceled because of substitute data");
@@ -2186,7 +2192,7 @@ void DocumentLoader::loadMainResource(ResourceRequest&& request)
         m_resultingClientId = ScriptExecutionContextIdentifier::generate();
         ASSERT(!scriptExecutionContextIdentifierToLoaderMap().contains(m_resultingClientId));
         scriptExecutionContextIdentifierToLoaderMap().add(m_resultingClientId, this);
-        mainResourceLoadOptions.resultingClientIdentifier = m_resultingClientId;
+        mainResourceLoadOptions.resultingClientIdentifier = m_resultingClientId.object();
     }
 #endif
 

@@ -928,6 +928,7 @@ localizedStrings["Ligatures @ Font Details Sidebar Property"] = "Ligatures";
 localizedStrings["Light @ Settings General Appearance"] = "Light";
 /* Label for the light color scheme preference. */
 localizedStrings["Light @ User Preferences Overrides"] = "Light";
+localizedStrings["Limit syntax highlighting on long lines of code"] = "Limit syntax highlighting on long lines of code";
 localizedStrings["Line %d"] = "Line %d";
 localizedStrings["Line %d:%d"] = "Line %d:%d";
 localizedStrings["Line Number"] = "Line Number";
@@ -1468,7 +1469,9 @@ localizedStrings["Show changes only for selected node"] = "Show changes only for
 localizedStrings["Show compositing borders"] = "Show compositing borders";
 /* Label for option to toggle the extended lines setting for CSS grid overlays */
 localizedStrings["Show extended lines @ Layout Panel Overlay Options"] = "Extended Grid Lines";
+localizedStrings["Show flexbox overlay"] = "Show flexbox overlay";
 localizedStrings["Show full certificate"] = "Show full certificate";
+localizedStrings["Show grid overlay"] = "Show grid overlay";
 localizedStrings["Show hidden tabs\u2026"] = "Show hidden tabs\u2026";
 /* Settings tab checkbox label for whether the independent styles sidebar should be shown */
 localizedStrings["Show independent Styles sidebar @ Settings Elements Pane"] = "Show independent Styles sidebar";
@@ -1513,6 +1516,7 @@ localizedStrings["Source Maps:"] = "Source Maps:";
 localizedStrings["Sources"] = "Sources";
 /* Name of Sources Tab */
 localizedStrings["Sources Tab Name"] = "Sources";
+localizedStrings["Sources:"] = "Sources:";
 localizedStrings["Space"] = "Space";
 localizedStrings["Spaces"] = "Spaces";
 localizedStrings["Specially Exposed Data"] = "Specially Exposed Data";
@@ -1683,8 +1687,8 @@ localizedStrings["Timer Fired"] = "Timer Fired";
 localizedStrings["Timer Installed"] = "Timer Installed";
 localizedStrings["Timer Removed"] = "Timer Removed";
 localizedStrings["Timers:"] = "Timers:";
-localizedStrings["Timestamps"] = "Timestamps";
 localizedStrings["Timestamp \u2014 %s"] = "Timestamp \u2014 %s";
+localizedStrings["Timestamps"] = "Timestamps";
 localizedStrings["Timing"] = "Timing";
 /* Property value for `font-variant-capitals: titling-caps`. */
 localizedStrings["Titling Capitals @ Font Details Sidebar Property Value"] = "Titling Capitals";

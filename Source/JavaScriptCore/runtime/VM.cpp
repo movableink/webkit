@@ -610,6 +610,10 @@ static ThunkGenerator thunkGeneratorForIntrinsic(Intrinsic intrinsic)
         return boundFunctionCallGenerator;
     case RemoteFunctionCallIntrinsic:
         return remoteFunctionCallGenerator;
+    case NumberConstructorIntrinsic:
+        return numberConstructorCallThunkGenerator;
+    case StringConstructorIntrinsic:
+        return stringConstructorCallThunkGenerator;
     default:
         return nullptr;
     }

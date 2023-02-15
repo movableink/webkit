@@ -27,9 +27,14 @@
 #include <@API_INCLUDE_PREFIX@/WebKitCookieManager.h>
 #include <@API_INCLUDE_PREFIX@/WebKitDefines.h>
 #include <@API_INCLUDE_PREFIX@/WebKitDownload.h>
+#if !ENABLE(2022_GLIB_API)
 #include <@API_INCLUDE_PREFIX@/WebKitFaviconDatabase.h>
+#endif
 #include <@API_INCLUDE_PREFIX@/WebKitGeolocationManager.h>
 #include <@API_INCLUDE_PREFIX@/WebKitNetworkProxySettings.h>
+#if ENABLE(2022_GLIB_API)
+#include <@API_INCLUDE_PREFIX@/WebKitNetworkSession.h>
+#endif
 #include <@API_INCLUDE_PREFIX@/WebKitSecurityManager.h>
 #include <@API_INCLUDE_PREFIX@/WebKitURISchemeRequest.h>
 #include <@API_INCLUDE_PREFIX@/WebKitUserMessage.h>
@@ -38,11 +43,15 @@
 G_BEGIN_DECLS
 
 #define WEBKIT_TYPE_WEB_CONTEXT            (webkit_web_context_get_type())
+#if !ENABLE(2022_GLIB_API)
 #define WEBKIT_WEB_CONTEXT(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), WEBKIT_TYPE_WEB_CONTEXT, WebKitWebContext))
 #define WEBKIT_WEB_CONTEXT_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),  WEBKIT_TYPE_WEB_CONTEXT, WebKitWebContextClass))
 #define WEBKIT_IS_WEB_CONTEXT(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), WEBKIT_TYPE_WEB_CONTEXT))
 #define WEBKIT_IS_WEB_CONTEXT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),  WEBKIT_TYPE_WEB_CONTEXT))
 #define WEBKIT_WEB_CONTEXT_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),  WEBKIT_TYPE_WEB_CONTEXT, WebKitWebContextClass))
+#endif
+
+WEBKIT_DECLARE_TYPE (WebKitWebContext, webkit_web_context, WEBKIT, WEB_CONTEXT, GObject)
 
 /**
  * WebKitCacheModel:
@@ -101,23 +110,14 @@ typedef enum {
 typedef void (* WebKitURISchemeRequestCallback) (WebKitURISchemeRequest *request,
                                                  gpointer                user_data);
 
-typedef struct _WebKitWebContext        WebKitWebContext;
-typedef struct _WebKitWebContextClass   WebKitWebContextClass;
-typedef struct _WebKitWebContextPrivate WebKitWebContextPrivate;
-
-struct _WebKitWebContext {
-    GObject parent;
-
-    /*< private >*/
-    WebKitWebContextPrivate *priv;
-};
-
 struct _WebKitWebContextClass {
     GObjectClass parent;
 
     /*< public >*/
+#if !ENABLE(2022_GLIB_API)
     void     (* download_started)                    (WebKitWebContext        *context,
                                                       WebKitDownload          *download);
+#endif
     void     (* initialize_web_extensions)           (WebKitWebContext        *context);
     void     (* initialize_notification_permissions) (WebKitWebContext        *context);
     void     (* automation_started)                  (WebKitWebContext        *context,
@@ -131,15 +131,13 @@ struct _WebKitWebContextClass {
     void (*_webkit_reserved2) (void);
 };
 
-WEBKIT_API GType
-webkit_web_context_get_type                         (void);
-
 WEBKIT_API WebKitWebContext *
 webkit_web_context_get_default                      (void);
 
 WEBKIT_API WebKitWebContext *
 webkit_web_context_new                              (void);
 
+#if !ENABLE(2022_GLIB_API)
 WEBKIT_API WebKitWebContext *
 webkit_web_context_new_ephemeral                    (void);
 
@@ -151,6 +149,7 @@ webkit_web_context_get_website_data_manager         (WebKitWebContext           
 
 WEBKIT_API gboolean
 webkit_web_context_is_ephemeral                     (WebKitWebContext              *context);
+#endif
 
 WEBKIT_API gboolean
 webkit_web_context_is_automation_allowed            (WebKitWebContext              *context);
@@ -158,6 +157,12 @@ webkit_web_context_is_automation_allowed            (WebKitWebContext           
 WEBKIT_API void
 webkit_web_context_set_automation_allowed           (WebKitWebContext              *context,
                                                      gboolean                       allowed);
+
+#if ENABLE(2022_GLIB_API)
+WEBKIT_API WebKitNetworkSession *
+webkit_web_context_get_network_session_for_automation(WebKitWebContext             *context);
+#endif
+
 WEBKIT_API void
 webkit_web_context_set_cache_model                  (WebKitWebContext              *context,
                                                      WebKitCacheModel               cache_model);
@@ -173,15 +178,14 @@ WEBKIT_DEPRECATED guint
 webkit_web_context_get_web_process_count_limit      (WebKitWebContext              *context);
 #endif
 
+#if !ENABLE(2022_GLIB_API)
 WEBKIT_API void
 webkit_web_context_clear_cache                      (WebKitWebContext              *context);
 
-#if !ENABLE(2022_GLIB_API)
 WEBKIT_DEPRECATED_FOR(webkit_website_data_manager_set_network_proxy_settings) void
 webkit_web_context_set_network_proxy_settings       (WebKitWebContext              *context,
                                                      WebKitNetworkProxyMode         proxy_mode,
                                                      WebKitNetworkProxySettings    *proxy_settings);
-#endif
 
 WEBKIT_API WebKitDownload *
 webkit_web_context_download_uri                     (WebKitWebContext              *context,
@@ -189,10 +193,12 @@ webkit_web_context_download_uri                     (WebKitWebContext           
 
 WEBKIT_API WebKitCookieManager *
 webkit_web_context_get_cookie_manager               (WebKitWebContext              *context);
+#endif
 
 WEBKIT_API WebKitGeolocationManager *
 webkit_web_context_get_geolocation_manager          (WebKitWebContext              *context);
 
+#if !ENABLE(2022_GLIB_API)
 WEBKIT_API WebKitFaviconDatabase *
 webkit_web_context_get_favicon_database             (WebKitWebContext              *context);
 
@@ -201,6 +207,7 @@ webkit_web_context_set_favicon_database_directory   (WebKitWebContext           
                                                      const gchar                   *path);
 WEBKIT_API const gchar *
 webkit_web_context_get_favicon_database_directory   (WebKitWebContext              *context);
+#endif
 
 WEBKIT_API WebKitSecurityManager *
 webkit_web_context_get_security_manager             (WebKitWebContext              *context);
@@ -277,12 +284,12 @@ WEBKIT_API void
 webkit_web_context_set_web_extensions_initialization_user_data
                                                     (WebKitWebContext              *context,
                                                      GVariant                      *user_data);
-
+#if !ENABLE(2022_GLIB_API)
 WEBKIT_API void
 webkit_web_context_prefetch_dns                     (WebKitWebContext              *context,
                                                      const gchar                   *hostname);
 
-#if PLATFORM(GTK) && !USE(GTK4)
+#if PLATFORM(GTK)
 WEBKIT_DEPRECATED_FOR(webkit_web_context_new_with_website_data_manager) void
 webkit_web_context_set_disk_cache_directory         (WebKitWebContext              *context,
                                                      const gchar                   *directory);
@@ -293,7 +300,6 @@ webkit_web_context_allow_tls_certificate_for_host   (WebKitWebContext           
                                                      GTlsCertificate               *certificate,
                                                      const gchar                   *host);
 
-#if !ENABLE(2022_GLIB_API)
 WEBKIT_DEPRECATED void
 webkit_web_context_set_process_model                (WebKitWebContext              *context,
                                                      WebKitProcessModel             process_model);
@@ -312,7 +318,7 @@ WEBKIT_API void
 webkit_web_context_send_message_to_all_extensions   (WebKitWebContext              *context,
                                                      WebKitUserMessage             *message);
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) && !USE(GTK4)
 WEBKIT_API void
 webkit_web_context_set_use_system_appearance_for_scrollbars (WebKitWebContext      *context,
                                                              gboolean               enabled);

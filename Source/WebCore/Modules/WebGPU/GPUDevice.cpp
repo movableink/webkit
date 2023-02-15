@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "GPUDevice.h"
 
+#include "DOMPromiseProxy.h"
 #include "GPUBindGroup.h"
 #include "GPUBindGroupDescriptor.h"
 #include "GPUBindGroupLayout.h"
@@ -40,6 +41,7 @@
 #include "GPUExternalTextureDescriptor.h"
 #include "GPUPipelineLayout.h"
 #include "GPUPipelineLayoutDescriptor.h"
+#include "GPUPresentationContext.h"
 #include "GPUQuerySet.h"
 #include "GPUQuerySetDescriptor.h"
 #include "GPURenderBundleEncoder.h"
@@ -52,12 +54,9 @@
 #include "GPUShaderModuleDescriptor.h"
 #include "GPUSupportedFeatures.h"
 #include "GPUSupportedLimits.h"
-#include "GPUSurface.h"
-#include "GPUSurfaceDescriptor.h"
-#include "GPUSwapChain.h"
-#include "GPUSwapChainDescriptor.h"
 #include "GPUTexture.h"
 #include "GPUTextureDescriptor.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSGPUComputePipeline.h"
 #include "JSGPUOutOfMemoryError.h"
 #include "JSGPURenderPipeline.h"
@@ -70,6 +69,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(GPUDevice);
 
 GPUDevice::GPUDevice(ScriptExecutionContext* scriptExecutionContext, Ref<PAL::WebGPU::Device>&& backing)
     : ActiveDOMObject { scriptExecutionContext }
+    , m_lostPromise(makeUniqueRef<LostPromise>())
     , m_backing(WTFMove(backing))
     , m_queue(GPUQueue::create(Ref { m_backing->queue() }))
     , m_autoPipelineLayout(createPipelineLayout({ { "autoLayout"_s, }, { } }))
@@ -98,7 +98,7 @@ Ref<GPUSupportedLimits> GPUDevice::limits() const
     return GPUSupportedLimits::create(m_backing->limits());
 }
 
-GPUQueue& GPUDevice::queue() const
+Ref<GPUQueue> GPUDevice::queue() const
 {
     return m_queue;
 }
@@ -118,21 +118,6 @@ Ref<GPUTexture> GPUDevice::createTexture(const GPUTextureDescriptor& textureDesc
     return GPUTexture::create(m_backing->createTexture(textureDescriptor.convertToBacking()));
 }
 
-Ref<GPUTexture> GPUDevice::createSurfaceTexture(const GPUTextureDescriptor& textureDescriptor, const GPUSurface& surface)
-{
-    return GPUTexture::create(m_backing->createSurfaceTexture(textureDescriptor.convertToBacking(), surface.backing()));
-}
-
-Ref<GPUSurface> GPUDevice::createSurface(const GPUSurfaceDescriptor& surfaceDescriptor)
-{
-    return GPUSurface::create(m_backing->createSurface(surfaceDescriptor.convertToBacking()));
-}
-
-Ref<GPUSwapChain> GPUDevice::createSwapChain(const GPUSurface& surface, const GPUSwapChainDescriptor& swapChainDescriptor)
-{
-    return GPUSwapChain::create(m_backing->createSwapChain(surface.backing(), swapChainDescriptor.convertToBacking()));
-}
-
 static PAL::WebGPU::SamplerDescriptor convertToBacking(const std::optional<GPUSamplerDescriptor>& samplerDescriptor)
 {
     if (!samplerDescriptor) {
@@ -143,7 +128,7 @@ static PAL::WebGPU::SamplerDescriptor convertToBacking(const std::optional<GPUSa
             PAL::WebGPU::AddressMode::ClampToEdge,
             PAL::WebGPU::FilterMode::Nearest,
             PAL::WebGPU::FilterMode::Nearest,
-            PAL::WebGPU::FilterMode::Nearest,
+            PAL::WebGPU::MipmapFilterMode::Nearest,
             0,
             32,
             std::nullopt,

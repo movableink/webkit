@@ -72,29 +72,31 @@ ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseBase::R
     , m_httpHeaderFields(data ? data->m_httpHeaderFields : HTTPHeaderMap { })
     , m_networkLoadMetrics(data ? data->m_networkLoadMetrics : Box<WebCore::NetworkLoadMetrics> { })
     , m_certificateInfo(data ? data->m_certificateInfo : std::nullopt)
-    , m_isRedirected(data ? data->m_isRedirected : false)
-    , m_isRangeRequested(data ? data->m_isRangeRequested : false)
+    , m_httpStatusCode(data ? data->m_httpStatusCode : 0)
     , m_isNull(data ? false : true)
     , m_usedLegacyTLS(data ? data->m_usedLegacyTLS : UsedLegacyTLS::No)
     , m_wasPrivateRelayed(data ? data->m_wasPrivateRelayed : WasPrivateRelayed::No)
+    , m_isRedirected(data ? data->m_isRedirected : false)
+    , m_isRangeRequested(data ? data->m_isRangeRequested : false)
     , m_tainting(data ? data->m_tainting : Tainting::Basic)
     , m_source(data ? data->m_source : Source::Unknown)
     , m_type(data ? data->m_type : Type::Default)
-    , m_httpStatusCode(data ? data->m_httpStatusCode : 0)
 {
 }
 
-ResourceResponseBase::CrossThreadData ResourceResponseBase::CrossThreadData::copy() const
+ResourceResponseBase::CrossThreadData ResourceResponseBase::CrossThreadData::isolatedCopy() const
 {
     ResourceResponseBase::CrossThreadData result;
-    result.url = url;
-    result.mimeType = mimeType;
+    result.url = url.isolatedCopy();
+    result.mimeType = mimeType.isolatedCopy();
     result.expectedContentLength = expectedContentLength;
-    result.textEncodingName = textEncodingName;
+    result.textEncodingName = textEncodingName.isolatedCopy();
     result.httpStatusCode = httpStatusCode;
-    result.httpVersion = httpVersion;
-    result.httpHeaderFields = httpHeaderFields;
-    result.networkLoadMetrics = networkLoadMetrics;
+    result.httpStatusText = httpStatusText.isolatedCopy();
+    result.httpVersion = httpVersion.isolatedCopy();
+    result.httpHeaderFields = httpHeaderFields.isolatedCopy();
+    if (networkLoadMetrics)
+        result.networkLoadMetrics = networkLoadMetrics->isolatedCopy();
     result.type = type;
     result.tainting = tainting;
     result.isRedirected = isRedirected;
@@ -131,13 +133,13 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
     ResourceResponse response;
 
     response.setURL(data.url);
-    response.setMimeType(AtomString { data.mimeType });
+    response.setMimeType(AtomString { WTFMove(data.mimeType) });
     response.setExpectedContentLength(data.expectedContentLength);
     response.setTextEncodingName(AtomString { WTFMove(data.textEncodingName) });
 
     response.setHTTPStatusCode(data.httpStatusCode);
-    response.setHTTPStatusText(AtomString { data.httpStatusText });
-    response.setHTTPVersion(AtomString { data.httpVersion });
+    response.setHTTPStatusText(AtomString { WTFMove(data.httpStatusText) });
+    response.setHTTPVersion(AtomString { WTFMove(data.httpVersion) });
 
     response.m_httpHeaderFields = WTFMove(data.httpHeaderFields);
     if (data.networkLoadMetrics)

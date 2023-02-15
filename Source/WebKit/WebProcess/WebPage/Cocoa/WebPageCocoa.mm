@@ -54,6 +54,7 @@
 #import <WebCore/HTMLUListElement.h>
 #import <WebCore/HitTestResult.h>
 #import <WebCore/ImageOverlay.h>
+#import <WebCore/MutableStyleProperties.h>
 #import <WebCore/NetworkExtensionContentFilter.h>
 #import <WebCore/NodeRenderStyle.h>
 #import <WebCore/PaymentCoordinator.h>
@@ -671,6 +672,11 @@ void WebPage::readSelectionFromPasteboard(const String& pasteboardName, Completi
 #include <WebKitAdditions/WebPageCocoaAdditions.mm>
 #else
 URL WebPage::sanitizeLookalikeCharacters(const URL& url, LookalikeCharacterSanitizationTrigger)
+{
+    return url;
+}
+
+URL WebPage::allowedLookalikeCharacters(const URL& url)
 {
     return url;
 }

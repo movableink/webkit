@@ -98,6 +98,7 @@ $(PROJECT_DIR)/Modules/WebGPU/GPUImageDataLayout.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUIndexFormat.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPULoadOp.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUMapMode.idl
+$(PROJECT_DIR)/Modules/WebGPU/GPUMipmapFilterMode.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUMultisampleState.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUObjectBase.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUObjectDescriptorBase.idl
@@ -372,6 +373,8 @@ $(PROJECT_DIR)/Modules/mediasession/MediaSessionReadyState.idl
 $(PROJECT_DIR)/Modules/mediasession/Navigator+MediaSession.idl
 $(PROJECT_DIR)/Modules/mediasource/AudioTrack+MediaSource.idl
 $(PROJECT_DIR)/Modules/mediasource/DOMURL+MediaSource.idl
+$(PROJECT_DIR)/Modules/mediasource/ManagedMediaSource.idl
+$(PROJECT_DIR)/Modules/mediasource/ManagedSourceBuffer.idl
 $(PROJECT_DIR)/Modules/mediasource/MediaSource.idl
 $(PROJECT_DIR)/Modules/mediasource/SourceBuffer.idl
 $(PROJECT_DIR)/Modules/mediasource/SourceBufferList.idl
@@ -1013,6 +1016,7 @@ $(PROJECT_DIR)/css/makeSelectorPseudoElementsMap.py
 $(PROJECT_DIR)/css/mathml.css
 $(PROJECT_DIR)/css/mediaControls.css
 $(PROJECT_DIR)/css/plugIns.css
+$(PROJECT_DIR)/css/popover.css
 $(PROJECT_DIR)/css/process-css-properties.py
 $(PROJECT_DIR)/css/process-css-values.py
 $(PROJECT_DIR)/css/quirks.css
@@ -1385,6 +1389,7 @@ $(PROJECT_DIR)/html/canvas/PredefinedColorSpace.idl
 $(PROJECT_DIR)/html/canvas/WebGL2RenderingContext.idl
 $(PROJECT_DIR)/html/canvas/WebGLActiveInfo.idl
 $(PROJECT_DIR)/html/canvas/WebGLBuffer.idl
+$(PROJECT_DIR)/html/canvas/WebGLClipCullDistance.idl
 $(PROJECT_DIR)/html/canvas/WebGLColorBufferFloat.idl
 $(PROJECT_DIR)/html/canvas/WebGLCompressedTextureASTC.idl
 $(PROJECT_DIR)/html/canvas/WebGLCompressedTextureETC.idl

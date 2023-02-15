@@ -108,7 +108,7 @@
 #include "SpellChecker.h"
 #include "SpellingCorrectionCommand.h"
 #include "StaticPasteboard.h"
-#include "StyleProperties.h"
+#include "StylePropertiesInlines.h"
 #include "StyleTreeResolver.h"
 #include "SystemSoundManager.h"
 #include "TelephoneNumberDetector.h"
@@ -2894,7 +2894,11 @@ void Editor::markAndReplaceFor(const SpellCheckRequest& request, const Vector<Te
 
     for (unsigned i = 0; i < results.size(); i++) {
         auto spellingRangeEndOffset = paragraph.checkingEnd() + offsetDueToReplacement;
-        TextCheckingType resultType = results[i].type;
+        if (!results[i].type.hasExactlyOneBitSet()) {
+            ASSERT_NOT_REACHED();
+            continue;
+        }
+        TextCheckingType resultType = *results[i].type.toSingleValue();
         auto resultLocation = results[i].range.location + offsetDueToReplacement;
         auto resultLength = results[i].range.length;
         auto resultEndLocation = resultLocation + resultLength;

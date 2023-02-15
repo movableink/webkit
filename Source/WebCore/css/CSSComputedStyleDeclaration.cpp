@@ -29,7 +29,6 @@
 #include "CSSPropertyAnimation.h"
 #include "CSSPropertyParser.h"
 #include "CSSSelector.h"
-#include "CSSValueList.h"
 #include "CSSValuePool.h"
 #include "ComposedTreeAncestorIterator.h"
 #include "ComputedStyleExtractor.h"
@@ -37,7 +36,7 @@
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderStyle.h"
-#include "StyleProperties.h"
+#include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
 #include "StyleScope.h"
 #include <wtf/IsoMallocInlines.h>

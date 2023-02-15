@@ -31,6 +31,61 @@ namespace rx
 #define SHADER_ENTRY_NAME @"main0"
 class ContextMtl;
 
+struct UBOConversionInfo
+{
+
+    UBOConversionInfo(const std::vector<sh::BlockMemberInfo> &stdInfo,
+                      const std::vector<sh::BlockMemberInfo> &metalInfo,
+                      size_t stdSize,
+                      size_t metalSize)
+        : _stdInfo(stdInfo), _metalInfo(metalInfo), _stdSize(stdSize), _metalSize(metalSize)
+    {
+        _needsConversion = _calculateNeedsConversion();
+    }
+    const std::vector<sh::BlockMemberInfo> &stdInfo() const { return _stdInfo; }
+    const std::vector<sh::BlockMemberInfo> &metalInfo() const { return _metalInfo; }
+    size_t stdSize() const { return _stdSize; }
+    size_t metalSize() const { return _metalSize; }
+
+    bool needsConversion() const { return _needsConversion; }
+
+  private:
+    std::vector<sh::BlockMemberInfo> _stdInfo, _metalInfo;
+    size_t _stdSize, _metalSize;
+    bool _needsConversion;
+
+    bool _calculateNeedsConversion()
+    {
+        if (_stdSize != _metalSize)
+        {
+            return true;
+        }
+        if (_stdInfo.size() != _metalInfo.size())
+        {
+            return true;
+        }
+        for (size_t i = 0; i < _stdInfo.size(); ++i)
+        {
+            // If the matrix is trasnposed
+            if (_stdInfo[i].isRowMajorMatrix)
+            {
+                return true;
+            }
+            // If we have a bool
+            if (gl::VariableComponentType(_stdInfo[i].type) == GL_BOOL)
+            {
+                return true;
+            }
+            // If any offset information is different
+            if (!(_stdInfo[i] == _metalInfo[i]))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
 struct ProgramArgumentBufferEncoderMtl
 {
     void reset(ContextMtl *contextMtl);
@@ -38,6 +93,8 @@ struct ProgramArgumentBufferEncoderMtl
     mtl::AutoObjCPtr<id<MTLArgumentEncoder>> metalArgBufferEncoder;
     mtl::BufferPool bufferPool;
 };
+
+constexpr size_t kFragmentShaderVariants = 4;
 
 // Represents a specialized shader variant. For example, a shader variant with fragment coverage
 // mask enabled and a shader variant without.
@@ -142,7 +199,7 @@ class ProgramMtl : public ProgramImpl, public mtl::RenderPipelineCacheSpecialize
         gl::ShaderType shaderType,
         gl::InfoLog &infoLog,
         mtl::TranslatedShaderInfo *translatedMslInfo,
-        NSDictionary<NSString *, NSObject *> *subtitutionDictionary = @{});
+        const std::map<std::string, std::string> &substitutionMacros = {});
     // Calls this before drawing, changedPipelineDesc is passed when vertex attributes desc and/or
     // shader program changed.
     angle::Result setupDraw(const gl::Context *glContext,
@@ -179,6 +236,11 @@ class ProgramMtl : public ProgramImpl, public mtl::RenderPipelineCacheSpecialize
     angle::Result initDefaultUniformBlocks(const gl::Context *glContext);
     angle::Result resizeDefaultUniformBlocksMemory(const gl::Context *glContext,
                                                    const gl::ShaderMap<size_t> &requiredBufferSize);
+
+    void saveInterfaceBlockInfo(gl::BinaryOutputStream *stream);
+    angle::Result loadInterfaceBlockInfo(const gl::Context *glContext,
+                                         gl::BinaryInputStream *stream);
+
     void saveDefaultUniformBlocksInfo(gl::BinaryOutputStream *stream);
     angle::Result loadDefaultUniformBlocksInfo(const gl::Context *glContext,
                                                gl::BinaryInputStream *stream);
@@ -200,6 +262,9 @@ class ProgramMtl : public ProgramImpl, public mtl::RenderPipelineCacheSpecialize
                                                     mtl::RenderCommandEncoder *cmdEncoder,
                                                     const std::vector<gl::InterfaceBlock> &blocks,
                                                     gl::ShaderType shaderType);
+
+    void initUniformBlocksRemapper(gl::Shader *shader, const gl::Context *glContext);
+
     angle::Result encodeUniformBuffersInfoArgumentBuffer(
         ContextMtl *context,
         mtl::RenderCommandEncoder *cmdEncoder,
@@ -248,7 +313,9 @@ class ProgramMtl : public ProgramImpl, public mtl::RenderPipelineCacheSpecialize
     bool mProgramHasFlatAttributes;
     gl::ShaderBitSet mDefaultUniformBlocksDirty;
     gl::ShaderBitSet mSamplerBindingsDirty;
+
     gl::ShaderMap<DefaultUniformBlock> mDefaultUniformBlocks;
+    std::unordered_map<std::string, UBOConversionInfo> mUniformBlockConversions;
 
     // Translated metal shaders:
     gl::ShaderMap<mtl::TranslatedShaderInfo> mMslShaderTranslateInfo;
@@ -263,8 +330,8 @@ class ProgramMtl : public ProgramImpl, public mtl::RenderPipelineCacheSpecialize
     // - Vertex shader: One with emulated rasterization discard, one with true rasterization
     // discard, one without.
     mtl::RenderPipelineRasterStateMap<ProgramShaderObjVariantMtl> mVertexShaderVariants;
-    // - Fragment shader: One with sample coverage mask enabled, one with it disabled.
-    std::array<ProgramShaderObjVariantMtl, 2> mFragmentShaderVariants;
+    // - Fragment shader: Combinations of sample coverage mask and depth write enabled states.
+    std::array<ProgramShaderObjVariantMtl, kFragmentShaderVariants> mFragmentShaderVariants;
 
     // Cached references of current shader variants.
     gl::ShaderMap<ProgramShaderObjVariantMtl *> mCurrentShaderVariants;

@@ -142,14 +142,15 @@ bool GStreamerMediaEndpoint::initializePipeline()
         });
     }), this);
 
-    if (webkitGstCheckVersion(1, 21, 0)) {
+    if (webkitGstCheckVersion(1, 22, 0)) {
         g_signal_connect_swapped(m_webrtcBin.get(), "prepare-data-channel", G_CALLBACK(+[](GStreamerMediaEndpoint* endPoint, GstWebRTCDataChannel* channel, gboolean isLocal) {
             endPoint->prepareDataChannel(channel, isLocal);
         }), this);
 
-        g_signal_connect_swapped(m_webrtcBin.get(), "request-aux-sender", G_CALLBACK(+[](GStreamerMediaEndpoint* endPoint, GstWebRTCDTLSTransport* transport) -> GstElement* {
-            if (auto sender = endPoint->requestAuxiliarySender(transport))
-                return sender.leakRef();
+        g_signal_connect_swapped(m_webrtcBin.get(), "request-aux-sender", G_CALLBACK(+[](GStreamerMediaEndpoint* endPoint, GstWebRTCDTLSTransport*) -> GstElement* {
+            // `sender` ownership is transferred to the signal caller.
+            if (auto sender = endPoint->requestAuxiliarySender())
+                return sender;
             return nullptr;
         }), this);
     }
@@ -179,10 +180,6 @@ void GStreamerMediaEndpoint::teardownPipeline()
     stopLoggingStats();
 #endif
     m_statsCollector->setElement(nullptr);
-
-    for (auto& [sessionId, auxiliarySender] : m_auxiliarySenders)
-        g_signal_handlers_disconnect_by_data(auxiliarySender.get(), this);
-    m_auxiliarySenders.clear();
 
     g_signal_handlers_disconnect_by_data(m_webrtcBin.get(), this);
     disconnectSimpleBusMessageCallback(m_pipeline.get());
@@ -617,7 +614,8 @@ GRefPtr<GstPad> GStreamerMediaEndpoint::requestPad(unsigned mlineIndex, const GR
         sinkPad = adoptGRef(gst_element_request_pad(m_webrtcBin.get(), padTemplate, padId.utf8().data(), caps.get()));
     }
 
-    if (g_object_class_find_property(G_OBJECT_GET_CLASS(sinkPad.get()), "msid"))
+    GST_DEBUG_OBJECT(m_pipeline.get(), "Setting msid to %s on sink pad", mediaStreamID.ascii().data());
+    if (gstObjectHasProperty(sinkPad.get(), "msid"))
         g_object_set(sinkPad.get(), "msid", mediaStreamID.ascii().data(), nullptr);
 
     GRefPtr<GstWebRTCRTPTransceiver> transceiver;
@@ -780,18 +778,28 @@ void GStreamerMediaEndpoint::addRemoteStream(GstPad* pad)
 
     // Look-up the mediastream ID, using the msid attribute, fall back to pad name if there is no msid.
     const auto* media = gst_sdp_message_get_media(description->sdp, mLineIndex);
-    GUniquePtr<gchar> name(gst_pad_get_name(pad));
-    auto mediaStreamId = String::fromLatin1(name.get());
+    String mediaStreamId;
 
-    if (g_object_class_find_property(G_OBJECT_GET_CLASS(pad), "msid")) {
+    if (gstObjectHasProperty(pad, "msid")) {
         GUniqueOutPtr<char> msid;
         g_object_get(pad, "msid", &msid.outPtr(), nullptr);
-        mediaStreamId = String::fromLatin1(msid.get());
-    } else if (const char* msidAttribute = gst_sdp_media_get_attribute_val(media, "msid")) {
-        auto components = makeString(msidAttribute).split(' ');
-        if (components.size() == 2)
-            mediaStreamId = components[0];
+        if (msid)
+            mediaStreamId = String::fromLatin1(msid.get());
     }
+
+    if (!mediaStreamId) {
+        if (const char* msidAttribute = gst_sdp_media_get_attribute_val(media, "msid")) {
+            auto components = makeString(msidAttribute).split(' ');
+            if (components.size() == 2)
+                mediaStreamId = components[0];
+        }
+    }
+
+    if (!mediaStreamId) {
+        GUniquePtr<gchar> name(gst_pad_get_name(pad));
+        mediaStreamId = String::fromLatin1(name.get());
+    }
+
     GST_DEBUG_OBJECT(m_pipeline.get(), "msid: %s", mediaStreamId.ascii().data());
 
     GstElement* bin = nullptr;
@@ -1033,7 +1041,7 @@ void GStreamerMediaEndpoint::prepareDataChannel(GstWebRTCDataChannel* dataChanne
 
 UniqueRef<GStreamerDataChannelHandler> GStreamerMediaEndpoint::findOrCreateIncomingChannelHandler(GRefPtr<GstWebRTCDataChannel>&& dataChannel)
 {
-    if (!webkitGstCheckVersion(1, 21, 0))
+    if (!webkitGstCheckVersion(1, 22, 0))
         return makeUniqueRef<GStreamerDataChannelHandler>(WTFMove(dataChannel));
 
     auto identifier = makeObjectIdentifier<GstWebRTCDataChannel>(reinterpret_cast<uintptr_t>(dataChannel.get()));
@@ -1057,19 +1065,11 @@ void GStreamerMediaEndpoint::onDataChannel(GstWebRTCDataChannel* dataChannel)
     });
 }
 
-GRefPtr<GstElement> GStreamerMediaEndpoint::requestAuxiliarySender(GstWebRTCDTLSTransport* transport)
+GstElement* GStreamerMediaEndpoint::requestAuxiliarySender()
 {
-    unsigned sessionId;
-    g_object_get(transport, "session-id", &sessionId, nullptr);
-
-    if (m_auxiliarySenders.contains(sessionId)) {
-        GST_WARNING_OBJECT(m_pipeline.get(), "Auxiliary sender already requested for session %u", sessionId);
-        return nullptr;
-    }
-
     // Don't use makeGStreamerElement() here because it would be called mutiple times and emit an
     // error every single time if the element is not found.
-    GRefPtr<GstElement> estimator(gst_element_factory_make("rtpgccbwe", nullptr));
+    auto* estimator = gst_element_factory_make("rtpgccbwe", nullptr);
     if (!estimator) {
         static std::once_flag onceFlag;
         std::call_once(onceFlag, [] {
@@ -1078,14 +1078,13 @@ GRefPtr<GstElement> GStreamerMediaEndpoint::requestAuxiliarySender(GstWebRTCDTLS
         return nullptr;
     }
 
-    g_signal_connect(estimator.get(), "notify::estimated-bitrate", G_CALLBACK(+[](GstElement* estimator, GParamSpec*, GStreamerMediaEndpoint* endPoint) {
+    g_signal_connect(estimator, "notify::estimated-bitrate", G_CALLBACK(+[](GstElement* estimator, GParamSpec*, GStreamerMediaEndpoint* endPoint) {
         uint32_t estimatedBitrate;
         g_object_get(estimator, "estimated-bitrate", &estimatedBitrate, nullptr);
         gst_element_send_event(endPoint->pipeline(), gst_event_new_custom(GST_EVENT_CUSTOM_DOWNSTREAM_OOB, gst_structure_new("encoder-bitrate-change-request", "bitrate", G_TYPE_UINT, static_cast<uint32_t>(estimatedBitrate / 1000), nullptr)));
     }), this);
-    m_auxiliarySenders.add(sessionId, WTFMove(estimator));
 
-    return GRefPtr<GstElement>(m_auxiliarySenders.get(sessionId));
+    return estimator;
 }
 
 void GStreamerMediaEndpoint::close()

@@ -43,6 +43,7 @@
 #include <WebCore/FrameIdentifier.h>
 #include <WebCore/HighlightVisibility.h>
 #include <WebCore/IntSize.h>
+#include <WebCore/LayerHostingContextIdentifier.h>
 #include <WebCore/LayoutMilestone.h>
 #include <WebCore/MediaProducer.h>
 #include <WebCore/PageIdentifier.h>
@@ -56,6 +57,10 @@
 
 #if ENABLE(APPLICATION_MANIFEST)
 #include <WebCore/ApplicationManifest.h>
+#endif
+
+#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
+#include <WebCore/LookalikeCharactersSanitizationData.h>
 #endif
 
 #if ENABLE(WK_WEB_EXTENSIONS)
@@ -281,9 +286,11 @@ struct WebPageCreationParameters {
     WebCore::ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension { WebCore::ContentSecurityPolicyModeForExtension::None };
 
     std::optional<WebCore::FrameIdentifier> mainFrameIdentifier;
+    Markable<WebCore::LayerHostingContextIdentifier> layerHostingContextIdentifier;
 
 #if ENABLE(NETWORK_CONNECTION_INTEGRITY)
     Vector<String> lookalikeCharacterStrings;
+    Vector<WebCore::LookalikeCharactersSanitizationData> allowedLookalikeCharacterStrings;
 #endif
 
 #if HAVE(MACH_BOOTSTRAP_EXTENSION)

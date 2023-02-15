@@ -737,11 +737,6 @@ void FrameLoader::didBeginDocument(bool dispatch)
     m_didCallImplicitClose = false;
     m_frame.document()->setReadyState(Document::Loading);
 
-    if (m_pendingStateObject) {
-        m_frame.document()->statePopped(*m_pendingStateObject);
-        m_pendingStateObject = nullptr;
-    }
-
     if (dispatch)
         dispatchDidClearWindowObjectsInAllWorlds();
 
@@ -1209,6 +1204,11 @@ void FrameLoader::loadInSameDocument(URL url, RefPtr<SerializedScriptValue> stat
         m_frame.document()->enqueueHashchangeEvent(oldURL.string(), url.string());
         m_client->dispatchDidChangeLocationWithinPage();
     }
+
+    if (auto* parentFrame = dynamicDowncast<LocalFrame>(m_frame.tree().parent()); parentFrame
+        && (m_frame.document()->processingLoadEvent() || m_frame.document()->loadEventFinished())
+        && !m_frame.document()->securityOrigin().isSameOriginAs(parentFrame->document()->securityOrigin()))
+        m_frame.document()->dispatchWindowLoadEvent();
     
     // FrameLoaderClient::didFinishLoad() tells the internal load delegate the load finished with no error
     m_client->didFinishLoad();
@@ -1814,7 +1814,7 @@ void FrameLoader::reload(OptionSet<ReloadOption> options)
     loader->setIsRequestFromClientOrUserInput(m_documentLoader->isRequestFromClientOrUserInput());
     applyShouldOpenExternalURLsPolicyToNewDocumentLoader(m_frame, loader, InitiatedByMainFrame::Unknown, m_documentLoader->shouldOpenExternalURLsPolicyToPropagate());
 
-    loader->setUserContentExtensionsEnabled(!options.contains(ReloadOption::DisableContentBlockers));
+    loader->setContentExtensionEnablement({ options.contains(ReloadOption::DisableContentBlockers) ? ContentExtensionDefaultEnablement::Disabled : ContentExtensionDefaultEnablement::Enabled, { } });
     
     ResourceRequest& request = loader->request();
 
@@ -2267,10 +2267,6 @@ void FrameLoader::transitionToCommitted(CachedPage* cachedPage)
 
             history().updateForBackForwardNavigation();
 
-            // For cached pages, CachedFrame::restore will take care of firing the popstate event with the history item's state object
-            if (history().currentItem() && !cachedPage)
-                m_pendingStateObject = history().currentItem()->stateObject();
-
             // Create a document view for this document, or used the cached view.
             if (cachedPage) {
                 ASSERT(cachedPage->documentLoader());
@@ -2529,7 +2525,7 @@ CachePolicy FrameLoader::subresourceCachePolicy(const URL& url) const
     return CachePolicy::Verify;
 }
 
-void FrameLoader::dispatchDidFailProvisionalLoad(DocumentLoader& provisionalDocumentLoader, const ResourceError& error)
+void FrameLoader::dispatchDidFailProvisionalLoad(DocumentLoader& provisionalDocumentLoader, const ResourceError& error, WillInternallyHandleFailure willInternallyHandleFailure)
 {
     m_provisionalLoadErrorBeingHandledURL = provisionalDocumentLoader.url();
 
@@ -2547,7 +2543,7 @@ void FrameLoader::dispatchDidFailProvisionalLoad(DocumentLoader& provisionalDocu
     }
 #endif
 
-    m_client->dispatchDidFailProvisionalLoad(error, willContinueLoading);
+    m_client->dispatchDidFailProvisionalLoad(error, willContinueLoading, willInternallyHandleFailure);
 
 #if ENABLE(CONTENT_FILTERING)
     if (contentFilterWillContinueLoading)
@@ -2555,6 +2551,27 @@ void FrameLoader::dispatchDidFailProvisionalLoad(DocumentLoader& provisionalDocu
 #endif
 
     m_provisionalLoadErrorBeingHandledURL = { };
+}
+
+void FrameLoader::handleLoadFailureRecovery(DocumentLoader& documentLoader, const ResourceError& error, bool isHTTPSFirstApplicable)
+{
+    FRAMELOADER_RELEASE_LOG(ResourceLoading, "handleLoadFailureRecovery: errorRecoveryMethod: %hhu, isHTTPSFirstApplicable: %d, isHTTPFallbackInProgress: %d", error.errorRecoveryMethod(), isHTTPSFirstApplicable, isHTTPFallbackInProgress());
+    if (error.errorRecoveryMethod() == ResourceError::ErrorRecoveryMethod::NoRecovery || !isHTTPSFirstApplicable || isHTTPFallbackInProgress()) {
+        if (isHTTPFallbackInProgress())
+            setHTTPFallbackInProgress(false);
+        return;
+    }
+
+    ASSERT(documentLoader.request().url().protocolIs("https"_s));
+    ASSERT(error.errorRecoveryMethod() == ResourceError::ErrorRecoveryMethod::HTTPFallback && isHTTPSFirstApplicable);
+
+    auto request = documentLoader.request();
+    auto url = request.url();
+    url.setProtocol("http"_s);
+    if (url.port() && WTF::isDefaultPortForProtocol(url.port().value(), "https"_s))
+        url.setPort(WTF::defaultPortForProtocol(url.protocol()));
+    setHTTPFallbackInProgress(true);
+    m_frame.navigationScheduler().scheduleRedirect(*m_frame.document(), 0, url, IsMetaRefresh::No);
 }
 
 void FrameLoader::checkLoadCompleteForThisFrame()
@@ -2593,12 +2610,16 @@ void FrameLoader::checkLoadCompleteForThisFrame()
             }
         }
 
+        bool isHTTPSFirstApplicable = protector->networkConnectionIntegrityPolicy().contains(NetworkConnectionIntegrity::HTTPSFirst) && !protector->networkConnectionIntegrityPolicy().contains(NetworkConnectionIntegrity::HTTPSOnly) && !isHTTPFallbackInProgress() && (!protector->mainResourceLoader() || !protector->mainResourceLoader()->redirectCount());
+
         // Only reset if we aren't already going to a new provisional item.
         bool shouldReset = !history().provisionalItem();
         if (!protector->isLoadingInAPISense() || protector->isStopping()) {
-            FRAMELOADER_RELEASE_LOG(ResourceLoading, "checkLoadCompleteForThisFrame: Failed provisional load (isTimeout = %d, isCancellation = %d, errorCode = %d)", error.isTimeout(), error.isCancellation(), error.errorCode());
+            FRAMELOADER_RELEASE_LOG(ResourceLoading, "checkLoadCompleteForThisFrame: Failed provisional load (isTimeout = %d, isCancellation = %d, errorCode = %d, httpsFirstApplicable = %d)", error.isTimeout(), error.isCancellation(), error.errorCode(), isHTTPSFirstApplicable);
 
-            dispatchDidFailProvisionalLoad(*protector, error);
+            auto willInternallyHandleFailure = (error.errorRecoveryMethod() == ResourceError::ErrorRecoveryMethod::NoRecovery || (error.errorRecoveryMethod() == ResourceError::ErrorRecoveryMethod::HTTPFallback && (!isHTTPSFirstApplicable || isHTTPFallbackInProgress()))) ? WillInternallyHandleFailure::No : WillInternallyHandleFailure::Yes;
+            dispatchDidFailProvisionalLoad(*protector, error, willInternallyHandleFailure);
+
             ASSERT(!protector->isLoading());
 
             // If we're in the middle of loading multipart data, we need to restore the document loader.
@@ -2619,6 +2640,8 @@ void FrameLoader::checkLoadCompleteForThisFrame()
             if (Page* page = m_frame.page())
                 page->backForward().setCurrentItem(*item);
         }
+
+        handleLoadFailureRecovery(*protector, error, isHTTPSFirstApplicable);
         return;
     }
         
@@ -2699,6 +2722,7 @@ void FrameLoader::checkLoadCompleteForThisFrame()
     }
         
     case FrameState::Complete:
+        setHTTPFallbackInProgress(false);
         m_loadType = FrameLoadType::Standard;
         frameLoadCompleted();
         return;

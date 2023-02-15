@@ -148,6 +148,8 @@ enum ContextMenuAction {
     ContextMenuItemTagDictationAlternative,
     ContextMenuItemTagPlayAllAnimations,
     ContextMenuItemTagPauseAllAnimations,
+    ContextMenuItemTagPlayAnimation,
+    ContextMenuItemTagPauseAnimation,
 #if PLATFORM(QT)
     ContextMenuItemTagOpenLinkInThisWindow,
 #endif

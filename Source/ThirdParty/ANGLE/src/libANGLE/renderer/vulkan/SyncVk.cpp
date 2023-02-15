@@ -155,8 +155,16 @@ angle::Result SyncHelper::getStatus(Context *context, ContextVk *contextVk, bool
     // Submit commands if it was deferred on the context that issued the sync object
     ANGLE_TRY(submitSyncIfDeferred(contextVk, RenderPassClosureReason::SyncObjectClientWait));
 
-    ANGLE_TRY(renderer->checkCompletedCommands(context));
-    *signaled = !renderer->hasUnfinishedUse(getResourceUse());
+    if (!renderer->hasUnfinishedUse(mUse))
+    {
+        *signaled = true;
+    }
+    else
+    {
+        // Do immediate check in case it actually already finished.
+        ANGLE_TRY(renderer->checkCompletedCommands(context));
+        *signaled = !renderer->hasUnfinishedUse(mUse);
+    }
     return angle::Result::Continue;
 }
 
@@ -271,8 +279,8 @@ angle::Result SyncHelperNativeFence::initializeWithFd(ContextVk *contextVk, int 
     // signal it is in the graphics pipeline at the time we export the fd. Thus we need to
     // EnsureSubmitted here.
     ANGLE_TRY(renderer->queueSubmitOneOff(contextVk, vk::PrimaryCommandBuffer(),
-                                          contextVk->hasProtectedContent(),
-                                          contextVk->getPriority(), nullptr, 0, &fence.get(),
+                                          contextVk->getProtectionType(), contextVk->getPriority(),
+                                          nullptr, 0, &fence.get(),
                                           vk::SubmitPolicy::EnsureSubmitted, &queueSerialOut));
 
     VkFenceGetFdInfoKHR fenceGetFdInfo = {};
@@ -369,7 +377,7 @@ angle::Result SyncHelperNativeFence::getStatus(Context *context,
     // We've got a serial, check if the serial is still in use
     if (mUse.valid())
     {
-        *signaled = !context->getRenderer()->hasUnfinishedUse(getResourceUse());
+        *signaled = !context->getRenderer()->hasUnfinishedUse(mUse);
         return angle::Result::Continue;
     }
 

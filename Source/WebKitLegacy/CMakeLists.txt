@@ -1,11 +1,3 @@
-cmake_minimum_required(VERSION 3.16)
-
-include(WebKitCommon)
-include(target/TargetWTF)
-include(target/TargetJavaScriptCore)
-include(target/PAL)
-include(target/WebCore)
-
 set_property(DIRECTORY . PROPERTY FOLDER "WebKitLegacy")
 
 set(WebKitLegacy_SOURCES
@@ -112,19 +104,3 @@ WEBKIT_COPY_FILES(WebKitLegacy_CopyHeaders
     FILES ${WebKitLegacy_PUBLIC_FRAMEWORK_HEADERS}
     FLATTENED
 )
-
-if (APPLE AND NOT ${PORT} STREQUAL "Qt")
-    set_target_properties(WebKitLegacy PROPERTIES LINK_FLAGS "-umbrella WebKit")
-endif ()
-
-if (MSVC AND NOT WTF_PLATFORM_WIN_CAIRO AND NOT ${PORT} STREQUAL "Qt")
-    add_custom_command(
-        TARGET WebKitLegacy
-        POST_BUILD
-        COMMAND ${PERL_EXECUTABLE} ${WEBKIT_LIBRARIES_DIR}/tools/scripts/version-stamp.pl ${WebKitLegacy_DERIVED_SOURCES_DIR} $<TARGET_FILE:WebKitLegacy>
-        VERBATIM)
-
-    if (USE_CA AND NOT ${PORT} STREQUAL "Qt")
-        add_subdirectory(win/WebKitQuartzCoreAdditions)
-    endif ()
-endif ()

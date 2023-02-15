@@ -318,25 +318,6 @@ bool ensureGStreamerInitialized()
     return isGStreamerInitialized;
 }
 
-#if ENABLE(ENCRYPTED_MEDIA) && ENABLE(THUNDER)
-// WebM does not specify a protection system ID so it can happen that
-// the ClearKey decryptor is chosen instead of the Thunder one for
-// Widevine (and viceversa) which can can create chaos. This is an
-// environment variable to set in run time if we prefer to rank higher
-// Thunder or ClearKey. If we want to run tests with Thunder, we need
-// to set this environment variable to Thunder and that decryptor will
-// be ranked higher when there is no protection system set (as in
-// WebM).
-// FIXME: In https://bugs.webkit.org/show_bug.cgi?id=214826 we say we
-// should migrate to use GST_PLUGIN_FEATURE_RANK but we can't yet
-// because our lowest dependency is 1.16.
-bool isThunderRanked()
-{
-    const char* value = g_getenv("WEBKIT_GST_EME_RANK_PRIORITY");
-    return value && equalIgnoringASCIICase(value, "Thunder"_s);
-}
-#endif
-
 static void registerInternalVideoEncoder()
 {
 #if ENABLE(VIDEO)
@@ -350,18 +331,16 @@ void registerWebKitGStreamerElements()
     bool registryWasUpdated = false;
     std::call_once(onceFlag, [&registryWasUpdated] {
 
-#if ENABLE(ENCRYPTED_MEDIA) && ENABLE(THUNDER)
-        if (!CDMFactoryThunder::singleton().supportedKeySystems().isEmpty()) {
-            unsigned thunderRank = isThunderRanked() ? 300 : 100;
-            gst_element_register(nullptr, "webkitthunder", GST_RANK_PRIMARY + thunderRank, WEBKIT_TYPE_MEDIA_THUNDER_DECRYPT);
-        }
-#ifndef NDEBUG
-        else if (isThunderRanked()) {
-            GST_WARNING("Thunder is up-ranked as preferred decryptor but Thunder is not supporting any encryption system. Is "
-                "Thunder running? Are the plugins built?");
-        }
-#endif
+        // Rank guidelines are as following:
+        // - Use GST_RANK_PRIMARY for elements meant to be auto-plugged and for which we know
+        //   there's no other alternative outside of WebKit.
+        // - Use GST_RANK_PRIMARY+100 for elements meant to be auto-plugged and that we know there
+        //   is an alternative outside of WebKit.
+        // - Use GST_RANK_NONE for elements explicitely created by WebKit (no auto-plugging).
 
+#if ENABLE(ENCRYPTED_MEDIA) && ENABLE(THUNDER)
+        if (!CDMFactoryThunder::singleton().supportedKeySystems().isEmpty())
+            gst_element_register(nullptr, "webkitthunder", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_MEDIA_THUNDER_DECRYPT);
 #endif
 
 #if ENABLE(MEDIA_STREAM)
@@ -370,11 +349,11 @@ void registerWebKitGStreamerElements()
         registerInternalVideoEncoder();
 
 #if ENABLE(MEDIA_SOURCE)
-        gst_element_register(nullptr, "webkitmediasrc", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_MEDIA_SRC);
+        gst_element_register(nullptr, "webkitmediasrc", GST_RANK_PRIMARY, WEBKIT_TYPE_MEDIA_SRC);
 #endif
 
 #if ENABLE(SPEECH_SYNTHESIS)
-        gst_element_register(nullptr, "webkitflitesrc", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_FLITE_SRC);
+        gst_element_register(nullptr, "webkitflitesrc", GST_RANK_NONE, WEBKIT_TYPE_FLITE_SRC);
 #endif
 
 #if ENABLE(VIDEO)
@@ -405,7 +384,7 @@ void registerWebKitGStreamerElements()
         // The new demuxers based on adaptivedemux2 cannot be used in WebKit yet because this new
         // base class does not abstract away network access. They can't work in a sandboxed
         // media process, so demote their rank in order to prevent decodebin3 from auto-plugging them.
-        if (webkitGstCheckVersion(1, 21, 0)) {
+        if (webkitGstCheckVersion(1, 22, 0)) {
             const char* const elementNames[] = { "dashdemux2", "hlsdemux2", "mssdemux2" };
             for (unsigned i = 0; i < G_N_ELEMENTS(elementNames); i++) {
                 if (auto factory = adoptGRef(gst_element_factory_find(elementNames[i])))
@@ -1039,6 +1018,30 @@ void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo* info, const PlatformVi
         GST_VIDEO_INFO_COLORIMETRY(info).range = *colorSpace.fullRange ? GST_VIDEO_COLOR_RANGE_0_255 : GST_VIDEO_COLOR_RANGE_16_235;
     else
         GST_VIDEO_INFO_COLORIMETRY(info).range = GST_VIDEO_COLOR_RANGE_UNKNOWN;
+}
+
+void configureVideoDecoderForHarnessing(const GRefPtr<GstElement>& element)
+{
+    if (gstObjectHasProperty(element.get(), "max-threads"))
+        g_object_set(element.get(), "max-threads", 1, nullptr);
+
+    if (gstObjectHasProperty(element.get(), "max-errors"))
+        g_object_set(element.get(), "max-errors", 0, nullptr);
+}
+
+static bool gstObjectHasProperty(GstObject* gstObject, const char* name)
+{
+    return g_object_class_find_property(G_OBJECT_GET_CLASS(gstObject), name);
+}
+
+bool gstObjectHasProperty(GstElement* element, const char* name)
+{
+    return gstObjectHasProperty(GST_OBJECT_CAST(element), name);
+}
+
+bool gstObjectHasProperty(GstPad* pad, const char* name)
+{
+    return gstObjectHasProperty(GST_OBJECT_CAST(pad), name);
 }
 
 } // namespace WebCore

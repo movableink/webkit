@@ -81,10 +81,10 @@ void CacheStorageCache::getSize(CompletionHandler<void(uint64_t)>&& callback)
         return callback(size);
     }
 
-    m_store->readAllRecords([callback = WTFMove(callback)](auto&& records) mutable {
+    m_store->readAllRecordInfos([callback = WTFMove(callback)](auto&& recordInfos) mutable {
         uint64_t size = 0;
-        for (auto& record : records)
-            size += record.info.size;
+        for (auto& recordInfo : recordInfos)
+            size += recordInfo.size;
 
         callback(size);
     });
@@ -95,19 +95,19 @@ void CacheStorageCache::open(WebCore::DOMCacheEngine::CacheIdentifierCallback&& 
     if (m_isInitialized)
         return callback(WebCore::DOMCacheEngine::CacheIdentifierOperationResult { m_identifier, false });
 
-    m_store->readAllRecords([this, weakThis = WeakPtr { *this }, callback = WTFMove(callback)](auto records) mutable {
+    m_store->readAllRecordInfos([this, weakThis = WeakPtr { *this }, callback = WTFMove(callback)](auto recordInfos) mutable {
         if (!weakThis)
             return callback(makeUnexpected(WebCore::DOMCacheEngine::Error::Internal));
 
-        std::sort(records.begin(), records.end(), [](auto& a, auto& b) {
-            return a.info.insertionTime < b.info.insertionTime;
+        std::sort(recordInfos.begin(), recordInfos.end(), [](auto& a, auto& b) {
+            return a.insertionTime < b.insertionTime;
         });
 
-        for (auto& record : records) {
-            record.info.identifier = nextRecordIdentifier();
-            m_records.ensure(computeKeyURL(record.info.url), [] {
+        for (auto& recordInfo : recordInfos) {
+            recordInfo.identifier = nextRecordIdentifier();
+            m_records.ensure(computeKeyURL(recordInfo.url), [] {
                 return Vector<CacheStorageRecordInformation> { };
-            }).iterator->value.append(record.info);
+            }).iterator->value.append(recordInfo);
         }
 
         m_isInitialized = true;
@@ -323,9 +323,9 @@ void CacheStorageCache::putRecordsInStore(Vector<CacheStorageRecord>&& records, 
             record.info.insertionTime = existingRecordInfo->insertionTime;
             record.info.url = existingRecordInfo->url;
             record.requestHeadersGuard = existingRecord->requestHeadersGuard;
-            record.request = WTFMove(existingRecord->request);
-            record.options = WTFMove(existingRecord->options);
-            record.referrer = WTFMove(existingRecord->referrer);
+            record.request = existingRecord->request;
+            record.options = existingRecord->options;
+            record.referrer = existingRecord->referrer;
             record.info.updateVaryHeaders(record.request, record.responseData.httpHeaderFields.get(WebCore::HTTPHeaderName::Vary));
             sizeIncreased += record.info.size;
             sizeDecreased += existingRecordInfo->size;
@@ -356,11 +356,17 @@ void CacheStorageCache::putRecordsInStore(Vector<CacheStorageRecord>&& records, 
 
 void CacheStorageCache::removeAllRecords()
 {
+    uint64_t sizeDecreased = 0;
     Vector<CacheStorageRecordInformation> targetRecordInfos;
     for (auto& urlRecords : m_records.values()) {
-        for (auto& record : urlRecords)
+        for (auto& record : urlRecords) {
             targetRecordInfos.append(record);
+            sizeDecreased += record.size;
+        }
     }
+
+    if (m_manager && sizeDecreased)
+        m_manager->sizeDecreased(sizeDecreased);
 
     m_records.clear();
     m_store->deleteRecords(targetRecordInfos, [](auto) { });

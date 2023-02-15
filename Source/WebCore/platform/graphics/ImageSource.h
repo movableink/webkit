@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 #include <wtf/Forward.h>
 #include <wtf/RunLoop.h>
 #include <wtf/SynchronizedFixedQueue.h>
-#include <wtf/WeakPtr.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/WorkQueue.h>
 #include <wtf/text/TextStream.h>
 
@@ -41,7 +41,8 @@ class GraphicsContext;
 class ImageDecoder;
 class FragmentedSharedBuffer;
 
-class ImageSource : public ThreadSafeRefCounted<ImageSource>, public CanMakeWeakPtr<ImageSource> {
+class ImageSource final
+    : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ImageSource> {
     friend class BitmapImage;
 public:
     ~ImageSource();
@@ -93,14 +94,14 @@ public:
     String filenameExtension();
     String accessibilityDescription();
     std::optional<IntPoint> hotSpot();
-    std::optional<IntSize> densityCorrectedSize(ImageOrientation = ImageOrientation::FromImage);
+    std::optional<IntSize> densityCorrectedSize(ImageOrientation = ImageOrientation::Orientation::FromImage);
     bool hasDensityCorrectedSize() { return densityCorrectedSize().has_value(); }
 
     ImageOrientation orientation();
 
     // Image metadata which is calculated from the first ImageFrame.
-    WEBCORE_EXPORT IntSize size(ImageOrientation = ImageOrientation::FromImage);
-    IntSize sourceSize(ImageOrientation = ImageOrientation::FromImage);
+    WEBCORE_EXPORT IntSize size(ImageOrientation = ImageOrientation::Orientation::FromImage);
+    IntSize sourceSize(ImageOrientation = ImageOrientation::Orientation::FromImage);
     IntSize sizeRespectingOrientation();
     Color singlePixelSolidColor();
     SubsamplingLevel maximumSubsamplingLevel();

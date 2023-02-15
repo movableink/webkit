@@ -39,14 +39,9 @@
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
-#include <wtf/RetainPtr.h>
-#endif
-
 #if PLATFORM(COCOA)
 #include <pal/spi/cf/CFNetworkSPI.h>
-#elif USE(CFURLCONNECTION)
-#include <pal/spi/win/CFNetworkSPIWin.h>
+#include <wtf/RetainPtr.h>
 #endif
 
 #if USE(SOUP)
@@ -81,6 +76,7 @@ class CurlProxySettings;
 class NetworkingContext;
 class ResourceRequest;
 
+struct ClientOrigin;
 struct Cookie;
 struct CookieRequestHeaderFieldProxy;
 struct SameSiteInfo;
@@ -124,7 +120,7 @@ public:
     WEBCORE_EXPORT ~NetworkStorageSession();
 #endif
 
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
     enum class ShouldDisableCFURLCache : bool { No, Yes };
     WEBCORE_EXPORT static RetainPtr<CFURLStorageSessionRef> createCFStorageSessionForIdentifier(CFStringRef identifier, ShouldDisableCFURLCache = ShouldDisableCFURLCache::No);
     enum class IsInMemoryCookieStore : bool { No, Yes };
@@ -178,6 +174,7 @@ public:
     WEBCORE_EXPORT void deleteCookie(const URL&, const String&, CompletionHandler<void()>&&) const;
     WEBCORE_EXPORT void deleteAllCookies(CompletionHandler<void()>&&);
     WEBCORE_EXPORT void deleteAllCookiesModifiedSince(WallTime, CompletionHandler<void()>&&);
+    WEBCORE_EXPORT void deleteCookies(const ClientOrigin&, CompletionHandler<void()>&&);
     WEBCORE_EXPORT void deleteCookiesForHostnames(const Vector<String>& cookieHostNames, CompletionHandler<void()>&&);
     WEBCORE_EXPORT void deleteCookiesForHostnames(const Vector<String>& cookieHostNames, IncludeHttpOnlyCookies, ScriptWrittenCookiesOnly, CompletionHandler<void()>&&);
     WEBCORE_EXPORT Vector<Cookie> getAllCookies();
@@ -257,6 +254,7 @@ private:
     RetainPtr<NSArray> cookiesForURL(const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ApplyTrackingPrevention, ShouldRelaxThirdPartyCookieBlocking) const;
     void setHTTPCookiesForURL(CFHTTPCookieStorageRef, NSArray *cookies, NSURL *, NSURL *mainDocumentURL, const SameSiteInfo&) const;
     void deleteHTTPCookie(CFHTTPCookieStorageRef, NSHTTPCookie *, CompletionHandler<void()>&&) const;
+    void deleteCookiesMatching(const Function<bool(NSHTTPCookie *)>& matches, CompletionHandler<void()>&&);
 #endif
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
@@ -266,7 +264,7 @@ private:
 
     PAL::SessionID m_sessionID;
 
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
     RetainPtr<CFURLStorageSessionRef> m_platformSession;
     RetainPtr<CFHTTPCookieStorageRef> m_platformCookieStorage;
     const bool m_isInMemoryCookieStore { false };
@@ -327,33 +325,8 @@ private:
     static bool m_processMayUseCookieAPI;
 };
 
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
 WEBCORE_EXPORT RetainPtr<CFURLStorageSessionRef> createPrivateStorageSession(CFStringRef identifier, std::optional<HTTPCookieAcceptPolicy> = std::nullopt, NetworkStorageSession::ShouldDisableCFURLCache = NetworkStorageSession::ShouldDisableCFURLCache::No);
 #endif
-
-}
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::ThirdPartyCookieBlockingMode> {
-    using values = EnumValues<
-        WebCore::ThirdPartyCookieBlockingMode,
-        WebCore::ThirdPartyCookieBlockingMode::All,
-        WebCore::ThirdPartyCookieBlockingMode::AllExceptBetweenAppBoundDomains,
-        WebCore::ThirdPartyCookieBlockingMode::AllExceptManagedDomains,
-        WebCore::ThirdPartyCookieBlockingMode::AllOnSitesWithoutUserInteraction,
-        WebCore::ThirdPartyCookieBlockingMode::OnlyAccordingToPerDomainPolicy
-    >;
-};
-
-template<> struct EnumTraits<WebCore::FirstPartyWebsiteDataRemovalMode> {
-    using values = EnumValues<
-        WebCore::FirstPartyWebsiteDataRemovalMode,
-        WebCore::FirstPartyWebsiteDataRemovalMode::AllButCookies,
-        WebCore::FirstPartyWebsiteDataRemovalMode::None,
-        WebCore::FirstPartyWebsiteDataRemovalMode::AllButCookiesLiveOnTestingTimeout,
-        WebCore::FirstPartyWebsiteDataRemovalMode::AllButCookiesReproTestingTimeout
-    >;
-};
 
 }

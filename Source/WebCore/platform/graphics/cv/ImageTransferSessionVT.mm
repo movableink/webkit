@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 #import <pal/avfoundation/MediaTimeAVFoundation.h>
 
 #if !PLATFORM(MACCATALYST)
-#import <pal/spi/cocoa/IOSurfaceSPI.h>
+#import <wtf/spi/cocoa/IOSurfaceSPI.h>
 #endif
 
 #import "CoreVideoSoftLink.h"
@@ -267,7 +267,21 @@ RefPtr<VideoFrame> ImageTransferSessionVT::convertVideoFrame(VideoFrame& videoFr
     return VideoFrameCV::create(videoFrame.presentationTime(), videoFrame.isMirrored(), videoFrame.rotation(), WTFMove(resizedBuffer));
 }
 
+RefPtr<VideoFrame> ImageTransferSessionVT::createVideoFrame(CGImageRef image, const WTF::MediaTime& time, const IntSize& size)
+{
+    return createVideoFrame(image, time, size, VideoFrame::Rotation::None);
+}
+RefPtr<VideoFrame> ImageTransferSessionVT::createVideoFrame(CMSampleBufferRef image, const WTF::MediaTime& time, const IntSize& size)
+{
+    return createVideoFrame(image, time, size, VideoFrame::Rotation::None);
+}
+
 #if !PLATFORM(MACCATALYST)
+RefPtr<VideoFrame> ImageTransferSessionVT::createVideoFrame(IOSurfaceRef surface, const MediaTime& sampleTime, const IntSize& size)
+{
+    return createVideoFrame(surface, sampleTime, size, VideoFrame::Rotation::None);
+}
+
 RefPtr<VideoFrame> ImageTransferSessionVT::createVideoFrame(IOSurfaceRef surface, const MediaTime& sampleTime, const IntSize& size, VideoFrame::Rotation rotation, bool mirrored)
 {
     auto sampleBuffer = createCMSampleBuffer(surface, sampleTime, size);

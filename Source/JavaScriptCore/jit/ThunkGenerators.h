@@ -76,6 +76,8 @@ MacroAssemblerCodeRef<JITThunkPtrTag> sqrtThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> imulThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> randomThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> truncThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> numberConstructorCallThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> stringConstructorCallThunkGenerator(VM&);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> boundFunctionCallGenerator(VM&);
 

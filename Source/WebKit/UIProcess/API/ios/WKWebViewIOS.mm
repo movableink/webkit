@@ -818,8 +818,12 @@ static WebCore::Color scrollViewBackgroundColor(WKWebView *webView, AllowPageBac
         [_scrollView _stopScrollingAndZoomingAnimations];
 
 #if HAVE(UIFINDINTERACTION)
-    if (_findInteractionEnabled)
+    if (_findInteractionEnabled) {
         [_findInteraction dismissFindNavigator];
+
+        if (auto *findSession = dynamic_objc_cast<UITextSearchingFindSession>([_findInteraction activeFindSession]))
+            findSession.searchableObject = [self _searchableObject];
+    }
 #endif
 }
 
@@ -3078,7 +3082,8 @@ static WebCore::UserInterfaceLayoutDirection toUserInterfaceLayoutDirection(UISe
 
 #if ENABLE(LOCKDOWN_MODE_API)
 
-constexpr auto WebKitLockdownModeAlertShownKey = @"WebKitLockdownModeAlertShown";
+// Note: Use the legacy 'CaptivePortal' string to avoid losing users choice from earlier releases.
+constexpr auto WebKitLockdownModeAlertShownKey = @"WebKitCaptivePortalModeAlertShown";
 
 static bool lockdownModeWarningNeeded = true;
 

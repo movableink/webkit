@@ -40,6 +40,7 @@
 #include "EventNames.h"
 #include "Frame.h"
 #include "FrameLoaderClient.h"
+#include "GPU.h"
 #include "GPUBasedCanvasRenderingContext.h"
 #include "GPUCanvasContext.h"
 #include "GeometryUtilities.h"
@@ -57,6 +58,7 @@
 #include "JSNodeCustom.h"
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
+#include "Navigator.h"
 #include "OffscreenCanvas.h"
 #include "PlaceholderRenderingContext.h"
 #include "RenderElement.h"
@@ -84,9 +86,6 @@
 #if ENABLE(WEBGL)
 #include "WebGLContextAttributes.h"
 #include "WebGLRenderingContext.h"
-#endif
-
-#if ENABLE(WEBGL2)
 #include "WebGL2RenderingContext.h"
 #endif
 
@@ -252,10 +251,8 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
                 return std::optional<RenderingContext> { std::nullopt };
             if (is<WebGLRenderingContext>(*m_context))
                 return std::optional<RenderingContext> { RefPtr<WebGLRenderingContext> { &downcast<WebGLRenderingContext>(*m_context) } };
-#if ENABLE(WEBGL2)
             ASSERT(is<WebGL2RenderingContext>(*m_context));
             return std::optional<RenderingContext> { RefPtr<WebGL2RenderingContext> { &downcast<WebGL2RenderingContext>(*m_context) } };
-#endif
         }
 #endif
 
@@ -303,15 +300,19 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
 
         if (is<WebGLRenderingContext>(*context))
             return std::optional<RenderingContext> { RefPtr<WebGLRenderingContext> { &downcast<WebGLRenderingContext>(*context) } };
-#if ENABLE(WEBGL2)
+
         ASSERT(is<WebGL2RenderingContext>(*context));
         return std::optional<RenderingContext> { RefPtr<WebGL2RenderingContext> { &downcast<WebGL2RenderingContext>(*context) } };
-#endif
     }
 #endif
 
     if (isWebGPUType(contextId)) {
-        auto context = createContextWebGPU(contextId);
+        GPU* gpu = nullptr;
+        if (auto* window = document().domWindow()) {
+            // FIXME: Should we be instead getting this through jsDynamicCast<JSDOMWindow*>(state)->wrapped().navigator().gpu()?
+            gpu = window->navigator().gpu();
+        }
+        auto context = createContextWebGPU(contextId, gpu);
         if (!context)
             return { std::nullopt };
         return { context };
@@ -334,7 +335,7 @@ CanvasRenderingContext* HTMLCanvasElement::getContext(const String& type)
 #endif
 
     if (HTMLCanvasElement::isWebGPUType(type))
-        return getContextWebGPU(type);
+        return getContextWebGPU(type, nullptr);
 
     return nullptr;
 }
@@ -405,21 +406,15 @@ bool HTMLCanvasElement::isWebGLType(const String& type)
 {
     // Retain support for the legacy "webkit-3d" name.
     return type == "webgl"_s || type == "experimental-webgl"_s
-#if ENABLE(WEBGL2)
         || type == "webgl2"_s
-#endif
         || type == "webkit-3d"_s;
 }
 
 GraphicsContextGLWebGLVersion HTMLCanvasElement::toWebGLVersion(const String& type)
 {
     ASSERT(isWebGLType(type));
-#if ENABLE(WEBGL2)
     if (type == "webgl2"_s)
         return WebGLVersion::WebGL2;
-#else
-    UNUSED_PARAM(type);
-#endif
     return WebGLVersion::WebGL1;
 }
 
@@ -520,15 +515,15 @@ bool HTMLCanvasElement::isWebGPUType(const String& type)
     return type == "webgpu"_s;
 }
 
-GPUCanvasContext* HTMLCanvasElement::createContextWebGPU(const String& type)
+GPUCanvasContext* HTMLCanvasElement::createContextWebGPU(const String& type, GPU* gpu)
 {
     ASSERT_UNUSED(type, HTMLCanvasElement::isWebGPUType(type));
     ASSERT(!m_context);
 
-    if (!document().settings().webGPU())
+    if (!document().settings().webGPU() || !gpu)
         return nullptr;
 
-    m_context = GPUCanvasContext::create(*this);
+    m_context = GPUCanvasContext::create(*this, *gpu);
 
     if (m_context) {
         // Adds the current document as an observer, so that the document calls prepareForDisplay
@@ -542,7 +537,7 @@ GPUCanvasContext* HTMLCanvasElement::createContextWebGPU(const String& type)
     return static_cast<GPUCanvasContext*>(m_context.get());
 }
 
-GPUCanvasContext* HTMLCanvasElement::getContextWebGPU(const String& type)
+GPUCanvasContext* HTMLCanvasElement::getContextWebGPU(const String& type, GPU* gpu)
 {
     ASSERT_UNUSED(type, HTMLCanvasElement::isWebGPUType(type));
 
@@ -553,7 +548,7 @@ GPUCanvasContext* HTMLCanvasElement::getContextWebGPU(const String& type)
         return nullptr;
 
     if (!m_context)
-        return createContextWebGPU(type);
+        return createContextWebGPU(type, gpu);
 
     return static_cast<GPUCanvasContext*>(m_context.get());
 }
@@ -910,7 +905,7 @@ void HTMLCanvasElement::createImageBuffer() const
 
     m_hasCreatedImageBuffer = true;
     m_didClearImageBuffer = true;
-    CanvasBase::createImageBuffer(m_usesDisplayListDrawing.value_or(false), m_avoidBackendSizeCheckForTesting);
+    setImageBuffer(allocateImageBuffer(m_usesDisplayListDrawing.value_or(false), m_avoidBackendSizeCheckForTesting));
 
 #if USE(IOSURFACE_CANVAS_BACKING_STORE)
     if (m_context && m_context->is2d()) {

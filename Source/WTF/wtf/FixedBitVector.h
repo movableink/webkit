@@ -37,7 +37,7 @@ namespace WTF {
 
 class FixedBitVector final {
     WTF_MAKE_FAST_ALLOCATED;
-    using WordType = uintptr_t;
+    using WordType = decltype(BitVector::m_bitsOrPointer);
 
 public:
     FixedBitVector() = default;
@@ -57,6 +57,8 @@ public:
     // Note that BitVector will be in inline mode with fixed size when
     // the BitVector is constructed with size less or equal to `maxInlineBits`.
     size_t size() const { return m_bitVector.size(); }
+
+    bool isEmpty() const { return m_bitVector.isEmpty(); }
 
     size_t findBit(size_t startIndex, bool value) const;
 

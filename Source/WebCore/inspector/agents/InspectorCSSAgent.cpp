@@ -468,6 +468,10 @@ Protocol::ErrorStringOr<std::tuple<RefPtr<JSON::ArrayOf<Protocol::CSS::RuleMatch
                 // `*::marker` selectors are only applicable to elements with `display: list-item`.
                 if (pseudoId == PseudoId::Marker && element->computedStyle()->display() != DisplayType::ListItem)
                     continue;
+
+                if (pseudoId == PseudoId::Backdrop && !element->isInTopLayer())
+                    continue;
+
                 if (auto protocolPseudoId = protocolValueForPseudoId(pseudoId)) {
                     auto matchedRules = styleResolver.pseudoStyleRulesForElement(element, pseudoId, Style::Resolver::AllCSSRules);
                     if (!matchedRules.isEmpty()) {
@@ -1293,12 +1297,11 @@ Ref<JSON::ArrayOf<Protocol::CSS::RuleMatch>> InspectorCSSAgent::buildArrayForMat
 RefPtr<Protocol::CSS::CSSStyle> InspectorCSSAgent::buildObjectForAttributesStyle(StyledElement& element)
 {
     // FIXME: Ugliness below.
-    auto* attributeStyle = const_cast<StyleProperties*>(element.presentationalHintStyle());
+    auto* attributeStyle = const_cast<MutableStyleProperties*>(element.presentationalHintStyle());
     if (!attributeStyle)
         return nullptr;
 
-    auto& mutableAttributeStyle = downcast<MutableStyleProperties>(*attributeStyle);
-    auto inspectorStyle = InspectorStyle::create(InspectorCSSId(), mutableAttributeStyle.ensureCSSStyleDeclaration(), nullptr);
+    auto inspectorStyle = InspectorStyle::create(InspectorCSSId(), attributeStyle->ensureCSSStyleDeclaration(), nullptr);
     return inspectorStyle->buildObjectForStyle();
 }
 

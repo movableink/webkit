@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *  Copyright (C) 2009 Torch Mobile, Inc.
  *  Copyright (C) 2015 Jordan Harband (ljharb@gmail.com)
  *
@@ -31,7 +31,6 @@
 #include "InterpreterInlines.h"
 #include "IntlCollator.h"
 #include "IntlObjectInlines.h"
-#include "JITCodeInlines.h"
 #include "JSArray.h"
 #include "JSCInlines.h"
 #include "JSStringIterator.h"
@@ -1826,17 +1825,20 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToWellFormed, (JSGlobalObject* globalObj
     if (thisValue.isString() && asString(thisValue)->is8Bit())
         return JSValue::encode(thisValue);
 
-    String string = thisValue.toWTFString(globalObject);
+    JSString* stringValue = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (string.is8Bit())
-        return JSValue::encode(thisValue);
+    if (stringValue->is8Bit())
+        return JSValue::encode(stringValue);
+
+    String string = stringValue->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
     const UChar* characters = string.characters16();
     unsigned length = string.length();
     auto firstIllFormedIndex = illFormedIndex(characters, length);
     if (!firstIllFormedIndex)
-        return JSValue::encode(thisValue);
+        return JSValue::encode(stringValue);
 
     Vector<UChar> buffer;
     buffer.reserveInitialCapacity(length);

@@ -85,9 +85,6 @@ void registerWebKitGStreamerElements();
 void registerWebKitGStreamerVideoEncoder();
 unsigned getGstPlayFlag(const char* nick);
 uint64_t toGstUnsigned64Time(const MediaTime&);
-#if ENABLE(THUNDER)
-bool isThunderRanked();
-#endif
 
 inline GstClockTime toGstClockTime(const MediaTime& mediaTime)
 {
@@ -343,6 +340,11 @@ GstClockTime webkitGstElementGetCurrentRunningTime(GstElement*);
 PlatformVideoColorSpace videoColorSpaceFromCaps(const GstCaps*);
 PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo&);
 void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo*, const PlatformVideoColorSpace&);
+
+void configureVideoDecoderForHarnessing(const GRefPtr<GstElement>&);
+
+bool gstObjectHasProperty(GstElement*, const char* name);
+bool gstObjectHasProperty(GstPad*, const char* name);
 
 } // namespace WebCore
 

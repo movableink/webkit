@@ -273,7 +273,15 @@ static inline void setBufferFields(GstBuffer* buffer, const MediaTime& presentat
 
 Ref<VideoFrameGStreamer> VideoFrameGStreamer::create(GRefPtr<GstSample>&& sample, const FloatSize& presentationSize, const MediaTime& presentationTime, Rotation videoRotation, bool videoMirrored, std::optional<VideoFrameTimeMetadata>&& metadata, std::optional<PlatformVideoColorSpace>&& colorSpace)
 {
-    auto platformColorSpace = colorSpace.value_or(videoColorSpaceFromCaps(gst_sample_get_caps(sample.get())));
+    PlatformVideoColorSpace platformColorSpace;
+    if (colorSpace)
+        platformColorSpace = *colorSpace;
+    else {
+        auto* caps = gst_sample_get_caps(sample.get());
+        if (doCapsHaveType(caps, GST_VIDEO_CAPS_TYPE_PREFIX))
+            platformColorSpace = videoColorSpaceFromCaps(caps);
+    }
+
     return adoptRef(*new VideoFrameGStreamer(WTFMove(sample), presentationSize, presentationTime, videoRotation, videoMirrored, WTFMove(metadata), WTFMove(platformColorSpace)));
 }
 
@@ -563,6 +571,11 @@ RefPtr<JSC::Uint8ClampedArray> VideoFrameGStreamer::computeRGBAImageData() const
     GstMappedFrame inputFrame(gst_sample_get_buffer(m_sample.get()), inputInfo, GST_MAP_READ);
     gst_video_converter_frame(converter.get(), inputFrame.get(), outputFrame.get());
     return JSC::Uint8ClampedArray::tryCreate(WTFMove(bufferStorage), 0, byteLength);
+}
+
+RefPtr<ImageGStreamer> VideoFrameGStreamer::convertToImage()
+{
+    return GstSampleColorConverter::singleton().convertSampleToImage(m_sample);
 }
 
 } // namespace WebCore

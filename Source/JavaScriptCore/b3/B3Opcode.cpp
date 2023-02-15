@@ -363,6 +363,9 @@ void printInternal(PrintStream& out, Opcode opcode)
     case VectorReplaceLane:
         out.print("VectorReplaceLane");
         return;
+    case VectorDupElement:
+        out.print("VectorDupElement");
+        return;
     case VectorEqual:
         out.print("VectorEqual");
         return;
@@ -522,8 +525,8 @@ void printInternal(PrintStream& out, Opcode opcode)
     case VectorSwizzle:
         out.print("VectorSwizzle");
         return;
-    case VectorShuffle:
-        out.print("VectorShuffle");
+    case VectorMulByElement:
+        out.print("VectorMulByElement");
         return;
     case Upsilon:
         out.print("Upsilon");

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,24 +32,20 @@
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "FontDescription.h"
+#include "LocaleCocoa.h"
 #include "Logging.h"
 #include "OpenTypeCG.h"
 #include "SharedBuffer.h"
 #include <CoreText/CoreText.h>
 #include <float.h>
+#include <pal/spi/cf/CoreTextSPI.h>
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #include <unicode/uchar.h>
 #include <wtf/Assertions.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/StdLibExtras.h>
 
-#if PLATFORM(COCOA)
-#include "LocaleCocoa.h"
 #include <pal/cf/CoreTextSoftLink.h>
-#include <pal/spi/cf/CoreTextSPI.h>
-#else
-#include <pal/spi/win/CoreTextSPIWin.h>
-#endif
 
 namespace WebCore {
 
@@ -57,8 +53,6 @@ static inline bool caseInsensitiveCompare(CFStringRef a, CFStringRef b)
 {
     return a && CFStringCompare(a, b, kCFCompareCaseInsensitive) == kCFCompareEqualTo;
 }
-
-#if !PLATFORM(WIN)
 
 static bool fontHasVerticalGlyphs(CTFontRef font)
 {
@@ -149,13 +143,6 @@ void Font::platformInit()
     m_syntheticBoldOffset = m_platformData.syntheticBold() ? ceilf(m_platformData.size() / 24.0f) : 0.f;
 #else
     m_syntheticBoldOffset = m_platformData.syntheticBold() ? 1.0f : 0.f;
-#endif
-
-#if PLATFORM(WIN)
-    m_scriptCache = 0;
-    m_scriptFontProperties = nullptr;
-    if (m_platformData.useGDI())
-        return initGDIFont();
 #endif
 
     unsigned unitsPerEm = CTFontGetUnitsPerEm(m_platformData.font());
@@ -581,8 +568,6 @@ float Font::platformWidthForGlyph(Glyph glyph) const
     return advance.width;
 }
 
-#endif
-
 GlyphBufferAdvance Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned beginningGlyphIndex, unsigned beginningStringIndex, bool enableKerning, bool requiresShaping, const AtomString& locale, StringView text, TextDirection textDirection) const
 {
     UNUSED_PARAM(requiresShaping);
@@ -851,7 +836,6 @@ bool Font::isProbablyOnlyUsedToRenderIcons() const
     return !hasGlyphsForCharacterRange(platformFont, ' ', '~', false) && !hasGlyphsForCharacterRange(platformFont, 0x0600, 0x06FF, true);
 }
 
-#if PLATFORM(COCOA)
 const PAL::OTSVGTable& Font::otSVGTable() const
 {
     if (!m_otSVGTable) {
@@ -936,11 +920,9 @@ bool Font::glyphHasComplexColorFormat(Glyph glyphID) const
 
     return false;
 }
-#endif
 
 std::optional<BitVector> Font::findOTSVGGlyphs(const GlyphBufferGlyph* glyphs, unsigned count) const
 {
-#if PLATFORM(COCOA)
     auto table = otSVGTable().table;
     if (!table)
         return { };
@@ -954,16 +936,10 @@ std::optional<BitVector> Font::findOTSVGGlyphs(const GlyphBufferGlyph* glyphs, u
         }
     }
     return result;
-#else
-    UNUSED_PARAM(glyphs);
-    UNUSED_PARAM(count);
-    return { };
-#endif
 }
 
 bool Font::hasAnyComplexColorFormatGlyphs(const GlyphBufferGlyph* glyphs, unsigned count) const
 {
-#if PLATFORM(COCOA)
     auto& complexGlyphs = glyphsWithComplexColorFormat();
     if (!complexGlyphs.hasRelevantTables())
         return false;
@@ -976,11 +952,6 @@ bool Font::hasAnyComplexColorFormatGlyphs(const GlyphBufferGlyph* glyphs, unsign
             return true;
     }
     return false;
-#else
-    UNUSED_PARAM(glyphs);
-    UNUSED_PARAM(count);
-    return false;
-#endif
 }
 
 } // namespace WebCore

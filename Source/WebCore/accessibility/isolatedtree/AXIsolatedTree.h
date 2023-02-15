@@ -35,6 +35,7 @@
 #include <wtf/Lock.h>
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WTF {
 class TextStream;
@@ -273,8 +274,7 @@ struct AXPropertyChange {
     AXPropertyMap properties; // Changed properties.
 };
 
-class AXIsolatedTree : public ThreadSafeRefCounted<AXIsolatedTree>
-    , public CanMakeWeakPtr<AXIsolatedTree>
+class AXIsolatedTree : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AXIsolatedTree>
     , public AXTreeStore<AXIsolatedTree> {
     WTF_MAKE_NONCOPYABLE(AXIsolatedTree);
     WTF_MAKE_FAST_ALLOCATED;
@@ -293,7 +293,7 @@ public:
     RefPtr<AXIsolatedObject> rootNode();
     RefPtr<AXIsolatedObject> focusedNode();
 
-    RefPtr<AXIsolatedObject> nodeForID(const AXID&) const;
+    RefPtr<AXIsolatedObject> objectForID(const AXID) const;
     Vector<RefPtr<AXCoreObject>> objectsForIDs(const Vector<AXID>&);
 
     struct NodeChange {
@@ -359,7 +359,7 @@ private:
     void queueRemovalsAndUnresolvedChanges(Vector<AXID>&&);
 
     unsigned m_maxTreeDepth { 0 };
-    AXObjectCache* m_axObjectCache { nullptr };
+    WeakPtr<AXObjectCache> m_axObjectCache;
     bool m_usedOnAXThread { true };
 
     // Stores the parent ID and children IDS for a given IsolatedObject.
@@ -407,7 +407,7 @@ private:
 inline AXObjectCache* AXIsolatedTree::axObjectCache() const
 {
     ASSERT(isMainThread());
-    return m_axObjectCache;
+    return m_axObjectCache.get();
 }
 
 inline RefPtr<AXIsolatedTree> AXIsolatedTree::treeForPageID(std::optional<PageIdentifier> pageID)

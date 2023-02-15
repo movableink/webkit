@@ -100,6 +100,7 @@ BEGIN {
        &debugSafari
        &debugWebKitTestRunner
        &determineCurrentSVNRevision
+       &determineCrossTarget
        &determineIsWin64
        &determineXcodeSDK
        &executableProductDir
@@ -108,8 +109,10 @@ BEGIN {
        &forceOptimizationLevel
        &formatBuildTime
        &generateBuildSystemFromCMakeProject
+       &getCrossTargetName
        &getJhbuildPath
        &getJhbuildModulesetName
+       &inCrossTargetEnvironment
        &inFlatpakSandbox
        &iosVersion
        &isARM64
@@ -157,11 +160,13 @@ BEGIN {
        &prependToEnvironmentVariableList
        &printHelpAndExitForRunAndDebugWebKitAppIfNeeded
        &productDir
+       &productDirForCMake
        &prohibitUnknownPort
        &relativeScriptsDir
        &removeCMakeCache
        &runGitUpdate
        &runIOSWebKitApp
+       &runInCrossTargetEnvironment
        &runInFlatpak
        &runInFlatpakIfAvailable
        &runMacWebKitApp
@@ -184,6 +189,7 @@ BEGIN {
        &setupUnixWebKitEnvironment
        &sharedCommandLineOptions
        &sharedCommandLineOptionsUsage
+       &shouldBuildForCrossTarget
        &shouldUseFlatpak
        &sourceDir
        &splitVersionString
@@ -272,6 +278,7 @@ my $shouldUseGuardMalloc;
 my $shouldNotUseNinja;
 my $xcodeVersion;
 my $configuredXcodeWorkspace;
+my $crossTarget;
 
 my $unknownPortProhibited = 0;
 my @originalArgv = @ARGV;
@@ -793,6 +800,27 @@ sub isValidXcodeSDKPlatformName($) {
     return grep { $_ eq $name } @platforms;
 }
 
+sub determineCrossTarget {
+    return if defined $crossTarget;
+    return if not isLinux();
+
+    my $crossTargetCandidate;
+    if (checkForArgumentAndRemoveFromARGVGettingValue("--cross-target", \$crossTargetCandidate)) {
+        my $crossToolchainHelperPath = File::Spec->catfile(sourceDir(), "Tools", "Scripts", "cross-toolchain-helper");
+        my $availableTargets = `'$crossToolchainHelperPath' --print-available-targets`;
+        die "Failed to get available cross-targets from cross-toolchain-helper: $!" if exitStatus($?);
+        my @targets = split /\n/, $availableTargets;
+        foreach my $target (@targets) {
+            if ($target eq $crossTargetCandidate) {
+                $crossTarget = $crossTargetCandidate;
+                last;
+            }
+        }
+        return if defined $crossTarget;
+        die ("cross-target '" . $crossTargetCandidate . "' not valid. Available cross-targets are: '" . join("', '", @targets) . "'\n");
+    }
+}
+
 sub determineXcodeSDKPlatformName {
     return if defined $xcodeSDKPlatformName;
     my $sdk;
@@ -979,7 +1007,7 @@ sub determineConfigurationProductDir
         if (usesPerConfigurationBuildDirectory()) {
             $configurationProductDir = "$baseProductDir";
         } else {
-            if (shouldUseFlatpak()) {
+            if (shouldUseFlatpak() or shouldBuildForCrossTarget() or inCrossTargetEnvironment()) {
                 $configurationProductDir = "$baseProductDir/$portName/$configuration";
             } else {
                 $configurationProductDir = "$baseProductDir/$configuration";
@@ -1279,6 +1307,11 @@ sub determinePassedConfiguration
         $passedConfiguration = "Testing";
     } elsif(checkForArgumentAndRemoveFromARGV("--release-and-assert") || checkForArgumentAndRemoveFromARGV("--ra")) {
         $passedConfiguration = "Release+Assert";
+    }
+
+    if (shouldBuildForCrossTarget() or inCrossTargetEnvironment()) {
+        $passedConfiguration = "Release" if not $passedConfiguration;
+        $passedConfiguration .= "_" . getCrossTargetName();
     }
 }
 
@@ -1608,7 +1641,7 @@ sub determinePortName()
     # Port was not selected via command line, use appropriate default value
 
     if (isAnyWindows()) {
-        $portName = AppleWin;
+        $portName = WinCairo;
     } elsif (isDarwin()) {
         determineXcodeSDKPlatformName();
         if (willUseIOSDeviceSDK() || willUseIOSSimulatorSDK()) {
@@ -2471,6 +2504,16 @@ sub inFlatpakSandbox()
     return (-f "/.flatpak-info");
 }
 
+
+sub runInCrossTargetEnvironment(@)
+{
+    return if not shouldBuildForCrossTarget();
+    my @prefix = (File::Spec->catfile(sourceDir(), "Tools", "Scripts", "cross-toolchain-helper"),
+                  "--cross-target", getCrossTargetName(), "--cross-toolchain-run-cmd");
+    my @command = @_;
+    exec @prefix, @command, argumentsForConfiguration(), @ARGV or die;
+}
+
 sub runInFlatpak(@)
 {
     if (isGtk() && checkForArgumentAndRemoveFromARGV("--update-gtk")) {
@@ -2537,6 +2580,25 @@ sub jhbuildWrapperPrefix()
     return @prefix;
 }
 
+
+sub inCrossTargetEnvironment()
+{
+    return defined $ENV{'WEBKIT_CROSS_TARGET'};
+}
+
+sub getCrossTargetName()
+{
+    return $crossTarget if shouldBuildForCrossTarget();
+    return $ENV{'WEBKIT_CROSS_TARGET'} if inCrossTargetEnvironment();
+    return;
+}
+
+sub shouldBuildForCrossTarget()
+{
+    determineCrossTarget();
+    return defined $crossTarget;
+}
+
 sub wrapperPrefixIfNeeded()
 {
     if (isAnyWindows() || isJSCOnly() || isPlayStation()) {
@@ -2544,6 +2606,9 @@ sub wrapperPrefixIfNeeded()
     }
     if (isAppleCocoaWebKit()) {
         return ("xcrun");
+    }
+    if (shouldBuildForCrossTarget() or inCrossTargetEnvironment()) {
+        return ();
     }
 
     # Returning () here means either Flatpak or no wrapper will be used.
@@ -2578,18 +2643,22 @@ sub shouldUseFlatpak()
         return 0;
     }
 
+    if (shouldBuildForCrossTarget() or inCrossTargetEnvironment()) {
+        return 0;
+    }
+
     my @prefix = wrapperPrefixIfNeeded();
     return ((! inFlatpakSandbox()) and (@prefix == 0) and -e getUserFlatpakPath());
 }
 
 sub cmakeCachePath()
 {
-    return File::Spec->catdir(baseProductDir(), configuration(), "CMakeCache.txt");
+    return File::Spec->catdir(productDirForCMake(), "CMakeCache.txt");
 }
 
 sub cmakeFilesPath()
 {
-    return File::Spec->catdir(baseProductDir(), configuration(), "CMakeFiles");
+    return File::Spec->catdir(productDirForCMake(), "CMakeFiles");
 }
 
 sub shouldRemoveCMakeCache(@)
@@ -2600,7 +2669,7 @@ sub shouldRemoveCMakeCache(@)
     my (@buildArgs) = grep(/^-/, sort(@_, @originalArgv));
 
     # We check this first, because we always want to create this file for a fresh build.
-    my $productDir = File::Spec->catdir(baseProductDir(), configuration());
+    my $productDir = productDirForCMake();
     my $optionsCache = File::Spec->catdir($productDir, "build-webkit-options.txt");
     my $joinedBuildArgs = join(" ", @buildArgs);
     if (isCachedArgumentfileOutOfDate($optionsCache, $joinedBuildArgs)) {
@@ -2710,11 +2779,11 @@ sub cmakeGeneratedBuildfile(@)
 {
     my ($willUseNinja) = @_;
     if ($willUseNinja) {
-        return File::Spec->catfile(baseProductDir(), configuration(), "build.ninja")
+        return File::Spec->catfile(productDirForCMake(), "build.ninja")
     } elsif (isAnyWindows()) {
-        return File::Spec->catfile(baseProductDir(), configuration(), "WebKit.sln")
+        return File::Spec->catfile(productDirForCMake(), "WebKit.sln")
     } else {
-        return File::Spec->catfile(baseProductDir(), configuration(), "Makefile")
+        return File::Spec->catfile(productDirForCMake(), "Makefile")
     }
 }
 
@@ -2723,7 +2792,7 @@ sub generateBuildSystemFromCMakeProject
     my ($prefixPath, @cmakeArgs) = @_;
     my $config = configuration();
     my $port = cmakeBasedPortName();
-    my $buildPath = File::Spec->catdir(baseProductDir(), $config);
+    my $buildPath = productDirForCMake();
     File::Path::mkpath($buildPath) unless -d $buildPath;
     my $originalWorkingDirectory = getcwd();
     chdir($buildPath) or die;
@@ -2805,11 +2874,18 @@ sub generateBuildSystemFromCMakeProject
     return $returnCode;
 }
 
+sub productDirForCMake() {
+    if (shouldBuildForCrossTarget() or inCrossTargetEnvironment()) {
+        return productDir();
+    }
+    return File::Spec->catdir(baseProductDir(), configuration());
+}
+
 sub buildCMakeGeneratedProject($)
 {
     my (@makeArgs) = @_;
     my $config = configuration();
-    my $buildPath = File::Spec->catdir(baseProductDir(), $config);
+    my $buildPath = productDirForCMake();
     if (! -d $buildPath) {
         die "Must call generateBuildSystemFromCMakeProject() before building CMake project.";
     }
@@ -2839,7 +2915,7 @@ sub buildCMakeGeneratedProject($)
 sub cleanCMakeGeneratedProject()
 {
     my $config = configuration();
-    my $buildPath = File::Spec->catdir(baseProductDir(), $config);
+    my $buildPath = productDirForCMake();
     if (-d $buildPath) {
         return systemVerbose("cmake", "--build", $buildPath, "--config", $config, "--target", "clean");
     }

@@ -46,7 +46,7 @@ InlineFormattingGeometry::InlineFormattingGeometry(const InlineFormattingContext
 
 InlineLayoutUnit InlineFormattingGeometry::logicalTopForNextLine(const LineBuilder::LineContent& lineContent, const InlineRect& lineLogicalRect, const FloatingContext& floatingContext) const
 {
-    if (!lineContent.inlineItemRange.isEmpty()) {
+    if (!lineContent.committedRange.isEmpty()) {
         // Normally the next line's logical top is the previous line's logical bottom, but when the line ends
         // with the clear property set, the next line needs to clear the existing floats.
         if (lineContent.runs.isEmpty())
@@ -321,6 +321,11 @@ LayoutPoint InlineFormattingGeometry::staticPositionForOutOfFlowBlockLevelBox(co
     auto isHorizontalWritingMode = formattingContext().root().style().isHorizontalWritingMode();
     auto& lines = formattingState.lines();
     auto& boxes = formattingState.boxes();
+
+    if (lines.isEmpty()) {
+        ASSERT(boxes.isEmpty());
+        return contentBoxTopLeft;
+    }
 
     // Block level boxes are placed under the current line as if they were normal inflow block level boxes.
     auto previousDisplayBoxIndexBeforeOutOfFlowBox = previousDisplayBoxIndex(outOfFlowBox, boxes);

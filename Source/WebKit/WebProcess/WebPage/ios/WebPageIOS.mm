@@ -170,6 +170,7 @@
 #define WEBPAGE_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - WebPage::" fmt, this, ##__VA_ARGS__)
 
 namespace WebKit {
+using namespace WebCore;
 
 enum class SelectionWasFlipped : bool { No, Yes };
 
@@ -2836,6 +2837,10 @@ static void imagePositionInformation(WebPage& page, Element& element, const Inte
     info.imageURL = page.sanitizeLookalikeCharacters(element.document().completeURL(renderImage.cachedImage()->url().string()), LookalikeCharacterSanitizationTrigger::Unspecified);
     info.imageMIMEType = image.mimeType();
     info.isAnimatedImage = image.isAnimated();
+    info.isAnimating = image.isAnimating();
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+    info.canShowAnimationControls = page.corePage() && page.corePage()->settings().imageAnimationControlEnabled();
+#endif
     info.elementContainsImageOverlay = is<HTMLElement>(element) && ImageOverlay::hasOverlay(downcast<HTMLElement>(element));
 
     if (request.includeSnapshot || request.includeImageData)
@@ -3254,6 +3259,16 @@ void WebPage::performActionOnElement(uint32_t action, const String& authorizatio
         }
         send(Messages::WebPageProxy::SaveImageToLibrary(WTFMove(handle), authorizationToken));
     }
+
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+    if (static_cast<SheetAction>(action) == SheetAction::PlayAnimation) {
+        if (auto* imageElement = dynamicDowncast<HTMLImageElement>(element))
+            imageElement->setAllowsAnimation(true);
+    } else if (static_cast<SheetAction>(action) == SheetAction::PauseAnimation) {
+        if (auto* imageElement = dynamicDowncast<HTMLImageElement>(element))
+            imageElement->setAllowsAnimation(false);
+    }
+#endif // ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
 }
 
 static inline RefPtr<Element> nextAssistableElement(Node* startNode, Page& page, bool isForward)

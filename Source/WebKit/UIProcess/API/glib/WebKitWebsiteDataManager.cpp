@@ -37,6 +37,10 @@
 #include <wtf/glib/GUniquePtr.h>
 #include <wtf/glib/WTFGType.h>
 
+#if PLATFORM(GTK) && ENABLE(2022_GLIB_API)
+#include "WebKitFaviconDatabasePrivate.h"
+#endif
+
 using namespace WebKit;
 
 /**
@@ -91,14 +95,18 @@ enum {
 
 struct _WebKitWebsiteDataManagerPrivate {
     RefPtr<WebKit::WebsiteDataStore> websiteDataStore;
-    GUniquePtr<char> baseDataDirectory;
-    GUniquePtr<char> baseCacheDirectory;
+    CString baseDataDirectory;
+    CString baseCacheDirectory;
 
+#if PLATFORM(GTK) && ENABLE(2022_GLIB_API)
+    GRefPtr<WebKitFaviconDatabase> faviconDatabase;
+#endif
+
+#if !ENABLE(2022_GLIB_API)
     WebKitTLSErrorsPolicy tlsErrorsPolicy;
 
     GRefPtr<WebKitCookieManager> cookieManager;
 
-#if !ENABLE(2022_GLIB_API)
     // These manual directory overrides are deprecated. Please don't add more.
     GUniquePtr<char> localStorageDirectory;
     GUniquePtr<char> diskCacheDirectory;
@@ -112,7 +120,7 @@ struct _WebKitWebsiteDataManagerPrivate {
 #endif
 };
 
-WEBKIT_DEFINE_FINAL_TYPE_IN_2022_API(WebKitWebsiteDataManager, webkit_website_data_manager, G_TYPE_OBJECT)
+WEBKIT_DEFINE_FINAL_TYPE(WebKitWebsiteDataManager, webkit_website_data_manager, G_TYPE_OBJECT, GObject)
 
 static void webkitWebsiteDataManagerGetProperty(GObject* object, guint propID, GValue* value, GParamSpec* paramSpec)
 {
@@ -174,10 +182,10 @@ static void webkitWebsiteDataManagerSetProperty(GObject* object, guint propID, c
 
     switch (propID) {
     case PROP_BASE_DATA_DIRECTORY:
-        manager->priv->baseDataDirectory.reset(g_value_dup_string(value));
+        manager->priv->baseDataDirectory = g_value_get_string(value);
         break;
     case PROP_BASE_CACHE_DIRECTORY:
-        manager->priv->baseCacheDirectory.reset(g_value_dup_string(value));
+        manager->priv->baseCacheDirectory = g_value_get_string(value);
         break;
 #if !ENABLE(2022_GLIB_API)
     case PROP_LOCAL_STORAGE_DIRECTORY:
@@ -217,51 +225,52 @@ static void webkitWebsiteDataManagerSetProperty(GObject* object, guint propID, c
     }
 }
 
+#if !ENABLE(2022_GLIB_API)
 static void webkitWebsiteDataManagerConstructed(GObject* object)
 {
     G_OBJECT_CLASS(webkit_website_data_manager_parent_class)->constructed(object);
 
     WebKitWebsiteDataManagerPrivate* priv = WEBKIT_WEBSITE_DATA_MANAGER(object)->priv;
-#if !ENABLE(2022_GLIB_API)
-    if (priv->baseDataDirectory) {
+    if (!priv->baseDataDirectory.isNull()) {
         if (!priv->localStorageDirectory)
-            priv->localStorageDirectory.reset(g_build_filename(priv->baseDataDirectory.get(), "localstorage", nullptr));
+            priv->localStorageDirectory.reset(g_build_filename(priv->baseDataDirectory.data(), "localstorage", nullptr));
         if (!priv->indexedDBDirectory)
-            priv->indexedDBDirectory.reset(g_build_filename(priv->baseDataDirectory.get(), "databases", "indexeddb", nullptr));
+            priv->indexedDBDirectory.reset(g_build_filename(priv->baseDataDirectory.data(), "databases", "indexeddb", nullptr));
         if (!priv->webSQLDirectory)
-            priv->webSQLDirectory.reset(g_build_filename(priv->baseDataDirectory.get(), "databases", nullptr));
+            priv->webSQLDirectory.reset(g_build_filename(priv->baseDataDirectory.data(), "databases", nullptr));
         if (!priv->itpDirectory)
-            priv->itpDirectory.reset(g_build_filename(priv->baseDataDirectory.get(), "itp", nullptr));
+            priv->itpDirectory.reset(g_build_filename(priv->baseDataDirectory.data(), "itp", nullptr));
         if (!priv->swRegistrationsDirectory)
-            priv->swRegistrationsDirectory.reset(g_build_filename(priv->baseDataDirectory.get(), "serviceworkers", nullptr));
+            priv->swRegistrationsDirectory.reset(g_build_filename(priv->baseDataDirectory.data(), "serviceworkers", nullptr));
     }
 
-    if (priv->baseCacheDirectory) {
+    if (!priv->baseCacheDirectory.isNull()) {
         if (!priv->diskCacheDirectory)
-            priv->diskCacheDirectory.reset(g_strdup(priv->baseCacheDirectory.get()));
+            priv->diskCacheDirectory.reset(g_strdup(priv->baseCacheDirectory.data()));
         if (!priv->applicationCacheDirectory)
-            priv->applicationCacheDirectory.reset(g_build_filename(priv->baseCacheDirectory.get(), "applications", nullptr));
+            priv->applicationCacheDirectory.reset(g_build_filename(priv->baseCacheDirectory.data(), "applications", nullptr));
         if (!priv->hstsCacheDirectory)
-            priv->hstsCacheDirectory.reset(g_strdup(priv->baseCacheDirectory.get()));
+            priv->hstsCacheDirectory.reset(g_strdup(priv->baseCacheDirectory.data()));
         if (!priv->domCacheDirectory)
-            priv->domCacheDirectory.reset(g_build_filename(priv->baseCacheDirectory.get(), "CacheStorage", nullptr));
+            priv->domCacheDirectory.reset(g_build_filename(priv->baseCacheDirectory.data(), "CacheStorage", nullptr));
     }
-#endif
 
     priv->tlsErrorsPolicy = WEBKIT_TLS_ERRORS_POLICY_FAIL;
     if (priv->websiteDataStore)
         priv->websiteDataStore->setIgnoreTLSErrors(false);
 }
+#endif
 
 static void webkit_website_data_manager_class_init(WebKitWebsiteDataManagerClass* findClass)
 {
     webkitInitialize();
 
     GObjectClass* gObjectClass = G_OBJECT_CLASS(findClass);
-
     gObjectClass->get_property = webkitWebsiteDataManagerGetProperty;
     gObjectClass->set_property = webkitWebsiteDataManagerSetProperty;
+#if !ENABLE(2022_GLIB_API)
     gObjectClass->constructed = webkitWebsiteDataManagerConstructed;
+#endif
 
     /**
      * WebKitWebsiteDataManager:base-data-directory:
@@ -483,7 +492,7 @@ WebKit::WebsiteDataStore& webkitWebsiteDataManagerGetDataStore(WebKitWebsiteData
 {
     WebKitWebsiteDataManagerPrivate* priv = manager->priv;
     if (!priv->websiteDataStore) {
-        auto configuration = WebsiteDataStoreConfiguration::createWithBaseDirectories(String::fromUTF8(priv->baseCacheDirectory.get()), String::fromUTF8(priv->baseDataDirectory.get()));
+        auto configuration = WebsiteDataStoreConfiguration::createWithBaseDirectories(String::fromUTF8(priv->baseCacheDirectory), String::fromUTF8(priv->baseDataDirectory));
 #if !ENABLE(2022_GLIB_API)
         if (priv->localStorageDirectory)
             configuration->setLocalStorageDirectory(FileSystem::stringFromFileSystemRepresentation(priv->localStorageDirectory.get()));
@@ -505,12 +514,23 @@ WebKit::WebsiteDataStore& webkitWebsiteDataManagerGetDataStore(WebKitWebsiteData
             configuration->setCacheStorageDirectory(FileSystem::stringFromFileSystemRepresentation(priv->domCacheDirectory.get()));
 #endif
         priv->websiteDataStore = WebKit::WebsiteDataStore::create(WTFMove(configuration), PAL::SessionID::generatePersistentSessionID());
+#if !ENABLE(2022_GLIB_API)
         priv->websiteDataStore->setIgnoreTLSErrors(priv->tlsErrorsPolicy == WEBKIT_TLS_ERRORS_POLICY_IGNORE);
+#endif
     }
 
     return *priv->websiteDataStore;
 }
 
+#if ENABLE(2022_GLIB_API)
+WebKitWebsiteDataManager* webkitWebsiteDataManagerCreate(CString&& baseDataDirectory, CString&& baseCacheDirectory)
+{
+    auto* manager = WEBKIT_WEBSITE_DATA_MANAGER(g_object_new(WEBKIT_TYPE_WEBSITE_DATA_MANAGER, nullptr));
+    manager->priv->baseDataDirectory = WTFMove(baseDataDirectory);
+    manager->priv->baseCacheDirectory = WTFMove(baseCacheDirectory);
+    return manager;
+}
+#else
 /**
  * webkit_website_data_manager_new:
  * @first_option_name: name of the first option to set
@@ -549,6 +569,7 @@ WebKitWebsiteDataManager* webkit_website_data_manager_new_ephemeral()
 {
     return WEBKIT_WEBSITE_DATA_MANAGER(g_object_new(WEBKIT_TYPE_WEBSITE_DATA_MANAGER, "is-ephemeral", TRUE, nullptr));
 }
+#endif
 
 /**
  * webkit_website_data_manager_is_ephemeral:
@@ -587,7 +608,7 @@ const gchar* webkit_website_data_manager_get_base_data_directory(WebKitWebsiteDa
     if (manager->priv->websiteDataStore && !manager->priv->websiteDataStore->isPersistent())
         return nullptr;
 
-    return manager->priv->baseDataDirectory.get();
+    return manager->priv->baseDataDirectory.data();
 }
 
 /**
@@ -608,7 +629,7 @@ const gchar* webkit_website_data_manager_get_base_cache_directory(WebKitWebsiteD
     if (manager->priv->websiteDataStore && !manager->priv->websiteDataStore->isPersistent())
         return nullptr;
 
-    return manager->priv->baseCacheDirectory.get();
+    return manager->priv->baseCacheDirectory.data();
 }
 
 #if !ENABLE(2022_GLIB_API)
@@ -838,7 +859,6 @@ const gchar* webkit_website_data_manager_get_dom_cache_directory(WebKitWebsiteDa
         priv->domCacheDirectory.reset(g_strdup(WebKit::WebsiteDataStore::defaultCacheStorageDirectory().utf8().data()));
     return priv->domCacheDirectory.get();
 }
-#endif
 
 /**
  * webkit_website_data_manager_get_cookie_manager:
@@ -1015,6 +1035,82 @@ void webkit_website_data_manager_set_network_proxy_settings(WebKitWebsiteDataMan
         break;
     }
 }
+#endif
+
+#if PLATFORM(GTK) && ENABLE(2022_GLIB_API)
+static String webkitWebsiteDataManagerGetFaviconDatabasePath(WebKitWebsiteDataManager* manager)
+{
+    if (webkit_website_data_manager_is_ephemeral(manager))
+        return { };
+
+    if (!manager->priv->baseCacheDirectory.isNull())
+        return FileSystem::pathByAppendingComponents(FileSystem::stringFromFileSystemRepresentation(manager->priv->baseCacheDirectory.data()), { "icondatabase"_s, "WebpageIcons.db"_s });
+
+    return FileSystem::pathByAppendingComponents(WebsiteDataStore::defaultBaseCacheDirectory(), { "icondatabase"_s, "WebpageIcons.db"_s });
+}
+
+/**
+ * webkit_website_data_manager_set_favicons_enabled:
+ * @manager: a #WebKitWebsiteDataManager
+ * @enabled: value to set
+ *
+ * Set whether website icons are enabled. Website icons are disabled by default.
+ * When website icons are disabled, the #WebKitFaviconDatabase of @manager is closed and
+ * its reference removed, so webkit_website_data_manager_get_favicon_database() will
+ * return %NULL. If website icons are enabled again, a new #WebKitFaviconDatabase will
+ * be created.
+ *
+ * Since: 2.40
+ */
+void webkit_website_data_manager_set_favicons_enabled(WebKitWebsiteDataManager* manager, gboolean enabled)
+{
+    g_return_if_fail(WEBKIT_IS_WEBSITE_DATA_MANAGER(manager));
+
+    if (enabled) {
+        if (!manager->priv->faviconDatabase)
+            manager->priv->faviconDatabase = adoptGRef(webkitFaviconDatabaseCreate());
+        auto path = webkitWebsiteDataManagerGetFaviconDatabasePath(manager);
+        webkitFaviconDatabaseOpen(manager->priv->faviconDatabase.get(), path, path.isNull());
+    } else if (manager->priv->faviconDatabase) {
+        webkitFaviconDatabaseClose(manager->priv->faviconDatabase.get());
+        manager->priv->faviconDatabase = nullptr;
+    }
+}
+
+/**
+ * webkit_website_data_manager_get_favicons_enabled:
+ * @manager: a #WebKitWebsiteDataManager
+ *
+ * Get whether website icons are enabled.
+ *
+ * Returns: %TRUE if website icons are enabled, or %FALSE otherwise.
+ *
+ * Since: 2.40
+ */
+gboolean webkit_website_data_manager_get_favicons_enabled(WebKitWebsiteDataManager* manager)
+{
+    g_return_val_if_fail(WEBKIT_IS_WEBSITE_DATA_MANAGER(manager), FALSE);
+
+    return !!manager->priv->faviconDatabase;
+}
+
+/**
+ * webkit_website_data_manager_get_favicon_database:
+ * @manager: a #WebKitWebsiteDataManager
+ *
+ * Get the #WebKitFaviconDatabase of @manager.
+ *
+ * Returns: (transfer none) (nullable): a #WebKitFaviconDatabase, or %NULL if website icons are disabled
+ *
+ * Since: 2.40
+ */
+WebKitFaviconDatabase* webkit_website_data_manager_get_favicon_database(WebKitWebsiteDataManager* manager)
+{
+    g_return_val_if_fail(WEBKIT_IS_WEBSITE_DATA_MANAGER(manager), nullptr);
+
+    return manager->priv->faviconDatabase.get();
+}
+#endif
 
 static OptionSet<WebsiteDataType> toWebsiteDataTypes(WebKitWebsiteDataTypes types)
 {
@@ -1247,6 +1343,7 @@ struct _WebKitITPFirstParty {
     int referenceCount { 1 };
 };
 
+#if !ENABLE(2022_GLIB_API)
 /**
  * webkit_website_data_manager_set_memory_pressure_settings:
  * @settings: a WebKitMemoryPressureSettings.
@@ -1272,6 +1369,7 @@ void webkit_website_data_manager_set_memory_pressure_settings(WebKitMemoryPressu
     std::optional<MemoryPressureHandler::Configuration> config = settings ? std::make_optional(webkitMemoryPressureSettingsGetMemoryPressureHandlerConfiguration(settings)) : std::nullopt;
     WebProcessPool::setNetworkProcessMemoryPressureHandlerConfiguration(config);
 }
+#endif
 
 G_DEFINE_BOXED_TYPE(WebKitITPFirstParty, webkit_itp_first_party, webkit_itp_first_party_ref, webkit_itp_first_party_unref)
 
@@ -1410,7 +1508,7 @@ struct _WebKitITPThirdParty {
 
 G_DEFINE_BOXED_TYPE(WebKitITPThirdParty, webkit_itp_third_party, webkit_itp_third_party_ref, webkit_itp_third_party_unref)
 
-static WebKitITPThirdParty* webkitITPThirdPartyCreate(WebResourceLoadStatisticsStore::ThirdPartyData&& data)
+WebKitITPThirdParty* webkitITPThirdPartyCreate(WebResourceLoadStatisticsStore::ThirdPartyData&& data)
 {
     auto* thirdParty = static_cast<WebKitITPThirdParty*>(fastMalloc(sizeof(WebKitITPThirdParty)));
     new (thirdParty) WebKitITPThirdParty(WTFMove(data));

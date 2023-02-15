@@ -232,9 +232,9 @@ auto SectionParser::parseFunction() -> PartialResult
         m_info->functions.uncheckedAppend({ start, end, false, false, Vector<uint8_t>() });
     }
 
-    // Note that `initializeReferencedFunctionsTracker` should only be used after both parseImport and parseFunction
+    // Note that `initializeFunctionTrackers` should only be used after both parseImport and parseFunction
     // finish updating importFunctionTypeIndices and internalFunctionTypeIndices.
-    m_info->initializeReferencedFunctionsTracker();
+    m_info->initializeFunctionTrackers();
     return { };
 }
 
@@ -716,7 +716,7 @@ auto SectionParser::parseInitExpr(uint8_t& opcode, uint64_t& bitsOrImportNumber,
     case RefFunc: {
         uint32_t index;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(index), "can't get ref.func index");
-        WASM_PARSER_FAIL_IF(index >= m_info->functions.size(), "ref.func index", index, " exceeds the number of functions ", m_info->functions.size());
+        WASM_PARSER_FAIL_IF(index >= m_info->functionIndexSpaceSize(), "ref.func index ", index, " exceeds the number of functions ", m_info->functionIndexSpaceSize());
         m_info->addReferencedFunction(index);
 
         if (Options::useWebAssemblyTypedFunctionReferences()) {
@@ -1268,6 +1268,8 @@ auto SectionParser::parseException() -> PartialResult
         WASM_PARSER_FAIL_IF(!parseVarUInt32(typeNumber), "can't get ", exceptionNumber, "th Exception's type number");
         WASM_PARSER_FAIL_IF(typeNumber >= m_info->typeCount(), exceptionNumber, "th Exception type number is invalid ", typeNumber);
         TypeIndex typeIndex = TypeInformation::get(m_info->typeSignatures[typeNumber]);
+        auto signature = TypeInformation::getFunctionSignature(typeIndex);
+        WASM_PARSER_FAIL_IF(!signature.returnsVoid(), exceptionNumber, "th Exception type cannot have a non-void return type ", typeNumber);
         m_info->internalExceptionTypeIndices.uncheckedAppend(typeIndex);
     }
 

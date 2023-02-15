@@ -109,6 +109,9 @@ public:
     Instance& instance() const { return m_adapter->instance(); }
     bool hasUnifiedMemory() const { return m_device.hasUnifiedMemory; }
 
+    uint32_t maxBuffersPlusVertexBuffersForVertexStage() const;
+    uint32_t vertexBufferIndexForBindGroup(uint32_t groupIndex) const;
+
 private:
     Device(id<MTLDevice>, id<MTLCommandQueue> defaultQueue, HardwareCapabilities&&, Adapter&);
     Device(Adapter&);
@@ -126,6 +129,14 @@ private:
 
     void loseTheDevice(WGPUDeviceLostReason);
     void captureFrameIfNeeded() const;
+    auto buildKeyValueReplacements(const auto& stage) const
+    {
+        HashMap<String, decltype(WGPUConstantEntry::value)> keyValueReplacements;
+        for (auto* kvp = stage.constants, *endKvp = kvp + stage.constantCount; kvp != endKvp; ++kvp)
+            keyValueReplacements.set(String::fromUTF8(kvp->key), kvp->value);
+
+        return keyValueReplacements;
+    }
 
     struct Error {
         WGPUErrorType type;

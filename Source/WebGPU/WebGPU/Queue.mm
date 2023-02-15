@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -84,7 +84,7 @@ void Queue::finalizeBlitCommandEncoder()
     }
 }
 
-void Queue::onSubmittedWorkDone(uint64_t, CompletionHandler<void(WGPUQueueWorkDoneStatus)>&& callback)
+void Queue::onSubmittedWorkDone(CompletionHandler<void(WGPUQueueWorkDoneStatus)>&& callback)
 {
     // https://gpuweb.github.io/gpuweb/#dom-gpuqueue-onsubmittedworkdone
 
@@ -101,6 +101,23 @@ void Queue::onSubmittedWorkDone(uint64_t, CompletionHandler<void(WGPUQueueWorkDo
 
     auto& callbacks = m_onSubmittedWorkDoneCallbacks.add(m_submittedCommandBufferCount, OnSubmittedWorkDoneCallbacks()).iterator->value;
     callbacks.append(WTFMove(callback));
+}
+
+void Queue::onSubmittedWorkScheduled(CompletionHandler<void()>&& completionHandler)
+{
+    ASSERT(m_submittedCommandBufferCount >= m_scheduledCommandBufferCount);
+
+    finalizeBlitCommandEncoder();
+
+    if (isSchedulingIdle()) {
+        scheduleWork([completionHandler = WTFMove(completionHandler)]() mutable {
+            completionHandler();
+        });
+        return;
+    }
+
+    auto& callbacks = m_onSubmittedWorkScheduledCallbacks.add(m_submittedCommandBufferCount, OnSubmittedWorkScheduledCallbacks()).iterator->value;
+    callbacks.append(WTFMove(completionHandler));
 }
 
 bool Queue::validateSubmit(const Vector<std::reference_wrapper<const CommandBuffer>>& commands) const
@@ -123,6 +140,13 @@ bool Queue::validateSubmit(const Vector<std::reference_wrapper<const CommandBuff
 void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
 {
     ASSERT(commandBuffer.commandQueue == m_commandQueue);
+    [commandBuffer addScheduledHandler:[protectedThis = Ref { *this }](id<MTLCommandBuffer>) {
+        protectedThis->scheduleWork(CompletionHandler<void(void)>([protectedThis = protectedThis.copyRef()]() {
+            ++(protectedThis->m_scheduledCommandBufferCount);
+            for (auto& callback : protectedThis->m_onSubmittedWorkScheduledCallbacks.take(protectedThis->m_scheduledCommandBufferCount))
+                callback();
+        }, CompletionHandlerCallThread::AnyThread));
+    }];
     [commandBuffer addCompletedHandler:[protectedThis = Ref { *this }](id<MTLCommandBuffer>) {
         protectedThis->scheduleWork(CompletionHandler<void(void)>([protectedThis = protectedThis.copyRef()]() {
             ++(protectedThis->m_completedCommandBufferCount);
@@ -235,30 +259,30 @@ void Queue::writeBuffer(const Buffer& buffer, uint64_t bufferOffset, const void*
         size:static_cast<NSUInteger>(size)];
 }
 
-static bool validateWriteTexture(const WGPUImageCopyTexture& destination, const WGPUTextureDataLayout& dataLayout, const WGPUExtent3D& size, size_t dataByteSize, const WGPUTextureDescriptor& textureDesc)
+static bool validateWriteTexture(const WGPUImageCopyTexture& destination, const WGPUTextureDataLayout& dataLayout, const WGPUExtent3D& size, size_t dataByteSize, const Texture& texture)
 {
     if (!Texture::validateImageCopyTexture(destination, size))
         return false;
 
-    if (!(textureDesc.usage & WGPUTextureUsage_CopyDst))
+    if (!(texture.usage() & WGPUTextureUsage_CopyDst))
         return false;
 
-    if (textureDesc.sampleCount != 1)
+    if (texture.sampleCount() != 1)
         return false;
 
     if (!Texture::validateTextureCopyRange(destination, size))
         return false;
 
-    if (!Texture::refersToSingleAspect(textureDesc.format, destination.aspect))
+    if (!Texture::refersToSingleAspect(texture.format(), destination.aspect))
         return false;
 
-    if (!Texture::isValidImageCopyDestination(textureDesc.format, destination.aspect))
+    if (!Texture::isValidImageCopyDestination(texture.format(), destination.aspect))
         return false;
 
-    auto aspectSpecificFormat = textureDesc.format;
+    auto aspectSpecificFormat = texture.format();
 
-    if (Texture::isDepthOrStencilFormat(textureDesc.format))
-        aspectSpecificFormat = Texture::aspectSpecificFormat(textureDesc.format, destination.aspect);
+    if (Texture::isDepthOrStencilFormat(texture.format()))
+        aspectSpecificFormat = Texture::aspectSpecificFormat(texture.format(), destination.aspect);
 
     if (!Texture::validateLinearTextureData(dataLayout, dataByteSize, aspectSpecificFormat, size))
         return false;
@@ -275,9 +299,9 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, const void* da
 
     auto dataByteSize = dataSize;
 
-    const auto& textureDesc = fromAPI(destination.texture).descriptor();
+    const auto& texture = fromAPI(destination.texture);
 
-    if (!validateWriteTexture(destination, dataLayout, size, dataByteSize, textureDesc)) {
+    if (!validateWriteTexture(destination, dataLayout, size, dataByteSize, texture)) {
         m_device.generateAValidationError("Validation failure."_s);
         return;
     }
@@ -314,7 +338,7 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, const void* da
         case MTLStorageModeManaged:
 #endif
             {
-                switch (textureDesc.dimension) {
+                switch (texture.dimension()) {
                 case WGPUTextureDimension_1D: {
                     auto region = MTLRegionMake1D(destination.origin.x, size.width);
                     for (uint32_t layer = 0; layer < size.depthOrArrayLayers; ++layer) {
@@ -384,7 +408,7 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, const void* da
     auto heightForMetal = std::min(size.height, logicalSize.height);
     auto depthForMetal = std::min(size.depthOrArrayLayers, logicalSize.depthOrArrayLayers);
 
-    switch (textureDesc.dimension) {
+    switch (texture.dimension()) {
     case WGPUTextureDimension_1D: {
         // https://developer.apple.com/documentation/metal/mtlblitcommandencoder/1400771-copyfrombuffer?language=objc
         // "When you copy to a 1D texture, height and depth must be 1."
@@ -471,16 +495,16 @@ void wgpuQueueRelease(WGPUQueue queue)
     WebGPU::fromAPI(queue).deref();
 }
 
-void wgpuQueueOnSubmittedWorkDone(WGPUQueue queue, uint64_t signalValue, WGPUQueueWorkDoneCallback callback, void* userdata)
+void wgpuQueueOnSubmittedWorkDone(WGPUQueue queue, WGPUQueueWorkDoneCallback callback, void* userdata)
 {
-    WebGPU::fromAPI(queue).onSubmittedWorkDone(signalValue, [callback, userdata](WGPUQueueWorkDoneStatus status) {
+    WebGPU::fromAPI(queue).onSubmittedWorkDone([callback, userdata](WGPUQueueWorkDoneStatus status) {
         callback(status, userdata);
     });
 }
 
-void wgpuQueueOnSubmittedWorkDoneWithBlock(WGPUQueue queue, uint64_t signalValue, WGPUQueueWorkDoneBlockCallback callback)
+void wgpuQueueOnSubmittedWorkDoneWithBlock(WGPUQueue queue, WGPUQueueWorkDoneBlockCallback callback)
 {
-    WebGPU::fromAPI(queue).onSubmittedWorkDone(signalValue, [callback = WebGPU::fromAPI(WTFMove(callback))](WGPUQueueWorkDoneStatus status) {
+    WebGPU::fromAPI(queue).onSubmittedWorkDone([callback = WebGPU::fromAPI(WTFMove(callback))](WGPUQueueWorkDoneStatus status) {
         callback(status);
     });
 }
