@@ -27,6 +27,7 @@
 #include "WebEditorClient.h"
 
 #include "EditorState.h"
+#include "MessageSenderInlines.h"
 #include "SharedBufferReference.h"
 #include "UndoOrRedo.h"
 #include "WKBundlePageEditorClient.h"
@@ -41,13 +42,13 @@
 #include <WebCore/DOMPasteAccess.h>
 #include <WebCore/DocumentFragment.h>
 #include <WebCore/FocusController.h>
-#include <WebCore/Frame.h>
 #include <WebCore/FrameLoader.h>
-#include <WebCore/FrameView.h>
 #include <WebCore/HTMLInputElement.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLTextAreaElement.h>
 #include <WebCore/KeyboardEvent.h>
+#include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameView.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
 #include <WebCore/Range.h>
@@ -216,7 +217,7 @@ void WebEditorClient::respondToChangedContents()
     m_page->didChangeContents();
 }
 
-void WebEditorClient::respondToChangedSelection(Frame* frame)
+void WebEditorClient::respondToChangedSelection(LocalFrame* frame)
 {
     static NeverDestroyed<String> WebViewDidChangeSelectionNotification(MAKE_STATIC_STRING_IMPL("WebViewDidChangeSelectionNotification"));
     m_page->injectedBundleEditorClient().didChangeSelection(*m_page, WebViewDidChangeSelectionNotification.get().impl());
@@ -245,7 +246,7 @@ void WebEditorClient::didUpdateComposition()
     m_page->didUpdateComposition();
 }
 
-void WebEditorClient::discardedComposition(Frame*)
+void WebEditorClient::discardedComposition(LocalFrame*)
 {
     m_page->discardedComposition();
 }
@@ -315,12 +316,12 @@ void WebEditorClient::clearUndoRedoOperations()
     m_page->send(Messages::WebPageProxy::ClearAllEditCommands());
 }
 
-bool WebEditorClient::canCopyCut(Frame*, bool defaultValue) const
+bool WebEditorClient::canCopyCut(LocalFrame*, bool defaultValue) const
 {
     return defaultValue;
 }
 
-bool WebEditorClient::canPaste(Frame*, bool defaultValue) const
+bool WebEditorClient::canPaste(LocalFrame*, bool defaultValue) const
 {
     return defaultValue;
 }
@@ -506,9 +507,9 @@ void WebEditorClient::textWillBeDeletedInTextField(Element& element)
 
 bool WebEditorClient::shouldEraseMarkersAfterChangeSelection(WebCore::TextCheckingType type) const
 {
-    // This prevents erasing spelling markers on OS X Lion or later to match AppKit on these Mac OS X versions.
+    // This prevents erasing spelling and grammar markers to match AppKit.
 #if PLATFORM(COCOA)
-    return type != TextCheckingType::Spelling;
+    return !(type == TextCheckingType::Spelling || type == TextCheckingType::Grammar);
 #else
     UNUSED_PARAM(type);
     return true;

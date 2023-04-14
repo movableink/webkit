@@ -89,7 +89,6 @@ namespace JSC {
     macro(starNamespace) \
     macro(keys) \
     macro(values) \
-    macro(get) \
     macro(set) \
     macro(clear) \
     macro(context) \
@@ -167,6 +166,7 @@ namespace JSC {
     macro(regExpProtoSourceGetter) \
     macro(regExpProtoStickyGetter) \
     macro(regExpProtoUnicodeGetter) \
+    macro(regExpProtoUnicodeSetsGetter) \
     macro(regExpPrototypeSymbolMatch) \
     macro(regExpPrototypeSymbolReplace) \
     macro(regExpSearchFast) \
@@ -181,9 +181,10 @@ namespace JSC {
     macro(stringIndexOfInternal) \
     macro(stringSplitFast) \
     macro(stringSubstring) \
-    macro(makeBoundFunction) \
-    macro(hasOwnLengthProperty) \
+    macro(handleNegativeProxyHasTrapResult) \
     macro(handleProxyGetTrapResult) \
+    macro(handleProxySetTrapResultSloppy) \
+    macro(handleProxySetTrapResultStrict) \
     macro(importModule) \
     macro(copyDataProperties) \
     macro(meta) \

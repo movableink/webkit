@@ -74,10 +74,6 @@ SOFT_LINK_CLASS_FOR_HEADER(PAL, AVURLAsset)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, AVDelegatingPlaybackCoordinator)
 #endif
 
-#if HAVE(AVSTREAMSESSION) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
-SOFT_LINK_CLASS_FOR_HEADER(PAL, AVStreamSession)
-#endif
-
 #if PLATFORM(IOS_FAMILY)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, AVAudioSession)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, AVPersistableContentKeyRequest)
@@ -155,8 +151,6 @@ SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVCaptureDeviceWasDisconnectedN
 #define AVCaptureDeviceWasDisconnectedNotification PAL::get_AVFoundation_AVCaptureDeviceWasDisconnectedNotification()
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVPlayerItemDidPlayToEndTimeNotification, NSString *)
 #define AVPlayerItemDidPlayToEndTimeNotification PAL::get_AVFoundation_AVPlayerItemDidPlayToEndTimeNotification()
-SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVStreamSessionContentProtectionSessionIdentifierChangedNotification, NSString *)
-#define AVStreamSessionContentProtectionSessionIdentifierChangedNotification PAL::get_AVFoundation_AVStreamSessionContentProtectionSessionIdentifierChangedNotification()
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVSampleBufferDisplayLayerFailedToDecodeNotification, NSString*)
 #define AVSampleBufferDisplayLayerFailedToDecodeNotification PAL::get_AVFoundation_AVSampleBufferDisplayLayerFailedToDecodeNotification()
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVSampleBufferDisplayLayerFailedToDecodeNotificationErrorKey, NSString*)
@@ -332,13 +326,13 @@ SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVAudioSessionRouteChangeReason
 #endif // PLATFORM(IOS_FAMILY)
 
 #if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
-SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVCaptureDeviceTypeBuiltInWideAngleCamera, NSString *)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, AVFoundation, AVCaptureDeviceTypeBuiltInWideAngleCamera, NSString *)
 #define AVCaptureDeviceTypeBuiltInWideAngleCamera PAL::get_AVFoundation_AVCaptureDeviceTypeBuiltInWideAngleCamera()
-SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVCaptureDeviceTypeBuiltInTelephotoCamera, NSString *)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, AVFoundation, AVCaptureDeviceTypeBuiltInTelephotoCamera, NSString *)
 #define AVCaptureDeviceTypeBuiltInTelephotoCamera PAL::get_AVFoundation_AVCaptureDeviceTypeBuiltInTelephotoCamera()
-SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVCaptureDeviceTypeBuiltInUltraWideCamera, NSString *)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, AVFoundation, AVCaptureDeviceTypeBuiltInUltraWideCamera, NSString *)
 #define AVCaptureDeviceTypeBuiltInUltraWideCamera PAL::get_AVFoundation_AVCaptureDeviceTypeBuiltInUltraWideCamera()
-SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVCaptureDeviceTypeBuiltInDualCamera, NSString *)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, AVFoundation, AVCaptureDeviceTypeBuiltInDualCamera, NSString *)
 #define AVCaptureDeviceTypeBuiltInDualCamera PAL::get_AVFoundation_AVCaptureDeviceTypeBuiltInDualCamera()
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, AVFoundation, AVCaptureDeviceTypeBuiltInDualWideCamera, NSString *)
 #define AVCaptureDeviceTypeBuiltInDualWideCamera PAL::get_AVFoundation_AVCaptureDeviceTypeBuiltInDualWideCamera()

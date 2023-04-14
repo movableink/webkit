@@ -68,7 +68,13 @@ public:
     enum class ShouldStartProcessThrottlerActivity : bool { No, Yes };
     using AsyncReplyID = IPC::Connection::AsyncReplyID;
     template<typename T, typename C> AsyncReplyID sendWithAsyncReply(T&&, C&&, uint64_t destinationID = 0, OptionSet<IPC::SendOption> = { }, ShouldStartProcessThrottlerActivity = ShouldStartProcessThrottlerActivity::Yes);
-    
+
+    template<typename T, typename C, typename U>
+    AsyncReplyID sendWithAsyncReply(T&& message, C&& completionHandler, ObjectIdentifier<U> destinationID, OptionSet<IPC::SendOption> sendOptions = { }, ShouldStartProcessThrottlerActivity shouldStartProcessThrottlerActivity = ShouldStartProcessThrottlerActivity::Yes)
+    {
+        return sendWithAsyncReply(std::forward<T>(message), std::forward<C>(completionHandler), destinationID.toUInt64(), sendOptions, shouldStartProcessThrottlerActivity);
+    }
+
     template<typename T, typename U>
     bool send(T&& message, ObjectIdentifier<U> destinationID, OptionSet<IPC::SendOption> sendOptions = { })
     {
@@ -213,6 +219,7 @@ private:
     MonotonicTime m_processStart;
 #if PLATFORM(MAC) && USE(RUNNINGBOARD)
     std::unique_ptr<ProcessThrottler::ForegroundActivity> m_lifetimeActivity;
+    RefPtr<ProcessAssertion> m_boostedJetsamAssertion;
 #endif
 };
 

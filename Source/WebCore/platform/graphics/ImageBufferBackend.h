@@ -106,27 +106,24 @@ public:
     static size_t calculateExternalMemoryCost(const Parameters&) { return 0; }
     WEBCORE_EXPORT static AffineTransform calculateBaseTransform(const Parameters&, bool originAtBottomLeftCorner);
 
-    virtual GraphicsContext& context() const = 0;
+    virtual GraphicsContext& context() = 0;
     virtual void flushContext() { }
 
     virtual IntSize backendSize() const { return { }; }
 
     virtual void finalizeDrawIntoContext(GraphicsContext&) { }
-    virtual RefPtr<NativeImage> copyNativeImage(BackingStoreCopy) const = 0;
+    virtual RefPtr<NativeImage> copyNativeImage(BackingStoreCopy) = 0;
 
-    WEBCORE_EXPORT virtual RefPtr<NativeImage> copyNativeImageForDrawing(BackingStoreCopy copyBehavior) const;
+    WEBCORE_EXPORT virtual RefPtr<NativeImage> copyNativeImageForDrawing(GraphicsContext& destination);
     WEBCORE_EXPORT virtual RefPtr<NativeImage> sinkIntoNativeImage();
-
-    virtual void clipToMask(GraphicsContext&, const FloatRect&) { }
 
     WEBCORE_EXPORT void convertToLuminanceMask();
     virtual void transformToColorSpace(const DestinationColorSpace&) { }
 
-    virtual RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect&, const ImageBufferAllocator& = ImageBufferAllocator()) const = 0;
+    virtual RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect&, const ImageBufferAllocator& = ImageBufferAllocator()) = 0;
     virtual void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) = 0;
 
-    virtual PlatformLayer* platformLayer() const { return nullptr; }
-    virtual bool copyToPlatformTexture(GraphicsContextGL&, GCGLenum, PlatformGLObject, GCGLenum, bool, bool) const { return false; }
+    virtual bool copyToPlatformTexture(GraphicsContextGL&, GCGLenum, PlatformGLObject, GCGLenum, bool, bool) { return false; }
 
 #if USE(CAIRO)
     virtual RefPtr<cairo_surface_t> createCairoSurface() { return nullptr; }
@@ -145,8 +142,6 @@ public:
 
     virtual std::unique_ptr<ThreadSafeImageBufferFlusher> createFlusher() { return nullptr; }
 
-    void applyBaseTransformToContext() const;
-
     static constexpr bool isOriginAtBottomLeftCorner = false;
     virtual bool originAtBottomLeftCorner() const { return isOriginAtBottomLeftCorner; }
 
@@ -158,8 +153,6 @@ public:
     virtual ImageBufferBackendSharing* toBackendSharing() { return nullptr; }
 
     virtual void setOwnershipIdentity(const ProcessIdentity&) { }
-
-    virtual void clearContents() { ASSERT_NOT_REACHED(); }
 
     const Parameters& parameters() { return m_parameters; }
 
@@ -186,7 +179,7 @@ protected:
     IntRect logicalRect() const { return IntRect(IntPoint::zero(), logicalSize()); };
     IntRect backendRect() const { return IntRect(IntPoint::zero(), backendSize()); };
 
-    WEBCORE_EXPORT RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data, const ImageBufferAllocator&) const;
+    WEBCORE_EXPORT RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data, const ImageBufferAllocator&);
     WEBCORE_EXPORT void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* data);
 
     Parameters m_parameters;

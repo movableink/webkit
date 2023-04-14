@@ -175,7 +175,6 @@ set(WTF_PUBLIC_HEADERS
     NotFound.h
     NumberOfCores.h
     OSAllocator.h
-    OSLogPrintStream.h
     OSObjectPtr.h
     OSRandomSource.h
     ObjCRuntimeExtras.h
@@ -328,6 +327,7 @@ set(WTF_PUBLIC_HEADERS
     VectorHash.h
     VectorTraits.h
     WTFConfig.h
+    WTFProcess.h
     WTFSemaphore.h
     WallTime.h
     WeakHashCountedSet.h
@@ -432,6 +432,7 @@ set(WTF_SOURCES
     AutomaticThread.cpp
     Bag.cpp
     BitVector.cpp
+    BloomFilter.cpp
     CPUTime.cpp
     ClockType.cpp
     CodePtr.cpp
@@ -476,7 +477,6 @@ set(WTF_SOURCES
     MetaAllocator.cpp
     MonotonicTime.cpp
     NumberOfCores.cpp
-    OSLogPrintStream.cpp
     OSRandomSource.cpp
     ObjectIdentifier.cpp
     PageBlock.cpp
@@ -517,7 +517,9 @@ set(WTF_SOURCES
     Vector.cpp
     WTFAssertions.cpp
     WTFConfig.cpp
+    WTFProcess.cpp
     WallTime.cpp
+    WeakPtr.cpp
     WeakRandomNumber.cpp
     WordLock.cpp
     WorkQueue.cpp

@@ -41,6 +41,7 @@
 #include "LibWebRTCCodecsProxyMessages.h"
 #include "Logging.h"
 #include "MediaOverridesForTesting.h"
+#include "MessageSenderInlines.h"
 #include "RemoteAudioHardwareListenerProxy.h"
 #include "RemoteAudioMediaStreamTrackRendererInternalUnitManager.h"
 #include "RemoteAudioMediaStreamTrackRendererInternalUnitManagerMessages.h"
@@ -67,6 +68,7 @@
 #include "WebGPUObjectHeap.h"
 #include "WebProcessMessages.h"
 #include <WebCore/LogInitialization.h>
+#include <WebCore/MediaPlayer.h>
 #include <WebCore/MockRealtimeMediaSourceCenter.h>
 #include <WebCore/NowPlayingManager.h>
 #include <wtf/Language.h>
@@ -88,6 +90,10 @@
 #include "RemoteCDMInstanceProxyMessages.h"
 #include "RemoteCDMInstanceSessionProxyMessages.h"
 #include "RemoteCDMProxyMessages.h"
+#endif
+
+#if ENABLE(MEDIA_SOURCE)
+#include <WebCore/MediaStrategy.h>
 #endif
 
 // FIXME: <https://bugs.webkit.org/show_bug.cgi?id=211085>
@@ -263,6 +269,7 @@ GPUConnectionToWebProcess::GPUConnectionToWebProcess(GPUProcess& gpuProcess, Web
     , m_presentingApplicationAuditToken(WTFMove(parameters.presentingApplicationAuditToken))
 #endif
     , m_isLockdownModeEnabled(parameters.isLockdownModeEnabled)
+    , m_allowTestOnlyIPC(parameters.allowTestOnlyIPC)
 #if ENABLE(ROUTING_ARBITRATION) && HAVE(AVAUDIO_ROUTING_ARBITER)
     , m_routingArbitrator(LocalAudioSessionRoutingArbitrator::create(*this))
 #endif
@@ -638,6 +645,14 @@ void GPUConnectionToWebProcess::createRemoteGPU(WebGPUIdentifier identifier, Ren
     ASSERT_UNUSED(addResult, addResult.isNewEntry);
 }
 
+void GPUConnectionToWebProcess::releaseRemoteGPU(WebGPUIdentifier identifier)
+{
+    bool result = m_remoteGPUMap.remove(identifier);
+    ASSERT_UNUSED(result, result);
+    if (m_remoteGPUMap.isEmpty())
+        gpuProcess().tryExitIfUnusedAndUnderMemoryPressure();
+}
+
 void GPUConnectionToWebProcess::clearNowPlayingInfo()
 {
     m_isActiveNowPlayingProcess = false;
@@ -961,7 +976,7 @@ const String& GPUConnectionToWebProcess::mediaKeysStorageDirectory() const
 #endif
 
 #if ENABLE(MEDIA_STREAM)
-void GPUConnectionToWebProcess::setOrientationForMediaCapture(uint64_t orientation)
+void GPUConnectionToWebProcess::setOrientationForMediaCapture(IntDegrees orientation)
 {
 // FIXME: <https://bugs.webkit.org/show_bug.cgi?id=211085>
 #if PLATFORM(COCOA)
@@ -1034,6 +1049,16 @@ void GPUConnectionToWebProcess::dispatchDisplayWasReconfigured()
 void GPUConnectionToWebProcess::enableVP9Decoders(bool shouldEnableVP8Decoder, bool shouldEnableVP9Decoder, bool shouldEnableVP9SWDecoder)
 {
     m_gpuProcess->enableVP9Decoders(shouldEnableVP8Decoder, shouldEnableVP9Decoder, shouldEnableVP9SWDecoder);
+}
+#endif
+
+#if ENABLE(MEDIA_SOURCE)
+void GPUConnectionToWebProcess::enableMockMediaSource()
+{
+    if (m_mockMediaSourceEnabled)
+        return;
+    MediaStrategy::addMockMediaSourceEngine();
+    m_mockMediaSourceEnabled = true;
 }
 #endif
 

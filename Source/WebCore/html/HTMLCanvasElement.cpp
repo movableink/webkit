@@ -38,7 +38,6 @@
 #include "Document.h"
 #include "ElementInlines.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameLoaderClient.h"
 #include "GPU.h"
 #include "GPUBasedCanvasRenderingContext.h"
@@ -55,7 +54,8 @@
 #include "InMemoryDisplayList.h"
 #include "InspectorInstrumentation.h"
 #include "JSDOMConvertDictionary.h"
-#include "JSNodeCustom.h"
+#include "JSNodeCustomInlines.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "Navigator.h"
@@ -90,7 +90,7 @@
 #endif
 
 #if ENABLE(WEBXR)
-#include "DOMWindow.h"
+#include "LocalDOMWindow.h"
 #include "Navigator.h"
 #include "NavigatorWebXR.h"
 #include "WebXRSystem.h"
@@ -180,7 +180,7 @@ void HTMLCanvasElement::parseAttribute(const QualifiedName& name, const AtomStri
 
 RenderPtr<RenderElement> HTMLCanvasElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {
-    RefPtr<Frame> frame = document().frame();
+    RefPtr frame { document().frame() };
     if (frame && frame->script().canExecuteScripts(NotAboutToExecuteScript))
         return createRenderer<RenderHTMLCanvas>(*this, WTFMove(style));
     return HTMLElement::createElementRenderer(WTFMove(style), insertionPosition);
@@ -309,7 +309,7 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
     if (isWebGPUType(contextId)) {
         GPU* gpu = nullptr;
         if (auto* window = document().domWindow()) {
-            // FIXME: Should we be instead getting this through jsDynamicCast<JSDOMWindow*>(state)->wrapped().navigator().gpu()?
+            // FIXME: Should we be instead getting this through jsDynamicCast<JSLocalDOMWindow*>(state)->wrapped().navigator().gpu()?
             gpu = window->navigator().gpu();
         }
         auto context = createContextWebGPU(contextId, gpu);
@@ -384,7 +384,7 @@ CanvasRenderingContext2D* HTMLCanvasElement::getContext2d(const String& type, Ca
 
 static bool requiresAcceleratedCompositingForWebGL()
 {
-#if PLATFORM(GTK) || PLATFORM(QT) || PLATFORM(WIN_CAIRO)
+#if PLATFORM(GTK) || PLATFORM(WIN) || PLATFORM(QT)
     return false;
 #else
     return true;
@@ -657,7 +657,7 @@ static bool imageDrawingRequiresGuardAgainstUseByPendingLayerTransaction(Graphic
 }
 #endif
 
-void HTMLCanvasElement::paint(GraphicsContext& context, const LayoutRect& r)
+void HTMLCanvasElement::paint(GraphicsContext& context, const LayoutRect& r, CompositeOperator op)
 {
     if (m_context)
         m_context->clearAccumulatedDirtyRect();
@@ -676,7 +676,7 @@ void HTMLCanvasElement::paint(GraphicsContext& context, const LayoutRect& r)
         if (shouldPaint) {
             if (hasCreatedImageBuffer()) {
                 if (ImageBuffer* imageBuffer = buffer()) {
-                    context.drawImageBuffer(*imageBuffer, snappedIntRect(r));
+                    context.drawImageBuffer(*imageBuffer, snappedIntRect(r), op);
 #if PLATFORM(COCOA)
                     m_mustGuardAgainstUseByPendingLayerTransaction |= imageDrawingRequiresGuardAgainstUseByPendingLayerTransaction(context, *imageBuffer);
 #endif
@@ -818,6 +818,9 @@ RefPtr<ImageData> HTMLCanvasElement::getImageData()
     auto pixelBuffer = downcast<WebGLRenderingContextBase>(*m_context).paintRenderingResultsToPixelBuffer();
     if (!is<ByteArrayPixelBuffer>(pixelBuffer))
         return nullptr;
+
+    if (pixelBuffer)
+        postProcessPixelBuffer(*pixelBuffer, false, { });
 
     return ImageData::create(static_reference_cast<ByteArrayPixelBuffer>(pixelBuffer.releaseNonNull()));
 #else
@@ -1064,6 +1067,16 @@ void HTMLCanvasElement::prepareForDisplay()
 bool HTMLCanvasElement::isControlledByOffscreen() const
 {
     return m_context && m_context->isPlaceholder();
+}
+
+void HTMLCanvasElement::queueTaskKeepingObjectAlive(TaskSource source, Function<void()>&& task)
+{
+    ActiveDOMObject::queueTaskKeepingObjectAlive(*this, source, WTFMove(task));
+}
+
+void HTMLCanvasElement::dispatchEvent(Event& event)
+{
+    Node::dispatchEvent(event);
 }
 
 WebCoreOpaqueRoot root(HTMLCanvasElement* canvas)

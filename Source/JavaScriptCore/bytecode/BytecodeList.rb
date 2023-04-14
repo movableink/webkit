@@ -1194,11 +1194,6 @@ op :create_cloned_arguments,
         dst: VirtualRegister,
     }
 
-op :create_arguments_butterfly,
-    args: {
-        dst: VirtualRegister,
-    }
-
 op :new_promise,
     args: {
         dst: VirtualRegister,
@@ -1883,7 +1878,7 @@ op :array_new,
         size: VirtualRegister,
         value: VirtualRegister,
         typeIndex: unsigned,
-        useDefault: bool,
+        arrayNewKind: uint8_t,
     }
 
 op :array_get,
@@ -1929,6 +1924,12 @@ op :struct_set,
         structReference: VirtualRegister,
         fieldIndex: unsigned,
         value: VirtualRegister,
+    }
+
+op :extern_externalize,
+    args: {
+        dst: VirtualRegister,
+        reference: VirtualRegister,
     }
 
 end_section :Wasm

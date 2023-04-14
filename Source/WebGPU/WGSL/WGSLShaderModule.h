@@ -29,6 +29,7 @@
 #include "ASTFunction.h"
 #include "ASTStructure.h"
 #include "ASTVariable.h"
+#include "TypeStore.h"
 #include "WGSL.h"
 
 #include <wtf/text/StringHash.h>
@@ -54,6 +55,78 @@ public:
     AST::Function::List& functions() { return m_functions; }
     AST::Structure::List& structures() { return m_structures; }
     AST::Variable::List& variables() { return m_variables; }
+    TypeStore& types() { return m_types; }
+
+    template<typename T>
+    std::enable_if_t<std::is_base_of_v<AST::Node, T>, void> replace(T* current, T&& replacement)
+    {
+        RELEASE_ASSERT(current->kind() == replacement.kind());
+        std::swap(*current, replacement);
+        m_replacements.append([current, replacement = WTFMove(replacement)]() mutable {
+            std::exchange(*current, WTFMove(replacement));
+        });
+    }
+
+    template<typename T>
+    std::enable_if_t<std::is_fundamental_v<T>, void> replace(T* current, T&& replacement)
+    {
+        std::swap(*current, replacement);
+        m_replacements.append([current, replacement = WTFMove(replacement)]() mutable {
+            std::exchange(*current, WTFMove(replacement));
+        });
+    }
+
+    template<typename CurrentType, typename ReplacementType>
+    void replace(CurrentType* current, ReplacementType&& replacement)
+    {
+        static_assert(sizeof(ReplacementType) <= sizeof(CurrentType));
+
+        m_replacements.append([current, currentCopy = *current]() mutable {
+            bitwise_cast<ReplacementType*>(current)->~ReplacementType();
+            new (current) CurrentType(WTFMove(currentCopy));
+        });
+
+        current->~CurrentType();
+        new (current) ReplacementType(WTFMove(replacement));
+    }
+
+    template<typename T, size_t size>
+    T takeLast(const Vector<T, size>& constVector)
+    {
+        auto& vector = const_cast<Vector<T, size>&>(constVector);
+        auto last = vector.takeLast();
+        m_replacements.append([&vector, last]() mutable {
+            vector.append(WTFMove(last));
+        });
+        return last;
+    }
+
+    template<typename T, size_t size>
+    void append(const Vector<T, size>& constVector, T&& value)
+    {
+        auto& vector = const_cast<Vector<T, size>&>(constVector);
+        vector.append(std::forward<T>(value));
+        m_replacements.append([&vector]() {
+            vector.takeLast();
+        });
+    }
+
+    template<typename T, size_t size>
+    void insert(const Vector<T, size>& constVector, size_t position, T&& value)
+    {
+        auto& vector = const_cast<Vector<T, size>&>(constVector);
+        vector.insert(position, std::forward<T>(value));
+        m_replacements.append([&vector, position]() {
+            vector.remove(position);
+        });
+    }
+
+    void revertReplacements()
+    {
+        for (int i = m_replacements.size() - 1; i >= 0; --i)
+            m_replacements[i]();
+        m_replacements.clear();
+    }
 
 private:
     String m_source;
@@ -62,6 +135,8 @@ private:
     AST::Function::List m_functions;
     AST::Structure::List m_structures;
     AST::Variable::List m_variables;
+    TypeStore m_types;
+    Vector<std::function<void()>> m_replacements;
 };
 
 } // namespace WGSL

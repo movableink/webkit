@@ -159,6 +159,7 @@ public:
         , m_ftlState(state)
         , m_out(state)
         , m_proc(*state.proc)
+        , m_tupleValues(m_graph.m_tupleData.size())
         , m_availabilityCalculator(m_graph)
         , m_state(state.graph)
         , m_interpreter(state.graph, m_state)
@@ -283,7 +284,7 @@ public:
         CallSiteIndex callSiteIndex = callSiteIndexForCodeOrigin(m_ftlState, CodeOrigin(BytecodeIndex(0)));
         stackOverflowHandler->appendSomeRegister(m_callFrame);
         stackOverflowHandler->appendSomeRegister(m_vmValue);
-        stackOverflowHandler->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        stackOverflowHandler->clobber(RegisterSetBuilder::macroClobberedGPRs());
         stackOverflowHandler->numGPScratchRegisters = 1;
         stackOverflowHandler->setGenerator(
             [=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
@@ -736,6 +737,9 @@ private:
         case DFG::Phi:
             compilePhi();
             break;
+        case ExtractFromTuple:
+            compileExtractFromTuple();
+            break;
         case JSConstant:
             break;
         case DoubleConstant:
@@ -1118,6 +1122,9 @@ private:
         case NewAsyncFunction:
             compileNewFunction();
             break;
+        case NewBoundFunction:
+            compileNewBoundFunction();
+            break;
         case CreateDirectArguments:
             compileCreateDirectArguments();
             break;
@@ -1126,9 +1133,6 @@ private:
             break;
         case CreateClonedArguments:
             compileCreateClonedArguments();
-            break;
-        case CreateArgumentsButterfly:
-            compileCreateArgumentsButterfly();
             break;
         case ObjectAssign:
             compileObjectAssign();
@@ -1231,6 +1235,9 @@ private:
             break;
         case FunctionToString:
             compileFunctionToString();
+            break;
+        case FunctionBind:
+            compileFunctionBind();
             break;
         case ToPrimitive:
             compileToPrimitive();
@@ -1568,12 +1575,6 @@ private:
             break;
         case EnumeratorNextUpdateIndexAndMode:
             compileEnumeratorNextUpdateIndexAndMode();
-            break;
-        case EnumeratorNextExtractIndex:
-            compileEnumeratorNextExtractIndex();
-            break;
-        case EnumeratorNextExtractMode:
-            compileEnumeratorNextExtractMode();
             break;
         case EnumeratorNextUpdatePropertyName:
             compileEnumeratorNextUpdatePropertyName();
@@ -2438,7 +2439,7 @@ private:
         patchpoint->append(m_numberTag, ValueRep::lateReg(GPRInfo::numberTagRegister));
         RefPtr<PatchpointExceptionHandle> exceptionHandle = preparePatchpointForExceptions(patchpoint);
         patchpoint->numGPScratchRegisters = 1;
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         State* state = &m_ftlState;
         CodeOrigin semanticNodeOrigin = node->origin.semantic;
         patchpoint->setGenerator(
@@ -2546,7 +2547,7 @@ private:
             preparePatchpointForExceptions(patchpoint);
         patchpoint->numGPScratchRegisters = 1;
         patchpoint->numFPScratchRegisters = 2;
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         State* state = &m_ftlState;
         CodeOrigin semanticNodeOrigin = node->origin.semantic;
         patchpoint->setGenerator(
@@ -4066,7 +4067,7 @@ private:
         patchpoint->appendSomeRegister(property);
         patchpoint->append(m_notCellMask, ValueRep::lateReg(GPRInfo::notCellMaskRegister));
         patchpoint->append(m_numberTag, ValueRep::lateReg(GPRInfo::numberTagRegister));
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->numGPScratchRegisters = Options::useDataICInFTL() ? 1 : 0;
 
         RefPtr<PatchpointExceptionHandle> exceptionHandle = preparePatchpointForExceptions(patchpoint);
@@ -4153,7 +4154,7 @@ private:
         patchpoint->appendSomeRegister(property);
         patchpoint->append(m_notCellMask, ValueRep::lateReg(GPRInfo::notCellMaskRegister));
         patchpoint->append(m_numberTag, ValueRep::lateReg(GPRInfo::numberTagRegister));
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->numGPScratchRegisters = Options::useDataICInFTL() ? 1 : 0;
 
         RefPtr<PatchpointExceptionHandle> exceptionHandle = preparePatchpointForExceptions(patchpoint);
@@ -4301,7 +4302,7 @@ private:
         patchpoint->appendSomeRegister(brand);
         patchpoint->append(m_notCellMask, ValueRep::lateReg(GPRInfo::notCellMaskRegister));
         patchpoint->append(m_numberTag, ValueRep::lateReg(GPRInfo::numberTagRegister));
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->numGPScratchRegisters = Options::useDataICInFTL() ? 1 : 0;
 
         RefPtr<PatchpointExceptionHandle> exceptionHandle = preparePatchpointForExceptions(patchpoint);
@@ -4462,7 +4463,7 @@ private:
         patchpoint->appendSomeRegister(value);
         patchpoint->append(m_notCellMask, ValueRep::lateReg(GPRInfo::notCellMaskRegister));
         patchpoint->append(m_numberTag, ValueRep::lateReg(GPRInfo::numberTagRegister));
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->numGPScratchRegisters = Options::useDataICInFTL() ? 1 : 0;
 
         RefPtr<PatchpointExceptionHandle> exceptionHandle = preparePatchpointForExceptions(patchpoint);
@@ -4810,7 +4811,7 @@ private:
         patchpoint->appendSomeRegister(value);
         patchpoint->append(m_notCellMask, ValueRep::reg(GPRInfo::notCellMaskRegister));
         patchpoint->append(m_numberTag, ValueRep::reg(GPRInfo::numberTagRegister));
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->numGPScratchRegisters = Options::useDataICInFTL() ? 3 : 0;
 
         // FIXME: If this is a PutByIdFlush, we might want to late-clobber volatile registers.
@@ -5011,7 +5012,7 @@ private:
             PatchpointValue* patchpoint = m_out.patchpoint(Int32);
 #endif
             patchpoint->appendSomeRegister(base);
-            patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+            patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
             patchpoint->numGPScratchRegisters = 2;
 
             patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
@@ -5206,7 +5207,7 @@ IGNORE_CLANG_WARNINGS_END
             PatchpointValue* patchpoint = m_out.patchpoint(Int32);
 #endif
             patchpoint->appendSomeRegister(base);
-            patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+            patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
             patchpoint->numGPScratchRegisters = 2;
 
             patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
@@ -5649,7 +5650,7 @@ IGNORE_CLANG_WARNINGS_END
             patchpoint->appendSomeRegister(property);
             patchpoint->append(m_notCellMask, ValueRep::lateReg(GPRInfo::notCellMaskRegister));
             patchpoint->append(m_numberTag, ValueRep::lateReg(GPRInfo::numberTagRegister));
-            patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+            patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
             patchpoint->numGPScratchRegisters = Options::useDataICInFTL() ? 1 : 0;
 
             RefPtr<PatchpointExceptionHandle> exceptionHandle = preparePatchpointForExceptions(patchpoint);
@@ -6005,7 +6006,7 @@ IGNORE_CLANG_WARNINGS_END
             patchpoint->appendSomeRegister(value);
             patchpoint->append(m_notCellMask, ValueRep::lateReg(GPRInfo::notCellMaskRegister));
             patchpoint->append(m_numberTag, ValueRep::lateReg(GPRInfo::numberTagRegister));
-            patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+            patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
             patchpoint->numGPScratchRegisters = Options::useDataICInFTL() ? 1 : 0;
 
             RefPtr<PatchpointExceptionHandle> exceptionHandle = preparePatchpointForExceptions(patchpoint);
@@ -6379,7 +6380,7 @@ IGNORE_CLANG_WARNINGS_END
         }
         patchpoint->append(m_notCellMask, ValueRep::lateReg(GPRInfo::notCellMaskRegister));
         patchpoint->append(m_numberTag, ValueRep::lateReg(GPRInfo::numberTagRegister));
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->numGPScratchRegisters = Options::useDataICInFTL() ? 1 : 0;
 
         RefPtr<PatchpointExceptionHandle> exceptionHandle =
@@ -7292,7 +7293,63 @@ IGNORE_CLANG_WARNINGS_END
         m_out.appendTo(continuation, lastNext);
         setJSValue(m_out.phi(pointerType(), fastResult, slowResult));
     }
-    
+
+    void compileNewBoundFunction()
+    {
+        JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
+
+        LValue target = lowObject(m_graph.child(m_node, 0));
+        LValue thisValue = lowJSValue(m_graph.child(m_node, 1));
+        LValue arg0 = lowJSValue(m_graph.child(m_node, 2));
+        LValue arg1 = lowJSValue(m_graph.child(m_node, 3));
+        LValue arg2 = lowJSValue(m_graph.child(m_node, 4));
+
+        NativeExecutable* executable = m_node->castOperand<NativeExecutable*>();
+        RegisteredStructure structure = m_graph.registerStructure(globalObject->boundFunctionStructure());
+
+        LBasicBlock slowPath = m_out.newBlock();
+        LBasicBlock continuation = m_out.newBlock();
+
+        LBasicBlock lastNext = m_out.insertNewBlocksBefore(slowPath);
+
+        LValue fastObject = allocateObject<JSBoundFunction>(structure, m_out.intPtrZero, slowPath);
+        unsigned numberOfBoundArguments = m_node->numberOfBoundArguments();
+
+        // We don't need memory barriers since we just fast-created the function, so it
+        // must be young.
+        m_out.storePtr(weakPointer(globalObject), fastObject, m_heaps.JSFunction_scope);
+        m_out.storePtr(weakPointer(executable), fastObject, m_heaps.JSFunction_executableOrRareData);
+        m_out.storePtr(target, fastObject, m_heaps.JSBoundFunction_targetFunction);
+        m_out.store64(thisValue, fastObject, m_heaps.JSBoundFunction_boundThis);
+        m_out.store64(arg0, fastObject, m_heaps.JSBoundFunction_boundArg0);
+        m_out.store64(arg1, fastObject, m_heaps.JSBoundFunction_boundArg1);
+        m_out.store64(arg2, fastObject, m_heaps.JSBoundFunction_boundArg2);
+        m_out.storePtr(m_out.intPtrZero, fastObject, m_heaps.JSBoundFunction_nameMayBeNull);
+        m_out.store64(m_out.constInt64(bitwise_cast<uint64_t>(PNaN)), fastObject, m_heaps.JSBoundFunction_length);
+        m_out.store32(m_out.constInt32(numberOfBoundArguments), fastObject, m_heaps.JSBoundFunction_boundArgsLength);
+        m_out.store32As8(m_out.constInt32(static_cast<uint32_t>(TriState::Indeterminate)), fastObject, m_heaps.JSBoundFunction_canConstruct);
+        mutatorFence();
+
+        ValueFromBlock fastResult = m_out.anchor(fastObject);
+        m_out.jump(continuation);
+
+        m_out.appendTo(slowPath, continuation);
+
+        VM& vm = this->vm();
+        LValue callResult = lazySlowPath(
+            [=, &vm] (const Vector<Location>& locations) -> RefPtr<LazySlowPath::Generator> {
+                return createLazyCallGenerator(vm, operationNewBoundFunction, locations[0].directGPR(),
+                    CCallHelpers::TrustedImmPtr(globalObject), locations[1].directGPR(),
+                    locations[2].directGPR(), locations[3].directGPR(), locations[4].directGPR(), locations[5].directGPR());
+            },
+            target, thisValue, arg0, arg1, arg2);
+        ValueFromBlock slowResult = m_out.anchor(callResult);
+        m_out.jump(continuation);
+
+        m_out.appendTo(continuation, lastNext);
+        setJSValue(m_out.phi(pointerType(), fastResult, slowResult));
+    }
+
     void compileCreateDirectArguments()
     {
         // FIXME: A more effective way of dealing with the argument count and callee is to have
@@ -7423,13 +7480,6 @@ IGNORE_CLANG_WARNINGS_END
                 m_graph.globalObjectFor(m_origin.semantic)->clonedArgumentsStructure()),
             getArgumentsStart(), getArgumentsLength().value, getCurrentCallee());
         
-        setJSValue(result);
-    }
-
-    void compileCreateArgumentsButterfly()
-    {
-        JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
-        LValue result = vmCall(Int64, operationCreateArgumentsButterfly, weakPointer(globalObject), getArgumentsStart(), getArgumentsLength().value);
         setJSValue(result);
     }
 
@@ -8960,7 +9010,13 @@ IGNORE_CLANG_WARNINGS_END
         m_out.appendTo(continuation, lastNext);
         setJSValue(m_out.phi(pointerType(), fastResult, slowResult));
     }
-    
+
+    void compileFunctionBind()
+    {
+        JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
+        setJSValue(vmCall(pointerType(), operationFunctionBind, weakPointer(globalObject), lowObject(m_graph.child(m_node, 0)), lowJSValue(m_graph.child(m_node, 1)), lowJSValue(m_graph.child(m_node, 2)), lowJSValue(m_graph.child(m_node, 3)), lowJSValue(m_graph.child(m_node, 4))));
+    }
+
     void compileToPrimitive()
     {
         JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
@@ -10544,7 +10600,7 @@ IGNORE_CLANG_WARNINGS_END
         
         patchpoint->append(m_notCellMask, ValueRep::reg(GPRInfo::notCellMaskRegister));
         patchpoint->append(m_numberTag, ValueRep::reg(GPRInfo::numberTagRegister));
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->clobberLate(RegisterSetBuilder::registersToSaveForJSCall(RegisterSetBuilder::allScalarRegisters()));
         patchpoint->resultConstraints = { ValueRep::reg(GPRInfo::returnValueGPR) };
 
@@ -10656,7 +10712,7 @@ IGNORE_CLANG_WARNINGS_END
             patchpoint->append(m_numberTag, ValueRep::reg(GPRInfo::numberTagRegister));
         }
         
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         if (!isTail) {
             patchpoint->clobberLate(RegisterSetBuilder::registersToSaveForJSCall(RegisterSetBuilder::allScalarRegisters()));
             patchpoint->resultConstraints = { ValueRep::reg(GPRInfo::returnValueGPR) };
@@ -10823,7 +10879,7 @@ IGNORE_CLANG_WARNINGS_END
         patchpoint->append(m_numberTag, ValueRep::reg(GPRInfo::numberTagRegister));
 
         // Prevent any of the arguments from using the scratch register.
-        patchpoint->clobberEarly(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobberEarly(RegisterSetBuilder::macroClobberedGPRs());
         
         patchpoint->effects.terminal = true;
 
@@ -11030,7 +11086,7 @@ IGNORE_CLANG_WARNINGS_END
 
         RefPtr<PatchpointExceptionHandle> exceptionHandle = preparePatchpointForExceptions(patchpoint);
 
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->clobber(RegisterSetBuilder::registersToSaveForJSCall(RegisterSetBuilder::allScalarRegisters())); // No inputs will be in a volatile register.
         patchpoint->resultConstraints = { ValueRep::reg(GPRInfo::returnValueGPR) };
 
@@ -11311,7 +11367,7 @@ IGNORE_CLANG_WARNINGS_END
         patchpoint->append(m_notCellMask, ValueRep::reg(GPRInfo::notCellMaskRegister));
         patchpoint->append(m_numberTag, ValueRep::reg(GPRInfo::numberTagRegister));
 
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->clobberLate(RegisterSetBuilder::registersToSaveForJSCall(RegisterSetBuilder::allScalarRegisters()));
         patchpoint->resultConstraints = { ValueRep::reg(GPRInfo::returnValueGPR) };
 
@@ -11571,7 +11627,7 @@ IGNORE_CLANG_WARNINGS_END
         
         patchpoint->append(m_notCellMask, ValueRep::reg(GPRInfo::notCellMaskRegister));
         patchpoint->append(m_numberTag, ValueRep::reg(GPRInfo::numberTagRegister));
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->clobberLate(RegisterSetBuilder::registersToSaveForJSCall(RegisterSetBuilder::allScalarRegisters()));
         patchpoint->resultConstraints = { ValueRep::reg(GPRInfo::returnValueGPR) };
         
@@ -11668,7 +11724,7 @@ IGNORE_CLANG_WARNINGS_END
                 PatchpointValue* patchpoint = m_out.patchpoint(Int64);
                 patchpoint->numGPScratchRegisters = 2;
                 patchpoint->append(ConstrainedValue(argument, ValueRep::SomeLateRegister));
-                patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+                patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
                 patchpoint->setGenerator(
                     [=](CCallHelpers& jit, const StackmapGenerationParams& params) {
                         AllowMacroScratchRegisterUsage allowScratch(jit);
@@ -11770,7 +11826,7 @@ IGNORE_CLANG_WARNINGS_END
         }
         patchpoint->appendVector(arguments);
 
-        auto clobber = RegisterSetBuilder::macroClobberedRegisters();
+        auto clobber = RegisterSetBuilder::macroClobberedGPRs();
         if (!wasmBoundsCheckingSizeRegisterConfiguredAsInputContraints)
             clobber.add(GPRInfo::wasmBoundsCheckingSizeRegister, IgnoreVectors);
         if (!wasmBaseMemoryPointerConfiguredAsInputContraints)
@@ -11799,7 +11855,7 @@ IGNORE_CLANG_WARNINGS_END
 
                 constexpr GPRReg scratchGPR = GPRInfo::nonPreservedNonArgumentGPR0;
                 static_assert(noOverlap(GPRInfo::wasmBoundsCheckingSizeRegister, GPRInfo::wasmBaseMemoryPointer, scratchGPR));
-                ASSERT(!RegisterSetBuilder::macroClobberedRegisters().contains(scratchGPR, IgnoreVectors));
+                ASSERT(!RegisterSetBuilder::macroClobberedGPRs().contains(scratchGPR, IgnoreVectors));
                 if (!!jsInstance->instance().module().moduleInformation().memory) {
                     auto mode = jsInstance->memoryMode();
                     if (!(mode == MemoryMode::Signaling || (mode == MemoryMode::BoundsChecking && jsInstance->instance().memory()->sharingMode() == MemorySharingMode::Shared))) {
@@ -13410,7 +13466,7 @@ IGNORE_CLANG_WARNINGS_END
             patchpoint->appendSomeRegister(subscriptValue);
         patchpoint->append(m_notCellMask, ValueRep::lateReg(GPRInfo::notCellMaskRegister));
         patchpoint->append(m_numberTag, ValueRep::lateReg(GPRInfo::numberTagRegister));
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         if constexpr (type == AccessType::InById)
             patchpoint->numGPScratchRegisters = Options::useDataICInFTL() ? 2 : 0;
         else
@@ -13778,7 +13834,7 @@ IGNORE_CLANG_WARNINGS_END
         patchpoint->append(m_numberTag, ValueRep::lateReg(GPRInfo::numberTagRegister));
         patchpoint->numGPScratchRegisters = Options::useDataICInFTL() ? 1 : 0;
         patchpoint->resultConstraints = { ValueRep::SomeEarlyRegister };
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         
         RefPtr<PatchpointExceptionHandle> exceptionHandle =
             preparePatchpointForExceptions(patchpoint);
@@ -14169,7 +14225,8 @@ IGNORE_CLANG_WARNINGS_END
 
             m_out.appendTo(continuation);
             LValue finalIndex = m_out.phi(Int32, finalIncrementedIndex, finalPropertyIndex);
-            setJSValue(m_out.bitOr(m_out.zeroExt(finalIndex, Int64), m_out.constInt64(JSValue::NumberTag | static_cast<uint64_t>(JSPropertyNameEnumerator::IndexedMode) << 32)));
+            setTuple(0, finalIndex);
+            setTuple(1, m_out.constInt32(static_cast<uint32_t>(JSPropertyNameEnumerator::IndexedMode)));
             return;
         }
 
@@ -14192,27 +14249,47 @@ IGNORE_CLANG_WARNINGS_END
 
             m_out.appendTo(continuation);
             index = m_out.phi(Int32, initialIndex, incrementedIndex);
-            setJSValue(m_out.bitOr(m_out.zeroExt(index, Int64), m_out.constInt64(JSValue::DoubleEncodeOffset | static_cast<uint64_t>(JSPropertyNameEnumerator::OwnStructureMode) << 32)));
+            setTuple(0, index);
+            setTuple(1, m_out.constInt32(static_cast<uint32_t>(JSPropertyNameEnumerator::OwnStructureMode)));
             return;
         }
 
         LValue base = lowJSValue(baseEdge);
-        setJSValue(vmCall(Int64, operationEnumeratorNextUpdateIndexAndMode, weakPointer(globalObject), base, index, mode, enumerator));
+        LValue tuple = vmCall(registerPair(), operationEnumeratorNextUpdateIndexAndMode, weakPointer(globalObject), base, index, mode, enumerator);
+
+        setTuple(0, m_out.castToInt32(m_out.extract(tuple, 0)));
+        setTuple(1, m_out.castToInt32(m_out.extract(tuple, 1)));
     }
 
-    void compileEnumeratorNextExtractIndex()
+    void compileExtractFromTuple()
     {
-        LValue boxedPair = lowJSValue(m_node->child1());
+        auto& loweredNodeValue = m_tupleValues.at(m_node->tupleIndex());
+        ASSERT(isValid(loweredNodeValue));
+        LValue result = loweredNodeValue.value();
 
-        setInt32(m_out.castToInt32(boxedPair));
-    }
+        switch (m_graph.m_tupleData.at(m_node->tupleIndex()).resultFlags) {
+        case NodeResultJS:
+        case NodeResultNumber:
+            setJSValue(result);
+            break;
+        case NodeResultDouble:
+            setDouble(result);
+            break;
+        case NodeResultInt32:
+            setInt32(result);
+            break;
+        case NodeResultBoolean:
+            setBoolean(result);
+            break;
+        case NodeResultStorage:
+            setStorage(result);
+            break;
 
-    void compileEnumeratorNextExtractMode()
-    {
-        LValue boxedPair = lowJSValue(m_node->child1());
-
-        LValue highBits = m_out.castToInt32(m_out.lShr(boxedPair, m_out.constInt32(32)));
-        setInt32(m_out.bitAnd(highBits, m_out.constInt32(JSPropertyNameEnumerator::enumerationModeMask)));
+        // FIXME: These are not supported because it wasn't exactly clear how to implement them and they are not currently used.
+        case NodeResultInt52:
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
     }
 
     // FIXME: We should probably have a method of value recovery for this node since it's "effect" free but always live in bytecode.
@@ -15051,7 +15128,7 @@ IGNORE_CLANG_WARNINGS_END
         patchpoint->append(ConstrainedValue(stringLength, ValueRep::SomeLateRegister));
         patchpoint->append(ConstrainedValue(argument, ValueRep::SomeLateRegister));
         patchpoint->numGPScratchRegisters = inlineCodeStats8Bit.needsTemp2() ? 6 : 5;
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->setGenerator(
             [=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
                 AllowMacroScratchRegisterUsage allowScratch(jit);
@@ -15086,6 +15163,9 @@ IGNORE_CLANG_WARNINGS_END
 
                 CCallHelpers::JumpList done;
 
+                // If we have a JIT failure, then we'll fallback to the operationCase. Keep the return code for the branch after the PatchPoint.
+                done.append(jit.branch32(CCallHelpers::Equal, returnGPR, CCallHelpers::TrustedImm32(static_cast<int32_t>(Yarr::JSRegExpResult::JITCodeFailure))));
+
                 auto failedMatch = jit.branch32(CCallHelpers::LessThan, returnGPR, CCallHelpers::TrustedImm32(0));
 
                 // Saved cached result.
@@ -15113,7 +15193,8 @@ IGNORE_CLANG_WARNINGS_END
         patchpoint->effects.writes = HeapRange::top();
 
         ValueFromBlock inlineresult = m_out.anchor(patchpoint);
-        m_out.jump(continuation);
+
+        m_out.branch(m_out.equal(patchpoint, m_out.constInt32(static_cast<int32_t>(Yarr::JSRegExpResult::JITCodeFailure))), unsure(operationCase), unsure(continuation));
 
         m_out.appendTo(operationCase, continuation);
         ValueFromBlock operationResult;
@@ -15724,7 +15805,7 @@ IGNORE_CLANG_WARNINGS_END
         // IC code is super smart about saving registers.
         // https://bugs.webkit.org/show_bug.cgi?id=152848
         
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
 
         RefPtr<PatchpointExceptionHandle> exceptionHandle =
             preparePatchpointForExceptions(patchpoint);
@@ -15814,7 +15895,7 @@ IGNORE_CLANG_WARNINGS_END
         patchpoint->appendSomeRegister(thisValue);
         patchpoint->append(m_notCellMask, ValueRep::lateReg(GPRInfo::notCellMaskRegister));
         patchpoint->append(m_numberTag, ValueRep::lateReg(GPRInfo::numberTagRegister));
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->numGPScratchRegisters = Options::useDataICInFTL() ? 2 : 0;
 
         RefPtr<PatchpointExceptionHandle> exceptionHandle =
@@ -16279,7 +16360,7 @@ IGNORE_CLANG_WARNINGS_END
 
         patchpoint->numGPScratchRegisters = domJIT->numGPScratchRegisters;
         patchpoint->numFPScratchRegisters = domJIT->numFPScratchRegisters;
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
 
         State* state = &m_ftlState;
         Node* node = m_node;
@@ -16419,7 +16500,7 @@ IGNORE_CLANG_WARNINGS_END
         patchpoint->append(m_notCellMask, ValueRep::reg(GPRInfo::notCellMaskRegister));
         patchpoint->append(m_numberTag, ValueRep::reg(GPRInfo::numberTagRegister));
         RefPtr<PatchpointExceptionHandle> exceptionHandle = preparePatchpointForExceptions(patchpoint);
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->numGPScratchRegisters = domJIT->numGPScratchRegisters;
         patchpoint->numFPScratchRegisters = domJIT->numFPScratchRegisters;
         patchpoint->resultConstraints = { ValueRep::SomeEarlyRegister };
@@ -17212,7 +17293,7 @@ IGNORE_CLANG_WARNINGS_END
         patchpoint->numFPScratchRegisters = 2;
         if (scratchFPRUsage == NeedScratchFPR)
             patchpoint->numFPScratchRegisters++;
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->resultConstraints = { ValueRep::SomeEarlyRegister };
         State* state = &m_ftlState;
         CodeOrigin semanticNodeOrigin = node->origin.semantic;
@@ -17280,7 +17361,7 @@ IGNORE_CLANG_WARNINGS_END
         RefPtr<PatchpointExceptionHandle> exceptionHandle =
             preparePatchpointForExceptions(patchpoint);
         patchpoint->numGPScratchRegisters = 1;
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->resultConstraints = { ValueRep::SomeEarlyRegister };
         State* state = &m_ftlState;
         CodeOrigin semanticNodeOrigin = node->origin.semantic;
@@ -17338,7 +17419,7 @@ IGNORE_CLANG_WARNINGS_END
             preparePatchpointForExceptions(patchpoint);
         patchpoint->numGPScratchRegisters = 1;
         patchpoint->numFPScratchRegisters = 1;
-        patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         patchpoint->resultConstraints = { ValueRep::SomeEarlyRegister };
         State* state = &m_ftlState;
         CodeOrigin semanticNodeOrigin = node->origin.semantic;
@@ -17414,7 +17495,7 @@ IGNORE_CLANG_WARNINGS_END
         PatchpointValue* patchpoint = m_out.patchpoint(pointerType());
         if (isARM64()) {
             // emitAllocateWithNonNullAllocator uses the scratch registers on ARM.
-            patchpoint->clobber(RegisterSetBuilder::macroClobberedRegisters());
+            patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
         }
         patchpoint->effects.terminal = true;
         if (actualAllocator.isConstant())
@@ -19085,7 +19166,7 @@ IGNORE_CLANG_WARNINGS_END
         RefPtr<PatchpointExceptionHandle> exceptionHandle =
             preparePatchpointForExceptions(result);
         
-        result->clobber(RegisterSetBuilder::macroClobberedRegisters());
+        result->clobber(RegisterSetBuilder::macroClobberedGPRs());
         State* state = &m_ftlState;
 
         result->setGenerator(
@@ -19556,7 +19637,7 @@ IGNORE_CLANG_WARNINGS_END
             return result;
         }
         
-        DFG_CRASH(m_graph, m_node, makeString("Value not defined: ", String::number(edge.node()->index())).ascii().data());
+        DFG_CRASH(m_graph, m_node, makeString("Value not defined: "_s, edge.node()->index()).ascii().data());
         return nullptr;
     }
 
@@ -21586,6 +21667,11 @@ IGNORE_CLANG_WARNINGS_END
     {
         m_doubleValues.set(node, LoweredNodeValue(value, m_highBlock));
     }
+    void setTuple(Node* tuple, unsigned index, LValue value)
+    {
+        ASSERT(index < tuple->tupleSize());
+        m_tupleValues.at(tuple->tupleOffset() + index) = LoweredNodeValue(value, m_highBlock);
+    }
 
     void setInt32(LValue value)
     {
@@ -21618,6 +21704,10 @@ IGNORE_CLANG_WARNINGS_END
     void setDouble(LValue value)
     {
         setDouble(m_node, value);
+    }
+    void setTuple(unsigned index, LValue value)
+    {
+        setTuple(m_node, index, value);
     }
     
     bool isValid(const LoweredNodeValue& value)
@@ -21772,6 +21862,13 @@ IGNORE_CLANG_WARNINGS_END
         return abstractStructure(edge.node());
     }
 
+    LType registerPair()
+    {
+        if (!m_registerPair.isTuple())
+            m_registerPair = m_proc.addTuple({ registerType(), registerType() });
+        return m_registerPair;
+    }
+
     void crash()
     {
         crash(m_highBlock, m_node);
@@ -21858,6 +21955,8 @@ IGNORE_CLANG_WARNINGS_END
     HashMap<Node*, LoweredNodeValue> m_storageValues;
     HashMap<Node*, LoweredNodeValue> m_doubleValues;
     
+    Vector<LoweredNodeValue> m_tupleValues;
+
     HashMap<Node*, LValue> m_phis;
     
     LocalOSRAvailabilityCalculator m_availabilityCalculator;
@@ -21876,6 +21975,8 @@ IGNORE_CLANG_WARNINGS_END
     HashMap<Node*, NodeSet> m_liveInToNode;
     HashMap<Node*, AbstractValue> m_aiCheckedNodes;
     String m_graphDump;
+
+    LType m_registerPair;
 };
 
 } // anonymous namespace

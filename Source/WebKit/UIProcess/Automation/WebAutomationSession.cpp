@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,11 +31,14 @@
 #include "APIHTTPCookieStore.h"
 #include "APINavigation.h"
 #include "APIOpenPanelParameters.h"
+#include "APIString.h"
 #include "AutomationProtocolObjects.h"
 #include "CoordinateSystem.h"
+#include "PageLoadState.h"
 #include "WebAutomationSessionMacros.h"
 #include "WebAutomationSessionMessages.h"
 #include "WebAutomationSessionProxyMessages.h"
+#include "WebFrameProxy.h"
 #include "WebFullScreenManagerProxy.h"
 #include "WebInspectorUIProxy.h"
 #include "WebOpenPanelResultListenerProxy.h"
@@ -59,7 +62,7 @@
 #if ENABLE(WEB_AUTHN)
 #include "VirtualAuthenticatorManager.h"
 #include <WebCore/AuthenticatorTransport.h>
-#endif // ENABLE(WEB_AUTHN)
+#endif
 
 namespace WebKit {
 

@@ -194,7 +194,9 @@ std::unique_ptr<DisplayList::InMemoryDisplayList> FontCascade::displayListForTex
         return nullptr;
 
     std::unique_ptr<DisplayList::InMemoryDisplayList> displayList = makeUnique<DisplayList::InMemoryDisplayList>();
-    DisplayList::RecorderImpl recordingContext(*displayList, context.state().cloneForRecording(), { }, context.getCTM(GraphicsContext::DefinitelyIncludeDeviceScale), DisplayList::Recorder::DrawGlyphsMode::DeconstructUsingDrawDecomposedGlyphsCommands);
+    DisplayList::RecorderImpl recordingContext(*displayList, context.state().cloneForRecording(), { },
+        context.getCTM(GraphicsContext::DefinitelyIncludeDeviceScale), context.colorSpace(),
+        DisplayList::Recorder::DrawGlyphsMode::DeconstructUsingDrawDecomposedGlyphsCommands);
 
     FloatPoint startPoint = toFloatPoint(WebCore::size(glyphBuffer.initialAdvance()));
     drawGlyphBuffer(recordingContext, glyphBuffer, startPoint, customFontNotReadyAction);
@@ -476,7 +478,7 @@ FontCascade::CodePath FontCascade::codePath(const TextRun& run, std::optional<un
     UNUSED_PARAM(to);
 #endif
 
-#if PLATFORM(COCOA) || USE(FREETYPE)
+#if USE(FONT_VARIANT_VIA_FEATURES) || USE(FREETYPE)
     // Because Font::applyTransforms() doesn't know which features to enable/disable in the simple code path, it can't properly handle feature or variant settings.
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=150791: @font-face features should also cause this to be complex.
     if (m_fontDescription.featureSettings().size() > 0 || !m_fontDescription.variantSettings().isAllNormal())

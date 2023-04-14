@@ -38,8 +38,8 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "ExtensionStyleSheets.h"
-#include "Frame.h"
 #include "FrameLoaderClient.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "ResourceLoadInfo.h"
 #include "ScriptController.h"
@@ -211,8 +211,10 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
             && frame->isMainFrame()
             && resourceType == ResourceType::Document)
             mainDocumentURL = url;
-        else if (auto* mainDocument = frame->mainFrame().document())
-            mainDocumentURL = mainDocument->url();
+        else if (auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame())) {
+            if (auto* mainDocument = localFrame->document())
+                mainDocumentURL = mainDocument->url();
+        }
     }
     if (currentDocument)
         frameURL = currentDocument->url();
@@ -349,15 +351,8 @@ void applyResultsToRequest(ContentRuleListResults&& results, Page* page, Resourc
         request.setAllowCookies(false);
 
     if (results.summary.madeHTTPS) {
-        const URL& originalURL = request.url();
-        ASSERT(originalURL.protocolIs("http"_s));
-        ASSERT(!originalURL.port() || WTF::isDefaultPortForProtocol(originalURL.port().value(), originalURL.protocol()));
-
-        URL newURL = originalURL;
-        newURL.setProtocol("https"_s);
-        if (originalURL.port())
-            newURL.setPort(WTF::defaultPortForProtocol("https"_s).value());
-        request.setURL(newURL);
+        ASSERT(!request.url().port() || WTF::isDefaultPortForProtocol(request.url().port().value(), request.url().protocol()));
+        request.upgradeToHTTPS();
     }
 
     std::sort(results.summary.modifyHeadersActions.begin(), results.summary.modifyHeadersActions.end(),

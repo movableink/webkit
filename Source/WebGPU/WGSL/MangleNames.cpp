@@ -81,6 +81,7 @@ public:
     void visit(AST::VariableStatement&) override;
     void visit(AST::Structure&) override;
     void visit(AST::Variable&) override;
+    void visit(AST::CompoundStatement&) override;
     void visit(AST::IdentifierExpression&) override;
     void visit(AST::FieldAccessExpression&) override;
     void visit(AST::NamedTypeName&) override;
@@ -105,11 +106,11 @@ private:
 void NameManglerVisitor::run()
 {
     for (const auto& entrypoint : m_callGraph.entrypoints()) {
-        String originalName = entrypoint.m_function.name();
-        introduceVariable(entrypoint.m_function.name(), MangledName::Function);
+        String originalName = entrypoint.function.name();
+        introduceVariable(entrypoint.function.name(), MangledName::Function);
         auto it = m_result.entryPoints.find(originalName);
         RELEASE_ASSERT(it != m_result.entryPoints.end());
-        it->value.mangledName = entrypoint.m_function.name();
+        it->value.mangledName = entrypoint.function.name();
     }
 
     auto& module = m_callGraph.ast();
@@ -173,6 +174,12 @@ void NameManglerVisitor::visitVariableDeclaration(AST::Variable& variable, Mangl
     AST::Visitor::visit(variable);
 }
 
+void NameManglerVisitor::visit(AST::CompoundStatement& statement)
+{
+    ContextScope blockScope(this);
+    AST::Visitor::visit(statement);
+}
+
 void NameManglerVisitor::visit(AST::IdentifierExpression& identifier)
 {
     readVariable(identifier.identifier());
@@ -192,7 +199,7 @@ void NameManglerVisitor::visit(AST::NamedTypeName& type)
 void NameManglerVisitor::introduceVariable(AST::Identifier& name, MangledName::Kind kind)
 {
     const auto& mangledName = ContextProvider::introduceVariable(name, makeMangledName(name, kind));
-    name = AST::Identifier::makeWithSpan(name.span(), mangledName.toString());
+    m_callGraph.ast().replace(&name, AST::Identifier::makeWithSpan(name.span(), mangledName.toString()));
 }
 
 MangledName NameManglerVisitor::makeMangledName(const String& name, MangledName::Kind kind)
@@ -208,7 +215,7 @@ void NameManglerVisitor::readVariable(AST::Identifier& name) const
 {
     // FIXME: this should be unconditional
     if (const auto* mangledName = ContextProvider::readVariable(name))
-        name = AST::Identifier::makeWithSpan(name.span(), mangledName->toString());
+        m_callGraph.ast().replace(&name, AST::Identifier::makeWithSpan(name.span(), mangledName->toString()));
 }
 
 void mangleNames(CallGraph& callGraph, PrepareResult& result)

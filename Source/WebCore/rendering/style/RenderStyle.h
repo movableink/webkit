@@ -3,7 +3,7 @@
  *           (C) 2000 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
  * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2014 Google Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Google Inc. All rights reserved.
  * Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  *
  * This library is free software; you can redistribute it and/or
@@ -41,6 +41,7 @@
 #include "LengthPoint.h"
 #include "LengthSize.h"
 #include "LineClampValue.h"
+#include "ListStyleType.h"
 #include "NinePieceImage.h"
 #include "OffsetRotation.h"
 #include "Pagination.h"
@@ -219,8 +220,8 @@ public:
 
     const PseudoStyleCache* cachedPseudoStyles() const { return m_cachedPseudoStyles.get(); }
 
-    const CustomPropertyValueMap& inheritedCustomProperties() const { return m_rareInheritedData->customProperties->values; }
-    const CustomPropertyValueMap& nonInheritedCustomProperties() const { return m_nonInheritedData->rareData->customProperties->values; }
+    const StyleCustomPropertyData& inheritedCustomProperties() const { return m_rareInheritedData->customProperties.get(); }
+    const StyleCustomPropertyData& nonInheritedCustomProperties() const { return m_nonInheritedData->rareData->customProperties.get(); }
     const CSSCustomPropertyValue* customPropertyValue(const AtomString&) const;
 
     void deduplicateCustomProperties(const RenderStyle&);
@@ -401,7 +402,6 @@ public:
     float specifiedFontSize() const;
     float computedFontSize() const;
     unsigned computedFontPixelSize() const;
-    std::optional<float> fontSizeAdjust() const { return fontDescription().fontSizeAdjust(); }
     std::pair<FontOrientation, NonCJKGlyphOrientation> fontAndGlyphOrientation();
 
     FontVariationSettings fontVariationSettings() const { return fontDescription().variationSettings(); }
@@ -409,12 +409,13 @@ public:
     FontSelectionValue fontStretch() const { return fontDescription().stretch(); }
     std::optional<FontSelectionValue> fontItalic() const { return fontDescription().italic(); }
     FontPalette fontPalette() const { return fontDescription().fontPalette(); }
+    FontSizeAdjust fontSizeAdjust() const { return fontDescription().fontSizeAdjust(); }
 
     const Length& textIndent() const { return m_rareInheritedData->indent; }
     TextAlignMode textAlign() const { return static_cast<TextAlignMode>(m_inheritedFlags.textAlign); }
     TextAlignLast textAlignLast() const { return static_cast<TextAlignLast>(m_rareInheritedData->textAlignLast); }
     TextGroupAlign textGroupAlign() const { return static_cast<TextGroupAlign>(m_nonInheritedData->rareData->textGroupAlign); }
-    TextTransform textTransform() const { return static_cast<TextTransform>(m_inheritedFlags.textTransform); }
+    OptionSet<TextTransform> textTransform() const { return OptionSet<TextTransform>::fromRaw(m_inheritedFlags.textTransform); }
     OptionSet<TextDecorationLine> textDecorationsInEffect() const { return OptionSet<TextDecorationLine>::fromRaw(m_inheritedFlags.textDecorationLines); }
     OptionSet<TextDecorationLine> textDecorationLine() const { return OptionSet<TextDecorationLine>::fromRaw(m_nonInheritedFlags.textDecorationLine); }
     TextDecorationStyle textDecorationStyle() const { return static_cast<TextDecorationStyle>(m_nonInheritedData->rareData->textDecorationStyle); }
@@ -435,6 +436,7 @@ public:
     const Length& wordSpacing() const;
     float letterSpacing() const;
     TextSpacingTrim textSpacingTrim() const;
+    TextAutospace textAutospace() const;
 
 
     float zoom() const { return m_nonInheritedData->rareData->zoom; }
@@ -494,11 +496,10 @@ public:
     EmptyCell emptyCells() const { return static_cast<EmptyCell>(m_inheritedFlags.emptyCells); }
     CaptionSide captionSide() const { return static_cast<CaptionSide>(m_inheritedFlags.captionSide); }
 
-    const AtomString& listStyleStringValue() const { return m_rareInheritedData->listStyleStringValue; }
-    ListStyleType listStyleType() const { return static_cast<ListStyleType>(m_inheritedFlags.listStyleType); }
+    ListStyleType listStyleType() const { return m_rareInheritedData->listStyleType; }
     StyleImage* listStyleImage() const;
     ListStylePosition listStylePosition() const { return static_cast<ListStylePosition>(m_inheritedFlags.listStylePosition); }
-    bool isFixedTableLayout() const { return tableLayout() == TableLayoutType::Fixed && !logicalWidth().isAuto(); }
+    bool isFixedTableLayout() const { return tableLayout() == TableLayoutType::Fixed && (logicalWidth().isSpecified() || logicalWidth().isFitContent() || logicalWidth().isMinContent()); }
 
     const Length& marginTop() const { return m_nonInheritedData->surroundData->margin.top(); }
     const Length& marginBottom() const { return m_nonInheritedData->surroundData->margin.bottom(); }
@@ -605,8 +606,11 @@ public:
 
     ContainIntrinsicSizeType containIntrinsicWidthType() const { return static_cast<ContainIntrinsicSizeType>(m_nonInheritedData->rareData->containIntrinsicWidthType); }
     ContainIntrinsicSizeType containIntrinsicHeightType() const { return static_cast<ContainIntrinsicSizeType>(m_nonInheritedData->rareData->containIntrinsicHeightType); }
+    ContainIntrinsicSizeType containIntrinsicLogicalWidthType() const { return isHorizontalWritingMode() ? containIntrinsicWidthType() : containIntrinsicHeightType(); }
+    ContainIntrinsicSizeType containIntrinsicLogicalHeightType() const { return isHorizontalWritingMode() ? containIntrinsicHeightType() : containIntrinsicWidthType(); }
     std::optional<Length> containIntrinsicWidth() const { return m_nonInheritedData->rareData->containIntrinsicWidth; }
     std::optional<Length> containIntrinsicHeight() const { return m_nonInheritedData->rareData->containIntrinsicHeight; }
+    bool hasAutoLengthContainIntrinsicSize() const { return containIntrinsicWidthType() == ContainIntrinsicSizeType::AutoAndLength || containIntrinsicHeightType() == ContainIntrinsicSizeType::AutoAndLength; }
 
     BoxAlignment boxAlign() const { return static_cast<BoxAlignment>(m_nonInheritedData->miscData->deprecatedFlexibleBox->align); }
     BoxDirection boxDirection() const { return static_cast<BoxDirection>(m_inheritedFlags.boxDirection); }
@@ -1077,7 +1081,7 @@ public:
 
     // Only used for blending font sizes when animating, for MathML anonymous blocks, and for text autosizing.
     void setFontSize(float);
-    void setFontSizeAdjust(std::optional<float>);
+    void setFontSizeAdjust(FontSizeAdjust);
 
     void setFontVariationSettings(FontVariationSettings);
     void setFontWeight(FontSelectionValue);
@@ -1090,7 +1094,7 @@ public:
     void setTextAlign(TextAlignMode v) { m_inheritedFlags.textAlign = static_cast<unsigned>(v); }
     void setTextAlignLast(TextAlignLast v) { SET_VAR(m_rareInheritedData, textAlignLast, static_cast<unsigned>(v)); }
     void setTextGroupAlign(TextGroupAlign v) { SET_NESTED_VAR(m_nonInheritedData, rareData, textGroupAlign, static_cast<unsigned>(v)); }
-    void setTextTransform(TextTransform v) { m_inheritedFlags.textTransform = static_cast<unsigned>(v); }
+    void setTextTransform(OptionSet<TextTransform> v) { m_inheritedFlags.textTransform = v.toRaw(); }
     void addToTextDecorationsInEffect(OptionSet<TextDecorationLine> v) { m_inheritedFlags.textDecorationLines |= static_cast<unsigned>(v.toRaw()); }
     void setTextDecorationsInEffect(OptionSet<TextDecorationLine> v) { m_inheritedFlags.textDecorationLines = v.toRaw(); }
     void setTextDecorationLine(OptionSet<TextDecorationLine> v) { m_nonInheritedFlags.textDecorationLine = v.toRaw(); }
@@ -1179,8 +1183,7 @@ public:
 
     void setEffectiveSkipsContent(bool effectiveSkipsContent) { SET_VAR(m_rareInheritedData, effectiveSkipsContent, effectiveSkipsContent); }
 
-    void setListStyleStringValue(const AtomString& value) { SET_VAR(m_rareInheritedData, listStyleStringValue, value); }
-    void setListStyleType(ListStyleType v) { m_inheritedFlags.listStyleType = static_cast<unsigned>(v); }
+    void setListStyleType(ListStyleType value) { SET_VAR(m_rareInheritedData, listStyleType, value); }
     void setListStyleImage(RefPtr<StyleImage>&&);
     void setListStylePosition(ListStylePosition v) { m_inheritedFlags.listStylePosition = static_cast<unsigned>(v); }
     void resetMargin() { SET_NESTED_VAR(m_nonInheritedData, surroundData, margin, LengthBox(LengthType::Fixed)); }
@@ -1676,6 +1679,7 @@ public:
     void setMathStyle(const MathStyle& v) { SET_VAR(m_rareInheritedData, mathStyle, static_cast<unsigned>(v)); }
 
     void setTextSpacingTrim(TextSpacingTrim v) { SET_VAR(m_rareInheritedData, textSpacingTrim, v); }
+    void setTextAutospace(TextAutospace v) { SET_VAR(m_rareInheritedData, textAutospace, v); }
 
     // Initial values for all the properties
     static Overflow initialOverflowX() { return Overflow::Visible; }
@@ -1705,13 +1709,13 @@ public:
     static TextCombine initialTextCombine() { return TextCombine::None; }
     static TextOrientation initialTextOrientation() { return TextOrientation::Mixed; }
     static TextSpacingTrim initialTextSpacingTrim() { return { }; }
+    static TextAutospace initialTextAutospace() { return { }; }
     static ObjectFit initialObjectFit() { return ObjectFit::Fill; }
     static LengthPoint initialObjectPosition() { return LengthPoint(Length(50.0f, LengthType::Percent), Length(50.0f, LengthType::Percent)); }
     static EmptyCell initialEmptyCells() { return EmptyCell::Show; }
     static ListStylePosition initialListStylePosition() { return ListStylePosition::Outside; }
-    static const AtomString& initialListStyleStringValue() { return nullAtom(); }
-    static ListStyleType initialListStyleType() { return ListStyleType::Disc; }
-    static TextTransform initialTextTransform() { return TextTransform::None; }
+    static ListStyleType initialListStyleType() { return { ListStyleType::Type::Disc, nullAtom() }; }
+    static OptionSet<TextTransform> initialTextTransform() { return OptionSet<TextTransform> { }; }
     static Visibility initialVisibility() { return Visibility::Visible; }
     static WhiteSpace initialWhiteSpace() { return WhiteSpace::Normal; }
     static float initialHorizontalBorderSpacing() { return 0; }
@@ -1957,10 +1961,6 @@ public:
 
     static MathStyle initialMathStyle() { return MathStyle::Normal; }
 
-    // Indicates the style is likely to change due to a pending stylesheet load.
-    bool isNotFinal() const { return m_nonInheritedData->miscData->isNotFinal; }
-    void setIsNotFinal() { SET_NESTED_VAR(m_nonInheritedData, miscData, isNotFinal, true); }
-
     void setVisitedLinkColor(const Color&);
     void setVisitedLinkBackgroundColor(const StyleColor& v) { SET_DOUBLY_NESTED_VAR(m_nonInheritedData, miscData, visitedLinkColor, background, v); }
     void setVisitedLinkBorderLeftColor(const StyleColor& v) { SET_DOUBLY_NESTED_VAR(m_nonInheritedData, miscData, visitedLinkColor, borderLeft, v); }
@@ -2048,6 +2048,14 @@ public:
     void setOverflowAnchor(OverflowAnchor a) { SET_NESTED_VAR(m_nonInheritedData, rareData, overflowAnchor, static_cast<unsigned>(a)); }
     static OverflowAnchor initialOverflowAnchor() { return OverflowAnchor::Auto; }
 
+    static std::optional<Length> initialBlockStepSize() { return { }; }
+    std::optional<Length> blockStepSize() const { return m_nonInheritedData->rareData->blockStepSize; } 
+    void setBlockStepSize(std::optional<Length> length) { SET_NESTED_VAR(m_nonInheritedData, rareData, blockStepSize, length); } 
+
+    static BlockStepInsert initialBlockStepInsert() { return BlockStepInsert::Margin; }
+    BlockStepInsert blockStepInsert() const { return static_cast<BlockStepInsert>(m_nonInheritedData->rareData->blockStepInsert); }
+    void setBlockStepInsert(BlockStepInsert newBlockStepInsert) { SET_NESTED_VAR(m_nonInheritedData, rareData, blockStepInsert, static_cast<unsigned>(newBlockStepInsert)); }
+
 private:
     struct NonInheritedFlags {
         bool operator==(const NonInheritedFlags&) const;
@@ -2099,11 +2107,10 @@ private:
 
         unsigned emptyCells : 1; // EmptyCell
         unsigned captionSide : 2; // CaptionSide
-        unsigned listStyleType : 7; // ListStyleType
         unsigned listStylePosition : 1; // ListStylePosition
         unsigned visibility : 2; // Visibility
         unsigned textAlign : 4; // TextAlignMode
-        unsigned textTransform : 2; // TextTransform
+        unsigned textTransform : TextTransformLineBits; // TextTransform
         unsigned textDecorationLines : TextDecorationLineBits;
         unsigned cursor : 6; // CursorType
 #if ENABLE(CURSOR_VISIBILITY)
@@ -2111,7 +2118,7 @@ private:
 #endif
         unsigned direction : 1; // TextDirection
         unsigned whiteSpace : 3; // WhiteSpace
-        // 35 bits
+        // 38 bits
         unsigned borderCollapse : 1; // BorderCollapse
         unsigned boxDirection : 1; // BoxDirection
 
@@ -2121,16 +2128,16 @@ private:
         unsigned pointerEvents : 4; // PointerEvents
         unsigned insideLink : 2; // InsideLink
         unsigned insideDefaultButton : 1;
-        // 46 bits
+        // 49 bits
 
         // CSS Text Layout Module Level 3: Vertical writing support
         unsigned writingMode : 2; // WritingMode
-        // 48 bits
+        // 51 bits
 
 #if ENABLE(TEXT_AUTOSIZING)
         unsigned autosizeStatus : 5;
 #endif
-        // 53 bits
+        // 56 bits
     };
 
     // This constructor is used to implement the replace operation.
@@ -2261,7 +2268,6 @@ inline bool RenderStyle::InheritedFlags::operator==(const InheritedFlags& other)
 {
     return emptyCells == other.emptyCells
         && captionSide == other.captionSide
-        && listStyleType == other.listStyleType
         && listStylePosition == other.listStylePosition
         && visibility == other.visibility
         && textAlign == other.textAlign

@@ -324,6 +324,7 @@ class Git(Scm):
         'webkitscmpy.auto-create-commit': ['true', 'false'],
         'webkitscmpy.auto-prune': ['only-source', 'true', 'false'],
         'webkitscmpy.cc-radar': ['true', 'false'],
+        'webkitscmpy.set-upstream-on-push': ['false', 'true'],
     }
     CONFIG_LOCATIONS = ['global', 'repository', 'project']
 
@@ -538,15 +539,17 @@ class Git(Scm):
 
     @decorators.Memoize()
     def source_remotes(self, cached=True, personal=False):
-        candidates = [self.default_remote]
+        security_levels = {}
         config = self.config(cached=cached)
         for candidate in config.keys():
-            if not candidate.startswith('webkitscmpy.remotes'):
+            if not candidate.startswith('webkitscmpy.remotes') or not candidate.endswith('url'):
                 continue
-            candidate = candidate.split('.')[-1]
-            if candidate in candidates:
-                continue
+            candidate = candidate.split('.')[-2]
             if config.get('remote.{}.url'.format(candidate)):
+                security_levels[candidate] = int(config.get('webkitscmpy.remotes.{}.security-level'.format(candidate), '0'))
+        candidates = [self.default_remote] if security_levels.get(self.default_remote, 0) == 0 else []
+        for _, candidate in sorted([(v, k) for k, v in security_levels.items()]):
+            if candidate not in candidates:
                 candidates.append(candidate)
 
         personal_remotes = []
@@ -601,7 +604,7 @@ class Git(Scm):
         if remote is False:
             return sorted(result[None])
         if remote is True:
-            return sorted(set.union(*result.values()))
+            return sorted(set.union(*result.values())) if result else []
         if isinstance(remote, string_utils.basestring):
             return sorted(result.get(remote, []))
         return result
@@ -733,13 +736,13 @@ class Git(Scm):
         if branch != default_branch:
             branch = self.prioritize_branches(self.branches_for(hash), self.branch)
 
-        if not identifier and include_identifier:
+        if not identifier and include_identifier and branch:
             cached_identifier = self.cache.to_identifier(hash=hash, branch=branch) if self.cache else None
             if cached_identifier:
                 branch_point, identifier, branch = Commit._parse_identifier(cached_identifier)
 
         # Compute the identifier if the function did not receive one and we were asked to
-        if not identifier and include_identifier:
+        if not identifier and include_identifier and branch:
             if branch == default_branch:
                 identifier = self._commit_count(hash)
             else:
@@ -749,7 +752,7 @@ class Git(Scm):
                 )
 
         # Only compute the branch point we're on something other than the default branch
-        if not branch_point and include_identifier and branch != default_branch:
+        if not branch_point and include_identifier and branch != default_branch and branch:
             branch_point = self._commit_count(hash) - identifier
         if branch_point and parsed_branch_point and branch_point != parsed_branch_point:
             raise ValueError("Provided 'branch_point' does not match branch point of specified branch")

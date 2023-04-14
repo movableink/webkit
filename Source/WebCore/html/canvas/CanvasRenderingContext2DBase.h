@@ -236,6 +236,8 @@ public:
     using Direction = CanvasDirection;
     void setDirection(Direction);
 
+    const HashSet<uint32_t>& suppliedColors() const { return m_suppliedColors; }
+
     class FontProxy final : public FontSelectorClient {
     public:
         FontProxy() = default;
@@ -322,6 +324,8 @@ protected:
 
     bool usesCSSCompatibilityParseMode() const { return m_usesCSSCompatibilityParseMode; }
 
+    void postProcessPixelBuffer() const final;
+
 private:
     void applyLineDash() const;
     void setShadow(const FloatSize& offset, float blur, const Color&);
@@ -338,6 +342,7 @@ private:
     void didDraw(bool entireCanvas, const FloatRect&);
     template<typename RectProvider> void didDraw(bool entireCanvas, RectProvider);
 
+    bool is2dBase() const final { return true; }
     void paintRenderingResultsToCanvas() override;
     bool needsPreparationForDisplay() const final;
     void prepareForDisplay() final;
@@ -420,8 +425,12 @@ private:
     unsigned m_unrealizedSaveCount { 0 };
     bool m_usesCSSCompatibilityParseMode;
     bool m_usesDisplayListDrawing { false };
+    bool m_wasLastDrawPutImageData { false };
     mutable std::unique_ptr<DisplayList::DrawingContext> m_recordingContext;
+    HashSet<uint32_t> m_suppliedColors;
     CanvasRenderingContext2DSettings m_settings;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CANVASRENDERINGCONTEXT(WebCore::CanvasRenderingContext2DBase, is2dBase())

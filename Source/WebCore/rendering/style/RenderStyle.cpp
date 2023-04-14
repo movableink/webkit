@@ -161,11 +161,10 @@ RenderStyle::RenderStyle(CreateDefaultStyleTag)
 {
     m_inheritedFlags.emptyCells = static_cast<unsigned>(initialEmptyCells());
     m_inheritedFlags.captionSide = static_cast<unsigned>(initialCaptionSide());
-    m_inheritedFlags.listStyleType = static_cast<unsigned>(initialListStyleType());
     m_inheritedFlags.listStylePosition = static_cast<unsigned>(initialListStylePosition());
     m_inheritedFlags.visibility = static_cast<unsigned>(initialVisibility());
     m_inheritedFlags.textAlign = static_cast<unsigned>(initialTextAlign());
-    m_inheritedFlags.textTransform = static_cast<unsigned>(initialTextTransform());
+    m_inheritedFlags.textTransform = initialTextTransform().toRaw();
     m_inheritedFlags.textDecorationLines = initialTextDecorationLine().toRaw();
     m_inheritedFlags.cursor = static_cast<unsigned>(initialCursor());
 #if ENABLE(CURSOR_VISIBILITY)
@@ -353,15 +352,16 @@ void RenderStyle::fastPathInheritFrom(const RenderStyle& inheritParent)
 {
     ASSERT(!disallowsFastPathInheritance());
 
-    if (m_inheritedData.ptr() == inheritParent.m_inheritedData.ptr())
-        return;
-
     // FIXME: Use this mechanism for other properties too, like variables.
-    if (m_inheritedData->nonFastPathInheritedEqual(*inheritParent.m_inheritedData)) {
-        m_inheritedData = inheritParent.m_inheritedData;
-        return;
+    m_inheritedFlags.visibility = inheritParent.m_inheritedFlags.visibility;
+
+    if (m_inheritedData.ptr() != inheritParent.m_inheritedData.ptr()) {
+        if (m_inheritedData->nonFastPathInheritedEqual(*inheritParent.m_inheritedData)) {
+            m_inheritedData = inheritParent.m_inheritedData;
+            return;
+        }
+        m_inheritedData.access().fastPathInheritFrom(*inheritParent.m_inheritedData);
     }
-    m_inheritedData.access().fastPathInheritFrom(*inheritParent.m_inheritedData);
 }
 
 void RenderStyle::copyNonInheritedFrom(const RenderStyle& other)
@@ -455,6 +455,8 @@ bool RenderStyle::inheritedEqual(const RenderStyle& other) const
 
 bool RenderStyle::fastPathInheritedEqual(const RenderStyle& other) const
 {
+    if (m_inheritedFlags.visibility != other.m_inheritedFlags.visibility)
+        return false;
     if (m_inheritedData.ptr() == other.m_inheritedData.ptr())
         return true;
     return m_inheritedData->fastPathInheritedEqual(*other.m_inheritedData);
@@ -462,7 +464,11 @@ bool RenderStyle::fastPathInheritedEqual(const RenderStyle& other) const
 
 bool RenderStyle::nonFastPathInheritedEqual(const RenderStyle& other) const
 {
-    if (m_inheritedFlags != other.m_inheritedFlags)
+    auto withoutFastPathFlags = [](auto flags) {
+        flags.visibility = 0;
+        return flags;
+    };
+    if (withoutFastPathFlags(m_inheritedFlags) != withoutFastPathFlags(other.m_inheritedFlags))
         return false;
     if (m_inheritedData.ptr() != other.m_inheritedData.ptr() && !m_inheritedData->nonFastPathInheritedEqual(*other.m_inheritedData))
         return false;
@@ -825,6 +831,9 @@ static bool rareDataChangeRequiresLayout(const StyleRareNonInheritedData& first,
     if (first.containIntrinsicWidth != second.containIntrinsicWidth || first.containIntrinsicHeight != second.containIntrinsicHeight)
         return true;
 
+    if (first.marginTrim != second.marginTrim)
+        return true;
+
     return false;
 }
 
@@ -871,6 +880,7 @@ static bool rareInheritedDataChangeRequiresLayout(const StyleRareInheritedData& 
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
         || first.useTouchOverflowScrolling != second.useTouchOverflowScrolling
 #endif
+        || first.listStyleType != second.listStyleType
         || first.listStyleImage != second.listStyleImage) // FIXME: needs arePointingToEqualData()?
         return true;
 
@@ -1004,8 +1014,7 @@ bool RenderStyle::changeRequiresLayout(const RenderStyle& other, OptionSet<Style
     }
 
     if (static_cast<DisplayType>(m_nonInheritedFlags.effectiveDisplay) == DisplayType::ListItem) {
-        if (m_inheritedFlags.listStyleType != other.m_inheritedFlags.listStyleType
-            || m_inheritedFlags.listStylePosition != other.m_inheritedFlags.listStylePosition)
+        if (m_inheritedFlags.listStylePosition != other.m_inheritedFlags.listStylePosition || m_rareInheritedData->listStyleType != other.m_rareInheritedData->listStyleType)
             return true;
     }
 
@@ -1093,6 +1102,8 @@ static bool rareDataChangeRequiresLayerRepaint(const StyleRareNonInheritedData& 
         changedContextSensitiveProperties.add(StyleDifferenceContextSensitiveProperty::Filter);
         // Don't return true; keep looking for another change.
     }
+#else
+    UNUSED_PARAM(changedContextSensitiveProperties);
 #endif
 
     // FIXME: In SVG this needs to trigger a layout.
@@ -1147,9 +1158,6 @@ static bool miscDataChangeRequiresRepaint(const StyleMiscNonInheritedData& first
     if (first.userDrag != second.userDrag
         || first.objectFit != second.objectFit
         || first.objectPosition != second.objectPosition)
-        return true;
-
-    if (first.isNotFinal != second.isNotFinal)
         return true;
 
     return false;
@@ -2009,6 +2017,11 @@ TextSpacingTrim RenderStyle::textSpacingTrim() const
     return m_rareInheritedData->textSpacingTrim;
 }
 
+TextAutospace RenderStyle::textAutospace() const
+{
+    return m_rareInheritedData->textAutospace;
+}
+
 bool RenderStyle::setFontDescription(FontCascadeDescription&& description)
 {
     if (m_inheritedData->fontCascade.fontDescription() == description)
@@ -2124,7 +2137,7 @@ void RenderStyle::setFontSize(float size)
     fontCascade().update(selector);
 }
 
-void RenderStyle::setFontSizeAdjust(std::optional<float> sizeAdjust)
+void RenderStyle::setFontSizeAdjust(FontSizeAdjust sizeAdjust)
 {
     auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
@@ -2642,41 +2655,41 @@ void RenderStyle::setBorderImageVerticalRule(NinePieceImageRule rule)
 
 void RenderStyle::setColumnStylesFromPaginationMode(const Pagination::Mode& paginationMode)
 {
-    if (paginationMode == Pagination::Unpaginated)
+    if (paginationMode == Unpaginated)
         return;
     
     setColumnFill(ColumnFill::Auto);
     
     switch (paginationMode) {
-    case Pagination::LeftToRightPaginated:
+    case LeftToRightPaginated:
         setColumnAxis(ColumnAxis::Horizontal);
         if (isHorizontalWritingMode())
             setColumnProgression(isLeftToRightDirection() ? ColumnProgression::Normal : ColumnProgression::Reverse);
         else
             setColumnProgression(isFlippedBlocksWritingMode() ? ColumnProgression::Reverse : ColumnProgression::Normal);
         break;
-    case Pagination::RightToLeftPaginated:
+    case RightToLeftPaginated:
         setColumnAxis(ColumnAxis::Horizontal);
         if (isHorizontalWritingMode())
             setColumnProgression(isLeftToRightDirection() ? ColumnProgression::Reverse : ColumnProgression::Normal);
         else
             setColumnProgression(isFlippedBlocksWritingMode() ? ColumnProgression::Normal : ColumnProgression::Reverse);
         break;
-    case Pagination::TopToBottomPaginated:
+    case TopToBottomPaginated:
         setColumnAxis(ColumnAxis::Vertical);
         if (isHorizontalWritingMode())
             setColumnProgression(isFlippedBlocksWritingMode() ? ColumnProgression::Reverse : ColumnProgression::Normal);
         else
             setColumnProgression(isLeftToRightDirection() ? ColumnProgression::Normal : ColumnProgression::Reverse);
         break;
-    case Pagination::BottomToTopPaginated:
+    case BottomToTopPaginated:
         setColumnAxis(ColumnAxis::Vertical);
         if (isHorizontalWritingMode())
             setColumnProgression(isFlippedBlocksWritingMode() ? ColumnProgression::Normal : ColumnProgression::Reverse);
         else
             setColumnProgression(isLeftToRightDirection() ? ColumnProgression::Reverse : ColumnProgression::Normal);
         break;
-    case Pagination::Unpaginated:
+    case Unpaginated:
         ASSERT_NOT_REACHED();
         break;
     }
@@ -2702,11 +2715,11 @@ void RenderStyle::setCustomPropertyValue(Ref<const CSSCustomPropertyValue>&& val
 {
     auto& name = value->name();
     if (isInherited) {
-        if (auto* existingValue = m_rareInheritedData->customProperties->values.get(name); !existingValue || !existingValue->equals(value.get()))
-            m_rareInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value));
+        if (auto* existingValue = m_rareInheritedData->customProperties->get(name); !existingValue || !existingValue->equals(value.get()))
+            m_rareInheritedData.access().customProperties.access().set(name, WTFMove(value));
     } else {
-        if (auto* existingValue = m_nonInheritedData->rareData->customProperties->values.get(name); !existingValue || !existingValue->equals(value.get()))
-            m_nonInheritedData.access().rareData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value));
+        if (auto* existingValue = m_nonInheritedData->rareData->customProperties->get(name); !existingValue || !existingValue->equals(value.get()))
+            m_nonInheritedData.access().rareData.access().customProperties.access().set(name, WTFMove(value));
     }
 }
 

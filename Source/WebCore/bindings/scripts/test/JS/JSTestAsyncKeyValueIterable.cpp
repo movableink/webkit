@@ -116,7 +116,7 @@ template<> void JSTestAsyncKeyValueIterableDOMConstructor::initializeProperties(
 
 static const HashTableValue JSTestAsyncKeyValueIterablePrototypeTableValues[] =
 {
-    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestAsyncKeyValueIterableConstructor, 0 } },
+    { "constructor"_s, static_cast<unsigned>(PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestAsyncKeyValueIterableConstructor, 0 } },
     { "entries"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsTestAsyncKeyValueIterablePrototypeFunction_entries, 0 } },
     { "keys"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsTestAsyncKeyValueIterablePrototypeFunction_keys, 0 } },
     { "values"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsTestAsyncKeyValueIterablePrototypeFunction_values, 0 } },
@@ -150,7 +150,9 @@ void JSTestAsyncKeyValueIterable::finishCreation(VM& vm)
 
 JSObject* JSTestAsyncKeyValueIterable::createPrototype(VM& vm, JSDOMGlobalObject& globalObject)
 {
-    return JSTestAsyncKeyValueIterablePrototype::create(vm, &globalObject, JSTestAsyncKeyValueIterablePrototype::createStructure(vm, &globalObject, globalObject.objectPrototype()));
+    auto* structure = JSTestAsyncKeyValueIterablePrototype::createStructure(vm, &globalObject, globalObject.objectPrototype());
+    structure->setMayBePrototype(true);
+    return JSTestAsyncKeyValueIterablePrototype::create(vm, &globalObject, structure);
 }
 
 JSObject* JSTestAsyncKeyValueIterable::prototype(VM& vm, JSDOMGlobalObject& globalObject)

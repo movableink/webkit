@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,6 +53,7 @@
 #include <WebCore/DatabaseDetails.h>
 #include <WebCore/DecomposedGlyphs.h>
 #include <WebCore/DeprecationReportBody.h>
+#include <WebCore/DiagnosticLoggingClient.h>
 #include <WebCore/DictationAlternative.h>
 #include <WebCore/DictionaryPopupInfo.h>
 #include <WebCore/DisplayListItems.h>
@@ -86,6 +87,7 @@
 #include <WebCore/FilterOperations.h>
 #include <WebCore/FloatQuad.h>
 #include <WebCore/Font.h>
+#include <WebCore/FontCustomPlatformData.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/GraphicsLayer.h>
 #include <WebCore/IDBGetResult.h>
@@ -110,7 +112,6 @@
 #include <WebCore/PointLightSource.h>
 #include <WebCore/ProgressBarPart.h>
 #include <WebCore/PromisedAttachmentInfo.h>
-#include <WebCore/ProtectionSpace.h>
 #include <WebCore/RectEdges.h>
 #include <WebCore/Region.h>
 #include <WebCore/RegistrableDomain.h>
@@ -395,53 +396,6 @@ bool ArgumentCoder<Length>::decode(Decoder& decoder, Length& length)
     return false;
 }
 
-void ArgumentCoder<ProtectionSpace>::encode(Encoder& encoder, const ProtectionSpace& space)
-{
-    if (space.encodingRequiresPlatformData()) {
-        encoder << true;
-        encodePlatformData(encoder, space);
-        return;
-    }
-
-    encoder << false;
-    encoder << space.host() << space.port() << space.realm();
-    encoder << space.authenticationScheme();
-    encoder << space.serverType();
-}
-
-bool ArgumentCoder<ProtectionSpace>::decode(Decoder& decoder, ProtectionSpace& space)
-{
-    bool hasPlatformData;
-    if (!decoder.decode(hasPlatformData))
-        return false;
-
-    if (hasPlatformData)
-        return decodePlatformData(decoder, space);
-
-    String host;
-    if (!decoder.decode(host))
-        return false;
-
-    int port;
-    if (!decoder.decode(port))
-        return false;
-
-    String realm;
-    if (!decoder.decode(realm))
-        return false;
-    
-    ProtectionSpace::AuthenticationScheme authenticationScheme;
-    if (!decoder.decode(authenticationScheme))
-        return false;
-
-    ProtectionSpace::ServerType serverType;
-    if (!decoder.decode(serverType))
-        return false;
-
-    space = ProtectionSpace(host, port, serverType, realm, authenticationScheme);
-    return true;
-}
-
 void ArgumentCoder<Credential>::encode(Encoder& encoder, const Credential& credential)
 {
     if (credential.encodingRequiresPlatformData()) {
@@ -488,7 +442,7 @@ void ArgumentCoder<RefPtr<Image>>::encode(Encoder& encoder, const RefPtr<Image>&
     if (!hasImage)
         return;
 
-    RefPtr<ShareableBitmap> bitmap = ShareableBitmap::create(IntSize(image->size()), { });
+    RefPtr<ShareableBitmap> bitmap = ShareableBitmap::create({ IntSize(image->size()) });
     auto graphicsContext = bitmap->createGraphicsContext();
     encoder << !!graphicsContext;
     if (!graphicsContext)
@@ -526,17 +480,36 @@ bool ArgumentCoder<RefPtr<Image>>::decode(Decoder& decoder, RefPtr<Image>& image
 
 void ArgumentCoder<WebCore::Font>::encode(Encoder& encoder, const WebCore::Font& font)
 {
-    encoder << font.origin();
-    encoder << (font.isInterstitial() ? Font::Interstitial::Yes : Font::Interstitial::No);
-    encoder << font.visibility();
-    encoder << (font.isTextOrientationFallback() ? Font::OrientationFallback::Yes : Font::OrientationFallback::No);
-    encoder << font.renderingResourceIdentifier();
+    encoder << font.attributes();
     // Intentionally don't encode m_isBrokenIdeographFallback because it doesn't affect drawGlyphs().
 
     encodePlatformData(encoder, font);
 }
 
 std::optional<Ref<Font>> ArgumentCoder<Font>::decode(Decoder& decoder)
+{
+    std::optional<Font::Attributes> attributes;
+    decoder >> attributes;
+    if (!attributes)
+        return std::nullopt;
+
+    auto platformData = decodePlatformData(decoder);
+    if (!platformData)
+        return std::nullopt;
+
+    return Font::create(*platformData, attributes->origin, attributes->isInterstitial, attributes->visibility, attributes->isTextOrientationFallback, attributes->renderingResourceIdentifier);
+}
+
+void ArgumentCoder<WebCore::Font::Attributes>::encode(Encoder& encoder, const WebCore::Font::Attributes& attributes)
+{
+    encoder << attributes.origin;
+    encoder << attributes.isInterstitial;
+    encoder << attributes.visibility;
+    encoder << attributes.isTextOrientationFallback;
+    encoder << attributes.ensureRenderingResourceIdentifier();
+}
+
+std::optional<Font::Attributes> ArgumentCoder<Font::Attributes>::decode(Decoder& decoder)
 {
     std::optional<Font::Origin> origin;
     decoder >> origin;
@@ -563,11 +536,81 @@ std::optional<Ref<Font>> ArgumentCoder<Font>::decode(Decoder& decoder)
     if (!renderingResourceIdentifier)
         return std::nullopt;
 
-    auto platformData = decodePlatformData(decoder);
-    if (!platformData)
+    return std::optional<Font::Attributes>({ renderingResourceIdentifier, origin.value(), isInterstitial.value(), visibility.value(), isTextOrientationFallback.value() });
+}
+
+void ArgumentCoder<WebCore::FontCustomPlatformData>::encode(Encoder& encoder, const WebCore::FontCustomPlatformData& customPlatformData)
+{
+    encodePlatformData(encoder, customPlatformData);
+
+    encoder << customPlatformData.m_renderingResourceIdentifier;
+}
+
+std::optional<Ref<FontCustomPlatformData>> ArgumentCoder<FontCustomPlatformData>::decode(Decoder& decoder)
+{
+    auto result = decodePlatformData(decoder);
+    if (result) {
+        std::optional<RenderingResourceIdentifier> renderingResourceIdentifier;
+        decoder >> renderingResourceIdentifier;
+        if (!renderingResourceIdentifier)
+            return std::nullopt;
+
+        (*result)->m_renderingResourceIdentifier = *renderingResourceIdentifier;
+    }
+
+    return result;
+}
+
+void ArgumentCoder<WebCore::FontPlatformData::Attributes>::encode(Encoder& encoder, const WebCore::FontPlatformData::Attributes& data)
+{
+    encoder << data.m_orientation;
+    encoder << data.m_widthVariant;
+    encoder << data.m_textRenderingMode;
+    encoder << data.m_size;
+    encoder << data.m_syntheticBold;
+    encoder << data.m_syntheticOblique;
+
+    encodePlatformData(encoder, data);
+}
+
+std::optional<FontPlatformData::Attributes> ArgumentCoder<FontPlatformData::Attributes>::decode(Decoder& decoder)
+{
+    std::optional<WebCore::FontOrientation> orientation;
+    decoder >> orientation;
+    if (!orientation)
         return std::nullopt;
 
-    return Font::create(platformData.value(), origin.value(), isInterstitial.value(), visibility.value(), isTextOrientationFallback.value(), renderingResourceIdentifier);
+    std::optional<WebCore::FontWidthVariant> widthVariant;
+    decoder >> widthVariant;
+    if (!widthVariant)
+        return std::nullopt;
+
+    std::optional<WebCore::TextRenderingMode> textRenderingMode;
+    decoder >> textRenderingMode;
+    if (!textRenderingMode)
+        return std::nullopt;
+
+    std::optional<float> size;
+    decoder >> size;
+    if (!size)
+        return std::nullopt;
+
+    std::optional<bool> syntheticBold;
+    decoder >> syntheticBold;
+    if (!syntheticBold)
+        return std::nullopt;
+
+    std::optional<bool> syntheticOblique;
+    decoder >> syntheticOblique;
+    if (!syntheticOblique)
+        return std::nullopt;
+
+    FontPlatformData::Attributes result(size.value(), orientation.value(), widthVariant.value(), textRenderingMode.value(), syntheticBold.value(), syntheticOblique.value());
+
+    if (!decodePlatformData(decoder, result))
+        return std::nullopt;
+
+    return result;
 }
 
 void ArgumentCoder<Cursor>::encode(Encoder& encoder, const Cursor& cursor)
@@ -639,6 +682,16 @@ bool ArgumentCoder<Cursor>::decode(Decoder& decoder, Cursor& cursor)
     cursor = Cursor(image.get(), hotSpot);
 #endif
     return true;
+}
+
+void ArgumentCoder<DiagnosticLoggingDictionary>::encode(Encoder& encoder, const DiagnosticLoggingDictionary& dictionary)
+{
+    encoder << dictionary.dictionary;
+}
+
+bool ArgumentCoder<DiagnosticLoggingDictionary>::decode(Decoder& decoder, DiagnosticLoggingDictionary& dictionary)
+{
+    return decoder.decode(dictionary.dictionary);
 }
 
 void ArgumentCoder<ResourceError>::encode(Encoder& encoder, const ResourceError& resourceError)
@@ -1260,7 +1313,7 @@ void ArgumentCoder<WebCore::FragmentedSharedBuffer>::encode(Encoder& encoder, co
         // over the IPC. ConnectionUnix.cpp already uses shared memory to send any IPC message that is
         // too large. See https://bugs.webkit.org/show_bug.cgi?id=208571.
         for (const auto& element : buffer)
-            encoder.encodeSpan(Span { element.segment->data(), element.segment->size() });
+            encoder.encodeSpan(makeSpan(element.segment->data(), element.segment->size()));
     } else {
         SharedMemory::Handle handle;
         {
@@ -2148,7 +2201,6 @@ void ArgumentCoder<Filter>::encode(Encoder& encoder, const Filter& filter)
 
     encoder << filter.filterRenderingModes();
     encoder << filter.filterScale();
-    encoder << filter.clipOperation();
     encoder << filter.filterRegion();
 }
 
@@ -2192,11 +2244,6 @@ std::optional<Ref<Filter>> ArgumentCoder<Filter>::decode(Decoder& decoder)
     if (!filterScale)
         return std::nullopt;
 
-    std::optional<Filter::ClipOperation> clipOperation;
-    decoder >> clipOperation;
-    if (!clipOperation)
-        return std::nullopt;
-
     std::optional<FloatRect> filterRegion;
     decoder >> filterRegion;
     if (!filterRegion)
@@ -2204,7 +2251,6 @@ std::optional<Ref<Filter>> ArgumentCoder<Filter>::decode(Decoder& decoder)
 
     (*filter)->setFilterRenderingModes(*filterRenderingModes);
     (*filter)->setFilterScale(*filterScale);
-    (*filter)->setClipOperation(*clipOperation);
     (*filter)->setFilterRegion(*filterRegion);
 
     return filter;
@@ -2276,90 +2322,5 @@ void ArgumentCoder<PixelBuffer>::encode<Encoder>(Encoder&, const PixelBuffer&);
 
 template
 void ArgumentCoder<PixelBuffer>::encode<StreamConnectionEncoder>(StreamConnectionEncoder&, const PixelBuffer&);
-
-void ArgumentCoder<RefPtr<WebCore::ReportBody>>::encode(Encoder& encoder, const RefPtr<WebCore::ReportBody>& reportBody)
-{
-    bool hasReportBody = !!reportBody;
-    encoder << hasReportBody;
-    if (!hasReportBody)
-        return;
-
-    encoder << reportBody->reportBodyType();
-
-    switch (reportBody->reportBodyType()) {
-    case ViolationReportType::ContentSecurityPolicy:
-        encoder << *downcast<CSPViolationReportBody>(reportBody.get());
-        return;
-    case ViolationReportType::COEPInheritenceViolation:
-        downcast<COEPInheritenceViolationReportBody>(reportBody.get())->encode(encoder);
-        return;
-    case ViolationReportType::CORPViolation:
-        downcast<CORPViolationReportBody>(reportBody.get())->encode(encoder);
-        return;
-    case ViolationReportType::Deprecation:
-        encoder << *downcast<DeprecationReportBody>(reportBody.get());
-        return;
-    case ViolationReportType::Test:
-        encoder << *downcast<TestReportBody>(reportBody.get());
-        return;
-    case ViolationReportType::CrossOriginOpenerPolicy:
-    case ViolationReportType::StandardReportingAPIViolation:
-        ASSERT_NOT_REACHED();
-        return;
-    }
-
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-std::optional<RefPtr<WebCore::ReportBody>> ArgumentCoder<RefPtr<WebCore::ReportBody>>::decode(Decoder& decoder)
-{
-    bool hasReportBody = false;
-    if (!decoder.decode(hasReportBody))
-        return std::nullopt;
-
-    RefPtr<WebCore::ReportBody> result;
-    if (!hasReportBody)
-        return { result };
-
-    std::optional<ViolationReportType> reportBodyType;
-    decoder >> reportBodyType;
-    if (!reportBodyType)
-        return std::nullopt;
-
-    switch (*reportBodyType) {
-    case ViolationReportType::ContentSecurityPolicy: {
-        std::optional<Ref<CSPViolationReportBody>> cspViolationReportBody;
-        decoder >> cspViolationReportBody;
-        if (!cspViolationReportBody)
-            return std::nullopt;
-        return WTFMove(*cspViolationReportBody);
-    }
-    case ViolationReportType::COEPInheritenceViolation:
-        return COEPInheritenceViolationReportBody::decode(decoder);
-    case ViolationReportType::CORPViolation:
-        return CORPViolationReportBody::decode(decoder);
-    case ViolationReportType::Deprecation: {
-        std::optional<Ref<DeprecationReportBody>> deprecationReportBody;
-        decoder >> deprecationReportBody;
-        if (!deprecationReportBody)
-            return std::nullopt;
-        return WTFMove(*deprecationReportBody);
-    }
-    case ViolationReportType::Test: {
-        std::optional<Ref<TestReportBody>> testReportBody;
-        decoder >> testReportBody;
-        if (!testReportBody)
-            return std::nullopt;
-        return WTFMove(*testReportBody);
-    }
-    case ViolationReportType::CrossOriginOpenerPolicy:
-    case ViolationReportType::StandardReportingAPIViolation:
-        ASSERT_NOT_REACHED();
-        return std::nullopt;
-    }
-
-    ASSERT_NOT_REACHED();
-    return std::nullopt;
-}
 
 } // namespace IPC

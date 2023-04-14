@@ -26,7 +26,9 @@
 #pragma once
 
 #include "ASTTypeName.h"
+#include "Types.h"
 #include <wtf/FixedVector.h>
+#include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
 namespace WGSL {
@@ -51,15 +53,29 @@ public:
 
     Type* abstractFloatType() const { return m_abstractFloat; }
     Type* f32Type() const { return m_f32; }
+    Type* samplerType() const { return m_sampler; }
 
-    Type* structType(const AST::Identifier& name);
+    Type* structType(AST::Structure&);
     Type* arrayType(Type*, std::optional<unsigned>);
     Type* vectorType(Type*, uint8_t);
     Type* matrixType(Type*, uint8_t columns, uint8_t rows);
+    Type* textureType(Type*, Types::Texture::Kind);
 
     Type* constructType(AST::ParameterizedTypeName::Base, Type*);
 
 private:
+    class TypeCache {
+    public:
+        template<typename Key>
+        Type* find(const Key&) const;
+
+        template<typename Key>
+        void insert(const Key&, Type*);
+
+    private:
+        HashMap<std::pair<Type*, uint64_t>, Type*> m_storage;
+    };
+
     template<typename TypeKind, typename... Arguments>
     Type* allocateType(Arguments&&...);
 
@@ -72,6 +88,7 @@ private:
 
     Vector<std::unique_ptr<Type>> m_types;
     FixedVector<TypeConstructor> m_typeConstrutors;
+    TypeCache m_cache;
 
     Type* m_bottom;
     Type* m_abstractInt;
@@ -81,6 +98,7 @@ private:
     Type* m_i32;
     Type* m_u32;
     Type* m_f32;
+    Type* m_sampler;
 };
 
 } // namespace WGSL

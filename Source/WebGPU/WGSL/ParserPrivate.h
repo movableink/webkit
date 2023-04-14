@@ -68,11 +68,14 @@ public:
     Result<AST::StorageClass> parseStorageClass();
     Result<AST::AccessMode> parseAccessMode();
     Result<AST::Function> parseFunction(AST::Attribute::List&&);
-    Result<AST::ParameterValue> parseParameterValue();
+    Result<Ref<AST::Parameter>> parseParameter();
     Result<AST::Statement::Ref> parseStatement();
     Result<AST::CompoundStatement> parseCompoundStatement();
+    Result<AST::IfStatement> parseIfStatement();
+    Result<AST::IfStatement> parseIfStatementWithAttributes(AST::Attribute::List&&, SourcePosition _startOfElementPosition);
     Result<AST::ReturnStatement> parseReturnStatement();
-    Result<AST::Expression::Ref> parseShortCircuitOrExpression();
+    Result<AST::Expression::Ref> parseShortCircuitExpression(AST::Expression::Ref&&, TokenType, AST::BinaryOperation);
+    Result<AST::Expression::Ref> parseRelationalExpression();
     Result<AST::Expression::Ref> parseRelationalExpressionPostUnary(AST::Expression::Ref&& lhs);
     Result<AST::Expression::Ref> parseShiftExpression();
     Result<AST::Expression::Ref> parseShiftExpressionPostUnary(AST::Expression::Ref&& lhs);
@@ -90,6 +93,8 @@ public:
 
 private:
     Expected<Token, TokenType> consumeType(TokenType);
+    template<TokenType... TTs> Expected<Token, TokenType> consumeTypes();
+
     void consume();
 
     Token& current() { return m_current; }

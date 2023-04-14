@@ -807,6 +807,10 @@ accessibility/page-reload-deadlock.html [ Skip ]
 # Missing AccessibilityUIElement::isIndeterminate() implementation.
 accessibility/progress-indeterminate-value.html [ Skip ]
 
+# This test is only applicable to WK2 because it renders date inputs using three separate
+# role="spinbutton" elements (month, day, year). WK1 renders date inputs using a contenteditable div.
+accessibility/mac/date-input-increment-decrement.html [ Skip ]
+
 accessibility/display-contents-dynamically-added-children.html [ Skip ]
 
 # DOM paste access requests are not implemented in WebKit1.
@@ -1027,6 +1031,10 @@ webkit.org/b/155067 storage/indexeddb/transaction-abort-private.html [ Pass Cras
 
 webkit.org/b/172092 [ Debug ] fast/parser/adoption-agency-unload-iframe-4.html [ Pass Timeout ]
 
+webkit.org/b/254706 [ Debug ] imported/w3c/web-platform-tests/html/dom/idlharness.https.html [ Pass Timeout ]
+
+webkit.org/b/255235 [ Ventura Debug ] imported/w3c/web-platform-tests/css/css-cascade/layer-counter-style-override.html [ Failure ]
+
 http/tests/security/xss-DENIED-xsl-external-entity.xml [ Skip ]
 
 # rdar://problem/34716163 Breaks subsequent tests using response.xml
@@ -1089,6 +1097,9 @@ http/tests/cookies/same-site/fetch-in-same-origin-service-worker.html [ Skip ]
 http/wpt/cache-storage [ Skip ]
 http/wpt/push-api [ Skip ]
 http/wpt/service-workers [ Skip ]
+http/wpt/background-fetch [ Skip ]
+imported/w3c/web-platform-tests/background-fetch [ Skip ]
+imported/w3c/web-platform-tests/badging/ [ Skip ]
 imported/w3c/web-platform-tests/content-security-policy/inside-worker/serviceworker-report-only.https.sub.html [ Skip ]
 imported/w3c/web-platform-tests/content-security-policy/sandbox/service-worker-sandbox.https.html [ Skip ]
 imported/w3c/web-platform-tests/content-security-policy/securitypolicyviolation/inside-service-worker.https.html [ Skip ]
@@ -1432,6 +1443,13 @@ editing/spelling/spelling-unified-emulation.html [ Failure ]
 # The inert attribute isn't making objects inaccessible on WK1.
 accessibility/node-only-inert-object.html [ Failure ]
 
+# AccessibilityUIElement::stringDescriptionOfAttributeValue is not implemented.
+accessibility/mac/aria-owned-object-relative-frame.html [ Skip ]
+accessibility/mac/iframe-relative-frame.html [ Skip ]
+accessibility/mac/shadow-dom-relative-frame.html [ Skip ]
+accessibility/mac/svg-relative-frame.html [ Skip ]
+accessibility/mac/table-relative-frame.html [ Skip ]
+
 # Skip due to lack of DumpRenderTree `AccessibilityUIElement::stringDescriptionOfAttributeValue` implementation.
 accessibility/visible-character-range-basic.html [ Skip ]
 accessibility/visible-character-range-height-changes.html [ Skip ]
@@ -1454,6 +1472,7 @@ accessibility/parent-delete.html [ Failure ]
 # Skip because the embedded plugin never resolves in WK1, resulting in a timeout.
 accessibility/mac/basic-embed-pdf-accessibility.html [ Skip ]
 accessibility/mac/iframe-pdf.html [ Skip ]
+accessibility/mac/scrolling-in-pdf-crash.html [ Skip ]
 
 # rdar://problem/26478296
 svg/hixie/text/003.html [ Failure ]
@@ -1838,6 +1857,14 @@ webkit.org/b/208022 http/tests/history/back-to-post.py [ Pass Failure ]
 
 # prefetch not supported in WK1
 http/wpt/prefetch [ Skip ]
+imported/w3c/web-platform-tests/preload/prefetch-accept.html [ Skip ]
+imported/w3c/web-platform-tests/preload/prefetch-cache.html [ Skip ]
+imported/w3c/web-platform-tests/preload/prefetch-document.html [ Skip ]
+imported/w3c/web-platform-tests/preload/prefetch-headers.html [ Skip ]
+imported/w3c/web-platform-tests/preload/prefetch-types.html [ Skip ]
+imported/w3c/web-platform-tests/preload/preload-in-data-doc.html [ Skip ]
+
+webkit.org/b/254528 imported/w3c/web-platform-tests/preload/onerror-event.html [ Pass Failure ]
 
 webkit.org/b/208384 imported/w3c/web-platform-tests/requestidlecallback/callback-timeout-when-busy.html [ Pass Failure ]
 
@@ -1862,6 +1889,7 @@ webkit.org/b/210079 [ Debug ] inspector/debugger/evaluateOnCallFrame-errors.html
 webkit.org/b/230072 [ Release ] inspector/dom/shadow-and-non-shadow-children.html [ Pass Failure ]
 
 webkit.org/b/208477 accessibility/mac/text-marker-for-index.html [ Skip ]
+webkit.org/b/251544 accessibility/date-input-aria-label-and-value.html [ Skip ]
 accessibility/mac/textmarker-range-for-range.html [ Skip ]
 accessibility/mac/isolated-tree-mode-on-off.html [ Skip ]
 accessibility/aria-current-state-changed-notification.html [ Skip ]
@@ -2065,8 +2093,6 @@ webkit.org/b/223193 [ BigSur ] imported/w3c/web-platform-tests/html/canvas/eleme
 
 webkit.org/b/223271 [ BigSur Debug ] imported/w3c/web-platform-tests/xhr/send-response-event-order.htm [ Pass Failure ]
 
-webkit.org/b/223283 fast/repaint/canvas-object-fit.html [ Pass Failure ]
-
 webkit.org/b/222686 imported/w3c/web-platform-tests/css/css-grid/grid-definition/grid-auto-repeat-max-size-001.html [ Pass Failure ]
 
 webkit.org/b/223944 [ BigSur Debug ] imported/w3c/web-platform-tests/xhr/event-upload-progress.any.html [ Pass Failure ]
@@ -2096,10 +2122,7 @@ webkit.org/b/223944 [ BigSur Debug ] imported/w3c/web-platform-tests/xhr/event-u
 # rdar://80332615 ([Monterey Wk1 Debug] compositing/clipping/border-radius-on-webgl.html is a constant failure)
 [ Monterey Debug ] compositing/clipping/border-radius-on-webgl.html [ Pass ImageOnlyFailure ]
 
-# rdar://80346720 ([Monterey Wk1] media/media-source/media-webm-opus-partial.html is a consistent failure)
-[ Monterey ] media/media-source/media-webm-opus-partial.html [ Failure ]
-
-#nrdar://80343068 ([ Monterey wk1 arm64] webanimations/accelerated-translate-animation-additional-animation-added-in-flight.html is a flaky image only failure)
+# rdar://80343068 ([ Monterey wk1 arm64] webanimations/accelerated-translate-animation-additional-animation-added-in-flight.html is a flaky image only failure)
 [ Monterey arm64 ] webanimations/accelerated-translate-animation-additional-animation-added-in-flight.html [ Pass ImageOnlyFailure ]
 
 # rdar://80342885 ([ Monterey wk1 arm64 ] webanimations/accelerated-transition-by-removing-property.html is a flaky image only failure)
@@ -2187,7 +2210,7 @@ webkit.org/b/227762 imported/w3c/web-platform-tests/html/interaction/focus/the-a
 
 webkit.org/b/232276 imported/w3c/web-platform-tests/html/interaction/focus/the-autofocus-attribute/spin-by-blocking-style-sheet.html [ Pass Failure ]
 
-webkit.org/b/228704 imported/w3c/web-platform-tests/mathml/relations/html5-tree/dynamic-childlist-002.html [ Pass Failure ]
+imported/w3c/web-platform-tests/mathml/presentation-markup/operators/operator-dictionary-arabic-002.html [ ImageOnlyFailure ]
 
 webkit.org/b/229058 imported/w3c/web-platform-tests/FileAPI/url/url-in-tags.window.html [ Pass Failure ]
 
@@ -2448,4 +2471,26 @@ http/tests/websocket/tests/hybi/multiple-connections-limit.html [ Skip ]
 # Displays blank on WK1
 fullscreen/fullscreen-iframe-navigation.html [ Skip ]
 
-webkit.org/b/252273 editing/mac/attributed-string/font-style-variant-effect.html [ Failure ]
+# Timeout on WK1
+fullscreen/fullscreen-restore-scroll-position-overflow-auto.html [ Skip ]
+
+# Timeout testing is not applicable to in-process webgl, only webgl in gpu process.
+fast/canvas/webgl/lose-context-on-timeout-async.html [ Skip ]
+fast/canvas/webgl/lose-context-on-timeout.html [ Skip ]
+
+webkit.org/b/253533 imported/w3c/web-platform-tests/xhr/status.h2.window.html [ Skip ]
+
+# webgpu is being brought up in the GPU process, radar://106507574 tracks fixing WK1
+http/tests/webgpu/webgpu/api/operation/buffers/map.html [ Skip ]
+
+webkit.org/b/253101 ipc/restrictedendpoints/deny-access-updateQuotaBasedOnSpaceUsageForTesting.html [ Skip ]
+webkit.org/b/253101 ipc/restrictedendpoints/no-test-only-ipc-expected-crash.html [ Skip ]
+
+imported/w3c/web-platform-tests/css/css-backgrounds/background-attachment-margin-root-001.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-backgrounds/background-image-shared-stylesheet.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-backgrounds/background-margin-root.html [ ImageOnlyFailure ]
+
+webkit.org/b/255228 [ Monterey+ ] imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/sizes/parse-a-sizes-attribute-display-none.html [ Failure ]
+webkit.org/b/255228 [ Monterey+ ] imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/sizes/parse-a-sizes-attribute-quirks-mode.html [ Failure ]
+webkit.org/b/255228 [ Monterey+ ] imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/sizes/parse-a-sizes-attribute-standards-mode.html [ Failure ]
+webkit.org/b/255228 [ Monterey+ ] imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/sizes/parse-a-sizes-attribute-width-1000px.html [ Failure ]

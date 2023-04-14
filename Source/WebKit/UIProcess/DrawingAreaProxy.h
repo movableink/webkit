@@ -28,7 +28,6 @@
 
 #include "Connection.h"
 #include "DrawingAreaInfo.h"
-#include "GenericCallback.h"
 #include "MessageReceiver.h"
 #include <WebCore/FloatRect.h>
 #include <WebCore/IntRect.h>
@@ -131,6 +130,8 @@ public:
     virtual bool shouldSendWheelEventsToEventDispatcher() const { return false; }
 
     WebPageProxy& page() const { return m_webPageProxy; }
+    virtual void viewWillStartLiveResize() { };
+    virtual void viewWillEndLiveResize() { };
 
 protected:
     DrawingAreaProxy(DrawingAreaType, WebPageProxy&);

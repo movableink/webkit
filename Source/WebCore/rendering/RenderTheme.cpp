@@ -34,9 +34,9 @@
 #include "FloatRoundedRect.h"
 #include "FocusController.h"
 #include "FontSelector.h"
-#include "Frame.h"
 #include "FrameSelection.h"
 #include "GraphicsContext.h"
+#include "GraphicsTypes.h"
 #include "HTMLAttachmentElement.h"
 #include "HTMLButtonElement.h"
 #include "HTMLInputElement.h"
@@ -47,6 +47,7 @@
 #include "HTMLTextAreaElement.h"
 #include "ImageControlsButtonPart.h"
 #include "InnerSpinButtonPart.h"
+#include "LocalFrame.h"
 #include "LocalizedStrings.h"
 #include "MenuListButtonPart.h"
 #include "MenuListPart.h"
@@ -71,6 +72,7 @@
 #include "TextControlInnerElements.h"
 #include "TextFieldPart.h"
 #include "ToggleButtonPart.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/FileSystem.h>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
@@ -1269,7 +1271,7 @@ bool RenderTheme::isFocused(const RenderObject& renderer) const
         delegate = downcast<SliderThumbElement>(*element).hostInput();
 
     Document& document = delegate->document();
-    Frame* frame = document.frame();
+    auto* frame = document.frame();
     return delegate == document.focusedElement() && frame && frame->selection().isFocusedAndActive();
 }
 
@@ -1980,6 +1982,77 @@ Color RenderTheme::datePlaceholderTextColor(const Color& textColor, const Color&
 
     // FIXME: Consider keeping color in LCHA (if that change is made) or converting back to the initial underlying color type to avoid unnecessarily clamping colors outside of sRGB.
     return convertColor<SRGBA<float>>(hsla);
+}
+
+
+Color RenderTheme::spellingMarkerColor(OptionSet<StyleColorOptions> options) const
+{
+    auto& cache = colorCache(options);
+    if (!cache.spellingMarkerColor.isValid())
+        cache.spellingMarkerColor = platformSpellingMarkerColor(options);
+    return cache.spellingMarkerColor;
+}
+
+Color RenderTheme::platformSpellingMarkerColor(OptionSet<StyleColorOptions>) const
+{
+    return Color::red;
+}
+
+Color RenderTheme::dictationAlternativesMarkerColor(OptionSet<StyleColorOptions> options) const
+{
+    auto& cache = colorCache(options);
+    if (!cache.dictationAlternativesMarkerColor.isValid())
+        cache.dictationAlternativesMarkerColor = platformDictationAlternativesMarkerColor(options);
+    return cache.dictationAlternativesMarkerColor;
+}
+
+Color RenderTheme::platformDictationAlternativesMarkerColor(OptionSet<StyleColorOptions>) const
+{
+    return Color::green;
+}
+
+Color RenderTheme::autocorrectionReplacementMarkerColor(OptionSet<StyleColorOptions> options) const
+{
+    auto& cache = colorCache(options);
+    if (!cache.autocorrectionReplacementMarkerColor.isValid())
+        cache.autocorrectionReplacementMarkerColor = platformAutocorrectionReplacementMarkerColor(options);
+    return cache.autocorrectionReplacementMarkerColor;
+}
+
+Color RenderTheme::platformAutocorrectionReplacementMarkerColor(OptionSet<StyleColorOptions>) const
+{
+    return Color::green;
+}
+
+Color RenderTheme::grammarMarkerColor(OptionSet<StyleColorOptions> options) const
+{
+    auto& cache = colorCache(options);
+    if (!cache.grammarMarkerColor.isValid())
+        cache.grammarMarkerColor = platformGrammarMarkerColor(options);
+    return cache.grammarMarkerColor;
+}
+
+Color RenderTheme::platformGrammarMarkerColor(OptionSet<StyleColorOptions>) const
+{
+    return Color::green;
+}
+
+Color RenderTheme::documentMarkerLineColor(DocumentMarkerLineStyleMode mode, OptionSet<StyleColorOptions> options) const
+{
+    switch (mode) {
+    case DocumentMarkerLineStyleMode::Spelling:
+        return spellingMarkerColor(options);
+    case DocumentMarkerLineStyleMode::DictationAlternatives:
+    case DocumentMarkerLineStyleMode::TextCheckingDictationPhraseWithAlternatives:
+        return dictationAlternativesMarkerColor(options);
+    case DocumentMarkerLineStyleMode::AutocorrectionReplacement:
+        return autocorrectionReplacementMarkerColor(options);
+    case DocumentMarkerLineStyleMode::Grammar:
+        return grammarMarkerColor(options);
+    }
+
+    ASSERT_NOT_REACHED();
+    return Color::transparentBlack;
 }
 
 void RenderTheme::setCustomFocusRingColor(const Color& color)

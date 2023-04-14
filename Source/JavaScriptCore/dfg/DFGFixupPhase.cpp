@@ -2007,6 +2007,11 @@ private:
             break;
         }
 
+        case FunctionBind: {
+            fixEdge<ObjectUse>(m_graph.child(node, 0));
+            break;
+        }
+
         case SetPrivateBrand: {
             fixEdge<CellUse>(node->child1());
             fixEdge<SymbolUse>(node->child2());
@@ -2413,11 +2418,15 @@ private:
             fixEdge<KnownInt32Use>(index);
             fixEdge<KnownInt32Use>(m_graph.varArgChild(node, 2));
             fixEdge<KnownCellUse>(m_graph.varArgChild(node, 3));
+
+            m_graph.m_tupleData.at(node->tupleOffset()).resultFlags = NodeResultInt32;
+            m_graph.m_tupleData.at(node->tupleOffset() + 1).resultFlags = NodeResultInt32;
             break;
         }
 
-        case EnumeratorNextExtractIndex:
-        case EnumeratorNextExtractMode: {
+        case ExtractFromTuple: {
+            node->setResult(m_graph.m_tupleData.at(node->tupleIndex()).resultFlags);
+            ASSERT(node->hasResult());
             break;
         }
 
@@ -3015,8 +3024,8 @@ private:
         case FilterCheckPrivateBrandStatus:
         case FilterSetPrivateBrandStatus:
         case InvalidationPoint:
-        case CreateArgumentsButterfly:
         case GetWebAssemblyInstanceExports:
+        case NewBoundFunction:
             break;
 #else // not ASSERT_ENABLED
         default:
@@ -3748,6 +3757,8 @@ private:
         emitPrimordialCheckFor(globalObject->regExpProtoGlobalGetter(), vm().propertyNames->global.impl());
         // Check that searchRegExp.unicode is the primordial RegExp.prototype.unicode
         emitPrimordialCheckFor(globalObject->regExpProtoUnicodeGetter(), vm().propertyNames->unicode.impl());
+        // Check that searchRegExp.unicodeSets is the primordial RegExp.prototype.unicodeSets
+        emitPrimordialCheckFor(globalObject->regExpProtoUnicodeSetsGetter(), vm().propertyNames->unicodeSets.impl());
         // Check that searchRegExp[Symbol.match] is the primordial RegExp.prototype[Symbol.replace]
         emitPrimordialCheckFor(globalObject->regExpProtoSymbolReplaceFunction(), vm().propertyNames->replaceSymbol.impl());
     }
@@ -4400,11 +4411,13 @@ private:
         switch (node->arrayMode().type()) {
         case Array::Double:
         case Array::Int32: {
+            Node* searchElementNode = searchElement.node();
+
             if (searchElement->shouldSpeculateCell()) {
                 fixEdge<CellUse>(searchElement);
                 m_insertionSet.insertCheck(m_graph, m_indexInBlock, node);
                 m_graph.convertToConstant(node, jsNumber(-1));
-                observeUseKindOnNode<CellUse>(searchElement.node());
+                observeUseKindOnNode<CellUse>(searchElementNode);
                 return;
             }
 
@@ -4412,7 +4425,7 @@ private:
                 fixEdge<OtherUse>(searchElement);
                 m_insertionSet.insertCheck(m_graph, m_indexInBlock, node);
                 m_graph.convertToConstant(node, jsNumber(-1));
-                observeUseKindOnNode<OtherUse>(searchElement.node());
+                observeUseKindOnNode<OtherUse>(searchElementNode);
                 return;
             }
 
@@ -4420,7 +4433,7 @@ private:
                 fixEdge<BooleanUse>(searchElement);
                 m_insertionSet.insertCheck(m_graph, m_indexInBlock, node);
                 m_graph.convertToConstant(node, jsNumber(-1));
-                observeUseKindOnNode<BooleanUse>(searchElement.node());
+                observeUseKindOnNode<BooleanUse>(searchElementNode);
                 return;
             }
             break;

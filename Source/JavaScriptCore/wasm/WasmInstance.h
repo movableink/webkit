@@ -32,6 +32,7 @@
 #include "WasmMemory.h"
 #include "WasmModule.h"
 #include "WasmTable.h"
+#include "WebAssemblyFunction.h"
 #include "WriteBarrier.h"
 #include <wtf/BitVector.h>
 #include <wtf/RefPtr.h>
@@ -79,6 +80,8 @@ public:
     const Element* elementAt(unsigned) const;
 
     void initElementSegment(uint32_t tableIndex, const Element& segment, uint32_t dstOffset, uint32_t srcOffset, uint32_t length);
+    template<typename T> bool copyDataSegment(uint32_t segmentIndex, uint32_t offset, uint32_t lengthInBytes, FixedVector<T>& values);
+    void copyElementSegment(const Element& segment, uint32_t srcOffset, uint32_t length, FixedVector<uint64_t>& values);
 
     bool isImportFunction(uint32_t functionIndex) const
     {

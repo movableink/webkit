@@ -110,7 +110,7 @@ template<> void JSTestStringifierAnonymousOperationDOMConstructor::initializePro
 
 static const HashTableValue JSTestStringifierAnonymousOperationPrototypeTableValues[] =
 {
-    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestStringifierAnonymousOperationConstructor, 0 } },
+    { "constructor"_s, static_cast<unsigned>(PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestStringifierAnonymousOperationConstructor, 0 } },
     { "toString"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsTestStringifierAnonymousOperationPrototypeFunction_toString, 0 } },
 };
 
@@ -141,7 +141,9 @@ void JSTestStringifierAnonymousOperation::finishCreation(VM& vm)
 
 JSObject* JSTestStringifierAnonymousOperation::createPrototype(VM& vm, JSDOMGlobalObject& globalObject)
 {
-    return JSTestStringifierAnonymousOperationPrototype::create(vm, &globalObject, JSTestStringifierAnonymousOperationPrototype::createStructure(vm, &globalObject, globalObject.objectPrototype()));
+    auto* structure = JSTestStringifierAnonymousOperationPrototype::createStructure(vm, &globalObject, globalObject.objectPrototype());
+    structure->setMayBePrototype(true);
+    return JSTestStringifierAnonymousOperationPrototype::create(vm, &globalObject, structure);
 }
 
 JSObject* JSTestStringifierAnonymousOperation::prototype(VM& vm, JSDOMGlobalObject& globalObject)

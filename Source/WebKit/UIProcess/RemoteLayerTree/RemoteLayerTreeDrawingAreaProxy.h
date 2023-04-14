@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,13 +45,15 @@ public:
     RemoteLayerTreeDrawingAreaProxy(WebPageProxy&, WebProcessProxy&);
     virtual ~RemoteLayerTreeDrawingAreaProxy();
 
+    virtual bool isRemoteLayerTreeDrawingAreaProxyMac() const { return false; }
+
     const RemoteLayerTreeHost& remoteLayerTreeHost() const { return *m_remoteLayerTreeHost; }
     std::unique_ptr<RemoteLayerTreeHost> detachRemoteLayerTreeHost();
     
     virtual std::unique_ptr<RemoteScrollingCoordinatorProxy> createScrollingCoordinatorProxy() const = 0;
 
-    void acceleratedAnimationDidStart(WebCore::GraphicsLayer::PlatformLayerID, const String& key, MonotonicTime startTime);
-    void acceleratedAnimationDidEnd(WebCore::GraphicsLayer::PlatformLayerID, const String& key);
+    void acceleratedAnimationDidStart(WebCore::PlatformLayerIdentifier, const String& key, MonotonicTime startTime);
+    void acceleratedAnimationDidEnd(WebCore::PlatformLayerIdentifier, const String& key);
 
     TransactionID nextLayerTreeTransactionID() const { return m_pendingLayerTreeTransactionID.next(); }
     TransactionID lastCommittedLayerTreeTransactionID() const { return m_transactionIDForPendingCACommit; }
@@ -61,21 +63,30 @@ public:
     
     bool hasDebugIndicator() const { return !!m_debugIndicatorLayerTreeHost; }
 
-    CALayer *layerWithIDForTesting(WebCore::GraphicsLayer::PlatformLayerID) const;
+    CALayer *layerWithIDForTesting(WebCore::PlatformLayerIdentifier) const;
 
 #if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
-    void updateOverlayRegionIDs(const HashSet<WebCore::GraphicsLayer::PlatformLayerID> &overlayRegionIDs) { m_remoteLayerTreeHost->updateOverlayRegionIDs(overlayRegionIDs); }
+    void updateOverlayRegionIDs(const HashSet<WebCore::PlatformLayerIdentifier> &overlayRegionIDs) { m_remoteLayerTreeHost->updateOverlayRegionIDs(overlayRegionIDs); }
 #endif
+    
+    void viewWillStartLiveResize() final;
+    void viewWillEndLiveResize() final;
 
+    // For testing.
+    unsigned countOfTransactionsWithNonEmptyLayerChanges() const { return m_countOfTransactionsWithNonEmptyLayerChanges; }
+    
 protected:
     void updateDebugIndicatorPosition();
 
     bool shouldCoalesceVisualEditorStateUpdates() const override { return true; }
 
 private:
+
     void sizeDidChange() final;
     void deviceScaleFactorDidChange() final;
     void windowKindDidChange() final;
+    void minimumSizeForAutoLayoutDidChange() final;
+    void sizeToContentAutoSizeMaximumSizeDidChange() final;
     void didUpdateGeometry();
     void attachToProvisionalFrameProcess(WebProcessProxy&) final;
     void startReceivingRemoteLayerTreeDrawingAreaProxyMessages(WebProcessProxy&);
@@ -107,10 +118,11 @@ private:
     // Message handlers
     virtual void setPreferredFramesPerSecond(WebCore::FramesPerSecond) { }
     void willCommitLayerTree(TransactionID);
-    void commitLayerTree(IPC::Connection&, const RemoteLayerTreeTransaction&, const RemoteScrollingCoordinatorTransaction&);
+    void commitLayerTree(IPC::Connection&, const Vector<std::pair<RemoteLayerTreeTransaction, RemoteScrollingCoordinatorTransaction>>&);
+    void commitLayerTreeTransaction(IPC::Connection&, const RemoteLayerTreeTransaction&, const RemoteScrollingCoordinatorTransaction&);
     virtual void didCommitLayerTree(IPC::Connection&, const RemoteLayerTreeTransaction&, const RemoteScrollingCoordinatorTransaction&) { }
 
-    void asyncSetLayerContents(WebCore::GraphicsLayer::PlatformLayerID, ImageBufferBackendHandle&&);
+    void asyncSetLayerContents(WebCore::PlatformLayerIdentifier, ImageBufferBackendHandle&&);
 
     void sendUpdateGeometry();
 
@@ -120,16 +132,22 @@ private:
     DidUpdateMessageState m_didUpdateMessageState { DoesNotNeedDidUpdate };
 
     WebCore::IntSize m_lastSentSize;
+    WebCore::IntSize m_lastSentMinimumSizeForAutoLayout;
+    WebCore::IntSize m_lastSentSizeToContentAutoSizeMaximumSize;
 
     std::unique_ptr<RemoteLayerTreeHost> m_debugIndicatorLayerTreeHost;
     RetainPtr<CALayer> m_tileMapHostLayer;
     RetainPtr<CALayer> m_exposedRectIndicatorLayer;
 
     TransactionID m_pendingLayerTreeTransactionID;
+#if ASSERT_ENABLED
     TransactionID m_lastVisibleTransactionID;
+#endif
     TransactionID m_transactionIDForPendingCACommit;
     TransactionID m_transactionIDForUnhidingContent;
     ActivityStateChangeID m_activityStateChangeID { ActivityStateChangeAsynchronous };
+    
+    unsigned m_countOfTransactionsWithNonEmptyLayerChanges { 0 };
 
     Vector<Ref<WebProcessProxy>> m_processesWithRegisteredRemoteLayerTreeDrawingAreaProxyMessageReceiver;
 };

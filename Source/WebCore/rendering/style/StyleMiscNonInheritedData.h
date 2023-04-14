@@ -25,15 +25,21 @@
 
 #pragma once
 
+#include "LengthPoint.h"
 #include "StyleContentAlignmentData.h"
 #include "StyleSelfAlignmentData.h"
-#include "ShadowData.h"
+#include <memory>
+#include <wtf/DataRef.h>
+#include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class AnimationList;
 class ContentData;
 class FillLayer;
+class ShadowData;
 class StyleDeprecatedFlexibleBoxData;
 class StyleFilterData;
 class StyleFlexibleBoxData;
@@ -91,7 +97,6 @@ public:
     unsigned effectiveAppearance : appearanceBitWidth; // EAppearance
     unsigned textOverflow : 1; // Whether or not lines that spill out should be truncated with "..."
     unsigned userDrag : 2; // UserDrag
-    unsigned isNotFinal : 1;
     unsigned objectFit : 3; // ObjectFit
     unsigned resize : 3; // Resize
 

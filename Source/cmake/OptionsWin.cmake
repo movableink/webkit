@@ -1,6 +1,4 @@
 set(PORT Win)
-# FIXME: https://bugs.webkit.org/show_bug.cgi?id=251927
-set(WTF_PLATFORM_WIN_CAIRO 1)
 
 # Use Release DLL CRT even for Debug build
 set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
@@ -17,8 +15,6 @@ add_definitions(-D_WINDOWS -DWINVER=0x601 -D_WIN32_WINNT=0x601)
 
 add_definitions(-DNOMINMAX)
 add_definitions(-DUNICODE -D_UNICODE)
-
-add_definitions(-DWTF_PLATFORM_WIN_CAIRO=1)
 add_definitions(-DNOCRYPT)
 
 # If <winsock2.h> is not included before <windows.h> redefinition errors occur
@@ -103,6 +99,7 @@ endif ()
 
 find_package(WOFF2 1.0.2 COMPONENTS dec)
 if (WOFF2_FOUND)
+    find_package(Brotli REQUIRED COMPONENTS dec)
     SET_AND_EXPOSE_TO_BUILD(USE_WOFF2 ON)
 endif ()
 

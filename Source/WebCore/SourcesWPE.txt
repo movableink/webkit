@@ -57,20 +57,17 @@ page/scrolling/nicosia/ScrollingTreePositionedNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeScrollingNodeDelegateNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeStickyNodeNicosia.cpp
 
-platform/UserAgentQuirks.cpp
-
 platform/gamepad/libwpe/GamepadLibWPE.cpp
 platform/gamepad/libwpe/GamepadProviderLibWPE.cpp
 
 platform/generic/ScrollbarsControllerGeneric.cpp
 
-platform/graphics/GLContext.cpp
 platform/graphics/PlatformDisplay.cpp
 
 platform/graphics/wpe/SystemFontDatabaseWPE.cpp
 
-platform/graphics/egl/GLContextEGL.cpp
-platform/graphics/egl/GLContextEGLLibWPE.cpp
+platform/graphics/egl/GLContext.cpp
+platform/graphics/egl/GLContextLibWPE.cpp
 
 platform/graphics/gbm/GBMBufferSwapchain.cpp
 platform/graphics/gbm/GBMDevice.cpp

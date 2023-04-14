@@ -29,6 +29,7 @@
 #include "AnimationList.h"
 #include "ContentData.h"
 #include "FillLayer.h"
+#include "RenderStyle.h"
 #include "StyleDeprecatedFlexibleBoxData.h"
 #include "StyleFilterData.h"
 #include "StyleFlexibleBoxData.h"
@@ -69,7 +70,6 @@ StyleMiscNonInheritedData::StyleMiscNonInheritedData()
     , effectiveAppearance(static_cast<unsigned>(RenderStyle::initialAppearance()))
     , textOverflow(static_cast<unsigned>(RenderStyle::initialTextOverflow()))
     , userDrag(static_cast<unsigned>(RenderStyle::initialUserDrag()))
-    , isNotFinal(false)
     , objectFit(static_cast<unsigned>(RenderStyle::initialObjectFit()))
     , resize(static_cast<unsigned>(RenderStyle::initialResize()))
 {
@@ -106,7 +106,6 @@ StyleMiscNonInheritedData::StyleMiscNonInheritedData(const StyleMiscNonInherited
     , effectiveAppearance(o.effectiveAppearance)
     , textOverflow(o.textOverflow)
     , userDrag(o.userDrag)
-    , isNotFinal(o.isNotFinal)
     , objectFit(o.objectFit)
     , resize(o.resize)
 {
@@ -150,7 +149,6 @@ bool StyleMiscNonInheritedData::operator==(const StyleMiscNonInheritedData& o) c
         && effectiveAppearance == o.effectiveAppearance
         && textOverflow == o.textOverflow
         && userDrag == o.userDrag
-        && isNotFinal == o.isNotFinal
         && objectFit == o.objectFit
         && resize == o.resize;
 }

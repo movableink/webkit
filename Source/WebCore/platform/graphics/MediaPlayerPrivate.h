@@ -82,6 +82,10 @@ public:
     virtual void videoFullscreenStandbyChanged() { }
 #endif
 
+    virtual LayerHostingContextID hostingContextID() const { return 0; }
+    virtual FloatSize videoInlineSize() const { return { }; }
+    virtual void setVideoInlineSizeFenced(const FloatSize&, const WTF::MachSendRight&) { }
+
 #if PLATFORM(IOS_FAMILY)
     virtual NSArray *timedMetadata() const { return nil; }
     virtual String accessLog() const { return emptyString(); }
@@ -117,6 +121,7 @@ public:
     virtual float currentTime() const { return 0; }
     virtual double currentTimeDouble() const { return currentTime(); }
     virtual MediaTime currentMediaTime() const { return MediaTime::createWithDouble(currentTimeDouble()); }
+    virtual bool currentMediaTimeMayProgress() const { return readyState() >= MediaPlayer::ReadyState::HaveFutureData; }
 
     virtual bool setCurrentTimeDidChangeCallback(MediaPlayer::CurrentTimeDidChangeCallback&&) { return false; }
 

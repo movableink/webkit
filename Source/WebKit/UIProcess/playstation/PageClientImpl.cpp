@@ -29,9 +29,15 @@
 #include "DrawingAreaProxyCoordinatedGraphics.h"
 #include "PlayStationWebView.h"
 #include "WebPageProxy.h"
+#include <WebCore/DOMPasteAccess.h>
+#include <WebCore/NotImplemented.h>
 
 #if USE(GRAPHICS_LAYER_WC)
 #include "DrawingAreaProxyWC.h"
+#endif
+
+#if USE(WPE_RENDERER)
+#include <wpe/wpe.h>
 #endif
 
 namespace WebKit {
@@ -191,6 +197,13 @@ void PageClientImpl::doneWithKeyEvent(const NativeWebKeyboardEvent& event, bool 
     notImplemented();
 }
 
+#if ENABLE(TOUCH_EVENTS)
+void PageClientImpl::doneWithTouchEvent(const NativeWebTouchEvent& event, bool wasEventHandled)
+{
+    notImplemented();
+}
+#endif // ENABLE(TOUCH_EVENTS)
+
 RefPtr<WebPopupMenuProxy> PageClientImpl::createPopupMenuProxy(WebPageProxy&  pageProxy)
 {
     notImplemented();
@@ -334,5 +347,12 @@ void PageClientImpl::requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, cons
 {
     completionHandler(WebCore::DOMPasteAccessResponse::DeniedForGesture);
 }
+
+#if USE(WPE_RENDERER)
+UnixFileDescriptor PageClientImpl::hostFileDescriptor()
+{
+    return UnixFileDescriptor { 1, UnixFileDescriptor::Adopt };
+}
+#endif
 
 } // namespace WebKit

@@ -25,7 +25,7 @@
 #include "config.h"
 #include "HTMLFieldSetElement.h"
 
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "GenericCachedHTMLCollection.h"
 #include "HTMLFormControlsCollection.h"
 #include "HTMLLegendElement.h"
@@ -35,6 +35,7 @@
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderElement.h"
 #include "ScriptDisallowedScope.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
 

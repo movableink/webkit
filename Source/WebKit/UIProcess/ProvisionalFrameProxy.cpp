@@ -31,11 +31,16 @@
 #include "FrameInfoData.h"
 #include "HandleMessage.h"
 #include "LoadParameters.h"
+#include "LoadedWebArchive.h"
+#include "MessageSenderInlines.h"
+#include "NetworkProcessMessages.h"
 #include "WebFrameProxy.h"
 #include "WebFrameProxyMessages.h"
 #include "WebPageMessages.h"
+#include "WebPageProxy.h"
 #include "WebPageProxyMessages.h"
 #include "WebProcessMessages.h"
+#include "WebProcessProxy.h"
 
 #include <WebCore/FrameIdentifier.h>
 #include <WebCore/ShouldTreatAsContinuingLoad.h>
@@ -63,17 +68,13 @@ ProvisionalFrameProxy::ProvisionalFrameProxy(WebFrameProxy& frame, Ref<WebProces
     ASSERT(drawingArea);
 
     auto parameters = page.creationParameters(m_process, *drawingArea);
+    parameters.subframeProcessFrameTreeInitializationParameters = { {
+        frame.frameID(),
+        *page.frameTreeCreationParameters(),
+        m_layerHostingContextIdentifier
+    } };
     parameters.isProcessSwap = true; // FIXME: This should be a parameter to creationParameters rather than doctoring up the parameters afterwards.
     parameters.topContentInset = 0;
-    parameters.viewSize = { 300, 150 }; // FIXME: Get the real size from the parent process.
-#if ENABLE(META_VIEWPORT)
-    // FIXME: This is incorrect, but needed to make the root layer the right size in the basic-iframe.html layout test.
-    // Investigate whether iframes think their viewport size is just the size of the iframe.
-    // and maybe update viewportConfigurationViewSize as well if needed.
-    parameters.viewportConfigurationViewLayoutSize = { 300, 150 };
-#endif
-    parameters.layerHostingContextIdentifier = m_layerHostingContextIdentifier;
-    parameters.mainFrameIdentifier = frame.frameID();
     m_process->send(Messages::WebProcess::CreateWebPage(m_pageID, parameters), 0);
     m_process->addVisitedLinkStoreUser(page.visitedLinkStore(), page.identifier());
 
@@ -82,10 +83,15 @@ ProvisionalFrameProxy::ProvisionalFrameProxy(WebFrameProxy& frame, Ref<WebProces
     LoadParameters loadParameters;
     loadParameters.request = request;
     loadParameters.shouldTreatAsContinuingLoad = WebCore::ShouldTreatAsContinuingLoad::YesAfterNavigationPolicyDecision;
+    loadParameters.frameIdentifier = frame.frameID();
     // FIXME: Add more parameters as appropriate.
 
-    // FIXME: Do we need a LoadRequestWaitingForProcessLaunch version?
-    m_process->send(Messages::WebPage::LoadRequest(loadParameters), m_pageID);
+    // FIXME: This gives too much cookie access. This should be removed after putting the entire frame tree in all web processes.
+    auto giveAllCookieAccess = LoadedWebArchive::Yes;
+    page.websiteDataStore().networkProcess().sendWithAsyncReply(Messages::NetworkProcess::AddAllowedFirstPartyForCookies(m_process->coreProcessIdentifier(), WebCore::RegistrableDomain(request.url()), giveAllCookieAccess), [process = m_process, loadParameters = WTFMove(loadParameters), pageID = m_pageID] () mutable {
+        // FIXME: Do we need a LoadRequestWaitingForProcessLaunch version?
+        process->send(Messages::WebPage::LoadRequest(loadParameters), pageID);
+    });
 }
 
 ProvisionalFrameProxy::~ProvisionalFrameProxy()

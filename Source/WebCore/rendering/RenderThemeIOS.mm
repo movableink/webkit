@@ -47,9 +47,7 @@
 #import "FontCache.h"
 #import "FontCacheCoreText.h"
 #import "FontCascade.h"
-#import "Frame.h"
 #import "FrameSelection.h"
-#import "FrameView.h"
 #import "GeometryUtilities.h"
 #import "Gradient.h"
 #import "GraphicsContext.h"
@@ -63,6 +61,8 @@
 #import "HTMLTextAreaElement.h"
 #import "IOSurface.h"
 #import "LocalCurrentTraitCollection.h"
+#import "LocalFrame.h"
+#import "LocalFrameView.h"
 #import "LocalizedDateCache.h"
 #import "NodeRenderStyle.h"
 #import "Page.h"
@@ -80,6 +80,7 @@
 #import "RenderView.h"
 #import "Settings.h"
 #import "Theme.h"
+#import "TypedElementDescendantIteratorInlines.h"
 #import "UTIUtilities.h"
 #import "WebCoreThreadRun.h"
 #import <CoreGraphics/CoreGraphics.h>
@@ -476,8 +477,8 @@ bool RenderThemeIOS::isControlStyled(const RenderStyle& style, const RenderStyle
     if (style.effectiveAppearance() == StyleAppearance::PushButton || style.effectiveAppearance() == StyleAppearance::MenulistButton)
         return !style.visitedDependentColor(CSSPropertyBackgroundColor).isVisible() || style.backgroundLayers().hasImage();
 
-    if (style.effectiveAppearance() == StyleAppearance::TextField || style.effectiveAppearance() == StyleAppearance::TextArea)
-        return style.backgroundLayers() != userAgentStyle.backgroundLayers();
+    if (style.effectiveAppearance() == StyleAppearance::TextField || style.effectiveAppearance() == StyleAppearance::TextArea || style.effectiveAppearance() == StyleAppearance::SearchField)
+        return !style.borderAndBackgroundEqual(userAgentStyle);
 
 #if ENABLE(DATALIST_ELEMENT)
     if (style.effectiveAppearance() == StyleAppearance::ListButton)
@@ -1413,6 +1414,7 @@ static const Vector<CSSValueSystemColorInformation>& cssValueSystemColorInformat
             // FIXME: <rdar://problem/75538507> UIKit should expose this color so that we maintain parity with system buttons.
             { CSSValueAppleSystemOpaqueSecondaryFillDisabled, @selector(secondarySystemFillColor), true, 0.75f },
             { CSSValueAppleSystemOpaqueTertiaryFill, @selector(tertiarySystemFillColor), true },
+            { CSSValueAppleSystemQuaternaryFill, @selector(quaternarySystemFillColor) },
             { CSSValueAppleSystemGroupedBackground, @selector(systemGroupedBackgroundColor) },
             { CSSValueAppleSystemSecondaryGroupedBackground, @selector(secondarySystemGroupedBackgroundColor) },
             { CSSValueAppleSystemTertiaryGroupedBackground, @selector(tertiarySystemGroupedBackgroundColor) },
@@ -1596,9 +1598,9 @@ RenderThemeIOS::IconAndSize RenderThemeIOS::iconForAttachment(const String& file
     return IconAndSize { result, size };
 }
 
-LayoutSize RenderThemeIOS::attachmentIntrinsicSize(const RenderAttachment&) const
+LayoutSize RenderThemeIOS::attachmentIntrinsicSize(const RenderAttachment& renderAttachment) const
 {
-    return LayoutSize(FloatSize(attachmentSize) * attachmentDynamicTypeScaleFactor());
+    return LayoutSize(FloatSize(renderAttachment.attachmentElement().isImageOnly() ? attachmentImageOnlySize : attachmentSize) * attachmentDynamicTypeScaleFactor());
 }
 
 static void paintAttachmentIcon(GraphicsContext& context, AttachmentLayout& info)
@@ -1662,7 +1664,7 @@ bool RenderThemeIOS::paintAttachment(const RenderObject& renderer, const PaintIn
 
     context.translate(toFloatSize(paintRect.location()));
 
-    if (attachment.shouldDrawBorder()) {
+    if (attachment.shouldDrawBorder() && !attachment.attachmentElement().isImageOnly()) {
         auto borderPath = attachmentBorderPath(info);
         paintAttachmentBorder(context, borderPath);
         context.clipPath(borderPath);

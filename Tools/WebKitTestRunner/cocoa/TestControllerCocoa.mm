@@ -160,7 +160,9 @@ void TestController::platformInitializeDataStore(WKPageConfigurationRef, const T
         if (options.enableInAppBrowserPrivacy())
             [websiteDataStoreConfig setEnableInAppBrowserPrivacyForTesting:YES];
 #endif
-        m_websiteDataStore = (__bridge WKWebsiteDataStoreRef)adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:websiteDataStoreConfig.get()]).get();
+        auto store = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:websiteDataStoreConfig.get()]);
+        m_websiteDataStore = (__bridge WKWebsiteDataStoreRef)store.get();
+        [store set_delegate:globalWebsiteDataStoreDelegateClient().get()];
     } else
         m_websiteDataStore = (__bridge WKWebsiteDataStoreRef)[globalWebViewConfiguration() websiteDataStore];
 }
@@ -184,6 +186,8 @@ void TestController::platformCreateWebView(WKPageConfigurationRef, const TestOpt
 
     if (options.enableAttachmentElement())
         [copiedConfiguration _setAttachmentElementEnabled:YES];
+    if (options.enableAttachmentWideLayout())
+        [copiedConfiguration _setAttachmentWideLayoutEnabled:YES];
 
     [copiedConfiguration setWebsiteDataStore:(WKWebsiteDataStore *)websiteDataStore()];
     [copiedConfiguration _setAllowTopNavigationToDataURLs:options.allowTopNavigationToDataURLs()];
@@ -204,6 +208,8 @@ void TestController::platformCreateWebView(WKPageConfigurationRef, const TestOpt
         NSString *text = [NSString stringWithContentsOfFile:manifestPath usedEncoding:nullptr error:nullptr];
         [copiedConfiguration _setApplicationManifest:[_WKApplicationManifest applicationManifestFromJSON:text manifestURL:nil documentURL:nil]];
     }
+    
+    [copiedConfiguration _setAllowTestOnlyIPC:options.allowTestOnlyIPC()];
 
     m_mainWebView = makeUnique<PlatformWebView>(copiedConfiguration.get(), options);
     finishCreatingPlatformWebView(m_mainWebView.get(), options);
@@ -569,6 +575,91 @@ void TestController::configureWebpagePreferences(WKWebViewConfiguration *configu
 WKRetainPtr<WKStringRef> TestController::takeViewPortSnapshot()
 {
     return adoptWK(WKImageCreateDataURLFromImage(mainWebView()->windowSnapshotImage().get()));
+}
+
+WKRetainPtr<WKStringRef> TestController::getBackgroundFetchIdentifier()
+{
+    __block String result;
+    __block bool isDone = false;
+    [globalWebViewConfiguration().get().websiteDataStore _getAllBackgroundFetchIdentifiers:^(NSArray<NSString *> *identifiers) {
+        if ([identifiers count])
+            result = identifiers[0];
+        isDone = true;
+    }];
+    platformRunUntil(isDone, noTimeout);
+
+    return adoptWK(WKStringCreateWithUTF8CString(result.utf8().data()));
+}
+
+void TestController::abortBackgroundFetch(WKStringRef identifier)
+{
+    __block bool isDone = false;
+    [globalWebViewConfiguration().get().websiteDataStore _abortBackgroundFetch:toWTFString(identifier) completionHandler:^() {
+        isDone = true;
+    }];
+    platformRunUntil(isDone, noTimeout);
+}
+
+void TestController::pauseBackgroundFetch(WKStringRef identifier)
+{
+    __block bool isDone = false;
+    [globalWebViewConfiguration().get().websiteDataStore _pauseBackgroundFetch:toWTFString(identifier) completionHandler:^() {
+        isDone = true;
+    }];
+    platformRunUntil(isDone, noTimeout);
+}
+
+void TestController::resumeBackgroundFetch(WKStringRef identifier)
+{
+    __block bool isDone = false;
+    [globalWebViewConfiguration().get().websiteDataStore _resumeBackgroundFetch:toWTFString(identifier) completionHandler:^() {
+        isDone = true;
+    }];
+    platformRunUntil(isDone, noTimeout);
+}
+
+void TestController::simulateClickBackgroundFetch(WKStringRef identifier)
+{
+    __block bool isDone = false;
+    [globalWebViewConfiguration().get().websiteDataStore _clickBackgroundFetch:toWTFString(identifier) completionHandler:^() {
+        isDone = true;
+    }];
+    platformRunUntil(isDone, noTimeout);
+}
+
+void TestController::setBackgroundFetchPermission(bool value)
+{
+    [globalWebsiteDataStoreDelegateClient() setBackgroundFetchPermission:value];
+}
+
+WKRetainPtr<WKStringRef> TestController::lastAddedBackgroundFetchIdentifier() const
+{
+    return adoptWK(WKStringCreateWithCFString((__bridge CFStringRef)[globalWebsiteDataStoreDelegateClient() lastAddedBackgroundFetchIdentifier]));
+}
+
+WKRetainPtr<WKStringRef> TestController::lastRemovedBackgroundFetchIdentifier() const
+{
+    return adoptWK(WKStringCreateWithCFString((__bridge CFStringRef)[globalWebsiteDataStoreDelegateClient() lastRemovedBackgroundFetchIdentifier]));
+}
+
+WKRetainPtr<WKStringRef> TestController::lastUpdatedBackgroundFetchIdentifier() const
+{
+    return adoptWK(WKStringCreateWithCFString((__bridge CFStringRef)[globalWebsiteDataStoreDelegateClient() lastUpdatedBackgroundFetchIdentifier]));
+}
+
+WKRetainPtr<WKStringRef> TestController::backgroundFetchState(WKStringRef identifier)
+{
+    __block bool isDone = false;
+    __block String backgroundFetchState;
+    [globalWebViewConfiguration().get().websiteDataStore _getBackgroundFetchState:toWTFString(identifier) completionHandler:^(NSDictionary *state) {
+        backgroundFetchState = makeString("{ ",
+            "\"downloaded\":", [[state valueForKey:@"Downloaded"] unsignedIntegerValue], ",",
+            "\"isPaused\":", [[state valueForKey:@"IsPaused"] boolValue] ? "true" : "false",
+        "}");
+        isDone = true;
+    }];
+    platformRunUntil(isDone, noTimeout);
+    return toWK(backgroundFetchState);
 }
 
 } // namespace WTR

@@ -67,10 +67,7 @@ enum class FontTypeForPreparation : bool {
     SystemFont,
     NonSystemFont
 };
-enum class ApplyTraitsVariations : bool {
-    No,
-    Yes
-};
+enum class ApplyTraitsVariations : bool { No, Yes };
 RetainPtr<CTFontRef> preparePlatformFont(UnrealizedCoreTextFont&&, const FontDescription&, const FontCreationContext&, FontTypeForPreparation = FontTypeForPreparation::NonSystemFont, ApplyTraitsVariations = ApplyTraitsVariations::Yes);
 enum class ShouldComputePhysicalTraits : bool { No, Yes };
 SynthesisPair computeNecessarySynthesis(CTFontRef, const FontDescription&, ShouldComputePhysicalTraits = ShouldComputePhysicalTraits::No, bool isPlatformFont = false);
@@ -81,9 +78,8 @@ RetainPtr<CTFontRef> createFontForInstalledFonts(CTFontDescriptorRef, CGFloat si
 RetainPtr<CTFontRef> createFontForInstalledFonts(CTFontRef, AllowUserInstalledFonts);
 void addAttributesForWebFonts(CFMutableDictionaryRef attributes, AllowUserInstalledFonts);
 RetainPtr<CFSetRef> installedFontMandatoryAttributes(AllowUserInstalledFonts);
-float normalizeCTWeight(float);
-float denormalizeCTWeight(float);
 WEBCORE_EXPORT void setOverrideEnhanceTextLegibility(bool);
+bool fontNameIsSystemFont(CFStringRef);
 
 CFStringRef getUIContentSizeCategoryDidChangeNotificationName();
 WEBCORE_EXPORT void setContentSizeCategory(const String&);

@@ -364,7 +364,7 @@ void AccessibilityObjectAtspi::textInserted(const String& insertedText, const Vi
     auto utf16Text = text();
     auto utf8Text = utf16Text.utf8();
     auto utf16Offset = adjustOutputOffset(m_coreObject->indexForVisiblePosition(position), m_hasListMarkerAtStart);
-    String maskedText = m_coreObject->isPasswordField() ? utf16Text.substring(utf16Offset - insertedText.length(), insertedText.length()) : String();
+    String maskedText = m_coreObject->isSecureField() ? utf16Text.substring(utf16Offset - insertedText.length(), insertedText.length()) : String();
     auto mapping = offsetMapping(utf16Text);
     auto offset = UTF16OffsetToUTF8(mapping, utf16Offset);
     auto utf8InsertedText = maskedText.isNull() ? insertedText.utf8() : maskedText.utf8();
@@ -993,7 +993,7 @@ bool AccessibilityObjectAtspi::scrollToMakeVisible(int startOffset, int endOffse
         break;
     }
 
-    FrameView::scrollRectToVisible(rect, *m_coreObject->renderer(), false, { SelectionRevealMode::Reveal, alignX, alignY, ShouldAllowCrossOriginScrolling::Yes });
+    LocalFrameView::scrollRectToVisible(rect, *m_coreObject->renderer(), false, { SelectionRevealMode::Reveal, alignX, alignY, ShouldAllowCrossOriginScrolling::Yes });
     return true;
 }
 

@@ -24,7 +24,32 @@
  */
 
 @linkTimeConstant
-function performProxyObjectGet(receiver, propertyName)
+function performProxyObjectHas(propertyName)
+{
+    "use strict";
+
+    var target = @getProxyInternalField(this, @proxyFieldTarget);
+    var handler = @getProxyInternalField(this, @proxyFieldHandler);
+
+    if (handler === null)
+        @throwTypeError("Proxy has already been revoked. No more operations are allowed to be performed on it");
+
+    var trap = handler.has;
+    if (@isUndefinedOrNull(trap))
+        return propertyName in target;
+
+    if (!@isCallable(trap))
+        @throwTypeError("'has' property of a Proxy's handler should be callable");
+
+    if (trap.@call(handler, target, propertyName))
+        return true;
+
+    @handleNegativeProxyHasTrapResult(target, propertyName);
+    return false;
+}
+
+@linkTimeConstant
+function performProxyObjectGet(propertyName, receiver)
 {
     "use strict";
 
@@ -39,7 +64,7 @@ function performProxyObjectGet(receiver, propertyName)
         return @getByValWithThis(target, receiver, propertyName);
 
     if (!@isCallable(trap))
-        @throwTypeError("'get' property of a Proxy's handler object should be callable");
+        @throwTypeError("'get' property of a Proxy's handler should be callable");
 
     var trapResult = trap.@call(handler, target, propertyName, receiver);
 
@@ -48,4 +73,54 @@ function performProxyObjectGet(receiver, propertyName)
     @handleProxyGetTrapResult(trapResult, target, propertyName);
 
     return trapResult;
+}
+
+@linkTimeConstant
+function performProxyObjectSetSloppy(propertyName, receiver, value)
+{
+    "use strict";
+
+    var target = @getProxyInternalField(this, @proxyFieldTarget);
+    var handler = @getProxyInternalField(this, @proxyFieldHandler);
+
+    if (handler === null)
+        @throwTypeError("Proxy has already been revoked. No more operations are allowed to be performed on it");
+
+    var trap = handler.set;
+    if (@isUndefinedOrNull(trap)) {
+        @putByValWithThisSloppy(target, receiver, propertyName, value);
+        return;
+    }
+
+    if (!@isCallable(trap))
+        @throwTypeError("'set' property of a Proxy's handler should be callable");
+
+    var trapResult = trap.@call(handler, target, propertyName, value, receiver);
+
+    @handleProxySetTrapResultSloppy(trapResult, target, propertyName, value);
+}
+
+@linkTimeConstant
+function performProxyObjectSetStrict(propertyName, receiver, value)
+{
+    "use strict";
+
+    var target = @getProxyInternalField(this, @proxyFieldTarget);
+    var handler = @getProxyInternalField(this, @proxyFieldHandler);
+
+    if (handler === null)
+        @throwTypeError("Proxy has already been revoked. No more operations are allowed to be performed on it");
+
+    var trap = handler.set;
+    if (@isUndefinedOrNull(trap)) {
+        @putByValWithThisStrict(target, receiver, propertyName, value);
+        return;
+    }
+
+    if (!@isCallable(trap))
+        @throwTypeError("'set' property of a Proxy's handler should be callable");
+
+    var trapResult = trap.@call(handler, target, propertyName, value, receiver);
+
+    @handleProxySetTrapResultStrict(trapResult, target, propertyName, value);
 }

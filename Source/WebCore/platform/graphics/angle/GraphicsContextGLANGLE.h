@@ -45,7 +45,7 @@ namespace WebCore {
 // Base class for GraphicsContextGL contexts that use ANGLE.
 class WEBCORE_EXPORT GraphicsContextGLANGLE : public GraphicsContextGL {
 public:
-    virtual ~GraphicsContextGLANGLE();
+    ~GraphicsContextGLANGLE();
 
     GCGLDisplay platformDisplay() const;
     GCGLConfig platformConfig() const;
@@ -62,15 +62,6 @@ public:
         TerminateAndReleaseThreadResources
     };
     static bool releaseThreadResources(ReleaseThreadResourceBehavior);
-
-    // Get an attribute location without checking the name -> mangledname mapping.
-    int getAttribLocationDirect(PlatformGLObject program, const String& name);
-
-    // Compile a shader without going through ANGLE.
-    void compileShaderDirect(PlatformGLObject);
-
-    // Equivalent to ::glTexImage2D(). Allows pixels==0 with no allocation.
-    void texImage2DDirect(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type, const void* pixels);
 
     // GraphicsContextGL overrides.
     bool isGLES2Compliant() const final;
@@ -123,7 +114,7 @@ public:
     GCGLint getAttribLocation(PlatformGLObject, const String& name) final;
     void getBooleanv(GCGLenum pname, GCGLSpan<GCGLboolean> value) final;
     GCGLint getBufferParameteri(GCGLenum target, GCGLenum pname) final;
-    GCGLenum getError() final;
+    GCGLErrorCodeSet getErrors() final;
     void getFloatv(GCGLenum pname, GCGLSpan<GCGLfloat> value) final;
     GCGLint getFramebufferAttachmentParameteri(GCGLenum target, GCGLenum attachment, GCGLenum pname) final;
     void getIntegerv(GCGLenum pname, GCGLSpan<GCGLint> value) final;
@@ -270,7 +261,7 @@ public:
     GCGLboolean isQuery(PlatformGLObject query) final;
     void beginQuery(GCGLenum target, PlatformGLObject query) final;
     void endQuery(GCGLenum target) final;
-    PlatformGLObject getQuery(GCGLenum target, GCGLenum pname) final;
+    GCGLint getQuery(GCGLenum target, GCGLenum pname) final;
     GCGLuint getQueryObjectui(PlatformGLObject query, GCGLenum pname) final;
     PlatformGLObject createSampler() final;
     void deleteSampler(PlatformGLObject sampler) final;
@@ -313,6 +304,16 @@ public:
     bool isExtensionEnabled(const String&) override;
     void drawBuffersEXT(GCGLSpan<const GCGLenum>) override;
     String getTranslatedShaderSourceANGLE(PlatformGLObject) override;
+    PlatformGLObject createQueryEXT() final;
+    void deleteQueryEXT(PlatformGLObject query) final;
+    GCGLboolean isQueryEXT(PlatformGLObject query) final;
+    void beginQueryEXT(GCGLenum target, PlatformGLObject query) final;
+    void endQueryEXT(GCGLenum target) final;
+    void queryCounterEXT(PlatformGLObject query, GCGLenum target) final;
+    GCGLint getQueryiEXT(GCGLenum target, GCGLenum pname) final;
+    GCGLint getQueryObjectiEXT(PlatformGLObject query, GCGLenum pname) final;
+    GCGLuint64 getQueryObjectui64EXT(PlatformGLObject query, GCGLenum pname) final;
+    GCGLint64 getInteger64EXT(GCGLenum pname) final;
     void enableiOES(GCGLenum target, GCGLuint index) final;
     void disableiOES(GCGLenum target, GCGLuint index) final;
     void blendEquationiOES(GCGLuint buf, GCGLenum mode) final;
@@ -325,6 +326,7 @@ public:
     void multiDrawArraysInstancedBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLint, const GCGLsizei, const GCGLsizei, const GCGLuint> firstsCountsInstanceCountsAndBaseInstances) final;
     void multiDrawElementsInstancedBaseVertexBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLsizei, const GCGLsizei, const GCGLsizei, const GCGLint, const GCGLuint> countsOffsetsInstanceCountsBaseVerticesAndBaseInstances, GCGLenum type) final;
     void provokingVertexANGLE(GCGLenum provokeMode) final;
+    void polygonOffsetClampEXT(GCGLfloat factor, GCGLfloat units, GCGLfloat clamp) final;
 
     PlatformGLObject createBuffer() final;
     PlatformGLObject createFramebuffer() final;
@@ -338,19 +340,25 @@ public:
     void deleteRenderbuffer(PlatformGLObject) final;
     void deleteShader(PlatformGLObject) final;
     void deleteTexture(PlatformGLObject) final;
-    void synthesizeGLError(GCGLenum error) final;
-    bool moveErrorsToSyntheticErrorList() final;
     void simulateEventForTesting(SimulatedEventForTesting) override;
-    void paintRenderingResultsToCanvas(ImageBuffer&) final;
-    RefPtr<PixelBuffer> paintRenderingResultsToPixelBuffer() final;
-    void paintCompositedResultsToCanvas(ImageBuffer&) final;
+    void paintRenderingResultsToCanvas(ImageBuffer&) override;
+    RefPtr<PixelBuffer> paintRenderingResultsToPixelBuffer() override;
+    void paintCompositedResultsToCanvas(ImageBuffer&) override;
 
     RefPtr<PixelBuffer> readRenderingResultsForPainting();
     RefPtr<PixelBuffer> readCompositedResultsForPainting();
+
+    virtual void withDrawingBufferAsNativeImage(std::function<void(NativeImage&)>);
+    virtual void withDisplayBufferAsNativeImage(std::function<void(NativeImage&)>);
+
     // Returns true on success.
     bool readnPixelsWithStatus(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLSpan<GCGLvoid> data);
+
+    void addError(GCGLErrorCode);
 protected:
     GraphicsContextGLANGLE(GraphicsContextGLAttributes);
+
+    bool updateErrors();
 
     // Called once by all the public entry points that eventually call OpenGL.
     bool makeContextCurrent() WARN_UNUSED_RETURN;
@@ -392,7 +400,6 @@ protected:
     // Returns false if context should be lost due to timeout.
     bool waitAndUpdateOldestFrame() WARN_UNUSED_RETURN;
 
-    // Platform specific behavior for releaseResources();
     static void platformReleaseThreadResources();
 
     virtual void invalidateKnownTextureContent(GCGLuint);
@@ -419,10 +426,8 @@ protected:
     GCGLuint m_preserveDrawingBufferFBO { 0 };
     // Queried at display startup.
     GCGLint m_drawingBufferTextureTarget { -1 };
-    // Errors raised by synthesizeGLError().
-    ListHashSet<GCGLenum> m_syntheticErrors;
+    GCGLErrorCodeSet m_errors;
     bool m_isForWebGL2 { false };
-    unsigned m_statusCheckCount { 0 };
     bool m_failNextStatusCheck { false };
     bool m_useFenceSyncForDisplayRateLimit = false;
     static constexpr size_t maxPendingFrames = 3;
@@ -445,6 +450,16 @@ protected:
 #endif
 };
 
+
+inline GCGLDisplay GraphicsContextGLANGLE::platformDisplay() const 
+{
+    return m_displayObj; 
+}
+
+inline GCGLConfig GraphicsContextGLANGLE::platformConfig() const
+{
+    return m_configObj;
+}
 }
 
 #endif

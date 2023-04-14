@@ -30,7 +30,7 @@
 #include "AXObjectCache.h"
 #include "Document.h"
 #include "DocumentInlines.h"
-#include "ElementAncestorIterator.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "HTMLDataListElement.h"
 #include "HTMLNames.h"
 #include "HTMLOptGroupElement.h"
@@ -54,10 +54,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLOptionElement);
 using namespace HTMLNames;
 
 HTMLOptionElement::HTMLOptionElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement(tagName, document)
+    : HTMLElement(tagName, document, CreateHTMLOptionElement)
 {
     ASSERT(hasTagName(optionTag));
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<HTMLOptionElement> HTMLOptionElement::create(Document& document)

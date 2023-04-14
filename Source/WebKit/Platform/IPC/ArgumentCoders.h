@@ -129,7 +129,7 @@ struct ArgumentCoder<ArrayReferenceTuple<Types...>> {
         if (UNLIKELY(!size))
             return;
 
-        (..., encoder.encodeSpan(Span { arrayReference.template data<Indices>(), size }));
+        (..., encoder.encodeSpan(makeSpan(arrayReference.template data<Indices>(), size)));
     }
 
     template<typename Decoder>
@@ -698,13 +698,16 @@ template<typename ErrorType> struct ArgumentCoder<Expected<void, ErrorType>> {
     }
 };
 
+using EncodedVariantIndex = uint8_t;
+
 template<typename... Types> struct ArgumentCoder<std::variant<Types...>> {
     template<typename Encoder, typename T>
     static void encode(Encoder& encoder, T&& variant)
     {
         static_assert(std::is_same_v<std::remove_cvref_t<T>, std::variant<Types...>>);
+        static_assert(sizeof...(Types) <= static_cast<size_t>(std::numeric_limits<EncodedVariantIndex>::max()));
 
-        size_t i = variant.index();
+        EncodedVariantIndex i = variant.index();
         encoder << i;
         encode(encoder, std::forward<T>(variant), std::index_sequence<> { }, i);
     }
@@ -725,7 +728,7 @@ template<typename... Types> struct ArgumentCoder<std::variant<Types...>> {
     template<typename Decoder>
     static std::optional<std::variant<Types...>> decode(Decoder& decoder)
     {
-        auto i = decoder.template decode<size_t>();
+        auto i = decoder.template decode<EncodedVariantIndex>();
         if (!i || *i >= sizeof...(Types))
             return std::nullopt;
         return decode(decoder, std::index_sequence<> { }, *i);
@@ -740,7 +743,7 @@ template<typename... Types> struct ArgumentCoder<std::variant<Types...>> {
                 auto optional = decoder.template decode<typename std::variant_alternative_t<index, std::variant<Types...>>>();
                 if (!optional)
                     return std::nullopt;
-                return std::make_optional<std::variant<Types...>>(WTFMove(*optional));
+                return std::make_optional<std::variant<Types...>>(std::in_place_index<index>, WTFMove(*optional));
             }
             return decode(decoder, std::make_index_sequence<index + 1> { }, i);
         } else
@@ -770,7 +773,7 @@ template<> struct ArgumentCoder<StringView> {
 template<> struct ArgumentCoder<SHA1::Digest> {
     static void encode(Encoder& encoder, const SHA1::Digest& digest)
     {
-        encoder.encodeSpan(Span { digest.data(), digest.size() });
+        encoder.encodeSpan(makeSpan(digest.data(), digest.size()));
     }
 
     static std::optional<SHA1::Digest> decode(Decoder& decoder)

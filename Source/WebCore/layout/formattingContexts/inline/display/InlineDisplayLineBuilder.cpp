@@ -62,7 +62,7 @@ InlineDisplayLineBuilder::EnclosingLineGeometry InlineDisplayLineBuilder::collec
             return { };
         return {
             lineBoxRect.top() + rootInlineBox.logicalTop() - rootInlineBox.annotationAbove().value_or(0.f),
-            lineBoxRect.top() + rootInlineBox.logicalBottom() + rootInlineBox.annotationUnder().value_or(0.f)
+            lineBoxRect.top() + rootInlineBox.logicalBottom() + rootInlineBox.annotationBelow().value_or(0.f)
         };
     };
     auto [enclosingTop, enclosingBottom] = initialEnclosingTopAndBottom();
@@ -113,7 +113,7 @@ InlineDisplayLineBuilder::EnclosingLineGeometry InlineDisplayLineBuilder::collec
             ASSERT_NOT_REACHED();
 
         auto adjustedBorderBoxTop = borderBox.top() - inlineLevelBox.annotationAbove().value_or(0.f);
-        auto adjustedBorderBoxBottom = borderBox.bottom() + inlineLevelBox.annotationUnder().value_or(0.f);
+        auto adjustedBorderBoxBottom = borderBox.bottom() + inlineLevelBox.annotationBelow().value_or(0.f);
         enclosingTop = std::min(enclosingTop.value_or(adjustedBorderBoxTop), adjustedBorderBoxTop);
         enclosingBottom = std::max(enclosingBottom.value_or(adjustedBorderBoxBottom), adjustedBorderBoxBottom);
     }
@@ -152,7 +152,7 @@ InlineDisplay::Line InlineDisplayLineBuilder::build(const LineBuilder::LineConte
     };
 }
 
-static float truncateOverflowingDisplayBoxes(const InlineDisplay::Line& displayLine, DisplayBoxes& boxes, float ellipsisWidth, const RenderStyle& rootStyle)
+static float truncateOverflowingDisplayBoxes(const InlineDisplay::Line& displayLine, InlineDisplay::Boxes& boxes, float ellipsisWidth, const RenderStyle& rootStyle)
 {
     // We gotta truncate some runs.
     ASSERT(displayLine.lineBoxLogicalRect().x() + displayLine.contentLogicalLeft() + displayLine.contentLogicalWidth() + ellipsisWidth > displayLine.lineBoxLogicalRect().maxX());
@@ -231,7 +231,7 @@ static float truncateOverflowingDisplayBoxes(const InlineDisplay::Line& displayL
     return truncateLeft.value_or(ellipsisWidth) - ellipsisWidth;
 }
 
-std::optional<FloatRect> InlineDisplayLineBuilder::trailingEllipsisVisualRectAfterTruncation(LineEndingEllipsisPolicy lineEndingEllipsisPolicy, const InlineDisplay::Line& displayLine, DisplayBoxes& displayBoxes, bool isLastLineWithInlineContent)
+std::optional<FloatRect> InlineDisplayLineBuilder::trailingEllipsisVisualRectAfterTruncation(LineEndingEllipsisPolicy lineEndingEllipsisPolicy, const InlineDisplay::Line& displayLine, InlineDisplay::Boxes& displayBoxes, bool isLastLineWithInlineContent)
 {
     if (displayBoxes.isEmpty())
         return { };

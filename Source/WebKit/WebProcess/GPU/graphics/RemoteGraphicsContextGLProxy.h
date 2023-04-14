@@ -79,11 +79,10 @@ public:
     bool isExtensionEnabled(const String&) final;
     void paintRenderingResultsToCanvas(WebCore::ImageBuffer&) final;
     void paintCompositedResultsToCanvas(WebCore::ImageBuffer&) final;
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
     RefPtr<WebCore::VideoFrame> paintCompositedResultsToVideoFrame() final;
 #endif
-    void synthesizeGLError(GCGLenum error) final;
-    GCGLenum getError() final;
+    GCGLErrorCodeSet getErrors() final;
 #if ENABLE(VIDEO)
     bool copyTextureFromMedia(WebCore::MediaPlayer&, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY) final;
     bool copyTextureFromVideoFrame(WebCore::VideoFrame&, PlatformGLObject /* texture */, GCGLenum /* target */, GCGLint /* level */, GCGLenum /* internalFormat */, GCGLenum /* format */, GCGLenum /* type */, bool /* premultiplyAlpha */, bool /* flipY */) final;
@@ -102,7 +101,6 @@ public:
     void multiDrawElementsInstancedBaseVertexBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLsizei, const GCGLsizei, const GCGLsizei, const GCGLint, const GCGLuint> countsOffsetsInstanceCountsBaseVerticesAndBaseInstances, GCGLenum type) final;
 
     // Functions with a generated implementation. This list is used by generate-gpup-webgl script.
-    bool moveErrorsToSyntheticErrorList() final;
     void activeTexture(GCGLenum texture) final;
     void attachShader(PlatformGLObject program, PlatformGLObject shader) final;
     void bindAttribLocation(PlatformGLObject arg0, GCGLuint index, const String& name) final;
@@ -302,7 +300,7 @@ public:
     GCGLboolean isQuery(PlatformGLObject query) final;
     void beginQuery(GCGLenum target, PlatformGLObject query) final;
     void endQuery(GCGLenum target) final;
-    PlatformGLObject getQuery(GCGLenum target, GCGLenum pname) final;
+    GCGLint getQuery(GCGLenum target, GCGLenum pname) final;
     GCGLuint getQueryObjectui(PlatformGLObject query, GCGLenum pname) final;
     PlatformGLObject createSampler() final;
     void deleteSampler(PlatformGLObject sampler) final;
@@ -338,6 +336,16 @@ public:
     void getActiveUniformBlockiv(GCGLuint program, GCGLuint uniformBlockIndex, GCGLenum pname, GCGLSpan<GCGLint> params) final;
     String getTranslatedShaderSourceANGLE(PlatformGLObject arg0) final;
     void drawBuffersEXT(GCGLSpan<const GCGLenum> bufs) final;
+    PlatformGLObject createQueryEXT() final;
+    void deleteQueryEXT(PlatformGLObject query) final;
+    GCGLboolean isQueryEXT(PlatformGLObject query) final;
+    void beginQueryEXT(GCGLenum target, PlatformGLObject query) final;
+    void endQueryEXT(GCGLenum target) final;
+    void queryCounterEXT(PlatformGLObject query, GCGLenum target) final;
+    GCGLint getQueryiEXT(GCGLenum target, GCGLenum pname) final;
+    GCGLint getQueryObjectiEXT(PlatformGLObject query, GCGLenum pname) final;
+    GCGLuint64 getQueryObjectui64EXT(PlatformGLObject query, GCGLenum pname) final;
+    GCGLint64 getInteger64EXT(GCGLenum pname) final;
     void enableiOES(GCGLenum target, GCGLuint index) final;
     void disableiOES(GCGLenum target, GCGLuint index) final;
     void blendEquationiOES(GCGLuint buf, GCGLenum mode) final;
@@ -348,17 +356,19 @@ public:
     void drawArraysInstancedBaseInstanceANGLE(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei instanceCount, GCGLuint baseInstance) final;
     void drawElementsInstancedBaseVertexBaseInstanceANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, GCGLintptr offset, GCGLsizei instanceCount, GCGLint baseVertex, GCGLuint baseInstance) final;
     void provokingVertexANGLE(GCGLenum provokeMode) final;
+    void polygonOffsetClampEXT(GCGLfloat factor, GCGLfloat units, GCGLfloat clamp) final;
     void getInternalformativ(GCGLenum target, GCGLenum internalformat, GCGLenum pname, GCGLSpan<GCGLint> params) final;
     void setDrawingBufferColorSpace(const WebCore::DestinationColorSpace&) final;
     RefPtr<WebCore::PixelBuffer> paintRenderingResultsToPixelBuffer() final;
     // End of list used by generate-gpup-webgl script.
 
     static bool handleMessageToRemovedDestination(IPC::Connection&, IPC::Decoder&);
+
 protected:
 #if ENABLE(VIDEO)
-    RemoteGraphicsContextGLProxy(IPC::Connection&, SerialFunctionDispatcher&, const WebCore::GraphicsContextGLAttributes&, RenderingBackendIdentifier, Ref<RemoteVideoFrameObjectHeapProxy>&&);
+    RemoteGraphicsContextGLProxy(IPC::Connection&, RefPtr<IPC::StreamClientConnection>, const WebCore::GraphicsContextGLAttributes&, Ref<RemoteVideoFrameObjectHeapProxy>&&);
 #else
-    RemoteGraphicsContextGLProxy(IPC::Connection&, SerialFunctionDispatcher&, const WebCore::GraphicsContextGLAttributes&, RenderingBackendIdentifier);
+    RemoteGraphicsContextGLProxy(IPC::Connection&, RefPtr<IPC::StreamClientConnection>, const WebCore::GraphicsContextGLAttributes&);
 #endif
 
     bool isContextLost() const { return !m_connection; }
@@ -378,6 +388,12 @@ protected:
 
     GraphicsContextGLIdentifier m_graphicsContextGLIdentifier { GraphicsContextGLIdentifier::generate() };
 private:
+#if ENABLE(VIDEO)
+    static Ref<RemoteGraphicsContextGLProxy> platformCreate(IPC::Connection&, Ref<IPC::StreamClientConnection>, const WebCore::GraphicsContextGLAttributes&, Ref<RemoteVideoFrameObjectHeapProxy>&&);
+#else 
+    static Ref<RemoteGraphicsContextGLProxy> platformCreate(IPC::Connection&, Ref<IPC::StreamClientConnection>, const WebCore::GraphicsContextGLAttributes&);
+#endif
+    void initializeIPC(IPC::StreamServerConnection::Handle&&, RemoteRenderingBackendProxy&);
     // Messages to be received.
     void wasCreated(bool didSucceed, IPC::Semaphore&&, IPC::Semaphore&&, String&& availableExtensions, String&& requestedExtensions);
     void wasLost();

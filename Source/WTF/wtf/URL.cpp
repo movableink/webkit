@@ -280,7 +280,12 @@ String URL::fileSystemPath() const
     if (!isLocalFile())
         return { };
 
-    return decodeEscapeSequencesFromParsedURL(path());
+    auto result = decodeEscapeSequencesFromParsedURL(path());
+#if PLATFORM(WIN)
+    if (result.startsWith('/'))
+        result = result.substring(1);
+#endif
+    return result;
 }
 
 #endif
@@ -908,6 +913,18 @@ String URL::strippedForUseAsReferrerWithExplicitPort() const
     return makeString(StringView(m_string).left(m_hostEnd), ':', static_cast<unsigned>(*port), StringView(m_string).substring(end, m_queryEnd - end));
 }
 
+String URL::strippedForUseAsReport() const
+{
+    if (!m_isValid)
+        return m_string;
+
+    unsigned end = credentialsEnd();
+
+    if (m_userStart == end && m_pathEnd == m_string.length())
+        return m_string;
+
+    return makeString(StringView(m_string).left(m_userStart), StringView(m_string).substring(end, m_pathEnd - end));
+}
 
 bool URL::isLocalFile() const
 {

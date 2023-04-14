@@ -669,11 +669,6 @@ TextStream& operator<<(TextStream& ts, ListStylePosition position)
     return ts;
 }
 
-TextStream& operator<<(TextStream& ts, ListStyleType styleType)
-{
-    return ts << nameLiteral(toCSSValueID(styleType)).characters();
-}
-
 TextStream& operator<<(TextStream& ts, MarginTrimType marginTrimType)
 {
     switch (marginTrimType) {
@@ -1157,6 +1152,8 @@ TextStream& operator<<(TextStream& ts, TextTransform textTransform)
     case TextTransform::Capitalize: ts << "capitalize"; break;
     case TextTransform::Uppercase: ts << "uppercase"; break;
     case TextTransform::Lowercase: ts << "lowercase"; break;
+    case TextTransform::FullSizeKana: ts << "full-size-kana"; break;
+    case TextTransform::FullWidth: ts << "full-width"; break;
     case TextTransform::None: ts << "none"; break;
     }
     return ts;
@@ -1168,6 +1165,8 @@ TextStream& operator<<(TextStream& ts, TextUnderlinePosition underlinePosition)
     case TextUnderlinePosition::Auto: ts << "Auto"; break;
     case TextUnderlinePosition::Under: ts << "Under"; break;
     case TextUnderlinePosition::FromFont: ts << "FromFont"; break;
+    case TextUnderlinePosition::Left: ts << "Left"; break;
+    case TextUnderlinePosition::Right: ts << "Right"; break;
     }
     return ts;
 }

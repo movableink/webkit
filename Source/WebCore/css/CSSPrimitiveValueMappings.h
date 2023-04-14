@@ -33,9 +33,11 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSToLengthConversionData.h"
 #include "CSSValueKeywords.h"
+#include "FontSizeAdjust.h"
 #include "GraphicsTypes.h"
 #include "Length.h"
 #include "LineClampValue.h"
+#include "ListStyleType.h"
 #include "RenderStyleConstants.h"
 #include "SVGRenderStyleDefs.h"
 #include "ScrollTypes.h"
@@ -54,7 +56,7 @@ namespace WebCore {
 
 template<typename TargetType> TargetType fromCSSValue(const CSSValue& value)
 {
-    return fromCSSValueID<TargetType>(downcast<CSSPrimitiveValue>(value).valueID());
+    return fromCSSValueID<TargetType>(value.valueID());
 }
 
 class TypeDeducingCSSValueMapper {
@@ -214,6 +216,13 @@ template<> constexpr OutlineIsAuto fromCSSValueID(CSSValueID valueID)
     if (valueID == CSSValueAuto)
         return OutlineIsAuto::On;
     return OutlineIsAuto::Off;
+}
+
+template<> constexpr BlockStepInsert fromCSSValueID(CSSValueID valueID)
+{
+    if (valueID == CSSValueMargin)
+        return BlockStepInsert::Margin;
+    return BlockStepInsert::Padding;
 }
 
 constexpr CSSValueID toCSSValueID(CompositeOperator e, CSSPropertyID propertyID)
@@ -807,12 +816,12 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
 
-constexpr CSSValueID toCSSValueID(ListStyleType style)
+constexpr CSSValueID toCSSValueID(ListStyleType::Type style)
 {
     switch (style) {
-    case ListStyleType::None:
+    case ListStyleType::Type::None:
         return CSSValueNone;
-    case ListStyleType::String:
+    case ListStyleType::Type::String:
         ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
         return CSSValueInvalid;
     default:
@@ -820,13 +829,13 @@ constexpr CSSValueID toCSSValueID(ListStyleType style)
     }
 }
 
-template<> constexpr ListStyleType fromCSSValueID(CSSValueID valueID)
+template<> constexpr ListStyleType::Type fromCSSValueID(CSSValueID valueID)
 {
     switch (valueID) {
     case CSSValueNone:
-        return ListStyleType::None;
+        return ListStyleType::Type::None;
     default:
-        return static_cast<ListStyleType>(valueID - CSSValueDisc);
+        return static_cast<ListStyleType::Type>(valueID - CSSValueDisc);
     }
 }
 
@@ -1164,7 +1173,7 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 
 // FIXME: Implement support for 'under left' and 'under right' values.
 #define TYPE TextUnderlinePosition
-#define FOR_EACH(CASE) CASE(Auto) CASE(Under) CASE(FromFont)
+#define FOR_EACH(CASE) CASE(Auto) CASE(Under) CASE(FromFont) CASE(Left) CASE(Right)
 DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
@@ -1182,7 +1191,7 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef FOR_EACH
 
 #define TYPE TextTransform
-#define FOR_EACH(CASE) CASE(Capitalize) CASE(Uppercase) CASE(Lowercase) CASE(None)
+#define FOR_EACH(CASE) CASE(Capitalize) CASE(Uppercase) CASE(Lowercase) CASE(FullSizeKana) CASE(FullWidth) CASE(None)
 DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
@@ -1635,6 +1644,44 @@ template<> constexpr Kerning fromCSSValueID(CSSValueID valueID)
 DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
+
+constexpr CSSValueID toCSSValueID(FontSizeAdjust::Metric metric)
+{
+    switch (metric) {
+    case FontSizeAdjust::Metric::ExHeight:
+        return CSSValueExHeight;
+    case FontSizeAdjust::Metric::CapHeight:
+        return CSSValueCapHeight;
+    case FontSizeAdjust::Metric::ChWidth:
+        return CSSValueChWidth;
+    case FontSizeAdjust::Metric::IcWidth:
+        return CSSValueIcWidth;
+    case FontSizeAdjust::Metric::IcHeight:
+        return CSSValueIcHeight;
+    }
+    ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+    return CSSValueAuto;
+}
+
+template<> constexpr FontSizeAdjust::Metric fromCSSValueID(CSSValueID valueID)
+{
+    switch (valueID) {
+    case CSSValueExHeight:
+        return FontSizeAdjust::Metric::ExHeight;
+    case CSSValueCapHeight:
+        return FontSizeAdjust::Metric::CapHeight;
+    case CSSValueChWidth:
+        return FontSizeAdjust::Metric::ChWidth;
+    case CSSValueIcWidth:
+        return FontSizeAdjust::Metric::IcWidth;
+    case CSSValueIcHeight:
+        return FontSizeAdjust::Metric::IcHeight;
+    default:
+        break;
+    }
+    ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+    return FontSizeAdjust::Metric::ExHeight;
+}
 
 constexpr CSSValueID toCSSValueID(FontSmoothingMode smoothing)
 {

@@ -85,11 +85,10 @@ public:
     void visit(ArrayTypeName&) override;
     void visit(NamedTypeName&) override;
     void visit(ParameterizedTypeName&) override;
-    void visit(StructTypeName&) override;
     void visit(ReferenceTypeName&) override;
 
     // Values
-    void visit(ParameterValue&) override;
+    void visit(Parameter&) override;
 
     void visit(StructureMember&) override;
 

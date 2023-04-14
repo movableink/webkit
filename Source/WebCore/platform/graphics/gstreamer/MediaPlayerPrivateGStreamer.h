@@ -51,11 +51,8 @@
 typedef struct _GstMpegtsSection GstMpegtsSection;
 
 #if USE(GSTREAMER_GL)
-#if USE(LIBEPOXY)
 // Include the <epoxy/gl.h> header before <gst/gl/gl.h>.
 #include <epoxy/gl.h>
-#endif // USE(LIBEPOXY)
-
 #define GST_USE_UNSTABLE_API
 #include <gst/gl/gl.h>
 #undef GST_USE_UNSTABLE_API
@@ -193,7 +190,7 @@ public:
 
 #if USE(TEXTURE_MAPPER_GL)
     PlatformLayer* platformLayer() const override;
-#if PLATFORM(WIN_CAIRO)
+#if PLATFORM(WIN)
     // FIXME: Accelerated rendering has not been implemented for WinCairo yet.
     bool supportsAcceleratedRendering() const override { return false; }
 #else
@@ -229,7 +226,7 @@ public:
     void handleStreamCollectionMessage(GstMessage*);
     void handleMessage(GstMessage*);
 
-    void triggerRepaint(GstSample*);
+    void triggerRepaint(GRefPtr<GstSample>&&);
 #if USE(GSTREAMER_GL)
     void flushCurrentBuffer();
 #endif
@@ -304,7 +301,6 @@ protected:
     void repaint();
     void cancelRepaint(bool destroying = false);
 
-    static void repaintCallback(MediaPlayerPrivateGStreamer*, GstSample*);
     static void repaintCancelledCallback(MediaPlayerPrivateGStreamer*);
 
     void notifyPlayerOfVolumeChange();
@@ -318,6 +314,7 @@ protected:
     template <typename TrackPrivateType> void notifyPlayerOfTrack();
 
     void ensureAudioSourceProvider();
+    void checkPlayingConsistency();
 
     virtual bool doSeek(const MediaTime& position, float rate, GstSeekFlags);
     void invalidateCachedPosition() const;
@@ -490,6 +487,9 @@ private:
     void configureDepayloader(GstElement*);
     void configureVideoDecoder(GstElement*);
     void configureElement(GstElement*);
+#if PLATFORM(BROADCOM) || USE(WESTEROS_SINK) || PLATFORM(AMLOGIC) || PLATFORM(REALTEK)
+    void configureElementPlatformQuirks(GstElement*);
+#endif
 
     void setPlaybinURL(const URL& urlString);
 
@@ -547,6 +547,7 @@ private:
     RefPtr<MediaStreamPrivate> m_streamPrivate;
 #endif
 
+    bool m_isMuted { false };
     bool m_visible { false };
 
     // playbin3 only:
@@ -607,6 +608,8 @@ private:
     GRefPtr<GstStreamCollection> m_streamCollection;
 
     AbortableTaskQueue m_sinkTaskQueue;
+
+    bool m_didTryToRecoverPlayingState { false };
 };
 
 }

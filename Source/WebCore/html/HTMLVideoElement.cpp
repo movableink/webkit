@@ -34,12 +34,12 @@
 #include "Document.h"
 #include "ElementInlines.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "HTMLImageLoader.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "ImageBuffer.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "Page.h"
 #include "Performance.h"
@@ -71,7 +71,6 @@ inline HTMLVideoElement::HTMLVideoElement(const QualifiedName& tagName, Document
     : HTMLMediaElement(tagName, document, createdByParser)
 {
     ASSERT(hasTagName(videoTag));
-    setHasCustomStyleResolveCallbacks();
     m_defaultPosterURL = AtomString { document.settings().defaultVideoPosterURL() };
 }
 
@@ -286,7 +285,7 @@ void HTMLVideoElement::mediaPlayerFirstVideoFrameAvailable()
 
 std::optional<DestinationColorSpace> HTMLVideoElement::colorSpace() const
 {
-    RefPtr<MediaPlayer> player = HTMLMediaElement::player();
+    auto player = this->player();
     if (!player)
         return std::nullopt;
 
@@ -335,10 +334,11 @@ bool HTMLVideoElement::shouldGetNativeImageForCanvasDrawing() const
 
 RefPtr<NativeImage> HTMLVideoElement::nativeImageForCurrentTime()
 {
-    if (!player())
+    auto player = this->player();
+    if (!player)
         return nullptr;
 
-    return player()->nativeImageForCurrentTime();
+    return player->nativeImageForCurrentTime();
 }
 
 ExceptionOr<void> HTMLVideoElement::webkitEnterFullscreen()

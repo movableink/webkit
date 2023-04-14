@@ -29,10 +29,8 @@
 
 #include "Comment.h"
 #include "CustomElementRegistry.h"
-#include "DOMWindow.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
@@ -50,6 +48,8 @@
 #include "HTMLTemplateElement.h"
 #include "HTMLUnknownElement.h"
 #include "JSCustomElementInterface.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "NotImplemented.h"
 #include "SVGElementInlines.h"
 #include "Settings.h"
@@ -68,7 +68,7 @@ static inline void setAttributes(Element& element, Vector<Attribute>& attributes
 {
     if (!scriptingContentIsAllowed(parserContentPolicy))
         element.stripScriptingAttributes(attributes);
-    element.parserSetAttributes(attributes);
+    element.parserSetAttributes(attributes.span());
     element.setHasDuplicateAttribute(hasDuplicateAttribute == HasDuplicateAttribute::Yes);
 }
 

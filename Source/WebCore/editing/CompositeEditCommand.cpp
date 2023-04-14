@@ -42,7 +42,6 @@
 #include "EditorInsertAction.h"
 #include "ElementTraversal.h"
 #include "Event.h"
-#include "Frame.h"
 #include "HTMLBRElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLLIElement.h"
@@ -55,6 +54,7 @@
 #include "InsertNodeBeforeCommand.h"
 #include "InsertParagraphSeparatorCommand.h"
 #include "InsertTextCommand.h"
+#include "LocalFrame.h"
 #include "MergeIdenticalElementsCommand.h"
 #include "NodeTraversal.h"
 #include "RemoveNodeCommand.h"
@@ -225,7 +225,7 @@ bool EditCommandComposition::areRootEditabledElementsConnected()
 void EditCommandComposition::unapply()
 {
     ASSERT(m_document);
-    RefPtr<Frame> frame = m_document->frame();
+    RefPtr frame { m_document->frame() };
     if (!frame)
         return;
 
@@ -266,7 +266,7 @@ void EditCommandComposition::unapply()
 void EditCommandComposition::reapply()
 {
     ASSERT(m_document);
-    RefPtr<Frame> frame = m_document->frame();
+    RefPtr frame { m_document->frame() };
     if (!frame)
         return;
 
@@ -1446,12 +1446,14 @@ void CompositeEditCommand::moveParagraph(const VisiblePosition& startOfParagraph
     moveParagraphs(startOfParagraphToMove, endOfParagraphToMove, destination, preserveSelection, preserveStyle);
 }
 
-void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagraphToMove, const VisiblePosition& endOfParagraphToMove, const VisiblePosition& destination, bool preserveSelection, bool preserveStyle)
+void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagraphToMove, const VisiblePosition& endOfParagraphToMove, const VisiblePosition& passedDestination, bool preserveSelection, bool preserveStyle)
 {
-    if (destination.isNull() || startOfParagraphToMove == destination)
+    if (passedDestination.isNull() || startOfParagraphToMove == passedDestination)
         return;
 
     ASSERT((startOfParagraphToMove.isNull() && endOfParagraphToMove.isNull()) || !endOfParagraphToMove.isNull());
+
+    VisiblePosition destination = passedDestination;
 
     std::optional<uint64_t> startIndex;
     std::optional<uint64_t> endIndex;
@@ -1508,13 +1510,19 @@ void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagrap
 
     setEndingSelection(VisibleSelection(start, end));
     document().editor().clearMisspellingsAndBadGrammar(endingSelection());
+
+    auto downstreamDestination = destination.deepEquivalent().downstream();
+
     deleteSelection(false, false, false, false);
 
-    ASSERT(destination.deepEquivalent().anchorNode()->isConnected());
+    if (destination.isOrphan())
+        destination = VisiblePosition { downstreamDestination };
+
+    ASSERT(!destination.deepEquivalent().isOrphan());
     cleanupAfterDeletion(destination);
 
     // FIXME (Bug 211793): We should redesign cleanupAfterDeletion or find another destination when it is removed.
-    if (!destination.deepEquivalent().anchorNode()->isConnected() || VisibleSelection(destination, originalIsDirectional).isNone())
+    if (destination.deepEquivalent().isOrphan() || VisibleSelection(destination, originalIsDirectional).isNone())
         return;
 
     // Add a br if pruning an empty block level element caused a collapse. For example:

@@ -76,7 +76,7 @@ bool defaultManageCaptureStatusBarInGPUProcessEnabled();
 bool defaultMediaSourceEnabled();
 #endif
 
-#if ENABLE(MANAGED_MEDIA_SOURCE)
+#if ENABLE(MANAGED_MEDIA_SOURCE) && ENABLE(MEDIA_SOURCE)
 bool defaultManagedMediaSourceEnabled();
 #endif
 
@@ -94,7 +94,23 @@ bool defaultRemoveBackgroundEnabled();
 bool defaultGamepadVibrationActuatorEnabled();
 #endif
 
-bool defaultShouldTakeSuspendedAssertions();
+bool defaultRunningBoardThrottlingEnabled();
+bool defaultShouldDropSuspendedAssertionAfterDelay();
 bool defaultShowModalDialogEnabled();
+
+bool defaultShouldEnableScreenOrientationAPI();
+bool defaultPopoverAttributeEnabled();
+
+#if HAVE(SC_CONTENT_SHARING_PICKER)
+bool defaultUseSCContentSharingPicker();
+#endif
+
+#if USE(LIBWEBRTC)
+bool defaultPeerConnectionEnabledAvailable();
+#endif
+
+#if HAVE(AVCONTENTKEYSPECIFIER)
+bool defaultSampleBufferContentKeySessionSupportEnabled();
+#endif
 
 } // namespace WebKit

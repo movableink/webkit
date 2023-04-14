@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -30,12 +30,12 @@
 #include "config.h"
 #include "Screen.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "FloatRect.h"
-#include "Frame.h"
-#include "FrameView.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
 #include "PlatformScreen.h"
 #include "Quirks.h"
@@ -47,16 +47,20 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Screen);
 
-Screen::Screen(DOMWindow& window)
-    : DOMWindowProperty(&window)
+Screen::Screen(LocalDOMWindow& window)
+    : LocalDOMWindowProperty(&window)
 {
 }
 
 Screen::~Screen() = default;
 
-static bool isLoadingInHeadlessMode(const Frame& frame)
+static bool isLoadingInHeadlessMode(const LocalFrame& frame)
 {
-    RefPtr mainDocument = frame.mainFrame().document();
+    auto* localFrame = dynamicDowncast<LocalFrame>(frame.mainFrame());
+    if (!localFrame)
+        return false;
+
+    RefPtr mainDocument = localFrame->document();
     if (!mainDocument)
         return false;
 
@@ -92,21 +96,6 @@ unsigned Screen::colorDepth() const
     if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::ColorDepth);
     return static_cast<unsigned>(screenDepth(frame->view()));
-}
-
-unsigned Screen::pixelDepth() const
-{
-    RefPtr frame = this->frame();
-    if (!frame)
-        return 0;
-    if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::PixelDepth);
-
-    auto* document = window()->document();
-    if (!document || !document->quirks().needsHDRPixelDepthQuirk() || !screenSupportsHighDynamicRange(frame->view()))
-        return static_cast<unsigned>(screenDepth(frame->view()));
-
-    return static_cast<unsigned>(screenDepth(frame->view())) + 1;
 }
 
 int Screen::availLeft() const

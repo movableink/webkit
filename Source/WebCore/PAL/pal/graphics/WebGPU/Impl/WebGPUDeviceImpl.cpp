@@ -462,6 +462,13 @@ static auto convertToBacking(const RenderPipelineDescriptor& descriptor, Convert
         colorTargets.data(),
     };
 
+    WGPUPrimitiveDepthClipControl depthClipControl = {
+        .chain = {
+            nullptr,
+            WGPUSType_PrimitiveDepthClipControl
+        },
+        .unclippedDepth = true
+    };
     WGPURenderPipelineDescriptor backingDescriptor {
         nullptr,
         label.data(),
@@ -474,7 +481,7 @@ static auto convertToBacking(const RenderPipelineDescriptor& descriptor, Convert
             static_cast<uint32_t>(backingBuffers.size()),
             backingBuffers.data(),
         }, {
-            nullptr,
+            descriptor.primitive && descriptor.primitive->unclippedDepth ? &depthClipControl.chain : nullptr,
             descriptor.primitive ? convertToBackingContext.convertToBacking(descriptor.primitive->topology) : WGPUPrimitiveTopology_PointList,
             descriptor.primitive && descriptor.primitive->stripIndexFormat ? convertToBackingContext.convertToBacking(*descriptor.primitive->stripIndexFormat) : WGPUIndexFormat_Undefined,
             descriptor.primitive ? convertToBackingContext.convertToBacking(descriptor.primitive->frontFace) : WGPUFrontFace_CCW,
@@ -499,20 +506,26 @@ Ref<RenderPipeline> DeviceImpl::createRenderPipeline(const RenderPipelineDescrip
     });
 }
 
-void DeviceImpl::createComputePipelineAsync(const ComputePipelineDescriptor& descriptor, CompletionHandler<void(Ref<ComputePipeline>&&)>&& callback)
+void DeviceImpl::createComputePipelineAsync(const ComputePipelineDescriptor& descriptor, CompletionHandler<void(RefPtr<ComputePipeline>&&)>&& callback)
 {
     convertToBacking(descriptor, m_convertToBackingContext, [this, callback = WTFMove(callback)] (const WGPUComputePipelineDescriptor& backingDescriptor) mutable {
-        wgpuDeviceCreateComputePipelineAsyncWithBlock(m_backing, &backingDescriptor, makeBlockPtr([convertToBackingContext = m_convertToBackingContext.copyRef(), callback = WTFMove(callback)](WGPUCreatePipelineAsyncStatus, WGPUComputePipeline pipeline, const char*) mutable {
-            callback(ComputePipelineImpl::create(pipeline, convertToBackingContext));
+        wgpuDeviceCreateComputePipelineAsyncWithBlock(m_backing, &backingDescriptor, makeBlockPtr([convertToBackingContext = m_convertToBackingContext.copyRef(), callback = WTFMove(callback)](WGPUCreatePipelineAsyncStatus status, WGPUComputePipeline pipeline, const char*) mutable {
+            if (status == WGPUCreatePipelineAsyncStatus_Success)
+                callback(ComputePipelineImpl::create(pipeline, convertToBackingContext));
+            else
+                callback(nullptr);
         }).get());
     });
 }
 
-void DeviceImpl::createRenderPipelineAsync(const RenderPipelineDescriptor& descriptor, CompletionHandler<void(Ref<RenderPipeline>&&)>&& callback)
+void DeviceImpl::createRenderPipelineAsync(const RenderPipelineDescriptor& descriptor, CompletionHandler<void(RefPtr<RenderPipeline>&&)>&& callback)
 {
     convertToBacking(descriptor, m_convertToBackingContext, [this, callback = WTFMove(callback)] (const WGPURenderPipelineDescriptor& backingDescriptor) mutable {
-        wgpuDeviceCreateRenderPipelineAsyncWithBlock(m_backing, &backingDescriptor, makeBlockPtr([convertToBackingContext = m_convertToBackingContext.copyRef(), callback = WTFMove(callback)](WGPUCreatePipelineAsyncStatus, WGPURenderPipeline pipeline, const char*) mutable {
-            callback(RenderPipelineImpl::create(pipeline, convertToBackingContext));
+        wgpuDeviceCreateRenderPipelineAsyncWithBlock(m_backing, &backingDescriptor, makeBlockPtr([convertToBackingContext = m_convertToBackingContext.copyRef(), callback = WTFMove(callback)](WGPUCreatePipelineAsyncStatus status, WGPURenderPipeline pipeline, const char*) mutable {
+            if (status == WGPUCreatePipelineAsyncStatus_Success)
+                callback(RenderPipelineImpl::create(pipeline, convertToBackingContext));
+            else
+                callback(nullptr);
         }).get());
     });
 }

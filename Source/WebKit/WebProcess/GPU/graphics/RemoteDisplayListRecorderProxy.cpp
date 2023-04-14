@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +48,7 @@ namespace WebKit {
 using namespace WebCore;
 
 RemoteDisplayListRecorderProxy::RemoteDisplayListRecorderProxy(RemoteImageBufferProxy& imageBuffer, RemoteRenderingBackendProxy& renderingBackend, const FloatRect& initialClip, const AffineTransform& initialCTM)
-    : DisplayList::Recorder({ }, initialClip, initialCTM, DrawGlyphsMode::DeconstructUsingDrawGlyphsCommands)
+    : DisplayList::Recorder({ }, initialClip, initialCTM, imageBuffer.colorSpace(), DrawGlyphsMode::DeconstructUsingDrawGlyphsCommands)
     , m_destinationBufferIdentifier(imageBuffer.renderingResourceIdentifier())
     , m_imageBuffer(imageBuffer)
     , m_renderingBackend(renderingBackend)
@@ -245,7 +245,7 @@ void RemoteDisplayListRecorderProxy::recordDrawLine(const FloatPoint& point1, co
 
 void RemoteDisplayListRecorderProxy::recordDrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle style)
 {
-    send(Messages::RemoteDisplayListRecorder::DrawLinesForText(DisplayList::DrawLinesForText { blockLocation, localAnchor, thickness, widths, printing, doubleLines, style }));
+    send(Messages::RemoteDisplayListRecorder::DrawLinesForText(DisplayList::DrawLinesForText { blockLocation, localAnchor, widths, thickness, printing, doubleLines, style }));
 }
 
 void RemoteDisplayListRecorderProxy::recordDrawDotsForDocumentMarker(const FloatRect& rect, const DocumentMarkerLineStyle& style)
@@ -486,6 +486,17 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(DecomposedGlyphs& decompo
     }
 
     m_renderingBackend->remoteResourceCacheProxy().recordDecomposedGlyphsUse(decomposedGlyphs);
+    return true;
+}
+
+bool RemoteDisplayListRecorderProxy::recordResourceUse(Gradient& gradient)
+{
+    if (UNLIKELY(!m_renderingBackend)) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
+    m_renderingBackend->remoteResourceCacheProxy().recordGradientUse(gradient);
     return true;
 }
 

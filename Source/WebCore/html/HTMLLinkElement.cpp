@@ -40,21 +40,24 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "EventSender.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "FrameTree.h"
-#include "FrameView.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "JSRequestPriority.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryParser.h"
 #include "MediaQueryParserContext.h"
 #include "MouseEvent.h"
+#include "Page.h"
 #include "ParsedContentType.h"
 #include "RenderStyle.h"
+#include "RequestPriority.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "StyleInheritedData.h"
@@ -267,6 +270,7 @@ void HTMLLinkElement::process()
         attributeWithoutSynchronization(imagesizesAttr),
         nonce(),
         referrerPolicy(),
+        fetchPriorityHint(),
     };
 
     m_linkLoader.loadLink(params, document());
@@ -323,6 +327,7 @@ void HTMLLinkElement::process()
             options.contentSecurityPolicyImposition = ContentSecurityPolicyImposition::SkipPolicyCheck;
         options.integrity = m_integrityMetadataForPendingSheetRequest;
         options.referrerPolicy = params.referrerPolicy;
+        options.fetchPriorityHint = fetchPriorityHint();
 
         auto request = createPotentialAccessControlRequest(m_url, WTFMove(options), document(), crossOrigin());
         request.setPriority(WTFMove(priority));
@@ -674,6 +679,23 @@ ReferrerPolicy HTMLLinkElement::referrerPolicy() const
 String HTMLLinkElement::debugDescription() const
 {
     return makeString(HTMLElement::debugDescription(), ' ', type(), ' ', href().string());
+}
+
+void HTMLLinkElement::setFetchPriorityForBindings(const AtomString& value)
+{
+    setAttributeWithoutSynchronization(fetchpriorityAttr, value);
+}
+
+String HTMLLinkElement::fetchPriorityForBindings() const
+{
+    return convertEnumerationToString(fetchPriorityHint());
+}
+
+RequestPriority HTMLLinkElement::fetchPriorityHint() const
+{
+    if (document().settings().priorityHintsEnabled())
+        return parseEnumerationFromString<RequestPriority>(attributeWithoutSynchronization(fetchpriorityAttr)).value_or(RequestPriority::Auto);
+    return RequestPriority::Auto;
 }
 
 } // namespace WebCore

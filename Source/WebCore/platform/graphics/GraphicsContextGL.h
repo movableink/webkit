@@ -719,6 +719,15 @@ public:
     // EXT_color_buffer_half_float
     static constexpr GCGLenum FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE_EXT = 0x8211;
 
+    // GL_EXT_disjoint_timer_query
+    static constexpr GCGLenum QUERY_COUNTER_BITS_EXT = 0x8864;
+    static constexpr GCGLenum CURRENT_QUERY_EXT = 0x8865;
+    static constexpr GCGLenum QUERY_RESULT_EXT = 0x8866;
+    static constexpr GCGLenum QUERY_RESULT_AVAILABLE_EXT = 0x8867;
+    static constexpr GCGLenum TIME_ELAPSED_EXT = 0x88BF;
+    static constexpr GCGLenum TIMESTAMP_EXT = 0x8E28;
+    static constexpr GCGLenum GPU_DISJOINT_EXT = 0x8FBB;
+
     // EXT_blend_minmax enums
     static constexpr GCGLenum MIN_EXT = 0x8007;
     static constexpr GCGLenum MAX_EXT = 0x8008;
@@ -843,6 +852,9 @@ public:
     static constexpr GCGLenum FIRST_VERTEX_CONVENTION_ANGLE = 0x8E4D;
     static constexpr GCGLenum LAST_VERTEX_CONVENTION_ANGLE = 0x8E4E;
     static constexpr GCGLenum PROVOKING_VERTEX_ANGLE = 0x8E4F;
+
+    // GL_EXT_polygon_offset_clamp
+    static constexpr GCGLenum POLYGON_OFFSET_CLAMP_EXT = 0x8E1B;
 
     // GL_ARB_draw_buffers / GL_EXT_draw_buffers
     static constexpr GCGLenum MAX_DRAW_BUFFERS_EXT = 0x8824;
@@ -1007,10 +1019,7 @@ public:
         DOMSourceNone,
     };
 
-    enum class FlipY : bool {
-        No,
-        Yes
-    };
+    enum class FlipY : bool { No, Yes };
 
     virtual RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() = 0;
 
@@ -1121,6 +1130,26 @@ public:
 #endif
     }
 
+    static constexpr GCGLErrorCode enumToErrorCode(GCGLenum error)
+    {
+        switch (error) {
+        case INVALID_ENUM:
+            return GCGLErrorCode::InvalidEnum;
+        case INVALID_VALUE:
+            return GCGLErrorCode::InvalidValue;
+        case INVALID_OPERATION:
+            return GCGLErrorCode::InvalidOperation;
+        case OUT_OF_MEMORY:
+            return GCGLErrorCode::OutOfMemory;
+        case INVALID_FRAMEBUFFER_OPERATION:
+            return GCGLErrorCode::InvalidFramebufferOperation;
+        case CONTEXT_LOST_WEBGL:
+            return GCGLErrorCode::ContextLost;
+        }
+        ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+        return GCGLErrorCode::InvalidOperation;
+    }
+
     class Client {
     public:
         WEBCORE_EXPORT Client();
@@ -1212,7 +1241,7 @@ public:
     virtual GCGLint getProgrami(PlatformGLObject program, GCGLenum pname) = 0;
     virtual void getBooleanv(GCGLenum pname, GCGLSpan<GCGLboolean> value) = 0;
 
-    virtual GCGLenum getError() = 0;
+    virtual GCGLErrorCodeSet getErrors() = 0;
 
     // getFramebufferAttachmentParameter
     virtual GCGLint getFramebufferAttachmentParameteri(GCGLenum target, GCGLenum attachment, GCGLenum pname) = 0;
@@ -1398,7 +1427,7 @@ public:
     virtual GCGLboolean isQuery(PlatformGLObject query) = 0;
     virtual void beginQuery(GCGLenum target, PlatformGLObject query) = 0;
     virtual void endQuery(GCGLenum target) = 0;
-    virtual PlatformGLObject getQuery(GCGLenum target, GCGLenum pname) = 0;
+    virtual GCGLint getQuery(GCGLenum target, GCGLenum pname) = 0;
     // getQueryParameter
     virtual GCGLuint getQueryObjectui(PlatformGLObject query, GCGLenum pname) = 0;
 
@@ -1468,6 +1497,18 @@ public:
     // GL_ARB_draw_buffers / GL_EXT_draw_buffers
     virtual void drawBuffersEXT(GCGLSpan<const GCGLenum> bufs) = 0;
 
+    // GL_EXT_disjoint_timer_query
+    virtual PlatformGLObject createQueryEXT() = 0;
+    virtual void deleteQueryEXT(PlatformGLObject query) = 0;
+    virtual GCGLboolean isQueryEXT(PlatformGLObject query) = 0;
+    virtual void beginQueryEXT(GCGLenum target, PlatformGLObject query) = 0;
+    virtual void endQueryEXT(GCGLenum target) = 0;
+    virtual void queryCounterEXT(PlatformGLObject query, GCGLenum target) = 0;
+    virtual GCGLint getQueryiEXT(GCGLenum target, GCGLenum pname) = 0;
+    virtual GCGLint getQueryObjectiEXT(PlatformGLObject query, GCGLenum pname) = 0;
+    virtual GCGLuint64 getQueryObjectui64EXT(PlatformGLObject query, GCGLenum pname) = 0;
+    virtual GCGLint64 getInteger64EXT(GCGLenum pname) = 0;
+
     // GL_OES_draw_buffers_indexed
     virtual void enableiOES(GCGLenum target, GCGLuint index) = 0;
     virtual void disableiOES(GCGLenum target, GCGLuint index) = 0;
@@ -1485,6 +1526,9 @@ public:
 
     // GL_ANGLE_provoking_vertex
     virtual void provokingVertexANGLE(GCGLenum provokeMode) = 0;
+
+    // GL_EXT_polygon_offset_clamp
+    virtual void polygonOffsetClampEXT(GCGLfloat factor, GCGLfloat units, GCGLfloat clamp) = 0;
 
     // ========== Other functions.
     GCGLfloat getFloat(GCGLenum pname);
@@ -1505,20 +1549,6 @@ public:
 
     virtual bool isGLES2Compliant() const = 0;
 
-    // Synthesizes an OpenGL error which will be returned from a
-    // later call to getError. This is used to emulate OpenGL ES
-    // 2.0 behavior on the desktop and to enforce additional error
-    // checking mandated by WebGL.
-    //
-    // Per the behavior of glGetError, this stores at most one
-    // instance of any given error, and returns them from calls to
-    // getError in the order they were added.
-    virtual void synthesizeGLError(GCGLenum error) = 0;
-
-    // Read real OpenGL errors, and move them to the synthetic
-    // error list. Return true if at least one error is moved.
-    virtual bool moveErrorsToSyntheticErrorList() = 0;
-
     virtual void prepareForDisplay() = 0;
 
     // FIXME: should be removed, caller should keep track of changed state.
@@ -1537,7 +1567,7 @@ public:
     virtual void paintRenderingResultsToCanvas(ImageBuffer&) = 0;
     virtual RefPtr<PixelBuffer> paintRenderingResultsToPixelBuffer() = 0;
     virtual void paintCompositedResultsToCanvas(ImageBuffer&) = 0;
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
     virtual RefPtr<VideoFrame> paintCompositedResultsToVideoFrame() = 0;
 #endif
 
@@ -1600,7 +1630,10 @@ public:
     // Returns true upon success.
     static bool packImageData(Image*, const void* pixels, GCGLenum format, GCGLenum type, bool flipY, AlphaOp, DataFormat sourceFormat, unsigned sourceImageWidth, unsigned sourceImageHeight, const IntRect& sourceImageSubRectangle, int depth, unsigned sourceUnpackAlignment, int unpackImageHeight, Vector<uint8_t>& data);
 
+    WEBCORE_EXPORT static RefPtr<NativeImage> createNativeImageFromPixelBuffer(const GraphicsContextGLAttributes&, Ref<PixelBuffer>&&);
+    WEBCORE_EXPORT static void paintToCanvas(NativeImage&, const IntSize& canvasSize, GraphicsContext&);
     WEBCORE_EXPORT static void paintToCanvas(const GraphicsContextGLAttributes&, Ref<PixelBuffer>&&, const IntSize& canvasSize, GraphicsContext&);
+
 protected:
     WEBCORE_EXPORT void forceContextLost();
     WEBCORE_EXPORT void dispatchContextChangedNotification();

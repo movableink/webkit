@@ -30,11 +30,9 @@
 #include "AXObjectCache.h"
 #include "DocumentInlines.h"
 #include "Editing.h"
-#include "ElementAncestorIterator.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "FloatQuad.h"
-#include "Frame.h"
 #include "FrameSelection.h"
-#include "FrameView.h"
 #include "GeometryUtilities.h"
 #include "GraphicsContext.h"
 #include "HTMLBRElement.h"
@@ -46,6 +44,8 @@
 #include "LayoutIntegrationLineLayout.h"
 #include "LegacyRenderSVGModelObject.h"
 #include "LegacyRenderSVGRoot.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "LogicalSelectionOffsetCaches.h"
 #include "Page.h"
 #include "PseudoElement.h"
@@ -110,18 +110,18 @@ RenderObject::SetLayoutNeededForbiddenScope::~SetLayoutNeededForbiddenScope()
 
 #endif
 
-struct SameSizeAsRenderObject {
+struct SameSizeAsRenderObject : CanMakeWeakPtr<SameSizeAsRenderObject> {
     virtual ~SameSizeAsRenderObject() = default; // Allocate vtable pointer.
 #if ASSERT_ENABLED
-    bool weakPtrFactorWasConstructedOnMainThread;
-    HashSet<void*> cachedResourceClientAssociatedResources;
+    WeakHashSet<void*> cachedResourceClientAssociatedResources;
 #endif
-    void* pointers[5];
+    WeakPtr<Node, WeakPtrImplWithEventTargetData> node;
+    void* pointers[3];
+    CheckedPtr<Layout::Box> layoutBox;
 #if ASSERT_ENABLED
     unsigned m_debugBitfields : 2;
 #endif
     unsigned m_bitfields;
-    WeakPtr<Node> m_node;
 };
 
 #if CPU(ADDRESS64)
@@ -223,7 +223,7 @@ bool RenderObject::isBlockContainer() const
         || display == DisplayType::TableCaption) && !isRenderReplaced();
 }
 
-void RenderObject::setFragmentedFlowStateIncludingDescendants(FragmentedFlowState state, const RenderElement* fragmentedFlowRoot)
+void RenderObject::setFragmentedFlowStateIncludingDescendants(FragmentedFlowState state, const RenderElement* fragmentedFlowRoot, SkipDescendentFragmentedFlow skipDescendentFragmentedFlow)
 {
     setFragmentedFlowState(state);
 
@@ -232,7 +232,7 @@ void RenderObject::setFragmentedFlowStateIncludingDescendants(FragmentedFlowStat
 
     for (auto& child : childrenOfType<RenderObject>(downcast<RenderElement>(*this))) {
         // If the child is a fragmentation context it already updated the descendants flag accordingly.
-        if (child.isRenderFragmentedFlow())
+        if (child.isRenderFragmentedFlow() && skipDescendentFragmentedFlow == SkipDescendentFragmentedFlow::Yes)
             continue;
         if (fragmentedFlowRoot && child.isOutOfFlowPositioned()) {
             // Fragmented status propagation stops at out-of-flow boundary.
@@ -248,8 +248,8 @@ void RenderObject::setFragmentedFlowStateIncludingDescendants(FragmentedFlowStat
             if (!isInsideMulticolumnFlow())
                 continue;
         }
-        ASSERT(state != child.fragmentedFlowState());
-        child.setFragmentedFlowStateIncludingDescendants(state, fragmentedFlowRoot);
+        ASSERT(skipDescendentFragmentedFlow == SkipDescendentFragmentedFlow::No || state != child.fragmentedFlowState());
+        child.setFragmentedFlowStateIncludingDescendants(state, fragmentedFlowRoot, skipDescendentFragmentedFlow);
     }
 }
 
@@ -292,7 +292,7 @@ void RenderObject::initializeFragmentedFlowStateOnInsertion()
         return;
 
     auto* enclosingFragmentedFlow = locateEnclosingFragmentedFlow();
-    setFragmentedFlowStateIncludingDescendants(computedState, enclosingFragmentedFlow ? enclosingFragmentedFlow->parent() : nullptr);
+    setFragmentedFlowStateIncludingDescendants(computedState, enclosingFragmentedFlow ? enclosingFragmentedFlow->parent() : nullptr, SkipDescendentFragmentedFlow::No);
 }
 
 void RenderObject::resetFragmentedFlowStateOnRemoval()
@@ -573,7 +573,7 @@ void RenderObject::markContainingBlocksForLayout(ScheduleRelayout scheduleRelayo
     auto ancestor = container();
 
     bool simplifiedNormalFlowLayout = needsSimplifiedNormalFlowLayout() && !selfNeedsLayout() && !normalChildNeedsLayout();
-    bool hasOutOfFlowPosition = !isText() && style().hasOutOfFlowPosition();
+    bool hasOutOfFlowPosition = isOutOfFlowPositioned();
 
     while (ancestor) {
         // FIXME: Remove this once we remove the special cases for counters, quotes and mathml calling setNeedsLayout during preferred width computation.
@@ -612,7 +612,7 @@ void RenderObject::markContainingBlocksForLayout(ScheduleRelayout scheduleRelayo
         if (scheduleRelayout == ScheduleRelayout::Yes && objectIsRelayoutBoundary(ancestor))
             break;
 
-        hasOutOfFlowPosition = ancestor->style().hasOutOfFlowPosition();
+        hasOutOfFlowPosition = ancestor->isOutOfFlowPositioned();
         ancestor = container;
     }
 
@@ -1719,11 +1719,27 @@ void RenderObject::willBeDestroyed()
     removeRareData();
 }
 
+enum class IsRemoval : bool { No, Yes };
+static void invalidateLineLayoutAfterTreeMutationIfNeeded(RenderObject& renderer, IsRemoval isRemoval)
+{
+    auto* container = LayoutIntegration::LineLayout::blockContainer(renderer);
+    if (!container)
+        return;
+    auto shouldInvalidateLineLayoutPath = true;
+    if (auto* modernLineLayout = container->modernLineLayout()) {
+        shouldInvalidateLineLayoutPath = LayoutIntegration::LineLayout::shouldInvalidateLineLayoutPathAfterTreeMutation(*container, renderer, *modernLineLayout, isRemoval == IsRemoval::Yes);
+        if (!shouldInvalidateLineLayoutPath) {
+            isRemoval == IsRemoval::Yes ? modernLineLayout->removedFromTree(*renderer.parent(), renderer) : modernLineLayout->insertedIntoTree(*renderer.parent(), renderer);
+            shouldInvalidateLineLayoutPath = !modernLineLayout->isDamaged();
+        }
+    }
+    if (shouldInvalidateLineLayoutPath)
+        container->invalidateLineLayoutPath();
+}
+
 void RenderObject::insertedIntoTree(IsInternalMove)
 {
-    if (auto* container = LayoutIntegration::LineLayout::blockContainer(*this))
-        container->invalidateLineLayoutPath();
-
+    invalidateLineLayoutAfterTreeMutationIfNeeded(*this, IsRemoval::No);
     // FIXME: We should ASSERT(isRooted()) here but generated content makes some out-of-order insertion.
     if (!isFloating() && parent()->childrenInline())
         parent()->dirtyLinesFromChangedChild(*this);
@@ -1731,9 +1747,7 @@ void RenderObject::insertedIntoTree(IsInternalMove)
 
 void RenderObject::willBeRemovedFromTree(IsInternalMove)
 {
-    if (auto* container = LayoutIntegration::LineLayout::blockContainer(*this))
-        container->invalidateLineLayoutPath();
-
+    invalidateLineLayoutAfterTreeMutationIfNeeded(*this, IsRemoval::Yes);
     // FIXME: We should ASSERT(isRooted()) but we have some out-of-order removals which would need to be fixed first.
     // Update cached boundaries in SVG renderers, if a child is removed.
     parent()->setNeedsBoundariesUpdate();
@@ -2334,7 +2348,7 @@ static inline void adjustLineHeightOfSelectionGeometries(Vector<SelectionGeometr
         --i;
         if (geometries[i].lineNumber())
             break;
-        if (geometries[i].behavior() == SelectionRenderingBehavior::UseIndividualQuads)
+        if (geometries[i].behavior() == SelectionRenderingBehavior::UseIndividualQuads && geometries[i].isHorizontal())
             continue;
         geometries[i].setLineNumber(lineNumber);
         geometries[i].setLogicalTop(lineTop);
@@ -2491,7 +2505,7 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
     for (size_t j = 1; j < numberOfGeometries; ++j) {
         if (geometries[j].lineNumber() != geometries[j - 1].lineNumber())
             continue;
-        if (geometries[j].behavior() == SelectionRenderingBehavior::UseIndividualQuads)
+        if (geometries[j].behavior() == SelectionRenderingBehavior::UseIndividualQuads && geometries[j].isHorizontal())
             continue;
         auto& previousRect = geometries[j - 1];
         bool previousRectMayNotReachRightEdge = (previousRect.direction() == TextDirection::LTR && previousRect.containsEnd()) || (previousRect.direction() == TextDirection::RTL && previousRect.containsStart());
@@ -2509,7 +2523,7 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
         auto& selectionGeometry = geometries[i];
         if (!selectionGeometry.isLineBreak() && selectionGeometry.lineNumber() >= maxLineNumber)
             continue;
-        if (selectionGeometry.behavior() == SelectionRenderingBehavior::UseIndividualQuads)
+        if (selectionGeometry.behavior() == SelectionRenderingBehavior::UseIndividualQuads && selectionGeometry.isHorizontal())
             continue;
         if (selectionGeometry.direction() == TextDirection::RTL && selectionGeometry.isFirstOnLine()) {
             selectionGeometry.setLogicalWidth(selectionGeometry.logicalWidth() + selectionGeometry.logicalLeft() - selectionGeometry.minX());
@@ -2561,7 +2575,7 @@ Vector<SelectionGeometry> RenderObject::collectSelectionGeometries(const SimpleR
     IntRect interiorUnionRect;
     for (size_t i = 0; i < numberOfGeometries; ++i) {
         auto& currentGeometry = result.geometries[i];
-        if (currentGeometry.behavior() == SelectionRenderingBehavior::UseIndividualQuads) {
+        if (currentGeometry.behavior() == SelectionRenderingBehavior::UseIndividualQuads && currentGeometry.isHorizontal()) {
             if (currentGeometry.quad().isEmpty())
                 continue;
 

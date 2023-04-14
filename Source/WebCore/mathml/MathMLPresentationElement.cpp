@@ -31,7 +31,7 @@
 #if ENABLE(MATHML)
 
 #include "CommonAtomStrings.h"
-#include "ElementIterator.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLMapElement.h"
 #include "HTMLNames.h"
@@ -52,8 +52,8 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLPresentationElement);
 
 using namespace MathMLNames;
 
-MathMLPresentationElement::MathMLPresentationElement(const QualifiedName& tagName, Document& document)
-    : MathMLElement(tagName, document)
+MathMLPresentationElement::MathMLPresentationElement(const QualifiedName& tagName, Document& document, ConstructionType constructionType)
+    : MathMLElement(tagName, document, constructionType)
 {
 }
 

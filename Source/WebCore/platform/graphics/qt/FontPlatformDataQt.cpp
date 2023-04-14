@@ -23,6 +23,7 @@
 
 #include "config.h"
 #include "FontPlatformData.h"
+#include "FontCustomPlatformData.h"
 
 #include "FontCascade.h"
 #include "SharedBuffer.h"

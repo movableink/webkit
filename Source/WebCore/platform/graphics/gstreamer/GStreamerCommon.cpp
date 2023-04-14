@@ -81,6 +81,8 @@ GST_DEBUG_CATEGORY(webkit_gst_common_debug);
 
 namespace WebCore {
 
+static GstClockTime s_webkitGstInitTime;
+
 GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTemplate* staticPadTemplate, const gchar* name, GstPad* target)
 {
     GstPad* pad;
@@ -296,6 +298,7 @@ bool ensureGStreamerInitialized()
 
         GUniqueOutPtr<GError> error;
         isGStreamerInitialized = gst_init_check(&argc, &argv, &error.outPtr());
+        s_webkitGstInitTime = gst_util_get_timestamp();
         ASSERT_WITH_MESSAGE(isGStreamerInitialized, "GStreamer initialization failed: %s", error ? error->message : "unknown error occurred");
         g_strfreev(argv);
         GST_DEBUG_CATEGORY_INIT(webkit_gst_common_debug, "webkitcommon", 0, "WebKit Common utilities");
@@ -379,6 +382,14 @@ void registerWebKitGStreamerElements()
                 if (avAACDecoderFactory)
                     gst_plugin_feature_set_rank(GST_PLUGIN_FEATURE_CAST(avAACDecoderFactory.get()), GST_RANK_MARGINAL);
             }
+        }
+
+        // Prevent decodebin(3) from auto-plugging hlsdemux if it was disabled. UAs should be able
+        // to fallback to MSE when this happens.
+        const char* hlsSupport = g_getenv("WEBKIT_GST_ENABLE_HLS_SUPPORT");
+        if (!hlsSupport || !g_strcmp0(hlsSupport, "0")) {
+            if (auto factory = adoptGRef(gst_element_factory_find("hlsdemux")))
+                gst_plugin_feature_set_rank(GST_PLUGIN_FEATURE_CAST(factory.get()), GST_RANK_NONE);
         }
 
         // The new demuxers based on adaptivedemux2 cannot be used in WebKit yet because this new
@@ -514,6 +525,7 @@ void connectSimpleBusMessageCallback(GstElement* pipeline, Function<void(GstMess
     }), pipeline);
 }
 
+template<>
 Vector<uint8_t> GstMappedBuffer::createVector() const
 {
     return { data(), size() };
@@ -744,6 +756,11 @@ GstClockTime webkitGstElementGetCurrentRunningTime(GstElement* element)
     return clockTime - baseTime;
 }
 #endif
+
+GstClockTime webkitGstInitTime()
+{
+    return s_webkitGstInitTime;
+}
 
 PlatformVideoColorSpace videoColorSpaceFromCaps(const GstCaps* caps)
 {

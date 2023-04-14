@@ -87,7 +87,9 @@ GPUProcess/webrtc/RemoteMediaRecorderManager.cpp
 GPUProcess/webrtc/RemoteSampleBufferDisplayLayer.cpp
 GPUProcess/webrtc/RemoteSampleBufferDisplayLayerManager.cpp
 
+NetworkProcess/BackgroundFetchLoad.cpp
 NetworkProcess/DatabaseUtilities.cpp
+NetworkProcess/EarlyHintsResourceLoader.cpp
 NetworkProcess/NetworkActivityTracker.cpp
 NetworkProcess/NetworkBroadcastChannelRegistry.cpp
 NetworkProcess/NetworkCORSPreflightChecker.cpp
@@ -107,7 +109,6 @@ NetworkProcess/NetworkSchemeRegistry.cpp
 NetworkProcess/NetworkSession.cpp
 NetworkProcess/NetworkSessionCreationParameters.cpp
 NetworkProcess/NetworkSocketChannel.cpp
-NetworkProcess/NetworkSocketStream.cpp
 NetworkProcess/PingLoad.cpp
 NetworkProcess/PreconnectTask.cpp
 
@@ -128,10 +129,11 @@ NetworkProcess/Notifications/WebPushDaemonConnection.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementClientImpl.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementDatabase.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementDebugInfo.cpp
+NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementEphemeralStore.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementManager.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementManagerInterface.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementNetworkLoader.cpp
-NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementStore.cpp
+NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementPersistentStore.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementConnection.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementDaemonClient.cpp
 NetworkProcess/PrivateClickMeasurement/PrivateClickMeasurementManagerProxy.cpp
@@ -141,6 +143,7 @@ NetworkProcess/ServiceWorker/ServiceWorkerFetchTask.cpp
 NetworkProcess/ServiceWorker/ServiceWorkerNavigationPreloader.cpp
 NetworkProcess/ServiceWorker/ServiceWorkerSoftUpdateLoader.cpp
 NetworkProcess/ServiceWorker/WebSWOriginStore.cpp @no-unify
+NetworkProcess/ServiceWorker/WebSWRegistrationStore.cpp
 NetworkProcess/ServiceWorker/WebSWServerConnection.cpp @no-unify
 NetworkProcess/ServiceWorker/WebSWServerToContextConnection.cpp @no-unify
 
@@ -149,6 +152,8 @@ NetworkProcess/SharedWorker/WebSharedWorkerServer.cpp
 NetworkProcess/SharedWorker/WebSharedWorkerServerConnection.cpp
 NetworkProcess/SharedWorker/WebSharedWorkerServerToContextConnection.cpp
 
+NetworkProcess/storage/BackgroundFetchStoreManager.cpp
+NetworkProcess/storage/BackgroundFetchStoreImpl.cpp
 NetworkProcess/storage/CacheStorageCache.cpp
 NetworkProcess/storage/CacheStorageMemoryStore.cpp
 NetworkProcess/storage/CacheStorageManager.cpp
@@ -162,10 +167,12 @@ NetworkProcess/storage/IDBStorageManager.cpp
 NetworkProcess/storage/IDBStorageRegistry.cpp
 NetworkProcess/storage/LocalStorageManager.cpp
 NetworkProcess/storage/MemoryStorageArea.cpp
+NetworkProcess/storage/NetworkQuotaManager.cpp
 NetworkProcess/storage/NetworkStorageManager.cpp
+NetworkProcess/storage/OriginQuotaManager.cpp
 NetworkProcess/storage/OriginStorageManager.cpp
-NetworkProcess/storage/QuotaManager.cpp
 NetworkProcess/storage/SQLiteStorageArea.cpp
+NetworkProcess/storage/ServiceWorkerStorageManager.cpp
 NetworkProcess/storage/SessionStorageManager.cpp
 NetworkProcess/storage/StorageAreaBase.cpp
 NetworkProcess/storage/StorageAreaRegistry.cpp
@@ -211,9 +218,7 @@ Shared/IPCTester.cpp
 Shared/IPCTesterReceiver.cpp
 Shared/LayerTreeContext.cpp
 Shared/LoadParameters.cpp
-Shared/NavigationActionData.cpp
 Shared/PersistencyUtils.cpp
-Shared/PlatformPopupMenuData.cpp
 Shared/PrintInfo.cpp
 Shared/ProcessTerminationReason.cpp
 Shared/RTCNetwork.cpp
@@ -335,6 +340,7 @@ Shared/WebGPU/WebGPUImageCopyExternalImage.cpp
 Shared/WebGPU/WebGPUImageCopyTexture.cpp
 Shared/WebGPU/WebGPUImageCopyTextureTagged.cpp
 Shared/WebGPU/WebGPUImageDataLayout.cpp
+Shared/WebGPU/WebGPUInternalError.cpp
 Shared/WebGPU/WebGPUMultisampleState.cpp
 Shared/WebGPU/WebGPUObjectDescriptorBase.cpp
 Shared/WebGPU/WebGPUOrigin2D.cpp
@@ -467,6 +473,7 @@ UIProcess/API/APIPageConfiguration.cpp
 UIProcess/API/APIProcessPoolConfiguration.cpp
 UIProcess/API/APIOpenPanelParameters.cpp
 UIProcess/API/APISessionState.cpp
+UIProcess/API/APIUIClient.cpp
 UIProcess/API/APIUserScript.cpp
 UIProcess/API/APIUserStyleSheet.cpp
 UIProcess/API/APIWebAuthenticationAssertionResponse.cpp
@@ -706,6 +713,7 @@ WebProcess/GPU/graphics/WebGPU/RemoteTextureProxy.cpp
 WebProcess/GPU/graphics/WebGPU/RemoteTextureViewProxy.cpp
 WebProcess/GPU/graphics/WebGPU/WebGPUDowncastConvertToBackingContext.cpp
 WebProcess/GPU/graphics/ImageBufferShareableBitmapBackend.cpp
+WebProcess/GPU/graphics/PrepareBackingStoreBuffersData.cpp
 WebProcess/GPU/graphics/RemoteGraphicsContextGLProxyFunctionsGenerated.cpp
 WebProcess/GPU/graphics/RemoteGraphicsContextGLProxy.cpp
 WebProcess/GPU/graphics/RemoteDisplayListRecorderProxy.cpp
@@ -750,7 +758,6 @@ WebProcess/Network/WebResourceLoader.cpp
 WebProcess/Network/WebSocketChannel.cpp @no-unify
 WebProcess/Network/WebSocketChannelManager.cpp
 WebProcess/Network/WebSocketProvider.cpp
-WebProcess/Network/WebSocketStream.cpp
 
 WebProcess/Network/webrtc/LibWebRTCNetwork.cpp
 WebProcess/Network/webrtc/LibWebRTCNetworkManager.cpp

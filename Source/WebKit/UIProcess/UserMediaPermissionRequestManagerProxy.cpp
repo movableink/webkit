@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Igalia S.L.
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -25,17 +25,22 @@
 #include "DeviceIdHashSaltStorage.h"
 #include "Logging.h"
 #include "MediaPermissionUtilities.h"
+#include "MessageSenderInlines.h"
+#include "PageLoadState.h"
 #include "UserMediaPermissionRequestManager.h"
 #include "UserMediaProcessManager.h"
 #include "WebAutomationSession.h"
+#include "WebFrameProxy.h"
 #include "WebPageMessages.h"
 #include "WebPageProxy.h"
 #include "WebProcess.h"
 #include "WebProcessPool.h"
 #include "WebProcessProxy.h"
 #include "WebsiteDataStore.h"
+#include <WebCore/CaptureDeviceWithCapabilities.h>
 #include <WebCore/MediaConstraints.h>
 #include <WebCore/MockRealtimeMediaSourceCenter.h>
+#include <WebCore/PlatformMediaSessionManager.h>
 #include <WebCore/RealtimeMediaSource.h>
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/UserMediaRequest.h>
@@ -700,7 +705,7 @@ void UserMediaPermissionRequestManagerProxy::checkUserMediaPermissionForSpeechRe
 
     // We use UserMediaRequestIdentifierType of 0 because this does not correspond to a UserMediaPermissionRequest in web process.
     // We create the RequestProxy only to check the media permission for speech.
-    auto request = UserMediaPermissionRequestProxy::create(*this, makeObjectIdentifier<WebCore::UserMediaRequestIdentifierType>(0), frameIdentifier, frameIdentifier, requestingOrigin.isolatedCopy(), topOrigin.isolatedCopy(), Vector<WebCore::CaptureDevice> { device }, { }, { }, WTFMove(completionHandler));
+    auto request = UserMediaPermissionRequestProxy::create(*this, ObjectIdentifier<WebCore::UserMediaRequestIdentifierType>(0), frameIdentifier, frameIdentifier, requestingOrigin.isolatedCopy(), topOrigin.isolatedCopy(), Vector<WebCore::CaptureDevice> { device }, { }, { }, WTFMove(completionHandler));
 
     // FIXME: Use switch on action.
     auto action = getRequestAction(request.get());
@@ -785,26 +790,35 @@ bool UserMediaPermissionRequestManagerProxy::wasGrantedVideoOrAudioAccess(FrameI
     return m_grantedFrames.contains(frameID);
 }
 
-static inline bool haveMicrophoneDevice(const Vector<WebCore::CaptureDevice>& devices, const String& deviceID)
+static inline bool haveMicrophoneDevice(const Vector<CaptureDeviceWithCapabilities>& devices, const String& deviceID)
 {
-    return std::any_of(devices.begin(), devices.end(), [&deviceID](auto& device) {
+    return std::any_of(devices.begin(), devices.end(), [&deviceID](auto& deviceWithCapabilities) {
+        auto& device = deviceWithCapabilities.device;
         return device.persistentId() == deviceID && device.type() == CaptureDevice::DeviceType::Microphone;
     });
 }
 
 #if !USE(GLIB)
-void UserMediaPermissionRequestManagerProxy::platformGetMediaStreamDevices(CompletionHandler<void(Vector<WebCore::CaptureDevice>&&)>&& completionHandler)
+void UserMediaPermissionRequestManagerProxy::platformGetMediaStreamDevices(bool revealIdsAndLabels, CompletionHandler<void(Vector<CaptureDeviceWithCapabilities>&&)>&& completionHandler)
 {
-    RealtimeMediaSourceCenter::singleton().getMediaStreamDevices(WTFMove(completionHandler));
+    RealtimeMediaSourceCenter::singleton().getMediaStreamDevices([revealIdsAndLabels, completionHandler = WTFMove(completionHandler)](auto&& devices) mutable {
+        auto deviceWithCapabilities = map(devices, [revealIdsAndLabels](auto&& device) -> CaptureDeviceWithCapabilities {
+            RealtimeMediaSourceCapabilities capabilities;
+            if (revealIdsAndLabels)
+                capabilities = RealtimeMediaSourceCenter::singleton().getCapabilities(device);
+            return { WTFMove(device), WTFMove(capabilities) };
+        });
+        completionHandler(WTFMove(deviceWithCapabilities));
+    });
 }
 #endif
 
-void UserMediaPermissionRequestManagerProxy::computeFilteredDeviceList(bool revealIdsAndLabels, CompletionHandler<void(Vector<CaptureDevice>&&)>&& completion)
+void UserMediaPermissionRequestManagerProxy::computeFilteredDeviceList(bool revealIdsAndLabels, CompletionHandler<void(Vector<CaptureDeviceWithCapabilities>&&)>&& completion)
 {
     static const unsigned defaultMaximumCameraCount = 1;
     static const unsigned defaultMaximumMicrophoneCount = 1;
 
-    platformGetMediaStreamDevices([logIdentifier = LOGIDENTIFIER, this, weakThis = WeakPtr { *this }, revealIdsAndLabels, completion = WTFMove(completion)](auto&& devices) mutable {
+    platformGetMediaStreamDevices(revealIdsAndLabels, [logIdentifier = LOGIDENTIFIER, this, weakThis = WeakPtr { *this }, revealIdsAndLabels, completion = WTFMove(completion)](auto&& devicesWithCapabilities) mutable {
 
         if (!weakThis) {
             completion({ });
@@ -817,8 +831,9 @@ void UserMediaPermissionRequestManagerProxy::computeFilteredDeviceList(bool reve
         bool hasCamera = false;
         bool hasMicrophone = false;
 
-        Vector<CaptureDevice> filteredDevices;
-        for (const auto& device : devices) {
+        Vector<CaptureDeviceWithCapabilities> filteredDevices;
+        for (auto& deviceWithCapabilities : devicesWithCapabilities) {
+            auto& device = deviceWithCapabilities.device;
             if (!device.enabled() || (device.type() != WebCore::CaptureDevice::DeviceType::Camera && device.type() != WebCore::CaptureDevice::DeviceType::Microphone && device.type() != WebCore::CaptureDevice::DeviceType::Speaker))
                 continue;
             hasCamera |= device.type() == WebCore::CaptureDevice::DeviceType::Camera;
@@ -832,11 +847,14 @@ void UserMediaPermissionRequestManagerProxy::computeFilteredDeviceList(bool reve
                     continue;
             } else {
                 // We only expose speakers tied to a microphone for the moment.
-                if (device.type() == WebCore::CaptureDevice::DeviceType::Speaker && !haveMicrophoneDevice(devices, device.groupId()))
+                if (device.type() == WebCore::CaptureDevice::DeviceType::Speaker && !haveMicrophoneDevice(devicesWithCapabilities, device.groupId()))
                     continue;
             }
 
-            filteredDevices.append(revealIdsAndLabels ? device : CaptureDevice({ }, device.type(), { }, { }));
+            if (revealIdsAndLabels)
+                filteredDevices.append(deviceWithCapabilities);
+            else
+                filteredDevices.append({ { { }, device.type(), { }, { } }, { } });
         }
 
         m_hasFilteredDeviceList = !revealIdsAndLabels;
@@ -847,7 +865,7 @@ void UserMediaPermissionRequestManagerProxy::computeFilteredDeviceList(bool reve
 }
 #endif
 
-void UserMediaPermissionRequestManagerProxy::enumerateMediaDevicesForFrame(FrameIdentifier frameID, Ref<SecurityOrigin>&& userMediaDocumentOrigin, Ref<SecurityOrigin>&& topLevelDocumentOrigin, CompletionHandler<void(const Vector<CaptureDevice>&, MediaDeviceHashSalts&&)>&& completionHandler)
+void UserMediaPermissionRequestManagerProxy::enumerateMediaDevicesForFrame(FrameIdentifier frameID, Ref<SecurityOrigin>&& userMediaDocumentOrigin, Ref<SecurityOrigin>&& topLevelDocumentOrigin, CompletionHandler<void(const Vector<CaptureDeviceWithCapabilities>&, MediaDeviceHashSalts&&)>&& completionHandler)
 {
 #if ENABLE(MEDIA_STREAM)
     ALWAYS_LOG(LOGIDENTIFIER);
@@ -942,6 +960,17 @@ void UserMediaPermissionRequestManagerProxy::syncWithWebCorePrefs() const
 #if ENABLE(GPU_PROCESS)
     if (m_page.preferences().captureAudioInGPUProcessEnabled() || m_page.preferences().captureVideoInGPUProcessEnabled())
         m_page.process().processPool().ensureGPUProcess().setUseMockCaptureDevices(mockDevicesEnabled);
+#endif
+
+#if HAVE(SC_CONTENT_SHARING_PICKER)
+    auto useSharingPicker = m_page.preferences().useSCContentSharingPicker();
+
+#if ENABLE(GPU_PROCESS)
+    if (useSharingPicker)
+        m_page.process().processPool().ensureGPUProcess().setUseSCContentSharingPicker(useSharingPicker);
+#endif
+
+    PlatformMediaSessionManager::setUseSCContentSharingPicker(useSharingPicker);
 #endif
 
     if (MockRealtimeMediaSourceCenter::mockRealtimeMediaSourceCenterEnabled() == mockDevicesEnabled)

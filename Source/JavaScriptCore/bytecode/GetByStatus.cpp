@@ -32,9 +32,9 @@
 #include "ComplexGetStatus.h"
 #include "GetterSetterAccessCase.h"
 #include "ICStatusUtils.h"
+#include "InlineCacheCompiler.h"
 #include "IntrinsicGetterAccessCase.h"
 #include "ModuleNamespaceAccessCase.h"
-#include "PolymorphicAccess.h"
 #include "ProxyObjectAccessCase.h"
 #include "StructureStubInfo.h"
 #include <wtf/ListDump.h>
@@ -183,6 +183,7 @@ GetByStatus::GetByStatus(StubInfoSummary summary, StructureStubInfo* stubInfo)
     case StubInfoSummary::MakesCalls:
         RELEASE_ASSERT_NOT_REACHED();
         return;
+    case StubInfoSummary::Megamorphic:
     case StubInfoSummary::TakesSlowPath:
         ASSERT(stubInfo);
         m_state = stubInfo->tookSlowPath ? ObservedTakesSlowPath : LikelyTakesSlowPath;

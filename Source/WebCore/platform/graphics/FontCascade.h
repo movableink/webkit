@@ -162,8 +162,6 @@ public:
     void setLetterSpacing(float s) { m_letterSpacing = s; }
     bool isFixedPitch() const;
     
-    FontRenderingMode renderingMode() const { return m_fontDescription.renderingMode(); }
-
     bool enableKerning() const { return m_enableKerning; }
     bool requiresShaping() const { return m_requiresShaping; }
 
@@ -311,16 +309,7 @@ private:
 
     bool advancedTextRenderingMode() const
     {
-        auto textRenderingMode = m_fontDescription.textRenderingMode();
-        if (textRenderingMode == TextRenderingMode::GeometricPrecision || textRenderingMode == TextRenderingMode::OptimizeLegibility)
-            return true;
-        if (textRenderingMode == TextRenderingMode::OptimizeSpeed)
-            return false;
-#if PLATFORM(COCOA) || USE(FREETYPE)
-        return true;
-#else
-        return false;
-#endif
+        return m_fontDescription.textRenderingMode() != TextRenderingMode::OptimizeSpeed;
     }
 
     bool computeEnableKerning() const
@@ -335,12 +324,10 @@ private:
 
     bool computeRequiresShaping() const
     {
-#if PLATFORM(COCOA) || USE(FREETYPE)
         if (!m_fontDescription.variantSettings().isAllNormal())
             return true;
         if (m_fontDescription.featureSettings().size())
             return true;
-#endif
         return advancedTextRenderingMode();
     }
 

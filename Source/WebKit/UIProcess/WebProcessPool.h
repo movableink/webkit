@@ -29,7 +29,6 @@
 #include "APIObject.h"
 #include "APIProcessPoolConfiguration.h"
 #include "GPUProcessProxy.h"
-#include "GenericCallback.h"
 #include "HiddenPageThrottlingAutoIncreasesCounter.h"
 #include "MessageReceiver.h"
 #include "MessageReceiverMap.h"
@@ -193,9 +192,6 @@ public:
     void setLegacyDownloadClient(RefPtr<API::DownloadClient>&&);
     void setAutomationClient(std::unique_ptr<API::AutomationClient>&&);
 
-    void setCustomWebContentServiceBundleIdentifier(const String&);
-    const String& customWebContentServiceBundleIdentifier() { return m_configuration->customWebContentServiceBundleIdentifier(); }
-
     const Vector<Ref<WebProcessProxy>>& processes() const { return m_processes; }
 
     // WebProcessProxy object which does not have a running process which is used for convenience, to avoid
@@ -222,13 +218,9 @@ public:
     bool hasPagesUsingWebsiteDataStore(WebsiteDataStore&) const;
 
     const String& injectedBundlePath() const { return m_configuration->injectedBundlePath(); }
-#if PLATFORM(COCOA)
-    NSSet *allowedClassesForParameterCoding() const;
-    void initializeClassesForParameterCoding();
-#endif
 
-    DownloadProxy& download(WebsiteDataStore&, WebPageProxy* initiatingPage, const WebCore::ResourceRequest&, const String& suggestedFilename = { });
-    DownloadProxy& resumeDownload(WebsiteDataStore&, WebPageProxy* initiatingPage, const API::Data& resumeData, const String& path, CallDownloadDidStart);
+    Ref<DownloadProxy> download(WebsiteDataStore&, WebPageProxy* initiatingPage, const WebCore::ResourceRequest&, const String& suggestedFilename = { });
+    Ref<DownloadProxy> resumeDownload(WebsiteDataStore&, WebPageProxy* initiatingPage, const API::Data& resumeData, const String& path, CallDownloadDidStart);
 
     void setInjectedBundleInitializationUserData(RefPtr<API::Object>&& userData) { m_injectedBundleInitializationUserData = WTFMove(userData); }
 
@@ -254,14 +246,6 @@ public:
 
 #if HAVE(CVDISPLAYLINK)
     DisplayLinkCollection& displayLinks() { return m_displayLinks; }
-
-    std::optional<WebCore::FramesPerSecond> nominalFramesPerSecondForDisplay(WebCore::PlatformDisplayID);
-
-    void startDisplayLink(WebProcessProxy&, DisplayLinkObserverID, WebCore::PlatformDisplayID, WebCore::FramesPerSecond);
-    void stopDisplayLink(WebProcessProxy&, DisplayLinkObserverID, WebCore::PlatformDisplayID);
-    void setDisplayLinkPreferredFramesPerSecond(WebProcessProxy&, DisplayLinkObserverID, WebCore::PlatformDisplayID, WebCore::FramesPerSecond);
-    void stopDisplayLinks(WebProcessProxy&);
-    void setDisplayLinkForDisplayWantsFullSpeedUpdates(WebProcessProxy&, WebCore::PlatformDisplayID, bool wantsFullSpeedUpdates);
 #endif
 
     void addSupportedPlugin(String&& matchingDomain, String&& name, HashSet<String>&& mimeTypes, HashSet<String> extensions);
@@ -298,13 +282,12 @@ public:
     void stopMemorySampler();
 
 #if USE(SOUP)
-    void setInitialHTTPCookieAcceptPolicy(WebCore::HTTPCookieAcceptPolicy policy) { m_initialHTTPCookieAcceptPolicy = policy; }
     static void setNetworkProcessMemoryPressureHandlerConfiguration(const std::optional<MemoryPressureHandler::Configuration>& configuration) { s_networkProcessMemoryPressureHandlerConfiguration = configuration; }
 #endif
     void setEnhancedAccessibility(bool);
     
     // Downloads.
-    DownloadProxy& createDownloadProxy(WebsiteDataStore&, const WebCore::ResourceRequest&, WebPageProxy* originatingPage, const FrameInfoData&);
+    Ref<DownloadProxy> createDownloadProxy(WebsiteDataStore&, const WebCore::ResourceRequest&, WebPageProxy* originatingPage, const FrameInfoData&);
 
     API::LegacyContextHistoryClient& historyClient() { return *m_historyClient; }
     WebContextClient& client() { return m_client; }
@@ -316,7 +299,6 @@ public:
     };
     static Statistics& statistics();    
 
-    void clearCachedCredentials(PAL::SessionID);
     void terminateAllWebContentProcesses();
     void sendNetworkProcessPrepareToSuspendForTesting(CompletionHandler<void()>&&);
     void sendNetworkProcessWillSuspendImminentlyForTesting();
@@ -462,7 +444,7 @@ public:
 #endif
 
 #if ENABLE(WEBCONTENT_CRASH_TESTING)
-    bool shouldCrashWhenCreatingWebProcess() const { return m_shouldCrashWhenCreatingWebProcess; }
+    static bool shouldCrashWhenCreatingWebProcess() { return s_shouldCrashWhenCreatingWebProcess; }
 #endif
 
     ForegroundWebProcessToken foregroundWebProcessToken() const { return ForegroundWebProcessToken(m_foregroundWebProcessCounter.count()); }
@@ -585,6 +567,10 @@ private:
 
     void registerNotificationObservers();
     void unregisterNotificationObservers();
+
+#if ENABLE(WEBCONTENT_CRASH_TESTING)
+    static void initializeShouldCrashWhenCreatingWebProcess();
+#endif
 #endif
 
     void setApplicationIsActive(bool);
@@ -703,7 +689,6 @@ private:
     WebContextSupplementMap m_supplements;
 
 #if USE(SOUP)
-    WebCore::HTTPCookieAcceptPolicy m_initialHTTPCookieAcceptPolicy { WebCore::HTTPCookieAcceptPolicy::ExclusivelyFromMainDocumentDomain };
     static std::optional<MemoryPressureHandler::Configuration> s_networkProcessMemoryPressureHandlerConfiguration;
 #endif
 
@@ -753,7 +738,6 @@ private:
 
 #if PLATFORM(COCOA)
     RetainPtr<NSMutableDictionary> m_bundleParameters;
-    mutable RetainPtr<NSSet> m_classesForParameterCoder;
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -769,7 +753,7 @@ private:
 #endif
 
 #if ENABLE(WEBCONTENT_CRASH_TESTING)
-    bool m_shouldCrashWhenCreatingWebProcess { false };
+    static bool s_shouldCrashWhenCreatingWebProcess;
 #endif
 
     struct Paths {
@@ -832,6 +816,7 @@ private:
     bool m_isDelayedWebProcessLaunchDisabled { false };
 #endif
     static bool s_useSeparateServiceWorkerProcess;
+    static bool s_didGlobalStaticInitialization;
 
 #if ENABLE(TRACKING_PREVENTION)
     HashSet<WebCore::RegistrableDomain> m_domainsWithUserInteraction;

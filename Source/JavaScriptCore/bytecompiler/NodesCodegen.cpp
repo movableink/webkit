@@ -38,6 +38,7 @@
 #include "JSGenerator.h"
 #include "JSImmutableButterfly.h"
 #include "JSMapIterator.h"
+#include "JSPromise.h"
 #include "JSSetIterator.h"
 #include "JSStringIterator.h"
 #include "LabelScope.h"
@@ -272,10 +273,14 @@ RegisterID* ResolveNode::emitBytecode(BytecodeGenerator& generator, RegisterID* 
     generator.emitExpressionInfo(divot, m_start, divot);
     RefPtr<RegisterID> scope = generator.emitResolveScope(dst, var);
     RegisterID* finalDest = generator.finalDestination(dst);
-    RefPtr<RegisterID> uncheckedResult = generator.newTemporary();
-    generator.emitGetFromScope(uncheckedResult.get(), scope.get(), var, ThrowIfNotFound);
-    generator.emitTDZCheckIfNecessary(var, uncheckedResult.get(), nullptr);
-    generator.move(finalDest, uncheckedResult.get());
+    if (!generator.needsTDZCheck(var))
+        generator.emitGetFromScope(finalDest, scope.get(), var, ThrowIfNotFound);
+    else {
+        RefPtr<RegisterID> uncheckedResult = generator.newTemporary();
+        generator.emitGetFromScope(uncheckedResult.get(), scope.get(), var, ThrowIfNotFound);
+        generator.emitTDZCheck(uncheckedResult.get());
+        generator.move(finalDest, uncheckedResult.get());
+    }
     generator.emitProfileType(finalDest, var, m_position, m_position + m_ident.length());
     return finalDest;
 }
@@ -1295,9 +1300,12 @@ RegisterID* FunctionCallResolveNode::emitBytecode(BytecodeGenerator& generator, 
     RefPtr<RegisterID> func;
     if (local) {
         generator.emitTDZCheckIfNecessary(var, local.get(), nullptr);
-        func = generator.move(generator.tempDestination(dst), local.get());
+        if (m_args->hasAssignments())
+            func = generator.move(generator.tempDestination(dst), local.get());
+        else
+            func = local;
     } else
-        func = generator.newTemporary();
+        func = generator.tempDestination(dst);
     CallArguments callArguments(generator, m_args);
 
     if (local) {
@@ -1370,6 +1378,33 @@ RegisterID* BytecodeIntrinsicNode::emit_intrinsic_getByValWithThis(BytecodeGener
     ASSERT(!node->m_next);
 
     return generator.emitGetByVal(generator.finalDestination(dst), base.get(), thisValue.get(), property.get());
+}
+
+static ALWAYS_INLINE void emitIntrinsicPutByValWithThis(BytecodeGenerator& generator, ArgumentListNode* node, ECMAMode ecmaMode)
+{
+    RefPtr<RegisterID> base = generator.emitNode(node);
+    node = node->m_next;
+    RefPtr<RegisterID> thisValue = generator.emitNode(node);
+    node = node->m_next;
+    RefPtr<RegisterID> property = generator.emitNodeForProperty(node);
+    node = node->m_next;
+    RefPtr<RegisterID> value = generator.emitNodeForProperty(node);
+
+    ASSERT(!node->m_next);
+
+    generator.emitPutByValWithECMAMode(base.get(), thisValue.get(), property.get(), value.get(), ecmaMode);
+}
+
+RegisterID* BytecodeIntrinsicNode::emit_intrinsic_putByValWithThisSloppy(BytecodeGenerator& generator, RegisterID* dst)
+{
+    emitIntrinsicPutByValWithThis(generator, m_args->m_listNode, ECMAMode::sloppy());
+    return dst;
+}
+
+RegisterID* BytecodeIntrinsicNode::emit_intrinsic_putByValWithThisStrict(BytecodeGenerator& generator, RegisterID* dst)
+{
+    emitIntrinsicPutByValWithThis(generator, m_args->m_listNode, ECMAMode::strict());
+    return dst;
 }
 
 RegisterID* BytecodeIntrinsicNode::emit_intrinsic_getPrototypeOf(BytecodeGenerator& generator, RegisterID* dst)
@@ -2033,12 +2068,6 @@ RegisterID* BytecodeIntrinsicNode::emit_intrinsic_newPromise(JSC::BytecodeGenera
     bool isInternalPromise = false;
     generator.emitNewPromise(finalDestination.get(), isInternalPromise);
     return finalDestination.get();
-}
-
-RegisterID* BytecodeIntrinsicNode::emit_intrinsic_createArgumentsButterfly(JSC::BytecodeGenerator& generator, JSC::RegisterID* dst)
-{
-    ASSERT(!m_args->m_listNode);
-    return generator.emitCreateArgumentsButterfly(generator.finalDestination(dst));
 }
 
 #define JSC_DECLARE_BYTECODE_INTRINSIC_CONSTANT_GENERATORS(name) \

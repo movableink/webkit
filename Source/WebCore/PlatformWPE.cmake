@@ -25,7 +25,6 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/graphics/egl"
     "${WEBCORE_DIR}/platform/graphics/epoxy"
     "${WEBCORE_DIR}/platform/graphics/gbm"
-    "${WEBCORE_DIR}/platform/graphics/glx"
     "${WEBCORE_DIR}/platform/graphics/gstreamer"
     "${WEBCORE_DIR}/platform/graphics/opengl"
     "${WEBCORE_DIR}/platform/graphics/opentype"
@@ -123,11 +122,10 @@ endif ()
 
 if (USE_LIBGBM)
     list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-        ${GBM_INCLUDE_DIR}
         ${LIBDRM_INCLUDE_DIR}
     )
     list(APPEND WebCore_LIBRARIES
-        ${GBM_LIBRARIES}
+        GBM::GBM
         ${LIBDRM_LIBRARIES}
     )
 endif ()

@@ -31,6 +31,7 @@
 #import "DrawingAreaMessages.h"
 #import "DrawingAreaProxyMessages.h"
 #import "LayerTreeContext.h"
+#import "MessageSenderInlines.h"
 #import "WebPageProxy.h"
 #import "WebPageProxyMessages.h"
 #import "WebProcessProxy.h"
@@ -192,7 +193,7 @@ void TiledCoreAnimationDrawingAreaProxy::sendUpdateGeometry()
         if (!weakThis)
             return;
         weakThis->didUpdateGeometry();
-    }, m_identifier.toUInt64());
+    }, m_identifier);
 }
 
 void TiledCoreAnimationDrawingAreaProxy::adjustTransientZoom(double scale, FloatPoint origin)

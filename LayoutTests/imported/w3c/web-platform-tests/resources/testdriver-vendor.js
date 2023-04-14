@@ -299,14 +299,16 @@ window.test_driver_internal.action_sequence = async function(sources)
                 const key = convertSeleniumKeyCode(action.value);
                 if (key.modifier)
                     modifiersInEffect.push(key.modifier);
-                events.push({type: 'rawKeyDown', arguments: [key.key, modifiersInEffect.slice(0)]});
+                else
+                    events.push({type: 'rawKeyDown', arguments: [key.key, modifiersInEffect.slice(0)]});
                 break;
             }
             case 'keyUp': {
                 const key = convertSeleniumKeyCode(action.value);
                 if (key.modifier)
                     modifiersInEffect = modifiersInEffect.filter((modifier) => modifier != key.modifier);
-                events.push({type: 'rawKeyUp', arguments: [key.key, modifiersInEffect.slice(0)]});
+                else
+                    events.push({type: 'rawKeyUp', arguments: [key.key, modifiersInEffect.slice(0)]});
                 break;
             }
             case 'pause':
@@ -381,6 +383,10 @@ window.test_driver_internal.action_sequence = async function(sources)
 window.test_driver_internal.set_permission = async function(permission_params)
 {
     switch (permission_params.descriptor.name) {
+    case "background-fetch":
+        if (window.testRunner && testRunner.setBackgroundFetchPermission)
+            testRunner.setBackgroundFetchPermission(permission_params.state === "granted");
+        break;
     case "geolocation":
         const granted = permission_params.state === "granted";
         testRunner.setGeolocationPermission(granted);

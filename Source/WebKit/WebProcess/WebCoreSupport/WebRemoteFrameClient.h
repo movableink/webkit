@@ -26,7 +26,10 @@
 #pragma once
 
 #include "WebFrame.h"
+#include <WebCore/MessageWithMessagePorts.h>
+#include <WebCore/ProcessIdentifier.h>
 #include <WebCore/RemoteFrameClient.h>
+#include <WebCore/SecurityOriginData.h>
 #include <wtf/Scope.h>
 
 namespace WebKit {
@@ -40,6 +43,8 @@ public:
 
 private:
     void frameDetached() final;
+    void sizeDidChange(WebCore::IntSize) final;
+    void postMessageToRemote(WebCore::ProcessIdentifier, WebCore::FrameIdentifier, std::optional<WebCore::SecurityOriginData>, const WebCore::MessageWithMessagePorts&) final;
 
     Ref<WebFrame> m_frame;
     ScopeExit<Function<void()>> m_frameInvalidator;

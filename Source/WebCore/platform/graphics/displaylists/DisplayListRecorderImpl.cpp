@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,8 +42,8 @@
 namespace WebCore {
 namespace DisplayList {
 
-RecorderImpl::RecorderImpl(DisplayList& displayList, const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, DrawGlyphsMode drawGlyphsMode)
-    : Recorder(state, initialClip, initialCTM, drawGlyphsMode)
+RecorderImpl::RecorderImpl(DisplayList& displayList, const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, const DestinationColorSpace& colorSpace, DrawGlyphsMode drawGlyphsMode)
+    : Recorder(state, initialClip, initialCTM, colorSpace, drawGlyphsMode)
     , m_displayList(displayList)
 {
     LOG_WITH_STREAM(DisplayLists, stream << "\nRecording with clip " << initialClip);
@@ -219,7 +219,7 @@ void RecorderImpl::recordDrawLine(const FloatPoint& point1, const FloatPoint& po
 
 void RecorderImpl::recordDrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle style)
 {
-    append<DrawLinesForText>(blockLocation, localAnchor, thickness, widths, printing, doubleLines, style);
+    append<DrawLinesForText>(blockLocation, localAnchor, widths, thickness, printing, doubleLines, style);
 }
 
 void RecorderImpl::recordDrawDotsForDocumentMarker(const FloatRect& rect, const DocumentMarkerLineStyle& style)
@@ -430,6 +430,12 @@ bool RecorderImpl::recordResourceUse(Font& font)
 bool RecorderImpl::recordResourceUse(DecomposedGlyphs& decomposedGlyphs)
 {
     m_displayList.cacheDecomposedGlyphs(decomposedGlyphs);
+    return true;
+}
+
+bool RecorderImpl::recordResourceUse(Gradient& gradient)
+{
+    m_displayList.cacheGradient(gradient);
     return true;
 }
 

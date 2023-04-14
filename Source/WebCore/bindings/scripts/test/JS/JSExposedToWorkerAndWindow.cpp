@@ -172,7 +172,7 @@ template<> void JSExposedToWorkerAndWindowDOMConstructor::initializeProperties(V
 
 static const HashTableValue JSExposedToWorkerAndWindowPrototypeTableValues[] =
 {
-    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsExposedToWorkerAndWindowConstructor, 0 } },
+    { "constructor"_s, static_cast<unsigned>(PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsExposedToWorkerAndWindowConstructor, 0 } },
     { "doSomething"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsExposedToWorkerAndWindowPrototypeFunction_doSomething, 0 } },
 };
 
@@ -203,7 +203,9 @@ void JSExposedToWorkerAndWindow::finishCreation(VM& vm)
 
 JSObject* JSExposedToWorkerAndWindow::createPrototype(VM& vm, JSDOMGlobalObject& globalObject)
 {
-    return JSExposedToWorkerAndWindowPrototype::create(vm, &globalObject, JSExposedToWorkerAndWindowPrototype::createStructure(vm, &globalObject, globalObject.objectPrototype()));
+    auto* structure = JSExposedToWorkerAndWindowPrototype::createStructure(vm, &globalObject, globalObject.objectPrototype());
+    structure->setMayBePrototype(true);
+    return JSExposedToWorkerAndWindowPrototype::create(vm, &globalObject, structure);
 }
 
 JSObject* JSExposedToWorkerAndWindow::prototype(VM& vm, JSDOMGlobalObject& globalObject)

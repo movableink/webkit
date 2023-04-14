@@ -41,6 +41,7 @@
 namespace WebCore {
 class PlatformCALayer;
 class ThreadSafeImageBufferFlusher;
+class TiledBacking;
 }
 
 namespace WebKit {
@@ -69,7 +70,8 @@ private:
     void adoptDisplayRefreshMonitorsFromDrawingArea(DrawingArea&) override;
 
     WebCore::GraphicsLayerFactory* graphicsLayerFactory() override;
-    void setRootCompositingLayer(WebCore::GraphicsLayer*) override;
+    void setRootCompositingLayer(WebCore::Frame&, WebCore::GraphicsLayer*) override;
+    void attachToInitialRootFrame(WebCore::FrameIdentifier) final;
     void triggerRenderingUpdate() override;
     void attachViewOverlayGraphicsLayer(WebCore::GraphicsLayer*) override;
 
@@ -80,7 +82,7 @@ private:
     void willDestroyDisplayRefreshMonitor(WebCore::DisplayRefreshMonitor*);
     void setPreferredFramesPerSecond(WebCore::FramesPerSecond);
 
-    bool shouldUseTiledBackingForFrameView(const WebCore::FrameView&) const override;
+    bool shouldUseTiledBackingForFrameView(const WebCore::LocalFrameView&) const override;
 
     void updatePreferences(const WebPreferencesStore&) override;
 
@@ -97,8 +99,8 @@ private:
     void setViewExposedRect(std::optional<WebCore::FloatRect>) override;
     std::optional<WebCore::FloatRect> viewExposedRect() const override { return m_viewExposedRect; }
 
-    void acceleratedAnimationDidStart(WebCore::GraphicsLayer::PlatformLayerID, const String& key, MonotonicTime startTime) override;
-    void acceleratedAnimationDidEnd(WebCore::GraphicsLayer::PlatformLayerID, const String& key) override;
+    void acceleratedAnimationDidStart(WebCore::PlatformLayerIdentifier, const String& key, MonotonicTime startTime) override;
+    void acceleratedAnimationDidEnd(WebCore::PlatformLayerIdentifier, const String& key) override;
 
     WebCore::FloatRect exposedContentRect() const override;
     void setExposedContentRect(const WebCore::FloatRect&) override;
@@ -109,7 +111,7 @@ private:
 
     void mainFrameContentSizeChanged(const WebCore::IntSize&) override;
 
-    void activityStateDidChange(OptionSet<WebCore::ActivityState::Flag> changed, ActivityStateChangeID, CompletionHandler<void()>&&) override;
+    void activityStateDidChange(OptionSet<WebCore::ActivityState> changed, ActivityStateChangeID, CompletionHandler<void()>&&) override;
 
     bool addMilestonesToDispatch(OptionSet<WebCore::LayoutMilestone>) override;
 
@@ -124,6 +126,8 @@ private:
     void tryMarkLayersVolatile(CompletionHandler<void(bool succeeded)>&&) final;
 
     void adoptLayersFromDrawingArea(DrawingArea&) final;
+
+    void setNextRenderingUpdateRequiresSynchronousImageDecoding() final;
 
     class BackingStoreFlusher : public ThreadSafeRefCounted<BackingStoreFlusher> {
     public:
@@ -143,14 +147,21 @@ private:
     };
 
     std::unique_ptr<RemoteLayerTreeContext> m_remoteLayerTreeContext;
-    Ref<WebCore::GraphicsLayer> m_rootLayer;
+    
+    struct RootLayerInfo {
+        Ref<WebCore::GraphicsLayer> layer;
+        RefPtr<WebCore::GraphicsLayer> contentLayer;
+        RefPtr<WebCore::GraphicsLayer> viewOverlayRootLayer;
+        WeakPtr<WebFrame> frame;
+    };
+
+    Vector<RootLayerInfo> m_rootLayers;
 
     std::optional<WebCore::FloatRect> m_viewExposedRect;
 
     WebCore::Timer m_updateRenderingTimer;
     bool m_isRenderingSuspended { false };
     bool m_hasDeferredRenderingUpdate { false };
-    bool m_nextRenderingUpdateRequiresSynchronousImageDecoding { false };
     bool m_inUpdateRendering { false };
 
     bool m_waitingForBackingStoreSwap { false };
@@ -167,9 +178,6 @@ private:
     ActivityStateChangeID m_activityStateChangeID { ActivityStateChangeAsynchronous };
 
     OptionSet<WebCore::LayoutMilestone> m_pendingNewlyReachedPaintingMilestones;
-
-    RefPtr<WebCore::GraphicsLayer> m_contentLayer;
-    RefPtr<WebCore::GraphicsLayer> m_viewOverlayRootLayer;
 };
 
 inline bool RemoteLayerTreeDrawingArea::addMilestonesToDispatch(OptionSet<WebCore::LayoutMilestone> paintMilestones)

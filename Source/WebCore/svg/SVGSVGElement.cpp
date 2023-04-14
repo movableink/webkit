@@ -29,10 +29,10 @@
 #include "DOMWrapperWorld.h"
 #include "ElementIterator.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameSelection.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGViewportContainer.h"
+#include "LocalFrame.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGViewportContainer.h"
@@ -50,7 +50,7 @@
 #include "SVGViewElement.h"
 #include "SVGViewSpec.h"
 #include "StaticNodeList.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -106,7 +106,7 @@ SVGViewSpec& SVGSVGElement::currentView()
     return *m_viewSpec;
 }
 
-RefPtr<Frame> SVGSVGElement::frameForCurrentScale() const
+RefPtr<LocalFrame> SVGSVGElement::frameForCurrentScale() const
 {
     // The behavior of currentScale() is undefined when we're dealing with non-standalone SVG documents.
     // If the document is embedded, the scaling is handled by the host renderer.

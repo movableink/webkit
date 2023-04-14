@@ -62,12 +62,12 @@ class ElementData;
 class ElementRareData;
 class FormAssociatedCustomElement;
 class FormListedElement;
-class Frame;
 class HTMLDocument;
 class IntSize;
 class JSCustomElementInterface;
 class KeyframeEffectStack;
 class KeyboardEvent;
+class LocalFrame;
 class Locale;
 class PlatformKeyboardEvent;
 class PlatformMouseEvent;
@@ -76,7 +76,6 @@ class PopoverData;
 class PseudoElement;
 class RenderStyle;
 class RenderTreePosition;
-class ResizeObserverSize;
 class SpaceSplitString;
 class StylePropertyMap;
 class StylePropertyMapReadOnly;
@@ -139,8 +138,8 @@ public:
     WEBCORE_EXPORT void setElementAttribute(const QualifiedName& attributeName, Element* value);
     WEBCORE_EXPORT std::optional<Vector<RefPtr<Element>>> getElementsArrayAttribute(const QualifiedName& attributeName) const;
     WEBCORE_EXPORT void setElementsArrayAttribute(const QualifiedName& attributeName, std::optional<Vector<RefPtr<Element>>>&& value);
-    static bool isElementReflectionAttribute(const QualifiedName&);
-    static bool isElementsArrayReflectionAttribute(const QualifiedName&);
+    static bool isElementReflectionAttribute(const Settings&, const QualifiedName&);
+    static bool isElementsArrayReflectionAttribute(const Settings&, const QualifiedName&);
 
     // Call this to get the value of an attribute that is known not to be the style
     // attribute or one of the SVG animatable attributes.
@@ -282,6 +281,8 @@ public:
     const AtomString& prefix() const final { return m_tagName.prefix(); }
     const AtomString& namespaceURI() const final { return m_tagName.namespaceURI(); }
 
+    const AtomString& localNameLowercase() const { return m_tagName.localNameLowercase(); }
+
     ElementName elementName() const { return m_tagName.elementName(); }
     Namespace nodeNamespace() const { return m_tagName.nodeNamespace(); }
 
@@ -310,7 +311,7 @@ public:
     virtual void parseAttribute(const QualifiedName&, const AtomString&) { }
 
     // Only called by the parser immediately after element construction.
-    void parserSetAttributes(const Vector<Attribute>&);
+    void parserSetAttributes(Span<const Attribute>);
 
     bool isEventHandlerAttribute(const Attribute&) const;
     virtual FormListedElement* asFormListedElement();
@@ -398,7 +399,7 @@ public:
     // Used by the HTMLElement and SVGElement IDLs.
     WEBCORE_EXPORT const AtomString& nonce() const;
     WEBCORE_EXPORT void setNonce(const AtomString&);
-    void hideNonce();
+    inline void hideNonce(); // Defined in ElementInlines.h.
 
     ExceptionOr<void> insertAdjacentHTML(const String& where, const String& html, NodeVector* addedNodes);
 
@@ -463,6 +464,7 @@ public:
 
     static RefPtr<Element> findFocusDelegateForTarget(ContainerNode&, FocusTrigger);
     RefPtr<Element> findFocusDelegate(FocusTrigger = FocusTrigger::Other);
+    RefPtr<Element> findAutofocusDelegate(FocusTrigger = FocusTrigger::Other);
 
     static AXTextStateChangeIntent defaultFocusTextStateChangeIntent() { return AXTextStateChangeIntent(AXTextStateChangeTypeSelectionMove, AXTextSelection { AXTextSelectionDirectionDiscontiguous, AXTextSelectionGranularityUnknown, true }); }
     virtual void focus(const FocusOptions& = { });
@@ -698,11 +700,14 @@ public:
     IntersectionObserverData* intersectionObserverDataIfExists();
 
     ResizeObserverData& ensureResizeObserverData();
-    ResizeObserverData* resizeObserverData();
+    ResizeObserverData* resizeObserverDataIfExists();
 
-    ResizeObserverSize* lastRememberedSize() const;
-    void setLastRememberedSize(Ref<ResizeObserverSize>&&);
-    void clearLastRememberedSize();
+    std::optional<LayoutUnit> lastRememberedLogicalWidth() const;
+    std::optional<LayoutUnit> lastRememberedLogicalHeight() const;
+    void setLastRememberedLogicalWidth(LayoutUnit);
+    void clearLastRememberedLogicalWidth();
+    void setLastRememberedLogicalHeight(LayoutUnit);
+    void clearLastRememberedLogicalHeight();
 
     Element* findAnchorElementForLink(String& outAnchorName);
 
@@ -755,7 +760,8 @@ protected:
     void updateLabel(TreeScope&, const AtomString& oldForAttributeValue, const AtomString& newForAttributeValue);
 
 private:
-    Frame* documentFrameWithNonNullView() const;
+    LocalFrame* documentFrameWithNonNullView() const;
+    void hideNonceSlow();
 
     bool isTextNode() const;
 
@@ -786,7 +792,7 @@ private:
     void updateNameForTreeScope(TreeScope&, const AtomString& oldName, const AtomString& newName);
     void updateNameForDocument(HTMLDocument&, const AtomString& oldName, const AtomString& newName);
 
-    enum class NotifyObservers { No, Yes };
+    enum class NotifyObservers : bool { No, Yes };
     void updateId(const AtomString& oldId, const AtomString& newId, NotifyObservers = NotifyObservers::Yes);
     void updateIdForTreeScope(TreeScope&, const AtomString& oldId, const AtomString& newId, NotifyObservers = NotifyObservers::Yes);
 
@@ -813,15 +819,18 @@ private:
     LayoutRect absoluteEventBoundsOfElementAndDescendants(bool& includesFixedPositionElements);
 
     void disconnectFromIntersectionObservers();
+    void disconnectFromIntersectionObserversSlow(IntersectionObserverData&);
 
     void disconnectFromResizeObservers();
+    void disconnectFromResizeObserversSlow(ResizeObserverData&);
 
     // The cloneNode function is private so that non-virtual cloneElementWith/WithoutChildren are used instead.
     Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
     void cloneShadowTreeIfPossible(Element& newHost);
     virtual Ref<Element> cloneElementWithoutAttributesAndChildren(Document&);
 
-    void removeShadowRoot();
+    inline void removeShadowRoot(); // Defined in ElementRareData.h.
+    void removeShadowRootSlow(ShadowRoot&);
 
     enum class ResolveComputedStyleMode { Normal, RenderedOnly };
     const RenderStyle* resolveComputedStyle(ResolveComputedStyleMode = ResolveComputedStyleMode::Normal);
@@ -869,6 +878,8 @@ private:
     bool hasLanguageAttribute() const { return hasLangAttr() || hasXMLLangAttr(); }
     bool hasLangAttrKnownToMatchDocumentElement() const { return hasLanguageAttribute() && effectiveLangKnownToMatchDocumentElement(); }
 
+    void parentOrShadowHostNode() const = delete; // Call parentNode() instead.
+
     QualifiedName m_tagName;
     RefPtr<ElementData> m_elementData;
 };
@@ -890,6 +901,22 @@ inline void Element::clearAfterPseudoElement()
 {
     if (hasRareData())
         clearAfterPseudoElementSlow();
+}
+
+inline void Element::disconnectFromIntersectionObservers()
+{
+    auto* observerData = intersectionObserverDataIfExists();
+    if (LIKELY(!observerData))
+        return;
+    disconnectFromIntersectionObserversSlow(*observerData);
+}
+
+inline void Element::disconnectFromResizeObservers()
+{
+    auto* observerData = resizeObserverDataIfExists();
+    if (LIKELY(!observerData))
+        return;
+    disconnectFromResizeObserversSlow(*observerData);
 }
 
 void invalidateForSiblingCombinators(Element* sibling);

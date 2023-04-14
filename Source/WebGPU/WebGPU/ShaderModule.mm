@@ -112,8 +112,9 @@ Ref<ShaderModule> Device::createShaderModule(const WGPUShaderModuleDescriptor& d
     auto checkResult = WGSL::staticCheck(fromAPI(shaderModuleParameters->wgsl.code), std::nullopt, { maxBuffersPlusVertexBuffersForVertexStage() });
 
     if (std::holds_alternative<WGSL::SuccessfulCheck>(checkResult) && shaderModuleParameters->hints && descriptor.hintCount) {
-        if (auto result = earlyCompileShaderModule(*this, WTFMove(checkResult), descriptor, fromAPI(descriptor.label)))
-            return result.releaseNonNull();
+        // FIXME: re-enable early compilation later on once deferred compilation is fully implemented
+        // https://bugs.webkit.org/show_bug.cgi?id=254258
+        UNUSED_PARAM(earlyCompileShaderModule);
     } else {
         // FIXME: remove shader library generation from MSL after compiler bringup
         auto library = ShaderModule::createLibrary(device(), String::fromUTF8(shaderModuleParameters->wgsl.code), fromAPI(descriptor.label));
@@ -185,13 +186,16 @@ static CompilationMessageData convertMessages(const Messages& messages1, const s
         for (size_t i = 0; i < compilationMessages.messages.size(); ++i) {
             const auto& compilationMessage = compilationMessages.messages[i];
             flattenedCompilationMessages.append({
-                nullptr,
-                flattenedMessages[i + base].data(),
-                compilationMessages.type,
-                compilationMessage.lineNumber(),
-                compilationMessage.lineOffset(),
-                compilationMessage.offset(),
-                compilationMessage.length(),
+                .nextInChain = nullptr,
+                .message = flattenedMessages[i + base].data(),
+                .type = compilationMessages.type,
+                .lineNum = compilationMessage.lineNumber(),
+                .linePos = compilationMessage.lineOffset(),
+                .offset = compilationMessage.offset(),
+                .length = compilationMessage.length(),
+                .utf16LinePos = compilationMessage.lineOffset(),
+                .utf16Offset = compilationMessage.offset(),
+                .utf16Length = compilationMessage.length(),
             });
         }
     };

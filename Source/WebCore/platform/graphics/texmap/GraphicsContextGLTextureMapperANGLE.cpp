@@ -45,11 +45,6 @@
 
 namespace WebCore {
 
-GraphicsContextGLANGLE::GraphicsContextGLANGLE(GraphicsContextGLAttributes attributes)
-    : GraphicsContextGL(attributes)
-{
-}
-
 GraphicsContextGLANGLE::~GraphicsContextGLANGLE()
 {
     if (!makeContextCurrent())
@@ -70,16 +65,6 @@ GraphicsContextGLANGLE::~GraphicsContextGLANGLE()
             GL_DeleteRenderbuffers(1, &m_depthStencilBuffer);
     }
     GL_DeleteFramebuffers(1, &m_fbo);
-}
-
-GCGLDisplay GraphicsContextGLANGLE::platformDisplay() const
-{
-    return m_displayObj;
-}
-
-GCGLConfig GraphicsContextGLANGLE::platformConfig() const
-{
-    return m_configObj;
 }
 
 bool GraphicsContextGLANGLE::makeContextCurrent()
@@ -146,7 +131,7 @@ bool GraphicsContextGLTextureMapperANGLE::copyTextureFromMedia(MediaPlayer&, Pla
 }
 #endif
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
 RefPtr<VideoFrame> GraphicsContextGLTextureMapperANGLE::paintCompositedResultsToVideoFrame()
 {
 #if USE(GSTREAMER)

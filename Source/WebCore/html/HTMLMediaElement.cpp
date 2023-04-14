@@ -49,16 +49,15 @@
 #include "DeprecatedGlobalSettings.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
+#include "DiagnosticLoggingResultType.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
-#include "ElementChildIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "EventLoop.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
-#include "FrameView.h"
 #include "FullscreenManager.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSourceElement.h"
@@ -74,6 +73,8 @@
 #include "JSHTMLMediaElement.h"
 #include "JSMediaControlsHost.h"
 #include "LoadableTextTrack.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "MediaController.h"
@@ -155,8 +156,12 @@
 #endif
 
 #if ENABLE(MEDIA_SOURCE)
-#include "DOMWindow.h"
+#include "LocalDOMWindow.h"
+#if ENABLE(MANAGED_MEDIA_SOURCE)
+#include "ManagedMediaSource.h"
+#else
 #include "MediaSource.h"
+#endif
 #include "SourceBufferList.h"
 #endif
 
@@ -224,11 +229,6 @@ static const Seconds hideMediaControlsAfterEndedDelay { 6_s };
 #if ENABLE(MEDIA_SOURCE)
 // URL protocol used to signal that the media source API is being used.
 static constexpr auto mediaSourceBlobProtocol = "blob"_s;
-#endif
-
-#if ENABLE(MEDIA_STREAM)
-// URL protocol used to signal that the media stream API is being used.
-static constexpr auto mediaStreamBlobProtocol = "blob"_s;
 #endif
 
 using namespace HTMLNames;
@@ -428,7 +428,7 @@ static bool defaultVolumeLocked()
 }
 
 HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document& document, bool createdByParser)
-    : HTMLElement(tagName, document)
+    : HTMLElement(tagName, document, CreateHTMLMediaElement)
     , ActiveDOMObject(document)
     , m_progressEventTimer(*this, &HTMLMediaElement::progressEventTimerFired)
     , m_playbackProgressTimer(*this, &HTMLMediaElement::playbackProgressTimerFired)
@@ -491,8 +491,6 @@ HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document& docum
     allMediaElements().add(this);
 
     ALWAYS_LOG(LOGIDENTIFIER);
-
-    setHasCustomStyleResolveCallbacks();
 
     InspectorInstrumentation::addEventListenersToNode(*this);
 }
@@ -638,9 +636,6 @@ HTMLMediaElement::~HTMLMediaElement()
 
     m_mediaSession = nullptr;
     schedulePlaybackControlsManagerUpdate();
-
-    if (!m_blobURLForReading.isEmpty())
-        ThreadableBlobRegistry::unregisterBlobURL(m_blobURLForReading);
 }
 
 std::optional<MediaPlayerIdentifier> HTMLMediaElement::playerIdentifier() const
@@ -1146,6 +1141,16 @@ String HTMLMediaElement::canPlayType(const String& mimeType) const
 {
     MediaEngineSupportParameters parameters;
     ContentType contentType(mimeType);
+
+#if PLATFORM(COCOA)
+    if (document().quirks().shouldAdvertiseSupportForHLSSubtitleTypes()
+        && contentType.containerType() == "application/vnd.apple.mpegurl"_s
+        && (contentType.codecs().contains("stpp.ttml.im1t"_s) || contentType.codecs().contains("wvtt"_s))) {
+        ALWAYS_LOG(LOGIDENTIFIER, "Quirk, ", mimeType, ": probably");
+        return "probably"_s;
+    }
+#endif
+
     parameters.type = contentType;
     parameters.contentTypesRequiringHardwareSupport = mediaContentTypesRequiringHardwareSupport();
     parameters.allowedMediaContainerTypes = allowedMediaContainerTypes();
@@ -1530,7 +1535,7 @@ void HTMLMediaElement::loadResource(const URL& initialURL, ContentType& contentT
 
     INFO_LOG(LOGIDENTIFIER, initialURL, contentType, keySystem);
 
-    RefPtr<Frame> frame = document().frame();
+    RefPtr frame = document().frame();
     if (!frame) {
         mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
         return;
@@ -1648,7 +1653,7 @@ void HTMLMediaElement::loadResource(const URL& initialURL, ContentType& contentT
         ALWAYS_LOG(LOGIDENTIFIER, "loading generic blob");
         if (!m_blobURLForReading.isEmpty())
             ThreadableBlobRegistry::unregisterBlobURL(m_blobURLForReading);
-        m_blobURLForReading = BlobURL::createPublicURL(&document().securityOrigin());
+        m_blobURLForReading = { BlobURL::createPublicURL(&document().securityOrigin()), document().topOrigin().data() };
         ThreadableBlobRegistry::registerBlobURL(&document().securityOrigin(), document().policyContainer(), m_blobURLForReading, m_blob->url());
 
         if (!m_player->load(m_blobURLForReading, contentType, keySystem, !!m_remotePlaybackConfiguration))
@@ -2354,7 +2359,7 @@ bool HTMLMediaElement::isSafeToLoadURL(const URL& url, InvalidURLAction actionIf
         return false;
     }
 
-    RefPtr<Frame> frame = document().frame();
+    RefPtr frame = document().frame();
     if (!frame || !document().securityOrigin().canDisplay(url)) {
         if (actionIfInvalid == Complain) {
             FrameLoader::reportLocalLoadFailed(frame.get(), url.stringCenterEllipsizedToLength());
@@ -4174,7 +4179,7 @@ void HTMLMediaElement::setLoop(bool loop)
 
 bool HTMLMediaElement::controls() const
 {
-    RefPtr<Frame> frame = document().frame();
+    RefPtr frame = document().frame();
 
     // always show controls when scripting is disabled
     if (frame && !frame->script().canExecuteScripts(NotAboutToExecuteScript))
@@ -4421,7 +4426,7 @@ void HTMLMediaElement::endScanning()
 
 double HTMLMediaElement::nextScanRate()
 {
-    double rate = std::min(ScanMaximumRate, fabs(playbackRate() * 2));
+    double rate = std::min(ScanMaximumRate, std::abs(playbackRate() * 2));
     if (m_scanDirection == Backward)
         rate *= -1;
 #if PLATFORM(IOS_FAMILY)
@@ -5216,9 +5221,6 @@ URL HTMLMediaElement::selectNextSourceChild(ContentType* contentType, String* ke
 #if ENABLE(MEDIA_SOURCE)
             parameters.isMediaSource = mediaURL.protocolIs(mediaSourceBlobProtocol);
 #endif
-#if ENABLE(MEDIA_STREAM)
-            parameters.isMediaStream = mediaURL.protocolIs(mediaStreamBlobProtocol);
-#endif
             parameters.requiresRemotePlayback = !!m_remotePlaybackConfiguration;
             if (!document().settings().allowMediaContentTypesRequiringHardwareSupportAsFallback() || Traversal<HTMLSourceElement>::nextSkippingChildren(source))
                 parameters.contentTypesRequiringHardwareSupport = mediaContentTypesRequiringHardwareSupport();
@@ -5587,7 +5589,7 @@ bool HTMLMediaElement::mediaPlayerRenderingCanBeAccelerated()
     // picture-in-picture window or if it is in fullscreen.
     // Otherwise, the MediaPlayerPrivate* may destroy the video layer if
     // the no longer in the DOM.
-    if (m_videoFullscreenLayer)
+    if (m_videoFullscreenMode != VideoFullscreenModeNone)
         return true;
 #endif
     auto* renderer = this->renderer();
@@ -6465,8 +6467,10 @@ void HTMLMediaElement::enqueuePlaybackTargetAvailabilityChangedEvent(EnqueueBeha
 
     ALWAYS_LOG(LOGIDENTIFIER, "hasTargets = ", hasTargets);
     m_lastTargetAvailabilityEventState = hasTargets;
+#if ENABLE(WIRELESS_PLAYBACK_TARGET_AVAILABILITY_API)
     auto event = WebKitPlaybackTargetAvailabilityEvent::create(eventNames().webkitplaybacktargetavailabilitychangedEvent, hasTargets);
     scheduleEvent(WTFMove(event));
+#endif
     scheduleUpdateMediaState();
 }
 
@@ -6675,11 +6679,8 @@ void HTMLMediaElement::enterFullscreen(VideoFullscreenMode mode)
     }
 #endif
 
-    ALWAYS_LOG(LOGIDENTIFIER, ", transient activation = ", window->hasTransientActivation());
-    if (mediaSession().hasBehaviorRestriction(MediaElementSession::RequireUserGestureForFullscreen) && !window->consumeTransientActivation()) {
-        ERROR_LOG(LOGIDENTIFIER, "User activation required to enter fullscreen");
-        return;
-    }
+    if (mediaSession().hasBehaviorRestriction(MediaElementSession::RequireUserGestureForFullscreen))
+        window->consumeTransientActivation();
 
     queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, mode, logIdentifier = LOGIDENTIFIER] {
         if (isContextStopped())
@@ -7165,11 +7166,6 @@ void HTMLMediaElement::clearMediaCacheForOrigins(const String& path, const HashS
     MediaPlayer::clearMediaCacheForOrigins(path, origins);
 }
 
-void HTMLMediaElement::resetMediaEngines()
-{
-    MediaPlayer::resetMediaEngines();
-}
-
 void HTMLMediaElement::privateBrowsingStateDidChange(PAL::SessionID sessionID)
 {
     // FIXME: We should try to reconcile this so there's no difference for PLATFORM(IOS_FAMILY).
@@ -7548,7 +7544,7 @@ HTMLMediaElement::SleepType HTMLMediaElement::shouldDisableSleep() const
 
 String HTMLMediaElement::mediaPlayerReferrer() const
 {
-    RefPtr<Frame> frame = document().frame();
+    RefPtr frame = document().frame();
     if (!frame)
         return String();
 
@@ -7557,7 +7553,7 @@ String HTMLMediaElement::mediaPlayerReferrer() const
 
 String HTMLMediaElement::mediaPlayerUserAgent() const
 {
-    RefPtr<Frame> frame = document().frame();
+    RefPtr frame = document().frame();
     if (!frame)
         return String();
 
@@ -7706,7 +7702,7 @@ const String& HTMLMediaElement::mediaPlayerMediaCacheDirectory() const
 
 String HTMLMediaElement::sourceApplicationIdentifier() const
 {
-    if (RefPtr<Frame> frame = document().frame()) {
+    if (RefPtr frame = document().frame()) {
         if (NetworkingContext* networkingContext = frame->loader().networkingContext())
             return networkingContext->sourceApplicationIdentifier();
     }
@@ -7902,7 +7898,7 @@ void HTMLMediaElement::updateRateChangeRestrictions()
 
 RefPtr<VideoPlaybackQuality> HTMLMediaElement::getVideoPlaybackQuality()
 {
-    RefPtr<DOMWindow> domWindow = document().domWindow();
+    RefPtr domWindow = document().domWindow();
     double timestamp = domWindow ? domWindow->nowTimestamp().milliseconds() : 0;
 
     auto metrics = m_player ? m_player->videoPlaybackQualityMetrics() : std::nullopt;
@@ -8436,6 +8432,33 @@ bool HTMLMediaElement::shouldOverridePauseDuringRouteChange() const
 #endif
 }
 
+LayerHostingContextID HTMLMediaElement::layerHostingContextID()
+{
+    if (m_player)
+        return m_player->hostingContextID();
+    return { };
+}
+
+FloatSize HTMLMediaElement::naturalSize()
+{
+    if (m_player)
+        return m_player->naturalSize();
+    return { };
+}
+
+FloatSize HTMLMediaElement::videoInlineSize() const
+{
+    if (m_player)
+        return m_player->videoInlineSize();
+    return { };
+}
+
+void HTMLMediaElement::setVideoInlineSizeFenced(const FloatSize& size, const WTF::MachSendRight& fence)
+{
+    if (m_player)
+        m_player->setVideoInlineSizeFenced(size, fence);
+}
+
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
 void HTMLMediaElement::scheduleUpdateMediaState()
@@ -8499,8 +8522,18 @@ MediaProducerMediaStateFlags HTMLMediaElement::mediaState() const
 #endif
 
 #if ENABLE(MEDIA_SOURCE)
+    bool streaming = false;
+#if ENABLE(MANAGED_MEDIA_SOURCE)
+    RefPtr managedMediasource = is<ManagedMediaSource>(m_mediaSource) ? downcast<ManagedMediaSource>(m_mediaSource.get()) : nullptr;
+    streaming |= managedMediasource && managedMediasource->streaming();
+    if (!managedMediasource) {
+#endif
     // We can assume that if we have active source buffers, later networking activity (such as stream or XHR requests) will be media related.
-    if (m_mediaSource && m_mediaSource->activeSourceBuffers() && m_mediaSource->activeSourceBuffers()->length())
+    streaming |= m_mediaSource && m_mediaSource->activeSourceBuffers() && m_mediaSource->activeSourceBuffers()->length();
+#if ENABLE(MANAGED_MEDIA_SOURCE)
+    }
+#endif
+    if (streaming)
         state.add(MediaProducerMediaState::HasStreamingActivity);
 #endif
 
@@ -8614,11 +8647,26 @@ void HTMLMediaElement::setBufferingPolicy(BufferingPolicy policy)
     m_bufferingPolicy = policy;
     if (m_player)
         m_player->setBufferingPolicy(policy);
+#if ENABLE(MEDIA_SOURCE)
+    if (m_mediaSource && policy == BufferingPolicy::PurgeResources)
+        m_mediaSource->memoryPressure();
+#endif
 }
 
 void HTMLMediaElement::purgeBufferedDataIfPossible()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
+
+    bool isPausedOrMSE = [&] {
+#if ENABLE(MEDIA_SOURCE)
+        if (m_mediaSource)
+            return true;
+#endif
+        return paused();
+    }();
+
+    if (!isPausedOrMSE)
+        return;
 
     if (!MemoryPressureHandler::singleton().isUnderMemoryPressure() && mediaSession().preferredBufferingPolicy() == BufferingPolicy::Default)
         return;

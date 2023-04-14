@@ -713,6 +713,15 @@ std::optional<uint64_t> volumeFreeSpace(const String& path)
         return std::nullopt;
     return spaceInfo.available;
 }
+
+std::optional<uint64_t> volumeCapacity(const String& path)
+{
+    std::error_code ec;
+    auto spaceInfo = std::filesystem::space(toStdFileSystemPath(path), ec);
+    if (ec)
+        return std::nullopt;
+    return spaceInfo.capacity;
+}
 #endif
 
 bool createSymbolicLink(const String& targetPath, const String& symbolicLinkPath)
@@ -787,7 +796,7 @@ bool isHiddenFile(const String& path)
 #endif
 }
 
-enum class ShouldFollowSymbolicLinks { No, Yes };
+enum class ShouldFollowSymbolicLinks : bool { No, Yes };
 static std::optional<FileType> fileTypePotentiallyFollowingSymLinks(const String& path, ShouldFollowSymbolicLinks shouldFollowSymbolicLinks)
 {
     std::error_code ec;

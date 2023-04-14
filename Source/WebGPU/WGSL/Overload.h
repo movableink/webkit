@@ -38,21 +38,31 @@ using AbstractValue = std::variant<NumericVariable, unsigned>;
 struct TypeVariable {
     enum Constraint : uint8_t {
         None = 0,
-        F16 = 1 << 0,
-        F32 = 1 << 1,
-        AbstractFloat = 1 << 2,
-        Float = F16 | F32 | AbstractFloat,
 
-        I32 = 1 << 3,
-        U32 = 1 << 4,
-        AbstractInt = 1 << 5,
-        Integer = I32 | U32 | AbstractInt,
+        Bool          = 1 << 0,
+        AbstractInt   = 1 << 1,
+        I32           = 1 << 2,
+        U32           = 1 << 3,
+        AbstractFloat = 1 << 4,
+        F32           = 1 << 5,
+        F16           = 1 << 6,
 
+        ConcreteFloat = F16 | F32,
+        Float = ConcreteFloat | AbstractFloat,
+
+        ConcreteInteger = I32 | U32,
+        Integer = ConcreteInteger | AbstractInt,
+        SignedInteger = I32 | AbstractInt,
+
+        Scalar = Bool | Integer | Float,
+        ConcreteScalar = Bool | ConcreteInteger | ConcreteFloat,
+
+        SignedNumber = Float | SignedInteger,
         Number = Float | Integer,
     };
 
     unsigned id;
-    Constraint constraints;
+    Constraint constraints { None };
 };
 
 struct AbstractVector;
@@ -76,13 +86,18 @@ struct AbstractMatrix {
 };
 
 struct OverloadCandidate {
-    WTF::Vector<TypeVariable, 1> typeVariables;
-    WTF::Vector<NumericVariable, 2> numericVariables;
-    WTF::Vector<AbstractType, 2> parameters;
+    Vector<TypeVariable, 1> typeVariables;
+    Vector<NumericVariable, 2> numericVariables;
+    Vector<AbstractType, 2> parameters;
     AbstractType result;
 };
 
-Type* resolveOverloads(TypeStore&, const WTF::Vector<OverloadCandidate>&, const WTF::Vector<Type*>&);
+struct SelectedOverload {
+    FixedVector<Type*> parameters;
+    Type* result;
+};
+
+std::optional<SelectedOverload> resolveOverloads(TypeStore&, const Vector<OverloadCandidate>&, const Vector<Type*>& valueArguments, const Vector<Type*>& typeArguments);
 
 } // namespace WGSL
 

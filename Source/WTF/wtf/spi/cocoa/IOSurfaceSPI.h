@@ -58,6 +58,7 @@ extern const CFStringRef kIOSurfacePixelFormat;
 extern const CFStringRef kIOSurfaceWidth;
 extern const CFStringRef kIOSurfaceElementWidth;
 extern const CFStringRef kIOSurfaceElementHeight;
+extern const CFStringRef kIOSurfaceName;
 extern const CFStringRef kIOSurfacePlaneWidth;
 extern const CFStringRef kIOSurfacePlaneHeight;
 extern const CFStringRef kIOSurfacePlaneBytesPerRow;
@@ -137,10 +138,6 @@ WTF_EXTERN_C_END
 #import <IOSurfaceAccelerator/IOSurfaceAccelerator.h>
 
 #else
-
-#if PLATFORM(WATCHOS) || PLATFORM(APPLETV)
-typedef uint32_t IOSurfaceID;
-#endif
 
 typedef struct __IOSurfaceAccelerator *IOSurfaceAcceleratorRef;
 

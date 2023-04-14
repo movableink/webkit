@@ -41,9 +41,13 @@ public:
         None
     };
 
-    static void testHandlerMessageReceivedCallback(WebKitUserContentManager* userContentManager, WebKitJavascriptResult* javascriptResult, PolicyClientTest* test)
+#if ENABLE(2022_GLIB_API)
+    static void testHandlerMessageReceivedCallback(WebKitUserContentManager* userContentManager, JSCValue* result, PolicyClientTest* test)
+#else
+    static void testHandlerMessageReceivedCallback(WebKitUserContentManager* userContentManager, WebKitJavascriptResult* result, PolicyClientTest* test)
+#endif
     {
-        GUniquePtr<char> valueString(WebViewTest::javascriptResultToCString(javascriptResult));
+        GUniquePtr<char> valueString(WebViewTest::javascriptResultToCString(result));
         if (g_str_equal(valueString.get(), "autoplayed"))
             test->m_autoplayed = true;
         else if (g_str_equal(valueString.get(), "did-not-play"))
@@ -110,7 +114,11 @@ public:
         : LoadTrackingTest()
     {
         g_signal_connect(m_webView, "decide-policy", G_CALLBACK(decidePolicyCallback), this);
+#if !ENABLE(2022_GLIB_API)
         webkit_user_content_manager_register_script_message_handler(m_userContentManager.get(), "testHandler");
+#else
+        webkit_user_content_manager_register_script_message_handler(m_userContentManager.get(), "testHandler", nullptr);
+#endif
         g_signal_connect(m_userContentManager.get(), "script-message-received::testHandler", G_CALLBACK(testHandlerMessageReceivedCallback), this);
     }
 

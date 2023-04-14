@@ -31,10 +31,9 @@
 #include "ContentData.h"
 #include "CursorList.h"
 #include "DocumentInlines.h"
-#include "ElementChildIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "EventHandler.h"
 #include "FocusController.h"
-#include "Frame.h"
 #include "FrameSelection.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLBodyElement.h"
@@ -45,6 +44,7 @@
 #include "InlineIteratorTextBox.h"
 #include "LayoutElementBox.h"
 #include "LengthFunctions.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "Page.h"
 #include "PathUtilities.h"
@@ -55,6 +55,7 @@
 #include "RenderDeprecatedFlexibleBox.h"
 #include "RenderDescendantIterator.h"
 #include "RenderFlexibleBox.h"
+#include "RenderFragmentContainer.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderGrid.h"
 #include "RenderImage.h"
@@ -68,7 +69,7 @@
 #if ASSERT_ENABLED
 #include "RenderListMarker.h"
 #endif
-#include "RenderFragmentContainer.h"
+#include "RenderMultiColumnSpannerPlaceholder.h"
 #include "RenderSVGViewportContainer.h"
 #include "RenderStyle.h"
 #include "RenderTableCaption.h"
@@ -1838,6 +1839,12 @@ void RenderElement::issueRepaintForOutlineAuto(float outlineSize)
 
 void RenderElement::updateOutlineAutoAncestor(bool hasOutlineAuto)
 {
+    if (is<RenderMultiColumnSpannerPlaceholder>(*this)) {
+        auto* spanner = downcast<RenderMultiColumnSpannerPlaceholder>(*this).spanner();
+        spanner->setHasOutlineAutoAncestor(hasOutlineAuto);
+        spanner->updateOutlineAutoAncestor(hasOutlineAuto);
+    }
+
     for (auto& child : childrenOfType<RenderObject>(*this)) {
         if (hasOutlineAuto == child.hasOutlineAutoAncestor())
             continue;
@@ -2123,7 +2130,7 @@ bool RenderElement::createsNewFormattingContext() const
 
 bool RenderElement::establishesIndependentFormattingContext() const
 {
-    return isFloatingOrOutOfFlowPositioned() || hasPotentiallyScrollableOverflow() || style().containsLayout() || paintContainmentApplies();
+    return isFloatingOrOutOfFlowPositioned() || hasPotentiallyScrollableOverflow() || style().containsLayout() || paintContainmentApplies() || (style().isDisplayBlockLevel() && style().blockStepSize());
 }
 
 FloatRect RenderElement::referenceBoxRect(CSSBoxType boxType) const

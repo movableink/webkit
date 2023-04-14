@@ -26,11 +26,16 @@
 #pragma once
 
 #include "RemoteLayerTreeTransaction.h"
+#include <WebCore/HTMLMediaElementIdentifier.h>
 #include <WebCore/PlatformCALayer.h>
 #include <WebCore/PlatformLayer.h>
 
 namespace WebCore {
 class LayerPool;
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+class AcceleratedEffect;
+struct AcceleratedEffectValues;
+#endif
 }
 
 namespace WebKit {
@@ -43,6 +48,9 @@ public:
     static Ref<PlatformCALayerRemote> create(PlatformLayer *, WebCore::PlatformCALayerClient*, RemoteLayerTreeContext&);
 #if ENABLE(MODEL_ELEMENT)
     static Ref<PlatformCALayerRemote> create(Ref<WebCore::Model>, WebCore::PlatformCALayerClient*, RemoteLayerTreeContext&);
+#endif
+#if HAVE(AVKIT)
+    static Ref<PlatformCALayerRemote> create(WebCore::HTMLVideoElement&, WebCore::PlatformCALayerClient*, RemoteLayerTreeContext&);
 #endif
     static Ref<PlatformCALayerRemote> create(const PlatformCALayerRemote&, WebCore::PlatformCALayerClient*, RemoteLayerTreeContext&);
 
@@ -73,6 +81,11 @@ public:
     RefPtr<WebCore::PlatformCAAnimation> animationForKey(const String& key) override;
     void animationStarted(const String& key, MonotonicTime beginTime) override;
     void animationEnded(const String& key) override;
+
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+    void clearAcceleratedEffectsAndBaseValues() override;
+    void setAcceleratedEffectsAndBaseValues(const WebCore::AcceleratedEffects&, WebCore::AcceleratedEffectValues&) override;
+#endif
 
     void setMask(WebCore::PlatformCALayer*) override;
 
@@ -124,10 +137,8 @@ public:
     bool hasContents() const override;
     CFTypeRef contents() const override;
     void setContents(CFTypeRef) override;
-#if HAVE(IOSURFACE)
-    void setContents(const WebCore::IOSurface&) override;
-    void setContents(const WTF::MachSendRight&) override;
-#endif
+    void setDelegatedContentsFinishedEvent(const WebCore::PlatformCALayerDelegatedContentsFinishedEvent&) override;
+    void setDelegatedContents(const WebCore::PlatformCALayerDelegatedContents&) override;
     void setContentsRect(const WebCore::FloatRect&) override;
 
     void setMinificationFilter(WebCore::PlatformCALayer::FilterType) override;

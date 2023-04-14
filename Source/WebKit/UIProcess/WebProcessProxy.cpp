@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,8 @@
 #include "Logging.h"
 #include "NetworkProcessConnectionInfo.h"
 #include "NotificationManagerMessageHandlerMessages.h"
+#include "PageLoadState.h"
+#include "PlatformXRSystem.h"
 #include "ProvisionalFrameProxy.h"
 #include "ProvisionalPageProxy.h"
 #include "RemoteWorkerType.h"
@@ -44,12 +46,15 @@
 #include "SpeechRecognitionRemoteRealtimeMediaSourceManager.h"
 #include "SpeechRecognitionRemoteRealtimeMediaSourceManagerMessages.h"
 #include "SpeechRecognitionServerMessages.h"
+#include "SuspendedPageProxy.h"
 #include "TextChecker.h"
 #include "TextCheckerState.h"
 #include "UserData.h"
 #include "WebAutomationSession.h"
 #include "WebBackForwardCache.h"
 #include "WebBackForwardListItem.h"
+#include "WebCompiledContentRuleList.h"
+#include "WebFrameProxy.h"
 #include "WebInspectorUtilities.h"
 #include "WebLockRegistryProxy.h"
 #include "WebNavigationDataStore.h"
@@ -76,6 +81,7 @@
 #include <WebCore/PlatformMediaSessionManager.h>
 #include <WebCore/PrewarmInformation.h>
 #include <WebCore/PublicSuffix.h>
+#include <WebCore/RealtimeMediaSourceCenter.h>
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/SuddenTermination.h>
 #include <pal/system/Sound.h>
@@ -340,7 +346,7 @@ WebProcessProxy::~WebProcessProxy()
     WebPasteboardProxy::singleton().removeWebProcessProxy(*this);
 
 #if HAVE(CVDISPLAYLINK)
-    processPool().stopDisplayLinks(*this);
+    processPool().displayLinks().stopDisplayLinks(m_displayLinkClient);
 #endif
 
     auto isResponsiveCallbacks = WTFMove(m_isResponsiveCallbacks);
@@ -486,8 +492,6 @@ void WebProcessProxy::getLaunchOptions(ProcessLauncher::LaunchOptions& launchOpt
 
     AuxiliaryProcessProxy::getLaunchOptions(launchOptions);
 
-    if (!m_processPool->customWebContentServiceBundleIdentifier().isEmpty())
-        launchOptions.customWebContentServiceBundleIdentifier = m_processPool->customWebContentServiceBundleIdentifier().ascii();
     if (WebKit::isInspectorProcessPool(processPool()))
         launchOptions.extraInitializationData.add<HashTranslatorASCIILiteral>("inspector-process"_s, "1"_s);
 
@@ -507,10 +511,8 @@ void WebProcessProxy::getLaunchOptions(ProcessLauncher::LaunchOptions& launchOpt
     }
 
 #if ENABLE(WEBCONTENT_CRASH_TESTING)
-    if (isCrashyProcess()) {
-        launchOptions.customWebContentServiceBundleIdentifier = toCString("com.apple.WebKit.WebContent.Crashy");
+    if (isCrashyProcess())
         launchOptions.extraInitializationData.add<HashTranslatorASCIILiteral>("is-webcontent-crashy"_s, "1"_s);
-    }
 #endif
 
     if (m_serviceWorkerInformation) {
@@ -576,7 +578,7 @@ void WebProcessProxy::processWillShutDown(IPC::Connection& connection)
 
 #if HAVE(CVDISPLAYLINK)
     m_displayLinkClient.setConnection(nullptr);
-    processPool().stopDisplayLinks(*this);
+    processPool().displayLinks().stopDisplayLinks(m_displayLinkClient);
 #endif
 }
 
@@ -601,6 +603,7 @@ void WebProcessProxy::shutDown()
     m_activityForHoldingLockedFiles = nullptr;
     m_audibleMediaActivity = std::nullopt;
     m_mediaStreamingActivity = std::nullopt;
+    m_throttler.didDisconnectFromProcess();
 
     for (auto& page : pages()) {
         if (page)
@@ -637,6 +640,17 @@ RefPtr<WebPageProxy> WebProcessProxy::audioCapturingWebPage()
     }
     return nullptr;
 }
+
+#if ENABLE(WEBXR) && !USE(OPENXR)
+RefPtr<WebPageProxy> WebProcessProxy::webPageWithActiveXRSession()
+{
+    for (auto& page : globalPages()) {
+        if (page && page->xrSystem() && page->xrSystem()->hasActiveSession())
+            return page;
+    }
+    return nullptr;
+}
+#endif
 
 #if ENABLE(TRACKING_PREVENTION)
 void WebProcessProxy::notifyPageStatisticsAndDataRecordsProcessed()
@@ -691,6 +705,11 @@ bool WebProcessProxy::shouldTakeSuspendedAssertion() const
     return false;
 }
 
+bool WebProcessProxy::shouldDropSuspendedAssertionAfterDelay() const
+{
+    return WTF::anyOf(m_pageMap.values(), [](auto& page) { return page->preferences().shouldDropSuspendedAssertionAfterDelay(); });
+}
+
 void WebProcessProxy::addExistingWebPage(WebPageProxy& webPage, BeginsUsingDataStore beginsUsingDataStore)
 {
     WEBPROCESSPROXY_RELEASE_LOG(Process, "addExistingWebPage: webPage=%p, pageProxyID=%" PRIu64 ", webPageID=%" PRIu64, &webPage, webPage.identifier().toUInt64(), webPage.webPageID().toUInt64());
@@ -714,9 +733,11 @@ void WebProcessProxy::addExistingWebPage(WebPageProxy& webPage, BeginsUsingDataS
     globalPageMap().set(webPage.identifier(), WeakPtr { webPage });
 
     m_throttler.setShouldTakeSuspendedAssertion(shouldTakeSuspendedAssertion());
+    m_throttler.setShouldDropSuspendedAssertionAfterDelay(shouldDropSuspendedAssertionAfterDelay());
 
     updateRegistrationWithDataStore();
     updateBackgroundResponsivenessTimer();
+    updateBlobRegistryPartitioningState();
 }
 
 void WebProcessProxy::markIsNoLongerInPrewarmedPool()
@@ -747,6 +768,8 @@ void WebProcessProxy::removeWebPage(WebPageProxy& webPage, EndsUsingDataStore en
     updateAudibleMediaAssertions();
     updateMediaStreamingActivity();
     updateBackgroundResponsivenessTimer();
+
+    updateBlobRegistryPartitioningState();
 
     maybeShutDown();
 }
@@ -1207,6 +1230,7 @@ void WebProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::Connect
 #endif // USE(RUNNINGBOARD)
 
     m_throttler.setShouldTakeSuspendedAssertion(shouldTakeSuspendedAssertion());
+    m_throttler.setShouldDropSuspendedAssertionAfterDelay(shouldDropSuspendedAssertionAfterDelay());
 
 #if PLATFORM(COCOA)
     unblockAccessibilityServerIfNeeded();
@@ -1232,13 +1256,30 @@ auto WebProcessProxy::visiblePageToken() const -> VisibleWebPageToken
 void WebProcessProxy::addPreviouslyApprovedFileURL(const URL& url)
 {
     ASSERT(url.isLocalFile());
-    m_previouslyApprovedFilePaths.add(url.fileSystemPath());
+    auto fileSystemPath = url.fileSystemPath();
+    if (!fileSystemPath.isEmpty())
+        m_previouslyApprovedFilePaths.add(fileSystemPath);
 }
 
 bool WebProcessProxy::wasPreviouslyApprovedFileURL(const URL& url) const
 {
     ASSERT(url.isLocalFile());
-    return m_previouslyApprovedFilePaths.contains(url.fileSystemPath());
+    auto fileSystemPath = url.fileSystemPath();
+    if (fileSystemPath.isEmpty())
+        return false;
+    return m_previouslyApprovedFilePaths.contains(fileSystemPath);
+}
+
+void WebProcessProxy::recordUserGestureAuthorizationToken(UUID authorizationToken)
+{
+    if (!UserInitiatedActionByAuthorizationTokenMap::isValidKey(authorizationToken) || !authorizationToken)
+        return;
+
+    m_userInitiatedActionByAuthorizationTokenMap.ensure(authorizationToken, [authorizationToken] {
+        auto action = API::UserInitiatedAction::create();
+        action->setAuthorizationToken(authorizationToken);
+        return action;
+    });
 }
 
 RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(uint64_t identifier)
@@ -1250,6 +1291,31 @@ RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(uint64_t
     return result.iterator->value;
 }
 
+RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(std::optional<UUID> authorizationToken, uint64_t identifier)
+{
+    if (!UserInitiatedActionMap::isValidKey(identifier) || !identifier)
+        return nullptr;
+
+    if (authorizationToken) {
+        auto it = m_userInitiatedActionByAuthorizationTokenMap.find(*authorizationToken);
+        if (it != m_userInitiatedActionByAuthorizationTokenMap.end()) {
+            auto result = m_userInitiatedActionMap.ensure(identifier, [it] {
+                return it->value;
+            });
+            return result.iterator->value;
+        }
+    }
+
+    return userInitiatedActivity(identifier);
+}
+
+void WebProcessProxy::consumeIfNotVerifiablyFromUIProcess(API::UserInitiatedAction& action, std::optional<UUID> authToken)
+{
+    if (authToken && m_userInitiatedActionByAuthorizationTokenMap.remove(*authToken))
+        return;
+    action.setConsumed();
+}
+
 bool WebProcessProxy::isResponsive() const
 {
     return responsivenessTimer().isResponsive() && m_backgroundResponsivenessTimer.isResponsive();
@@ -1258,7 +1324,15 @@ bool WebProcessProxy::isResponsive() const
 void WebProcessProxy::didDestroyUserGestureToken(uint64_t identifier)
 {
     ASSERT(UserInitiatedActionMap::isValidKey(identifier));
-    m_userInitiatedActionMap.remove(identifier);
+    if (auto removed = m_userInitiatedActionMap.take(identifier); removed && removed->authorizationToken())
+        m_userInitiatedActionByAuthorizationTokenMap.remove(*removed->authorizationToken());
+}
+
+void WebProcessProxy::postMessageToRemote(WebCore::ProcessIdentifier destinationProcessIdentifier, WebCore::FrameIdentifier identifier, std::optional<WebCore::SecurityOriginData> target, const WebCore::MessageWithMessagePorts& message)
+{
+    auto webProcessProxy = processForIdentifier(destinationProcessIdentifier);
+    if (webProcessProxy)
+        webProcessProxy->send(Messages::WebProcess::RemotePostMessage(identifier, target, message), 0);
 }
 
 bool WebProcessProxy::canBeAddedToWebProcessCache() const
@@ -1423,7 +1497,7 @@ void WebProcessProxy::requestTermination(ProcessTerminationReason reason)
         return;
 
     Ref protectedThis { *this };
-    WEBPROCESSPROXY_RELEASE_LOG_ERROR(Process, "requestTermination: reason=%d", reason);
+    WEBPROCESSPROXY_RELEASE_LOG_ERROR(Process, "requestTermination: reason=%d", static_cast<int>(reason));
 
     AuxiliaryProcessProxy::terminate();
 
@@ -1743,7 +1817,7 @@ void WebProcessProxy::processTerminated()
 void WebProcessProxy::logDiagnosticMessageForResourceLimitTermination(const String& limitKey)
 {
     if (pageCount()) {
-        if (auto& page = pages()[0])
+        if (RefPtr page = pages()[0])
             page->logDiagnosticMessage(DiagnosticLoggingKeys::simulatedPageCrashKey(), limitKey, ShouldSample::No);
     }
 }
@@ -1792,6 +1866,13 @@ void WebProcessProxy::didExceedCPULimit()
 void WebProcessProxy::updateBackgroundResponsivenessTimer()
 {
     m_backgroundResponsivenessTimer.updateState();
+}
+
+void WebProcessProxy::updateBlobRegistryPartitioningState() const
+{
+    auto* dataStore = websiteDataStore();
+    if (auto* networkProcess = dataStore ? dataStore->networkProcessIfExists() : nullptr)
+        networkProcess->setBlobRegistryTopOriginPartitioningEnabled(sessionID(),  dataStore->isBlobRegistryPartitioningEnabled());
 }
 
 #if !PLATFORM(COCOA)

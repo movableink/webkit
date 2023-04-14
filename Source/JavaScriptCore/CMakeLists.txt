@@ -1044,6 +1044,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/GetterSetter.h
     runtime/GetVM.h
     runtime/GlobalExecutable.h
+    runtime/GlobalObjectMethodTable.h
     runtime/HashMapImpl.h
     runtime/HashMapImplInlines.h
     runtime/Identifier.h
@@ -1145,6 +1146,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/Lookup.h
     runtime/MatchResult.h
     runtime/MathCommon.h
+    runtime/MegamorphicCache.h
     runtime/MemoryMode.h
     runtime/MemoryStatistics.h
     runtime/Microtask.h
@@ -1200,7 +1202,6 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/ScriptFetcher.h
     runtime/ShadowRealmObject.h
     runtime/SlowPathFunction.h
-    runtime/SlowPathReturnType.h
     runtime/SmallStrings.h
     runtime/SourceOrigin.h
     runtime/SparseArrayValueMap.h
@@ -1238,12 +1239,14 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/TypedArrayType.h
     runtime/TypedArrays.h
     runtime/TypeofType.h
+    runtime/UGPRPair.h
     runtime/Uint16Array.h
     runtime/Uint32Array.h
     runtime/Uint8Array.h
     runtime/Uint8ClampedArray.h
     runtime/VM.h
     runtime/VMEntryScope.h
+    runtime/VMEntryScopeInlines.h
     runtime/VMInlines.h
     runtime/VMTraps.h
     runtime/VMTrapsInlines.h
@@ -1505,7 +1508,7 @@ endif ()
 if (CMAKE_COMPILER_IS_GNUCXX AND GCC_OFFLINEASM_SOURCE_MAP)
     message(STATUS "Enabling asm postprocessing")
 
-    set(LowLevelInterpreter_LAUNCHER "${JavaScriptCore_SCRIPTS_SOURCES_DIR}/postprocess-asm")
+    set(LowLevelInterpreter_LAUNCHER "${RUBY_EXECUTABLE} ${JavaScriptCore_SCRIPTS_SOURCES_DIR}/postprocess-asm")
     get_target_property(PROP_RULE_LAUNCH_COMPILE LowLevelInterpreterLib RULE_LAUNCH_COMPILE)
     if (PROP_RULE_LAUNCH_COMPILE)
         set(LowLevelInterpreter_LAUNCHER "${LowLevelInterpreter_LAUNCHER} ${PROP_RULE_LAUNCH_COMPILE}")
@@ -1549,5 +1552,13 @@ QT_ADD_EXTRA_WEBKIT_TARGET_EXPORT(JavaScriptCore)
 
 add_custom_target(JavaScriptCoreSharedScripts DEPENDS ${JavaScriptCore_SCRIPTS})
 add_dependencies(JavaScriptCore JavaScriptCoreSharedScripts ${JavaScriptCore_EXTRA_DEPENDENCIES})
+
+if (CMAKE_GENERATOR MATCHES "Visual Studio")
+    # JavaScriptCoreSharedScripts and JSCBuiltins targets need to have
+    # a direct or indirect dependency for CMake Visual Studio
+    # generator to eliminate duplicated custom commands. Otherwise,
+    # JavaScriptCore_SCRIPTS will be generated in both projects.
+    add_dependencies(JavaScriptCoreSharedScripts JSCBuiltins)
+endif ()
 
 add_subdirectory(shell)

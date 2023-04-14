@@ -36,6 +36,7 @@
 #import "WKWebViewIOS.h"
 #import "WebFullScreenManagerProxy.h"
 #import "WebPageProxy.h"
+#import "WebPreferences.h"
 #import <WebCore/LocalizedStrings.h>
 #import <pal/spi/cocoa/AVKitSPI.h>
 #import <wtf/RetainPtr.h>
@@ -152,7 +153,7 @@ private:
     CGFloat _nonZeroStatusBarHeight;
     std::optional<UIInterfaceOrientationMask> _supportedOrientations;
 #if HAVE(UIKIT_WEBKIT_INTERNALS)
-    BOOL m_shouldHideMediaControls;
+    BOOL m_shouldHideCancelAndPIPButtons;
 #endif
 }
 
@@ -177,7 +178,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _playbackClient.setParent(self);
     _valid = YES;
 #if HAVE(UIKIT_WEBKIT_INTERNALS)
-    m_shouldHideMediaControls = NO;
+    m_shouldHideCancelAndPIPButtons = NO;
 #endif
 
     return self;
@@ -321,8 +322,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         isPiPEnabled = page->preferences().pictureInPictureAPIEnabled() && page->preferences().allowsPictureInPictureMediaPlayback();
     bool isPiPSupported = playbackSessionModel && playbackSessionModel->isPictureInPictureSupported();
 #if HAVE(UIKIT_WEBKIT_INTERNALS)
-    [_cancelButton setHidden:m_shouldHideMediaControls];
-    isPiPEnabled = !m_shouldHideMediaControls && isPiPEnabled;
+    [_cancelButton setHidden:m_shouldHideCancelAndPIPButtons];
+    isPiPEnabled = !m_shouldHideCancelAndPIPButtons && isPiPEnabled;
 #endif
     [_pipButton setHidden:!isPiPEnabled || !isPiPSupported];
 }
@@ -336,12 +337,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 #if HAVE(UIKIT_WEBKIT_INTERNALS)
-- (void)hideMediaControls:(BOOL)hidden
+- (void)hideCancelAndPIPButtons:(BOOL)hidden
 {
-    if (m_shouldHideMediaControls == hidden)
+    if (m_shouldHideCancelAndPIPButtons == hidden)
         return;
 
-    m_shouldHideMediaControls = hidden;
+    m_shouldHideCancelAndPIPButtons = hidden;
     [self videoControlsManagerDidChange];
 }
 #endif // HAVE(UIKIT_WEBKIT_INTERNALS)

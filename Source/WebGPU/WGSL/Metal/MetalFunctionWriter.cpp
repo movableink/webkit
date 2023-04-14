@@ -30,7 +30,11 @@
 #include "AST.h"
 #include "ASTStringDumper.h"
 #include "ASTVisitor.h"
+#include "CallGraph.h"
+#include "Types.h"
 #include "WGSLShaderModule.h"
+
+#include <wtf/SortedArrayMap.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WGSL {
@@ -39,9 +43,9 @@ namespace Metal {
 
 class FunctionDefinitionWriter : public AST::Visitor {
 public:
-    FunctionDefinitionWriter(ShaderModule& shaderModule, StringBuilder& stringBuilder)
+    FunctionDefinitionWriter(CallGraph& callGraph, StringBuilder& stringBuilder)
         : m_stringBuilder(stringBuilder)
-        , m_shaderModule(shaderModule)
+        , m_callGraph(callGraph)
     {
     }
 
@@ -49,7 +53,7 @@ public:
 
     using AST::Visitor::visit;
 
-    void visit(ShaderModule&) override;
+    void write();
 
     void visit(AST::Attribute&) override;
     void visit(AST::BuiltinAttribute&) override;
@@ -80,27 +84,30 @@ public:
     void visit(AST::AssignmentStatement&) override;
     void visit(AST::ReturnStatement&) override;
 
-    void visit(AST::ArrayTypeName&) override;
-    void visit(AST::NamedTypeName&) override;
-    void visit(AST::ParameterizedTypeName&) override;
-    void visit(AST::ReferenceTypeName&) override;
-    void visit(AST::StructTypeName&) override;
+    void visit(AST::TypeName&) override;
 
-    void visit(AST::ParameterValue&) override;
-    void visitArgumentBufferParameter(AST::ParameterValue&);
+    void visit(AST::Parameter&) override;
+    void visitArgumentBufferParameter(AST::Parameter&);
+
+    StringBuilder& stringBuilder() { return m_stringBuilder; }
 
 private:
+    void visit(const Type*);
+
     StringBuilder& m_stringBuilder;
-    ShaderModule& m_shaderModule;
+    CallGraph& m_callGraph;
     Indentation<4> m_indent { 0 };
     std::optional<AST::StructureRole> m_structRole;
     std::optional<AST::StageAttribute::Stage> m_entryPointStage;
     std::optional<String> m_suffix;
 };
 
-void FunctionDefinitionWriter::visit(ShaderModule& shaderModule)
+void FunctionDefinitionWriter::write()
 {
-    AST::Visitor::visit(shaderModule);
+    for (auto& structure : m_callGraph.ast().structures())
+        visit(structure);
+    for (auto& entryPoint : m_callGraph.entrypoints())
+        visit(entryPoint.function);
 }
 
 void FunctionDefinitionWriter::visit(AST::Function& functionDefinition)
@@ -171,16 +178,20 @@ void FunctionDefinitionWriter::visit(AST::Structure& structDecl)
     m_structRole = std::nullopt;
 }
 
-void FunctionDefinitionWriter::visit(AST::Variable& variableDecl)
+void FunctionDefinitionWriter::visit(AST::Variable& variable)
 {
-    ASSERT(variableDecl.maybeTypeName());
-
     m_stringBuilder.append(m_indent);
-    visit(*variableDecl.maybeTypeName());
-    m_stringBuilder.append(" ", variableDecl.name());
-    if (variableDecl.maybeInitializer()) {
+    if (variable.maybeTypeName())
+        visit(*variable.maybeTypeName());
+    else {
+        ASSERT(variable.maybeInitializer());
+        const Type* inferredType = variable.maybeInitializer()->inferredType();
+        visit(inferredType);
+    }
+    m_stringBuilder.append(" ", variable.name());
+    if (variable.maybeInitializer()) {
         m_stringBuilder.append(" = ");
-        visit(*variableDecl.maybeInitializer());
+        visit(*variable.maybeInitializer());
     }
     m_stringBuilder.append(";\n");
 }
@@ -193,18 +204,25 @@ void FunctionDefinitionWriter::visit(AST::Attribute& attribute)
 void FunctionDefinitionWriter::visit(AST::BuiltinAttribute& builtin)
 {
     // FIXME: we should replace this with something more efficient, like a trie
-    if (builtin.name() == "vertex_index"_s) {
-        m_stringBuilder.append("[[vertex_id]]");
-        return;
-    }
+    static constexpr std::pair<ComparableASCIILiteral, ASCIILiteral> builtinMappings[] {
+        { "frag_depth", "depth(any)"_s },
+        { "front_facing", "front_facing"_s },
+        { "global_invocation_id", "thread_position_in_grid"_s },
+        { "instance_index", "instance_id"_s },
+        { "local_invocation_id", "thread_position_in_threadgroup"_s },
+        { "local_invocation_index", "thread_index_in_threadgroup"_s },
+        { "num_workgroups", "threadgroups_per_grid"_s },
+        { "position", "position"_s },
+        { "sample_index", "sample_id"_s },
+        { "sample_mask", "sample_mask"_s },
+        { "vertex_index", "vertex_id"_s },
+        { "workgroup_id", "threadgroup_position_in_grid"_s },
+    };
+    static constexpr SortedArrayMap builtins { builtinMappings };
 
-    if (builtin.name() == "position"_s) {
-        m_stringBuilder.append("[[position]]");
-        return;
-    }
-
-    if (builtin.name() == "global_invocation_id"_s) {
-        m_stringBuilder.append("[[thread_position_in_grid]]");
+    auto mappedBuiltin = builtins.get(builtin.name().id());
+    if (mappedBuiltin) {
+        m_stringBuilder.append("[[", mappedBuiltin, "]]");
         return;
     }
 
@@ -231,7 +249,7 @@ void FunctionDefinitionWriter::visit(AST::GroupAttribute& group)
 {
     unsigned bufferIndex = group.group();
     if (m_entryPointStage.has_value() && *m_entryPointStage == AST::StageAttribute::Stage::Vertex) {
-        auto max = m_shaderModule.configuration().maxBuffersPlusVertexBuffersForVertexStage;
+        auto max = m_callGraph.ast().configuration().maxBuffersPlusVertexBuffersForVertexStage;
         bufferIndex = vertexBufferIndexForBindGroup(bufferIndex, max);
     }
     m_stringBuilder.append("[[buffer(", bufferIndex, ")]]");
@@ -264,106 +282,128 @@ void FunctionDefinitionWriter::visit(AST::LocationAttribute& location)
     m_stringBuilder.append("[[attribute(", location.location(), ")]]");
 }
 
-void FunctionDefinitionWriter::visit(AST::ArrayTypeName& type)
+// Types
+void FunctionDefinitionWriter::visit(AST::TypeName& type)
 {
-    ASSERT(type.maybeElementType());
-
-    if (!type.maybeElementCount()) {
-        visit(*type.maybeElementType());
-        m_suffix = { "[1]"_s };
+    // FIXME:Remove this when the type checker is aware of reference types
+    if (is<AST::ReferenceTypeName>(type)) {
+        // FIXME: We can't assume this will always be device. The ReferenceType should
+        // have knowledge about the memory region
+        m_stringBuilder.append("device ");
+        visit(downcast<AST::ReferenceTypeName>(type).type());
+        m_stringBuilder.append("&");
         return;
     }
 
-    m_stringBuilder.append("array<");
-    visit(*type.maybeElementType());
-    m_stringBuilder.append(", ");
-    visit(*type.maybeElementCount());
-    m_stringBuilder.append(">");
+    visit(type.resolvedType());
 }
 
-void FunctionDefinitionWriter::visit(AST::NamedTypeName& type)
+void FunctionDefinitionWriter::visit(const Type* type)
 {
-    if (type.name() == "i32"_s)
-        m_stringBuilder.append("int");
-    else if (type.name() == "f32"_s)
-        m_stringBuilder.append("float");
-    else if (type.name() == "u32"_s)
-        m_stringBuilder.append("unsigned");
-    else
-        m_stringBuilder.append(type.name());
+    using namespace WGSL::Types;
+    WTF::switchOn(*type,
+        [&](const Primitive& primitive) {
+            switch (primitive.kind) {
+            case Types::Primitive::AbstractInt:
+            case Types::Primitive::I32:
+                m_stringBuilder.append("int");
+                break;
+            case Types::Primitive::U32:
+                m_stringBuilder.append("unsigned");
+                break;
+            case Types::Primitive::AbstractFloat:
+            case Types::Primitive::F32:
+                m_stringBuilder.append("float");
+                break;
+            case Types::Primitive::Void:
+            case Types::Primitive::Bool:
+            case Types::Primitive::Sampler:
+                m_stringBuilder.append(*type);
+                break;
+            }
+        },
+        [&](const Vector& vector) {
+            m_stringBuilder.append("vec<");
+            visit(vector.element);
+            m_stringBuilder.append(", ", vector.size, ">");
+        },
+        [&](const Matrix& matrix) {
+            m_stringBuilder.append("matrix<");
+            visit(matrix.element);
+            m_stringBuilder.append(", ", matrix.columns, ", ", matrix.rows, ">");
+        },
+        [&](const Array& array) {
+            ASSERT(array.element);
+            if (!array.size.has_value()) {
+                visit(array.element);
+                m_suffix = { "[1]"_s };
+                return;
+            }
+
+            m_stringBuilder.append("array<");
+            visit(array.element);
+            m_stringBuilder.append(", ", *array.size, ">");
+        },
+        [&](const Struct& structure) {
+            m_stringBuilder.append(structure.structure.name());
+        },
+        [&](const Function&) {
+            // FIXME: implement this
+            RELEASE_ASSERT_NOT_REACHED();
+        },
+        [&](const Bottom&) {
+            RELEASE_ASSERT_NOT_REACHED();
+        },
+        [&](const Texture& texture) {
+            const char* type;
+            const char* mode = "sample";
+            switch (texture.kind) {
+            case Types::Texture::Kind::Texture1d:
+                type = "texture1d";
+                break;
+            case Types::Texture::Kind::Texture2d:
+                type = "texture2d";
+                break;
+            case Types::Texture::Kind::Texture2dArray:
+                type = "texture2d_array";
+                break;
+            case Types::Texture::Kind::Texture3d:
+                type = "texture3d";
+                break;
+            case Types::Texture::Kind::TextureCube:
+                type = "texturecube";
+                break;
+            case Types::Texture::Kind::TextureCubeArray:
+                type = "texturecube_array";
+                break;
+            case Types::Texture::Kind::TextureMultisampled2d:
+                type = "texture2d_ms";
+                break;
+
+            case Types::Texture::Kind::TextureStorage1d:
+                type = "texture1d";
+                mode = "write";
+                break;
+            case Types::Texture::Kind::TextureStorage2d:
+                type = "texture2d";
+                mode = "write";
+                break;
+            case Types::Texture::Kind::TextureStorage2dArray:
+                type = "texture2d_aray";
+                mode = "write";
+                break;
+            case Types::Texture::Kind::TextureStorage3d:
+                type = "texture3d";
+                mode = "write";
+                break;
+            }
+            m_stringBuilder.append(type, "<");
+            visit(texture.element);
+            m_stringBuilder.append(", access::", mode, ">");
+        });
 }
 
-void FunctionDefinitionWriter::visit(AST::ParameterizedTypeName& type)
-{
-    const auto& vec = [&](size_t size) {
-        m_stringBuilder.append("vec<");
-        visit(type.elementType());
-        m_stringBuilder.append(", ", size, ">");
-    };
-
-    const auto& matrix = [&](size_t rows, size_t columns) {
-        m_stringBuilder.append("matrix<");
-        visit(type.elementType());
-        m_stringBuilder.append(", ", columns, ", ", rows, ">");
-    };
-
-    switch (type.base()) {
-    case AST::ParameterizedTypeName::Base::Vec2:
-        vec(2);
-        break;
-    case AST::ParameterizedTypeName::Base::Vec3:
-        vec(3);
-        break;
-    case AST::ParameterizedTypeName::Base::Vec4:
-        vec(4);
-        break;
-
-    // FIXME: Implement the following types
-    case AST::ParameterizedTypeName::Base::Mat2x2:
-        matrix(2, 2);
-        break;
-    case AST::ParameterizedTypeName::Base::Mat2x3:
-        matrix(2, 3);
-        break;
-    case AST::ParameterizedTypeName::Base::Mat2x4:
-        matrix(2, 4);
-        break;
-    case AST::ParameterizedTypeName::Base::Mat3x2:
-        matrix(3, 2);
-        break;
-    case AST::ParameterizedTypeName::Base::Mat3x3:
-        matrix(3, 3);
-        break;
-    case AST::ParameterizedTypeName::Base::Mat3x4:
-        matrix(3, 4);
-        break;
-    case AST::ParameterizedTypeName::Base::Mat4x2:
-        matrix(4, 2);
-        break;
-    case AST::ParameterizedTypeName::Base::Mat4x3:
-        matrix(4, 3);
-        break;
-    case AST::ParameterizedTypeName::Base::Mat4x4:
-        matrix(4, 4);
-        break;
-    }
-}
-
-void FunctionDefinitionWriter::visit(AST::ReferenceTypeName& type)
-{
-    // FIXME: We can't assume this will always be device. The ReferenceType should
-    // have knowledge about the memory region
-    m_stringBuilder.append("device ");
-    visit(type.type());
-    m_stringBuilder.append("&");
-}
-
-void FunctionDefinitionWriter::visit(AST::StructTypeName& structType)
-{
-    m_stringBuilder.append(structType.structure().name());
-}
-
-void FunctionDefinitionWriter::visit(AST::ParameterValue& parameter)
+void FunctionDefinitionWriter::visit(AST::Parameter& parameter)
 {
     visit(parameter.typeName());
     m_stringBuilder.append(" ", parameter.name());
@@ -373,7 +413,7 @@ void FunctionDefinitionWriter::visit(AST::ParameterValue& parameter)
     }
 }
 
-void FunctionDefinitionWriter::visitArgumentBufferParameter(AST::ParameterValue& parameter)
+void FunctionDefinitionWriter::visitArgumentBufferParameter(AST::Parameter& parameter)
 {
     m_stringBuilder.append("constant ");
     visit(parameter.typeName());
@@ -389,9 +429,21 @@ void FunctionDefinitionWriter::visit(AST::Expression& expression)
     AST::Visitor::visit(expression);
 }
 
-void FunctionDefinitionWriter::visit(AST::CallExpression& call)
+static void visitArguments(FunctionDefinitionWriter* writer, AST::CallExpression& call, unsigned startOffset = 0)
 {
     bool first = true;
+    writer->stringBuilder().append("(");
+    for (unsigned i = startOffset; i < call.arguments().size(); ++i) {
+        if (!first)
+            writer->stringBuilder().append(", ");
+        writer->visit(call.arguments()[i]);
+        first = false;
+    }
+    writer->stringBuilder().append(")");
+};
+
+void FunctionDefinitionWriter::visit(AST::CallExpression& call)
+{
     if (is<AST::ArrayTypeName>(call.target())) {
         m_stringBuilder.append("{\n");
         {
@@ -400,21 +452,30 @@ void FunctionDefinitionWriter::visit(AST::CallExpression& call)
                 m_stringBuilder.append(m_indent);
                 visit(argument);
                 m_stringBuilder.append(",\n");
-                first = false;
             }
         }
         m_stringBuilder.append(m_indent, "}");
-    } else {
-        visit(call.target());
-        m_stringBuilder.append("(");
-        for (auto& argument : call.arguments()) {
-            if (!first)
-                m_stringBuilder.append(", ");
-            visit(argument);
-            first = false;
-        }
-        m_stringBuilder.append(")");
+        return;
     }
+
+    if (is<AST::NamedTypeName>(call.target())) {
+        static constexpr std::pair<ComparableASCIILiteral, void(*)(FunctionDefinitionWriter*, AST::CallExpression&)> builtinMappings[] {
+            { "textureSample", [](FunctionDefinitionWriter* writer, AST::CallExpression& call) {
+                ASSERT(call.arguments().size() > 1);
+                writer->visit(call.arguments()[0]);
+                writer->stringBuilder().append(".sample");
+                visitArguments(writer, call, 1);
+            } },
+        };
+        static constexpr SortedArrayMap builtins { builtinMappings };
+        if (auto mappedBuiltin = builtins.get(downcast<AST::NamedTypeName>(call.target()).name().id())) {
+            mappedBuiltin(this, call);
+            return;
+        }
+    }
+
+    visit(call.inferredType());
+    visitArguments(this, call);
 }
 
 void FunctionDefinitionWriter::visit(AST::UnaryExpression& unary)
@@ -550,13 +611,10 @@ void FunctionDefinitionWriter::visit(AST::ReturnStatement& statement)
     m_stringBuilder.append(";\n");
 }
 
-RenderMetalFunctionEntryPoints emitMetalFunctions(StringBuilder& stringBuilder, ShaderModule& module)
+void emitMetalFunctions(StringBuilder& stringBuilder, CallGraph& callGraph)
 {
-    FunctionDefinitionWriter functionDefinitionWriter(module, stringBuilder);
-    functionDefinitionWriter.visit(module);
-
-    // FIXME: return the actual entry points
-    return { String(""_s), String(""_s) };
+    FunctionDefinitionWriter functionDefinitionWriter(callGraph, stringBuilder);
+    functionDefinitionWriter.write();
 }
 
 } // namespace Metal

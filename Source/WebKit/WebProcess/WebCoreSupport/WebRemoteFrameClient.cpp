@@ -25,6 +25,8 @@
 
 #include "config.h"
 #include "WebRemoteFrameClient.h"
+#include "WebProcess.h"
+#include "WebProcessProxyMessages.h"
 
 #include <WebCore/FrameTree.h>
 #include <WebCore/RemoteFrame.h>
@@ -52,6 +54,16 @@ void WebRemoteFrameClient::frameDetached()
         parent->tree().removeChild(*coreFrame);
     }
     m_frame->invalidate();
+}
+
+void WebRemoteFrameClient::sizeDidChange(WebCore::IntSize size)
+{
+    m_frame->updateRemoteFrameSize(size);
+}
+
+void WebRemoteFrameClient::postMessageToRemote(WebCore::ProcessIdentifier processIdentifier, WebCore::FrameIdentifier identifier, std::optional<WebCore::SecurityOriginData> target, const WebCore::MessageWithMessagePorts& message)
+{
+    WebProcess::singleton().send(Messages::WebProcessProxy::PostMessageToRemote(processIdentifier, identifier, target, message), 0);
 }
 
 }

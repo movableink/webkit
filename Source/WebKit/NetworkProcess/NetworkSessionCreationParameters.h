@@ -115,10 +115,13 @@ struct NetworkSessionCreationParameters {
 #if !HAVE(NSURLSESSION_WEBSOCKET)
     bool shouldAcceptInsecureCertificatesForWebSockets { false };
 #endif
+    bool isBlobRegistryTopOriginPartitioningEnabled { false };
 
     UnifiedOriginStorageLevel unifiedOriginStorageLevel { UnifiedOriginStorageLevel::Basic };
     uint64_t perOriginStorageQuota;
-    uint64_t perThirdPartyOriginStorageQuota;
+    std::optional<double> originQuotaRatio;
+    std::optional<double> totalQuotaRatio;
+    std::optional<uint64_t> volumeCapacityOverride;
     String localStorageDirectory;
     SandboxExtension::Handle localStorageDirectoryExtensionHandle;
     String indexedDBDirectory;

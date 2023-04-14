@@ -340,7 +340,7 @@ JSValue JSInjectedScriptHost::getInternalProperties(JSGlobalObject* globalObject
         RETURN_IF_EXCEPTION(scope, JSValue());
         array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "boundThis"_s, boundFunction->boundThis()));
         RETURN_IF_EXCEPTION(scope, JSValue());
-        if (boundFunction->boundArgs()) {
+        if (boundFunction->boundArgsLength()) {
             scope.release();
             array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "boundArgs"_s, boundFunction->boundArgsCopy(globalObject)));
             return array;

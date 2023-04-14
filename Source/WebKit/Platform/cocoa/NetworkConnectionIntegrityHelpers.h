@@ -45,46 +45,46 @@ namespace WebKit {
 #if ENABLE(NETWORK_CONNECTION_INTEGRITY)
 
 void configureForNetworkConnectionIntegrity(NSURLSession *);
-void requestAllowedLookalikeCharacterStrings(CompletionHandler<void(const Vector<WebCore::LookalikeCharactersSanitizationData>&)>&&);
+void requestAllowedLookalikeCharacterStrings(CompletionHandler<void(Vector<WebCore::LookalikeCharactersSanitizationData>&&)>&&);
+
+class LookalikeCharactersObserver : public RefCounted<LookalikeCharactersObserver>, public CanMakeWeakPtr<LookalikeCharactersObserver> {
+public:
+    ~LookalikeCharactersObserver() = default;
+
+private:
+    friend class LookalikeCharacters;
+
+    LookalikeCharactersObserver(Function<void()>&& callback)
+        : m_callback { WTFMove(callback) }
+    {
+    }
+
+    static Ref<LookalikeCharactersObserver> create(Function<void()>&& callback)
+    {
+        return adoptRef(*new LookalikeCharactersObserver(WTFMove(callback)));
+    }
+
+    void invokeCallback() { m_callback(); }
+
+    Function<void()> m_callback;
+};
 
 class LookalikeCharacters {
 public:
     static LookalikeCharacters& shared();
 
-    const Vector<String>& cachedStrings() const { return m_cachedStrings; }
+    const Vector<WebCore::LookalikeCharactersSanitizationData>& cachedStrings() const { return m_cachedStrings; }
     void updateStrings(CompletionHandler<void()>&&);
 
-    class Observer : public RefCounted<Observer>, public CanMakeWeakPtr<Observer> {
-    public:
-        ~Observer() = default;
-
-    private:
-        friend class LookalikeCharacters;
-
-        Observer(Function<void()>&& callback)
-            : m_callback { WTFMove(callback) }
-        {
-        }
-
-        static Ref<Observer> create(Function<void()>&& callback)
-        {
-            return adoptRef(*new Observer(WTFMove(callback)));
-        }
-
-        void invokeCallback() { m_callback(); }
-
-        Function<void()> m_callback;
-    };
-
-    Ref<Observer> observeUpdates(Function<void()>&&);
+    Ref<LookalikeCharactersObserver> observeUpdates(Function<void()>&&);
 
 private:
     LookalikeCharacters() = default;
-    void setCachedStrings(Vector<String>&&);
+    void setCachedStrings(Vector<WebCore::LookalikeCharactersSanitizationData>&&);
 
     RetainPtr<WKNetworkConnectionIntegrityNotificationListener> m_notificationListener;
-    Vector<String> m_cachedStrings;
-    WeakHashSet<Observer> m_observers;
+    Vector<WebCore::LookalikeCharactersSanitizationData> m_cachedStrings;
+    WeakHashSet<LookalikeCharactersObserver> m_observers;
 };
 
 void configureForNetworkConnectionIntegrity(NSURLSession *);

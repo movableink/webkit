@@ -196,6 +196,8 @@ WGPUErrorFilter ConvertToBackingContext::convertToBacking(ErrorFilter errorFilte
         return WGPUErrorFilter_OutOfMemory;
     case ErrorFilter::Validation:
         return WGPUErrorFilter_Validation;
+    case ErrorFilter::Internal:
+        return WGPUErrorFilter_Internal;
     }
 }
 
@@ -216,6 +218,12 @@ WGPUFeatureName ConvertToBackingContext::convertToBacking(FeatureName featureNam
         return WGPUFeatureName_TimestampQuery;
     case FeatureName::IndirectFirstInstance:
         return static_cast<WGPUFeatureName>(WGPUFeatureName_IndirectFirstInstance);
+    case FeatureName::Bgra8unormStorage:
+        return static_cast<WGPUFeatureName>(WGPUFeatureName_BGRA8UnormStorage);
+    case FeatureName::ShaderF16:
+        return static_cast<WGPUFeatureName>(WGPUFeatureName_ShaderF16);
+    case FeatureName::Rg11b10ufloatRenderable:
+        return static_cast<WGPUFeatureName>(WGPUFeatureName_RG11B10UfloatRenderable);
     }
 }
 

@@ -61,7 +61,7 @@ public:
     
 #ifdef __OBJC__
     WTF_EXPORT_PRIVATE operator NSUUID *() const;
-    WTF_EXPORT_PRIVATE UUID(NSUUID *);
+    WTF_EXPORT_PRIVATE static std::optional<UUID> fromNSUUID(NSUUID *);
 #endif
 
     WTF_EXPORT_PRIVATE static std::optional<UUID> parse(StringView);
@@ -101,6 +101,7 @@ public:
     WTF_EXPORT_PRIVATE String toString() const;
 
     operator bool() const { return !!m_data; }
+    bool isValid() const { return m_data != emptyValue && m_data != deletedValue; }
 
     UInt128 data() const { return m_data; }
 
@@ -228,6 +229,5 @@ private:
 
 }
 
-using WTF::UUID;
 using WTF::createVersion4UUIDString;
 using WTF::bootSessionUUIDString;

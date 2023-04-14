@@ -56,6 +56,7 @@
 #include "CSSGridIntegerRepeatValue.h"
 #include "CSSGridLineNamesValue.h"
 #include "CSSGridTemplateAreasValue.h"
+#include "CSSImageSetOptionValue.h"
 #include "CSSImageSetValue.h"
 #include "CSSImageValue.h"
 #include "CSSLineBoxContainValue.h"
@@ -160,6 +161,8 @@ template<typename Visitor> constexpr decltype(auto) CSSValue::visitDerived(Visit
         return std::invoke(std::forward<Visitor>(visitor), downcast<CSSGridTemplateAreasValue>(*this));
     case ImageClass:
         return std::invoke(std::forward<Visitor>(visitor), downcast<CSSImageValue>(*this));
+    case ImageSetOptionClass:
+        return std::invoke(std::forward<Visitor>(visitor), downcast<CSSImageSetOptionValue>(*this));
     case ImageSetClass:
         return std::invoke(std::forward<Visitor>(visitor), downcast<CSSImageSetValue>(*this));
     case InsetShapeClass:
@@ -253,7 +256,7 @@ void CSSValue::collectComputedStyleDependencies(ComputedStyleDependencies& depen
     // FIXME: Consider a non-recursive algorithm for walking this tree of dependencies.
     if (auto* asList = dynamicDowncast<CSSValueContainingVector>(*this)) {
         for (auto& listValue : *asList)
-            listValue->collectComputedStyleDependencies(dependencies);
+            listValue.collectComputedStyleDependencies(dependencies);
         return;
     }
     if (auto* asPrimitiveValue = dynamicDowncast<CSSPrimitiveValue>(*this))
@@ -325,7 +328,6 @@ Ref<DeprecatedCSSOMValue> CSSValue::createDeprecatedCSSOMWrapper(CSSStyleDeclara
     case ValueListClass:
     case GridAutoRepeatClass: // FIXME: Likely this class should not be exposed and serialized as a CSSValueList. Confirm and remove this case.
     case GridIntegerRepeatClass: // FIXME: Likely this class should not be exposed and serialized as a CSSValueList. Confirm and remove this case.
-    case GridLineNamesClass: // FIXME: Likely this class should not be exposed and serialized as a CSSValueList. Confirm and remove this case.
     case ImageSetClass: // FIXME: Likely this class should not be exposed and serialized as a CSSValueList. Confirm and remove this case.
     case SubgridClass: // FIXME: Likely this class should not be exposed and serialized as a CSSValueList. Confirm and remove this case.
     case TransformListClass:

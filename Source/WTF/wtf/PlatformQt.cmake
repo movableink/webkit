@@ -44,10 +44,12 @@ if (USE_MACH_PORTS)
     list(APPEND WTF_SOURCES
         cocoa/MachSendRight.cpp
         cocoa/WorkQueueCocoa.cpp
+        darwin/OSLogPrintStream.mm
     )
     list(APPEND WTF_PUBLIC_HEADERS
         spi/cocoa/MachVMSPI.h
         spi/darwin/XPCSPI.h
+        darwin/OSLogPrintStream.h
     )
 endif()
 

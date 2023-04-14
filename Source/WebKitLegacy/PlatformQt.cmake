@@ -91,6 +91,7 @@ list(APPEND WebKitLegacy_SOURCES
     qt/WebCoreSupport/QtPluginWidgetAdapter.cpp
     qt/WebCoreSupport/QtPrintContext.cpp
     qt/WebCoreSupport/SearchPopupMenuQt.cpp
+    qt/WebCoreSupport/SocketStreamHandleImplQt.cpp
     qt/WebCoreSupport/TextCheckerClientQt.cpp
     qt/WebCoreSupport/TextureMapperLayerClientQt.cpp
     qt/WebCoreSupport/UndoStepQt.cpp

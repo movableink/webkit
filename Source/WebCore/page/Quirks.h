@@ -40,7 +40,7 @@ class HTMLVideoElement;
 class LayoutUnit;
 class PlatformMouseEvent;
 class WeakPtrImplWithEventTargetData;
-struct SecurityOriginData;
+class SecurityOriginData;
 
 #if ENABLE(TRACKING_PREVENTION)
 class RegistrableDomain;
@@ -76,7 +76,6 @@ public:
     WEBCORE_EXPORT bool shouldSynthesizeTouchEvents() const;
 #endif
     bool shouldDisablePointerEventsQuirk() const;
-    bool needsInputModeNoneImplicitly(const HTMLElement&) const;
     bool needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommand() const;
     bool shouldDisableContentChangeObserverTouchEventAdjustment() const;
     bool shouldTooltipPreventFromProceedingWithClick(const Element&) const;
@@ -100,7 +99,7 @@ public:
     WEBCORE_EXPORT static bool shouldAllowNavigationToCustomProtocolWithoutUserGesture(StringView protocol, const SecurityOriginData& requesterOrigin);
 
     WEBCORE_EXPORT bool needsYouTubeMouseOutQuirk() const;
-    
+
     WEBCORE_EXPORT bool shouldAvoidUsingIOS13ForGmail() const;
 
     bool needsGMailOverflowScrollQuirk() const;
@@ -132,12 +131,12 @@ public:
     StorageAccessResult triggerOptionalStorageAccessQuirk(Element&, const PlatformMouseEvent&, const AtomString& eventType, int, Element*, bool isParentProcessAFullWebBrowser, IsSyntheticClick) const;
 
     bool needsVP9FullRangeFlagQuirk() const;
-    bool needsHDRPixelDepthQuirk() const;
-    
+
     bool requiresUserGestureToPauseInPictureInPicture() const;
     bool requiresUserGestureToLoadInPictureInPicture() const;
 
     WEBCORE_EXPORT bool blocksReturnToFullscreenFromPictureInPictureQuirk() const;
+    WEBCORE_EXPORT bool blocksEnteringStandardFullscreenFromPictureInPictureQuirk() const;
     bool shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk() const;
 
 #if ENABLE(TRACKING_PREVENTION)
@@ -153,7 +152,7 @@ public:
 #if ENABLE(IMAGE_ANALYSIS)
     bool needsToForceUserSelectAndUserDragWhenInstallingImageOverlay() const;
 #endif
-    
+
 #if PLATFORM(IOS)
     WEBCORE_EXPORT bool allowLayeredFullscreenVideos() const;
 #endif
@@ -163,7 +162,13 @@ public:
 
     bool shouldDisableLazyImageLoadingQuirk() const;
     bool shouldDisableLazyIframeLoadingQuirk() const;
-    
+
+    bool shouldDisableFetchMetadata() const;
+
+#if PLATFORM(COCOA)
+    bool shouldAdvertiseSupportForHLSSubtitleTypes() const;
+#endif
+
 private:
     bool needsQuirks() const;
 
@@ -199,7 +204,6 @@ private:
     mutable std::optional<bool> m_needsCanPlayAfterSeekedQuirk;
     mutable std::optional<bool> m_shouldBypassAsyncScriptDeferring;
     mutable std::optional<bool> m_needsVP9FullRangeFlagQuirk;
-    mutable std::optional<bool> m_needsHDRPixelDepthQuirk;
     mutable std::optional<bool> m_needsBlackFullscreenBackgroundQuirk;
     mutable std::optional<bool> m_requiresUserGestureToPauseInPictureInPicture;
     mutable std::optional<bool> m_requiresUserGestureToLoadInPictureInPicture;
@@ -207,6 +211,7 @@ private:
     mutable std::optional<bool> m_shouldEnableLegacyGetUserMediaQuirk;
 #endif
     mutable std::optional<bool> m_blocksReturnToFullscreenFromPictureInPictureQuirk;
+    mutable std::optional<bool> m_blocksEnteringStandardFullscreenFromPictureInPictureQuirk;
     mutable std::optional<bool> m_shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk;
 #if PLATFORM(IOS)
     mutable std::optional<bool> m_allowLayeredFullscreenVideos;
@@ -222,6 +227,9 @@ private:
 #endif
     mutable std::optional<bool> m_shouldDisableLazyImageLoadingQuirk;
     mutable std::optional<bool> m_shouldDisableLazyIframeLoadingQuirk;
+#if PLATFORM(COCOA)
+    mutable std::optional<bool> m_shouldAdvertiseSupportForHLSSubtitleTypes;
+#endif
 };
 
 } // namespace WebCore

@@ -286,6 +286,13 @@ void Visitor::visit(AST::Function& function)
     checkErrorAndVisit(function.body());
 }
 
+void Visitor::visit(AST::Parameter& parameterValue)
+{
+    for (auto& attribute : parameterValue.attributes())
+        checkErrorAndVisit(attribute);
+    checkErrorAndVisit(parameterValue.typeName());
+}
+
 // Identifier
 
 void Visitor::visit(AST::Identifier&)
@@ -400,9 +407,11 @@ void Visitor::visit(AST::ForStatement& forStatement)
 
 void Visitor::visit(AST::IfStatement& ifStatement)
 {
+    for (auto& attribute : ifStatement.attributes())
+        checkErrorAndVisit(attribute);
     checkErrorAndVisit(ifStatement.test());
     checkErrorAndVisit(ifStatement.trueBody());
-    checkErrorAndVisit(ifStatement.falseBody());
+    maybeCheckErrorAndVisit(ifStatement.maybeFalseBody());
 }
 
 void Visitor::visit(AST::LoopStatement& loopStatement)
@@ -475,9 +484,6 @@ void Visitor::visit(AST::TypeName& typeName)
     case AST::NodeKind::ReferenceTypeName:
         checkErrorAndVisit(downcast<AST::ReferenceTypeName>(typeName));
         break;
-    case AST::NodeKind::StructTypeName:
-        checkErrorAndVisit(downcast<AST::StructTypeName>(typeName));
-        break;
     default:
         ASSERT_NOT_REACHED("Unhandled TypeName");
     }
@@ -501,62 +507,6 @@ void Visitor::visit(AST::ParameterizedTypeName& parameterizedTypeName)
 void Visitor::visit(AST::ReferenceTypeName& referenceTypeName)
 {
     checkErrorAndVisit(referenceTypeName.type());
-}
-
-void Visitor::visit(AST::StructTypeName&)
-{
-}
-
-// Values
-
-void Visitor::visit(AST::Value& value)
-{
-    switch (value.kind()) {
-    case AST::NodeKind::ConstantValue:
-        checkErrorAndVisit(downcast<AST::ConstantValue>(value));
-        break;
-    case AST::NodeKind::OverrideValue:
-        checkErrorAndVisit(downcast<AST::OverrideValue>(value));
-        break;
-    case AST::NodeKind::LetValue:
-        checkErrorAndVisit(downcast<AST::LetValue>(value));
-        break;
-    case AST::NodeKind::ParameterValue:
-        checkErrorAndVisit(downcast<AST::ParameterValue>(value));
-        break;
-    default:
-        ASSERT_NOT_REACHED("Unhandled Value");
-    }
-}
-
-void Visitor::visit(AST::ConstantValue& constantValue)
-{
-    checkErrorAndVisit(constantValue.name());
-    maybeCheckErrorAndVisit(constantValue.maybeTypeName());
-    checkErrorAndVisit(constantValue.initializer());
-}
-
-void Visitor::visit(AST::OverrideValue& overrideValue)
-{
-    for (auto& attribute : overrideValue.attributes())
-        checkErrorAndVisit(attribute);
-    checkErrorAndVisit(overrideValue.name());
-    maybeCheckErrorAndVisit(overrideValue.maybeTypeName());
-    checkErrorAndVisit(overrideValue.initializer());
-}
-
-void Visitor::visit(AST::LetValue& letValue)
-{
-    checkErrorAndVisit(letValue.name());
-    maybeCheckErrorAndVisit(letValue.maybeTypeName());
-    checkErrorAndVisit(letValue.initializer());
-}
-
-void Visitor::visit(AST::ParameterValue& parameterValue)
-{
-    for (auto& attribute : parameterValue.attributes())
-        checkErrorAndVisit(attribute);
-    checkErrorAndVisit(parameterValue.typeName());
 }
 
 // Variable

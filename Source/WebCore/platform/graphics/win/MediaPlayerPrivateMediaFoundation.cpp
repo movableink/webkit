@@ -30,10 +30,11 @@
 #if ENABLE(VIDEO) && USE(MEDIA_FOUNDATION)
 
 #include "CachedResourceLoader.h"
-#include "FrameView.h"
+#include "CairoOperations.h"
 #include "GraphicsContext.h"
 #include "HWndDC.h"
 #include "HostWindow.h"
+#include "LocalFrameView.h"
 #include "NotImplemented.h"
 #include <shlwapi.h>
 #include <wtf/MainThread.h>
@@ -42,11 +43,6 @@
 #if PLATFORM(QT)
 #include "QWebPageClient.h"
 #include <QWindow>
-#endif
-
-#if USE(CAIRO)
-#include "CairoOperations.h"
-#include <cairo.h>
 #endif
 
 // MFSamplePresenterSampleCounter
@@ -2453,7 +2449,7 @@ HRESULT MediaPlayerPrivateMediaFoundation::VideoScheduler::processSample(IMFSamp
 
             // Since sleeping is using the system clock, we need to convert the sleep time
             // from presentation time to system time.
-            nextSleepTime = (LONG)(nextSleepTime / fabsf(m_playbackRate));
+            nextSleepTime = (LONG)(nextSleepTime / std::abs(m_playbackRate));
 
             presentNow = false;
         }
@@ -2804,7 +2800,31 @@ void MediaPlayerPrivateMediaFoundation::Direct3DPresenter::paintCurrentFrame(Web
     if (SUCCEEDED(m_memSurface->LockRect(&lockedRect, nullptr, D3DLOCK_READONLY))) {
         void* data = lockedRect.pBits;
         int pitch = lockedRect.Pitch;
-#if USE(CAIRO)
+#if PLATFORM(QT)
+        D3DFORMAT format = D3DFMT_UNKNOWN;
+        D3DSURFACE_DESC desc;
+        if (SUCCEEDED(m_memSurface->GetDesc(&desc)))
+            format = desc.Format;
+        
+        QImage::Format imageFormat = QImage::Format_Invalid;
+        
+        switch (format) {
+            case D3DFMT_A8R8G8B8:
+                imageFormat = QImage::Format_ARGB32_Premultiplied;
+                break;
+            case D3DFMT_X8R8G8B8:
+                imageFormat = QImage::Format_RGB32;
+                break;
+        }
+        
+        ASSERT(imageFormat != QImage::Format_Invalid);
+        
+        QImage image(static_cast<unsigned char*>(data), width, height, pitch, imageFormat);
+        
+        FloatRect srcRect(0, 0, width, height);
+        QPainter* p = context.platformContext();
+        p->drawImage(destRect, image, srcRect);
+#else
         D3DFORMAT format = D3DFMT_UNKNOWN;
         D3DSURFACE_DESC desc;
         if (SUCCEEDED(m_memSurface->GetDesc(&desc)))
@@ -2832,32 +2852,6 @@ void MediaPlayerPrivateMediaFoundation::Direct3DPresenter::paintCurrentFrame(Web
             FloatRect srcRect(0, 0, width, height);
             context.drawNativeImage(*image, srcRect.size(), destRect, srcRect);
         }
-#elif PLATFORM(QT)
-        D3DFORMAT format = D3DFMT_UNKNOWN;
-        D3DSURFACE_DESC desc;
-        if (SUCCEEDED(m_memSurface->GetDesc(&desc)))
-            format = desc.Format;
-
-        QImage::Format imageFormat = QImage::Format_Invalid;
-
-        switch (format) {
-        case D3DFMT_A8R8G8B8:
-            imageFormat = QImage::Format_ARGB32_Premultiplied;
-            break;
-        case D3DFMT_X8R8G8B8:
-            imageFormat = QImage::Format_RGB32;
-            break;
-        }
-
-        ASSERT(imageFormat != QImage::Format_Invalid);
-
-        QImage image(static_cast<unsigned char*>(data), width, height, pitch, imageFormat);
-
-        FloatRect srcRect(0, 0, width, height);
-        QPainter* p = context.platformContext();
-        p->drawImage(destRect, image, srcRect);
-#else
-#error "Platform needs to implement drawing of Direct3D surface to graphics context!"
 #endif
         m_memSurface->UnlockRect();
     }

@@ -42,7 +42,7 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
     StyleColor firstColor;
     StyleColor colors[10];
     void* ownPtrs[1];
-    AtomString atomStrings[6];
+    AtomString atomStrings[5];
     void* refPtrs[3];
     Length lengths[2];
     float secondFloat;
@@ -70,6 +70,9 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
     StyleColorScheme colorScheme;
 #endif
     TextSpacingTrim textSpacingTrim;
+    TextAutospace textAutospace;
+
+    ListStyleType listStyleType;
 };
 
 static_assert(sizeof(StyleRareInheritedData) <= sizeof(GreaterThanOrSameSizeAsStyleRareInheritedData), "StyleRareInheritedData should bit pack");
@@ -79,7 +82,6 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRareInheritedData);
 StyleRareInheritedData::StyleRareInheritedData()
     : textStrokeWidth(RenderStyle::initialTextStrokeWidth())
     , listStyleImage(RenderStyle::initialListStyleImage())
-    , listStyleStringValue(RenderStyle::initialListStyleStringValue())
     , textStrokeColor(RenderStyle::initialTextStrokeColor())
     , textFillColor(RenderStyle::initialTextFillColor())
     , textEmphasisColor(RenderStyle::initialTextEmphasisColor())
@@ -169,6 +171,8 @@ StyleRareInheritedData::StyleRareInheritedData()
     , tapHighlightColor(RenderStyle::initialTapHighlightColor())
 #endif
     , textSpacingTrim(RenderStyle::initialTextSpacingTrim())
+    , textAutospace(RenderStyle::initialTextAutospace())
+    , listStyleType(RenderStyle::initialListStyleType())
 {
 }
 
@@ -176,7 +180,6 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     : RefCounted<StyleRareInheritedData>()
     , textStrokeWidth(o.textStrokeWidth)
     , listStyleImage(o.listStyleImage)
-    , listStyleStringValue(o.listStyleStringValue)
     , textStrokeColor(o.textStrokeColor)
     , textFillColor(o.textFillColor)
     , textEmphasisColor(o.textEmphasisColor)
@@ -275,6 +278,8 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , tapHighlightColor(o.tapHighlightColor)
 #endif
     , textSpacingTrim(o.textSpacingTrim)
+    , textAutospace(o.textAutospace)
+    , listStyleType(o.listStyleType)
 {
 }
 
@@ -386,8 +391,9 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && visitedLinkStrokeColor == o.visitedLinkStrokeColor
         && customProperties == o.customProperties
         && arePointingToEqualData(listStyleImage, o.listStyleImage)
-        && listStyleStringValue == o.listStyleStringValue
-        && textSpacingTrim == o.textSpacingTrim;
+        && listStyleType == o.listStyleType
+        && textSpacingTrim == o.textSpacingTrim
+        && textAutospace == o.textAutospace;
 }
 
 bool StyleRareInheritedData::hasColorFilters() const

@@ -31,8 +31,9 @@
 #include "StorageAreaImpl.h"
 #include "StorageAreaMap.h"
 #include "WebPage.h"
+#include "WebPageInlines.h"
 #include "WebProcess.h"
-#include <WebCore/Frame.h>
+#include <WebCore/LocalFrame.h>
 #include <WebCore/SecurityOrigin.h>
 #include <WebCore/Settings.h>
 #include <WebCore/StorageType.h>
@@ -88,7 +89,8 @@ Ref<StorageNamespace> StorageNamespaceImpl::copy(Page& newPage)
     ASSERT(m_storageNamespaceID);
     ASSERT(m_storageType == StorageType::Session);
 
-    return adoptRef(*new StorageNamespaceImpl(m_storageType, WebPage::fromCorePage(newPage).identifier(), m_topLevelOrigin.get(), m_quotaInBytes, WebPage::fromCorePage(newPage).sessionStorageNamespaceIdentifier()));
+    auto* webPage = WebPage::fromCorePage(newPage);
+    return adoptRef(*new StorageNamespaceImpl(m_storageType, webPage->identifier(), m_topLevelOrigin.get(), m_quotaInBytes, webPage->sessionStorageNamespaceIdentifier()));
 }
 
 void StorageNamespaceImpl::setSessionIDForTesting(PAL::SessionID)

@@ -25,10 +25,10 @@
 #include "HTMLFrameElement.h"
 
 #include "ElementInlines.h"
-#include "Frame.h"
 #include "HTMLFrameSetElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "LocalFrame.h"
 #include "RenderFrame.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -42,7 +42,6 @@ inline HTMLFrameElement::HTMLFrameElement(const QualifiedName& tagName, Document
     : HTMLFrameElementBase(tagName, document)
 {
     ASSERT(hasTagName(frameTag));
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<HTMLFrameElement> HTMLFrameElement::create(const QualifiedName& tagName, Document& document)

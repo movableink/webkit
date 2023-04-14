@@ -1,3 +1,0 @@
-
-FAIL Ensure the `beforetoggle` event can be used to populate content before the popover renders assert_equals: expected "Show Event Occurred" but got ""
-

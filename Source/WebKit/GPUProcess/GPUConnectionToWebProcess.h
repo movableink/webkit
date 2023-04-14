@@ -40,6 +40,7 @@
 #include "ScopedActiveMessageReceiveQueue.h"
 #include "ThreadSafeObjectHeap.h"
 #include "WebGPUIdentifier.h"
+#include <WebCore/IntDegrees.h>
 #include <WebCore/LibWebRTCEnumTraits.h>
 #include <WebCore/NowPlayingManager.h>
 #include <WebCore/PageIdentifier.h>
@@ -78,7 +79,7 @@ enum class Synchronous : bool;
 
 namespace WebCore {
 class SecurityOrigin;
-struct SecurityOriginData;
+class SecurityOriginData;
 }
 
 namespace WebKit {
@@ -145,6 +146,7 @@ public:
     PAL::SessionID sessionID() const { return m_sessionID; }
 
     bool isLockdownModeEnabled() const { return m_isLockdownModeEnabled; }
+    bool allowTestOnlyIPC() const { return m_allowTestOnlyIPC; }
 
     Logger& logger();
 
@@ -154,7 +156,7 @@ public:
 #endif
 
 #if ENABLE(MEDIA_STREAM)
-    void setOrientationForMediaCapture(uint64_t orientation);
+    void setOrientationForMediaCapture(WebCore::IntDegrees);
     void updateCaptureAccess(bool allowAudioCapture, bool allowVideoCapture, bool allowDisplayCapture);
     void updateCaptureOrigin(const WebCore::SecurityOriginData&);
     bool setCaptureAttributionString();
@@ -249,12 +251,17 @@ private:
 #endif
 
     void createRemoteGPU(WebGPUIdentifier, RenderingBackendIdentifier, IPC::StreamServerConnection::Handle&&);
+    void releaseRemoteGPU(WebGPUIdentifier);
 
     void clearNowPlayingInfo();
     void setNowPlayingInfo(WebCore::NowPlayingInfo&&);
 
 #if ENABLE(VP9)
     void enableVP9Decoders(bool shouldEnableVP8Decoder, bool shouldEnableVP9Decoder, bool shouldEnableVP9SWDecoder);
+#endif
+
+#if ENABLE(MEDIA_SOURCE)
+    void enableMockMediaSource();
 #endif
 
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
@@ -385,6 +392,10 @@ private:
     RefPtr<RemoteRemoteCommandListenerProxy> m_remoteRemoteCommandListener;
     bool m_isActiveNowPlayingProcess { false };
     bool m_isLockdownModeEnabled { false };
+    bool m_allowTestOnlyIPC { false };
+#if ENABLE(MEDIA_SOURCE)
+    bool m_mockMediaSourceEnabled { false };
+#endif
 
 #if ENABLE(ROUTING_ARBITRATION) && HAVE(AVAUDIO_ROUTING_ARBITER)
     UniqueRef<LocalAudioSessionRoutingArbitrator> m_routingArbitrator;

@@ -31,7 +31,9 @@
 #include "CachedImage.h"
 #include "EXTColorBufferFloat.h"
 #include "EXTColorBufferHalfFloat.h"
+#include "EXTDisjointTimerQueryWebGL2.h"
 #include "EXTFloatBlend.h"
+#include "EXTPolygonOffsetClamp.h"
 #include "EXTTextureCompressionBPTC.h"
 #include "EXTTextureCompressionRGTC.h"
 #include "EXTTextureFilterAnisotropic.h"
@@ -47,9 +49,10 @@
 #include "Logging.h"
 #include "OESDrawBuffersIndexed.h"
 #include "OESTextureFloatLinear.h"
+#include "OffscreenCanvas.h"
 #include "RenderBox.h"
 #include "WebCodecsVideoFrame.h"
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include "WebGLActiveInfo.h"
 #include "WebGLBuffer.h"
 #include "WebGLClipCullDistance.h"
@@ -409,11 +412,11 @@ IntRect WebGL2RenderingContext::getTextureSourceSubRectangle(GCGLsizei width, GC
     return IntRect(m_unpackSkipPixels, m_unpackSkipRows, width, height);
 }
 
-RefPtr<WebGLTexture> WebGL2RenderingContext::validateTexImageBinding(const char* functionName, TexImageFunctionID functionID, GCGLenum target)
+RefPtr<WebGLTexture> WebGL2RenderingContext::validateTexImageBinding(TexImageFunctionID functionID, GCGLenum target)
 {
     if (functionID == TexImageFunctionID::TexImage3D || functionID == TexImageFunctionID::TexSubImage3D)
-        return validateTexture3DBinding(functionName, target);
-    return validateTexture2DBinding(functionName, target);
+        return validateTexture3DBinding(texImageFunctionName(functionID), target);
+    return validateTexture2DBinding(texImageFunctionName(functionID), target);
 }
 
 RefPtr<WebGLTexture> WebGL2RenderingContext::validateTextureStorage2DBinding(const char* functionName, GCGLenum target)
@@ -788,9 +791,9 @@ WebGLAny WebGL2RenderingContext::getInternalformatParameter(GCGLenum target, GCG
     if (!validateForbiddenInternalFormats("getInternalformatParameter", internalformat))
         return nullptr;
 
-    m_context->moveErrorsToSyntheticErrorList();
+    updateErrors();
     GCGLint numValues = m_context->getInternalformati(target, internalformat, GraphicsContextGL::NUM_SAMPLE_COUNTS);
-    if (m_context->moveErrorsToSyntheticErrorList() || numValues < 0)
+    if (updateErrors() || numValues < 0)
         return nullptr;
 
     // Integer formats do not support multisampling, so numValues == 0 may occur.
@@ -798,7 +801,7 @@ WebGLAny WebGL2RenderingContext::getInternalformatParameter(GCGLenum target, GCG
     Vector<GCGLint> params(numValues);
     if (numValues > 0) {
         m_context->getInternalformativ(target, internalformat, pname, params);
-        if (m_context->moveErrorsToSyntheticErrorList())
+        if (updateErrors())
             return nullptr;
     }
 
@@ -953,7 +956,7 @@ void WebGL2RenderingContext::texImage2D(GCGLenum target, GCGLint level, GCGLint 
         synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "texImage2D", "FLIP_Y or PREMULTIPLY_ALPHA isn't allowed while uploading from PBO");
         return;
     }
-    if (!validateTexFunc("texImage2D", TexImageFunctionType::TexImage, SourceUnpackBuffer, target, level, internalformat, width, height, 1, border, format, type, 0, 0, 0))
+    if (!validateTexFunc(TexImageFunctionID::TexImage2D, SourceUnpackBuffer, target, level, internalformat, width, height, 1, border, format, type, 0, 0, 0))
         return;
 
     m_context->texImage2D(target, level, internalformat, width, height, border, format, type, offset);
@@ -997,7 +1000,7 @@ void WebGL2RenderingContext::texImage3D(GCGLenum target, GCGLint level, GCGLint 
         synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "texImage3D", "FLIP_Y or PREMULTIPLY_ALPHA isn't allowed for uploading 3D textures");
         return;
     }
-    if (!validateTexFunc("texImage3D", TexImageFunctionType::TexImage, SourceUnpackBuffer, target, level, internalformat, width, height, depth, border, format, type, 0, 0, 0))
+    if (!validateTexFunc(TexImageFunctionID::TexImage3D, SourceUnpackBuffer, target, level, internalformat, width, height, depth, border, format, type, 0, 0, 0))
         return;
 
     m_context->texImage3D(target, level, internalformat, width, height, depth, border, format, type,  offset);
@@ -1083,7 +1086,7 @@ void WebGL2RenderingContext::texSubImage2D(GCGLenum target, GCGLint level, GCGLi
         synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "texSubImage2D", "FLIP_Y or PREMULTIPLY_ALPHA isn't allowed while uploading from PBO");
         return;
     }
-    if (!validateTexFunc("texSubImage2D", TexImageFunctionType::TexSubImage, SourceUnpackBuffer, target, level, 0, width, height, 1, 0, format, type, xoffset, yoffset, 0))
+    if (!validateTexFunc(TexImageFunctionID::TexSubImage2D, SourceUnpackBuffer, target, level, 0, width, height, 1, 0, format, type, xoffset, yoffset, 0))
         return;
 
     m_context->texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, offset);
@@ -1127,7 +1130,7 @@ void WebGL2RenderingContext::texSubImage3D(GCGLenum target, GCGLint level, GCGLi
         synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "texSubImage3D", "FLIP_Y or PREMULTIPLY_ALPHA isn't allowed for uploading 3D textures");
         return;
     }
-    if (!validateTexFunc("texSubImage3D", TexImageFunctionType::TexSubImage, SourceUnpackBuffer, target, level, 0, width, height, depth, 0, format, type, xoffset, yoffset, zoffset))
+    if (!validateTexFunc(TexImageFunctionID::TexSubImage3D, SourceUnpackBuffer, target, level, 0, width, height, depth, 0, format, type, xoffset, yoffset, zoffset))
         return;
 
     m_context->texSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, offset);
@@ -1802,8 +1805,11 @@ std::optional<WebGL2RenderingContext::ActiveQueryKey> WebGL2RenderingContext::va
         return ActiveQueryKey::SamplesPassed;
     case GraphicsContextGL::TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN:
         return ActiveQueryKey::PrimitivesWritten;
-    default:
-        break;
+    case GraphicsContextGL::TIME_ELAPSED_EXT:
+        if (m_extDisjointTimerQueryWebGL2)
+            return ActiveQueryKey::TimeElapsed;
+        synthesizeGLError(GraphicsContextGL::INVALID_ENUM, functionName, "invalid target, EXT_disjoint_timer_query_webgl2 not enabled");
+        return std::nullopt;
     }
     synthesizeGLError(GraphicsContextGL::INVALID_ENUM, functionName, "invalid target");
     return std::nullopt;
@@ -1852,13 +1858,31 @@ void WebGL2RenderingContext::endQuery(GCGLenum target)
     });
 }
 
-RefPtr<WebGLQuery> WebGL2RenderingContext::getQuery(GCGLenum target, GCGLenum pname)
+WebGLAny WebGL2RenderingContext::getQuery(GCGLenum target, GCGLenum pname)
 {
     if (isContextLost() || !scriptExecutionContext())
         return nullptr;
-    auto activeQueryKey = validateQueryTarget("beginQuery", target);
+
+    // Timestamp queries require special treatment because they are never active.
+    if (target == GraphicsContextGL::TIMESTAMP_EXT) {
+        if (!m_extDisjointTimerQueryWebGL2) {
+            synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getQuery", "invalid target, EXT_disjoint_timer_query_webgl2 not enabled");
+            return nullptr;
+        }
+        if (pname == GraphicsContextGL::QUERY_COUNTER_BITS_EXT)
+            return m_context->getQuery(target, pname);
+        if (pname != GraphicsContextGL::CURRENT_QUERY)
+            synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getQuery", "invalid parameter name");
+        return nullptr;
+    }
+
+    auto activeQueryKey = validateQueryTarget("getQuery", target);
     if (!activeQueryKey)
         return nullptr;
+
+    // Time elapsed queries support one more parameter name.
+    if (target == GraphicsContextGL::TIME_ELAPSED_EXT && pname == GraphicsContextGL::QUERY_COUNTER_BITS_EXT)
+        return m_context->getQuery(target, pname);
 
     if (pname != GraphicsContextGL::CURRENT_QUERY) {
         synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getQuery", "invalid parameter name");
@@ -1886,18 +1910,17 @@ WebGLAny WebGL2RenderingContext::getQueryParameter(WebGLQuery& query, GCGLenum p
     switch (pname) {
     case GraphicsContextGL::QUERY_RESULT:
         if (!query.isResultAvailable())
-            return false;
-        break;
+            return 0;
+        if (query.target() == GraphicsContextGL::TIME_ELAPSED_EXT || query.target() == GraphicsContextGL::TIMESTAMP_EXT)
+            return static_cast<unsigned long long>(m_context->getQueryObjectui64EXT(query.object(), pname));
+        return m_context->getQueryObjectui(query.object(), pname);
     case GraphicsContextGL::QUERY_RESULT_AVAILABLE:
         if (!query.isResultAvailable())
             return false;
-        break;
-    default:
-        synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getQueryParameter", "invalid parameter name");
-        return nullptr;
+        return static_cast<bool>(m_context->getQueryObjectui(query.object(), pname));
     }
-
-    return static_cast<unsigned>(m_context->getQueryObjectui(query.object(), pname));
+    synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getQueryParameter", "invalid parameter name");
+    return nullptr;
 }
 
 RefPtr<WebGLSampler> WebGL2RenderingContext::createSampler()
@@ -2607,7 +2630,9 @@ WebGLExtension* WebGL2RenderingContext::getExtension(const String& name)
 
     ENABLE_IF_REQUESTED(EXTColorBufferFloat, m_extColorBufferFloat, "EXT_color_buffer_float"_s, EXTColorBufferFloat::supported(*m_context));
     ENABLE_IF_REQUESTED(EXTColorBufferHalfFloat, m_extColorBufferHalfFloat, "EXT_color_buffer_half_float"_s, EXTColorBufferHalfFloat::supported(*m_context));
+    ENABLE_IF_REQUESTED(EXTDisjointTimerQueryWebGL2, m_extDisjointTimerQueryWebGL2, "EXT_disjoint_timer_query_webgl2"_s, EXTDisjointTimerQueryWebGL2::supported(*m_context) && scriptExecutionContext()->settingsValues().webGLTimerQueriesEnabled);
     ENABLE_IF_REQUESTED(EXTFloatBlend, m_extFloatBlend, "EXT_float_blend"_s, EXTFloatBlend::supported(*m_context));
+    ENABLE_IF_REQUESTED(EXTPolygonOffsetClamp, m_extPolygonOffsetClamp, "EXT_polygon_offset_clamp"_s, EXTPolygonOffsetClamp::supported(*m_context) && enableDraftExtensions);
     ENABLE_IF_REQUESTED(EXTTextureCompressionBPTC, m_extTextureCompressionBPTC, "EXT_texture_compression_bptc"_s, EXTTextureCompressionBPTC::supported(*m_context));
     ENABLE_IF_REQUESTED(EXTTextureCompressionRGTC, m_extTextureCompressionRGTC, "EXT_texture_compression_rgtc"_s, EXTTextureCompressionRGTC::supported(*m_context));
     ENABLE_IF_REQUESTED(EXTTextureFilterAnisotropic, m_extTextureFilterAnisotropic, "EXT_texture_filter_anisotropic"_s, EXTTextureFilterAnisotropic::supported(*m_context));
@@ -2648,7 +2673,9 @@ std::optional<Vector<String>> WebGL2RenderingContext::getSupportedExtensions()
 
     APPEND_IF_SUPPORTED("EXT_color_buffer_float", EXTColorBufferFloat::supported(*m_context))
     APPEND_IF_SUPPORTED("EXT_color_buffer_half_float", EXTColorBufferHalfFloat::supported(*m_context))
+    APPEND_IF_SUPPORTED("EXT_disjoint_timer_query_webgl2", EXTDisjointTimerQueryWebGL2::supported(*m_context) && scriptExecutionContext()->settingsValues().webGLTimerQueriesEnabled)
     APPEND_IF_SUPPORTED("EXT_float_blend", EXTFloatBlend::supported(*m_context))
+    APPEND_IF_SUPPORTED("EXT_polygon_offset_clamp", EXTPolygonOffsetClamp::supported(*m_context) && enableDraftExtensions)
     APPEND_IF_SUPPORTED("EXT_texture_compression_bptc", EXTTextureCompressionBPTC::supported(*m_context))
     APPEND_IF_SUPPORTED("EXT_texture_compression_rgtc", EXTTextureCompressionRGTC::supported(*m_context))
     APPEND_IF_SUPPORTED("EXT_texture_filter_anisotropic", EXTTextureFilterAnisotropic::supported(*m_context))

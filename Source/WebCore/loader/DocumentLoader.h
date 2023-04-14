@@ -81,9 +81,9 @@ class ContentFilter;
 class SharedBuffer;
 struct CustomHeaderFields;
 class FormState;
-class Frame;
 class FrameLoader;
 class IconLoader;
+class LocalFrame;
 class Page;
 class PreviewConverter;
 class ResourceLoader;
@@ -164,6 +164,7 @@ using ContentExtensionEnablement = std::pair<ContentExtensionDefaultEnablement, 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DocumentLoader);
 class DocumentLoader
     : public RefCounted<DocumentLoader>
+    , public CanMakeCheckedPtr
     , public FrameDestructionObserver
     , public ContentSecurityPolicyClient
 #if ENABLE(CONTENT_FILTERING)
@@ -182,7 +183,7 @@ public:
 
     WEBCORE_EXPORT virtual ~DocumentLoader();
 
-    void attachToFrame(Frame&);
+    void attachToFrame(LocalFrame&);
 
     WEBCORE_EXPORT virtual void detachFromFrame();
 
@@ -836,34 +837,3 @@ inline void DocumentLoader::didTellClientAboutLoad(const String& url)
 }
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::MouseEventPolicy> {
-    using values = EnumValues<
-        WebCore::MouseEventPolicy,
-        WebCore::MouseEventPolicy::Default
-#if ENABLE(IOS_TOUCH_EVENTS)
-        , WebCore::MouseEventPolicy::SynthesizeTouchEvents
-#endif
-    >;
-};
-
-template<> struct EnumTraits<WebCore::ModalContainerObservationPolicy> {
-    using values = EnumValues<
-        WebCore::ModalContainerObservationPolicy,
-        WebCore::ModalContainerObservationPolicy::Disabled,
-        WebCore::ModalContainerObservationPolicy::Prompt
-    >;
-};
-
-template<> struct EnumTraits<WebCore::ColorSchemePreference> {
-    using values = EnumValues<
-        WebCore::ColorSchemePreference,
-        WebCore::ColorSchemePreference::NoPreference,
-        WebCore::ColorSchemePreference::Light,
-        WebCore::ColorSchemePreference::Dark
-    >;
-};
-
-} // namespace WTF

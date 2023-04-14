@@ -122,6 +122,7 @@ Shared/ApplePay/ApplePayPaymentSetupFeatures.mm
 Shared/ApplePay/PaymentSetupConfiguration.mm
 Shared/ApplePay/WebPaymentCoordinatorProxy.cpp
 Shared/ApplePay/cocoa/AutomaticReloadPaymentRequestCocoa.mm
+Shared/ApplePay/cocoa/DeferredPaymentRequestCocoa.mm
 Shared/ApplePay/cocoa/PaymentTokenContextCocoa.mm
 Shared/ApplePay/cocoa/RecurringPaymentRequestCocoa.mm
 Shared/ApplePay/cocoa/WebPaymentCoordinatorProxyCocoa.mm
@@ -163,7 +164,7 @@ Shared/Cocoa/SandboxExtensionCocoa.mm
 Shared/Cocoa/SandboxInitialiationParametersCocoa.mm
 Shared/Cocoa/SandboxUtilities.mm
 Shared/Cocoa/SharedCARingBuffer.cpp
-Shared/Cocoa/TCCSoftLink.mm
+Shared/Cocoa/TCCSoftLink.mm @no-unify
 Shared/Cocoa/WebCoreArgumentCodersCocoa.mm
 Shared/Cocoa/WebErrorsCocoa.mm
 Shared/Cocoa/WebKit2InitializeCocoa.mm
@@ -191,7 +192,6 @@ Shared/ios/InteractionInformationRequest.cpp
 Shared/ios/NativeWebKeyboardEventIOS.mm
 Shared/ios/NativeWebMouseEventIOS.mm
 Shared/ios/NativeWebTouchEventIOS.mm
-Shared/ios/WebAutocorrectionData.mm
 Shared/ios/WebIOSEventFactory.mm
 Shared/ios/WebPlatformTouchPointIOS.cpp
 Shared/ios/WebPreferencesDefaultValuesIOS.mm
@@ -252,6 +252,7 @@ UIProcess/API/C/mac/WKFrameMac.cpp
 UIProcess/API/C/mac/WKNotificationPrivateMac.mm
 UIProcess/API/C/mac/WKPagePrivateMac.mm
 UIProcess/API/C/mac/WKProtectionSpaceNS.mm
+UIProcess/API/C/mac/WKWebsiteDataStoreRefPrivateMac.mm
 
 UIProcess/API/Cocoa/_WKActivatedElementInfo.mm
 UIProcess/API/Cocoa/_WKAppHighlight.mm
@@ -468,7 +469,6 @@ UIProcess/ios/fullscreen/WKFullScreenWindowControllerIOS.mm
 UIProcess/ios/AppKitSoftLink.mm
 UIProcess/ios/DragDropInteractionState.mm
 UIProcess/ios/GestureRecognizerConsistencyEnforcer.mm
-UIProcess/ios/InputViewUpdateDeferrer.mm
 UIProcess/ios/PageClientImplIOS.mm
 UIProcess/ios/ProcessStateMonitor.mm
 UIProcess/ios/RevealFocusedElementDeferrer.mm
@@ -549,6 +549,7 @@ UIProcess/Network/CustomProtocols/LegacyCustomProtocolManagerProxy.cpp
 UIProcess/RemoteLayerTree/cocoa/RemoteLayerTreeLayers.mm
 
 UIProcess/RemoteLayerTree/mac/RemoteLayerTreeDrawingAreaProxyMac.mm
+UIProcess/RemoteLayerTree/mac/RemoteLayerTreeEventDispatcher.cpp
 UIProcess/RemoteLayerTree/mac/RemoteScrollingCoordinatorProxyMac.mm
 UIProcess/RemoteLayerTree/mac/RemoteScrollingTreeMac.mm
 UIProcess/RemoteLayerTree/mac/ScrollingTreeFrameScrollingNodeRemoteMac.cpp
@@ -706,7 +707,7 @@ WebProcess/WebPage/mac/WKAccessibilityWebPageObjectMac.mm
 
 WebProcess/WebPage/RemoteLayerTree/GraphicsLayerCARemote.cpp
 WebProcess/WebPage/RemoteLayerTree/PlatformCAAnimationRemote.mm
-WebProcess/WebPage/RemoteLayerTree/PlatformCALayerRemote.cpp
+WebProcess/WebPage/RemoteLayerTree/PlatformCALayerRemote.mm
 WebProcess/WebPage/RemoteLayerTree/PlatformCALayerRemoteCustom.mm
 WebProcess/WebPage/RemoteLayerTree/PlatformCALayerRemoteHost.mm
 WebProcess/WebPage/RemoteLayerTree/PlatformCALayerRemoteModelHosting.mm
@@ -715,6 +716,7 @@ WebProcess/WebPage/RemoteLayerTree/RemoteLayerTreeContext.mm
 WebProcess/WebPage/RemoteLayerTree/RemoteLayerTreeDisplayRefreshMonitor.mm
 WebProcess/WebPage/RemoteLayerTree/RemoteLayerTreeDrawingArea.mm @no-unify
 WebProcess/WebPage/RemoteLayerTree/RemoteScrollingCoordinator.mm
+WebProcess/WebPage/RemoteLayerTree/RemoteScrollbarsController.cpp
 
 // Derived Sources
 GPUConnectionToWebProcessMessageReceiver.cpp

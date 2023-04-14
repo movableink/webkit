@@ -21,10 +21,12 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import collections
+import os
 import re
 import sys
 
 from .command import Command
+from .install_hooks import InstallHooks
 from .track import Track
 from webkitcorepy import arguments, run, string_utils, Terminal
 from webkitscmpy import log, local
@@ -49,7 +51,7 @@ class Publish(Command):
     @classmethod
     def branches_on(cls, repository, ref):
         output = run(
-            [repository.executable(), 'branch', '-a', '--merged', ref],
+            [repository.executable(), 'branch', '-a', '--merged', '--format=%(refname)', ref],
             cwd=repository.root_path,
             capture_output=True,
             encoding='utf-8',
@@ -59,11 +61,12 @@ class Publish(Command):
             return {}
         result = collections.defaultdict(set)
         for line in output.stdout.splitlines():
-            split = line.lstrip().split('/', 2)
-            if len(split) < 3 or split[0] != 'remotes':
-                result[None].add('/'.join(split))
+            _, typ, name = line.split('/', 2)
+            if typ == 'remotes':
+                remote, name = name.split('/', 1)
+                result[remote].add(name)
             else:
-                result[split[1]].add(split[2])
+                result[None].add(name)
         return result
 
     @classmethod
@@ -108,12 +111,16 @@ class Publish(Command):
             mapping[branch] = commit
 
     @classmethod
-    def main(cls, args, repository, **kwargs):
+    def main(cls, args, repository, hooks=None, **kwargs):
         if not repository:
             sys.stderr.write('No repository provided\n')
             return 1
         if not isinstance(repository, local.Git):
             sys.stderr.write("Can only 'publish' branches in a git checkout\n")
+            return 1
+        if hooks and InstallHooks.hook_needs_update(repository, os.path.join(hooks, 'pre-push')):
+            sys.stderr.write("Cannot run a command which invokes `git push` with an out-of-date pre-push hook\n")
+            sys.stderr.write("Please re-run `git-webkit setup` to update all local hooks\n")
             return 1
 
         commits = set()
@@ -225,6 +232,10 @@ class Publish(Command):
             sys.stderr.write("Publication canceled\n")
             return 1
 
+        push_env = os.environ.copy()
+        push_env['VERBOSITY'] = str(args.verbose)
+        push_env['PUSH_HOOK_MODE'] = 'publish'
+
         return_code = 0
         print('Pushing branches to {}...'.format(args.remote))
         command = [repository.executable(), 'push', '--atomic', args.remote] + [
@@ -234,8 +245,8 @@ class Publish(Command):
         if run(
             command,
             cwd=repository.root_path,
-            capture_output=True,
             encoding='utf-8',
+            env=push_env,
         ).returncode:
             sys.stderr.write('Failed to push branches to {}\n'.format(args.remote))
             return_code += 1
@@ -247,8 +258,8 @@ class Publish(Command):
             if run(
                 command,
                 cwd=repository.root_path,
-                capture_output=True,
                 encoding='utf-8',
+                env=push_env,
             ).returncode:
                 sys.stderr.write('Failed to push tags to {}\n'.format(args.remote))
                 return_code += 1

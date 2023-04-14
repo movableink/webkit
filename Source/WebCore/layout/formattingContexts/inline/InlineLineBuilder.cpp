@@ -32,6 +32,7 @@
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutState.h"
+#include "Shape.h"
 #include "TextUtil.h"
 #include <wtf/unicode/CharacterNames.h>
 
@@ -209,7 +210,6 @@ struct LineCandidate {
         void appendtrailingWordBreakOpportunity(const InlineItem& wordBreakItem) { m_trailingWordBreakOpportunity = &wordBreakItem; }
         void reset();
         bool isEmpty() const { return m_continuousContent.runs().isEmpty() && !trailingWordBreakOpportunity() && !trailingLineBreak(); }
-        bool hasInlineLevelBox() const { return m_hasInlineLevelBox; }
 
         void setHasTrailingSoftWrapOpportunity(bool hasTrailingSoftWrapOpportunity) { m_hasTrailingSoftWrapOpportunity = hasTrailingSoftWrapOpportunity; }
         bool hasTrailingSoftWrapOpportunity() const { return m_hasTrailingSoftWrapOpportunity; }
@@ -222,7 +222,6 @@ struct LineCandidate {
         InlineContentBreaker::ContinuousContent m_continuousContent;
         const InlineItem* m_trailingLineBreak { nullptr };
         const InlineItem* m_trailingWordBreakOpportunity { nullptr };
-        bool m_hasInlineLevelBox { false };
         bool m_hasTrailingSoftWrapOpportunity { false };
     };
 
@@ -244,7 +243,6 @@ LineCandidate::InlineContent::InlineContent(bool ignoreTrailingLetterSpacing)
 inline void LineCandidate::InlineContent::appendInlineItem(const InlineItem& inlineItem, const RenderStyle& style, InlineLayoutUnit logicalWidth)
 {
     ASSERT(inlineItem.isText() || inlineItem.isBox() || inlineItem.isInlineBoxStart() || inlineItem.isInlineBoxEnd());
-    m_hasInlineLevelBox = m_hasInlineLevelBox || inlineItem.isBox() || inlineItem.isInlineBoxStart();
 
     if (inlineItem.isBox() || inlineItem.isInlineBoxStart() || inlineItem.isInlineBoxEnd())
         return m_continuousContent.append(inlineItem, style, logicalWidth);
@@ -282,7 +280,6 @@ inline void LineCandidate::InlineContent::reset()
     m_continuousContent.reset();
     m_trailingLineBreak = { };
     m_trailingWordBreakOpportunity = { };
-    m_hasInlineLevelBox = false;
 }
 
 inline void LineCandidate::reset()
@@ -326,6 +323,12 @@ InlineLayoutUnit LineBuilder::inlineItemWidth(const InlineItem& inlineItem, Inli
     if (inlineItem.isInlineBoxEnd())
         return boxGeometry.marginEnd() + boxGeometry.borderEnd() + boxGeometry.paddingEnd().value_or(0);
 
+    // FIXME: The overhang should be computed to not overlap the neighboring runs or overflow the line.
+    if (auto* rubyAdjustments = layoutBox.rubyAdjustments()) {
+        auto& overhang = isFirstFormattedLine() ? rubyAdjustments->firstLineOverhang : rubyAdjustments->overhang;
+        return boxGeometry.marginBoxWidth() - (overhang.start + overhang.end);
+    }
+
     // Non-replaced inline box (e.g. inline-block)
     return boxGeometry.marginBoxWidth();
 }
@@ -363,10 +366,9 @@ LineBuilder::LineContent LineBuilder::layoutInlineContent(const LineInput& lineI
 
     return { committedRange
         , committedContent.overflowLogicalWidth
-        , WTFMove(m_placedFloats)
-        , WTFMove(m_overflowingFloats)
+        , WTFMove(m_suspendedFloats)
         , m_lineIsConstrainedByFloat
-        , m_lineInitialLogicalLeft + m_initialIntrusiveFloatsWidth
+        , m_lineInitialLogicalRect.left() + m_initialIntrusiveFloatsWidth
         , m_lineLogicalRect.topLeft()
         , m_lineLogicalRect.width()
         , contentLogicalLeft
@@ -398,11 +400,11 @@ LineBuilder::IntrinsicContent LineBuilder::computedIntrinsicWidth(const InlineIt
 
 void LineBuilder::initialize(const InlineRect& initialLineLogicalRect, const UsedConstraints& lineConstraints, const InlineItemRange& needsLayoutRange, const std::optional<PreviousLine>& previousLine)
 {
-    ASSERT(!needsLayoutRange.isEmpty() || (previousLine && !previousLine->overflowingFloats.isEmpty()));
+    ASSERT(!needsLayoutRange.isEmpty() || (previousLine && !previousLine->suspendedFloats.isEmpty()));
 
     m_previousLine = previousLine;
     m_placedFloats.clear();
-    m_overflowingFloats.clear();
+    m_suspendedFloats.clear();
     m_lineSpanningInlineBoxes.clear();
     m_wrapOpportunityList.clear();
     m_overflowingLogicalWidth = { };
@@ -443,7 +445,7 @@ void LineBuilder::initialize(const InlineRect& initialLineLogicalRect, const Use
     createLineSpanningInlineBoxes();
     m_line.initialize(m_lineSpanningInlineBoxes, isFirstFormattedLine());
 
-    m_lineInitialLogicalLeft = initialLineLogicalRect.left();
+    m_lineInitialLogicalRect = initialLineLogicalRect;
     m_lineMarginStart = lineConstraints.marginStart;
     m_lineLogicalRect = lineConstraints.logicalRect;
     // This is by how much intrusive floats (coming from parent/sibling FCs) initially offset the line.
@@ -476,18 +478,21 @@ void LineBuilder::initialize(const InlineRect& initialLineLogicalRect, const Use
 
 CommittedContent LineBuilder::placeInlineContent(const InlineItemRange& needsLayoutRange)
 {
-    size_t overflowingFloatCount = 0;
-    auto placeOverflowingFloatsFromPreviousLine = [&] {
+    size_t resumedFloatCount = 0;
+    auto layoutPreviouslySuspendedFloats = [&] {
         if (!m_previousLine)
             return;
-        while (!m_previousLine->overflowingFloats.isEmpty()) {
-            auto isPlaced = tryPlacingFloatBox(*m_previousLine->overflowingFloats[0], LineBoxConstraintApplies::No);
+        // FIXME: Note that committedItemCount is not incremented here as these floats are already accounted for (at previous line)
+        // as CommittedContent only takes one range -meaning that inline layout may continue while float layout is being suspended
+        // and the placed InlineItem range ends at the last inline item placed on the current line.
+        resumedFloatCount = m_previousLine->suspendedFloats.size();
+        for (auto* suspendedFloat : m_previousLine->suspendedFloats) {
+            auto isPlaced = tryPlacingFloatBox(*suspendedFloat, MayOverConstrainLine::Yes);
             ASSERT_UNUSED(isPlaced, isPlaced);
-            ++overflowingFloatCount;
-            m_previousLine->overflowingFloats.remove(0);
         }
+        m_previousLine->suspendedFloats.clear();
     };
-    placeOverflowingFloatsFromPreviousLine();
+    layoutPreviouslySuspendedFloats();
 
     auto lineCandidate = LineCandidate { layoutState().shouldIgnoreTrailingLetterSpacing() };
     auto inlineContentBreaker = InlineContentBreaker { intrinsicWidthMode() };
@@ -503,9 +508,12 @@ CommittedContent LineBuilder::placeInlineContent(const InlineItemRange& needsLay
         // Now check if we can put this content on the current line.
         if (auto* floatItem = lineCandidate.floatItem) {
             ASSERT(lineCandidate.inlineContent.isEmpty());
-            auto evenOverflowingFloatShouldBePlaced = m_line.runs().isEmpty();
-            if (!tryPlacingFloatBox(*floatItem, evenOverflowingFloatShouldBePlaced ? LineBoxConstraintApplies::No : LineBoxConstraintApplies::Yes))
-                m_overflowingFloats.append(floatItem);
+            if (!tryPlacingFloatBox(*floatItem, m_line.runs().isEmpty() ? MayOverConstrainLine::Yes : MayOverConstrainLine::No)) {
+                // This float overconstrains the line (it simply means shrinking the line box by the float would cause inline content overflow.)
+                // At this point we suspend float layout but continue with inline layout.
+                // Such suspended float will be placed at the next available vertical positon when this line "closes".
+                m_suspendedFloats.append(floatItem);
+            }
             ++committedItemCount;
         } else {
             auto result = handleInlineContent(inlineContentBreaker, needsLayoutRange, lineCandidate);
@@ -542,7 +550,7 @@ CommittedContent LineBuilder::placeInlineContent(const InlineItemRange& needsLay
         currentItemIndex = needsLayoutRange.startIndex() + committedItemCount;
     }
     // Looks like we've run out of runs.
-    ASSERT_UNUSED(overflowingFloatCount, committedItemCount || overflowingFloatCount);
+    ASSERT_UNUSED(resumedFloatCount, committedItemCount || resumedFloatCount);
     return { committedItemCount, { } };
 }
 
@@ -917,13 +925,14 @@ static inline InlineLayoutUnit availableWidth(const LineCandidate::InlineContent
 #endif
     auto availableWidth = availableWidthForContent - line.contentLogicalRight();
     auto& inlineBoxListWithClonedDecorationEnd = line.inlineBoxListWithClonedDecorationEnd();
-    if (candidateContent.hasInlineLevelBox() && !inlineBoxListWithClonedDecorationEnd.isEmpty()) {
-        // We may try to commit a inline box end here which already takes up place implicitly.
-        // Let's not account for its logical width twice.
-        for (auto& run : candidateContent.continuousContent().runs()) {
-            if (run.inlineItem.isInlineBoxEnd())
-                availableWidth += inlineBoxListWithClonedDecorationEnd.get(&run.inlineItem.layoutBox());
-        }
+    if (inlineBoxListWithClonedDecorationEnd.isEmpty())
+        return std::isnan(availableWidth) ? maxInlineLayoutUnit() : availableWidth;
+    // We may try to commit a inline box end here which already takes up place implicitly through the cloned decoration.
+    // Let's not account for its logical width twice.
+    for (auto& run : candidateContent.continuousContent().runs()) {
+        if (!run.inlineItem.isInlineBoxEnd())
+            continue;
+        availableWidth += inlineBoxListWithClonedDecorationEnd.get(&run.inlineItem.layoutBox());
     }
     return std::isnan(availableWidth) ? maxInlineLayoutUnit() : availableWidth;
 }
@@ -1005,23 +1014,27 @@ LayoutUnit LineBuilder::adjustGeometryForInitialLetterIfNeeded(const Box& floatB
 {
     auto drop = floatBox.style().initialLetterDrop();
     auto isInitialLetter = floatBox.isFloatingPositioned() && floatBox.style().styleType() == PseudoId::FirstLetter && drop;
-    if (!isInitialLetter)
+    if (!isInitialLetter) {
+        formattingState()->setClearGapBeforeFirstLine({ });
         return { };
+    }
     // Here we try to set the vertical start position for the float in flush with the adjoining text content's cap height.
     // It's a super premature as at this point we don't normally deal with vertical geometry -other than the incoming vertical constraint.
     auto initialLetterCapHeightOffset = formattingContext().formattingQuirks().initialLetterAlignmentOffset(floatBox, rootStyle());
     // While initial-letter based floats do not set their clear property, intrusive floats from sibling IFCs are supposed to be cleared.
     auto intrusiveBottom = blockLayoutState()->intrusiveInitialLetterLogicalBottom();
-    if (!initialLetterCapHeightOffset && !intrusiveBottom)
+    if (!initialLetterCapHeightOffset && !intrusiveBottom) {
+        formattingState()->setClearGapBeforeFirstLine({ });
         return { };
+    }
 
     auto clearGapBeforeFirstLine = InlineLayoutUnit { };
     if (intrusiveBottom) {
         // When intrusive initial letter is cleared, we introduce a clear gap. This is (with proper floats) normally computed before starting
         // line layout but intrusive initial letters are cleared only when another initial letter shows up. Regular inline content
         // does not need clearance.
-        auto intrusiveInitialLetterWidth = std::max(0.f, m_lineLogicalRect.left() - m_lineInitialLogicalLeft);
-        m_lineLogicalRect.setLeft(m_lineInitialLogicalLeft);
+        auto intrusiveInitialLetterWidth = std::max(0.f, m_lineLogicalRect.left() - m_lineInitialLogicalRect.left());
+        m_lineLogicalRect.setLeft(m_lineInitialLogicalRect.left());
         m_lineLogicalRect.expandHorizontally(intrusiveInitialLetterWidth);
         clearGapBeforeFirstLine = *intrusiveBottom;
     }
@@ -1047,59 +1060,69 @@ LayoutUnit LineBuilder::adjustGeometryForInitialLetterIfNeeded(const Box& floatB
     return initialLetterCapHeightOffset.value_or(0_lu);
 }
 
-bool LineBuilder::tryPlacingFloatBox(const InlineItem& floatItem, LineBoxConstraintApplies lineBoxConstraintApplies)
+bool LineBuilder::shouldTryToPlaceFloatBox(const Box& floatBox, LayoutUnit floatBoxMarginBoxWidth, MayOverConstrainLine mayOverConstrainLine) const
+{
+    if (mayOverConstrainLine == MayOverConstrainLine::Yes) {
+        // This is a resumed float from a previous vertical position. Now we need to find a place for it.
+        // (which also means that the current line can't have any floats that we couldn't place yet)
+        ASSERT(m_suspendedFloats.isEmpty());
+        return true;
+    }
+    auto lineIsConsideredEmpty = !m_line.hasContent() && !m_lineIsConstrainedByFloat;
+    if (lineIsConsideredEmpty)
+        return true;
+    // Non-clear type of floats stack up (horizontally). It's easy to check if there's space for this float at all,
+    // while floats with clear needs post-processing to see if they overlap existing line content (and here we just check if they may fit at all).
+    auto lineLogicalWidth = floatBox.hasFloatClear() ? m_lineInitialLogicalRect.width() : m_lineLogicalRect.width();
+    auto availableWidthForFloat = lineLogicalWidth - m_line.contentLogicalRight() + m_line.trimmableTrailingWidth();
+    return availableWidthForFloat >= InlineLayoutUnit { floatBoxMarginBoxWidth };
+}
+
+static bool haveEnoughSpaceForFloatWithClear(const LayoutRect& floatBoxMarginBox, bool isLeftPositioned, const InlineRect& lineLogicalRect, InlineLayoutUnit contentLogicalWidth)
+{
+    auto adjustedLineLogicalLeft = lineLogicalRect.left();
+    auto adjustedLineLogicalRight = lineLogicalRect.right();
+    if (isLeftPositioned)
+        adjustedLineLogicalLeft = std::max<InlineLayoutUnit>(floatBoxMarginBox.maxX(), adjustedLineLogicalLeft);
+    else
+        adjustedLineLogicalRight = std::min<InlineLayoutUnit>(floatBoxMarginBox.x(), adjustedLineLogicalRight);
+    auto availableSpaceForContentWithPlacedFloat = adjustedLineLogicalRight - adjustedLineLogicalLeft;
+    return contentLogicalWidth <= availableSpaceForContentWithPlacedFloat;
+}
+
+bool LineBuilder::tryPlacingFloatBox(const InlineItem& floatItem, MayOverConstrainLine mayOverConstrainLine)
 {
     if (isInIntrinsicWidthMode()) {
         ASSERT_NOT_REACHED();
-        // Just ignore floats by pretending they have been placed.
+        // Floats are not supposed to be added to FloatingState in intrinsic mode.
+        m_placedFloats.append(&floatItem);
         return true;
     }
-    auto& floatBox = floatItem.layoutBox();
     ASSERT(formattingState());
-    auto& boxGeometry = formattingState()->boxGeometry(floatBox);
-    auto shouldBePlaced = [&] {
-        // Floats never terminate the line. If a float does not fit the current line
-        // we can still continue placing inline content on the line, but we have to save all the upcoming floats for subsequent lines.
-        auto lineHasSkippedFloats = !m_overflowingFloats.isEmpty();
-        if (lineHasSkippedFloats) {
-            // Overflowing floats must have been constrained by the current line box.
-            ASSERT(lineBoxConstraintApplies == LineBoxConstraintApplies::Yes);
-            return false;
-        }
-        if (lineBoxConstraintApplies == LineBoxConstraintApplies::No) {
-            // This is an overflowing float from previous line. Now we need to find a place for it.
-            // (which also means that the current line can't have any floats that we couldn't place yet i.e. overflown)
-            ASSERT(m_overflowingFloats.isEmpty());
-            return true;
-        }
-        auto lineIsConsideredEmpty = !m_line.hasContent() && !m_lineIsConstrainedByFloat;
-        if (lineIsConsideredEmpty)
-            return true;
-        auto availableWidthForFloat = m_lineLogicalRect.width() - m_line.contentLogicalRight() + m_line.trimmableTrailingWidth();
-        return availableWidthForFloat >= boxGeometry.marginBoxWidth();
-    };
-    if (!shouldBePlaced()) {
-        // This float needs to go somewhere else on a subsequent line.
+    if (isFloatLayoutSuspended())
         return false;
-    }
 
-    auto additionalOffset = adjustGeometryForInitialLetterIfNeeded(floatBox);
-    // Set static position first.
+    auto& floatBox = floatItem.layoutBox();
+    auto& boxGeometry = formattingState()->boxGeometry(floatBox);
+    if (!shouldTryToPlaceFloatBox(floatBox, boxGeometry.marginBoxWidth(), mayOverConstrainLine))
+        return false;
+
     auto lineMarginBoxLeft = std::max(0.f, m_lineLogicalRect.left() - m_lineMarginStart);
-    auto staticPosition = LayoutPoint { lineMarginBoxLeft, m_lineLogicalRect.top() + additionalOffset };
-    staticPosition.move(boxGeometry.marginStart(), boxGeometry.marginBefore());
-    boxGeometry.setLogicalTopLeft(staticPosition);
-    // Float it.
-    ASSERT(m_rootHorizontalConstraints);
     auto floatingContext = FloatingContext { formattingContext(), *floatingState() };
-    auto floatingPosition = floatingContext.positionForFloat(floatBox, *m_rootHorizontalConstraints);
-    boxGeometry.setLogicalTopLeft(floatingPosition);
-    auto floatBoxItem = floatingContext.toFloatItem(floatBox);
-    auto isLogicalLeftPositionedInFloatingState = floatBoxItem.isLeftPositioned();
-    floatingState()->append(floatBoxItem);
-    m_placedFloats.append(&floatItem);
+    auto computeFloatBoxPosition = [&] {
+        // Set static position first.
+        auto additionalOffset = adjustGeometryForInitialLetterIfNeeded(floatBox);
+        auto staticPosition = LayoutPoint { lineMarginBoxLeft, m_lineLogicalRect.top() + additionalOffset };
+        staticPosition.move(boxGeometry.marginStart(), boxGeometry.marginBefore());
+        boxGeometry.setLogicalTopLeft(staticPosition);
 
-    auto intersects = [&] {
+        // Compute float position by running float layout.
+        auto floatingPosition = floatingContext.positionForFloat(floatBox, *m_rootHorizontalConstraints);
+        boxGeometry.setLogicalTopLeft(floatingPosition);
+    };
+    computeFloatBoxPosition();
+
+    auto willFloatBoxShrinkLine = [&] {
         // Float boxes don't get positioned higher than the line.
         auto floatBoxMarginBox = BoxGeometry::marginBoxRect(boxGeometry);
         if (floatBoxMarginBox.isEmpty())
@@ -1110,31 +1133,48 @@ bool LineBuilder::tryPlacingFloatBox(const InlineItem& floatItem, LineBoxConstra
         }
         // Empty rect case: "line-height: 0px;" line still intersects with intrusive floats.
         return floatBoxMarginBox.top() == m_lineLogicalRect.top() || floatBoxMarginBox.top() < m_lineLogicalRect.bottom();
-    };
-    if (!intersects()) {
-        // This float is placed outside the line. No need to shrink the current line.
-        return true;
-    }
+    }();
 
-    // Shrink the line box with the intrusive float box's margin box.
-    m_lineIsConstrainedByFloat = true;
-    auto shouldAdjustLineLogicalLeft = [&] {
-        auto matchingInlineDirection = floatingState()->isLeftToRightDirection() == formattingContext().root().style().isLeftToRightDirection();
-        // Floating state inherited from the parent BFC with mismatching inline direction (ltr vs. rtl) puts
-        // a right float (float: right in direction: ltr but parent direction: rtl) to logical left.
-        return (matchingInlineDirection && isLogicalLeftPositionedInFloatingState) || (!matchingInlineDirection && !isLogicalLeftPositionedInFloatingState);
+    auto willFloatBoxWithClearFit = [&] {
+        if (!willFloatBoxShrinkLine)
+            return true;
+        auto lineIsConsideredEmpty = !m_line.hasContent() && !m_lineIsConstrainedByFloat;
+        if (lineIsConsideredEmpty)
+            return true;
+        // When floats with clear are placed under existing floats, we may find ourselves in an over-constrained state and
+        // can't place this float here.
+        auto contentLogicalWidth = m_line.contentLogicalWidth() - m_line.trimmableTrailingWidth();
+        return haveEnoughSpaceForFloatWithClear(BoxGeometry::marginBoxRect(boxGeometry), floatingContext.isLogicalLeftPositioned(floatBox), m_lineLogicalRect, contentLogicalWidth);
     };
+    if (floatBox.hasFloatClear() && !willFloatBoxWithClearFit())
+        return false;
 
-    // FIXME: In quirks mode some content may sneak above this float.
-    if (shouldAdjustLineLogicalLeft()) {
-        auto floatLogicalRight = InlineLayoutUnit { floatBoxItem.rectWithMargin().right() };
-        auto lineMarginLogicalLeft = m_lineLogicalRect.left() - m_lineMarginStart;
-        m_lineLogicalRect.shiftLeftTo(m_lineMarginStart + std::max(lineMarginLogicalLeft, floatLogicalRight));
-    } else {
-        auto floatLogicalLeft = InlineLayoutUnit { floatBoxItem.rectWithMargin().left() };
-        auto shrinkLineBy = m_lineLogicalRect.right() - floatLogicalLeft;
-        m_lineLogicalRect.expandHorizontally(std::min(0.f, -shrinkLineBy));
-    }
+    auto floatBoxItem = floatingContext.toFloatItem(floatBox);
+    auto placeFloatBox = [&] {
+        floatingState()->append(floatBoxItem);
+        m_placedFloats.append(&floatItem);
+    };
+    placeFloatBox();
+
+    auto adjustLineRectIfNeeded = [&] {
+        if (!willFloatBoxShrinkLine) {
+            // This float is placed outside the line box. No need to shrink the current line.
+            return;
+        }
+
+        auto lineConstraints = floatConstraints(m_lineLogicalRect);
+
+        auto adjustedRect = m_lineLogicalRect;
+        if (lineConstraints.left)
+            adjustedRect.shiftLeftTo(std::max<InlineLayoutUnit>(adjustedRect.left(), lineConstraints.left->x + m_lineMarginStart));
+        if (lineConstraints.right)
+            adjustedRect.setRight(std::max(adjustedRect.left(), std::min<InlineLayoutUnit>(adjustedRect.right(), lineConstraints.right->x)));
+
+        m_lineIsConstrainedByFloat = m_lineIsConstrainedByFloat || adjustedRect != m_lineLogicalRect;
+        m_lineLogicalRect = adjustedRect;
+    };
+    adjustLineRectIfNeeded();
+
     return true;
 }
 
@@ -1350,7 +1390,7 @@ bool LineBuilder::isLastLineWithInlineContent(const InlineItemRange& lineRange, 
     if (hasPartialTrailingContent)
         return false;
     if (lineRange.endIndex() == lastInlineItemIndex) {
-        // We must have only committed trailing overflowing floats on the line when the range is empty.
+        // We must have only committed trailing (overconstraining) floats on the line when the range is empty.
         return !lineRange.isEmpty();
     }
     // Omit floats to see if this is the last line with inline content.
@@ -1380,11 +1420,6 @@ InlineLayoutUnit LineBuilder::horizontalAlignmentOffset(bool isLastLine) const
     if (m_line.runs().isEmpty())
         return { };
 
-    auto& rootStyle = this->rootStyle();
-    auto textAlign = rootStyle.textAlign();
-    auto textAlignLast = rootStyle.textAlignLast();
-    auto isLeftToRightDirection = inlineBaseDirectionForLineContent() == TextDirection::LTR;
-
     // Depending on the line’s alignment/justification, the hanging glyph can be placed outside the line box.
     auto& runs = m_line.runs();
     auto contentLogicalRight = m_line.contentLogicalRight();
@@ -1403,68 +1438,8 @@ InlineLayoutUnit LineBuilder::horizontalAlignmentOffset(bool isLastLine) const
         } else
             contentLogicalRight -= hangingTrailingWidth;
     }
-    auto extraHorizontalSpace = lineLogicalRight - contentLogicalRight;
-    if (extraHorizontalSpace <= 0)
-        return { };
-
-    auto computedHorizontalAlignment = [&] {
-        // The last line before a forced break or the end of the block is aligned according to
-        // text-align-last.
-        if (isLastLine || (!runs.isEmpty() && runs.last().isLineBreak())) {
-            switch (textAlignLast) {
-            case TextAlignLast::Auto:
-                if (textAlign == TextAlignMode::Justify)
-                    return TextAlignMode::Start;
-                return textAlign;
-            case TextAlignLast::Start:
-                return TextAlignMode::Start;
-            case TextAlignLast::End:
-                return TextAlignMode::End;
-            case TextAlignLast::Left:
-                return TextAlignMode::Left;
-            case TextAlignLast::Right:
-                return TextAlignMode::Right;
-            case TextAlignLast::Center:
-                return TextAlignMode::Center;
-            case TextAlignLast::Justify:
-                return TextAlignMode::Justify;
-            default:
-                ASSERT_NOT_REACHED();
-                return TextAlignMode::Start;
-            }
-        }
-
-        // All other lines are aligned according to text-align.
-        return textAlign;
-    };
-
-    switch (computedHorizontalAlignment()) {
-    case TextAlignMode::Left:
-    case TextAlignMode::WebKitLeft:
-        if (!isLeftToRightDirection)
-            return extraHorizontalSpace;
-        FALLTHROUGH;
-    case TextAlignMode::Start:
-        return { };
-    case TextAlignMode::Right:
-    case TextAlignMode::WebKitRight:
-        if (!isLeftToRightDirection)
-            return { };
-        FALLTHROUGH;
-    case TextAlignMode::End:
-        return extraHorizontalSpace;
-    case TextAlignMode::Center:
-    case TextAlignMode::WebKitCenter:
-        return extraHorizontalSpace / 2;
-    case TextAlignMode::Justify:
-        // TextAlignMode::Justify is a run alignment (and we only do inline box alignment here)
-        return { };
-    default:
-        ASSERT_NOT_IMPLEMENTED_YET();
-        return { };
-    }
-    ASSERT_NOT_REACHED();
-    return { };
+    auto isLastLineOrAfterLineBreak = isLastLine || (!runs.isEmpty() && runs.last().isLineBreak()) ? InlineFormattingGeometry::IsLastLineOrAfterLineBreak::Yes : InlineFormattingGeometry::IsLastLineOrAfterLineBreak::No;
+    return formattingContext().formattingGeometry().horizontalAlignmentOffset(lineLogicalRight - contentLogicalRight, isLastLineOrAfterLineBreak, inlineBaseDirectionForLineContent());
 }
 
 const ElementBox& LineBuilder::root() const

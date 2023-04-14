@@ -38,9 +38,11 @@
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "MediaPlayerPrivate.h"
+#include "MediaStrategy.h"
 #include "PlatformMediaResourceLoader.h"
 #include "PlatformMediaSessionManager.h"
 #include "PlatformScreen.h"
+#include "PlatformStrategies.h"
 #include "PlatformTextTrack.h"
 #include "PlatformTimeRanges.h"
 #include "SecurityOrigin.h"
@@ -128,7 +130,6 @@ public:
     String engineDescription() const final { return "NullMediaPlayer"_s; }
 
     PlatformLayer* platformLayer() const final { return nullptr; }
-
     FloatSize naturalSize() const final { return FloatSize(); }
 
     bool hasVideo() const final { return false; }
@@ -273,9 +274,13 @@ static void buildMediaEnginesVector() WTF_REQUIRES_LOCK(mediaEngineVectorLock)
     ASSERT(mediaEngineVectorLock.isLocked());
 
 #if USE(AVFOUNDATION)
-    if (DeprecatedGlobalSettings::isAVFoundationEnabled()) {
-        auto& registerRemoteEngine = registerRemotePlayerCallback();
+    auto& registerRemoteEngine = registerRemotePlayerCallback();
+#if ENABLE(MEDIA_SOURCE)
+    if (registerRemoteEngine && platformStrategies()->mediaStrategy().mockMediaSourceEnabled())
+        registerRemoteEngine(addMediaEngine, MediaPlayerEnums::MediaEngineIdentifier::MockMSE);
+#endif
 
+    if (DeprecatedGlobalSettings::isAVFoundationEnabled()) {
 #if ENABLE(ALTERNATE_WEBM_PLAYER)
         if (PlatformMediaSessionManager::alternateWebMPlayerEnabled()) {
             if (registerRemoteEngine)
@@ -284,7 +289,7 @@ static void buildMediaEnginesVector() WTF_REQUIRES_LOCK(mediaEngineVectorLock)
                 MediaPlayerPrivateWebM::registerMediaEngine(addMediaEngine);
         }
 #endif
-        
+
 #if PLATFORM(COCOA)
         if (registerRemoteEngine)
             registerRemoteEngine(addMediaEngine, MediaPlayerEnums::MediaEngineIdentifier::AVFoundation);
@@ -782,6 +787,11 @@ MediaTime MediaPlayer::currentTime() const
     return m_private->currentMediaTime();
 }
 
+bool MediaPlayer::currentTimeMayProgress() const
+{
+    return m_private->currentMediaTimeMayProgress();
+}
+
 bool MediaPlayer::setCurrentTimeDidChangeCallback(CurrentTimeDidChangeCallback&& callback)
 {
     return m_private->setCurrentTimeDidChangeCallback(WTFMove(callback));
@@ -914,6 +924,16 @@ bool MediaPlayer::isVideoFullscreenStandby() const
 
 #endif
 
+FloatSize MediaPlayer::videoInlineSize() const
+{
+    return m_private->videoInlineSize();
+}
+
+void MediaPlayer::setVideoInlineSizeFenced(const FloatSize& size, const WTF::MachSendRight& fence)
+{
+    m_private->setVideoInlineSizeFenced(size, fence);
+}
+
 #if PLATFORM(IOS_FAMILY)
 
 NSArray* MediaPlayer::timedMetadata() const
@@ -938,7 +958,7 @@ MediaPlayer::NetworkState MediaPlayer::networkState()
     return m_private->networkState();
 }
 
-MediaPlayer::ReadyState MediaPlayer::readyState()
+MediaPlayer::ReadyState MediaPlayer::readyState() const
 {
     return m_private->readyState();
 }
@@ -1262,6 +1282,11 @@ void MediaPlayer::setShouldMaintainAspectRatio(bool maintainAspectRatio)
     m_private->setShouldMaintainAspectRatio(maintainAspectRatio);
 }
 
+LayerHostingContextID MediaPlayer::hostingContextID() const
+{
+    return m_private->hostingContextID();
+}
+
 bool MediaPlayer::didPassCORSAccessCheck() const
 {
     return m_private->didPassCORSAccessCheck();
@@ -1368,10 +1393,11 @@ void MediaPlayer::setPrivateBrowsingMode(bool privateBrowsingMode)
 // Client callbacks.
 void MediaPlayer::networkStateChanged()
 {
+    if (m_private->networkState() >= MediaPlayer::NetworkState::FormatError)
+        m_lastErrorMessage = m_private->errorMessage();
     // If more than one media engine is installed and this one failed before finding metadata,
     // let the next engine try.
     if (m_private->networkState() >= MediaPlayer::NetworkState::FormatError && m_private->readyState() < MediaPlayer::ReadyState::HaveMetadata) {
-        m_lastErrorMessage = m_private->errorMessage();
         client().mediaPlayerEngineFailedToLoad();
         if (!m_activeEngineIdentifier
             && installedMediaEngines().size() > 1

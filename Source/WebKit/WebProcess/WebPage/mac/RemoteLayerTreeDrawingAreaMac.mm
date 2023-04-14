@@ -28,10 +28,11 @@
 
 #if PLATFORM(MAC)
 
+#import "Logging.h"
 #import "WebPage.h"
 #import "WebPageCreationParameters.h"
-#import <WebCore/FrameView.h>
 #import <WebCore/GraphicsLayer.h>
+#import <WebCore/LocalFrameView.h>
 #import <WebCore/RenderLayerBacking.h>
 
 namespace WebKit {
@@ -96,7 +97,6 @@ void RemoteLayerTreeDrawingAreaMac::commitTransientZoom(double scale, WebCore::F
 
     scale *= m_webPage.viewScaleFactor();
     
-    // FIXME: Constrain scale and origin
     applyTransientZoomToPage(scale, origin);
 }
 
@@ -112,6 +112,12 @@ void RemoteLayerTreeDrawingAreaMac::willCommitLayerTree(RemoteLayerTreeTransacti
         return;
 
     transaction.setPageScalingLayerID(renderViewGraphicsLayer->primaryLayerID());
+
+    auto* scrolledContentsLayer = frameView->graphicsLayerForScrolledContents();
+    if (!scrolledContentsLayer)
+        return;
+
+    transaction.setScrolledContentsLayerID(scrolledContentsLayer->primaryLayerID());
 }
 
 } // namespace WebKit

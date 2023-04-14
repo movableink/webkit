@@ -28,12 +28,12 @@
 #include "ElementInlines.h"
 #include "EventLoop.h"
 #include "FocusController.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameView.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "JSDOMBindingSecurity.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
 #include "RenderWidget.h"
 #include "ScriptController.h"
@@ -49,9 +49,8 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFrameElementBase);
 using namespace HTMLNames;
 
 HTMLFrameElementBase::HTMLFrameElementBase(const QualifiedName& tagName, Document& document)
-    : HTMLFrameOwnerElement(tagName, document)
+    : HTMLFrameOwnerElement(tagName, document, CreateHTMLFrameElementBase)
 {
-    setHasCustomStyleResolveCallbacks();
 }
 
 bool HTMLFrameElementBase::canLoadScriptURL(const URL& scriptURL) const
@@ -91,19 +90,20 @@ void HTMLFrameElementBase::openURL(LockHistory lockHistory, LockBackForwardList 
     if (m_frameURL.isEmpty())
         m_frameURL = AtomString { aboutBlankURL().string() };
 
-    if (shouldLoadFrameLazily())
-        return;
-
-    RefPtr<Frame> parentFrame = document().frame();
+    RefPtr parentFrame { document().frame() };
     if (!parentFrame)
         return;
-
-    document().willLoadFrameElement(document().completeURL(m_frameURL));
 
     auto frameName = getNameAttribute();
     if (frameName.isNull() && UNLIKELY(document().settings().needsFrameNameFallbackToIdQuirk()))
         frameName = getIdAttribute();
 
+    if (shouldLoadFrameLazily()) {
+        parentFrame->loader().subframeLoader().createFrameIfNecessary(*this, frameName);
+        return;
+    }
+
+    document().willLoadFrameElement(document().completeURL(m_frameURL));
     parentFrame->loader().subframeLoader().requestFrame(*this, m_frameURL, frameName, lockHistory, lockBackForwardList);
 }
 

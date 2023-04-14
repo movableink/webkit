@@ -45,7 +45,7 @@ class TypeChecker : public AST::Visitor, public ContextProvider<Type*> {
 public:
     TypeChecker(ShaderModule&);
 
-    void check();
+    std::optional<FailedCheck> check();
 
     // Declarations
     void visit(AST::Structure&) override;
@@ -55,6 +55,7 @@ public:
     // Statements
     void visit(AST::AssignmentStatement&) override;
     void visit(AST::ReturnStatement&) override;
+    void visit(AST::CompoundStatement&) override;
 
     // Expressions
     void visit(AST::Expression&) override;
@@ -63,6 +64,7 @@ public:
     void visit(AST::BinaryExpression&) override;
     void visit(AST::IdentifierExpression&) override;
     void visit(AST::CallExpression&) override;
+    void visit(AST::UnaryExpression&) override;
 
     // Literal Expressions
     void visit(AST::BoolLiteral&) override;
@@ -97,57 +99,35 @@ private:
     bool unify(Type*, Type*) WARN_UNUSED_RETURN;
     bool isBottom(Type*) const;
     std::optional<unsigned> extractInteger(AST::Expression&);
-    Type* chooseOverload(const String&, const WTF::Vector<Type*>&);
+
+    template<typename CallArguments>
+    Type* chooseOverload(const char*, const SourceSpan&, const String&, CallArguments&& valueArguments, const Vector<Type*>& typeArguments);
 
     ShaderModule& m_shaderModule;
     Type* m_inferredType { nullptr };
 
-    // FIXME: move this into a class that contains the AST
-    TypeStore m_types;
+    TypeStore& m_types;
     Vector<Error> m_errors;
     // FIXME: maybe these should live in the context
-    HashMap<String, WTF::Vector<OverloadCandidate>> m_overloadedOperations;
+    HashMap<String, Vector<OverloadCandidate>> m_overloadedOperations;
 };
 
 TypeChecker::TypeChecker(ShaderModule& shaderModule)
     : m_shaderModule(shaderModule)
+    , m_types(shaderModule.types())
 {
     introduceVariable(AST::Identifier::make("void"_s), m_types.voidType());
     introduceVariable(AST::Identifier::make("bool"_s), m_types.boolType());
     introduceVariable(AST::Identifier::make("i32"_s), m_types.i32Type());
     introduceVariable(AST::Identifier::make("u32"_s), m_types.u32Type());
     introduceVariable(AST::Identifier::make("f32"_s), m_types.f32Type());
+    introduceVariable(AST::Identifier::make("sampler"_s), m_types.samplerType());
 
-    // FIXME: Add all other overloads
-    // FIXME: we should make this a lot more convenient
-    // operator + [T<:Number](T, T) -> T
-    OverloadCandidate plus1;
-    {
-        TypeVariable T { 0, TypeVariable::Number };
-        plus1.typeVariables.append(T);
-        plus1.parameters.append(T);
-        plus1.parameters.append(T);
-        plus1.result = T;
-    }
-    // operator + [T<:Number, N](vector<T, N>, T) -> vector<T, N>
-    OverloadCandidate plus2;
-    {
-        TypeVariable T { 0, TypeVariable::Number };
-        NumericVariable N { 0 };
-        plus2.typeVariables.append(T);
-        plus2.numericVariables.append(N);
-        plus2.parameters.append(AbstractVector { T, N });
-        plus2.parameters.append(T);
-        plus2.result = AbstractVector { T, N };
-    }
-
-    m_overloadedOperations.add("+"_s, WTF::Vector<OverloadCandidate> ({
-        WTFMove(plus1),
-        WTFMove(plus2),
-    }));
+    // This file contains the declarations generated from `TypeDeclarations.rb`
+#include "TypeDeclarations.h" // NOLINT
 }
 
-void TypeChecker::check()
+std::optional<FailedCheck> TypeChecker::check()
 {
     // FIXME: fill in struct fields in a second pass since declarations might be
     // out of order
@@ -170,12 +150,20 @@ void TypeChecker::check()
         for (auto& error : m_errors)
             dataLogLn(error);
     }
+
+    if (m_errors.isEmpty())
+        return std::nullopt;
+
+
+    // FIXME: add support for warnings
+    Vector<Warning> warnings { };
+    return FailedCheck { WTFMove(m_errors), WTFMove(warnings) };
 }
 
 // Declarations
 void TypeChecker::visit(AST::Structure& structure)
 {
-    Type* structType = m_types.structType(structure.name());
+    Type* structType = m_types.structType(structure);
     introduceVariable(structure.name(), structType);
 }
 
@@ -211,17 +199,19 @@ void TypeChecker::visit(AST::Variable& variable)
 void TypeChecker::visit(AST::Function& function)
 {
     // FIXME: allocate and build function type fromp parameters and return type
+    if (function.maybeReturnType())
+        resolve(*function.maybeReturnType());
     Type* functionType = nullptr;
     introduceVariable(function.name(), functionType);
 }
 
 void TypeChecker::visitFunctionBody(AST::Function& function)
 {
-    ContextProvider::ContextScope functionContext(this);
+    ContextScope functionContext(this);
 
     for (auto& parameter : function.parameters()) {
         auto* parameterType = resolve(parameter.typeName());
-        ContextProvider::introduceVariable(parameter.name(), parameterType);
+        introduceVariable(parameter.name(), parameterType);
     }
 
     AST::Visitor::visit(function.body());
@@ -243,6 +233,12 @@ void TypeChecker::visit(AST::ReturnStatement& statement)
 
     // FIXME: unify type with the curent function's return type
     UNUSED_PARAM(type);
+}
+
+void TypeChecker::visit(AST::CompoundStatement& statement)
+{
+    ContextScope blockScope(this);
+    AST::Visitor::visit(statement);
 }
 
 // Expressions
@@ -309,14 +305,7 @@ void TypeChecker::visit(AST::IndexAccessExpression& access)
 
 void TypeChecker::visit(AST::BinaryExpression& binary)
 {
-    // FIXME: this needs to resolve overloads, not just unify both types
-    auto* leftType = infer(binary.leftExpression());
-    auto* rightType = infer(binary.rightExpression());
-    auto* result = chooseOverload(toString(binary.operation()), { leftType, rightType });
-    if (result)
-        inferred(result);
-    else
-        typeError(binary.span(), "no matching overload for operator ", toString(binary.operation()), " (", *leftType, ", ", *rightType, ")");
+    chooseOverload("operator", binary.span(), toString(binary.operation()), Vector<AST::Expression*> { &binary.leftExpression(), &binary.rightExpression() }, { });
 }
 
 void TypeChecker::visit(AST::IdentifierExpression& identifier)
@@ -332,9 +321,33 @@ void TypeChecker::visit(AST::IdentifierExpression& identifier)
 
 void TypeChecker::visit(AST::CallExpression& call)
 {
-    auto* target = resolve(call.target());
-    // FIXME: validate arguments
-    inferred(target);
+    auto& target = call.target();
+    bool isNamedType = is<AST::NamedTypeName>(target);
+    bool isParameterizedType = is<AST::ParameterizedTypeName>(target);
+    if (isNamedType || isParameterizedType) {
+        Vector<Type*> typeArguments;
+        String targetName = [&]() -> String {
+            if (isNamedType)
+                return downcast<AST::NamedTypeName>(target).name();
+            auto& parameterizedType = downcast<AST::ParameterizedTypeName>(target);
+            typeArguments.append(resolve(parameterizedType.elementType()));
+            return AST::ParameterizedTypeName::baseToString(parameterizedType.base());
+        }();
+        auto* result = chooseOverload("initializer", call.span(), targetName, call.arguments(), typeArguments);
+        if (result) {
+            target.m_resolvedType = result;
+            return;
+        }
+    }
+
+    // FIXME: add support for user-defined function calls
+    auto* result = resolve(target);
+    inferred(result);
+}
+
+void TypeChecker::visit(AST::UnaryExpression& unary)
+{
+    chooseOverload("operator", unary.span(), toString(unary.operation()), Vector<AST::Expression*> { &unary.expression() }, { });
 }
 
 // Literal Expressions
@@ -401,7 +414,7 @@ void TypeChecker::visit(AST::ArrayTypeName& array)
 
 void TypeChecker::visit(AST::NamedTypeName& namedType)
 {
-    auto* const* type = ContextProvider::readVariable(namedType.name());
+    auto* const* type = readVariable(namedType.name());
     if (type) {
         inferred(*type);
         return;
@@ -494,12 +507,55 @@ void TypeChecker::vectorFieldAccess(const Types::Vector& vector, AST::FieldAcces
     inferred(m_types.constructType(base, vector.element));
 }
 
-Type* TypeChecker::chooseOverload(const String& operation, const WTF::Vector<Type*>& arguments)
+template<typename CallArguments>
+Type* TypeChecker::chooseOverload(const char* kind, const SourceSpan& span, const String& target, CallArguments&& callArguments, const Vector<Type*>& typeArguments)
 {
-    auto it = m_overloadedOperations.find(operation);
+    auto it = m_overloadedOperations.find(target);
     if (it == m_overloadedOperations.end())
         return nullptr;
-    return resolveOverloads(m_types, it->value, arguments);
+
+    Vector<Type*> valueArguments;
+    valueArguments.reserveInitialCapacity(callArguments.size());
+    for (unsigned i = 0; i < callArguments.size(); ++i) {
+        auto* type = infer(*callArguments.Vector::at(i));
+        if (isBottom(type)) {
+            inferred(m_types.bottomType());
+            return m_types.bottomType();
+        }
+        valueArguments.append(type);
+    }
+
+    auto overload = resolveOverloads(m_types, it->value, valueArguments, typeArguments);
+    if (overload.has_value()) {
+        ASSERT(overload->parameters.size() == callArguments.size());
+        for (unsigned i = 0; i < callArguments.size(); ++i)
+            callArguments.Vector::at(i)->m_inferredType = overload->parameters[i];
+        inferred(overload->result);
+        return overload->result;
+    }
+
+    StringPrintStream valueArgumentsStream;
+    bool first = true;
+    for (auto* argument : valueArguments) {
+        if (!first)
+            valueArgumentsStream.print(", ");
+        first = false;
+        valueArgumentsStream.print(*argument);
+    }
+    StringPrintStream typeArgumentsStream;
+    first = true;
+    if (typeArguments.size()) {
+        typeArgumentsStream.print("<");
+        for (auto* typeArgument : typeArguments) {
+            if (!first)
+                typeArgumentsStream.print(", ");
+            first = false;
+            typeArgumentsStream.print(*typeArgument);
+        }
+        typeArgumentsStream.print(">");
+    }
+    typeError(span, "no matching overload for ", kind, " ", target, typeArgumentsStream.toString(), "(", valueArgumentsStream.toString(), ")");
+    return m_types.bottomType();
 }
 
 Type* TypeChecker::infer(AST::Expression& expression)
@@ -508,39 +564,35 @@ Type* TypeChecker::infer(AST::Expression& expression)
     AST::Visitor::visit(expression);
     ASSERT(m_inferredType);
 
-    auto* type = m_inferredType;
-
     if (shouldDumpInferredTypes) {
         dataLog("> Type inference [expression]: ");
         dumpNode(WTF::dataFile(), expression);
         dataLog(" : ");
-        dataLogLn(*type);
+        dataLogLn(*m_inferredType);
     }
 
-    // FIXME: store resolved type in the expression
+    expression.m_inferredType = m_inferredType;
+    Type* inferredType = m_inferredType;
     m_inferredType = nullptr;
 
-    return type;
+    return inferredType;
 }
 
 Type* TypeChecker::resolve(AST::TypeName& type)
 {
     ASSERT(!m_inferredType);
-    // FIXME: this should call the base class and TypeChecker::visit should assert
-    // that it is never called directly on types
     AST::Visitor::visit(type);
     ASSERT(m_inferredType);
-
-    auto* inferredType = m_inferredType;
 
     if (shouldDumpInferredTypes) {
         dataLog("> Type inference [type]: ");
         dumpNode(WTF::dataFile(), type);
         dataLog(" : ");
-        dataLogLn(*inferredType);
+        dataLogLn(*m_inferredType);
     }
 
-    // FIXME: store resolved type in the AST type
+    type.m_resolvedType = m_inferredType;
+    Type* inferredType = m_inferredType;
     m_inferredType = nullptr;
 
     return inferredType;
@@ -566,7 +618,7 @@ bool TypeChecker::unify(Type* lhs, Type* rhs)
     if (isBottom(lhs) || isBottom(rhs))
         return true;
 
-    return false;
+    return !!conversionRank(rhs, lhs);
 }
 
 bool TypeChecker::isBottom(Type* type) const
@@ -588,9 +640,9 @@ void TypeChecker::typeError(InferBottom inferBottom, const SourceSpan& span, Arg
         inferred(m_types.bottomType());
 }
 
-void typeCheck(ShaderModule& shaderModule)
+std::optional<FailedCheck> typeCheck(ShaderModule& shaderModule)
 {
-    TypeChecker(shaderModule).check();
+    return TypeChecker(shaderModule).check();
 }
 
 } // namespace WGSL

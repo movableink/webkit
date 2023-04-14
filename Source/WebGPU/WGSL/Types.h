@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include "ASTForward.h"
 #include <wtf/HashMap.h>
+#include <wtf/Markable.h>
 #include <wtf/PrintStream.h>
 #include <wtf/text/WTFString.h>
 
@@ -43,6 +45,7 @@ namespace Types {
     f(F32, "f32") \
     f(Void, "void") \
     f(Bool, "bool") \
+    f(Sampler, "sampler") \
 
 struct Primitive {
     enum Kind : uint8_t {
@@ -51,6 +54,25 @@ struct Primitive {
 #undef PRIMITIVE_KIND
     };
 
+    Kind kind;
+};
+
+struct Texture {
+    enum class Kind : uint8_t {
+        Texture1d = 1,
+        Texture2d,
+        Texture2dArray,
+        Texture3d,
+        TextureCube,
+        TextureCubeArray,
+        TextureMultisampled2d,
+        TextureStorage1d,
+        TextureStorage2d,
+        TextureStorage2dArray,
+        TextureStorage3d,
+    };
+
+    Type* element;
     Kind kind;
 };
 
@@ -67,11 +89,12 @@ struct Matrix {
 
 struct Array {
     Type* element;
+
     std::optional<unsigned> size;
 };
 
 struct Struct {
-    String name;
+    AST::Structure& structure;
     HashMap<String, Type*> fields { };
 };
 
@@ -90,7 +113,8 @@ struct Type : public std::variant<
     Types::Array,
     Types::Struct,
     Types::Function,
-    Types::Bottom
+    Types::Bottom,
+    Types::Texture
 > {
     using std::variant<
         Types::Primitive,
@@ -99,11 +123,15 @@ struct Type : public std::variant<
         Types::Array,
         Types::Struct,
         Types::Function,
-        Types::Bottom
+        Types::Bottom,
+        Types::Texture
         >::variant;
     void dump(PrintStream&) const;
     String toString() const;
 };
+
+using ConversionRank = Markable<unsigned, IntegralMarkableTraits<unsigned, std::numeric_limits<unsigned>::max()>>;
+ConversionRank conversionRank(Type* from, Type* to);
 
 } // namespace WGSL
 

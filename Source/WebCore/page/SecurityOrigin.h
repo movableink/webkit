@@ -82,10 +82,10 @@ public:
     void setDomainFromDOM(const String& newDomain);
     bool domainWasSetInDOM() const { return m_domainWasSetInDOM; }
 
-    const String& protocol() const { return m_data.protocol; }
-    const String& host() const { return m_data.host; }
+    const String& protocol() const { return m_data.protocol(); }
+    const String& host() const { return m_data.host(); }
     const String& domain() const { return m_domain; }
-    std::optional<uint16_t> port() const { return m_data.port; }
+    std::optional<uint16_t> port() const { return m_data.port(); }
 
     static bool shouldIgnoreHost(const URL&);
 
@@ -138,7 +138,7 @@ public:
     // Explicitly grant the ability to access very other SecurityOrigin.
     //
     // WARNING: This is an extremely powerful ability. Use with caution!
-    void grantUniversalAccess();
+    WEBCORE_EXPORT void grantUniversalAccess();
     bool hasUniversalAccess() const { return m_universalAccess; }
 
     void grantStorageAccessFromFileURLsQuirk();
@@ -214,9 +214,6 @@ public:
 
     const SecurityOriginData& data() const { return m_data; }
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static RefPtr<SecurityOrigin> decode(Decoder&);
-
 private:
     friend struct IPC::ArgumentCoder<SecurityOrigin, void>;
     WEBCORE_EXPORT SecurityOrigin();
@@ -230,7 +227,7 @@ private:
 
     // This method checks that the scheme for this origin is an HTTP-family
     // scheme, e.g. HTTP and HTTPS.
-    bool isHTTPFamily() const { return m_data.protocol == "http"_s || m_data.protocol == "https"_s; }
+    bool isHTTPFamily() const { return m_data.protocol() == "http"_s || m_data.protocol() == "https"_s; }
     
     enum ShouldAllowFromThirdParty { AlwaysAllowFromThirdParty, MaybeAllowFromThirdParty };
     WEBCORE_EXPORT bool canAccessStorage(const SecurityOrigin*, ShouldAllowFromThirdParty = MaybeAllowFromThirdParty) const;

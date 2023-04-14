@@ -106,9 +106,16 @@ void RenderGrid::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
         }
     }
 
+    auto subgridChanged = subgridDidChange(*oldStyle);
     if (explicitGridDidResize(*oldStyle) || namedGridLinesDefinitionDidChange(*oldStyle) || implicitGridLinesDefinitionDidChange(*oldStyle) || oldStyle->gridAutoFlow() != style().gridAutoFlow()
-        || (style().gridAutoRepeatColumns().size() || style().gridAutoRepeatRows().size()))
-        dirtyGrid();
+        || (style().gridAutoRepeatColumns().size() || style().gridAutoRepeatRows().size()) || subgridChanged)
+        dirtyGrid(subgridChanged);
+}
+
+bool RenderGrid::subgridDidChange(const RenderStyle& oldStyle) const
+{
+    return oldStyle.gridSubgridRows() != style().gridSubgridRows()
+        || oldStyle.gridSubgridColumns() != style().gridSubgridColumns();
 }
 
 bool RenderGrid::explicitGridDidResize(const RenderStyle& oldStyle) const
@@ -670,9 +677,14 @@ void RenderGrid::computeTrackSizesForIndefiniteSize(GridTrackSizingAlgorithm& al
     ASSERT(algorithm.tracksAreWiderThanMinTrackBreadth());
 }
 
+bool RenderGrid::shouldCheckExplicitIntrinsicInnerLogicalSize(GridTrackSizingDirection direction) const
+{
+    return direction == ForColumns ? shouldApplySizeOrInlineSizeContainment() : shouldApplySizeContainment();
+}
+
 std::optional<LayoutUnit> RenderGrid::explicitIntrinsicInnerLogicalSize(GridTrackSizingDirection direction) const
 {
-    if (!shouldApplySizeContainment())
+    if (!shouldCheckExplicitIntrinsicInnerLogicalSize(direction))
         return std::nullopt;
     if (direction == ForColumns)
         return explicitIntrinsicInnerLogicalWidth();
@@ -791,7 +803,7 @@ std::unique_ptr<OrderedTrackIndexSet> RenderGrid::computeEmptyTracksForAutoRepea
     unsigned firstAutoRepeatTrack = insertionPoint + currentGrid().explicitGridStart(direction);
     unsigned lastAutoRepeatTrack = firstAutoRepeatTrack + currentGrid().autoRepeatTracks(direction);
 
-    if (!currentGrid().hasGridItems() || shouldApplyInlineSizeContainment() || (shouldApplySizeContainment() && !explicitIntrinsicInnerLogicalSize(direction))) {
+    if (!currentGrid().hasGridItems() || (shouldCheckExplicitIntrinsicInnerLogicalSize(direction) && !explicitIntrinsicInnerLogicalSize(direction))) {
         emptyTrackIndexes = makeUnique<OrderedTrackIndexSet>();
         for (unsigned trackIndex = firstAutoRepeatTrack; trackIndex < lastAutoRepeatTrack; ++trackIndex)
             emptyTrackIndexes->add(trackIndex);
@@ -1190,12 +1202,20 @@ GridTrackSizingDirection RenderGrid::autoPlacementMinorAxisDirection() const
     return (autoPlacementMajorAxisDirection() == ForColumns) ? ForRows : ForColumns;
 }
 
-void RenderGrid::dirtyGrid()
+void RenderGrid::dirtyGrid(bool subgridChanged)
 {
     if (currentGrid().needsItemsPlacement())
         return;
 
     currentGrid().setNeedsItemsPlacement(true);
+
+    auto currentChild = this;
+    while (currentChild && (subgridChanged || currentChild->isSubgridRows() || currentChild->isSubgridColumns())) {
+        currentChild = dynamicDowncast<RenderGrid>(currentChild->parent());
+        if (currentChild)
+            currentChild->currentGrid().setNeedsItemsPlacement(true);
+        subgridChanged = false;
+    }
 }
 
 Vector<LayoutUnit> RenderGrid::trackSizesForComputedStyle(GridTrackSizingDirection direction) const
@@ -1676,10 +1696,10 @@ void RenderGrid::updateAutoMarginsInColumnAxisIfNeeded(RenderBox& child)
     }
 }
 
-bool RenderGrid::shouldTrimChildMargin(MarginTrimType marginTrimType, const RenderBox& child) const
+bool RenderGrid::isChildEligibleForMarginTrim(MarginTrimType marginTrimType, const RenderBox& child) const
 {
-    if (!style().marginTrim().contains(marginTrimType))
-        return false;
+    ASSERT(style().marginTrim().contains(marginTrimType));
+
     auto isTrimmingBlockDirection = marginTrimType == MarginTrimType::BlockStart || marginTrimType == MarginTrimType::BlockEnd;
     auto itemGridSpan = isTrimmingBlockDirection ? currentGrid().gridItemSpanIgnoringCollapsedTracks(child, ForRows) : currentGrid().gridItemSpanIgnoringCollapsedTracks(child, ForColumns);
     switch (marginTrimType) {

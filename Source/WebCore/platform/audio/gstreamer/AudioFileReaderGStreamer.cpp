@@ -92,7 +92,7 @@ private:
     bool m_errorOccurred { false };
 };
 
-#if PLATFORM(BCM_NEXUS)
+#if PLATFORM(BCM_NEXUS) || PLATFORM(BROADCOM) || PLATFORM(REALTEK)
 int decodebinAutoplugSelectCallback(GstElement*, GstPad*, GstCaps*, GstElementFactory* factory, gpointer)
 {
     static int GST_AUTOPLUG_SELECT_SKIP;
@@ -107,7 +107,28 @@ int decodebinAutoplugSelectCallback(GstElement*, GstPad*, GstCaps*, GstElementFa
         g_type_class_unref(enumClass);
     });
 
-    return !g_strcmp0(gst_plugin_feature_get_name(GST_PLUGIN_FEATURE(factory)), "brcmaudfilter") ? GST_AUTOPLUG_SELECT_SKIP : GST_AUTOPLUG_SELECT_TRY;
+    const Vector<String> pluginsToSkip = {
+#if PLATFORM(BCM_NEXUS) || PLATFORM(BROADCOM)
+        "brcmaudfilter"_s,
+#endif
+#if PLATFORM(REALTEK)
+        "omxaacdec"_s,
+        "omxac3dec"_s,
+        "omxac4dec"_s,
+        "omxeac3dec"_s,
+        "omxflacdec"_s,
+        "omxlpcmdec"_s,
+        "omxmp3dec"_s,
+        "omxopusdec"_s,
+        "omxvorbisdec"_s,
+#endif
+    };
+    auto factoryName = StringView::fromLatin1(gst_plugin_feature_get_name(GST_PLUGIN_FEATURE(factory)));
+    for (const auto& pluginToSkip : pluginsToSkip) {
+        if (pluginToSkip == factoryName)
+            return GST_AUTOPLUG_SELECT_SKIP;
+    }
+    return GST_AUTOPLUG_SELECT_TRY;
 }
 #endif
 
@@ -159,7 +180,7 @@ AudioFileReader::~AudioFileReader()
 
     if (m_decodebin) {
         g_signal_handlers_disconnect_matched(m_decodebin.get(), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
-#if PLATFORM(BCM_NEXUS)
+#if PLATFORM(BCM_NEXUS) || PLATFORM(BROADCOM) || PLATFORM(REALTEK)
         g_signal_handlers_disconnect_matched(m_decodebin.get(), G_SIGNAL_MATCH_FUNC, 0, 0, nullptr, reinterpret_cast<gpointer>(decodebinAutoplugSelectCallback), nullptr);
 #endif
         m_decodebin = nullptr;
@@ -412,7 +433,7 @@ void AudioFileReader::decodeAudioForBusCreation()
     g_object_set(source, "stream", memoryStream.get(), nullptr);
 
     m_decodebin = makeGStreamerElement("decodebin", "decodebin");
-#if PLATFORM(BCM_NEXUS)
+#if PLATFORM(BCM_NEXUS) || PLATFORM(BROADCOM) || PLATFORM(REALTEK)
     g_signal_connect(m_decodebin.get(), "autoplug-select", G_CALLBACK(decodebinAutoplugSelectCallback), nullptr);
 #endif
     g_signal_connect_swapped(m_decodebin.get(), "pad-added", G_CALLBACK(decodebinPadAddedCallback), this);

@@ -26,7 +26,9 @@
 #include "config.h"
 #include "NetworkResourceLoader.h"
 
+#include "EarlyHintsResourceLoader.h"
 #include "FormDataReference.h"
+#include "LoadedWebArchive.h"
 #include "Logging.h"
 #include "NetworkCache.h"
 #include "NetworkCacheSpeculativeLoadManager.h"
@@ -59,6 +61,7 @@
 #include <WebCore/CrossOriginEmbedderPolicy.h>
 #include <WebCore/DiagnosticLoggingKeys.h>
 #include <WebCore/HTTPParsers.h>
+#include <WebCore/LinkHeader.h>
 #include <WebCore/NetworkLoadMetrics.h>
 #include <WebCore/NetworkStorageSession.h>
 #include <WebCore/RegistrableDomain.h>
@@ -192,14 +195,13 @@ bool NetworkResourceLoader::isSynchronous() const
 
 void NetworkResourceLoader::start()
 {
-    ASSERT(RunLoop::isMain());
-    LOADER_RELEASE_LOG("start: hasNetworkLoadChecker=%d", !!m_networkLoadChecker);
+    startRequest(originalRequest());
+}
 
-    auto newRequest = ResourceRequest { originalRequest() };
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
-    if (!startContentFiltering(newRequest))
-        return;
-#endif
+void NetworkResourceLoader::startRequest(const ResourceRequest& newRequest)
+{
+    ASSERT(RunLoop::isMain());
+    LOADER_RELEASE_LOG("startRequest: hasNetworkLoadChecker=%d", !!m_networkLoadChecker);
 
     m_networkActivityTracker = m_connection->startTrackingResourceLoad(m_parameters.webPageID, m_parameters.identifier, isMainFrameLoad());
 
@@ -661,11 +663,11 @@ bool NetworkResourceLoader::shouldInterruptLoadForCSPFrameAncestorsOrXFrameOptio
     if (!contentSecurityPolicy.allowFrameAncestors(m_parameters.frameAncestorOrigins, url))
         return true;
 
-    if (shouldInterruptNavigationForCrossOriginEmbedderPolicy(m_response))
+    if (shouldInterruptNavigationForCrossOriginEmbedderPolicy(response))
         return true;
 
     if (!contentSecurityPolicy.overridesXFrameOptions()) {
-        String xFrameOptions = m_response.httpHeaderField(HTTPHeaderName::XFrameOptions);
+        String xFrameOptions = response.httpHeaderField(HTTPHeaderName::XFrameOptions);
         if (!xFrameOptions.isNull() && shouldInterruptLoadForXFrameOptions(xFrameOptions, response.url())) {
             String errorMessage = makeString("Refused to display '", response.url().stringCenterEllipsizedToLength(), "' in a frame because it set 'X-Frame-Options' to '", xFrameOptions, "'.");
             send(Messages::WebPage::AddConsoleMessage { m_parameters.webFrameID,  MessageSource::Security, MessageLevel::Error, errorMessage, coreIdentifier() }, m_parameters.webPageID);
@@ -807,6 +809,16 @@ static BrowsingContextGroupSwitchDecision toBrowsingContextGroupSwitchDecision(c
     if (currentCoopEnforcementResult->crossOriginOpenerPolicy.value == CrossOriginOpenerPolicyValue::SameOriginPlusCOEP)
         return BrowsingContextGroupSwitchDecision::NewIsolatedGroup;
     return BrowsingContextGroupSwitchDecision::NewSharedGroup;
+}
+
+void NetworkResourceLoader::didReceiveInformationalResponse(ResourceResponse&& response)
+{
+    if (response.httpStatusCode() != 103)
+        return;
+
+    if (!m_earlyHintsResourceLoader)
+        m_earlyHintsResourceLoader = WTF::makeUnique<EarlyHintsResourceLoader>(*this);
+    m_earlyHintsResourceLoader->handleEarlyHintsResponse(WTFMove(response));
 }
 
 void NetworkResourceLoader::didReceiveResponse(ResourceResponse&& receivedResponse, PrivateRelayed privateRelayed, ResponseCompletionHandler&& completionHandler)
@@ -1156,14 +1168,12 @@ void NetworkResourceLoader::willSendRedirectedRequestInternal(ResourceRequest&& 
 #endif
 
     std::optional<WebCore::PCM::AttributionTriggerData> privateClickMeasurementAttributionTriggerData;
-    if (!sessionID().isEphemeral()) {
-        if (auto result = WebCore::PrivateClickMeasurement::parseAttributionRequest(redirectRequest.url())) {
-            privateClickMeasurementAttributionTriggerData = result.value();
-            if (privateClickMeasurementAttributionTriggerData)
-                privateClickMeasurementAttributionTriggerData->destinationSite = WebCore::RegistrableDomain { request.firstPartyForCookies() };
-        } else if (!result.error().isEmpty())
-            addConsoleMessage(MessageSource::PrivateClickMeasurement, MessageLevel::Error, result.error());
-    }
+    if (auto result = WebCore::PrivateClickMeasurement::parseAttributionRequest(redirectRequest.url())) {
+        privateClickMeasurementAttributionTriggerData = result.value();
+        if (privateClickMeasurementAttributionTriggerData)
+            privateClickMeasurementAttributionTriggerData->destinationSite = WebCore::RegistrableDomain { request.firstPartyForCookies() };
+    } else if (!result.error().isEmpty())
+        addConsoleMessage(MessageSource::PrivateClickMeasurement, MessageLevel::Error, result.error());
 
     if (isFromServiceWorker == IsFromServiceWorker::No) {
         auto maxAgeCap = validateCacheEntryForMaxAgeCapValidation(request, redirectRequest, redirectResponse);
@@ -1720,14 +1730,14 @@ static String escapeForJSON(const String& s)
     return makeStringByReplacingAll(makeStringByReplacingAll(s, '\\', "\\\\"_s), '"', "\\\""_s);
 }
 
-template<typename IdentifierType>
-static String escapeIDForJSON(const std::optional<ObjectIdentifier<IdentifierType>>& value)
+template<typename IdentifierType, typename ThreadSafety>
+static String escapeIDForJSON(const std::optional<ObjectIdentifierGeneric<IdentifierType, ThreadSafety>>& value)
 {
     return value ? String::number(value->toUInt64()) : String("None"_s);
 }
 
-template<typename IdentifierType>
-static String escapeIDForJSON(const std::optional<ProcessQualified<ObjectIdentifier<IdentifierType>>>& value)
+template<typename IdentifierType, typename ThreadSafety>
+static String escapeIDForJSON(const std::optional<ProcessQualified<ObjectIdentifierGeneric<IdentifierType, ThreadSafety>>>& value)
 {
     return value ? String::number(value->object().toUInt64()) : String("None"_s);
 }
@@ -1899,26 +1909,44 @@ void NetworkResourceLoader::setWorkerStart(MonotonicTime value)
 void NetworkResourceLoader::startWithServiceWorker()
 {
     LOADER_RELEASE_LOG("startWithServiceWorker:");
+
+    auto newRequest = ResourceRequest { originalRequest() };
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    if (!startContentFiltering(newRequest))
+        return;
+#endif
+
     ASSERT(!m_serviceWorkerFetchTask);
-    m_serviceWorkerFetchTask = m_connection->createFetchTask(*this, originalRequest());
+    m_serviceWorkerFetchTask = m_connection->createFetchTask(*this, newRequest);
     if (m_serviceWorkerFetchTask) {
         LOADER_RELEASE_LOG("startWithServiceWorker: Created a ServiceWorkerFetchTask (fetchIdentifier=%" PRIu64 ")", m_serviceWorkerFetchTask->fetchIdentifier().toUInt64());
         return;
     }
 
-    serviceWorkerDidNotHandle(nullptr);
+    if (abortIfServiceWorkersOnly())
+        return;
+
+    startRequest(newRequest);
+}
+
+bool NetworkResourceLoader::abortIfServiceWorkersOnly()
+{
+    if (m_parameters.serviceWorkersMode != ServiceWorkersMode::Only)
+        return false;
+
+    LOADER_RELEASE_LOG_ERROR("abortIfServiceWorkersOnly: Aborting load because the service worker did not handle the load and serviceWorkerMode only allows service workers");
+    send(Messages::WebResourceLoader::ServiceWorkerDidNotHandle { }, coreIdentifier());
+    abort();
+    return true;
 }
 
 void NetworkResourceLoader::serviceWorkerDidNotHandle(ServiceWorkerFetchTask* fetchTask)
 {
     LOADER_RELEASE_LOG("serviceWorkerDidNotHandle: (fetchIdentifier=%" PRIu64 ")", fetchTask ? fetchTask->fetchIdentifier().toUInt64() : 0);
     RELEASE_ASSERT(m_serviceWorkerFetchTask.get() == fetchTask);
-    if (m_parameters.serviceWorkersMode == ServiceWorkersMode::Only) {
-        LOADER_RELEASE_LOG_ERROR("serviceWorkerDidNotHandle: Aborting load because the service worker did not handle the load and serviceWorkerMode only allows service workers");
-        send(Messages::WebResourceLoader::ServiceWorkerDidNotHandle { }, coreIdentifier());
-        abort();
+
+    if (abortIfServiceWorkersOnly())
         return;
-    }
 
     if (m_serviceWorkerFetchTask) {
         auto newRequest = m_serviceWorkerFetchTask->takeRequest();
@@ -1926,6 +1954,10 @@ void NetworkResourceLoader::serviceWorkerDidNotHandle(ServiceWorkerFetchTask* fe
 
         if (m_networkLoad)
             m_networkLoad->updateRequestAfterRedirection(newRequest);
+
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+        m_contentFilter = nullptr;
+#endif
 
         LOADER_RELEASE_LOG("serviceWorkerDidNotHandle: Restarting network load for redirect");
         restartNetworkLoad(WTFMove(newRequest));
@@ -1973,6 +2005,27 @@ void NetworkResourceLoader::sendReportToEndpoints(const URL& baseURL, const Vect
 }
 
 #if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+bool NetworkResourceLoader::continueAfterServiceWorkerReceivedData(const WebCore::SharedBuffer& buffer, uint64_t encodedDataLength)
+{
+    if (!m_contentFilter)
+        return true;
+    return m_contentFilter->continueAfterDataReceived(buffer, encodedDataLength);
+}
+
+bool NetworkResourceLoader::continueAfterServiceWorkerReceivedResponse(const ResourceResponse& response)
+{
+    if (!m_contentFilter)
+        return true;
+    return m_contentFilter->continueAfterResponseReceived(response);
+}
+
+void NetworkResourceLoader::serviceWorkerDidFinish()
+{
+    if (!m_contentFilter)
+        return;
+    m_contentFilter->stopFilteringMainResource();
+}
+
 void NetworkResourceLoader::dataReceivedThroughContentFilter(const SharedBuffer& buffer, size_t encodedDataLength)
 {
     send(Messages::WebResourceLoader::DidReceiveData(IPC::SharedBufferReference(buffer), encodedDataLength));

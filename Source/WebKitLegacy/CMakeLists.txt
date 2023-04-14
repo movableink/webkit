@@ -41,16 +41,6 @@ set(WebKitLegacy_INTERFACE_DEPENDENCIES WebKitLegacy_CopyHeaders)
 WEBKIT_FRAMEWORK_DECLARE(WebKitLegacy)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
-if (MSVC)
-    if (NOT ${PORT} STREQUAL "Qt")
-        target_precompile_headers(WebKitLegacy PRIVATE win/WebKitPrefix.h)
-        list(APPEND WebKitLegacy_SOURCES win/WebKit.resources/WebKit.rc)
-        add_definitions(/DWEBKIT_EXPORTS /DFRAMEWORK_NAME=WebKitLegacy)
-    else ()
-        target_precompile_headers(WebKitLegacy PRIVATE qt/WebKitPrefix.h)
-    endif ()
-endif ()
-
 set(WebKit_PRIVATE_HEADERS_LOCATION Headers/${PROJECT_VERSION}/QtWebKit/private)
 
 WEBKIT_FRAMEWORK(WebKitLegacy)

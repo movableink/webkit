@@ -359,9 +359,8 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
     }
 
-    case EnumeratorNextExtractMode:
-    case EnumeratorNextExtractIndex: {
-        def(PureValue(node));
+    case ExtractFromTuple: {
+        def(PureValue(node, node->extractOffset()));
         return;
     }
 
@@ -588,7 +587,6 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case CreateDirectArguments:
     case CreateScopedArguments:
     case CreateClonedArguments:
-    case CreateArgumentsButterfly:
         read(Stack);
         read(HeapObjectCount);
         write(HeapObjectCount);
@@ -1860,6 +1858,11 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         write(HeapObjectCount);
         return;
 
+    case NewBoundFunction:
+        read(HeapObjectCount);
+        write(HeapObjectCount);
+        return;
+
     case RegExpExec:
     case RegExpTest:
     case RegExpTestInline:
@@ -1962,6 +1965,10 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
 
     case FunctionToString:
         def(PureValue(node));
+        return;
+
+    case FunctionBind:
+        clobberTop(); // Slow path can clobber top.
         return;
         
     case CountExecution:

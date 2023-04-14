@@ -27,9 +27,8 @@
 #include "CSSPropertyNames.h"
 #include "DOMWrapperWorld.h"
 #include "Document.h"
-#include "ElementIterator.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "Event.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "HTMLBodyElement.h"
@@ -38,6 +37,7 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "Length.h"
+#include "LocalFrame.h"
 #include "MouseEvent.h"
 #include "RenderFrameSet.h"
 #include "Text.h"
@@ -50,7 +50,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFrameSetElement);
 using namespace HTMLNames;
 
 HTMLFrameSetElement::HTMLFrameSetElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement(tagName, document)
+    : HTMLElement(tagName, document, CreateHTMLFrameSetElement)
     , m_totalRows(1)
     , m_totalCols(1)
     , m_border(6)
@@ -61,7 +61,6 @@ HTMLFrameSetElement::HTMLFrameSetElement(const QualifiedName& tagName, Document&
     , m_noresize(false)
 {
     ASSERT(hasTagName(framesetTag));
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<HTMLFrameSetElement> HTMLFrameSetElement::create(const QualifiedName& tagName, Document& document)
@@ -156,11 +155,10 @@ void HTMLFrameSetElement::parseAttribute(const QualifiedName& name, const AtomSt
     HTMLElement::parseAttribute(name, value);
 }
 
-bool HTMLFrameSetElement::rendererIsNeeded(const RenderStyle& style)
+bool HTMLFrameSetElement::rendererIsNeeded(const RenderStyle&)
 {
     // For compatibility, frames render even when display: none is set.
-    // However, we delay creating a renderer until stylesheets have loaded. 
-    return !style.isNotFinal();
+    return true;
 }
 
 RenderPtr<RenderElement> HTMLFrameSetElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)

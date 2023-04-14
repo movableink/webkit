@@ -381,7 +381,7 @@ bool Font::supportsAllPetiteCaps() const
 }
 #endif
 
-static RefPtr<Font> createDerivativeFont(CTFontRef font, float size, FontOrientation orientation, CTFontSymbolicTraits fontTraits, bool syntheticBold, bool syntheticItalic, FontWidthVariant fontWidthVariant, TextRenderingMode textRenderingMode, const FontPlatformData::CreationData* creationData)
+static RefPtr<Font> createDerivativeFont(CTFontRef font, float size, FontOrientation orientation, CTFontSymbolicTraits fontTraits, bool syntheticBold, bool syntheticItalic, FontWidthVariant fontWidthVariant, TextRenderingMode textRenderingMode, const FontCustomPlatformData* customPlatformData)
 {
     if (!font)
         return nullptr;
@@ -395,7 +395,7 @@ static RefPtr<Font> createDerivativeFont(CTFontRef font, float size, FontOrienta
 
     bool usedSyntheticBold = (fontTraits & kCTFontBoldTrait) && !(scaledFontTraits & kCTFontTraitBold);
     bool usedSyntheticOblique = (fontTraits & kCTFontItalicTrait) && !(scaledFontTraits & kCTFontTraitItalic);
-    FontPlatformData scaledFontData(font, size, usedSyntheticBold, usedSyntheticOblique, orientation, fontWidthVariant, textRenderingMode, creationData);
+    FontPlatformData scaledFontData(font, size, usedSyntheticBold, usedSyntheticOblique, orientation, fontWidthVariant, textRenderingMode, customPlatformData);
 
     return Font::create(scaledFontData);
 }
@@ -535,7 +535,7 @@ RefPtr<Font> Font::createFontWithoutSynthesizableFeatures() const
     float size = m_platformData.size();
     CTFontSymbolicTraits fontTraits = CTFontGetSymbolicTraits(m_platformData.font());
     RetainPtr<CTFontRef> ctFont = createCTFontWithoutSynthesizableFeatures(m_platformData.font());
-    return createDerivativeFont(ctFont.get(), size, m_platformData.orientation(), fontTraits, m_platformData.syntheticBold(), m_platformData.syntheticOblique(), m_platformData.widthVariant(), m_platformData.textRenderingMode(), m_platformData.creationData());
+    return createDerivativeFont(ctFont.get(), size, m_platformData.orientation(), fontTraits, m_platformData.syntheticBold(), m_platformData.syntheticOblique(), m_platformData.widthVariant(), m_platformData.textRenderingMode(), m_platformData.customPlatformData());
 }
 
 RefPtr<Font> Font::platformCreateScaledFont(const FontDescription&, float scaleFactor) const
@@ -545,7 +545,7 @@ RefPtr<Font> Font::platformCreateScaledFont(const FontDescription&, float scaleF
     RetainPtr<CTFontDescriptorRef> fontDescriptor = adoptCF(CTFontCopyFontDescriptor(m_platformData.font()));
     RetainPtr<CTFontRef> scaledFont = adoptCF(CTFontCreateWithFontDescriptor(fontDescriptor.get(), size, nullptr));
 
-    return createDerivativeFont(scaledFont.get(), size, m_platformData.orientation(), fontTraits, m_platformData.syntheticBold(), m_platformData.syntheticOblique(), m_platformData.widthVariant(), m_platformData.textRenderingMode(), m_platformData.creationData());
+    return createDerivativeFont(scaledFont.get(), size, m_platformData.orientation(), fontTraits, m_platformData.syntheticBold(), m_platformData.syntheticOblique(), m_platformData.widthVariant(), m_platformData.textRenderingMode(), m_platformData.customPlatformData());
 }
 
 float Font::platformWidthForGlyph(Glyph glyph) const
@@ -555,15 +555,7 @@ float Font::platformWidthForGlyph(Glyph glyph) const
     if (platformData().size()) {
         bool horizontal = platformData().orientation() == FontOrientation::Horizontal;
         CTFontOrientation orientation = horizontal || m_isBrokenIdeographFallback ? kCTFontOrientationHorizontal : kCTFontOrientationVertical;
-#if USE(CTFONTGETADVANCES_WORKAROUND)
-        CGFontRenderingStyle style = kCGFontRenderingStyleAntialiasing | kCGFontRenderingStyleSubpixelPositioning | kCGFontRenderingStyleSubpixelQuantization | kCGFontAntialiasingStyleUnfiltered;
-        if (!CTFontIsAppleColorEmoji(m_platformData.ctFont()) && !m_platformData.hasVariations())
-            CTFontGetUnsummedAdvancesForGlyphsAndStyle(m_platformData.ctFont(), orientation, style, &glyph, &advance, 1);
-        else
-#endif
-        {
-            CTFontGetAdvancesForGlyphs(m_platformData.ctFont(), orientation, &glyph, &advance, 1);
-        }
+        CTFontGetAdvancesForGlyphs(m_platformData.ctFont(), orientation, &glyph, &advance, 1);
     }
     return advance.width;
 }
@@ -572,7 +564,6 @@ GlyphBufferAdvance Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned begi
 {
     UNUSED_PARAM(requiresShaping);
 
-#if USE(CTFONTSHAPEGLYPHS)
     auto handler = ^(CFRange range, CGGlyph** newGlyphsPointer, CGSize** newAdvancesPointer, CGPoint** newOffsetsPointer, CFIndex** newIndicesPointer)
     {
         range.location = std::min(std::max(range.location, static_cast<CFIndex>(0)), static_cast<CFIndex>(glyphBuffer.size()));
@@ -606,6 +597,7 @@ GlyphBufferAdvance Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned begi
 
     LOG_WITH_STREAM(TextShaping,
         stream << "Simple shaping " << numberOfInputGlyphs << " glyphs in font " << String(adoptCF(CTFontCopyPostScriptName(m_platformData.ctFont())).get()) << ".\n";
+        stream << "Font attributes: " << String(adoptCF(CFCopyDescription(adoptCF(CTFontDescriptorCopyAttributes(adoptCF(CTFontCopyFontDescriptor(m_platformData.ctFont())).get())).get())).get()) << "\n";
         const auto* glyphs = glyphBuffer.glyphs(beginningGlyphIndex);
         stream << "Glyphs:";
         for (unsigned i = 0; i < numberOfInputGlyphs; ++i)
@@ -679,31 +671,6 @@ GlyphBufferAdvance Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned begi
 
     for (unsigned i = 0; i < glyphBuffer.size() - beginningGlyphIndex; ++i)
         glyphBuffer.offsetsInString(beginningGlyphIndex)[i] += beginningStringIndex;
-
-#else
-
-    UNUSED_PARAM(beginningStringIndex);
-    UNUSED_PARAM(locale);
-    UNUSED_PARAM(text);
-
-    // CTFontTransformGlyphs() operates in visual order, but WidthIterator iterates in logical order.
-    // Temporarily put us in visual order just for the call, then put us back into logical order when
-    // the call is done.
-    // We don't have a global view of the entire GlyphBuffer; we're just operating on a single chunk of it.
-    // WidthIterator encounters the chunks out in logical order, so we have to maintain that invariant.
-    // Eventually, FontCascade::layoutSimpleText() will reverse the whole buffer to put the entire thing
-    // in visual order, but that's okay because it has a view of the entire GlyphBuffer.
-    // On the other hand, CTFontShapeGlyphs() accepts the buffer in logical order but returns it in physical
-    // order, which means the second reverse() in this function still needs to execute when
-    // CTFontShapeGlyphs() is being used.
-    if (textDirection == TextDirection::RTL)
-        glyphBuffer.reverse(beginningGlyphIndex, glyphBuffer.size() - beginningGlyphIndex);
-
-    CTFontTransformOptions options = (enableKerning ? kCTFontTransformApplyPositioning : 0) | kCTFontTransformApplyShaping;
-    CTFontTransformGlyphs(m_platformData.ctFont(), glyphBuffer.glyphs(beginningGlyphIndex), reinterpret_cast<CGSize*>(glyphBuffer.advances(beginningGlyphIndex)), glyphBuffer.size() - beginningGlyphIndex, options);
-
-    auto initialAdvance = makeGlyphBufferAdvance();
-#endif
 
     // See the comment above in this function where the other call to reverse() is.
     if (textDirection == TextDirection::RTL)
@@ -790,16 +757,14 @@ bool Font::platformSupportsCodePoint(UChar32 character, std::optional<UChar32> v
 static bool hasGlyphsForCharacterRange(CTFontRef font, UniChar firstCharacter, UniChar lastCharacter, bool expectValidGlyphsForAllCharacters)
 {
     const unsigned numberOfCharacters = lastCharacter - firstCharacter + 1;
-    Vector<CGGlyph> glyphs;
-    glyphs.fill(0, numberOfCharacters);
+    Vector<CGGlyph> glyphs(numberOfCharacters, 0);
     CTFontGetGlyphsForCharacterRange(font, glyphs.begin(), CFRangeMake(firstCharacter, numberOfCharacters));
     glyphs.removeAll(0);
 
     if (glyphs.isEmpty())
         return false;
 
-    Vector<CGRect> boundingRects;
-    boundingRects.fill(CGRectZero, glyphs.size());
+    Vector<CGRect> boundingRects(glyphs.size(), CGRectZero);
     CTFontGetBoundingRectsForGlyphs(font, kCTFontOrientationDefault, glyphs.begin(), boundingRects.begin(), glyphs.size());
 
     unsigned validGlyphsCount = 0;

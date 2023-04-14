@@ -35,28 +35,38 @@ String toString(TokenType type)
         return "Invalid"_s;
     case TokenType::EndOfFile:
         return "EOF"_s;
+    case TokenType::AbstractFloatLiteral:
+        return "AbstractFloatLiteral"_s;
     case TokenType::IntegerLiteral:
         return "IntegerLiteral"_s;
     case TokenType::IntegerLiteralSigned:
         return "IntegerLiteralSigned"_s;
     case TokenType::IntegerLiteralUnsigned:
         return "IntegerLiteralUnsigned"_s;
-    case TokenType::DecimalFloatLiteral:
-        return "DecimalFloatLiteral"_s;
-    case TokenType::HexFloatLiteral:
-        return "HexFloatLiteral"_s;
+    case TokenType::FloatLiteral:
+        return "FloatLiteral"_s;
     case TokenType::Identifier:
         return "Identifier"_s;
     case TokenType::ReservedWord:
         return "ReservedWord"_s;
     case TokenType::KeywordArray:
         return "array"_s;
+    case TokenType::KeywordConst:
+        return "const"_s;
+    case TokenType::KeywordElse:
+        return "else"_s;
     case TokenType::KeywordStruct:
         return "struct"_s;
     case TokenType::KeywordFn:
         return "fn"_s;
     case TokenType::KeywordFunction:
         return "function"_s;
+    case TokenType::KeywordIf:
+        return "if"_s;
+    case TokenType::KeywordLet:
+        return "let"_s;
+    case TokenType::KeywordOverride:
+        return "override"_s;
     case TokenType::KeywordPrivate:
         return "private"_s;
     case TokenType::KeywordRead:
@@ -89,6 +99,8 @@ String toString(TokenType type)
         return "false"_s;
     case TokenType::And:
         return "&"_s;
+    case TokenType::AndAnd:
+        return "&&"_s;
     case TokenType::Arrow:
         return "->"_s;
     case TokenType::Attribute:
@@ -133,6 +145,8 @@ String toString(TokenType type)
         return "%"_s;
     case TokenType::Or:
         return "|"_s;
+    case TokenType::OrOr:
+        return "||"_s;
     case TokenType::Plus:
         return "+"_s;
     case TokenType::PlusPlus:

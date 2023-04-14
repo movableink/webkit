@@ -116,9 +116,9 @@ template<> void JSTestCEReactionsStringifierDOMConstructor::initializeProperties
 
 static const HashTableValue JSTestCEReactionsStringifierPrototypeTableValues[] =
 {
-    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestCEReactionsStringifierConstructor, 0 } },
-    { "value"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestCEReactionsStringifier_value, setJSTestCEReactionsStringifier_value } },
-    { "valueWithoutReactions"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestCEReactionsStringifier_valueWithoutReactions, setJSTestCEReactionsStringifier_valueWithoutReactions } },
+    { "constructor"_s, static_cast<unsigned>(PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestCEReactionsStringifierConstructor, 0 } },
+    { "value"_s, JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute, NoIntrinsic, { HashTableValue::GetterSetterType, jsTestCEReactionsStringifier_value, setJSTestCEReactionsStringifier_value } },
+    { "valueWithoutReactions"_s, JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute, NoIntrinsic, { HashTableValue::GetterSetterType, jsTestCEReactionsStringifier_valueWithoutReactions, setJSTestCEReactionsStringifier_valueWithoutReactions } },
     { "toString"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsTestCEReactionsStringifierPrototypeFunction_toString, 0 } },
 };
 
@@ -149,7 +149,9 @@ void JSTestCEReactionsStringifier::finishCreation(VM& vm)
 
 JSObject* JSTestCEReactionsStringifier::createPrototype(VM& vm, JSDOMGlobalObject& globalObject)
 {
-    return JSTestCEReactionsStringifierPrototype::create(vm, &globalObject, JSTestCEReactionsStringifierPrototype::createStructure(vm, &globalObject, globalObject.objectPrototype()));
+    auto* structure = JSTestCEReactionsStringifierPrototype::createStructure(vm, &globalObject, globalObject.objectPrototype());
+    structure->setMayBePrototype(true);
+    return JSTestCEReactionsStringifierPrototype::create(vm, &globalObject, structure);
 }
 
 JSObject* JSTestCEReactionsStringifier::prototype(VM& vm, JSDOMGlobalObject& globalObject)

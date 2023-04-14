@@ -136,6 +136,7 @@ WTF_EXPORT_PRIVATE bool makeAllDirectories(const String& path);
 WTF_EXPORT_PRIVATE String pathFileName(const String&);
 WTF_EXPORT_PRIVATE String parentPath(const String&);
 WTF_EXPORT_PRIVATE std::optional<uint64_t> volumeFreeSpace(const String&);
+WTF_EXPORT_PRIVATE std::optional<uint64_t> volumeCapacity(const String&);
 WTF_EXPORT_PRIVATE std::optional<uint32_t> volumeFileBlockSize(const String&);
 WTF_EXPORT_PRIVATE std::optional<int32_t> getFileDeviceId(const String&);
 WTF_EXPORT_PRIVATE bool createSymbolicLink(const String& targetPath, const String& symbolicLinkPath);
@@ -152,7 +153,9 @@ WTF_EXPORT_PRIVATE bool markPurgeable(const String&);
 WTF_EXPORT_PRIVATE Vector<String> listDirectory(const String& path); // Returns file names, not full paths.
 
 WTF_EXPORT_PRIVATE CString fileSystemRepresentation(const String&);
+#if !PLATFORM(WIN)
 WTF_EXPORT_PRIVATE String stringFromFileSystemRepresentation(const char*);
+#endif
 
 inline bool isHandleValid(const PlatformFileHandle& handle) { return handle != invalidPlatformFileHandle; }
 

@@ -240,7 +240,7 @@ template<> void JSTestOverloadedConstructorsDOMConstructor::initializeProperties
 
 static const HashTableValue JSTestOverloadedConstructorsPrototypeTableValues[] =
 {
-    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestOverloadedConstructorsConstructor, 0 } },
+    { "constructor"_s, static_cast<unsigned>(PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestOverloadedConstructorsConstructor, 0 } },
 };
 
 const ClassInfo JSTestOverloadedConstructorsPrototype::s_info = { "TestOverloadedConstructors"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestOverloadedConstructorsPrototype) };
@@ -270,7 +270,9 @@ void JSTestOverloadedConstructors::finishCreation(VM& vm)
 
 JSObject* JSTestOverloadedConstructors::createPrototype(VM& vm, JSDOMGlobalObject& globalObject)
 {
-    return JSTestOverloadedConstructorsPrototype::create(vm, &globalObject, JSTestOverloadedConstructorsPrototype::createStructure(vm, &globalObject, globalObject.objectPrototype()));
+    auto* structure = JSTestOverloadedConstructorsPrototype::createStructure(vm, &globalObject, globalObject.objectPrototype());
+    structure->setMayBePrototype(true);
+    return JSTestOverloadedConstructorsPrototype::create(vm, &globalObject, structure);
 }
 
 JSObject* JSTestOverloadedConstructors::prototype(VM& vm, JSDOMGlobalObject& globalObject)

@@ -122,7 +122,7 @@ template<> void JSTestOperationConditionalDOMConstructor::initializeProperties(V
 
 static const HashTableValue JSTestOperationConditionalPrototypeTableValues[] =
 {
-    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestOperationConditionalConstructor, 0 } },
+    { "constructor"_s, static_cast<unsigned>(PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestOperationConditionalConstructor, 0 } },
 #if ENABLE(ConditionBase)
     { "nonConditionalOperation"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsTestOperationConditionalPrototypeFunction_nonConditionalOperation, 0 } },
 #else
@@ -162,7 +162,9 @@ void JSTestOperationConditional::finishCreation(VM& vm)
 
 JSObject* JSTestOperationConditional::createPrototype(VM& vm, JSDOMGlobalObject& globalObject)
 {
-    return JSTestOperationConditionalPrototype::create(vm, &globalObject, JSTestOperationConditionalPrototype::createStructure(vm, &globalObject, globalObject.objectPrototype()));
+    auto* structure = JSTestOperationConditionalPrototype::createStructure(vm, &globalObject, globalObject.objectPrototype());
+    structure->setMayBePrototype(true);
+    return JSTestOperationConditionalPrototype::create(vm, &globalObject, structure);
 }
 
 JSObject* JSTestOperationConditional::prototype(VM& vm, JSDOMGlobalObject& globalObject)

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "HTMLMaybeFormAssociatedCustomElement.h"
 
+#include "Document.h"
 #include "FormAssociatedCustomElement.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -181,4 +182,4 @@ void HTMLMaybeFormAssociatedCustomElement::didUpgradeFormAssociated()
     formAssociatedCustomElementUnsafe().didUpgrade();
 }
 
-} // namespace Webcore
+} // namespace WebCore

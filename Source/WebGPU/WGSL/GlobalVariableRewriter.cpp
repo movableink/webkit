@@ -39,9 +39,10 @@ namespace WGSL {
 
 class RewriteGlobalVariables : public AST::Visitor {
 public:
-    RewriteGlobalVariables(CallGraph& callGraph, const HashMap<String, PipelineLayout>& pipelineLayouts)
+    RewriteGlobalVariables(CallGraph& callGraph, const HashMap<String, PipelineLayout>& pipelineLayouts, PrepareResult& result)
         : AST::Visitor()
         , m_callGraph(callGraph)
+        , m_result(result)
     {
         UNUSED_PARAM(pipelineLayouts);
     }
@@ -60,12 +61,12 @@ private:
 
     struct Global {
         struct Resource {
-            unsigned m_group;
-            unsigned m_binding;
+            unsigned group;
+            unsigned binding;
         };
 
-        std::optional<Resource> m_resource;
-        AST::Variable* m_declaration;
+        std::optional<Resource> resource;
+        AST::Variable* declaration;
     };
 
     static AST::Identifier argumentBufferParameterName(unsigned group);
@@ -76,13 +77,15 @@ private:
 
     void collectGlobals();
     void insertStructs();
-    void visitEntryPoint(AST::Function&);
-    IndexSet requiredGroups();
+    void visitEntryPoint(AST::Function&, AST::StageAttribute::Stage, PipelineLayout&);
+    IndexSet requiredGroups(PipelineLayout&, AST::StageAttribute::Stage);
     void insertParameters(AST::Function&, const IndexSet& requiredGroups);
 
     CallGraph& m_callGraph;
+    PrepareResult& m_result;
     HashMap<String, Global> m_globals;
     IndexMap<IndexMap<Global*>> m_groupBindingMap;
+    IndexMap<Type*> m_structTypes;
     HashSet<String> m_defs;
     HashSet<String> m_reads;
 };
@@ -91,9 +94,14 @@ void RewriteGlobalVariables::run()
 {
     collectGlobals();
     insertStructs();
-    for (auto& entryPoint : m_callGraph.entrypoints())
-        visitEntryPoint(entryPoint.m_function);
-    m_callGraph.ast().variables().clear();
+    for (auto& entryPoint : m_callGraph.entrypoints()) {
+        PipelineLayout pipelineLayout;
+        visitEntryPoint(entryPoint.function, entryPoint.stage, pipelineLayout);
+
+        auto it = m_result.entryPoints.find(entryPoint.function.name());
+        ASSERT(it != m_result.entryPoints.end());
+        it->value.defaultLayout = WTFMove(pipelineLayout);
+    }
 }
 
 void RewriteGlobalVariables::visit(AST::Function& function)
@@ -112,23 +120,14 @@ void RewriteGlobalVariables::visit(AST::Variable& variable)
     def(variable.name());
 }
 
-template <typename TargetType, typename CurrentType, typename... Arguments>
-void replace(CurrentType&& dst, Arguments&&... arguments)
-{
-    static_assert(sizeof(TargetType) <= sizeof(CurrentType));
-    auto span = dst.span();
-    dst.~CurrentType();
-    new (&dst) TargetType(span, std::forward<Arguments>(arguments)...);
-}
-
 void RewriteGlobalVariables::visit(AST::IdentifierExpression& identifier)
 {
     auto name = identifier.identifier();
     if (Global* global = read(name)) {
-        if (auto resource = global->m_resource) {
-            auto base = makeUniqueRef<AST::IdentifierExpression>(identifier.span(), argumentBufferParameterName(resource->m_group));
+        if (auto resource = global->resource) {
+            auto base = makeUniqueRef<AST::IdentifierExpression>(identifier.span(), argumentBufferParameterName(resource->group));
             auto structureAccess = makeUniqueRef<AST::FieldAccessExpression>(identifier.span(), WTFMove(base), WTFMove(name));
-            replace<AST::IdentityExpression>(WTFMove(identifier), WTFMove(structureAccess));
+            m_callGraph.ast().replace(&identifier, AST::IdentityExpression(identifier.span(), WTFMove(structureAccess)));
         }
     }
 }
@@ -149,6 +148,7 @@ void RewriteGlobalVariables::collectGlobals()
                 continue;
             }
         }
+
         std::optional<Global::Resource> resource;
         if (group.has_value()) {
             RELEASE_ASSERT(binding.has_value());
@@ -163,13 +163,13 @@ void RewriteGlobalVariables::collectGlobals()
 
         if (resource.has_value()) {
             Global& global = result.iterator->value;
-            auto result = m_groupBindingMap.add(resource->m_group, IndexMap<Global*>());
-            result.iterator->value.add(resource->m_binding, &global);
+            auto result = m_groupBindingMap.add(resource->group, IndexMap<Global*>());
+            result.iterator->value.add(resource->binding, &global);
         }
     }
 }
 
-void RewriteGlobalVariables::visitEntryPoint(AST::Function& function)
+void RewriteGlobalVariables::visitEntryPoint(AST::Function& function, AST::StageAttribute::Stage stage, PipelineLayout& pipelineLayout)
 {
     m_reads.clear();
     m_defs.clear();
@@ -178,22 +178,46 @@ void RewriteGlobalVariables::visitEntryPoint(AST::Function& function)
     if (m_reads.isEmpty())
         return;
 
-    auto groupsToGenerate = requiredGroups();
+    auto groupsToGenerate = requiredGroups(pipelineLayout, stage);
     // FIXME: not all globals are parameters
     insertParameters(function, groupsToGenerate);
 }
 
 
-auto RewriteGlobalVariables::requiredGroups() -> IndexSet
+auto RewriteGlobalVariables::requiredGroups(PipelineLayout& pipelineLayout, AST::StageAttribute::Stage stage) -> IndexSet
 {
     IndexSet groups;
     for (const auto& globalName : m_reads) {
         auto it = m_globals.find(globalName);
         RELEASE_ASSERT(it != m_globals.end());
         auto& global = it->value;
-        if (!global.m_resource.has_value())
+        if (!global.resource.has_value())
             continue;
-        groups.add(global.m_resource->m_group);
+        auto group = global.resource->group;
+        groups.add(group);
+
+        if (pipelineLayout.bindGroupLayouts.size() <= group)
+            pipelineLayout.bindGroupLayouts.grow(group + 1);
+
+        ShaderStage shaderStage;
+        switch (stage) {
+        case AST::StageAttribute::Stage::Compute:
+            shaderStage = ShaderStage::Compute;
+            break;
+        case AST::StageAttribute::Stage::Vertex:
+            shaderStage = ShaderStage::Vertex;
+            break;
+        case AST::StageAttribute::Stage::Fragment:
+            shaderStage = ShaderStage::Fragment;
+            break;
+        }
+        // FIXME: we need to check for an existing entry with the same binding
+        pipelineLayout.bindGroupLayouts[group].entries.append({
+            global.resource->binding,
+            shaderStage,
+            // FIXME: add the missing bindingMember information
+            { }
+        });
     }
     return groups;
 }
@@ -211,25 +235,39 @@ void RewriteGlobalVariables::insertStructs()
             unsigned binding = bindingGlobal.key;
             auto& global = *bindingGlobal.value;
 
-            ASSERT(global.m_declaration->maybeTypeName());
-            auto span = global.m_declaration->span();
+            ASSERT(global.declaration->maybeTypeName());
+            auto span = global.declaration->span();
+
+            auto* type = global.declaration->maybeTypeName()->resolvedType();
+            bool shouldBeReference = true;
+            if (std::get_if<Types::Texture>(type))
+                shouldBeReference = false;
+            else if (auto* primitive = std::get_if<Types::Primitive>(type)) {
+                if (primitive->kind == Types::Primitive::Sampler)
+                    shouldBeReference = false;
+            }
+
+            AST::TypeName::Ref memberType = *global.declaration->maybeTypeName();
+            if (shouldBeReference)
+                memberType = adoptRef(*new AST::ReferenceTypeName(span, WTFMove(memberType)));
             structMembers.append(makeUniqueRef<AST::StructureMember>(
                 span,
-                AST::Identifier::make(global.m_declaration->name()),
-                adoptRef(*new AST::ReferenceTypeName(span, *global.m_declaration->maybeTypeName())),
+                AST::Identifier::make(global.declaration->name()),
+                WTFMove(memberType),
                 AST::Attribute::List {
                     adoptRef(*new AST::BindingAttribute(span, binding))
                 }
             ));
         }
 
-        m_callGraph.ast().structures().append(makeUniqueRef<AST::Structure>(
+        m_callGraph.ast().append(m_callGraph.ast().structures(), makeUniqueRef<AST::Structure>(
             SourceSpan::empty(),
             WTFMove(structName),
             WTFMove(structMembers),
             AST::Attribute::List { },
             AST::StructureRole::BindGroup
         ));
+        m_structTypes.add(groupBinding.key, m_callGraph.ast().types().structType(m_callGraph.ast().structures().last()));
     }
 }
 
@@ -237,15 +275,17 @@ void RewriteGlobalVariables::insertParameters(AST::Function& function, const Ind
 {
     auto span = function.span();
     for (unsigned group : requiredGroups) {
-        function.parameters().append(makeUniqueRef<AST::ParameterValue>(
+        auto type = adoptRef(*new AST::NamedTypeName(span, argumentBufferStructName(group)));
+        type->m_resolvedType = m_structTypes.get(group);
+        m_callGraph.ast().append(function.parameters(), adoptRef(*new AST::Parameter(
             span,
             argumentBufferParameterName(group),
-            adoptRef(*new AST::NamedTypeName(span, argumentBufferStructName(group))),
+            WTFMove(type),
             AST::Attribute::List {
                 adoptRef(*new AST::GroupAttribute(span, group))
             },
             AST::ParameterRole::BindGroup
-        ));
+        )));
     }
 }
 
@@ -275,9 +315,9 @@ AST::Identifier RewriteGlobalVariables::argumentBufferStructName(unsigned group)
     return AST::Identifier::make(makeString("__ArgumentBuferT_", String::number(group)));
 }
 
-void rewriteGlobalVariables(CallGraph& callGraph, const HashMap<String, PipelineLayout>& pipelineLayouts)
+void rewriteGlobalVariables(CallGraph& callGraph, const HashMap<String, PipelineLayout>& pipelineLayouts, PrepareResult& result)
 {
-    RewriteGlobalVariables(callGraph, pipelineLayouts).run();
+    RewriteGlobalVariables(callGraph, pipelineLayouts, result).run();
 }
 
 } // namespace WGSL

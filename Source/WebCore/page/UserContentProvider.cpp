@@ -30,9 +30,9 @@
 #include "ChromeClient.h"
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
+#include "LocalFrame.h"
 #include "Page.h"
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -98,7 +98,10 @@ static DocumentLoader* mainDocumentLoader(DocumentLoader& loader)
     if (auto frame = loader.frame()) {
         if (frame->isMainFrame())
             return &loader;
-        return frame->mainFrame().loader().documentLoader();
+
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+        if (localFrame)
+            return localFrame->loader().documentLoader();
     }
     return nullptr;
 }
@@ -131,7 +134,7 @@ static ContentExtensions::ContentExtensionsBackend::RuleListFilter ruleListFilte
     return { };
 }
 
-static void sanitizeLookalikeCharactersIfNeeded(ContentRuleListResults& results, const Page& page, const URL& url, const DocumentLoader& initiatingDocumentLoader)
+static void sanitizeLookalikeCharactersIfNeeded(ContentRuleListResults& results, Page& page, const URL& url, const DocumentLoader& initiatingDocumentLoader)
 {
     if (RefPtr frame = initiatingDocumentLoader.frame(); !frame || !frame->isMainFrame())
         return;

@@ -21,6 +21,7 @@
 #pragma once
 
 #include <wtf/RefPtr.h>
+#include <wtf/Span.h>
 
 namespace WebCore {
 
@@ -47,6 +48,8 @@ enum CSSValueID : uint16_t;
 
 enum class PseudoId : uint16_t;
 enum class SVGPaintType : uint8_t;
+
+using CSSValueListBuilder = Vector<Ref<CSSValue>, 4>;
 
 class ComputedStyleExtractor {
     WTF_MAKE_FAST_ALLOCATED;
@@ -77,7 +80,7 @@ public:
 
     static Ref<CSSPrimitiveValue> currentColorOrValidColor(const RenderStyle&, const StyleColor&);
 
-    static void addValueForAnimationPropertyToList(CSSValueList&, CSSPropertyID, const Animation*);
+    static void addValueForAnimationPropertyToList(CSSValueListBuilder&, CSSPropertyID, const Animation*);
 
     static bool updateStyleIfNeededForProperty(Element&, CSSPropertyID);
 

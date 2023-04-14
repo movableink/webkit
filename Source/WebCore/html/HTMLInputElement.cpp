@@ -37,20 +37,18 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "ColorInputType.h"
-#include "DOMWindow.h"
 #include "DateComponents.h"
 #include "DateTimeChooser.h"
 #include "DocumentInlines.h"
 #include "Editor.h"
 #include "ElementInlines.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "FileChooser.h"
 #include "FileInputType.h"
 #include "FileList.h"
 #include "FormController.h"
-#include "Frame.h"
 #include "FrameSelection.h"
-#include "FrameView.h"
 #include "HTMLDataListElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLImageLoader.h"
@@ -58,6 +56,9 @@
 #include "HTMLParserIdioms.h"
 #include "IdTargetObserver.h"
 #include "KeyboardEvent.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
 #include "NodeRenderStyle.h"
@@ -73,7 +74,7 @@
 #include "StepRange.h"
 #include "StyleGradientImage.h"
 #include "TextControlInnerElements.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Language.h>
 #include <wtf/MathExtras.h>
@@ -113,7 +114,6 @@ HTMLInputElement::HTMLInputElement(const QualifiedName& tagName, Document& docum
     , m_inputType(createdByParser ? nullptr : RefPtr { InputType::createText(*this) })
 {
     ASSERT(hasTagName(inputTag));
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<HTMLInputElement> HTMLInputElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form, bool createdByParser)
@@ -130,9 +130,6 @@ HTMLImageLoader& HTMLInputElement::ensureImageLoader()
 
 HTMLInputElement::~HTMLInputElement()
 {
-    if (needsSuspensionCallback())
-        document().unregisterForDocumentSuspensionCallbacks(*this);
-
     // Need to remove form association while this is still an HTMLInputElement
     // so that virtual functions are called correctly.
     setForm(nullptr);
@@ -288,8 +285,7 @@ bool HTMLInputElement::tooShort(StringView value, NeedsToCheckDirtyFlag check) c
     if (value.isEmpty())
         return false;
 
-    // FIXME: The HTML specification says that the "number of characters" is measured using code-unit length.
-    return numGraphemeClusters(value) < static_cast<unsigned>(min);
+    return value.length() < static_cast<unsigned>(min);
 }
 
 bool HTMLInputElement::tooLong(StringView value, NeedsToCheckDirtyFlag check) const
@@ -303,8 +299,7 @@ bool HTMLInputElement::tooLong(StringView value, NeedsToCheckDirtyFlag check) co
         if (!hasDirtyValue() || !m_wasModifiedByUser)
             return false;
     }
-    // FIXME: The HTML specification says that the "number of characters" is measured using code-unit length.
-    return numGraphemeClusters(value) > max;
+    return value.length() > max;
 }
 
 bool HTMLInputElement::rangeUnderflow() const
@@ -592,6 +587,8 @@ void HTMLInputElement::updateType()
     }
 
     updateValidity();
+
+    checkAndPossiblyClosePopoverStack();
 }
 
 inline void HTMLInputElement::runPostTypeUpdateTasks()
@@ -928,8 +925,10 @@ bool HTMLInputElement::appendFormData(DOMFormData& formData)
 
 void HTMLInputElement::reset()
 {
-    if (m_inputType->storesValueSeparateFromAttribute())
+    if (m_inputType->storesValueSeparateFromAttribute()) {
         setValue({ });
+        updateValidity();
+    }
 
     setAutoFilled(false);
     setAutoFilledAndViewable(false);
@@ -1195,6 +1194,7 @@ void HTMLInputElement::defaultEventHandler(Event& event)
     // must dispatch a DOMActivate event - a click event will not do the job.
     if (event.type() == eventNames().DOMActivateEvent) {
         m_inputType->handleDOMActivateEvent(event);
+        handlePopoverTargetAction();
         if (event.defaultHandled())
             return;
     }
@@ -1400,6 +1400,9 @@ void HTMLInputElement::setAutoFilledAndObscured(bool autoFilledAndObscured)
 
     Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassAutofillAndObscured, autoFilledAndObscured);
     m_isAutoFilledAndObscured = autoFilledAndObscured;
+
+    if (auto* cache = document().existingAXObjectCache())
+        cache->onTextSecurityChanged(*this);
 }
 
 void HTMLInputElement::setShowAutoFillButton(AutoFillButtonType autoFillButtonType)

@@ -33,7 +33,6 @@
 #include "ComposedTreeAncestorIterator.h"
 #include "ContainerNodeAlgorithms.h"
 #include "ContextMenuController.h"
-#include "DOMWindow.h"
 #include "DataTransfer.h"
 #include "DocumentInlines.h"
 #include "DocumentType.h"
@@ -44,7 +43,6 @@
 #include "EventHandler.h"
 #include "EventLoop.h"
 #include "EventNames.h"
-#include "FrameView.h"
 #include "GCReachableRef.h"
 #include "HTMLAreaElement.h"
 #include "HTMLBodyElement.h"
@@ -57,9 +55,14 @@
 #include "InspectorController.h"
 #include "InspectorInstrumentation.h"
 #include "KeyboardEvent.h"
+#include "LiveNodeListInlines.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "MutationEvent.h"
+#include "NodeRareDataInlines.h"
 #include "NodeRenderStyle.h"
+#include "PointerEvent.h"
 #include "ProcessingInstruction.h"
 #include "ProgressEvent.h"
 #include "RenderBlock.h"
@@ -424,9 +427,6 @@ Node::~Node()
     ASSERT(!parentNode());
     ASSERT(!m_previous);
     ASSERT(!m_next);
-
-    if (auto* textManipulationController = document().textManipulationControllerIfExists(); UNLIKELY(textManipulationController))
-        textManipulationController->removeNode(*this);
 
     document().decrementReferencingNodeCount();
 
@@ -1521,6 +1521,11 @@ static const AtomString& locateDefaultNamespace(const Node& node, const AtomStri
 {
     switch (node.nodeType()) {
     case Node::ELEMENT_NODE: {
+        if (prefix == xmlAtom())
+            return XMLNames::xmlNamespaceURI.get();
+        if (prefix == xmlnsAtom())
+            return XMLNSNames::xmlnsNamespaceURI.get();
+
         auto& element = downcast<Element>(node);
         auto& namespaceURI = element.namespaceURI();
         if (!namespaceURI.isNull() && element.prefix() == prefix)
@@ -2483,20 +2488,21 @@ void Node::defaultEventHandler(Event& event)
     auto& eventNames = WebCore::eventNames();
     if (eventType == eventNames.keydownEvent || eventType == eventNames.keypressEvent || eventType == eventNames.keyupEvent) {
         if (is<KeyboardEvent>(event)) {
-            if (Frame* frame = document().frame())
+            if (auto* frame = document().frame())
                 frame->eventHandler().defaultKeyboardEventHandler(downcast<KeyboardEvent>(event));
         }
     } else if (eventType == eventNames.clickEvent) {
         dispatchDOMActivateEvent(event);
 #if ENABLE(CONTEXT_MENUS)
     } else if (eventType == eventNames.contextmenuEvent) {
-        if (Frame* frame = document().frame())
-            if (Page* page = frame->page())
+        if (auto* frame = document().frame()) {
+            if (auto* page = frame->page())
                 page->contextMenuController().handleContextMenuEvent(event);
+        }
 #endif
     } else if (eventType == eventNames.textInputEvent) {
         if (is<TextEvent>(event)) {
-            if (Frame* frame = document().frame())
+            if (auto* frame = document().frame())
                 frame->eventHandler().defaultTextInputEventHandler(downcast<TextEvent>(event));
         }
 #if ENABLE(PAN_SCROLLING)
@@ -2510,7 +2516,7 @@ void Node::defaultEventHandler(Event& event)
                 renderer = renderer->parent();
 
             if (renderer) {
-                if (Frame* frame = document().frame())
+                if (auto* frame = document().frame())
                     frame->eventHandler().startPanScrolling(downcast<RenderBox>(*renderer));
             }
         }
@@ -2523,7 +2529,7 @@ void Node::defaultEventHandler(Event& event)
             startNode = startNode->parentOrShadowHostNode();
         
         if (startNode && startNode->renderer()) {
-            if (Frame* frame = document().frame())
+            if (auto* frame = document().frame())
                 frame->eventHandler().defaultWheelEventHandler(startNode, downcast<WheelEvent>(event));
         }
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
@@ -2544,7 +2550,7 @@ void Node::defaultEventHandler(Event& event)
             renderer = renderer->parent();
 
         if (renderer && renderer->node()) {
-            if (Frame* frame = document().frame())
+            if (auto* frame = document().frame())
                 frame->eventHandler().defaultTouchEventHandler(*renderer->node(), downcast<TouchEvent>(event));
         }
 #endif

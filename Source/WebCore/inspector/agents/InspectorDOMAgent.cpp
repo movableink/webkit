@@ -54,17 +54,14 @@
 #include "DOMEditor.h"
 #include "DOMException.h"
 #include "DOMPatchSupport.h"
-#include "DOMWindow.h"
 #include "DocumentInlines.h"
 #include "DocumentType.h"
 #include "Editing.h"
-#include "Element.h"
+#include "ElementInlines.h"
 #include "Event.h"
 #include "EventListener.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameTree.h"
-#include "FrameView.h"
 #include "FullscreenManager.h"
 #include "HTMLElement.h"
 #include "HTMLFrameOwnerElement.h"
@@ -85,9 +82,12 @@
 #include "InstrumentingAgents.h"
 #include "IntRect.h"
 #include "JSDOMBindingSecurity.h"
-#include "JSDOMWindowCustom.h"
 #include "JSEventListener.h"
+#include "JSLocalDOMWindowCustom.h"
 #include "JSNode.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "MutationEvent.h"
 #include "Node.h"
 #include "NodeList.h"
@@ -311,7 +311,10 @@ void InspectorDOMAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, 
     m_domEditor = makeUnique<DOMEditor>(*m_history);
 
     m_instrumentingAgents.setPersistentDOMAgent(this);
-    m_document = m_inspectedPage.mainFrame().document();
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
+    if (!localMainFrame)
+        return;
+    m_document = localMainFrame->document();
 
     // Force a layout so that we can collect additional information from the layout process.
     relayoutDocument();
@@ -348,7 +351,7 @@ void InspectorDOMAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReaso
 Vector<Document*> InspectorDOMAgent::documents()
 {
     Vector<Document*> result;
-    for (AbstractFrame* frame = m_document->frame(); frame; frame = frame->tree().traverseNext()) {
+    for (Frame* frame = m_document->frame(); frame; frame = frame->tree().traverseNext()) {
         auto* localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
@@ -1205,7 +1208,7 @@ bool InspectorDOMAgent::handleTouchEvent(Node& node)
         return false;
 
     if (m_inspectModeHighlightConfig) {
-        m_overlay->highlightNode(&node, *m_inspectModeHighlightConfig, m_inspectModeGridOverlayConfig, m_inspectModeFlexOverlayConfig);
+        m_overlay->highlightNode(&node, *m_inspectModeHighlightConfig, m_inspectModeGridOverlayConfig, m_inspectModeFlexOverlayConfig, m_inspectModeShowRulers);
         inspect(&node);
         return true;
     }
@@ -1268,7 +1271,7 @@ void InspectorDOMAgent::highlightMousedOverNode()
         return;
 
     if (m_inspectModeHighlightConfig)
-        m_overlay->highlightNode(node, *m_inspectModeHighlightConfig, m_inspectModeGridOverlayConfig, m_inspectModeFlexOverlayConfig);
+        m_overlay->highlightNode(node, *m_inspectModeHighlightConfig, m_inspectModeGridOverlayConfig, m_inspectModeFlexOverlayConfig, m_inspectModeShowRulers);
 }
 
 void InspectorDOMAgent::setSearchingForNode(Protocol::ErrorString& errorString, bool enabled, RefPtr<JSON::Object>&& highlightInspectorObject, RefPtr<JSON::Object>&& gridOverlayInspectorObject, RefPtr<JSON::Object>&& flexOverlayInspectorObject, bool showRulers)
@@ -1277,8 +1280,6 @@ void InspectorDOMAgent::setSearchingForNode(Protocol::ErrorString& errorString, 
         return;
 
     m_searchingForNode = enabled;
-
-    m_overlay->setShowRulersDuringElementSelection(m_searchingForNode && showRulers);
 
     if (m_searchingForNode) {
         m_inspectModeHighlightConfig = highlightConfigFromInspectorObject(errorString, WTFMove(highlightInspectorObject));
@@ -1294,6 +1295,8 @@ void InspectorDOMAgent::setSearchingForNode(Protocol::ErrorString& errorString, 
         m_inspectModeFlexOverlayConfig = flexOverlayConfigFromInspectorObject(errorString, WTFMove(flexOverlayInspectorObject));
         if (providedFlexOverlayConfig && !m_inspectModeFlexOverlayConfig)
             return;
+
+        m_inspectModeShowRulers = showRulers;
 
         highlightMousedOverNode();
     } else
@@ -1413,7 +1416,16 @@ void InspectorDOMAgent::innerHighlightQuad(std::unique_ptr<FloatQuad> quad, RefP
     m_overlay->highlightQuad(WTFMove(quad), *highlightConfig);
 }
 
+#if PLATFORM(IOS_FAMILY)
+
 Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightSelector(const String& selectorString, const Protocol::Network::FrameId& frameId, Ref<JSON::Object>&& highlightInspectorObject, RefPtr<JSON::Object>&& gridOverlayInspectorObject, RefPtr<JSON::Object>&& flexOverlayInspectorObject)
+{
+    return highlightSelector(selectorString, frameId, WTFMove(highlightInspectorObject), WTFMove(gridOverlayInspectorObject), WTFMove(flexOverlayInspectorObject), std::nullopt);
+}
+
+#endif // PLATFORM(IOS_FAMILY)
+
+Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightSelector(const String& selectorString, const Protocol::Network::FrameId& frameId, Ref<JSON::Object>&& highlightInspectorObject, RefPtr<JSON::Object>&& gridOverlayInspectorObject, RefPtr<JSON::Object>&& flexOverlayInspectorObject, std::optional<bool>&& showRulers)
 {
     Protocol::ErrorString errorString;
 
@@ -1508,12 +1520,21 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightSelector(const String&
         }
     }
 
-    m_overlay->highlightNodeList(StaticNodeList::create(WTFMove(nodeList)), *highlightConfig, WTFMove(gridOverlayConfig), WTFMove(flexOverlayConfig));
+    m_overlay->highlightNodeList(StaticNodeList::create(WTFMove(nodeList)), *highlightConfig, WTFMove(gridOverlayConfig), WTFMove(flexOverlayConfig), showRulers && *showRulers);
 
     return { };
 }
 
+#if PLATFORM(IOS_FAMILY)
+
 Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightNode(std::optional<Protocol::DOM::NodeId>&& nodeId, const Protocol::Runtime::RemoteObjectId& objectId, Ref<JSON::Object>&& highlightInspectorObject, RefPtr<JSON::Object>&& gridOverlayInspectorObject, RefPtr<JSON::Object>&& flexOverlayInspectorObject)
+{
+    return highlightNode(WTFMove(nodeId), objectId, WTFMove(highlightInspectorObject), WTFMove(gridOverlayInspectorObject), WTFMove(flexOverlayInspectorObject), std::nullopt);
+}
+
+#endif // PLATFORM(IOS_FAMILY)
+
+Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightNode(std::optional<Protocol::DOM::NodeId>&& nodeId, const Protocol::Runtime::RemoteObjectId& objectId, Ref<JSON::Object>&& highlightInspectorObject, RefPtr<JSON::Object>&& gridOverlayInspectorObject, RefPtr<JSON::Object>&& flexOverlayInspectorObject, std::optional<bool>&& showRulers)
 {
     Protocol::ErrorString errorString;
 
@@ -1543,12 +1564,21 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightNode(std::optional<Pro
     if (providedFlexOverlayConfig && !flexOverlayConfig)
         return makeUnexpected(errorString);
 
-    m_overlay->highlightNode(node, *highlightConfig, WTFMove(gridOverlayConfig), WTFMove(flexOverlayConfig));
+    m_overlay->highlightNode(node, *highlightConfig, WTFMove(gridOverlayConfig), WTFMove(flexOverlayConfig), showRulers && *showRulers);
 
     return { };
 }
 
+#if PLATFORM(IOS_FAMILY)
+
 Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightNodeList(Ref<JSON::Array>&& nodeIds, Ref<JSON::Object>&& highlightInspectorObject, RefPtr<JSON::Object>&& gridOverlayInspectorObject, RefPtr<JSON::Object>&& flexOverlayInspectorObject)
+{
+    return highlightNodeList(WTFMove(nodeIds), WTFMove(highlightInspectorObject), WTFMove(gridOverlayInspectorObject), WTFMove(flexOverlayInspectorObject), std::nullopt);
+}
+
+#endif // PLATFORM(IOS_FAMILY)
+
+Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightNodeList(Ref<JSON::Array>&& nodeIds, Ref<JSON::Object>&& highlightInspectorObject, RefPtr<JSON::Object>&& gridOverlayInspectorObject, RefPtr<JSON::Object>&& flexOverlayInspectorObject, std::optional<bool>&& showRulers)
 {
     Protocol::ErrorString errorString;
 
@@ -1584,7 +1614,7 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightNodeList(Ref<JSON::Arr
     if (providedFlexOverlayConfig && !flexOverlayConfig)
         return makeUnexpected(errorString);
 
-    m_overlay->highlightNodeList(StaticNodeList::create(WTFMove(nodes)), *highlightConfig, WTFMove(gridOverlayConfig), WTFMove(flexOverlayConfig));
+    m_overlay->highlightNodeList(StaticNodeList::create(WTFMove(nodes)), *highlightConfig, WTFMove(gridOverlayConfig), WTFMove(flexOverlayConfig), showRulers && *showRulers);
 
     return { };
 }
@@ -2051,9 +2081,7 @@ Ref<Protocol::DOM::EventListener> InspectorDOMAgent::buildObjectForEventListener
     int lineNumber = 0;
     int columnNumber = 0;
     String scriptID;
-    if (is<JSEventListener>(eventListener)) {
-        auto& scriptListener = downcast<JSEventListener>(eventListener.get());
-
+    if (auto* scriptListener = dynamicDowncast<JSEventListener>(eventListener.get()); scriptListener && scriptListener->isolatedWorld()) {
         Document* document = nullptr;
         if (auto* scriptExecutionContext = eventTarget.scriptExecutionContext()) {
             if (is<Document>(scriptExecutionContext))
@@ -2064,14 +2092,14 @@ Ref<Protocol::DOM::EventListener> InspectorDOMAgent::buildObjectForEventListener
         JSC::JSObject* handlerObject = nullptr;
         JSC::JSGlobalObject* globalObject = nullptr;
 
-        JSC::JSLockHolder lock(scriptListener.isolatedWorld().vm());
+        JSC::JSLockHolder lock(scriptListener->isolatedWorld()->vm());
 
         if (document) {
-            handlerObject = scriptListener.ensureJSFunction(*document);
+            handlerObject = scriptListener->ensureJSFunction(*document);
             if (auto frame = document->frame()) {
                 // FIXME: Why do we need the canExecuteScripts check here?
                 if (frame->script().canExecuteScripts(NotAboutToExecuteScript))
-                    globalObject = frame->script().globalObject(scriptListener.isolatedWorld());
+                    globalObject = frame->script().globalObject(*scriptListener->isolatedWorld());
             }
         }
 
@@ -2117,7 +2145,7 @@ Ref<Protocol::DOM::EventListener> InspectorDOMAgent::buildObjectForEventListener
         .release();
     if (is<Node>(eventTarget))
         value->setNodeId(pushNodePathToFrontend(&downcast<Node>(eventTarget)));
-    else if (is<DOMWindow>(eventTarget))
+    else if (is<LocalDOMWindow>(eventTarget))
         value->setOnWindow(true);
     if (!scriptID.isNull()) {
         auto location = Protocol::Debugger::Location::create()
@@ -2778,7 +2806,7 @@ void InspectorDOMAgent::didChangeCustomElementState(Element& element)
     m_frontendDispatcher->customElementStateChanged(elementId, customElementState(element));
 }
 
-void InspectorDOMAgent::frameDocumentUpdated(Frame& frame)
+void InspectorDOMAgent::frameDocumentUpdated(LocalFrame& frame)
 {
     Document* document = frame.document();
     if (!document)

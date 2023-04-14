@@ -115,6 +115,7 @@ my (
     $legacyEncryptedMediaSupport,
     $letterpressSupport,
     $macGestureEventsSupport,
+    $managedMediaSourceSupport,
     $mathmlSupport,
     $mediaCaptureSupport,
     $mediaControlsScriptSupport,
@@ -163,7 +164,6 @@ my (
     $textAutosizingSupport,
     $threeDTransformsSupport,
     $touchEventsSupport,
-    $touchSliderSupport,
     $trackingPrevention,
     $unifiedBuildsSupport,
     $userMessageHandlersSupport,
@@ -372,6 +372,9 @@ my @features = (
     { option => "mac-gesture-events", desc => "Toggle Mac gesture events support",
       define => "ENABLE_MAC_GESTURE_EVENTS", value => \$macGestureEventsSupport },
 
+    { option => "managed-media-source", desc => "Toggle Managed Media Source support",
+      define => "ENABLE_MANAGED_MEDIA_SOURCE", value => \$managedMediaSourceSupport },
+
     { option => "mathml", desc => "Toggle MathML support",
       define => "ENABLE_MATHML", value => \$mathmlSupport },
 
@@ -494,9 +497,6 @@ my @features = (
 
     { option => "touch-events", desc => "Toggle Touch Events support",
       define => "ENABLE_TOUCH_EVENTS", value => \$touchEventsSupport },
-
-    { option => "touch-slider", desc => "Toggle Touch Slider support",
-      define => "ENABLE_TOUCH_SLIDER", value => \$touchSliderSupport },
 
     { option => "tracking-prevention", desc => "Toggle tracking prevention support",
       define => "ENABLE_TRACKING_PREVENTION", value => \$trackingPrevention },

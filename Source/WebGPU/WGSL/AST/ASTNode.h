@@ -65,6 +65,7 @@ enum class NodeKind : uint8_t {
     UnaryExpression,
 
     Function,
+    Parameter,
 
     Identifier,
 
@@ -107,13 +108,6 @@ enum class NodeKind : uint8_t {
     NamedTypeName,
     ParameterizedTypeName,
     ReferenceTypeName,
-    StructTypeName,
-
-    // Value
-    ConstantValue,
-    OverrideValue,
-    LetValue,
-    ParameterValue,
 
     Variable,
 

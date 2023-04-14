@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2013-2014 Google Inc. All rights reserved.
+ * Copyright (C) 2013-2017 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,8 @@
 #include "EventNames.h"
 #include "EventSender.h"
 #include "FloatConversion.h"
-#include "FrameView.h"
+#include "LocalFrameView.h"
+#include "Page.h"
 #include "SMILTimeContainer.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElementInlines.h"
@@ -1029,7 +1030,8 @@ float SVGSMILElement::calculateAnimationPercentAndRepeat(SMILTime elapsed, unsig
         if (!fmod(repeatingDuration.value(), simpleDuration.value()))
             --repeat;
 
-        double percent = (m_intervalEnd.value() - m_intervalBegin.value()) / simpleDuration.value();
+        double lastActiveDuration = elapsed >= m_intervalEnd ? m_intervalEnd.value() - m_intervalBegin.value() : repeatingDuration.value();
+        double percent = lastActiveDuration / simpleDuration.value();
         percent = percent - floor(percent);
         if (percent < std::numeric_limits<float>::epsilon() || 1 - percent < std::numeric_limits<float>::epsilon())
             return 1.0f;

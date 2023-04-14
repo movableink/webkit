@@ -153,7 +153,8 @@ static CodePtr<JSEntryPtrTag> callerReturnPC(CodeBlock* baselineCodeBlockForCall
 #define LLINT_RETURN_LOCATION(name) LLInt::returnLocationThunk(name##_return_location, callInstruction.width()).code()
 
         switch (trueCallerCallKind) {
-        case InlineCallFrame::Call: {
+        case InlineCallFrame::Call:
+        case InlineCallFrame::BoundFunctionCall: {
             if (callInstruction.opcodeID() == op_call)
                 jumpTarget = LLINT_RETURN_LOCATION(op_call);
             else if (callInstruction.opcodeID() == op_iterator_open)
@@ -181,7 +182,8 @@ static CodePtr<JSEntryPtrTag> callerReturnPC(CodeBlock* baselineCodeBlockForCall
                 RELEASE_ASSERT_NOT_REACHED();
             break;
         }
-        case InlineCallFrame::SetterCall: {
+        case InlineCallFrame::SetterCall:
+        case InlineCallFrame::ProxyObjectStoreCall: {
             if (callInstruction.opcodeID() == op_put_by_id)
                 jumpTarget = LLINT_RETURN_LOCATION(op_put_by_id);
             else if (callInstruction.opcodeID() == op_put_by_val)
@@ -201,7 +203,8 @@ static CodePtr<JSEntryPtrTag> callerReturnPC(CodeBlock* baselineCodeBlockForCall
         case InlineCallFrame::Call:
         case InlineCallFrame::Construct:
         case InlineCallFrame::CallVarargs:
-        case InlineCallFrame::ConstructVarargs: {
+        case InlineCallFrame::ConstructVarargs:
+        case InlineCallFrame::BoundFunctionCall: {
             CallLinkInfo* callLinkInfo = nullptr;
             {
                 ConcurrentJSLocker locker(baselineCodeBlockForCaller->m_lock);
@@ -214,7 +217,8 @@ static CodePtr<JSEntryPtrTag> callerReturnPC(CodeBlock* baselineCodeBlockForCall
 
         case InlineCallFrame::GetterCall:
         case InlineCallFrame::SetterCall:
-        case InlineCallFrame::ProxyObjectLoadCall: {
+        case InlineCallFrame::ProxyObjectLoadCall:
+        case InlineCallFrame::ProxyObjectStoreCall: {
             StructureStubInfo* stubInfo = baselineCodeBlockForCaller->findStubInfo(CodeOrigin(callBytecodeIndex));
             RELEASE_ASSERT(stubInfo, callInstruction.opcodeID());
             jumpTarget = stubInfo->doneLocation.retagged<JSEntryPtrTag>();

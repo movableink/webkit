@@ -32,6 +32,7 @@
 #include "CanvasRenderingContext.h"
 #include "Chrome.h"
 #include "Document.h"
+#include "EventDispatcher.h"
 #include "HTMLCanvasElement.h"
 #include "ImageBitmap.h"
 #include "ImageBitmapRenderingContext.h"
@@ -100,7 +101,9 @@ bool OffscreenCanvas::enabledForContext(ScriptExecutionContext& context)
 
 Ref<OffscreenCanvas> OffscreenCanvas::create(ScriptExecutionContext& scriptExecutionContext, unsigned width, unsigned height)
 {
-    return adoptRef(*new OffscreenCanvas(scriptExecutionContext, width, height));
+    auto canvas = adoptRef(*new OffscreenCanvas(scriptExecutionContext, width, height));
+    canvas->suspendIfNeeded();
+    return canvas;
 }
 
 Ref<OffscreenCanvas> OffscreenCanvas::create(ScriptExecutionContext& scriptExecutionContext, std::unique_ptr<DetachedOffscreenCanvas>&& detachedCanvas)
@@ -120,6 +123,7 @@ Ref<OffscreenCanvas> OffscreenCanvas::create(ScriptExecutionContext& scriptExecu
         }
     });
 
+    clone->suspendIfNeeded();
     return clone;
 }
 
@@ -127,12 +131,13 @@ Ref<OffscreenCanvas> OffscreenCanvas::create(ScriptExecutionContext& scriptExecu
 {
     auto offscreen = adoptRef(*new OffscreenCanvas(scriptExecutionContext, canvas.width(), canvas.height()));
     offscreen->setPlaceholderCanvas(canvas);
+    offscreen->suspendIfNeeded();
     return offscreen;
 }
 
 OffscreenCanvas::OffscreenCanvas(ScriptExecutionContext& scriptExecutionContext, unsigned width, unsigned height)
-    : CanvasBase(IntSize(width, height))
-    , ContextDestructionObserver(&scriptExecutionContext)
+    : ActiveDOMObject(&scriptExecutionContext)
+    , CanvasBase(IntSize(width, height))
     , m_placeholderData(PlaceholderData::create())
 {
 }
@@ -182,7 +187,7 @@ void OffscreenCanvas::setSize(const IntSize& newSize)
 #if ENABLE(WEBGL)
 static bool requiresAcceleratedCompositingForWebGL()
 {
-#if PLATFORM(GTK) || PLATFORM(WIN_CAIRO)
+#if PLATFORM(GTK) || PLATFORM(WIN)
     return false;
 #else
     return true;
@@ -194,12 +199,14 @@ static bool shouldEnableWebGL(const Settings::Values& settings, bool isWorker)
     if (!settings.webGLEnabled)
         return false;
 
-    if (isWorker && !settings.allowWebGLInWorkers)
+    if (!settings.allowWebGLInWorkers)
         return false;
 
 #if PLATFORM(IOS_FAMILY) || PLATFORM(MAC)
     if (isWorker && !settings.useGPUProcessForWebGLEnabled)
         return false;
+#else
+    UNUSED_PARAM(isWorker);
 #endif
 
     if (!requiresAcceleratedCompositingForWebGL())
@@ -246,7 +253,7 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
         auto settings = convert<IDLDictionary<CanvasRenderingContext2DSettings>>(state, arguments.isEmpty() ? JSC::jsUndefined() : (arguments[0].isObject() ? arguments[0].get() : JSC::jsNull()));
         RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
 
-        m_context = makeUnique<OffscreenCanvasRenderingContext2D>(*this, WTFMove(settings));
+        m_context = OffscreenCanvasRenderingContext2D::create(*this, WTFMove(settings));
         if (!m_context)
             return { { std::nullopt } };
 
@@ -337,8 +344,8 @@ ExceptionOr<RefPtr<ImageBitmap>> OffscreenCanvas::transferToImageBitmap()
     }
 
 #if ENABLE(WEBGL)
-    if (is<WebGLRenderingContext>(*m_context)) {
-        auto webGLContext = &downcast<WebGLRenderingContext>(*m_context);
+    if (is<WebGLRenderingContextBase>(*m_context)) {
+        auto webGLContext = &downcast<WebGLRenderingContextBase>(*m_context);
 
         // FIXME: We're supposed to create an ImageBitmap using the backing
         // store from this canvas (or its context), but for now we'll just
@@ -507,7 +514,8 @@ void OffscreenCanvas::commitToPlaceholderCanvas()
 
     Locker locker { m_placeholderData->bufferLock };
     bool shouldPushBuffer = !m_placeholderData->pendingCommitBuffer;
-    m_placeholderData->pendingCommitBuffer = ImageBuffer::sinkIntoSerializedImageBuffer(imageBuffer->clone());
+    if (auto clone = imageBuffer->clone())
+        m_placeholderData->pendingCommitBuffer = ImageBuffer::sinkIntoSerializedImageBuffer(WTFMove(clone));
     if (m_placeholderData->pendingCommitBuffer && shouldPushBuffer)
         pushBufferToPlaceholder();
 }
@@ -564,6 +572,17 @@ void OffscreenCanvas::reset()
 
     notifyObserversCanvasResized();
     scheduleCommitToPlaceholderCanvas();
+}
+
+
+void OffscreenCanvas::queueTaskKeepingObjectAlive(TaskSource source, Function<void()>&& task)
+{
+    ActiveDOMObject::queueTaskKeepingObjectAlive(*this, source, WTFMove(task));
+}
+
+void OffscreenCanvas::dispatchEvent(Event& event)
+{
+    EventDispatcher::dispatchEvent({ this }, event);
 }
 
 }

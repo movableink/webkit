@@ -357,9 +357,13 @@ static void websiteDataClearedCallback(WebKitWebsiteDataManager *manager, GAsync
         webkit_web_view_reload(webkit_uri_scheme_request_get_web_view(dataRequest->request));
 }
 
-static void aboutDataScriptMessageReceivedCallback(WebKitUserContentManager *userContentManager, WebKitJavascriptResult *message, WebKitWebsiteDataManager *manager)
+static void aboutDataScriptMessageReceivedCallback(WebKitUserContentManager *userContentManager, gpointer message, WebKitWebsiteDataManager *manager)
 {
+#if GTK_CHECK_VERSION(3, 98, 0)
+    char *messageString = jsc_value_to_string(message);
+#else
     char *messageString = jsc_value_to_string(webkit_javascript_result_get_js_value(message));
+#endif
     char **tokens = g_strsplit(messageString, ":", 3);
     g_free(messageString);
 
@@ -781,7 +785,11 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     webkit_web_context_register_uri_scheme(webContext, BROWSER_ABOUT_SCHEME, (WebKitURISchemeRequestCallback)aboutURISchemeRequestCallback, NULL, NULL);
 
     WebKitUserContentManager *userContentManager = webkit_user_content_manager_new();
+#if GTK_CHECK_VERSION(3, 98, 0)
+    webkit_user_content_manager_register_script_message_handler(userContentManager, "aboutData", NULL);
+#else
     webkit_user_content_manager_register_script_message_handler(userContentManager, "aboutData");
+#endif
     WebKitWebsiteDataManager *dataManager;
 #if GTK_CHECK_VERSION(3, 98, 0)
     dataManager = webkit_network_session_get_website_data_manager(networkSession);

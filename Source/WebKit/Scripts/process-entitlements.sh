@@ -120,7 +120,6 @@ function mac_process_gpu_entitlements()
         if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 140000 ))
         then
             plistbuddy add :com.apple.private.disable.screencapturekit.alert bool YES
-            plistbuddy add :com.apple.private.mediaexperience.recordingWebsite.allow bool YES
         fi
 
         plistbuddy Add :com.apple.private.memory.ownership_transfer bool YES
@@ -144,6 +143,7 @@ function mac_process_network_entitlements()
             plistbuddy Add :com.apple.private.security.message-filter bool YES
             plistbuddy Add :com.apple.private.tcc.manager.check-by-audit-token array
             plistbuddy Add :com.apple.private.tcc.manager.check-by-audit-token:0 string kTCCServiceWebKitIntelligentTrackingPrevention
+            plistbuddy Add :com.apple.private.tcc.manager.check-by-audit-token:1 string kTCCServiceUserTracking
         fi
 
         if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 110000 ))
@@ -175,16 +175,16 @@ function webcontent_sandbox_entitlements()
     plistbuddy Add :com.apple.private.security.mutable-state-flags array
     plistbuddy Add :com.apple.private.security.mutable-state-flags:0 string EnableMachBootstrap
     plistbuddy Add :com.apple.private.security.mutable-state-flags:1 string EnableExperimentalSandbox
-    plistbuddy Add :com.apple.private.security.mutable-state-flags:2 string EnableExperimentalSandboxWithProbability
-    plistbuddy Add :com.apple.private.security.mutable-state-flags:3 string BlockIOKitInWebContentSandbox
-    plistbuddy Add :com.apple.private.security.mutable-state-flags:4 string LockdownModeEnabled
-    plistbuddy Add :com.apple.private.security.mutable-state-flags:5 string WebContentProcessLaunched
+    plistbuddy Add :com.apple.private.security.mutable-state-flags:2 string BlockIOKitInWebContentSandbox
+    plistbuddy Add :com.apple.private.security.mutable-state-flags:3 string LockdownModeEnabled
+    plistbuddy Add :com.apple.private.security.mutable-state-flags:4 string WebContentProcessLaunched
+    plistbuddy Add :com.apple.private.security.mutable-state-flags:5 string DisableLogging
     plistbuddy Add :com.apple.private.security.enable-state-flags array
     plistbuddy Add :com.apple.private.security.enable-state-flags:0 string EnableExperimentalSandbox
-    plistbuddy Add :com.apple.private.security.enable-state-flags:1 string EnableExperimentalSandboxWithProbability
-    plistbuddy Add :com.apple.private.security.enable-state-flags:2 string BlockIOKitInWebContentSandbox
-    plistbuddy Add :com.apple.private.security.enable-state-flags:3 string LockdownModeEnabled
-    plistbuddy Add :com.apple.private.security.enable-state-flags:4 string WebContentProcessLaunched
+    plistbuddy Add :com.apple.private.security.enable-state-flags:1 string BlockIOKitInWebContentSandbox
+    plistbuddy Add :com.apple.private.security.enable-state-flags:2 string LockdownModeEnabled
+    plistbuddy Add :com.apple.private.security.enable-state-flags:3 string WebContentProcessLaunched
+    plistbuddy Add :com.apple.private.security.enable-state-flags:4 string DisableLogging
 }
 
 function mac_process_webcontent_shared_entitlements()
@@ -406,6 +406,7 @@ function ios_family_process_gpu_entitlements()
     plistbuddy Add :com.apple.private.gpu-restricted bool YES
     plistbuddy Add :com.apple.private.mediaexperience.startrecordinginthebackground.allow bool YES
     plistbuddy Add :com.apple.private.mediaexperience.processassertionaudittokens.allow bool YES
+    plistbuddy add :com.apple.private.mediaexperience.recordingWebsite.allow bool YES
     plistbuddy Add :com.apple.private.coremedia.pidinheritance.allow bool YES
     plistbuddy Add :com.apple.private.memorystatus bool YES
     plistbuddy Add :com.apple.private.memory.ownership_transfer bool YES
@@ -527,5 +528,20 @@ then
 else
     echo "Unsupported/unknown platform: ${WK_PLATFORM_NAME}"
 fi
+
+function process_additional_entitlements()
+{
+    local ENTITLEMENTS_SCRIPT=$1
+    shift
+    for PREFIX in "${@}"; do
+        if [[ -f "${PREFIX}/${ENTITLEMENTS_SCRIPT}" ]]; then
+            source "${PREFIX}/${ENTITLEMENTS_SCRIPT}"
+            break
+        fi
+    done
+}
+
+ADDITIONAL_ENTITLEMENTS_SCRIPT=usr/local/include/WebKitAdditions/Scripts/process-additional-entitlements.sh
+process_additional_entitlements "${ADDITIONAL_ENTITLEMENTS_SCRIPT}" "${BUILT_PRODUCTS_DIR}" "${SDKROOT}"
 
 exit 0

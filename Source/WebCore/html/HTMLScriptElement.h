@@ -28,6 +28,8 @@
 
 namespace WebCore {
 
+enum class RequestPriority : uint8_t;
+
 class HTMLScriptElement final : public HTMLElement, public ScriptElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLScriptElement);
 public:
@@ -52,6 +54,10 @@ public:
     using HTMLElement::deref;
 
     static bool supports(StringView type) { return type == "classic"_s || type == "module"_s || type == "importmap"_s; }
+
+    void setFetchPriorityForBindings(const AtomString&);
+    String fetchPriorityForBindings() const;
+    RequestPriority fetchPriorityHint() const override;
 
 private:
     HTMLScriptElement(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted);

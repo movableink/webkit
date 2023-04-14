@@ -22,6 +22,7 @@
 
 #include "APIString.h"
 #include "InjectedBundle.h"
+#include "MessageSenderInlines.h"
 #include "WebContextMenuItem.h"
 #include "WebKitContextMenuPrivate.h"
 #include "WebKitFramePrivate.h"
@@ -40,11 +41,11 @@
 #include <WebCore/ContextMenuContext.h>
 #include <WebCore/Document.h>
 #include <WebCore/DocumentLoader.h>
-#include <WebCore/Frame.h>
 #include <WebCore/FrameDestructionObserver.h>
 #include <WebCore/FrameLoader.h>
-#include <WebCore/FrameView.h>
 #include <WebCore/HTMLFormElement.h>
+#include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameView.h>
 #include <glib/gi18n-lib.h>
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
@@ -822,7 +823,7 @@ WebKitDOMDocument* webkit_web_page_get_dom_document(WebKitWebPage* webPage)
 {
     g_return_val_if_fail(WEBKIT_IS_WEB_PAGE(webPage), nullptr);
 
-    if (auto* coreFrame = webPage->priv->webPage->mainFrame())
+    if (auto* coreFrame = dynamicDowncast<WebCore::LocalFrame>(webPage->priv->webPage->mainFrame()))
         return kit(coreFrame->document());
 
     return nullptr;

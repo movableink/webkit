@@ -92,7 +92,7 @@ private:
     void dispatchDidReachLayoutMilestone(OptionSet<LayoutMilestone>) final;
     void dispatchDidReachVisuallyNonEmptyState() final;
 
-    Frame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) final;
+    LocalFrame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) final;
     void dispatchShow() final;
 
     void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String&, FramePolicyFunction&&) final;
@@ -132,6 +132,7 @@ private:
 
     ResourceError cannotShowMIMETypeError(const ResourceResponse&) const final;
     ResourceError fileDoesNotExistError(const ResourceResponse&) const final;
+    ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const final;
     ResourceError pluginWillHandleLoadError(const ResourceResponse&) const final;
 
     bool shouldFallBack(const ResourceError&) const final;
@@ -169,7 +170,7 @@ private:
     bool canCachePage() const final;
     void didDisplayInsecureContent() final;
     void didRunInsecureContent(SecurityOrigin&, const URL&) final;
-    RefPtr<Frame> createFrame(const AtomString&, HTMLFrameOwnerElement&) final;
+    RefPtr<LocalFrame> createFrame(const AtomString&, HTMLFrameOwnerElement&) final;
     RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool) final;
 
     ObjectContentType objectContentType(const URL&, const String&) final;

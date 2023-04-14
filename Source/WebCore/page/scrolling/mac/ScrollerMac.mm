@@ -28,6 +28,7 @@
 
 #if PLATFORM(MAC)
 
+#import "ScrollTypesMac.h"
 #import "ScrollerPairMac.h"
 #import <QuartzCore/CALayer.h>
 #import <WebCore/FloatPoint.h>
@@ -314,7 +315,7 @@ enum class FeatureToAnimate {
 
 namespace WebCore {
 
-ScrollerMac::ScrollerMac(ScrollerPairMac& pair, Orientation orientation)
+ScrollerMac::ScrollerMac(ScrollerPairMac& pair, ScrollbarOrientation orientation)
     : m_pair(pair)
     , m_orientation(orientation)
 {
@@ -329,9 +330,7 @@ ScrollerMac::~ScrollerMac()
 void ScrollerMac::attach()
 {
     m_scrollerImpDelegate = adoptNS([[WebScrollerImpDelegateMac alloc] initWithScroller:this]);
-
-    NSScrollerStyle newStyle = [m_pair.scrollerImpPair() scrollerStyle];
-    m_scrollerImp = [NSScrollerImp scrollerImpWithStyle:newStyle controlSize:NSControlSizeRegular horizontal:m_orientation == Orientation::Horizontal replacingScrollerImp:nil];
+    m_scrollerImp = [NSScrollerImp scrollerImpWithStyle:nsScrollerStyle(m_pair.scrollbarStyle()) controlSize:NSControlSizeRegular horizontal:m_orientation == ScrollbarOrientation::Horizontal replacingScrollerImp:nil];
     [m_scrollerImp setDelegate:m_scrollerImpDelegate.get()];
 }
 
@@ -344,10 +343,7 @@ void ScrollerMac::setHostLayer(CALayer *layer)
 
     [m_scrollerImp setLayer:layer];
 
-    if (m_orientation == Orientation::Vertical)
-        [m_pair.scrollerImpPair() setVerticalScrollerImp:layer ? m_scrollerImp.get() : nil];
-    else
-        [m_pair.scrollerImpPair() setHorizontalScrollerImp:layer ?  m_scrollerImp.get() : nil];
+    updatePairScrollerImps();
 }
 
 void ScrollerMac::updateValues()
@@ -365,9 +361,75 @@ void ScrollerMac::updateValues()
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
-WebCore::FloatPoint ScrollerMac::convertFromContent(const WebCore::FloatPoint& point) const
+void ScrollerMac::updateScrollbarStyle()
 {
-    return WebCore::FloatPoint { [m_hostLayer convertPoint:point fromLayer:[m_hostLayer superlayer]] };
+    m_scrollerImp = [NSScrollerImp scrollerImpWithStyle:nsScrollerStyle(m_pair.scrollbarStyle()) controlSize:NSControlSizeRegular horizontal:m_orientation == ScrollbarOrientation::Horizontal replacingScrollerImp:takeScrollerImp().get()];
+    updatePairScrollerImps();
+}
+
+FloatPoint ScrollerMac::convertFromContent(const FloatPoint& point) const
+{
+    return FloatPoint { [m_hostLayer convertPoint:point fromLayer:[m_hostLayer superlayer]] };
+}
+
+void ScrollerMac::updatePairScrollerImps()
+{
+    NSScrollerImp *scrollerImp = m_hostLayer ? m_scrollerImp.get() : nil;
+    if (m_orientation == ScrollbarOrientation::Vertical)
+        m_pair.setVerticalScrollerImp(scrollerImp);
+    else
+        m_pair.setHorizontalScrollerImp(scrollerImp);
+}
+
+void ScrollerMac::mouseEnteredScrollbar()
+{
+    m_pair.ensureOnMainThreadWithProtectedThis([this] {
+        // At this time, only legacy scrollbars needs to send notifications here.
+        if (m_pair.scrollbarStyle() != WebCore::ScrollbarStyle::AlwaysVisible)
+            return;
+
+        if ([m_pair.scrollerImpPair() overlayScrollerStateIsLocked])
+            return;
+
+        [m_scrollerImp mouseEnteredScroller];
+    });
+}
+
+void ScrollerMac::mouseExitedScrollbar()
+{
+    m_pair.ensureOnMainThreadWithProtectedThis([this] {
+        // At this time, only legacy scrollbars needs to send notifications here.
+        if (m_pair.scrollbarStyle() != WebCore::ScrollbarStyle::AlwaysVisible)
+            return;
+
+        if ([m_pair.scrollerImpPair() overlayScrollerStateIsLocked])
+            return;
+
+        [m_scrollerImp mouseExitedScroller];
+    });
+}
+
+String ScrollerMac::scrollbarState() const
+{
+    if (!m_hostLayer || !m_scrollerImp)
+        return "none"_s;
+
+    StringBuilder result;
+    result.append([m_scrollerImp isEnabled] ? "enabled"_s: "disabled"_s);
+
+    if (m_pair.scrollbarStyle() != WebCore::ScrollbarStyle::Overlay)
+        return result.toString();
+
+    if ([m_scrollerImp isExpanded])
+        result.append(",expanded"_s);
+
+    if ([m_scrollerImp trackAlpha] > 0)
+        result.append(",visible_track"_s);
+
+    if ([m_scrollerImp knobAlpha] > 0)
+        result.append(",visible_thumb"_s);
+
+    return result.toString();
 }
 
 }

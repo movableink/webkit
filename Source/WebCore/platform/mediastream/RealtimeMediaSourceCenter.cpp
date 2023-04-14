@@ -66,6 +66,7 @@ RealtimeMediaSourceCenter::RealtimeMediaSourceCenter()
     m_supportedConstraints.setSupportsVolume(true);
     m_supportedConstraints.setSupportsDeviceId(true);
     m_supportedConstraints.setSupportsDisplaySurface(true);
+    m_supportedConstraints.setSupportsZoom(true);
 }
 
 RealtimeMediaSourceCenter::~RealtimeMediaSourceCenter() = default;
@@ -137,6 +138,23 @@ void RealtimeMediaSourceCenter::getMediaStreamDevices(CompletionHandler<void(Vec
 
         completion(WTFMove(results));
     });
+}
+
+RealtimeMediaSourceCapabilities RealtimeMediaSourceCenter::getCapabilities(const CaptureDevice& device)
+{
+    if (device.type() == CaptureDevice::DeviceType::Camera) {
+        auto source = videoCaptureFactory().createVideoCaptureSource({ device },  { "fake"_s, "fake"_s }, nullptr, { });
+        if (!source)
+            return { };
+        return source.source()->capabilities();
+    }
+    if (device.type() == CaptureDevice::DeviceType::Microphone) {
+        auto source = audioCaptureFactory().createAudioCaptureSource({ device }, { "fake"_s, "fake"_s }, nullptr, { });
+        if (!source)
+            return { };
+        return source.source()->capabilities();
+    }
+    return { };
 }
 
 static void addStringToSHA1(SHA1& sha1, const String& string)
@@ -314,7 +332,7 @@ void RealtimeMediaSourceCenter::validateRequestConstraintsAfterEnumeration(Valid
 
     Vector<CaptureDevice> audioDevices;
     if (!audioDeviceInfo.isEmpty()) {
-        std::sort(audioDeviceInfo.begin(), audioDeviceInfo.end(), sortBasedOnFitnessScore);
+        std::stable_sort(audioDeviceInfo.begin(), audioDeviceInfo.end(), sortBasedOnFitnessScore);
         audioDevices = WTF::map(audioDeviceInfo, [] (auto& info) {
             return info.device;
         });
@@ -322,7 +340,7 @@ void RealtimeMediaSourceCenter::validateRequestConstraintsAfterEnumeration(Valid
 
     Vector<CaptureDevice> videoDevices;
     if (!videoDeviceInfo.isEmpty()) {
-        std::sort(videoDeviceInfo.begin(), videoDeviceInfo.end(), sortBasedOnFitnessScore);
+        std::stable_sort(videoDeviceInfo.begin(), videoDeviceInfo.end(), sortBasedOnFitnessScore);
         videoDevices = WTF::map(videoDeviceInfo, [] (auto& info) {
             return info.device;
         });

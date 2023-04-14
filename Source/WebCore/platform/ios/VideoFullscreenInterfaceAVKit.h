@@ -26,13 +26,15 @@
 
 #pragma once
 
-#if PLATFORM(IOS_FAMILY) && ENABLE(VIDEO_PRESENTATION_MODE)
+#if PLATFORM(IOS_FAMILY) && HAVE(AVKIT)
 
 #include "EventListener.h"
 #include "HTMLMediaElementEnums.h"
 #include "MediaPlayerIdentifier.h"
+#include "PlatformImage.h"
 #include "PlatformLayer.h"
 #include "PlaybackSessionInterfaceAVKit.h"
+#include "VideoFullscreenCaptions.h"
 #include "VideoFullscreenModel.h"
 #include <objc/objc.h>
 #include <wtf/Forward.h>
@@ -63,6 +65,7 @@ class VideoFullscreenChangeObserver;
 class VideoFullscreenInterfaceAVKit final
     : public VideoFullscreenModelClient
     , public PlaybackSessionModelClient
+    , public VideoFullscreenCaptions
     , public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<VideoFullscreenInterfaceAVKit, WTF::DestructionThread::MainRunLoop> {
 public:
     WEBCORE_EXPORT static Ref<VideoFullscreenInterfaceAVKit> create(PlaybackSessionInterfaceAVKit&);
@@ -240,5 +243,4 @@ private:
 
 }
 
-#endif // PLATFORM(IOS_FAMILY) && ENABLE(VIDEO_PRESENTATION_MODE)
-
+#endif // PLATFORM(IOS_FAMILY) && HAVE(AVKIT)

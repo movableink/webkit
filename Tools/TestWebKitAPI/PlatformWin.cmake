@@ -1,6 +1,6 @@
 set(TESTWEBKITAPI_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
-set(wrapper_DEFINITIONS USE_CONSOLE_ENTRY_POINT WIN_CAIRO)
+set(wrapper_DEFINITIONS USE_CONSOLE_ENTRY_POINT)
 
 set(test_main_SOURCES
     win/main.cpp
@@ -45,12 +45,6 @@ list(APPEND TestWebCore_LIBRARIES
     WindowsCodecs
     dxguid
 )
-
-if (USE_CF)
-    list(APPEND TestWebCore_LIBRARIES
-        Apple::CoreFoundation
-    )
-endif ()
 
 WEBKIT_WRAP_EXECUTABLE(TestWebCore
     SOURCES ${TOOLS_DIR}/win/DLLLauncher/DLLLauncherMain.cpp

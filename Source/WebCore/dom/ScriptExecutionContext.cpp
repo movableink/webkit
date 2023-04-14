@@ -33,7 +33,6 @@
 #include "CommonVM.h"
 #include "CrossOriginOpenerPolicy.h"
 #include "DOMTimer.h"
-#include "DOMWindow.h"
 #include "DatabaseContext.h"
 #include "Document.h"
 #include "ErrorEvent.h"
@@ -41,10 +40,11 @@
 #include "FrameDestructionObserverInlines.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMPromiseDeferred.h"
-#include "JSDOMWindow.h"
+#include "JSLocalDOMWindow.h"
 #include "JSWorkerGlobalScope.h"
 #include "JSWorkletGlobalScope.h"
 #include "LegacySchemeRegistry.h"
+#include "LocalDOMWindow.h"
 #include "MessagePort.h"
 #include "Navigator.h"
 #include "Page.h"
@@ -820,7 +820,7 @@ ScriptExecutionContext::HasResourceAccess ScriptExecutionContext::canAccessResou
 
 ScriptExecutionContext::NotificationCallbackIdentifier ScriptExecutionContext::addNotificationCallback(CompletionHandler<void()>&& callback)
 {
-    auto identifier = NotificationCallbackIdentifier::generateThreadSafe();
+    auto identifier = NotificationCallbackIdentifier::generate();
     m_notificationCallbacks.add(identifier, WTFMove(callback));
     return identifier;
 }

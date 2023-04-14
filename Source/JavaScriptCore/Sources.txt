@@ -247,6 +247,7 @@ bytecode/ICStatusUtils.cpp
 bytecode/InByStatus.cpp
 bytecode/InByVariant.cpp
 bytecode/InlineAccess.cpp
+bytecode/InlineCacheCompiler.cpp
 bytecode/InlineCallFrame.cpp
 bytecode/InlineCallFrameSet.cpp
 bytecode/InstanceOfAccessCase.cpp
@@ -267,7 +268,6 @@ bytecode/ObjectPropertyConditionSet.cpp
 bytecode/Opcode.cpp
 bytecode/ParseHash.cpp
 bytecode/PolyProtoAccessChain.cpp
-bytecode/PolymorphicAccess.cpp
 bytecode/PreciseJumpTargets.cpp
 bytecode/ProgramCodeBlock.cpp
 bytecode/PropertyCondition.cpp
@@ -656,7 +656,6 @@ jit/ExecutableMemoryHandle.cpp
 jit/GCAwareJITStubRoutine.cpp
 jit/GPRInfo.cpp
 jit/ICStats.cpp
-jit/IntrinsicEmitter.cpp
 jit/JIT.cpp
 jit/JITAddGenerator.cpp
 jit/JITArithmetic.cpp
@@ -969,6 +968,7 @@ runtime/MapPrototype.cpp
 runtime/MatchResult.cpp
 runtime/MathCommon.cpp
 runtime/MathObject.cpp
+runtime/MegamorphicCache.cpp
 runtime/MemoryMode.cpp
 runtime/MemoryStatistics.cpp
 runtime/ModuleProgramExecutable.cpp
@@ -1098,13 +1098,13 @@ tools/FunctionOverrides.cpp
 tools/HeapVerifier.cpp
 tools/Integrity.cpp
 tools/JSDollarVM.cpp
-tools/SigillCrashAnalyzer.cpp
 tools/VMInspector.cpp
 
 wasm/WasmAirIRGenerator32_64.cpp @no-unify
 wasm/WasmAirIRGenerator64.cpp @no-unify
 wasm/WasmB3IRGenerator.cpp
-wasm/WasmBBQJIT.cpp
+wasm/WasmBBQDisassembler.cpp
+wasm/WasmBBQJIT.cpp @no-unify
 wasm/WasmBBQPlan.cpp
 wasm/WasmBinding.cpp
 wasm/WasmBranchHintsSectionParser.cpp
@@ -1177,6 +1177,7 @@ wasm/js/WebAssemblyExceptionConstructor.cpp
 wasm/js/WebAssemblyExceptionPrototype.cpp
 wasm/js/WebAssemblyFunction.cpp
 wasm/js/WebAssemblyFunctionBase.cpp
+wasm/js/WebAssemblyGCObjectBase.cpp
 wasm/js/WebAssemblyGlobalConstructor.cpp
 wasm/js/WebAssemblyGlobalPrototype.cpp
 wasm/js/WebAssemblyInstanceConstructor.cpp
