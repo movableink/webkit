@@ -110,7 +110,7 @@ void ChromeClientQt::setWindowRect(const FloatRect& rect)
     like toolbars/scrollbars etc. It is used by the viewport meta tag as well as
     by the DOM Window object: outerHeight(), outerWidth(), screenX(), screenY().
 */
-FloatRect ChromeClientQt::windowRect()
+FloatRect ChromeClientQt::windowRect() const
 {
     if (!platformPageClient())
         return FloatRect();
@@ -128,7 +128,7 @@ bool ChromeClientQt::allowsAcceleratedCompositing() const
 #endif
 }
 
-FloatRect ChromeClientQt::pageRect()
+FloatRect ChromeClientQt::pageRect() const
 {
     if (!m_webPage)
         return FloatRect();
@@ -150,7 +150,7 @@ void ChromeClientQt::unfocus()
     m_webPage->unfocus();
 }
 
-bool ChromeClientQt::canTakeFocus(FocusDirection)
+bool ChromeClientQt::canTakeFocus(FocusDirection) const
 {
     // This is called when cycling through links/focusable objects and we
     // reach the last focusable object. Then we want to claim that we can
@@ -200,7 +200,7 @@ void ChromeClientQt::show()
 }
 
 
-bool ChromeClientQt::canRunModal()
+bool ChromeClientQt::canRunModal() const
 {
     return true;
 }
@@ -222,7 +222,7 @@ void ChromeClientQt::setToolbarsVisible(bool visible)
 }
 
 
-bool ChromeClientQt::toolbarsVisible()
+bool ChromeClientQt::toolbarsVisible() const
 {
     return toolBarsVisible;
 }
@@ -235,7 +235,7 @@ void ChromeClientQt::setStatusbarVisible(bool visible)
 }
 
 
-bool ChromeClientQt::statusbarVisible()
+bool ChromeClientQt::statusbarVisible() const
 {
     return statusBarVisible;
 }
@@ -247,7 +247,7 @@ void ChromeClientQt::setScrollbarsVisible(bool)
 }
 
 
-bool ChromeClientQt::scrollbarsVisible()
+bool ChromeClientQt::scrollbarsVisible() const
 {
     notImplemented();
     return true;
@@ -260,7 +260,7 @@ void ChromeClientQt::setMenubarVisible(bool visible)
     QMetaObject::invokeMethod(m_webPage->handle(), "menuBarVisibilityChangeRequested", Q_ARG(bool, visible));
 }
 
-bool ChromeClientQt::menubarVisible()
+bool ChromeClientQt::menubarVisible() const
 {
     return menuBarVisible;
 }

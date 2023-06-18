@@ -49,7 +49,7 @@ void ContextMenuClientQt::speak(const String&)
     notImplemented();
 }
 
-bool ContextMenuClientQt::isSpeaking()
+bool ContextMenuClientQt::isSpeaking() const
 {
     notImplemented();
     return false;

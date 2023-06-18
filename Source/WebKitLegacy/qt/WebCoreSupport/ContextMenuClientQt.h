@@ -39,7 +39,7 @@ public:
     void downloadURL(const URL&) final;
     void lookUpInDictionary(LocalFrame*) final;
     void speak(const String&) final;
-    bool isSpeaking() final;
+    bool isSpeaking() const final;
     void stopSpeaking() final;
     void searchWithGoogle(const LocalFrame*) final;
 };

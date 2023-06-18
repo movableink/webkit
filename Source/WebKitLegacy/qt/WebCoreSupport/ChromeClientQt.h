@@ -67,14 +67,14 @@ public:
     void chromeDestroyed() final;
 
     void setWindowRect(const FloatRect&) final;
-    FloatRect windowRect() final;
+    FloatRect windowRect() const final;
 
-    FloatRect pageRect() final;
+    FloatRect pageRect() const final;
 
     void focus() final;
     void unfocus() final;
 
-    bool canTakeFocus(FocusDirection) final;
+    bool canTakeFocus(FocusDirection) const final;
     void takeFocus(FocusDirection) final;
 
     void focusedElementChanged(Element*) final;
@@ -83,20 +83,20 @@ public:
     Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&) final;
     void show() final;
 
-    bool canRunModal() final;
+    bool canRunModal() const final;
     void runModal() final;
 
     void setToolbarsVisible(bool) final;
-    bool toolbarsVisible() final;
+    bool toolbarsVisible() const final;
 
     void setStatusbarVisible(bool) final;
-    bool statusbarVisible() final;
+    bool statusbarVisible() const final;
 
     void setScrollbarsVisible(bool) final;
-    bool scrollbarsVisible() final;
+    bool scrollbarsVisible() const final;
 
     void setMenubarVisible(bool) final;
-    bool menubarVisible() final;
+    bool menubarVisible() const final;
 
     void setResizable(bool) final;
 
