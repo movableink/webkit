@@ -60,6 +60,7 @@
 #include <WebCore/HTTPParsers.h>
 #include <WebCore/HitTestResult.h>
 #include <WebCore/MIMETypeRegistry.h>
+#include <WebCore/LocalDOMWindow.h>
 #include <WebCore/MouseEvent.h>
 #include <WebCore/PluginData.h>
 #include <WebCore/QNetworkReplyHandler.h>

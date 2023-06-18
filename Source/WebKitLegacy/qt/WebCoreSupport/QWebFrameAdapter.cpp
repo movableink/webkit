@@ -47,6 +47,7 @@
 #include <WebCore/InspectorController.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/IntSize.h>
+#include <WebCore/JSLocalDOMWindow.h>
 #include <WebCore/NavigationScheduler.h>
 #include <WebCore/NetworkingContext.h>
 #include <WebCore/ResourceRequest.h>
@@ -199,7 +200,7 @@ void QWebFrameAdapter::addToJavaScriptWindowObject(const QString& name, QObject*
     if (!pageAdapter->settings->testAttribute(QWebSettings::JavascriptEnabled))
         return;
     JSC::Bindings::QtInstance::ValueOwnership valueOwnership = static_cast<JSC::Bindings::QtInstance::ValueOwnership>(ownership);
-    JSDOMWindow* window = toJSDOMWindow(frame, mainThreadNormalWorld());
+    JSLocalDOMWindow* window = toJSLocalDOMWindow(frame, mainThreadNormalWorld());
     JSC::Bindings::RootObject* root;
     if (valueOwnership == JSC::Bindings::QtInstance::QtOwnership)
         root = frame->script().cacheableBindingRootObject();

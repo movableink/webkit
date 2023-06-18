@@ -714,7 +714,7 @@ QVariant QWebElement::evaluateJavaScript(const QString& scriptSource)
     JSC::JSLockHolder lock(lexicalGlobalObject);
     RefPtr<Element> protect = m_element;
 
-    JSC::JSValue thisValue = toJS(lexicalGlobalObject, toJSDOMWindow(m_element->document().frame(), currentWorld(*lexicalGlobalObject)), m_element);
+    JSC::JSValue thisValue = toJS(lexicalGlobalObject, toJSLocalDOMWindow(m_element->document().frame(), currentWorld(*lexicalGlobalObject)), m_element);
     if (!thisValue)
         return QVariant();
 

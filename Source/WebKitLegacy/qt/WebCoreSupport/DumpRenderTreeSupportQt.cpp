@@ -862,7 +862,7 @@ void DumpRenderTreeSupportQt::resetPageVisibility(QWebPageAdapter* adapter)
 
 void DumpRenderTreeSupportQt::getJSWindowObject(QWebFrameAdapter* adapter, JSContextRef* context, JSObjectRef* object)
 {
-    JSDOMWindow* window = toJSDOMWindow(adapter->frame, mainThreadNormalWorld());
+    JSLocalDOMWindow* window = toJSLocalDOMWindow(adapter->frame, mainThreadNormalWorld());
 
     // TODO: fix this
     //*object = toRef(window);
