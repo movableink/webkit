@@ -28,11 +28,6 @@
 #include <WebCore/NotImplemented.h>
 
 namespace WebCore {
-    
-void ContextMenuClientQt::contextMenuDestroyed()
-{
-    delete this;
-}
 
 void ContextMenuClientQt::downloadURL(const URL&)
 {

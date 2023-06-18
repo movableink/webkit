@@ -312,7 +312,6 @@ void ChromeClientQt::addMessageToConsole(MessageSource source, MessageLevel leve
 
 void ChromeClientQt::chromeDestroyed()
 {
-    delete this;
 }
 
 bool ChromeClientQt::canRunBeforeUnloadConfirmPanel()

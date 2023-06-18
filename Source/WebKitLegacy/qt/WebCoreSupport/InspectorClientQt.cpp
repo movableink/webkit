@@ -150,8 +150,6 @@ void InspectorClientQt::inspectedPageDestroyed()
     InspectorServerQt* webInspectorServer = InspectorServerQt::server();
     if (webInspectorServer)
         webInspectorServer->unregisterClient(this);
-
-    delete this;
 }
 
 Inspector::FrontendChannel* InspectorClientQt::openLocalFrontend(WebCore::InspectorController* inspectorController)
@@ -263,7 +261,6 @@ void InspectorClientQt::sendMessageToFrontend(const String& message)
     if (!m_frontendWebPage)
         return;
 
-    Page* frontendPage = m_frontendWebPage->page;
     m_frontendClient->frontendAPIDispatcher().dispatchMessageAsync(message);
 }
 

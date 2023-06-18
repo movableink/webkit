@@ -34,6 +34,7 @@
 #include "NotificationPresenterClientQt.h"
 #include "PluginInfoProviderQt.h"
 #include "ProgressTrackerClientQt.h"
+#include "LegacySocketProvider.h"
 #include "QWebFrameAdapter.h"
 #include "QWebPageStorageSessionProvider.h"
 #include "UndoStepQt.h"
@@ -64,6 +65,7 @@
 #include <WebCore/Chrome.h>
 #include <WebCore/CompositionHighlight.h>
 #include <WebCore/ContextMenu.h>
+#include <WebCore/ContextMenuClient.h>
 #include <WebCore/ContextMenuController.h>
 #include <WebCore/CookieJar.h>
 #include <WebCore/DocumentLoader.h>
@@ -93,10 +95,10 @@
 #include <WebCore/PlatformMouseEvent.h>
 #include <WebCore/ProgressTracker.h>
 #include <WebCore/QWebPageClient.h>
+#include <WebCore/RemoteFrameClient.h>
 #include <WebCore/RenderTextControl.h>
 #include <WebCore/ScrollbarTheme.h>
 #include <WebCore/Settings.h>
-#include <WebCore/SocketProvider.h>
 #include <WebCore/TextIterator.h>
 #include <WebCore/UserAgentQt.h>
 #include <WebCore/UserContentController.h>
@@ -271,7 +273,7 @@ void QWebPageAdapter::initializeWebCorePage()
     PageConfiguration pageConfiguration {
         sessionID,
         makeUniqueRef<EditorClientQt>(this),
-        SocketProvider::create(),
+        LegacySocketProvider::create(),
         WebRTCProvider::create(),
         CacheStorageProvider::create(),
         userContentProvider(),
@@ -279,18 +281,21 @@ void QWebPageAdapter::initializeWebCorePage()
         CookieJar::create(storageProvider.copyRef()),
         makeUniqueRef<ProgressTrackerClientQt>(this),
         makeUniqueRef<FrameLoaderClientQt>(),
+        WebCore::FrameIdentifier::generate(),
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate(isPrivateBrowsingEnabled),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
         makeUniqueRef<WebCore::DummyModelPlayerProvider>(),
-        EmptyBadgeClient::create()
+        EmptyBadgeClient::create(),
+#if ENABLE(CONTEXT_MENUS)
+        makeUniqueRef<ContextMenuClientQt>(),
+#endif
+        makeUniqueRef<ChromeClientQt>(this)
     };
     pageConfiguration.applicationCacheStorage = ApplicationCacheStorage::create({ }, { }); // QTFIXME
-    pageConfiguration.chromeClient = new ChromeClientQt(this);
-    pageConfiguration.contextMenuClient = new ContextMenuClientQt();
-    pageConfiguration.dragClient = std::make_unique<DragClientQt>(pageConfiguration.chromeClient);
-    pageConfiguration.inspectorClient = new InspectorClientQt(this);
+    pageConfiguration.dragClient = makeUnique<DragClientQt>(pageConfiguration.chromeClient.ptr());
+    pageConfiguration.inspectorClient = makeUnique<InspectorClientQt>(this);
     pageConfiguration.databaseProvider = &WebDatabaseProvider::singleton();
     pageConfiguration.pluginInfoProvider = &PluginInfoProviderQt::singleton();
     pageConfiguration.storageNamespaceProvider = WebKitLegacy::WebStorageNamespaceProvider::create(

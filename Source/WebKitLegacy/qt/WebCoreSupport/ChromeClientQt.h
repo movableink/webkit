@@ -61,6 +61,7 @@ class FullScreenVideoQt;
 class TextureMapperLayerClientQt;
 
 class ChromeClientQt final : public ChromeClient {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ChromeClientQt(QWebPageAdapter*);
     ~ChromeClientQt();
