@@ -1055,9 +1055,12 @@ void GraphicsContextQt::fillRectWithRoundedHole(const FloatRect& rect, const Flo
 
 void GraphicsContextQt::clipToImageBuffer(ImageBuffer& buffer, const FloatRect& destRect)
 {
+    auto nativeImage = buffer.copyNativeImage(DontCopyBackingStore);
+    if (!nativeImage)
+        return;
 
-    IntRect rect = enclosingIntRect(destRect);
-    buffer.clipToMask(*this, rect);
+    GraphicsContextQt* context = platformContext();
+    context->pushTransparencyLayerInternal(QRectF(destRect).toRect(), 1.0, nativeImage->platformImage());
 }
 
 void GraphicsContextQt::clip(const FloatRect& rect)

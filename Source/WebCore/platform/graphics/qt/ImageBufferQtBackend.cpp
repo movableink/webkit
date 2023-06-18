@@ -127,7 +127,7 @@ void ImageBufferQtBackend::initPainter(QPainter *painter)
     painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
 }
 
-RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyBehavior) const
+RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyBehavior)
 {
     if (copyBehavior == CopyBackingStore)
         return NativeImage::create(m_nativeImage->copy());
@@ -135,13 +135,7 @@ RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyB
     return NativeImage::create(QImage(*m_nativeImage.get()));
 }
 
-void ImageBufferQtBackend::clipToMask(GraphicsContext& context, const FloatRect& destRect)
-{
-    if (RefPtr<NativeImage> nativeImage = copyNativeImage(DontCopyBackingStore))
-        context.platformContext()->pushTransparencyLayerInternal(QRectF(destRect).toRect(), 1.0, nativeImage->platformImage());
-}
-
-GraphicsContext &ImageBufferQtBackend::context() const { return *m_context; }
+GraphicsContext &ImageBufferQtBackend::context() { return *m_context; }
 
 void ImageBufferQtBackend::transformToColorSpace(const DestinationColorSpace& newColorSpace)
 {
@@ -214,7 +208,7 @@ void ImageBufferQtBackend::platformTransformColorSpace(const std::array<uint8_t,
     painter->restore();
 }
 
-RefPtr<PixelBuffer> ImageBufferQtBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator) const
+RefPtr<PixelBuffer> ImageBufferQtBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator)
 {
     return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage->bits())), allocator);
 }
