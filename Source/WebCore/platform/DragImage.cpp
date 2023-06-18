@@ -256,7 +256,7 @@ DragImage::DragImage(DragImageRef dragImageRef)
 
 DragImage::DragImage(DragImage&& other)
 #if PLATFORM(QT)
-    : m_dragImageRef { std::exchange(other.m_dragImageRef, QImage() )
+    : m_dragImageRef { std::exchange(other.m_dragImageRef, QImage() ) }
 #else
     : m_dragImageRef { std::exchange(other.m_dragImageRef, nullptr) }
 #endif
