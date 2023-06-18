@@ -21,6 +21,7 @@
 #define PopupMenuQt_h
 
 #include <QObject>
+#include <WebCore/LocalFrameView.h>
 #include <WebCore/PopupMenu.h>
 
 class QWebSelectData;
@@ -38,7 +39,7 @@ public:
     PopupMenuQt(PopupMenuClient*, const ChromeClientQt*);
     ~PopupMenuQt();
 
-    void show(const IntRect&, FrameView*, int index) final;
+    void show(const IntRect&, LocalFrameView*, int index) final;
     void hide() final;
     void updateFromElement() final;
     void disconnectClient() final;

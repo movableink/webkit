@@ -24,6 +24,7 @@
 #include "qorientationsensor.h"
 #endif // ENABLE(ORIENTATION_EVENTS).
 #include "qwebelement.h"
+#include <WebCore/LocalFrame.h>
 
 #include <QList>
 #include <QNetworkAccessManager>
@@ -220,7 +221,7 @@ public:
     WebCore::Scrollbar* horizontalScrollBar() const;
     WebCore::Scrollbar* verticalScrollBar() const;
 
-    WebCore::Frame *frame;
+    WebCore::LocalFrame *frame;
     WebCore::FrameLoaderClientQt *frameLoaderClient;
     QUrl url;
 

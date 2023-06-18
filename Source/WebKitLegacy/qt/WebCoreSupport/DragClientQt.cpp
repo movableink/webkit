@@ -80,7 +80,7 @@ void DragClientQt::willPerformDragSourceAction(DragSourceAction, const IntPoint&
 {
 }
 
-void DragClientQt::startDrag(DragItem dragItem, DataTransfer& dataTransfer, Frame& frame)
+void DragClientQt::startDrag(DragItem dragItem, DataTransfer& dataTransfer, LocalFrame& frame)
 {
 #if ENABLE(DRAG_SUPPORT)
     DragImageRef dragImage = dragItem.image.get();

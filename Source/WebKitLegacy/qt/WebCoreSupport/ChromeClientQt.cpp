@@ -172,11 +172,11 @@ void ChromeClientQt::focusedElementChanged(Element* element)
     emit m_webPage->focusedElementChanged(QWebElement(element));
 }
 
-void ChromeClientQt::focusedFrameChanged(Frame*)
+void ChromeClientQt::focusedFrameChanged(LocalFrame*)
 {
 }
 
-Page* ChromeClientQt::createWindow(Frame& frame, const WindowFeatures& features, const NavigationAction&)
+Page* ChromeClientQt::createWindow(LocalFrame& frame, const WindowFeatures& features, const NavigationAction&)
 {
 #if ENABLE(FULLSCREEN_API)
     if (frame.document() && frame.document()->fullscreenManager().currentFullscreenElement())
@@ -320,7 +320,7 @@ bool ChromeClientQt::canRunBeforeUnloadConfirmPanel()
     return true;
 }
 
-bool ChromeClientQt::runBeforeUnloadConfirmPanel(const String& message, Frame& frame)
+bool ChromeClientQt::runBeforeUnloadConfirmPanel(const String& message, LocalFrame& frame)
 {
     return runJavaScriptConfirm(frame, message);
 }
@@ -328,21 +328,22 @@ bool ChromeClientQt::runBeforeUnloadConfirmPanel(const String& message, Frame& f
 void ChromeClientQt::closeWindow()
 {
     m_webPage->page->setGroupName(String());
-    m_webPage->page->mainFrame().loader().stopAllLoaders();
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_webPage->page->mainFrame());
+    localMainFrame->loader().stopAllLoaders();
     QMetaObject::invokeMethod(m_webPage->handle(), "windowCloseRequested");
 }
 
-void ChromeClientQt::runJavaScriptAlert(Frame& f, const String& msg)
+void ChromeClientQt::runJavaScriptAlert(LocalFrame& f, const String& msg)
 {
     m_webPage->javaScriptAlert(QWebFrameAdapter::kit(f), msg);
 }
 
-bool ChromeClientQt::runJavaScriptConfirm(Frame& f, const String& msg)
+bool ChromeClientQt::runJavaScriptConfirm(LocalFrame& f, const String& msg)
 {
     return m_webPage->javaScriptConfirm(QWebFrameAdapter::kit(f), msg);
 }
 
-bool ChromeClientQt::runJavaScriptPrompt(Frame& f, const String& message, const String& defaultValue, String& result)
+bool ChromeClientQt::runJavaScriptPrompt(LocalFrame& f, const String& message, const String& defaultValue, String& result)
 {
     QString x = result;
     QWebFrameAdapter* webFrame = QWebFrameAdapter::kit(f);
@@ -458,7 +459,7 @@ PlatformPageClient ChromeClientQt::platformPageClient() const
     return m_webPage->client.data();
 }
 
-void ChromeClientQt::contentsSizeChanged(Frame& frame, const IntSize& size) const
+void ChromeClientQt::contentsSizeChanged(LocalFrame& frame, const IntSize& size) const
 {
     if (frame.loader().networkingContext())
         QWebFrameAdapter::kit(frame)->contentsSizeDidChange(size);
@@ -479,12 +480,12 @@ void ChromeClientQt::mouseDidMoveOverElement(const HitTestResult& result, unsign
     }
 }
 
-void ChromeClientQt::print(Frame& frame, const StringWithDirection&)
+void ChromeClientQt::print(LocalFrame& frame, const StringWithDirection&)
 {
     emit m_webPage->printRequested(QWebFrameAdapter::kit(frame));
 }
 
-void ChromeClientQt::exceededDatabaseQuota(Frame& frame, const String& databaseName, DatabaseDetails)
+void ChromeClientQt::exceededDatabaseQuota(LocalFrame& frame, const String& databaseName, DatabaseDetails)
 {
     quint64 quota = QWebSettings::offlineStorageDefaultQuota();
 
@@ -536,7 +537,7 @@ std::unique_ptr<DataListSuggestionPicker> ChromeClientQt::createDataListSuggesti
 }
 #endif
 
-void ChromeClientQt::runOpenPanel(Frame& frame, FileChooser& fileChooser)
+void ChromeClientQt::runOpenPanel(LocalFrame& frame, FileChooser& fileChooser)
 {
     QStringList suggestedFileNames;
     for (unsigned i = 0; i < fileChooser.settings().selectedFiles.size(); ++i)
@@ -573,7 +574,7 @@ void ChromeClientQt::setCursor(const Cursor& cursor)
 #endif
 }
 
-void ChromeClientQt::attachRootGraphicsLayer(Frame& frame, GraphicsLayer* graphicsLayer)
+void ChromeClientQt::attachRootGraphicsLayer(LocalFrame& frame, GraphicsLayer* graphicsLayer)
 {
 #if USE(TEXTURE_MAPPER)
     if (!m_textureMapperLayerClient)

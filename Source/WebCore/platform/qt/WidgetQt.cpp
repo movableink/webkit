@@ -38,7 +38,7 @@
 #include "IntRect.h"
 #include "NotImplemented.h"
 #include "QWebPageClient.h"
-#include "FrameView.h"
+#include "LocalFrameView.h"
 
 #include <QCoreApplication>
 #include <QPaintEngine>
@@ -65,7 +65,7 @@ void Widget::setFocus(bool)
 void Widget::setCursor(const Cursor& cursor)
 {
 #ifndef QT_NO_CURSOR
-    FrameView* view = root();
+    LocalFrameView* view = root();
     if (!view)
         return;
     view->hostWindow()->setCursor(cursor);

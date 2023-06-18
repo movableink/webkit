@@ -71,7 +71,7 @@ public:
     FrameLoaderClientQt();
     ~FrameLoaderClientQt();
 
-    void setFrame(QWebFrameAdapter*, Frame*);
+    void setFrame(QWebFrameAdapter*, LocalFrame*);
 
     bool hasWebView() const override; // mainly for assertions
 
@@ -117,7 +117,7 @@ public:
     void dispatchDidFinishLoad() override;
     void dispatchDidReachLayoutMilestone(OptionSet<LayoutMilestone>) override;
 
-    WebCore::Frame* dispatchCreatePage(const WebCore::NavigationAction&, NewFrameOpenerPolicy) override;
+    WebCore::LocalFrame* dispatchCreatePage(const WebCore::NavigationAction&, NewFrameOpenerPolicy) override;
     void dispatchShow() override;
 
     void dispatchDecidePolicyForResponse(const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) override;
@@ -187,7 +187,7 @@ public:
     bool canCachePage() const override;
     void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const WebCore::ResourceResponse&) override;
 
-    RefPtr<Frame> createFrame(const AtomString& name, HTMLFrameOwnerElement&) override;
+    RefPtr<LocalFrame> createFrame(const AtomString& name, HTMLFrameOwnerElement&) override;
     RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool) override;
     void redirectDataToPlugin(Widget& pluginWidget) override;
 
@@ -236,7 +236,7 @@ private:
     void emitLoadStarted();
     void emitLoadFinished(bool ok);
 
-    Frame *m_frame;
+    LocalFrame *m_frame;
     QWebFrameAdapter *m_webFrame;
     ResourceResponse m_response;
 

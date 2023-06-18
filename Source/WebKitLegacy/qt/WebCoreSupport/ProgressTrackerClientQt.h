@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <WebCore/LocalFrame.h>
 #include <WebCore/ProgressTrackerClient.h>
 
 #include <QObject>
@@ -38,9 +39,9 @@ class ProgressTrackerClientQt final :  public QObject, public ProgressTrackerCli
 public:
     ProgressTrackerClientQt(QWebPageAdapter*);
 
-    void progressStarted(Frame& originatingProgressFrame) override;
-    void progressEstimateChanged(Frame& originatingProgressFrame) override;
-    void progressFinished(Frame& originatingProgressFrame) override;
+    void progressStarted(LocalFrame& originatingProgressFrame) override;
+    void progressEstimateChanged(LocalFrame& originatingProgressFrame) override;
+    void progressFinished(LocalFrame& originatingProgressFrame) override;
 
     static bool dumpProgressFinishedCallback;
 

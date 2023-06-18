@@ -37,11 +37,11 @@ public:
     void contextMenuDestroyed() final;
 
     void downloadURL(const URL&) final;
-    void lookUpInDictionary(Frame*) final;
+    void lookUpInDictionary(LocalFrame*) final;
     void speak(const String&) final;
     bool isSpeaking() final;
     void stopSpeaking() final;
-    void searchWithGoogle(const Frame*) final;
+    void searchWithGoogle(const LocalFrame*) final;
 };
 }
 

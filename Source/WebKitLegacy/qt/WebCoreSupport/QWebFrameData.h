@@ -24,7 +24,7 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-class Frame;
+class LocalFrame;
 class FrameLoaderClientQt;
 class HTMLFrameOwnerElement;
 class Page;
@@ -37,7 +37,7 @@ public:
     WTF::String name;
     WebCore::HTMLFrameOwnerElement* ownerElement;
     WebCore::Page* page;
-    RefPtr<WebCore::Frame> frame;
+    RefPtr<WebCore::LocalFrame> frame;
     WebCore::FrameLoaderClientQt* frameLoaderClient;
     WTF::String referrer;
 };

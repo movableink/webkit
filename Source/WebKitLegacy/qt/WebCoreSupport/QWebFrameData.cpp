@@ -22,7 +22,7 @@
 
 #include "FrameLoaderClientQt.h"
 #include <WebCore/Document.h>
-#include <WebCore/Frame.h>
+#include <WebCore/LocalFrame.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/Page.h>
@@ -35,10 +35,10 @@ QWebFrameData::QWebFrameData(WebCore::Page* parentPage, WebCore::Frame* parentFr
     , page(parentPage)
 {
     // mainframe is already created in WebCore::Page, just use it.
-    if (!parentFrame || !ownerElement) {
-        frame = &parentPage->mainFrame();
+    if (!ownerElement) {
+        frame = &downcast<WebCore::LocalFrame>(parentPage->mainFrame());
     } else {
-        frame = Frame::create(page, ownerElement, makeUniqueRef<FrameLoaderClientQt>(), WebCore::FrameIdentifier::generate());
+        frame = LocalFrame::createSubframe(*page, makeUniqueRef<FrameLoaderClientQt>(), WebCore::FrameIdentifier::generate(), *ownerElement);
     }
     frameLoaderClient = static_cast<FrameLoaderClientQt*>(&frame->loader().client());
 

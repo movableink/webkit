@@ -300,7 +300,7 @@ NotificationClient::Permission NotificationPresenterClientQt::checkPermission(Sc
     return m_cachedPermissions.value(context, NotificationClient::Permission::Default);
 }
 
-void NotificationPresenterClientQt::setNotificationsAllowedForFrame(Frame* frame, bool allowed)
+void NotificationPresenterClientQt::setNotificationsAllowedForFrame(LocalFrame* frame, bool allowed)
 {
     ASSERT(frame->document());
     if (!frame->document())

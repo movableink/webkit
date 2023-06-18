@@ -26,7 +26,7 @@
 #include <JavaScriptCore/JSGlobalObject.h>
 #include <QPainter>
 #include <WebCore/DocumentFragment.h>
-#include <WebCore/FrameView.h>
+#include <WebCore/LocalFrameView.h>
 #include <WebCore/FullscreenManager.h>
 #include <WebCore/GraphicsContextQt.h>
 #include <WebCore/HTMLElement.h>
@@ -678,7 +678,7 @@ static bool setupScriptContext(WebCore::Element* element, JSC::JSGlobalObject*& 
     if (!element)
         return false;
 
-    Frame* frame = element->document().frame();
+    LocalFrame* frame = element->document().frame();
     if (!frame)
         return false;
 
@@ -1348,11 +1348,11 @@ void QWebElement::render(QPainter* painter, const QRect& clip)
     if (!renderer)
         return;
 
-    Frame* frame = e->document().frame();
+    LocalFrame* frame = e->document().frame();
     if (!frame || !frame->view() || !frame->contentRenderer())
         return;
 
-    FrameView* view = frame->view();
+    LocalFrameView* view = frame->view();
 
     view->updateLayoutAndStyleIfNeededRecursive();
 

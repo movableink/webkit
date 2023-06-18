@@ -39,7 +39,7 @@ void ContextMenuClientQt::downloadURL(const URL&)
     notImplemented();
 }
 
-void ContextMenuClientQt::lookUpInDictionary(Frame*)
+void ContextMenuClientQt::lookUpInDictionary(LocalFrame*)
 {
     notImplemented();
 }
@@ -60,7 +60,7 @@ void ContextMenuClientQt::stopSpeaking()
     notImplemented();
 }
 
-void ContextMenuClientQt::searchWithGoogle(const Frame*)
+void ContextMenuClientQt::searchWithGoogle(const LocalFrame*)
 {
     notImplemented();
 }

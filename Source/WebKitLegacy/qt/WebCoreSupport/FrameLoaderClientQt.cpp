@@ -214,7 +214,7 @@ FrameLoaderClientQt::~FrameLoaderClientQt()
     m_webFrame = 0;
 }
 
-void FrameLoaderClientQt::setFrame(QWebFrameAdapter* webFrame, Frame* frame)
+void FrameLoaderClientQt::setFrame(QWebFrameAdapter* webFrame, LocalFrame* frame)
 {
     m_webFrame = webFrame;
     m_frame = frame;
@@ -1052,7 +1052,7 @@ void FrameLoaderClientQt::dispatchDidFailLoad(const WebCore::ResourceError& erro
         emitLoadFinished(false);
 }
 
-WebCore::Frame* FrameLoaderClientQt::dispatchCreatePage(const WebCore::NavigationAction&, NewFrameOpenerPolicy)
+WebCore::LocalFrame* FrameLoaderClientQt::dispatchCreatePage(const WebCore::NavigationAction&, NewFrameOpenerPolicy)
 {
     if (!m_webFrame)
         return 0;
@@ -1157,7 +1157,7 @@ void FrameLoaderClientQt::startDownload(const WebCore::ResourceRequest& request,
         m_webFrame->pageAdapter->emitDownloadRequested(r);
 }
 
-RefPtr<Frame> FrameLoaderClientQt::createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement)
+RefPtr<LocalFrame> FrameLoaderClientQt::createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement)
 {
     if (!m_webFrame)
         return nullptr;
@@ -1253,7 +1253,7 @@ public:
         QRect clipRect;
         if (parentScrollView) {
             ASSERT_WITH_SECURITY_IMPLICATION(parentScrollView->isFrameView());
-            clipRect = downcast<FrameView>(parentScrollView)->windowClipRect();
+            clipRect = downcast<LocalFrameView>(parentScrollView)->windowClipRect();
             clipRect.translate(-windowRect.x(), -windowRect.y());
         }
         widget->setGeometryAndClip(windowRect, clipRect, isVisible());

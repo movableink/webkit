@@ -190,7 +190,7 @@ void EditorClientQt::respondToChangedContents()
     m_page->respondToChangedContents();
 }
 
-void EditorClientQt::respondToChangedSelection(Frame* frame)
+void EditorClientQt::respondToChangedSelection(LocalFrame* frame)
 {
     if (dumpEditingCallbacks)
         printf("EDITING DELEGATE: webViewDidChangeSelection:WebViewDidChangeSelectionNotification\n");
@@ -229,7 +229,7 @@ void EditorClientQt::getClientPasteboardData(const std::optional<SimpleRange>&, 
 void EditorClientQt::registerUndoStep(UndoStep& step)
 {
 #ifndef QT_NO_UNDOSTACK
-    Frame& frame = m_page->page->focusController().focusedOrMainFrame();
+    LocalFrame& frame = m_page->page->focusController().focusedOrMainFrame();
     if (m_inUndoRedo || !frame.editor().lastEditCommand() /* HACK!! Don't recreate undos */)
         return;
     m_page->registerUndoStep(step);
@@ -247,12 +247,12 @@ void EditorClientQt::clearUndoRedoOperations()
 #endif
 }
 
-bool EditorClientQt::canCopyCut(WebCore::Frame*, bool defaultValue) const
+bool EditorClientQt::canCopyCut(WebCore::LocalFrame*, bool defaultValue) const
 {
     return defaultValue;
 }
 
-bool EditorClientQt::canPaste(WebCore::Frame*, bool defaultValue) const
+bool EditorClientQt::canPaste(WebCore::LocalFrame*, bool defaultValue) const
 {
     return defaultValue;
 }
@@ -401,7 +401,7 @@ const char* editorCommandForKeyDownEvent(const KeyboardEvent* event)
 
 void EditorClientQt::handleKeyboardEvent(KeyboardEvent& event)
 {
-    Frame& frame = m_page->page->focusController().focusedOrMainFrame();
+    LocalFrame& frame = m_page->page->focusController().focusedOrMainFrame();
 
     const PlatformKeyboardEvent* kevent = event.underlyingPlatformEvent();
     if (!kevent || kevent->type() == PlatformEvent::Type::KeyUp)
@@ -595,7 +595,7 @@ void EditorClientQt::setInputMethodState(WebCore::Element* element)
         Qt::InputMethodHints hints;
 
         HTMLInputElement* inputElement = 0;
-        Frame& frame = m_page->page->focusController().focusedOrMainFrame();
+        LocalFrame& frame = m_page->page->focusController().focusedOrMainFrame();
         if (frame.document() && frame.document()->focusedElement())
             if (is<HTMLInputElement>(frame.document()->focusedElement()))
                 inputElement = downcast<HTMLInputElement>(frame.document()->focusedElement());
@@ -639,7 +639,7 @@ void EditorClientQt::didApplyStyle()
 {
 }
 
-void EditorClientQt::discardedComposition(Frame *)
+void EditorClientQt::discardedComposition(LocalFrame *)
 {
 }
 
