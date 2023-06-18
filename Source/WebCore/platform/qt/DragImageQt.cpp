@@ -74,7 +74,7 @@ DragImageRef createDragImageIconForCachedImageFilename(const String&)
     return QImage();
 }
 
-DragImageRef createDragImageForLink(Element&, URL&, const String&, TextIndicatorData&, FontRenderingMode, float)
+DragImageRef createDragImageForLink(Element&, URL&, const String&, TextIndicatorData&, float)
 {
     return QImage();
 }

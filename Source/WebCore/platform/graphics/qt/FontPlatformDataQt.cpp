@@ -102,8 +102,6 @@ FontPlatformData::FontPlatformData(const QRawFont& rawFont)
     FontPlatformDataPrivate::platformDataInit(*this, rawFont.pixelSize(), rawFont);
 }
 
-FontPlatformData::~FontPlatformData() = default;
-
 FontPlatformData FontPlatformData::cloneWithSize(const FontPlatformData& source, float size)
 {
     FontPlatformData copy(source);
