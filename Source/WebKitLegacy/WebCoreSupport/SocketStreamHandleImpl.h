@@ -36,6 +36,10 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/StreamBuffer.h>
 
+#if PLATFORM(QT)
+#include "SocketStreamHandleImplQt.h"
+#else
+
 typedef struct __CFHTTPMessage* CFHTTPMessageRef;
 
 namespace WebCore {
@@ -113,3 +117,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif // !PLATFORM(QT)

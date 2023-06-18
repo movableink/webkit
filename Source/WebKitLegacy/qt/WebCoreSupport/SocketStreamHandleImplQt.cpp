@@ -29,15 +29,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "SocketStreamHandle.h"
 
-#include "Logging.h"
-#include "NotImplemented.h"
-#include "SocketStreamError.h"
+#include "SocketStreamHandleImpl.h"
+
+#include <WebCore/Logging.h>
+#include <WebCore/NotImplemented.h>
+#include <WebCore/SocketStreamError.h>
 #include "SocketStreamHandleClient.h"
 #include "SocketStreamHandlePrivate.h"
-#include "StorageSessionProvider.h"
+#include <WebCore/StorageSessionProvider.h>
 #include <wtf/URL.h>
 
 namespace WebCore {

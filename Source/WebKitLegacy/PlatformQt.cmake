@@ -55,6 +55,14 @@ list(REMOVE_ITEM WebKitLegacy_SOURCES
 )
 
 list(APPEND WebKitLegacy_SOURCES
+    # TODO: should not be port-specific?
+    WebCoreSupport/LegacySocketProvider.cpp
+    WebCoreSupport/SocketStreamHandle.cpp
+    WebCoreSupport/SocketStreamHandleImpl.cpp
+    WebCoreSupport/WebBroadcastChannelRegistry.cpp
+    WebCoreSupport/WebResourceLoadScheduler.cpp
+    WebCoreSupport/WebSocketChannel.cpp
+
     qt/Api/qhttpheader.cpp
     qt/Api/qwebdatabase.cpp
     qt/Api/qwebelement.cpp

@@ -25,7 +25,7 @@
 
 #include "SocketStreamHandleImpl.h"
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || PLATFORM(QT)
 
 #include "SocketStreamHandleClient.h"
 #include <WebCore/CookieRequestHeaderFieldProxy.h>
