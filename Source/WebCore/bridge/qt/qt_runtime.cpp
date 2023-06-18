@@ -43,6 +43,7 @@
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <JavaScriptCore/JSTypedArrays.h>
 #include <JavaScriptCore/PropertyNameArray.h>
+#include <JavaScriptCore/NumberObject.h>
 #include <QDateTime>
 #include <QDebug>
 #include <QMetaObject>
