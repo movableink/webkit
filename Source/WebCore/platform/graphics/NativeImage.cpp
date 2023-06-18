@@ -48,13 +48,17 @@ NativeImage::NativeImage(PlatformImagePtr&& platformImage, RenderingResourceIden
     , m_platformImage(WTFMove(platformImage))
 #endif
 {
+#if PLATFORM(QT)
+    ASSERT(!m_platformImage.isNull());
+#else
     ASSERT(m_platformImage);
+#endif
 }
     
 void NativeImage::setPlatformImage(PlatformImagePtr&& platformImage)
 {
 #if PLATFORM(QT)
-    m_platformImage = platformImage
+    m_platformImage = QImage(platformImage);
 #else
     ASSERT(platformImage);
     m_platformImage = WTFMove(platformImage);
