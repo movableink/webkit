@@ -25,6 +25,7 @@
 #include <JavaScriptCore/Completion.h>
 #include <JavaScriptCore/JSGlobalObject.h>
 #include <QPainter>
+#include <WebCore/Attr.h>
 #include <WebCore/DocumentFragment.h>
 #include <WebCore/LocalFrameView.h>
 #include <WebCore/FullscreenManager.h>
@@ -32,6 +33,7 @@
 #include <WebCore/HTMLElement.h>
 #include <WebCore/JSDocument.h>
 #include <WebCore/JSElement.h>
+#include <WebCore/NamedNodeMap.h>
 #include <WebCore/QStyleHelpers.h>
 #include <WebCore/RenderElement.h>
 #include <WebCore/ScriptController.h>
@@ -467,11 +469,11 @@ QStringList QWebElement::attributeNames(const QString& namespaceUri) const
     QStringList attributeNameList;
     if (m_element->hasAttributes()) {
         const String namespaceUriString(namespaceUri); // convert QString -> String once
-        const unsigned attrsCount = m_element->attributeCount();
-        for (unsigned i = 0; i < attrsCount; ++i) {
-            const Attribute& attribute = m_element->attributeAt(i);
-            if (namespaceUriString == attribute.namespaceURI())
-                attributeNameList.append(attribute.localName().string());
+        NamedNodeMap& attributes = m_element->attributes();
+        for (unsigned i = 0; i < attributes.length(); ++i) {
+            auto attribute = attributes.item(i);
+            if (namespaceUriString == attribute->namespaceURI())
+                attributeNameList.append(attribute->localName().string());
         }
     }
     return attributeNameList;
