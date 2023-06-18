@@ -156,6 +156,7 @@ public:
 
     ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
     ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
+    ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const override;
     ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
 
     bool shouldFallBack(const ResourceError&) const override;

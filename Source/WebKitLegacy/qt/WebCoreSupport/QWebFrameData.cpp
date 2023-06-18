@@ -29,7 +29,7 @@
 
 using namespace WebCore;
 
-QWebFrameData::QWebFrameData(WebCore::Page* parentPage, WebCore::Frame* parentFrame, WebCore::HTMLFrameOwnerElement* ownerFrameElement, const WTF::String& frameName)
+QWebFrameData::QWebFrameData(WebCore::Page* parentPage, WebCore::HTMLFrameOwnerElement* ownerFrameElement, const WTF::String& frameName)
     : name(frameName)
     , ownerElement(ownerFrameElement)
     , page(parentPage)

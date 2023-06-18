@@ -808,6 +808,12 @@ WebCore::ResourceError FrameLoaderClientQt::fileDoesNotExistError(const WebCore:
         QCoreApplication::translate("QWebFrame", "File does not exist", 0));
 }
 
+WebCore::ResourceError FrameLoaderClientQt::httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("QtNetwork"_s, QNetworkReply::TooManyRedirectsError, request.url(),
+        QCoreApplication::translate("QWebFrame", "Too many redirects", 0));
+}
+
 WebCore::ResourceError FrameLoaderClientQt::pluginWillHandleLoadError(const WebCore::ResourceResponse& response) const
 {
     return ResourceError("WebKit"_s, WebKitErrorPluginWillHandleLoad, response.url(),
@@ -1163,7 +1169,7 @@ RefPtr<LocalFrame> FrameLoaderClientQt::createFrame(const AtomString& name, HTML
     if (!m_webFrame)
         return nullptr;
 
-    QWebFrameData frameData(m_frame->page(), m_frame, &ownerElement, String(name));
+    QWebFrameData frameData(m_frame->page(), &ownerElement, String(name));
 
     QWebFrameAdapter* childWebFrame = m_webFrame->createChildFrame(&frameData);
     // The creation of the frame may have run arbitrary JavaScript that removed it from the page already.

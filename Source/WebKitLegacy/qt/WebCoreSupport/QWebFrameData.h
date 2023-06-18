@@ -32,7 +32,7 @@ class Page;
 
 class QWebFrameData {
 public:
-    QWebFrameData(WebCore::Page*, WebCore::Frame* parentFrame = 0, WebCore::HTMLFrameOwnerElement* = 0, const WTF::String& frameName = WTF::String());
+    QWebFrameData(WebCore::Page*, WebCore::HTMLFrameOwnerElement* = 0, const WTF::String& frameName = WTF::String());
 
     WTF::String name;
     WebCore::HTMLFrameOwnerElement* ownerElement;
