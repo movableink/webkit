@@ -47,6 +47,8 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     dom/StaticNodeList.h
 
+    inspector/LegacyWebSocketInspectorInstrumentation.h
+
     loader/NavigationScheduler.h
 
     loader/cache/CachedScript.h
@@ -103,6 +105,8 @@ list(APPEND WebCore_SOURCES
     dom/qt/GestureEvent.cpp
 
     editing/qt/EditorQt.cpp
+
+    inspector/LegacyWebSocketInspectorInstrumentation.cpp
 
     page/qt/DragControllerQt.cpp
     page/qt/EventHandlerQt.cpp
