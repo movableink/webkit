@@ -27,6 +27,7 @@
 #include <QPainter>
 #include <WebCore/Attr.h>
 #include <WebCore/DocumentFragment.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/LocalFrameView.h>
 #include <WebCore/FullscreenManager.h>
 #include <WebCore/GraphicsContextQt.h>
@@ -567,7 +568,7 @@ QString QWebElement::namespaceUri() const
 }
 
 /*!
-    Returns the parent element of this elemen. If this element is the root
+    Returns the parent element of this element. If this element is the root
     document element, a null element is returned.
 */
 QWebElement QWebElement::parent() const
@@ -1329,7 +1330,7 @@ void QWebElement::replace(const QString &markup)
 */
 
 
-/*! 
+/*!
   Render the element into \a painter .
 */
 void QWebElement::render(QPainter* painter)

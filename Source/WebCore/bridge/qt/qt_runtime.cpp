@@ -44,6 +44,7 @@
 #include <JavaScriptCore/JSTypedArrays.h>
 #include <JavaScriptCore/PropertyNameArray.h>
 #include <JavaScriptCore/NumberObject.h>
+#include <FrameDestructionObserverInlines.h>
 #include <QDateTime>
 #include <QDebug>
 #include <QMetaObject>
