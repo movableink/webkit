@@ -1,11 +1,11 @@
-find_package(Qt5Core QUIET)
+find_package(Qt6 REQUIRED COMPONENTS Core QUIET)
 
-set(_qmake_executable_default "qmake-qt5")
-if (TARGET Qt5::qmake)
-    get_target_property(_qmake_executable_default Qt5::qmake LOCATION)
+set(_qmake_executable_default "qmake-Qt6")
+if (TARGET Qt6::qmake)
+    get_target_property(_qmake_executable_default Qt6::qmake LOCATION)
 endif()
 set(QMAKE_EXECUTABLE ${_qmake_executable_default}
-    CACHE FILEPATH "Location of the Qt5 qmake executable")
+    CACHE FILEPATH "Location of the Qt6 qmake executable")
 
 # This is not public API (yet)!
 function(query_qmake result_variable qt_variable)

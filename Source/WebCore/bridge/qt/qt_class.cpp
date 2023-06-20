@@ -175,7 +175,7 @@ Field* QtClass::fieldNamed(PropertyName identifier, Instance* instance) const
         if (index >= 0) {
             const QMetaProperty prop = m_metaObject->property(index);
 
-            if (prop.isScriptable(obj)) {
+            if (prop.isScriptable()) {
                 f = new QtField(prop);
                 qtinst->m_fields.insert(name, f);
                 return f;

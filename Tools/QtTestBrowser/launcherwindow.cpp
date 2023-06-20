@@ -38,6 +38,7 @@
 #include "cookiejar.h"
 #include "urlloader.h"
 
+#include <QActionGroup>
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
@@ -170,14 +171,6 @@ void LauncherWindow::initializeView()
     } else {
         WebViewGraphicsBased* view = new WebViewGraphicsBased(splitter);
         m_view = view;
-#ifndef QT_NO_OPENGL
-        if (!m_windowOptions.useQOpenGLWidgetViewport)
-            toggleQGLWidgetViewport(m_windowOptions.useQGLWidgetViewport);
-#ifdef QT_OPENGL_LIB
-        if (!m_windowOptions.useQGLWidgetViewport)
-            toggleQOpenGLWidgetViewport(m_windowOptions.useQOpenGLWidgetViewport);
-#endif // QT_OPENGL_LIB
-#endif
         view->setPage(page());
 
         connect(view, SIGNAL(currentFPSUpdated(int)), this, SLOT(updateFPS(int)));
@@ -223,7 +216,7 @@ void LauncherWindow::applyPrefs()
     QWebSettings* settings = page()->settings();
 #ifndef QT_NO_OPENGL
     settings->setAttribute(QWebSettings::AcceleratedCompositingEnabled, m_windowOptions.useCompositing
-        && (m_windowOptions.useQGLWidgetViewport || m_windowOptions.useQOpenGLWidgetViewport));
+        && m_windowOptions.useQOpenGLWidgetViewport);
 #endif
     settings->setAttribute(QWebSettings::TiledBackingStoreEnabled, m_windowOptions.useTiledBackingStore);
     settings->setAttribute(QWebSettings::FrameFlatteningEnabled, m_windowOptions.useFrameFlattening);
@@ -439,20 +432,11 @@ void LauncherWindow::createChrome()
     toggleTiledBackingStore->setEnabled(isGraphicsBased());
     toggleTiledBackingStore->connect(toggleGraphicsView, SIGNAL(toggled(bool)), SLOT(setEnabled(bool)));
 
-#ifndef QT_NO_OPENGL
-    QAction* toggleQGLWidgetViewport = graphicsViewMenu->addAction("Toggle use of QGLWidget Viewport", this, SLOT(toggleQGLWidgetViewport(bool)));
-    toggleQGLWidgetViewport->setCheckable(true);
-    toggleQGLWidgetViewport->setChecked(m_windowOptions.useQGLWidgetViewport);
-    toggleQGLWidgetViewport->setEnabled(isGraphicsBased());
-    toggleQGLWidgetViewport->connect(toggleGraphicsView, SIGNAL(toggled(bool)), SLOT(setEnabled(bool)));
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
     QAction* toggleQOpenGLWidgetViewport = graphicsViewMenu->addAction("Toggle use of QOpenGLWidget Viewport", this, SLOT(toggleQOpenGLWidgetViewport(bool)));
     toggleQOpenGLWidgetViewport->setCheckable(true);
     toggleQOpenGLWidgetViewport->setChecked(m_windowOptions.useQOpenGLWidgetViewport);
     toggleQOpenGLWidgetViewport->setEnabled(isGraphicsBased());
     toggleQOpenGLWidgetViewport->connect(toggleGraphicsView, SIGNAL(toggled(bool)), SLOT(setEnabled(bool)));
-#endif
-#endif
 
     QMenu* viewportUpdateMenu = graphicsViewMenu->addMenu("Change Viewport Update Mode");
     viewportUpdateMenu->setEnabled(isGraphicsBased());
@@ -491,7 +475,7 @@ void LauncherWindow::createChrome()
     connect(boundingRectUpdate, SIGNAL(triggered()), signalMapper, SLOT(map()));
     connect(noUpdate, SIGNAL(triggered()), signalMapper, SLOT(map()));
 
-    connect(signalMapper, SIGNAL(mapped(int)), this, SLOT(changeViewportUpdateMode(int)));
+    connect(signalMapper, &QSignalMapper::mappedInt, this, &LauncherWindow::changeViewportUpdateMode);
 
     QActionGroup* viewportUpdateModeActions = new QActionGroup(viewportUpdateMenu);
     viewportUpdateModeActions->addAction(fullUpdate);
@@ -600,7 +584,7 @@ void LauncherWindow::createChrome()
     connect(findWrapAround, SIGNAL(stateChanged(int)), findSignalMapper, SLOT(map()));
     connect(findHighLightAll, SIGNAL(stateChanged(int)), findSignalMapper, SLOT(map()));
 
-    connect(findSignalMapper, SIGNAL(mapped(int)), this, SLOT(find(int)));
+    connect(findSignalMapper, &QSignalMapper::mappedInt, this, &LauncherWindow::find);
 
     m_findBar->addWidget(findClose);
     m_findBar->addWidget(m_lineEdit);
@@ -637,20 +621,21 @@ void LauncherWindow::sendTouchEvent()
 
     QEvent::Type type = QEvent::TouchUpdate;
     if (m_touchPoints.size() == 1) {
-        if (m_touchPoints[0].state() == Qt::TouchPointReleased)
+        if (m_touchPoints[0].state() == QEventPoint::Released)
             type = QEvent::TouchEnd;
-        else if (m_touchPoints[0].state() == Qt::TouchPointPressed)
+        else if (m_touchPoints[0].state() == QEventPoint::Pressed)
             type = QEvent::TouchBegin;
     }
 
-    QTouchEvent touchEv(type);
-    touchEv.setTouchPoints(m_touchPoints);
+    const QPointingDevice *device = nullptr;
+    Qt::KeyboardModifiers modifiers = Qt::NoModifier;
+    QTouchEvent touchEv(type, device, modifiers, m_touchPoints);
     QCoreApplication::sendEvent(page(), &touchEv);
 
     // After sending the event, remove all touchpoints that were released
-    if (m_touchPoints[0].state() == Qt::TouchPointReleased)
+    if (m_touchPoints[0].state() == QEventPoint::Released)
         m_touchPoints.removeAt(0);
-    if (m_touchPoints.size() > 1 && m_touchPoints[1].state() == Qt::TouchPointReleased)
+    if (m_touchPoints.size() > 1 && m_touchPoints[1].state() == QEventPoint::Released)
         m_touchPoints.removeAt(1);
 }
 
@@ -664,7 +649,7 @@ bool LauncherWindow::eventFilter(QObject* obj, QEvent* event)
             && ev->pos().x() > (width() - gExitClickArea)
             && ev->pos().y() > (height() - gExitClickArea)) {
 
-            emit enteredFullScreenMode(false);
+            Q_EMIT enteredFullScreenMode(false);
         }
     }
 
@@ -681,18 +666,17 @@ bool LauncherWindow::eventFilter(QObject* obj, QEvent* event)
             && !(ev->buttons() & Qt::LeftButton))
             return false;
 
-        QTouchEvent::TouchPoint touchPoint;
-        touchPoint.setState(Qt::TouchPointMoved);
+        int pointId = 0;
+        QEventPoint::State state = QEventPoint::Updated;
         if ((ev->type() == QEvent::MouseButtonPress
              || ev->type() == QEvent::MouseButtonDblClick))
-            touchPoint.setState(Qt::TouchPointPressed);
+            state = QEventPoint::Pressed;
         else if (ev->type() == QEvent::MouseButtonRelease)
-            touchPoint.setState(Qt::TouchPointReleased);
-
-        touchPoint.setId(0);
-        touchPoint.setScreenPos(ev->globalPos());
-        touchPoint.setPos(ev->pos());
-        touchPoint.setPressure(1);
+            state = QEventPoint::Released;
+        QPointF scenePosition = ev->scenePosition();
+        QPointF globalPosition = ev->globalPosition();
+        QEventPoint touchPoint(pointId, state, scenePosition, globalPosition);
+        //touchPoint.setPressure(1);
 
         // If the point already exists, update it. Otherwise create it.
         if (m_touchPoints.size() > 0 && !m_touchPoints[0].id())
@@ -710,23 +694,18 @@ bool LauncherWindow::eventFilter(QObject* obj, QEvent* event)
         // If the keyboard point is already pressed, release it.
         // Otherwise create it and append to m_touchPoints.
         if (m_touchPoints.size() > 0 && m_touchPoints[0].id() == 1) {
-            m_touchPoints[0].setState(Qt::TouchPointReleased);
+            QMutableEventPoint::setState(m_touchPoints[0], QEventPoint::Released);
             sendTouchEvent();
         } else if (m_touchPoints.size() > 1 && m_touchPoints[1].id() == 1) {
-            m_touchPoints[1].setState(Qt::TouchPointReleased);
+            QMutableEventPoint::setState(m_touchPoints[1], QEventPoint::Released);
             sendTouchEvent();
         } else {
-            QTouchEvent::TouchPoint touchPoint;
-            touchPoint.setState(Qt::TouchPointPressed);
-            touchPoint.setId(1);
-            touchPoint.setScreenPos(QCursor::pos());
-            touchPoint.setPos(m_view->mapFromGlobal(QCursor::pos()));
-            touchPoint.setPressure(1);
+            QEventPoint touchPoint(1, QEventPoint::Pressed, m_view->mapFromGlobal(QCursor::pos()), QCursor::pos());
             m_touchPoints.append(touchPoint);
             sendTouchEvent();
 
             // After sending the event, change the touchpoint state to stationary
-            m_touchPoints.last().setState(Qt::TouchPointStationary);
+            QMutableEventPoint::setState(m_touchPoints.last(), QEventPoint::Stationary);
         }
     }
 
@@ -850,13 +829,6 @@ void LauncherWindow::screenshot()
             label->setWindowTitle(QString("Screenshot - Saved at %1").arg(fileName));
     }
 #endif
-
-#ifndef QT_NO_OPENGL
-    if (!m_windowOptions.useQOpenGLWidgetViewport)
-        toggleQGLWidgetViewport(m_windowOptions.useQGLWidgetViewport);
-    if (!m_windowOptions.useQGLWidgetViewport)
-        toggleQOpenGLWidgetViewport(m_windowOptions.useQOpenGLWidgetViewport);
-#endif
 }
 
 void LauncherWindow::setEditable(bool on)
@@ -870,9 +842,9 @@ void LauncherWindow::setEditable(bool on)
 /*
 void LauncherWindow::dumpPlugins() {
     QList<QWebPluginInfo> plugins = QWebSettings::pluginDatabase()->plugins();
-    foreach (const QWebPluginInfo plugin, plugins) {
+    Q_FOREACH(const QWebPluginInfo plugin, plugins) {
         qDebug() << "Plugin:" << plugin.name();
-        foreach (const QWebPluginInfo::MimeType mime, plugin.mimeTypes()) {
+        Q_FOREACH(const QWebPluginInfo::MimeType mime, plugin.mimeTypes()) {
             qDebug() << "   " << mime.name;
         }
     }
@@ -894,7 +866,7 @@ void LauncherWindow::selectElements()
     if (ok && !str.isEmpty()) {
         clearSelection();
         QWebElementCollection result =  page()->mainFrame()->findAllElements(str);
-        foreach (QWebElement e, result) {
+        Q_FOREACH(QWebElement e, result) {
             HighlightedElement el = { e, e.styleProperty("background-color", QWebElement::InlineStyle) };
             m_highlightedElements.append(el);
             e.setStyleProperty("background-color", "yellow");
@@ -1064,32 +1036,15 @@ void LauncherWindow::togglePlugins(bool enable)
 }
 
 #ifndef QT_NO_OPENGL
-void LauncherWindow::toggleQGLWidgetViewport(bool enable)
-{
-    if (!isGraphicsBased())
-        return;
-
-    if (enable)
-        m_windowOptions.useQOpenGLWidgetViewport = false;
-    m_windowOptions.useQGLWidgetViewport = enable;
-
-    WebViewGraphicsBased* view = static_cast<WebViewGraphicsBased*>(m_view);
-    view->setViewport(enable ? new QGLWidget() : 0);
-}
-
 void LauncherWindow::toggleQOpenGLWidgetViewport(bool enable)
 {
     if (!isGraphicsBased())
         return;
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
-    if (enable)
-        m_windowOptions.useQGLWidgetViewport = false;
     m_windowOptions.useQOpenGLWidgetViewport = enable;
 
     WebViewGraphicsBased* view = static_cast<WebViewGraphicsBased*>(m_view);
     view->setViewport(enable ? new QOpenGLWidget() : 0);
-#endif
 }
 #endif
 
@@ -1154,7 +1109,7 @@ void LauncherWindow::showUserAgentDialog()
 
 #ifndef QT_NO_COMBOBOX
     QComboBox* combo = new QComboBox(dialog);
-    combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLength);
+    combo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
     combo->setEditable(true);
     combo->insertItems(0, items);
     layout->addWidget(combo);
@@ -1214,7 +1169,7 @@ void LauncherWindow::loadURLListFromFile()
 void LauncherWindow::printURL(const QUrl& url)
 {
     QTextStream output(stdout);
-    output << "Loaded: " << url.toString() << endl;
+    output << "Loaded: " << url.toString() << Qt::endl;
 }
 
 #if !defined(QT_NO_FILEDIALOG) && !defined(QT_NO_MESSAGEBOX)

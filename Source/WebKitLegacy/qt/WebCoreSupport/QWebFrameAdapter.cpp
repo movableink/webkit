@@ -277,7 +277,7 @@ void QWebFrameAdapter::setHtml(const QString &html, const QUrl &baseUrl)
 QMultiMap<QString, QString> QWebFrameAdapter::metaData() const
 {
     if (!frame->document())
-        return QMap<QString, QString>();
+        return {};
 
     QMultiMap<QString, QString> map;
     Document* doc = frame->document();
@@ -460,30 +460,28 @@ QString QWebFrameAdapter::uniqueName() const
     return frame->tree().uniqueName().string();
 }
 
-// This code is copied from ChromeClientGtk.cpp.
-static void coalesceRectsIfPossible(const QRect& clipRect, QVector<QRect>& rects)
+// This code is loosely copied from ChromeClientGtk.cpp.
+static bool shouldCoalesceRects(const QRegion& clip)
 {
     const int rectThreshold = 10;
     const float wastedSpaceThreshold = 0.75f;
-    bool useUnionedRect = (rects.size() <= 1) || (rects.size() > rectThreshold);
+
+    bool useUnionedRect = (clip.rectCount() <= 1) || (clip.rectCount() > rectThreshold);
     if (!useUnionedRect) {
         // Attempt to guess whether or not we should use the unioned rect or the individual rects.
         // We do this by computing the percentage of "wasted space" in the union. If that wasted space
         // is too large, then we will do individual rect painting instead.
-        float unionPixels = (clipRect.width() * clipRect.height());
+        float unionPixels = (clip.boundingRect().width() * clip.boundingRect().height());
         float singlePixels = 0;
-        for (auto& rect : rects)
+        for (const QRect& rect : clip)
             singlePixels += rect.width() * rect.height();
+
         float wastedSpace = 1 - (singlePixels / unionPixels);
         if (wastedSpace <= wastedSpaceThreshold)
-            useUnionedRect = true;
+            return true;
     }
 
-    if (!useUnionedRect)
-        return;
-
-    rects.clear();
-    rects.append(clipRect);
+    return useUnionedRect;
 }
 
 void QWebFrameAdapter::renderRelativeCoords(QPainter* painter, int layers, const QRegion& clip)
@@ -495,8 +493,7 @@ void QWebFrameAdapter::renderRelativeCoords(QPainter* painter, int layers, const
     if (!frame->view() || !frame->contentRenderer())
         return;
 
-    QVector<QRect> vector = clip.rects();
-    if (vector.isEmpty())
+    if (clip.rectCount() == 0)
         return;
 
     WebCore::LocalFrameView* view = frame->view();
@@ -504,10 +501,7 @@ void QWebFrameAdapter::renderRelativeCoords(QPainter* painter, int layers, const
 
     if (layers & ContentsLayer) {
         QRect clipBoundingRect = clip.boundingRect();
-        coalesceRectsIfPossible(clipBoundingRect, vector);
-        for (int i = 0; i < vector.size(); ++i) {
-            const QRect& clipRect = vector.at(i);
-
+        for (const QRect &clipRect : shouldCoalesceRects(clip) ? clipBoundingRect : clip) {
             QRect rect = clipRect.intersected(view->frameRect());
 
             context.save();
@@ -546,10 +540,7 @@ void QWebFrameAdapter::renderFrameExtras(GraphicsContext& context, int layers, c
         return;
     QPainter* painter = context.platformContext()->painter();
     WebCore::LocalFrameView* view = frame->view();
-    QVector<QRect> vector = clip.rects();
-    for (int i = 0; i < vector.size(); ++i) {
-        const QRect& clipRect = vector.at(i);
-
+    for (const QRect& clipRect : clip) {
         QRect intersectedRect = clipRect.intersected(view->frameRect());
 
         painter->save();

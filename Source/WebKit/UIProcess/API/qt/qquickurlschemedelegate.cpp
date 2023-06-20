@@ -45,7 +45,7 @@ QString QQuickUrlSchemeDelegate::scheme() const
 void QQuickUrlSchemeDelegate::setScheme(const QString& scheme)
 {
     m_scheme = scheme;
-    emit schemeChanged();
+    Q_EMIT schemeChanged();
 }
 
 QQuickNetworkRequest* QQuickUrlSchemeDelegate::request() const

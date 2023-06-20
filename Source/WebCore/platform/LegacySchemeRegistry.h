@@ -32,7 +32,7 @@
 
 #if PLATFORM(QT)
 QT_BEGIN_NAMESPACE
-class QStringList;
+using QStringList = class QList<QString>;
 QT_END_NAMESPACE
 #endif
 

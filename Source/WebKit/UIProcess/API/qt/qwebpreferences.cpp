@@ -296,7 +296,7 @@ bool QWebPreferences::autoLoadImages() const
 void QWebPreferences::setAutoLoadImages(bool enable)
 {
     d->setAttribute(QWebPreferencesPrivate::AutoLoadImages, enable);
-    emit autoLoadImagesChanged();
+    Q_EMIT autoLoadImagesChanged();
 }
 
 bool QWebPreferences::fullScreenEnabled() const
@@ -312,7 +312,7 @@ void QWebPreferences::setFullScreenEnabled(bool enable)
 {
 #if ENABLE(FULLSCREEN_API)
     d->setAttribute(QWebPreferencesPrivate::FullScreenEnabled, enable);
-    emit fullScreenEnabledChanged();
+    Q_EMIT fullScreenEnabledChanged();
 #else
     UNUSED_PARAM(enable);
 #endif
@@ -326,7 +326,7 @@ bool QWebPreferences::javascriptEnabled() const
 void QWebPreferences::setJavascriptEnabled(bool enable)
 {
     d->setAttribute(QWebPreferencesPrivate::JavascriptEnabled, enable);
-    emit javascriptEnabledChanged();
+    Q_EMIT javascriptEnabledChanged();
 }
 
 bool QWebPreferences::pluginsEnabled() const
@@ -337,7 +337,7 @@ bool QWebPreferences::pluginsEnabled() const
 void QWebPreferences::setPluginsEnabled(bool enable)
 {
     d->setAttribute(QWebPreferencesPrivate::PluginsEnabled, enable);
-    emit pluginsEnabledChanged();
+    Q_EMIT pluginsEnabledChanged();
 }
 
 bool QWebPreferences::offlineWebApplicationCacheEnabled() const
@@ -348,7 +348,7 @@ bool QWebPreferences::offlineWebApplicationCacheEnabled() const
 void QWebPreferences::setOfflineWebApplicationCacheEnabled(bool enable)
 {
     d->setAttribute(QWebPreferencesPrivate::OfflineWebApplicationCacheEnabled, enable);
-    emit offlineWebApplicationCacheEnabledChanged();
+    Q_EMIT offlineWebApplicationCacheEnabledChanged();
 }
 
 bool QWebPreferences::localStorageEnabled() const
@@ -359,7 +359,7 @@ bool QWebPreferences::localStorageEnabled() const
 void QWebPreferences::setLocalStorageEnabled(bool enable)
 {
     d->setAttribute(QWebPreferencesPrivate::LocalStorageEnabled, enable);
-    emit localStorageEnabledChanged();
+    Q_EMIT localStorageEnabledChanged();
 }
 
 bool QWebPreferences::xssAuditingEnabled() const
@@ -370,7 +370,7 @@ bool QWebPreferences::xssAuditingEnabled() const
 void QWebPreferences::setXssAuditingEnabled(bool enable)
 {
     d->setAttribute(QWebPreferencesPrivate::XSSAuditingEnabled, enable);
-    emit xssAuditingEnabledChanged();
+    Q_EMIT xssAuditingEnabledChanged();
 }
 
 bool QWebPreferences::privateBrowsingEnabled() const
@@ -381,7 +381,7 @@ bool QWebPreferences::privateBrowsingEnabled() const
 void QWebPreferences::setPrivateBrowsingEnabled(bool enable)
 {
     d->setAttribute(QWebPreferencesPrivate::PrivateBrowsingEnabled, enable);
-    emit privateBrowsingEnabledChanged();
+    Q_EMIT privateBrowsingEnabledChanged();
 }
 
 bool QWebPreferences::dnsPrefetchEnabled() const
@@ -392,7 +392,7 @@ bool QWebPreferences::dnsPrefetchEnabled() const
 void QWebPreferences::setDnsPrefetchEnabled(bool enable)
 {
     d->setAttribute(QWebPreferencesPrivate::DnsPrefetchEnabled, enable);
-    emit dnsPrefetchEnabledChanged();
+    Q_EMIT dnsPrefetchEnabledChanged();
 }
 
 bool QWebPreferences::developerExtrasEnabled() const
@@ -403,7 +403,7 @@ bool QWebPreferences::developerExtrasEnabled() const
 void QWebPreferences::setDeveloperExtrasEnabled(bool enable)
 {
     d->setAttribute(QWebPreferencesPrivate::DeveloperExtrasEnabled, enable);
-    emit developerExtrasEnabledChanged();
+    Q_EMIT developerExtrasEnabledChanged();
 }
 
 bool QWebPreferences::navigatorQtObjectEnabled() const
@@ -416,7 +416,7 @@ void QWebPreferences::setNavigatorQtObjectEnabled(bool enable)
     if (enable == navigatorQtObjectEnabled())
         return;
     d->webViewPrivate->setNavigatorQtObjectEnabled(enable);
-    emit navigatorQtObjectEnabledChanged();
+    Q_EMIT navigatorQtObjectEnabledChanged();
 }
 
 bool QWebPreferences::frameFlatteningEnabled() const
@@ -427,7 +427,7 @@ bool QWebPreferences::frameFlatteningEnabled() const
 void QWebPreferences::setFrameFlatteningEnabled(bool enable)
 {
     d->setAttribute(QWebPreferencesPrivate::FrameFlatteningEnabled, enable);
-    emit frameFlatteningEnabledChanged();
+    Q_EMIT frameFlatteningEnabledChanged();
 }
 
 QString QWebPreferences::standardFontFamily() const
@@ -438,7 +438,7 @@ QString QWebPreferences::standardFontFamily() const
 void QWebPreferences::setStandardFontFamily(const QString& family)
 {
     d->setFontFamily(QWebPreferencesPrivate::StandardFont, family);
-    emit standardFontFamilyChanged();
+    Q_EMIT standardFontFamilyChanged();
 }
 
 QString QWebPreferences::fixedFontFamily() const
@@ -449,7 +449,7 @@ QString QWebPreferences::fixedFontFamily() const
 void QWebPreferences::setFixedFontFamily(const QString& family)
 {
     d->setFontFamily(QWebPreferencesPrivate::FixedFont, family);
-    emit fixedFontFamilyChanged();
+    Q_EMIT fixedFontFamilyChanged();
 }
 
 QString QWebPreferences::serifFontFamily() const
@@ -460,7 +460,7 @@ QString QWebPreferences::serifFontFamily() const
 void QWebPreferences::setSerifFontFamily(const QString& family)
 {
     d->setFontFamily(QWebPreferencesPrivate::SerifFont, family);
-    emit serifFontFamilyChanged();
+    Q_EMIT serifFontFamilyChanged();
 }
 
 QString QWebPreferences::sansSerifFontFamily() const
@@ -471,7 +471,7 @@ QString QWebPreferences::sansSerifFontFamily() const
 void QWebPreferences::setSansSerifFontFamily(const QString& family)
 {
     d->setFontFamily(QWebPreferencesPrivate::SansSerifFont, family);
-    emit sansSerifFontFamilyChanged();
+    Q_EMIT sansSerifFontFamilyChanged();
 }
 
 QString QWebPreferences::cursiveFontFamily() const
@@ -482,7 +482,7 @@ QString QWebPreferences::cursiveFontFamily() const
 void QWebPreferences::setCursiveFontFamily(const QString& family)
 {
     d->setFontFamily(QWebPreferencesPrivate::CursiveFont, family);
-    emit cursiveFontFamilyChanged();
+    Q_EMIT cursiveFontFamilyChanged();
 }
 
 QString QWebPreferences::fantasyFontFamily() const
@@ -493,7 +493,7 @@ QString QWebPreferences::fantasyFontFamily() const
 void QWebPreferences::setFantasyFontFamily(const QString& family)
 {
     d->setFontFamily(QWebPreferencesPrivate::FantasyFont, family);
-    emit fantasyFontFamilyChanged();
+    Q_EMIT fantasyFontFamilyChanged();
 }
 
 unsigned QWebPreferences::minimumFontSize() const
@@ -504,7 +504,7 @@ unsigned QWebPreferences::minimumFontSize() const
 void QWebPreferences::setMinimumFontSize(unsigned size)
 {
     d->setFontSize(QWebPreferencesPrivate::MinimumFontSize, size);
-    emit minimumFontSizeChanged();
+    Q_EMIT minimumFontSizeChanged();
 }
 
 unsigned QWebPreferences::defaultFontSize() const
@@ -515,7 +515,7 @@ unsigned QWebPreferences::defaultFontSize() const
 void QWebPreferences::setDefaultFontSize(unsigned size)
 {
     d->setFontSize(QWebPreferencesPrivate::DefaultFontSize, size);
-    emit defaultFontSizeChanged();
+    Q_EMIT defaultFontSizeChanged();
 }
 
 unsigned QWebPreferences::defaultFixedFontSize() const
@@ -526,7 +526,7 @@ unsigned QWebPreferences::defaultFixedFontSize() const
 void QWebPreferences::setDefaultFixedFontSize(unsigned size)
 {
     d->setFontSize(QWebPreferencesPrivate::DefaultFixedFontSize, size);
-    emit defaultFixedFontSizeChanged();
+    Q_EMIT defaultFixedFontSizeChanged();
 }
 
 bool QWebPreferences::webGLEnabled() const
@@ -542,7 +542,7 @@ void QWebPreferences::setWebGLEnabled(bool enable)
 {
 #if ENABLE(WEBGL)
     d->setAttribute(QWebPreferencesPrivate::WebGLEnabled, enable);
-    emit webGLEnabledChanged();
+    Q_EMIT webGLEnabledChanged();
 #else
     UNUSED_PARAM(enable);
 #endif
@@ -561,7 +561,7 @@ void QWebPreferences::setWebAudioEnabled(bool enable)
 {
 #if ENABLE(WEB_AUDIO)
     d->setAttribute(QWebPreferencesPrivate::WebAudioEnabled, enable);
-    emit webAudioEnabledChanged();
+    Q_EMIT webAudioEnabledChanged();
 #else
     UNUSED_PARAM(enable);
 #endif
@@ -575,7 +575,7 @@ bool QWebPreferences::caretBrowsingEnabled() const
 void QWebPreferences::setCaretBrowsingEnabled(bool enable)
 {
     d->setAttribute(QWebPreferencesPrivate::CaretBrowsingEnabled, enable);
-    emit caretBrowsingEnabledChanged();
+    Q_EMIT caretBrowsingEnabledChanged();
 }
 
 bool QWebPreferences::notificationsEnabled() const
@@ -586,7 +586,7 @@ bool QWebPreferences::notificationsEnabled() const
 void QWebPreferences::setNotificationsEnabled(bool enable)
 {
     d->setAttribute(QWebPreferencesPrivate::NotificationsEnabled, enable);
-    emit notificationsEnabledChanged();
+    Q_EMIT notificationsEnabledChanged();
 }
 
 bool QWebPreferences::universalAccessFromFileURLsAllowed() const
@@ -599,7 +599,7 @@ void QWebPreferences::setUniversalAccessFromFileURLsAllowed(bool enable)
     if (universalAccessFromFileURLsAllowed() == enable)
         return;
     d->setAttribute(QWebPreferencesPrivate::UniversalAccessFromFileURLsAllowed, enable);
-    emit universalAccessFromFileURLsAllowedChanged();
+    Q_EMIT universalAccessFromFileURLsAllowedChanged();
 }
 
 bool QWebPreferences::fileAccessFromFileURLsAllowed() const
@@ -612,7 +612,7 @@ void QWebPreferences::setFileAccessFromFileURLsAllowed(bool enable)
     if (fileAccessFromFileURLsAllowed() == enable)
         return;
     d->setAttribute(QWebPreferencesPrivate::FileAccessFromFileURLsAllowed, enable);
-    emit fileAccessFromFileURLsAllowedChanged();
+    Q_EMIT fileAccessFromFileURLsAllowedChanged();
 }
 
 bool QWebPreferences::spatialNavigationEnabled() const
@@ -625,7 +625,7 @@ void QWebPreferences::setSpatialNavigationEnabled(bool enable)
     if (spatialNavigationEnabled() == enable)
         return;
     d->setAttribute(QWebPreferencesPrivate::SpatialNavigationEnabled, enable);
-    emit spatialNavigationEnabledChanged();
+    Q_EMIT spatialNavigationEnabledChanged();
 }
 
 bool QWebPreferences::linksIncludedInFocusChain() const
@@ -638,7 +638,7 @@ void QWebPreferences::setLinksIncludedInFocusChain(bool enable)
     if (linksIncludedInFocusChain() == enable)
         return;
     d->setAttribute(QWebPreferencesPrivate::LinksIncludedInFocusChain, enable);
-    emit linksIncludedInFocusChainChanged();
+    Q_EMIT linksIncludedInFocusChainChanged();
 }
 
 bool QWebPreferences::logsPageMessagesToSystemConsoleEnabled() const
@@ -651,7 +651,7 @@ void QWebPreferences::setLogsPageMessagesToSystemConsoleEnabled(bool enable)
     if (logsPageMessagesToSystemConsoleEnabled() == enable)
         return;
     d->setAttribute(QWebPreferencesPrivate::LogsPageMessagesToSystemConsoleEnabled, enable);
-    emit logsPageMessagesToSystemConsoleEnabledChanged();
+    Q_EMIT logsPageMessagesToSystemConsoleEnabledChanged();
 }
 
 bool QWebPreferences::webSecurityEnabled() const
@@ -664,7 +664,7 @@ void QWebPreferences::setWebSecurityEnabled(bool enable)
     if (webSecurityEnabled() == enable)
         return;
     d->setAttribute(QWebPreferencesPrivate::WebSecurityEnabled, enable);
-    emit webSecurityEnabledChanged();
+    Q_EMIT webSecurityEnabledChanged();
 }
 
 QWebPreferencesPrivate* QWebPreferencesPrivate::get(QWebPreferences* preferences)

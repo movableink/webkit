@@ -5,9 +5,9 @@ include_directories(
 )
 
 include_directories(SYSTEM
-    ${Qt5Quick_INCLUDE_DIRS}
-    ${Qt5Quick_PRIVATE_INCLUDE_DIRS}
-    ${Qt5QuickTest_INCLUDE_DIRS}
+    ${Qt6Quick_INCLUDE_DIRS}
+    ${Qt6Quick_PRIVATE_INCLUDE_DIRS}
+    ${Qt6QuickTest_INCLUDE_DIRS}
 )
 
 set(tst_qmltests_DEFINITIONS
@@ -75,13 +75,13 @@ set(qmltests_SOURCES
     ${qmltests_QML_SOURCES}
 )
 
-qt5_add_resources(qmltests_SOURCES qmltests/resources.qrc)
+qt_add_resources(qmltests_SOURCES qmltests/resources.qrc)
 
 set(qmltests_LIBRARIES
     WebKit
-    ${Qt5Quick_LIBRARIES}
-    ${Qt5QuickTest_LIBRARIES}
-    ${Qt5Test_LIBRARIES}
+    ${Qt6Quick_LIBRARIES}
+    ${Qt6QuickTest_LIBRARIES}
+    ${Qt6Test_LIBRARIES}
 )
 
 if (SHARED_CORE)

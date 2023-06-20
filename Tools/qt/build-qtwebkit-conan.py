@@ -135,9 +135,8 @@ conanfile_path = os.path.join(src_directory, "Tools", "qt", "conanfile.py")
 
 print("Path of build directory:" + build_directory)
 
-run_command("conan remote add -f bincrafters https://api.bintray.com/conan/bincrafters/public-conan")
-run_command("conan remote add -f qtproject https://api.bintray.com/conan/qtproject/conan")
-run_command("conan remote add -f qtproject-testing https://api.bintray.com/conan/qtproject/conan-testing")
+run_command("conan remote add -f bincrafters https://bincrafters.jfrog.io/artifactory/api/conan/public-conan")
+run_command("conan config set general.revisions_enabled=1")
 
 if args.profile and args.compiler:
     sys.exit("Error: --compiler and --profile cannot be specified at the same time")

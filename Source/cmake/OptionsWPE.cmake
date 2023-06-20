@@ -102,6 +102,7 @@ WEBKIT_OPTION_DEFINE(USE_LCMS "Whether to enable support for image color managem
 WEBKIT_OPTION_DEFINE(USE_OPENJPEG "Whether to enable support for JPEG2000 images." PUBLIC ON)
 WEBKIT_OPTION_DEFINE(USE_SOUP2 "Whether to enable usage of Soup 2 instead of Soup 3." PUBLIC OFF)
 WEBKIT_OPTION_DEFINE(USE_WOFF2 "Whether to enable support for WOFF2 Web Fonts." PUBLIC ON)
+WEBKIT_OPTION_DEFINE(ENABLE_WPE_QT_API "Whether to enable support for the Qt6/QML plugin" PUBLIC OFF)
 
 # Private options specific to the WPE port.
 WEBKIT_OPTION_DEFINE(USE_GSTREAMER_HOLEPUNCH "Whether to enable GStreamer holepunch" PRIVATE OFF)
@@ -280,8 +281,8 @@ if (ENABLE_XSLT)
 endif ()
 
 if (ENABLE_WPE_QT_API)
-    find_package(Qt5 REQUIRED COMPONENTS Core Quick Gui)
-    find_package(Qt5Test REQUIRED)
+    find_package(Qt6 REQUIRED COMPONENTS Core Quick Gui)
+    find_package(Qt6Test REQUIRED)
 endif ()
 
 if (ENABLE_WPE_QT_API OR USE_WPE_VIDEO_PLANE_DISPLAY_DMABUF)

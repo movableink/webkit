@@ -18,7 +18,7 @@ set(test_main_SOURCES
 )
 
 list(APPEND TestWTF_LIBRARIES
-    Qt5::Gui
+    Qt6::Gui
 )
 
 target_sources(TestWTF PRIVATE

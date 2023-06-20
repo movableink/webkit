@@ -28,6 +28,7 @@
 
 #include "WebPreferencesKeys.h"
 #include <QFont>
+#include <QHash>
 #include <WebCore/NotImplemented.h>
 
 namespace WebKit {
