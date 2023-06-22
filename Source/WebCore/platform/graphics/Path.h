@@ -312,7 +312,11 @@ template<class Encoder> void Path::encode(Encoder& encoder) const
     }
 #endif
 
+#if PLATFORM(QT)
+    if (true) {
+#else
     if (m_path) {
+#endif
         applyIgnoringInlineData([&](auto& element) {
             encoder << static_cast<EncodedPathElementType>(element.type);
 
