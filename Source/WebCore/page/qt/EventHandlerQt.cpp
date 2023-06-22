@@ -82,7 +82,7 @@ bool EventHandler::eventActivatedView(const PlatformMouseEvent&) const
 
 bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& event, Widget& widget, OptionSet<WheelEventProcessingSteps>)
 {
-    if (!widget.isFrameView())
+    if (!widget.isLocalFrameView())
         return false;
 
     return dynamicDowncast<LocalFrame>(downcast<LocalFrameView>(widget).frame())->eventHandler().handleWheelEvent(event, { });
