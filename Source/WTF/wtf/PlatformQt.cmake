@@ -49,6 +49,7 @@ if (USE_MACH_PORTS)
     list(APPEND WTF_PUBLIC_HEADERS
         spi/cocoa/MachVMSPI.h
         spi/darwin/XPCSPI.h
+        spi/darwin/AbortWithReasonSPI.h
         darwin/OSLogPrintStream.h
     )
 endif()
