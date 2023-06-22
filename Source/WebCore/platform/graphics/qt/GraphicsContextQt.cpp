@@ -1089,6 +1089,11 @@ void GraphicsContextQt::clipPath(const Path& path, WindRule clipRule)
     p->setClipPath(platformPath, Qt::IntersectClip);
 }
 
+void GraphicsContextQt::resetClip()
+{
+    m_data->p()->setClipping(false);
+}
+
 void drawFocusRingForPath(QPainter* p, const QPainterPath& path, const Color& color, bool antiAliasing)
 {
     const bool antiAlias = p->testRenderHint(QPainter::Antialiasing);
