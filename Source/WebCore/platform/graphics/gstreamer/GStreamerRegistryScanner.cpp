@@ -40,6 +40,63 @@
 #include "VideoEncoderPrivateGStreamer.h"
 #endif
 
+namespace {
+struct VideoDecodingLimits {
+    unsigned mediaMaxWidth = 0;
+    unsigned mediaMaxHeight = 0;
+    unsigned mediaMaxFrameRate = 0;
+    VideoDecodingLimits(unsigned mediaMaxWidth, unsigned mediaMaxHeight, unsigned mediaMaxFrameRate)
+        : mediaMaxWidth(mediaMaxWidth)
+        , mediaMaxHeight(mediaMaxHeight)
+        , mediaMaxFrameRate(mediaMaxFrameRate)
+    {
+    }
+};
+}
+
+#ifdef VIDEO_DECODING_LIMIT
+static std::optional<VideoDecodingLimits> videoDecoderLimitsDefaults()
+{
+    // VIDEO_DECODING_LIMIT should be in format: WIDTHxHEIGHT@FRAMERATE.
+    String videoDecodingLimit(String::fromUTF8(VIDEO_DECODING_LIMIT));
+
+    if (videoDecodingLimit.isEmpty())
+        return { };
+
+    Vector<String> entries;
+
+    // Extract frame rate part from the VIDEO_DECODING_LIMIT: WIDTHxHEIGHT@FRAMERATE.
+    videoDecodingLimit.split('@', [&entries](StringView item) {
+        entries.append(item.toString());
+    });
+
+    if (entries.size() != 2)
+        return { };
+
+    auto frameRate = parseIntegerAllowingTrailingJunk<unsigned>(entries[1]);
+
+    if (!frameRate.has_value())
+        return { };
+
+    const auto widthAndHeight = entries[0].split('x');
+
+    if (widthAndHeight.size() != 2)
+        return { };
+
+    const auto width = parseIntegerAllowingTrailingJunk<unsigned>(widthAndHeight[0]);
+
+    if (!width.has_value())
+        return { };
+
+    const auto height = parseIntegerAllowingTrailingJunk<unsigned>(widthAndHeight[1]);
+
+    if (!height.has_value())
+        return { };
+
+    return { VideoDecodingLimits(width.value(), height.value(), frameRate.value()) };
+}
+#endif
+
 namespace WebCore {
 
 GST_DEBUG_CATEGORY_STATIC(webkit_media_gst_registry_scanner_debug);
@@ -48,11 +105,6 @@ GST_DEBUG_CATEGORY_STATIC(webkit_media_gst_registry_scanner_debug);
 // We shouldn't accept media that the player can't actually play.
 // AAC supports up to 96 channels.
 #define MEDIA_MAX_AAC_CHANNELS 96
-
-// Assume hardware video decoding acceleration up to 8K@60fps for the generic case. Some embedded platforms might want to tune this.
-#define MEDIA_MAX_WIDTH 7680.0f
-#define MEDIA_MAX_HEIGHT 4320.0f
-#define MEDIA_MAX_FRAMERATE 60.0f
 
 static bool singletonInitialized = false;
 
@@ -254,7 +306,10 @@ GStreamerRegistryScanner::RegistryLookupResult GStreamerRegistryScanner::Element
     }
 
     gst_plugin_feature_list_free(candidates);
-    if (!isSupported)
+    // Valid `selectedFactory` ends up stored in the scanner singleton.
+    if (isSupported)
+        GST_OBJECT_FLAG_SET(selectedFactory.get(), GST_OBJECT_FLAG_MAY_BE_LEAKED);
+    else
         selectedFactory.clear();
 
     GST_LOG("Lookup result for %s matching caps %" GST_PTR_FORMAT " : isSupported=%s, isUsingHardware=%s", elementFactoryTypeToString(factoryType), caps.get(), boolForPrinting(isSupported), boolForPrinting(isUsingHardware));
@@ -463,7 +518,6 @@ void GStreamerRegistryScanner::initializeDecoders(const GStreamerRegistryScanner
         { ElementFactories::Type::Demuxer, "application/vnd.rn-realmedia", { }, { } },
         { ElementFactories::Type::Demuxer, "application/x-3gp", { }, { } },
         { ElementFactories::Type::Demuxer, "application/x-pn-realaudio", { }, { } },
-        { ElementFactories::Type::Demuxer, "application/dash+xml", { }, { } },
         { ElementFactories::Type::Demuxer, "audio/x-aiff", { }, { } },
         { ElementFactories::Type::Demuxer, "audio/x-wav", { "audio/x-wav"_s, "audio/wav"_s, "audio/vnd.wave"_s }, { "1"_s } },
         { ElementFactories::Type::Demuxer, "video/quicktime", { }, { } },
@@ -474,6 +528,11 @@ void GStreamerRegistryScanner::initializeDecoders(const GStreamerRegistryScanner
     if (const char* hlsSupport = g_getenv("WEBKIT_GST_ENABLE_HLS_SUPPORT")) {
         if (!g_strcmp0(hlsSupport, "1"))
             mapping.append({ ElementFactories::Type::Demuxer, "application/x-hls", { "application/vnd.apple.mpegurl"_s, "application/x-mpegurl"_s }, { } });
+    }
+
+    if (const char* dashSupport = g_getenv("WEBKIT_GST_ENABLE_DASH_SUPPORT")) {
+        if (!g_strcmp0(dashSupport, "1"))
+            mapping.append({ ElementFactories::Type::Demuxer, "application/dash+xml", { }, { } });
     }
 
     fillMimeTypeSetFromCapsMapping(factories, mapping);
@@ -651,6 +710,21 @@ bool GStreamerRegistryScanner::supportsFeatures(const String& features) const
 
 MediaPlayerEnums::SupportsType GStreamerRegistryScanner::isContentTypeSupported(Configuration configuration, const ContentType& contentType, const Vector<ContentType>& contentTypesRequiringHardwareSupport) const
 {
+    static std::optional<VideoDecodingLimits> videoDecodingLimits;
+#ifdef VIDEO_DECODING_LIMIT
+    static std::once_flag onceFlag;
+    if (configuration == Configuration::Decoding) {
+        std::call_once(onceFlag, [] {
+            videoDecodingLimits = videoDecoderLimitsDefaults();
+            if (!videoDecodingLimits) {
+                GST_WARNING("Parsing VIDEO_DECODING_LIMIT failed");
+                ASSERT_NOT_REACHED();
+                return;
+            }
+        });
+    }
+#endif
+
     using SupportsType = MediaPlayerEnums::SupportsType;
 
     const auto& containerType = contentType.containerType().convertToASCIILowercase();
@@ -660,10 +734,23 @@ MediaPlayerEnums::SupportsType GStreamerRegistryScanner::isContentTypeSupported(
     int channels = parseInteger<int>(contentType.parameter("channels"_s)).value_or(1);
     String features = contentType.parameter("features"_s);
     if (channels > MEDIA_MAX_AAC_CHANNELS || channels <= 0
-        || !(features.isEmpty() || supportsFeatures(features))
-        || parseInteger<unsigned>(contentType.parameter("width"_s)).value_or(0) > MEDIA_MAX_WIDTH
-        || parseInteger<unsigned>(contentType.parameter("height"_s)).value_or(0) > MEDIA_MAX_HEIGHT
-        || parseInteger<unsigned>(contentType.parameter("framerate"_s)).value_or(0) > MEDIA_MAX_FRAMERATE)
+        || !(features.isEmpty() || supportsFeatures(features)))
+        return SupportsType::IsNotSupported;
+
+    bool ok;
+    float width = contentType.parameter("width"_s).toFloat(&ok);
+    if (!ok)
+        width = 0;
+    float height = contentType.parameter("height"_s).toFloat(&ok);
+    if (!ok)
+        height = 0;
+
+    if (videoDecodingLimits && (width > videoDecodingLimits->mediaMaxWidth || height > videoDecodingLimits->mediaMaxHeight))
+        return SupportsType::IsNotSupported;
+
+    float frameRate = contentType.parameter("framerate"_s).toFloat(&ok);
+    // Limit frameRate only in case of highest supported resolution.
+    if (ok && videoDecodingLimits && width == videoDecodingLimits->mediaMaxWidth && height == videoDecodingLimits->mediaMaxHeight && frameRate > videoDecodingLimits->mediaMaxFrameRate)
         return SupportsType::IsNotSupported;
 
     const auto& codecs = contentType.codecs();
@@ -807,13 +894,8 @@ GStreamerRegistryScanner::CodecLookupResult GStreamerRegistryScanner::isAVC1Code
         return checkH264Caps(makeString("video/x-h264, level=(string)", maxLevelString).utf8().data());
     }
 
-    if (webkitGstCheckVersion(1, 18, 0)) {
-        GST_DEBUG("Checking video decoders for constrained caps");
-        return checkH264Caps(makeString("video/x-h264, level=(string)", level, ", profile=(string)", profile).utf8().data());
-    }
-
-    GST_DEBUG("Falling back to unconstrained caps");
-    return checkH264Caps("video/x-h264");
+    GST_DEBUG("Checking video decoders for constrained caps");
+    return checkH264Caps(makeString("video/x-h264, level=(string)", level, ", profile=(string)", profile).utf8().data());
 }
 
 const char* GStreamerRegistryScanner::configurationNameForLogging(Configuration configuration) const
@@ -904,7 +986,7 @@ void GStreamerRegistryScanner::fillAudioRtpCapabilities(Configuration configurat
 
     auto factories = ElementFactories({ codecElement, rtpElement });
     if (factories.hasElementForMediaType(codecElement, "audio/x-opus") && factories.hasElementForMediaType(rtpElement, "audio/x-opus"))
-        capabilities.codecs.append({ .mimeType = "audio/OPUS"_s, .clockRate = 48000, .channels = 2, .sdpFmtpLine = "minptime=10;useinbandfec=1"_s });
+        capabilities.codecs.append({ .mimeType = "audio/opus"_s, .clockRate = 48000, .channels = 2, .sdpFmtpLine = "minptime=10;useinbandfec=1"_s });
 
     if (factories.hasElementForMediaType(codecElement, "audio/isac") && factories.hasElementForMediaType(rtpElement, "audio/isac")) {
         capabilities.codecs.append({ .mimeType = "audio/ISAC"_s, .clockRate = 16000, .channels = 1, .sdpFmtpLine = emptyString() });
@@ -979,7 +1061,8 @@ void GStreamerRegistryScanner::fillVideoRtpCapabilities(Configuration configurat
         capabilities.codecs.append({ .mimeType = "video/H265"_s, .clockRate = 90000, .channels = { }, .sdpFmtpLine = { } });
     }
 
-    // FIXME: Probe for video/AV1 capabilities.
+    if (factories.hasElementForMediaType(codecElement, "video/x-av1") && factories.hasElementForMediaType(rtpElement, "video/x-av1"))
+        capabilities.codecs.append({ .mimeType = "video/AV1"_s, .clockRate = 90000, .channels = { }, .sdpFmtpLine = { } });
 
     if (factories.hasElementForMediaType(codecElement, "video/x-vp8") && factories.hasElementForMediaType(rtpElement, "video/x-vp8"))
         capabilities.codecs.append({ .mimeType = "video/VP8"_s, .clockRate = 90000, .channels = { }, .sdpFmtpLine = { } });
@@ -1008,5 +1091,8 @@ Vector<RTCRtpCapabilities::HeaderExtensionCapability> GStreamerRegistryScanner::
 
 #endif // USE(GSTREAMER_WEBRTC)
 
-}
-#endif
+#undef GST_CAT_DEFAULT
+
+} // namespace WebCore
+
+#endif // USE(GSTREAMER)

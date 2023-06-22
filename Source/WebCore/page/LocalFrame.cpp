@@ -54,7 +54,6 @@
 #include "FocusController.h"
 #include "FrameDestructionObserver.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "FrameSelection.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
@@ -70,9 +69,9 @@
 #include "JSNode.h"
 #include "JSWindowProxy.h"
 #include "LocalDOMWindow.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
-#include "NavigationScheduler.h"
 #include "Navigator.h"
 #include "NodeList.h"
 #include "NodeTraversal.h"
@@ -149,10 +148,9 @@ static inline float parentTextZoomFactor(LocalFrame* frame)
     return parent->textZoomFactor();
 }
 
-LocalFrame::LocalFrame(Page& page, UniqueRef<FrameLoaderClient>&& frameLoaderClient, FrameIdentifier identifier, HTMLFrameOwnerElement* ownerElement, Frame* parent)
+LocalFrame::LocalFrame(Page& page, UniqueRef<LocalFrameLoaderClient>&& frameLoaderClient, FrameIdentifier identifier, HTMLFrameOwnerElement* ownerElement, Frame* parent)
     : Frame(page, identifier, FrameType::Local, ownerElement, parent)
     , m_loader(makeUniqueRef<FrameLoader>(*this, WTFMove(frameLoaderClient)))
-    , m_navigationScheduler(makeUniqueRef<NavigationScheduler>(*this))
     , m_script(makeUniqueRef<ScriptController>(*this))
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
@@ -181,17 +179,17 @@ void LocalFrame::init()
     m_loader->init();
 }
 
-Ref<LocalFrame> LocalFrame::createMainFrame(Page& page, UniqueRef<FrameLoaderClient>&& client, FrameIdentifier identifier)
+Ref<LocalFrame> LocalFrame::createMainFrame(Page& page, UniqueRef<LocalFrameLoaderClient>&& client, FrameIdentifier identifier)
 {
     return adoptRef(*new LocalFrame(page, WTFMove(client), identifier, nullptr, nullptr));
 }
 
-Ref<LocalFrame> LocalFrame::createSubframe(Page& page, UniqueRef<FrameLoaderClient>&& client, FrameIdentifier identifier, HTMLFrameOwnerElement& ownerElement)
+Ref<LocalFrame> LocalFrame::createSubframe(Page& page, UniqueRef<LocalFrameLoaderClient>&& client, FrameIdentifier identifier, HTMLFrameOwnerElement& ownerElement)
 {
     return adoptRef(*new LocalFrame(page, WTFMove(client), identifier, &ownerElement, ownerElement.document().frame()));
 }
 
-Ref<LocalFrame> LocalFrame::createSubframeHostedInAnotherProcess(Page& page, UniqueRef<FrameLoaderClient>&& client, FrameIdentifier identifier, Frame& parent)
+Ref<LocalFrame> LocalFrame::createSubframeHostedInAnotherProcess(Page& page, UniqueRef<LocalFrameLoaderClient>&& client, FrameIdentifier identifier, Frame& parent)
 {
     return adoptRef(*new LocalFrame(page, WTFMove(client), identifier, nullptr, &parent));
 }
@@ -199,7 +197,6 @@ Ref<LocalFrame> LocalFrame::createSubframeHostedInAnotherProcess(Page& page, Uni
 LocalFrame::~LocalFrame()
 {
     setView(nullptr);
-    navigationScheduler().cancel();
 
     if (!loader().isComplete())
         loader().closeURL();
@@ -326,6 +323,11 @@ bool LocalFrame::preventsParentFromBeingComplete() const
     return !m_loader->isComplete() && (!ownerElement() || !ownerElement()->isLazyLoadObserverActive());
 }
 
+void LocalFrame::changeLocation(FrameLoadRequest&& request)
+{
+    loader().changeLocation(WTFMove(request));
+}
+
 void LocalFrame::invalidateContentEventRegionsIfNeeded(InvalidateContentEventRegionsReason reason)
 {
     if (!page() || !m_doc || !m_doc->renderView())
@@ -401,7 +403,7 @@ static JSC::Yarr::RegularExpression createRegExpForLabels(const Vector<String>& 
         pattern.append(i ? "|" : "", startsWithWordCharacter ? "\\b" : "", label, endsWithWordCharacter ? "\\b" : "");
     }
     pattern.append(')');
-    return JSC::Yarr::RegularExpression(pattern.toString(), JSC::Yarr::TextCaseInsensitive);
+    return JSC::Yarr::RegularExpression(pattern.toString(), { JSC::Yarr::Flags::IgnoreCase });
 }
 
 String LocalFrame::searchForLabelsAboveCell(const JSC::Yarr::RegularExpression& regExp, HTMLTableCellElement* cell, size_t* resultDistanceFromStartOfCell)
@@ -716,11 +718,6 @@ void LocalFrame::injectUserScriptsAwaitingNotification()
 {
     for (const auto& [world, script] : std::exchange(m_userScriptsAwaitingNotification, { }))
         injectUserScriptImmediately(world, script.get());
-}
-
-std::optional<PageIdentifier> LocalFrame::pageID() const
-{
-    return loader().pageID();
 }
 
 RenderView* LocalFrame::contentRenderer() const
@@ -1060,29 +1057,19 @@ FloatSize LocalFrame::screenSize() const
     if (!m_overrideScreenSize.isEmpty())
         return m_overrideScreenSize;
 
-    auto sizeForHeadlessMode = [&]() -> std::optional<IntSize> {
-        RefPtr document = this->document();
-        if (!document)
-            return std::nullopt;
+    auto defaultSize = screenRect(view()).size();
+    RefPtr document = this->document();
+    if (!document)
+        return defaultSize;
 
-        RefPtr loader = document->loader();
-        if (!loader || !loader->isLoadingInHeadlessMode())
-            return std::nullopt;
+    RefPtr loader = document->loader();
+    if (!loader || !loader->fingerprintingProtectionsEnabled())
+        return defaultSize;
 
-        RefPtr window = this->window();
-        if (!window)
-            return std::nullopt;
+    if (auto* page = this->page())
+        return page->chrome().client().screenSizeForFingerprintingProtections(*this, defaultSize);
 
-        IntSize size { window->innerWidth(), window->innerHeight() };
-        if (auto* page = this->page())
-            size.scale(page->pageScaleFactor());
-        return size;
-    }();
-
-    if (sizeForHeadlessMode)
-        return *sizeForHeadlessMode;
-
-    return screenRect(view()).size();
+    return defaultSize;
 }
 
 void LocalFrame::setOverrideScreenSize(FloatSize&& screenSize)

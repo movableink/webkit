@@ -28,6 +28,7 @@
 #if ENABLE(VIDEO)
 
 #include "ActiveDOMObject.h"
+#include "AudioSession.h"
 #include "AudioTrackClient.h"
 #include "AutoplayEvent.h"
 #include "CaptionUserPreferences.h"
@@ -193,7 +194,7 @@ public:
     PlatformLayer* platformLayer() const;
     bool isVideoLayerInline();
     void setPreparedToReturnVideoLayerToInline(bool);
-    void waitForPreparedForInlineThen(Function<void()>&& completionHandler = [] { });
+    void waitForPreparedForInlineThen(Function<void()>&& completionHandler);
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     RetainPtr<PlatformLayer> createVideoFullscreenLayer();
     WEBCORE_EXPORT void setVideoFullscreenLayer(PlatformLayer*, Function<void()>&& completionHandler = [] { });
@@ -205,7 +206,6 @@ public:
     MediaPlayer::VideoGravity videoFullscreenGravity() const { return m_videoFullscreenGravity; }
 #endif
 
-    void scheduleCheckPlaybackTargetCompatability();
     void checkPlaybackTargetCompatibility();
     void scheduleResolvePendingPlayPromises();
     void scheduleRejectPendingPlayPromises(Ref<DOMException>&&);
@@ -450,7 +450,10 @@ public:
     void setWirelessPlaybackTarget(Ref<MediaPlaybackTarget>&&) override;
     void setShouldPlayToPlaybackTarget(bool) override;
     void playbackTargetPickerWasDismissed() override;
+    bool hasWirelessPlaybackTargetAlternative() const;
+    bool isWirelessPlaybackTargetDisabled() const;
 #endif
+
     bool isPlayingToWirelessPlaybackTarget() const override { return m_isPlayingToWirelessTarget; };
     void setIsPlayingToWirelessTarget(bool);
     bool webkitCurrentPlaybackTargetIsWireless() const;
@@ -507,7 +510,7 @@ public:
 #endif
 
     using HTMLMediaElementEnums::InvalidURLAction;
-    bool isSafeToLoadURL(const URL&, InvalidURLAction);
+    bool isSafeToLoadURL(const URL&, InvalidURLAction, bool shouldLog = true) const;
 
     const String& mediaGroup() const;
     void setMediaGroup(const String&);
@@ -619,7 +622,8 @@ public:
     WEBCORE_EXPORT bool mediaPlayerRenderingCanBeAccelerated() final;
 
 #if USE(AUDIO_SESSION)
-    WEBCORE_EXPORT AudioSessionCategory categoryAtMostRecentPlayback() const { return m_categoryAtMostRecentPlayback; }
+    AudioSessionCategory categoryAtMostRecentPlayback() const { return m_categoryAtMostRecentPlayback; }
+    AudioSessionMode modeAtMostRecentPlayback() const { return m_modeAtMostRecentPlayback; }
 #endif
 
     void updateMediaPlayer(IntSize, bool);
@@ -636,8 +640,11 @@ public:
 
     bool hasSource() const { return hasCurrentSrc() || srcObject(); }
 
+    WEBCORE_EXPORT void requestHostingContextID(Function<void(LayerHostingContextID)>&&);
     WEBCORE_EXPORT LayerHostingContextID layerHostingContextID();
     WEBCORE_EXPORT WebCore::FloatSize naturalSize();
+
+    FloatSize mediaPlayerVideoInlineSize() const override { return videoInlineSize(); }
     WEBCORE_EXPORT WebCore::FloatSize videoInlineSize() const;
     void setVideoInlineSizeFenced(const FloatSize&, const WTF::MachSendRight&);
     void updateMediaState();
@@ -647,8 +654,7 @@ protected:
     HTMLMediaElement(const QualifiedName&, Document&, bool createdByParser);
     virtual ~HTMLMediaElement();
 
-    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void finishParsingChildren() override;
     bool isURLAttribute(const Attribute&) const override;
     void willAttachRenderers() override;
@@ -841,8 +847,8 @@ private:
     void addPlayedRange(const MediaTime& start, const MediaTime& end);
     
     void scheduleTimeupdateEvent(bool periodicEvent);
-    virtual void scheduleResizeEvent() { }
-    virtual void scheduleResizeEventIfSizeChanged() { }
+    virtual void scheduleResizeEvent(const FloatSize&) { }
+    virtual void scheduleResizeEventIfSizeChanged(const FloatSize&) { }
 
     void selectMediaResource();
     void loadResource(const URL&, ContentType&, const String& keySystem);
@@ -970,6 +976,9 @@ private:
     void hardwareMutedStateDidChange(const AudioSession&) final;
 #endif
 
+    bool hasMediaSource() const;
+    bool hasManagedMediaSource() const;
+
     bool processingUserGestureForMedia() const;
 
     bool effectiveMuted() const;
@@ -1041,9 +1050,9 @@ private:
     Timer m_scanTimer;
     Timer m_playbackControlsManagerBehaviorRestrictionsTimer;
     Timer m_seekToPlaybackPositionEndedTimer;
+    Timer m_checkPlaybackTargetCompatibilityTimer;
     TaskCancellationGroup m_configureTextTracksTaskCancellationGroup;
     TaskCancellationGroup m_updateTextTracksTaskCancellationGroup;
-    TaskCancellationGroup m_checkPlaybackTargetCompatibilityTaskCancellationGroup;
     TaskCancellationGroup m_updateMediaStateTaskCancellationGroup;
     TaskCancellationGroup m_mediaEngineUpdatedTaskCancellationGroup;
     TaskCancellationGroup m_updatePlayStateTaskCancellationGroup;
@@ -1214,6 +1223,7 @@ private:
     AutoplayEventPlaybackState m_autoplayEventPlaybackState { AutoplayEventPlaybackState::None };
 
     String m_subtitleTrackLanguage;
+    std::optional<String> m_languageOfPrimaryAudioTrack;
     MediaTime m_lastTextTrackUpdateTime { -1, 1 };
 
     std::optional<CaptionUserPreferences::CaptionDisplayMode> m_captionDisplayMode;
@@ -1280,7 +1290,6 @@ private:
     MediaProducerMediaStateFlags m_mediaState;
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    MonotonicTime m_currentPlaybackTargetIsWirelessEventFiredTime;
     bool m_hasPlaybackTargetAvailabilityListeners { false };
     bool m_failedToPlayToWirelessTarget { false };
     bool m_lastTargetAvailabilityEventState { false };
@@ -1300,6 +1309,7 @@ private:
 
 #if USE(AUDIO_SESSION)
     AudioSessionCategory m_categoryAtMostRecentPlayback;
+    AudioSessionMode m_modeAtMostRecentPlayback;
 #endif
     bool m_wasInterruptedForInvisibleAutoplay { false };
 
@@ -1314,6 +1324,8 @@ private:
     bool m_userPrefersTextDescriptions { false };
     bool m_userPrefersExtendedDescriptions { false };
     bool m_changingSynthesisState { false };
+
+    FloatSize m_videoInlineSize { };
 
 #if !RELEASE_LOG_DISABLED
     RefPtr<Logger> m_logger;

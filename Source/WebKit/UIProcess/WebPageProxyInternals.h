@@ -41,6 +41,7 @@
 #include "WebURLSchemeHandlerIdentifier.h"
 #include "WindowKind.h"
 #include <WebCore/PrivateClickMeasurement.h>
+#include <WebCore/RegistrableDomain.h>
 #include <WebCore/ResourceRequest.h>
 #include <pal/HysteresisActivity.h>
 
@@ -211,6 +212,11 @@ struct WebPageProxy::Internals final : WebPopupMenuProxy::Client
     WebCore::IntRect visibleScrollerThumbRect;
     WebCore::PageIdentifier webPageID;
     WindowKind windowKind { WindowKind::Unparented };
+    PageAllowedToRunInTheBackgroundCounter::Token pageAllowedToRunInTheBackgroundToken;
+
+    HashMap<WebCore::RegistrableDomain, WeakPtr<RemotePageProxy>> domainToRemotePageProxyMap;
+    RefPtr<RemotePageProxy> remotePageProxyInOpenerProcess;
+    HashSet<Ref<RemotePageProxy>> openedRemotePageProxies;
 
 #if ENABLE(APPLE_PAY)
     std::unique_ptr<WebPaymentCoordinatorProxy> paymentCoordinator;
@@ -363,7 +369,7 @@ struct WebPageProxy::Internals final : WebPopupMenuProxy::Client
     void setShouldPlayToPlaybackTarget(WebCore::PlaybackTargetClientContextIdentifier, bool) final;
     void playbackTargetPickerWasDismissed(WebCore::PlaybackTargetClientContextIdentifier) final;
     bool alwaysOnLoggingAllowed() const final { return page.sessionID().isAlwaysOnLoggingAllowed(); }
-    PlatformView* platformView() const final;
+    RetainPtr<PlatformView> platformView() const final;
 #endif
 };
 

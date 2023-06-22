@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -156,7 +156,6 @@
 #include "MockLibWebRTCPeerConnection.h"
 #include "MockPageOverlay.h"
 #include "MockPageOverlayClient.h"
-#include "ModalContainerObserver.h"
 #include "NavigatorBeacon.h"
 #include "NavigatorMediaDevices.h"
 #include "NetworkLoadInformation.h"
@@ -190,6 +189,7 @@
 #include "RenderTreeAsText.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
+#include "ResolvedStyle.h"
 #include "ResourceLoadObserver.h"
 #include "SMILTimeContainer.h"
 #include "SVGDocumentExtensions.h"
@@ -671,7 +671,7 @@ void Internals::resetToConsistentState(Page& page)
     CanvasBase::setMaxCanvasAreaForTesting(std::nullopt);
     LocalDOMWindow::overrideTransientActivationDurationForTesting(std::nullopt);
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     WebCore::setContentSizeCategory(kCTFontContentSizeCategoryL);
 #endif
 
@@ -875,14 +875,19 @@ bool Internals::isPreloaded(const String& url)
 
 bool Internals::isLoadingFromMemoryCache(const String& url)
 {
+    CachedResource* resource = resourceFromMemoryCache(url);
+    return resource && resource->status() == CachedResource::Cached;
+}
+
+CachedResource* Internals::resourceFromMemoryCache(const String& url)
+{   
     if (!contextDocument() || !contextDocument()->page())
-        return false;
+        return nullptr;
 
     ResourceRequest request(contextDocument()->completeURL(url));
     request.setDomainForCachePartition(contextDocument()->domainForCachePartition());
 
-    CachedResource* resource = MemoryCache::singleton().resourceForRequest(request, contextDocument()->page()->sessionID());
-    return resource && resource->status() == CachedResource::Cached;
+    return MemoryCache::singleton().resourceForRequest(request, contextDocument()->page()->sessionID());
 }
 
 static String responseSourceToString(const ResourceResponse& response)
@@ -1028,7 +1033,10 @@ std::optional<Internals::ResourceLoadPriority> Internals::getResourcePriority(co
     auto* document = contextDocument();
     if (!document)
         return std::nullopt;
-    if (auto* resource = document->cachedResourceLoader().cachedResource(url))
+    auto* resource = document->cachedResourceLoader().cachedResource(url);
+    if (!resource)
+        resource = resourceFromMemoryCache(url);
+    if (resource)
         return toInternalsResourceLoadPriority(resource->loadPriority());
     return std::nullopt;
 }
@@ -1173,10 +1181,10 @@ unsigned Internals::remoteImagesCountForTesting() const
     return document->page()->chrome().client().remoteImagesCountForTesting();
 }
 
-void Internals::setLargeImageAsyncDecodingEnabledForTesting(HTMLImageElement& element, bool enabled)
+void Internals::setAsyncDecodingEnabledForTesting(HTMLImageElement& element, bool enabled)
 {
     if (auto* bitmapImage = bitmapImageFromImageElement(element))
-        bitmapImage->setLargeImageAsyncDecodingEnabledForTesting(enabled);
+        bitmapImage->setAsyncDecodingEnabledForTesting(enabled);
 }
     
 void Internals::setForceUpdateImageDataEnabledForTesting(HTMLImageElement& element, bool enabled)
@@ -3985,6 +3993,8 @@ ExceptionOr<void> Internals::updateLayoutIgnorePendingStylesheetsAndRunPostLayou
         return Exception { TypeError };
 
     document->updateLayoutIgnorePendingStylesheets(Document::RunPostLayoutTasks::Synchronously);
+    document->flushDeferredAXObjectCacheUpdate();
+
     return { };
 }
 
@@ -4715,7 +4725,7 @@ ExceptionOr<void> Internals::postRemoteControlCommand(const String& commandStrin
 
 void Internals::activeAudioRouteDidChange(bool shouldPause)
 {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     MediaSessionHelper::sharedHelper().activeAudioRouteDidChange(shouldPause ? MediaSessionHelperClient::ShouldPause::Yes : MediaSessionHelperClient::ShouldPause::No);
 #else
     UNUSED_PARAM(shouldPause);
@@ -5105,7 +5115,7 @@ RefPtr<File> Internals::createFile(const String& path)
         return nullptr;
 
     URL url = document->completeURL(path);
-    if (!url.isLocalFile())
+    if (!url.protocolIsFile())
         return nullptr;
 
     return File::create(document, url.fileSystemPath());
@@ -5677,15 +5687,6 @@ void Internals::simulateEventForWebGLContext(SimulatedWebGLContextEvent event, W
     context.simulateEventForTesting(contextEvent);
 }
 
-bool Internals::hasLowAndHighPowerGPUs()
-{
-#if PLATFORM(MAC)
-    return WebCore::hasLowAndHighPowerGPUs();
-#else
-    return false;
-#endif
-}
-
 Internals::RequestedGPU Internals::requestedGPU(WebGLRenderingContext& context)
 {
     UNUSED_PARAM(context);
@@ -5704,20 +5705,6 @@ Internals::RequestedGPU Internals::requestedGPU(WebGLRenderingContext& context)
     }
 
     return RequestedGPU::Default;
-}
-
-bool Internals::requestedMetal(WebGLRenderingContext& context)
-{
-    UNUSED_PARAM(context);
-#if PLATFORM(COCOA)
-    if (auto optionalAttributes = context.getContextAttributes()) {
-        auto attributes = *optionalAttributes;
-
-        return attributes.useMetal;
-    }
-#endif
-
-    return false;
 }
 #endif
 
@@ -5827,11 +5814,6 @@ void Internals::observeMediaStreamTrack(MediaStreamTrack& track)
     }
 }
 
-void Internals::grabNextMediaStreamTrackFrame(TrackFramePromise&& promise)
-{
-    m_nextTrackFramePromise = makeUnique<TrackFramePromise>(WTFMove(promise));
-}
-
 void Internals::mediaStreamTrackVideoFrameRotation(DOMPromiseDeferred<IDLShort>&& promise)
 {
     promise.resolve(m_trackVideoRotation);
@@ -5844,23 +5826,6 @@ void Internals::videoFrameAvailable(VideoFrame& videoFrame, VideoFrameTimeMetada
             return;
         m_trackVideoSampleCount++;
         m_trackVideoRotation = static_cast<int>(videoFrame->rotation());
-        if (!m_nextTrackFramePromise)
-            return;
-
-        auto& videoSettings = m_trackSource->settings();
-        if (!videoSettings.width() || !videoSettings.height())
-            return;
-
-        auto rgba = videoFrame->getRGBAImageData();
-        if (!rgba)
-            return;
-
-        auto imageData = ImageData::create(rgba.releaseNonNull(), videoSettings.width(), videoSettings.height(), { { PredefinedColorSpace::SRGB } });
-        if (!imageData.hasException())
-            m_nextTrackFramePromise->resolve(imageData.releaseReturnValue());
-        else
-            m_nextTrackFramePromise->reject(imageData.exception().code());
-        m_nextTrackFramePromise = nullptr;
     });
 }
 
@@ -5935,6 +5900,15 @@ auto Internals::audioSessionCategory() const -> AudioSessionCategory
 #endif
 }
 
+auto Internals::audioSessionMode() const -> AudioSessionMode
+{
+#if USE(AUDIO_SESSION)
+    return AudioSession::sharedSession().mode();
+#else
+    return AudioSessionMode::Default;
+#endif
+}
+
 auto Internals::routeSharingPolicy() const -> RouteSharingPolicy
 {
 #if USE(AUDIO_SESSION)
@@ -5952,6 +5926,17 @@ auto Internals::categoryAtMostRecentPlayback(HTMLMediaElement& element) const ->
 #else
     UNUSED_PARAM(element);
     return AudioSessionCategory::None;
+#endif
+}
+
+auto Internals::modeAtMostRecentPlayback(HTMLMediaElement& element) const -> AudioSessionMode
+{
+#if USE(AUDIO_SESSION)
+    WTFLogAlways("Internals::modeAtMostRecentPlayback");
+    return element.modeAtMostRecentPlayback();
+#else
+    UNUSED_PARAM(element);
+    return AudioSessionMode::Default;
 #endif
 }
 #endif
@@ -6755,10 +6740,14 @@ String Internals::focusRingColor()
     return serializationForCSS(RenderTheme::singleton().focusRingColor({ }));
 }
 
-unsigned Internals::createSleepDisabler(const String& reason, bool display)
+ExceptionOr<unsigned> Internals::createSleepDisabler(const String& reason, bool display)
 {
+    auto* document = contextDocument();
+    if (!document || !document->pageID())
+        return Exception { InvalidAccessError };
+
     static unsigned lastUsedIdentifier = 0;
-    auto sleepDisabler = makeUnique<WebCore::SleepDisabler>(reason, display ? PAL::SleepDisabler::Type::Display : PAL::SleepDisabler::Type::System);
+    auto sleepDisabler = makeUnique<WebCore::SleepDisabler>(reason, display ? PAL::SleepDisabler::Type::Display : PAL::SleepDisabler::Type::System, *document->pageID());
     m_sleepDisablers.add(++lastUsedIdentifier, WTFMove(sleepDisabler));
     return lastUsedIdentifier;
 }
@@ -6802,7 +6791,7 @@ unsigned Internals::mediaKeySessionInternalInstanceSessionObjectRefCount(const M
 
 void Internals::setContentSizeCategory(Internals::ContentSizeCategory category)
 {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     CFStringRef ctCategory = nil;
     switch (category) {
     case Internals::ContentSizeCategory::L:
@@ -6932,13 +6921,13 @@ ExceptionOr<void> Internals::setMockMediaSessionCoordinatorCommandsShouldFail(bo
 }
 #endif // ENABLE(MEDIA_SESSION)
 
-constexpr ASCIILiteral string(PartialOrdering ordering)
+constexpr ASCIILiteral string(std::partial_ordering ordering)
 {
     if (is_lt(ordering))
         return "less"_s;
     if (is_gt(ordering))
         return "greater"_s;
-    if (is_eq(ordering))
+    if (WebCore::is_eq(ordering))
         return "equivalent"_s;
     return "unordered"_s;
 }
@@ -7042,13 +7031,6 @@ ExceptionOr<void> Internals::setDocumentAutoplayPolicy(Document& document, Inter
     return { };
 }
 
-#if ENABLE(WEBGL) && !PLATFORM(COCOA)
-bool Internals::platformSupportsMetal(bool)
-{
-    return false;
-}
-#endif
-
 void Internals::retainTextIteratorForDocumentContent()
 {
     auto* document = contextDocument();
@@ -7070,12 +7052,6 @@ RefPtr<PushSubscription> Internals::createPushSubscription(const String& endpoin
     return PushSubscription::create(PushSubscriptionData { { }, WTFMove(myEndpoint), expirationTime, WTFMove(myServerVAPIDPublicKey), WTFMove(myClientECDHPublicKey), WTFMove(myAuth) });
 }
 #endif
-
-void Internals::overrideModalContainerSearchTermForTesting(AtomString&& term)
-{
-    if (auto observer = contextDocument()->modalContainerObserver())
-        observer->overrideSearchTermForTesting(WTFMove(term));
-}
 
 #if ENABLE(ARKIT_INLINE_PREVIEW_MAC)
 

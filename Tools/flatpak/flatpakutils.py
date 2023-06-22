@@ -196,7 +196,7 @@ def check_flatpak(verbose=True):
                                   " how to install it for your distribution at:\n"
                                   "    * https://flatpak.org/\n", required_version,
                                   sys.argv[0])
-            return ()
+        return ()
 
     def comparable_version(version):
         return tuple(map(int, (version.split("."))))
@@ -878,6 +878,7 @@ class WebkitFlatpak:
         env_var_prefixes_to_keep = [
             "G",
             "CCACHE",
+            "COG",
             "EGL",
             "GIGACAGE",
             "GTK",

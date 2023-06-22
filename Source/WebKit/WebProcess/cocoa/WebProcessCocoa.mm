@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #import "WebProcess.h"
 
 #import "AccessibilitySupportSPI.h"
+#import "ArgumentCodersCocoa.h"
 #import "DefaultWebBrowserChecks.h"
 #import "LegacyCustomProtocolManager.h"
 #import "LogInitialization.h"
@@ -54,9 +55,16 @@
 #import "WebSleepDisablerClient.h"
 #import "WebSystemSoundDelegate.h"
 #import "WebsiteDataStoreParameters.h"
+#import <CoreMedia/CMFormatDescription.h>
 #import <JavaScriptCore/ConfigFile.h>
 #import <JavaScriptCore/Options.h>
 #import <WebCore/AVAssetMIMETypeCache.h>
+#import <pal/spi/cf/VideoToolboxSPI.h>
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+#import <WebCore/AXIsolatedObject.h>
+#import <WebCore/AXIsolatedTree.h>
+#endif
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/CPUMonitor.h>
 #import <WebCore/DeprecatedGlobalSettings.h>
@@ -161,7 +169,7 @@
 #endif
 
 #if ENABLE(DATA_DETECTION) && PLATFORM(IOS_FAMILY)
-#import <pal/spi/ios/DataDetectorsUISPI.h>
+#import <pal/spi/ios/DataDetectorsUISoftLink.h>
 #endif
 
 #import <WebCore/MediaAccessibilitySoftLink.h>
@@ -169,10 +177,6 @@
 #import <pal/cocoa/AVFoundationSoftLink.h>
 #import <pal/cocoa/DataDetectorsCoreSoftLink.h>
 #import <pal/cocoa/MediaToolboxSoftLink.h>
-
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/VideoToolboxAdditions.h>
-#endif
 
 #if HAVE(CATALYST_USER_INTERFACE_IDIOM_AND_SCALE_FACTOR)
 // FIXME: This is only for binary compatibility with versions of UIKit in macOS 11 that are missing the change in <rdar://problem/68524148>.
@@ -201,15 +205,45 @@ void WebProcess::platformSetCacheModel(CacheModel)
 {
 }
 
+id WebProcess::accessibilityFocusedUIElement()
+{
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (!isMainRunLoop()) {
+        // Avoid hitting the main thread by getting the focused object from the focused isolated tree.
+        auto tree = findAXTree([] (AXTreePtr tree) -> bool {
+            OptionSet<ActivityState> state;
+            switchOn(tree,
+                [&state] (RefPtr<AXIsolatedTree>& typedTree) {
+                    if (typedTree)
+                        state = typedTree->lockedPageActivityState();
+                }
+                , [] (auto&) { }
+            );
+            return state.containsAll({ ActivityState::IsVisible, ActivityState::IsFocused, ActivityState::WindowIsActive });
+        });
+
+        RefPtr object = switchOn(tree,
+            [] (RefPtr<AXIsolatedTree>& typedTree) -> RefPtr<AXIsolatedObject> {
+                return typedTree ? typedTree->focusedNode() : nullptr;
+            }
+            , [] (auto&) -> RefPtr<AXIsolatedObject> {
+                return nullptr;
+            }
+        );
+        return object ? object->wrapper() : nil;
+    }
+#endif
+
+    WebPage* page = WebProcess::singleton().focusedWebPage();
+    if (!page || !page->accessibilityRemoteObject())
+        return nil;
+    return [page->accessibilityRemoteObject() accessibilityFocusedUIElement];
+}
+
 #if USE(APPKIT)
 static id NSApplicationAccessibilityFocusedUIElement(NSApplication*, SEL)
 {
-    return Accessibility::retrieveAutoreleasedValueFromMainThread<id>([] () -> RetainPtr<id> {
-        WebPage* page = WebProcess::singleton().focusedWebPage();
-        if (!page || !page->accessibilityRemoteObject())
-            return nil;
-        return [page->accessibilityRemoteObject() accessibilityFocusedUIElement];
-    });
+    return WebProcess::accessibilityFocusedUIElement();
 }
 
 #if ENABLE(SET_WEBCONTENT_PROCESS_INFORMATION_IN_NETWORK_PROCESS)
@@ -220,7 +254,6 @@ static void preventAppKitFromContactingLaunchServices(NSApplication*, SEL)
 }
 #endif
 #endif
-
 
 #if PLATFORM(MAC)
 static Boolean isAXAuthenticatedCallback(audit_token_t auditToken)
@@ -240,9 +273,51 @@ static void softlinkDataDetectorsFrameworks()
 #if ENABLE(DATA_DETECTION)
     PAL::isDataDetectorsCoreFrameworkAvailable();
 #if PLATFORM(IOS_FAMILY)
-    DataDetectorsUILibrary();
+    PAL::isDataDetectorsUIFrameworkAvailable();
 #endif // PLATFORM(IOS_FAMILY)
 #endif // ENABLE(DATA_DETECTION)
+}
+
+enum class VideoDecoderBehavior : uint8_t {
+    AvoidHardware               = 1 << 0,
+    AvoidIOSurface              = 1 << 1,
+    EnableCommonVideoDecoders   = 1 << 2,
+    EnableHEIC                  = 1 << 3,
+    EnableAVIF                  = 1 << 4,
+};
+
+static void setVideoDecoderBehaviors(OptionSet<VideoDecoderBehavior> videoDecoderBehavior)
+{
+    if (!(PAL::isVideoToolboxFrameworkAvailable() && PAL::canLoad_VideoToolbox_VTRestrictVideoDecoders()))
+        return;
+
+    Vector<CMVideoCodecType> allowedCodecTypeList;
+
+    if (videoDecoderBehavior.contains(VideoDecoderBehavior::EnableCommonVideoDecoders)) {
+        allowedCodecTypeList.append(kCMVideoCodecType_H263);
+        allowedCodecTypeList.append(kCMVideoCodecType_H264);
+        allowedCodecTypeList.append(kCMVideoCodecType_MPEG4Video);
+    }
+
+    if (videoDecoderBehavior.contains(VideoDecoderBehavior::EnableHEIC)) {
+        allowedCodecTypeList.append(kCMVideoCodecType_HEVC);
+        allowedCodecTypeList.append(kCMVideoCodecType_HEVCWithAlpha);
+    }
+
+#if HAVE(AVIF)
+    if (videoDecoderBehavior.contains(VideoDecoderBehavior::EnableAVIF))
+        allowedCodecTypeList.append(kCMVideoCodecType_AV1);
+#endif
+
+    unsigned flags = 0;
+
+    if (videoDecoderBehavior.contains(VideoDecoderBehavior::AvoidHardware))
+        flags |= kVTRestrictions_RunVideoDecodersInProcess | kVTRestrictions_AvoidHardwareDecoders | kVTRestrictions_AvoidHardwarePixelTransfer;
+
+    if (videoDecoderBehavior.contains(VideoDecoderBehavior::AvoidIOSurface))
+        flags |= kVTRestrictions_AvoidIOSurfaceBackings;
+
+    PAL::softLinkVideoToolboxVTRestrictVideoDecoders(flags, allowedCodecTypeList.data(), allowedCodecTypeList.size());
 }
 
 void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& parameters)
@@ -268,9 +343,6 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 
 #if ENABLE(SANDBOX_EXTENSIONS)
     SandboxExtension::consumePermanently(parameters.uiProcessBundleResourcePathExtensionHandle);
-#if ENABLE(MEDIA_STREAM)
-    SandboxExtension::consumePermanently(parameters.audioCaptureExtensionHandle);
-#endif
 #if PLATFORM(COCOA) && ENABLE(REMOTE_INSPECTOR)
     Inspector::RemoteInspector::setNeedMachSandboxExtension(!SandboxExtension::consumePermanently(parameters.enableRemoteWebInspectorExtensionHandles));
 #endif
@@ -278,20 +350,26 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 
 #if HAVE(VIDEO_RESTRICTED_DECODING)
 #if PLATFORM(MAC)
+    OSObjectPtr<dispatch_semaphore_t> codeCheckSemaphore;
     if (SandboxExtension::consumePermanently(parameters.trustdExtensionHandle)) {
         // Open up a Mach connection to trustd by doing a code check validation on the main bundle.
         // This is required since launchd will be blocked after process launch, which prevents new Mach connections to be created.
         // FIXME: remove this once <rdar://90127163> is fixed.
-        auto bundleURL = adoptCF(CFBundleCopyBundleURL(CFBundleGetMainBundle()));
-        SecStaticCodeRef code = nullptr;
-        SecStaticCodeCreateWithPath(bundleURL.get(), kSecCSDefaultFlags, &code);
-        if (code) {
-            SecStaticCodeCheckValidity(code, kSecCSDoNotValidateResources, nullptr);
-            CFRelease(code);
-        }
+        // Dispatch this work on a thread to avoid blocking the main thread. We will wait for this to complete at the end of this method.
+        codeCheckSemaphore = adoptOSObject(dispatch_semaphore_create(0));
+        dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), [codeCheckSemaphore = codeCheckSemaphore] {
+            auto bundleURL = adoptCF(CFBundleCopyBundleURL(CFBundleGetMainBundle()));
+            SecStaticCodeRef code = nullptr;
+            if (bundleURL)
+                SecStaticCodeCreateWithPath(bundleURL.get(), kSecCSDefaultFlags, &code);
+            if (code) {
+                SecStaticCodeCheckValidity(code, kSecCSDoNotValidateResources | kSecCSDoNotValidateExecutable, nullptr);
+                CFRelease(code);
+            }
+            dispatch_semaphore_signal(codeCheckSemaphore.get());
+        });
     }
 #endif // PLATFORM(MAC)
-#if USE(APPLE_INTERNAL_SDK)
     OptionSet<VideoDecoderBehavior> videoDecoderBehavior;
     
     if (parameters.enableDecodingHEIC) {
@@ -308,7 +386,6 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
         videoDecoderBehavior.add({ VideoDecoderBehavior::AvoidIOSurface, VideoDecoderBehavior::AvoidHardware });
         setVideoDecoderBehaviors(videoDecoderBehavior);
     }
-#endif
 #endif // HAVE(VIDEO_RESTRICTED_DECODING)
 
     // Disable NSURLCache.
@@ -327,7 +404,7 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     setEnhancedAccessibility(parameters.accessibilityEnhancedUserInterfaceEnabled);
 
 #if PLATFORM(IOS_FAMILY)
-    setCurrentUserInterfaceIdiomIsSmallScreen(parameters.currentUserInterfaceIdiomIsSmallScreen);
+    setCurrentUserInterfaceIdiom(parameters.currentUserInterfaceIdiom);
     setLocalizedDeviceModel(parameters.localizedDeviceModel);
     setContentSizeCategory(parameters.contentSizeCategory);
 #if ENABLE(VIDEO_PRESENTATION_MODE)
@@ -348,13 +425,15 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     // no window in WK2, NSApplication needs to use the focused page's focused element.
     Method methodToPatch = class_getInstanceMethod([NSApplication class], @selector(accessibilityFocusedUIElement));
     method_setImplementation(methodToPatch, (IMP)NSApplicationAccessibilityFocusedUIElement);
+
+    auto method = class_getInstanceMethod([NSApplication class], @selector(_updateCanQuitQuietlyAndSafely));
+    method_setImplementation(method, (IMP)preventAppKitFromContactingLaunchServices);
 #endif
 
 #if PLATFORM(MAC) && ENABLE(WEBPROCESS_NSRUNLOOP)
-    RefPtr<SandboxExtension> launchServicesExtension;
     if (parameters.launchServicesExtensionHandle) {
-        if ((launchServicesExtension = SandboxExtension::create(WTFMove(*parameters.launchServicesExtensionHandle)))) {
-            bool ok = launchServicesExtension->consume();
+        if ((m_launchServicesExtension = SandboxExtension::create(WTFMove(*parameters.launchServicesExtensionHandle)))) {
+            bool ok = m_launchServicesExtension->consume();
             ASSERT_UNUSED(ok, ok);
         }
     }
@@ -365,25 +444,10 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     // Update process name while holding the Launch Services sandbox extension
     updateProcessName(IsInProcessInitialization::Yes);
 
-#if ENABLE(SET_WEBCONTENT_PROCESS_INFORMATION_IN_NETWORK_PROCESS)
     // Disable relaunch on login. This is also done from -[NSApplication init] by dispatching -[NSApplication disableRelaunchOnLogin] on a non-main thread.
     // This will be in a race with the closing of the Launch Services connection, so call it synchronously here.
     // The cost of calling this should be small, and it is not expected to have any impact on performance.
     _LSSetApplicationInformationItem(kLSDefaultSessionID, _LSGetCurrentApplicationASN(), _kLSPersistenceSuppressRelaunchAtLoginKey, kCFBooleanTrue, nullptr);
-    
-    // This is being called under WebPage::platformInitialize(), and may reach out to the Launch Services daemon once in the lifetime of the process.
-    // Call this synchronously here while a sandbox extension to Launch Services is being held.
-    [NSAccessibilityRemoteUIElement remoteTokenForLocalUIElement:adoptNS([[WKAccessibilityWebPageObject alloc] init]).get()];
-
-    auto method = class_getInstanceMethod([NSApplication class], @selector(_updateCanQuitQuietlyAndSafely));
-    method_setImplementation(method, (IMP)preventAppKitFromContactingLaunchServices);
-
-    // FIXME: Replace the constant 4 with kLSServerConnectionStatusReleaseNotificationsMask when available in the SDK, see <https://bugs.webkit.org/show_bug.cgi?id=220988>.
-    _LSSetApplicationLaunchServicesServerConnectionStatus(kLSServerConnectionStatusDoNotConnectToServerMask | /*kLSServerConnectionStatusReleaseNotificationsMask*/ 4, nullptr);
-#endif
-
-    if (launchServicesExtension)
-        launchServicesExtension->revoke();
 #endif
 
 #if PLATFORM(MAC)
@@ -426,7 +490,7 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     scrollerStylePreferenceChanged(parameters.useOverlayScrollbars);
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     SandboxExtension::consumePermanently(parameters.compilerServiceExtensionHandles);
 #endif
 
@@ -436,6 +500,7 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     
     setSystemHasBattery(parameters.systemHasBattery);
     setSystemHasAC(parameters.systemHasAC);
+    IPC::setStrictSecureDecodingForAllObjCEnabled(parameters.strictSecureDecodingForAllObjCEnabled);
 
 #if PLATFORM(IOS_FAMILY)
     RenderThemeIOS::setCSSValueToSystemColorMap(WTFMove(parameters.cssValueToSystemColorMap));
@@ -475,6 +540,11 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     // Soft link frameworks related to Data Detection before we disconnect from launchd because these frameworks connect to
     // launchd temporarily at link time to register XPC services. See rdar://93598951 (my feature request to stop doing that)
     softlinkDataDetectorsFrameworks();
+
+#if HAVE(VIDEO_RESTRICTED_DECODING) && PLATFORM(MAC)
+    if (codeCheckSemaphore)
+        dispatch_semaphore_wait(codeCheckSemaphore.get(), DISPATCH_TIME_FOREVER);
+#endif
 }
 
 void WebProcess::platformSetWebsiteDataStoreParameters(WebProcessDataStoreParameters&& parameters)
@@ -515,6 +585,9 @@ void WebProcess::initializeProcessName(const AuxiliaryProcessInitializationParam
 
 std::optional<audit_token_t> WebProcess::auditTokenForSelf()
 {
+    if (m_auditTokenForSelf)
+        return m_auditTokenForSelf;
+
     audit_token_t auditToken = { 0 };
     mach_msg_type_number_t info_size = TASK_AUDIT_TOKEN_COUNT;
     kern_return_t kr = task_info(mach_task_self(), TASK_AUDIT_TOKEN, reinterpret_cast<integer_t *>(&auditToken), &info_size);
@@ -522,7 +595,8 @@ std::optional<audit_token_t> WebProcess::auditTokenForSelf()
         WEBPROCESS_RELEASE_LOG_ERROR(Process, "Unable to get audit token for self. Error: %{public}s (%x)", mach_error_string(kr), kr);
         return std::nullopt;
     }
-    return auditToken;
+    m_auditTokenForSelf = auditToken;
+    return m_auditTokenForSelf;
 }
 
 void WebProcess::updateProcessName(IsInProcessInitialization isInProcessInitialization)
@@ -662,18 +736,39 @@ static void registerLogHook()
     os_log_set_hook(OS_LOG_TYPE_DEFAULT, ^(os_log_type_t type, os_log_message_t msg) {
         if (msg->buffer_sz > 1024)
             return;
-        char* messageString = os_log_copy_message_string(msg);
-        String logString = String::fromUTF8(messageString);
-        free(messageString);
 
-        String logChannel = String::fromUTF8(msg->subsystem);
-        String logCategory = String::fromUTF8(msg->category);
+        // Skip faults and debug logs in non-internal builds.
+        if (type == OS_LOG_TYPE_FAULT || type == OS_LOG_TYPE_DEBUG)
+            return;
 
-        callOnMainRunLoop([logChannel = logChannel.isolatedCopy(), logCategory = logCategory.isolatedCopy(), logString = logString.isolatedCopy(), type] {
-            auto* connection = WebProcess::singleton().existingNetworkProcessConnection();
-            if (!connection)
+        CString logFormat(msg->format);
+        CString logChannel(msg->subsystem);
+        CString logCategory(msg->category);
+
+        Vector<uint8_t> buffer(msg->buffer, msg->buffer_sz);
+        Vector<uint8_t> privdata(msg->privdata, msg->privdata_sz);
+
+        static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("Log Queue", WorkQueue::QOS::Background));
+
+        queue.get()->dispatch([logFormat = WTFMove(logFormat), logChannel = WTFMove(logChannel), logCategory = WTFMove(logCategory), type = type, buffer = WTFMove(buffer), privdata = WTFMove(privdata)] {
+            os_log_message_s msg = { 0 };
+
+            msg.format = logFormat.data();
+            msg.buffer = buffer.data();
+            msg.buffer_sz = buffer.size();
+            msg.privdata = privdata.data();
+            msg.privdata_sz = privdata.size();
+
+            char* messageString = os_log_copy_message_string(&msg);
+            if (!messageString)
                 return;
-            connection->connection().send(Messages::NetworkConnectionToWebProcess::LogOnBehalfOfWebContent(logChannel, logCategory, logString, type, getpid()), 0);
+            IPC::DataReference logString(reinterpret_cast<uint8_t*>(messageString), strlen(messageString) + 1);
+
+            auto connectionID = WebProcess::singleton().networkProcessConnectionID();
+            if (connectionID)
+                IPC::Connection::send(connectionID, Messages::NetworkConnectionToWebProcess::LogOnBehalfOfWebContent(logChannel.bytesInludingNullTerminator(), logCategory.bytesInludingNullTerminator(), logString, type, getpid()), 0);
+
+            free(messageString);
         });
     });
 }
@@ -764,8 +859,7 @@ RetainPtr<CFDataRef> WebProcess::sourceApplicationAuditData() const
 void WebProcess::initializeSandbox(const AuxiliaryProcessInitializationParameters& parameters, SandboxInitializationParameters& sandboxParameters)
 {
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
-    // Need to override the default, because service has a different bundle ID.
-    auto webKitBundle = [NSBundle bundleWithIdentifier:@"com.apple.WebKit"];
+    auto webKitBundle = [NSBundle bundleForClass:NSClassFromString(@"WKWebView")];
 
 #if defined(USE_VORBIS_AUDIOCOMPONENT_WORKAROUND)
     // We need to initialize the Vorbis decoder before the sandbox gets setup; this is a one off action.
@@ -920,43 +1014,36 @@ void WebProcess::updateCPUMonitorState(CPUMonitorUpdateReason reason)
 RefPtr<ObjCObjectGraph> WebProcess::transformHandlesToObjects(ObjCObjectGraph& objectGraph)
 {
     struct Transformer final : ObjCObjectGraph::Transformer {
-        Transformer(WebProcess& webProcess)
-            : m_webProcess(webProcess)
-        {
-        }
-
         bool shouldTransformObject(id object) const override
         {
             if (dynamic_objc_cast<WKBrowsingContextHandle>(object))
                 return true;
 
-            ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             if (dynamic_objc_cast<WKTypeRefWrapper>(object))
                 return true;
-            ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
             return false;
         }
 
         RetainPtr<id> transformObject(id object) const override
         {
             if (auto* handle = dynamic_objc_cast<WKBrowsingContextHandle>(object)) {
-                if (auto* webPage = m_webProcess.webPage(ObjectIdentifier<WebCore::PageIdentifierType>(handle._webPageID)))
+                if (auto* webPage = WebProcess::singleton().webPage(ObjectIdentifier<WebCore::PageIdentifierType>(handle._webPageID)))
                     return wrapper(*webPage);
 
                 return [NSNull null];
             }
 
-            ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             if (auto* wrapper = dynamic_objc_cast<WKTypeRefWrapper>(object))
-                return adoptNS([[WKTypeRefWrapper alloc] initWithObject:toAPI(m_webProcess.transformHandlesToObjects(toImpl(wrapper.object)).get())]);
-            ALLOW_DEPRECATED_DECLARATIONS_END
+                return adoptNS([[WKTypeRefWrapper alloc] initWithObject:toAPI(WebProcess::singleton().transformHandlesToObjects(toImpl(wrapper.object)).get())]);
+ALLOW_DEPRECATED_DECLARATIONS_END
             return object;
         }
-
-        WebProcess& m_webProcess;
     };
 
-    return ObjCObjectGraph::create(ObjCObjectGraph::transform(objectGraph.rootObject(), Transformer(*this)).get());
+    return ObjCObjectGraph::create(ObjCObjectGraph::transform(objectGraph.rootObject(), Transformer()).get());
 }
 
 RefPtr<ObjCObjectGraph> WebProcess::transformObjectsToHandles(ObjCObjectGraph& objectGraph)
@@ -967,10 +1054,10 @@ RefPtr<ObjCObjectGraph> WebProcess::transformObjectsToHandles(ObjCObjectGraph& o
             if (dynamic_objc_cast<WKWebProcessPlugInBrowserContextController>(object))
                 return true;
 
-            ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             if (dynamic_objc_cast<WKTypeRefWrapper>(object))
                 return true;
-            ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
             return false;
         }
 
@@ -979,10 +1066,10 @@ RefPtr<ObjCObjectGraph> WebProcess::transformObjectsToHandles(ObjCObjectGraph& o
             if (auto* controller = dynamic_objc_cast<WKWebProcessPlugInBrowserContextController>(object))
                 return controller.handle;
 
-            ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             if (auto* wrapper = dynamic_objc_cast<WKTypeRefWrapper>(object))
                 return adoptNS([[WKTypeRefWrapper alloc] initWithObject:toAPI(transformObjectsToHandles(toImpl(wrapper.object)).get())]);
-            ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
             return object;
         }
     };
@@ -1020,9 +1107,9 @@ void WebProcess::releaseSystemMallocMemory()
 
 #if PLATFORM(IOS_FAMILY)
 
-void WebProcess::userInterfaceIdiomDidChange(bool isSmallScreen)
+void WebProcess::userInterfaceIdiomDidChange(UserInterfaceIdiom idiom)
 {
-    WebKit::setCurrentUserInterfaceIdiomIsSmallScreen(isSmallScreen);
+    WebKit::setCurrentUserInterfaceIdiom(idiom);
 }
 
 bool WebProcess::shouldFreezeOnSuspension() const
@@ -1336,7 +1423,7 @@ void WebProcess::didWriteToPasteboardAsynchronously(const String& pasteboardName
 void WebProcess::waitForPendingPasteboardWritesToFinish(const String& pasteboardName)
 {
     while (m_pendingPasteboardWriteCounts.contains(pasteboardName)) {
-        if (!parentProcessConnection()->waitForAndDispatchImmediately<Messages::WebProcess::DidWriteToPasteboardAsynchronously>(0, 1_s, IPC::WaitForOption::InterruptWaitingIfSyncMessageArrives)) {
+        if (parentProcessConnection()->waitForAndDispatchImmediately<Messages::WebProcess::DidWriteToPasteboardAsynchronously>(0, 1_s, IPC::WaitForOption::InterruptWaitingIfSyncMessageArrives) != IPC::Error::NoError) {
             m_pendingPasteboardWriteCounts.removeAll(pasteboardName);
             break;
         }
@@ -1374,6 +1461,14 @@ void WebProcess::openDirectoryCacheInvalidated(SandboxExtension::Handle&& handle
     
     if (bootstrapExtension)
         bootstrapExtension->revoke();
+}
+
+void WebProcess::revokeLaunchServicesSandboxExtension()
+{
+    if (m_launchServicesExtension) {
+        m_launchServicesExtension->revoke();
+        m_launchServicesExtension = nullptr;
+    }
 }
 #endif
 

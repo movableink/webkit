@@ -801,9 +801,11 @@ private:
             break;
         }
 
+        case EnumeratorPutByVal:
         case PutByValDirect:
         case PutByVal:
-        case PutByValAlias: {
+        case PutByValAlias:
+        case PutByValMegamorphic: {
             Edge child1 = m_graph.varArgChild(node, 0);
             Edge child2 = m_graph.varArgChild(node, 1);
             Edge child3 = m_graph.varArgChild(node, 2);
@@ -914,6 +916,7 @@ private:
 
         case NewArrayWithSpecies:
         case EnumeratorGetByVal:
+        case GetByValMegamorphic:
         case ArrayPop:
         case ArrayPush:
         case RegExpExec:
@@ -927,11 +930,14 @@ private:
         case StringReplaceString:
         case GetById:
         case GetByIdFlush:
+        case GetByIdMegamorphic:
         case GetByIdWithThis:
+        case GetByIdWithThisMegamorphic:
         case GetByIdDirect:
         case GetByIdDirectFlush:
         case TryGetById:
         case GetByValWithThis:
+        case GetByValWithThisMegamorphic:
         case GetByOffset:
         case GetPrivateName:
         case GetPrivateNameById:
@@ -1124,11 +1130,14 @@ private:
         case IsNumber:
         case IsBigInt:
         case NumberIsInteger:
+        case GlobalIsNaN:
+        case NumberIsNaN:
         case IsObject:
         case IsCallable:
         case IsConstructor:
         case IsCellWithType:
         case IsTypedArrayView:
+        case HasStructureWithFlags:
         case MatchStructure: {
             setPrediction(SpecBoolean);
             break;
@@ -1195,10 +1204,13 @@ private:
         case NewArrayWithSpread:
         case NewArray:
         case NewArrayWithSize:
+        case NewArrayWithConstantSize:
         case CreateRest:
         case NewArrayBuffer:
         case ObjectKeys:
-        case ObjectGetOwnPropertyNames: {
+        case ObjectGetOwnPropertyNames:
+        case ObjectGetOwnPropertySymbols:
+        case ReflectOwnKeys: {
             setPrediction(SpecArray);
             break;
         }
@@ -1247,6 +1259,10 @@ private:
         case MakeRope:
         case StrCat: {
             setPrediction(SpecString);
+            break;
+        }
+        case MakeAtomString: {
+            setPrediction(SpecStringIdent);
             break;
         }
         case NewStringObject: {
@@ -1461,8 +1477,10 @@ private:
         case PutByValWithThis:
         case PutByIdWithThis:
         case PutByVal:
+        case PutByValMegamorphic:
         case PutPrivateName:
         case PutPrivateNameById:
+        case EnumeratorPutByVal:
         case SetPrivateBrand:
         case CheckPrivateBrand:
         case PutClosureVar:
@@ -1478,6 +1496,7 @@ private:
         case PutById:
         case PutByIdFlush:
         case PutByIdDirect:
+        case PutByIdMegamorphic:
         case PutByOffset:
         case MultiPutByOffset:
         case PutGetterById:
@@ -1517,6 +1536,7 @@ private:
         case NotifyWrite:
         case ConstantStoragePointer:
         case MovHint:
+        case ZombieHint:
         case ExitOK:
         case VarargsLength:
         case LoadVarargs:

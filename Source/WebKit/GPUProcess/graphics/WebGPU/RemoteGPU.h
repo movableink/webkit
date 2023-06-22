@@ -28,6 +28,7 @@
 #if ENABLE(GPU_PROCESS)
 
 #include "RemoteGPURequestAdapterResponse.h"
+#include "RemoteVideoFrameIdentifier.h"
 #include "StreamConnectionWorkQueue.h"
 #include "StreamMessageReceiver.h"
 #include "StreamServerConnection.h"
@@ -35,6 +36,7 @@
 #include "WebGPUObjectHeap.h"
 #include "WebGPUSupportedFeatures.h"
 #include "WebGPUSupportedLimits.h"
+#include <WebCore/MediaPlayerIdentifier.h>
 #include <WebCore/ProcessIdentifier.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
@@ -49,6 +51,11 @@ namespace IPC {
 class StreamServerConnection;
 }
 
+namespace WebCore {
+class MediaPlayer;
+class VideoFrame;
+}
+
 namespace WebKit {
 
 class GPUConnectionToWebProcess;
@@ -59,12 +66,18 @@ class ObjectHeap;
 struct RequestAdapterOptions;
 }
 
+#if ENABLE(VIDEO) && PLATFORM(COCOA)
+using PerformWithMediaPlayerOnMainThread = Function<void(std::variant<WebCore::MediaPlayerIdentifier, WebKit::RemoteVideoFrameReference>, Function<void(RefPtr<WebCore::VideoFrame>)>&&)>;
+#else
+using PerformWithMediaPlayerOnMainThread = Function<void()>;
+#endif
+
 class RemoteGPU final : public IPC::StreamMessageReceiver {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<RemoteGPU> create(WebGPUIdentifier identifier, GPUConnectionToWebProcess& gpuConnectionToWebProcess, RemoteRenderingBackend& renderingBackend, IPC::StreamServerConnection::Handle&& serverConnection)
+    static Ref<RemoteGPU> create(PerformWithMediaPlayerOnMainThread&& performWithMediaPlayerOnMainThread, WebGPUIdentifier identifier, GPUConnectionToWebProcess& gpuConnectionToWebProcess, RemoteRenderingBackend& renderingBackend, IPC::StreamServerConnection::Handle&& serverConnection)
     {
-        auto result = adoptRef(*new RemoteGPU(identifier, gpuConnectionToWebProcess, renderingBackend, WTFMove(serverConnection)));
+        auto result = adoptRef(*new RemoteGPU(WTFMove(performWithMediaPlayerOnMainThread), identifier, gpuConnectionToWebProcess, renderingBackend, WTFMove(serverConnection)));
         result->initialize();
         return result;
     }
@@ -76,7 +89,7 @@ public:
 private:
     friend class WebGPU::ObjectHeap;
 
-    RemoteGPU(WebGPUIdentifier, GPUConnectionToWebProcess&, RemoteRenderingBackend&, IPC::StreamServerConnection::Handle&&);
+    RemoteGPU(PerformWithMediaPlayerOnMainThread&&, WebGPUIdentifier, GPUConnectionToWebProcess&, RemoteRenderingBackend&, IPC::StreamServerConnection::Handle&&);
 
     RemoteGPU(const RemoteGPU&) = delete;
     RemoteGPU(RemoteGPU&&) = delete;
@@ -89,7 +102,7 @@ private:
     void workQueueUninitialize();
 
     template<typename T>
-    bool send(T&& message) const
+    IPC::Error send(T&& message) const
     {
         return m_streamConnection->send(WTFMove(message), m_identifier);
     }
@@ -107,9 +120,9 @@ private:
     RefPtr<IPC::StreamServerConnection> m_streamConnection;
     RefPtr<PAL::WebGPU::GPU> m_backing WTF_GUARDED_BY_CAPABILITY(workQueue());
     Ref<WebGPU::ObjectHeap> m_objectHeap WTF_GUARDED_BY_CAPABILITY(workQueue());
+    PerformWithMediaPlayerOnMainThread m_performWithMediaPlayerOnMainThread;
     const WebGPUIdentifier m_identifier;
     Ref<RemoteRenderingBackend> m_renderingBackend;
-    const WebCore::ProcessIdentifier m_webProcessIdentifier;
 };
 
 } // namespace WebKit

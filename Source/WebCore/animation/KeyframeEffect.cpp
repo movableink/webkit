@@ -56,7 +56,7 @@
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderElement.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "Settings.h"
 #include "StyleAdjuster.h"
 #include "StylePendingResources.h"
@@ -66,7 +66,6 @@
 #include "StyledElement.h"
 #include "TimingFunction.h"
 #include "TranslateTransformOperation.h"
-#include "WillChangeData.h"
 #include <JavaScriptCore/Exception.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/UUID.h>
@@ -1896,21 +1895,8 @@ std::optional<KeyframeEffect::RecomputationReason> KeyframeEffect::recomputeKeyf
         return false;
     };
 
-    auto propertySetToInheritChanged = [&]() {
-        // In the rare case where a non-inherted property was set to "inherit" on a keyframe,
-        // we consider that a property set to "inherit" changed without trying to work out whether
-        // the computed value changed.
-        if (m_hasExplicitlyInheritedKeyframeProperty)
-            return true;
-
-        if (previousUnanimatedStyle) {
-            for (auto property : m_blendingKeyframes.propertiesSetToInherit()) {
-                ASSERT(m_target);
-                if (!CSSPropertyAnimation::propertiesEqual(property, *previousUnanimatedStyle, unanimatedStyle, m_target->document()))
-                    return true;
-            }
-        }
-        return false;
+    auto hasPropertyExplicitlySetToInherit = [&]() {
+        return !m_blendingKeyframes.propertiesSetToInherit().isEmpty();
     };
 
     auto propertySetToCurrentColorChanged = [&]() {
@@ -1944,7 +1930,7 @@ std::optional<KeyframeEffect::RecomputationReason> KeyframeEffect::recomputeKeyf
         return false;
     }();
 
-    if (logicalPropertyChanged || fontSizeChanged() || fontWeightChanged() || cssVariableChanged() || propertySetToInheritChanged() || propertySetToCurrentColorChanged()) {
+    if (logicalPropertyChanged || fontSizeChanged() || fontWeightChanged() || cssVariableChanged() || hasPropertyExplicitlySetToInherit() || propertySetToCurrentColorChanged()) {
         switch (m_animationType) {
         case WebAnimationType::CSSTransition:
             ASSERT_NOT_REACHED();
@@ -2000,6 +1986,21 @@ void KeyframeEffect::animationSuspensionStateDidChange(bool animationIsSuspended
 
     if (isRunningAccelerated() || isAboutToRunAccelerated())
         addPendingAcceleratedAction(animationIsSuspended ? AcceleratedAction::Pause : AcceleratedAction::Play);
+}
+
+void KeyframeEffect::applyPendingAcceleratedActionsOrUpdateTimingProperties()
+{
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+    if (threadedAnimationResolutionEnabled())
+        return;
+#endif
+
+    if (m_pendingAcceleratedActions.isEmpty()) {
+        m_pendingAcceleratedActions.append(AcceleratedAction::UpdateProperties);
+        applyPendingAcceleratedActions();
+        m_pendingAcceleratedActions.clear();
+    } else
+        applyPendingAcceleratedActions();
 }
 
 void KeyframeEffect::applyPendingAcceleratedActions()
@@ -2141,16 +2142,16 @@ Ref<const Animation> KeyframeEffect::backingAnimationForCompositedRenderer() con
 
     switch (direction()) {
     case PlaybackDirection::Normal:
-        animation->setDirection(Animation::AnimationDirectionNormal);
+        animation->setDirection(Animation::Direction::Normal);
         break;
     case PlaybackDirection::Alternate:
-        animation->setDirection(Animation::AnimationDirectionAlternate);
+        animation->setDirection(Animation::Direction::Alternate);
         break;
     case PlaybackDirection::Reverse:
-        animation->setDirection(Animation::AnimationDirectionReverse);
+        animation->setDirection(Animation::Direction::Reverse);
         break;
     case PlaybackDirection::AlternateReverse:
-        animation->setDirection(Animation::AnimationDirectionAlternateReverse);
+        animation->setDirection(Animation::Direction::AlternateReverse);
         break;
     }
 
@@ -2686,7 +2687,7 @@ KeyframeEffect::CanBeAcceleratedMutationScope::~CanBeAcceleratedMutationScope()
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 static bool acceleratedPropertyDidChange(AnimatableProperty property, const RenderStyle& previousStyle, const RenderStyle& currentStyle, const Settings& settings)
 {
-#if !defined(NDEBUG)
+#if ASSERT_ENABLED
     ASSERT(CSSPropertyAnimation::animationOfPropertyIsAccelerated(property, settings));
 #else
     UNUSED_PARAM(settings);

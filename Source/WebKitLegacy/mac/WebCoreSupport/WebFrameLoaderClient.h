@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebCore/FrameLoaderClient.h>
+#import <WebCore/LocalFrameLoaderClient.h>
 #import <WebCore/Timer.h>
 #import <wtf/Forward.h>
 #import <wtf/HashMap.h>
@@ -57,7 +57,7 @@ class ResourceRequest;
 class SharedBuffer;
 }
 
-class WebFrameLoaderClient : public WebCore::FrameLoaderClient, public CanMakeWeakPtr<WebFrameLoaderClient> {
+class WebFrameLoaderClient : public WebCore::LocalFrameLoaderClient, public CanMakeWeakPtr<WebFrameLoaderClient> {
 public:
     explicit WebFrameLoaderClient(WebFrame* = nullptr);
     ~WebFrameLoaderClient();
@@ -67,8 +67,6 @@ public:
 
 private:
     bool hasWebView() const final; // mainly for assertions
-
-    std::optional<WebCore::PageIdentifier> pageID() const final;
 
     void makeRepresentation(WebCore::DocumentLoader*) final;
     bool hasHTMLView() const final;
@@ -222,8 +220,11 @@ private:
 #endif
 
     RemoteAXObjectRef accessibilityRemoteObject() final { return 0; }
-    
-    RetainPtr<WebFramePolicyListener> setUpPolicyListener(WebCore::PolicyCheckIdentifier, WebCore::FramePolicyFunction&&, WebCore::PolicyAction defaultPolicy, NSURL *appLinkURL = nil);
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    void setAXIsolatedTreeRoot(WebCore::AXCoreObject*) final { }
+#endif
+
+    RetainPtr<WebFramePolicyListener> setUpPolicyListener(WebCore::PolicyCheckIdentifier, WebCore::FramePolicyFunction&&, WebCore::PolicyAction defaultPolicy, NSURL *appLinkURL, NSURL* referrerURL);
 
     NSDictionary *actionDictionary(const WebCore::NavigationAction&, WebCore::FormState*) const;
     

@@ -169,6 +169,7 @@ void PlatformCALayerRemote::updateClonedLayerProperties(PlatformCALayerRemote& c
     clone.setBackgroundColor(backgroundColor());
     clone.setContentsScale(contentsScale());
     clone.setCornerRadius(cornerRadius());
+    clone.setVideoGravity(videoGravity());
 
     if (!m_properties.shapePath.isNull())
         clone.setShapePath(m_properties.shapePath);
@@ -724,13 +725,6 @@ void PlatformCALayerRemote::setContents(CFTypeRef value)
         m_properties.backingStore->clearBackingStore();
 }
 
-void PlatformCALayerRemote::setDelegatedContentsFinishedEvent(const PlatformCALayerDelegatedContentsFinishedEvent& event)
-{
-    ASSERT(m_acceleratesDrawing);
-    ensureBackingStore();
-    m_properties.backingStore->setDelegatedContentsFinishedEvent(event);
-}
-
 void PlatformCALayerRemote::setDelegatedContents(const PlatformCALayerDelegatedContents& contents)
 {
     ASSERT(m_acceleratesDrawing);
@@ -883,6 +877,20 @@ void PlatformCALayerRemote::setAntialiasesEdges(bool antialiases)
 
     m_properties.antialiasesEdges = antialiases;
     m_properties.notePropertiesChanged(LayerChange::AntialiasesEdgesChanged);
+}
+
+MediaPlayerVideoGravity PlatformCALayerRemote::videoGravity() const
+{
+    return m_properties.videoGravity;
+}
+
+void PlatformCALayerRemote::setVideoGravity(MediaPlayerVideoGravity gravity)
+{
+    if (m_properties.videoGravity == gravity)
+        return;
+
+    m_properties.videoGravity = gravity;
+    m_properties.notePropertiesChanged(LayerChange::VideoGravityChanged);
 }
 
 FloatRoundedRect PlatformCALayerRemote::shapeRoundedRect() const

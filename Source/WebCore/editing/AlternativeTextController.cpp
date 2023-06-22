@@ -98,10 +98,16 @@ AlternativeTextController::~AlternativeTextController()
 void AlternativeTextController::startAlternativeTextUITimer(AlternativeTextType type)
 {
     const Seconds correctionPanelTimerInterval { 300_ms };
-#if ENABLE(ALTERNATIVE_TEXT_REQUIRES_AUTOMATIC_SPELLING_CORRECTION)
-    if (!isAutomaticSpellingCorrectionEnabled())
+
+    if (!isAutomaticSpellingCorrectionEnabled()) {
+#if !ENABLE(ALTERNATIVE_TEXT_REQUIRES_AUTOMATIC_SPELLING_CORRECTION)
+        // Exclude correction & reversion bubbles which have accept on dismiss behavior.
+        if (type == AlternativeTextType::Correction || type == AlternativeTextType::Reversion)
+            return;
+#else
         return;
 #endif
+    }
 
     // If type is PanelTypeReversion, then the new range has been set. So we shouldn't clear it.
     if (type == AlternativeTextType::Correction)
@@ -227,7 +233,7 @@ void AlternativeTextController::respondToUnappliedSpellCorrection(const VisibleS
     RefPtr protector(m_document.frame());
     m_document.updateLayout();
 
-    m_document.selection().setSelection(selectionOfCorrected, FrameSelection::defaultSetSelectionOptions() | FrameSelection::SpellCorrectionTriggered);
+    m_document.selection().setSelection(selectionOfCorrected, FrameSelection::defaultSetSelectionOptions() | FrameSelection::SetSelectionOption::SpellCorrectionTriggered);
     auto range = m_document.selection().selection().firstRange();
     if (!range)
         return;

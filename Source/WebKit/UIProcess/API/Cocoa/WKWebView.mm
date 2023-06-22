@@ -89,6 +89,7 @@
 #import "WKWebViewMac.h"
 #import "WKWebpagePreferencesInternal.h"
 #import "WKWebsiteDataStoreInternal.h"
+#import "WebBackForwardCache.h"
 #import "WebBackForwardList.h"
 #import "WebFrameProxy.h"
 #import "WebFullScreenManagerProxy.h"
@@ -203,6 +204,12 @@ static const BOOL defaultFastClickingEnabled = YES;
 #elif PLATFORM(IOS_FAMILY)
 static const BOOL defaultAllowsViewportShrinkToFit = NO;
 static const BOOL defaultFastClickingEnabled = NO;
+#endif
+
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+#import <wtf/SoftLinking.h>
+SOFT_LINK_LIBRARY_OPTIONAL(libAccessibility)
+SOFT_LINK_OPTIONAL(libAccessibility, _AXSReduceMotionAutoplayAnimatedImagesEnabled, Boolean, (), ());
 #endif
 
 #define THROW_IF_SUSPENDED if (UNLIKELY(_page && _page->isSuspended())) \
@@ -591,7 +598,9 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
     pageConfiguration->preferences()->setVideoFullscreenRequiresElementFullscreen(WebKit::defaultVideoFullscreenRequiresElementFullscreen());
 #endif
 
-    pageConfiguration->preferences()->setMarkedTextInputEnabled(!![_configuration _markedTextInputEnabled]);
+#if HAVE(INLINE_PREDICTIONS)
+    pageConfiguration->preferences()->setInlinePredictionsEnabled(!![_configuration allowsInlinePredictions]);
+#endif
 }
 
 - (instancetype)initWithFrame:(CGRect)frame configuration:(WKWebViewConfiguration *)configuration
@@ -621,7 +630,7 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
     self.magnification = [coder decodeDoubleForKey:@"magnification"];
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(MACCATALYST)
+#if PLATFORM(IOS) || PLATFORM(MACCATALYST) || PLATFORM(VISION)
     self.findInteractionEnabled = [coder decodeBoolForKey:@"findInteractionEnabled"];
 #endif
 
@@ -643,7 +652,7 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
     [coder encodeDouble:self.magnification forKey:@"magnification"];
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(MACCATALYST)
+#if PLATFORM(IOS) || PLATFORM(MACCATALYST) || PLATFORM(VISION)
     [coder encodeBool:self.isFindInteractionEnabled forKey:@"findInteractionEnabled"];
 #endif
 }
@@ -1236,13 +1245,13 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
     // This code doesn't consider snapshotConfiguration.afterScreenUpdates since the software snapshot always
     // contains recent updates. If we ever have a UI-side snapshot mechanism on macOS, we will need to factor
     // in snapshotConfiguration.afterScreenUpdates at that time.
-    _page->takeSnapshot(WebCore::enclosingIntRect(rectInViewCoordinates), bitmapSize, snapshotOptions, [handler, snapshotWidth, imageHeight](const WebKit::ShareableBitmapHandle& imageHandle) {
+    _page->takeSnapshot(WebCore::enclosingIntRect(rectInViewCoordinates), bitmapSize, snapshotOptions, [handler, snapshotWidth, imageHeight](WebKit::ShareableBitmap::Handle&& imageHandle) {
         if (imageHandle.isNull()) {
             tracePoint(TakeSnapshotEnd, snapshotFailedTraceValue);
             handler(nil, createNSError(WKErrorUnknown).get());
             return;
         }
-        auto bitmap = WebKit::ShareableBitmap::create(imageHandle, WebKit::SharedMemory::Protection::ReadOnly);
+        auto bitmap = WebKit::ShareableBitmap::create(WTFMove(imageHandle), WebKit::SharedMemory::Protection::ReadOnly);
         RetainPtr<CGImageRef> cgImage = bitmap ? bitmap->makeCGImage() : nullptr;
         auto image = adoptNS([[NSImage alloc] initWithCGImage:cgImage.get() size:NSMakeSize(snapshotWidth, imageHeight)]);
         tracePoint(TakeSnapshotEnd, true);
@@ -1639,6 +1648,13 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
     });
 }
 
+- (void)_doAfterNextVisibleContentRectAndPresentationUpdate:(void (^)(void))updateBlock
+{
+    [self _doAfterNextVisibleContentRectUpdate:makeBlockPtr([strongSelf = retainPtr(self), updateBlock = makeBlockPtr(updateBlock)] {
+        [strongSelf _doAfterNextPresentationUpdate:updateBlock.get()];
+    }).get()];
+}
+
 - (void)_recalculateViewportSizesWithMinimumViewportInset:(CocoaEdgeInsets)minimumViewportInset maximumViewportInset:(CocoaEdgeInsets)maximumViewportInset throwOnInvalidInput:(BOOL)throwOnInvalidInput
 {
     auto frame = WebCore::FloatSize(self.frame.size);
@@ -1810,9 +1826,9 @@ static NSDictionary *dictionaryRepresentationForEditorState(const WebKit::Editor
     auto& postLayoutData = *state.postLayoutData;
     return @{
         @"post-layout-data" : @YES,
-        @"bold": postLayoutData.typingAttributes & WebKit::AttributeBold ? @YES : @NO,
-        @"italic": postLayoutData.typingAttributes & WebKit::AttributeItalics ? @YES : @NO,
-        @"underline": postLayoutData.typingAttributes & WebKit::AttributeUnderline ? @YES : @NO,
+        @"bold": postLayoutData.typingAttributes.contains(WebKit::TypingAttribute::Bold) ? @YES : @NO,
+        @"italic": postLayoutData.typingAttributes.contains(WebKit::TypingAttribute::Italics) ? @YES : @NO,
+        @"underline": postLayoutData.typingAttributes.contains(WebKit::TypingAttribute::Underline) ? @YES : @NO,
         @"text-alignment": @(nsTextAlignment(static_cast<WebKit::TextAlignment>(postLayoutData.textAlignment))),
         @"text-color": (NSString *)serializationForCSS(postLayoutData.textColor)
     };
@@ -1821,15 +1837,15 @@ static NSDictionary *dictionaryRepresentationForEditorState(const WebKit::Editor
 static NSTextAlignment nsTextAlignment(WebKit::TextAlignment alignment)
 {
     switch (alignment) {
-    case WebKit::NoAlignment:
+    case WebKit::TextAlignment::Natural:
         return NSTextAlignmentNatural;
-    case WebKit::LeftAlignment:
+    case WebKit::TextAlignment::Left:
         return NSTextAlignmentLeft;
-    case WebKit::RightAlignment:
+    case WebKit::TextAlignment::Right:
         return NSTextAlignmentRight;
-    case WebKit::CenterAlignment:
+    case WebKit::TextAlignment::Center:
         return NSTextAlignmentCenter;
-    case WebKit::JustifiedAlignment:
+    case WebKit::TextAlignment::Justified:
         return NSTextAlignmentJustified;
     }
     ASSERT_NOT_REACHED();
@@ -2143,6 +2159,16 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(FORWARD_ACTION_TO_WKCONTENTVIEW)
 {
     _page->getAllFrames([completionHandler = makeBlockPtr(completionHandler), page = Ref { *_page.get() }] (WebKit::FrameTreeNodeData&& data) {
         completionHandler(wrapper(API::FrameTreeNode::create(WTFMove(data), page.get())));
+    });
+}
+
+- (void)_frameTrees:(void (^)(NSSet<_WKFrameTreeNode *> *))completionHandler
+{
+    _page->getAllFrameTrees([completionHandler = makeBlockPtr(completionHandler), page = Ref { *_page.get() }] (Vector<WebKit::FrameTreeNodeData>&& vector) {
+        auto set = adoptNS([[NSMutableSet alloc] initWithCapacity:vector.size()]);
+        for (auto& data : vector)
+            [set addObject:wrapper(API::FrameTreeNode::create(WTFMove(data), page.get()))];
+        completionHandler(set.get());
     });
 }
 
@@ -2549,6 +2575,15 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
     THROW_IF_SUSPENDED;
     return _page->allowsAnyAnimationToPlay();
 }
+
+- (BOOL)_allowAnimationControls
+{
+    THROW_IF_SUSPENDED;
+
+    // Only show animation controls if autoplay of animated images has been disabled.
+    auto* autoplayAnimatedImagesFunction = _AXSReduceMotionAutoplayAnimatedImagesEnabledPtr();
+    return autoplayAnimatedImagesFunction && !autoplayAnimatedImagesFunction();
+}
 #else // !ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
 - (void)_pauseAllAnimationsWithCompletionHandler:(void(^)(void))completionHandler
 {
@@ -2565,6 +2600,11 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
 - (BOOL)_allowsAnyAnimationToPlay
 {
     return YES;
+}
+
+- (BOOL)_allowAnimationControls
+{
+    return NO;
 }
 #endif // ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
 
@@ -2852,7 +2892,7 @@ static void convertAndAddHighlight(Vector<Ref<WebKit::SharedMemory>>& buffers, N
     if (![self _isValid])
         return 0;
 
-    return _page->processIdentifier();
+    return _page->processID();
 }
 
 - (pid_t)_provisionalWebProcessIdentifier
@@ -2864,7 +2904,7 @@ static void convertAndAddHighlight(Vector<Ref<WebKit::SharedMemory>>& buffers, N
     if (!provisionalPage)
         return 0;
 
-    return provisionalPage->process().processIdentifier();
+    return provisionalPage->process().processID();
 }
 
 - (pid_t)_gpuProcessIdentifier
@@ -2872,7 +2912,7 @@ static void convertAndAddHighlight(Vector<Ref<WebKit::SharedMemory>>& buffers, N
     if (![self _isValid])
         return 0;
 
-    return _page->gpuProcessIdentifier();
+    return _page->gpuProcessID();
 }
 
 - (BOOL)_webProcessIsResponsive
@@ -3040,6 +3080,18 @@ static void convertAndAddHighlight(Vector<Ref<WebKit::SharedMemory>>& buffers, N
 {
     THROW_IF_SUSPENDED;
     _page->simulateDeviceOrientationChange(alpha, beta, gamma);
+}
+
+- (void)_launchInitialProcessIfNecessary
+{
+    THROW_IF_SUSPENDED;
+    _page->launchInitialProcessIfNecessary();
+}
+
+- (void)_clearBackForwardCache
+{
+    THROW_IF_SUSPENDED;
+    _page->process().processPool().backForwardCache().removeEntriesForPage(*_page);
 }
 
 + (BOOL)_handlesSafeBrowsing
@@ -3579,7 +3631,11 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
 - (void)_preconnectToServer:(NSURL *)url
 {
     THROW_IF_SUSPENDED;
-    _page->preconnectTo(url, _page->userAgent());
+
+    auto request = WebCore::ResourceRequest { url };
+    if (auto userAgent = _page->userAgent(); !userAgent.isEmpty())
+        request.setHTTPUserAgent(WTFMove(userAgent));
+    _page->preconnectTo(WTFMove(request));
 }
 
 - (BOOL)_canUseCredentialStorage

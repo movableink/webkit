@@ -42,7 +42,7 @@ static const float gSampleBitRate = 44100;
 GST_DEBUG_CATEGORY(webkit_audio_provider_debug);
 #define GST_CAT_DEFAULT webkit_audio_provider_debug
 
-static void initializeDebugCategory()
+static void initializeAudioSourceProviderDebugCategory()
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -86,7 +86,7 @@ static void copyGStreamerBuffersToAudioChannel(GstAdapter* adapter, AudioBus* bu
 AudioSourceProviderGStreamer::AudioSourceProviderGStreamer()
     : m_notifier(MainThreadNotifier<MainThreadNotification>::create())
 {
-    initializeDebugCategory();
+    initializeAudioSourceProviderDebugCategory();
 }
 
 #if ENABLE(MEDIA_STREAM)
@@ -94,7 +94,7 @@ AudioSourceProviderGStreamer::AudioSourceProviderGStreamer(MediaStreamTrackPriva
     : m_captureSource(source)
     , m_notifier(MainThreadNotifier<MainThreadNotification>::create())
 {
-    initializeDebugCategory();
+    initializeAudioSourceProviderDebugCategory();
     registerWebKitGStreamerElements();
     const char* pipelineNamePrefix = "";
 #if USE(GSTREAMER_WEBRTC)
@@ -122,10 +122,7 @@ AudioSourceProviderGStreamer::AudioSourceProviderGStreamer(MediaStreamTrackPriva
     g_signal_connect_swapped(decodebin, "pad-added", G_CALLBACK(+[](AudioSourceProviderGStreamer* provider, GstPad* pad) {
         auto padCaps = adoptGRef(gst_pad_query_caps(pad, nullptr));
         bool isAudio = doCapsHaveType(padCaps.get(), "audio");
-        if (webkitGstCheckVersion(1, 18, 0))
-            RELEASE_ASSERT(isAudio);
-        else if (!isAudio)
-            return;
+        RELEASE_ASSERT(isAudio);
 
         auto sinkPad = adoptGRef(gst_element_get_static_pad(provider->m_audioSinkBin.get(), "sink"));
         gst_pad_link(pad, sinkPad.get());
@@ -390,6 +387,10 @@ void AudioSourceProviderGStreamer::handleNewDeinterleavePad(GstPad* pad)
         // new_event
         nullptr,
 #endif
+#if GST_CHECK_VERSION(1, 23, 0)
+        // propose_allocation
+        nullptr,
+#endif
         { nullptr }
     };
     gst_app_sink_set_callbacks(GST_APP_SINK(sink), &callbacks, this, nullptr);
@@ -481,6 +482,8 @@ void AudioSourceProviderGStreamer::clearAdapters()
     for (auto& adapter : m_adapters.values())
         gst_adapter_clear(adapter.get());
 }
+
+#undef GST_CAT_DEFAULT
 
 } // WebCore
 

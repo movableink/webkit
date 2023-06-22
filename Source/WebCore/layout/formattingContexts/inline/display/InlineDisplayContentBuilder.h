@@ -42,17 +42,17 @@ class LineBox;
 
 class InlineDisplayContentBuilder {
 public:
-    InlineDisplayContentBuilder(const InlineFormattingContext&, InlineFormattingState&);
+    InlineDisplayContentBuilder(const InlineFormattingContext&, InlineFormattingState&, const InlineDisplay::Line&, size_t lineIndex);
 
-    InlineDisplay::Boxes build(const LineBuilder::LineContent&, const LineBox&, const InlineDisplay::Line&, const size_t lineIndex);
+    InlineDisplay::Boxes build(const LineBuilder::LayoutResult&, const LineBox&);
 
 private:
-    void processNonBidiContent(const LineBuilder::LineContent&, const LineBox&, const InlineDisplay::Line&, InlineDisplay::Boxes&);
-    void processBidiContent(const LineBuilder::LineContent&, const LineBox&, const InlineDisplay::Line&, InlineDisplay::Boxes&);
-    void processFloatBoxes(const LineBuilder::LineContent&);
+    void processNonBidiContent(const LineBuilder::LayoutResult&, const LineBox&, InlineDisplay::Boxes&);
+    void processBidiContent(const LineBuilder::LayoutResult&, const LineBox&, InlineDisplay::Boxes&);
+    void processFloatBoxes(const LineBuilder::LayoutResult&);
     void collectInkOverflowForInlineBoxes(InlineDisplay::Boxes&);
-    void collectInkOverflowForTextDecorations(InlineDisplay::Boxes&, const InlineDisplay::Line&);
-    void truncateForEllipsisPolicy(LineEndingEllipsisPolicy, const LineBuilder::LineContent&, const InlineDisplay::Line&, InlineDisplay::Boxes&);
+    void collectInkOverflowForTextDecorations(InlineDisplay::Boxes&);
+    void truncateForEllipsisPolicy(LineEndingEllipsisPolicy, const LineBuilder::LayoutResult&, InlineDisplay::Boxes&);
 
     void appendTextDisplayBox(const Line::Run&, const InlineRect&, InlineDisplay::Boxes&);
     void appendSoftLineBreakDisplayBox(const Line::Run&, const InlineRect&, InlineDisplay::Boxes&);
@@ -68,12 +68,13 @@ private:
     size_t ensureDisplayBoxForContainer(const ElementBox&, DisplayBoxTree&, AncestorStack&, InlineDisplay::Boxes&);
 
     InlineRect flipLogicalRectToVisualForWritingModeWithinLine(const InlineRect& logicalRect, const InlineRect& lineLogicalRect, WritingMode) const;
-    InlineRect flipLogicalRectToVisualForWritingMode(const InlineRect& logicalRect, WritingMode) const;
-    InlineRect flipRootInlineBoxRectToVisualForWritingMode(const InlineRect& rootInlineBoxLogicalRect, const InlineDisplay::Line&, WritingMode) const;
+    InlineRect flipRootInlineBoxRectToVisualForWritingMode(const InlineRect& rootInlineBoxLogicalRect, WritingMode) const;
     void setLeftForWritingMode(InlineDisplay::Box&, InlineLayoutUnit logicalRight, WritingMode) const;
     void setRightForWritingMode(InlineDisplay::Box&, InlineLayoutUnit logicalRight, WritingMode) const;
     InlineLayoutPoint movePointHorizontallyForWritingMode(const InlineLayoutPoint& topLeft, InlineLayoutUnit horizontalOffset, WritingMode) const;
-    InlineLayoutUnit outsideListMarkerVisualPosition(const ElementBox&, const InlineDisplay::Line&) const;
+    InlineLayoutUnit outsideListMarkerVisualPosition(const ElementBox&) const;
+
+    bool isLineFullyTruncatedInBlockDirection() const { return m_lineIsFullyTruncatedInBlockDirection; }
 
     const ElementBox& root() const { return formattingContext().root(); }
     const RenderStyle& rootStyle() const { return m_lineIndex ? root().style() : root().firstLineStyle(); }
@@ -83,7 +84,10 @@ private:
 
     const InlineFormattingContext& m_formattingContext;
     InlineFormattingState& m_formattingState;
-    size_t m_lineIndex { 0 };
+    const InlineDisplay::Line& m_displayLine;
+    const size_t m_lineIndex { 0 };
+    // FIXME: This should take DisplayLine::isTruncatedInBlockDirection() for non-prefixed line-clamp.
+    bool m_lineIsFullyTruncatedInBlockDirection { false };
     bool m_contentHasInkOverflow { false };
 };
 

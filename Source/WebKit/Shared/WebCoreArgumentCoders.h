@@ -79,6 +79,7 @@
 #endif
 
 #if ENABLE(GPU_PROCESS) && ENABLE(WEBGL)
+#include <WebCore/GraphicsContextGL.h>
 #include <WebCore/GraphicsContextGLEnums.h>
 #endif
 
@@ -217,8 +218,6 @@ template<> struct ArgumentCoder<WebCore::FontPlatformData::Attributes> {
 template<> struct ArgumentCoder<WebCore::FontCustomPlatformData> {
     static void encode(Encoder&, const WebCore::FontCustomPlatformData&);
     static std::optional<Ref<WebCore::FontCustomPlatformData>> decode(Decoder&);
-    static void encodePlatformData(Encoder&, const WebCore::FontCustomPlatformData&);
-    static std::optional<Ref<WebCore::FontCustomPlatformData>> decodePlatformData(Decoder&);
 };
 
 template<> struct ArgumentCoder<WebCore::ResourceError> {
@@ -470,13 +469,6 @@ template<> struct ArgumentCoder<WebCore::CDMInstanceSession::Message> {
 };
 #endif
 
-#if HAVE(PASSKIT_INSTALLMENTS)
-template<> struct ArgumentCoder<WebCore::PaymentInstallmentConfiguration> {
-    static void encode(Encoder&, const WebCore::PaymentInstallmentConfiguration&);
-    static std::optional<WebCore::PaymentInstallmentConfiguration> decode(Decoder&);
-};
-#endif
-
 #if ENABLE(IMAGE_ANALYSIS) && ENABLE(DATA_DETECTION)
 
 template<> struct ArgumentCoder<WebCore::TextRecognitionDataDetector> {
@@ -510,6 +502,20 @@ template<> struct ArgumentCoder<WebCore::PixelBuffer> {
     template<class Encoder> static void encode(Encoder&, const WebCore::PixelBuffer&);
     static std::optional<Ref<WebCore::PixelBuffer>> decode(Decoder&);
 };
+
+#if PLATFORM(COCOA) && ENABLE(GPU_PROCESS) && ENABLE(WEBGL)
+
+template<> struct ArgumentCoder<WebCore::GraphicsContextGL::EGLImageSourceIOSurfaceHandle> {
+    static void encode(Encoder&, const WebCore::GraphicsContextGL::EGLImageSourceIOSurfaceHandle&);
+    static std::optional<WebCore::GraphicsContextGL::EGLImageSourceIOSurfaceHandle> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebCore::GraphicsContextGL::EGLImageSourceMTLSharedTextureHandle> {
+    static void encode(Encoder&, const WebCore::GraphicsContextGL::EGLImageSourceMTLSharedTextureHandle&);
+    static std::optional<WebCore::GraphicsContextGL::EGLImageSourceMTLSharedTextureHandle> decode(Decoder&);
+};
+
+#endif
 
 } // namespace IPC
 

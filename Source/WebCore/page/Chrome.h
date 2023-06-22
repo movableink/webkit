@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2012, Samsung Electronics. All rights reserved.
  *
@@ -25,10 +25,12 @@
 #include "DisabledAdaptations.h"
 #include "FocusDirection.h"
 #include "HostWindow.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/FunctionDispatcher.h>
 #include <wtf/RefPtr.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/Vector.h>
 
 #if PLATFORM(COCOA)
 OBJC_CLASS NSView;
@@ -40,6 +42,16 @@ class GPU;
 
 namespace WebCore {
 
+namespace ShapeDetection {
+class BarcodeDetector;
+struct BarcodeDetectorOptions;
+enum class BarcodeFormat : uint8_t;
+class FaceDetector;
+struct FaceDetectorOptions;
+class TextDetector;
+}
+
+enum class PlatformEventModifier : uint8_t;
 enum class TextDirection : bool;
 
 class ChromeClient;
@@ -104,6 +116,11 @@ public:
 
     RefPtr<PAL::WebGPU::GPU> createGPUForWebGPU() const;
 
+    RefPtr<ShapeDetection::BarcodeDetector> createBarcodeDetector(const ShapeDetection::BarcodeDetectorOptions&) const;
+    void getBarcodeDetectorSupportedFormats(CompletionHandler<void(Vector<ShapeDetection::BarcodeFormat>&&)>&&) const;
+    RefPtr<ShapeDetection::FaceDetector> createFaceDetector(const ShapeDetection::FaceDetectorOptions&) const;
+    RefPtr<ShapeDetection::TextDetector> createTextDetector() const;
+
     PlatformDisplayID displayID() const override;
     void windowScreenDidChange(PlatformDisplayID, std::optional<FramesPerSecond>) override;
 
@@ -160,7 +177,7 @@ public:
     bool runJavaScriptPrompt(LocalFrame&, const String& message, const String& defaultValue, String& result);
     WEBCORE_EXPORT void setStatusbarText(LocalFrame&, const String&);
 
-    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags);
+    void mouseDidMoveOverElement(const HitTestResult&, OptionSet<PlatformEventModifier>);
 
     WEBCORE_EXPORT bool print(LocalFrame&);
 
@@ -214,10 +231,10 @@ public:
     void registerPopupOpeningObserver(PopupOpeningObserver&);
     void unregisterPopupOpeningObserver(PopupOpeningObserver&);
 
+    WEBCORE_EXPORT void getToolTip(const HitTestResult&, String&, TextDirection&);
+
 private:
     void notifyPopupOpeningObservers() const;
-
-    void getToolTip(const HitTestResult&, String&, TextDirection&);
 
     Page& m_page;
     UniqueRef<ChromeClient> m_client;

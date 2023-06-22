@@ -84,6 +84,8 @@ struct WKAppPrivacyReportTestingData {
 - (void)_didShowContextMenu;
 - (void)_didDismissContextMenu;
 
+- (void)_resetInteraction;
+
 - (BOOL)_shouldBypassGeolocationPromptForTesting;
 
 - (void)_didPresentContactPicker;
@@ -92,6 +94,8 @@ struct WKAppPrivacyReportTestingData {
 
 @property (nonatomic, setter=_setScrollingUpdatesDisabledForTesting:) BOOL _scrollingUpdatesDisabledForTesting;
 @property (nonatomic, readonly) NSString *_scrollingTreeAsText;
+
+@property (nonatomic, readonly) pid_t _networkProcessIdentifier;
 
 @property (nonatomic, readonly) unsigned long _countOfUpdatesWithLayerChanges;
 
@@ -134,6 +138,8 @@ struct WKAppPrivacyReportTestingData {
 - (void)_computePagesForPrinting:(_WKFrameHandle *)handle completionHandler:(void(^)(void))completionHandler WK_API_AVAILABLE(macos(13.0), ios(16.0));
 
 - (void)_setConnectedToHardwareConsoleForTesting:(BOOL)connected;
+
+- (void)_setSystemPreviewCompletionHandlerForLoadTesting:(void(^)(bool))completionHandler;
 
 @end
 

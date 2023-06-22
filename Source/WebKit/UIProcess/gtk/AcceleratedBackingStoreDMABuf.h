@@ -27,7 +27,6 @@
 
 #include "AcceleratedBackingStore.h"
 
-#if USE(GBM)
 #include "MessageReceiver.h"
 #include <WebCore/IntSize.h>
 #include <WebCore/RefPtrCairo.h>
@@ -37,7 +36,10 @@
 #include <wtf/unix/UnixFileDescriptor.h>
 
 typedef void *EGLImage;
+
+#if USE(GBM)
 struct gbm_bo;
+#endif
 
 namespace WebCore {
 class IntRect;
@@ -49,6 +51,8 @@ class UnixFileDescriptor;
 
 namespace WebKit {
 
+class ShareableBitmap;
+class ShareableBitmapHandle;
 class WebPageProxy;
 
 class AcceleratedBackingStoreDMABuf final : public AcceleratedBackingStore, public IPC::MessageReceiver {
@@ -63,8 +67,11 @@ private:
     // IPC::MessageReceiver.
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
-    void configure(WTF::UnixFileDescriptor&&, WTF::UnixFileDescriptor&&, const WebCore::IntSize&, uint32_t format, uint32_t offset, uint32_t stride, uint64_t modifier);
-    void frame(CompletionHandler<void()>&&);
+    void configure(WTF::UnixFileDescriptor&&, WTF::UnixFileDescriptor&&, WTF::UnixFileDescriptor&&, const WebCore::IntSize&, uint32_t format, uint32_t offset, uint32_t stride, uint64_t modifier);
+    void configureSHM(ShareableBitmapHandle&&, ShareableBitmapHandle&&, ShareableBitmapHandle&&);
+    void frame();
+    void willDisplayFrame();
+    void frameDone();
     void ensureGLContext();
 
 #if USE(GTK4)
@@ -81,7 +88,9 @@ private:
         WTF_MAKE_FAST_ALLOCATED;
     public:
         virtual ~RenderSource() = default;
-        virtual bool swap() = 0;
+        virtual void frame() = 0;
+        virtual void willDisplayFrame() = 0;
+        virtual bool prepareForRendering() = 0;
 #if USE(GTK4)
         virtual void snapshot(GtkSnapshot*) const = 0;
 #else
@@ -99,13 +108,15 @@ private:
 
     class Texture final : public RenderSource {
     public:
-        Texture(GdkGLContext*, const WTF::UnixFileDescriptor&, const WTF::UnixFileDescriptor&, const WebCore::IntSize&, uint32_t format, uint32_t offset, uint32_t stride, uint64_t modifier, float deviceScaleFactor);
+        Texture(GdkGLContext*, const WTF::UnixFileDescriptor&, const WTF::UnixFileDescriptor&, const WTF::UnixFileDescriptor&, const WebCore::IntSize&, uint32_t format, uint32_t offset, uint32_t stride, uint64_t modifier, float deviceScaleFactor);
         ~Texture();
 
         unsigned texture() const { return m_textureID; }
 
     private:
-        bool swap() override;
+        void frame() override;
+        void willDisplayFrame() override;
+        bool prepareForRendering() override;
 #if USE(GTK4)
         void snapshot(GtkSnapshot*) const override;
 #else
@@ -116,6 +127,7 @@ private:
         unsigned m_textureID { 0 };
         EGLImage m_backImage { nullptr };
         EGLImage m_frontImage { nullptr };
+        EGLImage m_displayImage { nullptr };
 #if USE(GTK4)
         GRefPtr<GdkTexture> m_texture[2];
         uint16_t m_textureIndex : 1;
@@ -124,35 +136,55 @@ private:
 
     class Surface final : public RenderSource {
     public:
-        Surface(const WTF::UnixFileDescriptor&, const WTF::UnixFileDescriptor&, const WebCore::IntSize&, uint32_t format, uint32_t offset, uint32_t stride, float deviceScaleFactor);
+#if USE(GBM)
+        Surface(const WTF::UnixFileDescriptor&, const WTF::UnixFileDescriptor&, const WTF::UnixFileDescriptor&, const WebCore::IntSize&, uint32_t format, uint32_t offset, uint32_t stride, float deviceScaleFactor);
+#endif
+        Surface(RefPtr<ShareableBitmap>&, RefPtr<ShareableBitmap>&, RefPtr<ShareableBitmap>&, float deviceScaleFactor);
         ~Surface();
 
         cairo_surface_t* surface() const { return m_surface.get(); }
 
     private:
-        bool swap() override;
+        void frame() override;
+        void willDisplayFrame() override;
+        bool prepareForRendering() override;
 #if USE(GTK4)
         void snapshot(GtkSnapshot*) const override;
 #else
         void paint(GtkWidget*, cairo_t*, const WebCore::IntRect&) const override;
 #endif
 
+#if USE(GBM)
         RefPtr<cairo_surface_t> map(struct gbm_bo*) const;
+#endif
+        RefPtr<cairo_surface_t> map(RefPtr<ShareableBitmap>&) const;
 
+#if USE(GBM)
         struct gbm_bo* m_backBuffer { nullptr };
         struct gbm_bo* m_frontBuffer { nullptr };
+        struct gbm_bo* m_displayBuffer { nullptr };
+#endif
+        RefPtr<ShareableBitmap> m_backBitmap;
+        RefPtr<ShareableBitmap> m_frontBitmap;
+        RefPtr<ShareableBitmap> m_displayBitmap;
         RefPtr<cairo_surface_t> m_surface;
         RefPtr<cairo_surface_t> m_backSurface;
+        RefPtr<cairo_surface_t> m_displaySurface;
     };
 
     std::unique_ptr<RenderSource> createSource();
 
     GRefPtr<GdkGLContext> m_gdkGLContext;
     bool m_glContextInitialized { false };
+    bool m_isSoftwareRast { false };
     struct {
         uint64_t id { 0 };
         WTF::UnixFileDescriptor backFD;
         WTF::UnixFileDescriptor frontFD;
+        WTF::UnixFileDescriptor displayFD;
+        RefPtr<ShareableBitmap> backBitmap;
+        RefPtr<ShareableBitmap> frontBitmap;
+        RefPtr<ShareableBitmap> displayBitmap;
         WebCore::IntSize size;
         uint32_t format { 0 };
         uint32_t offset { 0 };
@@ -165,5 +197,3 @@ private:
 };
 
 } // namespace WebKit
-
-#endif // USE(GBM)

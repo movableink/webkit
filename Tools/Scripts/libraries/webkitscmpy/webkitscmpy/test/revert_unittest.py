@@ -72,8 +72,8 @@ class TestRevert(testing.PathTestCase):
                 'No pre-PR checks to run',
                 'Checking if PR already exists...',
                 'PR not found.',
+                "Updating 'main' on 'https://github.example.com/Contributor/WebKit'",
                 "Pushing 'eng/pr-branch' to 'fork'...",
-                "Syncing 'main' to remote 'fork'",
                 "Creating pull-request for 'eng/pr-branch'...",
                 'Adding comment for reverted commits...'
             ],
@@ -109,7 +109,6 @@ class TestRevert(testing.PathTestCase):
             [line for line in log if 'Mock process' not in line], [
                 "Creating the local development branch 'eng/pr-branch'...",
                 'Reverted d8bce26fa65c6fc8f39c17927abb77f69fab82fc',
-                '    Found 1 commit...',
                 'Using committed changes...',
                 "Rebasing 'eng/pr-branch' on 'main'...",
                 "Rebased 'eng/pr-branch' on 'main!'",
@@ -117,8 +116,8 @@ class TestRevert(testing.PathTestCase):
                 'No pre-PR checks to run',
                 'Checking if PR already exists...',
                 'PR not found.',
+                "Updating 'main' on 'https://github.example.com/Contributor/WebKit'",
                 "Pushing 'eng/pr-branch' to 'fork'...",
-                "Syncing 'main' to remote 'fork'",
                 "Creating pull-request for 'eng/pr-branch'...",
                 'Adding comment for reverted commits...'
             ],
@@ -186,12 +185,11 @@ index 05e8751..0bf3c85 100644
                 'No pre-PR checks to run',
                 'Checking if PR already exists...',
                 'PR not found.',
+                "Updating 'main' on 'https://github.example.com/Contributor/WebKit'",
                 "Pushing 'eng/pr-branch' to 'fork'...",
-                "Syncing 'main' to remote 'fork'",
                 "Creating 'eng/pr-branch-1' as a reference branch",
                 "Creating pull-request for 'eng/pr-branch'...",
                 'Adding comment for reverted commits...',
-                '    Found 1 commit...',
                 'Using committed changes...',
                 "Rebasing 'eng/pr-branch' on 'main'...",
                 "Rebased 'eng/pr-branch' on 'main!'",
@@ -200,8 +198,8 @@ index 05e8751..0bf3c85 100644
                 'Checking if PR already exists...',
                 'PR #1 found.',
                 'Checking PR labels for active labels...',
+                "Updating 'main' on 'https://github.example.com/Contributor/WebKit'",
                 "Pushing 'eng/pr-branch' to 'fork'...",
-                "Syncing 'main' to remote 'fork'",
                 "Updating pull-request for 'eng/pr-branch'..."
             ],
         )

@@ -63,7 +63,6 @@
 #import <pal/crypto/CryptoDigest.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/RetainPtr.h>
-#import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/Base64.h>
@@ -84,7 +83,7 @@ static inline void updateQueryForGroupIfNecessary(NSMutableDictionary *dictionar
 }
 #endif
 
-static RetainPtr<NSData> produceClientDataJson(_WKWebAuthenticationType type, NSData *challenge, NSString *origin)
+static RetainPtr<NSData> produceClientDataJson(_WKWebAuthenticationType type, NSData *challenge, NSString *origin, NSString *topOrigin = nil, WebAuthn::Scope scope = WebAuthn::Scope::SameOrigin)
 {
     WebCore::ClientDataType clientDataType;
     switch (type) {
@@ -98,7 +97,7 @@ static RetainPtr<NSData> produceClientDataJson(_WKWebAuthenticationType type, NS
     auto challengeBuffer = ArrayBuffer::tryCreate(reinterpret_cast<const uint8_t*>(challenge.bytes), challenge.length);
     auto securityOrigin = WebCore::SecurityOrigin::createFromString(origin);
 
-    auto clientDataJson = buildClientDataJson(clientDataType, WebCore::BufferSource(challengeBuffer), securityOrigin, WebAuthn::Scope::SameOrigin);
+    auto clientDataJson = buildClientDataJson(clientDataType, WebCore::BufferSource(challengeBuffer), securityOrigin, scope, topOrigin);
     return adoptNS([[NSData alloc] initWithBytes:clientDataJson->data() length:clientDataJson->byteLength()]);
 }
 
@@ -925,6 +924,13 @@ static WebCore::CredentialRequestOptions::MediationRequirement toWebCore(_WKWebA
 }
 #endif
 
+#if ENABLE(WEB_AUTHN)
+static std::span<const uint8_t> asUInt8Span(NSData* data)
+{
+    return { reinterpret_cast<const uint8_t*>(data.bytes), data.length };
+}
+#endif
+
 + (WebCore::PublicKeyCredentialCreationOptions)convertToCoreCreationOptionsWithOptions:(_WKPublicKeyCredentialCreationOptions *)options
 {
     WebCore::PublicKeyCredentialCreationOptions result;
@@ -1097,6 +1103,17 @@ static RetainPtr<_WKAuthenticatorAssertionResponse> wkAuthenticatorAssertionResp
 
 #if ENABLE(WEB_AUTHN)
     clientDataJSON = produceClientDataJson(type, challenge, origin);
+#endif
+
+    return clientDataJSON.autorelease();
+}
+
++ (NSData *)getClientDataJSONWithTopOrigin:(_WKWebAuthenticationType)type challenge:(NSData *)challenge origin:(NSString *)origin topOrigin:(NSString *)topOrigin crossOrigin:(BOOL)crossOrigin
+{
+    RetainPtr<NSData> clientDataJSON;
+
+#if ENABLE(WEB_AUTHN)
+    clientDataJSON = produceClientDataJson(type, challenge, origin, topOrigin, crossOrigin ? WebAuthn::Scope::CrossOrigin: WebAuthn::Scope::SameOrigin);
 #endif
 
     return clientDataJSON.autorelease();

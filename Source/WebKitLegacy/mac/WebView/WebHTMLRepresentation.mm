@@ -47,7 +47,6 @@
 #import <WebCore/Editor.h>
 #import <WebCore/ElementInlines.h>
 #import <WebCore/FrameLoader.h>
-#import <WebCore/FrameLoaderClient.h>
 #import <WebCore/HTMLConverter.h>
 #import <WebCore/HTMLFormControlElement.h>
 #import <WebCore/HTMLFormElement.h>
@@ -55,6 +54,7 @@
 #import <WebCore/HTMLNames.h>
 #import <WebCore/HTMLTableCellElement.h>
 #import <WebCore/LocalFrame.h>
+#import <WebCore/LocalFrameLoaderClient.h>
 #import <WebCore/MIMETypeRegistry.h>
 #import <WebCore/NodeTraversal.h>
 #import <WebCore/Range.h>
@@ -385,7 +385,7 @@ static RegularExpression* regExpForLabels(NSArray *labels)
             pattern.append(i ? "|" : "", startsWithWordCharacter ? "\\b" : "", label, endsWithWordCharacter ? "\\b" : "");
         }
         pattern.append(')');
-        result = new RegularExpression(pattern.toString(), JSC::Yarr::TextCaseInsensitive);
+        result = new RegularExpression(pattern.toString(), { JSC::Yarr::Flags::IgnoreCase });
     }
 
     // add regexp to the cache, making sure it is at the front for LRU ordering

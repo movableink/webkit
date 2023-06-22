@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,6 +73,15 @@ public:
         bool allocationAllowed = false;
         return m_nameMayBeNull->tryGetValue(allocationAllowed);
     }
+    String nameStringWithoutGC(VM& vm)
+    {
+        if (m_nameMayBeNull) {
+            ASSERT(!m_nameMayBeNull->isRope());
+            bool allocationAllowed = false;
+            return m_nameMayBeNull->tryGetValue(allocationAllowed);
+        }
+        return nameStringWithoutGCSlow(vm);
+    }
 
     double length(VM& vm)
     {
@@ -131,8 +140,9 @@ private:
     JSString* nameSlow(VM&);
     double lengthSlow(VM&);
     bool canConstructSlow();
+    String nameStringWithoutGCSlow(VM&);
 
-    void finishCreation(VM&);
+    DECLARE_DEFAULT_FINISH_CREATION;
     DECLARE_VISIT_CHILDREN;
 
     WriteBarrier<JSObject> m_targetFunction;

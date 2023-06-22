@@ -39,7 +39,6 @@
 #include <WebCore/LocalFrameView.h>
 #include <WebCore/Page.h>
 #include <WebCore/Settings.h>
-#include <WebCore/TemporaryOpenGLSetting.h>
 #include <WebCore/TextureMapperGL.h>
 #include <WebCore/TextureMapperLayer.h>
 
@@ -289,7 +288,7 @@ bool LayerTreeHost::enabled()
     return window() && m_rootCompositingLayer;
 }
 
-void LayerTreeHost::paintContents(const GraphicsLayer*, GraphicsContext& context, const FloatRect& rectToPaint, GraphicsLayerPaintBehavior)
+void LayerTreeHost::paintContents(const GraphicsLayer*, GraphicsContext& context, const FloatRect& rectToPaint, OptionSet<GraphicsLayerPaintBehavior>)
 {
     context.save();
     context.clip(rectToPaint);

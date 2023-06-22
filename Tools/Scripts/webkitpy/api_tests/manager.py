@@ -30,6 +30,7 @@ from webkitpy.common.iteration_compatibility import iteritems
 from webkitpy.common.system.executive import ScriptError
 from webkitpy.results.upload import Upload
 from webkitpy.xcode.simulated_device import DeviceRequest, SimulatedDeviceManager
+from webkitpy.xcode.device_type import DeviceType
 
 _log = logging.getLogger(__name__)
 
@@ -151,7 +152,7 @@ class Manager(object):
 
     def _initialize_devices(self):
         if 'simulator' in self._port.port_name:
-            SimulatedDeviceManager.initialize_devices(DeviceRequest(self._port.DEVICE_TYPE, allow_incomplete_match=True), self.host, simulator_ui=False)
+            SimulatedDeviceManager.initialize_devices(DeviceRequest(self._port.supported_device_types()[0], allow_incomplete_match=True), self.host, simulator_ui=False)
         elif 'device' in self._port.port_name:
             raise RuntimeError('Running api tests on {} is not supported'.format(self._port.port_name))
 
@@ -289,9 +290,12 @@ class Manager(object):
                     start_time=start_time,
                     end_time=end_time,
                     tests_skipped=len(result_dictionary['Skipped']),
-                ),
-                results={test: Upload.create_test_result(actual=status_to_test_result[result[0]])
-                         for test, result in iteritems(runner.results) if result[0] in status_to_test_result},
+                ), results={
+                    test: Upload.create_test_result(
+                        actual=status_to_test_result[result[0]],
+                        time=int(result[2] * 1000),
+                    ) for test, result in iteritems(runner.results) if result[0] in status_to_test_result
+                },
             )
             for url in self._options.report_urls:
                 self._stream.write_update('Uploading to {} ...'.format(url))

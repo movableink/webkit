@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2006 David Smith (catfish.man@gmail.com)
  * Copyright (C) 2010 Igalia S.L
  *
@@ -56,7 +56,6 @@
 #import "WebDefaultPolicyDelegate.h"
 #import "WebDefaultUIDelegate.h"
 #import "WebDelegateImplementationCaching.h"
-#import "WebDeviceOrientationClient.h"
 #import "WebDeviceOrientationProvider.h"
 #import "WebDocument.h"
 #import "WebDocumentInternal.h"
@@ -147,6 +146,7 @@
 #import <WebCore/DeprecatedGlobalSettings.h>
 #import <WebCore/DictationAlternative.h>
 #import <WebCore/DictionaryLookup.h>
+#import <WebCore/DisplayRefreshMonitorManager.h>
 #import <WebCore/Document.h>
 #import <WebCore/DocumentLoader.h>
 #import <WebCore/DragController.h>
@@ -199,12 +199,14 @@
 #import <WebCore/NotificationController.h>
 #import <WebCore/Page.h>
 #import <WebCore/PageConfiguration.h>
+#import <WebCore/PageIdentifier.h>
 #import <WebCore/PathUtilities.h>
 #import <WebCore/PlatformEventFactoryMac.h>
 #import <WebCore/PlatformScreen.h>
 #import <WebCore/ProgressTracker.h>
 #import <WebCore/Range.h>
 #import <WebCore/RemoteFrameClient.h>
+#import <WebCore/RenderStyleInlines.h>
 #import <WebCore/RenderTheme.h>
 #import <WebCore/RenderView.h>
 #import <WebCore/RenderWidget.h>
@@ -1019,14 +1021,14 @@ static const NSUInteger orderedListSegment = 2;
     [insertListControl setWidth:listControlSegmentWidth forSegment:orderedListSegment];
     insertListControl.font = [NSFont systemFontOfSize:15];
 
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     id segmentElement = NSAccessibilityUnignoredDescendant(insertListControl);
     NSArray *segments = [segmentElement accessibilityAttributeValue:NSAccessibilityChildrenAttribute];
     ASSERT(segments.count == 3);
     [segments[noListSegment] accessibilitySetOverrideValue:WebCore::insertListTypeNone() forAttribute:NSAccessibilityDescriptionAttribute];
     [segments[unorderedListSegment] accessibilitySetOverrideValue:WebCore::insertListTypeBulletedAccessibilityTitle() forAttribute:NSAccessibilityDescriptionAttribute];
     [segments[orderedListSegment] accessibilitySetOverrideValue:WebCore::insertListTypeNumberedAccessibilityTitle() forAttribute:NSAccessibilityDescriptionAttribute];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 
     self.view = insertListControl;
 
@@ -1355,7 +1357,7 @@ static RetainPtr<CFMutableSetRef>& allWebViewsSet()
 
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
 static bool needsLaBanquePostaleQuirks()
 {
     static bool needsQuirks = WebCore::IOSApplication::isLaBanquePostale() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoLaBanquePostaleQuirks);
@@ -1499,6 +1501,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 
     auto storageProvider = PageStorageSessionProvider::create();
     WebCore::PageConfiguration pageConfiguration(
+        WebCore::PageIdentifier::generate(),
         [[self preferences] privateBrowsingEnabled] ? PAL::SessionID::legacyPrivateSessionID() : PAL::SessionID::defaultSessionID(),
         makeUniqueRef<WebEditorClient>(self),
         LegacySocketProvider::create(),
@@ -1508,7 +1511,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
         BackForwardList::create(self),
         WebCore::CookieJar::create(storageProvider.copyRef()),
         makeUniqueRef<WebProgressTrackerClient>(self),
-        UniqueRef<WebCore::FrameLoaderClient>(makeUniqueRef<WebFrameLoaderClient>()),
+        UniqueRef<WebCore::LocalFrameLoaderClient>(makeUniqueRef<WebFrameLoaderClient>()),
         WebCore::FrameIdentifier::generate(),
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
@@ -1554,9 +1557,6 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 #if ENABLE(NOTIFICATIONS)
     WebCore::provideNotification(_private->page, new WebNotificationClient(self));
 #endif
-#if ENABLE(DEVICE_ORIENTATION) && !PLATFORM(IOS_FAMILY)
-    WebCore::provideDeviceOrientationTo(*_private->page, *new WebDeviceOrientationClient(self));
-#endif
 #if ENABLE(ENCRYPTED_MEDIA)
     WebCore::provideMediaKeySystemTo(*_private->page, *new WebMediaKeySystemClient());
 #endif
@@ -1568,7 +1568,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
     _private->page->setCanStartMedia([self window]);
     _private->page->settings().setLocalStorageDatabasePath([[self preferences] _localStorageDatabasePath]);
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     if (needsLaBanquePostaleQuirks())
         [self _injectLaBanquePostaleQuirks];
 #endif
@@ -1762,6 +1762,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 
     auto storageProvider = PageStorageSessionProvider::create();
     WebCore::PageConfiguration pageConfiguration(
+        WebCore::PageIdentifier::generate(),
         [[self preferences] privateBrowsingEnabled] ? PAL::SessionID::legacyPrivateSessionID() : PAL::SessionID::defaultSessionID(),
         makeUniqueRef<WebEditorClient>(self),
         LegacySocketProvider::create(),
@@ -1771,7 +1772,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
         BackForwardList::create(self),
         WebCore::CookieJar::create(storageProvider.copyRef()),
         makeUniqueRef<WebProgressTrackerClient>(self),
-        UniqueRef<WebCore::FrameLoaderClient>(makeUniqueRef<WebFrameLoaderClient>()),
+        UniqueRef<WebCore::LocalFrameLoaderClient>(makeUniqueRef<WebFrameLoaderClient>()),
         WebCore::FrameIdentifier::generate(),
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
@@ -2040,7 +2041,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
     }
 }
 
-#elif PLATFORM(IOS)
+#elif PLATFORM(IOS) || PLATFORM(VISION)
 
 - (BOOL)_requestStartDataInteraction:(CGPoint)clientPosition globalPosition:(CGPoint)globalPosition
 {
@@ -2282,10 +2283,10 @@ static NSMutableSet *knownPluginMIMETypes()
         return;
     }
 
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     if (!OSAtomicCompareAndSwap32(0, 1, &_private->didDrawTiles))
         return;
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 
     WebThreadLock();
 
@@ -5622,8 +5623,13 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 #if !PLATFORM(IOS_FAMILY)
 - (void)doWindowDidChangeScreen
 {
-    if (_private && _private->page)
-        _private->page->chrome().windowScreenDidChange(WebCore::displayID(self.window.screen), std::nullopt);
+    if (_private && _private->page) {
+        // Try to find the refresh rate from the display refresh monitor, since
+        // we don't have any other easy way to access it from here.
+        auto displayID = WebCore::displayID(self.window.screen);
+        auto nominalFramesPerSecond = WebCore::DisplayRefreshMonitorManager::sharedManager().nominalFramesPerSecondForDisplay(displayID, _private->page->chrome().client().displayRefreshMonitorFactory());
+        _private->page->chrome().windowScreenDidChange(displayID, nominalFramesPerSecond);
+    }
 }
 
 - (void)_windowChangedKeyState
@@ -6647,9 +6653,9 @@ static WebFrame *incrementFrame(WebFrame *frame, WebFindOptions options = 0)
     if (auto *icon = _private->_mainFrameIcon.get())
         return icon;
 
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     return [[WebIconDatabase sharedIconDatabase] defaultIconWithSize:WebIconSmallSize];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 - (void)_setMainFrameIcon:(NSImage *)icon

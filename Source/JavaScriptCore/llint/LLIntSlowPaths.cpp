@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "LLIntSlowPaths.h"
 
+#include "AbortReason.h"
 #include "ArrayConstructor.h"
 #include "BaselineJITPlan.h"
 #include "BytecodeGenerator.h"
@@ -206,12 +207,12 @@ void slowPathLn(const Types&... values)
 template<typename... Types>
 void slowPathLogF(const char* format, const Types&... values)
 {
-    ALLOW_NONLITERAL_FORMAT_BEGIN
+ALLOW_NONLITERAL_FORMAT_BEGIN
     IGNORE_WARNINGS_BEGIN("format-security")
     if (Options::traceLLIntSlowPath())
         dataLogF(format, values...);
     IGNORE_WARNINGS_END
-    ALLOW_NONLITERAL_FORMAT_END
+ALLOW_NONLITERAL_FORMAT_END
 }
 
 #else // not LLINT_TRACING
@@ -1505,6 +1506,18 @@ LLINT_SLOW_PATH_DECL(slow_path_has_private_brand)
     LLINT_RETURN(jsBoolean(asObject(baseValue)->hasPrivateBrand(globalObject, getOperand(callFrame, bytecode.m_brand))));
 }
 
+LLINT_SLOW_PATH_DECL(slow_path_has_structure_with_flags)
+{
+    LLINT_BEGIN();
+
+    auto bytecode = pc->as<OpHasStructureWithFlags>();
+    ASSERT(getOperand(callFrame, bytecode.m_operand).isObject());
+    JSObject* object = asObject(getOperand(callFrame, bytecode.m_operand));
+    unsigned flags = bytecode.m_flags;
+
+    LLINT_RETURN(jsBoolean(object->structure()->hasAnyOfBitFieldFlags(flags)));
+}
+
 LLINT_SLOW_PATH_DECL(slow_path_put_getter_by_id)
 {
     LLINT_BEGIN();
@@ -2601,11 +2614,10 @@ extern "C" void llint_write_barrier_slow(CallFrame* callFrame, JSCell* cell)
     vm.writeBarrier(cell);
 }
 
-extern "C" UGPRPair llint_check_vm_entry_permission(VM* vm, ProtoCallFrame*)
+extern "C" UGPRPair llint_check_vm_entry_permission(VM*, ProtoCallFrame*)
 {
-    ASSERT_UNUSED(vm, vm->disallowVMEntryCount);
-    if (Options::crashOnDisallowedVMEntry())
-        CRASH();
+    if (Options::crashOnDisallowedVMEntry() || g_jscConfig.vmEntryDisallowed)
+        CRASH_WITH_EXTRA_SECURITY_IMPLICATION_AND_INFO(VMEntryDisallowed, "VM entry disallowed"_s);
 
     // Else return, and let doVMEntry return undefined.
     return encodeResult(nullptr, nullptr);

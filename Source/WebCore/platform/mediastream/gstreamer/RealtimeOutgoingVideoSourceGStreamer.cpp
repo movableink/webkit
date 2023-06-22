@@ -126,6 +126,8 @@ bool RealtimeOutgoingVideoSourceGStreamer::setPayloadType(const GRefPtr<GstCaps>
     } else if (encoding == "h265"_s) {
         encoderCaps = adoptGRef(gst_caps_new_empty_simple("video/x-h265"));
         // FIXME: profile tier level?
+    } else if (encoding == "av1"_s) {
+        encoderCaps = adoptGRef(gst_caps_new_empty_simple("video/x-av1"));
     } else {
         GST_ERROR_OBJECT(m_bin.get(), "Unsupported outgoing video encoding: %s", encodingName);
         return false;
@@ -275,6 +277,8 @@ void RealtimeOutgoingVideoSourceGStreamer::flush()
     GST_DEBUG_OBJECT(m_bin.get(), "Requesting key-frame");
     gst_element_send_event(m_outgoingSource.get(), gst_video_event_new_downstream_force_key_unit(GST_CLOCK_TIME_NONE, GST_CLOCK_TIME_NONE, GST_CLOCK_TIME_NONE, FALSE, 1));
 }
+
+#undef GST_CAT_DEFAULT
 
 } // namespace WebCore
 

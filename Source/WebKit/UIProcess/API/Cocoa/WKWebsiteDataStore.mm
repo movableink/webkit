@@ -73,6 +73,7 @@ public:
         , m_hasShowNotificationSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:showNotification:)])
         , m_hasNotificationPermissionsSelector([m_delegate.get() respondsToSelector:@selector(notificationPermissionsForWebsiteDataStore:)])
         , m_hasWorkerUpdatedAppBadgeSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:workerOrigin:updatedAppBadge:)])
+        , m_hasGetDisplayedNotificationsSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:getDisplayedNotificationsForWorkerOrigin:completionHandler:)])
         , m_hasRequestBackgroundFetchPermissionSelector([m_delegate.get() respondsToSelector:@selector(requestBackgroundFetchPermission:frameOrigin:decisionHandler:)])
         , m_hasNotifyBackgroundFetchChangeSelector([m_delegate.get() respondsToSelector:@selector(notifyBackgroundFetchChange:change:)])
     {
@@ -166,11 +167,41 @@ private:
         NSDictionary<NSString *, NSNumber *> *permissions = [m_delegate.getAutoreleased() notificationPermissionsForWebsiteDataStore:m_dataStore.getAutoreleased()];
         for (NSString *key in permissions) {
             NSNumber *value = permissions[key];
-            auto origin = WebCore::SecurityOriginData::fromURL(URL(key));
-            result.set(origin.toString(), value.boolValue);
+            auto originString = WebCore::SecurityOriginData::fromURL(URL(key)).toString();
+            if (originString.isEmpty()) {
+                RELEASE_LOG(Push, "[WKWebsiteDataStoreDelegate notificationPermissionsForWebsiteDataStore:] returned a URL string that could not be parsed into a security origin. Skipping.");
+                continue;
+            }
+            result.set(originString, value.boolValue);
         }
 
         return result;
+    }
+
+    bool hasGetDisplayedNotifications() const
+    {
+        return m_hasGetDisplayedNotificationsSelector;
+    }
+
+    void getDisplayedNotifications(const WebCore::SecurityOriginData& origin, CompletionHandler<void(Vector<WebCore::NotificationData>&&)>&& completionHandler) final
+    {
+        if (!m_hasGetDisplayedNotificationsSelector || !m_delegate || !m_dataStore) {
+            completionHandler({ });
+            return;
+        }
+
+        auto apiOrigin = API::SecurityOrigin::create(origin);
+        auto delegateCompletionHandler = makeBlockPtr([completionHandler = WTFMove(completionHandler)] (NSArray<NSDictionary *> *notifications) mutable {
+            Vector<WebCore::NotificationData> notificationDatas;
+            for (id notificationDictionary in notifications) {
+                auto notification = WebCore::NotificationData::fromDictionary(notificationDictionary);
+                RELEASE_ASSERT_WITH_MESSAGE(notification, "getDisplayedNotificationsForWorkerOrigin: Invalid notification dictionary passed back to WebKit");
+                notificationDatas.append(*notification);
+            }
+            completionHandler(WTFMove(notificationDatas));
+        });
+
+        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() getDisplayedNotificationsForWorkerOrigin:wrapper(apiOrigin.get()) completionHandler:delegateCompletionHandler.get()];
     }
 
     void workerUpdatedAppBadge(const WebCore::SecurityOriginData& origin, std::optional<uint64_t> badge) final
@@ -235,11 +266,14 @@ private:
     bool m_hasShowNotificationSelector { false };
     bool m_hasNotificationPermissionsSelector { false };
     bool m_hasWorkerUpdatedAppBadgeSelector { false };
+    bool m_hasGetDisplayedNotificationsSelector { false };
     bool m_hasRequestBackgroundFetchPermissionSelector { false };
     bool m_hasNotifyBackgroundFetchChangeSelector { false };
 };
 
-@implementation WKWebsiteDataStore
+@implementation WKWebsiteDataStore {
+    RetainPtr<NSArray> _proxyConfigurations;
+}
 
 + (WKWebsiteDataStore *)defaultDataStore
 {
@@ -384,20 +418,32 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 }
 
 #if HAVE(NW_PROXY_CONFIG)
-- (void)setProxyConfiguration:(nw_proxy_config_t)proxyConfig
+- (void)setProxyConfigurations:(NSArray<nw_proxy_config_t> *)proxyConfigurations
 {
-    if (!proxyConfig) {
+    _proxyConfigurations = [proxyConfigurations copy];
+    if (!_proxyConfigurations || !_proxyConfigurations.get().count) {
         _websiteDataStore->clearProxyConfigData();
         return;
     }
 
-    uuid_t proxyIdentifier;
-    nw_proxy_config_get_identifier(proxyConfig, proxyIdentifier);
+    Vector<std::pair<Vector<uint8_t>, UUID>> configDataVector;
+    for (nw_proxy_config_t proxyConfig in proxyConfigurations) {
+        RetainPtr<NSData> agentData = adoptNS((NSData *)nw_proxy_config_copy_agent_data(proxyConfig));
 
-    auto proxyConfigData = API::Data::createWithoutCopying((NSData *)nw_proxy_config_copy_agent_data(proxyConfig));
+        uuid_t proxyIdentifier;
+        nw_proxy_config_get_identifier(proxyConfig, proxyIdentifier);
+
+        configDataVector.append({ vectorFromNSData(agentData.get()), UUID(proxyIdentifier) });
+    }
     
-    _websiteDataStore->setProxyConfigData(proxyConfigData.get(), proxyIdentifier);
+    _websiteDataStore->setProxyConfigData(WTFMove(configDataVector));
 }
+
+- (NSArray<nw_proxy_config_t> *)proxyConfigurations
+{
+    return _proxyConfigurations.get();
+}
+
 #endif // HAVE(NW_PROXY_CONFIG)
 
 #pragma mark WKObject protocol implementation
@@ -939,7 +985,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
 - (pid_t)_networkProcessIdentifier
 {
-    return _websiteDataStore->networkProcess().processIdentifier();
+    return _websiteDataStore->networkProcess().processID();
 }
 
 + (void)_makeNextNetworkProcessLaunchFailForTesting
@@ -1218,6 +1264,16 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 - (NSString *)_webPushPartition
 {
     return _websiteDataStore->configuration().webPushPartitionString();
+}
+
+-(void)_setCompletionHandlerForRemovalFromNetworkProcess:(void(^)(NSError* error))completionHandler
+{
+    _websiteDataStore->setCompletionHandlerForRemovalFromNetworkProcess([completionHandlerCopy = makeBlockPtr(completionHandler)](auto errorMessage) {
+        if (!errorMessage.isEmpty())
+            return completionHandlerCopy([NSError errorWithDomain:@"WKWebSiteDataStore" code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey:errorMessage }]);
+
+        return completionHandlerCopy(nil);
+    });
 }
 
 @end

@@ -27,15 +27,20 @@
 #include "config.h"
 #include "GraphicsContextGLGBM.h"
 
-#if ENABLE(WEBGL) && USE(LIBGBM)
+#if ENABLE(WEBGL) && USE(GBM)
 
 #include "ANGLEHeaders.h"
 #include "DMABufEGLUtilities.h"
+#include "GBMDevice.h"
 #include "Logging.h"
 #include "PixelBuffer.h"
 
 #if ENABLE(MEDIA_STREAM)
 #include "VideoFrame.h"
+#endif
+
+#if USE(GSTREAMER) && ENABLE(MEDIA_STREAM)
+#include "VideoFrameGStreamer.h"
 #endif
 
 namespace WebCore {
@@ -68,7 +73,11 @@ RefPtr<GraphicsLayerContentsDisplayDelegate> GraphicsContextGLGBM::layerContents
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
 RefPtr<VideoFrame> GraphicsContextGLGBM::paintCompositedResultsToVideoFrame()
 {
-    return { };
+#if USE(GSTREAMER)
+    if (auto pixelBuffer = readCompositedResults())
+        return VideoFrameGStreamer::createFromPixelBuffer(pixelBuffer.releaseNonNull(), VideoFrameGStreamer::CanvasContentType::WebGL, VideoFrameGStreamer::Rotation::UpsideDown, MediaTime::invalidTime(), { }, 30, true, { });
+#endif
+    return nullptr;
 }
 #endif
 
@@ -78,6 +87,11 @@ bool GraphicsContextGLGBM::copyTextureFromMedia(MediaPlayer&, PlatformGLObject, 
     return false;
 }
 #endif
+
+RefPtr<PixelBuffer> GraphicsContextGLGBM::readCompositedResults()
+{
+    return readRenderingResults();
+}
 
 void GraphicsContextGLGBM::setContextVisibility(bool)
 {
@@ -97,16 +111,22 @@ void GraphicsContextGLGBM::prepareForDisplay()
 
 bool GraphicsContextGLGBM::platformInitializeContext()
 {
+    auto* device = GBMDevice::singleton().device();
+    if (!device) {
+        LOG(WebGL, "Warning: Unable to access the GBM device, we fallback to common GL images, they require a copy, that causes a performance penalty.");
+        return false;
+    }
+
     m_isForWebGL2 = contextAttributes().webGLVersion == GraphicsContextGLWebGLVersion::WebGL2;
 
     Vector<EGLint> displayAttributes {
         EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE,
         EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_DEVICE_TYPE_EGL_ANGLE,
-        EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE, EGL_PLATFORM_SURFACELESS_MESA,
+        EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE, EGL_PLATFORM_GBM_KHR,
         EGL_NONE,
     };
 
-    m_displayObj = EGL_GetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, EGL_DEFAULT_DISPLAY, displayAttributes.data());
+    m_displayObj = EGL_GetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, device, displayAttributes.data());
     if (m_displayObj == EGL_NO_DISPLAY)
         return false;
 
@@ -144,7 +164,7 @@ bool GraphicsContextGLGBM::platformInitializeContext()
 
     EGLint configAttributes[] = {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
         EGL_RED_SIZE, 8,
         EGL_GREEN_SIZE, 8,
         EGL_BLUE_SIZE, 8,
@@ -269,14 +289,14 @@ void GraphicsContextGLGBM::prepareTexture()
     GL_Flush();
 }
 
-bool GraphicsContextGLGBM::reshapeDisplayBufferBacking()
+bool GraphicsContextGLGBM::reshapeDrawingBuffer()
 {
     m_swapchain = Swapchain(platformDisplay());
     allocateDrawBufferObject();
 
     {
-        GLenum textureTarget = drawingBufferTextureTarget();
-        ScopedRestoreTextureBinding restoreBinding(drawingBufferTextureTargetQueryForDrawingTarget(textureTarget), textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
+        auto [textureTarget, textureBinding] = drawingBufferTextureBindingPoint();
+        ScopedRestoreTextureBinding restoreBinding(textureBinding, textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
 
         GL_BindTexture(textureTarget, m_texture);
         GL_FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, textureTarget, m_texture, 0);
@@ -298,9 +318,11 @@ void GraphicsContextGLGBM::allocateDrawBufferObject()
             .height = std::clamp<uint32_t>(size.height(), 0, UINT_MAX),
             .flags = GBMBufferSwapchain::BufferDescription::NoFlags,
         });
+    if (!m_swapchain.drawBO)
+        return;
 
-    GLenum textureTarget = drawingBufferTextureTarget();
-    ScopedRestoreTextureBinding restoreBinding(drawingBufferTextureTargetQueryForDrawingTarget(textureTarget), textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
+    auto [textureTarget, textureBinding] = drawingBufferTextureBindingPoint();
+    ScopedRestoreTextureBinding restoreBinding(textureBinding, textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
 
     auto result = m_swapchain.images.ensure(m_swapchain.drawBO->handle(),
         [&] {
@@ -332,4 +354,4 @@ GraphicsContextGLGBM::Swapchain::~Swapchain()
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGL) && USE(LIBGBM)
+#endif // ENABLE(WEBGL) && USE(GBM)

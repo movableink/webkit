@@ -58,7 +58,6 @@
 #include "WebProcessProxyMessages.h"
 #include <WebCore/PlatformMediaSessionManager.h>
 #include <WebCore/SharedBuffer.h>
-#include <wtf/Language.h>
 
 #if ENABLE(ENCRYPTED_MEDIA)
 #include "RemoteCDMInstanceSessionMessages.h"
@@ -104,17 +103,11 @@
 namespace WebKit {
 using namespace WebCore;
 
-static void languagesChanged(void* context)
-{
-    static_cast<GPUProcessConnection*>(context)->connection().send(Messages::GPUConnectionToWebProcess::SetUserPreferredLanguages(userPreferredLanguages()), { });
-}
-
 static GPUProcessConnectionParameters getGPUProcessConnectionParameters()
 {
     GPUProcessConnectionParameters parameters;
 #if PLATFORM(COCOA)
     parameters.webProcessIdentity = ProcessIdentity { ProcessIdentity::CurrentProcess };
-    parameters.overrideLanguages = userPreferredLanguagesOverride();
 #endif
     return parameters;
 }
@@ -125,7 +118,7 @@ RefPtr<GPUProcessConnection> GPUProcessConnection::create(IPC::Connection& paren
     if (!connectionIdentifiers)
         return nullptr;
 
-    parentConnection.send(Messages::WebProcessProxy::CreateGPUProcessConnection(connectionIdentifiers->client, getGPUProcessConnectionParameters()), 0, IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply);
+    parentConnection.send(Messages::WebProcessProxy::CreateGPUProcessConnection(WTFMove(connectionIdentifiers->client), getGPUProcessConnectionParameters()), 0, IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply);
 
     auto instance = adoptRef(*new GPUProcessConnection(WTFMove(connectionIdentifiers->server)));
 #if ENABLE(IPC_TESTING_API)
@@ -139,8 +132,6 @@ GPUProcessConnection::GPUProcessConnection(IPC::Connection::Identifier&& connect
     : m_connection(IPC::Connection::createServerConnection(connectionIdentifier))
 {
     m_connection->open(*this);
-
-    addLanguageChangeObserver(this, languagesChanged);
 
     if (WebProcess::singleton().shouldUseRemoteRenderingFor(RenderingPurpose::MediaPainting)) {
 #if ENABLE(VP9)
@@ -156,7 +147,6 @@ GPUProcessConnection::~GPUProcessConnection()
     if (m_audioSourceProviderManager)
         m_audioSourceProviderManager->stopListeningForIPC();
 #endif
-    removeLanguageChangeObserver(this);
 }
 
 #if HAVE(AUDIT_TOKEN)
@@ -184,9 +174,10 @@ void GPUProcessConnection::didClose(IPC::Connection&)
         arbitrator->leaveRoutingAbritration();
 #endif
 
-    auto clients = m_clients;
-    for (auto& client : clients)
+    m_clients.forEach([this] (auto& client) {
         client.gpuProcessConnectionDidClose(*this);
+    });
+    m_clients.clear();
 }
 
 void GPUProcessConnection::didReceiveInvalidMessage(IPC::Connection&, IPC::MessageName)
@@ -315,8 +306,8 @@ void GPUProcessConnection::didInitialize(std::optional<GPUProcessConnectionInfo>
 bool GPUProcessConnection::waitForDidInitialize()
 {
     if (!m_hasInitialized) {
-        bool result = m_connection->waitForAndDispatchImmediately<Messages::GPUProcessConnection::DidInitialize>(0, defaultTimeout);
-        if (!result) {
+        auto result = m_connection->waitForAndDispatchImmediately<Messages::GPUProcessConnection::DidInitialize>(0, defaultTimeout);
+        if (result != IPC::Error::NoError) {
             invalidate();
             return false;
         }

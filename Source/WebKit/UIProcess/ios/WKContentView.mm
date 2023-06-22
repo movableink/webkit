@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -155,9 +155,9 @@ typedef NS_ENUM(NSInteger, _WKPrintRenderingCallbackType) {
 
 @implementation WKContentView {
     std::unique_ptr<WebKit::PageClientImpl> _pageClient;
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     RetainPtr<WKBrowsingContextController> _browsingContextController;
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 
     RetainPtr<UIView> _rootContentView;
     RetainPtr<UIView> _fixedClippingView;
@@ -207,7 +207,7 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
     _page->setUseFixedLayout(true);
     _page->setScreenIsBeingCaptured([[[self window] screen] isCaptured]);
 
-    _page->windowScreenDidChange(_page->generateDisplayIDFromPageID(), std::nullopt);
+    _page->windowScreenDidChange(_page->generateDisplayIDFromPageID());
 
 #if ENABLE(FULLSCREEN_API)
     _page->setFullscreenClient(makeUnique<WebKit::FullscreenClient>(self.webView));
@@ -261,12 +261,12 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
 - (void)_setupVisibilityPropagationViewForWebProcess
 {
-    auto processIdentifier = _page->process().processIdentifier();
+    auto processID = _page->process().processID();
     auto contextID = _page->contextIDForVisibilityPropagationInWebProcess();
 #if HAVE(NON_HOSTING_VISIBILITY_PROPAGATION_VIEW)
-    if (!processIdentifier)
+    if (!processID)
 #else
-    if (!processIdentifier || !contextID)
+    if (!processID || !contextID)
 #endif
         return;
 
@@ -274,11 +274,11 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
     // Propagate the view's visibility state to the WebContent process so that it is marked as "Foreground Running" when necessary.
 #if HAVE(NON_HOSTING_VISIBILITY_PROPAGATION_VIEW)
     auto environmentIdentifier = _page->process().environmentIdentifier();
-    _visibilityPropagationViewForWebProcess = adoptNS([[_UINonHostingVisibilityPropagationView alloc] initWithFrame:CGRectZero pid:processIdentifier environmentIdentifier:environmentIdentifier]);
+    _visibilityPropagationViewForWebProcess = adoptNS([[_UINonHostingVisibilityPropagationView alloc] initWithFrame:CGRectZero pid:processID environmentIdentifier:environmentIdentifier]);
 #else
-    _visibilityPropagationViewForWebProcess = adoptNS([[_UILayerHostView alloc] initWithFrame:CGRectZero pid:processIdentifier contextID:contextID]);
+    _visibilityPropagationViewForWebProcess = adoptNS([[_UILayerHostView alloc] initWithFrame:CGRectZero pid:processID contextID:contextID]);
 #endif
-    RELEASE_LOG(Process, "Created visibility propagation view %p (contextID=%u) for WebContent process with PID=%d", _visibilityPropagationViewForWebProcess.get(), contextID, processIdentifier);
+    RELEASE_LOG(Process, "Created visibility propagation view %p (contextID=%u) for WebContent process with PID=%d", _visibilityPropagationViewForWebProcess.get(), contextID, processID);
     [self addSubview:_visibilityPropagationViewForWebProcess.get()];
 }
 
@@ -288,17 +288,17 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
     auto* gpuProcess = _page->process().processPool().gpuProcess();
     if (!gpuProcess)
         return;
-    auto processIdentifier = gpuProcess->processIdentifier();
+    auto processID = gpuProcess->processID();
     auto contextID = _page->contextIDForVisibilityPropagationInGPUProcess();
-    if (!processIdentifier || !contextID)
+    if (!processID || !contextID)
         return;
 
     if (_visibilityPropagationViewForGPUProcess)
         return;
 
     // Propagate the view's visibility state to the GPU process so that it is marked as "Foreground Running" when necessary.
-    _visibilityPropagationViewForGPUProcess = adoptNS([[_UILayerHostView alloc] initWithFrame:CGRectZero pid:processIdentifier contextID:contextID]);
-    RELEASE_LOG(Process, "Created visibility propagation view %p (contextID=%u) for GPU process with PID=%d", _visibilityPropagationViewForGPUProcess.get(), contextID, processIdentifier);
+    _visibilityPropagationViewForGPUProcess = adoptNS([[_UILayerHostView alloc] initWithFrame:CGRectZero pid:processID contextID:contextID]);
+    RELEASE_LOG(Process, "Created visibility propagation view %p (contextID=%u) for GPU process with PID=%d", _visibilityPropagationViewForGPUProcess.get(), contextID, processID);
     [self addSubview:_visibilityPropagationViewForGPUProcess.get()];
 }
 #endif // ENABLE(GPU_PROCESS)
@@ -672,7 +672,7 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 #if PLATFORM(MACCATALYST)
     pid_t pid = 0;
     if (registerProcess)
-        pid = _page->process().processIdentifier();
+        pid = _page->process().processID();
     else
         pid = [objc_getAssociatedObject(self, (void*)[@"ax-pid" hash]) intValue];
     if (!pid)
@@ -693,7 +693,7 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
     // Store information about the WebProcess that can later be retrieved by the iOS Accessibility runtime.
     if (_page->process().state() == WebKit::WebProcessProxy::State::Running) {
         [self _updateRemoteAccessibilityRegistration:YES];
-        storeAccessibilityRemoteConnectionInformation(self, _page->process().processIdentifier(), uuid);
+        storeAccessibilityRemoteConnectionInformation(self, _page->process().processID(), uuid);
 
         IPC::DataReference elementToken = IPC::DataReference(reinterpret_cast<const uint8_t*>([remoteElementToken bytes]), [remoteElementToken length]);
         _page->registerUIProcessAccessibilityTokens(elementToken, elementToken);
@@ -717,9 +717,9 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 
 #pragma mark PageClientImpl methods
 
-- (std::unique_ptr<WebKit::DrawingAreaProxy>)_createDrawingAreaProxy:(WebKit::WebProcessProxy&)process
+- (std::unique_ptr<WebKit::DrawingAreaProxy>)_createDrawingAreaProxy
 {
-    return makeUnique<WebKit::RemoteLayerTreeDrawingAreaProxyIOS>(*_page, process);
+    return makeUnique<WebKit::RemoteLayerTreeDrawingAreaProxyIOS>(*_page);
 }
 
 - (void)_processDidExit
@@ -1022,7 +1022,7 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
         RELEASE_LOG(Printing, "Beginning to generate print preview image. Page count = %zu", [formatterAttributes pageCount]);
 
         // Begin generating the image in expectation of a (eventual) request for the drawn data.
-        auto callbackID = retainedSelf->_page->drawToImage([formatterAttributes frameID], [formatterAttributes printInfo], [formatterAttributes pageCount], [isPrintingOnBackgroundThread, printFormatter, retainedSelf](WebKit::ShareableBitmapHandle&& imageHandle) mutable {
+        auto callbackID = retainedSelf->_page->drawToImage([formatterAttributes frameID], [formatterAttributes printInfo], [formatterAttributes pageCount], [isPrintingOnBackgroundThread, printFormatter, retainedSelf](WebKit::ShareableBitmap::Handle&& imageHandle) mutable {
             if (!isPrintingOnBackgroundThread)
                 retainedSelf->_printRenderingCallbackID = { };
             else {
@@ -1035,7 +1035,7 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
                 return;
             }
 
-            auto bitmap = WebKit::ShareableBitmap::create(imageHandle, WebKit::SharedMemory::Protection::ReadOnly);
+            auto bitmap = WebKit::ShareableBitmap::create(WTFMove(imageHandle), WebKit::SharedMemory::Protection::ReadOnly);
             if (!bitmap) {
                 [printFormatter _setPrintPreviewImage:nullptr];
                 return;

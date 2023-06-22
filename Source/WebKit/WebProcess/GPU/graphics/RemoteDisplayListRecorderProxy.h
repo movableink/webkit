@@ -27,7 +27,6 @@
 
 #if ENABLE(GPU_PROCESS)
 
-#include "DisplayListRecorderFlushIdentifier.h"
 #include "SharedVideoFrame.h"
 #include <WebCore/DisplayListRecorder.h>
 #include <WebCore/DrawGlyphsRecorder.h>
@@ -35,6 +34,7 @@
 #include <wtf/WeakPtr.h>
 
 namespace IPC {
+class Semaphore;
 class StreamClientConnection;
 }
 
@@ -50,11 +50,14 @@ public:
 
     void convertToLuminanceMask() final;
     void transformToColorSpace(const WebCore::DestinationColorSpace&) final;
-    void flushContext(DisplayListRecorderFlushIdentifier);
+    void flushContext(const IPC::Semaphore&);
+    void flushContextSync();
     void disconnect();
 
+    static inline constexpr Seconds defaultSendTimeout = 3_s;
 private:
     template<typename T> void send(T&& message);
+    template<typename T> void sendSync(T&& message);
 
     friend class WebCore::DrawGlyphsRecorder;
 
@@ -77,10 +80,13 @@ private:
     void recordSetMiterLimit(float) final;
     void recordClearShadow() final;
     void recordClip(const WebCore::FloatRect&) final;
+    void recordClipRoundedRect(const WebCore::FloatRoundedRect&) final;
     void recordClipOut(const WebCore::FloatRect&) final;
+    void recordClipOutRoundedRect(const WebCore::FloatRoundedRect&) final;
     void recordClipToImageBuffer(WebCore::ImageBuffer&, const WebCore::FloatRect& destinationRect) final;
     void recordClipOutToPath(const WebCore::Path&) final;
     void recordClipPath(const WebCore::Path&, WebCore::WindRule) final;
+    void recordResetClip() final;
     void recordDrawFilteredImageBuffer(WebCore::ImageBuffer*, const WebCore::FloatRect& sourceImageRect, WebCore::Filter&) final;
     void recordDrawGlyphs(const WebCore::Font&, const WebCore::GlyphBufferGlyph*, const WebCore::GlyphBufferAdvance*, unsigned count, const WebCore::FloatPoint& localAnchor, WebCore::FontSmoothingMode) final;
     void recordDrawDecomposedGlyphs(const WebCore::Font&, const WebCore::DecomposedGlyphs&) final;
@@ -140,12 +146,12 @@ private:
     bool recordResourceUse(WebCore::Font&) final;
     bool recordResourceUse(WebCore::DecomposedGlyphs&) final;
     bool recordResourceUse(WebCore::Gradient&) final;
+    bool recordResourceUse(WebCore::Filter&) final;
 
     RefPtr<WebCore::ImageBuffer> createImageBuffer(const WebCore::FloatSize&, float resolutionScale, const WebCore::DestinationColorSpace&, std::optional<WebCore::RenderingMode>, std::optional<WebCore::RenderingMethod>) const final;
     RefPtr<WebCore::ImageBuffer> createAlignedImageBuffer(const WebCore::FloatSize&, const WebCore::DestinationColorSpace&, std::optional<WebCore::RenderingMethod>) const final;
     RefPtr<WebCore::ImageBuffer> createAlignedImageBuffer(const WebCore::FloatRect&, const WebCore::DestinationColorSpace&, std::optional<WebCore::RenderingMethod>) const final;
 
-    static inline constexpr Seconds defaultSendTimeout = 3_s;
     WebCore::RenderingResourceIdentifier m_destinationBufferIdentifier;
     WeakPtr<RemoteImageBufferProxy> m_imageBuffer;
     WeakPtr<RemoteRenderingBackendProxy> m_renderingBackend;

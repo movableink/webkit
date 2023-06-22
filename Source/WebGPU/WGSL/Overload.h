@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "Constraints.h"
 #include "TypeStore.h"
 
 namespace WGSL {
@@ -36,53 +37,40 @@ struct NumericVariable {
 using AbstractValue = std::variant<NumericVariable, unsigned>;
 
 struct TypeVariable {
-    enum Constraint : uint8_t {
-        None = 0,
-
-        Bool          = 1 << 0,
-        AbstractInt   = 1 << 1,
-        I32           = 1 << 2,
-        U32           = 1 << 3,
-        AbstractFloat = 1 << 4,
-        F32           = 1 << 5,
-        F16           = 1 << 6,
-
-        ConcreteFloat = F16 | F32,
-        Float = ConcreteFloat | AbstractFloat,
-
-        ConcreteInteger = I32 | U32,
-        Integer = ConcreteInteger | AbstractInt,
-        SignedInteger = I32 | AbstractInt,
-
-        Scalar = Bool | Integer | Float,
-        ConcreteScalar = Bool | ConcreteInteger | ConcreteFloat,
-
-        SignedNumber = Float | SignedInteger,
-        Number = Float | Integer,
-    };
-
     unsigned id;
-    Constraint constraints { None };
+    Constraint constraints { Constraints::None };
 };
 
 struct AbstractVector;
 struct AbstractMatrix;
+struct AbstractTexture;
 using AbstractType = std::variant<
     AbstractVector,
     AbstractMatrix,
+    AbstractTexture,
     TypeVariable,
-    Type*
+    const Type*
+>;
+
+using AbstractScalarType = std::variant<
+    TypeVariable,
+    const Type*
 >;
 
 struct AbstractVector {
-    TypeVariable element;
+    AbstractScalarType element;
     AbstractValue size;
 };
 
 struct AbstractMatrix {
-    TypeVariable element;
+    AbstractScalarType element;
     AbstractValue columns;
     AbstractValue rows;
+};
+
+struct AbstractTexture {
+    AbstractScalarType element;
+    Types::Texture::Kind kind;
 };
 
 struct OverloadCandidate {
@@ -93,11 +81,11 @@ struct OverloadCandidate {
 };
 
 struct SelectedOverload {
-    FixedVector<Type*> parameters;
-    Type* result;
+    FixedVector<const Type*> parameters;
+    const Type* result;
 };
 
-std::optional<SelectedOverload> resolveOverloads(TypeStore&, const Vector<OverloadCandidate>&, const Vector<Type*>& valueArguments, const Vector<Type*>& typeArguments);
+std::optional<SelectedOverload> resolveOverloads(TypeStore&, const Vector<OverloadCandidate>&, const Vector<const Type*>& valueArguments, const Vector<const Type*>& typeArguments);
 
 } // namespace WGSL
 
@@ -106,5 +94,7 @@ void printInternal(PrintStream&, const WGSL::NumericVariable&);
 void printInternal(PrintStream&, const WGSL::AbstractValue&);
 void printInternal(PrintStream&, const WGSL::TypeVariable&);
 void printInternal(PrintStream&, const WGSL::AbstractType&);
+void printInternal(PrintStream&, const WGSL::AbstractScalarType&);
 void printInternal(PrintStream&, const WGSL::OverloadCandidate&);
+void printInternal(PrintStream&, WGSL::Types::Texture::Kind);
 } // namespace WTF

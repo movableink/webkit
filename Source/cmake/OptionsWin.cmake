@@ -10,8 +10,12 @@ endif ()
 # Define minimum supported Windows version
 # https://msdn.microsoft.com/en-us/library/6sehtctf.aspx
 #
-# Currently set to Windows 7
-add_definitions(-D_WINDOWS -DWINVER=0x601 -D_WIN32_WINNT=0x601)
+# Windows 10 1809 "Redstone 5" NTDDI_WIN10_RS5 (0x0A000006)
+# https://learn.microsoft.com/en-us/windows/win32/winprog/using-the-windows-headers?redirectedfrom=MSDN#macros-for-conditional-declarations
+#
+# Supported versions of Windows client
+# https://learn.microsoft.com/en-us/windows/release-health/supported-versions-windows-client
+add_definitions(-D_WINDOWS -DNTDDI_VERSION=0x0A000006 -D_WIN32_WINNT=0x0A00)
 
 add_definitions(-DNOMINMAX)
 add_definitions(-DUNICODE -D_UNICODE)
@@ -71,7 +75,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 set(CMAKE_DISABLE_PRECOMPILE_HEADERS OFF)
 
 find_package(Cairo 1.15.12 REQUIRED)
-find_package(CURL 7.77.0 REQUIRED)
+find_package(CURL 7.87.0 REQUIRED)
 find_package(ICU 61.2 REQUIRED COMPONENTS data i18n uc)
 find_package(JPEG 1.5.2 REQUIRED)
 find_package(LibXml2 2.9.7 REQUIRED)
@@ -85,11 +89,6 @@ find_package(LibPSL 0.20.2 REQUIRED)
 find_package(LCMS2)
 if (LCMS2_FOUND)
     SET_AND_EXPOSE_TO_BUILD(USE_LCMS ON)
-endif ()
-
-find_package(JPEGXL)
-if (JPEGXL_FOUND)
-    SET_AND_EXPOSE_TO_BUILD(USE_JPEGXL ON)
 endif ()
 
 find_package(OpenJPEG 2.3.1)
@@ -152,6 +151,9 @@ WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_SMOOTH_SCROLLING PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEBGL PRIVATE OFF)
 
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_AVIF PRIVATE OFF)
+if (${WTF_CPU_X86})
+    WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_JPEGXL PRIVATE OFF)
+endif ()
 
 # FIXME: Port bmalloc to Windows. https://bugs.webkit.org/show_bug.cgi?id=143310
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_SYSTEM_MALLOC PRIVATE ON)
@@ -197,8 +199,6 @@ SET_AND_EXPOSE_TO_BUILD(USE_CURL ON)
 SET_AND_EXPOSE_TO_BUILD(USE_GRAPHICS_LAYER_TEXTURE_MAPPER ON)
 SET_AND_EXPOSE_TO_BUILD(USE_GRAPHICS_LAYER_WC ON)
 SET_AND_EXPOSE_TO_BUILD(USE_EGL ON)
-SET_AND_EXPOSE_TO_BUILD(USE_OPENGL_ES ON)
-SET_AND_EXPOSE_TO_BUILD(HAVE_OPENGL_ES_3 ON)
 SET_AND_EXPOSE_TO_BUILD(USE_OPENSSL ON)
 SET_AND_EXPOSE_TO_BUILD(USE_TEXTURE_MAPPER ON)
 SET_AND_EXPOSE_TO_BUILD(USE_TEXTURE_MAPPER_GL ON)
@@ -221,6 +221,11 @@ if (ENABLE_XSLT)
     find_package(LibXslt 1.1.32 REQUIRED)
 endif ()
 
+if (USE_JPEGXL)
+    find_package(JPEGXL REQUIRED)
+endif ()
+
+set(bmalloc_LIBRARY_TYPE OBJECT)
 set(WTF_LIBRARY_TYPE SHARED)
 set(JavaScriptCore_LIBRARY_TYPE SHARED)
 set(PAL_LIBRARY_TYPE OBJECT)

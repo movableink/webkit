@@ -31,7 +31,7 @@
 #include "Path.h"
 #include "RenderAncestorIterator.h"
 #include "RenderBox.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "SimpleRange.h"
 #include "WindRule.h"
 #include <wtf/text/TextStream.h>
@@ -43,48 +43,7 @@ EventRegionContext::EventRegionContext(EventRegion& eventRegion)
 {
 }
 
-void EventRegionContext::pushTransform(const AffineTransform& transform)
-{
-    if (m_transformStack.isEmpty())
-        m_transformStack.append(transform);
-    else
-        m_transformStack.append(m_transformStack.last() * transform);
-}
-
-void EventRegionContext::popTransform()
-{
-    if (m_transformStack.isEmpty()) {
-        ASSERT_NOT_REACHED();
-        return;
-    }
-    m_transformStack.removeLast();
-}
-
-void EventRegionContext::pushClip(const IntRect& clipRect)
-{
-    auto transformedClip = m_transformStack.isEmpty() ? clipRect : m_transformStack.last().mapRect(clipRect);
-
-    if (m_clipStack.isEmpty())
-        m_clipStack.append(transformedClip);
-    else
-        m_clipStack.append(intersection(m_clipStack.last(), transformedClip));
-}
-
-void EventRegionContext::pushClip(const Path& path, WindRule)
-{
-    // FIXME: Approximate paths better.
-    auto pathBounds = enclosingIntRect(path.boundingRect());
-    pushClip(pathBounds);
-}
-
-void EventRegionContext::popClip()
-{
-    if (m_clipStack.isEmpty()) {
-        ASSERT_NOT_REACHED();
-        return;
-    }
-    m_clipStack.removeLast();
-}
+EventRegionContext::~EventRegionContext() = default;
 
 void EventRegionContext::unite(const Region& region, RenderObject& renderer, const RenderStyle& style, bool overrideUserModifyIsEditable)
 {
@@ -162,10 +121,11 @@ void EventRegionContext::uniteInteractionRegions(const Region& region, RenderObj
         
         if (m_interactionRects.contains(bounds))
             return;
-        m_interactionRects.add(bounds);
 
         if (shouldConsolidateInteractionRegion(bounds, renderer))
             return;
+
+        m_interactionRects.add(bounds);
 
         auto regionIterator = m_discoveredRegionsByElement.find(interactionRegion->elementIdentifier);
         if (regionIterator != m_discoveredRegionsByElement.end()) {
@@ -183,7 +143,7 @@ void EventRegionContext::uniteInteractionRegions(const Region& region, RenderObj
             auto occlusionRect = guardRectForRegionBounds(tempRegion.bounds());
             if (occlusionRect) {
                 m_interactionRegions.append({
-                    InteractionRegion::Type::Occlusion,
+                    InteractionRegion::Type::Guard,
                     interactionRegion->elementIdentifier,
                     occlusionRect.value()
                 });
@@ -205,7 +165,7 @@ void EventRegionContext::uniteInteractionRegions(const Region& region, RenderObj
         auto occlusionRect = guardRectForRegionBounds(interactionRegion->rectInLayerCoordinates);
         if (occlusionRect) {
             m_interactionRegions.append({
-                InteractionRegion::Type::Occlusion,
+                InteractionRegion::Type::Guard,
                 interactionRegion->elementIdentifier,
                 occlusionRect.value()
             });
@@ -216,46 +176,129 @@ void EventRegionContext::uniteInteractionRegions(const Region& region, RenderObj
 
 bool EventRegionContext::shouldConsolidateInteractionRegion(IntRect bounds, RenderObject& renderer)
 {
-    if (!renderer.style().borderAndBackgroundEqual(RenderStyle::defaultStyle()))
-        return false;
-
     for (auto& ancestor : ancestorsOfType<RenderElement>(renderer)) {
         if (!ancestor.element())
             continue;
 
-        auto elementIdentifier = ancestor.element()->identifier();
-        auto regionIterator = m_discoveredRegionsByElement.find(elementIdentifier);
-        if (regionIterator != m_discoveredRegionsByElement.end()) {
-            auto parentBounds = regionIterator->value.bounds();
-            if (!parentBounds.contains(bounds))
+        auto ancestorElementIdentifier = ancestor.element()->identifier();
+        auto regionIterator = m_discoveredRegionsByElement.find(ancestorElementIdentifier);
+
+        // The ancestor has no known InteractionRegion, we can skip it.
+        if (regionIterator == m_discoveredRegionsByElement.end()) {
+            // If it has a border / background, stop the search.
+            if (ancestor.hasVisibleBoxDecorations())
                 return false;
+            continue;
+        }
 
-            float marginLeft = bounds.x() - parentBounds.x();
-            float marginRight = parentBounds.maxX() - bounds.maxX();
-            float marginTop = bounds.y() - parentBounds.y();
-            float marginBottom = parentBounds.maxY() - bounds.maxY();
+        auto ancestorBounds = regionIterator->value.bounds();
 
-            constexpr auto maxMargin = 50;
+        // The ancestor's InteractionRegion does not contain ours, we don't consolidate and stop the search.
+        if (!ancestorBounds.contains(bounds))
+            return false;
 
-            if (marginLeft > maxMargin
-                || marginRight > maxMargin
-                || marginTop > maxMargin
-                || marginBottom > maxMargin)
-                return false;
+        float marginLeft = bounds.x() - ancestorBounds.x();
+        float marginRight = ancestorBounds.maxX() - bounds.maxX();
+        float marginTop = bounds.y() - ancestorBounds.y();
+        float marginBottom = ancestorBounds.maxY() - bounds.maxY();
 
+        constexpr auto maxMargin = 50;
+
+        bool canConsolidate = marginLeft <= maxMargin
+            && marginRight <= maxMargin
+            && marginTop <= maxMargin
+            && marginBottom <= maxMargin
+            && !renderer.hasVisibleBoxDecorations();
+
+        // We're consolidating the region based on this ancestor, it shouldn't be removed or candidate for removal.
+        if (canConsolidate) {
+            m_containerRemovalCandidates.remove(ancestorElementIdentifier);
+            m_containersToRemove.remove(ancestorElementIdentifier);
             return true;
         }
 
-        // If we find a border / background, stop the search.
-        if (!ancestor.style().borderAndBackgroundEqual(RenderStyle::defaultStyle()))
-            return false;
+        // We can't consolidate this region but it might be a container we can remove later.
+        if (!renderer.hasVisibleBoxDecorations() && is<RenderElement>(renderer)) {
+            auto& renderElement = downcast<RenderElement>(renderer);
+            m_containerRemovalCandidates.add(renderElement.element()->identifier());
+        }
+
+        // We found a region nested inside a container candidate for removal, flag it for removal.
+        if (m_containerRemovalCandidates.contains(ancestorElementIdentifier)) {
+            m_containerRemovalCandidates.remove(ancestorElementIdentifier);
+            m_containersToRemove.add(ancestorElementIdentifier);
+        }
+
+        return false;
     }
 
     return false;
 }
 
+// FIXME: switch to `PathUtilities::pathsWithShrinkWrappedRects` once we have rdar://104244712
+void EventRegionContext::shrinkWrapInteractionRegions()
+{
+    for (auto& region : m_interactionRegions) {
+        if (region.type != InteractionRegion::Type::Interaction)
+            continue;
+
+        auto regionIterator = m_discoveredRegionsByElement.find(region.elementIdentifier);
+        if (regionIterator == m_discoveredRegionsByElement.end())
+            continue;
+
+        auto discoveredRegion = regionIterator->value;
+        if (region.rectInLayerCoordinates == discoveredRegion.bounds())
+            continue;
+
+        auto maskedCorners = region.maskedCorners;
+        // Create a mask with all corners so we can selectively disable them.
+        if (maskedCorners.isEmpty()) {
+            maskedCorners.add(InteractionRegion::CornerMask::MinXMinYCorner);
+            maskedCorners.add(InteractionRegion::CornerMask::MaxXMinYCorner);
+            maskedCorners.add(InteractionRegion::CornerMask::MinXMaxYCorner);
+            maskedCorners.add(InteractionRegion::CornerMask::MaxXMaxYCorner);
+        }
+
+        auto horizontallyInflatedRect = region.rectInLayerCoordinates;
+        horizontallyInflatedRect.inflateX(1);
+        horizontallyInflatedRect.inflateY(-1);
+        auto verticallyInflatedRect = region.rectInLayerCoordinates;
+        verticallyInflatedRect.inflateY(1);
+        verticallyInflatedRect.inflateX(-1);
+
+        bool changedMaskedCorners = false;
+
+        if (discoveredRegion.contains(horizontallyInflatedRect.minXMinYCorner()) || discoveredRegion.contains(verticallyInflatedRect.minXMinYCorner())) {
+            maskedCorners.remove(InteractionRegion::CornerMask::MinXMinYCorner);
+            changedMaskedCorners = true;
+        }
+        if (discoveredRegion.contains(horizontallyInflatedRect.maxXMinYCorner()) || discoveredRegion.contains(verticallyInflatedRect.maxXMinYCorner())) {
+            maskedCorners.remove(InteractionRegion::CornerMask::MaxXMinYCorner);
+            changedMaskedCorners = true;
+        }
+        if (discoveredRegion.contains(horizontallyInflatedRect.minXMaxYCorner()) || discoveredRegion.contains(verticallyInflatedRect.minXMaxYCorner())) {
+            maskedCorners.remove(InteractionRegion::CornerMask::MinXMaxYCorner);
+            changedMaskedCorners = true;
+        }
+        if (discoveredRegion.contains(horizontallyInflatedRect.maxXMaxYCorner()) || discoveredRegion.contains(verticallyInflatedRect.maxXMaxYCorner())) {
+            maskedCorners.remove(InteractionRegion::CornerMask::MaxXMaxYCorner);
+            changedMaskedCorners = true;
+        }
+
+        if (maskedCorners.isEmpty())
+            region.borderRadius = 0;
+        else if (changedMaskedCorners)
+            region.maskedCorners = maskedCorners;
+    }
+}
+
 void EventRegionContext::copyInteractionRegionsToEventRegion()
 {
+    m_interactionRegions.removeAllMatching([&] (auto& region) {
+        return m_containersToRemove.contains(region.elementIdentifier);
+    });
+
+    shrinkWrapInteractionRegions();
     m_eventRegion.appendInteractionRegions(m_interactionRegions);
 }
 
@@ -521,6 +564,11 @@ bool EventRegion::containsEditableElementsInRect(const IntRect& rect) const
 void EventRegion::appendInteractionRegions(const Vector<InteractionRegion>& interactionRegions)
 {
     m_interactionRegions.appendVector(interactionRegions);
+}
+
+void EventRegion::clearInteractionRegions()
+{
+    m_interactionRegions.clear();
 }
 
 #endif

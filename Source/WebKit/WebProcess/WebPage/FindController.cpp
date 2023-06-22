@@ -300,7 +300,7 @@ void FindController::findString(const String& string, OptionSet<FindOptions> opt
     }
 #endif
 
-    RefPtr<WebPage> protectedWebPage = m_webPage;
+    RefPtr<WebPage> protectedWebPage { m_webPage.get() };
     m_webPage->drawingArea()->dispatchAfterEnsuringUpdatedScrollPosition([protectedWebPage, found, string, options, maxMatchCount, didWrap] () {
         protectedWebPage->findController().updateFindUIAfterPageScroll(found, string, options, maxMatchCount, didWrap, FindUIOriginator::FindString);
     });
@@ -323,7 +323,7 @@ void FindController::findStringMatches(const String& string, OptionSet<FindOptio
         return;
 
     bool found = !m_findMatches.isEmpty();
-    m_webPage->drawingArea()->dispatchAfterEnsuringUpdatedScrollPosition([protectedWebPage = RefPtr { m_webPage }, found, string, options, maxMatchCount] () {
+    m_webPage->drawingArea()->dispatchAfterEnsuringUpdatedScrollPosition([protectedWebPage = RefPtr { m_webPage.get() }, found, string, options, maxMatchCount] () {
         protectedWebPage->findController().updateFindUIAfterPageScroll(found, string, options, maxMatchCount, DidWrap::No, FindUIOriginator::FindStringMatches);
     });
 }
@@ -344,7 +344,7 @@ void FindController::findRectsForStringMatches(const String& string, OptionSet<F
         return;
 
     bool found = !m_findMatches.isEmpty();
-    m_webPage->drawingArea()->dispatchAfterEnsuringUpdatedScrollPosition([protectedWebPage = RefPtr { m_webPage }, found, string, options, maxMatchCount] () {
+    m_webPage->drawingArea()->dispatchAfterEnsuringUpdatedScrollPosition([protectedWebPage = RefPtr { m_webPage.get() }, found, string, options, maxMatchCount] () {
         protectedWebPage->findController().updateFindUIAfterPageScroll(found, string, options, maxMatchCount, DidWrap::No, FindUIOriginator::FindStringMatches);
     });
 }
@@ -371,7 +371,7 @@ void FindController::getImageForFindMatch(uint32_t matchIndex)
     if (handle.isNull())
         return;
 
-    m_webPage->send(Messages::WebPageProxy::DidGetImageForFindMatch(selectionSnapshot->parameters(), handle, matchIndex));
+    m_webPage->send(Messages::WebPageProxy::DidGetImageForFindMatch(selectionSnapshot->parameters(), WTFMove(handle), matchIndex));
 }
 
 void FindController::selectFindMatch(uint32_t matchIndex)

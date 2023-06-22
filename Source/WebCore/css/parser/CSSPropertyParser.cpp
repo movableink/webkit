@@ -928,6 +928,9 @@ static constexpr InitialValue initialValueForLonghand(CSSPropertyID longhand)
     case CSSPropertyScrollPaddingLeft:
     case CSSPropertyScrollPaddingRight:
     case CSSPropertyScrollPaddingTop:
+    case CSSPropertyScrollbarColor:
+    case CSSPropertyScrollbarGutter:
+    case CSSPropertyScrollbarWidth:
     case CSSPropertySize:
     case CSSPropertyTableLayout:
     case CSSPropertyTextAlignLast:
@@ -966,14 +969,13 @@ static constexpr InitialValue initialValueForLonghand(CSSPropertyID longhand)
     case CSSPropertyFontVariantPosition:
     case CSSPropertyFontWeight:
     case CSSPropertyJustifyContent:
-    case CSSPropertyLeadingTrim:
     case CSSPropertyLetterSpacing:
     case CSSPropertyLineHeight:
     case CSSPropertyOverflowWrap:
     case CSSPropertyRowGap:
     case CSSPropertyScrollSnapStop:
     case CSSPropertySpeakAs:
-    case CSSPropertyWhiteSpace:
+    case CSSPropertyTextBoxTrim:
     case CSSPropertyWordBreak:
     case CSSPropertyWordSpacing:
 #if ENABLE(VARIATION_FONTS)
@@ -1208,7 +1210,7 @@ static constexpr InitialValue initialValueForLonghand(CSSPropertyID longhand)
         return CSSValueStart;
     case CSSPropertyTextDecorationStyle:
         return CSSValueSolid;
-    case CSSPropertyTextEdge:
+    case CSSPropertyTextBoxEdge:
         return CSSValueLeading;
     case CSSPropertyTextOrientation:
         return CSSValueMixed;
@@ -1228,6 +1230,8 @@ static constexpr InitialValue initialValueForLonghand(CSSPropertyID longhand)
         return CSSValueSpaceAll;
     case CSSPropertyTextAutospace:
         return CSSValueNoAutospace;
+    case CSSPropertyWhiteSpaceCollapse:
+        return CSSValueCollapse;
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
@@ -2544,6 +2548,51 @@ bool CSSPropertyParser::consumeListStyleShorthand(bool important)
     return m_range.atEnd();
 }
 
+bool CSSPropertyParser::consumeWhiteSpaceShorthand(bool important)
+{
+    auto ident = consumeIdentRaw(m_range);
+    if (!ident)
+        return false;
+    if (!m_range.atEnd())
+        return false;
+
+    // FIXME: Implement `<'white-space-collapse'> || <'text-wrap'>` syntax.
+    RefPtr<CSSValue> whiteSpaceCollapse;
+    RefPtr<CSSValue> textWrap;
+    switch (ident.value()) {
+    case CSSValueBreakSpaces:
+        whiteSpaceCollapse = CSSPrimitiveValue::create(CSSValueBreakSpaces);
+        textWrap = CSSPrimitiveValue::create(CSSValueWrap);
+        break;
+    case CSSValueNormal:
+        whiteSpaceCollapse = CSSPrimitiveValue::create(CSSValueCollapse);
+        textWrap = CSSPrimitiveValue::create(CSSValueWrap);
+        break;
+    case CSSValueNowrap:
+        whiteSpaceCollapse = CSSPrimitiveValue::create(CSSValueCollapse);
+        textWrap = CSSPrimitiveValue::create(CSSValueNowrap);
+        break;
+    case CSSValuePre:
+        whiteSpaceCollapse = CSSPrimitiveValue::create(CSSValuePreserve);
+        textWrap = CSSPrimitiveValue::create(CSSValueNowrap);
+        break;
+    case CSSValuePreLine:
+        whiteSpaceCollapse = CSSPrimitiveValue::create(CSSValuePreserveBreaks);
+        textWrap = CSSPrimitiveValue::create(CSSValueWrap);
+        break;
+    case CSSValuePreWrap:
+        whiteSpaceCollapse = CSSPrimitiveValue::create(CSSValuePreserve);
+        textWrap = CSSPrimitiveValue::create(CSSValueWrap);
+        break;
+    default:
+        return false;
+    }
+
+    addProperty(CSSPropertyWhiteSpaceCollapse, CSSPropertyWhiteSpace, WTFMove(whiteSpaceCollapse), important);
+    addProperty(CSSPropertyTextWrap, CSSPropertyWhiteSpace, WTFMove(textWrap), important);
+    return true;
+}
+
 bool CSSPropertyParser::parseShorthand(CSSPropertyID property, bool important)
 {
     switch (property) {
@@ -2765,6 +2814,8 @@ bool CSSPropertyParser::parseShorthand(CSSPropertyID property, bool important)
         return consumeContainerShorthand(important);
     case CSSPropertyContainIntrinsicSize:
         return consumeContainIntrinsicSizeShorthand(important);
+    case CSSPropertyWhiteSpace:
+        return consumeWhiteSpaceShorthand(important);
     default:
         return false;
     }

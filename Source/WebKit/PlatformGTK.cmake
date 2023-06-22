@@ -52,15 +52,15 @@ list(APPEND WebKit_UNIFIED_SOURCE_LIST_FILES
 
 list(APPEND WebKit_MESSAGES_IN_FILES
     UIProcess/ViewGestureController
-    WebProcess/gtk/GtkSettingsManagerProxy
-    WebProcess/WebPage/ViewGestureGeometryCollector
-)
 
-if (USE_LIBGBM)
-    list(APPEND WebKit_MESSAGES_IN_FILES
-        UIProcess/gtk/AcceleratedBackingStoreDMABuf
-    )
-endif ()
+    UIProcess/gtk/AcceleratedBackingStoreDMABuf
+
+    WebProcess/WebPage/ViewGestureGeometryCollector
+
+    WebProcess/WebPage/gtk/AcceleratedSurfaceDMABuf
+
+    WebProcess/gtk/GtkSettingsManagerProxy
+)
 
 list(APPEND WebKit_DERIVED_SOURCES
     ${WebKitGTK_DERIVED_SOURCES_DIR}/InspectorGResourceBundle.c
@@ -136,6 +136,7 @@ set(WebKitGTK_HEADER_TEMPLATES
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitEditorState.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitError.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitFaviconDatabase.h.in
+    ${WEBKIT_DIR}/UIProcess/API/glib/WebKitFeature.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitFileChooserRequest.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitFindController.h.in
     ${WEBKIT_DIR}/UIProcess/API/glib/WebKitFormSubmissionRequest.h.in

@@ -37,6 +37,8 @@
 
 namespace WebCore {
 
+class OriginAccessPatterns;
+
 class SecurityOrigin : public ThreadSafeRefCounted<SecurityOrigin> {
 public:
     enum Policy {
@@ -105,7 +107,7 @@ public:
     // Returns true if this SecurityOrigin can read content retrieved from
     // the given URL. For example, call this function before issuing
     // XMLHttpRequests.
-    WEBCORE_EXPORT bool canRequest(const URL&) const;
+    WEBCORE_EXPORT bool canRequest(const URL&, const OriginAccessPatterns&) const;
 
     // Returns true if this SecurityOrigin can receive drag content from the
     // initiator. For example, call this function before allowing content to be
@@ -115,7 +117,7 @@ public:
     // Returns true if |document| can display content from the given URL (e.g.,
     // in an iframe or as an image). For example, web sites generally cannot
     // display content from the user's files system.
-    WEBCORE_EXPORT bool canDisplay(const URL&) const;
+    WEBCORE_EXPORT bool canDisplay(const URL&, const OriginAccessPatterns&) const;
 
     // Returns true if this SecurityOrigin can load local resources, such
     // as images, iframes, and style sheets, and can link to local URLs.
@@ -182,7 +184,7 @@ public:
     // could make the string return "null".
     WEBCORE_EXPORT String toRawString() const;
 
-    URL toURL() const;
+    WEBCORE_EXPORT URL toURL() const;
 
     // This method checks for equality between SecurityOrigins, not whether
     // one origin can access another. It is used for hash table keys.

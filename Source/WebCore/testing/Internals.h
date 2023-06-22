@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,6 +69,7 @@ class AudioTrack;
 class BaseAudioContext;
 class Blob;
 class CacheStorageConnection;
+class CachedResource;
 class CaptionUserPreferencesTestingModeToken;
 class DOMPointReadOnly;
 class DOMRect;
@@ -241,7 +242,7 @@ public:
     unsigned imageDecodeCount(HTMLImageElement&);
     unsigned imageCachedSubimageCreateCount(HTMLImageElement&);
     unsigned remoteImagesCountForTesting() const;
-    void setLargeImageAsyncDecodingEnabledForTesting(HTMLImageElement&, bool enabled);
+    void setAsyncDecodingEnabledForTesting(HTMLImageElement&, bool enabled);
     void setForceUpdateImageDataEnabledForTesting(HTMLImageElement&, bool enabled);
 
     void setGridMaxTracksLimit(unsigned);
@@ -640,6 +641,8 @@ public:
     ExceptionOr<void> setCompositingPolicyOverride(std::optional<CompositingPolicy>);
     ExceptionOr<std::optional<CompositingPolicy>> compositingPolicyOverride() const;
 
+    ExceptionOr<void> setAllowAnimationControlsOverride(bool);
+
     void updateLayoutAndStyleForAllFrames();
     ExceptionOr<void> updateLayoutIgnorePendingStylesheetsAndRunPostLayoutTasks(Node*);
     unsigned layoutCount() const;
@@ -893,7 +896,6 @@ public:
         Timeout
     };
     void simulateEventForWebGLContext(SimulatedWebGLContextEvent, WebGLRenderingContext&);
-    bool hasLowAndHighPowerGPUs();
 
     enum class RequestedGPU {
         Default,
@@ -901,8 +903,6 @@ public:
         HighPerformance
     };
     RequestedGPU requestedGPU(WebGLRenderingContext&);
-    bool requestedMetal(WebGLRenderingContext&);
-    bool platformSupportsMetal(bool isWebGL2);
 #endif
 
     void setPageVisibility(bool isVisible);
@@ -923,8 +923,6 @@ public:
     unsigned long trackAudioSampleCount() const { return m_trackAudioSampleCount; }
     unsigned long trackVideoSampleCount() const { return m_trackVideoSampleCount; }
     void observeMediaStreamTrack(MediaStreamTrack&);
-    using TrackFramePromise = DOMPromiseDeferred<IDLInterface<ImageData>>;
-    void grabNextMediaStreamTrackFrame(TrackFramePromise&&);
     void mediaStreamTrackVideoFrameRotation(DOMPromiseDeferred<IDLShort>&&);
     void delayMediaStreamTrackSamples(MediaStreamTrack&, float);
     void setMediaStreamTrackMuted(MediaStreamTrack&, bool);
@@ -941,6 +939,7 @@ public:
 
 #if USE(AUDIO_SESSION)
     using AudioSessionCategory = WebCore::AudioSessionCategory;
+    using AudioSessionMode = WebCore::AudioSessionMode;
     using RouteSharingPolicy = WebCore::RouteSharingPolicy;
 #else
     enum class AudioSessionCategory : uint8_t {
@@ -953,6 +952,12 @@ public:
         AudioProcessing,
     };
 
+    enum class AudioSessionMode : uint8_t {
+        Default,
+        VideoChat,
+        MoviePlayback,
+    };
+
     enum class RouteSharingPolicy : uint8_t {
         Default,
         LongFormAudio,
@@ -963,9 +968,11 @@ public:
 
     bool supportsAudioSession() const;
     AudioSessionCategory audioSessionCategory() const;
+    AudioSessionMode audioSessionMode() const;
     RouteSharingPolicy routeSharingPolicy() const;
 #if ENABLE(VIDEO)
     AudioSessionCategory categoryAtMostRecentPlayback(HTMLMediaElement&) const;
+    AudioSessionMode modeAtMostRecentPlayback(HTMLMediaElement&) const;
 #endif
     double preferredAudioBufferSize() const;
     double currentAudioBufferSize() const;
@@ -1285,7 +1292,7 @@ public:
 
     bool isRemoteUIAppForAccessibility();
 
-    unsigned createSleepDisabler(const String& reason, bool display);
+    ExceptionOr<unsigned> createSleepDisabler(const String& reason, bool display);
     bool destroySleepDisabler(unsigned identifier);
         
 #if ENABLE(APP_HIGHLIGHTS)
@@ -1359,8 +1366,6 @@ public:
     RefPtr<PushSubscription> createPushSubscription(const String& endpoint, std::optional<EpochTimeStamp> expirationTime, const ArrayBuffer& serverVAPIDPublicKey, const ArrayBuffer& clientECDHPublicKey, const ArrayBuffer& auth);
 #endif
 
-    void overrideModalContainerSearchTermForTesting(AtomString&& term);
-
 #if ENABLE(ARKIT_INLINE_PREVIEW_MAC)
     using ModelInlinePreviewUUIDsPromise = DOMPromiseDeferred<IDLSequence<IDLDOMString>>;
     void modelInlinePreviewUUIDs(ModelInlinePreviewUUIDsPromise&&) const;
@@ -1404,6 +1409,8 @@ private:
 
     static RefPtr<SharedBuffer> pngDataForTesting();
 
+    CachedResource* resourceFromMemoryCache(const String& url);
+
 #if ENABLE(MEDIA_STREAM)
     // RealtimeMediaSource::Observer API
     void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) final;
@@ -1414,7 +1421,6 @@ private:
     unsigned long m_trackVideoSampleCount { 0 };
     unsigned long m_trackAudioSampleCount { 0 };
     RefPtr<RealtimeMediaSource> m_trackSource;
-    std::unique_ptr<TrackFramePromise> m_nextTrackFramePromise;
     int m_trackVideoRotation { 0 };
 #endif
 #if ENABLE(MEDIA_SESSION)

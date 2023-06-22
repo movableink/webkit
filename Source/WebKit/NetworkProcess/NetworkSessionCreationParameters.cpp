@@ -52,7 +52,7 @@ void NetworkSessionCreationParameters::encode(IPC::Encoder& encoder) const
     encoder << httpProxy;
     encoder << httpsProxy;
 #endif
-#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+#if HAVE(ALTERNATIVE_SERVICE)
     encoder << alternativeServiceDirectory;
     encoder << alternativeServiceDirectoryExtensionHandle;
 #endif
@@ -100,7 +100,7 @@ void NetworkSessionCreationParameters::encode(IPC::Encoder& encoder) const
     encoder << isBlobRegistryTopOriginPartitioningEnabled;
 
     encoder << unifiedOriginStorageLevel;
-    encoder << perOriginStorageQuota << originQuotaRatio << totalQuotaRatio << volumeCapacityOverride;
+    encoder << perOriginStorageQuota << originQuotaRatio << totalQuotaRatio << standardVolumeCapacity << volumeCapacityOverride;
     encoder << localStorageDirectory << localStorageDirectoryExtensionHandle;
     encoder << indexedDBDirectory << indexedDBDirectoryExtensionHandle;
     encoder << cacheStorageDirectory << cacheStorageDirectoryExtensionHandle;
@@ -164,7 +164,7 @@ std::optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters
         return std::nullopt;
 #endif
 
-#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+#if HAVE(ALTERNATIVE_SERVICE)
     std::optional<String> alternativeServiceDirectory;
     decoder >> alternativeServiceDirectory;
     if (!alternativeServiceDirectory)
@@ -382,6 +382,11 @@ std::optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters
     if (!totalQuotaRatio)
         return std::nullopt;
 
+    std::optional<std::optional<uint64_t>> standardVolumeCapacity;
+    decoder >> standardVolumeCapacity;
+    if (!standardVolumeCapacity)
+        return std::nullopt;
+
     std::optional<std::optional<uint64_t>> volumeCapacityOverride;
     decoder >> volumeCapacityOverride;
     if (!volumeCapacityOverride)
@@ -462,7 +467,7 @@ std::optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters
         , WTFMove(*httpProxy)
         , WTFMove(*httpsProxy)
 #endif
-#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+#if HAVE(ALTERNATIVE_SERVICE)
         , WTFMove(*alternativeServiceDirectory)
         , WTFMove(*alternativeServiceDirectoryExtensionHandle)
 #endif
@@ -512,6 +517,7 @@ std::optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters
         , WTFMove(*perOriginStorageQuota)
         , WTFMove(*originQuotaRatio)
         , WTFMove(*totalQuotaRatio)
+        , WTFMove(*standardVolumeCapacity)
         , WTFMove(*volumeCapacityOverride)
         , WTFMove(*localStorageDirectory)
         , WTFMove(*localStorageDirectoryExtensionHandle)

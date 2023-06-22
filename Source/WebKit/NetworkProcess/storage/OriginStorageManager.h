@@ -58,12 +58,10 @@ class OriginStorageManager : public CanMakeWeakPtr<OriginStorageManager> {
 public:
     static String originFileIdentifier();
 
-    OriginStorageManager(uint64_t quota, uint64_t standardReportedQuota, OriginQuotaManager::IncreaseQuotaFunction&&, OriginQuotaManager::NotifyUsageUpdateFunction&&, String&& path, String&& cusotmLocalStoragePath, String&& customIDBStoragePath, String&& customCacheStoragePath, UnifiedOriginStorageLevel);
+    OriginStorageManager(uint64_t quota, uint64_t standardReportedQuota, OriginQuotaManager::IncreaseQuotaFunction&&, OriginQuotaManager::NotifySpaceGrantedFunction&&, String&& path, String&& cusotmLocalStoragePath, String&& customIDBStoragePath, String&& customCacheStoragePath, UnifiedOriginStorageLevel);
     ~OriginStorageManager();
 
     void connectionClosed(IPC::Connection::UniqueID);
-    bool persisted() const { return m_persisted; }
-    void setPersisted(bool value);
     WebCore::StorageEstimate estimate();
     const String& path() const { return m_path; }
     OriginQuotaManager& quotaManager();
@@ -113,9 +111,8 @@ private:
     uint64_t m_quota;
     uint64_t m_standardReportedQuota;
     OriginQuotaManager::IncreaseQuotaFunction m_increaseQuotaFunction;
-    OriginQuotaManager::NotifyUsageUpdateFunction m_notifyUsageUpdateFunction;
+    OriginQuotaManager::NotifySpaceGrantedFunction m_notifySpaceGrantedFunction;
     RefPtr<OriginQuotaManager> m_quotaManager;
-    bool m_persisted { false };
     UnifiedOriginStorageLevel m_level;
     Markable<WallTime> m_originFileCreationTimestamp;
 #if PLATFORM(IOS_FAMILY)

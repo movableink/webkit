@@ -20,8 +20,8 @@
 
 #pragma once
 
+#include <span>
 #include <wtf/RefPtr.h>
-#include <wtf/Span.h>
 
 namespace WebCore {
 
@@ -68,7 +68,7 @@ public:
     RefPtr<CSSValue> customPropertyValue(const AtomString& propertyName);
 
     // Helper methods for HTML editing.
-    Ref<MutableStyleProperties> copyProperties(Span<const CSSPropertyID>);
+    Ref<MutableStyleProperties> copyProperties(std::span<const CSSPropertyID>);
     Ref<MutableStyleProperties> copyProperties();
     RefPtr<CSSPrimitiveValue> getFontSizeCSSValuePreferringKeyword();
     bool useFixedFontDefaultSize();
@@ -102,6 +102,7 @@ private:
     Ref<CSSValue> getMaskShorthandValue();
     Ref<CSSValueList> getCSSPropertyValuesForGridShorthand(const StylePropertyShorthand&);
     Ref<CSSValue> fontVariantShorthandValue();
+    RefPtr<CSSValue> whiteSpaceShorthandValue(const RenderStyle&);
 
     RefPtr<Element> m_element;
     PseudoId m_pseudoElementSpecifier;

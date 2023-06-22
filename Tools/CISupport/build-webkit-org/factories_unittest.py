@@ -484,7 +484,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'builtins-generator-tests',
             'trigger-crash-log-submission'
         ],
-        'Apple-Monterey-Release-WK2-Accessibility-Isolated-Tree-Tests': [
+        'Apple-Ventura-Release-WK2-Accessibility-Isolated-Tree-Tests': [
             'configure-build',
             'configuration',
             'clean-and-update-working-directory',
@@ -1235,6 +1235,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'delete-stale-build-files',
             'download-built-product',
             'extract-built-product',
+            'wincairo-requirements',
             'jscore-test'
         ],
         'WinCairo-64-bit-Debug-Build': [
@@ -1309,6 +1310,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'delete-stale-build-files',
             'download-built-product',
             'extract-built-product',
+            'wincairo-requirements',
             'jscore-test'
         ],
         'PlayStation-Debug-Build': [
@@ -1562,6 +1564,88 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'delete-stale-build-files',
             'jhbuild',
             'compile-webkit'
+        ],
+        'WPE-Linux-ARM32-bit-Release-Debian-Stable-Build': [
+            'configure-build',
+            'configuration',
+            'clean-and-update-working-directory',
+            'checkout-specific-revision',
+            'show-identifier',
+            'kill-old-processes',
+            'delete-WebKitBuild-directory',
+            'delete-stale-build-files',
+            'compile-webkit'
+        ],
+        'WPE-Linux-ARM64-bit-Release-Debian-Stable-Build': [
+            'configure-build',
+            'configuration',
+            'clean-and-update-working-directory',
+            'checkout-specific-revision',
+            'show-identifier',
+            'kill-old-processes',
+            'delete-WebKitBuild-directory',
+            'delete-stale-build-files',
+            'compile-webkit'
+        ],
+        'WPE-Linux-RPi4-32bits-Mesa-Release-Perf-Build': [
+            'configure-build',
+            'configuration',
+            'clean-and-update-working-directory',
+            'checkout-specific-revision',
+            'show-identifier',
+            'kill-old-processes',
+            'delete-WebKitBuild-directory',
+            'delete-stale-build-files',
+            'compile-webkit',
+            'check-if-deployed-cross-target-image-is-updated',
+            'archive-built-product',
+            'upload-built-product',
+            'transfer-to-s3',
+            'trigger'
+        ],
+        'WPE-Linux-RPi4-64bits-Mesa-Release-Perf-Build': [
+            'configure-build',
+            'configuration',
+            'clean-and-update-working-directory',
+            'checkout-specific-revision',
+            'show-identifier',
+            'kill-old-processes',
+            'delete-WebKitBuild-directory',
+            'delete-stale-build-files',
+            'compile-webkit',
+            'check-if-deployed-cross-target-image-is-updated',
+            'archive-built-product',
+            'upload-built-product',
+            'transfer-to-s3',
+            'trigger'
+        ],
+        'WPE-Linux-RPi4-32bits-Mesa-Release-Perf-Tests': [
+            'configure-build',
+            'configuration',
+            'clean-and-update-working-directory',
+            'checkout-specific-revision',
+            'show-identifier',
+            'kill-old-processes',
+            'delete-WebKitBuild-directory',
+            'delete-stale-build-files',
+            'check-if-running-cross-target-image-is-updated',
+            'download-built-product',
+            'extract-built-product',
+            'benchmark-test'
+        ],
+        'WPE-Linux-RPi4-64bits-Mesa-Release-Perf-Tests': [
+            'configure-build',
+            'configuration',
+            'clean-and-update-working-directory',
+            'checkout-specific-revision',
+            'show-identifier',
+            'kill-old-processes',
+            'delete-WebKitBuild-directory',
+            'delete-stale-build-files',
+            'check-if-running-cross-target-image-is-updated',
+            'download-built-product',
+            'extract-built-product',
+            'benchmark-test'
         ],
     }
 

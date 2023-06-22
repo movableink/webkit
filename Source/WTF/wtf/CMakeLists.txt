@@ -235,6 +235,7 @@ set(WTF_PUBLIC_HEADERS
     RefCounter.h
     RefPtr.h
     RefVector.h
+    ReferenceWrapperVector.h
     ResourceUsage.h
     RetainPtr.h
     RobinHoodHashMap.h
@@ -261,7 +262,6 @@ set(WTF_PUBLIC_HEADERS
     SmallSet.h
     SoftLinking.h
     SortedArrayMap.h
-    Span.h
     SpanningTree.h
     Spectrum.h
     StackBounds.h
@@ -382,7 +382,6 @@ set(WTF_PUBLIC_HEADERS
     text/ExternalStringImpl.h
     text/IntegerToStringConversion.h
     text/LChar.h
-    text/LineBreakIteratorPoolICU.h
     text/LineEnding.h
     text/NullTextBreakIterator.h
     text/OrdinalNumber.h
@@ -546,7 +545,6 @@ set(WTF_SOURCES
     text/Base64.cpp
     text/CString.cpp
     text/ExternalStringImpl.cpp
-    text/LineBreakIteratorPoolICU.cpp
     text/LineEnding.cpp
     text/StringBuffer.cpp
     text/StringBuilder.cpp
@@ -573,6 +571,15 @@ set(WTF_SOURCES
     unicode/icu/CollatorICU.cpp
     unicode/icu/ICUHelpers.cpp
 )
+
+if (APPLE)
+    list(APPEND WTF_PUBLIC_HEADERS
+        darwin/OSLogPrintStream.h
+    )
+    list(APPEND WTF_SOURCES
+        darwin/OSLogPrintStream.mm
+    )
+endif ()
 
 set(WTF_PRIVATE_INCLUDE_DIRECTORIES
     "${CMAKE_BINARY_DIR}"

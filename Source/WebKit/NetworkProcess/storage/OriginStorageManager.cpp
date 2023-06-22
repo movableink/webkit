@@ -588,14 +588,10 @@ String OriginStorageManager::StorageBucket::resolvedCacheStoragePath()
         m_resolvedCacheStoragePath = m_customCacheStoragePath;
         break;
     case UnifiedOriginStorageLevel::Standard:
-        auto cacheStorageDirectory = typeStoragePath(StorageType::CacheStorage);
-        RELEASE_LOG(Storage, "%p - StorageBucket::resolvedCacheStoragePath New path '%" PUBLIC_LOG_STRING "'", this, cacheStorageDirectory.utf8().data());
-        if (cacheStorageDirectory.isEmpty() || m_customCacheStoragePath.isEmpty() || !FileSystem::fileExists(m_customCacheStoragePath))
-            m_resolvedCacheStoragePath = emptyString();
-        else {
-            if (!FileSystem::fileExists(cacheStorageDirectory))
-                FileSystem::moveFile(m_customCacheStoragePath, cacheStorageDirectory);
-            m_resolvedCacheStoragePath = cacheStorageDirectory;
+        m_resolvedCacheStoragePath = typeStoragePath(StorageType::CacheStorage);
+        if (!m_resolvedCacheStoragePath.isEmpty() && !m_customCacheStoragePath.isEmpty() && !FileSystem::fileExists(m_resolvedCacheStoragePath) && FileSystem::fileExists(m_customCacheStoragePath)) {
+            RELEASE_LOG(Storage, "%p - StorageBucket::resolvedCacheStoragePath New path '%" PUBLIC_LOG_STRING "'", this, m_resolvedCacheStoragePath.utf8().data());
+            FileSystem::moveFile(m_customCacheStoragePath, m_resolvedCacheStoragePath);
         }
     }
 
@@ -664,10 +660,10 @@ Ref<OriginQuotaManager> OriginStorageManager::createQuotaManager()
         }
         return IDBStorageManager::idbStorageSize(idbStoragePath) + CacheStorageManager::cacheStorageSize(cacheStoragePath) + fileSystemStorageSize;
     };
-    return OriginQuotaManager::create(m_quota, m_standardReportedQuota, WTFMove(getUsageFunction), std::exchange(m_increaseQuotaFunction, { }), std::exchange(m_notifyUsageUpdateFunction, { }));
+    return OriginQuotaManager::create(m_quota, m_standardReportedQuota, WTFMove(getUsageFunction), std::exchange(m_increaseQuotaFunction, { }), std::exchange(m_notifySpaceGrantedFunction, { }));
 }
 
-OriginStorageManager::OriginStorageManager(uint64_t quota, uint64_t standardReportedQuota, OriginQuotaManager::IncreaseQuotaFunction&& increaseQuotaFunction, OriginQuotaManager::NotifyUsageUpdateFunction&& notifyUsageUpdateFunction, String&& path, String&& customLocalStoragePath, String&& customIDBStoragePath, String&& customCacheStoragePath, UnifiedOriginStorageLevel level)
+OriginStorageManager::OriginStorageManager(uint64_t quota, uint64_t standardReportedQuota, OriginQuotaManager::IncreaseQuotaFunction&& increaseQuotaFunction, OriginQuotaManager::NotifySpaceGrantedFunction&& notifySpaceGrantedFunction, String&& path, String&& customLocalStoragePath, String&& customIDBStoragePath, String&& customCacheStoragePath, UnifiedOriginStorageLevel level)
     : m_path(WTFMove(path))
     , m_customLocalStoragePath(WTFMove(customLocalStoragePath))
     , m_customIDBStoragePath(WTFMove(customIDBStoragePath))
@@ -675,7 +671,7 @@ OriginStorageManager::OriginStorageManager(uint64_t quota, uint64_t standardRepo
     , m_quota(quota)
     , m_standardReportedQuota(standardReportedQuota)
     , m_increaseQuotaFunction(WTFMove(increaseQuotaFunction))
-    , m_notifyUsageUpdateFunction(WTFMove(notifyUsageUpdateFunction))
+    , m_notifySpaceGrantedFunction(WTFMove(notifySpaceGrantedFunction))
     , m_level(level)
 {
     ASSERT(!RunLoop::isMain());
@@ -815,14 +811,6 @@ bool OriginStorageManager::hasDataInMemory()
 bool OriginStorageManager::isEmpty()
 {
     return defaultBucket().isEmpty();
-}
-
-void OriginStorageManager::setPersisted(bool value)
-{
-    ASSERT(!RunLoop::isMain());
-
-    m_persisted = value;
-    defaultBucket().setMode(value ? StorageBucketMode::Persistent : StorageBucketMode::BestEffort);
 }
 
 WebCore::StorageEstimate OriginStorageManager::estimate()

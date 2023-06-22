@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include <wtf/Span.h>
+#include <span>
 
 namespace IPC {
 
-using DataReference = Span<const uint8_t>;
+using DataReference = std::span<const uint8_t>;
 
 } // namespace IPC

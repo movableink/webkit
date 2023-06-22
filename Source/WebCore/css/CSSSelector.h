@@ -56,9 +56,6 @@ struct PossiblyQuotedIdentifier {
         // Re-create selector text from selector's data.
         String selectorText(StringView separator = { }, StringView rightSide = { }) const;
 
-        // Check if the 2 selectors (including sub selectors) agree.
-        bool operator==(const CSSSelector&) const;
-
         unsigned computeSpecificity() const;
         std::array<uint8_t, 3> computeSpecificityTuple() const;
         unsigned specificityForPage() const;
@@ -131,6 +128,7 @@ struct PossiblyQuotedIdentifier {
             PseudoClassFullPageMedia,
             PseudoClassDefault,
             PseudoClassDisabled,
+            PseudoClassHtmlDocument, // for internal use only with forms in table case in UA stylesheet
             PseudoClassIs,
             PseudoClassMatches, // obsolete synonym for PseudoClassIs
             PseudoClassWhere,
@@ -382,8 +380,6 @@ struct PossiblyQuotedIdentifier {
 
 inline bool operator==(const AtomString& a, const PossiblyQuotedIdentifier& b) { return a == b.identifier; }
 inline bool operator==(const PossiblyQuotedIdentifier& a, const AtomString& b) { return a.identifier == b; }
-inline bool operator!=(const AtomString& a, const PossiblyQuotedIdentifier& b) { return a != b.identifier; }
-inline bool operator!=(const PossiblyQuotedIdentifier& a, const AtomString& b) { return a.identifier != b; }
 
 inline const QualifiedName& CSSSelector::attribute() const
 {

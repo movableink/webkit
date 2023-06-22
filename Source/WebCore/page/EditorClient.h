@@ -33,6 +33,7 @@
 #include "UndoStep.h"
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -54,7 +55,7 @@ struct GapRects;
 struct GrammarDetail;
 struct SimpleRange;
 
-class EditorClient {
+class EditorClient : public CanMakeWeakPtr<EditorClient> {
 public:
     virtual ~EditorClient() = default;
 
@@ -154,8 +155,6 @@ public:
     virtual void uppercaseWord() = 0;
     virtual void lowercaseWord() = 0;
     virtual void capitalizeWord() = 0;
-
-    virtual void setCaretDecorationVisibility(bool) = 0;
 #endif
 
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)

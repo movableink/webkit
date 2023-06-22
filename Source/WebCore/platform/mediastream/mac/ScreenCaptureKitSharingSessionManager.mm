@@ -42,6 +42,14 @@
 
 using namespace WebCore;
 
+typedef NS_OPTIONS(NSUInteger, WKSCContentSharingPickerMode) {
+    WKSCContentSharingPickerModeSingleWindow          = 1 << 0,
+    WKSCContentSharingPickerModeMultipleWindows       = 1 << 1,
+    WKSCContentSharingPickerModeSingleApplication     = 1 << 2,
+    WKSCContentSharingPickerModeMultipleApplications  = 1 << 3,
+    WKSCContentSharingPickerModeSingleDisplay         = 1 << 4
+};
+
 @protocol WKSCContentSharingPickerDelegate <NSObject>
 @required
 - (void)contentSharingPicker:(SCContentSharingPicker *)picker didUpdateWithFilter:(SCContentFilter *)filter forStream:(SCStream *)stream;
@@ -169,7 +177,7 @@ namespace WebCore {
 bool ScreenCaptureKitSharingSessionManager::isAvailable()
 {
 #if HAVE(SC_CONTENT_SHARING_PICKER)
-    if (PAL::getSCContentSharingPickerClass())
+    if (PAL::getSCContentSharingPickerClass() && PAL::getSCContentSharingPickerConfigurationClass())
         return true;
 #endif
 
@@ -410,21 +418,32 @@ bool ScreenCaptureKitSharingSessionManager::promptWithSCContentSharingSession(Di
 
 bool ScreenCaptureKitSharingSessionManager::promptWithSCContentSharingPicker(DisplayCapturePromptType promptType)
 {
-    UNUSED_PARAM(promptType);
-
 #if HAVE(SC_CONTENT_SHARING_PICKER)
     ASSERT(useSCContentSharingPicker());
 
-    SCContentSharingPicker* picker = [PAL::getSCContentSharingPickerClass() sharedPicker];
-    picker.excludedPickingModes = SCContentSharingPickerModeMultipleWindows | SCContentSharingPickerModeApplicationWindows;
-    picker.active = YES;
-    picker.delegate = (id<SCContentSharingPickerDelegate> _Nullable)m_promptHelper.get();
-    picker.maxStreamCount = @(1);
+    auto configuration = adoptNS([PAL::allocSCContentSharingPickerConfigurationInstance() init]);
+    switch (promptType) {
+    case DisplayCapturePromptType::Window:
+        [configuration setAllowedPickingModes:(SCContentSharingPickerMode)WKSCContentSharingPickerModeSingleWindow];
+        break;
+    case DisplayCapturePromptType::Screen:
+        [configuration setAllowedPickingModes:(SCContentSharingPickerMode)WKSCContentSharingPickerModeSingleDisplay];
+        break;
+    case DisplayCapturePromptType::UserChoose:
+        [configuration setAllowedPickingModes:(SCContentSharingPickerMode)(WKSCContentSharingPickerModeSingleWindow | WKSCContentSharingPickerModeSingleDisplay)];
+        break;
+    }
 
-    [picker startPickingContentForStream:nil withFilter:nil];
+    SCContentSharingPicker* picker = [PAL::getSCContentSharingPickerClass() sharedPicker];
+    picker.active = YES;
+    picker.maxStreamCount = @(1);
+    picker.configuration = configuration.get();
+    picker.delegate = (id<SCContentSharingPickerDelegate> _Nullable)m_promptHelper.get();
+    [picker present];
 
     return true;
 #else
+    UNUSED_PARAM(promptType);
     return false;
 #endif
 }

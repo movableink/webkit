@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 #import "FontInfo.h"
 #import "FrameInfoData.h"
 #import "InjectedBundleHitTestResult.h"
+#import "LaunchServicesDatabaseManager.h"
 #import "PDFPlugin.h"
 #import "PageBanner.h"
 #import "PluginView.h"
@@ -97,6 +98,7 @@
 #import <WebCore/ThemeMac.h>
 #import <WebCore/VisibleUnits.h>
 #import <WebCore/WindowsKeyboardCodes.h>
+#import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <pal/spi/cocoa/NSAccessibilitySPI.h>
 #import <pal/spi/mac/NSApplicationSPI.h>
 #import <wtf/SetForScope.h>
@@ -115,6 +117,9 @@ using namespace WebCore;
 
 void WebPage::platformInitializeAccessibility()
 {
+    // For performance reasons, we should have received the LS database before initializing NSApplication.
+    ASSERT(LaunchServicesDatabaseManager::singleton().hasReceivedLaunchServicesDatabase());
+
     // Need to initialize accessibility for VoiceOver to work when the WebContent process is using NSRunLoop.
     // Currently, it is also needed to allocate and initialize an NSApplication object.
     [NSApplication _accessibilityInitialize];
@@ -131,6 +136,15 @@ void WebPage::platformInitializeAccessibility()
     m_mockAccessibilityElement = WTFMove(mockAccessibilityElement);
 
     accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
+
+    // Close Mach connection to Launch Services.
+#if HAVE(HAVE_LS_SERVER_CONNECTION_STATUS_RELEASE_NOTIFICATIONS_MASK)
+    _LSSetApplicationLaunchServicesServerConnectionStatus(kLSServerConnectionStatusDoNotConnectToServerMask | kLSServerConnectionStatusReleaseNotificationsMask, nullptr);
+#else
+    _LSSetApplicationLaunchServicesServerConnectionStatus(kLSServerConnectionStatusDoNotConnectToServerMask, nullptr);
+#endif
+
+    WebProcess::singleton().revokeLaunchServicesSandboxExtension();
 }
 
 void WebPage::platformReinitialize()
@@ -516,6 +530,23 @@ WKAccessibilityWebPageObject* WebPage::accessibilityRemoteObject()
     return m_mockAccessibilityElement.get();
 }
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+void WebPage::cacheAXPosition(const WebCore::FloatPoint& point)
+{
+    [m_mockAccessibilityElement setPosition:point];
+}
+
+void WebPage::cacheAXSize(const WebCore::IntSize& size)
+{
+    [m_mockAccessibilityElement setSize:size];
+}
+
+void WebPage::setAXIsolatedTreeRoot(WebCore::AXCoreObject* root)
+{
+    [m_mockAccessibilityElement setIsolatedTreeRoot:root];
+}
+#endif
+
 bool WebPage::platformCanHandleRequest(const WebCore::ResourceRequest& request)
 {
     if ([NSURLConnection canHandleRequest:request.nsURLRequest(HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody)])
@@ -566,7 +597,7 @@ void WebPage::requestAcceptsFirstMouse(int eventNumber, const WebKit::WebMouseEv
 
 void WebPage::setTopOverhangImage(WebImage* image)
 {
-    auto* frameView = m_mainFrame->coreFrame()->view();
+    auto* frameView = m_mainFrame->coreLocalFrame()->view();
     if (!frameView)
         return;
 
@@ -585,7 +616,7 @@ void WebPage::setTopOverhangImage(WebImage* image)
 
 void WebPage::setBottomOverhangImage(WebImage* image)
 {
-    auto* frameView = m_mainFrame->coreFrame()->view();
+    auto* frameView = m_mainFrame->coreLocalFrame()->view();
     if (!frameView)
         return;
 
@@ -624,7 +655,7 @@ void WebPage::computePagesForPrintingPDFDocument(WebCore::FrameIdentifier frameI
 {
     ASSERT(resultPageRects.isEmpty());
     WebFrame* frame = WebProcess::singleton().webFrame(frameID);
-    auto* coreFrame = frame ? frame->coreFrame() : nullptr;
+    auto* coreFrame = frame ? frame->coreLocalFrame() : nullptr;
     RetainPtr<PDFDocument> pdfDocument = coreFrame ? pdfDocumentForPrintingFrame(coreFrame) : 0;
     if ([pdfDocument allowsPrinting]) {
         NSUInteger pageCount = [pdfDocument pageCount];
@@ -678,9 +709,9 @@ static void drawPDFPage(PDFDocument *pdfDocument, CFIndex pageIndex, CGContextRe
 
     [NSGraphicsContext saveGraphicsState];
     [NSGraphicsContext setCurrentContext:[NSGraphicsContext graphicsContextWithCGContext:context flipped:NO]];
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [pdfPage drawWithBox:kPDFDisplayBoxCropBox];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
     [NSGraphicsContext restoreGraphicsState];
 
     CGAffineTransform transform = CGContextGetCTM(context);
@@ -689,9 +720,9 @@ static void drawPDFPage(PDFDocument *pdfDocument, CFIndex pageIndex, CGContextRe
         if (![annotation isKindOfClass:getPDFAnnotationLinkClass()])
             continue;
 
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         PDFAnnotationLink *linkAnnotation = (PDFAnnotationLink *)annotation;
-        ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
         NSURL *url = [linkAnnotation URL];
         if (!url)
             continue;

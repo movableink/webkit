@@ -26,10 +26,13 @@
 #include "config.h"
 #include "RenderLayoutState.h"
 
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderMultiColumnFlow.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include <wtf/WeakPtr.h>
 
@@ -42,6 +45,7 @@ RenderLayoutState::RenderLayoutState(RenderElement& renderer, IsPaginated isPagi
 #if ASSERT_ENABLED
     , m_layoutDeltaXSaturated(false)
     , m_layoutDeltaYSaturated(false)
+    , m_blockStartTrimming(Vector<bool>(0))
     , m_renderer(&renderer)
 #endif
 {
@@ -62,7 +66,7 @@ RenderLayoutState::RenderLayoutState(RenderElement& renderer, IsPaginated isPagi
     }
 }
 
-RenderLayoutState::RenderLayoutState(const LocalFrameViewLayoutContext::LayoutStateStack& layoutStateStack, RenderBox& renderer, const LayoutSize& offset, LayoutUnit pageLogicalHeight, bool pageLogicalHeightChanged, std::optional<size_t> maximumLineCountForLineClamp, std::optional<size_t> visibleLineCountForLineClamp, std::optional<LeadingTrim> leadingTrim)
+RenderLayoutState::RenderLayoutState(const LocalFrameViewLayoutContext::LayoutStateStack& layoutStateStack, RenderBox& renderer, const LayoutSize& offset, LayoutUnit pageLogicalHeight, bool pageLogicalHeightChanged, std::optional<LineClamp> lineClamp, std::optional<TextBoxTrim> textBoxTrim)
     : m_clipped(false)
     , m_isPaginated(false)
     , m_pageLogicalHeightChanged(false)
@@ -70,9 +74,9 @@ RenderLayoutState::RenderLayoutState(const LocalFrameViewLayoutContext::LayoutSt
     , m_layoutDeltaXSaturated(false)
     , m_layoutDeltaYSaturated(false)
 #endif
-    , m_maximumLineCountForLineClamp(maximumLineCountForLineClamp)
-    , m_visibleLineCountForLineClamp(visibleLineCountForLineClamp)
-    , m_leadingTrim(leadingTrim)
+    , m_blockStartTrimming(Vector<bool>(0))
+    , m_lineClamp(lineClamp)
+    , m_textBoxTrim(textBoxTrim)
 #if ASSERT_ENABLED
     , m_renderer(&renderer)
 #endif

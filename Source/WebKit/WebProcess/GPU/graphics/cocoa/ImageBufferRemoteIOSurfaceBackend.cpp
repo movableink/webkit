@@ -28,14 +28,37 @@
 
 #if HAVE(IOSURFACE)
 
+#include "Logging.h"
 #include <WebCore/GraphicsContextCG.h>
 #include <WebCore/ImageBufferIOSurfaceBackend.h>
 #include <WebCore/PixelBuffer.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebKit {
 using namespace WebCore;
+
+static TextStream& operator<<(TextStream& ts, const ImageBufferBackendHandle& handle)
+{
+    WTF::switchOn(handle,
+        [&] (const ShareableBitmap::Handle& handle) {
+            if (handle.isNull())
+                ts << "null";
+            else
+                ts << "ShareableBitmap::Handle " << &handle;
+        },
+        [&] (const MachSendRight& machSendRight) {
+            ts << "MachSendRight " << machSendRight.sendRight();
+        }
+#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+        , [&] (const CGDisplayList& handle) {
+            ts << "CGDisplayList handle " << &handle;
+        }
+#endif
+    );
+    return ts;
+}
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(ImageBufferRemoteIOSurfaceBackend);
 
@@ -117,16 +140,23 @@ RefPtr<NativeImage> ImageBufferRemoteIOSurfaceBackend::copyNativeImage(BackingSt
     return { };
 }
 
-RefPtr<PixelBuffer> ImageBufferRemoteIOSurfaceBackend::getPixelBuffer(const PixelBufferFormat&, const IntRect&, const ImageBufferAllocator&)
+void ImageBufferRemoteIOSurfaceBackend::getPixelBuffer(const IntRect&, PixelBuffer&)
 {
     RELEASE_ASSERT_NOT_REACHED();
-    return nullptr;
 }
 
 void ImageBufferRemoteIOSurfaceBackend::putPixelBuffer(const PixelBuffer&, const IntRect&, const IntPoint&, AlphaPremultiplication)
 {
     RELEASE_ASSERT_NOT_REACHED();
 }
+
+String ImageBufferRemoteIOSurfaceBackend::debugDescription() const
+{
+    TextStream stream;
+    stream << "ImageBufferRemoteIOSurfaceBackend " << this << " handle " << m_handle << " " << m_volatilityState;
+    return stream.release();
+}
+
 
 } // namespace WebKit
 

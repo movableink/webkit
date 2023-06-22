@@ -494,10 +494,10 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
 
     JSValue parsedObject;
     if (s.is8Bit()) {
-        LiteralParser<LChar> preparser(globalObject, s.characters8(), s.length(), NonStrictJSON, nullptr);
+        LiteralParser<LChar> preparser(globalObject, s.characters8(), s.length(), SloppyJSON, nullptr);
         parsedObject = preparser.tryLiteralParse();
     } else {
-        LiteralParser<UChar> preparser(globalObject, s.characters16(), s.length(), NonStrictJSON, nullptr);
+        LiteralParser<UChar> preparser(globalObject, s.characters16(), s.length(), SloppyJSON, nullptr);
         parsedObject = preparser.tryLiteralParse();
     }
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -518,9 +518,13 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncParseInt, (JSGlobalObject* globalObject, Call
     JSValue value = callFrame->argument(0);
     JSValue radixValue = callFrame->argument(1);
 
-    if (value.isNumber() && radixValue.isUndefinedOrNull()) {
-        if (auto result = parseIntDouble(value.asNumber()))
-            return JSValue::encode(jsNumber(result.value()));
+    if (value.isNumber()) {
+        if (radixValue.isUndefinedOrNull() || (radixValue.isInt32() && radixValue.asInt32() == 10)) {
+            if (value.isInt32())
+                return JSValue::encode(value);
+            if (auto result = parseIntDouble(value.asDouble()))
+                return JSValue::encode(jsNumber(result.value()));
+        }
     }
 
     // If ToString throws, we shouldn't call ToInt32.
@@ -534,7 +538,16 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncParseFloat, (JSGlobalObject* globalObject, Ca
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* jsString = callFrame->argument(0).toString(globalObject);
+    JSValue value = callFrame->argument(0);
+    if (value.isNumber()) {
+        if (value.isInt32())
+            return JSValue::encode(value);
+        if (value.asDouble() == 0.0) // Makes -0.0 to 0.0 too.
+            return JSValue::encode(jsNumber(0.0));
+        return JSValue::encode(value);
+    }
+
+    auto* jsString = value.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     auto viewWithString = jsString->viewWithUnderlyingString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -1035,33 +1048,28 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncHandleProxyGetTrapResult, (JSGlobalObject* gl
     return JSValue::encode(jsUndefined());
 }
 
-static ALWAYS_INLINE EncodedJSValue globalFuncHandleProxySetTrapResult(JSGlobalObject* globalObject, CallFrame* callFrame, ECMAMode ecmaMode)
+JSC_DEFINE_HOST_FUNCTION(globalFuncHandlePositiveProxySetTrapResult, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue trapResult = callFrame->uncheckedArgument(0);
-    JSObject* target = asObject(callFrame->uncheckedArgument(1));
+    JSObject* target = asObject(callFrame->uncheckedArgument(0));
 
-    Identifier propertyName = callFrame->uncheckedArgument(2).toPropertyKey(globalObject);
+    Identifier propertyName = callFrame->uncheckedArgument(1).toPropertyKey(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    JSValue putValue = callFrame->uncheckedArgument(3);
+    JSValue putValue = callFrame->uncheckedArgument(2);
 
     scope.release();
-    ProxyObject::validateSetTrapResult(globalObject, trapResult, target, propertyName, putValue, ecmaMode.isStrict());
+    ProxyObject::validatePositiveSetTrapResult(globalObject, target, propertyName, putValue);
 
     return JSValue::encode(jsUndefined());
 }
 
-JSC_DEFINE_HOST_FUNCTION(globalFuncHandleProxySetTrapResultSloppy, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(globalFuncIsNaN, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    return globalFuncHandleProxySetTrapResult(globalObject, callFrame, ECMAMode::sloppy());
-}
-
-JSC_DEFINE_HOST_FUNCTION(globalFuncHandleProxySetTrapResultStrict, (JSGlobalObject* globalObject, CallFrame* callFrame))
-{
-    return globalFuncHandleProxySetTrapResult(globalObject, callFrame, ECMAMode::strict());
+    JSValue argument = callFrame->argument(0);
+    return JSValue::encode(jsBoolean(std::isnan(argument.toNumber(globalObject))));
 }
 
 } // namespace JSC

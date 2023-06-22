@@ -27,11 +27,31 @@
 
 #include "WebGPUObjectDescriptorBase.h"
 #include "WebGPUPredefinedColorSpace.h"
+#include <wtf/Vector.h>
+
+#if ENABLE(VIDEO) && PLATFORM(COCOA)
+typedef struct __CVBuffer* CVPixelBufferRef;
+#endif
 
 namespace PAL::WebGPU {
 
+struct HTMLVideoElementIdentifier {
+    uint64_t identifier;
+};
+struct WebCodecsVideoFrameIdentifier {
+    std::pair<uint64_t, uint64_t> identifier;
+};
+
+using VideoSourceIdentifier = std::variant<HTMLVideoElementIdentifier, WebCodecsVideoFrameIdentifier>;
+
 struct ExternalTextureDescriptor : public ObjectDescriptorBase {
+    VideoSourceIdentifier mediaIdentifier;
     PredefinedColorSpace colorSpace { PredefinedColorSpace::SRGB };
+#if ENABLE(VIDEO) && PLATFORM(COCOA)
+    RetainPtr<CVPixelBufferRef> pixelBuffer { nullptr };
+#else
+    void *pixelBuffer { nullptr };
+#endif
 };
 
 } // namespace PAL::WebGPU

@@ -29,6 +29,7 @@
 #if ENABLE(DRAG_SUPPORT)
 
 #include "ArgumentCodersGtk.h"
+#include "MessageSenderInlines.h"
 #include "ShareableBitmap.h"
 #include "WebPage.h"
 #include "WebPageProxyMessages.h"
@@ -66,7 +67,7 @@ void WebDragClient::startDrag(DragItem item, DataTransfer& dataTransfer, LocalFr
 {
     auto& dragImage = item.image;
     RefPtr<ShareableBitmap> bitmap = convertCairoSurfaceToShareableBitmap(dragImage.get().get());
-    ShareableBitmapHandle handle;
+    ShareableBitmap::Handle handle;
 
     if (bitmap) {
         if (auto imageHandle = bitmap->createHandle())
@@ -79,7 +80,7 @@ void WebDragClient::startDrag(DragItem item, DataTransfer& dataTransfer, LocalFr
 
     m_page->willStartDrag();
 
-    m_page->send(Messages::WebPageProxy::StartDrag(dataTransfer.pasteboard().selectionData(), dataTransfer.sourceOperationMask(), handle, dataTransfer.dragLocation()));
+    m_page->send(Messages::WebPageProxy::StartDrag(dataTransfer.pasteboard().selectionData(), dataTransfer.sourceOperationMask(), WTFMove(handle), dataTransfer.dragLocation()));
 }
 
 }; // namespace WebKit.

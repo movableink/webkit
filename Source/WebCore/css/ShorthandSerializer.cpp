@@ -56,7 +56,6 @@ private:
     struct LonghandIteratorBase {
         void operator++() { ++index; }
         bool operator==(std::nullptr_t) const { return index >= serializer.length(); }
-        bool operator!=(std::nullptr_t) const { return !(*this == nullptr); }
         const ShorthandSerializer& serializer;
         unsigned index { 0 };
     };
@@ -122,6 +121,7 @@ private:
     String serializeGridTemplate() const;
     String serializeOffset() const;
     String serializePageBreak() const;
+    String serializeWhiteSpace() const;
 
     StylePropertyShorthand m_shorthand;
     RefPtr<CSSValue> m_longhandValues[maxShorthandLength];
@@ -383,6 +383,8 @@ String ShorthandSerializer::serialize()
     case CSSPropertyWebkitColumnBreakAfter:
     case CSSPropertyWebkitColumnBreakBefore:
         return serializeColumnBreak();
+    case CSSPropertyWhiteSpace:
+        return serializeWhiteSpace();
     default:
         ASSERT_NOT_REACHED();
         return String();
@@ -598,6 +600,29 @@ String ShorthandSerializer::serializeLayered() const
                 }
             }
 
+            // A single background-position value (identifier or numeric) sets the other value to center.
+            // A single mask-position value (identifier or numeric) sets the other value to center.
+            // Order matters when one is numeric, but not when both are identifiers.
+            if (longhand == CSSPropertyBackgroundPositionY || longhand == CSSPropertyWebkitMaskPositionY) {
+                // The previous property is X.
+                ASSERT(j >= 1);
+                ASSERT(longhandProperty(j - 1) == CSSPropertyBackgroundPositionX || longhandProperty(j - 1) == CSSPropertyWebkitMaskPositionX);
+                if (layerValues.valueID(j - 1) == CSSValueCenter && layerValues.isValueID(j)) {
+                    layerValues.skip(j - 1) = true;
+                    layerValues.skip(j) = false;
+                } else if (layerValues.valueID(j) == CSSValueCenter && !layerValues.isPair(j - 1)) {
+                    layerValues.skip(j - 1) = false;
+                    layerValues.skip(j) = true;
+                } else if (length() == 2) {
+                    ASSERT(j == 1);
+                    layerValues.skip(0) = false;
+                    layerValues.skip(1) = false;
+                } else {
+                    if (!layerValues.skip(j - 1))
+                        layerValues.skip(j) = false;
+                }
+            }
+
             if (layerValues.skip(j))
                 continue;
 
@@ -612,22 +637,6 @@ String ShorthandSerializer::serializeLayered() const
                     || longhandProperty(j - 1) == CSSPropertyWebkitMaskPositionY);
                 layerValues.skip(j - 2) = false;
                 layerValues.skip(j - 1) = false;
-            }
-
-            // A single background-position value (identifier or numeric) sets the other value to center.
-            // A single mask-position value (identifier or numeric) sets the other value to center.
-            // Order matters when one is numeric, but not when both are identifiers.
-            if (longhand == CSSPropertyBackgroundPositionY || longhand == CSSPropertyWebkitMaskPositionY) {
-                // The previous property is X.
-                ASSERT(j >= 1);
-                ASSERT(longhandProperty(j - 1) == CSSPropertyBackgroundPositionX
-                    || longhandProperty(j - 1) == CSSPropertyWebkitMaskPositionX);
-                if (layerValues.valueID(j - 1) == CSSValueCenter && layerValues.isValueID(j))
-                    layerValues.skip(j - 1) = true;
-                else if (layerValues.valueID(j) == CSSValueCenter && !layerValues.isPair(j - 1)) {
-                    layerValues.skip(j - 1) = false;
-                    layerValues.skip(j) = true;
-                }
             }
 
             // The first value in each animation shorthand that can be parsed as a time is assigned to
@@ -1156,6 +1165,26 @@ String ShorthandSerializer::serializePageBreak() const
     default:
         return String();
     }
+}
+
+String ShorthandSerializer::serializeWhiteSpace() const
+{
+    auto whiteSpaceCollapse = longhandValueID(0);
+    auto textWrap = longhandValueID(1);
+    if (whiteSpaceCollapse == CSSValueBreakSpaces && textWrap == CSSValueWrap)
+        return nameString(CSSValueBreakSpaces);
+    if (whiteSpaceCollapse == CSSValueCollapse && textWrap == CSSValueWrap)
+        return nameString(CSSValueNormal);
+    if (whiteSpaceCollapse == CSSValueCollapse && textWrap == CSSValueNowrap)
+        return nameString(CSSValueNowrap);
+    if (whiteSpaceCollapse == CSSValuePreserve && textWrap == CSSValueNowrap)
+        return nameString(CSSValuePre);
+    if (whiteSpaceCollapse == CSSValuePreserveBreaks && textWrap == CSSValueWrap)
+        return nameString(CSSValuePreLine);
+    if (whiteSpaceCollapse == CSSValuePreserve && textWrap == CSSValueWrap)
+        return nameString(CSSValuePreWrap);
+
+    return String();
 }
 
 String serializeShorthandValue(const StyleProperties& properties, CSSPropertyID shorthand)

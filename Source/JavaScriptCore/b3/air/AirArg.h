@@ -781,11 +781,6 @@ public:
             && m_scale == other.m_scale;
     }
 
-    bool operator!=(const Arg& other) const
-    {
-        return !(*this == other);
-    }
-
     explicit operator bool() const { return *this != Arg(); }
 
     Kind kind() const
@@ -1274,8 +1269,14 @@ public:
     {
         if (isX86())
             return B3::isRepresentableAs<int32_t>(value);
-        if (isARM64())
-            return isUInt12(value);
+        if (isARM64()) {
+            if (isUInt12(value) || isUInt12(toTwosComplement(value)))
+                return true;
+            int64_t shifted = value >> 12;
+            if ((shifted << 12) == value)
+                return isUInt12(shifted) || isUInt12(toTwosComplement(shifted));
+            return false;
+        }
         if (isARM_THUMB2())
             return isValidARMThumb2Immediate(value);
         return false;

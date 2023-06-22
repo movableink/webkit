@@ -29,6 +29,7 @@
 #include "DocumentInlines.h"
 #include "HTMLFrameOwnerElement.h"
 #include "LocalFrame.h"
+#include "NavigationScheduler.h"
 #include "Page.h"
 #include "RemoteFrame.h"
 #include "WindowProxy.h"
@@ -44,6 +45,7 @@ Frame::Frame(Page& page, FrameIdentifier frameID, FrameType frameType, HTMLFrame
     , m_mainFrame(parent ? page.mainFrame() : *this)
     , m_settings(page.settings())
     , m_frameType(frameType)
+    , m_navigationScheduler(makeUniqueRef<NavigationScheduler>(*this))
 {
     if (parent)
         parent->tree().appendChild(*this);
@@ -52,6 +54,14 @@ Frame::Frame(Page& page, FrameIdentifier frameID, FrameType frameType, HTMLFrame
 Frame::~Frame()
 {
     m_windowProxy->detachFromFrame();
+    m_navigationScheduler->cancel();
+}
+
+std::optional<PageIdentifier> Frame::pageID() const
+{
+    if (auto* page = this->page())
+        return page->identifier();
+    return std::nullopt;
 }
 
 bool Frame::isRootFrame() const
@@ -73,6 +83,7 @@ bool Frame::isRootFrame() const
 
 void Frame::resetWindowProxy()
 {
+    ASSERT(m_windowProxy->frame() == this);
     m_windowProxy->detachFromFrame();
     m_windowProxy = WindowProxy::create(*this);
 }
@@ -92,6 +103,14 @@ void Frame::disconnectOwnerElement()
     // FIXME: This is a layering violation. Move this code so Frame doesn't do anything with its Document.
     if (auto* document = is<LocalFrame>(*this) ? downcast<LocalFrame>(*this).document() : nullptr)
         document->frameWasDisconnectedFromOwner();
+}
+
+void Frame::takeWindowProxyFrom(Frame& frame)
+{
+    ASSERT(m_windowProxy->frame() == this);
+    m_windowProxy->detachFromFrame();
+    m_windowProxy = frame.windowProxy();
+    m_windowProxy->replaceFrame(*this);
 }
 
 } // namespace WebCore

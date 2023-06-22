@@ -117,6 +117,8 @@ enum class TapHandlingResult : uint8_t;
 
 - (void)_showPasswordViewWithDocumentName:(NSString *)documentName passwordHandler:(void (^)(NSString *))passwordHandler;
 - (void)_hidePasswordView;
+- (void)_didRequestPasswordForDocument;
+- (void)_didStopRequestingPasswordForDocument;
 
 - (void)_addShortcut:(id)sender;
 - (void)_define:(id)sender;
@@ -144,7 +146,7 @@ enum class TapHandlingResult : uint8_t;
 
 - (void)_incrementFocusPreservationCount;
 - (void)_decrementFocusPreservationCount;
-- (void)_resetFocusPreservationCount;
+- (NSUInteger)_resetFocusPreservationCount;
 
 - (void)_setOpaqueInternal:(BOOL)opaque;
 - (NSString *)_contentSizeCategory;
@@ -167,6 +169,8 @@ enum class TapHandlingResult : uint8_t;
 #if HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING)
 - (void)_scrollView:(UIScrollView *)scrollView asynchronouslyHandleScrollEvent:(UIScrollEvent *)scrollEvent completion:(void (^)(BOOL handled))completion;
 #endif
+
+- (UIColor *)_insertionPointColor;
 
 @property (nonatomic, readonly) WKPasswordView *_passwordView;
 @property (nonatomic, readonly) WKWebViewContentProviderRegistry *_contentProviderRegistry;

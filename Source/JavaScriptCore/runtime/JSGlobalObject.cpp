@@ -347,10 +347,14 @@ static JSValue createConsoleProperty(VM& vm, JSObject* object)
 
 // FIXME: use a bytecode or intrinsic for creating a private symbol.
 // https://bugs.webkit.org/show_bug.cgi?id=212782
-JSC_DEFINE_HOST_FUNCTION(createPrivateSymbol, (JSGlobalObject* globalObject, CallFrame*))
+JSC_DEFINE_HOST_FUNCTION(createPrivateSymbol, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
-    return JSValue::encode(Symbol::create(vm, PrivateSymbolImpl::createNullSymbol().get()));
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    auto description = callFrame->argument(0).toWTFString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    return JSValue::encode(Symbol::create(vm, PrivateSymbolImpl::create(*description.impl()).get()));
 }
 
 JSC_DEFINE_HOST_FUNCTION(jsonParse, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -558,7 +562,7 @@ const GlobalObjectMethodTable* JSGlobalObject::baseGlobalObjectMethodTable()
 
 /* Source for JSGlobalObject.lut.h
 @begin globalObjectTable
-  isNaN                 JSBuiltin                                    DontEnum|Function 1
+  isNaN                 globalFuncIsNaN                              DontEnum|Function 1         GlobalIsNaNIntrinsic
   isFinite              JSBuiltin                                    DontEnum|Function 1
   escape                globalFuncEscape                             DontEnum|Function 1
   unescape              globalFuncUnescape                           DontEnum|Function 1
@@ -1281,6 +1285,17 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
             init.set(collator);
         });
 
+    m_defaultNumberFormat.initLater(
+        [] (const Initializer<IntlNumberFormat>& init) {
+            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(init.owner);
+            VM& vm = init.vm;
+            auto scope = DECLARE_THROW_SCOPE(vm);
+            auto* numberFormat = IntlNumberFormat::create(vm, globalObject->numberFormatStructure());
+            numberFormat->initializeNumberFormat(globalObject, jsUndefined(), jsUndefined());
+            RETURN_IF_EXCEPTION(scope, void());
+            init.set(numberFormat);
+        });
+
     IntlObject* intl = IntlObject::create(vm, this, IntlObject::createStructure(vm, this, m_objectPrototype.get()));
     putDirectWithoutTransition(vm, vm.propertyNames->Intl, intl, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
@@ -1597,12 +1612,8 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
             init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 3, "handleProxyGetTrapResult"_s, globalFuncHandleProxyGetTrapResult, ImplementationVisibility::Private));
         });
 
-    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::handleProxySetTrapResultSloppy)].initLater([] (const Initializer<JSCell>& init) {
-            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 4, "handleProxySetTrapResultSloppy"_s, globalFuncHandleProxySetTrapResultSloppy, ImplementationVisibility::Private));
-        });
-
-    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::handleProxySetTrapResultStrict)].initLater([] (const Initializer<JSCell>& init) {
-            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 4, "handleProxySetTrapResultStrict"_s, globalFuncHandleProxySetTrapResultStrict, ImplementationVisibility::Private));
+    m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::handlePositiveProxySetTrapResult)].initLater([] (const Initializer<JSCell>& init) {
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 3, "handlePositiveProxySetTrapResult"_s, globalFuncHandlePositiveProxySetTrapResult, ImplementationVisibility::Private));
         });
 
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::dateTimeFormat)].initLater([] (const Initializer<JSCell>& init) {
@@ -1611,7 +1622,7 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
 
     // PrivateSymbols / PrivateNames
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::createPrivateSymbol)].initLater([] (const Initializer<JSCell>& init) {
-            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 0, "createPrivateSymbol"_s, createPrivateSymbol, ImplementationVisibility::Private));
+            init.set(JSFunction::create(init.vm, jsCast<JSGlobalObject*>(init.owner), 1, "createPrivateSymbol"_s, createPrivateSymbol, ImplementationVisibility::Private));
         });
 
     // JSON helpers
@@ -2295,8 +2306,8 @@ void JSGlobalObject::resetPrototype(VM& vm, JSValue prototype)
         return;
     setPrototypeDirect(vm, prototype);
     fixupPrototypeChainWithObjectPrototype(vm);
-    // Whenever we change the prototype of the global object, we need to create a new JSProxy with the correct prototype.
-    setGlobalThis(vm, JSProxy::create(vm, JSProxy::createStructure(vm, this, prototype), this));
+    // Whenever we change the prototype of the global object, we need to create a new JSGlobalProxy with the correct prototype.
+    setGlobalThis(vm, JSGlobalProxy::create(vm, JSGlobalProxy::createStructure(vm, this, prototype), this));
 }
 
 template<typename Visitor>
@@ -2330,6 +2341,7 @@ void JSGlobalObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     visitor.append(thisObject->m_stringConstructor);
 
     thisObject->m_defaultCollator.visit(visitor);
+    thisObject->m_defaultNumberFormat.visit(visitor);
     thisObject->m_collatorStructure.visit(visitor);
     thisObject->m_displayNamesStructure.visit(visitor);
     thisObject->m_durationFormatStructure.visit(visitor);
@@ -3009,7 +3021,7 @@ void JSGlobalObject::finishCreation(VM& vm)
     structure()->setGlobalObject(vm, this);
     m_runtimeFlags = m_globalObjectMethodTable->javaScriptRuntimeFlags(this);
     init(vm);
-    setGlobalThis(vm, JSProxy::create(vm, JSProxy::createStructure(vm, this, getPrototypeDirect()), this));
+    setGlobalThis(vm, JSGlobalProxy::create(vm, JSGlobalProxy::createStructure(vm, this, getPrototypeDirect()), this));
     ASSERT(type() == GlobalObjectType);
 }
 

@@ -38,6 +38,7 @@
 #include "NetworkLoad.h"
 #include "NetworkLoadScheduler.h"
 #include "NetworkMDNSRegisterMessages.h"
+#include "NetworkOriginAccessPatterns.h"
 #include "NetworkProcess.h"
 #include "NetworkProcessConnectionMessages.h"
 #include "NetworkProcessMessages.h"
@@ -133,6 +134,7 @@ NetworkConnectionToWebProcess::NetworkConnectionToWebProcess(NetworkProcess& net
 #endif
     , m_webProcessIdentifier(webProcessIdentifier)
     , m_schemeRegistry(NetworkSchemeRegistry::create())
+    , m_originAccessPatterns(makeUniqueRef<NetworkOriginAccessPatterns>())
     , m_allowTestOnlyIPC(parameters.allowTestOnlyIPC)
 {
     RELEASE_ASSERT(RunLoop::isMain());
@@ -142,6 +144,12 @@ NetworkConnectionToWebProcess::NetworkConnectionToWebProcess(NetworkProcess& net
     // reply from the Network process, which would be unsafe.
     m_connection->setOnlySendMessagesAsDispatchWhenWaitingForSyncReplyWhenProcessingSuchAMessage(true);
     m_connection->open(*this);
+#if USE(RUNNINGBOARD)
+    m_connection->setOutgoingMessageQueueIsGrowingLargeCallback([weakThis = WeakPtr { *this }] {
+        if (weakThis)
+            weakThis->networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::WakeUpWebProcessForIPC(weakThis->m_webProcessIdentifier), 0);
+    });
+#endif
 
 #if ENABLE(SERVICE_WORKER)
     establishSWServerConnection();
@@ -474,10 +482,10 @@ void NetworkConnectionToWebProcess::didReceiveInvalidMessage(IPC::Connection&, I
     m_networkProcess->parentProcessConnection()->send(Messages::NetworkProcessProxy::TerminateWebProcess(m_webProcessIdentifier), 0);
 }
 
-void NetworkConnectionToWebProcess::createSocketChannel(const ResourceRequest& request, const String& protocol, WebSocketIdentifier identifier,  WebPageProxyIdentifier webPageProxyID, const ClientOrigin& clientOrigin, bool hadMainFrameMainResourcePrivateRelayed, bool allowPrivacyProxy, OptionSet<NetworkConnectionIntegrity> networkConnectionIntegrityPolicy)
+void NetworkConnectionToWebProcess::createSocketChannel(const ResourceRequest& request, const String& protocol, WebSocketIdentifier identifier, WebPageProxyIdentifier webPageProxyID, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, const ClientOrigin& clientOrigin, bool hadMainFrameMainResourcePrivateRelayed, bool allowPrivacyProxy, OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking, WebCore::StoredCredentialsPolicy storedCredentialsPolicy)
 {
     ASSERT(!m_networkSocketChannels.contains(identifier));
-    if (auto channel = NetworkSocketChannel::create(*this, m_sessionID, request, protocol, identifier, webPageProxyID, clientOrigin, hadMainFrameMainResourcePrivateRelayed, allowPrivacyProxy, networkConnectionIntegrityPolicy))
+    if (auto channel = NetworkSocketChannel::create(*this, m_sessionID, request, protocol, identifier, webPageProxyID, frameID, pageID, clientOrigin, hadMainFrameMainResourcePrivateRelayed, allowPrivacyProxy, advancedPrivacyProtections, shouldRelaxThirdPartyCookieBlocking, storedCredentialsPolicy))
         m_networkSocketChannels.add(identifier, WTFMove(channel));
 }
 
@@ -1371,7 +1379,7 @@ void NetworkConnectionToWebProcess::broadcastConsoleMessage(JSC::MessageSource s
 
 void NetworkConnectionToWebProcess::setCORSDisablingPatterns(WebCore::PageIdentifier pageIdentifier, Vector<String>&& patterns)
 {
-    networkProcess().setCORSDisablingPatterns(pageIdentifier, WTFMove(patterns));
+    networkProcess().setCORSDisablingPatterns(*this, pageIdentifier, WTFMove(patterns));
 }
 
 void NetworkConnectionToWebProcess::setResourceLoadSchedulingMode(WebCore::PageIdentifier pageIdentifier, WebCore::LoadSchedulingMode mode)
@@ -1414,37 +1422,27 @@ void NetworkConnectionToWebProcess::installMockContentFilter(WebCore::MockConten
 }
 #endif
 
-
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
-static CString validatedASCIIString(const String& string, unsigned maxLength)
+void NetworkConnectionToWebProcess::logOnBehalfOfWebContent(IPC::DataReference&& logChannel, IPC::DataReference&& logCategory, IPC::DataReference&& logString, uint8_t logType, int32_t pid)
 {
-    String shortString = string.substring(0, maxLength);
-    CString validatedString = shortString.ascii();
-    auto stringLength = validatedString.length();
-
-    for (unsigned i = 0; i < stringLength; i++) {
-        char c = validatedString.data()[i];
-        if (c >= 32 && c <= 126)
-            continue;
-        validatedString.mutableData()[i] = ' ';
+    OSObjectPtr<os_log_t> osLogChannel;
+    if (logChannel.data() && logCategory.data()) {
+        auto channel = reinterpret_cast<const char*>(logChannel.data());
+        auto category = reinterpret_cast<const char*>(logCategory.data());
+        osLogChannel = adoptOSObject(os_log_create(channel, category));
     }
-    return validatedString;
-}
-
-void NetworkConnectionToWebProcess::logOnBehalfOfWebContent(const String& logChannel, const String& logCategory, const String& logString, uint8_t logType, int32_t pid)
-{
-    // Truncate long strings and only accept printable characters
-    CString string = validatedASCIIString(logString, 2048);
-    CString channel = validatedASCIIString(logChannel, 64);
-    CString category = validatedASCIIString(logCategory, 64);
-
-    OSObjectPtr<os_log_t> osLogChannel = adoptOSObject(os_log_create(channel.data(), category.data()));
-
     RELEASE_ASSERT(logType == OS_LOG_TYPE_DEFAULT || logType == OS_LOG_TYPE_INFO || logType == OS_LOG_TYPE_DEBUG || logType == OS_LOG_TYPE_ERROR || logType == OS_LOG_TYPE_FAULT);
 
-    os_log_with_type(osLogChannel.get(), static_cast<os_log_type_t>(logType), "WebContent[pid=%d, identifier=%llu]: %s", pid, m_webProcessIdentifier.toUInt64(), string.data());
+    // Use '%{public}s' in the format string for the preprocessed string from the WebContent process.
+    // This should not reveal any redacted information in the string, since it has already been composed in the WebContent process.
+    os_log_with_type(osLogChannel.get() ? osLogChannel.get() : OS_LOG_DEFAULT, static_cast<os_log_type_t>(logType), "WebContent[%d]: %{public}s", pid, logString.data());
 }
 #endif
+
+void NetworkConnectionToWebProcess::addAllowedFirstPartyForCookies(const RegistrableDomain& firstPartyForCookies)
+{
+    connection().send(Messages::NetworkProcessConnection::AddAllowedFirstPartyForCookies(firstPartyForCookies), 0);
+}
 
 } // namespace WebKit
 

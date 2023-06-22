@@ -41,11 +41,11 @@
 #include <WebCore/NetworkLoadMetrics.h>
 #include <WebCore/NetworkStorageSession.h>
 #include <WebCore/NotImplemented.h>
+#include <WebCore/OriginAccessPatterns.h>
 #include <WebCore/ResourceError.h>
 #include <WebCore/SameSiteInfo.h>
 #include <WebCore/SharedBuffer.h>
 #include <WebCore/ShouldRelaxThirdPartyCookieBlocking.h>
-#include <WebCore/SynchronousLoaderClient.h>
 #include <WebCore/TimingAllowOrigin.h>
 #include <pal/text/TextEncoding.h>
 #include <wtf/FileSystem.h>
@@ -89,7 +89,6 @@ NetworkDataTaskCurl::NetworkDataTaskCurl(NetworkSession& session, NetworkDataTas
         m_curlRequest->setUserPass(m_initialCredential.user(), m_initialCredential.password());
         m_curlRequest->setAuthenticationScheme(ProtectionSpace::AuthenticationScheme::HTTPBasic);
     }
-    m_curlRequest->start();
 }
 
 NetworkDataTaskCurl::~NetworkDataTaskCurl()
@@ -144,7 +143,7 @@ Ref<CurlRequest> NetworkDataTaskCurl::createCurlRequest(ResourceRequest&& reques
     // Creates a CurlRequest in suspended state.
     // Then, NetworkDataTaskCurl::resume() will be called and communication resumes.
     const auto captureMetrics = shouldCaptureExtraNetworkLoadMetrics() ? CurlRequest::CaptureNetworkLoadMetrics::Extended : CurlRequest::CaptureNetworkLoadMetrics::Basic;
-    return CurlRequest::create(request, *this, CurlRequest::ShouldSuspend::Yes, CurlRequest::EnableMultipart::No, captureMetrics);
+    return CurlRequest::create(request, *this, CurlRequest::EnableMultipart::No, captureMetrics);
 }
 
 void NetworkDataTaskCurl::curlDidSendData(CurlRequest&, unsigned long long totalBytesSent, unsigned long long totalBytesExpectedToSend)
@@ -337,7 +336,7 @@ void NetworkDataTaskCurl::willPerformHTTPRedirection()
         redirectedURL.setFragmentIdentifier(request.url().fragmentIdentifier());
     request.setURL(redirectedURL);
 
-    m_hasCrossOriginRedirect = m_hasCrossOriginRedirect || !SecurityOrigin::create(m_response.url())->canRequest(request.url());
+    m_hasCrossOriginRedirect = m_hasCrossOriginRedirect || !SecurityOrigin::create(m_response.url())->canRequest(request.url(), WebCore::EmptyOriginAccessPatterns::singleton());
 
     // Should not set Referer after a redirect from a secure resource to non-secure one.
     if (m_shouldClearReferrerOnHTTPSToHTTPRedirect && !request.url().protocolIs("https"_s) && protocolIs(request.httpReferrer(), "https"_s))
@@ -396,7 +395,6 @@ void NetworkDataTaskCurl::willPerformHTTPRedirection()
             m_curlRequest->setUserPass(m_initialCredential.user(), m_initialCredential.password());
             m_curlRequest->setAuthenticationScheme(ProtectionSpace::AuthenticationScheme::HTTPBasic);
         }
-        m_curlRequest->start();
 
         if (m_state != State::Suspended) {
             m_state = State::Suspended;
@@ -516,7 +514,6 @@ void NetworkDataTaskCurl::restartWithCredential(const ProtectionSpace& protectio
     m_curlRequest->setUserPass(credential.user(), credential.password());
     if (shouldDisableServerTrustEvaluation)
         m_curlRequest->disableServerTrustEvaluation();
-    m_curlRequest->start();
 
     if (m_state != State::Suspended) {
         m_state = State::Suspended;

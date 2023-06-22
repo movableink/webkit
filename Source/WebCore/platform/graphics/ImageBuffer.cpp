@@ -271,6 +271,15 @@ bool ImageBuffer::flushDrawingContextAsync()
     return true;
 }
 
+void ImageBuffer::setBackend(std::unique_ptr<ImageBufferBackend>&& backend)
+{
+    if (m_backend.get() == backend.get())
+        return;
+
+    m_backend = WTFMove(backend);
+    ++m_backendGeneration;
+}
+
 std::unique_ptr<ImageBufferBackend> ImageBuffer::takeBackend()
 {
     return WTFMove(m_backend);
@@ -505,17 +514,28 @@ Vector<uint8_t> ImageBuffer::toData(Ref<ImageBuffer> source, const String& mimeT
 #endif
 }
 
-RefPtr<PixelBuffer> ImageBuffer::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator) const
+RefPtr<PixelBuffer> ImageBuffer::getPixelBuffer(const PixelBufferFormat& destinationFormat, const IntRect& sourceRect, const ImageBufferAllocator& allocator) const
 {
-    if (auto* backend = ensureBackendCreated())
-        return backend->getPixelBuffer(outputFormat, srcRect, allocator);
-    return nullptr;
+    auto* backend = ensureBackendCreated();
+    if (!backend)
+        return nullptr;
+    ASSERT(PixelBuffer::supportedPixelFormat(destinationFormat.pixelFormat));
+    auto sourceRectScaled = backend->toBackendCoordinates(sourceRect);
+    auto destination = allocator.createPixelBuffer(destinationFormat, sourceRectScaled.size());
+    if (!destination)
+        return nullptr;
+    backend->getPixelBuffer(sourceRectScaled, *destination);
+    return destination;
 }
 
-void ImageBuffer::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+void ImageBuffer::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationFormat)
 {
-    if (auto* backend = ensureBackendCreated())
-        backend->putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat);
+    auto* backend = ensureBackendCreated();
+    if (!backend)
+        return;
+    auto sourceRectScaled = backend->toBackendCoordinates(sourceRect);
+    auto destinationPointScaled = backend->toBackendCoordinates(destinationPoint);
+    backend->putPixelBuffer(pixelBuffer, sourceRectScaled, destinationPointScaled, destinationFormat);
 }
 
 bool ImageBuffer::copyToPlatformTexture(GraphicsContextGL& context, GCGLenum target, PlatformGLObject destinationTexture, GCGLenum internalformat, bool premultiplyAlpha, bool flipY) const
@@ -573,10 +593,15 @@ std::unique_ptr<ThreadSafeImageBufferFlusher> ImageBuffer::createFlusher()
     return nullptr;
 }
 
+unsigned ImageBuffer::backendGeneration() const
+{
+    return m_backendGeneration;
+}
+
 String ImageBuffer::debugDescription() const
 {
     TextStream stream;
-    stream << "ImageBuffer " << this << " " << renderingResourceIdentifier() << " " << logicalSize() << " " << resolutionScale() << "x " << renderingMode();
+    stream << "ImageBuffer " << this << " " << renderingResourceIdentifier() << " " << logicalSize() << " " << resolutionScale() << "x " << renderingMode() << " backend " << ValueOrNull(m_backend.get());
     return stream.release();
 }
 

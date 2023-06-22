@@ -26,6 +26,8 @@
 #include "ContentChangeObserver.h"
 
 #if ENABLE(CONTENT_CHANGE_OBSERVER)
+
+#include "Animation.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DOMTimer.h"
@@ -38,6 +40,7 @@
 #include "Page.h"
 #include "Quirks.h"
 #include "RenderDescendantIterator.h"
+#include "RenderStyleInlines.h"
 #include "Settings.h"
 
 namespace WebCore {

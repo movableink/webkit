@@ -32,7 +32,6 @@
 #import "PlatformCALayerRemote.h"
 #import "RemoteLayerBackingStoreCollection.h"
 #import "RemoteLayerTreeContext.h"
-#import "RemoteLayerTreeDisplayRefreshMonitor.h"
 #import "RemoteLayerTreeDrawingAreaProxyMessages.h"
 #import "RemoteScrollingCoordinator.h"
 #import "RemoteScrollingCoordinatorTransaction.h"
@@ -60,24 +59,16 @@
 namespace WebKit {
 using namespace WebCore;
 
-static WeakPtr<WebFrame> initialRootFrame(WebPage& page, const WebPageCreationParameters& parameters)
-{
-    if (parameters.subframeProcessFrameTreeInitializationParameters) {
-        // attachToInitialRootFrame will be called once the frame exists.
-        ASSERT(!WebProcess::singleton().webFrame(parameters.subframeProcessFrameTreeInitializationParameters->localFrameIdentifier));
-        return nullptr;
-    }
-    return page.mainWebFrame();
-}
+constexpr FramesPerSecond DefaultPreferredFramesPerSecond = 60;
 
 RemoteLayerTreeDrawingArea::RemoteLayerTreeDrawingArea(WebPage& webPage, const WebPageCreationParameters& parameters)
     : DrawingArea(DrawingAreaType::RemoteLayerTree, parameters.drawingAreaIdentifier, webPage)
     , m_remoteLayerTreeContext(makeUnique<RemoteLayerTreeContext>(webPage))
-    , m_rootLayers({ RootLayerInfo { GraphicsLayer::create(graphicsLayerFactory(), *this), nullptr, nullptr, initialRootFrame(webPage, parameters) } })
     , m_updateRenderingTimer(*this, &RemoteLayerTreeDrawingArea::updateRendering)
+    , m_scheduleRenderingTimer(*this, &RemoteLayerTreeDrawingArea::scheduleRenderingUpdateTimerFired)
+    , m_preferredFramesPerSecond(DefaultPreferredFramesPerSecond)
 {
-    webPage.corePage()->settings().setForceCompositingMode(true);
-    m_rootLayers[0].layer->setName(MAKE_STATIC_STRING_IMPL("drawing area root"));
+    m_webPage.corePage()->settings().setForceCompositingMode(true);
 
     m_commitQueue = adoptOSObject(dispatch_queue_create("com.apple.WebKit.WebContent.RemoteLayerTreeDrawingArea.CommitQueue", nullptr));
 
@@ -106,28 +97,8 @@ GraphicsLayerFactory* RemoteLayerTreeDrawingArea::graphicsLayerFactory()
 
 RefPtr<DisplayRefreshMonitor> RemoteLayerTreeDrawingArea::createDisplayRefreshMonitor(PlatformDisplayID displayID)
 {
-    auto monitor = RemoteLayerTreeDisplayRefreshMonitor::create(displayID, *this);
-    m_displayRefreshMonitors.add(monitor.ptr());
-    return WTFMove(monitor);
-}
-
-void RemoteLayerTreeDrawingArea::willDestroyDisplayRefreshMonitor(DisplayRefreshMonitor* monitor)
-{
-    auto remoteMonitor = static_cast<RemoteLayerTreeDisplayRefreshMonitor*>(monitor);
-    m_displayRefreshMonitors.remove(remoteMonitor);
-
-    if (m_displayRefreshMonitorsToNotify)
-        m_displayRefreshMonitorsToNotify->remove(remoteMonitor);
-}
-
-void RemoteLayerTreeDrawingArea::adoptDisplayRefreshMonitorsFromDrawingArea(DrawingArea& drawingArea)
-{
-    if (is<RemoteLayerTreeDrawingArea>(drawingArea)) {
-        auto& otherDrawingArea = downcast<RemoteLayerTreeDrawingArea>(drawingArea);
-        m_displayRefreshMonitors = WTFMove(otherDrawingArea.m_displayRefreshMonitors);
-        for (auto* monitor : m_displayRefreshMonitors)
-            monitor->updateDrawingArea(*this);
-    }
+    ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 void RemoteLayerTreeDrawingArea::setPreferredFramesPerSecond(FramesPerSecond preferredFramesPerSecond)
@@ -148,23 +119,31 @@ void RemoteLayerTreeDrawingArea::updateRootLayers()
     }
 }
 
-void RemoteLayerTreeDrawingArea::attachViewOverlayGraphicsLayer(GraphicsLayer* viewOverlayRootLayer)
+void RemoteLayerTreeDrawingArea::attachViewOverlayGraphicsLayer(WebCore::FrameIdentifier mainFrameID, GraphicsLayer* viewOverlayRootLayer)
 {
-    // FIXME: Support view overlays in iframe processes.
-    m_rootLayers[0].viewOverlayRootLayer = viewOverlayRootLayer;
-    updateRootLayers();
+    if (auto* layerInfo = rootLayerInfoWithFrameIdentifier(mainFrameID)) {
+        layerInfo->viewOverlayRootLayer = viewOverlayRootLayer;
+        updateRootLayers();
+    }
 }
 
-void RemoteLayerTreeDrawingArea::attachToInitialRootFrame(WebCore::FrameIdentifier frameID)
+void RemoteLayerTreeDrawingArea::addRootFrame(WebCore::FrameIdentifier frameID)
 {
-    m_rootLayers[0].frame = WebProcess::singleton().webFrame(frameID);
-    ASSERT(m_rootLayers[0].frame);
+    auto layer = GraphicsLayer::create(graphicsLayerFactory(), *this);
+    // FIXME: This has an unnecessary string allocation. Adding a StringTypeAdapter for FrameIdentifier or ProcessQualified would remove that.
+    layer->setName(makeString("drawing area root "_s, frameID.toString()));
+    m_rootLayers.append(RootLayerInfo {
+        WTFMove(layer),
+        nullptr,
+        nullptr,
+        frameID
+    });
 }
 
 void RemoteLayerTreeDrawingArea::setRootCompositingLayer(WebCore::Frame& frame, GraphicsLayer* rootGraphicsLayer)
 {
     for (auto& rootLayer : m_rootLayers) {
-        if (rootLayer.frame && rootLayer.frame->coreFrame() == &frame)
+        if (rootLayer.frameID == frame.frameID())
             rootLayer.contentLayer = rootGraphicsLayer;
     }
     updateRootLayers();
@@ -334,7 +313,10 @@ void RemoteLayerTreeDrawingArea::updateRendering()
     // This function is not reentrant, e.g. a rAF callback may force repaint.
     if (m_inUpdateRendering)
         return;
-    
+
+    if (auto* page = m_webPage.corePage(); page && !page->rootFrames().computeSize())
+        return;
+
     scaleViewToFitDocumentIfNeeded();
 
     SetForScope change(m_inUpdateRendering, true);
@@ -377,10 +359,12 @@ void RemoteLayerTreeDrawingArea::updateRendering()
         layerTransaction.setTransactionID(takeNextTransactionID());
         layerTransaction.setCallbackIDs(WTFMove(m_pendingCallbackIDs));
         
-        m_remoteLayerTreeContext->buildTransaction(layerTransaction, *downcast<GraphicsLayerCARemote>(rootLayer.layer.get()).platformCALayer(), rootLayer.frame.get());
+        m_remoteLayerTreeContext->buildTransaction(layerTransaction, *downcast<GraphicsLayerCARemote>(rootLayer.layer.get()).platformCALayer(), rootLayer.frameID);
         
         backingStoreCollection.willCommitLayerTree(layerTransaction);
-        m_webPage.willCommitLayerTree(layerTransaction, rootLayer.frame.get());
+
+        // FIXME: Investigate whether this needs to be done multiple times in a page with multiple root frames.
+        m_webPage.willCommitLayerTree(layerTransaction, rootLayer.frameID);
         
         layerTransaction.setNewlyReachedPaintingMilestones(std::exchange(m_pendingNewlyReachedPaintingMilestones, { }));
         layerTransaction.setActivityStateChangeID(std::exchange(m_activityStateChangeID, ActivityStateChangeAsynchronous));
@@ -441,29 +425,36 @@ void RemoteLayerTreeDrawingArea::displayDidRefresh()
 
     m_waitingForBackingStoreSwap = false;
 
-    if (m_deferredRenderingUpdateWhileWaitingForBackingStoreSwap) {
-        triggerRenderingUpdate();
-        m_deferredRenderingUpdateWhileWaitingForBackingStoreSwap = false;
-    }
-
     if (!WebProcess::singleton().shouldUseRemoteRenderingFor(WebCore::RenderingPurpose::DOM)) {
         // This empty transaction serves to trigger CA's garbage collection of IOSurfaces. See <rdar://problem/16110687>
         [CATransaction begin];
         [CATransaction commit];
     }
 
-    HashSet<RemoteLayerTreeDisplayRefreshMonitor*> monitorsToNotify = m_displayRefreshMonitors;
-    ASSERT(!m_displayRefreshMonitorsToNotify);
-    m_displayRefreshMonitorsToNotify = &monitorsToNotify;
-    while (!monitorsToNotify.isEmpty())
-        monitorsToNotify.takeAny()->triggerDisplayDidRefresh();
-    m_displayRefreshMonitorsToNotify = nullptr;
+    if (m_deferredRenderingUpdateWhileWaitingForBackingStoreSwap || (m_isScheduled && !m_scheduleRenderingTimer.isActive())) {
+        triggerRenderingUpdate();
+        m_deferredRenderingUpdateWhileWaitingForBackingStoreSwap = false;
+        m_isScheduled = false;
+    } else
+        send(Messages::RemoteLayerTreeDrawingAreaProxy::CommitLayerTreeNotTriggered());
 }
 
-void RemoteLayerTreeDrawingArea::mainFrameContentSizeChanged(const IntSize& contentsSize)
+auto RemoteLayerTreeDrawingArea::rootLayerInfoWithFrameIdentifier(WebCore::FrameIdentifier frameID) -> RootLayerInfo*
 {
-    // FIXME: Make this more aware of subframe processes where the root frame isn't always the main frame.
-    m_rootLayers[0].layer->setSize(contentsSize);
+    auto index = m_rootLayers.findIf([&] (const auto& layer) {
+        return layer.frameID == frameID;
+    });
+    if (index == WTF::notFound) {
+        ASSERT_NOT_REACHED();
+        return nullptr;
+    }
+    return &m_rootLayers[index];
+}
+
+void RemoteLayerTreeDrawingArea::mainFrameContentSizeChanged(WebCore::FrameIdentifier frameID, const IntSize& contentsSize)
+{
+    if (auto* layerInfo = rootLayerInfoWithFrameIdentifier(frameID))
+        layerInfo->layer->setSize(contentsSize);
 }
 
 void RemoteLayerTreeDrawingArea::tryMarkLayersVolatile(CompletionHandler<void(bool)>&& completionFunction)
@@ -530,6 +521,46 @@ void RemoteLayerTreeDrawingArea::adoptLayersFromDrawingArea(DrawingArea& oldDraw
     RemoteLayerTreeDrawingArea& oldRemoteDrawingArea = static_cast<RemoteLayerTreeDrawingArea&>(oldDrawingArea);
 
     m_remoteLayerTreeContext->adoptLayersFromContext(*oldRemoteDrawingArea.m_remoteLayerTreeContext);
+}
+
+void RemoteLayerTreeDrawingArea::scheduleRenderingUpdateTimerFired()
+{
+    triggerRenderingUpdate();
+    m_isScheduled = false;
+}
+
+bool RemoteLayerTreeDrawingArea::scheduleRenderingUpdate()
+{
+    if (m_isScheduled)
+        return true;
+
+    m_isScheduled = true;
+
+    if (m_preferredFramesPerSecond) {
+        if (displayDidRefreshIsPending())
+            return true;
+
+        callOnMainRunLoop([self = WeakPtr { this }] () {
+            if (self) {
+                self->m_isScheduled = false;
+                self->triggerRenderingUpdate();
+            }
+        });
+    } else
+        m_scheduleRenderingTimer.startOneShot(m_preferredRenderingUpdateInterval);
+
+    return true;
+}
+
+void RemoteLayerTreeDrawingArea::renderingUpdateFramesPerSecondChanged()
+{
+    auto preferredFramesPerSecond = m_webPage.corePage()->preferredRenderingUpdateFramesPerSecond();
+
+    if (preferredFramesPerSecond && preferredFramesPerSecond != m_preferredFramesPerSecond)
+        setPreferredFramesPerSecond(*preferredFramesPerSecond);
+
+    m_preferredFramesPerSecond = preferredFramesPerSecond;
+    m_preferredRenderingUpdateInterval = m_webPage.corePage()->preferredRenderingUpdateInterval();
 }
 
 } // namespace WebKit

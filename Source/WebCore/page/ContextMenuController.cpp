@@ -46,7 +46,6 @@
 #include "FormState.h"
 #include "FrameLoadRequest.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "FrameSelection.h"
 #include "FrameSnapshotting.h"
 #include "HTMLCanvasElement.h"
@@ -60,6 +59,7 @@
 #include "ImageOverlay.h"
 #include "InspectorController.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
 #include "NavigationAction.h"
@@ -92,6 +92,12 @@
 
 #if PLATFORM(COCOA)
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
+
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+#include <wtf/SoftLinking.h>
+SOFT_LINK_LIBRARY_OPTIONAL(libAccessibility)
+SOFT_LINK_OPTIONAL(libAccessibility, _AXSReduceMotionAutoplayAnimatedImagesEnabled, Boolean, (), ());
 #endif
 
 namespace WebCore {
@@ -277,7 +283,7 @@ static void insertUnicodeCharacter(UChar character, LocalFrame& frame)
         return;
 
     ASSERT(frame.document());
-    TypingCommand::insertText(*frame.document(), text, 0, TypingCommand::TextCompositionNone);
+    TypingCommand::insertText(*frame.document(), text, { }, TypingCommand::TextCompositionType::None);
 }
 
 #endif
@@ -1046,6 +1052,18 @@ void ContextMenuController::populate()
 #endif
     };
 
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+    auto canAddAnimationControls = [&] () -> bool {
+        if (!frame->page() || !frame->page()->settings().imageAnimationControlEnabled())
+            return false;
+
+        auto* autoplayAnimatedImagesFunction = _AXSReduceMotionAutoplayAnimatedImagesEnabledPtr();
+        // Only show these controls if autoplay of animated images has been disabled.
+        bool systemAllowsAnimationControls = autoplayAnimatedImagesFunction && !autoplayAnimatedImagesFunction();
+        return systemAllowsAnimationControls || frame->page()->settings().allowAnimationControlsOverride();
+    };
+#endif
+
     auto selectedText = m_context.hitTestResult().selectedText();
     m_context.setSelectedText(selectedText);
 
@@ -1074,7 +1092,7 @@ void ContextMenuController::populate()
             appendItem(DownloadImageItem, m_contextMenu.get());
 
             auto image = m_context.hitTestResult().image();
-            if (imageURL.isLocalFile() || image) {
+            if (imageURL.protocolIsFile() || image) {
                 appendItem(CopyImageItem, m_contextMenu.get());
 
                 if (image && !image->isAnimated()) {
@@ -1089,7 +1107,7 @@ void ContextMenuController::populate()
                 }
 
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
-                if (image && image->isAnimated() && frame->page() && frame->page()->settings().imageAnimationControlEnabled()) {
+                if (image && image->isAnimated() && canAddAnimationControls()) {
                     appendItem(*separatorItem(), m_contextMenu.get());
                     if (m_context.hitTestResult().isAnimating())
                         appendItem(PauseAnimation, m_contextMenu.get());
@@ -1104,7 +1122,7 @@ void ContextMenuController::populate()
         }
 
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
-        if (frame->page() && frame->page()->settings().imageAnimationControlEnabled()) {
+        if (canAddAnimationControls()) {
             if (frame->page()->imageAnimationEnabled())
                 appendItem(PauseAllAnimations, m_contextMenu.get());
             else
@@ -1640,7 +1658,7 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
             break;
         case ContextMenuItemTagDownloadImageToDisk:
 #if PLATFORM(MAC)
-            if (m_context.hitTestResult().absoluteImageURL().protocolIs("file"_s))
+            if (m_context.hitTestResult().absoluteImageURL().protocolIsFile())
                 shouldEnable = false;
 #endif
             break;
@@ -1655,7 +1673,7 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
                 item.setTitle(contextMenuItemTagDownloadVideoToDisk());
             else
                 item.setTitle(contextMenuItemTagDownloadAudioToDisk());
-            if (m_context.hitTestResult().absoluteImageURL().protocolIs("file"_s))
+            if (m_context.hitTestResult().absoluteImageURL().protocolIsFile())
                 shouldEnable = false;
             break;
         case ContextMenuItemTagCopyMediaLinkToClipboard:

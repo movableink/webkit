@@ -46,6 +46,12 @@ constexpr bool kExposeNonConformantExtensionsAndVersions = true;
 #else
 constexpr bool kExposeNonConformantExtensionsAndVersions = false;
 #endif
+
+#if defined(ANGLE_ENABLE_CRC_FOR_PIPELINE_CACHE)
+constexpr bool kEnableCRCForPipelineCache = true;
+#else
+constexpr bool kEnableCRCForPipelineCache                = false;
+#endif
 }  // anonymous namespace
 
 namespace rx
@@ -61,6 +67,10 @@ constexpr uint32_t kMinDefaultUniformBufferSize = 16 * 1024u;
 // between performance and memory usage.
 constexpr uint32_t kPreferredDefaultUniformBufferSize = 64 * 1024u;
 
+// Maximum size to use VMA image suballocation. Any allocation greater than or equal to this
+// value will use a dedicated VkDeviceMemory.
+constexpr size_t kImageSizeThresholdForDedicatedMemoryAllocation = 4 * 1024 * 1024;
+
 // Update the pipeline cache every this many swaps.
 constexpr uint32_t kPipelineCacheVkUpdatePeriod = 60;
 // Per the Vulkan specification, ANGLE must indicate the highest version of Vulkan functionality
@@ -72,6 +82,13 @@ constexpr uint32_t kPipelineCacheVkUpdatePeriod = 60;
 // later versions, they always do so in practice.  Avoiding later core versions helps keep the
 // initialization logic simpler.
 constexpr uint32_t kPreferredVulkanAPIVersion = VK_API_VERSION_1_1;
+
+// For pipeline cache, the values stored in key data has the following format: {originalCacheSize,
+// compressedDataCRC, numChunks, chunkIndex; chunkCompressedData}. The header values are used to
+// validate the data. For example, if the original and compressed sizes are 70000 bytes (68k) and
+// 68841 bytes (67k), the compressed data will be divided into two chunks: {70000,crc0,2,0;34421
+// bytes} and {70000,crc1,2,1;34420 bytes}.
+constexpr size_t kBlobHeaderSize = 8 * sizeof(uint8_t);
 
 bool IsVulkan11(uint32_t apiVersion)
 {
@@ -164,8 +181,6 @@ VkResult VerifyExtensionsPresent(const vk::ExtensionNameList &haystack,
 constexpr const char *kSkippedMessages[] = {
     // http://anglebug.com/2866
     "UNASSIGNED-CoreValidation-Shader-OutputNotConsumed",
-    // http://anglebug.com/4883
-    "UNASSIGNED-CoreValidation-Shader-InputNotProduced",
     // http://anglebug.com/4928
     "VUID-vkMapMemory-memory-00683",
     // http://anglebug.com/5027
@@ -184,8 +199,6 @@ constexpr const char *kSkippedMessages[] = {
     "VUID-vkCmdDrawIndexedIndirectCount-None-04584",
     // http://anglebug.com/5912
     "VUID-VkImageViewCreateInfo-pNext-01585",
-    // http://anglebug.com/6442
-    "UNASSIGNED-CoreValidation-Shader-InterfaceTypeMismatch",
     // http://anglebug.com/6514
     "vkEnumeratePhysicalDevices: One or more layers modified physical devices",
     // When using Vulkan secondary command buffers, the command buffer is begun with the current
@@ -215,8 +228,16 @@ constexpr const char *kSkippedMessages[] = {
     "VUID-VkImageCreateInfo-pNext-00990",
     // http://crbug.com/1420265
     "VUID-vkCmdEndDebugUtilsLabelEXT-commandBuffer-01912",
-    // https://anglebug.com/8076
+    // http://anglebug.com/8076
     "VUID-VkGraphicsPipelineCreateInfo-None-06573",
+    // http://anglebug.com/8119
+    "VUID-VkGraphicsPipelineCreateInfo-Input-07905",
+    "VUID-vkCmdDraw-None-02859",
+    "VUID-vkCmdDrawIndexed-None-02859",
+    "VUID-vkCmdDrawIndexed-None-07835",
+    "VUID-vkCmdDrawIndexedIndirect-None-02859",
+    "VUID-vkCmdDrawIndirect-None-02859",
+    "VUID-VkGraphicsPipelineCreateInfo-Input-08733",
 };
 
 // Validation messages that should be ignored only when VK_EXT_primitive_topology_list_restart is
@@ -384,18 +405,6 @@ constexpr vk::SkippedSyncvalMessage kSkippedSyncvalMessages[] = {
      "VK_IMAGE_LAYOUT_GENERAL). Access info (usage: SYNC_IMAGE_LAYOUT_TRANSITION, prior_usage: "
      "SYNC_COLOR_ATTACHMENT_OUTPUT_COLOR_ATTACHMENT_WRITE, write_barriers:",
      true},
-    // From: TraceTest.car_chase http://anglebug.com/7125
-    {
-        "SYNC-HAZARD-WRITE-AFTER-READ",
-        "type: VK_DESCRIPTOR_TYPE_STORAGE_BUFFER",
-    },
-    // From: TraceTest.car_chase http://anglebug.com/7125#c6
-    {
-        "SYNC-HAZARD-WRITE-AFTER-READ",
-        "Access info (usage: SYNC_COPY_TRANSFER_WRITE, "
-        "prior_usage: SYNC_FRAGMENT_SHADER_UNIFORM_READ, "
-        "read_barriers: VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, command: vkCmdDrawIndexed",
-    },
     // From: TraceTest.special_forces_group_2 http://anglebug.com/5592
     {
         "SYNC-HAZARD-WRITE-AFTER-READ",
@@ -838,6 +847,54 @@ gl::Version LimitVersionTo(const gl::Version &current, const gl::Version &lower)
     return true;
 }
 
+// CRC16-CCITT is used for header before the pipeline cache key data.
+uint16_t ComputeCRC16(const uint8_t *data, const size_t size)
+{
+    constexpr uint16_t kPolynomialCRC16 = 0x8408;
+    uint16_t rem                        = 0;
+
+    for (size_t i = 0; i < size; i++)
+    {
+        rem ^= data[i];
+        for (int j = 0; j < 8; j++)
+        {
+            rem = (rem & 1) ? kPolynomialCRC16 ^ (rem >> 1) : rem >> 1;
+        }
+    }
+    return rem;
+}
+
+// Pack header data for the pipeline cache key data.
+void PackHeaderDataForPipelineCache(uint32_t cacheDataSize,
+                                    uint16_t compressedDataCRC,
+                                    uint8_t numChunks,
+                                    uint8_t chunkIndex,
+                                    uint64_t *dataOut)
+{
+    uint64_t concatenatedData = cacheDataSize;
+    concatenatedData          = (concatenatedData << 16) | compressedDataCRC;
+    concatenatedData          = (concatenatedData << 8) | numChunks;
+    concatenatedData          = (concatenatedData << 8) | chunkIndex;
+
+    *dataOut = concatenatedData;
+}
+
+// Unpack header data from the pipeline cache key data.
+void UnpackHeaderDataForPipelineCache(uint64_t data,
+                                      uint32_t *cacheDataSizeOut,
+                                      uint16_t *compressedDataCRCOut,
+                                      size_t *numChunksOut,
+                                      size_t *chunkIndexOut)
+{
+    *chunkIndexOut = data & 0xFF;
+    data >>= 8;
+    *numChunksOut = data & 0xFF;
+    data >>= 8;
+    *compressedDataCRCOut = data & 0xFFFF;
+    data >>= 16;
+    *cacheDataSizeOut = static_cast<uint32_t>(data);
+}
+
 void ComputePipelineCacheVkChunkKey(VkPhysicalDeviceProperties physicalDeviceProperties,
                                     const uint8_t chunkIndex,
                                     egl::BlobCache::Key *hashOut)
@@ -894,17 +951,17 @@ void CompressAndStorePipelineCacheVk(VkPhysicalDeviceProperties physicalDevicePr
     // pipelineCache into several parts to store seperately. There is no function to
     // query the limit size in android.
     constexpr size_t kMaxBlobCacheSize = 64 * 1024;
-
-    // Store {numChunks, chunkCompressedData} in keyData, numChunks is used to validate the data.
-    // For example, if the compressed size is 68841 bytes(67k), divide into {2,34421 bytes} and
-    // {2,34420 bytes}.
-    constexpr size_t kBlobHeaderSize = sizeof(uint8_t);
-    size_t compressedOffset          = 0;
+    size_t compressedOffset            = 0;
 
     const size_t numChunks = UnsignedCeilDivide(static_cast<unsigned int>(compressedData.size()),
                                                 kMaxBlobCacheSize - kBlobHeaderSize);
     size_t chunkSize       = UnsignedCeilDivide(static_cast<unsigned int>(compressedData.size()),
                                                 static_cast<unsigned int>(numChunks));
+    uint16_t compressedDataCRC = 0;
+    if (kEnableCRCForPipelineCache)
+    {
+        compressedDataCRC = ComputeCRC16(compressedData.data(), compressedData.size());
+    }
 
     for (size_t chunkIndex = 0; chunkIndex < numChunks; ++chunkIndex)
     {
@@ -921,8 +978,14 @@ void CompressAndStorePipelineCacheVk(VkPhysicalDeviceProperties physicalDevicePr
             return;
         }
 
-        ASSERT(numChunks <= UINT8_MAX);
-        keyData.data()[0] = static_cast<uint8_t>(numChunks);
+        // Add the header data, followed by the compressed data.
+        ASSERT(numChunks <= UINT8_MAX && chunkIndex <= UINT8_MAX && cacheData.size() <= UINT32_MAX);
+        uint64_t headerData;
+        PackHeaderDataForPipelineCache(static_cast<uint32_t>(cacheData.size()), compressedDataCRC,
+                                       static_cast<uint8_t>(numChunks),
+                                       static_cast<uint8_t>(chunkIndex), &headerData);
+        *reinterpret_cast<uint64_t *>(keyData.data()) = headerData;
+
         memcpy(keyData.data() + kBlobHeaderSize, compressedData.data() + compressedOffset,
                chunkSize);
         compressedOffset += chunkSize;
@@ -979,12 +1042,14 @@ angle::Result GetAndDecompressPipelineCacheVk(VkPhysicalDeviceProperties physica
                                               angle::MemoryBuffer *uncompressedData,
                                               bool *success)
 {
+    // Make sure that the bool output is initialized to false.
+    *success = false;
+
     // Compute the hash key of chunkIndex 0 and find the first cache data in blob cache.
     egl::BlobCache::Key chunkCacheHash;
     ComputePipelineCacheVkChunkKey(physicalDeviceProperties, 0, &chunkCacheHash);
     egl::BlobCache::Value keyData;
-    size_t keySize                   = 0;
-    constexpr size_t kBlobHeaderSize = sizeof(uint8_t);
+    size_t keySize = 0;
 
     if (!displayVk->getBlobCache()->get(displayVk->getScratchBuffer(), chunkCacheHash, &keyData,
                                         &keySize) ||
@@ -994,8 +1059,17 @@ angle::Result GetAndDecompressPipelineCacheVk(VkPhysicalDeviceProperties physica
         return angle::Result::Continue;
     }
 
-    // Get the number of chunks.
-    size_t numChunks      = keyData.data()[0];
+    // Get the number of chunks and other values from the header for data validation.
+    uint32_t uncompressedCacheDataSize;
+    uint16_t compressedDataCRC;
+    size_t numChunks;
+    size_t chunkIndex0;
+
+    uint64_t headerData = *reinterpret_cast<const uint64_t *>(keyData.data());
+    UnpackHeaderDataForPipelineCache(headerData, &uncompressedCacheDataSize, &compressedDataCRC,
+                                     &numChunks, &chunkIndex0);
+    ASSERT(chunkIndex0 == 0);
+
     size_t chunkSize      = keySize - kBlobHeaderSize;
     size_t compressedSize = 0;
 
@@ -1019,26 +1093,64 @@ angle::Result GetAndDecompressPipelineCacheVk(VkPhysicalDeviceProperties physica
             return angle::Result::Continue;
         }
 
-        size_t checkNumber = keyData.data()[0];
-        chunkSize          = keySize - kBlobHeaderSize;
+        // Validate the header values and ensure there is enough space to store.
+        uint32_t checkUncompressedCacheDataSize;
+        uint16_t checkCompressedDataCRC;
+        size_t checkNumChunks;
+        size_t checkChunkIndex;
 
-        if (checkNumber != numChunks || compressedData.size() < (compressedSize + chunkSize))
+        headerData = *reinterpret_cast<const uint64_t *>(keyData.data());
+        UnpackHeaderDataForPipelineCache(headerData, &checkUncompressedCacheDataSize,
+                                         &checkCompressedDataCRC, &checkNumChunks,
+                                         &checkChunkIndex);
+
+        chunkSize = keySize - kBlobHeaderSize;
+        bool isHeaderDataCorrupted =
+            (checkNumChunks != numChunks) ||
+            (checkUncompressedCacheDataSize != uncompressedCacheDataSize) ||
+            (checkCompressedDataCRC != compressedDataCRC) || (checkChunkIndex != chunkIndex) ||
+            (compressedData.size() < compressedSize + chunkSize);
+        if (isHeaderDataCorrupted)
         {
-            // Validate the number value and enough space to store.
-            WARN() << "Pipeline cache chunk header corrupted: checkNumber = " << checkNumber
-                   << ", numChunks = " << numChunks
+            WARN() << "Pipeline cache chunk header corrupted: "
+                   << "checkNumChunks = " << checkNumChunks << ", numChunks = " << numChunks
+                   << ", checkUncompressedCacheDataSize = " << checkUncompressedCacheDataSize
+                   << ", uncompressedCacheDataSize = " << uncompressedCacheDataSize
+                   << ", checkCompressedDataCRC = " << checkCompressedDataCRC
+                   << ", compressedDataCRC = " << compressedDataCRC
+                   << ", checkChunkIndex = " << checkChunkIndex << ", chunkIndex = " << chunkIndex
                    << ", compressedData.size() = " << compressedData.size()
                    << ", (compressedSize + chunkSize) = " << (compressedSize + chunkSize);
             return angle::Result::Continue;
         }
+
         memcpy(compressedData.data() + compressedSize, keyData.data() + kBlobHeaderSize, chunkSize);
         compressedSize += chunkSize;
+    }
+
+    // CRC for compressed data and size for decompressed data should match the values in the header.
+    if (kEnableCRCForPipelineCache)
+    {
+        uint16_t computedCompressedDataCRC = ComputeCRC16(compressedData.data(), compressedSize);
+        if (computedCompressedDataCRC != compressedDataCRC)
+        {
+            WARN() << "Expected CRC = " << compressedDataCRC
+                   << ", Actual CRC = " << computedCompressedDataCRC;
+            return angle::Result::Continue;
+        }
     }
 
     ANGLE_VK_CHECK(
         displayVk,
         egl::DecompressBlobCacheData(compressedData.data(), compressedSize, uncompressedData),
         VK_ERROR_INITIALIZATION_FAILED);
+
+    if (uncompressedData->size() != uncompressedCacheDataSize)
+    {
+        WARN() << "Expected uncompressed size = " << uncompressedCacheDataSize
+               << ", Actual uncompressed size = " << uncompressedData->size();
+        return angle::Result::Continue;
+    }
 
     *success = true;
     return angle::Result::Continue;
@@ -3617,8 +3729,7 @@ void RendererVk::initFeatures(DisplayVk *displayVk,
         isVulkan11Device() ||
         ExtensionFound(VK_KHR_MAINTENANCE1_EXTENSION_NAME, deviceExtensionNames);
 
-    ANGLE_FEATURE_CONDITION(&mFeatures, appendAliasedMemoryDecorationsToSsbo,
-                            isARM && (isVenus || armDriverVersion >= ARMDriverVersion(38, 1, 0)));
+    ANGLE_FEATURE_CONDITION(&mFeatures, appendAliasedMemoryDecorationsToSsbo, true);
 
     ANGLE_FEATURE_CONDITION(
         &mFeatures, supportsSharedPresentableImageExtension,
@@ -4143,19 +4254,10 @@ void RendererVk::initFeatures(DisplayVk *displayVk,
         &mFeatures, emulateAdvancedBlendEquations,
         !mFeatures.supportsBlendOperationAdvanced.enabled && (isVenus || !isIntel));
 
-    // Workaround for platforms that do not return 1.0f even when dividend and divisor have the same
-    // value.
-    ANGLE_FEATURE_CONDITION(&mFeatures, precisionSafeDivision, isSamsung || isAMD);
-
     // http://anglebug.com/6933
     // Android expects VkPresentRegionsKHR rectangles with a bottom-left origin, while spec
     // states they should have a top-left origin.
     ANGLE_FEATURE_CONDITION(&mFeatures, bottomLeftOriginPresentRegionRectangles, IsAndroid());
-
-    // http://anglebug.com/7308
-    // Flushing mutable textures causes flakes in perf tests using Windows/Intel GPU. Failures are
-    // due to lost context/device.
-    ANGLE_FEATURE_CONDITION(&mFeatures, mutableMipmapTextureUpload, !(IsWindows() && isIntel));
 
     // Use VMA for image suballocation.
     ANGLE_FEATURE_CONDITION(&mFeatures, useVmaForImageSuballocation, true);
@@ -4270,7 +4372,7 @@ void RendererVk::initFeatures(DisplayVk *displayVk,
                                 (mFeatures.preferMonolithicPipelinesOverLibraries.enabled &&
                                  libraryBlobsAreReusedByMonolithicPipelines));
 
-    ANGLE_FEATURE_CONDITION(&mFeatures, enableAsyncPipelineCacheCompression, false);
+    ANGLE_FEATURE_CONDITION(&mFeatures, enableAsyncPipelineCacheCompression, isVenus);
 
     // Sync monolithic pipelines to the blob cache occasionally on platforms that would benefit from
     // it:
@@ -4302,6 +4404,8 @@ void RendererVk::initFeatures(DisplayVk *displayVk,
     // workaround, per-sample shading is inferred by ANGLE and explicitly enabled by the API.
     ANGLE_FEATURE_CONDITION(&mFeatures, explicitlyEnablePerSampleShading, isARM);
 
+    ANGLE_FEATURE_CONDITION(&mFeatures, explicitlyCastMediumpFloatTo16Bit, isARM);
+
     // Force to create swapchain with continuous refresh on shared present. Disabled by default.
     // Only enable it on integrations without EGL_FRONT_BUFFER_AUTO_REFRESH_ANDROID passthrough.
     ANGLE_FEATURE_CONDITION(&mFeatures, forceContinuousRefreshOnSharedPresent, false);
@@ -4331,6 +4435,15 @@ void RendererVk::initFeatures(DisplayVk *displayVk,
                                 (mSubgroupProperties.supportedOperations & kRequiredSubgroupOp) ==
                                     kRequiredSubgroupOp &&
                                 (limitsVk.maxTexelBufferElements >= kMaxTexelBufferSize));
+
+    // http://anglebug.com/7308
+    // Flushing mutable textures causes flakes in perf tests using Windows/Intel GPU. Failures are
+    // due to lost context/device.
+    // http://b/278600575
+    // Flushing mutable texture is disabled for discrete GPUs to mitigate possible VRAM OOM.
+    ANGLE_FEATURE_CONDITION(
+        &mFeatures, mutableMipmapTextureUpload,
+        canPreferDeviceLocalMemoryHostVisible(mPhysicalDeviceProperties.deviceType));
 
     // Allow passthrough of EGL colorspace attributes on Android platform and for vendors that
     // are known to support wide color gamut.
@@ -4366,6 +4479,9 @@ void RendererVk::initFeatures(DisplayVk *displayVk,
     // Required to pass android.media.cts.DecodeAccuracyTest with MESA Virtio-GPU Venus driver in
     // virtualized environment. https://issuetracker.google.com/246378938
     ANGLE_FEATURE_CONDITION(&mFeatures, preferLinearFilterForYUV, isVenus);
+
+    // Intel mesa drivers need depthBiasConstantFactor to be doubled to align with GL.
+    ANGLE_FEATURE_CONDITION(&mFeatures, doubleDepthBiasConstantFactor, isIntel && !IsWindows());
 
     // Required to pass android.media.codec.cts.EncodeDecodeTest with MESA Virtio-GPU Venus driver
     // in virtualized environment. https://issuetracker.google.com/246218584
@@ -4667,7 +4783,7 @@ angle::Result RendererVk::queueSubmitOneOff(vk::Context *context,
                                             vk::PrimaryCommandBuffer &&primary,
                                             vk::ProtectionType protectionType,
                                             egl::ContextPriority priority,
-                                            const vk::Semaphore *waitSemaphore,
+                                            VkSemaphore waitSemaphore,
                                             VkPipelineStageFlags waitSemaphoreStageMasks,
                                             const vk::Fence *fence,
                                             vk::SubmitPolicy submitPolicy,
@@ -4680,21 +4796,19 @@ angle::Result RendererVk::queueSubmitOneOff(vk::Context *context,
     ANGLE_TRY(allocateScopedQueueSerialIndex(&index));
     QueueSerial submitQueueSerial(index.get(), generateQueueSerial(index.get()));
 
-    ASSERT(waitSemaphore == nullptr || waitSemaphore->valid());
     ASSERT(fence == nullptr || fence->valid());
-    const VkSemaphore waitVkSemaphore = waitSemaphore ? waitSemaphore->getHandle() : VK_NULL_HANDLE;
-    const VkFence vkFence             = fence ? fence->getHandle() : VK_NULL_HANDLE;
+    const VkFence vkFence = fence ? fence->getHandle() : VK_NULL_HANDLE;
 
     if (isAsyncCommandQueueEnabled())
     {
         ANGLE_TRY(mCommandProcessor.enqueueSubmitOneOffCommands(
-            context, protectionType, priority, primary.getHandle(), waitVkSemaphore,
+            context, protectionType, priority, primary.getHandle(), waitSemaphore,
             waitSemaphoreStageMasks, vkFence, submitPolicy, submitQueueSerial));
     }
     else
     {
         ANGLE_TRY(mCommandQueue.queueSubmitOneOff(
-            context, protectionType, priority, primary.getHandle(), waitVkSemaphore,
+            context, protectionType, priority, primary.getHandle(), waitSemaphore,
             waitSemaphoreStageMasks, vkFence, submitPolicy, submitQueueSerial));
     }
 
@@ -5143,15 +5257,6 @@ angle::Result RendererVk::waitForResourceUseToFinishWithUserTimeout(vk::Context 
     return mCommandQueue.waitForResourceUseToFinishWithUserTimeout(context, use, timeout, result);
 }
 
-angle::Result RendererVk::finish(vk::Context *context)
-{
-    if (isAsyncCommandQueueEnabled())
-    {
-        ANGLE_TRY(mCommandProcessor.waitForAllWorkToBeSubmitted(context));
-    }
-    return mCommandQueue.waitIdle(context, getMaxFenceWaitTimeNs());
-}
-
 angle::Result RendererVk::flushWaitSemaphores(
     vk::ProtectionType protectionType,
     egl::ContextPriority priority,
@@ -5379,31 +5484,21 @@ VkDeviceSize RendererVk::getPreferedBufferBlockSize(uint32_t memoryTypeIndex) co
     return std::min(heapSize / 64, mPreferredLargeHeapBlockSize);
 }
 
-angle::Result RendererVk::allocateQueueSerialIndexImpl(SerialIndex *indexOut)
-{
-    *indexOut = mQueueSerialIndexAllocator.allocate();
-    if (*indexOut == kInvalidQueueSerialIndex)
-    {
-        return angle::Result::Stop;
-    }
-    return angle::Result::Continue;
-}
-
 angle::Result RendererVk::allocateScopedQueueSerialIndex(vk::ScopedQueueSerialIndex *indexOut)
 {
     SerialIndex index;
-    ANGLE_TRY(allocateQueueSerialIndexImpl(&index));
+    ANGLE_TRY(allocateQueueSerialIndex(&index));
     indexOut->init(index, &mQueueSerialIndexAllocator);
     return angle::Result::Continue;
 }
 
-angle::Result RendererVk::allocateQueueSerialIndex(QueueSerial *queueSerialOut)
+angle::Result RendererVk::allocateQueueSerialIndex(SerialIndex *serialIndexOut)
 {
-    SerialIndex index;
-    ANGLE_TRY(allocateQueueSerialIndexImpl(&index));
-    Serial serial   = isAsyncCommandQueueEnabled() ? mCommandProcessor.getLastEnqueuedSerial(index)
-                                                   : mCommandQueue.getLastSubmittedSerial(index);
-    *queueSerialOut = QueueSerial(index, serial);
+    *serialIndexOut = mQueueSerialIndexAllocator.allocate();
+    if (*serialIndexOut == kInvalidQueueSerialIndex)
+    {
+        return angle::Result::Stop;
+    }
     return angle::Result::Continue;
 }
 
@@ -5429,16 +5524,65 @@ VkResult ImageMemorySuballocator::allocateAndBindMemory(RendererVk *renderer,
                                                         Image *image,
                                                         VkMemoryPropertyFlags requiredFlags,
                                                         VkMemoryPropertyFlags preferredFlags,
+                                                        MemoryAllocationType memoryAllocationType,
                                                         Allocation *allocationOut,
+                                                        VkMemoryPropertyFlags *memoryFlagsOut,
                                                         uint32_t *memoryTypeIndexOut,
                                                         VkDeviceSize *sizeOut)
 {
     ASSERT(image && image->valid());
     ASSERT(allocationOut && !allocationOut->valid());
     const Allocator &allocator = renderer->getAllocator();
-    return vma::AllocateAndBindMemoryForImage(allocator.getHandle(), &image->mHandle, requiredFlags,
-                                              preferredFlags, &allocationOut->mHandle,
-                                              memoryTypeIndexOut, sizeOut);
+
+    VkMemoryRequirements memoryRequirements;
+    image->getMemoryRequirements(renderer->getDevice(), &memoryRequirements);
+    bool allocateDedicatedMemory =
+        memoryRequirements.size >= kImageSizeThresholdForDedicatedMemoryAllocation;
+
+    // Allocate and bind memory for the image.
+    VkResult result = vma::AllocateAndBindMemoryForImage(
+        allocator.getHandle(), &image->mHandle, requiredFlags, preferredFlags,
+        allocateDedicatedMemory, &allocationOut->mHandle, memoryTypeIndexOut, sizeOut);
+    if (result != VK_SUCCESS)
+    {
+        return result;
+    }
+
+    // We need to get the property flags of the allocated memory.
+    *memoryFlagsOut =
+        renderer->getMemoryProperties().getMemoryType(*memoryTypeIndexOut).propertyFlags;
+
+    renderer->onMemoryAlloc(memoryAllocationType, *sizeOut, *memoryTypeIndexOut,
+                            allocationOut->getHandle());
+    return VK_SUCCESS;
+}
+
+VkResult ImageMemorySuballocator::mapMemoryAndInitWithNonZeroValue(RendererVk *renderer,
+                                                                   Allocation *allocation,
+                                                                   VkDeviceSize size,
+                                                                   int value,
+                                                                   VkMemoryPropertyFlags flags)
+{
+    ASSERT(allocation && allocation->valid());
+    const Allocator &allocator = renderer->getAllocator();
+
+    void *mappedMemoryData;
+    VkResult result = vma::MapMemory(allocator.getHandle(), allocation->mHandle, &mappedMemoryData);
+    if (result != VK_SUCCESS)
+    {
+        return result;
+    }
+
+    memset(mappedMemoryData, value, static_cast<size_t>(size));
+    vma::UnmapMemory(allocator.getHandle(), allocation->mHandle);
+
+    // If the memory type is not host coherent, we perform an explicit flush.
+    if ((flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+    {
+        vma::FlushAllocation(allocator.getHandle(), allocation->mHandle, 0, VK_WHOLE_SIZE);
+    }
+
+    return VK_SUCCESS;
 }
 
 }  // namespace vk

@@ -14,7 +14,7 @@ class Constraint
     end
 
     def to_cpp
-        "TypeVariable::#{self}"
+        "Constraints::#{self}"
     end
 end
 
@@ -98,7 +98,7 @@ class AbstractType
         #    later be promoted to a concrete type once an overload is chosen.
         # 2) A concrete type if it's given a concrete type. Since there are no
         #    variables involved, we can immediately construct a concrete type.
-        if arguments[0].is_a? Variable
+        if arguments.any? do |arg| arg.is_a?(Variable) && !arg.kind.nil? end
             ParameterizedAbstractType.new(self, arguments)
         else
             Constructor.new(@name.downcase)[*arguments]
@@ -143,7 +143,7 @@ class PrimitiveType
     end
 
     def to_cpp
-        "m_types.#{name.downcase}Type()"
+        "m_types.#{name[0].downcase}#{name[1..]}Type()"
     end
 end
 
@@ -263,11 +263,11 @@ module DSL
         Vector = AbstractType.new(:Vector)
         Matrix = AbstractType.new(:Matrix)
         Array = AbstractType.new(:Array)
-
-        Texture = Constructor.new(:texture)
+        Texture = AbstractType.new(:Texture)
 
         Texture1d = Variable.new(:"Types::Texture::Kind::Texture1d", nil)
         Texture2d = Variable.new(:"Types::Texture::Kind::Texture2d", nil)
+        TextureMultisampled2d = Variable.new(:"Types::Texture::Kind::TextureMultisampled2d", nil)
         Texture2dArray = Variable.new(:"Types::Texture::Kind::Texture2dArray", nil)
         Texture3d = Variable.new(:"Types::Texture::Kind::Texture3d", nil)
         TextureCube = Variable.new(:"Types::Texture::Kind::TextureCube", nil)
@@ -278,21 +278,28 @@ module DSL
         U32 = PrimitiveType.new(:U32)
         F32 = PrimitiveType.new(:F32)
         Sampler = PrimitiveType.new(:Sampler)
+        TextureExternal = PrimitiveType.new(:TextureExternal)
         AbstractInt = PrimitiveType.new(:AbstractInt)
+        AbstractFloat = PrimitiveType.new(:AbstractFloat)
 
 
         S = Variable.new(:S, @TypeVariable)
         T = Variable.new(:T, @TypeVariable)
+        U = Variable.new(:U, @TypeVariable)
+        V = Variable.new(:V, @TypeVariable)
         N = Variable.new(:N, @NumericVariable)
         C = Variable.new(:C, @NumericVariable)
         R = Variable.new(:R, @NumericVariable)
+        K = Variable.new(:K, @NumericVariable)
 
         Number = Constraint.new(:Number)
+        Integer = Constraint.new(:Integer)
         Float = Constraint.new(:Float)
         Scalar = Constraint.new(:Scalar)
         ConcreteInteger = Constraint.new(:ConcreteInteger)
         ConcreteFloat = Constraint.new(:ConcreteFloat)
         ConcreteScalar = Constraint.new(:ConcreteScalar)
+        Concrete32BitNumber = Constraint.new(:Concrete32BitNumber)
         SignedNumber = Constraint.new(:SignedNumber)
         EOS
     end

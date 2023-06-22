@@ -109,7 +109,7 @@ static int runWGSL(const CommandLine& options)
     String fileName = String::fromLatin1(options.file());
     auto readResult = FileSystem::readEntireFile(fileName);
     if (!readResult.has_value()) {
-        // FIXME: print error message
+        dataLogLn("Failed to open ", fileName);
         return EXIT_FAILURE;
     }
 
@@ -131,7 +131,7 @@ static int runWGSL(const CommandLine& options)
         WGSL::AST::dumpAST(shaderModule);
 
     if (options.dumpGeneratedCode())
-        dataLog(prepareResult.msl);
+        printf("%s", prepareResult.msl.utf8().data());
 
     return EXIT_SUCCESS;
 }

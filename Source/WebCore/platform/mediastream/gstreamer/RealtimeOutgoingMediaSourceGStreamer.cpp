@@ -68,6 +68,8 @@ RealtimeOutgoingMediaSourceGStreamer::~RealtimeOutgoingMediaSourceGStreamer()
     if (m_transceiver)
         g_signal_handlers_disconnect_by_data(m_transceiver.get(), this);
 
+    stopOutgoingSource();
+
     if (GST_IS_PAD(m_webrtcSinkPad.get())) {
         auto srcPad = adoptGRef(gst_element_get_static_pad(m_bin.get(), "src"));
         if (gst_pad_unlink(srcPad.get(), m_webrtcSinkPad.get())) {
@@ -91,7 +93,7 @@ const GRefPtr<GstCaps>& RealtimeOutgoingMediaSourceGStreamer::allowedCaps() cons
 
     auto sdpMsIdLine = makeString(m_mediaStreamId, ' ', m_trackId);
     m_allowedCaps = capsFromRtpCapabilities(m_ssrcGenerator, rtpCapabilities(), [&sdpMsIdLine](GstStructure* structure) {
-        gst_structure_set(structure, "a-msid", G_TYPE_STRING, sdpMsIdLine.ascii().data(), nullptr);
+        gst_structure_set(structure, "a-msid", G_TYPE_STRING, sdpMsIdLine.utf8().data(), nullptr);
     });
 
     GST_DEBUG_OBJECT(m_bin.get(), "Allowed caps: %" GST_PTR_FORMAT, m_allowedCaps.get());
@@ -103,7 +105,7 @@ void RealtimeOutgoingMediaSourceGStreamer::setSource(Ref<MediaStreamTrackPrivate
     if (m_source && !m_initialSettings)
         m_initialSettings = m_source.value()->settings();
 
-    GST_DEBUG_OBJECT(m_bin.get(), "Setting source to %s", newSource->id().ascii().data());
+    GST_DEBUG_OBJECT(m_bin.get(), "Setting source to %s", newSource->id().utf8().data());
 
     if (m_source.has_value())
         stopOutgoingSource();
@@ -237,6 +239,8 @@ void RealtimeOutgoingMediaSourceGStreamer::setSinkPad(GRefPtr<GstPad>&& pad)
     }), this);
     g_object_get(m_transceiver.get(), "sender", &m_sender.outPtr(), nullptr);
 }
+
+#undef GST_CAT_DEFAULT
 
 } // namespace WebCore
 

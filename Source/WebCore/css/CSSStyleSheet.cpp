@@ -34,6 +34,7 @@
 #include "MediaList.h"
 #include "MediaQueryParser.h"
 #include "Node.h"
+#include "OriginAccessPatterns.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGStyleElement.h"
 #include "SecurityOrigin.h"
@@ -181,9 +182,10 @@ RefPtr<StyleRuleWithNesting> CSSStyleSheet::prepareChildStyleRuleForNesting(Styl
     RuleMutationScope scope(this);
     auto& rules = m_contents->m_childRules;
     for (size_t i = 0 ; i < rules.size() ; i++) {
-        if (rules[i] == &styleRule) {
+        if (rules[i].ptr() == &styleRule) {
             auto styleRuleWithNesting = StyleRuleWithNesting::create(WTFMove(styleRule));
-            rules[i] = styleRuleWithNesting.ptr();
+            rules[i] = styleRuleWithNesting;
+            m_contents->setHasNestingRules();
             return styleRuleWithNesting;
         }        
     }
@@ -332,7 +334,7 @@ bool CSSStyleSheet::canAccessRules() const
     Document* document = ownerDocument();
     if (!document)
         return true;
-    return document->securityOrigin().canRequest(baseURL);
+    return document->securityOrigin().canRequest(baseURL, OriginAccessPatternsForWebProcess::singleton());
 }
 
 ExceptionOr<unsigned> CSSStyleSheet::insertRule(const String& ruleString, unsigned index)
@@ -492,7 +494,8 @@ ExceptionOr<void> CSSStyleSheet::replaceSync(String&& text)
     RuleMutationScope mutationScope(this, RuleReplace);
     m_contents->clearRules();
     for (auto& childRuleWrapper : m_childRuleCSSOMWrappers)
-        childRuleWrapper->setParentStyleSheet(nullptr);
+        if (childRuleWrapper)
+            childRuleWrapper->setParentStyleSheet(nullptr);
     m_childRuleCSSOMWrappers.clear();
 
     m_contents->parseString(WTFMove(text));

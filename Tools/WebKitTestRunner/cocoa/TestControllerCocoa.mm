@@ -122,6 +122,9 @@ void TestController::cocoaPlatformInitialize(const Options& options)
 
     if (options.webKitLogChannels.length())
         [[NSUserDefaults standardUserDefaults] setValue:[NSString stringWithUTF8String:options.webKitLogChannels.c_str()] forKey:@"WebKit2Logging"];
+
+    if (options.lockdownModeEnabled)
+        [WKProcessPool _setCaptivePortalModeEnabledGloballyForTesting:YES];
 }
 
 WKContextRef TestController::platformContext()
@@ -140,8 +143,6 @@ TestFeatures TestController::platformSpecificFeatureOverridesDefaultsForTest(con
 
     if ([[NSUserDefaults standardUserDefaults] boolForKey:@"EnableProcessSwapOnNavigation"])
         features.boolTestRunnerFeatures.insert({ "enableProcessSwapOnNavigation", true });
-    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"EnableProcessSwapOnWindowOpen"])
-        features.boolTestRunnerFeatures.insert({ "enableProcessSwapOnWindowOpen", true });
 
     return features;
 }
@@ -565,7 +566,10 @@ static WKContentMode contentMode(const TestOptions& options)
 void TestController::configureWebpagePreferences(WKWebViewConfiguration *configuration, const TestOptions& options)
 {
     auto webpagePreferences = adoptNS([[WKWebpagePreferences alloc] init]);
-    [webpagePreferences _setNetworkConnectionIntegrityEnabled:options.networkConnectionIntegrityEnabled()];
+    if (options.advancedPrivacyProtectionsEnabled())
+        [webpagePreferences _setNetworkConnectionIntegrityPolicy:_WKWebsiteNetworkConnectionIntegrityPolicyEnabled];
+    else
+        [webpagePreferences _setNetworkConnectionIntegrityPolicy:_WKWebsiteNetworkConnectionIntegrityPolicyNone];
 #if PLATFORM(IOS_FAMILY)
     [webpagePreferences setPreferredContentMode:contentMode(options)];
 #endif

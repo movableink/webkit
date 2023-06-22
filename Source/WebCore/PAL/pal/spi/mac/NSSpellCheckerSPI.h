@@ -28,14 +28,22 @@
 #if USE(APPLE_INTERNAL_SDK)
 
 #import <AppKit/NSTextChecker.h>
-#import <WebKitAdditions/NSSpellCheckerSPIAdditions.h>
 
 #else
 
 extern NSString *NSTextCheckingInsertionPointKey;
 extern NSString *NSTextCheckingSuppressInitialCapitalizationKey;
+#if HAVE(INLINE_PREDICTIONS)
+extern NSString *NSTextCompletionAttributeName;
+#endif
 
 @interface NSSpellChecker ()
+
+#if HAVE(INLINE_PREDICTIONS)
+- (NSTextCheckingResult *)completionCandidateFromCandidates:(NSArray<NSTextCheckingResult *> *)candidates;
+- (void)showCompletionForCandidate:(NSTextCheckingResult *)candidate selectedRange:(NSRange)selectedRange offset:(NSUInteger)offset inString:(NSString *)string rect:(NSRect)rect view:(NSView *)view completionHandler:(void (^)(NSDictionary *resultDictionary))completionBlock;
+- (void)showCompletionForCandidate:(NSTextCheckingResult *)candidate selectedRange:(NSRange)selectedRange offset:(NSUInteger)offset inString:(NSString *)string rect:(NSRect)rect view:(NSView *)view client:(id <NSTextInputClient>)client completionHandler:(void (^)(NSDictionary *resultDictionary))completionBlock;
+#endif
 
 - (NSString *)languageForWordRange:(NSRange)range inString:(NSString *)string orthography:(NSOrthography *)orthography;
 - (BOOL)deletesAutospaceBeforeString:(NSString *)string language:(NSString *)language;
@@ -44,6 +52,12 @@ extern NSString *NSTextCheckingSuppressInitialCapitalizationKey;
 + (BOOL)grammarCheckingEnabled;
 
 @end
+
+#if HAVE(INLINE_PREDICTIONS)
+typedef NS_OPTIONS(uint64_t, NSTextCheckingTypeAppKitTemporary) {
+    _NSTextCheckingTypeSingleCompletion = 1ULL << 29,
+};
+#endif
 
 #endif // USE(APPLE_INTERNAL_SDK)
 

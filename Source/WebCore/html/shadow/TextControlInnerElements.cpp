@@ -39,8 +39,10 @@
 #include "MouseEvent.h"
 #include "PlatformMouseEvent.h"
 #include "RenderSearchField.h"
+#include "RenderStyleSetters.h"
 #include "RenderTextControl.h"
 #include "RenderView.h"
+#include "ResolvedStyle.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
 #include "ShadowPseudoIds.h"
@@ -159,7 +161,7 @@ void TextControlInnerTextElement::updateInnerTextElementEditabilityImpl(bool isE
     const auto& value = isEditable ? plaintextOnlyAtom() : falseAtom();
     if (initialization) {
         Attribute attribute(contenteditableAttr, value);
-        parserSetAttributes(makeSpan(&attribute, 1));
+        parserSetAttributes(std::span(&attribute, 1));
     } else
         setAttributeWithoutSynchronization(contenteditableAttr, value);
 }

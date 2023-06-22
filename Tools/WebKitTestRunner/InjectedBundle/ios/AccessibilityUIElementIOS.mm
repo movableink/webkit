@@ -460,6 +460,11 @@ JSValueRef AccessibilityUIElement::rowHeaders() const
     return nullptr;
 }
 
+JSValueRef AccessibilityUIElement::selectedCells() const
+{
+    return nullptr;
+}
+
 JSValueRef AccessibilityUIElement::columnHeaders() const
 {
     return nullptr;
@@ -976,6 +981,11 @@ bool AccessibilityUIElement::setSelectedTextRange(unsigned location, unsigned le
 {
     [m_element _accessibilitySetSelectedTextRange:NSMakeRange(location, length)];
     return true;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textInputMarkedRange() const
+{
+    return WTR::createJSString();
 }
 
 void AccessibilityUIElement::increment()

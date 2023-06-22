@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2013-2014 Google Inc. All rights reserved.
  * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,15 +45,17 @@
 #include "HTMLElement.h"
 #include "LocalFrame.h"
 #include "SVGElement.h"
-#include "SVGRenderStyle.h"
 #include "StyleBuilderConverter.h"
+#include "StyleBuilderStateInlines.h"
 #include "StyleCachedImage.h"
 #include "StyleCursorImage.h"
+#include "StyleCustomPropertyData.h"
 #include "StyleFontSizeFunctions.h"
 #include "StyleGeneratedImage.h"
 #include "StyleImageSet.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
+#include "TextSizeAdjustment.h"
 #include "WillChangeData.h"
 
 namespace WebCore {
@@ -105,9 +107,6 @@ public:
     DECLARE_PROPERTY_CUSTOM_HANDLERS(GridTemplateAreas);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(GridTemplateColumns);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(GridTemplateRows);
-#if ENABLE(CSS_IMAGE_RESOLUTION)
-    DECLARE_PROPERTY_CUSTOM_HANDLERS(ImageResolution);
-#endif
     DECLARE_PROPERTY_CUSTOM_HANDLERS(LetterSpacing);
 #if ENABLE(TEXT_AUTOSIZING)
     DECLARE_PROPERTY_CUSTOM_HANDLERS(LineHeight);
@@ -176,7 +175,6 @@ private:
 
     template <CSSPropertyID id>
     static void applyTextOrBoxShadowValue(BuilderState&, CSSValue&);
-    static bool isValidDisplayValue(BuilderState&, DisplayType);
 
     enum CounterBehavior {Increment = 0, Reset};
     template <CounterBehavior counterBehavior>
@@ -333,43 +331,6 @@ inline void BuilderCustom::applyValueVerticalAlign(BuilderState& builderState, C
     else
         builderState.style().setVerticalAlignLength(primitiveValue.convertToLength<FixedIntegerConversion | PercentConversion | CalculatedConversion>(builderState.cssToLengthConversionData()));
 }
-
-#if ENABLE(CSS_IMAGE_RESOLUTION)
-
-inline void BuilderCustom::applyInheritImageResolution(BuilderState& builderState)
-{
-    builderState.style().setImageResolutionSource(builderState.parentStyle().imageResolutionSource());
-    builderState.style().setImageResolutionSnap(builderState.parentStyle().imageResolutionSnap());
-    builderState.style().setImageResolution(builderState.parentStyle().imageResolution());
-}
-
-inline void BuilderCustom::applyInitialImageResolution(BuilderState& builderState)
-{
-    builderState.style().setImageResolutionSource(RenderStyle::initialImageResolutionSource());
-    builderState.style().setImageResolutionSnap(RenderStyle::initialImageResolutionSnap());
-    builderState.style().setImageResolution(RenderStyle::initialImageResolution());
-}
-
-inline void BuilderCustom::applyValueImageResolution(BuilderState& builderState, CSSValue& value)
-{
-    ImageResolutionSource source = RenderStyle::initialImageResolutionSource();
-    ImageResolutionSnap snap = RenderStyle::initialImageResolutionSnap();
-    double resolution = RenderStyle::initialImageResolution();
-    for (auto& item : downcast<CSSValueList>(value)) {
-        CSSPrimitiveValue& primitiveValue = downcast<CSSPrimitiveValue>(item.get());
-        if (primitiveValue.valueID() == CSSValueFromImage)
-            source = ImageResolutionSource::FromImage;
-        else if (primitiveValue.valueID() == CSSValueSnap)
-            snap = ImageResolutionSnap::Pixels;
-        else
-            resolution = primitiveValue.doubleValue(CSSUnitType::CSS_DPPX);
-    }
-    builderState.style().setImageResolutionSource(source);
-    builderState.style().setImageResolutionSnap(snap);
-    builderState.style().setImageResolution(resolution);
-}
-
-#endif // ENABLE(CSS_IMAGE_RESOLUTION)
 
 inline void BuilderCustom::applyInheritSize(BuilderState&)
 {
@@ -920,13 +881,12 @@ inline void BuilderCustom::applyTextOrBoxShadowValue(BuilderState& builderState,
         auto blur = shadowValue.blur ? shadowValue.blur->computeLength<Length>(conversionData) : Length(0, LengthType::Fixed);
         auto spread = shadowValue.spread ? shadowValue.spread->computeLength<Length>(conversionData) : Length(0, LengthType::Fixed);
         ShadowStyle shadowStyle = shadowValue.style && shadowValue.style->valueID() == CSSValueInset ? ShadowStyle::Inset : ShadowStyle::Normal;
-        Color color;
+        // If no color value is specified, the color is currentColor
+        auto color = StyleColor::currentColor();
         if (shadowValue.color)
-            color = builderState.colorFromPrimitiveValueWithResolvedCurrentColor(*shadowValue.color);
-        else
-            color = builderState.style().color();
+            color = builderState.colorFromPrimitiveValue(*shadowValue.color);
 
-        auto shadowData = makeUnique<ShadowData>(LengthPoint(x, y), blur, spread, shadowStyle, property == CSSPropertyWebkitBoxShadow, color.isValid() ? color : Color::transparentBlack);
+        auto shadowData = makeUnique<ShadowData>(LengthPoint(x, y), blur, spread, shadowStyle, property == CSSPropertyWebkitBoxShadow, color);
         if (property == CSSPropertyTextShadow)
             builderState.style().setTextShadow(WTFMove(shadowData), !isFirstEntry); // add to the list if this is not the first entry
         else
@@ -1128,13 +1088,6 @@ inline void BuilderCustom::applyValueBorderTopRightRadius(BuilderState& builderS
     builderState.style().setHasExplicitlySetBorderTopRightRadius(true);
 }
 
-inline bool BuilderCustom::isValidDisplayValue(BuilderState& builderState, DisplayType display)
-{
-    if (is<SVGElement>(builderState.element()) && builderState.style().styleType() == PseudoId::None)
-        return display == DisplayType::Inline || display == DisplayType::Block || display == DisplayType::None;
-    return true;
-}
-
 inline void BuilderCustom::applyInitialFontVariationSettings(BuilderState& builderState)
 {
     builderState.style().setFontVariationSettings({ });
@@ -1143,20 +1096,6 @@ inline void BuilderCustom::applyInitialFontVariationSettings(BuilderState& build
 inline void BuilderCustom::applyInheritFontVariationSettings(BuilderState& builderState)
 {
     builderState.style().setFontVariationSettings(builderState.parentStyle().fontVariationSettings());
-}
-
-inline void BuilderCustom::applyInheritDisplay(BuilderState& builderState)
-{
-    DisplayType display = builderState.parentStyle().display();
-    if (isValidDisplayValue(builderState, display))
-        builderState.style().setDisplay(display);
-}
-
-inline void BuilderCustom::applyValueDisplay(BuilderState& builderState, CSSValue& value)
-{
-    auto display = fromCSSValue<DisplayType>(value);
-    if (isValidDisplayValue(builderState, display))
-        builderState.style().setDisplay(display);
 }
 
 inline void BuilderCustom::applyInheritBaselineShift(BuilderState& builderState)
@@ -1331,8 +1270,8 @@ inline void BuilderCustom::applyValueTextEmphasisStyle(BuilderState& builderStat
 template <BuilderCustom::CounterBehavior counterBehavior>
 inline void BuilderCustom::applyInheritCounter(BuilderState& builderState)
 {
-    auto& map = builderState.style().accessCounterDirectives();
-    for (auto& keyValue : const_cast<RenderStyle&>(builderState.parentStyle()).accessCounterDirectives()) {
+    auto& map = builderState.style().accessCounterDirectives().map;
+    for (auto& keyValue : builderState.parentStyle().counterDirectives().map) {
         auto& directives = map.add(keyValue.key, CounterDirectives { }).iterator->value;
         if (counterBehavior == Reset)
             directives.resetValue = keyValue.value.resetValue;
@@ -1349,7 +1288,7 @@ inline void BuilderCustom::applyValueCounter(BuilderState& builderState, CSSValu
     if (!is<CSSValueList>(value) && !setCounterIncrementToNone)
         return;
 
-    CounterDirectiveMap& map = builderState.style().accessCounterDirectives();
+    auto& map = builderState.style().accessCounterDirectives().map;
     for (auto& keyValue : map) {
         if (counterBehavior == Reset)
             keyValue.value.resetValue = std::nullopt;
@@ -2033,9 +1972,9 @@ inline void BuilderCustom::applyValueWillChange(BuilderState& builderState, CSSV
     }
 
     auto willChange = WillChangeData::create();
-    for (auto& item : downcast<CSSValueList>(value)) {
+    auto processSingleValue = [&](const CSSValue& item) {
         if (!is<CSSPrimitiveValue>(item))
-            continue;
+            return;
         auto& primitiveValue = downcast<CSSPrimitiveValue>(item);
         switch (primitiveValue.valueID()) {
         case CSSValueScrollPosition:
@@ -2052,7 +1991,13 @@ inline void BuilderCustom::applyValueWillChange(BuilderState& builderState, CSSV
             }
             break;
         }
-    }
+    };
+    if (is<CSSValueList>(value)) {
+        for (auto& item : downcast<CSSValueList>(value))
+            processSingleValue(item);
+    } else
+        processSingleValue(value);
+
     builderState.style().setWillChange(WTFMove(willChange));
 }
 
@@ -2077,21 +2022,17 @@ inline void BuilderCustom::applyValueColor(BuilderState& builderState, CSSValue&
     auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
 
     // For the color property, current color is actually the inherited computed color.
-    auto absoluteColorOrInheritColor = [&](const StyleColor& color) {
-        if (color.isCurrentColor()) {
-            auto& parentStyle = builderState.parentStyle();
-            return parentStyle.color();
-        }
-        return color.absoluteColor();
+    auto resolveColor = [&](const StyleColor& color) {
+        return color.resolveColor(builderState.parentStyle().color());
     };
-    
+
     if (builderState.applyPropertyToRegularStyle()) {
         auto color = builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::No);
-        builderState.style().setColor(absoluteColorOrInheritColor(color));
+        builderState.style().setColor(resolveColor(color));
     }
     if (builderState.applyPropertyToVisitedLinkStyle()) {
         auto color = builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::Yes);
-        builderState.style().setVisitedLinkColor(absoluteColorOrInheritColor(color));
+        builderState.style().setVisitedLinkColor(resolveColor(color));
     }
     builderState.style().setDisallowsFastPathInheritance();
 }

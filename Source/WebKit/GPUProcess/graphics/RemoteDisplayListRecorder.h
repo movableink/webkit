@@ -28,7 +28,6 @@
 #if ENABLE(GPU_PROCESS)
 
 #include "Decoder.h"
-#include "DisplayListRecorderFlushIdentifier.h"
 #include "QualifiedRenderingResourceIdentifier.h"
 #include "RemoteRenderingBackend.h"
 #include "SharedVideoFrame.h"
@@ -55,7 +54,6 @@ public:
     }
 
     void stopListeningForIPC();
-    void clearImageBufferReference();
 
     void save();
     void restore();
@@ -74,10 +72,13 @@ public:
     void setMiterLimit(float);
     void clearShadow();
     void clip(const WebCore::FloatRect&);
+    void clipRoundedRect(const WebCore::FloatRoundedRect&);
     void clipOut(const WebCore::FloatRect&);
+    void clipOutRoundedRect(const WebCore::FloatRoundedRect&);
     void clipToImageBuffer(WebCore::RenderingResourceIdentifier, const WebCore::FloatRect& destinationRect);
     void clipOutToPath(const WebCore::Path&);
     void clipPath(const WebCore::Path&, WebCore::WindRule);
+    void resetClip();
     void drawGlyphs(WebCore::DisplayList::DrawGlyphs&&);
     void drawDecomposedGlyphs(WebCore::RenderingResourceIdentifier fontIdentifier, WebCore::RenderingResourceIdentifier decomposedGlyphsIdentifier);
     void drawFilteredImageBuffer(std::optional<WebCore::RenderingResourceIdentifier> sourceImageIdentifier, const WebCore::FloatRect& sourceImageRect, Ref<WebCore::Filter>);
@@ -131,7 +132,8 @@ public:
     void applyFillPattern();
 #endif
     void applyDeviceScaleFactor(float);
-    void flushContext(DisplayListRecorderFlushIdentifier);
+    void flushContext(IPC::Semaphore&&);
+    void flushContextSync(CompletionHandler<void()>&&);
 
 private:
     RemoteDisplayListRecorder(WebCore::ImageBuffer&, QualifiedRenderingResourceIdentifier, WebCore::ProcessIdentifier webProcessIdentifier, RemoteRenderingBackend&);
@@ -140,6 +142,7 @@ private:
     void clipToImageBufferWithQualifiedIdentifier(QualifiedRenderingResourceIdentifier, const WebCore::FloatRect& destinationRect);
     void drawGlyphsWithQualifiedIdentifier(WebCore::DisplayList::DrawGlyphs&&, QualifiedRenderingResourceIdentifier fontIdentifier);
     void drawDecomposedGlyphsWithQualifiedIdentifiers(QualifiedRenderingResourceIdentifier fontIdentifier, QualifiedRenderingResourceIdentifier decomposedGlyphsIdentifier);
+    void drawFilteredImageBufferInternal(std::optional<WebCore::RenderingResourceIdentifier> sourceImageIdentifier, const WebCore::FloatRect& sourceImageRect, WebCore::Filter&, WebCore::FilterResults&);
     void drawImageBufferWithQualifiedIdentifier(QualifiedRenderingResourceIdentifier imageBufferIdentifier, const WebCore::FloatRect& destinationRect, const WebCore::FloatRect& srcRect, const WebCore::ImagePaintingOptions&);
     void drawNativeImageWithQualifiedIdentifier(QualifiedRenderingResourceIdentifier imageIdentifier, const WebCore::FloatSize& imageSize, const WebCore::FloatRect& destRect, const WebCore::FloatRect& srcRect, const WebCore::ImagePaintingOptions&);
     void drawPatternWithQualifiedIdentifier(QualifiedRenderingResourceIdentifier imageIdentifier, const WebCore::FloatRect& destRect, const WebCore::FloatRect& tileRect, const WebCore::AffineTransform&, const WebCore::FloatPoint&, const WebCore::FloatSize& spacing, const WebCore::ImagePaintingOptions&);
@@ -162,7 +165,7 @@ private:
 #if PLATFORM(COCOA) && ENABLE(VIDEO)
     void paintVideoFrame(SharedVideoFrame&&, const WebCore::FloatRect&, bool shouldDiscardAlpha);
     void setSharedVideoFrameSemaphore(IPC::Semaphore&&);
-    void setSharedVideoFrameMemory(const SharedMemory::Handle&);
+    void setSharedVideoFrameMemory(SharedMemory::Handle&&);
 #endif
 
     WeakPtr<WebCore::ImageBuffer> m_imageBuffer;

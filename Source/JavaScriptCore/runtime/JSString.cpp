@@ -36,7 +36,7 @@ const ClassInfo JSString::s_info = { "string"_s, nullptr, nullptr, nullptr, CREA
 
 Structure* JSString::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
 {
-    return Structure::create(vm, globalObject, proto, TypeInfo(StringType, StructureFlags), info());
+    return Structure::create(vm, globalObject, proto, defaultTypeInfo(), info());
 }
 
 JSString* JSString::createEmptyString(VM& vm)
@@ -139,25 +139,10 @@ void JSString::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 
 DEFINE_VISIT_CHILDREN(JSString);
 
-static constexpr unsigned maxLengthForOnStackResolve = 2048;
-
 template<typename CharacterType>
 void JSRopeString::resolveRopeInternalNoSubstring(CharacterType* buffer) const
 {
-    for (size_t i = 0; i < s_maxInternalRopeLength && fiber(i); ++i) {
-        if (fiber(i)->isRope()) {
-            resolveRopeSlowCase(buffer);
-            return;
-        }
-    }
-
-    CharacterType* position = buffer;
-    for (size_t i = 0; i < s_maxInternalRopeLength && fiber(i); ++i) {
-        StringView view = *fiber(i)->valueInternal().impl();
-        view.getCharacters(position);
-        position += view.length();
-    }
-    ASSERT((buffer + length()) == position);
+    resolveToBuffer(this, buffer, length());
 }
 
 AtomString JSRopeString::resolveRopeToAtomString(JSGlobalObject* globalObject) const
@@ -198,18 +183,6 @@ AtomString JSRopeString::resolveRopeToAtomString(JSGlobalObject* globalObject) c
     convertToNonRope(String { atomString });
 
     return atomString;
-}
-
-inline void JSRopeString::convertToNonRope(String&& string) const
-{
-    // Concurrent compiler threads can access String held by JSString. So we always emit
-    // store-store barrier here to ensure concurrent compiler threads see initialized String.
-    ASSERT(JSString::isRope());
-    WTF::storeStoreFence();
-    new (&uninitializedValueInternal()) String(WTFMove(string));
-    static_assert(sizeof(String) == sizeof(RefPtr<StringImpl>), "JSString's String initialization must be done in one pointer move.");
-    // We do not clear the trailing fibers and length information (fiber1 and fiber2) because we could be reading the length concurrently.
-    ASSERT(!JSString::isRope());
 }
 
 RefPtr<AtomStringImpl> JSRopeString::resolveRopeToExistingAtomString(JSGlobalObject* globalObject) const
@@ -295,53 +268,6 @@ const String& JSRopeString::resolveRope(JSGlobalObject* nullOrGlobalObjectForOOM
     });
 }
 
-// Overview: These functions convert a JSString from holding a string in rope form
-// down to a simple String representation. It does so by building up the string
-// backwards, since we want to avoid recursion, we expect that the tree structure
-// representing the rope is likely imbalanced with more nodes down the left side
-// (since appending to the string is likely more common) - and as such resolving
-// in this fashion should minimize work queue size.  (If we built the queue forwards
-// we would likely have to place all of the constituent StringImpls into the
-// Vector before performing any concatenation, but by working backwards we likely
-// only fill the queue with the number of substrings at any given level in a
-// rope-of-ropes.)
-template<typename CharacterType>
-void JSRopeString::resolveRopeSlowCase(CharacterType* buffer) const
-{
-    CharacterType* position = buffer + length(); // We will be working backwards over the rope.
-    Vector<JSString*, 32, UnsafeVectorOverflow> workQueue; // These strings are kept alive by the parent rope, so using a Vector is OK.
-
-    for (size_t i = 0; i < s_maxInternalRopeLength && fiber(i); ++i)
-        workQueue.append(fiber(i));
-
-    while (!workQueue.isEmpty()) {
-        JSString* currentFiber = workQueue.last();
-        workQueue.removeLast();
-
-        if (currentFiber->isRope()) {
-            JSRopeString* currentFiberAsRope = static_cast<JSRopeString*>(currentFiber);
-            if (currentFiberAsRope->isSubstring()) {
-                ASSERT(!currentFiberAsRope->substringBase()->isRope());
-                StringView view = *currentFiberAsRope->substringBase()->valueInternal().impl();
-                unsigned offset = currentFiberAsRope->substringOffset();
-                unsigned length = currentFiberAsRope->length();
-                position -= length;
-                view.substring(offset, length).getCharacters(position);
-                continue;
-            }
-            for (size_t i = 0; i < s_maxInternalRopeLength && currentFiberAsRope->fiber(i); ++i)
-                workQueue.append(currentFiberAsRope->fiber(i));
-            continue;
-        }
-
-        StringView view = *currentFiber->valueInternal().impl();
-        position -= view.length();
-        view.getCharacters(position);
-    }
-
-    ASSERT(buffer == position);
-}
-
 void JSRopeString::outOfMemory(JSGlobalObject* nullOrGlobalObjectForOOM) const
 {
     ASSERT(isRope());
@@ -399,7 +325,7 @@ JSString* jsStringWithCacheSlowCase(VM& vm, StringImpl& stringImpl)
 {
     ASSERT(stringImpl.length() > 1 || (stringImpl.length() == 1 && stringImpl[0] > maxSingleCharacterString));
     JSString* string = JSString::create(vm, stringImpl);
-    vm.lastCachedString.set(vm, string);
+    vm.lastCachedString.setWithoutWriteBarrier(string);
     return string;
 }
 

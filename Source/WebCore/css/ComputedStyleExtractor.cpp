@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2004 Zack Rusin <zack@kde.org>
- * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007 Nicholas Shanks <webkit@nickshanks.com>
  * Copyright (C) 2011 Sencha, Inc. All rights reserved.
@@ -52,6 +52,7 @@
 #include "CSSValueList.h"
 #include "CSSValuePair.h"
 #include "CSSValuePool.h"
+#include "CSSWordBoundaryDetectionValue.h"
 #include "ComposedTreeAncestorIterator.h"
 #include "ContentData.h"
 #include "CursorList.h"
@@ -63,15 +64,18 @@
 #include "PerspectiveTransformOperation.h"
 #include "QuotesData.h"
 #include "RenderBlock.h"
-#include "RenderBox.h"
+#include "RenderBoxInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderGrid.h"
 #include "RenderInline.h"
 #include "RotateTransformOperation.h"
 #include "SVGElement.h"
+#include "SVGRenderStyle.h"
 #include "ScaleTransformOperation.h"
 #include "SkewTransformOperation.h"
 #include "StylePropertyShorthand.h"
 #include "StylePropertyShorthandFunctions.h"
+#include "StyleReflection.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
 #include "Styleable.h"
@@ -95,10 +99,10 @@ public:
     }
     virtual ~OrderedNamedLinesCollector() = default;
 
-    bool isEmpty() const { return m_orderedNamedGridLines.isEmpty() && m_orderedNamedAutoRepeatGridLines.isEmpty(); }
+    bool isEmpty() const { return m_orderedNamedGridLines.map.isEmpty() && m_orderedNamedAutoRepeatGridLines.map.isEmpty(); }
     virtual void collectLineNamesForIndex(Vector<String>&, unsigned index) const = 0;
 
-    virtual int namedGridLineCount() const { return m_orderedNamedGridLines.size(); }
+    virtual int namedGridLineCount() const { return m_orderedNamedGridLines.map.size(); }
 
 protected:
 
@@ -132,14 +136,14 @@ public:
     OrderedNamedLinesCollectorInSubgridLayout(const RenderStyle& style, bool isRowAxis, unsigned totalTracksCount)
         : OrderedNamedLinesCollector(style, isRowAxis)
         , m_insertionPoint(isRowAxis ? style.gridAutoRepeatColumnsInsertionPoint() : style.gridAutoRepeatRowsInsertionPoint())
-        , m_autoRepeatLineSetListLength((isRowAxis ? style.autoRepeatOrderedNamedGridColumnLines() : style.autoRepeatOrderedNamedGridRowLines()).size())
+        , m_autoRepeatLineSetListLength((isRowAxis ? style.autoRepeatOrderedNamedGridColumnLines() : style.autoRepeatOrderedNamedGridRowLines()).map.size())
         , m_totalLines(totalTracksCount + 1)
     {
         if (!m_autoRepeatLineSetListLength) {
             m_autoRepeatTotalLineSets = 0;
             return;
         }
-        unsigned named = (isRowAxis ? style.orderedNamedGridColumnLines() : style.orderedNamedGridRowLines()).size();
+        unsigned named = (isRowAxis ? style.orderedNamedGridColumnLines() : style.orderedNamedGridRowLines()).map.size();
         if (named >= m_totalLines) {
             m_autoRepeatTotalLineSets = 0;
             return;
@@ -158,15 +162,14 @@ private:
     unsigned m_totalLines;
 };
 
-void OrderedNamedLinesCollector::appendLines(Vector<String>& lineNamesValue, unsigned index, NamedLinesType type) const
+void OrderedNamedLinesCollector::appendLines(Vector<String>& lineNames, unsigned index, NamedLinesType type) const
 {
-    auto iter = type == NamedLines ? m_orderedNamedGridLines.find(index) : m_orderedNamedAutoRepeatGridLines.find(index);
-    auto endIter = type == NamedLines ? m_orderedNamedGridLines.end() : m_orderedNamedAutoRepeatGridLines.end();
-    if (iter == endIter)
+    auto& map = (type == NamedLines ? m_orderedNamedGridLines : m_orderedNamedAutoRepeatGridLines).map;
+    auto it = map.find(index);
+    if (it == map.end())
         return;
-
-    for (const auto& lineName : iter->value)
-        lineNamesValue.append(lineName);
+    for (auto& name : it->value)
+        lineNames.append(name);
 }
 
 void OrderedNamedLinesCollectorInGridLayout::collectLineNamesForIndex(Vector<String>& lineNamesValue, unsigned i) const
@@ -572,6 +575,27 @@ static RefPtr<CSSValue> positionOffsetValue(const RenderStyle& style, CSSPropert
     return CSSPrimitiveValue::create(CSSValueAuto);
 }
 
+RefPtr<CSSValue> ComputedStyleExtractor::whiteSpaceShorthandValue(const RenderStyle& style)
+{
+    auto whiteSpaceCollapse = style.whiteSpaceCollapse();
+    auto textWrap = style.textWrap();
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::BreakSpaces && textWrap == TextWrap::Wrap)
+        return CSSPrimitiveValue::create(CSSValueBreakSpaces);
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::Collapse && textWrap == TextWrap::Wrap)
+        return CSSPrimitiveValue::create(CSSValueNormal);
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::Collapse && textWrap == TextWrap::NoWrap)
+        return CSSPrimitiveValue::create(CSSValueNowrap);
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::Preserve && textWrap == TextWrap::NoWrap)
+        return CSSPrimitiveValue::create(CSSValuePre);
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::PreserveBreaks && textWrap == TextWrap::Wrap)
+        return CSSPrimitiveValue::create(CSSValuePreLine);
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::Preserve && textWrap == TextWrap::Wrap)
+        return CSSPrimitiveValue::create(CSSValuePreWrap);
+
+    // The white-space property cannot be properly expressed in terms of its longhands
+    return nullptr;
+}
+
 Ref<CSSPrimitiveValue> ComputedStyleExtractor::currentColorOrValidColor(const RenderStyle& style, const StyleColor& color)
 {
     // This function does NOT look at visited information, so that computed style doesn't expose that.
@@ -913,9 +937,9 @@ Ref<CSSValue> ComputedStyleExtractor::valueForShadow(const ShadowData* shadow, C
         auto y = adjustLengthForZoom(currShadowData->y(), style, adjust);
         auto blur = adjustLengthForZoom(currShadowData->radius(), style, adjust);
         auto spread = propertyID == CSSPropertyTextShadow ? RefPtr<CSSPrimitiveValue>() : adjustLengthForZoom(currShadowData->spread(), style, adjust);
-        auto style = propertyID == CSSPropertyTextShadow || currShadowData->style() == ShadowStyle::Normal ? RefPtr<CSSPrimitiveValue>() : CSSPrimitiveValue::create(CSSValueInset);
-        auto color = cssValuePool.createColorValue(currShadowData->color());
-        list.append(CSSShadowValue::create(WTFMove(x), WTFMove(y), WTFMove(blur), WTFMove(spread), WTFMove(style), WTFMove(color)));
+        auto shadowStyle = propertyID == CSSPropertyTextShadow || currShadowData->style() == ShadowStyle::Normal ? RefPtr<CSSPrimitiveValue>() : CSSPrimitiveValue::create(CSSValueInset);
+        auto color = cssValuePool.createColorValue(style.colorResolvingCurrentColor(currShadowData->color()));
+        list.append(CSSShadowValue::create(WTFMove(x), WTFMove(y), WTFMove(blur), WTFMove(spread), WTFMove(shadowStyle), WTFMove(color)));
     }
     list.reverse();
     return CSSValueList::createCommaSeparated(WTFMove(list));
@@ -1113,7 +1137,7 @@ static Ref<CSSValue> valueForGridTrackList(GridTrackSizingDirection direction, R
     }
 
     // Otherwise, the resolved value is the computed value, preserving repeat().
-    auto& computedTracks = isRowAxis ? style.gridColumnList() : style.gridRowList();
+    auto& computedTracks = (isRowAxis ? style.gridColumnList() : style.gridRowList()).list;
 
     auto repeatVisitor = [&](CSSValueListBuilder& list, const RepeatEntry& entry) {
         if (std::holds_alternative<Vector<String>>(entry)) {
@@ -1212,10 +1236,17 @@ static Ref<CSSValueList> valueForScrollSnapAlignment(const ScrollSnapAlign& alig
         createConvertingToCSSValueID(alignment.inlineAlign));
 }
 
-static Ref<CSSValueList> valueForTextEdge(const TextEdge& textEdge)
+static Ref<CSSValue> valueForScrollbarGutter(const ScrollbarGutter& gutter)
 {
-    return CSSValueList::createSpaceSeparated(createConvertingToCSSValueID(textEdge.over),
-        createConvertingToCSSValueID(textEdge.under));
+    if (!gutter.bothEdges)
+        return CSSPrimitiveValue::create(gutter.isAuto ? CSSValueAuto : CSSValueStable);
+    return CSSValuePair::create(CSSPrimitiveValue::create(CSSValueStable), CSSPrimitiveValue::create(CSSValueBothEdges));
+}
+
+static Ref<CSSValueList> valueForTextBoxEdge(const TextBoxEdge& textBoxEdge)
+{
+    return CSSValueList::createSpaceSeparated(createConvertingToCSSValueID(textBoxEdge.over),
+        createConvertingToCSSValueID(textBoxEdge.under));
 }
 
 static Ref<CSSValue> willChangePropertyValue(const WillChangeData* willChangeData)
@@ -1445,16 +1476,16 @@ static Ref<CSSPrimitiveValue> valueForAnimationIterationCount(double iterationCo
     return CSSPrimitiveValue::create(iterationCount);
 }
 
-static Ref<CSSPrimitiveValue> valueForAnimationDirection(Animation::AnimationDirection direction)
+static Ref<CSSPrimitiveValue> valueForAnimationDirection(Animation::Direction direction)
 {
     switch (direction) {
-    case Animation::AnimationDirectionNormal:
+    case Animation::Direction::Normal:
         return CSSPrimitiveValue::create(CSSValueNormal);
-    case Animation::AnimationDirectionAlternate:
+    case Animation::Direction::Alternate:
         return CSSPrimitiveValue::create(CSSValueAlternate);
-    case Animation::AnimationDirectionReverse:
+    case Animation::Direction::Reverse:
         return CSSPrimitiveValue::create(CSSValueReverse);
-    case Animation::AnimationDirectionAlternateReverse:
+    case Animation::Direction::AlternateReverse:
         return CSSPrimitiveValue::create(CSSValueAlternateReverse);
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -1694,9 +1725,8 @@ static Ref<CSSValue> valueForPathOperation(const RenderStyle& style, const PathO
         auto& ray = downcast<RayPathOperation>(*operation);
 
         auto angle = CSSPrimitiveValue::create(ray.angle(), CSSUnitType::CSS_DEG);
-        auto size = CSSPrimitiveValue::create(valueIDForRaySize(ray.size()));
 
-        return CSSRayValue::create(WTFMove(angle), WTFMove(size), ray.isContaining());
+        return CSSRayValue::create(WTFMove(angle), valueIDForRaySize(ray.size()), ray.isContaining());
     }
     }
 
@@ -2062,12 +2092,12 @@ static Ref<CSSValueList> contentToCSSValue(const RenderStyle& style)
 
 static Ref<CSSValue> counterToCSSValue(const RenderStyle& style, CSSPropertyID propertyID)
 {
-    auto* map = style.counterDirectives();
-    if (!map)
+    auto& map = style.counterDirectives().map;
+    if (map.isEmpty())
         return CSSPrimitiveValue::create(CSSValueNone);
 
     CSSValueListBuilder list;
-    for (auto& keyValue : *map) {
+    for (auto& keyValue : map) {
         if (auto number = (propertyID == CSSPropertyCounterIncrement ? keyValue.value.incrementValue : keyValue.value.resetValue)) {
             list.append(CSSPrimitiveValue::createCustomIdent(keyValue.key));
             list.append(CSSPrimitiveValue::createInteger(*number));
@@ -2076,6 +2106,11 @@ static Ref<CSSValue> counterToCSSValue(const RenderStyle& style, CSSPropertyID p
     if (!list.isEmpty())
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     return CSSPrimitiveValue::create(CSSValueNone);
+}
+
+static Ref<CSSValue> wordBoundaryDetection(WordBoundaryDetection wordBoundaryDetection)
+{
+    return CSSWordBoundaryDetectionValue::create(WTFMove(wordBoundaryDetection));
 }
 
 static Ref<CSSValueList> fontFamilyList(const RenderStyle& style)
@@ -2284,35 +2319,153 @@ static inline bool isNonReplacedInline(RenderObject& renderer)
     return renderer.isInline() && !renderer.isReplacedOrInlineBlock();
 }
 
-static bool isFlexItem(const RenderObject* renderer)
-{
-    if (auto* box = dynamicDowncast<RenderBox>(renderer))
-        return box->isFlexItem();
-    return false;
-}
-
-static bool rendererCanHaveTrimmedMargin(const RenderBox& renderer, std::optional<MarginTrimType> marginTrimType)
+static bool rendererCanHaveTrimmedMargin(const RenderBox& renderer, MarginTrimType marginTrimType)
 {
     // A renderer will have a specific margin marked as trimmed by setting its rare data bit if:
     // 1.) The layout system the box is in has this logic (setting the rare data bit for this 
     // specific margin) implemented
     // 2.) The block container/flexbox/grid has this margin specified in its margin-trim style
     // If marginTrimType is empty we will check if any of the supported margins are in the style
-    auto* containingBlock = renderer.containingBlock();
-    if (!containingBlock || containingBlock->isRenderView())
-        return false;
+    if (renderer.isFlexItem() || renderer.isGridItem())
+        return renderer.parent()->style().marginTrim().contains(marginTrimType);
 
-    // containingBlock->isBlockContainer() can return true even if the item is in a RenderFlexibleBox
-    // (e.g. buttons) so we should explicitly check that the item is not a flex item to catch block containers here
-    if (!renderer.isFlexItem() && (containingBlock->isRenderGrid() || containingBlock->isBlockContainer()))
-        return false;
-
-    if (containingBlock->isFlexibleBox()) {
-        if (!marginTrimType)
-            return !containingBlock->style().marginTrim().isEmpty();
-        return containingBlock->style().marginTrim().contains(marginTrimType.value());
+    // Even though margin-trim is not inherited, it is possible for nested block level boxes
+    // to get placed at the block-start of an containing block ancestor which does have margin-trim.
+    // In this case it is not enough to simply check the immediate containing block of the child. It is
+    // also probably too expensive to perform an arbitrary walk up the tree to check for the existence
+    // of an ancestor containing block with the property, so we will just return true and let
+    // the rest of the logic in RenderBox::hasTrimmedMargin to determine if the rare data bit
+    // were set at some point during layout
+    if (renderer.isBlockLevelBox()) {
+        auto containingBlock = renderer.containingBlock();
+        return containingBlock && containingBlock->isHorizontalWritingMode();
     }
     return false;
+}
+
+using PhysicalDirection = BoxSide;
+using FlowRelativeDirection = LogicalBoxSide;
+
+static const RenderStyle& formattingContextRootStyle(const RenderBox& renderer)
+{
+    if (auto* ancestorToUse = (renderer.isFlexItem() || renderer.isGridItem()) ? renderer.parent() : renderer.containingBlock())
+        return ancestorToUse->style();
+    ASSERT_NOT_REACHED();
+    return renderer.style();
+};
+
+// Mapping is done according to the table in section 6.4 (Abstract-to-Physical Mappings)
+static FlowRelativeDirection physicalToFlowRelativeDirection(const RenderBox& renderer, PhysicalDirection direction)
+{
+    auto& styleToUse = formattingContextRootStyle(renderer);
+    auto isHorizontalWritingMode = styleToUse.isHorizontalWritingMode();
+    auto isLeftToRightDirection = styleToUse.isLeftToRightDirection();
+    // vertical-rl and horizontal-bt writing modes
+    auto isFlippedBlocksWritingMode = styleToUse.isFlippedBlocksWritingMode();
+
+    switch (direction) {
+    case PhysicalDirection::Top:
+        if (isHorizontalWritingMode)
+            return !isFlippedBlocksWritingMode ? FlowRelativeDirection::BlockStart : FlowRelativeDirection::BlockEnd;
+        return isLeftToRightDirection ? FlowRelativeDirection::InlineStart : FlowRelativeDirection::InlineEnd;
+    case PhysicalDirection::Right:
+        if (isHorizontalWritingMode)
+            return isLeftToRightDirection ? FlowRelativeDirection::InlineEnd : FlowRelativeDirection::InlineStart;
+        return !isFlippedBlocksWritingMode ? FlowRelativeDirection::BlockEnd : FlowRelativeDirection::BlockStart;
+    case PhysicalDirection::Bottom:
+        if (isHorizontalWritingMode)
+            return !isFlippedBlocksWritingMode ? FlowRelativeDirection::BlockEnd : FlowRelativeDirection::BlockStart;
+        return isLeftToRightDirection ? FlowRelativeDirection::InlineEnd : FlowRelativeDirection::InlineStart;
+    case PhysicalDirection::Left:
+        if (isHorizontalWritingMode)
+            return isLeftToRightDirection ? FlowRelativeDirection::InlineStart : FlowRelativeDirection::InlineEnd;
+        return !isFlippedBlocksWritingMode ? FlowRelativeDirection::BlockStart : FlowRelativeDirection::BlockEnd;
+    default:
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+}
+
+static PhysicalDirection flowRelativeToPhysicalDirection(const RenderBox& renderer, FlowRelativeDirection direction)
+{
+    auto& styleToUse = formattingContextRootStyle(renderer);
+    auto isHorizontalWritingMode = styleToUse.isHorizontalWritingMode();
+    auto isLeftToRightDirection = styleToUse.isLeftToRightDirection();
+    // vertical-rl and horizontal-bt writing modes
+    auto isFlippedBlocksWritingMode = styleToUse.isFlippedBlocksWritingMode();
+
+    switch (direction) {
+    case FlowRelativeDirection::BlockStart:
+        if (isHorizontalWritingMode)
+            return !isFlippedBlocksWritingMode ? PhysicalDirection::Top : PhysicalDirection::Bottom;
+        return !isFlippedBlocksWritingMode ? PhysicalDirection::Left : PhysicalDirection::Right;
+    case FlowRelativeDirection::BlockEnd:
+        if (isHorizontalWritingMode)
+            return !isFlippedBlocksWritingMode ? PhysicalDirection::Bottom : PhysicalDirection::Top;
+        return !isFlippedBlocksWritingMode ? PhysicalDirection::Right : PhysicalDirection::Left;
+    case FlowRelativeDirection::InlineStart:
+        if (isHorizontalWritingMode)
+            return isLeftToRightDirection ? PhysicalDirection::Left : PhysicalDirection::Right;
+        return isLeftToRightDirection ? PhysicalDirection::Top : PhysicalDirection::Bottom;
+    case FlowRelativeDirection::InlineEnd:
+        if (isHorizontalWritingMode)
+            return isLeftToRightDirection ? PhysicalDirection::Right : PhysicalDirection::Left;
+        return isLeftToRightDirection ? PhysicalDirection::Bottom : PhysicalDirection::Top;
+    default:
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+}
+
+static MarginTrimType toMarginTrimType(const RenderBox& renderer, CSSPropertyID propertyID)
+{
+    auto flowRelativeDirectionToMarginTrimType = [](auto direction) {
+        switch (direction) {
+        case FlowRelativeDirection::BlockStart:
+            return MarginTrimType::BlockStart;
+        case FlowRelativeDirection::BlockEnd:
+            return MarginTrimType::BlockEnd;
+        case FlowRelativeDirection::InlineStart:
+            return MarginTrimType::InlineStart;
+        case FlowRelativeDirection::InlineEnd:
+            return MarginTrimType::InlineEnd;
+        default:
+            ASSERT_NOT_REACHED();
+            return MarginTrimType::BlockStart;
+        }
+    };
+
+    switch (propertyID) {
+    case CSSPropertyMarginTop:
+        return flowRelativeDirectionToMarginTrimType(physicalToFlowRelativeDirection(renderer, PhysicalDirection::Top));
+    case CSSPropertyMarginRight:
+        return flowRelativeDirectionToMarginTrimType(physicalToFlowRelativeDirection(renderer, PhysicalDirection::Right));
+    case CSSPropertyMarginBottom:
+        return flowRelativeDirectionToMarginTrimType(physicalToFlowRelativeDirection(renderer, PhysicalDirection::Bottom));
+    case CSSPropertyMarginLeft:
+        return flowRelativeDirectionToMarginTrimType(physicalToFlowRelativeDirection(renderer, PhysicalDirection::Left));
+    default:
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+}
+
+enum class PropertyType : bool { Padding, Margin };
+static CSSPropertyID toPaddingOrMarginPropertyID(FlowRelativeDirection direction, const RenderBox& renderer, PropertyType type)
+{
+    switch (flowRelativeToPhysicalDirection(renderer, direction)) {
+    case PhysicalDirection::Top:
+        return type == PropertyType::Padding ? CSSPropertyPaddingTop : CSSPropertyMarginTop;
+    case PhysicalDirection::Right:
+        return type == PropertyType::Padding ? CSSPropertyPaddingRight : CSSPropertyMarginRight;
+    case PhysicalDirection::Bottom:
+        return type == PropertyType::Padding ? CSSPropertyPaddingBottom : CSSPropertyMarginBottom;
+    case PhysicalDirection::Left:
+        return type == PropertyType::Padding ? CSSPropertyPaddingLeft : CSSPropertyMarginLeft;
+    default:
+        ASSERT_NOT_REACHED();
+        return { };
+    }
 }
 
 static bool isLayoutDependent(CSSPropertyID propertyID, const RenderStyle* style, RenderObject* renderer)
@@ -2340,27 +2493,58 @@ static bool isLayoutDependent(CSSPropertyID propertyID, const RenderStyle* style
     case CSSPropertyWebkitBackdropFilter: // Ditto for backdrop-filter.
 #endif
         return true;
-    case CSSPropertyMargin: {
-        if (!renderer || !renderer->isBox())
-            return false;
-        return !(style && style->marginTop().isFixed() && style->marginRight().isFixed()
-            && style->marginBottom().isFixed() && style->marginLeft().isFixed())
-            || (rendererCanHaveTrimmedMargin(downcast<RenderBox>(*renderer), { }));
-    }
+    case CSSPropertyMargin:
+        return isLayoutDependent(CSSPropertyMarginBlock, style, renderer) || isLayoutDependent(CSSPropertyMarginInline, style, renderer);
+    case CSSPropertyMarginBlock:
+        return isLayoutDependent(CSSPropertyMarginBlockStart, style, renderer) || isLayoutDependent(CSSPropertyMarginBlockEnd, style, renderer);
+    case CSSPropertyMarginInline:
+        return isLayoutDependent(CSSPropertyMarginInlineStart, style, renderer) || isLayoutDependent(CSSPropertyMarginInlineEnd, style, renderer);
+    case CSSPropertyMarginBlockStart:
+        if (auto* renderBox = dynamicDowncast<RenderBox>(renderer))
+            return isLayoutDependent(toPaddingOrMarginPropertyID(FlowRelativeDirection::BlockStart, *renderBox, PropertyType::Margin), style, renderBox);
+        return false;
+    case CSSPropertyMarginBlockEnd:
+        if (auto* renderBox = dynamicDowncast<RenderBox>(renderer))
+            return isLayoutDependent(toPaddingOrMarginPropertyID(FlowRelativeDirection::BlockEnd, *renderBox, PropertyType::Margin), style, renderBox);
+        return false;
+    case CSSPropertyMarginInlineStart:
+        if (auto* renderBox = dynamicDowncast<RenderBox>(renderer))
+            return isLayoutDependent(toPaddingOrMarginPropertyID(FlowRelativeDirection::InlineStart, *renderBox, PropertyType::Margin), style, renderBox);
+        return false;
+    case CSSPropertyMarginInlineEnd:
+        if (auto* renderBox = dynamicDowncast<RenderBox>(renderer))
+            return isLayoutDependent(toPaddingOrMarginPropertyID(FlowRelativeDirection::InlineEnd, *renderBox, PropertyType::Margin), style, renderBox);
+        return false;
     case CSSPropertyMarginTop:
-        return paddingOrMarginIsRendererDependent<&RenderStyle::marginTop>(style, renderer) || (isFlexItem(renderer) && rendererCanHaveTrimmedMargin(downcast<RenderBox>(*renderer), MarginTrimType::BlockStart));
+        return paddingOrMarginIsRendererDependent<&RenderStyle::marginTop>(style, renderer) || (is<RenderBox>(renderer) && rendererCanHaveTrimmedMargin(downcast<RenderBox>(*renderer), MarginTrimType::BlockStart));
     case CSSPropertyMarginRight:
-        return paddingOrMarginIsRendererDependent<&RenderStyle::marginRight>(style, renderer) || (isFlexItem(renderer) && rendererCanHaveTrimmedMargin(downcast<RenderBox>(*renderer), MarginTrimType::InlineEnd));
+        return paddingOrMarginIsRendererDependent<&RenderStyle::marginRight>(style, renderer) || ((is<RenderBox>(renderer)) && rendererCanHaveTrimmedMargin(downcast<RenderBox>(*renderer), MarginTrimType::InlineEnd));
     case CSSPropertyMarginBottom:
-        return paddingOrMarginIsRendererDependent<&RenderStyle::marginBottom>(style, renderer) || (isFlexItem(renderer) && rendererCanHaveTrimmedMargin(downcast<RenderBox>(*renderer), MarginTrimType::BlockEnd));
+        return paddingOrMarginIsRendererDependent<&RenderStyle::marginBottom>(style, renderer) ||  (is<RenderBox>(renderer) && rendererCanHaveTrimmedMargin(downcast<RenderBox>(*renderer), MarginTrimType::BlockEnd));
     case CSSPropertyMarginLeft:
-        return paddingOrMarginIsRendererDependent<&RenderStyle::marginLeft>(style, renderer) || (isFlexItem(renderer) && rendererCanHaveTrimmedMargin(downcast<RenderBox>(*renderer), MarginTrimType::InlineStart));
-    case CSSPropertyPadding: {
-        if (!renderer || !renderer->isBox())
-            return false;
-        return !(style && style->paddingTop().isFixed() && style->paddingRight().isFixed()
-            && style->paddingBottom().isFixed() && style->paddingLeft().isFixed());
-    }
+        return paddingOrMarginIsRendererDependent<&RenderStyle::marginLeft>(style, renderer) || (is<RenderBox>(renderer) && rendererCanHaveTrimmedMargin(downcast<RenderBox>(*renderer), MarginTrimType::InlineStart));
+    case CSSPropertyPadding:
+        return isLayoutDependent(CSSPropertyPaddingBlock, style, renderer) || isLayoutDependent(CSSPropertyPaddingInline, style, renderer);
+    case CSSPropertyPaddingBlock:
+        return isLayoutDependent(CSSPropertyPaddingBlockStart, style, renderer) || isLayoutDependent(CSSPropertyPaddingBlockEnd, style, renderer);
+    case CSSPropertyPaddingInline:
+        return isLayoutDependent(CSSPropertyPaddingInlineStart, style, renderer) || isLayoutDependent(CSSPropertyPaddingInlineEnd, style, renderer);
+    case CSSPropertyPaddingBlockStart:
+        if (auto* renderBox = dynamicDowncast<RenderBox>(renderer))
+            return isLayoutDependent(toPaddingOrMarginPropertyID(FlowRelativeDirection::BlockStart, *renderBox, PropertyType::Padding), style, renderBox);
+        return false;
+    case CSSPropertyPaddingBlockEnd:
+        if (auto* renderBox = dynamicDowncast<RenderBox>(renderer))
+            return isLayoutDependent(toPaddingOrMarginPropertyID(FlowRelativeDirection::BlockEnd, *renderBox, PropertyType::Padding), style, renderBox);
+        return false;
+    case CSSPropertyPaddingInlineStart:
+        if (auto* renderBox = dynamicDowncast<RenderBox>(renderer))
+            return isLayoutDependent(toPaddingOrMarginPropertyID(FlowRelativeDirection::InlineStart, *renderBox, PropertyType::Padding), style, renderBox);
+        return false;
+    case CSSPropertyPaddingInlineEnd:
+        if (auto* renderBox = dynamicDowncast<RenderBox>(renderer))
+            return isLayoutDependent(toPaddingOrMarginPropertyID(FlowRelativeDirection::InlineEnd, *renderBox, PropertyType::Padding), style, renderBox);
+        return false;
     case CSSPropertyPaddingTop:
         return paddingOrMarginIsRendererDependent<&RenderStyle::paddingTop>(style, renderer);
     case CSSPropertyPaddingRight:
@@ -2702,7 +2886,10 @@ RefPtr<CSSValue> ComputedStyleExtractor::propertyValue(CSSPropertyID propertyID,
     if (!styledElement)
         return nullptr;
 
-    if (!isExposed(propertyID, m_element->document().settings())) {
+    // FIXME: For now, we always allow access to white-space longhands.
+    // We should remove this hack once white-space longhands are no longer under a feature flag.
+    bool isWhiteSpaceLonghand = (propertyID == CSSPropertyWhiteSpaceCollapse || propertyID == CSSPropertyTextWrap);
+    if (!isWhiteSpaceLonghand && !isExposed(propertyID, m_element->document().settings())) {
         // Exit quickly, and avoid us ever having to update layout in this case.
         return nullptr;
     }
@@ -2757,7 +2944,9 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     auto& cssValuePool = CSSValuePool::singleton();
     propertyID = CSSProperty::resolveDirectionAwareProperty(propertyID, style.direction(), style.writingMode());
 
-    ASSERT(isExposed(propertyID, m_element->document().settings()));
+    // FIXME: For now, we always allow access to white-space longhands.
+    // We should remove this hack once white-space longhands are no longer under a feature flag.
+    ASSERT((propertyID == CSSPropertyWhiteSpaceCollapse || propertyID == CSSPropertyTextWrap) || isExposed(propertyID, m_element->document().settings()));
 
     switch (propertyID) {
     case CSSPropertyInvalid:
@@ -2980,8 +3169,8 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         return m_allowVisitedStyle ? cssValuePool.createColorValue(style.visitedDependentColor(CSSPropertyCaretColor)) : currentColorOrValidColor(style, style.caretColor());
     case CSSPropertyClear:
         return createConvertingToCSSValueID(style.clear());
-    case CSSPropertyLeadingTrim:
-        return createConvertingToCSSValueID(style.leadingTrim());
+    case CSSPropertyTextBoxTrim:
+        return createConvertingToCSSValueID(style.textBoxTrim());
     case CSSPropertyColor:
         return cssValuePool.createColorValue(m_allowVisitedStyle ? style.visitedDependentColor(CSSPropertyColor) : style.color());
     case CSSPropertyPrintColorAdjust:
@@ -3221,9 +3410,9 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
                 return zoomAdjustedPixelValue(sizingBox(*renderer).height(), style);
         }
         return zoomAdjustedPixelValueForLength(style.height(), style);
-    case CSSPropertyWebkitHyphens:
+    case CSSPropertyHyphens:
         return createConvertingToCSSValueID(style.hyphens());
-    case CSSPropertyWebkitHyphenateCharacter:
+    case CSSPropertyHyphenateCharacter:
         if (style.hyphenationString().isNull())
             return CSSPrimitiveValue::create(CSSValueAuto);
         return CSSPrimitiveValue::create(style.hyphenationString());
@@ -3245,10 +3434,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         return CSSPrimitiveValue::create(CSSValueNone);
     case CSSPropertyImageRendering:
         return createConvertingToCSSValueID(style.imageRendering());
-#if ENABLE(CSS_IMAGE_RESOLUTION)
-    case CSSPropertyImageResolution:
-        return CSSPrimitiveValue::create(style.imageResolution(), CSSUnitType::CSS_DPPX);
-#endif
     case CSSPropertyInputSecurity:
         return createConvertingToCSSValueID(style.inputSecurity());
     case CSSPropertyLeft:
@@ -3284,14 +3469,14 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     case CSSPropertyMarginTop: {
         if (auto* box = dynamicDowncast<RenderBox>(renderer); box
             && rendererCanHaveTrimmedMargin(*box, MarginTrimType::BlockStart) 
-            && box->hasTrimmedMargin(PhysicalDirection::Top))
+            && box->hasTrimmedMargin(toMarginTrimType(*box, propertyID)))
             return zoomAdjustedPixelValue(box->marginTop(), style);
         return zoomAdjustedPaddingOrMarginPixelValue<&RenderStyle::marginTop, &RenderBoxModelObject::marginTop>(style, renderer);
     }
     case CSSPropertyMarginRight: {
-        if (auto* box = dynamicDowncast<RenderBox>(renderer); box && box->isFlexItem() 
+        if (auto* box = dynamicDowncast<RenderBox>(renderer); box
             && rendererCanHaveTrimmedMargin(*box, MarginTrimType::InlineEnd)
-            && box->hasTrimmedMargin(PhysicalDirection::Right))
+            && box->hasTrimmedMargin(toMarginTrimType(*box, propertyID)))
             return zoomAdjustedPixelValue(box->marginRight(), style);
         Length marginRight = style.marginRight();
         if (marginRight.isFixed() || !is<RenderBox>(renderer))
@@ -3307,14 +3492,18 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         return zoomAdjustedPixelValue(value, style);
     }
     case CSSPropertyMarginBottom:
-        if (auto* box = dynamicDowncast<RenderBox>(renderer); box && rendererCanHaveTrimmedMargin(*box, MarginTrimType::BlockEnd) 
-            && box->hasTrimmedMargin(PhysicalDirection::Bottom))
+        if (auto* box = dynamicDowncast<RenderBox>(renderer); box 
+            && rendererCanHaveTrimmedMargin(*box, MarginTrimType::BlockEnd) 
+            && box->hasTrimmedMargin(toMarginTrimType(*box, propertyID)))
             return zoomAdjustedPixelValue(box->marginBottom(), style);
         return zoomAdjustedPaddingOrMarginPixelValue<&RenderStyle::marginBottom, &RenderBoxModelObject::marginBottom>(style, renderer);
-    case CSSPropertyMarginLeft:
-        if (auto* box = dynamicDowncast<RenderBox>(renderer); box && box->isFlexItem() && box->hasTrimmedMargin(PhysicalDirection::Left))
+    case CSSPropertyMarginLeft: {
+        if (auto* box = dynamicDowncast<RenderBox>(renderer);  box 
+            && rendererCanHaveTrimmedMargin(*box, MarginTrimType::InlineStart) 
+            && box->hasTrimmedMargin(toMarginTrimType(*box, propertyID)))
             return zoomAdjustedPixelValue(box->marginLeft(), style);
         return zoomAdjustedPaddingOrMarginPixelValue<&RenderStyle::marginLeft, &RenderBoxModelObject::marginLeft>(style, renderer);
+    }
     case CSSPropertyMarginTrim: {
         auto marginTrim = style.marginTrim();
         if (marginTrim.isEmpty())
@@ -3559,7 +3748,9 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     case CSSPropertyVisibility:
         return createConvertingToCSSValueID(style.visibility());
     case CSSPropertyWhiteSpace:
-        return createConvertingToCSSValueID(style.whiteSpace());
+        return whiteSpaceShorthandValue(style);
+    case CSSPropertyWhiteSpaceCollapse:
+        return createConvertingToCSSValueID(style.whiteSpaceCollapse());
     case CSSPropertyWidows:
         if (style.hasAutoWidows())
             return CSSPrimitiveValue::create(CSSValueAuto);
@@ -4027,10 +4218,18 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         return createConvertingToCSSValueID(style.scrollSnapStop());
     case CSSPropertyScrollSnapType:
         return valueForScrollSnapType(style.scrollSnapType());
+    case CSSPropertyScrollbarColor:
+        if (!style.scrollbarColor())
+            return CSSPrimitiveValue::create(CSSValueAuto);
+        return CSSValuePair::createNoncoalescing(currentColorOrValidColor(style, style.scrollbarColor().value().thumbColor), currentColorOrValidColor(style, style.scrollbarColor().value().trackColor));
+    case CSSPropertyScrollbarGutter:
+        return valueForScrollbarGutter(style.scrollbarGutter());
+    case CSSPropertyScrollbarWidth:
+        return createConvertingToCSSValueID(style.scrollbarWidth());
     case CSSPropertyOverflowAnchor:
         return createConvertingToCSSValueID(style.overflowAnchor());
-    case CSSPropertyTextEdge:
-        return valueForTextEdge(style.textEdge());
+    case CSSPropertyTextBoxEdge:
+        return valueForTextBoxEdge(style.textBoxEdge());
 
 #if ENABLE(APPLE_PAY)
     case CSSPropertyApplePayButtonStyle:
@@ -4092,6 +4291,9 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
 
     case CSSPropertyQuotes:
         return valueForQuotes(style.quotes());
+
+    case CSSPropertyWordBoundaryDetection:
+        return wordBoundaryDetection(style.wordBoundaryDetection());
 
     // Unimplemented CSS 3 properties (including CSS3 shorthand properties).
     case CSSPropertyAll:
@@ -4182,6 +4384,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     case CSSPropertySrc:
     case CSSPropertyUnicodeRange:
     case CSSPropertyFontDisplay:
+    case CSSPropertySizeAdjust:
         return nullptr;
 
     // Unimplemented @font-palette-values properties
@@ -4319,7 +4522,7 @@ Ref<CSSValueList> ComputedStyleExtractor::getCSSPropertyValuesForGridShorthand(c
     return CSSValueList::createSlashSeparated(WTFMove(builder));
 }
 
-Ref<MutableStyleProperties> ComputedStyleExtractor::copyProperties(Span<const CSSPropertyID> properties)
+Ref<MutableStyleProperties> ComputedStyleExtractor::copyProperties(std::span<const CSSPropertyID> properties)
 {
     Vector<CSSProperty> vector;
     vector.reserveInitialCapacity(properties.size());

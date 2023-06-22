@@ -162,6 +162,8 @@ PASS grid-template-columns
 PASS grid-template-rows
 PASS hanging-punctuation
 PASS height
+PASS hyphenate-character
+PASS hyphens
 PASS image-orientation
 PASS image-rendering
 PASS inline-size
@@ -176,7 +178,6 @@ PASS justify-items
 PASS justify-self
 PASS justify-tracks
 PASS kerning
-PASS leading-trim
 PASS left
 PASS letter-spacing
 PASS lighting-color
@@ -280,6 +281,9 @@ PASS scroll-padding-top
 PASS scroll-snap-align
 PASS scroll-snap-stop
 PASS scroll-snap-type
+PASS scrollbar-color
+PASS scrollbar-gutter
+PASS scrollbar-width
 PASS shape-image-threshold
 PASS shape-margin
 PASS shape-outside
@@ -302,13 +306,14 @@ PASS text-align
 PASS text-align-last
 PASS text-anchor
 PASS text-autospace
+PASS text-box-edge
+PASS text-box-trim
 PASS text-combine-upright
 PASS text-decoration-color
 PASS text-decoration-line
 PASS text-decoration-skip-ink
 PASS text-decoration-style
 PASS text-decoration-thickness
-PASS text-edge
 PASS text-emphasis-color
 PASS text-emphasis-position
 PASS text-emphasis-style
@@ -339,10 +344,11 @@ PASS unicode-bidi
 PASS vector-effect
 PASS vertical-align
 PASS visibility
-PASS white-space
+PASS white-space-collapse
 PASS widows
 PASS width
 PASS will-change
+PASS word-boundary-detection
 PASS word-break
 PASS word-spacing
 PASS writing-mode
@@ -373,11 +379,9 @@ PASS -webkit-column-axis
 PASS -webkit-column-progression
 PASS -webkit-cursor-visibility
 PASS -webkit-font-smoothing
-PASS -webkit-hyphenate-character
 PASS -webkit-hyphenate-limit-after
 PASS -webkit-hyphenate-limit-before
 PASS -webkit-hyphenate-limit-lines
-PASS -webkit-hyphens
 PASS -webkit-initial-letter
 PASS -webkit-line-align
 PASS -webkit-line-box-contain

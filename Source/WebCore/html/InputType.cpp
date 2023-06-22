@@ -99,9 +99,22 @@ struct InputTypeFactory {
 
 typedef MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, InputTypeFactory> InputTypeFactoryMap;
 
-template<class T> static Ref<InputType> createInputType(HTMLInputElement& element)
+template<typename T> static Ref<InputType> createInputType(HTMLInputElement& element)
 {
-    return adoptRef(*new T(element));
+    return T::create(element);
+}
+
+template<typename DowncastedType>
+ALWAYS_INLINE bool isInvalidInputType(const InputType& baseInputType, const String& value)
+{
+    auto& inputType = static_cast<const DowncastedType&>(baseInputType);
+    return inputType.typeMismatch()
+        || inputType.stepMismatch(value)
+        || inputType.rangeUnderflow(value)
+        || inputType.rangeOverflow(value)
+        || inputType.patternMismatch(value)
+        || inputType.valueMissing(value)
+        || inputType.hasBadInput();
 }
 
 static InputTypeFactoryMap createInputTypeFactoryMap()
@@ -179,14 +192,9 @@ RefPtr<InputType> InputType::createIfDifferent(HTMLInputElement& element, const 
                 return factory.second->factoryFunction(element);
         }
     }
-    if (currentInputType && currentInputType->formControlType() == InputTypeNames::text())
+    if (currentInputType && currentInputType->type() == Type::Text)
         return nullptr;
-    return adoptRef(*new TextInputType(element));
-}
-
-Ref<InputType> InputType::createText(HTMLInputElement& element)
-{
-    return adoptRef(*new TextInputType(element));
+    return TextInputType::create(element);
 }
 
 InputType::~InputType() = default;
@@ -333,35 +341,10 @@ ExceptionOr<void> InputType::setValueAsDecimal(const Decimal&, TextFieldEventBeh
     return Exception { InvalidStateError };
 }
 
-bool InputType::typeMismatchFor(const String&) const
-{
-    return false;
-}
-
-bool InputType::typeMismatch() const
-{
-    return false;
-}
-
 bool InputType::supportsRequired() const
 {
     // Almost all validatable types support @required.
     return supportsValidation();
-}
-
-bool InputType::valueMissing(const String&) const
-{
-    return false;
-}
-
-bool InputType::hasBadInput() const
-{
-    return false;
-}
-
-bool InputType::patternMismatch(const String&) const
-{
-    return false;
 }
 
 bool InputType::rangeUnderflow(const String& value) const
@@ -1061,7 +1044,7 @@ ExceptionOr<void> InputType::applyStep(int count, AnyStepHandling anyStepHandlin
     // 8. If the element has a minimum, and value is less than that minimum, then set value to the smallest value that, when subtracted from the step
     // base, is an integral multiple of the allowed value step, and that is more than or equal to minimum.
     if (newValue < stepRange.minimum()) {
-        const Decimal alignedMinimum = base + ((stepRange.minimum() - base) / step).ceiling() * step;
+        const Decimal alignedMinimum = base + ((stepRange.minimum() - base) / step).ceil() * step;
         ASSERT(alignedMinimum >= stepRange.minimum());
         newValue = alignedMinimum;
     }
@@ -1191,7 +1174,7 @@ void InputType::stepUpFromRenderer(int n)
             if (sign < 0)
                 newValue = base + ((current - base) / step).floor() * step;
             else if (sign > 0)
-                newValue = base + ((current - base) / step).ceiling() * step;
+                newValue = base + ((current - base) / step).ceil() * step;
             else
                 newValue = current;
 

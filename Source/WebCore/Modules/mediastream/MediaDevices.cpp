@@ -149,9 +149,10 @@ void MediaDevices::getUserMedia(StreamConstraints&& constraints, Promise&& promi
 
     bool isUserGesturePriviledged = false;
 
-    if (audioConstraints.isValid)
+    if (audioConstraints.isValid) {
         isUserGesturePriviledged |= computeUserGesturePriviledge(GestureAllowedRequest::Microphone);
-
+        audioConstraints.setDefaultAudioConstraints();
+    }
     if (videoConstraints.isValid) {
         isUserGesturePriviledged |= computeUserGesturePriviledge(GestureAllowedRequest::Camera);
         videoConstraints.setDefaultVideoConstraints();
@@ -316,7 +317,7 @@ void MediaDevices::exposeDevices(Vector<CaptureDeviceWithCapabilities>&& newDevi
             deviceId = center.hashStringWithSalt(newDevice.persistentId(), deviceIDHashSalts.ephemeralDeviceSalt);
         else
             deviceId = center.hashStringWithSalt(newDevice.persistentId(), deviceIDHashSalts.persistentDeviceSalt);
-        auto groupId = center.hashStringWithSalt(newDevice.groupId(), m_groupIdHashSalt);
+        auto groupId = hashedGroupId(newDevice.groupId());
 
         if (newDevice.type() == CaptureDevice::DeviceType::Speaker) {
             m_audioOutputDeviceIdToPersistentId.add(deviceId, newDevice.persistentId());
@@ -325,6 +326,11 @@ void MediaDevices::exposeDevices(Vector<CaptureDeviceWithCapabilities>&& newDevi
             devices.append(RefPtr<InputDeviceInfo> { InputDeviceInfo::create(WTFMove(newDeviceWithCapabilities), WTFMove(deviceId), WTFMove(groupId)) });
     }
     promise.resolve(WTFMove(devices));
+}
+
+String MediaDevices::hashedGroupId(const String& groupId)
+{
+    return RealtimeMediaSourceCenter::singleton().hashStringWithSalt(groupId, m_groupIdHashSalt);
 }
 
 void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)

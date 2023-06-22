@@ -53,7 +53,7 @@ public:
     void display(PlatformCALayer& layer) final
     {
         if (m_displayBuffer)
-            layer.setDelegatedContents({ m_displayBuffer, { } });
+            layer.setDelegatedContents({ m_displayBuffer, { }, std::nullopt });
         else
             layer.clearContents();
     }
@@ -183,6 +183,7 @@ void GPUCanvasContextCocoa::configure(GPUCanvasConfiguration&& configuration)
         return;
 
     auto renderBuffers = m_compositorIntegration->recreateRenderBuffers(m_width, m_height);
+    // FIXME: This ASSERT() is wrong. It's totally possible for the IPC to the GPU process to timeout if the GPUP is busy, and return nothing here.
     ASSERT(!renderBuffers.isEmpty());
 
     m_presentationContext->configure(configuration);

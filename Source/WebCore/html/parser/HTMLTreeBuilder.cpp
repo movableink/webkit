@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2016 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,9 +73,9 @@ CustomElementConstructionData::~CustomElementConstructionData() = default;
 
 namespace {
 
-inline bool isHTMLSpaceOrReplacementCharacter(UChar character)
+inline bool isASCIIWhitespaceOrReplacementCharacter(UChar character)
 {
-    return isHTMLSpace(character) || character == replacementCharacter;
+    return isASCIIWhitespace(character) || character == replacementCharacter;
 }
 
 }
@@ -83,16 +83,6 @@ inline bool isHTMLSpaceOrReplacementCharacter(UChar character)
 static inline TextPosition uninitializedPositionValue1()
 {
     return TextPosition(OrdinalNumber::fromOneBasedInt(-1), OrdinalNumber());
-}
-
-static inline bool isAllWhitespace(const String& string)
-{
-    return string.isAllSpecialCharacters<isHTMLSpace>();
-}
-
-static inline bool isAllWhitespaceOrReplacementCharacters(const String& string)
-{
-    return string.isAllSpecialCharacters<isHTMLSpaceOrReplacementCharacter>();
 }
 
 #if ASSERT_ENABLED
@@ -172,17 +162,17 @@ public:
 
     void skipLeadingWhitespace()
     {
-        skipLeading<isHTMLSpace>();
+        skipLeading<isASCIIWhitespace>();
     }
 
     String takeLeadingWhitespace()
     {
-        return takeLeading<isHTMLSpace>();
+        return takeLeading<isASCIIWhitespace>();
     }
 
     void skipLeadingNonWhitespace()
     {
-        skipLeading<isNotHTMLSpace>();
+        skipLeading<isNotASCIIWhitespace>();
     }
 
     String takeRemaining()
@@ -204,7 +194,7 @@ public:
         Vector<LChar, 8> whitespace;
         do {
             UChar character = m_text[0];
-            if (isHTMLSpace(character))
+            if (isASCIIWhitespace(character))
                 whitespace.append(character);
             m_text = m_text.substring(1);
         } while (!m_text.isEmpty());
@@ -425,7 +415,7 @@ void HTMLTreeBuilder::processFakeEndTag(TagName tagName)
 
 void HTMLTreeBuilder::processFakeEndTag(const HTMLStackItem& item)
 {
-    AtomHTMLToken fakeToken(HTMLToken::Type::EndTag, tagNameForElement(item.elementName()), item.localName());
+    AtomHTMLToken fakeToken(HTMLToken::Type::EndTag, tagNameForElementName(item.elementName()), item.localName());
     processEndTag(WTFMove(fakeToken));
 }
 
@@ -696,6 +686,7 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomHTMLToken&& token)
     case TagName::nav:
     case TagName::ol:
     case TagName::p:
+    case TagName::search:
     case TagName::section:
     case TagName::summary:
     case TagName::ul:
@@ -964,6 +955,7 @@ void HTMLTreeBuilder::processTemplateStartTag(AtomHTMLToken&& token)
 {
     m_tree.activeFormattingElements().appendMarker();
     m_tree.insertHTMLTemplateElement(WTFMove(token));
+    m_framesetOk = false;
     m_templateInsertionModes.append(InsertionMode::TemplateContents);
     m_insertionMode = InsertionMode::TemplateContents;
 }
@@ -1093,7 +1085,7 @@ void HTMLTreeBuilder::processStartTagForInTable(AtomHTMLToken&& token)
         parseError(token);
         if (m_tree.form() && !isParsingTemplateContents())
             return;
-        m_tree.insertHTMLFormElement(WTFMove(token), true);
+        m_tree.insertHTMLFormElement(WTFMove(token));
         m_tree.openElements().pop();
         return;
     case TagName::template_:
@@ -1423,6 +1415,13 @@ void HTMLTreeBuilder::processStartTag(AtomHTMLToken&& token)
             if (m_tree.currentStackItem().elementName() == HTML::optgroup)
                 processFakeEndTag(TagName::optgroup);
             m_tree.insertHTMLElement(WTFMove(token));
+            return;
+        case TagName::hr:
+            if (m_tree.currentStackItem().elementName() == HTML::option)
+                processFakeEndTag(TagName::option);
+            if (m_tree.currentStackItem().elementName() == HTML::optgroup)
+                processFakeEndTag(TagName::optgroup);
+            m_tree.insertSelfClosingHTMLElement(WTFMove(token));
             return;
         case TagName::select: {
             parseError(token);
@@ -1923,6 +1922,7 @@ void HTMLTreeBuilder::processEndTagForInBody(AtomHTMLToken&& token)
     case TagName::nav:
     case TagName::ol:
     case TagName::pre:
+    case TagName::search:
     case TagName::section:
     case TagName::summary:
     case TagName::ul:
@@ -2686,7 +2686,7 @@ void HTMLTreeBuilder::processCharacterBufferForInBody(ExternalCharacterTokenBuff
 #else
     m_tree.insertTextNode(characters);
 #endif
-    if (m_framesetOk && !isAllWhitespaceOrReplacementCharacters(characters))
+    if (m_framesetOk && !characters.containsOnly<isASCIIWhitespaceOrReplacementCharacter>())
         m_framesetOk = false;
 }
 
@@ -2820,7 +2820,7 @@ void HTMLTreeBuilder::defaultForInTableText()
 {
     String characters = m_pendingTableCharacters.toString();
     m_pendingTableCharacters.clear();
-    if (!isAllWhitespace(characters)) {
+    if (!characters.containsOnly<isASCIIWhitespace>()) {
         // FIXME: parse error
         HTMLConstructionSite::RedirectToFosterParentGuard redirecter(m_tree);
         m_tree.reconstructTheActiveFormattingElements();
@@ -3082,7 +3082,7 @@ void HTMLTreeBuilder::processTokenInForeignContent(AtomHTMLToken&& token)
     case HTMLToken::Type::Character: {
         String characters = token.characters();
         m_tree.insertTextNode(characters);
-        if (m_framesetOk && !isAllWhitespaceOrReplacementCharacters(characters))
+        if (m_framesetOk && !characters.containsOnly<isASCIIWhitespaceOrReplacementCharacter>())
             m_framesetOk = false;
         break;
     }

@@ -60,6 +60,17 @@ OMGPlan::OMGPlan(VM& vm, Ref<Module>&& module, uint32_t functionIndex, std::opti
     dataLogLnIf(WasmOMGPlanInternal::verbose, "Starting OMG plan for ", functionIndex, " of module: ", RawPointer(&m_module.get()));
 }
 
+FunctionAllowlist& OMGPlan::ensureGlobalOMGAllowlist()
+{
+    static LazyNeverDestroyed<FunctionAllowlist> omgAllowlist;
+    static std::once_flag initializeAllowlistFlag;
+    std::call_once(initializeAllowlistFlag, [] {
+        const char* functionAllowlistFile = Options::omgAllowlist();
+        omgAllowlist.construct(functionAllowlistFile);
+    });
+    return omgAllowlist;
+}
+
 void OMGPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffer, unsigned functionIndex, const TypeDefinition& signature, unsigned functionIndexSpace)
 {
     dataLogLnIf(context.procedure->shouldDumpIR() || shouldDumpDisassemblyFor(CompilationMode::OMGMode), "Generated OMG code for WebAssembly OMG function[", functionIndex, "] ", signature.toString().ascii().data(), " name ", makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data());
@@ -70,13 +81,15 @@ void OMGPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffe
         const char* airPrefix = "Air        ";
         const char* asmPrefix = "asm              ";
 
+        B3::Value* prevOrigin = nullptr;
         auto forEachInst = scopedLambda<void(B3::Air::Inst&)>([&] (B3::Air::Inst& inst) {
-            if (inst.origin && context.procedure->code().shouldPreserveB3Origins()) {
+            if (inst.origin && inst.origin != prevOrigin && context.procedure->code().shouldPreserveB3Origins()) {
                 if (String string = inst.origin->compilerConstructionSite(); !string.isNull())
                     dataLogLn("\033[1;37m", string, "\033[0m");
                 dataLog(b3Prefix);
                 inst.origin->deepDump(context.procedure.get(), WTF::dataFile());
                 dataLogLn();
+                prevOrigin = inst.origin;
             }
         });
 

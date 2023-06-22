@@ -2,13 +2,13 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2004-2005 Allan Sandfeld Jensen (kde@carewolf.com)
  * Copyright (C) 2006, 2007 Nicholas Shanks (webkit@nickshanks.com)
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007, 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (c) 2011, Code Aurora Forum. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
- * Copyright (C) 2012, 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Google Inc. All rights reserved.
  * Copyright (C) 2014, 2020, 2022 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
@@ -33,7 +33,6 @@
 #include "CSSFontSelector.h"
 #include "DOMTokenList.h"
 #include "ElementInlines.h"
-#include "ElementName.h"
 #include "EventNames.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDialogElement.h"
@@ -48,11 +47,11 @@
 #include "LocalDOMWindow.h"
 #include "LocalFrameView.h"
 #include "MathMLElement.h"
-#include "ModalContainerObserver.h"
+#include "NodeName.h"
 #include "Page.h"
 #include "Quirks.h"
 #include "RenderBox.h"
-#include "RenderStyle.h"
+#include "RenderStyleSetters.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "SVGElement.h"
@@ -62,8 +61,10 @@
 #include "SVGURIReference.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
+#include "StyleSelfAlignmentData.h"
 #include "StyleUpdate.h"
 #include "Text.h"
+#include "TouchAction.h"
 #include "WebAnimationTypes.h"
 #include <wtf/RobinHoodHashSet.h>
 
@@ -154,20 +155,31 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style)
     return DisplayType::Block;
 }
 
+static bool isOutermostSVGElement(const Element* element)
+{
+    return element && element->isSVGElement() && downcast<SVGElement>(*element).isOutermostSVGSVGElement();
+}
+
 static bool shouldInheritTextDecorationsInEffect(const RenderStyle& style, const Element* element)
 {
     if (style.isFloating() || style.hasOutOfFlowPosition())
         return false;
 
-    auto isAtUserAgentShadowBoundary = [&] {
+    // Media elements have a special rendering where the media controls do not use a proper containing
+    // block model which means we need to manually stop text-decorations to apply to text inside media controls.
+    auto isAtMediaUAShadowBoundary = [&] {
         if (!element)
             return false;
         auto* parentNode = element->parentNode();
-        return parentNode && parentNode->isUserAgentShadowRoot();
+        return parentNode && parentNode->isUserAgentShadowRoot() && parentNode->parentOrShadowHostElement()->isMediaElement();
     }();
 
+    // Outermost <svg> roots are considered to be atomic inline-level.
+    if (isOutermostSVGElement(element))
+        return false;
+
     // There is no other good way to prevent decorations from affecting user agent shadow trees.
-    if (isAtUserAgentShadowBoundary)
+    if (isAtMediaUAShadowBoundary)
         return false;
 
     switch (style.display()) {
@@ -408,9 +420,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.clipPath()
             || style.boxReflect()
             || style.hasFilter()
-#if ENABLE(FILTERS_LEVEL_2)
             || style.hasBackdropFilter()
-#endif
             || style.hasBlendMode()
             || style.hasIsolation()
             || style.position() == PositionType::Sticky
@@ -442,7 +452,8 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             bool isVertical = style.marqueeDirection() == MarqueeDirection::Up || style.marqueeDirection() == MarqueeDirection::Down;
             // Make horizontal marquees not wrap.
             if (!isVertical) {
-                style.setWhiteSpace(WhiteSpace::NoWrap);
+                style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Collapse);
+                style.setTextWrap(TextWrap::NoWrap);
                 style.setTextAlign(TextAlignMode::Start);
             }
             // Apparently this is the expected legacy behavior.
@@ -486,9 +497,9 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     // FIXME: Eventually table sections will support auto and scroll.
     if (style.display() == DisplayType::Table || style.display() == DisplayType::InlineTable
         || style.display() == DisplayType::TableRowGroup || style.display() == DisplayType::TableRow) {
-        if (style.overflowX() != Overflow::Visible && style.overflowX() != Overflow::Hidden)
+        if (style.overflowX() != Overflow::Visible && style.overflowX() != Overflow::Hidden && style.overflowX() != Overflow::Clip)
             style.setOverflowX(Overflow::Visible);
-        if (style.overflowY() != Overflow::Visible && style.overflowY() != Overflow::Hidden)
+        if (style.overflowY() != Overflow::Visible && style.overflowY() != Overflow::Hidden && style.overflowY() != Overflow::Clip)
             style.setOverflowY(Overflow::Visible);
     }
 
@@ -536,9 +547,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.hasFilter()
             || style.hasIsolation()
             || style.hasMask()
-#if ENABLE(FILTERS_LEVEL_2)
             || style.hasBackdropFilter()
-#endif
             || style.hasBlendMode();
         style.setTransformStyleForcedToFlat(forceToFlat);
     }
@@ -583,17 +592,16 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
         style.setEventListenerRegionTypes(computeEventListenerRegionTypes(m_document, style, *m_element, m_parentStyle.eventListenerRegionTypes()));
 
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+        // Every element will automatically get an interaction region which is not useful, ignoring the `cursor: pointer;` on the body.
+        if (is<HTMLBodyElement>(*m_element) && style.cursor() == CursorType::Pointer && style.eventListenerRegionTypes().contains(EventListenerRegionType::MouseClick))
+            style.setCursor(CursorType::Auto);
+#endif
+
 #if ENABLE(TEXT_AUTOSIZING)
         if (m_document.settings().textAutosizingUsesIdempotentMode())
             adjustForTextAutosizing(style, *m_element);
 #endif
-
-        if (auto observer = m_element->document().modalContainerObserverIfExists()) {
-            if (observer->shouldHide(*m_element))
-                style.setDisplay(DisplayType::None);
-            if (observer->shouldMakeVerticallyScrollable(*m_element))
-                style.setOverflowY(Overflow::Auto);
-        }
     }
 
     if (style.contentVisibility() == ContentVisibility::Hidden)
@@ -619,7 +627,7 @@ static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
         return false;
 
     // https://drafts.csswg.org/css-display-3/#unbox-html
-    switch (element.tagQName().elementName()) {
+    switch (element.elementName()) {
     case HTML::br:
     case HTML::wbr:
     case HTML::meter:

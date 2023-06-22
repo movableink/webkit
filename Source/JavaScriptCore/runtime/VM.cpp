@@ -29,6 +29,7 @@
 #include "config.h"
 #include "VM.h"
 
+#include "AbortReason.h"
 #include "AccessCase.h"
 #include "AggregateError.h"
 #include "ArgList.h"
@@ -57,6 +58,7 @@
 #include "HasOwnPropertyCache.h"
 #include "Heap.h"
 #include "HeapProfiler.h"
+#include "IncrementalSweeper.h"
 #include "Interpreter.h"
 #include "IntlCache.h"
 #include "JITCode.h"
@@ -95,6 +97,7 @@
 #include "PropertyTable.h"
 #include "RandomizingFuzzerAgent.h"
 #include "RegExpCache.h"
+#include "ResourceExhaustion.h"
 #include "SamplingProfiler.h"
 #include "ScopedArguments.h"
 #include "ShadowChicken.h"
@@ -112,6 +115,7 @@
 #include "VMInspector.h"
 #include "VariableEnvironment.h"
 #include "WaiterListManager.h"
+#include "WasmInstance.h"
 #include "WasmWorklist.h"
 #include "Watchdog.h"
 #include "WeakGCMapInlines.h"
@@ -217,68 +221,68 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     , m_builtinExecutables(makeUnique<BuiltinExecutables>(*this))
     , m_syncWaiter(adoptRef(*new Waiter(this)))
 {
-    if (UNLIKELY(vmCreationShouldCrash))
-        CRASH_WITH_INFO(0x4242424220202020, 0xbadbeef0badbeef, 0x1234123412341234, 0x1337133713371337);
+    if (UNLIKELY(vmCreationShouldCrash || g_jscConfig.vmCreationDisallowed))
+        CRASH_WITH_EXTRA_SECURITY_IMPLICATION_AND_INFO(VMCreationDisallowed, "VM creation disallowed"_s, 0x4242424220202020, 0xbadbeef0badbeef, 0x1234123412341234, 0x1337133713371337);
 
     VMInspector::instance().add(this);
 
     updateSoftReservedZoneSize(Options::softReservedZoneSize());
     setLastStackTop(Thread::current());
+    stringSplitIndice.reserveInitialCapacity(256);
 
     JSRunLoopTimer::Manager::shared().registerVM(*this);
 
     // Need to be careful to keep everything consistent here
     JSLockHolder lock(this);
     AtomStringTable* existingEntryAtomStringTable = Thread::current().setCurrentAtomStringTable(m_atomStringTable);
-    structureStructure.set(*this, Structure::createStructure(*this));
-    structureRareDataStructure.set(*this, StructureRareData::createStructure(*this, nullptr, jsNull()));
-    stringStructure.set(*this, JSString::createStructure(*this, nullptr, jsNull()));
+    structureStructure.setWithoutWriteBarrier(Structure::createStructure(*this));
+    structureRareDataStructure.setWithoutWriteBarrier(StructureRareData::createStructure(*this, nullptr, jsNull()));
+    stringStructure.setWithoutWriteBarrier(JSString::createStructure(*this, nullptr, jsNull()));
 
     smallStrings.initializeCommonStrings(*this);
 
     propertyNames = new CommonIdentifiers(*this);
-    propertyNameEnumeratorStructure.set(*this, JSPropertyNameEnumerator::createStructure(*this, nullptr, jsNull()));
-    getterSetterStructure.set(*this, GetterSetter::createStructure(*this, nullptr, jsNull()));
-    customGetterSetterStructure.set(*this, CustomGetterSetter::createStructure(*this, nullptr, jsNull()));
-    domAttributeGetterSetterStructure.set(*this, DOMAttributeGetterSetter::createStructure(*this, nullptr, jsNull()));
-    scopedArgumentsTableStructure.set(*this, ScopedArgumentsTable::createStructure(*this, nullptr, jsNull()));
-    apiWrapperStructure.set(*this, JSAPIValueWrapper::createStructure(*this, nullptr, jsNull()));
-    nativeExecutableStructure.set(*this, NativeExecutable::createStructure(*this, nullptr, jsNull()));
-    evalExecutableStructure.set(*this, EvalExecutable::createStructure(*this, nullptr, jsNull()));
-    programExecutableStructure.set(*this, ProgramExecutable::createStructure(*this, nullptr, jsNull()));
-    functionExecutableStructure.set(*this, FunctionExecutable::createStructure(*this, nullptr, jsNull()));
-    moduleProgramExecutableStructure.set(*this, ModuleProgramExecutable::createStructure(*this, nullptr, jsNull()));
-    regExpStructure.set(*this, RegExp::createStructure(*this, nullptr, jsNull()));
-    symbolStructure.set(*this, Symbol::createStructure(*this, nullptr, jsNull()));
-    symbolTableStructure.set(*this, SymbolTable::createStructure(*this, nullptr, jsNull()));
+    propertyNameEnumeratorStructure.setWithoutWriteBarrier(JSPropertyNameEnumerator::createStructure(*this, nullptr, jsNull()));
+    getterSetterStructure.setWithoutWriteBarrier(GetterSetter::createStructure(*this, nullptr, jsNull()));
+    customGetterSetterStructure.setWithoutWriteBarrier(CustomGetterSetter::createStructure(*this, nullptr, jsNull()));
+    domAttributeGetterSetterStructure.setWithoutWriteBarrier(DOMAttributeGetterSetter::createStructure(*this, nullptr, jsNull()));
+    scopedArgumentsTableStructure.setWithoutWriteBarrier(ScopedArgumentsTable::createStructure(*this, nullptr, jsNull()));
+    apiWrapperStructure.setWithoutWriteBarrier(JSAPIValueWrapper::createStructure(*this, nullptr, jsNull()));
+    nativeExecutableStructure.setWithoutWriteBarrier(NativeExecutable::createStructure(*this, nullptr, jsNull()));
+    evalExecutableStructure.setWithoutWriteBarrier(EvalExecutable::createStructure(*this, nullptr, jsNull()));
+    programExecutableStructure.setWithoutWriteBarrier(ProgramExecutable::createStructure(*this, nullptr, jsNull()));
+    functionExecutableStructure.setWithoutWriteBarrier(FunctionExecutable::createStructure(*this, nullptr, jsNull()));
+    moduleProgramExecutableStructure.setWithoutWriteBarrier(ModuleProgramExecutable::createStructure(*this, nullptr, jsNull()));
+    regExpStructure.setWithoutWriteBarrier(RegExp::createStructure(*this, nullptr, jsNull()));
+    symbolStructure.setWithoutWriteBarrier(Symbol::createStructure(*this, nullptr, jsNull()));
+    symbolTableStructure.setWithoutWriteBarrier(SymbolTable::createStructure(*this, nullptr, jsNull()));
 
-    immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithInt32) - NumberOfIndexingShapes].set(*this, JSImmutableButterfly::createStructure(*this, nullptr, jsNull(), CopyOnWriteArrayWithInt32));
+    immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithInt32) - NumberOfIndexingShapes].setWithoutWriteBarrier(JSImmutableButterfly::createStructure(*this, nullptr, jsNull(), CopyOnWriteArrayWithInt32));
     Structure* copyOnWriteArrayWithContiguousStructure = JSImmutableButterfly::createStructure(*this, nullptr, jsNull(), CopyOnWriteArrayWithContiguous);
-    immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithDouble) - NumberOfIndexingShapes].set(*this,
-        Options::allowDoubleShape() ? JSImmutableButterfly::createStructure(*this, nullptr, jsNull(), CopyOnWriteArrayWithDouble) : copyOnWriteArrayWithContiguousStructure);
-    immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].set(*this, copyOnWriteArrayWithContiguousStructure);
+    immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithDouble) - NumberOfIndexingShapes].setWithoutWriteBarrier(Options::allowDoubleShape() ? JSImmutableButterfly::createStructure(*this, nullptr, jsNull(), CopyOnWriteArrayWithDouble) : copyOnWriteArrayWithContiguousStructure);
+    immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].setWithoutWriteBarrier(copyOnWriteArrayWithContiguousStructure);
 
-    sourceCodeStructure.set(*this, JSSourceCode::createStructure(*this, nullptr, jsNull()));
-    scriptFetcherStructure.set(*this, JSScriptFetcher::createStructure(*this, nullptr, jsNull()));
-    scriptFetchParametersStructure.set(*this, JSScriptFetchParameters::createStructure(*this, nullptr, jsNull()));
-    structureChainStructure.set(*this, StructureChain::createStructure(*this, nullptr, jsNull()));
-    sparseArrayValueMapStructure.set(*this, SparseArrayValueMap::createStructure(*this, nullptr, jsNull()));
-    templateObjectDescriptorStructure.set(*this, JSTemplateObjectDescriptor::createStructure(*this, nullptr, jsNull()));
-    unlinkedFunctionExecutableStructure.set(*this, UnlinkedFunctionExecutable::createStructure(*this, nullptr, jsNull()));
-    unlinkedProgramCodeBlockStructure.set(*this, UnlinkedProgramCodeBlock::createStructure(*this, nullptr, jsNull()));
-    unlinkedEvalCodeBlockStructure.set(*this, UnlinkedEvalCodeBlock::createStructure(*this, nullptr, jsNull()));
-    unlinkedFunctionCodeBlockStructure.set(*this, UnlinkedFunctionCodeBlock::createStructure(*this, nullptr, jsNull()));
-    unlinkedModuleProgramCodeBlockStructure.set(*this, UnlinkedModuleProgramCodeBlock::createStructure(*this, nullptr, jsNull()));
-    propertyTableStructure.set(*this, PropertyTable::createStructure(*this, nullptr, jsNull()));
-    functionRareDataStructure.set(*this, FunctionRareData::createStructure(*this, nullptr, jsNull()));
-    exceptionStructure.set(*this, Exception::createStructure(*this, nullptr, jsNull()));
-    programCodeBlockStructure.set(*this, ProgramCodeBlock::createStructure(*this, nullptr, jsNull()));
-    moduleProgramCodeBlockStructure.set(*this, ModuleProgramCodeBlock::createStructure(*this, nullptr, jsNull()));
-    evalCodeBlockStructure.set(*this, EvalCodeBlock::createStructure(*this, nullptr, jsNull()));
-    functionCodeBlockStructure.set(*this, FunctionCodeBlock::createStructure(*this, nullptr, jsNull()));
-    hashMapBucketSetStructure.set(*this, HashMapBucket<HashMapBucketDataKey>::createStructure(*this, nullptr, jsNull()));
-    hashMapBucketMapStructure.set(*this, HashMapBucket<HashMapBucketDataKeyValue>::createStructure(*this, nullptr, jsNull()));
-    bigIntStructure.set(*this, JSBigInt::createStructure(*this, nullptr, jsNull()));
+    sourceCodeStructure.setWithoutWriteBarrier(JSSourceCode::createStructure(*this, nullptr, jsNull()));
+    scriptFetcherStructure.setWithoutWriteBarrier(JSScriptFetcher::createStructure(*this, nullptr, jsNull()));
+    scriptFetchParametersStructure.setWithoutWriteBarrier(JSScriptFetchParameters::createStructure(*this, nullptr, jsNull()));
+    structureChainStructure.setWithoutWriteBarrier(StructureChain::createStructure(*this, nullptr, jsNull()));
+    sparseArrayValueMapStructure.setWithoutWriteBarrier(SparseArrayValueMap::createStructure(*this, nullptr, jsNull()));
+    templateObjectDescriptorStructure.setWithoutWriteBarrier(JSTemplateObjectDescriptor::createStructure(*this, nullptr, jsNull()));
+    unlinkedFunctionExecutableStructure.setWithoutWriteBarrier(UnlinkedFunctionExecutable::createStructure(*this, nullptr, jsNull()));
+    unlinkedProgramCodeBlockStructure.setWithoutWriteBarrier(UnlinkedProgramCodeBlock::createStructure(*this, nullptr, jsNull()));
+    unlinkedEvalCodeBlockStructure.setWithoutWriteBarrier(UnlinkedEvalCodeBlock::createStructure(*this, nullptr, jsNull()));
+    unlinkedFunctionCodeBlockStructure.setWithoutWriteBarrier(UnlinkedFunctionCodeBlock::createStructure(*this, nullptr, jsNull()));
+    unlinkedModuleProgramCodeBlockStructure.setWithoutWriteBarrier(UnlinkedModuleProgramCodeBlock::createStructure(*this, nullptr, jsNull()));
+    propertyTableStructure.setWithoutWriteBarrier(PropertyTable::createStructure(*this, nullptr, jsNull()));
+    functionRareDataStructure.setWithoutWriteBarrier(FunctionRareData::createStructure(*this, nullptr, jsNull()));
+    exceptionStructure.setWithoutWriteBarrier(Exception::createStructure(*this, nullptr, jsNull()));
+    programCodeBlockStructure.setWithoutWriteBarrier(ProgramCodeBlock::createStructure(*this, nullptr, jsNull()));
+    moduleProgramCodeBlockStructure.setWithoutWriteBarrier(ModuleProgramCodeBlock::createStructure(*this, nullptr, jsNull()));
+    evalCodeBlockStructure.setWithoutWriteBarrier(EvalCodeBlock::createStructure(*this, nullptr, jsNull()));
+    functionCodeBlockStructure.setWithoutWriteBarrier(FunctionCodeBlock::createStructure(*this, nullptr, jsNull()));
+    hashMapBucketSetStructure.setWithoutWriteBarrier(HashMapBucket<HashMapBucketDataKey>::createStructure(*this, nullptr, jsNull()));
+    hashMapBucketMapStructure.setWithoutWriteBarrier(HashMapBucket<HashMapBucketDataKeyValue>::createStructure(*this, nullptr, jsNull()));
+    bigIntStructure.setWithoutWriteBarrier(JSBigInt::createStructure(*this, nullptr, jsNull()));
 
     // Eagerly initialize constant cells since the concurrent compiler can access them.
     if (Options::useJIT()) {
@@ -290,12 +294,12 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     {
         auto* bigInt = JSBigInt::tryCreateFrom(*this, 1);
         if (bigInt)
-            heapBigIntConstantOne.set(*this, bigInt);
+            heapBigIntConstantOne.setWithoutWriteBarrier(bigInt);
         else {
             if (success)
                 *success = false;
             else
-                RELEASE_ASSERT(bigInt);
+                RELEASE_ASSERT_RESOURCE_AVAILABLE(bigInt, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
         }
     }
 
@@ -596,6 +600,10 @@ static ThunkGenerator thunkGeneratorForIntrinsic(Intrinsic intrinsic)
         return clz32ThunkGenerator;
     case FromCharCodeIntrinsic:
         return fromCharCodeThunkGenerator;
+    case GlobalIsNaNIntrinsic:
+        return globalIsNaNThunkGenerator;
+    case NumberIsNaNIntrinsic:
+        return numberIsNaNThunkGenerator;
     case SqrtIntrinsic:
         return sqrtThunkGenerator;
     case AbsIntrinsic:
@@ -680,7 +688,7 @@ NativeExecutable* VM::getBoundFunction(bool isJSFunction)
 {
     bool slowCase = !isJSFunction;
 
-    auto getOrCreate = [&](Strong<NativeExecutable>& slot) -> NativeExecutable* {
+    auto getOrCreate = [&](WriteBarrier<NativeExecutable>& slot) -> NativeExecutable* {
         if (auto* cached = slot.get())
             return cached;
         NativeExecutable* result = getHostFunction(
@@ -688,7 +696,7 @@ NativeExecutable* VM::getBoundFunction(bool isJSFunction)
             ImplementationVisibility::Private, // Bound function's visibility is private on the stack.
             slowCase ? NoIntrinsic : BoundFunctionCallIntrinsic,
             boundFunctionConstruct, nullptr, String());
-        slot.set(*this, result);
+        slot.setWithoutWriteBarrier(result);
         return result;
     };
 
@@ -771,10 +779,6 @@ MacroAssemblerCodeRef<JITStubRoutinePtrTag> VM::getCTIVirtualCall(CallMode callM
         return LLInt::getCodeRef<JITStubRoutinePtrTag>(llint_virtual_construct_trampoline);
     }
     return LLInt::getCodeRef<JITStubRoutinePtrTag>(llint_virtual_call_trampoline);
-}
-
-VM::ClientData::~ClientData()
-{
 }
 
 void VM::whenIdle(Function<void()>&& callback)
@@ -962,9 +966,7 @@ static void preCommitStackMemory(void* stackLimit)
 
 void VM::updateStackLimits()
 {
-#if OS(WINDOWS)
     void* lastSoftStackLimit = m_softStackLimit;
-#endif
 
     const StackBounds& stack = Thread::current().stack();
     size_t reservedZoneSize = Options::reservedZoneSize();
@@ -983,18 +985,23 @@ void VM::updateStackLimits()
         m_stackLimit = stack.recursionLimit(reservedZoneSize);
     }
 
+    if (lastSoftStackLimit != m_softStackLimit) {
 #if OS(WINDOWS)
-    // We only need to precommit stack memory dictated by the VM::m_softStackLimit limit.
-    // This is because VM::m_softStackLimit applies to stack usage by LLINT asm or JIT
-    // generated code which can allocate stack space that the C++ compiler does not know
-    // about. As such, we have to precommit that stack memory manually.
-    //
-    // In contrast, we do not need to worry about VM::m_stackLimit because that limit is
-    // used exclusively by C++ code, and the C++ compiler will automatically commit the
-    // needed stack pages.
-    if (lastSoftStackLimit != m_softStackLimit)
+        // We only need to precommit stack memory dictated by the VM::m_softStackLimit limit.
+        // This is because VM::m_softStackLimit applies to stack usage by LLINT asm or JIT
+        // generated code which can allocate stack space that the C++ compiler does not know
+        // about. As such, we have to precommit that stack memory manually.
+        //
+        // In contrast, we do not need to worry about VM::m_stackLimit because that limit is
+        // used exclusively by C++ code, and the C++ compiler will automatically commit the
+        // needed stack pages.
         preCommitStackMemory(m_softStackLimit);
 #endif
+#if ENABLE(WEBASSEMBLY)
+        for (auto& instance : m_wasmInstances.values())
+            instance->updateSoftStackLimit(m_softStackLimit);
+#endif
+    }
 }
 
 #if ENABLE(DFG_JIT)
@@ -1245,6 +1252,8 @@ void VM::didExhaustMicrotaskQueue()
                 continue;
 
             callPromiseRejectionCallback(promise);
+            if (UNLIKELY(hasPendingTerminationException()))
+                return;
         }
     } while (!m_aboutToBeNotifiedRejectedPromises.isEmpty());
 }
@@ -1256,6 +1265,9 @@ void VM::promiseRejected(JSPromise* promise)
 
 void VM::drainMicrotasks()
 {
+    if (UNLIKELY(m_drainMicrotaskDelayScopeCount))
+        return;
+
     if (UNLIKELY(executionForbidden()))
         m_microtaskQueue.clear();
     else {
@@ -1263,10 +1275,14 @@ void VM::drainMicrotasks()
             while (!m_microtaskQueue.isEmpty()) {
                 auto task = m_microtaskQueue.dequeue();
                 task.run();
+                if (UNLIKELY(hasPendingTerminationException()))
+                    return;
                 if (m_onEachMicrotaskTick)
                     m_onEachMicrotaskTick(*this);
             }
             didExhaustMicrotaskQueue();
+            if (UNLIKELY(hasPendingTerminationException()))
+                return;
         } while (!m_microtaskQueue.isEmpty());
     }
     finalizeSynchronousJSExecution();
@@ -1412,7 +1428,7 @@ JSCell* VM::sentinelSetBucketSlow()
 {
     ASSERT(!m_sentinelSetBucket);
     auto* sentinel = JSSet::BucketType::createSentinel(*this);
-    m_sentinelSetBucket.set(*this, sentinel);
+    m_sentinelSetBucket.setWithoutWriteBarrier(sentinel);
     return sentinel;
 }
 
@@ -1420,7 +1436,7 @@ JSCell* VM::sentinelMapBucketSlow()
 {
     ASSERT(!m_sentinelMapBucket);
     auto* sentinel = JSMap::BucketType::createSentinel(*this);
-    m_sentinelMapBucket.set(*this, sentinel);
+    m_sentinelMapBucket.setWithoutWriteBarrier(sentinel);
     return sentinel;
 }
 
@@ -1429,7 +1445,7 @@ JSPropertyNameEnumerator* VM::emptyPropertyNameEnumeratorSlow()
     ASSERT(!m_emptyPropertyNameEnumerator);
     PropertyNameArray propertyNames(*this, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
     auto* enumerator = JSPropertyNameEnumerator::create(*this, nullptr, 0, 0, WTFMove(propertyNames));
-    m_emptyPropertyNameEnumerator.set(*this, enumerator);
+    m_emptyPropertyNameEnumerator.setWithoutWriteBarrier(enumerator);
     return enumerator;
 }
 
@@ -1542,6 +1558,58 @@ template<typename Visitor>
 void VM::visitAggregateImpl(Visitor& visitor)
 {
     m_microtaskQueue.visitAggregate(visitor);
+
+    visitor.append(structureStructure);
+    visitor.append(structureRareDataStructure);
+    visitor.append(stringStructure);
+    visitor.append(propertyNameEnumeratorStructure);
+    visitor.append(getterSetterStructure);
+    visitor.append(customGetterSetterStructure);
+    visitor.append(domAttributeGetterSetterStructure);
+    visitor.append(scopedArgumentsTableStructure);
+    visitor.append(apiWrapperStructure);
+    visitor.append(nativeExecutableStructure);
+    visitor.append(evalExecutableStructure);
+    visitor.append(programExecutableStructure);
+    visitor.append(functionExecutableStructure);
+#if ENABLE(WEBASSEMBLY)
+    visitor.append(webAssemblyCalleeGroupStructure);
+#endif
+    visitor.append(moduleProgramExecutableStructure);
+    visitor.append(regExpStructure);
+    visitor.append(symbolStructure);
+    visitor.append(symbolTableStructure);
+    for (auto& structure : immutableButterflyStructures)
+        visitor.append(structure);
+    visitor.append(sourceCodeStructure);
+    visitor.append(scriptFetcherStructure);
+    visitor.append(scriptFetchParametersStructure);
+    visitor.append(structureChainStructure);
+    visitor.append(sparseArrayValueMapStructure);
+    visitor.append(templateObjectDescriptorStructure);
+    visitor.append(unlinkedFunctionExecutableStructure);
+    visitor.append(unlinkedProgramCodeBlockStructure);
+    visitor.append(unlinkedEvalCodeBlockStructure);
+    visitor.append(unlinkedFunctionCodeBlockStructure);
+    visitor.append(unlinkedModuleProgramCodeBlockStructure);
+    visitor.append(propertyTableStructure);
+    visitor.append(functionRareDataStructure);
+    visitor.append(exceptionStructure);
+    visitor.append(programCodeBlockStructure);
+    visitor.append(moduleProgramCodeBlockStructure);
+    visitor.append(evalCodeBlockStructure);
+    visitor.append(functionCodeBlockStructure);
+    visitor.append(hashMapBucketSetStructure);
+    visitor.append(hashMapBucketMapStructure);
+    visitor.append(bigIntStructure);
+
+    visitor.append(m_emptyPropertyNameEnumerator);
+    visitor.append(m_sentinelSetBucket);
+    visitor.append(m_sentinelMapBucket);
+    visitor.append(m_fastCanConstructBoundExecutable);
+    visitor.append(m_slowCanConstructBoundExecutable);
+    visitor.append(lastCachedString);
+    visitor.append(heapBigIntConstantOne);
 }
 DEFINE_VISIT_AGGREGATE(VM);
 
@@ -1553,6 +1621,18 @@ void VM::addDebugger(Debugger& debugger)
 void VM::removeDebugger(Debugger& debugger)
 {
     m_debuggers.remove(&debugger);
+}
+
+void VM::performOpportunisticallyScheduledTasks(MonotonicTime deadline)
+{
+    bool hasPendingWork;
+    {
+        JSLockHolder locker { *this };
+        hasPendingWork = deferredWorkTimer->hasAnyPendingWork();
+    }
+
+    if (!hasPendingWork)
+        heap.sweeper().doWorkUntil(*this, deadline);
 }
 
 void QueuedTask::run()
@@ -1594,6 +1674,66 @@ void VM::invalidateStructureChainIntegrity(StructureChainIntegrityEvent)
 {
     if (m_megamorphicCache)
         m_megamorphicCache->bumpEpoch();
+}
+
+#if ENABLE(WEBASSEMBLY)
+void VM::registerWasmInstance(Wasm::Instance& instance)
+{
+    m_wasmInstances.add(instance);
+}
+#endif
+
+
+VM::DrainMicrotaskDelayScope::DrainMicrotaskDelayScope(VM& vm)
+    : m_vm(&vm)
+{
+    increment();
+}
+
+VM::DrainMicrotaskDelayScope::~DrainMicrotaskDelayScope()
+{
+    decrement();
+}
+
+VM::DrainMicrotaskDelayScope::DrainMicrotaskDelayScope(const VM::DrainMicrotaskDelayScope& other)
+    : m_vm(other.m_vm)
+{
+    increment();
+}
+
+VM::DrainMicrotaskDelayScope& VM::DrainMicrotaskDelayScope::operator=(const VM::DrainMicrotaskDelayScope& other)
+{
+    if (this == &other)
+        return *this;
+    decrement();
+    m_vm = other.m_vm;
+    increment();
+    return *this;
+}
+
+VM::DrainMicrotaskDelayScope& VM::DrainMicrotaskDelayScope::operator=(VM::DrainMicrotaskDelayScope&& other)
+{
+    decrement();
+    m_vm = std::exchange(other.m_vm, nullptr);
+    increment();
+    return *this;
+}
+
+void VM::DrainMicrotaskDelayScope::increment()
+{
+    if (m_vm)
+        ++m_vm->m_drainMicrotaskDelayScopeCount;
+}
+
+void VM::DrainMicrotaskDelayScope::decrement()
+{
+    if (!m_vm)
+        return;
+    ASSERT(m_vm->m_drainMicrotaskDelayScopeCount);
+    if (!--m_vm->m_drainMicrotaskDelayScopeCount) {
+        JSLockHolder locker(*m_vm);
+        m_vm->drainMicrotasks();
+    }
 }
 
 } // namespace JSC

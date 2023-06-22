@@ -51,8 +51,7 @@
 #import <WebCore/LocalFrameView.h>
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/Page.h>
-#import <WebCore/RenderBox.h>
-#import <WebCore/RenderObject.h>
+#import <WebCore/RenderBoxInlines.h>
 #import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/SimpleRange.h>
@@ -218,7 +217,7 @@ RetainPtr<NSImage> WebContextMenuClient::imageForCurrentSharingServicePickerItem
         return nil;
 
     auto oldSelection = localFrame->selection().selection();
-    localFrame->selection().setSelection(*makeRangeSelectingNode(*node), FrameSelection::DoNotSetFocus);
+    localFrame->selection().setSelection(*makeRangeSelectingNode(*node), FrameSelection::SetSelectionOption::DoNotSetFocus);
 
     auto oldPaintBehavior = frameView->paintBehavior();
     frameView->setPaintBehavior(PaintBehavior::SelectionOnly);

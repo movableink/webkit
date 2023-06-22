@@ -140,7 +140,7 @@ void InjectedBundle::postSynchronousMessage(const String& messageName, API::Obje
 {
     auto& webProcess = WebProcess::singleton();
     auto sendResult = webProcess.parentProcessConnection()->sendSync(Messages::WebProcessPool::HandleSynchronousMessage(messageName, UserData(webProcess.transformObjectsToHandles(messageBody))), 0);
-    if (sendResult) {
+    if (sendResult.succeeded()) {
         auto [returnUserData] = sendResult.takeReply();
         returnData = webProcess.transformHandlesToObjects(returnUserData.object());
     } else
@@ -179,7 +179,7 @@ void InjectedBundle::setAsynchronousSpellCheckingEnabled(bool enabled)
 
 int InjectedBundle::numberOfPages(WebFrame* frame, double pageWidthInPixels, double pageHeightInPixels)
 {
-    auto* coreFrame = frame ? frame->coreFrame() : nullptr;
+    auto* coreFrame = frame ? frame->coreLocalFrame() : nullptr;
     if (!coreFrame)
         return -1;
     if (!pageWidthInPixels)
@@ -192,7 +192,7 @@ int InjectedBundle::numberOfPages(WebFrame* frame, double pageWidthInPixels, dou
 
 int InjectedBundle::pageNumberForElementById(WebFrame* frame, const String& id, double pageWidthInPixels, double pageHeightInPixels)
 {
-    auto* coreFrame = frame ? frame->coreFrame() : nullptr;
+    auto* coreFrame = frame ? frame->coreLocalFrame() : nullptr;
     if (!coreFrame)
         return -1;
 
@@ -210,7 +210,7 @@ int InjectedBundle::pageNumberForElementById(WebFrame* frame, const String& id, 
 
 String InjectedBundle::pageSizeAndMarginsInPixels(WebFrame* frame, int pageIndex, int width, int height, int marginTop, int marginRight, int marginBottom, int marginLeft)
 {
-    auto* coreFrame = frame ? frame->coreFrame() : nullptr;
+    auto* coreFrame = frame ? frame->coreLocalFrame() : nullptr;
     if (!coreFrame)
         return String();
 
@@ -219,7 +219,7 @@ String InjectedBundle::pageSizeAndMarginsInPixels(WebFrame* frame, int pageIndex
 
 bool InjectedBundle::isPageBoxVisible(WebFrame* frame, int pageIndex)
 {
-    auto* coreFrame = frame ? frame->coreFrame() : nullptr;
+    auto* coreFrame = frame ? frame->coreLocalFrame() : nullptr;
     if (!coreFrame)
         return false;
 

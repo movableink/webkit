@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,8 @@
 #import "AccessibilityLabel.h"
 #import "AccessibilityList.h"
 #import "ColorCocoa.h"
+#import "CompositionHighlight.h"
+#import "CompositionUnderline.h"
 #import "Editor.h"
 #import "ElementAncestorIteratorInlines.h"
 #import "FrameSelection.h"
@@ -45,8 +47,11 @@
 
 #if ENABLE(ACCESSIBILITY) && PLATFORM(MAC)
 
+#import "PlatformScreen.h"
 #import "WebAccessibilityObjectWrapperMac.h"
 #import "Widget.h"
+
+#import <pal/spi/mac/NSSpellCheckerSPI.h>
 
 namespace WebCore {
 
@@ -73,9 +78,14 @@ void AccessibilityObject::overrideAttachmentParent(AXCoreObject* parent)
         parentWrapper = parent->wrapper();
     }
 
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [[wrapper() attachmentView] accessibilitySetOverrideValue:parentWrapper forAttribute:NSAccessibilityParentAttribute];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
+}
+
+FloatRect AccessibilityObject::primaryScreenRect() const
+{
+    return screenRectForPrimaryScreen();
 }
 
 FloatRect AccessibilityObject::convertRectToPlatformSpace(const FloatRect& rect, AccessibilityConversionSpace space) const
@@ -89,9 +99,9 @@ FloatRect AccessibilityObject::convertRectToPlatformSpace(const FloatRect& rect,
 
         NSRect nsRect = NSRectFromCGRect(cgRect);
         NSView *view = frameView->documentView();
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         nsRect = [[view window] convertRectToScreen:[view convertRect:nsRect toView:nil]];
-        ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
         return NSRectToCGRect(nsRect);
     }
 
@@ -109,14 +119,14 @@ bool AccessibilityObject::accessibilityIgnoreAttachment() const
     // LocalFrameView attachments are now handled by AccessibilityScrollView,
     // so if this is the attachment, it should be ignored.
     Widget* widget = nullptr;
-    if (isAttachment() && (widget = widgetForAttachmentView()) && widget->isFrameView())
+    if (isAttachment() && (widget = widgetForAttachmentView()) && widget->isLocalFrameView())
         return true;
 
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     id attachmentView = widget ? NSAccessibilityUnignoredDescendant(widget->platformWidget()) : nil;
     if (attachmentView)
         return [attachmentView accessibilityIsIgnored];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 
     // Attachments are ignored by default (unless we determine that we should expose them).
     return true;
@@ -193,10 +203,10 @@ String AccessibilityObject::subrolePlatformString() const
 
     if (isAttachment()) {
         NSView* attachView = [wrapper() attachmentView];
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         if ([[attachView accessibilityAttributeNames] containsObject:NSAccessibilitySubroleAttribute])
             return [attachView accessibilityAttributeValue:NSAccessibilitySubroleAttribute];
-        ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
     }
 
     if (isMeter())
@@ -503,13 +513,6 @@ String AccessibilityObject::rolePlatformDescription() const
     return String();
 }
 
-AXTextMarkerRangeRef AccessibilityObject::textMarkerRangeForNSRange(const NSRange& range) const
-{
-    return textMarkerRangeFromVisiblePositions(axObjectCache(),
-        visiblePositionForIndex(range.location),
-        visiblePositionForIndex(range.location + range.length));
-}
-
 // NSAttributedString support.
 
 static void attributedStringSetColor(NSMutableAttributedString *attrString, NSString *attribute, NSColor *color, const NSRange& range)
@@ -517,8 +520,7 @@ static void attributedStringSetColor(NSMutableAttributedString *attrString, NSSt
     if (color) {
         // Use the CGColor instead of the passed NSColor because that's what the AX system framework expects. Using the NSColor causes that the AX client gets nil instead of a valid NSAttributedString.
         [attrString addAttribute:attribute value:(__bridge id)color.CGColor range:range];
-    } else
-        [attrString removeAttribute:attribute range:range];
+    }
 }
 
 static void attributedStringSetStyle(NSMutableAttributedString *attrString, RenderObject* renderer, const NSRange& range)
@@ -541,26 +543,13 @@ static void attributedStringSetStyle(NSMutableAttributedString *attrString, Rend
         attributedStringSetNumber(attrString, NSAccessibilitySuperscriptTextAttribute, @(-1), range);
     else if (alignment == VerticalAlign::Super)
         attributedStringSetNumber(attrString, NSAccessibilitySuperscriptTextAttribute, @(1), range);
-    else
-        [attrString removeAttribute:NSAccessibilitySuperscriptTextAttribute range:range];
 
     // Set shadow.
     if (style.textShadow())
         attributedStringSetNumber(attrString, NSAccessibilityShadowTextAttribute, @YES, range);
-    else
-        [attrString removeAttribute:NSAccessibilityShadowTextAttribute range:range];
 
     // Set underline and strikethrough.
     auto decor = style.textDecorationsInEffect();
-    if (!(decor & TextDecorationLine::Underline)) {
-        [attrString removeAttribute:NSAccessibilityUnderlineTextAttribute range:range];
-        [attrString removeAttribute:NSAccessibilityUnderlineColorTextAttribute range:range];
-    }
-    if (!(decor & TextDecorationLine::LineThrough)) {
-        [attrString removeAttribute:NSAccessibilityStrikethroughTextAttribute range:range];
-        [attrString removeAttribute:NSAccessibilityStrikethroughColorTextAttribute range:range];
-    }
-
     if (decor & TextDecorationLine::Underline || decor & TextDecorationLine::LineThrough) {
         // FIXME: Should the underline style be reported here?
         auto decorationStyles = TextDecorationPainter::stylesForRenderer(*renderer, decor);
@@ -609,8 +598,6 @@ static void attributedStringSetHeadingLevel(NSMutableAttributedString *attrStrin
             return;
         }
     }
-
-    [attrString removeAttribute:@"AXHeadingLevel" range:range];
 }
 
 static void attributedStringSetBlockquoteLevel(NSMutableAttributedString *attrString, RenderObject* renderer, const NSRange& range)
@@ -625,8 +612,6 @@ static void attributedStringSetBlockquoteLevel(NSMutableAttributedString *attrSt
     unsigned level = object->blockquoteLevel();
     if (level)
         [attrString addAttribute:NSAccessibilityBlockQuoteLevelAttribute value:@(level) range:range];
-    else
-        [attrString removeAttribute:NSAccessibilityBlockQuoteLevelAttribute range:range];
 }
 
 static void attributedStringSetExpandedText(NSMutableAttributedString *attrString, RenderObject* renderer, const NSRange& range)
@@ -637,27 +622,16 @@ static void attributedStringSetExpandedText(NSMutableAttributedString *attrStrin
     RefPtr object = renderer->document().axObjectCache()->getOrCreate(renderer);
     if (object->supportsExpandedTextValue())
         [attrString addAttribute:NSAccessibilityExpandedTextValueAttribute value:object->expandedTextValue() range:range];
-    else
-        [attrString removeAttribute:NSAccessibilityExpandedTextValueAttribute range:range];
 }
 
 static void attributedStringSetElement(NSMutableAttributedString *attrString, NSString *attribute, AccessibilityObject* object, const NSRange& range)
 {
-    if (!attributedStringContainsRange(attrString, range))
+    if (!attributedStringContainsRange(attrString, range) || !is<AccessibilityRenderObject>(object))
         return;
-
-    if (!is<AccessibilityRenderObject>(object)) {
-        [attrString removeAttribute:attribute range:range];
-        return;
-    }
 
     // Make a serializable AX object.
     auto* renderer = downcast<AccessibilityRenderObject>(*object).renderer();
     if (!renderer)
-        return;
-
-    auto* cache = renderer->document().axObjectCache();
-    if (!cache)
         return;
 
     id wrapper = object->wrapper();
@@ -670,21 +644,53 @@ static void attributedStringSetElement(NSMutableAttributedString *attrString, NS
         [attrString addAttribute:attribute value:(__bridge id)axElement.get() range:range];
 }
 
-static void attributedStringSetSpelling(NSMutableAttributedString *attrString, Node* node, StringView text, const NSRange& range)
+static void attributedStringSetCompositionAttributes(NSMutableAttributedString *attrString, Node& node)
 {
-    ASSERT(node);
-
-    // If this node is not inside editable content, do not run the spell checker on the text.
-    if (!node->document().axObjectCache()->rootAXEditableElement(node))
+#if HAVE(INLINE_PREDICTIONS)
+    auto& editor = node.document().editor();
+    if (&node != editor.compositionNode())
         return;
 
-    if (unifiedTextCheckerEnabled(node->document().frame())) {
+    auto& annotations = editor.customCompositionAnnotations();
+    if (auto it = annotations.find(NSTextCompletionAttributeName); it != annotations.end()) {
+        for (auto& range : it->value) {
+            if (attributedStringContainsRange(attrString, range))
+                attributedStringSetNumber(attrString, NSAccessibilityTextCompletionAttribute, @YES, range);
+        }
+    }
+#else
+    UNUSED_PARAM(attrString);
+    UNUSED_PARAM(node);
+#endif
+}
+
+static bool shouldHaveAnySpellCheckAttribute(Node& node)
+{
+    // If this node is not inside editable content, do not run the spell checker on the text.
+    return node.document().axObjectCache()->rootAXEditableElement(&node);
+}
+
+void attributedStringSetNeedsSpellCheck(NSMutableAttributedString *attributedString, Node& node)
+{
+    if (!shouldHaveAnySpellCheckAttribute(node))
+        return;
+
+    // Inform the AT that we want it to spell-check for us by setting AXDidSpellCheck to @NO.
+    attributedStringSetNumber(attributedString, AXDidSpellCheckAttribute, @NO, NSMakeRange(0, attributedString.length));
+}
+
+void attributedStringSetSpelling(NSMutableAttributedString *attrString, Node& node, StringView text, const NSRange& range)
+{
+    if (!shouldHaveAnySpellCheckAttribute(node))
+        return;
+
+    if (unifiedTextCheckerEnabled(node.document().frame())) {
         // Check the spelling directly since document->markersForNode() does not store the misspelled marking when the cursor is in a word.
-        auto* checker = node->document().editor().textChecker();
+        auto* checker = node.document().editor().textChecker();
 
         // checkTextOfParagraph is the only spelling/grammar checker implemented in WK1 and WK2
         Vector<TextCheckingResult> results;
-        checkTextOfParagraph(*checker, text, TextCheckingType::Spelling, results, node->document().frame()->selection().selection());
+        checkTextOfParagraph(*checker, text, TextCheckingType::Spelling, results, node.document().frame()->selection().selection());
         for (const auto& result : results) {
             attributedStringSetNumber(attrString, NSAccessibilityMisspelledTextAttribute, @YES, NSMakeRange(result.range.location + range.location, result.range.length));
             attributedStringSetNumber(attrString, NSAccessibilityMarkedMisspelledTextAttribute, @YES, NSMakeRange(result.range.location + range.location, result.range.length));
@@ -696,7 +702,7 @@ static void attributedStringSetSpelling(NSMutableAttributedString *attrString, N
     for (unsigned current = 0; current < text.length(); ) {
         int misspellingLocation = -1;
         int misspellingLength = 0;
-        node->document().editor().textChecker()->checkSpellingOfString(text.substring(current), &misspellingLocation, &misspellingLength);
+        node.document().editor().textChecker()->checkSpellingOfString(text.substring(current), &misspellingLocation, &misspellingLength);
         if (misspellingLocation < 0 || !misspellingLength)
             break;
 
@@ -727,9 +733,14 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node* node, StringView text
     attributedStringSetBlockquoteLevel(result.get(), renderer.get(), range);
     attributedStringSetExpandedText(result.get(), renderer.get(), range);
     attributedStringSetElement(result.get(), NSAccessibilityLinkTextAttribute, AccessibilityObject::anchorElementForNode(node), range);
+    attributedStringSetCompositionAttributes(result.get(), *node);
     // Do spelling last because it tends to break up the range.
-    if (spellCheck == AXCoreObject::SpellCheck::Yes)
-        attributedStringSetSpelling(result.get(), node, text, range);
+    if (spellCheck == AXCoreObject::SpellCheck::Yes) {
+        if (AXObjectCache::shouldSpellCheck())
+            attributedStringSetSpelling(result.get(), *node, text, range);
+        else
+            attributedStringSetNeedsSpellCheck(result.get(), *node);
+    }
 
     return result;
 }

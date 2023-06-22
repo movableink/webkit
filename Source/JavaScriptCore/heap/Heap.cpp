@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  *
  *  This library is free software; you can redistribute it and/or
@@ -700,8 +700,10 @@ void Heap::finalizeUnconditionalFinalizers()
         [&] (auto& space) {
             this->finalizeMarkedUnconditionalFinalizers<CodeBlock>(space.set, collectionScope);
         });
-    if (collectionScope == CollectionScope::Full)
+    if (collectionScope == CollectionScope::Full) {
         finalizeMarkedUnconditionalFinalizers<Structure>(structureSpace, collectionScope);
+        finalizeMarkedUnconditionalFinalizers<BrandedStructure>(brandedStructureSpace, collectionScope);
+    }
     finalizeMarkedUnconditionalFinalizers<StructureRareData>(structureRareDataSpace, collectionScope);
     finalizeMarkedUnconditionalFinalizers<UnlinkedFunctionExecutable>(unlinkedFunctionExecutableSpaceAndSet.set, collectionScope);
     if (m_weakSetSpace)
@@ -1133,6 +1135,9 @@ void Heap::addToRememberedSet(const JSCell* constCell)
 
 void Heap::sweepSynchronously()
 {
+    if (UNLIKELY(!Options::useGC()))
+        return;
+
     MonotonicTime before { };
     if (UNLIKELY(Options::logGC())) {
         dataLog("Full sweep: ", capacity() / 1024, "kb ");
@@ -1148,6 +1153,9 @@ void Heap::sweepSynchronously()
 
 void Heap::collect(Synchronousness synchronousness, GCRequest request)
 {
+    if (UNLIKELY(!Options::useGC()))
+        return;
+
     switch (synchronousness) {
     case Async:
         collectAsync(request);
@@ -1161,6 +1169,9 @@ void Heap::collect(Synchronousness synchronousness, GCRequest request)
 
 void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
 {
+    if (UNLIKELY(!Options::useGC()))
+        return;
+
     if constexpr (validateDFGDoesGC)
         vm().verifyCanGC();
 
@@ -1194,6 +1205,9 @@ void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
 
 void Heap::collectAsync(GCRequest request)
 {
+    if (UNLIKELY(!Options::useGC()))
+        return;
+
     if constexpr (validateDFGDoesGC)
         vm().verifyCanGC();
 
@@ -1218,6 +1232,9 @@ void Heap::collectAsync(GCRequest request)
 
 void Heap::collectSync(GCRequest request)
 {
+    if (UNLIKELY(!Options::useGC()))
+        return;
+
     if constexpr (validateDFGDoesGC)
         vm().verifyCanGC();
 
@@ -2164,6 +2181,10 @@ void Heap::finalize()
 
     if (m_lastCollectionScope && m_lastCollectionScope.value() == CollectionScope::Full)
         vm().jsonAtomStringCache.clear();
+    vm().keyAtomStringCache.clear();
+    vm().stringSplitCache.clear();
+    vm().stringReplaceCache.clear();
+    vm().numericStrings.clearOnGarbageCollection();
 
     m_possiblyAccessedStringsFromConcurrentThreads.clear();
 
@@ -2679,7 +2700,7 @@ void Heap::collectIfNecessaryOrDefer(GCDeferralContext* deferralContext)
     case MutatorState::Collecting:
         return;
     }
-    if (!Options::useGC())
+    if (UNLIKELY(!Options::useGC()))
         return;
     
     if (mayNeedToStop()) {
@@ -2851,7 +2872,6 @@ void Heap::addCoreConstraints()
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::StrongReferences);
                 if (vm.smallStrings.needsToBeVisited(*m_collectionScope))
                     vm.smallStrings.visitStrongReferences(visitor);
-                vm.visitAggregate(visitor);
             }
             
             {
@@ -2862,7 +2882,7 @@ void Heap::addCoreConstraints()
             
             if (!m_markListSet.isEmpty()) {
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::ConservativeScan);
-                MarkedArgumentBufferBase::markLists(visitor, m_markListSet);
+                MarkedVectorBase::markLists(visitor, m_markListSet);
             }
 
             {
@@ -2891,6 +2911,7 @@ void Heap::addCoreConstraints()
         MAKE_MARKING_CONSTRAINT_EXECUTOR_PAIR(([this] (auto& visitor) {
             SetRootMarkReasonScope rootScope(visitor, RootMarkReason::StrongHandles);
             m_handleSet.visitStrongHandles(visitor);
+            vm().visitAggregate(visitor);
         })),
         ConstraintVolatility::GreyedByExecution);
     
@@ -2915,9 +2936,11 @@ void Heap::addCoreConstraints()
         "Ws", "Weak Sets",
         MAKE_MARKING_CONSTRAINT_EXECUTOR_PAIR(([this] (auto& visitor) {
             SetRootMarkReasonScope rootScope(visitor, RootMarkReason::WeakSets);
-            m_objectSpace.visitWeakSets(visitor);
+            RefPtr<SharedTask<void(decltype(visitor)&)>> task = m_objectSpace.forEachWeakInParallel<decltype(visitor)>();
+            visitor.addParallelConstraintTask(WTFMove(task));
         })),
-        ConstraintVolatility::GreyedByMarking);
+        ConstraintVolatility::GreyedByMarking,
+        ConstraintParallelism::Parallel);
     
     m_constraintSet->add(
         "O", "Output",
@@ -2935,7 +2958,7 @@ void Heap::addCoreConstraints()
             
             auto add = [&] (auto& set) {
                 RefPtr<SharedTask<void(decltype(visitor)&)>> task = set.template forEachMarkedCellInParallel<decltype(visitor)>(callOutputConstraint);
-                visitor.addParallelConstraintTask(task);
+                visitor.addParallelConstraintTask(WTFMove(task));
             };
 
             {
@@ -3004,6 +3027,9 @@ void Heap::addMarkingConstraint(std::unique_ptr<MarkingConstraint> constraint)
 
 void Heap::notifyIsSafeToCollect()
 {
+    if (UNLIKELY(!Options::useGC()))
+        return;
+
     MonotonicTime before;
     if (UNLIKELY(Options::logGC())) {
         before = MonotonicTime::now();

@@ -94,6 +94,7 @@ using PlatformTextMarkerData = NSData *;;
 class AXTextMarker {
     WTF_MAKE_FAST_ALLOCATED;
     friend class AXTextMarkerRange;
+    friend std::partial_ordering partialOrder(const AXTextMarker&, const AXTextMarker&);
 public:
     // Constructors
     AXTextMarker(const VisiblePosition&);
@@ -134,7 +135,7 @@ public:
 
 private:
     // Sets m_data.node when the marker is being created with a PlatformTextMarkerData that lacks the node pointer because it was created off the main thread.
-    void setNode();
+    void setNodeIfNeeded() const;
     TextMarkerData m_data;
 };
 
@@ -148,9 +149,10 @@ public:
 #if PLATFORM(MAC)
     AXTextMarkerRange(AXTextMarkerRangeRef);
 #endif
+    AXTextMarkerRange(AXID treeID, AXID objectID, unsigned offset, unsigned length);
     AXTextMarkerRange() = default;
 
-    operator bool() const { return !m_start.isNull() && !m_end.isNull(); }
+    operator bool() const { return m_start && m_end; }
     operator VisiblePositionRange() const;
     std::optional<SimpleRange> simpleRange() const;
 

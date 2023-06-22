@@ -47,6 +47,7 @@
 #include "LocalFrame.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
+#include "NodeName.h"
 #include "NodeRareData.h"
 #include "Page.h"
 #include "PlatformMouseEvent.h"
@@ -290,11 +291,12 @@ bool HTMLSelectElement::hasPresentationalHintsForAttribute(const QualifiedName& 
     return HTMLFormControlElement::hasPresentationalHintsForAttribute(name);
 }
 
-void HTMLSelectElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLSelectElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == sizeAttr) {
+    switch (name.nodeName()) {
+    case AttributeNames::sizeAttr: {
         unsigned oldSize = m_size;
-        unsigned size = limitToOnlyHTMLNonNegative(value);
+        unsigned size = limitToOnlyHTMLNonNegative(newValue);
 
         // Ensure that we've determined selectedness of the items at least once prior to changing the size.
         if (oldSize != size)
@@ -307,10 +309,15 @@ void HTMLSelectElement::parseAttribute(const QualifiedName& name, const AtomStri
             setRecalcListItems();
             updateValidity();
         }
-    } else if (name == multipleAttr)
-        parseMultipleAttribute(value);
-    else
-        HTMLFormControlElement::parseAttribute(name, value);
+        break;
+    }
+    case AttributeNames::multipleAttr:
+        parseMultipleAttribute(newValue);
+        break;
+    default:
+        HTMLFormControlElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+        break;
+    }
 }
 
 int HTMLSelectElement::defaultTabIndex() const
@@ -361,12 +368,12 @@ bool HTMLSelectElement::childShouldCreateRenderer(const Node& child) const
 
 Ref<HTMLCollection> HTMLSelectElement::selectedOptions()
 {
-    return ensureRareData().ensureNodeLists().addCachedCollection<GenericCachedHTMLCollection<CollectionTypeTraits<SelectedOptions>::traversalType>>(*this, SelectedOptions);
+    return ensureRareData().ensureNodeLists().addCachedCollection<GenericCachedHTMLCollection<CollectionTypeTraits<CollectionType::SelectedOptions>::traversalType>>(*this, CollectionType::SelectedOptions);
 }
 
 Ref<HTMLOptionsCollection> HTMLSelectElement::options()
 {
-    return ensureRareData().ensureNodeLists().addCachedCollection<HTMLOptionsCollection>(*this, SelectOptions);
+    return ensureRareData().ensureNodeLists().addCachedCollection<HTMLOptionsCollection>(*this, CollectionType::SelectOptions);
 }
 
 void HTMLSelectElement::updateListItemSelectedStates(AllowStyleInvalidation allowStyleInvalidation)
@@ -447,6 +454,11 @@ HTMLOptionElement* HTMLSelectElement::namedItem(const AtomString& name)
 HTMLOptionElement* HTMLSelectElement::item(unsigned index)
 {
     return options()->item(index);
+}
+
+bool HTMLSelectElement::isSupportedPropertyIndex(unsigned index)
+{
+    return options()->isSupportedPropertyIndex(index);
 }
 
 ExceptionOr<void> HTMLSelectElement::setItem(unsigned index, HTMLOptionElement* option)
@@ -779,7 +791,7 @@ const Vector<WeakPtr<HTMLElement, WeakPtrImplWithEventTargetData>>& HTMLSelectEl
 
 void HTMLSelectElement::invalidateSelectedItems()
 {
-    if (HTMLCollection* collection = cachedHTMLCollection(SelectedOptions))
+    if (HTMLCollection* collection = cachedHTMLCollection(CollectionType::SelectedOptions))
         collection->invalidateCache();
 }
 
@@ -791,7 +803,7 @@ void HTMLSelectElement::setRecalcListItems()
     setOptionsChangedOnRenderer();
     invalidateStyleForSubtree();
     if (!isConnected()) {
-        if (HTMLCollection* collection = cachedHTMLCollection(SelectOptions))
+        if (HTMLCollection* collection = cachedHTMLCollection(CollectionType::SelectOptions))
             collection->invalidateCache();
     }
     if (!isConnected())
@@ -1305,6 +1317,10 @@ void HTMLSelectElement::updateSelectedState(int listIndex, bool multi, bool shif
     if (listIndex < 0 || listIndex >= listSize)
         return;
 
+    auto& clickedElement = *items[listIndex];
+    if (is<HTMLOptGroupElement>(clickedElement))
+        return;
+
     // Save the selection so it can be compared to the new selection when
     // dispatching change events during mouseup, or after autoscroll finishes.
     saveLastSelection();
@@ -1314,7 +1330,6 @@ void HTMLSelectElement::updateSelectedState(int listIndex, bool multi, bool shif
     bool shiftSelect = m_multiple && shift;
     bool multiSelect = m_multiple && multi && !shift;
 
-    auto& clickedElement = *items[listIndex];
     if (is<HTMLOptionElement>(clickedElement)) {
         // Keep track of whether an active selection (like during drag
         // selection), should select or deselect.

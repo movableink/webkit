@@ -124,8 +124,6 @@ private:
     void uppercaseWord() final;
     void lowercaseWord() final;
     void capitalizeWord() final;
-
-    void setCaretDecorationVisibility(bool) final;
 #endif
 
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
@@ -201,7 +199,7 @@ private:
     bool performTwoStepDrop(WebCore::DocumentFragment&, const WebCore::SimpleRange&, bool isMove) final;
     bool supportsGlobalSelection() final;
 
-    WebPage* m_page;
+    WeakPtr<WebPage> m_page;
 };
 
 } // namespace WebKit

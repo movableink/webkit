@@ -89,6 +89,13 @@ bool SettingsBase::platformDefaultMediaSourceEnabled()
 {
     return true;
 }
+
+uint64_t SettingsBase::defaultMaximumSourceBufferSize()
+{
+    // Allow SourceBuffers to store up to 304MB each, enough for approximately five minutes
+    // of 1080p video and stereo audio.
+    return 318767104;
+}
 #endif
 
 #endif
@@ -102,7 +109,7 @@ void SettingsBase::setStandardFontFamily(const String& family, UScriptCode scrip
 {
     bool changes = fontGenericFamilies().setStandardFontFamily(family, script);
     if (changes)
-        invalidateAfterGenericFamilyChange(m_page);
+        invalidateAfterGenericFamilyChange(m_page.get());
 }
 
 const String& SettingsBase::fixedFontFamily(UScriptCode script) const
@@ -114,7 +121,7 @@ void SettingsBase::setFixedFontFamily(const String& family, UScriptCode script)
 {
     bool changes = fontGenericFamilies().setFixedFontFamily(family, script);
     if (changes)
-        invalidateAfterGenericFamilyChange(m_page);
+        invalidateAfterGenericFamilyChange(m_page.get());
 }
 
 const String& SettingsBase::serifFontFamily(UScriptCode script) const
@@ -126,7 +133,7 @@ void SettingsBase::setSerifFontFamily(const String& family, UScriptCode script)
 {
     bool changes = fontGenericFamilies().setSerifFontFamily(family, script);
     if (changes)
-        invalidateAfterGenericFamilyChange(m_page);
+        invalidateAfterGenericFamilyChange(m_page.get());
 }
 
 const String& SettingsBase::sansSerifFontFamily(UScriptCode script) const
@@ -138,7 +145,7 @@ void SettingsBase::setSansSerifFontFamily(const String& family, UScriptCode scri
 {
     bool changes = fontGenericFamilies().setSansSerifFontFamily(family, script);
     if (changes)
-        invalidateAfterGenericFamilyChange(m_page);
+        invalidateAfterGenericFamilyChange(m_page.get());
 }
 
 const String& SettingsBase::cursiveFontFamily(UScriptCode script) const
@@ -150,7 +157,7 @@ void SettingsBase::setCursiveFontFamily(const String& family, UScriptCode script
 {
     bool changes = fontGenericFamilies().setCursiveFontFamily(family, script);
     if (changes)
-        invalidateAfterGenericFamilyChange(m_page);
+        invalidateAfterGenericFamilyChange(m_page.get());
 }
 
 const String& SettingsBase::fantasyFontFamily(UScriptCode script) const
@@ -162,7 +169,7 @@ void SettingsBase::setFantasyFontFamily(const String& family, UScriptCode script
 {
     bool changes = fontGenericFamilies().setFantasyFontFamily(family, script);
     if (changes)
-        invalidateAfterGenericFamilyChange(m_page);
+        invalidateAfterGenericFamilyChange(m_page.get());
 }
 
 const String& SettingsBase::pictographFontFamily(UScriptCode script) const
@@ -174,7 +181,7 @@ void SettingsBase::setPictographFontFamily(const String& family, UScriptCode scr
 {
     bool changes = fontGenericFamilies().setPictographFontFamily(family, script);
     if (changes)
-        invalidateAfterGenericFamilyChange(m_page);
+        invalidateAfterGenericFamilyChange(m_page.get());
 }
 
 void SettingsBase::setMinimumDOMTimerInterval(Seconds interval)

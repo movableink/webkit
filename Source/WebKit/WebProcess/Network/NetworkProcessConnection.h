@@ -36,6 +36,7 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+class RegistrableDomain;
 class ResourceError;
 class ResourceRequest;
 class ResourceResponse;
@@ -92,6 +93,8 @@ public:
     void allCookiesDeleted();
 #endif
 
+    void addAllowedFirstPartyForCookies(WebCore::RegistrableDomain&&);
+
 private:
     NetworkProcessConnection(IPC::Connection::Identifier, WebCore::HTTPCookieAcceptPolicy);
 
@@ -110,7 +113,7 @@ private:
 
 #if ENABLE(SHAREABLE_RESOURCE)
     // Message handlers.
-    void didCacheResource(const WebCore::ResourceRequest&, const ShareableResource::Handle&);
+    void didCacheResource(const WebCore::ResourceRequest&, ShareableResource::Handle&&);
 #endif
 #if ENABLE(WEB_RTC)
     void connectToRTCDataChannelRemoteSource(WebCore::RTCDataChannelIdentifier source, WebCore::RTCDataChannelIdentifier handler, CompletionHandler<void(std::optional<bool>)>&&);

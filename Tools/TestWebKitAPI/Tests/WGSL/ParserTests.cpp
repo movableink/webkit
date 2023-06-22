@@ -81,7 +81,31 @@ inline Expected<WGSL::ShaderModule, WGSL::Error> parse(const String& wgsl)
     return { WTFMove(shaderModule) };
 }
 
-static void testStruct(ASCIILiteral program, const Vector<String>& fieldNames, const Vector<String>& typeNames)
+struct StructAttributeTest {
+    enum Kind {
+        Align,
+        Size,
+    };
+    Kind kind;
+    size_t value;
+};
+
+std::optional<unsigned> extractInteger(WGSL::AST::Expression& expression)
+{
+    switch (expression.kind()) {
+    case WGSL::AST::NodeKind::AbstractIntegerLiteral:
+        return { static_cast<unsigned>(downcast<WGSL::AST::AbstractIntegerLiteral>(expression).value()) };
+    case WGSL::AST::NodeKind::Unsigned32Literal:
+        return { static_cast<unsigned>(downcast<WGSL::AST::Unsigned32Literal>(expression).value()) };
+    case WGSL::AST::NodeKind::Signed32Literal:
+        return { static_cast<unsigned>(downcast<WGSL::AST::Signed32Literal>(expression).value()) };
+    default:
+        return std::nullopt;
+    }
+}
+
+
+static void testStruct(ASCIILiteral program, const Vector<String>& fieldNames, const Vector<String>& typeNames, const Vector<Vector<StructAttributeTest>>& attributeTests = { })
 {
     ASSERT(fieldNames.size() == typeNames.size());
 
@@ -99,7 +123,33 @@ static void testStruct(ASCIILiteral program, const Vector<String>& fieldNames, c
 
     EXPECT_EQ(str.members().size(), fieldNames.size());
     for (unsigned i = 0; i < fieldNames.size(); ++i) {
-        EXPECT_TRUE(str.members()[i].attributes().isEmpty());
+        auto& attributes = str.members()[i].attributes();
+        if (!attributeTests.size())
+            EXPECT_TRUE(attributes.isEmpty());
+        else {
+            const Vector<StructAttributeTest>& tests = attributeTests[i];
+            EXPECT_EQ(tests.size(), attributes.size());
+            for (unsigned j = 0; j < tests.size(); ++j) {
+                auto& test = tests[j];
+                auto& attribute = attributes[j];
+                switch (test.kind) {
+                case StructAttributeTest::Align: {
+                    EXPECT_TRUE(is<WGSL::AST::AlignAttribute>(attribute));
+                    auto alignment = extractInteger(downcast<WGSL::AST::AlignAttribute>(attribute).alignment());
+                    EXPECT_TRUE(alignment.has_value());
+                    EXPECT_EQ(*alignment, test.value);
+                    break;
+                }
+                case StructAttributeTest::Size: {
+                    EXPECT_TRUE(is<WGSL::AST::SizeAttribute>(attribute));
+                    auto size = extractInteger(downcast<WGSL::AST::SizeAttribute>(attribute).size());
+                    EXPECT_TRUE(size.has_value());
+                    EXPECT_EQ(*size, test.value);
+                    break;
+                }
+                }
+            }
+        }
         EXPECT_EQ(str.members()[i].name(), fieldNames[i]);
         EXPECT_TRUE(is<WGSL::AST::NamedTypeName>(str.members()[i].type()));
         auto& memberType = downcast<WGSL::AST::NamedTypeName>(str.members()[i].type());
@@ -130,9 +180,13 @@ TEST(WGSLParserTests, SourceLifecycle)
     auto& var = shader->variables()[0];
     EXPECT_EQ(var.attributes().size(), 2u);
     EXPECT_TRUE(is<WGSL::AST::GroupAttribute>(var.attributes()[0]));
-    EXPECT_FALSE(downcast<WGSL::AST::GroupAttribute>(var.attributes()[0]).group());
+    auto group = extractInteger(downcast<WGSL::AST::GroupAttribute>(var.attributes()[0]).group());
+    EXPECT_TRUE(group.has_value());
+    EXPECT_EQ(*group, 0u);
     EXPECT_TRUE(is<WGSL::AST::BindingAttribute>(var.attributes()[1]));
-    EXPECT_FALSE(downcast<WGSL::AST::BindingAttribute>(var.attributes()[1]).binding());
+    auto binding = extractInteger(downcast<WGSL::AST::BindingAttribute>(var.attributes()[1]).binding());
+    EXPECT_TRUE(binding.has_value());
+    EXPECT_EQ(*binding, 0u);
     EXPECT_EQ(var.name(), "x"_s);
     EXPECT_TRUE(var.maybeQualifier());
     EXPECT_EQ(var.maybeQualifier()->storageClass(), WGSL::AST::StorageClass::Storage);
@@ -168,9 +222,9 @@ TEST(WGSLParserTests, Struct)
     // 2 fields, with trailing comma
     testStruct(
         "struct B {\n"
-        "    a: i32,\n"
-        "    b: f32,\n"
-        "}"_s, { "a"_s, "b"_s }, { "i32"_s, "f32"_s });
+        "    @size(8) a: i32,\n"
+        "    @align(8) b: f32,\n"
+        "}"_s, { "a"_s, "b"_s }, { "i32"_s, "f32"_s }, { { { StructAttributeTest::Size, 8 } }, { { StructAttributeTest::Align, 8 } } });
 }
 
 TEST(WGSLParserTests, GlobalVariable)
@@ -189,10 +243,14 @@ TEST(WGSLParserTests, GlobalVariable)
     EXPECT_EQ(var.attributes().size(), 2u);
     EXPECT_TRUE(is<WGSL::AST::GroupAttribute>(var.attributes()[0]));
     auto& groupAttribute = downcast<WGSL::AST::GroupAttribute>(var.attributes()[0]);
-    EXPECT_EQ(groupAttribute.group(), 0u);
+    auto group = extractInteger(groupAttribute.group());
+    EXPECT_TRUE(group.has_value());
+    EXPECT_EQ(*group, 0u);
     EXPECT_TRUE(is<WGSL::AST::BindingAttribute>(var.attributes()[1]));
     auto& bindingAttribute = downcast<WGSL::AST::BindingAttribute>(var.attributes()[1]);
-    EXPECT_EQ(bindingAttribute.binding(), 0u);
+    auto binding = extractInteger(bindingAttribute.binding());
+    EXPECT_TRUE(binding.has_value());
+    EXPECT_EQ(*binding, 0u);
     EXPECT_EQ(var.name(), "x"_s);
     EXPECT_TRUE(var.maybeQualifier());
     EXPECT_EQ(var.maybeQualifier()->storageClass(), WGSL::AST::StorageClass::Storage);
@@ -270,7 +328,9 @@ TEST(WGSLParserTests, TrivialGraphicsShader)
         EXPECT_EQ(func.parameters()[0].attributes().size(), 1u);
         EXPECT_TRUE(is<WGSL::AST::LocationAttribute>(func.parameters()[0].attributes()[0]));
         auto& locationAttribute = downcast<WGSL::AST::LocationAttribute>(func.parameters()[0].attributes()[0]);
-        EXPECT_EQ(locationAttribute.location(), 0u);
+        auto location = extractInteger(locationAttribute.location());
+        EXPECT_TRUE(location.has_value());
+        EXPECT_EQ(*location, 0u);
         EXPECT_TRUE(is<WGSL::AST::ParameterizedTypeName>(func.parameters()[0].typeName()));
         auto& paramType = downcast<WGSL::AST::ParameterizedTypeName>(func.parameters()[0].typeName());
         EXPECT_EQ(paramType.base(), WGSL::AST::ParameterizedTypeName::Base::Vec4);
@@ -297,7 +357,9 @@ TEST(WGSLParserTests, TrivialGraphicsShader)
         EXPECT_EQ(func.returnAttributes().size(), 1u);
         EXPECT_TRUE(is<WGSL::AST::LocationAttribute>(func.returnAttributes()[0]));
         auto& locationAttribute = downcast<WGSL::AST::LocationAttribute>(func.returnAttributes()[0]);
-        EXPECT_EQ(locationAttribute.location(), 0u);
+        auto location = extractInteger(locationAttribute.location());
+        EXPECT_TRUE(location.has_value());
+        EXPECT_EQ(*location, 0u);
         EXPECT_TRUE(func.maybeReturnType());
         EXPECT_TRUE(is<WGSL::AST::ParameterizedTypeName>(func.maybeReturnType()));
         EXPECT_EQ(func.body().statements().size(), 1u);
@@ -620,9 +682,27 @@ TEST(WGSLParserTests, UnaryExpression)
 
 static void testUnaryExpressionX(ASCIILiteral program, WGSL::AST::UnaryOperation op)
 {
-    EXPECT_EXPRESSION(expression, program);
-    EXPECT_TRUE(is<WGSL::AST::UnaryExpression>(expression.get()));
-    auto& unaryExpression = downcast<WGSL::AST::UnaryExpression>(expression.get());
+    auto source = makeString(
+        "fn f() {\n"_s,
+        "_ = "_s, program, ";"_s,
+        "}\n"_s
+    );
+    auto shader = parse(source);
+
+    EXPECT_SHADER(shader);
+    EXPECT_TRUE(shader.has_value());
+    EXPECT_TRUE(shader->directives().isEmpty());
+    EXPECT_TRUE(shader->structures().isEmpty());
+    EXPECT_TRUE(shader->variables().isEmpty());
+    EXPECT_EQ(shader->functions().size(), 1u);
+    auto& function = shader->functions()[0];
+
+    EXPECT_EQ(function.body().statements().size(), 1u);
+    EXPECT_TRUE(is<WGSL::AST::PhonyAssignmentStatement>(function.body().statements()[0]));
+    auto& statement = downcast<WGSL::AST::PhonyAssignmentStatement>(function.body().statements()[0]);
+
+    EXPECT_TRUE(is<WGSL::AST::UnaryExpression>(statement.rhs()));
+    auto& unaryExpression = downcast<WGSL::AST::UnaryExpression>(statement.rhs());
 
     EXPECT_EQ(unaryExpression.operation(), op);
     EXPECT_TRUE(is<WGSL::AST::IdentifierExpression>(unaryExpression.expression()));
@@ -643,9 +723,26 @@ static void testBinaryExpressionXY(ASCIILiteral program, WGSL::AST::BinaryOperat
 {
     EXPECT_EQ(ids.size(), 2u);
 
-    EXPECT_EXPRESSION(expression, program);
-    EXPECT_TRUE(is<WGSL::AST::BinaryExpression>(expression.get()));
-    auto& binaryExpression = downcast<WGSL::AST::BinaryExpression>(expression.get());
+    auto source = makeString(
+        "fn f() {\n"_s,
+        "_ = "_s, program, ";"_s,
+        "}\n"_s
+    );
+    auto shader = parse(source);
+
+    EXPECT_SHADER(shader);
+    EXPECT_TRUE(shader.has_value());
+    EXPECT_TRUE(shader->directives().isEmpty());
+    EXPECT_TRUE(shader->structures().isEmpty());
+    EXPECT_TRUE(shader->variables().isEmpty());
+    EXPECT_EQ(shader->functions().size(), 1u);
+    auto& function = shader->functions()[0];
+
+    EXPECT_EQ(function.body().statements().size(), 1u);
+    EXPECT_TRUE(is<WGSL::AST::PhonyAssignmentStatement>(function.body().statements()[0]));
+    auto& statement = downcast<WGSL::AST::PhonyAssignmentStatement>(function.body().statements()[0]);
+    EXPECT_TRUE(is<WGSL::AST::BinaryExpression>(statement.rhs()));
+    auto& binaryExpression = downcast<WGSL::AST::BinaryExpression>(statement.rhs());
 
     EXPECT_EQ(binaryExpression.operation(), op);
     EXPECT_TRUE(is<WGSL::AST::IdentifierExpression>(binaryExpression.leftExpression()));
@@ -661,9 +758,27 @@ static void testBinaryExpressionXYZ(ASCIILiteral program, const Vector<WGSL::AST
     EXPECT_EQ(ops.size(), 2u);
     EXPECT_EQ(ids.size(), 3u);
 
-    EXPECT_EXPRESSION(expression, program);
-    EXPECT_TRUE(is<WGSL::AST::BinaryExpression>(expression.get()));
-    auto& binaryExpression = downcast<WGSL::AST::BinaryExpression>(expression.get());
+    auto source = makeString(
+        "fn f() {\n"_s,
+        "_ = "_s, program, ";"_s,
+        "}\n"_s
+    );
+    auto shader = parse(source);
+
+    EXPECT_SHADER(shader);
+    EXPECT_TRUE(shader.has_value());
+    EXPECT_TRUE(shader->directives().isEmpty());
+    EXPECT_TRUE(shader->structures().isEmpty());
+    EXPECT_TRUE(shader->variables().isEmpty());
+    EXPECT_EQ(shader->functions().size(), 1u);
+    auto& function = shader->functions()[0];
+
+    EXPECT_EQ(function.body().statements().size(), 1u);
+    EXPECT_TRUE(is<WGSL::AST::PhonyAssignmentStatement>(function.body().statements()[0]));
+    auto& statement = downcast<WGSL::AST::PhonyAssignmentStatement>(function.body().statements()[0]);
+
+    EXPECT_TRUE(is<WGSL::AST::BinaryExpression>(statement.rhs()));
+    auto& binaryExpression = downcast<WGSL::AST::BinaryExpression>(statement.rhs());
 
     auto& complex = is<WGSL::AST::BinaryExpression>(binaryExpression.leftExpression()) ?
         binaryExpression.leftExpression() : binaryExpression.rightExpression();

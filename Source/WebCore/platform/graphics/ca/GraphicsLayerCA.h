@@ -130,6 +130,8 @@ public:
     WEBCORE_EXPORT void setContentsClippingRect(const FloatRoundedRect&) override;
     WEBCORE_EXPORT void setContentsRectClipsDescendants(bool) override;
 
+    WEBCORE_EXPORT void setVideoGravity(MediaPlayerVideoGravity) override;
+
     WEBCORE_EXPORT void setShapeLayerPath(const Path&) override;
     WEBCORE_EXPORT void setShapeLayerWindRule(WindRule) override;
 
@@ -153,6 +155,7 @@ public:
     WEBCORE_EXPORT void setContentsToPlatformLayerHost(LayerHostingContextIdentifier) override;
     WEBCORE_EXPORT void setContentsToVideoElement(HTMLVideoElement&, ContentsLayerPurpose) override;
     WEBCORE_EXPORT void setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose) override;
+    WEBCORE_EXPORT PlatformLayerIdentifier setContentsToAsyncDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>, ContentsLayerPurpose);
 
     WEBCORE_EXPORT void setContentsToSolidColor(const Color&) override;
 #if ENABLE(MODEL_ELEMENT)
@@ -217,7 +220,7 @@ private:
     WEBCORE_EXPORT void platformCALayerAnimationStarted(const String& animationKey, MonotonicTime beginTime) override;
     WEBCORE_EXPORT void platformCALayerAnimationEnded(const String& animationKey) override;
     CompositingCoordinatesOrientation platformCALayerContentsOrientation() const override { return contentsOrientation(); }
-    WEBCORE_EXPORT void platformCALayerPaintContents(PlatformCALayer*, GraphicsContext&, const FloatRect& clip, GraphicsLayerPaintBehavior) override;
+    WEBCORE_EXPORT void platformCALayerPaintContents(PlatformCALayer*, GraphicsContext&, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior>) override;
     bool platformCALayerShowDebugBorders() const override { return isShowingDebugBorder(); }
     WEBCORE_EXPORT bool platformCALayerShowRepaintCounter(PlatformCALayer*) const override;
     int platformCALayerRepaintCount(PlatformCALayer*) const override { return repaintCount(); }
@@ -479,6 +482,7 @@ private:
     void updateBlendMode();
 #endif
 
+    void updateVideoGravity();
     void updateShape();
     void updateWindRule();
 
@@ -602,6 +606,7 @@ private:
 #endif
 #endif
         ContentsScalingFiltersChanged           = 1LLU << 43,
+        VideoGravityChanged                     = 1LLU << 44,
     };
     typedef uint64_t LayerChangeFlags;
     static const char* layerChangeAsString(LayerChange);

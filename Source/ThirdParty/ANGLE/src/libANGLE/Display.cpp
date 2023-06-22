@@ -44,6 +44,11 @@
 #include "libANGLE/renderer/ImageImpl.h"
 #include "libANGLE/trace.h"
 
+#if defined(ANGLE_PLATFORM_APPLE)
+#    include <dispatch/dispatch.h>
+#    include "common/tls.h"
+#endif
+
 #if defined(ANGLE_ENABLE_D3D9) || defined(ANGLE_ENABLE_D3D11)
 #    include <versionhelpers.h>
 
@@ -53,8 +58,10 @@
 #if defined(ANGLE_ENABLE_OPENGL)
 #    if defined(ANGLE_PLATFORM_WINDOWS)
 #        include "libANGLE/renderer/gl/wgl/DisplayWGL.h"
-#    elif defined(ANGLE_PLATFORM_MACOS) || defined(ANGLE_PLATFORM_APPLE_EMBEDDED)
-#        include "libANGLE/renderer/gl/apple/DisplayApple_api.h"
+#    elif ANGLE_ENABLE_CGL
+#        include "libANGLE/renderer/gl/cgl/DisplayCGL.h"
+#    elif ANGLE_ENABLE_EAGL
+#        include "libANGLE/renderer/gl/eagl/DisplayEAGL.h"
 #    elif defined(ANGLE_PLATFORM_LINUX)
 #        include "libANGLE/renderer/gl/egl/DisplayEGL.h"
 #        if defined(ANGLE_USE_X11)
@@ -98,6 +105,67 @@ namespace egl
 
 namespace
 {
+
+struct TLSData
+{
+    angle::UnlockedTailCall unlockedTailCall;
+
+    TLSData();
+};
+
+TLSData::TLSData() {}
+
+#if defined(ANGLE_PLATFORM_APPLE)
+// TODO(angleproject:6479): Due to a bug in Apple's dyld loader, `thread_local` will cause
+// excessive memory use. Temporarily avoid it by using pthread's thread
+// local storage instead.
+static angle::TLSIndex GetDisplayTLSIndex()
+{
+    static angle::TLSIndex DisplayIndex = TLS_INVALID_INDEX;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+      ASSERT(DisplayIndex == TLS_INVALID_INDEX);
+      DisplayIndex = angle::CreateTLSIndex(nullptr);
+    });
+    return DisplayIndex;
+}
+TLSData *GetDisplayTLS()
+{
+    angle::TLSIndex DisplayIndex = GetDisplayTLSIndex();
+    ASSERT(DisplayIndex != TLS_INVALID_INDEX);
+    return static_cast<TLSData *>(angle::GetTLSValue(DisplayIndex));
+}
+void SetDisplayTLS(TLSData *tlsData)
+{
+    angle::TLSIndex DisplayIndex = GetDisplayTLSIndex();
+    ASSERT(DisplayIndex != TLS_INVALID_INDEX);
+    angle::SetTLSValue(DisplayIndex, tlsData);
+}
+#else
+// Tail calls generated during execution of the entry point, to be run at the end of the entry
+// point.  gTLSData->unlockedTailCall.run() is called at the end of any EGL entry point that is
+// expected to generate such calls.  At the end of every other call, it is asserted that this is
+// empty.
+thread_local TLSData *gDisplayTLS = nullptr;
+
+TLSData *GetDisplayTLS()
+{
+    return gDisplayTLS;
+}
+#endif
+
+void InitDisplayTLS()
+{
+    // TLS data is intentionally leaked.
+    ANGLE_SCOPED_DISABLE_LSAN();
+    TLSData *tlsData = new TLSData;
+
+#if defined(ANGLE_PLATFORM_APPLE)
+    SetDisplayTLS(tlsData);
+#else
+    gDisplayTLS = tlsData;
+#endif
+}
 
 constexpr angle::SubjectIndex kGPUSwitchedSubjectIndex = 0;
 
@@ -342,8 +410,12 @@ rx::DisplayImpl *CreateDisplayFromAttribs(EGLAttrib displayType,
             impl = new rx::DisplayWGL(state);
             break;
 
-#    elif defined(ANGLE_PLATFORM_MACOS) || defined(ANGLE_PLATFORM_APPLE_EMBEDDED)
-            impl = rx::CreateDisplayCGLOrEAGL(state);
+#    elif ANGLE_ENABLE_CGL
+            impl = new rx::DisplayCGL(state);
+            break;
+
+#    elif ANGLE_ENABLE_EAGL
+            impl = new rx::DisplayEAGL(state);
             break;
 
 #    elif defined(ANGLE_PLATFORM_LINUX)
@@ -504,8 +576,7 @@ rx::DisplayImpl *CreateDisplayFromAttribs(EGLAttrib displayType,
 #        error Unsupported Vulkan platform.
 #    endif
 #else
-            // No display available
-            UNREACHABLE();
+            // Vulkan isn't available
             break;
 #endif  // defined(ANGLE_ENABLE_VULKAN)
 
@@ -517,8 +588,7 @@ rx::DisplayImpl *CreateDisplayFromAttribs(EGLAttrib displayType,
                 break;
             }
 #endif
-            // No display available
-            UNREACHABLE();
+            // Metal isn't available.
             break;
 
         case EGL_PLATFORM_ANGLE_TYPE_NULL_ANGLE:
@@ -1226,6 +1296,10 @@ Error Display::terminate(Thread *thread, TerminateReason terminateReason)
         // We also shouldn't set it to null in case eglInitialize() is called again later
         SafeDelete(mDevice);
     }
+
+    // Before tearing down the backend device, ensure all deferred operations are run.  It is not
+    // possible to defer them beyond this point.
+    GetCurrentThreadUnlockedTailCall()->run();
 
     mImplementation->terminate();
 
@@ -2050,12 +2124,11 @@ static ClientExtensions GenerateClientExtensions()
     extensions.platformANGLEDeviceTypeEGLANGLE = true;
 #endif
 
-#if (defined(ANGLE_PLATFORM_APPLE_EMBEDDED) && !defined(ANGLE_PLATFORM_MACCATALYST)) || \
-    (defined(ANGLE_PLATFORM_MACCATALYST) && defined(ANGLE_CPU_ARM64))
+#if defined(ANGLE_ENABLE_EAGL)
     extensions.platformANGLEDeviceContextVolatileEagl = true;
 #endif
 
-#if defined(ANGLE_PLATFORM_MACOS) || defined(ANGLE_PLATFORM_MACCATALYST)
+#if defined(ANGLE_ENABLE_CGL)
     extensions.platformANGLEDeviceContextVolatileCgl = true;
 #endif
 
@@ -2590,4 +2663,13 @@ egl::Sync *Display::getSync(egl::SyncID syncID)
     return GetResourceFromHashSet<egl::Sync *>(syncID, mSyncSet);
 }
 
+// static
+angle::UnlockedTailCall *Display::GetCurrentThreadUnlockedTailCall()
+{
+    if (GetDisplayTLS() == nullptr)
+    {
+        InitDisplayTLS();
+    }
+    return &GetDisplayTLS()->unlockedTailCall;
+}
 }  // namespace egl

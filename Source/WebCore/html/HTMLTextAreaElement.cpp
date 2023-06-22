@@ -41,6 +41,7 @@
 #include "HTMLParserIdioms.h"
 #include "LocalFrame.h"
 #include "LocalizedStrings.h"
+#include "NodeName.h"
 #include "RenderTextControlMultiLine.h"
 #include "ShadowRoot.h"
 #include "Text.h"
@@ -133,39 +134,48 @@ void HTMLTextAreaElement::collectPresentationalHintsForAttribute(const Qualified
 {
     if (name == wrapAttr) {
         if (m_wrap != NoWrap) {
-            addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValuePreWrap);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpaceCollapse, CSSValuePreserve);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyTextWrap, CSSValueWrap);
             addPropertyToPresentationalHintStyle(style, CSSPropertyOverflowWrap, CSSValueBreakWord);
         } else {
-            addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValuePre);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpaceCollapse, CSSValuePreserve);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyTextWrap, CSSValueNowrap);
             addPropertyToPresentationalHintStyle(style, CSSPropertyOverflowWrap, CSSValueNormal);
         }
     } else
         HTMLTextFormControlElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
-void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLTextAreaElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == rowsAttr) {
-        unsigned rows = limitToOnlyHTMLNonNegativeNumbersGreaterThanZero(value, defaultRows);
+    HTMLTextFormControlElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+
+    switch (name.nodeName()) {
+    case AttributeNames::rowsAttr: {
+        unsigned rows = limitToOnlyHTMLNonNegativeNumbersGreaterThanZero(newValue, defaultRows);
         if (m_rows != rows) {
             m_rows = rows;
             if (renderer())
                 renderer()->setNeedsLayoutAndPrefWidthsRecalc();
         }
-    } else if (name == colsAttr) {
-        unsigned cols = limitToOnlyHTMLNonNegativeNumbersGreaterThanZero(value, defaultCols);
+        break;
+    }
+    case AttributeNames::colsAttr: {
+        unsigned cols = limitToOnlyHTMLNonNegativeNumbersGreaterThanZero(newValue, defaultCols);
         if (m_cols != cols) {
             m_cols = cols;
             if (renderer())
                 renderer()->setNeedsLayoutAndPrefWidthsRecalc();
         }
-    } else if (name == wrapAttr) {
+        break;
+    }
+    case AttributeNames::wrapAttr: {
         // The virtual/physical values were a Netscape extension of HTML 3.0, now deprecated.
         // The soft/hard /off values are a recommendation for HTML 4 extension by IE and NS 4.
         WrapMethod wrap;
-        if (equalLettersIgnoringASCIICase(value, "physical"_s) || equalLettersIgnoringASCIICase(value, "hard"_s) || equalLettersIgnoringASCIICase(value, "on"_s))
+        if (equalLettersIgnoringASCIICase(newValue, "physical"_s) || equalLettersIgnoringASCIICase(newValue, "hard"_s) || equalLettersIgnoringASCIICase(newValue, "on"_s))
             wrap = HardWrap;
-        else if (equalLettersIgnoringASCIICase(value, "off"_s))
+        else if (equalLettersIgnoringASCIICase(newValue, "off"_s))
             wrap = NoWrap;
         else
             wrap = SoftWrap;
@@ -174,14 +184,19 @@ void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const AtomSt
             if (renderer())
                 renderer()->setNeedsLayoutAndPrefWidthsRecalc();
         }
-    } else if (name == maxlengthAttr) {
-        internalSetMaxLength(parseHTMLNonNegativeInteger(value).value_or(-1));
+        break;
+    }
+    case AttributeNames::maxlengthAttr:
+        internalSetMaxLength(parseHTMLNonNegativeInteger(newValue).value_or(-1));
         updateValidity();
-    } else if (name == minlengthAttr) {
-        internalSetMinLength(parseHTMLNonNegativeInteger(value).value_or(-1));
+        break;
+    case AttributeNames::minlengthAttr:
+        internalSetMinLength(parseHTMLNonNegativeInteger(newValue).value_or(-1));
         updateValidity();
-    } else
-        HTMLTextFormControlElement::parseAttribute(name, value);
+        break;
+    default:
+        break;
+    }
 }
 
 RenderPtr<RenderElement> HTMLTextAreaElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)

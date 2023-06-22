@@ -114,15 +114,13 @@ void SVGFEImageElement::buildPendingResource()
     updateSVGRendererForElementChange();
 }
 
-void SVGFEImageElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFEImageElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::preserveAspectRatioAttr) {
-        m_preserveAspectRatio->setBaseValInternal(SVGPreserveAspectRatioValue { value });
-        return;
-    }
+    if (name == SVGNames::preserveAspectRatioAttr)
+        m_preserveAspectRatio->setBaseValInternal(SVGPreserveAspectRatioValue { newValue });
 
-    SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
-    SVGURIReference::parseAttribute(name, value);
+    SVGURIReference::parseAttribute(name, newValue);
+    SVGFilterPrimitiveStandardAttributes::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGFEImageElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -152,6 +150,7 @@ Node::InsertedIntoAncestorResult SVGFEImageElement::insertedIntoAncestor(Inserti
 
 void SVGFEImageElement::didFinishInsertingNode()
 {
+    SVGFilterPrimitiveStandardAttributes::didFinishInsertingNode();
     buildPendingResource();
 }
 

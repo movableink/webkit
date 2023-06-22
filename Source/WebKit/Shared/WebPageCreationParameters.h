@@ -61,8 +61,8 @@
 #include <WebCore/ApplicationManifest.h>
 #endif
 
-#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
-#include <WebCore/LookalikeCharactersSanitizationData.h>
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+#include <WebCore/LinkDecorationFilteringData.h>
 #endif
 
 #if ENABLE(WK_WEB_EXTENSIONS)
@@ -77,9 +77,6 @@ class Encoder;
 namespace WebKit {
 
 struct WebPageCreationParameters {
-    void encode(IPC::Encoder&) const;
-    static std::optional<WebPageCreationParameters> decode(IPC::Decoder&);
-
     WebCore::IntSize viewSize;
 
     OptionSet<WebCore::ActivityState> activityState;
@@ -185,6 +182,7 @@ struct WebPageCreationParameters {
     bool keyboardIsAttached { false };
     bool canShowWhileLocked { false };
     bool isCapturingScreen { false };
+    WebCore::Color insertionPointColor;
 #endif
 #if PLATFORM(COCOA)
     bool smartInsertDeleteEnabled;
@@ -273,7 +271,7 @@ struct WebPageCreationParameters {
     
     bool httpsUpgradeEnabled { true };
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     bool allowsDeprecatedSynchronousXMLHttpRequestDuringUnload { false };
 #endif
     
@@ -289,19 +287,13 @@ struct WebPageCreationParameters {
 
     WebCore::ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension { WebCore::ContentSecurityPolicyModeForExtension::None };
 
-    struct SubframeProcessFrameTreeInitializationParameters {
-        WebCore::FrameIdentifier localFrameIdentifier;
-        FrameTreeCreationParameters treeCreationParameters;
-        WebCore::LayerHostingContextIdentifier layerHostingContextIdentifier;
+    std::optional<FrameTreeCreationParameters> subframeProcessFrameTreeCreationParameters;
+    std::optional<WebCore::FrameIdentifier> openerFrameIdentifier;
+    std::optional<WebCore::FrameIdentifier> mainFrameIdentifier;
 
-        void encode(IPC::Encoder&) const;
-        static std::optional<SubframeProcessFrameTreeInitializationParameters> decode(IPC::Decoder&);
-    };
-    std::optional<SubframeProcessFrameTreeInitializationParameters> subframeProcessFrameTreeInitializationParameters;
-
-#if ENABLE(NETWORK_CONNECTION_INTEGRITY)
-    Vector<WebCore::LookalikeCharactersSanitizationData> lookalikeCharacterStrings;
-    Vector<WebCore::LookalikeCharactersSanitizationData> allowedLookalikeCharacterStrings;
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+    Vector<WebCore::LinkDecorationFilteringData> linkDecorationFilteringData;
+    Vector<WebCore::LinkDecorationFilteringData> allowedQueryParametersForAdvancedPrivacyProtections;
 #endif
 
 #if HAVE(MACH_BOOTSTRAP_EXTENSION)

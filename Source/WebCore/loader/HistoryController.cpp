@@ -37,12 +37,12 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "FrameLoaderStateMachine.h"
 #include "FrameTree.h"
 #include "HTMLObjectElement.h"
 #include "HistoryItem.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "Page.h"
@@ -155,7 +155,7 @@ void FrameLoader::HistoryController::restoreScrollPositionAndViewState()
     m_frame.loader().client().restoreViewState();
 
 #if !PLATFORM(IOS_FAMILY)
-    // Don't restore scroll point on iOS as FrameLoaderClient::restoreViewState() does that.
+    // Don't restore scroll point on iOS as LocalFrameLoaderClient::restoreViewState() does that.
     if (view && !view->wasScrolledByUser()) {
         view->scrollToFocusedElementImmediatelyIfNeeded();
 
@@ -763,7 +763,7 @@ void FrameLoader::HistoryController::recursiveSetProvisionalItem(HistoryItem& it
         if (!fromChildItem)
             continue;
 
-        if (auto* childFrame = dynamicDowncast<LocalFrame>(m_frame.tree().child(childFrameName)))
+        if (auto* childFrame = dynamicDowncast<LocalFrame>(m_frame.tree().childByUniqueName(childFrameName)))
             childFrame->loader().history().recursiveSetProvisionalItem(childItem, fromChildItem);
     }
 }
@@ -785,7 +785,7 @@ void FrameLoader::HistoryController::recursiveGoToItem(HistoryItem& item, Histor
         if (!fromChildItem)
             continue;
 
-        if (auto* childFrame = dynamicDowncast<LocalFrame>(m_frame.tree().child(childFrameName)))
+        if (auto* childFrame = dynamicDowncast<LocalFrame>(m_frame.tree().childByUniqueName(childFrameName)))
             childFrame->loader().history().recursiveGoToItem(childItem, fromChildItem, type, shouldTreatAsContinuingLoad);
     }
 }
@@ -816,7 +816,7 @@ bool FrameLoader::HistoryController::currentFramesMatchItem(HistoryItem& item) c
         return false;
     
     for (auto& item : childItems) {
-        if (!m_frame.tree().child(item->target()))
+        if (!m_frame.tree().childByUniqueName(item->target()))
             return false;
     }
     
@@ -855,8 +855,7 @@ void FrameLoader::HistoryController::updateCurrentItem()
         return;
 
     DocumentLoader* documentLoader = m_frame.loader().documentLoader();
-
-    if (!documentLoader->unreachableURL().isEmpty())
+    if (!documentLoader || !documentLoader->unreachableURL().isEmpty())
         return;
 
     if (m_currentItem->url() != documentLoader->url()) {

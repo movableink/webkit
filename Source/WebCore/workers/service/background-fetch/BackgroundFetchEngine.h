@@ -28,7 +28,7 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "BackgroundFetch.h"
-#include <wtf/Span.h>
+#include <span>
 
 namespace WebCore {
 
@@ -58,7 +58,7 @@ public:
     void remove(SWServerRegistration&);
 
     WEBCORE_EXPORT WeakPtr<BackgroundFetch> backgroundFetch(const ServiceWorkerRegistrationKey&, const String&) const;
-    WEBCORE_EXPORT void addFetchFromStore(Span<const uint8_t>, CompletionHandler<void(const ServiceWorkerRegistrationKey&, const String&)>&&);
+    WEBCORE_EXPORT void addFetchFromStore(std::span<const uint8_t>, CompletionHandler<void(const ServiceWorkerRegistrationKey&, const String&)>&&);
 
     WEBCORE_EXPORT void abortBackgroundFetch(const ServiceWorkerRegistrationKey&, const String&);
     WEBCORE_EXPORT void pauseBackgroundFetch(const ServiceWorkerRegistrationKey&, const String&);

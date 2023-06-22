@@ -70,6 +70,11 @@ WebInspector::~WebInspector()
         m_frontendConnection->invalidate();
 }
 
+WebPage* WebInspector::page() const
+{
+    return m_page.get();
+}
+
 void WebInspector::openLocalInspectorFrontend(bool underTest)
 {
     WebProcess::singleton().parentProcessConnection()->send(Messages::WebInspectorUIProxy::OpenLocalInspectorFrontend(canAttachWindow(), underTest), m_page->identifier());
@@ -190,7 +195,7 @@ void WebInspector::showMainResourceForFrame(WebCore::FrameIdentifier frameIdenti
 
     m_page->corePage()->inspectorController().show();
 
-    String inspectorFrameIdentifier = m_page->corePage()->inspectorController().ensurePageAgent().frameId(frame->coreFrame());
+    String inspectorFrameIdentifier = m_page->corePage()->inspectorController().ensurePageAgent().frameId(frame->coreLocalFrame());
 
     whenFrontendConnectionEstablished([=, this] {
         m_frontendConnection->send(Messages::WebInspectorUI::ShowMainResourceForFrame(inspectorFrameIdentifier), 0);

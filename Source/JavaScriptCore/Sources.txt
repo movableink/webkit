@@ -189,10 +189,6 @@ b3/B3WasmAddressValue.cpp
 b3/B3WasmBoundsCheckValue.cpp
 b3/B3Width.cpp
 
-bindings/ScriptFunctionCall.cpp
-bindings/ScriptObject.cpp
-bindings/ScriptValue.cpp
-
 builtins/BuiltinExecutables.cpp
 builtins/BuiltinExecutableCreator.cpp
 builtins/BuiltinNames.cpp
@@ -390,6 +386,7 @@ dfg/DFGLoopPreHeaderCreationPhase.cpp
 dfg/DFGMayExit.cpp
 dfg/DFGMinifiedGraph.cpp
 dfg/DFGMinifiedNode.cpp
+dfg/DFGMovHintRemovalPhase.cpp
 dfg/DFGMultiGetByOffsetData.cpp
 dfg/DFGNode.cpp
 dfg/DFGNodeAbstractValuePair.cpp
@@ -584,7 +581,6 @@ heap/SynchronousStopTheWorldMutatorScheduler.cpp
 heap/Synchronousness.cpp
 heap/VerifierSlotVisitor.cpp
 heap/VisitRaceKey.cpp
-heap/Weak.cpp
 heap/WeakBlock.cpp
 heap/WeakHandleOwner.cpp
 heap/WeakSet.cpp
@@ -616,6 +612,7 @@ inspector/ScriptArguments.cpp
 inspector/ScriptCallFrame.cpp
 inspector/ScriptCallStack.cpp
 inspector/ScriptCallStackFactory.cpp
+inspector/ScriptFunctionCall.cpp
 
 // Derived Sources
 inspector/InspectorBackendDispatchers.cpp
@@ -912,6 +909,7 @@ runtime/JSGlobalLexicalEnvironment.cpp
 runtime/JSGlobalObject.cpp
 runtime/JSGlobalObjectDebuggable.cpp
 runtime/JSGlobalObjectFunctions.cpp
+runtime/JSGlobalProxy.cpp
 runtime/JSImmutableButterfly.cpp
 runtime/JSInternalPromise.cpp
 runtime/JSInternalPromiseConstructor.cpp
@@ -932,7 +930,6 @@ runtime/JSPromise.cpp
 runtime/JSPromiseConstructor.cpp
 runtime/JSPromisePrototype.cpp
 runtime/JSPropertyNameEnumerator.cpp
-runtime/JSProxy.cpp
 runtime/JSRemoteFunction.cpp
 runtime/JSRunLoopTimer.cpp
 runtime/JSScope.cpp
@@ -1155,7 +1152,8 @@ wasm/WasmWorklist.cpp
 wasm/js/JSToWasm.cpp
 wasm/js/JSToWasm.h
 wasm/js/JSWebAssembly.cpp
-wasm/js/JSWebAssemblyArray.cpp
+// FIXME: Remove this @no-unify when clang-AS-debug builds stops crashing in register allocation.
+wasm/js/JSWebAssemblyArray.cpp @no-unify
 wasm/js/JSWebAssemblyCompileError.cpp
 wasm/js/JSWebAssemblyException.cpp
 wasm/js/JSWebAssemblyGlobal.cpp

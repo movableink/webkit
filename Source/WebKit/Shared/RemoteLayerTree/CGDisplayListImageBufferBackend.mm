@@ -181,15 +181,21 @@ RefPtr<WebCore::NativeImage> CGDisplayListImageBufferBackend::copyNativeImage(We
     return nullptr;
 }
 
-RefPtr<WebCore::PixelBuffer> CGDisplayListImageBufferBackend::getPixelBuffer(const WebCore::PixelBufferFormat&, const WebCore::IntRect&, const WebCore::ImageBufferAllocator&)
+void CGDisplayListImageBufferBackend::getPixelBuffer(const WebCore::IntRect&, WebCore::PixelBuffer&)
 {
     ASSERT_NOT_REACHED();
-    return nullptr;
 }
 
 void CGDisplayListImageBufferBackend::putPixelBuffer(const WebCore::PixelBuffer&, const WebCore::IntRect&, const WebCore::IntPoint&, WebCore::AlphaPremultiplication)
 {
     ASSERT_NOT_REACHED();
+}
+
+String CGDisplayListImageBufferBackend::debugDescription() const
+{
+    TextStream stream;
+    stream << "CGDisplayListImageBufferBackend " << this;
+    return stream.release();
 }
 
 #pragma mark - CGDisplayListAcceleratedImageBufferBackend

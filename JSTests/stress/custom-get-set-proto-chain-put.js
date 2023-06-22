@@ -19,6 +19,7 @@ function shouldThrow(func, expectedError) {
 }
 
 const customTestGetterSetter = $vm.createCustomTestGetterSetter();
+const global = $vm.createGlobalObject(customTestGetterSetter);
 Object.setPrototypeOf(customTestGetterSetter, {
     set customValue(_v) { throw new Error("Should be unreachable!"); },
     set customValueGlobalObject(_v) { throw new Error("Should be unreachable!"); },
@@ -38,7 +39,7 @@ function getObjects() {
         Object.create(customTestGetterSetter),
         Object.create(Object.create(customTestGetterSetter)),
         Object.create(new Proxy(customTestGetterSetter, {})),
-        Object.create($vm.createProxy(customTestGetterSetter)),
+        Object.create($vm.createGlobalProxy(global)),
     ];
 }
 
@@ -66,8 +67,16 @@ function getBases() {
     for (let base of getBases()) {
         for (let i = 0; i < 100; ++i) {
             let value = {};
-            base.customValue = value;
-            assert(value.hasOwnProperty("result"));
+            if (base == null || typeof base !== 'object') {
+                shouldThrow(() => {
+                    base.customValue = value;
+                }, `TypeError: Attempted to assign to readonly property.`);
+            } else {
+                base.customValue = value;
+                assert(!value.hasOwnProperty("result"));
+                assert(base.customValue === value);
+                assert(base.hasOwnProperty('customValue'));
+            }
         }
         assert(Reflect.set(Object(base), "customValue", {}));
     }
@@ -88,9 +97,16 @@ function getBases() {
 // FIXME: Once legacy RegExp features are implemented, there would be no use case for calling CustomValue setter if receiver is altered.
 (() => {
     for (let base of getBases()) {
-        for (let i = 0; i < 100; ++i)
-            base.customValue = 1;
-        assert(!base.hasOwnProperty("customValue"));
+        for (let i = 0; i < 100; ++i) {
+            if (base == null || typeof base !== 'object') {
+                shouldThrow(() => {
+                    base.customValue = 1;
+                }, `TypeError: Attempted to assign to readonly property.`);
+            } else {
+                base.customValue = 1;
+                assert(base.hasOwnProperty("customValue"));
+            }
+        }
         assert(Reflect.set(Object(base), "customValue", 1));
     }
 })();

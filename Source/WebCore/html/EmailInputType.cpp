@@ -26,6 +26,7 @@
 #include "EmailInputType.h"
 
 #include "HTMLInputElement.h"
+#include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "InputTypeNames.h"
 #include "LocalizedStrings.h"
@@ -35,16 +36,18 @@
 
 namespace WebCore {
 
+using namespace HTMLNames;
+
 // From https://html.spec.whatwg.org/#valid-e-mail-address.
 static constexpr ASCIILiteral emailPattern = "^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"_s;
 
-static bool isValidEmailAddress(const String& address)
+static bool isValidEmailAddress(StringView address)
 {
     int addressLength = address.length();
     if (!addressLength)
         return false;
 
-    static NeverDestroyed<const JSC::Yarr::RegularExpression> regExp(StringView { emailPattern }, JSC::Yarr::TextCaseInsensitive);
+    static NeverDestroyed<const JSC::Yarr::RegularExpression> regExp(StringView { emailPattern }, OptionSet<JSC::Yarr::Flags> { JSC::Yarr::Flags::IgnoreCase });
 
     int matchLength;
     int matchOffset = regExp.get().match(address, 0, &matchLength);
@@ -65,7 +68,7 @@ bool EmailInputType::typeMismatchFor(const String& value) const
     if (!element()->multiple())
         return !isValidEmailAddress(value);
     for (auto& address : value.splitAllowingEmptyEntries(',')) {
-        if (!isValidEmailAddress(stripLeadingAndTrailingHTMLSpaces(address)))
+        if (!isValidEmailAddress(StringView(address).trim(isASCIIWhitespace<UChar>)))
             return true;
     }
     return false;
@@ -88,6 +91,14 @@ bool EmailInputType::supportsSelectionAPI() const
     return false;
 }
 
+void EmailInputType::attributeChanged(const QualifiedName& name)
+{
+    if (name == multipleAttr)
+        element()->setValueFromRenderer(sanitizeValue(element()->value()));
+
+    BaseTextInputType::attributeChanged(name);
+}
+
 String EmailInputType::sanitizeValue(const String& proposedValue) const
 {
     // Passing a lambda instead of a function name helps the compiler inline isHTMLLineBreak.
@@ -96,13 +107,13 @@ String EmailInputType::sanitizeValue(const String& proposedValue) const
     });
     ASSERT(element());
     if (!element()->multiple())
-        return stripLeadingAndTrailingHTMLSpaces(noLineBreakValue);
+        return noLineBreakValue.trim(isASCIIWhitespace);
     Vector<String> addresses = noLineBreakValue.splitAllowingEmptyEntries(',');
     StringBuilder strippedValue;
     for (unsigned i = 0; i < addresses.size(); ++i) {
         if (i > 0)
             strippedValue.append(',');
-        strippedValue.append(stripLeadingAndTrailingHTMLSpaces(addresses[i]));
+        strippedValue.append(addresses[i].trim(isASCIIWhitespace));
     }
     return strippedValue.toString();
 }

@@ -254,7 +254,7 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
 
 - (WebCore::AccessibilityObject *)axBackingObject
 {
-    return m_axObject;
+    return m_axObject.get();
 }
 
 - (void)detach
@@ -1113,7 +1113,7 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
         // https://bugs.webkit.org/show_bug.cgi?id=223492
         return self.axBackingObject->isKeyboardFocusable()
             && [self accessibilityElementCount] == 0
-            && self.axBackingObject->descriptionAttributeValue().find(isNotSpaceOrNewline) != notFound;
+            && self.axBackingObject->descriptionAttributeValue().find(deprecatedIsNotSpaceOrNewline) != notFound;
     case AccessibilityRole::Ignored:
     case AccessibilityRole::Presentational:
     case AccessibilityRole::Unknown:
@@ -1295,10 +1295,8 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
 - (AccessibilityTable*)tableParent
 {
     // Find the parent table for the table cell.
-    if (AXCoreObject* parent = Accessibility::findAncestor<AXCoreObject>(*self.axBackingObject, true, [] (const AXCoreObject& object) {
-        return is<AccessibilityTable>(object) && downcast<AccessibilityTable>(object).isExposable();
-    }))
-        return static_cast<AccessibilityTable*>(parent);
+    if (auto* ancestor = self.axBackingObject->exposedTableAncestor(true))
+        return dynamicDowncast<AccessibilityTable>(ancestor);
     return nil;
 }
 
@@ -1534,18 +1532,18 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     if (backingObject->supportsCheckedState()) {
         switch (backingObject->checkboxOrRadioValue()) {
         case AccessibilityButtonState::Off:
-            return [NSString stringWithFormat:@"%d", 0];
+            return @"0";
         case AccessibilityButtonState::On:
-            return [NSString stringWithFormat:@"%d", 1];
+            return @"1";
         case AccessibilityButtonState::Mixed:
-            return [NSString stringWithFormat:@"%d", 2];
+            return @"2";
         }
         ASSERT_NOT_REACHED();
-        return [NSString stringWithFormat:@"%d", 0];
+        return @"0";
     }
 
     if (backingObject->isButton() && backingObject->isPressed())
-        return [NSString stringWithFormat:@"%d", 1];
+        return @"1";
 
     // If self has the header trait, value should be the heading level.
     if (self.accessibilityTraits & self._axHeaderTrait) {
@@ -1920,7 +1918,8 @@ static NSArray *accessibleElementsForObjects(const AXCoreObject::AccessibilityCh
             continue;
 
         Accessibility::enumerateDescendants<AXCoreObject>(*object, true, [&accessibleElements] (AXCoreObject& descendant) {
-            if (descendant.wrapper().isAccessibilityElement)
+            auto* wrapper = descendant.wrapper();
+            if (wrapper && wrapper.isAccessibilityElement)
                 accessibleElements.append(&descendant);
         });
     }
@@ -2121,9 +2120,9 @@ static RenderObject* rendererForView(WAKView* view)
     // That should be the beginning of this element (range.start). However, if the cursor is already within the 
     // range of this element (the cursor is represented by selection), then the cursor does not need to move.
     if (frameSelection.isNone() && (selection.visibleStart() < range.start || selection.visibleEnd() > range.end))
-        frameSelection.moveTo(range.start, UserTriggered);
+        frameSelection.moveTo(range.start, UserTriggered::Yes);
     
-    frameSelection.modify(FrameSelection::AlterationExtend, (increase) ? SelectionDirection::Right : SelectionDirection::Left, granularity, UserTriggered);
+    frameSelection.modify(FrameSelection::Alteration::Extend, (increase) ? SelectionDirection::Right : SelectionDirection::Left, granularity, UserTriggered::Yes);
 }
 
 - (void)accessibilityIncreaseSelection:(TextGranularity)granularity
@@ -2158,8 +2157,8 @@ static RenderObject* rendererForView(WAKView* view)
     if (visiblePosition.isNull())
         return;
 
-    FrameSelection& frameSelection = self.axBackingObject->document()->frame()->selection();
-    frameSelection.moveTo(visiblePosition, UserTriggered);
+    auto& frameSelection = self.axBackingObject->document()->frame()->selection();
+    frameSelection.moveTo(visiblePosition, UserTriggered::Yes);
 }
 
 - (void)accessibilityIncrement
@@ -2379,18 +2378,18 @@ static RenderObject* rendererForView(WAKView* view)
     if (![self _prepareAccessibilityCall] || !self.axBackingObject->isTextControl())
         return NSMakeRange(NSNotFound, 0);
 
-    PlainTextRange textRange = self.axBackingObject->selectedTextRange();
-    if (textRange.isNull())
+    auto textRange = self.axBackingObject->selectedTextRange();
+    if (!textRange.location && !textRange.length)
         return NSMakeRange(NSNotFound, 0);
-    return NSMakeRange(textRange.start, textRange.length);
+    return textRange;
 }
 
 - (void)_accessibilitySetSelectedTextRange:(NSRange)range
 {
     if (![self _prepareAccessibilityCall])
         return;
-    
-    self.axBackingObject->setSelectedTextRange(PlainTextRange(range.location, range.length));
+
+    self.axBackingObject->setSelectedTextRange(range);
 }
 
 - (BOOL)accessibilityReplaceRange:(NSRange)range withText:(NSString *)string
@@ -2398,7 +2397,7 @@ static RenderObject* rendererForView(WAKView* view)
     if (![self _prepareAccessibilityCall])
         return NO;
 
-    return self.axBackingObject->replaceTextInRange(string, PlainTextRange(range));
+    return self.axBackingObject->replaceTextInRange(string, range);
 }
 
 - (BOOL)accessibilityInsertText:(NSString *)text

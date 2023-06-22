@@ -162,7 +162,7 @@ static void addStringToSHA1(SHA1& sha1, const String& string)
     if (string.isEmpty())
         return;
 
-    if (string.is8Bit() && string.isAllASCII()) {
+    if (string.is8Bit() && string.containsOnlyASCII()) {
         const uint8_t nullByte = 0;
         sha1.addBytes(string.characters8(), string.length());
         sha1.addBytes(&nullByte, 1);
@@ -205,10 +205,14 @@ void RealtimeMediaSourceCenter::captureDevicesChanged()
 {
     ASSERT(isMainThread());
 
+#if USE(GSTREAMER)
+    triggerDevicesChangedObservers();
+#else
     // When a device with camera and microphone is attached or detached, the CaptureDevice notification for
     // the different devices won't arrive at the same time so delay a bit so we can coalesce the callbacks.
     if (!m_debounceTimer.isActive())
         m_debounceTimer.startOneShot(deviceChangeDebounceTimerInterval);
+#endif
 }
 
 void RealtimeMediaSourceCenter::triggerDevicesChangedObservers()

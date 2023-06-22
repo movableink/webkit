@@ -74,7 +74,7 @@ UChar32 String::characterStartingAt(unsigned i) const
     return m_impl->characterStartingAt(i);
 }
 
-String makeStringByJoining(Span<const String> strings, const String& separator)
+String makeStringByJoining(std::span<const String> strings, const String& separator)
 {
     StringBuilder builder;
     for (const auto& string : strings) {
@@ -153,30 +153,10 @@ String String::convertToUppercaseWithLocale(const AtomString& localeIdentifier) 
     return m_impl ? m_impl->convertToUppercaseWithLocale(localeIdentifier) : String { };
 }
 
-String String::stripWhiteSpace() const
+String String::trim(CodeUnitMatchFunction predicate) const
 {
     // FIXME: Should this function, and the many others like it, be inlined?
-    // FIXME: This function needs a new name. For one thing, "whitespace" is a single
-    // word so the "s" should be lowercase. For another, it's not clear from this name
-    // that the function uses the Unicode definition of whitespace. Most WebKit callers
-    // don't want that and eventually we should consider deleting this.
-    return m_impl ? m_impl->stripWhiteSpace() : String { };
-}
-
-String String::stripLeadingAndTrailingCharacters(CodeUnitMatchFunction predicate) const
-{
-    // FIXME: Should this function, and the many others like it, be inlined?
-    return m_impl ? m_impl->stripLeadingAndTrailingCharacters(predicate) : String { };
-}
-
-String String::simplifyWhiteSpace() const
-{
-    // FIXME: Should this function, and the many others like it, be inlined?
-    // FIXME: This function needs a new name. For one thing, "whitespace" is a single
-    // word so the "s" should be lowercase. For another, it's not clear from this name
-    // that the function uses the Unicode definition of whitespace. Most WebKit callers
-    // don't want that and eventually we should consider deleting this.
-    return m_impl ? m_impl->simplifyWhiteSpace() : String { };
+    return m_impl ? m_impl->trim(predicate) : String { };
 }
 
 String String::simplifyWhiteSpace(CodeUnitMatchFunction isWhiteSpace) const
@@ -574,7 +554,7 @@ template<typename CharacterType, TrailingJunkPolicy policy>
 static inline double toDoubleType(const CharacterType* data, size_t length, bool* ok, size_t& parsedLength)
 {
     size_t leadingSpacesLength = 0;
-    while (leadingSpacesLength < length && isASCIISpace(data[leadingSpacesLength]))
+    while (leadingSpacesLength < length && isUnicodeCompatibleASCIIWhitespace(data[leadingSpacesLength]))
         ++leadingSpacesLength;
 
     double number = parseDouble(data + leadingSpacesLength, length - leadingSpacesLength, parsedLength);

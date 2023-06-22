@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -88,9 +88,9 @@
 
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, process().connection())
 
-#define WEBPAGEPROXY_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [pageProxyID=%llu, webPageID=%llu, PID=%i] WebPageProxy::" fmt, this, identifier().toUInt64(), webPageID().toUInt64(), m_process->processIdentifier(), ##__VA_ARGS__)
+#define WEBPAGEPROXY_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [pageProxyID=%llu, webPageID=%llu, PID=%i] WebPageProxy::" fmt, this, identifier().toUInt64(), webPageID().toUInt64(), m_process->processID(), ##__VA_ARGS__)
 
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
+#if PLATFORM(VISION)
 static constexpr CGFloat kTargetFullscreenAspectRatio = 1.7778;
 #endif
 
@@ -583,12 +583,17 @@ void WebPageProxy::performActionOnElement(uint32_t action)
     });
 }
 
-void WebPageProxy::saveImageToLibrary(const SharedMemory::Handle& imageHandle, const String& authorizationToken)
+void WebPageProxy::performActionOnElements(uint32_t action, Vector<WebCore::ElementContext>&& elements)
+{
+    m_process->send(Messages::WebPage::PerformActionOnElements(action, elements), webPageID());
+}
+
+void WebPageProxy::saveImageToLibrary(SharedMemory::Handle&& imageHandle, const String& authorizationToken)
 {
     MESSAGE_CHECK(!imageHandle.isNull());
     MESSAGE_CHECK(isValidPerformActionOnElementAuthorizationToken(authorizationToken));
 
-    auto sharedMemoryBuffer = SharedMemory::map(imageHandle, SharedMemory::Protection::ReadOnly);
+    auto sharedMemoryBuffer = SharedMemory::map(WTFMove(imageHandle), SharedMemory::Protection::ReadOnly);
     if (!sharedMemoryBuffer)
         return;
 
@@ -607,8 +612,10 @@ void WebPageProxy::applicationDidEnterBackground()
 #if !PLATFORM(WATCHOS)
     // We normally delay process suspension when the app is backgrounded until the current page load completes. However,
     // we do not want to do so when the screen is locked for power reasons.
-    if (isSuspendedUnderLock)
-        NavigationState::fromWebPage(*this).releaseNetworkActivity(NavigationState::NetworkActivityReleaseReason::ScreenLocked);
+    if (isSuspendedUnderLock) {
+        if (auto* navigationState = NavigationState::fromWebPage(*this))
+            navigationState->releaseNetworkActivity(NavigationState::NetworkActivityReleaseReason::ScreenLocked);
+    }
 #endif
     m_process->send(Messages::WebPage::ApplicationDidEnterBackground(isSuspendedUnderLock), webPageID());
 }
@@ -839,21 +846,30 @@ FloatSize WebPageProxy::screenSize()
     return WebCore::screenSize();
 }
 
+#if PLATFORM(VISION)
+static FloatSize fullscreenPreferencesScreenSize(CGFloat preferredWidth)
+{
+    CGFloat preferredHeight = preferredWidth / kTargetFullscreenAspectRatio;
+    return FloatSize(CGSizeMake(preferredWidth, preferredHeight));
+}
+#endif
+
 FloatSize WebPageProxy::availableScreenSize()
 {
+#if PLATFORM(VISION)
+    return fullscreenPreferencesScreenSize(m_preferences->mediaPreferredFullscreenWidth());
+#else
     return WebCore::availableScreenSize();
+#endif
 }
 
 FloatSize WebPageProxy::overrideScreenSize()
 {
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
-    // Report screen dimensions based on fullscreen preferences.
-    CGFloat preferredWidth = m_preferences->mediaPreferredFullscreenWidth();
-    CGFloat preferredHeight = preferredWidth / kTargetFullscreenAspectRatio;
-    return FloatSize(CGSizeMake(preferredWidth, preferredHeight));
-#endif
-
+#if PLATFORM(VISION)
+    return fullscreenPreferencesScreenSize(m_preferences->mediaPreferredFullscreenWidth());
+#else
     return WebCore::overrideScreenSize();
+#endif
 }
 
 float WebPageProxy::textAutosizingWidth()
@@ -1054,7 +1070,7 @@ IPC::Connection::AsyncReplyID WebPageProxy::drawToPDFiOS(FrameIdentifier frameID
     return sendWithAsyncReply(Messages::WebPage::DrawToPDFiOS(frameID, printInfo, pageCount), WTFMove(completionHandler));
 }
 
-IPC::Connection::AsyncReplyID WebPageProxy::drawToImage(FrameIdentifier frameID, const PrintInfo& printInfo, size_t pageCount, CompletionHandler<void(WebKit::ShareableBitmapHandle&&)>&& completionHandler)
+IPC::Connection::AsyncReplyID WebPageProxy::drawToImage(FrameIdentifier frameID, const PrintInfo& printInfo, size_t pageCount, CompletionHandler<void(WebKit::ShareableBitmap::Handle&&)>&& completionHandler)
 {
     if (!hasRunningProcess()) {
         completionHandler({ });
@@ -1237,9 +1253,9 @@ void WebPageProxy::didStartLoadForQuickLookDocumentInMainFrame(const String& fil
     m_navigationClient->didStartLoadForQuickLookDocumentInMainFrame(fileName.substring(fileName.reverseFind('/') + 1), uti);
 }
 
-void WebPageProxy::didFinishLoadForQuickLookDocumentInMainFrame(const ShareableResource::Handle& handle)
+void WebPageProxy::didFinishLoadForQuickLookDocumentInMainFrame(ShareableResource::Handle&& handle)
 {
-    auto buffer = handle.tryWrapInSharedBuffer();
+    auto buffer = WTFMove(handle).tryWrapInSharedBuffer();
     if (!buffer)
         return;
 
@@ -1547,17 +1563,17 @@ void WebPageProxy::setScreenIsBeingCaptured(bool captured)
 
 void WebPageProxy::willOpenAppLink()
 {
-    if (m_openingAppLinkActivity && m_openingAppLinkActivity->isValid())
+    if (m_processActivityState.hasValidOpeningAppLinkActivity())
         return;
 
     // We take a background activity for 25 seconds when switching to another app via an app link in case the WebPage
     // needs to run script to pass information to the native app.
     // We chose 25 seconds because the system only gives us 30 seconds and we don't want to get too close to that limit
     // to avoid assertion invalidation (or even termination).
-    m_openingAppLinkActivity = process().throttler().backgroundActivity("Opening AppLink"_s).moveToUniquePtr();
+    m_processActivityState.takeOpeningAppLinkActivity();
     WorkQueue::main().dispatchAfter(25_s, [weakThis = WeakPtr { *this }] {
         if (weakThis)
-            weakThis->m_openingAppLinkActivity = nullptr;
+            weakThis->m_processActivityState.dropOpeningAppLinkActivity();
     });
 }
 
@@ -1614,6 +1630,11 @@ void WebPageProxy::showDataDetectorsUIForPositionInformation(const InteractionIn
     pageClient().showDataDetectorsUIForPositionInformation(positionInfo);
 }
 
+void WebPageProxy::insertionPointColorDidChange()
+{
+    send(Messages::WebPage::SetInsertionPointColor(pageClient().insertionPointColor()));
+}
+
 Color WebPageProxy::platformUnderPageBackgroundColor() const
 {
     if (auto contentViewBackgroundColor = pageClient().contentViewBackgroundColor(); contentViewBackgroundColor.isValid())
@@ -1624,7 +1645,7 @@ Color WebPageProxy::platformUnderPageBackgroundColor() const
 
 void WebPageProxy::statusBarWasTapped()
 {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     RELEASE_LOG_INFO(WebRTC, "WebPageProxy::statusBarWasTapped");
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -1674,7 +1695,7 @@ FloatSize WebPageProxy::viewLayoutSize() const
 
 #if ENABLE(DRAG_SUPPORT)
 
-void WebPageProxy::setPromisedDataForImage(const String&, const SharedMemory::Handle&, const String&, const String&, const String&, const String&, const String&, const SharedMemory::Handle&, const String&)
+void WebPageProxy::setPromisedDataForImage(const String&, SharedMemory::Handle&&, const String&, const String&, const String&, const String&, const String&, SharedMemory::Handle&&, const String&)
 {
     notImplemented();
 }

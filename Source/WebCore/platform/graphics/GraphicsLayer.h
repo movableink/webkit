@@ -35,6 +35,7 @@
 #include "GraphicsLayerClient.h"
 #include "HTMLMediaElementIdentifier.h"
 #include "LayerHostingContextIdentifier.h"
+#include "MediaPlayerEnums.h"
 #include "Path.h"
 #include "PlatformLayer.h"
 #include "PlatformLayerIdentifier.h"
@@ -499,6 +500,10 @@ public:
     bool contentsRectClipsDescendants() const { return m_contentsRectClipsDescendants; }
     virtual void setContentsRectClipsDescendants(bool b) { m_contentsRectClipsDescendants = b; }
 
+    // Used to lay out video contents within a video layer.
+    MediaPlayerVideoGravity videoGravity() const;
+    WEBCORE_EXPORT virtual void setVideoGravity(MediaPlayerVideoGravity);
+
     Path shapeLayerPath() const;
     WEBCORE_EXPORT virtual void setShapeLayerPath(const Path&);
 
@@ -554,7 +559,7 @@ public:
     virtual bool usesContentsLayer() const { return false; }
 
     // Callback from the underlying graphics system to draw layer contents.
-    WEBCORE_EXPORT void paintGraphicsLayerContents(GraphicsContext&, const FloatRect& clip, GraphicsLayerPaintBehavior = GraphicsLayerPaintNormal);
+    WEBCORE_EXPORT void paintGraphicsLayerContents(GraphicsContext&, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior> = { });
 
     // For hosting this GraphicsLayer in a native layer hierarchy.
     virtual PlatformLayer* platformLayer() const { return nullptr; }
@@ -816,6 +821,7 @@ protected:
 
     EventRegion m_eventRegion;
 #if USE(CA)
+    MediaPlayerVideoGravity m_videoGravity { MediaPlayerVideoGravity::ResizeAspect };
     WindRule m_shapeLayerWindRule { WindRule::NonZero };
     Path m_shapeLayerPath;
 #endif

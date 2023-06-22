@@ -29,6 +29,7 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLStyleElement.h"
+#include "NodeName.h"
 #include "Page.h"
 #include "RenderMeter.h"
 #include "RenderTheme.h"
@@ -71,12 +72,21 @@ bool HTMLMeterElement::childShouldCreateRenderer(const Node& child) const
     return !is<RenderMeter>(renderer()) && HTMLElement::childShouldCreateRenderer(child);
 }
 
-void HTMLMeterElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLMeterElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == valueAttr || name == minAttr || name == maxAttr || name == lowAttr || name == highAttr || name == optimumAttr)
+    switch (name.nodeName()) {
+    case AttributeNames::valueAttr:
+    case AttributeNames::minAttr:
+    case AttributeNames::maxAttr:
+    case AttributeNames::lowAttr:
+    case AttributeNames::highAttr:
+    case AttributeNames::optimumAttr:
         didElementStateChange();
-    else
-        HTMLElement::parseAttribute(name, value);
+        break;
+    default:
+        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+        break;
+    }
 }
 
 double HTMLMeterElement::min() const

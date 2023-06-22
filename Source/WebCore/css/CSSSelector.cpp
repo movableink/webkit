@@ -310,34 +310,6 @@ const CSSSelector* CSSSelector::firstInCompound() const
     return selector;
 }
 
-bool CSSSelector::operator==(const CSSSelector& other) const
-{
-    const CSSSelector* sel1 = this;
-    const CSSSelector* sel2 = &other;
-
-    while (sel1 && sel2) {
-        if (sel1->attribute() != sel2->attribute()
-            || sel1->relation() != sel2->relation()
-            || sel1->match() != sel2->match()
-            || sel1->value() != sel2->value()
-            || sel1->m_pseudoType != sel2->m_pseudoType
-            || sel1->argument() != sel2->argument()) {
-            return false;
-        }
-        if (sel1->match() == Tag) {
-            if (sel1->tagQName() != sel2->tagQName())
-                return false;
-        }
-        sel1 = sel1->tagHistory();
-        sel2 = sel2->tagHistory();
-    }
-
-    if (sel1 || sel2)
-        return false;
-
-    return true;
-}
-
 static void appendPseudoClassFunctionTail(StringBuilder& builder, const CSSSelector* selector)
 {
     switch (selector->pseudoClassType()) {
@@ -407,11 +379,19 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
 {
     StringBuilder builder;
 
-    if (match() == CSSSelector::Tag && !m_tagIsForNamespaceRule) {
-        if (tagQName().prefix().isNull())
-            builder.append(tagQName().localName());
+    auto serializeIdentifierOrStar = [&] (const AtomString& identifier) {
+        if (identifier == starAtom())
+            builder.append('*');
         else
-            builder.append(tagQName().prefix().string(), '|', tagQName().localName());
+            serializeIdentifier(identifier, builder);
+    };
+
+    if (match() == CSSSelector::Tag && !m_tagIsForNamespaceRule) {
+        if (auto& prefix = tagQName().prefix(); !prefix.isNull()) {
+            serializeIdentifierOrStar(prefix);
+            builder.append('|');
+        }
+        serializeIdentifierOrStar(tagQName().localName());
     }
 
     const CSSSelector* cs = this;
@@ -583,6 +563,9 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
                 break;
             case CSSSelector::PseudoClassInvalid:
                 builder.append(":invalid");
+                break;
+            case CSSSelector::PseudoClassHtmlDocument:
+                builder.append(":-internal-html-document");
                 break;
             case CSSSelector::PseudoClassLang:
                 builder.append(":lang(");
@@ -780,9 +763,11 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
             }
         } else if (cs->isAttributeSelector()) {
             builder.append('[');
-            if (auto& prefix = cs->attribute().prefix(); !prefix.isEmpty())
-                builder.append(prefix, '|');
-            builder.append(cs->attribute().localName());
+            if (auto& prefix = cs->attribute().prefix(); !prefix.isEmpty()) {
+                serializeIdentifierOrStar(prefix);
+                builder.append('|');
+            }
+            serializeIdentifierOrStar(cs->attribute().localName());
             switch (cs->match()) {
                 case CSSSelector::Exact:
                     builder.append('=');
@@ -837,6 +822,19 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
 
     builder.append(separator, rightSide);
 
+    auto separatorTextForNestingRelative = [&] () -> String {
+        switch (cs->relation()) {
+        case CSSSelector::Child:
+            return "> "_s;
+        case CSSSelector::DirectAdjacent:
+            return "+ "_s;
+        case CSSSelector::IndirectAdjacent:
+            return "~ "_s;
+        default:
+            return { };
+        }
+    };
+
     if (auto* previousSelector = cs->tagHistory()) {
         ASCIILiteral separator = ""_s;
         switch (cs->relation()) {
@@ -861,6 +859,9 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
             break;
         }
         return previousSelector->selectorText(separator, builder);
+    } else if (auto separatorText = separatorTextForNestingRelative(); !separatorText.isNull()) {
+        // We have a separator but no tag history which can happen with implicit relative nesting selector
+        return separatorText + builder.toString();
     }
 
     return builder.toString();
@@ -969,11 +970,10 @@ CSSSelector::CSSSelector(const CSSSelector& other)
     , m_tagIsForNamespaceRule(other.m_tagIsForNamespaceRule)
     , m_caseInsensitiveAttributeValueMatching(other.m_caseInsensitiveAttributeValueMatching)
 {
-    if (other.m_hasRareData) {
-        auto copied = other.m_data.rareData->deepCopy(); 
-        m_data.rareData = &copied.leakRef();
-        m_data.rareData->ref();
-    } else if (other.match() == Tag) {
+    // Manually ref count the m_data union because they are stored as raw ptr, not as Ref.
+    if (other.m_hasRareData)
+        m_data.rareData = &other.m_data.rareData->deepCopy().leakRef();
+    else if (other.match() == Tag) {
         m_data.tagQName = other.m_data.tagQName;
         m_data.tagQName->ref();
     } else if (other.m_data.value) {

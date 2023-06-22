@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,6 @@
 #import "PlatformLayer.h"
 #import "RealtimeMediaSourceCenter.h"
 #import "RealtimeMediaSourceSettings.h"
-#import "RealtimeVideoSource.h"
 #import "RealtimeVideoUtilities.h"
 #import "VideoFrameCV.h"
 #import <AVFoundation/AVCaptureDevice.h>
@@ -121,14 +120,14 @@ CaptureSourceOrError AVVideoCaptureSource::create(const CaptureDevice& device, M
     if (!avDevice)
         return { "No AVVideoCaptureSource device"_s };
 
-    auto source = adoptRef(*new AVVideoCaptureSource(avDevice, device, WTFMove(hashSalts), pageIdentifier));
+    Ref<RealtimeMediaSource> source = adoptRef(*new AVVideoCaptureSource(avDevice, device, WTFMove(hashSalts), pageIdentifier));
     if (constraints) {
         auto result = source->applyConstraints(*constraints);
         if (result)
             return WTFMove(result.value().badConstraint);
     }
 
-    return CaptureSourceOrError(RealtimeVideoSource::create(WTFMove(source)));
+    return source;
 }
 
 static double cameraZoomScaleFactor(AVCaptureDeviceType deviceType)
@@ -282,9 +281,11 @@ const RealtimeMediaSourceSettings& AVVideoCaptureSource::settings()
     settings.setWidth(size.width());
     settings.setHeight(size.height());
     settings.setDeviceId(hashedId());
+    settings.setGroupId(captureDevice().groupId());
 
     RealtimeMediaSourceSupportedConstraints supportedConstraints;
     supportedConstraints.setSupportsDeviceId(true);
+    supportedConstraints.setSupportsGroupId(true);
     supportedConstraints.setSupportsFacingMode([device() position] != AVCaptureDevicePositionUnspecified);
     supportedConstraints.setSupportsWidth(true);
     supportedConstraints.setSupportsHeight(true);
@@ -394,6 +395,9 @@ bool AVVideoCaptureSource::prefersPreset(const VideoPreset& preset)
 void AVVideoCaptureSource::setFrameRateAndZoomWithPreset(double requestedFrameRate, double requestedZoom, std::optional<VideoPreset>&& preset)
 {
     m_currentPreset = WTFMove(preset);
+    if (m_currentPreset)
+        setIntrinsicSize({ m_currentPreset->size().width(), m_currentPreset->size().height() });
+
     m_currentFrameRate = requestedFrameRate;
     m_currentZoom = m_zoomScaleFactor * requestedZoom;
 
@@ -503,12 +507,15 @@ static inline IntDegrees sensorOrientation(AVCaptureVideoOrientation videoOrient
 }
 ALLOW_DEPRECATED_DECLARATIONS_END
 
-static inline IntDegrees sensorOrientationFromVideoOutput(AVCaptureVideoDataOutput* videoOutput)
+IntDegrees AVVideoCaptureSource::sensorOrientationFromVideoOutput()
 {
-    AVCaptureConnection* connection = [videoOutput connectionWithMediaType:AVMediaTypeVideo];
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    if (PAL::canLoad_AVFoundation_AVCaptureDeviceTypeExternalUnknown() && [device() deviceType] == AVCaptureDeviceTypeExternalUnknown)
+        return 0;
+
+    AVCaptureConnection* connection = [m_videoOutput connectionWithMediaType:AVMediaTypeVideo];
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     return connection ? sensorOrientation([connection videoOrientation]) : 0;
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 bool AVVideoCaptureSource::setupSession()
@@ -600,7 +607,7 @@ bool AVVideoCaptureSource::setupCaptureSession()
 
     setSessionSizeFrameRateAndZoom();
 
-    m_sensorOrientation = sensorOrientationFromVideoOutput(m_videoOutput.get());
+    m_sensorOrientation = sensorOrientationFromVideoOutput();
     computeVideoFrameRotation();
 
     return true;
@@ -615,6 +622,9 @@ void AVVideoCaptureSource::shutdownCaptureSession()
 void AVVideoCaptureSource::monitorOrientation(OrientationNotifier& notifier)
 {
 #if PLATFORM(IOS_FAMILY)
+    if (PAL::canLoad_AVFoundation_AVCaptureDeviceTypeExternalUnknown() && [device() deviceType] == AVCaptureDeviceTypeExternalUnknown)
+        return;
+
     notifier.addObserver(*this);
     orientationChanged(notifier.orientation());
 #else

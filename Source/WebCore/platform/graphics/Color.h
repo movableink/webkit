@@ -278,7 +278,6 @@ inline void add(Hasher& hasher, const Color& color)
 }
 
 bool operator==(const Color&, const Color&);
-bool operator!=(const Color&, const Color&);
 
 // One or both must be out of line colors.
 bool outOfLineComponentsEqual(const Color&, const Color&);
@@ -297,11 +296,6 @@ inline bool operator==(const Color& a, const Color& b)
     if (a.isOutOfLine() || b.isOutOfLine())
         return outOfLineComponentsEqual(a, b);
     return a.m_colorAndFlags == b.m_colorAndFlags;
-}
-
-inline bool operator!=(const Color& a, const Color& b)
-{
-    return !(a == b);
 }
 
 inline bool outOfLineComponentsEqual(const Color& a, const Color& b)

@@ -30,10 +30,10 @@
 #include "Element.h"
 #include "FocusController.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HistoryController.h"
 #include "HistoryItem.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "Node.h"
 #include "Page.h"
@@ -103,7 +103,7 @@ static void firePageShowEvent(Page& page)
         // This takes care of firing the visibilitychange event and making sure the document is reported as visible.
         document->setVisibilityHiddenDueToDismissal(false);
 
-        document->dispatchPageshowEvent(PageshowEventPersisted);
+        document->dispatchPageshowEvent(PageshowEventPersistence::Persisted);
     }
 }
 

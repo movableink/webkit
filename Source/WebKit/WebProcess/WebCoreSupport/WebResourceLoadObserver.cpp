@@ -36,9 +36,9 @@
 #include "WebProcess.h"
 #include <WebCore/FrameDestructionObserverInlines.h>
 #include <WebCore/FrameLoader.h>
-#include <WebCore/FrameLoaderClient.h>
 #include <WebCore/HTMLFrameOwnerElement.h>
 #include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameLoaderClient.h>
 #include <WebCore/Page.h>
 
 namespace WebKit {
@@ -349,7 +349,7 @@ void WebResourceLoadObserver::logWebSocketLoading(const URL& targetURL, const UR
 void WebResourceLoadObserver::logUserInteractionWithReducedTimeResolution(const Document& document)
 {
     auto& url = document.url();
-    if (url.protocolIsAbout() || url.isLocalFile() || url.isEmpty())
+    if (url.protocolIsAbout() || url.protocolIsFile() || url.isEmpty())
         return;
 
     RegistrableDomain topFrameDomain { url };
@@ -368,7 +368,7 @@ void WebResourceLoadObserver::logUserInteractionWithReducedTimeResolution(const 
     }
 
     if (auto* frame = document.frame()) {
-        if (auto* opener = frame->loader().opener()) {
+        if (auto* opener = dynamicDowncast<LocalFrame>(frame->loader().opener())) {
             if (auto* openerDocument = opener->document()) {
                 if (auto* openerPage = openerDocument->page())
                     requestStorageAccessUnderOpener(topFrameDomain, *WebPage::fromCorePage(*openerPage), *openerDocument);

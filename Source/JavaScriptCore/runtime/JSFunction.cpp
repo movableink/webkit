@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *  Copyright (C) 2015 Canon Inc. All rights reserved.
@@ -104,7 +104,7 @@ JSFunction::JSFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* glo
     ASSERT(structure->globalObject() == globalObject);
 }
 
-
+#if ASSERT_ENABLED
 void JSFunction::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
@@ -114,6 +114,7 @@ void JSFunction::finishCreation(VM& vm)
     ASSERT(methodTable()->getConstructData == &JSFunction::getConstructData);
     ASSERT(methodTable()->getCallData == &JSFunction::getCallData);
 }
+#endif
 
 void JSFunction::finishCreation(VM& vm, NativeExecutable*, unsigned length, const String& name)
 {
@@ -211,6 +212,21 @@ String JSFunction::name(VM& vm)
     if (isHostFunction()) {
         if (this->inherits<JSBoundFunction>())
             return jsCast<JSBoundFunction*>(this)->nameString();
+        NativeExecutable* executable = jsCast<NativeExecutable*>(this->executable());
+        return executable->name();
+    }
+    const Identifier identifier = jsExecutable()->name();
+    if (identifier == vm.propertyNames->starDefaultPrivateName)
+        return emptyString();
+    return identifier.string();
+}
+
+String JSFunction::nameWithoutGC(VM& vm)
+{
+    DisallowGC disallowGC;
+    if (isHostFunction()) {
+        if (this->inherits<JSBoundFunction>())
+            return jsCast<JSBoundFunction*>(this)->nameStringWithoutGC(vm);
         NativeExecutable* executable = jsCast<NativeExecutable*>(this->executable());
         return executable->name();
     }
@@ -504,7 +520,7 @@ String getCalculatedDisplayName(VM& vm, JSObject* object)
     }
 
     if (auto* function = jsDynamicCast<JSFunction*>(object)) {
-        const String actualName = function->name(vm);
+        String actualName = function->nameWithoutGC(vm);
         if (!actualName.isEmpty() || function->isHostOrBuiltinFunction())
             return actualName;
 
@@ -512,7 +528,6 @@ String getCalculatedDisplayName(VM& vm, JSObject* object)
     }
     if (auto* function = jsDynamicCast<InternalFunction*>(object))
         return function->name();
-
 
     return emptyString();
 }

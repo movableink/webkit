@@ -974,6 +974,15 @@ void GraphicsLayerCA::setContentsRectClipsDescendants(bool contentsRectClipsDesc
     noteLayerPropertyChanged(ChildrenChanged | ContentsRectsChanged);
 }
 
+void GraphicsLayerCA::setVideoGravity(MediaPlayerVideoGravity gravity)
+{
+    if (gravity == m_videoGravity)
+        return;
+
+    GraphicsLayer::setVideoGravity(gravity);
+    noteLayerPropertyChanged(VideoGravityChanged);
+}
+
 void GraphicsLayerCA::setShapeLayerPath(const Path& path)
 {
     // FIXME: need to check for path equality. No bool Path::operator==(const Path&)!.
@@ -1310,6 +1319,7 @@ void GraphicsLayerCA::setContentsToVideoElement(HTMLVideoElement& videoElement, 
         }
         m_contentsLayerPurpose = purpose;
         m_contentsDisplayDelegate = nullptr;
+        updateVideoGravity();
         noteSublayersChanged();
         noteLayerPropertyChanged(ContentsPlatformLayerChanged);
         return;
@@ -1341,6 +1351,12 @@ void GraphicsLayerCA::setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDis
 
     noteSublayersChanged();
     noteLayerPropertyChanged(ContentsPlatformLayerChanged);
+}
+
+PlatformLayerIdentifier GraphicsLayerCA::setContentsToAsyncDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate> delegate, ContentsLayerPurpose purpose)
+{
+    setContentsDisplayDelegate(WTFMove(delegate), purpose);
+    return m_contentsLayer->layerID();
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -1836,7 +1852,7 @@ void GraphicsLayerCA::recursiveCommitChanges(CommitState& commitState, const Tra
     commitLayerChangesAfterSublayers(childCommitState);
 
     if (affectedByTransformAnimation && m_layer->layerType() == PlatformCALayer::LayerTypeTiledBackingLayer)
-        client().notifyFlushBeforeDisplayRefresh(this);
+        client().notifySubsequentFlushRequired(this);
 
     if (layerTypeChanged)
         client().didChangePlatformLayerForLayer(this);
@@ -1868,7 +1884,7 @@ bool GraphicsLayerCA::platformCALayerShowRepaintCounter(PlatformCALayer* platfor
     return isShowingRepaintCounter();
 }
 
-void GraphicsLayerCA::platformCALayerPaintContents(PlatformCALayer*, GraphicsContext& context, const FloatRect& clip, GraphicsLayerPaintBehavior layerPaintBehavior)
+void GraphicsLayerCA::platformCALayerPaintContents(PlatformCALayer*, GraphicsContext& context, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior> layerPaintBehavior)
 {
     m_hasEverPainted = true;
     if (m_displayList) {
@@ -2031,6 +2047,9 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
     if (m_uncommittedChanges & BlendModeChanged)
         updateBlendMode();
 #endif
+
+    if (m_uncommittedChanges & VideoGravityChanged)
+        updateVideoGravity();
 
     if (m_uncommittedChanges & ShapeChanged)
         updateShape();
@@ -2526,6 +2545,12 @@ void GraphicsLayerCA::updateBlendMode()
     }
 }
 #endif
+
+void GraphicsLayerCA::updateVideoGravity()
+{
+    if (m_contentsLayer)
+        m_contentsLayer->setVideoGravity(m_videoGravity);
+}
 
 void GraphicsLayerCA::updateShape()
 {
@@ -3518,6 +3543,9 @@ bool GraphicsLayerCA::createTransformAnimationsFromKeyframes(const KeyframeValue
 
     const auto& primitives = prefix.primitives();
     unsigned numberOfSharedPrimitives = valueList.size() > 1 ? primitives.size() : 0;
+
+    removeAnimation(animationName);
+
     for (unsigned animationIndex = 0; animationIndex < numberOfSharedPrimitives; ++animationIndex) {
         if (!appendToUncommittedAnimations(valueList, primitives[animationIndex], animation, animationName, boxSize, animationIndex, timeOffset, false /* isMatrixAnimation */, keyframesShouldUseAnimationWideTimingFunction))
             return false;
@@ -3581,6 +3609,8 @@ bool GraphicsLayerCA::createFilterAnimationsFromKeyframes(const KeyframeValueLis
             return false;
     }
 
+    removeAnimation(animationName);
+
     for (int animationIndex = 0; animationIndex < numAnimations; ++animationIndex) {
         if (!appendToUncommittedAnimations(valueList, operations.operations().at(animationIndex).get(), animation, animationName, animationIndex, timeOffset, keyframesShouldUseAnimationWideTimingFunction))
             return false;
@@ -3619,7 +3649,7 @@ void GraphicsLayerCA::setupAnimation(PlatformCAAnimation* propertyAnim, const An
     float repeatCount = anim->iterationCount();
     if (repeatCount == Animation::IterationCountInfinite)
         repeatCount = std::numeric_limits<float>::max();
-    else if (anim->direction() == Animation::AnimationDirectionAlternate || anim->direction() == Animation::AnimationDirectionAlternateReverse)
+    else if (anim->direction() == Animation::Direction::Alternate || anim->direction() == Animation::Direction::AlternateReverse)
         repeatCount /= 2;
 
     PlatformCAAnimation::FillModeType fillMode = PlatformCAAnimation::NoFillMode;
@@ -3640,7 +3670,7 @@ void GraphicsLayerCA::setupAnimation(PlatformCAAnimation* propertyAnim, const An
 
     propertyAnim->setDuration(duration);
     propertyAnim->setRepeatCount(repeatCount);
-    propertyAnim->setAutoreverses(anim->direction() == Animation::AnimationDirectionAlternate || anim->direction() == Animation::AnimationDirectionAlternateReverse);
+    propertyAnim->setAutoreverses(anim->direction() == Animation::Direction::Alternate || anim->direction() == Animation::Direction::AlternateReverse);
     propertyAnim->setRemovedOnCompletion(false);
     propertyAnim->setAdditive(additive);
     propertyAnim->setFillMode(fillMode);
@@ -4322,6 +4352,7 @@ const char* GraphicsLayerCA::layerChangeAsString(LayerChange layerChange)
 #endif
 #endif
     case LayerChange::ContentsScalingFiltersChanged: return "ContentsScalingFiltersChanged";
+    case LayerChange::VideoGravityChanged: return "VideoGravityChanged";
     }
     ASSERT_NOT_REACHED();
     return "";

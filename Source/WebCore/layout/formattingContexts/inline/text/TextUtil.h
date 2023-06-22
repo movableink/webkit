@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@ namespace WebCore {
 
 class RenderStyle;
 class TextRun;
+class WordBoundaryDetection;
 
 namespace Layout {
 
@@ -68,8 +69,9 @@ public:
     static WordBreakLeft breakWord(const InlineTextBox&, size_t start, size_t length, InlineLayoutUnit width, InlineLayoutUnit availableWidth, InlineLayoutUnit contentLogicalLeft, const FontCascade&);
     static WordBreakLeft breakWord(const InlineTextItem&, const FontCascade&, InlineLayoutUnit textWidth, InlineLayoutUnit availableWidth, InlineLayoutUnit contentLogicalLeft);
 
-    static unsigned findNextBreakablePosition(LazyLineBreakIterator&, unsigned startPosition, const RenderStyle&);
-    static LineBreakIteratorMode lineBreakIteratorMode(LineBreak);
+    static unsigned findNextBreakablePosition(CachedLineBreakIteratorFactory&, unsigned startPosition, const RenderStyle&);
+    static TextBreakIterator::LineMode::Behavior lineBreakIteratorMode(LineBreak);
+    static TextBreakIterator::ContentAnalysis contentAnalysis(const WordBoundaryDetection&);
 
     static bool shouldPreserveSpacesAndTabs(const Box&);
     static bool shouldPreserveNewline(const Box&);
@@ -94,5 +96,5 @@ public:
     static bool canUseSimplifiedTextMeasuring(StringView, const RenderStyle& style, const RenderStyle* firstLineStyle);
 };
 
-}
-}
+} // namespace Layout
+} // namespace WebCore

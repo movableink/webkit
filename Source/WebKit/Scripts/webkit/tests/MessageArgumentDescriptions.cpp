@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,6 +72,7 @@
 #include "RenderingUpdateID.h"
 #include "RetrieveRecordResponseBodyCallbackIdentifier.h"
 #include "SampleBufferDisplayLayerIdentifier.h"
+#include "ShapeDetectionIdentifier.h"
 #include "StorageAreaIdentifier.h"
 #include "StorageAreaImplIdentifier.h"
 #include "StorageAreaMapIdentifier.h"
@@ -135,6 +136,7 @@
 #include "TestWithStreamBatchedMessages.h" // NOLINT
 #include "TestWithStreamBufferMessages.h" // NOLINT
 #include "TestWithCVPixelBufferMessages.h" // NOLINT
+#include "TestWithStreamServerConnectionHandleMessages.h" // NOLINT
 
 namespace IPC {
 
@@ -321,6 +323,8 @@ std::optional<JSC::JSValue> jsValueForArguments(JSC::JSGlobalObject* globalObjec
     case MessageName::TestWithCVPixelBuffer_ReceiveCVPixelBuffer:
         return jsValueForDecodedMessage<MessageName::TestWithCVPixelBuffer_ReceiveCVPixelBuffer>(globalObject, decoder);
 #endif
+    case MessageName::TestWithStreamServerConnectionHandle_SendStreamServerConnection:
+        return jsValueForDecodedMessage<MessageName::TestWithStreamServerConnectionHandle_SendStreamServerConnection>(globalObject, decoder);
     default:
         break;
     }
@@ -487,6 +491,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
     static_assert(sizeof(uint64_t) == sizeof(WebKit::RenderingUpdateID));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::RetrieveRecordResponseBodyCallbackIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::SampleBufferDisplayLayerIdentifier));
+    static_assert(sizeof(uint64_t) == sizeof(WebKit::ShapeDetectionIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::StorageAreaIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::StorageAreaImplIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::StorageAreaMapIdentifier));
@@ -586,6 +591,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
         "WebKit::RenderingUpdateID"_s,
         "WebKit::RetrieveRecordResponseBodyCallbackIdentifier"_s,
         "WebKit::SampleBufferDisplayLayerIdentifier"_s,
+        "WebKit::ShapeDetectionIdentifier"_s,
         "WebKit::StorageAreaIdentifier"_s,
         "WebKit::StorageAreaImplIdentifier"_s,
         "WebKit::StorageAreaMapIdentifier"_s,
@@ -920,6 +926,10 @@ std::optional<Vector<ArgumentDescription>> messageArgumentDescriptions(MessageNa
     case MessageName::TestWithCVPixelBuffer_ReceiveCVPixelBuffer:
         return Vector<ArgumentDescription> { };
 #endif
+    case MessageName::TestWithStreamServerConnectionHandle_SendStreamServerConnection:
+        return Vector<ArgumentDescription> {
+            { "handle", "IPC::StreamServerConnection::Handle", nullptr, false },
+        };
     default:
         break;
     }

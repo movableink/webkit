@@ -3,7 +3,7 @@
 # Copyright (C) 2006 Anders Carlsson <andersca@mac.com>
 # Copyright (C) 2006, 2007 Samuel Weinig <sam@webkit.org>
 # Copyright (C) 2006 Alexey Proskuryakov <ap@webkit.org>
-# Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+# Copyright (C) 2006-2023 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Cameron McCormack <cam@mcc.id.au>
 # Copyright (C) Research In Motion Limited 2010. All rights reserved.
 # Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
@@ -50,7 +50,8 @@ my @implContentHeader = ();
 my @implContent = ();
 my %implIncludes = ();
 my @depsContent = ();
-my $numCachedAttributes = 0;
+my $hasNonTrivialFinishCreation = 0;
+my $hasNonDefaultFinishCreation = 0;
 
 my $beginAppleCopyrightForHeaderFiles = <<END;
 // ------- Begin Apple Copyright -------
@@ -175,8 +176,8 @@ sub GenerateInterface
         $object->GenerateCallbackInterfaceHeader($interface, $enumerations, $dictionaries);
         $object->GenerateCallbackInterfaceImplementation($interface, $enumerations, $dictionaries);
     } else {
-        $object->GenerateHeader($interface, $enumerations, $dictionaries);
         $object->GenerateImplementation($interface, $enumerations, $dictionaries);
+        $object->GenerateHeader($interface, $enumerations, $dictionaries);
     }
 }
 
@@ -786,7 +787,7 @@ sub ShouldUseOrdinaryObjectPrototype
     return $interface->isNamespaceObject() || $interface->type->name eq "ShadowRealmGlobalScope";
 }
 
-sub ShouldCreateWithJSProxy
+sub ShouldCreateWithJSGlobalProxy
 {
     my ($codeGenerator, $interface) = @_;
 
@@ -1254,7 +1255,11 @@ sub GeneratePut
     }
 
     push(@$outputArray, "    throwScope.assertNoException();\n");
-    push(@$outputArray, "    RELEASE_AND_RETURN(throwScope, JSObject::put(thisObject, lexicalGlobalObject, propertyName, value, putPropertySlot));\n");
+    if (InstanceOverridesDefineOwnProperty($interface)) {
+        push(@$outputArray, "    RELEASE_AND_RETURN(throwScope, ordinarySetSlow(lexicalGlobalObject, thisObject, propertyName, value, putPropertySlot.thisValue(),  putPropertySlot.isStrictMode()));\n");
+    } else {
+        push(@$outputArray, "    RELEASE_AND_RETURN(throwScope, JSObject::put(thisObject, lexicalGlobalObject, propertyName, value, putPropertySlot));\n");
+    }
     push(@$outputArray, "}\n\n");
 }
 
@@ -1332,7 +1337,13 @@ sub GeneratePutByIndex
 
     if (!$ellidesCallsToBase) {
         push(@$outputArray, "    throwScope.assertNoException();\n");
-        push(@$outputArray, "    RELEASE_AND_RETURN(throwScope, JSObject::putByIndex(cell, lexicalGlobalObject, index, value, shouldThrow));\n");
+        if (InstanceOverridesDefineOwnProperty($interface)) {
+            push(@$outputArray, "    auto propertyName = Identifier::from(vm, index);\n") if !$namedSetterOperation;
+            push(@$outputArray, "    PutPropertySlot putPropertySlot(thisObject, shouldThrow);\n");
+            push(@$outputArray, "    RELEASE_AND_RETURN(throwScope, ordinarySetSlow(lexicalGlobalObject, thisObject, propertyName, value, putPropertySlot.thisValue(), shouldThrow));\n");
+        } else {
+            push(@$outputArray, "    RELEASE_AND_RETURN(throwScope, JSObject::putByIndex(cell, lexicalGlobalObject, index, value, shouldThrow));\n");
+        }
     }
     
     push(@$outputArray, "}\n\n");
@@ -1371,9 +1382,11 @@ sub GenerateDefineOwnProperty
     return if $interface->extendedAttributes->{CustomDefineOwnProperty};
     
     my $namedSetterOperation = GetNamedSetterOperation($interface);
+    my $namedGetterOperation = GetNamedGetterOperation($interface);
     my $indexedSetterOperation = GetIndexedSetterOperation($interface);
-    
-    return if !$namedSetterOperation && !$indexedSetterOperation;
+    my $indexedGetterOperation = GetIndexedGetterOperation($interface);
+
+    return if !$namedSetterOperation && !$namedGetterOperation && !$indexedSetterOperation && !$indexedGetterOperation;
     
     push(@$outputArray, "bool ${className}::defineOwnProperty(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, const PropertyDescriptor& propertyDescriptor, bool shouldThrow)\n");
     push(@$outputArray, "{\n");
@@ -1392,20 +1405,20 @@ sub GenerateDefineOwnProperty
     }
     
     # 1. If O supports indexed properties and P is an array index property name, then:
-    if (GetIndexedGetterOperation($interface)) {
+    if ($indexedGetterOperation) {
         # NOTE: The numbers are out of order because there is no reason doing steps 1, 3, and 4 if there
         # is no indexed property setter.
 
         if (!$indexedSetterOperation) {
             # 2. If O does not implement an interface with an indexed property setter, then return false.
             push(@$outputArray, "    if (parseIndex(propertyName))\n");
-            push(@$outputArray, "        return false;\n\n");
+            push(@$outputArray, "        return typeError(lexicalGlobalObject, throwScope, shouldThrow, \"Cannot set indexed properties on this object\"_s);\n\n");
         } else {
             push(@$outputArray, "    if (auto index = parseIndex(propertyName)) {\n");
 
             # 1. If the result of calling IsDataDescriptor(Desc) is false, then return false.
             push(@$outputArray, "        if (!propertyDescriptor.isDataDescriptor())\n");
-            push(@$outputArray, "            return false;\n");
+            push(@$outputArray, "            return typeError(lexicalGlobalObject, throwScope, shouldThrow, \"Cannot set indexed properties on this object\"_s);\n");
             
             # 3. Invoke the indexed property setter with P and Desc.[[Value]].
             GenerateInvokeIndexedPropertySetter($outputArray, "        ", $interface, $indexedSetterOperation, "index.value()", "propertyDescriptor.value()");
@@ -1418,7 +1431,7 @@ sub GenerateDefineOwnProperty
     
     # 2. If O supports named properties, O does not implement an interface with the [Global]
     #    extended attribute and P is not an unforgeable property name of O, then:
-    if (GetNamedGetterOperation($interface) && !IsGlobalInterface($interface)) {
+    if ($namedGetterOperation && !IsGlobalInterface($interface)) {
         # FIMXE: We need a more comprehensive story for Symbols.
         push(@$outputArray, "    if (!propertyName.isSymbol()) {\n");
         
@@ -1450,13 +1463,13 @@ sub GenerateDefineOwnProperty
         if (!$namedSetterOperation) {
             # 2.1. If creating is false and O does not implement an interface with a named property setter, then return false.
             push(@$outputArray, $additionalIndent . "        if (thisObject->wrapped().isSupportedPropertyName(propertyNameToString(propertyName)))\n");
-            push(@$outputArray, $additionalIndent . "            return false;\n");
+            push(@$outputArray, $additionalIndent . "            return typeError(lexicalGlobalObject, throwScope, shouldThrow, \"Cannot set named properties on this object\"_s);\n");
         } else {
             # 2.2. If O implements an interface with a named property setter, then:
             
             # 2.2.1. If the result of calling IsDataDescriptor(Desc) is false, then return false.
             push(@$outputArray, $additionalIndent . "        if (!propertyDescriptor.isDataDescriptor())\n");
-            push(@$outputArray, $additionalIndent . "            return false;\n");
+            push(@$outputArray, $additionalIndent . "            return typeError(lexicalGlobalObject, throwScope, shouldThrow, \"Cannot set named properties on this object\"_s);\n");
             
             # 2.2.2. Invoke the named property setter with P and Desc.[[Value]].
             GenerateInvokeNamedPropertySetter($outputArray, $additionalIndent . "        ", $interface, $namedSetterOperation, "propertyDescriptor.value()");
@@ -1477,13 +1490,7 @@ sub GenerateDefineOwnProperty
     }
     
     push(@$outputArray, "    PropertyDescriptor newPropertyDescriptor = propertyDescriptor;\n");
-        
-    # 3. If O does not implement an interface with the [Global] extended attribute,
-    #    then set Desc.[[Configurable]] to true.
-    if (!IsGlobalInterface($interface)) {
-        push(@$outputArray, "    newPropertyDescriptor.setConfigurable(true);\n");
-    }
-    
+       
     # 4. Return OrdinaryDefineOwnProperty(O, P, Desc).
     push(@$outputArray, "    throwScope.release();\n");
     push(@$outputArray, "    return JSObject::defineOwnProperty(object, lexicalGlobalObject, propertyName, newPropertyDescriptor, shouldThrow);\n");
@@ -1506,7 +1513,7 @@ sub GenerateDeletePropertyCommon
 
     AddToImplIncludes("JSDOMAbstractOperations.h", $conditional);
     my $overrideBuiltin = $codeGenerator->InheritsExtendedAttribute($interface, "LegacyOverrideBuiltIns") ? "LegacyOverrideBuiltIns::Yes" : "LegacyOverrideBuiltIns::No";
-    push(@$outputArray, "    if (isVisibleNamedProperty<${overrideBuiltin}>(*lexicalGlobalObject, thisObject, propertyName)) {\n");
+    push(@$outputArray, "        if (isVisibleNamedProperty<${overrideBuiltin}>(*lexicalGlobalObject, thisObject, propertyName)) {\n");
 
     GenerateCustomElementReactionsStackIfNeeded($outputArray, $operation, "*lexicalGlobalObject");
 
@@ -1530,24 +1537,23 @@ sub GenerateDeletePropertyCommon
     # NOTE: We require the implementation function of named deleters without an identifier to
     #       return either bool or ExceptionOr<bool>.
     if (!$operation->name) {
-        push(@$outputArray, "        using ReturnType = decltype($functionCall);\n");
-        push(@$outputArray, "        static_assert(std::is_same_v<ReturnType, ExceptionOr<bool>> || std::is_same_v<ReturnType, bool>, \"The implementation of named deleters without an identifier must return either bool or ExceptionOr<bool>.\");\n");
+        push(@$outputArray, "            using ReturnType = decltype($functionCall);\n");
+        push(@$outputArray, "            static_assert(std::is_same_v<ReturnType, ExceptionOr<bool>> || std::is_same_v<ReturnType, bool>, \"The implementation of named deleters without an identifier must return either bool or ExceptionOr<bool>.\");\n");
     }
 
-    push(@$outputArray, "        return performLegacyPlatformObjectDeleteOperation(*lexicalGlobalObject, [&] { return $functionCall; });\n");
-    push(@$outputArray, "    }\n");
+    push(@$outputArray, "            return performLegacyPlatformObjectDeleteOperation(*lexicalGlobalObject, [&] { return $functionCall; });\n");
+    push(@$outputArray, "        }\n");
 }
 
 sub GenerateDeleteProperty
 {
-    my ($outputArray, $interface, $className, $operation, $conditional) = @_;
+    my ($outputArray, $interface, $className, $namedDeleterOperation, $conditional) = @_;
 
     # This implements https://webidl.spec.whatwg.org/#legacy-platform-object-delete for the
     # for the deleteProperty override hook.
 
     push(@$outputArray, "bool ${className}::deleteProperty(JSCell* cell, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, DeletePropertySlot& slot)\n");
     push(@$outputArray, "{\n");
-
     push(@$outputArray, "    auto& thisObject = *jsCast<${className}*>(cell);\n");
     push(@$outputArray, "    auto& impl = thisObject.wrapped();\n");
 
@@ -1561,7 +1567,17 @@ sub GenerateDeleteProperty
     }
 
     # GenerateDeletePropertyCommon implements step 2.
-    GenerateDeletePropertyCommon($outputArray, $interface, $className, $operation, $conditional);
+    if (GetNamedGetterOperation($interface)) {
+        push(@$outputArray, "    if (!propertyName.isSymbol() && impl.isSupportedPropertyName(propertyNameToString(propertyName))) {\n");
+        if ($namedDeleterOperation) {
+            GenerateDeletePropertyCommon($outputArray, $interface, $className, $namedDeleterOperation, $conditional);
+        } else {
+            push(@$outputArray, "        PropertySlot slotForGet { &thisObject, PropertySlot::InternalMethodType::VMInquiry, &lexicalGlobalObject->vm() };\n");
+            push(@$outputArray, "        if (!JSObject::getOwnPropertySlot(&thisObject, lexicalGlobalObject, propertyName, slotForGet))\n");
+            push(@$outputArray, "            return false;\n");
+        }
+        push(@$outputArray, "    }\n");
+    }
 
     # FIXME: Instead of calling down JSObject::deleteProperty, perhaps we should implement
     # the remained of the algorithm ourselves.
@@ -1571,14 +1587,14 @@ sub GenerateDeleteProperty
 
 sub GenerateDeletePropertyByIndex
 {
-    my ($outputArray, $interface, $className, $operation, $conditional) = @_;
+    my ($outputArray, $interface, $className, $namedDeleterOperation, $conditional) = @_;
 
     # This implements https://webidl.spec.whatwg.org/#legacy-platform-object-delete for the
     # for the deletePropertyByIndex override hook.
 
     push(@$outputArray, "bool ${className}::deletePropertyByIndex(JSCell* cell, JSGlobalObject* lexicalGlobalObject, unsigned index)\n");
     push(@$outputArray, "{\n");
-
+    push(@$outputArray, "    UNUSED_PARAM(lexicalGlobalObject);\n");
     push(@$outputArray, "    auto& thisObject = *jsCast<${className}*>(cell);\n");
     push(@$outputArray, "    auto& impl = thisObject.wrapped();\n");
 
@@ -1595,12 +1611,19 @@ sub GenerateDeletePropertyByIndex
     } else {
         push(@$outputArray, "    VM& vm = JSC::getVM(lexicalGlobalObject);\n");
         push(@$outputArray, "    auto propertyName = Identifier::from(vm, index);\n");
-
-        # GenerateDeletePropertyCommon implements step 2.
-        GenerateDeletePropertyCommon($outputArray, $interface, $className, $operation, $conditional);
+        push(@$outputArray, "    if (impl.isSupportedPropertyName(propertyNameToString(propertyName))) {\n");
+        if ($namedDeleterOperation) {
+            # GenerateDeletePropertyCommon implements step 2.
+            GenerateDeletePropertyCommon($outputArray, $interface, $className, $namedDeleterOperation, $conditional);
+        } else {
+            push(@$outputArray, "        PropertySlot slotForGet { &thisObject, PropertySlot::InternalMethodType::VMInquiry, &lexicalGlobalObject->vm() };\n");
+            push(@$outputArray, "        if (!JSObject::getOwnPropertySlot(&thisObject, lexicalGlobalObject, propertyName, slotForGet))\n");
+            push(@$outputArray, "            return false;\n");
+        }
+        push(@$outputArray, "    }\n");
 
         # FIXME: Instead of calling down JSObject::deletePropertyByIndex, perhaps we should implement
-        # the remaineder of the algoritm (steps 3 and 4) ourselves.
+        # the remainder of the algorithm (steps 3 and 4) ourselves.
         
         # 3. If O has an own property with name P, then:
         #    1. If the property is not configurable, then return false.
@@ -1614,7 +1637,7 @@ sub GenerateDeletePropertyByIndex
 }
 
 
-sub GenerateNamedDeleterDefinition
+sub GenerateDeletePropertyDefinition
 {
     my ($outputArray, $interface, $className) = @_;
     
@@ -1625,10 +1648,7 @@ sub GenerateNamedDeleterDefinition
     # This implements https://webidl.spec.whatwg.org/#legacy-platform-object-delete using
     # the deleteProperty and deletePropertyByIndex override hooks.
 
-    assert("Named property deleters are not allowed without a corresponding named property getter.") if !GetNamedGetterOperation($interface);
-    assert("Named property deleters are not allowed on global object interfaces.") if IsGlobalInterface($interface);
-
-    my $conditional = $namedDeleterOperation->extendedAttributes->{Conditional};
+    my $conditional = $namedDeleterOperation ? $namedDeleterOperation->extendedAttributes->{Conditional} : undef;
     if ($conditional) {
         my $conditionalString = $codeGenerator->GenerateConditionalStringFromAttributeValue($conditional);
         push(@$outputArray, "#if ${conditionalString}\n\n");;
@@ -2198,7 +2218,9 @@ sub InstanceOverridesPut
     return $interface->extendedAttributes->{CustomPut}
         || $interface->extendedAttributes->{Plugin}
         || GetIndexedSetterOperation($interface)
-        || GetNamedSetterOperation($interface);
+        || GetIndexedGetterOperation($interface)
+        || GetNamedSetterOperation($interface)
+        || GetNamedGetterOperation($interface);
 }
 
 sub InstanceOverridesDefineOwnProperty
@@ -2206,14 +2228,18 @@ sub InstanceOverridesDefineOwnProperty
     my $interface = shift;
     return $interface->extendedAttributes->{CustomDefineOwnProperty}
         || GetIndexedSetterOperation($interface)
-        || GetNamedSetterOperation($interface);
+        || GetIndexedGetterOperation($interface)
+        || GetNamedSetterOperation($interface)
+        || GetNamedGetterOperation($interface);
 }
 
 sub InstanceOverridesDeleteProperty
 {
     my $interface = shift;
     return $interface->extendedAttributes->{CustomDeleteProperty}
-        || GetNamedDeleterOperation($interface);
+        || GetNamedDeleterOperation($interface)
+        || GetNamedGetterOperation($interface)
+        || GetIndexedGetterOperation($interface);
 }
 
 sub PrototypeHasStaticPropertyTable
@@ -2910,7 +2936,8 @@ sub GenerateHeader
         }
     }
 
-    push(@headerContent, "class JSWindowProxy;\n\n") if $interfaceName eq "LocalDOMWindow" or $interfaceName eq "RemoteDOMWindow";
+#    push(@headerContent, "class JSWindowProxy;\n\n") if $interfaceName eq "LocalDOMWindow" or $interfaceName eq "RemoteDOMWindow";
+    $headerIncludes{"JSWindowProxy.h"} = 1 if $interfaceName eq "LocalDOMWindow" or $interfaceName eq "RemoteDOMWindow";
 
     my $exportMacro = GetExportMacroForJSClass($interface);
 
@@ -2933,8 +2960,8 @@ sub GenerateHeader
         push(@headerContent, "        ptr->finishCreation(vm, proxy);\n");
         push(@headerContent, "        return ptr;\n");
         push(@headerContent, "    }\n\n");
-    } elsif (ShouldCreateWithJSProxy($codeGenerator, $interface)) {
-        push(@headerContent, "    static $className* create(JSC::VM& vm, JSC::Structure* structure, Ref<$implType>&& impl, JSC::JSProxy* proxy)\n");
+    } elsif (ShouldCreateWithJSGlobalProxy($codeGenerator, $interface)) {
+        push(@headerContent, "    static $className* create(JSC::VM& vm, JSC::Structure* structure, Ref<$implType>&& impl, JSC::JSGlobalProxy* proxy)\n");
         push(@headerContent, "    {\n");
         push(@headerContent, "        $className* ptr = new (NotNull, JSC::allocateCell<$className>(vm)) ${className}(vm, structure, WTFMove(impl));\n");
         push(@headerContent, "        ptr->finishCreation(vm, proxy);\n");
@@ -3117,7 +3144,6 @@ sub GenerateHeader
                 my $conditionalString = $codeGenerator->GenerateConditionalString($attribute);
                 push(@headerContent, "#if ${conditionalString}\n") if $conditionalString;
                 push(@headerContent, "    mutable JSC::WriteBarrier<JSC::Unknown> m_" . $attribute->name . ";\n");
-                $numCachedAttributes++;
                 push(@headerContent, "#endif\n") if $conditionalString;
             }
             $hasDOMJITAttributes = 1 if $attribute->extendedAttributes->{DOMJIT};
@@ -3244,7 +3270,7 @@ sub GenerateHeader
     # Constructor
     if ($interfaceName eq "LocalDOMWindow" || $interfaceName eq "RemoteDOMWindow") {
         push(@headerContent, "    $className(JSC::VM&, JSC::Structure*, Ref<$implType>&&, JSWindowProxy*);\n");
-    } elsif (ShouldCreateWithJSProxy($codeGenerator, $interface)) {
+    } elsif (ShouldCreateWithJSGlobalProxy($codeGenerator, $interface)) {
         push(@headerContent, "    $className(JSC::VM&, JSC::Structure*, Ref<$implType>&&);\n");
     } elsif (!NeedsImplementationClass($interface)) {
         push(@headerContent, "    $className(JSC::Structure*, JSDOMGlobalObject&);\n\n");
@@ -3252,12 +3278,18 @@ sub GenerateHeader
         push(@headerContent, "    $className(JSC::Structure*, JSDOMGlobalObject&, Ref<$implType>&&);\n\n");
     }
 
-    if ($interfaceName eq "LocalDOMWindow" || $interfaceName eq "RemoteDOMWindow") {
-        push(@headerContent, "    void finishCreation(JSC::VM&, JSWindowProxy*);\n");
-    } elsif (ShouldCreateWithJSProxy($codeGenerator, $interface)) {
-        push(@headerContent, "    void finishCreation(JSC::VM&, JSC::JSProxy*);\n");
+    if ($hasNonTrivialFinishCreation || $hasNonDefaultFinishCreation) {
+        push(@headerContent, "#if ASSERT_ENABLED\n") if !$hasNonTrivialFinishCreation;
+        if ($interfaceName eq "LocalDOMWindow" || $interfaceName eq "RemoteDOMWindow") {
+            push(@headerContent, "    void finishCreation(JSC::VM&, JSWindowProxy*);\n");
+        } elsif (ShouldCreateWithJSGlobalProxy($codeGenerator, $interface)) {
+            push(@headerContent, "    void finishCreation(JSC::VM&, JSC::JSGlobalProxy*);\n");
+        } else {
+            push(@headerContent, "    void finishCreation(JSC::VM&);\n");
+        }
+        push(@headerContent, "#endif\n") if !$hasNonTrivialFinishCreation;
     } else {
-        push(@headerContent, "    void finishCreation(JSC::VM&);\n");
+        push(@headerContent, "    DECLARE_DEFAULT_FINISH_CREATION;\n");
     }
 
     push(@headerContent, "};\n\n");
@@ -4733,7 +4765,7 @@ sub GenerateImplementation
         push(@implContent, "    : $parentClassName(vm, structure, WTFMove(impl), proxy)\n");
         push(@implContent, "{\n");
         push(@implContent, "}\n\n");
-      } elsif (ShouldCreateWithJSProxy($codeGenerator, $interface)) {
+      } elsif (ShouldCreateWithJSGlobalProxy($codeGenerator, $interface)) {
         AddIncludesForImplementationTypeInImpl($interfaceName);
         push(@implContent, "${className}::$className(VM& vm, Structure* structure, Ref<$implType>&& impl)\n");
         push(@implContent, "    : $parentClassName(vm, structure, WTFMove(impl))\n");
@@ -4750,33 +4782,40 @@ sub GenerateImplementation
     }
 
     # Finish Creation
+    my @finishCreation = ();
+    $hasNonTrivialFinishCreation = 0;
+    $hasNonDefaultFinishCreation = 0;
+
     if ($interfaceName eq "LocalDOMWindow" || $interfaceName eq "RemoteDOMWindow") {
-        push(@implContent, "void ${className}::finishCreation(VM& vm, JSWindowProxy* proxy)\n");
-        push(@implContent, "{\n");
-        push(@implContent, "    Base::finishCreation(vm, proxy);\n\n");
-    } elsif (ShouldCreateWithJSProxy($codeGenerator, $interface)) {
-        push(@implContent, "void ${className}::finishCreation(VM& vm, JSProxy* proxy)\n");
-        push(@implContent, "{\n");
-        push(@implContent, "    Base::finishCreation(vm, proxy);\n\n");
+        push(@finishCreation, "void ${className}::finishCreation(VM& vm, JSWindowProxy* proxy)\n");
+        push(@finishCreation, "{\n");
+        push(@finishCreation, "    Base::finishCreation(vm, proxy);\n\n");
+        $hasNonDefaultFinishCreation = 1;
+    } elsif (ShouldCreateWithJSGlobalProxy($codeGenerator, $interface)) {
+        push(@finishCreation, "void ${className}::finishCreation(VM& vm, JSGlobalProxy* proxy)\n");
+        push(@finishCreation, "{\n");
+        push(@finishCreation, "    Base::finishCreation(vm, proxy);\n\n");
+        $hasNonDefaultFinishCreation = 1;
     } else {
-        push(@implContent, "void ${className}::finishCreation(VM& vm)\n");
-        push(@implContent, "{\n");
-        push(@implContent, "    Base::finishCreation(vm);\n");
-        push(@implContent, "    ASSERT(inherits(info()));\n\n");
+        push(@finishCreation, "void ${className}::finishCreation(VM& vm)\n");
+        push(@finishCreation, "{\n");
+        push(@finishCreation, "    Base::finishCreation(vm);\n");
+        push(@finishCreation, "    ASSERT(inherits(info()));\n\n");
     }
 
     if (!$codeGenerator->InheritsExtendedAttribute($interface, "JSBuiltin")) {
         AddToImplIncludes("ActiveDOMObject.h");
         if ($codeGenerator->InheritsExtendedAttribute($interface, "ActiveDOMObject")) {
-            push(@implContent, "    static_assert(std::is_base_of<ActiveDOMObject, ${implType}>::value, \"Interface is marked as [ActiveDOMObject] but implementation class does not subclass ActiveDOMObject.\");\n\n");
+            push(@implContent, "static_assert(std::is_base_of<ActiveDOMObject, ${implType}>::value, \"Interface is marked as [ActiveDOMObject] but implementation class does not subclass ActiveDOMObject.\");\n\n");
         } elsif (!$codeGenerator->InheritsExtendedAttribute($interface, "CustomIsReachable")) {
-            push(@implContent, "    static_assert(!std::is_base_of<ActiveDOMObject, ${implType}>::value, \"Interface is not marked as [ActiveDOMObject] even though implementation class subclasses ActiveDOMObject.\");\n\n");
+            push(@implContent, "static_assert(!std::is_base_of<ActiveDOMObject, ${implType}>::value, \"Interface is not marked as [ActiveDOMObject] even though implementation class subclasses ActiveDOMObject.\");\n\n");
         }
     }
 
     if ($interfaceName eq "Location") {
-        push(@implContent, "    putDirect(vm, vm.propertyNames->valueOf, globalObject()->objectProtoValueOfFunction(), JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::DontEnum);\n");
-        push(@implContent, "    putDirect(vm, vm.propertyNames->toPrimitiveSymbol, jsUndefined(), JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::DontEnum);\n");
+        push(@finishCreation, "    putDirect(vm, vm.propertyNames->valueOf, globalObject()->objectProtoValueOfFunction(), JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::DontEnum);\n");
+        push(@finishCreation, "    putDirect(vm, vm.propertyNames->toPrimitiveSymbol, jsUndefined(), JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::DontEnum);\n");
+        $hasNonTrivialFinishCreation = 1;
     }
 
     # Support for RuntimeEnabled attributes on instances.
@@ -4793,21 +4832,22 @@ sub GenerateImplementation
         my $isPrivateAndPublic = $attribute->extendedAttributes->{PublicIdentifier} && $attribute->extendedAttributes->{PrivateIdentifier};
 
         my $conditionalString = $codeGenerator->GenerateConditionalString($attribute);
-        push(@implContent, "#if ${conditionalString}\n") if $conditionalString;
-        push(@implContent, "    if (${runtimeEnableConditionalString})");
-        push(@implContent, " {") if $isPrivateAndPublic;
-        push(@implContent, "\n");
+        push(@finishCreation, "#if ${conditionalString}\n") if $conditionalString;
+        push(@finishCreation, "    if (${runtimeEnableConditionalString})");
+        push(@finishCreation, " {") if $isPrivateAndPublic;
+        push(@finishCreation, "\n");
         assert("CustomGetterSetter is not allowed for DOMAttribute. DOMAttributeGetterSetter must be used.") if IsAcceleratedDOMAttribute($interface, $attribute);
 
         if ($attribute->extendedAttributes->{PublicIdentifier} || !$attribute->extendedAttributes->{PrivateIdentifier}) {
-            push(@implContent, "        putDirectCustomAccessor(vm, builtinNames(vm)." . $attributeName . "PublicName(), CustomGetterSetter::create(vm, $getter, $setter), attributesForStructure($jscAttributes));\n");
+            push(@finishCreation, "        putDirectCustomAccessor(vm, builtinNames(vm)." . $attributeName . "PublicName(), CustomGetterSetter::create(vm, $getter, $setter), attributesForStructure($jscAttributes));\n");
         }
         if ($attribute->extendedAttributes->{PrivateIdentifier}) {
-            push(@implContent, "        putDirectCustomAccessor(vm, builtinNames(vm)." . $attributeName . "PrivateName(), CustomGetterSetter::create(vm, $getter, $setter), attributesForStructure($jscAttributes));\n");
+            push(@finishCreation, "        putDirectCustomAccessor(vm, builtinNames(vm)." . $attributeName . "PrivateName(), CustomGetterSetter::create(vm, $getter, $setter), attributesForStructure($jscAttributes));\n");
         }
 
-        push(@implContent, "    }\n") if $isPrivateAndPublic;
-        push(@implContent, "#endif\n") if $conditionalString;
+        push(@finishCreation, "    }\n") if $isPrivateAndPublic;
+        push(@finishCreation, "#endif\n") if $conditionalString;
+        $hasNonTrivialFinishCreation = 1;
     }
 
     # Support PrivateIdentifier attributes on instances.
@@ -4821,10 +4861,11 @@ sub GenerateImplementation
         my $attributeName = $attribute->name;
         my $getter = GetAttributeGetterName($interface, $className, $attribute);
 
-        push(@implContent, "#if ${conditionalString}\n") if $conditionalString;
+        push(@finishCreation, "#if ${conditionalString}\n") if $conditionalString;
         assert("CustomGetterSetter is not allowed for DOMAttribute. DOMAttributeGetterSetter must be used.") if IsAcceleratedDOMAttribute($interface, $attribute);
-        push(@implContent, "    putDirectCustomAccessor(vm, builtinNames(vm)." . $attributeName . "PrivateName(), CustomGetterSetter::create(vm, $getter, nullptr), attributesForStructure(JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly));\n");
-        push(@implContent, "#endif\n") if $conditionalString;
+        push(@finishCreation, "    putDirectCustomAccessor(vm, builtinNames(vm)." . $attributeName . "PrivateName(), CustomGetterSetter::create(vm, $getter, nullptr), attributesForStructure(JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly));\n");
+        push(@finishCreation, "#endif\n") if $conditionalString;
+        $hasNonTrivialFinishCreation = 1;
     }
 
     # Support for RuntimeEnabled operations on instances.
@@ -4841,18 +4882,29 @@ sub GenerateImplementation
         my $jsAttributes = StringifyJSCAttributes(ComputeFunctionSpecial($interface, $operation));
 
         my $conditionalString = $codeGenerator->GenerateConditionalString($operation);
-        push(@implContent, "#if ${conditionalString}\n") if $conditionalString;
-        push(@implContent, "    if (${runtimeEnableConditionalString})\n");
+        push(@finishCreation, "#if ${conditionalString}\n") if $conditionalString;
+        push(@finishCreation, "    if (${runtimeEnableConditionalString})\n");
         my $propertyName = "builtinNames(vm)." . $functionName . ($operation->extendedAttributes->{PrivateIdentifier} ? "PrivateName()" : "PublicName()");
         if (IsJSBuiltin($interface, $operation)) {
-            push(@implContent, "        putDirectBuiltinFunction(vm, this, $propertyName, $implementationFunction(vm), attributesForStructure($jsAttributes));\n");
+            push(@finishCreation, "        putDirectBuiltinFunction(vm, this, $propertyName, $implementationFunction(vm), attributesForStructure($jsAttributes));\n");
         } else {
-            push(@implContent, "        putDirectNativeFunction(vm, this, $propertyName, $functionLength, $implementationFunction, ImplementationVisibility::Public, NoIntrinsic, attributesForStructure($jsAttributes));\n");
+            push(@finishCreation, "        putDirectNativeFunction(vm, this, $propertyName, $functionLength, $implementationFunction, ImplementationVisibility::Public, NoIntrinsic, attributesForStructure($jsAttributes));\n");
         }
-        push(@implContent, "#endif\n") if $conditionalString;
+        push(@finishCreation, "#endif\n") if $conditionalString;
+        $hasNonTrivialFinishCreation = 1;
     }
-    push(@implContent, "    vm.heap.reportExtraMemoryAllocated(wrapped().memoryCost());\n") if $interface->extendedAttributes->{ReportExtraMemoryCost};
-    push(@implContent, "}\n\n");
+    if ($interface->extendedAttributes->{ReportExtraMemoryCost}) {
+        push(@finishCreation, "    vm.heap.reportExtraMemoryAllocated(wrapped().memoryCost());\n");
+        $hasNonTrivialFinishCreation = 1;
+    }
+    push(@finishCreation, "}\n");
+
+    if ($hasNonTrivialFinishCreation || $hasNonDefaultFinishCreation) {
+        push(@implContent, "#if ASSERT_ENABLED\n") if !$hasNonTrivialFinishCreation;
+        push(@implContent, @finishCreation);
+        push(@implContent, "#endif\n") if !$hasNonTrivialFinishCreation;
+        push(@implContent, "\n");
+    }
 
     unless (ShouldUseGlobalObjectPrototype($interface) || ShouldUseOrdinaryObjectPrototype($interface)) {
         push(@implContent, "JSObject* ${className}::createPrototype(VM& vm, JSDOMGlobalObject& globalObject)\n");
@@ -4918,7 +4970,7 @@ sub GenerateImplementation
     }
 
     if (InstanceOverridesDeleteProperty($interface)) {
-        GenerateNamedDeleterDefinition(\@implContent, $interface, $className);
+        GenerateDeletePropertyDefinition(\@implContent, $interface, $className);
     }
     
     if (InstanceOverridesGetCallData($interface)) {
@@ -4996,7 +5048,8 @@ sub GenerateImplementation
                 push(@implContent, "#endif\n");
             }
         }
-        if ($numCachedAttributes > 0) {
+        my $numAttributes = @{$interface->attributes};
+        if ($numAttributes > 0) {
             foreach my $attribute (@{$interface->attributes}) {
                 if ($attribute->extendedAttributes->{CachedAttribute}) {
                     my $conditionalString = $codeGenerator->GenerateConditionalString($attribute);
@@ -5278,7 +5331,7 @@ sub GenerateForEachEventHandlerContentAttribute
     push(@$outputArray, "{\n");
     push(@$outputArray, "    static constexpr std::pair<decltype(HTMLNames::altAttr)&, const AtomString EventNames::*> table[] = {\n");
     foreach my $attribute (@{$interface->attributes}) {
-        if ($attribute->type->name eq "EventHandler" && (!defined $eventHandlerExtendedAttributeName || $attribute->extendedAttributes->{$eventHandlerExtendedAttributeName})) {
+        if ($codeGenerator->IsEventHandlerType($attribute->type) && (!defined $eventHandlerExtendedAttributeName || $attribute->extendedAttributes->{$eventHandlerExtendedAttributeName})) {
             my $attributeName = $attribute->name;
             my $eventName = EventHandlerAttributeShortEventName($attribute);
             push(@$outputArray, "        { HTMLNames::${attributeName}Attr, &EventNames::${eventName} },\n");
@@ -5302,7 +5355,7 @@ sub GenerateAttributeGetterBodyDefinition
 
     my $needSecurityCheck = $interface->extendedAttributes->{CheckSecurity} && !$attribute->extendedAttributes->{DoNotCheckSecurity} && !$attribute->extendedAttributes->{DoNotCheckSecurityOnGetter};
     my $hasCustomGetter = HasCustomGetter($attribute);
-    my $isEventHandler = $attribute->type->name eq "EventHandler";
+    my $isEventHandler = $codeGenerator->IsEventHandlerType($attribute->type);
     my $isConstructor = $codeGenerator->IsConstructorType($attribute->type);
 
     my $needThrowScope = $needSecurityCheck || (!$hasCustomGetter && !$isEventHandler && !$isConstructor);
@@ -5477,7 +5530,7 @@ sub GenerateAttributeSetterBodyDefinition
 
     my $needSecurityCheck = $interface->extendedAttributes->{CheckSecurity} && !$attribute->extendedAttributes->{DoNotCheckSecurity} && !$attribute->extendedAttributes->{DoNotCheckSecurityOnSetter};
     my $hasCustomSetter = HasCustomSetter($attribute);
-    my $isEventHandler = $attribute->type->name eq "EventHandler";
+    my $isEventHandler = $codeGenerator->IsEventHandlerType($attribute->type);
     my $isReplaceable = $attribute->extendedAttributes->{Replaceable};
     my $isLegacyLenientSetter = $attribute->extendedAttributes->{LegacyLenientSetter};
 
@@ -5510,17 +5563,12 @@ sub GenerateAttributeSetterBodyDefinition
         push(@$outputArray, "    thisObject.set${implSetterFunctionName}(lexicalGlobalObject, value);\n");
         push(@$outputArray, "    return true;\n");
     } elsif ($isEventHandler) {
-        AddToImplIncludes("JSEventListener.h", $conditional);
+        my $setter = $attribute->extendedAttributes->{WindowEventHandler} ? "setWindowEventHandlerAttribute" : "setEventHandlerAttribute";
+        my $eventListenerType = $attribute->type->name eq "OnErrorEventHandler" && (IsDOMGlobalObject($interface) || $attribute->extendedAttributes->{WindowEventHandler}) ? "JSErrorHandler" : "JSEventListener";
         my $eventName = EventHandlerAttributeEventName($attribute);
-        # FIXME: Find a way to do this special case without hardcoding the class and attribute names here.
-        if (($interface->type->name eq "LocalDOMWindow" or $interface->type->name eq "WorkerGlobalScope") and $attribute->name eq "onerror") {
-            AddToImplIncludes("JSErrorHandler.h", $conditional);
-            push(@$outputArray, "    setEventHandlerAttribute<JSErrorHandler>(thisObject.wrapped(), ${eventName}, value, thisObject);\n");
-        } else {
-            AddToImplIncludes("JSEventListener.h", $conditional);
-            my $setter = $attribute->extendedAttributes->{WindowEventHandler} ? "setWindowEventHandlerAttribute" : "setEventHandlerAttribute";
-            push(@$outputArray, "    $setter<JSEventListener>(thisObject.wrapped(), ${eventName}, value, thisObject);\n");
-        }
+
+        AddToImplIncludes("${eventListenerType}.h", $conditional);
+        push(@$outputArray, "    ${setter}<${eventListenerType}>(thisObject.wrapped(), ${eventName}, value, thisObject);\n");
         push(@$outputArray, "    vm.writeBarrier(&thisObject, value);\n");
         push(@$outputArray, "    ensureStillAliveHere(value);\n\n");
         push(@$outputArray, "    return true;\n");
@@ -8240,6 +8288,8 @@ sub GenerateCustomElementReactionsStackIfNeeded
     return if !$CEReactions;
 
     AddToImplIncludes("CustomElementReactionQueue.h");
+
+    assert("CEReactions should have a value of Needed or NotNeeded but found '$CEReactions'. Most CEReactions are not needed because WebKit does not support customized builtins.") unless $CEReactions eq "NotNeeded" || $CEReactions eq "Needed";
 
     if ($CEReactions eq "NotNeeded") {
         push(@$outputArray, "    CustomElementReactionDisallowedScope customElementReactionDisallowedScope;\n");

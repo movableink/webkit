@@ -40,8 +40,8 @@
 #include "DiagnosticLoggingClient.h"
 #include "DragClient.h"
 #include "EditorClient.h"
-#include "FrameLoaderClient.h"
 #include "InspectorClient.h"
+#include "LocalFrameLoaderClient.h"
 #include "MediaRecorderProvider.h"
 #include "ModelPlayerProvider.h"
 #include "PerformanceLoggingClient.h"
@@ -72,6 +72,7 @@
 namespace WebCore {
 
 PageConfiguration::PageConfiguration(
+    std::optional<PageIdentifier> identifier,
     PAL::SessionID sessionID,
     UniqueRef<EditorClient>&& editorClient,
     Ref<SocketProvider>&& socketProvider,
@@ -81,7 +82,7 @@ PageConfiguration::PageConfiguration(
     Ref<BackForwardClient>&& backForwardClient,
     Ref<CookieJar>&& cookieJar,
     UniqueRef<ProgressTrackerClient>&& progressTrackerClient,
-    std::variant<UniqueRef<FrameLoaderClient>, RemoteMainFrameCreationParameters>&& clientForMainFrame,
+    std::variant<UniqueRef<LocalFrameLoaderClient>, RemoteMainFrameCreationParameters>&& clientForMainFrame,
     FrameIdentifier mainFrameIdentifier,
     UniqueRef<SpeechRecognitionProvider>&& speechRecognitionProvider,
     UniqueRef<MediaRecorderProvider>&& mediaRecorderProvider,
@@ -96,7 +97,8 @@ PageConfiguration::PageConfiguration(
     UniqueRef<PaymentCoordinatorClient>&& paymentCoordinatorClient,
 #endif
     UniqueRef<ChromeClient>&& chromeClient)
-    : sessionID(sessionID)
+    : identifier(identifier)
+    , sessionID(sessionID)
     , chromeClient(WTFMove(chromeClient))
 #if ENABLE(CONTEXT_MENUS)
     , contextMenuClient(WTFMove(contextMenuClient))

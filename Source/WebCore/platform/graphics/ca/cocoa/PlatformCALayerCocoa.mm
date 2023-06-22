@@ -32,6 +32,7 @@
 #import "IOSurface.h"
 #import "LengthFunctions.h"
 #import "LocalCurrentGraphicsContext.h"
+#import "MediaPlayerEnumsCocoa.h"
 #import "Model.h"
 #import "PlatformCAAnimationCocoa.h"
 #import "PlatformCAFilters.h"
@@ -787,15 +788,10 @@ void PlatformCALayerCocoa::setContents(CFTypeRef value)
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
-void PlatformCALayerCocoa::setDelegatedContentsFinishedEvent(const PlatformCALayerInProcessDelegatedContentsFinishedEvent&)
-{
-    // FIXME: To be implemented.
-}
-
 void PlatformCALayerCocoa::setDelegatedContents(const PlatformCALayerInProcessDelegatedContents& contents)
 {
-    setContents(contents.surface.asLayerContents());
-    // FIXME: m_delegatedContentsFinishedIdentifier = contents.finishedIdentifier;
+    if (!contents.finishedFence || contents.finishedFence->waitFor(delegatedContentsFinishedTimeout))
+        setContents(contents.surface.asLayerContents());
 }
 
 void PlatformCALayerCocoa::setContentsRect(const FloatRect& value)
@@ -959,6 +955,23 @@ void PlatformCALayerCocoa::setAntialiasesEdges(bool antialiases)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     [m_layer setEdgeAntialiasingMask:antialiases ? (kCALayerLeftEdge | kCALayerRightEdge | kCALayerBottomEdge | kCALayerTopEdge) : 0];
+    END_BLOCK_OBJC_EXCEPTIONS
+}
+
+MediaPlayerVideoGravity PlatformCALayerCocoa::videoGravity() const
+{
+    BEGIN_BLOCK_OBJC_EXCEPTIONS
+    if ([m_layer respondsToSelector:@selector(videoGravity)])
+        return convertAVLayerToMediaPlayerVideoGravity([(AVPlayerLayer *)m_layer videoGravity]);
+    END_BLOCK_OBJC_EXCEPTIONS
+    return MediaPlayerVideoGravity::ResizeAspect;
+}
+
+void PlatformCALayerCocoa::setVideoGravity(MediaPlayerVideoGravity gravity)
+{
+    BEGIN_BLOCK_OBJC_EXCEPTIONS
+    if ([m_layer respondsToSelector:@selector(setVideoGravity:)])
+        [(AVPlayerLayer *)m_layer setVideoGravity:convertMediaPlayerToAVLayerVideoGravity(gravity)];
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
@@ -1192,14 +1205,16 @@ PlatformCALayer::RepaintRectList PlatformCALayer::collectRectsToPaint(GraphicsCo
     return dirtyRects;
 }
 
-void PlatformCALayer::drawLayerContents(GraphicsContext& graphicsContext, WebCore::PlatformCALayer* platformCALayer, RepaintRectList& dirtyRects, GraphicsLayerPaintBehavior layerPaintBehavior)
+void PlatformCALayer::drawLayerContents(GraphicsContext& graphicsContext, WebCore::PlatformCALayer* platformCALayer, RepaintRectList& dirtyRects, OptionSet<GraphicsLayerPaintBehavior> layerPaintBehavior)
 {
     WebCore::PlatformCALayerClient* layerContents = platformCALayer->owner();
     if (!layerContents)
         return;
 
-    if (!layerContents->platformCALayerRepaintCount(platformCALayer))
-        layerPaintBehavior |= GraphicsLayerPaintFirstTilePaint;
+    if (!layerPaintBehavior.contains(GraphicsLayerPaintBehavior::ForceSynchronousImageDecode)) {
+        if (!layerContents->platformCALayerRepaintCount(platformCALayer))
+            layerPaintBehavior.add(GraphicsLayerPaintBehavior::DefaultAsynchronousImageDecode);
+    }
 
     {
         GraphicsContextStateSaver saver(graphicsContext);

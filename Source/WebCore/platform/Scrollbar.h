@@ -44,12 +44,14 @@ class PlatformGestureEvent;
 class Scrollbar : public Widget {
 public:
     // Must be implemented by platforms that can't simply use the Scrollbar base class.  Right now the only platform that is not using the base class is GTK.
-    WEBCORE_EXPORT static Ref<Scrollbar> createNativeScrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarControlSize);
+    WEBCORE_EXPORT static Ref<Scrollbar> createNativeScrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarWidth);
 
     virtual ~Scrollbar();
 
     // Called by the ScrollableArea when the scroll offset changes.
     void offsetDidChange();
+
+    WEBCORE_EXPORT void setFrameRect(const IntRect&) final;
 
     static int pixelsPerLineStep() { return 40; }
     WEBCORE_EXPORT static int pixelsPerLineStep(int viewWidthOrHeight);
@@ -63,6 +65,8 @@ public:
     ScrollableArea& scrollableArea() const { return m_scrollableArea; }
 
     bool isCustomScrollbar() const { return m_isCustomScrollbar; }
+    WEBCORE_EXPORT bool isMockScrollbar() const;
+
     ScrollbarOrientation orientation() const { return m_orientation; }
 
     int value() const { return lroundf(m_currentPos); }
@@ -71,7 +75,7 @@ public:
     int visibleSize() const { return m_visibleSize; }
     int totalSize() const { return m_totalSize; }
     int maximum() const { return m_totalSize - m_visibleSize; }
-    ScrollbarControlSize controlSize() const { return m_controlSize; }
+    ScrollbarWidth widthStyle() const { return m_widthStyle; }
     
     int occupiedWidth() const;
     int occupiedHeight() const;
@@ -89,14 +93,14 @@ public:
     WEBCORE_EXPORT void setProportion(int visibleSize, int totalSize);
     void setPressedPos(int p) { m_pressedPos = p; }
 
-    void paint(GraphicsContext&, const IntRect& damageRect, Widget::SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr) override;
+    void paint(GraphicsContext&, const IntRect& damageRect, Widget::SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, RegionContext* = nullptr) override;
 
     bool enabled() const { return m_enabled; }
     virtual void setEnabled(bool);
 
     virtual bool isOverlayScrollbar() const;
     bool shouldParticipateInHitTesting();
-    virtual bool isHiddenByStyle() const { return false; }
+    virtual bool isHiddenByStyle() const;
 
     bool isWindowActive() const;
 
@@ -146,7 +150,7 @@ public:
     float deviceScaleFactor() const;
 
 protected:
-    Scrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarControlSize, ScrollbarTheme* = nullptr, bool isCustomScrollbar = false);
+    Scrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarWidth, ScrollbarTheme* = nullptr, bool isCustomScrollbar = false);
 
     void updateThumb();
     virtual void updateThumbPosition();
@@ -161,7 +165,7 @@ protected:
 
     ScrollableArea& m_scrollableArea;
     ScrollbarOrientation m_orientation;
-    ScrollbarControlSize m_controlSize;
+    ScrollbarWidth m_widthStyle;
     ScrollbarTheme& m_theme;
 
     int m_visibleSize { 0 };

@@ -56,14 +56,14 @@ public:
     void play() override;
     void pause() override;
     void seek(const MediaTime&) override;
-    bool doSeek(const MediaTime&, float rate, GstSeekFlags) override;
+    bool doSeek(const MediaTime&, float rate) override;
 
     void updatePipelineState(GstState);
 
     void durationChanged() override;
     MediaTime durationMediaTime() const override;
 
-    std::unique_ptr<PlatformTimeRanges> buffered() const override;
+    const PlatformTimeRanges& buffered() const override;
     MediaTime maxMediaTimeSeekable() const override;
     bool currentMediaTimeMayProgress() const override;
 
@@ -82,7 +82,6 @@ public:
 
     void asyncStateChangeDone() override;
 
-    bool hasAllTracks() const { return m_hasAllTracks; }
     void startSource(const Vector<RefPtr<MediaSourceTrackGStreamer>>& tracks);
     WebKitMediaSrc* webKitMediaSrc() { return reinterpret_cast<WebKitMediaSrc*>(m_source.get()); }
 
@@ -112,7 +111,6 @@ private:
     RefPtr<MediaSourcePrivateGStreamer> m_mediaSourcePrivate;
     MediaTime m_mediaTimeDuration { MediaTime::invalidTime() };
     bool m_isPipelinePlaying = true;
-    bool m_hasAllTracks = false;
     Vector<RefPtr<MediaSourceTrackGStreamer>> m_tracks;
 
     bool m_isWaitingForPreroll = true;

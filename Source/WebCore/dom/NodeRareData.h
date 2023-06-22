@@ -101,7 +101,7 @@ public:
     };
 
     using NodeListCacheMap = HashMap<std::pair<unsigned char, AtomString>, LiveNodeList*, NodeListCacheMapEntryHash>;
-    using CollectionCacheMap = HashMap<std::pair<unsigned char, AtomString>, HTMLCollection*, NodeListCacheMapEntryHash>;
+    using CollectionCacheMap = HashMap<std::pair<std::underlying_type_t<CollectionType>, AtomString>, HTMLCollection*, NodeListCacheMapEntryHash>;
     using TagCollectionNSCache = HashMap<QualifiedName, TagCollectionNS*>;
 
     template<typename T, typename ContainerType>
@@ -188,9 +188,9 @@ public:
     inline void adoptDocument(Document& oldDocument, Document& newDocument);
 
 private:
-    std::pair<unsigned char, AtomString> namedCollectionKey(CollectionType type, const AtomString& name)
+    std::pair<std::underlying_type_t<CollectionType>, AtomString> namedCollectionKey(CollectionType type, const AtomString& name)
     {
-        return std::pair<unsigned char, AtomString>(type, name);
+        return std::pair<std::underlying_type_t<CollectionType>, AtomString>(static_cast<std::underlying_type_t<CollectionType>>(type), name);
     }
 
     template<typename NodeListType>
@@ -286,6 +286,9 @@ public:
     HTMLSlotElement* manuallyAssignedSlot() { return m_manuallyAssignedSlot.get(); }
     void setManuallyAssignedSlot(HTMLSlotElement* slot) { m_manuallyAssignedSlot = slot; }
 
+    bool hasEverPaintedImages() const { return m_hasEverPaintedImages; }
+    void setHasEverPaintedImages(bool hasEverPaintedImages) { m_hasEverPaintedImages = hasEverPaintedImages; }
+
 #if DUMP_NODE_STATISTICS
     OptionSet<UseType> useTypes() const
     {
@@ -308,7 +311,8 @@ private:
     std::unique_ptr<NodeListsNodeData> m_nodeLists;
     std::unique_ptr<NodeMutationObserverData> m_mutationObserverData;
     WeakPtr<HTMLSlotElement, WeakPtrImplWithEventTargetData> m_manuallyAssignedSlot;
-    bool m_isElementRareData; // Keep last for better bit packing with ElementRareData.
+    bool m_isElementRareData;
+    bool m_hasEverPaintedImages { false }; // Keep last for better bit packing with ElementRareData.
 };
 
 template<> struct NodeListTypeIdentifier<NameNodeList> {

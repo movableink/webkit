@@ -103,6 +103,18 @@ public:
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
     bool showMediaControlsContextMenu(HTMLElement&, String&& optionsJSONString, Ref<VoidCallback>&&);
 #endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+
+    enum class SourceType : uint8_t {
+        File,
+        HLS,
+        MediaSource,
+        ManagedMediaSource,
+        MediaStream,
+        LiveStream,
+        StoredStream,
+    };
+
+    std::optional<SourceType> sourceType() const;
 #endif // ENABLE(MODERN_MEDIA_CONTROLS)
 
 private:

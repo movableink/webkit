@@ -508,7 +508,7 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
     if (!ratio)
         return nil;
 
-    return [NSNumber numberWithFloat:*ratio];
+    return [NSNumber numberWithDouble:*ratio];
 }
 
 - (void)setOriginQuotaRatio:(NSNumber *)originQuotaRatio
@@ -516,8 +516,8 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
     std::optional<double> ratio = std::nullopt;
     if (originQuotaRatio) {
         ratio = [originQuotaRatio doubleValue];
-        if (!ratio.value())
-            [NSException raise:NSInvalidArgumentException format:@"originQuotaRatio is 0.0"];
+        if (*ratio < 0.0 || *ratio > 1.0)
+            [NSException raise:NSInvalidArgumentException format:@"OriginQuotaRatio must be in the range [0.0, 1]"];
     }
 
     _configuration->setOriginQuotaRatio(ratio);
@@ -529,7 +529,7 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
     if (!ratio)
         return nil;
 
-    return [NSNumber numberWithFloat:*ratio];
+    return [NSNumber numberWithDouble:*ratio];
 }
 
 - (void)setTotalQuotaRatio:(NSNumber *)totalQuotaRatio
@@ -537,11 +537,29 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
     std::optional<double> ratio = std::nullopt;
     if (totalQuotaRatio) {
         ratio = [totalQuotaRatio doubleValue];
-        if (!ratio.value())
-            [NSException raise:NSInvalidArgumentException format:@"totalQuotaRatio is 0.0"];
+        if (*ratio < 0.0 || *ratio > 1.0)
+            [NSException raise:NSInvalidArgumentException format:@"TotalQuotaRatio must be in the range [0.0, 1]"];
     }
 
     _configuration->setTotalQuotaRatio(ratio);
+}
+
+- (NSNumber *)standardVolumeCapacity
+{
+    auto capacity = _configuration->standardVolumeCapacity();
+    if (!capacity)
+        return nil;
+
+    return [NSNumber numberWithUnsignedLongLong:*capacity];
+}
+
+- (void)setStandardVolumeCapacity:(NSNumber *)standardVolumeCapacity
+{
+    std::optional<uint64_t> capacity;
+    if (standardVolumeCapacity)
+        capacity = [standardVolumeCapacity unsignedLongLongValue];
+
+    _configuration->setStandardVolumeCapacity(capacity);
 }
 
 - (NSNumber *)volumeCapacityOverride

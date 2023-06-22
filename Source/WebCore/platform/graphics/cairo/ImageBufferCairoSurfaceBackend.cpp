@@ -104,9 +104,9 @@ RefPtr<NativeImage> ImageBufferCairoSurfaceBackend::cairoSurfaceCoerceToImage()
     return copyNativeImage(copyBehavior);
 }
 
-RefPtr<PixelBuffer> ImageBufferCairoSurfaceBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator)
+void ImageBufferCairoSurfaceBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination)
 {
-    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, cairo_image_surface_get_data(m_surface.get()), allocator);
+    ImageBufferBackend::getPixelBuffer(srcRect, cairo_image_surface_get_data(m_surface.get()), destination);
 }
 
 void ImageBufferCairoSurfaceBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
@@ -116,6 +116,13 @@ void ImageBufferCairoSurfaceBackend::putPixelBuffer(const PixelBuffer& pixelBuff
     IntRect srcRectScaled = toBackendCoordinates(srcRect);
     IntPoint destPointScaled = toBackendCoordinates(destPoint);
     cairo_surface_mark_dirty_rectangle(m_surface.get(), destPointScaled.x(), destPointScaled.y(), srcRectScaled.width(), srcRectScaled.height());
+}
+
+String ImageBufferCairoSurfaceBackend::debugDescription() const
+{
+    TextStream stream;
+    stream << "ImageBufferCairoSurfaceBackend " << this << " " << m_surface.get();
+    return stream.release();
 }
 
 } // namespace WebCore

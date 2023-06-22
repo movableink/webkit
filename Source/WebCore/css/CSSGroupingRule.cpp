@@ -85,7 +85,7 @@ ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsi
     }
 
     // Nesting inside style rule only accepts style rule or group rule
-    if (hasStyleRuleAncestor() && !newRule->isStyleRuleWithNesting() && !newRule->isStyleRule() && !newRule->isGroupRule())
+    if (hasStyleRuleAncestor() && !newRule->isStyleRule() && !newRule->isGroupRule())
         return Exception { HierarchyRequestError };
 
     CSSStyleSheet::RuleMutationScope mutationScope(this);
@@ -140,7 +140,7 @@ void CSSGroupingRule::appendCSSTextForItems(StringBuilder& builder) const
         return;
     }
 
-    builder.append('\n', static_cast<StringView>(decls), static_cast<StringView>(rules), "\n}");
+    builder.append('\n', "  ", static_cast<StringView>(decls), static_cast<StringView>(rules), "\n}");
     return;
 }
 
@@ -149,16 +149,18 @@ void CSSGroupingRule::cssTextForDeclsAndRules(StringBuilder& decls, StringBuilde
     auto& childRules = m_groupRule->childRules();
     for (unsigned index = 0 ; index < childRules.size() ; index++) {
         // We put the declarations at the upper level when the rule:
-        // - is a style rule
+        // - is the first rule
         // - has just "&" as original selector
         // - has no child rules
-        auto childRule = childRules[index];
-        ASSERT(childRule);
-        if (childRule->isStyleRuleWithNesting()) {
-            auto& nestedStyleRule = downcast<StyleRuleWithNesting>(*childRule);
-            if (nestedStyleRule.originalSelectorList().hasOnlyNestingSelector() && nestedStyleRule.nestedRules().isEmpty()) {
-                decls.append(nestedStyleRule.properties().asText());
-                continue;
+        if (!index) {
+            // It's the first rule.
+            auto childRule = childRules[index];
+            if (childRule->isStyleRuleWithNesting()) {
+                auto& nestedStyleRule = downcast<StyleRuleWithNesting>(childRule);
+                if (nestedStyleRule.originalSelectorList().hasOnlyNestingSelector() && nestedStyleRule.nestedRules().isEmpty()) {
+                    decls.append(nestedStyleRule.properties().asText());
+                    continue;
+                }
             }
         }
         // Otherwise we print the child rule
@@ -173,9 +175,11 @@ RefPtr<StyleRuleWithNesting> CSSGroupingRule::prepareChildStyleRuleForNesting(St
     auto& rules = m_groupRule->m_childRules;
     for (size_t i = 0 ; i < rules.size() ; i++) {
         auto& rule = rules[i];
-        if (rule == &styleRule) {
+        if (rule.ptr() == &styleRule) {
             auto styleRuleWithNesting = StyleRuleWithNesting::create(WTFMove(styleRule));
-            rules[i] = styleRuleWithNesting.ptr();
+            rules[i] = styleRuleWithNesting;
+            if (auto* styleSheet = parentStyleSheet())
+                styleSheet->contents().setHasNestingRules();
             return styleRuleWithNesting;
         }        
     }
@@ -210,7 +214,7 @@ void CSSGroupingRule::reattach(StyleRuleBase& rule)
     m_groupRule = downcast<StyleRuleGroup>(rule);
     for (unsigned i = 0; i < m_childRuleCSSOMWrappers.size(); ++i) {
         if (m_childRuleCSSOMWrappers[i])
-            m_childRuleCSSOMWrappers[i]->reattach(*m_groupRule.get().childRules()[i]);
+            m_childRuleCSSOMWrappers[i]->reattach(m_groupRule->childRules()[i]);
     }
 }
 

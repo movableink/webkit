@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -95,7 +95,6 @@
 #import <WebCore/HTMLFrameElement.h>
 #import <WebCore/HTMLFrameOwnerElement.h>
 #import <WebCore/HTMLNames.h>
-#import <WebCore/HTMLParserIdioms.h>
 #import <WebCore/HTMLPlugInElement.h>
 #import <WebCore/HistoryController.h>
 #import <WebCore/HistoryItem.h>
@@ -110,7 +109,6 @@
 #import <WebCore/PluginViewBase.h>
 #import <WebCore/ProtectionSpace.h>
 #import <WebCore/ResourceError.h>
-#import <WebCore/ResourceHandle.h>
 #import <WebCore/ResourceRequest.h>
 #import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/ScriptController.h>
@@ -175,13 +173,14 @@ NSString *WebPluginContainerKey = @"WebPluginContainer";
     WebCore::FramePolicyFunction _policyFunction;
 #if HAVE(APP_LINKS)
     RetainPtr<NSURL> _appLinkURL;
+    RetainPtr<NSURL> _referrerURL;
 #endif
     WebCore::PolicyAction _defaultPolicy;
 }
 
 - (id)initWithFrame:(NakedPtr<WebCore::LocalFrame>)frame identifier:(WebCore::PolicyCheckIdentifier)identifier policyFunction:(WebCore::FramePolicyFunction&&)policyFunction defaultPolicy:(WebCore::PolicyAction)defaultPolicy;
 #if HAVE(APP_LINKS)
-- (id)initWithFrame:(NakedPtr<WebCore::LocalFrame>)frame identifier:(WebCore::PolicyCheckIdentifier)identifier policyFunction:(WebCore::FramePolicyFunction&&)policyFunction defaultPolicy:(WebCore::PolicyAction)defaultPolicy appLinkURL:(NSURL *)url;
+- (id)initWithFrame:(NakedPtr<WebCore::LocalFrame>)frame identifier:(WebCore::PolicyCheckIdentifier)identifier policyFunction:(WebCore::FramePolicyFunction&&)policyFunction defaultPolicy:(WebCore::PolicyAction)defaultPolicy appLinkURL:(NSURL *)url referrerURL:(NSURL *)referrerURL;
 #endif
 
 - (void)invalidate;
@@ -196,11 +195,6 @@ WebDataSource *dataSource(WebCore::DocumentLoader* loader)
 WebFrameLoaderClient::WebFrameLoaderClient(WebFrame *webFrame)
     : m_webFrame(webFrame)
 {
-}
-
-std::optional<WebCore::PageIdentifier> WebFrameLoaderClient::pageID() const
-{
-    return std::nullopt;
 }
 
 WebFrameLoaderClient::~WebFrameLoaderClient()
@@ -262,9 +256,9 @@ void WebFrameLoaderClient::forceLayoutForNonHTML()
 
 void WebFrameLoaderClient::setCopiesOnScroll()
 {
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [[[m_webFrame->_private->webFrameView _scrollView] contentView] setCopiesOnScroll:YES];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 void WebFrameLoaderClient::detachedFromParent2()
@@ -293,9 +287,9 @@ void WebFrameLoaderClient::convertMainResourceLoadToDownload(WebCore::DocumentLo
 
     if (!mainResourceLoader) {
         // The resource has already been cached, or the conversion is being attmpted when not calling SubresourceLoader::didReceiveResponse().
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         auto webDownload = adoptNS([[WebDownload alloc] initWithRequest:request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::UpdateHTTPBody) delegate:[webView downloadDelegate]]);
-        ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
         webDownload.autorelease();
         return;
     }
@@ -845,7 +839,7 @@ void WebFrameLoaderClient::dispatchDecidePolicyForResponse(const WebCore::Resour
         decidePolicyForMIMEType:response.mimeType()
         request:request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::UpdateHTTPBody)
         frame:m_webFrame.get()
-        decisionListener:setUpPolicyListener(identifier, WTFMove(function), WebCore::PolicyAction::Use).get()];
+        decisionListener:setUpPolicyListener(identifier, WTFMove(function), WebCore::PolicyAction::Use, nil, nil).get()];
 }
 
 
@@ -873,11 +867,18 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const WebCore:
     WebView *webView = getWebView(m_webFrame.get());
     BOOL tryAppLink = shouldTryAppLink(webView, action, nullptr);
 
+    NSURL *appLinkURL = nil, *referrerURL = nil;
+    if (tryAppLink) {
+        appLinkURL = (NSURL *)request.url();
+        if (!request.httpReferrer().isEmpty())
+            referrerURL = (NSURL *)URL(request.httpReferrer());
+    }
+
     [[webView _policyDelegateForwarder] webView:webView
         decidePolicyForNewWindowAction:actionDictionary(action, formState)
         request:request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::UpdateHTTPBody)
         newFrameName:frameName
-        decisionListener:setUpPolicyListener(identifier, WTFMove(function), WebCore::PolicyAction::Ignore, tryAppLink ? (NSURL *)request.url() : nil).get()];
+        decisionListener:setUpPolicyListener(identifier, WTFMove(function), WebCore::PolicyAction::Ignore, appLinkURL, referrerURL).get()];
 }
 
 void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const WebCore::NavigationAction& action, const WebCore::ResourceRequest& request, const WebCore::ResourceResponse&, WebCore::FormState* formState, WebCore::PolicyDecisionMode, WebCore::PolicyCheckIdentifier identifier, WebCore::FramePolicyFunction&& function)
@@ -885,11 +886,18 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const WebCore
     WebView *webView = getWebView(m_webFrame.get());
     BOOL tryAppLink = shouldTryAppLink(webView, action, core(m_webFrame.get()));
 
+    NSURL *appLinkURL = nil, *referrerURL = nil;
+    if (tryAppLink) {
+        appLinkURL = (NSURL *)request.url();
+        if (!request.httpReferrer().isEmpty())
+            referrerURL = (NSURL *)URL(request.httpReferrer());
+    }
+
     [[webView _policyDelegateForwarder] webView:webView
         decidePolicyForNavigationAction:actionDictionary(action, formState)
         request:request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::UpdateHTTPBody)
         frame:m_webFrame.get()
-        decisionListener:setUpPolicyListener(identifier, WTFMove(function), WebCore::PolicyAction::Ignore, tryAppLink ? (NSURL *)request.url() : nil).get()];
+        decisionListener:setUpPolicyListener(identifier, WTFMove(function), WebCore::PolicyAction::Ignore, appLinkURL, referrerURL).get()];
 }
 
 void WebFrameLoaderClient::cancelPolicyCheck()
@@ -939,7 +947,7 @@ void WebFrameLoaderClient::dispatchWillSubmitForm(WebCore::FormState& formState,
     NSDictionary *values = makeFormFieldValuesDictionary(formState);
     CallFormDelegate(getWebView(m_webFrame.get()), @selector(frame:sourceFrame:willSubmitForm:withValues:submissionListener:), m_webFrame.get(), kit(formState.sourceDocument().frame()), kit(&formState.form()), values, setUpPolicyListener(WebCore::PolicyCheckIdentifier { },
         [completionHandler = WTFMove(completionHandler)](WebCore::PolicyAction, WebCore::PolicyCheckIdentifier) mutable { completionHandler(); },
-        WebCore::PolicyAction::Ignore).get());
+        WebCore::PolicyAction::Ignore, nil, nil).get());
 }
 
 void WebFrameLoaderClient::revertToProvisionalState(WebCore::DocumentLoader* loader)
@@ -1474,7 +1482,7 @@ void WebFrameLoaderClient::didRestoreFromBackForwardCache()
 #endif
 }
 
-RetainPtr<WebFramePolicyListener> WebFrameLoaderClient::setUpPolicyListener(WebCore::PolicyCheckIdentifier identifier, WebCore::FramePolicyFunction&& function, WebCore::PolicyAction defaultPolicy, NSURL *appLinkURL)
+RetainPtr<WebFramePolicyListener> WebFrameLoaderClient::setUpPolicyListener(WebCore::PolicyCheckIdentifier identifier, WebCore::FramePolicyFunction&& function, WebCore::PolicyAction defaultPolicy, NSURL *appLinkURL, NSURL* referrerURL)
 {
     // FIXME: <rdar://5634381> We need to support multiple active policy listeners.
     [m_policyListener invalidate];
@@ -1482,7 +1490,7 @@ RetainPtr<WebFramePolicyListener> WebFrameLoaderClient::setUpPolicyListener(WebC
     RetainPtr<WebFramePolicyListener> policyListener;
 #if HAVE(APP_LINKS)
     if (appLinkURL)
-        policyListener = adoptNS([[WebFramePolicyListener alloc] initWithFrame:core(m_webFrame.get()) identifier:identifier policyFunction:WTFMove(function) defaultPolicy:defaultPolicy appLinkURL:appLinkURL]);
+        policyListener = adoptNS([[WebFramePolicyListener alloc] initWithFrame:core(m_webFrame.get()) identifier:identifier policyFunction:WTFMove(function) defaultPolicy:defaultPolicy appLinkURL:appLinkURL referrerURL:referrerURL]);
     else
 #endif
         policyListener = adoptNS([[WebFramePolicyListener alloc] initWithFrame:core(m_webFrame.get()) identifier:identifier policyFunction:WTFMove(function) defaultPolicy:defaultPolicy]);
@@ -1858,7 +1866,7 @@ RefPtr<WebCore::Widget> WebFrameLoaderClient::createPlugin(const WebCore::IntSiz
     if (errorCode && m_webFrame) {
         WebResourceDelegateImplementationCache* implementations = WebViewGetResourceLoadDelegateImplementations(webView);
         if (implementations->plugInFailedWithErrorFunc) {
-            URL pluginPageURL = document->completeURL(WebCore::stripLeadingAndTrailingHTMLSpaces(parameterValue(paramNames, paramValues, "pluginspage"_s)));
+            URL pluginPageURL = document->completeURL(parameterValue(paramNames, paramValues, "pluginspage"_s));
             if (!pluginPageURL.protocolIsInHTTPFamily())
                 pluginPageURL = URL();
             NSString *pluginName = pluginPackage ? (NSString *)[pluginPackage pluginInfo].name : nil;
@@ -2052,7 +2060,7 @@ void WebFrameLoaderClient::getLoadDecisionForIcons(const Vector<std::pair<WebCor
 #endif
 
     bool disallowedDueToImageLoadSettings = false;
-    if (!frame->settings().loadsImagesAutomatically() && !frame->settings().loadsSiteIconsIgnoringImageLoadingSetting())
+    if (!frame->settings().loadsImagesAutomatically())
         disallowedDueToImageLoadSettings = true;
 
     if (disallowedDueToImageLoadSettings || !frame->isMainFrame() || !documentLoader->url().protocolIsInHTTPFamily() || ![WebView _isIconLoadingEnabled]) {
@@ -2101,9 +2109,9 @@ static NSImage *webGetNSImage(WebCore::Image* image, NSSize size)
     if (!nsImage)
         return nil;
     if (!NSEqualSizes([nsImage size], size)) {
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         [nsImage setScalesWhenResized:YES];
-        ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
         [nsImage setSize:size];
     }
     return nsImage;
@@ -2158,13 +2166,14 @@ void WebFrameLoaderClient::finishedLoadingIcon(WebCore::FragmentedSharedBuffer* 
 }
 
 #if HAVE(APP_LINKS)
-- (id)initWithFrame:(NakedPtr<WebCore::LocalFrame>)frame identifier:(WebCore::PolicyCheckIdentifier)identifier policyFunction:(WebCore::FramePolicyFunction&&)policyFunction defaultPolicy:(WebCore::PolicyAction)defaultPolicy appLinkURL:(NSURL *)appLinkURL
+- (id)initWithFrame:(NakedPtr<WebCore::LocalFrame>)frame identifier:(WebCore::PolicyCheckIdentifier)identifier policyFunction:(WebCore::FramePolicyFunction&&)policyFunction defaultPolicy:(WebCore::PolicyAction)defaultPolicy appLinkURL:(NSURL *)appLinkURL referrerURL:(NSURL *)referrerURL
 {
     self = [self initWithFrame:frame identifier:identifier policyFunction:WTFMove(policyFunction) defaultPolicy:defaultPolicy];
     if (!self)
         return nil;
 
     _appLinkURL = appLinkURL;
+    _referrerURL = (NSURL *)WebCore::SecurityOrigin::create(URL { referrerURL })->toURL();
 
     return self;
 }
@@ -2217,7 +2226,9 @@ void WebFrameLoaderClient::finishedLoadingIcon(WebCore::FragmentedSharedBuffer* 
 {
 #if HAVE(APP_LINKS)
     if (_appLinkURL && _frame) {
-        [LSAppLink openWithURL:_appLinkURL.get() completionHandler:^(BOOL success, NSError *) {
+        RetainPtr<_LSOpenConfiguration> configuration = adoptNS([[_LSOpenConfiguration alloc] init]);
+        configuration.get().referrerURL = _referrerURL.get();
+        [LSAppLink openWithURL:_appLinkURL.get() configuration:configuration.get() completionHandler:^(BOOL success, NSError *) {
 #if USE(WEB_THREAD)
             WebThreadRun(^{
 #else

@@ -175,12 +175,9 @@ MediaTime MockMediaPlayerMediaSource::maxMediaTimeSeekable() const
     return m_duration;
 }
 
-std::unique_ptr<PlatformTimeRanges> MockMediaPlayerMediaSource::buffered() const
+const PlatformTimeRanges& MockMediaPlayerMediaSource::buffered() const
 {
-    if (m_mediaSourcePrivate)
-        return m_mediaSourcePrivate->buffered();
-
-    return makeUnique<PlatformTimeRanges>();
+    return m_mediaSourcePrivate ? m_mediaSourcePrivate->buffered() : PlatformTimeRanges::emptyRanges();
 }
 
 bool MockMediaPlayerMediaSource::didLoadingProgress() const
@@ -203,11 +200,7 @@ MediaTime MockMediaPlayerMediaSource::currentMediaTime() const
 
 bool MockMediaPlayerMediaSource::currentMediaTimeMayProgress() const
 {
-    if (!m_mediaSourcePrivate)
-        return false;
-    if (auto ranges = buffered())
-        return m_mediaSourcePrivate->hasFutureTime(currentMediaTime(), durationMediaTime(), *ranges);
-    return false;
+    return m_mediaSourcePrivate && m_mediaSourcePrivate->hasFutureTime(currentMediaTime(), durationMediaTime(), buffered());
 }
 
 MediaTime MockMediaPlayerMediaSource::durationMediaTime() const
@@ -224,7 +217,8 @@ void MockMediaPlayerMediaSource::seekWithTolerance(const MediaTime& time, const 
         m_currentTime = m_mediaSourcePrivate->seekToTime(time, negativeTolerance, positiveTolerance);
 
     if (m_seekCompleted) {
-        m_player->timeChanged();
+        if (auto player = m_player.get())
+            player->timeChanged();
 
         if (m_playing)
             callOnMainThread([this, weakThis = WeakPtr { *this }] {
@@ -240,14 +234,15 @@ void MockMediaPlayerMediaSource::advanceCurrentTime()
     if (!m_mediaSourcePrivate)
         return;
 
-    auto buffered = m_mediaSourcePrivate->buffered();
-    size_t pos = buffered->find(m_currentTime);
+    auto& buffered = m_mediaSourcePrivate->buffered();
+    size_t pos = buffered.find(m_currentTime);
     if (pos == notFound)
         return;
 
     bool ignoreError;
-    m_currentTime = std::min(m_duration, buffered->end(pos, ignoreError));
-    m_player->timeChanged();
+    m_currentTime = std::min(m_duration, buffered.end(pos, ignoreError));
+    if (auto player = m_player.get())
+        player->timeChanged();
 }
 
 void MockMediaPlayerMediaSource::updateDuration(const MediaTime& duration)
@@ -256,7 +251,8 @@ void MockMediaPlayerMediaSource::updateDuration(const MediaTime& duration)
         return;
 
     m_duration = duration;
-    m_player->durationChanged();
+    if (auto player = m_player.get())
+        player->durationChanged();
 }
 
 void MockMediaPlayerMediaSource::setReadyState(MediaPlayer::ReadyState readyState)
@@ -265,7 +261,8 @@ void MockMediaPlayerMediaSource::setReadyState(MediaPlayer::ReadyState readyStat
         return;
 
     m_readyState = readyState;
-    m_player->readyStateChanged();
+    if (auto player = m_player.get())
+        player->readyStateChanged();
 }
 
 void MockMediaPlayerMediaSource::setNetworkState(MediaPlayer::NetworkState networkState)
@@ -274,7 +271,8 @@ void MockMediaPlayerMediaSource::setNetworkState(MediaPlayer::NetworkState netwo
         return;
 
     m_networkState = networkState;
-    m_player->networkStateChanged();
+    if (auto player = m_player.get())
+        player->networkStateChanged();
 }
 
 void MockMediaPlayerMediaSource::waitForSeekCompleted()
@@ -288,7 +286,8 @@ void MockMediaPlayerMediaSource::seekCompleted()
         return;
     m_seekCompleted = true;
 
-    m_player->timeChanged();
+    if (auto player = m_player.get())
+        player->timeChanged();
 
     if (m_playing)
         callOnMainThread([this, weakThis = WeakPtr { *this }] {

@@ -104,12 +104,12 @@ static bool applyCommandToFrame(LocalFrame& frame, EditorCommandSource source, E
 {
     // FIXME: We don't call shouldApplyStyle when the source is DOM; is there a good reason for that?
     switch (source) {
-    case CommandFromMenuOrKeyBinding:
-        // Use InvertColor for testing purposes. foreColor and backColor are never triggered with CommandFromMenuOrKeyBinding outside DRT/WTR.
+    case EditorCommandSource::MenuOrKeyBinding:
+        // Use InvertColor for testing purposes. foreColor and backColor are never triggered with EditorCommandSource::MenuOrKeyBinding outside DRT/WTR.
         frame.editor().applyStyleToSelection(WTFMove(style), action, Editor::ColorFilterMode::InvertColor);
         return true;
-    case CommandFromDOM:
-    case CommandFromDOMWithUserInterface:
+    case EditorCommandSource::DOM:
+    case EditorCommandSource::DOMWithUserInterface:
         frame.editor().applyStyle(WTFMove(style), action, Editor::ColorFilterMode::UseOriginalColor);
         return true;
     }
@@ -149,11 +149,11 @@ static bool executeApplyParagraphStyle(LocalFrame& frame, EditorCommandSource so
     style->setProperty(propertyID, propertyValue);
     // FIXME: We don't call shouldApplyStyle when the source is DOM; is there a good reason for that?
     switch (source) {
-    case CommandFromMenuOrKeyBinding:
+    case EditorCommandSource::MenuOrKeyBinding:
         frame.editor().applyParagraphStyleToSelection(style.ptr(), action);
         return true;
-    case CommandFromDOM:
-    case CommandFromDOMWithUserInterface:
+    case EditorCommandSource::DOM:
+    case EditorCommandSource::DOMWithUserInterface:
         frame.editor().applyParagraphStyle(style.ptr());
         return true;
     }
@@ -239,13 +239,13 @@ static bool executeBackColor(LocalFrame& frame, Event*, EditorCommandSource sour
 
 static bool executeCopy(LocalFrame& frame, Event*, EditorCommandSource source, const String&)
 {
-    frame.editor().copy(source == CommandFromMenuOrKeyBinding ? Editor::FromMenuOrKeyBinding::Yes : Editor::FromMenuOrKeyBinding::No);
+    frame.editor().copy(source == EditorCommandSource::MenuOrKeyBinding ? Editor::FromMenuOrKeyBinding::Yes : Editor::FromMenuOrKeyBinding::No);
     return true;
 }
 
 static bool executeCopyFont(LocalFrame& frame, Event*, EditorCommandSource source, const String&)
 {
-    frame.editor().copyFont(source == CommandFromMenuOrKeyBinding ? Editor::FromMenuOrKeyBinding::Yes : Editor::FromMenuOrKeyBinding::No);
+    frame.editor().copyFont(source == EditorCommandSource::MenuOrKeyBinding ? Editor::FromMenuOrKeyBinding::Yes : Editor::FromMenuOrKeyBinding::No);
     return true;
 }
 
@@ -261,7 +261,7 @@ static bool executeCreateLink(LocalFrame& frame, Event*, EditorCommandSource, co
 
 static bool executeCut(LocalFrame& frame, Event*, EditorCommandSource source, const String&)
 {
-    if (source == CommandFromMenuOrKeyBinding) {
+    if (source == EditorCommandSource::MenuOrKeyBinding) {
         UserTypingGestureIndicator typingGestureIndicator(frame);
         frame.editor().cut(Editor::FromMenuOrKeyBinding::Yes);
     } else
@@ -278,9 +278,9 @@ static bool executeClearText(LocalFrame& frame, Event*, EditorCommandSource, con
 static bool executeDefaultParagraphSeparator(LocalFrame& frame, Event*, EditorCommandSource, const String& value)
 {
     if (equalLettersIgnoringASCIICase(value, "div"_s))
-        frame.editor().setDefaultParagraphSeparator(EditorParagraphSeparatorIsDiv);
+        frame.editor().setDefaultParagraphSeparator(EditorParagraphSeparator::div);
     else if (equalLettersIgnoringASCIICase(value, "p"_s))
-        frame.editor().setDefaultParagraphSeparator(EditorParagraphSeparatorIsP);
+        frame.editor().setDefaultParagraphSeparator(EditorParagraphSeparator::p);
 
     return true;
 }
@@ -288,17 +288,17 @@ static bool executeDefaultParagraphSeparator(LocalFrame& frame, Event*, EditorCo
 static bool executeDelete(LocalFrame& frame, Event*, EditorCommandSource source, const String&)
 {
     switch (source) {
-    case CommandFromMenuOrKeyBinding: {
+    case EditorCommandSource::MenuOrKeyBinding: {
         // Doesn't modify the text if the current selection isn't a range.
         UserTypingGestureIndicator typingGestureIndicator(frame);
         frame.editor().performDelete();
         return true;
     }
-    case CommandFromDOM:
-    case CommandFromDOMWithUserInterface:
+    case EditorCommandSource::DOM:
+    case EditorCommandSource::DOMWithUserInterface:
         // If the current selection is a caret, delete the preceding character. IE performs forwardDelete, but we currently side with Firefox.
         // Doesn't scroll to make the selection visible, or modify the kill ring (this time, siding with IE, not Firefox).
-        TypingCommand::deleteKeyPressed(*frame.document(), frame.editor().shouldSmartDelete() ? TypingCommand::SmartDelete : 0);
+        TypingCommand::deleteKeyPressed(*frame.document(), frame.editor().shouldSmartDelete() ? TypingCommand::Option::SmartDelete : OptionSet<TypingCommand::Option> { });
         return true;
     }
     ASSERT_NOT_REACHED();
@@ -429,11 +429,11 @@ static bool executeFormatBlock(LocalFrame& frame, Event*, EditorCommandSource, c
 static bool executeForwardDelete(LocalFrame& frame, Event*, EditorCommandSource source, const String&)
 {
     switch (source) {
-    case CommandFromMenuOrKeyBinding:
+    case EditorCommandSource::MenuOrKeyBinding:
         frame.editor().deleteWithDirection(SelectionDirection::Forward, TextGranularity::CharacterGranularity, false, true);
         return true;
-    case CommandFromDOM:
-    case CommandFromDOMWithUserInterface:
+    case EditorCommandSource::DOM:
+    case EditorCommandSource::DOMWithUserInterface:
         // Doesn't scroll to make the selection visible, or modify the kill ring.
         // ForwardDelete is not implemented in IE or Firefox, so this behavior is only needed for
         // backward compatibility with ourselves, and for consistency with Delete.
@@ -487,14 +487,14 @@ static bool executeInsertImage(LocalFrame& frame, Event*, EditorCommandSource, c
 static bool executeInsertLineBreak(LocalFrame& frame, Event* event, EditorCommandSource source, const String&)
 {
     switch (source) {
-    case CommandFromMenuOrKeyBinding:
+    case EditorCommandSource::MenuOrKeyBinding:
         return targetFrame(frame, event)->eventHandler().handleTextInputEvent("\n"_s, event, TextEventInputLineBreak);
-    case CommandFromDOM:
-    case CommandFromDOMWithUserInterface:
+    case EditorCommandSource::DOM:
+    case EditorCommandSource::DOMWithUserInterface:
         // Doesn't scroll to make the selection visible, or modify the kill ring.
         // InsertLineBreak is not implemented in IE or Firefox, so this behavior is only needed for
         // backward compatibility with ourselves, and for consistency with other commands.
-        TypingCommand::insertLineBreak(*frame.document(), 0);
+        TypingCommand::insertLineBreak(*frame.document(), { });
         return true;
     }
     ASSERT_NOT_REACHED();
@@ -522,7 +522,7 @@ static bool executeInsertOrderedList(LocalFrame& frame, Event*, EditorCommandSou
 
 static bool executeInsertParagraph(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    TypingCommand::insertParagraphSeparator(*frame.document(), 0);
+    TypingCommand::insertParagraphSeparator(*frame.document(), { });
     return true;
 }
 
@@ -533,7 +533,7 @@ static bool executeInsertTab(LocalFrame& frame, Event* event, EditorCommandSourc
 
 static bool executeInsertText(LocalFrame& frame, Event*, EditorCommandSource, const String& value)
 {
-    TypingCommand::insertText(*frame.document(), value, 0);
+    TypingCommand::insertText(*frame.document(), value, { });
     return true;
 }
 
@@ -606,47 +606,47 @@ static bool executeMakeTextWritingDirectionRightToLeft(LocalFrame& frame, Event*
 
 static bool executeMoveBackward(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Backward, TextGranularity::CharacterGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Backward, TextGranularity::CharacterGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveBackwardAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Backward, TextGranularity::CharacterGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Backward, TextGranularity::CharacterGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveDown(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    return frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Forward, TextGranularity::LineGranularity, UserTriggered);
+    return frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Forward, TextGranularity::LineGranularity, UserTriggered::Yes);
 }
 
 static bool executeMoveDownAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Forward, TextGranularity::LineGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Forward, TextGranularity::LineGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveForward(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Forward, TextGranularity::CharacterGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Forward, TextGranularity::CharacterGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveForwardAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Forward, TextGranularity::CharacterGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Forward, TextGranularity::CharacterGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveLeft(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    return frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Left, TextGranularity::CharacterGranularity, UserTriggered);
+    return frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Left, TextGranularity::CharacterGranularity, UserTriggered::Yes);
 }
 
 static bool executeMoveLeftAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Left, TextGranularity::CharacterGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Left, TextGranularity::CharacterGranularity, UserTriggered::Yes);
     return true;
 }
 
@@ -655,8 +655,8 @@ static bool executeMovePageDown(LocalFrame& frame, Event*, EditorCommandSource, 
     unsigned distance = verticalScrollDistance(frame);
     if (!distance)
         return false;
-    return frame.selection().modify(FrameSelection::AlterationMove, distance, FrameSelection::DirectionDown,
-        UserTriggered, FrameSelection::AlignCursorOnScrollAlways);
+    return frame.selection().modify(FrameSelection::Alteration::Move, distance, FrameSelection::VerticalDirection::Down,
+        UserTriggered::Yes, FrameSelection::CursorAlignOnScroll::Always);
 }
 
 static bool executeMovePageDownAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
@@ -664,8 +664,8 @@ static bool executeMovePageDownAndModifySelection(LocalFrame& frame, Event*, Edi
     unsigned distance = verticalScrollDistance(frame);
     if (!distance)
         return false;
-    return frame.selection().modify(FrameSelection::AlterationExtend, distance, FrameSelection::DirectionDown,
-        UserTriggered, FrameSelection::AlignCursorOnScrollAlways);
+    return frame.selection().modify(FrameSelection::Alteration::Extend, distance, FrameSelection::VerticalDirection::Down,
+        UserTriggered::Yes, FrameSelection::CursorAlignOnScroll::Always);
 }
 
 static bool executeMovePageUp(LocalFrame& frame, Event*, EditorCommandSource, const String&)
@@ -673,8 +673,8 @@ static bool executeMovePageUp(LocalFrame& frame, Event*, EditorCommandSource, co
     unsigned distance = verticalScrollDistance(frame);
     if (!distance)
         return false;
-    return frame.selection().modify(FrameSelection::AlterationMove, distance, FrameSelection::DirectionUp,
-        UserTriggered, FrameSelection::AlignCursorOnScrollAlways);
+    return frame.selection().modify(FrameSelection::Alteration::Move, distance, FrameSelection::VerticalDirection::Up,
+        UserTriggered::Yes, FrameSelection::CursorAlignOnScroll::Always);
 }
 
 static bool executeMovePageUpAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
@@ -682,209 +682,209 @@ static bool executeMovePageUpAndModifySelection(LocalFrame& frame, Event*, Edito
     unsigned distance = verticalScrollDistance(frame);
     if (!distance)
         return false;
-    return frame.selection().modify(FrameSelection::AlterationExtend, distance, FrameSelection::DirectionUp,
-        UserTriggered, FrameSelection::AlignCursorOnScrollAlways);
+    return frame.selection().modify(FrameSelection::Alteration::Extend, distance, FrameSelection::VerticalDirection::Up,
+        UserTriggered::Yes, FrameSelection::CursorAlignOnScroll::Always);
 }
 
 static bool executeMoveRight(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    return frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Right, TextGranularity::CharacterGranularity, UserTriggered);
+    return frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Right, TextGranularity::CharacterGranularity, UserTriggered::Yes);
 }
 
 static bool executeMoveRightAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Right, TextGranularity::CharacterGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Right, TextGranularity::CharacterGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToBeginningOfDocument(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Backward, TextGranularity::DocumentBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Backward, TextGranularity::DocumentBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToBeginningOfDocumentAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Backward, TextGranularity::DocumentBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Backward, TextGranularity::DocumentBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToBeginningOfLine(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Backward, TextGranularity::LineBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Backward, TextGranularity::LineBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToBeginningOfLineAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Backward, TextGranularity::LineBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Backward, TextGranularity::LineBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToBeginningOfParagraph(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Backward, TextGranularity::ParagraphBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Backward, TextGranularity::ParagraphBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToBeginningOfParagraphAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Backward, TextGranularity::ParagraphBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Backward, TextGranularity::ParagraphBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToBeginningOfSentence(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Backward, TextGranularity::SentenceBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Backward, TextGranularity::SentenceBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToBeginningOfSentenceAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Backward, TextGranularity::SentenceBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Backward, TextGranularity::SentenceBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToEndOfDocument(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Forward, TextGranularity::DocumentBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Forward, TextGranularity::DocumentBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToEndOfDocumentAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Forward, TextGranularity::DocumentBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Forward, TextGranularity::DocumentBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToEndOfSentence(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Forward, TextGranularity::SentenceBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Forward, TextGranularity::SentenceBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToEndOfSentenceAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Forward, TextGranularity::SentenceBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Forward, TextGranularity::SentenceBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToEndOfLine(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Forward, TextGranularity::LineBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Forward, TextGranularity::LineBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToEndOfLineAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Forward, TextGranularity::LineBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Forward, TextGranularity::LineBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToEndOfParagraph(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Forward, TextGranularity::ParagraphBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Forward, TextGranularity::ParagraphBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToEndOfParagraphAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Forward, TextGranularity::ParagraphBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Forward, TextGranularity::ParagraphBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveParagraphBackwardAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Backward, TextGranularity::ParagraphGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Backward, TextGranularity::ParagraphGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveParagraphForwardAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Forward, TextGranularity::ParagraphGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Forward, TextGranularity::ParagraphGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveUp(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    return frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Backward, TextGranularity::LineGranularity, UserTriggered);
+    return frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Backward, TextGranularity::LineGranularity, UserTriggered::Yes);
 }
 
 static bool executeMoveUpAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Backward, TextGranularity::LineGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Backward, TextGranularity::LineGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveWordBackward(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Backward, TextGranularity::WordGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Backward, TextGranularity::WordGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveWordBackwardAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Backward, TextGranularity::WordGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Backward, TextGranularity::WordGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveWordForward(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Forward, TextGranularity::WordGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Forward, TextGranularity::WordGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveWordForwardAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Forward, TextGranularity::WordGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Forward, TextGranularity::WordGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveWordLeft(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Left, TextGranularity::WordGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Left, TextGranularity::WordGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveWordLeftAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Left, TextGranularity::WordGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Left, TextGranularity::WordGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveWordRight(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Right, TextGranularity::WordGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Right, TextGranularity::WordGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveWordRightAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Right, TextGranularity::WordGranularity, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Right, TextGranularity::WordGranularity, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToLeftEndOfLine(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Left, TextGranularity::LineBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Left, TextGranularity::LineBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToLeftEndOfLineAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Left, TextGranularity::LineBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Left, TextGranularity::LineBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToRightEndOfLine(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationMove, SelectionDirection::Right, TextGranularity::LineBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Move, SelectionDirection::Right, TextGranularity::LineBoundary, UserTriggered::Yes);
     return true;
 }
 
 static bool executeMoveToRightEndOfLineAndModifySelection(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    frame.selection().modify(FrameSelection::AlterationExtend, SelectionDirection::Right, TextGranularity::LineBoundary, UserTriggered);
+    frame.selection().modify(FrameSelection::Alteration::Extend, SelectionDirection::Right, TextGranularity::LineBoundary, UserTriggered::Yes);
     return true;
 }
 
@@ -903,7 +903,7 @@ static bool executeToggleOverwrite(LocalFrame& frame, Event*, EditorCommandSourc
 
 static bool executePaste(LocalFrame& frame, Event*, EditorCommandSource source, const String&)
 {
-    if (source == CommandFromMenuOrKeyBinding) {
+    if (source == EditorCommandSource::MenuOrKeyBinding) {
         UserTypingGestureIndicator typingGestureIndicator(frame);
         frame.editor().paste(Editor::FromMenuOrKeyBinding::Yes);
         return true;
@@ -918,7 +918,7 @@ static bool executePaste(LocalFrame& frame, Event*, EditorCommandSource source, 
 
 static bool executePasteFont(LocalFrame& frame, Event*, EditorCommandSource source, const String&)
 {
-    if (source == CommandFromMenuOrKeyBinding) {
+    if (source == EditorCommandSource::MenuOrKeyBinding) {
         UserTypingGestureIndicator typingGestureIndicator(frame);
         frame.editor().pasteFont(Editor::FromMenuOrKeyBinding::Yes);
         return true;
@@ -939,7 +939,7 @@ static bool executePasteGlobalSelection(LocalFrame& frame, Event*, EditorCommand
     if (!frame.editor().client()->supportsGlobalSelection())
         return false;
 
-    ASSERT_UNUSED(source, source == CommandFromMenuOrKeyBinding);
+    ASSERT_UNUSED(source, source == EditorCommandSource::MenuOrKeyBinding);
     UserTypingGestureIndicator typingGestureIndicator(frame);
     frame.editor().paste(*Pasteboard::createForGlobalSelection(PagePasteboardContext::create(frame.pageID())));
     return true;
@@ -949,7 +949,7 @@ static bool executePasteGlobalSelection(LocalFrame& frame, Event*, EditorCommand
 
 static bool executePasteAndMatchStyle(LocalFrame& frame, Event*, EditorCommandSource source, const String&)
 {
-    if (source == CommandFromMenuOrKeyBinding) {
+    if (source == EditorCommandSource::MenuOrKeyBinding) {
         UserTypingGestureIndicator typingGestureIndicator(frame);
         frame.editor().pasteAsPlainText(Editor::FromMenuOrKeyBinding::Yes);
         return true;
@@ -964,7 +964,7 @@ static bool executePasteAndMatchStyle(LocalFrame& frame, Event*, EditorCommandSo
 
 static bool executePasteAsPlainText(LocalFrame& frame, Event*, EditorCommandSource source, const String&)
 {
-    if (source == CommandFromMenuOrKeyBinding) {
+    if (source == EditorCommandSource::MenuOrKeyBinding) {
         UserTypingGestureIndicator typingGestureIndicator(frame);
         frame.editor().pasteAsPlainText(Editor::FromMenuOrKeyBinding::Yes);
         return true;
@@ -979,7 +979,7 @@ static bool executePasteAsPlainText(LocalFrame& frame, Event*, EditorCommandSour
 
 static bool executePasteAsQuotation(LocalFrame& frame, Event*, EditorCommandSource source, const String&)
 {
-    if (source == CommandFromMenuOrKeyBinding) {
+    if (source == EditorCommandSource::MenuOrKeyBinding) {
         UserTypingGestureIndicator typingGestureIndicator(frame);
         frame.editor().pasteAsQuotation(Editor::FromMenuOrKeyBinding::Yes);
         return true;
@@ -1345,10 +1345,10 @@ static bool allowCopyCutFromDOM(LocalFrame& frame)
 static bool enabledCopy(LocalFrame& frame, EditorCommandSource source, Function<bool(const Editor&)>&& canCopy)
 {
     switch (source) {
-    case CommandFromMenuOrKeyBinding:
+    case EditorCommandSource::MenuOrKeyBinding:
         return frame.editor().canDHTMLCopy() || canCopy(frame.editor());
-    case CommandFromDOM:
-    case CommandFromDOMWithUserInterface:
+    case EditorCommandSource::DOM:
+    case EditorCommandSource::DOMWithUserInterface:
         return allowCopyCutFromDOM(frame) && (frame.editor().canDHTMLCopy() || canCopy(frame.editor()));
     }
     ASSERT_NOT_REACHED();
@@ -1372,10 +1372,10 @@ static bool enabledCopyFont(LocalFrame& frame, Event*, EditorCommandSource sourc
 static bool enabledCut(LocalFrame& frame, Event*, EditorCommandSource source)
 {
     switch (source) {
-    case CommandFromMenuOrKeyBinding:    
+    case EditorCommandSource::MenuOrKeyBinding:
         return frame.editor().canDHTMLCut() || frame.editor().canCut();
-    case CommandFromDOM:
-    case CommandFromDOMWithUserInterface:
+    case EditorCommandSource::DOM:
+    case EditorCommandSource::DOMWithUserInterface:
         return allowCopyCutFromDOM(frame) && (frame.editor().canDHTMLCut() || frame.editor().canCut());
     }
     ASSERT_NOT_REACHED();
@@ -1396,10 +1396,10 @@ static bool enabledInEditableText(LocalFrame& frame, Event* event, EditorCommand
 static bool enabledDelete(LocalFrame& frame, Event* event, EditorCommandSource source)
 {
     switch (source) {
-    case CommandFromMenuOrKeyBinding:    
+    case EditorCommandSource::MenuOrKeyBinding:
         return frame.editor().canDelete();
-    case CommandFromDOM:
-    case CommandFromDOMWithUserInterface:
+    case EditorCommandSource::DOM:
+    case EditorCommandSource::DOMWithUserInterface:
         // "Delete" from DOM is like delete/backspace keypress, affects selected range if non-empty,
         // otherwise removes a character
         return enabledInEditableText(frame, event, source);
@@ -1432,10 +1432,10 @@ static bool allowPasteFromDOM(LocalFrame& frame)
 static bool enabledPaste(LocalFrame& frame, Event*, EditorCommandSource source)
 {
     switch (source) {
-    case CommandFromMenuOrKeyBinding:
+    case EditorCommandSource::MenuOrKeyBinding:
         return frame.editor().canDHTMLPaste() || frame.editor().canPaste();
-    case CommandFromDOM:
-    case CommandFromDOMWithUserInterface:
+    case EditorCommandSource::DOM:
+    case EditorCommandSource::DOMWithUserInterface:
         return allowPasteFromDOM(frame) && (frame.editor().canDHTMLPaste() || frame.editor().canPaste());
     }
     ASSERT_NOT_REACHED();
@@ -1581,9 +1581,9 @@ static String valueBackColor(LocalFrame& frame, Event*)
 static String valueDefaultParagraphSeparator(LocalFrame& frame, Event*)
 {
     switch (frame.editor().defaultParagraphSeparator()) {
-    case EditorParagraphSeparatorIsDiv:
+    case EditorParagraphSeparator::div:
         return divTag->localName();
-    case EditorParagraphSeparatorIsP:
+    case EditorParagraphSeparator::p:
         return pTag->localName();
     }
 
@@ -1637,10 +1637,10 @@ static bool doNotAllowExecutionWhenDisabled(LocalFrame&, EditorCommandSource)
 static bool allowExecutionWhenDisabledCopyCut(LocalFrame&, EditorCommandSource source)
 {
     switch (source) {
-    case CommandFromMenuOrKeyBinding:
+    case EditorCommandSource::MenuOrKeyBinding:
         return true;
-    case CommandFromDOM:
-    case CommandFromDOMWithUserInterface:
+    case EditorCommandSource::DOM:
+    case EditorCommandSource::DOMWithUserInterface:
         return false;
     }
 
@@ -1884,7 +1884,7 @@ static const EditorInternalCommand* internalCommand(const String& commandName)
 
 Editor::Command Editor::command(const String& commandName)
 {
-    return Command(internalCommand(commandName), CommandFromMenuOrKeyBinding, m_document);
+    return Command(internalCommand(commandName), EditorCommandSource::MenuOrKeyBinding, m_document);
 }
 
 Editor::Command Editor::command(const String& commandName, EditorCommandSource source)
@@ -1935,10 +1935,10 @@ bool Editor::Command::isSupported() const
     if (!m_command)
         return false;
     switch (m_source) {
-    case CommandFromMenuOrKeyBinding:
+    case EditorCommandSource::MenuOrKeyBinding:
         return true;
-    case CommandFromDOM:
-    case CommandFromDOMWithUserInterface:
+    case EditorCommandSource::DOM:
+    case EditorCommandSource::DOMWithUserInterface:
         return m_command->isSupportedFromDOM(m_frame.get());
     }
     ASSERT_NOT_REACHED();

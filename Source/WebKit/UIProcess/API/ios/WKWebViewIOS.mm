@@ -38,6 +38,7 @@
 #import "RemoteScrollingCoordinatorProxyIOS.h"
 #import "ScrollingTreeScrollingNodeDelegateIOS.h"
 #import "TapHandlingResult.h"
+#import "UIAlertControllerUtilities.h"
 #import "UIKitSPI.h"
 #import "VideoFullscreenManagerProxy.h"
 #import "ViewGestureController.h"
@@ -256,9 +257,9 @@ static WebCore::IntDegrees deviceOrientationForUIInterfaceOrientation(UIInterfac
         --_focusPreservationCount;
 }
 
-- (void)_resetFocusPreservationCount
+- (NSUInteger)_resetFocusPreservationCount
 {
-    _focusPreservationCount = 0;
+    return std::exchange(_focusPreservationCount, 0);
 }
 
 - (BOOL)_isRetainingActiveFocusedState
@@ -646,6 +647,11 @@ static WebCore::Color scrollViewBackgroundColor(WKWebView *webView, AllowPageBac
         [_scrollView _setIndicatorStyleInternal:UIScrollViewIndicatorStyleBlack];
 }
 
+- (UIColor *)_insertionPointColor
+{
+    return self._textInputTraits.insertionPointColor ?: UIColor.insertionPointColor;
+}
+
 - (void)_videoControlsManagerDidChange
 {
 #if ENABLE(FULLSCREEN_API)
@@ -803,7 +809,7 @@ static WebCore::Color scrollViewBackgroundColor(WKWebView *webView, AllowPageBac
 
 - (void)_didRelaunchProcess
 {
-    WKWEBVIEW_RELEASE_LOG("%p -[WKWebView _didRelaunchProcess] (pid=%d)", self, _page->processIdentifier());
+    WKWEBVIEW_RELEASE_LOG("%p -[WKWebView _didRelaunchProcess] (pid=%d)", self, _page->processID());
     _perProcessState.hasScheduledVisibleRectUpdate = NO;
     _viewStabilityWhenVisibleContentRectUpdateScheduled = { };
     if (_gestureController)
@@ -1319,8 +1325,8 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
             contentOffsetInScrollViewCoordinates.y = scrollViewContentOffset.y;
 
         [_scrollView setContentOffset:contentOffsetInScrollViewCoordinates animated:animated];
-    } else {
-        // If we haven't changed anything, there would not be any VisibleContentRect update sent to the content.
+    } else if (!_perProcessState.didDeferUpdateVisibleContentRectsForAnyReason) {
+        // If we haven't changed anything, and are not deferring updates, there would not be any VisibleContentRect update sent to the content.
         // The WebProcess would keep the invalid contentOffset as its scroll position.
         // To synchronize the WebProcess with what is on screen, we send the VisibleContentRect again.
         _page->resendLastVisibleContentRects();
@@ -2346,7 +2352,7 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
     if (scrollView.isDragging || scrollView.isZooming || scrollView._isInterruptingDeceleration)
         stabilityFlags.add(WebKit::ViewStabilityFlag::ScrollViewInteracting);
 
-    if (scrollView.isDecelerating || scrollView._isAnimatingZoom || scrollView._isScrollingToTop)
+    if (scrollView.isDecelerating || scrollView._isAnimatingZoom || scrollView._isScrollingToTop || scrollView.isZoomBouncing)
         stabilityFlags.add(WebKit::ViewStabilityFlag::ScrollViewAnimatedScrollOrZoom);
 
     if (scrollView == _scrollView.get() && _isChangingObscuredInsetsInteractively)
@@ -2908,6 +2914,8 @@ static WebCore::IntDegrees activeOrientation(WKWebView *webView)
     [_passwordView setUserDidEnterPassword:passwordHandler];
     [_passwordView showInScrollView:_scrollView.get()];
     self._currentContentView.hidden = YES;
+
+    [self _didRequestPasswordForDocument];
 }
 
 - (void)_hidePasswordView
@@ -2918,6 +2926,18 @@ static WebCore::IntDegrees activeOrientation(WKWebView *webView)
     self._currentContentView.hidden = NO;
     [_passwordView hide];
     _passwordView = nil;
+
+    [self _didStopRequestingPasswordForDocument];
+}
+
+- (void)_didRequestPasswordForDocument
+{
+    _navigationState->didRequestPasswordForQuickLookDocument();
+}
+
+- (void)_didStopRequestingPasswordForDocument
+{
+    _navigationState->didStopRequestingPasswordForQuickLookDocument();
 }
 
 - (WKPasswordView *)_passwordView
@@ -3124,7 +3144,11 @@ static bool isLockdownModeWarningNeeded()
     if (!lockdownModeWarningNeeded)
         return;
 
+#if PLATFORM(MACCATALYST)
+    auto message = WEB_UI_NSSTRING(@"Certain experiences and features may not function as expected. You can manage Lockdown Mode in Settings.", "Lockdown Mode alert message");
+#else
     auto message = WEB_UI_NSSTRING(@"Certain experiences and features may not function as expected. You can turn off Lockdown Mode for this app in Settings.", "Lockdown Mode alert message");
+#endif
 
     auto decisionHandler = makeBlockPtr([message, protectedSelf = retainPtr(self)](WKDialogResult result) mutable {
         if (result == WKDialogResultAskAgain) {
@@ -3144,17 +3168,17 @@ static bool isLockdownModeWarningNeeded()
             if (!appDisplayName)
                 appDisplayName = [[NSBundle mainBundle] objectForInfoDictionaryKey:(__bridge NSString *)kCFBundleNameKey];
 
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:WEB_UI_NSSTRING(@"Lockdown Mode is Turned On For “%@“", "Lockdown Mode alert title"), appDisplayName] message:message.get() preferredStyle:UIAlertControllerStyleAlert];
+            auto alert = WebKit::createUIAlertController([NSString stringWithFormat:WEB_UI_NSSTRING(@"Lockdown Mode is Turned On For “%@“", "Lockdown Mode alert title"), appDisplayName], message.get());
 
             [alert addAction:[UIAlertAction actionWithTitle:WEB_UI_NSSTRING(@"OK", "Lockdown Mode alert OK button") style:UIAlertActionStyleDefault handler:nil]];
 
             UIViewController *presentationViewController = [UIViewController _viewControllerForFullScreenPresentationFromView:protectedSelf.get()];
-            [presentationViewController presentViewController:alert animated:YES completion:nil];
+            [presentationViewController presentViewController:alert.get() animated:YES completion:nil];
             [[NSUserDefaults standardUserDefaults] setBool:YES forKey:WebKitLockdownModeAlertShownKey];
         });
     });
     
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     if ([self.UIDelegate respondsToSelector:@selector(webView:showLockdownModeFirstUseMessage:completionHandler:)]) {
         [self.UIDelegate webView:self showLockdownModeFirstUseMessage:message completionHandler:decisionHandler.get()];
         return;
@@ -3474,10 +3498,8 @@ static bool isLockdownModeWarningNeeded()
 
 - (CGRect)_uiTextCaretRect
 {
-    // Force the selection view to update if needed.
-    [_contentView _updateChangedSelection];
-
-    return [[_contentView valueForKeyPath:@"interactionAssistant.selectionView.selection.caretRect"] CGRectValue];
+    // Only here to maintain binary compatibility.
+    return CGRectZero;
 }
 
 - (UIView *)_safeBrowsingWarning
@@ -3839,11 +3861,11 @@ static bool isLockdownModeWarningNeeded()
         return;
     }
 
-    _page->takeSnapshot(WebCore::enclosingIntRect(snapshotRectInContentCoordinates), WebCore::expandedIntSize(WebCore::FloatSize(imageSize)), WebKit::SnapshotOptionsExcludeDeviceScaleFactor, [completionHandler = makeBlockPtr(completionHandler)](const WebKit::ShareableBitmapHandle& imageHandle) {
+    _page->takeSnapshot(WebCore::enclosingIntRect(snapshotRectInContentCoordinates), WebCore::expandedIntSize(WebCore::FloatSize(imageSize)), WebKit::SnapshotOptionsExcludeDeviceScaleFactor, [completionHandler = makeBlockPtr(completionHandler)](WebKit::ShareableBitmap::Handle&& imageHandle) {
         if (imageHandle.isNull())
             return completionHandler(nil);
 
-        auto bitmap = WebKit::ShareableBitmap::create(imageHandle, WebKit::SharedMemory::Protection::ReadOnly);
+        auto bitmap = WebKit::ShareableBitmap::create(WTFMove(imageHandle), WebKit::SharedMemory::Protection::ReadOnly);
 
         if (!bitmap)
             return completionHandler(nil);

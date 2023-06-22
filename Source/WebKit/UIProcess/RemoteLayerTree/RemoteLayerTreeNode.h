@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "RemoteLayerBackingStore.h"
 #include <WebCore/EventRegion.h>
 #include <WebCore/LayerHostingContextIdentifier.h>
 #include <WebCore/PlatformLayerIdentifier.h>
@@ -93,14 +94,24 @@ public:
 
     // A cached CAIOSurface object to retain CA render resources.
     struct CachedContentsBuffer {
-        WebCore::RenderingResourceIdentifier m_renderingResourceIdentifier;
-        RetainPtr<id> m_buffer;
+        BufferAndBackendInfo imageBufferInfo;
+        RetainPtr<id> buffer;
     };
 
-    Vector<CachedContentsBuffer> takeCachedContentsBuffers() { return WTFMove(m_cachedContentsBuffers); }
+    Vector<CachedContentsBuffer> takeCachedContentsBuffers() { return std::exchange(m_cachedContentsBuffers, { }); }
     void setCachedContentsBuffers(Vector<CachedContentsBuffer>&& buffers)
     {
         m_cachedContentsBuffers = WTFMove(buffers);
+    }
+
+    std::optional<WebCore::RenderingResourceIdentifier> asyncContentsIdentifier() const
+    {
+        return m_asyncContentsIdentifier;
+    }
+
+    void setAsyncContentsIdentifier(const WebCore::RenderingResourceIdentifier& identifier)
+    {
+        m_asyncContentsIdentifier = identifier;
     }
 
 private:
@@ -128,6 +139,7 @@ private:
     Vector<WebCore::PlatformLayerIdentifier> m_stationaryScrollContainerIDs;
 
     Vector<CachedContentsBuffer> m_cachedContentsBuffers;
+    std::optional<WebCore::RenderingResourceIdentifier> m_asyncContentsIdentifier;
 };
 
 }

@@ -39,6 +39,14 @@ Page* CaretAnimator::page() const
     return nullptr;
 }
 
+void CaretAnimator::stop(CaretAnimatorStopReason)
+{
+    if (!m_isActive)
+        return;
+
+    didEnd();
+}
+
 void CaretAnimator::serviceCaretAnimation(ReducedResolutionSeconds timestamp)
 {
     if (!isActive())
@@ -53,12 +61,12 @@ void CaretAnimator::scheduleAnimation()
         page->scheduleRenderingUpdate(RenderingUpdateStep::CaretAnimation);
 }
 
-void CaretAnimator::paint(const Node&, GraphicsContext& context, const FloatRect& caret, const Color& color, const LayoutPoint&) const
+void CaretAnimator::paint(const Node&, GraphicsContext& context, const FloatRect& caret, const Color& color, const LayoutPoint&, const std::optional<VisibleSelection>&) const
 {
     context.fillRect(caret, color);
 }
 
-LayoutRect CaretAnimator::repaintCaretRectForLocalRect(LayoutRect rect) const
+LayoutRect CaretAnimator::caretRepaintRectForLocalRect(LayoutRect rect) const
 {
     return rect;
 }

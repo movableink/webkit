@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,10 @@
 
 #pragma once
 
+#include "ASTBuilder.h"
 #include "ASTDirective.h"
 #include "ASTFunction.h"
+#include "ASTIdentityExpression.h"
 #include "ASTStructure.h"
 #include "ASTVariable.h"
 #include "TypeStore.h"
@@ -56,6 +58,19 @@ public:
     AST::Structure::List& structures() { return m_structures; }
     AST::Variable::List& variables() { return m_variables; }
     TypeStore& types() { return m_types; }
+    AST::Builder& astBuilder() { return m_astBuilder; }
+
+    bool usesExternalTextures() const { return m_usesExternalTextures; }
+    void setUsesExternalTextures() { m_usesExternalTextures = true; }
+    void clearUsesExternalTextures() { m_usesExternalTextures = false; }
+
+    bool usesPackArray() const { return m_usesPackArray; }
+    void setUsesPackArray() { m_usesPackArray = true; }
+    void clearUsesPackArray() { m_usesPackArray = false; }
+
+    bool usesUnpackArray() const { return m_usesUnpackArray; }
+    void setUsesUnpackArray() { m_usesUnpackArray = true; }
+    void clearUsesUnpackArray() { m_usesUnpackArray = false; }
 
     template<typename T>
     std::enable_if_t<std::is_base_of_v<AST::Node, T>, void> replace(T* current, T&& replacement)
@@ -68,7 +83,7 @@ public:
     }
 
     template<typename T>
-    std::enable_if_t<std::is_fundamental_v<T>, void> replace(T* current, T&& replacement)
+    std::enable_if_t<std::is_fundamental_v<T> || std::is_enum_v<T>, void> replace(T* current, T&& replacement)
     {
         std::swap(*current, replacement);
         m_replacements.append([current, replacement = WTFMove(replacement)]() mutable {
@@ -77,17 +92,27 @@ public:
     }
 
     template<typename CurrentType, typename ReplacementType>
-    void replace(CurrentType* current, ReplacementType&& replacement)
+    std::enable_if_t<sizeof(CurrentType) < sizeof(ReplacementType), void> replace(CurrentType& current, ReplacementType& replacement)
     {
-        static_assert(sizeof(ReplacementType) <= sizeof(CurrentType));
-
-        m_replacements.append([current, currentCopy = *current]() mutable {
-            bitwise_cast<ReplacementType*>(current)->~ReplacementType();
-            new (current) CurrentType(WTFMove(currentCopy));
+        m_replacements.append([&current, currentCopy = current]() mutable {
+            bitwise_cast<AST::IdentityExpression*>(&current)->~IdentityExpression();
+            new (&current) CurrentType(WTFMove(currentCopy));
         });
 
-        current->~CurrentType();
-        new (current) ReplacementType(WTFMove(replacement));
+        current.~CurrentType();
+        new (&current) AST::IdentityExpression(replacement.span(), replacement);
+    }
+
+    template<typename CurrentType, typename ReplacementType>
+    std::enable_if_t<sizeof(CurrentType) >= sizeof(ReplacementType), void> replace(CurrentType& current, ReplacementType& replacement)
+    {
+        m_replacements.append([&current, currentCopy = current]() mutable {
+            bitwise_cast<ReplacementType*>(&current)->~ReplacementType();
+            new (bitwise_cast<void*>(&current)) CurrentType(WTFMove(currentCopy));
+        });
+
+        current.~CurrentType();
+        new (bitwise_cast<void*>(&current)) ReplacementType(replacement);
     }
 
     template<typename T, size_t size>
@@ -101,10 +126,10 @@ public:
         return last;
     }
 
-    template<typename T, size_t size>
-    void append(const Vector<T, size>& constVector, T&& value)
+    template<typename T, typename U, size_t size>
+    void append(const Vector<U, size>& constVector, T&& value)
     {
-        auto& vector = const_cast<Vector<T, size>&>(constVector);
+        auto& vector = const_cast<Vector<U, size>&>(constVector);
         vector.append(std::forward<T>(value));
         m_replacements.append([&vector]() {
             vector.takeLast();
@@ -128,14 +153,37 @@ public:
         m_replacements.clear();
     }
 
+    class Compilation {
+    public:
+        Compilation(ShaderModule& shaderModule)
+            : m_shaderModule(shaderModule)
+            , m_builderState(shaderModule.astBuilder().saveCurrentState())
+        {
+        }
+
+        ~Compilation()
+        {
+            m_shaderModule.revertReplacements();
+            m_shaderModule.astBuilder().restore(WTFMove(m_builderState));
+        }
+
+    private:
+        ShaderModule& m_shaderModule;
+        AST::Builder::State m_builderState;
+    };
+
 private:
     String m_source;
+    bool m_usesExternalTextures { false };
+    bool m_usesPackArray { false };
+    bool m_usesUnpackArray { false };
     Configuration m_configuration;
     AST::Directive::List m_directives;
     AST::Function::List m_functions;
     AST::Structure::List m_structures;
     AST::Variable::List m_variables;
     TypeStore m_types;
+    AST::Builder m_astBuilder;
     Vector<std::function<void()>> m_replacements;
 };
 

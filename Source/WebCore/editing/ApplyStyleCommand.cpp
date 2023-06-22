@@ -363,7 +363,7 @@ void ApplyStyleCommand::applyRelativeFontStyleChange(EditingStyle* style)
     // is performed in the following loops below.
     if (beyondEnd) {
         auto treeOrderPos = treeOrder(*startNode, *beyondEnd);
-        if (is_gt(treeOrderPos) || is_eq(treeOrderPos))
+        if (is_gteq(treeOrderPos))
             return;
     }
     
@@ -405,7 +405,7 @@ void ApplyStyleCommand::applyRelativeFontStyleChange(EditingStyle* style)
             auto span = createStyleSpanElement(document());
             if (!surroundNodeRangeWithElement(*node, *node, span))
                 continue;
-            reachedEnd = node->isDescendantOf(beyondEnd.get());
+            reachedEnd = node->isDescendantOf(beyondEnd.get()) || !node->parentElement();
             element = WTFMove(span);
         }  else {
             // Only handle HTML elements and text nodes.
@@ -1023,7 +1023,7 @@ void ApplyStyleCommand::applyInlineStyleToPushDown(Node& node, EditingStyle* sty
     {
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
-        if (node.renderer()->isText() && static_cast<RenderText*>(node.renderer())->isAllCollapsibleWhitespace())
+        if (node.renderer()->isText() && static_cast<RenderText*>(node.renderer())->containsOnlyCollapsibleWhitespace())
             return;
         if (node.renderer()->isBR() && !node.renderer()->style().preserveNewline())
             return;

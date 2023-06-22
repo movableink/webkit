@@ -32,6 +32,7 @@
 #include "FormDataReference.h"
 #include "Logging.h"
 #include "NetworkLoad.h"
+#include "NetworkOriginAccessPatterns.h"
 #include "NetworkProcess.h"
 #include "NetworkResourceLoader.h"
 #include "NetworkSession.h"
@@ -126,12 +127,15 @@ ServiceWorkerFetchTask::~ServiceWorkerFetchTask()
 
 template<typename Message> bool ServiceWorkerFetchTask::sendToServiceWorker(Message&& message)
 {
-    return m_serviceWorkerConnection ? m_serviceWorkerConnection->ipcConnection().send(std::forward<Message>(message), 0) : false;
+    if (!m_serviceWorkerConnection)
+        return false;
+
+    return m_serviceWorkerConnection->ipcConnection().send(std::forward<Message>(message), 0) == IPC::Error::NoError;
 }
 
 template<typename Message> bool ServiceWorkerFetchTask::sendToClient(Message&& message)
 {
-    return m_loader.connectionToWebProcess().connection().send(std::forward<Message>(message), m_loader.coreIdentifier());
+    return m_loader.connectionToWebProcess().connection().send(std::forward<Message>(message), m_loader.coreIdentifier()) == IPC::Error::NoError;
 }
 
 void ServiceWorkerFetchTask::start(WebSWServerToContextConnection& serviceWorkerConnection)
@@ -173,8 +177,11 @@ void ServiceWorkerFetchTask::startFetch()
         if (auto identifier = m_loader.parameters().options.clientIdentifier)
             clientIdentifier = identifier->toString();
     }
+    String resultingClientIdentifier;
+    if (auto& identifier = m_loader.parameters().options.resultingClientIdentifier)
+        resultingClientIdentifier = identifier->toString();
 
-    bool isSent = sendToServiceWorker(Messages::WebSWContextManagerConnection::StartFetch { m_serverConnectionIdentifier, m_serviceWorkerIdentifier, m_fetchIdentifier, request, options, IPC::FormDataReference { m_currentRequest.httpBody() }, referrer, m_preloader && m_preloader->isServiceWorkerNavigationPreloadEnabled(), clientIdentifier, m_loader.resultingClientIdentifier() });
+    bool isSent = sendToServiceWorker(Messages::WebSWContextManagerConnection::StartFetch { m_serverConnectionIdentifier, m_serviceWorkerIdentifier, m_fetchIdentifier, request, options, IPC::FormDataReference { m_currentRequest.httpBody() }, referrer, m_preloader && m_preloader->isServiceWorkerNavigationPreloadEnabled(), clientIdentifier, resultingClientIdentifier });
     ASSERT_UNUSED(isSent, isSent);
 }
 
@@ -229,14 +236,14 @@ void ServiceWorkerFetchTask::processResponse(ResourceResponse&& response, bool n
 
     if (m_loader.parameters().options.mode == FetchOptions::Mode::Navigate) {
         if (auto parentOrigin = m_loader.parameters().parentOrigin()) {
-            if (auto error = validateCrossOriginResourcePolicy(m_loader.parameters().parentCrossOriginEmbedderPolicy.value, *parentOrigin, m_currentRequest.url(), response, ForNavigation::Yes)) {
+            if (auto error = validateCrossOriginResourcePolicy(m_loader.parameters().parentCrossOriginEmbedderPolicy.value, *parentOrigin, m_currentRequest.url(), response, ForNavigation::Yes, m_loader.connectionToWebProcess().originAccessPatterns())) {
                 didFail(*error);
                 return;
             }
         }
     }
     if (m_loader.parameters().options.mode == FetchOptions::Mode::NoCors) {
-        if (auto error = validateCrossOriginResourcePolicy(m_loader.parameters().crossOriginEmbedderPolicy.value, *m_loader.parameters().sourceOrigin, m_currentRequest.url(), response, ForNavigation::No)) {
+        if (auto error = validateCrossOriginResourcePolicy(m_loader.parameters().crossOriginEmbedderPolicy.value, *m_loader.parameters().sourceOrigin, m_currentRequest.url(), response, ForNavigation::No, m_loader.connectionToWebProcess().originAccessPatterns())) {
             didFail(*error);
             return;
         }

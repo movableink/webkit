@@ -40,12 +40,12 @@
 #include "EventNames.h"
 #include "FormState.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTMLFormElement.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLPlugInElement.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Logging.h"
 #include "ThreadableBlobRegistry.h"
 #include "URLKeepingBlobAlive.h"
@@ -55,7 +55,7 @@
 #include "QuickLook.h"
 #endif
 
-#define PAGE_ID (valueOrDefault(m_frame.loader().pageID()).toUInt64())
+#define PAGE_ID (valueOrDefault(m_frame.pageID()).toUInt64())
 #define FRAME_ID (m_frame.loader().frameID().object().toUInt64())
 #define POLICYCHECKER_RELEASE_LOG(fmt, ...) RELEASE_LOG(Loading, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 "] PolicyChecker::" fmt, this, PAGE_ID, FRAME_ID, ##__VA_ARGS__)
 

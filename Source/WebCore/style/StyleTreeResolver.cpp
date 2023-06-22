@@ -33,7 +33,6 @@
 #include "HTMLInputElement.h"
 #include "HTMLMeterElement.h"
 #include "HTMLNames.h"
-#include "HTMLParserIdioms.h"
 #include "HTMLProgressElement.h"
 #include "HTMLSlotElement.h"
 #include "LoaderStrategy.h"
@@ -43,7 +42,8 @@
 #include "PlatformStrategies.h"
 #include "Quirks.h"
 #include "RenderElement.h"
-#include "RenderStyle.h"
+#include "RenderStyleSetters.h"
+#include "ResolvedStyle.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "StyleAdjuster.h"
@@ -183,8 +183,6 @@ static bool affectsRenderedSubtree(Element& element, const RenderStyle& newStyle
         return true;
     if (element.renderOrDisplayContentsStyle())
         return true;
-    if (element.displayContentsChanged())
-        return true;
     if (element.rendererIsNeeded(newStyle))
         return true;
     return false;
@@ -259,8 +257,11 @@ auto TreeResolver::resolveElement(Element& element, const RenderStyle* existingS
     auto resolveAndAddPseudoElementStyle = [&](PseudoId pseudoId) {
         auto pseudoElementUpdate = resolvePseudoElement(element, pseudoId, update);
         auto pseudoElementChange = [&] {
-            if (pseudoElementUpdate)
+            if (pseudoElementUpdate) {
+                if (pseudoId == PseudoId::Scrollbar)
+                    return pseudoElementUpdate->change;
                 return pseudoElementUpdate->change == Change::None ? Change::None : Change::NonInherited;
+            }
             if (!existingStyle || !existingStyle->getCachedPseudoStyle(pseudoId))
                 return Change::None;
             // If ::first-letter goes aways rebuild the renderers.
@@ -278,6 +279,8 @@ auto TreeResolver::resolveElement(Element& element, const RenderStyle* existingS
     if (resolveAndAddPseudoElementStyle(PseudoId::FirstLine) != Change::None)
         descendantsToResolve = DescendantsToResolve::All;
     if (resolveAndAddPseudoElementStyle(PseudoId::FirstLetter) != Change::None)
+        descendantsToResolve = DescendantsToResolve::All;
+    if (resolveAndAddPseudoElementStyle(PseudoId::Scrollbar) != Change::None)
         descendantsToResolve = DescendantsToResolve::All;
 
     resolveAndAddPseudoElementStyle(PseudoId::Marker);
@@ -311,6 +314,8 @@ inline bool supportsFirstLineAndLetterPseudoElement(const RenderStyle& style)
 
 std::optional<ElementUpdate> TreeResolver::resolvePseudoElement(Element& element, PseudoId pseudoId, const ElementUpdate& elementUpdate)
 {
+    if (elementUpdate.style->display() == DisplayType::None)
+        return { };
     if (pseudoId == PseudoId::Backdrop && !element.isInTopLayer())
         return { };
     if (pseudoId == PseudoId::Marker && elementUpdate.style->display() != DisplayType::ListItem)
@@ -319,7 +324,7 @@ std::optional<ElementUpdate> TreeResolver::resolvePseudoElement(Element& element
         return { };
     if (pseudoId == PseudoId::FirstLetter && !scope().resolver->usesFirstLetterRules())
         return { };
-    if (elementUpdate.style->display() == DisplayType::None)
+    if (pseudoId == PseudoId::Scrollbar && elementUpdate.style->overflowX() != Overflow::Scroll && elementUpdate.style->overflowY() != Overflow::Scroll)
         return { };
 
     if (!elementUpdate.style->hasPseudoStyle(pseudoId))
@@ -332,14 +337,6 @@ std::optional<ElementUpdate> TreeResolver::resolvePseudoElement(Element& element
 
     auto resolvedStyle = scope().resolver->styleForPseudoElement(element, { pseudoId }, resolutionContext);
     if (!resolvedStyle)
-        return { };
-
-    // FIXME: This test shouldn't be needed.
-    bool alwaysNeedsPseudoElement = resolvedStyle->style->hasAnimationsOrTransitions()
-        || element.hasKeyframeEffects(pseudoId)
-        || pseudoId == PseudoId::FirstLine
-        || pseudoId == PseudoId::FirstLetter;
-    if (!alwaysNeedsPseudoElement && !pseudoElementRendererIsNeeded(resolvedStyle->style.get()))
         return { };
 
     auto animatedUpdate = createAnimatedElementUpdate(WTFMove(*resolvedStyle), { element, pseudoId }, elementUpdate.change, resolutionContext);
@@ -504,11 +501,14 @@ ResolutionContext TreeResolver::makeResolutionContext()
 
 ResolutionContext TreeResolver::makeResolutionContextForPseudoElement(const ElementUpdate& elementUpdate, PseudoId pseudoId)
 {
-    auto parentStyle = [&] {
+    auto parentStyle = [&]() -> const RenderStyle* {
         if (pseudoId == PseudoId::FirstLetter) {
             if (auto* firstLineStyle = elementUpdate.style->getCachedPseudoStyle(PseudoId::FirstLine))
                 return firstLineStyle;
         }
+        // ::backdrop does not inherit style, hence using the view style as parent style
+        if (pseudoId == PseudoId::Backdrop)
+            return &m_document.renderView()->style();
         return elementUpdate.style.get();
     };
 
@@ -837,7 +837,7 @@ void TreeResolver::resolveComposedTree()
                 m_update->addText(text, parent.element, WTFMove(textUpdate));
             }
 
-            if (!text.data().isAllSpecialCharacters<isHTMLSpace>())
+            if (!text.data().containsOnly<isASCIIWhitespace>())
                 parent.resolvedFirstLineAndLetterChild = true;
 
             text.setHasValidStyle();

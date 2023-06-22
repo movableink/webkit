@@ -205,6 +205,9 @@ public:
     WEBCORE_EXPORT FloatPoint matrixTransform(const TransformationMatrix&) const;
     WEBCORE_EXPORT FloatPoint matrixTransform(const AffineTransform&) const;
 
+    WEBCORE_EXPORT String toJSONString() const;
+    WEBCORE_EXPORT Ref<JSON::Object> toJSONObject() const;
+
 private:
     float m_x { 0 };
     float m_y { 0 };
@@ -257,11 +260,6 @@ inline FloatPoint operator-(const FloatPoint& a)
 inline bool operator==(const FloatPoint& a, const FloatPoint& b)
 {
     return a.x() == b.x() && a.y() == b.y();
-}
-
-inline bool operator!=(const FloatPoint& a, const FloatPoint& b)
-{
-    return a.x() != b.x() || a.y() != b.y();
 }
 
 inline float operator*(const FloatPoint& a, const FloatPoint& b)
@@ -324,3 +322,15 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FloatPoint&);
 
 }
 
+namespace WTF {
+
+template<typename Type> struct LogArgument;
+template <>
+struct LogArgument<WebCore::FloatPoint> {
+    static String toString(const WebCore::FloatPoint& point)
+    {
+        return point.toJSONString();
+    }
+};
+
+} // namespace WTF

@@ -50,20 +50,16 @@ struct FontSizeAdjust {
             && isFromFont == other.isFromFont;
     }
 
-    bool operator!=(const FontSizeAdjust& other) const
-    {
-        return !(*this == other);
-    }
-
     enum class Metric : uint8_t {
         ExHeight,
         CapHeight,
         ChWidth,
         IcWidth,
         IcHeight
-    } metric;
-    Markable<float, FloatMarkableTraits> value;
+    };
+    Metric metric { Metric::ExHeight };
     bool isFromFont { false };
+    Markable<float, FloatMarkableTraits> value { };
 };
 
 inline void add(Hasher& hasher, const FontSizeAdjust& fontSizeAdjust)

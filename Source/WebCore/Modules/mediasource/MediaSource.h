@@ -72,7 +72,8 @@ public:
     void addedToRegistry();
     void removedFromRegistry();
     void openIfInEndedState();
-    bool isOpen() const;
+    void openIfDeferredOpen();
+    virtual bool isOpen() const;
     bool isClosed() const;
     bool isEnded() const;
     void sourceBufferDidChangeActiveState(SourceBuffer&, bool);
@@ -81,7 +82,7 @@ public:
     void streamEndedWithError(std::optional<EndOfStreamError>);
 
     MediaTime duration() const final;
-    std::unique_ptr<PlatformTimeRanges> buffered() const final;
+    const PlatformTimeRanges& buffered() const final;
 
     bool attachToElement(HTMLMediaElement&);
     void detachFromElement(HTMLMediaElement&);
@@ -96,7 +97,7 @@ public:
     MediaTime currentTime() const;
 
     enum class ReadyState { Closed, Open, Ended };
-    ReadyState readyState() const { return m_readyState; }
+    ReadyState readyState() const;
     ExceptionOr<void> endOfStream(std::optional<EndOfStreamError>);
 
     HTMLMediaElement* mediaElement() const { return m_mediaElement.get(); }
@@ -127,8 +128,12 @@ public:
 
     void failedToCreateRenderer(RendererType) final;
 
+#if ENABLE(MANAGED_MEDIA_SOURCE)
     virtual bool isManaged() const { return false; }
     void memoryPressure();
+#endif
+
+    void setAsSrcObject(bool);
 
 protected:
     explicit MediaSource(ScriptExecutionContext&);
@@ -173,12 +178,14 @@ private:
 
     RefPtr<SourceBufferList> m_sourceBuffers;
     RefPtr<SourceBufferList> m_activeSourceBuffers;
-    UniqueRef<PlatformTimeRanges> m_buffered;
-    std::unique_ptr<PlatformTimeRanges> m_liveSeekable;
+    PlatformTimeRanges m_buffered;
+    PlatformTimeRanges m_liveSeekable;
     WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElement;
     MediaTime m_duration;
     MediaTime m_pendingSeekTime;
     ReadyState m_readyState { ReadyState::Closed };
+    bool m_openDeferred { false };
+    bool m_sourceopenPending { false };
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     const void* m_logIdentifier { nullptr };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -420,7 +420,7 @@ bool EventHandler::passSubframeEventToSubframe(MouseEventWithHitTestResults& eve
         if (!is<RenderWidget>(renderer))
             return false;
         Widget* widget = downcast<RenderWidget>(*renderer).widget();
-        if (!widget || !widget->isFrameView())
+        if (!widget || !widget->isLocalFrameView())
             return false;
         if (!passWidgetMouseDownEventToWidget(downcast<RenderWidget>(renderer)))
             return false;
@@ -632,9 +632,9 @@ void EventHandler::sendFakeEventsAfterWidgetTracking(NSEvent *initiatingEvent)
         // no up-to-date cache of them anywhere.
         fakeEvent = [NSEvent mouseEventWithType:NSEventTypeMouseMoved
                                        location:[[view->platformWidget() window]
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
                                   convertScreenToBase:[NSEvent mouseLocation]]
-        ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
                                   modifierFlags:[initiatingEvent modifierFlags]
                                       timestamp:[initiatingEvent timestamp]
                                    windowNumber:[initiatingEvent windowNumber]
@@ -969,7 +969,7 @@ void EventHandler::wheelEventWasProcessedByMainThread(const PlatformWheelEvent& 
 bool EventHandler::platformCompletePlatformWidgetWheelEvent(const PlatformWheelEvent& wheelEvent, const Widget& widget, const WeakPtr<ScrollableArea>& scrollableArea)
 {
     // WebKit1: Prevent multiple copies of the scrollWheel event from being sent to the NSScrollView widget.
-    if (frameHasPlatformWidget(m_frame) && widget.isFrameView())
+    if (frameHasPlatformWidget(m_frame) && widget.isLocalFrameView())
         return true;
 
     if (!m_frame.page())

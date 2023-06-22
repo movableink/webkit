@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -40,8 +40,6 @@
 		1C19E698273F408B004B17B0 /* WebGPUTextureViewImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1C19E696273F408B004B17B0 /* WebGPUTextureViewImpl.cpp */; };
 		1C19E6B5273F85AF004B17B0 /* WebGPUConvertToBackingContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1C19E6B4273F85AF004B17B0 /* WebGPUConvertToBackingContext.cpp */; };
 		1C19E6BA27405E32004B17B0 /* WebGPUExternalTextureImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1C19E6B927405E32004B17B0 /* WebGPUExternalTextureImpl.cpp */; };
-		1C34AEFD298E2C6200C350B8 /* WebGPUSwapChainWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1C34AEFB298E2C6200C350B8 /* WebGPUSwapChainWrapper.cpp */; };
-		1C34AEFE298E2C6200C350B8 /* WebGPUSwapChainWrapper.h in Headers */ = {isa = PBXBuildFile; fileRef = 1C34AEFC298E2C6200C350B8 /* WebGPUSwapChainWrapper.h */; };
 		1C36C52E2743011A006DA4C1 /* WebGPUDowncastConvertToBackingContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1C36C52C2743011A006DA4C1 /* WebGPUDowncastConvertToBackingContext.cpp */; };
 		1C469C7A27C46E1300DEB594 /* WebGPUShaderModuleCompilationHint.h in Headers */ = {isa = PBXBuildFile; fileRef = 1CEF45AA27BB101F00C3A6BC /* WebGPUShaderModuleCompilationHint.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		1C4876D81F8D7F4E00CCEEBD /* Logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1C4876D61F8D7F4E00CCEEBD /* Logging.cpp */; };
@@ -70,10 +68,11 @@
 		1C5C57E92757318E003B540D /* TextEncodingRegistryMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1C5C57E82757318D003B540D /* TextEncodingRegistryMac.mm */; };
 		1C77C8C925D7972000635E0C /* CoreTextSoftLink.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1C77C8C725D7972000635E0C /* CoreTextSoftLink.cpp */; };
 		1C77C8CE25D7A4A300635E0C /* OTSVGTable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1C77C8CD25D7A4A300635E0C /* OTSVGTable.cpp */; };
-		1CB709FC28034EDF00A3A637 /* WebGPUDeviceWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1CB709FA28034EDF00A3A637 /* WebGPUDeviceWrapper.cpp */; };
-		1CB709FD28034EDF00A3A637 /* WebGPUDeviceWrapper.h in Headers */ = {isa = PBXBuildFile; fileRef = 1CB709FB28034EDF00A3A637 /* WebGPUDeviceWrapper.h */; };
+		1C8D6C962A2ADE4F00DAE18F /* WebGPUPtr.h in Headers */ = {isa = PBXBuildFile; fileRef = 1C8D6C952A2ADE4F00DAE18F /* WebGPUPtr.h */; };
 		1CCA5EFF280FABB4008A6F78 /* WebGPUCreateImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1CCA5EFD280FABB4008A6F78 /* WebGPUCreateImpl.cpp */; };
 		1CCA5F00280FABB4008A6F78 /* WebGPUCreateImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = 1CCA5EFE280FABB4008A6F78 /* WebGPUCreateImpl.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		1CD50E0F2A33EA1300032F1A /* AppleJPEGXLSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 1CD50E0E2A33E9FA00032F1A /* AppleJPEGXLSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		1CDE179A2A3BC3F9004E646F /* VideoToolboxSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 1CDE17992A3BC3F2004E646F /* VideoToolboxSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		1D2B413425F05E3500A3F70A /* ClockGeneric.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1D2B413225F05E3400A3F70A /* ClockGeneric.cpp */; };
 		293EE4A824154F8F0047493D /* AccessibilitySupportSoftLink.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 293EE4A624154F8F0047493D /* AccessibilitySupportSoftLink.cpp */; };
 		297CB482288B11D700BB7971 /* AccessibilitySoftLink.h in Headers */ = {isa = PBXBuildFile; fileRef = 297CB480288B11D700BB7971 /* AccessibilitySoftLink.h */; };
@@ -95,6 +94,10 @@
 		5C7C787423AC3E770065F47E /* ManagedConfigurationSoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C787223AC3E770065F47E /* ManagedConfigurationSoftLink.mm */; };
 		5CB898B2286274FA00CA3485 /* QuarantineSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 5CB898B1286274FA00CA3485 /* QuarantineSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		5CF869ED29D266AE0045F0D2 /* NSKeyedUnarchiverSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 5CF869EC29D266AE0045F0D2 /* NSKeyedUnarchiverSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		7A46A8112A3265C8007BDD04 /* LockdownModeSoftLink.h in Headers */ = {isa = PBXBuildFile; fileRef = 7A46A80F2A3265C8007BDD04 /* LockdownModeSoftLink.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		7A46A8122A3265E2007BDD04 /* LockdownModeSoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7A46A80E2A3265C7007BDD04 /* LockdownModeSoftLink.mm */; };
+		7AA1E2CE29EF5921002D4455 /* DataDetectorsUISoftLink.h in Headers */ = {isa = PBXBuildFile; fileRef = 7AA1E2CD29EF5921002D4455 /* DataDetectorsUISoftLink.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		7AA1E2D029EF5947002D4455 /* DataDetectorsUISoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7AA1E2CF29EF5946002D4455 /* DataDetectorsUISoftLink.mm */; };
 		7B47F2A328587B9700E793C8 /* CoreGraphicsSoftLink.h in Headers */ = {isa = PBXBuildFile; fileRef = 7B47F2A128587B9700E793C8 /* CoreGraphicsSoftLink.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		7B47F2A428587B9700E793C8 /* CoreGraphicsSoftLink.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B47F2A228587B9700E793C8 /* CoreGraphicsSoftLink.cpp */; };
 		93B38EC025821CD800198E63 /* SpeechSoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = 93B38EBF25821CD700198E63 /* SpeechSoftLink.mm */; };
@@ -467,9 +470,9 @@
 		F47221F4276FC2EB00B984C7 /* CoreMLSoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = F47221F2276FC2EB00B984C7 /* CoreMLSoftLink.mm */; };
 		F47221F8276FC32300B984C7 /* NaturalLanguageSoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = F47221F6276FC32300B984C7 /* NaturalLanguageSoftLink.mm */; };
 		F4974EA4265EEA2200B49B8C /* RevealSoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4974EA2265EEA2200B49B8C /* RevealSoftLink.mm */; };
-		F499BAAC2947FDBA001241D6 /* NetworkConnectionIntegritySoftLink.h in Headers */ = {isa = PBXBuildFile; fileRef = F499BAAA2947FDBA001241D6 /* NetworkConnectionIntegritySoftLink.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		F499BAAD2947FDBA001241D6 /* NetworkConnectionIntegritySoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = F499BAAB2947FDBA001241D6 /* NetworkConnectionIntegritySoftLink.mm */; };
-		F499BAAF2947FDDB001241D6 /* NetworkConnectionIntegritySPI.h in Headers */ = {isa = PBXBuildFile; fileRef = F499BAAE2947FDDB001241D6 /* NetworkConnectionIntegritySPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		F499BAAC2947FDBA001241D6 /* WebPrivacySoftLink.h in Headers */ = {isa = PBXBuildFile; fileRef = F499BAAA2947FDBA001241D6 /* WebPrivacySoftLink.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		F499BAAD2947FDBA001241D6 /* WebPrivacySoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = F499BAAB2947FDBA001241D6 /* WebPrivacySoftLink.mm */; };
+		F499BAAF2947FDDB001241D6 /* WebPrivacySPI.h in Headers */ = {isa = PBXBuildFile; fileRef = F499BAAE2947FDDB001241D6 /* WebPrivacySPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		F4C85A4E2658551A005B89CC /* QuickLookUISoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4C85A4C26585519005B89CC /* QuickLookUISoftLink.mm */; };
 		F4DDD01B264DC69E00EF1B91 /* DataDetectorsCoreSoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4DDD019264DC69E00EF1B91 /* DataDetectorsCoreSoftLink.mm */; };
 		F4E0875C266ACA53000F814A /* DataDetectorsSoftLink.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4E0875A266ACA53000F814A /* DataDetectorsSoftLink.mm */; };
@@ -707,8 +710,6 @@
 		1C19E6B6273F85BC004B17B0 /* WebGPUConvertToBackingContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebGPUConvertToBackingContext.h; sourceTree = "<group>"; };
 		1C19E6B927405E32004B17B0 /* WebGPUExternalTextureImpl.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebGPUExternalTextureImpl.cpp; sourceTree = "<group>"; };
 		1C19E6BB27405E3C004B17B0 /* WebGPUExternalTextureImpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebGPUExternalTextureImpl.h; sourceTree = "<group>"; };
-		1C34AEFB298E2C6200C350B8 /* WebGPUSwapChainWrapper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebGPUSwapChainWrapper.cpp; sourceTree = "<group>"; };
-		1C34AEFC298E2C6200C350B8 /* WebGPUSwapChainWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebGPUSwapChainWrapper.h; sourceTree = "<group>"; };
 		1C36C52C2743011A006DA4C1 /* WebGPUDowncastConvertToBackingContext.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebGPUDowncastConvertToBackingContext.cpp; sourceTree = "<group>"; };
 		1C36C52D2743011A006DA4C1 /* WebGPUDowncastConvertToBackingContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebGPUDowncastConvertToBackingContext.h; sourceTree = "<group>"; };
 		1C4876D61F8D7F4E00CCEEBD /* Logging.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Logging.cpp; sourceTree = "<group>"; };
@@ -757,8 +758,7 @@
 		1C77C8C825D7972000635E0C /* CoreTextSoftLink.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoreTextSoftLink.h; sourceTree = "<group>"; };
 		1C77C8CB25D79B6C00635E0C /* OTSVGTable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OTSVGTable.h; sourceTree = "<group>"; };
 		1C77C8CD25D7A4A300635E0C /* OTSVGTable.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = OTSVGTable.cpp; sourceTree = "<group>"; };
-		1CB709FA28034EDF00A3A637 /* WebGPUDeviceWrapper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebGPUDeviceWrapper.cpp; sourceTree = "<group>"; };
-		1CB709FB28034EDF00A3A637 /* WebGPUDeviceWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebGPUDeviceWrapper.h; sourceTree = "<group>"; };
+		1C8D6C952A2ADE4F00DAE18F /* WebGPUPtr.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebGPUPtr.h; sourceTree = "<group>"; };
 		1CC3ACE722BD7EB800F360F0 /* MetalSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MetalSPI.h; sourceTree = "<group>"; };
 		1CC5E4132737492C006F6FF4 /* WebGPUStorageTextureBindingLayout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebGPUStorageTextureBindingLayout.h; sourceTree = "<group>"; };
 		1CC5E4142737492C006F6FF4 /* WebGPUTextureViewDescriptor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebGPUTextureViewDescriptor.h; sourceTree = "<group>"; };
@@ -891,6 +891,8 @@
 		1CCA5EFE280FABB4008A6F78 /* WebGPUCreateImpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebGPUCreateImpl.h; sourceTree = "<group>"; };
 		1CCEE4F420D871930047B097 /* CoreUISPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CoreUISPI.h; sourceTree = "<group>"; };
 		1CCEE4F620D8743F0047B097 /* NSAppearanceSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSAppearanceSPI.h; sourceTree = "<group>"; };
+		1CD50E0E2A33E9FA00032F1A /* AppleJPEGXLSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppleJPEGXLSPI.h; sourceTree = "<group>"; };
+		1CDE17992A3BC3F2004E646F /* VideoToolboxSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VideoToolboxSPI.h; sourceTree = "<group>"; };
 		1CEF45AA27BB101F00C3A6BC /* WebGPUShaderModuleCompilationHint.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebGPUShaderModuleCompilationHint.h; sourceTree = "<group>"; };
 		1D12CC4A2411BCAE00FDA0A3 /* FeatureFlagsSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FeatureFlagsSPI.h; sourceTree = "<group>"; };
 		1D2B413225F05E3400A3F70A /* ClockGeneric.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ClockGeneric.cpp; sourceTree = "<group>"; };
@@ -948,6 +950,10 @@
 		72C9483A2959517C006ECB96 /* NSSearchFieldCellSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSSearchFieldCellSPI.h; sourceTree = "<group>"; };
 		7A36D0F8223AD9AB00B0522E /* CommonCryptoSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommonCryptoSPI.h; sourceTree = "<group>"; };
 		7A3A6A7F20CADB4600317AAE /* NSImageSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSImageSPI.h; sourceTree = "<group>"; };
+		7A46A80E2A3265C7007BDD04 /* LockdownModeSoftLink.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LockdownModeSoftLink.mm; sourceTree = "<group>"; };
+		7A46A80F2A3265C8007BDD04 /* LockdownModeSoftLink.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LockdownModeSoftLink.h; sourceTree = "<group>"; };
+		7AA1E2CD29EF5921002D4455 /* DataDetectorsUISoftLink.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DataDetectorsUISoftLink.h; sourceTree = "<group>"; };
+		7AA1E2CF29EF5946002D4455 /* DataDetectorsUISoftLink.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DataDetectorsUISoftLink.mm; sourceTree = "<group>"; };
 		7B47F2A128587B9700E793C8 /* CoreGraphicsSoftLink.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CoreGraphicsSoftLink.h; sourceTree = "<group>"; };
 		7B47F2A228587B9700E793C8 /* CoreGraphicsSoftLink.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CoreGraphicsSoftLink.cpp; sourceTree = "<group>"; };
 		93468E662714A7CD009983E3 /* FilePortSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FilePortSPI.h; sourceTree = "<group>"; };
@@ -1032,9 +1038,9 @@
 		F47221F6276FC32300B984C7 /* NaturalLanguageSoftLink.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = NaturalLanguageSoftLink.mm; sourceTree = "<group>"; };
 		F4974EA1265EEA2200B49B8C /* RevealSoftLink.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RevealSoftLink.h; sourceTree = "<group>"; };
 		F4974EA2265EEA2200B49B8C /* RevealSoftLink.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = RevealSoftLink.mm; sourceTree = "<group>"; };
-		F499BAAA2947FDBA001241D6 /* NetworkConnectionIntegritySoftLink.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetworkConnectionIntegritySoftLink.h; sourceTree = "<group>"; };
-		F499BAAB2947FDBA001241D6 /* NetworkConnectionIntegritySoftLink.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = NetworkConnectionIntegritySoftLink.mm; sourceTree = "<group>"; };
-		F499BAAE2947FDDB001241D6 /* NetworkConnectionIntegritySPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetworkConnectionIntegritySPI.h; sourceTree = "<group>"; };
+		F499BAAA2947FDBA001241D6 /* WebPrivacySoftLink.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebPrivacySoftLink.h; sourceTree = "<group>"; };
+		F499BAAB2947FDBA001241D6 /* WebPrivacySoftLink.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WebPrivacySoftLink.mm; sourceTree = "<group>"; };
+		F499BAAE2947FDDB001241D6 /* WebPrivacySPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebPrivacySPI.h; sourceTree = "<group>"; };
 		F4C85A4C26585519005B89CC /* QuickLookUISoftLink.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = QuickLookUISoftLink.mm; sourceTree = "<group>"; };
 		F4C85A4D2658551A005B89CC /* QuickLookUISoftLink.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QuickLookUISoftLink.h; sourceTree = "<group>"; };
 		F4DDD019264DC69E00EF1B91 /* DataDetectorsCoreSoftLink.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DataDetectorsCoreSoftLink.mm; sourceTree = "<group>"; };
@@ -1092,6 +1098,7 @@
 				0C2DA1241F3BEB4900DBC317 /* CoreTextSPI.h */,
 				CD17B268255F1625008430F9 /* CoreVideoSPI.h */,
 				29C15F4725D75F63001CE31C /* MediaAccessibilitySPI.h */,
+				1CDE17992A3BC3F2004E646F /* VideoToolboxSPI.h */,
 			);
 			path = cf;
 			sourceTree = "<group>";
@@ -1108,6 +1115,7 @@
 		0C2DA1201F3BE9E700DBC317 /* cocoa */ = {
 			isa = PBXGroup;
 			children = (
+				1CD50E0D2A33E9B500032F1A /* AppleJPEGXL */,
 				293EE4A624154F8F0047493D /* AccessibilitySupportSoftLink.cpp */,
 				293EE4A724154F8F0047493D /* AccessibilitySupportSoftLink.h */,
 				C037494124127CCB00D9A36E /* AccessibilitySupportSPI.h */,
@@ -1136,7 +1144,6 @@
 				EB8A8DC12509E87E00D1BF90 /* MediaToolboxSPI.h */,
 				1CC3ACE722BD7EB800F360F0 /* MetalSPI.h */,
 				0C2DA12D1F3BEB4900DBC317 /* NEFilterSourceSPI.h */,
-				F499BAAE2947FDDB001241D6 /* NetworkConnectionIntegritySPI.h */,
 				E327C0DE260BDC90002281C5 /* NotifySPI.h */,
 				0C7785741F45130F00F4EBB6 /* NSAccessibilitySPI.h */,
 				0C2DA12E1F3BEB4900DBC317 /* NSAttributedStringSPI.h */,
@@ -1168,6 +1175,7 @@
 				0C2DA12B1F3BEB4900DBC317 /* URLFormattingSPI.h */,
 				F46B8C4E26740AD8007A6554 /* VisionKitCoreSPI.h */,
 				0C2DA13D1F3BEB4900DBC317 /* WebFilterEvaluatorSPI.h */,
+				F499BAAE2947FDDB001241D6 /* WebPrivacySPI.h */,
 			);
 			path = cocoa;
 			sourceTree = "<group>";
@@ -1178,6 +1186,8 @@
 				3C963637289DC1C600570DD6 /* BarcodeSupportSPI.h */,
 				CDF91112220E4EEC001EA39E /* CelestialSPI.h */,
 				0C5AF90F1F43A4C7002EAC02 /* CoreUISPI.h */,
+				7AA1E2CD29EF5921002D4455 /* DataDetectorsUISoftLink.h */,
+				7AA1E2CF29EF5946002D4455 /* DataDetectorsUISoftLink.mm */,
 				0C5AF9101F43A4C7002EAC02 /* DataDetectorsUISPI.h */,
 				0C5AF9111F43A4C7002EAC02 /* GraphicsServicesSPI.h */,
 				2D68D6572740B15B005EBB2E /* IOKitSPIIOS.h */,
@@ -1366,8 +1376,6 @@
 				1CCA5EFE280FABB4008A6F78 /* WebGPUCreateImpl.h */,
 				1C19E666273F3FFA004B17B0 /* WebGPUDeviceImpl.cpp */,
 				1C19E6AD273F4245004B17B0 /* WebGPUDeviceImpl.h */,
-				1CB709FA28034EDF00A3A637 /* WebGPUDeviceWrapper.cpp */,
-				1CB709FB28034EDF00A3A637 /* WebGPUDeviceWrapper.h */,
 				1C36C52C2743011A006DA4C1 /* WebGPUDowncastConvertToBackingContext.cpp */,
 				1C36C52D2743011A006DA4C1 /* WebGPUDowncastConvertToBackingContext.h */,
 				1C19E6B927405E32004B17B0 /* WebGPUExternalTextureImpl.cpp */,
@@ -1378,6 +1386,7 @@
 				1C19E69D273F4243004B17B0 /* WebGPUPipelineLayoutImpl.h */,
 				1C50DADD29837158005FA0A7 /* WebGPUPresentationContextImpl.cpp */,
 				1C50DADE29837158005FA0A7 /* WebGPUPresentationContextImpl.h */,
+				1C8D6C952A2ADE4F00DAE18F /* WebGPUPtr.h */,
 				1C19E672273F4020004B17B0 /* WebGPUQuerySetImpl.cpp */,
 				1C19E6A8273F4244004B17B0 /* WebGPUQuerySetImpl.h */,
 				1C19E676273F402B004B17B0 /* WebGPUQueueImpl.cpp */,
@@ -1394,8 +1403,6 @@
 				1C19E6A7273F4244004B17B0 /* WebGPUSamplerImpl.h */,
 				1C19E68E273F4071004B17B0 /* WebGPUShaderModuleImpl.cpp */,
 				1C19E6AA273F4245004B17B0 /* WebGPUShaderModuleImpl.h */,
-				1C34AEFB298E2C6200C350B8 /* WebGPUSwapChainWrapper.cpp */,
-				1C34AEFC298E2C6200C350B8 /* WebGPUSwapChainWrapper.h */,
 				1C19E692273F407D004B17B0 /* WebGPUTextureImpl.cpp */,
 				1C19E69F273F4243004B17B0 /* WebGPUTextureImpl.h */,
 				1C19E696273F408B004B17B0 /* WebGPUTextureViewImpl.cpp */,
@@ -1437,12 +1444,12 @@
 				F4DDD019264DC69E00EF1B91 /* DataDetectorsCoreSoftLink.mm */,
 				F44291661FA52705002CC93E /* FileSizeFormatterCocoa.mm */,
 				1C022EFC22CFE8E0006DF01B /* Gunzip.cpp */,
+				7A46A80F2A3265C8007BDD04 /* LockdownModeSoftLink.h */,
+				7A46A80E2A3265C7007BDD04 /* LockdownModeSoftLink.mm */,
 				CDACB35E23873E480018D7CE /* MediaToolboxSoftLink.cpp */,
 				CDACB35F23873E480018D7CE /* MediaToolboxSoftLink.h */,
 				F47221F5276FC32300B984C7 /* NaturalLanguageSoftLink.h */,
 				F47221F6276FC32300B984C7 /* NaturalLanguageSoftLink.mm */,
-				F499BAAA2947FDBA001241D6 /* NetworkConnectionIntegritySoftLink.h */,
-				F499BAAB2947FDBA001241D6 /* NetworkConnectionIntegritySoftLink.mm */,
 				31647FAF251759DC0010F8FB /* OpenGLSoftLinkCocoa.h */,
 				31647FAE251759DB0010F8FB /* OpenGLSoftLinkCocoa.mm */,
 				A1F63C9D21A4DBF7006FB43B /* PassKitSoftLink.h */,
@@ -1461,6 +1468,8 @@
 				F46B8C4C26740918007A6554 /* VisionKitCoreSoftLink.mm */,
 				E57B44B329AB45F4006069DE /* VisionSoftLink.h */,
 				E57B44B429AB45F4006069DE /* VisionSoftLink.mm */,
+				F499BAAA2947FDBA001241D6 /* WebPrivacySoftLink.h */,
+				F499BAAB2947FDBA001241D6 /* WebPrivacySoftLink.mm */,
 			);
 			path = cocoa;
 			sourceTree = "<group>";
@@ -1619,6 +1628,14 @@
 				1CC5E4242737492C006F6FF4 /* WebGPUVertexStepMode.h */,
 			);
 			path = WebGPU;
+			sourceTree = "<group>";
+		};
+		1CD50E0D2A33E9B500032F1A /* AppleJPEGXL */ = {
+			isa = PBXGroup;
+			children = (
+				1CD50E0E2A33E9FA00032F1A /* AppleJPEGXLSPI.h */,
+			);
+			path = AppleJPEGXL;
 			sourceTree = "<group>";
 		};
 		2E87C06E215A993100D6CD32 /* ios */ = {
@@ -1783,6 +1800,7 @@
 				297CB482288B11D700BB7971 /* AccessibilitySoftLink.h in Headers */,
 				DD20DDD527BC90D70093D175 /* AccessibilitySupportSoftLink.h in Headers */,
 				DD20DDD627BC90D70093D175 /* AccessibilitySupportSPI.h in Headers */,
+				1CD50E0F2A33EA1300032F1A /* AppleJPEGXLSPI.h in Headers */,
 				DD20DD1A27BC90D60093D175 /* AppSSOSoftLink.h in Headers */,
 				DD20DDD727BC90D70093D175 /* AppSSOSPI.h in Headers */,
 				DD20DD1527BC90D60093D175 /* AudioToolboxSoftLink.h in Headers */,
@@ -1827,6 +1845,7 @@
 				DD20DDE427BC90D70093D175 /* DataDetectorsCoreSPI.h in Headers */,
 				DD20DDC527BC90D70093D175 /* DataDetectorsSoftLink.h in Headers */,
 				DD20DE1D27BC90D80093D175 /* DataDetectorsSPI.h in Headers */,
+				7AA1E2CE29EF5921002D4455 /* DataDetectorsUISoftLink.h in Headers */,
 				DD20DE1127BC90D80093D175 /* DataDetectorsUISPI.h in Headers */,
 				DD20DE4D27BC90D80093D175 /* DecodeEscapeSequences.h in Headers */,
 				DD20DE4427BC90D80093D175 /* DefaultSearchProvider.h in Headers */,
@@ -1849,6 +1868,7 @@
 				DD20DDE927BC90D70093D175 /* IOPSLibSPI.h in Headers */,
 				DD20DE4F27BC90D80093D175 /* KillRing.h in Headers */,
 				DD20DDED27BC90D70093D175 /* LaunchServicesSPI.h in Headers */,
+				7A46A8112A3265C8007BDD04 /* LockdownModeSoftLink.h in Headers */,
 				DD20DE6227BC90D80093D175 /* Logging.h in Headers */,
 				DD20DDC627BC90D70093D175 /* LookupSoftLink.h in Headers */,
 				DD20DE2127BC90D80093D175 /* LookupSPI.h in Headers */,
@@ -1865,8 +1885,6 @@
 				DD20DE1627BC90D80093D175 /* MobileGestaltSPI.h in Headers */,
 				DD20DD2027BC90D60093D175 /* NaturalLanguageSoftLink.h in Headers */,
 				DD20DDF027BC90D70093D175 /* NEFilterSourceSPI.h in Headers */,
-				F499BAAC2947FDBA001241D6 /* NetworkConnectionIntegritySoftLink.h in Headers */,
-				F499BAAF2947FDDB001241D6 /* NetworkConnectionIntegritySPI.h in Headers */,
 				DD20DDF127BC90D70093D175 /* NotifySPI.h in Headers */,
 				DD20DDF227BC90D70093D175 /* NSAccessibilitySPI.h in Headers */,
 				DD20DE2327BC90D80093D175 /* NSAppearanceSPI.h in Headers */,
@@ -1976,6 +1994,7 @@
 				DD20DE0C27BC90D80093D175 /* URLFormattingSPI.h in Headers */,
 				DD20DD2527BC90D60093D175 /* UsageTrackingSoftLink.h in Headers */,
 				DD20DD1927BC90D60093D175 /* VideoToolboxSoftLink.h in Headers */,
+				1CDE179A2A3BC3F9004E646F /* VideoToolboxSPI.h in Headers */,
 				DD20DD2627BC90D60093D175 /* VisionKitCoreSoftLink.h in Headers */,
 				DD20DE0D27BC90D80093D175 /* VisionKitCoreSPI.h in Headers */,
 				E57B44B529AB45F4006069DE /* VisionSoftLink.h in Headers */,
@@ -2037,7 +2056,6 @@
 				DD20DD3127BC90D60093D175 /* WebGPUDeviceImpl.h in Headers */,
 				DD20DD6A27BC90D70093D175 /* WebGPUDeviceLostInfo.h in Headers */,
 				DD20DD6B27BC90D70093D175 /* WebGPUDeviceLostReason.h in Headers */,
-				1CB709FD28034EDF00A3A637 /* WebGPUDeviceWrapper.h in Headers */,
 				DD20DD3227BC90D60093D175 /* WebGPUDowncastConvertToBackingContext.h in Headers */,
 				DD20DD6C27BC90D70093D175 /* WebGPUError.h in Headers */,
 				DD20DD6D27BC90D70093D175 /* WebGPUErrorFilter.h in Headers */,
@@ -2078,6 +2096,7 @@
 				DD20DD8A27BC90D70093D175 /* WebGPUPrimitiveState.h in Headers */,
 				DD20DD8B27BC90D70093D175 /* WebGPUPrimitiveTopology.h in Headers */,
 				DD20DD8C27BC90D70093D175 /* WebGPUProgrammableStage.h in Headers */,
+				1C8D6C962A2ADE4F00DAE18F /* WebGPUPtr.h in Headers */,
 				DD20DD8D27BC90D70093D175 /* WebGPUQuerySet.h in Headers */,
 				DD20DD8E27BC90D70093D175 /* WebGPUQuerySetDescriptor.h in Headers */,
 				DD20DD3627BC90D60093D175 /* WebGPUQuerySetImpl.h in Headers */,
@@ -2119,7 +2138,6 @@
 				DD20DDAA27BC90D70093D175 /* WebGPUStoreOp.h in Headers */,
 				DD20DDAB27BC90D70093D175 /* WebGPUSupportedFeatures.h in Headers */,
 				DD20DDAC27BC90D70093D175 /* WebGPUSupportedLimits.h in Headers */,
-				1C34AEFE298E2C6200C350B8 /* WebGPUSwapChainWrapper.h in Headers */,
 				DD20DDAD27BC90D70093D175 /* WebGPUTexture.h in Headers */,
 				DD20DDAE27BC90D70093D175 /* WebGPUTextureAspect.h in Headers */,
 				DD20DDAF27BC90D70093D175 /* WebGPUTextureBindingLayout.h in Headers */,
@@ -2142,6 +2160,8 @@
 				DD20DDBE27BC90D70093D175 /* WebGPUVertexState.h in Headers */,
 				DD20DDBF27BC90D70093D175 /* WebGPUVertexStepMode.h in Headers */,
 				DD20DE4727BC90D80093D175 /* WebPanel.h in Headers */,
+				F499BAAC2947FDBA001241D6 /* WebPrivacySoftLink.h in Headers */,
+				F499BAAF2947FDDB001241D6 /* WebPrivacySPI.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2244,6 +2264,7 @@
 				57F1C90A25DCF0CF00E8F6EA /* CryptoKitPrivateSoftLink.mm in Sources */,
 				F4DDD01B264DC69E00EF1B91 /* DataDetectorsCoreSoftLink.mm in Sources */,
 				F4E0875C266ACA53000F814A /* DataDetectorsSoftLink.mm in Sources */,
+				7AA1E2D029EF5947002D4455 /* DataDetectorsUISoftLink.mm in Sources */,
 				A1175B581F6B470500C4B9F0 /* DefaultSearchProvider.cpp in Sources */,
 				1C5C57D427571626003B540D /* EncodingTables.cpp in Sources */,
 				F44291641FA52670002CC93E /* FileSizeFormatter.cpp in Sources */,
@@ -2251,13 +2272,13 @@
 				1C022EFE22CFE8E1006DF01B /* Gunzip.cpp in Sources */,
 				A30D41221F0DD0EA00B71954 /* KillRing.cpp in Sources */,
 				A30D41251F0DD12D00B71954 /* KillRingMac.mm in Sources */,
+				7A46A8122A3265E2007BDD04 /* LockdownModeSoftLink.mm in Sources */,
 				1C4876D81F8D7F4E00CCEEBD /* Logging.cpp in Sources */,
 				44E1A8B021FA54EB00C3048E /* LookupSoftLink.mm in Sources */,
 				5C7C787423AC3E770065F47E /* ManagedConfigurationSoftLink.mm in Sources */,
 				0CF99CA41F736375007EE793 /* MediaTimeAVFoundation.cpp in Sources */,
 				CDACB3602387425B0018D7CE /* MediaToolboxSoftLink.cpp in Sources */,
 				F47221F8276FC32300B984C7 /* NaturalLanguageSoftLink.mm in Sources */,
-				F499BAAD2947FDBA001241D6 /* NetworkConnectionIntegritySoftLink.mm in Sources */,
 				31647FB0251759DD0010F8FB /* OpenGLSoftLinkCocoa.mm in Sources */,
 				1C77C8CE25D7A4A300635E0C /* OTSVGTable.cpp in Sources */,
 				CD6122CD2559B6AC00FC657A /* OutputContext.mm in Sources */,
@@ -2313,7 +2334,6 @@
 				1C19E6B5273F85AF004B17B0 /* WebGPUConvertToBackingContext.cpp in Sources */,
 				1CCA5EFF280FABB4008A6F78 /* WebGPUCreateImpl.cpp in Sources */,
 				1C19E668273F3FFA004B17B0 /* WebGPUDeviceImpl.cpp in Sources */,
-				1CB709FC28034EDF00A3A637 /* WebGPUDeviceWrapper.cpp in Sources */,
 				1C36C52E2743011A006DA4C1 /* WebGPUDowncastConvertToBackingContext.cpp in Sources */,
 				1C19E6BA27405E32004B17B0 /* WebGPUExternalTextureImpl.cpp in Sources */,
 				1C19E644273F3E5D004B17B0 /* WebGPUImpl.cpp in Sources */,
@@ -2327,10 +2347,10 @@
 				1C19E688273F405D004B17B0 /* WebGPURenderPipelineImpl.cpp in Sources */,
 				1C19E68C273F4069004B17B0 /* WebGPUSamplerImpl.cpp in Sources */,
 				1C19E690273F4072004B17B0 /* WebGPUShaderModuleImpl.cpp in Sources */,
-				1C34AEFD298E2C6200C350B8 /* WebGPUSwapChainWrapper.cpp in Sources */,
 				1C19E694273F407D004B17B0 /* WebGPUTextureImpl.cpp in Sources */,
 				1C19E698273F408B004B17B0 /* WebGPUTextureViewImpl.cpp in Sources */,
 				A10826FA1F576292004772AC /* WebPanel.mm in Sources */,
+				F499BAAD2947FDBA001241D6 /* WebPrivacySoftLink.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -57,6 +57,10 @@
 #import <QuartzCore/CAFenceHandle.h>
 #endif
 
+#if PLATFORM(VISION)
+#import <QuartzCore/CARemoteEffectPrivate.h>
+#endif
+
 #endif // __OBJC__
 
 #else
@@ -153,6 +157,10 @@ typedef struct _CARenderContext CARenderContext;
 @property (getter=isSeparated) BOOL separated;
 #endif
 @property BOOL toneMapToStandardDynamicRange;
+#if PLATFORM(VISION)
+@property (nonatomic) CGFloat sizeMultiplier;
+@property (nonatomic, copy) void (^effectGroupConfigurator)(CARemoteEffectGroup *group);
+#endif
 @end
 
 #if ENABLE(FILTERS_LEVEL_2)
@@ -224,6 +232,11 @@ typedef enum {
 #if HAVE(CALAYER_USES_WEBKIT_BEHAVIOR)
 @property BOOL usesWebKitBehavior;
 #endif
+@property CGRect contentsDirtyRect;
+@end
+
+@interface CATransaction ()
++ (void)setDisableImplicitTransactionMainThreadAssert:(BOOL)flag;
 @end
 
 WTF_EXTERN_C_BEGIN

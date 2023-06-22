@@ -47,7 +47,8 @@
 #include "ImageOverlayController.h"
 #include "MediaControlsHost.h"
 #include "Page.h"
-#include "Quirks.h"
+#include "RenderBoxInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderImage.h"
 #include "RenderText.h"
 #include "ShadowRoot.h"
@@ -279,6 +280,9 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
 #endif // ENABLE(MODERN_MEDIA_CONTROLS)
 
     if (RefPtr shadowRoot = element.shadowRoot()) {
+        if (auto* renderer = dynamicDowncast<RenderImage>(element.renderer()))
+            renderer->setHasImageOverlay();
+
         if (hasOverlay(element)) {
             RefPtr<ContainerNode> containerForImageOverlay;
             if (mediaControlsContainer)
@@ -342,7 +346,7 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
                     return false;
 
                 for (size_t childIndex = 0; childIndex < childResults.size(); ++childIndex) {
-                    if (childResults[childIndex].text != childTextElements[childIndex]->textContent().stripWhiteSpace())
+                    if (childResults[childIndex].text != StringView(childTextElements[childIndex]->textContent()).trim(deprecatedIsSpaceOrNewline))
                         return false;
                 }
             }
@@ -354,7 +358,7 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
                     if (textContentByLine.size() <= lineIndex)
                         return false;
 
-                    if (textContentByLine[lineIndex++].stripWhiteSpace() != text.wholeText().stripWhiteSpace())
+                    if (StringView(textContentByLine[lineIndex++]).trim(deprecatedIsSpaceOrNewline) != StringView(text.wholeText()).trim(deprecatedIsSpaceOrNewline))
                         return false;
                 }
             }
@@ -438,11 +442,6 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
 
             elements.root->appendChild(blockContainer);
             elements.blocks.uncheckedAppend(WTFMove(blockContainer));
-        }
-
-        if (document->quirks().needsToForceUserSelectAndUserDragWhenInstallingImageOverlay()) {
-            element.setInlineStyleProperty(CSSPropertyWebkitUserSelect, CSSValueText);
-            element.setInlineStyleProperty(CSSPropertyWebkitUserDrag, CSSValueAuto);
         }
     }
 

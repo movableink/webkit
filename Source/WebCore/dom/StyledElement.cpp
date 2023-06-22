@@ -95,6 +95,7 @@ MutableStyleProperties& StyledElement::ensureMutableInlineStyle()
 
 void StyledElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason reason)
 {
+    Element::attributeChanged(name, oldValue, newValue, reason);
     if (oldValue != newValue) {
         if (name == styleAttr)
             styleAttributeChanged(newValue, reason);
@@ -103,8 +104,6 @@ void StyledElement::attributeChanged(const QualifiedName& name, const AtomString
             invalidateStyle();
         }
     }
-
-    Element::attributeChanged(name, oldValue, newValue, reason);
 }
 
 PropertySetCSSStyleDeclaration* StyledElement::inlineStyleCSSOMWrapper()
@@ -151,7 +150,7 @@ void StyledElement::styleAttributeChanged(const AtomString& newStyleString, Attr
 
     if (newStyleString.isNull())
         ensureMutableInlineStyle().clear();
-    else if (reason == ModifiedByCloning || document().contentSecurityPolicy()->allowInlineStyle(document().url().string(), startLineNumber, newStyleString.string(), CheckUnsafeHashes::Yes, *this, nonce(), isInUserAgentShadowTree()))
+    else if (reason == AttributeModificationReason::ByCloning || document().contentSecurityPolicy()->allowInlineStyle(document().url().string(), startLineNumber, newStyleString.string(), CheckUnsafeHashes::Yes, *this, nonce(), isInUserAgentShadowTree()))
         setInlineStyleFromString(newStyleString);
 
     elementData()->setStyleAttributeIsDirty(false);

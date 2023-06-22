@@ -54,15 +54,29 @@
 (allow socket-option-set (with telemetry) (with report))
 (allow socket-option-get (with telemetry) (with report))
 
+(allow socket-option-get
+    (require-all
+        (socket-option-level SOL_SOCKET)
+        (socket-option-name
+            SO_NREAD
+            SO_SNDBUF)))
+
+(allow socket-option-get
+    (require-all
+        (socket-option-level IPPROTO_IPV6)
+        (socket-option-name 125)))
+
 (allow socket-option-set
     (require-all
         (socket-option-level IPPROTO_IPV6)
-        (socket-option-name 27 61)))
+        (socket-option-name 27 35 36 61 62)))
 
 (allow socket-option-set
     (require-all
         (socket-option-level SOL_SOCKET)
         (socket-option-name
+            131072
+            SO_MARK_KNOWN_TRACKER
             SO_NECP_LISTENUUID
             SO_NOSIGPIPE
             SO_RCVBUF
@@ -563,7 +577,8 @@
         "kern.osversion"
         "kern.secure_kernel"
         "kern.version"
-        "vm.footprint_suspend")
+        "vm.footprint_suspend"
+        "vm.malloc_ranges") ;; <rdar://problem/105161083>
     (sysctl-name-prefix "kern.proc.pid.")
 )
 
@@ -652,6 +667,10 @@
  ;; <rdar://problem/101780002>
 (allow mach-lookup 
     (global-name "com.apple.mobileasset.autoasset"))
+
+;; <rdar://106216542>
+(allow mach-lookup
+    (global-name "com.apple.ciphermld"))
 
 ;; <rdar://problem/103895412>
 (allow file-read*
@@ -922,6 +941,7 @@
                 mach_port_set_attributes
                 mach_vm_copy
                 mach_vm_map_external
+                (when (defined? 'mach_vm_range_create) mach_vm_range_create) ;; <rdar://105161083>
                 mach_vm_remap_external
                 semaphore_create
                 semaphore_destroy
@@ -947,6 +967,10 @@
     (apply subpath issue-extension-secondary-paths))
 #endif
 
-#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/com.apple.WebKit.NetworkingAdditions.sb.in>)
-#include <WebKitAdditions/com.apple.WebKit.NetworkingAdditions.sb.in>
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+
+(allow mach-lookup
+    (global-name "com.apple.webprivacyd")
+    (global-name "com.apple.WebPrivacy.Service"))
+
 #endif

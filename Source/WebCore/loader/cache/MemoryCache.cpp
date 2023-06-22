@@ -222,8 +222,11 @@ void MemoryCache::pruneLiveResources(bool shouldDestroyDecodedDataForAllLiveReso
 void MemoryCache::forEachResource(const Function<void(CachedResource&)>& function)
 {
     for (auto& unprotectedLRUList : m_allResources) {
-        for (auto& resource : copyToVector(*unprotectedLRUList))
+        for (auto& resource : copyToVector(*unprotectedLRUList)) {
+            if (!resource)
+                continue;
             function(*resource);
+        }
     }
 }
 
@@ -337,6 +340,9 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
         // First flush all the decoded data in this queue.
         // Remove from the head, since this is the least frequently accessed of the objects.
         for (auto& resource : lruList) {
+            if (!resource)
+                continue;
+
             LOG(ResourceLoading, " lru resource %p - in cache %d, has clients %d, preloaded %d, loaded %d", resource.get(), resource->inCache(), resource->hasClients(), resource->isPreloaded(), resource->isLoaded());
             if (!resource->inCache())
                 continue;
@@ -360,6 +366,9 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
         // Now evict objects from this list.
         // Remove from the head, since this is the least frequently accessed of the objects.
         for (auto& resource : lruList) {
+            if (!resource)
+                continue;
+
             LOG(ResourceLoading, " lru resource %p - in cache %d, has clients %d, preloaded %d, loaded %d", resource.get(), resource->inCache(), resource->hasClients(), resource->isPreloaded(), resource->isLoaded());
             if (!resource->inCache())
                 continue;

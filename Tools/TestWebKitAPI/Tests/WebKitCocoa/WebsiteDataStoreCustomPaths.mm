@@ -386,7 +386,7 @@ TEST(WebKit, AlternativeServicesDefaultDirectoryCreation)
     auto webView1 = adoptNS([[TestWKWebView alloc] init]);
     [webView1 synchronouslyLoadHTMLString:@"start auxiliary processes" baseURL:nil];
 
-#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+#if HAVE(ALTERNATIVE_SERVICE)
     // We always create the path, even if HTTP/3 is turned off.
     EXPECT_TRUE([[NSFileManager defaultManager] fileExistsAtPath:defaultDirectory.path]);
 
@@ -398,7 +398,7 @@ TEST(WebKit, AlternativeServicesDefaultDirectoryCreation)
     EXPECT_TRUE([[NSFileManager defaultManager] fileExistsAtPath:defaultDirectory.path]);
     [[NSFileManager defaultManager] removeItemAtURL:defaultDirectory error:nil];
 
-#endif // HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+#endif // HAVE(ALTERNATIVE_SERVICE)
 }
 
 TEST(WebKit, WebsiteDataStoreEphemeralViaConfiguration)
@@ -651,7 +651,7 @@ TEST(WebKit, ApplicationCacheDirectories)
     EXPECT_FALSE(error);
 }
 
-#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+#if HAVE(ALTERNATIVE_SERVICE)
 
 static void checkUntilEntryFound(WKWebsiteDataStore *dataStore, void(^completionHandler)(NSArray<WKWebsiteDataRecord *> *))
 {
@@ -717,7 +717,7 @@ TEST(WebKit, DISABLED_AlternativeService)
     // We delete it before running this test the next time.
 }
 
-#endif // HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+#endif // HAVE(ALTERNATIVE_SERVICE)
 
 static void respondToRangeRequests(const TestWebKitAPI::Connection& connection, const RetainPtr<NSData>& data)
 {
@@ -1126,6 +1126,7 @@ TEST(WKWebsiteDataStoreConfiguration, SameCustomPathForDifferentTypes)
     websiteDataStoreConfiguration.get()._webSQLDatabaseDirectory = sharedDirectory;
     websiteDataStoreConfiguration.get()._webStorageDirectory = sharedDirectory;
     websiteDataStoreConfiguration.get()._indexedDBDatabaseDirectory = sharedDirectory;
+    websiteDataStoreConfiguration.get()._serviceWorkerRegistrationDirectory = sharedDirectory;
     websiteDataStoreConfiguration.get()._cookieStorageFile = [sharedDirectory URLByAppendingPathComponent:@"Cookies.binarycookies" isDirectory:NO];
     websiteDataStoreConfiguration.get().generalStorageDirectory = [sharedDirectory URLByAppendingPathComponent:@"Default" isDirectory:YES];
 
@@ -1697,4 +1698,59 @@ TEST(WKWebsiteDataStore, MigrateServiceWorkerRegistrationToGeneralStorageDirecto
     NSString *newServiceWorkerDatabaseFilePath = [originDirectoryString stringByAppendingPathComponent:serviceWorkerDatabaseName];
     EXPECT_TRUE([fileManager fileExistsAtPath:newServiceWorkerDatabaseFilePath]);
     EXPECT_FALSE([fileManager fileExistsAtPath:serviceWorkerDatabaseFile.path]);
+}
+
+TEST(WKWebsiteDataStore, RemoveServiceWorkerData)
+{
+    [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
+    auto websiteDataStoreConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] init]);
+    NSURL *generalStorageDirectory = [NSURL fileURLWithPath:[@"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/CustomWebsiteData/Origins" stringByExpandingTildeInPath] isDirectory:YES];
+    websiteDataStoreConfiguration.get().generalStorageDirectory = generalStorageDirectory;
+    auto websiteDataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:websiteDataStoreConfiguration.get()]);
+
+    done = false;
+    [websiteDataStore removeDataOfTypes:[WKWebsiteDataStore _allWebsiteDataTypesIncludingPrivate] modifiedSince:[NSDate distantPast] completionHandler:^() {
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { mainBytes } },
+        { "/migratetest/sw.js"_s, { { { "Content-Type"_s, "application/javascript"_s } }, scriptBytes } },
+    });
+
+    // Ensure web view is closed, so ServiceWorker directory is not in use and can be removed.
+    @autoreleasepool {
+        auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+        [configuration setWebsiteDataStore:websiteDataStore.get()];
+        auto messageHandler = adoptNS([[WebsiteDataStoreCustomPathsMessageHandler alloc] init]);
+        [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"testHandler"];
+        auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+        [webView loadRequest:server.request()];
+        EXPECT_WK_STREQ("Message from ServiceWorker: Hello", getNextMessage().body);
+
+        // Ensure data is stored to disk.
+        done = false;
+        [websiteDataStore _storeServiceWorkerRegistrations: ^{
+            done = true;
+        }];
+        TestWebKitAPI::Util::run(&done);
+    }
+
+    __block NSString *serviceWorkerDirectoryString = nil;
+    auto url = [server.request() URL];
+    done = false;
+    [websiteDataStore _originDirectoryForTesting:url topOrigin:url type:WKWebsiteDataTypeServiceWorkerRegistrations completionHandler:^(NSString *result) {
+        serviceWorkerDirectoryString = result;
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    EXPECT_TRUE([[NSFileManager defaultManager] fileExistsAtPath:serviceWorkerDirectoryString]);
+
+    done = false;
+    [websiteDataStore removeDataOfTypes:[NSSet setWithObjects:WKWebsiteDataTypeServiceWorkerRegistrations, nil] modifiedSince:[NSDate distantPast] completionHandler:^() {
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:serviceWorkerDirectoryString]);
 }

@@ -36,6 +36,10 @@ typedef void *EGLContext;
 typedef void *EGLDisplay;
 typedef void *EGLImage;
 typedef unsigned EGLenum;
+#if USE(GBM)
+typedef void *EGLDeviceEXT;
+struct gbm_device;
+#endif
 #endif
 
 #if PLATFORM(GTK)
@@ -80,7 +84,10 @@ public:
         WPE,
 #endif
 #if USE(EGL)
-        Headless,
+        Surfaceless,
+#if USE(GBM)
+        GBM,
+#endif
 #endif
     };
 
@@ -100,11 +107,26 @@ public:
         bool KHR_surfaceless_context { false };
         bool EXT_image_dma_buf_import { false };
         bool EXT_image_dma_buf_import_modifiers { false };
+        bool MESA_image_dma_buf_export { false };
     };
     const EGLExtensions& eglExtensions() const;
 
     EGLImage createEGLImage(EGLContext, EGLenum target, EGLClientBuffer, const Vector<EGLAttrib>&) const;
     bool destroyEGLImage(EGLImage) const;
+#if USE(GBM)
+    const String& drmDeviceFile();
+    const String& drmRenderNodeFile();
+    struct gbm_device* gbmDevice();
+#endif
+
+#if PLATFORM(GTK)
+    virtual EGLDisplay gtkEGLDisplay() { return nullptr; }
+#endif
+
+#if ENABLE(WEBGL)
+    EGLDisplay angleEGLDisplay() const;
+    EGLContext angleSharingGLContext();
+#endif
 #endif
 
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)
@@ -138,10 +160,18 @@ protected:
     virtual void initializeEGLDisplay();
 
     EGLDisplay m_eglDisplay;
+    bool m_eglDisplayOwned { true };
+    std::unique_ptr<GLContext> m_sharingGLContext;
+
+#if USE(GBM)
+    std::optional<String> m_drmDeviceFile;
+    std::optional<String> m_drmRenderNodeFile;
 #endif
 
-#if USE(EGL)
-    std::unique_ptr<GLContext> m_sharingGLContext;
+#if ENABLE(WEBGL) && !PLATFORM(WIN)
+    std::optional<int> m_anglePlatform;
+    void* m_angleNativeDisplay { nullptr };
+#endif
 #endif
 
 #if USE(LCMS)
@@ -157,13 +187,24 @@ protected:
 private:
     static std::unique_ptr<PlatformDisplay> createPlatformDisplay();
 
+#if ENABLE(WEBGL) && !PLATFORM(WIN)
+    void clearANGLESharingGLContext();
+#endif
+
 #if USE(EGL)
     void terminateEGLDisplay();
+#if USE(GBM)
+    EGLDeviceEXT eglDevice();
+#endif
 
     bool m_eglDisplayInitialized { false };
     int m_eglMajorVersion { 0 };
     int m_eglMinorVersion { 0 };
     EGLExtensions m_eglExtensions;
+#if ENABLE(WEBGL) && !PLATFORM(WIN)
+    mutable EGLDisplay m_angleEGLDisplay { nullptr };
+    EGLContext m_angleSharingGLContext { nullptr };
+#endif
 #endif
 
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)

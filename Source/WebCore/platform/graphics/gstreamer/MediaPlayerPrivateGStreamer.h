@@ -34,6 +34,7 @@
 #include "MainThreadNotifier.h"
 #include "MediaPlayerPrivate.h"
 #include "PlatformLayer.h"
+#include "PlatformMediaResourceLoader.h"
 #include "TrackPrivateBaseGStreamer.h"
 #include <glib.h>
 #include <gst/gst.h>
@@ -74,10 +75,6 @@ typedef struct _GstMpegtsSection GstMpegtsSection;
 typedef struct _GstStreamVolume GstStreamVolume;
 typedef struct _GstVideoInfo GstVideoInfo;
 
-#if USE(WPE_VIDEO_PLANE_DISPLAY_DMABUF)
-struct wpe_video_plane_display_dmabuf_source;
-#endif
-
 namespace WebCore {
 
 class BitmapTextureGL;
@@ -86,7 +83,6 @@ class GraphicsContext;
 class GraphicsContextGL;
 class IntSize;
 class IntRect;
-class VideoTextureCopierGStreamer;
 
 #if USE(TEXTURE_MAPPER_GL)
 class TextureMapperPlatformLayerProxy;
@@ -144,11 +140,12 @@ public:
     void play() override;
     void pause() override;
     bool paused() const final;
+    bool ended() const final;
     bool seeking() const override { return m_isSeeking; }
     void seek(const MediaTime&) override;
     void setRate(float) override;
     double rate() const final;
-    void setPreservesPitch(bool) final; 
+    void setPreservesPitch(bool) final;
     void setPreload(MediaPlayer::Preload) final;
     FloatSize naturalSize() const final;
     void setVolume(float) final;
@@ -157,6 +154,7 @@ public:
     MediaPlayer::NetworkState networkState() const final;
     MediaPlayer::ReadyState readyState() const final;
     void setPageIsVisible(bool visible) final { m_visible = visible; }
+    void setVisibleInViewport(bool isVisible) final;
     void setPresentationSize(const IntSize&) final;
     // Prefer MediaTime based methods over float based.
     float duration() const final { return durationMediaTime().toFloat(); }
@@ -165,7 +163,7 @@ public:
     float currentTime() const final { return currentMediaTime().toFloat(); }
     double currentTimeDouble() const final { return currentMediaTime().toDouble(); }
     MediaTime currentMediaTime() const override;
-    std::unique_ptr<PlatformTimeRanges> buffered() const override;
+    const PlatformTimeRanges& buffered() const override;
     void seek(float time) final { seek(MediaTime::createWithFloat(time)); }
     void seekDouble(double time) final { seek(MediaTime::createWithDouble(time)); }
     float maxTimeSeekable() const final { return maxMediaTimeSeekable().toFloat(); }
@@ -187,6 +185,7 @@ public:
     std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() final;
     void acceleratedRenderingStateChanged() final;
     bool performTaskAtMediaTime(Function<void()>&&, const MediaTime&) override;
+    void isLoopingChanged() final;
 
 #if USE(TEXTURE_MAPPER_GL)
     PlatformLayer* platformLayer() const override;
@@ -207,10 +206,6 @@ public:
     void handleProtectionEvent(GstEvent*);
 #endif
 
-#if USE(GSTREAMER_GL)
-    bool copyVideoTextureToPlatformTexture(GraphicsContextGL*, PlatformGLObject, GCGLenum, GCGLint, GCGLenum, GCGLenum, GCGLenum, bool, bool) override;
-    RefPtr<NativeImage> nativeImageForCurrentTime() override;
-#endif
     RefPtr<VideoFrame> videoFrameForCurrentTime() override;
 
     void updateEnabledVideoTrack();
@@ -246,6 +241,8 @@ public:
     // This AbortableTaskQueue must be aborted everytime a flush is sent downstream from the main thread
     // to avoid deadlocks from threads in the playback pipeline waiting for the main thread.
     AbortableTaskQueue& sinkTaskQueue() { return m_sinkTaskQueue; }
+
+    String codecForStreamId(const String& streamId);
 
 protected:
     enum MainThreadNotification {
@@ -316,8 +313,9 @@ protected:
     void ensureAudioSourceProvider();
     void checkPlayingConsistency();
 
-    virtual bool doSeek(const MediaTime& position, float rate, GstSeekFlags);
+    virtual bool doSeek(const MediaTime& position, float rate);
     void invalidateCachedPosition() const;
+    void ensureSeekFlags();
 
     static void sourceSetupCallback(MediaPlayerPrivateGStreamer*, GstElement*);
     static void videoChangedCallback(MediaPlayerPrivateGStreamer*);
@@ -333,7 +331,7 @@ protected:
 #endif
 
     Ref<MainThreadNotifier<MainThreadNotification>> m_notifier;
-    MediaPlayer* m_player;
+    ThreadSafeWeakPtr<MediaPlayer> m_player;
     String m_referrer;
     mutable std::optional<MediaTime> m_cachedPosition;
     mutable MediaTime m_cachedDuration;
@@ -377,10 +375,6 @@ protected:
 
     bool m_isBeingDestroyed WTF_GUARDED_BY_LOCK(m_drawLock) { false };
 
-#if USE(GSTREAMER_GL)
-    std::unique_ptr<VideoTextureCopierGStreamer> m_videoTextureCopier;
-#endif
-
     ImageOrientation m_videoSourceOrientation;
 
 #if ENABLE(ENCRYPTED_MEDIA)
@@ -395,6 +389,7 @@ protected:
 #endif
 
     std::optional<GstVideoDecoderPlatform> m_videoDecoderPlatform;
+    GstSeekFlags m_seekFlags;
 
     String errorMessage() const override { return m_errorMessage; }
 
@@ -442,7 +437,7 @@ private:
 
     GstElement* createVideoSink();
     GstElement* createAudioSink();
-    GstElement* audioSink() const;
+    GstElement* audioSink() const { return m_audioSink.get(); }
 
     bool isMediaStreamPlayer() const;
 
@@ -484,7 +479,7 @@ private:
     void configureDownloadBuffer(GstElement*);
     static void downloadBufferFileCreatedCallback(MediaPlayerPrivateGStreamer*);
 
-    void configureDepayloader(GstElement*);
+    void configureAudioDecoder(GstElement*);
     void configureVideoDecoder(GstElement*);
     void configureElement(GstElement*);
 #if PLATFORM(BROADCOM) || USE(WESTEROS_SINK) || PLATFORM(AMLOGIC) || PLATFORM(REALTEK)
@@ -580,7 +575,6 @@ private:
     uint64_t m_networkReadPosition { 0 };
     mutable uint64_t m_readPositionAtLastDidLoadingProgress { 0 };
 
-    GRefPtr<GstElement> m_fpsSink { nullptr };
     uint64_t m_totalVideoFrames { 0 };
     uint64_t m_droppedVideoFrames { 0 };
     uint64_t m_decodedVideoFrames { 0 };
@@ -591,9 +585,7 @@ private:
     std::optional<VideoFrameMetadata> videoFrameMetadata() final;
     uint64_t m_sampleCount { 0 };
     uint64_t m_lastVideoFrameMetadataSampleCount { 0 };
-#if USE(WPE_VIDEO_PLANE_DISPLAY_DMABUF)
-    GUniquePtr<struct wpe_video_plane_display_dmabuf_source> m_wpeVideoPlaneDisplayDmaBuf;
-#endif
+    mutable PlatformTimeRanges m_buffered;
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     const void* m_logIdentifier;
@@ -610,6 +602,20 @@ private:
     AbortableTaskQueue m_sinkTaskQueue;
 
     bool m_didTryToRecoverPlayingState { false };
+
+    bool m_isVisibleInViewport { true };
+    GstState m_invisiblePlayerState { GST_STATE_VOID_PENDING };
+
+    // Specific to MediaStream playback.
+    MediaTime m_startTime;
+    MediaTime m_pausedTime;
+
+    void setupCodecProbe(GstElement*);
+    HashMap<String, String> m_codecs;
+
+    bool isSeamlessSeekingEnabled() const { return m_seekFlags & (1 << GST_SEEK_FLAG_SEGMENT); }
+
+    RefPtr<PlatformMediaResourceLoader> m_loader;
 };
 
 }

@@ -37,7 +37,7 @@
 #include "WebDocumentLoader.h"
 #include "WebErrors.h"
 #include "WebFrame.h"
-#include "WebFrameLoaderClient.h"
+#include "WebLocalFrameLoaderClient.h"
 #include "WebPage.h"
 #include "WebPageInlines.h"
 #include "WebPageProxyMessages.h"
@@ -184,11 +184,11 @@ void WebLoaderStrategy::scheduleLoad(ResourceLoader& resourceLoader, CachedResou
     auto& frameLoaderClient = frameLoader->client();
 
     WebResourceLoader::TrackingParameters trackingParameters;
-    if (auto* webFrameLoaderClient = toWebFrameLoaderClient(frameLoaderClient))
+    if (auto* webFrameLoaderClient = toWebLocalFrameLoaderClient(frameLoaderClient))
         trackingParameters.webPageProxyID = valueOrDefault(webFrameLoaderClient->webPageProxyID());
     else if (is<RemoteWorkerFrameLoaderClient>(frameLoaderClient))
         trackingParameters.webPageProxyID = downcast<RemoteWorkerFrameLoaderClient>(frameLoaderClient).webPageProxyID();
-    trackingParameters.pageID = valueOrDefault(frameLoaderClient.pageID());
+    trackingParameters.pageID = valueOrDefault(frameLoader->frame().pageID());
     trackingParameters.frameID = frameLoader->frameID();
     trackingParameters.resourceID = identifier;
 
@@ -263,7 +263,7 @@ bool WebLoaderStrategy::tryLoadingUsingURLSchemeHandler(ResourceLoader& resource
     RefPtr<WebPage> webPage;
     RefPtr<WebFrame> webFrame;
 
-    if (auto* webFrameLoaderClient = toWebFrameLoaderClient(resourceLoader.frameLoader()->client())) {
+    if (auto* webFrameLoaderClient = toWebLocalFrameLoaderClient(resourceLoader.frameLoader()->client())) {
         webFrame = &webFrameLoaderClient->webFrame();
         webPage = webFrame->page();
     } else if (auto* workerFrameLoaderClient = dynamicDowncast<RemoteWorkerFrameLoaderClient>(resourceLoader.frameLoader()->client())) {
@@ -304,6 +304,22 @@ bool WebLoaderStrategy::tryLoadingUsingPDFJSHandler(ResourceLoader& resourceLoad
 }
 #endif
 
+static RefPtr<DocumentLoader> policySourceDocumentLoaderForFrame(const LocalFrame& frame, bool isMainFrameNavigation = false)
+{
+    RefPtr mainFrame = dynamicDowncast<LocalFrame>(frame.mainFrame());
+    if (!mainFrame)
+        return { };
+
+    auto canIncludeCurrentDocumentLoader = isMainFrameNavigation ? WebDocumentLoader::CanIncludeCurrentDocumentLoader::No : WebDocumentLoader::CanIncludeCurrentDocumentLoader::Yes;
+    RefPtr<DocumentLoader> mainFrameDocumentLoader = WebDocumentLoader::loaderForWebsitePolicies(*mainFrame, canIncludeCurrentDocumentLoader);
+
+    auto policySourceDocumentLoader = mainFrameDocumentLoader;
+    if (policySourceDocumentLoader && !policySourceDocumentLoader->request().url().hasSpecialScheme() && frame.document()->url().protocolIsInHTTPFamily())
+        policySourceDocumentLoader = frame.loader().documentLoader();
+
+    return policySourceDocumentLoader;
+}
+
 static void addParametersShared(const LocalFrame* frame, NetworkResourceLoadParameters& parameters, bool isMainFrameNavigation = false)
 {
     parameters.crossOriginAccessControlCheckEnabled = CrossOriginAccessControlCheckDisabler::singleton().crossOriginAccessControlCheckEnabled();
@@ -313,21 +329,16 @@ static void addParametersShared(const LocalFrame* frame, NetworkResourceLoadPara
         return;
 
     // When loading the main frame, we need to get allowPrivacyProxy from the same DocumentLoader that
-    // WebFrameLoaderClient::applyToDocumentLoader stored the value on. Otherwise, we need to get the
+    // WebLocalFrameLoaderClient::applyToDocumentLoader stored the value on. Otherwise, we need to get the
     // value from the main frame's current DocumentLoader.
 
-    auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
-    if (!localFrame)
+    RefPtr mainFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+    if (!mainFrame)
         return;
 
-    auto& mainFrame = *localFrame;
-    auto* mainFrameDocumentLoader = mainFrame.loader().policyDocumentLoader();
-    if (!mainFrameDocumentLoader)
-        mainFrameDocumentLoader = mainFrame.loader().provisionalDocumentLoader();
-    if (!mainFrameDocumentLoader || !isMainFrameNavigation)
-        mainFrameDocumentLoader = mainFrame.loader().documentLoader();
+    RefPtr policySourceDocumentLoader = policySourceDocumentLoaderForFrame(*frame, isMainFrameNavigation);
 
-    parameters.allowPrivacyProxy = mainFrameDocumentLoader ? mainFrameDocumentLoader->allowPrivacyProxy() : true;
+    parameters.allowPrivacyProxy = policySourceDocumentLoader ? policySourceDocumentLoader->allowPrivacyProxy() : true;
 
     if (auto* document = frame->document()) {
         parameters.crossOriginEmbedderPolicy = document->crossOriginEmbedderPolicy();
@@ -348,11 +359,11 @@ static void addParametersShared(const LocalFrame* frame, NetworkResourceLoadPara
         }
     }
 
-    auto networkConnectionIntegrityPolicy = mainFrameDocumentLoader ? mainFrameDocumentLoader->networkConnectionIntegrityPolicy() : OptionSet<NetworkConnectionIntegrity> { };
-    parameters.networkConnectionIntegrityPolicy = networkConnectionIntegrityPolicy;
+    auto advancedPrivacyProtections = policySourceDocumentLoader ? policySourceDocumentLoader->advancedPrivacyProtections() : OptionSet<AdvancedPrivacyProtections> { };
+    parameters.advancedPrivacyProtections = advancedPrivacyProtections;
 
     if (isMainFrameNavigation)
-        parameters.linkPreconnectEarlyHintsEnabled = mainFrame.settings().linkPreconnectEarlyHintsEnabled();
+        parameters.linkPreconnectEarlyHintsEnabled = mainFrame->settings().linkPreconnectEarlyHintsEnabled();
 }
 
 void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceLoader, const ResourceRequest& request, const WebResourceLoader::TrackingParameters& trackingParameters, bool shouldClearReferrerOnHTTPSToHTTPRedirect, Seconds maximumBufferingTime)
@@ -424,7 +435,7 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
         loadParameters.crossOriginEmbedderPolicy = *resourceLoader.options().crossOriginEmbedderPolicy;
     
 #if ENABLE(APP_BOUND_DOMAINS) || ENABLE(CONTENT_EXTENSIONS)
-    auto* webFrameLoaderClient = frame ? toWebFrameLoaderClient(frame->loader().client()) : nullptr;
+    auto* webFrameLoaderClient = frame ? toWebLocalFrameLoaderClient(frame->loader().client()) : nullptr;
     auto* webFrame = webFrameLoaderClient ? &webFrameLoaderClient->webFrame() : nullptr;
 #endif
 
@@ -494,7 +505,7 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
     loadParameters.isDisplayingInitialEmptyDocument = frame && frame->loader().stateMachine().isDisplayingInitialEmptyDocument();
     if (frame)
         loadParameters.effectiveSandboxFlags = frame->loader().effectiveSandboxFlags();
-    if (auto openerFrame = frame ? frame->loader().opener() : nullptr) {
+    if (auto* openerFrame = frame ? dynamicDowncast<LocalFrame>(frame->loader().opener()) : nullptr) {
         if (auto openerDocument = openerFrame->document())
             loadParameters.openerURL = openerDocument->url();
     }
@@ -518,7 +529,11 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
     if (loadParameters.isMainFrameNavigation)
         existingNetworkResourceLoadIdentifierToResume = std::exchange(m_existingNetworkResourceLoadIdentifierToResume, std::nullopt);
     WEBLOADERSTRATEGY_RELEASE_LOG("scheduleLoad: Resource is being scheduled with the NetworkProcess (priority=%d, existingNetworkResourceLoadIdentifierToResume=%" PRIu64 ")", static_cast<int>(resourceLoader.request().priority()), valueOrDefault(existingNetworkResourceLoadIdentifierToResume).toUInt64());
-    if (!WebProcess::singleton().ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::ScheduleResourceLoad(loadParameters, existingNetworkResourceLoadIdentifierToResume), 0)) {
+
+    if (frame && !frame->settings().siteIsolationEnabled() && !WebProcess::singleton().allowsFirstPartyForCookies(loadParameters.request.firstPartyForCookies()))
+        RELEASE_LOG_FAULT(IPC, "scheduleLoad: Process will terminate due to failed allowsFirstPartyForCookies check");
+
+    if (WebProcess::singleton().ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::ScheduleResourceLoad(loadParameters, existingNetworkResourceLoadIdentifierToResume), 0) != IPC::Error::NoError) {
         WEBLOADERSTRATEGY_RELEASE_LOG_ERROR("scheduleLoad: Unable to schedule resource with the NetworkProcess (priority=%d)", static_cast<int>(resourceLoader.request().priority()));
         // We probably failed to schedule this load with the NetworkProcess because it had crashed.
         // This load will never succeed so we will schedule it to fail asynchronously.
@@ -651,12 +666,8 @@ static bool shouldClearReferrerOnHTTPSToHTTPRedirect(LocalFrame* frame)
 
 WebLoaderStrategy::SyncLoadResult WebLoaderStrategy::loadDataURLSynchronously(const ResourceRequest& request)
 {
-    auto mode = DataURLDecoder::Mode::Legacy;
-    if (request.requester() == ResourceRequestRequester::Fetch)
-        mode = DataURLDecoder::Mode::ForgivingBase64;
-
     SyncLoadResult result;
-    auto decodeResult = DataURLDecoder::decode(request.url(), mode);
+    auto decodeResult = DataURLDecoder::decode(request.url());
     if (!decodeResult) {
         WEBLOADERSTRATEGY_RELEASE_LOG_BASIC("loadDataURLSynchronously: decoding of data failed");
         result.error = internalError(request.url());
@@ -671,7 +682,7 @@ WebLoaderStrategy::SyncLoadResult WebLoaderStrategy::loadDataURLSynchronously(co
 
 std::optional<WebLoaderStrategy::SyncLoadResult> WebLoaderStrategy::tryLoadingSynchronouslyUsingURLSchemeHandler(FrameLoader& frameLoader, WebCore::ResourceLoaderIdentifier identifier, const ResourceRequest& request)
 {
-    auto* webFrameLoaderClient = toWebFrameLoaderClient(frameLoader.client());
+    auto* webFrameLoaderClient = toWebLocalFrameLoaderClient(frameLoader.client());
     auto* webFrame = webFrameLoaderClient ? &webFrameLoaderClient->webFrame() : nullptr;
     auto* webPage = webFrame ? webFrame->page() : nullptr;
     if (!webPage)
@@ -691,7 +702,7 @@ std::optional<WebLoaderStrategy::SyncLoadResult> WebLoaderStrategy::tryLoadingSy
 
 void WebLoaderStrategy::loadResourceSynchronously(FrameLoader& frameLoader, WebCore::ResourceLoaderIdentifier resourceLoadIdentifier, const ResourceRequest& request, ClientCredentialPolicy clientCredentialPolicy,  const FetchOptions& options, const HTTPHeaderMap& originalRequestHeaders, ResourceError& error, ResourceResponse& response, Vector<uint8_t>& data)
 {
-    auto* webFrameLoaderClient = toWebFrameLoaderClient(frameLoader.client());
+    auto* webFrameLoaderClient = toWebLocalFrameLoaderClient(frameLoader.client());
     auto* webFrame = webFrameLoaderClient ? &webFrameLoaderClient->webFrame() : nullptr;
     auto* webPage = webFrame ? webFrame->page() : nullptr;
     auto* page = webPage ? webPage->corePage() : nullptr;
@@ -743,7 +754,7 @@ void WebLoaderStrategy::loadResourceSynchronously(FrameLoader& frameLoader, WebC
     loadParameters.contentEncodingSniffingPolicy = ContentEncodingSniffingPolicy::Default;
     loadParameters.storedCredentialsPolicy = options.credentials == FetchOptions::Credentials::Omit ? StoredCredentialsPolicy::DoNotUse : StoredCredentialsPolicy::Use;
     loadParameters.clientCredentialPolicy = clientCredentialPolicy;
-    loadParameters.shouldClearReferrerOnHTTPSToHTTPRedirect = shouldClearReferrerOnHTTPSToHTTPRedirect(webFrame ? webFrame->coreFrame() : nullptr);
+    loadParameters.shouldClearReferrerOnHTTPSToHTTPRedirect = shouldClearReferrerOnHTTPSToHTTPRedirect(webFrame ? webFrame->coreLocalFrame() : nullptr);
     loadParameters.shouldRestrictHTTPResponseAccess = shouldPerformSecurityChecks();
 
     loadParameters.options = options;
@@ -758,7 +769,7 @@ void WebLoaderStrategy::loadResourceSynchronously(FrameLoader& frameLoader, WebC
     if (webFrame)
         loadParameters.isNavigatingToAppBoundDomain = webFrame->isTopFrameNavigatingToAppBoundDomain();
 #endif
-    addParametersShared(webFrame->coreFrame(), loadParameters);
+    addParametersShared(webFrame->coreLocalFrame(), loadParameters);
 
     data.shrink(0);
 
@@ -766,8 +777,8 @@ void WebLoaderStrategy::loadResourceSynchronously(FrameLoader& frameLoader, WebC
     IPC::UnboundedSynchronousIPCScope unboundedSynchronousIPCScope;
 
     auto sendResult = WebProcess::singleton().ensureNetworkProcessConnection().connection().sendSync(Messages::NetworkConnectionToWebProcess::PerformSynchronousLoad(loadParameters), 0);
-    if (!sendResult) {
-        WEBLOADERSTRATEGY_WITH_FRAMELOADER_RELEASE_LOG_ERROR("loadResourceSynchronously: failed sending synchronous network process message");
+    if (!sendResult.succeeded()) {
+        WEBLOADERSTRATEGY_WITH_FRAMELOADER_RELEASE_LOG_ERROR("loadResourceSynchronously: failed sending synchronous network process message %" PUBLIC_LOG_STRING, IPC::errorAsString(sendResult.error));
         if (page)
             page->diagnosticLoggingClient().logDiagnosticMessage(WebCore::DiagnosticLoggingKeys::internalErrorKey(), WebCore::DiagnosticLoggingKeys::synchronousMessageFailedKey(), WebCore::ShouldSample::No);
         response = ResourceResponse();
@@ -862,7 +873,7 @@ void WebLoaderStrategy::didFinishPingLoad(WebCore::ResourceLoaderIdentifier ping
 
 void WebLoaderStrategy::preconnectTo(FrameLoader& frameLoader, const URL& url, StoredCredentialsPolicy storedCredentialsPolicy, ShouldPreconnectAsFirstParty shouldPreconnectAsFirstParty, PreconnectCompletionHandler&& completionHandler)
 {
-    auto* webFrameLoaderClient = toWebFrameLoaderClient(frameLoader.client());
+    auto* webFrameLoaderClient = toWebLocalFrameLoaderClient(frameLoader.client());
     if (!webFrameLoaderClient) {
         if (completionHandler)
             completionHandler(internalError(url));
@@ -922,6 +933,8 @@ void WebLoaderStrategy::preconnectTo(WebCore::ResourceRequest&& request, WebPage
 #if ENABLE(APP_BOUND_DOMAINS)
     parameters.isNavigatingToAppBoundDomain = webFrame.isTopFrameNavigatingToAppBoundDomain();
 #endif
+    if (RefPtr loader = policySourceDocumentLoaderForFrame(*webFrame.coreLocalFrame()))
+        parameters.advancedPrivacyProtections = loader->advancedPrivacyProtections();
 
     std::optional<WebCore::ResourceLoaderIdentifier> preconnectionIdentifier;
     if (completionHandler) {

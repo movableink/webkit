@@ -618,6 +618,11 @@ static JSValueRef rowHeadersCallback(JSContextRef context, JSObjectRef function,
     return convertElementsToObjectArray(context, elements);
 }
 
+static JSValueRef selectedCellsCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    return toAXElement(thisObject)->selectedCells(context);
+}
+
 static JSValueRef uiElementArrayAttributeValueCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount != 1)
@@ -1239,6 +1244,12 @@ static JSValueRef getHelpTextCallback(JSContextRef context, JSObjectRef thisObje
     return JSValueMakeString(context, language.get());
 }
 
+static JSValueRef getCustomContentCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
+{
+    auto customContent = toAXElement(thisObject)->customContent();
+    return JSValueMakeString(context, customContent.get());
+}
+
 static JSValueRef getLiveRegionRelevantCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
 {
     auto liveRegionRelevant = toAXElement(thisObject)->liveRegionRelevant();
@@ -1332,6 +1343,12 @@ static JSValueRef getSelectedTextRangeCallback(JSContextRef context, JSObjectRef
 {
     auto selectedTextRange = toAXElement(thisObject)->selectedTextRange();
     return JSValueMakeString(context, selectedTextRange.get());
+}
+
+static JSValueRef getTextInputMarkedRangeCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
+{
+    auto textInputMarkedRange = toAXElement(thisObject)->textInputMarkedRange();
+    return JSValueMakeString(context, textInputMarkedRange.get());
 }
 
 static JSValueRef getIsAtomicLiveRegionCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
@@ -1955,6 +1972,7 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "description", getDescriptionCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "language", getLanguageCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "helpText", getHelpTextCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "customContent", getCustomContentCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "stringValue", getStringValueCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "x", getXCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "y", getYCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -1971,6 +1989,7 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "columnCount", columnCountCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "insertionPointLineNumber", getInsertionPointLineNumberCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "selectedTextRange", getSelectedTextRangeCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "textInputMarkedRange", getTextInputMarkedRangeCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isAtomicLiveRegion", getIsAtomicLiveRegionCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isBusy", getIsBusyCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isEnabled", getIsEnabledCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2078,6 +2097,7 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "setSelectedTextRange", setSelectedTextRangeCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "stringAttributeValue", stringAttributeValueCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "uiElementArrayAttributeValue", uiElementArrayAttributeValueCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "selectedCells", selectedCellsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "rowHeaders", rowHeadersCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "columnHeaders", columnHeadersCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "uiElementAttributeValue", uiElementAttributeValueCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },

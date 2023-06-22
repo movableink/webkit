@@ -25,6 +25,7 @@
 
 messages -> RemoteDevice NotRefCounted Stream {
     void Destroy()
+    void Destruct()
     void CreateBuffer(WebKit::WebGPU::BufferDescriptor descriptor, WebKit::WebGPUIdentifier identifier)
     void CreateTexture(WebKit::WebGPU::TextureDescriptor descriptor, WebKit::WebGPUIdentifier identifier)
     void CreateSampler(WebKit::WebGPU::SamplerDescriptor descriptor, WebKit::WebGPUIdentifier identifier)
@@ -43,6 +44,11 @@ messages -> RemoteDevice NotRefCounted Stream {
     void PushErrorScope(PAL::WebGPU::ErrorFilter errorFilter)
     void PopErrorScope() -> (std::optional<WebKit::WebGPU::Error> error)
     void SetLabel(String label)
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+    void SetSharedVideoFrameSemaphore(IPC::Semaphore semaphore) NotStreamEncodable
+    void SetSharedVideoFrameMemory(WebKit::SharedMemory::Handle storageHandle) NotStreamEncodable
+    void ImportExternalTextureFromPixelBuffer(WebKit::WebGPU::ExternalTextureDescriptor descriptor, std::optional<WebKit::SharedVideoFrame::Buffer> sharedBuffer, WebKit::WebGPUIdentifier identifier) NotStreamEncodable
+#endif
 }
 
 #endif

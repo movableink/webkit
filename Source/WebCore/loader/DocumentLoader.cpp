@@ -50,7 +50,6 @@
 #include "ExtensionStyleSheets.h"
 #include "FormState.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "FrameTree.h"
 #include "HTMLFormElement.h"
 #include "HTMLFrameOwnerElement.h"
@@ -67,6 +66,7 @@
 #include "LoaderStrategy.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Logging.h"
 #include "MemoryCache.h"
 #include "MixedContentChecker.h"
@@ -74,6 +74,7 @@
 #include "NavigationScheduler.h"
 #include "NetworkLoadMetrics.h"
 #include "NetworkStorageSession.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "Performance.h"
 #include "PingLoader.h"
@@ -81,7 +82,6 @@
 #include "PolicyChecker.h"
 #include "ProgressTracker.h"
 #include "Quirks.h"
-#include "ResourceHandle.h"
 #include "ResourceLoadObserver.h"
 #include "SWClientConnection.h"
 #include "ScriptableDocumentParser.h"
@@ -135,15 +135,6 @@
 
 #if USE(APPLE_INTERNAL_SDK)
 #include <WebKitAdditions/DocumentLoaderAdditions.cpp>
-#else
-namespace WebCore {
-
-bool DocumentLoader::isLoadingInHeadlessMode() const
-{
-    return false;
-}
-
-} // namespace WebCore
 #endif
 
 namespace WebCore {
@@ -672,7 +663,7 @@ void DocumentLoader::willSendRequest(ResourceRequest&& newRequest, const Resourc
         // If the redirecting url is not allowed to display content from the target origin,
         // then block the redirect.
         Ref<SecurityOrigin> redirectingOrigin(SecurityOrigin::create(redirectResponse.url()));
-        if (!redirectingOrigin.get().canDisplay(newRequest.url())) {
+        if (!redirectingOrigin.get().canDisplay(newRequest.url(), OriginAccessPatternsForWebProcess::singleton())) {
             DOCUMENTLOADER_RELEASE_LOG("willSendRequest: canceling - redirecting URL not allowed to display content from target");
             FrameLoader::reportLocalLoadFailed(m_frame.get(), newRequest.url().string());
             cancelMainResourceLoad(frameLoader()->cancelledError(newRequest));
@@ -776,7 +767,7 @@ std::optional<CrossOriginOpenerPolicyEnforcementResult> DocumentLoader::doCrossO
         return std::nullopt;
 
     URL openerURL;
-    if (auto openerFrame = m_frame->loader().opener())
+    if (auto openerFrame = dynamicDowncast<LocalFrame>(m_frame->loader().opener()))
         openerURL = openerFrame->document() ? openerFrame->document()->url() : URL();
 
     auto currentCoopEnforcementResult = CrossOriginOpenerPolicyEnforcementResult::from(m_frame->document()->url(), m_frame->document()->securityOrigin(), m_frame->document()->crossOriginOpenerPolicy(), m_triggeringAction.requester(), openerURL);
@@ -2579,6 +2570,11 @@ bool DocumentLoader::allowsActiveContentRuleListActionsForURL(const String& cont
             return true;
     }
     return false;
+}
+
+bool DocumentLoader::fingerprintingProtectionsEnabled() const
+{
+    return m_advancedPrivacyProtections.contains(AdvancedPrivacyProtections::FingerprintingProtections);
 }
 
 } // namespace WebCore

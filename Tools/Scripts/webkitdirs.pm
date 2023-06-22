@@ -40,7 +40,7 @@ use Digest::MD5 qw(md5_hex);
 use FindBin;
 use File::Basename;
 use File::Find;
-use File::Glob qw(bsd_glob);
+use File::Glob qw(bsd_glob GLOB_TILDE);
 use File::Path qw(make_path mkpath rmtree);
 use File::Spec;
 use File::Temp qw(tempdir);
@@ -414,7 +414,16 @@ sub determineBaseProductDir
             $baseProductDir = $1 if $baseProductDir =~ /SYMROOT\s*=\s*\"(.*?)\";/s;
         }
 
-        undef $baseProductDir unless $baseProductDir =~ /^\//;
+        # Expand tilde in pathnames for compatibility
+        # (https://bugs.webkit.org/show_bug.cgi?id=249442).
+        ($baseProductDir) = bsd_glob($baseProductDir, GLOB_TILDE) if defined($baseProductDir);
+
+        if (defined($baseProductDir) && $baseProductDir !~ /^\//) {
+            # webkitdirs can be run from arbitrary directories, so any
+            # user-specified build directory must be absolute.
+            print STDERR "Ignoring Xcode application-wide build directory \"$baseProductDir\" because it's not an absolute path.\n";
+            undef $baseProductDir;
+        }
     }
 
     if (!defined($baseProductDir)) { # Port-specific checks failed, use default
@@ -990,11 +999,7 @@ sub determineConfigurationForVisualStudio
 
 sub usesPerConfigurationBuildDirectory
 {
-    # [Gtk] We don't have Release/Debug configurations in straight
-    # autotool builds (non build-webkit). In this case and if
-    # WEBKIT_OUTPUTDIR exist, use that as our configuration dir. This will
-    # allows us to run run-webkit-tests without using build-webkit.
-    return $ENV{"WEBKIT_OUTPUTDIR"} && isGtk();
+    return (defined $ENV{"WEBKIT_OUTPUTDIR"});
 }
 
 sub determineConfigurationProductDir
@@ -1225,8 +1230,9 @@ sub XcodeOptions
     push @options, @baseProductDirOption;
     push @options, "ARCHS=$architecture" if $architecture;
     push @options, "SDKROOT=$xcodeSDK" if $xcodeSDK;
-    if (xcodeVersion() lt "15.0") {
-        push @options, "TAPI_USE_SRCROOT=YES" if $ENV{UseSRCROOTSupportForTAPI};
+    if (xcodeVersion() ge "14.0" && xcodeVersion() lt "15.0") {
+        # TAPI_USE_SRCROOT is not recognized by Xcode 14.x, but the feature flag is.
+        push @options, ("-UseSRCROOTSupportForTAPI=YES", "TAPI_USE_SRCROOT=YES");
     }
 
     my @features = webkitperl::FeatureList::getFeatureOptionList();
@@ -2507,7 +2513,7 @@ sub shouldUseFlatpak()
         return 0;
     }
 
-    if (defined $ENV{'WEBKIT_JHBUILD'} && $ENV{'WEBKIT_JHBUILD'}) {
+    if ((defined $ENV{'WEBKIT_JHBUILD'} && $ENV{'WEBKIT_JHBUILD'}) or defined $ENV{'WKDEV_SDK'}) {
         return 0;
     }
 
@@ -2956,7 +2962,6 @@ sub setupUnixWebKitEnvironment($)
     my ($productDir) = @_;
 
     $ENV{TEST_RUNNER_INJECTED_BUNDLE_FILENAME} = File::Spec->catfile($productDir, "lib", "libTestRunnerInjectedBundle.so");
-    $ENV{TEST_RUNNER_TEST_PLUGIN_PATH} = File::Spec->catdir($productDir, "lib", "plugins");
 }
 
 sub setupIOSWebKitEnvironment($)

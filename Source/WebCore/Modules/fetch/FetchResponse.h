@@ -33,7 +33,7 @@
 #include "ReadableStreamSink.h"
 #include "ResourceResponse.h"
 #include <JavaScriptCore/TypedArrays.h>
-#include <wtf/Span.h>
+#include <span>
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
@@ -98,7 +98,7 @@ public:
     bool isBlobBody() const { return !isBodyNull() && body().isBlob(); }
     bool isBlobFormData() const { return !isBodyNull() && body().isFormData(); }
 
-    using ConsumeDataByChunkCallback = Function<void(ExceptionOr<Span<const uint8_t>*>&&)>;
+    using ConsumeDataByChunkCallback = Function<void(ExceptionOr<std::span<const uint8_t>*>&&)>;
     void consumeBodyReceivedByChunk(ConsumeDataByChunkCallback&&);
     void cancelStream();
 

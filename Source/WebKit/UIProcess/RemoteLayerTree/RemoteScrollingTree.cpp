@@ -119,6 +119,18 @@ void RemoteScrollingTree::scrollingTreeNodeDidEndScroll(ScrollingNodeID nodeID)
         m_scrollingCoordinatorProxy->scrollingTreeNodeDidEndScroll(nodeID);
 }
 
+void RemoteScrollingTree::scrollingTreeNodeDidBeginScrollSnapping(ScrollingNodeID nodeID)
+{
+    if (m_scrollingCoordinatorProxy)
+        m_scrollingCoordinatorProxy->scrollingTreeNodeDidBeginScrollSnapping(nodeID);
+}
+
+void RemoteScrollingTree::scrollingTreeNodeDidEndScrollSnapping(ScrollingNodeID nodeID)
+{
+    if (m_scrollingCoordinatorProxy)
+        m_scrollingCoordinatorProxy->scrollingTreeNodeDidEndScrollSnapping(nodeID);
+}
+
 Ref<ScrollingTreeNode> RemoteScrollingTree::createScrollingTreeNode(ScrollingNodeType nodeType, ScrollingNodeID nodeID)
 {
     switch (nodeType) {
@@ -187,7 +199,7 @@ void RemoteScrollingTree::deferWheelEventTestCompletionForReason(ScrollingNodeID
 {
     ASSERT(isMainRunLoop());
 
-    if (!m_scrollingCoordinatorProxy)
+    if (!m_scrollingCoordinatorProxy || !isMonitoringWheelEvents())
         return;
 
     m_scrollingCoordinatorProxy->deferWheelEventTestCompletionForReason(nodeID, reason);
@@ -197,7 +209,7 @@ void RemoteScrollingTree::removeWheelEventTestCompletionDeferralForReason(Scroll
 {
     ASSERT(isMainRunLoop());
 
-    if (!m_scrollingCoordinatorProxy)
+    if (!m_scrollingCoordinatorProxy || !isMonitoringWheelEvents())
         return;
 
     m_scrollingCoordinatorProxy->removeWheelEventTestCompletionDeferralForReason(nodeID, reason);
@@ -210,6 +222,7 @@ void RemoteScrollingTree::propagateSynchronousScrollingReasons(const HashSet<Scr
 
 void RemoteScrollingTree::tryToApplyLayerPositions()
 {
+    ASSERT(!isMainRunLoop());
     Locker locker { m_treeLock };
     if (m_hasNodesWithSynchronousScrollingReasons)
         return;

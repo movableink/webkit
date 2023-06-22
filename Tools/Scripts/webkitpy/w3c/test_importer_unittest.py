@@ -26,6 +26,7 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
+import json
 import os
 import unittest
 
@@ -93,6 +94,13 @@ FAKE_REPOSITORIES = {
     "test2": "skip"
 }'''
 }
+
+
+MINIMAL_TESTHARNESS = '''
+<!doctype html>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+'''
 
 
 class TestImporterTest(unittest.TestCase):
@@ -165,17 +173,17 @@ class TestImporterTest(unittest.TestCase):
         host.executive = MockExecutive2()
         host.filesystem = MockFileSystem(files=files)
 
-        options, args = parse_args(args)
-        importer = TestImporter(host, None, options)
+        options, test_paths = parse_args(args)
+        importer = TestImporter(host, test_paths, options)
         importer._test_downloader = TestDownloaderMock(importer.tests_download_path, importer.host, importer.options)
         importer.do_import()
         return host.filesystem
 
     def test_harnesslinks_conversion(self):
         FAKE_FILES = {
-            '/mock-checkout/WebKitBuild/w3c-tests/csswg-tests/t/test.html': '<!doctype html><script src="/resources/testharness.js"></script><script src="/resources/testharnessreport.js"></script>',
-            '/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests/css/t/test.html': '<!doctype html><script src="/resources/testharness.js"></script><script src="/resources/testharnessreport.js"></script>',
-            '/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests/t/test.html': '<!doctype html><script src="/resources/testharness.js"></script><script src="/resources/testharnessreport.js"></script>',
+            '/mock-checkout/WebKitBuild/w3c-tests/csswg-tests/t/test.html': MINIMAL_TESTHARNESS,
+            '/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests/css/t/test.html': MINIMAL_TESTHARNESS,
+            '/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests/t/test.html': MINIMAL_TESTHARNESS,
             '/mock-checkout/Source/WebCore/css/CSSProperties.json': '',
             '/mock-checkout/Source/WebCore/css/CSSValueKeywords.in': '',
         }
@@ -204,7 +212,7 @@ class TestImporterTest(unittest.TestCase):
 
     def test_skip_test_import(self):
         FAKE_FILES = {
-            '/mock-checkout/WebKitBuild/w3c-tests/streams-api/reference-implementation/web-platform-tests/test.html': '<!doctype html><script src="/resources/testharness.js"></script><script src="/resources/testharnessreport.js"></script>',
+            '/mock-checkout/WebKitBuild/w3c-tests/streams-api/reference-implementation/web-platform-tests/test.html': MINIMAL_TESTHARNESS,
             '/mock-checkout/LayoutTests/imported/w3c/resources/TestRepositories': '''
 [
     {
@@ -276,6 +284,82 @@ class TestImporterTest(unittest.TestCase):
         self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/.gitignore'))
         self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/.svn'))
 
+    def test_update_slow_test(self):
+        existing_resource_files = {
+            "directories": [],
+            "files": [],
+        }
+        existing_tests_options = {
+            "imported/w3c/web-platform-tests/a/existing-test.html": ["slow"],
+        }
+
+        # Note that neither old/new copies of existing-test.html are marked as long timeout.
+        FAKE_FILES = {
+            '/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/a/existing-test.html': MINIMAL_TESTHARNESS + '1',
+            '/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/a/existing-test-expected.txt': '2',
+            '/mock-checkout/LayoutTests/imported/w3c/resources/resource-files.json': json.dumps(existing_resource_files),
+            '/mock-checkout/LayoutTests/tests-options.json': json.dumps(existing_tests_options),
+            '/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests/a/existing-test.html': MINIMAL_TESTHARNESS,
+            '/mock-checkout/WebKitBuild/w3c-tests/csswg-tests/test.html': '-1',
+        }
+
+        FAKE_FILES.update(FAKE_REPOSITORIES)
+
+        fs = self.import_downloaded_tests(['--no-fetch', '--import-all'], FAKE_FILES)
+
+        # 'slow' should remain in tests-options.json.
+        tests_options = json.loads(fs.read_text_file('/mock-checkout/LayoutTests/tests-options.json'))
+        self.assertIn("slow", tests_options["imported/w3c/web-platform-tests/a/existing-test.html"])
+
+    def test_clean_directory_option_partial_import(self):
+        existing_resource_files = {
+            "directories": [],
+            "files": [
+                "web-platform-tests/a/old-support.html",
+                "web-platform-tests/b/old-support.html",
+                "web-platform-tests/b/existing-support.html",
+            ],
+        }
+        existing_tests_options = {
+            "imported/w3c/web-platform-tests/a/old-test.html": ["slow"],
+            "imported/w3c/web-platform-tests/b/old-test.html": ["slow"],
+            "imported/w3c/web-platform-tests/b/existing-test.html": ["slow"],
+        }
+
+        FAKE_FILES = {
+            '/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/a/old-test.html': '1',
+            '/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/a/old-test-expected.txt': '2',
+            '/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/a/old-support.html': '3',
+            '/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/b/old-test.html': '4',
+            '/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/b/old-test-expected.txt': '5',
+            '/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/b/old-support.html': '6',
+            '/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/b/existing-test.html': '4',
+            '/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/b/existing-test-expected.txt': '5',
+            '/mock-checkout/LayoutTests/imported/w3c/resources/resource-files.json': json.dumps(existing_resource_files),
+            '/mock-checkout/LayoutTests/tests-options.json': json.dumps(existing_tests_options),
+            '/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests/b/existing-test.html': MINIMAL_TESTHARNESS,
+            '/mock-checkout/WebKitBuild/w3c-tests/csswg-tests/test.html': '-1',
+        }
+
+        FAKE_FILES.update(FAKE_REPOSITORIES)
+
+        fs = self.import_downloaded_tests(['--no-fetch', '--import-all', '--clean-dest-dir', 'web-platform-tests/b'], FAKE_FILES)
+
+        self.assertTrue(fs.exists('/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/a/old-test.html'))
+        self.assertTrue(fs.exists('/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/a/old-test-expected.txt'))
+        self.assertFalse(fs.exists('/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/b/old-test.html'))
+        self.assertFalse(fs.exists('/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/b/old-test-expected.txt'))
+        self.assertTrue(fs.exists('/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/b/existing-test.html'))
+        self.assertTrue(fs.exists('/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/b/existing-test-expected.txt'))
+
+        resource_files = json.loads(fs.read_text_file('/mock-checkout/LayoutTests/imported/w3c/resources/resource-files.json'))
+        self.assertIn("web-platform-tests/a/old-support.html", resource_files["files"])
+        self.assertNotIn("web-platform-tests/b/old-support.html", resource_files["files"])
+
+        tests_options = json.loads(fs.read_text_file('/mock-checkout/LayoutTests/tests-options.json'))
+        self.assertIn("imported/w3c/web-platform-tests/a/old-test.html", tests_options)
+        self.assertNotIn("imported/w3c/web-platform-tests/b/old-test.html", tests_options)
+
     def test_git_ignore_generation(self):
         FAKE_FILES = {
             '/mock-checkout/WebKitBuild/w3c-tests/csswg-tests/.gitmodules': '[submodule "tools/resources"]\n	path = tools/resources\n	url = https://github.com/w3c/testharness.js.git\n  ignore = dirty\n',
@@ -313,7 +397,7 @@ class TestImporterTest(unittest.TestCase):
     def test_remove_obsolete_content(self):
         FAKE_FILES = {
             '/mock-checkout/WebKitBuild/w3c-tests/csswg-tests/temp': '',
-            '/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests/t/new.html': '<!doctype html><script src="/resources/testharness.js"></script><script src="/resources/testharnessreport.js"></script>',
+            '/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests/t/new.html': MINIMAL_TESTHARNESS,
             '/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests/t/w3c-import.log': 'List of files:\n/LayoutTests/w3c/web-platform-tests/t/obsolete.html',
             '/mock-checkout/LayoutTests/w3c/web-platform-tests/t/obsolete.html': 'obsoleted content',
             '/mock-checkout/LayoutTests/w3c/web-platform-tests/t/obsolete-expected.txt': 'PASS',

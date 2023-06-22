@@ -32,9 +32,9 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "NavigationDisabler.h"
@@ -129,8 +129,7 @@ void CachedFrameBase::restore()
         frame->loader().client().didRestoreFrameHierarchyForCachedFrame();
 
         if (auto* domWindow = m_document->domWindow()) {
-            // FIXME: Add SCROLL_LISTENER to the list of event types on Document, and use m_document->hasListenerType(). See <rdar://problem/9615482>.
-            // FIXME: Can use Document::hasListenerType() now.
+            // FIXME: Use Document::hasListenerType(). See <rdar://problem/9615482>.
             if (domWindow->scrollEventListenerCount() && frame->page())
                 frame->page()->chrome().client().setNeedsScrollNotifications(*frame, true);
         }

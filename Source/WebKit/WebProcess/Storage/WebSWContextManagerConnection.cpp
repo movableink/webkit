@@ -45,7 +45,7 @@
 #include "WebCoreArgumentCoders.h"
 #include "WebDatabaseProvider.h"
 #include "WebDocumentLoader.h"
-#include "WebFrameLoaderClient.h"
+#include "WebLocalFrameLoaderClient.h"
 #include "WebMessagePortChannelProvider.h"
 #include "WebNotificationClient.h"
 #include "WebPage.h"
@@ -157,8 +157,7 @@ void WebSWContextManagerConnection::installServiceWorker(ServiceWorkerContextDat
     assertIsCurrent(m_queue.get());
 
     callOnMainRunLoopAndWait([this, protectedThis = Ref { *this }, contextData = WTFMove(contextData).isolatedCopy(), workerData = WTFMove(workerData).isolatedCopy(), userAgent = WTFMove(userAgent).isolatedCopy(), workerThreadMode]() mutable {
-        auto pageConfiguration = pageConfigurationWithEmptyClients(WebProcess::singleton().sessionID());
-
+        auto pageConfiguration = pageConfigurationWithEmptyClients(m_pageID, WebProcess::singleton().sessionID());
         pageConfiguration.badgeClient = WebBadgeClient::create();
         pageConfiguration.databaseProvider = WebDatabaseProvider::getOrCreate(m_pageGroupID);
         pageConfiguration.socketProvider = WebSocketProvider::create(m_webPageProxyID);
@@ -177,7 +176,7 @@ void WebSWContextManagerConnection::installServiceWorker(ServiceWorkerContextDat
         auto loaderClientForMainFrame = makeUniqueRef<RemoteWorkerFrameLoaderClient>(m_webPageProxyID, m_pageID, effectiveUserAgent);
         if (contextData.serviceWorkerPageIdentifier)
             loaderClientForMainFrame->setServiceWorkerPageIdentifier(*contextData.serviceWorkerPageIdentifier);
-        pageConfiguration.clientForMainFrame = UniqueRef<WebCore::FrameLoaderClient>(WTFMove(loaderClientForMainFrame));
+        pageConfiguration.clientForMainFrame = UniqueRef<WebCore::LocalFrameLoaderClient>(WTFMove(loaderClientForMainFrame));
 
 #if !RELEASE_LOG_DISABLED
         auto serviceWorkerIdentifier = contextData.serviceWorkerIdentifier;

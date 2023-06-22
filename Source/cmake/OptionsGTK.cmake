@@ -3,7 +3,7 @@ include(VersioningUtils)
 
 WEBKIT_OPTION_BEGIN()
 
-SET_PROJECT_VERSION(2 41 1)
+SET_PROJECT_VERSION(2 41 5)
 
 # This is required because we use the DEPFILE argument to add_custom_command().
 # Remove after upgrading cmake_minimum_required() to 3.20.
@@ -29,9 +29,6 @@ find_package(Unifdef REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(WebP REQUIRED COMPONENTS demux)
 find_package(ATSPI 2.5.3)
-find_package(EGL)
-find_package(OpenGL)
-find_package(OpenGLES2)
 
 include(GStreamerDefinitions)
 
@@ -45,17 +42,10 @@ if (WTF_CPU_ARM OR WTF_CPU_MIPS)
     SET_AND_EXPOSE_TO_BUILD(USE_CAPSTONE ${DEVELOPER_MODE})
 endif ()
 
-if (OPENGLES2_FOUND AND (NOT OPENGL_FOUND OR WTF_CPU_ARM OR WTF_CPU_ARM64))
-    set(ENABLE_GLES2_DEFAULT ON)
-else ()
-    set(ENABLE_GLES2_DEFAULT OFF)
-endif ()
-
 # Public options specific to the GTK port. Do not add any options here unless
 # there is a strong reason we should support changing the value of the option,
 # and the option is not relevant to other WebKit ports.
 WEBKIT_OPTION_DEFINE(ENABLE_DOCUMENTATION "Whether to generate documentation." PUBLIC ON)
-WEBKIT_OPTION_DEFINE(ENABLE_GLES2 "Whether to enable OpenGL ES 2.0." PUBLIC ${ENABLE_GLES2_DEFAULT})
 WEBKIT_OPTION_DEFINE(ENABLE_INTROSPECTION "Whether to enable GObject introspection." PUBLIC ON)
 WEBKIT_OPTION_DEFINE(ENABLE_JOURNALD_LOG "Whether to enable journald logging" PUBLIC ON)
 WEBKIT_OPTION_DEFINE(ENABLE_QUARTZ_TARGET "Whether to enable support for the Quartz windowing target." PUBLIC ON)
@@ -63,7 +53,6 @@ WEBKIT_OPTION_DEFINE(ENABLE_WAYLAND_TARGET "Whether to enable support for the Wa
 WEBKIT_OPTION_DEFINE(ENABLE_X11_TARGET "Whether to enable support for the X11 windowing target." PUBLIC ON)
 WEBKIT_OPTION_DEFINE(USE_GBM "Whether to enable usage of GBM and libdrm." PUBLIC ON)
 WEBKIT_OPTION_DEFINE(USE_GTK4 "Whether to enable usage of GTK4 instead of GTK3." PUBLIC OFF)
-WEBKIT_OPTION_DEFINE(USE_JPEGXL "Whether to enable support for JPEG-XL images." PUBLIC ${ENABLE_EXPERIMENTAL_FEATURES})
 WEBKIT_OPTION_DEFINE(USE_LCMS "Whether to enable support for image color management using libcms2." PUBLIC ON)
 WEBKIT_OPTION_DEFINE(USE_LIBHYPHEN "Whether to enable the default automatic hyphenation implementation." PUBLIC ON)
 WEBKIT_OPTION_DEFINE(USE_LIBSECRET "Whether to enable the persistent credential storage using libsecret." PUBLIC ON)
@@ -75,7 +64,6 @@ WEBKIT_OPTION_DEFINE(USE_WOFF2 "Whether to enable support for WOFF2 Web Fonts." 
 WEBKIT_OPTION_DEPEND(ENABLE_DOCUMENTATION ENABLE_INTROSPECTION)
 WEBKIT_OPTION_DEPEND(ENABLE_3D_TRANSFORMS USE_OPENGL_OR_ES)
 WEBKIT_OPTION_DEPEND(ENABLE_ASYNC_SCROLLING USE_OPENGL_OR_ES)
-WEBKIT_OPTION_DEPEND(ENABLE_GLES2 USE_OPENGL_OR_ES)
 WEBKIT_OPTION_DEPEND(ENABLE_WEBGL USE_OPENGL_OR_ES)
 WEBKIT_OPTION_DEPEND(USE_GBM USE_OPENGL_OR_ES)
 WEBKIT_OPTION_DEPEND(USE_GSTREAMER_GL USE_OPENGL_OR_ES)
@@ -116,6 +104,7 @@ WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEB_CRYPTO PUBLIC ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEBDRIVER PUBLIC ON)
 
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_AVIF PUBLIC ON)
+WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_JPEGXL PUBLIC ON)
 
 # Private options shared with other WebKit ports. Add options here when
 # we need a value different from the default defined in WebKitFeatures.cmake.
@@ -233,14 +222,14 @@ EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_INFIX)
 EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_VERSION)
 
 if (WEBKITGTK_API_VERSION VERSION_EQUAL "4.0")
-    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 101 0 64)
-    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 41 0 23)
+    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 102 1 65)
+    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 41 4 23)
 elseif (WEBKITGTK_API_VERSION VERSION_EQUAL "4.1")
-    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 9 0 9)
-    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 4 0 4)
+    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 10 1 10)
+    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 4 4 4)
 elseif (WEBKITGTK_API_VERSION VERSION_EQUAL "6.0")
-    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 5 0 1)
-    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 2 0 1)
+    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 6 1 2)
+    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 2 4 1)
 else ()
     message(FATAL_ERROR "Unhandled API version")
 endif ()
@@ -343,28 +332,14 @@ endif ()
 SET_AND_EXPOSE_TO_BUILD(USE_TEXTURE_MAPPER TRUE)
 
 if (USE_OPENGL_OR_ES)
-    # USE_OPENGL is the opposite of ENABLE_GLES2.
-    if (ENABLE_GLES2)
-        find_package(OpenGLES2 REQUIRED)
-        SET_AND_EXPOSE_TO_BUILD(USE_OPENGL_ES TRUE)
-        SET_AND_EXPOSE_TO_BUILD(USE_OPENGL FALSE)
 
-        if (OpenGLES2_API_VERSION VERSION_GREATER_EQUAL 3.0)
-            SET_AND_EXPOSE_TO_BUILD(HAVE_OPENGL_ES_3 ON)
-        endif ()
-    else ()
-        SET_AND_EXPOSE_TO_BUILD(USE_OPENGL TRUE)
-    endif ()
+    SET_AND_EXPOSE_TO_BUILD(USE_TEXTURE_MAPPER_GL ON)
+    SET_AND_EXPOSE_TO_BUILD(USE_EGL ON)
+    SET_AND_EXPOSE_TO_BUILD(USE_COORDINATED_GRAPHICS ON)
+    SET_AND_EXPOSE_TO_BUILD(USE_NICOSIA ON)
+    SET_AND_EXPOSE_TO_BUILD(USE_ANGLE ${ENABLE_WEBGL})
 
-    if (NOT EGL_FOUND)
-        message(FATAL_ERROR "EGL is needed for USE_OPENGL_OR_ES.")
-    endif ()
-
-    SET_AND_EXPOSE_TO_BUILD(USE_TEXTURE_MAPPER_GL TRUE)
-
-    SET_AND_EXPOSE_TO_BUILD(USE_EGL ${EGL_FOUND})
-
-    if (ENABLE_WAYLAND_TARGET AND EGL_FOUND)
+    if (ENABLE_WAYLAND_TARGET)
         find_package(WPE 1.3.0)
         if (NOT WPE_FOUND)
             message(FATAL_ERROR "libwpe is required for ENABLE_WAYLAND_TARGET")
@@ -378,15 +353,11 @@ if (USE_OPENGL_OR_ES)
         SET_AND_EXPOSE_TO_BUILD(USE_WPE_RENDERER ON)
     endif ()
 
-    SET_AND_EXPOSE_TO_BUILD(USE_COORDINATED_GRAPHICS TRUE)
-    SET_AND_EXPOSE_TO_BUILD(USE_NICOSIA TRUE)
-    SET_AND_EXPOSE_TO_BUILD(USE_ANGLE ${ENABLE_WEBGL})
-
     if (USE_GBM)
         # ANGLE-backed WebGL depends on DMABuf support, which at the moment is leveraged
         # through libgbm and libdrm dependencies. When libgbm is enabled, make
-        # libdrm a requirement and define the USE_LIBGBM and USE_TEXTURE_MAPPER_DMABUF
-        # macros. When not available, ANGLE will be used in slower software-rasterization mode.
+        # libdrm a requirement and define USE_TEXTURE_MAPPER_DMABUF macros.
+        # When not available, ANGLE will be used in slower software-rasterization mode.
         find_package(GBM)
         if (NOT GBM_FOUND)
             message(FATAL_ERROR "GBM is required for USE_GBM")
@@ -397,8 +368,7 @@ if (USE_OPENGL_OR_ES)
             message(FATAL_ERROR "libdrm is required for USE_GBM")
         endif ()
 
-        SET_AND_EXPOSE_TO_BUILD(USE_LIBGBM TRUE)
-        SET_AND_EXPOSE_TO_BUILD(USE_TEXTURE_MAPPER_DMABUF TRUE)
+        SET_AND_EXPOSE_TO_BUILD(USE_TEXTURE_MAPPER_DMABUF ON)
     endif ()
 endif ()
 
@@ -442,10 +412,6 @@ endif ()
 if (ENABLE_WAYLAND_TARGET)
     if (NOT GTK_SUPPORTS_WAYLAND)
         message(FATAL_ERROR "Recompile GTK with Wayland backend to use ENABLE_WAYLAND_TARGET")
-    endif ()
-
-    if (NOT EGL_FOUND)
-        message(FATAL_ERROR "EGL is required to use ENABLE_WAYLAND_TARGET")
     endif ()
 
     find_package(Wayland 1.15 REQUIRED)

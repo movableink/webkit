@@ -61,6 +61,17 @@ BBQPlan::BBQPlan(VM& vm, Ref<ModuleInformation> moduleInformation, uint32_t func
     dataLogLnIf(WasmBBQPlanInternal::verbose, "Starting BBQ plan for ", functionIndex);
 }
 
+FunctionAllowlist& BBQPlan::ensureGlobalBBQAllowlist()
+{
+    static LazyNeverDestroyed<FunctionAllowlist> bbqAllowlist;
+    static std::once_flag initializeAllowlistFlag;
+    std::call_once(initializeAllowlistFlag, [] {
+        const char* functionAllowlistFile = Options::bbqAllowlist();
+        bbqAllowlist.construct(functionAllowlistFile);
+    });
+    return bbqAllowlist;
+}
+
 bool BBQPlan::planGeneratesLoopOSREntrypoints(const ModuleInformation& moduleInformation)
 {
     if constexpr (is32Bit())
@@ -113,13 +124,15 @@ bool BBQPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffe
             const char* airPrefix = "Air        ";
             const char* asmPrefix = "asm              ";
 
+            B3::Value* prevOrigin = nullptr;
             auto forEachInst = scopedLambda<void(B3::Air::Inst&)>([&] (B3::Air::Inst& inst) {
-                if (inst.origin && context.procedure->code().shouldPreserveB3Origins()) {
+                if (inst.origin && inst.origin != prevOrigin && context.procedure->code().shouldPreserveB3Origins()) {
                     if (String string = inst.origin->compilerConstructionSite(); !string.isNull())
                         dataLogLn("\033[1;37m", string, "\033[0m");
                     dataLog(b3Prefix);
                     inst.origin->deepDump(context.procedure.get(), WTF::dataFile());
                     dataLogLn();
+                    prevOrigin = inst.origin;
                 }
             });
 

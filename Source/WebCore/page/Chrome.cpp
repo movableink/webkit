@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2012, Samsung Electronics. All rights reserved.
  *
@@ -23,14 +23,15 @@
 #include "Chrome.h"
 
 #include "AppHighlight.h"
+#include "BarcodeDetectorInterface.h"
 #include "ChromeClient.h"
 #include "ContactInfo.h"
 #include "ContactsRequestData.h"
 #include "Document.h"
 #include "DocumentType.h"
+#include "FaceDetectorInterface.h"
 #include "FileList.h"
 #include "FloatRect.h"
-#include "FrameLoaderClient.h"
 #include "FrameTree.h"
 #include "Geolocation.h"
 #include "HTMLFormElement.h"
@@ -41,15 +42,16 @@
 #include "InspectorInstrumentation.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Page.h"
 #include "PageGroupLoadDeferrer.h"
 #include "PopupOpeningObserver.h"
 #include "RenderObject.h"
-#include "ResourceHandle.h"
 #include "Settings.h"
 #include "ShareData.h"
 #include "StorageNamespace.h"
 #include "StorageNamespaceProvider.h"
+#include "TextDetectorInterface.h"
 #include "WindowFeatures.h"
 #include "WorkerClient.h"
 #include <JavaScriptCore/VM.h>
@@ -337,7 +339,7 @@ void Chrome::setStatusbarText(LocalFrame& frame, const String& status)
     m_client->setStatusbarText(frame.displayStringModifiedByEncoding(status));
 }
 
-void Chrome::mouseDidMoveOverElement(const HitTestResult& result, unsigned modifierFlags)
+void Chrome::mouseDidMoveOverElement(const HitTestResult& result, OptionSet<PlatformEventModifier> modifiers)
 {
     auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
     if (!localMainFrame)
@@ -349,9 +351,9 @@ void Chrome::mouseDidMoveOverElement(const HitTestResult& result, unsigned modif
     String toolTip;
     TextDirection toolTipDirection;
     getToolTip(result, toolTip, toolTipDirection);
-    m_client->mouseDidMoveOverElement(result, modifierFlags, toolTip, toolTipDirection);
+    m_client->mouseDidMoveOverElement(result, modifiers, toolTip, toolTipDirection);
 
-    InspectorInstrumentation::mouseDidMoveOverElement(m_page, result, modifierFlags);
+    InspectorInstrumentation::mouseDidMoveOverElement(m_page, result, modifiers);
 }
 
 void Chrome::getToolTip(const HitTestResult& result, String& toolTip, TextDirection& toolTipDirection)
@@ -566,6 +568,26 @@ RefPtr<GraphicsContextGL> Chrome::createGraphicsContextGL(const GraphicsContextG
 RefPtr<PAL::WebGPU::GPU> Chrome::createGPUForWebGPU() const
 {
     return m_client->createGPUForWebGPU();
+}
+
+RefPtr<ShapeDetection::BarcodeDetector> Chrome::createBarcodeDetector(const ShapeDetection::BarcodeDetectorOptions& barcodeDetectorOptions) const
+{
+    return m_client->createBarcodeDetector(barcodeDetectorOptions);
+}
+
+void Chrome::getBarcodeDetectorSupportedFormats(CompletionHandler<void(Vector<ShapeDetection::BarcodeFormat>&&)>&& completionHandler) const
+{
+    return m_client->getBarcodeDetectorSupportedFormats(WTFMove(completionHandler));
+}
+
+RefPtr<ShapeDetection::FaceDetector> Chrome::createFaceDetector(const ShapeDetection::FaceDetectorOptions& faceDetectorOptions) const
+{
+    return m_client->createFaceDetector(faceDetectorOptions);
+}
+
+RefPtr<ShapeDetection::TextDetector> Chrome::createTextDetector() const
+{
+    return m_client->createTextDetector();
 }
 
 PlatformDisplayID Chrome::displayID() const

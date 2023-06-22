@@ -31,16 +31,17 @@
 #include "ComputedStyleExtractor.h"
 #include "Document.h"
 #include "ElementChildIteratorInlines.h"
-#include "ElementName.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "JSEventListener.h"
+#include "NodeName.h"
 #include "RenderAncestorIterator.h"
 #include "RenderSVGResourceFilter.h"
 #include "RenderSVGResourceMasker.h"
+#include "ResolvedStyle.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElementRareData.h"
 #include "SVGElementTypeHelpers.h"
@@ -57,6 +58,7 @@
 #include "SVGUseElement.h"
 #include "ShadowRoot.h"
 #include "StyleAdjuster.h"
+#include "StyleResolver.h"
 #include "XMLNames.h"
 #include <wtf/HashMap.h>
 #include <wtf/IsoMallocInlines.h>
@@ -410,28 +412,6 @@ void SVGElement::setCorrespondingElement(SVGElement* correspondingElement)
         correspondingElement->ensureSVGRareData().addInstance(*this);
 }
 
-void SVGElement::parseAttribute(const QualifiedName& name, const AtomString& value)
-{
-    if (name == HTMLNames::classAttr) {
-        m_className->setBaseValInternal(value);
-        return;
-    }
-
-    if (name == HTMLNames::tabindexAttr) {
-        if (value.isEmpty())
-            setTabIndexExplicitly(std::nullopt);
-        else if (auto optionalTabIndex = parseHTMLInteger(value))
-            setTabIndexExplicitly(optionalTabIndex.value());
-        return;
-    }
-
-    auto& eventName = HTMLElement::eventNameForEventHandlerAttribute(name);
-    if (!eventName.isNull()) {
-        setAttributeEventListener(eventName, name, value);
-        return;
-    }
-}
-
 bool SVGElement::haveLoadedRequiredResources()
 {
     for (auto& child : childrenOfType<SVGElement>(*this)) {
@@ -555,7 +535,7 @@ static inline bool isSVGLayerAwareElement(const SVGElement& element)
 {
     using namespace ElementNames;
 
-    switch (element.tagQName().elementName()) {
+    switch (element.elementName()) {
     case SVG::a:
     case SVG::altGlyph:
     case SVG::circle:
@@ -599,7 +579,7 @@ bool SVGElement::childShouldCreateRenderer(const Node& child) const
         return false;
 #endif
 
-    switch (svgChild.tagQName().elementName()) {
+    switch (svgChild.elementName()) {
     case ElementNames::SVG::altGlyph:
     case ElementNames::SVG::textPath:
     case ElementNames::SVG::tref:
@@ -611,12 +591,28 @@ bool SVGElement::childShouldCreateRenderer(const Node& child) const
     return svgChild.isValid();
 }
 
-void SVGElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason)
+void SVGElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    StyledElement::attributeChanged(name, oldValue, newValue);
+    StyledElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 
-    if (name == HTMLNames::idAttr)
+    switch (name.nodeName()) {
+    case AttributeNames::idAttr:
         document().accessSVGExtensions().rebuildAllElementReferencesForTarget(*this);
+        break;
+    case AttributeNames::classAttr:
+        m_className->setBaseValInternal(newValue);
+        break;
+    case AttributeNames::tabindexAttr:
+        if (newValue.isEmpty())
+            setTabIndexExplicitly(std::nullopt);
+        else if (auto optionalTabIndex = parseHTMLInteger(newValue))
+            setTabIndexExplicitly(optionalTabIndex.value());
+        break;
+    default:
+        if (auto& eventName = HTMLElement::eventNameForEventHandlerAttribute(name); !eventName.isNull())
+            setAttributeEventListener(eventName, name, newValue);
+        break;
+    }
 
     // Changes to the style attribute are processed lazily (see Element::getAttribute() and related methods),
     // so we don't want changes to the style attribute to result in extra work here except invalidateInstances().
@@ -736,6 +732,19 @@ void SVGElement::setUseOverrideComputedStyle(bool value)
 {
     if (m_svgRareData)
         m_svgRareData->setUseOverrideComputedStyle(value);
+}
+
+inline const RenderStyle* SVGElementRareData::overrideComputedStyle(Element& element, const RenderStyle* parentStyle)
+{
+    if (!m_useOverrideComputedStyle)
+        return nullptr;
+    if (!m_overrideComputedStyle || m_needsOverrideComputedStyleUpdate) {
+        // The style computed here contains no CSS Animations/Transitions or SMIL induced rules - this is needed to compute the "base value" for the SMIL animation sandwhich model.
+        m_overrideComputedStyle = element.styleResolver().styleForElement(element, { parentStyle }, RuleMatchingBehavior::MatchAllRulesExcludingSMIL).style;
+        m_needsOverrideComputedStyleUpdate = false;
+    }
+    ASSERT(m_overrideComputedStyle);
+    return m_overrideComputedStyle.get();
 }
 
 const RenderStyle* SVGElement::computedStyle(PseudoId pseudoElementSpecifier)

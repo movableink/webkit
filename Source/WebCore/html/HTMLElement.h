@@ -37,6 +37,7 @@ namespace WebCore {
 class ElementInternals;
 class FormListedElement;
 class FormAssociatedElement;
+class HTMLFormControlElement;
 class HTMLFormElement;
 class VisibleSelection;
 
@@ -121,7 +122,7 @@ public:
 
     // Only some element types can be disabled: https://html.spec.whatwg.org/multipage/scripting.html#concept-element-disabled
     bool canBeActuallyDisabled() const;
-    bool isActuallyDisabled() const;
+    virtual bool isActuallyDisabled() const;
 
 #if ENABLE(AUTOCAPITALIZE)
     WEBCORE_EXPORT virtual AutocapitalizeType autocapitalizeType() const;
@@ -148,10 +149,10 @@ public:
     WEBCORE_EXPORT ExceptionOr<Ref<ElementInternals>> attachInternals();
 
     void queuePopoverToggleEventTask(PopoverVisibilityState oldState, PopoverVisibilityState newState);
-    ExceptionOr<void> showPopover();
+    ExceptionOr<void> showPopover(const HTMLFormControlElement* = nullptr);
     ExceptionOr<void> hidePopover();
     ExceptionOr<void> hidePopoverInternal(FocusPreviousElement, FireEvents);
-    ExceptionOr<void> togglePopover(std::optional<bool> force);
+    ExceptionOr<bool> togglePopover(std::optional<bool> force);
 
     PopoverState popoverState() const;
     const AtomString& popover() const;
@@ -182,7 +183,7 @@ protected:
     void applyBorderAttributeToStyle(const AtomString&, MutableStyleProperties&);
 
     bool matchesReadWritePseudoClass() const override;
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType , ContainerNode& parentOfInsertedTree) override;
     void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) override;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
@@ -191,13 +192,6 @@ protected:
 
     void childrenChanged(const ChildChange&) override;
     void updateEffectiveDirectionalityOfDirAuto();
-
-    void checkAndPossiblyClosePopoverStack()
-    {
-        if (!document().settings().popoverAttributeEnabled() || !document().hasTopLayerElement())
-            return;
-        checkAndPossiblyClosePopoverStackInternal();
-    }
 
     using EventHandlerNameMap = HashMap<AtomStringImpl*, AtomString>;
     static const AtomString& eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap&);
@@ -208,7 +202,7 @@ private:
     void mapLanguageAttributeToLocale(const AtomString&, MutableStyleProperties&);
 
     void dirAttributeChanged(const AtomString&);
-    void updateEffectiveDirectionality(TextDirection);
+    void updateEffectiveDirectionality(std::optional<TextDirection>);
     void adjustDirectionalityIfNeededAfterChildAttributeChanged(Element* child);
     void adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type);
 
@@ -222,7 +216,6 @@ private:
     enum class UseCSSPXAsUnitType : bool { No, Yes };
     enum class IsMultiLength : bool { No, Yes };
     void addHTMLLengthToStyle(MutableStyleProperties&, CSSPropertyID, StringView value, AllowPercentage, UseCSSPXAsUnitType, IsMultiLength, AllowZeroValue = AllowZeroValue::Yes);
-    void checkAndPossiblyClosePopoverStackInternal();
 };
 
 inline HTMLElement::HTMLElement(const QualifiedName& tagName, Document& document, ConstructionType type = CreateHTMLElement)

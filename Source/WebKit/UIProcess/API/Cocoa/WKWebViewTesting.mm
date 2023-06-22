@@ -29,16 +29,19 @@
 #import "AudioSessionRoutingArbitratorProxy.h"
 #import "GPUProcessProxy.h"
 #import "MediaSessionCoordinatorProxyPrivate.h"
+#import "NetworkProcessProxy.h"
 #import "PlaybackSessionManagerProxy.h"
 #import "PrintInfo.h"
 #import "RemoteLayerTreeDrawingAreaProxy.h"
 #import "RemoteScrollingCoordinatorProxy.h"
 #import "UserMediaProcessManager.h"
 #import "ViewGestureController.h"
+#import "WKContentViewInteraction.h"
 #import "WebPageProxy.h"
 #import "WebProcessPool.h"
 #import "WebProcessProxy.h"
 #import "WebViewImpl.h"
+#import "WebsiteDataStore.h"
 #import "_WKFrameHandleInternal.h"
 #import "_WKInspectorInternal.h"
 #import <WebCore/RuntimeApplicationChecks.h>
@@ -94,10 +97,11 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
     };
 
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
-    if ([layer valueForKey:@"WKInteractionRegionGroupName"])
-        ts.dumpProperty("type", "interaction");
-    else if ([layer valueForKey:@"WKInteractionRegionType"])
-        ts.dumpProperty("type", "occlusion");
+    NSNumber *interactionRegionLayerType = [layer valueForKey:@"WKInteractionRegionType"];
+    if (interactionRegionLayerType) {
+        ts.dumpProperty("type", interactionRegionLayerType);
+        traverse = false;
+    }
 #endif
 
     ts.dumpProperty("layer bounds", rectToString(layer.bounds));
@@ -209,6 +213,13 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
         return @"";
 
     return coordinator->scrollingTreeAsText();
+}
+
+- (pid_t)_networkProcessIdentifier
+{
+    auto* networkProcess = _page->websiteDataStore().networkProcessIfExists();
+    RELEASE_ASSERT(networkProcess);
+    return networkProcess->processID();
 }
 
 - (void)_setScrollingUpdatesDisabledForTesting:(BOOL)disabled
@@ -394,7 +405,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 
 - (BOOL)_hasSleepDisabler
 {
-    return _page && _page->process().hasSleepDisabler();
+    return _page && _page->hasSleepDisabler();
 }
 
 - (NSString*)_scrollbarStateForScrollingNodeID:(uint64_t)scrollingNodeID isVertical:(bool)isVertical
@@ -495,6 +506,14 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
     // For subclasses to override.
 }
 
+- (void)_resetInteraction
+{
+#if PLATFORM(IOS_FAMILY)
+    [_contentView cleanUpInteraction];
+    [_contentView setUpInteraction];
+#endif
+}
+
 - (void)_didPresentContactPicker
 {
     // For subclasses to override.
@@ -565,6 +584,13 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 {
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     WebKit::WindowServerConnection::singleton().hardwareConsoleStateChanged(connected ? WebKit::WindowServerConnection::HardwareConsoleState::Connected : WebKit::WindowServerConnection::HardwareConsoleState::Disconnected);
+#endif
+}
+
+- (void)_setSystemPreviewCompletionHandlerForLoadTesting:(void(^)(bool))completionHandler
+{
+#if USE(SYSTEM_PREVIEW)
+    _page->setSystemPreviewCompletionHandlerForLoadTesting(makeBlockPtr(completionHandler));
 #endif
 }
 

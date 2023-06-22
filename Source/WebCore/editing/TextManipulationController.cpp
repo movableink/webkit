@@ -153,7 +153,7 @@ static bool isNotSpace(UChar character)
     if (character == noBreakSpace)
         return false;
 
-    return isNotHTMLSpace(character);
+    return !isASCIIWhitespace(character);
 }
 
 class ParagraphContentIterator {
@@ -287,11 +287,6 @@ static bool canPerformTextManipulationByReplacingEntireTextContent(const Element
     return element.hasTagName(HTMLNames::titleTag) || element.hasTagName(HTMLNames::optionTag);
 }
 
-static bool areEqualIgnoringLeadingAndTrailingWhitespaces(const String& content, const String& originalContent)
-{
-    return content.stripWhiteSpace() == originalContent.stripWhiteSpace();
-}
-
 static std::optional<TextManipulationTokenInfo> tokenInfo(Node* node)
 {
     if (!node)
@@ -413,7 +408,7 @@ void TextManipulationController::parse(ManipulationUnit& unit, const String& tex
                 startPositionOfCurrentToken = positionOfLastNonHTMLSpace + 1;
             }
 
-            while (index < text.length() && (isHTMLSpace(text[index]) || isInPrivateUseArea(text[index])))
+            while (index < text.length() && (isASCIIWhitespace(text[index]) || isInPrivateUseArea(text[index])))
                 ++index;
 
             --index;
@@ -842,7 +837,7 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
                 return ManipulationFailure::Type::ContentChanged;
 
             auto& currentToken = item.tokens[currentTokenIndex++];
-            bool isContentUnchanged = areEqualIgnoringLeadingAndTrailingWhitespaces(currentToken.content, token.content);
+            bool isContentUnchanged = StringView(currentToken.content).trim(deprecatedIsSpaceOrNewline) == StringView(token.content).trim(deprecatedIsSpaceOrNewline);
             if (!content.isReplacedContent && !isContentUnchanged)
                 return ManipulationFailure::Type::ContentChanged;
 

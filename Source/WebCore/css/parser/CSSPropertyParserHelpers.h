@@ -35,6 +35,7 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSShadowValue.h"
 #include "CSSValuePool.h"
+#include "CSSWordBoundaryDetectionValue.h"
 #include "GridArea.h"
 #include "Length.h"
 #include "StyleColor.h"
@@ -52,6 +53,7 @@ enum class FamilyNamesIndex;
 }
 
 enum class BoxOrient : bool;
+enum class FontTechnology : uint8_t;
 
 // When these functions are successful, they will consume all the relevant
 // tokens from the range and also consume any whitespace which follows. When
@@ -265,7 +267,9 @@ RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, const CSSParserContext&);
 RefPtr<CSSValue> consumeContent(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeScrollSnapAlign(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeScrollSnapType(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeTextEdge(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeScrollbarColor(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeScrollbarGutter(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeTextBoxEdge(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeBorderRadiusCorner(CSSParserTokenRange&, CSSParserMode);
 bool consumeRadii(std::array<RefPtr<CSSValue>, 4>& horizontalRadii, std::array<RefPtr<CSSValue>, 4>& verticalRadii, CSSParserTokenRange&, CSSParserMode, bool useLegacyParsing);
 enum class ConsumeRay { Include, Exclude };
@@ -313,13 +317,16 @@ RefPtr<CSSValue> consumeColorScheme(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeOffsetRotate(CSSParserTokenRange&, CSSParserMode);
 RefPtr<CSSValue> consumeTextSpacingTrim(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeTextAutospace(CSSParserTokenRange&);
+RefPtr<CSSPrimitiveValue> consumeLang(CSSParserTokenRange&);
+RefPtr<CSSWordBoundaryDetectionValue> consumeWordBoundaryDetection(CSSParserTokenRange&);
 
 RefPtr<CSSValue> consumeDeclarationValue(CSSParserTokenRange&, const CSSParserContext&);
 
 // @font-face descriptor consumers:
 
 RefPtr<CSSValue> consumeFontFaceFontFamily(CSSParserTokenRange&);
-bool identMatchesSupportedFontFormat(CSSValueID);
+Vector<FontTechnology> consumeFontTech(CSSParserTokenRange&, bool singleValue = false);
+String consumeFontFormat(CSSParserTokenRange&, bool rejectStringValues = false);
 
 // @font-palette-values descriptor consumers:
 
@@ -327,7 +334,7 @@ RefPtr<CSSValue> consumeFontPaletteValuesOverrideColors(CSSParserTokenRange&, co
 
 // @counter-style descriptor consumers:
 
-RefPtr<CSSValue> consumeCounterStyleSystem(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeCounterStyleSystem(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeCounterStyleSymbol(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeCounterStyleNegative(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeCounterStyleRange(CSSParserTokenRange&);

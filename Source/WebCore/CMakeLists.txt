@@ -14,6 +14,7 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WebCore_DERIVED_SOURCES_DIR}"
     "${WEBCORE_DIR}"
     "${WEBCORE_DIR}/Modules/ShapeDetection"
+    "${WEBCORE_DIR}/Modules/ShapeDetection/Interfaces"
     "${WEBCORE_DIR}/Modules/WebGPU"
     "${WEBCORE_DIR}/Modules/airplay"
     "${WEBCORE_DIR}/Modules/applepay"
@@ -406,6 +407,7 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/mediasession/Navigator+MediaSession.idl
 
     Modules/mediasource/AudioTrack+MediaSource.idl
+    Modules/mediasource/BufferedChangeEvent.idl
     Modules/mediasource/DOMURL+MediaSource.idl
     Modules/mediasource/ManagedMediaSource.idl
     Modules/mediasource/ManagedSourceBuffer.idl
@@ -834,7 +836,6 @@ set(WebCore_NON_SVG_IDL_FILES
     css/CSSFontFeatureValuesRule.idl
     css/CSSFontPaletteValuesRule.idl
     css/CSSGroupingRule.idl
-    css/CSSImportRule+Layer.idl
     css/CSSImportRule.idl
     css/CSSKeyframeRule.idl
     css/CSSKeyframesRule.idl
@@ -1619,6 +1620,7 @@ list(APPEND WebCore_NON_SVG_IDL_FILES
     Modules/ShapeDetection/TextDetector.idl
     Modules/WebGPU/GPU.idl
     Modules/WebGPU/GPUAdapter.idl
+    Modules/WebGPU/GPUAdapterInfo.idl
     Modules/WebGPU/GPUAddressMode.idl
     Modules/WebGPU/GPUAutoLayoutMode.idl
     Modules/WebGPU/GPUBindGroup.idl
@@ -1831,11 +1833,7 @@ elseif (USE_LIBEPOXY)
     )
     add_definitions(${LIBEPOXY_DEFINITIONS})
 else ()
-    if (USE_OPENGL)
-        list(APPEND WebCore_LIBRARIES OpenGL::OpenGL)
-    elseif (USE_OPENGL_ES)
-        list(APPEND WebCore_LIBRARIES OpenGL::GLES)
-    endif ()
+    list(APPEND WebCore_LIBRARIES OpenGL::GLES)
 
     if (USE_EGL)
         list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
@@ -2060,10 +2058,6 @@ elseif (USE_ANGLE_EGL)
     list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
         ${WEBCORE_DIR}/platform/graphics/angle
         ${WEBCORE_DIR}/platform/graphics/opengl
-    )
-
-    list(APPEND WebCore_SOURCES
-        platform/graphics/opengl/TemporaryOpenGLSetting.cpp
     )
 endif ()
 
@@ -2579,7 +2573,6 @@ set(WebCore_BUILTINS_SOURCES
     ${WEBCORE_DIR}/Modules/streams/ReadableStreamInternals.js
     ${WEBCORE_DIR}/Modules/streams/ReadableStreamDefaultReader.js
     ${WEBCORE_DIR}/Modules/streams/StreamInternals.js
-    ${WEBCORE_DIR}/Modules/streams/TransformStream.js
     ${WEBCORE_DIR}/Modules/streams/TransformStreamDefaultController.js
     ${WEBCORE_DIR}/Modules/streams/TransformStreamInternals.js
     ${WEBCORE_DIR}/Modules/streams/WritableStreamDefaultController.js
@@ -2677,8 +2670,8 @@ list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/XMLNames.cpp)
 GENERATE_DOM_NAME_ENUM(TagName)
 list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/TagName.cpp)
 
-GENERATE_DOM_NAME_ENUM(ElementName)
-list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/ElementName.cpp)
+GENERATE_DOM_NAME_ENUM(NodeName)
+list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/NodeName.cpp)
 
 GENERATE_DOM_NAME_ENUM(Namespace)
 list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/Namespace.cpp)

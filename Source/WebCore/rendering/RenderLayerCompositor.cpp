@@ -24,10 +24,10 @@
  */
 
 #include "config.h"
-
 #include "RenderLayerCompositor.h"
 
 #include "AsyncScrollingCoordinator.h"
+#include "BorderData.h"
 #include "CSSPropertyNames.h"
 #include "CanvasRenderingContext.h"
 #include "Chrome.h"
@@ -46,21 +46,32 @@
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "NodeList.h"
+#include "OffsetRotation.h"
 #include "Page.h"
 #include "PageOverlayController.h"
+#include "PathOperation.h"
+#include "RenderBoxInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderGeometryMap.h"
 #include "RenderIFrame.h"
 #include "RenderImage.h"
 #include "RenderLayerBacking.h"
+#include "RenderLayerInlines.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyleInlines.h"
 #include "RenderVideo.h"
 #include "RenderView.h"
+#include "RotateTransformOperation.h"
+#include "ScaleTransformOperation.h"
 #include "ScrollingConstraints.h"
 #include "Settings.h"
 #include "TiledBacking.h"
 #include "TransformState.h"
+#include "TranslateTransformOperation.h"
+#include "WillChangeData.h"
 #include <wtf/HexNumber.h>
 #include <wtf/MemoryPressureHandler.h>
 #include <wtf/SetForScope.h>
@@ -395,6 +406,7 @@ static inline bool layersLogEnabled()
 RenderLayerCompositor::RenderLayerCompositor(RenderView& renderView)
     : m_renderView(renderView)
     , m_updateCompositingLayersTimer(*this, &RenderLayerCompositor::updateCompositingLayersTimerFired)
+    , m_updateRenderingTimer(*this, &RenderLayerCompositor::scheduleRenderingUpdate)
 {
 #if PLATFORM(IOS_FAMILY)
     if (m_renderView.frameView().platformWidget())
@@ -718,24 +730,10 @@ void RenderLayerCompositor::didChangeVisibleRect()
         scheduleRenderingUpdate();
 }
 
-void RenderLayerCompositor::notifyFlushBeforeDisplayRefresh(const GraphicsLayer*)
+void RenderLayerCompositor::notifySubsequentFlushRequired(const GraphicsLayer*)
 {
-    if (!m_layerUpdater) {
-        PlatformDisplayID displayID = page().chrome().displayID();
-        m_layerUpdater = makeUnique<GraphicsLayerUpdater>(*this, displayID);
-    }
-    
-    m_layerUpdater->scheduleUpdate();
-}
-
-void RenderLayerCompositor::flushLayersSoon(GraphicsLayerUpdater&)
-{
-    scheduleRenderingUpdate();
-}
-
-DisplayRefreshMonitorFactory* RenderLayerCompositor::displayRefreshMonitorFactory()
-{
-    return page().chrome().client().displayRefreshMonitorFactory();
+    if (!m_updateRenderingTimer.isActive())
+        m_updateRenderingTimer.startOneShot(0_s);
 }
 
 void RenderLayerCompositor::layerTiledBackingUsageChanged(const GraphicsLayer* graphicsLayer, bool usingTiledBacking)
@@ -915,7 +913,9 @@ bool RenderLayerCompositor::updateCompositingLayers(CompositingUpdateType update
 #endif
 
     if (updateRoot->hasDescendantNeedingUpdateBackingOrHierarchyTraversal() || updateRoot->needsUpdateBackingOrHierarchyTraversal()) {
+        ASSERT(m_layersWithUnresolvedRelations.isEmptyIgnoringNullReferences());
         ScrollingTreeState scrollingTreeState = { 0, 0 };
+
         if (!m_renderView.frame().isMainFrame())
             scrollingTreeState.parentNodeID = frameHostingNodeForFrame(m_renderView.frame());
 
@@ -940,6 +940,8 @@ bool RenderLayerCompositor::updateCompositingLayers(CompositingUpdateType update
 
         if (scrollingCoordinator && scrollingCoordinator->hasSubscrollers() != hadSubscrollers)
             invalidateEventRegionForAllFrames();
+
+        resolveScrollingTreeRelationships();
     }
 
 #if !LOG_DISABLED
@@ -3441,6 +3443,7 @@ bool RenderLayerCompositor::requiresCompositingForOverflowScrolling(const Render
         return layer.isComposited();
     }
 
+    const_cast<RenderLayer&>(layer).computeHasCompositedScrollableOverflow(LayoutUpToDate::Yes);
     return layer.hasCompositedScrollableOverflow();
 }
 
@@ -3752,7 +3755,7 @@ void paintScrollbar(Scrollbar* scrollbar, GraphicsContext& context, const IntRec
     context.restore();
 }
 
-void RenderLayerCompositor::paintContents(const GraphicsLayer* graphicsLayer, GraphicsContext& context, const FloatRect& clip, GraphicsLayerPaintBehavior)
+void RenderLayerCompositor::paintContents(const GraphicsLayer* graphicsLayer, GraphicsContext& context, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior>)
 {
 #if PLATFORM(MAC)
     LocalDefaultSystemAppearance localAppearance(m_renderView.useDarkAppearance());
@@ -3815,7 +3818,7 @@ void RenderLayerCompositor::resetTrackedRepaintRects()
 
 float RenderLayerCompositor::deviceScaleFactor() const
 {
-    return m_renderView.document().deviceScaleFactor();
+    return page().deviceScaleFactor();
 }
 
 float RenderLayerCompositor::pageScaleFactor() const
@@ -4383,8 +4386,6 @@ void RenderLayerCompositor::destroyRootLayer()
     }
     ASSERT(!m_scrolledContentsLayer);
     GraphicsLayer::unparentAndClear(m_rootContentsLayer);
-
-    m_layerUpdater = nullptr;
 }
 
 void RenderLayerCompositor::attachRootLayer(RootLayerAttachment attachment)
@@ -4962,6 +4963,20 @@ ScrollingNodeID RenderLayerCompositor::updateScrollingNodeForScrollingRole(Rende
     return newNodeID;
 }
 
+bool RenderLayerCompositor::setupScrollProxyRelatedOverflowScrollingNode(ScrollingCoordinator& scrollingCoordinator, ScrollingNodeID scrollingProxyNodeID, RenderLayer& overflowScrollingLayer)
+{
+    auto* backing = overflowScrollingLayer.backing();
+    if (!backing)
+        return false;
+
+    auto overflowScrollNodeID = backing->scrollingNodeIDForRole(ScrollCoordinationRole::Scrolling);
+    if (!overflowScrollNodeID)
+        return false;
+
+    scrollingCoordinator.setRelatedOverflowScrollingNodes(scrollingProxyNodeID, { overflowScrollNodeID });
+    return true;
+}
+
 ScrollingNodeID RenderLayerCompositor::updateScrollingNodeForScrollingProxyRole(RenderLayer& layer, ScrollingTreeState& treeState, OptionSet<ScrollingNodeChangeFlags> changes)
 {
     auto* scrollingCoordinator = this->scrollingCoordinator();
@@ -4992,14 +5007,8 @@ ScrollingNodeID RenderLayerCompositor::updateScrollingNodeForScrollingProxyRole(
             ASSERT(entry.clipData.clippingLayer);
             ASSERT(entry.clipData.clippingLayer->isComposited());
 
-            ScrollingNodeID overflowScrollNodeID = 0;
-            if (auto* backing = entry.clipData.clippingLayer->backing())
-                overflowScrollNodeID = backing->scrollingNodeIDForRole(ScrollCoordinationRole::Scrolling);
-
-            Vector<ScrollingNodeID> scrollingNodeIDs;
-            if (overflowScrollNodeID)
-                scrollingNodeIDs.append(overflowScrollNodeID);
-            scrollingCoordinator->setRelatedOverflowScrollingNodes(entry.overflowScrollProxyNodeID, WTFMove(scrollingNodeIDs));
+            if (!setupScrollProxyRelatedOverflowScrollingNode(*scrollingCoordinator, entry.overflowScrollProxyNodeID, *entry.clipData.clippingLayer))
+                m_layersWithUnresolvedRelations.add(layer);
         }
     }
     
@@ -5056,6 +5065,33 @@ ScrollingNodeID RenderLayerCompositor::updateScrollingNodeForPositioningRole(Ren
     }
 
     return newNodeID;
+}
+
+void RenderLayerCompositor::resolveScrollingTreeRelationships()
+{
+    if (m_layersWithUnresolvedRelations.isEmptyIgnoringNullReferences())
+        return;
+
+    auto* scrollingCoordinator = this->scrollingCoordinator();
+
+    for (auto& layer : m_layersWithUnresolvedRelations) {
+        LOG_WITH_STREAM(ScrollingTree, stream << "RenderLayerCompositor::resolveScrollingTreeRelationships - resolving relationship for layer " << &layer);
+
+        if (!layer.isComposited())
+            continue;
+
+        if (auto* clippingStack = layer.backing()->ancestorClippingStack()) {
+            for (auto& entry : clippingStack->stack()) {
+                if (!entry.clipData.isOverflowScroll)
+                    continue;
+
+                bool succeeded = setupScrollProxyRelatedOverflowScrollingNode(*scrollingCoordinator, entry.overflowScrollProxyNodeID, *entry.clipData.clippingLayer);
+                ASSERT_UNUSED(succeeded, succeeded);
+            }
+        }
+    }
+
+    m_layersWithUnresolvedRelations.clear();
 }
 
 void RenderLayerCompositor::updateSynchronousScrollingNodes()
@@ -5179,12 +5215,6 @@ void RenderLayerCompositor::didAddScrollingLayer(RenderLayer& layer)
 #else
     UNUSED_PARAM(layer);
 #endif
-}
-
-void RenderLayerCompositor::windowScreenDidChange(PlatformDisplayID displayID)
-{
-    if (m_layerUpdater)
-        m_layerUpdater->screenDidChange(displayID);
 }
 
 ScrollingCoordinator* RenderLayerCompositor::scrollingCoordinator() const

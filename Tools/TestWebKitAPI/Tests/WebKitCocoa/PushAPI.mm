@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 #import "TestWKWebView.h"
 #import <WebCore/SWRegistrationDatabase.h>
 #import <WebKit/WKNotificationProvider.h>
+#import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WKWebsiteDataStorePrivate.h>
@@ -205,10 +206,21 @@ TEST(PushAPI, firePushEvent)
 
 @interface FirePushEventDataStoreDelegate : NSObject <_WKWebsiteDataStoreDelegate>
 @property (readwrite, copy) NSDictionary<NSString *, NSNumber *> *permissions;
-@property (readonly, copy) _WKNotificationData *mostRecentNotification;
+@property (readonly, copy) NSMutableArray<_WKNotificationData *> *displayedNotifications;
 @end
 
 @implementation FirePushEventDataStoreDelegate
+
+- (instancetype)init
+{
+    if (!(self = [super init]))
+        return nil;
+
+    _displayedNotifications = [[NSMutableArray alloc] init];
+
+    return self;
+}
+
 - (NSDictionary<NSString *, NSNumber *> *)notificationPermissionsForWebsiteDataStore:(WKWebsiteDataStore *)dataStore
 {
     return _permissions;
@@ -216,15 +228,39 @@ TEST(PushAPI, firePushEvent)
 
 - (void)websiteDataStore:(WKWebsiteDataStore *)dataStore showNotification:(_WKNotificationData *)notificationData
 {
-    _mostRecentNotification = [notificationData retain];
+    [_displayedNotifications addObject:notificationData];
+}
+
+- (void)websiteDataStore:(WKWebsiteDataStore *)dataStore getDisplayedNotificationsForWorkerOrigin:(WKSecurityOrigin *)workerOrigin completionHandler:(void (^)(NSArray<NSDictionary *> *))completionHandler
+{
+
+    NSMutableArray *notifications = [NSMutableArray new];
+    for (id notification in _displayedNotifications)
+        [notifications addObject:[notification dictionaryRepresentation]];
+
+    completionHandler(notifications);
 }
 
 - (void)dealloc
 {
-    [_mostRecentNotification release];
+    [_displayedNotifications release];
     [super dealloc];
 }
 @end
+
+TEST(PushAPI, notificationPermissionsDelegateInvalidResponse)
+{
+    auto configuration = createConfigurationWithNotificationsEnabled();
+    RetainPtr<FirePushEventDataStoreDelegate> delegate = adoptNS([FirePushEventDataStoreDelegate new]);
+    delegate.get().permissions = @{
+        @":" : @YES
+    };
+    [configuration websiteDataStore]._delegate = delegate.get();
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get() addToWindow:NO]);
+
+    // If the WebView completes the page load successfully, the test passes.
+    [webView synchronouslyLoadHTMLString:@"Hello"];
+}
 
 TEST(PushAPI, firePushEventDataStoreDelegate)
 {
@@ -282,8 +318,182 @@ TEST(PushAPI, firePushEventDataStoreDelegate)
     TestWebKitAPI::Util::run(&pushMessageProcessed);
     EXPECT_FALSE(pushMessageSuccessful);
 
-    EXPECT_TRUE([delegate.get().mostRecentNotification.title isEqualToString:@"notification"]);
-    EXPECT_TRUE([delegate.get().mostRecentNotification.body isEqualToString:@""]);
+    EXPECT_TRUE([delegate.get().displayedNotifications.lastObject.title isEqualToString:@"notification"]);
+    EXPECT_TRUE([delegate.get().displayedNotifications.lastObject.body isEqualToString:@""]);
+
+    clearWebsiteDataStore([configuration websiteDataStore]);
+}
+
+
+static constexpr auto testSilentFlagScriptBytes = R"SWRESOURCE(
+let port;
+self.addEventListener("message", (event) => {
+    port = event.data.port;
+    port.postMessage("Ready");
+    port.onmessage = (event) => {
+        if (event.data == "getAllNotifications") {
+            self.registration.getNotifications().then(notifications => {
+                var result = "";
+                notifications.forEach(notification => {
+                    result += notification.title + " " + notification.silent + " " + notification.tag + " ";
+                });
+                port.postMessage(result);
+            });
+        } else {
+            self.registration.getNotifications({ tag: event.data }).then(notifications => {
+                var result = "";
+                notifications.forEach(notification => {
+                    result += notification.title + " " + notification.silent + " " + notification.tag + " ";
+                });
+                port.postMessage(result);
+            });
+        }
+    };
+});
+self.addEventListener("push", (event) => {
+    try {
+        if (!event.data) {
+            port.postMessage("Received: null data");
+            return;
+        }
+        const value = event.data.text();
+        if (value == "nothing")
+            self.registration.showNotification("nothing", { tag: "nothingTag" });
+        else if (value == "true")
+            self.registration.showNotification("true", { silent: true, tag: "somethingTag" });
+        else if (value == "false")
+            self.registration.showNotification("false", { silent: false, tag: "somethingTag" });
+        port.postMessage("Done");
+    } catch (e) {
+        port.postMessage("Got exception " + e);
+    }
+});
+)SWRESOURCE"_s;
+
+TEST(PushAPI, testSilentFlag)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { mainBytes } },
+        { "/sw.js"_s, { { { "Content-Type"_s, "application/javascript"_s } }, testSilentFlagScriptBytes } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
+
+    auto messageHandler = adoptNS([[PushAPIMessageHandlerWithExpectedMessage alloc] init]);
+    auto configuration = createConfigurationWithNotificationsEnabled();
+    [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"sw"];
+
+    clearWebsiteDataStore([configuration websiteDataStore]);
+
+    RetainPtr<FirePushEventDataStoreDelegate> delegate = adoptNS([FirePushEventDataStoreDelegate new]);
+    delegate.get().permissions = @{
+        (NSString *)server.origin() : @YES
+    };
+    [configuration websiteDataStore]._delegate = delegate.get();
+
+    expectedMessage = "Ready"_s;
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView loadRequest:server.request()];
+
+    TestWebKitAPI::Util::run(&done);
+
+    expectedMessage = "Done"_s;
+
+    done = false;
+    pushMessageProcessed = false;
+    pushMessageSuccessful = false;
+    NSString *message = @"nothing";
+    [[configuration websiteDataStore] _processPushMessage:messageDictionary([message dataUsingEncoding:NSUTF8StringEncoding], [server.request() URL]) completionHandler:^(bool result) {
+        pushMessageSuccessful = result;
+        pushMessageProcessed = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    TestWebKitAPI::Util::run(&pushMessageProcessed);
+
+    EXPECT_TRUE(pushMessageSuccessful);
+    EXPECT_TRUE([delegate.get().displayedNotifications.lastObject.title isEqualToString:@"nothing"]);
+    EXPECT_EQ(delegate.get().displayedNotifications.lastObject.alert, _WKNotificationAlertDefault);
+    EXPECT_TRUE(delegate.get().displayedNotifications.lastObject.userInfo[@"WebNotificationSilentKey"] == nil);
+
+    done = false;
+    pushMessageProcessed = false;
+    pushMessageSuccessful = false;
+    message = @"true";
+    [[configuration websiteDataStore] _processPushMessage:messageDictionary([message dataUsingEncoding:NSUTF8StringEncoding], [server.request() URL]) completionHandler:^(bool result) {
+        pushMessageSuccessful = result;
+        pushMessageProcessed = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    TestWebKitAPI::Util::run(&pushMessageProcessed);
+
+    EXPECT_TRUE(pushMessageSuccessful);
+    EXPECT_TRUE([delegate.get().displayedNotifications.lastObject.title isEqualToString:@"true"]);
+    EXPECT_EQ(delegate.get().displayedNotifications.lastObject.alert, _WKNotificationAlertSilent);
+    EXPECT_TRUE([delegate.get().displayedNotifications.lastObject.userInfo[@"WebNotificationSilentKey"] isEqual:[NSNumber numberWithBool:YES]]);
+
+    done = false;
+    pushMessageProcessed = false;
+    pushMessageSuccessful = false;
+    message = @"false";
+    [[configuration websiteDataStore] _processPushMessage:messageDictionary([message dataUsingEncoding:NSUTF8StringEncoding], [server.request() URL]) completionHandler:^(bool result) {
+        pushMessageSuccessful = result;
+        pushMessageProcessed = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    TestWebKitAPI::Util::run(&pushMessageProcessed);
+
+    EXPECT_TRUE(pushMessageSuccessful);
+    EXPECT_TRUE([delegate.get().displayedNotifications.lastObject.title isEqualToString:@"false"]);
+    EXPECT_EQ(delegate.get().displayedNotifications.lastObject.alert, _WKNotificationAlertEnabled);
+    EXPECT_TRUE([delegate.get().displayedNotifications.lastObject.userInfo[@"WebNotificationSilentKey"] isEqual:[NSNumber numberWithBool:NO]]);
+
+    // Use the ServiceWorkerRegistration.getNotifications() API to grab them and verify the expected silent values
+    static constexpr auto getPersistentNotificationsScript = R"SWRESOURCE(
+    var oldOnMessage = channel.port1.onmessage;
+    const promise = new Promise((resolve) => {
+        channel.port1.onmessage = (event) => resolve(event.data);
+    });
+
+    channel.port1.postMessage(theMessage);
+
+    await promise;
+    channel.port1.onmessage = oldOnMessage;
+    return promise;
+    )SWRESOURCE";
+
+    pushMessageProcessed = false;
+    [webView callAsyncJavaScript:@(getPersistentNotificationsScript) arguments:@{ @"theMessage" : @"getAllNotifications" } inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([result isEqualToString:@"nothing null nothingTag true true somethingTag false false somethingTag "]);
+        pushMessageProcessed = true;
+    }];
+    TestWebKitAPI::Util::run(&pushMessageProcessed);
+
+    pushMessageProcessed = false;
+    // Passing an empty tag will explicitly add an empty "tag" value to the getNotifications() call,
+    // but the results should be the same as not specifying a tag at all like in the previous test.
+    [webView callAsyncJavaScript:@(getPersistentNotificationsScript) arguments:@{ @"theMessage" : @"" } inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([result isEqualToString:@"nothing null nothingTag true true somethingTag false false somethingTag "]);
+        pushMessageProcessed = true;
+    }];
+    TestWebKitAPI::Util::run(&pushMessageProcessed);
+
+    pushMessageProcessed = false;
+    [webView callAsyncJavaScript:@(getPersistentNotificationsScript) arguments:@{ @"theMessage" : @"nothingTag" } inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([result isEqualToString:@"nothing null nothingTag "]);
+        pushMessageProcessed = true;
+    }];
+    TestWebKitAPI::Util::run(&pushMessageProcessed);
+
+    pushMessageProcessed = false;
+    [webView callAsyncJavaScript:@(getPersistentNotificationsScript) arguments:@{ @"theMessage" : @"somethingTag" } inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_TRUE([result isEqualToString:@"true true somethingTag false false somethingTag "]);
+        pushMessageProcessed = true;
+    }];
+    TestWebKitAPI::Util::run(&pushMessageProcessed);
 
     clearWebsiteDataStore([configuration websiteDataStore]);
 }
@@ -310,15 +520,11 @@ self.addEventListener("push", (event) => {
 
 static void terminateNetworkProcessWhileRegistrationIsStored(WKWebViewConfiguration *configuration)
 {
-    auto path = configuration.websiteDataStore._configuration._serviceWorkerRegistrationDirectory.path;
-    NSURL* directory = [NSURL fileURLWithPath:path isDirectory:YES];
-    auto filename = makeString("ServiceWorkerRegistrations-"_s, WebCore::SWRegistrationDatabase::schemaVersion, ".sqlite3");
-    NSURL *swDBPath = [directory URLByAppendingPathComponent:filename];
-    unsigned timeout = 0;
-    while (![[NSFileManager defaultManager] fileExistsAtPath:swDBPath.path] && ++timeout < 100)
-        TestWebKitAPI::Util::runFor(0.1_s);
-    // Let's close the SQL database.
-    [configuration.websiteDataStore _sendNetworkProcessWillSuspendImminently];
+    done = false;
+    [configuration.websiteDataStore _storeServiceWorkerRegistrations:^{
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
     [configuration.websiteDataStore _terminateNetworkProcess];
 }
 
@@ -443,19 +649,23 @@ TEST(PushAPI, firePushEventWithNoPagesTimeout)
 
     expectedMessage = "Ready"_s;
 
+    fprintf(stderr, "totot1\n");
     @autoreleasepool {
         auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
         [webView loadRequest:server.request()];
         TestWebKitAPI::Util::run(&done);
     }
 
+    fprintf(stderr, "totot2\n");
     terminateNetworkProcessWhileRegistrationIsStored(configuration.get());
 
     // Push event for service worker without any related page, should timeout so fail.
     pushMessageProcessed = false;
     pushMessageSuccessful = false;
     NSString *message = @"Timeless Potatoes";
+    fprintf(stderr, "totot3\n");
     [[configuration websiteDataStore] _processPushMessage:messageDictionary([message dataUsingEncoding:NSUTF8StringEncoding], [server.request() URL]) completionHandler:^(bool result) {
+        fprintf(stderr, "totot3.1\n");
         pushMessageSuccessful = result;
         pushMessageProcessed = true;
     }];
@@ -463,6 +673,7 @@ TEST(PushAPI, firePushEventWithNoPagesTimeout)
     EXPECT_TRUE(waitUntilEvaluatesToTrue([&] { return [[configuration websiteDataStore] _hasServiceWorkerBackgroundActivityForTesting]; }));
 
     TestWebKitAPI::Util::run(&pushMessageProcessed);
+    fprintf(stderr, "totot4\n");
     EXPECT_FALSE(pushMessageSuccessful);
     EXPECT_TRUE(waitUntilEvaluatesToTrue([&] { return ![[configuration websiteDataStore] _hasServiceWorkerBackgroundActivityForTesting]; }));
 
@@ -748,7 +959,7 @@ self.addEventListener("message", (event) => {
     port.postMessage("Ready");
 });
 self.addEventListener("push", (event) => {
-    self.registration.showNotification("notification");
+    self.registration.showNotification("notification", { silent: true });
     try {
         if (!event.data) {
             port.postMessage("Received: null data");
@@ -764,7 +975,7 @@ self.addEventListener("push", (event) => {
 });
 self.addEventListener("notificationclick", async (event) => {
     for (let client of await self.clients.matchAll({includeUncontrolled:true}))
-        client.postMessage("Received notificationclick");
+        client.postMessage("Received notificationclick: " + event.notification.silent);
 });
 self.addEventListener("notificationclose", async (event) => {
     for (let client of await self.clients.matchAll({includeUncontrolled:true}))
@@ -821,7 +1032,7 @@ TEST(PushAPI, fireNotificationClickEvent)
     EXPECT_TRUE(provider.simulateNotificationClick());
 
     done = false;
-    expectedMessage = "Received notificationclick"_s;
+    expectedMessage = "Received notificationclick: true"_s;
     TestWebKitAPI::Util::run(&done);
 
     clearWebsiteDataStore([configuration websiteDataStore]);

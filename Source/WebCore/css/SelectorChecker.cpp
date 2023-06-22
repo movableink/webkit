@@ -39,7 +39,6 @@
 #include "FrameSelection.h"
 #include "HTMLDocument.h"
 #include "HTMLNames.h"
-#include "HTMLParserIdioms.h"
 #include "HTMLSlotElement.h"
 #include "InspectorInstrumentation.h"
 #include "LocalFrame.h"
@@ -478,7 +477,7 @@ static bool attributeValueMatches(const Attribute& attribute, CSSSelector::Match
     case CSSSelector::List:
         {
             // Ignore empty selectors or selectors containing spaces.
-            if (selectorValue.isEmpty() || selectorValue.find(isHTMLSpace<UChar>) != notFound)
+            if (selectorValue.isEmpty() || selectorValue.find(isASCIIWhitespace<UChar>) != notFound)
                 return false;
 
             unsigned startSearchAt = 0;
@@ -490,9 +489,9 @@ static bool attributeValueMatches(const Attribute& attribute, CSSSelector::Match
                     foundPos = value.findIgnoringASCIICase(selectorValue, startSearchAt);
                 if (foundPos == notFound)
                     return false;
-                if (!foundPos || isHTMLSpace(value[foundPos - 1])) {
+                if (!foundPos || isASCIIWhitespace(value[foundPos - 1])) {
                     unsigned endStr = foundPos + selectorValue.length();
-                    if (endStr == value.length() || isHTMLSpace(value[endStr]))
+                    if (endStr == value.length() || isASCIIWhitespace(value[endStr]))
                         break; // We found a match.
                 }
 
@@ -756,8 +755,6 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
             auto* parent = element.parentNode();
             if (is<Element>(parent))
                 addStyleRelation(checkingContext, downcast<Element>(*parent), Style::Relation::ChildrenAffectedByFirstChildRules);
-            else if (!is<ShadowRoot>(parent))
-                break; // FIXME: Add the support for specifying relations on ShadowRoot.
             if (!isFirstChild)
                 break;
             addStyleRelation(checkingContext, element, Style::Relation::FirstChild);
@@ -769,8 +766,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
             if (is<Element>(parent)) {
                 auto relation = context.isSubjectOrAdjacentElement ? Style::Relation::ChildrenAffectedByForwardPositionalRules : Style::Relation::DescendantsAffectedByForwardPositionalRules;
                 addStyleRelation(checkingContext, downcast<Element>(*parent), relation);
-            } else if (!is<ShadowRoot>(parent))
-                break; // FIXME: Add the support for specifying relations on ShadowRoot.
+            }
             return isFirstOfType(element, element.tagQName());
         }
         case CSSSelector::PseudoClassLastChild: {
@@ -782,8 +778,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
                 if (!parentElement.isFinishedParsingChildren())
                     isLastChild = false;
                 addStyleRelation(checkingContext, parentElement, Style::Relation::ChildrenAffectedByLastChildRules);
-            } else if (!is<ShadowRoot>(parent))
-                break; // FIXME: Add the support for specifying relations on ShadowRoot.
+            }
             if (!isLastChild)
                 break;
             addStyleRelation(checkingContext, element, Style::Relation::LastChild);
@@ -798,8 +793,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
                 addStyleRelation(checkingContext, parentElement, relation);
                 if (!parentElement.isFinishedParsingChildren())
                     return false;
-            } else if (!is<ShadowRoot>(parent))
-                break; // FIXME: Add the support for specifying relations on ShadowRoot.
+            }
             return isLastOfType(element, element.tagQName());
         }
         case CSSSelector::PseudoClassOnlyChild: {
@@ -812,8 +806,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
                 addStyleRelation(checkingContext, parentElement, Style::Relation::ChildrenAffectedByLastChildRules);
                 if (!parentElement.isFinishedParsingChildren())
                     onlyChild = false;
-            } else if (!is<ShadowRoot>(parent))
-                break; // FIXME: Add the support for specifying relations on ShadowRoot.
+            }
             if (firstChild)
                 addStyleRelation(checkingContext, element, Style::Relation::FirstChild);
             if (onlyChild)
@@ -832,8 +825,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
 
                 if (!parentElement.isFinishedParsingChildren())
                     return false;
-            } else if (!is<ShadowRoot>(parent))
-                break; // FIXME: Add the support for specifying relations on ShadowRoot.
+            }
             return isFirstOfType(element, element.tagQName()) && isLastOfType(element, element.tagQName());
         }
         case CSSSelector::PseudoClassIs:
@@ -887,8 +879,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
             if (is<Element>(parent)) {
                 auto relation = context.isSubjectOrAdjacentElement ? Style::Relation::ChildrenAffectedByForwardPositionalRules : Style::Relation::DescendantsAffectedByForwardPositionalRules;
                 addStyleRelation(checkingContext, downcast<Element>(*parent), relation);
-            } else if (!is<ShadowRoot>(parent))
-                break; // FIXME: Add the support for specifying relations on ShadowRoot.
+            }
 
             if (const CSSSelectorList* selectorList = selector.selectorList()) {
                 if (!matchSelectorList(checkingContext, context, element, *selectorList))
@@ -915,8 +906,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
             if (is<Element>(parent)) {
                 auto relation = context.isSubjectOrAdjacentElement ? Style::Relation::ChildrenAffectedByForwardPositionalRules : Style::Relation::DescendantsAffectedByForwardPositionalRules;
                 addStyleRelation(checkingContext, downcast<Element>(*parent), relation);
-            } else if (!is<ShadowRoot>(parent))
-                break; // FIXME: Add the support for specifying relations on ShadowRoot.
+            }
 
             int count = 1 + countElementsOfTypeBefore(element, element.tagQName());
             if (selector.matchNth(count))
@@ -931,15 +921,14 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
                     if (!matchSelectorList(checkingContext, context, element, *selectorList))
                         return false;
 
-                    addStyleRelation(checkingContext, parentElement, Style::Relation::ChildrenAffectedByPropertyBasedBackwardPositionalRules);
+                    addStyleRelation(checkingContext, parentElement, Style::Relation::ChildrenAffectedByBackwardPositionalRules);
                 } else {
                     auto relation = context.isSubjectOrAdjacentElement ? Style::Relation::ChildrenAffectedByBackwardPositionalRules : Style::Relation::DescendantsAffectedByBackwardPositionalRules;
                     addStyleRelation(checkingContext, parentElement, relation);
                 }
                 if (!parentElement.isFinishedParsingChildren())
                     return false;
-            } else if (!is<ShadowRoot>(parent))
-                break; // FIXME: Add the support for specifying relations on ShadowRoot.
+            }
 
             int count = 1;
             if (const CSSSelectorList* selectorList = selector.selectorList()) {
@@ -961,8 +950,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
 
                 if (!parentElement.isFinishedParsingChildren())
                     return false;
-            } else if (!is<ShadowRoot>(parent))
-                break; // FIXME: Add the support for specifying relations on ShadowRoot.
+            }
             int count = 1 + countElementsOfTypeAfter(element, element.tagQName());
             return selector.matchNth(count);
         }
@@ -1129,6 +1117,9 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
         case CSSSelector::PseudoClassHasAttachment:
             return hasAttachment(element);
 #endif
+        case CSSSelector::PseudoClassHtmlDocument:
+            return matchesHtmlDocumentPseudoClass(element);
+
         case CSSSelector::PseudoClassPopoverOpen:
             return matchesPopoverOpenPseudoClass(element);
 

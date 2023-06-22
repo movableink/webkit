@@ -89,12 +89,12 @@ using namespace HTMLNames;
 
 Ref<HTMLDocument> HTMLDocument::createSynthesizedDocument(LocalFrame& frame, const URL& url)
 {
-    auto document = adoptRef(*new HTMLDocument(&frame, frame.settings(), url, { }, { DocumentClass::HTML }, Synthesized));
+    auto document = adoptRef(*new HTMLDocument(&frame, frame.settings(), url, { }, { DocumentClass::HTML }, { ConstructionFlag::Synthesized }));
     document->addToContextsMap();
     return document;
 }
 
-HTMLDocument::HTMLDocument(LocalFrame* frame, const Settings& settings, const URL& url, ScriptExecutionContextIdentifier documentIdentifier, DocumentClasses documentClasses, unsigned constructionFlags)
+HTMLDocument::HTMLDocument(LocalFrame* frame, const Settings& settings, const URL& url, ScriptExecutionContextIdentifier documentIdentifier, DocumentClasses documentClasses, OptionSet<ConstructionFlag> constructionFlags)
     : Document(frame, settings, url, documentClasses | DocumentClasses(DocumentClass::HTML), constructionFlags, documentIdentifier)
 {
     clearXMLVersion();
@@ -140,6 +140,11 @@ std::optional<std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLColl
     }
 
     return std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<Element> { &element } };
+}
+
+bool HTMLDocument::isSupportedPropertyName(const AtomString& name) const
+{
+    return !name.isNull() && hasDocumentNamedItem(*name.impl());
 }
 
 Vector<AtomString> HTMLDocument::supportedPropertyNames() const

@@ -44,6 +44,9 @@
 #include "LocalFrameView.h"
 #include "Path.h"
 #include "RenderBlock.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderFlexibleBox.h"
 #include "RenderFragmentContainer.h"
 #include "RenderInline.h"
@@ -307,34 +310,60 @@ DecodingMode RenderBoxModelObject::decodingModeForImageDraw(const Image& image, 
         return DecodingMode::Synchronous;
     }
 
-    // Large image case.
+    // Some document types force synchronous decoding.
 #if PLATFORM(IOS_FAMILY)
     if (IOSApplication::isIBooksStorytime())
         return DecodingMode::Synchronous;
 #endif
-    if (paintInfo.paintBehavior.contains(PaintBehavior::Snapshotting))
-        return DecodingMode::Synchronous;
-    if (is<HTMLImageElement>(element())) {
-        auto decodingMode = downcast<HTMLImageElement>(*element()).decodingMode();
-        if (decodingMode == DecodingMode::Asynchronous)
-            return DecodingMode::Asynchronous;
-        if (decodingMode == DecodingMode::Synchronous)
-            return DecodingMode::Synchronous;
-    }
-    if (bitmapImage.isLargeImageAsyncDecodingEnabledForTesting())
-        return DecodingMode::Asynchronous;
     if (document().isImageDocument())
         return DecodingMode::Synchronous;
-    if (!settings().largeImageAsyncDecodingEnabled())
+
+    // A PaintBehavior may force synchronous decoding.
+    if (paintInfo.paintBehavior.contains(PaintBehavior::Snapshotting))
         return DecodingMode::Synchronous;
-    if (!bitmapImage.canUseAsyncDecodingForLargeImages())
+
+    auto defaultDecodingMode = [&]() -> DecodingMode {
+        if (paintInfo.paintBehavior.contains(PaintBehavior::ForceSynchronousImageDecode))
+            return DecodingMode::Synchronous;
+
+        // First tile paint.
+        if (paintInfo.paintBehavior.contains(PaintBehavior::DefaultAsynchronousImageDecode)) {
+            // And the images has not been painted in this element yet.
+            if (element() && !element()->hasEverPaintedImages())
+                return DecodingMode::Asynchronous;
+        }
+
+        // FIXME: Calling isVisibleInViewport() is not cheap. Find a way to make this faster.
+        return isVisibleInViewport() ? DecodingMode::Synchronous : DecodingMode::Asynchronous;
+    };
+
+    if (is<HTMLImageElement>(element())) {
+        // <img decoding="sync"> forces synchronous decoding.
+        if (downcast<HTMLImageElement>(*element()).decodingMode() == DecodingMode::Synchronous)
+            return DecodingMode::Synchronous;
+
+        // <img decoding="async"> forces asynchronous decoding but make sure this
+        // will not cause flickering.
+        if (downcast<HTMLImageElement>(*element()).decodingMode() == DecodingMode::Asynchronous) {
+            // isAsyncDecodingEnabledForTesting() forces async image decoding regardless whether it is in the viewport or not.
+            if (bitmapImage.isAsyncDecodingEnabledForTesting())
+                return DecodingMode::Asynchronous;
+
+            // Choose a decodingMode such that the image does not flicker.
+            return defaultDecodingMode();
+        }
+    }
+
+    // isAsyncDecodingEnabledForTesting() forces async image decoding regardless of the size.
+    if (bitmapImage.isAsyncDecodingEnabledForTesting())
+        return DecodingMode::Asynchronous;
+
+    // Large image case.
+    if (!(bitmapImage.canUseAsyncDecodingForLargeImages() && settings().largeImageAsyncDecodingEnabled()))
         return DecodingMode::Synchronous;
-    if (paintInfo.paintBehavior.contains(PaintBehavior::TileFirstPaint))
-        return DecodingMode::Asynchronous;
-    // FIXME: isVisibleInViewport() is not cheap. Find a way to make this condition faster.
-    if (!isVisibleInViewport())
-        return DecodingMode::Asynchronous;
-    return DecodingMode::Synchronous;
+
+    // Choose a decodingMode such that the image does not flicker.
+    return defaultDecodingMode();
 }
 
 LayoutSize RenderBoxModelObject::relativePositionOffset() const
@@ -575,7 +604,7 @@ FloatRect RenderBoxModelObject::constrainingRectForStickyPosition() const
 
         float scrollbarOffset = 0;
         if (enclosingClippingBox.hasLayer() && enclosingClippingBox.shouldPlaceVerticalScrollbarOnLeft() && scrollableArea)
-            scrollbarOffset = scrollableArea->verticalScrollbarWidth(IgnoreOverlayScrollbarSize);
+            scrollbarOffset = scrollableArea->verticalScrollbarWidth(IgnoreOverlayScrollbarSize, isHorizontalWritingMode());
 
         constrainingRect.setLocation(FloatPoint(scrollOffset.x() + scrollbarOffset, scrollOffset.y()));
         return constrainingRect;
@@ -935,6 +964,11 @@ void RenderBoxModelObject::applyTransform(TransformationMatrix&, const RenderSty
     // applyTransform() is only used through RenderLayer*, which only invokes this for RenderBox derived renderers, thus not for
     // RenderInline/RenderLineBreak - the other two renderers that inherit from RenderBoxModelObject.
     ASSERT_NOT_REACHED();
+}
+
+bool RenderBoxModelObject::requiresLayer() const
+{
+    return isDocumentElementRenderer() || isPositioned() || createsGroup() || hasTransformRelatedProperty() || hasHiddenBackface() || hasReflection();
 }
 
 } // namespace WebCore

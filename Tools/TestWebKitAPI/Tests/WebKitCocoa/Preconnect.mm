@@ -33,6 +33,7 @@
 #import "WKWebViewConfigurationExtras.h"
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebpagePreferencesPrivate.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <wtf/RetainPtr.h>
 
@@ -260,5 +261,39 @@ TEST(Preconnect, DisablePreconnect)
         configuration._loadsSubresources = NO;
     });
 }
+
+#if HAVE(SYSTEM_SUPPORT_FOR_ADVANCED_PRIVACY_PROTECTIONS)
+
+TEST(Preconnect, PrivacyProxyRequestFlags)
+{
+    size_t connectionCount = 0;
+    bool connected = false;
+    bool requested = false;
+    HTTPServer server([&] (Connection connection) {
+        ++connectionCount;
+        connected = true;
+        connection.receiveHTTPRequest([&](Vector<char>&&) {
+            requested = true;
+        });
+    });
+
+    constexpr auto policies = _WKWebsiteNetworkConnectionIntegrityPolicyEnabled
+        | _WKWebsiteNetworkConnectionIntegrityPolicyFailClosed
+        | _WKWebsiteNetworkConnectionIntegrityPolicyRequestValidation;
+
+    auto configuration = adoptNS([WKWebViewConfiguration new]);
+    [configuration defaultWebpagePreferences]._networkConnectionIntegrityPolicy = policies;
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
+    auto request = adoptNS(server.request().mutableCopy);
+    [request _setPrivacyProxyFailClosedForUnreachableHosts:YES];
+    [request _setUseEnhancedPrivacyMode:YES];
+    [webView loadRequest:request.get()];
+
+    Util::run(&requested);
+    EXPECT_EQ(connectionCount, 1U);
+}
+
+#endif // HAVE(SYSTEM_SUPPORT_FOR_ADVANCED_PRIVACY_PROTECTIONS)
 
 }

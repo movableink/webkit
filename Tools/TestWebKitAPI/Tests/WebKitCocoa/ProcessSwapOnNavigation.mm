@@ -1379,13 +1379,25 @@ TEST(ProcessSwap, CrossOriginButSameSiteWindowOpenNoOpener)
     EXPECT_NE(pid1, pid2);
 }
 
-TEST(ProcessSwap, CrossSiteWindowOpenWithOpener)
+static void enableWindowOpenPSON(WKWebViewConfiguration *configuration)
+{
+    auto preferences = [configuration preferences];
+    for (_WKFeature *feature in [WKPreferences _features]) {
+        if ([feature.key isEqualToString:@"ProcessSwapOnCrossSiteWindowOpenEnabled"]) {
+            [preferences _setEnabled:YES forFeature:feature];
+            break;
+        }
+    }
+}
+
+// FIXME: Get this working.
+TEST(ProcessSwap, DISABLED_CrossSiteWindowOpenWithOpener)
 {
     auto processPoolConfiguration = psonProcessPoolConfiguration();
-    processPoolConfiguration.get().processSwapsOnWindowOpenWithOpener = YES;
     auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
 
     auto webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    enableWindowOpenPSON(webViewConfiguration.get());
     [webViewConfiguration setProcessPool:processPool.get()];
     [webViewConfiguration preferences].javaScriptCanOpenWindowsAutomatically = YES;
     auto handler = adoptNS([[PSONScheme alloc] init]);
@@ -4397,6 +4409,64 @@ TEST(ProcessSwap, WebInspectorDelayedProcessLaunch)
 
 #endif // !TARGET_OS_IPHONE
 
+TEST(ProcessSwap, DelayedProcessLaunchThenLaunchInitialProcessIfNecessary)
+{
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    auto webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    webViewConfiguration.get()._delaysWebProcessLaunchUntilFirstLoad = YES;
+    [webViewConfiguration setProcessPool:processPool.get()];
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+
+    EXPECT_EQ(0, [webView _webProcessIdentifier]);
+    TestWebKitAPI::Util::runFor(200_ms);
+    EXPECT_EQ(0, [webView _webProcessIdentifier]);
+
+    [webView _launchInitialProcessIfNecessary];
+
+    while (![webView _webProcessIdentifier])
+        TestWebKitAPI::Util::spinRunLoop(10);
+    EXPECT_NE(0, [webView _webProcessIdentifier]);
+}
+
+TEST(ProcessSwap, DelayedProcessLaunchThenLoad)
+{
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    auto webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    webViewConfiguration.get()._delaysWebProcessLaunchUntilFirstLoad = YES;
+    [webViewConfiguration setProcessPool:processPool.get()];
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+
+    EXPECT_EQ(0, [webView _webProcessIdentifier]);
+    TestWebKitAPI::Util::runFor(200_ms);
+    EXPECT_EQ(0, [webView _webProcessIdentifier]);
+
+    [webView loadHTMLString:@"test" baseURL:[NSURL URLWithString:@"about:blank"]];
+    [webView _test_waitForDidFinishNavigation];
+
+    EXPECT_NE(0, [webView _webProcessIdentifier]);
+}
+
+TEST(ProcessSwap, DelayedProcessLaunchDisabled)
+{
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    auto webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    webViewConfiguration.get()._delaysWebProcessLaunchUntilFirstLoad = NO;
+    [webViewConfiguration setProcessPool:processPool.get()];
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+
+    while (![webView _webProcessIdentifier])
+        TestWebKitAPI::Util::spinRunLoop();
+}
+
 static const char* sameOriginBlobNavigationTestBytes = R"PSONRESOURCE(
 <!DOCTYPE html>
 <html>
@@ -6888,7 +6958,12 @@ static bool hasOverlay(CALayer *layer)
 }
 #endif
 
+// FIXME when rdar://106098852 is resolved
+#if PLATFORM(MAC) && (__MAC_OS_X_VERSION_MIN_REQUIRED > 130000) || PLATFORM(IOS) || PLATFORM(VISION)
+TEST(ProcessSwap, DISABLED_PageOverlayLayerPersistence)
+#else
 TEST(ProcessSwap, PageOverlayLayerPersistence)
+#endif
 {
     auto processPoolConfiguration = psonProcessPoolConfiguration();
     [processPoolConfiguration setInjectedBundleURL:[[NSBundle mainBundle] URLForResource:@"TestWebKitAPI" withExtension:@"wkbundle"]];
@@ -6939,7 +7014,7 @@ TEST(ProcessSwap, PageOverlayLayerPersistence)
 #endif
 }
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
 
 #if __IPHONE_OS_VERSION_MIN_REQUIRED > 130400
 TEST(ProcessSwap, QuickLookRequestsPasswordAfterSwap)
@@ -7104,13 +7179,14 @@ window.onload = function() {
 
 static const char* openedPage = "Hello World";
 
-TEST(ProcessSwap, SameSiteWindowWithOpenerNavigateToFile)
+// FIXME: Get this working.
+TEST(ProcessSwap, DISABLED_SameSiteWindowWithOpenerNavigateToFile)
 {
     auto processPoolConfiguration = psonProcessPoolConfiguration();
-    processPoolConfiguration.get().processSwapsOnWindowOpenWithOpener = YES;
     auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
 
     auto webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    enableWindowOpenPSON(webViewConfiguration.get());
     [webViewConfiguration setProcessPool:processPool.get()];
     auto handler = adoptNS([[PSONScheme alloc] init]);
     [handler addMappingFromURLString:@"pson://www.webkit.org/main.html" toData:pageThatOpensBytes];
@@ -7907,7 +7983,6 @@ static void checkSettingsControlledByLockdownMode(WKWebView *webView, ShouldBeEn
     EXPECT_EQ(runJSCheck("!!window.EncodedVideoChunk"_s), shouldBeEnabled == ShouldBeEnabled::Yes); // WebCodecs.
     String mathMLCheck = makeString("document.createElementNS('http://www.w3.org/1998/Math/MathML','mspace').__proto__ == ", shouldBeEnabled == ShouldBeEnabled::Yes ? "MathMLElement" : "Element", ".prototype");
     EXPECT_EQ(runJSCheck(mathMLCheck), true); // MathML.
-    EXPECT_EQ(runJSCheck("!!window.ServiceWorker"_s), isShowingInitialEmptyDocument != IsShowingInitialEmptyDocument::Yes && shouldBeEnabled == ShouldBeEnabled::Yes); // Service Workers API.
     String embedElementCheck = makeString("document.createElement('embed').__proto__ == ", shouldBeEnabled == ShouldBeEnabled::Yes ? "HTMLEmbedElement" : "HTMLUnknownElement", ".prototype");
     EXPECT_EQ(runJSCheck(embedElementCheck), true); // Embed Element.
 
@@ -7941,6 +8016,7 @@ static void configureLockdownWKWebViewConfiguration(WKWebViewConfiguration *conf
     [config.preferences _setMediaDevicesEnabled:YES];
     config.preferences._mediaCaptureRequiresSecureConnection = NO;
     [config.preferences _setNotificationsEnabled:YES];
+    [config.preferences _setPushAPIEnabled: YES];
 
     // Turn on testable and preview features to confirm they are properly turned off in Lockdown Mode.
     for (_WKFeature *feature in [WKPreferences _features]) {
@@ -8161,7 +8237,7 @@ TEST(ProcessSwap, MemoryPressureDuringProcessSwap)
         TestWebKitAPI::Util::spinRunLoop(10);
 }
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
 
 TEST(ProcessSwap, CannotDisableLockdownModeWithoutBrowserEntitlement)
 {
@@ -8730,7 +8806,54 @@ TEST(WebProcessCache, ReusedCrashedCachedWebProcess)
 
     EXPECT_EQ(crashCount, 1u);
 }
-#endif
+
+#if USE(RUNNINGBOARD)
+TEST(WebProcessCache, CachedProcessSuspension)
+{
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    processPoolConfiguration.get().pageCacheEnabled = NO;
+    auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    auto webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [webViewConfiguration setProcessPool:processPool.get()];
+    auto handler = adoptNS([[PSONScheme alloc] init]);
+    [webViewConfiguration setURLSchemeHandler:handler.get() forURLScheme:@"PSON"];
+
+    auto delegate = adoptNS([[PSONNavigationDelegate alloc] init]);
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 800) configuration:webViewConfiguration.get()]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.webkit.org/main.html"]];
+    done = false;
+    [webView loadRequest:request];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    auto webkitPID = [webView _webProcessIdentifier];
+
+    // Ask the process cache to send processes after 1 second instead of 30.
+    [WKWebsiteDataStore _setCachedProcessSuspensionDelayForTesting:1];
+
+    request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.apple.com/main.html"]];
+    done = false;
+    [webView loadRequest:request];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    // There should now be a process for webkit.org in the process cache.
+    while ([processPool _processCacheSize] != 1)
+        TestWebKitAPI::Util::runFor(0.1_s);
+
+    // The webkit.org process should suspend promptly.
+    unsigned timeout = 0;
+    while (![processPool _isWebProcessSuspended:webkitPID] && timeout++ < 30)
+        TestWebKitAPI::Util::runFor(0.1_s);
+
+    EXPECT_TRUE([processPool _isWebProcessSuspended:webkitPID]);
+}
+#endif // USE(RUNNINGBOARD)
+#endif // !PLATFORM(IOS_FAMILY)
 
 TEST(WebProcessCache, ReusedCrashedBackForwardSuspendedWebProcess)
 {

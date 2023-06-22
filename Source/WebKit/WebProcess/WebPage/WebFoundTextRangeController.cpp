@@ -349,7 +349,7 @@ void WebFoundTextRangeController::setTextIndicatorWithRange(const WebCore::Simpl
 void WebFoundTextRangeController::flashTextIndicatorAndUpdateSelectionWithRange(const WebCore::SimpleRange& range)
 {
     auto& document = range.startContainer().document();
-    document.selection().setSelection(WebCore::VisibleSelection(range), WebCore::FrameSelection::defaultSetSelectionOptions(WebCore::UserTriggered));
+    document.selection().setSelection(WebCore::VisibleSelection(range), WebCore::FrameSelection::defaultSetSelectionOptions(WebCore::UserTriggered::Yes));
 
     if (auto textIndicator = createTextIndicatorForRange(range, WebCore::TextIndicatorPresentationTransition::Bounce))
         m_webPage->setTextIndicator(textIndicator->data());
@@ -396,7 +396,7 @@ WebCore::Document* WebFoundTextRangeController::documentForFoundTextRange(const 
     if (range.frameIdentifier.isEmpty())
         return mainFrame.document();
 
-    if (auto* frame = dynamicDowncast<WebCore::LocalFrame>(mainFrame.tree().find(AtomString { range.frameIdentifier }, mainFrame)))
+    if (auto* frame = dynamicDowncast<WebCore::LocalFrame>(mainFrame.tree().findByUniqueName(AtomString { range.frameIdentifier }, mainFrame)))
         return frame->document();
 
     return nullptr;

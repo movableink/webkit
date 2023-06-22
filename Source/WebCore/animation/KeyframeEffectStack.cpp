@@ -32,6 +32,11 @@
 #include "CSSTransition.h"
 #include "Document.h"
 #include "KeyframeEffect.h"
+#include "RenderStyleInlines.h"
+#include "RotateTransformOperation.h"
+#include "ScaleTransformOperation.h"
+#include "TransformOperations.h"
+#include "TranslateTransformOperation.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
 #include <wtf/PointerComparison.h>
@@ -265,5 +270,10 @@ void KeyframeEffectStack::cascadeDidOverrideProperties(const HashSet<AnimatableP
         effect->acceleratedPropertiesOverriddenByCascadeDidChange();
 }
 
+void KeyframeEffectStack::applyPendingAcceleratedActions() const
+{
+    for (auto& effect : m_effects)
+        effect->applyPendingAcceleratedActionsOrUpdateTimingProperties();
+}
 
 } // namespace WebCore

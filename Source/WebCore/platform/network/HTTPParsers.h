@@ -136,20 +136,10 @@ bool isSafeMethod(const String&);
 
 WEBCORE_EXPORT CrossOriginResourcePolicy parseCrossOriginResourcePolicyHeader(StringView);
 
+// https://fetch.spec.whatwg.org/#http-whitespace-byte
 inline bool isHTTPSpace(UChar character)
 {
     return character <= ' ' && (character == ' ' || character == '\n' || character == '\t' || character == '\r');
-}
-
-// Strip leading and trailing whitespace as defined in https://fetch.spec.whatwg.org/#concept-header-value-normalize.
-inline String stripLeadingAndTrailingHTTPSpaces(const String& string)
-{
-    return string.stripLeadingAndTrailingCharacters(isHTTPSpace);
-}
-
-inline StringView stripLeadingAndTrailingHTTPSpaces(StringView string)
-{
-    return string.stripLeadingAndTrailingMatchedCharacters(isHTTPSpace);
 }
 
 template<class HashType>

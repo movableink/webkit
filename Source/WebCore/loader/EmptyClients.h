@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Eric Seidel (eric@webkit.org)
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
@@ -83,7 +83,7 @@ class EmptyChromeClient : public ChromeClient {
     void setResizable(bool) final { }
 
     void addMessageToConsole(MessageSource, MessageLevel, const String&, unsigned, unsigned, const String&) final { }
-    void addMessageWithArgumentsToConsole(MessageSource, MessageLevel, const String&, Span<const String>, unsigned, unsigned, const String&) final { }
+    void addMessageWithArgumentsToConsole(MessageSource, MessageLevel, const String&, std::span<const String>, unsigned, unsigned, const String&) final { }
 
     bool canRunBeforeUnloadConfirmPanel() final { return false; }
     bool runBeforeUnloadConfirmPanel(const String&, LocalFrame&) final { return true; }
@@ -124,7 +124,7 @@ class EmptyChromeClient : public ChromeClient {
     void contentsSizeChanged(LocalFrame&, const IntSize&) const final { }
     void intrinsicContentsSizeChanged(const IntSize&) const final { }
 
-    void mouseDidMoveOverElement(const HitTestResult&, unsigned, const String&, TextDirection) final { }
+    void mouseDidMoveOverElement(const HitTestResult&, OptionSet<PlatformEventModifier>, const String&, TextDirection) final { }
 
     void print(LocalFrame&, const StringWithDirection&) final { }
 
@@ -221,11 +221,9 @@ class EmptyChromeClient : public ChromeClient {
     RefPtr<Icon> createIconForFiles(const Vector<String>& /* filenames */) final { return nullptr; }
 
     void requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&) final;
-    void classifyModalContainerControls(Vector<String>&&, CompletionHandler<void(Vector<ModalContainerControlType>&&)>&&) final;
-    void decidePolicyForModalContainer(OptionSet<ModalContainerControlType>, CompletionHandler<void(ModalContainerDecision)>&&) final;
 };
 
 DiagnosticLoggingClient& emptyDiagnosticLoggingClient();
-WEBCORE_EXPORT PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID);
+WEBCORE_EXPORT PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier>, PAL::SessionID);
 
 }

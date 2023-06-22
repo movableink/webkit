@@ -66,7 +66,7 @@ static inline bool skipWhile(const String& str, unsigned& pos, const Function<bo
 // Note: Might return pos == str.length()
 static inline bool skipWhiteSpace(const String& str, unsigned& pos)
 {
-    skipWhile(str, pos, RFC7230::isWhitespace<UChar>);
+    skipWhile(str, pos, isTabOrSpace<UChar>);
     return pos < str.length();
 }
 
@@ -104,7 +104,7 @@ static inline bool skipValue(const String& str, unsigned& pos)
     unsigned start = pos;
     unsigned len = str.length();
     while (pos < len) {
-        if (str[pos] == ' ' || str[pos] == '\t' || str[pos] == ';')
+        if (isTabOrSpace(str[pos]) || str[pos] == ';')
             break;
         ++pos;
     }
@@ -126,10 +126,10 @@ bool isValidReasonPhrase(const String& value)
 bool isValidHTTPHeaderValue(const String& value)
 {
     UChar c = value[0];
-    if (c == ' ' || c == '\t')
+    if (isTabOrSpace(c))
         return false;
     c = value[value.length() - 1];
-    if (c == ' ' || c == '\t')
+    if (isTabOrSpace(c))
         return false;
     for (unsigned i = 0; i < value.length(); ++i) {
         c = value[i];
@@ -373,12 +373,12 @@ StringView filenameFromHTTPContentDisposition(StringView value)
         if (valueStartPos == notFound)
             continue;
 
-        auto key = keyValuePair.left(valueStartPos).stripWhiteSpace();
+        auto key = keyValuePair.left(valueStartPos).trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
 
         if (key.isEmpty() || key != "filename"_s)
             continue;
 
-        auto value = keyValuePair.substring(valueStartPos + 1).stripWhiteSpace();
+        auto value = keyValuePair.substring(valueStartPos + 1).trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
 
         // Remove quotes if there are any
         if (value.length() > 1 && value[0] == '\"')
@@ -397,7 +397,7 @@ String extractMIMETypeFromMediaType(const String& mediaType)
 
     for (; position < length; ++position) {
         UChar c = mediaType[position];
-        if (c != '\t' && c != ' ')
+        if (!isTabOrSpace(c))
             break;
     }
 
@@ -419,7 +419,7 @@ String extractMIMETypeFromMediaType(const String& mediaType)
         if (c == ',')
             break;
 
-        if (c == '\t' || c == ' ' || c == ';')
+        if (isTabOrSpace(c) || c == ';')
             break;
 
         typeEnd = position + 1;
@@ -566,7 +566,7 @@ XSSProtectionDisposition parseXSSProtectionHeader(const String& header, String& 
 ContentTypeOptionsDisposition parseContentTypeOptionsHeader(StringView header)
 {
     StringView leftToken = header.left(header.find(','));
-    if (equalLettersIgnoringASCIICase(stripLeadingAndTrailingHTTPSpaces(leftToken), "nosniff"_s))
+    if (equalLettersIgnoringASCIICase(leftToken.trim(isHTTPSpace), "nosniff"_s))
         return ContentTypeOptionsDisposition::Nosniff;
     return ContentTypeOptionsDisposition::None;
 }
@@ -594,7 +594,7 @@ XFrameOptionsDisposition parseXFrameOptionsHeader(StringView header)
         return result;
 
     for (auto currentHeader : header.splitAllowingEmptyEntries(',')) {
-        currentHeader = currentHeader.stripWhiteSpace();
+        currentHeader = currentHeader.trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
         XFrameOptionsDisposition currentValue = XFrameOptionsDisposition::None;
         if (equalLettersIgnoringASCIICase(currentHeader, "deny"_s))
             currentValue = XFrameOptionsDisposition::Deny;
@@ -625,7 +625,7 @@ OptionSet<ClearSiteDataValue> parseClearSiteDataHeader(const ResourceResponse& r
         return result;
 
     for (auto value : StringView(headerValue).split(',')) {
-        auto trimmedValue = value.stripLeadingAndTrailingMatchedCharacters(isHTTPSpace);
+        auto trimmedValue = value.trim(isHTTPSpace);
         if (trimmedValue == "\"cache\""_s)
             result.add(ClearSiteDataValue::Cache);
         else if (trimmedValue == "\"cookies\""_s)
@@ -640,11 +640,6 @@ OptionSet<ClearSiteDataValue> parseClearSiteDataHeader(const ResourceResponse& r
     return result;
 }
 
-static bool isTabOrSpace(UChar value)
-{
-    return value == '\t' || value == ' ';
-}
-
 // Implements <https://fetch.spec.whatwg.org/#simple-range-header-value>.
 // FIXME: this whole function could be more efficient by walking through the range value once.
 bool parseRange(StringView range, RangeAllowWhitespace allowWhitespace, long long& rangeStart, long long& rangeEnd)
@@ -652,7 +647,7 @@ bool parseRange(StringView range, RangeAllowWhitespace allowWhitespace, long lon
     rangeStart = rangeEnd = -1;
 
     // Only 0x20 and 0x09 matter as newlines are already gone by the time we parse a header value.
-    if (allowWhitespace == RangeAllowWhitespace::No && range.find(isTabOrSpace) != notFound)
+    if (allowWhitespace == RangeAllowWhitespace::No && range.find(isTabOrSpace<UChar>) != notFound)
         return false;
 
     // The "bytes" unit identifier should be present.
@@ -660,7 +655,7 @@ bool parseRange(StringView range, RangeAllowWhitespace allowWhitespace, long lon
     if (!startsWithLettersIgnoringASCIICase(range, "bytes"_s))
         return false;
 
-    auto byteRange = stripLeadingAndTrailingHTTPSpaces(range.substring(bytesLength));
+    auto byteRange = range.substring(bytesLength).trim(isHTTPSpace);
 
     if (!byteRange.startsWith('='))
         return false;
@@ -874,7 +869,7 @@ bool isForbiddenHeader(const String& name, StringView value)
         return true;
     if (equalLettersIgnoringASCIICase(name, "x-http-method-override"_s) || equalLettersIgnoringASCIICase(name, "x-http-method"_s) || equalLettersIgnoringASCIICase(name, "x-method-override"_s)) {
         for (auto methodValue : StringView(value).split(',')) {
-            auto method = methodValue.stripWhiteSpace();
+            auto method = methodValue.trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
             if (isForbiddenMethod(method))
                 return true;
         }
@@ -944,7 +939,7 @@ bool isCrossOriginSafeHeader(HTTPHeaderName name, const HTTPHeaderSet& accessCon
     default:
         break;
     }
-    return accessControlExposeHeaderSet.contains<ASCIICaseInsensitiveStringViewHashTranslator>(httpHeaderNameString(name));
+    return accessControlExposeHeaderSet.contains<HashTranslatorASCIILiteralCaseInsensitive>(httpHeaderNameString(name));
 }
 
 bool isCrossOriginSafeHeader(const String& name, const HTTPHeaderSet& accessControlExposeHeaderSet)
@@ -1026,18 +1021,18 @@ bool isSafeMethod(const String& method)
 
 CrossOriginResourcePolicy parseCrossOriginResourcePolicyHeader(StringView header)
 {
-    auto strippedHeader = stripLeadingAndTrailingHTTPSpaces(header);
+    auto trimmedHeader = header.trim(isHTTPSpace);
 
-    if (strippedHeader.isEmpty())
+    if (trimmedHeader.isEmpty())
         return CrossOriginResourcePolicy::None;
 
-    if (strippedHeader == "same-origin"_s)
+    if (trimmedHeader == "same-origin"_s)
         return CrossOriginResourcePolicy::SameOrigin;
 
-    if (strippedHeader == "same-site"_s)
+    if (trimmedHeader == "same-site"_s)
         return CrossOriginResourcePolicy::SameSite;
 
-    if (strippedHeader == "cross-origin"_s)
+    if (trimmedHeader == "cross-origin"_s)
         return CrossOriginResourcePolicy::CrossOrigin;
 
     return CrossOriginResourcePolicy::Invalid;

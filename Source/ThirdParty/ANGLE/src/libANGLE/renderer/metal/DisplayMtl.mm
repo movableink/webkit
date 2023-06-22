@@ -940,7 +940,7 @@ void DisplayMtl::initializeExtensions() const
     mNativeExtensions.copyTextureCHROMIUM           = true;
     mNativeExtensions.copyCompressedTextureCHROMIUM = false;
 
-#if !ANGLE_PLATFORM_WATCH
+#if !ANGLE_PLATFORM_WATCHOS
     if (@available(iOS 14.0, macOS 10.11, macCatalyst 14.0, tvOS 16.0, *))
     {
         mNativeExtensions.textureMirrorClampToEdgeEXT = true;
@@ -1013,6 +1013,32 @@ void DisplayMtl::initializeExtensions() const
     mNativeExtensions.textureNpotOES = true;
 
     mNativeExtensions.texture3DOES = true;
+
+    mNativeExtensions.sampleVariablesOES = true;
+
+    if (ANGLE_APPLE_AVAILABLE_XCI(11.0, 14.0, 14.0))
+    {
+        mNativeExtensions.shaderMultisampleInterpolationOES =
+            [mMetalDevice supportsPullModelInterpolation];
+        if (mNativeExtensions.shaderMultisampleInterpolationOES)
+        {
+            mNativeCaps.subPixelInterpolationOffsetBits = 4;
+            if (supportsAppleGPUFamily(1))
+            {
+                mNativeCaps.minInterpolationOffset = -0.5f;
+                mNativeCaps.maxInterpolationOffset = +0.5f;
+            }
+            else
+            {
+                // On non-Apple GPUs, the actual range is usually
+                // [-0.5, +0.4375] but due to framebuffer Y-flip
+                // the effective range for the Y direction will be
+                // [-0.4375, +0.5] when the default FBO is bound.
+                mNativeCaps.minInterpolationOffset = -0.4375f;  // -0.5 + (2 ^ -4)
+                mNativeCaps.maxInterpolationOffset = +0.4375f;  // +0.5 - (2 ^ -4)
+            }
+        }
+    }
 
     mNativeExtensions.shaderNoperspectiveInterpolationNV = true;
 
@@ -1248,13 +1274,15 @@ void DisplayMtl::initializeFeatures()
 
     ANGLE_FEATURE_CONDITION((&mFeatures), allowSeparateDepthStencilBuffers,
                             !isOSX && !isCatalyst && !isSimulator);
-    ANGLE_FEATURE_CONDITION((&mFeatures), rewriteRowMajorMatrices, true);
     ANGLE_FEATURE_CONDITION((&mFeatures), emulateTransformFeedback, true);
 
     ANGLE_FEATURE_CONDITION((&mFeatures), intelExplicitBoolCastWorkaround,
                             isIntel() && GetMacOSVersion() < OSVersion(11, 0, 0));
     ANGLE_FEATURE_CONDITION((&mFeatures), intelDisableFastMath,
                             isIntel() && GetMacOSVersion() < OSVersion(12, 0, 0));
+
+    ANGLE_FEATURE_CONDITION((&mFeatures), emulateAlphaToCoverage,
+                            isSimulator || !supportsAppleGPUFamily(1));
 
     ANGLE_FEATURE_CONDITION((&mFeatures), multisampleColorFormatShaderReadWorkaround, isAMD());
     ANGLE_FEATURE_CONDITION((&mFeatures), copyIOSurfaceToNonIOSurfaceForReadOptimization,
@@ -1273,6 +1301,13 @@ void DisplayMtl::initializeFeatures()
 
     ANGLE_FEATURE_CONDITION((&mFeatures), enableInMemoryMtlLibraryCache, true);
     ANGLE_FEATURE_CONDITION((&mFeatures), enableParallelMtlLibraryCompilation, true);
+
+    // Uploading texture data via staging buffers improves performance on all tested systems.
+    // http://anglebug.com/8092: Disabled on intel due to some texture formats uploading incorrectly
+    // with staging buffers
+    ANGLE_FEATURE_CONDITION(&mFeatures, alwaysPreferStagedTextureUploads, true);
+    ANGLE_FEATURE_CONDITION(&mFeatures, disableStagedInitializationOfPackedTextureFormats,
+                            isIntel() || isAMD());
 
     ApplyFeatureOverrides(&mFeatures, getState());
 }

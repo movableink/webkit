@@ -66,6 +66,7 @@ void LoadParameters::encode(IPC::Encoder& encoder) const
     encoder << existingNetworkResourceLoadIdentifierToResume;
     encoder << isServiceWorkerLoad;
     encoder << sessionHistoryVisibility;
+    encoder << advancedPrivacyProtections;
     platformEncode(encoder);
 }
 
@@ -171,6 +172,9 @@ bool LoadParameters::decode(IPC::Decoder& decoder, LoadParameters& data)
         return false;
     
     if (!decoder.decode(data.sessionHistoryVisibility))
+        return false;
+
+    if (!decoder.decode(data.advancedPrivacyProtections))
         return false;
 
     if (!platformDecode(decoder, data))

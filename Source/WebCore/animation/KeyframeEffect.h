@@ -48,6 +48,7 @@ namespace WebCore {
 class Element;
 class FilterOperations;
 class MutableStyleProperties;
+class RenderStyle;
 
 namespace Style {
 struct ResolutionContext;
@@ -132,6 +133,7 @@ public:
     enum class RecomputationReason : uint8_t { LogicalPropertyChange, Other };
     std::optional<RecomputationReason> recomputeKeyframesIfNecessary(const RenderStyle* previousUnanimatedStyle, const RenderStyle& unanimatedStyle, const Style::ResolutionContext&);
     void applyPendingAcceleratedActions();
+    void applyPendingAcceleratedActionsOrUpdateTimingProperties();
 
     void willChangeRenderer();
 

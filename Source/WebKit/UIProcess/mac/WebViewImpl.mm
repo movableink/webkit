@@ -142,6 +142,7 @@
 #import <wtf/SoftLinking.h>
 #import <wtf/cf/TypeCastsCF.h>
 #import <wtf/cocoa/VectorCocoa.h>
+#import <wtf/spi/darwin/OSVariantSPI.h>
 #import <wtf/text/StringConcatenate.h>
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
@@ -305,8 +306,8 @@ static void* keyValueObservingContext = &keyValueObservingContext;
     NSNotificationCenter *defaultNotificationCenter = [NSNotificationCenter defaultCenter];
 
     // An NSView derived object such as WKView cannot observe these notifications, because NSView itself observes them.
-    [defaultNotificationCenter addObserver:self selector:@selector(_windowDidOrderOffScreen:) name:@"NSWindowDidOrderOffScreenNotification" object:window];
-    [defaultNotificationCenter addObserver:self selector:@selector(_windowDidOrderOnScreen:) name:@"_NSWindowDidBecomeVisible" object:window];
+    [defaultNotificationCenter addObserver:self selector:@selector(_windowDidOrderOffScreen:) name:NSWindowDidOrderOffScreenNotification object:window];
+    [defaultNotificationCenter addObserver:self selector:@selector(_windowDidOrderOnScreen:) name:NSWindowDidOrderOnScreenNotification object:window];
 
     [defaultNotificationCenter addObserver:self selector:@selector(_windowDidBecomeKey:) name:NSWindowDidBecomeKeyNotification object:nil];
     [defaultNotificationCenter addObserver:self selector:@selector(_windowDidResignKey:) name:NSWindowDidResignKeyNotification object:nil];
@@ -316,7 +317,7 @@ static void* keyValueObservingContext = &keyValueObservingContext;
     [defaultNotificationCenter addObserver:self selector:@selector(_windowDidResize:) name:NSWindowDidResizeNotification object:window];
     [defaultNotificationCenter addObserver:self selector:@selector(_windowDidChangeBackingProperties:) name:NSWindowDidChangeBackingPropertiesNotification object:window];
     [defaultNotificationCenter addObserver:self selector:@selector(_windowDidChangeScreen:) name:NSWindowDidChangeScreenNotification object:window];
-    [defaultNotificationCenter addObserver:self selector:@selector(_windowDidChangeLayerHosting:) name:@"_NSWindowDidChangeContentsHostedInLayerSurfaceNotification" object:window];
+    [defaultNotificationCenter addObserver:self selector:@selector(_windowDidChangeLayerHosting:) name:_NSWindowDidChangeContentsHostedInLayerSurfaceNotification object:window];
     [defaultNotificationCenter addObserver:self selector:@selector(_windowDidChangeOcclusionState:) name:NSWindowDidChangeOcclusionStateNotification object:window];
 
     [defaultNotificationCenter addObserver:self selector:@selector(_screenDidChangeColorSpace:) name:NSScreenColorSpaceDidChangeNotification object:nil];
@@ -339,8 +340,8 @@ static void* keyValueObservingContext = &keyValueObservingContext;
 
     NSNotificationCenter *defaultNotificationCenter = [NSNotificationCenter defaultCenter];
 
-    [defaultNotificationCenter removeObserver:self name:@"NSWindowDidOrderOffScreenNotification" object:window];
-    [defaultNotificationCenter removeObserver:self name:@"_NSWindowDidBecomeVisible" object:window];
+    [defaultNotificationCenter removeObserver:self name:NSWindowDidOrderOffScreenNotification object:window];
+    [defaultNotificationCenter removeObserver:self name:NSWindowDidOrderOnScreenNotification object:window];
 
     [defaultNotificationCenter removeObserver:self name:NSWindowDidBecomeKeyNotification object:nil];
     [defaultNotificationCenter removeObserver:self name:NSWindowDidResignKeyNotification object:nil];
@@ -350,7 +351,7 @@ static void* keyValueObservingContext = &keyValueObservingContext;
     [defaultNotificationCenter removeObserver:self name:NSWindowDidResizeNotification object:window];
     [defaultNotificationCenter removeObserver:self name:NSWindowDidChangeBackingPropertiesNotification object:window];
     [defaultNotificationCenter removeObserver:self name:NSWindowDidChangeScreenNotification object:window];
-    [defaultNotificationCenter removeObserver:self name:@"_NSWindowDidChangeContentsHostedInLayerSurfaceNotification" object:window];
+    [defaultNotificationCenter removeObserver:self name:_NSWindowDidChangeContentsHostedInLayerSurfaceNotification object:window];
     [defaultNotificationCenter removeObserver:self name:NSWindowDidChangeOcclusionStateNotification object:window];
 
     [defaultNotificationCenter removeObserver:self name:NSScreenColorSpaceDidChangeNotification object:nil];
@@ -692,14 +693,14 @@ static const NSUInteger orderedListSegment = 2;
     [insertListControl setWidth:listControlSegmentWidth forSegment:orderedListSegment];
     insertListControl.font = [NSFont systemFontOfSize:15];
 
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     id segmentElement = NSAccessibilityUnignoredDescendant(insertListControl);
     NSArray *segments = [segmentElement accessibilityAttributeValue:NSAccessibilityChildrenAttribute];
     ASSERT(segments.count == 3);
     [segments[noListSegment] accessibilitySetOverrideValue:WebCore::insertListTypeNone() forAttribute:NSAccessibilityDescriptionAttribute];
     [segments[unorderedListSegment] accessibilitySetOverrideValue:WebCore::insertListTypeBulletedAccessibilityTitle() forAttribute:NSAccessibilityDescriptionAttribute];
     [segments[orderedListSegment] accessibilitySetOverrideValue:WebCore::insertListTypeNumberedAccessibilityTitle() forAttribute:NSAccessibilityDescriptionAttribute];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 
     self.view = insertListControl;
 
@@ -722,9 +723,9 @@ static const NSUInteger orderedListSegment = 2;
         // There is no "remove list" edit command, but InsertOrderedList and InsertUnorderedList both
         // behave as toggles, so we can invoke the appropriate edit command depending on our _currentListType
         // to remove an existing list. We don't have to do anything if _currentListType is NoList.
-        if (_currentListType == WebKit::OrderedList)
+        if (_currentListType == WebKit::ListType::OrderedList)
             _webViewImpl->page().executeEditCommand(@"InsertOrderedList", @"");
-        else if (_currentListType == WebKit::UnorderedList)
+        else if (_currentListType == WebKit::ListType::UnorderedList)
             _webViewImpl->page().executeEditCommand(@"InsertUnorderedList", @"");
         break;
     case unorderedListSegment:
@@ -742,13 +743,13 @@ static const NSUInteger orderedListSegment = 2;
 {
     NSSegmentedControl *insertListControl = (NSSegmentedControl *)self.view;
     switch (listType) {
-    case WebKit::NoList:
+    case WebKit::ListType::None:
         [insertListControl setSelected:YES forSegment:noListSegment];
         break;
-    case WebKit::OrderedList:
+    case WebKit::ListType::OrderedList:
         [insertListControl setSelected:YES forSegment:orderedListSegment];
         break;
-    case WebKit::UnorderedList:
+    case WebKit::ListType::UnorderedList:
         [insertListControl setSelected:YES forSegment:unorderedListSegment];
         break;
     }
@@ -1133,6 +1134,11 @@ static NSTrackingAreaOptions trackingAreaOptions()
 
 static RetainPtr<NSObject> subscribeToTextInputNotifications(WebViewImpl*);
 
+static bool isInRecoveryOS()
+{
+    return os_variant_is_basesystem("WebKit");
+}
+
 WebViewImpl::WebViewImpl(NSView <WebViewImplDelegate> *view, WKWebView *outerWebView, WebProcessPool& processPool, Ref<API::PageConfiguration>&& configuration)
     : m_view(view)
     , m_pageClient(makeUnique<PageClientImpl>(view, outerWebView))
@@ -1151,17 +1157,31 @@ WebViewImpl::WebViewImpl(NSView <WebViewImplDelegate> *view, WKWebView *outerWeb
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanCommunicateWithWindowServer));
     [NSApp registerServicesMenuSendTypes:PasteboardTypes::forSelection() returnTypes:PasteboardTypes::forEditing()];
 
+    auto useRemoteLayerTree = [&]() {
+        bool result = false;
 #if ENABLE(REMOTE_LAYER_TREE_ON_MAC_BY_DEFAULT)
-    bool useRemoteLayerTree = true;
-#else
-    bool useRemoteLayerTree = false;
+        result = WTF::numberOfPhysicalProcessorCores() >= 4;
 #endif
-    if (id useRemoteLayerTreeBoolean = [[NSUserDefaults standardUserDefaults] objectForKey:@"WebKit2UseRemoteLayerTreeDrawingArea"])
-        useRemoteLayerTree = [useRemoteLayerTreeBoolean boolValue];
-    if (m_page->preferences().siteIsolationEnabled())
-        useRemoteLayerTree = true;
+        if (id useRemoteLayerTreeBoolean = [[NSUserDefaults standardUserDefaults] objectForKey:@"WebKit2UseRemoteLayerTreeDrawingArea"])
+            result = [useRemoteLayerTreeBoolean boolValue];
 
-    if (useRemoteLayerTree)
+        if (m_page->preferences().siteIsolationEnabled())
+            result = true;
+
+        // FIXME: Either make this work with TiledCoreAnimationDrawingArea or only enable it where remote layer trees are used.
+        if (m_page->preferences().processSwapOnCrossSiteWindowOpenEnabled())
+            result = true;
+
+        if (isInRecoveryOS()) {
+            // Temporarily disable UI side compositing in Recovery OS <rdar://107964149>.
+            WTFLogAlways("Disabling UI side compositing in Recovery OS");
+            result = false;
+        }
+
+        return result;
+    };
+
+    if (useRemoteLayerTree())
         m_drawingAreaType = DrawingAreaType::RemoteLayerTree;
 
     [view addTrackingArea:m_primaryTrackingArea.get()];
@@ -1181,6 +1201,8 @@ WebViewImpl::WebViewImpl(NSView <WebViewImplDelegate> *view, WKWebView *outerWeb
         m_layerHostingView = adoptNS([[WKFlippedView alloc] initWithFrame:[m_view bounds]]);
         [view addSubview:m_layerHostingView.get() positioned:NSWindowBelow relativeTo:nil];
     }
+
+    [m_layerHostingView setClipsToBounds:YES];
 
     // Create a root layer that will back the NSView.
     RetainPtr<CALayer> layer = adoptNS([[CALayer alloc] init]);
@@ -1634,10 +1656,10 @@ void WebViewImpl::updateWindowAndViewFrames()
         if (weakThis->m_needsViewFrameInWindowCoordinates)
             viewFrameInWindowCoordinates = [weakThis->m_view convertRect:[weakThis->m_view frame] toView:nil];
 
-            ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         if (WebCore::AXObjectCache::accessibilityEnabled())
             accessibilityPosition = [[weakThis->m_view accessibilityAttributeValue:NSAccessibilityPositionAttribute] pointValue];
-            ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 
         weakThis->m_page->windowAndViewFramesChanged(viewFrameInWindowCoordinates, accessibilityPosition);
     });
@@ -1656,13 +1678,13 @@ CGSize WebViewImpl::fixedLayoutSize() const
     return m_page->fixedLayoutSize();
 }
 
-std::unique_ptr<WebKit::DrawingAreaProxy> WebViewImpl::createDrawingAreaProxy(WebProcessProxy& process)
+std::unique_ptr<WebKit::DrawingAreaProxy> WebViewImpl::createDrawingAreaProxy()
 {
     switch (m_drawingAreaType) {
     case DrawingAreaType::TiledCoreAnimation:
         return makeUnique<TiledCoreAnimationDrawingAreaProxy>(m_page);
     case DrawingAreaType::RemoteLayerTree:
-        return makeUnique<RemoteLayerTreeDrawingAreaProxyMac>(m_page, process);
+        return makeUnique<RemoteLayerTreeDrawingAreaProxyMac>(m_page);
     }
 
     ASSERT_NOT_REACHED();
@@ -2017,8 +2039,7 @@ void WebViewImpl::windowDidChangeScreen()
 {
     NSWindow *window = m_targetWindowForMovePreparation ? m_targetWindowForMovePreparation.get() : [m_view window];
     auto displayID = WebCore::displayID(window.screen);
-    auto framesPerSecond = m_page->process().nominalFramesPerSecondForDisplay(displayID);
-    m_page->windowScreenDidChange(displayID, framesPerSecond);
+    m_page->windowScreenDidChange(displayID);
 }
 
 void WebViewImpl::windowDidChangeLayerHosting()
@@ -2163,7 +2184,7 @@ void WebViewImpl::viewDidMoveToWindow()
             WeakPtr weakThis { *this };
             m_flagsChangedEventMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskFlagsChanged handler:[weakThis] (NSEvent *flagsChangedEvent) {
                 if (weakThis)
-                    weakThis->postFakeMouseMovedEventForFlagsChangedEvent(flagsChangedEvent);
+                    weakThis->scheduleMouseDidMoveOverElement(flagsChangedEvent);
                 return flagsChangedEvent;
             }];
         }
@@ -2288,13 +2309,13 @@ NSView *WebViewImpl::hitTest(CGPoint point)
     return hitView;
 }
 
-void WebViewImpl::postFakeMouseMovedEventForFlagsChangedEvent(NSEvent *flagsChangedEvent)
+void WebViewImpl::scheduleMouseDidMoveOverElement(NSEvent *flagsChangedEvent)
 {
     NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSEventTypeMouseMoved location:flagsChangedEvent.window.mouseLocationOutsideOfEventStream
         modifierFlags:flagsChangedEvent.modifierFlags timestamp:flagsChangedEvent.timestamp windowNumber:flagsChangedEvent.windowNumber
         context:nullptr eventNumber:0 clickCount:0 pressure:0];
     NativeWebMouseEvent webEvent(fakeEvent, m_lastPressureEvent.get(), m_view.getAutoreleased());
-    m_page->handleMouseEvent(webEvent);
+    m_page->dispatchMouseDidMoveOverElementAsynchronously(webEvent);
 }
 
 WebCore::DestinationColorSpace WebViewImpl::colorSpace()
@@ -3135,40 +3156,16 @@ void WebViewImpl::capitalizeWord()
     m_page->capitalizeWord();
 }
 
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/WebViewImplAdditions.mm>
-#else
-static Vector<WebCore::CompositionUnderline> extractInitialUnderlines(NSAttributedString *)
-{
-    return { };
-}
-
-bool WebViewImpl::markedTextInputEnabled() const
-{
-    return false;
-}
-
-void WebViewImpl::showMarkedTextForCandidate(NSTextCheckingResult *, NSRange, NSRange)
-{
-}
-
-void WebViewImpl::showMarkedTextForCandidates(NSArray<NSTextCheckingResult *> *)
-{
-}
-
 NSTextCheckingTypes WebViewImpl::getTextCheckingTypes() const
 {
-    return NSTextCheckingTypeSpelling | NSTextCheckingTypeReplacement | NSTextCheckingTypeCorrection;
-}
+    NSTextCheckingTypes types = NSTextCheckingTypeSpelling | NSTextCheckingTypeReplacement | NSTextCheckingTypeCorrection;
+#if HAVE(INLINE_PREDICTIONS)
+    if (allowsInlinePredictions())
+        types |= (NSTextCheckingType)_NSTextCheckingTypeSingleCompletion;
 #endif
 
-#ifndef WEB_VIEW_IMPL_ADDITIONS_SUSCRIBE_TO_TEXT_INPUT_NOTIFICATIONS_DEFINED
-static RetainPtr<NSObject> subscribeToTextInputNotifications(WebViewImpl*)
-{
-    return nullptr;
+    return types;
 }
-#endif //  WEB_VIEW_IMPL_ADDITIONS_SUSCRIBE_TO_TEXT_INPUT_NOTIFICATIONS_DEFINED
-
 
 void WebViewImpl::requestCandidatesForSelectionIfNeeded()
 {
@@ -3223,15 +3220,17 @@ void WebViewImpl::handleRequestedCandidates(NSInteger sequenceNumber, NSArray<NS
     if (m_lastStringForCandidateRequest != postLayoutData->stringForCandidateRequest)
         return;
 
-#if HAVE(TOUCH_BAR)
+#if HAVE(TOUCH_BAR) || HAVE(INLINE_PREDICTIONS)
     NSRange selectedRange = NSMakeRange(postLayoutData->candidateRequestStartPosition, postLayoutData->selectedTextLength);
     WebCore::IntRect offsetSelectionRect = postLayoutData->selectionBoundingRect;
     offsetSelectionRect.move(0, offsetSelectionRect.height());
 
     [candidateListTouchBarItem() setCandidates:candidates forSelectedRange:selectedRange inString:postLayoutData->paragraphContextForCandidateRequest rect:offsetSelectionRect view:m_view.getAutoreleased() completionHandler:nil];
 
-    if (markedTextInputEnabled())
-        showMarkedTextForCandidates(candidates);
+#if HAVE(INLINE_PREDICTIONS)
+    if (allowsInlinePredictions())
+        showInlinePredictionsForCandidates(candidates);
+#endif
 #else
     UNUSED_PARAM(candidates);
 #endif
@@ -3479,7 +3478,7 @@ void WebViewImpl::updateRemoteAccessibilityRegistration(bool registerProcess)
     // away, that information is not present in WebProcess
     pid_t pid = 0;
     if (registerProcess)
-        pid = m_page->process().processIdentifier();
+        pid = m_page->process().processID();
     else if (!registerProcess) {
         pid = [m_remoteAccessibilityChild processIdentifier];
         m_remoteAccessibilityChild = nil;
@@ -3847,9 +3846,9 @@ void WebViewImpl::draggedImage(NSImage *, CGPoint endPoint, NSDragOperation oper
 
 void WebViewImpl::sendDragEndToPage(CGPoint endPoint, NSDragOperation dragOperationMask)
 {
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     NSPoint windowImageLoc = [[m_view window] convertScreenToBase:NSPointFromCGPoint(endPoint)];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
     NSPoint windowMouseLoc = windowImageLoc;
 
     // Prevent queued mouseDragged events from coming after the drag and fake mouseUp event.
@@ -4097,9 +4096,9 @@ void WebViewImpl::startWindowDrag()
     [[m_view window] performWindowDragWithEvent:m_lastMouseDownEvent.get()];
 }
 
-void WebViewImpl::startDrag(const WebCore::DragItem& item, const ShareableBitmapHandle& dragImageHandle)
+void WebViewImpl::startDrag(const WebCore::DragItem& item, ShareableBitmap::Handle&& dragImageHandle)
 {
-    auto dragImageAsBitmap = ShareableBitmap::create(dragImageHandle);
+    auto dragImageAsBitmap = ShareableBitmap::create(WTFMove(dragImageHandle));
     if (!dragImageAsBitmap) {
         m_page->dragCancelled();
         return;
@@ -4158,9 +4157,9 @@ void WebViewImpl::startDrag(const WebCore::DragItem& item, const ShareableBitmap
     m_page->didStartDrag();
 
     [pasteboard setString:@"" forType:PasteboardTypes::WebDummyPboardType];
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [m_view dragImage:dragNSImage.get() at:NSPointFromCGPoint(clientDragLocation) offset:NSZeroSize event:m_lastMouseDownEvent.get() pasteboard:pasteboard source:m_view.getAutoreleased() slideBack:YES];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 static bool matchesExtensionOrEquivalent(const String& filename, const String& extension)
@@ -4397,9 +4396,9 @@ static RetainPtr<CGImageRef> takeWindowSnapshot(CGSWindowID windowID, bool captu
     CGWindowImageOption imageOptions = kCGWindowImageBoundsIgnoreFraming | kCGWindowImageShouldBeOpaque;
     if (captureAtNominalResolution)
         imageOptions |= kCGWindowImageNominalResolution;
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     return adoptCF(CGWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, windowID, imageOptions));
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 RefPtr<ViewSnapshot> WebViewImpl::takeViewSnapshot()
@@ -4564,7 +4563,7 @@ void WebViewImpl::scrollWheel(NSEvent *event)
     if (m_allowsBackForwardNavigationGestures && ensureGestureController().handleScrollWheelEvent(event))
         return;
 
-    NativeWebWheelEvent webEvent = NativeWebWheelEvent(event, m_view.getAutoreleased());
+    auto webEvent = NativeWebWheelEvent(event, m_view.getAutoreleased());
     m_page->handleNativeWheelEvent(webEvent);
 }
 
@@ -4700,31 +4699,6 @@ NSArray *WebViewImpl::validAttributesForMarkedText()
     //     NSBackgroundColorAttributeName, NSLanguageAttributeName.
     LOG(TextInput, "validAttributesForMarkedText -> (...)");
     return validAttributes.get().get();
-}
-
-static Vector<WebCore::CompositionUnderline> extractUnderlines(NSAttributedString *string)
-{
-    Vector<WebCore::CompositionUnderline> result;
-    int length = string.string.length;
-
-    for (int i = 0; i < length;) {
-        NSRange range;
-        NSDictionary *attrs = [string attributesAtIndex:i longestEffectiveRange:&range inRange:NSMakeRange(i, length - i)];
-
-        if (NSNumber *style = [attrs objectForKey:NSUnderlineStyleAttributeName]) {
-            WebCore::Color color = WebCore::Color::black;
-            WebCore::CompositionUnderlineColor compositionUnderlineColor = WebCore::CompositionUnderlineColor::TextColor;
-            if (NSColor *colorAttribute = [attrs objectForKey:NSUnderlineColorAttributeName]) {
-                color = WebCore::colorFromCocoaColor(colorAttribute);
-                compositionUnderlineColor = WebCore::CompositionUnderlineColor::GivenColor;
-            }
-            result.append(WebCore::CompositionUnderline(range.location, NSMaxRange(range), compositionUnderlineColor, color, style.intValue > 1));
-        }
-
-        i = range.location + range.length;
-    }
-
-    return result;
 }
 
 static bool eventKeyCodeIsZeroOrNumLockOrFn(NSEvent *event)
@@ -4957,10 +4931,10 @@ void WebViewImpl::characterIndexForPoint(NSPoint point, void(^completionHandler)
 
     NSWindow *window = [m_view window];
 
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     if (window)
         point = [window convertScreenToBase:point];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
     point = [m_view convertPoint:point fromView:nil];  // the point is relative to the main frame
 
     m_page->characterIndexForPointAsync(WebCore::IntPoint(point), [completionHandler = makeBlockPtr(completionHandler)](uint64_t result) {
@@ -4987,6 +4961,7 @@ void WebViewImpl::unmarkText()
     m_page->confirmCompositionAsync();
 }
 
+#if HAVE(REDESIGNED_TEXT_CURSOR)
 static BOOL shouldUseHighlightsForMarkedText(NSAttributedString *string)
 {
     __block BOOL result = NO;
@@ -5052,6 +5027,111 @@ static Vector<WebCore::CompositionHighlight> compositionHighlights(NSAttributedS
     mergedHighlights.shrinkToFit();
     return mergedHighlights;
 }
+#endif
+
+static Vector<WebCore::CompositionUnderline> compositionUnderlines(NSAttributedString *string)
+{
+    if (!string.length)
+        return { };
+
+    Vector<WebCore::CompositionUnderline> mergedUnderlines;
+
+#if HAVE(INLINE_PREDICTIONS) || HAVE(REDESIGNED_TEXT_CURSOR)
+    Vector<WebCore::CompositionUnderline> underlines;
+
+    [string enumerateAttributesInRange:NSMakeRange(0, string.length) options:0 usingBlock:[&underlines](NSDictionary<NSAttributedStringKey, id> *attributes, NSRange range, BOOL *) {
+        NSNumber *style = [attributes objectForKey:NSUnderlineStyleAttributeName];
+        if (!style)
+            return;
+
+        NSColor *underlineColor = attributes[NSUnderlineColorAttributeName];
+        bool isClear = [underlineColor isEqual:NSColor.clearColor];
+
+        if (!isClear)
+            underlines.append({ static_cast<unsigned>(range.location), static_cast<unsigned>(NSMaxRange(range)), WebCore::CompositionUnderlineColor::GivenColor, WebCore::Color::black, style.intValue > 1 });
+    }];
+
+    std::sort(underlines.begin(), underlines.end(), [](auto& a, auto& b) {
+        if (a.startOffset < b.startOffset)
+            return true;
+        if (a.startOffset > b.startOffset)
+            return false;
+        return a.endOffset < b.endOffset;
+    });
+
+    if (!underlines.isEmpty())
+        mergedUnderlines.append({ underlines.first().startOffset, underlines.last().endOffset, WebCore::CompositionUnderlineColor::GivenColor, WebCore::Color::black, false });
+
+    for (auto& underline : underlines) {
+        if (underline.thick)
+            mergedUnderlines.append(underline);
+    }
+
+    if (mergedUnderlines.size())
+        return mergedUnderlines;
+#endif
+
+    int length = string.string.length;
+
+    for (int i = 0; i < length;) {
+        NSRange range;
+        NSDictionary *attrs = [string attributesAtIndex:i longestEffectiveRange:&range inRange:NSMakeRange(i, length - i)];
+
+        if (NSNumber *style = [attrs objectForKey:NSUnderlineStyleAttributeName]) {
+            WebCore::Color color = WebCore::Color::black;
+            WebCore::CompositionUnderlineColor compositionUnderlineColor = WebCore::CompositionUnderlineColor::TextColor;
+            if (NSColor *colorAttribute = [attrs objectForKey:NSUnderlineColorAttributeName]) {
+                color = WebCore::colorFromCocoaColor(colorAttribute);
+                compositionUnderlineColor = WebCore::CompositionUnderlineColor::GivenColor;
+            }
+            mergedUnderlines.append(WebCore::CompositionUnderline(range.location, NSMaxRange(range), compositionUnderlineColor, color, style.intValue > 1));
+        }
+
+        i = range.location + range.length;
+    }
+
+    return mergedUnderlines;
+}
+
+static HashMap<String, Vector<CharacterRange>> compositionAnnotations(NSAttributedString *string)
+{
+    if (!string.length)
+        return { };
+
+    static NSSet *supportedAttributes = nil;
+#if HAVE(INLINE_PREDICTIONS)
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        supportedAttributes = [[NSSet alloc] initWithObjects:NSTextCompletionAttributeName, nil];
+    });
+#endif
+
+    HashMap<String, Vector<CharacterRange>> annotations;
+    [string enumerateAttributesInRange:NSMakeRange(0, string.length) options:0 usingBlock:[&annotations](NSDictionary<NSAttributedStringKey, id> *attributes, NSRange range, BOOL *) {
+        [attributes enumerateKeysAndObjectsUsingBlock:[&annotations, &range](NSAttributedStringKey key, id value, BOOL *) {
+
+            if (![supportedAttributes containsObject:key] || ![value respondsToSelector:@selector(boolValue)] || ![value boolValue])
+                return;
+
+            auto it = annotations.find(key);
+            if (it == annotations.end())
+                it = annotations.add(key, Vector<CharacterRange> { }).iterator;
+            auto& vector = it->value;
+
+            // Coalesce this range into the previous one if possible
+            if (vector.size() > 0) {
+                auto& last = vector.last();
+                if (NSMaxRange(last) == range.location) {
+                    last.length += range.length;
+                    return;
+                }
+            }
+            vector.append(range);
+        }];
+    }];
+
+    return annotations;
+}
 
 void WebViewImpl::setMarkedText(id string, NSRange selectedRange, NSRange replacementRange)
 {
@@ -5062,17 +5142,19 @@ void WebViewImpl::setMarkedText(id string, NSRange selectedRange, NSRange replac
 
     Vector<WebCore::CompositionUnderline> underlines;
     Vector<WebCore::CompositionHighlight> highlights;
+    HashMap<String, Vector<CharacterRange>> annotations;
     NSString *text;
 
     if (isAttributedString) {
         // FIXME: We ignore most attributes from the string, so an input method cannot specify e.g. a font or a glyph variation.
         text = [string string];
+#if HAVE(REDESIGNED_TEXT_CURSOR)
         if (shouldUseHighlightsForMarkedText(string))
             highlights = compositionHighlights(string);
-        else {
-            auto initialUnderlines = extractInitialUnderlines(string);
-            underlines = !initialUnderlines.isEmpty() ? initialUnderlines : extractUnderlines(string);
-        }
+        else
+#endif
+            underlines = compositionUnderlines(string);
+        annotations = compositionAnnotations(string);
     } else {
         text = string;
         underlines.append(WebCore::CompositionUnderline(0, [text length], WebCore::CompositionUnderlineColor::TextColor, WebCore::Color::black, false));
@@ -5091,8 +5173,112 @@ void WebViewImpl::setMarkedText(id string, NSRange selectedRange, NSRange replac
         return;
     }
 
-    m_page->setCompositionAsync(text, WTFMove(underlines), WTFMove(highlights), selectedRange, replacementRange);
+    m_page->setCompositionAsync(text, WTFMove(underlines), WTFMove(highlights), WTFMove(annotations), selectedRange, replacementRange);
 }
+
+#if HAVE(INLINE_PREDICTIONS)
+bool WebViewImpl::allowsInlinePredictions() const
+{
+    return m_page->preferences().inlinePredictionsEnabled() && [NSSpellChecker respondsToSelector:@selector(isAutomaticInlineCompletionEnabled)] && NSSpellChecker.isAutomaticInlineCompletionEnabled;
+}
+
+void WebViewImpl::showInlinePredictionsForCandidate(NSTextCheckingResult *candidate, NSRange absoluteSelectedRange, NSRange oldRelativeSelectedRange)
+{
+    if (!candidate)
+        return;
+
+    auto postLayoutData = postLayoutDataForContentEditable();
+    if (!postLayoutData)
+        return;
+
+    if (m_lastStringForCandidateRequest != postLayoutData->stringForCandidateRequest)
+        return;
+
+    NSRange relativeSelectedRange = NSMakeRange(postLayoutData->candidateRequestStartPosition, postLayoutData->selectedTextLength);
+    if (absoluteSelectedRange.location < relativeSelectedRange.location || absoluteSelectedRange.length != relativeSelectedRange.length)
+        return;
+
+    // Make sure the selected range didn’t change while we were making an asynchronous call to get it.
+    if (!NSEqualRanges(oldRelativeSelectedRange, relativeSelectedRange))
+        return;
+
+    NSString *paragraphContextForCandidateRequest = postLayoutData->paragraphContextForCandidateRequest;
+    auto offsetSelectionRect = postLayoutData->selectionBoundingRect;
+    offsetSelectionRect.move(0, offsetSelectionRect.height());
+
+    NSUInteger offset = absoluteSelectedRange.location - relativeSelectedRange.location;
+    NSTextCheckingResult *adjustedCandidate = [candidate resultByAdjustingRangesWithOffset:offset];
+
+    NSSpellChecker *spellChecker = [NSSpellChecker sharedSpellChecker];
+
+    if (![spellChecker respondsToSelector:@selector(showCompletionForCandidate:selectedRange:offset:inString:rect:view:completionHandler:)])
+        return;
+
+    WeakPtr weakThis { *this };
+    [spellChecker
+        showCompletionForCandidate:adjustedCandidate
+        selectedRange:absoluteSelectedRange
+        offset:offset
+        inString:paragraphContextForCandidateRequest
+        rect:offsetSelectionRect
+        view:m_view.getAutoreleased()
+        completionHandler:[weakThis](NSDictionary<NSString *, id> *resultDictionary) {
+        if (!weakThis)
+            return;
+
+        // FIXME: rdar://105809280 Adopt NSTextCheckingSoftSpaceRangeKey once it is in more builds.
+        NSValue *softSpaceRangeValue = resultDictionary[@"SoftSpaceRange"];
+        if (!softSpaceRangeValue)
+            return;
+
+        NSRange absoluteSoftSpaceRange = softSpaceRangeValue.rangeValue;
+        weakThis->selectedRangeWithCompletionHandler([weakThis, absoluteSoftSpaceRange](NSRange absoluteSelectedRange) {
+            if (!weakThis)
+                return;
+
+            auto postLayoutData = weakThis->postLayoutDataForContentEditable();
+            if (!postLayoutData)
+                return;
+
+            NSRange relativeSelectedRange = NSMakeRange(postLayoutData->candidateRequestStartPosition, postLayoutData->selectedTextLength);
+
+            if (absoluteSoftSpaceRange.location + absoluteSoftSpaceRange.length != absoluteSelectedRange.location)
+                return;
+
+            NSUInteger offset = absoluteSelectedRange.location - relativeSelectedRange.location;
+            NSRange relativeSoftSpaceRange = NSMakeRange(absoluteSoftSpaceRange.location - offset, absoluteSoftSpaceRange.length);
+
+            weakThis->m_softSpaceRange = relativeSoftSpaceRange;
+        });
+    }];
+}
+
+void WebViewImpl::showInlinePredictionsForCandidates(NSArray<NSTextCheckingResult *> *candidates)
+{
+    auto postLayoutData = postLayoutDataForContentEditable();
+    if (!postLayoutData)
+        return;
+
+    if (m_lastStringForCandidateRequest != postLayoutData->stringForCandidateRequest)
+        return;
+
+    NSSpellChecker *spellChecker = [NSSpellChecker sharedSpellChecker];
+
+    NSTextCheckingResult *candidate = [spellChecker completionCandidateFromCandidates:candidates];
+    if (!candidate)
+        return;
+
+    NSRange relativeSelectedRange = NSMakeRange(postLayoutData->candidateRequestStartPosition, postLayoutData->selectedTextLength);
+
+    WeakPtr weakThis { *this };
+    selectedRangeWithCompletionHandler([weakThis, retainedCandidate = retainPtr(candidate), relativeSelectedRange](NSRange absoluteSelectedRange) {
+        if (!weakThis)
+            return;
+
+        weakThis->showInlinePredictionsForCandidate(retainedCandidate.get(), absoluteSelectedRange, relativeSelectedRange);
+    });
+}
+#endif
 
 // Synchronous NSTextInputClient is still implemented to catch spurious sync calls. Remove when that is no longer needed.
 
@@ -5701,15 +5887,15 @@ NSTouchBar *WebViewImpl::textTouchBar() const
 static NSTextAlignment nsTextAlignmentFromTextAlignment(TextAlignment textAlignment)
 {
     switch (textAlignment) {
-    case NoAlignment:
+    case TextAlignment::Natural:
         return NSTextAlignmentNatural;
-    case LeftAlignment:
+    case TextAlignment::Left:
         return NSTextAlignmentLeft;
-    case RightAlignment:
+    case TextAlignment::Right:
         return NSTextAlignmentRight;
-    case CenterAlignment:
+    case TextAlignment::Center:
         return NSTextAlignmentCenter;
-    case JustifiedAlignment:
+    case TextAlignment::Justified:
         return NSTextAlignmentJustified;
     }
     ASSERT_NOT_REACHED();
@@ -5782,9 +5968,9 @@ void WebViewImpl::updateTextTouchBar()
     if (isRichlyEditableForTouchBar()) {
         const EditorState& editorState = m_page->editorState();
         if (editorState.hasPostLayoutData()) {
-            [m_textTouchBarItemController setTextIsBold:(bool)(m_page->editorState().postLayoutData->typingAttributes & AttributeBold)];
-            [m_textTouchBarItemController setTextIsItalic:(bool)(m_page->editorState().postLayoutData->typingAttributes & AttributeItalics)];
-            [m_textTouchBarItemController setTextIsUnderlined:(bool)(m_page->editorState().postLayoutData->typingAttributes & AttributeUnderline)];
+            [m_textTouchBarItemController setTextIsBold:(m_page->editorState().postLayoutData->typingAttributes.contains(TypingAttribute::Bold))];
+            [m_textTouchBarItemController setTextIsItalic:(m_page->editorState().postLayoutData->typingAttributes.contains(TypingAttribute::Italics))];
+            [m_textTouchBarItemController setTextIsUnderlined:(m_page->editorState().postLayoutData->typingAttributes.contains(TypingAttribute::Underline))];
             [m_textTouchBarItemController setTextColor:cocoaColor(editorState.postLayoutData->textColor).get()];
             [[m_textTouchBarItemController textListTouchBarViewController] setCurrentListType:(ListType)m_page->editorState().postLayoutData->enclosingListType];
             [m_textTouchBarItemController setCurrentTextAlignment:nsTextAlignmentFromTextAlignment((TextAlignment)editorState.postLayoutData->textAlignment)];
@@ -5895,7 +6081,15 @@ bool WebViewImpl::shouldRequestCandidates() const
     if (m_page->editorState().isInPasswordField)
         return false;
 
-    return candidateListTouchBarItem().candidateListVisible || markedTextInputEnabled();
+    if (candidateListTouchBarItem().candidateListVisible)
+        return true;
+
+#if HAVE(INLINE_PREDICTIONS)
+    if (allowsInlinePredictions())
+        return true;
+#endif
+
+    return false;
 }
 
 void WebViewImpl::setEditableElementIsFocused(bool editableElementIsFocused)
@@ -5925,13 +6119,16 @@ void WebViewImpl::setEditableElementIsFocused(bool editableElementIsFocused)
 
 #endif // HAVE(TOUCH_BAR)
 
-#if !USE(APPLE_INTERNAL_SDK)
-void WebViewImpl::setCaretDecorationVisibility(bool)
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/WebViewImplAdditions.mm>
+#else
+void WebViewImpl::updateCaretDecorationPlacement()
 {
 }
 
-void WebViewImpl::updateCaretDecorationPlacement()
+static RetainPtr<NSObject> subscribeToTextInputNotifications(WebViewImpl*)
 {
+    return nullptr;
 }
 #endif
 
@@ -6070,14 +6267,14 @@ static RetainPtr<CocoaImageAnalyzerRequest> createImageAnalyzerRequest(CGImageRe
     return request;
 }
 
-void WebViewImpl::requestTextRecognition(const URL& imageURL, const ShareableBitmapHandle& imageData, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier, CompletionHandler<void(WebCore::TextRecognitionResult&&)>&& completion)
+void WebViewImpl::requestTextRecognition(const URL& imageURL, ShareableBitmap::Handle&& imageData, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier, CompletionHandler<void(WebCore::TextRecognitionResult&&)>&& completion)
 {
     if (!isLiveTextAvailableAndEnabled()) {
         completion({ });
         return;
     }
 
-    auto imageBitmap = ShareableBitmap::create(imageData);
+    auto imageBitmap = ShareableBitmap::create(WTFMove(imageData));
     if (!imageBitmap) {
         completion({ });
         return;
@@ -6134,10 +6331,10 @@ bool WebViewImpl::imageAnalysisOverlayViewHasCursorAtPoint(NSPoint locationInVie
 #endif
 }
 
-void WebViewImpl::beginTextRecognitionForVideoInElementFullscreen(const ShareableBitmapHandle& bitmapHandle, WebCore::FloatRect bounds)
+void WebViewImpl::beginTextRecognitionForVideoInElementFullscreen(ShareableBitmap::Handle&& bitmapHandle, WebCore::FloatRect bounds)
 {
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-    auto imageBitmap = ShareableBitmap::create(bitmapHandle);
+    auto imageBitmap = ShareableBitmap::create(WTFMove(bitmapHandle));
     if (!imageBitmap)
         return;
 

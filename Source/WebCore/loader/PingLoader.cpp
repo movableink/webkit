@@ -40,17 +40,17 @@
 #include "ContentSecurityPolicy.h"
 #include "Document.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTTPHeaderValues.h"
 #include "InspectorInstrumentation.h"
 #include "LoaderStrategy.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "NetworkLoadMetrics.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
 #include "ProgressTracker.h"
 #include "ResourceError.h"
-#include "ResourceHandle.h"
 #include "ResourceLoadInfo.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
@@ -86,7 +86,7 @@ void PingLoader::loadImage(LocalFrame& frame, const URL& url)
     ASSERT(frame.document());
     auto& document = *frame.document();
 
-    if (!document.securityOrigin().canDisplay(url)) {
+    if (!document.securityOrigin().canDisplay(url, OriginAccessPatternsForWebProcess::singleton())) {
         FrameLoader::reportLocalLoadFailed(&frame, url.string());
         return;
     }
@@ -108,7 +108,7 @@ void PingLoader::loadImage(LocalFrame& frame, const URL& url)
 
     HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
 
-    String referrer = SecurityPolicy::generateReferrerHeader(document.referrerPolicy(), request.url(), frame.loader().outgoingReferrer());
+    String referrer = SecurityPolicy::generateReferrerHeader(document.referrerPolicy(), request.url(), frame.loader().outgoingReferrer(), OriginAccessPatternsForWebProcess::singleton());
     if (!referrer.isEmpty())
         request.setHTTPReferrer(referrer);
     frame.loader().updateRequestAndAddExtraFields(request, IsMainResource::No);
@@ -143,7 +143,7 @@ void PingLoader::sendPing(LocalFrame& frame, const URL& pingURL, const URL& dest
     HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
 
     auto& sourceOrigin = document.securityOrigin();
-    FrameLoader::addHTTPOriginIfNeeded(request, SecurityPolicy::generateOriginHeader(document.referrerPolicy(), request.url(), sourceOrigin));
+    FrameLoader::addHTTPOriginIfNeeded(request, SecurityPolicy::generateOriginHeader(document.referrerPolicy(), request.url(), sourceOrigin, OriginAccessPatternsForWebProcess::singleton()));
 
     frame.loader().updateRequestAndAddExtraFields(request, IsMainResource::No);
 
@@ -201,7 +201,7 @@ void PingLoader::sendViolationReport(LocalFrame& frame, const URL& reportURL, Re
     if (reportType == ViolationReportType::ContentSecurityPolicy)
         frame.loader().updateRequestAndAddExtraFields(request, IsMainResource::No);
 
-    String referrer = SecurityPolicy::generateReferrerHeader(document.referrerPolicy(), reportURL, frame.loader().outgoingReferrer());
+    String referrer = SecurityPolicy::generateReferrerHeader(document.referrerPolicy(), reportURL, frame.loader().outgoingReferrer(), OriginAccessPatternsForWebProcess::singleton());
     if (!referrer.isEmpty())
         request.setHTTPReferrer(referrer);
 

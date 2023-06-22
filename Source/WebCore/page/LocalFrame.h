@@ -30,7 +30,6 @@
 #include "AdjustViewSizeOrNot.h"
 #include "Document.h"
 #include "Frame.h"
-#include "PageIdentifier.h"
 #include "ScrollTypes.h"
 #include "UserScriptTypes.h"
 #include <wtf/HashSet.h>
@@ -77,7 +76,6 @@ class EventHandler;
 class FloatSize;
 class FrameDestructionObserver;
 class FrameLoader;
-class FrameLoaderClient;
 class FrameSelection;
 class HTMLFrameOwnerElement;
 class HTMLTableCellElement;
@@ -86,8 +84,8 @@ class ImageBuffer;
 class IntPoint;
 class IntRect;
 class IntSize;
+class LocalFrameLoaderClient;
 class LocalFrameView;
-class NavigationScheduler;
 class Node;
 class Page;
 class RenderLayer;
@@ -115,9 +113,9 @@ using NodeQualifier = Function<Node* (const HitTestResult&, Node* terminationNod
 
 class LocalFrame final : public Frame {
 public:
-    WEBCORE_EXPORT static Ref<LocalFrame> createMainFrame(Page&, UniqueRef<FrameLoaderClient>&&, FrameIdentifier);
-    WEBCORE_EXPORT static Ref<LocalFrame> createSubframe(Page&, UniqueRef<FrameLoaderClient>&&, FrameIdentifier, HTMLFrameOwnerElement&);
-    WEBCORE_EXPORT static Ref<LocalFrame> createSubframeHostedInAnotherProcess(Page&, UniqueRef<FrameLoaderClient>&&, FrameIdentifier, Frame& parent);
+    WEBCORE_EXPORT static Ref<LocalFrame> createMainFrame(Page&, UniqueRef<LocalFrameLoaderClient>&&, FrameIdentifier);
+    WEBCORE_EXPORT static Ref<LocalFrame> createSubframe(Page&, UniqueRef<LocalFrameLoaderClient>&&, FrameIdentifier, HTMLFrameOwnerElement&);
+    WEBCORE_EXPORT static Ref<LocalFrame> createSubframeHostedInAnotherProcess(Page&, UniqueRef<LocalFrameLoaderClient>&&, FrameIdentifier, Frame& parent);
 
     WEBCORE_EXPORT void init();
 #if PLATFORM(IOS_FAMILY)
@@ -148,14 +146,11 @@ public:
     const EventHandler& eventHandler() const { return m_eventHandler; }
     const FrameLoader& loader() const { return m_loader.get(); }
     FrameLoader& loader() { return m_loader.get(); }
-    NavigationScheduler& navigationScheduler() const;
     FrameSelection& selection() { return document()->selection(); }
     const FrameSelection& selection() const { return document()->selection(); }
     ScriptController& script() { return m_script; }
     const ScriptController& script() const { return m_script; }
     void resetScript();
-
-    WEBCORE_EXPORT std::optional<PageIdentifier> pageID() const;
 
     WEBCORE_EXPORT RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
     WEBCORE_EXPORT RenderWidget* ownerRenderer() const; // Renderer for the element that contains this frame.
@@ -293,12 +288,13 @@ public:
 private:
     friend class NavigationDisabler;
 
-    LocalFrame(Page&, UniqueRef<FrameLoaderClient>&&, FrameIdentifier, HTMLFrameOwnerElement*, Frame* parent);
+    LocalFrame(Page&, UniqueRef<LocalFrameLoaderClient>&&, FrameIdentifier, HTMLFrameOwnerElement*, Frame* parent);
 
     void dropChildren();
 
     void frameDetached() final;
     bool preventsParentFromBeingComplete() const final;
+    void changeLocation(FrameLoadRequest&&) final;
 
     FrameView* virtualView() const final;
     DOMWindow* virtualWindow() const final;
@@ -308,7 +304,6 @@ private:
     Vector<std::pair<Ref<DOMWrapperWorld>, UniqueRef<UserScript>>> m_userScriptsAwaitingNotification;
 
     UniqueRef<FrameLoader> m_loader;
-    mutable UniqueRef<NavigationScheduler> m_navigationScheduler;
 
     RefPtr<LocalFrameView> m_view;
     RefPtr<Document> m_doc;
@@ -347,16 +342,6 @@ private:
 
     UniqueRef<EventHandler> m_eventHandler;
 };
-
-using LocalFrame = LocalFrame;
-
-// FIXME: Remove after WebKitAdditions transitions to this change.
-#define WEBCORE_HAS_LOCAL_FRAME 1
-
-inline NavigationScheduler& LocalFrame::navigationScheduler() const
-{
-    return m_navigationScheduler.get();
-}
 
 inline LocalFrameView* LocalFrame::view() const
 {

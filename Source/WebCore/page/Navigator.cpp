@@ -33,12 +33,12 @@
 #include "Document.h"
 #include "FeaturePolicy.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "GPU.h"
 #include "Geolocation.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LoaderStrategy.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalizedStrings.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
@@ -350,7 +350,7 @@ bool Navigator::cookieEnabled() const
     return page->cookieJar().cookiesEnabled(*document);
 }
 
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(NAVIGATOR_STANDALONE)
 
 bool Navigator::standalone() const
 {
@@ -365,6 +365,8 @@ GPU* Navigator::gpu()
     if (!m_gpuForWebGPU) {
         auto* frame = this->frame();
         if (!frame)
+            return nullptr;
+        if (!frame->settings().webGPUEnabled())
             return nullptr;
         auto* page = frame->page();
         if (!page)

@@ -23,6 +23,9 @@
 
 #include "AXObjectCache.h"
 #include "AutoplayEvent.h"
+#include "BarcodeDetectorInterface.h"
+#include "BarcodeDetectorOptionsInterface.h"
+#include "BarcodeFormatInterface.h"
 #include "ContactInfo.h"
 #include "Cursor.h"
 #include "DatabaseDetails.h"
@@ -30,6 +33,8 @@
 #include "DisabledAdaptations.h"
 #include "DisplayRefreshMonitor.h"
 #include "DocumentStorageAccess.h"
+#include "FaceDetectorInterface.h"
+#include "FaceDetectorOptionsInterface.h"
 #include "FocusDirection.h"
 #include "FrameLoader.h"
 #include "GraphicsContext.h"
@@ -49,6 +54,7 @@
 #include "ScrollTypes.h"
 #include "ScrollingCoordinator.h"
 #include "SearchPopupMenu.h"
+#include "TextDetectorInterface.h"
 #include "WebCoreKeyboardUIMode.h"
 #include "WorkerClient.h"
 #include <JavaScriptCore/ConsoleTypes.h>
@@ -59,6 +65,7 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/Seconds.h>
 #include <wtf/URL.h>
+#include <wtf/Vector.h>
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 #include "MediaPlaybackTargetContext.h"
@@ -191,7 +198,7 @@ public:
     virtual void setResizable(bool) = 0;
 
     virtual void addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceID) = 0;
-    virtual void addMessageWithArgumentsToConsole(MessageSource, MessageLevel, const String& message, Span<const String> messageArguments, unsigned lineNumber, unsigned columnNumber, const String& sourceID) { UNUSED_PARAM(message); UNUSED_PARAM(messageArguments); UNUSED_PARAM(lineNumber); UNUSED_PARAM(columnNumber); UNUSED_PARAM(sourceID); }
+    virtual void addMessageWithArgumentsToConsole(MessageSource, MessageLevel, const String& message, std::span<const String> messageArguments, unsigned lineNumber, unsigned columnNumber, const String& sourceID) { UNUSED_PARAM(message); UNUSED_PARAM(messageArguments); UNUSED_PARAM(lineNumber); UNUSED_PARAM(columnNumber); UNUSED_PARAM(sourceID); }
 
     virtual bool canRunBeforeUnloadConfirmPanel() = 0;
     virtual bool runBeforeUnloadConfirmPanel(const String& message, LocalFrame&) = 0;
@@ -244,7 +251,7 @@ public:
 
     virtual bool shouldUnavailablePluginMessageBeButton(RenderEmbeddedObject::PluginUnavailabilityReason) const { return false; }
     virtual void unavailablePluginButtonClicked(Element&, RenderEmbeddedObject::PluginUnavailabilityReason) const { }
-    virtual void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags, const String& toolTip, TextDirection) = 0;
+    virtual void mouseDidMoveOverElement(const HitTestResult&, OptionSet<PlatformEventModifier>, const String& toolTip, TextDirection) = 0;
 
     virtual void print(LocalFrame&, const StringWithDirection&) = 0;
 
@@ -370,6 +377,11 @@ public:
 
     virtual RefPtr<PAL::WebGPU::GPU> createGPUForWebGPU() const { return nullptr; }
 
+    virtual RefPtr<ShapeDetection::BarcodeDetector> createBarcodeDetector(const ShapeDetection::BarcodeDetectorOptions&) const { return nullptr; }
+    virtual void getBarcodeDetectorSupportedFormats(CompletionHandler<void(Vector<ShapeDetection::BarcodeFormat>&&)>&& completionHandler) const { completionHandler({ }); }
+    virtual RefPtr<ShapeDetection::FaceDetector> createFaceDetector(const ShapeDetection::FaceDetectorOptions&) const { return nullptr; }
+    virtual RefPtr<ShapeDetection::TextDetector> createTextDetector() const { return nullptr; }
+
     // Pass nullptr as the GraphicsLayer to detatch the root layer.
     virtual void attachRootGraphicsLayer(LocalFrame&, GraphicsLayer*) = 0;
     virtual void attachViewOverlayGraphicsLayer(GraphicsLayer*) = 0;
@@ -382,6 +394,7 @@ public:
     virtual void triggerRenderingUpdate() = 0;
     // Schedule a rendering update that coordinates with display refresh. Returns true if scheduled. (This is only used by SVGImageChromeClient.)
     virtual bool scheduleRenderingUpdate() { return false; }
+    virtual void renderingUpdateFramesPerSecondChanged() { }
 
     virtual unsigned remoteImagesCountForTesting() const { return 0; }
 
@@ -542,8 +555,8 @@ public:
     virtual void handlePDFServiceClick(const IntPoint&, HTMLAttachmentElement&) { }
 #endif
 
-    virtual URL sanitizeLookalikeCharacters(const URL& url, LookalikeCharacterSanitizationTrigger) const { return url; }
-    virtual URL allowedLookalikeCharacters(const URL& url) const { return url; }
+    virtual URL applyLinkDecorationFiltering(const URL& url, LinkDecorationFilteringTrigger) const { return url; }
+    virtual URL allowedQueryParametersForAdvancedPrivacyProtections(const URL& url) const { return url; }
 
     virtual bool shouldDispatchFakeMouseMoveEvents() const { return true; }
 
@@ -625,15 +638,18 @@ public:
     virtual void abortApplePayAMSUISession() { }
 #endif
 
+#if USE(SYSTEM_PREVIEW)
+    virtual void handleSystemPreview(const URL&, const SystemPreviewInfo&) { }
+#endif
+
     virtual void requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&) = 0;
-
-    virtual const AtomString& searchStringForModalContainerObserver() const { return nullAtom(); }
-    virtual void classifyModalContainerControls(Vector<String>&& texts, CompletionHandler<void(Vector<ModalContainerControlType>&&)>&&) = 0;
-
-    virtual void decidePolicyForModalContainer(OptionSet<ModalContainerControlType>, CompletionHandler<void(ModalContainerDecision)>&&) = 0;
 
     virtual bool isUsingUISideCompositing() const { return false; }
     
+    virtual bool isInStableState() const { return true; }
+
+    virtual FloatSize screenSizeForFingerprintingProtections(const LocalFrame&, FloatSize defaultSize) const { return defaultSize; }
+
     WEBCORE_EXPORT virtual ~ChromeClient();
 
 protected:

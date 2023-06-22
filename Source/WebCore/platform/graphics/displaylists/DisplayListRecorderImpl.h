@@ -60,8 +60,11 @@ private:
     void recordSetLineJoin(LineJoin) final;
     void recordSetMiterLimit(float) final;
     void recordClearShadow() final;
+    void recordResetClip() final;
     void recordClip(const FloatRect&) final;
+    void recordClipRoundedRect(const FloatRoundedRect&) final;
     void recordClipOut(const FloatRect&) final;
+    void recordClipOutRoundedRect(const FloatRoundedRect&) final;
     void recordClipToImageBuffer(ImageBuffer&, const FloatRect& destinationRect) final;
     void recordClipOutToPath(const Path&) final;
     void recordClipPath(const Path&, WindRule) final;
@@ -124,6 +127,7 @@ private:
     bool recordResourceUse(Font&) final;
     bool recordResourceUse(DecomposedGlyphs&) final;
     bool recordResourceUse(Gradient&) final;
+    bool recordResourceUse(Filter&) final;
 
     template<typename T, class... Args>
     void append(Args&&... args)

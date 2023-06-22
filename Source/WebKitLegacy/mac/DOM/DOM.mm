@@ -44,7 +44,6 @@
 #import <WebCore/GeometryUtilities.h>
 #import <WebCore/HTMLLinkElement.h>
 #import <WebCore/HTMLNames.h>
-#import <WebCore/HTMLParserIdioms.h>
 #import <WebCore/HTMLTableCellElement.h>
 #import <WebCore/Image.h>
 #import <WebCore/JSNode.h>
@@ -55,6 +54,7 @@
 #import <WebCore/Page.h>
 #import <WebCore/Range.h>
 #import <WebCore/RenderImage.h>
+#import <WebCore/RenderStyleInlines.h>
 #import <WebCore/RenderView.h>
 #import <WebCore/ScriptController.h>
 #import <WebCore/SimpleRange.h>
@@ -386,7 +386,7 @@ id <DOMEventTarget> kit(EventTarget* target)
     auto* link = [self _linkElement];
     if (!link)
         return nil;
-    return link->document().completeURL(stripLeadingAndTrailingHTMLSpaces(link->getAttribute(HTMLNames::hrefAttr)));
+    return link->document().completeURL(link->getAttribute(HTMLNames::hrefAttr));
 }
 
 - (NSString *)hrefTarget
@@ -664,7 +664,7 @@ id <DOMEventTarget> kit(EventTarget* target)
 - (NSURL *)_getURLAttribute:(NSString *)name
 {
     auto& element = *core(self);
-    return element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(element.getAttribute(name)));
+    return element.document().completeURL(element.getAttribute(name));
 }
 
 - (BOOL)isFocused

@@ -65,14 +65,14 @@ void HTMLScriptElement::childrenChanged(const ChildChange& change)
     ScriptElement::childrenChanged(change);
 }
 
-void HTMLScriptElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLScriptElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == srcAttr)
-        handleSourceAttribute(value);
+        handleSourceAttribute(newValue);
     else if (name == asyncAttr)
         handleAsyncAttribute();
     else
-        HTMLElement::parseAttribute(name, value);
+        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 Node::InsertedIntoAncestorResult HTMLScriptElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -145,16 +145,6 @@ String HTMLScriptElement::languageAttributeValue() const
     return attributeWithoutSynchronization(languageAttr).string();
 }
 
-String HTMLScriptElement::forAttributeValue() const
-{
-    return attributeWithoutSynchronization(forAttr).string();
-}
-
-String HTMLScriptElement::eventAttributeValue() const
-{
-    return attributeWithoutSynchronization(eventAttr).string();
-}
-
 bool HTMLScriptElement::hasAsyncAttribute() const
 {
     return hasAttributeWithoutSynchronization(asyncAttr);
@@ -181,6 +171,21 @@ void HTMLScriptElement::dispatchLoadEvent()
     setHaveFiredLoadEvent(true);
 
     dispatchEvent(Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
+}
+
+bool HTMLScriptElement::isScriptPreventedByAttributes() const
+{
+    auto& eventAttribute = attributeWithoutSynchronization(eventAttr);
+    auto& forAttribute = attributeWithoutSynchronization(forAttr);
+    if (!eventAttribute.isNull() && !forAttribute.isNull()) {
+        if (!equalLettersIgnoringASCIICase(StringView(forAttribute).trim(isASCIIWhitespace<UChar>), "window"_s))
+            return true;
+
+        auto eventAttributeView = StringView(eventAttribute).trim(isASCIIWhitespace<UChar>);
+        if (!equalLettersIgnoringASCIICase(eventAttributeView, "onload"_s) && !equalLettersIgnoringASCIICase(eventAttributeView, "onload()"_s))
+            return true;
+    }
+    return false;
 }
 
 Ref<Element> HTMLScriptElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)
@@ -217,7 +222,7 @@ String HTMLScriptElement::fetchPriorityForBindings() const
 
 RequestPriority HTMLScriptElement::fetchPriorityHint() const
 {
-    if (document().settings().priorityHintsEnabled())
+    if (document().settings().fetchPriorityEnabled())
         return parseEnumerationFromString<RequestPriority>(attributeWithoutSynchronization(fetchpriorityAttr)).value_or(RequestPriority::Auto);
     return RequestPriority::Auto;
 }

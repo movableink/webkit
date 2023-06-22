@@ -1,0 +1,39 @@
+diff --git a/resources/benchmark-runner.mjs b/resources/benchmark-runner.mjs
+index bce469d..9cebc9d 100644
+--- a/resources/benchmark-runner.mjs
++++ b/resources/benchmark-runner.mjs
+@@ -348,6 +348,8 @@ export class BenchmarkRunner {
+         const syncEndLabel = `${suite.name}.${test.name}-sync-end`;
+         const asyncStartLabel = `${suite.name}.${test.name}-async-start`;
+         const asyncEndLabel = `${suite.name}.${test.name}-async-end`;
++        const syncName = `${suite.name}.${test.name}-sync`;
++        const asyncName = `${suite.name}.${test.name}-async`;
+ 
+         let syncTime;
+         let asyncStartTime;
+@@ -362,14 +364,17 @@ export class BenchmarkRunner {
+                 performance.mark("warmup-end");
+             }
+             performance.mark(startLabel);
++            __signpostStart(syncName);
+             const syncStartTime = performance.now();
+             test.run(this._page);
+             const syncEndTime = performance.now();
++            __signpostStop(syncName);
+             performance.mark(syncEndLabel);
+ 
+             syncTime = syncEndTime - syncStartTime;
+ 
+             performance.mark(asyncStartLabel);
++            __signpostStart(asyncName);
+             asyncStartTime = performance.now();
+         };
+         const measureAsync = () => {
+@@ -379,6 +384,7 @@ export class BenchmarkRunner {
+             const asyncEndTime = performance.now();
+             asyncTime = asyncEndTime - asyncStartTime;
+             this._frame.contentWindow._unusedHeightValue = height; // Prevent dead code elimination.
++            __signpostStop(asyncName);
+             performance.mark(asyncEndLabel);
+             if (params.warmupBeforeSync)
+                 performance.measure("warmup", "warmup-start", "warmup-end");

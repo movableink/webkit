@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,10 @@
 
 #include "FontCascade.h"
 #include "InlineSoftLineBreakItem.h"
+#include "RenderStyleInlines.h"
 #include "StyleResolver.h"
 #include "TextUtil.h"
+#include "UnicodeBidi.h"
 #include <wtf/Scope.h>
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -61,12 +63,12 @@ static std::optional<WhitespaceContent> moveToNextNonWhitespacePosition(StringVi
     return nextNonWhiteSpacePosition == startPosition ? std::nullopt : std::make_optional(WhitespaceContent { nextNonWhiteSpacePosition - startPosition, hasWordSeparatorCharacter });
 }
 
-static unsigned moveToNextBreakablePosition(unsigned startPosition, LazyLineBreakIterator& lineBreakIterator, const RenderStyle& style)
+static unsigned moveToNextBreakablePosition(unsigned startPosition, CachedLineBreakIteratorFactory& lineBreakIteratorFactory, const RenderStyle& style)
 {
-    auto textLength = lineBreakIterator.stringView().length();
+    auto textLength = lineBreakIteratorFactory.stringView().length();
     auto startPositionForNextBreakablePosition = startPosition;
     while (startPositionForNextBreakablePosition < textLength) {
-        auto nextBreakablePosition = TextUtil::findNextBreakablePosition(lineBreakIterator, startPositionForNextBreakablePosition, style);
+        auto nextBreakablePosition = TextUtil::findNextBreakablePosition(lineBreakIteratorFactory, startPositionForNextBreakablePosition, style);
         // Oftentimes the next breakable position comes back as the start position (most notably hyphens).
         if (nextBreakablePosition != startPosition)
             return nextBreakablePosition - startPosition;
@@ -84,7 +86,10 @@ InlineItemsBuilder::InlineItemsBuilder(const ElementBox& formattingContextRoot, 
 void InlineItemsBuilder::build(InlineItemPosition startPosition)
 {
     InlineItems inlineItems;
-    collectInlineItems(inlineItems, startPosition);
+    FormattingState::OutOfFlowBoxList outOfFlowBoxes;
+
+    collectInlineItems(inlineItems, outOfFlowBoxes, startPosition);
+
     if (!root().style().isLeftToRightDirection() || contentRequiresVisualReordering()) {
         // FIXME: Add support for partial, yet paragraph level bidi content handling.
         breakAndComputeBidiLevels(inlineItems);
@@ -104,16 +109,23 @@ void InlineItemsBuilder::build(InlineItemPosition startPosition)
         m_formattingState.appendInlineItems(WTFMove(inlineItems));
     };
     adjustInlineFormattingStateWithNewInlineItems();
+    m_formattingState.setOutOfFlowBoxes(WTFMove(outOfFlowBoxes));
 
 #if ASSERT_ENABLED
-    // Check if we've got matching inline box start/end pairs.
+    // Check if we've got matching inline box start/end pairs and unique inline level items (non-text, non-inline box items).
     size_t inlineBoxStart = 0;
     size_t inlineBoxEnd = 0;
+    auto inlineLevelItems = HashSet<const Box*> { };
     for (auto& inlineItem : m_formattingState.inlineItems()) {
         if (inlineItem.isInlineBoxStart())
             ++inlineBoxStart;
         else if (inlineItem.isInlineBoxEnd())
             ++inlineBoxEnd;
+        else {
+            auto hasToBeUniqueLayoutBox = inlineItem.isBox() || inlineItem.isFloat() || inlineItem.isHardLineBreak();
+            if (hasToBeUniqueLayoutBox)
+                ASSERT(inlineLevelItems.add(&inlineItem.layoutBox()).isNewEntry);
+        }
     }
     ASSERT(inlineBoxStart == inlineBoxEnd);
 #endif
@@ -178,7 +190,7 @@ static LayoutQueue initializeLayoutQueue(const ElementBox& formattingContextRoot
     return layoutQueue;
 }
 
-void InlineItemsBuilder::collectInlineItems(InlineItems& inlineItems, InlineItemPosition startPosition)
+void InlineItemsBuilder::collectInlineItems(InlineItems& inlineItems, FormattingState::OutOfFlowBoxList& outOfFlowBoxes, InlineItemPosition startPosition)
 {
     // Traverse the tree and create inline items out of inline boxes and leaf nodes. This essentially turns the tree inline structure into a flat one.
     // <span>text<span></span><img></span> -> [InlineBoxStart][InlineLevelBox][InlineBoxStart][InlineBoxEnd][InlineLevelBox][InlineBoxEnd]
@@ -231,7 +243,7 @@ void InlineItemsBuilder::collectInlineItems(InlineItems& inlineItems, InlineItem
             else if (layoutBox.isOutOfFlowPositioned()) {
                 // Let's not construct InlineItems for out-of-flow content as they don't participate in the inline layout.
                 // However to be able to static positioning them, we need to compute their approximate positions.
-                m_formattingState.addOutOfFlowBox(layoutBox);
+                outOfFlowBoxes.append(layoutBox);
             } else
                 ASSERT_NOT_REACHED();
 
@@ -625,7 +637,7 @@ void InlineItemsBuilder::handleTextContent(const InlineTextBox& inlineTextBox, I
     auto& style = inlineTextBox.style();
     auto shouldPreserveSpacesAndTabs = TextUtil::shouldPreserveSpacesAndTabs(inlineTextBox);
     auto shouldPreserveNewline = TextUtil::shouldPreserveNewline(inlineTextBox);
-    auto lineBreakIterator = LazyLineBreakIterator { text, style.computedLocale(), TextUtil::lineBreakIteratorMode(style.lineBreak()) };
+    auto lineBreakIteratorFactory = CachedLineBreakIteratorFactory { text, style.computedLocale(), TextUtil::lineBreakIteratorMode(style.lineBreak()), TextUtil::contentAnalysis(style.wordBoundaryDetection()) };
     auto currentPosition = partialContentOffset.value_or(0lu);
     ASSERT(currentPosition <= contentLength);
 
@@ -648,7 +660,7 @@ void InlineItemsBuilder::handleTextContent(const InlineTextBox& inlineTextBox, I
                 return false;
 
             ASSERT(whitespaceContent->length);
-            if (style.whiteSpace() == WhiteSpace::BreakSpaces) {
+            if (style.whiteSpaceCollapse() == WhiteSpaceCollapse::BreakSpaces) {
                 // https://www.w3.org/TR/css-text-3/#white-space-phase-1
                 // For break-spaces, a soft wrap opportunity exists after every space and every tab.
                 // FIXME: if this turns out to be a perf hit with too many individual whitespace inline items, we should transition this logic to line breaking.
@@ -690,11 +702,11 @@ void InlineItemsBuilder::handleTextContent(const InlineTextBox& inlineTextBox, I
             if (style.hyphens() == Hyphens::None) {
                 // Let's merge candidate InlineTextItems separated by soft hyphen when the style says so.
                 do {
-                    endPosition += moveToNextBreakablePosition(endPosition, lineBreakIterator, style);
+                    endPosition += moveToNextBreakablePosition(endPosition, lineBreakIteratorFactory, style);
                     ASSERT(startPosition < endPosition);
                 } while (endPosition < contentLength && text[endPosition - 1] == softHyphen);
             } else {
-                endPosition += moveToNextBreakablePosition(startPosition, lineBreakIterator, style);
+                endPosition += moveToNextBreakablePosition(startPosition, lineBreakIteratorFactory, style);
                 ASSERT(startPosition < endPosition);
                 hasTrailingSoftHyphen = text[endPosition - 1] == softHyphen;
             }

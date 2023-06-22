@@ -75,11 +75,11 @@ namespace WebCore {
 
 class Cursor;
 class Event;
-class EventRegionContext;
 class FontCascade;
 class GraphicsContext;
 class LocalFrameView;
 class PlatformMouseEvent;
+class RegionContext;
 class ScrollView;
 
 enum WidgetNotification { WillPaintFlattened, DidPaintFlattened };
@@ -125,7 +125,7 @@ public:
 
     enum class SecurityOriginPaintPolicy { AnyOrigin, AccessibleOriginOnly };
 
-    WEBCORE_EXPORT virtual void paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr);
+    WEBCORE_EXPORT virtual void paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, RegionContext* = nullptr);
     void invalidate() { invalidateRect(boundsRect()); }
     virtual void invalidateRect(const IntRect&) = 0;
 
@@ -143,7 +143,7 @@ public:
 
     void setIsSelected(bool);
 
-    virtual bool isFrameView() const { return false; }
+    virtual bool isLocalFrameView() const { return false; }
     virtual bool isRemoteFrameView() const { return false; }
     virtual bool isPluginViewBase() const { return false; }
     virtual bool isScrollbar() const { return false; }

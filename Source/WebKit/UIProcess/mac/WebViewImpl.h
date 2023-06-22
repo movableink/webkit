@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -228,7 +228,7 @@ public:
     void setFixedLayoutSize(CGSize);
     CGSize fixedLayoutSize() const;
 
-    std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy(WebProcessProxy&);
+    std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy();
     bool isUsingUISideCompositing() const;
     void setDrawingAreaSize(CGSize);
     void updateLayer();
@@ -373,7 +373,6 @@ public:
     bool validateUserInterfaceItem(id <NSValidatedUserInterfaceItem>);
     void setEditableElementIsFocused(bool);
 
-    void setCaretDecorationVisibility(bool);
     void updateCaretDecorationPlacement();
 
     void startSpeaking();
@@ -482,9 +481,9 @@ public:
 
     _WKRemoteObjectRegistry *remoteObjectRegistry();
 
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     WKBrowsingContextController *browsingContextController();
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 
 #if ENABLE(DRAG_SUPPORT)
     void draggedImage(NSImage *, CGPoint endPoint, NSDragOperation);
@@ -507,7 +506,7 @@ public:
 
     void startWindowDrag();
 
-    void startDrag(const WebCore::DragItem&, const ShareableBitmapHandle& image);
+    void startDrag(const WebCore::DragItem&, ShareableBitmap::Handle&& image);
     void setFileAndURLTypes(NSString *filename, NSString *extension, NSString *uti, NSString *title, NSString *url, NSString *visibleURL, NSPasteboard *);
     void setPromisedDataForImage(WebCore::Image&, NSString *filename, NSString *extension, NSString *title, NSString *url, NSString *visibleURL, WebCore::FragmentedSharedBuffer* archiveBuffer, NSString *pasteboardName, NSString *pasteboardOrigin);
     void pasteboardChangedOwner(NSPasteboard *);
@@ -571,7 +570,6 @@ public:
     void keyUp(NSEvent *);
     void keyDown(NSEvent *);
     void flagsChanged(NSEvent *);
-    bool markedTextInputEnabled() const;
 
     // Override this so that AppKit will send us arrow keys as key down events so we can
     // support them via the key bindings mechanism.
@@ -602,7 +600,7 @@ public:
     bool shouldRequestCandidates() const;
 
 #if ENABLE(IMAGE_ANALYSIS)
-    void requestTextRecognition(const URL& imageURL, const ShareableBitmapHandle& imageData, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier, CompletionHandler<void(WebCore::TextRecognitionResult&&)>&&);
+    void requestTextRecognition(const URL& imageURL, ShareableBitmap::Handle&& imageData, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier, CompletionHandler<void(WebCore::TextRecognitionResult&&)>&&);
     void computeHasVisualSearchResults(const URL& imageURL, ShareableBitmap& imageBitmap, CompletionHandler<void(bool)>&&);
 #endif
 
@@ -689,7 +687,7 @@ public:
     void didFinishPresentation(WKRevealItemPresenter *);
 #endif
 
-    void beginTextRecognitionForVideoInElementFullscreen(const ShareableBitmapHandle&, WebCore::FloatRect);
+    void beginTextRecognitionForVideoInElementFullscreen(ShareableBitmap::Handle&&, WebCore::FloatRect);
     void cancelTextRecognitionForVideoInElementFullscreen();
 
 private:
@@ -735,8 +733,6 @@ private:
     void scheduleSetTopContentInsetDispatch();
     void dispatchSetTopContentInset();
 
-    void postFakeMouseMovedEventForFlagsChangedEvent(NSEvent *);
-
     void sendToolTipMouseExited();
     void sendToolTipMouseEntered();
 
@@ -751,6 +747,8 @@ private:
     void nativeMouseEventHandler(NSEvent *);
     void nativeMouseEventHandlerInternal(NSEvent *);
     
+    void scheduleMouseDidMoveOverElement(NSEvent *);
+
     void mouseMovedInternal(NSEvent *);
     void mouseDownInternal(NSEvent *);
     void mouseUpInternal(NSEvent *);
@@ -762,8 +760,13 @@ private:
     bool mightBeginScrollWhileInactive();
 
     void handleRequestedCandidates(NSInteger sequenceNumber, NSArray<NSTextCheckingResult *> *candidates);
-    void showMarkedTextForCandidates(NSArray<NSTextCheckingResult *> *);
-    void showMarkedTextForCandidate(NSTextCheckingResult *, NSRange, NSRange);
+
+#if HAVE(INLINE_PREDICTIONS)
+    bool allowsInlinePredictions() const;
+    void showInlinePredictionsForCandidates(NSArray<NSTextCheckingResult *> *);
+    void showInlinePredictionsForCandidate(NSTextCheckingResult *, NSRange, NSRange);
+#endif
+
     NSTextCheckingTypes getTextCheckingTypes() const;
 
     void flushPendingMouseEventCallbacks();
@@ -872,9 +875,9 @@ private:
 
     RetainPtr<_WKRemoteObjectRegistry> m_remoteObjectRegistry;
 
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     RetainPtr<WKBrowsingContextController> m_browsingContextController;
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 
     std::unique_ptr<ViewGestureController> m_gestureController;
     bool m_allowsBackForwardNavigationGestures { false };

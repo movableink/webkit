@@ -33,9 +33,9 @@
 #include "CascadeLevel.h"
 #include "ExtensionStyleSheets.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTMLNames.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "MediaQueryEvaluator.h"
 #include "Page.h"
 #include "RuleSetBuilder.h"
@@ -218,7 +218,7 @@ std::optional<DynamicMediaQueryEvaluationChanges> ScopeRuleSets::evaluateDynamic
 
 void ScopeRuleSets::appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>& styleSheets, MQ::MediaQueryEvaluator* mediaQueryEvaluator, InspectorCSSOMWrappers& inspectorCSSOMWrappers)
 {
-    RuleSetBuilder builder(*m_authorStyle, *mediaQueryEvaluator, &m_styleResolver);
+    RuleSetBuilder builder(*m_authorStyle, *mediaQueryEvaluator, &m_styleResolver, RuleSetBuilder::ShrinkToFit::Enable, RuleSetBuilder::ShouldResolveNesting::Yes);
 
     for (auto& cssSheet : styleSheets) {
         ASSERT(!cssSheet->disabled());

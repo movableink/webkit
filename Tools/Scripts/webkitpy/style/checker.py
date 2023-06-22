@@ -107,7 +107,6 @@ _BASE_FILTER_RULES = [
     '-runtime/threadsafe_fn',
     '-runtime/rtti',
     '-whitespace/blank_line',
-    '-whitespace/end_of_line',
     # List Python pep8 categories last.
     #
     # Because much of WebKit's Python code base does not abide by the
@@ -259,8 +258,8 @@ _PATH_RULES_SPECIFIER = [
     ([
       # These files define GObjects, which implies some definitions of
       # variables and functions containing underscores.
-      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'AppSinkWorkaround.cpp'),
-      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'AppSinkWorkaround.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GStreamerSinksWorkarounds.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GStreamerSinksWorkarounds.h'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GLVideoSinkGStreamer.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GLVideoSinkGStreamer.h'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'DMABufVideoSinkGStreamer.cpp'),
@@ -283,6 +282,10 @@ _PATH_RULES_SPECIFIER = [
       os.path.join('Source', 'WebCore', 'platform', 'gstreamer', 'WebKitFliteSourceGStreamer.h'),
       os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMediaStreamSource.h'),
       os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMediaStreamSource.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMockDevice.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMockDevice.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMockDeviceProvider.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMockDeviceProvider.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'ProxyResolverSoup.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'ProxyResolverSoup.h'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'WebKitAutoconfigProxyResolver.cpp'),
@@ -347,6 +350,13 @@ _PATH_RULES_SPECIFIER = [
      os.path.join('Tools', 'Scripts', 'webkitpy', 'binary_bundling', 'dlopenwrap')],
      ["-readability/naming/underscores",
       "-whitespace/tab"]),
+
+    ([  # The GTK/WPE MiniBrowser uses public API and GLib-style conventions and indentation.
+     os.path.join('Tools', 'MiniBrowser', 'gtk'),
+     os.path.join('Tools', 'MiniBrowser', 'wpe')],
+     ["-readability/enum_casing",
+      "-readability/naming/underscores",
+      "-whitespace/indent"]),
 
     ([  # MiniBrowser doesn't use WTF, but only public WebKit API.
      os.path.join('Tools', 'MiniBrowser')],

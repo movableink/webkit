@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -75,6 +75,7 @@ const MessageDescription messageDescriptions[static_cast<size_t>(MessageName::Co
     { "TestWithSemaphore_SendSemaphore", ReceiverName::TestWithSemaphore, false, false },
     { "TestWithStreamBatched_SendString", ReceiverName::TestWithStreamBatched, true, false },
     { "TestWithStreamBuffer_SendStreamBuffer", ReceiverName::TestWithStreamBuffer, false, false },
+    { "TestWithStreamServerConnectionHandle_SendStreamServerConnection", ReceiverName::TestWithStreamServerConnectionHandle, false, false },
     { "TestWithStream_CallWithIdentifier", ReceiverName::TestWithStream, true, false },
 #if PLATFORM(COCOA)
     { "TestWithStream_SendMachSendRight", ReceiverName::TestWithStream, true, false },

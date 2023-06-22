@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -185,7 +185,7 @@ static bool defaultShouldDecidePolicyBeforeLoadingQuickLookPreview()
 #endif
     double _sampledPageTopColorMaxDifference;
     double _sampledPageTopColorMinHeight;
-    BOOL _markedTextInputEnabled;
+    BOOL _allowsInlinePredictions;
 
     RetainPtr<NSString> _mediaContentTypesRequiringHardwareSupport;
     RetainPtr<NSArray<NSString *>> _additionalSupportedImageTypes;
@@ -287,9 +287,19 @@ static bool defaultShouldDecidePolicyBeforeLoadingQuickLookPreview()
     _sampledPageTopColorMaxDifference = DEFAULT_VALUE_FOR_SampledPageTopColorMaxDifference;
     _sampledPageTopColorMinHeight = DEFAULT_VALUE_FOR_SampledPageTopColorMinHeight;
 
-    _markedTextInputEnabled = NO;
+    _allowsInlinePredictions = NO;
 
     return self;
+}
+
+- (void)setAllowsInlinePredictions:(BOOL)enabled
+{
+    _allowsInlinePredictions = enabled;
+}
+
+- (BOOL)allowsInlinePredictions
+{
+    return _allowsInlinePredictions;
 }
 
 - (NSString *)description
@@ -327,9 +337,9 @@ static bool defaultShouldDecidePolicyBeforeLoadingQuickLookPreview()
     [coder encodeBool:self.allowsPictureInPictureMediaPlayback forKey:@"allowsPictureInPictureMediaPlayback"];
     [coder encodeBool:self.ignoresViewportScaleLimits forKey:@"ignoresViewportScaleLimits"];
     [coder encodeInteger:self._dragLiftDelay forKey:@"dragLiftDelay"];
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [coder encodeBool:self._textInteractionGesturesEnabled forKey:@"textInteractionGesturesEnabled"];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
     [coder encodeBool:self._longPressActionsEnabled forKey:@"longPressActionsEnabled"];
     [coder encodeBool:self._systemPreviewEnabled forKey:@"systemPreviewEnabled"];
     [coder encodeBool:self._shouldDecidePolicyBeforeLoadingQuickLookPreview forKey:@"shouldDecidePolicyBeforeLoadingQuickLookPreview"];
@@ -367,9 +377,9 @@ static bool defaultShouldDecidePolicyBeforeLoadingQuickLookPreview()
     self.allowsPictureInPictureMediaPlayback = [coder decodeBoolForKey:@"allowsPictureInPictureMediaPlayback"];
     self.ignoresViewportScaleLimits = [coder decodeBoolForKey:@"ignoresViewportScaleLimits"];
     self._dragLiftDelay = toDragLiftDelay([coder decodeIntegerForKey:@"dragLiftDelay"]);
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     self._textInteractionGesturesEnabled = [coder decodeBoolForKey:@"textInteractionGesturesEnabled"];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
     self._longPressActionsEnabled = [coder decodeBoolForKey:@"longPressActionsEnabled"];
     self._systemPreviewEnabled = [coder decodeBoolForKey:@"systemPreviewEnabled"];
     self._shouldDecidePolicyBeforeLoadingQuickLookPreview = [coder decodeBoolForKey:@"shouldDecidePolicyBeforeLoadingQuickLookPreview"];
@@ -481,7 +491,7 @@ static bool defaultShouldDecidePolicyBeforeLoadingQuickLookPreview()
     configuration->_sampledPageTopColorMaxDifference = self->_sampledPageTopColorMaxDifference;
     configuration->_sampledPageTopColorMinHeight = self->_sampledPageTopColorMinHeight;
 
-    configuration->_markedTextInputEnabled = self->_markedTextInputEnabled;
+    configuration->_allowsInlinePredictions = self->_allowsInlinePredictions;
 
     return configuration;
 }
@@ -650,10 +660,6 @@ static NSString *defaultApplicationNameForUserAgent()
 
     return static_cast<WebKit::WebURLSchemeHandlerCocoa*>(handler.get())->apiHandler();
 }
-
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/WKWebViewConfigurationAdditions.mm>
-#endif
 
 #if PLATFORM(IOS_FAMILY)
 - (BOOL)limitsNavigationsToAppBoundDomains
@@ -1410,6 +1416,16 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
     _pageConfiguration->setAllowTestOnlyIPC(allowTestOnlyIPC);
 }
 
+- (BOOL)_delaysWebProcessLaunchUntilFirstLoad
+{
+    return _pageConfiguration->delaysWebProcessLaunchUntilFirstLoad();
+}
+
+- (void)_setDelaysWebProcessLaunchUntilFirstLoad:(BOOL)delaysWebProcessLaunchUntilFirstLoad
+{
+    _pageConfiguration->setDelaysWebProcessLaunchUntilFirstLoad(delaysWebProcessLaunchUntilFirstLoad);
+}
+
 - (BOOL)_shouldRelaxThirdPartyCookieBlocking
 {
     return _pageConfiguration->shouldRelaxThirdPartyCookieBlocking() == WebCore::ShouldRelaxThirdPartyCookieBlocking::Yes;
@@ -1482,14 +1498,15 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
     return WebKit::toWKContentSecurityPolicyModeForExtension(_pageConfiguration->contentSecurityPolicyModeForExtension());
 }
 
+// FIXME: Remove this SPI once rdar://110277838 is resolved and all clients adopt the API.
 - (void)_setMarkedTextInputEnabled:(BOOL)enabled
 {
-    _markedTextInputEnabled = enabled;
+    _allowsInlinePredictions = enabled;
 }
 
 - (BOOL)_markedTextInputEnabled
 {
-    return _markedTextInputEnabled;
+    return _allowsInlinePredictions;
 }
 
 @end

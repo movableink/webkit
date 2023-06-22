@@ -79,14 +79,15 @@ void SVGMPathElement::clearResourceReferences()
 
 Node::InsertedIntoAncestorResult SVGMPathElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    auto result = SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (insertionType.connectedToDocument)
         return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
-    return InsertedIntoAncestorResult::Done;
+    return result;
 }
 
 void SVGMPathElement::didFinishInsertingNode()
 {
+    SVGElement::didFinishInsertingNode();
     buildPendingResource();
 }
 
@@ -98,10 +99,10 @@ void SVGMPathElement::removedFromAncestor(RemovalType removalType, ContainerNode
         clearResourceReferences();
 }
 
-void SVGMPathElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGMPathElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGElement::parseAttribute(name, value);
-    SVGURIReference::parseAttribute(name, value);
+    SVGURIReference::parseAttribute(name, newValue);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGMPathElement::svgAttributeChanged(const QualifiedName& attrName)

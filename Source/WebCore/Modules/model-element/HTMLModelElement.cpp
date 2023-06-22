@@ -55,6 +55,7 @@
 #include "MouseEvent.h"
 #include "Page.h"
 #include "PlatformMouseEvent.h"
+#include "RenderBoxInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerModelObject.h"
@@ -380,7 +381,7 @@ bool HTMLModelElement::isInteractive() const
     return hasAttributeWithoutSynchronization(HTMLNames::interactiveAttr);
 }
 
-void HTMLModelElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLModelElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == srcAttr)
         sourcesChanged();
@@ -388,7 +389,7 @@ void HTMLModelElement::parseAttribute(const QualifiedName& name, const AtomStrin
         if (m_modelPlayer)
             m_modelPlayer->setInteractionEnabled(isInteractive());
     } else
-        HTMLElement::parseAttribute(name, value);
+        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void HTMLModelElement::defaultEventHandler(Event& event)

@@ -63,8 +63,9 @@
 #include "OrderIterator.h"
 #include "Page.h"
 #include "PseudoElement.h"
-#include "RenderBox.h"
+#include "RenderBoxInlines.h"
 #include "RenderBoxModelObject.h"
+#include "RenderElementInlines.h"
 #include "RenderFlexibleBox.h"
 #include "RenderGrid.h"
 #include "RenderInline.h"
@@ -75,6 +76,7 @@
 #include "TextDirection.h"
 #include <wtf/MathExtras.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
 
@@ -86,12 +88,6 @@ static constexpr float rulerStepIncrement = 50;
 static constexpr float rulerStepLength = 8;
 static constexpr float rulerSubStepIncrement = 5;
 static constexpr float rulerSubStepLength = 5;
-
-static constexpr UChar bullet = 0x2022;
-static constexpr UChar ellipsis = 0x2026;
-static constexpr UChar multiplicationSign = 0x00D7;
-static constexpr UChar thinSpace = 0x2009;
-static constexpr UChar emSpace = 0x2003;
 
 enum class Flip : bool { No, Yes };
 
@@ -107,7 +103,7 @@ static bool isInNodeList(const Node& node, const NodeList& list)
 static void truncateWithEllipsis(String& string, size_t length)
 {
     if (string.length() > length)
-        string = makeString(StringView(string).left(length), ellipsis);
+        string = makeString(StringView(string).left(length), horizontalEllipsis);
 }
 
 static FloatPoint localPointToRootPoint(const LocalFrameView* view, const FloatPoint& point)
@@ -1419,10 +1415,10 @@ void InspectorOverlay::drawGridOverlay(GraphicsContext& context, const Inspector
 
 static Vector<String> authoredGridTrackSizes(Node* node, GridTrackSizingDirection direction, unsigned expectedTrackCount)
 {
-    if (!is<StyledElement>(node))
+    auto* element = dynamicDowncast<StyledElement>(node);
+    if (!element)
         return { };
 
-    auto element = downcast<StyledElement>(node);
     auto directionCSSPropertyID = direction == GridTrackSizingDirection::ForColumns ? CSSPropertyID::CSSPropertyGridTemplateColumns : CSSPropertyID::CSSPropertyGridTemplateRows;
     RefPtr<CSSValue> cssValue;
     if (auto* inlineStyle = element->inlineStyle())
@@ -1441,7 +1437,8 @@ static Vector<String> authoredGridTrackSizes(Node* node, GridTrackSizingDirectio
         }
     }
 
-    if (!is<CSSValueList>(cssValue))
+    auto* cssValueList = dynamicDowncast<CSSValueList>(cssValue.get());
+    if (!cssValueList)
         return { };
     
     Vector<String> trackSizes;
@@ -1451,11 +1448,11 @@ static Vector<String> authoredGridTrackSizes(Node* node, GridTrackSizingDirectio
             trackSizes.append(currentValue.cssText());
     };
 
-    for (auto& currentValue : downcast<CSSValueList>(*cssValue)) {
-        if (is<CSSGridAutoRepeatValue>(currentValue)) {
+    for (auto& currentValue : *cssValueList) {
+        if (auto* cssGridAutoRepeatValue = dynamicDowncast<CSSGridAutoRepeatValue>(currentValue)) {
             // Auto-repeated values will be looped through until no more values were used in layout based on the expected track count.
             while (trackSizes.size() < expectedTrackCount) {
-                for (auto& autoRepeatValue : downcast<CSSValueList>(currentValue)) {
+                for (auto& autoRepeatValue : *cssGridAutoRepeatValue) {
                     handleValueIgnoringLineNames(autoRepeatValue);
                     if (trackSizes.size() >= expectedTrackCount)
                         break;
@@ -1464,10 +1461,10 @@ static Vector<String> authoredGridTrackSizes(Node* node, GridTrackSizingDirectio
             break;
         }
 
-        if (is<CSSGridIntegerRepeatValue>(currentValue)) {
-            size_t repetitions = downcast<CSSGridIntegerRepeatValue>(currentValue).repetitions();
+        if (auto* cssGridIntegerRepeatValue = dynamicDowncast<CSSGridIntegerRepeatValue>(currentValue)) {
+            size_t repetitions = cssGridIntegerRepeatValue->repetitions();
             for (size_t i = 0; i < repetitions; ++i) {
-                for (auto& integerRepeatValue : downcast<CSSValueList>(currentValue))
+                for (auto& integerRepeatValue : *cssGridIntegerRepeatValue)
                     handleValueIgnoringLineNames(integerRepeatValue);
             }
             continue;
@@ -1486,19 +1483,15 @@ static OrderedNamedGridLinesMap gridLineNames(const RenderStyle* renderStyle, Gr
     
     OrderedNamedGridLinesMap combinedGridLineNames;
     auto appendLineNames = [&](unsigned index, const Vector<String>& newNames) {
-        if (combinedGridLineNames.contains(index)) {
-            auto names = combinedGridLineNames.take(index);
-            names.appendVector(newNames);
-            combinedGridLineNames.add(index, names);
-        } else
-            combinedGridLineNames.add(index, newNames);
+        if (auto result = combinedGridLineNames.map.add(index, newNames); !result.isNewEntry)
+            result.iterator->value.appendVector(newNames);
     };
-    
+
     auto orderedGridLineNames = direction == GridTrackSizingDirection::ForColumns ? renderStyle->orderedNamedGridColumnLines() : renderStyle->orderedNamedGridRowLines();
-    for (auto& [i, names] : orderedGridLineNames)
+    for (auto& [i, names] : orderedGridLineNames.map)
         appendLineNames(i, names);
-    
-    auto autoRepeatOrderedGridLineNames = direction == GridTrackSizingDirection::ForColumns ? renderStyle->autoRepeatOrderedNamedGridColumnLines() : renderStyle->autoRepeatOrderedNamedGridRowLines();
+
+    auto& autoRepeatOrderedGridLineNames = (direction == GridTrackSizingDirection::ForColumns ? renderStyle->autoRepeatOrderedNamedGridColumnLines() : renderStyle->autoRepeatOrderedNamedGridRowLines()).map;
     auto autoRepeatInsertionPoint = direction == GridTrackSizingDirection::ForColumns ? renderStyle->gridAutoRepeatColumnsInsertionPoint() : renderStyle->gridAutoRepeatRowsInsertionPoint();
     unsigned autoRepeatIndex = 0;
     while (autoRepeatOrderedGridLineNames.size() && autoRepeatIndex < expectedLineCount - autoRepeatInsertionPoint) {
@@ -1509,7 +1502,7 @@ static OrderedNamedGridLinesMap gridLineNames(const RenderStyle* renderStyle, Gr
     }
 
     auto implicitGridLineNames = direction == GridTrackSizingDirection::ForColumns ? renderStyle->implicitNamedGridColumnLines() : renderStyle->implicitNamedGridRowLines();
-    for (auto& [name, indexes] : implicitGridLineNames) {
+    for (auto& [name, indexes] : implicitGridLineNames.map) {
         for (auto i : indexes)
             appendLineNames(i, {name});
     }
@@ -1711,8 +1704,8 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
             if (i <= authoredTrackColumnSizes.size())
                 lineLabel.append(emSpace, -static_cast<int>(authoredTrackColumnSizes.size() - i + 1));
         }
-        if (gridOverlay.config.showLineNames && columnLineNames.contains(i)) {
-            for (auto lineName : columnLineNames.get(i)) {
+        if (gridOverlay.config.showLineNames) {
+            for (auto lineName : columnLineNames.map.get(i)) {
                 if (!lineLabel.isEmpty())
                     lineLabel.append(thinSpace, bullet, thinSpace);
                 lineLabel.append(lineName);
@@ -1795,8 +1788,8 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
             if (i <= authoredTrackRowSizes.size())
                 lineLabel.append(emSpace, -static_cast<int>(authoredTrackRowSizes.size() - i + 1));
         }
-        if (gridOverlay.config.showLineNames && rowLineNames.contains(i)) {
-            for (auto lineName : rowLineNames.get(i)) {
+        if (gridOverlay.config.showLineNames) {
+            for (auto lineName : rowLineNames.map.get(i)) {
                 if (!lineLabel.isEmpty())
                     lineLabel.append(thinSpace, bullet, thinSpace);
                 lineLabel.append(lineName);
@@ -1822,7 +1815,7 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
     }
 
     if (gridOverlay.config.showAreaNames) {
-        for (auto& gridArea : node->renderStyle()->namedGridArea()) {
+        for (auto& gridArea : node->renderStyle()->namedGridArea().map) {
             auto& name = gridArea.key;
             auto& area = gridArea.value;
 

@@ -27,9 +27,11 @@
 #include "LayoutIntegrationCoverage.h"
 
 #include "DeprecatedGlobalSettings.h"
+#include "GapLength.h"
 #include "HTMLTextFormControlElement.h"
 #include "InlineWalker.h"
 #include "LayoutIntegrationLineLayout.h"
+#include "LineClampValue.h"
 #include "Logging.h"
 #include "RenderBlockFlow.h"
 #include "RenderChildIterator.h"
@@ -43,11 +45,14 @@
 #include "RenderListMarker.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderSVGBlock.h"
+#include "RenderStyleInlines.h"
 #include "RenderTable.h"
 #include "RenderTextControl.h"
 #include "RenderVTTCue.h"
 #include "RenderView.h"
 #include "Settings.h"
+#include "StyleContentAlignmentData.h"
+#include "StyleSelfAlignmentData.h"
 #include "TextUtil.h"
 #include <pal/Logging.h>
 #include <wtf/OptionSet.h>
@@ -145,7 +150,7 @@ static void printTextForSubtree(const RenderElement& renderer, unsigned& charact
     for (auto& child : childrenOfType<RenderObject>(downcast<RenderElement>(renderer))) {
         if (is<RenderText>(child)) {
             String text = downcast<RenderText>(child).text();
-            auto textView = StringView(text).stripWhiteSpace();
+            auto textView = StringView(text).trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
             auto length = std::min(charactersLeft, textView.length());
             stream << textView.left(length);
             charactersLeft -= length;
@@ -457,6 +462,21 @@ bool canUseForLineLayoutAfterStyleChange(const RenderBlockFlow& blockContainer, 
     return canUseForLineLayout(blockContainer);
 }
 
+bool canUseForPreferredWidthComputation(const RenderBlockFlow& blockContainer)
+{
+    for (auto walker = InlineWalker(blockContainer); !walker.atEnd(); walker.advance()) {
+        auto& renderer = *walker.current();
+        if (renderer.isText())
+            continue;
+        if (is<RenderLineBreak>(renderer))
+            continue;
+        if (is<RenderInline>(renderer))
+            continue;
+        return false;
+    }
+    return true;
+}
+
 bool shouldInvalidateLineLayoutPathAfterChangeFor(const RenderBlockFlow& rootBlockContainer, const RenderObject& renderer, const LineLayout& lineLayout, TypeOfChangeForInvalidation typeOfChange)
 {
     auto isSupportedRenderer = [](auto& renderer) {
@@ -471,6 +491,8 @@ bool shouldInvalidateLineLayoutPathAfterChangeFor(const RenderBlockFlow& rootBlo
     if (!isSupportedRenderer(renderer) || !is<RenderBlockFlow>(renderer.parent()))
         return true;
     if (lineLayout.hasOutOfFlowContent())
+        return true;
+    if (rootBlockContainer.containsFloats())
         return true;
     if (lineLayout.contentNeedsVisualReordering() || (is<RenderText>(renderer) && Layout::TextUtil::containsStrongDirectionalityText(downcast<RenderText>(renderer).text()))) {
         // FIXME: InlineItemsBuilder needs some work to support paragraph level bidi handling.

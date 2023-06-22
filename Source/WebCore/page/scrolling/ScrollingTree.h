@@ -142,6 +142,9 @@ public:
     virtual void scrollingTreeNodeWillStartScroll(ScrollingNodeID) { }
     virtual void scrollingTreeNodeDidEndScroll(ScrollingNodeID) { }
 
+    virtual void scrollingTreeNodeDidBeginScrollSnapping(ScrollingNodeID) { }
+    virtual void scrollingTreeNodeDidEndScrollSnapping(ScrollingNodeID) { }
+
     WEBCORE_EXPORT TrackingType eventTrackingTypeForPoint(EventTrackingRegions::EventType, IntPoint);
 
     virtual void receivedWheelEventWithPhases(PlatformWheelEventPhase /* phase */, PlatformWheelEventPhase /* momentumPhase */) { }
@@ -200,6 +203,8 @@ public:
     void setIsMonitoringWheelEvents(bool b) { m_isMonitoringWheelEvents = b; }
     bool inCommitTreeState() const { return m_inCommitTreeState; }
 
+    WEBCORE_EXPORT bool hasRecentActivity();
+
     void scrollBySimulatingWheelEventForTesting(ScrollingNodeID, FloatSize);
 
     virtual void lockLayersForHitTesting() { }
@@ -242,6 +247,7 @@ public:
 
     WEBCORE_EXPORT Seconds frameDuration();
     WEBCORE_EXPORT Seconds maxAllowableRenderingUpdateDurationForSynchronization();
+    WEBCORE_EXPORT virtual void scrollingTreeNodeScrollbarVisibilityDidChange(ScrollingNodeID, ScrollbarOrientation, bool) { };
     
 protected:
     WEBCORE_EXPORT WheelEventHandlingResult handleWheelEventWithNode(const PlatformWheelEvent&, OptionSet<WheelEventProcessingSteps>, ScrollingTreeNode*, EventTargeting = EventTargeting::Propagate);

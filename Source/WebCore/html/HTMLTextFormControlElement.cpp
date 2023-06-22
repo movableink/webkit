@@ -54,6 +54,7 @@
 #include "Page.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderLineBreak.h"
+#include "RenderStyleSetters.h"
 #include "RenderTextControlSingleLine.h"
 #include "RenderTheme.h"
 #include "ScriptDisallowedScope.h"
@@ -547,15 +548,15 @@ void HTMLTextFormControlElement::selectionChanged(bool shouldFireSelectEvent)
 void HTMLTextFormControlElement::scheduleSelectEvent()
 {
     queueTaskToDispatchEvent(TaskSource::UserInteraction, Event::create(eventNames().selectEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
-} 
+}
 
-void HTMLTextFormControlElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLTextFormControlElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == placeholderAttr) {
         updatePlaceholderText();
         updatePlaceholderVisibility();
     } else
-        HTMLFormControlElement::parseAttribute(name, value);
+        HTMLFormControlElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void HTMLTextFormControlElement::disabledStateChanged()

@@ -37,9 +37,9 @@ class OriginQuotaManager : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPt
 public:
     using GetUsageFunction = Function<uint64_t()>;
     using IncreaseQuotaFunction = Function<void(QuotaIncreaseRequestIdentifier, uint64_t currentQuota, uint64_t currentUsage, uint64_t requestedIncrease)>;
-    using NotifyUsageUpdateFunction = Function<void(uint64_t)>;
-    static Ref<OriginQuotaManager> create(uint64_t quota, uint64_t standardReportedQuota, GetUsageFunction&&, IncreaseQuotaFunction&& = { }, NotifyUsageUpdateFunction&& = { });
-    uint64_t reportedQuota() const;
+    using NotifySpaceGrantedFunction = Function<void(uint64_t)>;
+    static Ref<OriginQuotaManager> create(uint64_t quota, uint64_t standardReportedQuota, GetUsageFunction&&, IncreaseQuotaFunction&& = { }, NotifySpaceGrantedFunction&& = { });
+    uint64_t reportedQuota();
     uint64_t usage();
     enum class Decision : bool { Deny, Grant };
     using RequestCallback = CompletionHandler<void(Decision)>;
@@ -50,11 +50,11 @@ public:
     void resetQuotaForTesting();
 
 private:
-    OriginQuotaManager(uint64_t quota, uint64_t standardReportedQuota, GetUsageFunction&&, IncreaseQuotaFunction&&, NotifyUsageUpdateFunction&&);
+    OriginQuotaManager(uint64_t quota, uint64_t standardReportedQuota, GetUsageFunction&&, IncreaseQuotaFunction&&, NotifySpaceGrantedFunction&&);
     void handleRequests();
     bool grantWithCurrentQuota(uint64_t spaceRequested);
     bool grantFastPath(uint64_t spaceRequested);
-    void usageUpdated(uint64_t newUsage);
+    void spaceGranted(uint64_t amount);
 
     struct Request {
         uint64_t spaceRequested;
@@ -71,7 +71,7 @@ private:
     std::optional<uint64_t> m_usage;
     GetUsageFunction m_getUsageFunction;
     IncreaseQuotaFunction m_increaseQuotaFunction;
-    NotifyUsageUpdateFunction m_notifyUsageUpdateFunction;
+    NotifySpaceGrantedFunction m_notifySpaceGrantedFunction;
 };
 
 } // namespace WebKit

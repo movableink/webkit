@@ -385,6 +385,17 @@ public:
     static String defaultJavaScriptConfigurationDirectory(const String& baseDataDirectory = nullString());
 
     static constexpr uint64_t defaultPerOriginQuota() { return 1000 * MB; }
+    static constexpr uint64_t defaultStandardVolumeCapacity() {
+#if PLATFORM(MAC)
+        return 128 * GB;
+#elif PLATFORM(IOS) || PLATFORM(VISION)
+        return 64 * GB;
+#else
+        return 16 * GB;
+#endif
+    }
+    static std::optional<double> defaultOriginQuotaRatio();
+    static std::optional<double> defaultTotalQuotaRatio();
     static UnifiedOriginStorageLevel defaultUnifiedOriginStorageLevel();
 
 #if USE(GLIB)
@@ -425,6 +436,9 @@ public:
     void clearServiceWorkerNotification(const UUID& notificationID);
     void didDestroyServiceWorkerNotification(const UUID& notificationID);
 
+    bool hasClientGetDisplayedNotifications() const;
+    void getNotifications(const URL& registrationalURL, CompletionHandler<void(Vector<WebCore::NotificationData>&&)>&&);
+
     void openWindowFromServiceWorker(const String& urlString, const WebCore::SecurityOriginData& serviceWorkerOrigin, CompletionHandler<void(std::optional<WebCore::PageIdentifier>)>&&);
     void reportServiceWorkerConsoleMessage(const URL&, const WebCore::SecurityOriginData&, MessageSource,  MessageLevel, const String& message, unsigned long requestIdentifier);
 
@@ -448,8 +462,9 @@ public:
 
 #if HAVE(NW_PROXY_CONFIG)
     void clearProxyConfigData();
-    void setProxyConfigData(const API::Data&, uuid_t proxyIdentifier);
+    void setProxyConfigData(Vector<std::pair<Vector<uint8_t>, UUID>>&&);
 #endif
+    void setCompletionHandlerForRemovalFromNetworkProcess(CompletionHandler<void(String&&)>&&);
     
 private:
     enum class ForceReinitialization : bool { No, Yes };
@@ -574,6 +589,7 @@ private:
     Ref<WebCore::LocalWebLockRegistry> m_webLockRegistry;
 
     RefPtr<WebPreferences> m_serviceWorkerOverridePreferences;
+    CompletionHandler<void(String&&)> m_completionHandlerForRemovalFromNetworkProcess;
 };
 
 }

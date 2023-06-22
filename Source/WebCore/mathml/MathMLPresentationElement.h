@@ -41,10 +41,7 @@ public:
 protected:
     constexpr static auto CreateMathMLPresentationElement = CreateMathMLElement;
     MathMLPresentationElement(const QualifiedName& tagName, Document&, ConstructionType = CreateMathMLPresentationElement);
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
-
-    static bool isPhrasingContent(const Node&);
-    static bool isFlowContent(const Node&);
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
 
     static std::optional<bool> toOptionalBool(const BooleanValue& value) { return value == BooleanValue::Default ? std::nullopt : std::optional<bool>(value == BooleanValue::True); }
     const BooleanValue& cachedBooleanAttribute(const QualifiedName&, std::optional<BooleanValue>&);

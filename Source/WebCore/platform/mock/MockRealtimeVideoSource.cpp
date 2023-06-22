@@ -42,7 +42,6 @@
 #include "NotImplemented.h"
 #include "PlatformLayer.h"
 #include "RealtimeMediaSourceSettings.h"
-#include "RealtimeVideoSource.h"
 #include "VideoFrame.h"
 #include <math.h>
 #include <wtf/UUID.h>
@@ -68,18 +67,18 @@ CaptureSourceOrError MockRealtimeVideoSource::create(String&& deviceID, AtomStri
 }
 #endif
 
-static HashSet<MockRealtimeVideoSource*>& allMockRealtimeVideoSource()
+static ThreadSafeWeakHashSet<MockRealtimeVideoSource>& allMockRealtimeVideoSource()
 {
-    static MainThreadNeverDestroyed<HashSet<MockRealtimeVideoSource*>> videoSources;
+    static NeverDestroyed<ThreadSafeWeakHashSet<MockRealtimeVideoSource>> videoSources;
     return videoSources;
 }
 
 MockRealtimeVideoSource::MockRealtimeVideoSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&& hashSalts, PageIdentifier pageIdentifier)
     : RealtimeVideoCaptureSource(CaptureDevice { WTFMove(deviceID), CaptureDevice::DeviceType::Camera, WTFMove(name) }, WTFMove(hashSalts), pageIdentifier)
     , m_emitFrameTimer(RunLoop::current(), this, &MockRealtimeVideoSource::generateFrame)
-    , m_deviceOrientation { VideoFrame::Rotation::None }
+    , m_deviceOrientation { VideoFrameRotation::None }
 {
-    allMockRealtimeVideoSource().add(this);
+    allMockRealtimeVideoSource().add(*this);
 
     auto device = MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(persistentID());
     ASSERT(device);
@@ -105,7 +104,7 @@ MockRealtimeVideoSource::MockRealtimeVideoSource(String&& deviceID, AtomString&&
 
 MockRealtimeVideoSource::~MockRealtimeVideoSource()
 {
-    allMockRealtimeVideoSource().remove(this);
+    allMockRealtimeVideoSource().remove(*this);
 }
 
 bool MockRealtimeVideoSource::supportsSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate, std::optional<double> zoom)
@@ -143,7 +142,8 @@ const RealtimeMediaSourceCapabilities& MockRealtimeVideoSource::capabilities()
 
         if (mockCamera()) {
             auto facingMode = std::get<MockCameraProperties>(m_device.properties).facingMode;
-            capabilities.addFacingMode(facingMode);
+            if (facingMode != VideoFacingMode::Unknown)
+                capabilities.addFacingMode(facingMode);
             capabilities.setDeviceId(hashedId());
             updateCapabilities(capabilities);
 
@@ -190,6 +190,8 @@ const RealtimeMediaSourceSettings& MockRealtimeVideoSource::settings()
         settings.setLogicalSurface(false);
     }
     settings.setDeviceId(hashedId());
+    settings.setGroupId(captureDevice().groupId());
+
     settings.setFrameRate(frameRate());
     auto size = this->size();
     if (mockCamera()) {
@@ -198,17 +200,18 @@ const RealtimeMediaSourceSettings& MockRealtimeVideoSource::settings()
     }
     settings.setWidth(size.width());
     settings.setHeight(size.height());
-    if (aspectRatio())
-        settings.setAspectRatio(aspectRatio());
 
     RealtimeMediaSourceSupportedConstraints supportedConstraints;
     supportedConstraints.setSupportsFrameRate(true);
     supportedConstraints.setSupportsWidth(true);
     supportedConstraints.setSupportsHeight(true);
-    supportedConstraints.setSupportsAspectRatio(true);
+    if (mockCamera())
+        supportedConstraints.setSupportsAspectRatio(true);
     supportedConstraints.setSupportsDeviceId(true);
+    supportedConstraints.setSupportsGroupId(true);
     if (mockCamera()) {
-        supportedConstraints.setSupportsFacingMode(true);
+        if (facingMode() != VideoFacingMode::Unknown)
+            supportedConstraints.setSupportsFacingMode(true);
         if (isZoomSupported(presets())) {
             supportedConstraints.setSupportsZoom(true);
             settings.setZoom(zoom());
@@ -237,6 +240,11 @@ void MockRealtimeVideoSource::setFrameRateAndZoomWithPreset(double frameRate, do
 IntSize MockRealtimeVideoSource::captureSize() const
 {
     return m_preset ? m_preset->size() : this->size();
+}
+
+VideoFrameRotation MockRealtimeVideoSource::videoFrameRotation() const
+{
+    return m_deviceOrientation;
 }
 
 void MockRealtimeVideoSource::settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag> settings)
@@ -538,7 +546,7 @@ void MockRealtimeVideoSource::orientationChanged(IntDegrees orientation)
 
 void MockRealtimeVideoSource::monitorOrientation(OrientationNotifier& notifier)
 {
-    if (!mockCamera())
+    if (!mockCamera() || std::get<MockCameraProperties>(m_device.properties).facingMode == VideoFacingMode::Unknown)
         return;
 
     notifier.addObserver(*this);
@@ -547,14 +555,14 @@ void MockRealtimeVideoSource::monitorOrientation(OrientationNotifier& notifier)
 
 void MockRealtimeVideoSource::setIsInterrupted(bool isInterrupted)
 {
-    for (auto* source : allMockRealtimeVideoSource()) {
-        if (!source->isProducingData())
+    for (auto& source : allMockRealtimeVideoSource()) {
+        if (!source.isProducingData())
             continue;
         if (isInterrupted)
-            source->m_emitFrameTimer.stop();
+            source.m_emitFrameTimer.stop();
         else
-            source->startCaptureTimer();
-        source->notifyMutedChange(isInterrupted);
+            source.startCaptureTimer();
+        source.notifyMutedChange(isInterrupted);
     }
 }
 

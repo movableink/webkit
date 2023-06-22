@@ -61,8 +61,8 @@ public:
     void seekCompleted();
 
 #if !RELEASE_LOG_DISABLED
-    const void* mediaPlayerLogIdentifier() { return m_player->mediaPlayerLogIdentifier(); }
-    const Logger& mediaPlayerLogger() { return m_player->mediaPlayerLogger(); }
+    const void* mediaPlayerLogIdentifier() { return m_player.get()->mediaPlayerLogIdentifier(); }
+    const Logger& mediaPlayerLogger() { return m_player.get()->mediaPlayerLogger(); }
 #endif
 
 private:
@@ -83,7 +83,7 @@ private:
     bool paused() const override;
     MediaPlayer::NetworkState networkState() const override;
     MediaTime maxMediaTimeSeekable() const override;
-    std::unique_ptr<PlatformTimeRanges> buffered() const override;
+    const PlatformTimeRanges& buffered() const override;
     bool didLoadingProgress() const override;
     void setPresentationSize(const IntSize&) override;
     void paint(GraphicsContext&, const FloatRect&) override;
@@ -92,7 +92,7 @@ private:
     std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() override;
     DestinationColorSpace colorSpace() override;
 
-    MediaPlayer* m_player;
+    ThreadSafeWeakPtr<MediaPlayer> m_player;
     RefPtr<MockMediaSourcePrivate> m_mediaSourcePrivate;
 
     MediaTime m_currentTime;

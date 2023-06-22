@@ -82,8 +82,8 @@ void RemoteLayerTreeDisplayLinkClient::displayLinkFired(WebCore::PlatformDisplay
     });
 }
 
-RemoteLayerTreeDrawingAreaProxyMac::RemoteLayerTreeDrawingAreaProxyMac(WebPageProxy& pageProxy, WebProcessProxy& processProxy)
-    : RemoteLayerTreeDrawingAreaProxy(pageProxy, processProxy)
+RemoteLayerTreeDrawingAreaProxyMac::RemoteLayerTreeDrawingAreaProxyMac(WebPageProxy& pageProxy)
+    : RemoteLayerTreeDrawingAreaProxy(pageProxy)
     , m_displayLinkClient(makeUnique<RemoteLayerTreeDisplayLinkClient>(pageProxy.identifier()))
 {
 }
@@ -305,12 +305,17 @@ void RemoteLayerTreeDrawingAreaProxyMac::commitTransientZoom(double scale, Float
     NSValue *transformValue = [NSValue valueWithCATransform3D:transform];
     [renderViewAnimationCA setToValue:transformValue];
     
-    [CATransaction setCompletionBlock:[layerForPageScale, this, scale, constrainedOrigin, transform] () {
-        layerForPageScale.transform = transform;
-        [layerForPageScale removeAnimationForKey:transientAnimationKey];
-        [layerForPageScale removeAnimationForKey:@"transientZoomCommit"];
-        m_transactionIDAfterEndingTransientZoom = nextLayerTreeTransactionID();
-        m_webPageProxy.send(Messages::DrawingArea::CommitTransientZoom(scale, constrainedOrigin), m_identifier);
+    [CATransaction setCompletionBlock:[scale, constrainedOrigin, transform, protectedWebPageProxy = Ref { m_webPageProxy }] () {
+        if (RemoteLayerTreeDrawingAreaProxyMac* drawingArea = static_cast<RemoteLayerTreeDrawingAreaProxyMac*>(protectedWebPageProxy->drawingArea())) {
+            CALayer *layerForPageScale = drawingArea->remoteLayerTreeHost().layerForID(drawingArea->pageScalingLayerID());
+            if (layerForPageScale) {
+                layerForPageScale.transform = transform;
+                [layerForPageScale removeAnimationForKey:transientAnimationKey];
+                [layerForPageScale removeAnimationForKey:@"transientZoomCommit"];
+            }
+            drawingArea->updateZoomTransactionID();
+            protectedWebPageProxy->send(Messages::DrawingArea::CommitTransientZoom(scale, constrainedOrigin), drawingArea->identifier());
+        }
     }];
 
     [layerForPageScale addAnimation:renderViewAnimationCA.get() forKey:@"transientZoomCommit"];
@@ -372,9 +377,9 @@ void RemoteLayerTreeDrawingAreaProxyMac::setDisplayLinkWantsFullSpeedUpdates(boo
         removeObserver(m_fullSpeedUpdateObserverID);
 }
 
-void RemoteLayerTreeDrawingAreaProxyMac::windowScreenDidChange(PlatformDisplayID displayID, std::optional<FramesPerSecond> nominalFramesPerSecond)
+void RemoteLayerTreeDrawingAreaProxyMac::windowScreenDidChange(PlatformDisplayID displayID)
 {
-    if (displayID == m_displayID && m_displayNominalFramesPerSecond == nominalFramesPerSecond)
+    if (displayID == m_displayID)
         return;
 
     bool hadFullSpeedOberver = m_fullSpeedUpdateObserverID.has_value();
@@ -384,9 +389,9 @@ void RemoteLayerTreeDrawingAreaProxyMac::windowScreenDidChange(PlatformDisplayID
     pauseDisplayRefreshCallbacks();
 
     m_displayID = displayID;
-    m_displayNominalFramesPerSecond = nominalFramesPerSecond;
+    m_displayNominalFramesPerSecond = displayNominalFramesPerSecond();
 
-    m_webPageProxy.scrollingCoordinatorProxy()->windowScreenDidChange(displayID, nominalFramesPerSecond);
+    m_webPageProxy.scrollingCoordinatorProxy()->windowScreenDidChange(displayID, m_displayNominalFramesPerSecond);
 
     scheduleDisplayRefreshCallbacks();
     if (hadFullSpeedOberver) {
@@ -394,6 +399,11 @@ void RemoteLayerTreeDrawingAreaProxyMac::windowScreenDidChange(PlatformDisplayID
         if (auto* displayLink = exisingDisplayLink())
             displayLink->addObserver(*m_displayLinkClient, *m_fullSpeedUpdateObserverID, displayLink->nominalFramesPerSecond());
     }
+}
+
+std::optional<WebCore::FramesPerSecond> RemoteLayerTreeDrawingAreaProxyMac::displayNominalFramesPerSecond()
+{
+    return displayLink().nominalFramesPerSecond();
 }
 
 void RemoteLayerTreeDrawingAreaProxyMac::didRefreshDisplay()
@@ -450,6 +460,11 @@ MachSendRight RemoteLayerTreeDrawingAreaProxyMac::createFence()
     } forPhase:kCATransactionPhasePostCommit];
 
     return fencePort;
+}
+
+void RemoteLayerTreeDrawingAreaProxyMac::updateZoomTransactionID()
+{
+    m_transactionIDAfterEndingTransientZoom = nextLayerTreeTransactionID();
 }
 
 

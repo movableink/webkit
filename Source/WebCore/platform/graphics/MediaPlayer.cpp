@@ -39,6 +39,7 @@
 #include "MIMETypeRegistry.h"
 #include "MediaPlayerPrivate.h"
 #include "MediaStrategy.h"
+#include "OriginAccessPatterns.h"
 #include "PlatformMediaResourceLoader.h"
 #include "PlatformMediaSessionManager.h"
 #include "PlatformScreen.h"
@@ -159,7 +160,7 @@ public:
 
     float maxTimeSeekable() const final { return 0; }
     double minTimeSeekable() const final { return 0; }
-    std::unique_ptr<PlatformTimeRanges> buffered() const final { return makeUnique<PlatformTimeRanges>(); }
+    const PlatformTimeRanges& buffered() const final { return PlatformTimeRanges::emptyRanges(); }
 
     double seekableTimeRangesLastModifiedTime() const final { return 0; }
     double liveUpdateInterval() const final { return 0; }
@@ -926,7 +927,7 @@ bool MediaPlayer::isVideoFullscreenStandby() const
 
 FloatSize MediaPlayer::videoInlineSize() const
 {
-    return m_private->videoInlineSize();
+    return client().mediaPlayerVideoInlineSize();
 }
 
 void MediaPlayer::setVideoInlineSizeFenced(const FloatSize& size, const WTF::MachSendRight& fence)
@@ -1036,22 +1037,22 @@ void MediaPlayer::setPitchCorrectionAlgorithm(PitchCorrectionAlgorithm pitchCorr
     m_private->setPitchCorrectionAlgorithm(pitchCorrectionAlgorithm);
 }
 
-std::unique_ptr<PlatformTimeRanges> MediaPlayer::buffered()
+const PlatformTimeRanges& MediaPlayer::buffered() const
 {
     return m_private->buffered();
 }
 
-std::unique_ptr<PlatformTimeRanges> MediaPlayer::seekable()
+const PlatformTimeRanges& MediaPlayer::seekable() const
 {
     return m_private->seekable();
 }
 
-MediaTime MediaPlayer::maxTimeSeekable()
+MediaTime MediaPlayer::maxTimeSeekable() const
 {
     return m_private->maxMediaTimeSeekable();
 }
 
-MediaTime MediaPlayer::minTimeSeekable()
+MediaTime MediaPlayer::minTimeSeekable() const
 {
     return m_private->minMediaTimeSeekable();
 }
@@ -1282,6 +1283,11 @@ void MediaPlayer::setShouldMaintainAspectRatio(bool maintainAspectRatio)
     m_private->setShouldMaintainAspectRatio(maintainAspectRatio);
 }
 
+void MediaPlayer::requestHostingContextID(LayerHostingContextIDCallback&& callback)
+{
+    return m_private->requestHostingContextID(WTFMove(callback));
+}
+
 LayerHostingContextID MediaPlayer::hostingContextID() const
 {
     return m_private->hostingContextID();
@@ -1300,7 +1306,7 @@ bool MediaPlayer::isCrossOrigin(const SecurityOrigin& origin) const
     if (m_url.protocolIsData())
         return false;
 
-    return !origin.canRequest(m_url);
+    return !origin.canRequest(m_url, EmptyOriginAccessPatterns::singleton());
 }
 
 MediaPlayer::MovieLoadType MediaPlayer::movieLoadType() const
@@ -1802,6 +1808,11 @@ bool MediaPlayer::shouldIgnoreIntrinsicSize()
     return m_private->shouldIgnoreIntrinsicSize();
 }
 
+void MediaPlayer::isLoopingChanged()
+{
+    m_private->isLoopingChanged();
+}
+
 void MediaPlayer::remoteEngineFailedToLoad()
 {
     client().mediaPlayerEngineFailedToLoad();
@@ -1971,6 +1982,22 @@ String convertEnumerationToString(MediaPlayer::SupportsType enumerationValue)
     static_assert(static_cast<size_t>(MediaPlayer::SupportsType::MayBeSupported) == 2, "MediaPlayer::SupportsType::MayBeSupported is not 2 as expected");
     ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
+}
+
+WTF::TextStream& operator<<(TextStream& ts, MediaPlayerEnums::VideoGravity gravity)
+{
+    switch (gravity) {
+    case MediaPlayerEnums::VideoGravity::Resize:
+        ts << "resize";
+        break;
+    case MediaPlayerEnums::VideoGravity::ResizeAspect:
+        ts << "resize-aspect";
+        break;
+    case MediaPlayerEnums::VideoGravity::ResizeAspectFill:
+        ts << "resize-aspect-fill";
+        break;
+    }
+    return ts;
 }
 
 String convertEnumerationToString(MediaPlayer::BufferingPolicy enumerationValue)

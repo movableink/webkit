@@ -10,7 +10,6 @@ list(APPEND WebCore_SOURCES
     platform/network/curl/CookieUtil.cpp
     platform/network/curl/CredentialStorageCurl.cpp
     platform/network/curl/CurlContext.cpp
-    platform/network/curl/CurlDownload.cpp
     platform/network/curl/CurlFormDataStream.cpp
     platform/network/curl/CurlMultipartHandle.cpp
     platform/network/curl/CurlProxySettings.cpp
@@ -26,10 +25,8 @@ list(APPEND WebCore_SOURCES
     platform/network/curl/ProtectionSpaceCurl.cpp
     platform/network/curl/PublicSuffixCurl.cpp
     platform/network/curl/ResourceErrorCurl.cpp
-    platform/network/curl/ResourceHandleCurl.cpp
     platform/network/curl/ResourceRequestCurl.cpp
     platform/network/curl/ResourceResponseCurl.cpp
-    platform/network/curl/SynchronousLoaderClientCurl.cpp
 )
 
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
@@ -38,7 +35,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/network/curl/CookieJarDB.h
     platform/network/curl/CookieUtil.h
     platform/network/curl/CurlContext.h
-    platform/network/curl/CurlDownload.h
     platform/network/curl/CurlFormDataStream.h
     platform/network/curl/CurlMultipartHandle.h
     platform/network/curl/CurlMultipartHandleClient.h
@@ -53,7 +49,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/network/curl/CurlStream.h
     platform/network/curl/CurlStreamScheduler.h
     platform/network/curl/DNSResolveQueueCurl.h
-    platform/network/curl/DownloadBundle.h
     platform/network/curl/OpenSSLHelper.h
     platform/network/curl/ProtectionSpaceCurl.h
     platform/network/curl/ResourceError.h

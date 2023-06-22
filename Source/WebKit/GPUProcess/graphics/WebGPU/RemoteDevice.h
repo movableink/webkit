@@ -28,23 +28,38 @@
 #if ENABLE(GPU_PROCESS)
 
 #include "RemoteQueue.h"
+#include "RemoteVideoFrameIdentifier.h"
+#include "SharedVideoFrame.h"
 #include "StreamMessageReceiver.h"
 #include "WebGPUError.h"
 #include "WebGPUIdentifier.h"
+#include <WebCore/MediaPlayerIdentifier.h>
 #include <pal/graphics/WebGPU/WebGPUErrorFilter.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
 #include <wtf/text/WTFString.h>
 
+typedef struct __CVBuffer* CVPixelBufferRef;
+
 namespace PAL::WebGPU {
 class Device;
+enum class DeviceLostReason : uint8_t;
 }
 
 namespace IPC {
+class Semaphore;
 class StreamServerConnection;
 }
 
+namespace WebCore {
+class MediaPlayer;
+class VideoFrame;
+}
+
 namespace WebKit {
+
+class RemoteGPU;
+class SharedMemoryHandle;
 
 namespace WebGPU {
 struct BindGroupDescriptor;
@@ -63,12 +78,18 @@ struct ShaderModuleDescriptor;
 struct TextureDescriptor;
 }
 
+#if ENABLE(VIDEO) && PLATFORM(COCOA)
+using PerformWithMediaPlayerOnMainThread = Function<void(std::variant<WebCore::MediaPlayerIdentifier, WebKit::RemoteVideoFrameReference>, Function<void(RefPtr<WebCore::VideoFrame>)>&&)>;
+#else
+using PerformWithMediaPlayerOnMainThread = Function<void()>;
+#endif
+
 class RemoteDevice final : public IPC::StreamMessageReceiver {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<RemoteDevice> create(PAL::WebGPU::Device& device, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, WebGPUIdentifier identifier, WebGPUIdentifier queueIdentifier)
+    static Ref<RemoteDevice> create(PerformWithMediaPlayerOnMainThread& performWithMediaPlayerOnMainThread, PAL::WebGPU::Device& device, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, WebGPUIdentifier identifier, WebGPUIdentifier queueIdentifier)
     {
-        return adoptRef(*new RemoteDevice(device, objectHeap, WTFMove(streamConnection), identifier, queueIdentifier));
+        return adoptRef(*new RemoteDevice(performWithMediaPlayerOnMainThread, device, objectHeap, WTFMove(streamConnection), identifier, queueIdentifier));
     }
 
     ~RemoteDevice();
@@ -80,7 +101,7 @@ public:
 private:
     friend class WebGPU::ObjectHeap;
 
-    RemoteDevice(PAL::WebGPU::Device&, WebGPU::ObjectHeap&, Ref<IPC::StreamServerConnection>&&, WebGPUIdentifier, WebGPUIdentifier queueIdentifier);
+    RemoteDevice(PerformWithMediaPlayerOnMainThread&, PAL::WebGPU::Device&, WebGPU::ObjectHeap&, Ref<IPC::StreamServerConnection>&&, WebGPUIdentifier, WebGPUIdentifier queueIdentifier);
 
     RemoteDevice(const RemoteDevice&) = delete;
     RemoteDevice(RemoteDevice&&) = delete;
@@ -92,11 +113,15 @@ private:
     void didReceiveStreamMessage(IPC::StreamServerConnection&, IPC::Decoder&) final;
 
     void destroy();
+    void destruct();
 
     void createBuffer(const WebGPU::BufferDescriptor&, WebGPUIdentifier);
     void createTexture(const WebGPU::TextureDescriptor&, WebGPUIdentifier);
     void createSampler(const WebGPU::SamplerDescriptor&, WebGPUIdentifier);
     void importExternalTexture(const WebGPU::ExternalTextureDescriptor&, WebGPUIdentifier);
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+    void importExternalTextureFromPixelBuffer(const WebGPU::ExternalTextureDescriptor&, std::optional<WebKit::SharedVideoFrame::Buffer>, WebGPUIdentifier);
+#endif
 
     void createBindGroupLayout(const WebGPU::BindGroupLayoutDescriptor&, WebGPUIdentifier);
     void createPipelineLayout(const WebGPU::PipelineLayoutDescriptor&, WebGPUIdentifier);
@@ -117,12 +142,18 @@ private:
     void popErrorScope(CompletionHandler<void(std::optional<WebGPU::Error>&&)>&&);
 
     void setLabel(String&&);
+    void setSharedVideoFrameSemaphore(IPC::Semaphore&&);
+    void setSharedVideoFrameMemory(SharedMemoryHandle&&);
 
     Ref<PAL::WebGPU::Device> m_backing;
     WebGPU::ObjectHeap& m_objectHeap;
     Ref<IPC::StreamServerConnection> m_streamConnection;
     WebGPUIdentifier m_identifier;
     Ref<RemoteQueue> m_queue;
+    PerformWithMediaPlayerOnMainThread& m_performWithMediaPlayerOnMainThread;
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+    SharedVideoFrameReader m_sharedVideoFrameReader;
+#endif
 };
 
 } // namespace WebKit

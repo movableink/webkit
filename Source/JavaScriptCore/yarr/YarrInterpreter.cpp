@@ -279,6 +279,21 @@ public:
             return result;
         }
 
+        int readCheckedDontAdvance(unsigned negativePositionOffest)
+        {
+            RELEASE_ASSERT(pos >= negativePositionOffest);
+            unsigned p = pos - negativePositionOffest;
+            ASSERT(p < length);
+            int result = input[p];
+            if (U16_IS_LEAD(result) && decodeSurrogatePairs && p + 1 < length && U16_IS_TRAIL(input[p + 1])) {
+                if (atEnd())
+                    return -1;
+
+                result = U16_GET_SUPPLEMENTARY(result, input[p + 1]);
+            }
+            return result;
+        }
+
         // readForCharacterDump() is only for use by the DUMP_CURR_CHAR macro.
         // We don't want any side effects like the next() in readChecked() above.
         int readForCharacterDump(unsigned negativePositionOffest)
@@ -635,13 +650,13 @@ public:
 
     bool matchAssertionBOL(ByteTerm& term)
     {
-        return (input.atStart(term.inputPosition)) || (pattern->multiline() && testCharacterClass(pattern->newlineCharacterClass, input.readChecked(term.inputPosition + 1)));
+        return (input.atStart(term.inputPosition)) || (pattern->multiline() && testCharacterClass(pattern->newlineCharacterClass, input.readCheckedDontAdvance(term.inputPosition + 1)));
     }
 
     bool matchAssertionEOL(ByteTerm& term)
     {
         if (term.inputPosition)
-            return (input.atEnd(term.inputPosition)) || (pattern->multiline() && testCharacterClass(pattern->newlineCharacterClass, input.readChecked(term.inputPosition)));
+            return (input.atEnd(term.inputPosition)) || (pattern->multiline() && testCharacterClass(pattern->newlineCharacterClass, input.readCheckedDontAdvance(term.inputPosition)));
 
         return (input.atEnd()) || (pattern->multiline() && testCharacterClass(pattern->newlineCharacterClass, input.read()));
     }
@@ -1024,7 +1039,9 @@ public:
         case QuantifierType::Greedy:
             if (backTrack->matchAmount) {
                 --backTrack->matchAmount;
-                input.rewind(backTrack->backReferenceSize);
+                if (term.matchDirection() == Backward)
+                    return input.checkInput(matchEnd - matchBegin);
+                input.rewind(matchEnd - matchBegin);
                 return true;
             }
             break;
@@ -1048,6 +1065,11 @@ public:
             // For Backward matches, the captured indexes are recorded end then start.
             output[(subpatternId << 1) + term.matchDirection()] = context->getDisjunctionContext()->matchBegin - term.inputPosition;
             output[(subpatternId << 1) + 1 - term.matchDirection()] = context->getDisjunctionContext()->matchEnd - term.inputPosition;
+
+            if (term.duplicateNamedGroupId()) {
+                // Record which of the duplicate named subpatterns matched.
+                output[pattern->offsetForDuplicateNamedGroupId(term.duplicateNamedGroupId())] = subpatternId;
+            }
         }
     }
     void resetMatches(ByteTerm& term, ParenthesesDisjunctionContext* context)
@@ -2466,12 +2488,10 @@ public:
         m_bodyDisjunction->terms.last().m_matchDirection = parenthesesMatchDirection;
         m_allParenthesesInfo.append(WTFMove(parenthesesDisjunction));
 
-        if (m_pattern.hasDuplicateNamedCaptureGroups() && m_bodyDisjunction->terms[beginTerm].capture()) {
+        if (m_pattern.hasDuplicateNamedCaptureGroups() && capture) {
             auto duplicateNamedGroupId = m_pattern.m_duplicateNamedGroupForSubpatternId[subpatternId];
-            if (duplicateNamedGroupId) {
-                m_bodyDisjunction->terms[endTerm].atom.parenIds.duplicateNamedGroupId = duplicateNamedGroupId;
+            if (duplicateNamedGroupId)
                 m_bodyDisjunction->terms[beginTerm].atom.parenIds.duplicateNamedGroupId = duplicateNamedGroupId;
-            }
         }
 
         m_bodyDisjunction->terms[beginTerm].atom.quantityMinCount = quantityMinCount;

@@ -27,6 +27,7 @@
 
 #include "ContentSecurityPolicy.h"
 #include "FrameIdentifier.h"
+#include "PageIdentifier.h"
 #include "ShouldRelaxThirdPartyCookieBlocking.h"
 #include <pal/SessionID.h>
 #include <wtf/Forward.h>
@@ -62,8 +63,8 @@ class DatabaseProvider;
 class DiagnosticLoggingClient;
 class DragClient;
 class EditorClient;
-class FrameLoaderClient;
 class InspectorClient;
+class LocalFrameLoaderClient;
 class MediaRecorderProvider;
 class ModelPlayerProvider;
 class PaymentCoordinatorClient;
@@ -94,6 +95,7 @@ public:
     };
 
     WEBCORE_EXPORT PageConfiguration(
+        std::optional<PageIdentifier>,
         PAL::SessionID,
         UniqueRef<EditorClient>&&,
         Ref<SocketProvider>&&,
@@ -103,7 +105,7 @@ public:
         Ref<BackForwardClient>&&,
         Ref<CookieJar>&&,
         UniqueRef<ProgressTrackerClient>&&,
-        std::variant<UniqueRef<FrameLoaderClient>, RemoteMainFrameCreationParameters>&&,
+        std::variant<UniqueRef<LocalFrameLoaderClient>, RemoteMainFrameCreationParameters>&&,
         FrameIdentifier mainFrameIdentifier,
         UniqueRef<SpeechRecognitionProvider>&&,
         UniqueRef<MediaRecorderProvider>&&,
@@ -122,6 +124,7 @@ public:
     WEBCORE_EXPORT ~PageConfiguration();
     PageConfiguration(PageConfiguration&&);
 
+    std::optional<PageIdentifier> identifier;
     PAL::SessionID sessionID;
     std::unique_ptr<AlternativeTextClient> alternativeTextClient;
     UniqueRef<ChromeClient> chromeClient;
@@ -151,7 +154,7 @@ public:
     Ref<CookieJar> cookieJar;
     std::unique_ptr<ValidationMessageClient> validationMessageClient;
 
-    std::variant<UniqueRef<FrameLoaderClient>, RemoteMainFrameCreationParameters> clientForMainFrame;
+    std::variant<UniqueRef<LocalFrameLoaderClient>, RemoteMainFrameCreationParameters> clientForMainFrame;
 
     FrameIdentifier mainFrameIdentifier;
     std::unique_ptr<DiagnosticLoggingClient> diagnosticLoggingClient;

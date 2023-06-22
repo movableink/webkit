@@ -90,6 +90,9 @@ public:
 
     bool isImageOnly() const { return m_implementation == Implementation::ImageOnly; }
 
+    bool isWideLayout() const { return m_implementation == Implementation::Modern; }
+    HTMLElement* wideLayoutShadowContainer() const { return m_containerElement.get(); }
+
 private:
     friend class AttachmentSaveEventListener;
 
@@ -110,7 +113,7 @@ private:
 #endif
     }
     bool canContainRangeEndPoint() const final { return false; }
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
 #if ENABLE(SERVICE_CONTROLS)
     bool childShouldCreateRenderer(const Node&) const final;
@@ -127,6 +130,7 @@ private:
 
     RefPtr<HTMLAttachmentElement> m_innerLegacyAttachment;
     RefPtr<HTMLElement> m_containerElement;
+    RefPtr<HTMLElement> m_placeholderElement;
     RefPtr<HTMLElement> m_progressElement;
     RefPtr<HTMLElement> m_informationBlock;
     RefPtr<HTMLElement> m_actionTextElement;

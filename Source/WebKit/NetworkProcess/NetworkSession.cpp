@@ -110,21 +110,21 @@ static UniqueRef<PCM::ManagerInterface> managerOrProxy(NetworkSession& networkSe
     return makeUniqueRef<PrivateClickMeasurementManager>(makeUniqueRef<PCM::ClientImpl>(networkSession, networkProcess), parameters.resourceLoadStatisticsParameters.directory);
 }
 
-static Ref<NetworkStorageManager> createNetworkStorageManager(IPC::Connection* connection, const NetworkSessionCreationParameters& parameters)
+static Ref<NetworkStorageManager> createNetworkStorageManager(NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
 {
     SandboxExtension::consumePermanently(parameters.localStorageDirectoryExtensionHandle);
     SandboxExtension::consumePermanently(parameters.indexedDBDirectoryExtensionHandle);
     SandboxExtension::consumePermanently(parameters.cacheStorageDirectoryExtensionHandle);
     SandboxExtension::consumePermanently(parameters.generalStorageDirectoryHandle);
     IPC::Connection::UniqueID connectionID;
-    if (connection)
+    if (auto* connection = networkProcess.parentProcessConnection())
         connectionID = connection->uniqueID();
     String serviceWorkerStorageDirectory;
 #if ENABLE(SERVICE_WORKER)
     serviceWorkerStorageDirectory = parameters.serviceWorkerRegistrationDirectory;
     SandboxExtension::consumePermanently(parameters.serviceWorkerRegistrationDirectoryExtensionHandle);
 #endif
-    return NetworkStorageManager::create(parameters.sessionID, parameters.dataStoreIdentifier, connectionID, parameters.generalStorageDirectory, parameters.localStorageDirectory, parameters.indexedDBDirectory, parameters.cacheStorageDirectory, serviceWorkerStorageDirectory, parameters.perOriginStorageQuota, parameters.originQuotaRatio, parameters.totalQuotaRatio, parameters.volumeCapacityOverride, parameters.unifiedOriginStorageLevel);
+    return NetworkStorageManager::create(networkProcess, parameters.sessionID, parameters.dataStoreIdentifier, connectionID, parameters.generalStorageDirectory, parameters.localStorageDirectory, parameters.indexedDBDirectory, parameters.cacheStorageDirectory, serviceWorkerStorageDirectory, parameters.perOriginStorageQuota, parameters.originQuotaRatio, parameters.totalQuotaRatio, parameters.standardVolumeCapacity, parameters.volumeCapacityOverride, parameters.unifiedOriginStorageLevel);
 }
 
 NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
@@ -148,7 +148,7 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
     , m_allowsServerPreconnect(parameters.allowsServerPreconnect)
     , m_shouldRunServiceWorkersOnMainThreadForTesting(parameters.shouldRunServiceWorkersOnMainThreadForTesting)
     , m_overrideServiceWorkerRegistrationCountTestingValue(parameters.overrideServiceWorkerRegistrationCountTestingValue)
-    , m_storageManager(createNetworkStorageManager(networkProcess.parentProcessConnection(), parameters))
+    , m_storageManager(createNetworkStorageManager(networkProcess, parameters))
 #if ENABLE(BUILT_IN_NOTIFICATIONS)
     , m_notificationManager(*this, parameters.webPushMachServiceName, WebPushD::WebPushDaemonConnectionConfiguration { parameters.webPushDaemonConnectionConfiguration })
 #endif
@@ -599,7 +599,7 @@ void NetworkSession::removeLoaderWaitingWebProcessTransfer(NetworkResourceLoadId
         cachedResourceLoader->takeLoader()->abort();
 }
 
-std::unique_ptr<WebSocketTask> NetworkSession::createWebSocketTask(WebPageProxyIdentifier, NetworkSocketChannel&, const WebCore::ResourceRequest&, const String& protocol, const WebCore::ClientOrigin&, bool, bool, OptionSet<WebCore::NetworkConnectionIntegrity>)
+std::unique_ptr<WebSocketTask> NetworkSession::createWebSocketTask(WebPageProxyIdentifier, std::optional<WebCore::FrameIdentifier>, std::optional<WebCore::PageIdentifier>, NetworkSocketChannel&, const WebCore::ResourceRequest&, const String& protocol, const WebCore::ClientOrigin&, bool, bool, OptionSet<WebCore::AdvancedPrivacyProtections>, WebCore::ShouldRelaxThirdPartyCookieBlocking, WebCore::StoredCredentialsPolicy)
 {
     return nullptr;
 }
@@ -768,6 +768,10 @@ void NetworkSession::addAllowedFirstPartyForCookies(WebCore::ProcessIdentifier w
         ASSERT_NOT_REACHED();
         return;
     }
+
+    if (auto* connection = m_networkProcess->webProcessConnection(webProcessIdentifier))
+        connection->addAllowedFirstPartyForCookies(firstPartyForCookies);
+
     m_networkProcess->addAllowedFirstPartyForCookies(webProcessIdentifier, WTFMove(firstPartyForCookies), LoadedWebArchive::No, [] { });
 }
 

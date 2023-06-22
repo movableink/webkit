@@ -30,9 +30,9 @@
 
 #import "DocumentLoader.h"
 #import "FrameLoader.h"
-#import "FrameLoaderClient.h"
 #import "LegacyPreviewLoaderClient.h"
 #import "LocalFrame.h"
+#import "LocalFrameLoaderClient.h"
 #import "Logging.h"
 #import "PreviewConverter.h"
 #import "QuickLook.h"
@@ -200,7 +200,7 @@ void LegacyPreviewLoader::previewConverterDidFailConverting(PreviewConverter& co
     resourceLoader->didFail(converter.previewError());
 }
 
-void LegacyPreviewLoader::providePasswordForPreviewConverter(PreviewConverter& converter, CompletionHandler<void(const String&)>&& completionHandler)
+void LegacyPreviewLoader::providePasswordForPreviewConverter(PreviewConverter& converter, Function<void(const String&)>&& completionHandler)
 {
     ASSERT_UNUSED(converter, &converter == m_converter);
 

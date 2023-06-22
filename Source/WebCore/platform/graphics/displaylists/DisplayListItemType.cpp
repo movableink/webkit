@@ -68,14 +68,20 @@ static size_t sizeOfItemInBytes(ItemType type)
         return sizeof(ClearShadow);
     case ItemType::Clip:
         return sizeof(Clip);
+    case ItemType::ClipRoundedRect:
+        return sizeof(ClipRoundedRect);
     case ItemType::ClipOut:
         return sizeof(ClipOut);
+    case ItemType::ClipOutRoundedRect:
+        return sizeof(ClipOutRoundedRect);
     case ItemType::ClipToImageBuffer:
         return sizeof(ClipToImageBuffer);
     case ItemType::ClipOutToPath:
         return sizeof(ClipOutToPath);
     case ItemType::ClipPath:
         return sizeof(ClipPath);
+    case ItemType::ResetClip:
+        return sizeof(ResetClip);
     case ItemType::DrawFilteredImageBuffer:
         return sizeof(DrawFilteredImageBuffer);
     case ItemType::DrawGlyphs:
@@ -186,10 +192,13 @@ bool isDrawingItem(ItemType type)
 #endif
     case ItemType::ClearShadow:
     case ItemType::Clip:
+    case ItemType::ClipRoundedRect:
     case ItemType::ClipOut:
+    case ItemType::ClipOutRoundedRect:
     case ItemType::ClipToImageBuffer:
     case ItemType::ClipOutToPath:
     case ItemType::ClipPath:
+    case ItemType::ResetClip:
     case ItemType::ConcatenateCTM:
     case ItemType::Restore:
     case ItemType::Rotate:
@@ -313,8 +322,11 @@ bool isInlineItem(ItemType type)
     case ItemType::ClearRect:
     case ItemType::ClearShadow:
     case ItemType::Clip:
+    case ItemType::ClipRoundedRect:
     case ItemType::ClipOut:
+    case ItemType::ClipOutRoundedRect:
     case ItemType::ClipToImageBuffer:
+    case ItemType::ResetClip:
     case ItemType::ConcatenateCTM:
     case ItemType::DrawEllipse:
     case ItemType::DrawFilteredImageBuffer:

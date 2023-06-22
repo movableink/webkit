@@ -70,6 +70,11 @@ void AccessibilityController::setIsolatedTreeMode(bool flag)
 #endif
 }
 
+void AccessibilityController::setForceDeferredSpellChecking(bool shouldForce)
+{
+    WKAccessibilitySetForceDeferredSpellChecking(shouldForce);
+}
+
 void AccessibilityController::makeWindowObject(JSContextRef context)
 {
     setGlobalObjectProperty(context, "accessibilityController", this);
@@ -95,16 +100,8 @@ bool AccessibilityController::enhancedAccessibilityEnabled()
 Ref<AccessibilityUIElement> AccessibilityController::rootElement()
 {
     auto page = InjectedBundle::singleton().page()->page();
-    PlatformUIElement root = static_cast<PlatformUIElement>(WKAccessibilityRootObject(page));
-    return AccessibilityUIElement::create(root);
-}
-
-RefPtr<AccessibilityUIElement> AccessibilityController::focusedElement()
-{
-    auto page = InjectedBundle::singleton().page()->page();
     auto root = static_cast<PlatformUIElement>(WKAccessibilityRootObject(page));
-    auto rootElement = AccessibilityUIElement::create(root);
-    return rootElement->focusedElement();
+    return AccessibilityUIElement::create(root);
 }
 
 void AccessibilityController::executeOnAXThreadAndWait(Function<void()>&& function)

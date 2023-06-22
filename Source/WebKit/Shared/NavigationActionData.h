@@ -27,6 +27,7 @@
 
 #include "WebHitTestResultData.h"
 #include "WebMouseEvent.h"
+#include <WebCore/AdvancedPrivacyProtections.h>
 #include <WebCore/BackForwardItemIdentifier.h>
 #include <WebCore/FloatPoint.h>
 #include <WebCore/FrameLoaderTypes.h>
@@ -68,6 +69,7 @@ struct NavigationActionData {
     WTF::String clientRedirectSourceForHistory;
     WebCore::SandboxFlags effectiveSandboxFlags { 0 };
     std::optional<WebCore::PrivateClickMeasurement> privateClickMeasurement;
+    OptionSet<WebCore::AdvancedPrivacyProtections> advancedPrivacyProtections;
 #if PLATFORM(MAC) || HAVE(UIKIT_WITH_MOUSE_SUPPORT)
     std::optional<WebKit::WebHitTestResultData> webHitTestResultData;
 #endif

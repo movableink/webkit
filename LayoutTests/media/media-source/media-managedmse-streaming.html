@@ -9,8 +9,6 @@
     var loader;
     var source;
     var sourceBuffer;
-    var gotBufferedChange = false;
-    var bufferedStart;
 
     function loaderPromise(loader) {
         return new Promise((resolve, reject) => {
@@ -33,6 +31,7 @@
 
             waitFor(video, 'error').then(failTest);
 
+            video.disableRemotePlayback = true;
             source = new ManagedMediaSource();
             run('video.src = URL.createObjectURL(source)');
 

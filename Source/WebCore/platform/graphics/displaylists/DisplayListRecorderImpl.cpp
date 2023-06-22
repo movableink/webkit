@@ -134,14 +134,29 @@ void RecorderImpl::recordClearShadow()
     append<ClearShadow>();
 }
 
+void RecorderImpl::recordResetClip()
+{
+    append<ResetClip>();
+}
+
 void RecorderImpl::recordClip(const FloatRect& clipRect)
 {
     append<Clip>(clipRect);
 }
 
+void RecorderImpl::recordClipRoundedRect(const FloatRoundedRect& clipRect)
+{
+    append<ClipRoundedRect>(clipRect);
+}
+
 void RecorderImpl::recordClipOut(const FloatRect& clipRect)
 {
     append<ClipOut>(clipRect);
+}
+
+void RecorderImpl::recordClipOutRoundedRect(const FloatRoundedRect& clipRect)
+{
+    append<ClipOutRoundedRect>(clipRect);
 }
 
 void RecorderImpl::recordClipToImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destinationRect)
@@ -436,6 +451,12 @@ bool RecorderImpl::recordResourceUse(DecomposedGlyphs& decomposedGlyphs)
 bool RecorderImpl::recordResourceUse(Gradient& gradient)
 {
     m_displayList.cacheGradient(gradient);
+    return true;
+}
+
+bool RecorderImpl::recordResourceUse(Filter& filter)
+{
+    m_displayList.cacheFilter(filter);
     return true;
 }
 

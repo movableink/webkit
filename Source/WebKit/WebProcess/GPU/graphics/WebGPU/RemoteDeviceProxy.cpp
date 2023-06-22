@@ -43,6 +43,7 @@
 #include "RemoteSamplerProxy.h"
 #include "RemoteShaderModuleProxy.h"
 #include "RemoteTextureProxy.h"
+#include "SharedVideoFrame.h"
 #include "WebGPUCommandEncoderDescriptor.h"
 #include "WebGPUConvertToBackingContext.h"
 
@@ -53,12 +54,14 @@ RemoteDeviceProxy::RemoteDeviceProxy(Ref<PAL::WebGPU::SupportedFeatures>&& featu
     , m_backing(identifier)
     , m_convertToBackingContext(convertToBackingContext)
     , m_parent(parent)
-    , m_queue(RemoteQueueProxy::create(*this, convertToBackingContext, queueIdentifier))
+    , m_queue(RemoteQueueProxy::create(parent, convertToBackingContext, queueIdentifier))
 {
 }
 
 RemoteDeviceProxy::~RemoteDeviceProxy()
 {
+    auto sendResult = send(Messages::RemoteDevice::Destruct());
+    UNUSED_VARIABLE(sendResult);
 }
 
 Ref<PAL::WebGPU::Queue> RemoteDeviceProxy::queue()
@@ -126,8 +129,28 @@ Ref<PAL::WebGPU::ExternalTexture> RemoteDeviceProxy::importExternalTexture(const
     }
 
     auto identifier = WebGPUIdentifier::generate();
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+    if (auto pixelBuffer = descriptor.pixelBuffer) {
+        WebKit::SharedVideoFrameWriter sharedVideoFrameWriter;
+        constexpr bool canSendIOSurface = false;
+        auto sharedVideoFrameBuffer = sharedVideoFrameWriter.writeBuffer(pixelBuffer.get(), [&](auto& semaphore) {
+            auto sendResult = send(Messages::RemoteDevice::SetSharedVideoFrameSemaphore { semaphore });
+            UNUSED_VARIABLE(sendResult);
+        }, [&](auto&& handle) {
+            auto sendResult = send(Messages::RemoteDevice::SetSharedVideoFrameMemory { WTFMove(handle) });
+            UNUSED_VARIABLE(sendResult);
+        }, canSendIOSurface);
+
+        auto sendResult = send(Messages::RemoteDevice::ImportExternalTextureFromPixelBuffer(*convertedDescriptor, sharedVideoFrameBuffer, identifier));
+        UNUSED_VARIABLE(sendResult);
+    }  else {
+        auto sendResult = send(Messages::RemoteDevice::ImportExternalTexture(*convertedDescriptor, identifier));
+        UNUSED_VARIABLE(sendResult);
+    }
+#else
     auto sendResult = send(Messages::RemoteDevice::ImportExternalTexture(*convertedDescriptor, identifier));
     UNUSED_VARIABLE(sendResult);
+#endif
 
     return RemoteExternalTextureProxy::create(*this, m_convertToBackingContext, identifier);
 }

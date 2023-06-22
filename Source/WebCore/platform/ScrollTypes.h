@@ -75,7 +75,7 @@ enum class ScrollAnimationStatus : uint8_t {
 
 enum class ScrollIsAnimated : bool { No, Yes };
 
-enum class OverflowAnchor : uint8_t {
+enum class OverflowAnchor : bool {
     Auto,
     None
 };
@@ -159,14 +159,15 @@ enum class ScrollbarMode : uint8_t {
     AlwaysOn
 };
 
-enum class ScrollbarControlSize : uint8_t {
-    Regular,
-    Small
-};
-
 enum class ScrollbarExpansionState : uint8_t {
     Regular,
     Expanded
+};
+
+enum class ScrollbarWidth : uint8_t {
+    Auto,
+    Thin,
+    None
 };
 
 enum class NativeScrollbarVisibility : uint8_t {
@@ -353,6 +354,7 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, OverflowAnchor);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollDirection);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollGranularity);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, NativeScrollbarVisibility);
+WTF::TextStream& operator<<(WTF::TextStream&, ScrollbarWidth);
 
 struct ScrollPositionChangeOptions {
     ScrollType type;
@@ -410,6 +412,14 @@ template<> struct EnumTraits<WebCore::ScrollDirection> {
         WebCore::ScrollDirection::ScrollDown,
         WebCore::ScrollDirection::ScrollLeft,
         WebCore::ScrollDirection::ScrollRight
+    >;
+};
+
+template<> struct EnumTraits<WebCore::ScrollbarOrientation> {
+    using values = EnumValues<
+        WebCore::ScrollbarOrientation,
+        WebCore::ScrollbarOrientation::Horizontal,
+        WebCore::ScrollbarOrientation::Vertical
     >;
 };
 } // namespace WTF

@@ -99,7 +99,7 @@ IntRect RemoteFrameView::windowClipRect() const
     return { };
 }
 
-void RemoteFrameView::paintContents(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy, EventRegionContext*)
+void RemoteFrameView::paintContents(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy, RegionContext*)
 {
 }
 
@@ -153,6 +153,12 @@ void RemoteFrameView::updateLayerPositionsAfterScrolling()
 
 void RemoteFrameView::updateCompositingLayersAfterScrolling()
 {
+}
+
+void RemoteFrameView::writeRenderTreeAsText(TextStream& ts, OptionSet<RenderAsTextFlag> behavior)
+{
+    auto& remoteFrame = frame();
+    ts << remoteFrame.renderTreeAsText(ts.indent(), behavior);
 }
 
 } // namespace WebCore

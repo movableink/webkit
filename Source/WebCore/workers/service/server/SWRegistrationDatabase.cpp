@@ -79,7 +79,16 @@ static String scriptDirectoryPath(const String& directory)
     if (directory.isEmpty())
         return emptyString();
 
-    return FileSystem::pathByAppendingComponents(directory, { "Scripts"_s, scriptVersion });
+    return FileSystem::pathByAppendingComponent(directory, "Scripts"_s);
+}
+
+static String scriptVersionDirectoryPath(const String& directory)
+{
+    auto scriptDirectory = scriptDirectoryPath(directory);
+    if (scriptDirectory.isEmpty())
+        return emptyString();
+
+    return FileSystem::pathByAppendingComponent(scriptDirectory, scriptVersion);
 }
 
 static ASCIILiteral convertUpdateViaCacheToString(ServiceWorkerUpdateViaCache update)
@@ -203,17 +212,23 @@ SWRegistrationDatabase::SWRegistrationDatabase(const String& path)
 
 SWRegistrationDatabase::~SWRegistrationDatabase()
 {
+    close();
+}
+
+void SWRegistrationDatabase::close()
+{
     ASSERT(!isMainRunLoop());
 
     for (size_t i = 0; i < static_cast<size_t>(StatementType::Invalid); ++i)
         m_cachedStatements[i] = nullptr;
     m_database = nullptr;
+    m_scriptStorage = nullptr;
 }
 
 SWScriptStorage& SWRegistrationDatabase::scriptStorage()
 {
     if (!m_scriptStorage)
-        m_scriptStorage = makeUnique<SWScriptStorage>(scriptDirectoryPath(m_directory));
+        m_scriptStorage = makeUnique<SWScriptStorage>(scriptVersionDirectoryPath(m_directory));
         
     return *m_scriptStorage;
 }
@@ -290,8 +305,10 @@ std::optional<Vector<ServiceWorkerContextData>> SWRegistrationDatabase::importRe
     if (!prepareDatabase(ShouldCreateIfNotExists::No))
         return std::nullopt;
 
-    if (!m_database)
+    if (!m_database) {
+        clearAllRegistrations();
         return Vector<ServiceWorkerContextData> { };
+    }
 
     auto statement = cachedStatement(StatementType::GetAllRecords);
     if (!statement) {
@@ -451,12 +468,12 @@ std::optional<Vector<ServiceWorkerScripts>> SWRegistrationDatabase::updateRegist
             || statement->bindText(6, StringView { convertUpdateViaCacheToString(data.registration.updateViaCache) }) != SQLITE_OK
             || statement->bindText(7, data.scriptURL.string()) != SQLITE_OK
             || statement->bindText(8, StringView { convertWorkerTypeToString(data.workerType) }) != SQLITE_OK
-            || statement->bindBlob(9, makeSpan(cspEncoder.buffer(), cspEncoder.bufferSize())) != SQLITE_OK
-            || statement->bindBlob(10, makeSpan(coepEncoder.buffer(), coepEncoder.bufferSize())) != SQLITE_OK
+            || statement->bindBlob(9, std::span(cspEncoder.buffer(), cspEncoder.bufferSize())) != SQLITE_OK
+            || statement->bindBlob(10, std::span(coepEncoder.buffer(), coepEncoder.bufferSize())) != SQLITE_OK
             || statement->bindText(11, data.referrerPolicy) != SQLITE_OK
-            || statement->bindBlob(12, makeSpan(scriptResourceMapEncoder.buffer(), scriptResourceMapEncoder.bufferSize())) != SQLITE_OK
-            || statement->bindBlob(13, makeSpan(certificateInfoEncoder.buffer(), certificateInfoEncoder.bufferSize())) != SQLITE_OK
-            || statement->bindBlob(14, makeSpan(navigationPreloadStateEncoder.buffer(), navigationPreloadStateEncoder.bufferSize())) != SQLITE_OK
+            || statement->bindBlob(12, std::span(scriptResourceMapEncoder.buffer(), scriptResourceMapEncoder.bufferSize())) != SQLITE_OK
+            || statement->bindBlob(13, std::span(certificateInfoEncoder.buffer(), certificateInfoEncoder.bufferSize())) != SQLITE_OK
+            || statement->bindBlob(14, std::span(navigationPreloadStateEncoder.buffer(), navigationPreloadStateEncoder.bufferSize())) != SQLITE_OK
             || statement->step() != SQLITE_DONE) {
             RELEASE_LOG_ERROR(ServiceWorker, "SWRegistrationDatabase::updateRegistrations failed to insert record (%i) - %s", m_database->lastError(), m_database->lastErrorMsg());
             return std::nullopt;
@@ -485,6 +502,14 @@ std::optional<Vector<ServiceWorkerScripts>> SWRegistrationDatabase::updateRegist
     }
 
     return result;
+}
+
+void SWRegistrationDatabase::clearAllRegistrations()
+{
+    close();
+    SQLiteFileSystem::deleteDatabaseFile(databaseFilePath(m_directory));
+    FileSystem::deleteNonEmptyDirectory(scriptDirectoryPath(m_directory));
+    FileSystem::deleteEmptyDirectory(m_directory);
 }
 
 } // namespace WebCore

@@ -144,6 +144,8 @@ public:
             , m_tryStart(tryStart)
             , m_tryCatchDepth(tryDepth)
         {
+            ASSERT(type == BlockType::Try);
+            m_stackSize -= signature->as<FunctionSignature>()->argumentCount();
             for (unsigned i = 0; i < signature->as<FunctionSignature>()->returnCount(); ++i)
                 phis.append(proc.add<Value>(Phi, toB3Type(signature->as<FunctionSignature>()->returnType(i)), origin));
         }
@@ -417,6 +419,7 @@ public:
         B3_OP_CASE(ExtendHigh)
         B3_OP_CASE(ExtendLow)
         B3_OP_CASE(TruncSat)
+        B3_OP_CASE(RelaxedTruncSat)
         B3_OP_CASE(Not)
         B3_OP_CASE(Neg)
 
@@ -533,6 +536,7 @@ public:
         B3_OP_CASE(Pmin)
         B3_OP_CASE(Or)
         B3_OP_CASE(Swizzle)
+        B3_OP_CASE(RelaxedSwizzle)
         B3_OP_CASE(Xor)
         B3_OP_CASE(Narrow)
         B3_OP_CASE(AddSat)
@@ -547,6 +551,17 @@ public:
 
         result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), b3Op, B3::V128, info,
             get(a), get(b)));
+        return { };
+    }
+
+    auto addSIMDRelaxedFMA(SIMDLaneOperation op, SIMDInfo info, ExpressionType m1, ExpressionType m2, ExpressionType add, ExpressionType& result) -> PartialResult
+    {
+        B3_OP_CASES()
+        B3_OP_CASE(RelaxedMAdd)
+        B3_OP_CASE(RelaxedNMAdd)
+
+        result = push(m_currentBlock->appendNew<SIMDValue>(m_proc, origin(), b3Op, B3::V128, info,
+            get(m1), get(m2), get(add)));
         return { };
     }
 
@@ -1095,7 +1110,7 @@ B3IRGenerator::B3IRGenerator(const ModuleInformation& info, OptimizingJITCallee&
         stackOverflowCheck->appendSomeRegister(instanceValue());
         stackOverflowCheck->appendSomeRegister(framePointer());
         stackOverflowCheck->clobber(RegisterSetBuilder::macroClobberedGPRs());
-        stackOverflowCheck->numGPScratchRegisters = 2;
+        stackOverflowCheck->numGPScratchRegisters = 0;
         stackOverflowCheck->setGenerator([=, this] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
             const Checked<int32_t> wasmFrameSize = params.proc().frameSize();
             const Checked<int32_t> wasmTailCallFrameSize = -m_tailCallStackOffsetFromFP;
@@ -1136,16 +1151,7 @@ B3IRGenerator::B3IRGenerator(const ModuleInformation& info, OptimizingJITCallee&
                 AllowMacroScratchRegisterUsage allowScratch(jit);
                 GPRReg contextInstance = params[0].gpr();
                 GPRReg fp = params[1].gpr();
-                GPRReg scratch1 = params.gpScratch(0);
-                GPRReg scratch2 = params.gpScratch(1);
-
-                jit.loadPtr(CCallHelpers::Address(contextInstance, Instance::offsetOfVM()), scratch2);
-                jit.loadPtr(CCallHelpers::Address(scratch2, VM::offsetOfSoftStackLimit()), scratch2);
-                jit.addPtr(CCallHelpers::TrustedImm32(-checkSize), fp, scratch1);
-                MacroAssembler::JumpList overflow;
-                if (UNLIKELY(needUnderflowCheck))
-                    overflow.append(jit.branchPtr(CCallHelpers::Above, scratch1, fp));
-                overflow.append(jit.branchPtr(CCallHelpers::Below, scratch1, scratch2));
+                CCallHelpers::JumpList overflow = jit.checkWasmStackOverflow(contextInstance, CCallHelpers::TrustedImm32(checkSize), fp);
                 jit.addLinkTask([overflow] (LinkBuffer& linkBuffer) {
                     linkBuffer.link(overflow, CodeLocationLabel<JITThunkPtrTag>(Thunks::singleton().stub(throwStackOverflowFromWasmThunkGenerator).code()));
                 });
@@ -2991,12 +2997,9 @@ auto B3IRGenerator::addArrayNew(uint32_t typeIndex, ExpressionType size, Express
 
     Value* initValue = get(value);
     if (value->type() == B3::Float || value->type() == B3::Double) {
-        PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, B3::Int64, origin());
-        patchpoint->appendSomeRegister(initValue);
-        patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
-            jit.moveDoubleTo64(params[1].fpr(), params[0].gpr());
-        });
-        initValue = patchpoint;
+        initValue = m_currentBlock->appendNew<Value>(m_proc, BitwiseCast, origin(), initValue);
+        if (initValue->type() == B3::Int32)
+            initValue = m_currentBlock->appendNew<Value>(m_proc, ZExt32, origin(), initValue);
     }
 
     result = pushArrayNew(typeIndex, initValue, size);
@@ -3109,24 +3112,17 @@ auto B3IRGenerator::addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, Ex
         instanceValue(), m_currentBlock->appendNew<Const32Value>(m_proc, origin(), typeIndex),
         get(arrayref), get(index));
 
-    switch (toB3Type(resultType).kind()) {
+    auto b3Type = toB3Type(resultType);
+    switch (b3Type.kind()) {
     case B3::Float:
     case B3::Double: {
-        PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, toB3Type(resultType), origin());
-        patchpoint->appendSomeRegister(arrayResult);
-        patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
-            jit.move64ToDouble(params[1].gpr(), params[0].fpr());
-        });
-        result = push(patchpoint);
+        if (b3Type == B3::Float)
+            arrayResult = m_currentBlock->appendNew<Value>(m_proc, Trunc, origin(), arrayResult);
+        result = push(m_currentBlock->appendNew<Value>(m_proc, BitwiseCast, origin(), arrayResult));
         break;
     }
     case B3::Int32: {
-        PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, toB3Type(resultType), origin());
-        patchpoint->appendSomeRegister(arrayResult);
-        patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
-            jit.move(params[1].gpr(), params[0].gpr());
-        });
-        Value* postProcess = patchpoint;
+        Value* postProcess = m_currentBlock->appendNew<Value>(m_proc, Trunc, origin(), arrayResult);
         switch (arrayGetKind) {
         case ExtGCOpType::ArrayGet:
         case ExtGCOpType::ArrayGetU:
@@ -3134,7 +3130,7 @@ auto B3IRGenerator::addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, Ex
         case ExtGCOpType::ArrayGetS: {
             size_t elementSize = elementType.as<PackedType>() == PackedType::I8 ? sizeof(uint8_t) : sizeof(uint16_t);
             uint8_t bitShift = (sizeof(uint32_t) - elementSize) * 8;
-            Value* shiftLeft = m_currentBlock->appendNew<Value>(m_proc, B3::Shl, origin(), patchpoint, m_currentBlock->appendNew<Const32Value>(m_proc, origin(), bitShift));
+            Value* shiftLeft = m_currentBlock->appendNew<Value>(m_proc, B3::Shl, origin(), postProcess, m_currentBlock->appendNew<Const32Value>(m_proc, origin(), bitShift));
             postProcess = m_currentBlock->appendNew<Value>(m_proc, B3::SShr, origin(), shiftLeft, m_currentBlock->appendNew<Const32Value>(m_proc, origin(), bitShift));
             break;
         }
@@ -3170,12 +3166,9 @@ void B3IRGenerator::emitArrayNullCheck(Value* arrayref)
 void B3IRGenerator::emitArraySetUnchecked(uint32_t typeIndex, Value* arrayref, Value* index, Value* setValue)
 {
     if (setValue->type() == B3::Float || setValue->type() == B3::Double) {
-        PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, B3::Int64, origin());
-        patchpoint->appendSomeRegister(setValue);
-        patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
-            jit.moveDoubleTo64(params[1].fpr(), params[0].gpr());
-        });
-        setValue = patchpoint;
+        setValue = m_currentBlock->appendNew<Value>(m_proc, BitwiseCast, origin(), setValue);
+        if (setValue->type() == B3::Int32)
+            setValue = m_currentBlock->appendNew<Value>(m_proc, ZExt32, origin(), setValue);
     }
 
     // FIXME: Emit this inline.
@@ -5218,18 +5211,23 @@ auto B3IRGenerator::addI64Ctz(ExpressionType argVar, ExpressionType& result) -> 
 auto B3IRGenerator::addI32Popcnt(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
-#if CPU(X86_64)
     if (MacroAssembler::supportsCountPopulation()) {
         PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Int32, origin());
         patchpoint->append(arg, ValueRep::SomeRegister);
+#if CPU(X86_64)
         patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
             jit.countPopulation32(params[1].gpr(), params[0].gpr());
         });
+#else
+        patchpoint->numFPScratchRegisters = 1;
+        patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+            jit.countPopulation32(params[1].gpr(), params[0].gpr(), params.fpScratch(0));
+        });
+#endif
         patchpoint->effects = Effects::none();
         result = push(patchpoint);
         return { };
     }
-#endif
 
     // Pure math function does not need to call emitPrepareWasmOperation.
     Value* funcAddress = m_currentBlock->appendNew<ConstPtrValue>(m_proc, origin(), tagCFunction<OperationPtrTag>(operationPopcount32));
@@ -5240,18 +5238,23 @@ auto B3IRGenerator::addI32Popcnt(ExpressionType argVar, ExpressionType& result) 
 auto B3IRGenerator::addI64Popcnt(ExpressionType argVar, ExpressionType& result) -> PartialResult
 {
     Value* arg = get(argVar);
-#if CPU(X86_64)
     if (MacroAssembler::supportsCountPopulation()) {
         PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Int64, origin());
         patchpoint->append(arg, ValueRep::SomeRegister);
+#if CPU(X86_64)
         patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
             jit.countPopulation64(params[1].gpr(), params[0].gpr());
         });
+#else
+        patchpoint->numFPScratchRegisters = 1;
+        patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+            jit.countPopulation64(params[1].gpr(), params[0].gpr(), params.fpScratch(0));
+        });
+#endif
         patchpoint->effects = Effects::none();
         result = push(patchpoint);
         return { };
     }
-#endif
 
     // Pure math function does not need to call emitPrepareWasmOperation.
     Value* funcAddress = m_currentBlock->appendNew<ConstPtrValue>(m_proc, origin(), tagCFunction<OperationPtrTag>(operationPopcount64));

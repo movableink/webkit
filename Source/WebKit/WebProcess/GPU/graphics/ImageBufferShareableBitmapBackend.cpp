@@ -87,12 +87,12 @@ std::unique_ptr<ImageBufferShareableBitmapBackend> ImageBufferShareableBitmapBac
 
 std::unique_ptr<ImageBufferShareableBitmapBackend> ImageBufferShareableBitmapBackend::create(const Parameters& parameters, ImageBufferBackendHandle handle)
 {
-    if (!std::holds_alternative<ShareableBitmapHandle>(handle)) {
+    if (!std::holds_alternative<ShareableBitmap::Handle>(handle)) {
         ASSERT_NOT_REACHED();
         return nullptr;
     }
 
-    auto bitmap = ShareableBitmap::create(WTFMove(std::get<ShareableBitmapHandle>(handle)));
+    auto bitmap = ShareableBitmap::create(WTFMove(std::get<ShareableBitmap::Handle>(handle)));
     if (!bitmap)
         return nullptr;
 
@@ -144,14 +144,21 @@ RefPtr<NativeImage> ImageBufferShareableBitmapBackend::copyNativeImage(BackingSt
     return NativeImage::create(m_bitmap->createPlatformImage(copyBehavior));
 }
 
-RefPtr<PixelBuffer> ImageBufferShareableBitmapBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator)
+void ImageBufferShareableBitmapBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination)
 {
-    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, m_bitmap->data(), allocator);
+    ImageBufferBackend::getPixelBuffer(srcRect, m_bitmap->data(), destination);
 }
 
 void ImageBufferShareableBitmapBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, WebCore::AlphaPremultiplication destFormat)
 {
     ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, m_bitmap->data());
+}
+
+String ImageBufferShareableBitmapBackend::debugDescription() const
+{
+    TextStream stream;
+    stream << "ImageBufferShareableBitmapBackend " << this;
+    return stream.release();
 }
 
 } // namespace WebKit

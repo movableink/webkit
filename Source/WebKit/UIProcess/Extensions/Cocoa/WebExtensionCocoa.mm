@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -422,13 +422,12 @@ NSError *WebExtension::createError(Error error, NSString *customLocalizedDescrip
         break;
 
     case Error::InvalidManifest:
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
+ALLOW_NONLITERAL_FORMAT_BEGIN
         if (NSString *debugDescription = underlyingError.userInfo[NSDebugDescriptionErrorKey])
             localizedDescription = [NSString stringWithFormat:WEB_UI_STRING("Unable to parse manifest: %@", "WKWebExtensionErrorInvalidManifest description, because of a JSON error"), debugDescription];
         else
             localizedDescription = WEB_UI_STRING("Unable to parse manifest because of an unexpected format.", "WKWebExtensionErrorInvalidManifest description");
-#pragma clang diagnostic pop
+ALLOW_NONLITERAL_FORMAT_END
         break;
 
     case Error::UnsupportedManifestVersion:
@@ -458,13 +457,12 @@ NSError *WebExtension::createError(Error error, NSString *customLocalizedDescrip
         break;
 
     case Error::InvalidDeclarativeNetRequest:
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
+ALLOW_NONLITERAL_FORMAT_BEGIN
         if (NSString *debugDescription = underlyingError.userInfo[NSDebugDescriptionErrorKey])
             localizedDescription = [NSString stringWithFormat:WEB_UI_STRING("Unable to parse `declarativeNetRequest` rules: %@", "WKWebExtensionErrorInvalidDeclarativeNetRequest description, because of a JSON error"), debugDescription];
         else
             localizedDescription = WEB_UI_STRING("Unable to parse `declarativeNetRequest` rules because of an unexpected error.", "WKWebExtensionErrorInvalidDeclarativeNetRequest description");
-#pragma clang diagnostic pop
+ALLOW_NONLITERAL_FORMAT_END
         break;
 
     case Error::InvalidDescription:
@@ -576,10 +574,9 @@ NSArray *WebExtension::errors()
 
 NSString *WebExtension::webProcessDisplayName()
 {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
+ALLOW_NONLITERAL_FORMAT_BEGIN
     return [NSString stringWithFormat:WEB_UI_STRING("%@ Web Extension", "Extension's process name that appears in Activity Monitor where the parameter is the name of the extension"), displayShortName()];
-#pragma clang diagnostic pop
+ALLOW_NONLITERAL_FORMAT_END
 }
 
 NSString *WebExtension::displayName()
@@ -801,7 +798,7 @@ NSString *WebExtension::pathForBestImageInIconsDictionary(NSDictionary *iconsDic
     if (NSString *resultPath = iconsDictionary[idealSizeString])
         return resultPath;
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     // Check if the ideal 3x retina size exists. This will usually be called on 2x iOS devices when a 3x image might exist.
     // Since the ideal size is likly already 2x, multiply by 1.5x to get the 3x pixel size.
     idealSizeString = @(idealPixelSize * 1.5).stringValue;
@@ -839,7 +836,7 @@ CocoaImage *WebExtension::bestImageInIconsDictionary(NSDictionary *iconsDictiona
         return nil;
 
     NSUInteger standardPixelSize = idealPointSize;
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     standardPixelSize *= UIScreen.mainScreen.scale;
 #endif
 
@@ -1023,7 +1020,7 @@ void WebExtension::populateBackgroundPropertiesIfNeeded()
     if (!m_backgroundContentIsPersistent && hasRequestedPermission(_WKWebExtensionPermissionWebRequest))
         recordError(createError(Error::InvalidBackgroundPersistence, WEB_UI_STRING("Non-persistent background content cannot listen to `webRequest` events.", "WKWebExtensionErrorInvalidBackgroundPersistence description for webRequest events")));
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     if (m_backgroundContentIsPersistent)
         recordError(createError(Error::InvalidBackgroundPersistence, WEB_UI_STRING("Invalid `persistent` manifest entry. A non-persistent background is required on iOS and iPadOS.", "WKWebExtensionErrorInvalidBackgroundPersistence description for iOS")));
 #endif

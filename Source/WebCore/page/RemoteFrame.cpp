@@ -45,7 +45,7 @@ Ref<RemoteFrame> RemoteFrame::createSubframe(Page& page, UniqueRef<RemoteFrameCl
     return adoptRef(*new RemoteFrame(page, WTFMove(client), identifier, nullptr, &parent, std::nullopt, remoteProcessIdentifier));
 }
 
-Ref<RemoteFrame> RemoteFrame::createSubframeWithContentsInAnotherProcess(Page& page, UniqueRef<RemoteFrameClient>&& client, FrameIdentifier identifier, HTMLFrameOwnerElement& ownerElement, LayerHostingContextIdentifier layerHostingContextIdentifier, ProcessIdentifier remoteProcessIdentifier)
+Ref<RemoteFrame> RemoteFrame::createSubframeWithContentsInAnotherProcess(Page& page, UniqueRef<RemoteFrameClient>&& client, FrameIdentifier identifier, HTMLFrameOwnerElement& ownerElement, std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier, ProcessIdentifier remoteProcessIdentifier)
 {
     return adoptRef(*new RemoteFrame(page, WTFMove(client), identifier, &ownerElement, ownerElement.document().frame(), layerHostingContextIdentifier, remoteProcessIdentifier));
 }
@@ -73,6 +73,7 @@ RemoteDOMWindow& RemoteFrame::window() const
 
 void RemoteFrame::didFinishLoadInAnotherProcess()
 {
+    // FIXME: We also need to set this to false if the load fails in another process.
     m_preventsParentFromBeingComplete = false;
 
     if (auto* ownerElement = this->ownerElement())
@@ -82,6 +83,11 @@ void RemoteFrame::didFinishLoadInAnotherProcess()
 bool RemoteFrame::preventsParentFromBeingComplete() const
 {
     return m_preventsParentFromBeingComplete;
+}
+
+void RemoteFrame::changeLocation(FrameLoadRequest&& request)
+{
+    m_client->changeLocation(WTFMove(request));
 }
 
 FrameView* RemoteFrame::virtualView() const
@@ -97,6 +103,11 @@ void RemoteFrame::setView(RefPtr<RemoteFrameView>&& view)
 void RemoteFrame::frameDetached()
 {
     m_client->frameDetached();
+}
+
+String RemoteFrame::renderTreeAsText(size_t baseIndent, OptionSet<RenderAsTextFlag> behavior)
+{
+    return m_client->renderTreeAsText(m_remoteProcessIdentifier, frameID(), baseIndent, behavior);
 }
 
 } // namespace WebCore

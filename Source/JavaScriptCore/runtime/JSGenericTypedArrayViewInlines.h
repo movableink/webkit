@@ -242,14 +242,25 @@ bool JSGenericTypedArrayView<Adaptor>::setWithSpecificType(
     }
     
     // Fail: we need an intermediate transfer buffer (i.e. case (3)).
-    Vector<typename Adaptor::Type, 32> transferBuffer(length);
-    for (size_t i = length; i--;) {
-        transferBuffer[i] = OtherAdaptor::template convertTo<Adaptor>(
-            other->getIndexQuicklyAsNativeValue(i + otherOffset));
+    auto transfer = [&] (auto& buffer) {
+        for (size_t i = length; i--;) {
+            buffer[i] = OtherAdaptor::template convertTo<Adaptor>(
+                other->getIndexQuicklyAsNativeValue(i + otherOffset));
+        }
+        for (size_t i = length; i--;)
+            setIndexQuicklyToNativeValue(offset + i, buffer[i]);
+    };
+
+    if (WTF::isValidCapacityForVector<typename Adaptor::Type>(length)) {
+        Vector<typename Adaptor::Type, 32> buffer(length);
+        transfer(buffer);
+    } else {
+        Checked<size_t> sizeToAllocate = length;
+        sizeToAllocate *= sizeof(typename Adaptor::Type);
+        UniqueArray<typename Adaptor::Type> buffer = makeUniqueArray<typename Adaptor::Type>(sizeToAllocate);
+        transfer(buffer);
     }
-    for (size_t i = length; i--;)
-        setIndexQuicklyToNativeValue(offset + i, transferBuffer[i]);
-    
+
     return true;
 }
 
@@ -346,6 +357,33 @@ bool JSGenericTypedArrayView<Adaptor>::setFromArrayLike(JSGlobalObject* globalOb
     // So we iterate in the optimized loop up to MAX_ARRAY_INDEX, then if there is anything to do beyond this, we rely on slower code.
     size_t safeUnadjustedLength = std::min(length, static_cast<size_t>(MAX_ARRAY_INDEX) + 1);
     size_t safeLength = objectOffset <= safeUnadjustedLength ? safeUnadjustedLength - objectOffset : 0;
+
+    if constexpr (TypedArrayStorageType != TypeBigInt64 || TypedArrayStorageType != TypeBigUint64) {
+        if (JSArray* array = jsDynamicCast<JSArray*>(object); LIKELY(array)) {
+            if (safeLength == length && (safeLength + objectOffset) >= array->length() && array->isIteratorProtocolFastAndNonObservable()) {
+                IndexingType indexingType = array->indexingType() & IndexingShapeMask;
+                if (indexingType == Int32Shape) {
+                    for (size_t i = 0; i < safeLength; ++i) {
+                        JSValue value = array->butterfly()->contiguous().at(array, static_cast<unsigned>(i + objectOffset)).get();
+                        if (LIKELY(!!value))
+                            setIndexQuicklyToNativeValue(offset + i, Adaptor::toNativeFromInt32(value.asInt32()));
+                        else
+                            setIndexQuicklyToNativeValue(offset + i, Adaptor::toNativeFromUndefined());
+                    }
+                    return true;
+                }
+
+                if (indexingType == DoubleShape) {
+                    for (size_t i = 0; i < safeLength; ++i) {
+                        double d = array->butterfly()->contiguousDouble().at(array, static_cast<unsigned>(i + objectOffset));
+                        setIndexQuicklyToNativeValue(offset + i, Adaptor::toNativeFromDouble(d));
+                    }
+                    return true;
+                }
+            }
+        }
+    }
+
     for (size_t i = 0; i < safeLength; ++i) {
         ASSERT(i + objectOffset <= MAX_ARRAY_INDEX);
         JSValue value = object->get(globalObject, static_cast<unsigned>(i + objectOffset));
@@ -378,6 +416,9 @@ bool JSGenericTypedArrayView<Adaptor>::setFromArrayLike(JSGlobalObject* globalOb
         throwTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
         return false;
     }
+
+    if (JSArray* array = jsDynamicCast<JSArray*>(sourceValue); LIKELY(array))
+        RELEASE_AND_RETURN(scope, setFromArrayLike(globalObject, offset, array, 0, array->length()));
 
     size_t targetLength = this->length();
 

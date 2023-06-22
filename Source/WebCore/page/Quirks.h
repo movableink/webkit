@@ -83,8 +83,6 @@ public:
     bool shouldExposeShowModalDialog() const;
     bool shouldNavigatorPluginsBeEmpty() const;
 
-    bool needsMillisecondResolutionForHighResTimeStamp() const;
-
     WEBCORE_EXPORT bool shouldDisableContentChangeObserver() const;
     WEBCORE_EXPORT bool shouldDispatchSyntheticMouseEventsWhenModifyingSelection() const;
     WEBCORE_EXPORT bool shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreas() const;
@@ -138,6 +136,7 @@ public:
     WEBCORE_EXPORT bool blocksReturnToFullscreenFromPictureInPictureQuirk() const;
     WEBCORE_EXPORT bool blocksEnteringStandardFullscreenFromPictureInPictureQuirk() const;
     bool shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk() const;
+    bool shouldDelayFullscreenEventWhenExitingPictureInPictureQuirk() const;
 
 #if ENABLE(TRACKING_PREVENTION)
     static bool isMicrosoftTeamsRedirectURL(const URL&);
@@ -149,18 +148,13 @@ public:
 
     static bool shouldOmitHTMLDocumentSupportedPropertyNames();
 
-#if ENABLE(IMAGE_ANALYSIS)
-    bool needsToForceUserSelectAndUserDragWhenInstallingImageOverlay() const;
-#endif
-
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     WEBCORE_EXPORT bool allowLayeredFullscreenVideos() const;
 #endif
     bool shouldEnableApplicationCacheQuirk() const;
     bool shouldEnableFontLoadingAPIQuirk() const;
     bool needsVideoShouldMaintainAspectRatioQuirk() const;
 
-    bool shouldDisableLazyImageLoadingQuirk() const;
     bool shouldDisableLazyIframeLoadingQuirk() const;
 
     bool shouldDisableFetchMetadata() const;
@@ -168,6 +162,8 @@ public:
 #if PLATFORM(COCOA)
     bool shouldAdvertiseSupportForHLSSubtitleTypes() const;
 #endif
+
+    bool shouldDisablePopoverAttributeQuirk() const;
 
 private:
     bool needsQuirks() const;
@@ -213,7 +209,8 @@ private:
     mutable std::optional<bool> m_blocksReturnToFullscreenFromPictureInPictureQuirk;
     mutable std::optional<bool> m_blocksEnteringStandardFullscreenFromPictureInPictureQuirk;
     mutable std::optional<bool> m_shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk;
-#if PLATFORM(IOS)
+    mutable std::optional<bool> m_shouldDelayFullscreenEventWhenExitingPictureInPictureQuirk;
+#if PLATFORM(IOS) || PLATFORM(VISION)
     mutable std::optional<bool> m_allowLayeredFullscreenVideos;
 #endif
 #if PLATFORM(IOS_FAMILY)
@@ -225,7 +222,6 @@ private:
 #if PLATFORM(IOS_FAMILY)
     mutable std::optional<bool> m_shouldNavigatorPluginsBeEmpty;
 #endif
-    mutable std::optional<bool> m_shouldDisableLazyImageLoadingQuirk;
     mutable std::optional<bool> m_shouldDisableLazyIframeLoadingQuirk;
 #if PLATFORM(COCOA)
     mutable std::optional<bool> m_shouldAdvertiseSupportForHLSSubtitleTypes;

@@ -41,19 +41,20 @@
 #include "EventNames.h"
 #include "EventSender.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "FrameTree.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "JSRequestPriority.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryParser.h"
 #include "MediaQueryParserContext.h"
 #include "MouseEvent.h"
+#include "NodeName.h"
 #include "Page.h"
 #include "ParsedContentType.h"
 #include "RenderStyle.h"
@@ -159,59 +160,59 @@ void HTMLLinkElement::setDisabledState(bool disabled)
     }
 }
 
-void HTMLLinkElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLLinkElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == relAttr) {
-        auto parsedRel = LinkRelAttribute(document(), value);
+    switch (name.nodeName()) {
+    case AttributeNames::relAttr: {
+        auto parsedRel = LinkRelAttribute(document(), newValue);
         auto didMutateRel = parsedRel != m_relAttribute;
         m_relAttribute = WTFMove(parsedRel);
         if (m_relList)
-            m_relList->associatedAttributeValueChanged(value);
+            m_relList->associatedAttributeValueChanged(newValue);
         if (didMutateRel)
             process();
-        return;
+        break;
     }
-    if (name == hrefAttr) {
+    case AttributeNames::hrefAttr: {
         URL url = getNonEmptyURLAttribute(hrefAttr);
         if (url == m_url)
             return;
         m_url = WTFMove(url);
         process();
-        return;
+        break;
     }
-    if (name == typeAttr) {
-        if (value == m_type)
+    case AttributeNames::typeAttr:
+        if (newValue == m_type)
             return;
-        m_type = value;
+        m_type = newValue;
         process();
-        return;
-    }
-    if (name == sizesAttr) {
+        break;
+    case AttributeNames::sizesAttr:
         if (m_sizes)
-            m_sizes->associatedAttributeValueChanged(value);
+            m_sizes->associatedAttributeValueChanged(newValue);
         process();
-        return;
-    }
-    if (name == mediaAttr) {
-        auto media = value.string().convertToASCIILowercase();
+        break;
+    case AttributeNames::mediaAttr: {
+        auto media = newValue.string().convertToASCIILowercase();
         if (media == m_media)
             return;
         m_media = WTFMove(media);
         process();
         if (m_sheet && !isDisabled())
             m_styleScope->didChangeActiveStyleSheetCandidates();
-        return;
+        break;
     }
-    if (name == disabledAttr) {
-        setDisabledState(!value.isNull());
-        return;
-    }
-    if (name == titleAttr) {
+    case AttributeNames::disabledAttr:
+        setDisabledState(!newValue.isNull());
+        break;
+    case AttributeNames::titleAttr:
         if (m_sheet && !isInShadowTree())
-            m_sheet->setTitle(value);
-        return;
+            m_sheet->setTitle(newValue);
+        break;
+    default:
+        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+        break;
     }
-    HTMLElement::parseAttribute(name, value);
 }
 
 bool HTMLLinkElement::shouldLoadLink()
@@ -693,7 +694,7 @@ String HTMLLinkElement::fetchPriorityForBindings() const
 
 RequestPriority HTMLLinkElement::fetchPriorityHint() const
 {
-    if (document().settings().priorityHintsEnabled())
+    if (document().settings().fetchPriorityEnabled())
         return parseEnumerationFromString<RequestPriority>(attributeWithoutSynchronization(fetchpriorityAttr)).value_or(RequestPriority::Auto);
     return RequestPriority::Auto;
 }

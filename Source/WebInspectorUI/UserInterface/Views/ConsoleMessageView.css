@@ -311,8 +311,12 @@
 }
 
 .console-message .timestamp {
+    float: right;
+    margin-inline-start: 12px;
+    padding-top: 2px;
+    font-family: Menlo, monospace;
+    font-size: 11px;
     color: var(--text-color-tertiary);
-    padding-inline-end: 5px;
 }
 
 .console-session:not(.timestamps-visible) .console-message .timestamp {

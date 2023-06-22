@@ -29,6 +29,7 @@
 #if ENABLE(FULLSCREEN_API)
 
 #include "APIFullscreenClient.h"
+#include "MessageSenderInlines.h"
 #include "WebAutomationSession.h"
 #include "WebFullScreenManagerMessages.h"
 #include "WebFullScreenManagerProxyMessages.h"
@@ -171,7 +172,7 @@ bool WebFullScreenManagerProxy::blocksReturnToFullscreenFromPictureInPicture() c
     return m_blocksReturnToFullscreenFromPictureInPicture;
 }
 
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
+#if PLATFORM(VISION)
 bool WebFullScreenManagerProxy::isVideoElement() const
 {
     return m_isVideoElement;
@@ -181,7 +182,7 @@ bool WebFullScreenManagerProxy::isVideoElement() const
 void WebFullScreenManagerProxy::enterFullScreen(bool blocksReturnToFullscreenFromPictureInPicture, bool isVideoElement, FloatSize videoDimensions)
 {
     m_blocksReturnToFullscreenFromPictureInPicture = blocksReturnToFullscreenFromPictureInPicture;
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
+#if PLATFORM(VISION)
     m_isVideoElement = isVideoElement;
 #else
     UNUSED_PARAM(isVideoElement);

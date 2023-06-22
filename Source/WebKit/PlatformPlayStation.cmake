@@ -35,6 +35,8 @@ list(APPEND WebKit_SOURCES
     GPUProcess/playstation/GPUProcessMainPlayStation.cpp
     GPUProcess/playstation/GPUProcessPlayStation.cpp
 
+    NetworkProcess/NetworkDataTaskDataURL.cpp
+
     NetworkProcess/Classifier/WebResourceLoadStatisticsStore.cpp
 
     NetworkProcess/Cookies/curl/WebCookieManagerCurl.cpp
@@ -70,13 +72,13 @@ list(APPEND WebKit_SOURCES
 
     Shared/curl/WebCoreArgumentCodersCurl.cpp
 
+    Shared/freetype/WebCoreArgumentCodersFreeType.cpp
+
     Shared/libwpe/NativeWebKeyboardEventLibWPE.cpp
     Shared/libwpe/NativeWebMouseEventLibWPE.cpp
     Shared/libwpe/NativeWebTouchEventLibWPE.cpp
     Shared/libwpe/NativeWebWheelEventLibWPE.cpp
     Shared/libwpe/WebEventFactory.cpp
-
-    Shared/playstation/WebCoreArgumentCodersPlayStation.cpp
 
     Shared/unix/AuxiliaryProcessMain.cpp
 
@@ -186,6 +188,7 @@ if (USE_GRAPHICS_LAYER_WC)
 
         GPUProcess/graphics/wc/RemoteWCLayerTreeHost.cpp
         GPUProcess/graphics/wc/WCContentBufferManager.cpp
+        GPUProcess/graphics/wc/WCRemoteFrameHostLayerManager.cpp
         GPUProcess/graphics/wc/WCScene.cpp
         GPUProcess/graphics/wc/WCSceneContext.cpp
 
@@ -212,6 +215,10 @@ if (USE_GRAPHICS_LAYER_WC)
 
     list(APPEND WebKit_MESSAGES_IN_FILES
         GPUProcess/graphics/wc/RemoteWCLayerTreeHost
+    )
+
+    list(APPEND WebKit_SERIALIZATION_IN_FILES
+        WebProcess/WebPage/wc/WCUpdateInfo.serialization.in
     )
 endif ()
 

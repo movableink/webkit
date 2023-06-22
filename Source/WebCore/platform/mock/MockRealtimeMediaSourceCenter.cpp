@@ -49,6 +49,7 @@
 #endif
 
 #if USE(GSTREAMER)
+#include "MockDisplayCaptureSourceGStreamer.h"
 #include "MockRealtimeVideoSourceGStreamer.h"
 #endif
 
@@ -115,7 +116,7 @@ private:
     CaptureDeviceManager& videoCaptureDeviceManager() final { return MockRealtimeMediaSourceCenter::singleton().videoCaptureDeviceManager(); }
 };
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 class MockDisplayCapturer final : public DisplayCaptureSourceCocoa::Capturer {
 public:
     MockDisplayCapturer(const CaptureDevice&, PageIdentifier);
@@ -174,7 +175,7 @@ IntSize MockDisplayCapturer::intrinsicSize() const
     auto& properties = std::get<MockDisplayProperties>(device->properties);
     return properties.defaultSize;
 }
-#endif // PLATFORM(MAC)
+#endif // PLATFORM(COCOA)
 
 class MockRealtimeDisplaySourceFactory : public DisplayCaptureFactory {
 public:
@@ -186,7 +187,7 @@ public:
         switch (device.type()) {
         case CaptureDevice::DeviceType::Screen:
         case CaptureDevice::DeviceType::Window:
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
             return DisplayCaptureSourceCocoa::create(UniqueRef<DisplayCaptureSourceCocoa::Capturer>(makeUniqueRef<MockDisplayCapturer>(device, pageIdentifier)), device, WTFMove(hashSalts), constraints, pageIdentifier);
 #elif USE(GSTREAMER)
             return MockDisplayCaptureSourceGStreamer::create(device, WTFMove(hashSalts), constraints, pageIdentifier);
@@ -303,9 +304,12 @@ static CaptureDevice toCaptureDevice(const MockMediaDevice& device)
     return captureDevice;
 }
 
-static void createMockDevice(const MockMediaDevice& device)
+static void createMockDevice(const MockMediaDevice& device, bool isDefault)
 {
-    deviceListForDevice(device).append(toCaptureDevice(device));
+    if (isDefault)
+        deviceListForDevice(device).insert(0, toCaptureDevice(device));
+    else
+        deviceListForDevice(device).append(toCaptureDevice(device));
 }
 
 void MockRealtimeMediaSourceCenter::resetDevices()
@@ -346,16 +350,26 @@ void MockRealtimeMediaSourceCenter::setDevices(Vector<MockMediaDevice>&& newMock
 
     for (const auto& device : mockDevices) {
         map.add(device.persistentId, device);
-        createMockDevice(device);
+        createMockDevice(device, false);
     }
     RealtimeMediaSourceCenter::singleton().captureDevicesChanged();
 }
 
+static bool shouldBeDefaultDevice(const MockMediaDevice& device)
+{
+    auto* cameraProperties = device.cameraProperties();
+    return cameraProperties && cameraProperties->facingMode == VideoFacingMode::Unknown;
+}
+
 void MockRealtimeMediaSourceCenter::addDevice(const MockMediaDevice& device)
 {
-    devices().append(device);
+    bool isDefault = shouldBeDefaultDevice(device);
+    if (isDefault)
+        devices().insert(0, device);
+    else
+        devices().append(device);
     deviceMap().set(device.persistentId, device);
-    createMockDevice(device);
+    createMockDevice(device, isDefault);
     RealtimeMediaSourceCenter::singleton().captureDevicesChanged();
 }
 
@@ -463,7 +477,7 @@ Vector<CaptureDevice>& MockRealtimeMediaSourceCenter::displayDevices()
         Vector<CaptureDevice> displayDevices;
         for (const auto& device : devices()) {
             if (device.isDisplay())
-                displayDevices.append(device.captureDevice());
+                displayDevices.append(toCaptureDevice(device));
         }
         return displayDevices;
     }();

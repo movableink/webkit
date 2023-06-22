@@ -412,6 +412,9 @@ TextStream& operator<<(TextStream& stream, AccessibilityObjectInclusion inclusio
 TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notification)
 {
     switch (notification) {
+    case AXObjectCache::AXNotification::AXAccessKeyChanged:
+        stream << "AXAccessKeyChanged";
+        break;
     case AXObjectCache::AXNotification::AXActiveDescendantChanged:
         stream << "AXActiveDescendantChanged";
         break;
@@ -529,8 +532,8 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
     case AXObjectCache::AXNotification::AXSelectedChildrenChanged:
         stream << "AXSelectedChildrenChanged";
         break;
-    case AXObjectCache::AXNotification::AXSelectedCellChanged:
-        stream << "AXSelectedCellChanged";
+    case AXObjectCache::AXNotification::AXSelectedCellsChanged:
+        stream << "AXSelectedCellsChanged";
         break;
     case AXObjectCache::AXNotification::AXSelectedStateChanged:
         stream << "AXSelectedStateChanged";
@@ -612,6 +615,9 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
         break;
     case AXObjectCache::AXNotification::AXTextChanged:
         stream << "AXTextChanged";
+        break;
+    case AXObjectCache::AXNotification::AXTextCompositionChanged:
+        stream << "AXTextCompositionChanged";
         break;
     case AXObjectCache::AXNotification::AXTextSecurityChanged:
         stream << "AXTextSecurityChanged";

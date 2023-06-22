@@ -68,9 +68,9 @@ class BlobDataFileReference;
 class BlobPart;
 class BlobRegistryImpl;
 class MockContentFilterSettings;
-enum class NetworkConnectionIntegrity : uint16_t;
 class ResourceError;
 class ResourceRequest;
+enum class AdvancedPrivacyProtections : uint16_t;
 enum class ApplyTrackingPrevention : bool;
 enum class StorageAccessScope : bool;
 struct ClientOrigin;
@@ -84,6 +84,7 @@ enum class IncludeSecureCookies : bool;
 
 namespace WebKit {
 
+class NetworkOriginAccessPatterns;
 class NetworkSchemeRegistry;
 class NetworkProcess;
 class NetworkResourceLoader;
@@ -110,7 +111,7 @@ class NetworkConnectionToWebProcess
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
     , public WebCore::CookieChangeObserver
 #endif
-    , IPC::Connection::Client {
+    , public IPC::Connection::Client {
 public:
     using RegistrableDomain = WebCore::RegistrableDomain;
 
@@ -198,12 +199,16 @@ public:
     void broadcastConsoleMessage(JSC::MessageSource, JSC::MessageLevel, const String& message);
     RefPtr<NetworkResourceLoader> takeNetworkResourceLoader(WebCore::ResourceLoaderIdentifier);
 
+    NetworkOriginAccessPatterns& originAccessPatterns() { return m_originAccessPatterns.get(); }
+
 #if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     void installMockContentFilter(WebCore::MockContentFilterSettings&&);
 #endif
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
-    void logOnBehalfOfWebContent(const String& logChannel, const String& logCategory, const String& logString, uint8_t logType, int32_t pid);
+    void logOnBehalfOfWebContent(IPC::DataReference&& logChannel, IPC::DataReference&& logCategory, IPC::DataReference&& logString, uint8_t logType, int32_t pid);
 #endif
+
+    void addAllowedFirstPartyForCookies(const RegistrableDomain&);
 private:
     NetworkConnectionToWebProcess(NetworkProcess&, WebCore::ProcessIdentifier, PAL::SessionID, NetworkProcessConnectionParameters, IPC::Connection::Identifier);
 
@@ -259,7 +264,7 @@ private:
 
     void setCaptureExtraNetworkLoadMetricsEnabled(bool);
 
-    void createSocketChannel(const WebCore::ResourceRequest&, const String& protocol, WebCore::WebSocketIdentifier, WebPageProxyIdentifier, const WebCore::ClientOrigin&, bool hadMainFrameMainResourcePrivateRelayed, bool allowPrivacyProxy, OptionSet<WebCore::NetworkConnectionIntegrity> networkConnectionIntegrityPolicy);
+    void createSocketChannel(const WebCore::ResourceRequest&, const String& protocol, WebCore::WebSocketIdentifier, WebPageProxyIdentifier, std::optional<WebCore::FrameIdentifier>, std::optional<WebCore::PageIdentifier>, const WebCore::ClientOrigin&, bool hadMainFrameMainResourcePrivateRelayed, bool allowPrivacyProxy, OptionSet<WebCore::AdvancedPrivacyProtections>, WebCore::ShouldRelaxThirdPartyCookieBlocking, WebCore::StoredCredentialsPolicy);
     void updateQuotaBasedOnSpaceUsageForTesting(WebCore::ClientOrigin&&);
 
     void establishSharedWorkerServerConnection();
@@ -434,6 +439,7 @@ private:
     HashSet<WebCore::MessagePortIdentifier> m_processEntangledPorts;
     HashMap<uint64_t, CompletionHandler<void()>> m_messageBatchDeliveryCompletionHandlers;
     Ref<NetworkSchemeRegistry> m_schemeRegistry;
+    UniqueRef<NetworkOriginAccessPatterns> m_originAccessPatterns;
         
     HashSet<URL> m_blobURLs;
     HashCountedSet<URL> m_blobURLHandles;

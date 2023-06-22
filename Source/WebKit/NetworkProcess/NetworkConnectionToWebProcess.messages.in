@@ -61,7 +61,7 @@ messages -> NetworkConnectionToWebProcess LegacyReceiver {
 
     SetCaptureExtraNetworkLoadMetricsEnabled(bool enabled)
 
-    CreateSocketChannel(WebCore::ResourceRequest request, String protocol, WebCore::WebSocketIdentifier identifier, WebKit::WebPageProxyIdentifier webPageProxyID, struct WebCore::ClientOrigin clientOrigin, bool hadMainFrameMainResourcePrivateRelayed, bool allowPrivacyProxy, OptionSet<WebCore::NetworkConnectionIntegrity> networkConnectionIntegrityPolicy)
+    CreateSocketChannel(WebCore::ResourceRequest request, String protocol, WebCore::WebSocketIdentifier identifier, WebKit::WebPageProxyIdentifier webPageProxyID, std::optional<WebCore::FrameIdentifier> frameID, std::optional<WebCore::PageIdentifier> pageID, struct WebCore::ClientOrigin clientOrigin, bool hadMainFrameMainResourcePrivateRelayed, bool allowPrivacyProxy, OptionSet<WebCore::AdvancedPrivacyProtections> protections, enum:bool WebCore::ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking, enum:uint8_t WebCore::StoredCredentialsPolicy storedCredentialsPolicy)
 
     ClearPageSpecificData(WebCore::PageIdentifier pageID);
 
@@ -116,6 +116,8 @@ messages -> NetworkConnectionToWebProcess LegacyReceiver {
     InstallMockContentFilter(WebCore::MockContentFilterSettings settings)
 #endif
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
-    LogOnBehalfOfWebContent(String logChannel, String logCategory, String logString, uint8_t logType, int32_t pid)
+    LogOnBehalfOfWebContent(IPC::DataReference logChannel, IPC::DataReference logCategory, IPC::DataReference logString, uint8_t logType, int32_t pid)
 #endif
+
+    AddAllowedFirstPartyForCookies(WebCore::RegistrableDomain firstPartyDomain)
 }

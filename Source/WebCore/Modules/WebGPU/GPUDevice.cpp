@@ -59,6 +59,7 @@
 #include "GPUTextureDescriptor.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSGPUComputePipeline.h"
+#include "JSGPUDeviceLostInfo.h"
 #include "JSGPUInternalError.h"
 #include "JSGPUOutOfMemoryError.h"
 #include "JSGPUPipelineError.h"
@@ -75,7 +76,7 @@ GPUDevice::GPUDevice(ScriptExecutionContext* scriptExecutionContext, Ref<PAL::We
     , m_lostPromise(makeUniqueRef<LostPromise>())
     , m_backing(WTFMove(backing))
     , m_queue(GPUQueue::create(Ref { m_backing->queue() }))
-    , m_autoPipelineLayout(createPipelineLayout({ { "autoLayout"_s, }, { } }))
+    , m_autoPipelineLayout(createAutoPipelineLayout())
 {
 }
 
@@ -111,6 +112,18 @@ void GPUDevice::destroy()
     m_backing->destroy();
 }
 
+GPUDevice::LostPromise& GPUDevice::lost()
+{
+    if (m_waitingForDeviceLostPromise)
+        return m_lostPromise;
+
+    m_waitingForDeviceLostPromise = true;
+
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=257656 Implement this.
+
+    return m_lostPromise;
+}
+
 Ref<GPUBuffer> GPUDevice::createBuffer(const GPUBufferDescriptor& bufferDescriptor)
 {
     auto bufferSize = bufferDescriptor.size;
@@ -121,7 +134,7 @@ Ref<GPUBuffer> GPUDevice::createBuffer(const GPUBufferDescriptor& bufferDescript
 
 Ref<GPUTexture> GPUDevice::createTexture(const GPUTextureDescriptor& textureDescriptor)
 {
-    return GPUTexture::create(m_backing->createTexture(textureDescriptor.convertToBacking()));
+    return GPUTexture::create(m_backing->createTexture(textureDescriptor.convertToBacking()), textureDescriptor.format);
 }
 
 static PAL::WebGPU::SamplerDescriptor convertToBacking(const std::optional<GPUSamplerDescriptor>& samplerDescriptor)
@@ -160,6 +173,14 @@ Ref<GPUBindGroupLayout> GPUDevice::createBindGroupLayout(const GPUBindGroupLayou
     return GPUBindGroupLayout::create(m_backing->createBindGroupLayout(bindGroupLayoutDescriptor.convertToBacking()));
 }
 
+Ref<GPUPipelineLayout> GPUDevice::createAutoPipelineLayout()
+{
+    return GPUPipelineLayout::create(m_backing->createPipelineLayout(PAL::WebGPU::PipelineLayoutDescriptor {
+        { "autoLayout"_s, },
+        std::nullopt
+    }));
+}
+
 Ref<GPUPipelineLayout> GPUDevice::createPipelineLayout(const GPUPipelineLayoutDescriptor& pipelineLayoutDescriptor)
 {
     return GPUPipelineLayout::create(m_backing->createPipelineLayout(pipelineLayoutDescriptor.convertToBacking()));
@@ -187,7 +208,7 @@ Ref<GPURenderPipeline> GPUDevice::createRenderPipeline(const GPURenderPipelineDe
 
 void GPUDevice::createComputePipelineAsync(const GPUComputePipelineDescriptor& computePipelineDescriptor, CreateComputePipelineAsyncPromise&& promise)
 {
-    m_backing->createComputePipelineAsync(computePipelineDescriptor.convertToBacking(m_autoPipelineLayout), [promise = WTFMove(promise)] (RefPtr<PAL::WebGPU::ComputePipeline>&& computePipeline) mutable {
+    m_backing->createComputePipelineAsync(computePipelineDescriptor.convertToBacking(m_autoPipelineLayout), [promise = WTFMove(promise)](RefPtr<PAL::WebGPU::ComputePipeline>&& computePipeline) mutable {
         if (computePipeline.get())
             promise.resolve(GPUComputePipeline::create(computePipeline.releaseNonNull()));
         else
@@ -197,7 +218,7 @@ void GPUDevice::createComputePipelineAsync(const GPUComputePipelineDescriptor& c
 
 void GPUDevice::createRenderPipelineAsync(const GPURenderPipelineDescriptor& renderPipelineDescriptor, CreateRenderPipelineAsyncPromise&& promise)
 {
-    m_backing->createRenderPipelineAsync(renderPipelineDescriptor.convertToBacking(m_autoPipelineLayout), [promise = WTFMove(promise)] (RefPtr<PAL::WebGPU::RenderPipeline>&& renderPipeline) mutable {
+    m_backing->createRenderPipelineAsync(renderPipelineDescriptor.convertToBacking(m_autoPipelineLayout), [promise = WTFMove(promise)](RefPtr<PAL::WebGPU::RenderPipeline>&& renderPipeline) mutable {
         if (renderPipeline.get())
             promise.resolve(GPURenderPipeline::create(renderPipeline.releaseNonNull()));
         else
@@ -235,18 +256,18 @@ void GPUDevice::pushErrorScope(GPUErrorFilter errorFilter)
 
 void GPUDevice::popErrorScope(ErrorScopePromise&& errorScopePromise)
 {
-    m_backing->popErrorScope([promise = WTFMove(errorScopePromise)] (std::optional<PAL::WebGPU::Error>&& error) mutable {
+    m_backing->popErrorScope([promise = WTFMove(errorScopePromise)](std::optional<PAL::WebGPU::Error>&& error) mutable {
         if (!error) {
             promise.resolve(std::nullopt);
             return;
         }
-        WTF::switchOn(WTFMove(*error), [&] (Ref<PAL::WebGPU::OutOfMemoryError>&& outOfMemoryError) {
+        WTF::switchOn(WTFMove(*error), [&promise](Ref<PAL::WebGPU::OutOfMemoryError>&& outOfMemoryError) {
             GPUError error = RefPtr<GPUOutOfMemoryError>(GPUOutOfMemoryError::create(WTFMove(outOfMemoryError)));
             promise.resolve(error);
-        }, [&] (Ref<PAL::WebGPU::ValidationError>&& validationError) {
+        }, [&promise](Ref<PAL::WebGPU::ValidationError>&& validationError) {
             GPUError error = RefPtr<GPUValidationError>(GPUValidationError::create(WTFMove(validationError)));
             promise.resolve(error);
-        }, [&] (Ref<PAL::WebGPU::InternalError>&& internalError) {
+        }, [&promise](Ref<PAL::WebGPU::InternalError>&& internalError) {
             GPUError error = RefPtr<GPUInternalError>(GPUInternalError::create(WTFMove(internalError)));
             promise.resolve(error);
         });

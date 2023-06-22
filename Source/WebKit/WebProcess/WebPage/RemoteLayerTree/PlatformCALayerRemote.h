@@ -137,7 +137,6 @@ public:
     bool hasContents() const override;
     CFTypeRef contents() const override;
     void setContents(CFTypeRef) override;
-    void setDelegatedContentsFinishedEvent(const WebCore::PlatformCALayerDelegatedContentsFinishedEvent&) override;
     void setDelegatedContents(const WebCore::PlatformCALayerDelegatedContents&) override;
     void setContentsRect(const WebCore::FloatRect&) override;
 
@@ -174,6 +173,9 @@ public:
     void setCornerRadius(float) override;
 
     void setAntialiasesEdges(bool) override;
+
+    WebCore::MediaPlayerVideoGravity videoGravity() const override;
+    void setVideoGravity(WebCore::MediaPlayerVideoGravity) override;
 
     // FIXME: Having both shapeRoundedRect and shapePath is redundant. We could use shapePath for everything.
     WebCore::FloatRoundedRect shapeRoundedRect() const override;

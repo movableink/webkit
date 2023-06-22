@@ -287,13 +287,13 @@ void NetworkProcessConnection::allCookiesDeleted()
 #endif
 
 #if ENABLE(SHAREABLE_RESOURCE)
-void NetworkProcessConnection::didCacheResource(const ResourceRequest& request, const ShareableResource::Handle& handle)
+void NetworkProcessConnection::didCacheResource(const ResourceRequest& request, ShareableResource::Handle&& handle)
 {
     auto* resource = MemoryCache::singleton().resourceForRequest(request, WebProcess::singleton().sessionID());
     if (!resource)
         return;
     
-    auto buffer = handle.tryWrapInSharedBuffer();
+    auto buffer = WTFMove(handle).tryWrapInSharedBuffer();
     if (!buffer) {
         LOG_ERROR("Unable to create FragmentedSharedBuffer from ShareableResource handle for resource url %s", request.url().string().utf8().data());
         return;
@@ -335,9 +335,10 @@ void NetworkProcessConnection::broadcastConsoleMessage(MessageSource source, Mes
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
 
-    Page::forEachPage([&] (Page& page) {
-        if (auto* webPage = WebPage::fromCorePage(page))
-            webPage->mainWebFrame().addConsoleMessage(source, level, message);
+    Page::forEachPage([&] (auto& page) {
+        if (auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame()))
+            if (auto* document = localMainFrame->document())
+                document->addConsoleMessage(source, level, message);
     });
 }
 
@@ -347,5 +348,10 @@ void NetworkProcessConnection::connectToRTCDataChannelRemoteSource(WebCore::RTCD
     callback(RTCDataChannelRemoteManager::sharedManager().connectToRemoteSource(localIdentifier, remoteIdentifier));
 }
 #endif
+
+void NetworkProcessConnection::addAllowedFirstPartyForCookies(WebCore::RegistrableDomain&& firstPartyForCookies)
+{
+    WebProcess::singleton().addAllowedFirstPartyForCookies(WTFMove(firstPartyForCookies));
+}
 
 } // namespace WebKit

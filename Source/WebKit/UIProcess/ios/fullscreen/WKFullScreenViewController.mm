@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 
 #import "FullscreenTouchSecheuristic.h"
 #import "PlaybackSessionManagerProxy.h"
-#import "UIKitSPI.h"
+#import "UIAlertControllerUtilities.h"
 #import "VideoFullscreenManagerProxy.h"
 #import "WKFullscreenStackView.h"
 #import "WKWebViewIOS.h"
@@ -152,7 +152,7 @@ private:
     WKFullScreenViewControllerPlaybackSessionModelClient _playbackClient;
     CGFloat _nonZeroStatusBarHeight;
     std::optional<UIInterfaceOrientationMask> _supportedOrientations;
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
+#if PLATFORM(VISION)
     BOOL m_shouldHideCancelAndPIPButtons;
 #endif
 }
@@ -177,7 +177,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     _playbackClient.setParent(self);
     _valid = YES;
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
+#if PLATFORM(VISION)
     m_shouldHideCancelAndPIPButtons = NO;
 #endif
 
@@ -321,7 +321,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (auto page = [self._webView _page])
         isPiPEnabled = page->preferences().pictureInPictureAPIEnabled() && page->preferences().allowsPictureInPictureMediaPlayback();
     bool isPiPSupported = playbackSessionModel && playbackSessionModel->isPictureInPictureSupported();
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
+#if PLATFORM(VISION)
     [_cancelButton setHidden:m_shouldHideCancelAndPIPButtons];
     isPiPEnabled = !m_shouldHideCancelAndPIPButtons && isPiPEnabled;
 #endif
@@ -336,7 +336,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     }];
 }
 
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
+#if PLATFORM(VISION)
 - (void)hideCancelAndPIPButtons:(BOOL)hidden
 {
     if (m_shouldHideCancelAndPIPButtons == hidden)
@@ -345,7 +345,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     m_shouldHideCancelAndPIPButtons = hidden;
     [self videoControlsManagerDidChange];
 }
-#endif // HAVE(UIKIT_WEBKIT_INTERNALS)
+#endif // PLATFORM(VISION)
 
 - (void)setPrefersStatusBarHidden:(BOOL)value
 {
@@ -458,9 +458,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     _cancelButton = [_WKExtrinsicButton buttonWithType:UIButtonTypeSystem];
     [_cancelButton setTranslatesAutoresizingMaskIntoConstraints:NO];
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [_cancelButton setAdjustsImageWhenHighlighted:NO];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
     [_cancelButton setExtrinsicContentSize:buttonSize];
     
     [_cancelButton setImage:[doneImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
@@ -481,9 +481,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     } else {
         _pipButton = [_WKExtrinsicButton buttonWithType:UIButtonTypeSystem];
         [_pipButton setTranslatesAutoresizingMaskIntoConstraints:NO];
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         [_pipButton setAdjustsImageWhenHighlighted:NO];
-        ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
         [_pipButton setExtrinsicContentSize:buttonSize];
         
         [_pipButton setImage:[startPiPImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
@@ -534,8 +534,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         _topConstraint.get(),
         stackViewToTopGuideConstraint,
 #if ENABLE(FULLSCREEN_DISMISSAL_GESTURES)
-        [[_banner centerYAnchor] constraintEqualToAnchor:margins.centerYAnchor],
-        [[_banner centerXAnchor] constraintEqualToAnchor:margins.centerXAnchor],
+        [[_banner centerYAnchor] constraintEqualToAnchor:self.view.centerYAnchor],
+        [[_banner centerXAnchor] constraintEqualToAnchor:self.view.centerXAnchor],
 #endif
         [[_stackView leadingAnchor] constraintEqualToAnchor:margins.leadingAnchor],
     ]];
@@ -568,7 +568,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [super viewWillAppear:animated];
 }
 
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
+#if PLATFORM(VISION)
 - (void)viewIsAppearing:(BOOL)animated
 {
     self.view.clipsToBounds = YES;
@@ -591,18 +591,20 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         [self._webView _beginAnimatedResizeWithUpdates:^{
             [self._webView _overrideLayoutParametersWithMinimumLayoutSize:size maximumUnobscuredSizeOverride:size];
         }];
- ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         [self._webView _setInterfaceOrientationOverride:[UIApp statusBarOrientation]];
- ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
     } completion:^(id <UIViewControllerTransitionCoordinatorContext>context) {
         [self._webView _endAnimatedResize];
     }];
 }
 
+#if !PLATFORM(VISION)
 - (UIStatusBarStyle)preferredStatusBarStyle
 {
     return UIStatusBarStyleLightContent;
 }
+#endif
 
 - (BOOL)prefersStatusBarHidden
 {
@@ -712,7 +714,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     ASSERT(_valid);
     NSString *alertTitle = WEB_UI_STRING("It looks like you are typing while in full screen", "Full Screen Deceptive Website Warning Sheet Title");
     NSString *alertMessage = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Typing is not allowed in full screen websites. “%@” may be showing a fake keyboard to trick you into disclosing personal or financial information.", "Full Screen Deceptive Website Warning Sheet Content Text"), (NSString *)self.location];
-    UIAlertController* alert = [UIAlertController alertControllerWithTitle:alertTitle message:alertMessage preferredStyle:UIAlertControllerStyleAlert];
+    auto alert = WebKit::createUIAlertController(alertTitle, alertMessage);
 
     if (auto page = [self._webView _page]) {
         page->suspendAllMediaPlayback([] { });
@@ -737,7 +739,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     [alert addAction:exitAction];
     [alert addAction:stayAction];
-    [self presentViewController:alert animated:YES completion:nil];
+    [self presentViewController:alert.get() animated:YES completion:nil];
 }
 
 @end

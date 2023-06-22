@@ -54,9 +54,7 @@
 
 #if PLATFORM(GTK)
 #include "GtkSettingsManager.h"
-#if USE(GBM)
 #include "AcceleratedBackingStoreDMABuf.h"
-#endif
 #endif
 
 
@@ -86,9 +84,12 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
     }
 #endif
 
-#if PLATFORM(GTK) && USE(GBM)
-    if (AcceleratedBackingStoreDMABuf::checkRequirements())
-        parameters.useDMABufSurfaceForCompositing = true;
+#if USE(GBM)
+    parameters.renderDeviceFile = WebCore::PlatformDisplay::sharedDisplay().drmRenderNodeFile();
+#endif
+
+#if PLATFORM(GTK)
+    parameters.useDMABufSurfaceForCompositing = AcceleratedBackingStoreDMABuf::checkRequirements();
 #endif
 
 #if PLATFORM(WAYLAND)

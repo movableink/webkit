@@ -66,7 +66,8 @@
       "name" : "Abrar Rahman Protyasha",
       "nicks" : [
          "aprotyas"
-      ]
+      ],
+      "status" : "committer"
    },
    {
       "emails" : [
@@ -831,7 +832,8 @@
       "name" : "Anne van Kesteren",
       "nicks" : [
          "annevk"
-      ]
+      ],
+      "status" : "committer"
    },
    {
       "emails" : [
@@ -936,6 +938,15 @@
          "anttik"
       ],
       "status" : "reviewer"
+   },
+   {
+      "emails" : [
+         "anuj1panta@gmail.com",
+         "a_panta@apple.com"
+      ],
+      "expertise" : "Web Inspector",
+      "github" : "anujpanta1",
+      "name" : "Anuj Panta"
    },
    {
       "emails" : [
@@ -1828,7 +1839,14 @@
       "nicks" : [
          "djg"
       ],
-      "status" : "committer"
+      "status" : "reviewer"
+   },
+   {
+      "emails" : [
+         "dtr_bugzilla@apple.com"
+      ],
+      "github" : "drobson1005",
+      "name" : "Dan Robson"
    },
    {
       "emails" : [
@@ -1892,6 +1910,15 @@
          "danielpunkass",
          "dcj"
       ]
+   },
+   {
+      "emails" : [
+         "daniel_liu4@apple.com",
+         "danlliu@umich.edu"
+      ],
+      "expertise" : "JavaScriptCore",
+      "github" : "danlliu",
+      "name" : "Daniel Liu"
    },
    {
       "emails" : [
@@ -3362,6 +3389,13 @@
    },
    {
       "emails" : [
+         "iagho@apple.com"
+      ],
+      "github" : "asiagho",
+      "name" : "Isi Agho"
+   },
+   {
+      "emails" : [
          "ike@apple.com"
       ],
       "name" : "Ivan Ivan Krsti\u0107"
@@ -3587,6 +3621,14 @@
    },
    {
       "emails" : [
+         "jasmine.mok@sony.com",
+         "jasminemok@ucla.edu"
+      ],
+      "github" : "mokjasmine",
+      "name" : "Jasmine Mok"
+   },
+   {
+      "emails" : [
          "lawrence.j@apple.com"
       ],
       "name" : "Jason Lawrence",
@@ -3739,6 +3781,16 @@
       "name" : "Jeremy Orlow",
       "nicks" : [
          "jorlow"
+      ]
+   },
+   {
+      "emails" : [
+         "jcheung23@apple.com",
+         "cheungje@usc.edu"
+      ],
+      "name" : "Jessica Cheung",
+      "nicks" : [
+         "jesxilin"
       ]
    },
    {
@@ -4865,6 +4917,13 @@
    },
    {
       "emails" : [
+         "luke@warlow.dev"
+      ],
+      "github" : "lukewarlow",
+      "name" : "Luke Warlow"
+   },
+   {
+      "emails" : [
          "luming_yin@apple.com"
       ],
       "name" : "Luming Yin"
@@ -5239,11 +5298,11 @@
    },
    {
       "emails" : [
-         "mcatanzaro@gnome.org",
          "mcatanzaro@redhat.com",
+         "mcatanzaro@gnome.org",
          "mcatanzaro@igalia.com"
       ],
-      "expertise" : "The WebKitGTK Port, Epiphany, Soup HTTP Backend",
+      "expertise" : "WebKitGTK, Epiphany",
       "github" : "mcatanzaro",
       "name" : "Michael Catanzaro",
       "nicks" : [
@@ -7287,7 +7346,8 @@
       "name" : "Vitaly Dyachkov",
       "nicks" : [
          "obyknovenius"
-      ]
+      ],
+      "status" : "committer"
    },
    {
       "emails" : [

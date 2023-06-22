@@ -153,12 +153,12 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
     if (!eval) {
         if (!ecmaMode.isStrict()) {
             if (programSource.is8Bit()) {
-                LiteralParser<LChar> preparser(globalObject, programSource.characters8(), programSource.length(), NonStrictJSON, callerBaselineCodeBlock);
+                LiteralParser<LChar> preparser(globalObject, programSource.characters8(), programSource.length(), SloppyJSON, callerBaselineCodeBlock);
                 if (JSValue parsedObject = preparser.tryLiteralParse())
                     RELEASE_AND_RETURN(scope, parsedObject);
 
             } else {
-                LiteralParser<UChar> preparser(globalObject, programSource.characters16(), programSource.length(), NonStrictJSON, callerBaselineCodeBlock);
+                LiteralParser<UChar> preparser(globalObject, programSource.characters16(), programSource.length(), SloppyJSON, callerBaselineCodeBlock);
                 if (JSValue parsedObject = preparser.tryLiteralParse())
                     RELEASE_AND_RETURN(scope, parsedObject);
 
@@ -347,6 +347,8 @@ Interpreter::Interpreter()
 #if ASSERT_ENABLED
     static std::once_flag assertOnceKey;
     std::call_once(assertOnceKey, [] {
+        if (g_jscConfig.vmEntryDisallowed)
+            return;
         for (unsigned i = 0; i < NUMBER_OF_BYTECODE_IDS; ++i) {
             OpcodeID opcodeID = static_cast<OpcodeID>(i);
             RELEASE_ASSERT(getOpcodeID(getOpcode(opcodeID)) == opcodeID);

@@ -28,6 +28,7 @@
 #import "HTTPServer.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
+#import "TestProtocol.h"
 #import "TestWKWebView.h"
 #import "Utilities.h"
 #import <WebKit/WKProcessPoolPrivate.h>
@@ -684,6 +685,27 @@ TEST(_WKDataTask, Redirect)
     Util::run(&completed);
 }
 
+TEST(_WKDataTask, CrashDuringCreation)
+{
+    using namespace TestWebKitAPI;
+    HTTPServer server(HTTPServer::respondWithOK);
+    auto webView = adoptNS([WKWebView new]);
+    __block bool done = false;
+    [webView _dataTaskWithRequest:server.request() completionHandler:^(_WKDataTask *task) {
+        auto delegate = adoptNS([TestDataTaskDelegate new]);
+        task.delegate = delegate.get();
+        delegate.get().didCompleteWithError = ^(_WKDataTask *, NSError *error) {
+            EXPECT_NOT_NULL(error);
+            done = true;
+        };
+    }];
+    auto* dataStore = webView.get().configuration.websiteDataStore;
+    while (!dataStore._networkProcessIdentifier)
+        Util::spinRunLoop();
+    [dataStore _terminateNetworkProcess];
+    Util::run(&done);
+}
+
 TEST(_WKDataTask, Crash)
 {
     using namespace TestWebKitAPI;
@@ -809,4 +831,39 @@ TEST(NetworkProcess, DoNotLaunchForDOMCacheDestruction)
 
     TestWebKitAPI::Util::spinRunLoop(50);
     EXPECT_FALSE([configuration.get().websiteDataStore _networkProcessExists]);
+}
+
+TEST(NetworkProcess, CustomSchemeWasPrivateRelayed)
+{
+    [TestProtocol registerWithScheme:@"custom"];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600)]);
+    [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"custom://test"]]];
+
+    EXPECT_EQ(NO, [webView _wasPrivateRelayed]);
+
+    [TestProtocol unregister];
+}
+
+TEST(NetworkProcess, URLSchemeHandlerWasPrivateRelayed)
+{
+    auto handler = adoptNS([TestURLSchemeHandler new]);
+    [handler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
+        auto result = @"<html></html>";
+        auto type = @"text/html";
+
+        auto response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:type expectedContentLength:[result length] textEncodingName:nil]);
+        [task didReceiveResponse:response.get()];
+        [task didReceiveData:[result dataUsingEncoding:NSUTF8StringEncoding]];
+        [task didFinish];
+    }];
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration setURLSchemeHandler:handler.get() forURLScheme:@"custom"];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
+
+    [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"custom://test"]]];
+
+    EXPECT_EQ(NO, [webView _wasPrivateRelayed]);
 }

@@ -56,7 +56,7 @@ public:
 
     float opacity() const;
     
-    bool isHiddenByStyle() const final;
+    bool isHiddenByStyle() const override;
 
     std::unique_ptr<RenderStyle> getScrollbarPseudoStyle(ScrollbarPart, PseudoId) const;
 
@@ -68,7 +68,7 @@ private:
     void setParent(ScrollView*) override;
     void setEnabled(bool) override;
 
-    void paint(GraphicsContext&, const IntRect& damageRect, Widget::SecurityOriginPaintPolicy, EventRegionContext*) override;
+    void paint(GraphicsContext&, const IntRect& damageRect, Widget::SecurityOriginPaintPolicy, RegionContext*) override;
 
     void setHoveredPart(ScrollbarPart) override;
     void setPressedPart(ScrollbarPart) override;

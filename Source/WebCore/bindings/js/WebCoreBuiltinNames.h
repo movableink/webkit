@@ -101,6 +101,7 @@ namespace WebCore {
     macro(BiquadFilterNode) \
     macro(BlobEvent) \
     macro(BroadcastChannel) \
+    macro(BufferedChangeEvent) \
     macro(Cache) \
     macro(CacheStorage) \
     macro(ChannelMergerNode) \
@@ -191,6 +192,7 @@ namespace WebCore {
     macro(GainNode) \
     macro(GPU) \
     macro(GPUAdapter) \
+    macro(GPUAdapterInfo) \
     macro(GPUBindGroup) \
     macro(GPUBindGroupLayout) \
     macro(GPUBuffer) \

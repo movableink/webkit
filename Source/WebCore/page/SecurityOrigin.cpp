@@ -54,7 +54,7 @@ constexpr unsigned maximumURLSize = 0x04000000;
 
 bool SecurityOrigin::shouldIgnoreHost(const URL& url)
 {
-    return url.protocolIsData() || url.protocolIsAbout() || url.protocolIsJavaScript() || url.protocolIs("file"_s);
+    return url.protocolIsData() || url.protocolIsAbout() || url.protocolIsJavaScript() || url.protocolIsFile();
 }
 
 bool SecurityOrigin::shouldUseInnerURL(const URL& url)
@@ -200,7 +200,7 @@ Ref<SecurityOrigin> SecurityOrigin::createOpaque()
 
 Ref<SecurityOrigin> SecurityOrigin::createNonLocalWithAllowedFilePath(const URL& url, const String& filePath)
 {
-    ASSERT(!url.isLocalFile());
+    ASSERT(!url.protocolIsFile());
     auto securityOrigin = SecurityOrigin::create(url);
     securityOrigin->m_filePath = filePath;
     return securityOrigin;
@@ -285,12 +285,13 @@ bool SecurityOrigin::passesFileCheck(const SecurityOrigin& other) const
     return !m_enforcesFilePathSeparation && !other.m_enforcesFilePathSeparation;
 }
 
-bool SecurityOrigin::canRequest(const URL& url) const
+bool SecurityOrigin::canRequest(const URL& url, const OriginAccessPatterns& patterns) const
 {
     if (m_universalAccess)
         return true;
 
-    if (getCachedOrigin(url) == this)
+    auto cachedOriginForURL = getCachedOrigin(url);
+    if (cachedOriginForURL && isSameOriginAs(*cachedOriginForURL))
         return true;
 
     if (isOpaque())
@@ -306,7 +307,7 @@ bool SecurityOrigin::canRequest(const URL& url) const
     if (isSameSchemeHostPort(targetOrigin.get()))
         return true;
 
-    if (SecurityPolicy::isAccessAllowed(*this, targetOrigin.get(), url))
+    if (SecurityPolicy::isAccessAllowed(*this, targetOrigin.get(), url, patterns))
         return true;
 
     return false;
@@ -345,7 +346,7 @@ static bool isFeedWithNestedProtocolInHTTPFamily(const URL& url)
         || startsWithLettersIgnoringASCIICase(string, "feedsearch:https:"_s);
 }
 
-bool SecurityOrigin::canDisplay(const URL& url) const
+bool SecurityOrigin::canDisplay(const URL& url, const OriginAccessPatterns& patterns) const
 {
     ASSERT(!isInNetworkProcess());
     if (m_universalAccess)
@@ -355,7 +356,7 @@ bool SecurityOrigin::canDisplay(const URL& url) const
         return false;
     
 #if !PLATFORM(IOS_FAMILY) && !ENABLE(BUBBLEWRAP_SANDBOX)
-    if (m_data.protocol() == "file"_s && url.isLocalFile() && !FileSystem::filesHaveSameVolume(m_filePath, url.fileSystemPath()))
+    if (m_data.protocol() == "file"_s && url.protocolIsFile() && !FileSystem::filesHaveSameVolume(m_filePath, url.fileSystemPath()))
         return false;
 #endif
 
@@ -365,19 +366,19 @@ bool SecurityOrigin::canDisplay(const URL& url) const
     auto protocol = url.protocol();
 
     if (LegacySchemeRegistry::canDisplayOnlyIfCanRequest(protocol))
-        return canRequest(url);
+        return canRequest(url, patterns);
 
     if (LegacySchemeRegistry::shouldTreatURLSchemeAsDisplayIsolated(protocol))
-        return equalIgnoringASCIICase(m_data.protocol(), protocol) || SecurityPolicy::isAccessAllowed(*this, url);
+        return equalIgnoringASCIICase(m_data.protocol(), protocol) || SecurityPolicy::isAccessAllowed(*this, url, patterns);
 
     if (!SecurityPolicy::restrictAccessToLocal())
         return true;
 
-    if (url.isLocalFile() && url.fileSystemPath() == m_filePath)
+    if (url.protocolIsFile() && url.fileSystemPath() == m_filePath)
         return true;
 
     if (LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(protocol))
-        return canLoadLocalResources() || SecurityPolicy::isAccessAllowed(*this, url);
+        return canLoadLocalResources() || SecurityPolicy::isAccessAllowed(*this, url, patterns);
 
     return true;
 }

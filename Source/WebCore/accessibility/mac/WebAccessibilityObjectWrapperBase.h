@@ -51,14 +51,16 @@ class VisiblePosition;
 bool attributedStringContainsRange(NSAttributedString *, const NSRange&);
 void attributedStringSetNumber(NSMutableAttributedString *, NSString *, NSNumber *, const NSRange&);
 void attributedStringSetFont(NSMutableAttributedString *, CTFontRef, const NSRange&);
+void attributedStringSetSpelling(NSMutableAttributedString *, Node&, StringView, const NSRange&);
+void attributedStringSetNeedsSpellCheck(NSMutableAttributedString *, Node&);
 RetainPtr<NSAttributedString> attributedStringCreate(Node*, StringView, AXCoreObject::SpellCheck);
 }
 
 @interface WebAccessibilityObjectWrapperBase : NSObject {
-    WebCore::AccessibilityObject* m_axObject;
+    WeakPtr<WebCore::AccessibilityObject> m_axObject;
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    WebCore::AXIsolatedObject* m_isolatedObject;
+    ThreadSafeWeakPtr<WebCore::AXIsolatedObject> m_isolatedObject;
     // To be accessed only on the main thread.
     bool m_isolatedObjectInitialized;
 #endif

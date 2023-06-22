@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,21 +29,23 @@
 #if HAVE(WEBGPU_IMPLEMENTATION)
 
 #include "WebGPUConvertToBackingContext.h"
+#include "WebGPUExternalTextureDescriptor.h"
 #include <WebGPU/WebGPUExt.h>
 
 namespace PAL::WebGPU {
 
-ExternalTextureImpl::ExternalTextureImpl(ConvertToBackingContext& convertToBackingContext)
+ExternalTextureImpl::ExternalTextureImpl(WebGPUPtr<WGPUExternalTexture>&& externalTexture, const ExternalTextureDescriptor& descriptor, ConvertToBackingContext& convertToBackingContext)
     : m_convertToBackingContext(convertToBackingContext)
+    , m_backing(WTFMove(externalTexture))
+    , m_colorSpace(descriptor.colorSpace)
 {
 }
 
-ExternalTextureImpl::~ExternalTextureImpl()
-{
-}
+ExternalTextureImpl::~ExternalTextureImpl() = default;
 
 void ExternalTextureImpl::setLabelInternal(const String&)
 {
+    // FIXME: Implement this.
 }
 
 } // namespace PAL::WebGPU

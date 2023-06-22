@@ -26,43 +26,28 @@
 #include "config.h"
 #include "AcceleratedBackingStoreDMABuf.h"
 
-#if USE(GBM)
 #include "AcceleratedBackingStoreDMABufMessages.h"
+#include "AcceleratedSurfaceDMABufMessages.h"
 #include "LayerTreeContext.h"
+#include "ShareableBitmap.h"
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
 #include <WebCore/DMABufFormat.h>
-#include <WebCore/GBMDevice.h>
 #include <WebCore/GLContext.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/PlatformDisplay.h>
 #include <epoxy/egl.h>
-#include <gbm.h>
 #include <wtf/glib/GUniquePtr.h>
+
+#if USE(GBM)
+#include <gbm.h>
+#endif
 
 #if PLATFORM(X11) && USE(GTK4)
 #include <gdk/x11/gdkx.h>
 #endif
 
 namespace WebKit {
-
-static bool gtkGLContextIsEGL()
-{
-    static bool isEGL = true;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
-#if PLATFORM(X11)
-    if (WebCore::PlatformDisplay::sharedDisplay().type() == WebCore::PlatformDisplay::Type::X11) {
-#if USE(GTK4)
-        isEGL = !!gdk_x11_display_get_egl_display(gdk_display_get_default());
-#else
-        isEGL = false;
-#endif
-    }
-#endif
-    });
-    return isEGL;
-}
 
 bool AcceleratedBackingStoreDMABuf::checkRequirements()
 {
@@ -78,7 +63,6 @@ bool AcceleratedBackingStoreDMABuf::checkRequirements()
         const auto& eglExtensions = WebCore::PlatformDisplay::sharedDisplay().eglExtensions();
         available = eglExtensions.KHR_image_base
             && eglExtensions.KHR_surfaceless_context
-            && eglExtensions.EXT_image_dma_buf_import
             && WebCore::GLContext::isExtensionSupported(eglQueryString(nullptr, EGL_EXTENSIONS), "EGL_MESA_platform_surfaceless");
     });
     return available;
@@ -110,7 +94,7 @@ AcceleratedBackingStoreDMABuf::RenderSource::RenderSource(const WebCore::IntSize
 {
 }
 
-AcceleratedBackingStoreDMABuf::Texture::Texture(GdkGLContext* glContext, const UnixFileDescriptor& backFD, const UnixFileDescriptor& frontFD, const WebCore::IntSize& size, uint32_t format, uint32_t offset, uint32_t stride, uint64_t modifier, float deviceScaleFactor)
+AcceleratedBackingStoreDMABuf::Texture::Texture(GdkGLContext* glContext, const UnixFileDescriptor& backFD, const UnixFileDescriptor& frontFD, const UnixFileDescriptor& displayFD, const WebCore::IntSize& size, uint32_t format, uint32_t offset, uint32_t stride, uint64_t modifier, float deviceScaleFactor)
     : RenderSource(size, deviceScaleFactor)
     , m_context(glContext)
 {
@@ -121,17 +105,17 @@ AcceleratedBackingStoreDMABuf::Texture::Texture(GdkGLContext* glContext, const U
         Vector<EGLAttrib> attributes = {
             EGL_WIDTH, m_size.width(),
             EGL_HEIGHT, m_size.height(),
-            EGL_LINUX_DRM_FOURCC_EXT, format,
+            EGL_LINUX_DRM_FOURCC_EXT, static_cast<EGLAttrib>(format),
             EGL_DMA_BUF_PLANE0_FD_EXT, fd.value(),
-            EGL_DMA_BUF_PLANE0_OFFSET_EXT, offset,
-            EGL_DMA_BUF_PLANE0_PITCH_EXT, stride,
+            EGL_DMA_BUF_PLANE0_OFFSET_EXT, static_cast<EGLAttrib>(offset),
+            EGL_DMA_BUF_PLANE0_PITCH_EXT, static_cast<EGLAttrib>(stride),
         };
         if (modifier != uint64_t(WebCore::DMABufFormat::Modifier::Invalid) && display.eglExtensions().EXT_image_dma_buf_import_modifiers) {
             std::array<EGLAttrib, 4> modifierAttributes {
                 EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, static_cast<EGLAttrib>(modifier >> 32),
                 EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, static_cast<EGLAttrib>(modifier & 0xffffffff),
             };
-            attributes.append(Span<const EGLAttrib> { modifierAttributes });
+            attributes.append(std::span<const EGLAttrib> { modifierAttributes });
         }
         attributes.append(EGL_NONE);
 
@@ -140,14 +124,18 @@ AcceleratedBackingStoreDMABuf::Texture::Texture(GdkGLContext* glContext, const U
 
     m_backImage = createImage(backFD);
     m_frontImage = createImage(frontFD);
-    if (!m_backImage || !m_frontImage) {
-        WTFLogAlways("Failed to create EGL image from DMABufs with file descriptors %d and %d", backFD.value(), frontFD.value());
+    m_displayImage = createImage(displayFD);
+    if (!m_backImage || !m_frontImage || !m_displayImage) {
+        WTFLogAlways("Failed to create EGL image from DMABufs with file descriptors %d, %d and %d", backFD.value(), frontFD.value(), displayFD.value());
         if (m_backImage)
             display.destroyEGLImage(m_backImage);
         m_backImage = nullptr;
         if (m_frontImage)
             display.destroyEGLImage(m_frontImage);
         m_frontImage = nullptr;
+        if (m_displayImage)
+            display.destroyEGLImage(m_displayImage);
+        m_displayImage = nullptr;
         return;
     }
 
@@ -174,22 +162,34 @@ AcceleratedBackingStoreDMABuf::Texture::~Texture()
         display.destroyEGLImage(m_backImage);
     if (m_frontImage)
         display.destroyEGLImage(m_frontImage);
+    if (m_displayImage)
+        display.destroyEGLImage(m_displayImage);
     if (m_textureID)
         glDeleteTextures(1, &m_textureID);
 }
 
-bool AcceleratedBackingStoreDMABuf::Texture::swap()
+void AcceleratedBackingStoreDMABuf::Texture::frame()
 {
     std::swap(m_backImage, m_frontImage);
+}
+
+void AcceleratedBackingStoreDMABuf::Texture::willDisplayFrame()
+{
+    std::swap(m_frontImage, m_displayImage);
+}
+
+bool AcceleratedBackingStoreDMABuf::Texture::prepareForRendering()
+{
     if (!m_textureID)
         return false;
 
     gdk_gl_context_make_current(m_context.get());
     glBindTexture(GL_TEXTURE_2D, m_textureID);
-    glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, m_frontImage);
+    glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, m_displayImage);
 #if USE(GTK4)
     m_textureIndex = !m_textureIndex;
 #endif
+
     return true;
 }
 
@@ -216,10 +216,16 @@ void AcceleratedBackingStoreDMABuf::Texture::paint(GtkWidget* widget, cairo_t* c
 }
 #endif
 
-AcceleratedBackingStoreDMABuf::Surface::Surface(const UnixFileDescriptor& backFD, const UnixFileDescriptor& frontFD, const WebCore::IntSize& size, uint32_t format, uint32_t offset, uint32_t stride, float deviceScaleFactor)
+#if USE(GBM)
+AcceleratedBackingStoreDMABuf::Surface::Surface(const UnixFileDescriptor& backFD, const UnixFileDescriptor& frontFD, const UnixFileDescriptor& displayFD, const WebCore::IntSize& size, uint32_t format, uint32_t offset, uint32_t stride, float deviceScaleFactor)
     : RenderSource(size, deviceScaleFactor)
 {
-    auto* device = WebCore::GBMDevice::singleton().device();
+    auto* device = WebCore::PlatformDisplay::sharedDisplay().gbmDevice();
+    if (!device) {
+        WTFLogAlways("Failed to get GBM device");
+        return;
+    }
+
     struct gbm_import_fd_data fdData = { backFD.value(), static_cast<uint32_t>(m_size.width()), static_cast<uint32_t>(m_size.height()), stride, format };
     m_backBuffer = gbm_bo_import(device, GBM_BO_IMPORT_FD, &fdData, GBM_BO_USE_RENDERING);
     if (!m_backBuffer) {
@@ -233,18 +239,41 @@ AcceleratedBackingStoreDMABuf::Surface::Surface(const UnixFileDescriptor& backFD
         gbm_bo_destroy(m_backBuffer);
         m_backBuffer = nullptr;
     }
+    fdData.fd = displayFD.value();
+    m_displayBuffer = gbm_bo_import(device, GBM_BO_IMPORT_FD, &fdData, GBM_BO_USE_RENDERING);
+    if (!m_displayBuffer) {
+        WTFLogAlways("Failed to import DMABuf with file descriptor %d", fdData.fd);
+        gbm_bo_destroy(m_backBuffer);
+        m_backBuffer = nullptr;
+        gbm_bo_destroy(m_frontBuffer);
+        m_frontBuffer = nullptr;
+    }
+}
+#endif
+
+AcceleratedBackingStoreDMABuf::Surface::Surface(RefPtr<ShareableBitmap>& backBitmap, RefPtr<ShareableBitmap>& frontBitmap, RefPtr<ShareableBitmap>& displayBitmap, float deviceScaleFactor)
+    : RenderSource(backBitmap ? backBitmap->size() : WebCore::IntSize(), deviceScaleFactor)
+    , m_backBitmap(backBitmap)
+    , m_frontBitmap(frontBitmap)
+    , m_displayBitmap(displayBitmap)
+{
 }
 
 AcceleratedBackingStoreDMABuf::Surface::~Surface()
 {
     m_surface = nullptr;
 
+#if USE(GBM)
     if (m_backBuffer)
         gbm_bo_destroy(m_backBuffer);
     if (m_frontBuffer)
         gbm_bo_destroy(m_frontBuffer);
+    if (m_displayBuffer)
+        gbm_bo_destroy(m_displayBuffer);
+#endif
 }
 
+#if USE(GBM)
 RefPtr<cairo_surface_t> AcceleratedBackingStoreDMABuf::Surface::map(struct gbm_bo* buffer) const
 {
     if (!buffer)
@@ -271,11 +300,45 @@ RefPtr<cairo_surface_t> AcceleratedBackingStoreDMABuf::Surface::map(struct gbm_b
     });
     return surface;
 }
+#endif
 
-bool AcceleratedBackingStoreDMABuf::Surface::swap()
+RefPtr<cairo_surface_t> AcceleratedBackingStoreDMABuf::Surface::map(RefPtr<ShareableBitmap>& bitmap) const
 {
-    std::swap(m_backBuffer, m_frontBuffer);
-    m_surface = map(m_frontBuffer);
+    if (!bitmap)
+        return nullptr;
+
+    return bitmap->createCairoSurface();
+}
+
+void AcceleratedBackingStoreDMABuf::Surface::frame()
+{
+    if (m_backBitmap && m_frontBitmap)
+        std::swap(m_backBitmap, m_frontBitmap);
+#if USE(GBM)
+    else
+        std::swap(m_backBuffer, m_frontBuffer);
+#endif
+}
+
+void AcceleratedBackingStoreDMABuf::Surface::willDisplayFrame()
+{
+    if (m_frontBitmap && m_displayBitmap)
+        std::swap(m_frontBitmap, m_displayBitmap);
+#if USE(GBM)
+    else
+        std::swap(m_frontBuffer, m_displayBuffer);
+#endif
+}
+
+bool AcceleratedBackingStoreDMABuf::Surface::prepareForRendering()
+{
+    if (m_displayBitmap)
+        m_surface = map(m_displayBitmap);
+#if USE(GBM)
+    else
+        m_surface = map(m_displayBuffer);
+#endif
+
     if (m_surface) {
         cairo_surface_mark_dirty(m_surface.get());
         return true;
@@ -313,10 +376,12 @@ void AcceleratedBackingStoreDMABuf::Surface::paint(GtkWidget*, cairo_t* cr, cons
 }
 #endif
 
-void AcceleratedBackingStoreDMABuf::configure(UnixFileDescriptor&& backFD, UnixFileDescriptor&& frontFD, const WebCore::IntSize& size, uint32_t format, uint32_t offset, uint32_t stride, uint64_t modifier)
+void AcceleratedBackingStoreDMABuf::configure(UnixFileDescriptor&& backFD, UnixFileDescriptor&& frontFD, UnixFileDescriptor&& displayFD, const WebCore::IntSize& size, uint32_t format, uint32_t offset, uint32_t stride, uint64_t modifier)
 {
+    m_isSoftwareRast = false;
     m_surface.backFD = WTFMove(backFD);
     m_surface.frontFD = WTFMove(frontFD);
+    m_surface.displayFD = WTFMove(displayFD);
     m_surface.size = size;
     m_surface.format = format;
     m_surface.offset = offset;
@@ -326,38 +391,86 @@ void AcceleratedBackingStoreDMABuf::configure(UnixFileDescriptor&& backFD, UnixF
         m_pendingSource = createSource();
 }
 
-std::unique_ptr<AcceleratedBackingStoreDMABuf::RenderSource> AcceleratedBackingStoreDMABuf::createSource()
+void AcceleratedBackingStoreDMABuf::configureSHM(ShareableBitmap::Handle&& backBufferHandle, ShareableBitmap::Handle&& frontBufferHandle, ShareableBitmap::Handle&& displayBufferHandle)
 {
-    if (!gtkGLContextIsEGL())
-        return makeUnique<Surface>(m_surface.backFD, m_surface.frontFD, m_surface.size, m_surface.format, m_surface.offset, m_surface.stride, m_webPage.deviceScaleFactor());
-
-    ensureGLContext();
-    return makeUnique<Texture>(m_gdkGLContext.get(), m_surface.backFD, m_surface.frontFD, m_surface.size, m_surface.format, m_surface.offset, m_surface.stride, m_surface.modifier, m_webPage.deviceScaleFactor());
+    m_isSoftwareRast = true;
+    m_surface.backBitmap = ShareableBitmap::create(WTFMove(backBufferHandle), SharedMemory::Protection::ReadOnly);
+    m_surface.frontBitmap = ShareableBitmap::create(WTFMove(frontBufferHandle), SharedMemory::Protection::ReadOnly);
+    m_surface.displayBitmap = ShareableBitmap::create(WTFMove(displayBufferHandle), SharedMemory::Protection::ReadOnly);
+    if (gtk_widget_get_realized(m_webPage.viewWidget()))
+        m_pendingSource = createSource();
 }
 
-void AcceleratedBackingStoreDMABuf::frame(CompletionHandler<void()>&& completionHandler)
+std::unique_ptr<AcceleratedBackingStoreDMABuf::RenderSource> AcceleratedBackingStoreDMABuf::createSource()
 {
+    if (m_isSoftwareRast)
+        return makeUnique<Surface>(m_surface.backBitmap, m_surface.frontBitmap, m_surface.displayBitmap, m_webPage.deviceScaleFactor());
+
+#if USE(GBM)
+    if (!WebCore::PlatformDisplay::sharedDisplay().gtkEGLDisplay())
+        return makeUnique<Surface>(m_surface.backFD, m_surface.frontFD, m_surface.displayFD, m_surface.size, m_surface.format, m_surface.offset, m_surface.stride, m_webPage.deviceScaleFactor());
+#endif
+
+    ensureGLContext();
+    return makeUnique<Texture>(m_gdkGLContext.get(), m_surface.backFD, m_surface.frontFD, m_surface.displayFD, m_surface.size, m_surface.format, m_surface.offset, m_surface.stride, m_surface.modifier, m_webPage.deviceScaleFactor());
+}
+
+void AcceleratedBackingStoreDMABuf::frame()
+{
+    ASSERT(!m_frameCompletionHandler);
+    m_frameCompletionHandler = [this] {
+        m_webPage.process().send(Messages::AcceleratedSurfaceDMABuf::FrameDone(), m_surface.id);
+    };
+
     if (m_pendingSource)
         m_committedSource = WTFMove(m_pendingSource);
 
-    std::swap(m_surface.backFD, m_surface.frontFD);
-    if (!m_committedSource || !m_committedSource->swap()) {
-        completionHandler();
-        return;
-    }
+    if (m_isSoftwareRast)
+        std::swap(m_surface.backBitmap, m_surface.frontBitmap);
+    else
+        std::swap(m_surface.backFD, m_surface.frontFD);
 
-    ASSERT(!m_frameCompletionHandler);
-    m_frameCompletionHandler = WTFMove(completionHandler);
-    gtk_widget_queue_draw(m_webPage.viewWidget());
+    if (m_committedSource) {
+        m_committedSource->frame();
+        gtk_widget_queue_draw(m_webPage.viewWidget());
+    } else {
+        if (m_isSoftwareRast)
+            std::swap(m_surface.frontBitmap, m_surface.displayBitmap);
+        else
+            std::swap(m_surface.frontFD, m_surface.displayFD);
+        frameDone();
+    }
+}
+
+void AcceleratedBackingStoreDMABuf::willDisplayFrame()
+{
+    ASSERT(m_frameCompletionHandler);
+    if (m_isSoftwareRast)
+        std::swap(m_surface.frontBitmap, m_surface.displayBitmap);
+    else
+        std::swap(m_surface.frontFD, m_surface.displayFD);
+
+    if (m_committedSource)
+        m_committedSource->willDisplayFrame();
+}
+
+void AcceleratedBackingStoreDMABuf::frameDone()
+{
+    if (auto completionHandler = std::exchange(m_frameCompletionHandler, nullptr))
+        completionHandler();
 }
 
 void AcceleratedBackingStoreDMABuf::realize()
 {
-    if (!m_surface.backFD && !m_surface.frontFD)
+    if (m_isSoftwareRast && !m_surface.backBitmap && !m_surface.frontBitmap)
+        return;
+
+    if (!m_isSoftwareRast && !m_surface.backFD && !m_surface.frontFD)
         return;
 
     m_committedSource = createSource();
-    gtk_widget_queue_draw(m_webPage.viewWidget());
+    if (m_committedSource->prepareForRendering())
+        gtk_widget_queue_draw(m_webPage.viewWidget());
 }
 
 void AcceleratedBackingStoreDMABuf::unrealize()
@@ -387,17 +500,13 @@ void AcceleratedBackingStoreDMABuf::ensureGLContext()
     if (!m_gdkGLContext)
         g_error("GDK is not able to create a GL context: %s.", error->message);
 
-#if USE(OPENGL_ES)
-    gdk_gl_context_set_use_es(m_gdkGLContext.get(), TRUE);
-#endif
-
     if (!gdk_gl_context_realize(m_gdkGLContext.get(), &error.outPtr()))
         g_error("GDK failed to realize the GL context: %s.", error->message);
 }
 
 bool AcceleratedBackingStoreDMABuf::makeContextCurrent()
 {
-    if (!gtkGLContextIsEGL())
+    if (!WebCore::PlatformDisplay::sharedDisplay().gtkEGLDisplay())
         return false;
 
     if (!gtk_widget_get_realized(m_webPage.viewWidget()))
@@ -414,8 +523,7 @@ void AcceleratedBackingStoreDMABuf::update(const LayerTreeContext& context)
         return;
 
     if (m_surface.id) {
-        if (auto completionHandler = std::exchange(m_frameCompletionHandler, nullptr))
-            completionHandler();
+        frameDone();
         m_webPage.process().removeMessageReceiver(Messages::AcceleratedBackingStoreDMABuf::messageReceiverName(), m_surface.id);
     }
 
@@ -427,27 +535,35 @@ void AcceleratedBackingStoreDMABuf::update(const LayerTreeContext& context)
 #if USE(GTK4)
 void AcceleratedBackingStoreDMABuf::snapshot(GtkSnapshot* gtkSnapshot)
 {
+    if (m_frameCompletionHandler)
+        willDisplayFrame();
+
     if (!m_committedSource)
         return;
 
+    if (m_frameCompletionHandler)
+        m_committedSource->prepareForRendering();
+
     m_committedSource->snapshot(gtkSnapshot);
-    if (auto completionHandler = std::exchange(m_frameCompletionHandler, nullptr))
-        completionHandler();
+    frameDone();
 }
 #else
 bool AcceleratedBackingStoreDMABuf::paint(cairo_t* cr, const WebCore::IntRect& clipRect)
 {
+    if (m_frameCompletionHandler)
+        willDisplayFrame();
+
     if (!m_committedSource)
         return false;
 
+    if (m_frameCompletionHandler)
+        m_committedSource->prepareForRendering();
+
     m_committedSource->paint(m_webPage.viewWidget(), cr, clipRect);
-    if (auto completionHandler = std::exchange(m_frameCompletionHandler, nullptr))
-        completionHandler();
+    frameDone();
 
     return true;
 }
 #endif
 
 } // namespace WebKit
-
-#endif // USE(GBM)

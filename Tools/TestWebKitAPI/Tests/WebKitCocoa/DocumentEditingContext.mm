@@ -36,6 +36,12 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/Vector.h>
 
+static constexpr auto longTextString = "Here's to the crazy ones. The misfits. The rebels. The troublemakers. The round pegs in the square holes. "
+    "The ones who see things differently. They're not fond of rules. And they have no respect for the status quo. "
+    "You can quote them, disagree with them, glorify or vilify them. About the only thing you can't do is ignore them. "
+    "Because they change things. They push the human race forward. And while some may see them as the crazy ones, we see genius. "
+    "Because the people who are crazy enough to think they can change the world, are the ones who do.";
+
 #define EXPECT_NSSTRING_EQ(expected, actual) \
     EXPECT_TRUE([actual isKindOfClass:[NSString class]]); \
     EXPECT_WK_STREQ(expected, (NSString *)actual);
@@ -54,6 +60,19 @@ static UIWKDocumentRequest *makeRequest(UIWKDocumentRequestFlags flags, UITextGr
     [request setInputElementIdentifier:inputElementIdentifier];
     return request.autorelease();
 }
+
+@implementation NSString (TestWebKitAPIHelpers)
+
+- (Vector<NSRange>)composedCharacterRanges
+{
+    __block Vector<NSRange> result;
+    [self enumerateSubstringsInRange:NSMakeRange(0, self.length) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString *, NSRange substringRange, NSRange, BOOL *) {
+        result.append(substringRange);
+    }];
+    return result;
+}
+
+@end
 
 @interface UIWKDocumentContext (TestRunner)
 @property (nonatomic, readonly) NSArray<NSValue *> *markedTextRects;
@@ -114,6 +133,14 @@ static UIWKDocumentRequest *makeRequest(UIWKDocumentRequestFlags flags, UITextGr
     return result.autorelease();
 }
 
+- (CGRect)boundingRectForCharacterRange:(NSRange)range
+{
+    auto bounds = CGRectNull;
+    for (NSValue *rectValue in [self characterRectsForCharacterRange:range])
+        bounds = CGRectUnion(bounds, rectValue.CGRectValue);
+    return bounds;
+}
+
 @end
 
 @implementation TestWKWebView (SynchronousDocumentContext)
@@ -158,6 +185,21 @@ static UIWKDocumentRequest *makeRequest(UIWKDocumentRequestFlags flags, UITextGr
         finished = true;
     }];
     TestWebKitAPI::Util::run(&finished);
+}
+
+- (CGRect)firstSelectionRect
+{
+    return self.selectionViewRectsInContentCoordinates.firstObject.CGRectValue;
+}
+
+- (CGRect)waitForFirstSelectionRectToChange:(CGRect)previousRect
+{
+    auto newRect = previousRect;
+    while (CGRectEqualToRect(newRect, previousRect)) {
+        [self waitForNextPresentationUpdate];
+        newRect = self.firstSelectionRect;
+    }
+    return newRect;
 }
 
 @end
@@ -937,11 +979,15 @@ TEST(DocumentEditingContext, RequestRectsInTextAreaInsideIFrame)
     }
 }
 
+// FIXME when rdar://107850452 is resolved
 TEST(DocumentEditingContext, RequestRectsInTextAreaInsideScrolledIFrame)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
     // Use "padding: 0" for the <textarea> as the default user-agent stylesheet can effect text wrapping.
-    [webView synchronouslyLoadHTMLString:applyAhemStyle([NSString stringWithFormat:@"<iframe srcdoc=\"%@\" style='position: absolute; left: 1em; top: 1em; border: none' height='200'></iframe>", applyAhemStyle(@"<body style='height: 1000px'><div style='width: 200px; height: 200px'></div><textarea id='test' style='padding: 0'>The quick brown fox jumps over the lazy dog.</textarea><script>let textarea = document.getElementById('test'); textarea.focus(); textarea.setSelectionRange(0, 0); /* Place caret at the beginning of the field. */ window.scrollTo(0, 200); /* Scroll <textarea> to the top. */</script></body>")])];
+    [webView synchronouslyLoadHTMLString:applyAhemStyle([NSString stringWithFormat:@"<iframe srcdoc=\"%@\" style='position: absolute; left: 1em; top: 1em; border: none' height='200'></iframe>",
+        applyAhemStyle(@"<body style='height: 1000px'><div style='width: 200px; height: 200px'></div><textarea id='test' style='padding: 0'>The quick brown fox jumps over the lazy dog.</textarea>"
+            "<script>let textarea = document.getElementById('test'); textarea.focus({preventScroll: true}); textarea.setSelectionRange(0, 0); /* Place caret at the beginning of the field. */"
+            "window.scrollTo(0, 200, {behavior: 'instant'}); /* Scroll <textarea> to the top. */ </script></body>")])];
 
     auto *context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText | UIWKDocumentRequestRects, UITextGranularityWord, 1)];
     EXPECT_NOT_NULL(context);
@@ -950,11 +996,10 @@ TEST(DocumentEditingContext, RequestRectsInTextAreaInsideScrolledIFrame)
     auto *textRects = [context textRects];
     EXPECT_EQ(3U, textRects.count);
 
-#if PLATFORM(MACCATALYST)
     const size_t yPos = 26;
+#if PLATFORM(MACCATALYST)
     const size_t height = 26;
 #else
-    const size_t yPos = 27;
     const size_t height = 25;
 #endif
 
@@ -1413,5 +1458,125 @@ TEST(DocumentEditingContext, RequestSentencesAfterTextInsertion)
     EXPECT_NULL(context.selectedText);
     EXPECT_NSSTRING_EQ("\nThis is a test.", context.contextAfter);
 }
+
+static void checkThatAllCharacterRectsAreConsistentWithSelectionRects(TestWKWebView *webView)
+{
+    [webView becomeFirstResponder];
+    [webView waitForNextPresentationUpdate];
+
+    RetainPtr context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText | UIWKDocumentRequestRects, UITextGranularitySentence, 2)];
+    EXPECT_NOT_NULL(context);
+
+    RetainPtr contextString = [NSString stringWithFormat:@"%@%@%@", [context contextBefore] ?: @"", [context selectedText] ?: @"", [context contextAfter] ?: @""];
+    EXPECT_GT([contextString length], 0U);
+
+    auto composedCharacterRanges = [contextString composedCharacterRanges];
+    for (auto range : composedCharacterRanges) {
+        auto previousSelectionRect = webView.firstSelectionRect;
+        auto rectFromContext = [context boundingRectForCharacterRange:range];
+        [webView objectByEvaluatingJavaScript:[NSString stringWithFormat:@"setSelection(%ld, %ld)", range.location, range.location + range.length]];
+        auto selectionRect = [webView waitForFirstSelectionRectToChange:previousSelectionRect];
+        BOOL rectsAreConsistent = CGRectEqualToRect(rectFromContext, selectionRect);
+        EXPECT_TRUE(rectsAreConsistent);
+        if (!rectsAreConsistent) {
+            NSLog(@"FAIL: Observed inconsistent document context character rects.");
+            NSLog(@"> rect from document context:   %@", NSStringFromCGRect(rectFromContext));
+            NSLog(@"> actual selection rect:        %@", NSStringFromCGRect(selectionRect));
+            NSLog(@"> substring:                    '%@' in range [%ld, %ld]", [contextString substringWithRange:range], range.location, range.location + range.length);
+        }
+    }
+}
+
+TEST(DocumentEditingContext, CharacterRectConsistency)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 300)]);
+    [webView synchronouslyLoadTestPageNamed:@"editable-body-mixed-text"];
+
+    checkThatAllCharacterRectsAreConsistentWithSelectionRects(webView.get());
+}
+
+TEST(DocumentEditingContext, CharacterRectConsistencyWithRTL)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 300)]);
+    [webView synchronouslyLoadTestPageNamed:@"editable-body-mixed-text"];
+    [webView stringByEvaluatingJavaScript:@"document.body.style = 'direction: rtl;'"];
+
+    checkThatAllCharacterRectsAreConsistentWithSelectionRects(webView.get());
+}
+
+TEST(DocumentEditingContext, CharacterRectConsistencyWithVerticalText)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 300)]);
+    [webView synchronouslyLoadTestPageNamed:@"editable-body-mixed-text"];
+    [webView stringByEvaluatingJavaScript:@"document.body.style = 'writing-mode: vertical-rl;'"];
+
+    checkThatAllCharacterRectsAreConsistentWithSelectionRects(webView.get());
+}
+
+TEST(DocumentEditingContext, CharacterRectConsistencyWithRTLAndVerticalText)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 300)]);
+    [webView synchronouslyLoadTestPageNamed:@"editable-body-mixed-text"];
+    [webView stringByEvaluatingJavaScript:@"document.body.style = 'writing-mode: vertical-rl; direction: rtl;'"];
+
+    checkThatAllCharacterRectsAreConsistentWithSelectionRects(webView.get());
+}
+
+TEST(DocumentEditingContext, CharacterRectsInEditableWebView)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 320, 568)]);
+    [webView _setEditable:YES];
+    [webView synchronouslyLoadHTMLString:makeString("<meta name='viewport' content='width=device-width, initial-scale=1'><body>"_s, longTextString, "</body>"_s)];
+    [webView objectByEvaluatingJavaScript:@"getSelection().setPosition(document.body, 0)"];
+    [webView waitForNextPresentationUpdate];
+
+    RetainPtr context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText | UIWKDocumentRequestRects, UITextGranularitySentence, 15)];
+    auto contextAfter = dynamic_objc_cast<NSString>([context contextAfter]);
+    EXPECT_GT(contextAfter.length, 0U);
+
+    for (auto range : contextAfter.composedCharacterRanges) {
+        auto rectFromContext = [context boundingRectForCharacterRange:range];
+        auto text = [contextAfter substringWithRange:range];
+        EXPECT_TRUE([text isEqualToString:@" "] || !CGRectIsEmpty(rectFromContext));
+    }
+}
+
+#if ENABLE(PLATFORM_DRIVEN_TEXT_CHECKING)
+
+TEST(DocumentEditingContext, RequestAnnotationsForTextChecking)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+    auto loadWebViewAndGetContext = [&] {
+        [webView synchronouslyLoadHTMLString:makeString("<body>"_s, longTextString, "</body>"_s)];
+        [webView objectByEvaluatingJavaScript:@"(() => {"
+            "    let text = document.body.childNodes[0];"
+            "    getSelection().setBaseAndExtent(text, 90, text, 94);"
+            "})()"];
+        [webView waitForNextPresentationUpdate];
+        auto context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText | UIWKDocumentRequestAnnotation, UITextGranularitySentence, 3)];
+        auto annotatedText = String { dynamic_objc_cast<NSAttributedString>(context.annotatedText).string };
+        auto combinedContext = makeString(
+            String { dynamic_objc_cast<NSString>(context.contextBefore) },
+            String { dynamic_objc_cast<NSString>(context.selectedText) },
+            String { dynamic_objc_cast<NSString>(context.contextAfter) }
+        );
+        return std::pair { WTFMove(combinedContext), WTFMove(annotatedText) };
+    };
+    {
+        [webView _setEditable:YES];
+        auto [combinedContext, annotatedText] = loadWebViewAndGetContext();
+        EXPECT_GT(combinedContext.length(), 0U);
+        EXPECT_GT(annotatedText.length(), 0U);
+        EXPECT_WK_STREQ(annotatedText, combinedContext);
+    }
+    {
+        [webView _setEditable:NO];
+        auto [combinedContext, annotatedText] = loadWebViewAndGetContext();
+        EXPECT_GT(combinedContext.length(), 0U);
+        EXPECT_EQ(annotatedText.length(), 0U);
+    }
+}
+
+#endif // ENABLE(PLATFORM_DRIVEN_TEXT_CHECKING)
 
 #endif // PLATFORM(IOS_FAMILY) && HAVE(UI_WK_DOCUMENT_CONTEXT)

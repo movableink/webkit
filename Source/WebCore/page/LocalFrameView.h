@@ -53,13 +53,13 @@ namespace WebCore {
 class AXObjectCache;
 class ContainerNode;
 class Element;
-class EventRegionContext;
 class FloatSize;
 class Frame;
 class GraphicsContext;
 class HTMLFrameOwnerElement;
 class LocalFrame;
 class Page;
+class RegionContext;
 class RenderBox;
 class RenderElement;
 class RenderEmbeddedObject;
@@ -107,6 +107,7 @@ public:
     WEBCORE_EXPORT void invalidateRect(const IntRect&) final;
     void setFrameRect(const IntRect&) final;
     Type viewType() const final { return Type::Local; }
+    void writeRenderTreeAsText(TextStream&, OptionSet<RenderAsTextFlag>) override;
 
     // FIXME: This should return Frame. If it were a RemoteFrame, we would have a RemoteFrameView.
     WEBCORE_EXPORT Frame& frame() const;
@@ -133,7 +134,6 @@ public:
     LocalFrameViewLayoutContext& layoutContext() { return m_layoutContext; }
 
     WEBCORE_EXPORT bool didFirstLayout() const;
-    void queuePostLayoutCallback(Function<void()>&&);
 
     WEBCORE_EXPORT bool needsLayout() const;
     WEBCORE_EXPORT void setNeedsLayoutAfterViewConfigurationChange();
@@ -286,8 +286,7 @@ public:
     bool requestStartKeyboardScrollAnimation(const KeyboardScroll&) final;
     bool requestStopKeyboardScrollAnimation(bool immediate) final;
 
-    bool requestScrollPositionUpdate(const ScrollPosition&, ScrollType = ScrollType::User, ScrollClamping = ScrollClamping::Clamped) final;
-    bool requestAnimatedScrollToPosition(const ScrollPosition&, ScrollClamping = ScrollClamping::Clamped) final;
+    bool requestScrollToPosition(const ScrollPosition&, ScrollType = ScrollType::Programmatic, ScrollClamping = ScrollClamping::Clamped, ScrollIsAnimated = ScrollIsAnimated::No) final;
     void stopAsyncAnimatedScroll() final;
 
     bool isUserScrollInProgress() const final;
@@ -406,7 +405,7 @@ public:
     void addEmbeddedObjectToUpdate(RenderEmbeddedObject&);
     void removeEmbeddedObjectToUpdate(RenderEmbeddedObject&);
 
-    WEBCORE_EXPORT void paintContents(GraphicsContext&, const IntRect& dirtyRect, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr) final;
+    WEBCORE_EXPORT void paintContents(GraphicsContext&, const IntRect& dirtyRect, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, RegionContext* = nullptr) final;
 
     struct PaintingState {
         OptionSet<PaintBehavior> paintBehavior;
@@ -420,7 +419,7 @@ public:
         }
     };
 
-    void willPaintContents(GraphicsContext&, const IntRect& dirtyRect, PaintingState&);
+    void willPaintContents(GraphicsContext&, const IntRect& dirtyRect, PaintingState&, RegionContext* = nullptr);
     void didPaintContents(GraphicsContext&, const IntRect& dirtyRect, PaintingState&);
 
 #if PLATFORM(IOS_FAMILY)
@@ -443,9 +442,6 @@ public:
     void paintScrollbar(GraphicsContext&, Scrollbar&, const IntRect&) final;
 
     WEBCORE_EXPORT Color documentBackgroundColor() const;
-
-    void startDisallowingLayout() { layoutContext().startDisallowingLayout(); }
-    void endDisallowingLayout() { layoutContext().endDisallowingLayout(); }
 
     static MonotonicTime currentPaintTimeStamp() { return sCurrentPaintTimeStamp; } // returns 0 if not painting
     
@@ -712,6 +708,8 @@ public:
 
     WEBCORE_EXPORT void invalidateControlTints();
     void invalidateImagesWithAsyncDecodes();
+    void updateAccessibilityObjectRegions();
+    AXObjectCache* axObjectCache() const;
 
     void invalidateScrollbarsForAllScrollableAreas();
 
@@ -734,9 +732,12 @@ public:
     OverscrollBehavior horizontalOverscrollBehavior() const final;
     OverscrollBehavior verticalOverscrollBehavior() const final;
 
+    ScrollbarWidth scrollbarWidthStyle() const final;
+
 private:
     explicit LocalFrameView(LocalFrame&);
 
+    bool isLocalFrameView() const final { return true; }
     bool scrollContentsFastPath(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect) final;
     void scrollContentsSlowPath(const IntRect& updateRect) final;
 
@@ -756,8 +757,6 @@ private:
         InViewSizeAdjust,
         InPostLayout
     };
-
-    bool isFrameView() const final { return true; }
 
     friend class RenderWidget;
     bool useSlowRepaints(bool considerOverlap = true) const;
@@ -823,6 +822,7 @@ private:
 #if HAVE(RUBBER_BANDING)
     GraphicsLayer* layerForOverhangAreas() const final;
 #endif
+    bool isInStableState() const final;
     void contentsResized() final;
 
 #if ENABLE(DARK_MODE_CSS)
@@ -839,14 +839,16 @@ private:
     NativeScrollbarVisibility horizontalNativeScrollbarVisibility() const final;
     NativeScrollbarVisibility verticalNativeScrollbarVisibility() const final;
 
+    void createScrollbarsController() final;
     // Override scrollbar notifications to update the AXObject cache.
     void didAddScrollbar(Scrollbar*, ScrollbarOrientation) final;
     void willRemoveScrollbar(Scrollbar*, ScrollbarOrientation) final;
+    void scrollbarFrameRectChanged(const Scrollbar&) const final;
 
     IntSize sizeForResizeEvent() const;
     void scheduleResizeEventIfNeeded();
     
-    RefPtr<Element> rootElementForCustomScrollbarPartStyle(PseudoId) const;
+    RefPtr<Element> rootElementForCustomScrollbarPartStyle() const;
 
     void adjustScrollbarsForLayout(bool firstLayout);
 
@@ -866,6 +868,8 @@ private:
     void updateWidgetPositionsTimerFired();
 
     bool scrollToFragmentInternal(StringView);
+    void scheduleScrollToAnchorAndTextFragment();
+    void scrollToAnchorAndTextFragmentNowIfNeeded();
     void scrollToAnchor();
     void scrollToTextFragmentRange();
     void scrollPositionChanged(const ScrollPosition& oldPosition, const ScrollPosition& newPosition);
@@ -888,7 +892,6 @@ private:
 
     bool isViewForDocumentInFrame() const;
 
-    AXObjectCache* axObjectCache() const;
     void notifyWidgetsInAllFrames(WidgetNotification);
     void removeFromAXObjectCache();
     void notifyWidgets(WidgetNotification);
@@ -921,6 +924,8 @@ private:
     void scrollRectToVisibleInTopLevelView(const LayoutRect& absoluteRect, bool insideFixed, const ScrollRectToVisibleOptions&);
     LayoutRect getPossiblyFixedRectToExpose(const LayoutRect& visibleRect, const LayoutRect& exposeRect, bool insideFixed, const ScrollAlignment& alignX, const ScrollAlignment& alignY) const;
 
+    float deviceScaleFactor() const final;
+
     const Ref<LocalFrame> m_frame;
     LocalFrameViewLayoutContext m_layoutContext;
 
@@ -931,6 +936,7 @@ private:
     std::unique_ptr<WeakHashSet<RenderElement>> m_slowRepaintObjects;
 
     RefPtr<ContainerNode> m_maintainScrollPositionAnchor;
+    RefPtr<ContainerNode> m_scheduledMaintainScrollPositionAnchor;
     RefPtr<Node> m_nodeToDraw;
     std::optional<SimpleRange> m_pendingTextFragmentIndicatorRange;
     String m_pendingTextFragmentIndicatorText;
@@ -959,7 +965,6 @@ private:
     Vector<FloatRect> m_trackedRepaintRects;
     
     IntRect* m_cachedWindowClipRect { nullptr };
-    Vector<Function<void()>> m_postLayoutCallbackQueue;
 
     LayoutPoint m_layoutViewportOrigin;
     std::optional<LayoutRect> m_layoutViewportOverrideRect;
@@ -1052,6 +1057,7 @@ private:
     // True if autosize has been run since m_shouldAutoSize was set.
     bool m_didRunAutosize { false };
     bool m_inUpdateEmbeddedObjects { false };
+    bool m_scheduledToScrollToAnchor { false };
 };
 
 inline void LocalFrameView::incrementVisuallyNonEmptyPixelCount(const IntSize& size)
@@ -1072,5 +1078,5 @@ WTF::TextStream& operator<<(WTF::TextStream&, const LocalFrameView&);
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LocalFrameView)
 static bool isType(const WebCore::FrameView& view) { return view.viewType() == WebCore::FrameView::Type::Local; }
-static bool isType(const WebCore::Widget& widget) { return widget.isFrameView(); }
+static bool isType(const WebCore::Widget& widget) { return widget.isLocalFrameView(); }
 SPECIALIZE_TYPE_TRAITS_END()

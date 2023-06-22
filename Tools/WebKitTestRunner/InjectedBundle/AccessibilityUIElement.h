@@ -177,6 +177,7 @@ public:
     JSRetainPtr<JSStringRef> valueDescription();
     int insertionPointLineNumber();
     JSRetainPtr<JSStringRef> selectedTextRange();
+    JSRetainPtr<JSStringRef> textInputMarkedRange() const;
     bool isAtomicLiveRegion() const;
     bool isBusy() const;
     bool isEnabled();
@@ -243,6 +244,7 @@ public:
     JSValueRef rowHeaders() const;
     JSValueRef columnHeaders() const;
     JSRetainPtr<JSStringRef> customContent() const;
+    JSValueRef selectedCells() const;
 
     // Tree/Outline specific attributes
     RefPtr<AccessibilityUIElement> selectedRowAtIndex(unsigned);

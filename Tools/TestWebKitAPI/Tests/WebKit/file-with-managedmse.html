@@ -9,19 +9,20 @@
 
       function isMP4Supported()
       {
-        return MediaSource.isTypeSupported('video/mp4;codecs="avc1.4D4001,mp4a.40.2"');
+        return ManagedMediaSource.isTypeSupported('video/mp4;codecs="avc1.4D4001,mp4a.40.2"');
       }
       function isWebMVP9Supported()
       {
-        return MediaSource.isTypeSupported('video/webm;codecs="vp9,opus"');
+        return ManagedMediaSource.isTypeSupported('video/webm;codecs="vp9,opus"');
       }
       function isWebMOpusSupported()
       {
-        return MediaSource.isTypeSupported('video/webm;codecs="opus"');
+        return ManagedMediaSource.isTypeSupported('video/webm;codecs="opus"');
       }
       function loadVideo()
       {
           video = document.getElementById('test-video');
+          video.disableRemotePlayback = true;
           request = new XMLHttpRequest();
           request.responseType = 'arraybuffer';
           request.open('GET', isMP4Supported() ? 'test-mse.mp4' : isWebMVP9Supported() ? 'test-mse.webm' : 'test-mse-audio.webm', true);

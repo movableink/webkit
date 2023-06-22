@@ -128,6 +128,7 @@ class FormData;
 class HTMLElement;
 class HTMLMediaElement;
 class HistoryItem;
+class OpportunisticTaskScheduler;
 class ImageAnalysisQueue;
 class ImageOverlayController;
 class InspectorClient;
@@ -237,9 +238,14 @@ enum class RenderingUpdateStep : uint32_t {
     PrepareCanvasesForDisplay       = 1 << 16,
     CaretAnimation                  = 1 << 17,
     FocusFixup                      = 1 << 18,
+    UpdateValidationMessagePositions= 1 << 19,
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    AccessibilityRegionUpdate       = 1 << 20,
+#endif
+    RestoreScrollPositionAndViewState = 1 << 21,
 };
 
-enum class LookalikeCharacterSanitizationTrigger : uint8_t {
+enum class LinkDecorationFilteringTrigger : uint8_t {
     Unspecified,
     Navigation,
     Copy,
@@ -260,6 +266,9 @@ constexpr OptionSet<RenderingUpdateStep> updateRenderingSteps = {
     RenderingUpdateStep::WheelEventMonitorCallbacks,
     RenderingUpdateStep::CursorUpdate,
     RenderingUpdateStep::EventRegionUpdate,
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    RenderingUpdateStep::AccessibilityRegionUpdate,
+#endif
     RenderingUpdateStep::PrepareCanvasesForDisplay,
     RenderingUpdateStep::CaretAnimation,
 };
@@ -288,6 +297,9 @@ public:
     WEBCORE_EXPORT explicit Page(PageConfiguration&&);
     WEBCORE_EXPORT ~Page();
 
+    // Utility pages (e.g. SVG image pages) don't have an identifier currently.
+    std::optional<PageIdentifier> identifier() const { return m_identifier; }
+
     WEBCORE_EXPORT uint64_t renderTreeSize() const;
 
     WEBCORE_EXPORT void setNeedsRecalcStyleInAllFrames();
@@ -304,6 +316,8 @@ public:
     WEBCORE_EXPORT PluginData& pluginData();
     void clearPluginData();
 
+    OpportunisticTaskScheduler& opportunisticTaskScheduler() const { return m_opportunisticTaskScheduler.get(); }
+
     WEBCORE_EXPORT void setCanStartMedia(bool);
     bool canStartMedia() const { return m_canStartMedia; }
 
@@ -311,6 +325,7 @@ public:
 
     Frame& mainFrame() { return m_mainFrame.get(); }
     const Frame& mainFrame() const { return m_mainFrame.get(); }
+    WEBCORE_EXPORT void setMainFrame(Ref<Frame>&&);
 
     bool openedByDOM() const;
     WEBCORE_EXPORT void setOpenedByDOM();
@@ -341,7 +356,7 @@ public:
     void setCurrentKeyboardScrollingAnimator(KeyboardScrollingAnimator*);
     KeyboardScrollingAnimator* currentKeyboardScrollingAnimator() const { return m_currentKeyboardScrollingAnimator.get(); }
 
-    bool isLoadingInHeadlessMode() const;
+    bool fingerprintingProtectionsEnabled() const;
 
 #if ENABLE(REMOTE_INSPECTOR)
     WEBCORE_EXPORT bool inspectable() const;
@@ -468,6 +483,7 @@ public:
     void didStartProvisionalLoad();
     void didCommitLoad();
     void didFinishLoad();
+    void didFirstMeaningfulPaint();
 
     bool delegatesScaling() const { return m_delegatesScaling; }
     WEBCORE_EXPORT void setDelegatesScaling(bool);
@@ -499,8 +515,8 @@ public:
         IncludeAnimationsFrameRate  = 1 << 1
     };
     static constexpr OptionSet<PreferredRenderingUpdateOption> allPreferredRenderingUpdateOptions = { PreferredRenderingUpdateOption::IncludeThrottlingReasons, PreferredRenderingUpdateOption::IncludeAnimationsFrameRate };
-    std::optional<FramesPerSecond> preferredRenderingUpdateFramesPerSecond(OptionSet<PreferredRenderingUpdateOption> = allPreferredRenderingUpdateOptions) const;
-    Seconds preferredRenderingUpdateInterval() const;
+    WEBCORE_EXPORT std::optional<FramesPerSecond> preferredRenderingUpdateFramesPerSecond(OptionSet<PreferredRenderingUpdateOption> = allPreferredRenderingUpdateOptions) const;
+    WEBCORE_EXPORT Seconds preferredRenderingUpdateInterval() const;
 
     float topContentInset() const { return m_topContentInset; }
     WEBCORE_EXPORT void setTopContentInset(float);
@@ -564,6 +580,7 @@ public:
     WEBCORE_EXPORT void setPagination(const Pagination&);
 
     WEBCORE_EXPORT unsigned pageCount() const;
+    WEBCORE_EXPORT unsigned pageCountAssumingLayoutIsUpToDate() const;
 
     WEBCORE_EXPORT DiagnosticLoggingClient& diagnosticLoggingClient() const;
 
@@ -599,6 +616,10 @@ public:
     bool hasActiveApplePayAMSUISession() const { return m_activeApplePayAMSUIPaymentHandler; }
     bool startApplePayAMSUISession(Document&, ApplePayAMSUIPaymentHandler&, const ApplePayAMSUIRequest&);
     void abortApplePayAMSUISession(ApplePayAMSUIPaymentHandler&);
+#endif
+
+#if USE(SYSTEM_PREVIEW)
+    void handleSystemPreview(const URL&, const SystemPreviewInfo&);
 #endif
 
 #if ENABLE(WEB_AUTHN)
@@ -983,9 +1004,9 @@ public:
 
     bool httpsUpgradeEnabled() const { return m_httpsUpgradeEnabled; }
 
-    URL sanitizeLookalikeCharacters(const URL&, LookalikeCharacterSanitizationTrigger) const;
-    String sanitizeLookalikeCharacters(const String&, LookalikeCharacterSanitizationTrigger) const;
-    URL allowedLookalikeCharacters(const URL&) const;
+    URL applyLinkDecorationFiltering(const URL&, LinkDecorationFilteringTrigger) const;
+    String applyLinkDecorationFiltering(const String&, LinkDecorationFilteringTrigger) const;
+    URL allowedQueryParametersForAdvancedPrivacyProtections(const URL&) const;
 
     LoadSchedulingMode loadSchedulingMode() const { return m_loadSchedulingMode; }
     void setLoadSchedulingMode(LoadSchedulingMode);
@@ -1006,6 +1027,9 @@ public:
     AttachmentElementClient* attachmentElementClient() { return m_attachmentElementClient.get(); }
 #endif
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    bool shouldUpdateAccessibilityRegions() const;
+#endif
     WEBCORE_EXPORT std::optional<AXTreeData> accessibilityTreeData() const;
 #if USE(ATSPI)
     AccessibilityRootAtspi* accessibilityRootObject() const { return m_accessibilityRootObject; }
@@ -1033,7 +1057,9 @@ public:
     void didFinishScrolling();
 
     const WeakHashSet<LocalFrame>& rootFrames() const { return m_rootFrames; }
-    void addRootFrame(LocalFrame& frame) { m_rootFrames.add(frame); }
+    WEBCORE_EXPORT void addRootFrame(LocalFrame&);
+
+    void performOpportunisticallyScheduledTasks(MonotonicTime deadline);
 
 private:
     struct Navigation {
@@ -1079,6 +1105,7 @@ private:
     void prioritizeVisibleResources();
 
     RenderingUpdateScheduler& renderingUpdateScheduler();
+    RenderingUpdateScheduler* existingRenderingUpdateScheduler();
 
     WheelEventTestMonitor& ensureWheelEventTestMonitor();
 
@@ -1087,6 +1114,7 @@ private:
     void updateElementsWithTextRecognitionResults();
 #endif
 
+    std::optional<PageIdentifier> m_identifier;
     UniqueRef<Chrome> m_chrome;
     UniqueRef<DragCaretController> m_dragCaretController;
 
@@ -1110,11 +1138,11 @@ private:
 
     UniqueRef<BackForwardController> m_backForwardController;
     WeakHashSet<LocalFrame> m_rootFrames;
+    UniqueRef<EditorClient> m_editorClient;
     Ref<Frame> m_mainFrame;
 
     RefPtr<PluginData> m_pluginData;
 
-    UniqueRef<EditorClient> m_editorClient;
     std::unique_ptr<ValidationMessageClient> m_validationMessageClient;
     std::unique_ptr<DiagnosticLoggingClient> m_diagnosticLoggingClient;
     std::unique_ptr<PerformanceLoggingClient> m_performanceLoggingClient;
@@ -1373,6 +1401,9 @@ private:
     bool m_isServiceWorkerPage { false };
 
     MonotonicTime m_lastRenderingUpdateTimestamp;
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    MonotonicTime m_lastAccessibilityObjectRegionsUpdate;
+#endif
 
     Color m_underPageBackgroundColorOverride;
     std::optional<Color> m_sampledPageTopColor;
@@ -1388,6 +1419,9 @@ private:
 #if ENABLE(ATTACHMENT_ELEMENT)
     std::unique_ptr<AttachmentElementClient> m_attachmentElementClient;
 #endif
+
+    std::unique_ptr<OpportunisticTaskDeferralScope> m_opportunisticTaskDeferralScopeForFirstPaint;
+    Ref<OpportunisticTaskScheduler> m_opportunisticTaskScheduler;
 
 #if ENABLE(IMAGE_ANALYSIS)
     using CachedTextRecognitionResult = std::pair<TextRecognitionResult, IntRect>;

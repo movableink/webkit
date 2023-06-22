@@ -45,10 +45,9 @@
 #include <wtf/HashSet.h>
 #include <wtf/Logger.h>
 #include <wtf/MediaTime.h>
-#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/URL.h>
 #include <wtf/WallTime.h>
-#include <wtf/WeakPtr.h>
 #include <wtf/text/StringHash.h>
 
 OBJC_CLASS AVPlayer;
@@ -305,18 +304,20 @@ public:
 
     virtual bool mediaPlayerShouldDisableHDR() const { return false; }
 
+    virtual FloatSize mediaPlayerVideoInlineSize() const { return { }; }
+
 #if !RELEASE_LOG_DISABLED
     virtual const void* mediaPlayerLogIdentifier() { return nullptr; }
     virtual const Logger& mediaPlayerLogger() = 0;
 #endif
 };
 
-class WEBCORE_EXPORT MediaPlayer : public MediaPlayerEnums, public ThreadSafeRefCounted<MediaPlayer, WTF::DestructionThread::Main>, public CanMakeWeakPtr<MediaPlayer> {
+class WEBCORE_EXPORT MediaPlayer : public MediaPlayerEnums, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaPlayer, WTF::DestructionThread::Main> {
     WTF_MAKE_NONCOPYABLE(MediaPlayer); WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<MediaPlayer> create(MediaPlayerClient&);
     static Ref<MediaPlayer> create(MediaPlayerClient&, MediaPlayerEnums::MediaEngineIdentifier);
-    virtual ~MediaPlayer();
+    ~MediaPlayer();
 
     void invalidate();
 
@@ -355,6 +356,8 @@ public:
     bool isVideoFullscreenStandby() const;
 #endif
 
+    using LayerHostingContextIDCallback = CompletionHandler<void(LayerHostingContextID)>;
+    void requestHostingContextID(LayerHostingContextIDCallback&&);
     LayerHostingContextID hostingContextID() const;
     FloatSize videoInlineSize() const;
     void setVideoInlineSizeFenced(const FloatSize&, const WTF::MachSendRight&);
@@ -455,12 +458,12 @@ public:
     void setPitchCorrectionAlgorithm(PitchCorrectionAlgorithm);
     PitchCorrectionAlgorithm pitchCorrectionAlgorithm() const { return m_pitchCorrectionAlgorithm; }
 
-    std::unique_ptr<PlatformTimeRanges> buffered();
-    std::unique_ptr<PlatformTimeRanges> seekable();
+    const PlatformTimeRanges& buffered() const;
+    const PlatformTimeRanges& seekable() const;
     void bufferedTimeRangesChanged();
     void seekableTimeRangesChanged();
-    MediaTime minTimeSeekable();
-    MediaTime maxTimeSeekable();
+    MediaTime minTimeSeekable() const;
+    MediaTime maxTimeSeekable() const;
 
     double seekableTimeRangesLastModifiedTime();
     double liveUpdateInterval();
@@ -695,6 +698,7 @@ public:
     void mediaEngineUpdated() { client().mediaPlayerEngineUpdated(); }
     void resourceNotSupported() { client().mediaPlayerResourceNotSupported(); }
     bool isLooping() const { return client().mediaPlayerIsLooping(); }
+    void isLoopingChanged();
 
     void remoteEngineFailedToLoad();
     SecurityOriginData documentSecurityOrigin() const;

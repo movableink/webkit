@@ -416,7 +416,6 @@ TEST(IPCTestingAPI, CanInterceptAlert)
         [webView stringByEvaluatingJavaScript:@"IPC.webPageProxyID.toString()"].intValue);
 }
 
-#if ENABLE(TRACKING_PREVENTION)
 TEST(IPCTestingAPI, CanInterceptHasStorageAccess)
 {
     auto webView = createWebViewWithIPCTestingAPI();
@@ -446,7 +445,6 @@ TEST(IPCTestingAPI, CanInterceptHasStorageAccess)
     EXPECT_STREQ([webView stringByEvaluatingJavaScript:@"typeof(targetMessage.syncRequestID)"].UTF8String, "undefined");
     EXPECT_EQ([webView stringByEvaluatingJavaScript:@"targetMessage.destinationID"].intValue, 0);
 }
-#endif
 
 TEST(IPCTestingAPI, CanInterceptFindString)
 {

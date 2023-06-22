@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #import "APINavigation.h"
 #import "AccessibilityPreferences.h"
 #import "AccessibilitySupportSPI.h"
+#import "ArgumentCodersCocoa.h"
 #import "CookieStorageUtilsCF.h"
 #import "DefaultWebBrowserChecks.h"
 #import "LegacyCustomProtocolManagerClient.h"
@@ -371,10 +372,10 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
     parameters.mediaMIMETypes = process.mediaMIMETypes();
 
 #if PLATFORM(MAC)
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanCommunicateWithWindowServer));
     parameters.accessibilityEnhancedUserInterfaceEnabled = [[NSApp accessibilityAttributeValue:@"AXEnhancedUserInterface"] boolValue];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 #else
     parameters.accessibilityEnhancedUserInterfaceEnabled = false;
 #endif
@@ -408,11 +409,24 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
         else
             parameters.presentingApplicationBundleIdentifier = bundleProxy.bundleIdentifier;
     }
+#if PLATFORM(MAC)
+    else
+        parameters.presentingApplicationBundleIdentifier = [NSRunningApplication currentApplication].bundleIdentifier;
+#endif
 
 #if PLATFORM(COCOA) && ENABLE(REMOTE_INSPECTOR)
     if (WebProcessProxy::shouldEnableRemoteInspector()) {
         auto handles = SandboxExtension::createHandlesForMachLookup({ "com.apple.webinspector"_s }, process.auditToken());
         parameters.enableRemoteWebInspectorExtensionHandles = WTFMove(handles);
+
+#if ENABLE(GPU_PROCESS)
+        if (auto* gpuProcess = GPUProcessProxy::singletonIfCreated()) {
+            if (!gpuProcess->hasSentGPUToolsSandboxExtensions()) {
+                auto gpuToolsHandle = GPUProcessProxy::createGPUToolsSandboxExtensionHandlesIfNeeded();
+                gpuProcess->send(Messages::GPUProcess::UpdateSandboxAccess(gpuToolsHandle), 0);
+            }
+        }
+#endif
     }
 #endif
 
@@ -434,31 +448,6 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
     }
     parameters.networkATSContext = adoptCF(_CFNetworkCopyATSContext());
 
-#if ENABLE(MEDIA_STREAM)
-    // Allow microphone access if either preference is set because WebRTC requires microphone access.
-    bool mediaDevicesEnabled = m_defaultPageGroup->preferences().mediaDevicesEnabled();
-
-    bool isSafari = false;
-#if PLATFORM(IOS_FAMILY)
-    if (WebCore::IOSApplication::isMobileSafari())
-        isSafari = true;
-#elif PLATFORM(MAC)
-    if (WebCore::MacApplication::isSafari())
-        isSafari = true;
-#endif
-
-#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
-    // FIXME: Remove this and related parameter when <rdar://problem/29448368> is fixed.
-    if (isSafari && mediaDevicesEnabled && !m_defaultPageGroup->preferences().captureAudioInUIProcessEnabled() && !m_defaultPageGroup->preferences().captureAudioInGPUProcessEnabled()) {
-        if (auto handle = SandboxExtension::createHandleForGenericExtension("com.apple.webkit.microphone"_s))
-            parameters.audioCaptureExtensionHandle = WTFMove(*handle);
-    }
-#else
-    UNUSED_VARIABLE(mediaDevicesEnabled);
-    UNUSED_VARIABLE(isSafari);
-#endif
-#endif
-
 #if ENABLE(TRACKING_PREVENTION) && !RELEASE_LOG_DISABLED
     parameters.shouldLogUserInteraction = [defaults boolForKey:WebKitLogCookieInformationDefaultsKey];
 #endif
@@ -469,7 +458,7 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
     parameters.useOverlayScrollbars = ([NSScroller preferredScrollerStyle] == NSScrollerStyleOverlay);
 #endif
     
-#if PLATFORM(IOS) && HAVE(AGX_COMPILER_SERVICE)
+#if (PLATFORM(IOS) || PLATFORM(VISION)) && HAVE(AGX_COMPILER_SERVICE)
     if (WebCore::deviceHasAGXCompilerService())
         parameters.compilerServiceExtensionHandles = SandboxExtension::createHandlesForMachLookup(WebCore::agxCompilerServices(), std::nullopt);
 #endif
@@ -481,9 +470,10 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
 
     parameters.systemHasBattery = systemHasBattery();
     parameters.systemHasAC = cachedSystemHasAC().value_or(true);
+    parameters.strictSecureDecodingForAllObjCEnabled = IPC::strictSecureDecodingForAllObjCEnabled();
 
 #if PLATFORM(IOS_FAMILY)
-    parameters.currentUserInterfaceIdiomIsSmallScreen = currentUserInterfaceIdiomIsSmallScreen();
+    parameters.currentUserInterfaceIdiom = currentUserInterfaceIdiom();
     parameters.supportsPictureInPicture = supportsPictureInPicture();
     parameters.cssValueToSystemColorMap = RenderThemeIOS::cssValueToSystemColorMap();
     parameters.focusRingColor = RenderThemeIOS::systemFocusRingColor();
@@ -500,16 +490,12 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
 
 #if HAVE(VIDEO_RESTRICTED_DECODING)
 #if PLATFORM(MAC)
-    if (!isFullWebBrowser() || isRunningTest(WebCore::applicationBundleIdentifier())) {
-        if (auto trustdExtensionHandle = SandboxExtension::createHandleForMachLookup("com.apple.trustd.agent"_s, std::nullopt))
-            parameters.trustdExtensionHandle = WTFMove(*trustdExtensionHandle);
-        parameters.enableDecodingHEIC = true;
-        parameters.enableDecodingAVIF = true;
-    }
-#else
+    // FIXME: this will not be needed when rdar://74144544 is fixed.
+    if (auto trustdExtensionHandle = SandboxExtension::createHandleForMachLookup("com.apple.trustd.agent"_s, std::nullopt))
+        parameters.trustdExtensionHandle = WTFMove(*trustdExtensionHandle);
+#endif
     parameters.enableDecodingHEIC = true;
     parameters.enableDecodingAVIF = true;
-#endif // PLATFORM(MAC)
 #endif // HAVE(VIDEO_RESTRICTED_DECODING)
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(CFPREFS_DIRECT_MODE)
@@ -550,6 +536,7 @@ void WebProcessPool::platformInitializeNetworkProcess(NetworkProcessCreationPara
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
 
     parameters.networkATSContext = adoptCF(_CFNetworkCopyATSContext());
+    parameters.strictSecureDecodingForAllObjCEnabled = IPC::strictSecureDecodingForAllObjCEnabled();
 
     parameters.shouldSuppressMemoryPressureHandler = [defaults boolForKey:WebKitSuppressMemoryPressureHandlerDefaultsKey];
 
@@ -783,12 +770,15 @@ void WebProcessPool::registerNotificationObservers()
         m_openDirectoryNotifyTokens.append(notifyToken);
     }
 #elif !PLATFORM(MACCATALYST)
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    // FIXME: <https://webkit.org/b/246488> Adopt UIScreenBrightnessDidChangeNotification.
     addCFNotificationObserver(backlightLevelDidChangeCallback, (__bridge CFStringRef)UIBacklightLevelChangedNotification);
-#if PLATFORM(IOS)
+ALLOW_DEPRECATED_DECLARATIONS_END
+#if PLATFORM(IOS) || PLATFORM(VISION)
 #if ENABLE(REMOTE_INSPECTOR)
     addCFNotificationObserver(remoteWebInspectorEnabledCallback, CFSTR(WIRServiceEnabledNotification));
 #endif
-#endif // PLATFORM(IOS)
+#endif // PLATFORM(IOS) || PLATFORM(VISION)
 #endif // !PLATFORM(IOS_FAMILY)
 
 #if PLATFORM(IOS_FAMILY)
@@ -806,7 +796,7 @@ void WebProcessPool::registerNotificationObservers()
     if (![UIApplication sharedApplication]) {
         m_applicationLaunchObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidFinishLaunchingNotification object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
             if (WebKit::updateCurrentUserInterfaceIdiom())
-                sendToAllProcesses(Messages::WebProcess::UserInterfaceIdiomDidChange(WebKit::currentUserInterfaceIdiomIsSmallScreen()));
+                sendToAllProcesses(Messages::WebProcess::UserInterfaceIdiomDidChange(WebKit::currentUserInterfaceIdiom()));
         }];
     }
 #endif
@@ -855,12 +845,15 @@ void WebProcessPool::unregisterNotificationObservers()
     for (auto token : m_openDirectoryNotifyTokens)
         notify_cancel(token);
 #elif !PLATFORM(MACCATALYST)
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    // FIXME: <https://webkit.org/b/255833> Adopt UIScreenBrightnessDidChangeNotification.
     removeCFNotificationObserver((__bridge CFStringRef)UIBacklightLevelChangedNotification);
-#if PLATFORM(IOS)
+ALLOW_DEPRECATED_DECLARATIONS_END
+#if PLATFORM(IOS) || PLATFORM(VISION)
 #if ENABLE(REMOTE_INSPECTOR)
     removeCFNotificationObserver(CFSTR(WIRServiceEnabledNotification));
 #endif
-#endif // PLATFORM(IOS)
+#endif // PLATFORM(IOS) || PLATFORM(VISION)
 #endif // !PLATFORM(IOS_FAMILY)
 
 #if PLATFORM(IOS_FAMILY)
@@ -1177,7 +1170,7 @@ void WebProcessPool::systemDidWake()
 }
 #endif // PLATFORM(MAC)
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
 void WebProcessPool::registerHighDynamicRangeChangeCallback()
 {
     static NeverDestroyed<LowPowerModeNotifier> notifier { [](bool) {
@@ -1186,6 +1179,6 @@ void WebProcessPool::registerHighDynamicRangeChangeCallback()
             pool->sendToAllProcesses(Messages::WebProcess::SetScreenProperties(properties));
     } };
 }
-#endif // PLATFORM(MAC) || PLATFORM(IOS)
+#endif // PLATFORM(IOS) || PLATFORM(VISION)
 
 } // namespace WebKit

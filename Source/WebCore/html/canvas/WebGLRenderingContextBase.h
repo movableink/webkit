@@ -458,7 +458,6 @@ public:
     void vertexAttribDivisor(GCGLuint index, GCGLuint divisor);
 
     // GraphicsContextGL::Client
-    void didComposite() override;
     void forceContextLost() override;
     void dispatchContextChangedNotification() override;
 
@@ -483,6 +482,11 @@ public:
 
     // Returns the ordinal number of when the context was last active (drew, read pixels).
     uint64_t activeOrdinal() const { return m_activeOrdinal; }
+
+    using PixelStoreParameters = GraphicsContextGL::PixelStoreParameters;
+    const PixelStoreParameters& pixelStorePackParameters() const { return m_packParameters; }
+    const PixelStoreParameters& unpackPixelStoreParameters() const { return m_unpackParameters; };
+
 protected:
     WebGLRenderingContextBase(CanvasBase&, WebGLContextAttributes);
     WebGLRenderingContextBase(CanvasBase&, Ref<GraphicsContextGL>&&, WebGLContextAttributes);
@@ -515,7 +519,6 @@ protected:
 
     // Implementation helpers.
     friend class InspectorScopedShaderProgramHighlight;
-    friend class ScopedUnpackParametersResetRestore;
 
     virtual void initializeNewContext();
     virtual void initializeVertexArrayObjects() = 0;
@@ -572,11 +575,6 @@ protected:
 
     // Adds a compressed texture format.
     void addCompressedTextureFormat(GCGLenum);
-
-    // Set UNPACK_ALIGNMENT to 1, all other parameters to 0.
-    virtual void resetUnpackParameters();
-    // Restore the client unpack parameters.
-    virtual void restoreUnpackParameters();
 
     RefPtr<Image> drawImageIntoBuffer(Image&, int width, int height, int deviceScaleFactor, const char* functionName);
 
@@ -693,8 +691,8 @@ protected:
     bool m_drawBuffersWebGLRequirementsChecked;
     bool m_drawBuffersSupported;
 
-    GCGLint m_packAlignment;
-    GCGLint m_unpackAlignment;
+    PixelStoreParameters m_packParameters;
+    PixelStoreParameters m_unpackParameters;
     bool m_unpackFlipY;
     bool m_unpackPremultiplyAlpha;
     GCGLenum m_unpackColorspaceConversion;
@@ -852,6 +850,8 @@ protected:
         NullNotReachable
     };
 
+    // Validates size and pack sizes.
+    bool validateReadPixelsDimensions(GCGLint width, GCGLint height);
     bool validateTexImageSubRectangle(TexImageFunctionID, const IntRect& imageSize, const IntRect& subRect, GCGLsizei depth, GCGLint unpackImageHeight, bool* selectingSubRectangle);
 
     IntRect sentinelEmptyRect();
@@ -861,14 +861,12 @@ protected:
     ExceptionOr<void> texImageSourceHelper(TexImageFunctionID, GCGLenum target, GCGLint level, GCGLint internalformat, GCGLint border, GCGLenum format, GCGLenum type, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, const IntRect& sourceImageRect, GCGLsizei depth, GCGLint unpackImageHeight, TexImageSource&&);
     void texImageArrayBufferViewHelper(TexImageFunctionID, GCGLenum target, GCGLint level, GCGLint internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLenum format, GCGLenum type, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, RefPtr<ArrayBufferView>&& pixels, NullDisposition, GCGLuint srcOffset);
     void texImageImpl(TexImageFunctionID, GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLenum format, GCGLenum type, Image*, GraphicsContextGL::DOMSource, bool flipY, bool premultiplyAlpha, bool ignoreNativeImageAlphaPremultiplication, const IntRect&, GCGLsizei depth, GCGLint unpackImageHeight);
-    void texImage2DBase(GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type, GCGLSpan<const GCGLvoid> pixels);
-    void texSubImage2DBase(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum internalFormat, GCGLenum format, GCGLenum type, GCGLSpan<const GCGLvoid> pixels);
+    void texImage2DBase(GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type, std::span<const uint8_t> pixels);
+    void texSubImage2DBase(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum internalFormat, GCGLenum format, GCGLenum type, std::span<const uint8_t> pixels);
     static const char* texImageFunctionName(TexImageFunctionID);
     static TexImageFunctionType texImageFunctionType(TexImageFunctionID);
 
-    using PixelStoreParams = GraphicsContextGL::PixelStoreParams;
-    virtual PixelStoreParams getPackPixelStoreParams() const;
-    virtual PixelStoreParams getUnpackPixelStoreParams(TexImageDimension) const;
+    PixelStoreParameters computeUnpackPixelStoreParameters(TexImageDimension) const;
 
     // Helper function to verify limits on the length of uniform and attribute locations.
     bool validateLocationLength(const char* functionName, const String&);
@@ -930,10 +928,13 @@ protected:
         GCGLint border,
         GCGLenum format, GCGLenum type);
 
+    // Helper function to validate pixel transfer format and type.
+    bool validateImageFormatAndType(const char* functionName, GCGLenum format, GCGLenum type);
+
     // Helper function to validate that the given ArrayBufferView
     // is of the correct type and contains enough data for the texImage call.
     // Generates GL error and returns false if parameters are invalid.
-    std::optional<GCGLSpan<const GCGLvoid>> validateTexFuncData(const char* functionName, TexImageDimension,
+    std::optional<std::span<const uint8_t>> validateTexFuncData(const char* functionName, TexImageDimension,
         GCGLsizei width, GCGLsizei height, GCGLsizei depth,
         GCGLenum format, GCGLenum type,
         ArrayBufferView* pixels,
@@ -990,12 +991,12 @@ protected:
     // Helper function to validate input parameters for uniform functions.
     bool validateUniformLocation(const char* functionName, const WebGLUniformLocation*);
     template<typename T, typename TypedListType>
-    std::optional<GCGLSpan<const T>> validateUniformParameters(const char* functionName, const WebGLUniformLocation* location, const TypedList<TypedListType, T>& values, GCGLsizei requiredMinSize, GCGLuint srcOffset = 0, GCGLuint srcLength = 0)
+    std::optional<std::span<const T>> validateUniformParameters(const char* functionName, const WebGLUniformLocation* location, const TypedList<TypedListType, T>& values, GCGLsizei requiredMinSize, GCGLuint srcOffset = 0, GCGLuint srcLength = 0)
     {
         return validateUniformMatrixParameters(functionName, location, false, values, requiredMinSize, srcOffset, srcLength);
     }
     template<typename T, typename TypedListType>
-    std::optional<GCGLSpan<const T>> validateUniformMatrixParameters(const char* functionName, const WebGLUniformLocation*, GCGLboolean transpose, const TypedList<TypedListType, T>&, GCGLsizei requiredMinSize, GCGLuint srcOffset = 0, GCGLuint srcLength = 0);
+    std::optional<std::span<const T>> validateUniformMatrixParameters(const char* functionName, const WebGLUniformLocation*, GCGLboolean transpose, const TypedList<TypedListType, T>&, GCGLsizei requiredMinSize, GCGLuint srcOffset = 0, GCGLuint srcLength = 0);
 
     // Helper function to validate parameters for bufferData.
     // Return the current bound buffer to target, or 0 if parameters are invalid.

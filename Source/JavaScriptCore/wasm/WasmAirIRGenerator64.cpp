@@ -59,10 +59,6 @@ public:
     {
         return m_tmp == other.m_tmp && m_type == other.m_type;
     }
-    bool operator!=(const TypedTmp& other) const
-    {
-        return !(*this == other);
-    }
 
     explicit operator bool() const { return !!tmp(); }
 
@@ -275,6 +271,8 @@ public:
         AIR_OP_CASE(TruncSat)
         AIR_OP_CASE(Not)
         AIR_OP_CASE(Neg)
+
+        else if (op == SIMDLaneOperation::RelaxedTruncSat) airOp = B3::Air::VectorTruncSat;
 
         result = tmpForType(Types::V128);
 
@@ -524,6 +522,11 @@ public:
         AIR_OP_CASE(SubSat)
         AIR_OP_CASE(Max)
         AIR_OP_CASE(Min)
+
+        // Relaxed SIMD redirecting to non-relaxed:
+
+        else if (op == SIMDLaneOperation::RelaxedSwizzle) airOp = B3::Air::VectorSwizzle;
+
         result = tmpForType(Types::V128);
 
         if (isX86() && airOp == B3::Air::VectorMulSat) {
@@ -553,6 +556,23 @@ public:
             return { };
         }
         ASSERT_NOT_REACHED();
+        return { };
+    }
+
+    auto addSIMDRelaxedFMA(SIMDLaneOperation op, SIMDInfo info, ExpressionType m1, ExpressionType m2, ExpressionType add, ExpressionType& result) -> PartialResult
+    {
+        B3::Air::Opcode airOp = B3::Air::Oops;
+        if (op == SIMDLaneOperation::RelaxedMAdd)
+            airOp = B3::Air::VectorFusedMulAdd;
+        else if (op == SIMDLaneOperation::RelaxedNMAdd)
+            airOp = B3::Air::VectorFusedNegMulAdd;
+        else {
+            RELEASE_ASSERT_NOT_REACHED();
+            return { };
+        }
+        result = tmpForType(Types::V128);
+        auto scratch = tmpForType(Types::V128);
+        append(airOp, Arg::simdInfo(info), m1, m2, add, result, scratch);
         return { };
     }
 

@@ -45,6 +45,7 @@ $(PROJECT_DIR)/Modules/ShapeDetection/Point2D.idl
 $(PROJECT_DIR)/Modules/ShapeDetection/TextDetector.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPU.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUAdapter.idl
+$(PROJECT_DIR)/Modules/WebGPU/GPUAdapterInfo.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUAddressMode.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUAutoLayoutMode.idl
 $(PROJECT_DIR)/Modules/WebGPU/GPUBindGroup.idl
@@ -207,7 +208,7 @@ $(PROJECT_DIR)/Modules/applepay/ApplePayInstallmentConfiguration.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayInstallmentItem.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayInstallmentItemType.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayInstallmentRetailChannel.idl
-$(PROJECT_DIR)/Modules/applepay/ApplePayLaterMode.idl
+$(PROJECT_DIR)/Modules/applepay/ApplePayLaterAvailability.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayLineItem.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayMerchantCapability.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayPayment.idl
@@ -392,6 +393,7 @@ $(PROJECT_DIR)/Modules/mediasession/MediaSessionPlaylistMixin.idl
 $(PROJECT_DIR)/Modules/mediasession/MediaSessionReadyState.idl
 $(PROJECT_DIR)/Modules/mediasession/Navigator+MediaSession.idl
 $(PROJECT_DIR)/Modules/mediasource/AudioTrack+MediaSource.idl
+$(PROJECT_DIR)/Modules/mediasource/BufferedChangeEvent.idl
 $(PROJECT_DIR)/Modules/mediasource/DOMURL+MediaSource.idl
 $(PROJECT_DIR)/Modules/mediasource/ManagedMediaSource.idl
 $(PROJECT_DIR)/Modules/mediasource/ManagedSourceBuffer.idl
@@ -547,6 +549,11 @@ $(PROJECT_DIR)/Modules/modern-media-controls/controls/time-control.js
 $(PROJECT_DIR)/Modules/modern-media-controls/controls/time-label.css
 $(PROJECT_DIR)/Modules/modern-media-controls/controls/time-label.js
 $(PROJECT_DIR)/Modules/modern-media-controls/controls/tracks-button.js
+$(PROJECT_DIR)/Modules/modern-media-controls/controls/vision-layout-traits.js
+$(PROJECT_DIR)/Modules/modern-media-controls/controls/vision-media-controls.css
+$(PROJECT_DIR)/Modules/modern-media-controls/controls/vision-media-controls.js
+$(PROJECT_DIR)/Modules/modern-media-controls/controls/vision-slider.css
+$(PROJECT_DIR)/Modules/modern-media-controls/controls/vision-slider.js
 $(PROJECT_DIR)/Modules/modern-media-controls/controls/watchos-activity-indicator.css
 $(PROJECT_DIR)/Modules/modern-media-controls/controls/watchos-activity-indicator.js
 $(PROJECT_DIR)/Modules/modern-media-controls/controls/watchos-layout-traits.js
@@ -689,7 +696,6 @@ $(PROJECT_DIR)/Modules/streams/ReadableStreamSink.idl
 $(PROJECT_DIR)/Modules/streams/ReadableStreamSource.idl
 $(PROJECT_DIR)/Modules/streams/StreamInternals.js
 $(PROJECT_DIR)/Modules/streams/TransformStream.idl
-$(PROJECT_DIR)/Modules/streams/TransformStream.js
 $(PROJECT_DIR)/Modules/streams/TransformStreamDefaultController.idl
 $(PROJECT_DIR)/Modules/streams/TransformStreamDefaultController.js
 $(PROJECT_DIR)/Modules/streams/TransformStreamInternals.js
@@ -976,7 +982,6 @@ $(PROJECT_DIR)/css/CSSFontFaceRule.idl
 $(PROJECT_DIR)/css/CSSFontFeatureValuesRule.idl
 $(PROJECT_DIR)/css/CSSFontPaletteValuesRule.idl
 $(PROJECT_DIR)/css/CSSGroupingRule.idl
-$(PROJECT_DIR)/css/CSSImportRule+Layer.idl
 $(PROJECT_DIR)/css/CSSImportRule.idl
 $(PROJECT_DIR)/css/CSSKeyframeRule.idl
 $(PROJECT_DIR)/css/CSSKeyframesRule.idl
@@ -1493,7 +1498,6 @@ $(PROJECT_DIR)/mathml/mathtags.in
 $(PROJECT_DIR)/page/BarProp.idl
 $(PROJECT_DIR)/page/Crypto.idl
 $(PROJECT_DIR)/page/DOMSelection.idl
-$(PROJECT_DIR)/page/DOMWindow.idl
 $(PROJECT_DIR)/page/DOMWindow+CSSOM.idl
 $(PROJECT_DIR)/page/DOMWindow+CSSOMView.idl
 $(PROJECT_DIR)/page/DOMWindow+Compat.idl

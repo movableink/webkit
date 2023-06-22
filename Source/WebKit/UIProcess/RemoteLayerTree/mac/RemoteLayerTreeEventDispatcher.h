@@ -91,6 +91,8 @@ private:
 
     WebCore::PlatformWheelEvent filteredWheelEvent(const WebCore::PlatformWheelEvent&);
 
+    RemoteScrollingCoordinatorProxyMac* scrollingCoordinator() const { return m_scrollingCoordinator.get(); }
+
     void wheelEventHysteresisUpdated(PAL::HysteresisState);
 
     void willHandleWheelEvent(const WebWheelEvent&);
@@ -107,6 +109,8 @@ private:
 
     void scheduleDelayedRenderingUpdateDetectionTimer(Seconds delay);
     void delayedRenderingUpdateDetectionTimerFired();
+
+    bool scrollingTreeWasRecentlyActive();
 
     void waitForRenderingUpdateCompletionOrTimeout() WTF_REQUIRES_LOCK(m_scrollingTreeLock);
 

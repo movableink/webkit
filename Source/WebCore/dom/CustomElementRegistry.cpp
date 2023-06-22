@@ -128,6 +128,17 @@ JSC::JSValue CustomElementRegistry::get(const AtomString& name)
     return JSC::jsUndefined();
 }
 
+String CustomElementRegistry::getName(JSC::JSValue constructorValue)
+{
+    auto* constructor = constructorValue.getObject();
+    if (!constructor)
+        return String { };
+    auto* elementInterface = findInterface(constructor);
+    if (!elementInterface)
+        return String { };
+    return elementInterface->name().localName();
+}
+
 static void upgradeElementsInShadowIncludingDescendants(ContainerNode& root)
 {
     for (auto& element : descendantsOfType<Element>(root)) {

@@ -247,22 +247,22 @@ bool WebPageProxy::readSelectionFromPasteboard(const String& pasteboardName)
 
 #if ENABLE(DRAG_SUPPORT)
 
-void WebPageProxy::setPromisedDataForImage(const String& pasteboardName, const SharedMemory::Handle& imageHandle, const String& filename, const String& extension,
-    const String& title, const String& url, const String& visibleURL, const SharedMemory::Handle& archiveHandle, const String& originIdentifier)
+void WebPageProxy::setPromisedDataForImage(const String& pasteboardName, SharedMemory::Handle&& imageHandle, const String& filename, const String& extension,
+    const String& title, const String& url, const String& visibleURL, SharedMemory::Handle&& archiveHandle, const String& originIdentifier)
 {
     MESSAGE_CHECK_URL(url);
     MESSAGE_CHECK_URL(visibleURL);
     MESSAGE_CHECK(!imageHandle.isNull());
     MESSAGE_CHECK(extension == FileSystem::lastComponentOfPathIgnoringTrailingSlash(extension));
 
-    auto sharedMemoryImage = SharedMemory::map(imageHandle, SharedMemory::Protection::ReadOnly);
+    auto sharedMemoryImage = SharedMemory::map(WTFMove(imageHandle), SharedMemory::Protection::ReadOnly);
     if (!sharedMemoryImage)
         return;
     auto imageBuffer = sharedMemoryImage->createSharedBuffer(sharedMemoryImage->size());
 
     RefPtr<FragmentedSharedBuffer> archiveBuffer;
     if (!archiveHandle.isNull()) {
-        auto sharedMemoryArchive = SharedMemory::map(archiveHandle, SharedMemory::Protection::ReadOnly);
+        auto sharedMemoryArchive = SharedMemory::map(WTFMove(archiveHandle), SharedMemory::Protection::ReadOnly);
         if (!sharedMemoryArchive)
             return;
         archiveBuffer = sharedMemoryArchive->createSharedBuffer(sharedMemoryArchive->size());
@@ -372,8 +372,11 @@ bool WebPageProxy::acceptsFirstMouse(int eventNumber, const WebKit::WebMouseEven
     if (!m_process->hasConnection())
         return false;
 
+    if (shouldAvoidSynchronouslyWaitingToPreventDeadlock())
+        return false;
+
     send(Messages::WebPage::RequestAcceptsFirstMouse(eventNumber, event), IPC::SendOption::DispatchMessageEvenWhenWaitingForUnboundedSyncReply);
-    bool receivedReply = m_process->connection()->waitForAndDispatchImmediately<Messages::WebPageProxy::HandleAcceptsFirstMouse>(webPageID(), 3_s, IPC::WaitForOption::InterruptWaitingIfSyncMessageArrives);
+    bool receivedReply = m_process->connection()->waitForAndDispatchImmediately<Messages::WebPageProxy::HandleAcceptsFirstMouse>(webPageID(), 3_s, IPC::WaitForOption::InterruptWaitingIfSyncMessageArrives) == IPC::Error::NoError;
 
     if (!receivedReply)
         return false;
@@ -650,7 +653,7 @@ void WebPageProxy::willPerformPasteCommand(DOMPasteAccessCategory pasteAccessCat
     }
 }
 
-NSView *WebPageProxy::Internals::platformView() const
+RetainPtr<NSView> WebPageProxy::Internals::platformView() const
 {
     return [page.pageClient().platformWindow() contentView];
 }

@@ -86,11 +86,11 @@ TiledCoreAnimationDrawingArea::TiledCoreAnimationDrawingArea(WebPage& webPage, c
     [m_hostingLayer setOpaque:YES];
     [m_hostingLayer setGeometryFlipped:YES];
 
-    m_renderingUpdateRunLoopObserver = makeUnique<RunLoopObserver>(static_cast<CFIndex>(RunLoopObserver::WellKnownRunLoopOrders::RenderingUpdate), [this]() {
+    m_renderingUpdateRunLoopObserver = makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::RenderingUpdate, [this] {
         this->renderingUpdateRunLoopCallback();
     });
 
-    m_postRenderingUpdateRunLoopObserver = makeUnique<RunLoopObserver>(static_cast<CFIndex>(RunLoopObserver::WellKnownRunLoopOrders::PostRenderingUpdate), [this]() {
+    m_postRenderingUpdateRunLoopObserver = makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::PostRenderingUpdate, [this] {
         this->postRenderingUpdateRunLoopCallback();
     });
 
@@ -261,14 +261,14 @@ void TiledCoreAnimationDrawingArea::updateRootLayers()
         [m_hostingLayer addSublayer:m_debugInfoLayer.get()];
 }
 
-void TiledCoreAnimationDrawingArea::attachViewOverlayGraphicsLayer(GraphicsLayer* viewOverlayRootLayer)
+void TiledCoreAnimationDrawingArea::attachViewOverlayGraphicsLayer(WebCore::FrameIdentifier, GraphicsLayer* viewOverlayRootLayer)
 {
     m_viewOverlayRootLayer = viewOverlayRootLayer;
     updateRootLayers();
     triggerRenderingUpdate();
 }
 
-void TiledCoreAnimationDrawingArea::mainFrameContentSizeChanged(const IntSize& size)
+void TiledCoreAnimationDrawingArea::mainFrameContentSizeChanged(WebCore::FrameIdentifier, const IntSize& size)
 {
 }
 

@@ -572,8 +572,9 @@ void PropertyListNode::emitDeclarePrivateFieldNames(BytecodeGenerator& generator
             if (!createPrivateSymbol)
                 createPrivateSymbol = generator.moveLinkTimeConstant(nullptr, LinkTimeConstant::createPrivateSymbol);
 
-            CallArguments arguments(generator, nullptr, 0);
+            CallArguments arguments(generator, nullptr, 1);
             generator.emitLoad(arguments.thisRegister(), jsUndefined());
+            generator.emitLoad(arguments.argumentRegister(0), *node.name());
             RefPtr<RegisterID> symbol = generator.emitCall(generator.finalDestination(nullptr, createPrivateSymbol.get()), createPrivateSymbol.get(), NoExpectedFunction, arguments, position(), position(), position(), DebuggableCall::No);
 
             Variable var = generator.variable(*node.name());
@@ -2026,6 +2027,24 @@ CREATE_INTRINSIC_FOR_BRAND_CHECK(isUndefinedOrNull, IsUndefinedOrNull)
 
 #undef CREATE_INTRINSIC_FOR_BRAND_CHECK
 
+RegisterID* BytecodeIntrinsicNode::emit_intrinsic_mustValidateResultOfProxyGetAndSetTraps(BytecodeGenerator& generator, RegisterID* dst)
+{
+    ArgumentListNode* node = m_args->m_listNode;
+    RefPtr<RegisterID> src = generator.emitNode(node);
+    ASSERT(!node->m_next);
+
+    return generator.move(dst, generator.emitHasStructureWithFlags(generator.tempDestination(dst), src.get(), Structure::s_hasNonConfigurableReadOnlyOrGetterSetterPropertiesBits));
+}
+
+RegisterID* BytecodeIntrinsicNode::emit_intrinsic_mustValidateResultOfProxyTrapsExceptGetAndSet(BytecodeGenerator& generator, RegisterID* dst)
+{
+    ArgumentListNode* node = m_args->m_listNode;
+    RefPtr<RegisterID> src = generator.emitNode(node);
+    ASSERT(!node->m_next);
+
+    return generator.move(dst, generator.emitHasStructureWithFlags(generator.tempDestination(dst), src.get(), Structure::s_hasNonConfigurablePropertiesBits | Structure::s_didPreventExtensionsBits));
+}
+
 RegisterID* BytecodeIntrinsicNode::emit_intrinsic_newArrayWithSize(JSC::BytecodeGenerator& generator, JSC::RegisterID* dst)
 {
     ArgumentListNode* node = m_args->m_listNode;
@@ -2650,14 +2669,11 @@ RegisterID* PostfixNode::emitBytecode(BytecodeGenerator& generator, RegisterID* 
 RegisterID* DeleteResolveNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
     Variable var = generator.variable(m_ident);
-    if (var.local()) {
-        generator.emitTDZCheckIfNecessary(var, var.local(), nullptr);
+    if (var.local())
         return generator.emitLoad(generator.finalDestination(dst), false);
-    }
 
     generator.emitExpressionInfo(divot(), divotStart(), divotEnd());
     RefPtr<RegisterID> base = generator.emitResolveScope(dst, var);
-    generator.emitTDZCheckIfNecessary(var, nullptr, base.get());
     return generator.emitDeleteById(generator.finalDestination(dst, base.get()), base.get(), m_ident);
 }
 
@@ -3827,6 +3843,15 @@ RegisterID* AssignErrorNode::emitBytecode(BytecodeGenerator& generator, Register
 
 RegisterID* AssignBracketNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
+    ForInContext* context = nullptr;
+    if (m_subscript->isResolveNode()) {
+        Variable argumentVariable = generator.variable(static_cast<ResolveNode*>(m_subscript)->identifier());
+        if (argumentVariable.isLocal()) {
+            RegisterID* property = argumentVariable.local();
+            context = generator.findForInContext(property);
+        }
+    }
+
     RefPtr<RegisterID> base = generator.emitNodeForLeftHandSide(m_base, m_subscriptHasAssignments || m_rightHasAssignments, m_subscript->isPure(generator) && m_right->isPure(generator));
     RefPtr<RegisterID> property = generator.emitNodeForLeftHandSideForProperty(m_subscript, m_rightHasAssignments, m_right->isPure(generator));
     RefPtr<RegisterID> value = generator.destinationForAssignResult(dst);
@@ -3845,8 +3870,12 @@ RegisterID* AssignBracketNode::emitBytecode(BytecodeGenerator& generator, Regist
         if (m_base->isSuperNode()) {
             RefPtr<RegisterID> thisValue = generator.ensureThis();
             generator.emitPutByVal(base.get(), thisValue.get(), property.get(), forwardResult);
-        } else
-            generator.emitPutByVal(base.get(), property.get(), forwardResult);
+        } else {
+            if (context)
+                generator.emitEnumeratorPutByVal(*context, base.get(), property.get(), forwardResult);
+            else
+                generator.emitPutByVal(base.get(), property.get(), forwardResult);
+        }
     }
 
     generator.emitProfileType(forwardResult, divotStart(), divotEnd());
@@ -4811,7 +4840,7 @@ void TryNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
         }
 
         if (m_catchPattern) {
-            generator.emitPushCatchScope(m_lexicalVariables);
+            generator.emitPushCatchScope(m_lexicalVariables, m_catchPattern->isBindingNode() ? BytecodeGenerator::ScopeType::CatchScopeWithSimpleParameter : BytecodeGenerator::ScopeType::CatchScope);
             m_catchPattern->bindValue(generator, thrownValueRegister.get());
         }
 

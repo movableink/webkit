@@ -59,7 +59,6 @@
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLModelElement.h"
-#include "HTMLParserIdioms.h"
 #include "HTMLPlugInElement.h"
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
@@ -71,6 +70,7 @@
 #include "Model.h"
 #include "MoveSelectionCommand.h"
 #include "MutableStyleProperties.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "Pasteboard.h"
 #include "PlatformKeyboardEvent.h"
@@ -969,8 +969,8 @@ void DragController::prepareForDragStart(LocalFrame& source, OptionSet<DragSourc
     }
 
     auto linkURL = hitTestResult->absoluteLinkURL();
-    if (actionMask.contains(DragSourceAction::Link) && !linkURL.isEmpty() && source.document()->securityOrigin().canDisplay(linkURL))
-        editor.copyURL(linkURL, hitTestResult->textContent().simplifyWhiteSpace(), pasteboard);
+    if (actionMask.contains(DragSourceAction::Link) && !linkURL.isEmpty() && source.document()->securityOrigin().canDisplay(linkURL, OriginAccessPatternsForWebProcess::singleton()))
+        editor.copyURL(linkURL, hitTestResult->textContent().simplifyWhiteSpace(deprecatedIsSpaceOrNewline), pasteboard);
 #else
     // FIXME: Make this work on Windows by implementing Editor::writeSelectionToPasteboard and Editor::writeImageToPasteboard.
     UNUSED_PARAM(source);
@@ -1129,7 +1129,7 @@ bool DragController::startDrag(LocalFrame& src, const DragState& state, OptionSe
         return true;
     }
 
-    if (!src.document()->securityOrigin().canDisplay(linkURL)) {
+    if (!src.document()->securityOrigin().canDisplay(linkURL, OriginAccessPatternsForWebProcess::singleton())) {
         src.document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Not allowed to drag local resource: " + linkURL.stringCenterEllipsizedToLength());
         return false;
     }
@@ -1168,7 +1168,7 @@ bool DragController::startDrag(LocalFrame& src, const DragState& state, OptionSe
     if (!linkURL.isEmpty() && m_dragSourceAction.contains(DragSourceAction::Link)) {
         PasteboardWriterData pasteboardWriterData;
 
-        String textContentWithSimplifiedWhiteSpace = hitTestResult->textContent().simplifyWhiteSpace();
+        String textContentWithSimplifiedWhiteSpace = hitTestResult->textContent().simplifyWhiteSpace(deprecatedIsSpaceOrNewline);
 
         if (hasData == HasNonDefaultPasteboardData::No) {
             // Simplify whitespace so the title put on the dataTransfer resembles what the user sees
@@ -1440,7 +1440,7 @@ void DragController::doSystemDrag(DragImage image, const IntPoint& dragLoc, cons
         if (auto link = containingLinkElement(*element)) {
             auto titleAttribute = link->attributeWithoutSynchronization(HTMLNames::titleAttr);
             item.title = titleAttribute.isEmpty() ? link->innerText() : titleAttribute.string();
-            item.url = frame.document()->completeURL(stripLeadingAndTrailingHTMLSpaces(link->getAttribute(HTMLNames::hrefAttr)));
+            item.url = frame.document()->completeURL(link->getAttribute(HTMLNames::hrefAttr));
         }
     }
     client().startDrag(WTFMove(item), *state.dataTransfer, protectedLocalMainFrame.get());

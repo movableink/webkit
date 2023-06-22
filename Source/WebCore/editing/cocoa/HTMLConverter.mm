@@ -54,7 +54,6 @@
 #import "HTMLMetaElement.h"
 #import "HTMLNames.h"
 #import "HTMLOListElement.h"
-#import "HTMLParserIdioms.h"
 #import "HTMLTableCellElement.h"
 #import "HTMLTextAreaElement.h"
 #import "LoaderNSURLExtras.h"
@@ -261,6 +260,8 @@ private:
     RetainPtr<NSMutableAttributedString> _attrStr;
     RetainPtr<NSMutableDictionary> _documentAttrs;
     RetainPtr<NSURL> _baseURL;
+    RetainPtr<NSPresentationIntent> _topPresentationIntent;
+    NSInteger _topPresentationIntentIdentity;
     RetainPtr<NSMutableArray> _textLists;
     RetainPtr<NSMutableArray> _textBlocks;
     RetainPtr<NSMutableArray> _textTables;
@@ -305,7 +306,9 @@ private:
     void _addQuoteForElement(Element&, BOOL opening, NSInteger level);
     void _addValue(NSString *value, Element&);
     void _fillInBlock(NSTextBlock *block, Element&, PlatformColor *backgroundColor, CGFloat extraMargin, CGFloat extraPadding, BOOL isTable);
-    
+    void _enterBlockquote();
+    void _exitBlockquote();
+
     BOOL _enterElement(Element&, BOOL embedded);
     BOOL _processElement(Element&, NSInteger depth);
     void _exitElement(Element&, NSInteger depth, NSUInteger startIndex);
@@ -329,6 +332,8 @@ HTMLConverter::HTMLConverter(const SimpleRange& range)
     _attrStr = adoptNS([[NSMutableAttributedString alloc] init]);
     _documentAttrs = adoptNS([[NSMutableDictionary alloc] init]);
     _baseURL = nil;
+    _topPresentationIntent = nil;
+    _topPresentationIntentIdentity = 0;
     _textLists = adoptNS([[NSMutableArray alloc] init]);
     _textBlocks = adoptNS([[NSMutableArray alloc] init]);
     _textTables = adoptNS([[NSMutableArray alloc] init]);
@@ -1047,7 +1052,9 @@ NSDictionary *HTMLConverter::computedAttributesForElement(Element& element)
             heading = 5;
         else if (coreBlockElement.hasTagName(h6Tag))
             heading = 6;
-        bool isParagraph = coreBlockElement.hasTagName(pTag) || coreBlockElement.hasTagName(liTag) || heading;
+        else if (coreBlockElement.hasTagName(blockquoteTag) && _topPresentationIntent)
+            [attrs setObject:_topPresentationIntent.get() forKey:NSPresentationIntentAttributeName];
+        bool isParagraph = coreBlockElement.hasTagName(pTag) || coreBlockElement.hasTagName(liTag) || heading || coreBlockElement.hasTagName(blockquoteTag);
 
         String textAlign = _caches->propertyValueForNode(coreBlockElement, CSSPropertyTextAlign);
         if (textAlign.length()) {
@@ -1070,7 +1077,7 @@ NSDictionary *HTMLConverter::computedAttributesForElement(Element& element)
                 [paragraphStyle setBaseWritingDirection:NSWritingDirectionRightToLeft];
         }
 
-        String hyphenation = _caches->propertyValueForNode(coreBlockElement, CSSPropertyWebkitHyphens);
+        String hyphenation = _caches->propertyValueForNode(coreBlockElement, CSSPropertyHyphens);
         if (hyphenation.length()) {
             if (hyphenation == autoAtom())
                 [paragraphStyle setHyphenationFactor:1.0];
@@ -1572,9 +1579,23 @@ void HTMLConverter::_processHeadElement(Element& element)
     }
 }
 
+void HTMLConverter::_enterBlockquote()
+{
+    _topPresentationIntent = [NSPresentationIntent blockQuoteIntentWithIdentity:++_topPresentationIntentIdentity nestedInsideIntent:_topPresentationIntent.get()];
+}
+
+void HTMLConverter::_exitBlockquote()
+{
+    if (_topPresentationIntent)
+        _topPresentationIntent = [_topPresentationIntent parentIntent];
+}
+
 BOOL HTMLConverter::_enterElement(Element& element, BOOL embedded)
 {
     String displayValue = _caches->propertyValueForNode(element, CSSPropertyDisplay);
+    if (element.hasTagName(blockquoteTag))
+        _enterBlockquote();
+
     if (element.hasTagName(headTag) && !embedded)
         _processHeadElement(element);
     else if (!m_userSelectNoneStateCache.nodeOnlyContainsUserSelectNone(element) && (!displayValue.length() || !(displayValue == noneAtom() || displayValue == "table-column"_s || displayValue == "table-column-group"_s))) {
@@ -1596,9 +1617,9 @@ void HTMLConverter::_addLinkForElement(Element& element, NSRange range)
     NSString *urlString = element.getAttribute(hrefAttr);
     NSString *strippedString = [urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if (urlString && [urlString length] > 0 && strippedString && [strippedString length] > 0 && ![strippedString hasPrefix:@"#"]) {
-        NSURL *url = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(urlString));
+        NSURL *url = element.document().completeURL(urlString);
         if (!url)
-            url = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(strippedString));
+            url = element.document().completeURL(strippedString);
         if (!url)
             url = [NSURL _web_URLWithString:strippedString relativeToURL:_baseURL.get()];
         [_attrStr addAttribute:NSLinkAttributeName value:url ? (id)url : (id)urlString range:range];
@@ -1757,7 +1778,7 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
     } else if (element.hasTagName(imgTag)) {
         NSString *urlString = element.imageSourceURL();
         if (urlString && [urlString length] > 0) {
-            NSURL *url = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(urlString));
+            NSURL *url = element.document().completeURL(urlString);
             if (!url)
                 url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:_baseURL.get()];
 #if PLATFORM(IOS_FAMILY)
@@ -1777,14 +1798,14 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
             NSURL *baseURL = nil;
             NSURL *url = nil;
             if (baseString && [baseString length] > 0) {
-                baseURL = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(baseString));
+                baseURL = element.document().completeURL(baseString);
                 if (!baseURL)
                     baseURL = [NSURL _web_URLWithString:[baseString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:_baseURL.get()];
             }
             if (baseURL)
                 url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:baseURL];
             if (!url)
-                url = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(urlString));
+                url = element.document().completeURL(urlString);
             if (!url)
                 url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:_baseURL.get()];
             if (url)
@@ -2046,6 +2067,9 @@ void HTMLConverter::_exitElement(Element& element, NSInteger depth, NSUInteger s
             }
         }
     }
+
+    if (element.hasTagName(blockquoteTag))
+        _exitBlockquote();
 }
 
 void HTMLConverter::_processText(CharacterData& characterData)

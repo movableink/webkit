@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -65,7 +65,6 @@
 #include "FocusController.h"
 #include "FrameLoadRequest.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "FrameTree.h"
 #include "HTTPParsers.h"
 #include "History.h"
@@ -76,6 +75,7 @@
 #include "JSDOMWindowBase.h"
 #include "JSExecState.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "Location.h"
 #include "Logging.h"
@@ -85,6 +85,7 @@
 #include "MessageWithMessagePorts.h"
 #include "NavigationScheduler.h"
 #include "Navigator.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
 #include "PageTransitionEvent.h"
@@ -305,7 +306,7 @@ void LocalDOMWindow::dispatchAllPendingUnloadEvents()
             continue;
 
         if (RefPtr document = window->document())
-            document->dispatchPagehideEvent(PageshowEventNotPersisted);
+            document->dispatchPagehideEvent(PageshowEventPersistence::NotPersisted);
         window->dispatchEvent(Event::create(eventNames.unloadEvent, Event::CanBubble::No, Event::IsCancelable::No), window->document());
 
         window->enableSuddenTermination();
@@ -932,11 +933,20 @@ void LocalDOMWindow::processPostMessage(JSC::JSGlobalObject& lexicalGlobalObject
         if (!globalObject)
             return;
 
+        auto& vm = globalObject->vm();
+        auto scope = DECLARE_CATCH_SCOPE(vm);
+
         UserGestureIndicator userGestureIndicator(userGestureToForward);
         InspectorInstrumentation::willDispatchPostMessage(frame, postMessageIdentifier);
 
         auto ports = MessagePort::entanglePorts(*document(), WTFMove(message.transferredPorts));
         auto event = MessageEvent::create(*globalObject, message.message.releaseNonNull(), sourceOrigin, { }, incumbentWindowProxy ? std::make_optional(MessageEventSource(WTFMove(incumbentWindowProxy))) : std::nullopt, WTFMove(ports));
+        if (UNLIKELY(scope.exception())) {
+            // Currently, we assume that the only way we can get here is if we have a termination.
+            RELEASE_ASSERT(vm.hasPendingTerminationException());
+            return;
+        }
+
         dispatchEvent(event.event);
 
         InspectorInstrumentation::didDispatchPostMessage(frame, postMessageIdentifier);
@@ -1139,6 +1149,7 @@ void LocalDOMWindow::stop()
     if (!frame)
         return;
 
+    SetForScope isStopping { m_isStopping, true };
     // We must check whether the load is complete asynchronously, because we might still be parsing
     // the document until the callstack unwinds.
     frame->loader().stopForUserCancel(true);
@@ -1269,7 +1280,7 @@ int LocalDOMWindow::outerHeight() const
     if (!page)
         return 0;
 
-    if (page->isLoadingInHeadlessMode())
+    if (page->fingerprintingProtectionsEnabled())
         return innerHeight();
 
 #if PLATFORM(IOS_FAMILY)
@@ -1297,7 +1308,7 @@ int LocalDOMWindow::outerWidth() const
     if (!page)
         return 0;
 
-    if (page->isLoadingInHeadlessMode())
+    if (page->fingerprintingProtectionsEnabled())
         return innerWidth();
 
 #if PLATFORM(IOS_FAMILY)
@@ -1322,7 +1333,7 @@ int LocalDOMWindow::innerHeight() const
     
     // Force enough layout in the parent document to ensure that the FrameView has been resized.
     if (RefPtr ownerElement = frameElement())
-        ownerElement->document().updateLayoutIfDimensionsOutOfDate(*ownerElement, HeightDimensionsCheck);
+        ownerElement->document().updateLayoutIfDimensionsOutOfDate(*ownerElement, { DimensionsCheck::Height });
 
     RefPtr frame = this->frame();
     if (!frame)
@@ -1342,7 +1353,7 @@ int LocalDOMWindow::innerWidth() const
 
     // Force enough layout in the parent document to ensure that the FrameView has been resized.
     if (RefPtr ownerElement = frameElement())
-        ownerElement->document().updateLayoutIfDimensionsOutOfDate(*ownerElement, WidthDimensionsCheck);
+        ownerElement->document().updateLayoutIfDimensionsOutOfDate(*ownerElement, { DimensionsCheck::Width });
 
     RefPtr frame = this->frame();
     if (!frame)
@@ -1362,7 +1373,7 @@ int LocalDOMWindow::screenX() const
         return 0;
 
     Page* page = frame->page();
-    if (!page || page->isLoadingInHeadlessMode())
+    if (!page || page->fingerprintingProtectionsEnabled())
         return 0;
 
     return static_cast<int>(page->chrome().windowRect().x());
@@ -1375,7 +1386,7 @@ int LocalDOMWindow::screenY() const
         return 0;
 
     Page* page = frame->page();
-    if (!page || page->isLoadingInHeadlessMode())
+    if (!page || page->fingerprintingProtectionsEnabled())
         return 0;
 
     return static_cast<int>(page->chrome().windowRect().y());
@@ -1461,7 +1472,7 @@ AtomString LocalDOMWindow::name() const
     if (!frame)
         return nullAtom();
 
-    return frame->tree().name();
+    return frame->tree().specifiedName();
 }
 
 void LocalDOMWindow::setName(const AtomString& string)
@@ -1470,7 +1481,7 @@ void LocalDOMWindow::setName(const AtomString& string)
     if (!frame)
         return;
 
-    frame->tree().setName(string);
+    frame->tree().setSpecifiedName(string);
 }
 
 void LocalDOMWindow::setStatus(const String& string)
@@ -2581,7 +2592,7 @@ ExceptionOr<RefPtr<LocalFrame>> LocalDOMWindow::createWindow(const String& urlSt
     WindowFeatures windowFeatures = initialWindowFeatures;
 
     // For whatever reason, Firefox uses the first frame to determine the outgoingReferrer. We replicate that behavior here.
-    String referrer = windowFeatures.noreferrer ? String() : SecurityPolicy::generateReferrerHeader(firstFrame.document()->referrerPolicy(), completedURL, firstFrame.loader().outgoingReferrer());
+    String referrer = windowFeatures.noreferrer ? String() : SecurityPolicy::generateReferrerHeader(firstFrame.document()->referrerPolicy(), completedURL, firstFrame.loader().outgoingReferrer(), OriginAccessPatternsForWebProcess::singleton());
     auto initiatedByMainFrame = activeFrame->isMainFrame() ? InitiatedByMainFrame::Yes : InitiatedByMainFrame::Unknown;
 
     ResourceRequest resourceRequest { completedURL, referrer };

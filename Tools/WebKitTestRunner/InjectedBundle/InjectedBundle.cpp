@@ -547,6 +547,7 @@ void InjectedBundle::beginTesting(WKDictionaryRef settings, BegingTestingMode te
     m_textInputController = TextInputController::create();
 #if ENABLE(ACCESSIBILITY)
     m_accessibilityController = AccessibilityController::create();
+    m_accessibilityController->setForceDeferredSpellChecking(false);
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     m_accessibilityController->setIsolatedTreeMode(m_accessibilityIsolatedTreeMode);
 #endif
@@ -775,9 +776,14 @@ unsigned InjectedBundle::imageCountInGeneralPasteboard() const
     return uint64Value(adoptWK(result).get());
 }
 
-void InjectedBundle::setUserMediaPermission(bool enabled)
+void InjectedBundle::setCameraPermission(bool enabled)
 {
-    postPageMessage("SetUserMediaPermission", adoptWK(WKBooleanCreate(enabled)));
+    postPageMessage("SetCameraPermission", adoptWK(WKBooleanCreate(enabled)));
+}
+
+void InjectedBundle::setMicrophonePermission(bool enabled)
+{
+    postPageMessage("SetMicrophonePermission", adoptWK(WKBooleanCreate(enabled)));
 }
 
 void InjectedBundle::resetUserMediaPermission()

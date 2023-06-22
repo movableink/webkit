@@ -71,13 +71,13 @@ template<typename T> struct SimpleArgumentCoder {
     }
 };
 
-template<typename T, size_t Extent> struct ArgumentCoder<Span<T, Extent>> {
+template<typename T, size_t Extent> struct ArgumentCoder<std::span<T, Extent>> {
     template<typename Encoder>
-    static void encode(Encoder& encoder, const Span<T, Extent>& span)
+    static void encode(Encoder& encoder, const std::span<T, Extent>& span)
     {
         static_assert(Extent, "Can't encode a fixed size of 0");
 
-        if constexpr (Extent == WTF::dynamic_extent) {
+        if constexpr (Extent == std::dynamic_extent) {
             size_t size = span.size();
             encoder << size;
             if (!size)
@@ -87,29 +87,29 @@ template<typename T, size_t Extent> struct ArgumentCoder<Span<T, Extent>> {
     }
 
     template<typename Decoder>
-    static std::optional<Span<T, Extent>> decode(Decoder& decoder)
+    static std::optional<std::span<T, Extent>> decode(Decoder& decoder)
     {
         static_assert(Extent, "Can't decode a fixed size of 0");
 
         size_t size = Extent;
-        if constexpr (Extent == WTF::dynamic_extent) {
+        if constexpr (Extent == std::dynamic_extent) {
             auto decodedSize = decoder.template decode<size_t>();
             if (!decodedSize)
                 return std::nullopt;
 
             size = *decodedSize;
             if (!size)
-                return Span<T, Extent> { };
+                return std::span<T, Extent> { };
         }
 
         auto data = decoder.template decodeSpan<T>(size);
         if (!data.data() || data.size() != size)
             return std::nullopt;
 
-        if constexpr (Extent == WTF::dynamic_extent)
+        if constexpr (Extent == std::dynamic_extent)
             return data;
         else
-            return Span<T, Extent> { data.data(), Extent };
+            return std::span<T, Extent> { data.data(), Extent };
     }
 };
 
@@ -129,7 +129,7 @@ struct ArgumentCoder<ArrayReferenceTuple<Types...>> {
         if (UNLIKELY(!size))
             return;
 
-        (..., encoder.encodeSpan(makeSpan(arrayReference.template data<Indices>(), size)));
+        (..., encoder.encodeSpan(std::span(arrayReference.template data<Indices>(), size)));
     }
 
     template<typename Decoder>
@@ -503,7 +503,7 @@ template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t min
     template<typename Decoder>
     static std::optional<Vector<T, inlineCapacity, OverflowHandler, minCapacity>> decode(Decoder& decoder)
     {
-        auto data = decoder.template decode<Span<const T>>();
+        auto data = decoder.template decode<std::span<const T>>();
         if (!data)
             return std::nullopt;
         return std::make_optional<Vector<T, inlineCapacity, OverflowHandler, minCapacity>>(*data);
@@ -773,7 +773,7 @@ template<> struct ArgumentCoder<StringView> {
 template<> struct ArgumentCoder<SHA1::Digest> {
     static void encode(Encoder& encoder, const SHA1::Digest& digest)
     {
-        encoder.encodeSpan(makeSpan(digest.data(), digest.size()));
+        encoder.encodeSpan(std::span(digest.data(), digest.size()));
     }
 
     static std::optional<SHA1::Digest> decode(Decoder& decoder)

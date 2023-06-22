@@ -374,6 +374,25 @@ private:
     FloatRect m_rect;
 };
 
+class ClipRoundedRect {
+public:
+    static constexpr ItemType itemType = ItemType::ClipRoundedRect;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    ClipRoundedRect(const FloatRoundedRect& rect)
+        : m_rect(rect)
+    {
+    }
+
+    const FloatRoundedRect& rect() const { return m_rect; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+
+private:
+    FloatRoundedRect m_rect;
+};
+
 class ClipOut {
 public:
     static constexpr ItemType itemType = ItemType::ClipOut;
@@ -391,6 +410,25 @@ public:
 
 private:
     FloatRect m_rect;
+};
+
+class ClipOutRoundedRect {
+public:
+    static constexpr ItemType itemType = ItemType::ClipOutRoundedRect;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    ClipOutRoundedRect(const FloatRoundedRect& rect)
+        : m_rect(rect)
+    {
+    }
+
+    const FloatRoundedRect& rect() const { return m_rect; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+
+private:
+    FloatRoundedRect m_rect;
 };
 
 class ClipToImageBuffer {
@@ -466,6 +504,19 @@ public:
 private:
     Path m_path;
     WindRule m_windRule;
+};
+
+class ResetClip {
+public:
+    static constexpr ItemType itemType = ItemType::ResetClip;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = false;
+
+    ResetClip()
+    {
+    }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
 };
 
 class DrawFilteredImageBuffer {
@@ -1389,7 +1440,9 @@ using DisplayListItem = std::variant
     , ClearRect
     , ClearShadow
     , Clip
+    , ClipRoundedRect
     , ClipOut
+    , ClipOutRoundedRect
     , ClipOutToPath
     , ClipPath
     , ClipToImageBuffer
@@ -1419,6 +1472,7 @@ using DisplayListItem = std::variant
     , FillRectWithGradient
     , FillRectWithRoundedHole
     , FillRoundedRect
+    , ResetClip
     , Restore
     , Rotate
     , Save
@@ -1475,10 +1529,13 @@ WEBCORE_EXPORT void dumpItem(TextStream&, const SetLineDash&, OptionSet<AsTextFl
 WEBCORE_EXPORT void dumpItem(TextStream&, const SetLineJoin&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const SetMiterLimit&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const Clip&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const ClipRoundedRect&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const ClipOut&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const ClipOutRoundedRect&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const ClipToImageBuffer&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const ClipOutToPath&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const ClipPath&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const ResetClip&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const DrawControlPart&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const DrawFilteredImageBuffer&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const DrawGlyphs&, OptionSet<AsTextFlag>);
@@ -1565,10 +1622,13 @@ template<> struct EnumTraits<WebCore::DisplayList::ItemType> {
     WebCore::DisplayList::ItemType::SetMiterLimit,
     WebCore::DisplayList::ItemType::ClearShadow,
     WebCore::DisplayList::ItemType::Clip,
+    WebCore::DisplayList::ItemType::ClipRoundedRect,
     WebCore::DisplayList::ItemType::ClipOut,
+    WebCore::DisplayList::ItemType::ClipOutRoundedRect,
     WebCore::DisplayList::ItemType::ClipToImageBuffer,
     WebCore::DisplayList::ItemType::ClipOutToPath,
     WebCore::DisplayList::ItemType::ClipPath,
+    WebCore::DisplayList::ItemType::ResetClip,
     WebCore::DisplayList::ItemType::DrawGlyphs,
     WebCore::DisplayList::ItemType::DrawDecomposedGlyphs,
     WebCore::DisplayList::ItemType::DrawImageBuffer,

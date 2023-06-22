@@ -310,12 +310,12 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
         m_isolatedObjectInitialized = true;
 
     if (!_identifier.isValid())
-        _identifier = m_isolatedObject->objectID();
+        _identifier = m_isolatedObject.get()->objectID();
 }
 
 - (BOOL)hasIsolatedObject
 {
-    return !!m_isolatedObject;
+    return !!m_isolatedObject.get();
 }
 #endif
 
@@ -377,11 +377,11 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 - (WebCore::AXCoreObject*)axBackingObject
 {
     if (isMainThread())
-        return m_axObject;
+        return m_axObject.get();
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     ASSERT(AXObjectCache::isIsolatedTreeEnabled());
-    return m_isolatedObject;
+    return m_isolatedObject.get().get();
 #else
     ASSERT_NOT_REACHED();
     return nullptr;
@@ -414,7 +414,10 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
     auto extendedDescription = backingObject->extendedDescription();
     if (extendedDescription.length()) {
         accessibilityCustomContent = adoptNS([[NSMutableArray alloc] init]);
-        [accessibilityCustomContent addObject:[PAL::getAXCustomContentClass() customContentWithLabel:WEB_UI_STRING("description", "description detail") value:extendedDescription]];
+        AXCustomContent *contentItem = [PAL::getAXCustomContentClass() customContentWithLabel:WEB_UI_STRING("description", "description detail") value:extendedDescription];
+        // Set this to high, so that it's always spoken.
+        [contentItem setImportance:AXCustomContentImportanceHigh];
+        [accessibilityCustomContent addObject:contentItem];
     }
     
     return accessibilityCustomContent.autorelease();

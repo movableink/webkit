@@ -43,7 +43,6 @@
 #include "Document.h"
 #include "FetchRequestDestination.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTMLSrcsetParser.h"
 #include "JSFetchRequestDestination.h"
 #include "LinkHeader.h"
@@ -51,6 +50,7 @@
 #include "LinkRelAttribute.h"
 #include "LoaderStrategy.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "MIMETypeRegistry.h"
 #include "MediaQueryEvaluator.h"
@@ -121,7 +121,7 @@ void LinkLoader::loadLinksFromHeader(const String& headerValue, const URL& baseU
             continue;
 
         RequestPriority fetchPriorityHint = RequestPriority::Auto;
-        if (document.settings().priorityHintsEnabled())
+        if (document.settings().fetchPriorityEnabled())
             fetchPriorityHint = parseEnumerationFromString<RequestPriority>(header.fetchPriorityHint()).value_or(RequestPriority::Auto);
 
         LinkLoadParameters params { relAttribute, url, header.as(), header.media(), header.mimeType(), header.crossOrigin(), header.imageSrcSet(), header.imageSizes(), header.nonce(),

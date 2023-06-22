@@ -171,7 +171,7 @@ void NetworkProcessProxy::requestTermination()
 
 void NetworkProcessProxy::didBecomeUnresponsive()
 {
-    RELEASE_LOG_ERROR(Process, "NetworkProcessProxy::didBecomeUnresponsive: NetworkProcess with PID %d became unresponsive, terminating it", processIdentifier());
+    RELEASE_LOG_ERROR(Process, "NetworkProcessProxy::didBecomeUnresponsive: NetworkProcess with PID %d became unresponsive, terminating it", processID());
 
     // Let network process terminates itself and generate crash report for investigation of hangs.
     // We currently only do this when network process becomes unresponsive multiple times in a short
@@ -323,7 +323,7 @@ void NetworkProcessProxy::getNetworkProcessConnection(WebProcessProxy& webProces
         reply(NetworkProcessConnectionInfo { WTFMove(*identifier), cookieAcceptPolicy });
         UNUSED_VARIABLE(this);
 #elif OS(DARWIN)
-        MESSAGE_CHECK(MACH_PORT_VALID(identifier->sendRight()));
+        MESSAGE_CHECK(*identifier);
         reply(NetworkProcessConnectionInfo { WTFMove(*identifier) , cookieAcceptPolicy, connection()->getAuditToken() });
 #else
         notImplemented();
@@ -350,10 +350,12 @@ Ref<DownloadProxy> NetworkProcessProxy::createDownloadProxy(WebsiteDataStore& da
 void NetworkProcessProxy::dataTaskWithRequest(WebPageProxy& page, PAL::SessionID sessionID, WebCore::ResourceRequest&& request, CompletionHandler<void(API::DataTask&)>&& completionHandler)
 {
     sendWithAsyncReply(Messages::NetworkProcess::DataTaskWithRequest(page.identifier(), sessionID, request, IPC::FormDataReference(request.httpBody())), [this, protectedThis = Ref { *this }, weakPage = WeakPtr { page }, completionHandler = WTFMove(completionHandler), originalURL = request.url()] (DataTaskIdentifier identifier) mutable {
-        MESSAGE_CHECK(decltype(m_dataTasks)::isValidKey(identifier));
         auto dataTask = API::DataTask::create(identifier, WTFMove(weakPage), WTFMove(originalURL));
         completionHandler(dataTask);
-        m_dataTasks.add(identifier, WTFMove(dataTask));
+        if (decltype(m_dataTasks)::isValidKey(identifier))
+            m_dataTasks.add(identifier, WTFMove(dataTask));
+        else
+            dataTask->networkProcessCrashed();
     });
 }
 
@@ -447,7 +449,7 @@ void NetworkProcessProxy::networkProcessDidTerminate(ProcessTerminationReason re
     for (auto& websiteDataStore : copyToVectorOf<Ref<WebsiteDataStore>>(m_websiteDataStores))
         websiteDataStore->networkProcessDidTerminate(*this);
     for (auto& task : m_dataTasks.values())
-        task->client().didCompleteWithError(task, WebCore::internalError(task->originalURL()));
+        task->networkProcessCrashed();
     m_dataTasks.clear();
 }
 
@@ -553,10 +555,10 @@ void NetworkProcessProxy::didNegotiateModernTLS(WebPageProxyIdentifier pageID, c
         page->didNegotiateModernTLS(url);
 }
 
-void NetworkProcessProxy::didFailLoadDueToNetworkConnectionIntegrity(WebPageProxyIdentifier pageID, const URL& url) 
+void NetworkProcessProxy::didBlockLoadToKnownTracker(WebPageProxyIdentifier pageID, const URL& url)
 {
     if (auto page = pageID ? WebProcessProxy::webPage(pageID) : nullptr)
-        page->didFailLoadDueToNetworkConnectionIntegrity(url);
+        page->didBlockLoadToKnownTracker(url);
 }
 
 void NetworkProcessProxy::triggerBrowsingContextGroupSwitchForNavigation(WebPageProxyIdentifier pageID, uint64_t navigationID, BrowsingContextGroupSwitchDecision browsingContextGroupSwitchDecision, const WebCore::RegistrableDomain& responseDomain, NetworkResourceLoadIdentifier existingNetworkResourceLoadIdentifierToResume, CompletionHandler<void(bool success)>&& completionHandler)
@@ -1438,12 +1440,19 @@ void NetworkProcessProxy::addSession(WebsiteDataStore& store, SendParametersToNe
         createSymLinkForFileUpgrade(store.resolvedIndexedDBDatabaseDirectory());
 }
 
-void NetworkProcessProxy::removeSession(WebsiteDataStore& websiteDataStore)
+void NetworkProcessProxy::removeSession(WebsiteDataStore& websiteDataStore, CompletionHandler<void(String&&)>&& completionHandler)
 {
     m_websiteDataStores.remove(websiteDataStore);
 
-    if (canSendMessage())
-        send(Messages::NetworkProcess::DestroySession { websiteDataStore.sessionID() }, 0);
+    if (canSendMessage()) {
+        sendWithAsyncReply(Messages::NetworkProcess::DestroySession { websiteDataStore.sessionID() }, [completionHandler = std::exchange(completionHandler, { })]() mutable {
+            if (completionHandler)
+                completionHandler({ });
+        });
+    }
+
+    if (completionHandler)
+        completionHandler({ });
 
     if (m_websiteDataStores.isEmptyIgnoringNullReferences())
         defaultNetworkProcess() = nullptr;
@@ -1680,14 +1689,14 @@ void NetworkProcessProxy::setWebProcessHasUploads(WebCore::ProcessIdentifier pro
         RELEASE_LOG(ProcessSuspension, "NetworkProcessProxy::setWebProcessHasUploads: The number of uploads in progress is now greater than 0. Taking Networking and UI process assertions.");
         m_uploadActivity = UploadActivity {
             ProcessAssertion::create(getCurrentProcessID(), "WebKit uploads"_s, ProcessAssertionType::UnboundedNetworking),
-            ProcessAssertion::create(processIdentifier(), "WebKit uploads"_s, ProcessAssertionType::UnboundedNetworking),
+            ProcessAssertion::create(this->processID(), "WebKit uploads"_s, ProcessAssertionType::UnboundedNetworking),
             HashMap<WebCore::ProcessIdentifier, RefPtr<ProcessAssertion>>()
         };
     }
 
     m_uploadActivity->webProcessAssertions.ensure(processID, [&] {
-        RELEASE_LOG(ProcessSuspension, "NetworkProcessProxy::setWebProcessHasUploads: Taking upload assertion on behalf of WebProcess with PID %d", process->processIdentifier());
-        return ProcessAssertion::create(process->processIdentifier(), "WebKit uploads"_s, ProcessAssertionType::UnboundedNetworking);
+        RELEASE_LOG(ProcessSuspension, "NetworkProcessProxy::setWebProcessHasUploads: Taking upload assertion on behalf of WebProcess with PID %d", process->processID());
+        return ProcessAssertion::create(process->processID(), "WebKit uploads"_s, ProcessAssertionType::UnboundedNetworking);
     });
 }
 
@@ -1713,11 +1722,11 @@ void NetworkProcessProxy::createSymLinkForFileUpgrade(const String& indexedDatab
         FileSystem::createSymbolicLink(indexedDatabaseDirectory, oldVersionDirectory);
 }
 
-void NetworkProcessProxy::preconnectTo(PAL::SessionID sessionID, WebPageProxyIdentifier webPageProxyID, WebCore::PageIdentifier webPageID, const URL& url, const String& userAgent, WebCore::StoredCredentialsPolicy storedCredentialsPolicy, std::optional<NavigatingToAppBoundDomain> isNavigatingToAppBoundDomain, LastNavigationWasAppInitiated lastNavigationWasAppInitiated)
+void NetworkProcessProxy::preconnectTo(PAL::SessionID sessionID, WebPageProxyIdentifier webPageProxyID, WebCore::PageIdentifier webPageID, WebCore::ResourceRequest&& request, WebCore::StoredCredentialsPolicy storedCredentialsPolicy, std::optional<NavigatingToAppBoundDomain> isNavigatingToAppBoundDomain)
 {
-    if (!url.isValid() || !url.protocolIsInHTTPFamily())
+    if (!request.url().isValid() || !request.url().protocolIsInHTTPFamily())
         return;
-    send(Messages::NetworkProcess::PreconnectTo(sessionID, webPageProxyID, webPageID, url, userAgent, storedCredentialsPolicy, isNavigatingToAppBoundDomain, lastNavigationWasAppInitiated), 0);
+    send(Messages::NetworkProcess::PreconnectTo(sessionID, webPageProxyID, webPageID, WTFMove(request), storedCredentialsPolicy, isNavigatingToAppBoundDomain), 0);
 }
 
 static bool anyProcessPoolHasForegroundWebProcesses()
@@ -2001,6 +2010,16 @@ void NetworkProcessProxy::reloadExecutionContextsForOrigin(const WebCore::Client
             process.sendWithAsyncReply(Messages::WebProcess::ReloadExecutionContextsForOrigin(origin, triggeringFrame), [callbackAggregator] { });
     }
 }
+
+#if USE(RUNNINGBOARD)
+void NetworkProcessProxy::wakeUpWebProcessForIPC(WebCore::ProcessIdentifier processIdentifier)
+{
+    auto webProcess = WebProcessProxy::processForIdentifier(processIdentifier);
+    RELEASE_LOG(Process, "%p - NetworkProcessProxy::wakeUpWebProcessForIPC processIdentifier=%" PRIu64 ", webProcess=%p", this, processIdentifier.toUInt64(), webProcess.get());
+    if (webProcess)
+        webProcess->wakeUpTemporarilyForIPC();
+}
+#endif
 
 #if ENABLE(NETWORK_ISSUE_REPORTING)
 

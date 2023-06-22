@@ -183,7 +183,7 @@ void removeSubresourceURLAttributes(Ref<DocumentFragment>&& fragment, Function<b
 
 std::unique_ptr<Page> createPageForSanitizingWebContent()
 {
-    auto pageConfiguration = pageConfigurationWithEmptyClients(PAL::SessionID::defaultSessionID());
+    auto pageConfiguration = pageConfigurationWithEmptyClients(std::nullopt, PAL::SessionID::defaultSessionID());
     
     auto page = makeUnique<Page>(WTFMove(pageConfiguration));
 #if ENABLE(VIDEO)
@@ -330,12 +330,12 @@ public:
 
     void prependMetaCharsetUTF8TagIfNonASCIICharactersArePresent()
     {
-        if (!isAllASCII())
+        if (!containsOnlyASCII())
             m_reversedPrecedingMarkup.append("<meta charset=\"UTF-8\">"_s);
     }
 
 private:
-    bool isAllASCII() const;
+    bool containsOnlyASCII() const;
     void appendStyleNodeOpenTag(StringBuilder&, StyleProperties*, Document&, bool isBlock = false);
     const String& styleNodeCloseTag(bool isBlock = false);
 
@@ -432,7 +432,7 @@ private:
 inline StyledMarkupAccumulator::StyledMarkupAccumulator(const Position& start, const Position& end, Vector<Node*>* nodes, ResolveURLs resolveURLs,
     SerializeComposedTree serializeComposedTree, IgnoreUserSelectNone ignoreUserSelectNone, AnnotateForInterchange annotate,
     StandardFontFamilySerializationMode standardFontFamilySerializationMode, MSOListMode msoListMode, bool needsPositionStyleConversion, Node* highestNodeToBeSerialized)
-    : MarkupAccumulator(nodes, resolveURLs)
+    : MarkupAccumulator(nodes, resolveURLs, start.document()->isHTMLDocument() ? SerializationSyntax::HTML : SerializationSyntax::XML)
     , m_start(start)
     , m_end(end)
     , m_annotate(annotate)
@@ -485,13 +485,13 @@ const String& StyledMarkupAccumulator::styleNodeCloseTag(bool isBlock)
     return isBlock ? divClose : styleSpanClose;
 }
 
-bool StyledMarkupAccumulator::isAllASCII() const
+bool StyledMarkupAccumulator::containsOnlyASCII() const
 {
     for (auto& preceding : m_reversedPrecedingMarkup) {
-        if (!preceding.isAllASCII())
+        if (!preceding.containsOnlyASCII())
             return false;
     }
-    return MarkupAccumulator::isAllASCII();
+    return MarkupAccumulator::containsOnlyASCII();
 }
 
 String StyledMarkupAccumulator::takeResults()
@@ -1183,9 +1183,11 @@ Ref<DocumentFragment> createFragmentFromMarkup(Document& document, const String&
     return fragment;
 }
 
-String serializeFragment(const Node& node, SerializedNodes root, Vector<Node*>* nodes, ResolveURLs resolveURLs, Vector<QualifiedName>* tagNamesToSkip, SerializationSyntax serializationSyntax)
+String serializeFragment(const Node& node, SerializedNodes root, Vector<Node*>* nodes, ResolveURLs resolveURLs, Vector<QualifiedName>* tagNamesToSkip, std::optional<SerializationSyntax> serializationSyntax)
 {
-    MarkupAccumulator accumulator(nodes, resolveURLs, serializationSyntax);
+    if (!serializationSyntax)
+        serializationSyntax = node.document().isHTMLDocument() ? SerializationSyntax::HTML : SerializationSyntax::XML;
+    MarkupAccumulator accumulator(nodes, resolveURLs, *serializationSyntax);
     return accumulator.serializeNodes(const_cast<Node&>(node), root, tagNamesToSkip);
 }
 
@@ -1458,11 +1460,8 @@ static inline bool hasOneTextChild(ContainerNode& node)
 
 static inline bool hasMutationEventListeners(const Document& document)
 {
-    return document.hasListenerType(Document::DOMSUBTREEMODIFIED_LISTENER)
-        || document.hasListenerType(Document::DOMNODEINSERTED_LISTENER)
-        || document.hasListenerType(Document::DOMNODEREMOVED_LISTENER)
-        || document.hasListenerType(Document::DOMNODEREMOVEDFROMDOCUMENT_LISTENER)
-        || document.hasListenerType(Document::DOMCHARACTERDATAMODIFIED_LISTENER);
+    return document.hasAnyListenerOfType({ Document::ListenerType::DOMSubtreeModified, Document::ListenerType::DOMNodeInserted,
+        Document::ListenerType::DOMNodeRemoved, Document::ListenerType::DOMNodeRemovedFromDocument, Document::ListenerType::DOMCharacterDataModified });
 }
 
 // We can use setData instead of replacing Text node as long as script can't observe the difference.

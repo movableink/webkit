@@ -50,7 +50,6 @@
 #include "EXTsRGB.h"
 #include "EventNames.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "GraphicsContext.h"
 #include "GraphicsContextGLImageExtractor.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
@@ -68,6 +67,7 @@
 #include "KHRParallelShaderCompile.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "NavigatorWebXR.h"
@@ -288,25 +288,43 @@ static const GCGLenum supportedTypesOESTextureHalfFloat[] = {
     GraphicsContextGL::HALF_FLOAT_OES,
 };
 
-class ScopedUnpackParametersResetRestore {
+// Set UNPACK_ALIGNMENT to 1, all other parameters to 0.
+class ScopedTightUnpackParameters {
 public:
-    explicit ScopedUnpackParametersResetRestore(WebGLRenderingContextBase* context, bool enabled = true)
-        : m_context(context)
-        , m_enabled(enabled)
+    explicit ScopedTightUnpackParameters(WebGLRenderingContextBase& context, bool enabled = true)
+        : m_context(enabled ? &context : nullptr)
     {
-        if (m_enabled)
-            m_context->resetUnpackParameters();
+        if (!m_context)
+            return;
+        set(m_context->unpackPixelStoreParameters(), tightUnpack);
     }
 
-    ~ScopedUnpackParametersResetRestore()
+    ~ScopedTightUnpackParameters()
     {
-        if (m_enabled)
-            m_context->restoreUnpackParameters();
+        if (!m_context)
+            return;
+        set(tightUnpack, m_context->unpackPixelStoreParameters());
     }
-
 private:
-    WebGLRenderingContextBase* m_context;
-    bool m_enabled;
+    using PixelStoreParameters =  WebGLRenderingContextBase::PixelStoreParameters;
+    static constexpr PixelStoreParameters tightUnpack { 1, 0, 0, 0, 0 };
+    void set(const PixelStoreParameters& oldValues, const PixelStoreParameters& newValues)
+    {
+        auto* context = m_context->graphicsContextGL();
+        if (oldValues.alignment != newValues.alignment)
+            context->pixelStorei(GraphicsContextGL::UNPACK_ALIGNMENT, newValues.alignment);
+        if (oldValues.rowLength != newValues.rowLength)
+            context->pixelStorei(GraphicsContextGL::UNPACK_ROW_LENGTH, newValues.rowLength);
+        if (oldValues.imageHeight != newValues.imageHeight)
+            context->pixelStorei(GraphicsContextGL::UNPACK_IMAGE_HEIGHT, newValues.imageHeight);
+        if (oldValues.skipPixels != newValues.skipPixels)
+            context->pixelStorei(GraphicsContextGL::UNPACK_SKIP_PIXELS, newValues.skipPixels);
+        if (oldValues.skipRows != newValues.skipRows)
+            context->pixelStorei(GraphicsContextGL::UNPACK_SKIP_ROWS, newValues.skipRows);
+        if (oldValues.skipImages != newValues.skipImages)
+            context->pixelStorei(GraphicsContextGL::UNPACK_SKIP_IMAGES, newValues.skipImages);
+    }
+    WebGLRenderingContextBase* const m_context;
 };
 
 class ScopedDisableRasterizerDiscard {
@@ -717,8 +735,8 @@ void WebGLRenderingContextBase::initializeNewContext()
     m_needsUpdate = true;
     m_markedCanvasDirty = false;
     m_activeTextureUnit = 0;
-    m_packAlignment = 4;
-    m_unpackAlignment = 4;
+    m_packParameters = { };
+    m_unpackParameters = { };
     m_unpackFlipY = false;
     m_unpackPremultiplyAlpha = false;
     m_unpackColorspaceConversion = GraphicsContextGL::BROWSER_DEFAULT_WEBGL;
@@ -831,18 +849,6 @@ void WebGLRenderingContextBase::addCompressedTextureFormat(GCGLenum format)
 {
     if (!m_compressedTextureFormats.contains(format))
         m_compressedTextureFormats.append(format);
-}
-
-void WebGLRenderingContextBase::resetUnpackParameters()
-{
-    if (m_unpackAlignment != 1)
-        m_context->pixelStorei(GraphicsContextGL::UNPACK_ALIGNMENT, 1);
-}
-
-void WebGLRenderingContextBase::restoreUnpackParameters()
-{
-    if (m_unpackAlignment != 1)
-        m_context->pixelStorei(GraphicsContextGL::UNPACK_ALIGNMENT, m_unpackAlignment);
 }
 
 void WebGLRenderingContextBase::addActivityStateChangeObserverIfNecessary()
@@ -1490,7 +1496,7 @@ void WebGLRenderingContextBase::bufferData(GCGLenum target, std::optional<Buffer
         return;
 
     std::visit([&](auto& data) {
-        m_context->bufferData(target, GCGLSpan<const GCGLvoid>(data->data(), data->byteLength()), usage);
+        m_context->bufferData(target, std::span(static_cast<const uint8_t*>(data->data()), data->byteLength()), usage);
     }, data.value());
 }
 
@@ -1507,7 +1513,7 @@ void WebGLRenderingContextBase::bufferSubData(GCGLenum target, long long offset,
     }
 
     std::visit([&](auto& data) {
-        m_context->bufferSubData(target, static_cast<GCGLintptr>(offset), GCGLSpan<const GCGLvoid>(data->data(), data->byteLength()));
+        m_context->bufferSubData(target, static_cast<GCGLintptr>(offset), std::span(static_cast<const uint8_t*>(data->data()), data->byteLength()));
     }, data);
 }
 
@@ -1592,8 +1598,7 @@ void WebGLRenderingContextBase::compressedTexImage2D(GCGLenum target, GCGLint le
         return;
     if (!validateCompressedTexFormat("compressedTexImage2D", internalformat))
         return;
-    m_context->compressedTexImage2D(target, level, internalformat, width, height,
-        border, data.byteLength(), makeGCGLSpan(data.baseAddress(), data.byteLength()));
+    m_context->compressedTexImage2D(target, level, internalformat, width, height, border, data.byteLength(), std::span(static_cast<const uint8_t*>(data.baseAddress()), data.byteLength()));
 }
 
 void WebGLRenderingContextBase::compressedTexSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum format, ArrayBufferView& data)
@@ -1604,7 +1609,7 @@ void WebGLRenderingContextBase::compressedTexSubImage2D(GCGLenum target, GCGLint
         return;
     if (!validateCompressedTexFormat("compressedTexSubImage2D", format))
         return;
-    m_context->compressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, data.byteLength(), GCGLSpan<const GCGLvoid>(data.baseAddress(), data.byteLength()));
+    m_context->compressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, data.byteLength(), std::span(static_cast<const uint8_t*>(data.baseAddress()), data.byteLength()));
 }
 
 bool WebGLRenderingContextBase::validateSettableTexInternalFormat(const char* functionName, GCGLenum internalFormat)
@@ -2372,7 +2377,7 @@ WebGLAny WebGLRenderingContextBase::getParameter(GCGLenum pname)
     case GraphicsContextGL::NUM_SHADER_BINARY_FORMATS:
         return getIntParameter(pname);
     case GraphicsContextGL::PACK_ALIGNMENT:
-        return getIntParameter(pname);
+        return m_packParameters.alignment;
     case GraphicsContextGL::POLYGON_OFFSET_FACTOR:
         return getFloatParameter(pname);
     case GraphicsContextGL::POLYGON_OFFSET_FILL:
@@ -2448,7 +2453,7 @@ WebGLAny WebGLRenderingContextBase::getParameter(GCGLenum pname)
     case GraphicsContextGL::TEXTURE_BINDING_CUBE_MAP:
         return m_textureUnits[m_activeTextureUnit].textureCubeMapBinding;
     case GraphicsContextGL::UNPACK_ALIGNMENT:
-        return getIntParameter(pname);
+        return m_unpackParameters.alignment;
     case GraphicsContextGL::UNPACK_FLIP_Y_WEBGL:
         return m_unpackFlipY;
     case GraphicsContextGL::UNPACK_PREMULTIPLY_ALPHA_WEBGL:
@@ -2909,28 +2914,28 @@ WebGLAny WebGLRenderingContextBase::getUniform(WebGLProgram& program, const WebG
     switch (baseType) {
     case GraphicsContextGL::FLOAT: {
         GCGLfloat value[16] = {0};
-        m_context->getUniformfv(program.object(), location, makeGCGLSpan(value, length));
+        m_context->getUniformfv(program.object(), location, std::span<GCGLfloat> { value, length });
         if (length == 1)
             return value[0];
         return Float32Array::tryCreate(value, length);
     }
     case GraphicsContextGL::INT: {
         GCGLint value[4] = {0};
-        m_context->getUniformiv(program.object(), location, makeGCGLSpan(value, length));
+        m_context->getUniformiv(program.object(), location, std::span<GCGLint> { value, length });
         if (length == 1)
             return value[0];
         return Int32Array::tryCreate(value, length);
     }
     case GraphicsContextGL::UNSIGNED_INT: {
         GCGLuint value[4] = {0};
-        m_context->getUniformuiv(program.object(), location, makeGCGLSpan(value, length));
+        m_context->getUniformuiv(program.object(), location, std::span<GCGLuint> { value, length });
         if (length == 1)
             return value[0];
         return Uint32Array::tryCreate(value, length);
     }
     case GraphicsContextGL::BOOL: {
         GCGLint value[4] = {0};
-        m_context->getUniformiv(program.object(), location, makeGCGLSpan(value, length));
+        m_context->getUniformiv(program.object(), location, std::span<GCGLint> { value, length });
         if (length > 1) {
             Vector<bool> vector(length);
             for (unsigned j = 0; j < length; j++)
@@ -3278,7 +3283,12 @@ void WebGLRenderingContextBase::makeXRCompatible(MakeXRCompatiblePromise&& promi
         m_isXRCompatible = true;
 
 #if PLATFORM(COCOA) && !PLATFORM(IOS_FAMILY_SIMULATOR)
+        // FIXME: This is ugly. It's something needed at the GraphicsContextGL
+        // level, not WebGLRenderingContext. We should move this down to a
+        // virtual makeXRCompatible or something on GCGL.
         enableSupportedExtension("GL_OES_EGL_image"_s);
+        enableSupportedExtension("GL_EXT_sRGB"_s);
+        enableSupportedExtension("GL_ANGLE_framebuffer_multisample"_s);
 #endif
 
         promise.resolve();
@@ -3309,11 +3319,13 @@ void WebGLRenderingContextBase::pixelStorei(GCGLenum pname, GCGLint param)
     case GraphicsContextGL::PACK_ALIGNMENT:
     case GraphicsContextGL::UNPACK_ALIGNMENT:
         if (param == 1 || param == 2 || param == 4 || param == 8) {
-            if (pname == GraphicsContextGL::PACK_ALIGNMENT)
-                m_packAlignment = param;
-            else // GraphicsContextGL::UNPACK_ALIGNMENT:
-                m_unpackAlignment = param;
-            m_context->pixelStorei(pname, param);
+            if (pname == GraphicsContextGL::PACK_ALIGNMENT) {
+                m_packParameters.alignment = param;
+                // PACK parameters are client only, not sent to the m_context.
+            } else {
+                m_unpackParameters.alignment = param;
+                m_context->pixelStorei(pname, param);
+            }
         } else {
             synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "pixelStorei", "invalid parameter for alignment");
             return;
@@ -3331,16 +3343,6 @@ void WebGLRenderingContextBase::polygonOffset(GCGLfloat factor, GCGLfloat units)
         return;
     m_context->polygonOffset(factor, units);
 }
-
-enum class InternalFormatTheme {
-    None,
-    NormalizedFixedPoint,
-    Packed,
-    SignedNormalizedFixedPoint,
-    FloatingPoint,
-    SignedInteger,
-    UnsignedInteger
-};
 
 void WebGLRenderingContextBase::readPixels(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, RefPtr<ArrayBufferView>&& maybePixels)
 {
@@ -3361,10 +3363,25 @@ void WebGLRenderingContextBase::readPixels(GCGLint x, GCGLint y, GCGLsizei width
     if (!validateTypeAndArrayBufferType("readPixels", ArrayBufferViewFunctionType::ReadPixels, type, &pixels))
         return;
 
-    clearIfComposited(CallerTypeOther);
-    void* data = pixels.baseAddress();
+    if (!validateImageFormatAndType("readPixels", format, type))
+        return;
 
-    m_context->readnPixels(x, y, width, height, format, type, makeGCGLSpan(data, pixels.byteLength()));
+    if (!validateReadPixelsDimensions(width, height))
+        return;
+
+    IntRect rect { x, y, width, height };
+    auto packSizes = GraphicsContextGL::computeImageSize(format, type, rect.size(), 1, m_packParameters);
+    if (!packSizes) {
+        synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "readPixels", "invalid dimensions");
+        return;
+    }
+    if (pixels.byteLength() < packSizes->initialSkipBytes + packSizes->imageBytes) {
+        synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "readPixels", "size too large");
+        return;
+    }
+    clearIfComposited(CallerTypeOther);
+    std::span<uint8_t> data { static_cast<uint8_t*>(pixels.baseAddress()) + packSizes->initialSkipBytes, packSizes->imageBytes };
+    m_context->readPixels(rect, format, type, data, m_packParameters.alignment, m_packParameters.rowLength);
 }
 
 void WebGLRenderingContextBase::renderbufferStorage(GCGLenum target, GCGLenum internalformat, GCGLsizei width, GCGLsizei height)
@@ -3650,7 +3667,7 @@ ExceptionOr<void> WebGLRenderingContextBase::texImageSource(TexImageFunctionID f
     if (m_unpackFlipY)
         adjustedSourceImageRect.setY(source.height() - adjustedSourceImageRect.maxY());
 
-    GCGLSpan<const GCGLvoid> imageData { source.data() };
+    std::span<const uint8_t> imageData { source.data().data(), source.data().byteLength() };
     Vector<uint8_t> data;
 
     // The data from ImageData is always of format RGBA8.
@@ -3664,9 +3681,9 @@ ExceptionOr<void> WebGLRenderingContextBase::texImageSource(TexImageFunctionID f
             synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "texImage2D", "bad image data");
             return { };
         }
-        imageData = GCGLSpan { data };
+        imageData = std::span<const uint8_t> { data.data(), data.size() };
     }
-    ScopedUnpackParametersResetRestore temporaryResetUnpack(this);
+    ScopedTightUnpackParameters temporaryResetUnpack(*this);
     if (functionID == TexImageFunctionID::TexImage2D) {
         texImage2DBase(target, level, internalformat,
             adjustedSourceImageRect.width(), adjustedSourceImageRect.height(), 0,
@@ -3884,7 +3901,7 @@ void WebGLRenderingContextBase::texImageArrayBufferViewHelper(TexImageFunctionID
         ASSERT(sourceType == TexImageDimension::Tex2D);
         // Only enter here if width or height is non-zero. Otherwise, call to the
         // underlying driver to generate appropriate GL errors if needed.
-        PixelStoreParams unpackParams = getUnpackPixelStoreParams(TexImageDimension::Tex2D);
+        PixelStoreParameters unpackParams = computeUnpackPixelStoreParameters(TexImageDimension::Tex2D);
         GCGLint dataStoreWidth = unpackParams.rowLength ? unpackParams.rowLength : width;
         if (unpackParams.skipPixels + width > dataStoreWidth) {
             synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, functionName, "Invalid unpack params combination.");
@@ -3905,7 +3922,7 @@ void WebGLRenderingContextBase::texImageArrayBufferViewHelper(TexImageFunctionID
         m_context->texSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, data.value());
         return;
     }
-    ScopedUnpackParametersResetRestore temporaryResetUnpack(this, changeUnpackParams);
+    ScopedTightUnpackParameters temporaryResetUnpack(*this, changeUnpackParams);
     if (functionID == TexImageFunctionID::TexImage2D)
         texImage2DBase(target, level, internalformat, width, height, border, format, type, data.value());
     else {
@@ -3953,7 +3970,7 @@ void WebGLRenderingContextBase::texImageImpl(TexImageFunctionID functionID, GCGL
 
     GraphicsContextGL::DataFormat sourceDataFormat = imageExtractor.imageSourceFormat();
     GraphicsContextGL::AlphaOp alphaOp = imageExtractor.imageAlphaOp();
-    const void* imagePixelData = imageExtractor.imagePixelData();
+    const uint8_t* imagePixelData = static_cast<const uint8_t*>(imageExtractor.imagePixelData());
     CheckedSize imagePixelByteLength(imageExtractor.imageWidth());
     imagePixelByteLength *= imageExtractor.imageHeight();
     imagePixelByteLength *= 4u;
@@ -3962,16 +3979,16 @@ void WebGLRenderingContextBase::texImageImpl(TexImageFunctionID functionID, GCGL
         return;
     }
 
-    GCGLSpan<const GCGLvoid> pixels { imagePixelData, imagePixelByteLength };
+    std::span<const uint8_t> pixels { imagePixelData, imagePixelByteLength };
     if (type != GraphicsContextGL::UNSIGNED_BYTE || sourceDataFormat != GraphicsContextGL::DataFormat::RGBA8 || format != GraphicsContextGL::RGBA || alphaOp != GraphicsContextGL::AlphaOp::DoNothing || flipY || selectingSubRectangle || depth != 1) {
         if (!m_context->packImageData(image, imagePixelData, format, type, flipY, alphaOp, sourceDataFormat, imageExtractor.imageWidth(), imageExtractor.imageHeight(), adjustedSourceImageRect, depth, imageExtractor.imageSourceUnpackAlignment(), unpackImageHeight, data)) {
             synthesizeGLError(GraphicsContextGL::INVALID_VALUE, functionName, "packImage error");
             return;
         }
-        pixels = GCGLSpan { data };
+        pixels = std::span<const uint8_t> { data.data(), data.size() };
     }
 
-    ScopedUnpackParametersResetRestore temporaryResetUnpack(this, true);
+    ScopedTightUnpackParameters temporaryResetUnpack(*this);
     if (functionID == TexImageFunctionID::TexImage2D) {
         texImage2DBase(target, level, internalformat,
             adjustedSourceImageRect.width(), adjustedSourceImageRect.height(), 0,
@@ -3995,12 +4012,12 @@ void WebGLRenderingContextBase::texImageImpl(TexImageFunctionID functionID, GCGL
     }
 }
 
-void WebGLRenderingContextBase::texImage2DBase(GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type, GCGLSpan<const GCGLvoid> pixels)
+void WebGLRenderingContextBase::texImage2DBase(GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type, std::span<const uint8_t> pixels)
 {
     m_context->texImage2D(target, level, internalFormat, width, height, border, format, type, pixels);
 }
 
-void WebGLRenderingContextBase::texSubImage2DBase(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum internalFormat, GCGLenum format, GCGLenum type, GCGLSpan<const GCGLvoid> pixels)
+void WebGLRenderingContextBase::texSubImage2DBase(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum internalFormat, GCGLenum format, GCGLenum type, std::span<const uint8_t> pixels)
 {
     ASSERT(!isContextLost());
     UNUSED_PARAM(internalFormat);
@@ -4028,6 +4045,25 @@ WebGLRenderingContextBase::TexImageFunctionType WebGLRenderingContextBase::texIm
     if (functionID == TexImageFunctionID::TexImage2D || functionID == TexImageFunctionID::TexImage3D)
         return TexImageFunctionType::TexImage;
     return TexImageFunctionType::TexSubImage;
+}
+
+bool WebGLRenderingContextBase::validateReadPixelsDimensions(GCGLint width, GCGLint height)
+{
+    if (width < 0 || height < 0) {
+        synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "readPixels", "invalid dimensions");
+        return false;
+    }
+    GCGLint dataStoreWidth = m_packParameters.rowLength ? m_packParameters.rowLength : width;
+    if (dataStoreWidth < width) {
+        synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "readPixels", "invalid pack parameters");
+        return false;
+    }
+    auto skipAndWidth = Checked<GCGLint> { m_packParameters.skipPixels } + width;
+    if (skipAndWidth.hasOverflowed() || skipAndWidth > dataStoreWidth) {
+        synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "readPixels", "invalid pack parameters");
+        return false;
+    }
+    return true;
 }
 
 bool WebGLRenderingContextBase::validateTexImageSubRectangle(TexImageFunctionID functionID, const IntRect& imageSize, const IntRect& subRect, GCGLsizei depth, GCGLint unpackImageHeight, bool* selectingSubRectangle)
@@ -4217,7 +4253,16 @@ bool WebGLRenderingContextBase::validateTypeAndArrayBufferType(const char* funct
     return false;
 }
 
-std::optional<GCGLSpan<const GCGLvoid>> WebGLRenderingContextBase::validateTexFuncData(const char* functionName, TexImageDimension texDimension, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, GCGLenum type, ArrayBufferView* pixels, NullDisposition disposition, GCGLuint srcOffset)
+bool WebGLRenderingContextBase::validateImageFormatAndType(const char* functionName, GCGLenum format, GCGLenum type)
+{
+    if (!GraphicsContextGL::computeBytesPerGroup(format, type)) {
+        synthesizeGLError(GraphicsContextGL::INVALID_ENUM, functionName, "invalid format or type");
+        return false;
+    }
+    return true;
+}
+
+std::optional<std::span<const uint8_t>> WebGLRenderingContextBase::validateTexFuncData(const char* functionName, TexImageDimension texDimension, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, GCGLenum type, ArrayBufferView* pixels, NullDisposition disposition, GCGLuint srcOffset)
 {
     // All calling functions check isContextLost, so a duplicate check is not
     // needed here.
@@ -4236,14 +4281,16 @@ std::optional<GCGLSpan<const GCGLvoid>> WebGLRenderingContextBase::validateTexFu
     if (!validateTypeAndArrayBufferType(functionName, ArrayBufferViewFunctionType::TexImage, type, pixels))
         return std::nullopt;
 
-    unsigned totalBytesRequired, skipBytes;
-    GCGLenum error = m_context->computeImageSizeInBytes(format, type, width, height, depth, getUnpackPixelStoreParams(texDimension), &totalBytesRequired, nullptr, &skipBytes);
-    if (error != GraphicsContextGL::NO_ERROR) {
-        synthesizeGLError(error, functionName, "invalid texture dimensions");
+    if (!validateImageFormatAndType(functionName, format, type))
+        return std::nullopt;
+
+    auto packSizes = m_context->computeImageSize(format, type, { width, height }, depth, computeUnpackPixelStoreParameters(texDimension));
+    if (!packSizes) {
+        synthesizeGLError(GraphicsContextGL::INVALID_VALUE, functionName, "invalid texture dimensions");
         return std::nullopt;
     }
 
-    auto dataLength = CheckedSize { totalBytesRequired } + skipBytes;
+    auto dataLength = CheckedSize { packSizes->imageBytes } + packSizes->initialSkipBytes;
     auto offset = CheckedSize { pixels ? JSC::elementSize(pixels->getType()) : 0 } * srcOffset;
     auto total = offset + dataLength;
     if (total.hasOverflowed() || !isInBounds<GCGLsizei>(dataLength)) {
@@ -4252,15 +4299,14 @@ std::optional<GCGLSpan<const GCGLvoid>> WebGLRenderingContextBase::validateTexFu
     }
 
     if (!pixels)
-        return std::make_optional<GCGLSpan<const GCGLvoid>>(nullptr, 0);
+        return std::span<const uint8_t> { };
 
     if (pixels->byteLength() < total) {
         synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, functionName, "ArrayBufferView not big enough for request");
         return std::nullopt;
     }
     ASSERT(!offset.hasOverflowed()); // Checked already as part of `total.hasOverflowed()` check.
-    auto data = static_cast<uint8_t*>(pixels->baseAddress()) + offset.value();
-    return std::make_optional<GCGLSpan<const GCGLvoid>>(data, static_cast<GCGLsizei>(dataLength));
+    return std::span(static_cast<const uint8_t*>(pixels->baseAddress()) + offset.value(), dataLength);
 }
 
 bool WebGLRenderingContextBase::validateTexFuncParameters(TexImageFunctionID functionID,
@@ -5177,19 +5223,14 @@ RefPtr<Int32Array> WebGLRenderingContextBase::getWebGLIntArrayParameter(GCGLenum
     return Int32Array::tryCreate(value, length);
 }
 
-WebGLRenderingContextBase::PixelStoreParams WebGLRenderingContextBase::getPackPixelStoreParams() const
+WebGLRenderingContextBase::PixelStoreParameters WebGLRenderingContextBase::computeUnpackPixelStoreParameters(TexImageDimension dimension) const
 {
-    PixelStoreParams params;
-    params.alignment = m_packAlignment;
-    return params;
-}
-
-WebGLRenderingContextBase::PixelStoreParams WebGLRenderingContextBase::getUnpackPixelStoreParams(TexImageDimension dimension) const
-{
-    UNUSED_PARAM(dimension);
-    PixelStoreParams params;
-    params.alignment = m_unpackAlignment;
-    return params;
+    PixelStoreParameters parameters = unpackPixelStoreParameters();
+    if (dimension != TexImageDimension::Tex3D) {
+        parameters.imageHeight = 0;
+        parameters.skipImages = 0;
+    }
+    return parameters;
 }
 
 RefPtr<WebGLTexture> WebGLRenderingContextBase::validateTextureBinding(const char* functionName, GCGLenum target)
@@ -5474,7 +5515,7 @@ bool WebGLRenderingContextBase::validateCapability(const char* functionName, GCG
 }
 
 template<typename T, typename TypedListType>
-std::optional<GCGLSpan<const T>> WebGLRenderingContextBase::validateUniformMatrixParameters(const char* functionName, const WebGLUniformLocation* location, GCGLboolean transpose, const TypedList<TypedListType, T>& values, GCGLsizei requiredMinSize, GCGLuint srcOffset, GCGLuint srcLength)
+std::optional<std::span<const T>> WebGLRenderingContextBase::validateUniformMatrixParameters(const char* functionName, const WebGLUniformLocation* location, GCGLboolean transpose, const TypedList<TypedListType, T>& values, GCGLsizei requiredMinSize, GCGLuint srcOffset, GCGLuint srcLength)
 {
     if (!validateUniformLocation(functionName, location))
         return { };
@@ -5502,17 +5543,17 @@ std::optional<GCGLSpan<const T>> WebGLRenderingContextBase::validateUniformMatri
         synthesizeGLError(GraphicsContextGL::INVALID_VALUE, functionName, "invalid size");
         return { };
     }
-    return makeGCGLSpan(values.data() + srcOffset, actualSize);
+    return std::span<const T> { values.data() + srcOffset, static_cast<size_t>(actualSize) };
 }
 
 template
-std::optional<GCGLSpan<const GCGLuint>> WebGLRenderingContextBase::validateUniformMatrixParameters<GCGLuint, Uint32Array>(const char* functionName, const WebGLUniformLocation*, GCGLboolean transpose, const TypedList<Uint32Array, uint32_t>& values, GCGLsizei requiredMinSize, GCGLuint srcOffset, GCGLuint srcLength);
+std::optional<std::span<const GCGLuint>> WebGLRenderingContextBase::validateUniformMatrixParameters<GCGLuint, Uint32Array>(const char* functionName, const WebGLUniformLocation*, GCGLboolean transpose, const TypedList<Uint32Array, uint32_t>& values, GCGLsizei requiredMinSize, GCGLuint srcOffset, GCGLuint srcLength);
 
 template
-std::optional<GCGLSpan<const GCGLint>> WebGLRenderingContextBase::validateUniformMatrixParameters<GCGLint, Int32Array>(const char* functionName, const WebGLUniformLocation*, GCGLboolean transpose, const TypedList<Int32Array, int32_t>& values, GCGLsizei requiredMinSize, GCGLuint srcOffset, GCGLuint srcLength);
+std::optional<std::span<const GCGLint>> WebGLRenderingContextBase::validateUniformMatrixParameters<GCGLint, Int32Array>(const char* functionName, const WebGLUniformLocation*, GCGLboolean transpose, const TypedList<Int32Array, int32_t>& values, GCGLsizei requiredMinSize, GCGLuint srcOffset, GCGLuint srcLength);
 
 template
-std::optional<GCGLSpan<const GCGLfloat>> WebGLRenderingContextBase::validateUniformMatrixParameters<GCGLfloat, Float32Array>(const char* functionName, const WebGLUniformLocation*, GCGLboolean transpose, const TypedList<Float32Array, float>& values, GCGLsizei requiredMinSize, GCGLuint srcOffset, GCGLuint srcLength);
+std::optional<std::span<const GCGLfloat>> WebGLRenderingContextBase::validateUniformMatrixParameters<GCGLfloat, Float32Array>(const char* functionName, const WebGLUniformLocation*, GCGLboolean transpose, const TypedList<Float32Array, float>& values, GCGLsizei requiredMinSize, GCGLuint srcOffset, GCGLuint srcLength);
 
 WebGLBuffer* WebGLRenderingContextBase::validateBufferDataParameters(const char* functionName, GCGLenum target, GCGLenum usage)
 {
@@ -5653,16 +5694,16 @@ void WebGLRenderingContextBase::vertexAttribfvImpl(const char* functionName, GCG
     }
     switch (expectedSize) {
     case 1:
-        m_context->vertexAttrib1fv(index, makeGCGLSpan<1>(data));
+        m_context->vertexAttrib1fv(index, std::span<const GCGLfloat, 1> { data, 1 });
         break;
     case 2:
-        m_context->vertexAttrib2fv(index, makeGCGLSpan<2>(data));
+        m_context->vertexAttrib2fv(index, std::span<const GCGLfloat, 2> { data, 2 });
         break;
     case 3:
-        m_context->vertexAttrib3fv(index, makeGCGLSpan<3>(data));
+        m_context->vertexAttrib3fv(index, std::span<const GCGLfloat, 3> { data, 3 });
         break;
     case 4:
-        m_context->vertexAttrib4fv(index, makeGCGLSpan<4>(data));
+        m_context->vertexAttrib4fv(index, std::span<const GCGLfloat, 4> { data, 4 });
         break;
     }
     VertexAttribValue& attribValue = m_vertexAttribValue[index];
@@ -5997,14 +6038,6 @@ void WebGLRenderingContextBase::activityStateDidChange(OptionSet<ActivityState> 
         m_context->setContextVisibility(newActivityState.contains(ActivityState::IsVisible));
 }
 
-void WebGLRenderingContextBase::didComposite()
-{
-    m_compositingResultsNeedUpdating = false;
-
-    if (UNLIKELY(hasActiveInspectorCanvasCallTracer()))
-        InspectorInstrumentation::didFinishRecordingCanvasFrame(*this);
-}
-
 void WebGLRenderingContextBase::forceContextLost()
 {
     forceLostContext(WebGLRenderingContextBase::RealLostContext);
@@ -6074,6 +6107,11 @@ void WebGLRenderingContextBase::prepareForDisplay()
         return;
 
     m_context->prepareForDisplay();
+
+    m_compositingResultsNeedUpdating = false;
+
+    if (UNLIKELY(hasActiveInspectorCanvasCallTracer()))
+        InspectorInstrumentation::didFinishRecordingCanvasFrame(*this);
 }
 
 void WebGLRenderingContextBase::updateActiveOrdinal()

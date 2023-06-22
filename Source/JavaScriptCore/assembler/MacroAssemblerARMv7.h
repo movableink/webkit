@@ -26,7 +26,7 @@
 
 #pragma once
 
-#if ENABLE(ASSEMBLER)
+#if ENABLE(ASSEMBLER) && CPU(ARM_THUMB2)
 
 #include <initializer_list>
 
@@ -1806,10 +1806,26 @@ public:
         return makeFPBranch(cond);
     }
 
+    Jump branchFloatWithZero(DoubleCondition cond, FPRegisterID left)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNREACHABLE_FOR_PLATFORM();
+        return { };
+    }
+
     Jump branchDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right)
     {
         m_assembler.vcmp(left, right);
         return makeFPBranch(cond);
+    }
+
+    Jump branchDoubleWithZero(DoubleCondition cond, FPRegisterID left)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNREACHABLE_FOR_PLATFORM();
+        return { };
     }
 
     enum BranchTruncateType { BranchIfTruncateFailed, BranchIfTruncateSuccessful };
@@ -2735,6 +2751,14 @@ public:
         m_assembler.mov(dest, ARMThumbImmediate::makeUInt16(0));
     }
 
+    void compareFloatWithZero(DoubleCondition cond, FPRegisterID left, RegisterID dest)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+
     void test32(ResultCondition cond, RegisterID op1, RegisterID op2, RegisterID dest)
     {
         m_assembler.tst(op1, op2);
@@ -3114,4 +3138,4 @@ private:
 
 } // namespace JSC
 
-#endif // ENABLE(ASSEMBLER)
+#endif // ENABLE(ASSEMBLER) && CPU(ARM_THUMB2)

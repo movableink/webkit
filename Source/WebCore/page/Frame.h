@@ -27,15 +27,19 @@
 
 #include "FrameIdentifier.h"
 #include "FrameTree.h"
+#include "PageIdentifier.h"
 #include <wtf/Ref.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/UniqueRef.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class DOMWindow;
 class FrameView;
+class FrameLoadRequest;
 class HTMLFrameOwnerElement;
+class NavigationScheduler;
 class Page;
 class Settings;
 class WeakPtrImplWithEventTargetData;
@@ -54,6 +58,7 @@ public:
     FrameTree& tree() const { return m_treeNode; }
     FrameIdentifier frameID() const { return m_frameID; }
     inline Page* page() const; // Defined in Page.h.
+    WEBCORE_EXPORT std::optional<PageIdentifier> pageID() const;
     Settings& settings() const { return m_settings.get(); }
     Frame& mainFrame() const { return m_mainFrame; }
     bool isMainFrame() const { return this == &m_mainFrame; }
@@ -62,9 +67,12 @@ public:
     WEBCORE_EXPORT void detachFromPage();
     inline HTMLFrameOwnerElement* ownerElement() const; // Defined in HTMLFrameOwnerElement.h.
     WEBCORE_EXPORT void disconnectOwnerElement();
+    NavigationScheduler& navigationScheduler() const { return m_navigationScheduler.get(); }
+    WEBCORE_EXPORT void takeWindowProxyFrom(Frame&);
 
     virtual void frameDetached() = 0;
     virtual bool preventsParentFromBeingComplete() const = 0;
+    virtual void changeLocation(FrameLoadRequest&&) = 0;
 
 protected:
     Frame(Page&, FrameIdentifier, FrameType, HTMLFrameOwnerElement*, Frame* parent);
@@ -82,6 +90,7 @@ private:
     Frame& m_mainFrame;
     const Ref<Settings> m_settings;
     FrameType m_frameType;
+    mutable UniqueRef<NavigationScheduler> m_navigationScheduler;
 };
 
 } // namespace WebCore

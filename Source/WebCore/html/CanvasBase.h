@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "CanvasNoiseInjection.h"
+#include "FloatRect.h"
 #include "IntSize.h"
 #include "PixelBuffer.h"
 #include "TaskSource.h"
@@ -45,10 +47,12 @@ class GraphicsContext;
 class GraphicsContextStateSaver;
 class Image;
 class ImageBuffer;
-class FloatRect;
+class IntRect;
 class ScriptExecutionContext;
 class SecurityOrigin;
 class WebCoreOpaqueRoot;
+
+enum class ShouldApplyPostProcessingToDirtyRect : bool { No, Yes };
 
 class CanvasDisplayBufferObserver : public CanMakeWeakPtr<CanvasDisplayBufferObserver> {
 public:
@@ -94,6 +98,7 @@ public:
 
     void addObserver(CanvasObserver&);
     void removeObserver(CanvasObserver&);
+    bool hasObserver(CanvasObserver&) const;
     void notifyObserversCanvasChanged(const std::optional<FloatRect>&);
     void notifyObserversCanvasResized();
     void notifyObserversCanvasDestroyed(); // Must be called in destruction before clearing m_context.
@@ -109,7 +114,8 @@ public:
 
     GraphicsClient* graphicsClient() const;
 
-    virtual void didDraw(const std::optional<FloatRect>&) = 0;
+    void didDraw(const std::optional<FloatRect>& rect) { return didDraw(rect, ShouldApplyPostProcessingToDirtyRect::Yes); }
+    virtual void didDraw(const std::optional<FloatRect>&, ShouldApplyPostProcessingToDirtyRect);
 
     virtual Image* copiedImage() const = 0;
     virtual void clearCopiedImage() const = 0;
@@ -126,11 +132,10 @@ public:
     virtual void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) = 0;
     virtual void dispatchEvent(Event&) = 0;
 
-    bool shouldInjectNoiseBeforeReadback() const;
-    bool postProcessPixelBuffer(Ref<PixelBuffer>&&, bool, const HashSet<uint32_t>&) const;
+    bool postProcessPixelBufferResults(Ref<PixelBuffer>&&) const;
 
 protected:
-    explicit CanvasBase(IntSize);
+    explicit CanvasBase(IntSize, const std::optional<NoiseInjectionHashSalt>&);
 
     virtual ScriptExecutionContext* canvasBaseScriptExecutionContext() const = 0;
 
@@ -145,6 +150,7 @@ protected:
     RefPtr<ImageBuffer> allocateImageBuffer(bool usesDisplayListDrawing, bool avoidBackendSizeCheckForTesting) const;
 
 private:
+    bool shouldInjectNoiseBeforeReadback() const;
     virtual void createImageBuffer() const { }
 
     mutable IntSize m_size;
@@ -153,6 +159,8 @@ private:
     mutable size_t m_imageBufferCost { 0 };
     mutable std::unique_ptr<GraphicsContextStateSaver> m_contextStateSaver;
 
+    CanvasNoiseInjection m_canvasNoiseInjection;
+    Markable<NoiseInjectionHashSalt, IntegralMarkableTraits<NoiseInjectionHashSalt>> m_canvasNoiseHashSalt;
     bool m_originClean { true };
 #if ASSERT_ENABLED
     bool m_didNotifyObserversCanvasDestroyed { false };

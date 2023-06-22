@@ -184,6 +184,7 @@ Modules/mediarecorder/BlobEvent.cpp
 Modules/mediarecorder/MediaRecorder.cpp
 Modules/mediarecorder/MediaRecorderErrorEvent.cpp
 Modules/mediarecorder/MediaRecorderProvider.cpp
+Modules/mediasource/BufferedChangeEvent.cpp
 Modules/mediasource/DOMURLMediaSource.cpp
 Modules/mediasource/ManagedMediaSource.cpp
 Modules/mediasource/ManagedSourceBuffer.cpp
@@ -316,6 +317,7 @@ Modules/storage/WorkerStorageConnection.cpp
 Modules/streams/ReadableStream.cpp
 Modules/streams/ReadableStreamSink.cpp
 Modules/streams/ReadableStreamSource.cpp
+Modules/streams/TransformStream.cpp
 Modules/streams/WritableStream.cpp
 Modules/web-locks/WebLock.cpp
 Modules/web-locks/WebLockManager.cpp
@@ -461,6 +463,7 @@ Modules/webxr/XRInputSourceEvent.cpp
 Modules/webxr/XRInputSourcesChangeEvent.cpp
 Modules/webxr/XRReferenceSpaceEvent.cpp
 Modules/webxr/XRSessionEvent.cpp
+accessibility/AXGeometryManager.cpp
 accessibility/AXImage.cpp
 accessibility/AXLogger.cpp
 accessibility/AXObjectCache.cpp
@@ -608,6 +611,8 @@ bindings/js/JSKeyframeEffectCustom.cpp
 bindings/js/JSLazyEventListener.cpp
 bindings/js/JSLocalDOMWindowCustom.cpp
 bindings/js/JSLocationCustom.cpp
+bindings/js/JSMediaSessionCustom.cpp
+bindings/js/JSMediaSourceCustom.cpp
 bindings/js/JSMediaStreamTrackCustom.cpp
 bindings/js/JSMessageChannelCustom.cpp
 bindings/js/JSMessageEventCustom.cpp
@@ -642,6 +647,7 @@ bindings/js/JSSVGViewSpecCustom.cpp
 bindings/js/JSServiceWorkerClientCustom.cpp
 bindings/js/JSServiceWorkerGlobalScopeCustom.cpp
 bindings/js/JSShadowRootCustom.cpp
+bindings/js/JSSourceBufferCustom.cpp
 bindings/js/JSStaticRangeCustom.cpp
 bindings/js/JSStyleSheetCustom.cpp
 bindings/js/JSTextCustom.cpp
@@ -832,6 +838,7 @@ css/CSSValuePair.cpp
 css/CSSValuePool.cpp
 css/CSSVariableData.cpp
 css/CSSVariableReferenceValue.cpp
+css/CSSWordBoundaryDetectionValue.cpp
 css/ComputedStyleExtractor.cpp
 css/ContainerQuery.cpp
 css/ContainerQueryParser.cpp
@@ -1257,6 +1264,7 @@ html/BaseDateAndTimeInputType.cpp
 html/BaseTextInputType.cpp
 html/ButtonInputType.cpp
 html/CanvasBase.cpp
+html/CanvasNoiseInjection.cpp
 html/CheckboxInputType.cpp
 html/ColorInputType.cpp
 html/CustomPaintCanvas.cpp
@@ -1855,12 +1863,13 @@ page/LocalFrameViewLayoutContext.cpp
 page/Location.cpp
 page/LoggedInStatus.cpp
 page/MemoryRelease.cpp
-page/ModalContainerObserver.cpp
 page/MouseEventWithHitTestResults.cpp
 page/Navigator.cpp
 page/NavigatorBase.cpp
 page/NavigatorIsLoggedIn.cpp
+page/OpportunisticTaskScheduler.cpp
 page/OriginAccessEntry.cpp
+page/OriginAccessPatterns.cpp
 page/Page.cpp
 page/PageColorSampler.cpp
 page/PageConfiguration.cpp
@@ -2018,6 +2027,7 @@ platform/ProcessIdentifier.cpp
 platform/ProcessIdentity.cpp
 platform/ReferrerPolicy.cpp
 platform/RemoteCommandListener.cpp
+platform/RunLoopObserver.cpp
 platform/RuntimeApplicationChecks.cpp
 platform/ScreenOrientationManager.cpp
 platform/ScreenOrientationProvider.cpp
@@ -2184,7 +2194,6 @@ platform/graphics/GraphicsContextState.cpp
 platform/graphics/GraphicsLayer.cpp
 platform/graphics/GraphicsLayerContentsDisplayDelegate.cpp
 platform/graphics/GraphicsLayerTransform.cpp
-platform/graphics/GraphicsLayerUpdater.cpp
 platform/graphics/GraphicsStyle.cpp
 platform/graphics/GraphicsTypes.cpp
 platform/graphics/HEVCUtilities.cpp
@@ -2356,7 +2365,6 @@ platform/mediastream/RealtimeMediaSourceSupportedConstraints.cpp
 platform/mediastream/RealtimeOutgoingAudioSource.cpp
 platform/mediastream/RealtimeOutgoingVideoSource.cpp
 platform/mediastream/RealtimeVideoCaptureSource.cpp
-platform/mediastream/RealtimeVideoSource.cpp
 platform/mediastream/WebRTCProvider.cpp
 platform/mock/DeviceOrientationClientMock.cpp
 platform/mock/GeolocationClientMock.cpp
@@ -2437,8 +2445,10 @@ plugins/DOMPlugin.cpp
 plugins/DOMPluginArray.cpp
 plugins/PluginData.cpp
 plugins/PluginInfoProvider.cpp
+rendering/AccessibilityRegionContext.cpp
 rendering/AutoTableLayout.cpp
 rendering/BackgroundPainter.cpp
+rendering/BaselineAlignment.cpp
 rendering/BidiRun.cpp
 rendering/BorderEdge.cpp
 rendering/BorderPainter.cpp
@@ -2482,6 +2492,7 @@ rendering/OrderIterator.cpp
 rendering/PathOperation.cpp
 rendering/PointerEventsHitRules.cpp
 rendering/ReferencedSVGResources.cpp
+rendering/RegionContext.cpp
 rendering/RenderAttachment.cpp
 rendering/RenderBlock.cpp
 rendering/RenderBlockFlow.cpp
@@ -2645,6 +2656,8 @@ rendering/style/StyleNonInheritedData.cpp
 rendering/style/StylePaintImage.cpp
 rendering/style/StyleRareInheritedData.cpp
 rendering/style/StyleRareNonInheritedData.cpp
+rendering/style/ScrollbarColor.cpp
+rendering/style/ScrollbarGutter.cpp
 rendering/style/StyleSelfAlignmentData.cpp
 rendering/style/StyleSurroundData.cpp
 rendering/style/StyleTransformData.cpp
@@ -3139,6 +3152,7 @@ JSBlob.cpp
 JSBlobCallback.cpp
 JSBlobEvent.cpp
 JSBlobPropertyBag.cpp
+JSBufferedChangeEvent.cpp
 JSBroadcastChannel.cpp
 JSByteLengthQueuingStrategy.cpp
 JSCDATASection.cpp
@@ -3391,6 +3405,7 @@ JSFontFaceSet.cpp
 JSFormDataEvent.cpp
 JSGPU.cpp
 JSGPUAdapter.cpp
+JSGPUAdapterInfo.cpp
 JSGPUAddressMode.cpp
 JSGPUAutoLayoutMode.cpp
 JSGPUBindGroup.cpp

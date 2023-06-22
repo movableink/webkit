@@ -48,14 +48,14 @@
 
 namespace WebKit {
 
-RemoteGPU::RemoteGPU(WebGPUIdentifier identifier, GPUConnectionToWebProcess& gpuConnectionToWebProcess, RemoteRenderingBackend& renderingBackend, IPC::StreamServerConnection::Handle&& connectionHandle)
+RemoteGPU::RemoteGPU(PerformWithMediaPlayerOnMainThread&& performWithMediaPlayerOnMainThread, WebGPUIdentifier identifier, GPUConnectionToWebProcess& gpuConnectionToWebProcess, RemoteRenderingBackend& renderingBackend, IPC::StreamServerConnection::Handle&& connectionHandle)
     : m_gpuConnectionToWebProcess(gpuConnectionToWebProcess)
     , m_workQueue(IPC::StreamConnectionWorkQueue::create("WebGPU work queue"))
-    , m_streamConnection(IPC::StreamServerConnection::create(WTFMove(connectionHandle), workQueue()))
+    , m_streamConnection(IPC::StreamServerConnection::create(WTFMove(connectionHandle)))
     , m_objectHeap(WebGPU::ObjectHeap::create())
+    , m_performWithMediaPlayerOnMainThread(WTFMove(performWithMediaPlayerOnMainThread))
     , m_identifier(identifier)
     , m_renderingBackend(renderingBackend)
-    , m_webProcessIdentifier(gpuConnectionToWebProcess.webProcessIdentifier())
 {
 }
 
@@ -81,7 +81,7 @@ void RemoteGPU::stopListeningForIPC()
 void RemoteGPU::workQueueInitialize()
 {
     assertIsCurrent(workQueue());
-    m_streamConnection->open();
+    m_streamConnection->open(workQueue());
     m_streamConnection->startReceivingMessages(*this, Messages::RemoteGPU::messageReceiverName(), m_identifier.toUInt64());
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
@@ -106,8 +106,8 @@ void RemoteGPU::workQueueInitialize()
 void RemoteGPU::workQueueUninitialize()
 {
     assertIsCurrent(workQueue());
-    m_streamConnection->invalidate();
     m_streamConnection->stopReceivingMessages(Messages::RemoteGPU::messageReceiverName(), m_identifier.toUInt64());
+    m_streamConnection->invalidate();
     m_streamConnection = nullptr;
     m_objectHeap->clear();
     m_backing = nullptr;
@@ -125,13 +125,13 @@ void RemoteGPU::requestAdapter(const WebGPU::RequestAdapterOptions& options, Web
         return;
     }
 
-    m_backing->requestAdapter(*convertedOptions, [callback = WTFMove(callback), objectHeap = m_objectHeap.copyRef(), streamConnection = Ref { *m_streamConnection }, identifier] (RefPtr<PAL::WebGPU::Adapter>&& adapter) mutable {
+    m_backing->requestAdapter(*convertedOptions, [callback = WTFMove(callback), objectHeap = m_objectHeap.copyRef(), streamConnection = Ref { *m_streamConnection }, identifier, &performWithMediaPlayerOnMainThread = m_performWithMediaPlayerOnMainThread] (RefPtr<PAL::WebGPU::Adapter>&& adapter) mutable {
         if (!adapter) {
             callback(std::nullopt);
             return;
         }
 
-        auto remoteAdapter = RemoteAdapter::create(*adapter, objectHeap, WTFMove(streamConnection), identifier);
+        auto remoteAdapter = RemoteAdapter::create(performWithMediaPlayerOnMainThread, *adapter, objectHeap, WTFMove(streamConnection), identifier);
         objectHeap->addObject(identifier, remoteAdapter);
 
         auto name = adapter->name();

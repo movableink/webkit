@@ -130,8 +130,6 @@
 		51FDC4D30B0AF5C100F84EB3 /* WebHistoryItemPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 51FDC4D20B0AF5C100F84EB3 /* WebHistoryItemPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		5241ADF50B1BC48A004012BD /* WebCache.h in Headers */ = {isa = PBXBuildFile; fileRef = 5241ADF30B1BC48A004012BD /* WebCache.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		5241ADF60B1BC48A004012BD /* WebCache.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5241ADF40B1BC48A004012BD /* WebCache.mm */; };
-		598AD91A1201CEC900ABAE4E /* WebDeviceOrientationClient.h in Headers */ = {isa = PBXBuildFile; fileRef = 598AD9191201CEC900ABAE4E /* WebDeviceOrientationClient.h */; };
-		598AD91E1201CECF00ABAE4E /* WebDeviceOrientationClient.mm in Sources */ = {isa = PBXBuildFile; fileRef = 598AD91D1201CECF00ABAE4E /* WebDeviceOrientationClient.mm */; };
 		598AD9201201CF0700ABAE4E /* WebDeviceOrientation.h in Headers */ = {isa = PBXBuildFile; fileRef = 598AD91F1201CF0700ABAE4E /* WebDeviceOrientation.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		598AD9221201CF1000ABAE4E /* WebDeviceOrientation.mm in Sources */ = {isa = PBXBuildFile; fileRef = 598AD9211201CF1000ABAE4E /* WebDeviceOrientation.mm */; };
 		598AD9241201CF1900ABAE4E /* WebDeviceOrientationInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = 598AD9231201CF1900ABAE4E /* WebDeviceOrientationInternal.h */; };
@@ -839,8 +837,6 @@
 		51FDC4D20B0AF5C100F84EB3 /* WebHistoryItemPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebHistoryItemPrivate.h; sourceTree = "<group>"; };
 		5241ADF30B1BC48A004012BD /* WebCache.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = WebCache.h; sourceTree = "<group>"; };
 		5241ADF40B1BC48A004012BD /* WebCache.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; path = WebCache.mm; sourceTree = "<group>"; };
-		598AD9191201CEC900ABAE4E /* WebDeviceOrientationClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebDeviceOrientationClient.h; sourceTree = "<group>"; };
-		598AD91D1201CECF00ABAE4E /* WebDeviceOrientationClient.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebDeviceOrientationClient.mm; sourceTree = "<group>"; };
 		598AD91F1201CF0700ABAE4E /* WebDeviceOrientation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebDeviceOrientation.h; sourceTree = "<group>"; };
 		598AD9211201CF1000ABAE4E /* WebDeviceOrientation.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebDeviceOrientation.mm; sourceTree = "<group>"; };
 		598AD9231201CF1900ABAE4E /* WebDeviceOrientationInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebDeviceOrientationInternal.h; sourceTree = "<group>"; };
@@ -1462,6 +1458,7 @@
 		CEDA12DA152CBE6800D9E08D /* WebAlternativeTextClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebAlternativeTextClient.h; sourceTree = "<group>"; };
 		DD2170FC29A58B300057233A /* MigratedHeaders-input.xcfilelist */ = {isa = PBXFileReference; lastKnownFileType = text.xcfilelist; path = "MigratedHeaders-input.xcfilelist"; sourceTree = "<group>"; };
 		DD2170FD29A58B300057233A /* MigratedHeaders-output.xcfilelist */ = {isa = PBXFileReference; lastKnownFileType = text.xcfilelist; path = "MigratedHeaders-output.xcfilelist"; sourceTree = "<group>"; };
+		DD6502D72A26BD730018CF04 /* ExtraPrivateSymbolsForTAPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ExtraPrivateSymbolsForTAPI.h; path = mac/ExtraPrivateSymbolsForTAPI.h; sourceTree = "<group>"; };
 		DD7AF5D0298C52FC0059E87E /* migrate-headers.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; name = "migrate-headers.py"; path = "scripts/migrate-headers.py"; sourceTree = "<group>"; };
 		DD89681E09AA87240097E7F0 /* WebElementDictionary.h */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.c.h; path = WebElementDictionary.h; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
 		DD89681F09AA87240097E7F0 /* WebElementDictionary.mm */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebElementDictionary.mm; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
@@ -1548,6 +1545,7 @@
 				5C9D925822D7E8AD008E9266 /* Sources.txt */,
 				5C9D925922D7E8AD008E9266 /* SourcesCocoa.txt */,
 				44DDD0812540F8C800836F81 /* TestingFunctions.h */,
+				DD6502D72A26BD730018CF04 /* ExtraPrivateSymbolsForTAPI.h */,
 				F5F732D202FF4D4F01A80180 /* WebKit.exp */,
 				319A3F4D1885E5FB00E0C900 /* WebKit.mac.exp */,
 				A10C1D8F1820307D0036883A /* WebKit.iOS.exp */,
@@ -2526,8 +2524,6 @@
 				065AD5A10B0C32C7005A2B1D /* WebContextMenuClient.h */,
 				065AD5A20B0C32C7005A2B1D /* WebContextMenuClient.mm */,
 				E13E782B1E5A7365001849D1 /* WebCreateFragmentInternal.h */,
-				598AD9191201CEC900ABAE4E /* WebDeviceOrientationClient.h */,
-				598AD91D1201CECF00ABAE4E /* WebDeviceOrientationClient.mm */,
 				A70936AD0B5608DC00CDB48E /* WebDragClient.h */,
 				A70936AE0B5608DC00CDB48E /* WebDragClient.mm */,
 				4BF99F8E0AE050BC00815C2B /* WebEditorClient.h */,
@@ -2897,7 +2893,6 @@
 				A10C1D1E18202F9C0036883A /* WebDefaultUIKitDelegate.h in Headers */,
 				BC542C420FD7766F00D8AB5D /* WebDelegateImplementationCaching.h in Headers */,
 				598AD9201201CF0700ABAE4E /* WebDeviceOrientation.h in Headers */,
-				598AD91A1201CEC900ABAE4E /* WebDeviceOrientationClient.h in Headers */,
 				598AD9241201CF1900ABAE4E /* WebDeviceOrientationInternal.h in Headers */,
 				598ADA461202275000ABAE4E /* WebDeviceOrientationProvider.h in Headers */,
 				598AD9261201CF2500ABAE4E /* WebDeviceOrientationProviderMock.h in Headers */,
@@ -3086,7 +3081,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 149C282D08902B0F008A9EFC /* Build configuration list for PBXNativeTarget "WebKitLegacy" */;
 			buildPhases = (
-				5D2F7DB70C687A5A00B5B72B /* Update Info.plist with version information */,
 				7C02321B251B9A8A00BA7BB6 /* Generate Preferences */,
 				9398100D0824BF01008DF038 /* Headers */,
 				DD7AF5CF298C51C90059E87E /* Migrate WebCore Headers and Generate Export List */,
@@ -3099,6 +3093,7 @@
 				532424B1254905FE00A6975B /* Check For Inappropriate Files In Framework */,
 				537CF83A22EFBFB100C6EBB3 /* Check .xcfilelists */,
 				650473452789431C00AF78A2 /* Create Symlink to Alt Root Path */,
+				DD00C28C2A37905800CBB4D9 /* Work around rdar://109484516 */,
 			);
 			buildRules = (
 				535E08C322545B4C00DF00CA /* PBXBuildRule */,
@@ -3297,22 +3292,6 @@
 			shellPath = /bin/sh;
 			shellScript = "if [ \"${ACTION}\" = \"installhdrs\" ] || [ \"${ACTION}\" = \"installapi\" ]; then\n    exit 0;\nfi\n\nif [ -f ../../Tools/Scripts/check-for-weak-vtables-and-externals ]; then\n    ../../Tools/Scripts/check-for-weak-vtables-and-externals || exit $?\nfi\n";
 		};
-		5D2F7DB70C687A5A00B5B72B /* Update Info.plist with version information */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/../../Configurations/Version.xcconfig",
-			);
-			name = "Update Info.plist with version information";
-			outputPaths = (
-				"$(SRCROOT)/mac/Info.plist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Touch Info.plist to let Xcode know it needs to copy it into the built product\nif [[ \"${CONFIGURATION}\" != \"Production\" ]]; then\n    touch \"${SRCROOT}/mac/Info.plist\";\nfi;\n";
-		};
 		650473452789431C00AF78A2 /* Create Symlink to Alt Root Path */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
@@ -3359,6 +3338,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "${SRCROOT}/mac/Scripts/generate-preferences.sh\n";
+		};
+		DD00C28C2A37905800CBB4D9 /* Work around rdar://109484516 */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Work around rdar://109484516";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/worked_around_109484516",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "rm -vf \"${OBJROOT}/EagerLinkingTBDs/${CONFIGURATION}${EFFECTIVE_PLATFORM_NAME}/${CONTENTS_FOLDER_PATH}/${EXECUTABLE_PREFIX}${PRODUCT_NAME}${EXECUTABLE_VARIANT_SUFFIX}.tbd\" &&\ntouch \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 		};
 		DD7AF5CF298C51C90059E87E /* Migrate WebCore Headers and Generate Export List */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -3453,7 +3451,6 @@
 				A10C1D1F18202F9C0036883A /* WebDefaultUIKitDelegate.m in Sources */,
 				BC542C430FD7766F00D8AB5D /* WebDelegateImplementationCaching.mm in Sources */,
 				598AD9221201CF1000ABAE4E /* WebDeviceOrientation.mm in Sources */,
-				598AD91E1201CECF00ABAE4E /* WebDeviceOrientationClient.mm in Sources */,
 				598AD9281201CF3200ABAE4E /* WebDeviceOrientationProviderMock.mm in Sources */,
 				65FFB7FD0AD0B7D30048CD05 /* WebDocumentLoaderMac.mm in Sources */,
 				E15663190FB61C1F00C199CA /* WebDownload.mm in Sources */,

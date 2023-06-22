@@ -101,7 +101,6 @@
 #import <UIKit/_UINavigationInteractiveTransition.h>
 #import <UIKit/_UINavigationParallaxTransition.h>
 #import <UIKit/_UISheetPresentationController.h>
-#import <WebKitAdditions/UIKitSPIAdditions.h>
 
 #if HAVE(LINK_PREVIEW)
 #import <UIKit/UIPreviewAction_Private.h>
@@ -445,6 +444,7 @@ typedef struct CGSVGDocument *CGSVGDocumentRef;
 + (CGSize)defaultSizeForInterfaceOrientation:(UIInterfaceOrientation)orientation;
 + (BOOL)isInHardwareKeyboardMode;
 + (BOOL)isOnScreen;
++ (BOOL)usesInputSystemUI;
 @end
 
 @interface UIKeyboardImpl : UIView <UIKeyboardCandidateListDelegate>
@@ -696,7 +696,7 @@ typedef enum {
 @property (readonly) NSString *_hostApplicationBundleIdentifier;
 @end
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
 @interface NSURL ()
 @property (nonatomic, copy, setter=_setTitle:) NSString *_title;
 @end
@@ -1088,6 +1088,11 @@ typedef NS_ENUM(NSInteger, _UIBackdropViewStylePrivate) {
 @end
 
 @class BKSAnimationFenceHandle;
+
+@interface UIGestureRecognizer (SPI)
+- (NSSet<UITouch *> *)_activeTouchesForEvent:(UIEvent *)event;
+- (__kindof UIEvent *)_activeEventOfType:(UIEventType)type;
+@end
 
 @interface UIWindow ()
 + (BKSAnimationFenceHandle *)_synchronizedDrawingFence;
@@ -1534,6 +1539,8 @@ typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
 - (BOOL)_canScrollWithoutBouncingY;
 - (void)_setContentOffsetWithDecelerationAnimation:(CGPoint)contentOffset;
 - (CGPoint)_adjustedContentOffsetForContentOffset:(CGPoint)contentOffset;
+- (void)handlePinch:(UIPinchGestureRecognizer *)gesture;
+- (void)handlePan:(UIPanGestureRecognizer *)gesture;
 
 @property (nonatomic) BOOL tracksImmediatelyWhileDecelerating;
 @property (nonatomic, getter=_avoidsJumpOnInterruptedBounce, setter=_setAvoidsJumpOnInterruptedBounce:) BOOL _avoidsJumpOnInterruptedBounce;

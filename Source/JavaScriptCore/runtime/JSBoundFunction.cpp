@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -232,9 +232,9 @@ bool JSBoundFunction::customHasInstance(JSObject* object, JSGlobalObject* global
 
 JSBoundFunction::JSBoundFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, JSObject* targetFunction, JSValue boundThis, unsigned boundArgsLength, JSValue arg0, JSValue arg1, JSValue arg2, JSString* nameMayBeNull, double length)
     : Base(vm, executable, globalObject, structure)
-    , m_targetFunction(vm, this, targetFunction)
-    , m_boundThis(vm, this, boundThis)
-    , m_nameMayBeNull(vm, this, nameMayBeNull, WriteBarrier<JSString>::MayBeNull)
+    , m_targetFunction(targetFunction, WriteBarrierEarlyInit)
+    , m_boundThis(boundThis, WriteBarrierEarlyInit)
+    , m_nameMayBeNull(nameMayBeNull, WriteBarrierEarlyInit)
     , m_length(length)
     , m_boundArgsLength(boundArgsLength)
 {
@@ -257,12 +257,6 @@ JSArray* JSBoundFunction::boundArgsCopy(JSGlobalObject* globalObject)
     });
     RETURN_IF_EXCEPTION(scope, nullptr);
     return result;
-}
-
-void JSBoundFunction::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
 }
 
 JSString* JSBoundFunction::nameSlow(VM& vm)
@@ -319,6 +313,39 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
 
     m_nameMayBeNull.set(vm, this, terminal);
     return terminal;
+}
+
+String JSBoundFunction::nameStringWithoutGCSlow(VM& vm)
+{
+    DisallowGC disallowGC;
+    unsigned nestingCount = 0;
+    JSObject* cursor = m_targetFunction.get();
+    String terminal;
+    while (true) {
+        ASSERT(cursor->inherits<JSFunction>()); // If this is not JSFunction, we eagerly materialized the name.
+        if (!cursor->inherits<JSBoundFunction>()) {
+            terminal = jsCast<JSFunction*>(cursor)->nameWithoutGC(vm);
+            break;
+        }
+        ++nestingCount;
+        JSBoundFunction* boundFunction = jsCast<JSBoundFunction*>(cursor);
+        if (boundFunction->nameMayBeNull()) {
+            terminal = boundFunction->nameStringWithoutGC(vm);
+            break;
+        }
+        cursor = boundFunction->targetFunction();
+    }
+
+    if (!nestingCount)
+        return terminal;
+
+    StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+    for (unsigned i = 0; i < nestingCount; ++i)
+        builder.append("bound "_s);
+    builder.append(WTFMove(terminal));
+    if (builder.hasOverflowed())
+        return emptyString();
+    return builder.toString();
 }
 
 double JSBoundFunction::lengthSlow(VM& vm)

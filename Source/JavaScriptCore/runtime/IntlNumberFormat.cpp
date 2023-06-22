@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
  * Copyright (C) 2016 Sukolsak Sakshuwong (sukolsak@gmail.com)
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -90,12 +90,6 @@ IntlNumberFormat::IntlNumberFormat(VM& vm, Structure* structure)
 {
 }
 
-void IntlNumberFormat::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
-}
-
 template<typename Visitor>
 void IntlNumberFormat::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
@@ -119,14 +113,14 @@ Vector<String> IntlNumberFormat::localeData(const String& locale, RelevantExtens
 static inline unsigned computeCurrencySortKey(const String& currency)
 {
     ASSERT(currency.length() == 3);
-    ASSERT(currency.isAllSpecialCharacters<isASCIIUpper>());
+    ASSERT(currency.containsOnly<isASCIIUpper>());
     return (currency[0] << 16) + (currency[1] << 8) + currency[2];
 }
 
 static inline unsigned computeCurrencySortKey(const char* currency)
 {
     ASSERT(strlen(currency) == 3);
-    ASSERT(isAllSpecialCharacters<isASCIIUpper>(currency, 3));
+    ASSERT(containsOnly<isASCIIUpper>(currency, 3));
     return (currency[0] << 16) + (currency[1] << 8) + currency[2];
 }
 
