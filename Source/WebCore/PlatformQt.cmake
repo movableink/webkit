@@ -370,6 +370,9 @@ if (ENABLE_OPENGL)
             platform/graphics/opengl/GraphicsContext3DOpenGL.cpp
         )
     endif ()
+else ()
+    # remove OpenGL::GLES from WebCore
+    list(REMOVE_ITEM WebCore_LIBRARIES OpenGL::GLES)
 endif ()
 
 if (USE_GLIB)
