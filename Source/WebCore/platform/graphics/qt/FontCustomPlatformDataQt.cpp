@@ -37,7 +37,7 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription&
     return FontPlatformData(m_rawFont);
 }
 
-RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, const String&)
+RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, const String& itemInCollection)
 {
     const QByteArray fontData(reinterpret_cast<const char*>(buffer.data()), buffer.size());
 
@@ -46,7 +46,8 @@ RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer
     if (!rawFont.isValid())
         return nullptr;
 
-    auto data = adoptRef(*new FontCustomPlatformData);
+    FontPlatformData::CreationData creationData = { buffer, itemInCollection };
+    auto data = adoptRef(*new FontCustomPlatformData(WTFMove(creationData)));
     data->m_rawFont = rawFont;
     return data;
 }

@@ -63,7 +63,10 @@ public:
 #if PLATFORM(WIN)
     FontCustomPlatformData(const String& name, FontPlatformData::CreationData&&);
 #elif PLATFORM(QT)
-    FontCustomPlatformData() { }
+    FontCustomPlatformData(FontPlatformData::CreationData&&)
+        : creationData(WTFMove(creationData))
+    {
+    }
 #elif USE(CORE_TEXT)
     FontCustomPlatformData(CTFontDescriptorRef fontDescriptor, FontPlatformData::CreationData&& creationData)
         : fontDescriptor(fontDescriptor)

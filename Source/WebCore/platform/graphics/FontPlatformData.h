@@ -151,8 +151,8 @@ public:
 #endif
 
 #if PLATFORM(QT)
-    FontPlatformData(const FontDescription&, const AtomString& family);
-    FontPlatformData(const QRawFont& rawFont);
+    FontPlatformData(const FontDescription&, const AtomString& family, const FontCustomPlatformData* = nullptr);
+    FontPlatformData(const QRawFont& rawFont, const FontCustomPlatformData* = nullptr);
 
     friend class FontPlatformDataPrivate;
 #endif
