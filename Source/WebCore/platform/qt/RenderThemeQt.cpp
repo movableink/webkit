@@ -850,7 +850,7 @@ void RenderThemeQt::adjustSliderThumbSize(RenderStyle& style, const Element*) co
     style.setHeight(Length(thumbHeight, LengthType::Fixed));
 }
 
-Seconds RenderThemeQt::caretBlinkInterval() const
+std::optional<Seconds> RenderThemeQt::caretBlinkInterval() const
 {
     return Seconds(static_cast<QGuiApplication*>(qApp)->styleHints()->cursorFlashTime()) / 1000.0 / 2.0;
 }
