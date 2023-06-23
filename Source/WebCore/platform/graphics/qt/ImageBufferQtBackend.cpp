@@ -39,6 +39,7 @@
 #include "MIMETypeRegistry.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/TextStream.h>
 
 #include <QImage>
 #include <QPainter>
@@ -208,9 +209,9 @@ void ImageBufferQtBackend::platformTransformColorSpace(const std::array<uint8_t,
     painter->restore();
 }
 
-RefPtr<PixelBuffer> ImageBufferQtBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator)
+void ImageBufferQtBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination)
 {
-    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage->bits())), allocator);
+    ImageBufferBackend::getPixelBuffer(srcRect, m_nativeImage->bits(), destination);
 }
 
 void ImageBufferQtBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
@@ -221,6 +222,13 @@ void ImageBufferQtBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const 
 unsigned ImageBufferQtBackend::bytesPerRow() const
 {
     return m_nativeImage->bytesPerLine();
+}
+
+String ImageBufferQtBackend::debugDescription() const
+{
+    TextStream stream;
+    stream << "ImageBufferQtBackend " << m_nativeImage->width() << "x" << m_nativeImage->height() << " " << m_nativeImage->format();
+    return stream.release();
 }
 
 } // namespace WebCore

@@ -55,8 +55,9 @@ public:
     void transformToColorSpace(const DestinationColorSpace&) override;
 
     GraphicsContext& context() override;
+    String debugDescription() const override;
 
-    RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator = ImageBufferAllocator()) override;
+    void getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) override;
     void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
 protected:
