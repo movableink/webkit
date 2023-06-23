@@ -129,7 +129,7 @@ public:
     PlatformPageClient platformPageClient() const final;
     void contentsSizeChanged(LocalFrame&, const IntSize&) const final;
 
-    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags, const WTF::String&, WebCore::TextDirection) final;
+    void mouseDidMoveOverElement(const HitTestResult&, OptionSet<PlatformEventModifier>, const WTF::String&, WebCore::TextDirection) final;
 
     void print(LocalFrame&, const StringWithDirection&) final;
     void exceededDatabaseQuota(LocalFrame&, const String&, DatabaseDetails) final;
@@ -206,8 +206,6 @@ public:
 #endif
 
     void requestCookieConsent(CompletionHandler<void(WebCore::CookieConsentDecisionResult)>&&) final;
-    void classifyModalContainerControls(Vector<String>&&, CompletionHandler<void(Vector<WebCore::ModalContainerControlType>&&)>&&) final;
-    void decidePolicyForModalContainer(OptionSet<WebCore::ModalContainerControlType>, CompletionHandler<void(WebCore::ModalContainerDecision)>&&) final;
 
     IntPoint accessibilityScreenToRootView(const IntPoint&) const;
     IntRect rootViewToAccessibilityScreen(const IntRect&) const;

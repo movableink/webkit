@@ -464,7 +464,7 @@ void ChromeClientQt::contentsSizeChanged(LocalFrame& frame, const IntSize& size)
         QWebFrameAdapter::kit(frame)->contentsSizeDidChange(size);
 }
 
-void ChromeClientQt::mouseDidMoveOverElement(const HitTestResult& result, unsigned, const WTF::String& toolTip, WebCore::TextDirection dir)
+void ChromeClientQt::mouseDidMoveOverElement(const HitTestResult& result, OptionSet<PlatformEventModifier>, const WTF::String& toolTip, WebCore::TextDirection dir)
 {
     if (result.absoluteLinkURL() != lastHoverURL
         || result.title(dir) != lastHoverTitle
@@ -782,16 +782,6 @@ void ChromeClientQt::intrinsicContentsSizeChanged(const IntSize&) const
 RefPtr<Icon> ChromeClientQt::createIconForFiles(const Vector<WTF::String>& filenames)
 {
     return Icon::createIconForFiles(filenames);
-}
-
-void ChromeClientQt::classifyModalContainerControls(Vector<String>&&, CompletionHandler<void(Vector<WebCore::ModalContainerControlType>&&)>&& completion)
-{
-    completion({ });
-}
-
-void ChromeClientQt::decidePolicyForModalContainer(OptionSet<WebCore::ModalContainerControlType>, CompletionHandler<void(WebCore::ModalContainerDecision)>&& completion)
-{
-    completion(ModalContainerDecision::Show);
 }
 
 void ChromeClientQt::requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&& completion)
