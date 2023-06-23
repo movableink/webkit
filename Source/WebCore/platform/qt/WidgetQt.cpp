@@ -97,7 +97,7 @@ void Widget::hide()
         client->setWidgetVisible(platformWidget(), false);
 }
 
-void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy, EventRegionContext*)
+void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy, RegionContext*)
 {
 }
 
