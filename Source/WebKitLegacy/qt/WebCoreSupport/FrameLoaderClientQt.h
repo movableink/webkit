@@ -77,8 +77,6 @@ public:
 
     void makeRepresentation(DocumentLoader*) override { }
 
-    std::optional<PageIdentifier> pageID() const final;
-
     void forceLayoutForNonHTML() override;
 
     void setCopiesOnScroll() override;

@@ -238,11 +238,6 @@ bool FrameLoaderClientQt::hasWebView() const
     return true;
 }
 
-std::optional<PageIdentifier> FrameLoaderClientQt::pageID() const
-{
-    return std::nullopt;
-}
-
 void FrameLoaderClientQt::savePlatformDataToCachedFrame(CachedFrame*)
 {
     notImplemented();
