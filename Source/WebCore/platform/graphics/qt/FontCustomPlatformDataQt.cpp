@@ -63,6 +63,12 @@ bool FontCustomPlatformData::supportsFormat(const String& format)
     ;
 }
 
+bool FontCustomPlatformData::supportsTechnology(const FontTechnology&)
+{
+    // FIXME: define supported technologies for this platform (webkit.org/b/256310).
+    return true;
+}
+
 FontCustomPlatformData::~FontCustomPlatformData() = default;
 
 }
