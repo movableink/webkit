@@ -756,6 +756,13 @@ if (USE_LIBHYPHEN)
     endif ()
 endif ()
 
+if (USE_JPEGXL)
+    find_package(JPEGXL)
+    if (NOT JPEGXL_FOUND)
+        message(FATAL_ERROR "libjxl is required for USE_JPEGXL")
+    endif ()
+endif ()
+
 if (USE_WOFF2)
     if (TARGET CONAN_PKG::woff2)
         set(WOFF2DEC_LIBRARIES CONAN_PKG::woff2)
