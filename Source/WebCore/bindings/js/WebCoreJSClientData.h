@@ -32,6 +32,11 @@
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 
+#if PLATFORM(QT)
+//undefine signals
+#undef signals
+#endif
+
 namespace WebCore {
 
 class ExtendedDOMClientIsoSubspaces;
