@@ -328,7 +328,8 @@ void RenderThemeQt::adjustMenuListStyle(RenderStyle& style, const Element*) cons
     style.setHeight(Length(LengthType::Auto));
 
     // White-space is locked to pre
-    style.setWhiteSpace(WhiteSpace::Pre);
+    style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
+    style.setTextWrap(TextWrap::NoWrap);
 
     computeSizeBasedOnStyle(style);
 
@@ -342,7 +343,8 @@ void RenderThemeQt::adjustMenuListButtonStyle(RenderStyle& style, const Element*
     style.setHeight(Length(LengthType::Auto));
 
     // White-space is locked to pre
-    style.setWhiteSpace(WhiteSpace::Pre);
+    style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
+    style.setTextWrap(TextWrap::NoWrap);
 
     computeSizeBasedOnStyle(style);
 
