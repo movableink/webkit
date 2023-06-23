@@ -39,6 +39,7 @@
 #include "NotImplemented.h"
 #include "QWebPageClient.h"
 #include "LocalFrameView.h"
+#include "EventRegion.h"
 
 #include <QCoreApplication>
 #include <QPaintEngine>
