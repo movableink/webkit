@@ -41,7 +41,7 @@ void RunLoopObserver::runLoopObserverFired()
     m_callback();
 }
 
-#if !USE(CF)
+#if !USE(CF) || PLATFORM(QT)
 
 void RunLoopObserver::schedule(PlatformRunLoop, OptionSet<Activity>)
 {
