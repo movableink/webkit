@@ -39,8 +39,15 @@ namespace WebCore {
 class HTMLVideoElement;
 #if ENABLE(WEB_CODECS)
 using GPUVideoSource = std::variant<RefPtr<HTMLVideoElement>, RefPtr<WebCodecsVideoFrame>>;
-#else
+#elsif ENABLE(VIDEO)
 using GPUVideoSource = RefPtr<HTMLVideoElement>;
+#else
+class DummyHTMLVideoElement {
+    public:
+    void ref() {}
+    void deref() { }
+};
+using GPUVideoSource = RefPtr<DummyHTMLVideoElement>;
 #endif
 
 struct GPUExternalTextureDescriptor : public GPUObjectDescriptorBase {
@@ -67,9 +74,17 @@ struct GPUExternalTextureDescriptor : public GPUObjectDescriptorBase {
             return PAL::WebGPU::WebCodecsVideoFrameIdentifier { };
         });
 #else
+
+#if ENABLE(VIDEO)
         UNUSED_PARAM(outPixelBuffer);
         auto playerIdentifier = videoSource->playerIdentifier();
         return PAL::WebGPU::HTMLVideoElementIdentifier { playerIdentifier ? playerIdentifier->toUInt64() : 0 };
+#else
+        UNUSED_PARAM(videoSource);
+        UNUSED_PARAM(outPixelBuffer);
+        return PAL::WebGPU::HTMLVideoElementIdentifier { 0 };
+#endif // ENABLE(VIDEO)
+
 #endif
     }
 

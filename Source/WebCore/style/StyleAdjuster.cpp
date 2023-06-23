@@ -171,7 +171,11 @@ static bool shouldInheritTextDecorationsInEffect(const RenderStyle& style, const
         if (!element)
             return false;
         auto* parentNode = element->parentNode();
+#if ENABLE(VIDEO)
         return parentNode && parentNode->isUserAgentShadowRoot() && parentNode->parentOrShadowHostElement()->isMediaElement();
+#else
+        return false;
+#endif // ENABLE(VIDEO)
     }();
 
     // Outermost <svg> roots are considered to be atomic inline-level.
