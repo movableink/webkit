@@ -108,7 +108,7 @@ static QStyleFacadeOption initSliderStyleOption(Scrollbar& scrollbar, QObject* w
     opt.rect = scrollbar.frameRect();
     if (scrollbar.enabled())
         opt.state |= QStyleFacade::State_Enabled;
-    if (scrollbar.controlSize() != ScrollbarControlSize::Regular)
+    if (scrollbar.widthStyle() != ScrollbarWidth::Auto)
         opt.state |= QStyleFacade::State_Mini;
     opt.slider.orientation = (scrollbar.orientation() == ScrollbarOrientation::Vertical) ? Qt::Vertical : Qt::Horizontal;
 
@@ -201,9 +201,9 @@ void ScrollbarThemeQStyle::invalidatePart(Scrollbar& scrollbar, ScrollbarPart)
     scrollbar.invalidate();
 }
 
-int ScrollbarThemeQStyle::scrollbarThickness(ScrollbarControlSize controlSize, ScrollbarExpansionState)
+int ScrollbarThemeQStyle::scrollbarThickness(ScrollbarWidth width, ScrollbarExpansionState)
 {
-    const bool mini = controlSize != ScrollbarControlSize::Regular;
+    const bool mini = width != ScrollbarWidth::Auto;
     return m_qStyle->scrollBarExtent(mini);
 }
 
