@@ -110,7 +110,7 @@ static QString drtPrintFrameUserGestureStatus(WebCore::Frame* frame)
 
 static QString drtDescriptionSuitableForTestResult(const WTF::URL& kurl)
 {
-    if (kurl.isEmpty() || !kurl.isLocalFile())
+    if (kurl.isEmpty() || !kurl.protocolIsFile())
         return kurl.string();
     // Remove the leading path from file urls.
     return QString(kurl.string()).remove(WebCore::FrameLoaderClientQt::dumpResourceLoadCallbacksPath).mid(1);
