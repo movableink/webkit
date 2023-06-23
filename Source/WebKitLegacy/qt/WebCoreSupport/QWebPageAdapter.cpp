@@ -91,6 +91,7 @@
 #include <WebCore/NetworkStorageSession.h>
 #include <WebCore/NetworkingContext.h>
 #include <WebCore/PageConfiguration.h>
+#include <WebCore/PageIdentifier.h>
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/PlatformMouseEvent.h>
 #include <WebCore/ProgressTracker.h>
@@ -271,6 +272,7 @@ void QWebPageAdapter::initializeWebCorePage()
     auto sessionID = isPrivateBrowsingEnabled ? PAL::SessionID::legacyPrivateSessionID() : PAL::SessionID::defaultSessionID();
 
     PageConfiguration pageConfiguration {
+        WebCore::PageIdentifier::generate(),
         sessionID,
         makeUniqueRef<EditorClientQt>(this),
         LegacySocketProvider::create(),
