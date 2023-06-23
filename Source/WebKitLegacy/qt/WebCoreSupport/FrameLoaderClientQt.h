@@ -31,8 +31,9 @@
 #define FrameLoaderClientQt_h
 
 #include <WebCore/FormState.h>
-#include <WebCore/FrameLoaderClient.h>
+#include <WebCore/LocalFrameLoaderClient.h>
 #include <WebCore/ResourceResponse.h>
+#include <WebCore/ResourceError.h>
 
 #include <QObject>
 #include <QUrl>
@@ -57,7 +58,7 @@ class ResourceLoader;
 
 struct LoadErrorResetToken;
 
-class FrameLoaderClientQt final : public QObject, public FrameLoaderClient {
+class FrameLoaderClientQt final : public QObject, public LocalFrameLoaderClient {
     Q_OBJECT
 
     friend class ::QWebFrameAdapter;

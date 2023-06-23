@@ -1254,7 +1254,7 @@ public:
         ScrollView* parentScrollView = parent();
         QRect clipRect;
         if (parentScrollView) {
-            ASSERT_WITH_SECURITY_IMPLICATION(parentScrollView->isFrameView());
+            ASSERT_WITH_SECURITY_IMPLICATION(parentScrollView->isLocalFrameView());
             clipRect = downcast<LocalFrameView>(parentScrollView)->windowClipRect();
             clipRect.translate(-windowRect.x(), -windowRect.y());
         }
