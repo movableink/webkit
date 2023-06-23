@@ -329,7 +329,7 @@ ContentDispositionType contentDispositionType(const String& contentDisposition)
 
     Vector<String> parameters = contentDisposition.split(';');
     String dispositionType = parameters[0];
-    dispositionType.stripWhiteSpace();
+    dispositionType = dispositionType.trim(deprecatedIsSpaceOrNewline);
 
     if (equalLettersIgnoringASCIICase(dispositionType, "inline"_s))
         return ContentDispositionInline;
