@@ -43,5 +43,5 @@ QWebFrameData::QWebFrameData(WebCore::Page* parentPage, WebCore::HTMLFrameOwnerE
     frameLoaderClient = static_cast<FrameLoaderClientQt*>(&frame->loader().client());
 
     // FIXME: All of the below should probably be moved over into WebCore
-    frame->tree().setName(AtomString(String(name)));
+    frame->tree().setSpecifiedName(AtomString(String(name)));
 }
