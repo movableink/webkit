@@ -59,7 +59,7 @@ class TextRun;
 namespace DisplayList {
 class InMemoryDisplayList;
 }
-    
+
 struct GlyphData;
 
 struct GlyphOverflow {
@@ -162,7 +162,7 @@ public:
     void setWordSpacing(float s) { m_wordSpacing = s; }
     void setLetterSpacing(float s) { m_letterSpacing = s; }
     bool isFixedPitch() const;
-    
+
     bool enableKerning() const { return m_enableKerning; }
     bool requiresShaping() const { return m_requiresShaping; }
 
@@ -242,7 +242,7 @@ private:
 
     static bool canReturnFallbackFontsForComplexText();
     static bool canExpandAroundIdeographsInComplexText();
-    
+
 #if PLATFORM(QT)
     void drawComplexText(GraphicsContext&, const TextRun&, const FloatPoint&, int from, int to) const;
 #endif
@@ -308,7 +308,17 @@ private:
 
     bool advancedTextRenderingMode() const
     {
+#if PLATFORM(QT)
+        auto textRenderingMode = m_fontDescription.textRenderingMode();
+        if (textRenderingMode == TextRenderingMode::GeometricPrecision || textRenderingMode == TextRenderingMode::OptimizeLegibility)
+            return true;
+        if (textRenderingMode == TextRenderingMode::OptimizeSpeed)
+            return false;
+
+        return false;
+#else
         return m_fontDescription.textRenderingMode() != TextRenderingMode::OptimizeSpeed;
+#endif
     }
 
     bool computeEnableKerning() const
