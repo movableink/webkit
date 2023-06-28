@@ -35,6 +35,8 @@ GST_DEBUG_CATEGORY_EXTERN(webkit_media_player_debug);
 
 namespace WebCore {
 
+#if USE(GSTREAMER_GL)
+
 GstGLDisplay* PlatformDisplay::gstGLDisplay() const
 {
 #if USE(EGL)
@@ -71,5 +73,7 @@ GstGLContext* PlatformDisplay::gstGLContext() const
 #endif
     return m_gstGLContext.get();
 }
+
+#endif // USE(GSTREAMER_GL)
 
 } // namespace WebCore
