@@ -194,7 +194,7 @@ public:
     IntRect transposedRect() const { return IntRect(m_location.transposedPoint(), m_size.transposedSize()); }
 
     // Return false if x + width or y + height overflows.
-    bool isValid() const;
+    WEBCORE_EXPORT bool isValid() const;
 
 #if PLATFORM(WIN)
     WEBCORE_EXPORT IntRect(const RECT&);
@@ -239,11 +239,6 @@ inline IntRect unionRect(const IntRect& a, const IntRect& b)
 inline bool operator==(const IntRect& a, const IntRect& b)
 {
     return a.location() == b.location() && a.size() == b.size();
-}
-
-inline bool operator!=(const IntRect& a, const IntRect& b)
-{
-    return a.location() != b.location() || a.size() != b.size();
 }
 
 inline IntRect& operator-=(IntRect& r, const IntPoint& offset)

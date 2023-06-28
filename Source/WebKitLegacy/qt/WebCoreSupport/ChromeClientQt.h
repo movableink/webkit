@@ -61,55 +61,56 @@ class FullScreenVideoQt;
 class TextureMapperLayerClientQt;
 
 class ChromeClientQt final : public ChromeClient {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ChromeClientQt(QWebPageAdapter*);
     ~ChromeClientQt();
     void chromeDestroyed() final;
 
     void setWindowRect(const FloatRect&) final;
-    FloatRect windowRect() final;
+    FloatRect windowRect() const final;
 
-    FloatRect pageRect() final;
+    FloatRect pageRect() const final;
 
     void focus() final;
     void unfocus() final;
 
-    bool canTakeFocus(FocusDirection) final;
+    bool canTakeFocus(FocusDirection) const final;
     void takeFocus(FocusDirection) final;
 
     void focusedElementChanged(Element*) final;
-    void focusedFrameChanged(Frame*) final;
+    void focusedFrameChanged(LocalFrame*) final;
 
-    Page* createWindow(Frame&, const WindowFeatures&, const NavigationAction&) final;
+    Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&) final;
     void show() final;
 
-    bool canRunModal() final;
+    bool canRunModal() const final;
     void runModal() final;
 
     void setToolbarsVisible(bool) final;
-    bool toolbarsVisible() final;
+    bool toolbarsVisible() const final;
 
     void setStatusbarVisible(bool) final;
-    bool statusbarVisible() final;
+    bool statusbarVisible() const final;
 
     void setScrollbarsVisible(bool) final;
-    bool scrollbarsVisible() final;
+    bool scrollbarsVisible() const final;
 
     void setMenubarVisible(bool) final;
-    bool menubarVisible() final;
+    bool menubarVisible() const final;
 
     void setResizable(bool) final;
 
     void addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceID) final;
 
     bool canRunBeforeUnloadConfirmPanel() final;
-    bool runBeforeUnloadConfirmPanel(const String& message, Frame&) final;
+    bool runBeforeUnloadConfirmPanel(const String& message, LocalFrame&) final;
 
     void closeWindow() final;
 
-    void runJavaScriptAlert(Frame&, const String&) final;
-    bool runJavaScriptConfirm(Frame&, const String&) final;
-    bool runJavaScriptPrompt(Frame&, const String& message, const String& defaultValue, String& result) final;
+    void runJavaScriptAlert(LocalFrame&, const String&) final;
+    bool runJavaScriptConfirm(LocalFrame&, const String&) final;
+    bool runJavaScriptPrompt(LocalFrame&, const String& message, const String& defaultValue, String& result) final;
 
     void setStatusbarText(const String&) final;
 
@@ -126,17 +127,17 @@ public:
     IntPoint screenToRootView(const IntPoint&) const final;
     IntRect rootViewToScreen(const IntRect&) const final;
     PlatformPageClient platformPageClient() const final;
-    void contentsSizeChanged(Frame&, const IntSize&) const final;
+    void contentsSizeChanged(LocalFrame&, const IntSize&) const final;
 
-    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags, const WTF::String&, WebCore::TextDirection) final;
+    void mouseDidMoveOverElement(const HitTestResult&, OptionSet<PlatformEventModifier>, const WTF::String&, WebCore::TextDirection) final;
 
-    void print(Frame&, const StringWithDirection&) final;
-    void exceededDatabaseQuota(Frame&, const String&, DatabaseDetails) final;
+    void print(LocalFrame&, const StringWithDirection&) final;
+    void exceededDatabaseQuota(LocalFrame&, const String&, DatabaseDetails) final;
     void reachedMaxAppCacheSize(int64_t spaceNeeded) final;
     void reachedApplicationCacheOriginQuota(SecurityOrigin&, int64_t totalSpaceNeeded) final;
 
     // This is a hook for WebCore to tell us what we need to do with the GraphicsLayers.
-    void attachRootGraphicsLayer(Frame&, GraphicsLayer*) final;
+    void attachRootGraphicsLayer(LocalFrame&, GraphicsLayer*) final;
     void setNeedsOneShotDrawingSynchronization() final;
     bool scheduleRenderingUpdate() final;
     void triggerRenderingUpdate() final;
@@ -178,7 +179,7 @@ public:
 
     void setTextIndicator(const WebCore::TextIndicatorData&) const final;
 
-    void runOpenPanel(Frame&, FileChooser&) final;
+    void runOpenPanel(LocalFrame&, FileChooser&) final;
     void loadIconForFiles(const Vector<String>&, FileIconLoader&) final;
 
     void setCursor(const Cursor&) final;
@@ -205,8 +206,6 @@ public:
 #endif
 
     void requestCookieConsent(CompletionHandler<void(WebCore::CookieConsentDecisionResult)>&&) final;
-    void classifyModalContainerControls(Vector<String>&&, CompletionHandler<void(Vector<WebCore::ModalContainerControlType>&&)>&&) final;
-    void decidePolicyForModalContainer(OptionSet<WebCore::ModalContainerControlType>, CompletionHandler<void(WebCore::ModalContainerDecision)>&&) final;
 
     IntPoint accessibilityScreenToRootView(const IntPoint&) const;
     IntRect rootViewToAccessibilityScreen(const IntRect&) const;

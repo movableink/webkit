@@ -43,14 +43,14 @@
 #import <Carbon/Carbon.h>
 #endif
 
-#if PLATFORM(IOS) || ENABLE(UI_PROCESS_PDF_HUD) || PLATFORM(MAC)
+#if PLATFORM(IOS) || PLATFORM(MAC) || PLATFORM(VISION)
 static NSData *pdfData()
 {
     return [NSData dataWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"test" withExtension:@"pdf" subdirectory:@"TestWebKitAPI.resources"]];
 }
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
 
 @interface PDFHostViewController : UIViewController
 + (void)createHostView:(void(^)(id hostViewController))callback forExtensionIdentifier:(NSString *)extensionIdentifier;
@@ -191,7 +191,7 @@ TEST(WKPDFView, BackgroundColor)
 
 #endif
 
-#if ENABLE(UI_PROCESS_PDF_HUD)
+#if ENABLE(PDFKIT_PLUGIN)
 
 static void checkFrame(NSRect frame, CGFloat x, CGFloat y, CGFloat width, CGFloat height)
 {
@@ -414,7 +414,7 @@ TEST(PDFHUD, LoadPDFTypeWithPluginsBlocked)
     checkFrame([webView _pdfHUDs].anyObject.frame, 0, 0, 800, 600);
 }
 
-#endif // ENABLE(UI_PROCESS_PDF_HUD)
+#endif // ENABLE(PDFKIT_PLUGIN)
 
 #if PLATFORM(MAC)
 

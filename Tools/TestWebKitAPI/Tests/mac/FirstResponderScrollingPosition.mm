@@ -30,6 +30,7 @@
 #import <WebKit/WKRetainPtr.h>
 #import <WebKit/WKPage.h>
 #import <WebKit/WKPreferencesPrivate.h>
+#import <WebKit/WKWebViewPrivate.h>
 #import <wtf/RetainPtr.h>
 
 namespace TestWebKitAPI {
@@ -41,7 +42,8 @@ static void didFinishNavigation(WKPageRef, WKNavigationRef, WKTypeRef, const voi
     didFinishLoad = true;
 }
 
-TEST(WebKit, FirstResponderScrollingPosition)
+// FIXME when rdar://107850827 is resolved
+TEST(WebKit, DISABLED_FirstResponderScrollingPosition)
 {
     WKRetainPtr<WKContextRef> context = adoptWK(Util::createContextWithInjectedBundle());
 
@@ -79,6 +81,12 @@ TEST(WebKit, FirstResponderScrollingPosition)
 
     ASSERT_TRUE([webView.platformView() respondsToSelector:@selector(scrollLineDown:)]);
     [webView.platformView() scrollLineDown:nil];
+
+    __block bool done = false;
+    [webView.platformView() _doAfterNextPresentationUpdate:^{
+        done = true;
+    }];
+    Util::run(&done);
 
     EXPECT_JS_EQ(webView.page(), "window.scrollY", "40");
 

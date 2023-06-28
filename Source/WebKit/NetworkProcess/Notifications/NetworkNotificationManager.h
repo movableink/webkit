@@ -38,7 +38,7 @@
 
 namespace WebCore {
 class NotificationResources;
-struct SecurityOriginData;
+class SecurityOriginData;
 }
 
 namespace WebKit {
@@ -76,6 +76,7 @@ private:
     void cancelNotification(const UUID& notificationID) final;
     void clearNotifications(const Vector<UUID>& notificationIDs) final;
     void didDestroyNotification(const UUID& notificationID) final;
+    void pageWasNotifiedOfNotificationPermission() final { }
 
     NetworkSession& m_networkSession;
     std::unique_ptr<WebPushD::Connection> m_connection;

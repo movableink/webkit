@@ -86,7 +86,7 @@ void PopupMenuQt::disconnectClient()
     m_popupClient = 0;
 }
 
-void PopupMenuQt::show(const IntRect& rect, FrameView* view, int index)
+void PopupMenuQt::show(const IntRect& rect, LocalFrameView* view, int index)
 {
     if (!m_popupClient)
         return;

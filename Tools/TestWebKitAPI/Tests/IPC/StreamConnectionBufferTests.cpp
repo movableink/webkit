@@ -33,7 +33,9 @@ namespace TestWebKitAPI {
 
 TEST(StreamConnectionBufferTests, CreateWorks)
 {
-    IPC::StreamClientConnectionBuffer b(8);
+    auto buffer = IPC::StreamClientConnectionBuffer::create(8);
+    ASSERT_TRUE(buffer.has_value());
+    auto& b = *buffer;
     EXPECT_NE(b.data(), nullptr);
     EXPECT_EQ(b.dataSize(), 256u);
     {
@@ -41,7 +43,9 @@ TEST(StreamConnectionBufferTests, CreateWorks)
         ASSERT_TRUE(server.has_value());
         EXPECT_EQ(b.dataSize(), server->dataSize());
     }
-    IPC::StreamClientConnectionBuffer b2(24);
+    auto buffer2 = IPC::StreamClientConnectionBuffer::create(24);
+    ASSERT_TRUE(buffer2.has_value());
+    auto& b2 = *buffer2;
     EXPECT_NE(b2.data(), nullptr);
     EXPECT_EQ(b2.dataSize(), 16777216u);
     {
@@ -60,7 +64,8 @@ public:
 
     void SetUp() override
     {
-        m_client.emplace(bufferSizeLog2());
+        m_client = IPC::StreamClientConnectionBuffer::create(bufferSizeLog2());
+        ASSERT(m_client);
         m_maybeServer = IPC::StreamServerConnectionBuffer::map(m_client->createHandle());
     }
 
@@ -74,13 +79,13 @@ protected:
     std::optional<IPC::StreamServerConnectionBuffer> m_maybeServer;
 };
 
-static void fill(Span<uint8_t> span)
+static void fill(std::span<uint8_t> span)
 {
     for (size_t i = 0; i < span.size(); ++i)
         span[i] = i;
 }
 
-static void expectFilled(Span<uint8_t> span)
+static void expectFilled(std::span<uint8_t> span)
 {
     size_t reportFailureCount = 5;
     for (size_t i = 0; i < span.size() && reportFailureCount; ++i) {

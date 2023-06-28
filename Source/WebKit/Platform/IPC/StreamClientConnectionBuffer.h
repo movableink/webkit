@@ -33,18 +33,17 @@ namespace IPC {
 
 class StreamClientConnectionBuffer : public StreamConnectionBuffer {
 public:
-    explicit StreamClientConnectionBuffer(unsigned dataSizeLog2);
+    static std::optional<StreamClientConnectionBuffer> create(unsigned dataSizeLog2);
+    StreamClientConnectionBuffer(StreamClientConnectionBuffer&&) = default;
+    StreamClientConnectionBuffer& operator=(StreamClientConnectionBuffer&&) = default;
 
-    std::optional<Span<uint8_t>> tryAcquire(Timeout);
-    std::optional<Span<uint8_t>> tryAcquireAll(Timeout);
+    std::optional<std::span<uint8_t>> tryAcquire(Timeout);
+    std::optional<std::span<uint8_t>> tryAcquireAll(Timeout);
 
-    enum class WakeUpServer : bool {
-        No,
-        Yes
-    };
+    enum class WakeUpServer : bool { No, Yes };
     WakeUpServer release(size_t writeSize);
     void resetClientOffset();
-    Span<uint8_t> alignedSpan(size_t offset, size_t limit);
+    std::span<uint8_t> alignedSpan(size_t offset, size_t limit);
     void setSemaphores(IPC::Semaphore&& wakeUp, IPC::Semaphore&& clientWait);
     bool hasSemaphores() const { return m_semaphores.has_value(); }
     void wakeUpServer();
@@ -52,7 +51,8 @@ public:
 private:
     static constexpr size_t minimumMessageSize = StreamConnectionEncoder::minimumMessageSize;
     static constexpr size_t messageAlignment = StreamConnectionEncoder::messageAlignment;
-    static Ref<WebKit::SharedMemory> createMemory(unsigned dataSizeLog2);
+    explicit StreamClientConnectionBuffer(Ref<WebKit::SharedMemory>);
+
     size_t size(size_t offset, size_t limit);
     size_t alignOffset(size_t offset) const { return StreamConnectionBuffer::alignOffset<messageAlignment>(offset, minimumMessageSize); }
     Atomic<ClientOffset>& sharedClientOffset() { return clientOffset(); }
@@ -68,24 +68,28 @@ private:
     std::optional<Semaphores> m_semaphores;
 };
 
-inline Ref<WebKit::SharedMemory> StreamClientConnectionBuffer::createMemory(unsigned dataSizeLog2)
+inline std::optional<StreamClientConnectionBuffer> StreamClientConnectionBuffer::create(unsigned dataSizeLog2)
 {
-    auto size = (static_cast<size_t>(1) << dataSizeLog2) + headerSize();
-    auto memory = WebKit::SharedMemory::allocate(size);
-    if (!memory)
-        CRASH();
-    return memory.releaseNonNull();
-}
+    // Currently expected to be not that big, and offset to fit in size_t with the tag bits.
+    if (dataSizeLog2 >= 31)
+        return std::nullopt;
 
-inline StreamClientConnectionBuffer::StreamClientConnectionBuffer(unsigned dataSizeLog2)
-    : StreamConnectionBuffer(createMemory(dataSizeLog2))
-{
-    ASSERT(dataSizeLog2 < 31u); // Currently expected to be not that big, and offset to fit in size_t with the tag bits.
     // Currently the minimum message size is 16, and as such 32 bytes is not enough to hold one message.
     // The problem happens after initial write and read, because after the read the buffer is split between
     // 15 free bytes and 15 free bytes.
-    ASSERT(dataSizeLog2 > 5);
+    if (dataSizeLog2 <= 5)
+        return std::nullopt;
 
+    auto size = (static_cast<size_t>(1) << dataSizeLog2) + headerSize();
+    auto memory = WebKit::SharedMemory::allocate(size);
+    if (!memory)
+        return std::nullopt;
+    return StreamClientConnectionBuffer { memory.releaseNonNull() };
+}
+
+inline StreamClientConnectionBuffer::StreamClientConnectionBuffer(Ref<WebKit::SharedMemory> memory)
+    : StreamConnectionBuffer(WTFMove(memory))
+{
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(sharedMemorySizeIsValid(m_sharedMemory->size()));
 
     // Read starts from 0 with limit of 0 and reader sleeping.
@@ -94,7 +98,7 @@ inline StreamClientConnectionBuffer::StreamClientConnectionBuffer(unsigned dataS
     sharedClientLimit().store(static_cast<ClientLimit>(0), std::memory_order_relaxed);
 }
 
-inline std::optional<Span<uint8_t>> StreamClientConnectionBuffer::tryAcquire(Timeout timeout)
+inline std::optional<std::span<uint8_t>> StreamClientConnectionBuffer::tryAcquire(Timeout timeout)
 {
     ClientLimit clientLimit = sharedClientLimit().load(std::memory_order_acquire);
     // This would mean we try to send messages after a timeout. It is a programming error.
@@ -125,7 +129,7 @@ inline std::optional<Span<uint8_t>> StreamClientConnectionBuffer::tryAcquire(Tim
     return std::nullopt;
 }
 
-inline std::optional<Span<uint8_t>> StreamClientConnectionBuffer::tryAcquireAll(Timeout timeout)
+inline std::optional<std::span<uint8_t>> StreamClientConnectionBuffer::tryAcquireAll(Timeout timeout)
 {
     // This would mean we try to send messages after a timeout. It is a programming error.
     // Since the value is trusted, we only assert.
@@ -173,7 +177,7 @@ inline void StreamClientConnectionBuffer::resetClientOffset()
     m_clientOffset = 0;
 }
 
-inline Span<uint8_t> StreamClientConnectionBuffer::alignedSpan(size_t offset, size_t limit)
+inline std::span<uint8_t> StreamClientConnectionBuffer::alignedSpan(size_t offset, size_t limit)
 {
     ASSERT(offset < dataSize());
     ASSERT(limit < dataSize());

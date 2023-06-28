@@ -5,6 +5,7 @@ navigator.appName is OK
 navigator.appVersion is OK
 navigator.audioSession is OK
 navigator.canShare() is OK
+navigator.clearAppBadge() is OK
 navigator.clipboard is OK
 navigator.contacts is OK
 navigator.cookieEnabled is OK
@@ -29,9 +30,11 @@ navigator.productSub is OK
 navigator.requestMediaKeySystemAccess() is OK
 navigator.sendBeacon() threw err TypeError: Not enough arguments
 navigator.serviceWorker is OK
+navigator.setAppBadge() is OK
 navigator.setLoggedIn() is OK
 navigator.setLoggedOut() is OK
 navigator.share() is OK
+navigator.standalone is OK
 navigator.storage is OK
 navigator.userActivation is OK
 navigator.userAgent is OK
@@ -39,12 +42,12 @@ navigator.vendor is OK
 navigator.vendorSub is OK
 navigator.wakeLock is OK
 navigator.webdriver is OK
-navigator.xr is OK
 navigator.appCodeName is OK
 navigator.appName is OK
 navigator.appVersion is OK
 navigator.audioSession is OK
 navigator.canShare() is OK
+navigator.clearAppBadge() is OK
 navigator.clipboard is OK
 navigator.contacts is OK
 navigator.cookieEnabled is OK
@@ -69,9 +72,11 @@ navigator.productSub is OK
 navigator.requestMediaKeySystemAccess() is OK
 navigator.sendBeacon() threw err TypeError: Not enough arguments
 navigator.serviceWorker is OK
+navigator.setAppBadge() is OK
 navigator.setLoggedIn() is OK
 navigator.setLoggedOut() is OK
 navigator.share() is OK
+navigator.standalone is OK
 navigator.storage is OK
 navigator.userActivation is OK
 navigator.userAgent is OK
@@ -79,5 +84,4 @@ navigator.vendor is OK
 navigator.vendorSub is OK
 navigator.wakeLock is OK
 navigator.webdriver is OK
-navigator.xr is OK
 

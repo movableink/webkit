@@ -33,7 +33,7 @@
 #include "DocumentFragment.h"
 #include "DragData.h"
 #include "Editor.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "HTMLElement.h"
 #include "Image.h"
 #include "NotImplemented.h"
@@ -126,7 +126,7 @@ Pasteboard::~Pasteboard()
     m_readableData = 0;
 }
 
-void Pasteboard::writeSelection(const SimpleRange& selectedRange, bool canSmartCopyOrDelete, Frame& frame, ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
+void Pasteboard::writeSelection(const SimpleRange& selectedRange, bool canSmartCopyOrDelete, LocalFrame& frame, ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
 {
     if (!m_writableData)
         m_writableData = new QMimeData;
@@ -164,7 +164,7 @@ void Pasteboard::read(PasteboardPlainText& text, PlainTextURLReadingPolicy, std:
         text.text =  data->text();
 }
 
-RefPtr<DocumentFragment> Pasteboard::documentFragment(Frame& frame, const SimpleRange& context,
+RefPtr<DocumentFragment> Pasteboard::documentFragment(LocalFrame& frame, const SimpleRange& context,
                                                           bool allowPlainText, bool& chosePlainText)
 {
     const QMimeData* mimeData = readData();

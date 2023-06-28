@@ -33,14 +33,18 @@
 #import <wtf/URL.h>
 #import <wtf/text/WTFString.h>
 
-#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/ResourceErrorMacAdditions.mm>)
-#import <WebKitAdditions/ResourceErrorMacAdditions.mm>
-#else
-static bool dueToCompromisingNetworkConnectionIntegrity(NSError *)
+static bool failureIsDueToTrackerBlocking(NSError *error)
 {
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+    for (NSError *underlyingError in error.underlyingErrors) {
+        if ([[underlyingError.userInfo objectForKey:@"_NSURLErrorBlockedTrackerFailureKey"] boolValue])
+            return true;
+    }
+#else
+    UNUSED_PARAM(error);
+#endif
     return false;
 }
-#endif
 
 @interface NSError (WebExtras)
 - (NSString *)_web_localizedDescription;
@@ -147,6 +151,7 @@ ResourceError::ErrorRecoveryMethod ResourceError::errorRecoveryMethod() const
 {
     lazyInit();
 
+    bool isRecoverableError { false };
     if ([m_domain isEqualToString:NSURLErrorDomain]) {
         switch (m_errorCode) {
         case NSURLErrorTimedOut:
@@ -168,10 +173,16 @@ ResourceError::ErrorRecoveryMethod ResourceError::errorRecoveryMethod() const
         case NSURLErrorServerCertificateNotYetValid:
         case NSURLErrorClientCertificateRejected:
         case NSURLErrorClientCertificateRequired:
-            if (m_failingURL.protocolIs("https"_s) && (!m_failingURL.port() || WTF::isDefaultPortForProtocol(m_failingURL.port().value(), m_failingURL.protocol())))
-                return ResourceError::ErrorRecoveryMethod::HTTPFallback;
+            isRecoverableError = true;
         }
+    } else if ([m_domain isEqualToString:@"WebKitErrorDomain"]) {
+        // FIXME: These literals should be moved into a central location that is shared with WebKit::API.
+        constexpr auto httpsUpgradeRedirectLoop { 304 };
+        isRecoverableError = m_errorCode == httpsUpgradeRedirectLoop;
     }
+
+    if (isRecoverableError && m_failingURL.protocolIs("https"_s) && (!m_failingURL.port() || WTF::isDefaultPortForProtocol(m_failingURL.port().value(), m_failingURL.protocol())))
+        return ResourceError::ErrorRecoveryMethod::HTTPFallback;
     return ResourceError::ErrorRecoveryMethod::NoRecovery;
 }
 
@@ -209,7 +220,7 @@ void ResourceError::platformLazyInit()
     m_localizedDescription = m_failingURL.string();
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     m_localizedDescription = [m_platformError _web_localizedDescription];
-    m_compromisedNetworkConnectionIntegrity = dueToCompromisingNetworkConnectionIntegrity(m_platformError.get());
+    m_blockedKnownTracker = failureIsDueToTrackerBlocking(m_platformError.get());
     END_BLOCK_OBJC_EXCEPTIONS
 
     m_dataIsUpToDate = true;

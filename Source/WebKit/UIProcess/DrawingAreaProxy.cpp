@@ -30,6 +30,7 @@
 #include "DrawingAreaProxyMessages.h"
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
+#include <WebCore/ScrollView.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/MachSendRight.h>
@@ -49,16 +50,16 @@ DrawingAreaProxy::DrawingAreaProxy(DrawingAreaType type, WebPageProxy& webPagePr
 {
 }
 
-DrawingAreaProxy::~DrawingAreaProxy()
-{
-    for (auto& process : m_processesWithRegisteredDrawingAreaProxyMessageReceiver)
-        process->removeMessageReceiver(Messages::DrawingAreaProxy::messageReceiverName(), m_identifier);
-}
+DrawingAreaProxy::~DrawingAreaProxy() = default;
 
 void DrawingAreaProxy::startReceivingMessages(WebProcessProxy& process)
 {
     process.addMessageReceiver(Messages::DrawingAreaProxy::messageReceiverName(), m_identifier, *this);
-    m_processesWithRegisteredDrawingAreaProxyMessageReceiver.append(process);
+}
+
+void DrawingAreaProxy::stopReceivingMessages(WebProcessProxy& process)
+{
+    process.removeMessageReceiver(Messages::DrawingAreaProxy::messageReceiverName(), m_identifier);
 }
 
 DelegatedScrollingMode DrawingAreaProxy::delegatedScrollingMode() const

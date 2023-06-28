@@ -66,7 +66,7 @@ enum JSType : uint8_t {
     BooleanObjectType,
     NumberObjectType,
     ErrorInstanceType,
-    PureForwardingProxyType,
+    GlobalProxyType,
     DirectArgumentsType,
     ScopedArgumentsType,
     ClonedArgumentsType,
@@ -127,6 +127,7 @@ enum JSType : uint8_t {
     JSWeakSetType,
     WebAssemblyModuleType,
     WebAssemblyInstanceType,
+    WebAssemblyGCObjectType,
     // Start StringObjectType types.
     StringObjectType,
     DerivedStringObjectType,

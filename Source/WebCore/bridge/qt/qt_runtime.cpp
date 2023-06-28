@@ -22,7 +22,7 @@
 
 #include "JSDOMBinding.h"
 #include "JSDOMConvertBufferSource.h"
-#include "JSDOMWindow.h"
+#include "JSLocalDOMWindow.h"
 #include "JSDocument.h"
 #include "JSHTMLElement.h"
 #include "qt_instance.h"
@@ -43,6 +43,8 @@
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <JavaScriptCore/JSTypedArrays.h>
 #include <JavaScriptCore/PropertyNameArray.h>
+#include <JavaScriptCore/NumberObject.h>
+#include <FrameDestructionObserverInlines.h>
 #include <QDateTime>
 #include <QDebug>
 #include <QMetaObject>
@@ -782,13 +784,13 @@ JSValueRef convertQVariantToValue(JSContextRef context, RootObject* root, const 
     if (customRuntimeConversions()->contains(type)) {
         JSGlobalObject* lexicalGlobalObject = toJS(context);
         JSLockHolder locker(lexicalGlobalObject);
-        if (!root->globalObject()->inherits<JSDOMWindow>())
+        if (!root->globalObject()->inherits<JSLocalDOMWindow>())
             return JSValueMakeUndefined(context);
 
-        Document* document = JSDOMWindow::toWrapped(lexicalGlobalObject->vm(), root->globalObject())->document();
+        Document* document = JSLocalDOMWindow::toWrapped(lexicalGlobalObject->vm(), root->globalObject())->document();
         if (!document)
             return JSValueMakeUndefined(context);
-        return toRef(lexicalGlobalObject, customRuntimeConversions()->value(type).toJSValueFunc(lexicalGlobalObject, toJSDOMWindow(document->frame(), currentWorld(*lexicalGlobalObject)), variant));
+        return toRef(lexicalGlobalObject, customRuntimeConversions()->value(type).toJSValueFunc(lexicalGlobalObject, toJSLocalDOMWindow(document->frame(), currentWorld(*lexicalGlobalObject)), variant));
     }
 
     if (type == QMetaType::QVariantMap) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -32,9 +32,7 @@
 #import "FileList.h"
 #import "FloatRoundedRect.h"
 #import "FocusController.h"
-#import "Frame.h"
 #import "FrameSelection.h"
-#import "FrameView.h"
 #import "GeometryUtilities.h"
 #import "GraphicsContext.h"
 #import "HTMLAttachmentElement.h"
@@ -47,6 +45,8 @@
 #import "ImageControlsButtonMac.h"
 #import "LocalCurrentGraphicsContext.h"
 #import "LocalDefaultSystemAppearance.h"
+#import "LocalFrame.h"
+#import "LocalFrameView.h"
 #import "LocalizedStrings.h"
 #import "Page.h"
 #import "PaintInfo.h"
@@ -56,6 +56,7 @@
 #import "RenderMeter.h"
 #import "RenderProgress.h"
 #import "RenderSlider.h"
+#import "RenderStyleSetters.h"
 #import "RenderView.h"
 #import "SliderThumbElement.h"
 #import "StringTruncator.h"
@@ -66,12 +67,13 @@
 #import <CoreServices/CoreServices.h>
 #import <math.h>
 #import <pal/spi/cg/CoreGraphicsSPI.h>
-#import <pal/spi/cocoa/NSColorSPI.h>
 #import <pal/spi/mac/CoreUISPI.h>
 #import <pal/spi/mac/NSAppearanceSPI.h>
 #import <pal/spi/mac/NSCellSPI.h>
+#import <pal/spi/mac/NSColorSPI.h>
 #import <pal/spi/mac/NSImageSPI.h>
 #import <pal/spi/mac/NSSharingServicePickerSPI.h>
+#import <pal/spi/mac/NSSpellCheckerSPI.h>
 #import <wtf/MathExtras.h>
 #import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/RetainPtr.h>
@@ -310,9 +312,9 @@ Color RenderThemeMac::platformActiveListBoxSelectionBackgroundColor(OptionSet<St
     return colorFromCocoaColor([NSColor selectedContentBackgroundColor]);
 #else
     UNUSED_PARAM(options);
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     return colorFromCocoaColor([NSColor alternateSelectedControlColor]);
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
 }
 
@@ -369,6 +371,28 @@ Color RenderThemeMac::platformDefaultButtonTextColor(OptionSet<StyleColorOptions
 {
     LocalDefaultSystemAppearance localAppearance(options.contains(StyleColorOptions::UseDarkAppearance));
     return colorFromCocoaColor([NSColor alternateSelectedControlTextColor]);
+}
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/RenderThemeMacAdditions.mm>
+#else
+#if HAVE(NSSPELLCHECKER_CORRECTION_INDICATOR_UNDERLINE_COLOR)
+static inline bool usePlatformColorForAutocorrectionReplacementMarker()
+{
+    return false;
+}
+#endif
+#endif
+
+Color RenderThemeMac::platformAutocorrectionReplacementMarkerColor(OptionSet<StyleColorOptions> options) const
+{
+#if HAVE(NSSPELLCHECKER_CORRECTION_INDICATOR_UNDERLINE_COLOR)
+    if (usePlatformColorForAutocorrectionReplacementMarker() && [NSSpellChecker respondsToSelector:@selector(correctionIndicatorUnderlineColor)]) {
+        LocalDefaultSystemAppearance localAppearance(options.contains(StyleColorOptions::UseDarkAppearance));
+        return colorFromCocoaColor([NSSpellChecker correctionIndicatorUnderlineColor]);
+    }
+#endif
+    return RenderThemeCocoa::platformAutocorrectionReplacementMarkerColor(options);
 }
 
 static Color activeButtonTextColor()
@@ -456,9 +480,9 @@ Color RenderThemeMac::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOpt
 #if HAVE(OS_DARK_MODE_SUPPORT)
             return systemAppearanceColor(cache.systemControlAccentColor, @selector(controlAccentColor));
 #else
-            ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             return systemAppearanceColor(cache.systemControlAccentColor, @selector(alternateSelectedControlColor));
-            ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
 
         case CSSValueAppleSystemSelectedContentBackground:
@@ -589,6 +613,14 @@ Color RenderThemeMac::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOpt
                 return @selector(tertiaryLabelColor);
             case CSSValueAppleSystemQuaternaryLabel:
                 return @selector(quaternaryLabelColor);
+#if HAVE(NSCOLOR_FILL_COLOR_HIERARCHY)
+            case CSSValueAppleSystemTertiaryFill:
+                // FIXME: Remove selector check when AppKit without tertiary-fill is not used anymore; see rdar://108340604.
+                if ([NSColor respondsToSelector:@selector(tertiarySystemFillColor)])
+                    return @selector(tertiarySystemFillColor);
+                // Handled below.
+                return nullptr;
+#endif
             case CSSValueAppleSystemGrid:
                 return @selector(gridColor);
             case CSSValueAppleSystemSeparator:
@@ -692,6 +724,12 @@ Color RenderThemeMac::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOpt
             ASSERT(alternateColors.count >= 2);
             return semanticColorFromNSColor(alternateColors[1]);
         }
+
+        // FIXME: Remove this fallback when AppKit without tertiary-fill is not used anymore; see rdar://108340604.
+        case CSSValueAppleSystemTertiaryFill:
+            if (localAppearance.usingDarkAppearance())
+                return { SRGBA<uint8_t> { 255, 255, 255, 13 }, Color::Flags::Semantic };
+            return { SRGBA<uint8_t> { 0, 0, 0, 13 }, Color::Flags::Semantic };
 
         case CSSValueBackground:
             // Use platform-independent value returned by base class.
@@ -1055,7 +1093,8 @@ void RenderThemeMac::adjustMenuListStyle(RenderStyle& style, const Element* e) c
     style.setHeight(Length(LengthType::Auto));
 
     // White-space is locked to pre
-    style.setWhiteSpace(WhiteSpace::Pre);
+    style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
+    style.setTextWrap(TextWrap::NoWrap);
 
     // Set the button's vertical size.
     setSizeFromFont(style, menuListButtonSizes());
@@ -1445,18 +1484,18 @@ static void paintAttachmentIcon(const RenderAttachment& attachment, GraphicsCont
 static std::pair<RefPtr<Image>, float> createAttachmentPlaceholderImage(float deviceScaleFactor, const AttachmentLayout& layout)
 {
 #if HAVE(ALTERNATE_ICONS)
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     auto image = [NSImage _imageWithSystemSymbolName:@"arrow.down.circle"];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
     auto imageSize = FloatSize([image size]);
     auto imageSizeScales = deviceScaleFactor * layout.iconRect.size() / imageSize;
     imageSize.scale(std::min(imageSizeScales.width(), imageSizeScales.height()));
     auto imageRect = NSMakeRect(0, 0, imageSize.width(), imageSize.height());
     auto cgImage = [image CGImageForProposedRect:&imageRect context:nil hints:@{
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         NSImageHintSymbolFont : [NSFont systemFontOfSize:32],
         NSImageHintSymbolScale : @(NSImageSymbolScaleMedium)
-        ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
     }];
     return { BitmapImage::create(cgImage), deviceScaleFactor };
 #else
@@ -1494,9 +1533,9 @@ static void paintAttachmentTitleBackground(const RenderAttachment& attachment, G
 
     Color backgroundColor;
     if (attachment.frame().selection().isFocusedAndActive()) {
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         backgroundColor = colorFromCocoaColor([NSColor alternateSelectedControlColor]);
-        ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
     } else
         backgroundColor = attachmentTitleInactiveBackgroundColor;
 
@@ -1560,13 +1599,18 @@ bool RenderThemeMac::paintAttachment(const RenderObject& renderer, const PaintIn
 
     const RenderAttachment& attachment = downcast<RenderAttachment>(renderer);
 
+    if (attachment.paintWideLayoutAttachmentOnly(paintInfo, paintRect.location()))
+        return true;
+
+    HTMLAttachmentElement& element = attachment.attachmentElement();
+
     auto layoutStyle = AttachmentLayoutStyle::NonSelected;
     if (attachment.selectionState() != RenderObject::HighlightState::None && paintInfo.phase != PaintPhase::Selection)
         layoutStyle = AttachmentLayoutStyle::Selected;
 
     AttachmentLayout layout(attachment, layoutStyle);
 
-    auto& progressString = attachment.attachmentElement().attributeWithoutSynchronization(progressAttr);
+    auto& progressString = element.attributeWithoutSynchronization(progressAttr);
     bool validProgress = false;
     float progress = 0;
     if (!progressString.isEmpty())
@@ -1581,19 +1625,23 @@ bool RenderThemeMac::paintAttachment(const RenderObject& renderer, const PaintIn
 
     bool usePlaceholder = validProgress && !progress;
 
-    paintAttachmentIconBackground(attachment, context, layout);
+    if (!element.isImageOnly())
+        paintAttachmentIconBackground(attachment, context, layout);
+
     if (usePlaceholder)
         paintAttachmentIconPlaceholder(attachment, context, layout);
     else
         paintAttachmentIcon(attachment, context, layout);
 
-    paintAttachmentTitleBackground(attachment, context, layout);
-    paintAttachmentText(context, &layout);
+    if (!element.isImageOnly()) {
+        paintAttachmentTitleBackground(attachment, context, layout);
+        paintAttachmentText(context, &layout);
+    }
 
     if (validProgress && progress)
         paintAttachmentProgress(attachment, context, layout, progress);
 
-    if (usePlaceholder)
+    if (usePlaceholder && !element.isImageOnly())
         paintAttachmentPlaceholderBorder(attachment, context, layout);
 
     return true;

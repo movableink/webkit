@@ -47,6 +47,7 @@
 #include <WebCore/InspectorController.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/IntSize.h>
+#include <WebCore/JSLocalDOMWindow.h>
 #include <WebCore/NavigationScheduler.h>
 #include <WebCore/NetworkingContext.h>
 #include <WebCore/ResourceRequest.h>
@@ -199,7 +200,7 @@ void QWebFrameAdapter::addToJavaScriptWindowObject(const QString& name, QObject*
     if (!pageAdapter->settings->testAttribute(QWebSettings::JavascriptEnabled))
         return;
     JSC::Bindings::QtInstance::ValueOwnership valueOwnership = static_cast<JSC::Bindings::QtInstance::ValueOwnership>(ownership);
-    JSDOMWindow* window = toJSDOMWindow(frame, mainThreadNormalWorld());
+    JSLocalDOMWindow* window = toJSLocalDOMWindow(frame, mainThreadNormalWorld());
     JSC::Bindings::RootObject* root;
     if (valueOwnership == JSC::Bindings::QtInstance::QtOwnership)
         root = frame->script().cacheableBindingRootObject();
@@ -348,7 +349,8 @@ void QWebFrameAdapter::init(QWebPageAdapter* pageAdapter, QWebFrameData* frameDa
 
 QWebFrameAdapter* QWebFrameAdapter::kit(const Frame* frame)
 {
-    return static_cast<const FrameLoaderClientQt&>(frame->loader().client()).webFrame();
+    auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+    return static_cast<const FrameLoaderClientQt&>(localFrame->loader().client()).webFrame();
 }
 
 QUrl QWebFrameAdapter::ensureAbsoluteUrl(const QUrl& url)
@@ -413,7 +415,7 @@ void QWebFrameAdapter::clearCoreFrame()
 }
 
 
-static inline bool isCoreFrameClear(WebCore::Frame* frame)
+static inline bool isCoreFrameClear(WebCore::LocalFrame* frame)
 {
     return frame->document()->url().isEmpty();
 }
@@ -497,7 +499,7 @@ void QWebFrameAdapter::renderRelativeCoords(QPainter* painter, int layers, const
     if (vector.isEmpty())
         return;
 
-    WebCore::FrameView* view = frame->view();
+    WebCore::LocalFrameView* view = frame->view();
     view->updateLayoutAndStyleIfNeededRecursive();
 
     if (layers & ContentsLayer) {
@@ -543,7 +545,7 @@ void QWebFrameAdapter::renderFrameExtras(GraphicsContext& context, int layers, c
     if (!(layers & (PanIconLayer | ScrollBarLayer)))
         return;
     QPainter* painter = context.platformContext()->painter();
-    WebCore::FrameView* view = frame->view();
+    WebCore::LocalFrameView* view = frame->view();
     QVector<QRect> vector = clip.rects();
     for (int i = 0; i < vector.size(); ++i) {
         const QRect& clipRect = vector.at(i);
@@ -619,7 +621,7 @@ bool QWebFrameAdapter::renderFromTiledBackingStore(QPainter* painter, const QReg
 
     GraphicsContext context(painter);
 
-    WebCore::FrameView* view = frame->view();
+    WebCore::LocalFrameView* view = frame->view();
 
     int scrollX = view->scrollX();
     int scrollY = view->scrollY();
@@ -677,7 +679,7 @@ QList<QObject*> QWebFrameAdapter::childFrames() const
 {
     QList<QObject*> originatingObjects;
     if (frame) {
-        for (AbstractFrame* child = frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
+        for (Frame* child = frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
             auto* childLocalFrame = dynamicDowncast<WebCore::LocalFrame>(child);
             if (childLocalFrame) {
                 FrameLoader& loader = childLocalFrame->loader();
@@ -722,7 +724,7 @@ void QWebFrameAdapter::setScrollBarPolicy(Qt::Orientation orientation, Qt::Scrol
 
 void QWebFrameAdapter::scrollToAnchor(const QString &anchor)
 {
-    FrameView* view = frame->view();
+    LocalFrameView* view = frame->view();
     if (view)
         view->scrollToFragment(URL(QUrl(anchor)));
 }
@@ -828,7 +830,7 @@ QWebHitTestResultPrivate::QWebHitTestResultPrivate(const WebCore::HitTestResult 
     if (img)
         pixmap = QPixmap::fromImage(img->nativeImageForCurrentFrame()->platformImage());
 
-    WebCore::Frame *wframe = hitTest.targetFrame();
+    WebCore::LocalFrame *wframe = hitTest.targetFrame();
     if (wframe) {
         linkTargetFrame = QWebFrameAdapter::kit(wframe)->handle();
         webCoreFrame = wframe;
@@ -840,7 +842,7 @@ QWebHitTestResultPrivate::QWebHitTestResultPrivate(const WebCore::HitTestResult 
     isContentSelected = hitTest.isSelected();
     isScrollBar = hitTest.scrollbar();
 
-    WebCore::Frame *innerNodeFrame = hitTest.innerNodeFrame();
+    WebCore::LocalFrame *innerNodeFrame = hitTest.innerNodeFrame();
     if (innerNodeFrame)
         frame = QWebFrameAdapter::kit(innerNodeFrame)->handle();
 
@@ -932,7 +934,7 @@ QSize QWebFrameAdapter::customLayoutSize() const
 void QWebFrameAdapter::setCustomLayoutSize(const QSize& size)
 {
     ASSERT(&pageAdapter->mainFrameAdapter() == this);
-    FrameView* view = frame->view();
+    LocalFrameView* view = frame->view();
     ASSERT(view);
 
     if (size.isValid()) {
@@ -947,7 +949,7 @@ void QWebFrameAdapter::setCustomLayoutSize(const QSize& size)
 void QWebFrameAdapter::setFixedVisibleContentRect(const QRect& rect)
 {
     ASSERT(&pageAdapter->mainFrameAdapter() == this);
-    FrameView* view = frame->view();
+    LocalFrameView* view = frame->view();
     ASSERT(view);
     view->setFixedVisibleContentRect(rect);
 }
@@ -955,7 +957,7 @@ void QWebFrameAdapter::setFixedVisibleContentRect(const QRect& rect)
 void QWebFrameAdapter::setViewportSize(const QSize& size)
 {
     ASSERT(&pageAdapter->mainFrameAdapter() == this);
-    FrameView* view = frame->view();
+    LocalFrameView* view = frame->view();
     ASSERT(view);
     view->resize(size);
     if (view->needsLayout())

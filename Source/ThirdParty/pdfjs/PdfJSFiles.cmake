@@ -191,6 +191,8 @@ set(PdfJSFiles
     ${THIRDPARTY_DIR}/pdfjs/web/images/cursor-editorInk.svg
     ${THIRDPARTY_DIR}/pdfjs/web/images/findbarButton-next.svg
     ${THIRDPARTY_DIR}/pdfjs/web/images/findbarButton-previous.svg
+    ${THIRDPARTY_DIR}/pdfjs/web/images/gv-toolbarButton-download.svg
+    ${THIRDPARTY_DIR}/pdfjs/web/images/gv-toolbarButton-openinapp.svg
     ${THIRDPARTY_DIR}/pdfjs/web/images/loading-dark.svg
     ${THIRDPARTY_DIR}/pdfjs/web/images/loading-icon.gif
     ${THIRDPARTY_DIR}/pdfjs/web/images/loading.svg
@@ -347,10 +349,6 @@ set(PdfJSFiles
     ${THIRDPARTY_DIR}/pdfjs/web/standard_fonts/FoxitFixedBold.pfb
     ${THIRDPARTY_DIR}/pdfjs/web/standard_fonts/FoxitFixedBoldItalic.pfb
     ${THIRDPARTY_DIR}/pdfjs/web/standard_fonts/FoxitFixedItalic.pfb
-    ${THIRDPARTY_DIR}/pdfjs/web/standard_fonts/FoxitSans.pfb
-    ${THIRDPARTY_DIR}/pdfjs/web/standard_fonts/FoxitSansBold.pfb
-    ${THIRDPARTY_DIR}/pdfjs/web/standard_fonts/FoxitSansBoldItalic.pfb
-    ${THIRDPARTY_DIR}/pdfjs/web/standard_fonts/FoxitSansItalic.pfb
     ${THIRDPARTY_DIR}/pdfjs/web/standard_fonts/FoxitSerif.pfb
     ${THIRDPARTY_DIR}/pdfjs/web/standard_fonts/FoxitSerifBold.pfb
     ${THIRDPARTY_DIR}/pdfjs/web/standard_fonts/FoxitSerifBoldItalic.pfb

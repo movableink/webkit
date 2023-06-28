@@ -32,10 +32,12 @@
 #import "IOSurface.h"
 #import "LengthFunctions.h"
 #import "LocalCurrentGraphicsContext.h"
+#import "MediaPlayerEnumsCocoa.h"
 #import "Model.h"
 #import "PlatformCAAnimationCocoa.h"
 #import "PlatformCAFilters.h"
 #import "PlatformCALayerContentsDelayedReleaser.h"
+#import "PlatformCALayerDelegatedContents.h"
 #import "ScrollbarThemeMac.h"
 #import "TileController.h"
 #import "TiledBacking.h"
@@ -786,18 +788,11 @@ void PlatformCALayerCocoa::setContents(CFTypeRef value)
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
-#if HAVE(IOSURFACE)
-void PlatformCALayerCocoa::setContents(const WebCore::IOSurface& surface)
+void PlatformCALayerCocoa::setDelegatedContents(const PlatformCALayerInProcessDelegatedContents& contents)
 {
-    setContents(surface.asLayerContents());
+    if (!contents.finishedFence || contents.finishedFence->waitFor(delegatedContentsFinishedTimeout))
+        setContents(contents.surface.asLayerContents());
 }
-
-void PlatformCALayerCocoa::setContents(const WTF::MachSendRight& surfaceHandle)
-{
-    auto surface = WebCore::IOSurface::createFromSendRight(surfaceHandle.copySendRight());
-    setContents(*surface);
-}
-#endif
 
 void PlatformCALayerCocoa::setContentsRect(const FloatRect& value)
 {
@@ -960,6 +955,23 @@ void PlatformCALayerCocoa::setAntialiasesEdges(bool antialiases)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     [m_layer setEdgeAntialiasingMask:antialiases ? (kCALayerLeftEdge | kCALayerRightEdge | kCALayerBottomEdge | kCALayerTopEdge) : 0];
+    END_BLOCK_OBJC_EXCEPTIONS
+}
+
+MediaPlayerVideoGravity PlatformCALayerCocoa::videoGravity() const
+{
+    BEGIN_BLOCK_OBJC_EXCEPTIONS
+    if ([m_layer respondsToSelector:@selector(videoGravity)])
+        return convertAVLayerToMediaPlayerVideoGravity([(AVPlayerLayer *)m_layer videoGravity]);
+    END_BLOCK_OBJC_EXCEPTIONS
+    return MediaPlayerVideoGravity::ResizeAspect;
+}
+
+void PlatformCALayerCocoa::setVideoGravity(MediaPlayerVideoGravity gravity)
+{
+    BEGIN_BLOCK_OBJC_EXCEPTIONS
+    if ([m_layer respondsToSelector:@selector(setVideoGravity:)])
+        [(AVPlayerLayer *)m_layer setVideoGravity:convertMediaPlayerToAVLayerVideoGravity(gravity)];
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
@@ -1193,14 +1205,16 @@ PlatformCALayer::RepaintRectList PlatformCALayer::collectRectsToPaint(GraphicsCo
     return dirtyRects;
 }
 
-void PlatformCALayer::drawLayerContents(GraphicsContext& graphicsContext, WebCore::PlatformCALayer* platformCALayer, RepaintRectList& dirtyRects, GraphicsLayerPaintBehavior layerPaintBehavior)
+void PlatformCALayer::drawLayerContents(GraphicsContext& graphicsContext, WebCore::PlatformCALayer* platformCALayer, RepaintRectList& dirtyRects, OptionSet<GraphicsLayerPaintBehavior> layerPaintBehavior)
 {
     WebCore::PlatformCALayerClient* layerContents = platformCALayer->owner();
     if (!layerContents)
         return;
 
-    if (!layerContents->platformCALayerRepaintCount(platformCALayer))
-        layerPaintBehavior |= GraphicsLayerPaintFirstTilePaint;
+    if (!layerPaintBehavior.contains(GraphicsLayerPaintBehavior::ForceSynchronousImageDecode)) {
+        if (!layerContents->platformCALayerRepaintCount(platformCALayer))
+            layerPaintBehavior.add(GraphicsLayerPaintBehavior::DefaultAsynchronousImageDecode);
+    }
 
     {
         GraphicsContextStateSaver saver(graphicsContext);
@@ -1208,7 +1222,6 @@ void PlatformCALayer::drawLayerContents(GraphicsContext& graphicsContext, WebCor
 #if PLATFORM(IOS_FAMILY)
         std::optional<FontAntialiasingStateSaver> fontAntialiasingState;
 #endif
-
         // We never use CompositingCoordinatesOrientation::BottomUp on Mac.
         ASSERT(layerContents->platformCALayerContentsOrientation() == GraphicsLayer::CompositingCoordinatesOrientation::TopDown);
 
@@ -1220,8 +1233,6 @@ void PlatformCALayer::drawLayerContents(GraphicsContext& graphicsContext, WebCor
             fontAntialiasingState.emplace(context, !![platformCALayer->platformLayer() isOpaque]);
             fontAntialiasingState->setup([WAKWindow hasLandscapeOrientation]);
 #endif
-            graphicsContext.setIsCALayerContext(true);
-            graphicsContext.setIsAcceleratedContext(platformCALayer->acceleratesDrawing());
         }
 
         {

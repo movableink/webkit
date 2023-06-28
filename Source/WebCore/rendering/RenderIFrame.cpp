@@ -26,10 +26,13 @@
 #include "config.h"
 #include "RenderIFrame.h"
 
-#include "Frame.h"
-#include "FrameView.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "Settings.h"
 #include <wtf/IsoMallocInlines.h>
@@ -68,7 +71,7 @@ bool RenderIFrame::requiresLayer() const
 
 RenderView* RenderIFrame::contentRootRenderer() const
 {
-    FrameView* childFrameView = childView();
+    auto* childFrameView = childView();
     auto* localFrame = childFrameView ? dynamicDowncast<LocalFrame>(childFrameView->frame()) : nullptr;
     return localFrame ? localFrame->contentRenderer() : nullptr;
 }

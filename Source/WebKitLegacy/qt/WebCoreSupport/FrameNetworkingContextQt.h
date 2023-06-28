@@ -26,10 +26,10 @@ namespace WebCore {
 
 class FrameNetworkingContextQt : public FrameNetworkingContext {
 public:
-    static Ref<FrameNetworkingContextQt> create(Frame*, QObject* originatingObject, bool mimeSniffingEnabled);
+    static Ref<FrameNetworkingContextQt> create(LocalFrame*, QObject* originatingObject, bool mimeSniffingEnabled);
 
 private:
-    FrameNetworkingContextQt(Frame*, QObject* originatingObject, bool mimeSniffingEnabled);
+    FrameNetworkingContextQt(LocalFrame*, QObject* originatingObject, bool mimeSniffingEnabled);
     void setSession(std::unique_ptr<NetworkStorageSession>&&);
 
     NetworkStorageSession* storageSession() const override;

@@ -25,14 +25,9 @@
 #include "config.h"
 #include "GeneratedSerializers.h"
 
-template<size_t...> struct MembersInCorrectOrder;
-template<size_t onlyOffset> struct MembersInCorrectOrder<onlyOffset> { static constexpr bool value = true; };
-template<size_t firstOffset, size_t secondOffset, size_t... remainingOffsets> struct MembersInCorrectOrder<firstOffset, secondOffset, remainingOffsets...> {
-    static constexpr bool value = firstOffset > secondOffset ? false : MembersInCorrectOrder<secondOffset, remainingOffsets...>::value;
-};
-
-#if COMPILER(GCC)
-IGNORE_WARNINGS_BEGIN("invalid-offsetof")
+#include "CommonHeader.h"
+#if ENABLE(TEST_FEATURE)
+#include "CommonHeader.h"
 #endif
 #if ENABLE(TEST_FEATURE)
 #include "FirstMemberType.h"
@@ -50,9 +45,50 @@ IGNORE_WARNINGS_BEGIN("invalid-offsetof")
 #include <WebCore/FloatBoxExtent.h>
 #include <WebCore/InheritanceGrandchild.h>
 #include <WebCore/InheritsFrom.h>
+#include <WebCore/MoveOnlyBaseClass.h>
+#include <WebCore/MoveOnlyDerivedClass.h>
 #include <WebCore/TimingFunction.h>
 #include <wtf/CreateUsingClass.h>
 #include <wtf/Seconds.h>
+
+template<size_t...> struct MembersInCorrectOrder;
+template<size_t onlyOffset> struct MembersInCorrectOrder<onlyOffset> { static constexpr bool value = true; };
+template<size_t firstOffset, size_t secondOffset, size_t... remainingOffsets> struct MembersInCorrectOrder<firstOffset, secondOffset, remainingOffsets...> {
+    static constexpr bool value = firstOffset > secondOffset ? false : MembersInCorrectOrder<secondOffset, remainingOffsets...>::value;
+};
+
+template<bool, bool> struct VirtualTableAndRefCountOverhead;
+template<> struct VirtualTableAndRefCountOverhead<true, true> {
+    virtual ~VirtualTableAndRefCountOverhead() { }
+    unsigned refCount;
+#if ASSERT_ENABLED
+    bool m_isOwnedByMainThread;
+    bool m_areThreadingChecksEnabled;
+#endif
+#if CHECK_REF_COUNTED_LIFECYCLE
+    bool m_deletionHasBegun;
+    bool m_adoptionIsRequired;
+#endif
+};
+template<> struct VirtualTableAndRefCountOverhead<false, true> {
+    unsigned refCount;
+#if ASSERT_ENABLED
+    bool m_isOwnedByMainThread;
+    bool m_areThreadingChecksEnabled;
+#endif
+#if CHECK_REF_COUNTED_LIFECYCLE
+    bool m_deletionHasBegun;
+    bool m_adoptionIsRequired;
+#endif
+};
+template<> struct VirtualTableAndRefCountOverhead<true, false> {
+    virtual ~VirtualTableAndRefCountOverhead() { }
+};
+template<> struct VirtualTableAndRefCountOverhead<false, false> { };
+
+#if COMPILER(GCC)
+IGNORE_WARNINGS_BEGIN("invalid-offsetof")
+#endif
 
 namespace IPC {
 
@@ -72,6 +108,14 @@ void ArgumentCoder<Namespace::Subnamespace::StructName>::encode(Encoder& encoder
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.secondMemberName)>, SecondMemberType>);
 #endif
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.nullableTestMember)>, RetainPtr<CFTypeRef>>);
+    struct ShouldBeSameSizeAsStructName : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<Namespace::Subnamespace::StructName>, false> {
+        FirstMemberType firstMemberName;
+#if ENABLE(SECOND_MEMBER)
+        SecondMemberType secondMemberName;
+#endif
+        RetainPtr<CFTypeRef> nullableTestMember;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsStructName) == sizeof(Namespace::Subnamespace::StructName));
     static_assert(MembersInCorrectOrder<0
         , offsetof(Namespace::Subnamespace::StructName, firstMemberName)
 #if ENABLE(SECOND_MEMBER)
@@ -95,6 +139,14 @@ void ArgumentCoder<Namespace::Subnamespace::StructName>::encode(OtherEncoder& en
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.secondMemberName)>, SecondMemberType>);
 #endif
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.nullableTestMember)>, RetainPtr<CFTypeRef>>);
+    struct ShouldBeSameSizeAsStructName : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<Namespace::Subnamespace::StructName>, false> {
+        FirstMemberType firstMemberName;
+#if ENABLE(SECOND_MEMBER)
+        SecondMemberType secondMemberName;
+#endif
+        RetainPtr<CFTypeRef> nullableTestMember;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsStructName) == sizeof(Namespace::Subnamespace::StructName));
     static_assert(MembersInCorrectOrder<0
         , offsetof(Namespace::Subnamespace::StructName, firstMemberName)
 #if ENABLE(SECOND_MEMBER)
@@ -154,14 +206,19 @@ void ArgumentCoder<Namespace::OtherClass>::encode(Encoder& encoder, const Namesp
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.a)>, int>);
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.b)>, bool>);
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.dataDetectorResults)>, RetainPtr<NSArray>>);
+    struct ShouldBeSameSizeAsOtherClass : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<Namespace::OtherClass>, false> {
+        bool isNull;
+        int a;
+        bool b : 1;
+        RetainPtr<NSArray> dataDetectorResults;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsOtherClass) == sizeof(Namespace::OtherClass));
     static_assert(MembersInCorrectOrder<0
         , offsetof(Namespace::OtherClass, isNull)
         , offsetof(Namespace::OtherClass, a)
         , offsetof(Namespace::OtherClass, dataDetectorResults)
     >::value);
     encoder << instance.isNull;
-    if (instance.isNull)
-        return;
     encoder << instance.a;
     encoder << instance.b;
     encoder << instance.dataDetectorResults;
@@ -172,8 +229,6 @@ std::optional<Namespace::OtherClass> ArgumentCoder<Namespace::OtherClass>::decod
     auto isNull = decoder.decode<bool>();
     if (!isNull)
         return std::nullopt;
-    if (*isNull)
-        return { Namespace::OtherClass { } };
 
     auto a = decoder.decode<int>();
     if (!a)
@@ -266,6 +321,16 @@ void ArgumentCoder<Namespace::EmptyConstructorNullable>::encode(Encoder& encoder
 #if CONDITION_AROUND_M_TYPE_AND_M_VALUE
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.m_value)>, OtherMemberType>);
 #endif
+    struct ShouldBeSameSizeAsEmptyConstructorNullable : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<Namespace::EmptyConstructorNullable>, false> {
+        bool m_isNull;
+#if CONDITION_AROUND_M_TYPE_AND_M_VALUE
+        MemberType m_type;
+#endif
+#if CONDITION_AROUND_M_TYPE_AND_M_VALUE
+        OtherMemberType m_value;
+#endif
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsEmptyConstructorNullable) == sizeof(Namespace::EmptyConstructorNullable));
     static_assert(MembersInCorrectOrder<0
         , offsetof(Namespace::EmptyConstructorNullable, m_isNull)
 #if CONDITION_AROUND_M_TYPE_AND_M_VALUE
@@ -276,8 +341,6 @@ void ArgumentCoder<Namespace::EmptyConstructorNullable>::encode(Encoder& encoder
 #endif
     >::value);
     encoder << instance.m_isNull;
-    if (instance.m_isNull)
-        return;
 #if CONDITION_AROUND_M_TYPE_AND_M_VALUE
     encoder << instance.m_type;
 #endif
@@ -291,8 +354,6 @@ std::optional<Namespace::EmptyConstructorNullable> ArgumentCoder<Namespace::Empt
     auto m_isNull = decoder.decode<bool>();
     if (!m_isNull)
         return std::nullopt;
-    if (*m_isNull)
-        return { Namespace::EmptyConstructorNullable { } };
 
 #if CONDITION_AROUND_M_TYPE_AND_M_VALUE
     auto m_type = decoder.decode<MemberType>();
@@ -321,6 +382,10 @@ std::optional<Namespace::EmptyConstructorNullable> ArgumentCoder<Namespace::Empt
 void ArgumentCoder<WithoutNamespace>::encode(Encoder& encoder, const WithoutNamespace& instance)
 {
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.a)>, int>);
+    struct ShouldBeSameSizeAsWithoutNamespace : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<WithoutNamespace>, false> {
+        int a;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsWithoutNamespace) == sizeof(WithoutNamespace));
     static_assert(MembersInCorrectOrder<0
         , offsetof(WithoutNamespace, a)
     >::value);
@@ -344,6 +409,10 @@ std::optional<WithoutNamespace> ArgumentCoder<WithoutNamespace>::decode(Decoder&
 void ArgumentCoder<WithoutNamespaceWithAttributes>::encode(Encoder& encoder, const WithoutNamespaceWithAttributes& instance)
 {
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.a)>, int>);
+    struct ShouldBeSameSizeAsWithoutNamespaceWithAttributes : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<WithoutNamespaceWithAttributes>, false> {
+        int a;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsWithoutNamespaceWithAttributes) == sizeof(WithoutNamespaceWithAttributes));
     static_assert(MembersInCorrectOrder<0
         , offsetof(WithoutNamespaceWithAttributes, a)
     >::value);
@@ -353,6 +422,10 @@ void ArgumentCoder<WithoutNamespaceWithAttributes>::encode(Encoder& encoder, con
 void ArgumentCoder<WithoutNamespaceWithAttributes>::encode(OtherEncoder& encoder, const WithoutNamespaceWithAttributes& instance)
 {
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.a)>, int>);
+    struct ShouldBeSameSizeAsWithoutNamespaceWithAttributes : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<WithoutNamespaceWithAttributes>, false> {
+        int a;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsWithoutNamespaceWithAttributes) == sizeof(WithoutNamespaceWithAttributes));
     static_assert(MembersInCorrectOrder<0
         , offsetof(WithoutNamespaceWithAttributes, a)
     >::value);
@@ -478,6 +551,10 @@ std::optional<WTF::Seconds> ArgumentCoder<WTF::Seconds>::decode(Decoder& decoder
 void ArgumentCoder<WTF::CreateUsingClass>::encode(Encoder& encoder, const WTF::CreateUsingClass& instance)
 {
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.value)>, double>);
+    struct ShouldBeSameSizeAsCreateUsingClass : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<WTF::CreateUsingClass>, false> {
+        double value;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsCreateUsingClass) == sizeof(WTF::CreateUsingClass));
     static_assert(MembersInCorrectOrder<0
         , offsetof(WTF::CreateUsingClass, value)
     >::value);
@@ -543,6 +620,11 @@ void ArgumentCoder<NullableSoftLinkedMember>::encode(Encoder& encoder, const Nul
 {
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.firstMember)>, RetainPtr<DDActionContext>>);
     static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.secondMember)>, RetainPtr<DDActionContext>>);
+    struct ShouldBeSameSizeAsNullableSoftLinkedMember : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<NullableSoftLinkedMember>, false> {
+        RetainPtr<DDActionContext> firstMember;
+        RetainPtr<DDActionContext> secondMember;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsNullableSoftLinkedMember) == sizeof(NullableSoftLinkedMember));
     static_assert(MembersInCorrectOrder<0
         , offsetof(NullableSoftLinkedMember, firstMember)
         , offsetof(NullableSoftLinkedMember, secondMember)
@@ -578,7 +660,7 @@ std::optional<NullableSoftLinkedMember> ArgumentCoder<NullableSoftLinkedMember>:
     };
 }
 
-enum class WebCore_TimingFunction_Subclass : uint8_t {
+enum class WebCore_TimingFunction_Subclass : IPC::EncodedVariantIndex {
     LinearTimingFunction,
     CubicBezierTimingFunction,
     StepsTimingFunction,
@@ -648,17 +730,190 @@ std::optional<Ref<WebCore::TimingFunction>> ArgumentCoder<WebCore::TimingFunctio
     return std::nullopt;
 }
 
+#if ENABLE(TEST_FEATURE)
+
+void ArgumentCoder<Namespace::ConditionalCommonClass>::encode(Encoder& encoder, const Namespace::ConditionalCommonClass& instance)
+{
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.value)>, int>);
+    struct ShouldBeSameSizeAsConditionalCommonClass : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<Namespace::ConditionalCommonClass>, false> {
+        int value;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsConditionalCommonClass) == sizeof(Namespace::ConditionalCommonClass));
+    static_assert(MembersInCorrectOrder<0
+        , offsetof(Namespace::ConditionalCommonClass, value)
+    >::value);
+    encoder << instance.value;
+}
+
+std::optional<Namespace::ConditionalCommonClass> ArgumentCoder<Namespace::ConditionalCommonClass>::decode(Decoder& decoder)
+{
+    auto value = decoder.decode<int>();
+    if (!value)
+        return std::nullopt;
+
+    return {
+        Namespace::ConditionalCommonClass {
+            WTFMove(*value)
+        }
+    };
+}
+
+#endif
+
+
+void ArgumentCoder<Namespace::CommonClass>::encode(Encoder& encoder, const Namespace::CommonClass& instance)
+{
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.value)>, int>);
+    struct ShouldBeSameSizeAsCommonClass : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<Namespace::CommonClass>, false> {
+        int value;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsCommonClass) == sizeof(Namespace::CommonClass));
+    static_assert(MembersInCorrectOrder<0
+        , offsetof(Namespace::CommonClass, value)
+    >::value);
+    encoder << instance.value;
+}
+
+std::optional<Namespace::CommonClass> ArgumentCoder<Namespace::CommonClass>::decode(Decoder& decoder)
+{
+    auto value = decoder.decode<int>();
+    if (!value)
+        return std::nullopt;
+
+    return {
+        Namespace::CommonClass {
+            WTFMove(*value)
+        }
+    };
+}
+
+
+void ArgumentCoder<Namespace::AnotherCommonClass>::encode(Encoder& encoder, const Namespace::AnotherCommonClass& instance)
+{
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.value)>, int>);
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.notSerialized)>, double>);
+    struct ShouldBeSameSizeAsAnotherCommonClass : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<Namespace::AnotherCommonClass>, true> {
+        int value;
+        double notSerialized;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsAnotherCommonClass) == sizeof(Namespace::AnotherCommonClass));
+    static_assert(MembersInCorrectOrder<0
+        , offsetof(Namespace::AnotherCommonClass, value)
+        , offsetof(Namespace::AnotherCommonClass, notSerialized)
+    >::value);
+    encoder << instance.value;
+}
+
+std::optional<Ref<Namespace::AnotherCommonClass>> ArgumentCoder<Namespace::AnotherCommonClass>::decode(Decoder& decoder)
+{
+    auto value = decoder.decode<int>();
+    if (!value)
+        return std::nullopt;
+
+    return {
+        Namespace::AnotherCommonClass::create(
+            WTFMove(*value)
+        )
+    };
+}
+
+enum class WebCore_MoveOnlyBaseClass_Subclass : IPC::EncodedVariantIndex {
+    MoveOnlyDerivedClass
+};
+
+void ArgumentCoder<WebCore::MoveOnlyBaseClass>::encode(Encoder& encoder, WebCore::MoveOnlyBaseClass&& instance)
+{
+    if (auto* subclass = dynamicDowncast<WebCore::MoveOnlyDerivedClass>(instance)) {
+        encoder << WebCore_MoveOnlyBaseClass_Subclass::MoveOnlyDerivedClass;
+        encoder << WTFMove(*subclass);
+    }
+}
+
+std::optional<WebCore::MoveOnlyBaseClass> ArgumentCoder<WebCore::MoveOnlyBaseClass>::decode(Decoder& decoder)
+{
+    std::optional<WebCore_MoveOnlyBaseClass_Subclass> type;
+    decoder >> type;
+    if (!type)
+        return std::nullopt;
+
+    if (type == WebCore_MoveOnlyBaseClass_Subclass::MoveOnlyDerivedClass) {
+        std::optional<Ref<WebCore::MoveOnlyDerivedClass>> result;
+        decoder >> result;
+        if (!result)
+            return std::nullopt;
+        return WTFMove(*result);
+    }
+
+    ASSERT_NOT_REACHED();
+    return std::nullopt;
+}
+
+
+void ArgumentCoder<WebCore::MoveOnlyDerivedClass>::encode(Encoder& encoder, WebCore::MoveOnlyDerivedClass&& instance)
+{
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.firstMember)>, int>);
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.secondMember)>, int>);
+    struct ShouldBeSameSizeAsMoveOnlyDerivedClass : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<WebCore::MoveOnlyDerivedClass>, false> {
+        int firstMember;
+        int secondMember;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsMoveOnlyDerivedClass) == sizeof(WebCore::MoveOnlyDerivedClass));
+    static_assert(MembersInCorrectOrder<0
+        , offsetof(WebCore::MoveOnlyDerivedClass, firstMember)
+        , offsetof(WebCore::MoveOnlyDerivedClass, secondMember)
+    >::value);
+    encoder << !!instance.firstMember;
+    if (!!instance.firstMember)
+        encoder << WTFMove(instance.firstMember);
+    encoder << WTFMove(instance.secondMember);
+}
+
+std::optional<WebCore::MoveOnlyDerivedClass> ArgumentCoder<WebCore::MoveOnlyDerivedClass>::decode(Decoder& decoder)
+{
+    auto hasfirstMember = decoder.decode<bool>();
+    if (!hasfirstMember)
+        return std::nullopt;
+    std::optional<int> firstMember;
+    if (*hasfirstMember) {
+        firstMember = decoder.decode<int>();
+        if (!firstMember)
+            return std::nullopt;
+    } else
+        firstMember = std::optional<int> { int { } };
+
+    auto secondMember = decoder.decode<int>();
+    if (!secondMember)
+        return std::nullopt;
+
+    return {
+        WebCore::MoveOnlyDerivedClass {
+            WTFMove(*firstMember),
+            WTFMove(*secondMember)
+        }
+    };
+}
+
 } // namespace IPC
 
 namespace WTF {
 
-template<> bool isValidEnum<IPC::WebCore_TimingFunction_Subclass, void>(uint8_t value)
+template<> bool isValidEnum<IPC::WebCore_TimingFunction_Subclass, void>(IPC::EncodedVariantIndex value)
 {
     switch (static_cast<IPC::WebCore_TimingFunction_Subclass>(value)) {
     case IPC::WebCore_TimingFunction_Subclass::LinearTimingFunction:
     case IPC::WebCore_TimingFunction_Subclass::CubicBezierTimingFunction:
     case IPC::WebCore_TimingFunction_Subclass::StepsTimingFunction:
     case IPC::WebCore_TimingFunction_Subclass::SpringTimingFunction:
+        return true;
+    default:
+        return false;
+    }
+}
+
+template<> bool isValidEnum<IPC::WebCore_MoveOnlyBaseClass_Subclass, void>(IPC::EncodedVariantIndex value)
+{
+    switch (static_cast<IPC::WebCore_MoveOnlyBaseClass_Subclass>(value)) {
+    case IPC::WebCore_MoveOnlyBaseClass_Subclass::MoveOnlyDerivedClass:
         return true;
     default:
         return false;
@@ -694,12 +949,53 @@ template<> bool isValidEnum<EnumNamespace::EnumType, void>(uint16_t value)
 
 template<> bool isValidOptionSet<EnumNamespace2::OptionSetEnumType>(OptionSet<EnumNamespace2::OptionSetEnumType> value)
 {
-    constexpr uint8_t allValidBitsValue =
-        static_cast<uint8_t>(EnumNamespace2::OptionSetEnumType::OptionSetFirstValue)
+    constexpr uint8_t allValidBitsValue = 0
+        | static_cast<uint8_t>(EnumNamespace2::OptionSetEnumType::OptionSetFirstValue)
 #if ENABLE(OPTION_SET_SECOND_VALUE)
         | static_cast<uint8_t>(EnumNamespace2::OptionSetEnumType::OptionSetSecondValue)
 #endif
-        | static_cast<uint8_t>(EnumNamespace2::OptionSetEnumType::OptionSetThirdValue);
+        | static_cast<uint8_t>(EnumNamespace2::OptionSetEnumType::OptionSetThirdValue)
+        | 0;
+    return (value.toRaw() | allValidBitsValue) == allValidBitsValue;
+}
+
+template<> bool isValidOptionSet<OptionSetEnumFirstCondition>(OptionSet<OptionSetEnumFirstCondition> value)
+{
+    constexpr uint32_t allValidBitsValue = 0
+#if ENABLE(OPTION_SET_FIRST_VALUE)
+        | static_cast<uint32_t>(OptionSetEnumFirstCondition::OptionSetFirstValue)
+#endif
+        | static_cast<uint32_t>(OptionSetEnumFirstCondition::OptionSetSecondValue)
+        | static_cast<uint32_t>(OptionSetEnumFirstCondition::OptionSetThirdValue)
+        | 0;
+    return (value.toRaw() | allValidBitsValue) == allValidBitsValue;
+}
+
+template<> bool isValidOptionSet<OptionSetEnumLastCondition>(OptionSet<OptionSetEnumLastCondition> value)
+{
+    constexpr uint32_t allValidBitsValue = 0
+        | static_cast<uint32_t>(OptionSetEnumLastCondition::OptionSetFirstValue)
+        | static_cast<uint32_t>(OptionSetEnumLastCondition::OptionSetSecondValue)
+#if ENABLE(OPTION_SET_THIRD_VALUE)
+        | static_cast<uint32_t>(OptionSetEnumLastCondition::OptionSetThirdValue)
+#endif
+        | 0;
+    return (value.toRaw() | allValidBitsValue) == allValidBitsValue;
+}
+
+template<> bool isValidOptionSet<OptionSetEnumAllCondition>(OptionSet<OptionSetEnumAllCondition> value)
+{
+    constexpr uint32_t allValidBitsValue = 0
+#if ENABLE(OPTION_SET_FIRST_VALUE)
+        | static_cast<uint32_t>(OptionSetEnumAllCondition::OptionSetFirstValue)
+#endif
+#if ENABLE(OPTION_SET_SECOND_VALUE)
+        | static_cast<uint32_t>(OptionSetEnumAllCondition::OptionSetSecondValue)
+#endif
+#if ENABLE(OPTION_SET_THIRD_VALUE)
+        | static_cast<uint32_t>(OptionSetEnumAllCondition::OptionSetThirdValue)
+#endif
+        | 0;
     return (value.toRaw() | allValidBitsValue) == allValidBitsValue;
 }
 

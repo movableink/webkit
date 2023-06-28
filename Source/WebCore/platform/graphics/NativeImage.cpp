@@ -26,9 +26,6 @@
 #include "config.h"
 #include "NativeImage.h"
 
-#include "GraphicsContext.h"
-#include <wtf/NeverDestroyed.h>
-
 namespace WebCore {
 
 RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage, RenderingResourceIdentifier renderingResourceIdentifier)
@@ -44,24 +41,28 @@ RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage, Render
 }
 
 NativeImage::NativeImage(PlatformImagePtr&& platformImage, RenderingResourceIdentifier renderingResourceIdentifier)
+    : RenderingResource(renderingResourceIdentifier)
 #if PLATFORM(QT)
-    : m_platformImage(platformImage)
+    , m_platformImage(platformImage)
 #else
-    : m_platformImage(WTFMove(platformImage))
+    , m_platformImage(WTFMove(platformImage))
 #endif
-    , m_renderingResourceIdentifier(renderingResourceIdentifier)
 {
+#if PLATFORM(QT)
+    ASSERT(!m_platformImage.isNull());
+#else
+    ASSERT(m_platformImage);
+#endif
 }
-
-NativeImage::~NativeImage()
+    
+void NativeImage::setPlatformImage(PlatformImagePtr&& platformImage)
 {
-    for (auto observer : m_observers)
-        observer->releaseNativeImage(m_renderingResourceIdentifier);
-}
-
-void NativeImage::draw(GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, const ImagePaintingOptions& options)
-{
-    context.drawNativeImageInternal(*this, imageSize, destinationRect, sourceRect, options);
+#if PLATFORM(QT)
+    m_platformImage = QImage(platformImage);
+#else
+    ASSERT(platformImage);
+    m_platformImage = WTFMove(platformImage);
+#endif
 }
 
 } // namespace WebCore

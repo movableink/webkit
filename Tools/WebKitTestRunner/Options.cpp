@@ -76,6 +76,12 @@ static bool handleOptionRemoteLayerTree(Options& options, const char*, const cha
     return true;
 }
 
+static bool handleOptionNoRemoteLayerTree(Options& options, const char*, const char*)
+{
+    options.features.boolTestRunnerFeatures.insert_or_assign("noUseRemoteLayerTree", true);
+    return true;
+}
+
 static bool handleOptionShowWindow(Options& options, const char*, const char*)
 {
     options.features.boolTestRunnerFeatures.insert_or_assign("shouldShowWindow", true);
@@ -162,6 +168,12 @@ static bool handleOptionWebKitLogging(Options& options, const char*, const char*
     return true;
 }
 
+static bool handleOptionLockdownMode(Options& options, const char*, const char*)
+{
+    options.lockdownModeEnabled = true;
+    return true;
+}
+
 static bool handleOptionUnmatched(Options& options, const char* option, const char*)
 {
     if (option[0] && option[1] && option[0] == '-' && option[1] == '-')
@@ -181,6 +193,7 @@ OptionsHandler::OptionsHandler(Options& o)
     optionList.append(Option("--complex-text", "Force complex tests.", handleOptionComplexText));
     optionList.append(Option("--accelerated-drawing", "Use accelerated drawing.", handleOptionAcceleratedDrawing));
     optionList.append(Option("--remote-layer-tree", "Use remote layer tree.", handleOptionRemoteLayerTree));
+    optionList.append(Option("--no-remote-layer-tree", "Disable remote layer tree.", handleOptionNoRemoteLayerTree));
     optionList.append(Option("--allowed-host", "Allows access to the specified host from tests.", handleOptionAllowedHost, true));
     optionList.append(Option("--localhost-alias", "Adds hostname alias to localhost if the port supports it.", handleOptionLocalhostAlias, true));
     optionList.append(Option("--allow-any-certificate-for-allowed-hosts", "Allows any HTTPS certificate for an allowed host.", handleOptionAllowAnyHTTPSCertificateForAllowedHosts));
@@ -196,7 +209,8 @@ OptionsHandler::OptionsHandler(Options& o)
 #endif
     optionList.append(Option("--webcore-logging", "Enable WebCore log channels", handleOptionWebCoreLogging, true));
     optionList.append(Option("--webkit-logging", "Enable WebKit log channels", handleOptionWebKitLogging, true));
-    
+    optionList.append(Option("--lockdown-mode", "Enable Lockdown Mode", handleOptionLockdownMode));
+
     optionList.append(Option(0, 0, handleOptionUnmatched));
 }
 

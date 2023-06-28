@@ -118,10 +118,7 @@ public:
     CFTypeRef contents() const override;
     void setContents(CFTypeRef) override;
     void clearContents() override;
-#if HAVE(IOSURFACE)
-    void setContents(const WebCore::IOSurface&) override;
-    void setContents(const WTF::MachSendRight&) override;
-#endif
+    void setDelegatedContents(const PlatformCALayerInProcessDelegatedContents&) override;
 
     void setContentsRect(const FloatRect&) override;
 
@@ -158,6 +155,9 @@ public:
     void setCornerRadius(float) override;
 
     void setAntialiasesEdges(bool) override;
+
+    MediaPlayerVideoGravity videoGravity() const override;
+    void setVideoGravity(MediaPlayerVideoGravity) override;
 
     FloatRoundedRect shapeRoundedRect() const override;
     void setShapeRoundedRect(const FloatRoundedRect&) override;

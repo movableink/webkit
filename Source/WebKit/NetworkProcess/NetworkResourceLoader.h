@@ -51,6 +51,7 @@ namespace WebCore {
 class BlobDataFileReference;
 class ContentFilter;
 class FormData;
+class LinkHeader;
 class NetworkStorageSession;
 class Report;
 class ResourceRequest;
@@ -58,6 +59,7 @@ class ResourceRequest;
 
 namespace WebKit {
 
+class EarlyHintsResourceLoader;
 class NetworkConnectionToWebProcess;
 class NetworkLoad;
 class NetworkLoadChecker;
@@ -126,6 +128,7 @@ public:
     bool isSynchronous() const final;
     bool isAllowedToAskUserForCredentials() const final { return m_isAllowedToAskUserForCredentials; }
     void willSendRedirectedRequest(WebCore::ResourceRequest&&, WebCore::ResourceRequest&& redirectRequest, WebCore::ResourceResponse&&) final;
+    void didReceiveInformationalResponse(WebCore::ResourceResponse&&) final;
     void didReceiveResponse(WebCore::ResourceResponse&&, PrivateRelayed, ResponseCompletionHandler&&) final;
     void didReceiveBuffer(const WebCore::FragmentedSharedBuffer&, uint64_t reportedEncodedDataLength) final;
     void didFinishLoading(const WebCore::NetworkLoadMetrics&) final;
@@ -157,8 +160,6 @@ public:
 #if ENABLE(SERVICE_WORKER)
     void startWithServiceWorker();
     void serviceWorkerDidNotHandle(ServiceWorkerFetchTask*);
-    void setResultingClientIdentifier(String&& identifier) { m_resultingClientIdentifier = WTFMove(identifier); }
-    const String& resultingClientIdentifier() const { return m_resultingClientIdentifier; }
     void setServiceWorkerRegistration(WebCore::SWServerRegistration& serviceWorkerRegistration) { m_serviceWorkerRegistration = serviceWorkerRegistration; }
     void setWorkerStart(MonotonicTime);
     MonotonicTime workerStart() const { return m_workerStart; }
@@ -172,6 +173,9 @@ public:
 #if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     void ref() const final { RefCounted<NetworkResourceLoader>::ref(); }
     void deref() const final { RefCounted<NetworkResourceLoader>::deref(); }
+    bool continueAfterServiceWorkerReceivedData(const WebCore::SharedBuffer&, uint64_t encodedDataLength);
+    bool continueAfterServiceWorkerReceivedResponse(const WebCore::ResourceResponse&);
+    void serviceWorkerDidFinish();
 #endif
 
     void willSendServiceWorkerRedirectedRequest(WebCore::ResourceRequest&&, WebCore::ResourceRequest&& redirectRequest, WebCore::ResourceResponse&&);
@@ -209,7 +213,7 @@ private:
     bool shouldInterruptNavigationForCrossOriginEmbedderPolicy(const WebCore::ResourceResponse&);
     bool shouldInterruptWorkerLoadForCrossOriginEmbedderPolicy(const WebCore::ResourceResponse&);
 
-    enum class FirstLoad { No, Yes };
+    enum class FirstLoad : bool { No, Yes };
     void startNetworkLoad(WebCore::ResourceRequest&&, FirstLoad);
     void restartNetworkLoad(WebCore::ResourceRequest&&);
     void continueDidReceiveResponse();
@@ -266,6 +270,9 @@ private:
     void willSendRedirectedRequestInternal(WebCore::ResourceRequest&&, WebCore::ResourceRequest&& redirectRequest, WebCore::ResourceResponse&&, IsFromServiceWorker);
     std::optional<WebCore::NetworkLoadMetrics> computeResponseMetrics(const WebCore::ResourceResponse&) const;
 
+    void startRequest(const WebCore::ResourceRequest&);
+    bool abortIfServiceWorkersOnly();
+
     NetworkResourceLoadParameters m_parameters;
 
     Ref<NetworkConnectionToWebProcess> m_connection;
@@ -300,11 +307,11 @@ private:
     ResponseCompletionHandler m_responseCompletionHandler;
     bool m_shouldCaptureExtraNetworkLoadMetrics { false };
     bool m_isKeptAlive { false };
+    std::unique_ptr<EarlyHintsResourceLoader> m_earlyHintsResourceLoader;
 
     std::optional<NetworkActivityTracker> m_networkActivityTracker;
 #if ENABLE(SERVICE_WORKER)
     std::unique_ptr<ServiceWorkerFetchTask> m_serviceWorkerFetchTask;
-    String m_resultingClientIdentifier;
     WeakPtr<WebCore::SWServerRegistration> m_serviceWorkerRegistration;
     MonotonicTime m_workerStart;
 #endif

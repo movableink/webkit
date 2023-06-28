@@ -97,14 +97,47 @@ public:
     }
 
 private:
-    bool isNotNegZero(Node* node)
+    bool isNotNegZero(Node* node, unsigned timeToLive = 3)
     {
-        if (!node->isNumberConstant())
+        if (!timeToLive)
             return false;
-        double value = node->asNumber();
-        return (value || 1.0 / value > 0.0);
+
+        switch (node->op()) {
+        case DoubleConstant:
+        case JSConstant:
+        case Int52Constant: {
+            if (!node->isNumberConstant())
+                return false;
+            double value = node->asNumber();
+            return (value || 1.0 / value > 0.0);
+        }
+
+        case ValueBitAnd:
+        case ValueBitOr:
+        case ValueBitXor:
+        case ValueBitLShift:
+        case ValueBitRShift:
+        case ArithBitAnd:
+        case ArithBitOr:
+        case ArithBitXor:
+        case ArithBitLShift:
+        case ArithBitRShift:
+        case BitURShift: {
+            return true;
+        }
+
+        case ValueAdd:
+        case ArithAdd: {
+            if (isNotNegZero(node->child1().node(), timeToLive - 1) || isNotNegZero(node->child2().node(), timeToLive - 1))
+                return true;
+            return false;
+        }
+
+        default:
+            return false;
+        }
     }
-    
+
     bool isNotPosZero(Node* node)
     {
         if (!node->isNumberConstant())
@@ -451,7 +484,8 @@ private:
         }
 
         case EnumeratorGetByVal:
-        case GetByVal: {
+        case GetByVal:
+        case GetByValMegamorphic: {
             m_graph.varArgChild(node, 0)->mergeFlags(NodeBytecodeUsesAsValue);
             m_graph.varArgChild(node, 1)->mergeFlags(NodeBytecodeUsesAsNumber | NodeBytecodeUsesAsOther | NodeBytecodeUsesAsInt | NodeBytecodeUsesAsArrayIndex);
             break;
@@ -459,6 +493,7 @@ private:
             
         case NewTypedArray:
         case NewArrayWithSize:
+        case NewArrayWithConstantSize:
         case NewArrayWithSpecies: {
             // Negative zero is not observable. NaN versus undefined are only observable
             // in that you would get a different exception message. So, like, whatever: we
@@ -494,8 +529,10 @@ private:
             break;
         }
 
+        case EnumeratorPutByVal:
         case PutByValDirect:
-        case PutByVal: {
+        case PutByVal:
+        case PutByValMegamorphic: {
             m_graph.varArgChild(node, 0)->mergeFlags(NodeBytecodeUsesAsValue);
             m_graph.varArgChild(node, 1)->mergeFlags(NodeBytecodeUsesAsNumber | NodeBytecodeUsesAsOther | NodeBytecodeUsesAsInt | NodeBytecodeUsesAsArrayIndex);
             m_graph.varArgChild(node, 2)->mergeFlags(NodeBytecodeUsesAsValue);

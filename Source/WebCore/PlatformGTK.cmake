@@ -23,7 +23,6 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/gtk"
     "${WEBCORE_DIR}/platform/graphics/egl"
     "${WEBCORE_DIR}/platform/graphics/epoxy"
-    "${WEBCORE_DIR}/platform/graphics/glx"
     "${WEBCORE_DIR}/platform/graphics/gbm"
     "${WEBCORE_DIR}/platform/graphics/gstreamer"
     "${WEBCORE_DIR}/platform/graphics/gtk"
@@ -47,6 +46,10 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     accessibility/atspi/AccessibilityRootAtspi.h
 
     platform/glib/ApplicationGLib.h
+
+    platform/graphics/egl/PlatformDisplaySurfaceless.h
+
+    platform/graphics/gbm/PlatformDisplayGBM.h
 
     platform/graphics/gtk/GdkCairoUtilities.h
 
@@ -93,12 +96,6 @@ list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
     ${LIBTASN1_INCLUDE_DIRS}
     ${UPOWERGLIB_INCLUDE_DIRS}
 )
-
-if (USE_OPENGL AND NOT USE_LIBEPOXY)
-    list(APPEND WebCore_SOURCES
-        platform/graphics/OpenGLShims.cpp
-    )
-endif ()
 
 if (ENABLE_WAYLAND_TARGET)
     list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
@@ -186,13 +183,12 @@ if (USE_ATSPI)
     )
 endif ()
 
-if (USE_LIBGBM)
+if (USE_GBM)
     list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-        ${GBM_INCLUDE_DIR}
         ${LIBDRM_INCLUDE_DIR}
     )
     list(APPEND WebCore_LIBRARIES
-        ${GBM_LIBRARIES}
+        GBM::GBM
         ${LIBDRM_LIBRARIES}
     )
 endif ()

@@ -24,11 +24,20 @@
  */
 #import <WebKit/WKFoundation.h>
 
-WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
+typedef NS_ENUM(NSUInteger, _WKNotificationAlert) {
+    _WKNotificationAlertDefault,
+    _WKNotificationAlertSilent,
+    _WKNotificationAlertEnabled
+};
+
+WK_CLASS_AVAILABLE(macos(13.3), ios(16.4))
 @interface _WKNotificationData : NSObject
 @property (nonatomic, readonly, copy) NSString *title;
 @property (nonatomic, readonly, copy) NSString *body;
 @property (nonatomic, readonly, copy) NSString *origin;
 @property (nonatomic, readonly, copy) NSString *identifier;
 @property (nonatomic, readonly, copy) NSDictionary *userInfo;
+@property (nonatomic, readonly) _WKNotificationAlert alert;
+
+- (NSDictionary *)dictionaryRepresentation;
 @end

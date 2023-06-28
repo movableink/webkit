@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebScreenOrientationManager.h"
 
+#include "MessageSenderInlines.h"
 #include "WebPage.h"
 #include "WebProcess.h"
 #include "WebScreenOrientationManagerMessages.h"
@@ -50,7 +51,7 @@ WebCore::ScreenOrientationType WebScreenOrientationManager::currentOrientation()
         return *m_currentOrientation;
 
     auto sendResult = m_page.sendSync(Messages::WebScreenOrientationManagerProxy::CurrentOrientation { });
-    auto [currentOrientation] = sendResult.takeReplyOr(WebCore::ScreenOrientationType::PortraitPrimary);
+    auto [currentOrientation] = sendResult.takeReplyOr(WebCore::naturalScreenOrientationType());
     if (!m_observers.isEmptyIgnoringNullReferences())
         m_currentOrientation = currentOrientation;
     return currentOrientation;

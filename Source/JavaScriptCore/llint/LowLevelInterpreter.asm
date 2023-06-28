@@ -1844,14 +1844,16 @@ if not (C_LOOP or C_LOOP_WIN)
 end
 
 if ARM64E
-    # void* jitCagePtr(void* pointer, uintptr_t tag)
-    emit ".globl _jitCagePtr"
-    emit "_jitCagePtr:"
-        tagReturnAddress sp
-        leap _g_config, t2
-        jmp JSCConfigGateMapOffset + (constexpr Gate::jitCagePtr) * PtrSize[t2], NativeToJITGatePtrTag
-        global _jitCagePtrGateAfter
-        _jitCagePtrGateAfter:
+    if JIT_CAGE
+        # void* jitCagePtr(void* pointer, uintptr_t tag)
+        emit ".globl _jitCagePtr"
+        emit "_jitCagePtr:"
+            tagReturnAddress sp
+            leap _g_config, t2
+            jmp JSCConfigGateMapOffset + (constexpr Gate::jitCagePtr) * PtrSize[t2], NativeToJITGatePtrTag
+    end
+    global _jitCagePtrGateAfter
+    _jitCagePtrGateAfter:
         ret
 
     global _tailCallJSEntryTrampoline
@@ -2125,7 +2127,6 @@ macro slowPathOp(opcodeName)
 end
 
 slowPathOp(create_cloned_arguments)
-slowPathOp(create_arguments_butterfly)
 slowPathOp(create_direct_arguments)
 slowPathOp(create_lexical_environment)
 slowPathOp(create_rest)
@@ -2334,7 +2335,7 @@ llintOp(op_loop_hint, OpLoopHint, macro (unused, unused, dispatch)
 end)
 
 
-llintOp(op_check_traps, OpCheckTraps, macro (unused, unused, dispatch)
+macro checkTraps(dispatch)
     loadp CodeBlock[cfr], t1
     loadp CodeBlock::m_vm[t1], t1
     loadi VM::m_traps+VMTraps::m_trapBits[t1], t0
@@ -2347,6 +2348,10 @@ llintOp(op_check_traps, OpCheckTraps, macro (unused, unused, dispatch)
     jmp .afterHandlingTraps
 .throwHandler:
     jmp _llint_throw_from_slow_path_trampoline
+end
+
+llintOp(op_check_traps, OpCheckTraps, macro (unused, unused, dispatch)
+    checkTraps(dispatch)
 end)
 
 

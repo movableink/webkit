@@ -60,7 +60,7 @@
 SOFT_LINK_PRIVATE_FRAMEWORK_OPTIONAL(LinkPresentation)
 #endif
 
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
+#if PLATFORM(VISION)
 #include <WebKitAdditions/WKFullscreenWindowControllerAdditions.h>
 #endif
 
@@ -159,7 +159,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 } // namespace WebKit
 
 static constexpr NSTimeInterval kAnimationDuration = 0.2;
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
+#if PLATFORM(VISION)
 static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
 #endif
 
@@ -429,7 +429,7 @@ static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
 @implementation WKFullScreenPlaceholderView
 - (void)willMoveToSuperview:(UIView *)newSuperview
 {
-    [super viewWillMoveToSuperview:newSuperview];
+    [super willMoveToSuperview:newSuperview];
     [self.parent placeholderWillMoveToSuperview:newSuperview];
 }
 @end
@@ -560,28 +560,30 @@ static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
     [_window setBackgroundColor:[UIColor clearColor]];
     [_window setWindowLevel:UIWindowLevelNormal - 1];
     [_window setHidden:NO];
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
-    auto screenSize = page->overrideScreenSize();
-    CGFloat preferredWidth = screenSize.width();
-    CGFloat preferredHeight = screenSize.height();
-    CGFloat preferredAspectRatio = preferredWidth / preferredHeight;
-    CGFloat videoAspectRatio = videoDimensions.height ? (videoDimensions.width / videoDimensions.height) : preferredAspectRatio;
+#if ENABLE(FULLSCREEN_WINDOW_EFFECTS)
+    if (fullscreenWindowEffectsEnabled()) {
+        auto screenSize = page->overrideScreenSize();
+        CGFloat preferredWidth = screenSize.width();
+        CGFloat preferredHeight = screenSize.height();
 
-    CGFloat targetWidth = preferredWidth;
-    CGFloat targetHeight = preferredHeight;
-    if (videoDimensions.height && videoDimensions.width) {
-        if (videoAspectRatio > preferredAspectRatio)
-            targetHeight = videoDimensions.height * preferredWidth / videoDimensions.width;
-        else
-            targetWidth = videoDimensions.width * preferredHeight / videoDimensions.height;
+        CGFloat targetWidth = preferredWidth;
+        CGFloat targetHeight = preferredHeight;
+        if (videoDimensions.height && videoDimensions.width) {
+            CGFloat preferredAspectRatio = preferredWidth / preferredHeight;
+            CGFloat videoAspectRatio = videoDimensions.height ? (videoDimensions.width / videoDimensions.height) : preferredAspectRatio;
+            if (videoAspectRatio > preferredAspectRatio)
+                targetHeight = videoDimensions.height * preferredWidth / videoDimensions.width;
+            else
+                targetWidth = videoDimensions.width * preferredHeight / videoDimensions.height;
+        }
+
+        [_window setFrame:CGRectMake(0, 0, floorf(targetWidth), floorf(targetHeight))];
+        [_window setAlpha:0];
+        [_window setClipsToBounds:YES];
+        [_window _setContinuousCornerRadius:kFullScreenWindowCornerRadius];
+        [_window setNeedsLayout];
+        [_window layoutIfNeeded];
     }
-
-    [_window setFrame:CGRectMake(0, 0, floorf(targetWidth), floorf(targetHeight))];
-    [_window setAlpha:0];
-    [_window setClipsToBounds:YES];
-    [_window _setContinuousCornerRadius:kFullScreenWindowCornerRadius];
-    [_window setNeedsLayout];
-    [_window layoutIfNeeded];
 #endif
 
     _rootViewController = adoptNS([[UIViewController alloc] init]);
@@ -600,8 +602,8 @@ static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
     [_fullscreenViewController setTarget:self];
     [_fullscreenViewController setExitFullScreenAction:@selector(requestExitFullScreen)];
     _fullscreenViewController.get().view.frame = _rootViewController.get().view.bounds;
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
-    [_fullscreenViewController hideMediaControls:manager->isVideoElementWithControls()];
+#if PLATFORM(VISION)
+    [_fullscreenViewController hideCancelAndPIPButtons:manager->isVideoElement()];
 #endif
     [self _updateLocationInfo];
 
@@ -649,6 +651,7 @@ static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
 
         [webView setAutoresizingMask:(UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight)];
         [webView setFrame:[_window bounds]];
+        [webView _setMinimumEffectiveDeviceWidth:0];
         [webView _overrideLayoutParametersWithMinimumLayoutSize:[_window bounds].size maximumUnobscuredSizeOverride:[_window bounds].size];
         [_window insertSubview:webView.get() atIndex:0];
         [webView setNeedsLayout];
@@ -671,13 +674,21 @@ static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
                 return;
             }
 
-            if (auto* manager = [protectedSelf _manager]) {
-                manager->willEnterFullScreen();
+            if (![protectedSelf _manager]) {
+                ASSERT_NOT_REACHED();
+                [self _exitFullscreenImmediately];
                 return;
             }
 
-            ASSERT_NOT_REACHED();
-            [self _exitFullscreenImmediately];
+            [self._webView _doAfterNextVisibleContentRectAndPresentationUpdate:makeBlockPtr([protectedSelf] {
+                if (auto* manager = [protectedSelf _manager]) {
+                    manager->willEnterFullScreen();
+                    return;
+                }
+
+                ASSERT_NOT_REACHED();
+                [protectedSelf _exitFullscreenImmediately];
+            }).get()];
         });
 
         [CATransaction commit];
@@ -710,14 +721,15 @@ static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
 
     [CATransaction commit];
 
-#if ENABLE(FULLSCREEN_WINDOW_EFFECTS)
-    configureFullscreenTransition(_lastKnownParentWindow.get(), _window.get());
-    BOOL shouldAnimateEnterFullscreenTransition = NO;
-#else
     // NOTE: In this state, there is already a AVKit fullscreen presentation; we want to
     // animate into position under the AVKit fullscreen, then after that presentation
     // completes, exit AVKit fullscreen.
     BOOL shouldAnimateEnterFullscreenTransition = !_returnToFullscreenFromPictureInPicture;
+#if ENABLE(FULLSCREEN_WINDOW_EFFECTS)
+    if (fullscreenWindowEffectsEnabled()) {
+        configureFullscreenTransition(_lastKnownParentWindow.get(), _window.get());
+        shouldAnimateEnterFullscreenTransition = NO;
+    }
 #endif
 
     [_rootViewController presentViewController:_fullscreenViewController.get() animated:shouldAnimateEnterFullscreenTransition completion:^{
@@ -742,8 +754,10 @@ static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
             [_fullscreenViewController showBanner];
 
 #if ENABLE(FULLSCREEN_WINDOW_EFFECTS)
-            CompletionHandler<void()> completionHandler = []() { };
-            performFullscreenTransition(_lastKnownParentWindow.get(), _window.get(), _parentWindowState.get(), true, WTFMove(completionHandler));
+            if (fullscreenWindowEffectsEnabled()) {
+                CompletionHandler<void()> completionHandler = []() { };
+                performFullscreenTransition(self, _lastKnownParentWindow.get(), _window.get(), _parentWindowState.get(), true, WTFMove(completionHandler));
+            }
 #endif
 
             if (auto* videoFullscreenManager = self._videoFullscreenManager) {
@@ -760,7 +774,7 @@ static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
                     if (_returnToFullscreenFromPictureInPicture)
                         videoFullscreenInterface->preparedToReturnToStandby();
                     else if (videoFullscreenInterface->inPictureInPicture()) {
-                        if (auto* model = videoFullscreenInterface->videoFullscreenModel()) {
+                        if (auto model = videoFullscreenInterface->videoFullscreenModel()) {
                             _enterFullscreenNeedsExitPictureInPicture = YES;
                             model->requestFullscreenMode(WebCore::HTMLMediaElementEnums::VideoFullscreenModeNone);
                         }
@@ -1082,6 +1096,15 @@ static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
     if (page)
         page->setSuppressVisibilityUpdates(true);
 
+#if ENABLE(FULLSCREEN_WINDOW_EFFECTS)
+    if (fullscreenWindowEffectsEnabled()) {
+        [UIView performWithoutAnimation:^{
+            CompletionHandler<void()> completionHandler = []() { };
+            performFullscreenTransition(self, _lastKnownParentWindow.get(), _window.get(), _parentWindowState.get(), false, WTFMove(completionHandler));
+        }];
+    }
+#endif
+
     [self _reinsertWebViewUnderPlaceholder];
 
     if (auto* manager = self._manager) {
@@ -1223,16 +1246,17 @@ static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
     }
 
 #if ENABLE(FULLSCREEN_WINDOW_EFFECTS)
+    if (fullscreenWindowEffectsEnabled()) {
+        configureFullscreenTransition(_lastKnownParentWindow.get(), _window.get());
 
-    configureFullscreenTransition(_lastKnownParentWindow.get(), _window.get());
+        CompletionHandler<void()> completionHandler = [strongSelf = retainPtr(self), self] () {
+            [self _completedExitFullScreen];
+        };
 
-    CompletionHandler<void()> completionHandler = [strongSelf = retainPtr(self), self] () {
-        [self _completedExitFullScreen];
-    };
-
-    performFullscreenTransition(_lastKnownParentWindow.get(), _window.get(), _parentWindowState.get(), false, WTFMove(completionHandler));
-
-#else
+        performFullscreenTransition(self, _lastKnownParentWindow.get(), _window.get(), _parentWindowState.get(), false, WTFMove(completionHandler));
+        return;
+    }
+#endif // ENABLE(FULLSCREEN_WINDOW_EFFECTS)
 
     [_fullscreenViewController setAnimating:YES];
     [_fullscreenViewController dismissViewControllerAnimated:YES completion:^{
@@ -1250,8 +1274,6 @@ static constexpr CGFloat kFullScreenWindowCornerRadius = 12;
         [self _completedExitFullScreen];
 #endif
     }];
-
-#endif // ENABLE(FULLSCREEN_WINDOW_EFFECTS)
 }
 
 #if ENABLE(FULLSCREEN_DISMISSAL_GESTURES)

@@ -37,16 +37,17 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription&
     return FontPlatformData(m_rawFont);
 }
 
-std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, const String&)
+RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, const String& itemInCollection)
 {
     const QByteArray fontData(reinterpret_cast<const char*>(buffer.data()), buffer.size());
 
     // Pixel size doesn't matter at this point, it is set in FontCustomPlatformData::fontPlatformData.
     QRawFont rawFont(fontData, /*pixelSize = */0, QFont::PreferVerticalHinting);
     if (!rawFont.isValid())
-        return 0;
+        return nullptr;
 
-    auto data = std::make_unique<FontCustomPlatformData>();
+    FontPlatformData::CreationData creationData = { buffer, itemInCollection };
+    auto data = adoptRef(*new FontCustomPlatformData(WTFMove(creationData)));
     data->m_rawFont = rawFont;
     return data;
 }
@@ -60,6 +61,12 @@ bool FontCustomPlatformData::supportsFormat(const String& format)
         || equalLettersIgnoringASCIICase(format, "woff2"_s)
 #endif
     ;
+}
+
+bool FontCustomPlatformData::supportsTechnology(const FontTechnology&)
+{
+    // FIXME: define supported technologies for this platform (webkit.org/b/256310).
+    return true;
 }
 
 FontCustomPlatformData::~FontCustomPlatformData() = default;

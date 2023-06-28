@@ -226,6 +226,20 @@ async function checkVideoBlack(expected, canvas, video, errorMessage, counter)
     return checkVideoBlack(expected, canvas, video, errorMessage, --counter);
 }
 
+async function checkVideoIsEntirelyBlack(canvas, video, counter)
+{
+    if (counter === undefined)
+        counter = 200;
+    if (counter === 0)
+        return Promise.reject("Remote video frame was not black as expected");
+
+    if (video.videoWidth && video.videoHeight && isVideoBlack(canvas, video, 0, 0, video.videoWidth, video.videoHeight))
+        return Promise.resolve();
+
+    await waitFor(50);
+    return checkVideoIsEntirelyBlack(canvas, video, --counter);
+}
+
 function setCodec(sdp, codec)
 {
     return sdp.split('\r\n').filter(line => {
@@ -249,7 +263,7 @@ function getReceivedTrackStats(connection)
     return connection.getStats().then((report) => {
         var stats;
         report.forEach((statItem) => {
-            if (statItem.type === "track") {
+            if (statItem.type === "inbound-rtp") {
                 stats = statItem;
             }
         });

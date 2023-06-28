@@ -109,11 +109,6 @@ public:
             return m_index == other.m_index;
         }
         
-        constexpr bool operator!=(const iterator& other) const
-        {
-            return !(*this == other);
-        }
-
     private:
         const Bitmap* m_bitmap;
         size_t m_index;
@@ -129,7 +124,6 @@ public:
     void setEachNthBit(size_t n, size_t start = 0, size_t end = bitmapSize);
 
     constexpr bool operator==(const Bitmap&) const;
-    constexpr bool operator!=(const Bitmap&) const;
 
     constexpr void operator|=(const Bitmap&);
     constexpr void operator&=(const Bitmap&);
@@ -409,6 +403,21 @@ ALWAYS_INLINE constexpr void Bitmap<bitmapSize, WordType>::forEachSetBit(const F
         if (!word)
             continue;
         size_t base = i * wordSize;
+
+#if COMPILER(GCC_COMPATIBLE) && (CPU(X86_64) || CPU(ARM64))
+        // We should only use ctz() when we know that ctz() is implementated using
+        // a fast hardware instruction. Otherwise, this will actually result in
+        // worse performance.
+        while (word) {
+            size_t offset = ctz(word);
+            if constexpr (std::is_same_v<IterationStatus, decltype(func(base + offset))>) {
+                if (func(base + offset) == IterationStatus::Done)
+                    return;
+            } else
+                func(base + offset);
+            word &= ~(1ull << offset);
+        }
+#else
         for (size_t j = 0; j < wordSize; ++j) {
             if (word & 1) {
                 if constexpr (std::is_same_v<IterationStatus, decltype(func(base + j))>) {
@@ -419,6 +428,7 @@ ALWAYS_INLINE constexpr void Bitmap<bitmapSize, WordType>::forEachSetBit(const F
             }
             word >>= 1;
         }
+#endif
     }
 }
 
@@ -497,12 +507,6 @@ inline constexpr bool Bitmap<bitmapSize, WordType>::operator==(const Bitmap& oth
             return false;
     }
     return true;
-}
-
-template<size_t bitmapSize, typename WordType>
-inline constexpr bool Bitmap<bitmapSize, WordType>::operator!=(const Bitmap& other) const
-{
-    return !(*this == other);
 }
 
 template<size_t bitmapSize, typename WordType>

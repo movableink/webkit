@@ -34,7 +34,7 @@
 #include "EventNames.h"
 #include "FloatPoint.h"
 #include "FocusController.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "FrameLoader.h"
 #include "FrameTree.h"
 #include "FrameView.h"
@@ -82,25 +82,25 @@ bool EventHandler::eventActivatedView(const PlatformMouseEvent&) const
 
 bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& event, Widget& widget, OptionSet<WheelEventProcessingSteps>)
 {
-    if (!widget.isFrameView())
+    if (!widget.isLocalFrameView())
         return false;
 
-    return dynamicDowncast<LocalFrame>(downcast<FrameView>(widget).frame())->eventHandler().handleWheelEvent(event, { });
+    return dynamicDowncast<LocalFrame>(downcast<LocalFrameView>(widget).frame())->eventHandler().handleWheelEvent(event, { });
 }
 
-bool EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& mev, Frame& subframe)
+bool EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& mev, LocalFrame& subframe)
 {
     subframe.eventHandler().handleMousePressEvent(mev.event());
     return true;
 }
 
-bool EventHandler::passMouseMoveEventToSubframe(MouseEventWithHitTestResults& mev, Frame& subframe, HitTestResult* hoveredNode)
+bool EventHandler::passMouseMoveEventToSubframe(MouseEventWithHitTestResults& mev, LocalFrame& subframe, HitTestResult* hoveredNode)
 {
     subframe.eventHandler().handleMouseMoveEvent(mev.event(), hoveredNode);
     return true;
 }
 
-bool EventHandler::passMouseReleaseEventToSubframe(MouseEventWithHitTestResults& mev, Frame& subframe)
+bool EventHandler::passMouseReleaseEventToSubframe(MouseEventWithHitTestResults& mev, LocalFrame& subframe)
 {
     subframe.eventHandler().handleMouseReleaseEvent(mev.event());
     return true;

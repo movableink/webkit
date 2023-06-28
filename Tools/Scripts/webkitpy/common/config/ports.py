@@ -62,21 +62,19 @@ class DeprecatedPort(object):
     @staticmethod
     def port(port_name):
         ports = {
-            "ftw": FTWPort,
             "gtk-wk2": GtkWK2Port,
             "ios-device": IOSPort,
             "ios-simulator-wk2": IOSSimulatorWK2Port,
             "jsc-only": JscOnlyPort,
             "mac": MacPort,
             "mac-wk2": MacWK2Port,
-            "win": WinPort,
             "wincairo": WinCairoPort,
             "qt": QtPort,
             "qt-wk2": QtWK2Port,
             "wpe": WpePort,
         }
         default_port = {
-            "Windows": WinPort,
+            "Windows": WinCairoPort,
             "Darwin": MacPort,
         }
         # Do we really need MacPort as the ultimate default?
@@ -171,15 +169,6 @@ class MacWK2Port(DeprecatedPort):
     port_flag_name = "mac-wk2"
 
 
-class WinPort(DeprecatedPort):
-    port_flag_name = "win"
-
-    def run_webkit_tests_command(self, build_style=None):
-        command = super(WinPort, self).run_webkit_tests_command(build_style)
-        command.append("--dump-render-tree")
-        return command
-
-
 class WinCairoPort(DeprecatedPort):
     port_flag_name = "wincairo"
 
@@ -191,20 +180,6 @@ class WinCairoPort(DeprecatedPort):
     def run_webkit_tests_command(self, build_style=None):
         command = super(WinCairoPort, self).run_webkit_tests_command(build_style)
         command.append("--wincairo")
-        return command
-
-
-class FTWPort(DeprecatedPort):
-    port_flag_name = "ftw"
-
-    def build_webkit_command(self, build_style=None):
-        command = super(FTWPort, self).build_webkit_command(build_style=build_style)
-        command.append('--ftw')
-        return command
-
-    def run_webkit_tests_command(self, build_style=None):
-        command = super(FTWPort, self).run_webkit_tests_command(build_style)
-        command.append("--ftw")
         return command
 
 

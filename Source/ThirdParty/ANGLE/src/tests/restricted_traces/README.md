@@ -52,12 +52,14 @@ When that is working, add the following GN arg to your setup:
 ```
 build_angle_trace_perf_tests = true
 ```
-### (Optional) Reducing the trace count
+### Selecting which traces to build
 
-Since the traces are numerous, you can limit compilation to a subset with the following GN arg:
+Since the traces are numerous, you should limit compilation to a subset with the following GN arg:
 ```
-angle_restricted_traces = ["world_of_kings 5", "worms_zone_io 5"]
+angle_restricted_traces = ["among_us 5", "street_fighter_duel 1"]
 ```
+If you choose not to pick any traces and build them all, you must follow different steps for Android. Skip ahead to [Building and running all traces for Android](#building-and-running-all-traces-for-android)
+
 To build the trace tests:
 ```
 autoninja -C out/<config> angle_trace_tests
@@ -80,6 +82,18 @@ Common options used are:
 
 # Use the system's native GLES driver
 --use-gl=native
+```
+
+### Building and running all traces for Android
+Our trace library has gotten large enough that they no longer fit in a single APK.  To support building and running the entire library, we can compile the libraries by themselves, outside of the APK, and push them to locations accessible by the test harness.
+
+To do so, remove `angle_restricted_traces` from your GN args, then compile with:
+```
+autoninja -C out/<config> angle_trace_perf_tests
+```
+and run with (including recommended options):
+```
+(cd out/<config>; ../../src/tests/run_angle_android_test.py angle_trace_tests --filter='*among_us*' --verbose --local-output --verbose-logging --fixed-test-time-with-warmup 10)
 ```
 
 # Capturing and adding new Android traces
@@ -210,25 +224,22 @@ Allow the app to run until the `*angledata.gz` file is non-zero and no longer gr
 should continue rendering after that:
 ```
 $ adb shell ls -s -w 1 /sdcard/Android/data/$PACKAGE_NAME/angle_capture
-30528 angry_birds_2_capture_context1.angledata.gz
-    8 angry_birds_2_capture_context1.cpp
-    4 angry_birds_2_capture_context1_files.txt
-  768 angry_birds_2_capture_context1_frame001.cpp
-  100 angry_birds_2_capture_context1_frame002.cpp
-  100 angry_birds_2_capture_context1_frame003.cpp
-  100 angry_birds_2_capture_context1_frame004.cpp
-  100 angry_birds_2_capture_context1_frame005.cpp
-  104 angry_birds_2_capture_context1_frame006.cpp
-  100 angry_birds_2_capture_context1_frame007.cpp
-  100 angry_birds_2_capture_context1_frame008.cpp
-  100 angry_birds_2_capture_context1_frame009.cpp
-  100 angry_birds_2_capture_context1_frame010.cpp
-  120 angry_birds_2_capture_context1_frame011.cpp
-    8 angry_birds_2_capture_context1.h
+30528 angry_birds_2.angledata.gz
+    8 angry_birds_2.cpp
+    4 angry_birds_2.json
+  768 angry_birds_2_001.cpp
+  100 angry_birds_2_002.cpp
+  100 angry_birds_2_003.cpp
+  100 angry_birds_2_004.cpp
+  100 angry_birds_2_005.cpp
+  104 angry_birds_2_006.cpp
+  100 angry_birds_2_007.cpp
+  100 angry_birds_2_008.cpp
+  100 angry_birds_2_009.cpp
+  100 angry_birds_2_010.cpp
+  120 angry_birds_2_011.cpp
+    8 angry_birds_2.h
 ```
-Note, you may see multiple contexts captured in the output. When this happens, look at the size of
-the files. The larger files should be the context you care about it. You should move or delete the
-other context files.
 
 ## Pull the trace files
 

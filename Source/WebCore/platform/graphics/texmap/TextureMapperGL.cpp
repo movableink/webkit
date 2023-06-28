@@ -131,11 +131,6 @@ TextureMapperGLData::~TextureMapperGLData()
 {
     for (auto& entry : m_vbos)
         glDeleteBuffers(1, &entry.value);
-
-#if !USE(OPENGL_ES)
-    if (GLContext::current()->version() >= 320 && m_vao)
-        glDeleteVertexArrays(1, &m_vao);
-#endif
 }
 
 void TextureMapperGLData::initializeStencil()
@@ -168,11 +163,6 @@ GLuint TextureMapperGLData::getStaticVBO(GLenum target, GLsizeiptr size, const v
 
 GLuint TextureMapperGLData::getVAO()
 {
-#if !USE(OPENGL_ES)
-    if (GLContext::current()->version() >= 320 && !m_vao)
-        glGenVertexArrays(1, &m_vao);
-#endif
-
     return m_vao;
 }
 
@@ -203,7 +193,7 @@ ClipStack& TextureMapperGL::clipStack()
     return data().currentSurface ? toBitmapTextureGL(data().currentSurface.get())->clipStack() : m_clipStack;
 }
 
-void TextureMapperGL::beginPainting(PaintFlags flags)
+void TextureMapperGL::beginPainting(PaintFlags flags, BitmapTexture* surface)
 {
     glGetIntegerv(GL_CURRENT_PROGRAM, &data().previousProgram);
     data().previousScissorState = glIsEnabled(GL_SCISSOR_TEST);
@@ -223,18 +213,12 @@ void TextureMapperGL::beginPainting(PaintFlags flags)
     m_clipStack.reset(IntRect(0, 0, data().viewport[2], data().viewport[3]), flags & PaintingMirrored ? ClipStack::YAxisMode::Default : ClipStack::YAxisMode::Inverted);
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &data().targetFrameBuffer);
     data().PaintFlags = flags;
-    bindSurface(0);
-
-#if !USE(OPENGL_ES)
-    if (GLContext::current()->version() >= 320) {
-        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &data().previousVAO);
-        glBindVertexArray(data().getVAO());
-    }
-#endif
+    bindSurface(surface);
 }
 
 void TextureMapperGL::endPainting()
 {
+    glBindFramebuffer(GL_FRAMEBUFFER, data().targetFrameBuffer);
     if (data().didModifyStencil) {
         glClearStencil(1);
         glClear(GL_STENCIL_BUFFER_BIT);
@@ -259,11 +243,6 @@ void TextureMapperGL::endPainting()
     QPainter* painter = m_context->platformContext();
     painter->endNativePainting();
     painter->restore();
-#endif
-
-#if !USE(OPENGL_ES)
-    if (GLContext::current()->version() >= 320)
-        glBindVertexArray(data().previousVAO);
 #endif
 }
 
@@ -928,11 +907,11 @@ void TextureMapperGL::bindDefaultSurface()
 {
     glBindFramebuffer(GL_FRAMEBUFFER, data().targetFrameBuffer);
     auto& viewport = data().viewport;
-    data().projectionMatrix = createProjectionMatrix(IntSize(viewport[2], viewport[3]), data().PaintFlags & PaintingMirrored, data().zNear, data().zFar);
     glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
     glDisable(GL_DEPTH_TEST);
     m_clipStack.apply();
     data().currentSurface = nullptr;
+    updateProjectionMatrix();
 }
 
 void TextureMapperGL::bindSurface(BitmapTexture *surface)
@@ -943,8 +922,8 @@ void TextureMapperGL::bindSurface(BitmapTexture *surface)
     }
 
     static_cast<BitmapTextureGL*>(surface)->bindAsSurface();
-    data().projectionMatrix = createProjectionMatrix(surface->size(), true /* mirrored */, data().zNear, data().zFar);
     data().currentSurface = surface;
+    updateProjectionMatrix();
 }
 
 BitmapTexture* TextureMapperGL::currentSurface()
@@ -1076,6 +1055,21 @@ void TextureMapperGL::setDepthRange(double zNear, double zFar)
 {
     data().zNear = zNear;
     data().zFar = zFar;
+    updateProjectionMatrix();
+}
+
+void TextureMapperGL::updateProjectionMatrix()
+{
+    bool mirrored;
+    IntSize size;
+    if (data().currentSurface) {
+        size = data().currentSurface->size();
+        mirrored = true;
+    } else {
+        size = IntSize(data().viewport[2], data().viewport[3]);
+        mirrored = data().PaintFlags & PaintingMirrored;
+    }
+    data().projectionMatrix = createProjectionMatrix(size, mirrored, data().zNear, data().zFar);
 }
 
 std::unique_ptr<TextureMapper> TextureMapper::platformCreateAccelerated()

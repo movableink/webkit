@@ -21,6 +21,7 @@
 #include "config.h"
 #include "FontCustomPlatformData.h"
 
+#include "CSSFontFaceSrcValue.h"
 #include "FontCreationContext.h"
 #include "FontDescription.h"
 #include "FontMemoryResource.h"
@@ -37,6 +38,7 @@ namespace WebCore {
 FontCustomPlatformData::FontCustomPlatformData(const String& name, FontPlatformData::CreationData&& creationData)
     : name(name)
     , creationData(WTFMove(creationData))
+    , m_renderingResourceIdentifier(RenderingResourceIdentifier::generate())
 {
 }
 
@@ -45,15 +47,12 @@ FontCustomPlatformData::~FontCustomPlatformData() = default;
 FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription& fontDescription, bool bold, bool italic, const FontCreationContext&)
 {
     int size = fontDescription.computedPixelSize();
-    FontRenderingMode renderingMode = fontDescription.renderingMode();
 
     LOGFONT logFont;
     memset(&logFont, 0, sizeof(LOGFONT));
     wcsncpy(logFont.lfFaceName, name.wideCharacters().data(), LF_FACESIZE - 1);
 
-    logFont.lfHeight = -size;
-    if (renderingMode == FontRenderingMode::Normal)
-        logFont.lfHeight *= 32;
+    logFont.lfHeight = -size * cWindowsFontScaleFactor;
     logFont.lfWidth = 0;
     logFont.lfEscapement = 0;
     logFont.lfOrientation = 0;
@@ -70,7 +69,7 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription&
 
     cairo_font_face_t* fontFace = cairo_win32_font_face_create_for_hfont(hfont.get());
 
-    FontPlatformData fontPlatformData(WTFMove(hfont), fontFace, size, bold, italic, &creationData);
+    FontPlatformData fontPlatformData(WTFMove(hfont), fontFace, size, bold, italic, this);
 
     cairo_font_face_destroy(fontFace);
 
@@ -87,7 +86,7 @@ static String createUniqueFontName()
     return fontName;
 }
 
-std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, const String& itemInCollection)
+RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, const String& itemInCollection)
 {
     String fontName = createUniqueFontName();
     auto fontResource = renameAndActivateFont(buffer, fontName);
@@ -96,7 +95,7 @@ std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffe
         return nullptr;
 
     FontPlatformData::CreationData creationData = { buffer, itemInCollection, fontResource.releaseNonNull() };
-    return makeUnique<FontCustomPlatformData>(fontName, WTFMove(creationData));
+    return adoptRef(new FontCustomPlatformData(fontName, WTFMove(creationData)));
 }
 
 bool FontCustomPlatformData::supportsFormat(const String& format)
@@ -106,7 +105,14 @@ bool FontCustomPlatformData::supportsFormat(const String& format)
 #if USE(WOFF2)
         || equalLettersIgnoringASCIICase(format, "woff2"_s)
 #endif
-        || equalLettersIgnoringASCIICase(format, "woff"_s);
+        || equalLettersIgnoringASCIICase(format, "woff"_s)
+        || equalLettersIgnoringASCIICase(format, "svg"_s);
+}
+
+bool FontCustomPlatformData::supportsTechnology(const FontTechnology&)
+{
+    // FIXME: define supported technologies for this platform (webkit.org/b/256310).
+    return true;
 }
 
 }

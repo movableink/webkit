@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
@@ -62,6 +62,7 @@
 #include "RenderElement.h"
 #include "RenderImage.h"
 #include "RenderLayer.h"
+#include "RenderStyleInlines.h"
 #include "RenderTheme.h"
 #include "SVGImageElement.h"
 #include "ScriptDisallowedScope.h"
@@ -516,6 +517,14 @@ void CanvasRenderingContext2DBase::setFillStyle(CanvasStyle style)
         return;
     state.fillStyle.applyFillColor(*c);
     state.unparsedFillColor = String();
+
+    if (!style.srgbaColor())
+        return;
+    if (auto color = style.srgbaColor()->tryGetAsSRGBABytes()) {
+        auto colorValue { PackedColor::RGBA { *color }.value };
+        if (m_suppliedColors.isValidValue(colorValue))
+            m_suppliedColors.add(colorValue);
+    }
 }
 
 void CanvasRenderingContext2DBase::setLineWidth(double width)
@@ -1032,6 +1041,19 @@ void CanvasRenderingContext2DBase::clip(Path2D& path, CanvasFillRule windingRule
     clipInternal(path.path(), windingRule);
 }
 
+static inline IntRect computeImageDataRect(const ImageBuffer& buffer, int width, int height, IntRect destRect, const IntSize& destOffset)
+{
+    destRect.intersect(IntRect { 0, 0, width, height });
+    destRect.move(destOffset);
+    destRect.intersect(IntRect { { }, buffer.truncatedLogicalSize() });
+    if (destRect.isEmpty())
+        return destRect;
+    IntRect sourceRect { destRect };
+    sourceRect.move(-destOffset);
+    sourceRect.intersect(IntRect { 0, 0, width, height });
+    return sourceRect;
+}
+
 void CanvasRenderingContext2DBase::fillInternal(const Path& path, CanvasFillRule windingRule)
 {
     auto* c = drawingContext();
@@ -1155,6 +1177,9 @@ bool CanvasRenderingContext2DBase::isPointInStroke(Path2D& path, double x, doubl
 
 bool CanvasRenderingContext2DBase::isPointInPathInternal(const Path& path, double x, double y, CanvasFillRule windingRule)
 {
+    if (!std::isfinite(x) || !std::isfinite(y))
+        return false;
+    
     if (!drawingContext())
         return false;
     auto& state = this->state();
@@ -1162,14 +1187,16 @@ bool CanvasRenderingContext2DBase::isPointInPathInternal(const Path& path, doubl
         return false;
 
     auto transformedPoint = valueOrDefault(state.transform.inverse()).mapPoint(FloatPoint(x, y));
-    if (!std::isfinite(transformedPoint.x()) || !std::isfinite(transformedPoint.y()))
-        return false;
+    ASSERT(std::isfinite(transformedPoint.x()) && std::isfinite(transformedPoint.y()));
 
     return path.contains(transformedPoint, toWindRule(windingRule));
 }
 
 bool CanvasRenderingContext2DBase::isPointInStrokeInternal(const Path& path, double x, double y)
 {
+    if (!std::isfinite(x) || !std::isfinite(y))
+        return false;
+
     if (!drawingContext())
         return false;
     auto& state = this->state();
@@ -1177,8 +1204,7 @@ bool CanvasRenderingContext2DBase::isPointInStrokeInternal(const Path& path, dou
         return false;
 
     auto transformedPoint = valueOrDefault(state.transform.inverse()).mapPoint(FloatPoint(x, y));
-    if (!std::isfinite(transformedPoint.x()) || !std::isfinite(transformedPoint.y()))
-        return false;
+    ASSERT(std::isfinite(transformedPoint.x()) && std::isfinite(transformedPoint.y()));
 
     return path.strokeContains(transformedPoint, [&state] (GraphicsContext& context) {
         context.setStrokeThickness(state.lineWidth);
@@ -1448,12 +1474,6 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(CanvasImageSource&& im
             LayoutSize sourceRectSize = size(*imageElement, ImageSizeType::BeforeDevicePixelRatio);
             return this->drawImage(*imageElement, FloatRect { 0, 0, sourceRectSize.width(), sourceRectSize.height() }, FloatRect { dx, dy, destRectSize.width(), destRectSize.height() });
         },
-#if ENABLE(WEB_CODECS)
-        [&] (RefPtr<WebCodecsVideoFrame>& videoFrame) -> ExceptionOr<void> {
-            auto rectSize = size(*videoFrame);
-            return this->drawImage(*videoFrame, FloatRect { 0, 0, rectSize.width(), rectSize.height() }, FloatRect { dx, dy, rectSize.width(), rectSize.height() });
-        },
-#endif
         [&] (auto& element) -> ExceptionOr<void> {
             FloatSize elementSize = size(*element);
             return this->drawImage(*element, FloatRect { 0, 0, elementSize.width(), elementSize.height() }, FloatRect { dx, dy, elementSize.width(), elementSize.height() });
@@ -1569,7 +1589,12 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(WebCodecsVideoFrame& f
     if (!internalFrame)
         return { };
 
+    // FIXME: Add support for srcRect
     context->paintVideoFrame(*internalFrame, dstRect, frame.shoudlDiscardAlpha());
+
+    auto normalizedDstRect = normalizeRect(dstRect);
+    bool repaintEntireCanvas = rectContainsCanvas(normalizedDstRect);
+    didDraw(repaintEntireCanvas, normalizedDstRect);
 
     return { };
 }
@@ -1695,7 +1720,7 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(CanvasBase& sourceCanv
         repaintEntireCanvas = true;
     } else if (state().globalComposite == CompositeOperator::Copy) {
         if (&sourceCanvas == &canvasBase()) {
-            if (auto copy = c->createAlignedImageBuffer(normalizedSrcRect.size(), colorSpace())) {
+            if (auto copy = c->createImageBuffer(normalizedSrcRect.size(), 1, colorSpace())) {
                 copy->context().drawImageBuffer(*buffer, -normalizedSrcRect.location());
                 clearCanvas();
                 c->drawImageBuffer(*copy, normalizedDstRect, { { }, normalizedSrcRect.size() }, { state().globalComposite, state().globalBlend });
@@ -2144,7 +2169,7 @@ ExceptionOr<RefPtr<CanvasPattern>> CanvasRenderingContext2DBase::createPattern(C
 
 void CanvasRenderingContext2DBase::didDrawEntireCanvas()
 {
-    didDraw(backingStoreBounds(), DidDrawOption::ApplyClip);
+    didDraw(backingStoreBounds(), { DidDrawOption::ApplyClip, DidDrawOption::ApplyPostProcessing });
 }
 
 void CanvasRenderingContext2DBase::didDraw(std::optional<FloatRect> rect, OptionSet<DidDrawOption> options)
@@ -2181,7 +2206,7 @@ void CanvasRenderingContext2DBase::didDraw(std::optional<FloatRect> rect, Option
         canvasBase().didDraw(std::nullopt);
     else {
         m_dirtyRect.unite(dirtyRect);
-        canvasBase().didDraw(m_dirtyRect);
+        canvasBase().didDraw(m_dirtyRect, options.contains(DidDrawOption::ApplyPostProcessing) ? ShouldApplyPostProcessingToDirtyRect::Yes : ShouldApplyPostProcessingToDirtyRect::No);
     }
 }
 
@@ -2306,6 +2331,7 @@ ExceptionOr<Ref<ImageData>> CanvasRenderingContext2DBase::getImageData(int sx, i
 
     IntRect imageDataRect { sx, sy, sw, sh };
 
+    canvasBase().makeRenderingResultsAvailable();
     ImageBuffer* buffer = canvasBase().buffer();
     if (!buffer) {
         auto imageData = ImageData::createUninitialized(imageDataRect.width(), imageDataRect.height(), m_settings.colorSpace, settings);
@@ -2353,22 +2379,14 @@ void CanvasRenderingContext2DBase::putImageData(ImageData& data, int dx, int dy,
         dirtyHeight = -dirtyHeight;
     }
 
-    IntRect clipRect { dirtyX, dirtyY, dirtyWidth, dirtyHeight };
-    clipRect.intersect(IntRect { 0, 0, data.width(), data.height() });
     IntSize destOffset { dx, dy };
-    IntRect destRect = clipRect;
-    destRect.move(destOffset);
-    destRect.intersect(IntRect { { }, buffer->truncatedLogicalSize() });
-    if (destRect.isEmpty())
-        return;
-    IntRect sourceRect { destRect };
-    sourceRect.move(-destOffset);
-    sourceRect.intersect(IntRect { 0, 0, data.width(), data.height() });
+    IntRect destRect { dirtyX, dirtyY, dirtyWidth, dirtyHeight };
+    IntRect sourceRect = computeImageDataRect(*buffer, data.width(), data.height(), destRect, destOffset);
 
     if (!sourceRect.isEmpty())
         buffer->putPixelBuffer(data.pixelBuffer(), sourceRect, IntPoint { destOffset });
 
-    didDraw(FloatRect { destRect }, { }); // ignore transform, shadow and clip
+    didDraw(FloatRect { destRect }, { }); // ignore transform, shadow, clip, and post-processing
 }
 
 void CanvasRenderingContext2DBase::inflateStrokeRect(FloatRect& rect) const

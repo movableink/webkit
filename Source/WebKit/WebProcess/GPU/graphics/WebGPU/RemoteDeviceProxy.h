@@ -65,7 +65,7 @@ private:
     
     static inline constexpr Seconds defaultSendTimeout = 30_s;
     template<typename T>
-    WARN_UNUSED_RETURN bool send(T&& message)
+    WARN_UNUSED_RETURN IPC::Error send(T&& message)
     {
         return root().streamClientConnection().send(WTFMove(message), backing(), defaultSendTimeout);
     }
@@ -73,6 +73,11 @@ private:
     WARN_UNUSED_RETURN IPC::Connection::SendSyncResult<T> sendSync(T&& message)
     {
         return root().streamClientConnection().sendSync(WTFMove(message), backing(), defaultSendTimeout);
+    }
+    template<typename T, typename C>
+    WARN_UNUSED_RETURN IPC::StreamClientConnection::AsyncReplyID sendWithAsyncReply(T&& message, C&& completionHandler)
+    {
+        return root().streamClientConnection().sendWithAsyncReply(WTFMove(message), completionHandler, backing(), defaultSendTimeout);
     }
 
     Ref<PAL::WebGPU::Queue> queue() final;
@@ -91,8 +96,8 @@ private:
     Ref<PAL::WebGPU::ShaderModule> createShaderModule(const PAL::WebGPU::ShaderModuleDescriptor&) final;
     Ref<PAL::WebGPU::ComputePipeline> createComputePipeline(const PAL::WebGPU::ComputePipelineDescriptor&) final;
     Ref<PAL::WebGPU::RenderPipeline> createRenderPipeline(const PAL::WebGPU::RenderPipelineDescriptor&) final;
-    void createComputePipelineAsync(const PAL::WebGPU::ComputePipelineDescriptor&, CompletionHandler<void(Ref<PAL::WebGPU::ComputePipeline>&&)>&&) final;
-    void createRenderPipelineAsync(const PAL::WebGPU::RenderPipelineDescriptor&, CompletionHandler<void(Ref<PAL::WebGPU::RenderPipeline>&&)>&&) final;
+    void createComputePipelineAsync(const PAL::WebGPU::ComputePipelineDescriptor&, CompletionHandler<void(RefPtr<PAL::WebGPU::ComputePipeline>&&)>&&) final;
+    void createRenderPipelineAsync(const PAL::WebGPU::RenderPipelineDescriptor&, CompletionHandler<void(RefPtr<PAL::WebGPU::RenderPipeline>&&)>&&) final;
 
     Ref<PAL::WebGPU::CommandEncoder> createCommandEncoder(const std::optional<PAL::WebGPU::CommandEncoderDescriptor>&) final;
     Ref<PAL::WebGPU::RenderBundleEncoder> createRenderBundleEncoder(const PAL::WebGPU::RenderBundleEncoderDescriptor&) final;

@@ -132,3 +132,34 @@ to draw scrollbars that match arbitrary GTK themes. Accordingly, the
 `webkit_web_context_get_use_system_appearance_for_scrollbars` and
 `webkit_web_context_set_use_system_appearance_for_scrollbars` APIs have been
 removed. WebKit will draw scrollbars that match the Adwaita GTK theme.
+
+## User Script Message Handlers
+
+`webkit_user_content_manager_register_script_message_handler_in_world()` and
+`webkit_user_content_manager_unregister_script_message_handler_in_world()` have
+been removed. Instead, [method@WebKit.UserContentManager.register_script_message_handler]
+and [method@WebKit.UserContentManager.unregister_script_message_handler] have
+gained parameters to specify the script world to use.
+
+## Download Destination
+
+[method@WebKit.Download.set_destination], [method@WebKit.Download.get_destination],
+[property@WebKit.Download:destination], and [signal@WebKit.Download::created-destination]
+now all use a filesystem path rather than a URI. All uses must be updated accordingly.
+
+## JavaScript Results
+
+WebKitJavascriptResult has been removed. [signal@WebKit.UserContentManager::script-message-received]
+now directly returns a [class@JSC.Value] instead.
+
+## Web Process Extension
+
+WebKitWebExtension has been renamed to WebKitWebProcessExtension to avoid
+confusion with WebExtensions, which are unrelated. This affects many methods and
+signals of other objects as well, e.g. [signal@WebKit.WebContext::initialize-web-process-extensions].
+The name of your extension's entry point must now be `webkit_web_process_extension_initialize()`
+or `webkit_web_process_extension_initialize_with_user_data()`.
+
+Beware that as of WebKitGTK 2.40, the entire web process API may unfortunately
+be removed in the future. For more information on why, see
+[this mailing list thread](https://lists.webkit.org/pipermail/webkit-dev/2022-August/032329.html).

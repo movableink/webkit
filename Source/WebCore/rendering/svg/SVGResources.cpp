@@ -48,7 +48,7 @@ SVGResources::SVGResources()
 {
 }
 
-static MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> tagSet(Span<decltype(SVGNames::aTag)* const> tags)
+static MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> tagSet(std::span<decltype(SVGNames::aTag)* const> tags)
 {
     MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> set;
     set.reserveInitialCapacity(tags.size());
@@ -265,23 +265,16 @@ bool SVGResources::buildCachedResources(const RenderElement& renderer, const Ren
     }
 
     if (markerTags().contains(tagName) && svgStyle.hasMarkers()) {
-        AtomString markerStartId(svgStyle.markerStartResource());
-        if (setMarkerStart(getRenderSVGResourceById<RenderSVGResourceMarker>(document, markerStartId)))
-            foundResources = true;
-        else
-            registerPendingResource(extensions, markerStartId, element);
-
-        AtomString markerMidId(svgStyle.markerMidResource());
-        if (setMarkerMid(getRenderSVGResourceById<RenderSVGResourceMarker>(document, markerMidId)))
-            foundResources = true;
-        else
-            registerPendingResource(extensions, markerMidId, element);
-
-        AtomString markerEndId(svgStyle.markerEndResource());
-        if (setMarkerEnd(getRenderSVGResourceById<RenderSVGResourceMarker>(document, markerEndId)))
-            foundResources = true;
-        else
-            registerPendingResource(extensions, markerEndId, element);
+        auto buildCachedMarkerResource = [&](const String& markerResource, bool (SVGResources::*setMarker)(RenderSVGResourceMarker*)) {
+            auto markerId = SVGURIReference::fragmentIdentifierFromIRIString(markerResource, document);
+            if ((this->*setMarker)(getRenderSVGResourceById<RenderSVGResourceMarker>(document, markerId)))
+                foundResources = true;
+            else
+                registerPendingResource(extensions, markerId, element);
+        };
+        buildCachedMarkerResource(svgStyle.markerStartResource(), &SVGResources::setMarkerStart);
+        buildCachedMarkerResource(svgStyle.markerMidResource(), &SVGResources::setMarkerMid);
+        buildCachedMarkerResource(svgStyle.markerEndResource(), &SVGResources::setMarkerEnd);
     }
 
     if (fillAndStrokeTags().contains(tagName)) {
@@ -318,25 +311,22 @@ bool SVGResources::buildCachedResources(const RenderElement& renderer, const Ren
     return foundResources;
 }
 
-void SVGResources::layoutDifferentRootIfNeeded(const LegacyRenderSVGRoot* svgRoot)
+void SVGResources::layoutReferencedRootIfNeeded()
 {
-    if (clipper() && svgRoot != SVGRenderSupport::findTreeRootObject(*clipper()))
-        clipper()->layoutIfNeeded();
-
-    if (masker() && svgRoot != SVGRenderSupport::findTreeRootObject(*masker()))
-        masker()->layoutIfNeeded();
-
-    if (filter() && svgRoot != SVGRenderSupport::findTreeRootObject(*filter()))
-        filter()->layoutIfNeeded();
-
-    if (markerStart() && svgRoot != SVGRenderSupport::findTreeRootObject(*markerStart()))
-        markerStart()->layoutIfNeeded();
-
-    if (markerMid() && svgRoot != SVGRenderSupport::findTreeRootObject(*markerMid()))
-        markerMid()->layoutIfNeeded();
-
-    if (markerEnd() && svgRoot != SVGRenderSupport::findTreeRootObject(*markerEnd()))
-        markerEnd()->layoutIfNeeded();
+    auto layoutDifferentRootIfNeeded = [&](RenderElement* container) {
+        if (!container)
+            return;
+        auto* root = SVGRenderSupport::findTreeRootObject(*container);
+        if (root->isInLayout())
+            return;
+        container->layoutIfNeeded();
+    };
+    layoutDifferentRootIfNeeded(clipper());
+    layoutDifferentRootIfNeeded(masker());
+    layoutDifferentRootIfNeeded(filter());
+    layoutDifferentRootIfNeeded(markerStart());
+    layoutDifferentRootIfNeeded(markerMid());
+    layoutDifferentRootIfNeeded(markerEnd());
 }
 
 bool SVGResources::markerReverseStart() const

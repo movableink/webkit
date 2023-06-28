@@ -81,6 +81,10 @@
 #define NSAccessibilitySelectedTextMarkerRangeAttribute @"AXSelectedTextMarkerRange"
 #endif
 
+#ifndef NSAccessibilityTextInputMarkedRangeAttribute
+#define NSAccessibilityTextInputMarkedRangeAttribute @"AXTextInputMarkedRange"
+#endif
+
 typedef void (*AXPostedNotificationCallback)(id element, NSString* notification, void* context);
 
 @interface NSObject (WebKitAccessibilityAdditions)
@@ -425,6 +429,16 @@ JSValueRef AccessibilityUIElement::rowHeaders() const
     END_AX_OBJC_EXCEPTIONS
 }
 
+JSValueRef AccessibilityUIElement::selectedCells() const
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    auto value = attributeValue(NSAccessibilitySelectedCellsAttribute);
+    if ([value isKindOfClass:[NSArray class]])
+        return makeJSArray(makeVector<RefPtr<AccessibilityUIElement>>(value.get()));
+    END_AX_OBJC_EXCEPTIONS
+    return nullptr;
+}
+
 JSValueRef AccessibilityUIElement::columnHeaders() const
 {
     BEGIN_AX_OBJC_EXCEPTIONS
@@ -618,6 +632,10 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::allAttributes()
             continue;
 
         auto value = descriptionOfValue(attributeValue(attribute).get());
+
+        if ([attribute isEqualToString:NSAccessibilityTextInputMarkedRangeAttribute] && !value)
+            continue;
+
         [values appendFormat:@"%@: %@\n", attribute, value.get()];
     }
 
@@ -1517,6 +1535,16 @@ bool AccessibilityUIElement::setSelectedTextRange(unsigned location, unsigned le
     return true;
 }
 
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textInputMarkedRange() const
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    auto value = attributeValue(NSAccessibilityTextInputMarkedRangeAttribute);
+    if (value)
+        return [NSStringFromRange([value rangeValue]) createJSStringRef];
+    END_AX_OBJC_EXCEPTIONS
+    return nullptr;
+}
+
 void AccessibilityUIElement::dismiss()
 {
     performAction(@"AXDismissAction");
@@ -2406,17 +2434,16 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::pathDescription() const
         case NSMoveToBezierPathElement:
             [result appendString:@"\tMove to point\n"];
             break;
-
         case NSLineToBezierPathElement:
             [result appendString:@"\tLine to\n"];
             break;
-
         case NSCurveToBezierPathElement:
             [result appendString:@"\tCurve to\n"];
             break;
-
         case NSClosePathBezierPathElement:
             [result appendString:@"\tClose\n"];
+            break;
+        default:
             break;
         }
     }

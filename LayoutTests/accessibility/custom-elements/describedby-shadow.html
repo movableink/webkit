@@ -21,6 +21,7 @@ class CustomElement extends HTMLElement {
         internals.ariaDescribedByElements = Array.from(document.querySelectorAll('.note'));
         internals.ariaDetailsElements = Array.from(document.querySelectorAll('.details'));
         internals.ariaErrorMessageElements = Array.from(document.querySelectorAll('.error'));
+        internals.ariaInvalid = true;
         shouldBe('internals.ariaDescribedByElements.length', '2');
         shouldBe('internals.ariaDescribedByElements[0]', 'document.querySelectorAll(".note")[0]');
         shouldBe('internals.ariaDescribedByElements[1]', 'document.querySelectorAll(".note")[1]');
@@ -44,7 +45,11 @@ if (!window.accessibilityController)
     debug('This test requires accessibilityController');
 else {
     shouldBeEqualToString('accessibilityController.accessibleElementById("custom-1").role', 'AXRole: AXCheckBox');
-    shouldBeEqualToString('accessibilityController.accessibleElementById("custom-1").helpText', 'AXHelp: some description other description');
+    if (accessibilityController.platformName == "mac")
+        shouldBeEqualToString('accessibilityController.accessibleElementById("custom-1").customContent', 'description: some description other description');
+    else
+        shouldBeEqualToString('accessibilityController.accessibleElementById("custom-1").helpText', 'AXHelp: some description other description');
+
     shouldBe('accessibilityController.accessibleElementById("custom-1").detailsElements().length', '2');
     shouldBeEqualToString('accessibilityController.accessibleElementById("custom-1").detailsElements()[0].domIdentifier', 'details1');
     shouldBeEqualToString('accessibilityController.accessibleElementById("custom-1").detailsElements()[1].domIdentifier', 'details2');

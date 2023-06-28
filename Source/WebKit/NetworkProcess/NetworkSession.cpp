@@ -26,6 +26,9 @@
 #include "config.h"
 #include "NetworkSession.h"
 
+#include "BackgroundFetchLoad.h"
+#include "BackgroundFetchState.h"
+#include "BackgroundFetchStoreImpl.h"
 #include "CacheStorageEngine.h"
 #include "LoadedWebArchive.h"
 #include "Logging.h"
@@ -48,6 +51,7 @@
 #include "WebPageProxyMessages.h"
 #include "WebProcessProxy.h"
 #include "WebSWOriginStore.h"
+#include "WebSWRegistrationStore.h"
 #include "WebSharedWorkerServer.h"
 #include "WebSocketTask.h"
 #include <WebCore/CookieJar.h>
@@ -101,21 +105,26 @@ NetworkStorageSession* NetworkSession::networkStorageSession() const
 
 static UniqueRef<PCM::ManagerInterface> managerOrProxy(NetworkSession& networkSession, NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
 {
-    if (!parameters.pcmMachServiceName.isEmpty())
+    if (!parameters.pcmMachServiceName.isEmpty() && !networkSession.sessionID().isEphemeral())
         return makeUniqueRef<PCM::ManagerProxy>(parameters.pcmMachServiceName, networkSession);
     return makeUniqueRef<PrivateClickMeasurementManager>(makeUniqueRef<PCM::ClientImpl>(networkSession, networkProcess), parameters.resourceLoadStatisticsParameters.directory);
 }
 
-static Ref<NetworkStorageManager> createNetworkStorageManager(IPC::Connection* connection, const NetworkSessionCreationParameters& parameters)
+static Ref<NetworkStorageManager> createNetworkStorageManager(NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
 {
     SandboxExtension::consumePermanently(parameters.localStorageDirectoryExtensionHandle);
     SandboxExtension::consumePermanently(parameters.indexedDBDirectoryExtensionHandle);
     SandboxExtension::consumePermanently(parameters.cacheStorageDirectoryExtensionHandle);
     SandboxExtension::consumePermanently(parameters.generalStorageDirectoryHandle);
     IPC::Connection::UniqueID connectionID;
-    if (connection)
+    if (auto* connection = networkProcess.parentProcessConnection())
         connectionID = connection->uniqueID();
-    return NetworkStorageManager::create(parameters.sessionID, connectionID, parameters.generalStorageDirectory, parameters.localStorageDirectory, parameters.indexedDBDirectory, parameters.cacheStorageDirectory, parameters.perOriginStorageQuota, parameters.perThirdPartyOriginStorageQuota, parameters.unifiedOriginStorageLevel);
+    String serviceWorkerStorageDirectory;
+#if ENABLE(SERVICE_WORKER)
+    serviceWorkerStorageDirectory = parameters.serviceWorkerRegistrationDirectory;
+    SandboxExtension::consumePermanently(parameters.serviceWorkerRegistrationDirectoryExtensionHandle);
+#endif
+    return NetworkStorageManager::create(networkProcess, parameters.sessionID, parameters.dataStoreIdentifier, connectionID, parameters.generalStorageDirectory, parameters.localStorageDirectory, parameters.indexedDBDirectory, parameters.cacheStorageDirectory, serviceWorkerStorageDirectory, parameters.perOriginStorageQuota, parameters.originQuotaRatio, parameters.totalQuotaRatio, parameters.standardVolumeCapacity, parameters.volumeCapacityOverride, parameters.unifiedOriginStorageLevel);
 }
 
 NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
@@ -139,7 +148,7 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
     , m_allowsServerPreconnect(parameters.allowsServerPreconnect)
     , m_shouldRunServiceWorkersOnMainThreadForTesting(parameters.shouldRunServiceWorkersOnMainThreadForTesting)
     , m_overrideServiceWorkerRegistrationCountTestingValue(parameters.overrideServiceWorkerRegistrationCountTestingValue)
-    , m_storageManager(createNetworkStorageManager(networkProcess.parentProcessConnection(), parameters))
+    , m_storageManager(createNetworkStorageManager(networkProcess, parameters))
 #if ENABLE(BUILT_IN_NOTIFICATIONS)
     , m_notificationManager(*this, parameters.webPushMachServiceName, WebPushD::WebPushDaemonConnectionConfiguration { parameters.webPushDaemonConnectionConfiguration })
 #endif
@@ -179,6 +188,8 @@ NetworkSession::NetworkSession(NetworkProcess& networkProcess, const NetworkSess
 #if ENABLE(TRACKING_PREVENTION)
     setTrackingPreventionEnabled(parameters.resourceLoadStatisticsParameters.enabled);
 #endif
+
+    setBlobRegistryTopOriginPartitioningEnabled(parameters.isBlobRegistryTopOriginPartitioningEnabled);
 
 #if ENABLE(SERVICE_WORKER)
     SandboxExtension::consumePermanently(parameters.serviceWorkerRegistrationDirectoryExtensionHandle);
@@ -405,11 +416,20 @@ void NetworkSession::handlePrivateClickMeasurementConversion(WebCore::PCM::Attri
         appBundleID = WebCore::applicationBundleIdentifier();
 #endif
 
+    if (!m_ephemeralMeasurement && m_sessionID.isEphemeral())
+        return;
+
     if (m_ephemeralMeasurement) {
         auto ephemeralMeasurement = *std::exchange(m_ephemeralMeasurement, std::nullopt);
 
         auto redirectDomain = RegistrableDomain(redirectRequest.url());
         auto firstPartyForCookies = redirectRequest.firstPartyForCookies();
+
+        bool hasAgedOut = WallTime::now() - ephemeralMeasurement.timeOfAdClick() > WebCore::PrivateClickMeasurement::maxAge();
+        if (hasAgedOut) {
+            networkProcess().broadcastConsoleMessage(m_sessionID, JSC::MessageSource::PrivateClickMeasurement, JSC::MessageLevel::Info, "[Private Click Measurement] Aging out ephemeral click measurement."_s);
+            return;
+        }
 
         // Ephemeral measurement can only have one pending click.
         if (ephemeralMeasurement.isNeitherSameSiteNorCrossSiteTriggeringEvent(redirectDomain, firstPartyForCookies, attributionTriggerData))
@@ -501,6 +521,12 @@ void NetworkSession::firePrivateClickMeasurementTimerImmediatelyForTesting()
     privateClickMeasurement().startTimerImmediatelyForTesting();
 }
 
+void NetworkSession::setBlobRegistryTopOriginPartitioningEnabled(bool enabled)
+{
+    RELEASE_LOG(Storage, "NetworkSession::setBlobRegistryTopOriginPartitioningEnabled as %" PUBLIC_LOG_STRING " for session %" PRIu64, enabled ? "enabled" : "disabled", m_sessionID.toUInt64());
+    m_blobRegistry.setPartitioningEnabled(enabled);
+}
+
 void NetworkSession::allowTLSCertificateChainForLocalPCMTesting(const WebCore::CertificateInfo& certificateInfo)
 {
     privateClickMeasurement().allowTLSCertificateChainForLocalPCMTesting(certificateInfo);
@@ -573,7 +599,7 @@ void NetworkSession::removeLoaderWaitingWebProcessTransfer(NetworkResourceLoadId
         cachedResourceLoader->takeLoader()->abort();
 }
 
-std::unique_ptr<WebSocketTask> NetworkSession::createWebSocketTask(WebPageProxyIdentifier, NetworkSocketChannel&, const WebCore::ResourceRequest&, const String& protocol, const WebCore::ClientOrigin&, bool, bool, OptionSet<WebCore::NetworkConnectionIntegrity>)
+std::unique_ptr<WebSocketTask> NetworkSession::createWebSocketTask(WebPageProxyIdentifier, std::optional<WebCore::FrameIdentifier>, std::optional<WebCore::PageIdentifier>, NetworkSocketChannel&, const WebCore::ResourceRequest&, const String& protocol, const WebCore::ClientOrigin&, bool, bool, OptionSet<WebCore::AdvancedPrivacyProtections>, WebCore::ShouldRelaxThirdPartyCookieBlocking, WebCore::StoredCredentialsPolicy)
 {
     return nullptr;
 }
@@ -674,6 +700,10 @@ bool NetworkSession::hasServiceWorkerDatabasePath() const
     return m_serviceWorkerInfo && !m_serviceWorkerInfo->databasePath.isEmpty();
 }
 
+void NetworkSession::requestBackgroundFetchPermission(const ClientOrigin& origin, CompletionHandler<void(bool)>&& callback)
+{
+    m_networkProcess->requestBackgroundFetchPermission(m_sessionID, origin, WTFMove(callback));
+}
 #endif // ENABLE(SERVICE_WORKER)
 
 WebSharedWorkerServer& NetworkSession::ensureSharedWorkerServer()
@@ -709,17 +739,6 @@ void NetworkSession::setEmulatedConditions(std::optional<int64_t>&& bytesPerSeco
 
 #endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
 
-bool NetworkSession::needsAdditionalNetworkConnectionIntegritySettings(const ResourceRequest& request)
-{
-    if (request.isThirdParty())
-        return false;
-
-    if (request.url().host() == request.firstPartyForCookies().host())
-        return false;
-
-    return true;
-}
-
 #if ENABLE(SERVICE_WORKER)
 void NetworkSession::softUpdate(ServiceWorkerJobData&& jobData, bool shouldRefreshCache, WebCore::ResourceRequest&& request, CompletionHandler<void(WebCore::WorkerFetchResult&&)>&& completionHandler)
 {
@@ -749,7 +768,66 @@ void NetworkSession::addAllowedFirstPartyForCookies(WebCore::ProcessIdentifier w
         ASSERT_NOT_REACHED();
         return;
     }
+
+    if (auto* connection = m_networkProcess->webProcessConnection(webProcessIdentifier))
+        connection->addAllowedFirstPartyForCookies(firstPartyForCookies);
+
     m_networkProcess->addAllowedFirstPartyForCookies(webProcessIdentifier, WTFMove(firstPartyForCookies), LoadedWebArchive::No, [] { });
+}
+
+std::unique_ptr<SWRegistrationStore> NetworkSession::createUniqueRegistrationStore(WebCore::SWServer& server)
+{
+    if (m_sessionID.isEphemeral())
+        return nullptr;
+
+    return makeUnique<WebSWRegistrationStore>(server, m_storageManager.get());
+}
+
+std::unique_ptr<BackgroundFetchRecordLoader> NetworkSession::createBackgroundFetchRecordLoader(BackgroundFetchRecordLoader::Client& client, const WebCore::BackgroundFetchRequest& request, size_t responseDataSize, const ClientOrigin& clientOrigin)
+{
+    return makeUnique<BackgroundFetchLoad>(m_networkProcess.get(), m_sessionID, client, request, responseDataSize, clientOrigin);
+}
+
+Ref<BackgroundFetchStore> NetworkSession::createBackgroundFetchStore()
+{
+    return ensureBackgroundFetchStore();
+}
+
+BackgroundFetchStoreImpl& NetworkSession::ensureBackgroundFetchStore()
+{
+    if (!m_backgroundFetchStore)
+        m_backgroundFetchStore = BackgroundFetchStoreImpl::create(m_storageManager.get(), ensureSWServer());
+    return *m_backgroundFetchStore;
+}
+
+void NetworkSession::getAllBackgroundFetchIdentifiers(CompletionHandler<void(Vector<String>&&)>&& callback)
+{
+    ensureBackgroundFetchStore().getAllBackgroundFetchIdentifiers(WTFMove(callback));
+}
+
+void NetworkSession::getBackgroundFetchState(const String& identifier, CompletionHandler<void(std::optional<BackgroundFetchState>&&)>&& callback)
+{
+    ensureBackgroundFetchStore().getBackgroundFetchState(identifier, WTFMove(callback));
+}
+
+void NetworkSession::abortBackgroundFetch(const String& identifier, CompletionHandler<void()>&& callback)
+{
+    ensureBackgroundFetchStore().abortBackgroundFetch(identifier, WTFMove(callback));
+}
+
+void NetworkSession::pauseBackgroundFetch(const String& identifier, CompletionHandler<void()>&& callback)
+{
+    ensureBackgroundFetchStore().pauseBackgroundFetch(identifier, WTFMove(callback));
+}
+
+void NetworkSession::resumeBackgroundFetch(const String& identifier, CompletionHandler<void()>&& callback)
+{
+    ensureBackgroundFetchStore().resumeBackgroundFetch(identifier, WTFMove(callback));
+}
+
+void NetworkSession::clickBackgroundFetch(const String& identifier, CompletionHandler<void()>&& callback)
+{
+    ensureBackgroundFetchStore().clickBackgroundFetch(identifier, WTFMove(callback));
 }
 #endif // ENABLE(SERVICE_WORKER)
 

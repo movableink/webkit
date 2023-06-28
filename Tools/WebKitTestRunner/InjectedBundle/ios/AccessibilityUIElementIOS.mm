@@ -61,7 +61,6 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (NSString *)stringForRange:(NSRange)range;
 - (NSAttributedString *)attributedStringForRange:(NSRange)range;
 - (NSAttributedString *)attributedStringForElement;
-- (NSArray *)elementsForRange:(NSRange)range;
 - (NSString *)selectionRangeString;
 - (NSArray *)lineRectsAndText;
 - (CGPoint)accessibilityClickPoint;
@@ -261,12 +260,6 @@ RefPtr<AccessibilityUIElement> AccessibilityUIElement::elementAtPoint(int x, int
     return AccessibilityUIElement::create(element);
 }
 
-JSValueRef AccessibilityUIElement::elementsForRange(unsigned location, unsigned length)
-{
-    NSArray *elementsForRange = [m_element elementsForRange:NSMakeRange(location, length)];
-    return makeJSArray(makeVector<RefPtr<AccessibilityUIElement>>(elementsForRange));
-}
-
 unsigned AccessibilityUIElement::indexOfChild(AccessibilityUIElement* element)
 {
     return 0;
@@ -463,6 +456,11 @@ JSValueRef AccessibilityUIElement::uiElementArrayAttributeValue(JSStringRef attr
 }
 
 JSValueRef AccessibilityUIElement::rowHeaders() const
+{
+    return nullptr;
+}
+
+JSValueRef AccessibilityUIElement::selectedCells() const
 {
     return nullptr;
 }
@@ -983,6 +981,11 @@ bool AccessibilityUIElement::setSelectedTextRange(unsigned location, unsigned le
 {
     [m_element _accessibilitySetSelectedTextRange:NSMakeRange(location, length)];
     return true;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textInputMarkedRange() const
+{
+    return WTR::createJSString();
 }
 
 void AccessibilityUIElement::increment()

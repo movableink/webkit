@@ -37,7 +37,17 @@
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/SoftLinking.h>
 #import <wtf/text/StringConcatenateNumbers.h>
+
+#if HAVE(NW_PROXY_CONFIG) && __has_include(<Network/proxy_config_private.h>)
+// FIXME: Soft link libnetwork on the simulator after rdar://110076935 is resolved
+#if !PLATFORM(IOS_FAMILY_SIMULATOR)
+SOFT_LINK_LIBRARY_OPTIONAL(libnetwork)
+SOFT_LINK_OPTIONAL(libnetwork, nw_proxy_config_create_http_connect, nw_proxy_config_t, __cdecl, (nw_endpoint_t, nw_protocol_options_t))
+SOFT_LINK_OPTIONAL(libnetwork, nw_proxy_config_create_socksv5, nw_proxy_config_t, __cdecl, (nw_endpoint_t))
+#endif
+#endif
 
 @interface ProxyDelegate : NSObject <WKNavigationDelegate, WKUIDelegate>
 - (NSString *)waitForAlert;
@@ -155,6 +165,138 @@ TEST(WebKit, SOCKS5)
     EXPECT_WK_STREQ([webView _test_waitForAlert], "success!");
 }
 
+// FIXME: Try to re-enable on the simulator after rdar://110076935 is resolved
+#if !PLATFORM(IOS_FAMILY_SIMULATOR)
+
+#if HAVE(NW_PROXY_CONFIG) && __has_include(<Network/proxy_config_private.h>)
+TEST(WebKit, HTTPSProxyAPI)
+{
+    auto* createProxyConfig = nw_proxy_config_create_http_connectPtr();
+    if (!createProxyConfig)
+        return;
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 100, 100)]);
+    auto delegate = adoptNS([ProxyDelegate new]);
+    [webView setNavigationDelegate:delegate.get()];
+    [webView setUIDelegate:delegate.get()];
+
+    TestWebKitAPI::HTTPServer nonProxyServer({
+        { "/"_s, { "<script>alert('non proxy success!')</script>"_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Https);
+
+    TestWebKitAPI::HTTPServer proxyServer1({
+        { "/"_s, { "<script>alert('proxy success!')</script>"_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::HttpsProxy);
+
+    TestWebKitAPI::HTTPServer proxyServer2({
+        { "/"_s, { "<script>alert('other proxy success!')</script>"_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::HttpsProxy);
+
+    // 127.0.0.1:1 will never be reachable and will immediately timeout, causing
+    // us to fallback to 127.0.0.1:<real port>
+    auto endpoint1 = adoptNS(nw_endpoint_create_host("127.0.0.1", "1"));
+    auto proxyConfig1 = adoptNS(createProxyConfig(endpoint1.get(), nil));
+
+    auto endpoint2 = adoptNS(nw_endpoint_create_host("127.0.0.1", std::to_string(proxyServer1.port()).c_str()));
+    auto proxyConfig2 = adoptNS(createProxyConfig(endpoint2.get(), nil));
+
+    auto endpoint3 = adoptNS(nw_endpoint_create_host("127.0.0.1", std::to_string(proxyServer2.port()).c_str()));
+    auto proxyConfig3 = adoptNS(createProxyConfig(endpoint3.get(), nil));
+
+    // Proxy 1 should be ignored as it is unreachable.
+    // Proxy 2 should be used.
+    // Proxy 3 should be ignored, since proxy 2 handled the request
+    webView.get().configuration.websiteDataStore.proxyConfigurations = @[ proxyConfig1.get(), proxyConfig2.get(), proxyConfig3.get() ];
+
+    EXPECT_EQ(webView.get().configuration.websiteDataStore.proxyConfigurations[0], proxyConfig1.get());
+    EXPECT_EQ(webView.get().configuration.websiteDataStore.proxyConfigurations[1], proxyConfig2.get());
+    EXPECT_EQ(webView.get().configuration.websiteDataStore.proxyConfigurations[2], proxyConfig3.get());
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/"]]];
+    EXPECT_WK_STREQ([delegate waitForAlert], "proxy success!");
+
+    // Proxy 3 should be used
+    // Proxy 2 should now be ignored, since proxy 3 handled the request
+    webView.get().configuration.websiteDataStore.proxyConfigurations = @[ proxyConfig3.get(), proxyConfig2.get() ];
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://yetanotherexample.net/"]]];
+    EXPECT_WK_STREQ([delegate waitForAlert], "other proxy success!");
+
+    // Clear the proxies. The server should be hit directly.
+    webView.get().configuration.websiteDataStore.proxyConfigurations = nil;
+    EXPECT_EQ(webView.get().configuration.websiteDataStore.proxyConfigurations, nil);
+
+    [webView loadRequest:nonProxyServer.request()];
+    EXPECT_WK_STREQ([delegate waitForAlert], "non proxy success!");
+}
+
+TEST(WebKit, SOCKS5API)
+{
+    auto* createProxyConfig = nw_proxy_config_create_socksv5Ptr();
+    if (!createProxyConfig)
+        return;
+
+    constexpr uint8_t socks5Version = 0x5; // https://tools.ietf.org/html/rfc1928#section-3
+    constexpr uint8_t noAuthenticationRequired = 0x00; // https://tools.ietf.org/html/rfc1928#section-3
+    constexpr uint8_t connect = 0x01; // https://tools.ietf.org/html/rfc1928#section-4
+    constexpr uint8_t reserved = 0x00; // https://tools.ietf.org/html/rfc1928#section-4
+    constexpr uint8_t domainName = 0x03; // https://tools.ietf.org/html/rfc1928#section-4
+    constexpr uint8_t requestSucceeded = 0x00; // https://tools.ietf.org/html/rfc1928#section-6
+
+    using namespace TestWebKitAPI;
+    HTTPServer server([](Connection connection) {
+        connection.receiveBytes([=] (Vector<uint8_t>&& bytes) {
+            constexpr uint8_t expectedAuthenticationMethodCount = 1;
+            Vector<uint8_t> expectedClientGreeting { socks5Version, expectedAuthenticationMethodCount, noAuthenticationRequired };
+            EXPECT_EQ(bytes, expectedClientGreeting);
+            connection.send(Vector<uint8_t> { socks5Version, noAuthenticationRequired }, [=] {
+                connection.receiveBytes([=] (Vector<uint8_t>&& bytes) {
+                    constexpr uint8_t httpPortFirstByte = 0;
+                    constexpr uint8_t httpPortSecondByte = 80;
+                    Vector<uint8_t> expectedConnectRequest {
+                        socks5Version,
+                        connect,
+                        reserved,
+                        domainName,
+                        static_cast<uint8_t>(strlen("example.com")),
+                        'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+                        httpPortFirstByte, httpPortSecondByte
+                    };
+                    EXPECT_EQ(bytes, expectedConnectRequest);
+
+                    Vector<uint8_t> response { socks5Version, requestSucceeded, reserved,
+                        domainName,
+                        static_cast<uint8_t>(strlen("example.com")),
+                        'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+                        httpPortFirstByte, httpPortSecondByte
+                    };
+                    connection.send(WTFMove(response), [=] {
+                        connection.receiveHTTPRequest([=] (Vector<char>&&) {
+                            connection.send(
+                                "HTTP/1.1 200 OK\r\n"
+                                "Content-Length: 34\r\n"
+                                "\r\n"
+                                "<script>alert('success!')</script>"_s
+                            );
+                        });
+                    });
+                });
+            });
+        });
+    });
+
+    auto endpoint = adoptNS(nw_endpoint_create_host("127.0.0.1", std::to_string(server.port()).c_str()));
+    auto proxyConfig = adoptNS(createProxyConfig(endpoint.get()));
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 100, 100)]);
+    webView.get().configuration.websiteDataStore.proxyConfigurations = @[ proxyConfig.get() ];
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"http://example.com/"]]];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "success!");
+}
+#endif // HAVE(NW_PROXY_CONFIG) && __has_include(<Network/proxy_config_private.h>)
+#endif // !PLATFORM(IOS_FAMILY_SIMULATOR)
+
 static HTTPServer proxyAuthenticationServer()
 {
     return HTTPServer(HTTPServer::respondWithOK, HTTPServer::Protocol::HttpsProxyWithAuthentication);
@@ -263,7 +405,7 @@ TEST(WebKit, RelaxThirdPartyCookieBlocking)
                 "</script>";
                 switch (connectionCount) {
                 case 1: {
-                    EXPECT_TRUE(strstr(request.data(), "GET http://www.webkit.org/path1 HTTP/1.1\r\n"));
+                    EXPECT_TRUE(strnstr(request.data(), "GET http://www.webkit.org/path1 HTTP/1.1\r\n", request.size()));
                     reply = makeString(
                         "HTTP/1.1 200 OK\r\n"
                         "Content-Length: ", strlen(body), "\r\n"
@@ -274,7 +416,7 @@ TEST(WebKit, RelaxThirdPartyCookieBlocking)
                     break;
                 }
                 case 3: {
-                    EXPECT_TRUE(strstr(request.data(), "GET http://example.com/path2 HTTP/1.1\r\n"));
+                    EXPECT_TRUE(strnstr(request.data(), "GET http://example.com/path2 HTTP/1.1\r\n", request.size()));
                     reply = makeString(
                         "HTTP/1.1 200 OK\r\n"
                         "Content-Type: text/html\r\n"
@@ -287,10 +429,10 @@ TEST(WebKit, RelaxThirdPartyCookieBlocking)
                 case 2:
                 case 4:
                     if (connectionCount == 2 || shouldRelaxThirdPartyCookieBlocking)
-                        EXPECT_TRUE(strstr(request.data(), "Cookie: a=b\r\n"));
+                        EXPECT_TRUE(strnstr(request.data(), "Cookie: a=b\r\n", request.size()));
                     else
-                        EXPECT_FALSE(strstr(request.data(), "Cookie: a=b\r\n"));
-                    EXPECT_TRUE(strstr(request.data(), "GET http://www.webkit.org/path3 HTTP/1.1\r\n"));
+                        EXPECT_FALSE(strnstr(request.data(), "Cookie: a=b\r\n", request.size()));
+                    EXPECT_TRUE(strnstr(request.data(), "GET http://www.webkit.org/path3 HTTP/1.1\r\n", request.size()));
                     reply =
                         "HTTP/1.1 200 OK\r\n"
                         "Content-Length: 0\r\n"

@@ -78,9 +78,9 @@ void RemoteGraphicsContextGL::setSharedVideoFrameSemaphore(IPC::Semaphore&& sema
     m_sharedVideoFrameReader.setSemaphore(WTFMove(semaphore));
 }
 
-void RemoteGraphicsContextGL::setSharedVideoFrameMemory(const SharedMemory::Handle& handle)
+void RemoteGraphicsContextGL::setSharedVideoFrameMemory(SharedMemory::Handle&& handle)
 {
-    m_sharedVideoFrameReader.setSharedMemory(handle);
+    m_sharedVideoFrameReader.setSharedMemory(WTFMove(handle));
 }
 #endif
 
@@ -92,8 +92,9 @@ public:
     ~RemoteGraphicsContextGLCocoa() final = default;
 
     // RemoteGraphicsContextGL overrides.
+    void createEGLSync(WTF::MachSendRight syncEvent, uint64_t signalValue, CompletionHandler<void(uint64_t)>&&) final;
     void platformWorkQueueInitialize(WebCore::GraphicsContextGLAttributes&&) final;
-    void prepareForDisplay(CompletionHandler<void(WTF::MachSendRight&&)>&&) final;
+    void prepareForDisplay(IPC::Semaphore&&, CompletionHandler<void(WTF::MachSendRight&&)>&&) final;
 private:
 };
 
@@ -111,22 +112,29 @@ RemoteGraphicsContextGLCocoa::RemoteGraphicsContextGLCocoa(GPUConnectionToWebPro
 {
 }
 
+void RemoteGraphicsContextGLCocoa::createEGLSync(WTF::MachSendRight syncEvent, uint64_t signalValue, CompletionHandler<void(uint64_t)>&& completionHandler)
+{
+    GCEGLSync returnValue = { };
+    assertIsCurrent(workQueue());
+    returnValue = m_context->createEGLSync(std::make_tuple(syncEvent, signalValue));
+    completionHandler(static_cast<uint64_t>(reinterpret_cast<intptr_t>(returnValue)));
+}
+
 void RemoteGraphicsContextGLCocoa::platformWorkQueueInitialize(WebCore::GraphicsContextGLAttributes&& attributes)
 {
     assertIsCurrent(workQueue());
     m_context = WebCore::GraphicsContextGLCocoa::create(WTFMove(attributes), WebCore::ProcessIdentity { m_resourceOwner });
 }
 
-void RemoteGraphicsContextGLCocoa::prepareForDisplay(CompletionHandler<void(WTF::MachSendRight&&)>&& completionHandler)
+void RemoteGraphicsContextGLCocoa::prepareForDisplay(IPC::Semaphore&& finishedSemaphore, CompletionHandler<void(WTF::MachSendRight&&)>&& completionHandler)
 {
     assertIsCurrent(workQueue());
-    m_context->prepareForDisplay();
+    m_context->prepareForDisplayWithFinishedSignal([finishedSemaphore = WTFMove(finishedSemaphore)]() mutable { 
+        finishedSemaphore.signal();
+    });
     MachSendRight sendRight;
-    WebCore::IOSurface* displayBuffer = m_context->displayBuffer();
-    if (displayBuffer) {
-        m_context->markDisplayBufferInUse();
-        sendRight = displayBuffer->createSendRight();
-    }
+    if (WebCore::IOSurface* surface = m_context->displayBufferSurface())
+        sendRight = surface->createSendRight();
     completionHandler(WTFMove(sendRight));
 }
 

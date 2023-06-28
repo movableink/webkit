@@ -35,6 +35,8 @@ list(APPEND WebKit_SOURCES
     GPUProcess/playstation/GPUProcessMainPlayStation.cpp
     GPUProcess/playstation/GPUProcessPlayStation.cpp
 
+    NetworkProcess/NetworkDataTaskDataURL.cpp
+
     NetworkProcess/Classifier/WebResourceLoadStatisticsStore.cpp
 
     NetworkProcess/Cookies/curl/WebCookieManagerCurl.cpp
@@ -70,13 +72,13 @@ list(APPEND WebKit_SOURCES
 
     Shared/curl/WebCoreArgumentCodersCurl.cpp
 
+    Shared/freetype/WebCoreArgumentCodersFreeType.cpp
+
     Shared/libwpe/NativeWebKeyboardEventLibWPE.cpp
     Shared/libwpe/NativeWebMouseEventLibWPE.cpp
     Shared/libwpe/NativeWebTouchEventLibWPE.cpp
     Shared/libwpe/NativeWebWheelEventLibWPE.cpp
     Shared/libwpe/WebEventFactory.cpp
-
-    Shared/playstation/WebCoreArgumentCodersPlayStation.cpp
 
     Shared/unix/AuxiliaryProcessMain.cpp
 
@@ -135,7 +137,7 @@ list(APPEND WebKit_SOURCES
     WebProcess/playstation/WebProcessPlayStation.cpp
 )
 
-list(APPEND WebKit_INCLUDE_DIRECTORIES
+list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/NetworkProcess/curl"
     "${WEBKIT_DIR}/Platform/IPC/unix"
     "${WEBKIT_DIR}/Platform/classifier"
@@ -146,6 +148,7 @@ list(APPEND WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/UIProcess/API/C/cairo"
     "${WEBKIT_DIR}/UIProcess/API/C/curl"
     "${WEBKIT_DIR}/UIProcess/API/C/playstation"
+    "${WEBKIT_DIR}/UIProcess/API/libwpe"
     "${WEBKIT_DIR}/UIProcess/API/playstation"
     "${WEBKIT_DIR}/UIProcess/CoordinatedGraphics"
     "${WEBKIT_DIR}/UIProcess/playstation"
@@ -185,6 +188,7 @@ if (USE_GRAPHICS_LAYER_WC)
 
         GPUProcess/graphics/wc/RemoteWCLayerTreeHost.cpp
         GPUProcess/graphics/wc/WCContentBufferManager.cpp
+        GPUProcess/graphics/wc/WCRemoteFrameHostLayerManager.cpp
         GPUProcess/graphics/wc/WCScene.cpp
         GPUProcess/graphics/wc/WCSceneContext.cpp
 
@@ -201,7 +205,7 @@ if (USE_GRAPHICS_LAYER_WC)
         WebProcess/WebPage/wc/WCTileGrid.cpp
     )
 
-    list(APPEND WebKit_INCLUDE_DIRECTORIES
+    list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
         "${WEBKIT_DIR}/GPUProcess/graphics/wc"
         "${WEBKIT_DIR}/Shared/wc"
         "${WEBKIT_DIR}/UIProcess/wc"
@@ -212,15 +216,21 @@ if (USE_GRAPHICS_LAYER_WC)
     list(APPEND WebKit_MESSAGES_IN_FILES
         GPUProcess/graphics/wc/RemoteWCLayerTreeHost
     )
+
+    list(APPEND WebKit_SERIALIZATION_IN_FILES
+        WebProcess/WebPage/wc/WCUpdateInfo.serialization.in
+    )
 endif ()
 
 if (USE_WPE_BACKEND_PLAYSTATION)
     list(APPEND WebKit_SOURCES
+        UIProcess/API/libwpe/TouchGestureController.cpp
+
         UIProcess/Launcher/libwpe/ProcessProviderLibWPE.cpp
 
         UIProcess/Launcher/playstation/ProcessProviderPlayStation.cpp
     )
-    list(APPEND WebKit_INCLUDE_DIRECTORIES "${WEBKIT_DIR}/UIProcess/Launcher/libwpe")
+    list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES "${WEBKIT_DIR}/UIProcess/Launcher/libwpe")
 endif ()
 
 # PlayStation specific

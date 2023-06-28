@@ -42,6 +42,13 @@
 namespace WebCore {
 
 #if !PLATFORM(QT)
+
+static_assert(static_cast<uint8_t>(PathElementType::MoveToPoint) == static_cast<uint8_t>(EncodedPathElementType::MoveToPoint), "PathElementType and EncodedPathElementType should match");
+static_assert(static_cast<uint8_t>(PathElementType::AddLineToPoint) == static_cast<uint8_t>(EncodedPathElementType::AddLineToPoint), "PathElementType and EncodedPathElementType should match");
+static_assert(static_cast<uint8_t>(PathElementType::AddQuadCurveToPoint) == static_cast<uint8_t>(EncodedPathElementType::AddQuadCurveToPoint), "PathElementType and EncodedPathElementType should match");
+static_assert(static_cast<uint8_t>(PathElementType::AddCurveToPoint) == static_cast<uint8_t>(EncodedPathElementType::AddCurveToPoint), "PathElementType and EncodedPathElementType should match");
+static_assert(static_cast<uint8_t>(PathElementType::CloseSubpath) == static_cast<uint8_t>(EncodedPathElementType::CloseSubpath), "PathElementType and EncodedPathElementType should match");
+
 float Path::length() const
 {
     PathTraversalState traversalState(PathTraversalState::Action::TotalLength);
@@ -225,7 +232,7 @@ void Path::apply(const PathApplierFunction& function) const
     }
 #endif
 
-    applySlowCase(function);
+    applyIgnoringInlineData(function);
 }
 
 bool Path::isEmpty() const

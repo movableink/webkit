@@ -87,6 +87,8 @@ TEST(UserAgentTest, Quirks)
     assertUserAgentForURLHasChromeBrowserQuirk("http://auth.mayohr.com/");
     assertUserAgentForURLHasChromeBrowserQuirk("http://bankofamerica.com/");
     assertUserAgentForURLHasChromeBrowserQuirk("http://soundcloud.com/");
+    assertUserAgentForURLHasChromeBrowserQuirk("http://youtube.com/");
+    assertUserAgentForURLHasChromeBrowserQuirk("http://apple.com/");
 
     assertUserAgentForURLHasFirefoxBrowserQuirk("http://bugzilla.redhat.com/");
 

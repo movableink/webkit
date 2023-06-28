@@ -38,7 +38,7 @@ def default_diagnose_dir():
 
 def config_argument_parser():
     diagnose_directory = default_diagnose_dir()
-    parser = argparse.ArgumentParser(description='Run browser based performance benchmarks. To run a single benchmark in the recommended way, use run-benchmark --plan. To see the available benchmarks, use run-benchmark --list-plans. This script passes through the __XPC variables in its environment to the Safari process.')
+    parser = argparse.ArgumentParser(description='Run browser based performance benchmarks. To run a single benchmark in the recommended way, use run-benchmark --plan. To see the available benchmarks, use run-benchmark --list-plans. This script passes through the __XPC variables in its environment to the Safari process. All other arguments are passed to the browser at launch.')
     mutual_group = parser.add_mutually_exclusive_group(required=True)
     mutual_group.add_argument('--plan', help='Run a specific benchmark plan (e.g. speedometer, jetstream).')
     mutual_group.add_argument('--list-plans', action='store_true', help='List all available benchmark plans.')
@@ -64,6 +64,8 @@ def config_argument_parser():
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--browser-path', help='Specify the path to a non-default copy of the target browser as a path to the .app.')
     group.add_argument('--build-directory', dest='build_dir', help='Path to the browser executable (e.g. WebKitBuild/Release/).')
+
+    parser.add_argument('browser_args', nargs='*', help='Additional arguments to pass to the browser process. These are positional arguments and must follow all other arguments. If the pass through arguments begin with a dash, use `--` before the argument list begins.')
 
     return parser
 
@@ -97,7 +99,8 @@ def run_benchmark_plan(args, plan):
                                     args.platform, args.browser, args.browser_path, args.subtests, args.scale_unit,
                                     args.show_iteration_values, args.device_id, args.diagnose_dir,
                                     args.diagnose_dir if args.generate_pgo_profiles else None,
-                                    args.diagnose_dir if args.profile else None)
+                                    args.diagnose_dir if args.profile else None,
+                                    args.browser_args)
     runner.execute()
 
 

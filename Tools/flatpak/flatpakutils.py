@@ -196,7 +196,7 @@ def check_flatpak(verbose=True):
                                   " how to install it for your distribution at:\n"
                                   "    * https://flatpak.org/\n", required_version,
                                   sys.argv[0])
-            return ()
+        return ()
 
     def comparable_version(version):
         return tuple(map(int, (version.split("."))))
@@ -698,7 +698,7 @@ class WebkitFlatpak:
         if building:
             Console.message("Building local dependencies from %s ", src_dir)
             if self.run_in_sandbox('meson', 'compile', '-C', sandbox_build_dir, building_local_deps=True, start_sccache=False) != 0:
-                raise RuntimeError('Error while building local dependencies.')
+                raise RuntimeError(f'Error while building local dependencies in {sandbox_build_dir}')
 
         command = ['meson', 'devenv', '-C', sandbox_build_dir, '--dump']
         local_env = self.run_in_sandbox(*command, building_local_deps=True, start_sccache=False, gather_output=True)
@@ -878,6 +878,7 @@ class WebkitFlatpak:
         env_var_prefixes_to_keep = [
             "G",
             "CCACHE",
+            "COG",
             "EGL",
             "GIGACAGE",
             "GTK",

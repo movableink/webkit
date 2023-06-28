@@ -163,6 +163,14 @@ public:
     GList* m_dataList { nullptr };
 };
 
+static void loadChanged(WebKitWebView* webView, WebKitLoadEvent loadEvent, WebViewTest* test)
+{
+    if (loadEvent != WEBKIT_LOAD_FINISHED)
+        return;
+    g_signal_handlers_disconnect_by_func(webView, reinterpret_cast<void*>(loadChanged), test);
+    g_main_loop_quit(test->m_mainLoop);
+}
+
 static void testWebsiteDataConfiguration(WebsiteDataTest* test, gconstpointer)
 {
 #if !ENABLE(2022_GLIB_API)
@@ -279,6 +287,7 @@ static void testWebsiteDataConfiguration(WebsiteDataTest* test, gconstpointer)
     GRefPtr<WebKitWebsiteDataManager> baseDataManager = adoptGRef(webkit_website_data_manager_new(
         "base-data-directory", Test::dataDirectory(), "base-cache-directory", Test::dataDirectory(),
         "indexeddb-directory", indexedDBDirectory.get(), "offline-application-cache-directory", applicationCacheDirectory.get(),
+        "origin-storage-ratio", 1.0, "total-storage-ratio", 1.0,
         nullptr));
     g_assert_true(WEBKIT_IS_WEBSITE_DATA_MANAGER(baseDataManager.get()));
 
@@ -292,6 +301,29 @@ static void testWebsiteDataConfiguration(WebsiteDataTest* test, gconstpointer)
     g_assert_cmpstr(webkit_website_data_manager_get_disk_cache_directory(baseDataManager.get()), ==, diskCacheDirectory.get());
 
     ALLOW_DEPRECATED_DECLARATIONS_END
+#endif
+}
+
+static void testWebsiteDataOriginAndTotalStorageRatio(WebsiteDataTest* test, gconstpointer)
+{
+#if !ENABLE(2022_GLIB_API)
+    GUniquePtr<char> baseDirectory(g_build_filename(Test::dataDirectory(), "ShouldNotExist", nullptr));
+    GUniquePtr<char> indexedDBDirectory(g_build_filename(baseDirectory.get(), "databases", "indexeddb", nullptr));
+
+    GRefPtr<WebKitWebsiteDataManager> baseDataManager = adoptGRef(webkit_website_data_manager_new(
+        "base-data-directory", baseDirectory.get(), "base-cache-directory", baseDirectory.get(),
+        "origin-storage-ratio", 0.0, "total-storage-ratio", 0.0,
+        nullptr));
+    g_assert_true(WEBKIT_IS_WEBSITE_DATA_MANAGER(baseDataManager.get()));
+
+    GRefPtr<WebKitWebContext> webContext = adoptGRef(webkit_web_context_new_with_website_data_manager(baseDataManager.get()));
+    auto webView = Test::adoptView(Test::createWebView(webContext.get()));
+    g_signal_connect(webView.get(), "load-changed", G_CALLBACK(loadChanged), test);
+
+    webkit_web_view_load_uri(webView.get(), kServer->getURIForPath("/empty").data());
+    test->waitUntilLoadFinished(webView.get());
+    test->runJavaScriptAndWaitUntilFinished("window.indexedDB.open('TestDatabase');", nullptr, webView.get());
+    test->assertFileIsNotCreated(indexedDBDirectory.get());
 #endif
 }
 
@@ -873,11 +905,9 @@ static void testWebViewHandleCorruptedLocalStorage(WebsiteDataTest* test, gconst
     const char html[] = "<html><script>let foo = (window.localStorage.length ? window.localStorage.getItem('item'):''); window.localStorage.setItem('item','value');</script></html>";
     auto waitForFooChanged = [&test](WebKitWebView* webView) {
         GUniqueOutPtr<GError> error;
-        JSCValue* jscvalue;
-        WebKitJavascriptResult* result = test->runJavaScriptAndWaitUntilFinished("foo;", &error.outPtr(), webView);
+        JSCValue* value = test->runJavaScriptAndWaitUntilFinished("foo;", &error.outPtr(), webView);
         g_assert_no_error(error.get());
-        jscvalue = webkit_javascript_result_get_js_value(result);
-        GUniquePtr<char> fooValue(jsc_value_to_string(jscvalue));
+        GUniquePtr<char> fooValue(jsc_value_to_string(value));
         return fooValue;
     };
 
@@ -985,6 +1015,7 @@ void beforeAll()
     WebsiteDataTest::add("WebKitWebsiteData", "dom-cache", testWebsiteDataDOMCache);
     WebsiteDataTest::add("WebKitWebsiteData", "handle-corrupted-local-storage", testWebViewHandleCorruptedLocalStorage);
     MemoryPressureTest::add("WebKitWebsiteData", "memory-pressure", testMemoryPressureSettings);
+    WebsiteDataTest::add("WebKitWebsiteData", "origin-and-total-storage-ratio", testWebsiteDataOriginAndTotalStorageRatio);
 }
 
 void afterAll()

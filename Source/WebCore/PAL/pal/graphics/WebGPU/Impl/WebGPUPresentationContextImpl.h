@@ -29,11 +29,10 @@
 
 #include "WebGPUIntegralTypes.h"
 #include "WebGPUPresentationContext.h"
-#include "WebGPUSwapChainWrapper.h"
+#include "WebGPUPtr.h"
 #include "WebGPUTextureFormat.h"
 #include <IOSurface/IOSurfaceRef.h>
 #include <WebGPU/WebGPU.h>
-#include <wtf/MachSendRight.h>
 
 namespace PAL::WebGPU {
 
@@ -43,9 +42,9 @@ class TextureImpl;
 class PresentationContextImpl final : public PresentationContext {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<PresentationContextImpl> create(WGPUSurface surface, ConvertToBackingContext& convertToBackingContext)
+    static Ref<PresentationContextImpl> create(WebGPUPtr<WGPUSurface>&& surface, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new PresentationContextImpl(surface, convertToBackingContext));
+        return adoptRef(*new PresentationContextImpl(WTFMove(surface), convertToBackingContext));
     }
 
     virtual ~PresentationContextImpl();
@@ -58,12 +57,12 @@ public:
 
     void present();
 
-    WGPUSurface backing() const { return m_backing; }
+    WGPUSurface backing() const { return m_backing.get(); }
 
 private:
     friend class DowncastConvertToBackingContext;
 
-    PresentationContextImpl(WGPUSurface, ConvertToBackingContext&);
+    PresentationContextImpl(WebGPUPtr<WGPUSurface>&&, ConvertToBackingContext&);
 
     PresentationContextImpl(const PresentationContextImpl&) = delete;
     PresentationContextImpl(PresentationContextImpl&&) = delete;
@@ -79,10 +78,9 @@ private:
     uint32_t m_width { 0 };
     uint32_t m_height { 0 };
 
-    WGPUSurface m_backing { nullptr };
-    WGPUSwapChain m_swapChain { nullptr };
+    WebGPUPtr<WGPUSurface> m_backing;
+    WebGPUPtr<WGPUSwapChain> m_swapChain;
     Ref<ConvertToBackingContext> m_convertToBackingContext;
-    RefPtr<SwapChainWrapper> m_swapChainWrapper;
     RefPtr<TextureImpl> m_currentTexture;
 };
 

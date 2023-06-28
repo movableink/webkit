@@ -30,23 +30,25 @@
 #include "DOMRect.h"
 #include "DOMRectList.h"
 #include "DocumentFragment.h"
+#include "DocumentType.h"
 #include "ElementInlines.h"
 #include "Event.h"
-#include "Frame.h"
 #include "FrameSelection.h"
-#include "FrameView.h"
 #include "GeometryUtilities.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
-#include "JSNode.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "NodeTraversal.h"
 #include "NodeWithIndex.h"
 #include "ProcessingInstruction.h"
 #include "ScopedEventQueue.h"
+#include "ShadowRoot.h"
 #include "TextIterator.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "VisibleUnits.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include "markup.h"
 #include <stdio.h>
 #include <wtf/IsoMallocInlines.h>
@@ -88,7 +90,6 @@ Ref<Range> Range::create(Document& ownerDocument)
 Range::~Range()
 {
     ASSERT(!m_isAssociatedWithSelection);
-
     m_ownerDocument->detachRange(*this);
 
 #ifndef NDEBUG
@@ -179,7 +180,7 @@ ExceptionOr<short> Range::comparePoint(Node& container, unsigned offset) const
     auto ordering = treeOrder({ container, offset }, makeSimpleRange(*this));
     if (is_lt(ordering))
         return -1;
-    if (is_eq(ordering))
+    if (WebCore::is_eq(ordering))
         return 0;
     if (is_gt(ordering))
         return 1;
@@ -247,7 +248,7 @@ ExceptionOr<short> Range::compareBoundaryPoints(unsigned short how, const Range&
     auto ordering = treeOrder(makeBoundaryPoint(*thisPoint), makeBoundaryPoint(*otherPoint));
     if (is_lt(ordering))
         return -1;
-    if (is_eq(ordering))
+    if (WebCore::is_eq(ordering))
         return 0;
     if (is_gt(ordering))
         return 1;
@@ -311,6 +312,13 @@ ExceptionOr<RefPtr<DocumentFragment>> Range::processContents(ActionType action)
 
     RefPtr<Node> commonRoot = commonAncestorContainer();
     ASSERT(commonRoot);
+    
+    if (action == Extract) {
+        auto& commonRootDocument = commonRoot->document();
+        RefPtr doctype = commonRootDocument.doctype();
+        if (doctype && contains(makeSimpleRange(*this), { *doctype, 0 }))
+            return Exception { HierarchyRequestError };
+    }
 
     if (&startContainer() == &endContainer()) {
         auto result = processContentsBetweenOffsets(action, fragment, &startContainer(), m_start.offset(), m_end.offset());
@@ -568,6 +576,10 @@ ExceptionOr<RefPtr<Node>> processAncestorsAndTheirSiblings(Range::ActionType act
     RefPtr<Node> firstChildInAncestorToProcess = direction == ProcessContentsForward ? container->nextSibling() : container->previousSibling();
     for (auto& ancestor : ancestors) {
         if (action == Range::Extract || action == Range::Clone) {
+            if (auto shadowRoot = dynamicDowncast<ShadowRoot>(ancestor.get())) {
+                if (!shadowRoot->isCloneable())
+                    continue;
+            }
             auto clonedAncestor = ancestor->cloneNode(false); // Might have been removed already during mutation event.
             if (clonedContainer) {
                 auto result = clonedAncestor->appendChild(*clonedContainer);
@@ -1077,7 +1089,7 @@ void Range::updateFromSelection(const SimpleRange& value)
     m_isAssociatedWithSelection = true;
 }
 
-DOMWindow* Range::window() const
+LocalDOMWindow* Range::window() const
 {
     return m_isAssociatedWithSelection ? m_ownerDocument->domWindow() : nullptr;
 }

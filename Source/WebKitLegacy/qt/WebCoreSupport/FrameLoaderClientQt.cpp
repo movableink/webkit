@@ -60,6 +60,7 @@
 #include <WebCore/HTTPParsers.h>
 #include <WebCore/HitTestResult.h>
 #include <WebCore/MIMETypeRegistry.h>
+#include <WebCore/LocalDOMWindow.h>
 #include <WebCore/MouseEvent.h>
 #include <WebCore/PluginData.h>
 #include <WebCore/QNetworkReplyHandler.h>
@@ -109,7 +110,7 @@ static QString drtPrintFrameUserGestureStatus(WebCore::Frame* frame)
 
 static QString drtDescriptionSuitableForTestResult(const WTF::URL& kurl)
 {
-    if (kurl.isEmpty() || !kurl.isLocalFile())
+    if (kurl.isEmpty() || !kurl.protocolIsFile())
         return kurl.string();
     // Remove the leading path from file urls.
     return QString(kurl.string()).remove(WebCore::FrameLoaderClientQt::dumpResourceLoadCallbacksPath).mid(1);
@@ -214,7 +215,7 @@ FrameLoaderClientQt::~FrameLoaderClientQt()
     m_webFrame = 0;
 }
 
-void FrameLoaderClientQt::setFrame(QWebFrameAdapter* webFrame, Frame* frame)
+void FrameLoaderClientQt::setFrame(QWebFrameAdapter* webFrame, LocalFrame* frame)
 {
     m_webFrame = webFrame;
     m_frame = frame;
@@ -235,11 +236,6 @@ bool FrameLoaderClientQt::hasWebView() const
 {
     // notImplemented();
     return true;
-}
-
-std::optional<PageIdentifier> FrameLoaderClientQt::pageID() const
-{
-    return std::nullopt;
 }
 
 void FrameLoaderClientQt::savePlatformDataToCachedFrame(CachedFrame*)
@@ -807,6 +803,12 @@ WebCore::ResourceError FrameLoaderClientQt::fileDoesNotExistError(const WebCore:
         QCoreApplication::translate("QWebFrame", "File does not exist", 0));
 }
 
+WebCore::ResourceError FrameLoaderClientQt::httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("QtNetwork"_s, QNetworkReply::TooManyRedirectsError, request.url(),
+        QCoreApplication::translate("QWebFrame", "Too many redirects", 0));
+}
+
 WebCore::ResourceError FrameLoaderClientQt::pluginWillHandleLoadError(const WebCore::ResourceResponse& response) const
 {
     return ResourceError("WebKit"_s, WebKitErrorPluginWillHandleLoad, response.url(),
@@ -1052,7 +1054,7 @@ void FrameLoaderClientQt::dispatchDidFailLoad(const WebCore::ResourceError& erro
         emitLoadFinished(false);
 }
 
-WebCore::Frame* FrameLoaderClientQt::dispatchCreatePage(const WebCore::NavigationAction&, NewFrameOpenerPolicy)
+WebCore::LocalFrame* FrameLoaderClientQt::dispatchCreatePage(const WebCore::NavigationAction&, NewFrameOpenerPolicy)
 {
     if (!m_webFrame)
         return 0;
@@ -1157,12 +1159,12 @@ void FrameLoaderClientQt::startDownload(const WebCore::ResourceRequest& request,
         m_webFrame->pageAdapter->emitDownloadRequested(r);
 }
 
-RefPtr<Frame> FrameLoaderClientQt::createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement)
+RefPtr<LocalFrame> FrameLoaderClientQt::createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement)
 {
     if (!m_webFrame)
         return nullptr;
 
-    QWebFrameData frameData(m_frame->page(), m_frame, &ownerElement, String(name));
+    QWebFrameData frameData(m_frame->page(), &ownerElement, String(name));
 
     QWebFrameAdapter* childWebFrame = m_webFrame->createChildFrame(&frameData);
     // The creation of the frame may have run arbitrary JavaScript that removed it from the page already.
@@ -1252,8 +1254,8 @@ public:
         ScrollView* parentScrollView = parent();
         QRect clipRect;
         if (parentScrollView) {
-            ASSERT_WITH_SECURITY_IMPLICATION(parentScrollView->isFrameView());
-            clipRect = downcast<FrameView>(parentScrollView)->windowClipRect();
+            ASSERT_WITH_SECURITY_IMPLICATION(parentScrollView->isLocalFrameView());
+            clipRect = downcast<LocalFrameView>(parentScrollView)->windowClipRect();
             clipRect.translate(-windowRect.x(), -windowRect.y());
         }
         widget->setGeometryAndClip(windowRect, clipRect, isVisible());

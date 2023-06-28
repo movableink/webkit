@@ -443,8 +443,13 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
         return;
     }
 
-    if (WKStringIsEqualToUTF8CString(messageName, "SetUserMediaPermission")) {
-        TestController::singleton().setUserMediaPermission(booleanValue(messageBody));
+    if (WKStringIsEqualToUTF8CString(messageName, "SetCameraPermission")) {
+        TestController::singleton().setCameraPermission(booleanValue(messageBody));
+        return;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SetMicrophonePermission")) {
+        TestController::singleton().setMicrophonePermission(booleanValue(messageBody));
         return;
     }
 
@@ -947,7 +952,42 @@ WKRetainPtr<WKTypeRef> TestInvocation::didReceiveSynchronousMessageFromInjectedB
         TestController::singleton().setAllowsAnySSLCertificate(booleanValue(messageBody));
         return nullptr;
     }
-    
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SetBackgroundFetchPermission")) {
+        TestController::singleton().setBackgroundFetchPermission(booleanValue(messageBody));
+        return nullptr;
+    }
+    if (WKStringIsEqualToUTF8CString(messageName, "GetBackgroundFetchIdentifier"))
+        return TestController::singleton().getBackgroundFetchIdentifier();
+
+    if (WKStringIsEqualToUTF8CString(messageName, "AbortBackgroundFetch")) {
+        TestController::singleton().abortBackgroundFetch(stringValue(messageBody));
+        return nullptr;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "PauseBackgroundFetch")) {
+        TestController::singleton().pauseBackgroundFetch(stringValue(messageBody));
+        return nullptr;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "ResumeBackgroundFetch")) {
+        TestController::singleton().resumeBackgroundFetch(stringValue(messageBody));
+        return nullptr;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "SimulateClickBackgroundFetch")) {
+        TestController::singleton().simulateClickBackgroundFetch(stringValue(messageBody));
+        return nullptr;
+    }
+    if (WKStringIsEqualToUTF8CString(messageName, "LastAddedBackgroundFetchIdentifier"))
+        return TestController::singleton().lastAddedBackgroundFetchIdentifier();
+    if (WKStringIsEqualToUTF8CString(messageName, "LastRemovedBackgroundFetchIdentifier"))
+        return TestController::singleton().lastRemovedBackgroundFetchIdentifier();
+    if (WKStringIsEqualToUTF8CString(messageName, "LastUpdatedBackgroundFetchIdentifier"))
+        return TestController::singleton().lastUpdatedBackgroundFetchIdentifier();
+    if (WKStringIsEqualToUTF8CString(messageName, "BackgroundFetchState"))
+        return TestController::singleton().backgroundFetchState(stringValue(messageBody));
+
     if (WKStringIsEqualToUTF8CString(messageName, "SetShouldSwapToEphemeralSessionOnNextNavigation")) {
         TestController::singleton().setShouldSwapToEphemeralSessionOnNextNavigation(booleanValue(messageBody));
         return nullptr;
@@ -971,7 +1011,8 @@ WKRetainPtr<WKTypeRef> TestInvocation::didReceiveSynchronousMessageFromInjectedB
         auto persistentID = stringValue(messageBodyDictionary, "PersistentID");
         auto label = stringValue(messageBodyDictionary, "Label");
         auto type = stringValue(messageBodyDictionary, "Type");
-        TestController::singleton().addMockMediaDevice(persistentID, label, type);
+        auto properties = dictionaryValue(value(messageBodyDictionary, "Properties"));
+        TestController::singleton().addMockMediaDevice(persistentID, label, type, properties);
         return nullptr;
     }
 
@@ -1720,10 +1761,10 @@ void TestInvocation::dumpPrivateClickMeasurement()
 
 void TestInvocation::initializeWaitToDumpWatchdogTimerIfNeeded()
 {
-    if (m_waitToDumpWatchdogTimer.isActive())
+    if (m_waitToDumpWatchdogTimer.isActive() || m_timeout == TestController::noTimeout)
         return;
 
-    m_waitToDumpWatchdogTimer.startOneShot(m_timeout);
+    m_waitToDumpWatchdogTimer.startOneShot(m_timeout > 0_s ? m_timeout : TestController::defaultShortTimeout);
 }
 
 void TestInvocation::invalidateWaitToDumpWatchdogTimer()

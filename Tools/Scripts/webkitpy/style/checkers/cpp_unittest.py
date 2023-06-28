@@ -3211,6 +3211,14 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint('mutable AnEnum a : 14;', errmsg)
         self.assert_lint('const AnEnum a : 6;', errmsg)
         self.assert_lint('bool a : 1;', '')
+        self.assert_lint('uint8_t a : 1;', '')
+        self.assert_lint('uint16_t a : 1;', '')
+        self.assert_lint('uint32_t a : 1;', '')
+        self.assert_lint('uint64_t a : 1;', '')
+        self.assert_lint('int8_t a : 1;', '')
+        self.assert_lint('int16_t a : 1;', '')
+        self.assert_lint('int32_t a : 1;', '')
+        self.assert_lint('int64_t a : 1;', '')
 
     # Integral bitfields must be declared with either signed or unsigned keyword.
     def test_plain_integral_bitfields(self):
@@ -5859,6 +5867,7 @@ class WebKitStyleTest(CppStyleTestBase):
             "Use 'CheckedSize' instead of 'Checked<size_t, RecordOverflow>'."
             "  [runtime/wtf_checked_size] [5]",
             'foo.cpp')
+
 
     def test_wtf_make_unique(self):
         self.assert_lint(

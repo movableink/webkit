@@ -43,6 +43,16 @@
 #include <gst/gst.h>
 #endif
 
+#if !defined(FALLTHROUGH) && defined(__GNUC__) && defined(__has_attribute)
+#if __has_attribute(fallthrough)
+#define FALLTHROUGH __attribute__ ((fallthrough))
+#endif
+#endif
+
+#if !defined(FALLTHROUGH)
+#define FALLTHROUGH
+#endif
+
 #define MINI_BROWSER_ERROR (miniBrowserErrorQuark())
 
 static const gchar **uriArguments = NULL;
@@ -244,6 +254,72 @@ static gboolean isValidParameterType(GType gParamType)
             || gParamType == G_TYPE_FLOAT);
 }
 
+static WebKitFeature* findFeature(WebKitFeatureList *featureList, const char *identifier)
+{
+    for (gsize i = 0; i < webkit_feature_list_get_length(featureList); i++) {
+        WebKitFeature *feature = webkit_feature_list_get(featureList, i);
+        if (!g_ascii_strcasecmp(identifier, webkit_feature_get_identifier(feature)))
+            return feature;
+    }
+    return NULL;
+}
+
+static gboolean parseFeaturesOptionCallback(const gchar *option, const gchar *value, WebKitSettings *webSettings, GError **error)
+{
+    g_autoptr(WebKitFeatureList) featureList = webkit_settings_get_all_features();
+
+    if (!strcmp(value, "help")) {
+        g_print("Multiple feature names may be specified separated by commas. No prefix or '+' enable\n"
+                "features, prefixes '-' and '!' disable features. Names are case-insensitive. Example:\n"
+                "\n    %s --features='!DirPseudo,+WebAnimationsCustomEffects,webgl'\n\n"
+                "Available features (+/- = enabled/disabled by default):\n\n", g_get_prgname());
+        g_autoptr(GEnumClass) statusEnum = g_type_class_ref(WEBKIT_TYPE_FEATURE_STATUS);
+        for (gsize i = 0; i < webkit_feature_list_get_length(featureList); i++) {
+            WebKitFeature *feature = webkit_feature_list_get(featureList, i);
+            g_print("  %c %s (%s)",
+                    webkit_feature_get_default_value(feature) ? '+' : '-',
+                    webkit_feature_get_identifier(feature),
+                    g_enum_get_value(statusEnum, webkit_feature_get_status(feature))->value_nick);
+            if (webkit_feature_get_name(feature))
+                g_print(": %s", webkit_feature_get_name(feature));
+            g_print("\n");
+        }
+        exit(EXIT_SUCCESS);
+    }
+
+    g_auto(GStrv) items = g_strsplit(value, ",", -1);
+    for (gsize i = 0; items[i]; i++) {
+        char *item = g_strchomp(items[i]);
+        gboolean enabled = TRUE;
+        switch (item[0]) {
+        case '!':
+        case '-':
+            enabled = FALSE;
+            FALLTHROUGH;
+        case '+':
+            item++;
+            FALLTHROUGH;
+        default:
+            break;
+        }
+
+        if (item[0] == '\0') {
+            g_set_error_literal(error, G_OPTION_ERROR, G_OPTION_ERROR_FAILED, "Empty feature name specified");
+            return FALSE;
+        }
+
+        WebKitFeature *feature = findFeature(featureList, item);
+        if (!feature) {
+            g_set_error(error, G_OPTION_ERROR, G_OPTION_ERROR_FAILED, "Feature '%s' is not available", item);
+            return FALSE;
+        }
+
+        webkit_settings_set_feature_enabled(webSettings, feature, enabled);
+    }
+
+    return TRUE;
+}
+
 static GOptionEntry* getOptionEntriesFromWebKitSettings(WebKitSettings *webSettings)
 {
     GParamSpec **propertySpecs;
@@ -298,6 +374,20 @@ static gboolean addSettingsGroupToContext(GOptionContext *context, WebKitSetting
                                                         NULL);
     g_option_group_add_entries(webSettingsGroup, optionEntries);
     g_free(optionEntries);
+
+    GOptionEntry featureEntries[] = {
+        {
+            .short_name = 'F',
+            .long_name = "features",
+            .description = "Enable or disable WebKit features (hint: pass 'help' for a list)",
+            .arg = G_OPTION_ARG_CALLBACK,
+            .arg_data = parseFeaturesOptionCallback,
+            .arg_description = "FEATURE-LIST",
+        },
+        { }
+    };
+    memset(&featureEntries[1], 0, sizeof(GOptionEntry));
+    g_option_group_add_entries(webSettingsGroup, featureEntries);
 
     /* Option context takes ownership of the group. */
     g_option_context_add_group(context, webSettingsGroup);
@@ -357,9 +447,13 @@ static void websiteDataClearedCallback(WebKitWebsiteDataManager *manager, GAsync
         webkit_web_view_reload(webkit_uri_scheme_request_get_web_view(dataRequest->request));
 }
 
-static void aboutDataScriptMessageReceivedCallback(WebKitUserContentManager *userContentManager, WebKitJavascriptResult *message, WebKitWebsiteDataManager *manager)
+static void aboutDataScriptMessageReceivedCallback(WebKitUserContentManager *userContentManager, gpointer message, WebKitWebsiteDataManager *manager)
 {
+#if GTK_CHECK_VERSION(3, 98, 0)
+    char *messageString = jsc_value_to_string(message);
+#else
     char *messageString = jsc_value_to_string(webkit_javascript_result_get_js_value(message));
+#endif
     char **tokens = g_strsplit(messageString, ":", 3);
     g_free(messageString);
 
@@ -781,7 +875,11 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     webkit_web_context_register_uri_scheme(webContext, BROWSER_ABOUT_SCHEME, (WebKitURISchemeRequestCallback)aboutURISchemeRequestCallback, NULL, NULL);
 
     WebKitUserContentManager *userContentManager = webkit_user_content_manager_new();
+#if GTK_CHECK_VERSION(3, 98, 0)
+    webkit_user_content_manager_register_script_message_handler(userContentManager, "aboutData", NULL);
+#else
     webkit_user_content_manager_register_script_message_handler(userContentManager, "aboutData");
+#endif
     WebKitWebsiteDataManager *dataManager;
 #if GTK_CHECK_VERSION(3, 98, 0)
     dataManager = webkit_network_session_get_website_data_manager(networkSession);

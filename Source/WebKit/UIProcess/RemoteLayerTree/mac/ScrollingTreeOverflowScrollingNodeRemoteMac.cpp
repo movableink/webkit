@@ -50,29 +50,20 @@ ScrollingTreeOverflowScrollingNodeRemoteMac::~ScrollingTreeOverflowScrollingNode
 {
 }
 
-void ScrollingTreeOverflowScrollingNodeRemoteMac::commitStateBeforeChildren(const ScrollingStateNode& stateNode)
-{
-    ScrollingTreeOverflowScrollingNodeMac::commitStateBeforeChildren(stateNode);
-    const auto& scrollingStateNode = downcast<ScrollingStateOverflowScrollingNode>(stateNode);
-    m_delegate->updateFromStateNode(scrollingStateNode);
-}
-
 void ScrollingTreeOverflowScrollingNodeRemoteMac::repositionRelatedLayers()
 {
     ScrollingTreeOverflowScrollingNodeMac::repositionRelatedLayers();
     m_delegate->updateScrollbarLayers();
 }
 
-WheelEventHandlingResult ScrollingTreeOverflowScrollingNodeRemoteMac::handleWheelEvent(const PlatformWheelEvent& wheelEvent, EventTargeting eventTargeting)
+void ScrollingTreeOverflowScrollingNodeRemoteMac::handleWheelEventPhase(const PlatformWheelEventPhase phase)
 {
-    auto result = ScrollingTreeOverflowScrollingNodeMac::handleWheelEvent(wheelEvent, eventTargeting);
-    m_delegate->handleWheelEventForScrollbars(wheelEvent);
-    return result;
+    m_delegate->handleWheelEventPhase(phase);
 }
 
-bool ScrollingTreeOverflowScrollingNodeRemoteMac::handleMouseEvent(const PlatformMouseEvent& mouseEvent)
+String ScrollingTreeOverflowScrollingNodeRemoteMac::scrollbarStateForOrientation(ScrollbarOrientation orientation) const
 {
-    return m_delegate->handleMouseEventForScrollbars(mouseEvent);
+    return m_delegate->scrollbarStateForOrientation(orientation);
 }
 
 }

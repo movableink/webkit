@@ -11,7 +11,6 @@
 
 #include "common/frame_capture_utils.h"
 #include "common/string_utils.h"
-#include "trace_fixture.h"
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
@@ -130,6 +129,20 @@ bool LoadTraceInfoFromJSON(const std::string &traceName,
         }
     }
 
+    if (meta.HasMember("KeyFrames"))
+    {
+        const rapidjson::Value &keyFrames = meta["KeyFrames"];
+        if (!keyFrames.IsArray())
+        {
+            return false;
+        }
+        for (rapidjson::SizeType i = 0; i < keyFrames.Size(); i++)
+        {
+            int frame = keyFrames[i].GetInt();
+            traceInfoOut->keyFrames.push_back(frame);
+        }
+    }
+
     const rapidjson::Document::Array &traceFiles = doc["TraceFiles"].GetArray();
     for (const rapidjson::Value &value : traceFiles)
     {
@@ -140,46 +153,34 @@ bool LoadTraceInfoFromJSON(const std::string &traceName,
     return true;
 }
 
-void ReplayTraceFunction(const TraceFunction &func, const TraceFunctionMap &customFunctions)
+TraceLibrary::TraceLibrary(const std::string &traceName, const TraceInfo &traceInfo)
 {
-    for (const CallCapture &call : func)
-    {
-        ReplayTraceFunctionCall(call, customFunctions);
-    }
-}
+    std::stringstream libNameStr;
+    SearchType searchType = SearchType::ModuleDir;
 
-GLuint GetResourceIDMapValue(ResourceIDType resourceIDType, GLuint key)
-{
-    switch (resourceIDType)
+#if defined(ANGLE_TRACE_EXTERNAL_BINARIES)
+    // This means we are using the binary build of traces on Android, which are
+    // not bundled in the APK, but located in the app's home directory.
+    searchType = SearchType::SystemDir;
+    libNameStr << "/data/user/0/com.android.angle.test/angle_traces/";
+#endif  // defined(ANGLE_TRACE_EXTERNAL_BINARIES)
+#if !defined(ANGLE_PLATFORM_WINDOWS)
+    libNameStr << "lib";
+#endif  // !defined(ANGLE_PLATFORM_WINDOWS)
+    libNameStr << traceName;
+#if defined(ANGLE_PLATFORM_ANDROID) && defined(COMPONENT_BUILD)
+    // Added to shared library names in Android component builds in
+    // https://chromium.googlesource.com/chromium/src/+/9bacc8c4868cc802f69e1e858eea6757217a508f/build/toolchain/toolchain.gni#56
+    libNameStr << ".cr";
+#endif  // defined(ANGLE_PLATFORM_ANDROID) && defined(COMPONENT_BUILD)
+    std::string libName = libNameStr.str();
+    std::string loadError;
+    mTraceLibrary.reset(OpenSharedLibraryAndGetError(libName.c_str(), searchType, &loadError));
+    if (mTraceLibrary->getNative() == nullptr)
     {
-        case ResourceIDType::Buffer:
-            return gBufferMap[key];
-        case ResourceIDType::FenceNV:
-            return gFenceNVMap[key];
-        case ResourceIDType::Framebuffer:
-            return gFramebufferMap[key];
-        case ResourceIDType::ProgramPipeline:
-            return gProgramPipelineMap[key];
-        case ResourceIDType::Query:
-            return gQueryMap[key];
-        case ResourceIDType::Renderbuffer:
-            return gRenderbufferMap[key];
-        case ResourceIDType::Sampler:
-            return gSamplerMap[key];
-        case ResourceIDType::Semaphore:
-            return gSemaphoreMap[key];
-        case ResourceIDType::ShaderProgram:
-            return gShaderProgramMap[key];
-        case ResourceIDType::Texture:
-            return gTextureMap[key];
-        case ResourceIDType::TransformFeedback:
-            return gTransformFeedbackMap[key];
-        case ResourceIDType::VertexArray:
-            return gVertexArrayMap[key];
-        default:
-            printf("Incompatible resource ID type: %d\n", static_cast<int>(resourceIDType));
-            UNREACHABLE();
-            return 0;
+        FATAL() << "Failed to load trace library (" << libName << "): " << loadError;
     }
+
+    callFunc<SetTraceInfoFunc>("SetTraceInfo", traceInfo.traceFiles);
 }
 }  // namespace angle

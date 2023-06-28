@@ -45,7 +45,8 @@ class LinuxBrowserDriver(BrowserDriver):
     process_search_list = []
     platform = 'linux'
 
-    def __init__(self):
+    def __init__(self, browser_args):
+        super().__init__(browser_args)
         self.process_name = self._get_first_executable_path_from_list(self.process_search_list)
         if self.process_name is None:
             raise ValueError('Cant find executable for browser {browser_name}. Searched list: {browser_process_list}'.format(
@@ -53,7 +54,7 @@ class LinuxBrowserDriver(BrowserDriver):
 
     def prepare_env(self, config):
         self._browser_process = None
-        self._browser_arguments = None
+        self._default_browser_arguments = None
         self._temp_profiledir = tempfile.mkdtemp()
         self._test_environ = dict(os.environ)
         self._test_environ['HOME'] = self._temp_profiledir
@@ -99,9 +100,11 @@ class LinuxBrowserDriver(BrowserDriver):
                             browser_retcode=self._browser_process.returncode))
 
     def launch_url(self, url, options, browser_build_path, browser_path):
-        if not self._browser_arguments:
-            self._browser_arguments = [url]
-        exec_args = [self.process_name] + self._browser_arguments
+        if not self._default_browser_arguments:
+            self._default_browser_arguments = [url]
+        if not self.browser_args:
+            self.browser_args = []
+        exec_args = [self.process_name] + self.browser_args + self._default_browser_arguments
         _log.info('Executing: {browser_cmdline}'.format(browser_cmdline=' '.join(exec_args)))
         self._browser_process = subprocess.Popen(
             exec_args, env=self._test_environ,

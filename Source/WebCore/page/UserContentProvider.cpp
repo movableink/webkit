@@ -30,9 +30,9 @@
 #include "ChromeClient.h"
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
+#include "LocalFrame.h"
 #include "Page.h"
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -98,7 +98,10 @@ static DocumentLoader* mainDocumentLoader(DocumentLoader& loader)
     if (auto frame = loader.frame()) {
         if (frame->isMainFrame())
             return &loader;
-        return frame->mainFrame().loader().documentLoader();
+
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+        if (localFrame)
+            return localFrame->loader().documentLoader();
     }
     return nullptr;
 }
@@ -112,8 +115,12 @@ static ContentExtensions::ContentExtensionsBackend::RuleListFilter ruleListFilte
         };
     }
 
-    auto& exceptions = mainLoader->contentExtensionEnablement().second;
-    switch (mainLoader->contentExtensionEnablement().first) {
+    auto policySourceLoader = mainLoader;
+    if (!mainLoader->request().url().hasSpecialScheme() && documentLoader.request().url().protocolIsInHTTPFamily())
+        policySourceLoader = &documentLoader;
+
+    auto& exceptions = policySourceLoader->contentExtensionEnablement().second;
+    switch (policySourceLoader->contentExtensionEnablement().first) {
     case ContentExtensionDefaultEnablement::Disabled:
         return [&](auto& identifier) {
             return exceptions.contains(identifier)
@@ -131,12 +138,12 @@ static ContentExtensions::ContentExtensionsBackend::RuleListFilter ruleListFilte
     return { };
 }
 
-static void sanitizeLookalikeCharactersIfNeeded(ContentRuleListResults& results, const Page& page, const URL& url, const DocumentLoader& initiatingDocumentLoader)
+static void applyLinkDecorationFilteringIfNeeded(ContentRuleListResults& results, Page& page, const URL& url, const DocumentLoader& initiatingDocumentLoader)
 {
     if (RefPtr frame = initiatingDocumentLoader.frame(); !frame || !frame->isMainFrame())
         return;
 
-    if (auto adjustedURL = page.chrome().client().sanitizeLookalikeCharacters(url, LookalikeCharacterSanitizationTrigger::Navigation); adjustedURL != url)
+    if (auto adjustedURL = page.chrome().client().applyLinkDecorationFiltering(url, LinkDecorationFilteringTrigger::Navigation); adjustedURL != url)
         results.summary.redirectActions.append({ { ContentExtensions::RedirectAction::URLAction { adjustedURL.string() } }, adjustedURL });
 }
 
@@ -145,7 +152,7 @@ ContentRuleListResults UserContentProvider::processContentRuleListsForLoad(Page&
     auto results = userContentExtensionBackend().processContentRuleListsForLoad(page, url, resourceType, initiatingDocumentLoader, redirectFrom, ruleListFilter(initiatingDocumentLoader));
 
     if (resourceType.contains(ContentExtensions::ResourceType::Document))
-        sanitizeLookalikeCharactersIfNeeded(results, page, url, initiatingDocumentLoader);
+        applyLinkDecorationFilteringIfNeeded(results, page, url, initiatingDocumentLoader);
 
     return results;
 }

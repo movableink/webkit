@@ -47,7 +47,7 @@ enum class VideoFrameRotation : uint16_t;
 class WEBCORE_EXPORT LocalSampleBufferDisplayLayer final : public SampleBufferDisplayLayer, public CanMakeWeakPtr<LocalSampleBufferDisplayLayer, WeakPtrFactoryInitialization::Eager> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static std::unique_ptr<LocalSampleBufferDisplayLayer> create(Client&);
+    static RefPtr<LocalSampleBufferDisplayLayer> create(Client&);
 
     LocalSampleBufferDisplayLayer(RetainPtr<AVSampleBufferDisplayLayer>&&, Client&);
     ~LocalSampleBufferDisplayLayer();
@@ -63,7 +63,7 @@ public:
 
     PlatformLayer* displayLayer();
 
-    enum class ShouldUpdateRootLayer { No, Yes };
+    enum class ShouldUpdateRootLayer : bool { No, Yes };
     void updateRootLayerBoundsAndPosition(CGRect, VideoFrameRotation, ShouldUpdateRootLayer);
     void updateRootLayerAffineTransform(CGAffineTransform);
 
@@ -78,7 +78,7 @@ public:
     void updateDisplayMode(bool hideDisplayLayer, bool hideRootLayer) final;
 
     void updateAffineTransform(CGAffineTransform)  final;
-    void updateBoundsAndPosition(CGRect, VideoFrameRotation) final;
+    void updateBoundsAndPosition(CGRect, VideoFrameRotation, std::optional<WTF::MachSendRight>&&) final;
 
     void flush() final;
     void flushAndRemoveImage() final;
@@ -101,18 +101,23 @@ private:
     void onIrregularFrameRateNotification(MonotonicTime frameTime, MonotonicTime lastFrameTime);
 #endif
 
+    WorkQueue& workQueue() { return m_processingQueue.get(); }
+
 private:
     RetainPtr<WebAVSampleBufferStatusChangeListener> m_statusChangeListener;
     RetainPtr<AVSampleBufferDisplayLayer> m_sampleBufferDisplayLayer;
+    RetainPtr<AVSampleBufferDisplayLayer> m_sampleBufferDisplayLayerForQueue WTF_GUARDED_BY_CAPABILITY(workQueue());
+    RetainPtr<CVPixelBufferRef> m_lastPixelBuffer WTF_GUARDED_BY_CAPABILITY(workQueue());
+    MediaTime m_lastPresentationTime WTF_GUARDED_BY_CAPABILITY(workQueue());
     RetainPtr<PlatformLayer> m_rootLayer;
     RenderPolicy m_renderPolicy { RenderPolicy::TimingInfo };
-    
-    RefPtr<WorkQueue> m_processingQueue;
+
+    Ref<WorkQueue> m_processingQueue;
 
     // Only accessed through m_processingQueue or if m_processingQueue is null.
     using PendingSampleQueue = Deque<Ref<VideoFrame>>;
     PendingSampleQueue m_pendingVideoFrameQueue;
-    
+
     bool m_paused { false };
     bool m_didFail { false };
 #if !RELEASE_LOG_DISABLED

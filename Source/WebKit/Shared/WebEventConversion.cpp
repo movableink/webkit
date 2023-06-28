@@ -90,6 +90,7 @@ public:
         m_modifiers = platform(webEvent.modifiers());
 
         m_timestamp = webEvent.timestamp();
+        m_authorizationToken = webEvent.authorizationToken();
 
         // PlatformMouseEvent
         switch (webEvent.button()) {
@@ -120,6 +121,8 @@ public:
         m_menuTypeForEvent = webEvent.menuTypeForEvent();
 #elif PLATFORM(GTK)
         m_isTouchEvent = webEvent.isTouchEvent();
+#elif PLATFORM(WPE)
+        m_syntheticClickType = static_cast<WebCore::SyntheticClickType>(webEvent.syntheticClickType());
 #endif
         m_modifierFlags = 0;
         if (webEvent.shiftKey())

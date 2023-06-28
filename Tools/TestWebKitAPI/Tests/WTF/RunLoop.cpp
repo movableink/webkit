@@ -286,8 +286,8 @@ TEST(WTF_RunLoop, Create)
     }
 }
 
-// FIXME(https://bugs.webkit.org/show_bug.cgi?id=246569): glib runloop does not match Cocoa.
-#if USE(GLIB)
+// FIXME(https://bugs.webkit.org/show_bug.cgi?id=246569): glib and Windows runloop does not match Cocoa.
+#if USE(GLIB) || OS(WINDOWS)
 #define MAYBE_DispatchInRunLoopIterationDispatchesOnNextIteration1 DISABLED_DispatchInRunLoopIterationDispatchesOnNextIteration1
 #define MAYBE_DispatchInRunLoopIterationDispatchesOnNextIteration2 DISABLED_DispatchInRunLoopIterationDispatchesOnNextIteration2
 #else
@@ -305,7 +305,8 @@ TEST(WTF_RunLoop, MAYBE_DispatchInRunLoopIterationDispatchesOnNextIteration1)
     auto& runLoop = RunLoop::current();
     bool outer = false;
     bool inner = false;
-    for (int i = 0; i < 100; ++i) {
+    int i = 0;
+    for (; i < 100; ++i) {
         SCOPED_TRACE(i);
         runLoop.dispatch([&] {
             outer = true;
@@ -341,7 +342,8 @@ TEST(WTF_RunLoop, MAYBE_DispatchInRunLoopIterationDispatchesOnNextIteration2)
     auto& runLoop = RunLoop::current();
     int outer = 0;
     int inner = 0;
-    for (int i = 0; i < 100; ++i) {
+    int i = 0;
+    for (; i < 100; ++i) {
         SCOPED_TRACE(i);
         runLoop.dispatch([&] {
             outer++;

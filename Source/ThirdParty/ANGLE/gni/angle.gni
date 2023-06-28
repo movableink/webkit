@@ -38,6 +38,9 @@ declare_args() {
 
   # Expose GLX entry points by default when using Desktop GL on Linux.
   angle_expose_glx_entry_points = angle_enable_gl_desktop_frontend && is_linux
+
+  # Only bundle traces in the APK if we're building a subset
+  restricted_traces_outside_of_apk = is_android && angle_restricted_traces == []
 }
 
 if (angle_has_build) {
@@ -135,6 +138,7 @@ declare_args() {
 
   # There's no "is_winuwp" helper in BUILDCONFIG.gn, so we define one ourselves
   angle_is_winuwp = is_win && target_os == "winuwp"
+  angle_is_msvc = is_win && !is_clang
 
   # Default to using "_angle" suffix on Android
   if (is_android) {
@@ -286,8 +290,7 @@ declare_args() {
   angle_enable_cgl = angle_enable_gl && !angle_enable_eagl && is_apple
 
   angle_enable_apple_translator_workarounds =
-      is_apple &&
-      (angle_enable_glsl || angle_enable_metal || use_fuzzing_engine)
+      is_apple && (angle_enable_glsl || use_fuzzing_engine)
 
   angle_has_histograms = angle_has_build
 
@@ -557,10 +560,21 @@ if (angle_standalone || build_with_chromium) {
 
       if (is_android) {
         public_configs += [ "$angle_root:build_id_config" ]
-        configs -= [ "//build/config/android:hide_all_but_jni" ]
         use_default_launcher = false
-        generate_final_jni = false
-        android_manifest_template = "$angle_root/src/tests/test_utils/runner/android/java/AndroidManifest.xml.jinja2"
+
+        apk_build = true
+        if (defined(invoker.use_raw_android_executable)) {
+          # If the caller of this template has requested binaries only, skip the APK steps below
+          apk_build = !invoker.use_raw_android_executable
+        }
+
+        # Some of our build targets don't want an APK on Android, specifically trace tests which exceed APK size
+        if (apk_build) {
+          generate_final_jni = false
+          android_manifest_template = "$angle_root/src/tests/test_utils/runner/android/java/AndroidManifest.xml.jinja2"
+          configs -= [ "//build/config/android:hide_all_but_jni" ]
+        }
+
         deps += [
           "$angle_root/src/tests:native_test_java",
           "$angle_root/src/tests:native_test_support_android",
@@ -597,6 +611,10 @@ template("angle_trace") {
       "$angle_root/util:angle_trace_fixture",
       "$angle_root/util:angle_trace_loader",
     ]
+
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
 
     if (is_android) {
       libs = [ "log" ]
@@ -652,13 +670,27 @@ template("angle_trace_library") {
     } else {
       _target = "${target_name}_$_trace"
     }
+
+    _gen_target = "gen${target_name}_$_trace"
+    action(_gen_target) {
+      script = "//scripts/tracegz.py"
+      args = [
+        _trace,
+        rebase_path(_trace_dir, root_build_dir),
+      ]
+      outputs = [ "$root_gen_dir/tracegz_$_trace.gz" ]
+    }
+
     angle_trace(_target) {
       sources = rebase_path(_trace_data.TraceFiles, ".", _trace_dir)
 
       data = [
         "$_trace_dir/$_trace.json",
         "$_trace_dir/$_trace.angledata.gz",
+        "$root_gen_dir/tracegz_$_trace.gz",
       ]
+
+      deps = [ ":$_gen_target" ]
 
       if (invoker.short_names) {
         output_name = _trace

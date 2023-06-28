@@ -96,7 +96,7 @@ QWebSecurityOrigin& QWebSecurityOrigin::operator=(const QWebSecurityOrigin& othe
 */
 QString QWebSecurityOrigin::scheme() const
 {
-    return d->origin.protocol;
+    return d->origin.protocol();
 }
 
 /*!
@@ -104,7 +104,7 @@ QString QWebSecurityOrigin::scheme() const
 */
 QString QWebSecurityOrigin::host() const
 {
-    return d->origin.host;
+    return d->origin.host();
 }
 
 /*!
@@ -112,7 +112,7 @@ QString QWebSecurityOrigin::host() const
 */
 int QWebSecurityOrigin::port() const
 {
-    return d->origin.port.value_or(0);
+    return d->origin.port().value_or(0);
 }
 
 /*!
@@ -264,7 +264,7 @@ QWebSecurityOrigin::QWebSecurityOrigin(const QUrl& url)
 */
 void QWebSecurityOrigin::addAccessAllowlistEntry(const QString& scheme, const QString& host, SubdomainSetting subdomainSetting)
 {
-    Ref<SecurityOrigin> sourceOrigin(SecurityOrigin::create(d->origin.protocol, d->origin.host, d->origin.port));
+    Ref<SecurityOrigin> sourceOrigin(SecurityOrigin::create(d->origin.protocol(), d->origin.host(), d->origin.port()));
     SecurityPolicy::addOriginAccessAllowlistEntry(sourceOrigin, scheme, host, subdomainSetting == AllowSubdomains);
 }
 
@@ -274,7 +274,7 @@ void QWebSecurityOrigin::addAccessAllowlistEntry(const QString& scheme, const QS
 */
 void QWebSecurityOrigin::removeAccessAllowlistEntry(const QString& scheme, const QString& host, SubdomainSetting subdomainSetting)
 {
-    Ref<SecurityOrigin> sourceOrigin(SecurityOrigin::create(d->origin.protocol, d->origin.host, d->origin.port));
+    Ref<SecurityOrigin> sourceOrigin(SecurityOrigin::create(d->origin.protocol(), d->origin.host(), d->origin.port()));
     SecurityPolicy::removeOriginAccessAllowlistEntry(sourceOrigin, scheme, host, subdomainSetting == AllowSubdomains);
 }
 

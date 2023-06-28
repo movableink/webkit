@@ -40,8 +40,8 @@
 #include <QSettings>
 #include <QUrl>
 #include <QVariant>
-#include <WebCore/Frame.h>
-#include <WebCore/FrameView.h>
+#include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameView.h>
 #include <WebCore/InspectorController.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
@@ -150,8 +150,6 @@ void InspectorClientQt::inspectedPageDestroyed()
     InspectorServerQt* webInspectorServer = InspectorServerQt::server();
     if (webInspectorServer)
         webInspectorServer->unregisterClient(this);
-
-    delete this;
 }
 
 Inspector::FrontendChannel* InspectorClientQt::openLocalFrontend(WebCore::InspectorController* inspectorController)
@@ -236,10 +234,13 @@ void InspectorClientQt::highlight()
 
 void InspectorClientQt::hideHighlight()
 {
-    WebCore::Frame& frame = m_inspectedWebPage->page->mainFrame();
+    WebCore::LocalFrame* frame = dynamicDowncast<WebCore::LocalFrame>(m_inspectedWebPage->page->mainFrame());
+    if (!frame)
+        return;
+
     QRect rect = m_inspectedWebPage->mainFrameAdapter().frameRect();
     if (!rect.isEmpty())
-        frame.view()->invalidateRect(rect);
+        frame->view()->invalidateRect(rect);
 }
 
 InspectorClientQt::ConnectionType InspectorClientQt::connectionType() const
@@ -260,7 +261,6 @@ void InspectorClientQt::sendMessageToFrontend(const String& message)
     if (!m_frontendWebPage)
         return;
 
-    Page* frontendPage = m_frontendWebPage->page;
     m_frontendClient->frontendAPIDispatcher().dispatchMessageAsync(message);
 }
 

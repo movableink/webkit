@@ -36,6 +36,7 @@
 #include "GraphicsLayerAsyncContentsDisplayDelegateCocoa.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "GraphicsLayerFactory.h"
+#include "HTMLVideoElement.h"
 #include "Image.h"
 #include "InMemoryDisplayList.h"
 #include "Logging.h"
@@ -48,6 +49,7 @@
 #include "Region.h"
 #include "RotateTransformOperation.h"
 #include "ScaleTransformOperation.h"
+#include "Settings.h"
 #include "TiledBacking.h"
 #include "TransformState.h"
 #include "TranslateTransformOperation.h"
@@ -68,6 +70,11 @@
 #if PLATFORM(IOS_FAMILY)
 #include "SystemMemory.h"
 #include "WebCoreThread.h"
+#endif
+
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#include "AcceleratedEffect.h"
+#include "AcceleratedEffectStack.h"
 #endif
 
 namespace WebCore {
@@ -347,6 +354,12 @@ Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayerHost(LayerHostingCont
     return GraphicsLayerCA::createPlatformCALayer(PlatformCALayer::LayerTypeLayer, owner);
 }
 
+Ref<PlatformCALayer> GraphicsLayerCA::createPlatformVideoLayer(HTMLVideoElement&, PlatformCALayerClient* owner)
+{
+    // By default, just make a plain layer; subclasses can override to provide a custom PlatformCALayer for hosting context id.
+    return GraphicsLayerCA::createPlatformCALayer(PlatformCALayer::LayerTypeLayer, owner);
+}
+
 Ref<PlatformCAAnimation> GraphicsLayerCA::createPlatformCAAnimation(PlatformCAAnimation::AnimationType type, const String& keyPath)
 {
     return PlatformCAAnimationCocoa::create(type, keyPath);
@@ -467,7 +480,7 @@ String GraphicsLayerCA::debugName() const
 #endif
 }
 
-GraphicsLayer::PlatformLayerID GraphicsLayerCA::primaryLayerID() const
+PlatformLayerIdentifier GraphicsLayerCA::primaryLayerID() const
 {
     return primaryLayer()->layerID();
 }
@@ -961,6 +974,15 @@ void GraphicsLayerCA::setContentsRectClipsDescendants(bool contentsRectClipsDesc
     noteLayerPropertyChanged(ChildrenChanged | ContentsRectsChanged);
 }
 
+void GraphicsLayerCA::setVideoGravity(MediaPlayerVideoGravity gravity)
+{
+    if (gravity == m_videoGravity)
+        return;
+
+    GraphicsLayer::setVideoGravity(gravity);
+    noteLayerPropertyChanged(VideoGravityChanged);
+}
+
 void GraphicsLayerCA::setShapeLayerPath(const Path& path)
 {
     // FIXME: need to check for path equality. No bool Path::operator==(const Path&)!.
@@ -1244,9 +1266,9 @@ void GraphicsLayerCA::setContentsToModel(RefPtr<Model>&& model, ModelInteraction
     noteLayerPropertyChanged(ContentsRectsChanged | OpacityChanged);
 }
 
-GraphicsLayer::PlatformLayerID GraphicsLayerCA::contentsLayerIDForModel() const
+PlatformLayerIdentifier GraphicsLayerCA::contentsLayerIDForModel() const
 {
-    return m_contentsLayerPurpose == ContentsLayerPurpose::Model ? m_contentsLayer->layerID() : GraphicsLayer::PlatformLayerID { };
+    return m_contentsLayerPurpose == ContentsLayerPurpose::Model ? m_contentsLayer->layerID() : PlatformLayerIdentifier { };
 }
 
 #endif
@@ -1287,6 +1309,25 @@ void GraphicsLayerCA::setContentsToPlatformLayerHost(LayerHostingContextIdentifi
     noteLayerPropertyChanged(ContentsPlatformLayerChanged);
 }
 
+void GraphicsLayerCA::setContentsToVideoElement(HTMLVideoElement& videoElement, ContentsLayerPurpose purpose)
+{
+#if HAVE(AVKIT)
+    if (auto hostingContextID = videoElement.layerHostingContextID()) {
+        if (hostingContextID != m_layerHostingContextID) {
+            m_contentsLayer = createPlatformVideoLayer(videoElement, this);
+            m_layerHostingContextID = hostingContextID;
+        }
+        m_contentsLayerPurpose = purpose;
+        m_contentsDisplayDelegate = nullptr;
+        updateVideoGravity();
+        noteSublayersChanged();
+        noteLayerPropertyChanged(ContentsPlatformLayerChanged);
+        return;
+    }
+#endif
+    setContentsToPlatformLayer(videoElement.platformLayer(), purpose);
+}
+
 void GraphicsLayerCA::setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&& delegate, ContentsLayerPurpose purpose)
 {
     if (m_contentsLayer && delegate == m_contentsDisplayDelegate)
@@ -1310,6 +1351,12 @@ void GraphicsLayerCA::setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDis
 
     noteSublayersChanged();
     noteLayerPropertyChanged(ContentsPlatformLayerChanged);
+}
+
+PlatformLayerIdentifier GraphicsLayerCA::setContentsToAsyncDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate> delegate, ContentsLayerPurpose purpose)
+{
+    setContentsDisplayDelegate(WTFMove(delegate), purpose);
+    return m_contentsLayer->layerID();
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -1805,7 +1852,7 @@ void GraphicsLayerCA::recursiveCommitChanges(CommitState& commitState, const Tra
     commitLayerChangesAfterSublayers(childCommitState);
 
     if (affectedByTransformAnimation && m_layer->layerType() == PlatformCALayer::LayerTypeTiledBackingLayer)
-        client().notifyFlushBeforeDisplayRefresh(this);
+        client().notifySubsequentFlushRequired(this);
 
     if (layerTypeChanged)
         client().didChangePlatformLayerForLayer(this);
@@ -1837,7 +1884,7 @@ bool GraphicsLayerCA::platformCALayerShowRepaintCounter(PlatformCALayer* platfor
     return isShowingRepaintCounter();
 }
 
-void GraphicsLayerCA::platformCALayerPaintContents(PlatformCALayer*, GraphicsContext& context, const FloatRect& clip, GraphicsLayerPaintBehavior layerPaintBehavior)
+void GraphicsLayerCA::platformCALayerPaintContents(PlatformCALayer*, GraphicsContext& context, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior> layerPaintBehavior)
 {
     m_hasEverPainted = true;
     if (m_displayList) {
@@ -2000,6 +2047,9 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
     if (m_uncommittedChanges & BlendModeChanged)
         updateBlendMode();
 #endif
+
+    if (m_uncommittedChanges & VideoGravityChanged)
+        updateVideoGravity();
 
     if (m_uncommittedChanges & ShapeChanged)
         updateShape();
@@ -2495,6 +2545,12 @@ void GraphicsLayerCA::updateBlendMode()
     }
 }
 #endif
+
+void GraphicsLayerCA::updateVideoGravity()
+{
+    if (m_contentsLayer)
+        m_contentsLayer->setVideoGravity(m_videoGravity);
+}
 
 void GraphicsLayerCA::updateShape()
 {
@@ -2998,8 +3054,7 @@ GraphicsLayerCA::CloneID GraphicsLayerCA::ReplicaState::cloneID() const
     const size_t bitsPerUChar = sizeof(UChar) * 8;
     size_t vectorSize = (depth + bitsPerUChar - 1) / bitsPerUChar;
     
-    Vector<UChar> result(vectorSize);
-    result.fill(0);
+    Vector<UChar> result(vectorSize, 0);
 
     // Create a string from the bit sequence which we can use to identify the clone.
     // Note that the string may contain embedded nulls, but that's OK.
@@ -3059,7 +3114,7 @@ void GraphicsLayerCA::updateAnimations()
         m_animationGroups.append(WTFMove(animationGroup));
     };
 
-    enum class Additive { Yes, No };
+    enum class Additive : bool { No, Yes };
     auto prepareAnimationForAddition = [&](LayerPropertyAnimation& animation, Additive additive = Additive::Yes) {
         auto caAnim = animation.m_animation;
         caAnim->setAdditive(additive == Additive::Yes);
@@ -3246,6 +3301,14 @@ void GraphicsLayerCA::updateAnimations()
 
 bool GraphicsLayerCA::isRunningTransformAnimation() const
 {
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+    if (auto* effectStack = acceleratedEffectStack()) {
+        return effectStack->primaryLayerEffects().findIf([](auto& effect) {
+            return effect->animatesTransformRelatedProperty();
+        }) != notFound;
+    }
+#endif
+
     return m_animations.findIf([&](LayerPropertyAnimation animation) {
         return animatedPropertyIsTransformOrRelated(animation.m_property) && (animation.m_playState == PlayState::Playing || animation.m_playState == PlayState::Paused);
     }) != notFound;
@@ -3480,6 +3543,9 @@ bool GraphicsLayerCA::createTransformAnimationsFromKeyframes(const KeyframeValue
 
     const auto& primitives = prefix.primitives();
     unsigned numberOfSharedPrimitives = valueList.size() > 1 ? primitives.size() : 0;
+
+    removeAnimation(animationName);
+
     for (unsigned animationIndex = 0; animationIndex < numberOfSharedPrimitives; ++animationIndex) {
         if (!appendToUncommittedAnimations(valueList, primitives[animationIndex], animation, animationName, boxSize, animationIndex, timeOffset, false /* isMatrixAnimation */, keyframesShouldUseAnimationWideTimingFunction))
             return false;
@@ -3543,6 +3609,8 @@ bool GraphicsLayerCA::createFilterAnimationsFromKeyframes(const KeyframeValueLis
             return false;
     }
 
+    removeAnimation(animationName);
+
     for (int animationIndex = 0; animationIndex < numAnimations; ++animationIndex) {
         if (!appendToUncommittedAnimations(valueList, operations.operations().at(animationIndex).get(), animation, animationName, animationIndex, timeOffset, keyframesShouldUseAnimationWideTimingFunction))
             return false;
@@ -3581,7 +3649,7 @@ void GraphicsLayerCA::setupAnimation(PlatformCAAnimation* propertyAnim, const An
     float repeatCount = anim->iterationCount();
     if (repeatCount == Animation::IterationCountInfinite)
         repeatCount = std::numeric_limits<float>::max();
-    else if (anim->direction() == Animation::AnimationDirectionAlternate || anim->direction() == Animation::AnimationDirectionAlternateReverse)
+    else if (anim->direction() == Animation::Direction::Alternate || anim->direction() == Animation::Direction::AlternateReverse)
         repeatCount /= 2;
 
     PlatformCAAnimation::FillModeType fillMode = PlatformCAAnimation::NoFillMode;
@@ -3602,7 +3670,7 @@ void GraphicsLayerCA::setupAnimation(PlatformCAAnimation* propertyAnim, const An
 
     propertyAnim->setDuration(duration);
     propertyAnim->setRepeatCount(repeatCount);
-    propertyAnim->setAutoreverses(anim->direction() == Animation::AnimationDirectionAlternate || anim->direction() == Animation::AnimationDirectionAlternateReverse);
+    propertyAnim->setAutoreverses(anim->direction() == Animation::Direction::Alternate || anim->direction() == Animation::Direction::AlternateReverse);
     propertyAnim->setRemovedOnCompletion(false);
     propertyAnim->setAdditive(additive);
     propertyAnim->setFillMode(fillMode);
@@ -3969,7 +4037,8 @@ void GraphicsLayerCA::updateRootRelativeScale()
         if (transform.isIdentityOrTranslation())
             return 1;
         TransformationMatrix::Decomposed2Type decomposeData;
-        transform.decompose2(decomposeData);
+        if (!transform.decompose2(decomposeData))
+            return 1;
         return std::max(std::abs(decomposeData.scaleX), std::abs(decomposeData.scaleY));
     };
 
@@ -4093,11 +4162,7 @@ void GraphicsLayerCA::getDebugBorderInfo(Color& color, float& width) const
 {
     if (isPageTiledBackingLayer()) {
         color = pageTiledBackingBorderColor();
-#if OS(WINDOWS)
-        width = 1.0;
-#else
         width = 0.5;
-#endif
         return;
     }
 
@@ -4287,6 +4352,7 @@ const char* GraphicsLayerCA::layerChangeAsString(LayerChange layerChange)
 #endif
 #endif
     case LayerChange::ContentsScalingFiltersChanged: return "ContentsScalingFiltersChanged";
+    case LayerChange::VideoGravityChanged: return "VideoGravityChanged";
     }
     ASSERT_NOT_REACHED();
     return "";
@@ -4853,9 +4919,66 @@ static String animatedPropertyIDAsString(AnimatedProperty property)
     return ""_s;
 }
 
-Vector<std::pair<String, double>> GraphicsLayerCA::acceleratedAnimationsForTesting() const
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+static String acceleratedEffectPropertyIDAsString(AcceleratedEffectProperty property)
+{
+    switch (property) {
+    case AcceleratedEffectProperty::Opacity:
+        return "opacity"_s;
+    case AcceleratedEffectProperty::Transform:
+        return "transform"_s;
+    case AcceleratedEffectProperty::Translate:
+        return "translate"_s;
+    case AcceleratedEffectProperty::Rotate:
+        return "rotate"_s;
+    case AcceleratedEffectProperty::Scale:
+        return "scale"_s;
+    case AcceleratedEffectProperty::OffsetPath:
+        return "offset-path"_s;
+    case AcceleratedEffectProperty::OffsetDistance:
+        return "offset-distance"_s;
+    case AcceleratedEffectProperty::OffsetPosition:
+        return "offset-position"_s;
+    case AcceleratedEffectProperty::OffsetAnchor:
+        return "offset-anchor"_s;
+    case AcceleratedEffectProperty::OffsetRotate:
+        return "offset-rotate"_s;
+    case AcceleratedEffectProperty::Filter:
+        return "filter"_s;
+#if ENABLE(FILTERS_LEVEL_2)
+    case AcceleratedEffectProperty::BackdropFilter:
+        return "backdrop-filter"_s;
+#endif
+    default:
+        ASSERT_NOT_REACHED();
+        return "invalid"_s;
+    }
+    ASSERT_NOT_REACHED();
+    return ""_s;
+}
+#endif
+
+Vector<std::pair<String, double>> GraphicsLayerCA::acceleratedAnimationsForTesting(const Settings& settings) const
 {
     Vector<std::pair<String, double>> animations;
+
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+    auto addAcceleratedEffect = [&](const AcceleratedEffect& effect) {
+        for (auto property : effect.animatedProperties())
+            animations.append({ acceleratedEffectPropertyIDAsString(property), effect.playbackRate() });
+    };
+
+    if (settings.threadedAnimationResolutionEnabled()) {
+        if (auto* effectsStack = acceleratedEffectStack()) {
+            for (auto& effect : effectsStack->primaryLayerEffects())
+                addAcceleratedEffect(effect.get());
+            for (auto& effect : effectsStack->backdropLayerEffects())
+                addAcceleratedEffect(effect.get());
+        }
+
+        return animations;
+    }
+#endif
 
     for (auto& animation : m_animations) {
         if (animation.m_pendingRemoval)
@@ -4873,6 +4996,42 @@ RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> GraphicsLayerCA::createAsyncCo
 {
     return adoptRef(new GraphicsLayerAsyncContentsDisplayDelegateCocoa(*this));
 }
+
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+void GraphicsLayerCA::setAcceleratedEffectsAndBaseValues(AcceleratedEffects&& effects, AcceleratedEffectValues&& baseValues)
+{
+    GraphicsLayer::setAcceleratedEffectsAndBaseValues(WTFMove(effects), WTFMove(baseValues));
+
+    auto* layer = primaryLayer();
+    ASSERT(layer);
+
+    auto hasEffectsTargetingPrimaryLayer = false;
+    auto hasEffectsTargetingBackdropLayer = false;
+
+    if (auto* effectsStack = acceleratedEffectStack()) {
+        auto& primaryLayerEffects = effectsStack->primaryLayerEffects();
+        hasEffectsTargetingPrimaryLayer = !primaryLayerEffects.isEmpty();
+        layer->setAcceleratedEffectsAndBaseValues(primaryLayerEffects, baseValues);
+
+        auto& backdropLayerEffects = effectsStack->backdropLayerEffects();
+        hasEffectsTargetingBackdropLayer = !backdropLayerEffects.isEmpty();
+        if (m_backdropLayer)
+            m_backdropLayer->setAcceleratedEffectsAndBaseValues(backdropLayerEffects, baseValues);
+    }
+
+    if (!hasEffectsTargetingPrimaryLayer)
+        layer->clearAcceleratedEffectsAndBaseValues();
+    if (!hasEffectsTargetingBackdropLayer && m_backdropLayer)
+        m_backdropLayer->clearAcceleratedEffectsAndBaseValues();
+
+    // After clearing animations, ensure that any property that could have
+    // been animated is reset to match the current non-animated values.
+    if (!hasEffectsTargetingPrimaryLayer && !hasEffectsTargetingBackdropLayer)
+        noteLayerPropertyChanged(TransformChanged | FiltersChanged | OpacityChanged | BackdropFiltersChanged | DebugIndicatorsChanged);
+
+    noteLayerPropertyChanged(AnimationChanged | CoverageRectChanged);
+}
+#endif
 
 } // namespace WebCore
 

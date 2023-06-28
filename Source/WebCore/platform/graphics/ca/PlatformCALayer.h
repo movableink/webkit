@@ -37,12 +37,6 @@ OBJC_CLASS AVPlayerLayer;
 
 typedef struct CGContext *CGContextRef;
 
-namespace WTF {
-#if HAVE(IOSURFACE)
-class MachSendRight;
-#endif
-}
-
 namespace WebCore {
 
 class LayerPool;
@@ -50,11 +44,19 @@ class PlatformCALayer;
 class PlatformCAAnimation;
 class PlatformCALayerClient;
 
+struct PlatformCALayerDelegatedContents;
+struct PlatformCALayerDelegatedContentsFinishedEvent;
+struct PlatformCALayerInProcessDelegatedContents;
+struct PlatformCALayerInProcessDelegatedContentsFinishedEvent;
+
 typedef Vector<RefPtr<PlatformCALayer>> PlatformCALayerList;
 
-#if HAVE(IOSURFACE)
-class IOSurface;
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+class AcceleratedEffect;
+struct AcceleratedEffectValues;
 #endif
+
+enum class MediaPlayerVideoGravity : uint8_t;
 
 class WEBCORE_EXPORT PlatformCALayer : public ThreadSafeRefCounted<PlatformCALayer, WTF::DestructionThread::Main> {
     friend class PlatformCALayerCocoa;
@@ -90,7 +92,7 @@ public:
 
     virtual ~PlatformCALayer();
 
-    GraphicsLayer::PlatformLayerID layerID() const { return m_layerID; }
+    PlatformLayerIdentifier layerID() const { return m_layerID; }
 
     enum class Type : uint8_t {
         Cocoa,
@@ -146,6 +148,11 @@ public:
     virtual void removeAnimationForKey(const String& key) = 0;
     virtual RefPtr<PlatformCAAnimation> animationForKey(const String& key) = 0;
 
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+    virtual void clearAcceleratedEffectsAndBaseValues();
+    virtual void setAcceleratedEffectsAndBaseValues(const AcceleratedEffects&, AcceleratedEffectValues&);
+#endif
+
     virtual void setMask(PlatformCALayer*) = 0;
 
     virtual bool isOpaque() const = 0;
@@ -196,10 +203,10 @@ public:
     virtual void setContents(CFTypeRef) = 0;
     virtual void clearContents();
 
-#if HAVE(IOSURFACE)
-    virtual void setContents(const WebCore::IOSurface&) = 0;
-    virtual void setContents(const WTF::MachSendRight&) = 0;
-#endif
+    // The client will override one of setDelegatedContents().
+
+    virtual void setDelegatedContents(const PlatformCALayerDelegatedContents&);
+    virtual void setDelegatedContents(const PlatformCALayerInProcessDelegatedContents&);
 
     virtual void setContentsRect(const FloatRect&) = 0;
 
@@ -238,7 +245,10 @@ public:
     virtual void setCornerRadius(float) = 0;
 
     virtual void setAntialiasesEdges(bool) = 0;
-    
+
+    virtual MediaPlayerVideoGravity videoGravity() const = 0;
+    virtual void setVideoGravity(MediaPlayerVideoGravity) = 0;
+
     // Only used by LayerTypeShapeLayer.
     virtual FloatRoundedRect shapeRoundedRect() const = 0;
     virtual void setShapeRoundedRect(const FloatRoundedRect&) = 0;
@@ -301,12 +311,12 @@ public:
         
     // Functions allows us to share implementation across WebTiledLayer and WebLayer
     static RepaintRectList collectRectsToPaint(GraphicsContext&, PlatformCALayer*);
-    static void drawLayerContents(GraphicsContext&, PlatformCALayer*, RepaintRectList&, GraphicsLayerPaintBehavior);
+    static void drawLayerContents(GraphicsContext&, PlatformCALayer*, RepaintRectList&, OptionSet<GraphicsLayerPaintBehavior>);
     static void drawRepaintIndicator(GraphicsContext&, PlatformCALayer*, int repaintCount, Color customBackgroundColor = { });
     static CGRect frameForLayer(const PlatformLayer*);
 
     void moveToLayerPool();
-    
+
     virtual void dumpAdditionalProperties(TextStream&, OptionSet<PlatformLayerTreeAsTextFlags>);
 
 protected:
@@ -315,7 +325,7 @@ protected:
     virtual LayerPool& layerPool();
 
     const LayerType m_layerType;
-    const GraphicsLayer::PlatformLayerID m_layerID;
+    const PlatformLayerIdentifier m_layerID;
     RetainPtr<PlatformLayer> m_layer;
     PlatformCALayerClient* m_owner;
 };

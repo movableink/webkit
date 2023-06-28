@@ -23,10 +23,10 @@ _log = logging.getLogger(__name__)
 class WebServerBenchmarkRunner(BenchmarkRunner):
     name = 'webserver'
 
-    def __init__(self, plan_file, local_copy, count_override, timeout_override, build_dir, output_file, platform, browser, browser_path, subtests=None, scale_unit=True, show_iteration_values=False, device_id=None, diagnose_dir=None, pgo_profile_output_dir=None, profile_output_dir=None):
+    def __init__(self, plan_file, local_copy, count_override, timeout_override, build_dir, output_file, platform, browser, browser_path, subtests=None, scale_unit=True, show_iteration_values=False, device_id=None, diagnose_dir=None, pgo_profile_output_dir=None, profile_output_dir=None, browser_args=None):
         self._http_server_driver = HTTPServerDriverFactory.create(platform)
         self._http_server_driver.set_device_id(device_id)
-        super(WebServerBenchmarkRunner, self).__init__(plan_file, local_copy, count_override, timeout_override, build_dir, output_file, platform, browser, browser_path, subtests, scale_unit, show_iteration_values, device_id, diagnose_dir, pgo_profile_output_dir, profile_output_dir)
+        super(WebServerBenchmarkRunner, self).__init__(plan_file, local_copy, count_override, timeout_override, build_dir, output_file, platform, browser, browser_path, subtests, scale_unit, show_iteration_values, device_id, diagnose_dir, pgo_profile_output_dir, profile_output_dir, browser_args)
         if self._diagnose_dir:
             self._http_server_driver.set_http_log(os.path.join(self._diagnose_dir, 'run-benchmark-http.log'))
 
@@ -48,8 +48,7 @@ class WebServerBenchmarkRunner(BenchmarkRunner):
         return result
 
     def _construct_subtest_url(self, subtests):
-        print(subtests)
-        if not subtests or not isinstance(subtests, collections.Mapping) or 'subtest_url_format' not in self._plan:
+        if not subtests or not isinstance(subtests, collections.abc.Mapping if sys.version_info >= (3, 10) else collections.Mapping) or 'subtest_url_format' not in self._plan:
             return ''
         subtest_url = ''
         for suite, tests in subtests.items():
@@ -63,6 +62,8 @@ class WebServerBenchmarkRunner(BenchmarkRunner):
         try:
             self._http_server_driver.serve(web_root)
             url = urljoin(self._http_server_driver.base_url(), self._plan_name + '/' + test_file + self._construct_subtest_url(self._subtests))
+            if '?' not in url:
+                url = url.replace('&', '?', 1)
             if enable_profiling:
                 context = self._browser_driver.profile(self._profile_output_dir, profile_filename)
             else:

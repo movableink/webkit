@@ -28,6 +28,7 @@
 
 #include "AuthenticationChallengeDisposition.h"
 #include "AuthenticationManager.h"
+#include "MessageSenderInlines.h"
 #include "NetworkDataTaskBlob.h"
 #include "NetworkLoadScheduler.h"
 #include "NetworkProcess.h"
@@ -228,6 +229,11 @@ void NetworkLoad::didReceiveChallenge(AuthenticationChallenge&& challenge, Negot
         m_networkProcess->authenticationManager().didReceiveAuthenticationChallenge(m_task->sessionID(), m_parameters.webPageProxyID, m_parameters.topOrigin ? &m_parameters.topOrigin->data() : nullptr, challenge, negotiatedLegacyTLS, WTFMove(completionHandler));
 }
 
+void NetworkLoad::didReceiveInformationalResponse(ResourceResponse&& response)
+{
+    m_client.get().didReceiveInformationalResponse(WTFMove(response));
+}
+
 void NetworkLoad::didReceiveResponse(ResourceResponse&& response, NegotiatedLegacyTLS negotiatedLegacyTLS, PrivateRelayed privateRelayed, ResponseCompletionHandler&& completionHandler)
 {
     ASSERT(RunLoop::isMain());
@@ -248,12 +254,12 @@ void NetworkLoad::notifyDidReceiveResponse(ResourceResponse&& response, Negotiat
     ASSERT(RunLoop::isMain());
 
     if (m_parameters.needsCertificateInfo) {
-        Span<const std::byte> auditToken;
+        std::span<const std::byte> auditToken;
 
 #if PLATFORM(COCOA)
         auto token = m_networkProcess->sourceApplicationAuditToken();
         if (token)
-            auditToken = asBytes(Span<unsigned> { token->val });
+            auditToken = std::as_bytes(std::span<unsigned> { token->val });
 #endif
 
         response.includeCertificateInfo(auditToken);

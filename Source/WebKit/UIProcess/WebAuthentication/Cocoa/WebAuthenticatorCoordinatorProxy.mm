@@ -30,15 +30,20 @@
 
 #import "LocalService.h"
 #import "Logging.h"
+#import "PageClient.h"
 #import "WKError.h"
 #import "WebAuthenticationRequestData.h"
 #import "WebPageProxy.h"
 #import <WebCore/AuthenticatorAttachment.h>
 #import <WebCore/AuthenticatorResponseData.h>
+#import <WebCore/AuthenticatorTransport.h>
 #import <WebCore/BufferSource.h>
 #import <WebCore/ExceptionData.h>
 #import <WebCore/PublicKeyCredentialCreationOptions.h>
+#import <WebCore/SecurityOrigin.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/CompletionHandler.h>
+#import <wtf/EnumTraits.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 #import "AuthenticationServicesCoreSoftLink.h"
@@ -79,6 +84,8 @@ static inline RetainPtr<NSString> toNSString(AttestationConveyancePreference att
         return @"indirect";
     case AttestationConveyancePreference::None:
         return @"none";
+    case AttestationConveyancePreference::Enterprise:
+        return @"enterprise";
     }
 
     return @"none";
@@ -176,8 +183,8 @@ static inline RetainPtr<ASCPublicKeyCredentialDescriptor> toASCDescriptor(Public
 
 static inline RetainPtr<ASCWebAuthenticationExtensionsClientInputs> toASCExtensions(const AuthenticationExtensionsClientInputs& extensions)
 {
-    if ([allocASCWebAuthenticationExtensionsClientInputsInstance() respondsToSelector:@selector(initWithAppID:isGoogleLegacyAppIDSupport:)])
-        return adoptNS([allocASCWebAuthenticationExtensionsClientInputsInstance() initWithAppID:extensions.appid isGoogleLegacyAppIDSupport:extensions.googleLegacyAppidSupport]);
+    if ([allocASCWebAuthenticationExtensionsClientInputsInstance() respondsToSelector:@selector(initWithAppID:)])
+        return adoptNS([allocASCWebAuthenticationExtensionsClientInputsInstance() initWithAppID:extensions.appid]);
 
     return nil;
 }
@@ -493,7 +500,9 @@ void WebAuthenticatorCoordinatorProxy::performRequest(RetainPtr<ASCCredentialReq
         return;
     }
 #endif // PLATFORM(MAC) || PLATFORM(MACCATALYST)
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
+    requestContext.get().windowSceneIdentifier = m_webPageProxy.pageClient().sceneID();
+
     [m_proxy performAuthorizationRequestsForContext:requestContext.get() withCompletionHandler:makeBlockPtr([weakThis = WeakPtr { *this }, handler = WTFMove(handler)](id<ASCCredentialProtocol> credential, NSError *error) mutable {
         callOnMainRunLoop([weakThis, handler = WTFMove(handler), credential = retainPtr(credential), error = retainPtr(error)] () mutable {
 #elif PLATFORM(MAC)

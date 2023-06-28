@@ -14,6 +14,11 @@ list(APPEND WebKitTestRunner_SOURCES
     wpe/main.cpp
 )
 
+list(APPEND WebKitTestRunner_PRIVATE_INCLUDE_DIRECTORIES
+    ${CMAKE_SOURCE_DIR}/Source
+    $<TARGET_PROPERTY:WebKit,INCLUDE_DIRECTORIES>
+)
+
 list(APPEND WebKitTestRunner_INCLUDE_DIRECTORIES
     ${FORWARDING_HEADERS_DIR}
 )
@@ -48,12 +53,12 @@ list(APPEND TestRunnerInjectedBundle_SOURCES
 )
 
 list(APPEND TestRunnerInjectedBundle_INCLUDE_DIRECTORIES
+    ${CMAKE_SOURCE_DIR}/Source
     ${GLIB_INCLUDE_DIRS}
     ${WebKitTestRunner_DIR}/InjectedBundle/atspi
     ${WebKitTestRunner_DIR}/InjectedBundle/wpe
 )
 
 add_definitions(
-    -DFONTS_CONF_DIR="${TOOLS_DIR}/WebKitTestRunner/gtk/fonts"
     -DTOP_LEVEL_DIR="${CMAKE_SOURCE_DIR}"
 )

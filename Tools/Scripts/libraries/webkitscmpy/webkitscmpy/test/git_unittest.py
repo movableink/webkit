@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022 Apple Inc. All rights reserved.
+# Copyright (C) 2020-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -413,7 +413,7 @@ CommitDate: {time_c}
 
             self.assertEqual(repo.config()['user.name'], 'Tim Apple')
             self.assertEqual(repo.config()['core.filemode'], 'true')
-            self.assertEqual(repo.config()['remote.origin.url'], 'git@example.org:/mock/repository')
+            self.assertEqual(repo.config()['remote.origin.url'], 'git@example.org:mock/repository')
             self.assertEqual(repo.config()['svn-remote.svn.url'], 'https://svn.example.org/repository/webkit')
             self.assertEqual(repo.config()['svn-remote.svn.fetch'], 'trunk:refs/remotes/origin/main')
             self.assertEqual(repo.config()['webkitscmpy.history'], 'when-user-owned')
@@ -529,9 +529,12 @@ CommitDate: {time_c}
             project_config = os.path.join(self.path, 'metadata', local.Git.GIT_CONFIG_EXTENSION)
             os.mkdir(os.path.dirname(project_config))
             with open(project_config, 'w') as f:
-                f.write('[webkitscmpy "remotes"]\n')
-                f.write('    origin = git@github.example.com:WebKit/WebKit.git\n')
-                f.write('    security = git@github.example.com:WebKit/WebKit-security.git\n')
+                f.write('[webkitscmpy "remotes.origin"]\n')
+                f.write('    url = git@github.example.com:WebKit/WebKit.git\n')
+                f.write('    security-level = 0\n')
+                f.write('[webkitscmpy "remotes.security"]\n')
+                f.write('    url = git@github.example.com:WebKit/WebKit-security.git\n')
+                f.write('    security-level = 1\n')
 
             self.assertEqual(local.Git(self.path).source_remotes(), ['origin'])
 
@@ -545,9 +548,12 @@ CommitDate: {time_c}
             project_config = os.path.join(self.path, 'metadata', local.Git.GIT_CONFIG_EXTENSION)
             os.mkdir(os.path.dirname(project_config))
             with open(project_config, 'w') as f:
-                f.write('[webkitscmpy "remotes"]\n')
-                f.write('    origin = git@github.example.com:WebKit/WebKit.git\n')
-                f.write('    security = git@github.example.com:WebKit/WebKit-security.git\n')
+                f.write('[webkitscmpy "remotes.origin"]\n')
+                f.write('    url = git@github.example.com:WebKit/WebKit.git\n')
+                f.write('    security-level = 0\n')
+                f.write('[webkitscmpy "remotes.security"]\n')
+                f.write('    url = git@github.example.com:WebKit/WebKit-security.git\n')
+                f.write('    security-level = 1\n')
 
             self.assertEqual(local.Git(self.path).source_remotes(), ['origin', 'security'])
             self.assertEqual(
@@ -740,6 +746,13 @@ class TestGitHub(testing.TestCase):
                 ['Source/main.cpp', 'Source/main.h'],
             )
 
+    def test_checkout_url(self):
+        self.assertEqual(remote.GitHub(self.remote).checkout_url(), 'git@github.example.com:WebKit/WebKit.git')
+        self.assertEqual(remote.GitHub(self.remote).checkout_url(http=True), 'https://github.example.com/WebKit/WebKit.git')
+        self.assertEqual(remote.GitHub(self.remote).checkout_url(ssh=True), 'git@github.example.com:WebKit/WebKit.git')
+        with self.assertRaises(ValueError):
+            remote.GitHub(self.remote).checkout_url(http=True, ssh=True)
+
 
 class TestBitBucket(testing.TestCase):
     remote = 'https://bitbucket.example.com/projects/WEBKIT/repos/webkit'
@@ -878,3 +891,10 @@ class TestBitBucket(testing.TestCase):
                 remote.BitBucket(self.remote).files_changed('4@main'),
                 ['Source/main.cpp', 'Source/main.h'],
             )
+
+    def test_checkout_url(self):
+        self.assertEqual(remote.BitBucket(self.remote).checkout_url(), 'git@bitbucket.example.com/WEBKIT/webkit.git')
+        self.assertEqual(remote.BitBucket(self.remote).checkout_url(http=True), 'https://bitbucket.example.com/scm/WEBKIT/webkit.git')
+        self.assertEqual(remote.BitBucket(self.remote).checkout_url(ssh=True), 'git@bitbucket.example.com/WEBKIT/webkit.git')
+        with self.assertRaises(ValueError):
+            remote.BitBucket(self.remote).checkout_url(http=True, ssh=True)

@@ -60,10 +60,12 @@ public:
     void updateScrollbarPainters();
     void updateScrollbarLayers() final;
     
-    bool handleWheelEventForScrollbars(const PlatformWheelEvent&) final;
-    bool handleMouseEventForScrollbars(const PlatformMouseEvent&) final;
-    
+    void handleWheelEventPhase(const PlatformWheelEventPhase) final;
+    void viewWillStartLiveResize() final;
+    void viewWillEndLiveResize() final;
+    void viewSizeDidChange() final;
     void initScrollbars() final;
+    String scrollbarStateForOrientation(ScrollbarOrientation) const final;
 
 private:
     void updateFromStateNode(const ScrollingStateScrollingNode&) final;
@@ -80,7 +82,7 @@ private:
     void rubberBandingStateChanged(bool) final;
     bool scrollPositionIsNotRubberbandingEdge(const FloatPoint&) const;
 
-    ScrollerPairMac m_scrollerPair;
+    Ref<ScrollerPairMac> m_scrollerPair;
 
     bool m_inMomentumPhase { false };
 };

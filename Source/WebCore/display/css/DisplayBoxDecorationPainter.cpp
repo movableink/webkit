@@ -650,8 +650,8 @@ void BorderPainter::drawLineForBoxSide(PaintingContext& paintingContext, const F
             float adjacent1BigThird = ceilToDevicePixel(adjacentWidth1 / 3, deviceScaleFactor);
             float adjacent2BigThird = ceilToDevicePixel(adjacentWidth2 / 3, deviceScaleFactor);
 
-            float offset1 = floorToDevicePixel(fabs(adjacentWidth1) * 2 / 3, deviceScaleFactor);
-            float offset2 = floorToDevicePixel(fabs(adjacentWidth2) * 2 / 3, deviceScaleFactor);
+            float offset1 = floorToDevicePixel(std::abs(adjacentWidth1) * 2 / 3, deviceScaleFactor);
+            float offset2 = floorToDevicePixel(std::abs(adjacentWidth2) * 2 / 3, deviceScaleFactor);
 
             float mitreOffset1 = adjacentWidth1 < 0 ? offset1 : 0;
             float mitreOffset2 = adjacentWidth1 > 0 ? offset1 : 0;
@@ -722,7 +722,7 @@ void BorderPainter::drawLineForBoxSide(PaintingContext& paintingContext, const F
             offset2 = ceilToDevicePixel(adjacentWidth2 / 2, deviceScaleFactor);
 
         if (((side == BoxSide::Top || side == BoxSide::Left) && adjacentWidth1 > 0) || ((side == BoxSide::Bottom || side == BoxSide::Right) && adjacentWidth1 < 0))
-            offset3 = floorToDevicePixel(fabs(adjacentWidth1) / 2, deviceScaleFactor);
+            offset3 = floorToDevicePixel(std::abs(adjacentWidth1) / 2, deviceScaleFactor);
 
         if (((side == BoxSide::Top || side == BoxSide::Left) && adjacentWidth2 > 0) || ((side == BoxSide::Bottom || side == BoxSide::Right) && adjacentWidth2 < 0))
             offset4 = ceilToDevicePixel(adjacentWidth2 / 2, deviceScaleFactor);
@@ -1260,7 +1260,16 @@ void BoxDecorationPainter::paintBoxShadow(PaintingContext& paintingContext, Shad
 
     bool hasOpaqueBackground = m_box.style().backgroundColor().isOpaque();
 
-    auto paintNormalShadow = [&](const ShadowData& shadow) {
+    auto resolveColor = [] (const StyleColor& styleColor) {
+        // FIXME: StyleColor should have been properly resolved already,
+        // but unfortunately it's not enforced in the type system.
+        // We should create a new class such as ResolvedShadowData to make it explicit.
+        // https://bugs.webkit.org/show_bug.cgi?id=248467
+        ASSERT(styleColor.isAbsoluteColor());
+        return styleColor.absoluteColor();
+    };
+
+    auto paintNormalShadow = [&] (const ShadowData& shadow) {
         // FIXME: Snapping here isn't ideal. It would be better to compute a rect which is border rect + offset + spread, and snap that at tree building time.
         auto shadowOffset = roundSizeToDevicePixels({ shadow.x().value(), shadow.y().value() }, paintingContext.deviceScaleFactor);
         float shadowPaintingExtent = ceilToDevicePixel(shadow.paintingExtent(), paintingContext.deviceScaleFactor);
@@ -1292,7 +1301,7 @@ void BoxDecorationPainter::paintBoxShadow(PaintingContext& paintingContext, Shad
         auto shadowRectOrigin = fillRect.rect().location() + shadowOffset;
         auto adjustedShadowOffset = shadowRectOrigin - adjustedFillRect.rect().location();
 
-        paintingContext.context.setShadow(adjustedShadowOffset, shadowRadius.value(), shadow.color(), shadow.isWebkitBoxShadow() ? ShadowRadiusMode::Legacy : ShadowRadiusMode::Default);
+        paintingContext.context.setShadow(adjustedShadowOffset, shadowRadius.value(), resolveColor(shadow.color()), shadow.isWebkitBoxShadow() ? ShadowRadiusMode::Legacy : ShadowRadiusMode::Default);
 
         if (hasBorderRadius) {
             // If the box is opaque, it is unnecessary to clip it out. However, doing so saves time
@@ -1369,9 +1378,9 @@ void BoxDecorationPainter::paintBoxShadow(PaintingContext& paintingContext, Shad
 
         if (roundedHoleRect.isEmpty()) {
             if (hasBorderRadius)
-                paintingContext.context.fillRoundedRect(borderRect, shadow.color());
+                paintingContext.context.fillRoundedRect(borderRect, resolveColor(shadow.color()));
             else
-                paintingContext.context.fillRect(borderRect.rect(), shadow.color());
+                paintingContext.context.fillRect(borderRect.rect(), resolveColor(shadow.color()));
             return;
         }
 
@@ -1388,7 +1397,7 @@ void BoxDecorationPainter::paintBoxShadow(PaintingContext& paintingContext, Shad
             return unionRect(bounds, offsetBounds);
         };
 
-        Color fillColor = shadow.color().opaqueColor();
+        Color fillColor = resolveColor(shadow.color()).opaqueColor();
         auto shadowCastingRect = areaCastingShadowInHole(borderRect.rect(), shadowPaintingExtent, shadowSpread, shadowOffset);
 
         GraphicsContextStateSaver stateSaver(paintingContext.context);
@@ -1403,7 +1412,7 @@ void BoxDecorationPainter::paintBoxShadow(PaintingContext& paintingContext, Shad
         paintingContext.context.translate(extraOffset);
         shadowOffset -= extraOffset;
 
-        paintingContext.context.setShadow(shadowOffset, shadowRadius.value(), shadow.color(), shadow.isWebkitBoxShadow() ? ShadowRadiusMode::Legacy : ShadowRadiusMode::Default);
+        paintingContext.context.setShadow(shadowOffset, shadowRadius.value(), resolveColor(shadow.color()), shadow.isWebkitBoxShadow() ? ShadowRadiusMode::Legacy : ShadowRadiusMode::Default);
         paintingContext.context.fillRectWithRoundedHole(shadowCastingRect, roundedHoleRect, fillColor);
     };
 

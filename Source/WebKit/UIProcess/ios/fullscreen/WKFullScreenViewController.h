@@ -51,8 +51,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setAnimatingViewAlpha:(CGFloat)alpha;
 - (void)setSupportedOrientations:(UIInterfaceOrientationMask)supportedOrientations;
 - (void)resetSupportedOrientations;
-#if HAVE(UIKIT_WEBKIT_INTERNALS)
-- (void)hideMediaControls:(BOOL)hidden;
+#if PLATFORM(VISION)
+- (void)hideCancelAndPIPButtons:(BOOL)hidden;
 #endif
 @end
 

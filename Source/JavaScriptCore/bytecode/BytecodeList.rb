@@ -792,6 +792,21 @@ op :enumerator_has_own_property,
         enumeratorMetadata: EnumeratorMetadata,
     }
 
+op :enumerator_put_by_val,
+    args: {
+        base: VirtualRegister,
+        mode: VirtualRegister,
+        propertyName: VirtualRegister,
+        index: VirtualRegister,
+        enumerator: VirtualRegister,
+        value: VirtualRegister,
+        ecmaMode: ECMAMode,
+    },
+    metadata: {
+        arrayProfile: ArrayProfile,
+        enumeratorMetadata: EnumeratorMetadata,
+    }
+
 # Alignment: 1
 op :jneq_ptr,
     args: {
@@ -1194,11 +1209,6 @@ op :create_cloned_arguments,
         dst: VirtualRegister,
     }
 
-op :create_arguments_butterfly,
-    args: {
-        dst: VirtualRegister,
-    }
-
 op :new_promise,
     args: {
         dst: VirtualRegister,
@@ -1371,6 +1381,13 @@ op :is_cell_with_type,
         dst: VirtualRegister,
         operand: VirtualRegister,
         type: JSType,
+    }
+
+op :has_structure_with_flags,
+    args: {
+        dst: VirtualRegister,
+        operand: VirtualRegister,
+        flags: unsigned,
     }
 
 end_section :Bytecode
@@ -1883,7 +1900,7 @@ op :array_new,
         size: VirtualRegister,
         value: VirtualRegister,
         typeIndex: unsigned,
-        useDefault: bool,
+        arrayNewKind: uint8_t,
     }
 
 op :array_get,
@@ -1929,6 +1946,12 @@ op :struct_set,
         structReference: VirtualRegister,
         fieldIndex: unsigned,
         value: VirtualRegister,
+    }
+
+op :extern_externalize,
+    args: {
+        dst: VirtualRegister,
+        reference: VirtualRegister,
     }
 
 end_section :Wasm

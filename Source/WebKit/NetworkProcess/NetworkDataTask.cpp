@@ -28,6 +28,7 @@
 
 #include "AuthenticationManager.h"
 #include "NetworkDataTaskBlob.h"
+#include "NetworkDataTaskDataURL.h"
 #include "NetworkLoadParameters.h"
 #include "NetworkProcess.h"
 #include "NetworkSession.h"
@@ -58,7 +59,9 @@ Ref<NetworkDataTask> NetworkDataTask::create(NetworkSession& session, NetworkDat
     ASSERT(!parameters.request.url().protocolIsBlob());
 #if PLATFORM(COCOA)
     return NetworkDataTaskCocoa::create(session, client, parameters);
-#endif
+#else
+    if (parameters.request.url().protocolIsData())
+        return NetworkDataTaskDataURL::create(session, client, parameters);
 #if USE(SOUP)
     return NetworkDataTaskSoup::create(session, client, parameters);
 #endif
@@ -67,6 +70,7 @@ Ref<NetworkDataTask> NetworkDataTask::create(NetworkSession& session, NetworkDat
 #endif
 #if PLATFORM(QT)
     return NetworkDataTaskQt::create(session, client, parameters.request, parameters.storedCredentialsPolicy, parameters.contentSniffingPolicy, parameters.contentEncodingSniffingPolicy, parameters.shouldClearReferrerOnHTTPSToHTTPRedirect, parameters.isMainFrameNavigation); 
+#endif
 #endif
 }
 
@@ -127,6 +131,12 @@ void NetworkDataTask::scheduleFailure(FailureType type)
             m_client->wasBlockedByDisabledFTP();
         }
     });
+}
+
+void NetworkDataTask::didReceiveInformationalResponse(ResourceResponse&& headers)
+{
+    if (m_client)
+        m_client->didReceiveInformationalResponse(WTFMove(headers));
 }
 
 void NetworkDataTask::didReceiveResponse(ResourceResponse&& response, NegotiatedLegacyTLS negotiatedLegacyTLS, PrivateRelayed privateRelayed, ResponseCompletionHandler&& completionHandler)

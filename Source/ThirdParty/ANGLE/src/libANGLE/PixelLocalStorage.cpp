@@ -11,6 +11,7 @@
 #include "libANGLE/PixelLocalStorage.h"
 
 #include <numeric>
+#include "common/FixedVector.h"
 #include "libANGLE/Context.h"
 #include "libANGLE/Framebuffer.h"
 #include "libANGLE/Texture.h"
@@ -406,13 +407,6 @@ void PixelLocalStoragePlane::bindToImage(Context *context, GLuint unit, bool nee
                 break;
         }
     }
-    if (mTextureRef->getType() != TextureType::_2D)
-    {
-        // TODO(anglebug.com/7279): Texture types other than GL_TEXTURE_2D will take a lot of
-        // consideration to support on all backends. Hold of on fully implementing them until the
-        // other backends are in place.
-        UNIMPLEMENTED();
-    }
     context->bindImageTexture(unit, mTextureRef->id(), mTextureImageIndex.getLevelIndex(), GL_FALSE,
                               mTextureImageIndex.getLayerIndex(), GL_READ_WRITE,
                               imageBindingFormat);
@@ -468,10 +462,6 @@ void PixelLocalStorage::begin(Context *context, GLsizei n, const GLenum loadops[
     bool hasPLSExtents = false;
     for (GLsizei i = 0; i < n; ++i)
     {
-        if (loadops[i] == GL_LOAD_OP_DISABLE_ANGLE)
-        {
-            continue;
-        }
         PixelLocalStoragePlane &plane = mPlanes[i];
         if (plane.isTextureIDDeleted(context))
         {
@@ -495,10 +485,6 @@ void PixelLocalStorage::begin(Context *context, GLsizei n, const GLenum loadops[
     }
     for (GLsizei i = 0; i < n; ++i)
     {
-        if (loadops[i] == GL_LOAD_OP_DISABLE_ANGLE)
-        {
-            continue;
-        }
         PixelLocalStoragePlane &plane = mPlanes[i];
         if (mPLSOptions.type == ShPixelLocalStorageType::ImageLoadStore ||
             mPLSOptions.type == ShPixelLocalStorageType::FramebufferFetch)
@@ -526,6 +512,42 @@ void PixelLocalStorage::barrier(Context *context)
 {
     ASSERT(!context->getExtensions().shaderPixelLocalStorageCoherentANGLE);
     onBarrier(context);
+}
+
+void PixelLocalStorage::interrupt(Context *context)
+{
+    if (mInterruptCount == 0)
+    {
+        mActivePlanesAtInterrupt = context->getState().getPixelLocalStorageActivePlanes();
+        ASSERT(0 <= mActivePlanesAtInterrupt &&
+               mActivePlanesAtInterrupt <= IMPLEMENTATION_MAX_PIXEL_LOCAL_STORAGE_PLANES);
+        if (mActivePlanesAtInterrupt >= 1)
+        {
+            angle::FixedVector<GLenum, IMPLEMENTATION_MAX_PIXEL_LOCAL_STORAGE_PLANES> storeops(
+                mActivePlanesAtInterrupt, GL_STORE_OP_STORE_ANGLE);
+            context->endPixelLocalStorage(mActivePlanesAtInterrupt, storeops.data());
+        }
+    }
+    ++mInterruptCount;
+    ASSERT(mInterruptCount > 0);
+}
+
+void PixelLocalStorage::restore(Context *context)
+{
+    ASSERT(mInterruptCount > 0);
+    --mInterruptCount;
+    ASSERT(0 <= mActivePlanesAtInterrupt &&
+           mActivePlanesAtInterrupt <= IMPLEMENTATION_MAX_PIXEL_LOCAL_STORAGE_PLANES);
+    if (mInterruptCount == 0 && mActivePlanesAtInterrupt >= 1)
+    {
+        angle::FixedVector<GLenum, IMPLEMENTATION_MAX_PIXEL_LOCAL_STORAGE_PLANES> loadops(
+            mActivePlanesAtInterrupt);
+        for (GLsizei i = 0; i < mActivePlanesAtInterrupt; ++i)
+        {
+            loadops[i] = mPlanes[i].isMemoryless() ? GL_DONT_CARE : GL_LOAD_OP_LOAD_ANGLE;
+        }
+        context->beginPixelLocalStorage(mActivePlanesAtInterrupt, loadops.data());
+    }
 }
 
 namespace
@@ -599,15 +621,7 @@ class PixelLocalStorageImageLoadStore : public PixelLocalStorage
                 }
 
                 // Attach one of the PLS textures to GL_COLOR_ATTACHMENT0.
-                for (GLsizei i = 0; i < n; ++i)
-                {
-                    if (loadops[i] == GL_LOAD_OP_DISABLE_ANGLE)
-                    {
-                        continue;
-                    }
-                    getPlane(i).attachToDrawFramebuffer(context, GL_COLOR_ATTACHMENT0);
-                    break;
-                }
+                getPlane(0).attachToDrawFramebuffer(context, GL_COLOR_ATTACHMENT0);
             }
         }
         else
@@ -650,11 +664,7 @@ class PixelLocalStorageImageLoadStore : public PixelLocalStorage
             DrawBuffersVector<int> pendingClears;
             for (; pendingClears.size() < maxDrawBuffers && i < n; ++i)
             {
-                GLenum loadop = loadops[i];
-                if (loadop == GL_LOAD_OP_DISABLE_ANGLE)
-                {
-                    continue;
-                }
+                GLenum loadop                       = loadops[i];
                 const PixelLocalStoragePlane &plane = getPlane(i);
                 ASSERT(!plane.isDeinitialized());
                 plane.bindToImage(context, i, !mPLSOptions.supportsNativeRGBA8ImageFormats);
@@ -828,14 +838,8 @@ class PixelLocalStorageFramebufferFetch : public PixelLocalStorage
 
         for (GLsizei i = 0; i < n; ++i)
         {
-            GLuint drawBufferIdx = GetDrawBufferIdx(caps, i);
-            GLenum loadop        = loadops[i];
-            if (loadop == GL_LOAD_OP_DISABLE_ANGLE)
-            {
-                plsDrawBuffers[drawBufferIdx] = GL_NONE;
-                continue;
-            }
-
+            GLuint drawBufferIdx                = GetDrawBufferIdx(caps, i);
+            GLenum loadop                       = loadops[i];
             const PixelLocalStoragePlane &plane = getPlane(i);
             ASSERT(!plane.isDeinitialized());
 
@@ -879,7 +883,7 @@ class PixelLocalStorageFramebufferFetch : public PixelLocalStorage
             for (GLsizei i = 0; i < n; ++i)
             {
                 GLenum loadop = loadops[i];
-                if (loadop != GL_LOAD_OP_DISABLE_ANGLE && loadop != GL_LOAD_OP_LOAD_ANGLE)
+                if (loadop != GL_LOAD_OP_LOAD_ANGLE)
                 {
                     GLuint drawBufferIdx = GetDrawBufferIdx(caps, i);
                     getPlane(i).issueClearCommand(&clearBufferCommands, drawBufferIdx, loadop);

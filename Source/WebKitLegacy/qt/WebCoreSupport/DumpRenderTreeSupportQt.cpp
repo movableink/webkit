@@ -295,7 +295,7 @@ bool DumpRenderTreeSupportQt::isCommandEnabled(QWebPageAdapter *adapter, const Q
 
 QVariantList DumpRenderTreeSupportQt::selectedRange(QWebPageAdapter *adapter)
 {
-    WebCore::Frame& frame = adapter->page->focusController().focusedOrMainFrame();
+    WebCore::LocalFrame& frame = adapter->page->focusController().focusedOrMainFrame();
     QVariantList selectedRange;
     auto range = createLiveRange(frame.selection().selection().toNormalizedRange()).get();
 
@@ -320,7 +320,7 @@ QVariantList DumpRenderTreeSupportQt::selectedRange(QWebPageAdapter *adapter)
 
 QVariantList DumpRenderTreeSupportQt::firstRectForCharacterRange(QWebPageAdapter *adapter, uint64_t location, uint64_t length)
 {
-    WebCore::Frame& frame = adapter->page->focusController().focusedOrMainFrame();
+    WebCore::LocalFrame& frame = adapter->page->focusController().focusedOrMainFrame();
     QVariantList rect;
 
     if ((location + length < location) && (location + length))
@@ -563,7 +563,7 @@ QMap<QString, QWebHistoryItem> DumpRenderTreeSupportQt::getChildHistoryItems(con
 
 bool DumpRenderTreeSupportQt::shouldClose(QWebFrameAdapter *adapter)
 {
-    WebCore::Frame* coreFrame = adapter->frame;
+    WebCore::LocalFrame* coreFrame = adapter->frame;
     return coreFrame->loader().shouldClose();
 }
 
@@ -583,7 +583,7 @@ void DumpRenderTreeSupportQt::evaluateScriptInIsolatedWorld(QWebFrameAdapter *ad
     } else
         scriptWorld = m_worldMap.value(worldID);
 
-    WebCore::Frame* coreFrame = adapter->frame;
+    WebCore::LocalFrame* coreFrame = adapter->frame;
 
     ScriptController& proxy = coreFrame->script();
     proxy.executeScriptInWorldIgnoringException(*scriptWorld->world(), script, true);
@@ -631,14 +631,14 @@ void DumpRenderTreeSupportQt::goBack(QWebPageAdapter* adapter)
 // API Candidate?
 QString DumpRenderTreeSupportQt::responseMimeType(QWebFrameAdapter* adapter)
 {
-    WebCore::Frame* coreFrame = adapter->frame;
+    WebCore::LocalFrame* coreFrame = adapter->frame;
     WebCore::DocumentLoader* docLoader = coreFrame->loader().documentLoader();
     return docLoader->responseMIMEType();
 }
 
 void DumpRenderTreeSupportQt::clearOpener(QWebFrameAdapter* adapter)
 {
-    WebCore::Frame* coreFrame = adapter->frame;
+    WebCore::LocalFrame* coreFrame = adapter->frame;
     coreFrame->loader().setOpener(0);
 }
 
@@ -662,7 +662,10 @@ QStringList DumpRenderTreeSupportQt::contextMenu(QWebPageAdapter* page)
 bool DumpRenderTreeSupportQt::thirdPartyCookiePolicyAllows(QWebPageAdapter *adapter, const QUrl& url, const QUrl& firstPartyUrl)
 {
     Page* corePage = adapter->page;
-    auto* storageSession = corePage->mainFrame().loader().networkingContext()->storageSession();
+    auto* localFrame = dynamicDowncast<LocalFrame>(corePage->mainFrame());
+    if (!localFrame)
+        return false;
+    auto* storageSession = localFrame->loader().networkingContext()->storageSession();
     return thirdPartyCookiePolicyPermits(storageSession, url, firstPartyUrl);
 }
 
@@ -705,7 +708,7 @@ QUrl DumpRenderTreeSupportQt::mediaContentUrlByElementId(QWebFrameAdapter* adapt
 void DumpRenderTreeSupportQt::setAlternateHtml(QWebFrameAdapter* adapter, const QString& html, const QUrl& baseUrl, const QUrl& failingUrl)
 {
     URL kurl(baseUrl);
-    WebCore::Frame* coreFrame = adapter->frame;
+    WebCore::LocalFrame* coreFrame = adapter->frame;
     WebCore::ResourceRequest request(kurl);
     const QByteArray utf8 = html.toUtf8();
     WTF::RefPtr<WebCore::SharedBuffer> data = WebCore::SharedBuffer::create(utf8.constData(), utf8.length());
@@ -717,7 +720,7 @@ void DumpRenderTreeSupportQt::setAlternateHtml(QWebFrameAdapter* adapter, const 
 
 void DumpRenderTreeSupportQt::confirmComposition(QWebPageAdapter *adapter, const char* text)
 {
-    Frame& frame = adapter->page->focusController().focusedOrMainFrame();
+    LocalFrame& frame = adapter->page->focusController().focusedOrMainFrame();
 
     Editor& editor = frame.editor();
     if (!editor.hasComposition() && !text)
@@ -734,8 +737,8 @@ void DumpRenderTreeSupportQt::confirmComposition(QWebPageAdapter *adapter, const
 
 void DumpRenderTreeSupportQt::injectInternalsObject(QWebFrameAdapter* adapter)
 {
-    WebCore::Frame* coreFrame = adapter->frame;
-    JSDOMWindow* window = toJSDOMWindow(coreFrame, mainThreadNormalWorld());
+    WebCore::LocalFrame* coreFrame = adapter->frame;
+    JSLocalDOMWindow* window = toJSLocalDOMWindow(coreFrame, mainThreadNormalWorld());
     Q_ASSERT(window);
 
     JSC::JSGlobalObject* lexicalGlobalObject = window->globalObject();
@@ -753,8 +756,8 @@ void DumpRenderTreeSupportQt::injectInternalsObject(JSContextRef context)
 
 void DumpRenderTreeSupportQt::resetInternalsObject(QWebFrameAdapter* adapter)
 {
-    WebCore::Frame* coreFrame = adapter->frame;
-    JSDOMWindow* window = toJSDOMWindow(coreFrame, mainThreadNormalWorld());
+    WebCore::LocalFrame* coreFrame = adapter->frame;
+    JSLocalDOMWindow* window = toJSLocalDOMWindow(coreFrame, mainThreadNormalWorld());
     Q_ASSERT(window);
 
     JSC::JSGlobalObject* lexicalGlobalObject = window->globalObject();
@@ -772,7 +775,7 @@ void DumpRenderTreeSupportQt::resetInternalsObject(JSContextRef context)
 
 QImage DumpRenderTreeSupportQt::paintPagesWithBoundaries(QWebFrameAdapter* adapter)
 {
-    Frame* frame = adapter->frame;
+    LocalFrame* frame = adapter->frame;
     PrintContext printContext(frame);
 
     QRect rect = frame->view()->frameRect();
@@ -825,7 +828,7 @@ bool DumpRenderTreeSupportQt::trackRepaintRects(QWebFrameAdapter* adapter)
 
 void DumpRenderTreeSupportQt::getTrackedRepaintRects(QWebFrameAdapter* adapter, QVector<QRectF>& result)
 {
-    Frame* coreFrame = adapter->frame;
+    LocalFrame* coreFrame = adapter->frame;
     const Vector<FloatRect>& rects = coreFrame->view()->trackedRepaintRects();
     result.resize(rects.size());
     for (size_t i = 0; i < rects.size(); ++i)
@@ -859,7 +862,7 @@ void DumpRenderTreeSupportQt::resetPageVisibility(QWebPageAdapter* adapter)
 
 void DumpRenderTreeSupportQt::getJSWindowObject(QWebFrameAdapter* adapter, JSContextRef* context, JSObjectRef* object)
 {
-    JSDOMWindow* window = toJSDOMWindow(adapter->frame, mainThreadNormalWorld());
+    JSLocalDOMWindow* window = toJSLocalDOMWindow(adapter->frame, mainThreadNormalWorld());
 
     // TODO: fix this
     //*object = toRef(window);

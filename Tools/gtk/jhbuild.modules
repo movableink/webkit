@@ -9,7 +9,6 @@
     <dependencies>
       <dep package="avif"/>
       <dep package="cairo"/>
-      <dep package="fonts"/>
       <dep package="dicts"/>
       <dep package="fontconfig"/>
       <dep package="freetype6"/>
@@ -21,7 +20,6 @@
       <dep package="glib-networking"/>
       <dep package="adwaita-icon-theme"/>
       <dep package="icu"/>
-      <dep package="libsoup"/>
       <dep package="atk"/>
       <dep package="webkit-gstreamer-testing-dependencies"/>
       <dep package="pango"/>
@@ -44,6 +42,9 @@
       <if condition-set="macos">
           <dep package="gsettings-desktop-schemas"/>
       </if>
+      <if condition-unset="USE_SOUP2">
+        <dep package="libsoup3"/>
+      </if>
     </dependencies>
   </metamodule>
 
@@ -51,7 +52,7 @@
   <repository type="git" name="github.com"
       href="https://github.com"/>
   <repository type="tarball" name="github-tarball"
-      href="https://github.com/"/>
+      href="https://github.com"/>
   <repository type="tarball" name="sourceware.org-mirror"
       href="http://mirrors.kernel.org/sources.redhat.com/"/>
   <repository type="tarball" name="ftp.gnome.org"
@@ -116,11 +117,6 @@
     <branch module="releases/pixman-${version}.tar.gz" version="0.40.0"
             repo="cairographics.org"
             hash="sha256:6d200dec3740d9ec4ec8d1180e25779c00bc749f94278c8b9021f5534db223fc"/>
-  </autotools>
-
-  <autotools id="fonts" supports-non-srcdir-builds="no"
-             skip-autogen="true">
-    <branch repo="github.com" module="WebKitGTK/webkitgtk-test-fonts.git" checkoutdir="webkitgtk-test-fonts" tag="0.0.8"/>
   </autotools>
 
   <meson id="dav1d">
@@ -226,9 +222,11 @@
 
   <meson id="glib"
          mesonargs="-Dlibmount=disabled -Dselinux=disabled">
-    <branch module="/sources/glib/2.70/glib-${version}.tar.xz" version="2.70.0"
+    <pkg-config>glib-2.0.pc</pkg-config>
+    <branch module="/sources/glib/2.72/glib-${version}.tar.xz"
+            version="2.72.4"
             repo="download.gnome.org"
-            hash="sha256:200d7df811c5ba634afbf109f14bb40ba7fde670e89389885da14e27c0840742">
+            hash="sha256:8848aba518ba2f4217d144307a1d6cb9afcc92b54e5c13ac1f8c4d4608e96f0e">
     </branch>
   </meson>
 
@@ -252,19 +250,21 @@
             hash="sha256:f8fd0aeb66252dfcc638f14d9be1e2362fdaf2ca86bde0444ff4d5cc961b560f"/>
   </autotools>
 
-  <meson id="libsoup" mesonargs="-Dintrospection=disabled -Dgssapi=disabled -Dvapi=disabled">
-    <if condition-set="macos">
-      <mesonargs value="-Dtls_check=false"/>
-    </if>
-    <dependencies>
-      <dep package="glib-networking"/>
-      <dep package="libpsl"/>
-    </dependencies>
-    <branch module="/sources/libsoup/2.71/libsoup-${version}.tar.xz" version="2.71.0"
-            repo="download.gnome.org"
-            hash="sha256:88e24fad72d16e1cb692c8782688dbee4bf44151efb0d9ed25b14f3849d9896e">
-    </branch>
-  </meson>
+  <if condition-unset="USE_SOUP2">
+    <meson id="libsoup3" mesonargs="-Dgssapi=disabled -Dvapi=disabled -Dntlm=disabled -Dsysprof=disabled -Dautobahn=disabled -Dpkcs11_tests=disabled">
+      <pkg-config>libsoup-3.0.pc</pkg-config>
+      <dependencies>
+        <dep package="glib"/>
+        <dep package="glib-networking"/>
+        <dep package="libpsl"/>
+      </dependencies>
+      <branch module="/sources/libsoup/3.2/libsoup-${version}.tar.xz"
+              version="3.2.2"
+              repo="download.gnome.org"
+              hash="sha256:83673c685b910fb7d39f1f28eee5afbefb71c05798fc350ac3bf1b885e1efaa1">
+      </branch>
+    </meson>
+  </if>
 
   <autotools id="fontconfig"
              autogenargs="--enable-libxml2 --disable-docs"
@@ -292,28 +292,28 @@
   </autotools>
 
   <meson id="atk" mesonargs="-Dintrospection=false">
-      <branch module="/sources/atk/2.34/atk-${version}.tar.xz" version="2.34.1"
+      <branch module="/sources/atk/2.38/atk-${version}.tar.xz" version="2.38.0"
             repo="download.gnome.org"
-            hash="sha256:d4f0e3b3d21265fcf2bc371e117da51c42ede1a71f6db1c834e6976bb20997cb"/>
+            hash="sha256:ac4de2a4ef4bd5665052952fe169657e65e895c5057dffb3c2a810f6191a0c36"/>
     <dependencies>
       <dep package="glib"/>
     </dependencies>
   </meson>
 
   <meson id="at-spi2-core" mesonargs="-Dintrospection=no -Dx11=no">
-    <branch module="/sources/at-spi2-core/2.34/at-spi2-core-${version}.tar.xz" version="2.34.0"
+    <branch module="/sources/at-spi2-core/2.44/at-spi2-core-${version}.tar.xz" version="2.44.1"
             repo="download.gnome.org"
-            hash="sha256:d629cdbd674e539f8912028512af583990938c7b49e25184c126b00121ef11c6">
+            hash="sha256:4beb23270ba6cf7caf20b597354d75194d89afb69d2efcf15f4271688ba6f746">
     </branch>
     <dependencies>
       <dep package="glib"/>
     </dependencies>
   </meson>
 
-  <meson id="at-spi2-atk" mesonargs="-Dintrospection=no">
-      <branch module="/sources/at-spi2-atk/2.34/at-spi2-atk-${version}.tar.xz" version="2.34.0"
+  <meson id="at-spi2-atk" mesonargs="">
+      <branch module="/sources/at-spi2-atk/2.38/at-spi2-atk-${version}.tar.xz" version="2.38.0"
             repo="download.gnome.org"
-            hash="sha256:3a9a7e96a1eb549529e60a42201dd78ccce413d9c1706e16351cc5288e064500">
+            hash="sha256:cfa008a5af822b36ae6287f18182c40c91dd699c55faa38605881ed175ca464f">
     </branch>
     <dependencies>
       <dep package="glib"/>
@@ -490,23 +490,22 @@
   </cmake>
 
   <cmake id="libwpe">
-    <branch module="libwpe-1.8.0.tar.xz" version="1.8.0"
-            repo="wpewebkit"
-            hash="sha256:a6f00a7d091cbd4db57fe7ee3b4c12c6350921d654ed79812800a26c888481d2"/>
+    <branch repo="github-tarball"
+            module="WebPlatformForEmbedded/libwpe/releases/download/${version}/libwpe-${version}.tar.xz"
+            version="1.14.1"
+            hash="sha256:b1d0cdcf0f8dbb494e65b0f7913e357106da9a0d57f4fbb7b9d1238a6dbe9ade"/>
   </cmake>
 
-  <cmake id="wpebackend-fdo">
+  <meson id="wpebackend-fdo">
     <dependencies>
       <dep package="libwpe"/>
-      <dep package="glib"/>
-      <dep package="mesa"/>
     </dependencies>
-    <branch module="wpebackend-fdo-1.8.0.tar.xz" version="1.8.0"
-            repo="wpewebkit"
-            hash="sha256:9652a99c75fe1c6eab0585b6395f4e104b2427e4d1f42969f1f77df29920d253">
-    <patch file="wpebackend-fdo-cmake-buildfix-3.10.patch" strip="1"/>
+    <branch repo="github-tarball"
+            module="Igalia/WPEBackend-fdo/releases/download/${version}/wpebackend-fdo-${version}.tar.xz"
+            version="1.14.2"
+            hash="sha256:93c9766ae9864eeaeaee2b0a74f22cbca08df42c1a1bdb55b086f2528e380d38">
     </branch>
-  </cmake>
+  </meson>
 
   <!-- Dependencies listed below this point are not thought to affect test results, and are only
        included because they themselves depend on other dependencies built by jhbuild. -->

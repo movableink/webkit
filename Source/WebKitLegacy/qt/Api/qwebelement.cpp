@@ -25,13 +25,16 @@
 #include <JavaScriptCore/Completion.h>
 #include <JavaScriptCore/JSGlobalObject.h>
 #include <QPainter>
+#include <WebCore/Attr.h>
 #include <WebCore/DocumentFragment.h>
-#include <WebCore/FrameView.h>
+#include <WebCore/ElementInlines.h>
+#include <WebCore/LocalFrameView.h>
 #include <WebCore/FullscreenManager.h>
 #include <WebCore/GraphicsContextQt.h>
 #include <WebCore/HTMLElement.h>
 #include <WebCore/JSDocument.h>
 #include <WebCore/JSElement.h>
+#include <WebCore/NamedNodeMap.h>
 #include <WebCore/QStyleHelpers.h>
 #include <WebCore/RenderElement.h>
 #include <WebCore/ScriptController.h>
@@ -467,11 +470,11 @@ QStringList QWebElement::attributeNames(const QString& namespaceUri) const
     QStringList attributeNameList;
     if (m_element->hasAttributes()) {
         const String namespaceUriString(namespaceUri); // convert QString -> String once
-        const unsigned attrsCount = m_element->attributeCount();
-        for (unsigned i = 0; i < attrsCount; ++i) {
-            const Attribute& attribute = m_element->attributeAt(i);
-            if (namespaceUriString == attribute.namespaceURI())
-                attributeNameList.append(attribute.localName().string());
+        NamedNodeMap& attributes = m_element->attributes();
+        for (unsigned i = 0; i < attributes.length(); ++i) {
+            auto attribute = attributes.item(i);
+            if (namespaceUriString == attribute->namespaceURI())
+                attributeNameList.append(attribute->localName().string());
         }
     }
     return attributeNameList;
@@ -565,7 +568,7 @@ QString QWebElement::namespaceUri() const
 }
 
 /*!
-    Returns the parent element of this elemen. If this element is the root
+    Returns the parent element of this element. If this element is the root
     document element, a null element is returned.
 */
 QWebElement QWebElement::parent() const
@@ -678,7 +681,7 @@ static bool setupScriptContext(WebCore::Element* element, JSC::JSGlobalObject*& 
     if (!element)
         return false;
 
-    Frame* frame = element->document().frame();
+    LocalFrame* frame = element->document().frame();
     if (!frame)
         return false;
 
@@ -712,7 +715,7 @@ QVariant QWebElement::evaluateJavaScript(const QString& scriptSource)
     JSC::JSLockHolder lock(lexicalGlobalObject);
     RefPtr<Element> protect = m_element;
 
-    JSC::JSValue thisValue = toJS(lexicalGlobalObject, toJSDOMWindow(m_element->document().frame(), currentWorld(*lexicalGlobalObject)), m_element);
+    JSC::JSValue thisValue = toJS(lexicalGlobalObject, toJSLocalDOMWindow(m_element->document().frame(), currentWorld(*lexicalGlobalObject)), m_element);
     if (!thisValue)
         return QVariant();
 
@@ -1327,7 +1330,7 @@ void QWebElement::replace(const QString &markup)
 */
 
 
-/*! 
+/*!
   Render the element into \a painter .
 */
 void QWebElement::render(QPainter* painter)
@@ -1348,11 +1351,11 @@ void QWebElement::render(QPainter* painter, const QRect& clip)
     if (!renderer)
         return;
 
-    Frame* frame = e->document().frame();
+    LocalFrame* frame = e->document().frame();
     if (!frame || !frame->view() || !frame->contentRenderer())
         return;
 
-    FrameView* view = frame->view();
+    LocalFrameView* view = frame->view();
 
     view->updateLayoutAndStyleIfNeededRecursive();
 

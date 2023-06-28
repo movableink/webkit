@@ -1055,9 +1055,12 @@ void GraphicsContextQt::fillRectWithRoundedHole(const FloatRect& rect, const Flo
 
 void GraphicsContextQt::clipToImageBuffer(ImageBuffer& buffer, const FloatRect& destRect)
 {
+    auto nativeImage = buffer.copyNativeImage(DontCopyBackingStore);
+    if (!nativeImage)
+        return;
 
-    IntRect rect = enclosingIntRect(destRect);
-    buffer.clipToMask(*this, rect);
+    GraphicsContextQt* context = platformContext();
+    context->pushTransparencyLayerInternal(QRectF(destRect).toRect(), 1.0, nativeImage->platformImage());
 }
 
 void GraphicsContextQt::clip(const FloatRect& rect)
@@ -1084,6 +1087,11 @@ void GraphicsContextQt::clipPath(const Path& path, WindRule clipRule)
     QPainterPath platformPath = path.platformPath();
     platformPath.setFillRule(clipRule == WindRule::EvenOdd ? Qt::OddEvenFill : Qt::WindingFill);
     p->setClipPath(platformPath, Qt::IntersectClip);
+}
+
+void GraphicsContextQt::resetClip()
+{
+    m_data->p()->setClipping(false);
 }
 
 void drawFocusRingForPath(QPainter* p, const QPainterPath& path, const Color& color, bool antiAliasing)

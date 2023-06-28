@@ -53,6 +53,6 @@ WEBCORE_EXPORT WTFLogChannel* notImplementedLoggingChannel();
         } \
     } while (0)
 
-#endif // NDEBUG
+#endif // LOG_DISABLED
 
 #endif // NotImplemented_h

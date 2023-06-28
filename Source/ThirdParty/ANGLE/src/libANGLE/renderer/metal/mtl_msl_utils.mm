@@ -10,6 +10,7 @@
 
 #include "common/utilities.h"
 #include "compiler/translator/TranslatorMetalDirect.h"
+#include "libANGLE/renderer/metal/ContextMtl.h"
 #include "libANGLE/renderer/metal/ShaderMtl.h"
 #include "libANGLE/renderer/metal/mtl_msl_utils.h"
 namespace rx
@@ -45,6 +46,7 @@ void TranslatedShaderInfo::reset()
     metalShaderSource.clear();
     metalLibrary         = nil;
     hasUBOArgumentBuffer = false;
+    hasInvariantOrAtan   = false;
     for (mtl::SamplerBinding &binding : actualSamplerBindings)
     {
         binding.textureBinding = mtl::kMaxShaderSamplers;
@@ -205,6 +207,107 @@ std::string updateShaderAttributes(std::string shaderSourceIn, const gl::Program
                 strlen(sh::kUnassignedAttributeString), stream.str());
         }
     }
+    return outputSource;
+}
+
+std::string UpdateFragmentShaderOutputs(std::string shaderSourceIn,
+                                        const gl::ProgramState &programState,
+                                        bool defineAlpha0)
+{
+    std::ostringstream stream;
+    std::string outputSource    = shaderSourceIn;
+    const auto &outputVariables = programState.getOutputVariables();
+
+    // For alpha-to-coverage emulation, a reference to the alpha channel
+    // of color output 0 is needed. For ESSL 1.00, it is gl_FragColor or
+    // gl_FragData[0]; for ESSL 3.xx, it is a user-defined output.
+    std::string alphaOutputName;
+
+    auto assignLocations = [&](const std::vector<gl::VariableLocation> &locations, bool secondary) {
+        for (auto &outputLocation : locations)
+        {
+            if (!outputLocation.used())
+            {
+                continue;
+            }
+
+            const sh::ShaderVariable &outputVar = outputVariables[outputLocation.index];
+
+            ASSERT(outputVar.location >= 0);
+            int elementLocation = outputVar.location;
+
+            stream.str("");
+            stream << outputVar.mappedName;
+            if (outputVar.getOutermostArraySize() > 0)
+            {
+                ASSERT(outputLocation.arrayIndex >= 0);
+                elementLocation += outputLocation.arrayIndex;
+                stream << "_" << outputLocation.arrayIndex;
+            }
+            stream << " [[" << sh::kUnassignedFragmentOutputString;
+            const std::string placeholder(stream.str());
+
+            size_t outputFound = outputSource.find(placeholder);
+            if (outputFound != std::string::npos)
+            {
+                stream.str("");
+                stream << "color(" << elementLocation << (secondary ? "), index(1)" : ")");
+                outputSource =
+                    outputSource.replace(outputFound + placeholder.length() -
+                                             strlen(sh::kUnassignedFragmentOutputString),
+                                         strlen(sh::kUnassignedFragmentOutputString), stream.str());
+            }
+
+            if (defineAlpha0 && elementLocation == 0 && !secondary &&
+                outputVar.type == GL_FLOAT_VEC4)
+            {
+                ASSERT(alphaOutputName.empty());
+                std::ostringstream nameStream;
+                nameStream << "ANGLE_fragmentOut." << outputVar.mappedName;
+                if (outputVar.getOutermostArraySize() > 0)
+                {
+                    nameStream << "[" << outputLocation.arrayIndex << "]";
+                }
+                nameStream << ".a";
+                alphaOutputName = nameStream.str();
+            }
+        }
+    };
+    assignLocations(programState.getOutputLocations(), false);
+    assignLocations(programState.getSecondaryOutputLocations(), true);
+
+    if (defineAlpha0)
+    {
+        // Locations are empty for ESSL 1.00 shaders, try built-in outputs
+        if (alphaOutputName.empty())
+        {
+            for (auto &v : outputVariables)
+            {
+                if (v.name == "gl_FragColor")
+                {
+                    alphaOutputName = "ANGLE_fragmentOut.gl_FragColor.a";
+                    break;
+                }
+                else if (v.name == "gl_FragData")
+                {
+                    alphaOutputName = "ANGLE_fragmentOut.ANGLE_gl_FragData_0.a";
+                    break;
+                }
+            }
+        }
+
+        // Set a value used for alpha-to-coverage emulation
+        const std::string alphaPlaceholder("#define ANGLE_ALPHA0");
+        size_t alphaFound = outputSource.find(alphaPlaceholder);
+        ASSERT(alphaFound != std::string::npos);
+
+        std::ostringstream alphaStream;
+        alphaStream << alphaPlaceholder << " ";
+        alphaStream << (alphaOutputName.empty() ? "1.0" : alphaOutputName);
+        outputSource =
+            outputSource.replace(alphaFound, alphaPlaceholder.length(), alphaStream.str());
+    }
+
     return outputSource;
 }
 
@@ -422,7 +525,11 @@ angle::Result MTLGetMSL(const gl::Context *glContext,
         }
         else
         {
-            source = shaderSources[type];
+            ASSERT(type == gl::ShaderType::Fragment);
+            ContextMtl *contextMtl = mtl::GetImpl(glContext);
+            bool defineAlpha0 =
+                contextMtl->getDisplay()->getFeatures().emulateAlphaToCoverage.enabled;
+            source = UpdateFragmentShaderOutputs(shaderSources[type], programState, defineAlpha0);
         }
         (*mslCodeOut)[type]                             = source;
         (*mslShaderInfoOut)[type].metalShaderSource     = source;

@@ -26,9 +26,11 @@
 #include "config.h"
 #include "WebNotificationManagerMessageHandler.h"
 
+#include "Logging.h"
 #include "ServiceWorkerNotificationHandler.h"
 #include "WebPageProxy.h"
 #include <WebCore/NotificationData.h>
+#include <wtf/CompletionHandler.h>
 
 namespace WebKit {
 
@@ -92,6 +94,11 @@ void WebNotificationManagerMessageHandler::didDestroyNotification(const UUID& no
         return;
     }
     m_webPageProxy.didDestroyNotification(notificationID);
+}
+
+void WebNotificationManagerMessageHandler::pageWasNotifiedOfNotificationPermission()
+{
+    m_webPageProxy.pageWillLikelyUseNotifications();
 }
 
 } // namespace WebKit

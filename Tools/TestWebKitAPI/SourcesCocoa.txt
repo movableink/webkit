@@ -1,4 +1,4 @@
-// Copyright (C) 2019 Apple Inc. All rights reserved.
+// Copyright (C) 2019-2023 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -25,7 +25,10 @@ DeprecatedGlobalValues.mm
 EditingTestHarness.mm
 WKWebViewConfigurationExtras.mm
 
+cocoa/CGImagePixelReader.cpp
 cocoa/DaemonTestUtilities.mm
+cocoa/DragAndDropSimulator.mm
+cocoa/EnableUISideCompositingScope.mm
 cocoa/ImageAnalysisTestingUtilities.mm
 cocoa/NSItemProviderAdditions.mm
 cocoa/PlatformUtilitiesCocoa.mm
@@ -37,6 +40,7 @@ cocoa/TestNavigationDelegate.mm
 cocoa/TestProtocol.mm
 cocoa/TestUIDelegate.mm
 cocoa/TestWKWebView.mm
+cocoa/TestWebExtensionsDelegate.mm
 cocoa/UserMediaCaptureUIDelegate.mm
 
 Tests/WebKitCocoa/AVFoundationPreference.mm
@@ -166,7 +170,6 @@ Tests/WebKitCocoa/MediaSession.mm
 Tests/WebKitCocoa/MediaType.mm
 Tests/WebKitCocoa/MessagePortProviders.mm
 Tests/WebKitCocoa/ModalAlerts.mm
-Tests/WebKitCocoa/ModalContainerObservation.mm
 Tests/WebKitCocoa/NSAttributedStringWebKitAdditions.mm
 Tests/WebKitCocoa/NSFileManagerExtras.mm
 Tests/WebKitCocoa/Navigation.mm
@@ -286,6 +289,7 @@ Tests/WebKitCocoa/WKWebExtension.mm
 Tests/WebKitCocoa/WKWebExtensionAPIEvent.mm
 Tests/WebKitCocoa/WKWebExtensionAPIExtension.mm
 Tests/WebKitCocoa/WKWebExtensionAPINamespace.mm
+Tests/WebKitCocoa/WKWebExtensionAPIPermissions.mm
 Tests/WebKitCocoa/WKWebExtensionAPIRuntime.mm
 Tests/WebKitCocoa/WKWebExtensionAPIWebNavigation.mm
 Tests/WebKitCocoa/WKWebExtensionContext.mm
@@ -306,6 +310,7 @@ Tests/WebKitCocoa/WKWebViewEvaluateJavaScript.mm
 Tests/WebKitCocoa/WKWebViewFindString.mm
 Tests/WebKitCocoa/WKWebViewFirstResponderTests.mm
 Tests/WebKitCocoa/WKWebViewGetContents.mm
+Tests/WebKitCocoa/WKWebViewInspection.mm
 Tests/WebKitCocoa/WKWebViewLoadAPIs.mm
 Tests/WebKitCocoa/WKWebViewPrintFormatter.mm
 Tests/WebKitCocoa/WKWebViewResize.mm

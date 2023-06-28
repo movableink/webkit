@@ -33,7 +33,7 @@
 #import <UIKit/UIKit.h>
 #endif
 
-#if !PLATFORM(WATCHOS) && USE(APPLE_INTERNAL_SDK)
+#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV) && USE(APPLE_INTERNAL_SDK)
 #import <AVKit/AVValueTiming.h>
 #else
 NS_ASSUME_NONNULL_BEGIN
@@ -67,7 +67,7 @@ IGNORE_WARNINGS_END
 #import <AVKit/AVPlayerViewController_WebKitOnly.h>
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(MACCATALYST)
+#if PLATFORM(IOS) || PLATFORM(MACCATALYST) || PLATFORM(VISION)
 #import <AVKit/AVBackgroundView.h>
 #endif
 

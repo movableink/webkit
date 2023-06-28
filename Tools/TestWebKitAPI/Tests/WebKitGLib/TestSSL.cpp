@@ -446,13 +446,21 @@ public:
 
     WebSocketTest()
     {
+#if !ENABLE(2022_GLIB_API)
         webkit_user_content_manager_register_script_message_handler(m_userContentManager.get(), "event");
+#else
+        webkit_user_content_manager_register_script_message_handler(m_userContentManager.get(), "event", nullptr);
+#endif
         g_signal_connect(m_userContentManager.get(), "script-message-received::event", G_CALLBACK(webSocketTestResultCallback), this);
     }
 
     virtual ~WebSocketTest()
     {
+#if !ENABLE(2022_GLIB_API)
         webkit_user_content_manager_unregister_script_message_handler(m_userContentManager.get(), "event");
+#else
+        webkit_user_content_manager_unregister_script_message_handler(m_userContentManager.get(), "event", nullptr);
+#endif
         g_signal_handlers_disconnect_by_data(m_userContentManager.get(), this);
     }
 
@@ -478,9 +486,13 @@ public:
         static_cast<WebSocketTest*>(userData)->m_events |= WebSocketTest::EventFlags::DidServerCompleteHandshake;
     }
 
-    static void webSocketTestResultCallback(WebKitUserContentManager*, WebKitJavascriptResult* javascriptResult, WebSocketTest* test)
+#if ENABLE(2022_GLIB_API)
+    static void webSocketTestResultCallback(WebKitUserContentManager*, JSCValue* result, WebSocketTest* test)
+#else
+    static void webSocketTestResultCallback(WebKitUserContentManager*, WebKitJavascriptResult* result, WebSocketTest* test)
+#endif
     {
-        GUniquePtr<char> event(WebViewTest::javascriptResultToCString(javascriptResult));
+        GUniquePtr<char> event(WebViewTest::javascriptResultToCString(result));
         if (!g_strcmp0(event.get(), "open"))
             test->m_events |= WebSocketTest::EventFlags::DidOpen;
         else if (!g_strcmp0(event.get(), "close"))

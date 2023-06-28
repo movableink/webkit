@@ -43,12 +43,10 @@ public:
     }
     
 private:
-    void contextMenuDestroyed() override;
-
     void downloadURL(const URL&) override;
-    void searchWithGoogle(const WebCore::Frame*) override;
-    void lookUpInDictionary(WebCore::Frame*) override;
-    bool isSpeaking() override;
+    void searchWithGoogle(const WebCore::LocalFrame*) override;
+    void lookUpInDictionary(WebCore::LocalFrame*) override;
+    bool isSpeaking() const override;
     void speak(const String&) override;
     void stopSpeaking() override;
 
@@ -69,14 +67,14 @@ private:
 #endif
 
 #if PLATFORM(GTK)
-    void insertEmoji(WebCore::Frame&) override;
+    void insertEmoji(WebCore::LocalFrame&) override;
 #endif
 
 #if USE(ACCESSIBILITY_CONTEXT_MENUS)
     void showContextMenu() override;
 #endif
 
-    WebPage* m_page;
+    WeakPtr<WebPage> m_page;
 };
 
 } // namespace WebKit

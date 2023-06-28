@@ -22,6 +22,7 @@
 #include <stdint.h>
 
 #include <bitset>
+#include <functional>
 #include <map>
 #include <memory>
 #include <unordered_map>
@@ -130,12 +131,6 @@ bool operator!=(const RectangleImpl<T> &a, const RectangleImpl<T> &b);
 
 using Rectangle = RectangleImpl<int>;
 
-enum class ClipSpaceOrigin
-{
-    LowerLeft = 0,
-    UpperLeft = 1
-};
-
 // Calculate the intersection of two rectangles.  Returns false if the intersection is empty.
 [[nodiscard]] bool ClipRectangle(const Rectangle &source,
                                  const Rectangle &clip,
@@ -243,6 +238,8 @@ struct RasterizerState final
     GLfloat polygonOffsetFactor;
     GLfloat polygonOffsetUnits;
     GLfloat polygonOffsetClamp;
+
+    bool depthClamp;
 
     // pointDrawMode/multiSample are only used in the D3D back-end right now.
     bool pointDrawMode;
@@ -367,6 +364,12 @@ class SamplerState final
     GLenum getWrapR() const { return mWrapR; }
 
     bool setWrapR(GLenum wrapR);
+
+    bool usesBorderColor() const
+    {
+        return mWrapS == GL_CLAMP_TO_BORDER || mWrapT == GL_CLAMP_TO_BORDER ||
+               mWrapR == GL_CLAMP_TO_BORDER;
+    }
 
     float getMaxAnisotropy() const { return mMaxAnisotropy; }
 
@@ -1120,6 +1123,46 @@ inline DestT *SafeGetImplAs(SrcT *src)
 
 namespace angle
 {
+// Under certain circumstances, such as for increased parallelism, the backend may defer an
+// operation to be done at the end of a call after the locks have been unlocked.  The entry point
+// function passes an |UnlockedTailCall| through the frontend to the backend.  If it is set, the
+// entry point would execute it at the end of the call.
+//
+// Since the function is called without any locks, care must be taken to minimize the amount of work
+// in such calls and ensure thread safety (for example by using fine grained locks inside the call
+// itself).
+class UnlockedTailCall final : angle::NonCopyable
+{
+  public:
+    using CallType = std::function<void(void)>;
+
+    UnlockedTailCall();
+    ~UnlockedTailCall();
+
+    void add(CallType &&call);
+    ANGLE_INLINE void run()
+    {
+        if (!mCalls.empty())
+        {
+            runImpl();
+        }
+    }
+
+    bool any() const { return !mCalls.empty(); }
+
+  private:
+    void runImpl();
+
+    // Typically, there is only one tail call.  It is possible to end up with 2 tail calls currently
+    // with unMakeCurrent destroying both the read and draw surfaces, each adding a tail call in the
+    // Vulkan backend.
+    //
+    // The max count can be increased as necessary.  An assertion would fire inside FixedVector if
+    // the max count is surpassed.
+    static constexpr size_t kMaxCallCount = 2;
+    angle::FixedVector<CallType, kMaxCallCount> mCalls;
+};
+
 // Zero-based for better array indexing
 enum FramebufferBinding
 {

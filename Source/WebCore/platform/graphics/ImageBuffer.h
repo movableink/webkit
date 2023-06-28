@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2006 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Torch Mobile (Beijing) Co. Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +30,7 @@
 
 #include "ImageBufferAllocator.h"
 #include "ImageBufferBackend.h"
+#include "ProcessIdentity.h"
 #include "RenderingMode.h"
 #include "RenderingResourceIdentifier.h"
 #include <wtf/OptionSet.h>
@@ -40,6 +42,10 @@ QT_BEGIN_NAMESPACE
 class QOpenGLContext;
 QT_END_NAMESPACE
 #endif
+
+namespace WTF {
+class TextStream;
+}
 
 namespace WebCore {
 
@@ -69,6 +75,7 @@ struct ImageBufferCreationContext {
     enum class UseCGDisplayListImageCache : bool { No, Yes };
     UseCGDisplayListImageCache useCGDisplayListImageCache;
 #endif
+    WebCore::ProcessIdentity resourceOwner;
 
     ImageBufferCreationContext(GraphicsClient* client = nullptr
 #if HAVE(IOSURFACE)
@@ -78,6 +85,7 @@ struct ImageBufferCreationContext {
 #if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
         , UseCGDisplayListImageCache useCGDisplayListImageCache = UseCGDisplayListImageCache::No
 #endif
+        , WebCore::ProcessIdentity resourceOwner = { }
     )
         : graphicsClient(client)
 #if HAVE(IOSURFACE)
@@ -87,6 +95,7 @@ struct ImageBufferCreationContext {
 #if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
         , useCGDisplayListImageCache(useCGDisplayListImageCache)
 #endif
+        , resourceOwner(resourceOwner)
     { }
 };
 
@@ -107,15 +116,7 @@ public:
     }
 
     template<typename BackendType, typename ImageBufferType = ImageBuffer, typename... Arguments>
-    static RefPtr<ImageBufferType> create(const FloatSize& size, const GraphicsContext& context, RenderingPurpose purpose, Arguments&&... arguments)
-    {
-        auto parameters = ImageBufferBackend::Parameters { size, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, purpose };
-        auto backend = BackendType::create(parameters, context);
-        if (!backend)
-            return nullptr;
-        auto backendInfo = populateBackendInfo<BackendType>(parameters);
-        return create<ImageBufferType>(parameters, backendInfo, WTFMove(backend), std::forward<Arguments>(arguments)...);
-    }
+    static RefPtr<ImageBufferType> create(const FloatSize&, const GraphicsContext&, RenderingPurpose, Arguments&&...);
 
     template<typename ImageBufferType = ImageBuffer, typename... Arguments>
     static RefPtr<ImageBufferType> create(const ImageBufferBackend::Parameters& parameters, const ImageBufferBackend::Info& backendInfo, std::unique_ptr<ImageBufferBackend>&& backend, Arguments&&... arguments)
@@ -152,11 +153,10 @@ public:
 #endif
 
     WEBCORE_EXPORT virtual GraphicsContext& context() const;
-    WEBCORE_EXPORT virtual void flushContext();
 
     virtual bool prefersPreparationForDisplay() { return false; }
-    virtual void flushDrawingContext() { }
-    virtual bool flushDrawingContextAsync() { return false; }
+    WEBCORE_EXPORT virtual void flushDrawingContext();
+    WEBCORE_EXPORT virtual bool flushDrawingContextAsync();
 
     WEBCORE_EXPORT std::unique_ptr<ImageBufferBackend> takeBackend();
     WEBCORE_EXPORT IntSize backendSize() const;
@@ -185,7 +185,7 @@ public:
     WEBCORE_EXPORT static std::unique_ptr<SerializedImageBuffer> sinkIntoSerializedImageBuffer(RefPtr<ImageBuffer>&&);
 
     WEBCORE_EXPORT virtual RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) const;
-    WEBCORE_EXPORT virtual RefPtr<NativeImage> copyNativeImageForDrawing(BackingStoreCopy = CopyBackingStore) const;
+    WEBCORE_EXPORT virtual RefPtr<NativeImage> copyNativeImageForDrawing(GraphicsContext& destination) const;
     WEBCORE_EXPORT virtual RefPtr<NativeImage> sinkIntoNativeImage();
     WEBCORE_EXPORT RefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, PreserveResolution = PreserveResolution::No) const;
     WEBCORE_EXPORT virtual RefPtr<Image> filteredImage(Filter&);
@@ -206,8 +206,6 @@ public:
     WEBCORE_EXPORT virtual void drawConsuming(GraphicsContext& destContext, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&);
 
     static void drawConsuming(RefPtr<ImageBuffer>, GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { });
-
-    void clipToMask(GraphicsContext& destContext, const FloatRect& destRect);
 
     WEBCORE_EXPORT virtual void convertToLuminanceMask();
     WEBCORE_EXPORT virtual void transformToColorSpace(const DestinationColorSpace& newColorSpace);
@@ -230,10 +228,12 @@ public:
     WEBCORE_EXPORT SetNonVolatileResult setNonVolatile();
     WEBCORE_EXPORT VolatilityState volatilityState() const;
     WEBCORE_EXPORT void setVolatilityState(VolatilityState);
-
-    WEBCORE_EXPORT void clearContents();
-
     WEBCORE_EXPORT virtual std::unique_ptr<ThreadSafeImageBufferFlusher> createFlusher();
+
+    // This value increments when the ImageBuffer gets a new backend, which can happen if, for example, the GPU Process exits.
+    WEBCORE_EXPORT unsigned backendGeneration() const;
+
+    WEBCORE_EXPORT virtual String debugDescription() const;
 
 protected:
     WEBCORE_EXPORT ImageBuffer(const ImageBufferBackend::Parameters&, const ImageBufferBackend::Info&, std::unique_ptr<ImageBufferBackend>&& = nullptr, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
@@ -241,10 +241,13 @@ protected:
     WEBCORE_EXPORT virtual RefPtr<ImageBuffer> sinkIntoBufferForDifferentThread();
     WEBCORE_EXPORT virtual std::unique_ptr<SerializedImageBuffer> sinkIntoSerializedImageBuffer();
 
+    WEBCORE_EXPORT void setBackend(std::unique_ptr<ImageBufferBackend>&&);
+
     ImageBufferBackend::Parameters m_parameters;
     ImageBufferBackend::Info m_backendInfo;
     std::unique_ptr<ImageBufferBackend> m_backend;
     RenderingResourceIdentifier m_renderingResourceIdentifier;
+    unsigned m_backendGeneration { 0 };
 };
 
 class SerializedImageBuffer {
@@ -271,5 +274,7 @@ inline OptionSet<ImageBufferOptions> bufferOptionsForRendingMode(RenderingMode r
         return { ImageBufferOptions::Accelerated };
     return { };
 }
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const ImageBuffer&);
 
 } // namespace WebCore

@@ -30,7 +30,7 @@
 #include "RenderInline.h"
 #include "RenderRubyRun.h"
 #include "RenderSVGText.h"
-#include "RenderStyle.h"
+#include "RenderStyleSetters.h"
 #include "RenderTable.h"
 #include "RenderTextFragment.h"
 #include "RenderTreeBuilder.h"
@@ -104,7 +104,7 @@ static inline bool isPunctuationForFirstLetter(UChar32 c)
 
 static inline bool shouldSkipForFirstLetter(UChar32 c)
 {
-    return isSpaceOrNewline(c) || c == noBreakSpace || isPunctuationForFirstLetter(c);
+    return deprecatedIsSpaceOrNewline(c) || c == noBreakSpace || isPunctuationForFirstLetter(c);
 }
 
 static bool supportsFirstLetter(RenderBlock& block)

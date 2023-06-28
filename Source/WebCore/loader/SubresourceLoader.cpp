@@ -33,15 +33,17 @@
 #include "CrossOriginAccessControl.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
+#include "DiagnosticLoggingResultType.h"
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "HTTPParsers.h"
 #include "InspectorNetworkAgent.h"
 #include "LinkLoader.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "MemoryCache.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "ResourceLoadObserver.h"
 #include "ResourceTiming.h"
@@ -108,7 +110,7 @@ SubresourceLoader::RequestCountTracker::~RequestCountTracker()
         m_cachedResourceLoader->decrementRequestCount(*m_resource);
 }
 
-SubresourceLoader::SubresourceLoader(Frame& frame, CachedResource& resource, const ResourceLoaderOptions& options)
+SubresourceLoader::SubresourceLoader(LocalFrame& frame, CachedResource& resource, const ResourceLoaderOptions& options)
     : ResourceLoader(frame, options)
     , m_resource(&resource)
     , m_state(Uninitialized)
@@ -133,7 +135,7 @@ SubresourceLoader::~SubresourceLoader()
 #endif
 }
 
-void SubresourceLoader::create(Frame& frame, CachedResource& resource, ResourceRequest&& request, const ResourceLoaderOptions& options, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&& completionHandler)
+void SubresourceLoader::create(LocalFrame& frame, CachedResource& resource, ResourceRequest&& request, const ResourceLoaderOptions& options, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&& completionHandler)
 {
     auto subloader(adoptRef(*new SubresourceLoader(frame, resource, options)));
 #if PLATFORM(IOS_FAMILY)
@@ -572,7 +574,7 @@ bool SubresourceLoader::responseHasHTTPStatusCodeError() const
     return true;
 }
 
-static void logResourceLoaded(Frame* frame, CachedResource::Type type)
+static void logResourceLoaded(LocalFrame* frame, CachedResource::Type type)
 {
     if (!frame || !frame->page())
         return;
@@ -648,7 +650,7 @@ Expected<void, String> SubresourceLoader::checkResponseCrossOriginAccessControl(
 Expected<void, String> SubresourceLoader::checkRedirectionCrossOriginAccessControl(const ResourceRequest& previousRequest, const ResourceResponse& redirectResponse, ResourceRequest& newRequest)
 {
     bool crossOriginFlag = m_resource->isCrossOrigin();
-    bool isNextRequestCrossOrigin = m_origin && !m_origin->canRequest(newRequest.url());
+    bool isNextRequestCrossOrigin = m_origin && !m_origin->canRequest(newRequest.url(), OriginAccessPatternsForWebProcess::singleton());
 
     if (isNextRequestCrossOrigin)
         m_resource->setCrossOrigin();
@@ -694,7 +696,7 @@ Expected<void, String> SubresourceLoader::checkRedirectionCrossOriginAccessContr
         updateRequestForAccessControl(newRequest, *m_origin, options().storedCredentialsPolicy);
     }
 
-    updateRequestReferrer(newRequest, referrerPolicy(), previousRequest.httpReferrer());
+    updateRequestReferrer(newRequest, referrerPolicy(), previousRequest.httpReferrer(), OriginAccessPatternsForWebProcess::singleton());
 
     FrameLoader::addHTTPOriginIfNeeded(newRequest, m_origin ? m_origin->toString() : String());
 
@@ -730,7 +732,7 @@ void SubresourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLoadMe
     logResourceLoaded(m_frame.get(), m_resource->type());
 
     Ref<SubresourceLoader> protectedThis(*this);
-    CachedResourceHandle<CachedResource> protectResource(m_resource);
+    CachedResourceHandle<CachedResource> protectResource(m_resource.get());
 
     m_loadTiming.markEndTime();
 
@@ -787,7 +789,7 @@ void SubresourceLoader::didFail(const ResourceError& error)
         m_frame->document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, error.localizedDescription());
 
     Ref<SubresourceLoader> protectedThis(*this);
-    CachedResourceHandle<CachedResource> protectResource(m_resource);
+    CachedResourceHandle<CachedResource> protectResource(m_resource.get());
     m_state = Finishing;
 
     if (m_resource->type() != CachedResource::Type::MainResource)
@@ -877,6 +879,7 @@ void SubresourceLoader::notifyDone(LoadCompletionType type)
 void SubresourceLoader::releaseResources()
 {
     ASSERT(!reachedTerminalState());
+    m_requestCountTracker = std::nullopt;
 #if PLATFORM(IOS_FAMILY)
     if (m_state != Uninitialized && m_state != CancelledWhileInitializing)
 #else

@@ -60,6 +60,7 @@ This test ensures ARIA visible elements (e.g. those with both `hidden` and `aria
 
 <input hidden="" aria-hidden="false" id="date-input" type="date">
     AXRole: AXTextField
+    computedRoleString: textbox
 
 <input hidden="" aria-hidden="false" id="color-input" type="color">
     AXRole: AXColorWell
@@ -99,6 +100,7 @@ This test ensures ARIA visible elements (e.g. those with both `hidden` and `aria
 
 <code hidden="" aria-hidden="false" id="code"></code>
     AXRole: AXGroup
+    computedRoleString: code
     AXSubrole: AXCodeStyleGroup
 
 <dt hidden="" aria-hidden="false" id="dt"></dt>
@@ -111,14 +113,15 @@ This test ensures ARIA visible elements (e.g. those with both `hidden` and `aria
 
 <dl hidden="" aria-hidden="false" id="dl"></dl>
     AXRole: AXList
+    AXSubrole: AXDescriptionList
 
 <ol hidden="" aria-hidden="false" id="ol"></ol>
-    AXRole: AXList
-    computedRoleString: list
+    AXRole: AXGroup
+    AXSubrole: AXContentList
 
 <ul hidden="" aria-hidden="false" id="ul"></ul>
-    AXRole: AXList
-    computedRoleString: list
+    AXRole: AXGroup
+    AXSubrole: AXContentList
 
 <figure hidden="" aria-hidden="false" id="figure"></figure>
     AXRole: AXGroup
@@ -139,6 +142,7 @@ This test ensures ARIA visible elements (e.g. those with both `hidden` and `aria
 
 <div hidden="" aria-hidden="false" id="div"></div>
     AXRole: AXGroup
+    computedRoleString: generic
 
 <form hidden="" aria-hidden="false" id="form"></form>
     AXRole: AXGroup
@@ -199,8 +203,8 @@ This test ensures ARIA visible elements (e.g. those with both `hidden` and `aria
     AXSubrole: AXApplicationStatus
 
 <menu hidden="" aria-hidden="false" type="toolbar" id="menu-toolbar"></menu>
-    AXRole: AXToolbar
-    computedRoleString: toolbar
+    AXRole: AXGroup
+    AXSubrole: AXContentList
 
 <hr hidden="" aria-hidden="false" id="hr">
     AXRole: AXSplitter

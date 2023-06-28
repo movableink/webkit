@@ -21,7 +21,7 @@ namespace rx
 {
 class RendererVk;
 
-class SurfaceVk : public SurfaceImpl, public angle::ObserverInterface
+class SurfaceVk : public SurfaceImpl, public angle::ObserverInterface, public vk::Resource
 {
   public:
     angle::Result getAttachmentRenderTarget(const gl::Context *context,
@@ -50,6 +50,9 @@ class OffscreenSurfaceVk : public SurfaceVk
 
     egl::Error initialize(const egl::Display *display) override;
     void destroy(const egl::Display *display) override;
+
+    egl::Error unMakeCurrent(const gl::Context *context) override;
+    const vk::ImageHelper *getColorImage() const { return &mColorAttachment.image; }
 
     egl::Error swap(const gl::Context *context) override;
     egl::Error postSubBuffer(const gl::Context *context,
@@ -182,13 +185,13 @@ struct SwapchainImage : angle::NonCopyable
     SwapchainImage(SwapchainImage &&other);
     ~SwapchainImage();
 
-    vk::ImageHelper image;
+    std::unique_ptr<vk::ImageHelper> image;
     vk::ImageViewHelper imageViews;
     vk::Framebuffer framebuffer;
     vk::Framebuffer fetchFramebuffer;
     vk::Framebuffer framebufferResolveMS;
 
-    uint64_t mFrameNumber = 0;
+    uint64_t frameNumber = 0;
 };
 }  // namespace impl
 
@@ -213,6 +216,9 @@ class WindowSurfaceVk : public SurfaceVk
     void destroy(const egl::Display *display) override;
 
     egl::Error initialize(const egl::Display *display) override;
+
+    egl::Error unMakeCurrent(const gl::Context *context) override;
+
     angle::Result getAttachmentRenderTarget(const gl::Context *context,
                                             GLenum binding,
                                             const gl::ImageIndex &imageIndex,
@@ -352,7 +358,6 @@ class WindowSurfaceVk : public SurfaceVk
     // This method is called when a swapchain image is presented.  It schedules
     // acquireNextSwapchainImage() to be called later.
     void deferAcquireNextImage();
-    void flushAcquireImageSemaphore(const gl::Context *context);
 
     angle::Result computePresentOutOfDate(vk::Context *context,
                                           VkResult result,
@@ -363,7 +368,6 @@ class WindowSurfaceVk : public SurfaceVk
                           EGLint n_rects,
                           const void *pNextChain,
                           bool *presentOutOfDate);
-    void waitPendingPresent() const;
 
     angle::Result cleanUpPresentHistory(vk::Context *context);
 
@@ -372,6 +376,9 @@ class WindowSurfaceVk : public SurfaceVk
     // presented).  This is a failsafe, as the application should ensure command buffer recording is
     // not ahead of the frame being rendered by *one* frame.
     angle::Result throttleCPU(ContextVk *contextVk, const QueueSerial &currentSubmitSerial);
+
+    // Finish all GPU operations on the surface
+    angle::Result finish(vk::Context *context);
 
     void updateOverlay(ContextVk *contextVk) const;
     bool overlayHasEnabledWidget(ContextVk *contextVk) const;
@@ -441,10 +448,6 @@ class WindowSurfaceVk : public SurfaceVk
     // Before this wait, there were three acquire semaphores in use corresponding to frames i, i+1
     // and i+2.  Frame i+3 can reuse the semaphore of frame i.
     angle::CircularBuffer<vk::Semaphore, impl::kSwapHistorySize + 1> mAcquireImageSemaphores;
-    // A pointer to mAcquireImageSemaphores.  This is set when an image is acquired and is waited on
-    // by the next submission (which uses this image), at which point it is reset so future
-    // submissions don't wait on it until the next acquire.
-    const vk::Semaphore *mAcquireImageSemaphore;
 
     // There is no direct signal from Vulkan regarding when a Present semaphore can be be reused.
     // During window resizing when swapchains are recreated every frame, the number of in-flight

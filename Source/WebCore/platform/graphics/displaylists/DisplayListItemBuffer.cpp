@@ -97,8 +97,14 @@ void ItemHandle::apply(GraphicsContext& context)
     case ItemType::Clip:
         get<Clip>().apply(context);
         return;
+    case ItemType::ClipRoundedRect:
+        get<ClipRoundedRect>().apply(context);
+        return;
     case ItemType::ClipOut:
         get<ClipOut>().apply(context);
+        return;
+    case ItemType::ClipOutRoundedRect:
+        get<ClipOutRoundedRect>().apply(context);
         return;
     case ItemType::ClipToImageBuffer:
         ASSERT_NOT_REACHED();
@@ -108,6 +114,9 @@ void ItemHandle::apply(GraphicsContext& context)
         return;
     case ItemType::ClipPath:
         get<ClipPath>().apply(context);
+        return;
+    case ItemType::ResetClip:
+        get<ResetClip>().apply(context);
         return;
     case ItemType::DrawFilteredImageBuffer:
         ASSERT_NOT_REACHED();
@@ -276,6 +285,9 @@ void ItemHandle::destroy()
     case ItemType::DrawLinesForText:
         get<DrawLinesForText>().~DrawLinesForText();
         return;
+    case ItemType::DrawDotsForDocumentMarker:
+        get<DrawDotsForDocumentMarker>().~DrawDotsForDocumentMarker();
+        return;
     case ItemType::DrawPath:
         get<DrawPath>().~DrawPath();
         return;
@@ -329,17 +341,23 @@ void ItemHandle::destroy()
     case ItemType::Clip:
         static_assert(std::is_trivially_destructible<Clip>::value);
         return;
+    case ItemType::ClipRoundedRect:
+        static_assert(std::is_trivially_destructible<ClipRoundedRect>::value);
+        return;
     case ItemType::ClipOut:
         static_assert(std::is_trivially_destructible<ClipOut>::value);
+        return;
+    case ItemType::ClipOutRoundedRect:
+        static_assert(std::is_trivially_destructible<ClipOutRoundedRect>::value);
         return;
     case ItemType::ClipToImageBuffer:
         static_assert(std::is_trivially_destructible<ClipToImageBuffer>::value);
         return;
+    case ItemType::ResetClip:
+        static_assert(std::is_trivially_destructible<ResetClip>::value);
+        return;
     case ItemType::ConcatenateCTM:
         static_assert(std::is_trivially_destructible<ConcatenateCTM>::value);
-        return;
-    case ItemType::DrawDotsForDocumentMarker:
-        static_assert(std::is_trivially_destructible<DrawDotsForDocumentMarker>::value);
         return;
     case ItemType::DrawEllipse:
         static_assert(std::is_trivially_destructible<DrawEllipse>::value);
@@ -544,10 +562,16 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
         return copyInto<ClearShadow>(itemOffset, *this);
     case ItemType::Clip:
         return copyInto<Clip>(itemOffset, *this);
+    case ItemType::ClipRoundedRect:
+        return copyInto<ClipRoundedRect>(itemOffset, *this);
     case ItemType::ClipOut:
         return copyInto<ClipOut>(itemOffset, *this);
+    case ItemType::ClipOutRoundedRect:
+        return copyInto<ClipOutRoundedRect>(itemOffset, *this);
     case ItemType::ClipToImageBuffer:
         return copyInto<ClipToImageBuffer>(itemOffset, *this);
+    case ItemType::ResetClip:
+        return copyInto<ResetClip>(itemOffset, *this);
     case ItemType::ConcatenateCTM:
         return copyInto<ConcatenateCTM>(itemOffset, *this);
     case ItemType::DrawDotsForDocumentMarker:
@@ -664,6 +688,9 @@ ItemBuffer& ItemBuffer::operator=(ItemBuffer&& other)
     return *this;
 }
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DisplayListItemBufferHandle);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DisplayListItemBufferHandle);
+
 ItemBufferHandle ItemBuffer::createItemBuffer(size_t capacity)
 {
     if (m_writingClient) {
@@ -674,7 +701,7 @@ ItemBufferHandle ItemBuffer::createItemBuffer(size_t capacity)
     constexpr size_t defaultItemBufferCapacity = 1 << 10;
 
     auto newBufferCapacity = std::max(capacity, defaultItemBufferCapacity);
-    auto* buffer = static_cast<uint8_t*>(fastMalloc(newBufferCapacity));
+    auto* buffer = static_cast<uint8_t*>(DisplayListItemBufferHandleMalloc::malloc(newBufferCapacity));
     m_allocatedBuffers.append(buffer);
     return { ItemBufferIdentifier::generate(), buffer, newBufferCapacity };
 }
@@ -691,7 +718,7 @@ void ItemBuffer::forEachItemBuffer(Function<void(const ItemBufferHandle&)>&& map
 void ItemBuffer::clear()
 {
     for (auto* buffer : std::exchange(m_allocatedBuffers, { }))
-        fastFree(buffer);
+        DisplayListItemBufferHandleMalloc::free(buffer);
 
     m_readOnlyBuffers.clear();
     m_writableBuffer = { };
@@ -700,7 +727,16 @@ void ItemBuffer::clear()
 
 void ItemBuffer::shrinkToFit()
 {
+    if (m_writableBuffer) {
+        if (m_allocatedBuffers.last() == m_writableBuffer.data) {
+            m_writableBuffer.data = static_cast<uint8_t*>(fastRealloc(m_writableBuffer.data, m_writtenNumberOfBytes));
+            m_writableBuffer.capacity = m_writtenNumberOfBytes;
+            m_allocatedBuffers.last() = m_writableBuffer.data;
+        } else
+            ASSERT(!m_allocatedBuffers.contains(m_writableBuffer.data));
+    }
     m_allocatedBuffers.shrinkToFit();
+    m_readOnlyBuffers.shrinkToFit();
 }
 
 DidChangeItemBuffer ItemBuffer::swapWritableBufferIfNeeded(size_t numberOfBytes)

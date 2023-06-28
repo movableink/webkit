@@ -35,6 +35,7 @@
 #include "qwebkitglobal.h"
 
 #include <WebCore/Frame.h>
+#include <WebCore/Page.h>
 #include <WebCore/Geolocation.h>
 
 namespace WebCore {
@@ -78,8 +79,8 @@ void GeolocationPermissionClientQt::cancelGeolocationPermissionRequestForFrame(Q
 }
 
 void GeolocationPermissionClientQt::setPermission(QWebFrameAdapter* webFrame, bool granted)
-{  
-    if (!m_pendingPermissionRequests.contains(webFrame)) 
+{
+    if (!m_pendingPermissionRequests.contains(webFrame))
         return;
 
     Geolocation* listener = m_pendingPermissionRequests.value(webFrame);

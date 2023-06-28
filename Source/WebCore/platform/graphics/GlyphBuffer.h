@@ -43,6 +43,8 @@
 
 namespace WebCore {
 
+static const constexpr GlyphBufferGlyph deletedGlyph = 0xFFFF;
+
 class Font;
 
 class GlyphBuffer {
@@ -130,7 +132,6 @@ public:
     void makeGlyphInvisible(unsigned index)
     {
         // GlyphID 0xFFFF is the "deleted glyph" and is supposed to be invisible when rendered.
-        static const constexpr GlyphBufferGlyph deletedGlyph = 0xFFFF;
         m_glyphs[index] = deletedGlyph;
     }
 

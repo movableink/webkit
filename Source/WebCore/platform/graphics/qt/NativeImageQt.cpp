@@ -82,4 +82,9 @@ void NativeImage::clearSubimages()
 {
 }
 
+void NativeImage::draw(GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, const ImagePaintingOptions& options)
+{
+    context.drawNativeImageInternal(*this, imageSize, destinationRect, sourceRect, options);
+}
+
 } // namespace WebCore

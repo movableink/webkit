@@ -34,6 +34,8 @@
 #include "PaintInfo.h"
 #include "RenderBox.h"
 #include "RenderProgress.h"
+#include "RenderStyleInlines.h"
+#include "RenderStyleSetters.h"
 #include "StyleResolver.h"
 
 #include <wtf/RefPtr.h>

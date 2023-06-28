@@ -143,7 +143,7 @@ enum {
 #if !ENABLE(2022_GLIB_API)
     DOWNLOAD_STARTED,
 #endif
-    INITIALIZE_WEB_EXTENSIONS,
+    INITIALIZE_WEB_PROCESS_EXTENSIONS,
     INITIALIZE_NOTIFICATION_PERMISSIONS,
     AUTOMATION_STARTED,
     USER_MESSAGE_RECEIVED,
@@ -239,8 +239,8 @@ struct _WebKitWebContextPrivate {
 
     HashMap<WebPageProxyIdentifier, WebKitWebView*> webViews;
 
-    CString webExtensionsDirectory;
-    GRefPtr<GVariant> webExtensionsInitializationUserData;
+    CString webProcessExtensionsDirectory;
+    GRefPtr<GVariant> webProcessExtensionsInitializationUserData;
 
     CString localStorageDirectory;
 #if ENABLE(REMOTE_INSPECTOR)
@@ -640,22 +640,20 @@ static void webkit_web_context_class_init(WebKitWebContextClass* webContextClass
             WEBKIT_TYPE_DOWNLOAD);
 #endif
 
-    /**
-     * WebKitWebContext::initialize-web-extensions:
-     * @context: the #WebKitWebContext
-     *
-     * This signal is emitted when a new web process is about to be
-     * launched. It signals the most appropriate moment to use
-     * webkit_web_context_set_web_extensions_initialization_user_data()
-     * and webkit_web_context_set_web_extensions_directory().
-     *
-     * Since: 2.4
-     */
-    signals[INITIALIZE_WEB_EXTENSIONS] =
+
+    signals[INITIALIZE_WEB_PROCESS_EXTENSIONS] =
+#if ENABLE(2022_GLIB_API)
+        g_signal_new("initialize-web-process-extensions",
+#else
         g_signal_new("initialize-web-extensions",
+#endif
             G_TYPE_FROM_CLASS(gObjectClass),
             G_SIGNAL_RUN_LAST,
+#if ENABLE(2022_GLIB_API)
+            0,
+#else
             G_STRUCT_OFFSET(WebKitWebContextClass, initialize_web_extensions),
+#endif
             nullptr, nullptr,
             g_cclosure_marshal_VOID__VOID,
             G_TYPE_NONE, 0);
@@ -679,7 +677,11 @@ static void webkit_web_context_class_init(WebKitWebContextClass* webContextClass
         g_signal_new("initialize-notification-permissions",
             G_TYPE_FROM_CLASS(gObjectClass),
             G_SIGNAL_RUN_LAST,
+#if ENABLE(2022_GLIB_API)
+            0,
+#else
             G_STRUCT_OFFSET(WebKitWebContextClass, initialize_notification_permissions),
+#endif
             nullptr, nullptr,
             g_cclosure_marshal_VOID__VOID,
             G_TYPE_NONE, 0);
@@ -699,7 +701,11 @@ static void webkit_web_context_class_init(WebKitWebContextClass* webContextClass
         g_signal_new("automation-started",
             G_TYPE_FROM_CLASS(gObjectClass),
             G_SIGNAL_RUN_LAST,
+#if ENABLE(2022_GLIB_API)
+            0,
+#else
             G_STRUCT_OFFSET(WebKitWebContextClass, automation_started),
+#endif
             nullptr, nullptr,
             g_cclosure_marshal_VOID__OBJECT,
             G_TYPE_NONE, 1,
@@ -711,7 +717,7 @@ static void webkit_web_context_class_init(WebKitWebContextClass* webContextClass
      * @message: the #WebKitUserMessage received
      *
      * This signal is emitted when a #WebKitUserMessage is received from a
-     * #WebKitWebExtension. You can reply to the message using
+     * web process extension. You can reply to the message using
      * webkit_user_message_send_reply().
      *
      * You can handle the user message asynchronously by calling g_object_ref() on
@@ -725,7 +731,11 @@ static void webkit_web_context_class_init(WebKitWebContextClass* webContextClass
         "user-message-received",
         G_TYPE_FROM_CLASS(gObjectClass),
         G_SIGNAL_RUN_LAST,
+#if ENABLE(2022_GLIB_API)
+        0,
+#else
         G_STRUCT_OFFSET(WebKitWebContextClass, user_message_received),
+#endif
         g_signal_accumulator_true_handled, nullptr,
         g_cclosure_marshal_generic,
         G_TYPE_BOOLEAN, 1,
@@ -1069,9 +1079,9 @@ WebKitDownload* webkit_web_context_download_uri(WebKitWebContext* context, const
 
     WebCore::ResourceRequest request(String::fromUTF8(uri));
     auto& websiteDataStore = webkitWebsiteDataManagerGetDataStore(context->priv->websiteDataManager.get());
-    auto& downloadProxy = context->priv->processPool->download(websiteDataStore, nullptr, request);
-    auto download = webkitDownloadCreate(downloadProxy);
-    downloadProxy.setDidStartCallback([context = GRefPtr<WebKitWebContext> { context }, download = download.get()](auto* downloadProxy) {
+    auto downloadProxy = context->priv->processPool->download(websiteDataStore, nullptr, request);
+    auto download = webkitDownloadCreate(downloadProxy.get());
+    downloadProxy->setDidStartCallback([context = GRefPtr<WebKitWebContext> { context }, download = download.get()](auto* downloadProxy) {
         if (!downloadProxy)
             return;
 
@@ -1257,7 +1267,7 @@ void webkit_web_context_set_additional_plugins_directory(WebKitWebContext*, cons
  * @context: a #WebKitWebContext
  * @cancellable: (allow-none): a #GCancellable or %NULL to ignore
  * @callback: (scope async): a #GAsyncReadyCallback to call when the request is satisfied
- * @user_data: (closure): the data to pass to callback function
+ * @user_data: the data to pass to callback function
  *
  * Asynchronously get the list of installed plugins.
  *
@@ -1660,49 +1670,29 @@ WebKitTLSErrorsPolicy webkit_web_context_get_tls_errors_policy(WebKitWebContext*
 }
 #endif
 
-/**
- * webkit_web_context_set_web_extensions_directory:
- * @context: a #WebKitWebContext
- * @directory: the directory to add
- *
- * Set the directory where WebKit will look for Web Extensions.
- *
- * This method must be called before loading anything in this context,
- * otherwise it will not have any effect. You can connect to
- * #WebKitWebContext::initialize-web-extensions to call this method
- * before anything is loaded.
- */
+#if ENABLE(2022_GLIB_API)
+void webkit_web_context_set_web_process_extensions_directory(WebKitWebContext* context, const char* directory)
+#else
 void webkit_web_context_set_web_extensions_directory(WebKitWebContext* context, const char* directory)
+#endif
 {
     g_return_if_fail(WEBKIT_IS_WEB_CONTEXT(context));
     g_return_if_fail(directory);
 
-    context->priv->webExtensionsDirectory = directory;
+    context->priv->webProcessExtensionsDirectory = directory;
     context->priv->processPool->addSandboxPath(directory, SandboxPermission::ReadOnly);
 }
 
-/**
- * webkit_web_context_set_web_extensions_initialization_user_data:
- * @context: a #WebKitWebContext
- * @user_data: a #GVariant
- *
- * Set user data to be passed to Web Extensions on initialization.
- *
- * The data will be passed to the
- * #WebKitWebExtensionInitializeWithUserDataFunction.
- * This method must be called before loading anything in this context,
- * otherwise it will not have any effect. You can connect to
- * #WebKitWebContext::initialize-web-extensions to call this method
- * before anything is loaded.
- *
- * Since: 2.4
- */
+#if ENABLE(2022_GLIB_API)
+void webkit_web_context_set_web_process_extensions_initialization_user_data(WebKitWebContext* context, GVariant* userData)
+#else
 void webkit_web_context_set_web_extensions_initialization_user_data(WebKitWebContext* context, GVariant* userData)
+#endif
 {
     g_return_if_fail(WEBKIT_IS_WEB_CONTEXT(context));
     g_return_if_fail(userData);
 
-    context->priv->webExtensionsInitializationUserData = userData;
+    context->priv->webProcessExtensionsInitializationUserData = userData;
 }
 
 #if PLATFORM(GTK) && !USE(GTK4)
@@ -1912,7 +1902,7 @@ void webkit_web_context_initialize_notification_permissions(WebKitWebContext* co
  * @context: the #WebKitWebContext
  * @message: a #WebKitUserMessage
  *
- * Send @message to all #WebKitWebExtension<!-- -->s associated to @context.
+ * Send @message to all web process extensions associated to @context.
  *
  * If @message is floating, it's consumed.
  *
@@ -1926,7 +1916,7 @@ void webkit_web_context_send_message_to_all_extensions(WebKitWebContext* context
     // We sink the reference in case of being floating.
     GRefPtr<WebKitUserMessage> adoptedMessage = message;
     for (auto& process : context->priv->processPool->processes())
-        process->send(Messages::WebProcess::SendMessageToWebExtension(webkitUserMessageGetMessage(message)), 0);
+        process->send(Messages::WebProcess::SendMessageToWebProcessExtension(webkitUserMessageGetMessage(message)), 0);
 }
 
 #if PLATFORM(GTK) && !USE(GTK4)
@@ -2001,12 +1991,12 @@ void webkitWebContextDownloadStarted(WebKitWebContext* context, WebKitDownload* 
 }
 #endif
 
-GVariant* webkitWebContextInitializeWebExtensions(WebKitWebContext* context)
+GVariant* webkitWebContextInitializeWebProcessExtensions(WebKitWebContext* context)
 {
-    g_signal_emit(context, signals[INITIALIZE_WEB_EXTENSIONS], 0);
+    g_signal_emit(context, signals[INITIALIZE_WEB_PROCESS_EXTENSIONS], 0);
     return g_variant_new("(msmv)",
-        context->priv->webExtensionsDirectory.data(),
-        context->priv->webExtensionsInitializationUserData.get());
+        context->priv->webProcessExtensionsDirectory.data(),
+        context->priv->webProcessExtensionsInitializationUserData.get());
 }
 
 WebProcessPool& webkitWebContextGetProcessPool(WebKitWebContext* context)

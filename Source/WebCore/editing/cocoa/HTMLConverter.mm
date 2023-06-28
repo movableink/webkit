@@ -44,7 +44,6 @@
 #import "ElementTraversal.h"
 #import "File.h"
 #import "FontCascade.h"
-#import "Frame.h"
 #import "FrameLoader.h"
 #import "HTMLAttachmentElement.h"
 #import "HTMLElement.h"
@@ -55,10 +54,10 @@
 #import "HTMLMetaElement.h"
 #import "HTMLNames.h"
 #import "HTMLOListElement.h"
-#import "HTMLParserIdioms.h"
 #import "HTMLTableCellElement.h"
 #import "HTMLTextAreaElement.h"
 #import "LoaderNSURLExtras.h"
+#import "LocalFrame.h"
 #import "RenderImage.h"
 #import "RenderText.h"
 #import "StyleProperties.h"
@@ -77,52 +76,10 @@
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-
+#import "UIFoundationSoftLink.h"
 #import "WAKAppKitStubs.h"
 #import <pal/ios/UIKitSoftLink.h>
 #import <pal/spi/ios/UIKitSPI.h>
-
-SOFT_LINK_CLASS(UIFoundation, NSColor)
-SOFT_LINK_CLASS(UIFoundation, NSShadow)
-SOFT_LINK_CLASS(UIFoundation, NSTextAttachment)
-SOFT_LINK_CLASS(UIFoundation, NSMutableParagraphStyle)
-SOFT_LINK_CLASS(UIFoundation, NSParagraphStyle)
-SOFT_LINK_CLASS(UIFoundation, NSTextList)
-SOFT_LINK_CLASS(UIFoundation, NSTextBlock)
-SOFT_LINK_CLASS(UIFoundation, NSTextTableBlock)
-SOFT_LINK_CLASS(UIFoundation, NSTextTable)
-SOFT_LINK_CLASS(UIFoundation, NSTextTab)
-
-#define PlatformNSShadow            getNSShadowClass()
-#define PlatformNSTextAttachment    getNSTextAttachmentClass()
-#define PlatformNSParagraphStyle    getNSParagraphStyleClass()
-#define PlatformNSTextList          getNSTextListClass()
-#define PlatformNSTextTableBlock    getNSTextTableBlockClass()
-#define PlatformNSTextTable         getNSTextTableClass()
-#define PlatformNSTextTab           getNSTextTabClass()
-#define PlatformColor               UIColor
-#define PlatformColorClass          PAL::getUIColorClass()
-#define PlatformNSColorClass        getNSColorClass()
-#define PlatformFont                UIFont
-#define PlatformFontClass           PAL::getUIFontClass()
-#define PlatformImageClass          PAL::getUIImageClass()
-
-#else
-
-#define PlatformNSShadow            NSShadow
-#define PlatformNSTextAttachment    NSTextAttachment
-#define PlatformNSParagraphStyle    NSParagraphStyle
-#define PlatformNSTextList          NSTextList
-#define PlatformNSTextTableBlock    NSTextTableBlock
-#define PlatformNSTextTable         NSTextTable
-#define PlatformNSTextTab           NSTextTab
-#define PlatformColor               NSColor
-#define PlatformColorClass          NSColor
-#define PlatformNSColorClass        NSColor
-#define PlatformFont                NSFont
-#define PlatformFontClass           NSFont
-#define PlatformImageClass          NSImage
-
 #endif
 
 using namespace WebCore;
@@ -303,6 +260,8 @@ private:
     RetainPtr<NSMutableAttributedString> _attrStr;
     RetainPtr<NSMutableDictionary> _documentAttrs;
     RetainPtr<NSURL> _baseURL;
+    RetainPtr<NSPresentationIntent> _topPresentationIntent;
+    NSInteger _topPresentationIntentIdentity;
     RetainPtr<NSMutableArray> _textLists;
     RetainPtr<NSMutableArray> _textBlocks;
     RetainPtr<NSMutableArray> _textTables;
@@ -347,7 +306,9 @@ private:
     void _addQuoteForElement(Element&, BOOL opening, NSInteger level);
     void _addValue(NSString *value, Element&);
     void _fillInBlock(NSTextBlock *block, Element&, PlatformColor *backgroundColor, CGFloat extraMargin, CGFloat extraPadding, BOOL isTable);
-    
+    void _enterBlockquote();
+    void _exitBlockquote();
+
     BOOL _enterElement(Element&, BOOL embedded);
     BOOL _processElement(Element&, NSInteger depth);
     void _exitElement(Element&, NSInteger depth, NSUInteger startIndex);
@@ -371,6 +332,8 @@ HTMLConverter::HTMLConverter(const SimpleRange& range)
     _attrStr = adoptNS([[NSMutableAttributedString alloc] init]);
     _documentAttrs = adoptNS([[NSMutableDictionary alloc] init]);
     _baseURL = nil;
+    _topPresentationIntent = nil;
+    _topPresentationIntentIdentity = 0;
     _textLists = adoptNS([[NSMutableArray alloc] init]);
     _textBlocks = adoptNS([[NSMutableArray alloc] init]);
     _textTables = adoptNS([[NSMutableArray alloc] init]);
@@ -416,7 +379,7 @@ AttributedString HTMLConverter::convert()
     if (_domRangeStartIndex > 0 && _domRangeStartIndex <= [_attrStr length])
         [_attrStr deleteCharactersInRange:NSMakeRange(0, _domRangeStartIndex)];
 
-    return { WTFMove(_attrStr), WTFMove(_documentAttrs) };
+    return AttributedString::fromNSAttributedStringAndDocumentAttributes(WTFMove(_attrStr), WTFMove(_documentAttrs));
 }
 
 #if !PLATFORM(IOS_FAMILY)
@@ -947,9 +910,9 @@ NSDictionary *HTMLConverter::computedAttributesForElement(Element& element)
         fontSize = defaultFontSize;
     if (fontSize < minimumFontSize)
         fontSize = minimumFontSize;
-    if (fabs(floor(2.0 * fontSize + 0.5) / 2.0 - fontSize) < 0.05)
+    if (std::abs(floor(2.0 * fontSize + 0.5) / 2.0 - fontSize) < 0.05)
         fontSize = floor(2.0 * fontSize + 0.5) / 2;
-    else if (fabs(floor(10.0 * fontSize + 0.5) / 10.0 - fontSize) < 0.005)
+    else if (std::abs(floor(10.0 * fontSize + 0.5) / 10.0 - fontSize) < 0.005)
         fontSize = floor(10.0 * fontSize + 0.5) / 10;
 
     if (fontSize <= 0.0)
@@ -1025,7 +988,7 @@ NSDictionary *HTMLConverter::computedAttributesForElement(Element& element)
             [attrs setObject:@0.0 forKey:NSKernAttributeName];
         else {
             double kernVal = letterSpacing.length() ? letterSpacing.toDouble() : 0.0;
-            if (fabs(kernVal - 0) < FLT_EPSILON)
+            if (std::abs(kernVal - 0) < FLT_EPSILON)
                 [attrs setObject:@0.0 forKey:NSKernAttributeName]; // auto and normal, the other possible values, are both "kerning enabled"
             else
                 [attrs setObject:@(kernVal) forKey:NSKernAttributeName];
@@ -1089,7 +1052,9 @@ NSDictionary *HTMLConverter::computedAttributesForElement(Element& element)
             heading = 5;
         else if (coreBlockElement.hasTagName(h6Tag))
             heading = 6;
-        bool isParagraph = coreBlockElement.hasTagName(pTag) || coreBlockElement.hasTagName(liTag) || heading;
+        else if (coreBlockElement.hasTagName(blockquoteTag) && _topPresentationIntent)
+            [attrs setObject:_topPresentationIntent.get() forKey:NSPresentationIntentAttributeName];
+        bool isParagraph = coreBlockElement.hasTagName(pTag) || coreBlockElement.hasTagName(liTag) || heading || coreBlockElement.hasTagName(blockquoteTag);
 
         String textAlign = _caches->propertyValueForNode(coreBlockElement, CSSPropertyTextAlign);
         if (textAlign.length()) {
@@ -1112,7 +1077,7 @@ NSDictionary *HTMLConverter::computedAttributesForElement(Element& element)
                 [paragraphStyle setBaseWritingDirection:NSWritingDirectionRightToLeft];
         }
 
-        String hyphenation = _caches->propertyValueForNode(coreBlockElement, CSSPropertyWebkitHyphens);
+        String hyphenation = _caches->propertyValueForNode(coreBlockElement, CSSPropertyHyphens);
         if (hyphenation.length()) {
             if (hyphenation == autoAtom())
                 [paragraphStyle setHyphenationFactor:1.0];
@@ -1265,7 +1230,7 @@ BOOL HTMLConverter::_addAttachmentForElement(Element& element, NSURL *url, BOOL 
     BOOL retval = NO;
     BOOL notFound = NO;
     RetainPtr<NSFileWrapper> fileWrapper;
-    Frame* frame = element.document().frame();
+    auto* frame = element.document().frame();
     DocumentLoader *dataSource = frame->loader().frameHasLoaded() ? frame->loader().documentLoader() : 0;
     BOOL ignoreOrientation = YES;
 
@@ -1614,9 +1579,23 @@ void HTMLConverter::_processHeadElement(Element& element)
     }
 }
 
+void HTMLConverter::_enterBlockquote()
+{
+    _topPresentationIntent = [NSPresentationIntent blockQuoteIntentWithIdentity:++_topPresentationIntentIdentity nestedInsideIntent:_topPresentationIntent.get()];
+}
+
+void HTMLConverter::_exitBlockquote()
+{
+    if (_topPresentationIntent)
+        _topPresentationIntent = [_topPresentationIntent parentIntent];
+}
+
 BOOL HTMLConverter::_enterElement(Element& element, BOOL embedded)
 {
     String displayValue = _caches->propertyValueForNode(element, CSSPropertyDisplay);
+    if (element.hasTagName(blockquoteTag))
+        _enterBlockquote();
+
     if (element.hasTagName(headTag) && !embedded)
         _processHeadElement(element);
     else if (!m_userSelectNoneStateCache.nodeOnlyContainsUserSelectNone(element) && (!displayValue.length() || !(displayValue == noneAtom() || displayValue == "table-column"_s || displayValue == "table-column-group"_s))) {
@@ -1638,9 +1617,9 @@ void HTMLConverter::_addLinkForElement(Element& element, NSRange range)
     NSString *urlString = element.getAttribute(hrefAttr);
     NSString *strippedString = [urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if (urlString && [urlString length] > 0 && strippedString && [strippedString length] > 0 && ![strippedString hasPrefix:@"#"]) {
-        NSURL *url = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(urlString));
+        NSURL *url = element.document().completeURL(urlString);
         if (!url)
-            url = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(strippedString));
+            url = element.document().completeURL(strippedString);
         if (!url)
             url = [NSURL _web_URLWithString:strippedString relativeToURL:_baseURL.get()];
         [_attrStr addAttribute:NSLinkAttributeName value:url ? (id)url : (id)urlString range:range];
@@ -1799,7 +1778,7 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
     } else if (element.hasTagName(imgTag)) {
         NSString *urlString = element.imageSourceURL();
         if (urlString && [urlString length] > 0) {
-            NSURL *url = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(urlString));
+            NSURL *url = element.document().completeURL(urlString);
             if (!url)
                 url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:_baseURL.get()];
 #if PLATFORM(IOS_FAMILY)
@@ -1819,14 +1798,14 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
             NSURL *baseURL = nil;
             NSURL *url = nil;
             if (baseString && [baseString length] > 0) {
-                baseURL = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(baseString));
+                baseURL = element.document().completeURL(baseString);
                 if (!baseURL)
                     baseURL = [NSURL _web_URLWithString:[baseString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:_baseURL.get()];
             }
             if (baseURL)
                 url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:baseURL];
             if (!url)
-                url = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(urlString));
+                url = element.document().completeURL(urlString);
             if (!url)
                 url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:_baseURL.get()];
             if (url)
@@ -2088,6 +2067,9 @@ void HTMLConverter::_exitElement(Element& element, NSInteger depth, NSUInteger s
             }
         }
     }
+
+    if (element.hasTagName(blockquoteTag))
+        _exitBlockquote();
 }
 
 void HTMLConverter::_processText(CharacterData& characterData)
@@ -2397,7 +2379,7 @@ AttributedString editingAttributedString(const SimpleRange& range, IncludeImages
         if (style.textDecorationsInEffect() & TextDecorationLine::LineThrough)
             [attrs setObject:[NSNumber numberWithInteger:NSUnderlineStyleSingle] forKey:NSStrikethroughStyleAttributeName];
         if (auto font = style.fontCascade().primaryFont().getCTFont())
-            [attrs setObject:toNSFont(font) forKey:NSFontAttributeName];
+            [attrs setObject:(__bridge NSFont *)font forKey:NSFontAttributeName];
         else
             [attrs setObject:[fontManager convertFont:WebDefaultFont() toSize:style.fontCascade().primaryFont().platformData().size()] forKey:NSFontAttributeName];
 
@@ -2459,7 +2441,7 @@ AttributedString editingAttributedString(const SimpleRange& range, IncludeImages
         stringLength += currentTextLength;
     }
 
-    return { WTFMove(string), nil };
+    return AttributedString::fromNSAttributedString(WTFMove(string));
 }
 
 #endif

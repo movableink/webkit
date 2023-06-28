@@ -29,6 +29,7 @@
 #import "APIConversions.h"
 #import "Device.h"
 #import "TextureView.h"
+#import <bmalloc/Algorithm.h>
 #import <wtf/CheckedArithmetic.h>
 #import <wtf/MathExtras.h>
 
@@ -2380,21 +2381,25 @@ WGPUExtent3D Texture::physicalMiplevelSpecificTextureExtent(uint32_t mipLevel)
 
     auto logicalExtent = logicalMiplevelSpecificTextureExtent(mipLevel);
 
+    auto roundUpToMultipleOf = [](size_t a, size_t b) {
+        return static_cast<uint32_t>(bmalloc::roundUpToMultipleOfNonPowerOfTwo(a, b));
+    };
+
     switch (m_dimension) {
     case WGPUTextureDimension_1D:
         return {
-            static_cast<uint32_t>(WTF::roundUpToMultipleOf(texelBlockWidth(m_format), logicalExtent.width)),
+            roundUpToMultipleOf(texelBlockWidth(m_format), logicalExtent.width),
             1,
             logicalExtent.depthOrArrayLayers };
     case WGPUTextureDimension_2D:
         return {
-            static_cast<uint32_t>(WTF::roundUpToMultipleOf(texelBlockWidth(m_format), logicalExtent.width)),
-            static_cast<uint32_t>(WTF::roundUpToMultipleOf(texelBlockHeight(m_format), logicalExtent.height)),
+            roundUpToMultipleOf(texelBlockWidth(m_format), logicalExtent.width),
+            roundUpToMultipleOf(texelBlockHeight(m_format), logicalExtent.height),
             logicalExtent.depthOrArrayLayers };
     case WGPUTextureDimension_3D:
         return {
-            static_cast<uint32_t>(WTF::roundUpToMultipleOf(texelBlockWidth(m_format), logicalExtent.width)),
-            static_cast<uint32_t>(WTF::roundUpToMultipleOf(texelBlockHeight(m_format), logicalExtent.height)),
+            roundUpToMultipleOf(texelBlockWidth(m_format), logicalExtent.width),
+            roundUpToMultipleOf(texelBlockHeight(m_format), logicalExtent.height),
             logicalExtent.depthOrArrayLayers };
     case WGPUTextureDimension_Force32:
         ASSERT_NOT_REACHED();
@@ -2464,9 +2469,10 @@ bool Texture::refersToSingleAspect(WGPUTextureFormat format, WGPUTextureAspect a
     return true;
 }
 
-bool Texture::isValidImageCopySource(WGPUTextureFormat format, WGPUTextureAspect aspect)
+bool Texture::isValidDepthStencilCopySource(WGPUTextureFormat format, WGPUTextureAspect aspect)
 {
     // https://gpuweb.github.io/gpuweb/#depth-formats
+    ASSERT(Texture::isDepthOrStencilFormat(format));
 
     switch (format) {
     case WGPUTextureFormat_Undefined:
@@ -2576,13 +2582,13 @@ bool Texture::isValidImageCopySource(WGPUTextureFormat format, WGPUTextureAspect
     }
 }
 
-bool Texture::isValidImageCopyDestination(WGPUTextureFormat format, WGPUTextureAspect aspect)
+bool Texture::isValidDepthStencilCopyDestination(WGPUTextureFormat format, WGPUTextureAspect aspect)
 {
     // https://gpuweb.github.io/gpuweb/#depth-formats
+    ASSERT(Texture::isDepthOrStencilFormat(format));
 
     switch (format) {
     case WGPUTextureFormat_Undefined:
-        return false;
     case WGPUTextureFormat_R8Unorm:
     case WGPUTextureFormat_R8Snorm:
     case WGPUTextureFormat_R8Uint:
@@ -2619,7 +2625,7 @@ bool Texture::isValidImageCopyDestination(WGPUTextureFormat format, WGPUTextureA
     case WGPUTextureFormat_RGBA32Float:
     case WGPUTextureFormat_RGBA32Uint:
     case WGPUTextureFormat_RGBA32Sint:
-        return true;
+        return false;
     case WGPUTextureFormat_Stencil8:
     case WGPUTextureFormat_Depth16Unorm:
         return true;
@@ -2683,6 +2689,7 @@ bool Texture::isValidImageCopyDestination(WGPUTextureFormat format, WGPUTextureA
     case WGPUTextureFormat_ASTC12x10UnormSrgb:
     case WGPUTextureFormat_ASTC12x12Unorm:
     case WGPUTextureFormat_ASTC12x12UnormSrgb:
+        return false;
     case WGPUTextureFormat_Force32:
         ASSERT_NOT_REACHED();
         return false;
@@ -2784,6 +2791,11 @@ bool Texture::validateLinearTextureData(const WGPUTextureDataLayout& layout, uin
 } // namespace WebGPU
 
 #pragma mark WGPU Stubs
+
+void wgpuTextureReference(WGPUTexture texture)
+{
+    WebGPU::fromAPI(texture).ref();
+}
 
 void wgpuTextureRelease(WGPUTexture texture)
 {

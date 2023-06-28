@@ -66,7 +66,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(PaymentRequest);
 static bool isWellFormedCurrencyCode(const String& currency)
 {
     if (currency.length() == 3)
-        return currency.isAllSpecialCharacters<isASCIIAlpha>();
+        return currency.containsOnly<isASCIIAlpha>();
     return false;
 }
 
@@ -99,7 +99,7 @@ static ExceptionOr<void> checkAndCanonicalizeAmount(PaymentCurrencyAmount& amoun
     return { };
 }
 
-enum class NegativeAmountAllowed { Yes, No };
+enum class NegativeAmountAllowed : bool { No, Yes };
 static ExceptionOr<void> checkAndCanonicalizePaymentItem(PaymentItem& item, NegativeAmountAllowed negativeAmountAllowed)
 {
     auto exception = checkAndCanonicalizeAmount(item.amount);

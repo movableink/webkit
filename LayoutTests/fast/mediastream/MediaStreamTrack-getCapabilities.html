@@ -65,6 +65,8 @@
                     if (capabilities.hasOwnProperty(property) || capabilities.__proto__.hasOwnProperty(property))
                         if (property === "deviceId" && validateDeviceId(capabilities[property], track.kind))
                             value = "&lt;UUID>";
+                        else if (property === "groupId")
+                            value = "&lt;UUID>";
                         else if (typeof capabilities[property] === "object")
                             value = capabilityRange(property, capabilities[property]);
                         else
@@ -91,6 +93,11 @@
 
                 listTrackProperties(mediaStream.getVideoTracks()[0]);
                 listTrackProperties(mediaStream.getAudioTracks()[0]);
+
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:{ facingMode:"environment" } });
+                listTrackProperties(mediaStream.getVideoTracks()[0]);
+                listTrackProperties(mediaStream.getAudioTracks()[0]);
+
                 finishJSTest();
             }
 

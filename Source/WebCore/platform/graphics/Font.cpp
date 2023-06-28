@@ -39,7 +39,6 @@
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "FontCustomPlatformData.h"
-#include "OpenTypeMathData.h"
 #include "SharedBuffer.h"
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
@@ -77,12 +76,8 @@ Ref<Font> Font::create(Ref<SharedBuffer>&& fontFaceData, Font::Origin origin, fl
 
 Font::Font(const FontPlatformData& platformData, Origin origin, Interstitial interstitial, Visibility visibility, OrientationFallback orientationFallback, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
     : m_platformData(platformData)
-    , m_renderingResourceIdentifier(renderingResourceIdentifier)
-    , m_origin(origin)
-    , m_visibility(visibility)
+    , m_attributes({ renderingResourceIdentifier, origin, interstitial, visibility, orientationFallback })
     , m_treatAsFixedPitch(false)
-    , m_isInterstitial(interstitial == Interstitial::Yes)
-    , m_isTextOrientationFallback(orientationFallback == OrientationFallback::Yes)
     , m_isBrokenIdeographFallback(false)
     , m_hasVerticalGlyphs(false)
     , m_isUsedInSystemFallbackFontCache(false)
@@ -180,9 +175,14 @@ Font::~Font()
 
 RenderingResourceIdentifier Font::renderingResourceIdentifier() const
 {
-    if (!m_renderingResourceIdentifier)
-        m_renderingResourceIdentifier = RenderingResourceIdentifier::generate();
-    return *m_renderingResourceIdentifier;
+    return m_attributes.ensureRenderingResourceIdentifier();
+}
+
+RenderingResourceIdentifier Font::Attributes::ensureRenderingResourceIdentifier() const
+{
+    if (!renderingResourceIdentifier)
+        renderingResourceIdentifier = RenderingResourceIdentifier::generate();
+    return *renderingResourceIdentifier;
 }
 
 static bool fillGlyphPage(GlyphPage& pageToFill, UChar* buffer, unsigned bufferLength, const Font& font)
@@ -530,6 +530,7 @@ String Font::description() const
 }
 #endif
 
+#if ENABLE(MATHML)
 const OpenTypeMathData* Font::mathData() const
 {
     if (isInterstitial())
@@ -541,6 +542,7 @@ const OpenTypeMathData* Font::mathData() const
     }
     return m_mathData.get();
 }
+#endif
 
 RefPtr<Font> Font::createScaledFont(const FontDescription& fontDescription, float scaleFactor) const
 {

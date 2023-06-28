@@ -53,6 +53,27 @@ TEST(NSAttributedStringWebKitAdditions, MultipleParagraphs)
     TestWebKitAPI::Util::run(&done);
 }
 
+TEST(NSAttributedStringWebKitAdditions, BlockQuotes)
+{
+    __block bool done = false;
+    [NSAttributedString loadFromHTMLWithString:@"<p>Hello</p><blockquote>Down<blockquote>under</blockquote></blockquote>" options:@{ } completionHandler:^(NSAttributedString *attributedString, NSDictionary<NSAttributedStringDocumentAttributeKey, id> *attributes, NSError *error) {
+        EXPECT_EQ([[attributedString attribute:NSParagraphStyleAttributeName atIndex:0 effectiveRange:nil] headerLevel], 0);
+        EXPECT_EQ([[attributedString attribute:NSParagraphStyleAttributeName atIndex:6 effectiveRange:nil] headerLevel], 0);
+        NSPresentationIntent* quote1 = [attributedString attribute:NSPresentationIntentAttributeName atIndex:6 effectiveRange:nil];
+        ASSERT_NOT_NULL(quote1);
+        EXPECT_EQ([quote1 indentationLevel], 0);
+        EXPECT_EQ([[attributedString attribute:NSParagraphStyleAttributeName atIndex:11 effectiveRange:nil] headerLevel], 0);
+        NSPresentationIntent* quote2 = [attributedString attribute:NSPresentationIntentAttributeName atIndex:11 effectiveRange:nil];
+        ASSERT_NOT_NULL(quote2);
+        EXPECT_EQ([quote2 indentationLevel], 1);
+        EXPECT_NE([quote1 identity], [quote2 identity]);
+        EXPECT_EQ([quote1 identity], [[quote2 parentIntent] identity]);
+
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+}
+
 #if PLATFORM(IOS_FAMILY)
 TEST(NSAttributedStringWebKitAdditions, DirectoriesNotCreated)
 {
@@ -76,3 +97,33 @@ TEST(NSAttributedStringWebKitAdditions, DirectoriesNotCreated)
     EXPECT_TRUE(cookieDirectoryExists());
 }
 #endif
+
+TEST(NSAttributedStringWebKitAdditions, FontDataURL)
+{
+    NSURL *fontURL = [[NSBundle mainBundle] URLForResource:@"Ahem" withExtension:@"ttf" subdirectory:@"TestWebKitAPI.resources"];
+    NSData *fontData = [NSData dataWithContentsOfURL:fontURL];
+    NSString *fontBase64 = [fontData base64EncodedStringWithOptions:0];
+
+    NSString *html = [NSString stringWithFormat:@""
+        "<html>"
+        "<head>"
+        "<style>"
+        "@font-face { font-family: exampleFont; src: url(data:font/opentype;base64,%@); }"
+        "div { font-family: exampleFont; }"
+        "</style>"
+        "</head>"
+        "<body><div>hello!</div></body>"
+        "</html>", fontBase64];
+
+    __block bool done = false;
+    [NSAttributedString loadFromHTMLWithString:html options:@{ } completionHandler:^(NSAttributedString *attributedString, NSDictionary<NSAttributedStringDocumentAttributeKey, id> *attributes, NSError *error) {
+        __block bool foundFont { false };
+        [attributedString enumerateAttributesInRange:NSMakeRange(0, attributedString.length) options:0 usingBlock:^(NSDictionary *attributes, NSRange attributeRange, BOOL *stop) {
+            if (attributes[NSFontAttributeName])
+                foundFont = true;
+        }];
+        EXPECT_TRUE(foundFont);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+}

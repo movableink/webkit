@@ -84,6 +84,7 @@ enum class SDKAlignedBehavior {
     PushStateFilePathRestriction,
     RequiresUserGestureToLoadVideo,
     RestrictsBaseURLSchemes,
+    RunningBoardThrottling,
     ScrollViewContentInsetsAreNotObscuringInsets,
     SendsNativeMouseEvents,
     SessionCleanupByDefault,
@@ -104,6 +105,11 @@ enum class SDKAlignedBehavior {
     UIBackForwardSkipsHistoryItemsWithoutUserGesture,
     ProgrammaticFocusDuringUserScriptShowsInputViews,
     UsesGameControllerPhysicalInputProfile,
+    ScreenOrientationAPIEnabled,
+    PopoverAttributeEnabled,
+    LiveRangeSelectionEnabledForAllApps,
+    DoesNotOverrideUAFromNSUserDefault,
+    EvaluateJavaScriptWithoutTransientActivation,
 
     NumberOfBehaviors
 };

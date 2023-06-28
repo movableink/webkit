@@ -32,6 +32,7 @@
 #include "FormDataReference.h"
 #include "Logging.h"
 #include "NetworkLoad.h"
+#include "NetworkOriginAccessPatterns.h"
 #include "NetworkProcess.h"
 #include "NetworkResourceLoader.h"
 #include "NetworkSession.h"
@@ -126,12 +127,15 @@ ServiceWorkerFetchTask::~ServiceWorkerFetchTask()
 
 template<typename Message> bool ServiceWorkerFetchTask::sendToServiceWorker(Message&& message)
 {
-    return m_serviceWorkerConnection ? m_serviceWorkerConnection->ipcConnection().send(std::forward<Message>(message), 0) : false;
+    if (!m_serviceWorkerConnection)
+        return false;
+
+    return m_serviceWorkerConnection->ipcConnection().send(std::forward<Message>(message), 0) == IPC::Error::NoError;
 }
 
 template<typename Message> bool ServiceWorkerFetchTask::sendToClient(Message&& message)
 {
-    return m_loader.connectionToWebProcess().connection().send(std::forward<Message>(message), m_loader.coreIdentifier());
+    return m_loader.connectionToWebProcess().connection().send(std::forward<Message>(message), m_loader.coreIdentifier()) == IPC::Error::NoError;
 }
 
 void ServiceWorkerFetchTask::start(WebSWServerToContextConnection& serviceWorkerConnection)
@@ -150,7 +154,7 @@ void ServiceWorkerFetchTask::contextClosed()
     if (m_isDone)
         return;
 
-    if (m_wasHandled) {
+    if (m_wasHandled && !m_isLoadingFromPreloader) {
         didFail(ResourceError { errorDomainWebKitInternal, 0, { }, "Service Worker context closed"_s });
         return;
     }
@@ -173,8 +177,11 @@ void ServiceWorkerFetchTask::startFetch()
         if (auto identifier = m_loader.parameters().options.clientIdentifier)
             clientIdentifier = identifier->toString();
     }
+    String resultingClientIdentifier;
+    if (auto& identifier = m_loader.parameters().options.resultingClientIdentifier)
+        resultingClientIdentifier = identifier->toString();
 
-    bool isSent = sendToServiceWorker(Messages::WebSWContextManagerConnection::StartFetch { m_serverConnectionIdentifier, m_serviceWorkerIdentifier, m_fetchIdentifier, request, options, IPC::FormDataReference { m_currentRequest.httpBody() }, referrer, m_preloader && m_preloader->isServiceWorkerNavigationPreloadEnabled(), clientIdentifier, m_loader.resultingClientIdentifier() });
+    bool isSent = sendToServiceWorker(Messages::WebSWContextManagerConnection::StartFetch { m_serverConnectionIdentifier, m_serviceWorkerIdentifier, m_fetchIdentifier, request, options, IPC::FormDataReference { m_currentRequest.httpBody() }, referrer, m_preloader && m_preloader->isServiceWorkerNavigationPreloadEnabled(), clientIdentifier, resultingClientIdentifier });
     ASSERT_UNUSED(isSent, isSent);
 }
 
@@ -216,6 +223,11 @@ void ServiceWorkerFetchTask::processResponse(ResourceResponse&& response, bool n
     if (m_isDone)
         return;
 
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    if (!m_loader.continueAfterServiceWorkerReceivedResponse(response))
+        return;
+#endif
+
     SWFETCH_RELEASE_LOG("processResponse: (httpStatusCode=%d, MIMEType=%" PUBLIC_LOG_STRING ", expectedContentLength=%" PRId64 ", needsContinueDidReceiveResponseMessage=%d, source=%u)", response.httpStatusCode(), response.mimeType().string().utf8().data(), response.expectedContentLength(), needsContinueDidReceiveResponseMessage, static_cast<unsigned>(response.source()));
     m_wasHandled = true;
     if (m_timeoutTimer)
@@ -224,14 +236,14 @@ void ServiceWorkerFetchTask::processResponse(ResourceResponse&& response, bool n
 
     if (m_loader.parameters().options.mode == FetchOptions::Mode::Navigate) {
         if (auto parentOrigin = m_loader.parameters().parentOrigin()) {
-            if (auto error = validateCrossOriginResourcePolicy(m_loader.parameters().parentCrossOriginEmbedderPolicy.value, *parentOrigin, m_currentRequest.url(), response, ForNavigation::Yes)) {
+            if (auto error = validateCrossOriginResourcePolicy(m_loader.parameters().parentCrossOriginEmbedderPolicy.value, *parentOrigin, m_currentRequest.url(), response, ForNavigation::Yes, m_loader.connectionToWebProcess().originAccessPatterns())) {
                 didFail(*error);
                 return;
             }
         }
     }
     if (m_loader.parameters().options.mode == FetchOptions::Mode::NoCors) {
-        if (auto error = validateCrossOriginResourcePolicy(m_loader.parameters().crossOriginEmbedderPolicy.value, *m_loader.parameters().sourceOrigin, m_currentRequest.url(), response, ForNavigation::No)) {
+        if (auto error = validateCrossOriginResourcePolicy(m_loader.parameters().crossOriginEmbedderPolicy.value, *m_loader.parameters().sourceOrigin, m_currentRequest.url(), response, ForNavigation::No, m_loader.connectionToWebProcess().originAccessPatterns())) {
             didFail(*error);
             return;
         }
@@ -255,7 +267,32 @@ void ServiceWorkerFetchTask::didReceiveData(const IPC::SharedBufferReference& da
         return;
 
     ASSERT(!m_timeoutTimer || !m_timeoutTimer->isActive());
-    sendToClient(Messages::WebResourceLoader::DidReceiveData { data, encodedDataLength });
+
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    RefPtr<WebCore::SharedBuffer> buffer = data.unsafeBuffer();
+    if (!buffer)
+        return;
+    if (!m_loader.continueAfterServiceWorkerReceivedData(*buffer, encodedDataLength))
+        return;
+#endif
+    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), encodedDataLength });
+}
+
+void ServiceWorkerFetchTask::didReceiveDataFromPreloader(const WebCore::FragmentedSharedBuffer& data, uint64_t encodedDataLength)
+{
+    if (m_isDone)
+        return;
+
+    ASSERT(!m_timeoutTimer || !m_timeoutTimer->isActive());
+
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    RefPtr<WebCore::SharedBuffer> buffer = data.makeContiguous();
+    if (!buffer)
+        return;
+    if (!m_loader.continueAfterServiceWorkerReceivedData(*buffer, encodedDataLength))
+        return;
+#endif
+    sendToClient(Messages::WebResourceLoader::DidReceiveData { IPC::SharedBufferReference(data), encodedDataLength });
 }
 
 void ServiceWorkerFetchTask::didReceiveFormData(const IPC::FormDataReference& formData)
@@ -275,6 +312,11 @@ void ServiceWorkerFetchTask::didFinish(const NetworkLoadMetrics& networkLoadMetr
     m_isDone = true;
     if (m_timeoutTimer)
         m_timeoutTimer->stop();
+
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    m_loader.serviceWorkerDidFinish();
+#endif
+
     sendToClient(Messages::WebResourceLoader::DidFinishResourceLoad { networkLoadMetrics });
 
     cancelPreloadIfNecessary();
@@ -460,7 +502,7 @@ void ServiceWorkerFetchTask::loadBodyFromPreloader()
             didFinish(m_preloader->networkLoadMetrics());
             return;
         }
-        didReceiveData(IPC::SharedBufferReference(const_cast<WebCore::FragmentedSharedBuffer&>(*chunk)), length);
+        didReceiveDataFromPreloader(const_cast<WebCore::FragmentedSharedBuffer&>(*chunk), length);
     });
 }
 

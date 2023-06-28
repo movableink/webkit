@@ -27,7 +27,6 @@
 #pragma once
 
 #include "FocusController.h"
-#include "Frame.h"
 #include "FrameSelection.h"
 #include "HTMLDialogElement.h"
 #include "HTMLFrameElement.h"
@@ -36,6 +35,7 @@
 #include "HTMLInputElement.h"
 #include "HTMLOptionElement.h"
 #include "InspectorInstrumentation.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "SelectorChecker.h"
 #include "Settings.h"
@@ -96,7 +96,7 @@ ALWAYS_INLINE bool matchesDisabledPseudoClass(const Element& element)
 // https://html.spec.whatwg.org/multipage/scripting.html#selector-enabled
 ALWAYS_INLINE bool matchesEnabledPseudoClass(const Element& element)
 {
-    return is<HTMLElement>(element) && downcast<HTMLElement>(element).canBeActuallyDisabled() && !element.isDisabledFormControl();
+    return is<HTMLElement>(element) && downcast<HTMLElement>(element).canBeActuallyDisabled() && !downcast<HTMLElement>(element).isActuallyDisabled();
 }
 
 // https://dom.spec.whatwg.org/#concept-element-defined
@@ -562,6 +562,11 @@ ALWAYS_INLINE bool matchesFocusWithinPseudoClass(const Element& element)
     return element.hasFocusWithin() && isFrameFocused(element);
 }
 
+ALWAYS_INLINE bool matchesHtmlDocumentPseudoClass(const Element& element)
+{
+    return element.document().isHTMLDocument();
+}
+
 ALWAYS_INLINE bool matchesModalPseudoClass(const Element& element)
 {
     if (is<HTMLDialogElement>(element))
@@ -573,20 +578,9 @@ ALWAYS_INLINE bool matchesModalPseudoClass(const Element& element)
 #endif
 }
 
-ALWAYS_INLINE bool matchesOpenPseudoClass(const Element& element)
+ALWAYS_INLINE bool matchesPopoverOpenPseudoClass(const Element& element)
 {
-    if (auto* popoverData = element.popoverData())
-        return popoverData->visibilityState() == PopoverVisibilityState::Showing;
-
-    return false;
-}
-
-ALWAYS_INLINE bool matchesClosedPseudoClass(const Element& element)
-{
-    if (auto* popoverData = element.popoverData())
-        return popoverData->visibilityState() == PopoverVisibilityState::Hidden;
-
-    return false;
+    return element.isPopoverShowing();
 }
 
 ALWAYS_INLINE bool matchesUserInvalidPseudoClass(const Element& element)

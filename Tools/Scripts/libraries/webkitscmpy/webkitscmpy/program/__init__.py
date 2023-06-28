@@ -40,6 +40,7 @@ from .find import Find, Info
 from .pickable import Pickable
 from .publish import Publish
 from .install_git_lfs import InstallGitLFS
+from .install_hooks import InstallHooks
 from .land import Land
 from .log import Log
 from .pull import Pull
@@ -52,7 +53,7 @@ from .trace import Trace
 from .track import Track
 
 from webkitbugspy import log as webkitbugspy_log
-from webkitcorepy import arguments, filtered_call, log as webkitcorepy_log
+from webkitcorepy import arguments, filtered_call, log as webkitcorepy_log, Terminal
 from webkitscmpy import local, log, remote
 
 
@@ -94,7 +95,7 @@ def main(
         PullRequest, Revert, Setup, InstallGitLFS,
         Credentials, Commit, DeletePRBranches, Squash,
         Pickable, CherryPick, Trace, Track, Show, Publish,
-        Classify,
+        Classify, InstallHooks,
     ] + (programs or [])
     if subversion:
         programs.append(SetupGitSvn)
@@ -177,12 +178,13 @@ def main(
         parser.print_help()
         return -1
 
-    return parsed.main(
-        args=parsed,
-        repository=repository,
-        identifier_template=identifier_template,
-        subversion=subversion,
-        additional_setup=additional_setup,
-        hooks=hooks,
-        canonical_svn=canonical_svn,
-    )
+    with Terminal.disable_keyboard_interrupt_stacktracktrace():
+        return parsed.main(
+            args=parsed,
+            repository=repository,
+            identifier_template=identifier_template,
+            subversion=subversion,
+            additional_setup=additional_setup,
+            hooks=hooks,
+            canonical_svn=canonical_svn,
+        )

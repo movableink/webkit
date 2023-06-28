@@ -21,6 +21,7 @@
 #include "WebKitWebResource.h"
 
 #include "APIData.h"
+#include "APIURL.h"
 #include "WebFrameProxy.h"
 #include "WebKitPrivate.h"
 #include "WebKitURIRequestPrivate.h"
@@ -370,7 +371,7 @@ static void resourceDataCallback(API::Data* wkData, GTask* task)
  * @resource: a #WebKitWebResource
  * @cancellable: (allow-none): a #GCancellable or %NULL to ignore
  * @callback: (scope async): a #GAsyncReadyCallback to call when the request is satisfied
- * @user_data: (closure): the data to pass to callback function
+ * @user_data: the data to pass to callback function
  *
  * Asynchronously get the raw data for @resource.
  *

@@ -57,6 +57,15 @@ public:
 #endif
     }
 
+    bool isKeyboardImmediatelyAvailable()
+    {
+#if PLATFORM(VISION)
+        return true;
+#else
+        return false;
+#endif
+    }
+
     bool isWebKit2() const { return true; }
 
     // The basics.
@@ -113,6 +122,7 @@ public:
     void setCacheModel(int);
     void setAsynchronousSpellCheckingEnabled(bool);
     void setAllowsAnySSLCertificate(bool);
+
     void setShouldSwapToEphemeralSessionOnNextNavigation(bool);
     void setShouldSwapToDefaultSessionOnNextNavigation(bool);
     void setCustomUserAgent(JSStringRef);
@@ -297,6 +307,17 @@ public:
     static void simulateWebNotificationClick(JSValueRef notification);
     static void simulateWebNotificationClickForServiceWorkerNotifications();
 
+    JSRetainPtr<JSStringRef> getBackgroundFetchIdentifier();
+    void abortBackgroundFetch(JSStringRef);
+    void pauseBackgroundFetch(JSStringRef);
+    void resumeBackgroundFetch(JSStringRef);
+    void simulateClickBackgroundFetch(JSStringRef);
+    void setBackgroundFetchPermission(bool);
+    JSRetainPtr<JSStringRef> lastAddedBackgroundFetchIdentifier() const;
+    JSRetainPtr<JSStringRef> lastRemovedBackgroundFetchIdentifier() const;
+    JSRetainPtr<JSStringRef> lastUpdatedBackgroundFetchIdentifier() const;
+    JSRetainPtr<JSStringRef> backgroundFetchState(JSStringRef);
+
     // Geolocation.
     void setGeolocationPermission(bool);
     void setMockGeolocationPosition(double latitude, double longitude, double accuracy, std::optional<double> altitude, std::optional<double> altitudeAccuracy, std::optional<double> heading, std::optional<double> speed, std::optional<double> floorLevel);
@@ -307,6 +328,8 @@ public:
     void setScreenWakeLockPermission(bool);
 
     // MediaStream
+    void setCameraPermission(bool);
+    void setMicrophonePermission(bool);
     void setUserMediaPermission(bool);
     void resetUserMediaPermission();
     void setUserMediaPersistentPermissionForOrigin(bool permission, JSStringRef origin, JSStringRef parentOrigin);
@@ -494,7 +517,7 @@ public:
     void dumpAllHTTPRedirectedResponseHeaders() { m_dumpAllHTTPRedirectedResponseHeaders = true; }
     bool shouldDumpAllHTTPRedirectedResponseHeaders() const { return m_dumpAllHTTPRedirectedResponseHeaders; }
 
-    void addMockCameraDevice(JSStringRef persistentId, JSStringRef label);
+    void addMockCameraDevice(JSStringRef persistentId, JSStringRef label, JSValueRef properties);
     void addMockMicrophoneDevice(JSStringRef persistentId, JSStringRef label);
     void addMockScreenDevice(JSStringRef persistentId, JSStringRef label);
     void clearMockMediaDevices();
@@ -566,7 +589,7 @@ private:
     void setDumpPixels(bool);
     void setWaitUntilDone(bool);
 
-    void addMockMediaDevice(JSStringRef persistentId, JSStringRef label, const char* type);
+    void addMockMediaDevice(JSStringRef persistentId, JSStringRef label, const char* type, WKDictionaryRef);
 
     WKRetainPtr<WKURLRef> m_testURL; // Set by InjectedBundlePage once provisional load starts.
 

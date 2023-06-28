@@ -25,6 +25,10 @@
 #include "config.h"
 #include "SerializedTypeInfo.h"
 
+#include "CommonHeader.h"
+#if ENABLE(TEST_FEATURE)
+#include "CommonHeader.h"
+#endif
 #if ENABLE(TEST_FEATURE)
 #include "FirstMemberType.h"
 #endif
@@ -41,6 +45,8 @@
 #include <WebCore/FloatBoxExtent.h>
 #include <WebCore/InheritanceGrandchild.h>
 #include <WebCore/InheritsFrom.h>
+#include <WebCore/MoveOnlyBaseClass.h>
+#include <WebCore/MoveOnlyDerivedClass.h>
 #include <WebCore/TimingFunction.h>
 #include <wtf/CreateUsingClass.h>
 #include <wtf/Seconds.h>
@@ -60,7 +66,7 @@ Vector<SerializedTypeInfo> allSerializedTypes()
                 "SecondMemberType"_s,
                 "secondMemberName"_s
             }, {
-                "RetainPtr<CFTypeRef>"_s,
+                "std::optional<RetainPtr<CFTypeRef>>"_s,
                 "nullableTestMember"_s
             }
         } },
@@ -165,10 +171,43 @@ Vector<SerializedTypeInfo> allSerializedTypes()
         } },
         { "NullableSoftLinkedMember"_s, {
             {
-                "RetainPtr<DDActionContext>"_s,
+                "std::optional<RetainPtr<DDActionContext>>"_s,
                 "firstMember"_s
             }, {
                 "RetainPtr<DDActionContext>"_s,
+                "secondMember"_s
+            }
+        } },
+        { "WebCore::TimingFunction"_s, {
+            { "std::variant<WebCore::LinearTimingFunction, WebCore::CubicBezierTimingFunction, WebCore::StepsTimingFunction, WebCore::SpringTimingFunction>"_s, "subclasses"_s }
+        } },
+        { "Namespace::ConditionalCommonClass"_s, {
+            {
+                "int"_s,
+                "value"_s
+            }
+        } },
+        { "Namespace::CommonClass"_s, {
+            {
+                "int"_s,
+                "value"_s
+            }
+        } },
+        { "Namespace::AnotherCommonClass"_s, {
+            {
+                "int"_s,
+                "value"_s
+            }
+        } },
+        { "WebCore::MoveOnlyBaseClass"_s, {
+            { "std::variant<WebCore::MoveOnlyDerivedClass>"_s, "subclasses"_s }
+        } },
+        { "WebCore::MoveOnlyDerivedClass"_s, {
+            {
+                "std::optional<int>"_s,
+                "firstMember"_s
+            }, {
+                "int"_s,
                 "secondMember"_s
             }
         } },
@@ -205,6 +244,31 @@ Vector<SerializedEnumInfo> allSerializedEnums()
             static_cast<uint64_t>(EnumNamespace2::OptionSetEnumType::OptionSetSecondValue),
 #endif
             static_cast<uint64_t>(EnumNamespace2::OptionSetEnumType::OptionSetThirdValue),
+        } },
+        { "OptionSetEnumFirstCondition"_s, sizeof(OptionSetEnumFirstCondition), true, {
+#if ENABLE(OPTION_SET_FIRST_VALUE)
+            static_cast<uint64_t>(OptionSetEnumFirstCondition::OptionSetFirstValue),
+#endif
+            static_cast<uint64_t>(OptionSetEnumFirstCondition::OptionSetSecondValue),
+            static_cast<uint64_t>(OptionSetEnumFirstCondition::OptionSetThirdValue),
+        } },
+        { "OptionSetEnumLastCondition"_s, sizeof(OptionSetEnumLastCondition), true, {
+            static_cast<uint64_t>(OptionSetEnumLastCondition::OptionSetFirstValue),
+            static_cast<uint64_t>(OptionSetEnumLastCondition::OptionSetSecondValue),
+#if ENABLE(OPTION_SET_THIRD_VALUE)
+            static_cast<uint64_t>(OptionSetEnumLastCondition::OptionSetThirdValue),
+#endif
+        } },
+        { "OptionSetEnumAllCondition"_s, sizeof(OptionSetEnumAllCondition), true, {
+#if ENABLE(OPTION_SET_FIRST_VALUE)
+            static_cast<uint64_t>(OptionSetEnumAllCondition::OptionSetFirstValue),
+#endif
+#if ENABLE(OPTION_SET_SECOND_VALUE)
+            static_cast<uint64_t>(OptionSetEnumAllCondition::OptionSetSecondValue),
+#endif
+#if ENABLE(OPTION_SET_THIRD_VALUE)
+            static_cast<uint64_t>(OptionSetEnumAllCondition::OptionSetThirdValue),
+#endif
         } },
     };
 }

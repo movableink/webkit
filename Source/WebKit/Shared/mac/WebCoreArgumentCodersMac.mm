@@ -196,21 +196,6 @@ bool ArgumentCoder<WebCore::ResourceError>::decodePlatformData(Decoder& decoder,
     return true;
 }
 
-void ArgumentCoder<WebCore::ProtectionSpace>::encodePlatformData(Encoder& encoder, const WebCore::ProtectionSpace& space)
-{
-    encoder << space.nsSpace();
-}
-
-bool ArgumentCoder<WebCore::ProtectionSpace>::decodePlatformData(Decoder& decoder, WebCore::ProtectionSpace& space)
-{
-    auto platformData = IPC::decode<NSURLProtectionSpace>(decoder);
-    if (!platformData)
-        return false;
-
-    space = WebCore::ProtectionSpace { platformData->get() };
-    return true;
-}
-
 void ArgumentCoder<WebCore::Credential>::encodePlatformData(Encoder& encoder, const WebCore::Credential& credential)
 {
     NSURLCredential *nsCredential = credential.nsCredential();
@@ -248,32 +233,6 @@ std::optional<WebCore::KeypressCommand> ArgumentCoder<WebCore::KeypressCommand>:
     command.text = WTFMove(*text);
     return WTFMove(command);
 }
-
-#if ENABLE(CONTENT_FILTERING)
-
-void ArgumentCoder<WebCore::ContentFilterUnblockHandler>::encode(Encoder& encoder, const WebCore::ContentFilterUnblockHandler& contentFilterUnblockHandler)
-{
-    auto archiver = adoptNS([[NSKeyedArchiver alloc] initRequiringSecureCoding:YES]);
-    contentFilterUnblockHandler.encode(archiver.get());
-    encoder << (__bridge CFDataRef)archiver.get().encodedData;
-}
-
-bool ArgumentCoder<WebCore::ContentFilterUnblockHandler>::decode(Decoder& decoder, WebCore::ContentFilterUnblockHandler& contentFilterUnblockHandler)
-{
-    RetainPtr<CFDataRef> data;
-    if (!decoder.decode(data) || !data)
-        return false;
-
-    auto unarchiver = adoptNS([[NSKeyedUnarchiver alloc] initForReadingFromData:(__bridge NSData *)data.get() error:nullptr]);
-    unarchiver.get().decodingFailurePolicy = NSDecodingFailurePolicyRaiseException;
-    if (!WebCore::ContentFilterUnblockHandler::decode(unarchiver.get(), contentFilterUnblockHandler))
-        return false;
-
-    [unarchiver finishDecoding];
-    return true;
-}
-
-#endif
 
 #if ENABLE(VIDEO)
 void ArgumentCoder<WebCore::SerializedPlatformDataCueValue>::encodePlatformData(Encoder& encoder, const WebCore::SerializedPlatformDataCueValue& value)

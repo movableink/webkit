@@ -89,7 +89,7 @@ public:
     int sliderTickOffsetFromTrackCenter() const override;
 #endif
 
-    Seconds caretBlinkInterval() const override;
+    std::optional<Seconds> caretBlinkInterval() const override;
 
     bool isControlStyled(const RenderStyle&, const RenderStyle&) const override;
 

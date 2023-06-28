@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #if PLATFORM(MAC)
 
 #include "DrawingAreaInfo.h"
+#include "EditorState.h"
 #include "ImageAnalysisUtilities.h"
 #include "PDFPluginIdentifier.h"
 #include "ShareableBitmap.h"
@@ -84,9 +85,7 @@ OBJC_CLASS WKTextTouchBarItemController;
 OBJC_CLASS WebPlaybackControlsManager;
 #endif // HAVE(TOUCH_BAR)
 
-#if ENABLE(UI_PROCESS_PDF_HUD)
 OBJC_CLASS WKPDFHUDView;
-#endif
 
 OBJC_CLASS VKCImageAnalysis;
 OBJC_CLASS VKCImageAnalysisOverlayView;
@@ -212,13 +211,11 @@ public:
     void viewWillStartLiveResize();
     void viewDidEndLiveResize();
 
-#if ENABLE(UI_PROCESS_PDF_HUD)
     void createPDFHUD(PDFPluginIdentifier, const WebCore::IntRect&);
     void updatePDFHUDLocation(PDFPluginIdentifier, const WebCore::IntRect&);
     void removePDFHUD(PDFPluginIdentifier);
     void removeAllPDFHUDs();
     NSSet *pdfHUDs();
-#endif
 
     void renewGState();
     void setFrameSize(CGSize);
@@ -231,7 +228,7 @@ public:
     void setFixedLayoutSize(CGSize);
     CGSize fixedLayoutSize() const;
 
-    std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy(WebProcessProxy&);
+    std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy();
     bool isUsingUISideCompositing() const;
     void setDrawingAreaSize(CGSize);
     void updateLayer();
@@ -376,7 +373,6 @@ public:
     bool validateUserInterfaceItem(id <NSValidatedUserInterfaceItem>);
     void setEditableElementIsFocused(bool);
 
-    void setCaretDecorationVisibility(bool);
     void updateCaretDecorationPlacement();
 
     void startSpeaking();
@@ -472,6 +468,11 @@ public:
     void setThumbnailView(_WKThumbnailView *);
     _WKThumbnailView *thumbnailView() const { return m_thumbnailView; }
 
+    void setHeaderBannerLayer(CALayer *);
+    CALayer *headerBannerLayer() const { return m_headerBannerLayer.get(); }
+    void setFooterBannerLayer(CALayer *);
+    CALayer *footerBannerLayer() const { return m_footerBannerLayer.get(); }
+
     void setInspectorAttachmentView(NSView *);
     NSView *inspectorAttachmentView();
     
@@ -480,9 +481,9 @@ public:
 
     _WKRemoteObjectRegistry *remoteObjectRegistry();
 
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     WKBrowsingContextController *browsingContextController();
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 
 #if ENABLE(DRAG_SUPPORT)
     void draggedImage(NSImage *, CGPoint endPoint, NSDragOperation);
@@ -505,9 +506,9 @@ public:
 
     void startWindowDrag();
 
-    void startDrag(const WebCore::DragItem&, const ShareableBitmapHandle& image);
-    void setFileAndURLTypes(NSString *filename, NSString *extension, NSString *title, NSString *url, NSString *visibleURL, NSPasteboard *);
-    void setPromisedDataForImage(WebCore::Image*, NSString *filename, NSString *extension, NSString *title, NSString *url, NSString *visibleURL, WebCore::FragmentedSharedBuffer* archiveBuffer, NSString *pasteboardName, NSString *pasteboardOrigin);
+    void startDrag(const WebCore::DragItem&, ShareableBitmap::Handle&& image);
+    void setFileAndURLTypes(NSString *filename, NSString *extension, NSString *uti, NSString *title, NSString *url, NSString *visibleURL, NSPasteboard *);
+    void setPromisedDataForImage(WebCore::Image&, NSString *filename, NSString *extension, NSString *title, NSString *url, NSString *visibleURL, WebCore::FragmentedSharedBuffer* archiveBuffer, NSString *pasteboardName, NSString *pasteboardOrigin);
     void pasteboardChangedOwner(NSPasteboard *);
     void provideDataForPasteboard(NSPasteboard *, NSString *type);
     NSArray *namesOfPromisedFilesDroppedAtDestination(NSURL *dropDestination);
@@ -599,7 +600,7 @@ public:
     bool shouldRequestCandidates() const;
 
 #if ENABLE(IMAGE_ANALYSIS)
-    void requestTextRecognition(const URL& imageURL, const ShareableBitmapHandle& imageData, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier, CompletionHandler<void(WebCore::TextRecognitionResult&&)>&&);
+    void requestTextRecognition(const URL& imageURL, ShareableBitmap::Handle&& imageData, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier, CompletionHandler<void(WebCore::TextRecognitionResult&&)>&&);
     void computeHasVisualSearchResults(const URL& imageURL, ShareableBitmap& imageBitmap, CompletionHandler<void(bool)>&&);
 #endif
 
@@ -686,7 +687,7 @@ public:
     void didFinishPresentation(WKRevealItemPresenter *);
 #endif
 
-    void beginTextRecognitionForVideoInElementFullscreen(const ShareableBitmapHandle&, WebCore::FloatRect);
+    void beginTextRecognitionForVideoInElementFullscreen(ShareableBitmap::Handle&&, WebCore::FloatRect);
     void cancelTextRecognitionForVideoInElementFullscreen();
 
 private:
@@ -732,8 +733,6 @@ private:
     void scheduleSetTopContentInsetDispatch();
     void dispatchSetTopContentInset();
 
-    void postFakeMouseMovedEventForFlagsChangedEvent(NSEvent *);
-
     void sendToolTipMouseExited();
     void sendToolTipMouseEntered();
 
@@ -748,6 +747,8 @@ private:
     void nativeMouseEventHandler(NSEvent *);
     void nativeMouseEventHandlerInternal(NSEvent *);
     
+    void scheduleMouseDidMoveOverElement(NSEvent *);
+
     void mouseMovedInternal(NSEvent *);
     void mouseDownInternal(NSEvent *);
     void mouseUpInternal(NSEvent *);
@@ -759,6 +760,15 @@ private:
     bool mightBeginScrollWhileInactive();
 
     void handleRequestedCandidates(NSInteger sequenceNumber, NSArray<NSTextCheckingResult *> *candidates);
+
+#if HAVE(INLINE_PREDICTIONS)
+    bool allowsInlinePredictions() const;
+    void showInlinePredictionsForCandidates(NSArray<NSTextCheckingResult *> *);
+    void showInlinePredictionsForCandidate(NSTextCheckingResult *, NSRange, NSRange);
+#endif
+
+    NSTextCheckingTypes getTextCheckingTypes() const;
+
     void flushPendingMouseEventCallbacks();
 
     void viewWillMoveToWindowImpl(NSWindow *);
@@ -773,6 +783,8 @@ private:
     CocoaImageAnalyzer *ensureImageAnalyzer();
     int32_t processImageAnalyzerRequest(CocoaImageAnalyzerRequest *, CompletionHandler<void(CocoaImageAnalysis *, NSError *)>&&);
 #endif
+
+    std::optional<EditorState::PostLayoutData> postLayoutDataForContentEditable();
 
     WeakObjCPtr<NSView<WebViewImplDelegate>> m_view;
     std::unique_ptr<PageClient> m_pageClient;
@@ -813,9 +825,7 @@ private:
     RetainPtr<WKFullScreenWindowController> m_fullScreenWindowController;
 #endif
 
-#if ENABLE(UI_PROCESS_PDF_HUD)
     HashMap<WebKit::PDFPluginIdentifier, RetainPtr<WKPDFHUDView>> _pdfHUDViews;
-#endif
 
     RetainPtr<WKShareSheet> _shareSheet;
 
@@ -858,13 +868,16 @@ private:
     RetainPtr<CALayer> m_rootLayer;
     RetainPtr<NSView> m_layerHostingView;
 
+    RetainPtr<CALayer> m_headerBannerLayer;
+    RetainPtr<CALayer> m_footerBannerLayer;
+
     _WKThumbnailView *m_thumbnailView { nullptr };
 
     RetainPtr<_WKRemoteObjectRegistry> m_remoteObjectRegistry;
 
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     RetainPtr<WKBrowsingContextController> m_browsingContextController;
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 
     std::unique_ptr<ViewGestureController> m_gestureController;
     bool m_allowsBackForwardNavigationGestures { false };
@@ -931,6 +944,8 @@ private:
 #if HAVE(TRANSLATION_UI_SERVICES) && ENABLE(CONTEXT_MENUS)
     WeakObjCPtr<NSPopover> m_lastContextMenuTranslationPopover;
 #endif
+
+    RetainPtr<NSObject> _textInputNotifications;
 };
     
 } // namespace WebKit

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016 Google Inc. All rights reserved.
  *           (C) 2005 Rob Buis <buis@kde.org>
  *           (C) 2006 Alexander Kellett <lypanov@kde.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
@@ -30,7 +31,6 @@
 #include "SVGRenderTreeAsText.h"
 
 #include "ColorSerialization.h"
-#include "GraphicsTypes.h"
 #include "LegacyRenderSVGImage.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGShapeInlines.h"
@@ -52,6 +52,7 @@
 #include "RenderSVGRoot.h"
 #include "RenderSVGShapeInlines.h"
 #include "RenderSVGText.h"
+#include "RenderStyleInlines.h"
 #include "SVGCircleElement.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGEllipseElement.h"
@@ -61,10 +62,10 @@
 #include "SVGPathUtilities.h"
 #include "SVGPolyElement.h"
 #include "SVGRectElement.h"
+#include "SVGRenderStyle.h"
 #include "SVGRootInlineBox.h"
 #include "SVGStopElement.h"
 #include "StyleCachedImage.h"
-
 #include <math.h>
 
 namespace WebCore {
@@ -256,9 +257,18 @@ void writeSVGPaintingFeatures(TextStream& ts, const RenderElement& renderer, Opt
     }
 #endif
 
-    writeIfNotEmpty(ts, "start marker", svgStyle.markerStartResource());
-    writeIfNotEmpty(ts, "middle marker", svgStyle.markerMidResource());
-    writeIfNotEmpty(ts, "end marker", svgStyle.markerEndResource());
+    auto writeMarker = [&](const char* name, const String& value) {
+        auto* element = renderer.element();
+        if (!element)
+            return;
+
+        auto fragment = SVGURIReference::fragmentIdentifierFromIRIString(value, element->document());
+        writeIfNotEmpty(ts, name, fragment);
+    };
+
+    writeMarker("start marker", svgStyle.markerStartResource());
+    writeMarker("middle marker", svgStyle.markerMidResource());
+    writeMarker("end marker", svgStyle.markerEndResource());
 }
 
 static TextStream& writePositionAndStyle(TextStream& ts, const RenderElement& renderer, OptionSet<RenderAsTextFlag> behavior = { })
@@ -403,10 +413,7 @@ static inline void writeSVGInlineTextBoxes(TextStream& ts, const RenderText& tex
     }
 }
 
-enum class WriteIndentOrNot {
-    No,
-    Yes
-};
+enum class WriteIndentOrNot : bool { No, Yes };
 
 static void writeStandardPrefix(TextStream& ts, const RenderObject& object, OptionSet<RenderAsTextFlag> behavior, WriteIndentOrNot writeIndent = WriteIndentOrNot::Yes)
 {
@@ -468,7 +475,7 @@ void writeSVGResourceContainer(TextStream& ts, const RenderSVGResourceContainer&
         // Creating a placeholder filter which is passed to the builder.
         FloatRect dummyRect;
         FloatSize dummyScale(1, 1);
-        auto dummyFilter = SVGFilter::create(filter.filterElement(), FilterRenderingMode::Software, dummyScale, Filter::ClipOperation::Intersect, dummyRect, dummyRect, NullGraphicsContext());
+        auto dummyFilter = SVGFilter::create(filter.filterElement(), FilterRenderingMode::Software, dummyScale, dummyRect, dummyRect, NullGraphicsContext());
         if (dummyFilter) {
             TextStream::IndentScope indentScope(ts);
             dummyFilter->externalRepresentation(ts, FilterRepresentation::TestOutput);
@@ -482,10 +489,10 @@ void writeSVGResourceContainer(TextStream& ts, const RenderSVGResourceContainer&
         writeNameValuePair(ts, "markerUnits", marker.markerUnits());
         ts << " [ref at " << marker.referencePoint() << "]";
         ts << " [angle=";
-        if (marker.angle() == -1)
-            ts << "auto" << "]\n";
+        if (auto angle = marker.angle())
+            ts << *angle << "]\n";
         else
-            ts << marker.angle() << "]\n";
+            ts << "auto" << "]\n";
     } else if (resource.resourceType() == PatternResourceType) {
         const auto& pattern = static_cast<const RenderSVGResourcePattern&>(resource);
 

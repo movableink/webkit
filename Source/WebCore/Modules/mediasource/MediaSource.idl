@@ -40,6 +40,8 @@ enum ReadyState {
 };
 
 [
+    CustomToJSObject,
+    JSGenerateToNativeObject,
     ActiveDOMObject,
     Conditional=MEDIA_SOURCE,
     EnabledBySetting=MediaSourceEnabled,

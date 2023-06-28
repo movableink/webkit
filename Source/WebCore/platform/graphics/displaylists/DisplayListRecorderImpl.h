@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@ class RecorderImpl : public Recorder {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(RecorderImpl);
 public:
-    WEBCORE_EXPORT RecorderImpl(DisplayList&, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, DrawGlyphsMode = DrawGlyphsMode::Normal);
+    WEBCORE_EXPORT RecorderImpl(DisplayList&, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), DrawGlyphsMode = DrawGlyphsMode::Normal);
     WEBCORE_EXPORT virtual ~RecorderImpl();
 
     bool isEmpty() const { return m_displayList.isEmpty(); }
@@ -60,8 +60,11 @@ private:
     void recordSetLineJoin(LineJoin) final;
     void recordSetMiterLimit(float) final;
     void recordClearShadow() final;
+    void recordResetClip() final;
     void recordClip(const FloatRect&) final;
+    void recordClipRoundedRect(const FloatRoundedRect&) final;
     void recordClipOut(const FloatRect&) final;
+    void recordClipOutRoundedRect(const FloatRoundedRect&) final;
     void recordClipToImageBuffer(ImageBuffer&, const FloatRect& destinationRect) final;
     void recordClipOutToPath(const Path&) final;
     void recordClipPath(const Path&, WindRule) final;
@@ -123,6 +126,8 @@ private:
     bool recordResourceUse(const SourceImage&) final;
     bool recordResourceUse(Font&) final;
     bool recordResourceUse(DecomposedGlyphs&) final;
+    bool recordResourceUse(Gradient&) final;
+    bool recordResourceUse(Filter&) final;
 
     template<typename T, class... Args>
     void append(Args&&... args)

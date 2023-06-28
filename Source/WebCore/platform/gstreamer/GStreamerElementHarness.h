@@ -52,7 +52,10 @@ public:
         bool sendEvent(GstEvent*);
 
         const GRefPtr<GstPad>& pad() const { return m_pad; }
+        const GRefPtr<GstPad>& targetPad() const { return m_targetPad; }
         const GRefPtr<GstCaps>& outputCaps();
+
+        const RefPtr<GStreamerElementHarness> downstreamHarness() const { return m_downstreamHarness; }
 
     private:
         Stream(GRefPtr<GstPad>&&, RefPtr<GStreamerElementHarness>&&);
@@ -64,13 +67,14 @@ public:
         RefPtr<GStreamerElementHarness> m_downstreamHarness;
 
         GRefPtr<GstPad> m_targetPad;
-        GRefPtr<GstCaps> m_outputCaps;
 
         Lock m_bufferQueueLock;
         Deque<GRefPtr<GstBuffer>> m_bufferQueue WTF_GUARDED_BY_LOCK(m_bufferQueueLock);
 
         Lock m_sinkEventQueueLock;
         Deque<GRefPtr<GstEvent>> m_sinkEventQueue WTF_GUARDED_BY_LOCK(m_sinkEventQueueLock);
+
+        GRefPtr<GstCaps> m_outputCaps WTF_GUARDED_BY_LOCK(m_sinkEventQueueLock);
     };
 
     using PadLinkCallback = Function<RefPtr<GStreamerElementHarness>(const GRefPtr<GstPad>&)>;
@@ -82,6 +86,7 @@ public:
     ~GStreamerElementHarness();
 
     void start(GRefPtr<GstCaps>&&);
+    bool isStarted() const { return m_playing.loadRelaxed(); }
 
     bool pushSample(GRefPtr<GstSample>&&);
     bool pushBuffer(GRefPtr<GstBuffer>&&);
@@ -95,6 +100,9 @@ public:
 
     void processOutputBuffers();
     void flush();
+    bool flushBuffers();
+
+    void dumpGraph(const char* filenamePrefix);
 
 private:
     GStreamerElementHarness(GRefPtr<GstElement>&&, ProcessBufferCallback&&, std::optional<PadLinkCallback>&&);

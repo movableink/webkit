@@ -40,6 +40,7 @@
 #include <WebCore/NotificationData.h>
 #include <WebCore/NotificationPermission.h>
 #include <WebCore/Timer.h>
+#include <WebCore/LocalFrame.h>
 #include <wtf/UUID.h>
 
 class QWebFrameAdapter;
@@ -98,7 +99,7 @@ public:
 
     void cancel(NotificationWrapper*);
 
-    void setNotificationsAllowedForFrame(Frame*, bool allowed);
+    void setNotificationsAllowedForFrame(LocalFrame*, bool allowed);
 
     static bool dumpNotification;
 

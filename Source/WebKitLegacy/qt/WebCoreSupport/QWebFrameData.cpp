@@ -22,26 +22,26 @@
 
 #include "FrameLoaderClientQt.h"
 #include <WebCore/Document.h>
-#include <WebCore/Frame.h>
+#include <WebCore/LocalFrame.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/Page.h>
 
 using namespace WebCore;
 
-QWebFrameData::QWebFrameData(WebCore::Page* parentPage, WebCore::Frame* parentFrame, WebCore::HTMLFrameOwnerElement* ownerFrameElement, const WTF::String& frameName)
+QWebFrameData::QWebFrameData(WebCore::Page* parentPage, WebCore::HTMLFrameOwnerElement* ownerFrameElement, const WTF::String& frameName)
     : name(frameName)
     , ownerElement(ownerFrameElement)
     , page(parentPage)
 {
     // mainframe is already created in WebCore::Page, just use it.
-    if (!parentFrame || !ownerElement) {
-        frame = &parentPage->mainFrame();
+    if (!ownerElement) {
+        frame = &downcast<WebCore::LocalFrame>(parentPage->mainFrame());
     } else {
-        frame = Frame::create(page, ownerElement, makeUniqueRef<FrameLoaderClientQt>(), WebCore::FrameIdentifier::generate());
+        frame = LocalFrame::createSubframe(*page, makeUniqueRef<FrameLoaderClientQt>(), WebCore::FrameIdentifier::generate(), *ownerElement);
     }
     frameLoaderClient = static_cast<FrameLoaderClientQt*>(&frame->loader().client());
 
     // FIXME: All of the below should probably be moved over into WebCore
-    frame->tree().setName(AtomString(String(name)));
+    frame->tree().setSpecifiedName(AtomString(String(name)));
 }

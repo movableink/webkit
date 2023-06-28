@@ -67,12 +67,12 @@ RenderPassEncoder::RenderPassEncoder(Device& device)
 
 RenderPassEncoder::~RenderPassEncoder()
 {
-    // FIXME: Metal driver requires the command encoder to end before being destroyed.
-    // Might have to explicitly end encoding here if the user forgets to?
+    [m_renderCommandEncoder endEncoding];
 }
 
 void RenderPassEncoder::beginOcclusionQuery(uint32_t queryIndex)
 {
+    queryIndex *= sizeof(uint64_t);
     if (queryIndex < m_visibilityResultBufferSize) {
         m_visibilityResultBufferOffset = queryIndex;
         [m_renderCommandEncoder setVisibilityResultMode:MTLVisibilityResultModeCounting offset:queryIndex];
@@ -138,7 +138,7 @@ void RenderPassEncoder::executeBundles(Vector<std::reference_wrapper<const Rende
     for (auto& bundle : bundles) {
         const auto& renderBundle = bundle.get();
         for (const auto& resource : renderBundle.resources())
-            [m_renderCommandEncoder useResource:resource.mtlResource usage:resource.usage stages:resource.renderStages];
+            [m_renderCommandEncoder useResources:&resource.mtlResources[0] count:resource.mtlResources.size() usage:resource.usage stages:resource.renderStages];
 
         id<MTLIndirectCommandBuffer> icb = renderBundle.indirectCommandBuffer();
         [m_renderCommandEncoder executeCommandsInBuffer:icb withRange:NSMakeRange(0, icb.size)];
@@ -161,6 +161,12 @@ bool RenderPassEncoder::validatePopDebugGroup() const
         return false;
 
     return true;
+}
+
+void RenderPassEncoder::makeInvalid()
+{
+    [m_renderCommandEncoder endEncoding];
+    m_renderCommandEncoder = nil;
 }
 
 void RenderPassEncoder::popDebugGroup()
@@ -196,7 +202,7 @@ void RenderPassEncoder::setBindGroup(uint32_t groupIndex, const BindGroup& group
     UNUSED_PARAM(dynamicOffsets);
 
     for (const auto& resource : group.resources())
-        [m_renderCommandEncoder useResource:resource.mtlResource usage:resource.usage stages:resource.renderStages];
+        [m_renderCommandEncoder useResources:&resource.mtlResources[0] count:resource.mtlResources.size() usage:resource.usage stages:resource.renderStages];
 
     [m_renderCommandEncoder setVertexBuffer:group.vertexArgumentBuffer() offset:0 atIndex:m_device->vertexBufferIndexForBindGroup(groupIndex)];
     [m_renderCommandEncoder setFragmentBuffer:group.fragmentArgumentBuffer() offset:0 atIndex:groupIndex];
@@ -219,6 +225,12 @@ void RenderPassEncoder::setPipeline(const RenderPipeline& pipeline)
 {
     // FIXME: validation according to
     // https://gpuweb.github.io/gpuweb/#dom-gpurendercommandsmixin-setpipeline.
+    if (!pipeline.isValid()) {
+        m_device->generateAValidationError("invalid RenderPipeline in RenderPassEncoder.setPipeline"_s);
+        makeInvalid();
+        return;
+    }
+
     if (!pipeline.validateDepthStencilState(m_depthReadOnly, m_stencilReadOnly))
         return;
 
@@ -230,6 +242,7 @@ void RenderPassEncoder::setPipeline(const RenderPipeline& pipeline)
         [m_renderCommandEncoder setDepthStencilState:pipeline.depthStencilState()];
     [m_renderCommandEncoder setCullMode:pipeline.cullMode()];
     [m_renderCommandEncoder setFrontFacingWinding:pipeline.frontFace()];
+    [m_renderCommandEncoder setDepthClipMode:pipeline.depthClipMode()];
 }
 
 void RenderPassEncoder::setScissorRect(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
@@ -240,7 +253,7 @@ void RenderPassEncoder::setScissorRect(uint32_t x, uint32_t y, uint32_t width, u
 
 void RenderPassEncoder::setStencilReference(uint32_t reference)
 {
-    UNUSED_PARAM(reference);
+    [m_renderCommandEncoder setStencilReferenceValue:reference];
 }
 
 void RenderPassEncoder::setVertexBuffer(uint32_t slot, const Buffer& buffer, uint64_t offset, uint64_t size)
@@ -262,6 +275,11 @@ void RenderPassEncoder::setLabel(String&& label)
 } // namespace WebGPU
 
 #pragma mark WGPU Stubs
+
+void wgpuRenderPassEncoderReference(WGPURenderPassEncoder renderPassEncoder)
+{
+    WebGPU::fromAPI(renderPassEncoder).ref();
+}
 
 void wgpuRenderPassEncoderRelease(WGPURenderPassEncoder renderPassEncoder)
 {

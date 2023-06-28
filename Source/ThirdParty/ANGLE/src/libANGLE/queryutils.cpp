@@ -485,6 +485,9 @@ void SetTexParameterBase(Context *context, Texture *texture, GLenum pname, const
         case GL_TEXTURE_PROTECTED_EXT:
             texture->setProtectedContent(context, (params[0] == GL_TRUE));
             break;
+        case GL_RENDERABILITY_VALIDATION_ANGLE:
+            texture->setRenderabilityValidation(context, (params[0] == GL_TRUE));
+            break;
         default:
             UNREACHABLE();
             break;
@@ -3075,6 +3078,7 @@ unsigned int GetTexParameterCount(GLenum pname)
         case GL_DEPTH_STENCIL_TEXTURE_MODE:
         case GL_TEXTURE_NATIVE_ID_ANGLE:
         case GL_REQUIRED_TEXTURE_IMAGE_UNITS_OES:
+        case GL_RENDERABILITY_VALIDATION_ANGLE:
             return 1;
         default:
             return 0;
@@ -3240,6 +3244,16 @@ bool GetQueryParameterInfo(const State &glState,
         case GL_DITHER:
         case GL_CONTEXT_ROBUST_ACCESS_EXT:
         {
+            *type      = GL_BOOL;
+            *numParams = 1;
+            return true;
+        }
+        case GL_DEPTH_CLAMP_EXT:
+        {
+            if (!extensions.depthClampEXT)
+            {
+                return false;
+            }
             *type      = GL_BOOL;
             *numParams = 1;
             return true;
@@ -3791,7 +3805,6 @@ bool GetQueryParameterInfo(const State &glState,
         case GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS:
         case GL_UNPACK_IMAGE_HEIGHT:
         case GL_UNPACK_SKIP_IMAGES:
-        case GL_FRAGMENT_INTERPOLATION_OFFSET_BITS_OES:
         {
             *type      = GL_INT;
             *numParams = 1;
@@ -3820,12 +3833,30 @@ bool GetQueryParameterInfo(const State &glState,
         }
 
         case GL_MAX_TEXTURE_LOD_BIAS:
-        case GL_MIN_FRAGMENT_INTERPOLATION_OFFSET_OES:
-        case GL_MAX_FRAGMENT_INTERPOLATION_OFFSET_OES:
         {
             *type      = GL_FLOAT;
             *numParams = 1;
             return true;
+        }
+    }
+
+    if (extensions.shaderMultisampleInterpolationOES)
+    {
+        switch (pname)
+        {
+            case GL_MIN_FRAGMENT_INTERPOLATION_OFFSET_OES:
+            case GL_MAX_FRAGMENT_INTERPOLATION_OFFSET_OES:
+            {
+                *type      = GL_FLOAT;
+                *numParams = 1;
+                return true;
+            }
+            case GL_FRAGMENT_INTERPOLATION_OFFSET_BITS_OES:
+            {
+                *type      = GL_INT;
+                *numParams = 1;
+                return true;
+            }
         }
     }
 
@@ -4522,19 +4553,20 @@ egl::Error SetSurfaceAttrib(Surface *surface, EGLint attribute, EGLint value)
     return NoError();
 }
 
-Error GetSyncAttrib(Display *display, Sync *sync, EGLint attribute, EGLint *value)
+Error GetSyncAttrib(Display *display, SyncID sync, EGLint attribute, EGLint *value)
 {
+    const egl::Sync *syncObj = display->getSync(sync);
     switch (attribute)
     {
         case EGL_SYNC_TYPE_KHR:
-            *value = sync->getType();
+            *value = syncObj->getType();
             return NoError();
 
         case EGL_SYNC_STATUS_KHR:
-            return sync->getStatus(display, value);
+            return syncObj->getStatus(display, value);
 
         case EGL_SYNC_CONDITION_KHR:
-            *value = sync->getCondition();
+            *value = syncObj->getCondition();
             return NoError();
 
         default:

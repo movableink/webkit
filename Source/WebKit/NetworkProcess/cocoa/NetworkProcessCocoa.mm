@@ -26,6 +26,7 @@
 #import "config.h"
 #import "NetworkProcess.h"
 
+#import "ArgumentCodersCocoa.h"
 #import "CookieStorageUtilsCF.h"
 #import "Logging.h"
 #import "NetworkCache.h"
@@ -41,7 +42,6 @@
 #import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/SecurityOrigin.h>
 #import <WebCore/SecurityOriginData.h>
-#import <WebCore/SocketStreamHandleImpl.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/CallbackAggregator.h>
@@ -75,6 +75,7 @@ static void initializeNetworkSettings()
 void NetworkProcess::platformInitializeNetworkProcessCocoa(const NetworkProcessCreationParameters& parameters)
 {
     _CFNetworkSetATSContext(parameters.networkATSContext.get());
+    IPC::setStrictSecureDecodingForAllObjCEnabled(parameters.strictSecureDecodingForAllObjCEnabled);
 
     m_uiProcessBundleIdentifier = parameters.uiProcessBundleIdentifier;
     
@@ -216,14 +217,32 @@ const String& NetworkProcess::uiProcessBundleIdentifier() const
 }
 
 #if PLATFORM(IOS_FAMILY)
-
 void NetworkProcess::setBackupExclusionPeriodForTesting(PAL::SessionID sessionID, Seconds period, CompletionHandler<void()>&& completionHandler)
 {
     auto callbackAggregator = CallbackAggregator::create(WTFMove(completionHandler));
     if (auto* session = networkSession(sessionID))
         session->storageManager().setBackupExclusionPeriodForTesting(period, [callbackAggregator] { });
 }
+#endif // PLATFORM(IOS_FAMILY)
 
-#endif
+#if HAVE(NW_PROXY_CONFIG)
+void NetworkProcess::clearProxyConfigData(PAL::SessionID sessionID)
+{
+    auto* session = networkSession(sessionID);
+    if (!session)
+        return;
+
+    session->clearProxyConfigData();
+}
+
+void NetworkProcess::setProxyConfigData(PAL::SessionID sessionID, Vector<std::pair<Vector<uint8_t>, UUID>>&& proxyConfigurations)
+{
+    auto* session = networkSession(sessionID);
+    if (!session)
+        return;
+
+    session->setProxyConfigData(WTFMove(proxyConfigurations));
+}
+#endif // HAVE(NW_PROXY_CONFIG)
 
 } // namespace WebKit

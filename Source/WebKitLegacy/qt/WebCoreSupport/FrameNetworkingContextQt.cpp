@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-FrameNetworkingContextQt::FrameNetworkingContextQt(Frame* frame, QObject* originatingObject, bool mimeSniffingEnabled)
+FrameNetworkingContextQt::FrameNetworkingContextQt(LocalFrame* frame, QObject* originatingObject, bool mimeSniffingEnabled)
     : FrameNetworkingContext(frame)
     , m_originatingObject(originatingObject)
     , m_mimeSniffingEnabled(mimeSniffingEnabled)
@@ -43,7 +43,7 @@ void FrameNetworkingContextQt::setSession(std::unique_ptr<NetworkStorageSession>
     m_session = WTFMove(session);
 }
 
-Ref<FrameNetworkingContextQt> FrameNetworkingContextQt::create(Frame* frame, QObject* originatingObject, bool mimeSniffingEnabled)
+Ref<FrameNetworkingContextQt> FrameNetworkingContextQt::create(LocalFrame* frame, QObject* originatingObject, bool mimeSniffingEnabled)
 {
     Ref<FrameNetworkingContextQt> self = adoptRef(*new FrameNetworkingContextQt(frame, originatingObject, mimeSniffingEnabled));
     self->setSession(makeUnique<NetworkStorageSession>(PAL::SessionID::defaultSessionID()));

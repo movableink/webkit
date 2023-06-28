@@ -34,6 +34,7 @@
 #include "NotificationPresenterClientQt.h"
 #include "PluginInfoProviderQt.h"
 #include "ProgressTrackerClientQt.h"
+#include "LegacySocketProvider.h"
 #include "QWebFrameAdapter.h"
 #include "QWebPageStorageSessionProvider.h"
 #include "UndoStepQt.h"
@@ -64,6 +65,7 @@
 #include <WebCore/Chrome.h>
 #include <WebCore/CompositionHighlight.h>
 #include <WebCore/ContextMenu.h>
+#include <WebCore/ContextMenuClient.h>
 #include <WebCore/ContextMenuController.h>
 #include <WebCore/CookieJar.h>
 #include <WebCore/DocumentLoader.h>
@@ -89,14 +91,15 @@
 #include <WebCore/NetworkStorageSession.h>
 #include <WebCore/NetworkingContext.h>
 #include <WebCore/PageConfiguration.h>
+#include <WebCore/PageIdentifier.h>
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/PlatformMouseEvent.h>
 #include <WebCore/ProgressTracker.h>
 #include <WebCore/QWebPageClient.h>
+#include <WebCore/RemoteFrameClient.h>
 #include <WebCore/RenderTextControl.h>
 #include <WebCore/ScrollbarTheme.h>
 #include <WebCore/Settings.h>
-#include <WebCore/SocketProvider.h>
 #include <WebCore/TextIterator.h>
 #include <WebCore/UserAgentQt.h>
 #include <WebCore/UserContentController.h>
@@ -188,7 +191,7 @@ static inline QWebPageAdapter::VisibilityState webCoreVisibilityStateToWebPageVi
     }
 }
 
-static WebCore::FrameLoadRequest frameLoadRequest(const QUrl &url, WebCore::Frame& frame)
+static WebCore::FrameLoadRequest frameLoadRequest(const QUrl &url, WebCore::LocalFrame& frame)
 {
     WebCore::FrameLoadRequest frameLoadRequest(*frame.document(),
         frame.document()->securityOrigin(),
@@ -206,14 +209,15 @@ static WebCore::FrameLoadRequest frameLoadRequest(const QUrl &url, WebCore::Fram
     return frameLoadRequest;
 }
 
-static void openNewWindow(const QUrl& url, Frame& frame)
+static void openNewWindow(const QUrl& url, LocalFrame& frame)
 {
     if (Page* oldPage = frame.page()) {
         WindowFeatures features;
         NavigationAction action;
         FrameLoadRequest request = frameLoadRequest(url, frame);
         if (Page* newPage = oldPage->chrome().createWindow(frame, features, action)) {
-            newPage->mainFrame().loader().loadFrameRequest(WTFMove(request), /*event*/ nullptr, /*FormState*/ nullptr);
+            WebCore::LocalFrame* newFrame = dynamicDowncast<WebCore::LocalFrame>(newPage->mainFrame());
+            newFrame->loader().loadFrameRequest(WTFMove(request), /*event*/ nullptr, /*FormState*/ nullptr);
             newPage->chrome().show();
         }
     }
@@ -268,9 +272,10 @@ void QWebPageAdapter::initializeWebCorePage()
     auto sessionID = isPrivateBrowsingEnabled ? PAL::SessionID::legacyPrivateSessionID() : PAL::SessionID::defaultSessionID();
 
     PageConfiguration pageConfiguration {
+        WebCore::PageIdentifier::generate(),
         sessionID,
         makeUniqueRef<EditorClientQt>(this),
-        SocketProvider::create(),
+        LegacySocketProvider::create(),
         WebRTCProvider::create(),
         CacheStorageProvider::create(),
         userContentProvider(),
@@ -278,18 +283,21 @@ void QWebPageAdapter::initializeWebCorePage()
         CookieJar::create(storageProvider.copyRef()),
         makeUniqueRef<ProgressTrackerClientQt>(this),
         makeUniqueRef<FrameLoaderClientQt>(),
+        WebCore::FrameIdentifier::generate(),
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate(isPrivateBrowsingEnabled),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
         makeUniqueRef<WebCore::DummyModelPlayerProvider>(),
-        EmptyBadgeClient::create()
+        EmptyBadgeClient::create(),
+#if ENABLE(CONTEXT_MENUS)
+        makeUniqueRef<ContextMenuClientQt>(),
+#endif
+        makeUniqueRef<ChromeClientQt>(this)
     };
     pageConfiguration.applicationCacheStorage = ApplicationCacheStorage::create({ }, { }); // QTFIXME
-    pageConfiguration.chromeClient = new ChromeClientQt(this);
-    pageConfiguration.contextMenuClient = new ContextMenuClientQt();
-    pageConfiguration.dragClient = std::make_unique<DragClientQt>(pageConfiguration.chromeClient);
-    pageConfiguration.inspectorClient = new InspectorClientQt(this);
+    pageConfiguration.dragClient = makeUnique<DragClientQt>(pageConfiguration.chromeClient.ptr());
+    pageConfiguration.inspectorClient = makeUnique<InspectorClientQt>(this);
     pageConfiguration.databaseProvider = &WebDatabaseProvider::singleton();
     pageConfiguration.pluginInfoProvider = &PluginInfoProviderQt::singleton();
     pageConfiguration.storageNamespaceProvider = WebKitLegacy::WebStorageNamespaceProvider::create(
@@ -418,13 +426,13 @@ QNetworkAccessManager* QWebPageAdapter::networkAccessManager()
 
 bool QWebPageAdapter::hasSelection() const
 {
-    Frame& frame = page->focusController().focusedOrMainFrame();
+    LocalFrame& frame = page->focusController().focusedOrMainFrame();
     return !frame.selection().selection().isNone();
 }
 
 QString QWebPageAdapter::selectedText() const
 {
-    Frame& frame = page->focusController().focusedOrMainFrame();
+    LocalFrame& frame = page->focusController().focusedOrMainFrame();
     if (frame.selection().selection().isNone())
         return QString();
     return frame.editor().selectedText();
@@ -448,7 +456,7 @@ void QWebPageAdapter::setContentEditable(bool editable)
     page->setEditable(editable);
     page->setTabKeyCyclesThroughElements(!editable);
 
-    Frame* frame = mainFrameAdapter().frame;
+    LocalFrame* frame = mainFrameAdapter().frame;
     if (editable) {
         frame->editor().applyEditingStyleToBodyElement();
         // FIXME: mac port calls this if there is no selectedDOMRange
@@ -491,8 +499,11 @@ bool QWebPageAdapter::findText(const QString& subString, FindFlag options)
     }
 
     if (subString.isEmpty()) {
-        page->mainFrame().selection().clear();
-        AbstractFrame* frame = page->mainFrame().tree().firstChild();
+        auto* localFrame = dynamicDowncast<WebCore::LocalFrame>(page->mainFrame());
+        if (localFrame)
+            localFrame->selection().clear();
+
+        Frame* frame = page->mainFrame().tree().firstChild();
         while (frame) {
             auto* localFrame = dynamicDowncast<WebCore::LocalFrame>(frame);
             localFrame->selection().clear();
@@ -546,7 +557,7 @@ bool QWebPageAdapter::tryClosePage()
 
 void QWebPageAdapter::mouseMoveEvent(QMouseEvent* ev)
 {
-    WebCore::Frame* frame = mainFrameAdapter().frame;
+    WebCore::LocalFrame* frame = mainFrameAdapter().frame;
     if (!frame->view())
         return;
     if (ev->buttons() == Qt::NoButton)
@@ -558,12 +569,12 @@ void QWebPageAdapter::mouseMoveEvent(QMouseEvent* ev)
 
 void QWebPageAdapter::mousePressEvent(QMouseEvent* ev)
 {
-    WebCore::Frame* frame = mainFrameAdapter().frame;
+    WebCore::LocalFrame* frame = mainFrameAdapter().frame;
     if (!frame->view())
         return;
 
     RefPtr<WebCore::Node> oldNode;
-    Frame* focusedFrame = page->focusController().focusedFrame();
+    LocalFrame* focusedFrame = page->focusController().focusedFrame();
     if (Document* focusedDocument = focusedFrame ? focusedFrame->document() : 0)
         oldNode = focusedDocument->focusedElement();
 
@@ -591,7 +602,7 @@ void QWebPageAdapter::mousePressEvent(QMouseEvent* ev)
 
 void QWebPageAdapter::mouseDoubleClickEvent(QMouseEvent *ev)
 {
-    WebCore::Frame* frame = mainFrameAdapter().frame;
+    WebCore::LocalFrame* frame = mainFrameAdapter().frame;
     if (!frame->view())
         return;
 
@@ -608,7 +619,7 @@ void QWebPageAdapter::mouseDoubleClickEvent(QMouseEvent *ev)
 
 void QWebPageAdapter::mouseTripleClickEvent(QMouseEvent *ev)
 {
-    WebCore::Frame* frame = mainFrameAdapter().frame;
+    WebCore::LocalFrame* frame = mainFrameAdapter().frame;
     if (!frame->view())
         return;
 
@@ -622,7 +633,7 @@ void QWebPageAdapter::mouseTripleClickEvent(QMouseEvent *ev)
 
 void QWebPageAdapter::mouseReleaseEvent(QMouseEvent *ev)
 {
-    WebCore::Frame* frame = mainFrameAdapter().frame;
+    WebCore::LocalFrame* frame = mainFrameAdapter().frame;
     if (!frame->view())
         return;
 
@@ -641,7 +652,7 @@ void QWebPageAdapter::mouseReleaseEvent(QMouseEvent *ev)
 
 void QWebPageAdapter::handleSoftwareInputPanel(Qt::MouseButton button, const QPoint& pos)
 {
-    Frame* frame = page->focusController().focusedFrame();
+    LocalFrame* frame = page->focusController().focusedFrame();
     if (!frame)
         return;
 
@@ -664,12 +675,12 @@ void QWebPageAdapter::handleSoftwareInputPanel(Qt::MouseButton button, const QPo
 #ifndef QT_NO_WHEELEVENT
 void QWebPageAdapter::wheelEvent(QWheelEvent *ev, int wheelScrollLines)
 {
-    WebCore::Frame* frame = mainFrameAdapter().frame;
+    WebCore::LocalFrame* frame = mainFrameAdapter().frame;
     if (!frame->view())
         return;
 
     PlatformWheelEvent pev = convertWheelEvent(ev, wheelScrollLines);
-    bool accepted = frame->eventHandler().handleWheelEvent(pev, { WheelEventProcessingSteps::MainThreadForScrolling, WheelEventProcessingSteps::MainThreadForBlockingDOMEventDispatch });
+    bool accepted = frame->eventHandler().handleWheelEvent(pev, { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::BlockingDOMEventDispatch });
     ev->setAccepted(accepted);
 }
 #endif // QT_NO_WHEELEVENT
@@ -704,7 +715,7 @@ bool QWebPageAdapter::performDrag(const QMimeData *data, const QPoint &pos, Qt::
 
 void QWebPageAdapter::inputMethodEvent(QInputMethodEvent *ev)
 {
-    WebCore::Frame& frame = page->focusController().focusedOrMainFrame();
+    WebCore::LocalFrame& frame = page->focusController().focusedOrMainFrame();
     WebCore::Editor& editor = frame.editor();
 
     if (!editor.canEdit()) {
@@ -755,12 +766,12 @@ void QWebPageAdapter::inputMethodEvent(QInputMethodEvent *ev)
             }
 
             if (!ev->preeditString().isEmpty())
-                editor.setComposition(ev->preeditString(), underlines, { }, qMin(a.start, (a.start + a.length)), qMax(a.start, (a.start + a.length)));
+                editor.setComposition(ev->preeditString(), underlines, { }, { }, qMin(a.start, (a.start + a.length)), qMax(a.start, (a.start + a.length)));
             else {
                 // If we are in the middle of a composition, an empty pre-edit string and a selection of zero
                 // cancels the current composition
                 if (editor.hasComposition() && !(a.start + a.length))
-                    editor.setComposition(QString(), underlines, { }, 0, 0);
+                    editor.setComposition(QString(), underlines, { }, { }, 0, 0);
             }
             break;
         }
@@ -782,7 +793,7 @@ void QWebPageAdapter::inputMethodEvent(QInputMethodEvent *ev)
         else
             editor.insertText(ev->commitString(), 0);
     } else if (!hasSelection && !ev->preeditString().isEmpty())
-        editor.setComposition(ev->preeditString(), underlines, { }, 0, 0);
+        editor.setComposition(ev->preeditString(), underlines, { }, { }, 0, 0);
     else if (ev->preeditString().isEmpty() && editor.hasComposition())
         editor.confirmComposition(String());
 
@@ -791,7 +802,7 @@ void QWebPageAdapter::inputMethodEvent(QInputMethodEvent *ev)
 
 QVariant QWebPageAdapter::inputMethodQuery(Qt::InputMethodQuery property) const
 {
-    Frame* frame = page->focusController().focusedFrame();
+    LocalFrame* frame = page->focusController().focusedFrame();
     if (!frame)
         return QVariant();
 
@@ -812,7 +823,7 @@ QVariant QWebPageAdapter::inputMethodQuery(Qt::InputMethodQuery property) const
 
     switch (property) {
     case Qt::ImMicroFocus: {
-        WebCore::FrameView* view = frame->view();
+        WebCore::LocalFrameView* view = frame->view();
         if (view && view->needsLayout()) {
             // We can't access absoluteCaretBounds() while the view needs to layout.
             return QVariant();
@@ -963,7 +974,7 @@ QList<MenuItem> descriptionForPlatformMenu(const Vector<ContextMenuItem>& items,
 QWebHitTestResultPrivate* QWebPageAdapter::updatePositionDependentMenuActions(const QPoint& pos, QBitArray* visitedWebActions)
 {
     ASSERT(visitedWebActions);
-    WebCore::Frame& focusedFrame = page->focusController().focusedOrMainFrame();
+    WebCore::LocalFrame& focusedFrame = page->focusController().focusedOrMainFrame();
     constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::IgnoreClipping, HitTestRequest::Type::DisallowUserAgentShadowContent };
     HitTestResult result = focusedFrame.eventHandler().hitTestResultAtPoint(focusedFrame.view()->windowToContents(pos), hitType);
     page->contextMenuController().setHitTestResult(result);
@@ -1089,7 +1100,7 @@ static WebCore::HTMLMediaElement* mediaElement(WebCore::Node* innerNonSharedNode
 
 void QWebPageAdapter::triggerAction(QWebPageAdapter::MenuAction action, QWebHitTestResultPrivate* hitTestResult, const char* commandName, bool endToEndReload)
 {
-    Frame& frame = page->focusController().focusedOrMainFrame();
+    LocalFrame& frame = page->focusController().focusedOrMainFrame();
     Editor& editor = frame.editor();
 
     // Convenience
@@ -1099,7 +1110,7 @@ void QWebPageAdapter::triggerAction(QWebPageAdapter::MenuAction action, QWebHitT
 
     switch (action) {
     case OpenLink:
-        if (Frame* targetFrame = hitTestResult->webCoreFrame) {
+        if (auto* targetFrame = dynamicDowncast<LocalFrame>(hitTestResult->webCoreFrame)) {
             targetFrame->loader().loadFrameRequest(frameLoadRequest(hitTestResult->linkUrl, *targetFrame), /*event*/ 0, /*FormState*/ nullptr);
             break;
         }
@@ -1343,14 +1354,14 @@ bool QWebPageAdapter::treatSchemeAsLocal(const QString& scheme)
 
 QObject* QWebPageAdapter::currentFrame() const
 {
-    Frame& frame = page->focusController().focusedOrMainFrame();
+    LocalFrame& frame = page->focusController().focusedOrMainFrame();
     return frame.loader().networkingContext()->originatingObject();
 }
 
 bool QWebPageAdapter::hasFocusedNode() const
 {
     bool hasFocus = false;
-    Frame* frame = page->focusController().focusedFrame();
+    LocalFrame* frame = page->focusController().focusedFrame();
     if (frame) {
         Document* document = frame->document();
         hasFocus = document && document->focusedElement();
@@ -1414,13 +1425,13 @@ void QWebPageAdapter::setFullScreenElement(const QWebElement& e)
 
 bool QWebPageAdapter::handleKeyEvent(QKeyEvent *ev)
 {
-    Frame& frame = page->focusController().focusedOrMainFrame();
+    LocalFrame& frame = page->focusController().focusedOrMainFrame();
     return frame.eventHandler().keyEvent(PlatformKeyboardEvent(ev, m_useNativeVirtualKeyAsDOMKey));
 }
 
 bool QWebPageAdapter::handleScrolling(QKeyEvent *ev)
 {
-    Frame& frame = page->focusController().focusedOrMainFrame();
+    LocalFrame& frame = page->focusController().focusedOrMainFrame();
     WebCore::ScrollDirection direction;
     WebCore::ScrollGranularity granularity;
 
@@ -1487,7 +1498,7 @@ void QWebPageAdapter::focusOutEvent(QFocusEvent *)
 
 bool QWebPageAdapter::handleShortcutOverrideEvent(QKeyEvent* event)
 {
-    WebCore::Frame& frame = page->focusController().focusedOrMainFrame();
+    WebCore::LocalFrame& frame = page->focusController().focusedOrMainFrame();
     WebCore::Editor& editor = frame.editor();
     if (!editor.canEdit())
         return false;
@@ -1552,7 +1563,7 @@ bool QWebPageAdapter::swallowContextMenuEvent(QContextMenuEvent *event, QWebFram
     page->contextMenuController().clearContextMenu();
 
     if (webFrame) {
-        Frame* frame = webFrame->frame;
+        LocalFrame* frame = webFrame->frame;
         if (Scrollbar* scrollBar = frame->view()->scrollbarAtPoint(convertMouseEvent(event, 1).position())) {
             bool horizontal = (scrollBar->orientation() == WebCore::ScrollbarOrientation::Horizontal);
             QWebPageAdapter::ScrollDirection direction = QWebPageAdapter::InvalidScrollDirection;
@@ -1575,7 +1586,7 @@ bool QWebPageAdapter::swallowContextMenuEvent(QContextMenuEvent *event, QWebFram
         }
     }
 
-    WebCore::Frame& focusedFrame = page->focusController().focusedOrMainFrame();
+    WebCore::LocalFrame& focusedFrame = page->focusController().focusedOrMainFrame();
     focusedFrame.eventHandler().sendContextMenuEvent(convertMouseEvent(event, 1));
     ContextMenu* menu = page->contextMenuController().contextMenu();
     // If the website defines its own handler then sendContextMenuEvent takes care of

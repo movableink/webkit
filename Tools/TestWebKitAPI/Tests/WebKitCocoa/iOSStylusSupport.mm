@@ -25,7 +25,7 @@
 
 #import "config.h"
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
 
 #import "PlatformUtilities.h"
 #import "Test.h"
@@ -48,7 +48,7 @@ static WKStylusDeviceObserver *getStylusDeviceObserver()
     return [NSClassFromString(@"WKStylusDeviceObserver") sharedInstance];
 }
 
-enum class HasStylusDevice { Yes, No };
+enum class HasStylusDevice : bool { No, Yes };
 static RetainPtr<TestWKWebView> createWebView(HasStylusDevice hasStylusDevice)
 {
     WKStylusDeviceObserver *stylusDeviceObserver = getStylusDeviceObserver();
@@ -174,4 +174,4 @@ TEST(iOSStylusSupport, StylusDisconnectedTimeoutCancel)
 
 #endif // HAVE(STYLUS_DEVICE_OBSERVATION)
 
-#endif // PLATFORM(IOS)
+#endif // PLATFORM(IOS) || PLATFORM(VISION)

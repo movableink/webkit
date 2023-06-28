@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #pragma once
@@ -34,12 +34,20 @@ namespace WebCore {
 
 class WEBCORE_EXPORT GraphicsContextCG : public GraphicsContext {
 public:
-    GraphicsContextCG(CGContextRef);
+    enum CGContextSource {
+        Unknown,
+        CGContextFromCALayer
+    };
+    GraphicsContextCG(CGContextRef, CGContextSource = CGContextSource::Unknown, std::optional<RenderingMode> knownRenderingMode = std::nullopt);
 
     ~GraphicsContextCG();
 
     bool hasPlatformContext() const final;
+
+    // Returns the platform context for any purpose, including draws.
     CGContextRef platformContext() const final;
+
+    const DestinationColorSpace& colorSpace() const final;
 
     void save() final;
     void restore() final;
@@ -70,18 +78,19 @@ public:
     void fillEllipse(const FloatRect& ellipse) final;
     void strokeEllipse(const FloatRect& ellipse) final;
 
-    void setIsCALayerContext(bool) final;
     bool isCALayerContext() const final;
 
-    void setIsAcceleratedContext(bool) final;
     RenderingMode renderingMode() const final;
 
+    void resetClip() final;
     void clip(const FloatRect&) final;
     void clipOut(const FloatRect&) final;
 
     void clipOut(const Path&) final;
 
     void clipPath(const Path&, WindRule = WindRule::EvenOdd) final;
+
+    void clipToImageBuffer(ImageBuffer&, const FloatRect&) final;
 
     IntRect clipBounds() const final;
 
@@ -121,22 +130,33 @@ public:
 
     virtual bool canUseShadowBlur() const;
 
-#if OS(WINDOWS)
-    GraphicsContextPlatformPrivate* deprecatedPrivateContext() const final;
-#endif
-
     virtual FloatRect roundToDevicePixels(const FloatRect&, RoundingMode = RoundAllSides) const;
 
+    // Returns the platform context for draws.
+    CGContextRef contextForDraw();
+
+    // Returns false if there has not been any potential draws since last call.
+    // Returns true if there has been potential draws since last call.
+    bool consumeHasDrawn();
 protected:
     virtual void setCGShadow(RenderingMode, const FloatSize& offset, float blur, const Color&, bool shadowsIgnoreTransforms);
+
 
 private:
     void convertToDestinationColorSpaceIfNeeded(RetainPtr<CGImageRef>&);
     void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
 
     void clearCGShadow();
+    // Returns the platform context for purposes of context state change, not draws.
+    CGContextRef contextForState() const;
 
-    GraphicsContextPlatformPrivate* m_data { nullptr };
+    const RetainPtr<CGContextRef> m_cgContext;
+    const RenderingMode m_renderingMode;
+    const bool m_isLayerCGContext;
+    mutable bool m_userToDeviceTransformKnownToBeIdentity { false };
+    // Flag for pending draws. Start with true because we do not know what commands have been scheduled to the context.
+    bool m_hasDrawn { true };
+    mutable std::optional<DestinationColorSpace> m_colorSpace;
 };
 
 CGAffineTransform getUserToBaseCTM(CGContextRef);

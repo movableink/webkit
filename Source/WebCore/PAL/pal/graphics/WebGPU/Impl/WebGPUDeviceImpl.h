@@ -28,7 +28,7 @@
 #if HAVE(WEBGPU_IMPLEMENTATION)
 
 #include "WebGPUDevice.h"
-#include "WebGPUDeviceWrapper.h"
+#include "WebGPUPtr.h"
 #include "WebGPUQueueImpl.h"
 #include <WebGPU/WebGPU.h>
 #include <wtf/Deque.h>
@@ -36,13 +36,14 @@
 namespace PAL::WebGPU {
 
 class ConvertToBackingContext;
+enum class DeviceLostReason : uint8_t;
 
 class DeviceImpl final : public Device {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<DeviceImpl> create(WGPUDevice device, Ref<SupportedFeatures>&& features, Ref<SupportedLimits>&& limits, ConvertToBackingContext& convertToBackingContext)
+    static Ref<DeviceImpl> create(WebGPUPtr<WGPUDevice>&& device, Ref<SupportedFeatures>&& features, Ref<SupportedLimits>&& limits, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new DeviceImpl(device, WTFMove(features), WTFMove(limits), convertToBackingContext));
+        return adoptRef(*new DeviceImpl(WTFMove(device), WTFMove(features), WTFMove(limits), convertToBackingContext));
     }
 
     virtual ~DeviceImpl();
@@ -50,14 +51,14 @@ public:
 private:
     friend class DowncastConvertToBackingContext;
 
-    DeviceImpl(WGPUDevice, Ref<SupportedFeatures>&&, Ref<SupportedLimits>&&, ConvertToBackingContext&);
+    DeviceImpl(WebGPUPtr<WGPUDevice>&&, Ref<SupportedFeatures>&&, Ref<SupportedLimits>&&, ConvertToBackingContext&);
 
     DeviceImpl(const DeviceImpl&) = delete;
     DeviceImpl(DeviceImpl&&) = delete;
     DeviceImpl& operator=(const DeviceImpl&) = delete;
     DeviceImpl& operator=(DeviceImpl&&) = delete;
 
-    WGPUDevice backing() const { return m_backing; }
+    WGPUDevice backing() const { return m_backing.get(); }
 
     Ref<Queue> queue() final;
 
@@ -75,8 +76,8 @@ private:
     Ref<ShaderModule> createShaderModule(const ShaderModuleDescriptor&) final;
     Ref<ComputePipeline> createComputePipeline(const ComputePipelineDescriptor&) final;
     Ref<RenderPipeline> createRenderPipeline(const RenderPipelineDescriptor&) final;
-    void createComputePipelineAsync(const ComputePipelineDescriptor&, CompletionHandler<void(Ref<ComputePipeline>&&)>&&) final;
-    void createRenderPipelineAsync(const RenderPipelineDescriptor&, CompletionHandler<void(Ref<RenderPipeline>&&)>&&) final;
+    void createComputePipelineAsync(const ComputePipelineDescriptor&, CompletionHandler<void(RefPtr<ComputePipeline>&&)>&&) final;
+    void createRenderPipelineAsync(const RenderPipelineDescriptor&, CompletionHandler<void(RefPtr<RenderPipeline>&&)>&&) final;
 
     Ref<CommandEncoder> createCommandEncoder(const std::optional<CommandEncoderDescriptor>&) final;
     Ref<RenderBundleEncoder> createRenderBundleEncoder(const RenderBundleEncoderDescriptor&) final;
@@ -88,9 +89,8 @@ private:
 
     void setLabelInternal(const String&) final;
 
-    WGPUDevice m_backing { nullptr };
+    WebGPUPtr<WGPUDevice> m_backing;
     Ref<ConvertToBackingContext> m_convertToBackingContext;
-    Ref<DeviceWrapper> m_deviceWrapper;
     Ref<QueueImpl> m_queue;
 };
 

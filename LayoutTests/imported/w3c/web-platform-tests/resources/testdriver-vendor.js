@@ -299,14 +299,16 @@ window.test_driver_internal.action_sequence = async function(sources)
                 const key = convertSeleniumKeyCode(action.value);
                 if (key.modifier)
                     modifiersInEffect.push(key.modifier);
-                events.push({type: 'rawKeyDown', arguments: [key.key, modifiersInEffect.slice(0)]});
+                else
+                    events.push({type: 'rawKeyDown', arguments: [key.key, modifiersInEffect.slice(0)]});
                 break;
             }
             case 'keyUp': {
                 const key = convertSeleniumKeyCode(action.value);
                 if (key.modifier)
                     modifiersInEffect = modifiersInEffect.filter((modifier) => modifier != key.modifier);
-                events.push({type: 'rawKeyUp', arguments: [key.key, modifiersInEffect.slice(0)]});
+                else
+                    events.push({type: 'rawKeyUp', arguments: [key.key, modifiersInEffect.slice(0)]});
                 break;
             }
             case 'pause':
@@ -381,6 +383,14 @@ window.test_driver_internal.action_sequence = async function(sources)
 window.test_driver_internal.set_permission = async function(permission_params)
 {
     switch (permission_params.descriptor.name) {
+    case "camera":
+        if (window.testRunner && testRunner.setCameraPermission)
+            testRunner.setCameraPermission(permission_params.state === "granted");
+        break;
+    case "background-fetch":
+        if (window.testRunner && testRunner.setBackgroundFetchPermission)
+            testRunner.setBackgroundFetchPermission(permission_params.state === "granted");
+        break;
     case "geolocation":
         const granted = permission_params.state === "granted";
         testRunner.setGeolocationPermission(granted);
@@ -388,6 +398,10 @@ window.test_driver_internal.set_permission = async function(permission_params)
             await pause(10);
             window.testRunner.setMockGeolocationPosition(51.478, -0.166, 100);
         }
+        break;
+    case "microphone":
+        if (window.testRunner && testRunner.setMicrophonePermission)
+            testRunner.setMicrophonePermission(permission_params.state === "granted");
         break;
     case "screen-wake-lock":
         testRunner.setScreenWakeLockPermission(permission_params.state == "granted");
@@ -461,7 +475,7 @@ window.test_driver_internal.minimize_window = async function (context=null)
  */
 window.test_driver_internal.set_window_rect = async function (rect, context=null)
 {
-    if (typeof rect !== "object" || typeof rect.width !== "number" || typeof rect.height !== "number")
+    if (!rect || typeof rect !== "object" || typeof rect.width !== "number" || typeof rect.height !== "number")
         throw new Error("Invalid rect");
 
     context = context ?? window;

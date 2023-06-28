@@ -2863,6 +2863,26 @@ TEST_P(ClearTest, DISABLED_ClearReachesWindow)
     angle::Sleep(2000);
 }
 
+// Tests that masked clear after a no-op framebuffer binding change with an open render pass works.
+TEST_P(ClearTest, DrawThenChangeFBOBindingAndBackThenMaskedClear)
+{
+    ANGLE_GL_PROGRAM(blueProgram, essl1_shaders::vs::Simple(), essl1_shaders::fs::Blue());
+
+    // Draw blue.
+    drawQuad(blueProgram, essl1_shaders::PositionAttrib(), 0.5f);
+
+    // Change framebuffer and back
+    glBindFramebuffer(GL_FRAMEBUFFER, mFBOs[0]);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Masked clear
+    glColorMask(1, 0, 0, 1);
+    glClearColor(1.0f, 0.5f, 0.5f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::magenta);
+}
+
 // Test that clearing slices of a 3D texture and reading them back works.
 TEST_P(ClearTestES3, ClearAndReadPixels3DTexture)
 {
@@ -3337,7 +3357,7 @@ void main()
 TEST_P(ClearTestES3, RepeatedDepthClearWithBlitAfterClearAndDrawInBetween)
 {
     glClearDepthf(0.25f);
-    glClear(GL_DEPTH_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     // Make sure clear is flushed.
     GLRenderbuffer depth;
@@ -3387,7 +3407,7 @@ TEST_P(ClearTestES3, RepeatedDepthClearWithBlitAfterClearAndDrawInBetween)
 TEST_P(ClearTestES3, RepeatedStencilClearWithBlitAfterClearAndDrawInBetween)
 {
     glClearStencil(0xE4);
-    glClear(GL_STENCIL_BUFFER_BIT);
+    glClear(GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Make sure clear is flushed.
     GLRenderbuffer stencil;
@@ -3440,16 +3460,19 @@ TEST_P(ClearTestES3, RepeatedStencilClearWithBlitAfterClearAndDrawInBetween)
 
 ANGLE_INSTANTIATE_TEST_ES2_AND_ES3_AND(
     ClearTest,
+    ES3_VULKAN().enable(Feature::ForceFallbackFormat),
     ES3_VULKAN().enable(Feature::PreferDrawClearOverVkCmdClearAttachments));
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(ClearTestES3);
 ANGLE_INSTANTIATE_TEST_ES3_AND(
     ClearTestES3,
+    ES3_VULKAN().enable(Feature::ForceFallbackFormat),
     ES3_VULKAN().enable(Feature::PreferDrawClearOverVkCmdClearAttachments));
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(ClearTestES31);
 ANGLE_INSTANTIATE_TEST_ES31_AND(
     ClearTestES31,
+    ES31_VULKAN().enable(Feature::ForceFallbackFormat),
     ES31_VULKAN().enable(Feature::PreferDrawClearOverVkCmdClearAttachments));
 
 ANGLE_INSTANTIATE_TEST_COMBINE_4(MaskedScissoredClearTest,

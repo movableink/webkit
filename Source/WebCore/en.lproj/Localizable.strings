@@ -292,6 +292,9 @@
 /* Lockdown Mode alert message */
 "Certain experiences and features may not function as expected. You can turn off Lockdown Mode for this app in Settings." = "Certain experiences and features may not function as expected. You can turn off Lockdown Mode for this app in Settings.";
 
+/* Lockdown Mode alert message (MacCatalyst) */
+"Certain experiences and features may not function as expected. You can manage Lockdown Mode in Settings." = "Certain experiences and features may not function as expected. You can manage Lockdown Mode in Settings.";
+
 /* Undo action name */
 "Change Attributes (Undo action name)" = "Change Attributes";
 
@@ -342,6 +345,9 @@
 
 /* WebKitErrorCannotShowMIMEType description */
 "Content with specified MIME type can’t be shown" = "Content with specified MIME type can’t be shown";
+
+/* WebKitErrorHTTPSUpgradeRedirectLoop description */
+"HTTPS Upgrade redirect loop detected" = "HTTPS Upgrade redirect loop detected";
 
 /* Continue */
 "Continue" = "Continue";
@@ -1512,6 +1518,15 @@
 
 /* accessibility role description for a date field. */
 "date field" = "date field";
+
+/* accessibility label for a date field month input. */
+"month" = "month";
+
+/* accessibility label for a date field day input. */
+"day" = "day";
+
+/* accessibility label for a date field year input. */
+"year" = "year";
 
 /* role description of ARIA definition role */
 "definition" = "definition";

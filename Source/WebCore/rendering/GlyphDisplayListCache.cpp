@@ -59,10 +59,13 @@ static bool canShareDisplayListWithItem(DisplayList::ItemType itemType)
     case ItemType::SetMiterLimit:
     case ItemType::ClearShadow:
     case ItemType::Clip:
+    case ItemType::ClipRoundedRect:
     case ItemType::ClipOut:
+    case ItemType::ClipOutRoundedRect:
     case ItemType::ClipToImageBuffer:
     case ItemType::ClipOutToPath:
     case ItemType::ClipPath:
+    case ItemType::ResetClip:
     case ItemType::DrawControlPart:
     case ItemType::DrawFilteredImageBuffer:
     case ItemType::DrawSystemImage:

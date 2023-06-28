@@ -28,6 +28,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "VideoFrame.h"
 #include "VideoFrameMetadata.h"
 
 namespace WebCore {
@@ -43,6 +44,14 @@ RefPtr<VideoFrame> MediaPlayerPrivateInterface::videoFrameForCurrentTime()
 std::optional<VideoFrameMetadata> MediaPlayerPrivateInterface::videoFrameMetadata()
 {
     return { };
+}
+
+const PlatformTimeRanges& MediaPlayerPrivateInterface::seekable() const
+{
+    if (maxMediaTimeSeekable() == MediaTime::zeroTime())
+        return PlatformTimeRanges::emptyRanges();
+    m_seekable = { minMediaTimeSeekable(), maxMediaTimeSeekable() };
+    return m_seekable;
 }
 
 }

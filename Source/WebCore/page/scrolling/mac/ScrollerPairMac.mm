@@ -28,10 +28,12 @@
 
 #if PLATFORM(MAC)
 
+#import "Logging.h"
+#import "ScrollTypesMac.h"
+#import "ScrollingTreeFrameScrollingNode.h"
 #import <WebCore/FloatPoint.h>
 #import <WebCore/IntRect.h>
 #import <WebCore/NSScrollerImpDetails.h>
-#import <WebCore/PlatformMouseEvent.h>
 #import <WebCore/PlatformWheelEvent.h>
 #import <WebCore/ScrollTypes.h>
 #import <WebCore/ScrollableArea.h>
@@ -73,22 +75,21 @@
 
 - (BOOL)inLiveResizeForScrollerImpPair:(NSScrollerImpPair *)scrollerImpPair
 {
-    // FIMXE: Not implemented.
-    return NO;
+    return _scrollerPair->inLiveResize();
 }
 
 - (NSPoint)mouseLocationInContentAreaForScrollerImpPair:(NSScrollerImpPair *)scrollerImpPair
 {
     UNUSED_PARAM(scrollerImpPair);
-    if (!_scrollerPair)
-        return NSZeroPoint;
-
-    return _scrollerPair->lastKnownMousePosition();
+    // This location is only used when calling mouseLocationInScrollerForScrollerImp,
+    // where we will use the converted mouse position from the Web Process
+    return NSZeroPoint;
 }
 
 - (NSPoint)scrollerImpPair:(NSScrollerImpPair *)scrollerImpPair convertContentPoint:(NSPoint)pointInContentArea toScrollerImp:(NSScrollerImp *)scrollerImp
 {
     UNUSED_PARAM(scrollerImpPair);
+    UNUSED_PARAM(pointInContentArea);
 
     if (!_scrollerPair || !scrollerImp)
         return NSZeroPoint;
@@ -101,7 +102,7 @@
 
     ASSERT(scrollerImp == scroller->scrollerImp());
 
-    return scroller->convertFromContent(WebCore::IntPoint(pointInContentArea));
+    return scroller->lastKnownMousePositionInScrollbar();
 }
 
 - (void)scrollerImpPair:(NSScrollerImpPair *)scrollerImpPair setContentAreaNeedsDisplayInRect:(NSRect)rect
@@ -112,17 +113,19 @@
 
 - (void)scrollerImpPair:(NSScrollerImpPair *)scrollerImpPair updateScrollerStyleForNewRecommendedScrollerStyle:(NSScrollerStyle)newRecommendedScrollerStyle
 {
-    [scrollerImpPair setScrollerStyle:newRecommendedScrollerStyle];
+    UNUSED_PARAM(scrollerImpPair);
+
+    _scrollerPair->setScrollbarStyle(WebCore::scrollbarStyle(newRecommendedScrollerStyle));
 }
 
 @end
 
 namespace WebCore {
 
-ScrollerPairMac::ScrollerPairMac(WebCore::ScrollingTreeScrollingNode& node)
+ScrollerPairMac::ScrollerPairMac(ScrollingTreeScrollingNode& node)
     : m_scrollingNode(node)
-    , m_verticalScroller(*this, ScrollerMac::Orientation::Vertical)
-    , m_horizontalScroller(*this, ScrollerMac::Orientation::Horizontal)
+    , m_verticalScroller(*this, ScrollbarOrientation::Vertical)
+    , m_horizontalScroller(*this, ScrollbarOrientation::Horizontal)
 {
 }
 
@@ -131,8 +134,10 @@ void ScrollerPairMac::init()
     m_scrollerImpPairDelegate = adoptNS([[WebScrollerImpPairDelegateMac alloc] initWithScrollerPair:this]);
 
     m_scrollerImpPair = adoptNS([[NSScrollerImpPair alloc] init]);
-    [m_scrollerImpPair.get() setDelegate:m_scrollerImpPairDelegate.get()];
-    [m_scrollerImpPair setScrollerStyle:WebCore::ScrollerStyle::recommendedScrollerStyle()];
+    [m_scrollerImpPair setDelegate:m_scrollerImpPairDelegate.get()];
+    auto style = ScrollerStyle::recommendedScrollerStyle();
+    m_scrollbarStyle = WebCore::scrollbarStyle(style);
+    [m_scrollerImpPair setScrollerStyle:style];
 
     m_verticalScroller.attach();
     m_horizontalScroller.attach();
@@ -142,57 +147,110 @@ ScrollerPairMac::~ScrollerPairMac()
 {
     [m_scrollerImpPairDelegate invalidate];
     [m_scrollerImpPair setDelegate:nil];
+    
+    m_verticalScroller.detach();
+    m_horizontalScroller.detach();
+
+    ensureOnMainThread([scrollerImpPair = std::exchange(m_scrollerImpPair, nil), verticalScrollerImp = verticalScroller().takeScrollerImp(), horizontalScrollerImp = horizontalScroller().takeScrollerImp()] {
+    });
 }
 
-bool ScrollerPairMac::handleWheelEvent(const WebCore::PlatformWheelEvent& event)
+void ScrollerPairMac::handleWheelEventPhase(PlatformWheelEventPhase phase)
 {
-    switch (event.phase()) {
-    case WebCore::PlatformWheelEventPhase::Began:
-        [m_scrollerImpPair beginScrollGesture];
-        break;
-    case WebCore::PlatformWheelEventPhase::Ended:
-    case WebCore::PlatformWheelEventPhase::Cancelled:
-        [m_scrollerImpPair endScrollGesture];
-        break;
-    case WebCore::PlatformWheelEventPhase::MayBegin:
-        [m_scrollerImpPair beginScrollGesture];
-        [m_scrollerImpPair contentAreaScrolled];
-        break;
-    default:
-        break;
-    }
-    // FIXME: this needs to return whether the event was handled.
-    return true;
+    ensureOnMainThreadWithProtectedThis([phase, this] {
+        switch (phase) {
+        case PlatformWheelEventPhase::Began:
+            [m_scrollerImpPair beginScrollGesture];
+            break;
+        case PlatformWheelEventPhase::Ended:
+        case PlatformWheelEventPhase::Cancelled:
+            [m_scrollerImpPair endScrollGesture];
+            break;
+        case PlatformWheelEventPhase::MayBegin:
+            [m_scrollerImpPair beginScrollGesture];
+            [m_scrollerImpPair contentAreaScrolled];
+            break;
+        default:
+            break;
+        }
+    });
 }
 
-bool ScrollerPairMac::handleMouseEvent(const WebCore::PlatformMouseEvent& event)
+void ScrollerPairMac::viewWillStartLiveResize()
 {
-    if (event.type() != WebCore::PlatformEvent::Type::MouseMoved)
-        return false;
+    if (m_inLiveResize)
+        return;
+    
+    m_inLiveResize = true;
 
-    m_lastKnownMousePosition = event.position();
-    [m_scrollerImpPair mouseMovedInContentArea];
-    // FIXME: this needs to return whether the event was handled.
-    return true;
+    ensureOnMainThreadWithProtectedThis([this] {
+        if ([m_scrollerImpPair overlayScrollerStateIsLocked])
+            return;
+
+        [m_scrollerImpPair startLiveResize];
+    });
+}
+
+void ScrollerPairMac::viewWillEndLiveResize()
+{
+    if (!m_inLiveResize)
+        return;
+    
+    m_inLiveResize = false;
+
+    ensureOnMainThreadWithProtectedThis([this] {
+        if ([m_scrollerImpPair overlayScrollerStateIsLocked])
+            return;
+
+        [m_scrollerImpPair endLiveResize];
+    });
+}
+
+void ScrollerPairMac::contentsSizeChanged()
+{
+    ensureOnMainThreadWithProtectedThis([this] {
+        if ([m_scrollerImpPair overlayScrollerStateIsLocked])
+            return;
+
+        [m_scrollerImpPair contentAreaDidResize];
+    });
+}
+
+void ScrollerPairMac::setUsePresentationValues(bool inMomentumPhase)
+{
+    m_usingPresentationValues = inMomentumPhase;
+    [scrollerImpHorizontal() setUsePresentationValue:m_usingPresentationValues];
+    [scrollerImpVertical() setUsePresentationValue:m_usingPresentationValues];
+}
+
+void ScrollerPairMac::setHorizontalScrollbarPresentationValue(float scrollbValue)
+{
+    [scrollerImpHorizontal() setPresentationValue:scrollbValue];
+}
+
+void ScrollerPairMac::setVerticalScrollbarPresentationValue(float scrollbValue)
+{
+    [scrollerImpVertical() setPresentationValue:scrollbValue];
 }
 
 void ScrollerPairMac::updateValues()
 {
-    auto position = m_scrollingNode.currentScrollPosition();
+    auto offset = m_scrollingNode.currentScrollOffset();
 
-    if (position != m_lastScrollPosition) {
-        if (m_lastScrollPosition) {
-            auto delta = position - *m_lastScrollPosition;
-            [m_scrollerImpPair contentAreaScrolledInDirection:NSMakePoint(delta.width(), delta.height())];
+    if (offset != m_lastScrollOffset) {
+        if (m_lastScrollOffset) {
+            ensureOnMainThreadWithProtectedThis([delta = offset - *m_lastScrollOffset, this] {
+                [m_scrollerImpPair contentAreaScrolledInDirection:NSMakePoint(delta.width(), delta.height())];
+            });
         }
-        m_lastScrollPosition = position;
+        m_lastScrollOffset = offset;
     }
 
-    m_verticalScroller.updateValues();
     m_horizontalScroller.updateValues();
+    m_verticalScroller.updateValues();
 }
 
-WebCore::FloatSize ScrollerPairMac::visibleSize() const
+FloatSize ScrollerPairMac::visibleSize() const
 {
     return m_scrollingNode.scrollableAreaSize();
 }
@@ -202,24 +260,24 @@ bool ScrollerPairMac::useDarkAppearance() const
     return m_scrollingNode.useDarkAppearanceForScrollbars();
 }
 
-ScrollerPairMac::Values ScrollerPairMac::valuesForOrientation(ScrollerMac::Orientation orientation)
+ScrollerPairMac::Values ScrollerPairMac::valuesForOrientation(ScrollbarOrientation orientation)
 {
     float position;
     float totalSize;
     float visibleSize;
-    if (orientation == ScrollerMac:: Orientation::Vertical) {
-        position = m_scrollingNode.currentScrollPosition().y();
+    if (orientation == ScrollbarOrientation::Vertical) {
+        position = m_scrollingNode.currentScrollOffset().y();
         totalSize = m_scrollingNode.totalContentsSize().height();
         visibleSize = m_scrollingNode.scrollableAreaSize().height();
     } else {
-        position = m_scrollingNode.currentScrollPosition().x();
+        position = m_scrollingNode.currentScrollOffset().x();
         totalSize = m_scrollingNode.totalContentsSize().width();
         visibleSize = m_scrollingNode.scrollableAreaSize().width();
     }
 
     float value;
     float overhang;
-    WebCore::ScrollableArea::computeScrollbarValueAndOverhang(position, totalSize, visibleSize, value, overhang);
+    ScrollableArea::computeScrollbarValueAndOverhang(position, totalSize, visibleSize, value, overhang);
 
     float proportion = totalSize ? (visibleSize - overhang) / totalSize : 1;
 
@@ -241,6 +299,100 @@ void ScrollerPairMac::releaseReferencesToScrollerImpsOnTheMainThread()
     }
 }
 
+String ScrollerPairMac::scrollbarStateForOrientation(ScrollbarOrientation orientation) const
+{
+    return orientation == ScrollbarOrientation::Vertical ? m_verticalScroller.scrollbarState() : m_horizontalScroller.scrollbarState();
 }
 
-#endif
+void ScrollerPairMac::setVerticalScrollerImp(NSScrollerImp *scrollerImp)
+{
+    ensureOnMainThreadWithProtectedThis([this, scrollerImp = RetainPtr { scrollerImp }] {
+        [m_scrollerImpPair setVerticalScrollerImp:scrollerImp.get()];
+    });
+}
+
+void ScrollerPairMac::setHorizontalScrollerImp(NSScrollerImp *scrollerImp)
+{
+    ensureOnMainThreadWithProtectedThis([this, scrollerImp = RetainPtr { scrollerImp }] {
+        [m_scrollerImpPair setHorizontalScrollerImp:scrollerImp.get()];
+    });
+}
+
+void ScrollerPairMac::setScrollbarStyle(ScrollbarStyle style)
+{
+    m_scrollbarStyle = style;
+
+    ensureOnMainThreadWithProtectedThis([this, scrollerStyle = nsScrollerStyle(style)] {
+        m_horizontalScroller.updateScrollbarStyle();
+        m_verticalScroller.updateScrollbarStyle();
+        [m_scrollerImpPair setScrollerStyle:scrollerStyle];
+    });
+}
+
+void ScrollerPairMac::ensureOnMainThreadWithProtectedThis(Function<void()>&& task)
+{
+    ensureOnMainThread([protectedThis = Ref { *this }, task = WTFMove(task)]() mutable {
+        task();
+    });
+}
+
+void ScrollerPairMac::mouseEnteredContentArea()
+{
+    LOG_WITH_STREAM(OverlayScrollbars, stream << "ScrollerPairMac for [" << m_scrollingNode.scrollingNodeID() << "] mouseEnteredContentArea");
+
+    ensureOnMainThreadWithProtectedThis([this] {
+        if ([m_scrollerImpPair overlayScrollerStateIsLocked])
+            return;
+
+        [m_scrollerImpPair mouseEnteredContentArea];
+    });
+}
+
+void ScrollerPairMac::mouseExitedContentArea()
+{
+    m_mouseInContentArea = false;
+    LOG_WITH_STREAM(OverlayScrollbars, stream << "ScrollerPairMac for [" << m_scrollingNode.scrollingNodeID() << "] mouseExitedContentArea");
+    
+    ensureOnMainThreadWithProtectedThis([this] {
+        if ([m_scrollerImpPair overlayScrollerStateIsLocked])
+            return;
+
+        [m_scrollerImpPair mouseExitedContentArea];
+    });
+}
+
+void ScrollerPairMac::mouseMovedInContentArea(const MouseLocationState& state)
+{
+    m_mouseInContentArea = true;
+    horizontalScroller().setLastKnownMousePositionInScrollbar(state.locationInHorizontalScrollbar);
+    verticalScroller().setLastKnownMousePositionInScrollbar(state.locationInVerticalScrollbar);
+
+    ensureOnMainThreadWithProtectedThis([this] {
+        if ([m_scrollerImpPair overlayScrollerStateIsLocked])
+            return;
+        
+        [m_scrollerImpPair mouseMovedInContentArea];
+    });
+}
+
+void ScrollerPairMac::mouseIsInScrollbar(ScrollbarHoverState hoverState)
+{
+    if (m_scrollbarHoverState.mouseIsOverVerticalScrollbar != hoverState.mouseIsOverVerticalScrollbar) {
+        if (hoverState.mouseIsOverVerticalScrollbar)
+            verticalScroller().mouseEnteredScrollbar();
+        else
+            verticalScroller().mouseExitedScrollbar();
+    }
+
+    if (m_scrollbarHoverState.mouseIsOverHorizontalScrollbar != hoverState.mouseIsOverHorizontalScrollbar) {
+        if (hoverState.mouseIsOverHorizontalScrollbar)
+            horizontalScroller().mouseEnteredScrollbar();
+        else
+            horizontalScroller().mouseExitedScrollbar();
+    }
+    m_scrollbarHoverState = hoverState;
+}
+
+} // namespace WebCore
+
+#endif // PLATFORM(MAC)

@@ -1106,7 +1106,6 @@ public:
     [self _setBoolValue:flag forKey:WebKitAuthorAndUserStylesEnabledPreferenceKey];
 }
 
-// FIXME: applicationChromeMode is no longer needed by ToT, but is still used in Safari 8.
 - (BOOL)applicationChromeModeEnabled
 {
     return NO;
@@ -1114,6 +1113,7 @@ public:
 
 - (void)setApplicationChromeModeEnabled:(BOOL)flag
 {
+    // This is still called. See rdar://106306112
 }
 
 - (BOOL)domTimersThrottlingEnabled
@@ -1954,16 +1954,6 @@ static RetainPtr<NSString>& classIBCreatorID()
     setWebKitLinkTimeVersion(version);
 }
 
-- (void)setLoadsSiteIconsIgnoringImageLoadingPreference: (BOOL)flag
-{
-    [self _setBoolValue: flag forKey: WebKitLoadSiteIconsKey];
-}
-
-- (BOOL)loadsSiteIconsIgnoringImageLoadingPreference
-{
-    return [self _boolValueForKey: WebKitLoadSiteIconsKey];
-}
-
 - (void)setAVFoundationEnabled:(BOOL)flag
 {
     [self _setBoolValue:flag forKey:WebKitAVFoundationEnabledKey];
@@ -2380,16 +2370,6 @@ static RetainPtr<NSString>& classIBCreatorID()
 - (void)setLowPowerVideoAudioBufferSizeEnabled:(BOOL)enabled
 {
     [self _setBoolValue:enabled forKey:WebKitLowPowerVideoAudioBufferSizeEnabledPreferenceKey];
-}
-
-- (BOOL)useLegacyTextAlignPositionedElementBehavior
-{
-    return [self _boolValueForKey:WebKitUseLegacyTextAlignPositionedElementBehaviorPreferenceKey];
-}
-
-- (void)setUseLegacyTextAlignPositionedElementBehavior:(BOOL)enabled
-{
-    [self _setBoolValue:enabled forKey:WebKitUseLegacyTextAlignPositionedElementBehaviorPreferenceKey];
 }
 
 - (BOOL)mediaSourceEnabled
@@ -3400,5 +3380,15 @@ static RetainPtr<NSString>& classIBCreatorID()
 - (void)setWebGL2Enabled:(BOOL)enabled
 {
 }
+
+- (void)setLoadsSiteIconsIgnoringImageLoadingPreference: (BOOL)flag
+{
+}
+
+- (BOOL)loadsSiteIconsIgnoringImageLoadingPreference
+{
+    return NO;
+}
+
 
 @end

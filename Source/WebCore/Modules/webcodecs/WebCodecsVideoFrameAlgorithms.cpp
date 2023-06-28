@@ -29,6 +29,7 @@
 #if ENABLE(WEB_CODECS)
 
 #include "DOMRectReadOnly.h"
+#include "ExceptionOr.h"
 #include "VideoColorSpace.h"
 
 namespace WebCore {
@@ -127,10 +128,11 @@ size_t videoPixelFormatToPlaneCount(VideoPixelFormat format)
 {
     switch (format) {
     case VideoPixelFormat::I420:
-    case VideoPixelFormat::I420A:
     case VideoPixelFormat::I444:
     case VideoPixelFormat::I422:
         return 3;
+    case VideoPixelFormat::I420A:
+        return 4;
     case VideoPixelFormat::NV12:
         return 2;
     case VideoPixelFormat::RGBA:
@@ -170,11 +172,12 @@ size_t videoPixelFormatToSubSampling(VideoPixelFormat format, size_t planeNumber
 {
     switch (format) {
     case VideoPixelFormat::I420:
-    case VideoPixelFormat::I420A:
     case VideoPixelFormat::I444:
     case VideoPixelFormat::I422:
     case VideoPixelFormat::NV12:
         return planeNumber ? 2 : 1;
+    case VideoPixelFormat::I420A:
+        return (planeNumber == 1 || planeNumber == 2) ? 2 : 1;
     case VideoPixelFormat::RGBA:
     case VideoPixelFormat::RGBX:
     case VideoPixelFormat::BGRA:

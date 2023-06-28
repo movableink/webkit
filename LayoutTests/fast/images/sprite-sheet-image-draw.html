@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<meta name="fuzzy" content="maxDifference=0-1;totalPixels=14200-14600" />
+<meta name="fuzzy" content="maxDifference=0-1;totalPixels=14200-16000" />
 <style>
     .box {
         width: 200px;
@@ -28,7 +28,7 @@
             image.onload = function() {
                 // Force async image decoding for this image.
                 if (window.internals)
-                    internals.setLargeImageAsyncDecodingEnabledForTesting(image, true);
+                    internals.setAsyncDecodingEnabledForTesting(image, true);
 
                 // Change the background of the element.
                 var element = document.getElementsByClassName("image-background")[0];

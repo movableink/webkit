@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,26 +28,33 @@
 #if HAVE(WEBGPU_IMPLEMENTATION)
 
 #include "WebGPUExternalTexture.h"
+#include "WebGPUExternalTextureDescriptor.h"
+#include "WebGPUPredefinedColorSpace.h"
+#include "WebGPUPtr.h"
 #include <WebGPU/WebGPU.h>
+#include <WebGPU/WebGPUExt.h>
 
 namespace PAL::WebGPU {
 
 class ConvertToBackingContext;
+struct ExternalTextureDescriptor;
 
 class ExternalTextureImpl final : public ExternalTexture {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<ExternalTextureImpl> create(ConvertToBackingContext& convertToBackingContext)
+    static Ref<ExternalTextureImpl> create(WebGPUPtr<WGPUExternalTexture>&& externalTexture, const ExternalTextureDescriptor& descriptor, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new ExternalTextureImpl(convertToBackingContext));
+        return adoptRef(*new ExternalTextureImpl(WTFMove(externalTexture), descriptor, convertToBackingContext));
     }
 
     virtual ~ExternalTextureImpl();
 
+    WGPUExternalTexture backing() const { return m_backing.get(); };
+
 private:
     friend class DowncastConvertToBackingContext;
 
-    ExternalTextureImpl(ConvertToBackingContext&);
+    ExternalTextureImpl(WebGPUPtr<WGPUExternalTexture>&&, const ExternalTextureDescriptor&, ConvertToBackingContext&);
 
     ExternalTextureImpl(const ExternalTextureImpl&) = delete;
     ExternalTextureImpl(ExternalTextureImpl&&) = delete;
@@ -57,6 +64,9 @@ private:
     void setLabelInternal(const String&) final;
 
     Ref<ConvertToBackingContext> m_convertToBackingContext;
+
+    WebGPUPtr<WGPUExternalTexture> m_backing;
+    PredefinedColorSpace m_colorSpace;
 };
 
 } // namespace PAL::WebGPU

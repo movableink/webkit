@@ -57,21 +57,25 @@ namespace Style {
 
 static const StyleProperties& leftToRightDeclaration()
 {
+IGNORE_GCC_WARNINGS_BEGIN("dangling-reference")
     static auto& declaration = [] () -> const StyleProperties& {
         auto properties = MutableStyleProperties::create();
         properties->setProperty(CSSPropertyDirection, CSSValueLtr);
         return properties.leakRef();
     }();
+IGNORE_GCC_WARNINGS_END
     return declaration;
 }
 
 static const StyleProperties& rightToLeftDeclaration()
 {
+IGNORE_GCC_WARNINGS_BEGIN("dangling-reference")
     static auto& declaration = [] () -> const StyleProperties& {
         auto properties = MutableStyleProperties::create();
         properties->setProperty(CSSPropertyDirection, CSSValueRtl);
         return properties.leakRef();
     }();
+IGNORE_GCC_WARNINGS_END
     return declaration;
 }
 
@@ -680,7 +684,7 @@ void ElementRuleCollector::addMatchedProperties(MatchedProperties&& matchedPrope
 
             // The value currentColor has implicitely the same side effect. It depends on the value of color,
             // which is an inherited value, making the non-inherited property implicitly inherited.
-            if (is<CSSPrimitiveValue>(value) && StyleColor::isCurrentColor(downcast<CSSPrimitiveValue>(value)))
+            if (is<CSSPrimitiveValue>(value) && StyleColor::containsCurrentColor(downcast<CSSPrimitiveValue>(value)))
                 return false;
 
             if (value.hasVariableReferences())

@@ -117,7 +117,7 @@ bool URL::hasSpecialScheme() const
 {
     // https://url.spec.whatwg.org/#special-scheme
     return protocolIs("ftp"_s)
-        || protocolIs("file"_s)
+        || protocolIsFile()
         || protocolIs("http"_s)
         || protocolIs("https"_s)
         || protocolIs("ws"_s)
@@ -127,9 +127,9 @@ bool URL::hasSpecialScheme() const
 bool URL::hasLocalScheme() const
 {
     // https://fetch.spec.whatwg.org/#local-scheme
-    return protocolIs("about"_s)
-        || protocolIs("blob"_s)
-        || protocolIs("data"_s);
+    return protocolIsAbout()
+        || protocolIsBlob()
+        || protocolIsData();
 }
 
 unsigned URL::pathStart() const
@@ -195,7 +195,7 @@ static std::optional<LChar> decodeEscapeSequence(StringView input, unsigned inde
 
 static String decodeEscapeSequencesFromParsedURL(StringView input)
 {
-    ASSERT(input.isAllASCII());
+    ASSERT(input.containsOnlyASCII());
 
     auto length = input.length();
     if (length < 3 || !input.contains('%'))
@@ -277,10 +277,15 @@ URL URL::truncatedForUseAsBase() const
 
 String URL::fileSystemPath() const
 {
-    if (!isLocalFile())
+    if (!protocolIsFile())
         return { };
 
-    return decodeEscapeSequencesFromParsedURL(path());
+    auto result = decodeEscapeSequencesFromParsedURL(path());
+#if PLATFORM(WIN)
+    if (result.startsWith('/'))
+        result = result.substring(1);
+#endif
+    return result;
 }
 
 #endif
@@ -292,7 +297,7 @@ String URL::fileSystemPath() const
     if (!isValid())
         return String();
 
-    if (isLocalFile())
+    if (protocolIsFile())
         return QUrl(*this).toLocalFile();
 
     // A valid qrc resource path begins with a colon.
@@ -379,11 +384,6 @@ bool URL::protocolIsJavaScript() const
     return WTF::protocolIsJavaScript(string());
 }
 
-bool URL::protocolIsInFTPFamily() const
-{
-    return WTF::protocolIsInFTPFamily(string());
-}
-
 bool URL::protocolIs(StringView protocol) const
 {
     assertProtocolIsGood(protocol);
@@ -434,7 +434,7 @@ bool URL::setProtocol(StringView newProtocol)
     if ((m_passwordEnd != m_userStart || port()) && *newProtocolCanonicalized == "file"_s)
         return true;
 
-    if (isLocalFile() && host().isEmpty())
+    if (protocolIsFile() && host().isEmpty())
         return true;
 
     parse(makeString(*newProtocolCanonicalized, StringView(m_string).substring(m_schemeEnd)));
@@ -448,7 +448,7 @@ static bool appendEncodedHostname(Vector<UChar, 512>& buffer, StringView string)
 {
     // hostnameBuffer needs to be big enough to hold an IDN-encoded name.
     // For host names bigger than this, we won't do IDN encoding, which is almost certainly OK.
-    if (string.length() > URLParser::hostnameBufferLength || string.isAllASCII()) {
+    if (string.length() > URLParser::hostnameBufferLength || string.containsOnlyASCII()) {
         append(buffer, string);
         return true;
     }
@@ -575,7 +575,7 @@ template<typename StringType>
 static String percentEncodeCharacters(const StringType& input, bool(*shouldEncode)(UChar))
 {
     auto encode = [shouldEncode] (const StringType& input) {
-        auto result = input.tryGetUTF8([&](Span<const char> span) -> String {
+        auto result = input.tryGetUTF8([&](std::span<const char> span) -> String {
             StringBuilder builder;
             for (unsigned j = 0; j < span.size(); j++) {
                 auto c = span[j];
@@ -726,7 +726,7 @@ void URL::setPath(StringView path)
 
     parse(makeString(
         StringView(m_string).left(pathStart()),
-        path.startsWith('/') || (path.startsWith('\\') && (hasSpecialScheme() || protocolIs("file"_s))) || (!hasSpecialScheme() && path.isEmpty() && m_schemeEnd + 1U < pathStart()) ? ""_s : "/"_s,
+        path.startsWith('/') || (path.startsWith('\\') && (hasSpecialScheme() || protocolIsFile())) || (!hasSpecialScheme() && path.isEmpty() && m_schemeEnd + 1U < pathStart()) ? ""_s : "/"_s,
         !hasSpecialScheme() && host().isEmpty() && path.startsWith("//"_s) && path.length() > 2 ? "/."_s : ""_s,
         escapePathWithoutCopying(path),
         StringView(m_string).substring(m_pathEnd)
@@ -908,30 +908,22 @@ String URL::strippedForUseAsReferrerWithExplicitPort() const
     return makeString(StringView(m_string).left(m_hostEnd), ':', static_cast<unsigned>(*port), StringView(m_string).substring(end, m_queryEnd - end));
 }
 
-
-bool URL::isLocalFile() const
+String URL::strippedForUseAsReport() const
 {
-    // Including feed here might be a bad idea since drag and drop uses this check
-    // and including feed would allow feeds to potentially let someone's blog
-    // read the contents of the clipboard on a drag, even without a drop.
-    // Likewise with using the FrameLoader::shouldTreatURLAsLocal() function.
-    return protocolIs("file"_s);
+    if (!m_isValid)
+        return m_string;
+
+    unsigned end = credentialsEnd();
+
+    if (m_userStart == end && m_pathEnd == m_string.length())
+        return m_string;
+
+    return makeString(StringView(m_string).left(m_userStart), StringView(m_string).substring(end, m_pathEnd - end));
 }
 
 bool protocolIsJavaScript(StringView string)
 {
     return protocolIsInternal(string, "javascript"_s);
-}
-
-bool protocolIsInFTPFamily(StringView url)
-{
-    auto length = url.length();
-    // Do the comparison without making a new string object.
-    return length >= 4
-        && isASCIIAlphaCaselessEqual(url[0], 'f')
-        && isASCIIAlphaCaselessEqual(url[1], 't')
-        && isASCIIAlphaCaselessEqual(url[2], 'p')
-        && (url[3] == ':' || (isASCIIAlphaCaselessEqual(url[3], 's') && length >= 5 && url[4] == ':'));
 }
 
 bool protocolIsInHTTPFamily(StringView url)
@@ -967,11 +959,6 @@ const URL& aboutSrcDocURL()
         staticSrcDocURL.construct(&aboutSrcDocString);
     });
     return staticSrcDocURL;
-}
-
-bool URL::protocolIsAbout() const
-{
-    return protocolIs("about"_s);
 }
 
 bool portAllowed(const URL& url)
@@ -1079,7 +1066,7 @@ bool portAllowed(const URL& url)
         return true;
 
     // Allow any port number in a file URL, since the port number is ignored.
-    if (url.protocolIs("file"_s))
+    if (url.protocolIsFile())
         return true;
 
     return false;

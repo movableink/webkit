@@ -47,6 +47,7 @@ public:
     void append(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
 
     bool hasContent() const;
+    bool hasContentOrListMarker() const;
 
     bool contentNeedsBidiReordering() const { return m_hasNonDefaultBidiLevelRun; }
 
@@ -79,7 +80,8 @@ public:
             SoftLineBreak,
             WordBreakOpportunity,
             GenericInlineLevelBox,
-            ListMarker,
+            ListMarkerInside,
+            ListMarkerOutside,
             InlineBoxStart,
             InlineBoxEnd,
             LineSpanningInlineBoxStart
@@ -89,7 +91,9 @@ public:
         bool isNonBreakingSpace() const { return m_type == Type::NonBreakingSpace; }
         bool isWordSeparator() const { return m_type == Type::WordSeparator; }
         bool isBox() const { return m_type == Type::GenericInlineLevelBox; }
-        bool isListMarker() const { return m_type == Type::ListMarker; }
+        bool isListMarker() const { return isListMarkerInside() || isListMarkerOutside(); }
+        bool isListMarkerInside() const { return m_type == Type::ListMarkerInside; }
+        bool isListMarkerOutside() const { return m_type == Type::ListMarkerOutside; }
         bool isLineBreak() const { return isHardLineBreak() || isSoftLineBreak(); }
         bool isSoftLineBreak() const  { return m_type == Type::SoftLineBreak; }
         bool isHardLineBreak() const { return m_type == Type::HardLineBreak; }
@@ -123,7 +127,7 @@ public:
         bool shouldTrailingWhitespaceHang() const;
         TextDirection inlineDirection() const;
         InlineLayoutUnit letterSpacing() const;
-        bool hasTextCombine() const;
+        inline bool hasTextCombine() const;
 
         UBiDiLevel bidiLevel() const { return m_bidiLevel; }
 
@@ -273,6 +277,15 @@ private:
     Vector<InlineLayoutUnit> m_inlineBoxLogicalLeftStack;
 };
 
+inline bool Line::hasContentOrListMarker() const
+{
+    if (m_runs.isEmpty())
+        return false;
+    if (m_runs.first().isListMarkerInside())
+        return true;
+    return Line::hasContent();
+}
+
 inline bool Line::hasContent() const
 {
     for (auto& run : makeReversedRange(m_runs)) {
@@ -339,11 +352,6 @@ inline TextDirection Line::Run::inlineDirection() const
 inline InlineLayoutUnit Line::Run::letterSpacing() const
 {
     return m_style.letterSpacing();
-}
-
-inline bool Line::Run::hasTextCombine() const
-{
-    return m_style.hasTextCombine();
 }
 
 }

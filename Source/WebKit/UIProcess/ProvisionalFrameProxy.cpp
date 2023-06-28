@@ -31,11 +31,18 @@
 #include "FrameInfoData.h"
 #include "HandleMessage.h"
 #include "LoadParameters.h"
+#include "LoadedWebArchive.h"
+#include "LocalFrameCreationParameters.h"
+#include "MessageSenderInlines.h"
+#include "NetworkProcessMessages.h"
+#include "RemotePageProxy.h"
+#include "VisitedLinkStore.h"
 #include "WebFrameProxy.h"
-#include "WebFrameProxyMessages.h"
 #include "WebPageMessages.h"
+#include "WebPageProxy.h"
 #include "WebPageProxyMessages.h"
 #include "WebProcessMessages.h"
+#include "WebProcessProxy.h"
 
 #include <WebCore/FrameIdentifier.h>
 #include <WebCore/ShouldTreatAsContinuingLoad.h>
@@ -53,101 +60,32 @@ ProvisionalFrameProxy::ProvisionalFrameProxy(WebFrameProxy& frame, Ref<WebProces
     m_process->markProcessAsRecentlyUsed();
     m_process->addProvisionalFrameProxy(*this);
 
-    m_process->addMessageReceiver(Messages::WebPageProxy::messageReceiverName(), m_pageID, *this);
-
-    m_process->addMessageReceiver(Messages::WebFrameProxy::messageReceiverName(), m_frame.frameID().object(), *this);
-
-    ASSERT(m_frame.page());
-    auto& page = *m_frame.page();
-    auto* drawingArea = page.drawingArea();
-    ASSERT(drawingArea);
-
-    auto parameters = page.creationParameters(m_process, *drawingArea);
-    parameters.isProcessSwap = true; // FIXME: This should be a parameter to creationParameters rather than doctoring up the parameters afterwards.
-    parameters.topContentInset = 0;
-    parameters.viewSize = { 300, 150 }; // FIXME: Get the real size from the parent process.
-#if ENABLE(META_VIEWPORT)
-    // FIXME: This is incorrect, but needed to make the root layer the right size in the basic-iframe.html layout test.
-    // Investigate whether iframes think their viewport size is just the size of the iframe.
-    // and maybe update viewportConfigurationViewSize as well if needed.
-    parameters.viewportConfigurationViewLayoutSize = { 300, 150 };
-#endif
-    parameters.layerHostingContextIdentifier = m_layerHostingContextIdentifier;
-    parameters.mainFrameIdentifier = frame.frameID();
-    m_process->send(Messages::WebProcess::CreateWebPage(m_pageID, parameters), 0);
-    m_process->addVisitedLinkStoreUser(page.visitedLinkStore(), page.identifier());
-
-    drawingArea->attachToProvisionalFrameProcess(m_process);
+    ASSERT(frame.page());
 
     LoadParameters loadParameters;
     loadParameters.request = request;
     loadParameters.shouldTreatAsContinuingLoad = WebCore::ShouldTreatAsContinuingLoad::YesAfterNavigationPolicyDecision;
+    loadParameters.frameIdentifier = frame.frameID();
     // FIXME: Add more parameters as appropriate.
 
-    // FIXME: Do we need a LoadRequestWaitingForProcessLaunch version?
-    m_process->send(Messages::WebPage::LoadRequest(loadParameters), m_pageID);
+    LocalFrameCreationParameters localFrameCreationParameters {
+        m_layerHostingContextIdentifier
+    };
+
+    // FIXME: This gives too much cookie access. This should be removed after putting the entire frame tree in all web processes.
+    auto giveAllCookieAccess = LoadedWebArchive::Yes;
+    WebCore::RegistrableDomain domain { request.url() };
+    m_process->addAllowedFirstPartyForCookies(domain);
+    frame.page()->websiteDataStore().networkProcess().sendWithAsyncReply(Messages::NetworkProcess::AddAllowedFirstPartyForCookies(m_process->coreProcessIdentifier(), domain, giveAllCookieAccess), [process = m_process, loadParameters = WTFMove(loadParameters), localFrameCreationParameters = WTFMove(localFrameCreationParameters), pageID = m_pageID] () mutable {
+        process->send(Messages::WebPage::TransitionFrameToLocal(localFrameCreationParameters, *loadParameters.frameIdentifier), pageID);
+        process->send(Messages::WebPage::LoadRequest(loadParameters), pageID);
+    });
 }
 
 ProvisionalFrameProxy::~ProvisionalFrameProxy()
 {
-    if (!m_wasCommitted) {
-        m_process->removeMessageReceiver(Messages::WebPageProxy::messageReceiverName(), m_pageID);
-        m_process->removeMessageReceiver(Messages::WebFrameProxy::messageReceiverName(), m_frame.frameID().object());
-        if (m_process->hasConnection())
-            send(Messages::WebPage::Close(), m_pageID);
-    }
     m_process->removeVisitedLinkStoreUser(m_visitedLinkStore.get(), m_webPageID);
     m_process->removeProvisionalFrameProxy(*this);
-}
-
-void ProvisionalFrameProxy::didReceiveMessage(IPC::Connection& connection, IPC::Decoder& decoder)
-{
-    ASSERT(decoder.messageReceiverName() == Messages::WebPageProxy::messageReceiverName());
-
-#if HAVE(VISIBILITY_PROPAGATION_VIEW)
-    // FIXME: This needs to be handled correctly in a way that doesn't cause assertions or crashes..
-    if (decoder.messageName() == Messages::WebPageProxy::DidCreateContextInWebProcessForVisibilityPropagation::name())
-        return;
-#endif
-
-    if (decoder.messageName() == Messages::WebPageProxy::DecidePolicyForResponse::name()) {
-        IPC::handleMessage<Messages::WebPageProxy::DecidePolicyForResponse>(connection, decoder, this, &ProvisionalFrameProxy::decidePolicyForResponse);
-        return;
-    }
-
-    if (decoder.messageName() == Messages::WebPageProxy::DidCommitLoadForFrame::name()) {
-        IPC::handleMessage<Messages::WebPageProxy::DidCommitLoadForFrame>(connection, decoder, this, &ProvisionalFrameProxy::didCommitLoadForFrame);
-        return;
-    }
-
-    if (auto* page = m_frame.page())
-        page->didReceiveMessage(connection, decoder);
-}
-
-void ProvisionalFrameProxy::decidePolicyForResponse(WebCore::FrameIdentifier frameID, FrameInfoData&& frameInfo, WebCore::PolicyCheckIdentifier identifier, uint64_t navigationID, const WebCore::ResourceResponse& response, const WebCore::ResourceRequest& request, bool canShowMIMEType, const String& downloadAttribute, uint64_t listenerID)
-{
-    if (auto* page = m_frame.page())
-        page->decidePolicyForResponseShared(m_process.copyRef(), m_pageID, frameID, WTFMove(frameInfo), identifier, navigationID, response, request, canShowMIMEType, downloadAttribute, listenerID);
-}
-
-void ProvisionalFrameProxy::didCommitLoadForFrame(WebCore::FrameIdentifier frameID, FrameInfoData&& frameInfo, WebCore::ResourceRequest&& request, uint64_t navigationID, const String& mimeType, bool frameHasCustomContentProvider, WebCore::FrameLoadType frameLoadType, const WebCore::CertificateInfo& certificateInfo, bool usedLegacyTLS, bool privateRelayed, bool containsPluginDocument, WebCore::HasInsecureContent hasInsecureContent, WebCore::MouseEventPolicy mouseEventPolicy, const UserData& userData)
-{
-    m_process->removeMessageReceiver(Messages::WebPageProxy::messageReceiverName(), m_pageID);
-    m_process->removeMessageReceiver(Messages::WebFrameProxy::messageReceiverName(), m_frame.frameID().object());
-    m_wasCommitted = true;
-
-    m_frame.commitProvisionalFrame(frameID, WTFMove(frameInfo), WTFMove(request), navigationID, mimeType, frameHasCustomContentProvider, frameLoadType, certificateInfo, usedLegacyTLS, privateRelayed, containsPluginDocument, hasInsecureContent, mouseEventPolicy, userData); // Will delete |this|.
-}
-
-IPC::Connection* ProvisionalFrameProxy::messageSenderConnection() const
-{
-    return m_process->connection();
-}
-
-uint64_t ProvisionalFrameProxy::messageSenderDestinationID() const
-{
-    // FIXME: This identifier was generated in another process and can collide with identifiers in this frame's process.
-    return m_frame.frameID().object().toUInt64();
 }
 
 }

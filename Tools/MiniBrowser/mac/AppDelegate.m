@@ -118,13 +118,14 @@ static WKWebsiteDataStore *persistentDataStore(void)
         _WKProcessPoolConfiguration *processConfiguration = [[_WKProcessPoolConfiguration alloc] init];
         if (_settingsController.perWindowWebProcessesDisabled)
             processConfiguration.usesSingleWebProcess = YES;
-        if (_settingsController.processSwapOnWindowOpenWithOpenerEnabled)
-            processConfiguration.processSwapsOnWindowOpenWithOpener = true;
         
         configuration.processPool = [[WKProcessPool alloc] _initWithConfiguration:processConfiguration];
 
         NSArray<_WKFeature *> *features = [WKPreferences _features];
         for (_WKFeature *feature in features) {
+            if ([feature.key isEqualToString:@"MediaDevicesEnabled"])
+                continue;
+
             BOOL enabled;
             if ([[NSUserDefaults standardUserDefaults] objectForKey:feature.key])
                 enabled = [[NSUserDefaults standardUserDefaults] boolForKey:feature.key];
@@ -136,7 +137,6 @@ static WKWebsiteDataStore *persistentDataStore(void)
         configuration.preferences.elementFullscreenEnabled = YES;
         configuration.preferences._allowsPictureInPictureMediaPlayback = YES;
         configuration.preferences._developerExtrasEnabled = YES;
-        configuration.preferences._mockCaptureDevicesEnabled = YES;
         configuration.preferences._accessibilityIsolatedTreeEnabled = YES;
         configuration.preferences._logsPageMessagesToSystemConsoleEnabled = YES;
     }
@@ -226,6 +226,11 @@ static WKWebsiteDataStore *persistentDataStore(void)
 
     [[controller window] makeKeyAndOrderFront:sender];
     [controller loadHTMLString:@"<html><body></body></html>"];
+}
+
+- (void)didCreateBrowserWindowController:(BrowserWindowController *)controller
+{
+    [_browserWindowControllers addObject:controller];
 }
 
 - (void)browserWindowWillClose:(NSWindow *)window

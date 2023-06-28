@@ -41,20 +41,21 @@
 namespace WebKit {
 using namespace WebCore;
 
-std::unique_ptr<SampleBufferDisplayLayer> SampleBufferDisplayLayer::create(SampleBufferDisplayLayerManager& manager, WebCore::SampleBufferDisplayLayer::Client& client)
+Ref<SampleBufferDisplayLayer> SampleBufferDisplayLayer::create(SampleBufferDisplayLayerManager& manager, WebCore::SampleBufferDisplayLayer::Client& client)
 {
-    return std::unique_ptr<SampleBufferDisplayLayer>(new SampleBufferDisplayLayer(manager, client));
+    return adoptRef(*new SampleBufferDisplayLayer(manager, client));
 }
 
 SampleBufferDisplayLayer::SampleBufferDisplayLayer(SampleBufferDisplayLayerManager& manager, WebCore::SampleBufferDisplayLayer::Client& client)
     : WebCore::SampleBufferDisplayLayer(client)
     , m_gpuProcessConnection(&WebProcess::singleton().ensureGPUProcessConnection())
     , m_manager(manager)
-    , m_connection(m_gpuProcessConnection->connection())
+    , m_connection(m_gpuProcessConnection.get()->connection())
     , m_identifier(SampleBufferDisplayLayerIdentifier::generate())
 {
     manager.addLayer(*this);
-    m_gpuProcessConnection->addClient(*this);
+    auto gpuProcessConnection = m_gpuProcessConnection.get();
+    gpuProcessConnection->addClient(*this);
 }
 
 void SampleBufferDisplayLayer::initialize(bool hideRootLayer, IntSize size, CompletionHandler<void(bool)>&& callback)
@@ -62,8 +63,10 @@ void SampleBufferDisplayLayer::initialize(bool hideRootLayer, IntSize size, Comp
     m_connection->sendWithAsyncReply(Messages::RemoteSampleBufferDisplayLayerManager::CreateLayer { m_identifier, hideRootLayer, size }, [this, weakThis = WeakPtr { *this }, callback = WTFMove(callback)](auto contextId) mutable {
         if (!weakThis)
             return callback(false);
-        if (contextId)
+        if (contextId) {
+            m_hostingContextID = *contextId;
             m_videoLayer = LayerHostingContext::createPlatformLayerForHostingContext(*contextId);
+        }
         callback(!!m_videoLayer);
     });
 }
@@ -78,7 +81,6 @@ void SampleBufferDisplayLayer::setLogIdentifier(String&& logIdentifier)
 
 SampleBufferDisplayLayer::~SampleBufferDisplayLayer()
 {
-    disconnectGPUProcessConnectionIfNeeded();
     m_connection->send(Messages::RemoteSampleBufferDisplayLayerManager::ReleaseLayer { m_identifier }, 0);
     if (m_manager)
         m_manager->removeLayer(*this);
@@ -99,9 +101,9 @@ void SampleBufferDisplayLayer::updateAffineTransform(CGAffineTransform transform
     m_connection->send(Messages::RemoteSampleBufferDisplayLayer::UpdateAffineTransform { transform }, m_identifier);
 }
 
-void SampleBufferDisplayLayer::updateBoundsAndPosition(CGRect bounds, VideoFrame::Rotation rotation)
+void SampleBufferDisplayLayer::updateBoundsAndPosition(CGRect bounds, VideoFrame::Rotation rotation, std::optional<WTF::MachSendRight>&& fence)
 {
-    m_connection->send(Messages::RemoteSampleBufferDisplayLayer::UpdateBoundsAndPosition { bounds, rotation }, m_identifier);
+    m_connection->send(Messages::RemoteSampleBufferDisplayLayer::UpdateBoundsAndPosition { bounds, rotation, fence }, m_identifier);
 }
 
 void SampleBufferDisplayLayer::flush()
@@ -126,6 +128,14 @@ void SampleBufferDisplayLayer::pause()
     m_connection->send(Messages::RemoteSampleBufferDisplayLayer::Pause { }, m_identifier);
 }
 
+void SampleBufferDisplayLayer::enqueueBlackFrameFrom(const VideoFrame& videoFrame)
+{
+    auto size = videoFrame.presentationSize();
+    WebCore::IntSize blackFrameSize { static_cast<int>(size.width()), static_cast<int>(size.height()) };
+    SharedVideoFrame sharedVideoFrame { videoFrame.presentationTime(), false, videoFrame.rotation(), blackFrameSize };
+    m_connection->send(Messages::RemoteSampleBufferDisplayLayer::EnqueueVideoFrame { sharedVideoFrame }, m_identifier);
+}
+
 void SampleBufferDisplayLayer::enqueueVideoFrame(VideoFrame& videoFrame)
 {
     if (m_paused)
@@ -133,7 +143,7 @@ void SampleBufferDisplayLayer::enqueueVideoFrame(VideoFrame& videoFrame)
 
     auto sharedVideoFrame = m_sharedVideoFrameWriter.write(videoFrame,
         [this](auto& semaphore) { m_connection->send(Messages::RemoteSampleBufferDisplayLayer::SetSharedVideoFrameSemaphore { semaphore }, m_identifier); },
-        [this](auto& handle) { m_connection->send(Messages::RemoteSampleBufferDisplayLayer::SetSharedVideoFrameMemory { handle }, m_identifier); }
+        [this](auto&& handle) { m_connection->send(Messages::RemoteSampleBufferDisplayLayer::SetSharedVideoFrameMemory { WTFMove(handle) }, m_identifier); }
     );
     if (!sharedVideoFrame)
         return;
@@ -161,16 +171,9 @@ void SampleBufferDisplayLayer::setDidFail(bool value)
 void SampleBufferDisplayLayer::gpuProcessConnectionDidClose(GPUProcessConnection&)
 {
     m_sharedVideoFrameWriter.disable();
-    disconnectGPUProcessConnectionIfNeeded();
     m_didFail = true;
     if (m_client)
         m_client->sampleBufferDisplayLayerStatusDidFail();
-}
-
-void SampleBufferDisplayLayer::disconnectGPUProcessConnectionIfNeeded()
-{
-    if (auto* gpuProcessConnection = std::exchange(m_gpuProcessConnection, nullptr))
-        gpuProcessConnection->removeClient(*this);
 }
 
 }

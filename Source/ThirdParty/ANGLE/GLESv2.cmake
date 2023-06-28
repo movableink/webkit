@@ -123,14 +123,16 @@ if(is_apple)
         "src/common/apple/SoftLinking.h"
         "src/common/apple/apple_platform.h"
         "src/common/apple_platform_utils.mm"
-        "src/common/gl/cgl/FunctionsCGL.cpp"
-        "src/common/gl/cgl/FunctionsCGL.h"
         "src/common/system_utils_apple.cpp"
         "src/common/system_utils_posix.cpp"
     )
 
     if(is_mac)
-        list(APPEND libangle_common_sources "src/common/system_utils_mac.cpp")
+        list(APPEND libangle_common_sources
+            "src/common/gl/cgl/FunctionsCGL.cpp"
+            "src/common/gl/cgl/FunctionsCGL.h"
+            "src/common/system_utils_mac.cpp"
+        )
     endif()
 
     if(is_ios)
@@ -157,6 +159,7 @@ set(libangle_image_util_headers
     "src/image_util/imageformats.h"
     "src/image_util/loadimage.h"
     "src/image_util/loadimage.inc"
+    "src/image_util/storeimage.h"
 )
 
 set(libangle_image_util_sources
@@ -166,6 +169,7 @@ set(libangle_image_util_sources
     "src/image_util/loadimage_astc.cpp"
     "src/image_util/loadimage_etc.cpp"
     "src/image_util/loadimage_paletted.cpp"
+    "src/image_util/storeimage_paletted.cpp"
 )
 
 if(angle_has_astc_encoder)
@@ -271,6 +275,7 @@ set(libangle_headers
     "src/libANGLE/GLES1Renderer.h"
     "src/libANGLE/GLES1Shaders.inc"
     "src/libANGLE/GLES1State.h"
+    "src/libANGLE/GlobalMutex.h"
     "src/libANGLE/HandleAllocator.h"
     "src/libANGLE/Image.h"
     "src/libANGLE/ImageIndex.h"
@@ -404,6 +409,7 @@ set(libangle_sources
     "src/libANGLE/FramebufferAttachment.cpp"
     "src/libANGLE/GLES1Renderer.cpp"
     "src/libANGLE/GLES1State.cpp"
+    "src/libANGLE/GlobalMutex.cpp"
     "src/libANGLE/HandleAllocator.cpp"
     "src/libANGLE/Image.cpp"
     "src/libANGLE/ImageIndex.cpp"
@@ -563,11 +569,7 @@ set(libangle_cl_sources
     "src/libANGLE/validationCL.cpp"
 )
 
-set(libangle_mac_sources
-    "src/libANGLE/renderer/driver_utils_mac.mm"
-    "src/libANGLE/renderer/gl/apple/DisplayApple_api.cpp"
-    "src/libANGLE/renderer/gl/apple/DisplayApple_api.h"
-)
+set(libangle_mac_sources "src/libANGLE/renderer/driver_utils_mac.mm")
 # The frame capture headers are always visible to libANGLE.
 
 list(APPEND libangle_sources

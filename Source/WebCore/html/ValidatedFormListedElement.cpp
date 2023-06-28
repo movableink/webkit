@@ -30,21 +30,23 @@
 #include "config.h"
 #include "ValidatedFormListedElement.h"
 
+#include "AXObjectCache.h"
 #include "ControlStates.h"
-#include "ElementAncestorIterator.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "Event.h"
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "FormAssociatedElement.h"
 #include "FormController.h"
-#include "Frame.h"
-#include "FrameView.h"
 #include "HTMLDataListElement.h"
 #include "HTMLFieldSetElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLLegendElement.h"
 #include "HTMLParserIdioms.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "PseudoClassChangeInvalidation.h"
+#include "RenderElement.h"
 #include "ScriptDisallowedScope.h"
 #include "ValidationMessage.h"
 #include <wtf/Ref.h>
@@ -58,8 +60,7 @@ using namespace HTMLNames;
 ValidatedFormListedElement::ValidatedFormListedElement(HTMLFormElement* form)
     : FormListedElement { form }
 {
-    if (supportsReadOnly())
-        ASSERT(readOnlyBarsFromConstraintValidation());
+    ASSERT(!supportsReadOnly() || readOnlyBarsFromConstraintValidation());
 }
 
 ValidatedFormListedElement::~ValidatedFormListedElement() = default;
@@ -101,7 +102,7 @@ void ValidatedFormListedElement::updateVisibleValidationMessage(Ref<HTMLElement>
         return;
     String message;
     if (element.renderer() && willValidate())
-        message = validationMessage().stripWhiteSpace();
+        message = validationMessage().trim(deprecatedIsSpaceOrNewline);
     if (!m_validationMessage)
         m_validationMessage = makeUnique<ValidationMessage>(validationAnchor);
     m_validationMessage->updateValidationMessage(validationAnchor, message);
@@ -262,15 +263,20 @@ void ValidatedFormListedElement::updateValidity()
 
         if (willValidate) {
             if (!newIsValid) {
-                addInvalidElementToAncestorFromInsertionPoint(element, element.parentNode());
+                if (!belongsToFormThatIsBeingDestroyed())
+                    addInvalidElementToAncestorFromInsertionPoint(element, element.parentNode());
                 if (auto* form = this->form())
                     form->addInvalidFormControl(element);
             } else {
-                removeInvalidElementToAncestorFromInsertionPoint(element, element.parentNode());
+                if (!belongsToFormThatIsBeingDestroyed())
+                    removeInvalidElementToAncestorFromInsertionPoint(element, element.parentNode());
                 if (auto* form = this->form())
                     form->removeInvalidFormControlIfNeeded(element);
             }
         }
+
+        if (auto* cache = element.document().existingAXObjectCache())
+            cache->onValidityChange(element);
     }
 
     // Updates only if this control already has a validation message.
@@ -389,6 +395,13 @@ void ValidatedFormListedElement::didChangeForm()
     }
 }
 
+void ValidatedFormListedElement::formWillBeDestroyed()
+{
+    m_belongsToFormThatIsBeingDestroyed = true;
+    FormListedElement::formWillBeDestroyed();
+    m_belongsToFormThatIsBeingDestroyed = false;
+}
+
 void ValidatedFormListedElement::disabledStateChanged()
 {
     updateWillValidateAndValidity();
@@ -498,4 +511,4 @@ void ValidatedFormListedElement::setInteractedWithSinceLastFormSubmitEvent(bool 
     m_wasInteractedWithSinceLastFormSubmitEvent = interactedWith;
 }
 
-} // namespace Webcore
+} // namespace WebCore

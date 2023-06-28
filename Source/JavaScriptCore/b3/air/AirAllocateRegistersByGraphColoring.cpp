@@ -61,6 +61,7 @@ public:
     AbstractColoringAllocator(Code& code, const Vector<Reg>& regsInPriorityOrder, IndexType lastPrecoloredRegisterIndex, unsigned tmpArraySize, const BitVector& unspillableTmps, const UseCounts& useCounts)
         : m_regsInPriorityOrder(regsInPriorityOrder)
         , m_lastPrecoloredRegisterIndex(lastPrecoloredRegisterIndex)
+        , m_coalescedTmps(tmpArraySize, 0)
         , m_unspillableTmps(unspillableTmps)
         , m_useCounts(useCounts)
         , m_code(code)
@@ -73,10 +74,9 @@ public:
                 dataLogIf(unspillableTmps.quickGet(i), TmpMapper::tmpFromAbsoluteIndex(i), ", ");
             dataLogLn("]");
         }
-        
+
         m_adjacencyList.resize(tmpArraySize);
         m_moveList.resize(tmpArraySize);
-        m_coalescedTmps.fill(0, tmpArraySize);
         m_isOnSelectStack.ensureSize(tmpArraySize);
         m_spillWorklist.ensureSize(tmpArraySize);
     }
@@ -208,6 +208,9 @@ protected:
         ASSERT(u != v);
         ASSERT(!isPrecolored(u));
         ASSERT(!isPrecolored(v));
+
+        if (m_unspillableTmps.get(u) != m_unspillableTmps.get(v))
+            return false;
 
         const auto& adjacentsOfU = m_adjacencyList[u];
         const auto& adjacentsOfV = m_adjacencyList[v];
@@ -1446,11 +1449,6 @@ public:
             return m_indexIterator == other.m_indexIterator;
         }
 
-        bool operator!=(const IndexToTmpIteratorAdaptor& other) const
-        {
-            return !(*this == other);
-        }
-
     private:
         IndexIterator m_indexIterator;
     };
@@ -1896,8 +1894,7 @@ private:
         unsigned numTmps = m_code.numTmps(bank);
         unsigned arraySize = AbsoluteTmpMapper<bank>::absoluteIndex(numTmps);
 
-        Vector<Range, 0, UnsafeVectorOverflow> ranges;
-        ranges.fill(Range(), arraySize);
+        Vector<Range, 0, UnsafeVectorOverflow> ranges(arraySize, Range());
 
         unsigned globalIndex = 0;
         for (BasicBlock* block : m_code) {
@@ -1943,13 +1940,17 @@ private:
         unspillableTmps.ensureSize(arraySize);
         for (unsigned i = AbsoluteTmpMapper<bank>::lastMachineRegisterIndex() + 1; i < ranges.size(); ++i) {
             Range& range = ranges[i];
-            if (range.last - range.first <= 1 && range.count > range.admitStackCount)
+            if (range.last - range.first <= 1 && range.count > range.admitStackCount) {
+                dataLogLnIf(traceDebug, "Add unspillable tmp due to range: ", AbsoluteTmpMapper<bank>::tmpFromAbsoluteIndex(i));
                 unspillableTmps.quickSet(i);
+            }
         }
 
         m_code.forEachFastTmp([&](Tmp tmp) {
-            if (tmp.bank() == bank)
+            if (tmp.bank() == bank) {
+                dataLogLnIf(traceDebug, "Add unspillable tmp since it is FastTmp: ", tmp);
                 unspillableTmps.quickSet(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
+            }
         });
 
         return unspillableTmps;
@@ -1967,15 +1968,17 @@ private:
                 // complete register allocation. So, we record this before starting.
                 bool mayBeCoalescable = allocator.mayBeCoalescable(inst);
 
-                // Move32 is cheaper if we know that it's equivalent to a Move. It's
+                // Move32 is cheaper if we know that it's equivalent to a Move in x86_64. It's
                 // equivalent if the destination's high bits are not observable or if the source's high
                 // bits are all zero. Note that we don't have the opposite optimization for other
                 // architectures, which may prefer Move over Move32, because Move is canonical already.
-                if (bank == GP && inst.kind.opcode == Move
-                    && inst.args[0].isTmp() && inst.args[1].isTmp()) {
-                    if (m_tmpWidth.useWidth(inst.args[1].tmp()) <= Width32
-                        || m_tmpWidth.defWidth(inst.args[0].tmp()) <= Width32)
-                        inst.kind.opcode = Move32;
+                if constexpr (isX86_64()) {
+                    if (bank == GP && inst.kind.opcode == Move
+                        && inst.args[0].isTmp() && inst.args[1].isTmp()) {
+                        if (m_tmpWidth.useWidth(inst.args[1].tmp()) <= Width32
+                            || m_tmpWidth.defWidth(inst.args[0].tmp()) <= Width32)
+                            inst.kind.opcode = Move32;
+                    }
                 }
 
                 inst.forEachTmpFast([&] (Tmp& tmp) {
@@ -2023,6 +2026,7 @@ private:
         HashMap<Tmp, StackSlot*> stackSlots;
         for (Tmp tmp : allocator.spilledTmps()) {
             // All the spilled values become unspillable.
+            dataLogLnIf(traceDebug, "Add unspillable tmp due to spill: ", tmp);
             unspillableTmps.set(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
 
             // Allocate stack slot for each spilled value.
@@ -2150,6 +2154,7 @@ private:
                     RELEASE_ASSERT(instBank == bank);
                     
                     Tmp tmp = m_code.newTmp(bank);
+                    dataLogLnIf(traceDebug, "Add unspillable tmp (scratch) since we introduce it during spill: ", tmp);
                     unspillableTmps.set(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
                     inst.args.append(tmp);
                     RELEASE_ASSERT(inst.args.size() == 3);
@@ -2198,7 +2203,9 @@ private:
                         break;
                     }
 
-                    tmp = m_code.newTmp(bank);
+                    auto newTmp = m_code.newTmp(bank);
+                    dataLogLnIf(traceDebug, "Add unspillable tmp since we introduce it during spill (2): ", tmp, " -> ", newTmp);
+                    tmp = newTmp;
                     unspillableTmps.set(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
                     
                     if (role == Arg::Scratch)

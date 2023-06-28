@@ -214,7 +214,7 @@ private:
     void setPitchCorrectionAlgorithm(MediaPlayer::PitchCorrectionAlgorithm) final;
     void seekToTime(const MediaTime&, const MediaTime& negativeTolerance, const MediaTime& positiveTolerance) final;
     unsigned long long totalBytes() const final;
-    std::unique_ptr<PlatformTimeRanges> platformBufferedTimeRanges() const final;
+    const PlatformTimeRanges& platformBufferedTimeRanges() const final;
     MediaTime platformMinTimeSeekable() const final;
     MediaTime platformMaxTimeSeekable() const final;
     MediaTime platformDuration() const final;
@@ -222,6 +222,8 @@ private:
     void beginLoadingMetadata() final;
     void sizeChanged() final;
     void resolvedURLChanged() final;
+
+    bool isHLS() const { return m_cachedAssetIsHLS.value_or(false); }
 
     bool hasAvailableVideoFrame() const final;
 
@@ -431,7 +433,6 @@ private:
     RetainPtr<id> m_currentTimeObserver;
 
     mutable RetainPtr<NSArray> m_cachedSeekableRanges;
-    mutable RetainPtr<NSArray> m_cachedLoadedRanges;
     RetainPtr<NSArray> m_cachedTracks;
     RetainPtr<NSArray> m_currentMetaData;
     FloatSize m_cachedPresentationSize;
@@ -465,6 +466,7 @@ private:
     mutable bool m_cachedTracksAreLoaded { false };
     mutable std::optional<bool> m_cachedAssetIsPlayable;
     mutable std::optional<bool> m_cachedTracksArePlayable;
+    mutable std::optional<bool> m_cachedAssetIsHLS;
     bool m_muted { false };
     bool m_shouldObserveTimeControlStatus { false };
     mutable std::optional<bool> m_tracksArePlayable;
@@ -485,6 +487,7 @@ private:
     std::unique_ptr<Observer<void()>> m_currentImageChangedObserver;
     std::unique_ptr<Observer<void()>> m_waitForVideoOutputMediaDataWillChangeObserver;
     ProcessIdentity m_resourceOwner;
+    PlatformTimeRanges m_buffered;
 };
 
 }

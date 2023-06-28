@@ -97,6 +97,7 @@ public:
     bool isGridIntegerRepeatValue() const { return m_classType == GridIntegerRepeatClass; }
     bool isGridLineNamesValue() const { return m_classType == GridLineNamesClass; }
     bool isGridTemplateAreasValue() const { return m_classType == GridTemplateAreasClass; }
+    bool isImageSetOptionValue() const { return m_classType == ImageSetOptionClass; }
     bool isImageSetValue() const { return m_classType == ImageSetClass; }
     bool isImageValue() const { return m_classType == ImageClass; }
     bool isInsetShape() const { return m_classType == InsetShapeClass; }
@@ -124,6 +125,7 @@ public:
     bool isUnicodeRangeValue() const { return m_classType == UnicodeRangeClass; }
     bool isValueList() const { return m_classType == ValueListClass; }
     bool isVariableReferenceValue() const { return m_classType == VariableReferenceClass; }
+    bool isWordBoundaryDetectionValue() const { return m_classType == WordBoundaryDetectionClass; }
 
 #if ENABLE(CSS_PAINTING_API)
     bool isPaintImageValue() const { return m_classType == PaintImageClass; }
@@ -185,6 +187,7 @@ protected:
 
         // Image classes.
         ImageClass,
+        ImageSetOptionClass,
         CursorImageClass,
 
         // Image generator classes.
@@ -228,6 +231,7 @@ protected:
         FontStyleWithAngleClass,
         FontVariantAlternatesClass,
         FontVariationClass,
+        GridLineNamesClass,
         GridTemplateAreasClass,
         InsetShapeClass,
         LineBoxContainClass,
@@ -242,13 +246,13 @@ protected:
         UnicodeRangeClass,
         ValuePairClass,
         VariableReferenceClass,
+        WordBoundaryDetectionClass,
 
         // Classes that contain vectors, which derive from CSSValueContainingVector.
         ValueListClass,
         FunctionClass,
         GridAutoRepeatClass,
         GridIntegerRepeatClass,
-        GridLineNamesClass,
         ImageSetClass,
         PolygonClass,
         SubgridClass,

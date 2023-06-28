@@ -371,16 +371,19 @@ inline JSValue fastJoin(JSGlobalObject* globalObject, JSObject* thisObject, Stri
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
+    JSStringJoiner joiner(separator);
+
+    unsigned i = 0;
     switch (thisObject->indexingType()) {
     case ALL_INT32_INDEXING_TYPES: {
         auto& butterfly = *thisObject->butterfly();
         if (UNLIKELY(length > butterfly.publicLength()))
             break;
-        JSStringJoiner joiner(globalObject, separator, length);
+        joiner.reserveCapacity(globalObject, length);
         RETURN_IF_EXCEPTION(scope, { });
         auto data = butterfly.contiguous().data();
         bool holesKnownToBeOK = false;
-        for (unsigned i = 0; i < length; ++i) {
+        for (; i < length; ++i) {
             JSValue value = data[i].get();
             if (LIKELY(value))
                 joiner.appendNumber(vm, value.asInt32());
@@ -400,11 +403,9 @@ inline JSValue fastJoin(JSGlobalObject* globalObject, JSObject* thisObject, Stri
         auto& butterfly = *thisObject->butterfly();
         if (UNLIKELY(length > butterfly.publicLength()))
             break;
-        JSStringJoiner joiner(globalObject, separator, length);
-        RETURN_IF_EXCEPTION(scope, { });
         auto data = butterfly.contiguous().data();
         bool holesKnownToBeOK = false;
-        for (unsigned i = 0; i < length; ++i) {
+        for (; i < length; ++i) {
             if (JSValue value = data[i].get()) {
                 if (!joiner.appendWithoutSideEffects(globalObject, value))
                     goto generalCase;
@@ -425,11 +426,11 @@ inline JSValue fastJoin(JSGlobalObject* globalObject, JSObject* thisObject, Stri
         auto& butterfly = *thisObject->butterfly();
         if (UNLIKELY(length > butterfly.publicLength()))
             break;
-        JSStringJoiner joiner(globalObject, separator, length);
+        joiner.reserveCapacity(globalObject, length);
         RETURN_IF_EXCEPTION(scope, { });
         auto data = butterfly.contiguousDouble().data();
         bool holesKnownToBeOK = false;
-        for (unsigned i = 0; i < length; ++i) {
+        for (; i < length; ++i) {
             double value = data[i];
             if (LIKELY(!isHole(value)))
                 joiner.appendNumber(vm, value);
@@ -483,9 +484,7 @@ inline JSValue fastJoin(JSGlobalObject* globalObject, JSObject* thisObject, Stri
 
 generalCase:
     genericCase = true;
-    JSStringJoiner joiner(globalObject, separator, length);
-    RETURN_IF_EXCEPTION(scope, { });
-    for (unsigned i = 0; i < length; ++i) {
+    for (; i < length; ++i) {
         JSValue element = thisObject->getIndex(globalObject, i);
         RETURN_IF_EXCEPTION(scope, { });
         joiner.append(globalObject, element);
@@ -527,7 +526,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToString, (JSGlobalObject* globalObject, 
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     Integrity::auditStructureID(thisObject->structureID());
-    if (!canUseDefaultArrayJoinForToString(thisObject)) {
+    if (UNLIKELY(!canUseDefaultArrayJoinForToString(thisObject))) {
         // 2. Let func be the result of calling the [[Get]] internal method of array with argument "join".
         JSValue function = thisObject->get(globalObject, vm.propertyNames->join);
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -577,9 +576,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToString, (JSGlobalObject* globalObject, 
         return JSValue::encode(result);
     }
 
-    JSStringJoiner joiner(globalObject, ',', length);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-
+    JSStringJoiner joiner(","_s);
     for (unsigned i = 0; i < length; ++i) {
         JSValue element = thisArray->tryGetIndexQuickly(i);
         if (!element) {
@@ -1449,7 +1446,7 @@ static bool moveElements(JSGlobalObject* globalObject, VM& vm, JSArray* target, 
     return true;
 }
 
-static EncodedJSValue concatAppendOne(JSGlobalObject* globalObject, VM& vm, JSArray* first, JSValue second)
+static JSValue concatAppendOne(JSGlobalObject* globalObject, VM& vm, JSArray* first, JSValue second)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -1462,7 +1459,15 @@ static EncodedJSValue concatAppendOne(JSGlobalObject* globalObject, VM& vm, JSAr
     checkedResultSize += 1;
     if (UNLIKELY(checkedResultSize.hasOverflowed())) {
         throwOutOfMemoryError(globalObject, scope);
-        return encodedJSValue();
+        return { };
+    }
+
+    // This code still can see concat-spreadable items. It is ProxyObject and DerivedArray.
+    // We should not use `isArray` check here since it is side-effectful for ProxyObject. Let's just bail out if it is ProxyObject or DerivedArray.
+    if (second.isObject()) {
+        JSType type = asObject(second)->type();
+        if (UNLIKELY(type == ProxyObjectType || type == DerivedArrayType))
+            return jsNull();
     }
 
     unsigned resultSize = checkedResultSize;
@@ -1475,24 +1480,23 @@ static EncodedJSValue concatAppendOne(JSGlobalObject* globalObject, VM& vm, JSAr
     JSArray* result = JSArray::tryCreate(vm, resultStructure, resultSize);
     if (UNLIKELY(!result)) {
         throwOutOfMemoryError(globalObject, scope);
-        return encodedJSValue();
+        return { };
     }
 
     bool success = result->appendMemcpy(globalObject, vm, 0, first);
     EXCEPTION_ASSERT(!scope.exception() || !success);
     if (!success) {
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        RETURN_IF_EXCEPTION(scope, { });
 
         bool success = moveElements(globalObject, vm, result, 0, first, firstArraySize);
         EXCEPTION_ASSERT(!scope.exception() == success);
         if (UNLIKELY(!success))
-            return encodedJSValue();
+            return { };
     }
 
     scope.release();
     result->putDirectIndex(globalObject, firstArraySize, second);
-    return JSValue::encode(result);
-
+    return result;
 }
 
 template<typename T>
@@ -1541,7 +1545,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoPrivateFuncConcatMemcpy, (JSGlobalObject* glo
 
     JSValue second = callFrame->uncheckedArgument(1);
     if (!isJSArray(second))
-        RELEASE_AND_RETURN(scope, concatAppendOne(globalObject, vm, firstArray, second));
+        RELEASE_AND_RETURN(scope, JSValue::encode(concatAppendOne(globalObject, vm, firstArray, second)));
 
     JSArray* secondArray = jsCast<JSArray*>(second);
     

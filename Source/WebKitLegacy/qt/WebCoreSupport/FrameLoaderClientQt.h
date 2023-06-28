@@ -31,8 +31,9 @@
 #define FrameLoaderClientQt_h
 
 #include <WebCore/FormState.h>
-#include <WebCore/FrameLoaderClient.h>
+#include <WebCore/LocalFrameLoaderClient.h>
 #include <WebCore/ResourceResponse.h>
+#include <WebCore/ResourceError.h>
 
 #include <QObject>
 #include <QUrl>
@@ -57,7 +58,7 @@ class ResourceLoader;
 
 struct LoadErrorResetToken;
 
-class FrameLoaderClientQt final : public QObject, public FrameLoaderClient {
+class FrameLoaderClientQt final : public QObject, public LocalFrameLoaderClient {
     Q_OBJECT
 
     friend class ::QWebFrameAdapter;
@@ -71,13 +72,11 @@ public:
     FrameLoaderClientQt();
     ~FrameLoaderClientQt();
 
-    void setFrame(QWebFrameAdapter*, Frame*);
+    void setFrame(QWebFrameAdapter*, LocalFrame*);
 
     bool hasWebView() const override; // mainly for assertions
 
     void makeRepresentation(DocumentLoader*) override { }
-
-    std::optional<PageIdentifier> pageID() const final;
 
     void forceLayoutForNonHTML() override;
 
@@ -117,7 +116,7 @@ public:
     void dispatchDidFinishLoad() override;
     void dispatchDidReachLayoutMilestone(OptionSet<LayoutMilestone>) override;
 
-    WebCore::Frame* dispatchCreatePage(const WebCore::NavigationAction&, NewFrameOpenerPolicy) override;
+    WebCore::LocalFrame* dispatchCreatePage(const WebCore::NavigationAction&, NewFrameOpenerPolicy) override;
     void dispatchShow() override;
 
     void dispatchDecidePolicyForResponse(const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) override;
@@ -156,6 +155,7 @@ public:
 
     ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
     ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
+    ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const override;
     ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
 
     bool shouldFallBack(const ResourceError&) const override;
@@ -187,7 +187,7 @@ public:
     bool canCachePage() const override;
     void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const WebCore::ResourceResponse&) override;
 
-    RefPtr<Frame> createFrame(const AtomString& name, HTMLFrameOwnerElement&) override;
+    RefPtr<LocalFrame> createFrame(const AtomString& name, HTMLFrameOwnerElement&) override;
     RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool) override;
     void redirectDataToPlugin(Widget& pluginWidget) override;
 
@@ -236,7 +236,7 @@ private:
     void emitLoadStarted();
     void emitLoadFinished(bool ok);
 
-    Frame *m_frame;
+    LocalFrame *m_frame;
     QWebFrameAdapter *m_webFrame;
     ResourceResponse m_response;
 

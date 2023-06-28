@@ -67,7 +67,7 @@ private:
     
     static inline constexpr Seconds defaultSendTimeout = 30_s;
     template<typename T>
-    WARN_UNUSED_RETURN bool send(T&& message)
+    WARN_UNUSED_RETURN IPC::Error send(T&& message)
     {
         return root().streamClientConnection().send(WTFMove(message), backing(), defaultSendTimeout);
     }
@@ -77,7 +77,7 @@ private:
         return root().streamClientConnection().sendSync(WTFMove(message), backing(), defaultSendTimeout);
     }
 
-    void requestDevice(const PAL::WebGPU::DeviceDescriptor&, CompletionHandler<void(Ref<PAL::WebGPU::Device>&&)>&&) final;
+    void requestDevice(const PAL::WebGPU::DeviceDescriptor&, CompletionHandler<void(RefPtr<PAL::WebGPU::Device>&&)>&&) final;
 
     Deque<CompletionHandler<void(Ref<PAL::WebGPU::Device>)>> m_callbacks;
 

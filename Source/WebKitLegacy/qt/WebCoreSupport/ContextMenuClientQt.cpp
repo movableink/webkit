@@ -28,18 +28,13 @@
 #include <WebCore/NotImplemented.h>
 
 namespace WebCore {
-    
-void ContextMenuClientQt::contextMenuDestroyed()
-{
-    delete this;
-}
 
 void ContextMenuClientQt::downloadURL(const URL&)
 {
     notImplemented();
 }
 
-void ContextMenuClientQt::lookUpInDictionary(Frame*)
+void ContextMenuClientQt::lookUpInDictionary(LocalFrame*)
 {
     notImplemented();
 }
@@ -49,7 +44,7 @@ void ContextMenuClientQt::speak(const String&)
     notImplemented();
 }
 
-bool ContextMenuClientQt::isSpeaking()
+bool ContextMenuClientQt::isSpeaking() const
 {
     notImplemented();
     return false;
@@ -60,7 +55,7 @@ void ContextMenuClientQt::stopSpeaking()
     notImplemented();
 }
 
-void ContextMenuClientQt::searchWithGoogle(const Frame*)
+void ContextMenuClientQt::searchWithGoogle(const LocalFrame*)
 {
     notImplemented();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,20 +44,21 @@ class SampleBufferDisplayLayerManager;
 
 class SampleBufferDisplayLayer final : public WebCore::SampleBufferDisplayLayer, public IPC::MessageReceiver, public GPUProcessConnection::Client {
 public:
-    static std::unique_ptr<SampleBufferDisplayLayer> create(SampleBufferDisplayLayerManager&, WebCore::SampleBufferDisplayLayer::Client&);
+    static Ref<SampleBufferDisplayLayer> create(SampleBufferDisplayLayerManager&, WebCore::SampleBufferDisplayLayer::Client&);
     ~SampleBufferDisplayLayer();
 
     SampleBufferDisplayLayerIdentifier identifier() const { return m_identifier; }
 
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
 
-    using GPUProcessConnection::Client::weakPtrFactory;
-    using GPUProcessConnection::Client::WeakValueType;
-    using GPUProcessConnection::Client::WeakPtrImplType;
+    WebCore::LayerHostingContextID hostingContextID() const final { return m_hostingContextID; }
+
+    void ref() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCore::SampleBufferDisplayLayer>::ref(); }
+    void deref() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCore::SampleBufferDisplayLayer>::deref(); }
+    ThreadSafeWeakPtrControlBlock& controlBlock() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCore::SampleBufferDisplayLayer>::controlBlock(); }
 
 private:
     SampleBufferDisplayLayer(SampleBufferDisplayLayerManager&, WebCore::SampleBufferDisplayLayer::Client&);
-    void disconnectGPUProcessConnectionIfNeeded();
 
     // WebCore::SampleBufferDisplayLayer
     void initialize(bool hideRootLayer, WebCore::IntSize, CompletionHandler<void(bool)>&&) final;
@@ -67,11 +68,12 @@ private:
     bool didFail() const final;
     void updateDisplayMode(bool hideDisplayLayer, bool hideRootLayer) final;
     void updateAffineTransform(CGAffineTransform) final;
-    void updateBoundsAndPosition(CGRect, WebCore::VideoFrameRotation) final;
+    void updateBoundsAndPosition(CGRect, WebCore::VideoFrameRotation, std::optional<WTF::MachSendRight>&&) final;
     void flush() final;
     void flushAndRemoveImage() final;
     void play() final;
     void pause() final;
+    void enqueueBlackFrameFrom(const WebCore::VideoFrame&) final;
     void enqueueVideoFrame(WebCore::VideoFrame&) final;
     void clearVideoFrames() final;
     PlatformLayer* rootLayer() final;
@@ -81,7 +83,7 @@ private:
 
     void setDidFail(bool);
 
-    GPUProcessConnection* m_gpuProcessConnection;
+    ThreadSafeWeakPtr<GPUProcessConnection> m_gpuProcessConnection;
     WeakPtr<SampleBufferDisplayLayerManager> m_manager;
     Ref<IPC::Connection> m_connection;
     SampleBufferDisplayLayerIdentifier m_identifier;
@@ -91,6 +93,7 @@ private:
     bool m_paused { false };
 
     SharedVideoFrameWriter m_sharedVideoFrameWriter;
+    WebCore::LayerHostingContextID m_hostingContextID { 0 };
 };
 
 }

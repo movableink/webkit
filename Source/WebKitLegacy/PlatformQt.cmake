@@ -40,6 +40,7 @@ list(APPEND WebKitLegacy_INCLUDE_DIRECTORIES
     "${WEBKITLEGACY_DIR}/qt/Api"
     "${WEBKITLEGACY_DIR}/qt/WebCoreSupport"
     "${bmalloc_FRAMEWORK_HEADERS_DIR}"
+    "${JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS_DIR}"
 )
 
 list(APPEND WebKitLegacy_PRIVATE_INCLUDE_DIRECTORIES
@@ -54,6 +55,14 @@ list(REMOVE_ITEM WebKitLegacy_SOURCES
 )
 
 list(APPEND WebKitLegacy_SOURCES
+    # TODO: should not be port-specific?
+    WebCoreSupport/LegacySocketProvider.cpp
+    WebCoreSupport/SocketStreamHandle.cpp
+    WebCoreSupport/SocketStreamHandleImpl.cpp
+    WebCoreSupport/WebBroadcastChannelRegistry.cpp
+    WebCoreSupport/WebResourceLoadScheduler.cpp
+    WebCoreSupport/WebSocketChannel.cpp
+
     qt/Api/qhttpheader.cpp
     qt/Api/qwebdatabase.cpp
     qt/Api/qwebelement.cpp
@@ -91,6 +100,7 @@ list(APPEND WebKitLegacy_SOURCES
     qt/WebCoreSupport/QtPluginWidgetAdapter.cpp
     qt/WebCoreSupport/QtPrintContext.cpp
     qt/WebCoreSupport/SearchPopupMenuQt.cpp
+    qt/WebCoreSupport/SocketStreamHandleImplQt.cpp
     qt/WebCoreSupport/TextCheckerClientQt.cpp
     qt/WebCoreSupport/TextureMapperLayerClientQt.cpp
     qt/WebCoreSupport/UndoStepQt.cpp
@@ -490,7 +500,9 @@ set(WebKitWidgets_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBKITLEGACY_DIR}/qt/WidgetApi"
     "${WEBKITLEGACY_DIR}/qt/WidgetSupport"
     "${WTF_FRAMEWORK_HEADERS_DIR}"
+    "${PAL_FRAMEWORK_HEADERS_DIR}"
     "${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}"
+    "${JavaScriptCore_FRAMEWORK_HEADERS_DIR}"
 )
 
 set(WebKitWidgets_SOURCES

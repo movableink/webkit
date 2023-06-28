@@ -31,20 +31,21 @@
 #include "config.h"
 #include "CSSGridAutoRepeatValue.h"
 
+#include "CSSValueKeywords.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-CSSGridAutoRepeatValue::CSSGridAutoRepeatValue(bool isAutoFit)
-    : CSSValueContainingVector(GridAutoRepeatClass, SpaceSeparator)
+CSSGridAutoRepeatValue::CSSGridAutoRepeatValue(bool isAutoFit, CSSValueListBuilder builder)
+    : CSSValueContainingVector(GridAutoRepeatClass, SpaceSeparator, WTFMove(builder))
     , m_isAutoFit(isAutoFit)
 {
 }
 
-Ref<CSSGridAutoRepeatValue> CSSGridAutoRepeatValue::create(CSSValueID id)
+Ref<CSSGridAutoRepeatValue> CSSGridAutoRepeatValue::create(CSSValueID id, CSSValueListBuilder builder)
 {
     ASSERT(id == CSSValueAutoFill || id == CSSValueAutoFit);
-    return adoptRef(*new CSSGridAutoRepeatValue(id == CSSValueAutoFit));
+    return adoptRef(*new CSSGridAutoRepeatValue(id == CSSValueAutoFit, WTFMove(builder)));
 }
 
 CSSValueID CSSGridAutoRepeatValue::autoRepeatID() const

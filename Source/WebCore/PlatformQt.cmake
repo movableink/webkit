@@ -47,6 +47,8 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     dom/StaticNodeList.h
 
+    inspector/LegacyWebSocketInspectorInstrumentation.h
+
     loader/NavigationScheduler.h
 
     loader/cache/CachedScript.h
@@ -75,7 +77,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/network/qt/ResourceRequest.h
     platform/network/qt/ResourceResponse.h
     platform/network/qt/SharedCookieJarQt.h
-    platform/network/qt/SocketStreamHandleImpl.h
 
     platform/qt/KeyedDecoderQt.h
     platform/qt/KeyedEncoderQt.h
@@ -104,6 +105,8 @@ list(APPEND WebCore_SOURCES
     dom/qt/GestureEvent.cpp
 
     editing/qt/EditorQt.cpp
+
+    inspector/LegacyWebSocketInspectorInstrumentation.cpp
 
     page/qt/DragControllerQt.cpp
     page/qt/EventHandlerQt.cpp
@@ -173,7 +176,6 @@ list(APPEND WebCore_SOURCES
     platform/network/qt/ResourceRequestQt.cpp
     platform/network/qt/ResourceResponseQt.cpp
     platform/network/qt/SharedCookieJarQt.cpp
-    platform/network/qt/SocketStreamHandleImplQt.cpp
     platform/network/qt/SynchronousLoaderClientQt.cpp
 
     platform/qt/ApplicationQt.cpp
@@ -228,7 +230,6 @@ QTWEBKIT_GENERATE_MOC_FILES_H(WebCore
 )
 
 QTWEBKIT_GENERATE_MOC_FILE_H(WebCore platform/network/qt/NetworkStateNotifierPrivate.h platform/network/qt/NetworkStateNotifierQt.cpp)
-QTWEBKIT_GENERATE_MOC_FILE_H(WebCore platform/network/qt/SocketStreamHandlePrivate.h platform/network/qt/SocketStreamHandleImplQt.cpp)
 
 if (COMPILER_IS_GCC_OR_CLANG)
     set_source_files_properties(
@@ -369,6 +370,9 @@ if (ENABLE_OPENGL)
             platform/graphics/opengl/GraphicsContext3DOpenGL.cpp
         )
     endif ()
+else ()
+    # remove OpenGL::GLES from WebCore
+    list(REMOVE_ITEM WebCore_LIBRARIES OpenGL::GLES)
 endif ()
 
 if (USE_GLIB)
@@ -499,10 +503,6 @@ if (WIN32)
 endif ()
 
 if (APPLE)
-    list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
-        "${CMAKE_BINARY_DIR}/../include/private/JavaScriptCore"
-    )
-
     list(APPEND WebCore_SOURCES
         platform/cf/SharedBufferCF.cpp
     )

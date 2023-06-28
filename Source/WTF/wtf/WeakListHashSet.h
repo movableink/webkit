@@ -105,7 +105,6 @@ public:
         using Base = WeakListHashSetIteratorBase<WeakListHashSet, typename WeakPtrImplSet::iterator>;
 
         bool operator==(const WeakListHashSetIterator& other) const { return Base::m_position == other.Base::m_position; }
-        bool operator!=(const WeakListHashSetIterator& other) const { return Base::m_position != other.Base::m_position; }
 
         T* get() { return Base::makePeek(); }
         T& operator*() { return *Base::makePeek(); }
@@ -136,7 +135,6 @@ public:
         using Base = WeakListHashSetIteratorBase<WeakListHashSet, typename WeakPtrImplSet::const_iterator>;
 
         bool operator==(const WeakListHashSetConstIterator& other) const { return Base::m_position == other.Base::m_position; }
-        bool operator!=(const WeakListHashSetConstIterator& other) const { return Base::m_position != other.Base::m_position; }
 
         const T* get() const { return Base::makePeek(); }
         const T& operator*() const { return *Base::makePeek(); }
@@ -325,6 +323,26 @@ private:
     WeakPtrImplSet m_set;
     mutable unsigned m_operationCountSinceLastCleanup { 0 };
 };
+
+template<typename MapFunction, typename T, typename WeakMapImpl>
+struct Mapper<MapFunction, const WeakListHashSet<T, WeakMapImpl> &, void> {
+    using SourceItemType = T&;
+    using DestinationItemType = typename std::invoke_result<MapFunction, SourceItemType&>::type;
+
+    static Vector<DestinationItemType> map(const WeakListHashSet<T, WeakMapImpl>& source, const MapFunction& mapFunction)
+    {
+        Vector<DestinationItemType> result;
+        result.reserveInitialCapacity(source.computeSize());
+        for (auto& item : source)
+            result.uncheckedAppend(mapFunction(item));
+        return result;
+    }
+};
+
+template<typename T, typename WeakMapImpl>
+inline auto copyToVector(const WeakListHashSet<T, WeakMapImpl>& collection) -> Vector<WeakPtr<T, WeakMapImpl>> {
+    return WTF::map(collection, [](auto& v) -> WeakPtr<T, WeakMapImpl> { return WeakPtr<T, WeakMapImpl> { v }; });
+}
 
 }
 

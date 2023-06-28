@@ -27,7 +27,7 @@
 #include "QWebFrameAdapter.h"
 #include "QWebPageAdapter.h"
 #include <WebCore/Frame.h>
-#include <WebCore/FrameView.h>
+#include <WebCore/LocalFrameView.h>
 #include <WebCore/GraphicsContextQt.h>
 #include <WebCore/GraphicsLayerTextureMapper.h>
 #include <WebCore/QWebPageClient.h>

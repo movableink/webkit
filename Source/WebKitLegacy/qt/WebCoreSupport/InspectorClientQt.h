@@ -49,6 +49,7 @@ class InspectorServerRequestHandlerQt;
 class Page;
 
 class InspectorClientQt : public InspectorClient, public Inspector::FrontendChannel {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit InspectorClientQt(QWebPageAdapter*);
 

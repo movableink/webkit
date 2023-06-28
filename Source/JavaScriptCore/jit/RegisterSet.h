@@ -169,7 +169,6 @@ public:
     }
 
     inline constexpr bool operator==(const RegisterSetBuilder& other) const { return m_bits == other.m_bits && m_upperBits == other.m_upperBits; }
-    inline constexpr bool operator!=(const RegisterSetBuilder& other) const { return m_bits != other.m_bits || m_upperBits != other.m_upperBits; }
 
 protected:
     inline constexpr void setAny(Reg reg) { ASSERT(!reg.isFPR()); add(reg, IgnoreVectors); }
@@ -197,7 +196,8 @@ public:
     JS_EXPORT_PRIVATE static RegisterSet allScalarRegisters();
     JS_EXPORT_PRIVATE static RegisterSet stackRegisters();
     JS_EXPORT_PRIVATE static RegisterSet reservedHardwareRegisters();
-    JS_EXPORT_PRIVATE static RegisterSet macroClobberedRegisters();
+    JS_EXPORT_PRIVATE static RegisterSet macroClobberedGPRs();
+    JS_EXPORT_PRIVATE static RegisterSet macroClobberedFPRs();
     JS_EXPORT_PRIVATE static RegisterSet runtimeTagRegisters();
     JS_EXPORT_PRIVATE static RegisterSet specialRegisters(); // The union of stack, reserved hardware, and runtime registers.
     JS_EXPORT_PRIVATE static RegisterSet calleeSaveRegisters();
@@ -209,7 +209,7 @@ public:
     JS_EXPORT_PRIVATE static RegisterSet stubUnavailableRegisters(); // The union of callee saves and special registers.
     JS_EXPORT_PRIVATE static RegisterSet argumentGPRS();
 #if ENABLE(WEBASSEMBLY)
-    JS_EXPORT_PRIVATE static RegisterSet wasmPinnedRegisters(MemoryMode);
+    JS_EXPORT_PRIVATE static RegisterSet wasmPinnedRegisters();
 #endif
     JS_EXPORT_PRIVATE static RegisterSetBuilder registersToSaveForJSCall(RegisterSetBuilder live);
     JS_EXPORT_PRIVATE static RegisterSetBuilder registersToSaveForCCall(RegisterSetBuilder live);
@@ -340,11 +340,6 @@ public:
             return m_iter == other.m_iter;
         }
 
-        inline constexpr bool operator!=(const iterator& other) const
-        {
-            return !(*this == other);
-        }
-
     private:
         RegisterBitmap::iterator m_iter;
     };
@@ -421,7 +416,6 @@ public:
     }
 
     inline constexpr bool operator==(const RegisterSet& other) const { return m_bits == other.m_bits && m_upperBits == other.m_upperBits; }
-    inline constexpr bool operator!=(const RegisterSet& other) const { return m_bits != other.m_bits || m_upperBits != other.m_upperBits; }
 
 private:
     RegisterBitmap m_bits = { };
@@ -469,7 +463,6 @@ public:
 
     inline constexpr unsigned hash() const { return m_bits.hash(); }
     inline constexpr bool operator==(const ScalarRegisterSet& other) const { return m_bits == other.m_bits; }
-    inline constexpr bool operator!=(const ScalarRegisterSet& other) const { return m_bits != other.m_bits; }
 
     inline constexpr RegisterSet toRegisterSet() const WARN_UNUSED_RETURN
     {

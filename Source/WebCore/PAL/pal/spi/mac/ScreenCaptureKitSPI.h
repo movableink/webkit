@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if HAVE(SCREEN_CAPTURE_KIT) && HAVE(SC_CONTENT_SHARING_SESSION)
+#if HAVE(SCREEN_CAPTURE_KIT)
 
 #import <ScreenCaptureKit/ScreenCaptureKit.h>
 
@@ -32,6 +32,16 @@
 #import <ScreenCaptureKit/SCContentFilterPrivate.h>
 #import <ScreenCaptureKit/SCContentSharingSession.h>
 #import <ScreenCaptureKit/SCStream_Private.h>
+
+#if HAVE(SC_CONTENT_SHARING_PICKER)
+#if __has_include(<ScreenCaptureKit/SCContentSharingPicker.h>)
+#import <ScreenCaptureKit/SCContentSharingPicker.h>
+#endif
+
+#if __has_include(<ScreenCaptureKit/SCContentSharingPicker_Private.h>)
+#import <ScreenCaptureKit/SCContentSharingPicker_Private.h>
+#endif
+#endif // HAVE(SC_CONTENT_SHARING_PICKER)
 
 #else // USE(APPLE_INTERNAL_SDK)
 
@@ -76,14 +86,37 @@ typedef NS_ENUM(NSInteger, SCContentFilterType) {
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithTitle:(NSString *)title;
-- (BOOL)isEqualToSharingSession:(SCContentSharingSession *)other;
 - (void)showPickerForType:(SCContentFilterType)type;
-- (void)updateContent:(SCContentFilter *)content;
 - (void)end;
 @end
 
 @interface SCStream (SCContentSharing) <SCContentSharingSessionProtocol>
 - (instancetype)initWithSharingSession:(SCContentSharingSession *)session captureOutputProperties:(SCStreamConfiguration *)streamConfig delegate:(id<SCStreamDelegate>)delegate;
+@end
+
+@protocol SCContentSharingPickerDelegate <NSObject>
+@required
+@optional
+- (void)contentSharingPicker:(SCContentSharingPicker *)picker didCancelForStream:(nullable SCStream *)stream;
+- (void)contentSharingPickerStartDidFailWithError:(NSError *)error;
+- (void)contentSharingPickerDidCancel:(SCContentSharingPicker *)picker forStream:(nullable SCStream *)stream;
+@end
+
+typedef NS_OPTIONS(NSUInteger, SCContentSharingAllowedPickerModes) {
+    SCContentSharingPickerAllowedModeSingleWindow          = 1 << 0,
+    SCContentSharingPickerAllowedModeMultipleWindows       = 1 << 1,
+    SCContentSharingPickerAllowedModeSingleApplication     = 1 << 2,
+    SCContentSharingPickerAllowedModeSingleDisplay         = 1 << 3,
+};
+
+@interface SCContentSharingPickerConfiguration : NSObject
+@property (nonatomic, assign) SCContentSharingAllowedPickerModes allowedPickingModes;
+@end
+
+@interface SCContentSharingPicker : NSObject
+@property (nonatomic, weak, nullable) id<SCContentSharingPickerDelegate> delegate;
+@property (nonatomic, nullable, strong) NSNumber *maxStreamCount;
+@property (nonatomic, nullable, copy) SCContentSharingPickerConfiguration *configuration;
 @end
 
 NS_ASSUME_NONNULL_END

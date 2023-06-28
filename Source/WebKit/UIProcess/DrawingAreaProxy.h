@@ -28,7 +28,6 @@
 
 #include "Connection.h"
 #include "DrawingAreaInfo.h"
-#include "GenericCallback.h"
 #include "MessageReceiver.h"
 #include <WebCore/FloatRect.h>
 #include <WebCore/IntRect.h>
@@ -57,7 +56,7 @@ class WebPageProxy;
 class WebProcessProxy;
 
 #if USE(COORDINATED_GRAPHICS) || USE(TEXTURE_MAPPER)
-class UpdateInfo;
+struct UpdateInfo;
 #endif
 
 class DrawingAreaProxy : public IPC::MessageReceiver {
@@ -70,14 +69,15 @@ public:
     DrawingAreaType type() const { return m_type; }
     DrawingAreaIdentifier identifier() const { return m_identifier; }
 
-    void startReceivingMessages(WebProcessProxy&);
-    virtual void attachToProvisionalFrameProcess(WebProcessProxy&) = 0;
+    virtual void startReceivingMessages(WebProcessProxy&);
+    virtual void stopReceivingMessages(WebProcessProxy&);
 
     virtual WebCore::DelegatedScrollingMode delegatedScrollingMode() const;
 
     virtual void deviceScaleFactorDidChange() = 0;
     virtual void colorSpaceDidChange() { }
-    virtual void windowScreenDidChange(WebCore::PlatformDisplayID, std::optional<WebCore::FramesPerSecond> /* nominalFramesPerSecond */) { }
+    virtual void windowScreenDidChange(WebCore::PlatformDisplayID) { }
+    virtual std::optional<WebCore::FramesPerSecond> displayNominalFramesPerSecond() { return std::nullopt; }
 
     // FIXME: These should be pure virtual.
     virtual void setBackingStoreIsDiscardable(bool) { }
@@ -88,8 +88,6 @@ public:
     bool setSize(const WebCore::IntSize&, const WebCore::IntSize& scrollOffset = { });
 
 #if USE(COORDINATED_GRAPHICS) || USE(TEXTURE_MAPPER)
-    // The timeout we use when waiting for a UpdateGeometry reply.
-    static constexpr Seconds didUpdateBackingStoreStateTimeout() { return Seconds::fromMilliseconds(500); }
     virtual void targetRefreshRateDidChange(unsigned) { }
 #endif
 
@@ -108,8 +106,6 @@ public:
     virtual void updateDebugIndicator() { }
 
     virtual void waitForDidUpdateActivityState(ActivityStateChangeID, WebProcessProxy&) { }
-    
-    virtual void dispatchAfterEnsuringDrawing(CompletionHandler<void()>&&) = 0;
 
     // Hide the content until the currently pending update arrives.
     virtual void hideContentUntilPendingUpdate() { ASSERT_NOT_REACHED(); }
@@ -131,6 +127,8 @@ public:
     virtual bool shouldSendWheelEventsToEventDispatcher() const { return false; }
 
     WebPageProxy& page() const { return m_webPageProxy; }
+    virtual void viewWillStartLiveResize() { };
+    virtual void viewWillEndLiveResize() { };
 
 protected:
     DrawingAreaProxy(DrawingAreaType, WebPageProxy&);
@@ -138,7 +136,6 @@ protected:
     DrawingAreaType m_type;
     DrawingAreaIdentifier m_identifier;
     WebPageProxy& m_webPageProxy;
-    Vector<Ref<WebProcessProxy>> m_processesWithRegisteredDrawingAreaProxyMessageReceiver;
 
     WebCore::IntSize m_size;
     WebCore::IntSize m_scrollOffset;
@@ -160,9 +157,8 @@ private:
 #endif // PLATFORM(MAC)
 
 #if USE(COORDINATED_GRAPHICS) || USE(TEXTURE_MAPPER)
-    virtual void update(uint64_t /* backingStoreStateID */, const UpdateInfo&) { }
-    virtual void didUpdateBackingStoreState(uint64_t /* backingStoreStateID */, const UpdateInfo&, const LayerTreeContext&) { }
-    virtual void exitAcceleratedCompositingMode(uint64_t /* backingStoreStateID */, const UpdateInfo&) { }
+    virtual void update(uint64_t /* backingStoreStateID */, UpdateInfo&&) { }
+    virtual void exitAcceleratedCompositingMode(uint64_t /* backingStoreStateID */, UpdateInfo&&) { }
 #endif
 };
 

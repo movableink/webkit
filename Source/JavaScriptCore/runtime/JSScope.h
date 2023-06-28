@@ -70,6 +70,7 @@ public:
     bool isLexicalScope();
     bool isModuleScope();
     bool isCatchScope();
+    bool isCatchScopeWithSimpleParameter();
     bool isFunctionNameScopeObject();
 
     bool isNestedLexicalScope();
@@ -94,7 +95,7 @@ private:
 
 inline JSScope::JSScope(VM& vm, Structure* structure, JSScope* next)
     : Base(vm, structure)
-    , m_next(vm, this, next, WriteBarrier<JSScope>::MayBeNull)
+    , m_next(next, WriteBarrierEarlyInit)
 {
 }
 
@@ -114,7 +115,6 @@ public:
     // postfix ++ intentionally omitted
 
     bool operator==(const ScopeChainIterator& other) const { return m_node == other.m_node; }
-    bool operator!=(const ScopeChainIterator& other) const { return m_node != other.m_node; }
 
 private:
     JSScope* m_node;

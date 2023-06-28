@@ -232,6 +232,12 @@ JSValueRef AccessibilityUIElement::columnHeaders() const
     return nullptr;
 }
 
+JSValueRef AccessibilityUIElement::selectedCells() const
+{
+    notImplemented();
+    return nullptr;
+}
+
 RefPtr<AccessibilityUIElement> AccessibilityUIElement::uiElementAttributeValue(JSStringRef attribute) const
 {
     notImplemented();
@@ -656,6 +662,12 @@ bool AccessibilityUIElement::setSelectedTextRange(unsigned, unsigned)
 {
     notImplemented();
     return false;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textInputMarkedRange() const
+{
+    notImplemented();
+    return nullptr;
 }
 
 void AccessibilityUIElement::increment()

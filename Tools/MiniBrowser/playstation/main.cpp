@@ -27,9 +27,14 @@
 #include "cmakeconfig.h"
 #endif
 #include "MainWindow.h"
+#include <JavaScriptCore/JSRemoteInspectorServer.h>
 #include <WebKit/WKRunLoop.h>
 #include <dlfcn.h>
 #include <toolkitten/Application.h>
+
+#if defined (USE_WPE_BACKEND_PLAYSTATION) && USE_WPE_BACKEND_PLAYSTATION
+#include <wpe/playstation.h>
+#endif
 
 using toolkitten::Widget;
 using toolkitten::Application;
@@ -46,13 +51,12 @@ __attribute__((constructor(110)))
 static void initialize()
 {
     loadLibraryOrExit("PosixWebKit");
-    setenv_np("WebInspectorServerPort", "868", 1);
 
     loadLibraryOrExit(ICU_LOAD_AT);
     loadLibraryOrExit(PNG_LOAD_AT);
 #if defined(JPEG_LOAD_AT)
     loadLibraryOrExit(JPEG_LOAD_AT);
-#endif 
+#endif
 #if defined(WebP_LOAD_AT)
     loadLibraryOrExit(WebP_LOAD_AT);
 #endif
@@ -62,6 +66,9 @@ static void initialize()
     loadLibraryOrExit(Cairo_LOAD_AT);
     loadLibraryOrExit(ToolKitten_LOAD_AT);
     loadLibraryOrExit(WebKitRequirements_LOAD_AT);
+#if defined(LibPSL_LOAD_AT)
+    loadLibraryOrExit(LibPSL_LOAD_AT);
+#endif
 #if defined(WPE_LOAD_AT)
     loadLibraryOrExit(WPE_LOAD_AT);
 #endif
@@ -69,6 +76,12 @@ static void initialize()
     loadLibraryOrExit("libJavaScriptCore");
 #endif
     loadLibraryOrExit("libWebKit");
+
+#if defined (USE_WPE_BACKEND_PLAYSTATION) && USE_WPE_BACKEND_PLAYSTATION
+    wpe_playstation_process_provider_register_backend();
+#endif
+
+    JSRemoteInspectorServerStart(nullptr, 868);
 }
 
 class ApplicationClient : public Application::Client {

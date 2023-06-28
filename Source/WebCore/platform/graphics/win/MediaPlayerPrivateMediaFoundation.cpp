@@ -30,10 +30,13 @@
 #if ENABLE(VIDEO) && USE(MEDIA_FOUNDATION)
 
 #include "CachedResourceLoader.h"
-#include "FrameView.h"
+#include "CairoOperations.h"
 #include "GraphicsContext.h"
 #include "HWndDC.h"
 #include "HostWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
+#include "MediaPlayer.h"
 #include "NotImplemented.h"
 #include <shlwapi.h>
 #include <wtf/MainThread.h>
@@ -42,11 +45,6 @@
 #if PLATFORM(QT)
 #include "QWebPageClient.h"
 #include <QWindow>
-#endif
-
-#if USE(CAIRO)
-#include "CairoOperations.h"
-#include <cairo.h>
 #endif
 
 // MFSamplePresenterSampleCounter
@@ -205,6 +203,10 @@ MediaPlayer::SupportsType MediaPlayerPrivateMediaFoundation::supportsType(const 
 
 void MediaPlayerPrivateMediaFoundation::load(const String& url)
 {
+    auto player = m_player.get();
+    if (!player)
+        return;
+
     {
         Locker locker { m_cachedNaturalSizeLock };
         m_cachedNaturalSize = FloatSize();
@@ -213,9 +215,9 @@ void MediaPlayerPrivateMediaFoundation::load(const String& url)
     startCreateMediaSource(url);
 
     m_networkState = MediaPlayer::NetworkState::Loading;
-    m_player->networkStateChanged();
+    player->networkStateChanged();
     m_readyState = MediaPlayer::ReadyState::HaveNothing;
-    m_player->readyStateChanged();
+    player->readyStateChanged();
 }
 
 void MediaPlayerPrivateMediaFoundation::cancelLoad()
@@ -333,9 +335,11 @@ float MediaPlayerPrivateMediaFoundation::currentTime() const
     // clockTime is in 100 nanoseconds, we need to convert to seconds.
     float currentTime = clockTime / tenMegahertz;
 
-    if (currentTime > m_maxTimeLoaded)
-        m_maxTimeLoaded = currentTime;
-
+    if (m_buffered.length() && currentTime > m_buffered.maximumBufferedTime().toFloat()) {
+        PlatformTimeRanges ranges;
+        ranges.add(MediaTime::zeroTime(), MediaTime::createWithFloat(currentTime));
+        m_buffered = WTFMove(ranges);
+    }
     return currentTime;
 }
 
@@ -384,12 +388,9 @@ float MediaPlayerPrivateMediaFoundation::maxTimeSeekable() const
     return durationDouble();
 }
 
-std::unique_ptr<PlatformTimeRanges> MediaPlayerPrivateMediaFoundation::buffered() const
-{ 
-    auto ranges = makeUnique<PlatformTimeRanges>();
-    if (maxTimeLoaded() > 0)
-        ranges->add(MediaTime::zeroTime(), MediaTime::createWithDouble(maxTimeLoaded()));
-    return ranges;
+const PlatformTimeRanges& MediaPlayerPrivateMediaFoundation::buffered() const
+{
+    return m_buffered;
 }
 
 bool MediaPlayerPrivateMediaFoundation::didLoadingProgress() const
@@ -665,8 +666,9 @@ bool MediaPlayerPrivateMediaFoundation::addBranchToPartialTopology(int stream)
 
 HWND MediaPlayerPrivateMediaFoundation::hostWindow()
 {
-    if (m_player && m_player->cachedResourceLoader() && !m_player->cachedResourceLoader()->document()) {
-        auto* view = m_player->cachedResourceLoader()->document()->view();
+    auto player = m_player.get();
+    if (player && player->cachedResourceLoader() && !player->cachedResourceLoader()->document()) {
+        auto* view = player->cachedResourceLoader()->document()->view();
         if (view && view->hostWindow() && view->hostWindow()->platformPageClient())
             return view->hostWindow()->platformPageClient();
     }
@@ -675,7 +677,8 @@ HWND MediaPlayerPrivateMediaFoundation::hostWindow()
 
 void MediaPlayerPrivateMediaFoundation::invalidateVideoArea()
 {
-    m_player->repaint();
+    if (auto player = m_player.get())
+        player->repaint();
 }
 
 void MediaPlayerPrivateMediaFoundation::addListener(MediaPlayerListener* listener)
@@ -819,8 +822,10 @@ void MediaPlayerPrivateMediaFoundation::updateReadyState()
     else
         m_readyState = MediaPlayer::ReadyState::HaveCurrentData;
 
-    if (m_readyState != oldReadyState)
-        m_player->readyStateChanged();
+    if (m_readyState != oldReadyState) {
+        if (auto player = m_player.get())
+            player->readyStateChanged();
+    }
 }
 
 COMPtr<IMFVideoDisplayControl> MediaPlayerPrivateMediaFoundation::videoDisplay()
@@ -849,7 +854,8 @@ void MediaPlayerPrivateMediaFoundation::onCreatedMediaSource(COMPtr<IMFMediaSour
 void MediaPlayerPrivateMediaFoundation::onNetworkStateChanged(MediaPlayer::NetworkState state)
 {
     m_networkState = state;
-    m_player->networkStateChanged();
+    if (auto player = m_player.get())
+        player->networkStateChanged();
 }
 
 void MediaPlayerPrivateMediaFoundation::onTopologySet()
@@ -879,7 +885,8 @@ void MediaPlayerPrivateMediaFoundation::onSessionStarted()
         m_seeking = false;
         if (m_paused)
             m_mediaSession->Pause();
-        m_player->timeChanged();
+        if (auto player = m_player.get())
+            player->timeChanged();
         return;
     }
 
@@ -893,14 +900,19 @@ void MediaPlayerPrivateMediaFoundation::onSessionStarted()
 
 void MediaPlayerPrivateMediaFoundation::onSessionEnded()
 {
+    auto player = m_player.get();
+
     m_sessionEnded = true;
     m_networkState = MediaPlayer::NetworkState::Loaded;
-    m_player->networkStateChanged();
+    if (player)
+        player->networkStateChanged();
 
     m_paused = true;
-    m_player->playbackStateChanged();
+    if (player) {
+        player->playbackStateChanged();
 
-    m_player->timeChanged();
+        player->timeChanged();
+    }
 }
 
 MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::CustomVideoPresenter(MediaPlayerPrivateMediaFoundation* mediaPlayer)
@@ -2253,7 +2265,7 @@ void MediaPlayerPrivateMediaFoundation::VideoScheduler::setFrameRate(const MFRat
 
 HRESULT MediaPlayerPrivateMediaFoundation::VideoScheduler::startScheduler(IMFClock* clock)
 {
-    if (m_schedulerThread.isValid())
+    if (m_schedulerThread)
         return E_UNEXPECTED;
 
     HRESULT hr = S_OK;
@@ -2264,19 +2276,19 @@ HRESULT MediaPlayerPrivateMediaFoundation::VideoScheduler::startScheduler(IMFClo
     timeBeginPeriod(1);
 
     // Create an event to signal that the scheduler thread has started.
-    m_threadReadyEvent = ::CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    if (!m_threadReadyEvent.isValid())
+    m_threadReadyEvent = Win32Handle::adopt(::CreateEvent(nullptr, FALSE, FALSE, nullptr));
+    if (!m_threadReadyEvent)
         return HRESULT_FROM_WIN32(GetLastError());
 
     // Create an event to signal that the flush has completed.
-    m_flushEvent = ::CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    if (!m_flushEvent.isValid())
+    m_flushEvent = Win32Handle::adopt(::CreateEvent(nullptr, FALSE, FALSE, nullptr));
+    if (!m_flushEvent)
         return HRESULT_FROM_WIN32(GetLastError());
 
     // Start scheduler thread.
     DWORD threadID = 0;
-    m_schedulerThread = ::CreateThread(nullptr, 0, schedulerThreadProc, (LPVOID)this, 0, &threadID);
-    if (!m_schedulerThread.isValid())
+    m_schedulerThread = Win32Handle::adopt(::CreateThread(nullptr, 0, schedulerThreadProc, (LPVOID)this, 0, &threadID));
+    if (!m_schedulerThread)
         return HRESULT_FROM_WIN32(GetLastError());
 
     HANDLE hObjects[] = { m_threadReadyEvent.get(), m_schedulerThread.get() };
@@ -2285,7 +2297,7 @@ HRESULT MediaPlayerPrivateMediaFoundation::VideoScheduler::startScheduler(IMFClo
     DWORD result = ::WaitForMultipleObjects(2, hObjects, FALSE, INFINITE);
     if (WAIT_OBJECT_0 != result) {
         // The thread has terminated.
-        m_schedulerThread.clear();
+        m_schedulerThread = { };
         return E_UNEXPECTED;
     }
 
@@ -2296,7 +2308,7 @@ HRESULT MediaPlayerPrivateMediaFoundation::VideoScheduler::startScheduler(IMFClo
 
 HRESULT MediaPlayerPrivateMediaFoundation::VideoScheduler::stopScheduler()
 {
-    if (!m_schedulerThread.isValid())
+    if (!m_schedulerThread)
         return S_OK;
 
     // Terminate the scheduler thread
@@ -2308,9 +2320,9 @@ HRESULT MediaPlayerPrivateMediaFoundation::VideoScheduler::stopScheduler()
 
     Locker locker { m_lock };
 
-    m_scheduledSamples.clear();
-    m_schedulerThread.clear();
-    m_flushEvent.clear();
+    m_scheduledSamples = { };
+    m_schedulerThread = { };
+    m_flushEvent = { };
 
     // Clear previously set timer resolution.
     timeEndPeriod(1);
@@ -2322,7 +2334,7 @@ HRESULT MediaPlayerPrivateMediaFoundation::VideoScheduler::flush()
 {
     // This method will wait for the flush to finish on the worker thread.
 
-    if (m_schedulerThread.isValid()) {
+    if (m_schedulerThread) {
         ::PostThreadMessage(m_threadID, EventFlush, 0, 0);
 
         HANDLE objects[] = { m_flushEvent.get(), m_schedulerThread.get() };
@@ -2344,7 +2356,7 @@ HRESULT MediaPlayerPrivateMediaFoundation::VideoScheduler::scheduleSample(IMFSam
     if (!m_presenter)
         return MF_E_NOT_INITIALIZED;
 
-    if (!m_schedulerThread.isValid())
+    if (!m_schedulerThread)
         return MF_E_NOT_INITIALIZED;
 
     DWORD exitCode = 0;
@@ -2453,7 +2465,7 @@ HRESULT MediaPlayerPrivateMediaFoundation::VideoScheduler::processSample(IMFSamp
 
             // Since sleeping is using the system clock, we need to convert the sleep time
             // from presentation time to system time.
-            nextSleepTime = (LONG)(nextSleepTime / fabsf(m_playbackRate));
+            nextSleepTime = (LONG)(nextSleepTime / std::abs(m_playbackRate));
 
             presentNow = false;
         }
@@ -2804,7 +2816,31 @@ void MediaPlayerPrivateMediaFoundation::Direct3DPresenter::paintCurrentFrame(Web
     if (SUCCEEDED(m_memSurface->LockRect(&lockedRect, nullptr, D3DLOCK_READONLY))) {
         void* data = lockedRect.pBits;
         int pitch = lockedRect.Pitch;
-#if USE(CAIRO)
+#if PLATFORM(QT)
+        D3DFORMAT format = D3DFMT_UNKNOWN;
+        D3DSURFACE_DESC desc;
+        if (SUCCEEDED(m_memSurface->GetDesc(&desc)))
+            format = desc.Format;
+        
+        QImage::Format imageFormat = QImage::Format_Invalid;
+        
+        switch (format) {
+            case D3DFMT_A8R8G8B8:
+                imageFormat = QImage::Format_ARGB32_Premultiplied;
+                break;
+            case D3DFMT_X8R8G8B8:
+                imageFormat = QImage::Format_RGB32;
+                break;
+        }
+        
+        ASSERT(imageFormat != QImage::Format_Invalid);
+        
+        QImage image(static_cast<unsigned char*>(data), width, height, pitch, imageFormat);
+        
+        FloatRect srcRect(0, 0, width, height);
+        QPainter* p = context.platformContext();
+        p->drawImage(destRect, image, srcRect);
+#else
         D3DFORMAT format = D3DFMT_UNKNOWN;
         D3DSURFACE_DESC desc;
         if (SUCCEEDED(m_memSurface->GetDesc(&desc)))
@@ -2832,32 +2868,6 @@ void MediaPlayerPrivateMediaFoundation::Direct3DPresenter::paintCurrentFrame(Web
             FloatRect srcRect(0, 0, width, height);
             context.drawNativeImage(*image, srcRect.size(), destRect, srcRect);
         }
-#elif PLATFORM(QT)
-        D3DFORMAT format = D3DFMT_UNKNOWN;
-        D3DSURFACE_DESC desc;
-        if (SUCCEEDED(m_memSurface->GetDesc(&desc)))
-            format = desc.Format;
-
-        QImage::Format imageFormat = QImage::Format_Invalid;
-
-        switch (format) {
-        case D3DFMT_A8R8G8B8:
-            imageFormat = QImage::Format_ARGB32_Premultiplied;
-            break;
-        case D3DFMT_X8R8G8B8:
-            imageFormat = QImage::Format_RGB32;
-            break;
-        }
-
-        ASSERT(imageFormat != QImage::Format_Invalid);
-
-        QImage image(static_cast<unsigned char*>(data), width, height, pitch, imageFormat);
-
-        FloatRect srcRect(0, 0, width, height);
-        QPainter* p = context.platformContext();
-        p->drawImage(destRect, image, srcRect);
-#else
-#error "Platform needs to implement drawing of Direct3D surface to graphics context!"
 #endif
         m_memSurface->UnlockRect();
     }

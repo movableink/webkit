@@ -33,15 +33,15 @@ namespace WebCore {
 class ContextMenu;
 
 class ContextMenuClientQt final : public ContextMenuClient {
-public:
-    void contextMenuDestroyed() final;
+    WTF_MAKE_FAST_ALLOCATED;
 
+public:
     void downloadURL(const URL&) final;
-    void lookUpInDictionary(Frame*) final;
+    void lookUpInDictionary(LocalFrame*) final;
     void speak(const String&) final;
-    bool isSpeaking() final;
+    bool isSpeaking() const final;
     void stopSpeaking() final;
-    void searchWithGoogle(const Frame*) final;
+    void searchWithGoogle(const LocalFrame*) final;
 };
 }
 

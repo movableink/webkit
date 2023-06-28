@@ -30,10 +30,12 @@
 #include "config.h"
 #include "RenderThemeQt.h"
 
+#include "BorderData.h"
 #include "CSSValueKeywords.h"
 #include "ChromeClient.h"
 #include "Color.h"
 #include "FileList.h"
+#include "FillLayer.h"
 #include "GraphicsContext.h"
 #include "GraphicsContextQt.h"
 #include "HTMLInputElement.h"
@@ -47,6 +49,7 @@
 #include "RenderProgress.h"
 #include "RenderTheme.h"
 #include "RenderThemeQtMobile.h"
+#include "RenderStyleSetters.h"
 #include "ScrollbarTheme.h"
 #include "StyleResolver.h"
 #include "TimeRanges.h"
@@ -325,7 +328,8 @@ void RenderThemeQt::adjustMenuListStyle(RenderStyle& style, const Element*) cons
     style.setHeight(Length(LengthType::Auto));
 
     // White-space is locked to pre
-    style.setWhiteSpace(WhiteSpace::Pre);
+    style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
+    style.setTextWrap(TextWrap::NoWrap);
 
     computeSizeBasedOnStyle(style);
 
@@ -339,7 +343,8 @@ void RenderThemeQt::adjustMenuListButtonStyle(RenderStyle& style, const Element*
     style.setHeight(Length(LengthType::Auto));
 
     // White-space is locked to pre
-    style.setWhiteSpace(WhiteSpace::Pre);
+    style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
+    style.setTextWrap(TextWrap::NoWrap);
 
     computeSizeBasedOnStyle(style);
 
@@ -845,7 +850,7 @@ void RenderThemeQt::adjustSliderThumbSize(RenderStyle& style, const Element*) co
     style.setHeight(Length(thumbHeight, LengthType::Fixed));
 }
 
-Seconds RenderThemeQt::caretBlinkInterval() const
+std::optional<Seconds> RenderThemeQt::caretBlinkInterval() const
 {
     return Seconds(static_cast<QGuiApplication*>(qApp)->styleHints()->cursorFlashTime()) / 1000.0 / 2.0;
 }

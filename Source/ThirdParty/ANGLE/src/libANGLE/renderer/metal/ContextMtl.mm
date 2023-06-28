@@ -1133,6 +1133,8 @@ angle::Result ContextMtl::popDebugGroup(const gl::Context *context)
 angle::Result ContextMtl::syncState(const gl::Context *context,
                                     const gl::State::DirtyBits &dirtyBits,
                                     const gl::State::DirtyBits &bitMask,
+                                    const gl::State::ExtendedDirtyBits &extendedDirtyBits,
+                                    const gl::State::ExtendedDirtyBits &extendedBitMask,
                                     gl::Command command)
 {
     const gl::State &glState = context->getState();
@@ -1199,11 +1201,16 @@ angle::Result ContextMtl::syncState(const gl::Context *context,
                 break;
             }
             case gl::State::DIRTY_BIT_SAMPLE_ALPHA_TO_COVERAGE_ENABLED:
-                invalidateRenderPipeline();
+                if (getDisplay()->getFeatures().emulateAlphaToCoverage.enabled)
+                {
+                    invalidateDriverUniforms();
+                }
+                else
+                {
+                    invalidateRenderPipeline();
+                }
                 break;
             case gl::State::DIRTY_BIT_SAMPLE_COVERAGE_ENABLED:
-                invalidateRenderPipeline();
-                break;
             case gl::State::DIRTY_BIT_SAMPLE_COVERAGE:
                 invalidateDriverUniforms();
                 break;
@@ -1361,8 +1368,7 @@ angle::Result ContextMtl::syncState(const gl::Context *context,
             case gl::State::DIRTY_BIT_PROVOKING_VERTEX:
                 break;
             case gl::State::DIRTY_BIT_EXTENDED:
-                updateExtendedState(glState);
-                // Nothing to do until EXT_clip_control is implemented.
+                updateExtendedState(glState, extendedDirtyBits);
                 break;
             case gl::State::DIRTY_BIT_SAMPLE_SHADING:
                 // Nothing to do until OES_sample_shading is implemented.
@@ -1379,11 +1385,27 @@ angle::Result ContextMtl::syncState(const gl::Context *context,
     return angle::Result::Continue;
 }
 
-void ContextMtl::updateExtendedState(const gl::State &glState)
+void ContextMtl::updateExtendedState(const gl::State &glState,
+                                     const gl::State::ExtendedDirtyBits &extendedDirtyBits)
 {
-    // Handling clip distance enabled flags, mipmap generation hint & shader derivative
-    // hint.
-    invalidateDriverUniforms();
+    for (size_t extendedDirtyBit : extendedDirtyBits)
+    {
+        switch (extendedDirtyBit)
+        {
+            case gl::State::EXTENDED_DIRTY_BIT_CLIP_CONTROL:
+                updateFrontFace(glState);
+                invalidateDriverUniforms();
+                break;
+            case gl::State::EXTENDED_DIRTY_BIT_CLIP_DISTANCES:
+                invalidateDriverUniforms();
+                break;
+            case gl::State::EXTENDED_DIRTY_BIT_DEPTH_CLAMP_ENABLED:
+                mDirtyBits.set(DIRTY_BIT_DEPTH_CLIP_MODE);
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 // Disjoint timer queries
@@ -2150,8 +2172,9 @@ void ContextMtl::updateCullMode(const gl::State &glState)
 void ContextMtl::updateFrontFace(const gl::State &glState)
 {
     FramebufferMtl *framebufferMtl = mtl::GetImpl(glState.getDrawFramebuffer());
-    mWinding =
-        mtl::GetFontfaceWinding(glState.getRasterizerState().frontFace, !framebufferMtl->flipY());
+    const bool upperLeftOrigin     = mState.getClipOrigin() == gl::ClipOrigin::UpperLeft;
+    mWinding = mtl::GetFrontfaceWinding(glState.getRasterizerState().frontFace,
+                                        framebufferMtl->flipY() == upperLeftOrigin);
     mDirtyBits.set(DIRTY_BIT_WINDING);
 }
 
@@ -2549,6 +2572,10 @@ angle::Result ContextMtl::setupDrawImpl(const gl::Context *context,
             case DIRTY_BIT_DEPTH_BIAS:
                 ANGLE_TRY(handleDirtyDepthBias(context));
                 break;
+            case DIRTY_BIT_DEPTH_CLIP_MODE:
+                mRenderEncoder.setDepthClipMode(
+                    mState.isDepthClampEnabled() ? MTLDepthClipModeClamp : MTLDepthClipModeClip);
+                break;
             case DIRTY_BIT_STENCIL_REF:
                 mRenderEncoder.setStencilRefVals(mStencilRefFront, mStencilRefBack);
                 break;
@@ -2727,27 +2754,45 @@ angle::Result ContextMtl::handleDirtyDriverUniforms(const gl::Context *context,
 
     const float flipX      = 1.0;
     const float flipY      = mDrawFramebuffer->flipY() ? -1.0f : 1.0f;
-    mDriverUniforms.flipXY = gl::PackSnorm4x8(flipX, flipY, flipX, -flipY);
+    mDriverUniforms.flipXY = gl::PackSnorm4x8(
+        flipX, flipY, flipX, mState.getClipOrigin() == gl::ClipOrigin::LowerLeft ? -flipY : flipY);
 
     // gl_ClipDistance
     const uint32_t enabledClipDistances = mState.getEnabledClipDistances().bits();
     ASSERT((enabledClipDistances & ~sh::vk::kDriverUniformsMiscEnabledClipPlanesMask) == 0);
 
-    mDriverUniforms.misc = enabledClipDistances
-                           << sh::vk::kDriverUniformsMiscEnabledClipPlanesOffset;
+    // GL_CLIP_DEPTH_MODE_EXT
+    const uint32_t transformDepth = !mState.isClipDepthModeZeroToOne();
+    ASSERT((transformDepth & ~sh::vk::kDriverUniformsMiscTransformDepthMask) == 0);
+
+    // GL_SAMPLE_ALPHA_TO_COVERAGE
+    const uint32_t alphaToCoverage = mState.isSampleAlphaToCoverageEnabled();
+    ASSERT((alphaToCoverage & ~sh::vk::kDriverUniformsMiscAlphaToCoverageMask) == 0);
+
+    mDriverUniforms.misc =
+        (enabledClipDistances << sh::vk::kDriverUniformsMiscEnabledClipPlanesOffset) |
+        (transformDepth << sh::vk::kDriverUniformsMiscTransformDepthOffset) |
+        (alphaToCoverage << sh::vk::kDriverUniformsMiscAlphaToCoverageOffset);
 
     // Sample coverage mask
-    const uint32_t sampleBitCount = mDrawFramebuffer->getSamples();
-    const uint32_t coverageSampleBitCount =
-        static_cast<uint32_t>(std::round(mState.getSampleCoverageValue() * sampleBitCount));
-    ASSERT(sampleBitCount < 32);
-    const uint32_t sampleMask = (1u << sampleBitCount) - 1;
-    uint32_t coverageMask     = (1u << coverageSampleBitCount) - 1;
-    if (mState.getSampleCoverageInvert())
+    if (mState.isSampleCoverageEnabled())
     {
-        coverageMask = sampleMask & (~coverageMask);
+        const uint32_t sampleBitCount = mDrawFramebuffer->getSamples();
+        ASSERT(sampleBitCount < 32);
+        const uint32_t coverageSampleBitCount =
+            static_cast<uint32_t>(std::round(mState.getSampleCoverageValue() * sampleBitCount));
+        uint32_t coverageMask = (1u << coverageSampleBitCount) - 1;
+        if (mState.getSampleCoverageInvert())
+        {
+            const uint32_t sampleMask = (1u << sampleBitCount) - 1;
+            coverageMask              = sampleMask & (~coverageMask);
+        }
+        mDriverUniforms.coverageMask = coverageMask;
     }
-    mDriverUniforms.coverageMask = coverageMask;
+    else
+    {
+        mDriverUniforms.coverageMask = 0xFFFFFFFFu;
+    }
 
     ANGLE_TRY(
         fillDriverXFBUniforms(drawCallFirstVertex, verticesPerInstance, /** skippedInstances */ 0));
@@ -2864,8 +2909,9 @@ angle::Result ContextMtl::checkIfPipelineChanged(const gl::Context *context,
             mRenderPipelineDesc.rasterizationType = mtl::RenderPipelineRasterization::Enabled;
         }
         mRenderPipelineDesc.inputPrimitiveTopology = topologyClass;
-        mRenderPipelineDesc.alphaToCoverageEnabled = mState.isSampleAlphaToCoverageEnabled();
-        mRenderPipelineDesc.emulateCoverageMask    = mState.isSampleCoverageEnabled();
+        mRenderPipelineDesc.alphaToCoverageEnabled =
+            mState.isSampleAlphaToCoverageEnabled() &&
+            !getDisplay()->getFeatures().emulateAlphaToCoverage.enabled;
 
         mRenderPipelineDesc.outputDescriptor.updateEnabledDrawBuffers(
             mDrawFramebuffer->getState().getEnabledDrawBuffers());

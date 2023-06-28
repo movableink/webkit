@@ -26,6 +26,7 @@
 
 #include "CSSValue.h"
 #include "ExceptionOr.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
@@ -50,7 +51,6 @@ public:
     bool isSpringTimingFunction() const { return type() == Type::SpringFunction; }
 
     virtual bool operator==(const TimingFunction&) const = 0;
-    bool operator!=(const TimingFunction& other) const { return !(*this == other); }
 
     static ExceptionOr<RefPtr<TimingFunction>> createFromCSSText(const String&);
     static RefPtr<TimingFunction> createFromCSSValue(const CSSValue&);
@@ -72,8 +72,8 @@ public:
 
     static const LinearTimingFunction& sharedLinearTimingFunction()
     {
-        static const LinearTimingFunction& function = create().leakRef();
-        return function;
+        static NeverDestroyed<Ref<LinearTimingFunction>> function { create() };
+        return function.get();
     }
 
 private:
@@ -138,8 +138,8 @@ public:
 
     static const CubicBezierTimingFunction& defaultTimingFunction()
     {
-        static const CubicBezierTimingFunction& function = create().leakRef();
-        return function;
+        static NeverDestroyed<Ref<CubicBezierTimingFunction>> function { create() };
+        return function.get();
     }
 
     Ref<CubicBezierTimingFunction> createReversed() const

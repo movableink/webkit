@@ -792,6 +792,9 @@ void clearRect(GraphicsContextCairo& platformContext, const FloatRect& rect)
 
 void drawGlyphs(GraphicsContextCairo& platformContext, const FillSource& fillSource, const StrokeSource& strokeSource, const ShadowState& shadowState, const FloatPoint& point, cairo_scaled_font_t* scaledFont, double syntheticBoldOffset, const Vector<cairo_glyph_t>& glyphs, float xOffset, TextDrawingModeFlags textDrawingMode, float strokeThickness, const FloatSize& shadowOffset, const Color& shadowColor, FontSmoothingMode fontSmoothingMode)
 {
+#if USE(FREETYPE)
+    Locker cairoFontLocker(cairoFontLock());
+#endif
     drawGlyphsShadow(platformContext, shadowState, textDrawingMode, shadowOffset, shadowColor, point, scaledFont, syntheticBoldOffset, glyphs, fontSmoothingMode);
 
     cairo_t* cr = platformContext.cr();
@@ -856,7 +859,7 @@ void drawPattern(GraphicsContextCairo& platformContext, cairo_surface_t* surface
 void drawSurface(GraphicsContextCairo& platformContext, cairo_surface_t* surface, const FloatRect& destRect, const FloatRect& originalSrcRect, InterpolationQuality imageInterpolationQuality, float globalAlpha, const ShadowState& shadowState, OrientationSizing orientationSizing)
 {
     // Avoid invalid cairo matrix with small values.
-    if (std::fabs(destRect.width()) < 0.5f || std::fabs(destRect.height()) < 0.5f)
+    if (std::abs(destRect.width()) < 0.5f || std::abs(destRect.height()) < 0.5f)
         return;
 
     FloatRect srcRect = originalSrcRect;
@@ -864,11 +867,11 @@ void drawSurface(GraphicsContextCairo& platformContext, cairo_surface_t* surface
     // We need to account for negative source dimensions by flipping the rectangle.
     if (originalSrcRect.width() < 0) {
         srcRect.setX(originalSrcRect.x() + originalSrcRect.width());
-        srcRect.setWidth(std::fabs(originalSrcRect.width()));
+        srcRect.setWidth(std::abs(originalSrcRect.width()));
     }
     if (originalSrcRect.height() < 0) {
         srcRect.setY(originalSrcRect.y() + originalSrcRect.height());
-        srcRect.setHeight(std::fabs(originalSrcRect.height()));
+        srcRect.setHeight(std::abs(originalSrcRect.height()));
     }
 
     RefPtr<cairo_surface_t> patternSurface = surface;
@@ -915,11 +918,11 @@ void drawSurface(GraphicsContextCairo& platformContext, cairo_surface_t* surface
     float scaleX = 1;
     float scaleY = 1;
     if (didUseWidthAsHeight) {
-        scaleX = std::fabs(srcRect.width() / destRect.height());
-        scaleY = std::fabs(srcRect.height() / destRect.width());
+        scaleX = std::abs(srcRect.width() / destRect.height());
+        scaleY = std::abs(srcRect.height() / destRect.width());
     } else {
-        scaleX = std::fabs(srcRect.width() / destRect.width());
-        scaleY = std::fabs(srcRect.height() / destRect.height());
+        scaleX = std::abs(srcRect.width() / destRect.width());
+        scaleY = std::abs(srcRect.height() / destRect.height());
     }
     cairo_matrix_t matrix = { scaleX, 0, 0, scaleY, leftPadding, topPadding };
     cairo_pattern_set_matrix(pattern.get(), &matrix);
@@ -1057,10 +1060,8 @@ void drawDotsForDocumentMarker(GraphicsContextCairo& platformContext, const Floa
     cairo_t* cr = platformContext.cr();
     cairo_save(cr);
 
-    if (style.mode == DocumentMarkerLineStyleMode::Spelling)
-        cairo_set_source_rgb(cr, 1, 0, 0);
-    else if (style.mode == DocumentMarkerLineStyleMode::Grammar)
-        cairo_set_source_rgb(cr, 0, 1, 0);
+    auto [r, g, b, a] = style.color.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+    cairo_set_source_rgba(cr, r, g, b, a);
 
     drawErrorUnderline(cr, rect.x(), rect.y(), rect.width(), rect.height());
     cairo_restore(cr);
@@ -1178,9 +1179,21 @@ static void doClipWithAntialias(cairo_t* cr, cairo_antialias_t antialias)
     cairo_set_antialias(cr, savedAntialiasRule);
 }
 
-void clip(GraphicsContextCairo& platformContext, const FloatRect& rect)
+static FloatRect clampClipRect(const FloatRect& rect)
+{
+    // Cairo is internally using 24.8 fixed point numbers.
+    float maxValue = 1 << 22;
+    auto x = std::max(rect.x(), -maxValue / 2);
+    auto y = std::max(rect.y(), -maxValue / 2);
+    auto width = std::min(rect.width(), maxValue);
+    auto height = std::min(rect.height(), maxValue);
+    return { x, y, width, height };
+}
+
+void clip(GraphicsContextCairo& platformContext, const FloatRect& clipRect)
 {
     cairo_t* cr = platformContext.cr();
+    auto rect = clampClipRect(clipRect);
     cairo_rectangle(cr, rect.x(), rect.y(), rect.width(), rect.height());
     cairo_fill_rule_t savedFillRule = cairo_get_fill_rule(cr);
     cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);

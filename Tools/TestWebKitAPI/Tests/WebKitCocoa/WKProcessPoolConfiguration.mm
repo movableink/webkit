@@ -34,16 +34,8 @@
 TEST(WKProcessPoolConfiguration, Copy)
 {
     auto configuration = adoptNS([[_WKProcessPoolConfiguration alloc] init]);
-
-#if PLATFORM(IOS_FAMILY)
-    NSSet<Class> *testSet = [NSSet setWithObjects:[UIColor class], nil];
-#else
-    NSSet<Class> *testSet = [NSSet setWithObjects:[NSColor class], nil];
-#endif
     
     [configuration setInjectedBundleURL:[NSURL fileURLWithPath:@"/path/to/injected.wkbundle"]];
-    [configuration setCustomClassesForParameterCoder:testSet];
-    [configuration setCustomWebContentServiceBundleIdentifier:@"org.webkit.WebContent.custom"];
     [configuration setIgnoreSynchronousMessagingTimeoutsForTesting:YES];
     [configuration setAttrStyleEnabled:YES];
     [configuration setAdditionalReadAccessAllowedURLs:@[ [NSURL fileURLWithPath:@"/path/to/allow/read/access/"] ]];
@@ -57,15 +49,12 @@ TEST(WKProcessPoolConfiguration, Copy)
     [configuration setPresentingApplicationPID:1000];
     [configuration setProcessSwapsOnNavigation:YES];
     [configuration setAlwaysKeepAndReuseSwappedProcesses:YES];
-    [configuration setProcessSwapsOnWindowOpenWithOpener:YES];
     [configuration setPrewarmsProcessesAutomatically:YES];
     [configuration setPageCacheEnabled:YES];
 
     auto copy = adoptNS([configuration copy]);
 
     EXPECT_TRUE([[configuration injectedBundleURL] isEqual:[copy injectedBundleURL]]);
-    EXPECT_TRUE([[copy customClassesForParameterCoder] isEqualToSet:testSet]);
-    EXPECT_TRUE([[configuration customWebContentServiceBundleIdentifier] isEqual:[copy customWebContentServiceBundleIdentifier]]);
     EXPECT_EQ([configuration ignoreSynchronousMessagingTimeoutsForTesting], [copy ignoreSynchronousMessagingTimeoutsForTesting]);
     EXPECT_EQ([configuration attrStyleEnabled], [copy attrStyleEnabled]);
     EXPECT_TRUE([[configuration additionalReadAccessAllowedURLs] isEqual:[copy additionalReadAccessAllowedURLs]]);
@@ -79,7 +68,6 @@ TEST(WKProcessPoolConfiguration, Copy)
     EXPECT_EQ([configuration presentingApplicationPID], [copy presentingApplicationPID]);
     EXPECT_EQ([configuration processSwapsOnNavigation], [copy processSwapsOnNavigation]);
     EXPECT_EQ([configuration alwaysKeepAndReuseSwappedProcesses], [copy alwaysKeepAndReuseSwappedProcesses]);
-    EXPECT_EQ([configuration processSwapsOnWindowOpenWithOpener], [copy processSwapsOnWindowOpenWithOpener]);
     EXPECT_EQ([configuration prewarmsProcessesAutomatically], [copy prewarmsProcessesAutomatically]);
     EXPECT_EQ([configuration pageCacheEnabled], [copy pageCacheEnabled]);
 }

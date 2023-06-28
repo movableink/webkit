@@ -23,7 +23,7 @@ _log = logging.getLogger(__name__)
 class BenchmarkRunner(object):
     name = 'benchmark_runner'
 
-    def __init__(self, plan_file, local_copy, count_override, timeout_override, build_dir, output_file, platform, browser, browser_path, subtests=None, scale_unit=True, show_iteration_values=False, device_id=None, diagnose_dir=None, pgo_profile_output_dir=None, profile_output_dir=None):
+    def __init__(self, plan_file, local_copy, count_override, timeout_override, build_dir, output_file, platform, browser, browser_path, subtests=None, scale_unit=True, show_iteration_values=False, device_id=None, diagnose_dir=None, pgo_profile_output_dir=None, profile_output_dir=None, browser_args=None):
         self._plan_name, self._plan = BenchmarkRunner._load_plan_data(plan_file)
         if 'options' not in self._plan:
             self._plan['options'] = {}
@@ -34,7 +34,7 @@ class BenchmarkRunner(object):
         if timeout_override:
             self._plan['timeout'] = timeout_override
         self._subtests = self.validate_subtests(subtests) if subtests else None
-        self._browser_driver = BrowserDriverFactory.create(platform, browser)
+        self._browser_driver = BrowserDriverFactory.create(platform, browser, browser_args)
         self._browser_path = browser_path
         self._build_dir = os.path.abspath(build_dir) if build_dir else None
         self._diagnose_dir = os.path.abspath(diagnose_dir) if diagnose_dir else None
@@ -151,9 +151,12 @@ class BenchmarkRunner(object):
                 _log.info('Start the iteration {current_iteration} of {iterations} for current benchmark'.format(current_iteration=iteration, iterations=count))
                 try:
                     self._browser_driver.prepare_env(self._config)
-
                     if 'entry_point' in self._plan:
-                        result = self._run_one_test(web_root, self._plan['entry_point'], iteration)
+                        if 'subtest_entry_point' in self._plan and self._subtests:
+                            entry_point = self._plan['subtest_entry_point']
+                        else:
+                            entry_point = self._plan['entry_point']
+                        result = self._run_one_test(web_root, entry_point, iteration)
                         debug_outputs.append(result.pop('debugOutput', None))
                         assert(result)
                         results.append(result)

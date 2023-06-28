@@ -31,7 +31,7 @@
 #pragma once
 
 #include <array>
-#include <wtf/Span.h>
+#include <span>
 #include <wtf/text/CString.h>
 
 #if PLATFORM(COCOA)
@@ -45,11 +45,11 @@ class SHA1 {
 public:
     WTF_EXPORT_PRIVATE SHA1();
 
-    WTF_EXPORT_PRIVATE void addBytes(Span<const std::byte>);
+    WTF_EXPORT_PRIVATE void addBytes(std::span<const std::byte>);
 
-    void addBytes(Span<const uint8_t> input)
+    void addBytes(std::span<const uint8_t> input)
     {
-        addBytes(asBytes(input));
+        addBytes(std::as_bytes(input));
     }
 
     void addBytes(const CString& input)
@@ -59,7 +59,7 @@ public:
 
     void addBytes(const uint8_t* input, size_t length)
     {
-        addBytes(Span { input, length });
+        addBytes(std::span(input, length));
     }
 
     // Size of the SHA1 hash

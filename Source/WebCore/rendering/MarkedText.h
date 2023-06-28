@@ -37,7 +37,7 @@ struct TextBoxSelectableRange;
 
 struct MarkedText {
     // Sorted by paint order
-    enum Type {
+    enum class Type : uint8_t {
         Unmarked,
         GrammarError,
         Correction,
@@ -75,7 +75,6 @@ struct MarkedText {
     AtomString highlightName { };
 
     bool isEmpty() const { return endOffset <= startOffset; }
-    bool operator!=(const MarkedText& other) const { return !(*this == other); }
     bool operator==(const MarkedText& other) const
     {
         return startOffset == other.startOffset && endOffset == other.endOffset && type == other.type && marker == other.marker && highlightName == other.highlightName;

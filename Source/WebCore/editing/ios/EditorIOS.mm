@@ -37,11 +37,10 @@
 #import "DocumentMarkerController.h"
 #import "Editing.h"
 #import "EditorClient.h"
-#import "Frame.h"
 #import "HTMLInputElement.h"
 #import "HTMLNames.h"
-#import "HTMLParserIdioms.h"
 #import "HTMLTextAreaElement.h"
+#import "LocalFrame.h"
 #import "MutableStyleProperties.h"
 #import "Pasteboard.h"
 #import "RenderBlock.h"
@@ -183,10 +182,10 @@ void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& imageElemen
         return;
     ASSERT(cachedImage);
 
-    auto imageSourceURL = imageElement.document().completeURL(stripLeadingAndTrailingHTMLSpaces(imageElement.imageSourceURL()));
+    auto imageSourceURL = imageElement.document().completeURL(imageElement.imageSourceURL());
 
     auto pasteboardImageURL = url.isEmpty() ? imageSourceURL : url;
-    if (!pasteboardImageURL.isLocalFile()) {
+    if (!pasteboardImageURL.protocolIsFile()) {
         pasteboardImage.url.url = pasteboardImageURL;
         pasteboardImage.url.title = title;
     }

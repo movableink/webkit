@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,9 +37,9 @@ RetainPtr<T> encodeAndDecode(T* t)
     }
 
     NSData *data = [NSKeyedArchiver archivedDataWithRootObject:t requiringSecureCoding:NO error:nullptr];
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     return [NSKeyedUnarchiver unarchiveObjectWithData:data];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 TEST(Coding, WKPreferences)
@@ -137,7 +137,7 @@ TEST(Coding, WKWebView)
 
 #if PLATFORM(IOS_FAMILY)
     [a setAllowsLinkPreview:YES];
-#if PLATFORM(IOS) || PLATFORM(MACCATALYST)
+#if PLATFORM(IOS) || PLATFORM(MACCATALYST) || PLATFORM(VISION)
     [a setFindInteractionEnabled:YES];
 #endif
 #else
@@ -157,7 +157,7 @@ TEST(Coding, WKWebView)
     EXPECT_EQ([a magnification], [b magnification]);
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(MACCATALYST)
+#if PLATFORM(IOS) || PLATFORM(MACCATALYST) || PLATFORM(VISION)
     EXPECT_EQ([a isFindInteractionEnabled], [b isFindInteractionEnabled]);
 #endif
 }

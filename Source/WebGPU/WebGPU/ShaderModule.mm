@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,8 @@
 #import "PipelineLayout.h"
 
 #import <WebGPU/WebGPU.h>
+#import <wtf/DataLog.h>
+#import <wtf/StringPrintStream.h>
 
 namespace WebGPU {
 
@@ -82,14 +84,17 @@ id<MTLLibrary> ShaderModule::createLibrary(id<MTLDevice> device, const String& m
 static RefPtr<ShaderModule> earlyCompileShaderModule(Device& device, std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&& checkResult, const WGPUShaderModuleDescriptor& suppliedHints, String&& label)
 {
     HashMap<String, Ref<PipelineLayout>> hints;
-    HashMap<String, WGSL::PipelineLayout> wgslHints;
+    HashMap<String, std::optional<WGSL::PipelineLayout>> wgslHints;
     for (uint32_t i = 0; i < suppliedHints.hintCount; ++i) {
         const auto& hint = suppliedHints.hints[i];
         if (hint.nextInChain)
             return nullptr;
         auto hintKey = fromAPI(hint.entryPoint);
-        hints.add(hintKey, WebGPU::fromAPI(hint.layout));
-        auto convertedPipelineLayout = ShaderModule::convertPipelineLayout(WebGPU::fromAPI(hint.layout));
+        auto& layout = WebGPU::fromAPI(hint.layout);
+        hints.add(hintKey, layout);
+        std::optional<WGSL::PipelineLayout> convertedPipelineLayout { std::nullopt };
+        if (layout.numberOfBindGroupLayouts())
+            convertedPipelineLayout = ShaderModule::convertPipelineLayout(layout);
         wgslHints.add(hintKey, WTFMove(convertedPipelineLayout));
     }
 
@@ -111,14 +116,21 @@ Ref<ShaderModule> Device::createShaderModule(const WGPUShaderModuleDescriptor& d
 
     auto checkResult = WGSL::staticCheck(fromAPI(shaderModuleParameters->wgsl.code), std::nullopt, { maxBuffersPlusVertexBuffersForVertexStage() });
 
-    if (std::holds_alternative<WGSL::SuccessfulCheck>(checkResult) && shaderModuleParameters->hints && descriptor.hintCount) {
-        if (auto result = earlyCompileShaderModule(*this, WTFMove(checkResult), descriptor, fromAPI(descriptor.label)))
-            return result.releaseNonNull();
+    if (std::holds_alternative<WGSL::SuccessfulCheck>(checkResult)) {
+        if (shaderModuleParameters->hints && descriptor.hintCount) {
+            // FIXME: re-enable early compilation later on once deferred compilation is fully implemented
+            // https://bugs.webkit.org/show_bug.cgi?id=254258
+            UNUSED_PARAM(earlyCompileShaderModule);
+        }
     } else {
-        // FIXME: remove shader library generation from MSL after compiler bringup
-        auto library = ShaderModule::createLibrary(device(), String::fromUTF8(shaderModuleParameters->wgsl.code), fromAPI(descriptor.label));
-        if (library)
-            return ShaderModule::create(WTFMove(checkResult), { }, { }, library, *this);
+        auto& failedCheck = std::get<WGSL::FailedCheck>(checkResult);
+        StringPrintStream message;
+        message.print(String::number(failedCheck.errors.size()), " error", failedCheck.errors.size() != 1 ? "s" : "", " generated while compiling the shader:"_s);
+        for (const auto& error : failedCheck.errors) {
+            message.print("\n"_s, error);
+        }
+        generateAValidationError(message.toString());
+        return ShaderModule::createInvalid(*this);
     }
 
     return ShaderModule::create(WTFMove(checkResult), { }, { }, nil, *this);
@@ -185,13 +197,16 @@ static CompilationMessageData convertMessages(const Messages& messages1, const s
         for (size_t i = 0; i < compilationMessages.messages.size(); ++i) {
             const auto& compilationMessage = compilationMessages.messages[i];
             flattenedCompilationMessages.append({
-                nullptr,
-                flattenedMessages[i + base].data(),
-                compilationMessages.type,
-                compilationMessage.lineNumber(),
-                compilationMessage.lineOffset(),
-                compilationMessage.offset(),
-                compilationMessage.length(),
+                .nextInChain = nullptr,
+                .message = flattenedMessages[i + base].data(),
+                .type = compilationMessages.type,
+                .lineNum = compilationMessage.lineNumber(),
+                .linePos = compilationMessage.lineOffset(),
+                .offset = compilationMessage.offset(),
+                .length = compilationMessage.length(),
+                .utf16LinePos = compilationMessage.lineOffset(),
+                .utf16Offset = compilationMessage.offset(),
+                .utf16Length = compilationMessage.length(),
             });
         }
     };
@@ -236,61 +251,6 @@ void ShaderModule::setLabel(String&& label)
 {
     if (m_library)
         m_library.label = label;
-}
-
-id<MTLFunction> ShaderModule::getNamedFunction(const String& originalName, const HashMap<String, double>& keyValueReplacements) const
-{
-    const auto* information = entryPointInformation(originalName);
-    const String& name = information ? information->mangledName : originalName;
-    auto originalFunction = [m_library newFunctionWithName:name];
-
-    if (!keyValueReplacements.size())
-        return originalFunction;
-
-    NSDictionary<NSString *, MTLFunctionConstant *> *originalFunctionConstants = [originalFunction functionConstantsDictionary];
-    MTLFunctionConstantValues *constantValues = [MTLFunctionConstantValues new];
-    for (auto& kvp : keyValueReplacements) {
-        auto it = m_constantIdentifiersToNames.find(kvp.key);
-        auto& constantName = it != m_constantIdentifiersToNames.end() ? it->value : kvp.key;
-
-        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=250444 - it would be preferable
-        // to get the type information from the WGSL compiler so we don't have to call
-        // -[MTLLibrary newFunctionWithName:] twice
-        MTLDataType dataType = [originalFunctionConstants objectForKey:constantName].type;
-        union {
-            bool b;
-            int32_t i;
-            uint32_t u;
-            float f;
-            __fp16 h;
-        } v;
-        if (dataType == MTLDataTypeFloat)
-            v.f = static_cast<decltype(v.f)>(kvp.value);
-        else if (dataType == MTLDataTypeHalf)
-            v.h = static_cast<decltype(v.h)>(kvp.value);
-        else if (dataType == MTLDataTypeInt)
-            v.i = static_cast<decltype(v.i)>(kvp.value);
-        else if (dataType == MTLDataTypeUInt)
-            v.u = static_cast<decltype(v.u)>(kvp.value);
-        else if (dataType == MTLDataTypeBool)
-            v.b = static_cast<decltype(v.b)>(kvp.value);
-        else {
-            ASSERT_NOT_REACHED("Unsupported MTLFunctionConstant data type");
-            return nil;
-        }
-
-        [constantValues setConstantValue:&v type:dataType withName:constantName];
-    }
-
-    NSError *error;
-    id<MTLFunction> result = [m_library newFunctionWithName:name constantValues:constantValues error:&error];
-
-    if (error) {
-        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=250442
-        WTFLogAlways("MSL compilation error: %@", error);
-    }
-
-    return result;
 }
 
 static auto wgslBindingType(WGPUBufferBindingType bindingType)
@@ -366,30 +326,32 @@ static auto wgslViewDimension(WGPUTextureViewDimension viewDimension)
     }
 }
 
-static decltype(WGSL::BindGroupLayoutEntry::bindingMember) populateBindingMember(const WGPUBindGroupLayoutEntry& entry)
+static WGSL::BindGroupLayoutEntry::BindingMember convertBindingLayout(const BindGroupLayout::Entry::BindingLayout& bindingLayout)
 {
-    if (BindGroupLayout::isPresent(entry.buffer)) {
+    return WTF::switchOn(bindingLayout, [](const WGPUBufferBindingLayout& bindingLayout) -> WGSL::BindGroupLayoutEntry::BindingMember {
         return WGSL::BufferBindingLayout {
-            .type = wgslBindingType(entry.buffer.type),
-            .hasDynamicOffset = entry.buffer.hasDynamicOffset,
-            .minBindingSize = entry.buffer.minBindingSize
+            .type = wgslBindingType(bindingLayout.type),
+            .hasDynamicOffset = bindingLayout.hasDynamicOffset,
+            .minBindingSize = bindingLayout.minBindingSize
         };
-    } else if (BindGroupLayout::isPresent(entry.sampler)) {
+    }, [](const WGPUSamplerBindingLayout& bindingLayout) -> WGSL::BindGroupLayoutEntry::BindingMember {
         return WGSL::SamplerBindingLayout {
-            .type = wgslSamplerType(entry.sampler.type)
+            .type = wgslSamplerType(bindingLayout.type)
         };
-    } else if (BindGroupLayout::isPresent(entry.texture)) {
+    }, [](const WGPUTextureBindingLayout& bindingLayout) -> WGSL::BindGroupLayoutEntry::BindingMember {
         return WGSL::TextureBindingLayout {
-            .sampleType = wgslSampleType(entry.texture.sampleType),
-            .viewDimension = wgslViewDimension(entry.texture.viewDimension),
-            .multisampled = entry.texture.multisampled
+            .sampleType = wgslSampleType(bindingLayout.sampleType),
+            .viewDimension = wgslViewDimension(bindingLayout.viewDimension),
+            .multisampled = bindingLayout.multisampled
         };
-    } else {
-        ASSERT(BindGroupLayout::isPresent(entry.storageTexture));
+    }, [](const WGPUStorageTextureBindingLayout& bindingLayout) -> WGSL::BindGroupLayoutEntry::BindingMember {
         return WGSL::StorageTextureBindingLayout {
-            .viewDimension = wgslViewDimension(entry.storageTexture.viewDimension)
+            .viewDimension = wgslViewDimension(bindingLayout.viewDimension)
         };
-    }
+    }, [](const WGPUExternalTextureBindingLayout&) -> WGSL::BindGroupLayoutEntry::BindingMember {
+        return WGSL::ExternalTextureBindingLayout {
+        };
+    });
 }
 
 WGSL::PipelineLayout ShaderModule::convertPipelineLayout(const PipelineLayout& pipelineLayout)
@@ -401,9 +363,9 @@ WGSL::PipelineLayout ShaderModule::convertPipelineLayout(const PipelineLayout& p
         WGSL::BindGroupLayout wgslBindGroupLayout;
         for (auto& entry : bindGroupLayout.entries()) {
             WGSL::BindGroupLayoutEntry wgslEntry;
-            wgslEntry.visibility.fromRaw(entry.visibility);
             wgslEntry.binding = entry.binding;
-            wgslEntry.bindingMember = populateBindingMember(entry);
+            wgslEntry.visibility.fromRaw(entry.visibility);
+            wgslEntry.bindingMember = convertBindingLayout(entry.bindingLayout);
             wgslBindGroupLayout.entries.append(wgslEntry);
         }
 
@@ -444,6 +406,11 @@ const WGSL::Reflection::EntryPointInformation* ShaderModule::entryPointInformati
 } // namespace WebGPU
 
 #pragma mark WGPU Stubs
+
+void wgpuShaderModuleReference(WGPUShaderModule shaderModule)
+{
+    WebGPU::fromAPI(shaderModule).ref();
+}
 
 void wgpuShaderModuleRelease(WGPUShaderModule shaderModule)
 {

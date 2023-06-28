@@ -31,7 +31,7 @@
 
 #include "CaptureDevice.h"
 #include "RealtimeMediaSource.h"
-#include "RealtimeVideoSource.h"
+#include "VideoPreset.h"
 
 namespace WebCore {
 
@@ -101,7 +101,7 @@ struct MockCameraProperties {
         if (!defaultFrameRate)
             return std::nullopt;
 
-        std::optional<RealtimeMediaSourceSettings::VideoFacingMode> facingMode;
+        std::optional<VideoFacingMode> facingMode;
         decoder >> facingMode;
         if (!facingMode)
             return std::nullopt;
@@ -120,8 +120,8 @@ struct MockCameraProperties {
     }
 
     double defaultFrameRate { 30 };
-    RealtimeMediaSourceSettings::VideoFacingMode facingMode { RealtimeMediaSourceSettings::VideoFacingMode::User };
-    Vector<VideoPresetData> presets { { { 640, 480 }, { { 30, 30}, { 15, 15 } } } };
+    VideoFacingMode facingMode { VideoFacingMode::User };
+    Vector<VideoPresetData> presets { { { 640, 480 }, { { 30, 30}, { 15, 15 } }, 1, 2 } };
     Color fillColor { Color::black };
 };
 
@@ -196,6 +196,11 @@ struct MockMediaDevice {
     const MockSpeakerProperties* speakerProperties() const
     {
         return isSpeaker() ? &std::get<MockSpeakerProperties>(properties) : nullptr;
+    }
+
+    const MockCameraProperties* cameraProperties() const
+    {
+        return isCamera() ? &std::get<MockCameraProperties>(properties) : nullptr;
     }
 
     template<class Encoder>

@@ -26,17 +26,18 @@
 #include "config.h"
 #include "CanvasBase.h"
 
+#include "ByteArrayPixelBuffer.h"
 #include "CanvasRenderingContext.h"
 #include "Chrome.h"
 #include "Document.h"
 #include "Element.h"
-#include "FloatRect.h"
 #include "GraphicsClient.h"
 #include "GraphicsContext.h"
 #include "HTMLCanvasElement.h"
 #include "HostWindow.h"
 #include "ImageBuffer.h"
 #include "InspectorInstrumentation.h"
+#include "IntRect.h"
 #include "StyleCanvasImage.h"
 #include "RenderElement.h"
 #include "WebCoreOpaqueRoot.h"
@@ -62,8 +63,9 @@ const InterpolationQuality defaultInterpolationQuality = InterpolationQuality::D
 static std::optional<size_t> maxCanvasAreaForTesting;
 static std::optional<size_t> maxActivePixelMemoryForTesting;
 
-CanvasBase::CanvasBase(IntSize size)
+CanvasBase::CanvasBase(IntSize size, const std::optional<NoiseInjectionHashSalt>& noiseHashSalt)
     : m_size(size)
+    , m_canvasNoiseHashSalt(noiseHashSalt)
 {
 }
 
@@ -72,6 +74,7 @@ CanvasBase::~CanvasBase()
     ASSERT(m_didNotifyObserversCanvasDestroyed);
     ASSERT(m_observers.isEmptyIgnoringNullReferences());
     ASSERT(!m_imageBuffer);
+    m_canvasNoiseHashSalt = std::nullopt;
 }
 
 GraphicsContext* CanvasBase::drawingContext() const
@@ -106,8 +109,11 @@ AffineTransform CanvasBase::baseTransform() const
 
 void CanvasBase::makeRenderingResultsAvailable()
 {
-    if (auto* context = renderingContext())
+    if (auto* context = renderingContext()) {
         context->paintRenderingResultsToCanvas();
+        if (m_canvasNoiseHashSalt)
+            m_canvasNoiseInjection.postProcessDirtyCanvasBuffer(buffer(), *m_canvasNoiseHashSalt);
+    }
 }
 
 size_t CanvasBase::memoryCost() const
@@ -191,10 +197,26 @@ void CanvasBase::removeObserver(CanvasObserver& observer)
         InspectorInstrumentation::didChangeCSSCanvasClientNodes(*this);
 }
 
+bool CanvasBase::hasObserver(CanvasObserver& observer) const
+{
+    return m_observers.contains(observer);
+}
+
 void CanvasBase::notifyObserversCanvasChanged(const std::optional<FloatRect>& rect)
 {
     for (auto& observer : m_observers)
         observer.canvasChanged(*this, rect);
+}
+
+void CanvasBase::didDraw(const std::optional<FloatRect>& rect, ShouldApplyPostProcessingToDirtyRect shouldApplyPostProcessingToDirtyRect)
+{
+    // FIXME: We should exclude rects with ShouldApplyPostProcessingToDirtyRect::No
+    if (shouldInjectNoiseBeforeReadback() && shouldApplyPostProcessingToDirtyRect == ShouldApplyPostProcessingToDirtyRect::Yes) {
+        if (rect)
+            m_canvasNoiseInjection.updateDirtyRect(intersection(enclosingIntRect(*rect), { { }, size() }));
+        else
+            m_canvasNoiseInjection.updateDirtyRect({ { }, size() });
+    }
 }
 
 void CanvasBase::notifyObserversCanvasResized()
@@ -238,8 +260,9 @@ HashSet<Element*> CanvasBase::cssCanvasClients() const
         if (!is<StyleCanvasImage>(observer))
             continue;
 
-        for (auto& client : downcast<StyleCanvasImage>(observer).clients().values()) {
-            if (auto element = client->element())
+        for (auto entry : downcast<StyleCanvasImage>(observer).clients()) {
+            auto& client = entry.key;
+            if (auto element = client.element())
                 cssCanvasClients.add(element);
         }
     }
@@ -354,6 +377,19 @@ RefPtr<ImageBuffer> CanvasBase::allocateImageBuffer(bool usesDisplayListDrawing,
     context.graphicsClient = graphicsClient();
     context.avoidIOSurfaceSizeCheckInWebProcessForTesting = avoidBackendSizeCheckForTesting;
     return ImageBuffer::create(size(), RenderingPurpose::Canvas, 1, colorSpace, pixelFormat, bufferOptions, context);
+}
+
+bool CanvasBase::shouldInjectNoiseBeforeReadback() const
+{
+    // Note, every early-return resulting from this check potentially leaks this state. This is a risk that we're accepting right now.
+    return !!m_canvasNoiseHashSalt;
+}
+
+bool CanvasBase::postProcessPixelBufferResults(Ref<PixelBuffer>&& pixelBuffer) const
+{
+    if (m_canvasNoiseHashSalt)
+        return m_canvasNoiseInjection.postProcessPixelBufferResults(std::forward<Ref<PixelBuffer>>(pixelBuffer), *m_canvasNoiseHashSalt);
+    return false;
 }
 
 size_t CanvasBase::activePixelMemory()

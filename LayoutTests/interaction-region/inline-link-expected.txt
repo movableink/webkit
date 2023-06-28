@@ -1,4 +1,4 @@
-This is a link.
+This is a link. This is a wiki-style link. This is a link with visible edges.
 (GraphicsLayer
   (anchor 0.00 0.00)
   (bounds 800.00 600.00)
@@ -12,9 +12,13 @@ This is a link.
         (rect (0,0) width=800 height=600)
 
       (interaction regions [
-        (interaction
-            (rect (-3,-3) width=35 height=25)
-)
+        (interaction (-4,-4) width=37 height=27)
+        (borderRadius 8.00),
+        (interaction (87,-4) width=37 height=27)
+        (borderRadius 8.00),
+        (guard (250,-10) width=29 height=39)
+        (borderRadius 0.00),
+        (interaction (250,0) width=29 height=19)
         (borderRadius 0.00)])
       )
     )

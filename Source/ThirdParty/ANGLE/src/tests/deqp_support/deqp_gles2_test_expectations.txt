@@ -132,10 +132,6 @@
 2631 MAC OPENGL : dEQP-GLES2.functional.shaders.operator.sequence.side_effects.affect_* = FAIL
 3317 MAC OPENGL : dEQP-GLES2.functional.shaders.linkage.varying_4 = FAIL
 
-5136 MAC OPENGL : dEQP-GLES2.functional.fbo.completeness.renderable.texture.color0.stencil_index8 = FAIL
-5136 MAC OPENGL : dEQP-GLES2.functional.fbo.completeness.renderable.texture.stencil.stencil_index8 = FAIL
-5136 MAC OPENGL : dEQP-GLES2.functional.fbo.completeness.renderable.texture.depth.stencil_index8 = FAIL
-
 // MAC OPENGL INTEL specific
 2137 MAC OPENGL INTEL : dEQP-GLES2.functional.color_clear.complex_rgb = FAIL
 2137 MAC OPENGL INTEL : dEQP-GLES2.functional.color_clear.complex_rgba = FAIL
@@ -292,6 +288,10 @@
 
 6297 MAC METAL : dEQP-GLES2.functional.attribute_location.bind_aliasing.cond* = FAIL
 
+// New failures on MacBook Pro 2019 macOS 13.2.1
+8091 MAC METAL AMD : dEQP-GLES2.functional.shaders.function.global_variable_aliasing_fragment = FAIL
+8091 MAC METAL AMD : dEQP-GLES2.functional.shaders.function.global_variable_aliasing_vertex = FAIL
+
 // Test bug - fails in ASAN.
 6678 ASAN : dEQP-GLES2.functional.negative_api.texture.compressedtexsubimage2d* = SKIP
 
@@ -314,6 +314,3 @@
 6678 UBSAN : dEQP-GLES2.functional.shaders.random.* = SKIP
 6678 UBSAN : dEQP-GLES2.functional.fragment_ops.interaction.basic_shader.* = SKIP
 6678 UBSAN : dEQP-GLES2.functional.shaders.texture_functions.vertex.texture2dprojlod_vec3 = SKIP
-
-// Pixel 6 test expectations
-7867 PIXEL6 : dEQP-GLES2.functional.shaders.algorithm.rgb_to_hsl_vertex = SKIP

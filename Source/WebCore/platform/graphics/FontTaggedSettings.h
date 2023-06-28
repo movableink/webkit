@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -70,7 +70,6 @@ public:
     FontTaggedSetting(FontTag, T value);
 
     bool operator==(const FontTaggedSetting<T>& other) const;
-    bool operator!=(const FontTaggedSetting<T>& other) const { return !(*this == other); }
     bool operator<(const FontTaggedSetting<T>& other) const;
 
     FontTag tag() const { return m_tag; }
@@ -96,12 +95,6 @@ template <typename T>
 bool FontTaggedSetting<T>::operator==(const FontTaggedSetting<T>& other) const
 {
     return m_tag == other.m_tag && m_value == other.m_value;
-}
-
-template <typename T>
-bool FontTaggedSetting<T>::operator<(const FontTaggedSetting<T>& other) const
-{
-    return (m_tag < other.m_tag) || (m_tag == other.m_tag && m_value < other.m_value);
 }
 
 template <typename T>
@@ -160,9 +153,10 @@ template<typename T> void add(Hasher& hasher, const FontTaggedSetting<T>& settin
 template <typename T>
 class FontTaggedSettings {
 public:
+    using Setting = FontTaggedSetting<T>;
+
     void insert(FontTaggedSetting<T>&&);
     bool operator==(const FontTaggedSettings<T>& other) const { return m_list == other.m_list; }
-    bool operator!=(const FontTaggedSettings<T>& other) const { return !(*this == other); }
 
     bool isEmpty() const { return !size(); }
     size_t size() const { return m_list.size(); }
@@ -177,8 +171,6 @@ public:
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<FontTaggedSettings<T>> decode(Decoder&);
 
-    FontTaggedSettings<T> deduplicated() const;
-
 private:
     Vector<FontTaggedSetting<T>> m_list;
 };
@@ -187,13 +179,15 @@ template <typename T>
 void FontTaggedSettings<T>::insert(FontTaggedSetting<T>&& feature)
 {
     // This vector will almost always have 0 or 1 items in it. Don't bother with the overhead of a binary search or a hash set.
+    // We keep the vector sorted alphabetically and replace any pre-existing value for a given tag.
     size_t i;
     for (i = 0; i < m_list.size(); ++i) {
-        if (!(feature < m_list[i]))
-            break;
+        if (m_list[i].tag() < feature.tag())
+            continue;
+        if (m_list[i].tag() == feature.tag())
+            m_list.remove(i);
+        break;
     }
-    if (i < m_list.size() && feature.tag() == m_list[i].tag())
-        m_list.remove(i);
     m_list.insert(i, WTFMove(feature));
 }
 
@@ -215,21 +209,6 @@ std::optional<FontTaggedSettings<T>> FontTaggedSettings<T>::decode(Decoder& deco
 
     FontTaggedSettings result;
     result.m_list = WTFMove(*list);
-    return result;
-}
-
-template <typename T>
-FontTaggedSettings<T> FontTaggedSettings<T>::deduplicated() const
-{
-    HashCountedSet<FontTag, FourCharacterTagHash, FourCharacterTagHashTraits> duplicateTagChecker;
-    for (auto& feature : m_list)
-        duplicateTagChecker.add(feature.tag());
-
-    FontTaggedSettings<T> result;
-    for (auto& feature : m_list) {
-        if (duplicateTagChecker.remove(feature.tag()))
-            result.insert({ feature.tag(), feature.value() });
-    }
     return result;
 }
 

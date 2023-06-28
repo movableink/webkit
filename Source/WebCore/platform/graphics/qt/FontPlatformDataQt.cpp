@@ -23,6 +23,7 @@
 
 #include "config.h"
 #include "FontPlatformData.h"
+#include "FontCustomPlatformData.h"
 
 #include "FontCascade.h"
 #include "SharedBuffer.h"
@@ -74,7 +75,7 @@ void FontPlatformDataPrivate::platformDataInit(FontPlatformData& q, float size, 
     q.updateSize(size);
 }
 
-FontPlatformData::FontPlatformData(const FontDescription& description, const AtomString& familyName)
+FontPlatformData::FontPlatformData(const FontDescription& description, const AtomString& familyName, const FontCustomPlatformData* customPlatformData)
 {
     QFont font;
     int requestedSize = description.computedPixelSize();
@@ -96,12 +97,10 @@ FontPlatformData::FontPlatformData(const FontDescription& description, const Ato
     FontPlatformDataPrivate::platformDataInit(*this, size, QRawFont::fromFont(font, QFontDatabase::Any));
 }
 
-FontPlatformData::FontPlatformData(const QRawFont& rawFont)
+FontPlatformData::FontPlatformData(const QRawFont& rawFont, const FontCustomPlatformData* customPlatformData)
 {
     FontPlatformDataPrivate::platformDataInit(*this, rawFont.pixelSize(), rawFont);
 }
-
-FontPlatformData::~FontPlatformData() = default;
 
 FontPlatformData FontPlatformData::cloneWithSize(const FontPlatformData& source, float size)
 {

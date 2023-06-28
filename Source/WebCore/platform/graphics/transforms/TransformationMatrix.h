@@ -337,10 +337,10 @@ public:
         }
     };
     
-    bool decompose2(Decomposed2Type&) const;
+    bool decompose2(Decomposed2Type&) const WARN_UNUSED_RETURN;
     void recompose2(const Decomposed2Type&);
 
-    bool decompose4(Decomposed4Type&) const;
+    bool decompose4(Decomposed4Type&) const WARN_UNUSED_RETURN;
     void recompose4(const Decomposed4Type&);
 
     WEBCORE_EXPORT void blend(const TransformationMatrix& from, double progress, CompositeOperation = CompositeOperation::Replace);
@@ -377,8 +377,6 @@ public:
                 m_matrix[3][2] == m2.m_matrix[3][2] &&
                 m_matrix[3][3] == m2.m_matrix[3][3]);
     }
-
-    bool operator!=(const TransformationMatrix& other) const { return !(*this == other); }
 
     // *this = *this * t
     TransformationMatrix& operator*=(const TransformationMatrix& t)

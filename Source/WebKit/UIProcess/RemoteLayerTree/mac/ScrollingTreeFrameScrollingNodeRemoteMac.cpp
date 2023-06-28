@@ -48,29 +48,35 @@ Ref<ScrollingTreeFrameScrollingNodeRemoteMac> ScrollingTreeFrameScrollingNodeRem
     return adoptRef(*new ScrollingTreeFrameScrollingNodeRemoteMac(tree, nodeType, nodeID));
 }
 
-void ScrollingTreeFrameScrollingNodeRemoteMac::commitStateBeforeChildren(const ScrollingStateNode& stateNode)
-{
-    ScrollingTreeFrameScrollingNodeMac::commitStateBeforeChildren(stateNode);
-    const auto& scrollingStateNode = downcast<ScrollingStateFrameScrollingNode>(stateNode);
-    m_delegate->updateFromStateNode(scrollingStateNode);
-}
-
 void ScrollingTreeFrameScrollingNodeRemoteMac::repositionRelatedLayers()
 {
     ScrollingTreeFrameScrollingNodeMac::repositionRelatedLayers();
     m_delegate->updateScrollbarLayers();
 }
 
-WheelEventHandlingResult ScrollingTreeFrameScrollingNodeRemoteMac::handleWheelEvent(const PlatformWheelEvent& wheelEvent, EventTargeting eventTargeting)
+void ScrollingTreeFrameScrollingNodeRemoteMac::handleWheelEventPhase(const PlatformWheelEventPhase phase)
 {
-    auto result = ScrollingTreeFrameScrollingNodeMac::handleWheelEvent(wheelEvent, eventTargeting);
-    m_delegate->handleWheelEventForScrollbars(wheelEvent);
-    return result;
+    m_delegate->handleWheelEventPhase(phase);
 }
 
-bool ScrollingTreeFrameScrollingNodeRemoteMac::handleMouseEvent(const PlatformMouseEvent& mouseEvent)
+void ScrollingTreeFrameScrollingNodeRemoteMac::viewWillStartLiveResize()
 {
-    return m_delegate->handleMouseEventForScrollbars(mouseEvent);
+    m_delegate->viewWillStartLiveResize();
+}
+
+void ScrollingTreeFrameScrollingNodeRemoteMac::viewWillEndLiveResize()
+{
+    m_delegate->viewWillEndLiveResize();
+}
+
+void ScrollingTreeFrameScrollingNodeRemoteMac::viewSizeDidChange()
+{
+    m_delegate->viewSizeDidChange();
+}
+
+String ScrollingTreeFrameScrollingNodeRemoteMac::scrollbarStateForOrientation(ScrollbarOrientation orientation) const
+{
+    return m_delegate->scrollbarStateForOrientation(orientation);
 }
 
 }

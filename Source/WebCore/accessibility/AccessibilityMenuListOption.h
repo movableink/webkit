@@ -51,7 +51,6 @@ private:
     bool isVisible() const final;
     bool isOffScreen() const final;
     bool isSelected() const final;
-    String nameForMSAA() const final;
     void setSelected(bool) final;
     bool canSetSelectedAttribute() const final;
     LayoutRect elementRect() const final;
@@ -64,4 +63,6 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityMenuListOption, isMenuListOption())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityMenuListOption) \
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isMenuListOption(); } \
+SPECIALIZE_TYPE_TRAITS_END()

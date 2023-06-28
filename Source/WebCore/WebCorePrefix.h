@@ -66,8 +66,15 @@
 
 #ifdef __cplusplus
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
+#include <functional>
+#include <list>
+#include <memory>
+#include <mutex>
 #include <new>
+#include <string>
+#include <typeinfo>
 #endif
 
 #if defined(__APPLE__)
@@ -114,13 +121,17 @@
 #endif
 #endif
 
-#if PLATFORM(WIN_CAIRO)
+#if PLATFORM(WIN)
 #include <windows.h>
 #else
 
 #if OS(WINDOWS)
 #include <windows.h>
 #endif // OS(WINDOWS)
+
+#if USE(OS_LOG)
+#include <os/log.h>
+#endif
 
 #if PLATFORM(IOS_FAMILY)
 #include <MobileCoreServices/MobileCoreServices.h>

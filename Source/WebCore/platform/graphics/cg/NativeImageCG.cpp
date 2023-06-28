@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #if USE(CG)
 
 #include "CGSubimageCacheWithTimer.h"
+#include "GeometryUtilities.h"
 #include "GraphicsContextCG.h"
 
 namespace WebCore {
@@ -69,6 +70,67 @@ DestinationColorSpace NativeImage::colorSpace() const
     return DestinationColorSpace(CGImageGetColorSpace(m_platformImage.get()));
 }
 
+void NativeImage::draw(GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, const ImagePaintingOptions& options)
+{
+    auto isHDRColorSpace = [](CGColorSpaceRef colorSpace) -> bool {
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+        return CGColorSpaceIsHDR(colorSpace);
+ALLOW_DEPRECATED_DECLARATIONS_END
+    };
+
+    auto isHDRNativeImage = [&](const NativeImage& image) -> bool {
+        return isHDRColorSpace(CGImageGetColorSpace(image.platformImage().get()));
+    };
+
+    auto isHDRContext = [&](GraphicsContext& context) -> bool {
+        return isHDRColorSpace(context.colorSpace().platformColorSpace());
+    };
+
+    auto colorSpaceForHDRImageBuffer = [](GraphicsContext& context) -> const DestinationColorSpace& {
+#if PLATFORM(IOS_FAMILY)
+        // iOS typically renders into extended range sRGB to preserve wide gamut colors, but we want
+        // a non-extended range colorspace here so that the contents are tone mapped to SDR range.
+        UNUSED_PARAM(context);
+        return DestinationColorSpace::DisplayP3();
+#else
+        // Otherwise, match the colorSpace of the GraphicsContext.
+        return context.colorSpace();
+#endif
+    };
+
+    auto drawHDRNativeImage = [&](GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, const ImagePaintingOptions& options) -> bool {
+        if (sourceRect.isEmpty() || !isHDRNativeImage(*this))
+            return false;
+
+        // If context and the image have HDR colorSpaces, draw the image directly without
+        // going through the workaround.
+        if (isHDRContext(context))
+            return false;
+
+        // Create a temporary ImageBuffer for destinationRect with the current scaleFator.
+        auto imageBuffer = context.createScaledImageBuffer(destinationRect, context.scaleFactor(), colorSpaceForHDRImageBuffer(context), RenderingMode::Unaccelerated, RenderingMethod::Local);
+        if (!imageBuffer)
+            return false;
+
+        // Draw sourceRect from the image into the temporary ImageBuffer.
+        imageBuffer->context().drawNativeImageInternal(*this, imageSize, destinationRect, sourceRect, options);
+
+        auto sourceRectScaled = FloatRect { { }, sourceRect.size() };
+        auto scaleFactor = destinationRect.size() / sourceRect.size();
+        sourceRectScaled.scale(scaleFactor * context.scaleFactor());
+
+        // Draw the ImageBuffer to destinationRect in the destination context.
+        imageBuffer->draw(context, destinationRect, sourceRectScaled, { });
+        return true;
+    };
+
+    // FIXME: rdar://105525195 -- Remove this HDR workaround once the system libraries can render images without clipping HDR data.
+    if (drawHDRNativeImage(context, imageSize, destinationRect, sourceRect, options))
+        return;
+
+    context.drawNativeImageInternal(*this, imageSize, destinationRect, sourceRect, options);
+}
+
 void NativeImage::clearSubimages()
 {
 #if CACHE_SUBIMAGES
@@ -76,6 +138,6 @@ void NativeImage::clearSubimages()
 #endif
 }
 
-}
+} // namespace WebCore
 
 #endif // USE(CG)

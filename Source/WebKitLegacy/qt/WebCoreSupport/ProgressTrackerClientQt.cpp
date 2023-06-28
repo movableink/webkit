@@ -48,7 +48,7 @@ ProgressTrackerClientQt::ProgressTrackerClientQt(QWebPageAdapter* webPageAdapter
         m_webPage->handle(), SIGNAL(loadProgress(int)));
 }
 
-void ProgressTrackerClientQt::progressStarted(Frame& originatingProgressFrame)
+void ProgressTrackerClientQt::progressStarted(LocalFrame& originatingProgressFrame)
 {
     QWebFrameAdapter* frame = QWebFrameAdapter::kit(&originatingProgressFrame);
     ASSERT(m_webPage == frame->pageAdapter);
@@ -59,13 +59,13 @@ void ProgressTrackerClientQt::progressStarted(Frame& originatingProgressFrame)
         m_webPage->updateNavigationActions();
 }
 
-void ProgressTrackerClientQt::progressEstimateChanged(Frame& originatingProgressFrame)
+void ProgressTrackerClientQt::progressEstimateChanged(LocalFrame& originatingProgressFrame)
 {
     ASSERT(m_webPage == QWebFrameAdapter::kit(&originatingProgressFrame)->pageAdapter);
     emit loadProgress(qRound(originatingProgressFrame.page()->progress().estimatedProgress() * 100));
 }
 
-void ProgressTrackerClientQt::progressFinished(Frame& originatingProgressFrame)
+void ProgressTrackerClientQt::progressFinished(LocalFrame& originatingProgressFrame)
 {
     if (dumpProgressFinishedCallback)
         printf("postProgressFinishedNotification\n");

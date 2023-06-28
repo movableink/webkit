@@ -277,7 +277,7 @@ set(angle_translator_glsl_sources
     "src/compiler/translator/tree_ops/gl/UseInterfaceBlockFields.cpp"
 )
 
-set(angle_translator_apple_sources
+set(angle_translator_glsl_apple_sources
     "src/compiler/translator/tree_ops/apple/AddAndTrueToLoopCondition.cpp"
     "src/compiler/translator/tree_ops/apple/RewriteDoWhile.cpp"
     "src/compiler/translator/tree_ops/apple/RewriteRowMajorMatrices.cpp"
@@ -427,6 +427,8 @@ set(angle_translator_lib_metal_sources
     "src/compiler/translator/TranslatorMetalDirect/Reference.h"
     "src/compiler/translator/TranslatorMetalDirect/RewriteCaseDeclarations.cpp"
     "src/compiler/translator/TranslatorMetalDirect/RewriteCaseDeclarations.h"
+    "src/compiler/translator/TranslatorMetalDirect/RewriteInterpolants.cpp"
+    "src/compiler/translator/TranslatorMetalDirect/RewriteInterpolants.h"
     "src/compiler/translator/TranslatorMetalDirect/RewriteOutArgs.cpp"
     "src/compiler/translator/TranslatorMetalDirect/RewriteOutArgs.h"
     "src/compiler/translator/TranslatorMetalDirect/RewritePipelines.cpp"

@@ -27,69 +27,113 @@
 
 #if PLATFORM(MAC)
 
+#include "FloatRect.h"
+#include "FloatSize.h"
+#include "PlatformWheelEvent.h"
 #include "ScrollerMac.h"
-#include <WebCore/FloatRect.h>
-#include <WebCore/FloatSize.h>
+#include "ScrollingStateScrollingNode.h"
+#include <wtf/RecursiveLockAdapter.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
+OBJC_CLASS NSScrollerImp;
 OBJC_CLASS NSScrollerImpPair;
 OBJC_CLASS WebScrollerImpPairDelegateMac;
 
 namespace WebCore {
-class PlatformMouseEvent;
 class PlatformWheelEvent;
 class ScrollingTreeScrollingNode;
 }
 
 namespace WebCore {
 
-class ScrollerPairMac {
+// Controls a pair of NSScrollerImps via a pair of ScrollerMac. The NSScrollerImps need to remain internal to this class.
+class ScrollerPairMac : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ScrollerPairMac> {
     WTF_MAKE_FAST_ALLOCATED;
+    friend class ScrollerMac;
 public:
-    ScrollerPairMac(WebCore::ScrollingTreeScrollingNode&);
     void init();
+
+    static Ref<ScrollerPairMac> create(ScrollingTreeScrollingNode& node)
+    {
+        return adoptRef(*new ScrollerPairMac(node));
+    }
 
     ~ScrollerPairMac();
 
-    ScrollerMac& verticalScroller() { return m_verticalScroller; }
-    ScrollerMac& horizontalScroller() { return m_horizontalScroller; }
+    void handleWheelEventPhase(PlatformWheelEventPhase);
 
-    bool handleWheelEvent(const WebCore::PlatformWheelEvent&);
-    bool handleMouseEvent(const WebCore::PlatformMouseEvent&);
+    void setUsePresentationValues(bool);
+    bool isUsingPresentationValues() const { return m_usingPresentationValues; }
+
+    void setVerticalScrollbarPresentationValue(float);
+    void setHorizontalScrollbarPresentationValue(float);
 
     void updateValues();
 
-    WebCore::FloatSize visibleSize() const;
-    WebCore::IntPoint lastKnownMousePosition() const { return m_lastKnownMousePosition; }
+    FloatSize visibleSize() const;
     bool useDarkAppearance() const;
 
     struct Values {
         float value;
         float proportion;
     };
-    Values valuesForOrientation(ScrollerMac::Orientation);
+    Values valuesForOrientation(ScrollbarOrientation);
 
-    NSScrollerImpPair *scrollerImpPair() { return m_scrollerImpPair.get(); }
-    NSScrollerImp *scrollerImpHorizontal() { return horizontalScroller().scrollerImp(); }
-    NSScrollerImp *scrollerImpVertical() { return verticalScroller().scrollerImp(); }
-    
     void releaseReferencesToScrollerImpsOnTheMainThread();
-    
+
     bool hasScrollerImp();
 
+    void viewWillStartLiveResize();
+    void viewWillEndLiveResize();
+    void contentsSizeChanged();
+    bool inLiveResize() const { return m_inLiveResize; }
+
+    // Only for use by WebScrollerImpPairDelegateMac. Do not use elsewhere!
+    ScrollerMac& verticalScroller() { return m_verticalScroller; }
+    ScrollerMac& horizontalScroller() { return m_horizontalScroller; }
+
+    String scrollbarStateForOrientation(ScrollbarOrientation) const;
+
+    ScrollbarStyle scrollbarStyle() const { return m_scrollbarStyle; }
+    void setScrollbarStyle(ScrollbarStyle);
+
+    void setVerticalScrollerImp(NSScrollerImp *);
+    void setHorizontalScrollerImp(NSScrollerImp *);
+    
+    void mouseEnteredContentArea();
+    void mouseExitedContentArea();
+    void mouseMovedInContentArea(const MouseLocationState&);
+    void mouseIsInScrollbar(ScrollbarHoverState);
+
+    NSScrollerImpPair *scrollerImpPair() const { return m_scrollerImpPair.get(); }
+    void ensureOnMainThreadWithProtectedThis(Function<void()>&&);
+    ScrollingTreeScrollingNode& node() const { return m_scrollingNode; }
+    
+    bool mouseInContentArea() const { return m_mouseInContentArea; }
+
 private:
-    WebCore::ScrollingTreeScrollingNode& m_scrollingNode;
+    ScrollerPairMac(ScrollingTreeScrollingNode&);
+
+    NSScrollerImp *scrollerImpHorizontal() { return horizontalScroller().scrollerImp(); }
+    NSScrollerImp *scrollerImpVertical() { return verticalScroller().scrollerImp(); }
+
+
+    ScrollingTreeScrollingNode& m_scrollingNode;
+
+    ScrollbarHoverState m_scrollbarHoverState;
 
     ScrollerMac m_verticalScroller;
     ScrollerMac m_horizontalScroller;
 
-    WebCore::FloatSize m_contentSize;
-    WebCore::FloatRect m_visibleContentRect;
-
-    WebCore::IntPoint m_lastKnownMousePosition;
-    std::optional<WebCore::FloatPoint> m_lastScrollPosition;
+    std::optional<FloatPoint> m_lastScrollOffset;
 
     RetainPtr<NSScrollerImpPair> m_scrollerImpPair;
     RetainPtr<WebScrollerImpPairDelegateMac> m_scrollerImpPairDelegate;
+
+    std::atomic<bool> m_usingPresentationValues { false };
+    std::atomic<ScrollbarStyle> m_scrollbarStyle { ScrollbarStyle::AlwaysVisible };
+    bool m_inLiveResize { false };
+    bool m_mouseInContentArea { false };
 };
 
 }

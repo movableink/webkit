@@ -44,18 +44,21 @@
 #include "CompositeOperation.h"
 #include "Document.h"
 #include "ElementRuleCollector.h"
-#include "Frame.h"
 #include "FrameSelection.h"
-#include "FrameView.h"
 #include "InspectorInstrumentation.h"
 #include "KeyframeList.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "MediaList.h"
 #include "NodeRenderStyle.h"
 #include "PageRuleCollector.h"
 #include "RenderScrollbar.h"
 #include "RenderStyleConstants.h"
+#include "RenderStyleInlines.h"
+#include "RenderStyleSetters.h"
 #include "RenderView.h"
+#include "ResolvedStyle.h"
 #include "RuleSet.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElement.h"
@@ -159,7 +162,7 @@ void Resolver::initialize()
     // document doesn't have documentElement
     // NOTE: this assumes that element that gets passed to styleForElement -call
     // is always from the document that owns the style selector
-    FrameView* view = document().view();
+    auto* view = document().view();
     if (view)
         m_mediaQueryEvaluator = MQ::MediaQueryEvaluator { view->mediaType() };
     else
@@ -244,7 +247,7 @@ ResolvedStyle Resolver::styleForElement(const Element& element, const Resolution
 
     if (state.parentStyle()) {
         state.setStyle(RenderStyle::createPtrWithRegisteredInitialValues(document().customPropertyRegistry()));
-        if (&element == document().documentElement()) {
+        if (&element == document().documentElement() && !context.isSVGUseTreeRoot) {
             // Initial values for custom properties are inserted to the document element style. Don't overwrite them.
             state.style()->inheritIgnoringCustomPropertiesFrom(*state.parentStyle());
         } else
@@ -529,7 +532,6 @@ std::unique_ptr<RenderStyle> Resolver::defaultStyleForElement(const Element* ele
     auto style = RenderStyle::createPtrWithRegisteredInitialValues(document().customPropertyRegistry());
 
     FontCascadeDescription fontDescription;
-    fontDescription.setRenderingMode(settings().fontRenderingMode());
     fontDescription.setOneFamily(standardFamily);
     fontDescription.setKeywordSizeFromIdentifier(CSSValueMedium);
 
@@ -671,6 +673,20 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
 
     if (MatchedDeclarationsCache::isCacheable(element, style, parentStyle))
         m_matchedDeclarationsCache.add(style, parentStyle, state.userAgentAppearanceStyle(), cacheHash, matchResult);
+}
+
+bool Resolver::hasSelectorForAttribute(const Element& element, const AtomString& attributeName) const
+{
+    ASSERT(!attributeName.isEmpty());
+    if (element.isHTMLElement() && element.document().isHTMLDocument())
+        return m_ruleSets.features().attributeLowercaseLocalNamesInRules.contains(attributeName);
+    return m_ruleSets.features().attributeLocalNamesInRules.contains(attributeName);
+}
+
+bool Resolver::hasSelectorForId(const AtomString& idValue) const
+{
+    ASSERT(!idValue.isEmpty());
+    return m_ruleSets.features().idsInRules.contains(idValue);
 }
 
 bool Resolver::hasViewportDependentMediaQueries() const

@@ -32,7 +32,7 @@
 #include "PlatformScreen.h"
 
 #include "FloatRect.h"
-#include "FrameView.h"
+#include "LocalFrameView.h"
 #include "HostWindow.h"
 #include "NotImplemented.h"
 #include "QWebPageClient.h"

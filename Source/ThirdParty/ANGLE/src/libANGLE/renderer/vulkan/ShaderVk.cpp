@@ -103,9 +103,14 @@ std::shared_ptr<WaitableCompileEvent> ShaderVk::compile(const gl::Context *conte
         options->roundOutputAfterDithering = true;
     }
 
-    if (contextVk->getFeatures().precisionSafeDivision.enabled)
+    if (contextVk->getFeatures().appendAliasedMemoryDecorationsToSsbo.enabled)
     {
-        options->precisionSafeDivision = true;
+        options->aliasedSSBOUnlessRestrict = true;
+    }
+
+    if (contextVk->getFeatures().explicitlyCastMediumpFloatTo16Bit.enabled)
+    {
+        options->castMediumpFloatTo16Bit = true;
     }
 
     if (contextVk->getExtensions().shaderPixelLocalStorageANGLE)

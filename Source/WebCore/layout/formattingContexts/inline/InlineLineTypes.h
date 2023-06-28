@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "LayoutUnits.h"
+
 namespace WebCore {
 namespace Layout {
 
@@ -43,11 +45,13 @@ struct InlineItemPosition {
     size_t offset { 0 }; // Note that this is offset relative to the start position of the InlineItem.
 
     bool operator==(const InlineItemPosition& other) const { return index == other.index && offset == other.offset; }
+    operator bool() const { return index || offset; }
 };
 
 struct InlineItemRange {
     InlineItemRange(InlineItemPosition start, InlineItemPosition end);
     InlineItemRange(size_t startIndex, size_t endIndex);
+    InlineItemRange() = default;
 
     size_t startIndex() const { return start.index; }
     size_t endIndex() const { return end.index; }
@@ -58,11 +62,12 @@ struct InlineItemRange {
 };
 
 struct PreviousLine {
+    size_t lineIndex { 0 };
     // Content width measured during line breaking (avoid double-measuring).
     std::optional<InlineLayoutUnit> trailingOverflowingContentWidth { };
     bool endsWithLineBreak { false };
     TextDirection inlineBaseDirection { TextDirection::LTR };
-    Vector<const InlineItem*> overflowingFloats;
+    Vector<const Box*> suspendedFloats;
 };
 
 inline InlineItemRange::InlineItemRange(InlineItemPosition start, InlineItemPosition end)

@@ -39,6 +39,7 @@
 #include "MIMETypeRegistry.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/TextStream.h>
 
 #include <QImage>
 #include <QPainter>
@@ -127,7 +128,7 @@ void ImageBufferQtBackend::initPainter(QPainter *painter)
     painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
 }
 
-RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyBehavior) const
+RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyBehavior)
 {
     if (copyBehavior == CopyBackingStore)
         return NativeImage::create(m_nativeImage->copy());
@@ -135,13 +136,7 @@ RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyB
     return NativeImage::create(QImage(*m_nativeImage.get()));
 }
 
-void ImageBufferQtBackend::clipToMask(GraphicsContext& context, const FloatRect& destRect)
-{
-    if (RefPtr<NativeImage> nativeImage = copyNativeImage(DontCopyBackingStore))
-        context.platformContext()->pushTransparencyLayerInternal(QRectF(destRect).toRect(), 1.0, nativeImage->platformImage());
-}
-
-GraphicsContext &ImageBufferQtBackend::context() const { return *m_context; }
+GraphicsContext &ImageBufferQtBackend::context() { return *m_context; }
 
 void ImageBufferQtBackend::transformToColorSpace(const DestinationColorSpace& newColorSpace)
 {
@@ -214,9 +209,9 @@ void ImageBufferQtBackend::platformTransformColorSpace(const std::array<uint8_t,
     painter->restore();
 }
 
-RefPtr<PixelBuffer> ImageBufferQtBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator) const
+void ImageBufferQtBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination)
 {
-    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage->bits())), allocator);
+    ImageBufferBackend::getPixelBuffer(srcRect, m_nativeImage->bits(), destination);
 }
 
 void ImageBufferQtBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
@@ -227,6 +222,13 @@ void ImageBufferQtBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const 
 unsigned ImageBufferQtBackend::bytesPerRow() const
 {
     return m_nativeImage->bytesPerLine();
+}
+
+String ImageBufferQtBackend::debugDescription() const
+{
+    TextStream stream;
+    stream << "ImageBufferQtBackend " << m_nativeImage->width() << "x" << m_nativeImage->height() << " " << m_nativeImage->format();
+    return stream.release();
 }
 
 } // namespace WebCore

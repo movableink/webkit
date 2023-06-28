@@ -74,12 +74,12 @@ struct TextMarkerData {
 
     AXID axTreeID() const
     {
-        return makeObjectIdentifier<AXIDType>(treeID);
+        return ObjectIdentifier<AXIDType>(treeID);
     }
 
     AXID axObjectID() const
     {
-        return makeObjectIdentifier<AXIDType>(objectID);
+        return ObjectIdentifier<AXIDType>(objectID);
     }
 private:
     void initializeAXIDs(AXObjectCache&, Node*);
@@ -94,6 +94,7 @@ using PlatformTextMarkerData = NSData *;;
 class AXTextMarker {
     WTF_MAKE_FAST_ALLOCATED;
     friend class AXTextMarkerRange;
+    friend std::partial_ordering partialOrder(const AXTextMarker&, const AXTextMarker&);
 public:
     // Constructors
     AXTextMarker(const VisiblePosition&);
@@ -112,6 +113,7 @@ public:
     operator bool() const { return !isNull(); }
     operator VisiblePosition() const;
     operator CharacterOffset() const;
+    std::optional<BoundaryPoint> boundaryPoint() const;
 
 #if PLATFORM(COCOA)
     RetainPtr<PlatformTextMarkerData> platformData() const;
@@ -124,11 +126,7 @@ public:
     RefPtr<AXCoreObject> object() const;
     bool isValid() const { return object(); }
 
-    Node* node() const
-    {
-        ASSERT(isMainThread());
-        return m_data.node;
-    }
+    Node* node() const;
     bool isIgnored() const { return m_data.ignored; }
 
 #if ENABLE(TREE_DEBUGGING)
@@ -136,6 +134,8 @@ public:
 #endif
 
 private:
+    // Sets m_data.node when the marker is being created with a PlatformTextMarkerData that lacks the node pointer because it was created off the main thread.
+    void setNodeIfNeeded() const;
     TextMarkerData m_data;
 };
 
@@ -149,9 +149,10 @@ public:
 #if PLATFORM(MAC)
     AXTextMarkerRange(AXTextMarkerRangeRef);
 #endif
+    AXTextMarkerRange(AXID treeID, AXID objectID, unsigned offset, unsigned length);
     AXTextMarkerRange() = default;
 
-    operator bool() const { return !m_start.isNull() && !m_end.isNull(); }
+    operator bool() const { return m_start && m_end; }
     operator VisiblePositionRange() const;
     std::optional<SimpleRange> simpleRange() const;
 
@@ -160,11 +161,22 @@ public:
     operator AXTextMarkerRangeRef() const { return platformData().autorelease(); }
 #endif
 
+#if PLATFORM(COCOA)
+    std::optional<NSRange> nsRange() const;
+#endif
+
     AXTextMarker start() const { return m_start; }
     AXTextMarker end() const { return m_end; }
+
 private:
     AXTextMarker m_start;
     AXTextMarker m_end;
 };
+
+inline Node* AXTextMarker::node() const
+{
+    ASSERT(isMainThread());
+    return m_data.node;
+}
 
 } // namespace WebCore

@@ -268,7 +268,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/ca/GraphicsLayerCA.cpp
     platform/graphics/ca/LayerPool.cpp
     platform/graphics/ca/PlatformCAAnimation.cpp
-    platform/graphics/ca/PlatformCALayer.cpp
+    platform/graphics/ca/PlatformCALayer.mm
     platform/graphics/ca/TileController.cpp
     platform/graphics/ca/TileCoverageMap.cpp
     platform/graphics/ca/TileGrid.cpp
@@ -319,7 +319,6 @@ list(APPEND WebCore_SOURCES
     platform/graphics/cocoa/FontPlatformDataCocoa.mm
     platform/graphics/cocoa/GraphicsContextCocoa.mm
     platform/graphics/cocoa/GraphicsContextGLCocoa.mm
-    platform/graphics/cocoa/GraphicsContextGLIOSurfaceSwapChain.cpp
     platform/graphics/cocoa/IntRectCocoa.mm
     platform/graphics/cocoa/IOSurface.mm
     platform/graphics/cocoa/IOSurfacePoolCocoa.mm
@@ -332,6 +331,7 @@ list(APPEND WebCore_SOURCES
 
     platform/graphics/coretext/FontCascadeCoreText.cpp
     platform/graphics/coretext/FontCoreText.cpp
+    platform/graphics/coretext/FontCustomPlatformDataCoreText.cpp
     platform/graphics/coretext/FontPlatformDataCoreText.cpp
     platform/graphics/coretext/GlyphPageCoreText.cpp
 
@@ -345,7 +345,6 @@ list(APPEND WebCore_SOURCES
     platform/graphics/mac/DisplayConfigurationMonitor.cpp
     platform/graphics/mac/FloatPointMac.mm
     platform/graphics/mac/FloatSizeMac.mm
-    platform/graphics/mac/FontCustomPlatformDataMac.cpp
     platform/graphics/mac/GraphicsChecksMac.cpp
     platform/graphics/mac/IconMac.mm
     platform/graphics/mac/ImageMac.mm
@@ -402,7 +401,6 @@ list(APPEND WebCore_SOURCES
     platform/network/cf/FormDataStreamCFNet.cpp
     platform/network/cf/NetworkStorageSessionCFNet.cpp
     platform/network/cf/ResourceRequestCFNet.cpp
-    platform/network/cf/SocketStreamHandleImplCFNet.cpp
 
     platform/network/cocoa/CookieCocoa.mm
     platform/network/cocoa/CookieStorageObserver.mm
@@ -437,8 +435,6 @@ list(APPEND WebCore_SOURCES
     rendering/RenderThemeCocoa.mm
     rendering/RenderThemeMac.mm
     rendering/TextAutoSizing.cpp
-
-    xml/SoftLinkLibxslt.cpp
 )
 
 list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
@@ -448,6 +444,10 @@ list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
 )
 
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+    Modules/ShapeDetection/Implementation/Cocoa/BarcodeDetectorImplementation.h
+    Modules/ShapeDetection/Implementation/Cocoa/FaceDetectorImplementation.h
+    Modules/ShapeDetection/Implementation/Cocoa/TextDetectorImplementation.h
+
     Modules/airplay/WebMediaSessionManager.h
     Modules/airplay/WebMediaSessionManagerClient.h
 
@@ -455,6 +455,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/applepay/ApplePayCouponCodeUpdate.h
     Modules/applepay/ApplePayDateComponents.h
     Modules/applepay/ApplePayDateComponentsRange.h
+    Modules/applepay/ApplePayDeferredPaymentRequest.h
     Modules/applepay/ApplePayDetailsUpdateBase.h
     Modules/applepay/ApplePayError.h
     Modules/applepay/ApplePayErrorCode.h
@@ -606,7 +607,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/cocoa/SharedVideoFrameInfo.h
     platform/cocoa/SystemBattery.h
     platform/cocoa/SystemVersion.h
-    platform/cocoa/VideoFullscreenChangeObserver.h
     platform/cocoa/VideoFullscreenModel.h
     platform/cocoa/VideoFullscreenModelVideoElement.h
 
@@ -669,7 +669,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/cocoa/FontFamilySpecificationCoreText.h
     platform/graphics/cocoa/FontFamilySpecificationCoreTextCache.h
     platform/graphics/cocoa/GraphicsContextGLCocoa.h
-    platform/graphics/cocoa/GraphicsContextGLIOSurfaceSwapChain.h
     platform/graphics/cocoa/IOSurface.h
     platform/graphics/cocoa/MediaPlaybackTargetContext.h
     platform/graphics/cocoa/MediaPlayerPrivateWebM.h
@@ -744,12 +743,10 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     platform/network/cf/AuthenticationChallenge.h
     platform/network/cf/CertificateInfo.h
-    platform/network/cf/DownloadBundle.h
     platform/network/cf/ResourceError.h
     platform/network/cf/ResourceRequest.h
     platform/network/cf/ResourceRequestCFNet.h
     platform/network/cf/ResourceResponse.h
-    platform/network/cf/SocketStreamHandleImpl.h
 
     platform/network/cocoa/CookieStorageObserver.h
     platform/network/cocoa/CredentialCocoa.h
@@ -776,6 +773,7 @@ list(APPEND WebCore_IDL_FILES
     Modules/applepay/ApplePayCouponCodeUpdate.idl
     Modules/applepay/ApplePayDateComponents.idl
     Modules/applepay/ApplePayDateComponentsRange.idl
+    Modules/applepay/ApplePayDeferredPaymentRequest.idl
     Modules/applepay/ApplePayDetailsUpdateBase.idl
     Modules/applepay/ApplePayError.idl
     Modules/applepay/ApplePayErrorCode.idl

@@ -55,7 +55,7 @@ public:
     ~StreamConnectionEncoder() = default;
 
     template<typename T, size_t Extent>
-    bool encodeSpan(const Span<T, Extent>& span)
+    bool encodeSpan(const std::span<T, Extent>& span)
     {
         auto* data = reinterpret_cast<const uint8_t*>(span.data());
         size_t size = span.size_bytes();
@@ -76,7 +76,7 @@ public:
     bool encodeObject(const T& object)
     {
         static_assert(std::is_trivially_copyable_v<T>);
-        return encodeSpan(Span { std::addressof(object), 1 });
+        return encodeSpan(std::span(std::addressof(object), 1));
     }
 
     template<typename T>

@@ -69,7 +69,7 @@ public:
 
     void didBeginEditing() override;
     void respondToChangedContents() override;
-    void respondToChangedSelection(Frame*) override;
+    void respondToChangedSelection(LocalFrame*) override;
     void didEndEditing() override;
     void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&) override;
     void didWriteSelectionToPasteboard() override;
@@ -79,8 +79,8 @@ public:
     void registerRedoStep(UndoStep&) override;
     void clearUndoRedoOperations() override;
 
-    bool canCopyCut(Frame*, bool defaultValue) const override;
-    bool canPaste(Frame*, bool defaultValue) const override;
+    bool canCopyCut(LocalFrame*, bool defaultValue) const override;
+    bool canPaste(LocalFrame*, bool defaultValue) const override;
     bool canUndo() const override;
     bool canRedo() const override;
     
@@ -108,7 +108,7 @@ public:
     bool supportsGlobalSelection() override;
 
     void didApplyStyle() override;
-    void discardedComposition(Frame *) override;
+    void discardedComposition(LocalFrame *) override;
     void overflowScrollPositionChanged() override;
     void subFrameScrollPositionChanged() final { }
 

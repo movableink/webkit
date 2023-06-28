@@ -50,15 +50,14 @@ public:
     static unsigned calculateBytesPerRow(const IntSize& backendSize);
     static size_t calculateExternalMemoryCost(const Parameters&);
 
-    RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) const override;
+    RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) override;
 
     void transformToColorSpace(const DestinationColorSpace&) override;
 
-    GraphicsContext& context() const override;
+    GraphicsContext& context() override;
+    String debugDescription() const override;
 
-    void clipToMask(GraphicsContext&, const FloatRect& rect) override;
-
-    RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator = ImageBufferAllocator()) const override;
+    void getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) override;
     void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
 protected:
