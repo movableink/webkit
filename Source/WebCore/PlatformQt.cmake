@@ -387,7 +387,8 @@ if (USE_GLIB)
     )
     list(APPEND WebCore_SOURCES
         platform/network/glib/DNSResolveQueueGLib.cpp
-        platform/UserAgentQuirks.cpp
+        platform/glib/UserAgentQuirks.cpp
+        platform/glib/SharedBufferGlib.cpp
     )
 endif ()
 

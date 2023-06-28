@@ -512,7 +512,7 @@ Ref<DataSegment> DataSegment::create(RetainPtr<CFDataRef>&& data)
 }
 #endif
 
-#if USE(GLIB) && !PLATFORM(QT)
+#if USE(GLIB)
 Ref<DataSegment> DataSegment::create(GRefPtr<GBytes>&& data)
 {
     return adoptRef(*new DataSegment(WTFMove(data)));
