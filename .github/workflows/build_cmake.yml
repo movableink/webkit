@@ -3,14 +3,11 @@ name: CMake Build Matrix
 on:
   push:
     branches:
-      - qtwebkit-dev-wip
-      - wk2
-      - qtwebkit-5.212
+      - master
 
   pull_request:
     branches:
-      - qtwebkit-dev-wip
-      - qtwebkit-5.212
+      - master
 
 env:
   QT_VERSION: 5.15.1
