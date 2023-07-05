@@ -34,8 +34,11 @@ extern "C" {
     GDBusNodeInfo* g_dbus_node_info_ref(GDBusNodeInfo*);
     void g_dbus_node_info_unref(GDBusNodeInfo*);
 };
+
+#if !PLATFORM(QT)
 extern "C" void g_object_unref(gpointer);
 extern "C" gpointer g_object_ref_sink(gpointer);
+#endif
 
 namespace WTF {
 

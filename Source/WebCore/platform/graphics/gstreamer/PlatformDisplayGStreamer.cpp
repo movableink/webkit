@@ -20,6 +20,8 @@
 #include "config.h"
 #include "PlatformDisplay.h"
 
+#if USE(GSTREAMER_GL)
+
 #include "GLContext.h"
 #include "GStreamerCommon.h"
 #define GST_USE_UNSTABLE_API
@@ -34,8 +36,6 @@ GST_DEBUG_CATEGORY_EXTERN(webkit_media_player_debug);
 #define GST_CAT_DEFAULT webkit_media_player_debug
 
 namespace WebCore {
-
-#if USE(GSTREAMER_GL)
 
 GstGLDisplay* PlatformDisplay::gstGLDisplay() const
 {
@@ -74,6 +74,6 @@ GstGLContext* PlatformDisplay::gstGLContext() const
     return m_gstGLContext.get();
 }
 
-#endif // USE(GSTREAMER_GL)
-
 } // namespace WebCore
+
+#endif // USE(GSTREAMER_GL)
