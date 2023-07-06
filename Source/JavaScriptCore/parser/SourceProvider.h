@@ -114,10 +114,6 @@ class UnlinkedFunctionCodeBlock;
             return adoptRef(*new StringSourceProvider(source, sourceOrigin, WTFMove(sourceURL), startPosition, sourceType));
         }
 
-#if PLATFORM(QT)
-        JS_EXPORT_PRIVATE ~StringSourceProvider() override;
-#endif
-
         unsigned hash() const override
         {
             return m_source.get().hash();
