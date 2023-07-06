@@ -36,7 +36,6 @@
 #include <WebCore/NamedNodeMap.h>
 #include <WebCore/QStyleHelpers.h>
 #include <WebCore/RenderElement.h>
-#include <WebCore/ScriptController.h>
 #include <WebCore/StaticNodeList.h>
 #include <WebCore/markup.h>
 #include <WebCore/qt_runtime.h>
@@ -673,22 +672,6 @@ QWebFrame *QWebElement::webFrame() const
     return frameAdapter->apiHandle();
 }
 
-static bool setupScriptContext(WebCore::Element* element, JSC::JSGlobalObject*& lexicalGlobalObject)
-{
-    if (!element)
-        return false;
-
-    LocalFrame* frame = element->document().frame();
-    if (!frame)
-        return false;
-
-    lexicalGlobalObject = frame->script().globalObject(mainThreadNormalWorld())->globalObject();
-    if (!lexicalGlobalObject)
-        return false;
-
-    return true;
-}
-
 /*!
     Executes \a scriptSource with this element as \c this object
     and returns the result of the last executed statement.
@@ -704,23 +687,8 @@ QVariant QWebElement::evaluateJavaScript(const QString& scriptSource)
     if (scriptSource.isEmpty())
         return QVariant();
 
-    JSC::JSGlobalObject* lexicalGlobalObject = nullptr;
-
-    if (!setupScriptContext(m_element, lexicalGlobalObject))
-        return QVariant();
-
-    JSC::JSLockHolder lock(lexicalGlobalObject);
     RefPtr<Element> protect = m_element;
-
-    JSC::JSValue thisValue = toJS(lexicalGlobalObject, toJSLocalDOMWindow(m_element->document().frame(), currentWorld(*lexicalGlobalObject)), m_element);
-    if (!thisValue)
-        return QVariant();
-
-    JSValueRef evaluationResultRef = evaluateJavaScriptString(lexicalGlobalObject, scriptSource, thisValue);
-
-    int distance = 0;
-    JSValueRef* ignoredException = 0;
-    return JSC::Bindings::convertValueToQVariant(toRef(lexicalGlobalObject), evaluationResultRef, QMetaType::Void, &distance, ignoredException);
+    return evaluateJavaScriptString(scriptSource, m_element);
 }
 
 /*!

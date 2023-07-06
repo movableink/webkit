@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <JavaScriptCore/JSGlobalObject.h>
-#include <JavaScriptCore/JSValueRef.h>
+#include <WebCore/Element.h>
+#include <QVariant>
 
-JSValueRef evaluateJavaScriptString(JSC::JSGlobalObject* lexicalGlobalObject, const String& scriptSource, const JSC::JSValue& thisValue);
+QVariant evaluateJavaScriptString(const String& scriptSource, WebCore::Element* element);

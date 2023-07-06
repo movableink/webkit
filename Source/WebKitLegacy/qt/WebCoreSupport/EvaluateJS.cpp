@@ -23,17 +23,55 @@
 #include <JavaScriptCore/JSValueRef.h>
 #include <JavaScriptCore/Completion.h>
 #include <wtf/NakedPtr.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/ScriptSourceCode.h>
+#include <WebCore/ScriptController.h>
+#include <WebCore/JSElement.h>
+#include <WebCore/qt_runtime.h>
+#include <QVariant>
+
+using namespace WebCore;
+
+static bool setupScriptContext(Element* element, JSC::JSGlobalObject*& lexicalGlobalObject)
+{
+    if (!element)
+        return false;
+
+    LocalFrame* frame = element->document().frame();
+    if (!frame)
+        return false;
+
+    lexicalGlobalObject = frame->script().globalObject(mainThreadNormalWorld())->globalObject();
+    if (!lexicalGlobalObject)
+        return false;
+
+    return true;
+}
 
 // Extracted from qwebelement.cpp because that file needs rtti and WebCore::ScriptSourceCode has rtti disabled
-JSValueRef evaluateJavaScriptString(JSC::JSGlobalObject* lexicalGlobalObject, const String& scriptSource, const JSC::JSValue& thisValue)
+QVariant evaluateJavaScriptString(const String& scriptSource, Element* element)
 {
-    WebCore::ScriptSourceCode sourceCode(scriptSource);
+    JSC::JSGlobalObject* lexicalGlobalObject = nullptr;
+
+    if (!setupScriptContext(element, lexicalGlobalObject))
+	return QVariant();
+
+    JSC::JSLockHolder lock(lexicalGlobalObject);
+
+    JSC::JSValue thisValue = toJS(lexicalGlobalObject, toJSLocalDOMWindow(element->document().frame(), currentWorld(*lexicalGlobalObject)), element);
+    if (!thisValue)
+	return QVariant();
+
+    ScriptSourceCode sourceCode(scriptSource);
  
     NakedPtr<JSC::Exception> evaluationException;
     JSC::JSValue evaluationResult = JSC::evaluate(lexicalGlobalObject, sourceCode.jsSourceCode(), thisValue, evaluationException);   
     if (evaluationException)
-	return JSValueMakeUndefined(toRef(lexicalGlobalObject));
+	return QVariant();
 
-    return toRef(lexicalGlobalObject, evaluationResult);
+    JSValueRef evaluationResultRef = toRef(lexicalGlobalObject, evaluationResult);
+
+    int distance = 0;
+    JSValueRef* ignoredException = 0;
+    return JSC::Bindings::convertValueToQVariant(toRef(lexicalGlobalObject), evaluationResultRef, QMetaType::Void, &distance, ignoredException);
 }
