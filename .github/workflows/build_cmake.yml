@@ -3,14 +3,11 @@ name: CMake Build Matrix
 on:
   push:
     branches:
-      - qtwebkit-dev-wip
-      - wk2
-      - qtwebkit-5.212
+      - master
 
   pull_request:
     branches:
-      - qtwebkit-dev-wip
-      - qtwebkit-5.212
+      - master
 
 env:
   QT_VERSION: 5.15.1
@@ -38,17 +35,17 @@ jobs:
             os: ubuntu-latest,
             build_type: Release,
           }
-        - {
-            name: "macOS Release", artifact: "macOS",
-            os: macos-latest,
-            build_type: Release,
-          }
-        - {
-            name: "Windows MSVC Conan Release", artifact: "Windows-MSVC",
-            os: windows-latest,
-            build_type: Release,
-            environment_script: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
-          }
+        #- {
+        #    name: "macOS Release", artifact: "macOS",
+        #    os: macos-latest,
+        #    build_type: Release,
+        #  }
+        #- {
+        #    name: "Windows MSVC Conan Release", artifact: "Windows-MSVC",
+        #    os: windows-latest,
+        #    build_type: Release,
+        #    environment_script: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
+        #  }
 
     steps:
     - name: Sparse checkout
@@ -142,7 +139,7 @@ jobs:
       run: |
         sudo apt-get update && sudo apt-get install \
         ninja-build build-essential bison flex gperf libfontconfig1-dev libgl1-mesa-dev libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhyphen-dev libicu-dev libjpeg-dev libpng-dev libqt5opengl5-dev libqt5sensors5-dev libqt5webchannel5-dev libsqlite3-dev libwebp-dev libwoff-dev libxcomposite-dev libxml2-dev libxrender-dev libxslt1-dev mesa-common-dev pkg-config python3 qtbase5-private-dev qtdeclarative5-private-dev qtpositioning5-dev ruby libqt5sql5-sqlite qtbase5-doc-html qttools5-dev-tools \
-        libtasn1-6-dev libgcrypt20-dev
+        libtasn1-6-dev libgcrypt20-dev libunwind-dev libharfbuzz-dev
 
     - name: CMake version
       id: cmake_version
@@ -153,13 +150,10 @@ jobs:
     - name: CMake environment
       shell: bash --noprofile --norc -eo pipefail -x {0}
       run: |
-        echo "::add-path::$GITHUB_WORKSPACE"
-        echo "::set-env name=CCACHE_BASEDIR::$GITHUB_WORKSPACE"
-        echo "::set-env name=CCACHE_DIR::$GITHUB_WORKSPACE/.ccache"
-        echo "::set-env name=cmake_args::\
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DENABLE_PCH=OFF"
+        echo "$GITHUB_WORKSPACE" >> $GITHUB_PATH
+        echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "CCACHE_DIR=$GITHUB_WORKSPACE/.ccache" >> $GITHUB_ENV
+        echo "cmake_args='-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_PCH=OFF'" >> $GITHUB_ENV
 
     - name: Configure (Linux)
       if: runner.os == 'Linux'
