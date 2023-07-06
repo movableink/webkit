@@ -21,9 +21,8 @@
 
 #include "QWebFrameAdapter.h"
 #include "qwebelement_p.h"
+#include "EvaluateJS.h"
 #include <JavaScriptCore/APICast.h>
-#include <JavaScriptCore/Completion.h>
-#include <JavaScriptCore/JSGlobalObject.h>
 #include <QPainter>
 #include <WebCore/Attr.h>
 #include <WebCore/DocumentFragment.h>
@@ -38,11 +37,9 @@
 #include <WebCore/QStyleHelpers.h>
 #include <WebCore/RenderElement.h>
 #include <WebCore/ScriptController.h>
-#include <WebCore/ScriptSourceCode.h>
 #include <WebCore/StaticNodeList.h>
 #include <WebCore/markup.h>
 #include <WebCore/qt_runtime.h>
-#include <wtf/NakedPtr.h>
 
 using namespace WebCore;
 
@@ -719,13 +716,7 @@ QVariant QWebElement::evaluateJavaScript(const QString& scriptSource)
     if (!thisValue)
         return QVariant();
 
-    ScriptSourceCode sourceCode(scriptSource);
-
-    NakedPtr<JSC::Exception> evaluationException;
-    JSC::JSValue evaluationResult = JSC::evaluate(lexicalGlobalObject, sourceCode.jsSourceCode(), thisValue, evaluationException);
-    if (evaluationException)
-        return QVariant();
-    JSValueRef evaluationResultRef = toRef(lexicalGlobalObject, evaluationResult);
+    JSValueRef evaluationResultRef = evaluateJavaScriptString(lexicalGlobalObject, scriptSource, thisValue);
 
     int distance = 0;
     JSValueRef* ignoredException = 0;
