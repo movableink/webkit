@@ -66,6 +66,7 @@ list(APPEND WebKitLegacy_SOURCES
     qt/Api/qhttpheader.cpp
     qt/Api/qwebdatabase.cpp
     qt/Api/qwebelement.cpp
+    qt/Api/qwebelement_p.cpp
     qt/Api/qwebfullscreenrequest.cpp
     qt/Api/qwebhistory.cpp
     qt/Api/qwebhistoryinterface.cpp
@@ -81,7 +82,6 @@ list(APPEND WebKitLegacy_SOURCES
     qt/WebCoreSupport/DataListSuggestionPickerQt.cpp
     qt/WebCoreSupport/DragClientQt.cpp
     qt/WebCoreSupport/EditorClientQt.cpp
-    qt/WebCoreSupport/EvaluateJS.cpp
     qt/WebCoreSupport/FrameLoaderClientQt.cpp
     qt/WebCoreSupport/FrameNetworkingContextQt.cpp
     qt/WebCoreSupport/HistorySerialization.cpp

@@ -21,8 +21,6 @@
 
 #include "QWebFrameAdapter.h"
 #include "qwebelement_p.h"
-#include "EvaluateJS.h"
-#include <JavaScriptCore/APICast.h>
 #include <QPainter>
 #include <WebCore/Attr.h>
 #include <WebCore/DocumentFragment.h>
@@ -31,20 +29,13 @@
 #include <WebCore/FullscreenManager.h>
 #include <WebCore/GraphicsContextQt.h>
 #include <WebCore/HTMLElement.h>
-#include <WebCore/JSDocument.h>
-#include <WebCore/JSElement.h>
 #include <WebCore/NamedNodeMap.h>
 #include <WebCore/QStyleHelpers.h>
 #include <WebCore/RenderElement.h>
 #include <WebCore/StaticNodeList.h>
 #include <WebCore/markup.h>
-#include <WebCore/qt_runtime.h>
 
 using namespace WebCore;
-
-class QWebElementPrivate {
-public:
-};
 
 /*!
     \class QWebElement
@@ -688,7 +679,7 @@ QVariant QWebElement::evaluateJavaScript(const QString& scriptSource)
         return QVariant();
 
     RefPtr<Element> protect = m_element;
-    return evaluateJavaScriptString(scriptSource, m_element);
+    return d->evaluateJavaScriptString(scriptSource, m_element);
 }
 
 /*!
@@ -1943,41 +1934,4 @@ QWebElement QtWebElementRuntime::create(Element* element)
 Element* QtWebElementRuntime::get(const QWebElement& element)
 {
     return element.m_element;
-}
-
-static QVariant convertJSValueToWebElementVariant(JSC::JSGlobalObject* lexicalGlobalObject, JSC::JSObject* object, int *distance, HashSet<JSObjectRef>* visitedObjects)
-{
-    JSC::VM& vm = lexicalGlobalObject->vm();
-    Element* element = 0;
-    QVariant ret;
-    if (object && object->inherits<JSElement>()) {
-        element = JSElement::toWrapped(vm, object);
-        *distance = 0;
-        // Allow other objects to reach this one. This won't cause our algorithm to
-        // loop since when we find an Element we do not recurse.
-        visitedObjects->remove(toRef(object));
-    } else if (object && object->inherits<JSElement>()) {
-        // To support TestRunnerQt::nodesFromRect(), used in DRT, we do an implicit
-        // conversion from 'document' to the QWebElement representing the 'document.documentElement'.
-        // We can't simply use a QVariantMap in nodesFromRect() because it currently times out
-        // when serializing DOMMimeType and DOMPlugin, even if we limit the recursion.
-        element = JSDocument::toWrapped(vm, object)->documentElement();
-    }
-
-    return QVariant::fromValue<QWebElement>(QtWebElementRuntime::create(element));
-}
-
-static JSC::JSValue convertWebElementVariantToJSValue(JSC::JSGlobalObject* lexicalGlobalObject, WebCore::JSDOMGlobalObject* globalObject, const QVariant& variant)
-{
-    return WebCore::toJS(lexicalGlobalObject, globalObject, QtWebElementRuntime::get(variant.value<QWebElement>()));
-}
-
-void QtWebElementRuntime::initialize()
-{
-    static bool initialized = false;
-    if (initialized)
-        return;
-    initialized = true;
-    int id = qRegisterMetaType<QWebElement>();
-    JSC::Bindings::registerCustomType(id, convertJSValueToWebElementVariant, convertWebElementVariantToJSValue);
 }

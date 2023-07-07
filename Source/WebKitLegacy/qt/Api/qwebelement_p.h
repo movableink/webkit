@@ -20,6 +20,8 @@
 #ifndef qwebelement_p_h
 #define qwebelement_p_h
 
+#include <QVariant>
+
 class QWebElement;
 
 namespace WebCore {
@@ -33,6 +35,11 @@ public:
     static void initialize();
     static QWebElement create(WebCore::Element*);
     static WebCore::Element* get(const QWebElement&);
+};
+
+class QWebElementPrivate {
+public:
+    QVariant evaluateJavaScriptString(const QString& scriptSource, WebCore::Element* element);
 };
 
 #endif // qwebelement_p_h
