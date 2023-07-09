@@ -52,10 +52,6 @@ void SourceProvider::getID()
     }
 }
 
-#if PLATFORM(QT)
-StringSourceProvider::~StringSourceProvider() = default;
-#endif
-
 #if ENABLE(WEBASSEMBLY)
 BaseWebAssemblySourceProvider::BaseWebAssemblySourceProvider(const SourceOrigin& sourceOrigin, String&& sourceURL)
     : SourceProvider(sourceOrigin, WTFMove(sourceURL), String(), TextPosition(), SourceProviderSourceType::WebAssembly)
