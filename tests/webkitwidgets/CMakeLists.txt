@@ -7,10 +7,10 @@ if (ENABLE_TEST_SUPPORT)
 endif ()
 
 set(QtWK1ApiTests_LIBRARIES
-    ${Qt5Gui_LIBRARIES}
-    ${Qt5Network_LIBRARIES}
-    ${Qt5Test_LIBRARIES}
-    ${Qt5Widgets_LIBRARIES}
+    ${Qt6Gui_LIBRARIES}
+    ${Qt6Network_LIBRARIES}
+    ${Qt6Test_LIBRARIES}
+    ${Qt6Widgets_LIBRARIES}
     WebKitWidgets
 )
 
@@ -34,12 +34,12 @@ set(QtWK1ApiTests
 )
 
 set(tst_hybridPixmap_SOURCES hybridPixmap/widget.cpp)
-qt5_wrap_ui(tst_hybridPixmap_SOURCES hybridPixmap/widget.ui)
+qt_wrap_ui(tst_hybridPixmap_SOURCES hybridPixmap/widget.ui)
 
 foreach (testName ${QtWK1ApiTests})
     list(APPEND tst_${testName}_SOURCES ${testName}/tst_${testName}.cpp)
     if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${testName}/tst_${testName}.qrc")
-        qt5_add_resources(tst_${testName}_SOURCES ${testName}/tst_${testName}.qrc)
+        qt_add_resources(tst_${testName}_SOURCES ${testName}/tst_${testName}.qrc)
     endif ()
 
     add_executable(tst_${testName} ${tst_${testName}_SOURCES})
@@ -52,7 +52,7 @@ foreach (testName ${QtWK1ApiTests})
     )
 
     target_include_directories(tst_${testName} SYSTEM PRIVATE
-        ${Qt5Gui_PRIVATE_INCLUDE_DIRS}
+        ${Qt6Gui_PRIVATE_INCLUDE_DIRS}
     )
 
     target_link_libraries(tst_${testName} ${QtWK1ApiTests_LIBRARIES})

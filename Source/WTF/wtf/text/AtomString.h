@@ -126,7 +126,7 @@ public:
 
 #if PLATFORM(QT)
     WTF_EXPORT_PRIVATE AtomString(const QString&);
-    WTF_EXPORT_PRIVATE AtomString(const QStringRef&);
+    WTF_EXPORT_PRIVATE AtomString(const QStringView&);
 #endif
 
 #if OS(WINDOWS)

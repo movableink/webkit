@@ -262,7 +262,7 @@ void QtPageClient::enterFullScreen()
 
     WebFullScreenManagerProxy* manager = m_eventHandler->webPageProxy()->fullScreenManager();
     manager->willEnterFullScreen();
-    emit m_webView->experimental()->enterFullScreenRequested();
+    Q_EMIT m_webView->experimental()->enterFullScreenRequested();
     manager->didEnterFullScreen();
 }
 
@@ -270,7 +270,7 @@ void QtPageClient::exitFullScreen()
 {
     WebFullScreenManagerProxy* manager = m_eventHandler->webPageProxy()->fullScreenManager();
     manager->willExitFullScreen();
-    emit m_webView->experimental()->exitFullScreenRequested();
+    Q_EMIT m_webView->experimental()->exitFullScreenRequested();
     manager->didExitFullScreen();
 }
 

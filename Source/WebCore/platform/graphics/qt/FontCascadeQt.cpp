@@ -339,7 +339,7 @@ QFont FontCascade::syntheticFont() const
     QFont f(rawFont.familyName());
     if (rawFont.pixelSize())
         f.setPixelSize(rawFont.pixelSize());
-    f.setWeight(rawFont.weight());
+    f.setWeight(QFont::Weight(rawFont.weight()));
     f.setStyle(rawFont.style());
     if (m_letterSpacing)
         f.setLetterSpacing(QFont::AbsoluteSpacing, m_letterSpacing);

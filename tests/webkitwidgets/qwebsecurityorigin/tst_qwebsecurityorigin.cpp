@@ -32,11 +32,11 @@ public:
     tst_QWebSecurityOrigin();
     virtual ~tst_QWebSecurityOrigin();
 
-private slots:
+private Q_SLOTS:
     void init();
     void cleanup();
-    void whiteList_data();
-    void whiteList();
+    void allowList_data();
+    void allowList();
 private:
     QWebView* m_view { nullptr };
     QWebPage* m_page { nullptr };
@@ -61,7 +61,7 @@ void tst_QWebSecurityOrigin::cleanup()
     delete m_view;
 }
 
-void tst_QWebSecurityOrigin::whiteList_data()
+void tst_QWebSecurityOrigin::allowList_data()
 {
     QTest::addColumn<QString>("source");
     QTest::addColumn<QString>("scheme");
@@ -114,16 +114,16 @@ protected:
         return m_buffer.bytesAvailable();
     }
 
-private slots:
+private Q_SLOTS:
     void emitReadyRead()
     {
-        emit readyRead();
+        Q_EMIT readyRead();
     }
 
     void emitReadChannelFinished()
     {
-        emit readChannelFinished();
-        emit finished();
+        Q_EMIT readChannelFinished();
+        Q_EMIT finished();
     }
     void abort() { };
 
@@ -134,8 +134,8 @@ private slots:
         setError(QNetworkReply::NoError, "");
         setAttribute(QNetworkRequest::HttpStatusCodeAttribute, 200);
         setAttribute(QNetworkRequest::HttpReasonPhraseAttribute, QString("Ok").toLatin1());
-        emit metaDataChanged();
-        emit readyRead();
+        Q_EMIT metaDataChanged();
+        Q_EMIT readyRead();
     }
 public:
     QBuffer m_buffer;
@@ -154,7 +154,7 @@ public:
 
 static const char cannedResponse[] = "Test";
 
-void tst_QWebSecurityOrigin::whiteList()
+void tst_QWebSecurityOrigin::allowList()
 {
     QFETCH(QString, source);
     QFETCH(QString, scheme);
@@ -179,9 +179,9 @@ void tst_QWebSecurityOrigin::whiteList()
     m_view->page()->setNetworkAccessManager(&manager);
     QString testJS="runTest(\"" + testUrl + "\")";
     QCOMPARE(m_view->page()->mainFrame()->evaluateJavaScript(testJS), QVariant(successBeforeAdd));
-    origin->addAccessWhitelistEntry(scheme, host, subdomainSetting);
+    origin->addAccessAllowlistEntry(scheme, host, subdomainSetting);
     QCOMPARE(m_view->page()->mainFrame()->evaluateJavaScript(testJS), QVariant(successAfterAdd));
-    origin->removeAccessWhitelistEntry(scheme, host, subdomainSetting);
+    origin->removeAccessAllowlistEntry(scheme, host, subdomainSetting);
     QCOMPARE(m_view->page()->mainFrame()->evaluateJavaScript(testJS), QVariant(successAfterRemove));
     m_view->page()->setNetworkAccessManager(0);
 }

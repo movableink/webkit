@@ -24,26 +24,26 @@ list(APPEND WebKitTestRunner_INCLUDE_DIRECTORIES
 )
 
 list(APPEND WebKitTestRunner_SYSTEM_INCLUDE_DIRECTORIES
-    ${Qt5Gui_INCLUDE_DIRS}
-    ${Qt5Gui_PRIVATE_INCLUDE_DIRS}
-    ${Qt5Quick_INCLUDE_DIRS}
-    ${Qt5Quick_PRIVATE_INCLUDE_DIRS}
-    ${Qt5Widgets_INCLUDE_DIRS}
-    ${Qt5Widgets_PRIVATE_INCLUDE_DIRS}
+    ${Qt6Gui_INCLUDE_DIRS}
+    ${Qt6Gui_PRIVATE_INCLUDE_DIRS}
+    ${Qt6Quick_INCLUDE_DIRS}
+    ${Qt6Quick_PRIVATE_INCLUDE_DIRS}
+    ${Qt6Widgets_INCLUDE_DIRS}
+    ${Qt6Widgets_PRIVATE_INCLUDE_DIRS}
 )
 
 list(APPEND WebKitTestRunner_LIBRARIES
     WebCore
-    ${Qt5Core_LIBRARIES}
-    ${Qt5Widgets_LIBRARIES}
-    ${Qt5Quick_LIBRARIES}
-    ${Qt5Test_LIBRARIES}
+    ${Qt6Core_LIBRARIES}
+    ${Qt6Widgets_LIBRARIES}
+    ${Qt6Quick_LIBRARIES}
+    ${Qt6Test_LIBRARIES}
 )
 
 set(WebKitTestRunnerInjectedBundle_LIBRARIES
     WebCoreTestSupport
     WebKit
-    ${Qt5Quick_LIBRARIES}
+    ${Qt6Quick_LIBRARIES}
 )
 
 list(APPEND WebKitTestRunnerInjectedBundle_SOURCES

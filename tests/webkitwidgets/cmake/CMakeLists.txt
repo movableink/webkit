@@ -5,11 +5,11 @@ project(qmake_cmake_files)
 
 enable_testing()
 
-find_package(Qt5Core REQUIRED)
+find_package(Qt6 COMPONENTS Core REQUIRED)
 
-include("${_Qt5CTestMacros}")
+include("${_Qt6CTestMacros}")
 
-set(Qt5_MODULE_TEST_DEPENDS Widgets)
+set(Qt6_MODULE_TEST_DEPENDS Widgets)
 
 test_module_includes(
   WebKit QWebElement

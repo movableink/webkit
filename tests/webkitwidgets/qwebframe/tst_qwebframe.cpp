@@ -32,7 +32,7 @@
 #include <QPicture>
 #include <QNetworkRequest>
 #include <QNetworkReply>
-#include <QTextCodec>
+#include <QStringConverter>
 #ifndef QT_NO_OPENSSL
 #include <qsslerror.h>
 #endif
@@ -243,14 +243,14 @@ protected:
 private Q_SLOTS:
     void continueRedirect()
     {
-        emit metaDataChanged();
-        emit finished();
+        Q_EMIT metaDataChanged();
+        Q_EMIT finished();
     }
 
     void continueError()
     {
-        emit error(this->error());
-        emit finished();
+        Q_EMIT errorOccurred(this->error());
+        Q_EMIT finished();
     }
 };
 
@@ -271,7 +271,7 @@ protected:
             if (url == "qrc:/fake-ssl-error.html") {
                 FakeReply* reply = new FakeReply(request, this);
                 QList<QSslError> errors;
-                emit sslErrors(reply, errors << QSslError(QSslError::UnspecifiedError));
+                Q_EMIT sslErrors(reply, errors << QSslError(QSslError::UnspecifiedError));
                 return reply;
             }
 #endif
@@ -617,7 +617,7 @@ void tst_QWebFrame::popupFocus()
 
     // open the popup by clicking. check if focus is on the popup
     const QWebElement webCombo = view.page()->mainFrame()->documentElement().findFirst(QLatin1String("select[name=select]"));
-    QTest::mouseClick(&view, Qt::LeftButton, 0, webCombo.geometry().center());
+    QTest::mouseClick(&view, Qt::LeftButton, { }, webCombo.geometry().center());
 
     QComboBox* combo = view.findChild<QComboBox*>();
     QVERIFY(combo != 0);
@@ -647,7 +647,7 @@ void tst_QWebFrame::inputFieldFocus()
     bool autoSipEnabled = qApp->autoSipEnabled();
     qApp->setAutoSipEnabled(false);
     const QWebElement inputElement = view.page()->mainFrame()->documentElement().findFirst(QLatin1String("input[type=text]"));
-    QTest::mouseClick(&view, Qt::LeftButton, 0, inputElement.geometry().center());
+    QTest::mouseClick(&view, Qt::LeftButton, { }, inputElement.geometry().center());
     m_inputFieldsTestView = &view;
     view.installEventFilter( this );
     QTest::qWait(delay);
@@ -898,25 +898,20 @@ void tst_QWebFrame::renderHints()
     page.mainFrame()->render(&painter);
     QVERIFY(!(buffer.renderHints() & QPainter::TextAntialiasing));
     QVERIFY(!(buffer.renderHints() & QPainter::SmoothPixmapTransform));
-    QVERIFY(!(buffer.renderHints() & QPainter::HighQualityAntialiasing));
 
     painter.setRenderHint(QPainter::TextAntialiasing, true);
     page.mainFrame()->render(&painter);
     QVERIFY(buffer.renderHints() & QPainter::TextAntialiasing);
     QVERIFY(!(buffer.renderHints() & QPainter::SmoothPixmapTransform));
-    QVERIFY(!(buffer.renderHints() & QPainter::HighQualityAntialiasing));
 
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
     page.mainFrame()->render(&painter);
     QVERIFY(buffer.renderHints() & QPainter::TextAntialiasing);
     QVERIFY(buffer.renderHints() & QPainter::SmoothPixmapTransform);
-    QVERIFY(!(buffer.renderHints() & QPainter::HighQualityAntialiasing));
 
-    painter.setRenderHint(QPainter::HighQualityAntialiasing, true);
     page.mainFrame()->render(&painter);
     QVERIFY(buffer.renderHints() & QPainter::TextAntialiasing);
     QVERIFY(buffer.renderHints() & QPainter::SmoothPixmapTransform);
-    QVERIFY(buffer.renderHints() & QPainter::HighQualityAntialiasing);
 }
 
 void tst_QWebFrame::scrollPosition()
@@ -1056,14 +1051,11 @@ void tst_QWebFrame::setContent_data()
     QString str = QString::fromUtf8("ὕαλον ϕαγεῖν δύναμαι· τοῦτο οὔ με βλάπτει");
     QTest::newRow("UTF-8 plain text") << "text/plain; charset=utf-8" << str.toUtf8() << str;
 
-    QTextCodec *utf16 = QTextCodec::codecForName("UTF-16");
-    if (utf16)
-        QTest::newRow("UTF-16 plain text") << "text/plain; charset=utf-16" << utf16->fromUnicode(str) << str;
+    auto toUtf16 = QStringEncoder(QStringEncoder::Utf16);
+    QTest::newRow("UTF-16 plain text") << "text/plain; charset=utf-16" << toUtf16(str) << str;
 
     str = QString::fromUtf8("Une chaîne de caractères à sa façon.");
     QTest::newRow("latin-1 plain text") << "text/plain; charset=iso-8859-1" << str.toLatin1() << str;
-
-
 }
 
 void tst_QWebFrame::setContent()

@@ -201,7 +201,8 @@ static void javaScriptCallback(WKSerializedScriptValueRef valueRef, WKErrorRef, 
 
                 JSValueRef exception = 0;
                 JSValueRef value = WKSerializedScriptValueDeserialize(valueRef, context, &exception);
-                var = buildQJSValue(function.engine(), context, value, /* depth */ 0);
+                // Qt 6 error: ‘class QJSValue’ has no member named ‘engine’
+                var = buildQJSValue(qjsEngine(closure->receiver), context, value, /* depth */ 0);
 
                 JSGlobalContextRelease(context);
             }
@@ -235,8 +236,8 @@ QQuickWebViewPrivate::FlickableAxisLocker::FlickableAxisLocker()
 
 QVector2D QQuickWebViewPrivate::FlickableAxisLocker::touchVelocity(const QTouchEvent* event)
 {
-    static bool touchVelocityAvailable = event->device()->capabilities().testFlag(QTouchDevice::Velocity);
-    const QTouchEvent::TouchPoint& touchPoint = event->touchPoints().first();
+    static bool touchVelocityAvailable = event->device()->capabilities().testFlag(QInputDevice::Capability::Velocity);
+    const QTouchEvent::TouchPoint& touchPoint = event->points().first();
 
     if (touchVelocityAvailable)
         return touchPoint.velocity();
@@ -415,7 +416,7 @@ void QQuickWebViewPrivate::didStartProvisionalLoadForFrame(WKPageRef, WKFrameRef
 
     q->emitUrlChangeIfNeeded();
     QWebLoadRequest loadRequest(WKURLCopyQUrl(url.get()), QQuickWebView::LoadStartedStatus);
-    emit q->loadingChanged(&loadRequest);
+    Q_EMIT q->loadingChanged(&loadRequest);
 }
 
 void QQuickWebViewPrivate::didReceiveServerRedirectForProvisionalLoadForFrame(WKPageRef, WKFrameRef frame, WKTypeRef, const void* clientInfo)
@@ -437,7 +438,7 @@ void QQuickWebViewPrivate::didFailLoad(WKPageRef, WKFrameRef frame, WKErrorRef e
     QtWebError error(errorRef);
     if (error.isCancellation()) {
         QWebLoadRequest loadRequest(q->url(), QQuickWebView::LoadStoppedStatus);
-        emit q->loadingChanged(&loadRequest);
+        Q_EMIT q->loadingChanged(&loadRequest);
         return;
     }
 
@@ -445,7 +446,7 @@ void QQuickWebViewPrivate::didFailLoad(WKPageRef, WKFrameRef frame, WKErrorRef e
     if (errorCode == kWKErrorCodeFrameLoadInterruptedByPolicyChange || errorCode == kWKErrorCodePlugInWillHandleLoad) {
         QWebLoadRequest loadRequest(q->url(), QQuickWebView::LoadSucceededStatus);
         q->emitUrlChangeIfNeeded();
-        emit q->loadingChanged(&loadRequest);
+        Q_EMIT q->loadingChanged(&loadRequest);
         return;
     }
 
@@ -460,7 +461,7 @@ void QQuickWebViewPrivate::didFailLoad(WKPageRef, WKFrameRef frame, WKErrorRef e
     toImpl(frame)->setUnreachableURL(URL(error.url()));
     q->emitUrlChangeIfNeeded();
     QWebLoadRequest loadRequest(error.url(), QQuickWebView::LoadFailedStatus, error.description(), static_cast<QQuickWebView::ErrorDomain>(error.type()), errorCode);
-    emit q->loadingChanged(&loadRequest);
+    Q_EMIT q->loadingChanged(&loadRequest);
 }
 
 void QQuickWebViewPrivate::didCommitLoadForFrame(WKPageRef, WKFrameRef frame, WKTypeRef, const void* clientInfo)
@@ -476,8 +477,8 @@ void QQuickWebViewPrivate::didCommitLoadForFrame(WKPageRef, WKFrameRef frame, WK
     QQuickWebView* const q = d->q_func();
     ASSERT(q->loading());
     d->m_betweenLoadCommitAndFirstFrame = true;
-    emit q->navigationHistoryChanged();
-    emit q->titleChanged();
+    Q_EMIT q->navigationHistoryChanged();
+    Q_EMIT q->titleChanged();
 }
 
 void QQuickWebViewPrivate::didFinishLoadForFrame(WKPageRef, WKFrameRef frame, WKTypeRef, const void* clientInfo)
@@ -489,7 +490,7 @@ void QQuickWebViewPrivate::didFinishLoadForFrame(WKPageRef, WKFrameRef frame, WK
     ASSERT(!q->loading());
 
     QWebLoadRequest loadRequest(q->url(), QQuickWebView::LoadSucceededStatus);
-    emit q->loadingChanged(&loadRequest);
+    Q_EMIT q->loadingChanged(&loadRequest);
 }
 
 void QQuickWebViewPrivate::didSameDocumentNavigationForFrame(WKPageRef, WKFrameRef frame, WKSameDocumentNavigationType type, WKTypeRef userData, const void* clientInfo)
@@ -498,14 +499,14 @@ void QQuickWebViewPrivate::didSameDocumentNavigationForFrame(WKPageRef, WKFrameR
         return;
     QQuickWebView* const q = toQQuickWebViewPrivate(clientInfo)->q_func();
     q->emitUrlChangeIfNeeded();
-    emit q->navigationHistoryChanged();
+    Q_EMIT q->navigationHistoryChanged();
 }
 
 void QQuickWebViewPrivate::didReceiveTitleForFrame(WKPageRef, WKStringRef title, WKFrameRef frame, WKTypeRef, const void* clientInfo)
 {
     if (!WKFrameIsMainFrame(frame))
         return;
-    emit toQQuickWebViewPrivate(clientInfo)->q_func()->titleChanged();
+    Q_EMIT toQQuickWebViewPrivate(clientInfo)->q_func()->titleChanged();
 }
 
 void QQuickWebViewPrivate::didStartProgress(WKPageRef, const void* clientInfo)
@@ -545,7 +546,7 @@ void QQuickWebViewPrivate::loadProgressDidChange(int loadProgress)
 
     m_loadProgress = loadProgress;
 
-    emit q->loadProgressChanged();
+    Q_EMIT q->loadProgressChanged();
 }
 
 void QQuickWebViewPrivate::handleMouseEvent(QMouseEvent* event)
@@ -589,7 +590,7 @@ void QQuickWebViewPrivate::didRenderFrame()
 {
     Q_Q(QQuickWebView);
     if (m_betweenLoadCommitAndFirstFrame) {
-        emit q->experimental()->loadVisuallyCommitted();
+        Q_EMIT q->experimental()->loadVisuallyCommitted();
         m_betweenLoadCommitAndFirstFrame = false;
     }
 }
@@ -609,10 +610,10 @@ void QQuickWebViewPrivate::processDidCrash(WKPageRef, const void* clientInfo)
         QWebLoadRequest loadRequest(url, QQuickWebView::LoadFailedStatus, QStringLiteral("The web process crashed."), QQuickWebView::InternalErrorDomain, 0);
 
         d->loadProgressDidChange(100);
-        emit q->loadingChanged(&loadRequest);
+        Q_EMIT q->loadingChanged(&loadRequest);
     }
 
-    emit q->experimental()->processDidCrash();
+    Q_EMIT q->experimental()->processDidCrash();
 }
 
 void QQuickWebViewPrivate::didRelaunchProcess()
@@ -630,21 +631,21 @@ void QQuickWebViewPrivate::didRelaunchProcess()
         updateSchemeDelegates();
     }
 
-    emit q->experimental()->didRelaunchProcess();
+    Q_EMIT q->experimental()->didRelaunchProcess();
 }
 
 void QQuickWebViewPrivate::processDidBecomeUnresponsive(WKPageRef, const void* clientInfo)
 {
     QQuickWebView* q = toQQuickWebViewPrivate(clientInfo)->q_ptr;
 
-    emit q->experimental()->processDidBecomeUnresponsive();
+    Q_EMIT q->experimental()->processDidBecomeUnresponsive();
 }
 
 void QQuickWebViewPrivate::processDidBecomeResponsive(WKPageRef, const void* clientInfo)
 {
     QQuickWebView* q = toQQuickWebViewPrivate(clientInfo)->q_ptr;
 
-    emit q->experimental()->processDidBecomeResponsive();
+    Q_EMIT q->experimental()->processDidBecomeResponsive();
 }
 
 void QQuickWebViewPrivate::handleDownloadRequest(DownloadProxy* download)
@@ -699,18 +700,18 @@ void QQuickWebViewPrivate::updateIcon()
         return;
 
     m_iconUrl = iconUrl;
-    emit q->iconChanged();*/
+    Q_EMIT q->iconChanged();*/
 }
 
 void QQuickWebViewPrivate::_q_onReceivedResponseFromDownload(QWebDownloadItem* downloadItem)
 {
-    // Now that our downloadItem has everything we need we can emit downloadRequested.
+    // Now that our downloadItem has everything we need we can Q_EMIT downloadRequested.
     if (!downloadItem)
         return;
 
     Q_Q(QQuickWebView);
     QQmlEngine::setObjectOwnership(downloadItem, QQmlEngine::JavaScriptOwnership);
-    emit q->experimental()->downloadRequested(downloadItem);
+    Q_EMIT q->experimental()->downloadRequested(downloadItem);
 }
 
 void QQuickWebViewPrivate::runJavaScriptAlert(const QString& alertText)
@@ -842,7 +843,7 @@ void QQuickWebViewAttached::setView(QQuickWebView* view)
     if (m_view == view)
         return;
     m_view = view;
-    emit viewChanged();
+    Q_EMIT viewChanged();
 }
 
 QQuickWebViewAttached* QQuickWebView::qmlAttachedProperties(QObject* object)
@@ -987,7 +988,7 @@ void QQuickWebViewPrivate::didReceiveMessageFromNavigatorQtObject(WKStringRef me
     QVariantMap variantMap;
     variantMap.insert(QLatin1String("data"), WKStringCopyQString(message));
     variantMap.insert(QLatin1String("origin"), q_ptr->url());
-    emit q_ptr->experimental()->messageReceived(variantMap);
+    Q_EMIT q_ptr->experimental()->messageReceived(variantMap);
 }
 
 #if ENABLE(QT_WEBCHANNEL)
@@ -1210,7 +1211,7 @@ void QQuickWebViewExperimental::setPreferredMinimumContentsWidth(int width)
         return;
 
     webPreferences.setLayoutFallbackWidth(width);
-    emit preferredMinimumContentsWidthChanged();
+    Q_EMIT preferredMinimumContentsWidthChanged();
 }
 
 void QQuickWebViewExperimental::setFlickableViewportEnabled(bool enable)
@@ -1242,7 +1243,7 @@ void QQuickWebViewExperimental::setWebChannel(QQmlWebChannel* channel)
     if (m_webChannel)
         m_webChannel->connectTo(m_webChannelTransport);
 
-    emit webChannelChanged(channel);
+    Q_EMIT webChannelChanged(channel);
 }
 #endif
 
@@ -1288,7 +1289,7 @@ void QQuickWebViewExperimental::setAlertDialog(QQmlComponent* alertDialog)
     if (d->alertDialog == alertDialog)
         return;
     d->alertDialog = alertDialog;
-    emit alertDialogChanged();
+    Q_EMIT alertDialogChanged();
 }
 
 QQmlComponent* QQuickWebViewExperimental::confirmDialog() const
@@ -1303,7 +1304,7 @@ void QQuickWebViewExperimental::setConfirmDialog(QQmlComponent* confirmDialog)
     if (d->confirmDialog == confirmDialog)
         return;
     d->confirmDialog = confirmDialog;
-    emit confirmDialogChanged();
+    Q_EMIT confirmDialogChanged();
 }
 
 QWebNavigationHistory* QQuickWebViewExperimental::navigationHistory() const
@@ -1331,7 +1332,7 @@ void QQuickWebViewExperimental::setPromptDialog(QQmlComponent* promptDialog)
     if (d->promptDialog == promptDialog)
         return;
     d->promptDialog = promptDialog;
-    emit promptDialogChanged();
+    Q_EMIT promptDialogChanged();
 }
 
 QQmlComponent* QQuickWebViewExperimental::authenticationDialog() const
@@ -1346,7 +1347,7 @@ void QQuickWebViewExperimental::setAuthenticationDialog(QQmlComponent* authentic
     if (d->authenticationDialog == authenticationDialog)
         return;
     d->authenticationDialog = authenticationDialog;
-    emit authenticationDialogChanged();
+    Q_EMIT authenticationDialogChanged();
 }
 
 QQmlComponent* QQuickWebViewExperimental::proxyAuthenticationDialog() const
@@ -1361,7 +1362,7 @@ void QQuickWebViewExperimental::setProxyAuthenticationDialog(QQmlComponent* prox
     if (d->proxyAuthenticationDialog == proxyAuthenticationDialog)
         return;
     d->proxyAuthenticationDialog = proxyAuthenticationDialog;
-    emit proxyAuthenticationDialogChanged();
+    Q_EMIT proxyAuthenticationDialogChanged();
 }
 QQmlComponent* QQuickWebViewExperimental::certificateVerificationDialog() const
 {
@@ -1375,7 +1376,7 @@ void QQuickWebViewExperimental::setCertificateVerificationDialog(QQmlComponent* 
     if (d->certificateVerificationDialog == certificateVerificationDialog)
         return;
     d->certificateVerificationDialog = certificateVerificationDialog;
-    emit certificateVerificationDialogChanged();
+    Q_EMIT certificateVerificationDialogChanged();
 }
 
 QQmlComponent* QQuickWebViewExperimental::itemSelector() const
@@ -1390,7 +1391,7 @@ void QQuickWebViewExperimental::setItemSelector(QQmlComponent* itemSelector)
     if (d->itemSelector == itemSelector)
         return;
     d->itemSelector = itemSelector;
-    emit itemSelectorChanged();
+    Q_EMIT itemSelectorChanged();
 }
 
 QQmlComponent* QQuickWebViewExperimental::filePicker() const
@@ -1405,7 +1406,7 @@ void QQuickWebViewExperimental::setFilePicker(QQmlComponent* filePicker)
     if (d->filePicker == filePicker)
         return;
     d->filePicker = filePicker;
-    emit filePickerChanged();
+    Q_EMIT filePickerChanged();
 }
 
 QQmlComponent* QQuickWebViewExperimental::databaseQuotaDialog() const
@@ -1420,7 +1421,7 @@ void QQuickWebViewExperimental::setDatabaseQuotaDialog(QQmlComponent* databaseQu
     if (d->databaseQuotaDialog == databaseQuotaDialog)
         return;
     d->databaseQuotaDialog = databaseQuotaDialog;
-    emit databaseQuotaDialogChanged();
+    Q_EMIT databaseQuotaDialogChanged();
 }
 
 QQmlComponent* QQuickWebViewExperimental::colorChooser() const
@@ -1436,7 +1437,7 @@ void QQuickWebViewExperimental::setColorChooser(QQmlComponent* colorChooser)
         return;
 
     d->colorChooser = colorChooser;
-    emit colorChooserChanged();
+    Q_EMIT colorChooserChanged();
 }
 
 QString QQuickWebViewExperimental::userAgent() const
@@ -1454,7 +1455,7 @@ void QQuickWebViewExperimental::setUserAgent(const QString& userAgent)
         return;
 
     d->webPageProxy->setCustomUserAgent(newUserAgent);
-    emit userAgentChanged();
+    Q_EMIT userAgentChanged();
 }
 
 /*!
@@ -1478,7 +1479,7 @@ void QQuickWebViewExperimental::setDeviceWidth(int value)
 {
     Q_D(QQuickWebView);
     d->webPageProxy->pageGroup().preferences().setDeviceWidth(qMax(0, value));
-    emit deviceWidthChanged();
+    Q_EMIT deviceWidthChanged();
 }
 
 /*!
@@ -1502,7 +1503,7 @@ void QQuickWebViewExperimental::setDeviceHeight(int value)
 {
     Q_D(QQuickWebView);
     d->webPageProxy->pageGroup().preferences().setDeviceHeight(qMax(0, value));
-    emit deviceHeightChanged();
+    Q_EMIT deviceHeightChanged();
 }
 
 /*!
@@ -1562,7 +1563,7 @@ void QQuickWebViewExperimental::setUserScripts(const QList<QUrl>& userScripts)
         return;
     d->userScripts = userScripts;
     d->updateUserScripts();
-    emit userScriptsChanged();
+    Q_EMIT userScriptsChanged();
 }
 
 QList<QUrl> QQuickWebViewExperimental::userStyleSheets() const
@@ -1578,7 +1579,7 @@ void QQuickWebViewExperimental::setUserStyleSheets(const QList<QUrl>& userStyleS
         return;
     d->userStyleSheets = userStyleSheets;
     d->updateUserStyleSheets();
-    emit userStyleSheetsChanged();
+    Q_EMIT userStyleSheetsChanged();
 }
 
 QUrl QQuickWebViewExperimental::remoteInspectorUrl() const
@@ -1590,7 +1591,7 @@ QUrl QQuickWebViewExperimental::remoteInspectorUrl() const
 #endif
 }
 
-QQuickUrlSchemeDelegate* QQuickWebViewExperimental::schemeDelegates_At(QQmlListProperty<QQuickUrlSchemeDelegate>* property, int index)
+QQuickUrlSchemeDelegate* QQuickWebViewExperimental::schemeDelegates_At(QQmlListProperty<QQuickUrlSchemeDelegate>* property, qsizetype index)
 {
     const QObjectList children = property->object->children();
     if (index < children.count())
@@ -1616,7 +1617,7 @@ void QQuickWebViewExperimental::schemeDelegates_Append(QQmlListProperty<QQuickUr
     //d->webPageProxy->registerApplicationScheme(scheme->scheme());
 }
 
-int QQuickWebViewExperimental::schemeDelegates_Count(QQmlListProperty<QQuickUrlSchemeDelegate>* property)
+qsizetype QQuickWebViewExperimental::schemeDelegates_Count(QQmlListProperty<QQuickUrlSchemeDelegate>* property)
 {
     return property->object->children().count();
 }
@@ -1660,7 +1661,7 @@ void QQuickWebViewExperimental::invokeApplicationSchemeHandler(Ref<QtRefCountedN
         if (!delegate->scheme().compare(QString(req->data().m_scheme), Qt::CaseInsensitive)) {
             delegate->request()->setNetworkRequestData(WTFMove(req));
             delegate->reply()->setNetworkRequestData(WTFMove(req));
-            emit delegate->receivedRequest();
+            Q_EMIT delegate->receivedRequest();
             return;
         }
     }
@@ -1887,7 +1888,7 @@ void QQuickWebView::setUrl(const QUrl& url)
     emitUrlChangeIfNeeded();
 }
 
-// Make sure we don't emit urlChanged unless it actually changed
+// Make sure we don't Q_EMIT urlChanged unless it actually changed
 void QQuickWebView::emitUrlChangeIfNeeded()
 {
     Q_D(QQuickWebView);
@@ -1895,7 +1896,7 @@ void QQuickWebView::emitUrlChangeIfNeeded()
     QString activeUrl = d->webPageProxy->pageLoadState().activeURL();
     if (activeUrl != d->m_currentUrl) {
         d->m_currentUrl = activeUrl;
-        emit urlChanged();
+        Q_EMIT urlChanged();
     }
 }
 
@@ -2099,10 +2100,10 @@ bool QQuickWebView::childMouseEventFilter(QQuickItem* item, QEvent* event)
     return QQuickFlickable::childMouseEventFilter(item, event);
 }
 
-void QQuickWebView::geometryChanged(const QRectF& newGeometry, const QRectF& oldGeometry)
+void QQuickWebView::geometryChange(const QRectF& newGeometry, const QRectF& oldGeometry)
 {
     Q_D(QQuickWebView);
-    QQuickFlickable::geometryChanged(newGeometry, oldGeometry);
+    QQuickFlickable::geometryChange(newGeometry, oldGeometry);
     if (newGeometry.size() != oldGeometry.size())
         d->updateViewportSize();
 }
@@ -2376,7 +2377,7 @@ void QQuickWebView::setAllowAnyHTTPSCertificateForLocalHost(bool allow)
 void QQuickWebViewPrivate::didFindString(WKPageRef, WKStringRef, unsigned matchCount, const void* clientInfo)
 {
     QQuickWebView* q = toQQuickWebViewPrivate(clientInfo)->q_ptr;
-    emit q->experimental()->textFound(matchCount);
+    Q_EMIT q->experimental()->textFound(matchCount);
 }
 
 void QQuickWebViewPrivate::didFailToFindString(WKPageRef page, WKStringRef string, const void* clientInfo)

@@ -5,7 +5,7 @@ include(ECMPackageConfigHelpers)
 
 set(ECM_MODULE_DIR ${CMAKE_CURRENT_LIST_DIR})
 
-set(PROJECT_VERSION_MAJOR 5)
+set(PROJECT_VERSION_MAJOR 6)
 set(PROJECT_VERSION_MINOR 212)
 set(PROJECT_VERSION_PATCH 0)
 set(PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
@@ -59,8 +59,8 @@ if (EXISTS ${STATIC_DEPENDENCIES_CMAKE_FILE})
 endif ()
 
 macro(CONVERT_PRL_LIBS_TO_CMAKE _qt_component)
-    if (TARGET Qt5::${_qt_component})
-        get_target_property(_lib_location Qt5::${_qt_component} LOCATION)
+    if (TARGET Qt6::${_qt_component})
+        get_target_property(_lib_location Qt6::${_qt_component} LOCATION)
         execute_process(COMMAND ${PERL_EXECUTABLE} ${TOOLS_DIR}/qt/convert-prl-libs-to-cmake.pl
             --lib ${_lib_location}
             --out ${STATIC_DEPENDENCIES_CMAKE_FILE}
@@ -70,27 +70,27 @@ macro(CONVERT_PRL_LIBS_TO_CMAKE _qt_component)
     endif ()
 endmacro()
 
-macro(CHECK_QT5_PRIVATE_INCLUDE_DIRS _qt_component _header)
+macro(CHECK_Qt6_PRIVATE_INCLUDE_DIRS _qt_component _header)
     set(INCLUDE_TEST_SOURCE
     "
         #include <${_header}>
         int main() { return 0; }
     "
     )
-    set(CMAKE_REQUIRED_INCLUDES ${Qt5${_qt_component}_PRIVATE_INCLUDE_DIRS})
-    set(CMAKE_REQUIRED_LIBRARIES Qt5::${_qt_component})
+    set(CMAKE_REQUIRED_INCLUDES ${Qt6${_qt_component}_PRIVATE_INCLUDE_DIRS})
+    set(CMAKE_REQUIRED_LIBRARIES Qt6::${_qt_component})
 
     # Avoid check_include_file_cxx() because it performs linking but doesn't support CMAKE_REQUIRED_LIBRARIES (doh!)
-    check_cxx_source_compiles("${INCLUDE_TEST_SOURCE}" Qt5${_qt_component}_PRIVATE_HEADER_FOUND)
+    check_cxx_source_compiles("${INCLUDE_TEST_SOURCE}" Qt6${_qt_component}_PRIVATE_HEADER_FOUND)
 
     unset(INCLUDE_TEST_SOURCE)
     unset(CMAKE_REQUIRED_INCLUDES)
     unset(CMAKE_REQUIRED_LIBRARIES)
 
-    if (NOT Qt5${_qt_component}_PRIVATE_HEADER_FOUND)
+    if (NOT Qt6${_qt_component}_PRIVATE_HEADER_FOUND)
         message(FATAL_ERROR "Header ${_header} is not found. Please make sure that:
-    1. Private headers of Qt5${_qt_component} are installed
-    2. Qt5${_qt_component}_PRIVATE_INCLUDE_DIRS is correctly defined in Qt5${_qt_component}Config.cmake")
+    1. Private headers of Qt6${_qt_component} are installed
+    2. Qt6${_qt_component}_PRIVATE_INCLUDE_DIRS is correctly defined in Qt6${_qt_component}Config.cmake")
     endif ()
 endmacro()
 
@@ -118,7 +118,7 @@ macro(QTWEBKIT_GENERATE_MOC_FILES_CPP _target)
         endif ()
         get_filename_component(_name_we ${_file} NAME_WE)
         set(_moc_name "${CMAKE_CURRENT_BINARY_DIR}/${_name_we}.moc")
-        qt5_generate_moc(${_file} ${_moc_name} TARGET ${_target})
+        qt_generate_moc(${_file} ${_moc_name} TARGET ${_target})
         WEBKIT_ADD_SOURCE_DEPENDENCIES(${_file} ${_moc_name})
     endforeach ()
 endmacro()
@@ -131,7 +131,7 @@ macro(QTWEBKIT_GENERATE_MOC_FILE_H _target _header _source)
     endif ()
     get_filename_component(_name_we ${_header} NAME_WE)
     set(_moc_name "${CMAKE_CURRENT_BINARY_DIR}/moc_${_name_we}.cpp")
-    qt5_generate_moc(${_header} ${_moc_name} TARGET ${_target})
+    qt_generate_moc(${_header} ${_moc_name} TARGET ${_target})
     WEBKIT_ADD_SOURCE_DEPENDENCIES(${_source} ${_moc_name})
 endmacro()
 
@@ -183,6 +183,8 @@ add_definitions(-DQT_USE_QSTRINGBUILDER)
 add_definitions(-DQT_NO_CAST_TO_ASCII -DQT_ASCII_CAST_WARNINGS)
 add_definitions(-DQT_DEPRECATED_WARNINGS -DQT_DISABLE_DEPRECATED_BEFORE=0x050000)
 add_definitions(-DQT_NO_NARROWING_CONVERSIONS_IN_CONNECT)
+add_definitions(-DQT_NO_KEYWORDS)
+add_definitions(-DQT_NO_BEARERMANAGEMENT)
 
 # We use -fno-rtti with GCC and Clang, see OptionsCommon.cmake
 if (COMPILER_IS_GCC_OR_CLANG)
@@ -240,10 +242,30 @@ if (WIN32)
 endif ()
 
 # FIXME: Move Qt handling here
-set(REQUIRED_QT_VERSION 5.2.0)
-find_package(Qt5 ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS Core Gui QUIET)
+set(REQUIRED_QT_VERSION 6.0.0)
 
-get_target_property(QT_CORE_TYPE Qt5::Core TYPE)
+## Qt 6 : Qt's cmake file don't seem to locate OpenGL on my system
+find_package(OpenGL)
+add_library(OpenGL::GL INTERFACE IMPORTED)
+set_target_properties(OpenGL::GL PROPERTIES
+  IMPORTED_LOCATION "${OPENGL_LIBRARIES}")
+        
+find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS Core Gui)
+message("OPENGL_FOUND: ${OPENGL_FOUND}")
+message("OPENGL_GLU_FOUND: ${OPENGL_GLU_FOUND}")
+message("OpenGL_OpenGL_FOUND: ${OpenGL_OpenGL_FOUND}")
+message("OpenGL_GLX_FOUND: ${OpenGL_GLX_FOUND}")
+message("OPENGL_XMESA_FOUND: ${OPENGL_XMESA_FOUND}")
+message("OpenGL_EGL_FOUND: ${OpenGL_EGL_FOUND}")
+message("OPENGL_opengl_LIBRARY: ${OPENGL_opengl_LIBRARY}")
+message("OPENGL_gl_LIBRARY: ${OPENGL_gl_LIBRARY}")
+message("OPENGL_glx_LIBRARY: ${OPENGL_glx_LIBRARY}")
+message("OPENGL_INCLUDE_DIR: ${OPENGL_INCLUDE_DIR}")
+message("OPENGL_LIBRARIES: ${OPENGL_LIBRARIES}")
+include(CMakePrintHelpers)
+cmake_print_properties(TARGETS OpenGL::GL PROPERTIES IMPORTED_LOCATION)
+
+get_target_property(QT_CORE_TYPE Qt6::Core TYPE)
 if (QT_CORE_TYPE MATCHES STATIC)
     set(QT_STATIC_BUILD ON)
     set(SHARED_CORE OFF)
@@ -261,7 +283,7 @@ endif ()
 set(ENABLE_WEBKIT_LEGACY ON)
 set(ENABLE_WEBKIT OFF)
 
-if (UNIX AND TARGET Qt5::QXcbIntegrationPlugin AND NOT APPLE)
+if (UNIX AND TARGET Qt6::QXcbIntegrationPlugin AND NOT APPLE)
     set(ENABLE_X11_TARGET_DEFAULT ON)
 else ()
     set(ENABLE_X11_TARGET_DEFAULT OFF)
@@ -504,6 +526,13 @@ if (ENABLE_API_TESTS OR ENABLE_TEST_SUPPORT)
     endif ()
 endif ()
 
+if (ENABLE_WEBKIT_LEGACY)
+    # Without StateMachine, some animations will be disabled
+    list(APPEND QT_OPTIONAL_COMPONENTS
+        StateMachine
+    )
+endif ()
+
 if (ENABLE_GEOLOCATION)
     list(APPEND QT_REQUIRED_COMPONENTS Positioning)
     SET_AND_EXPOSE_TO_BUILD(HAVE_QTPOSITIONING 1)
@@ -515,9 +544,12 @@ if (ENABLE_DEVICE_ORIENTATION)
 endif ()
 
 if (ENABLE_OPENGL)
+    # Qt6 : QOpenGLWidget is now in its separate library
+    list(APPEND QT_REQUIRED_COMPONENTS OpenGLWidgets)
+
     # Note: Gui module is already found
     # Warning: quotes are sinificant here!
-    if (NOT DEFINED Qt5Gui_OPENGL_IMPLEMENTATION OR "${Qt5Gui_OPENGL_IMPLEMENTATION}" STREQUAL "")
+    if (NOT DEFINED Qt6Gui_OPENGL_IMPLEMENTATION OR "${Qt6Gui_OPENGL_IMPLEMENTATION}" STREQUAL "")
        message(FATAL_ERROR "Qt with OpenGL support is required for ENABLE_OPENGL")
     endif ()
 
@@ -526,19 +558,21 @@ if (ENABLE_OPENGL)
 
     if (WIN32)
         include(CheckCXXSymbolExists)
-        set(CMAKE_REQUIRED_INCLUDES ${Qt5Gui_INCLUDE_DIRS})
-        set(CMAKE_REQUIRED_FLAGS ${Qt5Gui_EXECUTABLE_COMPILE_FLAGS})
+        set(CMAKE_REQUIRED_INCLUDES ${Qt6Gui_INCLUDE_DIRS})
+        set(CMAKE_REQUIRED_FLAGS ${Qt6Gui_EXECUTABLE_COMPILE_FLAGS})
         check_cxx_symbol_exists(QT_OPENGL_DYNAMIC qopenglcontext.h HAVE_QT_OPENGL_DYNAMIC)
         if (HAVE_QT_OPENGL_DYNAMIC)
-            set(Qt5Gui_OPENGL_IMPLEMENTATION DynamicGL)
+            set(Qt6Gui_OPENGL_IMPLEMENTATION DynamicGL)
         endif ()
         unset(CMAKE_REQUIRED_INCLUDES)
         unset(CMAKE_REQUIRED_FLAGS)
     endif ()
 
-    message(STATUS "Qt OpenGL implementation: ${Qt5Gui_OPENGL_IMPLEMENTATION}")
-    message(STATUS "Qt OpenGL libraries: ${Qt5Gui_OPENGL_LIBRARIES}")
-    message(STATUS "Qt EGL libraries: ${Qt5Gui_EGL_LIBRARIES}")
+    message(STATUS "Qt OpenGL implementation: ${Qt6Gui_OPENGL_IMPLEMENTATION}")
+    message(STATUS "Qt OpenGL libraries: ${Qt6Gui_OPENGL_LIBRARIES}")
+    message(STATUS "Qt EGL libraries: ${Qt6Gui_EGL_LIBRARIES}")
+else ()
+    add_definitions(-DQT_NO_OPENGL)
 endif ()
 
 if (ENABLE_PRINT_SUPPORT)
@@ -573,14 +607,14 @@ else ()
     set(WebKit_LIBRARY_TYPE STATIC)
 endif ()
 
-find_package(Qt5 ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS ${QT_REQUIRED_COMPONENTS})
+find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS ${QT_REQUIRED_COMPONENTS})
 
-CHECK_QT5_PRIVATE_INCLUDE_DIRS(Gui private/qhexstring_p.h)
-if (Qt5_VERSION VERSION_GREATER 5.10.1)
-    CHECK_QT5_PRIVATE_INCLUDE_DIRS(Network private/http2protocol_p.h)
+CHECK_Qt6_PRIVATE_INCLUDE_DIRS(Gui private/qhexstring_p.h)
+if (Qt6_VERSION VERSION_GREATER 5.10.1)
+    CHECK_Qt6_PRIVATE_INCLUDE_DIRS(Network private/http2protocol_p.h)
 endif ()
 if (ENABLE_WEBKIT)
-    CHECK_QT5_PRIVATE_INCLUDE_DIRS(Quick private/qsgrendernode_p.h)
+    CHECK_Qt6_PRIVATE_INCLUDE_DIRS(Quick private/qsgrendernode_p.h)
 endif ()
 
 if (QT_STATIC_BUILD)
@@ -589,11 +623,11 @@ if (QT_STATIC_BUILD)
     endforeach ()
     # HACK: We must explicitly add LIB path of the Qt installation
     # to correctly find qtpcre
-    link_directories(${_qt5_install_prefix}/../)
+    link_directories(${_Qt6_install_prefix}/../)
 endif ()
 
 foreach (qt_module ${QT_OPTIONAL_COMPONENTS})
-    find_package("Qt5${qt_module}" ${REQUIRED_QT_VERSION} PATHS ${_qt5_install_prefix} NO_DEFAULT_PATH)
+    find_package("Qt6${qt_module}" ${REQUIRED_QT_VERSION} PATHS ${_Qt6_install_prefix} NO_DEFAULT_PATH)
     if (QT_STATIC_BUILD)
         CONVERT_PRL_LIBS_TO_CMAKE(${qt_module})
     endif ()
@@ -608,7 +642,7 @@ if (QT_STATIC_BUILD)
 endif ()
 
 if (COMPILER_IS_GCC_OR_CLANG AND UNIX)
-    if (APPLE OR CMAKE_SYSTEM_NAME MATCHES "Android" OR ${Qt5_VERSION} VERSION_LESS 5.6)
+    if (APPLE OR CMAKE_SYSTEM_NAME MATCHES "Android" OR ${Qt6_VERSION} VERSION_LESS 5.6)
         set(USE_LINKER_VERSION_SCRIPT_DEFAULT OFF)
     else ()
         set(USE_LINKER_VERSION_SCRIPT_DEFAULT ON)
@@ -718,9 +752,9 @@ if (NOT ENABLE_VIDEO)
 endif ()
 
 if (USE_QT_MULTIMEDIA)
-    find_package(Qt5Multimedia ${REQUIRED_QT_VERSION} REQUIRED PATHS ${_qt5_install_prefix} NO_DEFAULT_PATH)
+    find_package(Qt6Multimedia ${REQUIRED_QT_VERSION} REQUIRED PATHS ${_Qt6_install_prefix} NO_DEFAULT_PATH)
     # FIXME: Allow building w/o widgets
-    find_package(Qt5MultimediaWidgets ${REQUIRED_QT_VERSION} REQUIRED PATHS ${_qt5_install_prefix} NO_DEFAULT_PATH)
+    find_package(Qt6MultimediaWidgets ${REQUIRED_QT_VERSION} REQUIRED PATHS ${_Qt6_install_prefix} NO_DEFAULT_PATH)
 endif ()
 
 if (ENABLE_WEB_CRYPTO)
@@ -905,7 +939,7 @@ if (NOT RUBY_FOUND AND RUBY_EXECUTABLE AND NOT RUBY_VERSION VERSION_LESS 1.9)
 endif ()
 
 set_package_properties(Ruby PROPERTIES TYPE REQUIRED)
-set_package_properties(Qt5PrintSupport PROPERTIES PURPOSE "Required for ENABLE_PRINT_SUPPORT=ON")
+set_package_properties(Qt6PrintSupport PROPERTIES PURPOSE "Required for ENABLE_PRINT_SUPPORT=ON")
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
 
 

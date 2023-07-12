@@ -71,6 +71,7 @@ public:
     // FIXME: Share iOS's HandledByInputMethod enum here instead of passing a boolean.
     NativeWebKeyboardEvent(NSEvent *, bool handledByInputMethod, bool replacesSoftSpace, const Vector<WebCore::KeypressCommand>&);
 #elif PLATFORM(QT)
+    NativeWebKeyboardEvent(const NativeWebKeyboardEvent&);
     explicit NativeWebKeyboardEvent(QKeyEvent*);
 #elif PLATFORM(GTK)
     NativeWebKeyboardEvent(const NativeWebKeyboardEvent&);
@@ -90,7 +91,7 @@ public:
 #if USE(APPKIT)
     NSEvent *nativeEvent() const { return m_nativeEvent.get(); }
 #elif PLATFORM(QT)
-    const QKeyEvent* nativeEvent() const { return &m_nativeEvent; }
+    const QKeyEvent* nativeEvent() const { return m_nativeEvent.get(); }
 #elif PLATFORM(GTK)
     GdkEvent* nativeEvent() const { return m_nativeEvent.get(); }
 #elif PLATFORM(IOS_FAMILY)
@@ -108,7 +109,7 @@ private:
 #elif PLATFORM(GTK) && USE(GTK4)
     GRefPtr<GdkEvent> m_nativeEvent;
 #elif PLATFORM(QT)
-    QKeyEvent m_nativeEvent;
+    std::unique_ptr<QKeyEvent> m_nativeEvent;
 #elif PLATFORM(GTK)
     GUniquePtr<GdkEvent> m_nativeEvent;
 #elif PLATFORM(IOS_FAMILY)

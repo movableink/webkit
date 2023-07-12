@@ -1431,7 +1431,7 @@ sub builtDylibPathForName
         if (isDarwin()) {
             $libraryName = "QtWebKitWidgets";
         } else {
-            $libraryName = "Qt5WebKitWidgets";
+            $libraryName = "Qt6WebKitWidgets";
         }
         my $result;
         if (isDarwin() and -d "$configurationProductDir/lib/$libraryName.framework") {
