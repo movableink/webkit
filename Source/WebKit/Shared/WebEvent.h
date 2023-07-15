@@ -89,7 +89,7 @@ enum class WebEventType : int8_t {
 class WebEvent {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WebEvent(WebEventType, OptionSet<WebEventModifier>, WallTime timestamp, UUID authorizationToken);
+    WebEvent(WebEventType, OptionSet<WebEventModifier>, WallTime timestamp, WTF::UUID authorizationToken);
     WebEvent(WebEventType, OptionSet<WebEventModifier>, WallTime timestamp);
 
     WebEventType type() const { return m_type; }
@@ -104,7 +104,7 @@ public:
 
     WallTime timestamp() const { return m_timestamp; }
 
-    UUID authorizationToken() const { return m_authorizationToken; }
+    WTF::UUID authorizationToken() const { return m_authorizationToken; }
 
 protected:
     WebEvent();
@@ -113,7 +113,7 @@ private:
     WebEventType m_type;
     OptionSet<WebEventModifier> m_modifiers;
     WallTime m_timestamp;
-    UUID m_authorizationToken;
+    WTF::UUID m_authorizationToken;
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, WebEventType);

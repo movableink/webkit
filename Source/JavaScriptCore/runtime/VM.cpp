@@ -240,6 +240,7 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     stringStructure.setWithoutWriteBarrier(JSString::createStructure(*this, nullptr, jsNull()));
 
     smallStrings.initializeCommonStrings(*this);
+    numericStrings.initializeSmallIntCache(*this);
 
     propertyNames = new CommonIdentifiers(*this);
     propertyNameEnumeratorStructure.setWithoutWriteBarrier(JSPropertyNameEnumerator::createStructure(*this, nullptr, jsNull()));
@@ -314,12 +315,14 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     if (UNLIKELY(Options::useProfiler())) {
         m_perBytecodeProfiler = makeUnique<Profiler::Database>(*this);
 
-        StringPrintStream pathOut;
-        const char* profilerPath = getenv("JSC_PROFILER_PATH");
-        if (profilerPath)
-            pathOut.print(profilerPath, "/");
-        pathOut.print("JSCProfile-", getCurrentProcessID(), "-", m_perBytecodeProfiler->databaseID(), ".json");
-        m_perBytecodeProfiler->registerToSaveAtExit(pathOut.toCString().data());
+        if (UNLIKELY(Options::dumpProfilerDataAtExit())) {
+            StringPrintStream pathOut;
+            const char* profilerPath = getenv("JSC_PROFILER_PATH");
+            if (profilerPath)
+                pathOut.print(profilerPath, "/");
+            pathOut.print("JSCProfile-", getCurrentProcessID(), "-", m_perBytecodeProfiler->databaseID(), ".json");
+            m_perBytecodeProfiler->registerToSaveAtExit(pathOut.toCString().data());
+        }
     }
 
     // Initialize this last, as a free way of asserting that VM initialization itself
@@ -1558,6 +1561,7 @@ template<typename Visitor>
 void VM::visitAggregateImpl(Visitor& visitor)
 {
     m_microtaskQueue.visitAggregate(visitor);
+    numericStrings.visitAggregate(visitor);
 
     visitor.append(structureStructure);
     visitor.append(structureRareDataStructure);
@@ -1625,13 +1629,8 @@ void VM::removeDebugger(Debugger& debugger)
 
 void VM::performOpportunisticallyScheduledTasks(MonotonicTime deadline)
 {
-    bool hasPendingWork;
-    {
-        JSLockHolder locker { *this };
-        hasPendingWork = deferredWorkTimer->hasAnyPendingWork();
-    }
-
-    if (!hasPendingWork)
+    JSLockHolder locker { *this };
+    if (!deferredWorkTimer->hasAnyPendingWork())
         heap.sweeper().doWorkUntil(*this, deadline);
 }
 

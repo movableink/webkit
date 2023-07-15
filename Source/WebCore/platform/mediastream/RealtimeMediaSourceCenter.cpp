@@ -140,21 +140,22 @@ void RealtimeMediaSourceCenter::getMediaStreamDevices(CompletionHandler<void(Vec
     });
 }
 
-RealtimeMediaSourceCapabilities RealtimeMediaSourceCenter::getCapabilities(const CaptureDevice& device)
+std::optional<RealtimeMediaSourceCapabilities> RealtimeMediaSourceCenter::getCapabilities(const CaptureDevice& device)
 {
     if (device.type() == CaptureDevice::DeviceType::Camera) {
         auto source = videoCaptureFactory().createVideoCaptureSource({ device },  { "fake"_s, "fake"_s }, nullptr, { });
         if (!source)
-            return { };
+            return std::nullopt;
         return source.source()->capabilities();
     }
     if (device.type() == CaptureDevice::DeviceType::Microphone) {
         auto source = audioCaptureFactory().createAudioCaptureSource({ device }, { "fake"_s, "fake"_s }, nullptr, { });
         if (!source)
-            return { };
+            return std::nullopt;
         return source.source()->capabilities();
     }
-    return { };
+
+    return std::nullopt;
 }
 
 static void addStringToSHA1(SHA1& sha1, const String& string)
@@ -213,6 +214,14 @@ void RealtimeMediaSourceCenter::captureDevicesChanged()
     if (!m_debounceTimer.isActive())
         m_debounceTimer.startOneShot(deviceChangeDebounceTimerInterval);
 #endif
+}
+
+void RealtimeMediaSourceCenter::captureDeviceWillBeRemoved(const String& persistentId)
+{
+    Ref protectedThis { *this };
+    m_observers.forEach([&](auto& observer) {
+        observer.deviceWillBeRemoved(persistentId);
+    });
 }
 
 void RealtimeMediaSourceCenter::triggerDevicesChangedObservers()

@@ -1,5 +1,5 @@
 /*
-  * Copyright (C) 2017 Apple Inc. All rights reserved.
+  * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
   *
   * Redistribution and use in source and binary forms, with or without
   * modification, are permitted provided that the following conditions
@@ -35,7 +35,6 @@
 #import <UIKit/UIAction_Private.h>
 #import <UIKit/UIApplication_Private.h>
 #import <UIKit/UIBarButtonItemGroup_Private.h>
-#import <UIKit/UICalloutBar.h>
 #import <UIKit/UIKeyboardImpl.h>
 #import <UIKit/UIKeyboard_Private.h>
 #import <UIKit/UIResponder_Private.h>
@@ -50,7 +49,6 @@
 #import <UIKit/UIViewController_Private.h>
 #import <UIKit/UIWKTextInteractionAssistant.h>
 #import <UIKit/UIWebFormAccessory.h>
-#import <UIKit/UIWebTouchEventsGestureRecognizer.h>
 #import <UIKit/_UINavigationInteractiveTransition.h>
 
 IGNORE_WARNINGS_BEGIN("deprecated-implementations")
@@ -74,17 +72,6 @@ IGNORE_WARNINGS_END
 @property (readonly) NSArray<NSString *> *alternativeStrings;
 @property (readonly) BOOL isLowConfidence;
 @end
-
-#if !HAVE(NSTEXTLIST_MARKER_FORMATS)
-@interface NSParagraphStyle ()
-- (NSArray *)textLists;
-@end
-
-@interface NSTextList : NSObject
-@property NSInteger startingItemNumber;
-@property (readonly, copy) NSString *markerFormat;
-@end
-#endif
 
 WTF_EXTERN_C_BEGIN
 
@@ -153,11 +140,6 @@ WTF_EXTERN_C_END
 @end
 
 @interface UIKeyboard : UIView
-@end
-
-@interface UICalloutBar : UIView
-+ (UICalloutBar *)sharedCalloutBar;
-+ (UICalloutBar *)activeCalloutBar;
 @end
 
 @interface _UINavigationInteractiveTransitionBase : UIPercentDrivenInteractiveTransition

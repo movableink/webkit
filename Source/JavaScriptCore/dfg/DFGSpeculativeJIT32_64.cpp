@@ -3100,6 +3100,11 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case StringIndexOf: {
+        compileStringIndexOf(node);
+        break;
+    }
+
     case FunctionToString:
         compileFunctionToString(node);
         break;
@@ -4290,6 +4295,7 @@ void SpeculativeJIT::compile(Node* node)
     case DataViewSet:
     case DateGetInt32OrNaN:
     case DateGetTime:
+    case DateSetTime:
     case StringCodePointAt:
     case CallWasm:
     case FunctionBind:

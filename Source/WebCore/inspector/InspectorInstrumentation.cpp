@@ -1036,6 +1036,12 @@ void InspectorInstrumentation::stopProfilingImpl(InstrumentingAgents& instrument
         timelineAgent->stopFromConsole(exec, title);
 }
 
+void InspectorInstrumentation::performanceMarkImpl(InstrumentingAgents& instrumentingAgents, const String& label, std::optional<MonotonicTime> timestamp, LocalFrame* frame)
+{
+    if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
+        timelineAgent->didPerformanceMark(label, timestamp, frame);
+}
+
 void InspectorInstrumentation::consoleStartRecordingCanvasImpl(InstrumentingAgents& instrumentingAgents, CanvasRenderingContext& context, JSC::JSGlobalObject& exec, JSC::JSObject* options)
 {
     if (auto* canvasAgent = instrumentingAgents.enabledCanvasAgent())

@@ -47,6 +47,7 @@ fast/images/text-recognition [ Skip ]
 fast/images/mac [ Skip ]
 fast/sandbox/ios [ Skip ]
 fast/sandbox/mac [ Skip ]
+fast/text/data-detectors/ios [ Skip ]
 fast/viewport/watchos [ Skip ]
 fast/visual-viewport/watchos [ Skip ]
 fast/visual-viewport/tiled-drawing [ Skip ]
@@ -79,6 +80,7 @@ media/encrypted-media/encrypted-media-append-encrypted-unencrypted.html [ Skip ]
 media/media-source/media-source-append-play-corrupt-aac.html [ Skip ]
 media/modern-media-controls/ios-inline-media-controls/touch [ Skip ]
 media/modern-media-controls/overflow-support [ Skip ]
+media/wireless-route-monitoring.html [ Skip ]
 http/tests/media/modern-media-controls/overflow-support [ Skip ]
 media/modern-media-controls/tracks-support [ Skip ]
 fast/text-autosizing [ Skip ]
@@ -138,6 +140,10 @@ fast/scrolling/latching [ Skip ]
 fast/forms/search/search-padding-cancel-results-buttons.html [ Skip ]
 fast/forms/search/search-results-hidden-crash.html [ Skip ]
 fast/forms/search/search-recent-searches.html [ Skip ]
+
+# Only macOS has fixed size controls.
+fast/forms/fixed-size-checkbox-vertically-centered.html [ Skip ]
+fast/forms/fixed-size-radio-vertically-centered.html [ Skip ]
 
 # Only applicable on platforms with dark mode support
 css-dark-mode [ Skip ]
@@ -516,6 +522,7 @@ imported/w3c/web-platform-tests/x-frame-options/get-decode-split.html [ DumpJSCo
 imported/w3c/web-platform-tests/x-frame-options/invalid.html [ DumpJSConsoleLogInStdErr ]
 imported/w3c/web-platform-tests/x-frame-options/multiple.html [ DumpJSConsoleLogInStdErr ]
 imported/w3c/web-platform-tests/x-frame-options/sameorigin.sub.html [ DumpJSConsoleLogInStdErr ]
+imported/w3c/web-platform-tests/cookie-store/cookieStore_event_basic.https.window.html [ DumpJSConsoleLogInStdErr ]
 
 # Timing out tests.
 imported/w3c/web-platform-tests/background-fetch/fetch-uploads.https.window.html [ Skip ]
@@ -718,6 +725,7 @@ imported/w3c/web-platform-tests/html/semantics/scripting-1/the-script-element/mo
 imported/w3c/web-platform-tests/html/user-activation/activation-trigger-keyboard-enter.html [ Skip ]
 imported/w3c/web-platform-tests/html/user-activation/activation-trigger-keyboard-escape.html [ Skip ]
 imported/w3c/web-platform-tests/html/user-activation/activation-trigger-mouse-left.html [ Skip ]
+imported/w3c/web-platform-tests/html/user-activation/activation-trigger-mouse-right.html [ Skip ]
 imported/w3c/web-platform-tests/html/webappapis/scripting/processing-model-2/unhandled-promise-rejections/allow-crossorigin.html [ Skip ]
 imported/w3c/web-platform-tests/html/webappapis/scripting/processing-model-2/unhandled-promise-rejections/disallow-crossorigin.html [ Skip ]
 imported/w3c/web-platform-tests/html/webappapis/scripting/processing-model-2/unhandled-promise-rejections/promise-rejection-events.html [ Skip ]
@@ -817,10 +825,8 @@ imported/w3c/web-platform-tests/html/rendering/the-details-element/details-page-
 imported/w3c/web-platform-tests/html/rendering/the-details-element/details-page-break-after-2-print.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/rendering/the-details-element/details-page-break-before-1-print.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/rendering/the-details-element/details-page-break-before-2-print.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/widgets/the-select-element/option-add-label.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/rendering/widgets/the-select-element/option-empty-label-to-empty-string.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/rendering/widgets/the-select-element/option-empty-label.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/widgets/the-select-element/option-rm-label.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-iframe-element/iframe-modify-scrolling-attr-to-yes.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/adopt-from-image-document.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/image-loading-lazy-slow-aspect-ratio.html [ ImageOnlyFailure ]
@@ -828,7 +834,6 @@ imported/w3c/web-platform-tests/html/semantics/forms/the-option-element/dynamic-
 imported/w3c/web-platform-tests/html/semantics/forms/the-selectmenu-element/selectmenu-option-arbitrary-content-displayed.tentative.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/rendering/non-replaced-elements/phrasing-content-0/font-element-text-decoration-color/001-x.xhtml [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/canvas/element/manual/imagebitmap/imageBitmapRendering-transferFromImageBitmap-webgl.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/html/rendering/non-replaced-elements/tables/table-cell-nowrap-with-fixed-width.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/rendering/replaced-elements/embedded-content/cross-domain-iframe-in-multicol.sub.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/semantics/grouping-content/the-li-element/grouping-li-reftest-007.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/canvas/element/drawing-text-to-the-canvas/direction-inherit-rtl.html [ ImageOnlyFailure ]
@@ -1007,8 +1012,6 @@ http/wpt/service-workers/basic-fetch-with-contentfilter.https.html [ Skip ]
 # Reenable it when having a custom gc exposed in service workers.
 [ Debug ] http/wpt/service-workers/fetchEvent.https.html [ Skip ]
 
-webkit.org/b/248735 http/wpt/service-workers/fetch-service-worker-preload-changing-request.https.html [ Pass Failure ]
-webkit.org/b/248735 http/wpt/service-workers/fetch-service-worker-preload.https.html [ Pass Failure ]
 webkit.org/b/248743 http/wpt/service-workers/fetch-service-worker-preload-download.https.html [ Pass Failure ]
 webkit.org/b/248743 http/wpt/service-workers/file-upload.html [ Pass Failure ]
 
@@ -1239,6 +1242,7 @@ fast/forms/file/entries-api/image-transcode-open-panel.html [ Skip ]
 fast/forms/file/entries-api/image-no-transcode-open-panel.html [ Skip ]
 fast/forms/file/entries-api/pages-jpeg-open-panel.html [ Skip ]
 fast/forms/file/entries-api/pdf-jpeg-open-panel.html [ Skip ]
+fast/forms/file/entries-api/png-raw-open-panel.html [ Skip ]
 
 # This test is currently only relevant on mac-wk2
 fast/canvas/webgl/context-update-on-display-configuration.html [ Skip ]
@@ -1356,8 +1360,6 @@ webkit.org/b/72698 media/audio-garbage-collect.html [ Skip ]
 
 # This test times out.
 webkit.org/b/172527 fast/mediacapturefromelement/CanvasCaptureMediaStream-request-frame-events.html [ Skip ]
-
-webkit.org/b/53990 fast/forms/search-event-delay.html [ Pass Failure ]
 
 webkit.org/b/124932 media/video-size.html [ Pass Failure ]
 
@@ -1659,9 +1661,8 @@ imported/w3c/web-platform-tests/css/selectors/invalidation/nth-last-child-of-in-
 # This test is bit heavy for debug
 [ Debug ] imported/w3c/web-platform-tests/css/selectors/invalidation/has-complexity.html [ Skip ]
 
-# https://github.com/w3c/web-platform-tests/issues/8547
-imported/w3c/web-platform-tests/css/mediaqueries/device-aspect-ratio-001.html [ Skip ]
-imported/w3c/web-platform-tests/css/mediaqueries/device-aspect-ratio-005.html [ Skip ]
+# This test is flaky on macOS Ventura
+imported/w3c/web-platform-tests/css/mediaqueries/mq-non-matching-lazy-load.tentative.html [ Skip ]
 
 # nth-child tests takes long time and Debug build sometimes timeouts because there are many test cases.
 webkit.org/b/137149 fast/selectors/nth-child-of-basics.html [ Slow ]
@@ -2822,7 +2823,6 @@ webkit.org/b/214290 imported/w3c/web-platform-tests/css/css-text/shaping/shaping
 webkit.org/b/214290 imported/w3c/web-platform-tests/css/css-text/shaping/shaping-025.html [ ImageOnlyFailure ]
 webkit.org/b/214290 imported/w3c/web-platform-tests/css/css-text/shaping/shaping_lig-000.html [ ImageOnlyFailure ]
 webkit.org/b/195275 imported/w3c/web-platform-tests/css/css-text/tab-size/tab-size-spacing-001.html [ ImageOnlyFailure ]
-webkit.org/b/195275 imported/w3c/web-platform-tests/css/css-text/tab-size/tab-min-rendered-width-1.html [ ImageOnlyFailure ]
 webkit.org/b/183258 imported/w3c/web-platform-tests/css/css-text/text-align/text-align-justifyall-001.html [ ImageOnlyFailure ]
 webkit.org/b/183258 imported/w3c/web-platform-tests/css/css-text/text-align/text-align-justifyall-002.html [ ImageOnlyFailure ]
 webkit.org/b/183258 imported/w3c/web-platform-tests/css/css-text/text-align/text-align-justifyall-003.html [ ImageOnlyFailure ]
@@ -2862,9 +2862,6 @@ webkit.org/b/214290 imported/w3c/web-platform-tests/css/css-text/text-transform/
 webkit.org/b/214290 imported/w3c/web-platform-tests/css/css-text/text-transform/math/text-transform-math-auto-002.html [ ImageOnlyFailure ]
 webkit.org/b/195275 imported/w3c/web-platform-tests/css/css-text/white-space/text-space-collapse-discard-001.xht [ ImageOnlyFailure ]
 webkit.org/b/195275 imported/w3c/web-platform-tests/css/css-text/white-space/text-space-trim-trim-inner-001.xht [ ImageOnlyFailure ]
-webkit.org/b/195275 imported/w3c/web-platform-tests/css/css-text/white-space/tab-stop-threshold-004.html [ ImageOnlyFailure ]
-webkit.org/b/195275 imported/w3c/web-platform-tests/css/css-text/white-space/tab-stop-threshold-002.html [ ImageOnlyFailure ]
-webkit.org/b/195275 imported/w3c/web-platform-tests/css/css-text/white-space/tab-stop-threshold-006.html [ ImageOnlyFailure ]
 webkit.org/b/195275 imported/w3c/web-platform-tests/css/css-text/white-space/control-chars-000.html [ ImageOnlyFailure ]
 webkit.org/b/195275 imported/w3c/web-platform-tests/css/css-text/white-space/text-space-collapse-preserve-breaks-001.xht [ ImageOnlyFailure ]
 webkit.org/b/214290 imported/w3c/web-platform-tests/css/css-text/white-space/textarea-pre-wrap-012.html [ ImageOnlyFailure ]
@@ -3693,6 +3690,9 @@ webkit.org/b/203338 imported/w3c/web-platform-tests/css/css-values/vh_not_refres
 webkit.org/b/242465 imported/w3c/web-platform-tests/css/css-values/calc-width-table-auto-1.html [ Skip ]
 webkit.org/b/242465 imported/w3c/web-platform-tests/css/css-values/calc-width-table-fixed-1.html [ Skip ]
 webkit.org/b/242466 imported/w3c/web-platform-tests/css/css-values/cap-unit-001.html [ ImageOnlyFailure ]
+webkit.org/b/259025 imported/w3c/web-platform-tests/css/css-values/ch-unit-018.html [ ImageOnlyFailure ]
+webkit.org/b/259025 imported/w3c/web-platform-tests/css/css-values/ic-unit-015.html [ ImageOnlyFailure ]
+webkit.org/b/214466 imported/w3c/web-platform-tests/css/css-values/ex-unit-004.html [ ImageOnlyFailure ]
 webkit.org/b/242467 imported/w3c/web-platform-tests/css/css-values/calc-text-indent-intrinsic-1.html [ ImageOnlyFailure ]
 
 # wpt css-sizing failures
@@ -3852,7 +3852,6 @@ webkit.org/b/206881 imported/w3c/web-platform-tests/css/css-fonts/font-face-weig
 
 # Triaged css-fonts failures
 webkit.org/b/246564 imported/w3c/web-platform-tests/css/css-fonts/font-synthesis-small-caps-not-applied.html [ ImageOnlyFailure ]
-webkit.org/b/257092 imported/w3c/web-platform-tests/css/css-fonts/font-palette-empty-font-family.html [ ImageOnlyFailure ]
 webkit.org/b/246911 imported/w3c/web-platform-tests/css/css-fonts/font-variant-emoji-2.html [ ImageOnlyFailure ]
 
 # vert font feature in vertical-text
@@ -4639,6 +4638,7 @@ webkit.org/b/214299 imported/w3c/web-platform-tests/css/css-ui/appearance-menuli
 webkit.org/b/214299 imported/w3c/web-platform-tests/css/css-ui/outline-025.html [ ImageOnlyFailure ]
 webkit.org/b/214299 imported/w3c/web-platform-tests/css/css-ui/outline-026.html [ ImageOnlyFailure ]
 webkit.org/b/214299 imported/w3c/web-platform-tests/css/css-ui/text-overflow-ruby.html [ ImageOnlyFailure ]
+webkit.org/b/214299 imported/w3c/web-platform-tests/css/css-ui/text-overflow-021.html [ ImageOnlyFailure ]
 webkit.org/b/214299 imported/w3c/web-platform-tests/css/css-ui/webkit-appearance-menulist-button-002.tentative.html [ ImageOnlyFailure ]
 webkit.org/b/214299 imported/w3c/web-platform-tests/css/css-ui/resize-child-will-change-transform.html [ ImageOnlyFailure ]
 webkit.org/b/214299 imported/w3c/web-platform-tests/css/css-ui/resize-generated-content.html [ ImageOnlyFailure ]
@@ -4664,9 +4664,6 @@ webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/deprecated-sam
 webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/deprecated-sameas-014.html [ ImageOnlyFailure ]
 webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/deprecated-sameas-015.html [ ImageOnlyFailure ]
 webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/deprecated-sameas-016.html [ ImageOnlyFailure ]
-webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/deprecated-sameas-017.html [ ImageOnlyFailure ]
-webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/deprecated-sameas-018.html [ ImageOnlyFailure ]
-webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/deprecated-sameas-019.html [ ImageOnlyFailure ]
 webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/deprecated-sameas-020.html [ ImageOnlyFailure ]
 webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/deprecated-sameas-021.html [ ImageOnlyFailure ]
 webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/deprecated-sameas-022.html [ ImageOnlyFailure ]
@@ -4675,9 +4672,6 @@ webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/lch-009.html [
 webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/lch-010.html [ ImageOnlyFailure ]
 webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/oklch-009.html [ ImageOnlyFailure ]
 webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/oklch-010.html [ ImageOnlyFailure ]
-webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/system-color-compute.html [ Failure ]
-webkit.org/b/245347 imported/w3c/web-platform-tests/css/css-color/system-color-consistency.html [ Failure ]
-
 webkit.org/b/214455 imported/w3c/web-platform-tests/css/css-color-adjust/rendering/dark-color-scheme/color-scheme-visited-link-initial.html [ ImageOnlyFailure ]
 webkit.org/b/214455 imported/w3c/web-platform-tests/css/css-color-adjust/rendering/dark-color-scheme/color-scheme-table-border-currentcolor-responsive.html [ ImageOnlyFailure ]
 
@@ -4812,7 +4806,6 @@ webkit.org/b/214464 imported/w3c/web-platform-tests/css/css-text-decor/text-deco
 webkit.org/b/214465 imported/w3c/web-platform-tests/css/mediaqueries/prefers-color-scheme-svg-image.html [ ImageOnlyFailure ]
 webkit.org/b/214465 imported/w3c/web-platform-tests/css/mediaqueries/prefers-color-scheme-svg-image-normal-with-meta-dark.html [ ImageOnlyFailure ]
 
-webkit.org/b/214466 imported/w3c/web-platform-tests/css/css-values/ex-unit-004.html [ ImageOnlyFailure ]
 webkit.org/b/214466 imported/w3c/web-platform-tests/css/css-shapes/shape-outside/formatting-context/shape-outside-formatting-context.tentative.html [ ImageOnlyFailure ]
 
 webkit.org/b/251953 imported/w3c/web-platform-tests/shadow-dom/directionality/dir-shadow-06.html [ ImageOnlyFailure ]
@@ -4906,20 +4899,14 @@ webkit.org/b/220325 http/wpt/css/css-highlight-api/highlight-text-cascade.html [
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-008.html [ Skip ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/css-target-text-decoration-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-002.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-004-2.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-009.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-014.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-below-selection.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-below-target-text.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-iframe-006.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-inheritance-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-inheritance-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-invalidation-003.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-invalidation-005.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-invalidation-006.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-prioritization-001.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-prioritization-002.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-staticrange-001.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-highlight-api/painting/custom-highlight-painting-017.html [ ImageOnlyFailure ]
 
 http/tests/webgl/1.0.x/conformance/textures/misc/origin-clean-conformance-offscreencanvas.html [ Skip ]
 http/tests/webgl/2.0.y/conformance/textures/misc/origin-clean-conformance-offscreencanvas.html [ Skip ]
@@ -4940,11 +4927,13 @@ imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visib
 # c-v: auto
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-075.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-076.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-auto-nested-scroll.html [ Skip ]
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-auto-state-changed.html [ Skip ]
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-auto-state-changed-first-observation.html [ Skip ]
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-auto-state-changed-removed.html [ Skip ]
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-fieldset-size.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-video.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-with-top-layer-in-auto-subtree-removal.html [ Skip ]
 imported/w3c/web-platform-tests/css/css-contain/counter-scoping-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-contain/counter-scoping-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-contain/quote-scoping-001.html [ ImageOnlyFailure ]
@@ -4958,6 +4947,7 @@ imported/w3c/web-platform-tests/css/css-contain/quote-scoping-invalidation-004.h
 # Container queries
 webkit.org/b/229659 imported/w3c/web-platform-tests/css/css-contain/container-queries/custom-layout-container-001.https.html [ ImageOnlyFailure ]
 webkit.org/b/229659 imported/w3c/web-platform-tests/css/css-contain/container-queries/inline-size-bfc-floats.html [ ImageOnlyFailure ]
+webkit.org/b/229659 imported/w3c/web-platform-tests/css/css-contain/container-queries/container-for-cue.html [ Skip ]
 webkit.org/b/241778 [ Debug ] imported/w3c/web-platform-tests/css/css-contain/container-queries/svg-foreignobject-no-size-container.html [ Skip ]
 
 # Flaky css-contain test
@@ -5091,6 +5081,16 @@ imported/w3c/web-platform-tests/html/canvas/offscreen/wide-gamut-canvas/2d.color
 imported/w3c/web-platform-tests/html/canvas/offscreen/wide-gamut-canvas/2d.color.space.p3.to.srgb.worker.html [ Failure ]
 imported/w3c/web-platform-tests/webcodecs/videoFrame-createImageBitmap.any.worker.html [ Failure ]
 imported/w3c/web-platform-tests/webcodecs/videoFrame-drawImage.any.worker.html [ Failure ]
+
+# HEVC support may not be available to all platforms.
+imported/w3c/web-platform-tests/webcodecs/full-cycle-test.https.any.html?h265_annexb [ Pass Failure ]
+imported/w3c/web-platform-tests/webcodecs/full-cycle-test.https.any.html?h265_hevc [ Pass Failure ]
+imported/w3c/web-platform-tests/webcodecs/full-cycle-test.https.any.worker.html?h265_annexb [ Pass Failure ]
+imported/w3c/web-platform-tests/webcodecs/full-cycle-test.https.any.worker.html?h265_hevc [ Pass Failure ]
+imported/w3c/web-platform-tests/webcodecs/videoDecoder-codec-specific.https.any.html?h265_annexb [ Pass Failure ]
+imported/w3c/web-platform-tests/webcodecs/videoDecoder-codec-specific.https.any.html?h265_hevc [ Pass Failure ]
+imported/w3c/web-platform-tests/webcodecs/videoDecoder-codec-specific.https.any.worker.html?h265_annexb [ Pass Failure ]
+imported/w3c/web-platform-tests/webcodecs/videoDecoder-codec-specific.https.any.worker.html?h265_hevc [ Pass Failure ]
 
 webkit.org/b/226942 imported/w3c/web-platform-tests/webaudio/the-audio-api/the-audiobuffersourcenode-interface/active-processing.https.html [ Pass Failure ]
 
@@ -6240,7 +6240,6 @@ imported/w3c/web-platform-tests/wasm/serialization/module/cross-origin-module-sh
 imported/w3c/web-platform-tests/wasm/serialization/module/share-module-cross-origin-fails.sub.html [ Skip ]
 imported/w3c/web-platform-tests/wasm/serialization/module/window-domain-success.sub.html [ Skip ]
 imported/w3c/web-platform-tests/wasm/serialization/module/window-similar-but-cross-origin-success.sub.html [ Skip ]
-imported/w3c/web-platform-tests/webcodecs/videoFrame-construction.window.html [ Skip ]
 imported/w3c/web-platform-tests/webcodecs/videoFrame-serialization.crossAgentCluster.https.html [ Skip ]
 imported/w3c/web-platform-tests/webrtc/RTCConfiguration-iceTransportPolicy.html [ Skip ]
 imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-onicecandidateerror.https.html [ Skip ]
@@ -6415,7 +6414,6 @@ imported/w3c/web-platform-tests/html/browsers/browsing-the-web/navigating-across
 webkit.org/b/242658 http/tests/media/user-gesture-preserved-across-xmlhttprequest.html [ Slow Pass Failure ]
 
 # These tests are crashing in debug since its import.
-webkit.org/b/256847 [ Debug ] imported/w3c/web-platform-tests/dom/events/preventDefault-during-activation-behavior.html [ Skip ]
 webkit.org/b/256976 [ Debug ] imported/w3c/web-platform-tests/html/browsers/browsing-the-web/overlapping-navigations-and-traversals/cross-document-traversal-same-document-nav.html [ Skip ]
 webkit.org/b/256976 [ Debug ] imported/w3c/web-platform-tests/html/browsers/browsing-the-web/overlapping-navigations-and-traversals/same-document-nav-cross-document-traversal.html [ Skip ]
 
@@ -6548,3 +6546,6 @@ imported/w3c/web-platform-tests/css/css-overflow/overflow-auto-scrollbar-gutter-
 webkit.org/b/257336 imported/w3c/web-platform-tests/css/css-tables/visibility-collapse-row-003-dynamic.html [ Pass Failure ]
 
 webkit.org/b/257904 http/tests/site-isolation/basic-iframe.html [ Skip ]
+
+# Only some OSes have support for auto word breaking.
+imported/w3c/web-platform-tests/css/css-text/word-break/auto [ Pass Failure ImageOnlyFailure ]

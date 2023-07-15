@@ -38,6 +38,7 @@
 #include "ContentExtensionActions.h"
 #include "ContentExtensionRule.h"
 #include "ContentRuleListResults.h"
+#include "CookieStore.h"
 #include "CrossOriginOpenerPolicy.h"
 #include "Crypto.h"
 #include "CustomElementRegistry.h"
@@ -1609,12 +1610,17 @@ bool LocalDOMWindow::consumeTransientActivation()
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame.get());
         if (!localFrame)
             continue;
-        auto* window = localFrame->window();
-        if (!window || window->lastActivationTimestamp() != MonotonicTime::infinity())
-            window->setLastActivationTimestamp(-MonotonicTime::infinity());
+        if (auto* window = localFrame->window())
+            window->consumeLastActivationIfNecessary();
     }
 
     return true;
+}
+
+void LocalDOMWindow::consumeLastActivationIfNecessary()
+{
+    if (!std::isinf(m_lastActivationTimestamp))
+        m_lastActivationTimestamp = -MonotonicTime::infinity();
 }
 
 // https://html.spec.whatwg.org/multipage/interaction.html#activation-notification
@@ -2801,6 +2807,13 @@ void LocalDOMWindow::eventListenersDidChange()
 WebCoreOpaqueRoot root(LocalDOMWindow* window)
 {
     return WebCoreOpaqueRoot { window };
+}
+
+CookieStore& LocalDOMWindow::cookieStore()
+{
+    if (!m_cookieStore)
+        m_cookieStore = CookieStore::create(document());
+    return *m_cookieStore;
 }
 
 } // namespace WebCore

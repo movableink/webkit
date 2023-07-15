@@ -117,7 +117,7 @@ static bool elementMatchesHoverRules(Element& element)
     bool foundHoverRules = false;
     bool initialValue = element.isUserActionElement() && element.document().userActionElements().isHovered(element);
 
-    for (auto key : Style::makePseudoClassInvalidationKeys(CSSSelector::PseudoClassHover, element)) {
+    for (auto key : Style::makePseudoClassInvalidationKeys(CSSSelector::PseudoClassType::Hover, element)) {
         auto& ruleSets = element.styleResolver().ruleSets();
         auto* invalidationRuleSets = ruleSets.pseudoClassInvalidationRuleSets(key);
         if (!invalidationRuleSets)
@@ -147,6 +147,9 @@ static bool shouldAllowNonPointerCursorForElement(const Element& element)
     if (is<HTMLAttachmentElement>(element))
         return true;
 #endif
+
+    if (is<HTMLTextFormControlElement>(element))
+        return !element.focused();
 
     if (is<HTMLFormControlElement>(element))
         return true;
@@ -259,7 +262,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     if (!hasPointer) {
         // The hover check can be expensive (it may end up doing selector matching), so we only run it on some elements.
         bool hasVisibleBoxDecorations = renderer.hasVisibleBoxDecorations();
-        bool nonScrollable = !renderer.hasPotentiallyScrollableOverflow();
+        bool nonScrollable = !is<RenderBox>(renderer) || (!downcast<RenderBox>(renderer).hasScrollableOverflowX() && !downcast<RenderBox>(renderer).hasScrollableOverflowY());
         if (hasVisibleBoxDecorations && nonScrollable)
             detectedHoverRules = elementMatchesHoverRules(*matchedElement);
     }

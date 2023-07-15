@@ -2673,10 +2673,10 @@ String RenderObject::debugDescription() const
 
 bool RenderObject::isSkippedContent() const
 {
-    return parent() && parent()->style().effectiveSkipsContent();
+    return parent() && parent()->style().effectiveSkippedContent();
 }
 
-bool RenderObject::shouldSkipContent() const
+bool RenderObject::isSkippedContentRoot() const
 {
     return style().contentVisibility() == ContentVisibility::Hidden;
 }

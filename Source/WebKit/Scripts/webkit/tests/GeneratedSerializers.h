@@ -43,7 +43,7 @@ namespace Namespace::Subnamespace { struct StructName; }
 #endif
 namespace Namespace { class ReturnRefClass; }
 namespace Namespace { struct EmptyConstructorStruct; }
-namespace Namespace { class EmptyConstructorNullable; }
+namespace Namespace { class EmptyConstructorWithIf; }
 class WithoutNamespace;
 class WithoutNamespaceWithAttributes;
 namespace WebCore { class InheritsFrom; }
@@ -63,6 +63,7 @@ namespace Namespace { class CommonClass; }
 namespace Namespace { class AnotherCommonClass; }
 namespace WebCore { class MoveOnlyBaseClass; }
 namespace WebCore { class MoveOnlyDerivedClass; }
+namespace WebKit { class PlatformClass; }
 
 namespace IPC {
 
@@ -88,9 +89,9 @@ template<> struct ArgumentCoder<Namespace::EmptyConstructorStruct> {
     static std::optional<Namespace::EmptyConstructorStruct> decode(Decoder&);
 };
 
-template<> struct ArgumentCoder<Namespace::EmptyConstructorNullable> {
-    static void encode(Encoder&, const Namespace::EmptyConstructorNullable&);
-    static std::optional<Namespace::EmptyConstructorNullable> decode(Decoder&);
+template<> struct ArgumentCoder<Namespace::EmptyConstructorWithIf> {
+    static void encode(Encoder&, const Namespace::EmptyConstructorWithIf&);
+    static std::optional<Namespace::EmptyConstructorWithIf> decode(Decoder&);
 };
 
 template<> struct ArgumentCoder<WithoutNamespace> {
@@ -164,6 +165,11 @@ template<> struct ArgumentCoder<WebCore::MoveOnlyBaseClass> {
 template<> struct ArgumentCoder<WebCore::MoveOnlyDerivedClass> {
     static void encode(Encoder&, WebCore::MoveOnlyDerivedClass&&);
     static std::optional<WebCore::MoveOnlyDerivedClass> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebKit::PlatformClass> {
+    static void encode(Encoder&, const WebKit::PlatformClass&);
+    static std::optional<WebKit::PlatformClass> decode(Decoder&);
 };
 
 } // namespace IPC

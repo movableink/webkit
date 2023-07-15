@@ -57,6 +57,7 @@ namespace WebCore {
 class BarProp;
 class CSSRuleList;
 class CSSStyleDeclaration;
+class CookieStore;
 class Crypto;
 class CustomElementRegistry;
 class DOMApplicationCache;
@@ -172,6 +173,7 @@ public:
 
     WEBCORE_EXPORT static void overrideTransientActivationDurationForTesting(std::optional<Seconds>&&);
     void setLastActivationTimestamp(MonotonicTime lastActivationTimestamp) { m_lastActivationTimestamp = lastActivationTimestamp; }
+    void consumeLastActivationIfNecessary();
     MonotonicTime lastActivationTimestamp() const { return m_lastActivationTimestamp; }
     void notifyActivated(MonotonicTime);
     WEBCORE_EXPORT bool hasTransientActivation() const;
@@ -407,6 +409,8 @@ public:
     Page* page() const;
     WEBCORE_EXPORT static void forEachWindowInterestedInStorageEvents(const Function<void(LocalDOMWindow&)>&);
 
+    CookieStore& cookieStore();
+
 private:
     explicit LocalDOMWindow(Document&);
 
@@ -494,6 +498,8 @@ private:
 #if ENABLE(USER_MESSAGE_HANDLERS)
     mutable RefPtr<WebKitNamespace> m_webkitNamespace;
 #endif
+
+    RefPtr<CookieStore> m_cookieStore;
 };
 
 inline String LocalDOMWindow::status() const

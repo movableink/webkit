@@ -702,7 +702,7 @@ bool GStreamerRegistryScanner::supportsFeatures(const String& features) const
 {
     // Apple TV requires this one for DD+.
     constexpr auto dolbyDigitalPlusJOC = "joc"_s;
-    if (features == dolbyDigitalPlusJOC)
+    if (equalIgnoringASCIICase(features, dolbyDigitalPlusJOC))
         return true;
 
     return false;
@@ -987,11 +987,6 @@ void GStreamerRegistryScanner::fillAudioRtpCapabilities(Configuration configurat
     auto factories = ElementFactories({ codecElement, rtpElement });
     if (factories.hasElementForMediaType(codecElement, "audio/x-opus") && factories.hasElementForMediaType(rtpElement, "audio/x-opus"))
         capabilities.codecs.append({ .mimeType = "audio/opus"_s, .clockRate = 48000, .channels = 2, .sdpFmtpLine = "minptime=10;useinbandfec=1"_s });
-
-    if (factories.hasElementForMediaType(codecElement, "audio/isac") && factories.hasElementForMediaType(rtpElement, "audio/isac")) {
-        capabilities.codecs.append({ .mimeType = "audio/ISAC"_s, .clockRate = 16000, .channels = 1, .sdpFmtpLine = emptyString() });
-        capabilities.codecs.append({ .mimeType = "audio/ISAC"_s, .clockRate = 32000, .channels = 1, .sdpFmtpLine = emptyString() });
-    }
 
     if (factories.hasElementForMediaType(codecElement, "audio/G722") && factories.hasElementForMediaType(rtpElement, "audio/G722"))
         capabilities.codecs.append({ .mimeType = "audio/G722"_s, .clockRate = 8000, .channels = 1, .sdpFmtpLine = emptyString() });

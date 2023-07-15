@@ -169,6 +169,7 @@ inline CapabilityLevel canCompile(Node* node)
     case StringCharCodeAt:
     case StringCodePointAt:
     case StringFromCharCode:
+    case StringIndexOf:
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
     case NukeStructureAndSetButterfly:
@@ -449,6 +450,7 @@ inline CapabilityLevel canCompile(Node* node)
     case DataViewSet:
     case DateGetInt32OrNaN:
     case DateGetTime:
+    case DateSetTime:
         // These are OK.
         break;
 

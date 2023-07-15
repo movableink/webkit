@@ -412,13 +412,13 @@ static void CallbackForContainIntrinsicSize(const Vector<Ref<ResizeObserverEntry
                 observer.unobserve(*target);
                 continue;
             }
-            ASSERT(!box->shouldSkipContent());
+            ASSERT(!box->isSkippedContentRoot());
             ASSERT(box->style().hasAutoLengthContainIntrinsicSize());
 
             auto contentBoxSize = entry->contentBoxSize().at(0);
-            if (box->style().containIntrinsicLogicalWidthType() == ContainIntrinsicSizeType::AutoAndLength)
+            if (box->style().containIntrinsicWidthHasAuto())
                 target->setLastRememberedLogicalWidth(LayoutUnit(contentBoxSize->inlineSize()));
-            if (box->style().containIntrinsicLogicalHeightType() == ContainIntrinsicSizeType::AutoAndLength)
+            if (box->style().containIntrinsicHeightHasAuto())
                 target->setLastRememberedLogicalHeight(LayoutUnit(contentBoxSize->blockSize()));
         }
     }
@@ -1671,7 +1671,7 @@ std::optional<BoundaryPoint> Document::caretPositionFromPoint(const LayoutPoint&
     if (!renderer)
         return std::nullopt;
 
-    if (renderer->shouldSkipContent())
+    if (renderer->isSkippedContentRoot())
         return { { *node, 0 } };
 
     auto rangeCompliantPosition = renderer->positionForPoint(localPoint).parentAnchoredEquivalent();
@@ -5112,11 +5112,11 @@ void Document::setCSSTarget(Element* newTarget)
 
     std::optional<Style::PseudoClassChangeInvalidation> oldInvalidation;
     if (m_cssTarget)
-        emplace(oldInvalidation, *m_cssTarget, { { CSSSelector::PseudoClassTarget, false } });
+        emplace(oldInvalidation, *m_cssTarget, { { CSSSelector::PseudoClassType::Target, false } });
 
     std::optional<Style::PseudoClassChangeInvalidation> newInvalidation;
     if (newTarget)
-        emplace(newInvalidation, *newTarget, { { CSSSelector::PseudoClassTarget, true } });
+        emplace(newInvalidation, *newTarget, { { CSSSelector::PseudoClassType::Target, true } });
     m_cssTarget = newTarget;
 }
 
@@ -6541,7 +6541,7 @@ String Document::originIdentifierForPasteboard() const
     if (origin != "null"_s)
         return origin;
     if (!m_uniqueIdentifier)
-        m_uniqueIdentifier = makeString("null:"_s, UUID::createVersion4());
+        m_uniqueIdentifier = makeString("null:"_s, WTF::UUID::createVersion4());
     return m_uniqueIdentifier;
 }
 
@@ -7064,8 +7064,7 @@ void Document::serviceRequestAnimationFrameCallbacks()
 
 void Document::serviceCaretAnimation()
 {
-    if (auto* window = domWindow())
-        selection().caretAnimator().serviceCaretAnimation(window->frozenNowTimestamp());
+    selection().caretAnimator().serviceCaretAnimation();
 }
 
 void Document::serviceRequestVideoFrameCallbacks()
@@ -7835,16 +7834,16 @@ void Document::updateHoverActiveState(const HitTestRequest& request, Element* in
             setter(*element);
     };
 
-    changeState(elementsToClearActive, CSSSelector::PseudoClassActive, false, [](auto& element) {
+    changeState(elementsToClearActive, CSSSelector::PseudoClassType::Active, false, [](auto& element) {
         element.setActive(false, Style::InvalidationScope::SelfChildrenAndSiblings);
     });
-    changeState(elementsToSetActive, CSSSelector::PseudoClassActive, true, [](auto& element) {
+    changeState(elementsToSetActive, CSSSelector::PseudoClassType::Active, true, [](auto& element) {
         element.setActive(true, Style::InvalidationScope::SelfChildrenAndSiblings);
     });
-    changeState(elementsToClearHover, CSSSelector::PseudoClassHover, false, [request](auto& element) {
+    changeState(elementsToClearHover, CSSSelector::PseudoClassType::Hover, false, [request](auto& element) {
         element.setHovered(false, Style::InvalidationScope::SelfChildrenAndSiblings, request);
     });
-    changeState(elementsToSetHover, CSSSelector::PseudoClassHover, true, [request](auto& element) {
+    changeState(elementsToSetHover, CSSSelector::PseudoClassType::Hover, true, [request](auto& element) {
         element.setHovered(true, Style::InvalidationScope::SelfChildrenAndSiblings, request);
     });
 }
@@ -8303,130 +8302,6 @@ void Document::removeIntersectionObserver(IntersectionObserver& observer)
     m_intersectionObservers.removeFirst(&observer);
 }
 
-static void expandRootBoundsWithRootMargin(FloatRect& localRootBounds, const LengthBox& rootMargin, float zoomFactor)
-{
-    auto zoomAdjustedLength = [](const Length& length, float maximumValue, float zoomFactor) {
-        if (length.isPercent())
-            return floatValueForLength(length, maximumValue);
-
-        return floatValueForLength(length, maximumValue) * zoomFactor;
-    };
-
-    auto rootMarginEdges = FloatBoxExtent {
-        zoomAdjustedLength(rootMargin.top(), localRootBounds.height(), zoomFactor),
-        zoomAdjustedLength(rootMargin.right(), localRootBounds.width(), zoomFactor),
-        zoomAdjustedLength(rootMargin.bottom(), localRootBounds.height(), zoomFactor),
-        zoomAdjustedLength(rootMargin.left(), localRootBounds.width(), zoomFactor)
-    };
-
-    localRootBounds.expand(rootMarginEdges);
-}
-
-static std::optional<LayoutRect> computeClippedRectInRootContentsSpace(const LayoutRect& rect, const RenderElement* renderer)
-{
-    OptionSet<RenderObject::VisibleRectContextOption> visibleRectOptions = { RenderObject::VisibleRectContextOption::UseEdgeInclusiveIntersection, RenderObject::VisibleRectContextOption::ApplyCompositedClips, RenderObject::VisibleRectContextOption::ApplyCompositedContainerScrolls };
-    std::optional<LayoutRect> rectInFrameAbsoluteSpace = renderer->computeVisibleRectInContainer(rect, &renderer->view(),  {false /* hasPositionFixedDescendant */, false /* dirtyRectIsFlipped */, visibleRectOptions });
-    if (!rectInFrameAbsoluteSpace || renderer->frame().isMainFrame())
-        return rectInFrameAbsoluteSpace;
-
-    bool intersects = rectInFrameAbsoluteSpace->edgeInclusiveIntersect(renderer->view().frameView().layoutViewportRect());
-    if (!intersects)
-        return std::nullopt;
-
-    auto* ownerRenderer = renderer->frame().ownerRenderer();
-    if (!ownerRenderer)
-        return std::nullopt;
-
-    LayoutRect rectInFrameViewSpace { renderer->view().frameView().contentsToView(*rectInFrameAbsoluteSpace) };
-
-    rectInFrameViewSpace.moveBy(ownerRenderer->contentBoxLocation());
-    return computeClippedRectInRootContentsSpace(rectInFrameViewSpace, ownerRenderer);
-}
-
-struct IntersectionObservationState {
-    FloatRect absoluteTargetRect;
-    FloatRect absoluteRootBounds;
-    FloatRect absoluteIntersectionRect;
-    bool isIntersecting { false };
-};
-
-static std::optional<IntersectionObservationState> computeIntersectionState(LocalFrameView& frameView, const IntersectionObserver& observer, Element& target, bool applyRootMargin)
-{
-    auto* targetRenderer = target.renderer();
-    if (!targetRenderer)
-        return std::nullopt;
-
-    FloatRect localRootBounds;
-    RenderBlock* rootRenderer;
-    if (observer.root()) {
-        if (observer.trackingDocument() != &target.document())
-            return std::nullopt;
-
-        if (!observer.root()->renderer() || !is<RenderBlock>(observer.root()->renderer()))
-            return std::nullopt;
-
-        rootRenderer = downcast<RenderBlock>(observer.root()->renderer());
-        if (!rootRenderer->isContainingBlockAncestorFor(*targetRenderer))
-            return std::nullopt;
-
-        if (observer.root() == &target.document())
-            localRootBounds = frameView.layoutViewportRect();
-        else if (rootRenderer->hasNonVisibleOverflow())
-            localRootBounds = rootRenderer->contentBoxRect();
-        else
-            localRootBounds = { FloatPoint(), rootRenderer->size() };
-    } else {
-        ASSERT(is<LocalFrame>(frameView.frame()) && downcast<LocalFrame>(frameView.frame()).isMainFrame());
-        // FIXME: Handle the case of an implicit-root observer that has a target in a different frame tree.
-        if (dynamicDowncast<LocalFrame>(targetRenderer->frame().mainFrame()) != &frameView.frame())
-            return std::nullopt;
-        rootRenderer = frameView.renderView();
-        localRootBounds = frameView.layoutViewportRect();
-    }
-
-    if (applyRootMargin)
-        expandRootBoundsWithRootMargin(localRootBounds, observer.rootMarginBox(), rootRenderer->style().effectiveZoom());
-
-    LayoutRect localTargetBounds;
-    if (is<RenderBox>(*targetRenderer))
-        localTargetBounds = downcast<RenderBox>(targetRenderer)->borderBoundingBox();
-    else if (is<RenderInline>(targetRenderer)) {
-        auto pair = target.boundingAbsoluteRectWithoutLayout();
-        if (pair) {
-            FloatRect absoluteTargetBounds = pair->second;
-            localTargetBounds = enclosingLayoutRect(targetRenderer->absoluteToLocalQuad(absoluteTargetBounds).boundingBox());
-        }
-    } else if (is<RenderLineBreak>(targetRenderer))
-        localTargetBounds = downcast<RenderLineBreak>(targetRenderer)->linesBoundingBox();
-
-    std::optional<LayoutRect> rootLocalTargetRect;
-    if (observer.root()) {
-        OptionSet<RenderObject::VisibleRectContextOption> visibleRectOptions = { RenderObject::VisibleRectContextOption::UseEdgeInclusiveIntersection, RenderObject::VisibleRectContextOption::ApplyCompositedClips, RenderObject::VisibleRectContextOption::ApplyCompositedContainerScrolls };
-        rootLocalTargetRect = targetRenderer->computeVisibleRectInContainer(localTargetBounds, rootRenderer, { false /* hasPositionFixedDescendant */, false /* dirtyRectIsFlipped */, visibleRectOptions });
-    } else
-        rootLocalTargetRect = computeClippedRectInRootContentsSpace(localTargetBounds, targetRenderer);
-
-    FloatRect rootLocalIntersectionRect = localRootBounds;
-
-    IntersectionObservationState intersectionState;
-    intersectionState.isIntersecting = rootLocalTargetRect && rootLocalIntersectionRect.edgeInclusiveIntersect(*rootLocalTargetRect) && !targetRenderer->isSkippedContent();
-    intersectionState.absoluteTargetRect = targetRenderer->localToAbsoluteQuad(FloatRect(localTargetBounds)).boundingBox();
-    intersectionState.absoluteRootBounds = rootRenderer->localToAbsoluteQuad(localRootBounds).boundingBox();
-
-    if (intersectionState.isIntersecting) {
-        FloatRect rootAbsoluteIntersectionRect = rootRenderer->localToAbsoluteQuad(rootLocalIntersectionRect).boundingBox();
-        if (&targetRenderer->frame() == &rootRenderer->frame())
-            intersectionState.absoluteIntersectionRect = rootAbsoluteIntersectionRect;
-        else {
-            FloatRect rootViewIntersectionRect = frameView.contentsToView(rootAbsoluteIntersectionRect);
-            intersectionState.absoluteIntersectionRect = targetRenderer->view().frameView().rootViewToContents(rootViewIntersectionRect);
-        }
-        intersectionState.isIntersecting = intersectionState.absoluteIntersectionRect.edgeInclusiveIntersect(intersectionState.absoluteTargetRect);
-    }
-
-    return intersectionState;
-}
-
 void Document::updateIntersectionObservations()
 {
     RefPtr frameView = view();
@@ -8439,76 +8314,13 @@ void Document::updateIntersectionObservations()
 
     Vector<WeakPtr<IntersectionObserver>> intersectionObserversWithPendingNotifications;
 
-    for (const auto& observer : m_intersectionObservers) {
-        bool needNotify = false;
-        auto timestamp = observer->nowTimestamp();
-        if (!timestamp)
+    for (auto& weakObserver : m_intersectionObservers) {
+        RefPtr observer = weakObserver.get();
+        if (!observer)
             continue;
-        for (auto& target : observer->observationTargets()) {
-            auto& targetRegistrations = target->intersectionObserverDataIfExists()->registrations;
-            auto index = targetRegistrations.findIf([observer](auto& registration) {
-                return registration.observer.get() == observer;
-            });
-            ASSERT(index != notFound);
-            auto& registration = targetRegistrations[index];
 
-            bool isSameOriginObservation = &target->document() == this || target->document().securityOrigin().isSameOriginDomain(securityOrigin());
-            auto intersectionState = computeIntersectionState(*frameView, *observer, *target, isSameOriginObservation);
-
-            float intersectionRatio = 0;
-            size_t thresholdIndex = 0;
-            if (intersectionState) {
-                if (intersectionState->isIntersecting) {
-                    float absTargetArea = intersectionState->absoluteTargetRect.area();
-                    if (absTargetArea)
-                        intersectionRatio = intersectionState->absoluteIntersectionRect.area() / absTargetArea;
-                    else
-                        intersectionRatio = 1;
-
-                    for (auto threshold : observer->thresholds()) {
-                        if (!(threshold <= intersectionRatio || WTF::areEssentiallyEqual<float>(threshold, intersectionRatio)))
-                            break;
-                        ++thresholdIndex;
-                    }
-                }
-            }
-
-            if (!registration.previousThresholdIndex || thresholdIndex != registration.previousThresholdIndex) {
-                FloatRect targetBoundingClientRect;
-                FloatRect clientIntersectionRect;
-                FloatRect clientRootBounds;
-                if (intersectionState) {
-                    RefPtr targetFrameView = target->document().view();
-                    targetBoundingClientRect = targetFrameView->absoluteToClientRect(intersectionState->absoluteTargetRect, target->renderer()->style().effectiveZoom());
-                    clientRootBounds = frameView->absoluteToLayoutViewportRect(intersectionState->absoluteRootBounds);
-                    if (intersectionState->isIntersecting)
-                        clientIntersectionRect = targetFrameView->absoluteToClientRect(intersectionState->absoluteIntersectionRect, target->renderer()->style().effectiveZoom());
-                }
-
-                std::optional<DOMRectInit> reportedRootBounds;
-                if (isSameOriginObservation) {
-                    reportedRootBounds = DOMRectInit({
-                        clientRootBounds.x(),
-                        clientRootBounds.y(),
-                        clientRootBounds.width(),
-                        clientRootBounds.height()
-                    });
-                }
-
-                observer->appendQueuedEntry(IntersectionObserverEntry::create({
-                    timestamp->milliseconds(),
-                    reportedRootBounds,
-                    { targetBoundingClientRect.x(), targetBoundingClientRect.y(), targetBoundingClientRect.width(), targetBoundingClientRect.height() },
-                    { clientIntersectionRect.x(), clientIntersectionRect.y(), clientIntersectionRect.width(), clientIntersectionRect.height() },
-                    intersectionRatio,
-                    target.get(),
-                    thresholdIndex > 0,
-                }));
-                needNotify = true;
-                registration.previousThresholdIndex = thresholdIndex;
-            }
-        }
-        if (needNotify)
+        auto needNotify = observer->updateObservations(*this);
+        if (needNotify == IntersectionObserver::NeedNotify::Yes)
             intersectionObserversWithPendingNotifications.append(observer);
     }
 
@@ -8602,6 +8414,10 @@ void Document::setHasSkippedResizeObservations(bool skipped)
 
 void Document::updateResizeObservations(Page& page)
 {
+    if (quirks().shouldSilenceResizeObservers()) {
+        addConsoleMessage(MessageSource::Other, MessageLevel::Info, "ResizeObservers silenced due to: http://webkit.org/b/258597"_s);
+        return;
+    }
     if (!hasResizeObservers() && !m_resizeObserverForContainIntrinsicSize)
         return;
 
@@ -9492,11 +9308,11 @@ void Document::setPictureInPictureElement(HTMLVideoElement* element)
 
     std::optional<Style::PseudoClassChangeInvalidation> oldInvalidation;
     if (oldElement)
-        emplace(oldInvalidation, *oldElement, { { CSSSelector::PseudoClassPictureInPicture, false } });
+        emplace(oldInvalidation, *oldElement, { { CSSSelector::PseudoClassType::PictureInPicture, false } });
 
     std::optional<Style::PseudoClassChangeInvalidation> newInvalidation;
     if (element)
-        emplace(newInvalidation, *element, { { CSSSelector::PseudoClassPictureInPicture, true } });
+        emplace(newInvalidation, *element, { { CSSSelector::PseudoClassType::PictureInPicture, true } });
 
     m_pictureInPictureElement = element;
 }

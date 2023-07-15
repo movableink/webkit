@@ -609,6 +609,10 @@ fast/dom/Window/window-special-properties.html [ Pass Failure ]
 
 [ Debug ] fast/html/marquee-reparent-check.html [ Pass Failure ]
 
+# The CookieStore API is not fully implemented on WinCario yet.
+imported/w3c/web-platform-tests/cookie-store [ Skip ]
+imported/w3c/web-platform-tests/cookies/partitioned-cookies/partitioned-cookies.tentative.https.html [ Skip ]
+
 #//////////////////////////////////////////////////////////////////////////////////////////
 # Following tests are labeled "Skip" because not working well and causes crash or timeout
 #//////////////////////////////////////////////////////////////////////////////////////////
@@ -843,6 +847,7 @@ http/tests/eventsource [ Skip ]
 http/tests/events/touch/ios [ Skip ]
 http/tests/fileapi [ Skip ]
 http/tests/frame-throttling [ Skip ]
+http/tests/fullscreen [ Skip ]
 
 http/tests/globalhistory/history-delegate-basic-refresh-redirect.html [ Failure ]
 http/tests/globalhistory/history-delegate-basic-visited-links.html [ Pass Failure ]
@@ -852,6 +857,9 @@ http/tests/images/image-supports-video.html [ Failure ]
 http/tests/images/mp4-partial-load.html [ Failure ]
 
 webkit.org/b/219225 http/tests/inspector/dom/disconnect-dom-tree-after-main-frame-navigation.html [ Pass Failure ]
+
+# fullscreen isn't supported yet
+http/tests/inspector/dom/didFireEvent.html [ Skip ]
 
 http/tests/inspector/network/eventsource-type.html [ Failure ]
 http/tests/inspector/network/fetch-response-body.html [ Failure ]
@@ -1117,6 +1125,8 @@ http/wpt/service-workers/fetch-service-worker-preload-use-download-and-clone.htt
 http/wpt/service-workers/fetch-service-worker-preload-use-download.https.html [ Failure ]
 http/wpt/service-workers/form-data-upload.html [ Failure ]
 http/wpt/service-workers/navigate-iframes-window-client.https.html [ Failure ]
+
+http/tests/workers/service/postmessage-after-sw-process-crash.https.html [ Timeout Pass ]
 
 http/tests/misc/slow-loading-animated-image.html [ ImageOnlyFailure ]
 
@@ -1678,7 +1688,6 @@ fast/forms/range/slider-transformed.html [ Skip ]
 fast/forms/scroll-into-view-and-show-validation-message.html [ Skip ]
 fast/forms/search-cancel-button-style-sharing.html [ Skip ]
 fast/forms/search-display-none-cancel-button.html [ Skip ]
-fast/forms/search-event-delay.html [ Skip ]
 fast/forms/search-input-rtl.html [ Skip ]
 fast/forms/search-rtl.html [ Skip ]
 fast/forms/search-styled.html [ Skip ]
@@ -1910,6 +1919,7 @@ imported/w3c/web-platform-tests/paint-timing [ Skip ]
 imported/w3c/web-platform-tests/payment-request [ Skip ]
 imported/w3c/web-platform-tests/performance-timeline [ Skip ]
 imported/w3c/web-platform-tests/permissions [ Skip ]
+imported/w3c/web-platform-tests/permissions-policy [ Skip ]
 imported/w3c/web-platform-tests/picture-in-picture [ Skip ]
 imported/w3c/web-platform-tests/pointerevents [ Skip ]
 imported/w3c/web-platform-tests/pointerlock [ Skip ]
@@ -2255,7 +2265,6 @@ webgl/2.0.0/conformance2/rendering/fs-color-type-mismatch-color-buffer-type.html
 webgl/2.0.0/conformance2/state/gl-object-get-calls.html [ Skip ] # Timeout Failure Pass
 webgl/2.0.0/conformance2/textures/misc/tex-image-with-bad-args-from-dom-elements.html [ Skip ] # Timeout
 webgl/2.0.0/conformance2/transform_feedback/transform_feedback.html [ Skip ] # Timeout and flaky
-webgl/webgl-oom-paint-document-no-crash.html [ Skip ]
 workers/bomb.html [ Skip ] # Timeout
 
 # This test is crashing on Buildbot. Skipping this test makes the subsequent test crash. Not sure which preceding test is the root cause.
@@ -2292,7 +2301,6 @@ fast/text/rtl-pre-wrap-hanging-offset.html [ ImageOnlyFailure ]
 fast/text/synthetic-bold-percentage-word-spacing.html [ ImageOnlyFailure ]
 fast/text/text-overflow-over-64k.html [ ImageOnlyFailure ]
 
-webgl/2.0.0/conformance/textures/misc/default-texture.html [ Failure ]
 webgl/lose-context-after-context-lost.html [ Failure ]
 webgl/max-active-contexts-gc.html [ Failure Pass ]
 webgl/max-active-contexts-webglcontextlost-prevent-default.html [ Failure ]
@@ -2309,8 +2317,6 @@ fast/css3-text/font-synthesis.html [ ImageOnlyFailure ]
 fast/css3-text/css3-text-decoration/text-underline-position/underline-visual-overflow-with-subpixel-position.html [ Failure ]
 
 fast/canvas/toDataURL-alpha-permutation.html [ ImageOnlyFailure ]
-
-webgl/2.0.y/conformance2/extensions/webgl-multi-draw-instanced-base-vertex-base-instance.html [ Failure ]
 
 webkit.org/b/243992 fast/text/punctuation-break-all.html [ ImageOnlyFailure ]
 
@@ -2836,3 +2842,7 @@ http/tests/inspector/network/xhr-request-type.html [ Failure ]
 compositing/overlap-blending/reflection-opacity-huge.html [ ImageOnlyFailure Pass ]
 
 fast/css-grid-layout/grid-item-display.html [ Failure Pass ]
+
+fast/canvas/canvas-ellipse-connecting-line.html [ ImageOnlyFailure ]
+
+fast/html/transient-activation.html [ Skip ]

@@ -1435,6 +1435,21 @@ CSSWhiteSpaceLonghandsEnabled:
     WebCore:
       default: false
 
+CSSWordBreakAutoEnabled:
+  type: bool
+  status: testable
+  category: css
+  webcoreOnChange: setNeedsRecalcStyleInAllFrames
+  humanReadableName: "word-break: auto enabled"
+  humanReadableDescription: "Enables the auto value of the word-break CSS property"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 # FIXME: This is not relevent for WebKitLegacy, so should be excluded from WebKitLegacy entirely (though we should still set the default value to false when initializing settings).
 CacheAPIEnabled:
   type: bool
@@ -1759,6 +1774,20 @@ CookieEnabled:
     WebCore:
       default: true
 
+CookieStoreAPIEnabled:
+  type: bool
+  category: dom
+  status: testable
+  humanReadableName: "Cookie Store API"
+  humanReadableDescription: "Enable Cookie Store API"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 CoreMathMLEnabled:
   type: bool
   status: unstable
@@ -1935,11 +1964,11 @@ DataDetectorTypes:
   condition: ENABLE(DATA_DETECTION)
   defaultValue:
     WebKitLegacy:
-      default: DataDetectorType::None
+      default: static_cast<DataDetectorType>(0)
     WebKit:
-      default: DataDetectorType::None
+      default: static_cast<DataDetectorType>(0)
     WebCore:
-      default: DataDetectorType::None
+      default: static_cast<DataDetectorType>(0)
 
 # FIXME: This is on by default in WebKit2 (for everything but WatchOS). Perhaps we should consider turning it on for WebKitLegacy as well.
 DataListElementEnabled:
@@ -2361,6 +2390,16 @@ EnumeratingAllNetworkInterfacesEnabled:
     WebKit:
       default: false
 
+EnumeratingVisibleNetworkInterfacesEnabled:
+  type: bool
+  status: internal
+  humanReadableName: "Enable Enumerating Visible Network Interfaces"
+  webcoreBinding: none
+  exposed: [ WebKit ]
+  defaultValue:
+    WebKit:
+      default: false
+
 EventHandlerDrivenSmoothKeyboardScrollingEnabled:
   type: bool
   status: internal
@@ -2708,6 +2747,20 @@ FullscreenRequirementForScreenOrientationLockingEnabled:
       default: true
     WebCore:
       default: true
+
+FullscreenSceneDimmingEnabled:
+  type: bool
+  status: internal
+  humanReadableName: "Fullscreen scene dimming"
+  humanReadableDescription: "Enable scene dimming in Fullscreen"
+  condition: PLATFORM(VISION)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
 
 GStreamerEnabled:
   type: bool
@@ -3352,7 +3405,6 @@ InterruptVideoOnPageVisibilityChangeEnabled:
     WebCore:
       default: false
 
-# FIXME: This is on by default in WebKit2. Perhaps we should consider turning it on for WebKitLegacy as well.
 IntersectionObserverEnabled:
   type: bool
   status: mature
@@ -5624,6 +5676,20 @@ ScrollingPerformanceTestingEnabled:
     WebCore:
       default: false
 
+SearchInputIncrementalAttributeAndSearchEventEnabled:
+  type: bool
+  status: embedder
+  category: html
+  humanReadableName: "Search control incremental attribute and search event"
+  humanReadableDescription: "Enable search control incremental attribute and search event support"
+  defaultValue:
+    WebKitLegacy:
+      default: WebKit::defaultSearchInputIncrementalAttributeAndSearchEventEnabled()
+    WebKit:
+      default: WebKit::defaultSearchInputIncrementalAttributeAndSearchEventEnabled()
+    WebCore:
+      default: false
+
 SecureContextChecksEnabled:
   type: bool
   status: internal
@@ -7272,6 +7338,21 @@ WebCodecsEnabled:
       "USE(GSTREAMER)": true
       default: false
 
+WebCodecsHEVCEnabled:
+  type: bool
+  status: preview
+  category: media
+  humanReadableName: "WebCodecs HEVC codec"
+  humanReadableDescription: "Enable WebCodecs HEVC codec"
+  condition: ENABLE(WEB_CODECS)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 WebCryptoSafeCurvesEnabled:
   type: bool
   status: stable
@@ -7836,21 +7917,6 @@ WirelessPlaybackTargetAPIEnabled:
     WebCore:
       "PLATFORM(VISION)" : false
       default: true
-
-WordBoundaryDetectionEnabled:
-  type: bool
-  status: testable
-  category: css
-  webcoreOnChange: setNeedsRecalcStyleInAllFrames
-  humanReadableName: "word-boundary-detection enabled"
-  humanReadableDescription: "Enables the word-boundary-detection CSS property"
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: false
-    WebCore:
-      default: false
 
 ZoomOnDoubleTapWhenRoot:
   type: bool

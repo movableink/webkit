@@ -1070,14 +1070,14 @@ IPC::Connection::AsyncReplyID WebPageProxy::drawToPDFiOS(FrameIdentifier frameID
     return sendWithAsyncReply(Messages::WebPage::DrawToPDFiOS(frameID, printInfo, pageCount), WTFMove(completionHandler));
 }
 
-IPC::Connection::AsyncReplyID WebPageProxy::drawToImage(FrameIdentifier frameID, const PrintInfo& printInfo, size_t pageCount, CompletionHandler<void(WebKit::ShareableBitmap::Handle&&)>&& completionHandler)
+IPC::Connection::AsyncReplyID WebPageProxy::drawToImage(FrameIdentifier frameID, const PrintInfo& printInfo, CompletionHandler<void(WebKit::ShareableBitmap::Handle&&)>&& completionHandler)
 {
     if (!hasRunningProcess()) {
         completionHandler({ });
         return { };
     }
 
-    return sendWithAsyncReply(Messages::WebPage::DrawToImage(frameID, printInfo, pageCount), WTFMove(completionHandler));
+    return sendWithAsyncReply(Messages::WebPage::DrawToImage(frameID, printInfo), WTFMove(completionHandler));
 }
 
 void WebPageProxy::contentSizeCategoryDidChange(const String& contentSizeCategory)
@@ -1509,24 +1509,6 @@ WebContentMode WebPageProxy::effectiveContentModeAfterAdjustingPolicies(API::Web
     }
 
     return WebContentMode::Desktop;
-}
-
-bool WebPageProxy::shouldForceForegroundPriorityForClientNavigation() const
-{
-    // The client may request that we do client navigations at foreground priority, even if the
-    // view is not visible, as long as the application is foreground.
-    if (!configuration().clientNavigationsRunAtForegroundPriority())
-        return false;
-
-    // This setting only applies to background views. There is no need to force foreground
-    // priority for foreground views since they get foreground priority by virtue of being
-    // visible.
-    if (isViewVisible())
-        return false;
-
-    bool canTakeForegroundAssertions = pageClient().canTakeForegroundAssertions();
-    WEBPAGEPROXY_RELEASE_LOG(Process, "WebPageProxy::shouldForceForegroundPriorityForClientNavigation() returns %d based on PageClient::canTakeForegroundAssertions()", canTakeForegroundAssertions);
-    return canTakeForegroundAssertions;
 }
 
 void WebPageProxy::textInputContextsInRect(FloatRect rect, CompletionHandler<void(const Vector<ElementContext>&)>&& completionHandler)

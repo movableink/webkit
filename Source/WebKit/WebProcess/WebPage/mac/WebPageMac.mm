@@ -128,8 +128,6 @@ void WebPage::platformInitializeAccessibility()
 
     // Get the pid for the starting process.
     pid_t pid = WebCore::presentingApplicationPID();
-    // FIXME: WKAccessibilityWebPageObject doesn't respond to -accessibilitySetPresenterProcessIdentifier:.
-    // Either it needs to or this call should be removed.
     if ([mockAccessibilityElement respondsToSelector:@selector(accessibilitySetPresenterProcessIdentifier:)])
         [(id)mockAccessibilityElement.get() accessibilitySetPresenterProcessIdentifier:pid];
     [mockAccessibilityElement setWebPage:this];
@@ -138,7 +136,7 @@ void WebPage::platformInitializeAccessibility()
     accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
 
     // Close Mach connection to Launch Services.
-#if HAVE(HAVE_LS_SERVER_CONNECTION_STATUS_RELEASE_NOTIFICATIONS_MASK)
+#if HAVE(LS_SERVER_CONNECTION_STATUS_RELEASE_NOTIFICATIONS_MASK)
     _LSSetApplicationLaunchServicesServerConnectionStatus(kLSServerConnectionStatusDoNotConnectToServerMask | kLSServerConnectionStatusReleaseNotificationsMask, nullptr);
 #else
     _LSSetApplicationLaunchServicesServerConnectionStatus(kLSServerConnectionStatusDoNotConnectToServerMask, nullptr);

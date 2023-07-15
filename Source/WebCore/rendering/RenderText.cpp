@@ -1039,16 +1039,18 @@ TextBreakIterator::LineMode::Behavior mapLineBreakToIteratorMode(LineBreak lineB
     return TextBreakIterator::LineMode::Behavior::Default;
 }
 
-TextBreakIterator::ContentAnalysis mapWordBoundaryDetectionToContentAnalysis(const WordBoundaryDetection& wordBoundaryDetection)
+TextBreakIterator::ContentAnalysis mapWordBreakToContentAnalysis(WordBreak wordBreak)
 {
-    // FIXME: Explicit static_cast to work around issue on libstdc++-10. Undo when upgrading GCC from 10 to 11.
-    return WTF::switchOn(static_cast<WordBoundaryDetectionType>(wordBoundaryDetection), [](WordBoundaryDetectionNormal) {
+    switch (wordBreak) {
+    case WordBreak::Normal:
+    case WordBreak::BreakAll:
+    case WordBreak::KeepAll:
+    case WordBreak::BreakWord:
         return TextBreakIterator::ContentAnalysis::Mechanical;
-    }, [](WordBoundaryDetectionManual) {
-        return TextBreakIterator::ContentAnalysis::Mechanical;
-    }, [](const WordBoundaryDetectionAuto&) {
+    case WordBreak::Auto:
         return TextBreakIterator::ContentAnalysis::Linguistic;
-    });
+    }
+    return TextBreakIterator::ContentAnalysis::Mechanical;
 }
 
 void RenderText::computePreferredLogicalWidths(float leadWidth, bool forcedMinMaxWidthComputation)
@@ -1090,7 +1092,7 @@ float RenderText::maxWordFragmentWidth(const RenderStyle& style, const FontCasca
     // and one that measures the single last suffix.
 
     // FIXME: Breaking the string at these places in the middle of words doesn't work with complex text.
-    float minimumFragmentWidthToConsider = font.pixelSize() * 5 / 4 + hyphenWidth(*this, font);
+    float minimumFragmentWidthToConsider = font.size() * 5 / 4 + hyphenWidth(*this, font);
     float maxFragmentWidth = 0;
     for (size_t k = 0; k < hyphenLocations.size(); ++k) {
         int fragmentLength = hyphenLocations[k] - suffixStart;
@@ -1142,7 +1144,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
     auto& string = text();
     unsigned length = string.length();
     auto iteratorMode = mapLineBreakToIteratorMode(style.lineBreak());
-    auto contentAnalysis = mapWordBoundaryDetectionToContentAnalysis(style.wordBoundaryDetection());
+    auto contentAnalysis = mapWordBreakToContentAnalysis(style.wordBreak());
     CachedLineBreakIteratorFactory lineBreakIteratorFactory(string, style.computedLocale(), iteratorMode, contentAnalysis);
     bool needsWordSpacing = false;
     bool ignoringSpaces = false;

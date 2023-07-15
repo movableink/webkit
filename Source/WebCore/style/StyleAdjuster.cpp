@@ -187,9 +187,10 @@ static bool shouldInheritTextDecorationsInEffect(const RenderStyle& style, const
         return false;
 
     switch (style.display()) {
-    case DisplayType::Table:
     case DisplayType::InlineTable:
     case DisplayType::InlineBlock:
+    case DisplayType::InlineGrid:
+    case DisplayType::InlineFlex:
     case DisplayType::InlineBox:
         return false;
     default:
@@ -525,7 +526,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::DoesNotAddIntrinsicMarginsToFormControls)) {
         // Important: Intrinsic margins get added to controls before the theme has adjusted the style, since the theme will
         // alter fonts and heights/widths.
-        if (is<HTMLFormControlElement>(m_element) && style.computedFontPixelSize() >= 11) {
+        if (is<HTMLFormControlElement>(m_element) && style.computedFontSize() >= 11) {
             // Don't apply intrinsic margins to image buttons. The designer knows how big the images are,
             // so we have to treat all image buttons as though they were explicitly sized.
             if (!is<HTMLInputElement>(*m_element) || !downcast<HTMLInputElement>(*m_element).isImageButton())
@@ -609,7 +610,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     }
 
     if (style.contentVisibility() == ContentVisibility::Hidden)
-        style.setEffectiveSkipsContent(true);
+        style.setEffectiveSkippedContent(true);
 
     adjustForSiteSpecificQuirks(style);
 }

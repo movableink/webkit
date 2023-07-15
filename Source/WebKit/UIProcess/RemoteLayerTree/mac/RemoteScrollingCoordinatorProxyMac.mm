@@ -116,6 +116,12 @@ void RemoteScrollingCoordinatorProxyMac::hasNodeWithAnimatedScrollChanged(bool h
 #endif
 }
 
+void RemoteScrollingCoordinatorProxyMac::clearNodesWithUserScrollInProgress()
+{
+    m_uiState.clearNodesWithActiveUserScroll();
+    sendUIStateChangedIfNecessary();
+}
+
 void RemoteScrollingCoordinatorProxyMac::scrollingTreeNodeWillStartScroll(ScrollingNodeID nodeID)
 {
     m_uiState.addNodeWithActiveUserScroll(nodeID);
@@ -225,6 +231,13 @@ void RemoteScrollingCoordinatorProxyMac::windowScreenDidChange(PlatformDisplayID
 {
 #if ENABLE(SCROLLING_THREAD)
     m_wheelEventDispatcher->windowScreenDidChange(displayID, nominalFramesPerSecond);
+#endif
+}
+
+void RemoteScrollingCoordinatorProxyMac::windowScreenWillChange()
+{
+#if ENABLE(SCROLLING_THREAD)
+    m_wheelEventDispatcher->windowScreenWillChange();
 #endif
 }
 

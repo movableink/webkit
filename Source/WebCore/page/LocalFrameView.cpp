@@ -140,10 +140,6 @@
 #include "LegacyTileCache.h"
 #endif
 
-#if PLATFORM(MAC)
-#include "LocalDefaultSystemAppearance.h"
-#endif
-
 #include "DisplayView.h"
 #include "LayoutContext.h"
 
@@ -521,12 +517,12 @@ RefPtr<Element> LocalFrameView::rootElementForCustomScrollbarPartStyle() const
     // Try the <body> element first as a scrollbar source.
     auto* body = document->bodyOrFrameset();
     // scrollbar-width on root element should override custom scrollbars declared on body element, so check that here..
-    if (body && body->renderer() && body->renderer()->style().hasCustomScrollbarStyle() && scrollbarWidthStyle() == ScrollbarWidth::Auto)
+    if (body && body->renderer() && body->renderer()->style().usesLegacyScrollbarStyle() && scrollbarWidthStyle() == ScrollbarWidth::Auto)
         return body;
 
     // If the <body> didn't have a custom style, then the root element might.
     auto* docElement = document->documentElement();
-    if (docElement && docElement->renderer() && docElement->renderer()->style().hasCustomScrollbarStyle())
+    if (docElement && docElement->renderer() && docElement->renderer()->style().usesLegacyScrollbarStyle())
         return docElement;
 
     return nullptr;
@@ -540,7 +536,7 @@ Ref<Scrollbar> LocalFrameView::createScrollbar(ScrollbarOrientation orientation)
     // If we have an owning iframe/frame element, then it can set the custom scrollbar also.
     // FIXME: Seems bad to do this for cross-origin frames.
     RenderWidget* frameRenderer = m_frame->ownerRenderer();
-    if (frameRenderer && frameRenderer->style().hasCustomScrollbarStyle())
+    if (frameRenderer && frameRenderer->style().usesLegacyScrollbarStyle())
         return RenderScrollbar::createCustomScrollbar(*this, orientation, nullptr, m_frame.ptr());
 
     // Nobody set a custom style, so we just use a native scrollbar.
@@ -1534,15 +1530,15 @@ String LocalFrameView::debugDescription() const
 
 bool LocalFrameView::canShowNonOverlayScrollbars() const
 {
-    auto hasCustomScrollbarStyle = [&] {
+    auto usesLegacyScrollbarStyle = [&] {
         auto element = rootElementForCustomScrollbarPartStyle();
         if (!element || !is<RenderBox>(element->renderer()))
             return false;
 
-        return downcast<RenderBox>(*element->renderer()).style().hasCustomScrollbarStyle();
+        return downcast<RenderBox>(*element->renderer()).style().usesLegacyScrollbarStyle();
     }();
 
-    return canHaveScrollbars() && (hasCustomScrollbarStyle || !ScrollbarTheme::theme().usesOverlayScrollbars());
+    return canHaveScrollbars() && (usesLegacyScrollbarStyle || !ScrollbarTheme::theme().usesOverlayScrollbars());
 }
 
 bool LocalFrameView::styleHidesScrollbarWithOrientation(ScrollbarOrientation orientation) const
@@ -3914,6 +3910,7 @@ void LocalFrameView::scheduleResizeEventIfNeeded()
 
     auto* document = m_frame->document();
     if (document->quirks().shouldSilenceWindowResizeEvents()) {
+        document->addConsoleMessage(MessageSource::Other, MessageLevel::Info, "Window resize events silenced due to: http://webkit.org/b/258597"_s);
         FRAMEVIEW_RELEASE_LOG(Events, "scheduleResizeEventIfNeeded: Not firing resize events because they are temporarily disabled for this page");
         return;
     }
@@ -4516,10 +4513,19 @@ void LocalFrameView::updateScrollCorner()
     RenderElement* renderer = nullptr;
     std::unique_ptr<RenderStyle> cornerStyle;
     IntRect cornerRect = scrollCornerRect();
-    
-    if (!cornerRect.isEmpty()) {
+    Document* doc = m_frame->document();
+
+    auto usesStandardScrollbarStyle = [](auto& doc) {
+        if (!doc || !doc->documentElement())
+            return false;
+        if (!doc->documentElement()->renderer())
+            return false;
+
+        return doc->documentElement()->renderer()->style().usesStandardScrollbarStyle();
+    };
+
+    if (!(usesStandardScrollbarStyle(doc) || cornerRect.isEmpty())) {
         // Try the <body> element first as a scroll corner source.
-        Document* doc = m_frame->document();
         Element* body = doc ? doc->bodyOrFrameset() : nullptr;
         if (body && body->renderer()) {
             renderer = body->renderer();
@@ -4568,11 +4574,6 @@ void LocalFrameView::paintScrollCorner(GraphicsContext& context, const IntRect& 
         m_scrollCorner->paintIntoRect(context, cornerRect.location(), cornerRect);
         return;
     }
-
-#if PLATFORM(MAC)
-    // Keep this in sync with ScrollAnimatorMac's effectiveAppearanceForScrollerImp:.
-    LocalDefaultSystemAppearance localAppearance(useDarkAppearanceForScrollbars());
-#endif
 
     ScrollView::paintScrollCorner(context, cornerRect);
 }
@@ -6313,6 +6314,15 @@ OverscrollBehavior LocalFrameView::verticalOverscrollBehavior()  const
     if (scrollingObject && renderView())
         return scrollingObject->style().overscrollBehaviorY();
     return OverscrollBehavior::Auto;
+}
+
+ScrollbarGutter LocalFrameView::scrollbarGutterStyle()  const
+{
+    auto* document = m_frame->document();
+    auto scrollingObject = document && document->documentElement() ? document->documentElement()->renderer() : nullptr;
+    if (scrollingObject)
+        return scrollingObject->style().scrollbarGutter();
+    return { };
 }
 
 ScrollbarWidth LocalFrameView::scrollbarWidthStyle()  const

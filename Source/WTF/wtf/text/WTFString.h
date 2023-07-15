@@ -98,8 +98,8 @@ public:
 
     static String adopt(StringBuffer<LChar>&& buffer) { return StringImpl::adopt(WTFMove(buffer)); }
     static String adopt(StringBuffer<UChar>&& buffer) { return StringImpl::adopt(WTFMove(buffer)); }
-    template<typename CharacterType, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity>
-    static String adopt(Vector<CharacterType, inlineCapacity, OverflowHandler, minCapacity>&& vector) { return StringImpl::adopt(WTFMove(vector)); }
+    template<typename CharacterType, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+    static String adopt(Vector<CharacterType, inlineCapacity, OverflowHandler, minCapacity, Malloc>&& vector) { return StringImpl::adopt(WTFMove(vector)); }
 
     bool isNull() const { return !m_impl; }
     bool isEmpty() const { return !m_impl || m_impl->isEmpty(); }
@@ -249,12 +249,8 @@ public:
 #endif
 
 #if USE(FOUNDATION) && defined(__OBJC__)
-#if HAVE(SAFARI_FOR_WEBKIT_DEVELOPMENT_REQUIRING_EXTRA_SYMBOLS)
-    WTF_EXPORT_PRIVATE String(NSString *);
-#else
     String(NSString *string)
         : String((__bridge CFStringRef)string) { }
-#endif
 
     // This conversion converts the null string to an empty NSString rather than to nil.
     // Given Cocoa idioms, this is a more useful default. Clients that need to preserve the

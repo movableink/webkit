@@ -150,6 +150,7 @@ private:
     void updateGPUProcessPreferences(GPUProcessPreferences&&);
     void createGPUConnectionToWebProcess(WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, GPUProcessConnectionParameters&&, CompletionHandler<void()>&&);
     void updateWebGPUEnabled(WebCore::ProcessIdentifier, bool webGPUEnabled);
+    void updateDOMRenderingEnabled(WebCore::ProcessIdentifier, bool isDOMRenderingEnabled);
     void addSession(PAL::SessionID, GPUProcessSessionParameters&&);
     void removeSession(PAL::SessionID);
     void updateSandboxAccess(const Vector<SandboxExtension::Handle>&);
@@ -177,6 +178,10 @@ private:
 #if PLATFORM(MAC)
     void displayConfigurationChanged(CGDirectDisplayID, CGDisplayChangeSummaryFlags);
     void setScreenProperties(const WebCore::ScreenProperties&);
+    void updateProcessName();
+#endif
+#if PLATFORM(COCOA)
+    void platformInitializeGPUProcess(GPUProcessCreationParameters&);
 #endif
 
 #if USE(OS_STATE)
@@ -232,6 +237,9 @@ private:
     WebCore::Timer m_idleExitTimer;
     std::unique_ptr<WebCore::NowPlayingManager> m_nowPlayingManager;
     String m_applicationVisibleName;
+#if PLATFORM(MAC)
+    String m_uiProcessName;
+#endif
 #if ENABLE(GPU_PROCESS) && USE(AUDIO_SESSION)
     mutable std::unique_ptr<RemoteAudioSessionProxyManager> m_audioSessionManager;
 #endif

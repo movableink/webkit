@@ -179,7 +179,7 @@
 #include <WebCore/DisplayRefreshMonitorManager.h>
 #endif
 
-#if PLATFORM(IOS_FAMILY)
+#if USE(RUNNINGBOARD)
 #include "WebSQLiteDatabaseTracker.h"
 #endif
 
@@ -303,7 +303,7 @@ WebProcess::WebProcess()
 #if ENABLE(NON_VISIBLE_WEBPROCESS_MEMORY_CLEANUP_TIMER)
     , m_nonVisibleProcessMemoryCleanupTimer(*this, &WebProcess::nonVisibleProcessMemoryCleanupTimerFired)
 #endif
-#if PLATFORM(IOS_FAMILY)
+#if USE(RUNNINGBOARD)
     , m_webSQLiteDatabaseTracker([this](bool isHoldingLockedFiles) { parentProcessConnection()->send(Messages::WebProcessProxy::SetIsHoldingLockedFiles(isHoldingLockedFiles), 0); })
 #endif
 {
@@ -1330,14 +1330,14 @@ GPUProcessConnection& WebProcess::ensureGPUProcessConnection()
     // If we've lost our connection to the GPU process (e.g. it crashed) try to re-establish it.
     if (!m_gpuProcessConnection) {
         m_gpuProcessConnection = GPUProcessConnection::create(*parentProcessConnection());
-
+        if (!m_gpuProcessConnection)
+            CRASH();
         for (auto& page : m_pageMap.values()) {
             // If page is null, then it is currently being constructed.
             if (page)
                 page->gpuProcessConnectionDidBecomeAvailable(*m_gpuProcessConnection);
         }
     }
-    
     return *m_gpuProcessConnection;
 }
 
@@ -1623,9 +1623,12 @@ void WebProcess::prepareToSuspend(bool isSuspensionImminent, MonotonicTime estim
     destroyRenderingResources();
 #endif
 
-#if PLATFORM(IOS_FAMILY)
+#if USE(RUNNINGBOARD)
     m_webSQLiteDatabaseTracker.setIsSuspended(true);
     SQLiteDatabase::setIsDatabaseOpeningForbidden(true);
+#endif
+
+#if PLATFORM(IOS_FAMILY)
     IPC::AccessibilityProcessSuspendedNotification(true);
     updateFreezerStatus();
 #endif
@@ -1685,9 +1688,12 @@ void WebProcess::processDidResume()
     cancelMarkAllLayersVolatile();
     unfreezeAllLayerTrees();
     
-#if PLATFORM(IOS_FAMILY)
+#if USE(RUNNINGBOARD)
     m_webSQLiteDatabaseTracker.setIsSuspended(false);
     SQLiteDatabase::setIsDatabaseOpeningForbidden(false);
+#endif
+
+#if PLATFORM(IOS_FAMILY)
     IPC::AccessibilityProcessSuspendedNotification(false);
 #endif
 
@@ -2353,9 +2359,7 @@ void WebProcess::addAllowedFirstPartyForCookies(WebCore::RegistrableDomain&& fir
 
 bool WebProcess::allowsFirstPartyForCookies(const URL& firstParty)
 {
-    return AuxiliaryProcess::allowsFirstPartyForCookies(firstParty, [&] {
-        return AuxiliaryProcess::allowsFirstPartyForCookies(WebCore::RegistrableDomain { firstParty }, m_allowedFirstPartiesForCookies);
-    });
+    return AuxiliaryProcess::allowsFirstPartyForCookies(WebCore::RegistrableDomain { firstParty }, m_allowedFirstPartiesForCookies);
 }
 
 } // namespace WebKit

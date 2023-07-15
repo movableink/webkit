@@ -943,7 +943,7 @@ struct WebCore::NotificationData {
     WebCore::NotificationDirection direction;
     String originString;
     URL serviceWorkerRegistrationURL;
-    UUID notificationID;
+    WTF::UUID notificationID;
     WebCore::ScriptExecutionContextIdentifier contextIdentifier;
     PAL::SessionID sourceSession;
     MonotonicTime creationTime;
@@ -1202,6 +1202,8 @@ enum class WebCore::RenderingPurpose : uint8_t {
     ShareableLocalSnapshot,
     MediaPainting,
 };
+
+enum class WebCore::RotationDirection : bool
 
 #if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
 [LegacyPopulateFromEmptyConstructor] class WebCore::MockContentFilterSettings {
@@ -1978,6 +1980,13 @@ header: <WebCore/ScrollTypes.h>
     ReplacedByCustomScrollbar
 };
 
+header: <WebCore/ScrollTypes.h>
+[CustomHeader] enum class WebCore::ScrollbarWidth : uint8_t {
+    Auto,
+    Thin,
+    None
+};
+
 header: <WebCore/ScrollingCoordinatorTypes.h>
 [CustomHeader] struct WebCore::ScrollableAreaParameters {
     WebCore::ScrollElasticity horizontalScrollElasticity;
@@ -1991,6 +2000,7 @@ header: <WebCore/ScrollingCoordinatorTypes.h>
     WebCore::NativeScrollbarVisibility horizontalNativeScrollbarVisibility;
     WebCore::NativeScrollbarVisibility verticalNativeScrollbarVisibility;
     bool useDarkAppearanceForScrollbars;
+    WebCore::ScrollbarWidth scrollbarWidthStyle;
 };
 
 header: <WebCore/ScrollingCoordinatorTypes.h>
@@ -2543,8 +2553,8 @@ struct WebCore::FetchOptions {
     WebCore::ReferrerPolicy referrerPolicy;
     bool keepAlive;
     String integrity;
-    Markable<UUID> clientIdentifier;
-    Markable<UUID> resultingClientIdentifier;
+    Markable<WTF::UUID> clientIdentifier;
+    Markable<WTF::UUID> resultingClientIdentifier;
 }
 
 enum class WebCore::FetchHeadersGuard : uint8_t {
@@ -2578,7 +2588,7 @@ enum class WebCore::FetchHeadersGuard : uint8_t {
 
 [AdditionalEncoder=StreamConnectionEncoder] struct WebCore::ControlStyle {
     OptionSet<WebCore::ControlStyle::State> states;
-    unsigned fontSize;
+    float fontSize;
     float zoomFactor;
     WebCore::Color accentColor;
     WebCore::Color textColor;
@@ -2825,6 +2835,30 @@ header: <WebCore/FEComponentTransfer.h>
     int numOctaves();
     float seed();
     bool stitchTiles();
+};
+
+[Nested, OptionSet] enum class WebCore::FilterEffectGeometry::Flags : uint8_t {
+    HasX,
+    HasY,
+    HasWidth,
+    HasHeight
+};
+
+[AdditionalEncoder=StreamConnectionEncoder] class WebCore::FilterEffectGeometry {
+    WebCore::FloatRect m_boundaries;
+    OptionSet<WebCore::FilterEffectGeometry::Flags> m_flags;
+};
+
+header: <WebCore/SVGFilterExpression.h>
+[CustomHeader, AdditionalEncoder=StreamConnectionEncoder] struct WebCore::SVGFilterExpressionTerm {
+    unsigned index;
+    unsigned level;
+    std::optional<WebCore::FilterEffectGeometry> geometry;
+};
+
+[AdditionalEncoder=StreamConnectionEncoder] class WebCore::SVGPreserveAspectRatioValue {
+    WebCore::SVGPreserveAspectRatioValue::SVGPreserveAspectRatioType m_align;
+    WebCore::SVGPreserveAspectRatioValue::SVGMeetOrSliceType m_meetOrSlice;
 };
 
 enum class WebCore::HasInsecureContent : bool
@@ -3577,23 +3611,6 @@ struct WebCore::ImageBufferBackendParameters {
 
 enum class WebCore::PreserveResolution : bool;
 
-[AdditionalEncoder=StreamConnectionEncoder] enum class WebCore::PathElementType : uint8_t {
-    MoveToPoint,
-    AddLineToPoint,
-    AddQuadCurveToPoint,
-    AddCurveToPoint,
-    CloseSubpath
-};
-
-[AdditionalEncoder=StreamConnectionEncoder] enum class WebCore::EncodedPathElementType : uint8_t {
-    MoveToPoint,
-    AddLineToPoint,
-    AddQuadCurveToPoint,
-    AddCurveToPoint,
-    CloseSubpath,
-    EndOfPath
-};
-
 class WebCore::ProcessIdentity {
 #if HAVE(TASK_IDENTITY_TOKEN)
     MachSendRight m_taskIdToken;
@@ -4331,6 +4348,12 @@ class WebCore::RealtimeMediaSourceCapabilities {
     WebCore::RealtimeMediaSourceSupportedConstraints supportedConstraints();
 };
 
+header: <WebCore/MockMediaDevice.h>
+[Nested, OptionSet] enum class WebCore::MockMediaDevice::Flag : uint8_t {
+    Ephemeral
+    Invalid
+};
+
 #endif
 
 enum class WebCore::PlatformVideoColorPrimaries : uint8_t {
@@ -4429,18 +4452,6 @@ struct WebCore::RTCDataChannelIdentifier {
 };
 
 #endif // ENABLE(WEB_RTC)
-
-header: <WebCore/SVGFilterExpression.h>
-[CustomHeader, AdditionalEncoder=StreamConnectionEncoder] struct WebCore::SVGFilterExpressionTerm {
-    unsigned index;
-    unsigned level;
-    std::optional<WebCore::FilterEffectGeometry> geometry;
-};
-
-[AdditionalEncoder=StreamConnectionEncoder] class WebCore::SVGPreserveAspectRatioValue {
-    WebCore::SVGPreserveAspectRatioValue::SVGPreserveAspectRatioType m_align;
-    WebCore::SVGPreserveAspectRatioValue::SVGMeetOrSliceType m_meetOrSlice;
-};
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
@@ -4852,18 +4863,6 @@ class WebCore::Region {
     std::unique_ptr<WebCore::Region::Shape> copyShape();
 }
 
-[Nested, OptionSet] enum class WebCore::FilterEffectGeometry::Flags : uint8_t {
-    HasX,
-    HasY,
-    HasWidth,
-    HasHeight
-};
-
-[AdditionalEncoder=StreamConnectionEncoder] class WebCore::FilterEffectGeometry {
-    WebCore::FloatRect m_boundaries;
-    OptionSet<WebCore::FilterEffectGeometry::Flags> m_flags;
-};
-
 header: <WebCore/ISOVTTCue.h>
 [CustomHeader] class WebCore::ISOWebVTTCue {
     MediaTime presentationTime();
@@ -5068,7 +5067,7 @@ header: <WebCore/AcceleratedEffect.h>
 header: <WebCore/CaretAnimator.h>
 [CustomHeader] enum class WebCore::CaretAnimatorType : uint8_t {
     Default,
-    Alternate,
+    Dictation,
 };
 #endif
 
@@ -5191,4 +5190,121 @@ header: <WebCore/RenderTreeAsText.h>
     PrintingMode,
     DontUpdateLayout,
     ShowLayoutState
+};
+
+header: <WebCore/WebGPUTextureFormat.h>
+enum class WebCore::WebGPU::TextureFormat : uint8_t {
+    R8unorm,
+    R8snorm,
+    R8uint,
+    R8sint,
+    R16uint,
+    R16sint,
+    R16float,
+    Rg8unorm,
+    Rg8snorm,
+    Rg8uint,
+    Rg8sint,
+    R32uint,
+    R32sint,
+    R32float,
+    Rg16uint,
+    Rg16sint,
+    Rg16float,
+    Rgba8unorm,
+    Rgba8unormSRGB,
+    Rgba8snorm,
+    Rgba8uint,
+    Rgba8sint,
+    Bgra8unorm,
+    Bgra8unormSRGB,
+    Rgb9e5ufloat,
+    Rgb10a2unorm,
+    Rg11b10ufloat,
+    Rg32uint,
+    Rg32sint,
+    Rg32float,
+    Rgba16uint,
+    Rgba16sint,
+    Rgba16float,
+    Rgba32uint,
+    Rgba32sint,
+    Rgba32float,
+    Stencil8,
+    Depth16unorm,
+    Depth24plus,
+    Depth24plusStencil8,
+    Depth32float,
+    Depth32floatStencil8,
+    Bc1RgbaUnorm,
+    Bc1RgbaUnormSRGB,
+    Bc2RgbaUnorm,
+    Bc2RgbaUnormSRGB,
+    Bc3RgbaUnorm,
+    Bc3RgbaUnormSRGB,
+    Bc4RUnorm,
+    Bc4RSnorm,
+    Bc5RgUnorm,
+    Bc5RgSnorm,
+    Bc6hRgbUfloat,
+    Bc6hRgbFloat,
+    Bc7RgbaUnorm,
+    Bc7RgbaUnormSRGB,
+    Etc2Rgb8unorm,
+    Etc2Rgb8unormSRGB,
+    Etc2Rgb8a1unorm,
+    Etc2Rgb8a1unormSRGB,
+    Etc2Rgba8unorm,
+    Etc2Rgba8unormSRGB,
+    EacR11unorm,
+    EacR11snorm,
+    EacRg11unorm,
+    EacRg11snorm,
+    Astc4x4Unorm,
+    Astc4x4UnormSRGB,
+    Astc5x4Unorm,
+    Astc5x4UnormSRGB,
+    Astc5x5Unorm,
+    Astc5x5UnormSRGB,
+    Astc6x5Unorm,
+    Astc6x5UnormSRGB,
+    Astc6x6Unorm,
+    Astc6x6UnormSRGB,
+    Astc8x5Unorm,
+    Astc8x5UnormSRGB,
+    Astc8x6Unorm,
+    Astc8x6UnormSRGB,
+    Astc8x8Unorm,
+    Astc8x8UnormSRGB,
+    Astc10x5Unorm,
+    Astc10x5UnormSRGB,
+    Astc10x6Unorm,
+    Astc10x6UnormSRGB,
+    Astc10x8Unorm,
+    Astc10x8UnormSRGB,
+    Astc10x10Unorm,
+    Astc10x10UnormSRGB,
+    Astc12x10Unorm,
+    Astc12x10UnormSRGB,
+    Astc12x12Unorm,
+    Astc12x12UnormSRGB,
+};
+
+header: <WebCore/WebGPUTextureAspect.h>
+enum class WebCore::WebGPU::TextureAspect : uint8_t {
+    All,
+    StencilOnly,
+    DepthOnly,
+};
+
+enum class WebCore::WebGPU::PowerPreference : bool
+
+header: <WebCore/WebGPUPredefinedColorSpace.h>
+enum class WebCore::WebGPU::PredefinedColorSpace : uint8_t {
+    SRGB
+};
+
+struct WebCore::CookieStoreGetOptions {
+    String name;
+    String url;
 };

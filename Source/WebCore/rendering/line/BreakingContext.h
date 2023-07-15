@@ -588,7 +588,7 @@ inline void tryHyphenating(RenderText& text, const FontCascade& font, const Atom
     float hyphenWidth = measureHyphenWidth(text, font);
 
     float maxPrefixWidth = availableWidth - xPos - hyphenWidth - lastSpaceWordSpacing;
-    if (!enoughWidthForHyphenation(maxPrefixWidth, font.pixelSize()))
+    if (!enoughWidthForHyphenation(maxPrefixWidth, font.size()))
         return;
 
     const RenderStyle& style = text.style();
@@ -701,7 +701,7 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
     bool keepAllWords = style.wordBreak() == WordBreak::KeepAll;
     float hyphenWidth = 0;
     auto iteratorMode = mapLineBreakToIteratorMode(m_blockStyle.lineBreak());
-    auto contentAnalysis = mapWordBoundaryDetectionToContentAnalysis(m_blockStyle.wordBoundaryDetection());
+    auto contentAnalysis = mapWordBreakToContentAnalysis(m_blockStyle.wordBreak());
     bool canUseLineBreakShortcut = iteratorMode == TextBreakIterator::LineMode::Behavior::Default;
     bool isLineEmpty = m_lineInfo.isEmpty();
 

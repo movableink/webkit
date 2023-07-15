@@ -102,7 +102,7 @@
 #include <WebCore/TextRecognitionOptions.h>
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
-#import <pal/graphics/WebGPU/Impl/WebGPUCreateImpl.h>
+#import <WebCore/WebGPUCreateImpl.h>
 #endif
 
 #if HAVE(SHAPE_DETECTION_API_IMPLEMENTATION)
@@ -325,6 +325,7 @@ Page* WebChromeClient::createWindow(LocalFrame& frame, const WindowFeatures& win
         0, /* effectiveSandboxFlags */
         navigationAction.privateClickMeasurement(),
         { }, /* advancedPrivacyProtections */
+        { }, /* originatorAdvancedPrivacyProtections */
 #if PLATFORM(MAC) || HAVE(UIKIT_WITH_MOUSE_SUPPORT)
         std::nullopt, /* webHitTestResultData */
 #endif
@@ -968,12 +969,12 @@ RefPtr<GraphicsContextGL> WebChromeClient::createGraphicsContextGL(const Graphic
 }
 #endif
 
-RefPtr<PAL::WebGPU::GPU> WebChromeClient::createGPUForWebGPU() const
+RefPtr<WebCore::WebGPU::GPU> WebChromeClient::createGPUForWebGPU() const
 {
 #if ENABLE(GPU_PROCESS)
     return RemoteGPUProxy::create(WebProcess::singleton().ensureGPUProcessConnection(), WebGPU::DowncastConvertToBackingContext::create(), WebGPUIdentifier::generate(), m_page.ensureRemoteRenderingBackendProxy().ensureBackendCreated());
 #elif HAVE(WEBGPU_IMPLEMENTATION)
-    return PAL::WebGPU::create([](PAL::WebGPU::WorkItem&& workItem) {
+    return WebCore::WebGPU::create([](WebCore::WebGPU::WorkItem&& workItem) {
         callOnMainRunLoop(WTFMove(workItem));
     });
 #else
@@ -1689,9 +1690,9 @@ void WebChromeClient::abortApplePayAMSUISession()
 #endif // ENABLE(APPLE_PAY_AMS_UI)
 
 #if USE(SYSTEM_PREVIEW)
-void WebChromeClient::handleSystemPreview(const URL& url, const SystemPreviewInfo& systemPreviewInfo)
+void WebChromeClient::beginSystemPreview(const URL& url, const SystemPreviewInfo& systemPreviewInfo, CompletionHandler<void()>&& completionHandler)
 {
-    m_page.send(Messages::WebPageProxy::HandleSystemPreview(WTFMove(url), WTFMove(systemPreviewInfo)));
+    m_page.sendWithAsyncReply(Messages::WebPageProxy::BeginSystemPreview(WTFMove(url), WTFMove(systemPreviewInfo)), WTFMove(completionHandler));
 }
 #endif
 

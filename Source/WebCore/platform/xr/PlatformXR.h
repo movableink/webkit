@@ -293,6 +293,9 @@ public:
 #if USE(IOSURFACE_FOR_XR_LAYER_DATA)
             std::unique_ptr<WebCore::IOSurface> surface;
             bool isShared { false };
+#elif USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+            std::tuple<MachSendRight, bool> colorTexture = { { }, false };
+            std::tuple<MachSendRight, bool> depthStencilBuffer = { { }, false };
 #else
             PlatformGLObject opaqueTexture { 0 };
 #endif
@@ -581,6 +584,9 @@ void Device::FrameData::LayerData::encode(Encoder& encoder) const
     MachSendRight surfaceSendRight = surface ? surface->createSendRight() : MachSendRight();
     encoder << surfaceSendRight;
     encoder << isShared;
+#elif USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+    encoder << colorTexture;
+    encoder << depthStencilBuffer;
 #else
     encoder << opaqueTexture;
 #endif
@@ -599,6 +605,11 @@ std::optional<Device::FrameData::LayerData> Device::FrameData::LayerData::decode
         return std::nullopt;
     layerData.surface = WebCore::IOSurface::createFromSendRight(WTFMove(surfaceSendRight));
     if (!decoder.decode(layerData.isShared))
+        return std::nullopt;
+#elif USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+    if (!decoder.decode(layerData.colorTexture))
+        return std::nullopt;
+    if (!decoder.decode(layerData.depthStencilBuffer))
         return std::nullopt;
 #else
     if (!decoder.decode(layerData.opaqueTexture))

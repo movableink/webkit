@@ -641,6 +641,8 @@ void MediaPlayer::loadWithNextMediaEngine(const MediaPlayerFactory* current)
                 m_private->setVisibleInViewport(m_visibleInViewport);
             if (m_isGatheringVideoFrameMetadata)
                 m_private->startVideoFrameMetadataGathering();
+            if (m_processIdentity)
+                m_private->setResourceOwner(m_processIdentity);
             m_private->prepareForPlayback(m_privateBrowsing, m_preload, m_preservesPitch, m_shouldPrepareToRender);
         }
     }
@@ -1113,6 +1115,12 @@ void MediaPlayer::setVisibleInViewport(bool visible)
 
     m_visibleInViewport = visible;
     m_private->setVisibleInViewport(visible);
+}
+
+void MediaPlayer::setResourceOwner(const ProcessIdentity& processIdentity)
+{
+    m_processIdentity = processIdentity;
+    m_private->setResourceOwner(processIdentity);
 }
 
 MediaPlayer::Preload MediaPlayer::preload() const

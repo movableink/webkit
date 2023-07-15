@@ -1110,8 +1110,10 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
 
     // See if we can use an existing resource from the cache.
     CachedResourceHandle<CachedResource> resource;
-    if (auto* document = this->document())
+    if (auto* document = this->document()) {
         request.setDomainForCachePartition(*document);
+        request.resourceRequest().setFirstPartyForCookies(document->firstPartyForCookies());
+    }
 
     if (request.allowsCaching())
         resource = memoryCache.resourceForRequest(request.resourceRequest(), page.sessionID());
@@ -1493,6 +1495,11 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
         logMemoryCacheResourceRequest(frame(), DiagnosticLoggingKeys::inMemoryCacheKey(), DiagnosticLoggingKeys::unusedReasonMustRevalidateNoValidatorKey());
         return Reload;
     }
+
+    // FIXME: We should be able to USE the data here, but cannot currently due to a bug
+    // concerning redirect and URL fragments. https://bugs.webkit.org/show_bug.cgi?id=258934
+    if (cachedResourceRequest.hasFragmentIdentifier() && existingResource->hasRedirections())
+        return Load;
 
     return Use;
 }

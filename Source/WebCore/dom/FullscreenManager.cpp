@@ -297,6 +297,9 @@ void FullscreenManager::cancelFullscreen()
     m_pendingExitFullscreen = true;
 
     m_document.eventLoop().queueTask(TaskSource::MediaElement, [this, weakThis = WeakPtr { *this }, topDocument = WTFMove(topDocument), identifier = LOGIDENTIFIER] {
+#if RELEASE_LOG_DISABLED
+        UNUSED_PARAM(this);
+#endif
         if (!weakThis)
             return;
 
@@ -691,7 +694,7 @@ void FullscreenManager::setAnimatingFullscreen(bool flag)
 
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
     if (m_fullscreenElement)
-        emplace(styleInvalidation, *m_fullscreenElement, { { CSSSelector::PseudoClassAnimatingFullScreenTransition, flag } });
+        emplace(styleInvalidation, *m_fullscreenElement, { { CSSSelector::PseudoClassType::AnimatingFullScreenTransition, flag } });
     m_isAnimatingFullscreen = flag;
 }
 
@@ -709,7 +712,7 @@ void FullscreenManager::setFullscreenControlsHidden(bool flag)
 
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
     if (m_fullscreenElement)
-        emplace(styleInvalidation, *m_fullscreenElement, { { CSSSelector::PseudoClassFullScreenControlsHidden, flag } });
+        emplace(styleInvalidation, *m_fullscreenElement, { { CSSSelector::PseudoClassType::FullScreenControlsHidden, flag } });
     m_areFullscreenControlsHidden = flag;
 }
 

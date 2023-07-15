@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Google Inc. All rights reserved.
  * Copyright (C) 2005 Alexey Proskuryakov.
  *
@@ -480,7 +480,7 @@ void TextIterator::advance()
             if (!isRendererVisible(renderer, m_behaviors)) {
                 m_handledNode = true;
                 m_handledChildren = !hasDisplayContents(*m_node) && !renderer;
-            } else if (is<Element>(m_node) && renderer->shouldSkipContent()) {
+            } else if (is<Element>(m_node) && renderer->isSkippedContentRoot()) {
                 m_handledChildren = true;
             } else {
                 // handle current node according to its type
@@ -942,8 +942,8 @@ static bool shouldEmitExtraNewlineForNode(Node& node)
     if (!renderBox.height())
         return false;
 
-    int bottomMargin = renderBox.collapsedMarginAfter();
-    int fontSize = renderBox.style().fontDescription().computedPixelSize();
+    auto bottomMargin = renderBox.collapsedMarginAfter();
+    auto fontSize = renderBox.style().fontDescription().computedSize();
     return bottomMargin * 2 >= fontSize;
 }
 

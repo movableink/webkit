@@ -887,6 +887,7 @@ public:
 
     // Table cell support.
     virtual bool isTableCell() const = 0;
+    virtual bool isExposedTableCell() const = 0;
     // Returns the start location and row span of the cell.
     virtual std::pair<unsigned, unsigned> rowIndexRange() const = 0;
     // Returns the start location and column span of the cell.
@@ -1934,8 +1935,10 @@ void enumerateDescendants(T& object, bool includeSelf, const F& lambda)
     if (includeSelf)
         lambda(object);
 
-    for (const auto& child : object.children())
-        enumerateDescendants(*child, true, lambda);
+    for (const auto& child : object.children()) {
+        if (child)
+            enumerateDescendants(*child, true, lambda);
+    }
 }
 
 template<typename U> inline void performFunctionOnMainThreadAndWait(U&& lambda)

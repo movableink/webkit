@@ -912,7 +912,7 @@ void HTMLElement::dirAttributeChanged(const AtomString& value)
 
 void HTMLElement::updateEffectiveDirectionality(std::optional<TextDirection> direction)
 {
-    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassDir, Style::PseudoClassChangeInvalidation::AnyValue);
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassType::Dir, Style::PseudoClassChangeInvalidation::AnyValue);
     auto effectiveDirection = direction.value_or(TextDirection::LTR);
     setUsesEffectiveTextDirection(!!direction);
     if (direction)
@@ -931,7 +931,7 @@ void HTMLElement::updateEffectiveDirectionality(std::optional<TextDirection> dir
             continue;
         }
         updateEffectiveTextDirectionOfShadowRoot(element);
-        Style::PseudoClassChangeInvalidation styleInvalidation(element, CSSSelector::PseudoClassDir, Style::PseudoClassChangeInvalidation::AnyValue);
+        Style::PseudoClassChangeInvalidation styleInvalidation(element, CSSSelector::PseudoClassType::Dir, Style::PseudoClassChangeInvalidation::AnyValue);
         element.setUsesEffectiveTextDirection(!!direction);
         if (direction)
             element.setEffectiveTextDirection(effectiveDirection);
@@ -958,6 +958,11 @@ void HTMLElement::updateEffectiveDirectionalityOfDirAuto()
     updateEffectiveDirectionality(result.direction);
     if (renderer() && renderer()->style().direction() != result.direction)
         invalidateStyleForSubtree();
+}
+
+void HTMLElement::updateTextDirectionalityAfterTelephoneInputTypeChange()
+{
+    dirAttributeChanged(attributeWithoutSynchronization(dirAttr));
 }
 
 void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type changeType)
@@ -1344,14 +1349,14 @@ void HTMLElement::queuePopoverToggleEventTask(PopoverVisibilityState oldState, P
 
 ExceptionOr<void> HTMLElement::showPopover(const HTMLFormControlElement* invoker)
 {
-    if (popoverData())
-        popoverData()->setInvoker(invoker);
-
     auto check = checkPopoverValidity(*this, PopoverVisibilityState::Hidden);
     if (check.hasException())
         return check.releaseException();
     if (!check.returnValue())
         return { };
+
+    if (popoverData())
+        popoverData()->setInvoker(invoker);
 
     ASSERT(!isInTopLayer());
 
@@ -1397,7 +1402,7 @@ ExceptionOr<void> HTMLElement::showPopover(const HTMLFormControlElement* invoker
 
     popoverData()->setPreviouslyFocusedElement(nullptr);
 
-    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassPopoverOpen, true);
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassType::PopoverOpen, true);
     popoverData()->setVisibilityState(PopoverVisibilityState::Showing);
 
     runPopoverFocusingSteps(*this);
@@ -1451,7 +1456,7 @@ ExceptionOr<void> HTMLElement::hidePopoverInternal(FocusPreviousElement focusPre
 
     removeFromTopLayer();
 
-    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassPopoverOpen, false);
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassType::PopoverOpen, false);
     popoverData()->setVisibilityState(PopoverVisibilityState::Hidden);
 
     if (fireEvents == FireEvents::Yes)
@@ -1484,6 +1489,10 @@ ExceptionOr<bool> HTMLElement::togglePopover(std::optional<bool> force)
         auto returnValue = showPopover();
         if (returnValue.hasException())
             return returnValue.releaseException();
+    } else {
+        auto check = checkPopoverValidity(*this, popoverData() ? popoverData()->visibilityState() : PopoverVisibilityState::Showing);
+        if (check.hasException())
+            return check.releaseException();
     }
     return isPopoverShowing();
 }
@@ -1506,7 +1515,7 @@ void HTMLElement::popoverAttributeChanged(const AtomString& value)
     if (newPopoverState == oldPopoverState)
         return;
 
-    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassPopoverOpen, false);
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassType::PopoverOpen, false);
 
     if (isPopoverShowing()) {
         hidePopoverInternal(FocusPreviousElement::Yes, FireEvents::Yes);

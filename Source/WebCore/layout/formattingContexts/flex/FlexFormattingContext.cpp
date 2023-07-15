@@ -50,80 +50,27 @@ FlexFormattingContext::FlexFormattingContext(const ElementBox& formattingContext
 {
 }
 
-void FlexFormattingContext::layoutInFlowContent(const ConstraintsForInFlowContent& constraints)
+void FlexFormattingContext::layout(const ConstraintsForFlexContent& constraints)
 {
-    computeIntrinsicWidthConstraintsForFlexItems();
-    sizeAndPlaceFlexItems(downcast<ConstraintsForFlexContent>(constraints));
-}
+    auto logicalFlexItems = convertFlexItemsToLogicalSpace(constraints);
+    auto flexLayout = FlexLayout { *this };
 
-LayoutUnit FlexFormattingContext::usedContentHeight() const
-{
-    auto contentTop = LayoutUnit::max();
-    auto contentBottom = LayoutUnit::min();
-    for (auto& flexItem : childrenOfType<Box>(root())) {
-        auto marginBox = Layout::BoxGeometry::marginBoxRect(geometryForBox(flexItem));
-        contentTop = std::min(contentTop, marginBox.top());
-        contentBottom = std::max(contentBottom, marginBox.bottom());
-    }
-    return std::max(0_lu, contentBottom - contentTop);
+    auto logicalFlexConstraints = [&] {
+        auto flexDirection = root().style().flexDirection();
+        auto flexDirectionIsInlineAxis = flexDirection == FlexDirection::Row || flexDirection == FlexDirection::RowReverse;
+        auto logicalVerticalSpace = flexDirectionIsInlineAxis ? constraints.availableVerticalSpace() : std::make_optional(constraints.horizontal().logicalWidth);
+        auto logicalHorizontalSpace = flexDirectionIsInlineAxis ? std::make_optional(constraints.horizontal().logicalWidth) : constraints.availableVerticalSpace();
+
+        return FlexLayout::LogicalConstraints { { logicalHorizontalSpace, { }, { }, { }, { }, { } }, { logicalVerticalSpace, { }, { }, { }, { }, { } } };
+    };
+
+    auto flexItemRects = flexLayout.layout(logicalFlexConstraints(), logicalFlexItems);
+    setFlexItemsGeometry(logicalFlexItems, flexItemRects, constraints);
 }
 
 IntrinsicWidthConstraints FlexFormattingContext::computedIntrinsicWidthConstraints()
 {
     return { };
-}
-
-void FlexFormattingContext::sizeAndPlaceFlexItems(const ConstraintsForFlexContent& constraints)
-{
-    auto& formattingState = this->formattingState();
-    auto& formattingGeometry = this->formattingGeometry();
-    auto flexItemMainAxisStart = constraints.horizontal().logicalLeft;
-    auto flexItemMainAxisEnd = flexItemMainAxisStart;
-    auto flexItemCrosAxisStart = constraints.logicalTop();
-    auto flexItemCrosAxisEnd = flexItemCrosAxisStart;
-    for (auto& flexItem : childrenOfType<ElementBox>(root())) {
-        ASSERT(flexItem.establishesFormattingContext());
-        // FIXME: This is just a simple, let's layout the flex items and place them next to each other setup.
-        auto intrinsicWidths = formattingState.intrinsicWidthConstraintsForBox(flexItem);
-        auto flexItemLogicalWidth = std::min(std::max(intrinsicWidths->minimum, constraints.horizontal().logicalWidth), intrinsicWidths->maximum);
-        auto flexItemConstraints = ConstraintsForInFlowContent { { { }, flexItemLogicalWidth }, { } };
-
-        LayoutContext::createFormattingContext(flexItem, layoutState())->layoutInFlowContent(flexItemConstraints);
-
-        auto computeFlexItemGeometry = [&] {
-            auto& flexItemGeometry = formattingState.boxGeometry(flexItem);
-
-            flexItemGeometry.setLogicalTopLeft(LayoutPoint { flexItemMainAxisEnd, flexItemCrosAxisStart });
-
-            flexItemGeometry.setBorder(formattingGeometry.computedBorder(flexItem));
-            flexItemGeometry.setPadding(formattingGeometry.computedPadding(flexItem, constraints.horizontal().logicalWidth));
-
-            auto computedHorizontalMargin = formattingGeometry.computedHorizontalMargin(flexItem, constraints.horizontal());
-            flexItemGeometry.setHorizontalMargin({ computedHorizontalMargin.start.value_or(0_lu), computedHorizontalMargin.end.value_or(0_lu) });
-
-            auto computedVerticalMargin = formattingGeometry.computedVerticalMargin(flexItem, constraints.horizontal());
-            flexItemGeometry.setVerticalMargin({ computedVerticalMargin.before.value_or(0_lu), computedVerticalMargin.after.value_or(0_lu) });
-
-            flexItemGeometry.setContentBoxHeight(formattingGeometry.contentHeightForFormattingContextRoot(flexItem));
-            flexItemGeometry.setContentBoxWidth(flexItemLogicalWidth);
-            flexItemMainAxisEnd= BoxGeometry::borderBoxRect(flexItemGeometry).right();
-            flexItemCrosAxisEnd = std::max(flexItemCrosAxisEnd, BoxGeometry::borderBoxRect(flexItemGeometry).bottom());
-        };
-        computeFlexItemGeometry();
-    }
-    auto flexLine = InlineRect { flexItemCrosAxisStart, flexItemMainAxisStart, flexItemMainAxisEnd - flexItemMainAxisStart, flexItemCrosAxisEnd - flexItemCrosAxisStart };
-    formattingState.addLine(flexLine);
-}
-
-void FlexFormattingContext::computeIntrinsicWidthConstraintsForFlexItems()
-{
-    auto& formattingState = this->formattingState();
-    auto& formattingGeometry = this->formattingGeometry();
-    for (auto& flexItem : childrenOfType<ElementBox>(root())) {
-        if (formattingState.intrinsicWidthConstraintsForBox(flexItem))
-            continue;
-        formattingState.setIntrinsicWidthConstraintsForBox(flexItem, formattingGeometry.intrinsicWidthConstraints(flexItem));
-    }
 }
 
 FlexLayout::LogicalFlexItems FlexFormattingContext::convertFlexItemsToLogicalSpace(const ConstraintsForFlexContent& constraints)
@@ -152,7 +99,12 @@ FlexLayout::LogicalFlexItems FlexFormattingContext::convertFlexItemsToLogicalSpa
             switch (direction) {
             case FlexDirection::Row:
             case FlexDirection::RowReverse: {
-                if (!style.flexBasis().isAuto())
+                if (style.flexBasis().isAuto()) {
+                    // Auto keyword retrieves the value of the main size property as the used flex-basis.
+                    // If that value is itself auto, then the used value is content.
+                    if (!style.width().isAuto())
+                        mainAxis.definiteFlexBasis = valueForLength(style.width(), constraints.horizontal().logicalWidth);
+                } else if (!style.flexBasis().isContent())
                     mainAxis.definiteFlexBasis = valueForLength(style.flexBasis(), constraints.horizontal().logicalWidth);
                 if (style.maxWidth().isSpecified())
                     mainAxis.maximumSize = valueForLength(style.maxWidth(), constraints.horizontal().logicalWidth);
@@ -172,6 +124,11 @@ FlexLayout::LogicalFlexItems FlexFormattingContext::convertFlexItemsToLogicalSpa
                 crossAxis.hasSizeAuto = height.isAuto();
                 if (height.isFixed())
                     crossAxis.definiteSize = height.value();
+                if (style.maxHeight().isSpecified())
+                    crossAxis.maximumSize = valueForLength(style.maxHeight(), constraints.availableVerticalSpace().value_or(0));
+                if (!style.minHeight().isSpecified())
+                    crossAxis.minimumSize = valueForLength(style.minHeight(), constraints.availableVerticalSpace().value_or(0));
+                crossAxis.borderAndPadding = flexItemGeometry.verticalBorderAndPadding();
                 break;
             }
             case FlexDirection::Column:
@@ -284,38 +241,24 @@ void FlexFormattingContext::setFlexItemsGeometry(const FlexLayout::LogicalFlexIt
         auto& flexItemGeometry = formattingState.boxGeometry(logicalFlexItem.layoutBox());
         auto borderBoxTopLeft = LayoutPoint { };
         auto logicalRect = logicalRects[index];
-        auto usedHorizontalMargin = horizontalMargin(logicalRects[index], flexDirection);
-        auto usedVerticalMargin = verticalMargin(logicalRects[index], flexDirection);
         auto adjustedLogicalTop = !flexBoxLogicalHeightForWarpReserve ? logicalRect.top() : *flexBoxLogicalHeightForWarpReserve - logicalRect.bottom();
 
         switch (flexDirection) {
         case FlexDirection::Row: {
-            borderBoxTopLeft = {
-                constraints.horizontal().logicalLeft + logicalRect.left() + usedHorizontalMargin.start,
-                constraints.logicalTop() + adjustedLogicalTop + usedVerticalMargin.before
-            };
+            borderBoxTopLeft = { constraints.horizontal().logicalLeft + logicalRect.left(), constraints.logicalTop() + adjustedLogicalTop };
             break;
         }
         case FlexDirection::RowReverse:
-            borderBoxTopLeft = {
-                constraints.horizontal().logicalRight() - logicalRect.right() + usedHorizontalMargin.start,
-                constraints.logicalTop() + adjustedLogicalTop + usedVerticalMargin.before
-            };
+            borderBoxTopLeft = { constraints.horizontal().logicalRight() - logicalRect.right(), constraints.logicalTop() + adjustedLogicalTop };
             break;
         case FlexDirection::Column: {
             auto flippedTopLeft = FloatPoint { adjustedLogicalTop, logicalRect.left() };
-            borderBoxTopLeft = {
-                constraints.horizontal().logicalLeft + flippedTopLeft.x() + usedHorizontalMargin.start,
-                constraints.logicalTop() + flippedTopLeft.y() + usedVerticalMargin.before
-            };
+            borderBoxTopLeft = { constraints.horizontal().logicalLeft + flippedTopLeft.x(), constraints.logicalTop() + flippedTopLeft.y() };
             break;
         }
         case FlexDirection::ColumnReverse: {
             auto visualBottom = constraints.logicalTop() + constraints.availableVerticalSpace().value_or(logicalWidth);
-            borderBoxTopLeft = {
-                constraints.horizontal().logicalLeft + adjustedLogicalTop + usedHorizontalMargin.start,
-                visualBottom - logicalRect.right() + usedVerticalMargin.before
-            };
+            borderBoxTopLeft = { constraints.horizontal().logicalLeft + adjustedLogicalTop, visualBottom - logicalRect.right() };
             break;
         }
         default:
@@ -324,39 +267,15 @@ void FlexFormattingContext::setFlexItemsGeometry(const FlexLayout::LogicalFlexIt
         }
         flexItemGeometry.setLogicalTopLeft(borderBoxTopLeft);
 
-        auto horizontalMarginBorderAndPadding = usedHorizontalMargin.start + flexItemGeometry.horizontalBorderAndPadding() + usedHorizontalMargin.end;
-        auto verticallMarginBorderAndPadding = usedVerticalMargin.before + flexItemGeometry.verticalBorderAndPadding() + usedVerticalMargin.after;
-        if (isMainAxisParallelWithInlineAxis) {
-            flexItemGeometry.setContentBoxWidth(logicalRect.width() - horizontalMarginBorderAndPadding);
-            flexItemGeometry.setContentBoxHeight(logicalRect.height() - verticallMarginBorderAndPadding);
-        } else {
-            flexItemGeometry.setContentBoxWidth(logicalRect.height() - horizontalMarginBorderAndPadding);
-            flexItemGeometry.setContentBoxHeight(logicalRect.width() - verticallMarginBorderAndPadding);
+        auto contentBoxWidth = isMainAxisParallelWithInlineAxis ? logicalRect.width() : logicalRect.height();
+        auto contentBoxHeight = isMainAxisParallelWithInlineAxis ? logicalRect.height() : logicalRect.width();
+        if (!logicalFlexItem.isContentBoxBased()) {
+            contentBoxWidth -= flexItemGeometry.horizontalBorderAndPadding();
+            contentBoxHeight -= flexItemGeometry.verticalBorderAndPadding();
         }
+        flexItemGeometry.setContentBoxWidth(contentBoxWidth);
+        flexItemGeometry.setContentBoxHeight(contentBoxHeight);
     }
-}
-
-void FlexFormattingContext::layoutInFlowContentForIntegration(const ConstraintsForFlexContent& constraints)
-{
-    auto logicalFlexItems = convertFlexItemsToLogicalSpace(constraints);
-    auto flexLayout = FlexLayout { root() };
-
-    auto logicalFlexConstraints = [&] {
-        auto flexDirection = root().style().flexDirection();
-        auto flexDirectionIsInlineAxis = flexDirection == FlexDirection::Row || flexDirection == FlexDirection::RowReverse;
-        auto logicalVerticalSpace = flexDirectionIsInlineAxis ? constraints.availableVerticalSpace() : std::make_optional(constraints.horizontal().logicalWidth);
-        auto logicalHorizontalSpace = flexDirectionIsInlineAxis ? std::make_optional(constraints.horizontal().logicalWidth) : constraints.availableVerticalSpace();
-
-        return FlexLayout::LogicalConstraints { { logicalHorizontalSpace, { }, { }, { }, { }, { } }, { logicalVerticalSpace, { }, { }, { }, { }, { } } };
-    };
-
-    auto flexItemRects = flexLayout.layout(logicalFlexConstraints(), logicalFlexItems);
-    setFlexItemsGeometry(logicalFlexItems, flexItemRects, constraints);
-}
-
-IntrinsicWidthConstraints FlexFormattingContext::computedIntrinsicWidthConstraintsForIntegration()
-{
-    return { };
 }
 
 }

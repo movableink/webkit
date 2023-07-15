@@ -28,8 +28,7 @@
 
 #if PLATFORM(IOS_FAMILY)
 
-#import "UIKitSPI.h"
-#import <UIKit/UITouch.h>
+#import "WKTouchEventsGestureRecognizer.h"
 #import <WebCore/IntPoint.h>
 #import <WebCore/WAKAppKitStubs.h>
 
@@ -37,45 +36,45 @@ namespace WebKit {
 
 #if ENABLE(TOUCH_EVENTS)
 
-static inline WebEventType webEventTypeForUIWebTouchEventType(UIWebTouchEventType type)
+static inline WebEventType webEventTypeForWKTouchEventType(WKTouchEventType type)
 {
     switch (type) {
-    case UIWebTouchEventTouchBegin:
+    case WKTouchEventType::Begin:
         return WebEventType::TouchStart;
-    case UIWebTouchEventTouchChange:
+    case WKTouchEventType::Change:
         return WebEventType::TouchMove;
-    case UIWebTouchEventTouchEnd:
+    case WKTouchEventType::End:
         return WebEventType::TouchEnd;
-    case UIWebTouchEventTouchCancel:
+    case WKTouchEventType::Cancel:
         return WebEventType::TouchCancel;
     }
 }
 
-static WebPlatformTouchPoint::TouchPointState convertTouchPhase(UITouchPhase touchPhase)
+static WebPlatformTouchPoint::State convertTouchPhase(UITouchPhase touchPhase)
 {
     switch (touchPhase) {
     case UITouchPhaseBegan:
-        return WebPlatformTouchPoint::TouchPressed;
+        return WebPlatformTouchPoint::State::Pressed;
     case UITouchPhaseMoved:
-        return WebPlatformTouchPoint::TouchMoved;
+        return WebPlatformTouchPoint::State::Moved;
     case UITouchPhaseStationary:
-        return WebPlatformTouchPoint::TouchStationary;
+        return WebPlatformTouchPoint::State::Stationary;
     case UITouchPhaseEnded:
-        return WebPlatformTouchPoint::TouchReleased;
+        return WebPlatformTouchPoint::State::Released;
     case UITouchPhaseCancelled:
-        return WebPlatformTouchPoint::TouchCancelled;
+        return WebPlatformTouchPoint::State::Cancelled;
     default:
         ASSERT_NOT_REACHED();
-        return WebPlatformTouchPoint::TouchStationary;
+        return WebPlatformTouchPoint::State::Stationary;
     }
 }
 
-static WebPlatformTouchPoint::TouchType convertTouchType(UIWebTouchPointType touchType)
+static WebPlatformTouchPoint::TouchType convertTouchType(WKTouchPointType touchType)
 {
     switch (touchType) {
-    case UIWebTouchPointTypeDirect:
+    case WKTouchPointType::Direct:
         return WebPlatformTouchPoint::TouchType::Direct;
-    case UIWebTouchPointTypeStylus:
+    case WKTouchPointType::Stylus:
         return WebPlatformTouchPoint::TouchType::Stylus;
     default:
         ASSERT_NOT_REACHED();
@@ -88,7 +87,7 @@ static inline WebCore::IntPoint positionForCGPoint(CGPoint position)
     return WebCore::IntPoint(position);
 }
 
-static CGFloat radiusForTouchPoint(const _UIWebTouchPoint& touchPoint)
+static CGFloat radiusForTouchPoint(const WKTouchPoint& touchPoint)
 {
 #if ENABLE(FIXED_IOS_TOUCH_POINT_RADIUS)
     return 12.1;
@@ -97,42 +96,37 @@ static CGFloat radiusForTouchPoint(const _UIWebTouchPoint& touchPoint)
 #endif
 }
 
-Vector<WebPlatformTouchPoint> NativeWebTouchEvent::extractWebTouchPoint(const _UIWebTouchEvent* event)
+Vector<WebPlatformTouchPoint> NativeWebTouchEvent::extractWebTouchPoint(const WKTouchEvent& event)
 {
-    unsigned touchCount = event->touchPointCount;
-
-    Vector<WebPlatformTouchPoint> touchPointList;
-    touchPointList.reserveInitialCapacity(touchCount);
-    for (unsigned i = 0; i < touchCount; ++i) {
-        const _UIWebTouchPoint& touchPoint = event->touchPoints[i];
+    return event.touchPoints.map([](auto& touchPoint) {
         unsigned identifier = touchPoint.identifier;
         WebCore::IntPoint location = positionForCGPoint(touchPoint.locationInDocumentCoordinates);
-        WebPlatformTouchPoint::TouchPointState phase = convertTouchPhase(touchPoint.phase);
+        WebPlatformTouchPoint::State phase = convertTouchPhase(touchPoint.phase);
         WebPlatformTouchPoint platformTouchPoint = WebPlatformTouchPoint(identifier, location, phase);
 #if ENABLE(IOS_TOUCH_EVENTS)
         auto radius = radiusForTouchPoint(touchPoint);
         platformTouchPoint.setRadiusX(radius);
         platformTouchPoint.setRadiusY(radius);
-        platformTouchPoint.setRotationAngle(0); // Not available in _UIWebTouchEvent yet.
+        // FIXME (259068): Add support for Touch.rotationAngle.
+        platformTouchPoint.setRotationAngle(0);
         platformTouchPoint.setForce(touchPoint.force);
         platformTouchPoint.setAltitudeAngle(touchPoint.altitudeAngle);
         platformTouchPoint.setAzimuthAngle(touchPoint.azimuthAngle);
         platformTouchPoint.setTouchType(convertTouchType(touchPoint.touchType));
 #endif
-        touchPointList.uncheckedAppend(platformTouchPoint);
-    }
-    return touchPointList;
+        return platformTouchPoint;
+    });
 }
 
-NativeWebTouchEvent::NativeWebTouchEvent(const _UIWebTouchEvent* event, UIKeyModifierFlags flags)
+NativeWebTouchEvent::NativeWebTouchEvent(const WKTouchEvent& event, UIKeyModifierFlags flags)
     : WebTouchEvent(
-        { webEventTypeForUIWebTouchEventType(event->type), webEventModifierFlags(flags), WallTime::fromRawSeconds(event->timestamp) },
+        { webEventTypeForWKTouchEventType(event.type), webEventModifierFlags(flags), WallTime::fromRawSeconds(event.timestamp) },
         extractWebTouchPoint(event),
-        positionForCGPoint(event->locationInDocumentCoordinates),
-        event->isPotentialTap,
-        event->inJavaScriptGesture,
-        event->scale,
-        event->rotation)
+        positionForCGPoint(event.locationInDocumentCoordinates),
+        event.isPotentialTap,
+        event.inJavaScriptGesture,
+        event.scale,
+        event.rotation)
 {
 }
 

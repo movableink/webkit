@@ -978,6 +978,11 @@ bool WebPageProxy::useGPUProcessForDOMRenderingEnabled() const
     if (preferences().useGPUProcessForDOMRenderingEnabled())
         return true;
 
+#if ENABLE(REMOTE_LAYER_TREE_ON_MAC_BY_DEFAULT)
+    if (m_configuration->lockdownModeEnabled())
+        return true;
+#endif
+
     HashSet<RefPtr<const WebPageProxy>> visitedPages;
     visitedPages.add(this);
     for (auto* page = m_configuration->relatedPage(); page && !visitedPages.contains(page); page = page->configuration().relatedPage()) {
@@ -987,6 +992,24 @@ bool WebPageProxy::useGPUProcessForDOMRenderingEnabled() const
     }
 
     return false;
+}
+
+bool WebPageProxy::shouldForceForegroundPriorityForClientNavigation() const
+{
+    // The client may request that we do client navigations at foreground priority, even if the
+    // view is not visible, as long as the application is foreground.
+    if (!configuration().clientNavigationsRunAtForegroundPriority())
+        return false;
+
+    // This setting only applies to background views. There is no need to force foreground
+    // priority for foreground views since they get foreground priority by virtue of being
+    // visible.
+    if (isViewVisible())
+        return false;
+
+    bool canTakeForegroundAssertions = pageClient().canTakeForegroundAssertions();
+    WEBPAGEPROXY_RELEASE_LOG(Process, "WebPageProxy::shouldForceForegroundPriorityForClientNavigation() returns %d based on PageClient::canTakeForegroundAssertions()", canTakeForegroundAssertions);
+    return canTakeForegroundAssertions;
 }
 
 } // namespace WebKit

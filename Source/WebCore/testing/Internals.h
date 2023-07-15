@@ -30,6 +30,7 @@
 #include "CSSComputedStyleDeclaration.h"
 #include "ContextDestructionObserver.h"
 #include "Cookie.h"
+#include "DocumentMarker.h"
 #include "EpochTimeStamp.h"
 #include "EventTrackingRegions.h"
 #include "ExceptionOr.h"
@@ -419,6 +420,7 @@ public:
     bool hasGrammarMarker(int from, int length);
     bool hasAutocorrectedMarker(int from, int length);
     bool hasDictationAlternativesMarker(int from, int length);
+    bool hasCorrectionIndicatorMarker(int from, int length);
     void setContinuousSpellCheckingEnabled(bool);
     void setAutomaticQuoteSubstitutionEnabled(bool);
     void setAutomaticLinkDetectionEnabled(bool);
@@ -787,6 +789,7 @@ public:
     bool isPlayerMuted(const HTMLMediaElement&) const;
     void beginAudioSessionInterruption();
     void endAudioSessionInterruption();
+    void suspendAllMediaBuffering();
 #endif
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
@@ -794,6 +797,8 @@ public:
     ExceptionOr<void> setMockMediaPlaybackTargetPickerState(const String& deviceName, const String& deviceState);
     void mockMediaPlaybackTargetPickerDismissPopup();
 #endif
+
+    bool isMonitoringWirelessRoutes() const;
 
 #if ENABLE(WEB_AUDIO)
     void setAudioContextRestrictions(AudioContext&, StringView restrictionsString);
@@ -1410,6 +1415,8 @@ private:
     static RefPtr<SharedBuffer> pngDataForTesting();
 
     CachedResource* resourceFromMemoryCache(const String& url);
+
+    bool hasMarkerFor(DocumentMarker::MarkerType, int from, int length);
 
 #if ENABLE(MEDIA_STREAM)
     // RealtimeMediaSource::Observer API

@@ -309,11 +309,14 @@ bool ensureGStreamerInitialized()
     return isGStreamerInitialized;
 }
 
-static void registerInternalVideoEncoder()
+static bool registerInternalVideoEncoder()
 {
 #if ENABLE(VIDEO)
-    gst_element_register(nullptr, "webkitvideoencoder", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_VIDEO_ENCODER);
+    if (auto factory = adoptGRef(gst_element_factory_find("webkitvideoencoder")))
+        return false;
+    return gst_element_register(nullptr, "webkitvideoencoder", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_VIDEO_ENCODER);
 #endif
+    return false;
 }
 
 void registerWebKitGStreamerElements()
@@ -426,8 +429,7 @@ void registerWebKitGStreamerVideoEncoder()
     static std::once_flag onceFlag;
     bool registryWasUpdated = false;
     std::call_once(onceFlag, [&registryWasUpdated] {
-        registerInternalVideoEncoder();
-        registryWasUpdated = true;
+        registryWasUpdated = registerInternalVideoEncoder();
     });
 
     // The video encoder might be registered after the scanner was initialized, so in this situation
@@ -634,18 +636,28 @@ GstBuffer* gstBufferNewWrappedFast(void* data, size_t length)
 
 GstElement* makeGStreamerElement(const char* factoryName, const char* name)
 {
+    static Lock lock;
+    static Vector<const char*> cache WTF_GUARDED_BY_LOCK(lock);
     auto* element = gst_element_factory_make(factoryName, name);
-    if (!element)
+    Locker locker { lock };
+    if (!element && !cache.contains(factoryName)) {
+        cache.append(factoryName);
         WTFLogAlways("GStreamer element %s not found. Please install it", factoryName);
+    }
     return element;
 }
 
 GstElement* makeGStreamerBin(const char* description, bool ghostUnlinkedPads)
 {
+    static Lock lock;
+    static Vector<const char*> cache WTF_GUARDED_BY_LOCK(lock);
     GUniqueOutPtr<GError> error;
     auto* bin = gst_parse_bin_from_description(description, ghostUnlinkedPads, &error.outPtr());
-    if (!bin)
+    Locker locker { lock };
+    if (!bin && !cache.contains(description)) {
+        cache.append(description);
         WTFLogAlways("Unable to create bin for description: \"%s\". Error: %s", description, error->message);
+    }
     return bin;
 }
 
@@ -661,6 +673,15 @@ static std::optional<RefPtr<JSON::Value>> gstStructureValueToJSON(const GValue* 
         auto array = JSON::Array::create();
         for (unsigned i = 0; i < size; i++) {
             if (auto innerJson = gstStructureValueToJSON(gst_value_array_get_value(value, i)))
+                array->pushValue(innerJson->releaseNonNull());
+        }
+        return array->asArray()->asValue();
+    }
+    if (GST_VALUE_HOLDS_LIST(value)) {
+        unsigned size = gst_value_list_get_size(value);
+        auto array = JSON::Array::create();
+        for (unsigned i = 0; i < size; i++) {
+            if (auto innerJson = gstStructureValueToJSON(gst_value_list_get_value(value, i)))
                 array->pushValue(innerJson->releaseNonNull());
         }
         return array->asArray()->asValue();

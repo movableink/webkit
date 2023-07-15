@@ -46,6 +46,7 @@
 #include "FloatConversion.h"
 #include "FontCascade.h"
 #include "FontSelectionAlgorithm.h"
+#include "FontSelectionValueInlines.h"
 #include "FontTaggedSettings.h"
 #include "GridPositionsResolver.h"
 #include "IdentityTransformOperation.h"
@@ -64,7 +65,6 @@
 #include "StyleFilterImage.h"
 #include "StylePropertyShorthand.h"
 #include "StyleResolver.h"
-#include "WordBoundaryDetection.h"
 #include <algorithm>
 #include <memory>
 #include <wtf/MathExtras.h>
@@ -533,7 +533,16 @@ static inline FontSelectionValue blendFunc(FontSelectionValue from, FontSelectio
 
 static inline std::optional<FontSelectionValue> blendFunc(std::optional<FontSelectionValue> from, std::optional<FontSelectionValue> to, const CSSPropertyBlendingContext& context)
 {
-    return blendFunc(*from, *to, context);
+    if (!from && !to)
+        return std::nullopt;
+
+    auto valueOrDefault = [](std::optional<FontSelectionValue> fontSelectionValue) {
+        if (!fontSelectionValue)
+            return 0.0f;
+        return static_cast<float>(fontSelectionValue.value());
+    };
+
+    return normalizedFontItalicValue(blendFunc(valueOrDefault(from), valueOrDefault(to), context));
 }
 
 static inline bool canInterpolate(const GridTrackList& from, const GridTrackList& to)
@@ -2589,7 +2598,7 @@ public:
 private:
     bool canInterpolate(const RenderStyle& from, const RenderStyle& to, CompositeOperation) const final
     {
-        return from.fontItalic() && to.fontItalic() && from.fontDescription().fontStyleAxis() == FontStyleAxis::slnt && to.fontDescription().fontStyleAxis() == FontStyleAxis::slnt;
+        return from.fontDescription().fontStyleAxis() == FontStyleAxis::slnt && to.fontDescription().fontStyleAxis() == FontStyleAxis::slnt;
     }
 
     void blend(RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, const CSSPropertyBlendingContext& context) const final
@@ -3757,8 +3766,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new DiscreteSVGPropertyWrapper<const String&>(CSSPropertyMarkerMid, &SVGRenderStyle::markerMidResource, &SVGRenderStyle::setMarkerMidResource),
         new DiscreteSVGPropertyWrapper<const String&>(CSSPropertyMarkerStart, &SVGRenderStyle::markerStartResource, &SVGRenderStyle::setMarkerStartResource),
         new DiscretePropertyWrapper<const ScrollbarGutter>(CSSPropertyScrollbarGutter, &RenderStyle::scrollbarGutter, &RenderStyle::setScrollbarGutter),
-        new DiscretePropertyWrapper<ScrollbarWidth>(CSSPropertyScrollbarWidth, &RenderStyle::scrollbarWidth, &RenderStyle::setScrollbarWidth),
-        new DiscretePropertyWrapper<const WordBoundaryDetection&>(CSSPropertyWordBoundaryDetection, &RenderStyle::wordBoundaryDetection, &RenderStyle::setWordBoundaryDetection),
+        new DiscretePropertyWrapper<ScrollbarWidth>(CSSPropertyScrollbarWidth, &RenderStyle::scrollbarWidth, &RenderStyle::setScrollbarWidth)
     };
     const unsigned animatableLonghandPropertiesCount = std::size(animatableLonghandPropertyWrappers);
 
@@ -3783,6 +3791,8 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         CSSPropertyMargin,
         CSSPropertyOutline,
         CSSPropertyPadding,
+        CSSPropertyPaddingBlock,
+        CSSPropertyPaddingInline,
         CSSPropertyPageBreakAfter,
         CSSPropertyPageBreakBefore,
         CSSPropertyPageBreakInside,
@@ -3929,8 +3939,6 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         case CSSPropertyOverscrollBehaviorInline:
         case CSSPropertyOverscrollBehaviorX:
         case CSSPropertyOverscrollBehaviorY:
-        case CSSPropertyPaddingBlock: // logical shorthand
-        case CSSPropertyPaddingInline: // logical shorthand
         case CSSPropertyPage:
         case CSSPropertyPlaceContent:
         case CSSPropertyPlaceItems:

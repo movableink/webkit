@@ -42,15 +42,6 @@ class RenderLayerCompositor;
 class TiledBacking;
 class TransformationMatrix;
 
-
-#if CPU(ADDRESS64) && PLATFORM(COCOA)
-#define USE_OWNING_LAYER_BEAR_TRAP 1
-#define BEAR_TRAP_VALUE 0xEEEEEEEEEEEEEEEE
-#else
-#define USE_OWNING_LAYER_BEAR_TRAP 0
-#endif
-
-
 enum CompositingLayerType {
     NormalCompositingLayer, // non-tiled layer with backing store
     TiledCompositingLayer, // tiled layer (always has backing store)
@@ -298,6 +289,7 @@ public:
     WEBCORE_EXPORT void setIsTrackingDisplayListReplay(bool);
     WEBCORE_EXPORT String replayDisplayListAsText(OptionSet<DisplayList::AsTextFlag>) const;
 
+    bool shouldPaintUsingCompositeCopy() const { return m_shouldPaintUsingCompositeCopy; }
 private:
     friend class PaintedContentsInfo;
 
@@ -417,9 +409,6 @@ private:
 
     bool shouldSetContentsDisplayDelegate() const;
 
-#if USE(OWNING_LAYER_BEAR_TRAP)
-    uintptr_t m_owningLayerBearTrap { BEAR_TRAP_VALUE }; // webkit.org/b.206915
-#endif
     RenderLayer& m_owningLayer;
     
     // A list other layers that paint into this backing store, later than m_owningLayer in paint order.
@@ -468,6 +457,7 @@ private:
 #if ENABLE(ASYNC_SCROLLING)
     bool m_needsEventRegionUpdate { true };
 #endif
+    bool m_shouldPaintUsingCompositeCopy { false };
 };
 
 enum CanvasCompositingStrategy {

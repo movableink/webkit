@@ -90,6 +90,7 @@ public:
 
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
+    bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) override;
 
     // Messages to be sent.
     RefPtr<WebCore::ImageBuffer> createImageBuffer(const WebCore::FloatSize&, WebCore::RenderingMode, WebCore::RenderingPurpose, float resolutionScale, const WebCore::DestinationColorSpace&, WebCore::PixelFormat, bool avoidBackendSizeCheck = false);
@@ -135,12 +136,6 @@ public:
     RenderingUpdateID renderingUpdateID() const { return m_renderingUpdateID; }
     unsigned delayedRenderingUpdateCount() const { return m_renderingUpdateID - m_didRenderingUpdateID; }
 
-    enum class DidReceiveBackendCreationResult : bool {
-        ReceivedAnyResponse,
-        TimeoutOrIPCFailure
-    };
-    DidReceiveBackendCreationResult waitForDidCreateImageBufferBackend();
-
     RenderingBackendIdentifier renderingBackendIdentifier() const;
 
     RenderingBackendIdentifier ensureBackendCreated();
@@ -160,28 +155,21 @@ public:
 
     SerialFunctionDispatcher& dispatcher() { return m_dispatcher; }
 
-    static constexpr Seconds defaultTimeout = 3_s;
+    static constexpr Seconds defaultTimeout = 15_s;
 private:
     explicit RemoteRenderingBackendProxy(const RemoteRenderingBackendCreationParameters&, SerialFunctionDispatcher&);
 
-    template<typename T>
-    void send(T&& message)
-    {
-        streamConnection().send(WTFMove(message), renderingBackendIdentifier(), Seconds::infinity());
-
-    }
-
-    template<typename T>
-    auto sendSync(T&& message, IPC::Timeout timeout = Seconds::infinity())
-    {
-        return streamConnection().sendSync(WTFMove(message), renderingBackendIdentifier(), timeout);
-    }
+    template<typename T> auto send(T&& message);
+    template<typename T> auto sendSync(T&& message);
 
     // Connection::Client
     void didClose(IPC::Connection&) final;
     void didReceiveInvalidMessage(IPC::Connection&, IPC::MessageName) final { }
     void disconnectGPUProcess();
     void ensureGPUProcessConnection();
+
+    bool dispatchMessage(IPC::Connection&, IPC::Decoder&);
+    bool dispatchSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&);
 
     // Returns std::nullopt if no update is needed or allocation failed.
     // Returns handle if that should be sent to the receiver process.

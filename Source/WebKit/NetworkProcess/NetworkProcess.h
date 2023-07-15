@@ -64,7 +64,7 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/WeakPtr.h>
 
-#if PLATFORM(IOS_FAMILY)
+#if USE(RUNNINGBOARD)
 #include "WebSQLiteDatabaseTracker.h"
 #endif
 
@@ -385,6 +385,8 @@ public:
 #if PLATFORM(COCOA)
     void appPrivacyReportTestingData(PAL::SessionID, CompletionHandler<void(const AppPrivacyReportTestingData&)>&&);
     void clearAppPrivacyReportTestingData(PAL::SessionID, CompletionHandler<void()>&&);
+
+    bool isParentProcessFullWebBrowserOrRunningTest() const { return m_isParentProcessFullWebBrowserOrRunningTest; }
 #endif
 
 #if ENABLE(WEB_RTC)
@@ -422,7 +424,6 @@ public:
     void deleteWebsiteDataForOrigin(PAL::SessionID, OptionSet<WebsiteDataType>, const WebCore::ClientOrigin&, CompletionHandler<void()>&&);
     void deleteWebsiteDataForOrigins(PAL::SessionID, OptionSet<WebsiteDataType>, const Vector<WebCore::SecurityOriginData>& origins, const Vector<String>& cookieHostNames, const Vector<String>& HSTSCacheHostnames, const Vector<RegistrableDomain>&, CompletionHandler<void()>&&);
 
-    bool allowsFirstPartyForCookies(WebCore::ProcessIdentifier, const URL&);
     bool allowsFirstPartyForCookies(WebCore::ProcessIdentifier, const RegistrableDomain&);
     void addAllowedFirstPartyForCookies(WebCore::ProcessIdentifier, WebCore::RegistrableDomain&&, LoadedWebArchive, CompletionHandler<void()>&&);
     void webProcessWillLoadWebArchive(WebCore::ProcessIdentifier);
@@ -500,7 +501,7 @@ private:
 
 #if HAVE(NW_PROXY_CONFIG)
     void clearProxyConfigData(PAL::SessionID);
-    void setProxyConfigData(PAL::SessionID, Vector<std::pair<Vector<uint8_t>, UUID>>&& proxyConfigurations);
+    void setProxyConfigData(PAL::SessionID, Vector<std::pair<Vector<uint8_t>, WTF::UUID>>&& proxyConfigurations);
 #endif
     
 #if USE(SOUP)
@@ -527,7 +528,7 @@ private:
     void registerURLSchemeAsNoAccess(const String&) const;
     void registerURLSchemeAsCORSEnabled(const String&) const;
 
-#if PLATFORM(IOS_FAMILY)
+#if USE(RUNNINGBOARD)
     void setIsHoldingLockedFiles(bool);
 #endif
     void stopRunLoopIfNecessary();
@@ -567,7 +568,7 @@ private:
     QtNetworkAccessManager m_networkAccessManager;
 #endif
 
-#if PLATFORM(IOS_FAMILY)
+#if USE(RUNNINGBOARD)
     WebSQLiteDatabaseTracker m_webSQLiteDatabaseTracker;
     RefPtr<ProcessAssertion> m_holdingLockedFileAssertion;
 #endif
@@ -592,6 +593,7 @@ private:
     bool m_didSyncCookiesForClose { false };
 #if PLATFORM(COCOA)
     int m_mediaStreamingActivitityToken { NOTIFY_TOKEN_INVALID };
+    bool m_isParentProcessFullWebBrowserOrRunningTest { false };
 #endif
 };
 

@@ -1656,6 +1656,27 @@ public:
         m_assembler.ldp<32>(dest1, dest2, src.base, PairPostIndex(src.index));
     }
 
+    void loadPair32(Address address, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair32(address.base, TrustedImm32(address.offset), dest1, dest2);
+    }
+
+    void loadPair32(RegisterID src, TrustedImm32 offset, FPRegisterID dest1, FPRegisterID dest2)
+    {
+        ASSERT(dest1 != dest2); // If it is the same, ldp becomes illegal instruction.
+        if (ARM64Assembler::isValidLDPFPImm<32>(offset.m_value)) {
+            m_assembler.ldp<32>(dest1, dest2, src, offset.m_value);
+            return;
+        }
+        loadFloat(Address(src, offset.m_value), dest1);
+        loadFloat(Address(src, offset.m_value + 8), dest2);
+    }
+
+    void loadPairFloat(Address src, FPRegisterID dest1, FPRegisterID dest2)
+    {
+        loadPair32(src.base, TrustedImm32(src.offset), dest1, dest2);
+    }
+
     void loadPair64(RegisterID src, RegisterID dest1, RegisterID dest2)
     {
         loadPair64(src, TrustedImm32(0), dest1, dest2);
@@ -1685,6 +1706,11 @@ public:
     void loadPair64(PostIndexAddress src, RegisterID dest1, RegisterID dest2)
     {
         m_assembler.ldp<64>(dest1, dest2, src.base, PairPostIndex(src.index));
+    }
+
+    void loadPair64(Address address, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair64(address.base, TrustedImm32(address.offset), dest1, dest2);
     }
 
     void loadPair64WithNonTemporalAccess(RegisterID src, RegisterID dest1, RegisterID dest2)
@@ -1722,6 +1748,11 @@ public:
         }
         loadDouble(Address(src, offset.m_value), dest1);
         loadDouble(Address(src, offset.m_value + 8), dest2);
+    }
+
+    void loadPairDouble(Address src, FPRegisterID dest1, FPRegisterID dest2)
+    {
+        loadPair64(src.base, TrustedImm32(src.offset), dest1, dest2);
     }
 
     void abortWithReason(AbortReason reason)
@@ -2110,6 +2141,26 @@ public:
         m_assembler.stp<32>(src1, src2, dest.base, PairPostIndex(dest.index));
     }
 
+    void storePair32(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair32(src1, src2, dest.base, TrustedImm32(dest.offset));
+    }
+
+    void storePair32(FPRegisterID src1, FPRegisterID src2, RegisterID dest, TrustedImm32 offset)
+    {
+        if (ARM64Assembler::isValidSTPFPImm<32>(offset.m_value)) {
+            m_assembler.stp<32>(src1, src2, dest, offset.m_value);
+            return;
+        }
+        storeFloat(src1, Address(dest, offset.m_value));
+        storeFloat(src2, Address(dest, offset.m_value + 8));
+    }
+
+    void storePairFloat(FPRegisterID src1, FPRegisterID src2, Address dest)
+    {
+        storePair32(src1, src2, dest.base, TrustedImm32(dest.offset));
+    }
+
     void storePair64(RegisterID src1, RegisterID src2, RegisterID dest)
     {
         storePair64(src1, src2, dest, TrustedImm32(0));
@@ -2150,6 +2201,11 @@ public:
         store64(src2, Address(dest, offset.m_value + 8));
     }
 
+    void storePair64(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair64(src1, src2, dest.base, TrustedImm32(dest.offset));
+    }
+
     void storePair64(FPRegisterID src1, FPRegisterID src2, RegisterID dest)
     {
         storePair64(src1, src2, dest, TrustedImm32(0));
@@ -2163,6 +2219,11 @@ public:
         }
         storeDouble(src1, Address(dest, offset.m_value));
         storeDouble(src2, Address(dest, offset.m_value + 8));
+    }
+
+    void storePairDouble(FPRegisterID src1, FPRegisterID src2, Address dest)
+    {
+        storePair64(src1, src2, dest.base, TrustedImm32(dest.offset));
     }
 
     void store32(RegisterID src, Address address)
@@ -2742,20 +2803,26 @@ public:
 
     void materializeVector(v128_t value, FPRegisterID dest)
     {
+        if (bitEquals(value, vectorAllZeros())) {
+            moveZeroToVector(dest);
+            return;
+        }
         move(TrustedImm64(value.u64x2[0]), scratchRegister());
-        vectorReplaceLaneInt64(TrustedImm32(0), scratchRegister(), dest);
+        vectorSplatInt64(scratchRegister(), dest);
         move(TrustedImm64(value.u64x2[1]), scratchRegister());
         vectorReplaceLaneInt64(TrustedImm32(1), scratchRegister(), dest);
     }
 
     void moveZeroToDouble(FPRegisterID reg)
     {
-        m_assembler.fmov<64>(reg, ARM64Registers::zr);
+        // Intentionally use 128bit width here to clear all part of this register with zero.
+        m_assembler.movi<128>(reg, 0);
     }
 
     void moveZeroToFloat(FPRegisterID reg)
     {
-        m_assembler.fmov<32>(reg, ARM64Registers::zr);
+        // Intentionally use 128bit width here to clear all part of this register with zero.
+        m_assembler.movi<128>(reg, 0);
     }
 
     void moveDoubleTo64(FPRegisterID src, RegisterID dest)
@@ -3292,8 +3359,12 @@ public:
 
     void move(RegisterID src, RegisterID dest)
     {
-        if (src != dest)
-            m_assembler.mov<64>(dest, src);
+        if (src != dest) {
+            if (src == ARM64Registers::zr && dest != ARM64Registers::sp)
+                m_assembler.movz<64>(dest, 0);
+            else
+                m_assembler.mov<64>(dest, src);
+        }
     }
 
     void move(TrustedImm32 imm, RegisterID dest)
@@ -5455,7 +5526,7 @@ public:
 
     void moveZeroToVector(FPRegisterID dest)
     {
-        vectorXor({ SIMDLane::v128, SIMDSignMode::None }, dest, dest, dest);
+        m_assembler.movi<128>(dest, 0);
     }
 
     void vectorAbs(SIMDInfo simdInfo, FPRegisterID input, FPRegisterID dest)

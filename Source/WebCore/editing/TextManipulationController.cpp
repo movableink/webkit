@@ -197,7 +197,7 @@ public:
         return content;
     }
 
-    bool atEnd() const { return !m_text && m_iterator.atEnd() && m_node == m_pastEndNode; }
+    bool atEnd() const { return !m_text && m_node == m_pastEndNode; }
 
 private:
     bool shouldAdvanceIteratorPastCurrentNode() const
@@ -336,8 +336,8 @@ static bool isEnclosingItemBoundaryElement(const Element& element)
                 return true;
         }
 
-        // Treat a or li with white-space: nowrap as its own paragraph so that wrapping whitespace between them will be preserved.
-        if (renderer->style().whiteSpace() == WhiteSpace::NoWrap)
+        // Treat a or li with text-wrap: nowrap as its own paragraph so that wrapping whitespace between them will be preserved.
+        if (renderer->style().textWrap() == TextWrap::NoWrap)
             return true;
     }
 
