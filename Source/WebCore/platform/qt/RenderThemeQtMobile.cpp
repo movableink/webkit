@@ -725,8 +725,8 @@ void RenderThemeQtMobile::adjustButtonStyle(RenderStyle& style, const Element*) 
     FontCascadeDescription fontDescription = style.fontDescription();
     fontDescription.setIsAbsoluteSize(true);
 
-    fontDescription.setSpecifiedSize(style.computedFontPixelSize());
-    fontDescription.setComputedSize(style.computedFontPixelSize());
+    fontDescription.setSpecifiedSize(style.computedFontSize());
+    fontDescription.setComputedSize(style.computedFontSize());
 
     // QTFIXME: style.setFontDescription(WTFMove(fontDescription)); ?
     style.setLineHeight(RenderStyle::initialLineHeight());

@@ -32,7 +32,7 @@ namespace WebCore {
 FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription& description, bool /* bold */, bool /* italic */, const FontCreationContext&)
 {
     Q_ASSERT(m_rawFont.isValid());
-    int size = description.computedPixelSize();
+    auto size = description.computedSize();
     m_rawFont.setPixelSize(qreal(size));
     return FontPlatformData(m_rawFont);
 }

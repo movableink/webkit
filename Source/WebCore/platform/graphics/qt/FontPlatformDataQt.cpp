@@ -78,7 +78,7 @@ void FontPlatformDataPrivate::platformDataInit(FontPlatformData& q, float size, 
 FontPlatformData::FontPlatformData(const FontDescription& description, const AtomString& familyName, const FontCustomPlatformData* customPlatformData)
 {
     QFont font;
-    int requestedSize = description.computedPixelSize();
+    auto requestedSize = description.computedSize();
     font.setFamily(familyName.string());
     if (requestedSize)
         font.setPixelSize(requestedSize);
