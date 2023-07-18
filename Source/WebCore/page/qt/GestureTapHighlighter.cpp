@@ -34,6 +34,7 @@
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "GraphicsTypes.h"
+#include "LocalFrame.h"
 #include "Node.h"
 #include "Page.h"
 #include "RenderBoxModelObject.h"
@@ -49,11 +50,12 @@ namespace {
 inline LayoutPoint ownerFrameToMainFrameOffset(const RenderObject* o)
 {
     ASSERT(o->node());
-    Frame& containingFrame = o->frame();
+    LocalFrame& containingFrame = o->frame();
 
-    Frame& mainFrame = containingFrame.page()->mainFrame();
+    LocalFrame* mainFrame = dynamicDowncast<LocalFrame>(containingFrame.page()->mainFrame());
+    ASSERT(mainFrame);
 
-    LayoutPoint mainFramePoint = mainFrame.view()->windowToContents(containingFrame.view()->contentsToWindow(IntPoint()));
+    LayoutPoint mainFramePoint = mainFrame->view()->windowToContents(containingFrame.view()->contentsToWindow(IntPoint()));
     return mainFramePoint;
 }
 
@@ -130,11 +132,13 @@ inline void addHighlightRect(Path& path, const LayoutRect& rect, const LayoutRec
     FloatSize rounded(rounding * 1.8, rounding * 1.8);
     FloatSize squared(0, 0);
 
-    path.addBeziersForRoundedRect(copy,
+    FloatRoundedRect roundedRect(copy,
         contains(prev, rect.x()) ? squared : rounded,
         contains(prev, rect.maxX()) ? squared : rounded,
         contains(next, rect.x()) ? squared : rounded,
         contains(next, rect.maxX()) ? squared : rounded);
+
+    path.addRoundedRect(roundedRect);
 }
 
 Path absolutePathForRenderer(RenderObject* const o)
