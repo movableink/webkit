@@ -164,7 +164,6 @@ list(APPEND WebCore_SOURCES
     platform/network/MIMESniffing.cpp
 
     platform/network/qt/BlobUrlConversion.cpp
-    platform/network/qt/CredentialStorageQt.cpp
     platform/network/qt/CookieStorageQt.cpp
     platform/network/qt/DNSResolveQueueQt.cpp
     platform/network/qt/NetworkStateNotifierQt.cpp
