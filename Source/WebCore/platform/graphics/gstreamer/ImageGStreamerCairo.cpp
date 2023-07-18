@@ -20,7 +20,7 @@
 #include "config.h"
 #include "ImageGStreamer.h"
 
-#if ENABLE(VIDEO) && USE(GSTREAMER)
+#if ENABLE(VIDEO) && USE(GSTREAMER) && !PLATFORM(QT)
 
 #include "GStreamerCommon.h"
 

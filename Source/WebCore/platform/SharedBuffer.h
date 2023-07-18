@@ -42,7 +42,7 @@
 #include <wtf/RetainPtr.h>
 #endif
 
-#if USE(GLIB) && !PLATFORM(QT)
+#if USE(GLIB)
 #include <wtf/glib/GRefPtr.h>
 typedef struct _GBytes GBytes;
 #endif
@@ -113,7 +113,7 @@ private:
     explicit DataSegment(RetainPtr<CFDataRef>&& data)
         : m_immutableData(WTFMove(data)) { }
 #endif
-#if USE(GLIB) && !PLATFORM(QT)
+#if USE(GLIB)
     explicit DataSegment(GRefPtr<GBytes>&& data)
         : m_immutableData(WTFMove(data)) { }
 #endif
@@ -130,7 +130,7 @@ private:
 #if USE(CF)
         RetainPtr<CFDataRef>,
 #endif
-#if USE(GLIB) && !PLATFORM(QT)
+#if USE(GLIB)
         GRefPtr<GBytes>,
 #endif
 #if USE(GSTREAMER)
@@ -227,7 +227,7 @@ protected:
 #if USE(CF)
     WEBCORE_EXPORT explicit FragmentedSharedBuffer(CFDataRef);
 #endif
-#if USE(GLIB) && !PLATFORM(QT)
+#if USE(GLIB)
     WEBCORE_EXPORT explicit FragmentedSharedBuffer(GBytes*);
 #endif
 #if USE(GSTREAMER)

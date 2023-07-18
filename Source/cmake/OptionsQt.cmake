@@ -257,11 +257,9 @@ else ()
     set(ICU_LIBRARY_PREFIX "")
 endif ()
 
-if (QT_STATIC_BUILD)
-    set(ENABLE_WEBKIT_DEFAULT OFF)
-else ()
-    set(ENABLE_WEBKIT_DEFAULT ON)
-endif ()
+# QtWebKit only supports WebKitLegacy (WK1) at this time
+set(ENABLE_WEBKIT_LEGACY ON)
+set(ENABLE_WEBKIT OFF)
 
 if (UNIX AND TARGET Qt5::QXcbIntegrationPlugin AND NOT APPLE)
     set(ENABLE_X11_TARGET_DEFAULT ON)
@@ -381,7 +379,6 @@ if (APPLE AND CMAKE_SYSTEM_VERSION VERSION_LESS 14.0.0)
     message(FATAL_ERROR "macOS 10.10 or higher is required to build and run QtWebKit")
 endif ()
 
-set(ENABLE_WEBKIT_LEGACY ON)
 if (WIN32)
     set(ENABLE_WEBKIT OFF)
 endif ()

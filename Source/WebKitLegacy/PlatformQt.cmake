@@ -796,7 +796,8 @@ endif ()
 if (COMPILER_IS_GCC_OR_CLANG)
     set_source_files_properties(
         qt/Api/qwebdatabase.cpp
-        qt/Api/qwebelement.cpp
+        # FIXME
+        #qt/Api/qwebelement.cpp
         qt/Api/qwebfullscreenrequest.cpp
         qt/Api/qwebhistory.cpp
         qt/Api/qwebhistoryinterface.cpp
