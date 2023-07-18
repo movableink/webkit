@@ -83,11 +83,11 @@ PasteboardStrategy* PlatformStrategiesQt::createPasteboardStrategy()
 
 class WebBlobRegistry final : public BlobRegistry {
 private:
-    void registerFileBlobURL(const URL& url, Ref<BlobDataFileReference>&& reference, const String& path, const String& contentType) final { m_blobRegistry.registerFileBlobURL(url, WTFMove(reference), contentType); }
-    void registerBlobURL(const URL& url, Vector<BlobPart>&& parts, const String& contentType) final { m_blobRegistry.registerBlobURL(url, WTFMove(parts), contentType); }
+    void registerInternalFileBlobURL(const URL& url, Ref<BlobDataFileReference>&& reference, const String& path, const String& contentType) final { m_blobRegistry.registerInternalFileBlobURL(url, WTFMove(reference), contentType); }
+    void registerInternalBlobURL(const URL& url, Vector<BlobPart>&& parts, const String& contentType) final { m_blobRegistry.registerInternalBlobURL(url, WTFMove(parts), contentType); }
+    void registerInternalBlobURLOptionallyFileBacked(const URL& url, const URL& srcURL, RefPtr<BlobDataFileReference>&& reference, const String& contentType) final { m_blobRegistry.registerInternalBlobURLOptionallyFileBacked(url, srcURL, WTFMove(reference), contentType, { }); }
+    void registerInternalBlobURLForSlice(const URL& url, const URL& srcURL, long long start, long long end, const String& contentType) final { m_blobRegistry.registerInternalBlobURLForSlice(url, srcURL, start, end, contentType); }
     void registerBlobURL(const URL& url, const URL& srcURL, const PolicyContainer& container) final { m_blobRegistry.registerBlobURL(url, srcURL, container); }
-    void registerBlobURLOptionallyFileBacked(const URL& url, const URL& srcURL, RefPtr<BlobDataFileReference>&& reference, const String& contentType) final { m_blobRegistry.registerBlobURLOptionallyFileBacked(url, srcURL, WTFMove(reference), contentType, { }); }
-    void registerBlobURLForSlice(const URL& url, const URL& srcURL, long long start, long long end, const String& contentType) final { m_blobRegistry.registerBlobURLForSlice(url, srcURL, start, end, contentType); }
     void registerBlobURLHandle(const URL& url) final { m_blobRegistry.registerBlobURLHandle(url); }
     void unregisterBlobURL(const URL& url) final { m_blobRegistry.unregisterBlobURL(url); }
     void unregisterBlobURLHandle(const URL& url) final { m_blobRegistry.unregisterBlobURLHandle(url); }

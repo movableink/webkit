@@ -345,7 +345,7 @@ void NotificationPresenterClientQt::removeReplacedNotificationFromQueue(const No
     }
 }
 
-void NotificationPresenterClientQt::detachNotification(UUID notificationID)
+void NotificationPresenterClientQt::detachNotification(WTF::UUID notificationID)
 {
     delete m_notifications.take(notificationID);
 }

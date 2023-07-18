@@ -82,7 +82,7 @@ private:
 
 #if ENABLE(NOTIFICATIONS)
 
-typedef QHash <UUID, NotificationWrapper*> NotificationsQueue;
+typedef QHash <WTF::UUID, NotificationWrapper*> NotificationsQueue;
 
 class NotificationPresenterClientQt final : public NotificationClient {
 public:
@@ -122,7 +122,7 @@ private:
     void removeReplacedNotificationFromQueue(const NotificationData&);
     void dumpReplacedIdText(const NotificationData&);
     void dumpShowText(const NotificationData&);
-    void detachNotification(UUID);
+    void detachNotification(WTF::UUID);
     QWebPageAdapter* toPage(ScriptExecutionContext&);
     QWebFrameAdapter* toFrame(ScriptExecutionContext&);
 
