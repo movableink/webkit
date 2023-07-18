@@ -82,7 +82,7 @@ struct GPUExternalTextureDescriptor : public GPUObjectDescriptorBase {
 #else
         UNUSED_PARAM(videoSource);
         UNUSED_PARAM(outPixelBuffer);
-        return PAL::WebGPU::HTMLVideoElementIdentifier { 0 };
+        return WebGPU::HTMLVideoElementIdentifier { 0 };
 #endif // ENABLE(VIDEO)
 
 #endif
