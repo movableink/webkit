@@ -27,6 +27,8 @@
 
 #if USE(CG)
 #include "PathCG.h"
+#elif PLATFORM(QT)
+#include "PathQt.h"
 #else
 #include "PathCairo.h"
 #endif

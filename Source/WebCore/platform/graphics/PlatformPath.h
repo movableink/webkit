@@ -27,6 +27,9 @@
 
 #if USE(CG)
 #include <CoreGraphics/CGPath.h>
+#elif PLATFORM(QT)
+#include <qpainterpath.h>
+typedef QPainterPath PlatformPath;
 #else
 #include "RefPtrCairo.h"
 #endif
@@ -34,6 +37,9 @@
 #if USE(CG)
 typedef struct CGPath PlatformPath;
 typedef PlatformPath* PlatformPathPtr;
+#elif PLATFORM(QT)
+/* QPainterPath is valued based */
+typedef const PlatformPath& PlatformPathPtr;
 #else
 typedef cairo_t* PlatformPathPtr;
 #endif
@@ -43,6 +49,9 @@ namespace WebCore {
 #if USE(CG)
 class PathCG;
 using PlatformPathImpl = PathCG;
+#elif PLATFORM(QT)
+class PathQt;
+using PlatformPathImpl = PathQt;
 #else
 class PathCairo;
 using PlatformPathImpl = PathCairo;
