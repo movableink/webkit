@@ -66,6 +66,15 @@ UniqueRef<PathQt> PathQt::create(QPainterPath&& platformPath)
     return makeUniqueRef<PathQt>(WTFMove(platformPath));
 }
 
+PathQt::PathQt()
+{
+}
+
+PathQt::PathQt(QPainterPath&& platformPath)
+    : m_path(WTFMove(platformPath))
+{
+}
+
 PathQt::PathQt(const PathQt& other)
     : m_path(other.m_path)
 {
@@ -361,6 +370,11 @@ void PathQt::addArc(const FloatPoint& p, float r, float sar, float ear, Rotation
 void PathQt::addRect(const FloatRect& r)
 {
     m_path.addRect(r.x(), r.y(), r.width(), r.height());
+}
+
+void PathQt::addRoundedRect(const FloatRoundedRect& roundedRect, PathRoundedRect::Strategy)
+{
+    addBeziersForRoundedRect(roundedRect);
 }
 
 void PathQt::addEllipse(const FloatPoint& center, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, RotationDirection rotationDirection)
