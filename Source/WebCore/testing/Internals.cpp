@@ -4970,7 +4970,11 @@ void Internals::mockMediaPlaybackTargetPickerDismissPopup()
 
 bool Internals::isMonitoringWirelessRoutes() const
 {
+#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
     return PlatformMediaSessionManager::sharedManager().isMonitoringWirelessTargets();
+#else
+    return false;
+#endif
 }
 
 ExceptionOr<Ref<MockPageOverlay>> Internals::installMockPageOverlay(PageOverlayType type)
