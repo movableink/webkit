@@ -61,7 +61,7 @@ UniqueRef<PathQt> PathQt::create(const PathStream& stream)
     return pathQt;
 }
 
-UniqueRef<PathQt> PathQt::create(QPainterPath&& platformPath)
+UniqueRef<PathQt> PathQt::create(QPainterPath platformPath)
 {
     return makeUniqueRef<PathQt>(WTFMove(platformPath));
 }
@@ -99,8 +99,7 @@ PathQt& PathQt::operator=(PathQt&& other)
 
 UniqueRef<PathImpl> PathQt::clone() const
 {
-    QPainterPath path(m_path);
-    return create(WTFMove(path));
+    return create(m_path);
 }
 
 QPainterPath PathQt::platformPath() const

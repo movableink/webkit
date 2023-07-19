@@ -40,7 +40,7 @@ class PathQt final : public PathImpl {
 public:
     static UniqueRef<PathQt> create();
     static UniqueRef<PathQt> create(const PathStream&);
-    static UniqueRef<PathQt> create(QPainterPath&&);
+    static UniqueRef<PathQt> create(QPainterPath);
 
     PathQt();
     PathQt(QPainterPath&&);
