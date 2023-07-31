@@ -75,6 +75,9 @@ imported/w3c/web-platform-tests/webaudio/the-audio-api/the-audiocontext-interfac
 imported/w3c/web-platform-tests/webaudio/the-audio-api/the-audiocontext-interface/audiocontext-sinkid-setsinkid.https.html [ Skip ]
 imported/w3c/web-platform-tests/webaudio/the-audio-api/the-audiocontext-interface/audiocontext-sinkid-state-change.https.html [ Skip ]
 
+# Payment request API is not supported on WK1.
+imported/w3c/web-platform-tests/permissions-policy/payment-allowed-by-permissions-policy-attribute-redirect-on-load.https.sub.html [ Skip ]
+
 # No support for the Clear-Site-Data header in WebKit1.
 imported/w3c/web-platform-tests/clear-site-data [ Skip ]
 http/tests/clear-site-data [ Skip ]
@@ -808,6 +811,11 @@ accessibility/custom-elements/ [ Skip ]
 accessibility/ax-object-destroyed-on-reload.html [ Skip ]
 accessibility/page-reload-deadlock.html [ Skip ]
 
+# Skip because WK1 doesn't seem to support Element::setAttribute.
+accessibility/dynamic-rowspan.html [ Skip ]
+accessibility/dynamic-colspan.html [ Skip ]
+accessibility/dynamic-table-descendants.html [ Skip ] 
+
 # Missing AccessibilityUIElement::isIndeterminate() implementation.
 accessibility/progress-indeterminate-value.html [ Skip ]
 
@@ -818,6 +826,7 @@ accessibility/mac/date-input-increment-decrement.html [ Skip ]
 accessibility/display-contents/dynamically-added-children.html [ Skip ]
 accessibility/display-contents/aria-owns.html [ Skip ]
 
+accessibility/mac/text-field-number-of-characters.html [ Skip ]
 accessibility/mac/lazy-spellchecking.html [ Skip ]
 
 # DOM paste access requests are not implemented in WebKit1.
@@ -981,6 +990,10 @@ http/tests/media/video-webm-stall.html
 
 # Screenshots timeline does not capture screenshots for changes in WebKitLegacy.
 webkit.org/b/251113 inspector/timeline/timeline-event-screenshots.html [ Skip ]
+
+# The CookieStore API is not fully implemented on macOS WK1 yet.
+imported/w3c/web-platform-tests/cookie-store [ Skip ]
+imported/w3c/web-platform-tests/cookies/partitioned-cookies/partitioned-cookies.tentative.https.html [ Skip ]
 
 #//////////////////////////////////////////////////////////////////////////////////////////
 # End features not supported in WebKit1
@@ -2313,7 +2326,7 @@ imported/w3c/web-platform-tests/pointerevents/pointerevent_mouse_capture_change_
 imported/w3c/web-platform-tests/pointerevents/pointerevent_mouse_pointercapture_in_frame.html [ Pass Failure ]
 imported/w3c/web-platform-tests/pointerevents/pointerevent_pointercapture-in-custom-element.html [ Pass Failure ]
 
-webkit.org/b/236128 imported/w3c/web-platform-tests/html/user-activation/activation-trigger-mouse-right.html [ Skip ]
+webkit.org/b/236128 fullscreen/full-screen-iframe-with-max-width-height.html [ Skip ]
 
 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-object-element/object-param-url.html [ ImageOnlyFailure ]
 
@@ -2544,3 +2557,16 @@ imported/w3c/web-platform-tests/css/css-scrollbars/scrollbar-color-001.html  [ S
 imported/w3c/web-platform-tests/css/css-scrollbars/scrollbar-color-002.html  [ Skip ]
 imported/w3c/web-platform-tests/css/css-scrollbars/scrollbar-width-010.html  [ Skip ]
 imported/w3c/web-platform-tests/css/css-scrollbars/scrollbar-width-014.html  [ Skip ]
+
+# webkit.org/b/258628 Skipping some newly imported pointerevents WPT
+imported/w3c/web-platform-tests/pointerevents/compat/pointerevent_mouse-on-object.html [ Skip ]
+imported/w3c/web-platform-tests/pointerevents/compat/pointerevent_mouse-pointer-preventdefault-passive.html [ Skip ]
+imported/w3c/web-platform-tests/pointerevents/pointerevent_after_target_removed.html?mouse [ Skip ]
+imported/w3c/web-platform-tests/pointerevents/pointerevent_after_target_removed.html?pen [ Skip ]
+imported/w3c/web-platform-tests/pointerevents/pointerevent_contextmenu_is_a_pointerevent.html?mouse [ Skip ]
+imported/w3c/web-platform-tests/pointerevents/pointerevent_fractional_coordinates.html?mouse [ Skip ]
+imported/w3c/web-platform-tests/pointerevents/pointerevent_fractional_coordinates.html?pen [ Skip ]
+imported/w3c/web-platform-tests/pointerevents/pointerevent_pointerout_no_pointer_movement.html [ Skip ]
+
+# rdar://111704637 - 'mousemove' not emitted from 'eventSender.moveMouseTo()'
+fast/html/transient-activation.html [ Skip ]

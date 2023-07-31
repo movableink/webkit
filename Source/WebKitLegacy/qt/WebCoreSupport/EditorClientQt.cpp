@@ -639,7 +639,7 @@ void EditorClientQt::didApplyStyle()
 {
 }
 
-void EditorClientQt::discardedComposition(LocalFrame *)
+void EditorClientQt::discardedComposition(const WebCore::Document&)
 {
 }
 

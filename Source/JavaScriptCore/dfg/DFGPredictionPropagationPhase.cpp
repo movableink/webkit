@@ -994,6 +994,11 @@ private:
             break;
         }
 
+        case DateSetTime: {
+            setPrediction(SpecFullNumber);
+            break;
+        }
+
         case WeakMapGet:
         case ResolveScopeForHoistingFuncDeclInEval: {
             setPrediction(SpecBytecodeTop);
@@ -1061,6 +1066,11 @@ private:
 
         case StringCharCodeAt:
         case StringCodePointAt: {
+            setPrediction(SpecInt32Only);
+            break;
+        }
+
+        case StringIndexOf: {
             setPrediction(SpecInt32Only);
             break;
         }

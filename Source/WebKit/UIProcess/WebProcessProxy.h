@@ -143,7 +143,7 @@ enum class CheckBackForwardList : bool { No, Yes };
 class WebProcessProxy : public AuxiliaryProcessProxy, private ProcessThrottlerClient {
 public:
     using WebPageProxyMap = HashMap<WebPageProxyIdentifier, WeakPtr<WebPageProxy>>;
-    using UserInitiatedActionByAuthorizationTokenMap = HashMap<UUID, RefPtr<API::UserInitiatedAction>>;
+    using UserInitiatedActionByAuthorizationTokenMap = HashMap<WTF::UUID, RefPtr<API::UserInitiatedAction>>;
     typedef HashMap<WebCore::FrameIdentifier, WeakPtr<WebFrameProxy>> WebFrameProxyMap;
     typedef HashMap<uint64_t, RefPtr<API::UserInitiatedAction>> UserInitiatedActionMap;
 
@@ -240,11 +240,11 @@ public:
     void addWebUserContentControllerProxy(WebUserContentControllerProxy&);
     void didDestroyWebUserContentControllerProxy(WebUserContentControllerProxy&);
 
-    void recordUserGestureAuthorizationToken(UUID);
+    void recordUserGestureAuthorizationToken(WTF::UUID);
     RefPtr<API::UserInitiatedAction> userInitiatedActivity(uint64_t);
-    RefPtr<API::UserInitiatedAction> userInitiatedActivity(std::optional<UUID>, uint64_t);
+    RefPtr<API::UserInitiatedAction> userInitiatedActivity(std::optional<WTF::UUID>, uint64_t);
 
-    void consumeIfNotVerifiablyFromUIProcess(API::UserInitiatedAction&, std::optional<UUID>);
+    void consumeIfNotVerifiablyFromUIProcess(API::UserInitiatedAction&, std::optional<WTF::UUID>);
 
     bool isResponsive() const;
 
@@ -365,6 +365,7 @@ public:
     void sendProcessDidResume(ResumeReason) final;
     void didChangeThrottleState(ProcessThrottleState) final;
     void prepareToDropLastAssertion(CompletionHandler<void()>&&) final;
+    void didDropLastAssertion() final;
     ASCIILiteral clientName() const final { return "WebProcess"_s; }
     String environmentIdentifier() const final;
 
@@ -489,7 +490,7 @@ public:
     const WeakHashSet<WebProcessProxy>* sharedWorkerClientProcesses() const;
 
     static void permissionChanged(WebCore::PermissionName, const WebCore::SecurityOriginData&);
-    void sendPermissionChanged(WebCore::PermissionName, const WebCore::SecurityOriginData&);
+    void processPermissionChanged(WebCore::PermissionName, const WebCore::SecurityOriginData&);
 
     void addAllowedFirstPartyForCookies(const WebCore::RegistrableDomain&);
 
@@ -565,6 +566,7 @@ private:
     void updateBlobRegistryPartitioningState() const;
 
     void updateWebGPUEnabledStateInGPUProcess();
+    void updateDOMRenderingStateInGPUProcess();
 
     void processDidTerminateOrFailedToLaunch(ProcessTerminationReason);
 

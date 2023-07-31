@@ -140,16 +140,11 @@ CString CodeBlock::sourceCodeForTools() const
 {
     if (codeType() != FunctionCode)
         return ownerExecutable()->source().toUTF8();
-    
-    SourceProvider* provider = source().provider();
+
     FunctionExecutable* executable = jsCast<FunctionExecutable*>(ownerExecutable());
-    UnlinkedFunctionExecutable* unlinked = executable->unlinkedExecutable();
-    unsigned unlinkedStartOffset = unlinked->startOffset();
-    unsigned linkedStartOffset = executable->source().startOffset();
-    int delta = linkedStartOffset - unlinkedStartOffset;
-    unsigned rangeStart = delta + unlinked->unlinkedFunctionStart();
-    unsigned rangeEnd = delta + unlinked->startOffset() + unlinked->sourceLength();
-    return provider->source().substring(rangeStart, rangeEnd - rangeStart).utf8();
+    return executable->source().provider()->getRange(
+        executable->functionStart(),
+        executable->parametersStartOffset() + executable->source().length()).utf8();
 }
 
 CString CodeBlock::sourceCodeOnOneLine() const
@@ -2744,12 +2739,16 @@ bool CodeBlock::shouldReoptimizeFromLoopNow()
 ArrayProfile* CodeBlock::getArrayProfile(const ConcurrentJSLocker&, BytecodeIndex bytecodeIndex)
 {
     auto instruction = instructions().at(bytecodeIndex);
+
+    if (instruction->opcodeID() == op_iterator_next)
+        return &instruction->as<OpIteratorNext>().metadata(this).m_iterableProfile;
+
     switch (instruction->opcodeID()) {
 #define CASE(Op) \
     case Op::opcodeID: \
         return &instruction->as<Op>().metadata(this).m_arrayProfile;
 
-    FOR_EACH_OPCODE_WITH_ARRAY_PROFILE(CASE)
+    FOR_EACH_OPCODE_WITH_SIMPLE_ARRAY_PROFILE(CASE)
 
 #undef CASE
 
@@ -2923,7 +2922,7 @@ void CodeBlock::updateAllArrayProfilePredictions(const ConcurrentJSLocker& locke
 #define VISIT(__op) \
     m_metadata->forEach<__op>([&] (auto& metadata) { process(metadata.m_arrayProfile); });
 
-    FOR_EACH_OPCODE_WITH_ARRAY_PROFILE(VISIT)
+    FOR_EACH_OPCODE_WITH_SIMPLE_ARRAY_PROFILE(VISIT)
 
 #undef VISIT
 

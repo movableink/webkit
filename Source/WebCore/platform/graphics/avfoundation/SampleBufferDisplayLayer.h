@@ -43,7 +43,7 @@ enum class VideoFrameRotation : uint16_t;
 
 using LayerHostingContextID = uint32_t;
 
-class SampleBufferDisplayLayer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<SampleBufferDisplayLayer> {
+class SampleBufferDisplayLayer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<SampleBufferDisplayLayer, WTF::DestructionThread::MainRunLoop> {
 public:
     class Client : public CanMakeWeakPtr<Client> {
     public:
@@ -65,8 +65,7 @@ public:
 
     virtual void updateDisplayMode(bool hideDisplayLayer, bool hideRootLayer) = 0;
 
-    virtual void updateAffineTransform(CGAffineTransform) = 0;
-    virtual void updateBoundsAndPosition(CGRect, VideoFrameRotation, std::optional<WTF::MachSendRight>&& = std::nullopt) = 0;
+    virtual void updateBoundsAndPosition(CGRect, std::optional<WTF::MachSendRight>&& = std::nullopt) = 0;
 
     virtual void flush() = 0;
     virtual void flushAndRemoveImage() = 0;

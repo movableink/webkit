@@ -756,6 +756,7 @@ void WebProcessProxy::addExistingWebPage(WebPageProxy& webPage, BeginsUsingDataS
     updateBackgroundResponsivenessTimer();
     updateBlobRegistryPartitioningState();
     updateWebGPUEnabledStateInGPUProcess();
+    updateDOMRenderingStateInGPUProcess();
 
     // If this was previously a standalone worker process with no pages we need to call didChangeThrottleState()
     // to update our process assertions on the network process since standalone worker processes do not hold
@@ -795,6 +796,7 @@ void WebProcessProxy::removeWebPage(WebPageProxy& webPage, EndsUsingDataStore en
     updateMediaStreamingActivity();
     updateBackgroundResponsivenessTimer();
     updateWebGPUEnabledStateInGPUProcess();
+    updateDOMRenderingStateInGPUProcess();
     updateBlobRegistryPartitioningState();
 
     maybeShutDown();
@@ -1294,7 +1296,7 @@ bool WebProcessProxy::wasPreviouslyApprovedFileURL(const URL& url) const
     return m_previouslyApprovedFilePaths.contains(fileSystemPath);
 }
 
-void WebProcessProxy::recordUserGestureAuthorizationToken(UUID authorizationToken)
+void WebProcessProxy::recordUserGestureAuthorizationToken(WTF::UUID authorizationToken)
 {
     if (!UserInitiatedActionByAuthorizationTokenMap::isValidKey(authorizationToken) || !authorizationToken)
         return;
@@ -1315,7 +1317,7 @@ RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(uint64_t
     return result.iterator->value;
 }
 
-RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(std::optional<UUID> authorizationToken, uint64_t identifier)
+RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(std::optional<WTF::UUID> authorizationToken, uint64_t identifier)
 {
     if (!UserInitiatedActionMap::isValidKey(identifier) || !identifier)
         return nullptr;
@@ -1333,7 +1335,7 @@ RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(std::opt
     return userInitiatedActivity(identifier);
 }
 
-void WebProcessProxy::consumeIfNotVerifiablyFromUIProcess(API::UserInitiatedAction& action, std::optional<UUID> authToken)
+void WebProcessProxy::consumeIfNotVerifiablyFromUIProcess(API::UserInitiatedAction& action, std::optional<WTF::UUID> authToken)
 {
     if (authToken && m_userInitiatedActionByAuthorizationTokenMap.remove(*authToken))
         return;
@@ -1724,6 +1726,12 @@ void WebProcessProxy::didChangeThrottleState(ProcessThrottleState type)
     }
 
     ASSERT(!m_backgroundToken || !m_foregroundToken);
+    m_backgroundResponsivenessTimer.updateState();
+}
+
+void WebProcessProxy::didDropLastAssertion()
+{
+    m_backgroundResponsivenessTimer.updateState();
 }
 
 void WebProcessProxy::prepareToDropLastAssertion(CompletionHandler<void()>&& completionHandler)
@@ -1940,12 +1948,24 @@ void WebProcessProxy::updateBlobRegistryPartitioningState() const
         networkProcess->setBlobRegistryTopOriginPartitioningEnabled(sessionID(),  dataStore->isBlobRegistryPartitioningEnabled());
 }
 
+
+void WebProcessProxy::updateDOMRenderingStateInGPUProcess()
+{
+#if ENABLE(GPU_PROCESS)
+    if (auto* gpuProcess = processPool().gpuProcess()) {
+        gpuProcess->updateDOMRenderingEnabled(*this, WTF::anyOf(pages(), [](auto& page) {
+            return page->preferences().useGPUProcessForDOMRenderingEnabled();
+        }));
+    }
+#endif
+}
+
 void WebProcessProxy::updateWebGPUEnabledStateInGPUProcess()
 {
 #if ENABLE(GPU_PROCESS)
     if (auto* process = processPool().gpuProcess()) {
         process->updateWebGPUEnabled(*this, WTF::anyOf(pages(), [](const auto& page) {
-            return page && page->preferences().webGPUEnabled();
+            return page->preferences().webGPUEnabled();
         }));
     }
 #endif
@@ -2484,12 +2504,20 @@ void WebProcessProxy::permissionChanged(WebCore::PermissionName permissionName, 
 
     for (auto& webProcessPool : webProcessPools) {
         for (auto& webProcessProxy : webProcessPool->processes())
-            webProcessProxy->sendPermissionChanged(permissionName, topOrigin);
+            webProcessProxy->processPermissionChanged(permissionName, topOrigin);
     }
 }
 
-void WebProcessProxy::sendPermissionChanged(WebCore::PermissionName permissionName, const WebCore::SecurityOriginData& topOrigin)
+void WebProcessProxy::processPermissionChanged(WebCore::PermissionName permissionName, const WebCore::SecurityOriginData& topOrigin)
 {
+#if ENABLE(MEDIA_STREAM)
+    if (permissionName == WebCore::PermissionName::Camera || permissionName == WebCore::PermissionName::Microphone) {
+        for (auto& page : m_pageMap.values()) {
+            if (SecurityOriginData::fromURLWithoutStrictOpaqueness(URL { page->currentURL() }) == topOrigin)
+                page->clearUserMediaPermissionRequestHistory(permissionName);
+        }
+    }
+#endif
     send(Messages::WebPermissionController::permissionChanged(permissionName, topOrigin), 0);
 }
 

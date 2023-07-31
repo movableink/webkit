@@ -347,7 +347,7 @@ void RenderThemeIOS::adjustCheckboxStyle(RenderStyle& style, const Element* elem
     if (!style.width().isIntrinsicOrAuto() && !style.height().isAuto())
         return;
 
-    int size = std::max(style.computedFontPixelSize(), 10U);
+    auto size = std::max(style.computedFontSize(), 10.f);
     style.setWidth({ size, LengthType::Fixed });
     style.setHeight({ size, LengthType::Fixed });
 }
@@ -506,10 +506,10 @@ void RenderThemeIOS::adjustRadioStyle(RenderStyle& style, const Element* element
     if (!style.width().isIntrinsicOrAuto() && !style.height().isAuto())
         return;
 
-    int size = std::max(style.computedFontPixelSize(), 10U);
+    auto size = std::max(style.computedFontSize(), 10.f);
     style.setWidth({ size, LengthType::Fixed });
     style.setHeight({ size, LengthType::Fixed });
-    style.setBorderRadius({ size / 2, size / 2 });
+    style.setBorderRadius({ static_cast<int>(size / 2), static_cast<int>(size / 2) });
 }
 
 void RenderThemeIOS::paintRadioDecorations(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
@@ -952,11 +952,11 @@ void RenderThemeIOS::paintMenuListButtonDecorations(const RenderBox& box, const 
         uint8_t opacity = isReadOnlyControl(box) ? 51 : 128;
         paintInfo.context().setStrokeColor(Color::black.colorWithAlphaByte(opacity));
         paintInfo.context().setFillColor(Color::black.colorWithAlphaByte(opacity));
-        paintInfo.context().drawPath(Path::polygonPathFromPoints(shadow));
+        paintInfo.context().drawPath(Path(shadow));
 
         paintInfo.context().setStrokeColor(Color::white);
         paintInfo.context().setFillColor(Color::white);
-        paintInfo.context().drawPath(Path::polygonPathFromPoints(arrow));
+        paintInfo.context().drawPath(Path(arrow));
     }
 }
 
@@ -1651,9 +1651,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     return IconAndSize { result, size };
 }
 
-LayoutSize RenderThemeIOS::attachmentIntrinsicSize(const RenderAttachment& renderAttachment) const
+LayoutSize RenderThemeIOS::attachmentIntrinsicSize(const RenderAttachment&) const
 {
-    return LayoutSize(FloatSize(renderAttachment.attachmentElement().isImageOnly() ? attachmentImageOnlySize : attachmentSize) * attachmentDynamicTypeScaleFactor());
+    return LayoutSize(FloatSize(attachmentSize) * attachmentDynamicTypeScaleFactor());
 }
 
 static void paintAttachmentIcon(GraphicsContext& context, AttachmentLayout& info)
@@ -1681,7 +1681,7 @@ static void paintAttachmentProgress(GraphicsContext& context, AttachmentLayout& 
     Path progressPath;
     progressPath.moveTo(center);
     progressPath.addLineTo(FloatPoint(center.x(), info.progressRect.y()));
-    progressPath.addArc(center, info.progressRect.width() / 2, -M_PI_2, info.progress * 2 * M_PI - M_PI_2, 0);
+    progressPath.addArc(center, info.progressRect.width() / 2, -M_PI_2, info.progress * 2 * M_PI - M_PI_2, RotationDirection::Counterclockwise);
     progressPath.closeSubpath();
     context.fillPath(progressPath);
 }
@@ -1720,7 +1720,7 @@ bool RenderThemeIOS::paintAttachment(const RenderObject& renderer, const PaintIn
 
     context.translate(toFloatSize(paintRect.location()));
 
-    if (attachment.shouldDrawBorder() && !attachment.attachmentElement().isImageOnly()) {
+    if (attachment.shouldDrawBorder()) {
         auto borderPath = attachmentBorderPath(info);
         paintAttachmentBorder(context, borderPath);
         context.clipPath(borderPath);
@@ -2000,7 +2000,7 @@ bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintI
         context.fillEllipse(innerCircleRect);
     } else {
         Path path;
-        path.addEllipse(rect);
+        path.addEllipseInRect(rect);
         if (!useAlternateDesign) {
             context.setStrokeColor(checkboxRadioBorderColor(controlStates, styleColorOptions));
             context.setStrokeThickness(checkboxRadioBorderWidth * 2);
@@ -2429,7 +2429,7 @@ void RenderThemeIOS::paintMenuListButtonDecorationsWithFormControlRefresh(const 
         FloatRect ellipse(0, 0, length, length);
 
         for (int i = 0; i < count; ++i) {
-            glyphPath.addEllipse(ellipse);
+            glyphPath.addEllipseInRect(ellipse);
             ellipse.move(length + padding, 0);
         }
 

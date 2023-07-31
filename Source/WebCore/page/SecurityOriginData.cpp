@@ -205,6 +205,9 @@ bool SecurityOriginData::shouldTreatAsOpaqueOrigin(const URL& url)
 #if ENABLE(PDFJS)
         || url.protocolIs("webkit-pdfjs-viewer"_s)
 #endif
+#if PLATFORM(QT)
+        || url.protocolIs("qrc"_s)
+#endif
         || url.protocolIs("blob"_s))
         return false;
 

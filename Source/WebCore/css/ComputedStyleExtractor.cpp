@@ -52,7 +52,6 @@
 #include "CSSValueList.h"
 #include "CSSValuePair.h"
 #include "CSSValuePool.h"
-#include "CSSWordBoundaryDetectionValue.h"
 #include "ComposedTreeAncestorIterator.h"
 #include "ContentData.h"
 #include "CursorList.h"
@@ -579,21 +578,24 @@ RefPtr<CSSValue> ComputedStyleExtractor::whiteSpaceShorthandValue(const RenderSt
 {
     auto whiteSpaceCollapse = style.whiteSpaceCollapse();
     auto textWrap = style.textWrap();
-    if (whiteSpaceCollapse == WhiteSpaceCollapse::BreakSpaces && textWrap == TextWrap::Wrap)
-        return CSSPrimitiveValue::create(CSSValueBreakSpaces);
+
+    // Convert to backwards-compatible keywords if possible.
     if (whiteSpaceCollapse == WhiteSpaceCollapse::Collapse && textWrap == TextWrap::Wrap)
         return CSSPrimitiveValue::create(CSSValueNormal);
-    if (whiteSpaceCollapse == WhiteSpaceCollapse::Collapse && textWrap == TextWrap::NoWrap)
-        return CSSPrimitiveValue::create(CSSValueNowrap);
     if (whiteSpaceCollapse == WhiteSpaceCollapse::Preserve && textWrap == TextWrap::NoWrap)
         return CSSPrimitiveValue::create(CSSValuePre);
-    if (whiteSpaceCollapse == WhiteSpaceCollapse::PreserveBreaks && textWrap == TextWrap::Wrap)
-        return CSSPrimitiveValue::create(CSSValuePreLine);
     if (whiteSpaceCollapse == WhiteSpaceCollapse::Preserve && textWrap == TextWrap::Wrap)
         return CSSPrimitiveValue::create(CSSValuePreWrap);
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::PreserveBreaks && textWrap == TextWrap::Wrap)
+        return CSSPrimitiveValue::create(CSSValuePreLine);
 
-    // The white-space property cannot be properly expressed in terms of its longhands
-    return nullptr;
+    // Omit default longhand values.
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::Collapse)
+        return createConvertingToCSSValueID(textWrap);
+    if (textWrap == TextWrap::Wrap)
+        return createConvertingToCSSValueID(whiteSpaceCollapse);
+
+    return CSSValuePair::create(createConvertingToCSSValueID(whiteSpaceCollapse), createConvertingToCSSValueID(textWrap));
 }
 
 Ref<CSSPrimitiveValue> ComputedStyleExtractor::currentColorOrValidColor(const RenderStyle& style, const StyleColor& color)
@@ -1742,8 +1744,10 @@ static Ref<CSSValue> valueForContainIntrinsicSize(const RenderStyle& style, cons
     case ContainIntrinsicSizeType::Length:
         return zoomAdjustedPixelValueForLength(containIntrinsicLength.value(), style);
     case ContainIntrinsicSizeType::AutoAndLength:
-        return CSSValueList::createSpaceSeparated(CSSPrimitiveValue::create(CSSValueAuto),
+        return CSSValuePair::create(CSSPrimitiveValue::create(CSSValueAuto),
             zoomAdjustedPixelValueForLength(containIntrinsicLength.value(), style));
+    case ContainIntrinsicSizeType::AutoAndNone:
+        return CSSValuePair::create(CSSPrimitiveValue::create(CSSValueAuto), CSSPrimitiveValue::create(CSSValueNone));
     }
     RELEASE_ASSERT_NOT_REACHED();
     return CSSPrimitiveValue::create(CSSValueNone);
@@ -2106,11 +2110,6 @@ static Ref<CSSValue> counterToCSSValue(const RenderStyle& style, CSSPropertyID p
     if (!list.isEmpty())
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     return CSSPrimitiveValue::create(CSSValueNone);
-}
-
-static Ref<CSSValue> wordBoundaryDetection(WordBoundaryDetection wordBoundaryDetection)
-{
-    return CSSWordBoundaryDetectionValue::create(WTFMove(wordBoundaryDetection));
 }
 
 static Ref<CSSValueList> fontFamilyList(const RenderStyle& style)
@@ -4291,9 +4290,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
 
     case CSSPropertyQuotes:
         return valueForQuotes(style.quotes());
-
-    case CSSPropertyWordBoundaryDetection:
-        return wordBoundaryDetection(style.wordBoundaryDetection());
 
     // Unimplemented CSS 3 properties (including CSS3 shorthand properties).
     case CSSPropertyAll:

@@ -70,6 +70,7 @@
 #import "RenderTextControl.h"
 #import "RenderView.h"
 #import "RenderWidget.h"
+#import "RuntimeApplicationChecks.h"
 #import "ScrollView.h"
 #import "TextIterator.h"
 #import "VisibleUnits.h"
@@ -1189,7 +1190,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         objectAttributes = tableAttrs.get().get();
     else if (backingObject->isTableColumn())
         objectAttributes = tableColAttrs.get().get();
-    else if (backingObject->isTableCell())
+    else if (backingObject->isExposedTableCell())
         objectAttributes = tableCellAttrs.get().get();
     else if (backingObject->isTableRow()) {
         // An ARIA table row can be collapsed and expanded, so it needs the extra attributes.
@@ -1846,7 +1847,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         }
     }
 
-    if (backingObject->isTableCell()) {
+    if (backingObject->isExposedTableCell()) {
         if ([attributeName isEqualToString:NSAccessibilityRowIndexRangeAttribute]) {
             auto rowRange = backingObject->rowIndexRange();
             return [NSValue valueWithRange:NSMakeRange(rowRange.first, rowRange.second)];
@@ -3700,6 +3701,13 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     return [super accessibilityArrayAttributeCount:attribute];
 }
 ALLOW_DEPRECATED_DECLARATIONS_END
+
+// Implement this for performance reasons, as the default AppKit implementation will iterate upwards
+// until it finds something that responds to this method.
+- (pid_t)accessibilityPresenterProcessIdentifier
+{
+    return WebCore::presentingApplicationPID();
+}
 
 - (NSArray *)accessibilityArrayAttributeValues:(NSString *)attribute index:(NSUInteger)index maxCount:(NSUInteger)maxCount
 {

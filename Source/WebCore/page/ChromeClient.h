@@ -56,9 +56,9 @@
 #include "SearchPopupMenu.h"
 #include "TextDetectorInterface.h"
 #include "WebCoreKeyboardUIMode.h"
+#include "WebGPU.h"
 #include "WorkerClient.h"
 #include <JavaScriptCore/ConsoleTypes.h>
-#include <pal/graphics/WebGPU/WebGPU.h>
 #include <wtf/Assertions.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
@@ -375,7 +375,7 @@ public:
     WEBCORE_EXPORT virtual RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const;
 #endif
 
-    virtual RefPtr<PAL::WebGPU::GPU> createGPUForWebGPU() const { return nullptr; }
+    virtual RefPtr<WebGPU::GPU> createGPUForWebGPU() const { return nullptr; }
 
     virtual RefPtr<ShapeDetection::BarcodeDetector> createBarcodeDetector(const ShapeDetection::BarcodeDetectorOptions&) const { return nullptr; }
     virtual void getBarcodeDetectorSupportedFormats(CompletionHandler<void(Vector<ShapeDetection::BarcodeFormat>&&)>&& completionHandler) const { completionHandler({ }); }
@@ -639,7 +639,7 @@ public:
 #endif
 
 #if USE(SYSTEM_PREVIEW)
-    virtual void handleSystemPreview(const URL&, const SystemPreviewInfo&) { }
+    virtual void beginSystemPreview(const URL&, const SystemPreviewInfo&, CompletionHandler<void()>&&) { }
 #endif
 
     virtual void requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&) = 0;

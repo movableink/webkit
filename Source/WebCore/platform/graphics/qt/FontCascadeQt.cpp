@@ -338,7 +338,7 @@ QFont FontCascade::syntheticFont() const
     QRawFont rawFont(primaryFont().getQtRawFont());
     QFont f(rawFont.familyName());
     if (rawFont.pixelSize())
-        f.setPixelSize(rawFont.pixelSize());
+        f.setPointSizeF(rawFont.pixelSize());
     f.setWeight(rawFont.weight());
     f.setStyle(rawFont.style());
     if (m_letterSpacing)

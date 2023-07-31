@@ -26,6 +26,8 @@
 #include "config.h"
 #include "WasmBBQJIT.h"
 
+#if ENABLE(WEBASSEMBLY_BBQJIT)
+
 #include "B3Common.h"
 #include "B3ValueRep.h"
 #include "BinarySwitch.h"
@@ -55,6 +57,7 @@
 #include "WasmOps.h"
 #include "WasmThunks.h"
 #include "WasmTypeDefinition.h"
+#include <bit>
 #include <wtf/Assertions.h>
 #include <wtf/Compiler.h>
 #include <wtf/HashFunctions.h>
@@ -63,8 +66,6 @@
 #include <wtf/PlatformRegisters.h>
 #include <wtf/SmallSet.h>
 #include <wtf/StdLibExtras.h>
-
-#if ENABLE(WEBASSEMBLY_BBQJIT)
 
 namespace JSC { namespace Wasm {
 
@@ -6044,7 +6045,7 @@ public:
     {
         EMIT_UNARY(
             "I32Popcnt", TypeKind::I32,
-            BLOCK(Value::fromI32(__builtin_popcount(operand.asI32()))),
+            BLOCK(Value::fromI32(std::popcount(static_cast<uint32_t>(operand.asI32())))),
             BLOCK(
                 if (m_jit.supportsCountPopulation())
                     m_jit.countPopulation32(operandLocation.asGPR(), resultLocation.asGPR(), wasmScratchFPR);
@@ -6068,7 +6069,7 @@ public:
     {
         EMIT_UNARY(
             "I64Popcnt", TypeKind::I64,
-            BLOCK(Value::fromI64(__builtin_popcountll(operand.asI64()))),
+            BLOCK(Value::fromI64(std::popcount(static_cast<uint64_t>(operand.asI64())))),
             BLOCK(
                 if (m_jit.supportsCountPopulation())
                     m_jit.countPopulation64(operandLocation.asGPR(), resultLocation.asGPR(), wasmScratchFPR);
@@ -8320,7 +8321,7 @@ public:
             m_jit.vectorExtractLaneInt64(TrustedImm32(1), srcLocation.asFPR(), scratches.gpr(1));
             m_jit.rshift64(shiftRCX, scratches.gpr(0));
             m_jit.rshift64(shiftRCX, scratches.gpr(1));
-            m_jit.vectorReplaceLaneInt64(TrustedImm32(0), scratches.gpr(0), resultLocation.asFPR());
+            m_jit.vectorSplatInt64(scratches.gpr(0), resultLocation.asFPR());
             m_jit.vectorReplaceLaneInt64(TrustedImm32(1), scratches.gpr(1), resultLocation.asFPR());
             return { };
         }
@@ -8366,15 +8367,17 @@ public:
 
         LOG_INSTRUCTION("Vector", op, left, leftLocation, right, rightLocation, RESULT(result));
 
+        ScratchScope<0, 1> scratches(*this, leftLocation, rightLocation, resultLocation);
+        FPRReg scratchFPR = scratches.fpr(0);
         if (op == SIMDLaneOperation::ExtmulLow) {
-            m_jit.vectorExtendLow(info, leftLocation.asFPR(), wasmScratchFPR);
+            m_jit.vectorExtendLow(info, leftLocation.asFPR(), scratchFPR);
             m_jit.vectorExtendLow(info, rightLocation.asFPR(), resultLocation.asFPR());
         } else {
             ASSERT(op == SIMDLaneOperation::ExtmulHigh);
-            m_jit.vectorExtendHigh(info, leftLocation.asFPR(), wasmScratchFPR);
+            m_jit.vectorExtendHigh(info, leftLocation.asFPR(), scratchFPR);
             m_jit.vectorExtendHigh(info, rightLocation.asFPR(), resultLocation.asFPR());
         }
-        emitVectorMul(info, Location::fromFPR(wasmScratchFPR), resultLocation, resultLocation);
+        emitVectorMul(info, Location::fromFPR(scratchFPR), resultLocation, resultLocation);
 
         return { };
     }
@@ -9076,11 +9079,11 @@ public:
             m_jit.vectorExtractLaneInt64(TrustedImm32(0), left.asFPR(), wasmScratchGPR);
             m_jit.vectorExtractLaneInt64(TrustedImm32(0), right.asFPR(), dataScratchGPR);
             m_jit.mul64(wasmScratchGPR, dataScratchGPR, wasmScratchGPR);
-            m_jit.vectorReplaceLane(SIMDLane::i64x2, TrustedImm32(0), wasmScratchGPR, wasmScratchFPR);
+            m_jit.vectorSplatInt64(wasmScratchGPR, wasmScratchFPR);
             m_jit.vectorExtractLaneInt64(TrustedImm32(1), left.asFPR(), wasmScratchGPR);
             m_jit.vectorExtractLaneInt64(TrustedImm32(1), right.asFPR(), dataScratchGPR);
             m_jit.mul64(wasmScratchGPR, dataScratchGPR, wasmScratchGPR);
-            m_jit.vectorReplaceLane(SIMDLane::i64x2, TrustedImm32(1), wasmScratchGPR, wasmScratchFPR);
+            m_jit.vectorReplaceLaneInt64(TrustedImm32(1), wasmScratchGPR, wasmScratchFPR);
             m_jit.moveVector(wasmScratchFPR, result.asFPR());
         } else
             m_jit.vectorMul(info, left.asFPR(), right.asFPR(), result.asFPR());

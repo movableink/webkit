@@ -1805,10 +1805,10 @@ void MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
             || g_error_matches(err.get(), GST_RESOURCE_ERROR, GST_RESOURCE_ERROR_NOT_FOUND))
             error = MediaPlayer::NetworkState::FormatError;
         else if (g_error_matches(err.get(), GST_STREAM_ERROR, GST_STREAM_ERROR_TYPE_NOT_FOUND)) {
-            // Let the mediaPlayerClient handle the stream error, in this case the HTMLMediaElement will emit a stalled event.
             GST_ERROR_OBJECT(pipeline(), "Decode error, let the Media element emit a stalled event.");
             m_loadingStalled = true;
-            break;
+            error = MediaPlayer::NetworkState::DecodeError;
+            attemptNextLocation = true;
         } else if (err->domain == GST_STREAM_ERROR) {
             error = MediaPlayer::NetworkState::DecodeError;
             attemptNextLocation = true;
@@ -2245,7 +2245,7 @@ void MediaPlayerPrivateGStreamer::configureElement(GstElement* element)
         g_object_set(element, "use-buffering", FALSE, nullptr);
 
     // Collect processing time metrics for video decoders and converters.
-    if ((classifiers.contains("Converter"_s) || classifiers.contains("Decoder"_s)) && classifiers.contains("Video"_s) && !classifiers.contains("Parser"_s))
+    if ((classifiers.contains("Converter"_s) || classifiers.contains("Decoder"_s)) && classifiers.contains("Video"_s) && !classifiers.contains("Parser"_s) && !classifiers.contains("Sink"_s))
         webkitGstTraceProcessingTimeForElement(element);
 
     // This will set the multiqueue size to the default value.
@@ -2289,6 +2289,12 @@ void MediaPlayerPrivateGStreamer::configureElementPlatformQuirks(GstElement* ele
 #if PLATFORM(BROADCOM)
     if (g_str_has_prefix(GST_ELEMENT_NAME(element), "brcmaudiosink"))
         g_object_set(G_OBJECT(element), "async", TRUE, nullptr);
+    else if (g_str_has_prefix(GST_ELEMENT_NAME(element), "brcmaudiodecoder")) {
+        if (m_isLiveStream.value_or(false)) {
+            // Limit BCM audio decoder buffering to 1sec so live progressive playback can start faster.
+            g_object_set(G_OBJECT(element), "limit_buffering_ms", 1000, nullptr);
+        }
+    }
 #if ENABLE(MEDIA_STREAM)
     if (m_streamPrivate && !g_strcmp0(G_OBJECT_TYPE_NAME(G_OBJECT(element)), "GstBrcmPCMSink") && gstObjectHasProperty(element, "low_latency")) {
         GST_DEBUG_OBJECT(pipeline(), "Set 'low_latency' in brcmpcmsink");
@@ -3311,6 +3317,12 @@ static uint32_t fourccValue(GstVideoFormat format)
         return uint32_t(DMABufFormat::FourCC::BGRA8888);
     case GST_VIDEO_FORMAT_ABGR:
         return uint32_t(DMABufFormat::FourCC::RGBA8888);
+    case GST_VIDEO_FORMAT_P010_10LE:
+    case GST_VIDEO_FORMAT_P010_10BE:
+        return uint32_t(DMABufFormat::FourCC::P010);
+    case GST_VIDEO_FORMAT_P016_LE:
+    case GST_VIDEO_FORMAT_P016_BE:
+        return uint32_t(DMABufFormat::FourCC::P016);
     default:
         break;
     }

@@ -89,6 +89,7 @@ public:
     DECLARE_PROPERTY_CUSTOM_HANDLERS(BoxShadow);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(CaretColor);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(Clip);
+    DECLARE_PROPERTY_CUSTOM_HANDLERS(Color);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(Contain);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(ContainIntrinsicWidth);
     DECLARE_PROPERTY_CUSTOM_HANDLERS(ContainIntrinsicHeight);
@@ -163,8 +164,6 @@ public:
     static void applyInitialCustomProperty(BuilderState&, const CSSRegisteredCustomProperty*, const AtomString& name);
     static void applyInheritCustomProperty(BuilderState&, const CSSRegisteredCustomProperty*, const AtomString& name);
     static void applyValueCustomProperty(BuilderState&, const CSSRegisteredCustomProperty*, const CSSCustomPropertyValue&);
-
-    static void applyValueColor(BuilderState&, CSSValue&);
 
 private:
     static void resetEffectiveZoom(BuilderState&);
@@ -996,7 +995,7 @@ inline void BuilderCustom::applyValueFontFamily(BuilderState& builderState, CSSV
                 isGenericFamily = true;
                 family = CSSPropertyParserHelpers::genericFontFamily(contentValue.valueID());
             }
-            if (family.isEmpty())
+            if (family.isNull())
                 continue;
             if (families.isEmpty())
                 fontDescription.setIsSpecifiedFont(!isGenericFamily);
@@ -2034,7 +2033,31 @@ inline void BuilderCustom::applyValueColor(BuilderState& builderState, CSSValue&
         auto color = builderState.colorFromPrimitiveValue(primitiveValue, ForVisitedLink::Yes);
         builderState.style().setVisitedLinkColor(resolveColor(color));
     }
+
     builderState.style().setDisallowsFastPathInheritance();
+    builderState.style().setHasExplicitlySetColor(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyInitialColor(BuilderState& builderState)
+{
+    if (builderState.applyPropertyToRegularStyle())
+        builderState.style().setColor(RenderStyle::initialColor());
+    if (builderState.applyPropertyToVisitedLinkStyle())
+        builderState.style().setVisitedLinkColor(RenderStyle::initialColor());
+
+    builderState.style().setDisallowsFastPathInheritance();
+    builderState.style().setHasExplicitlySetColor(builderState.isAuthorOrigin());
+}
+
+inline void BuilderCustom::applyInheritColor(BuilderState& builderState)
+{
+    if (builderState.applyPropertyToRegularStyle())
+        builderState.style().setColor(builderState.parentStyle().color());
+    if (builderState.applyPropertyToVisitedLinkStyle())
+        builderState.style().setVisitedLinkColor(builderState.parentStyle().color());
+
+    builderState.style().setDisallowsFastPathInheritance();
+    builderState.style().setHasExplicitlySetColor(builderState.isAuthorOrigin());
 }
 
 inline void BuilderCustom::applyInitialCustomProperty(BuilderState& builderState, const CSSRegisteredCustomProperty* registered, const AtomString& name)
@@ -2095,16 +2118,19 @@ inline void BuilderCustom::applyValueContainIntrinsicWidth(BuilderState& builder
         return;
     }
 
-    if (!is<CSSValueList>(value))
+    if (!is<CSSValuePair>(value))
         return;
 
-    auto& list = downcast<CSSValueList>(value);
-    ASSERT(list.length() == 2);
-    ASSERT(downcast<CSSPrimitiveValue>(list.item(0))->valueID() == CSSValueAuto);
-    ASSERT(downcast<CSSPrimitiveValue>(list.item(1))->isLength());
-    style.setContainIntrinsicWidthType(ContainIntrinsicSizeType::AutoAndLength);
-    auto lengthValue = downcast<CSSPrimitiveValue>(list.item(1))->computeLength<Length>(builderState.cssToLengthConversionData().copyWithAdjustedZoom(1.0f));
-    style.setContainIntrinsicWidth(lengthValue);
+    auto& pair = downcast<CSSValuePair>(value);
+    ASSERT(downcast<CSSPrimitiveValue>(pair.first()).valueID() == CSSValueAuto);
+    if (downcast<CSSPrimitiveValue>(pair.second()).valueID() == CSSValueNone)
+        style.setContainIntrinsicWidthType(ContainIntrinsicSizeType::AutoAndNone);
+    else {
+        ASSERT(downcast<CSSPrimitiveValue>(pair.second()).isLength());
+        style.setContainIntrinsicWidthType(ContainIntrinsicSizeType::AutoAndLength);
+        auto lengthValue = downcast<CSSPrimitiveValue>(pair.second()).computeLength<Length>(builderState.cssToLengthConversionData().copyWithAdjustedZoom(1.0f));
+        style.setContainIntrinsicWidth(lengthValue);
+    }
 }
 
 inline void BuilderCustom::applyInitialContainIntrinsicHeight(BuilderState& builderState)
@@ -2135,16 +2161,19 @@ inline void BuilderCustom::applyValueContainIntrinsicHeight(BuilderState& builde
         return;
     }
 
-    if (!is<CSSValueList>(value))
+    if (!is<CSSValuePair>(value))
         return;
 
-    auto& list = downcast<CSSValueList>(value);
-    ASSERT(list.length() == 2);
-    ASSERT(downcast<CSSPrimitiveValue>(list.item(0))->valueID() == CSSValueAuto);
-    ASSERT(downcast<CSSPrimitiveValue>(list.item(1))->isLength());
-    style.setContainIntrinsicHeightType(ContainIntrinsicSizeType::AutoAndLength);
-    auto lengthValue = downcast<CSSPrimitiveValue>(list.item(1))->computeLength<Length>(builderState.cssToLengthConversionData().copyWithAdjustedZoom(1.0f));
-    style.setContainIntrinsicHeight(lengthValue);
+    auto& pair = downcast<CSSValuePair>(value);
+    ASSERT(downcast<CSSPrimitiveValue>(pair.first()).valueID() == CSSValueAuto);
+    if (downcast<CSSPrimitiveValue>(pair.second()).valueID() == CSSValueNone)
+        style.setContainIntrinsicHeightType(ContainIntrinsicSizeType::AutoAndNone);
+    else {
+        ASSERT(downcast<CSSPrimitiveValue>(pair.second()).isLength());
+        style.setContainIntrinsicHeightType(ContainIntrinsicSizeType::AutoAndLength);
+        auto lengthValue = downcast<CSSPrimitiveValue>(pair.second()).computeLength<Length>(builderState.cssToLengthConversionData().copyWithAdjustedZoom(1.0f));
+        style.setContainIntrinsicHeight(lengthValue);
+    }
 }
 
 }

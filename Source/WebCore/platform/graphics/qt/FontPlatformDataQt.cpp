@@ -70,7 +70,7 @@ static inline QFont::Weight toQFontWeight(FontSelectionValue fontWeight)
 
 void FontPlatformDataPrivate::platformDataInit(FontPlatformData& q, float size, const QRawFont& rawFont)
 {
-    // ASSERT(qFuzzyCompare(static_cast<float>(rawFont.pixelSize()), size));
+    // ASSERT(qFuzzyCompare(static_cast<float>(rawFont.pointSizeF()), size));
     q.m_data = adoptRef(new FontPlatformDataPrivate(rawFont));
     q.updateSize(size);
 }
@@ -78,10 +78,10 @@ void FontPlatformDataPrivate::platformDataInit(FontPlatformData& q, float size, 
 FontPlatformData::FontPlatformData(const FontDescription& description, const AtomString& familyName, const FontCustomPlatformData* customPlatformData)
 {
     QFont font;
-    int requestedSize = description.computedPixelSize();
+    auto requestedSize = description.computedSize();
     font.setFamily(familyName.string());
     if (requestedSize)
-        font.setPixelSize(requestedSize);
+        font.setPointSizeF(requestedSize);
     font.setItalic(isItalic(description.italic()));
     font.setWeight(toQFontWeight(description.weight()));
 
@@ -91,9 +91,9 @@ FontPlatformData::FontPlatformData(const FontDescription& description, const Ato
         font.setStyleStrategy(QFont::ForceOutline);
 
     // WebKit allows font size zero but QFont does not. We will return
-    // m_data->size if a font size of zero is requested and pixelSize()
+    // m_data->size if a font size of zero is requested and pointSizeF()
     // otherwise.
-    auto size = (!requestedSize) ? requestedSize : font.pixelSize();
+    auto size = (!requestedSize) ? requestedSize : font.pointSizeF();
     FontPlatformDataPrivate::platformDataInit(*this, size, QRawFont::fromFont(font, QFontDatabase::Any));
 }
 
@@ -115,6 +115,7 @@ FontPlatformData FontPlatformData::cloneWithSize(const FontPlatformData& source,
 void FontPlatformData::updateSize(float size)
 {
     m_size = size;
+    m_data->rawFont.setPixelSize(size);
 }
 
 QRawFont FontPlatformData::rawFont() const

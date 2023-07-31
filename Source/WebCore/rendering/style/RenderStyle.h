@@ -91,7 +91,6 @@ class TransformOperations;
 class TransformationMatrix;
 class TranslateTransformOperation;
 class WillChangeData;
-class WordBoundaryDetection;
 
 enum CSSPropertyID : uint16_t;
 enum GridAutoFlow : uint8_t;
@@ -515,7 +514,6 @@ public:
     WEBCORE_EXPORT const FontCascadeDescription& fontDescription() const;
     float specifiedFontSize() const;
     float computedFontSize() const;
-    unsigned computedFontPixelSize() const;
     std::pair<FontOrientation, NonCJKGlyphOrientation> fontAndGlyphOrientation();
 
     inline FontVariationSettings fontVariationSettings() const;
@@ -696,12 +694,14 @@ public:
 
     inline ContentVisibility contentVisibility() const;
 
-    inline bool effectiveSkipsContent() const;
+    inline bool effectiveSkippedContent() const;
 
     inline ContainIntrinsicSizeType containIntrinsicWidthType() const;
     inline ContainIntrinsicSizeType containIntrinsicHeightType() const;
     inline ContainIntrinsicSizeType containIntrinsicLogicalWidthType() const;
     inline ContainIntrinsicSizeType containIntrinsicLogicalHeightType() const;
+    inline bool containIntrinsicWidthHasAuto() const;
+    inline bool containIntrinsicHeightHasAuto() const;
     inline std::optional<Length> containIntrinsicWidth() const;
     inline std::optional<Length> containIntrinsicHeight() const;
     inline bool hasAutoLengthContainIntrinsicSize() const;
@@ -825,7 +825,6 @@ public:
     inline unsigned short columnRuleWidth() const;
     inline bool columnRuleIsTransparent() const;
     inline ColumnSpan columnSpan() const;
-    inline const WordBoundaryDetection& wordBoundaryDetection() const;
 
     inline const TransformOperations& transform() const;
     inline bool hasTransform() const;
@@ -1042,7 +1041,8 @@ public:
 
     bool shouldPlaceVerticalScrollbarOnLeft() const;
 
-    inline bool hasCustomScrollbarStyle() const;
+    inline bool usesStandardScrollbarStyle() const;
+    inline bool usesLegacyScrollbarStyle() const;
 
 #if ENABLE(APPLE_PAY)
     inline ApplePayButtonStyle applePayButtonStyle() const;
@@ -1267,7 +1267,7 @@ public:
 
     inline void setContentVisibility(ContentVisibility);
 
-    inline void setEffectiveSkipsContent(bool);
+    inline void setEffectiveSkippedContent(bool);
 
     inline void setListStyleType(ListStyleType);
     void setListStyleImage(RefPtr<StyleImage>&&);
@@ -1416,7 +1416,6 @@ public:
     inline void setColumnRuleWidth(unsigned short);
     inline void resetColumnRule();
     inline void setColumnSpan(ColumnSpan);
-    inline void setWordBoundaryDetection(const WordBoundaryDetection&);
     inline void inheritColumnPropertiesFrom(const RenderStyle& parent);
 
     inline void setTransform(const TransformOperations&);
@@ -1591,6 +1590,8 @@ public:
     inline SVGPaintType fillPaintType() const;
     inline StyleColor fillPaintColor() const;
     inline void setFillPaintColor(const StyleColor&);
+    inline void setHasExplicitlySetColor(bool);
+    inline bool hasExplicitlySetColor() const;
     inline float fillOpacity() const;
     inline void setFillOpacity(float);
 
@@ -1680,6 +1681,7 @@ public:
     const AtomString& hyphenString() const;
 
     bool inheritedEqual(const RenderStyle&) const;
+    bool inheritedCustomPropertiesEqual(const RenderStyle&) const;
     bool fastPathInheritedEqual(const RenderStyle&) const;
     bool nonFastPathInheritedEqual(const RenderStyle&) const;
 
@@ -1873,7 +1875,6 @@ public:
     static Vector<AtomString> initialContainerNames();
     static double initialAspectRatioWidth() { return 1.0; }
     static double initialAspectRatioHeight() { return 1.0; }
-    static WordBoundaryDetection initialWordBoundaryDetection();
 
     static constexpr ContainIntrinsicSizeType initialContainIntrinsicWidthType();
     static constexpr ContainIntrinsicSizeType initialContainIntrinsicHeightType();
@@ -2198,6 +2199,8 @@ private:
         unsigned autosizeStatus : 5;
 #endif
         // 51 bits
+        unsigned hasExplicitlySetColor : 1;
+        // 52 bits
     };
 
     // This constructor is used to implement the replace operation.

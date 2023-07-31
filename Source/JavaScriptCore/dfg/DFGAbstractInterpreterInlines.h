@@ -235,7 +235,7 @@ inline ToThisResult isToThisAnIdentity(ECMAMode ecmaMode, AbstractValue& valueFo
             // We don't need to worry about strings/symbols here since either:
             // 1) We are in strict mode and strings/symbols are not wrapped
             // 2) The AI has proven that the type of this is a subtype of object
-            if (type.isObject() && type.overridesToThis())
+            if (type.isObject() && (FirstScopeType <= type.type() && type.type() <= LastScopeType))
                 overridesToThis = true;
 
             // If all the structures are JSScope's ones, we know the details of JSScope::toThis() operation.
@@ -2293,10 +2293,15 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     case StringCodePointAt:
         setNonCellTypeForNode(node, SpecInt32Only);
         break;
-        
+
+    case StringIndexOf:
+        setNonCellTypeForNode(node, SpecInt32Only);
+        break;
+
     case StringFromCharCode:
         switch (node->child1().useKind()) {
         case Int32Use:
+        case KnownInt32Use:
             break;
         case UntypedUse:
             clobberWorld();
@@ -3053,6 +3058,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         case Int52RepUse:
         case DoubleRepUse:
         case NotCellUse:
+        case KnownPrimitiveUse:
             break;
         case CellUse:
         case UntypedUse:
@@ -3817,11 +3823,17 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         break;
             
     case GetArrayLength: {
-        JSArrayBufferView* view = m_graph.tryGetFoldableView(
-            forNode(node->child1()).m_value, node->arrayMode());
-        if (view && !view->isResizableOrGrowableShared() && isInBounds<int32_t>(view->length())) {
-            setConstant(node, jsNumber(view->length()));
-            break;
+        if (JSValue constant = forNode(node->child1()).m_value) {
+            JSArrayBufferView* view = m_graph.tryGetFoldableView(constant, node->arrayMode());
+            if (view && !view->isResizableOrGrowableShared() && isInBounds<int32_t>(view->length())) {
+                setConstant(node, jsNumber(view->length()));
+                break;
+            }
+
+            if (constant.isString() && node->arrayMode().type() == Array::String) {
+                setConstant(node, jsNumber(asString(constant)->length()));
+                break;
+            }
         }
         setNonCellTypeForNode(node, SpecInt32Only);
         break;
@@ -5063,6 +5075,11 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     }
 
     case DateGetTime: {
+        setNonCellTypeForNode(node, SpecFullDouble);
+        break;
+    }
+
+    case DateSetTime: {
         setNonCellTypeForNode(node, SpecFullDouble);
         break;
     }

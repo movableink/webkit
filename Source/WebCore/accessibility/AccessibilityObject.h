@@ -154,9 +154,11 @@ public:
     AXCoreObject* headerContainer() override { return nullptr; }
     int axColumnCount() const override { return 0; }
     int axRowCount() const override { return 0; }
+    virtual Vector<Vector<AXID>> cellSlots() { return { }; }
 
     // Table cell support.
     bool isTableCell() const override { return false; }
+    bool isExposedTableCell() const override { return false; }
     // Returns the start location and row span of the cell.
     std::pair<unsigned, unsigned> rowIndexRange() const override { return { 0, 1 }; }
     // Returns the start location and column span of the cell.
@@ -467,6 +469,7 @@ public:
     LocalFrame* frame() const;
     LocalFrame* mainFrame() const;
     Document* topDocument() const;
+    RenderView* topRenderer() const;
     ScrollView* scrollView() const override { return nullptr; }
     String language() const override;
     // 1-based, to match the aria-level spec.
@@ -563,7 +566,7 @@ public:
     IntRect boundsForRange(const SimpleRange&) const final;
     void setSelectedVisiblePositionRange(const VisiblePositionRange&) const override { }
 
-    VisiblePosition visiblePositionForPoint(const IntPoint&) const override { return VisiblePosition(); }
+    VisiblePosition visiblePositionForPoint(const IntPoint&) const final;
     VisiblePosition nextLineEndPosition(const VisiblePosition&) const override;
     VisiblePosition previousLineStartPosition(const VisiblePosition&) const override;
     VisiblePosition nextSentenceEndPosition(const VisiblePosition&) const override;

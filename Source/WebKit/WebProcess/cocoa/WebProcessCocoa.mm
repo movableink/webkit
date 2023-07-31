@@ -89,6 +89,7 @@
 #import <WebCore/PlatformMediaSessionManager.h>
 #import <WebCore/PlatformScreen.h>
 #import <WebCore/ProcessCapabilities.h>
+#import <WebCore/PublicSuffix.h>
 #import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/SWContextManager.h>
 #import <WebCore/SystemBattery.h>
@@ -267,16 +268,6 @@ static Boolean isAXAuthenticatedCallback(audit_token_t auditToken)
     return authenticated;
 }
 #endif
-
-static void softlinkDataDetectorsFrameworks()
-{
-#if ENABLE(DATA_DETECTION)
-    PAL::isDataDetectorsCoreFrameworkAvailable();
-#if PLATFORM(IOS_FAMILY)
-    PAL::isDataDetectorsUIFrameworkAvailable();
-#endif // PLATFORM(IOS_FAMILY)
-#endif // ENABLE(DATA_DETECTION)
-}
 
 enum class VideoDecoderBehavior : uint8_t {
     AvoidHardware               = 1 << 0,
@@ -537,10 +528,6 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 
     disableURLSchemeCheckInDataDetectors();
 
-    // Soft link frameworks related to Data Detection before we disconnect from launchd because these frameworks connect to
-    // launchd temporarily at link time to register XPC services. See rdar://93598951 (my feature request to stop doing that)
-    softlinkDataDetectorsFrameworks();
-
 #if HAVE(VIDEO_RESTRICTED_DECODING) && PLATFORM(MAC)
     if (codeCheckSemaphore)
         dispatch_semaphore_wait(codeCheckSemaphore.get(), DISPATCH_TIME_FOREVER);
@@ -728,6 +715,28 @@ NEVER_INLINE NO_RETURN_DUE_TO_CRASH static void deliberateCrashForTesting()
 #endif
 
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
+static void prewarmLogs()
+{
+    // This call will create container manager log objects.
+    // FIXME: this can be removed if we move all calls to topPrivatelyControlledDomain out of the WebContent process.
+    // This would be desirable, since the WebContent process is blocking access to the container manager daemon.
+    topPrivatelyControlledDomain("apple.com"_s);
+
+    static std::array<std::pair<const char*, const char*>, 5> logs { {
+        { "com.apple.CFBundle", "strings" },
+        { "com.apple.network", "" },
+        { "com.apple.CFNetwork", "ATS" },
+        { "com.apple.coremedia", "" },
+        { "com.apple.SafariShared", "Translation" },
+    } };
+
+    for (auto& log : logs) {
+        auto logHandle = adoptOSObject(os_log_create(log.first, log.second));
+        bool enabled = os_log_type_enabled(logHandle.get(), OS_LOG_TYPE_ERROR);
+        UNUSED_PARAM(enabled);
+    }
+}
+
 static void registerLogHook()
 {
     if (os_trace_get_mode() != OS_TRACE_MODE_DISABLE && os_trace_get_mode() != OS_TRACE_MODE_OFF)
@@ -737,20 +746,28 @@ static void registerLogHook()
         if (msg->buffer_sz > 1024)
             return;
 
-        // Skip faults and debug logs in non-internal builds.
-        if (type == OS_LOG_TYPE_FAULT || type == OS_LOG_TYPE_DEBUG)
+        // Skip debug logs in non-internal builds.
+        if (type == OS_LOG_TYPE_DEBUG)
             return;
 
         CString logFormat(msg->format);
         CString logChannel(msg->subsystem);
         CString logCategory(msg->category);
 
+        auto qos = Thread::QOS::Background;
+
+        // Send fault logs with high priority. If the WebContent process is terminated, we might not be able to send the log in time.
+        if (type == OS_LOG_TYPE_FAULT) {
+            type = OS_LOG_TYPE_ERROR;
+            qos = Thread::QOS::UserInteractive;
+        }
+
         Vector<uint8_t> buffer(msg->buffer, msg->buffer_sz);
         Vector<uint8_t> privdata(msg->privdata, msg->privdata_sz);
 
         static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("Log Queue", WorkQueue::QOS::Background));
 
-        queue.get()->dispatch([logFormat = WTFMove(logFormat), logChannel = WTFMove(logChannel), logCategory = WTFMove(logCategory), type = type, buffer = WTFMove(buffer), privdata = WTFMove(privdata)] {
+        queue.get()->dispatchWithQOS([logFormat = WTFMove(logFormat), logChannel = WTFMove(logChannel), logCategory = WTFMove(logCategory), type = type, buffer = WTFMove(buffer), privdata = WTFMove(privdata), qos] {
             os_log_message_s msg = { 0 };
 
             msg.format = logFormat.data();
@@ -766,10 +783,10 @@ static void registerLogHook()
 
             auto connectionID = WebProcess::singleton().networkProcessConnectionID();
             if (connectionID)
-                IPC::Connection::send(connectionID, Messages::NetworkConnectionToWebProcess::LogOnBehalfOfWebContent(logChannel.bytesInludingNullTerminator(), logCategory.bytesInludingNullTerminator(), logString, type, getpid()), 0);
+                IPC::Connection::send(connectionID, Messages::NetworkConnectionToWebProcess::LogOnBehalfOfWebContent(logChannel.bytesInludingNullTerminator(), logCategory.bytesInludingNullTerminator(), logString, type, getpid()), 0, { }, qos);
 
             free(messageString);
-        });
+        }, qos);
     });
 }
 #endif
@@ -777,6 +794,7 @@ static void registerLogHook()
 void WebProcess::platformInitializeProcess(const AuxiliaryProcessInitializationParameters& parameters)
 {
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
+    prewarmLogs();
     registerLogHook();
 #endif
 
@@ -860,11 +878,6 @@ void WebProcess::initializeSandbox(const AuxiliaryProcessInitializationParameter
 {
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     auto webKitBundle = [NSBundle bundleForClass:NSClassFromString(@"WKWebView")];
-
-#if defined(USE_VORBIS_AUDIOCOMPONENT_WORKAROUND)
-    // We need to initialize the Vorbis decoder before the sandbox gets setup; this is a one off action.
-    WebCore::registerVorbisDecoderIfNeeded();
-#endif
 
     sandboxParameters.setOverrideSandboxProfilePath(makeString(String([webKitBundle resourcePath]), "/com.apple.WebProcess.sb"));
 

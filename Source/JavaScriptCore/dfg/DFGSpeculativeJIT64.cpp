@@ -3486,6 +3486,11 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case StringIndexOf: {
+        compileStringIndexOf(node);
+        break;
+    }
+
     case StringCharAt: {
         // Relies on StringCharAt node having same basic layout as GetByVal
         JSValueRegsTemporary result;
@@ -5919,6 +5924,10 @@ void SpeculativeJIT::compile(Node* node)
         compileDateGet(node);
         break;
 
+    case DateSetTime:
+        compileDateSet(node);
+        break;
+
     case DataViewSet: {
         SpeculateCellOperand dataView(this, m_graph.varArgChild(node, 0));
         GPRReg dataViewGPR = dataView.gpr();
@@ -6555,6 +6564,40 @@ void SpeculativeJIT::compileDateGet(Node* node)
     }
 }
 
+void SpeculativeJIT::compileDateSet(Node* node)
+{
+    SpeculateCellOperand base(this, node->child1());
+    SpeculateDoubleOperand time(this, node->child2());
+
+    FPRTemporary scratch1(this);
+    FPRTemporary scratch2(this);
+    FPRTemporary scratch3(this);
+    FPRTemporary scratch4(this);
+
+    GPRReg baseGPR = base.gpr();
+    FPRReg timeFPR = time.fpr();
+    FPRReg scratch1FPR = scratch1.fpr();
+    FPRReg scratch2FPR = scratch2.fpr();
+    FPRReg scratch3FPR = scratch3.fpr();
+    FPRReg scratch4FPR = scratch4.fpr();
+
+    speculateDateObject(node->child1(), baseGPR);
+
+    roundTowardZeroDouble(timeFPR, scratch1FPR);
+    moveZeroToDouble(scratch2FPR);
+    addDouble(scratch2FPR, scratch1FPR);
+
+    static const double NaN = PNaN;
+    static const double max = WTF::maxECMAScriptTime;
+    loadDouble(TrustedImmPtr(&max), scratch3FPR);
+    loadDouble(TrustedImmPtr(&NaN), scratch4FPR);
+    absDouble(timeFPR, scratch2FPR);
+    moveDoubleConditionallyDouble(DoubleGreaterThanAndOrdered, scratch2FPR, scratch3FPR, scratch4FPR, scratch1FPR, scratch1FPR);
+
+    storeDouble(scratch1FPR, Address(baseGPR, DateInstance::offsetOfInternalNumber()));
+    doubleResult(scratch1FPR, node);
+}
+
 void SpeculativeJIT::compileGetByValWithThis(Node* node)
 {
     JSValueOperand base(this, node->child1(), ManualOperandSpeculation);
@@ -6788,7 +6831,7 @@ void SpeculativeJIT::compileNewBoundFunction(Node* node)
     JumpList slowPath;
 
     auto butterfly = TrustedImmPtr(nullptr);
-    emitAllocateJSObjectWithKnownSize<JSBoundFunction>(resultGPR, TrustedImmPtr(structure), butterfly, scratch1GPR, scratch2GPR, slowPath, sizeof(JSBoundFunction));
+    emitAllocateJSObjectWithKnownSize<JSBoundFunction>(resultGPR, TrustedImmPtr(structure), butterfly, scratch1GPR, scratch2GPR, slowPath, sizeof(JSBoundFunction), SlowAllocationResult::UndefinedBehavior);
     storeLinkableConstant(LinkableConstant::globalObject(*this, node), Address(resultGPR, JSBoundFunction::offsetOfScopeChain()));
     storeLinkableConstant(LinkableConstant(*this, executable), Address(resultGPR, JSBoundFunction::offsetOfExecutableOrRareData()));
     storeValue(JSValueRegs { targetGPR }, Address(resultGPR, JSBoundFunction::offsetOfTargetFunction()));
@@ -7029,7 +7072,7 @@ void SpeculativeJIT::compileCreateClonedArguments(Node* node)
             emitInitializeOutOfLineStorage(storageGPR, outOfLineCapacity, scratchGPR);
         }
 
-        emitAllocateJSObject<ClonedArguments>(resultGPR, TrustedImmPtr(m_graph.registerStructure(globalObject->clonedArgumentsStructure())), storageGPR, scratchGPR, scratch2GPR, slowCases);
+        emitAllocateJSObject<ClonedArguments>(resultGPR, TrustedImmPtr(m_graph.registerStructure(globalObject->clonedArgumentsStructure())), storageGPR, scratchGPR, scratch2GPR, slowCases, SlowAllocationResult::UndefinedBehavior);
 
         emitGetCallee(node->origin.semantic, scratchGPR);
         storePtr(scratchGPR, Address(resultGPR, ClonedArguments::offsetOfCallee()));

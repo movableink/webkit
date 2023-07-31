@@ -184,6 +184,7 @@ BEGIN {
        &setXcodeSDK
        &setupMacWebKitEnvironment
        &setupUnixWebKitEnvironment
+       &setupWindowsWebKitEnvironment
        &sharedCommandLineOptions
        &sharedCommandLineOptionsUsage
        &shouldBuildForCrossTarget
@@ -2513,7 +2514,7 @@ sub shouldUseFlatpak()
         return 0;
     }
 
-    if ((defined $ENV{'WEBKIT_JHBUILD'} && $ENV{'WEBKIT_JHBUILD'}) or defined $ENV{'WKDEV_SDK'}) {
+    if ((defined $ENV{'WEBKIT_JHBUILD'} && $ENV{'WEBKIT_JHBUILD'}) or defined $ENV{'WEBKIT_BUILD_USE_SYSTEM_LIBRARIES'}) {
         return 0;
     }
 
@@ -2962,6 +2963,17 @@ sub setupUnixWebKitEnvironment($)
     my ($productDir) = @_;
 
     $ENV{TEST_RUNNER_INJECTED_BUNDLE_FILENAME} = File::Spec->catfile($productDir, "lib", "libTestRunnerInjectedBundle.so");
+}
+
+sub setupWindowsWebKitEnvironment()
+{
+    my $lib;
+    if ($ENV{WEBKIT_LIBRARIES}) {
+        $lib = File::Spec->catfile($ENV{WEBKIT_LIBRARIES}, 'bin64');
+    } else  {
+        $lib = File::Spec->catfile(sourceDir(), 'WebKitLibraries', 'win', 'bin64');
+    }
+    $ENV{PATH} = $lib . ';' . $ENV{PATH};
 }
 
 sub setupIOSWebKitEnvironment($)

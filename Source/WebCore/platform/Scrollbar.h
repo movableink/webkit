@@ -149,6 +149,8 @@ public:
 
     float deviceScaleFactor() const;
 
+    bool shouldRegisterScrollbar() const;
+
 protected:
     Scrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarWidth, ScrollbarTheme* = nullptr, bool isCustomScrollbar = false);
 

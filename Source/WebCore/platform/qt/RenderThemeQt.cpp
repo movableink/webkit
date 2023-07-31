@@ -415,7 +415,7 @@ void RenderThemeQt::adjustSearchFieldCancelButtonStyle(RenderStyle& style, const
 {
     // Logic taken from RenderThemeChromium.cpp.
     // Scale the button size based on the font size.
-    float fontScale = style.computedFontPixelSize() / defaultControlFontPixelSize;
+    float fontScale = style.computedFontSize() / defaultControlFontPixelSize;
     int cancelButtonSize = lroundf(qMin(qMax(minCancelButtonSize, defaultCancelButtonSize * fontScale), maxCancelButtonSize));
     style.setWidth(Length(cancelButtonSize, LengthType::Fixed));
     style.setHeight(Length(cancelButtonSize, LengthType::Fixed));

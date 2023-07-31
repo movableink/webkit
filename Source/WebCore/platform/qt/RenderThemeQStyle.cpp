@@ -305,8 +305,8 @@ void RenderThemeQStyle::adjustButtonStyle(RenderStyle& style, const Element*) co
     fontDescription.setSpecifiedSize(m_buttonFontPixelSize);
     fontDescription.setComputedSize(m_buttonFontPixelSize);
 #else
-    fontDescription.setSpecifiedSize(style.computedFontPixelSize());
-    fontDescription.setComputedSize(style.computedFontPixelSize());
+    fontDescription.setSpecifiedSize(style.computedFontSize());
+    fontDescription.setComputedSize(style.computedFontSize());
 #endif
 
     Vector<AtomString> families;

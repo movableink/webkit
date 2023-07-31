@@ -4,7 +4,7 @@
  *           (C) 2001 Peter Kelly (pmk@post.com)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2007 David Smith (catfish.man@gmail.com)
- * Copyright (C) 2004-2010, 2012-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *           (C) 2007 Eric Seidel (eric@webkit.org)
  *
  * This library is free software; you can redistribute it and/or
@@ -43,6 +43,7 @@
 #include "Quirks.h"
 #include "RenderElement.h"
 #include "RenderStyleSetters.h"
+#include "RenderView.h"
 #include "ResolvedStyle.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
@@ -232,7 +233,7 @@ auto TreeResolver::resolveElement(Element& element, const RenderStyle* existingS
     auto descendantsToResolve = computeDescendantsToResolve(update.change, element.styleValidity(), parent().descendantsToResolve);
 
     if (&element == m_document.documentElement()) {
-        if (!existingStyle || existingStyle->computedFontPixelSize() != update.style->computedFontPixelSize()) {
+        if (!existingStyle || existingStyle->computedFontSize() != update.style->computedFontSize()) {
             // "rem" units are relative to the document element's font size so we need to recompute everything.
             scope().resolver->invalidateMatchedDeclarationsCache();
             descendantsToResolve = DescendantsToResolve::All;
@@ -661,7 +662,7 @@ HashSet<AnimatableProperty> TreeResolver::applyCascadeAfterAnimation(RenderStyle
         WTFMove(builderContext),
         matchResult,
         CascadeLevel::Author,
-        isTransition ? PropertyCascade::IncludedProperties::AfterTransition : PropertyCascade::IncludedProperties::AfterAnimation,
+        isTransition ? PropertyCascade::PropertyType::AfterTransition : PropertyCascade::PropertyType::AfterAnimation,
         &animatedProperties
     };
 

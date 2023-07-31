@@ -326,6 +326,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ResolveRope:
     case GetWebAssemblyInstanceExports:
     case NumberIsNaN:
+    case StringIndexOf:
         return true;
 
     case GlobalIsNaN:
@@ -723,6 +724,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case TryGetById:
     case StringLocaleCompare:
     case FunctionBind:
+    case DateSetTime:
         return false;
 
     case StringReplaceString:

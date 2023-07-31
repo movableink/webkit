@@ -23,6 +23,7 @@
 
 #include "config.h"
 #include "Font.h"
+#include "PathQt.h"
 
 #include "FontDescription.h"
 #include "NotImplemented.h"
@@ -121,12 +122,11 @@ void Font::platformCharWidthInit()
 // QTFIXME: Copied from pathForGlyphs() from FontCascadeQt.cpp
 Path Font::platformPathForGlyph(Glyph glyph) const
 {
-    Path path;
-    QPainterPath platformPath = path.ensurePlatformPath();
+    QPainterPath platformPath;
     QRawFont rawFont(m_platformData.rawFont());
     QPainterPath glyphPath = rawFont.pathForGlyph(glyph);
     platformPath.addPath(glyphPath);
-    return path;
+    return { PathQt::create(WTFMove(platformPath)) };
 }
 
 bool Font::platformSupportsCodePoint(UChar32 character, std::optional<UChar32> variation) const

@@ -16,6 +16,8 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/ShapeDetection"
     "${WEBCORE_DIR}/Modules/ShapeDetection/Interfaces"
     "${WEBCORE_DIR}/Modules/WebGPU"
+    "${WEBCORE_DIR}/Modules/WebGPU/InternalAPI"
+    "${WEBCORE_DIR}/Modules/WebGPU/Implementation"
     "${WEBCORE_DIR}/Modules/airplay"
     "${WEBCORE_DIR}/Modules/applepay"
     "${WEBCORE_DIR}/Modules/applepay/paymentrequest"
@@ -28,6 +30,7 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/compression"
     "${WEBCORE_DIR}/Modules/contact-picker"
     "${WEBCORE_DIR}/Modules/cookie-consent"
+    "${WEBCORE_DIR}/Modules/cookie-store"
     "${WEBCORE_DIR}/Modules/credentialmanagement"
     "${WEBCORE_DIR}/Modules/encryptedmedia"
     "${WEBCORE_DIR}/Modules/encryptedmedia/legacy"
@@ -212,6 +215,7 @@ set(WebCore_IDL_INCLUDES
     Modules/badge
     Modules/cache
     Modules/compression
+    Modules/cookie-store
     Modules/credentialmanagement
     Modules/encryptedmedia/legacy
     Modules/entriesapi
@@ -286,6 +290,14 @@ set(WebCore_NON_SVG_IDL_FILES
 
     Modules/cookie-consent/Navigator+CookieConsent.idl
     Modules/cookie-consent/RequestCookieConsentOptions.idl
+
+    Modules/cookie-store/CookieInit.idl
+    Modules/cookie-store/CookieListItem.idl
+    Modules/cookie-store/CookieSameSite.idl
+    Modules/cookie-store/CookieStore.idl
+    Modules/cookie-store/CookieStoreDeleteOptions.idl
+    Modules/cookie-store/CookieStoreGetOptions.idl
+    Modules/cookie-store/LocalDOMWindow+CookieStore.idl
 
     Modules/credentialmanagement/BasicCredential.idl
     Modules/credentialmanagement/CredentialCreationOptions.idl
@@ -734,6 +746,7 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/webcodecs/WebCodecsEncodedVideoChunkOutputCallback.idl
     Modules/webcodecs/WebCodecsEncodedVideoChunkType.idl
     Modules/webcodecs/WebCodecsErrorCallback.idl
+    Modules/webcodecs/WebCodecsSvcOutputMetadata.idl
     Modules/webcodecs/WebCodecsVideoDecoder.idl
     Modules/webcodecs/WebCodecsVideoDecoderConfig.idl
     Modules/webcodecs/WebCodecsVideoDecoderSupport.idl
@@ -1618,6 +1631,7 @@ list(APPEND WebCore_NON_SVG_IDL_FILES
     Modules/ShapeDetection/LandmarkType.idl
     Modules/ShapeDetection/Point2D.idl
     Modules/ShapeDetection/TextDetector.idl
+
     Modules/WebGPU/GPU.idl
     Modules/WebGPU/GPUAdapter.idl
     Modules/WebGPU/GPUAdapterInfo.idl
@@ -1696,10 +1710,10 @@ list(APPEND WebCore_NON_SVG_IDL_FILES
     Modules/WebGPU/GPUOrigin3DDict.idl
     Modules/WebGPU/GPUOutOfMemoryError.idl
     Modules/WebGPU/GPUPipelineBase.idl
+    Modules/WebGPU/GPUPipelineDescriptorBase.idl
     Modules/WebGPU/GPUPipelineError.idl
     Modules/WebGPU/GPUPipelineErrorInit.idl
     Modules/WebGPU/GPUPipelineErrorReason.idl
-    Modules/WebGPU/GPUPipelineDescriptorBase.idl
     Modules/WebGPU/GPUPipelineLayout.idl
     Modules/WebGPU/GPUPipelineLayoutDescriptor.idl
     Modules/WebGPU/GPUPowerPreference.idl

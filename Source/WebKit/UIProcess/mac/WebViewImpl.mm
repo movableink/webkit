@@ -81,10 +81,12 @@
 #import "_WKDragActionsInternal.h"
 #import "_WKRemoteObjectRegistryInternal.h"
 #import "_WKThumbnailViewInternal.h"
+#import "_WKWebViewTextInputNotifications.h"
 #import <Carbon/Carbon.h>
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/ActivityState.h>
 #import <WebCore/AttributedString.h>
+#import <WebCore/CaretRectComputation.h>
 #import <WebCore/ColorMac.h>
 #import <WebCore/ColorSerialization.h>
 #import <WebCore/CompositionHighlight.h>
@@ -103,6 +105,7 @@
 #import <WebCore/Pasteboard.h>
 #import <WebCore/PlatformEventFactoryMac.h>
 #import <WebCore/PlatformScreen.h>
+#import <WebCore/PlaybackSessionInterfaceMac.h>
 #import <WebCore/PromisedAttachmentInfo.h>
 #import <WebCore/TextAlternativeWithRange.h>
 #import <WebCore/TextRecognitionResult.h>
@@ -1132,7 +1135,9 @@ static NSTrackingAreaOptions trackingAreaOptions()
     return options;
 }
 
-static RetainPtr<NSObject> subscribeToTextInputNotifications(WebViewImpl*);
+#if HAVE(REDESIGNED_TEXT_CURSOR) && PLATFORM(MAC)
+static RetainPtr<_WKWebViewTextInputNotifications> subscribeToTextInputNotifications(WebViewImpl*);
+#endif
 
 static bool isInRecoveryOS()
 {
@@ -1160,7 +1165,7 @@ WebViewImpl::WebViewImpl(NSView <WebViewImplDelegate> *view, WKWebView *outerWeb
     auto useRemoteLayerTree = [&]() {
         bool result = false;
 #if ENABLE(REMOTE_LAYER_TREE_ON_MAC_BY_DEFAULT)
-        result = WTF::numberOfPhysicalProcessorCores() >= 4;
+        result = WTF::numberOfPhysicalProcessorCores() >= 4 || m_page->configuration().lockdownModeEnabled();
 #endif
         if (id useRemoteLayerTreeBoolean = [[NSUserDefaults standardUserDefaults] objectForKey:@"WebKit2UseRemoteLayerTreeDrawingArea"])
             result = [useRemoteLayerTreeBoolean boolValue];
@@ -1242,7 +1247,9 @@ WebViewImpl::WebViewImpl(NSView <WebViewImplDelegate> *view, WKWebView *outerWeb
     m_lastScrollViewFrame = scrollViewFrame();
 #endif
 
+#if HAVE(REDESIGNED_TEXT_CURSOR) && PLATFORM(MAC)
     _textInputNotifications = subscribeToTextInputNotifications(this);
+#endif
 
     WebProcessPool::statistics().wkViewCount++;
 }
@@ -2711,8 +2718,10 @@ void WebViewImpl::selectionDidChange()
         requestCandidatesForSelectionIfNeeded();
 #endif
 
+#if HAVE(REDESIGNED_TEXT_CURSOR)
     if (m_page->editorState().hasPostLayoutData())
-        updateCaretDecorationPlacement();
+        updateCursorAccessoryPlacement();
+#endif
 
     NSWindow *window = [m_view window];
     if (window.firstResponder == m_view.get().get()) {
@@ -6119,16 +6128,45 @@ void WebViewImpl::setEditableElementIsFocused(bool editableElementIsFocused)
 
 #endif // HAVE(TOUCH_BAR)
 
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/WebViewImplAdditions.mm>
-#else
-void WebViewImpl::updateCaretDecorationPlacement()
+#if HAVE(REDESIGNED_TEXT_CURSOR)
+void WebViewImpl::updateCursorAccessoryPlacement()
 {
-}
+    const EditorState& editorState = m_page->editorState();
+    if (!editorState.hasPostLayoutData())
+        return;
 
-static RetainPtr<NSObject> subscribeToTextInputNotifications(WebViewImpl*)
+    auto& postLayoutData = *editorState.postLayoutData;
+
+    NSTextInputContext *context = [m_view _web_superInputContext];
+    if (!context)
+        return;
+
+    if ([_textInputNotifications caretType] == WebCore::CaretAnimatorType::Dictation) {
+        // The dictation cursor accessory should always be visible no matter what, since it is
+        // the only prominent way a user can tell if dictation is active.
+        context.showsCursorAccessories = YES;
+        return;
+    }
+
+    // Otherwise, the cursor accessory should be hidden if it will not show up in the correct position.
+    context.showsCursorAccessories = !postLayoutData.editableRootIsTransparentOrFullyClipped;
+}
+#endif
+
+#if HAVE(REDESIGNED_TEXT_CURSOR) && PLATFORM(MAC)
+static RetainPtr<_WKWebViewTextInputNotifications> subscribeToTextInputNotifications(WebViewImpl* webView)
 {
-    return nullptr;
+    if (!redesignedTextCursorEnabled())
+        return nullptr;
+
+    auto textInputNotifications = adoptNS([[_WKWebViewTextInputNotifications alloc] initWithWebView:webView]);
+
+    [[NSNotificationCenter defaultCenter] addObserver:textInputNotifications.get() selector:@selector(dictationDidStart) name:@"_NSTextInputContextDictationDidStartNotification" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:textInputNotifications.get() selector:@selector(dictationDidEnd) name:@"_NSTextInputContextDictationDidEndNotification" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:textInputNotifications.get() selector:@selector(dictationDidPause) name:@"_NSTextInputContextDictationDidPauseNotification" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:textInputNotifications.get() selector:@selector(dictationDidResume) name:@"_NSTextInputContextDictationDidResumeNotification" object:nil];
+
+    return textInputNotifications;
 }
 #endif
 

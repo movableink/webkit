@@ -108,7 +108,7 @@ public:
     bool supportsGlobalSelection() override;
 
     void didApplyStyle() override;
-    void discardedComposition(LocalFrame *) override;
+    void discardedComposition(const WebCore::Document&) override;
     void overflowScrollPositionChanged() override;
     void subFrameScrollPositionChanged() final { }
 

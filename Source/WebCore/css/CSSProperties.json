@@ -369,7 +369,7 @@
             "codegen-properties": {
                 "visited-link-color-support": true,
                 "color-property": true,
-                "custom": "Value",
+                "custom": "All",
                 "high-priority": true,
                 "fast-path-inherited": true,
                 "parser-grammar": "<color accept-quirky-colors-in-quirks-mode>"
@@ -3376,6 +3376,7 @@
             }
         },
         "dominant-baseline": {
+            "inherited": true,
             "values": [
                 "auto",
                 "use-script",
@@ -5869,7 +5870,8 @@
             ],
             "codegen-properties": {
                 "settings-flag": "cssWhiteSpaceLonghandsEnabled",
-                "parser-grammar": "<<values>>"
+                "parser-grammar": "<<values>>",
+                "parser-exported": true
             },
             "specification": {
                 "category": "css-text",
@@ -6072,15 +6074,14 @@
             "inherited": true,
             "values": [
                 "collapse",
-                "discard",
                 "preserve",
                 "preserve-breaks",
-                "preserve-spaces",
                 "break-spaces"
             ],
             "codegen-properties": {
                 "settings-flag": "cssWhiteSpaceLonghandsEnabled",
-                "parser-grammar": "<<values>>"
+                "parser-grammar": "<<values>>",
+                "parser-exported": true
             },
             "specification": {
                 "category": "css-text",
@@ -6127,29 +6128,17 @@
                 "url": "https://www.w3.org/TR/css-will-change/#propdef-will-change"
             }
         },
-        "word-boundary-detection": {
-            "inherited": true,
-            "codegen-properties": {
-                "settings-flag": "wordBoundaryDetectionEnabled",
-                "converter": "WordBoundaryDetection",
-                "parser-function": "consumeWordBoundaryDetection",
-                "parser-grammar-unused": "normal | auto(<lang>)",
-                "parser-grammar-unused-reason": "Only KeywordTerm, ReferenceTerm and UnboundedRepetitionTerm terms are supported inside MatchOneTerm at this time: '[ normal | auto(<lang>) ]' - auto(<lang>)",
-                "parser-grammar-comment": "There is also a 'manual' value which we don't implement yet."
-            },
-            "specification": {
-                "category": "css-text",
-                "url": "https://drafts.csswg.org/css-text-4/#propdef-word-boundary-detection"
-            },
-            "status": "in development"
-        },
         "word-break": {
             "inherited": true,
             "values": [
                 "normal",
                 "break-all",
                 "keep-all",
-                "break-word"
+                "break-word",
+                {
+                    "settings-flag": "cssWordBreakAutoEnabled",
+                    "value": "auto"
+                }
             ],
             "codegen-properties": {
                 "aliases": [
@@ -6335,7 +6324,7 @@
                     "resolver": "horizontal"
                 },
                 "parser-function": "consumeContainIntrinsicSize",
-                "parser-grammar-unused": "none | <length> | [ auto && <length> ]",
+                "parser-grammar-unused": "auto? [none | <<length>>]",
                 "parser-grammar-unused-reason": "Needs support for '&&' groups.",
                 "comment": "Should ensure generator simplifies to 'none | [ <length> && auto? ]"
             },
@@ -6353,7 +6342,7 @@
                     "resolver": "block"
                 },
                 "parser-function": "consumeContainIntrinsicSize",
-                "parser-grammar-unused": "none | <length> | [ auto && <length> ]",
+                "parser-grammar-unused": "auto? [none | <<length>>]",
                 "parser-grammar-unused-reason": "Needs support for '&&' groups.",
                 "comment": "Should ensure generator simplifies to 'none | [ <length> && auto? ]"
             },

@@ -183,6 +183,8 @@ constexpr unsigned maximumGPUProcessRelaunchAttemptsBeforeKillingWebProcesses { 
 bool WebProcessPool::s_shouldCrashWhenCreatingWebProcess = false;
 #endif
 
+static constexpr Seconds audibleActivityClearDelay = 5_s;
+
 bool WebProcessPool::s_didGlobalStaticInitialization = false;
 
 Ref<WebProcessPool> WebProcessPool::create(API::ProcessPoolConfiguration& configuration)
@@ -250,6 +252,7 @@ WebProcessPool::WebProcessPool(API::ProcessPoolConfiguration& configuration)
     , m_backForwardCache(makeUniqueRef<WebBackForwardCache>(*this))
     , m_webProcessCache(makeUniqueRef<WebProcessCache>(*this))
     , m_webProcessWithAudibleMediaCounter([this](RefCounterEvent) { updateAudibleMediaAssertions(); })
+    , m_audibleActivityTimer(RunLoop::main(), this, &WebProcessPool::clearAudibleActivity)
     , m_webProcessWithMediaStreamingCounter([this](RefCounterEvent) { updateMediaStreamingActivity(); })
 {
     if (!s_didGlobalStaticInitialization) {
@@ -530,7 +533,10 @@ void WebProcessPool::createGPUProcessConnection(WebProcessProxy& webProcessProxy
 
     parameters.isLockdownModeEnabled = webProcessProxy.lockdownMode() == WebProcessProxy::LockdownMode::Enabled;
     parameters.isWebGPUEnabled = WTF::anyOf(webProcessProxy.pages(), [](const auto& page) {
-        return page && page->preferences().webGPUEnabled();
+        return page->preferences().webGPUEnabled();
+    });
+    parameters.isDOMRenderingEnabled = WTF::anyOf(webProcessProxy.pages(), [](const auto& page) {
+        return page->preferences().useGPUProcessForDOMRenderingEnabled();
     });
     parameters.allowTestOnlyIPC = webProcessProxy.allowTestOnlyIPC();
     
@@ -1967,11 +1973,11 @@ std::tuple<Ref<WebProcessProxy>, SuspendedPageProxy*, ASCIILiteral> WebProcessPo
 
     // FIXME: We should support process swap when a window has been opened via window.open() without 'noopener'.
     // The issue is that the opener has a handle to the WindowProxy.
-    if (navigation.openedByDOMWithOpener() && !page.preferences().processSwapOnCrossSiteWindowOpenEnabled())
+    if (navigation.openedByDOMWithOpener() && !!page.openerFrame() && !page.preferences().processSwapOnCrossSiteWindowOpenEnabled())
         return { WTFMove(sourceProcess), nullptr, "Browsing context been opened by DOM without 'noopener'"_s };
 
     // FIXME: We should support process swap when a window has opened other windows via window.open.
-    if (navigation.hasOpenedFrames())
+    if (navigation.hasOpenedFrames() && page.hasOpenedPage() && !page.preferences().processSwapOnCrossSiteWindowOpenEnabled())
         return { WTFMove(sourceProcess), nullptr, "Browsing context has opened other windows"_s };
 
     if (auto* targetItem = navigation.targetItem()) {
@@ -2176,14 +2182,24 @@ WebProcessWithAudibleMediaToken WebProcessPool::webProcessWithAudibleMediaToken(
     return m_webProcessWithAudibleMediaCounter.count();
 }
 
+void WebProcessPool::clearAudibleActivity()
+{
+    ASSERT(!m_webProcessWithAudibleMediaCounter.value());
+    m_audibleMediaActivity = std::nullopt;
+}
+
 void WebProcessPool::updateAudibleMediaAssertions()
 {
     if (!m_webProcessWithAudibleMediaCounter.value()) {
         WEBPROCESSPOOL_RELEASE_LOG(ProcessSuspension, "updateAudibleMediaAssertions: The number of processes playing audible media now zero. Releasing UI process assertion.");
-        m_audibleMediaActivity = std::nullopt;
+        // We clear the audible activity on a timer for 2 reasons:
+        // 1. Media may start playing shortly after (e.g. switching from one track to another)
+        // 2. It minimizes the risk of the GPUProcess getting suspended while shutting down the media stack.
+        m_audibleActivityTimer.startOneShot(audibleActivityClearDelay);
         return;
     }
 
+    m_audibleActivityTimer.stop();
     if (m_audibleMediaActivity)
         return;
 

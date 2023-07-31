@@ -230,6 +230,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case GetGlobalObject:
     case StringCharCodeAt:
     case StringCodePointAt:
+    case StringIndexOf:
     case CompareStrictEq:
     case SameValue:
     case IsEmpty:
@@ -454,6 +455,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case StringFromCharCode:
         switch (node->child1().useKind()) {
         case Int32Use:
+        case KnownInt32Use:
             def(PureValue(node));
             return;
         case UntypedUse:
@@ -1947,10 +1949,6 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
 
     case StringCharAt:
-        if (node->arrayMode().isOutOfBounds()) {
-            clobberTop();
-            return;
-        }
         def(PureValue(node));
         return;
 
@@ -1984,6 +1982,10 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         case CellUse:
         case UntypedUse:
             clobberTop();
+            return;
+
+        case KnownPrimitiveUse:
+            write(SideState);
             return;
 
         case StringObjectUse:
@@ -2152,6 +2154,11 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case DateGetInt32OrNaN: {
         read(JSDateFields);
         def(HeapLocation(DateFieldLoc, AbstractHeap(JSDateFields, static_cast<uint64_t>(node->intrinsic())), node->child1()), LazyNode(node));
+        return;
+    }
+
+    case DateSetTime: {
+        write(JSDateFields);
         return;
     }
 

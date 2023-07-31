@@ -66,6 +66,7 @@
 #include "Node.h"
 #include "Page.h"
 #include "PlatformEvent.h"
+#include "PlatformMouseEvent.h"
 #include "RenderImage.h"
 #include "ReplaceSelectionCommand.h"
 #include "ResourceRequest.h"
@@ -1062,6 +1063,19 @@ void ContextMenuController::populate()
         bool systemAllowsAnimationControls = autoplayAnimatedImagesFunction && !autoplayAnimatedImagesFunction();
         return systemAllowsAnimationControls || frame->page()->settings().allowAnimationControlsOverride();
     };
+
+    bool shouldAddPlayAllPauseAllAnimationsItem = canAddAnimationControls();
+    auto addPlayAllPauseAllAnimationsItem = [&] () {
+        if (!shouldAddPlayAllPauseAllAnimationsItem)
+            return;
+        // Only add this item once.
+        shouldAddPlayAllPauseAllAnimationsItem = false;
+
+        if (frame->page()->imageAnimationEnabled())
+            appendItem(PauseAllAnimations, m_contextMenu.get());
+        else
+            appendItem(PlayAllAnimations, m_contextMenu.get());
+    };
 #endif
 
     auto selectedText = m_context.hitTestResult().selectedText();
@@ -1113,6 +1127,8 @@ void ContextMenuController::populate()
                         appendItem(PauseAnimation, m_contextMenu.get());
                     else
                         appendItem(PlayAnimation, m_contextMenu.get());
+                    // If the individual animation control action is available, group the Pause All Animations / Play All Animations action with it.
+                    addPlayAllPauseAllAnimationsItem();
                 }
 #endif // ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
             }
@@ -1120,15 +1136,6 @@ void ContextMenuController::populate()
             appendItem(CopyImageUrlItem, m_contextMenu.get());
 #endif
         }
-
-#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
-        if (canAddAnimationControls()) {
-            if (frame->page()->imageAnimationEnabled())
-                appendItem(PauseAllAnimations, m_contextMenu.get());
-            else
-                appendItem(PlayAllAnimations, m_contextMenu.get());
-        }
-#endif
 
         URL mediaURL = m_context.hitTestResult().absoluteMediaURL();
         if (!mediaURL.isEmpty()) {
@@ -1402,6 +1409,14 @@ void ContextMenuController::populate()
             appendItem(ShareMenuItem, m_contextMenu.get());
         }
     }
+
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+    if (shouldAddPlayAllPauseAllAnimationsItem) {
+        appendItem(*separatorItem(), m_contextMenu.get());
+        addPlayAllPauseAllAnimationsItem();
+        appendItem(*separatorItem(), m_contextMenu.get());
+    }
+#endif
 }
 
 void ContextMenuController::addDebuggingItems()
@@ -1798,7 +1813,7 @@ void ContextMenuController::showContextMenuAt(LocalFrame& frame, const IntPoint&
     clearContextMenu();
     
     // Simulate a click in the middle of the accessibility object.
-    PlatformMouseEvent mouseEvent(clickPoint, clickPoint, RightButton, PlatformEvent::Type::MousePressed, 1, { }, WallTime::now(), ForceAtClick, NoTap);
+    PlatformMouseEvent mouseEvent(clickPoint, clickPoint, RightButton, PlatformEvent::Type::MousePressed, 1, { }, WallTime::now(), ForceAtClick, SyntheticClickType::NoTap);
     frame.eventHandler().handleMousePressEvent(mouseEvent);
     bool handled = frame.eventHandler().sendContextMenuEvent(mouseEvent);
     if (handled)

@@ -53,9 +53,9 @@ public:
 
     WebCore::LayerHostingContextID hostingContextID() const final { return m_hostingContextID; }
 
-    void ref() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCore::SampleBufferDisplayLayer>::ref(); }
-    void deref() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCore::SampleBufferDisplayLayer>::deref(); }
-    ThreadSafeWeakPtrControlBlock& controlBlock() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCore::SampleBufferDisplayLayer>::controlBlock(); }
+    void ref() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCore::SampleBufferDisplayLayer, WTF::DestructionThread::MainRunLoop>::ref(); }
+    void deref() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCore::SampleBufferDisplayLayer, WTF::DestructionThread::MainRunLoop>::deref(); }
+    ThreadSafeWeakPtrControlBlock& controlBlock() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCore::SampleBufferDisplayLayer, WTF::DestructionThread::MainRunLoop>::controlBlock(); }
 
 private:
     SampleBufferDisplayLayer(SampleBufferDisplayLayerManager&, WebCore::SampleBufferDisplayLayer::Client&);
@@ -67,8 +67,7 @@ private:
 #endif
     bool didFail() const final;
     void updateDisplayMode(bool hideDisplayLayer, bool hideRootLayer) final;
-    void updateAffineTransform(CGAffineTransform) final;
-    void updateBoundsAndPosition(CGRect, WebCore::VideoFrameRotation, std::optional<WTF::MachSendRight>&&) final;
+    void updateBoundsAndPosition(CGRect, std::optional<WTF::MachSendRight>&&) final;
     void flush() final;
     void flushAndRemoveImage() final;
     void play() final;

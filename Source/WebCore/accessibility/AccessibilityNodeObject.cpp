@@ -80,6 +80,7 @@
 #include "TextControlInnerElements.h"
 #include "UserGestureIndicator.h"
 #include "VisibleUnits.h"
+#include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -255,7 +256,7 @@ LayoutRect AccessibilityNodeObject::boundingBoxRect() const
     // the width of that ancestor, and about the height of a line of text, so it's clear this object is
     // a descendant of that ancestor.
     for (RefPtr<AccessibilityObject> ancestor = parentObject(); ancestor; ancestor = ancestor->parentObject()) {
-        if (!is<AccessibilityRenderObject>(ancestor))
+        if (!ancestor->renderer())
             continue;
         auto ancestorRect = ancestor->elementRect();
         if (ancestorRect.isEmpty())
@@ -517,8 +518,11 @@ void AccessibilityNodeObject::addChildren()
     // If the need to add more children in addition to existing children arises, 
     // childrenChanged should have been called, leaving the object with no children.
     ASSERT(!m_childrenInitialized);
-    
     m_childrenInitialized = true;
+
+    auto clearDirtySubtree = makeScopeExit([&] {
+        m_subtreeDirty = false;
+    });
 
     WeakPtr node = this->node();
     if (!node || !canHaveChildren())
@@ -536,7 +540,6 @@ void AccessibilityNodeObject::addChildren()
         addChild(objectCache->getOrCreate(child));
 
     updateOwnedChildren();
-    m_subtreeDirty = false;
 }
 
 bool AccessibilityNodeObject::canHaveChildren() const
@@ -823,16 +826,15 @@ bool AccessibilityNodeObject::isMultiSelectable() const
 
 bool AccessibilityNodeObject::isRequired() const
 {
-    // Explicit aria-required values should trump native required attributes.
+    auto* formControlElement = dynamicDowncast<HTMLFormControlElement>(node());
+    if (formControlElement && formControlElement->isRequired())
+        return true;
+
     const AtomString& requiredValue = getAttribute(aria_requiredAttr);
     if (equalLettersIgnoringASCIICase(requiredValue, "true"_s))
         return true;
     if (equalLettersIgnoringASCIICase(requiredValue, "false"_s))
         return false;
-
-    Node* n = this->node();
-    if (is<HTMLFormControlElement>(n))
-        return downcast<HTMLFormControlElement>(*n).isRequired();
 
     return false;
 }
@@ -1454,6 +1456,96 @@ bool AccessibilityNodeObject::liveRegionAtomic() const
     default:
         return false;
     }
+}
+
+// This function is like a cross-platform version of - (WebCoreTextMarkerRange*)textMarkerRange. It returns
+// a Range that we can convert to a WebCoreTextMarkerRange in the Obj-C file
+VisiblePositionRange AccessibilityNodeObject::visiblePositionRange() const
+{
+    RefPtr node = this->node();
+    if (!node)
+        return VisiblePositionRange();
+
+    VisiblePosition startPos = firstPositionInOrBeforeNode(node.get());
+    VisiblePosition endPos = lastPositionInOrAfterNode(node.get());
+
+    // the VisiblePositions are equal for nodes like buttons, so adjust for that
+    // FIXME: Really?  [button, 0] and [button, 1] are distinct (before and after the button)
+    // I expect this code is only hit for things like empty divs? In which case I don't think
+    // the behavior is correct here -- eseidel
+    if (startPos == endPos) {
+        endPos = endPos.next();
+        if (endPos.isNull())
+            endPos = startPos;
+    }
+
+    return { WTFMove(startPos), WTFMove(endPos) };
+}
+
+VisiblePositionRange AccessibilityNodeObject::selectedVisiblePositionRange() const
+{
+    auto* document = this->document();
+    if (auto* localFrame = document ? document->frame() : nullptr) {
+        if (auto selection = localFrame->selection().selection(); !selection.isNone())
+            return selection;
+    }
+    return { };
+}
+
+int AccessibilityNodeObject::indexForVisiblePosition(const VisiblePosition& position) const
+{
+    RefPtr node = this->node();
+    if (!node)
+        return 0;
+    // We need to consider replaced elements for GTK, as they will be
+    // presented with the 'object replacement character' (0xFFFC).
+    TextIteratorBehaviors behaviors;
+#if USE(ATSPI)
+    behaviors.add(TextIteratorBehavior::EmitsObjectReplacementCharacters);
+#endif
+    return WebCore::indexForVisiblePosition(*node, position, behaviors);
+}
+
+VisiblePosition AccessibilityNodeObject::visiblePositionForIndex(int index) const
+{
+    RefPtr node = this->node();
+    if (!node)
+        return { };
+#if USE(ATSPI)
+    // We need to consider replaced elements for GTK, as they will be presented with the 'object replacement character' (0xFFFC).
+    return WebCore::visiblePositionForIndex(index, node.get(), TextIteratorBehavior::EmitsObjectReplacementCharacters);
+#else
+    return visiblePositionForIndexUsingCharacterIterator(*node, index);
+#endif
+}
+
+VisiblePositionRange AccessibilityNodeObject::visiblePositionRangeForLine(unsigned lineCount) const
+{
+    if (!lineCount)
+        return { };
+
+    auto* document = this->document();
+    auto* renderView = document ? document->renderView() : nullptr;
+    if (!renderView)
+        return { };
+
+    // iterate over the lines
+    // FIXME: This is wrong when lineNumber is lineCount+1, because nextLinePosition takes you to the last offset of the last line.
+    VisiblePosition position = renderView->positionForPoint(IntPoint(), nullptr);
+    while (--lineCount) {
+        auto previousLinePosition = position;
+        position = nextLinePosition(position, 0);
+        if (position.isNull() || position == previousLinePosition)
+            return VisiblePositionRange();
+    }
+
+    // make a caret selection for the marker position, then extend it to the line
+    // NOTE: Ignores results of sel.modify because it returns false when starting at an empty line.
+    // The resulting selection in that case will be a caret at position.
+    FrameSelection selection;
+    selection.setSelection(position);
+    selection.modify(FrameSelection::Alteration::Extend, SelectionDirection::Right, TextGranularity::LineBoundary);
+    return selection.selection();
 }
 
 bool AccessibilityNodeObject::isGenericFocusableElement() const

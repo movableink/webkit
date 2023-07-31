@@ -467,10 +467,9 @@
         (extension "com.apple.fileprovider.read-write")))
 
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
-(with-filter (system-attribute apple-internal)
-    (allow mach-lookup (global-name
-        "com.apple.logd"
-        "com.apple.logd.events")))
+(deny mach-lookup (with no-report) (global-name
+    "com.apple.logd"
+    "com.apple.logd.events"))
 #else
 (allow mach-lookup (global-name
     "com.apple.logd"
@@ -1373,6 +1372,8 @@
 (define (kernel-mig-routine-in-use-watchos)
     (kernel-mig-routine
         io_connect_set_notification_port
+        io_registry_entry_get_property
+        io_server_version
         mach_make_memory_entry
         mach_make_memory_entry_64
         vm_copy

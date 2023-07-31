@@ -34,6 +34,7 @@
 #include "SandboxExtension.h"
 #include "WebFramePolicyListenerProxy.h"
 #include "WebPageProxyIdentifier.h"
+#include "WebPageProxyMessageReceiverRegistration.h"
 #include "WebsitePoliciesData.h"
 #include <WebCore/DiagnosticLoggingClient.h>
 #include <WebCore/FrameIdentifier.h>
@@ -49,6 +50,7 @@ class FormDataReference;
 }
 
 namespace WebCore {
+class RegistrableDomain;
 class ResourceRequest;
 enum class ShouldTreatAsContinuingLoad : uint8_t;
 }
@@ -56,6 +58,7 @@ enum class ShouldTreatAsContinuingLoad : uint8_t;
 namespace WebKit {
 
 class DrawingAreaProxy;
+class RemotePageProxy;
 class SuspendedPageProxy;
 class UserData;
 class WebBackForwardListItem;
@@ -89,6 +92,7 @@ public:
     ProcessSwapRequestedByClient processSwapRequestedByClient() const { return m_processSwapRequestedByClient; }
     uint64_t navigationID() const { return m_navigationID; }
     const URL& provisionalURL() const { return m_provisionalLoadURL; }
+    std::optional<HashMap<WebCore::RegistrableDomain, WeakPtr<RemotePageProxy>>> takeRemotePageMap();
 
     bool isProcessSwappingOnNavigationResponse() const { return m_isProcessSwappingOnNavigationResponse; }
 
@@ -183,6 +187,7 @@ private:
     bool m_wasCommitted { false };
     bool m_isProcessSwappingOnNavigationResponse { false };
     URL m_provisionalLoadURL;
+    WebPageProxyMessageReceiverRegistration m_messageReceiverRegistration;
 
 #if PLATFORM(COCOA)
     Vector<uint8_t> m_accessibilityToken;
@@ -200,6 +205,7 @@ private:
     LayerHostingContextID m_contextIDForVisibilityPropagationInGPUProcess { 0 };
 #endif
 #endif
+    std::optional<HashMap<WebCore::RegistrableDomain, WeakPtr<RemotePageProxy>>> m_remotePageMap;
 };
 
 } // namespace WebKit

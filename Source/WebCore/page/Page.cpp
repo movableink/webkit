@@ -2270,8 +2270,9 @@ void Page::userStyleSheetLocationChanged()
     if (url.protocolIsData() && url.string().startsWith("data:text/css;charset=utf-8;base64,"_s)) {
         m_didLoadUserStyleSheet = true;
 
-        if (auto styleSheetAsUTF8 = base64Decode(PAL::decodeURLEscapeSequences(StringView(url.string()).substring(35)), Base64DecodeMode::DefaultValidatePaddingAndIgnoreWhitespace))
-            m_userStyleSheet = String::fromUTF8(styleSheetAsUTF8->data(), styleSheetAsUTF8->size());
+        String styleSheetAsBase64 = base64DecodeToString(PAL::decodeURLEscapeSequences(StringView(url.string()).substring(35)), Base64DecodeMode::DefaultValidatePaddingAndIgnoreWhitespace);
+        if (!styleSheetAsBase64.isNull())
+            m_userStyleSheet = styleSheetAsBase64;
     }
 
     forEachDocument([] (Document& document) {
@@ -3984,9 +3985,9 @@ void Page::abortApplePayAMSUISession(ApplePayAMSUIPaymentHandler& paymentHandler
 #endif // ENABLE(APPLE_PAY_AMS_UI)
 
 #if USE(SYSTEM_PREVIEW)
-void Page::handleSystemPreview(const URL& url, const SystemPreviewInfo& systemPreviewInfo)
+void Page::beginSystemPreview(const URL& url, const SystemPreviewInfo& systemPreviewInfo, CompletionHandler<void()>&& completionHandler)
 {
-    chrome().client().handleSystemPreview(url, systemPreviewInfo);
+    chrome().client().beginSystemPreview(url, systemPreviewInfo, WTFMove(completionHandler));
 }
 #endif
 
@@ -4440,7 +4441,15 @@ void Page::didFinishScrolling()
 void Page::addRootFrame(LocalFrame& frame)
 {
     ASSERT(frame.isRootFrame());
+    ASSERT(!m_rootFrames.contains(frame));
     m_rootFrames.add(frame);
+}
+
+void Page::removeRootFrame(LocalFrame& frame)
+{
+    ASSERT(frame.isRootFrame());
+    ASSERT(m_rootFrames.contains(frame));
+    m_rootFrames.remove(frame);
 }
 
 void Page::reloadExecutionContextsForOrigin(const ClientOrigin& origin, std::optional<FrameIdentifier> triggeringFrame) const

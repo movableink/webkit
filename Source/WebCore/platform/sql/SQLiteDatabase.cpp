@@ -117,7 +117,7 @@ SQLiteDatabase::~SQLiteDatabase()
     close();
 }
 
-bool SQLiteDatabase::open(const String& filename, OpenMode openMode)
+bool SQLiteDatabase::open(const String& filename, OpenMode openMode, OptionSet<OpenOptions> options)
 {
     initializeSQLiteIfNecessary();
     close();
@@ -156,6 +156,12 @@ bool SQLiteDatabase::open(const String& filename, OpenMode openMode)
         {
             SQLiteTransactionInProgressAutoCounter transactionCounter;
             result = sqlite3_open_v2(FileSystem::fileSystemRepresentation(filename).data(), &m_db, flags, nullptr);
+#if PLATFORM(COCOA)
+            if (result == SQLITE_OK && options.contains(OpenOptions::CanSuspendWhileLocked))
+                SQLiteFileSystem::setCanSuspendLockedFileAttribute(filename);
+#else
+            UNUSED_PARAM(options);
+#endif
         }
 
         if (result != SQLITE_OK) {

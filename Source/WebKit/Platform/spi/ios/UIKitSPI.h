@@ -34,7 +34,6 @@
 #import <UIKit/UIApplication_Private.h>
 #import <UIKit/UIBarButtonItem_Private.h>
 #import <UIKit/UIBlurEffect_Private.h>
-#import <UIKit/UICalloutBar.h>
 #import <UIKit/UIClickInteraction_Private.h>
 #import <UIKit/UIClickPresentationInteraction_Private.h>
 #import <UIKit/UIColorEffect.h>
@@ -91,7 +90,6 @@
 #import <UIKit/UIWebGeolocationPolicyDecider.h>
 #import <UIKit/UIWebScrollView.h>
 #import <UIKit/UIWebTiledView.h>
-#import <UIKit/UIWebTouchEventsGestureRecognizer.h>
 #import <UIKit/UIWindowScene_Private.h>
 #import <UIKit/UIWindow_Private.h>
 #import <UIKit/_UIApplicationRotationFollowing.h>
@@ -536,12 +534,6 @@ typedef struct CGSVGDocument *CGSVGDocumentRef;
 @property (nonatomic, readonly, retain) FBSDisplayConfiguration *displayConfiguration;
 @end
 
-typedef NS_ENUM(NSInteger, UIScrollViewIndicatorInsetAdjustmentBehavior) {
-    UIScrollViewIndicatorInsetAdjustmentAutomatic,
-    UIScrollViewIndicatorInsetAdjustmentAlways,
-    UIScrollViewIndicatorInsetAdjustmentNever
-};
-
 #if PLATFORM(IOS) && !defined(__IPHONE_13_4)
 typedef enum {
     UIAxisNeither = 0,
@@ -567,9 +559,7 @@ typedef enum {
 @property (nonatomic) CGFloat verticalScrollDecelerationFactor;
 @property (nonatomic, readonly) BOOL _isInterruptingDeceleration;
 @property (nonatomic, getter=_contentScrollInset, setter=_setContentScrollInset:) UIEdgeInsets contentScrollInset;
-@property (nonatomic, getter=_indicatorInsetAdjustmentBehavior, setter=_setIndicatorInsetAdjustmentBehavior:) UIScrollViewIndicatorInsetAdjustmentBehavior indicatorInsetAdjustmentBehavior;
 @property (nonatomic, readonly) UIEdgeInsets _systemContentInset;
-@property (nonatomic, readonly) UIEdgeInsets _effectiveContentInset;
 @property (nonatomic, getter=_allowsAsyncScrollEvent, setter=_setAllowsAsyncScrollEvent:) BOOL _allowsAsyncScrollEvent;
 @property (nonatomic, getter=_isFirstResponderKeyboardAvoidanceEnabled, setter=_setFirstResponderKeyboardAvoidanceEnabled:) BOOL firstResponderKeyboardAvoidanceEnabled;
 @property (nonatomic) BOOL bouncesHorizontally;
@@ -951,69 +941,7 @@ typedef NS_ENUM(NSInteger, UIWKGestureType) {
 - (void)decidePolicyForGeolocationRequestFromOrigin:(id)securityOrigin requestingURL:(NSURL *)requestingURL view:(UIView *)view listener:(id)listener;
 @end
 
-typedef enum {
-    UIWebTouchEventTouchBegin = 0,
-    UIWebTouchEventTouchChange = 1,
-    UIWebTouchEventTouchEnd = 2,
-    UIWebTouchEventTouchCancel = 3,
-} UIWebTouchEventType;
-
-typedef enum {
-    UIWebTouchPointTypeDirect = 0,
-    UIWebTouchPointTypeStylus
-} UIWebTouchPointType;
-
-struct _UIWebTouchPoint {
-    CGPoint locationInScreenCoordinates;
-    CGPoint locationInDocumentCoordinates;
-    unsigned identifier;
-    UITouchPhase phase;
-    CGFloat majorRadiusInScreenCoordinates;
-    CGFloat force;
-    CGFloat altitudeAngle;
-    CGFloat azimuthAngle;
-    UIWebTouchPointType touchType;
-};
-
-struct _UIWebTouchEvent {
-    UIWebTouchEventType type;
-    NSTimeInterval timestamp;
-    CGPoint locationInScreenCoordinates;
-    CGPoint locationInDocumentCoordinates;
-    CGFloat scale;
-    CGFloat rotation;
-
-    bool inJavaScriptGesture;
-
-    struct _UIWebTouchPoint* touchPoints;
-    unsigned touchPointCount;
-
-    bool isPotentialTap;
-};
-
 @interface _UILookupGestureRecognizer : UIGestureRecognizer
-@end
-
-@class UIWebTouchEventsGestureRecognizer;
-
-@protocol UIWebTouchEventsGestureRecognizerDelegate <NSObject>
-- (BOOL)isAnyTouchOverActiveArea:(NSSet *)touches;
-@optional
-- (BOOL)gestureRecognizer:(UIWebTouchEventsGestureRecognizer *)gestureRecognizer shouldIgnoreWebTouchWithEvent:(UIEvent *)event;
-@end
-
-@interface UIWebTouchEventsGestureRecognizer : UIGestureRecognizer
-@end
-
-@interface UIWebTouchEventsGestureRecognizer ()
-- (id)initWithTarget:(id)target action:(SEL)action touchDelegate:(id <UIWebTouchEventsGestureRecognizerDelegate>)delegate;
-- (void)cancel;
-@property (nonatomic, getter=isDefaultPrevented) BOOL defaultPrevented;
-@property (nonatomic, readonly) BOOL inJavaScriptGesture;
-@property (nonatomic, readonly) CGPoint locationInWindow;
-@property (nonatomic, readonly) UIWebTouchEventType type;
-@property (nonatomic, readonly) const struct _UIWebTouchEvent *lastTouchEvent;
-@property (nonatomic, readonly) NSMapTable<NSNumber *, UITouch *> *activeTouchesByIdentifier;
 @end
 
 typedef NS_ENUM(NSInteger, _UIBackdropViewStylePrivate) {
@@ -1184,6 +1112,7 @@ typedef enum {
 - (id)_initWithAsynchronousLoading:(BOOL)asynchronousLoading;
 - (BOOL)_doneLoading;
 - (NSRange)rangeOfMisspelledWordInString:(NSString *)stringToCheck range:(NSRange)range startingAt:(NSInteger)startingOffset wrap:(BOOL)wrapFlag languages:(NSArray *)languagesArray;
+- (NSArray<NSTextAlternatives *> *)grammarAlternativesForString:(NSString *)string;
 @end
 
 @interface UIKeyboardInputMode : UITextInputMode <NSCopying>
@@ -1259,11 +1188,6 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 @property (nonatomic) BOOL dontDismiss;
 @end
 ALLOW_DEPRECATED_DECLARATIONS_END
-
-@interface UICalloutBar : UIView
-+ (UICalloutBar *)activeCalloutBar;
-+ (void)fadeSharedCalloutBar;
-@end
 
 @interface UIAutoRotatingWindow : UIApplicationRotationFollowingWindow
 @end

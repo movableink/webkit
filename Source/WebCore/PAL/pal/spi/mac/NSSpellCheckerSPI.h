@@ -40,6 +40,7 @@ extern NSString *NSTextCompletionAttributeName;
 @interface NSSpellChecker ()
 
 #if HAVE(INLINE_PREDICTIONS)
+@property (class, readonly, getter=isAutomaticInlineCompletionEnabled) BOOL automaticInlineCompletionEnabled;
 - (NSTextCheckingResult *)completionCandidateFromCandidates:(NSArray<NSTextCheckingResult *> *)candidates;
 - (void)showCompletionForCandidate:(NSTextCheckingResult *)candidate selectedRange:(NSRange)selectedRange offset:(NSUInteger)offset inString:(NSString *)string rect:(NSRect)rect view:(NSView *)view completionHandler:(void (^)(NSDictionary *resultDictionary))completionBlock;
 - (void)showCompletionForCandidate:(NSTextCheckingResult *)candidate selectedRange:(NSRange)selectedRange offset:(NSUInteger)offset inString:(NSString *)string rect:(NSRect)rect view:(NSView *)view client:(id <NSTextInputClient>)client completionHandler:(void (^)(NSDictionary *resultDictionary))completionBlock;
@@ -61,7 +62,7 @@ typedef NS_OPTIONS(uint64_t, NSTextCheckingTypeAppKitTemporary) {
 
 #endif // USE(APPLE_INTERNAL_SDK)
 
-#if HAVE(NSSPELLCHECKER_CORRECTION_INDICATOR_UNDERLINE_COLOR)
+#if HAVE(AUTOCORRECTION_ENHANCEMENTS)
 // FIXME: rdar://105853874 Remove staging code.
 @interface NSSpellChecker (Staging_105286196)
 + (NSColor *)correctionIndicatorUnderlineColor;

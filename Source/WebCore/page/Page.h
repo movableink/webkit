@@ -619,7 +619,7 @@ public:
 #endif
 
 #if USE(SYSTEM_PREVIEW)
-    void handleSystemPreview(const URL&, const SystemPreviewInfo&);
+    void beginSystemPreview(const URL&, const SystemPreviewInfo&, CompletionHandler<void()>&&);
 #endif
 
 #if ENABLE(WEB_AUTHN)
@@ -1036,11 +1036,6 @@ public:
     void setAccessibilityRootObject(AccessibilityRootAtspi* rootObject) { m_accessibilityRootObject = rootObject; }
 #endif
 
-#if PLATFORM(COCOA)
-    void setIsAwaitingLayerTreeTransactionFlush(bool isAwaiting) { m_isAwaitingLayerTreeTransactionFlush = isAwaiting; }
-    bool isAwaitingLayerTreeTransactionFlush() const { return m_isAwaitingLayerTreeTransactionFlush; }
-#endif
-
     void timelineControllerMaximumAnimationFrameRateDidChange(DocumentTimelinesController&);
 
     ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension() const { return m_contentSecurityPolicyModeForExtension; }
@@ -1058,6 +1053,7 @@ public:
 
     const WeakHashSet<LocalFrame>& rootFrames() const { return m_rootFrames; }
     WEBCORE_EXPORT void addRootFrame(LocalFrame&);
+    WEBCORE_EXPORT void removeRootFrame(LocalFrame&);
 
     void performOpportunisticallyScheduledTasks(MonotonicTime deadline);
 
@@ -1324,10 +1320,6 @@ private:
 
 #if ENABLE(EDITABLE_REGION)
     bool m_isEditableRegionEnabled { false };
-#endif
-
-#if PLATFORM(COCOA)
-    bool m_isAwaitingLayerTreeTransactionFlush { false };
 #endif
 
     Vector<OptionSet<RenderingUpdateStep>, 2> m_renderingUpdateRemainingSteps;

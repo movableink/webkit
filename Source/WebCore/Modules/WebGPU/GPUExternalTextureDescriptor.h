@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,7 @@
 #include "GPUPredefinedColorSpace.h"
 #include "HTMLVideoElement.h"
 #include "WebCodecsVideoFrame.h"
-#include <pal/graphics/WebGPU/WebGPUExternalTextureDescriptor.h>
+#include "WebGPUExternalTextureDescriptor.h"
 #include <wtf/RefPtr.h>
 
 typedef struct __CVBuffer* CVPixelBufferRef;
@@ -52,18 +52,18 @@ using GPUVideoSource = RefPtr<DummyHTMLVideoElement>;
 
 struct GPUExternalTextureDescriptor : public GPUObjectDescriptorBase {
 
-    static PAL::WebGPU::VideoSourceIdentifier mediaIdentifierForSource(const GPUVideoSource& videoSource, CVPixelBufferRef& outPixelBuffer)
+    static WebGPU::VideoSourceIdentifier mediaIdentifierForSource(const GPUVideoSource& videoSource, CVPixelBufferRef& outPixelBuffer)
     {
 #if ENABLE(WEB_CODECS)
-        return WTF::switchOn(videoSource, [] (const RefPtr<HTMLVideoElement> videoElement) -> PAL::WebGPU::VideoSourceIdentifier {
+        return WTF::switchOn(videoSource, [] (const RefPtr<HTMLVideoElement> videoElement) -> WebGPU::VideoSourceIdentifier {
             auto playerIdentifier = videoElement->playerIdentifier();
-            return PAL::WebGPU::HTMLVideoElementIdentifier { playerIdentifier ? playerIdentifier->toUInt64() : 0 };
+            return WebGPU::HTMLVideoElementIdentifier { playerIdentifier ? playerIdentifier->toUInt64() : 0 };
         }
-        , [&outPixelBuffer] (const RefPtr<WebCodecsVideoFrame> videoFrame) -> PAL::WebGPU::VideoSourceIdentifier {
+        , [&outPixelBuffer] (const RefPtr<WebCodecsVideoFrame> videoFrame) -> WebGPU::VideoSourceIdentifier {
 #if PLATFORM(COCOA)
             if (auto internalFrame = videoFrame->internalFrame()) {
                 if (internalFrame->isRemoteProxy())
-                    return PAL::WebGPU::WebCodecsVideoFrameIdentifier { internalFrame->resourceIdentifier() };
+                    return WebGPU::WebCodecsVideoFrameIdentifier { internalFrame->resourceIdentifier() };
 
                 outPixelBuffer = internalFrame->pixelBuffer();
             }
@@ -71,24 +71,24 @@ struct GPUExternalTextureDescriptor : public GPUObjectDescriptorBase {
             UNUSED_PARAM(videoFrame);
             UNUSED_PARAM(outPixelBuffer);
 #endif
-            return PAL::WebGPU::WebCodecsVideoFrameIdentifier { };
+            return WebGPU::WebCodecsVideoFrameIdentifier { };
         });
 #else
 
 #if ENABLE(VIDEO)
         UNUSED_PARAM(outPixelBuffer);
         auto playerIdentifier = videoSource->playerIdentifier();
-        return PAL::WebGPU::HTMLVideoElementIdentifier { playerIdentifier ? playerIdentifier->toUInt64() : 0 };
+        return WebGPU::HTMLVideoElementIdentifier { playerIdentifier ? playerIdentifier->toUInt64() : 0 };
 #else
         UNUSED_PARAM(videoSource);
         UNUSED_PARAM(outPixelBuffer);
-        return PAL::WebGPU::HTMLVideoElementIdentifier { 0 };
+        return WebGPU::HTMLVideoElementIdentifier { 0 };
 #endif // ENABLE(VIDEO)
 
 #endif
     }
 
-    PAL::WebGPU::ExternalTextureDescriptor convertToBacking() const
+    WebGPU::ExternalTextureDescriptor convertToBacking() const
     {
         CVPixelBufferRef pixelBuffer = nullptr;
         auto mediaIdentifier = mediaIdentifierForSource(source, pixelBuffer);

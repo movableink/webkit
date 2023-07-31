@@ -36,7 +36,6 @@
 #include "SurrogatePairAwareTextIterator.h"
 #include "TextRun.h"
 #include "WidthIterator.h"
-#include "WordBoundaryDetection.h"
 #include <unicode/ubidi.h>
 #include <wtf/text/TextBreakIterator.h>
 
@@ -355,6 +354,12 @@ bool TextUtil::isWrappingAllowed(const RenderStyle& style)
     return style.textWrap() != TextWrap::NoWrap;
 }
 
+bool TextUtil::shouldTrailingWhitespaceHang(const RenderStyle& style)
+{
+    // https://www.w3.org/TR/css-text-4/#white-space-phase-2
+    return style.whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve && style.textWrap() != TextWrap::NoWrap;
+}
+
 TextBreakIterator::LineMode::Behavior TextUtil::lineBreakIteratorMode(LineBreak lineBreak)
 {
     switch (lineBreak) {
@@ -373,16 +378,18 @@ TextBreakIterator::LineMode::Behavior TextUtil::lineBreakIteratorMode(LineBreak 
     return TextBreakIterator::LineMode::Behavior::Default;
 }
 
-TextBreakIterator::ContentAnalysis TextUtil::contentAnalysis(const WordBoundaryDetection& wordBoundaryDetection)
+TextBreakIterator::ContentAnalysis TextUtil::contentAnalysis(WordBreak wordBreak)
 {
-    // FIXME: Explicit static_cast to work around issue on libstdc++-10. Undo when upgrading GCC from 10 to 11.
-    return WTF::switchOn(static_cast<WordBoundaryDetectionType>(wordBoundaryDetection), [](WordBoundaryDetectionNormal) {
+    switch (wordBreak) {
+    case WordBreak::Normal:
+    case WordBreak::BreakAll:
+    case WordBreak::KeepAll:
+    case WordBreak::BreakWord:
         return TextBreakIterator::ContentAnalysis::Mechanical;
-    }, [](WordBoundaryDetectionManual) {
-        return TextBreakIterator::ContentAnalysis::Mechanical;
-    }, [](const WordBoundaryDetectionAuto&) {
+    case WordBreak::Auto:
         return TextBreakIterator::ContentAnalysis::Linguistic;
-    });
+    }
+    return TextBreakIterator::ContentAnalysis::Mechanical;
 }
 
 bool TextUtil::containsStrongDirectionalityText(StringView text)

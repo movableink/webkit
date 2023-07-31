@@ -81,6 +81,7 @@ namespace JSC {
     macro(DatePrototypeGetUTCMillisecondsIntrinsic) \
     macro(DatePrototypeGetTimezoneOffsetIntrinsic) \
     macro(DatePrototypeGetYearIntrinsic) \
+    macro(DatePrototypeSetTimeIntrinsic) \
     macro(FromCharCodeIntrinsic) \
     macro(GlobalIsNaNIntrinsic) \
     macro(PowIntrinsic) \
@@ -109,6 +110,7 @@ namespace JSC {
     macro(ReflectOwnKeysIntrinsic) \
     macro(StringConstructorIntrinsic) \
     macro(StringPrototypeCodePointAtIntrinsic) \
+    macro(StringPrototypeIndexOfIntrinsic) \
     macro(StringPrototypeLocaleCompareIntrinsic) \
     macro(StringPrototypeValueOfIntrinsic) \
     macro(StringPrototypeReplaceIntrinsic) \

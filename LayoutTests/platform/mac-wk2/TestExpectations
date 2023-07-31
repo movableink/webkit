@@ -38,6 +38,9 @@ fast/events/autoscroll-main-document.html [ Pass ]
 
 fast/forms/enterkeyhint-attribute-values.html [ Pass ]
 
+fast/forms/fixed-size-checkbox-vertically-centered.html [ Pass ]
+fast/forms/fixed-size-radio-vertically-centered.html [ Pass ]
+
 accessibility/smart-invert.html [ Pass ]
 webkit.org/b/189818 accessibility/smart-invert-reference.html [ Pass ImageOnlyFailure ]
 fast/media/mq-inverted-colors-live-update.html [ Pass ]
@@ -126,6 +129,7 @@ fast/animation/request-animation-frame-in-two-pages.html [ Pass ]
 fast/forms/file/entries-api/image-transcode-open-panel.html [ Pass ]
 fast/forms/file/entries-api/pages-jpeg-open-panel.html [ Pass ]
 fast/forms/file/entries-api/pdf-jpeg-open-panel.html [ Pass ]
+fast/forms/file/entries-api/png-raw-open-panel.html [ Pass ]
 
 storage/indexeddb/database-transaction-cycle.html [ Pass ]
 
@@ -1103,7 +1107,6 @@ webkit.org/b/188924 fast/mediastream/device-change-event-2.html [ Pass Timeout ]
 
 webkit.org/b/212721 svg/custom/textPath-change-id.svg [ Pass ImageOnlyFailure ]
 
-webkit.org/b/212042 [ Debug ] fast/scrolling/mac/scrollbars/overlay-scrollbar-reveal.html [ Pass Timeout ]
 webkit.org/b/212042 [ Debug ] fast/scrolling/mac/scrollbars/select-overlay-scrollbar-reveal.html [ Pass Timeout ]
 
 webkit.org/b/213461 fast/mediastream/mediastreamtrack-video-frameRate-clone-increasing.html [ Pass Failure ]
@@ -1208,13 +1211,9 @@ webkit.org/b/230113 [ Monterey+ Debug arm64 ] svg/animations/animate-elem-14-t-d
 
 webkit.org/b/230696 imported/w3c/web-platform-tests/webrtc/RTCDataChannel-close.html [ Pass Failure ]
 
-webkit.org/b/215611 [ Debug ] fast/scrolling/mac/scrollbars/overflow-overlay-scrollbar-hovered.html [ Pass Timeout ]
-
 # rdar://65269589 ([ macOS and iOS ] media/vp9.html is failing consistently.)
 [ Monterey+ ] media/vp9.html [ Pass ]
 [ Monterey+ ] webrtc/vp9-vtb.html [ Pass ]
-
-webkit.org/b/215700 fast/scrolling/mac/scrollbars/overlay-scrollbar-hovered.html [ Pass Failure Timeout ]
 
 webkit.org/b/214997 [ Release ] http/tests/workers/service/basic-install-event-waitUntil-reject.html [ Pass Timeout ]
 
@@ -1769,8 +1768,6 @@ webgl/2.0.y/conformance2/offscreencanvas/offscreencanvas-transfer-image-bitmap.h
 
 webkit.org/b/251187 [ Debug ] imported/w3c/web-platform-tests/fetch/api/redirect/redirect-back-to-original-origin.any.html [ Pass Crash ]
 
-webkit.org/b/254001 http/wpt/service-workers/service-worker-spinning-activate.https.html [ Failure Pass Timeout ]
-
 webkit.org/b/250046 [ Monterey+ ] svg/clip-path/clip-opacity-translate.svg [ ImageOnlyFailure ]
 
 # Early hints require network callbacks that are only present in macOS 12 / iOS 15 or greater.
@@ -1790,8 +1787,36 @@ webkit.org/b/238749 imported/w3c/web-platform-tests/html/semantics/interactive-e
 
 webkit.org/b/258325 [ Debug ] media/modern-media-controls/pip-support/pip-support-click.html [ Crash ]
 
+[ Monterey x86_64 ] imported/w3c/web-platform-tests/webcodecs/temporal-svc-encoding.https.any.html?vp9 [ Failure ]
+[ Monterey x86_64 ] imported/w3c/web-platform-tests/webcodecs/temporal-svc-encoding.https.any.worker.html?vp9 [ Failure ]
+
 # webkit.org/b/258328 Umbrella Bug: Batch mark expectations slowing down EWS (258328) 
-[ Debug ] imported/w3c/web-platform-tests/webcodecs/videoFrame-construction.crossOriginSource.sub.html [ Pass Failure Crash ]
+[ Debug ] imported/w3c/web-platform-tests/webcodecs/videoFrame-construction.crossOriginSource.sub.html [ Pass Failure ]
 imported/w3c/web-platform-tests/css/css-sizing/aspect-ratio/replaced-element-035.html [ Pass ImageOnlyFailure ] 
 fast/forms/file/entries-api/image-no-transcode-open-panel.html [ Pass Crash ] 
 [ Debug Ventura arm64 ] http/tests/media/modern-media-controls/overflow-support/playback-speed-live-broadcast.html [ Pass Crash ]
+[ Debug arm64 ] media/track/track-css-visible-stroke.html [ Pass Crash ]
+[ Ventura Debug arm64 ] http/tests/media/modern-media-controls/skip-back-support/skip-back-support-button-click.html [ Pass Crash ]
+media/track/track-cues-missed.html [ Pass Crash ]
+media/track/video-track-addition-and-frame-removal.html [ Pass Crash ]
+media/track/track-cue-left-align.html [ Pass Crash ]
+http/tests/media/modern-media-controls/skip-back-support/skip-back-support-live-broadcast.html [ Pass Crash ]
+media/track/track-cue-mutable-fragment.html [ Pass Crash ]
+http/tests/workers/service/postmessage-after-terminating-hung-worker.html [ Pass Crash ]
+imported/w3c/web-platform-tests/dom/nodes/NodeList-static-length-getter-tampered-indexOf-1.html [ Timeout ]
+imported/w3c/web-platform-tests/dom/nodes/NodeList-static-length-getter-tampered-indexOf-2.html [ Timeout ]
+imported/w3c/web-platform-tests/dom/nodes/NodeList-static-length-getter-tampered-indexOf-3.html [ Timeout ]
+fast/mediastream/getUserMedia-video-rescaling.html [ Pass Crash ]
+media/video-source-load.html [ Pass Crash ]
+media/track/video-track.html [ Pass Crash ]
+imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/interfaces/TextTrack/activeCues.html [ Pass Crash ]
+http/tests/media/media-stream/audio-capture-and-category.https.html [ Pass Crash ]
+
+webkit.org/b/258865 fast/attachment/cocoa/wide-attachment-folder-icon.html [ Pass ImageOnlyFailure ]
+webkit.org/b/258865 fast/attachment/cocoa/wide-attachment-icon-from-file-extension.html [ Pass ImageOnlyFailure ]
+webkit.org/b/258865 fast/attachment/mac/wide-attachment-title-with-rtl.html [ Pass ImageOnlyFailure ]
+webkit.org/b/258865 fast/attachment/mac/wide-attachment-type-attribute.html [ Pass ImageOnlyFailure ]
+
+webkit.org/b/259160 http/tests/privateClickMeasurement/triggering-event-with-attribution-source-through-fetch-keepalive.html [ Pass Failure ]
+
+webkit.org/b/259228 [ Release ] fast/dom/lazy-image-loading-document-leak.html [ Pass Failure ]

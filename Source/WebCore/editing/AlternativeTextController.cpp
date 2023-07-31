@@ -85,9 +85,10 @@ static bool markersHaveIdenticalDescription(const Vector<RenderedDocumentMarker*
 }
 
 AlternativeTextController::AlternativeTextController(Document& document)
-    : m_timer(*this, &AlternativeTextController::timerFired)
+    : m_timer(&document, *this, &AlternativeTextController::timerFired)
     , m_document(document)
 {
+    m_timer.suspendIfNeeded();
 }
 
 AlternativeTextController::~AlternativeTextController()
@@ -118,7 +119,7 @@ void AlternativeTextController::startAlternativeTextUITimer(AlternativeTextType 
 
 void AlternativeTextController::stopAlternativeTextUITimer()
 {
-    m_timer.stop();
+    m_timer.cancel();
     m_rangeWithAlternative = std::nullopt;
 }
 
@@ -418,26 +419,6 @@ void AlternativeTextController::respondToChangedSelection(const VisibleSelection
     }
 }
 
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/AlternativeTextControllerAdditions.cpp>
-#else
-static inline void removeCorrectionIndicatorMarkers(Document& document)
-{
-    document.markers().removeMarkers(DocumentMarker::CorrectionIndicator);
-}
-#endif
-
-void AlternativeTextController::respondToAppliedEditing(CompositeEditCommand* command)
-{
-    if (command->isTopLevelCommand() && !command->shouldRetainAutocorrectionIndicator())
-        removeCorrectionIndicatorMarkers(m_document);
-
-    markPrecedingWhitespaceForDeletedAutocorrectionAfterCommand(command);
-    m_originalStringForLastDeletedAutocorrection = String();
-
-    dismiss(ReasonForDismissingAlternativeText::Ignored);
-}
-
 void AlternativeTextController::respondToUnappliedEditing(EditCommandComposition* command)
 {
     if (!command->wasCreateLinkCommand())
@@ -666,7 +647,34 @@ void AlternativeTextController::applyAlternativeTextToRange(const SimpleRange& r
         addMarker(replacementRange, markerType, markerDescriptionForAppliedAlternativeText(alternativeType, markerType));
 }
 
+#endif // USE(AUTOCORRECTION_PANEL)
+
+void AlternativeTextController::removeCorrectionIndicatorMarkers()
+{
+#if HAVE(AUTOCORRECTION_ENHANCEMENTS)
+    m_document.markers().dismissMarkers(DocumentMarker::CorrectionIndicator);
+#else
+    m_document.markers().removeMarkers(DocumentMarker::CorrectionIndicator);
 #endif
+}
+
+void AlternativeTextController::respondToAppliedEditing(CompositeEditCommand* command)
+{
+#if USE(AUTOCORRECTION_PANEL)
+    if (command->isTopLevelCommand() && !command->shouldRetainAutocorrectionIndicator())
+        removeCorrectionIndicatorMarkers();
+
+    markPrecedingWhitespaceForDeletedAutocorrectionAfterCommand(command);
+    m_originalStringForLastDeletedAutocorrection = String();
+
+    dismiss(ReasonForDismissingAlternativeText::Ignored);
+#elif HAVE(AUTOCORRECTION_ENHANCEMENTS) && PLATFORM(IOS_FAMILY)
+    if (!command->shouldRetainAutocorrectionIndicator())
+        removeCorrectionIndicatorMarkers();
+#else
+    UNUSED_PARAM(command);
+#endif
+}
 
 bool AlternativeTextController::insertDictatedText(const String& text, const Vector<DictationAlternative>& dictationAlternatives, Event* triggeringEvent)
 {

@@ -1920,9 +1920,7 @@ bool RenderElement::hasSelfPaintingLayer() const
 
 bool RenderElement::checkForRepaintDuringLayout() const
 {
-    if (document().view()->layoutContext().needsFullRepaint() || !everHadLayout() || hasSelfPaintingLayer())
-        return false;
-    return !settings().repaintOutsideLayoutEnabled();
+    return everHadLayout() && !hasSelfPaintingLayer() && !document().view()->layoutContext().needsFullRepaint();
 }
 
 ImageOrientation RenderElement::imageOrientation() const
@@ -2038,7 +2036,7 @@ void RenderElement::updateReferencedSVGResources()
 {
     auto referencedElementIDs = ReferencedSVGResources::referencedSVGResourceIDs(style());
     if (!referencedElementIDs.isEmpty())
-        ensureReferencedSVGResources().updateReferencedResources(document(), referencedElementIDs);
+        ensureReferencedSVGResources().updateReferencedResources(treeScopeForSVGReferences(), referencedElementIDs);
     else
         clearReferencedSVGResources();
 }

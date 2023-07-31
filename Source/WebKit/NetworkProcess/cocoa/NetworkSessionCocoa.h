@@ -146,12 +146,13 @@ public:
     void removeNetworkWebsiteData(std::optional<WallTime>, std::optional<HashSet<WebCore::RegistrableDomain>>&&, CompletionHandler<void()>&&) override;
 
     void removeDataTask(DataTaskIdentifier);
+    void removeBlobDataTask(DataTaskIdentifier);
 
 #if HAVE(NW_PROXY_CONFIG)
     const Vector<RetainPtr<nw_proxy_config_t>> proxyConfigs() const { return m_nwProxyConfigs; }
 
     void clearProxyConfigData() final;
-    void setProxyConfigData(Vector<std::pair<Vector<uint8_t>, UUID>>&&) final;
+    void setProxyConfigData(Vector<std::pair<Vector<uint8_t>, WTF::UUID>>&&) final;
 #endif
 
 private:
@@ -210,6 +211,9 @@ private:
     bool m_fastServerTrustEvaluationEnabled { false };
     String m_dataConnectionServiceType;
     bool m_preventsSystemHTTPProxyAuthentication { false };
+
+    class BlobDataTaskClient;
+    HashMap<DataTaskIdentifier, UniqueRef<BlobDataTaskClient>> m_blobDataTasksForAPI;
     HashMap<DataTaskIdentifier, RetainPtr<NSURLSessionDataTask>> m_dataTasksForAPI;
 };
 

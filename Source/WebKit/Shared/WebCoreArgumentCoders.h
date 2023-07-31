@@ -119,6 +119,7 @@ class Font;
 class FontPlatformData;
 class FragmentedSharedBuffer;
 class LightSource;
+class Path;
 class PaymentInstallmentConfiguration;
 class PixelBuffer;
 class ResourceError;
@@ -138,6 +139,9 @@ struct SerializedAttachmentData;
 struct SoupNetworkProxySettings;
 struct TextRecognitionDataDetector;
 struct ViewportArguments;
+
+template <class>
+struct PathCommand;
 
 namespace DOMCacheEngine {
 struct Record;
@@ -451,6 +455,12 @@ template<> struct ArgumentCoder<WebCore::Filter> {
     template<typename Encoder>
     static void encode(Encoder&, const WebCore::Filter&);
     static std::optional<Ref<WebCore::Filter>> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebCore::Path> {
+    template<typename Encoder>
+    static void encode(Encoder&, const WebCore::Path&);
+    static std::optional<WebCore::Path> decode(Decoder&);
 };
 
 #if ENABLE(DATA_DETECTION)

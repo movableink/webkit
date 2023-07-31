@@ -133,10 +133,9 @@ list(APPEND WebKit_SOURCES
 
     #UIProcess/Storage/StorageManager.cpp
 
-    UIProcess/WebsiteData/unix/WebsiteDataStoreUnix.cpp
     UIProcess/WebsiteData/qt/WebsiteDataStoreQt.cpp
 
-    UIProcess/gstreamer/InstallMissingMediaPluginsPermissionRequest.cpp
+    UIProcess/API/glib/WebKitInstallMissingMediaPluginsPermissionRequest.cpp
     UIProcess/gstreamer/WebPageProxyGStreamer.cpp
 
     UIProcess/qt/BackingStoreQt.cpp
@@ -179,8 +178,6 @@ list(APPEND WebKit_SOURCES
     WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp
     WebProcess/WebPage/CoordinatedGraphics/LayerTreeHost.cpp
     WebProcess/WebPage/CoordinatedGraphics/CompositingCoordinator.cpp
-
-    WebProcess/WebPage/gstreamer/WebPageGStreamer.cpp
 
     WebProcess/WebPage/qt/WebInspectorUIQt.cpp
     WebProcess/WebPage/qt/WebPageQt.cpp

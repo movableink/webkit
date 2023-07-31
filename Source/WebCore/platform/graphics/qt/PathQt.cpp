@@ -29,11 +29,10 @@
  */
 
 #include "config.h"
-#include "Path.h"
+#include "PathQt.h"
 
 #include "AffineTransform.h"
 #include "FloatRect.h"
-#include "GraphicsContext.h"
 #include "GraphicsContextQt.h"
 #include "NativeImageQt.h"
 #include <QPainterPath>
@@ -46,34 +45,73 @@
 
 namespace WebCore {
 
-Path::Path()
+UniqueRef<PathQt> PathQt::create()
+{
+    return makeUniqueRef<PathQt>();
+}
+
+UniqueRef<PathQt> PathQt::create(const PathStream& stream)
+{
+    auto pathQt = PathQt::create();
+
+    stream.applySegments([&](const PathSegment& segment) {
+        pathQt->appendSegment(segment);
+    });
+
+    return pathQt;
+}
+
+UniqueRef<PathQt> PathQt::create(QPainterPath platformPath)
+{
+    return makeUniqueRef<PathQt>(WTFMove(platformPath));
+}
+
+PathQt::PathQt()
 {
 }
 
-Path::~Path()
+PathQt::PathQt(QPainterPath&& platformPath)
+    : m_path(WTFMove(platformPath))
 {
 }
 
-Path::Path(const Path& other)
+PathQt::PathQt(const PathQt& other)
     : m_path(other.m_path)
 {
 }
 
-Path::Path(Path&& other)
+PathQt::PathQt(PathQt&& other)
 {
     m_path.swap(other.m_path);
 }
 
-Path& Path::operator=(const Path& other)
+PathQt& PathQt::operator=(const PathQt& other)
 {
     m_path = other.m_path;
     return *this;
 }
 
-Path& Path::operator=(Path&& other)
+PathQt& PathQt::operator=(PathQt&& other)
 {
     m_path.swap(other.m_path);
     return *this;
+}
+
+UniqueRef<PathImpl> PathQt::clone() const
+{
+    return create(m_path);
+}
+
+QPainterPath PathQt::platformPath() const
+{
+    return m_path;
+}
+
+bool PathQt::operator==(const PathImpl& other) const
+{
+    if (!is<PathQt>(other))
+        return false;
+    return m_path == downcast<PathQt>(other).m_path;
 }
 
 static inline bool areCollinear(const QPointF& a, const QPointF& b, const QPointF& c)
@@ -112,13 +150,13 @@ static bool isPointOnPathBorder(const QPolygonF& border, const QPointF& p)
     return false;
 }
 
-bool Path::contains(const FloatPoint& point, WindRule rule) const
+bool PathQt::contains(const FloatPoint& point, WindRule rule) const
 {
     Qt::FillRule savedRule = m_path.fillRule();
     const_cast<QPainterPath*>(&m_path)->setFillRule(rule == WindRule::EvenOdd ? Qt::OddEvenFill : Qt::WindingFill);
 
     bool contains = m_path.contains(point);
-    
+
     if (!contains) {
         // check whether the point is on the border
         contains = isPointOnPathBorder(m_path.toFillPolygon(), point);
@@ -135,7 +173,7 @@ static QPainter* scratchContext()
     return &painter;
 }
 
-bool Path::strokeContains(const FloatPoint& point, const Function<void(GraphicsContext&)>& strokeStyleApplier) const
+bool PathQt::strokeContains(const FloatPoint& point, const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     ASSERT(strokeStyleApplier);
 
@@ -154,22 +192,17 @@ bool Path::strokeContains(const FloatPoint& point, const Function<void(GraphicsC
     return stroke.createStroke(m_path).contains(point);
 }
 
-void Path::translate(const FloatSize& size)
-{
-    m_path.translate(size.width(), size.height());
-}
-
-FloatRect Path::fastBoundingRect() const
+FloatRect PathQt::fastBoundingRect() const
 {
     return m_path.controlPointRect();
 }
 
-FloatRect Path::boundingRect() const
+FloatRect PathQt::boundingRect() const
 {
     return m_path.boundingRect();
 }
 
-FloatRect Path::strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const
+FloatRect PathQt::strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     GraphicsContextQt context(scratchContext());
     QPainterPathStroker stroke;
@@ -187,27 +220,27 @@ FloatRect Path::strokeBoundingRect(const Function<void(GraphicsContext&)>& strok
     return stroke.createStroke(m_path).boundingRect();
 }
 
-void Path::moveTo(const FloatPoint& point)
+void PathQt::moveTo(const FloatPoint& point)
 {
     m_path.moveTo(point);
 }
 
-void Path::addLineTo(const FloatPoint& p)
+void PathQt::addLineTo(const FloatPoint& p)
 {
     m_path.lineTo(p);
 }
 
-void Path::addQuadCurveTo(const FloatPoint& cp, const FloatPoint& p)
+void PathQt::addQuadCurveTo(const FloatPoint& cp, const FloatPoint& p)
 {
     m_path.quadTo(cp, p);
 }
 
-void Path::addBezierCurveTo(const FloatPoint& cp1, const FloatPoint& cp2, const FloatPoint& p)
+void PathQt::addBezierCurveTo(const FloatPoint& cp1, const FloatPoint& cp2, const FloatPoint& p)
 {
     m_path.cubicTo(cp1, cp2, p);
 }
 
-void Path::addArcTo(const FloatPoint& p1, const FloatPoint& p2, float radius)
+void PathQt::addArcTo(const FloatPoint& p1, const FloatPoint& p2, float radius)
 {
     FloatPoint p0(m_path.currentPosition());
 
@@ -248,7 +281,7 @@ void Path::addArcTo(const FloatPoint& p1, const FloatPoint& p2, float radius)
         sa = 2 * piDouble - sa;
 
     // anticlockwise logic
-    bool anticlockwise = false;
+    RotationDirection rotationDirection = RotationDirection::Clockwise;
 
     float factor_p1p2 = tangent / p1p2_length;
     FloatPoint t_p1p2((p1.x() + factor_p1p2 * p1p2.x()), (p1.y() + factor_p1p2 * p1p2.y()));
@@ -258,21 +291,21 @@ void Path::addArcTo(const FloatPoint& p1, const FloatPoint& p2, float radius)
     if (orth_p1p2.y() < 0)
         ea = 2 * piDouble - ea;
     if ((sa > ea) && ((sa - ea) < piDouble))
-        anticlockwise = true;
+        rotationDirection = RotationDirection::Counterclockwise;
     if ((sa < ea) && ((ea - sa) > piDouble))
-        anticlockwise = true;
+        rotationDirection = RotationDirection::Counterclockwise;
 
     m_path.lineTo(t_p1p0);
 
-    addArc(p, radius, sa, ea, anticlockwise);
+    addArc(p, radius, sa, ea, rotationDirection);
 }
 
-void Path::closeSubpath()
+void PathQt::closeSubpath()
 {
     m_path.closeSubpath();
 }
 
-static void addEllipticArc(QPainterPath &path, qreal xc, qreal yc, qreal radiusX, qreal radiusY,  float sar, float ear, bool anticlockwise)
+static void addEllipticArc(QPainterPath &path, qreal xc, qreal yc, qreal radiusX, qreal radiusY,  float sar, float ear, RotationDirection rotationDirection)
 {
     //### HACK
     // In Qt we don't switch the coordinate system for degrees
@@ -280,7 +313,7 @@ static void addEllipticArc(QPainterPath &path, qreal xc, qreal yc, qreal radiusX
     // to switch
     sar = -sar;
     ear = -ear;
-    anticlockwise = !anticlockwise;
+    bool anticlockwise = rotationDirection != RotationDirection::Counterclockwise;
     //end hack
 
     float sa = rad2deg(sar);
@@ -328,22 +361,27 @@ static void addEllipticArc(QPainterPath &path, qreal xc, qreal yc, qreal radiusX
     path.arcTo(xs, ys, width, height, sa, span);
 }
 
-void Path::addArc(const FloatPoint& p, float r, float sar, float ear, bool anticlockwise)
+void PathQt::addArc(const FloatPoint& p, float r, float sar, float ear, RotationDirection rotationDirection)
 {
-    addEllipticArc(m_path, p.x(), p.y(), r, r, sar, ear, anticlockwise);
+    addEllipticArc(m_path, p.x(), p.y(), r, r, sar, ear, rotationDirection);
 }
 
-void Path::addRect(const FloatRect& r)
+void PathQt::addRect(const FloatRect& r)
 {
     m_path.addRect(r.x(), r.y(), r.width(), r.height());
 }
 
-void Path::addEllipse(FloatPoint p, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, bool anticlockwise)
+void PathQt::addRoundedRect(const FloatRoundedRect& roundedRect, PathRoundedRect::Strategy)
+{
+    addBeziersForRoundedRect(roundedRect);
+}
+
+void PathQt::addEllipse(const FloatPoint& center, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, RotationDirection rotationDirection)
 {
     if (!qFuzzyIsNull(rotation)) {
         QPainterPath subPath;
         QTransform t;
-        t.translate(p.x(), p.y());
+        t.translate(center.x(), center.y());
         t.rotateRadians(rotation);
 
         bool isEmpty = m_path.elementCount() == 0;
@@ -352,7 +390,7 @@ void Path::addEllipse(FloatPoint p, float radiusX, float radiusY, float rotation
             subPath.moveTo(invTransform.map(m_path.currentPosition()));
         }
 
-        addEllipticArc(subPath, 0, 0, radiusX, radiusY, startAngle, endAngle, anticlockwise);
+        addEllipticArc(subPath, 0, 0, radiusX, radiusY, startAngle, endAngle, rotationDirection);
         subPath = t.map(subPath);
 
         if (isEmpty)
@@ -362,15 +400,15 @@ void Path::addEllipse(FloatPoint p, float radiusX, float radiusY, float rotation
         return;
     }
 
-    addEllipticArc(m_path, p.x(), p.y(), radiusX, radiusY, startAngle, endAngle, anticlockwise);
+    addEllipticArc(m_path, center.x(), center.y(), radiusX, radiusY, startAngle, endAngle, rotationDirection);
 }
 
-void Path::addEllipse(const FloatRect& r)
+void PathQt::addEllipseInRect(const FloatRect& r)
 {
     m_path.addEllipse(r.x(), r.y(), r.width(), r.height());
 }
 
-void Path::addPath(const Path& path, const AffineTransform& transform)
+void PathQt::addPath(const PathQt& path, const AffineTransform& transform)
 {
     if (!transform.isInvertible())
         return;
@@ -379,31 +417,46 @@ void Path::addPath(const Path& path, const AffineTransform& transform)
     m_path.addPath(qTransform.map(path.platformPath()));
 }
 
-void Path::clear()
-{
-    if (!m_path.elementCount())
-        return;
-    m_path = QPainterPath();
-}
-
-bool Path::isEmpty() const
+bool PathQt::isEmpty() const
 {
     // Don't use QPainterPath::isEmpty(), as that also returns true if there's only
     // one initial MoveTo element in the path.
     return !m_path.elementCount();
 }
 
-bool Path::hasCurrentPoint() const
-{
-    return !isEmpty();
-}
-
-FloatPoint Path::currentPoint() const 
+FloatPoint PathQt::currentPoint() const
 {
     return m_path.currentPosition();
 }
 
-void Path::apply(const PathApplierFunction& function) const
+void PathQt::applySegments(const PathSegmentApplier& applier) const
+{
+    applyElements([&] (const PathElement& pathElement) {
+        switch (pathElement.type) {
+        case PathElement::Type::MoveToPoint:
+            applier({ PathMoveTo { pathElement.points[0] } });
+            break;
+
+        case PathElement::Type::AddLineToPoint:
+            applier({ PathLineTo { pathElement.points[0] } });
+            break;
+
+        case PathElement::Type::AddQuadCurveToPoint:
+            applier({ PathQuadCurveTo { pathElement.points[0], pathElement.points[1] } });
+            break;
+
+        case PathElement::Type::AddCurveToPoint:
+            applier({ PathBezierCurveTo { pathElement.points[0], pathElement.points[1], pathElement.points[2] } });
+            break;
+
+        case PathElement::Type::CloseSubpath:
+            applier({ std::monostate() });
+            break;
+        }
+    });
+}
+
+void PathQt::applyElements(const PathElementApplier& applier) const
 {
     PathElement pelement;
     for (int i = 0; i < m_path.elementCount(); ++i) {
@@ -413,12 +466,12 @@ void Path::apply(const PathApplierFunction& function) const
             case QPainterPath::MoveToElement:
                 pelement.type = PathElement::Type::MoveToPoint;
                 pelement.points[0] = QPointF(cur);
-                function(pelement);
+                applier(pelement);
                 break;
             case QPainterPath::LineToElement:
                 pelement.type = PathElement::Type::AddLineToPoint;
                 pelement.points[0] = QPointF(cur);
-                function(pelement);
+                applier(pelement);
                 break;
             case QPainterPath::CurveToElement:
             {
@@ -432,7 +485,7 @@ void Path::apply(const PathApplierFunction& function) const
                 pelement.points[0] = QPointF(cur);
                 pelement.points[1] = QPointF(c1);
                 pelement.points[2] = QPointF(c2);
-                function(pelement);
+                applier(pelement);
 
                 i += 2;
                 break;
@@ -443,25 +496,10 @@ void Path::apply(const PathApplierFunction& function) const
     }
 }
 
-void Path::transform(const AffineTransform& transform)
+void PathQt::transform(const AffineTransform& transform)
 {
     QTransform qTransform(transform);
     m_path = qTransform.map(m_path);
 }
 
-float Path::length() const
-{
-    return m_path.length();
 }
-
-FloatPoint Path::pointAtLength(float length) const
-{
-    qreal percent = m_path.percentAtLength(length);
-    QPointF point = m_path.pointAtPercent(percent);
-
-    return point;
-}
-
-}
-
-// vim: ts=4 sw=4 et

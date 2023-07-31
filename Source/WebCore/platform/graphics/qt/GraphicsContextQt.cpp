@@ -1015,11 +1015,13 @@ void GraphicsContextQt::fillRoundedRectImpl(const FloatRoundedRect& rect, const 
         } else {
             const QPointF offset(shadowOffset().width(), shadowOffset().height());
             p->translate(offset);
-            p->fillPath(path.platformPath(), QColor(shadowColor()));
+            const QPainterPath platformPath = path.platformPath();
+            p->fillPath(platformPath, QColor(shadowColor()));
             p->translate(-offset);
         }
     }
-    p->fillPath(path.platformPath(), QColor(color));
+    const QPainterPath platformPath = path.platformPath();
+    p->fillPath(platformPath, QColor(color));
 }
 
 void GraphicsContextQt::fillRectWithRoundedHole(const FloatRect& rect, const FloatRoundedRect& roundedHoleRect, const Color& color)
@@ -1516,7 +1518,7 @@ void GraphicsContextQt::clipOut(const Path& path)
         return;
 
     QPainter* p = m_data->p();
-    QPainterPath clippedOut = path.platformPath();
+    const QPainterPath clippedOut = path.platformPath();
     QPainterPath newClip;
     newClip.setFillRule(Qt::OddEvenFill);
     if (p->hasClipping()) {

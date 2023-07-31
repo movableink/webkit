@@ -1515,22 +1515,26 @@ TiledBacking* GraphicsLayerCA::tiledBacking() const
 
 TransformationMatrix GraphicsLayerCA::layerTransform(const FloatPoint& position, const TransformationMatrix* customTransform) const
 {
-    TransformationMatrix transform;
-    transform.translate(position.x(), position.y());
+    auto transform = TransformationMatrix(position.x(), position.y());
 
-    TransformationMatrix currentTransform;
-    if (customTransform)
-        currentTransform = *customTransform;
-    else if (m_transform)
-        currentTransform = *m_transform;
+    auto currentTransform = [&]() -> const TransformationMatrix* {
+        if (customTransform)
+            return customTransform;
 
-    transform.multiply(transformByApplyingAnchorPoint(currentTransform));
+        if (m_transform)
+            return m_transform.get();
 
-    if (GraphicsLayer* parentLayer = parent()) {
+        return nullptr;
+    }();
+
+    if (currentTransform)
+        transform.multiply(transformByApplyingAnchorPoint(*currentTransform));
+
+    if (auto* parentLayer = parent()) {
         if (parentLayer->hasNonIdentityChildrenTransform()) {
-            FloatPoint boundsOrigin = parentLayer->boundsOrigin();
+            auto boundsOrigin = parentLayer->boundsOrigin();
 
-            FloatPoint3D parentAnchorPoint(parentLayer->anchorPoint());
+            auto parentAnchorPoint(parentLayer->anchorPoint());
             parentAnchorPoint.scale(parentLayer->size().width(), parentLayer->size().height(), 1);
             parentAnchorPoint += boundsOrigin;
 
@@ -1602,16 +1606,17 @@ GraphicsLayerCA::VisibleAndCoverageRects GraphicsLayerCA::computeVisibleAndCover
     FloatPoint position = approximatePosition();
     client().customPositionForVisibleRectComputation(this, position);
 
-    TransformationMatrix layerTransform;
     TransformationMatrix currentTransform;
-    if ((flags & RespectAnimatingTransforms) && client().getCurrentTransform(this, currentTransform))
-        layerTransform = this->layerTransform(position, &currentTransform);
-    else
-        layerTransform = this->layerTransform(position);
+    auto transform = [&]() {
+        if ((flags & RespectAnimatingTransforms) && client().getCurrentTransform(this, currentTransform))
+            return layerTransform(position, &currentTransform);
+
+        return layerTransform(position);
+    }();
 
     bool applyWasClamped;
     TransformState::TransformAccumulation accumulation = preserves3D ? TransformState::AccumulateTransform : TransformState::FlattenTransform;
-    state.applyTransform(layerTransform, accumulation, &applyWasClamped);
+    state.applyTransform(transform, accumulation, &applyWasClamped);
 
     bool mapWasClamped;
     auto clipRectFromParent = state.mappedQuad(&mapWasClamped).boundingBox();
@@ -3107,7 +3112,7 @@ void GraphicsLayerCA::updateAnimations()
         caAnimationGroup->setDuration(infiniteDuration);
         caAnimationGroup->setAnimations(animations);
 
-        auto animationGroup = LayerPropertyAnimation(WTFMove(caAnimationGroup), makeString("group-"_s, UUID::createVersion4()), property, 0, 0_s);
+        auto animationGroup = LayerPropertyAnimation(WTFMove(caAnimationGroup), makeString("group-"_s, WTF::UUID::createVersion4()), property, 0, 0_s);
         animationGroup.m_beginTime = animationGroupBeginTime;
 
         setAnimationOnLayer(animationGroup);
@@ -3155,7 +3160,7 @@ void GraphicsLayerCA::updateAnimations()
         caAnimation->setFromValue(matrix);
         caAnimation->setToValue(matrix);
 
-        auto animation = LayerPropertyAnimation(WTFMove(caAnimation), makeString("base-transform-"_s, UUID::createVersion4()), property, 0, 0_s);
+        auto animation = LayerPropertyAnimation(WTFMove(caAnimation), makeString("base-transform-"_s, WTF::UUID::createVersion4()), property, 0, 0_s);
         if (delay)
             animation.m_beginTime = currentTime - animationGroupBeginTime;
 

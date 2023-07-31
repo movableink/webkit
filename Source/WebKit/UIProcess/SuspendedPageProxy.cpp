@@ -111,11 +111,11 @@ SuspendedPageProxy::SuspendedPageProxy(WebPageProxy& page, Ref<WebProcessProxy>&
     , m_contextIDForVisibilityPropagationInGPUProcess(page.contextIDForVisibilityPropagationInGPUProcess())
 #endif
 #endif
+    , m_remotePageMap(page.takeRemotePageMap())
 {
     allSuspendedPages().add(this);
     m_process->addSuspendedPageProxy(*this);
-    m_process->addMessageReceiver(Messages::WebPageProxy::messageReceiverName(), m_webPageID, *this);
-
+    m_messageReceiverRegistration.startReceivingMessages(m_process, m_webPageID, *this);
     m_suspensionTimeoutTimer.startOneShot(suspensionTimeout);
     send(Messages::WebPage::SetIsSuspended(true));
 }
@@ -134,12 +134,14 @@ SuspendedPageProxy::~SuspendedPageProxy()
         // If the suspended page was not consumed before getting destroyed, then close the corresponding page
         // on the WebProcess side.
         close();
-
-        if (m_suspensionState == SuspensionState::Suspending)
-            m_process->removeMessageReceiver(Messages::WebPageProxy::messageReceiverName(), m_webPageID);
     }
 
     m_process->removeSuspendedPageProxy(*this);
+}
+
+HashMap<WebCore::RegistrableDomain, WeakPtr<RemotePageProxy>> SuspendedPageProxy::takeRemotePageMap()
+{
+    return std::exchange(m_remotePageMap, { });
 }
 
 void SuspendedPageProxy::didDestroyNavigation(uint64_t navigationID)
@@ -233,7 +235,7 @@ void SuspendedPageProxy::didProcessRequestToSuspend(SuspensionState newSuspensio
     m_suspensionActivity = nullptr;
 #endif
 
-    m_process->removeMessageReceiver(Messages::WebPageProxy::messageReceiverName(), m_webPageID);
+    m_messageReceiverRegistration.stopReceivingMessages();
 
     if (m_suspensionState == SuspensionState::FailedToSuspend)
         closeWithoutFlashing();
