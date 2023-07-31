@@ -33,7 +33,7 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription&
 {
     Q_ASSERT(m_rawFont.isValid());
     auto size = description.computedSize();
-    m_rawFont.setPixelSize(qreal(size));
+    m_rawFont.setPixelSize(size);
     return FontPlatformData(m_rawFont);
 }
 
