@@ -3,7 +3,6 @@ PASS accent-color
 PASS align-content
 PASS align-items
 PASS align-self
-PASS align-tracks
 PASS alignment-baseline
 PASS alt
 PASS animation-composition
@@ -17,6 +16,7 @@ PASS animation-play-state
 PASS animation-timing-function
 PASS appearance
 PASS aspect-ratio
+PASS backdrop-filter
 PASS backface-visibility
 PASS background-attachment
 PASS background-blend-mode
@@ -101,8 +101,10 @@ PASS contain-intrinsic-width
 PASS container-name
 PASS container-type
 PASS content
+PASS content-visibility
 PASS counter-increment
 PASS counter-reset
+PASS counter-set
 PASS cursor
 PASS cx
 PASS cy
@@ -137,6 +139,7 @@ PASS font-synthesis-weight
 PASS font-variant-alternates
 PASS font-variant-caps
 PASS font-variant-east-asian
+PASS font-variant-emoji
 PASS font-variant-ligatures
 PASS font-variant-numeric
 PASS font-variant-position
@@ -170,7 +173,6 @@ PASS isolation
 PASS justify-content
 PASS justify-items
 PASS justify-self
-PASS justify-tracks
 PASS kerning
 PASS left
 PASS letter-spacing
@@ -188,6 +190,7 @@ PASS margin-inline-start
 PASS margin-left
 PASS margin-right
 PASS margin-top
+PASS margin-trim
 PASS marker-end
 PASS marker-mid
 PASS marker-start
@@ -316,7 +319,8 @@ PASS text-shadow
 PASS text-transform
 PASS text-underline-offset
 PASS text-underline-position
-PASS text-wrap
+PASS text-wrap-mode
+PASS text-wrap-style
 PASS top
 PASS touch-action
 PASS transform

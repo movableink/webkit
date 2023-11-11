@@ -36,6 +36,7 @@
 #include "GPUProcessConnectionParameters.h"
 #include "GPUProcessCreationParameters.h"
 #include "GPUProcessPreferences.h"
+#include "GPUProcessPreferencesForWebProcess.h"
 #include "GPUProcessProxyMessages.h"
 #include "GPUProcessSessionParameters.h"
 #include "LogInitialization.h"
@@ -73,11 +74,8 @@
 #if PLATFORM(COCOA)
 #include "ArgumentCodersCocoa.h"
 #include <WebCore/CoreAudioSharedUnit.h>
+#include <WebCore/UTIUtilities.h>
 #include <WebCore/VP9UtilitiesCocoa.h>
-#endif
-
-#if HAVE(CGIMAGESOURCE_WITH_SET_ALLOWABLE_TYPES)
-#include <pal/spi/cg/ImageIOSPI.h>
 #endif
 
 #if HAVE(SCREEN_CAPTURE_KIT)
@@ -118,18 +116,6 @@ void GPUProcess::didReceiveMessage(IPC::Connection& connection, IPC::Decoder& de
     }
 
     didReceiveGPUProcessMessage(connection, decoder);
-}
-
-void GPUProcess::updateWebGPUEnabled(WebCore::ProcessIdentifier processIdentifier, bool webGPUEnabled)
-{
-    if (auto* connection = m_webProcessConnections.get(processIdentifier))
-        connection->updateWebGPUEnabled(webGPUEnabled);
-}
-
-void GPUProcess::updateDOMRenderingEnabled(WebCore::ProcessIdentifier processIdentifier, bool isDOMRenderingEnabled)
-{
-    if (auto* connection = m_webProcessConnections.get(processIdentifier))
-        connection->updateDOMRenderingEnabled(isDOMRenderingEnabled);
 }
 
 void GPUProcess::createGPUConnectionToWebProcess(WebCore::ProcessIdentifier identifier, PAL::SessionID sessionID, IPC::Connection::Handle&& connectionHandle, GPUProcessConnectionParameters&& parameters, CompletionHandler<void()>&& completionHandler)
@@ -279,9 +265,8 @@ void GPUProcess::initializeGPUProcess(GPUProcessCreationParameters&& parameters)
     SandboxExtension::consumePermanently(parameters.gpuToolsExtensionHandles);
 #endif
 
-#if HAVE(CGIMAGESOURCE_WITH_SET_ALLOWABLE_TYPES)
-    auto emptyArray = adoptCF(CFArrayCreate(kCFAllocatorDefault, nullptr, 0, &kCFTypeArrayCallBacks));
-    CGImageSourceSetAllowableTypes(emptyArray.get());
+#if PLATFORM(COCOA)
+    WebCore::setImageSourceAllowableTypes({ });
 #endif
 
 #if USE(GBM)
@@ -289,9 +274,6 @@ void GPUProcess::initializeGPUProcess(GPUProcessCreationParameters&& parameters)
 #endif
 
     m_applicationVisibleName = WTFMove(parameters.applicationVisibleName);
-#if PLATFORM(COCOA)
-    IPC::setStrictSecureDecodingForAllObjCEnabled(parameters.strictSecureDecodingForAllObjCEnabled);
-#endif
 
     // Match the QoS of the UIProcess since the GPU process is doing rendering on its behalf.
     WTF::Thread::setCurrentThreadIsUserInteractive(0);
@@ -305,9 +287,7 @@ void GPUProcess::initializeGPUProcess(GPUProcessCreationParameters&& parameters)
     registerWithStateDumper("GPUProcess state"_s);
 #endif
 
-#if PLATFORM(COCOA)
     platformInitializeGPUProcess(parameters);
-#endif
 }
 
 void GPUProcess::updateGPUProcessPreferences(GPUProcessPreferences&& preferences)
@@ -482,9 +462,9 @@ void GPUProcess::setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool
     MockRealtimeMediaSourceCenter::setMockCaptureDevicesInterrupted(isCameraInterrupted, isMicrophoneInterrupted);
 }
 
-void GPUProcess::triggerMockMicrophoneConfigurationChange()
+void GPUProcess::triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay)
 {
-    MockRealtimeMediaSourceCenter::singleton().triggerMockMicrophoneConfigurationChange();
+    MockRealtimeMediaSourceCenter::singleton().triggerMockCaptureConfigurationChange(forMicrophone, forDisplay);
 }
 #endif // ENABLE(MEDIA_STREAM)
 
@@ -611,11 +591,11 @@ void GPUProcess::processIsStartingToCaptureAudio(GPUConnectionToWebProcess& proc
 #endif
 
 #if ENABLE(VIDEO)
-void GPUProcess::requestBitmapImageForCurrentTime(WebCore::ProcessIdentifier processIdentifier, WebCore::MediaPlayerIdentifier playerIdentifier, CompletionHandler<void(ShareableBitmap::Handle&&)>&& completion)
+void GPUProcess::requestBitmapImageForCurrentTime(WebCore::ProcessIdentifier processIdentifier, WebCore::MediaPlayerIdentifier playerIdentifier, CompletionHandler<void(std::optional<ShareableBitmap::Handle>&&)>&& completion)
 {
     auto iterator = m_webProcessConnections.find(processIdentifier);
     if (iterator == m_webProcessConnections.end()) {
-        completion({ });
+        completion(std::nullopt);
         return;
     }
 

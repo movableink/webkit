@@ -32,7 +32,6 @@
 #import "Download.h"
 #import "DownloadProxyMessages.h"
 #import "Logging.h"
-#import "NWSPI.h"
 #import "NetworkIssueReporter.h"
 #import "NetworkProcess.h"
 #import "NetworkSessionCocoa.h"
@@ -47,6 +46,7 @@
 #import <WebCore/ResourceRequest.h>
 #import <WebCore/TimingAllowOrigin.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
+#import <pal/spi/cocoa/NetworkSPI.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/FileSystem.h>
 #import <wtf/MainThread.h>
@@ -275,7 +275,7 @@ NetworkDataTaskCocoa::NetworkDataTaskCocoa(NetworkSession& session, NetworkDataT
         m_task.get()._hostOverride = adoptNS(nw_endpoint_create_host_with_numeric_port("localhost", url.port().value_or(0))).get();
 #endif
 
-    WTFBeginSignpost(m_task.get(), "DataTask", "%" PUBLIC_LOG_STRING " %" PRIVATE_LOG_STRING " pri: %.2f preconnect: %d", request.httpMethod().utf8().data(), url.string().utf8().data(), toNSURLSessionTaskPriority(request.priority()), parameters.shouldPreconnectOnly == PreconnectOnly::Yes);
+    WTFBeginSignpost(m_task.get(), DataTask, "%" PUBLIC_LOG_STRING " %" PRIVATE_LOG_STRING " pri: %.2f preconnect: %d", request.httpMethod().utf8().data(), url.string().utf8().data(), toNSURLSessionTaskPriority(request.priority()), parameters.shouldPreconnectOnly == PreconnectOnly::Yes);
 
     switch (parameters.storedCredentialsPolicy) {
     case WebCore::StoredCredentialsPolicy::Use:
@@ -326,24 +326,25 @@ NetworkDataTaskCocoa::NetworkDataTaskCocoa(NetworkSession& session, NetworkDataT
     if (parameters.networkActivityTracker)
         m_task.get()._nw_activity = parameters.networkActivityTracker->getPlatformObject();
 #endif
-
-    m_session->registerNetworkDataTask(*this);
 }
 
 NetworkDataTaskCocoa::~NetworkDataTaskCocoa()
 {
     if (m_task)
-        WTFEndSignpost(m_task.get(), "DataTask");
+        WTFEndSignpost(m_task.get(), DataTask);
 
     if (m_task && m_sessionWrapper) {
-        auto dataTask = m_sessionWrapper->dataTaskMap.take([m_task taskIdentifier]);
-        RELEASE_ASSERT(dataTask == this);
+        auto& map = m_sessionWrapper->dataTaskMap;
+        auto iterator = map.find([m_task taskIdentifier]);
+        RELEASE_ASSERT(iterator != map.end());
+        ASSERT(!iterator->value.get());
+        map.remove(iterator);
     }
 }
 
 void NetworkDataTaskCocoa::didSendData(uint64_t totalBytesSent, uint64_t totalBytesExpectedToSend)
 {
-    WTFEmitSignpost(m_task.get(), "DataTask", "sent %llu bytes (expected %llu bytes)", totalBytesSent, totalBytesExpectedToSend);
+    WTFEmitSignpost(m_task.get(), DataTask, "sent %llu bytes (expected %llu bytes)", totalBytesSent, totalBytesExpectedToSend);
 
     if (m_client)
         m_client->didSendData(totalBytesSent, totalBytesExpectedToSend);
@@ -351,7 +352,7 @@ void NetworkDataTaskCocoa::didSendData(uint64_t totalBytesSent, uint64_t totalBy
 
 void NetworkDataTaskCocoa::didReceiveChallenge(WebCore::AuthenticationChallenge&& challenge, NegotiatedLegacyTLS negotiatedLegacyTLS, ChallengeCompletionHandler&& completionHandler)
 {
-    WTFEmitSignpost(m_task.get(), "DataTask", "received challenge");
+    WTFEmitSignpost(m_task.get(), DataTask, "received challenge");
 
     if (tryPasswordBasedAuthentication(challenge, completionHandler))
         return;
@@ -372,7 +373,7 @@ void NetworkDataTaskCocoa::didNegotiateModernTLS(const URL& url)
 
 void NetworkDataTaskCocoa::didCompleteWithError(const WebCore::ResourceError& error, const WebCore::NetworkLoadMetrics& networkLoadMetrics)
 {
-    WTFEmitSignpost(m_task.get(), "DataTask", "completed with error: %d", !error.isNull());
+    WTFEmitSignpost(m_task.get(), DataTask, "completed with error: %d", !error.isNull());
 
     if (m_client)
         m_client->didCompleteWithError(error, networkLoadMetrics);
@@ -380,7 +381,7 @@ void NetworkDataTaskCocoa::didCompleteWithError(const WebCore::ResourceError& er
 
 void NetworkDataTaskCocoa::didReceiveData(const WebCore::SharedBuffer& data)
 {
-    WTFEmitSignpost(m_task.get(), "DataTask", "received %zd bytes", data.size());
+    WTFEmitSignpost(m_task.get(), DataTask, "received %zd bytes", data.size());
 
     if (m_client)
         m_client->didReceiveData(data);
@@ -388,7 +389,7 @@ void NetworkDataTaskCocoa::didReceiveData(const WebCore::SharedBuffer& data)
 
 void NetworkDataTaskCocoa::didReceiveResponse(WebCore::ResourceResponse&& response, NegotiatedLegacyTLS negotiatedLegacyTLS, PrivateRelayed privateRelayed, WebKit::ResponseCompletionHandler&& completionHandler)
 {
-    WTFEmitSignpost(m_task.get(), "DataTask", "received response headers");
+    WTFEmitSignpost(m_task.get(), DataTask, "received response headers");
     if (isTopLevelNavigation())
         updateFirstPartyInfoForSession(response.url());
 #if ENABLE(NETWORK_ISSUE_REPORTING)
@@ -402,24 +403,25 @@ void NetworkDataTaskCocoa::didReceiveResponse(WebCore::ResourceResponse&& respon
 
 void NetworkDataTaskCocoa::willPerformHTTPRedirection(WebCore::ResourceResponse&& redirectResponse, WebCore::ResourceRequest&& request, RedirectCompletionHandler&& completionHandler)
 {
-    WTFEmitSignpost(m_task.get(), "DataTask", "redirect");
+    WTFEmitSignpost(m_task.get(), DataTask, "redirect");
 
     networkLoadMetrics().hasCrossOriginRedirect = networkLoadMetrics().hasCrossOriginRedirect || !WebCore::SecurityOrigin::create(request.url())->canRequest(redirectResponse.url(), WebCore::EmptyOriginAccessPatterns::singleton());
 
+    const auto& previousRequest = m_previousRequest.isNull() ? m_firstRequest : m_previousRequest;
     if (redirectResponse.httpStatusCode() == 307 || redirectResponse.httpStatusCode() == 308) {
         ASSERT(m_lastHTTPMethod == request.httpMethod());
-        auto body = m_firstRequest.httpBody();
+        auto body = previousRequest.httpBody();
         if (body && !body->isEmpty() && !equalLettersIgnoringASCIICase(m_lastHTTPMethod, "get"_s))
             request.setHTTPBody(WTFMove(body));
         
-        String originalContentType = m_firstRequest.httpContentType();
+        String originalContentType = previousRequest.httpContentType();
         if (!originalContentType.isEmpty())
             request.setHTTPHeaderField(WebCore::HTTPHeaderName::ContentType, originalContentType);
     } else if (redirectResponse.httpStatusCode() == 303) { // FIXME: (rdar://problem/13706454).
-        if (equalLettersIgnoringASCIICase(m_firstRequest.httpMethod(), "head"_s))
+        if (equalLettersIgnoringASCIICase(previousRequest.httpMethod(), "head"_s))
             request.setHTTPMethod("HEAD"_s);
 
-        String originalContentType = m_firstRequest.httpContentType();
+        String originalContentType = previousRequest.httpContentType();
         if (!originalContentType.isEmpty())
             request.setHTTPHeaderField(WebCore::HTTPHeaderName::ContentType, originalContentType);
     }
@@ -457,18 +459,19 @@ void NetworkDataTaskCocoa::willPerformHTTPRedirection(WebCore::ResourceResponse&
     if (isTopLevelNavigation())
         request.setFirstPartyForCookies(request.url());
 
-    NetworkTaskCocoa::willPerformHTTPRedirection(WTFMove(redirectResponse), WTFMove(request), [completionHandler = WTFMove(completionHandler), this, weakThis = ThreadSafeWeakPtr { *this }, redirectResponse] (auto&& request) mutable {
+    NetworkTaskCocoa::willPerformHTTPRedirection(WTFMove(redirectResponse), WTFMove(request), [completionHandler = WTFMove(completionHandler), this, weakThis = ThreadSafeWeakPtr { *this }, redirectResponse] (WebCore::ResourceRequest&& request) mutable {
         auto strongThis = weakThis.get();
         if (!strongThis)
             return completionHandler({ });
         if (!m_client)
             return completionHandler({ });
-        m_client->willPerformHTTPRedirection(WTFMove(redirectResponse), WTFMove(request), [completionHandler = WTFMove(completionHandler), this, weakThis] (auto&& request) mutable {
+        m_client->willPerformHTTPRedirection(WTFMove(redirectResponse), WTFMove(request), [completionHandler = WTFMove(completionHandler), this, weakThis] (WebCore::ResourceRequest&& request) mutable {
             auto strongThis = weakThis.get();
             if (!strongThis || !m_session)
                 return completionHandler({ });
             if (!request.isNull())
                 restrictRequestReferrerToOriginIfNeeded(request);
+            m_previousRequest = request;
             completionHandler(WTFMove(request));
         });
     });
@@ -548,13 +551,13 @@ String NetworkDataTaskCocoa::suggestedFilename() const
 
 void NetworkDataTaskCocoa::cancel()
 {
-    WTFEmitSignpost(m_task.get(), "DataTask", "cancel");
+    WTFEmitSignpost(m_task.get(), DataTask, "cancel");
     [m_task cancel];
 }
 
 void NetworkDataTaskCocoa::resume()
 {
-    WTFEmitSignpost(m_task.get(), "DataTask", "resume");
+    WTFEmitSignpost(m_task.get(), DataTask, "resume");
 
     if (m_failureScheduled)
         return;

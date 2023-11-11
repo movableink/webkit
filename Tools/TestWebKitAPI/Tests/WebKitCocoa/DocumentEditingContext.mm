@@ -29,8 +29,9 @@
 
 #import "PlatformUtilities.h"
 #import "TestCocoa.h"
+#import "TestInputDelegate.h"
 #import "TestWKWebView.h"
-#import "UIKitSPI.h"
+#import "UIKitSPIForTesting.h"
 #import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/_WKTextInputContext.h>
 #import <wtf/RetainPtr.h>
@@ -149,7 +150,7 @@ static UIWKDocumentRequest *makeRequest(UIWKDocumentRequestFlags flags, UITextGr
 {
     __block bool finished = false;
     __block RetainPtr<UIWKDocumentContext> result;
-    [self _requestDocumentContext:request completionHandler:^(UIWKDocumentContext *context) {
+    [self.textInputContentView requestDocumentContext:request completionHandler:^(UIWKDocumentContext *context) {
         result = context;
         finished = true;
     }];
@@ -160,7 +161,7 @@ static UIWKDocumentRequest *makeRequest(UIWKDocumentRequestFlags flags, UITextGr
 - (void)synchronouslyAdjustSelectionWithDelta:(NSRange)range
 {
     __block bool finished = false;
-    [self _adjustSelectionWithDelta:range completionHandler:^() {
+    [self.textInputContentView adjustSelectionWithDelta:range completionHandler:^{
         finished = true;
     }];
     TestWebKitAPI::Util::run(&finished);
@@ -363,7 +364,7 @@ TEST(DocumentEditingContext, RequestMarkedText)
     [webView evaluateJavaScript:@"document.body.focus()" completionHandler:nil];
     [webView _synchronouslyExecuteEditCommand:@"InsertText" argument:@"Hello world"];
 
-    [contentView selectWordBackward];
+    [webView selectWordBackwardForTesting];
     [contentView setMarkedText:@"world" selectedRange:NSMakeRange(0, 5)];
     [webView waitForNextPresentationUpdate];
     {
@@ -460,7 +461,7 @@ TEST(DocumentEditingContext, RequestMarkedTextRectsAndTextOnly)
     [webView _synchronouslyExecuteEditCommand:@"InsertText" argument:@"Hello world"];
 
     auto *contentView = [webView textInputContentView];
-    [contentView selectWordBackward];
+    [webView selectWordBackwardForTesting];
     [contentView setMarkedText:@"world" selectedRange:NSMakeRange(0, 5)];
     [webView collapseToEnd];
 
@@ -1540,6 +1541,78 @@ TEST(DocumentEditingContext, CharacterRectsInEditableWebView)
         EXPECT_TRUE([text isEqualToString:@" "] || !CGRectIsEmpty(rectFromContext));
     }
 }
+
+#if HAVE(AUTOCORRECTION_ENHANCEMENTS)
+
+#define UIWKDocumentRequestAutocorrectedRanges (1 << 7)
+
+TEST(DocumentEditingContext, RequestAutocorrectedRanges)
+{
+    if (![UIWKDocumentContext instancesRespondToSelector:@selector(autocorrectedRanges)])
+        return;
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+
+    auto inputDelegate = adoptNS([[TestInputDelegate alloc] init]);
+    [inputDelegate setFocusStartsInputSessionPolicyHandler:[] (WKWebView *, id<_WKFocusedElementInfo>) -> _WKFocusStartsInputSessionPolicy {
+        return _WKFocusStartsInputSessionPolicyAllow;
+    }];
+
+    [webView _setInputDelegate:inputDelegate.get()];
+    [webView synchronouslyLoadTestPageNamed:@"autofocused-text-input"];
+
+    auto *contentView = [webView textInputContentView];
+    [contentView insertText:@"Should we go to "];
+    [contentView insertText:@"sanfrancisco"];
+
+    [webView waitForNextPresentationUpdate];
+
+    __block bool appliedAutocorrection = false;
+    [[webView textInputContentView] applyAutocorrection:@"San Francisco" toString:@"sanfrancisco" shouldUnderline:YES withCompletionHandler:^(UIWKAutocorrectionRects *) {
+        appliedAutocorrection = true;
+    }];
+
+    TestWebKitAPI::Util::run(&appliedAutocorrection);
+
+    UIWKDocumentContext *context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText | UIWKDocumentRequestAutocorrectedRanges, UITextGranularityParagraph, 1)];
+    NSArray<NSValue *> *autocorrectedRanges = context.autocorrectedRanges;
+
+    EXPECT_NOT_NULL(context);
+    EXPECT_EQ([autocorrectedRanges count], 1u);
+    EXPECT_TRUE(NSEqualRanges([autocorrectedRanges[0] rangeValue], NSMakeRange(16, 13)));
+
+    [contentView insertText:@" atfer"];
+
+    appliedAutocorrection = false;
+    [[webView textInputContentView] applyAutocorrection:@"after" toString:@"atfer" shouldUnderline:YES withCompletionHandler:^(UIWKAutocorrectionRects *) {
+        appliedAutocorrection = true;
+    }];
+
+    TestWebKitAPI::Util::run(&appliedAutocorrection);
+
+    context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText | UIWKDocumentRequestAutocorrectedRanges, UITextGranularityParagraph, 1)];
+    autocorrectedRanges = context.autocorrectedRanges;
+
+    EXPECT_NOT_NULL(context);
+    EXPECT_EQ([autocorrectedRanges count], 2u);
+    EXPECT_TRUE(NSEqualRanges([autocorrectedRanges[0] rangeValue], NSMakeRange(16, 13)));
+    EXPECT_TRUE(NSEqualRanges([autocorrectedRanges[1] rangeValue], NSMakeRange(30, 5)));
+
+    [contentView insertText:@" "];
+    [contentView insertText:@"work"];
+    [contentView insertText:@" "];
+    [contentView insertText:@"tomorrow?"];
+
+    TestWebKitAPI::Util::runFor(1_s);
+
+    context = [webView synchronouslyRequestDocumentContext:makeRequest(UIWKDocumentRequestText | UIWKDocumentRequestAutocorrectedRanges, UITextGranularityParagraph, 1)];
+    autocorrectedRanges = context.autocorrectedRanges;
+
+    EXPECT_NOT_NULL(context);
+    EXPECT_EQ([autocorrectedRanges count], 0u);
+}
+
+#endif // HAVE(AUTOCORRECTION_ENHANCEMENTS)
 
 #if ENABLE(PLATFORM_DRIVEN_TEXT_CHECKING)
 

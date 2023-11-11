@@ -1640,7 +1640,7 @@ TEST_P(VertexAttributeTest, DrawWithLargeBufferOffset)
     std::array<GLbyte, kQuadVertexCount> validInputData = {{0, 1, 2, 3}};
 
     // 4 components
-    std::array<GLbyte, 4 *kQuadVertexCount + kBufferOffset> inputData = {};
+    std::array<GLbyte, 4 * kQuadVertexCount + kBufferOffset> inputData = {};
 
     std::array<GLfloat, 4 * kQuadVertexCount> expectedData;
     for (size_t i = 0; i < kQuadVertexCount; i++)
@@ -4280,6 +4280,119 @@ void main()
     EXPECT_PIXEL_RECT_EQ(0, 0, getWindowWidth(), getWindowHeight(), GLColor::green);
 }
 
+// Test that vertex conversion correctly no-ops when the vertex format requires conversion but there
+// are no vertices to convert.
+TEST_P(VertexAttributeTest, ConversionWithNoVertices)
+{
+    constexpr char kVS[] = R"(precision highp float;
+attribute vec3 attr1;
+void main(void) {
+   gl_Position = vec4(attr1, 1.0);
+})";
+
+    constexpr char kFS[] = R"(precision highp float;
+void main(void) {
+   gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+})";
+
+    GLBuffer buffer;
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    std::array<int8_t, 12> data = {
+        1,
+    };
+    glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(data[0]), data.data(), GL_STATIC_DRAW);
+
+    ANGLE_GL_PROGRAM(program, kVS, kFS);
+    glBindAttribLocation(program, 0, "attr1");
+    glLinkProgram(program);
+    ASSERT_TRUE(CheckLinkStatusAndReturnProgram(program, true));
+    glUseProgram(program);
+
+    // Set the offset the athe attribute past the end of the buffer but use a format that requires
+    // conversion in Vulkan
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_BYTE, true, 128, reinterpret_cast<void *>(256));
+
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    EXPECT_GL_NO_ERROR();
+}
+
+// Test that pipeline is recreated properly when switching from ARRAY buffer to client buffer,
+// while removing client buffer. Bug observed in Dragonmania game.
+TEST_P(VertexAttributeTestES31, ArrayToClientBufferStride)
+{
+    constexpr char kVS[] = R"(#version 310 es
+precision highp float;
+in vec4 in_pos;
+in vec4 in_color;
+out vec4 color;
+void main(void) {
+   gl_Position = in_pos;
+   color = in_color;
+})";
+
+    constexpr char kFS[] = R"(#version 310 es
+precision highp float;
+in vec4 color;
+out vec4 frag_color;
+void main(void) {
+   frag_color = color;
+})";
+    swapBuffers();
+
+    ANGLE_GL_PROGRAM(program, kVS, kFS);
+    glUseProgram(program);
+    GLint posLoc   = glGetAttribLocation(program, "in_pos");
+    GLint colorLoc = glGetAttribLocation(program, "in_color");
+    ASSERT_NE(posLoc, -1);
+    ASSERT_NE(colorLoc, -1);
+
+    const std::array<Vector3, 6> &quadVerts = GetQuadVertices();
+    // Data for packed attributes.
+    std::array<float, ((3 + 4) * 6)> data;
+
+    float kYellow[4] = {1.0f, 1.0f, 0.0f, 1.0f};
+    float kGreen[4]  = {0.0f, 1.0f, 0.0f, 1.0f};
+
+    for (int i = 0; i < 6; i++)
+    {
+        memcpy(&data[i * (3 + 4)], &quadVerts[i], sizeof(Vector3));
+        memcpy(&data[i * (3 + 4) + 3], &kYellow, 4 * sizeof(float));
+    }
+
+    {
+        GLBuffer buffer;
+        glBindBuffer(GL_ARRAY_BUFFER, buffer);
+        glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(data[0]), data.data(), GL_STATIC_DRAW);
+
+        glEnableVertexAttribArray(posLoc);
+        glEnableVertexAttribArray(colorLoc);
+
+        glVertexAttribPointer(posLoc, 3, GL_FLOAT, false, 28, reinterpret_cast<void *>(0));
+        glVertexAttribPointer(colorLoc, 4, GL_FLOAT, false, 28, reinterpret_cast<void *>(12));
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        EXPECT_PIXEL_RECT_EQ(0, 0, getWindowWidth(), getWindowHeight(), GLColor::yellow);
+        EXPECT_GL_NO_ERROR();
+        // Unbind before destroy.
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+
+    // Modify color to green.
+    for (int i = 0; i < 6; i++)
+    {
+        memcpy(&data[i * (3 + 4) + 3], &kGreen, 4 * sizeof(float));
+    }
+
+    // Provide client pointer.
+    glVertexAttribPointer(posLoc, 3, GL_FLOAT, false, 28, data.data());
+    glVertexAttribPointer(colorLoc, 4, GL_FLOAT, false, 28, &data[3]);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    EXPECT_PIXEL_RECT_EQ(0, 0, getWindowWidth(), getWindowHeight(), GLColor::green);
+    EXPECT_GL_NO_ERROR();
+}
+
 // Create a vertex array with an empty array buffer and attribute offsets.
 // This succeded in the end2end and capture/replay tests, but resulted in a trace
 // producing a GL error when using MEC.
@@ -4364,6 +4477,125 @@ TEST_P(VertexAttributeTestES3, InvalidAttribPointer)
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glEnableVertexAttribArray(0);
+}
+
+// Test maxinum attribs full of Client buffers and then switch to mixed.
+TEST_P(VertexAttributeTestES3, fullClientBuffersSwitchToMixed)
+{
+    GLint maxAttribs;
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs);
+    ASSERT_GL_NO_ERROR();
+
+    // Reserve one attrib for position
+    GLint drawAttribs = maxAttribs - 1;
+
+    GLuint program = compileMultiAttribProgram(drawAttribs);
+    ASSERT_NE(0u, program);
+
+    const std::array<Vector2, 4> kIndexedQuadVertices = {{
+        Vector2(-1.0f, 1.0f),
+        Vector2(-1.0f, -1.0f),
+        Vector2(1.0f, -1.0f),
+        Vector2(1.0f, 1.0f),
+    }};
+
+    GLsizei stride = (maxAttribs + 1) * sizeof(GLfloat);
+
+    constexpr std::array<GLushort, 6> kIndexedQuadIndices = {{0, 1, 2, 0, 2, 3}};
+    GLuint indexBuffer                                    = 0;
+    glGenBuffers(1, &indexBuffer);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(kIndexedQuadIndices), kIndexedQuadIndices.data(),
+                 GL_STATIC_DRAW);
+
+    // Vertex drawAttribs color attributes plus position (x, y).
+    GLint totalComponents = drawAttribs + 2;
+    std::vector<GLfloat> vertexData(totalComponents * 4, 0.0f);
+    for (GLint index = 0; index < 4; ++index)
+    {
+        vertexData[index * totalComponents + drawAttribs]     = kIndexedQuadVertices[index].x();
+        vertexData[index * totalComponents + drawAttribs + 1] = kIndexedQuadVertices[index].y();
+    }
+
+    GLfloat attributeValue = 0.0f;
+    GLfloat delta          = 1.0f / 256.0f;
+    for (GLint attribIndex = 0; attribIndex < drawAttribs; ++attribIndex)
+    {
+        vertexData[attribIndex]                       = attributeValue;
+        vertexData[attribIndex + totalComponents]     = attributeValue;
+        vertexData[attribIndex + totalComponents * 2] = attributeValue;
+        vertexData[attribIndex + totalComponents * 3] = attributeValue;
+        attributeValue += delta;
+    }
+
+    glUseProgram(program);
+    for (GLint attribIndex = 0; attribIndex < drawAttribs; ++attribIndex)
+    {
+        std::stringstream attribStream;
+        attribStream << "a" << attribIndex;
+        GLint location = glGetAttribLocation(program, attribStream.str().c_str());
+        ASSERT_NE(-1, location);
+        glVertexAttribPointer(location, 1, GL_FLOAT, GL_FALSE, stride,
+                              vertexData.data() + attribIndex);
+        glEnableVertexAttribArray(location);
+    }
+    GLint posLoc = glGetAttribLocation(program, "position");
+    ASSERT_NE(-1, posLoc);
+    glEnableVertexAttribArray(posLoc);
+    glVertexAttribPointer(posLoc, 2, GL_FLOAT, GL_FALSE, stride, vertexData.data() + drawAttribs);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr);
+
+    // the result color should be (0 + 1 + 2 + ... + 14)/256 * 255;
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(0, 0, 105, 0, 0, 255, 1);
+
+    // disable a few attribute use default attribute color
+    GLint l0  = glGetAttribLocation(program, "a0");
+    GLint l5  = glGetAttribLocation(program, "a5");
+    GLint l13 = glGetAttribLocation(program, "a13");
+    glDisableVertexAttribArray(l0);
+    glVertexAttrib1f(l0, 1.0f / 16.0f);
+    glDisableVertexAttribArray(l5);
+    glVertexAttrib1f(l5, 1.0f / 16.0f);
+    glDisableVertexAttribArray(l13);
+    glVertexAttrib1f(l13, 1.0f / 16.0f);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr);
+
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(0, 0, 134, 0, 0, 255, 1);
+
+    // disable all the client buffers.
+    for (GLint attribIndex = 0; attribIndex < drawAttribs; ++attribIndex)
+    {
+        std::stringstream attribStream;
+        attribStream << "a" << attribIndex;
+        GLint location = glGetAttribLocation(program, attribStream.str().c_str());
+        ASSERT_NE(-1, location);
+        glDisableVertexAttribArray(location);
+        glVertexAttrib1f(location, 1.0f / 16.0f);
+    }
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr);
+
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(0, 0, 239, 0, 0, 255, 1);
+
+    // enable all the client buffers.
+    for (GLint attribIndex = 0; attribIndex < drawAttribs; ++attribIndex)
+    {
+        std::stringstream attribStream;
+        attribStream << "a" << attribIndex;
+        GLint location = glGetAttribLocation(program, attribStream.str().c_str());
+        ASSERT_NE(-1, location);
+        glVertexAttribPointer(location, 1, GL_FLOAT, GL_FALSE, stride,
+                              vertexData.data() + attribIndex);
+        glEnableVertexAttribArray(location);
+    }
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(0, 0, 105, 0, 0, 255, 1);
 }
 
 // Test bind an empty buffer for vertex attribute does not crash
@@ -4513,12 +4745,18 @@ ANGLE_INSTANTIATE_TEST_ES3_AND(
     ES3_VULKAN().enable(Feature::ForceFallbackFormat),
     ES3_VULKAN_SWIFTSHADER().enable(Feature::ForceFallbackFormat),
     ES3_METAL().disable(Feature::HasExplicitMemBarrier).disable(Feature::HasCheapRenderPass),
-    ES3_METAL().disable(Feature::HasExplicitMemBarrier).enable(Feature::HasCheapRenderPass));
+    ES3_METAL().disable(Feature::HasExplicitMemBarrier).enable(Feature::HasCheapRenderPass),
+    ES3_VULKAN()
+        .disable(Feature::UseVertexInputBindingStrideDynamicState)
+        .disable(Feature::SupportsGraphicsPipelineLibrary));
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(VertexAttributeTestES31);
 ANGLE_INSTANTIATE_TEST_ES31_AND(VertexAttributeTestES31,
                                 ES31_VULKAN().enable(Feature::ForceFallbackFormat),
-                                ES31_VULKAN_SWIFTSHADER().enable(Feature::ForceFallbackFormat));
+                                ES31_VULKAN_SWIFTSHADER().enable(Feature::ForceFallbackFormat),
+                                ES31_VULKAN()
+                                    .disable(Feature::UseVertexInputBindingStrideDynamicState)
+                                    .disable(Feature::SupportsGraphicsPipelineLibrary));
 
 ANGLE_INSTANTIATE_TEST_ES2_AND_ES3_AND(
     VertexAttributeCachingTest,

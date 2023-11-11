@@ -30,7 +30,6 @@
 #include "Connection.h"
 #include "GPUConnectionToWebProcess.h"
 #include "GraphicsContextGLIdentifier.h"
-#include "QualifiedRenderingResourceIdentifier.h"
 #include "RemoteRenderingBackend.h"
 #include "ScopedWebGLRenderingResourcesRequest.h"
 #include "SharedVideoFrame.h"
@@ -39,6 +38,7 @@
 #include <WebCore/NotImplemented.h>
 #include <WebCore/PixelBuffer.h>
 #include <WebCore/ProcessIdentity.h>
+#include <WebCore/RenderingResourceIdentifier.h>
 #include <wtf/ThreadAssertions.h>
 #include <wtf/WeakPtr.h>
 
@@ -83,7 +83,7 @@ IPC::StreamConnectionWorkQueue& remoteGraphicsContextGLStreamWorkQueue();
 class RemoteGraphicsContextGL : private WebCore::GraphicsContextGL::Client, public IPC::StreamMessageReceiver {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<RemoteGraphicsContextGL> create(GPUConnectionToWebProcess&, WebCore::GraphicsContextGLAttributes&&, GraphicsContextGLIdentifier, RemoteRenderingBackend&, IPC::StreamServerConnection::Handle&&);
+    static Ref<RemoteGraphicsContextGL> create(GPUConnectionToWebProcess&, WebCore::GraphicsContextGLAttributes&&, GraphicsContextGLIdentifier, RemoteRenderingBackend&, Ref<IPC::StreamServerConnection>&&);
     ~RemoteGraphicsContextGL() override;
     void stopListeningForIPC(Ref<RemoteGraphicsContextGL>&& refFromConnection);
 
@@ -93,7 +93,7 @@ public:
 #endif
 
 protected:
-    RemoteGraphicsContextGL(GPUConnectionToWebProcess&, GraphicsContextGLIdentifier, RemoteRenderingBackend&, IPC::StreamServerConnection::Handle&&);
+    RemoteGraphicsContextGL(GPUConnectionToWebProcess&, GraphicsContextGLIdentifier, RemoteRenderingBackend&, Ref<IPC::StreamServerConnection>&&);
     void initialize(WebCore::GraphicsContextGLAttributes&&);
     IPC::StreamConnectionWorkQueue& workQueue() const { return m_workQueue; }
 
@@ -101,15 +101,13 @@ protected:
     virtual void platformWorkQueueInitialize(WebCore::GraphicsContextGLAttributes&&) { };
     void workQueueUninitialize();
     template<typename T>
-    IPC::Error send(T&& message) const { return m_streamConnection->send(WTFMove(message), m_graphicsContextGLIdentifier); }
+    IPC::Error send(T&& message) const { return m_streamConnection->send(std::forward<T>(message), m_graphicsContextGLIdentifier); }
 
     // GraphicsContextGL::Client overrides.
     void forceContextLost() final;
-    void dispatchContextChangedNotification() final;
 
     // Messages to be received.
     void ensureExtensionEnabled(String&&);
-    void markContextChanged();
     void createAndBindEGLImage(GCGLenum, WebCore::GraphicsContextGL::EGLImageSource, CompletionHandler<void(uint64_t, WebCore::IntSize)>&&);
     void reshape(int32_t width, int32_t height);
 #if PLATFORM(COCOA)
@@ -122,10 +120,9 @@ protected:
     void prepareForDisplay(CompletionHandler<void()>&&);
 #endif
     void getErrors(CompletionHandler<void(GCGLErrorCodeSet)>&&);
-    void paintRenderingResultsToCanvas(WebCore::RenderingResourceIdentifier, CompletionHandler<void()>&&);
-    void paintCompositedResultsToCanvas(WebCore::RenderingResourceIdentifier, CompletionHandler<void()>&&);
+    void drawSurfaceBufferToImageBuffer(WebCore::GraphicsContextGL::SurfaceBuffer, WebCore::RenderingResourceIdentifier, CompletionHandler<void()>&&);
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
-    void paintCompositedResultsToVideoFrame(CompletionHandler<void(std::optional<WebKit::RemoteVideoFrameProxy::Properties>&&)>&&);
+    void surfaceBufferToVideoFrame(WebCore::GraphicsContextGL::SurfaceBuffer, CompletionHandler<void(std::optional<WebKit::RemoteVideoFrameProxy::Properties>&&)>&&);
 #endif
 #if ENABLE(VIDEO) && PLATFORM(COCOA)
     void copyTextureFromVideoFrame(SharedVideoFrame&&, uint32_t texture, uint32_t target, int32_t level, uint32_t internalFormat, uint32_t format, uint32_t type, bool premultiplyAlpha, bool flipY, CompletionHandler<void(bool)>&&);
@@ -148,9 +145,7 @@ protected:
 #include "RemoteGraphicsContextGLFunctionsGenerated.h" // NOLINT
 
 private:
-    void paintRenderingResultsToCanvasWithQualifiedIdentifier(QualifiedRenderingResourceIdentifier);
-    void paintCompositedResultsToCanvasWithQualifiedIdentifier(QualifiedRenderingResourceIdentifier);
-    void paintNativeImageToImageBuffer(WebCore::NativeImage&, QualifiedRenderingResourceIdentifier);
+    void paintNativeImageToImageBuffer(WebCore::NativeImage&, WebCore::RenderingResourceIdentifier);
 
 protected:
     WeakPtr<GPUConnectionToWebProcess> m_gpuConnectionToWebProcess;

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(MEDIA_STREAM) && (PLATFORM(IOS) || PLATFORM(VISION))
+#if ENABLE(MEDIA_STREAM) && HAVE(REPLAYKIT)
 
 #include "DisplayCaptureSourceCocoa.h"
 #include "Timer.h"
@@ -38,7 +38,7 @@ namespace WebCore {
 
 class ReplayKitCaptureSource final : public DisplayCaptureSourceCocoa::Capturer, public CanMakeWeakPtr<ReplayKitCaptureSource> {
 public:
-    static Expected<UniqueRef<DisplayCaptureSourceCocoa::Capturer>, String> create(const String&);
+    static Expected<UniqueRef<DisplayCaptureSourceCocoa::Capturer>, CaptureSourceError> create(const String&);
 
     ReplayKitCaptureSource();
     virtual ~ReplayKitCaptureSource();
@@ -82,4 +82,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM) && (PLATFORM(IOS) || PLATFORM(VISION))
+#endif // ENABLE(MEDIA_STREAM) && HAVE(REPLAYKIT)

@@ -34,6 +34,7 @@
 
 #import "CocoaHelpers.h"
 #import "JSWebExtensionWrappable.h"
+#import "Logging.h"
 #import "WebExtensionAPIRuntime.h"
 #import <JavaScriptCore/JSObjectRef.h>
 
@@ -101,12 +102,14 @@ void WebExtensionCallbackHandler::reportError(NSString *message)
         return;
 
     if (m_runtime) {
-        m_runtime->reportErrorForCallbackHandler(*this, message, m_globalContext.get());
+        m_runtime->reportError(message, *this);
         return;
     }
 
     if (!m_rejectFunction)
         return;
+
+    RELEASE_LOG_ERROR(Extensions, "Promise rejected: %{public}@", message);
 
     JSValue *error = [JSValue valueWithNewErrorFromMessage:message inContext:[JSContext contextWithJSGlobalContextRef:m_globalContext.get()]];
 
@@ -153,20 +156,18 @@ id toNSObject(JSContextRef context, JSValueRef valueRef, Class requiredClass)
 
     JSValue *value = [JSValue valueWithJSValueRef:valueRef inContext:[JSContext contextWithJSGlobalContextRef:JSContextGetGlobalContext(context)]];
 
-    // For functions and promises ("thenable" objects), return the JSValue instead of calling toObject since that will convert it to an empty NSDictionary and be useless.
-    if (JSValueIsObject(context, valueRef)) {
-        JSObjectRef objectRef = JSValueToObject(context, valueRef, nullptr);
-        if (JSObjectIsFunction(context, objectRef))
-            return value;
-
-        if (value._thenable)
-            return value;
-    }
+    // Return the JSValue instead of calling toObject for some objects,
+    // since that would convert it to an empty NSDictionary and be useless.
+    if (value.isObject && !value._isDictionary && !value.isArray && !value.isDate && !value.isNull)
+        return value;
 
     id result = [value toObject];
     NSArray *resultArray = dynamic_objc_cast<NSArray>(result);
     if (!requiredClass || !resultArray)
         return result;
+
+    if (requiredClass == NSObject.class)
+        return resultArray;
 
     return filterObjects(resultArray, ^bool (id, id value) {
         return [value isKindOfClass:requiredClass];
@@ -190,20 +191,28 @@ NSString *toNSString(JSContextRef context, JSValueRef value, NullStringPolicy nu
         FALLTHROUGH;
 
     case NullStringPolicy::NoNullString:
+        // Don't try to convert other objects into strings.
+        if (!JSValueIsString(context, value))
+            return nil;
+
         JSRetainPtr<JSStringRef> string(Adopt, JSValueToStringCopy(context, value, 0));
         return CFBridgingRelease(JSStringCopyCFString(nullptr, string.get()));
     }
 }
 
-NSDictionary *toNSDictionary(JSContextRef context, JSValueRef value)
+NSDictionary *toNSDictionary(JSContextRef context, JSValueRef valueRef, NullValuePolicy nullPolicy)
 {
     ASSERT(context);
 
-    if (!JSValueIsObject(context, value))
+    if (!JSValueIsObject(context, valueRef))
         return nil;
 
-    JSObjectRef object = JSValueToObject(context, value, nullptr);
+    JSObjectRef object = JSValueToObject(context, valueRef, nullptr);
     if (!object)
+        return nil;
+
+    JSValue *value = [JSValue valueWithJSValueRef:valueRef inContext:[JSContext contextWithJSGlobalContextRef:JSContextGetGlobalContext(context)]];
+    if (!value._isDictionary)
         return nil;
 
     JSPropertyNameArrayRef propertyNames = JSObjectCopyPropertyNames(context, object);
@@ -216,10 +225,14 @@ NSDictionary *toNSDictionary(JSContextRef context, JSValueRef value)
         JSValueRef item = JSObjectGetProperty(context, object, propertyName.get(), 0);
 
         // Chrome does not include null values in dictionaries for web extensions.
-        if (JSValueIsNull(context, item))
+        if (nullPolicy == NullValuePolicy::NotAllowed && JSValueIsNull(context, item))
             continue;
 
-        if (id value = toNSObject(context, item))
+        auto *itemValue = toJSValue(context, item);
+        if (itemValue._isDictionary) {
+            if (auto *itemDictionary = toNSDictionary(context, item, nullPolicy))
+                [result setObject:itemDictionary forKey:toNSString(propertyName.get())];
+        } else if (id value = toNSObject(context, item))
             [result setObject:value forKey:toNSString(propertyName.get())];
     }
 
@@ -338,19 +351,26 @@ using namespace WebKit;
     return functionRef && JSObjectIsFunction(context, functionRef);
 }
 
+- (BOOL)_isDictionary
+{
+    // Equivalent to JavaScript: this.__proto__ === Object.prototype
+    // Using isInstanceOf: is too permissive here since all built-in objects inherit from Object.
+    return self.isObject && [self[@"__proto__"] isEqualToObject:self.context[@"Object"][@"prototype"]] && !self._isThenable;
+}
+
 - (BOOL)_isRegularExpression
 {
-    return self.isObject && dynamic_objc_cast<JSValue>(self[@"test"])._function;
+    return self.isObject && [self isInstanceOf:self.context[@"RegExp"]];
 }
 
 - (BOOL)_isThenable
 {
-    return self.isObject && dynamic_objc_cast<JSValue>(self[@"then"])._function;
+    return self.isObject && dynamic_objc_cast<JSValue>(self[@"then"])._isFunction;
 }
 
 - (void)_awaitThenableResolutionWithCompletionHandler:(void (^)(JSValue *result, JSValue *error))completionHandler
 {
-    ASSERT(self._thenable);
+    ASSERT(self._isThenable);
 
     auto resolveBlock = ^(JSValue *result) {
         completionHandler(result, nil);

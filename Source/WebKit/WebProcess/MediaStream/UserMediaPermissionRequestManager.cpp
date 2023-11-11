@@ -54,7 +54,7 @@ void UserMediaPermissionRequestManager::startUserMediaRequest(UserMediaRequest& 
     auto* frame = document ? document->frame() : nullptr;
 
     if (!frame || !document->page()) {
-        request.deny(UserMediaRequest::OtherFailure, emptyString());
+        request.deny(MediaAccessDenialReason::OtherFailure, emptyString());
         return;
     }
 
@@ -73,13 +73,13 @@ void UserMediaPermissionRequestManager::sendUserMediaRequest(UserMediaRequest& u
 {
     auto* frame = userRequest.document() ? userRequest.document()->frame() : nullptr;
     if (!frame) {
-        userRequest.deny(UserMediaRequest::OtherFailure, emptyString());
+        userRequest.deny(MediaAccessDenialReason::OtherFailure, emptyString());
         return;
     }
 
     m_ongoingUserMediaRequests.add(userRequest.identifier(), userRequest);
 
-    WebFrame* webFrame = WebFrame::fromCoreFrame(*frame);
+    auto webFrame = WebFrame::fromCoreFrame(*frame);
     ASSERT(webFrame);
 
     auto* topLevelDocumentOrigin = userRequest.topLevelDocumentOrigin();
@@ -131,7 +131,7 @@ void UserMediaPermissionRequestManager::userMediaAccessWasGranted(UserMediaReque
     request->allow(WTFMove(audioDevice), WTFMove(videoDevice), WTFMove(deviceIdentifierHashSalts), WTFMove(completionHandler));
 }
 
-void UserMediaPermissionRequestManager::userMediaAccessWasDenied(UserMediaRequestIdentifier requestID, UserMediaRequest::MediaAccessDenialReason reason, String&& invalidConstraint)
+void UserMediaPermissionRequestManager::userMediaAccessWasDenied(UserMediaRequestIdentifier requestID, MediaAccessDenialReason reason, String&& invalidConstraint)
 {
     auto request = m_ongoingUserMediaRequests.take(requestID);
     if (!request)

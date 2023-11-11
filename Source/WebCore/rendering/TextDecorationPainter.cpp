@@ -67,6 +67,9 @@ namespace WebCore {
  */
 static void strokeWavyTextDecoration(GraphicsContext& context, const FloatRect& rect, WavyStrokeParameters wavyStrokeParameters)
 {
+    if (rect.isEmpty() || !wavyStrokeParameters.step)
+        return;
+
     FloatPoint p1 = rect.minXMinYCorner();
     FloatPoint p2 = rect.maxXMinYCorner();
 
@@ -276,15 +279,15 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
 
             auto shadowX = m_isHorizontal ? shadow->x().value() : shadow->y().value();
             auto shadowY = m_isHorizontal ? shadow->y().value() : -shadow->x().value();
-            m_context.setShadow(FloatSize { shadowX, shadowY - extraOffset }, shadow->radius().value(), shadowColor);
+            m_context.setDropShadow({ { shadowX, shadowY - extraOffset }, shadow->radius().value(), shadowColor, ShadowRadiusMode::Default });
             shadow = shadow->next();
         };
         applyShadowIfNeeded();
 
         // FIXME: Add support to handle left/right case
-        if (decorationType.contains(TextDecorationLine::Underline))
+        if (decorationType.contains(TextDecorationLine::Underline) && !underlineRect.isEmpty())
             paintDecoration(TextDecorationLine::Underline, decorationStyle.underline.decorationStyle, decorationStyle.underline.color, underlineRect);
-        if (decorationType.contains(TextDecorationLine::Overline))
+        if (decorationType.contains(TextDecorationLine::Overline) && !overlineRect.isEmpty())
             paintDecoration(TextDecorationLine::Overline, decorationStyle.overline.decorationStyle, decorationStyle.overline.color, overlineRect);
         // We only want to paint the shadow, hence the transparent color, not the actual line-through,
         // which will be painted in paintForegroundDecorations().
@@ -295,7 +298,7 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
     if (clipping)
         m_context.restore();
     else if (m_shadow)
-        m_context.clearShadow();
+        m_context.clearDropShadow();
 }
 
 void TextDecorationPainter::paintForegroundDecorations(const ForegroundDecorationGeometry& foregroundDecorationGeometry, const Styles& decorationStyle)
@@ -319,13 +322,13 @@ void TextDecorationPainter::paintLineThrough(const ForegroundDecorationGeometry&
         m_context.drawLineForText(rect, m_isPrinting, style == TextDecorationStyle::Double, strokeStyle);
 }
 
-static void collectStylesForRenderer(TextDecorationPainter::Styles& result, const RenderObject& renderer, OptionSet<TextDecorationLine> remainingDecorations, bool firstLineStyle, PseudoId pseudoId)
+static void collectStylesForRenderer(TextDecorationPainter::Styles& result, const RenderObject& renderer, OptionSet<TextDecorationLine> remainingDecorations, bool firstLineStyle, OptionSet<PaintBehavior> paintBehavior, PseudoId pseudoId)
 {
     auto extractDecorations = [&] (const RenderStyle& style, OptionSet<TextDecorationLine> decorations) {
         if (decorations.isEmpty())
             return;
 
-        auto color = TextDecorationPainter::decorationColor(style);
+        auto color = TextDecorationPainter::decorationColor(style, paintBehavior);
         auto decorationStyle = style.textDecorationStyle();
 
         if (decorations.contains(TextDecorationLine::Underline)) {
@@ -359,7 +362,7 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
         const auto& style = styleForRenderer(*current);
         extractDecorations(style, style.textDecorationLine());
 
-        if (current->isRubyText())
+        if (current->isRenderRubyText())
             return;
 
         current = current->parent();
@@ -376,20 +379,20 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
         extractDecorations(styleForRenderer(*current), remainingDecorations);
 }
 
-Color TextDecorationPainter::decorationColor(const RenderStyle& style)
+Color TextDecorationPainter::decorationColor(const RenderStyle& style, OptionSet<PaintBehavior> paintBehavior)
 {
-    return style.visitedDependentColorWithColorFilter(CSSPropertyTextDecorationColor);
+    return style.visitedDependentColorWithColorFilter(CSSPropertyTextDecorationColor, paintBehavior);
 }
 
-auto TextDecorationPainter::stylesForRenderer(const RenderObject& renderer, OptionSet<TextDecorationLine> requestedDecorations, bool firstLineStyle, PseudoId pseudoId) -> Styles
+auto TextDecorationPainter::stylesForRenderer(const RenderObject& renderer, OptionSet<TextDecorationLine> requestedDecorations, bool firstLineStyle, OptionSet<PaintBehavior> paintBehavior, PseudoId pseudoId) -> Styles
 {
     if (requestedDecorations.isEmpty())
         return { };
 
     Styles result;
-    collectStylesForRenderer(result, renderer, requestedDecorations, false, pseudoId);
+    collectStylesForRenderer(result, renderer, requestedDecorations, false, paintBehavior, pseudoId);
     if (firstLineStyle)
-        collectStylesForRenderer(result, renderer, requestedDecorations, true, pseudoId);
+        collectStylesForRenderer(result, renderer, requestedDecorations, true, paintBehavior, pseudoId);
     result.skipInk = renderer.style().textDecorationSkipInk();
     return result;
 }

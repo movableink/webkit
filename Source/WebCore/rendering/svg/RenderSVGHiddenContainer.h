@@ -32,13 +32,14 @@ class SVGElement;
 class RenderSVGHiddenContainer : public RenderSVGContainer {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGHiddenContainer);
 public:
-    RenderSVGHiddenContainer(SVGElement&, RenderStyle&&);
+    RenderSVGHiddenContainer(Type, SVGElement&, RenderStyle&&);
 
 protected:
     void layout() override;
 
+    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+
 private:
-    bool isSVGHiddenContainer() const final { return true; }
     ASCIILiteral renderName() const override { return "RenderSVGHiddenContainer"_s; }
 
     void paint(PaintInfo&, const LayoutPoint&) final { }
@@ -46,7 +47,7 @@ private:
     LayoutRect clippedOverflowRect(const RenderLayerModelObject*, VisibleRectContext) const final { return { }; }
     std::optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect& rect, const RenderLayerModelObject*, VisibleRectContext) const final { return std::make_optional(rect); }
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint&) const final { }
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint&) const final { }
     void absoluteQuads(Vector<FloatQuad>&, bool*) const final { }
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint&, const RenderLayerModelObject* = nullptr) const final { }
 
@@ -54,11 +55,10 @@ private:
     void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect&, OptionSet<RenderStyle::TransformOperationOption>) const final { }
     void updateFromStyle() final { }
     bool needsHasSVGTransformFlags() const final { return false; }
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGHiddenContainer, isSVGHiddenContainer())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGHiddenContainer, isRenderSVGHiddenContainer())
 
 #endif // ENABLE(LAYER_BASED_SVG_ENGINE)

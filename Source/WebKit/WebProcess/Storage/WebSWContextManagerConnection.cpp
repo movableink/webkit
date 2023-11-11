@@ -42,6 +42,7 @@
 #include "WebBroadcastChannelRegistry.h"
 #include "WebCacheStorageProvider.h"
 #include "WebCompiledContentRuleListData.h"
+#include "WebCookieJar.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebDatabaseProvider.h"
 #include "WebDocumentLoader.h"
@@ -152,17 +153,18 @@ void WebSWContextManagerConnection::updateAppInitiatedValue(ServiceWorkerIdentif
         serviceWorkerThreadProxy->setLastNavigationWasAppInitiated(lastNavigationWasAppInitiated == WebCore::LastNavigationWasAppInitiated::Yes);
 }
 
-void WebSWContextManagerConnection::installServiceWorker(ServiceWorkerContextData&& contextData, ServiceWorkerData&& workerData, String&& userAgent, WorkerThreadMode workerThreadMode)
+void WebSWContextManagerConnection::installServiceWorker(ServiceWorkerContextData&& contextData, ServiceWorkerData&& workerData, String&& userAgent, WorkerThreadMode workerThreadMode, ServiceWorkerIsInspectable inspectable)
 {
     assertIsCurrent(m_queue.get());
 
-    callOnMainRunLoopAndWait([this, protectedThis = Ref { *this }, contextData = WTFMove(contextData).isolatedCopy(), workerData = WTFMove(workerData).isolatedCopy(), userAgent = WTFMove(userAgent).isolatedCopy(), workerThreadMode]() mutable {
+    callOnMainRunLoopAndWait([this, protectedThis = Ref { *this }, contextData = WTFMove(contextData).isolatedCopy(), workerData = WTFMove(workerData).isolatedCopy(), userAgent = WTFMove(userAgent).isolatedCopy(), workerThreadMode, inspectable]() mutable {
         auto pageConfiguration = pageConfigurationWithEmptyClients(m_pageID, WebProcess::singleton().sessionID());
         pageConfiguration.badgeClient = WebBadgeClient::create();
         pageConfiguration.databaseProvider = WebDatabaseProvider::getOrCreate(m_pageGroupID);
         pageConfiguration.socketProvider = WebSocketProvider::create(m_webPageProxyID);
         pageConfiguration.broadcastChannelRegistry = WebProcess::singleton().broadcastChannelRegistry();
         pageConfiguration.userContentProvider = m_userContentController;
+        pageConfiguration.cookieJar = WebCookieJar::create();
 #if ENABLE(WEB_RTC)
         pageConfiguration.webRTCProvider = makeUniqueRef<RemoteWorkerLibWebRTCProvider>();
 #endif
@@ -189,6 +191,9 @@ void WebSWContextManagerConnection::installServiceWorker(ServiceWorkerContextDat
             page->settings().setStorageBlockingPolicy(static_cast<StorageBlockingPolicy>(m_preferencesStore->getUInt32ValueForKey(WebPreferencesKey::storageBlockingPolicyKey())));
         }
         page->setupForRemoteWorker(contextData.scriptURL, contextData.registration.key.topOrigin(), contextData.referrerPolicy);
+#if ENABLE(REMOTE_INSPECTOR)
+        page->setInspectable(inspectable == ServiceWorkerIsInspectable::Yes);
+#endif // ENABLE(REMOTE_INSPECTOR)
 
         std::unique_ptr<WebCore::NotificationClient> notificationClient;
 #if ENABLE(NOTIFICATIONS)
@@ -275,21 +280,19 @@ void WebSWContextManagerConnection::fireInstallEvent(ServiceWorkerIdentifier ide
 {
     assertIsCurrent(m_queue.get());
 
-    callOnMainRunLoop([identifier] {
-        SWContextManager::singleton().fireInstallEvent(identifier);
-    });
+    if (auto serviceWorkerThreadProxy = SWContextManager::singleton().serviceWorkerThreadProxyFromBackgroundThread(identifier))
+        serviceWorkerThreadProxy->fireInstallEvent();
 }
 
 void WebSWContextManagerConnection::fireActivateEvent(ServiceWorkerIdentifier identifier)
 {
     assertIsCurrent(m_queue.get());
 
-    callOnMainRunLoop([identifier] {
-        SWContextManager::singleton().fireActivateEvent(identifier);
-    });
+    if (auto serviceWorkerThreadProxy = SWContextManager::singleton().serviceWorkerThreadProxyFromBackgroundThread(identifier))
+        serviceWorkerThreadProxy->fireActivateEvent();
 }
 
-void WebSWContextManagerConnection::firePushEvent(ServiceWorkerIdentifier identifier, const std::optional<IPC::DataReference>& ipcData, CompletionHandler<void(bool)>&& callback)
+void WebSWContextManagerConnection::firePushEvent(ServiceWorkerIdentifier identifier, const std::optional<IPC::DataReference>& ipcData, std::optional<NotificationPayload>&& proposedPayload, CompletionHandler<void(bool, std::optional<NotificationPayload>&&)>&& callback)
 {
     assertIsCurrent(m_queue.get());
 
@@ -297,14 +300,14 @@ void WebSWContextManagerConnection::firePushEvent(ServiceWorkerIdentifier identi
     if (ipcData)
         data = Vector<uint8_t> { ipcData->data(), ipcData->size() };
 
-    auto inQueueCallback = [queue = m_queue, callback = WTFMove(callback)](bool result) mutable {
-        queue->dispatch([result, callback = WTFMove(callback)]() mutable {
-            callback(result);
+    auto inQueueCallback = [queue = m_queue, callback = WTFMove(callback)](bool result, std::optional<NotificationPayload>&& resultPayload) mutable {
+        queue->dispatch([result, resultPayload = crossThreadCopy(WTFMove(resultPayload)), callback = WTFMove(callback)]() mutable {
+            callback(result, WTFMove(resultPayload));
         });
     };
 
-    callOnMainRunLoop([identifier, data = WTFMove(data), callback = WTFMove(inQueueCallback)]() mutable {
-        SWContextManager::singleton().firePushEvent(identifier, WTFMove(data), WTFMove(callback));
+    callOnMainRunLoop([identifier, data = WTFMove(data), proposedPayload = crossThreadCopy(WTFMove(proposedPayload)), callback = WTFMove(inQueueCallback)]() mutable {
+        SWContextManager::singleton().firePushEvent(identifier, WTFMove(data), WTFMove(proposedPayload), WTFMove(callback));
     });
 }
 
@@ -391,6 +394,41 @@ void WebSWContextManagerConnection::navigationPreloadFailed(SWServerConnectionId
 
     if (auto serviceWorkerThreadProxy = SWContextManager::singleton().serviceWorkerThreadProxyFromBackgroundThread(serviceWorkerIdentifier))
         serviceWorkerThreadProxy->navigationPreloadFailed(serverConnectionIdentifier, fetchIdentifier, WTFMove(error));
+}
+
+void WebSWContextManagerConnection::updateRegistrationState(WebCore::ServiceWorkerRegistrationIdentifier identifier, WebCore::ServiceWorkerRegistrationState state, const std::optional<WebCore::ServiceWorkerData>& serviceWorkerData)
+{
+    assertIsCurrent(m_queue.get());
+
+    SWContextManager::singleton().updateRegistrationState(identifier, state, serviceWorkerData);
+}
+
+void WebSWContextManagerConnection::updateWorkerState(WebCore::ServiceWorkerIdentifier identifier, WebCore::ServiceWorkerState state)
+{
+    assertIsCurrent(m_queue.get());
+
+    SWContextManager::singleton().updateWorkerState(identifier, state);
+}
+
+void WebSWContextManagerConnection::fireUpdateFoundEvent(WebCore::ServiceWorkerRegistrationIdentifier identifier)
+{
+    assertIsCurrent(m_queue.get());
+
+    SWContextManager::singleton().fireUpdateFoundEvent(identifier);
+}
+
+void WebSWContextManagerConnection::setRegistrationLastUpdateTime(WebCore::ServiceWorkerRegistrationIdentifier identifier, WallTime time)
+{
+    assertIsCurrent(m_queue.get());
+
+    SWContextManager::singleton().setRegistrationLastUpdateTime(identifier, time);
+}
+
+void WebSWContextManagerConnection::setRegistrationUpdateViaCache(WebCore::ServiceWorkerRegistrationIdentifier identifier, WebCore::ServiceWorkerUpdateViaCache value)
+{
+    assertIsCurrent(m_queue.get());
+
+    SWContextManager::singleton().setRegistrationUpdateViaCache(identifier, value);
 }
 
 void WebSWContextManagerConnection::postMessageToServiceWorkerClient(const ScriptExecutionContextIdentifier& destinationIdentifier, const MessageWithMessagePorts& message, ServiceWorkerIdentifier sourceIdentifier, const String& sourceOrigin)
@@ -490,7 +528,7 @@ void WebSWContextManagerConnection::navigate(ScriptExecutionContextIdentifier cl
             callback(WTFMove(result).error().toException());
             return;
         }
-        callback(WTFMove(result).value());
+        callback(std::forward<decltype(result)>(result).value());
     });
 }
 
@@ -527,6 +565,15 @@ void WebSWContextManagerConnection::setThrottleState(bool isThrottleable)
         RELEASE_LOG(ServiceWorker, "Service worker throttleable state is set to %d", isThrottleable);
         protectedThis->m_isThrottleable = isThrottleable;
         WebProcess::singleton().setProcessSuppressionEnabled(isThrottleable);
+    });
+}
+
+void WebSWContextManagerConnection::setInspectable(ServiceWorkerIsInspectable inspectable)
+{
+    assertIsCurrent(m_queue.get());
+
+    callOnMainRunLoop([inspectable] {
+        SWContextManager::singleton().setInspectable(inspectable == ServiceWorkerIsInspectable::Yes);
     });
 }
 

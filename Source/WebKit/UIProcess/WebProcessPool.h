@@ -45,6 +45,7 @@
 #include <WebCore/SecurityOriginHash.h>
 #include <WebCore/SharedStringHash.h>
 #include <pal/SessionID.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -69,11 +70,13 @@ OBJC_CLASS WKWebInspectorPreferenceObserver;
 #endif
 
 #if PLATFORM(MAC)
-#include "DisplayLink.h"
 #include <WebCore/PowerObserverMac.h>
 #include <pal/system/SystemSleepListener.h>
 #endif
 
+#if HAVE(DISPLAY_LINK)
+#include "DisplayLink.h"
+#endif
 
 #if ENABLE(IPC_TESTING_API)
 #include "IPCTester.h"
@@ -104,7 +107,6 @@ class PowerSourceNotifier;
 namespace WebKit {
 
 class LockdownModeObserver;
-class HighPerformanceGraphicsUsageSampler;
 class UIGamepad;
 class PerActivityStateCPUUsageSampler;
 class SuspendedPageProxy;
@@ -137,6 +139,7 @@ enum class ProcessSwapRequestedByClient : bool;
 class WebProcessPool final
     : public API::ObjectImpl<API::Object::Type::ProcessPool>
     , public IPC::MessageReceiver
+    , public CanMakeCheckedPtr
 #if PLATFORM(MAC)
     , private PAL::SystemSleepListener::Client
 #endif
@@ -148,6 +151,7 @@ public:
     virtual ~WebProcessPool();
 
     API::ProcessPoolConfiguration& configuration() { return m_configuration.get(); }
+    Ref<API::ProcessPoolConfiguration> protectedConfiguration() { return m_configuration; }
 
     static Vector<Ref<WebProcessPool>> allProcessPools();
 
@@ -169,6 +173,7 @@ public:
     void removeMessageReceiver(IPC::ReceiverName, uint64_t destinationID);
 
     WebBackForwardCache& backForwardCache() { return m_backForwardCache.get(); }
+    CheckedRef<WebBackForwardCache> checkedBackForwardCache();
     
     void addMessageReceiver(IPC::ReceiverName messageReceiverName, const ObjectIdentifierGenericBase& destinationID, IPC::MessageReceiver& receiver)
     {
@@ -205,14 +210,15 @@ public:
     void processDidFinishLaunching(WebProcessProxy&);
 
     WebProcessCache& webProcessCache() { return m_webProcessCache.get(); }
+    CheckedRef<WebProcessCache> checkedWebProcessCache();
 
     // Disconnect the process from the context.
     void disconnectProcess(WebProcessProxy&);
 
     Ref<WebPageProxy> createWebPage(PageClient&, Ref<API::PageConfiguration>&&);
 
-    void pageBeginUsingWebsiteDataStore(WebPageProxyIdentifier, WebsiteDataStore&);
-    void pageEndUsingWebsiteDataStore(WebPageProxyIdentifier, WebsiteDataStore&);
+    void pageBeginUsingWebsiteDataStore(WebPageProxy&, WebsiteDataStore&);
+    void pageEndUsingWebsiteDataStore(WebPageProxy&, WebsiteDataStore&);
     bool hasPagesUsingWebsiteDataStore(WebsiteDataStore&) const;
 
     const String& injectedBundlePath() const { return m_configuration->injectedBundlePath(); }
@@ -242,7 +248,7 @@ public:
     void displayPropertiesChanged(const WebCore::ScreenProperties&, WebCore::PlatformDisplayID, CGDisplayChangeSummaryFlags);
 #endif
 
-#if HAVE(CVDISPLAYLINK)
+#if HAVE(DISPLAY_LINK)
     DisplayLinkCollection& displayLinks() { return m_displayLinks; }
 #endif
 
@@ -308,7 +314,7 @@ public:
 
     void reportWebContentCPUTime(Seconds cpuTime, uint64_t activityState);
 
-    Ref<WebProcessProxy> processForRegistrableDomain(WebsiteDataStore&, const WebCore::RegistrableDomain&, WebProcessProxy::LockdownMode); // Will return an existing one if limit is met or due to caching.
+    Ref<WebProcessProxy> processForRegistrableDomain(WebsiteDataStore&, const WebCore::RegistrableDomain&, WebProcessProxy::LockdownMode, const API::PageConfiguration&); // Will return an existing one if limit is met or due to caching.
 
     void prewarmProcess();
 
@@ -359,6 +365,7 @@ public:
     void createGPUProcessConnection(WebProcessProxy&, IPC::Connection::Handle&&, WebKit::GPUProcessConnectionParameters&&);
 
     GPUProcessProxy& ensureGPUProcess();
+    Ref<GPUProcessProxy> ensureProtectedGPUProcess();
     GPUProcessProxy* gpuProcess() const { return m_gpuProcess.get(); }
 #endif
     // Network Process Management
@@ -440,19 +447,15 @@ public:
     void lockdownModeStateChanged();
 #endif
 
-#if ENABLE(WEBCONTENT_CRASH_TESTING)
-    static bool shouldCrashWhenCreatingWebProcess() { return s_shouldCrashWhenCreatingWebProcess; }
-#endif
-
     ForegroundWebProcessToken foregroundWebProcessToken() const { return ForegroundWebProcessToken(m_foregroundWebProcessCounter.count()); }
     BackgroundWebProcessToken backgroundWebProcessToken() const { return BackgroundWebProcessToken(m_backgroundWebProcessCounter.count()); }
     bool hasForegroundWebProcesses() const { return m_foregroundWebProcessCounter.value(); }
     bool hasBackgroundWebProcesses() const { return m_backgroundWebProcessCounter.value(); }
 
-    enum class DidCreateNewProcess : bool { No, Yes };
-    void processForNavigation(WebPageProxy&, WebFrameProxy&, const API::Navigation&, Ref<WebProcessProxy>&& sourceProcess, const URL& sourceURL, ProcessSwapRequestedByClient, WebProcessProxy::LockdownMode, const FrameInfoData&, Ref<WebsiteDataStore>&&, CompletionHandler<void(Ref<WebProcessProxy>&&, SuspendedPageProxy*, ASCIILiteral, DidCreateNewProcess)>&&);
+    void processForNavigation(WebPageProxy&, WebFrameProxy&, const API::Navigation&, Ref<WebProcessProxy>&& sourceProcess, const URL& sourceURL, ProcessSwapRequestedByClient, WebProcessProxy::LockdownMode, const FrameInfoData&, Ref<WebsiteDataStore>&&, CompletionHandler<void(Ref<WebProcessProxy>&&, SuspendedPageProxy*, ASCIILiteral)>&&);
 
     void didReachGoodTimeToPrewarm();
+    bool hasPrewarmedProcess() const { return m_prewarmedProcess.get(); }
 
     void didCollectPrewarmInformation(const WebCore::RegistrableDomain&, const WebCore::PrewarmInformation&);
 
@@ -462,7 +465,6 @@ public:
     void setMockMediaDeviceIsEphemeral(const String&, bool);
     void resetMockMediaDevices();
 
-    void sendDisplayConfigurationChangedMessageForTesting();
     void clearCurrentModifierStateForTesting();
 
 #if ENABLE(TRACKING_PREVENTION)
@@ -529,7 +531,8 @@ public:
     bool operator==(const WebProcessPool& other) const { return (this == &other); }
 
 private:
-    void platformInitialize();
+    enum class NeedsGlobalStaticInitialization : bool { No, Yes };
+    void platformInitialize(NeedsGlobalStaticInitialization);
 
     void platformInitializeWebProcess(const WebProcessProxy&, WebProcessCreationParameters&);
     void platformInvalidateContext();
@@ -569,10 +572,6 @@ private:
 
     void registerNotificationObservers();
     void unregisterNotificationObservers();
-
-#if ENABLE(WEBCONTENT_CRASH_TESTING)
-    static void initializeShouldCrashWhenCreatingWebProcess();
-#endif
 #endif
 
     void setApplicationIsActive(bool);
@@ -706,7 +705,6 @@ private:
     RetainPtr<NSObject> m_deactivationObserver;
     RetainPtr<WKWebInspectorPreferenceObserver> m_webInspectorPreferenceObserver;
 
-    std::unique_ptr<HighPerformanceGraphicsUsageSampler> m_highPerformanceGraphicsUsageSampler;
     std::unique_ptr<PerActivityStateCPUUsageSampler> m_perActivityStateCPUUsageSampler;
 #endif
 
@@ -755,10 +753,6 @@ private:
     bool m_cookieStoragePartitioningEnabled { false };
 #endif
 
-#if ENABLE(WEBCONTENT_CRASH_TESTING)
-    static bool s_shouldCrashWhenCreatingWebProcess;
-#endif
-
     struct Paths {
         String injectedBundlePath;
         String uiProcessBundleResourcePath;
@@ -784,7 +778,7 @@ private:
 
     HashMap<WebCore::RegistrableDomain, std::unique_ptr<WebCore::PrewarmInformation>> m_prewarmInformationPerRegistrableDomain;
 
-#if HAVE(CVDISPLAYLINK)
+#if HAVE(DISPLAY_LINK)
     DisplayLinkCollection m_displayLinks;
 #endif
 
@@ -816,7 +810,6 @@ private:
     bool m_delaysWebProcessLaunchDefaultValue { globalDelaysWebProcessLaunchDefaultValue() };
 
     static bool s_useSeparateServiceWorkerProcess;
-    static bool s_didGlobalStaticInitialization;
 
 #if ENABLE(TRACKING_PREVENTION)
     HashSet<WebCore::RegistrableDomain> m_domainsWithUserInteraction;
@@ -827,6 +820,10 @@ private:
     std::unique_ptr<WebCore::PowerObserver> m_powerObserver;
     std::unique_ptr<PAL::SystemSleepListener> m_systemSleepListener;
     Vector<int> m_openDirectoryNotifyTokens;
+#endif
+#if ENABLE(NOTIFYD_BLOCKING_IN_WEBCONTENT)
+    Vector<int> m_notifyTokens;
+    Vector<RetainPtr<NSObject>> m_notificationObservers;
 #endif
 #if ENABLE(IPC_TESTING_API)
     IPCTester m_ipcTester;

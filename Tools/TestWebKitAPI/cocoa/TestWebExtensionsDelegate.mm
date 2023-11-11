@@ -28,13 +28,67 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
+#import "WebExtensionUtilities.h"
 #import <WebKit/_WKWebExtensionController.h>
 #import <WebKit/_WKWebExtensionMatchPattern.h>
 #import <WebKit/_WKWebExtensionPermission.h>
 
 @implementation TestWebExtensionsDelegate
 
-- (void)webExtensionController:(_WKWebExtensionController *)controller promptForPermissions:(NSSet<_WKWebExtensionPermission> *)permissions inTab:(id <_WKWebExtensionTab>)tab forExtensionContext:(_WKWebExtensionContext *)extensionContext completionHandler:(void (^)(NSSet<_WKWebExtensionPermission> *allowedPermissions))completionHandler
+- (NSArray<id<_WKWebExtensionWindow>> *)webExtensionController:(_WKWebExtensionController *)controller openWindowsForExtensionContext:(_WKWebExtensionContext *)extensionContext
+{
+    if (_openWindows)
+        return _openWindows(extensionContext);
+
+    return @[ ];
+}
+
+- (id<_WKWebExtensionWindow>)webExtensionController:(_WKWebExtensionController *)controller focusedWindowForExtensionContext:(_WKWebExtensionContext *)extensionContext
+{
+    if (_focusedWindow)
+        return _focusedWindow(extensionContext);
+
+    return nil;
+}
+
+- (void)webExtensionController:(_WKWebExtensionController *)controller openNewWindowWithOptions:(_WKWebExtensionWindowCreationOptions *)options forExtensionContext:(_WKWebExtensionContext *)extensionContext completionHandler:(void (^)(id<_WKWebExtensionWindow> newWindow, NSError *error))completionHandler
+{
+    if (_openNewWindow)
+        return _openNewWindow(options, extensionContext, completionHandler);
+
+    completionHandler(nil, nil);
+}
+
+- (void)webExtensionController:(_WKWebExtensionController *)controller openNewTabWithOptions:(_WKWebExtensionTabCreationOptions *)options forExtensionContext:(_WKWebExtensionContext *)extensionContext completionHandler:(void (^)(id<_WKWebExtensionTab> newTab, NSError *error))completionHandler
+{
+    if (_openNewTab)
+        return _openNewTab(options, extensionContext, completionHandler);
+
+    auto *openWindows = [self webExtensionController:controller openWindowsForExtensionContext:extensionContext];
+    if (!openWindows.count) {
+        completionHandler(nil, nil);
+        return;
+    }
+
+    TestWebExtensionWindow *window = openWindows.firstObject;
+    auto newTab = adoptNS([[TestWebExtensionTab alloc] initWithWindow:window extensionController:controller]);
+
+    window.tabs = [window.tabs arrayByAddingObject:newTab.get()];
+
+    [controller didOpenTab:newTab.get()];
+
+    completionHandler(newTab.get(), nil);
+}
+
+- (void)webExtensionController:(_WKWebExtensionController *)controller openOptionsPageForExtensionContext:(_WKWebExtensionContext *)extensionContext completionHandler:(void (^)(NSError *))completionHandler
+{
+    if (_openOptionsPage)
+        _openOptionsPage(extensionContext, completionHandler);
+    else
+        completionHandler([NSError errorWithDomain:NSCocoaErrorDomain code:0 userInfo:@{ NSDebugDescriptionErrorKey: @"runtime.openOptionsPage() not implemneted" }]);
+}
+
+- (void)webExtensionController:(_WKWebExtensionController *)controller promptForPermissions:(NSSet<_WKWebExtensionPermission> *)permissions inTab:(id<_WKWebExtensionTab>)tab forExtensionContext:(_WKWebExtensionContext *)extensionContext completionHandler:(void (^)(NSSet<_WKWebExtensionPermission> *allowedPermissions))completionHandler
 {
     if (_promptForPermissions)
         _promptForPermissions(tab, permissions, completionHandler);
@@ -42,12 +96,38 @@
         completionHandler(permissions);
 }
 
-- (void)webExtensionController:(_WKWebExtensionController *)controller promptForPermissionMatchPatterns:(NSSet<_WKWebExtensionMatchPattern *> *)matchPatterns inTab:(id <_WKWebExtensionTab>)tab forExtensionContext:(_WKWebExtensionContext *)extensionContext completionHandler:(void (^)(NSSet<_WKWebExtensionMatchPattern *> *allowedMatchPatterns))completionHandler
+- (void)webExtensionController:(_WKWebExtensionController *)controller promptForPermissionMatchPatterns:(NSSet<_WKWebExtensionMatchPattern *> *)matchPatterns inTab:(id<_WKWebExtensionTab>)tab forExtensionContext:(_WKWebExtensionContext *)extensionContext completionHandler:(void (^)(NSSet<_WKWebExtensionMatchPattern *> *allowedMatchPatterns))completionHandler
 {
     if (_promptForPermissionMatchPatterns)
         _promptForPermissionMatchPatterns(tab, matchPatterns, completionHandler);
     else
         completionHandler(matchPatterns);
+}
+
+- (void)webExtensionController:(_WKWebExtensionController *)controller sendMessage:(id)message toApplicationIdentifier:(NSString *)applicationIdentifier forExtensionContext:(_WKWebExtensionContext *)extensionContext replyHandler:(void (^)(id, NSError *))replyHandler
+{
+    if (_sendMessage)
+        _sendMessage(message, applicationIdentifier, replyHandler);
+    else
+        replyHandler(nil, [NSError errorWithDomain:NSCocoaErrorDomain code:0 userInfo:@{ NSDebugDescriptionErrorKey: @"runtime.sendNativeMessage() not implemneted" }]);
+}
+
+- (void)webExtensionController:(_WKWebExtensionController *)controller connectUsingMessagePort:(_WKWebExtensionMessagePort *)port forExtensionContext:(_WKWebExtensionContext *)extensionContext completionHandler:(void (^)(NSError *error))completionHandler
+{
+    if (_connectUsingMessagePort) {
+        _connectUsingMessagePort(port);
+        completionHandler(nil);
+    } else
+        completionHandler([NSError errorWithDomain:NSCocoaErrorDomain code:0 userInfo:@{ NSDebugDescriptionErrorKey: @"runtime.connectNative() not implemneted" }]);
+}
+
+- (void)webExtensionController:(_WKWebExtensionController *)controller presentPopupForAction:(_WKWebExtensionAction *)action forExtensionContext:(_WKWebExtensionContext *)context completionHandler:(void (^)(NSError *))completionHandler
+{
+    if (_presentPopupForAction) {
+        _presentPopupForAction(action);
+        completionHandler(nil);
+    } else
+        completionHandler([NSError errorWithDomain:NSCocoaErrorDomain code:0 userInfo:@{ NSDebugDescriptionErrorKey: @"action.showPopup() not implemneted" }]);
 }
 
 @end

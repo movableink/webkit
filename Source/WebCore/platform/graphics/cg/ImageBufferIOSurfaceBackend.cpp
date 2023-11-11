@@ -45,7 +45,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(ImageBufferIOSurfaceBackend);
 
 IntSize ImageBufferIOSurfaceBackend::calculateSafeBackendSize(const Parameters& parameters)
 {
-    IntSize backendSize = calculateBackendSize(parameters);
+    IntSize backendSize = parameters.backendSize;
     if (backendSize.isEmpty())
         return { };
 
@@ -65,8 +65,7 @@ unsigned ImageBufferIOSurfaceBackend::calculateBytesPerRow(const IntSize& backen
 
 size_t ImageBufferIOSurfaceBackend::calculateMemoryCost(const Parameters& parameters)
 {
-    IntSize backendSize = calculateBackendSize(parameters);
-    return ImageBufferBackend::calculateMemoryCost(backendSize, calculateBytesPerRow(backendSize));
+    return ImageBufferBackend::calculateMemoryCost(parameters.backendSize, calculateBytesPerRow(parameters.backendSize));
 }
 
 size_t ImageBufferIOSurfaceBackend::calculateExternalMemoryCost(const Parameters& parameters)
@@ -84,15 +83,13 @@ std::unique_ptr<ImageBufferIOSurfaceBackend> ImageBufferIOSurfaceBackend::create
     if (!surface)
         return nullptr;
 
-    auto displayID = creationContext.graphicsClient ? creationContext.graphicsClient->displayID() : 0;
-    RetainPtr<CGContextRef> cgContext = surface->createPlatformContext(displayID);
+    RetainPtr<CGContextRef> cgContext = surface->createPlatformContext(creationContext.displayID);
     if (!cgContext)
         return nullptr;
 
     CGContextClearRect(cgContext.get(), FloatRect(FloatPoint::zero(), backendSize));
-    CGContextFlush(cgContext.get());
 
-    return makeUnique<ImageBufferIOSurfaceBackend>(parameters, WTFMove(surface), WTFMove(cgContext), displayID, creationContext.surfacePool);
+    return std::unique_ptr<ImageBufferIOSurfaceBackend> { new ImageBufferIOSurfaceBackend { parameters, WTFMove(surface), WTFMove(cgContext), creationContext.displayID, creationContext.surfacePool } };
 }
 
 ImageBufferIOSurfaceBackend::ImageBufferIOSurfaceBackend(const Parameters& parameters, std::unique_ptr<IOSurface> surface, RetainPtr<CGContextRef> platformContext, PlatformDisplayID displayID, IOSurfacePool* ioSurfacePool)
@@ -130,10 +127,10 @@ void ImageBufferIOSurfaceBackend::flushContext()
 
 bool ImageBufferIOSurfaceBackend::flushContextDraws()
 {
-    if (!m_context)
+    bool contextNeedsFlush = m_context && m_context->consumeHasDrawn();
+    if (!contextNeedsFlush && !m_needsFirstFlush)
         return false;
-    if (!m_context->consumeHasDrawn())
-        return false;
+    m_needsFirstFlush = false;
     CGContextFlush(ensurePlatformContext());
     return true;
 }
@@ -145,11 +142,6 @@ CGContextRef ImageBufferIOSurfaceBackend::ensurePlatformContext()
         RELEASE_ASSERT(m_platformContext);
     }
     return m_platformContext.get();
-}
-
-IntSize ImageBufferIOSurfaceBackend::backendSize() const
-{
-    return m_surface->size();
 }
 
 unsigned ImageBufferIOSurfaceBackend::bytesPerRow() const
@@ -172,22 +164,17 @@ void ImageBufferIOSurfaceBackend::invalidateCachedNativeImage()
     CGContextFillRect(ensurePlatformContext(), CGRect { });
 }
 
-RefPtr<NativeImage> ImageBufferIOSurfaceBackend::copyNativeImage(BackingStoreCopy)
+RefPtr<NativeImage> ImageBufferIOSurfaceBackend::copyNativeImage()
 {
     return NativeImage::create(createImage());
 }
 
-RefPtr<NativeImage> ImageBufferIOSurfaceBackend::copyNativeImageForDrawing(GraphicsContext& destination)
+RefPtr<NativeImage> ImageBufferIOSurfaceBackend::createNativeImageReference()
 {
-    if (destination.hasPlatformContext() && CGContextGetType(destination.platformContext()) == kCGContextTypeBitmap) {
-        // The destination backend is not deferred, so we can return a reference.
-        // The destination backend needs to read the actual pixels. Returning non-refence will
-        // copy the pixels and but still cache the image to the context. This means we must
-        // return the reference or cleanup later if we return the non-reference.
-        return NativeImage::create(createImageReference());
-    }
-    // Other backends are deferred (iosurface, display list) or potentially deferred. Must copy for drawing.
-    return ImageBufferIOSurfaceBackend::copyNativeImage(CopyBackingStore);
+    // The destination backend needs to read the actual pixels. Returning non-refence will
+    // copy the pixels and but still cache the image to the context. This means we must
+    // return the reference or cleanup later if we return the non-reference.
+    return NativeImage::create(createImageReference());
 }
 
 RefPtr<NativeImage> ImageBufferIOSurfaceBackend::sinkIntoNativeImage()

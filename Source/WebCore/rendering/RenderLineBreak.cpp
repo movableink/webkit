@@ -50,12 +50,12 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderLineBreak);
 static const int invalidLineHeight = -1;
 
 RenderLineBreak::RenderLineBreak(HTMLElement& element, RenderStyle&& style)
-    : RenderBoxModelObject(element, WTFMove(style), 0)
+    : RenderBoxModelObject(Type::LineBreak, element, WTFMove(style), 0)
     , m_inlineBoxWrapper(nullptr)
     , m_cachedLineHeight(invalidLineHeight)
     , m_isWBR(is<HTMLWBRElement>(element))
 {
-    setIsLineBreak();
+    ASSERT(isRenderLineBreak());
 }
 
 RenderLineBreak::~RenderLineBreak()
@@ -152,14 +152,15 @@ IntRect RenderLineBreak::linesBoundingBox() const
     return enclosingIntRect(run->visualRectIgnoringBlockDirection());
 }
 
-void RenderLineBreak::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
+void RenderLineBreak::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& accumulatedOffset) const
 {
     auto box = InlineIterator::boxFor(*this);
     if (!box)
         return;
 
-    auto rect = box->visualRectIgnoringBlockDirection();
-    rects.append(enclosingIntRect(FloatRect(accumulatedOffset + rect.location(), rect.size())));
+    auto rect = LayoutRect { box->visualRectIgnoringBlockDirection() };
+    rect.moveBy(accumulatedOffset);
+    rects.append(rect);
 }
 
 void RenderLineBreak::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
@@ -218,7 +219,7 @@ void RenderLineBreak::collectSelectionGeometries(Vector<SelectionGeometry>& rect
         extentsRect = extentsRect.transposedRect();
     bool isFirstOnLine = !run->previousOnLine();
     bool isLastOnLine = !run->nextOnLine();
-    if (containingBlock->isRubyBase() || containingBlock->isRubyText())
+    if (containingBlock->isRenderRubyBase() || containingBlock->isRenderRubyText())
         isLastOnLine = !containingBlock->containingBlock()->inlineBoxWrapper()->nextOnLineExists();
 
     bool isFixed = false;
@@ -234,7 +235,7 @@ void RenderLineBreak::collectSelectionGeometries(Vector<SelectionGeometry>& rect
         }
     }
 
-    rects.append(SelectionGeometry(absoluteQuad, HTMLElement::selectionRenderingBehavior(element()), run->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, run->isLineBreak(), isFirstOnLine, isLastOnLine, false, false, boxIsHorizontal, isFixed, containingBlock->isRubyText(), view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
+    rects.append(SelectionGeometry(absoluteQuad, HTMLElement::selectionRenderingBehavior(element()), run->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, run->isLineBreak(), isFirstOnLine, isLastOnLine, false, false, boxIsHorizontal, isFixed, containingBlock->isRenderRubyText(), view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
 }
 #endif
 

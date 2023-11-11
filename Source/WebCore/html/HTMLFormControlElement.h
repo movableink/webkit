@@ -98,7 +98,7 @@ public:
 
     virtual String resultForDialogSubmit() const;
 
-    HTMLElement* popoverTargetElement() const;
+    RefPtr<HTMLElement> popoverTargetElement() const;
     const AtomString& popoverTargetAction() const;
     void setPopoverTargetAction(const AtomString& value);
 
@@ -106,7 +106,7 @@ public:
     using Node::deref;
 
 protected:
-    constexpr static auto CreateHTMLFormControlElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
+    static constexpr auto CreateHTMLFormControlElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLFormControlElement(const QualifiedName& tagName, Document&, HTMLFormElement*);
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;

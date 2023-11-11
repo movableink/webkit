@@ -62,6 +62,10 @@ list(APPEND WebKit_MESSAGES_IN_FILES
     WebProcess/gtk/GtkSettingsManagerProxy
 )
 
+list(APPEND WebKit_SERIALIZATION_IN_FILES Shared/glib/DMABufRendererBufferFormat.serialization.in)
+
+list(APPEND WebCore_SERIALIZATION_IN_FILES SoupNetworkProxySettings.serialization.in)
+
 list(APPEND WebKit_DERIVED_SOURCES
     ${WebKitGTK_DERIVED_SOURCES_DIR}/InspectorGResourceBundle.c
     ${WebKitGTK_DERIVED_SOURCES_DIR}/WebKitDirectoryInputStreamData.cpp
@@ -266,6 +270,7 @@ list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/Shared/API/glib"
     "${WEBKIT_DIR}/Shared/CoordinatedGraphics"
     "${WEBKIT_DIR}/Shared/CoordinatedGraphics/threadedcompositor"
+    "${WEBKIT_DIR}/Shared/Extensions"
     "${WEBKIT_DIR}/Shared/glib"
     "${WEBKIT_DIR}/Shared/gtk"
     "${WEBKIT_DIR}/Shared/linux"
@@ -340,6 +345,15 @@ if (USE_WPE_RENDERER)
     list(APPEND WebKit_LIBRARIES
       WPE::libwpe
       ${WPEBACKEND_FDO_LIBRARIES}
+    )
+endif ()
+
+if (USE_LIBDRM)
+    list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
+        ${LIBDRM_INCLUDE_DIR}
+    )
+    list(APPEND WebKit_LIBRARIES
+        ${LIBDRM_LIBRARIES}
     )
 endif ()
 

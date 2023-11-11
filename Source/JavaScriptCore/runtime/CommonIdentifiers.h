@@ -86,6 +86,7 @@
     macro(calendar) \
     macro(callee) \
     macro(caller) \
+    macro(captureStackTrace) \
     macro(caseFirst) \
     macro(cause) \
     macro(clear) \
@@ -108,6 +109,7 @@
     macro(deref) \
     macro(description) \
     macro(descriptions) \
+    macro(detached) \
     macro(detail) \
     macro(displayName) \
     macro(done) \
@@ -277,6 +279,7 @@
     macro(toWellFormed) \
     macro(trailingZeroDisplay) \
     macro(transfer) \
+    macro(transferToFixedLength) \
     macro(type) \
     macro(uid) \
     macro(unicode) \

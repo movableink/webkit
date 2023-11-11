@@ -30,10 +30,6 @@
     readonly attribute DOMString domIdentifier;
     readonly attribute boolean isIsolatedObject;
 
-    // Document information
-    readonly attribute DOMString documentEncoding;
-    readonly attribute DOMString documentURI;
-
     // Element access.
     AccessibilityUIElement elementAtPoint(long x, long y);
     AccessibilityUIElement childAtIndex(unsigned long index);
@@ -161,6 +157,7 @@
     // Table info.
     DOMString attributesOfColumnHeaders();
     DOMString attributesOfRowHeaders();
+    object columns();
     DOMString attributesOfColumns();
     DOMString attributesOfRows();
     DOMString attributesOfVisibleCells();
@@ -233,15 +230,21 @@
 
     // Text markers.
     AccessibilityTextMarkerRange lineTextMarkerRangeForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarkerRange rightLineTextMarkerRangeForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarkerRange leftLineTextMarkerRangeForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarker previousLineStartTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarker nextLineEndTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
     long lineIndexForTextMarker(AccessibilityTextMarker textMarker);
     AccessibilityTextMarkerRange misspellingTextMarkerRange(AccessibilityTextMarkerRange start, boolean forward);
     AccessibilityTextMarkerRange textMarkerRangeForElement(AccessibilityUIElement element);
     AccessibilityTextMarkerRange textMarkerRangeForMarkers(AccessibilityTextMarker startMarker, AccessibilityTextMarker endMarker);
+    AccessibilityTextMarkerRange textMarkerRangeForUnorderedMarkers(AccessibilityTextMarker startMarker, AccessibilityTextMarker endMarker);
     AccessibilityTextMarkerRange textMarkerRangeForRange(unsigned long location, unsigned long length);
     AccessibilityTextMarkerRange selectedTextMarkerRange();
     undefined resetSelectedTextMarkerRange();
     boolean replaceTextInRange(DOMString string, long position, long length);
     boolean insertText(DOMString text);
+    AccessibilityTextMarkerRange textInputMarkedTextMarkerRange();
     AccessibilityTextMarker startTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange range);
     AccessibilityTextMarker endTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange range);
     AccessibilityTextMarker endTextMarkerForBounds(long x, long y, long width, long height);
@@ -298,6 +301,7 @@
     readonly attribute boolean isSearchField;
     readonly attribute boolean isTextArea;
     readonly attribute boolean isMarkAnnotation;
+    readonly attribute boolean supportsExpanded;
 
     readonly attribute boolean hasDocumentRoleAncestor;
     readonly attribute boolean hasWebApplicationAncestor;
@@ -305,6 +309,7 @@
     readonly attribute boolean isInDescriptionListTerm;
 
     readonly attribute boolean hasContainedByFieldsetTrait;
+    readonly attribute boolean hasTextEntryTrait;
     AccessibilityUIElement fieldsetAncestorElement();
     AccessibilityUIElement focusableAncestor();
     AccessibilityUIElement editableAncestor();

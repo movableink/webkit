@@ -54,7 +54,7 @@ public:
         InlineLayoutUnit descent { 0 };
 
         InlineLayoutUnit height() const { return ascent + descent; }
-        bool operator==(const AscentAndDescent& other) const { return ascent == other.ascent && descent == other.descent; }
+        friend bool operator==(const AscentAndDescent&, const AscentAndDescent&) = default;
         // FIXME: Remove this.
         // We need floor/ceil to match legacy layout integral positioning.
         void round();
@@ -124,7 +124,8 @@ private:
     friend class LineBox;
     friend class LineBoxBuilder;
     friend class LineBoxVerticalAligner;
-    friend class InlineFormattingGeometry;
+    friend class InlineFormattingUtils;
+    friend class RubyFormattingContext;
 
     const InlineRect& logicalRect() const { return m_logicalRect; }
     InlineLayoutUnit logicalTop() const { return m_logicalRect.top(); }

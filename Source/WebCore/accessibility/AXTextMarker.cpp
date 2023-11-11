@@ -33,6 +33,7 @@
 #include "TextIterator.h"
 
 namespace WebCore {
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXTextMarker);
 
 TextMarkerData::TextMarkerData(AXObjectCache& cache, Node* nodeParam, const VisiblePosition& visiblePosition, int charStart, int charOffset, bool ignoredParam)
 {
@@ -147,14 +148,22 @@ AXTextMarker::operator CharacterOffset() const
     if (isIgnored() || isNull())
         return { };
 
-    setNodeIfNeeded();
+    WeakPtr cache = AXTreeStore<AXObjectCache>::axObjectCacheForID(m_data.axTreeID());
+    if (!cache)
+        return { };
+
+    if (m_data.node) {
+        // Make sure that this node is still in cache->m_textMarkerNodes. Since this method can be called as a result of a dispatch from the AX thread, the Node may have gone away in a previous main loop cycle.
+        if (!cache->isNodeInUse(m_data.node))
+            return { };
+    } else
+        setNodeIfNeeded();
+
     CharacterOffset result(m_data.node, m_data.characterStart, m_data.characterOffset);
     // When we are at a line wrap and the VisiblePosition is upstream, it means the text marker is at the end of the previous line.
     // We use the previous CharacterOffset so that it will match the Range.
-    if (m_data.affinity == Affinity::Upstream) {
-        if (WeakPtr cache = AXTreeStore<AXObjectCache>::axObjectCacheForID(m_data.axTreeID()))
-            return cache->previousCharacterOffset(result, false);
-    }
+    if (m_data.affinity == Affinity::Upstream)
+        return cache->previousCharacterOffset(result, false);
     return result;
 }
 
@@ -204,9 +213,11 @@ RefPtr<AXCoreObject> AXTextMarker::object() const
 String AXTextMarker::debugDescription() const
 {
     auto separator = ", ";
+    RefPtr object = this->object();
     return makeString(
         "treeID ", treeID().loggingString()
         , separator, "objectID ", objectID().loggingString()
+        , separator, "role ", object ? accessibilityRoleToString(object->roleValue()) : String("no object"_s)
         , separator, isMainThread() ? node()->debugDescription()
             : makeString("node 0x", hex(reinterpret_cast<uintptr_t>(m_data.node)))
         , separator, "offset ", m_data.offset
@@ -259,6 +270,8 @@ AXTextMarkerRange::AXTextMarkerRange(AXID treeID, AXID objectID, unsigned start,
 AXTextMarkerRange::operator VisiblePositionRange() const
 {
     ASSERT(isMainThread());
+    if (!m_start || !m_end)
+        return { };
     return { m_start, m_end };
 }
 
@@ -275,9 +288,22 @@ std::optional<SimpleRange> AXTextMarkerRange::simpleRange() const
     return { { *startBoundaryPoint, *endBoundaryPoint } };
 }
 
+std::optional<CharacterRange> AXTextMarkerRange::characterRange() const
+{
+    if (m_start.m_data.objectID != m_end.m_data.objectID
+        || m_start.m_data.treeID != m_end.m_data.treeID)
+        return std::nullopt;
+
+    if (m_start.m_data.characterOffset > m_end.m_data.characterOffset) {
+        ASSERT_NOT_REACHED();
+        return std::nullopt;
+    }
+    return { { m_start.m_data.characterOffset, m_end.m_data.characterOffset - m_start.m_data.characterOffset } };
+}
+
 std::partial_ordering partialOrder(const AXTextMarker& marker1, const AXTextMarker& marker2)
 {
-    if (marker1.objectID() == marker2.objectID() && marker1.treeID() == marker2.treeID()) {
+    if (marker1.objectID() == marker2.objectID() && LIKELY(marker1.treeID() == marker2.treeID())) {
         if (LIKELY(marker1.m_data.characterOffset < marker2.m_data.characterOffset))
             return std::partial_ordering::less;
         if (marker1.m_data.characterOffset > marker2.m_data.characterOffset)

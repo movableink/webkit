@@ -32,6 +32,7 @@
 #include "Frame.h"
 #include "ScrollTypes.h"
 #include "UserScriptTypes.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/HashSet.h>
 #include <wtf/UniqueRef.h>
 
@@ -111,7 +112,7 @@ enum OverflowScrollAction { DoNotPerformOverflowScroll, PerformOverflowScroll };
 using NodeQualifier = Function<Node* (const HitTestResult&, Node* terminationNode, IntRect* nodeBounds)>;
 #endif
 
-class LocalFrame final : public Frame {
+class LocalFrame final : public Frame, public CanMakeCheckedPtr {
 public:
     WEBCORE_EXPORT static Ref<LocalFrame> createMainFrame(Page&, UniqueRef<LocalFrameLoaderClient>&&, FrameIdentifier);
     WEBCORE_EXPORT static Ref<LocalFrame> createSubframe(Page&, UniqueRef<LocalFrameLoaderClient>&&, FrameIdentifier, HTMLFrameOwnerElement&);
@@ -138,19 +139,34 @@ public:
     WEBCORE_EXPORT void willDetachPage();
 
     Document* document() const;
+    RefPtr<Document> protectedDocument() const;
     LocalFrameView* view() const;
+    inline RefPtr<LocalFrameView> protectedView() const; // Defined in LocalFrameView.h.
 
     Editor& editor() { return document()->editor(); }
     const Editor& editor() const { return document()->editor(); }
+    CheckedRef<Editor> checkedEditor();
+    CheckedRef<const Editor> checkedEditor() const;
+
     EventHandler& eventHandler() { return m_eventHandler; }
     const EventHandler& eventHandler() const { return m_eventHandler; }
+    CheckedRef<EventHandler> checkedEventHandler();
+    CheckedRef<const EventHandler> checkedEventHandler() const;
+
     const FrameLoader& loader() const { return m_loader.get(); }
     FrameLoader& loader() { return m_loader.get(); }
+    CheckedRef<const FrameLoader> checkedLoader() const;
+    CheckedRef<FrameLoader> checkedLoader();
+
     FrameSelection& selection() { return document()->selection(); }
     const FrameSelection& selection() const { return document()->selection(); }
     ScriptController& script() { return m_script; }
     const ScriptController& script() const { return m_script; }
+    CheckedRef<ScriptController> checkedScript();
+    CheckedRef<const ScriptController> checkedScript() const;
     void resetScript();
+
+    WEBCORE_EXPORT bool isRootFrame() const;
 
     WEBCORE_EXPORT RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
     WEBCORE_EXPORT RenderWidget* ownerRenderer() const; // Renderer for the element that contains this frame.
@@ -285,6 +301,11 @@ public:
 
     WEBCORE_EXPORT bool arePluginsEnabled();
 
+    void documentURLDidChange(const URL&);
+
+protected:
+    void frameWasDisconnectedFromOwner() const final;
+
 private:
     friend class NavigationDisabler;
 
@@ -295,11 +316,13 @@ private:
     void frameDetached() final;
     bool preventsParentFromBeingComplete() const final;
     void changeLocation(FrameLoadRequest&&) final;
+    void broadcastFrameRemovalToOtherProcesses() final;
+    void didFinishLoadInAnotherProcess() final;
 
     FrameView* virtualView() const final;
     DOMWindow* virtualWindow() const final;
 
-    HashSet<FrameDestructionObserver*> m_destructionObservers;
+    WeakHashSet<FrameDestructionObserver> m_destructionObservers;
 
     Vector<std::pair<Ref<DOMWrapperWorld>, UniqueRef<UserScript>>> m_userScriptsAwaitingNotification;
 
@@ -351,6 +374,11 @@ inline LocalFrameView* LocalFrame::view() const
 inline Document* LocalFrame::document() const
 {
     return m_doc.get();
+}
+
+inline RefPtr<Document> LocalFrame::protectedDocument() const
+{
+    return document();
 }
 
 inline LocalFrameView* Document::view() const

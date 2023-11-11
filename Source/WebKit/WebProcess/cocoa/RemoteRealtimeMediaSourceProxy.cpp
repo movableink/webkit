@@ -39,11 +39,12 @@
 #include <WebCore/RealtimeMediaSource.h>
 #include <WebCore/RealtimeMediaSourceCenter.h>
 #include <WebCore/WebAudioBufferList.h>
+#include <wtf/NativePromise.h>
 
 namespace WebKit {
 using namespace WebCore;
 
-static IPC::Connection& getSourceConnection(bool shouldCaptureInGPUProcess)
+static Ref<IPC::Connection> getSourceConnection(bool shouldCaptureInGPUProcess)
 {
     ASSERT(isMainRunLoop());
 #if ENABLE(GPU_PROCESS)
@@ -112,6 +113,22 @@ void RemoteRealtimeMediaSourceProxy::applyConstraints(const MediaConstraints& co
     m_connection->send(Messages::UserMediaCaptureManagerProxy::ApplyConstraints { m_identifier, constraints }, 0);
 }
 
+void RemoteRealtimeMediaSourceProxy::getPhotoCapabilities(WebCore::RealtimeMediaSource::PhotoCapabilitiesHandler&& handler)
+{
+    m_connection->sendWithAsyncReply(Messages::UserMediaCaptureManagerProxy::GetPhotoCapabilities(identifier()), WTFMove(handler));
+}
+
+Ref<WebCore::RealtimeMediaSource::PhotoSettingsNativePromise> RemoteRealtimeMediaSourceProxy::getPhotoSettings()
+{
+    return m_connection->sendWithPromisedReply(Messages::UserMediaCaptureManagerProxy::GetPhotoSettings(identifier()))->whenSettled(RunLoop::main(), [](Messages::UserMediaCaptureManagerProxy::GetPhotoSettings::Promise::Result&& result) {
+
+        if (result)
+            return WebCore::RealtimeMediaSource::PhotoSettingsNativePromise::createAndSettle(WTFMove(result.value()));
+
+        return WebCore::RealtimeMediaSource::PhotoSettingsNativePromise::createAndReject(String("IPC Connection closed"_s));
+    });
+}
+
 void RemoteRealtimeMediaSourceProxy::applyConstraintsSucceeded()
 {
     auto callback = m_pendingApplyConstraintsCallbacks.takeFirst();
@@ -138,10 +155,11 @@ void RemoteRealtimeMediaSourceProxy::end()
     m_connection->send(Messages::UserMediaCaptureManagerProxy::RemoveSource { m_identifier }, 0);
 }
 
-void RemoteRealtimeMediaSourceProxy::whenReady(CompletionHandler<void(String)>&& callback)
+void RemoteRealtimeMediaSourceProxy::whenReady(CompletionHandler<void(WebCore::CaptureSourceError&&)>&& callback)
 {
     if (m_isReady)
-        return callback(WTFMove(m_errorMessage));
+        return callback(WebCore::CaptureSourceError(m_failureReason));
+
     m_callback = WTFMove(callback);
 }
 
@@ -153,12 +171,12 @@ void RemoteRealtimeMediaSourceProxy::setAsReady()
         m_callback({ });
 }
 
-void RemoteRealtimeMediaSourceProxy::didFail(String&& errorMessage)
+void RemoteRealtimeMediaSourceProxy::didFail(CaptureSourceError&& reason)
 {
     m_isReady = true;
-    m_errorMessage = WTFMove(errorMessage);
+    m_failureReason = WTFMove(reason);
     if (m_callback)
-        m_callback(m_errorMessage);
+        m_callback(WebCore::CaptureSourceError(m_failureReason));
 }
 
 }

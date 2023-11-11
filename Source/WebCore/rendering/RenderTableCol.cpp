@@ -46,17 +46,19 @@ using namespace HTMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTableCol);
 
 RenderTableCol::RenderTableCol(Element& element, RenderStyle&& style)
-    : RenderBox(element, WTFMove(style), 0)
+    : RenderBox(Type::TableCol, element, WTFMove(style), 0)
 {
     // init RenderObject attributes
     setInline(true); // our object is not Inline
     updateFromElement();
+    ASSERT(isRenderTableCol());
 }
 
 RenderTableCol::RenderTableCol(Document& document, RenderStyle&& style)
-    : RenderBox(document, WTFMove(style), 0)
+    : RenderBox(Type::TableCol, document, WTFMove(style), 0)
 {
     setInline(true);
+    ASSERT(isRenderTableCol());
 }
 
 void RenderTableCol::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
@@ -68,7 +70,7 @@ void RenderTableCol::styleDidChange(StyleDifference diff, const RenderStyle* old
     // If border was changed, notify table.
     if (!oldStyle)
         return;
-    if (oldStyle->border() != style().border()) {
+    if (!oldStyle->borderIsEquivalentForPainting(style())) {
         table->invalidateCollapsedBorders();
         return;
     }
@@ -111,7 +113,10 @@ void RenderTableCol::insertedIntoTree(IsInternalMove isInternalMove)
 void RenderTableCol::willBeRemovedFromTree(IsInternalMove isInternalMove)
 {
     RenderBox::willBeRemovedFromTree(isInternalMove);
-    table()->removeColumn(this);
+    if (auto* table = this->table()) {
+        // We only need to invalidate the column cache when only individual columns are being removed (as opposed to when the entire table is being collapsed).
+        table->invalidateColumns();
+    }
 }
 
 bool RenderTableCol::isChildAllowed(const RenderObject& child, const RenderStyle& style) const

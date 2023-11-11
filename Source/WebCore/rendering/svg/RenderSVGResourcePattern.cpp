@@ -39,20 +39,20 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGResourcePattern);
 
 RenderSVGResourcePattern::RenderSVGResourcePattern(SVGPatternElement& element, RenderStyle&& style)
-    : RenderSVGResourceContainer(element, WTFMove(style))
+    : LegacyRenderSVGResourceContainer(Type::SVGResourcePattern, element, WTFMove(style))
 {
 }
 
 SVGPatternElement& RenderSVGResourcePattern::patternElement() const
 {
-    return downcast<SVGPatternElement>(RenderSVGResourceContainer::element());
+    return downcast<SVGPatternElement>(LegacyRenderSVGResourceContainer::element());
 }
 
-void RenderSVGResourcePattern::removeAllClientsFromCache(bool markForInvalidation)
+void RenderSVGResourcePattern::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers)
 {
     m_patternMap.clear();
     m_shouldCollectPatternAttributes = true;
-    markAllClientsForInvalidation(markForInvalidation ? RepaintInvalidation : ParentOnlyInvalidation);
+    markAllClientsForInvalidationIfNeeded(markForInvalidation ? RepaintInvalidation : ParentOnlyInvalidation, visitedRenderers);
 }
 
 void RenderSVGResourcePattern::removeClientFromCache(RenderElement& client, bool markForInvalidation)

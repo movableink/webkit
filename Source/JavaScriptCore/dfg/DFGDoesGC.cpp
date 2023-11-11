@@ -268,6 +268,7 @@ bool doesGC(Graph& graph, Node* node)
 #if ASSERT_ENABLED
     case ArrayPush:
     case ArrayPop:
+    case ArraySpliceExtract:
     case PushWithScope:
     case CreateActivation:
     case CreateDirectArguments:
@@ -293,6 +294,8 @@ bool doesGC(Graph& graph, Node* node)
     case DirectTailCall:
     case DirectTailCallInlinedCaller:
     case CallWasm:
+    case CallCustomAccessorGetter:
+    case CallCustomAccessorSetter:
     case ForceOSRExit:
     case FunctionToString:
     case FunctionBind:
@@ -393,6 +396,8 @@ bool doesGC(Graph& graph, Node* node)
     case NewArrayBuffer:
     case NewRegexp:
     case NewStringObject:
+    case NewMap:
+    case NewSet:
     case NewSymbol:
     case MakeRope:
     case MakeAtomString:

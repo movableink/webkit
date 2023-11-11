@@ -210,6 +210,7 @@ bytecode/BytecodeRewriter.cpp
 bytecode/BytecodeUseDef.cpp
 bytecode/CallEdge.cpp
 bytecode/CallLinkInfo.cpp
+bytecode/CallLinkInfoBase.cpp
 bytecode/CallLinkStatus.cpp
 bytecode/CallMode.cpp
 bytecode/CallVariant.cpp
@@ -254,7 +255,7 @@ bytecode/InstructionStream.cpp
 bytecode/IntrinsicGetterAccessCase.cpp
 bytecode/JumpTable.cpp
 bytecode/LLIntPrototypeLoadAdaptiveStructureWatchpoint.cpp
-bytecode/LazyOperandValueProfile.cpp
+bytecode/LazyValueProfile.cpp
 bytecode/LinkTimeConstant.cpp
 bytecode/MetadataTable.cpp
 bytecode/MethodOfGettingAValueProfile.cpp
@@ -702,6 +703,7 @@ jit/TagRegistersMode.cpp
 jit/ThunkGenerators.cpp
 jit/Width.cpp
 
+llint/InPlaceInterpreter.cpp
 llint/LLIntCLoop.cpp
 llint/LLIntData.cpp
 llint/LLIntEntrypoint.cpp
@@ -717,6 +719,7 @@ parser/Parser.cpp @no-unify
 parser/ParserArena.cpp
 parser/SourceProvider.cpp
 parser/SourceProviderCache.cpp
+parser/SourceTaintedOrigin.cpp
 parser/UnlinkedSourceCode.cpp
 parser/VariableEnvironment.cpp
 
@@ -971,6 +974,8 @@ runtime/MemoryMode.cpp
 runtime/MemoryStatistics.cpp
 runtime/ModuleProgramExecutable.cpp
 runtime/NarrowingNumberPredictionFuzzerAgent.cpp
+runtime/NativeCallee.cpp
+runtime/NativeCalleeRegistry.cpp
 runtime/NativeErrorConstructor.cpp
 runtime/NativeErrorPrototype.cpp
 runtime/NativeExecutable.cpp
@@ -1021,6 +1026,7 @@ runtime/ScriptExecutable.cpp
 runtime/SetConstructor.cpp
 runtime/SetIteratorPrototype.cpp
 runtime/SetPrototype.cpp
+runtime/SideDataRepository.cpp
 runtime/SimpleTypedArrayController.cpp
 runtime/SmallStrings.cpp
 runtime/SparseArrayValueMap.cpp
@@ -1098,8 +1104,6 @@ tools/Integrity.cpp
 tools/JSDollarVM.cpp
 tools/VMInspector.cpp
 
-wasm/WasmAirIRGenerator32_64.cpp @no-unify
-wasm/WasmAirIRGenerator64.cpp @no-unify
 wasm/WasmB3IRGenerator.cpp
 wasm/WasmBBQDisassembler.cpp
 wasm/WasmBBQJIT.cpp @no-unify
@@ -1108,19 +1112,23 @@ wasm/WasmBinding.cpp
 wasm/WasmBranchHintsSectionParser.cpp
 wasm/WasmCallee.cpp
 wasm/WasmCalleeGroup.cpp
-wasm/WasmCalleeRegistry.cpp
 wasm/WasmCallingConvention.cpp
 wasm/WasmCompilationMode.cpp
+wasm/WasmConstExprGenerator.cpp
 wasm/WasmContext.cpp
 wasm/WasmEntryPlan.cpp
 wasm/WasmFaultSignalHandler.cpp
 wasm/WasmFormat.cpp
 wasm/WasmFunctionCodeBlockGenerator.cpp
+wasm/WasmFunctionIPIntMetadataGenerator.cpp
 wasm/WasmGlobal.cpp
 wasm/WasmHandlerInfo.cpp
 wasm/WasmIndexOrName.cpp
 wasm/WasmInstance.cpp
 wasm/WasmInstance.h
+wasm/WasmIPIntGenerator.cpp
+wasm/WasmIPIntPlan.cpp
+wasm/WasmIPIntSlowPaths.cpp
 wasm/WasmLLIntGenerator.cpp
 wasm/WasmLLIntPlan.cpp
 wasm/WasmLLIntTierUpCounter.cpp

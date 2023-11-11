@@ -87,7 +87,7 @@ static bool shouldTransform(const API::Object& object, const UserData::Transform
             if (!keyValuePair.value)
                 continue;
 
-            if (shouldTransform(*keyValuePair.value, transformer))
+            if (shouldTransform(Ref { *keyValuePair.value }, transformer))
                 return true;
         }
     }
@@ -113,10 +113,11 @@ static RefPtr<API::Object> transformGraph(API::Object& object, const UserData::T
 
         API::Dictionary::MapType map;
         for (const auto& keyValuePair : dictionary.map()) {
-            if (!keyValuePair.value)
+            RefPtr value = keyValuePair.value;
+            if (!value)
                 map.add(keyValuePair.key, nullptr);
             else
-                map.add(keyValuePair.key, transformGraph(*keyValuePair.value, transformer));
+                map.add(keyValuePair.key, transformGraph(*value, transformer));
         }
         return API::Dictionary::create(WTFMove(map));
     }
@@ -165,7 +166,7 @@ void UserData::encode(IPC::Encoder& encoder, const API::Object& object)
         auto& array = static_cast<const API::Array&>(object);
         encoder << static_cast<uint64_t>(array.size());
         for (size_t i = 0; i < array.size(); ++i)
-            encode(encoder, array.at(i));
+            encode(encoder, RefPtr { array.at(i) }.get());
         break;
     }
 
@@ -205,7 +206,7 @@ void UserData::encode(IPC::Encoder& encoder, const API::Object& object)
         auto& image = static_cast<const WebImage&>(object);
 
         auto handle = image.createHandle();
-        if (handle.isNull()) {
+        if (!handle) {
             // Initial false indicates no allocated bitmap or is not shareable.
             encoder << false;
             break;
@@ -214,7 +215,7 @@ void UserData::encode(IPC::Encoder& encoder, const API::Object& object)
         // Initial true indicates a bitmap was allocated and is shareable.
         encoder << true;
         encoder << image.parameters();
-        encoder << WTFMove(handle);
+        encoder << WTFMove(*handle);
         break;
     }
 
@@ -384,17 +385,11 @@ bool UserData::decode(IPC::Decoder& decoder, RefPtr<API::Object>& result)
 
         if (!didEncode)
             break;
-
-        std::optional<WebCore::ImageBufferBackend::Parameters> parameters;
-        decoder >> parameters;
-        if (!parameters)
+        auto parameters = decoder.decode<WebCore::ImageBufferParameters>();
+        auto handle = decoder.decode<ShareableBitmap::Handle>();
+        if (UNLIKELY(!decoder.isValid()))
             return false;
-
-        ShareableBitmap::Handle handle;
-        if (!decoder.decode(handle))
-            return false;
-
-        result = WebImage::create(*parameters, WTFMove(handle));
+        result = WebImage::create(WTFMove(*parameters), WTFMove(*handle));
         break;
     }
 

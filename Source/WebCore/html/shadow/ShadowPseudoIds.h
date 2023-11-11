@@ -37,6 +37,9 @@ const AtomString& fileSelectorButton();
 
 const AtomString& placeholder();
 
+const AtomString& thumb();
+const AtomString& track();
+
 const AtomString& webkitContactsAutoFillButton();
 const AtomString& webkitCredentialsAutoFillButton();
 const AtomString& webkitCreditCardAutoFillButton();
@@ -74,8 +77,6 @@ const AtomString& webkitMeterInnerElement();
 const AtomString& webkitMeterOptimumValue();
 const AtomString& webkitMeterSuboptimumValue();
 const AtomString& webkitMeterEvenLessGoodValue();
-
-const AtomString& webkitPluginReplacement();
 
 const AtomString& webkitProgressBar();
 const AtomString& webkitProgressValue();

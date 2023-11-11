@@ -24,6 +24,7 @@ import calendar
 import os
 import re
 import sys
+import time
 
 from datetime import datetime
 from webkitbugspy import User
@@ -41,6 +42,9 @@ class GitHub(Scm):
     URL_RE = re.compile(r'\Ahttps?://github.(?P<domain>\S+)/(?P<owner>\S+)/(?P<repository>\S+)\Z')
     EMAIL_RE = re.compile(r'(?P<email>[^@]+@[^@]+)(@.*)?')
     ACCEPT_HEADER = Tracker.ACCEPT_HEADER
+    KNOWN_400_MESSAGES = [
+        'No commit found for SHA',
+    ]
 
     class PRGenerator(Scm.PRGenerator):
         SUPPORTS_DRAFTS = True
@@ -346,7 +350,7 @@ class GitHub(Scm):
             if comment and pull_request._comments:
                 pull_request._comments.append(PullRequest.Comment(
                     author=me,
-                    timestamp=time.time(),
+                    timestamp=int(time.time()),
                     content=comment,
                 ))
 
@@ -436,6 +440,9 @@ class GitHub(Scm):
         if response.status_code not in [200, 201]:
             sys.stderr.write("Request to '{}' returned status code '{}'\n".format(url, response.status_code))
             message = response.json().get('message') if is_json_response else ''
+            message_header = message.split(':')[0]
+            if message_header in self.KNOWN_400_MESSAGES:
+                return None
             if message:
                 sys.stderr.write('Message: {}\n'.format(message))
             if auth:
@@ -764,7 +771,7 @@ class GitHub(Scm):
 
     def files_changed(self, argument=None):
         if not argument:
-            return self.modified()
+            raise ValueError('No argument provided')
         if not Commit.HASH_RE.match(argument):
             commit = self.find(argument, include_log=False, include_identifier=False)
             if not commit:

@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "CSSParserContext.h"
 #include "CSSSelector.h"
 #include <wtf/text/AtomStringHash.h>
 
@@ -36,7 +37,7 @@ class CSSParserSelector {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static std::unique_ptr<CSSParserSelector> parsePseudoClassSelector(StringView);
-    static std::unique_ptr<CSSParserSelector> parsePseudoElementSelector(StringView);
+    static std::unique_ptr<CSSParserSelector> parsePseudoElementSelector(StringView, CSSParserMode);
     static std::unique_ptr<CSSParserSelector> parsePagePseudoSelector(StringView);
 
     CSSParserSelector();
@@ -49,6 +50,7 @@ public:
     ~CSSParserSelector();
 
     std::unique_ptr<CSSSelector> releaseSelector() { return WTFMove(m_selector); }
+    const CSSSelector* selector() const { return m_selector.get(); };
     CSSSelector* selector() { return m_selector.get(); }
 
     void setValue(const AtomString& value, bool matchLowerCase = false) { m_selector->setValue(value, matchLowerCase); }
@@ -80,6 +82,8 @@ public:
     bool matchesPseudoElement() const;
 
     bool isHostPseudoSelector() const;
+
+    bool hasExplicitNestingParent() const;
 
     // FIXME-NEWPARSER: "slotted" was removed here for now, since it leads to a combinator
     // connection of ShadowDescendant, and the current shadow DOM code doesn't expect this. When

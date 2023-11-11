@@ -51,7 +51,7 @@ PlatformLayerContainer MediaPlayerPrivateRemote::createVideoFullscreenLayer()
 
 void MediaPlayerPrivateRemote::pushVideoFrameMetadata(WebCore::VideoFrameMetadata&& videoFrameMetadata, RemoteVideoFrameProxy::Properties&& properties)
 {
-    auto videoFrame = RemoteVideoFrameProxy::create(connection(), videoFrameObjectHeapProxy(), WTFMove(properties));
+    auto videoFrame = RemoteVideoFrameProxy::create(protectedConnection(), videoFrameObjectHeapProxy(), WTFMove(properties));
     if (!m_isGatheringVideoFrameMetadata)
         return;
     m_videoFrameMetadata = WTFMove(videoFrameMetadata);
@@ -92,7 +92,19 @@ void MediaPlayerPrivateRemote::layerHostingContextIdChanged(std::optional<WebKit
         return;
     }
     setLayerHostingContextID(inlineLayerHostingContextId.value());
-    m_videoInlineSize = presentationSize;
+    player->videoLayerSizeDidChange(presentationSize);
+}
+
+WebCore::FloatSize MediaPlayerPrivateRemote::videoLayerSize() const
+{
+    if (RefPtr player = m_player.get())
+        return player->videoLayerSize();
+    return { };
+}
+
+void MediaPlayerPrivateRemote::setVideoLayerSizeFenced(const FloatSize& size, WTF::MachSendRight&& machSendRight)
+{
+    connection().send(Messages::RemoteMediaPlayerProxy::SetVideoLayerSizeFenced(size, WTFMove(machSendRight)), m_id);
 }
 
 } // namespace WebKit

@@ -26,10 +26,11 @@
 #include "config.h"
 #include "PluginView.h"
 
-#if ENABLE(PDFKIT_PLUGIN)
+#if ENABLE(PDF_PLUGIN)
 
 #include "PDFPlugin.h"
 #include "ShareableBitmap.h"
+#include "UnifiedPDFPlugin.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebFrame.h"
 #include "WebKeyboardEvent.h"
@@ -51,6 +52,7 @@
 #include <WebCore/FrameLoadRequest.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/GraphicsContext.h>
+#include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLPlugInElement.h>
 #include <WebCore/HTTPHeaderNames.h>
 #include <WebCore/HostWindow.h>
@@ -133,9 +135,6 @@ void PluginView::Stream::start()
     auto* frame = m_pluginView->frame();
     ASSERT(frame);
 
-    if (auto* document = frame->document())
-        m_request.setFirstPartyForCookies(document->topDocument().url());
-
     WebProcess::singleton().webLoaderStrategy().schedulePluginStreamLoad(*frame, *this, ResourceRequest {m_request}, [this, protectedThis = Ref { *this }](RefPtr<NetscapePlugInStreamLoader>&& loader) {
         m_loader = WTFMove(loader);
     });
@@ -205,7 +204,7 @@ RefPtr<PluginView> PluginView::create(HTMLPlugInElement& element, const URL& mai
     if (!coreFrame)
         return nullptr;
 
-    auto* frame = WebFrame::fromCoreFrame(*coreFrame);
+    auto frame = WebFrame::fromCoreFrame(*coreFrame);
     if (!frame)
         return nullptr;
 
@@ -216,21 +215,36 @@ RefPtr<PluginView> PluginView::create(HTMLPlugInElement& element, const URL& mai
     return adoptRef(*new PluginView(element, mainResourceURL, contentType, shouldUseManualLoader, *page));
 }
 
+static Ref<PDFPluginBase> createPlugin(HTMLPlugInElement& element)
+{
+#if ENABLE(UNIFIED_PDF)
+    if (element.document().settings().unifiedPDFEnabled())
+        return UnifiedPDFPlugin::create(element);
+#endif
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
+    return PDFPlugin::create(element);
+#endif
+    RELEASE_ASSERT_NOT_REACHED();
+
+    RefPtr<PDFPluginBase> nullPluginBase;
+    return nullPluginBase.releaseNonNull();
+}
+
 PluginView::PluginView(HTMLPlugInElement& element, const URL& mainResourceURL, const String&, bool shouldUseManualLoader, WebPage& page)
     : m_pluginElement(element)
-    , m_plugin(PDFPlugin::create(element))
+    , m_plugin(createPlugin(element))
     , m_webPage(page)
     , m_mainResourceURL(mainResourceURL)
     , m_shouldUseManualLoader(shouldUseManualLoader)
     , m_pendingResourceRequestTimer(RunLoop::main(), this, &PluginView::pendingResourceRequestTimerFired)
 {
-    m_webPage->addPluginView(this);
+    m_webPage->addPluginView(*this);
 }
 
 PluginView::~PluginView()
 {
     if (m_webPage)
-        m_webPage->removePluginView(this);
+        m_webPage->removePluginView(*this);
     if (m_stream)
         m_stream->cancel();
     m_plugin->destroy();
@@ -273,6 +287,15 @@ void PluginView::manualLoadDidFinishLoading()
     }
 
     m_plugin->streamDidFinishLoading();
+}
+
+void PluginView::layerHostingStrategyDidChange()
+{
+    if (!m_isInitialized)
+        return;
+
+    // This ensures that we update RenderLayers and compositing when the result of RenderEmbeddedObject::requiresLayer() changes.
+    Ref { m_pluginElement }->invalidateStyleAndLayerComposition();
 }
 
 void PluginView::manualLoadDidFail()
@@ -357,9 +380,9 @@ void PluginView::initializePlugin()
     redeliverManualStream();
 
 #if PLATFORM(COCOA)
-    if (m_plugin->pluginLayer() && frame()) {
+    if (m_plugin->isComposited() && frame()) {
         frame()->view()->enterCompositingMode();
-        m_pluginElement->invalidateStyleAndLayerComposition();
+        Ref { m_pluginElement }->invalidateStyleAndLayerComposition();
     }
     m_plugin->visibilityDidChange(isVisible());
 #endif
@@ -372,28 +395,66 @@ void PluginView::initializePlugin()
     }
 }
 
+PluginLayerHostingStrategy PluginView::layerHostingStrategy() const
+{
+    if (!m_isInitialized)
+        return PluginLayerHostingStrategy::None;
+
+    return m_plugin->layerHostingStrategy();
+}
+
 #if PLATFORM(COCOA)
 
 PlatformLayer* PluginView::platformLayer() const
 {
     if (!m_isInitialized)
-        return nil;
+        return nullptr;
 
-    return m_plugin->pluginLayer();
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
+    if (m_plugin->layerHostingStrategy() == PluginLayerHostingStrategy::PlatformLayer)
+        return m_plugin->platformLayer();
+#endif
+
+    return nullptr;
 }
 
 #endif
 
+GraphicsLayer* PluginView::graphicsLayer() const
+{
+    if (!m_isInitialized)
+        return nullptr;
+
+    if (m_plugin->layerHostingStrategy() == PluginLayerHostingStrategy::GraphicsLayer)
+        return m_plugin->graphicsLayer();
+
+    return nullptr;
+}
+
 bool PluginView::scroll(ScrollDirection direction, ScrollGranularity granularity)
 {
-    return m_isInitialized && m_plugin->scroll(direction, granularity);
+    if (!m_isInitialized)
+        return false;
+
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
+    if (is<PDFPlugin>(m_plugin))
+        return downcast<PDFPlugin>(m_plugin)->scroll(direction, granularity);
+#endif
+
+    return false;
 }
 
 ScrollPosition PluginView::scrollPositionForTesting() const
 {
     if (!m_isInitialized)
         return { };
-    return m_plugin->scrollPositionForTesting();
+
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
+    if (is<PDFPlugin>(m_plugin))
+        return downcast<PDFPlugin>(m_plugin)->scrollPositionForTesting();
+#endif
+
+    return { };
 }
 
 Scrollbar* PluginView::horizontalScrollbar()
@@ -401,7 +462,12 @@ Scrollbar* PluginView::horizontalScrollbar()
     if (!m_isInitialized)
         return nullptr;
 
-    return m_plugin->horizontalScrollbar();
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
+    if (is<PDFPlugin>(m_plugin))
+        return downcast<PDFPlugin>(m_plugin)->horizontalScrollbar();
+#endif
+
+    return nullptr;
 }
 
 Scrollbar* PluginView::verticalScrollbar()
@@ -409,12 +475,20 @@ Scrollbar* PluginView::verticalScrollbar()
     if (!m_isInitialized)
         return nullptr;
 
-    return m_plugin->verticalScrollbar();
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
+    if (is<PDFPlugin>(m_plugin))
+        return downcast<PDFPlugin>(m_plugin)->verticalScrollbar();
+#endif
+
+    return nullptr;
 }
 
 bool PluginView::wantsWheelEvents()
 {
-    return true;
+    if (!m_isInitialized)
+        return false;
+
+    return m_plugin->wantsWheelEvents();
 }
 
 void PluginView::setFrameRect(const WebCore::IntRect& rect)
@@ -423,7 +497,7 @@ void PluginView::setFrameRect(const WebCore::IntRect& rect)
     viewGeometryDidChange();
 }
 
-void PluginView::paint(GraphicsContext& context, const IntRect& /*dirtyRect*/, Widget::SecurityOriginPaintPolicy, RegionContext*)
+void PluginView::paint(GraphicsContext& context, const IntRect& dirtyRect, Widget::SecurityOriginPaintPolicy, RegionContext*)
 {
     if (!m_isInitialized)
         return;
@@ -446,9 +520,16 @@ void PluginView::paint(GraphicsContext& context, const IntRect& /*dirtyRect*/, W
             if (!image)
                 return;
             context.drawImage(*image, frameRect());
-        } else
-            m_transientPaintingSnapshot->paint(context, m_plugin->deviceScaleFactor(), frameRect().location(), m_transientPaintingSnapshot->bounds());
+        } else {
+            auto deviceScaleFactor = 1;
+            if (auto* page = m_pluginElement->document().page())
+                deviceScaleFactor = page->deviceScaleFactor();
+            m_transientPaintingSnapshot->paint(context, deviceScaleFactor, frameRect().location(), m_transientPaintingSnapshot->bounds());
+        }
+        return;
     }
+
+    m_plugin->paint(context, dirtyRect);
 }
 
 void PluginView::frameRectsChanged()
@@ -504,16 +585,16 @@ void PluginView::handleEvent(Event& event)
         return;
 
     bool didHandleEvent = false;
-
     if ((event.type() == eventNames().mousemoveEvent && currentEvent->type() == WebEventType::MouseMove)
         || (event.type() == eventNames().mousedownEvent && currentEvent->type() == WebEventType::MouseDown)
         || (event.type() == eventNames().mouseupEvent && currentEvent->type() == WebEventType::MouseUp)) {
         // FIXME: Clicking in a scroll bar should not change focus.
+        RefPtr frame = this->frame();
         if (currentEvent->type() == WebEventType::MouseDown) {
             focusPluginElement();
-            frame()->eventHandler().setCapturingMouseEventsElement(m_pluginElement.ptr());
+            frame->eventHandler().setCapturingMouseEventsElement(m_pluginElement.copyRef());
         } else if (currentEvent->type() == WebEventType::MouseUp)
-            frame()->eventHandler().setCapturingMouseEventsElement(nullptr);
+            frame->eventHandler().setCapturingMouseEventsElement(nullptr);
 
         didHandleEvent = m_plugin->handleMouseEvent(static_cast<const WebMouseEvent&>(*currentEvent));
     } else if (eventNames().isWheelEventType(event.type()) && currentEvent->type() == WebEventType::Wheel)
@@ -531,7 +612,7 @@ void PluginView::handleEvent(Event& event)
     if (didHandleEvent)
         event.setDefaultHandled();
 }
-    
+
 bool PluginView::handleEditingCommand(const String& commandName, const String&)
 {
     if (!m_isInitialized)
@@ -672,7 +753,7 @@ IntRect PluginView::clipRectInWindowCoordinates() const
     // Get the frame rect in window coordinates.
     IntRect frameRectInWindowCoordinates = parent()->contentsToWindow(frameRect());
 
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
 
     // Get the window clip rect for the plugin element (in window coordinates).
     IntRect windowClipRect = frame->view()->windowClipRectForFrameOwner(m_pluginElement.ptr(), true);
@@ -685,12 +766,14 @@ IntRect PluginView::clipRectInWindowCoordinates() const
 
 void PluginView::focusPluginElement()
 {
-    ASSERT(frame());
-    
-    if (Page* page = frame()->page())
-        CheckedRef(page->focusController())->setFocusedElement(m_pluginElement.ptr(), *frame());
+    RefPtr frame = this->frame();
+    ASSERT(frame);
+
+    Ref pluginElement = m_pluginElement;
+    if (auto* page = frame->page())
+        CheckedRef(page->focusController())->setFocusedElement(pluginElement.ptr(), *frame);
     else
-        RefPtr(frame()->document())->setFocusedElement(m_pluginElement.ptr());
+        RefPtr(frame->document())->setFocusedElement(pluginElement.ptr());
 }
 
 void PluginView::pendingResourceRequestTimerFired()
@@ -741,7 +824,7 @@ void PluginView::invalidateRect(const IntRect& dirtyRect)
         return;
 
 #if PLATFORM(COCOA)
-    if (m_plugin->pluginLayer())
+    if (m_plugin->isComposited())
         return;
 #endif
 
@@ -820,6 +903,11 @@ CGFloat PluginView::contentScaleFactor() const
 bool PluginView::isUsingUISideCompositing() const
 {
     return m_webPage->isUsingUISideCompositing();
+}
+
+void PluginView::didChangeSettings()
+{
+    m_plugin->didChangeSettings();
 }
 
 } // namespace WebKit

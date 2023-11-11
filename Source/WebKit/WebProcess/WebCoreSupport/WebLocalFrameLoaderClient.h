@@ -182,6 +182,7 @@ private:
     WebCore::ResourceError cannotShowMIMETypeError(const WebCore::ResourceResponse&) const final;
     WebCore::ResourceError fileDoesNotExistError(const WebCore::ResourceResponse&) const final;
     WebCore::ResourceError httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest&) const final;
+    WebCore::ResourceError httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest&) const final;
     WebCore::ResourceError pluginWillHandleLoadError(const WebCore::ResourceResponse&) const final;
     
     bool shouldFallBack(const WebCore::ResourceError&) const final;
@@ -275,9 +276,12 @@ private:
 
     inline bool hasPlugInView() const;
 
+    void broadcastFrameRemovalToOtherProcesses() final;
+    void broadcastMainFrameURLChangeToOtherProcesses(const URL&) final;
+
     ScopeExit<Function<void()>> m_frameInvalidator;
 
-#if ENABLE(PDFKIT_PLUGIN)
+#if ENABLE(PDF_PLUGIN)
     RefPtr<PluginView> m_pluginView;
     bool m_hasSentResponseToPluginView { false };
 #endif
@@ -295,7 +299,7 @@ private:
     void notifyPageOfAppBoundBehavior() final;
 #endif
 
-#if ENABLE(PDFKIT_PLUGIN)
+#if ENABLE(PDF_PLUGIN)
     bool shouldUsePDFPlugin(const String& contentType, StringView path) const final;
 #endif
 
@@ -304,6 +308,8 @@ private:
 #if ENABLE(ARKIT_INLINE_PREVIEW_MAC)
     void modelInlinePreviewUUIDs(CompletionHandler<void(Vector<String>)>&&) const final;
 #endif
+
+    void dispatchLoadEventToOwnerElementInAnotherProcess() final;
 };
 
 // As long as EmptyFrameLoaderClient exists in WebCore, this can return nullptr.

@@ -43,7 +43,11 @@ namespace WebCore {
 
 static bool isFilePasteboardType(const String& type)
 {
-    return [legacyFilenamesPasteboardType() isEqualToString:type] || [legacyFilesPromisePasteboardType() isEqualToString:type];
+    return [legacyFilenamesPasteboardType() isEqualToString:type]
+        || [legacyFilesPromisePasteboardType() isEqualToString:type]
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+        || [(NSString *)kUTTypeFileURL isEqualToString:type];
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 static bool canWritePasteboardType(const String& type)
@@ -155,14 +159,14 @@ static Vector<String> urlStringsFromPasteboard(NSPasteboard *pasteboard)
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             if (id propertyList = [item propertyListForType:(__bridge NSString *)kUTTypeURL]) {
                 if (auto urlFromItem = adoptNS([[NSURL alloc] initWithPasteboardPropertyList:propertyList ofType:(__bridge NSString *)kUTTypeURL]))
-                    urlStrings.uncheckedAppend([urlFromItem absoluteString]);
+                    urlStrings.append([urlFromItem absoluteString]);
             }
 ALLOW_DEPRECATED_DECLARATIONS_END
         }
     } else if (NSURL *urlFromPasteboard = [NSURL URLFromPasteboard:pasteboard])
-        urlStrings.uncheckedAppend(urlFromPasteboard.absoluteString);
+        urlStrings.append(urlFromPasteboard.absoluteString);
     else if (NSString *urlStringFromPasteboard = [pasteboard stringForType:legacyURLPasteboardType()])
-        urlStrings.uncheckedAppend(urlStringFromPasteboard);
+        urlStrings.append(urlStringFromPasteboard);
 
     bool mayContainFiles = pasteboardMayContainFilePaths(pasteboard);
     urlStrings.removeAllMatching([&] (auto& urlString) {
@@ -563,7 +567,7 @@ std::optional<PasteboardItemInfo> PlatformPasteboard::informationForItemAtIndex(
     ListHashSet<String> webSafeTypes;
     info.platformTypesByFidelity.reserveInitialCapacity(platformTypes.count);
     for (NSPasteboardType type in platformTypes) {
-        info.platformTypesByFidelity.uncheckedAppend(type);
+        info.platformTypesByFidelity.append(type);
         auto webSafeType = webSafeMIMETypeForModernPasteboardType(type, containsFileURL);
         if (webSafeType.isEmpty())
             continue;

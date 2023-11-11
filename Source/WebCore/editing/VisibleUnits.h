@@ -36,11 +36,11 @@ class VisiblePosition;
 class SimplifiedBackwardsTextIterator;
 class TextIterator;
 
-enum EWordSide { RightWordIfOnBoundary = false, LeftWordIfOnBoundary = true };
+enum class WordSide : bool { RightWordIfOnBoundary, LeftWordIfOnBoundary };
 
 // words
-WEBCORE_EXPORT VisiblePosition startOfWord(const VisiblePosition&, EWordSide = RightWordIfOnBoundary);
-WEBCORE_EXPORT VisiblePosition endOfWord(const VisiblePosition&, EWordSide = RightWordIfOnBoundary);
+WEBCORE_EXPORT VisiblePosition startOfWord(const VisiblePosition&, WordSide = WordSide::RightWordIfOnBoundary);
+WEBCORE_EXPORT VisiblePosition endOfWord(const VisiblePosition&, WordSide = WordSide::RightWordIfOnBoundary);
 WEBCORE_EXPORT VisiblePosition previousWordPosition(const VisiblePosition&);
 WEBCORE_EXPORT VisiblePosition nextWordPosition(const VisiblePosition&);
 WEBCORE_EXPORT VisiblePosition rightWordPosition(const VisiblePosition&, bool skipsSpaceWhenMovingRight);
@@ -123,7 +123,7 @@ unsigned suffixLengthForRange(const SimpleRange&, Vector<UChar, 1024>&);
 unsigned prefixLengthForRange(const SimpleRange&, Vector<UChar, 1024>&);
 unsigned backwardSearchForBoundaryWithTextIterator(SimplifiedBackwardsTextIterator&, Vector<UChar, 1024>&, unsigned, BoundarySearchFunction);
 unsigned forwardSearchForBoundaryWithTextIterator(TextIterator&, Vector<UChar, 1024>&, unsigned, BoundarySearchFunction);
-Node* findStartOfParagraph(Node*, Node*, Node*, int&, Position::AnchorType&, EditingBoundaryCrossingRule);
-Node* findEndOfParagraph(Node*, Node*, Node*, int&, Position::AnchorType&, EditingBoundaryCrossingRule);
+RefPtr<Node> findStartOfParagraph(Node*, Node*, Node*, int&, Position::AnchorType&, EditingBoundaryCrossingRule);
+RefPtr<Node> findEndOfParagraph(Node*, Node*, Node*, int&, Position::AnchorType&, EditingBoundaryCrossingRule);
 
 } // namespace WebCore

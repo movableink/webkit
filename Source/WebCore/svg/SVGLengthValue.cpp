@@ -106,9 +106,9 @@ static inline SVGLengthType primitiveTypeToLengthType(CSSUnitType primitiveType)
         return SVGLengthType::Number;
     case CSSUnitType::CSS_PERCENTAGE:
         return SVGLengthType::Percentage;
-    case CSSUnitType::CSS_EMS:
+    case CSSUnitType::CSS_EM:
         return SVGLengthType::Ems;
-    case CSSUnitType::CSS_EXS:
+    case CSSUnitType::CSS_EX:
         return SVGLengthType::Exs;
     case CSSUnitType::CSS_PX:
         return SVGLengthType::Pixels;
@@ -139,9 +139,9 @@ static inline CSSUnitType lengthTypeToPrimitiveType(SVGLengthType lengthType)
     case SVGLengthType::Percentage:
         return CSSUnitType::CSS_PERCENTAGE;
     case SVGLengthType::Ems:
-        return CSSUnitType::CSS_EMS;
+        return CSSUnitType::CSS_EM;
     case SVGLengthType::Exs:
-        return CSSUnitType::CSS_EXS;
+        return CSSUnitType::CSS_EX;
     case SVGLengthType::Pixels:
         return CSSUnitType::CSS_PX;
     case SVGLengthType::Centimeters:
@@ -329,11 +329,11 @@ ExceptionOr<void> SVGLengthValue::setValueAsString(StringView string)
     return readCharactersForParsing(string, [&](auto buffer) -> ExceptionOr<void> {
         auto convertedNumber = parseNumber(buffer, SuffixSkippingPolicy::DontSkip);
         if (!convertedNumber)
-            return Exception { SyntaxError };
+            return Exception { ExceptionCode::SyntaxError };
 
         auto lengthType = parseLengthType(buffer);
         if (lengthType == SVGLengthType::Unknown)
-            return Exception { SyntaxError };
+            return Exception { ExceptionCode::SyntaxError };
 
         m_lengthType = lengthType;
         m_valueInSpecifiedUnits = *convertedNumber;

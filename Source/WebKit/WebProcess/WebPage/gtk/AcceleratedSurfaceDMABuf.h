@@ -25,12 +25,16 @@
 
 #pragma once
 
+#if USE(EGL)
+
 #include "AcceleratedSurface.h"
 
 #include "MessageReceiver.h"
+#include <wtf/Noncopyable.h>
 #include <wtf/unix/UnixFileDescriptor.h>
 
 #if USE(GBM)
+#include "DMABufRendererBufferFormat.h"
 typedef void *EGLImage;
 struct gbm_bo;
 #endif
@@ -71,6 +75,7 @@ private:
     // IPC::MessageReceiver.
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
+    void releaseBuffer(uint64_t);
     void frameDone();
 
     class RenderTarget {
@@ -78,81 +83,106 @@ private:
     public:
         virtual ~RenderTarget();
 
+        uint64_t id() const { return m_id; }
+
         virtual void willRenderFrame() const;
         virtual void didRenderFrame() { };
-        virtual void didDisplayFrame() { };
 
     protected:
-        explicit RenderTarget(const WebCore::IntSize&);
+        RenderTarget(uint64_t, const WebCore::IntSize&);
 
+        uint64_t m_id { 0 };
+        uint64_t m_surfaceID { 0 };
         unsigned m_depthStencilBuffer { 0 };
     };
 
     class RenderTargetColorBuffer : public RenderTarget {
     protected:
-        explicit RenderTargetColorBuffer(const WebCore::IntSize&);
+        RenderTargetColorBuffer(uint64_t, const WebCore::IntSize&);
         virtual ~RenderTargetColorBuffer();
 
         void willRenderFrame() const final;
-        void didRenderFrame() override;
-        void didDisplayFrame() override;
 
-        unsigned m_backColorBuffer { 0 };
-        unsigned m_frontColorBuffer { 0 };
-        unsigned m_displayColorBuffer { 0 };
+        unsigned m_colorBuffer { 0 };
     };
 
 #if USE(GBM)
     class RenderTargetEGLImage final : public RenderTargetColorBuffer {
     public:
-        static std::unique_ptr<RenderTarget> create(uint64_t, const WebCore::IntSize&);
-        RenderTargetEGLImage(uint64_t, const WebCore::IntSize&, EGLImage, WTF::UnixFileDescriptor&&, EGLImage, WTF::UnixFileDescriptor&&, EGLImage, WTF::UnixFileDescriptor&&, uint32_t format, uint32_t offset, uint32_t stride, uint64_t modifier);
+        static std::unique_ptr<RenderTarget> create(uint64_t, const WebCore::IntSize&, const DMABufRendererBufferFormat&);
+        RenderTargetEGLImage(uint64_t, const WebCore::IntSize&, EGLImage, uint32_t format, Vector<WTF::UnixFileDescriptor>&&, Vector<uint32_t>&& offsets, Vector<uint32_t>&& strides, uint64_t modifier);
         ~RenderTargetEGLImage();
 
     private:
-        void didRenderFrame() override;
-        void didDisplayFrame() override;
-
-        EGLImage m_backImage { nullptr };
-        EGLImage m_frontImage { nullptr };
-        EGLImage m_displayImage { nullptr };
+        EGLImage m_image { nullptr };
     };
 #endif
 
     class RenderTargetSHMImage final : public RenderTargetColorBuffer {
     public:
         static std::unique_ptr<RenderTarget> create(uint64_t, const WebCore::IntSize&);
-        RenderTargetSHMImage(uint64_t, const WebCore::IntSize&, Ref<ShareableBitmap>&&, ShareableBitmapHandle&&, Ref<ShareableBitmap>&&, ShareableBitmapHandle&&, Ref<ShareableBitmap>&&, ShareableBitmapHandle&&);
+        RenderTargetSHMImage(uint64_t, const WebCore::IntSize&, Ref<ShareableBitmap>&&, ShareableBitmapHandle&&);
         ~RenderTargetSHMImage() = default;
 
     private:
         void didRenderFrame() override;
-        void didDisplayFrame() override;
 
-        Ref<ShareableBitmap> m_backBitmap;
-        Ref<ShareableBitmap> m_frontBitmap;
-        Ref<ShareableBitmap> m_displayBitmap;
+        Ref<ShareableBitmap> m_bitmap;
     };
 
     class RenderTargetTexture final : public RenderTarget {
     public:
         static std::unique_ptr<RenderTarget> create(uint64_t, const WebCore::IntSize&);
-        RenderTargetTexture(uint64_t, const WebCore::IntSize&, WTF::UnixFileDescriptor&&, unsigned, WTF::UnixFileDescriptor&&, unsigned, WTF::UnixFileDescriptor&&, unsigned, uint32_t format, uint32_t offset, uint32_t stride, uint64_t modifier);
+        RenderTargetTexture(uint64_t, const WebCore::IntSize&, unsigned texture, uint32_t format, Vector<WTF::UnixFileDescriptor>&&, Vector<uint32_t>&& offsets, Vector<uint32_t>&& strides, uint64_t modifier);
         ~RenderTargetTexture();
 
     private:
         void willRenderFrame() const override;
-        void didRenderFrame() override;
-        void didDisplayFrame() override;
 
-        unsigned m_backTexture { 0 };
-        unsigned m_frontTexture { 0 };
-        unsigned m_displayTexture { 0 };
+        unsigned m_texture { 0 };
+    };
+
+    class SwapChain {
+        WTF_MAKE_NONCOPYABLE(SwapChain);
+    public:
+        explicit SwapChain(uint64_t);
+        ~SwapChain() = default;
+
+        enum class Type { Invalid, EGLImage, SharedMemory, Texture };
+
+        Type type() const { return m_type; }
+        void resize(const WebCore::IntSize&);
+        RenderTarget* nextTarget();
+        void releaseTarget(uint64_t);
+        void reset();
+
+        unsigned size() const { return m_freeTargets.size() + m_lockedTargets.size(); }
+
+#if USE(GBM)
+        void setupBufferFormat(const Vector<DMABufRendererBufferFormat>&);
+#endif
+
+    private:
+        static constexpr unsigned s_maximumBuffers = 3;
+
+        std::unique_ptr<RenderTarget> createTarget() const;
+
+        uint64_t m_surfaceID { 0 };
+        Type m_type { Type::Invalid };
+        WebCore::IntSize m_size;
+        Vector<std::unique_ptr<RenderTarget>, s_maximumBuffers> m_freeTargets;
+        Vector<std::unique_ptr<RenderTarget>, s_maximumBuffers> m_lockedTargets;
+#if USE(GBM)
+        DMABufRendererBufferFormat m_dmabufFormat;
+#endif
     };
 
     uint64_t m_id { 0 };
     unsigned m_fbo { 0 };
-    std::unique_ptr<RenderTarget> m_target;
+    SwapChain m_swapChain;
+    RenderTarget* m_target { nullptr };
 };
 
 } // namespace WebKit
+
+#endif // USE(EGL)

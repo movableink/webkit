@@ -9,6 +9,12 @@
 		"paths": ["Configurations/Version.xcconfig"]
 	},
 	{
+		"name": "Poison",
+		"pickable": false,
+		"headers": ["Poisoned commit"],
+		"paths": ["metadata/poison.txt"]
+	},
+	{
 		"name": "Build-fix",
 		"pickable": false,
 		"headers": [
@@ -51,6 +57,18 @@
 		"trailers": [
 			"^[Cc]herry[- ][Pp]ick:",
 			"^[Oo]riginally[- ]landed[- ]as:"
+		]
+	},
+	{
+		"name": "Test-import",
+		"pickable": false,
+		"headers": ["[Ii]mport", "[Ss]ync"],
+		"paths": [
+			"LayoutTests/TestExpectations",
+			"LayoutTests/imported",
+			"LayoutTests/platform/.+/TestExpectations",
+			"LayoutTests/platform/.+/imported",
+			"LayoutTests/tests-options.json"
 		]
 	},
 	{

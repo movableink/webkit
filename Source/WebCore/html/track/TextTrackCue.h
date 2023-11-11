@@ -56,7 +56,7 @@ public:
 protected:
     void initialize();
 
-    constexpr static auto CreateTextTrackCueBox = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
+    static constexpr auto CreateTextTrackCueBox = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     TextTrackCueBox(Document&, TextTrackCue&);
     ~TextTrackCueBox() { }
 
@@ -107,7 +107,7 @@ public:
     bool isEqual(const TextTrackCue&, CueMatchRules) const;
 
     void willChange();
-    virtual void didChange();
+    virtual void didChange(bool = false);
 
     virtual RefPtr<TextTrackCueBox> getDisplayTree();
     virtual void removeDisplayTree();
@@ -132,12 +132,13 @@ public:
     virtual void pauseSpeaking() { }
     virtual void cancelSpeaking() { }
 
+    virtual bool cueContentsMatch(const TextTrackCue&) const;
+
 protected:
     TextTrackCue(Document&, const MediaTime& start, const MediaTime& end);
 
     Document* document() const;
 
-    virtual bool cueContentsMatch(const TextTrackCue&) const;
     virtual void toJSON(JSON::Object&) const;
 
 private:

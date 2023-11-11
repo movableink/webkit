@@ -29,6 +29,7 @@
 #if ENABLE(JIT)
 
 #include "AccessCase.h"
+#include "CachedCall.h"
 #include "CallLinkInfo.h"
 #include "CodeBlock.h"
 #include "FullCodeOrigin.h"
@@ -37,13 +38,7 @@
 
 namespace JSC {
 
-PolymorphicCallNode::~PolymorphicCallNode()
-{
-    if (isOnList())
-        remove();
-}
-
-void PolymorphicCallNode::unlink(VM& vm)
+void PolymorphicCallNode::unlinkImpl(VM& vm)
 {
     if (m_callLinkInfo) {
         dataLogLnIf(Options::dumpDisassembly(), "Unlinking polymorphic call at ", m_callLinkInfo->doneLocation(), ", bc#", m_callLinkInfo->codeOrigin().bytecodeIndex());
@@ -75,12 +70,12 @@ PolymorphicCallStubRoutine::PolymorphicCallStubRoutine(
     for (unsigned index = 0; index < cases.size(); ++index) {
         const PolymorphicCallCase& callCase = cases[index];
         m_variants[index].set(vm, owner, callCase.variant().rawCalleeCell());
-        if (!callerFrame->isWasmFrame()) {
+        if (!callerFrame->isNativeCalleeFrame()) {
             if (shouldDumpDisassemblyFor(callerFrame->codeBlock()))
                 dataLog("Linking polymorphic call in ", FullCodeOrigin(callerFrame->codeBlock(), callerFrame->codeOrigin()), " to ", callCase.variant(), ", codeBlock = ", pointerDump(callCase.codeBlock()), "\n");
         }
         if (CodeBlock* codeBlock = callCase.codeBlock())
-            codeBlock->linkIncomingPolymorphicCall(callerFrame, m_callNodes.add(&info));
+            codeBlock->linkIncomingCall(callerFrame, m_callNodes.add(&info));
     }
     WTF::storeStoreFence();
     makeGCAware(vm);

@@ -74,7 +74,7 @@ static CaptureSourceOrError initializeCoreAudioCaptureSource(Ref<CoreAudioCaptur
 {
     if (constraints) {
         if (auto result = source->applyConstraints(*constraints))
-            return WTFMove(result->badConstraint);
+            return CaptureSourceOrError({ WTFMove(result->badConstraint), MediaAccessDenialReason::InvalidConstraint });
     }
     return CaptureSourceOrError(WTFMove(source));
 }
@@ -86,13 +86,13 @@ CaptureSourceOrError CoreAudioCaptureSource::create(String&& deviceID, MediaDevi
 #if PLATFORM(MAC)
     auto device = CoreAudioCaptureDeviceManager::singleton().coreAudioDeviceWithUID(deviceID);
     if (!device)
-        return { "No CoreAudioCaptureSource device"_s };
+        return CaptureSourceOrError({ "No CoreAudioCaptureSource device"_s, MediaAccessDenialReason::PermissionDenied });
 
     auto source = adoptRef(*new CoreAudioCaptureSource(device.value(), device->deviceID(), WTFMove(hashSalts), nullptr, pageIdentifier));
 #elif PLATFORM(IOS_FAMILY)
     auto device = AVAudioSessionCaptureDeviceManager::singleton().audioSessionDeviceWithUID(WTFMove(deviceID));
     if (!device)
-        return { "No AVAudioSessionCaptureDevice device"_s };
+        return CaptureSourceOrError({ "No AVAudioSessionCaptureDevice device"_s, MediaAccessDenialReason::PermissionDenied });
 
     auto source = adoptRef(*new CoreAudioCaptureSource(device.value(), 0, WTFMove(hashSalts), nullptr, pageIdentifier));
 #endif
@@ -272,7 +272,7 @@ const RealtimeMediaSourceCapabilities& CoreAudioCaptureSource::capabilities()
         RealtimeMediaSourceCapabilities capabilities(settings().supportedConstraints());
         capabilities.setDeviceId(hashedId());
         capabilities.setEchoCancellation(RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite);
-        capabilities.setVolume(CapabilityValueOrRange(0.0, 1.0));
+        capabilities.setVolume(CapabilityRange(0.0, 1.0));
         capabilities.setSampleRate(unit().sampleRateCapacities());
         m_capabilities = WTFMove(capabilities);
     }

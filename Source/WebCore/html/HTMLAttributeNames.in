@@ -111,6 +111,8 @@ contenteditable
 controls
 coords
 crossorigin
+cue
+cuebackground
 data
 datetime
 declare
@@ -223,6 +225,7 @@ oncanplaythrough
 onchange
 onclick
 onclose
+oncontentvisibilityautostatechange
 oncontextmenu
 oncopy
 oncuechange
@@ -398,6 +401,7 @@ step
 style
 subtitle
 summary
+switch
 tabindex
 target
 text

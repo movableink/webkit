@@ -117,27 +117,32 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
             addStyleRule(downcast<StyleRule>(rule));
         return;
 
+    case StyleRuleType::Scope:
+        // FIXME: to implement
+        // https://bugs.webkit.org/show_bug.cgi?id=264500
+        return;
+
     case StyleRuleType::Page:
         if (m_ruleSet)
             m_ruleSet->addPageRule(downcast<StyleRulePage>(rule));
         return;
 
     case StyleRuleType::Media: {
-        auto& mediaRule = downcast<StyleRuleMedia>(rule);
-        if (m_mediaQueryCollector.pushAndEvaluate(mediaRule.mediaQueries()))
-            addChildRules(mediaRule.childRules());
-        m_mediaQueryCollector.pop(mediaRule.mediaQueries());
+        auto mediaRule = downcast<StyleRuleMedia>(WTFMove(rule));
+        if (m_mediaQueryCollector.pushAndEvaluate(mediaRule->mediaQueries()))
+            addChildRules(mediaRule->childRules());
+        m_mediaQueryCollector.pop(mediaRule->mediaQueries());
         return;
     }
 
     case StyleRuleType::Container: {
-        auto& containerRule = downcast<StyleRuleContainer>(rule);
+        auto containerRule = downcast<StyleRuleContainer>(WTFMove(rule));
         auto previousContainerQueryIdentifier = m_currentContainerQueryIdentifier;
         if (m_ruleSet) {
-            m_ruleSet->m_containerQueries.append({ containerRule, previousContainerQueryIdentifier });
+            m_ruleSet->m_containerQueries.append({ containerRule.copyRef(), previousContainerQueryIdentifier });
             m_currentContainerQueryIdentifier = m_ruleSet->m_containerQueries.size();
         }
-        addChildRules(containerRule.childRules());
+        addChildRules(containerRule->childRules());
         if (m_ruleSet)
             m_currentContainerQueryIdentifier = previousContainerQueryIdentifier;
         return;
@@ -147,16 +152,16 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
     case StyleRuleType::LayerStatement: {
         disallowDynamicMediaQueryEvaluationIfNeeded();
 
-        auto& layerRule = downcast<StyleRuleLayer>(rule);
-        if (layerRule.isStatement()) {
+        auto layerRule = downcast<StyleRuleLayer>(WTFMove(rule));
+        if (layerRule->isStatement()) {
             // Statement syntax just registers the layers.
-            registerLayers(layerRule.nameList());
+            registerLayers(layerRule->nameList());
             return;
         }
         // Block syntax.
-        pushCascadeLayer(layerRule.name());
-        addChildRules(layerRule.childRules());
-        popCascadeLayer(layerRule.name());
+        pushCascadeLayer(layerRule->name());
+        addChildRules(layerRule->childRules());
+        popCascadeLayer(layerRule->name());
         return;
     }
     case StyleRuleType::CounterStyle:
@@ -170,11 +175,12 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
             m_collectedResolverMutatingRules.append({ rule, m_currentCascadeLayerIdentifier });
         return;
 
-    case StyleRuleType::Supports:
-        if (downcast<StyleRuleSupports>(rule).conditionIsSupported())
-            addChildRules(downcast<StyleRuleSupports>(rule).childRules());
+    case StyleRuleType::Supports: {
+        auto supportsRule = downcast<StyleRuleSupports>(WTFMove(rule));
+        if (supportsRule->conditionIsSupported())
+            addChildRules(supportsRule->childRules());
         return;
-
+    }
     case StyleRuleType::Import:
     case StyleRuleType::Margin:
     case StyleRuleType::Namespace:
@@ -227,7 +233,6 @@ void RuleSetBuilder::resolveSelectorListWithNesting(StyleRuleWithNesting& rule)
         return;
 
     auto resolvedSelectorList = CSSSelectorParser::resolveNestingParent(rule.originalSelectorList(), parentResolvedSelectorList);
-    ASSERT(!resolvedSelectorList.hasExplicitNestingParent());
     rule.wrapperAdoptSelectorList(WTFMove(resolvedSelectorList));    
 }
 
@@ -352,10 +357,9 @@ void RuleSetBuilder::updateCascadeLayerPriorities()
 
     auto layerCount = m_ruleSet->m_cascadeLayers.size();
 
-    Vector<RuleSet::CascadeLayerIdentifier> layersInPriorityOrder;
-    layersInPriorityOrder.reserveInitialCapacity(layerCount);
-    for (RuleSet::CascadeLayerIdentifier identifier = 1; identifier <= layerCount; ++identifier)
-        layersInPriorityOrder.uncheckedAppend(identifier);
+    Vector<RuleSet::CascadeLayerIdentifier> layersInPriorityOrder(layerCount, [](size_t i) {
+        return i + 1;
+    });
 
     std::sort(layersInPriorityOrder.begin(), layersInPriorityOrder.end(), compare);
 
@@ -473,9 +477,9 @@ void RuleSetBuilder::MediaQueryCollector::pop(const MQ::MediaQueryList& mediaQue
 
     if (!dynamicContextStack.last().affectedRulePositions.isEmpty() || !collectDynamic) {
         RuleSet::DynamicMediaQueryRules rules;
-        rules.mediaQueries.reserveCapacity(rules.mediaQueries.size() + dynamicContextStack.size());
-        for (auto& context : dynamicContextStack)
-            rules.mediaQueries.uncheckedAppend(context.queries);
+        rules.mediaQueries = WTF::map(dynamicContextStack, [](auto& context) {
+            return context.queries;
+        });
 
         if (collectDynamic) {
             rules.affectedRulePositions.appendVector(dynamicContextStack.last().affectedRulePositions);

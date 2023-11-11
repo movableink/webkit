@@ -133,7 +133,7 @@ if ($buildDir && !isCMakeBuild()) {
 }
 
 if (isWinCairo() || (isJSCOnly() && isWindows())) {
-    (system("python Tools/Scripts/update-webkit-wincairo-libs.py") == 0) or die;
+    (system("python3 Tools/Scripts/update-webkit-wincairo-libs.py") == 0) or die;
 }
 
 if ($useCCache == 1) {
@@ -147,10 +147,6 @@ $ENV{'EXPORT_COMPILE_COMMANDS'} = "YES" if $exportCompileCommands;
 checkRequiredSystemConfig();
 setConfiguration();
 chdirWebKit();
-my @options = XcodeOptions();
-my @additionalSupportOptions = ();
-push @additionalSupportOptions, XcodeCoverageSupportOptions() if $coverageSupport;
-push @additionalSupportOptions, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
 
 if ($forceCLoop) {
     $ftlJIT = 0;
@@ -196,6 +192,14 @@ if (isCMakeBuild()) {
 }
 
 if (isAppleCocoaWebKit()) {
+    my @options = XcodeOptions();
+    # FIXME: additionalSupportOptions is unused. Coverage and static analysis options are broken.
+    # https://webkit.org/b/259562
+    my @additionalSupportOptions = ();
+    push @additionalSupportOptions, XcodeCoverageSupportOptions() if $coverageSupport;
+    push @additionalSupportOptions, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
+    push @additionalSupportOptions, XcodeExportCompileCommandsOptions() if $exportCompileCommands;
+
     push @options, ($forceCLoop ? "ENABLE_JIT=ENABLE_JIT=0" : "ENABLE_JIT=ENABLE_JIT");
     push @options, ($forceCLoop ? "ENABLE_C_LOOP=ENABLE_C_LOOP" : "ENABLE_C_LOOP=ENABLE_C_LOOP=0");
     push @options, ($ftlJIT ? "ENABLE_FTL_JIT=ENABLE_FTL_JIT" : "ENABLE_FTL_JIT=ENABLE_FTL_JIT=0");

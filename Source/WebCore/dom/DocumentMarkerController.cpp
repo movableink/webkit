@@ -29,6 +29,7 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "DocumentInlines.h"
 #include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "Page.h"
@@ -123,7 +124,7 @@ void DocumentMarkerController::invalidateRectsForAllMarkers()
             marker.invalidate();
     }
 
-    if (Page* page = m_document.page())
+    if (CheckedPtr page = m_document->page())
         page->chrome().client().didInvalidateDocumentMarkerRects();
 }
 
@@ -132,31 +133,33 @@ void DocumentMarkerController::invalidateRectsForMarkersInNode(Node& node)
     if (!hasMarkers())
         return;
 
-    auto markers = m_markers.get(&node);
+    auto markers = m_markers.get(node);
     ASSERT(markers);
 
     for (auto& marker : *markers)
         marker.invalidate();
 
-    if (Page* page = m_document.page())
+    if (CheckedPtr page = m_document->page())
         page->chrome().client().didInvalidateDocumentMarkerRects();
 }
 
 static void updateMainFrameLayoutIfNeeded(Document& document)
 {
-    auto* frame = document.frame();
+    RefPtr frame = document.frame();
     if (!frame)
         return;
 
-    auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
     if (!localFrame)
         return;
 
-    auto* mainFrameView = localFrame->view();
-    if (!mainFrameView)
-        return;
+    if (RefPtr mainFrameView = localFrame->view())
+        mainFrameView->updateLayoutAndStyleIfNeededRecursive();
+}
 
-    mainFrameView->updateLayoutAndStyleIfNeededRecursive();
+Ref<Document> DocumentMarkerController::protectedDocument() const
+{
+    return m_document.get();
 }
 
 void DocumentMarkerController::updateRectsForInvalidatedMarkersOfType(DocumentMarker::MarkerType type)
@@ -171,10 +174,10 @@ void DocumentMarkerController::updateRectsForInvalidatedMarkersOfType(DocumentMa
             if (marker.type() != type || marker.isValid())
                 continue;
             if (!updatedLayout) {
-                updateMainFrameLayoutIfNeeded(m_document);
+                updateMainFrameLayoutIfNeeded(protectedDocument());
                 updatedLayout = true;
             }
-            updateRenderedRectsForMarker(marker, *nodeMarkers.key);
+            updateRenderedRectsForMarker(marker, nodeMarkers.key);
         }
     }
 }
@@ -187,10 +190,10 @@ Vector<FloatRect> DocumentMarkerController::renderedRectsForMarkers(DocumentMark
         return result;
     ASSERT(!m_markers.isEmpty());
 
-    RefPtr frame = m_document.frame();
+    RefPtr frame = m_document->frame();
     if (!frame)
         return result;
-    auto* frameView = frame->view();
+    RefPtr frameView = frame->view();
     if (!frameView)
         return result;
 
@@ -202,7 +205,7 @@ Vector<FloatRect> DocumentMarkerController::renderedRectsForMarkers(DocumentMark
         subframeClipRect = frameView->windowToContents(frameView->windowClipRect());
 
     for (auto& nodeMarkers : m_markers) {
-        auto renderer = nodeMarkers.key->renderer();
+        CheckedPtr renderer = nodeMarkers.key->renderer();
         FloatRect overflowClipRect;
         if (renderer)
             overflowClipRect = renderer->absoluteClippedOverflowRectForRepaint();
@@ -263,7 +266,7 @@ void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
 
     m_possiblyExistingMarkerTypes.add(newMarker.type());
 
-    auto& list = m_markers.add(&node, nullptr).iterator->value;
+    auto& list = m_markers.add(node, nullptr).iterator->value;
 
     if (!list) {
         list = makeUnique<Vector<RenderedDocumentMarker>>();
@@ -318,8 +321,8 @@ void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
         list->insert(i, RenderedDocumentMarker(toInsert));
     }
 
-    if (node.renderer())
-        node.renderer()->repaint();
+    if (CheckedPtr renderer = node.renderer())
+        renderer->repaint();
 
     invalidateRectsForMarkersInNode(node);
 }
@@ -335,7 +338,7 @@ void DocumentMarkerController::copyMarkers(Node& source, OffsetRange range, Node
         return;
     ASSERT(!m_markers.isEmpty());
 
-    auto list = m_markers.get(&source);
+    auto list = m_markers.get(source);
     if (!list)
         return;
 
@@ -361,7 +364,7 @@ void DocumentMarkerController::copyMarkers(Node& source, OffsetRange range, Node
     }
 
     if (needRepaint) {
-        if (auto renderer = destination.renderer())
+        if (CheckedPtr renderer = destination.renderer())
             renderer->repaint();
     }
 }
@@ -375,7 +378,7 @@ void DocumentMarkerController::removeMarkers(Node& node, OffsetRange range, Opti
         return;
     ASSERT(!m_markers.isEmpty());
 
-    auto list = m_markers.get(&node);
+    auto list = m_markers.get(node);
     if (!list)
         return;
 
@@ -421,18 +424,18 @@ void DocumentMarkerController::removeMarkers(Node& node, OffsetRange range, Opti
     }
 
     if (list->isEmpty()) {
-        m_markers.remove(&node);
+        m_markers.remove(node);
         if (m_markers.isEmpty())
             m_possiblyExistingMarkerTypes = { };
     }
 
     if (needRepaint) {
-        if (auto renderer = node.renderer())
+        if (CheckedPtr renderer = node.renderer())
             renderer->repaint();
     }
 }
 
-DocumentMarker* DocumentMarkerController::markerContainingPoint(const LayoutPoint& point, DocumentMarker::MarkerType type)
+WeakPtr<DocumentMarker> DocumentMarkerController::markerContainingPoint(const LayoutPoint& point, DocumentMarker::MarkerType type)
 {
     if (!possiblyHasMarkers(type))
         return nullptr;
@@ -442,31 +445,31 @@ DocumentMarker* DocumentMarkerController::markerContainingPoint(const LayoutPoin
     for (auto& nodeMarkers : m_markers.values()) {
         for (auto& marker : *nodeMarkers) {
             if (marker.type() == type && marker.contains(point))
-                return &marker;
+                return marker;
         }
     }
     return nullptr;
 }
 
-Vector<RenderedDocumentMarker*> DocumentMarkerController::markersFor(Node& node, OptionSet<DocumentMarker::MarkerType> types)
+Vector<WeakPtr<RenderedDocumentMarker>> DocumentMarkerController::markersFor(Node& node, OptionSet<DocumentMarker::MarkerType> types)
 {
     if (!possiblyHasMarkers(types))
         return { };
 
-    Vector<RenderedDocumentMarker*> result;
+    Vector<WeakPtr<RenderedDocumentMarker>> result;
     auto list = m_markers.get(&node);
     if (!list)
         return result;
 
     for (auto& marker : *list) {
         if (types.contains(marker.type()))
-            result.append(&marker);
+            result.append(marker);
     }
 
     return result;
 }
 
-void DocumentMarkerController::forEach(const SimpleRange& range, OptionSet<DocumentMarker::MarkerType> types, Function<bool(RenderedDocumentMarker&)> function)
+void DocumentMarkerController::forEach(const SimpleRange& range, OptionSet<DocumentMarker::MarkerType> types, Function<bool(Node&, RenderedDocumentMarker&)> function)
 {
     if (!possiblyHasMarkers(types))
         return;
@@ -480,7 +483,7 @@ void DocumentMarkerController::forEach(const SimpleRange& range, OptionSet<Docum
                 if (marker.startOffset() >= offsetRange.end)
                     break;
                 if (marker.endOffset() > offsetRange.start && types.contains(marker.type())) {
-                    if (function(marker))
+                    if (function(node, marker))
                         return;
                 }
             }
@@ -499,20 +502,31 @@ void DocumentMarkerController::forEachOfTypes(OptionSet<DocumentMarker::MarkerTy
             if (!types.contains(marker.type()))
                 continue;
 
-            function(*nodeMarkers.key, marker);
+            Ref node = nodeMarkers.key;
+            function(node, marker);
         }
     }
 }
 
-Vector<RenderedDocumentMarker*> DocumentMarkerController::markersInRange(const SimpleRange& range, OptionSet<DocumentMarker::MarkerType> types)
+Vector<WeakPtr<RenderedDocumentMarker>> DocumentMarkerController::markersInRange(const SimpleRange& range, OptionSet<DocumentMarker::MarkerType> types)
 {
     // FIXME: Consider making forEach public and changing callers to use that function instead of this one.
-    Vector<RenderedDocumentMarker*> markers;
-    forEach(range, types, [&] (RenderedDocumentMarker& marker) {
-        markers.append(&marker);
+    Vector<WeakPtr<RenderedDocumentMarker>> markers;
+    forEach(range, types, [&] (Node&, RenderedDocumentMarker& marker) {
+        markers.append(marker);
         return false;
     });
     return markers;
+}
+
+Vector<SimpleRange> DocumentMarkerController::rangesForMarkersInRange(const SimpleRange& range, OptionSet<DocumentMarker::MarkerType> types)
+{
+    Vector<SimpleRange> ranges;
+    forEach(range, types, [&] (Node& node, RenderedDocumentMarker& marker) {
+        ranges.append(makeSimpleRange(node, marker));
+        return false;
+    });
+    return ranges;
 }
 
 void DocumentMarkerController::removeMarkers(Node& node, OptionSet<DocumentMarker::MarkerType> types)
@@ -521,7 +535,7 @@ void DocumentMarkerController::removeMarkers(Node& node, OptionSet<DocumentMarke
         return;
     ASSERT(!m_markers.isEmpty());
     
-    auto iterator = m_markers.find(&node);
+    auto iterator = m_markers.find(node);
     if (iterator != m_markers.end())
         removeMarkersFromList(iterator, types);
 }
@@ -582,7 +596,7 @@ OptionSet<DocumentMarker::MarkerType> DocumentMarkerController::removeMarkersFro
     }
 
     if (needsRepainting) {
-        if (auto renderer = iterator->key->renderer())
+        if (CheckedPtr renderer = iterator->key->renderer())
             renderer->repaint();
     }
 
@@ -604,7 +618,7 @@ void DocumentMarkerController::repaintMarkers(OptionSet<DocumentMarker::MarkerTy
     for (auto& nodeMarkers : m_markers) {
         for (auto& marker : *nodeMarkers.value) {
             if (types.contains(marker.type())) {
-                if (auto renderer = nodeMarkers.key->renderer())
+                if (CheckedPtr renderer = nodeMarkers.key->renderer())
                     renderer->repaint();
                 break;
             }
@@ -618,7 +632,7 @@ void DocumentMarkerController::shiftMarkers(Node& node, unsigned startOffset, in
         return;
     ASSERT(!m_markers.isEmpty());
 
-    auto list = m_markers.get(&node);
+    auto list = m_markers.get(node);
     if (!list)
         return;
 
@@ -658,7 +672,7 @@ void DocumentMarkerController::shiftMarkers(Node& node, unsigned startOffset, in
 
     if (didShiftMarker) {
         invalidateRectsForMarkersInNode(node);
-        if (auto renderer = node.renderer())
+        if (CheckedPtr renderer = node.renderer())
             renderer->repaint();
     }
 }
@@ -704,7 +718,7 @@ void DocumentMarkerController::fadeAnimationTimerFired()
             shouldRemoveMarkers = true;
         else {
             cancelTimer = false;
-            if (auto* renderer = node.renderer())
+            if (CheckedPtr renderer = node.renderer())
                 renderer->repaint();
         }
 
@@ -726,7 +740,7 @@ void DocumentMarkerController::fadeAnimationTimerFired()
 bool DocumentMarkerController::hasMarkers(const SimpleRange& range, OptionSet<DocumentMarker::MarkerType> types)
 {
     bool foundMarker = false;
-    forEach(range, types, [&] (RenderedDocumentMarker&) {
+    forEach(range, types, [&] (Node&, RenderedDocumentMarker&) {
         foundMarker = true;
         return true;
     });
@@ -735,7 +749,7 @@ bool DocumentMarkerController::hasMarkers(const SimpleRange& range, OptionSet<Do
 
 void DocumentMarkerController::clearDescriptionOnMarkersIntersectingRange(const SimpleRange& range, OptionSet<DocumentMarker::MarkerType> types)
 {
-    forEach(range, types, [&] (RenderedDocumentMarker& marker) {
+    forEach(range, types, [&] (Node&, RenderedDocumentMarker& marker) {
         marker.clearData();
         return false;
     });
@@ -743,17 +757,17 @@ void DocumentMarkerController::clearDescriptionOnMarkersIntersectingRange(const 
 
 void addMarker(const SimpleRange& range, DocumentMarker::MarkerType type, const DocumentMarker::Data& data)
 {
-    range.start.document().markers().addMarker(range, type, data);
+    range.start.protectedDocument()->checkedMarkers()->addMarker(range, type, data);
 }
 
 void addMarker(Text& node, unsigned startOffset, unsigned length, DocumentMarker::MarkerType type, DocumentMarker::Data&& data)
 {
-    node.document().markers().addMarker(node, startOffset, length, type, WTFMove(data));
+    node.protectedDocument()->checkedMarkers()->addMarker(node, startOffset, length, type, WTFMove(data));
 }
 
 void removeMarkers(const SimpleRange& range, OptionSet<DocumentMarker::MarkerType> types, RemovePartiallyOverlappingMarker policy)
 {
-    range.start.document().markers().removeMarkers(range, types, policy);
+    range.start.protectedDocument()->checkedMarkers()->removeMarkers(range, types, policy);
 }
 
 SimpleRange makeSimpleRange(Node& node, const DocumentMarker& marker)
@@ -769,7 +783,7 @@ void DocumentMarkerController::showMarkers() const
 {
     fprintf(stderr, "%d nodes have markers:\n", m_markers.size());
     for (auto& nodeMarkers : m_markers) {
-        fprintf(stderr, "%p", nodeMarkers.key.get());
+        fprintf(stderr, "%p", nodeMarkers.key.ptr());
         for (auto& marker : *nodeMarkers.value)
             fprintf(stderr, " %d:[%d:%d]", marker.type(), marker.startOffset(), marker.endOffset());
         fputc('\n', stderr);

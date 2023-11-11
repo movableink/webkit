@@ -203,6 +203,9 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
 
     _page = processPool.createWebPage(*_pageClient, WTFMove(configuration));
     _page->initializeWebPage();
+
+    [self _updateRuntimeProtocolConformanceIfNeeded];
+
     _page->setIntrinsicDeviceScaleFactor(WebCore::screenScaleFactor([UIScreen mainScreen]));
     _page->setUseFixedLayout(true);
     _page->setScreenIsBeingCaptured([[[self window] screen] isCaptured]);
@@ -419,6 +422,8 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
 {
     [super didMoveToWindow];
 
+    _cachedHasCustomTintColor = std::nullopt;
+
     if (self.window)
         [self setUpInteraction];
     else
@@ -498,7 +503,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!_needsDeferredEndScrollingSelectionUpdate)
         return;
 
-    [_textInteractionAssistant deactivateSelection];
+    [_textInteractionWrapper deactivateSelection];
 }
 
 static WebCore::FloatBoxExtent floatBoxExtent(UIEdgeInsets insets)
@@ -555,9 +560,9 @@ static WebCore::FloatBoxExtent floatBoxExtent(UIEdgeInsets insets)
         floatBoxExtent(unobscuredSafeAreaInsets),
         zoomScale,
         viewStability,
-        _sizeChangedSinceLastVisibleContentRectUpdate,
-        self.webView._allowsViewportShrinkToFit,
-        enclosedInScrollableAncestorView,
+        !!_sizeChangedSinceLastVisibleContentRectUpdate,
+        !!self.webView._allowsViewportShrinkToFit,
+        !!enclosedInScrollableAncestorView,
         velocityData,
         downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*drawingArea).lastCommittedLayerTreeTransactionID());
 
@@ -573,7 +578,7 @@ static WebCore::FloatBoxExtent floatBoxExtent(UIEdgeInsets insets)
     _sizeChangedSinceLastVisibleContentRectUpdate = NO;
 
     drawingArea->updateDebugIndicator();
-    
+
     [self updateFixedClippingView:layoutViewport];
 
     if (wasStableState && !inStableState)
@@ -1022,7 +1027,7 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
         RELEASE_LOG(Printing, "Beginning to generate print preview image. Page count = %zu", [formatterAttributes pageCount]);
 
         // Begin generating the image in expectation of a (eventual) request for the drawn data.
-        auto callbackID = retainedSelf->_page->drawToImage([formatterAttributes frameID], [formatterAttributes printInfo], [isPrintingOnBackgroundThread, printFormatter, retainedSelf](WebKit::ShareableBitmap::Handle&& imageHandle) mutable {
+        auto callbackID = retainedSelf->_page->drawToImage([formatterAttributes frameID], [formatterAttributes printInfo], [isPrintingOnBackgroundThread, printFormatter, retainedSelf](std::optional<WebKit::ShareableBitmap::Handle>&& imageHandle) mutable {
             if (!isPrintingOnBackgroundThread)
                 retainedSelf->_printRenderingCallbackID = { };
             else {
@@ -1030,12 +1035,12 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
                 [retainedSelf->_pendingBackgroundPrintFormatters removeObject:printFormatter.get()];
             }
 
-            if (imageHandle.isNull()) {
+            if (!imageHandle) {
                 [printFormatter _setPrintPreviewImage:nullptr];
                 return;
             }
 
-            auto bitmap = WebKit::ShareableBitmap::create(WTFMove(imageHandle), WebKit::SharedMemory::Protection::ReadOnly);
+            auto bitmap = WebKit::ShareableBitmap::create(WTFMove(*imageHandle), WebKit::SharedMemory::Protection::ReadOnly);
             if (!bitmap) {
                 [printFormatter _setPrintPreviewImage:nullptr];
                 return;

@@ -1,318 +1,73 @@
-diff --git a/WebKit/SourcesCGL-mm.mm b/WebKit/SourcesCGL-mm.mm
+diff --git a/commit-message.txt b/commit-message.txt
 new file mode 100644
-index 0000000000000000000000000000000000000000..9c879aa6e4320ece9d065edcf7e9f9558180ce55
+index 0000000000000000000000000000000000000000..c0ce3fc686ee07e5bd66a90ec2bb41db4ca9098f
 --- /dev/null
-+++ b/WebKit/SourcesCGL-mm.mm
-@@ -0,0 +1,31 @@
-+/*
-+ * Copyright (C) 2023 Apple Inc. All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions
-+ * are met:
-+ * 1. Redistributions of source code must retain the above copyright
-+ *    notice, this list of conditions and the following disclaimer.
-+ * 2. Redistributions in binary form must reproduce the above copyright
-+ *    notice, this list of conditions and the following disclaimer in the
-+ *    documentation and/or other materials provided with the distribution.
-+ *
-+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
-+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
-+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+ */
++++ b/commit-message.txt
+@@ -0,0 +1,64 @@
++Update ANGLE to 2023-11-06 (0584ffd8fbdd1e58dffceecea77c32989751def8)
++Need the bug URL (OOPS!).
++Include a Radar link (OOPS!).
 +
-+#include "common/platform.h"
++Reviewed by NOBODY (OOPS!)
 +
-+#if ANGLE_ENABLE_CGL
-+#import "libANGLE/renderer/gl/cgl/DisplayCGL.mm"
-+#import "libANGLE/renderer/gl/cgl/WindowSurfaceCGL.mm"
-+#endif
-diff --git a/WebKit/SourcesCGL.cpp b/WebKit/SourcesCGL.cpp
-new file mode 100644
-index 0000000000000000000000000000000000000000..a03046c2f9f0857870b8454332300070a23aad43
---- /dev/null
-+++ b/WebKit/SourcesCGL.cpp
-@@ -0,0 +1,35 @@
-+/*
-+ * Copyright (C) 2023 Apple Inc. All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions
-+ * are met:
-+ * 1. Redistributions of source code must retain the above copyright
-+ *    notice, this list of conditions and the following disclaimer.
-+ * 2. Redistributions in binary form must reproduce the above copyright
-+ *    notice, this list of conditions and the following disclaimer in the
-+ *    documentation and/or other materials provided with the distribution.
-+ *
-+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
-+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
-+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+ */
-+
-+#include "common/platform.h"
-+
-+#if ANGLE_ENABLE_CGL
-+#include "libANGLE/renderer/gl/cgl/DeviceCGL.cpp"
-+#include "libANGLE/renderer/gl/cgl/PbufferSurfaceCGL.cpp"
-+#include "libANGLE/renderer/gl/cgl/ContextCGL.cpp"
-+#include "libANGLE/renderer/gl/cgl/RendererCGL.cpp"
-+#include "libANGLE/renderer/gl/cgl/IOSurfaceSurfaceCGL.cpp"
-+#include "common/gl/cgl/FunctionsCGL.cpp"
-+#endif
-diff --git a/WebKit/SourcesEAGL.cpp b/WebKit/SourcesEAGL.cpp
-new file mode 100644
-index 0000000000000000000000000000000000000000..0416a5886c9b7c7917e8da9570ff2e64f52a4f9f
---- /dev/null
-+++ b/WebKit/SourcesEAGL.cpp
-@@ -0,0 +1,33 @@
-+/*
-+ * Copyright (C) 2023 Apple Inc. All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions
-+ * are met:
-+ * 1. Redistributions of source code must retain the above copyright
-+ *    notice, this list of conditions and the following disclaimer.
-+ * 2. Redistributions in binary form must reproduce the above copyright
-+ *    notice, this list of conditions and the following disclaimer in the
-+ *    documentation and/or other materials provided with the distribution.
-+ *
-+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
-+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
-+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+ */
-+
-+#include "common/platform.h"
-+
-+#if ANGLE_ENABLE_EAGL
-+#include "libANGLE/renderer/gl/eagl/ContextEAGL.cpp"
-+#include "libANGLE/renderer/gl/eagl/DeviceEAGL.cpp"
-+#include "libANGLE/renderer/gl/eagl/PbufferSurfaceEAGL.cpp"
-+#include "libANGLE/renderer/gl/eagl/RendererEAGL.cpp"
-+#endif
-diff --git a/WebKit/SourcesEAGL1-mm.mm b/WebKit/SourcesEAGL1-mm.mm
-new file mode 100644
-index 0000000000000000000000000000000000000000..f9d49b42577306302fbc91e39b56c91713da3aaa
---- /dev/null
-+++ b/WebKit/SourcesEAGL1-mm.mm
-@@ -0,0 +1,32 @@
-+/*
-+ * Copyright (C) 2023 Apple Inc. All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions
-+ * are met:
-+ * 1. Redistributions of source code must retain the above copyright
-+ *    notice, this list of conditions and the following disclaimer.
-+ * 2. Redistributions in binary form must reproduce the above copyright
-+ *    notice, this list of conditions and the following disclaimer in the
-+ *    documentation and/or other materials provided with the distribution.
-+ *
-+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
-+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
-+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+ */
-+
-+#import "common/platform.h"
-+
-+#if ANGLE_ENABLE_EAGL
-+#import "libANGLE/renderer/gl/eagl/DisplayEAGL.mm"
-+#import "libANGLE/renderer/gl/eagl/IOSurfaceSurfaceEAGL.mm"
-+#import "libANGLE/renderer/gl/eagl/WindowSurfaceEAGL.mm"
-+#endif
-diff --git a/WebKit/SourcesEAGL2-mm.mm b/WebKit/SourcesEAGL2-mm.mm
-new file mode 100644
-index 0000000000000000000000000000000000000000..c2264459a02d65518f000bb1b4b4d1d357345dff
---- /dev/null
-+++ b/WebKit/SourcesEAGL2-mm.mm
-@@ -0,0 +1,30 @@
-+/*
-+ * Copyright (C) 2023 Apple Inc. All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions
-+ * are met:
-+ * 1. Redistributions of source code must retain the above copyright
-+ *    notice, this list of conditions and the following disclaimer.
-+ * 2. Redistributions in binary form must reproduce the above copyright
-+ *    notice, this list of conditions and the following disclaimer in the
-+ *    documentation and/or other materials provided with the distribution.
-+ *
-+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
-+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
-+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+ */
-+
-+#import "common/platform.h"
-+
-+#if ANGLE_ENABLE_EAGL
-+#import "libANGLE/renderer/gl/eagl/FunctionsEAGL.mm"
-+#endif
-diff --git a/WebKit/SourcesGL.cpp b/WebKit/SourcesGL.cpp
-new file mode 100644
-index 0000000000000000000000000000000000000000..0412a766f115841dfa9532d5c0cdf48db2177bbe
---- /dev/null
-+++ b/WebKit/SourcesGL.cpp
-@@ -0,0 +1,37 @@
-+/*
-+ * Copyright (C) 2023 Apple Inc. All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions
-+ * are met:
-+ * 1. Redistributions of source code must retain the above copyright
-+ *    notice, this list of conditions and the following disclaimer.
-+ * 2. Redistributions in binary form must reproduce the above copyright
-+ *    notice, this list of conditions and the following disclaimer in the
-+ *    documentation and/or other materials provided with the distribution.
-+ *
-+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
-+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
-+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+ */
-+
-+#include "common/platform.h"
-+
-+#if ANGLE_ENABLE_GLSL && ANGLE_ENABLE_APPLE_WORKAROUNDS
-+#include "compiler/translator/tree_ops/apple/AddAndTrueToLoopCondition.cpp"
-+#include "compiler/translator/tree_ops/apple/RewriteDoWhile.cpp"
-+#include "compiler/translator/tree_ops/apple/RewriteRowMajorMatrices.cpp"
-+#include "compiler/translator/tree_ops/apple/RewriteUnaryMinusOperatorFloat.cpp"
-+#include "compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.cpp"
-+#endif
-+#if ANGLE_ENABLE_GLSL
-+#include "compiler/translator/tree_ops/gl/RegenerateStructNames.cpp"
-+#endif
-\ No newline at end of file
-diff --git a/WebKit/SourcesPlatform-mm.mm b/WebKit/SourcesPlatform-mm.mm
-new file mode 100644
-index 0000000000000000000000000000000000000000..78ca284de371cb97b3a22be96ee2a50d4cce8270
---- /dev/null
-+++ b/WebKit/SourcesPlatform-mm.mm
-@@ -0,0 +1,30 @@
-+/*
-+ * Copyright (C) 2023 Apple Inc. All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions
-+ * are met:
-+ * 1. Redistributions of source code must retain the above copyright
-+ *    notice, this list of conditions and the following disclaimer.
-+ * 2. Redistributions in binary form must reproduce the above copyright
-+ *    notice, this list of conditions and the following disclaimer in the
-+ *    documentation and/or other materials provided with the distribution.
-+ *
-+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
-+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
-+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+ */
-+
-+#include "common/platform.h"
-+
-+#if ANGLE_PLATFORM_MACOS || ANGLE_PLATFORM_MACCATALYST
-+#include "gpu_info_util/SystemInfo_macos.mm"
-+#endif
-diff --git a/WebKit/SourcesPlatform.cpp b/WebKit/SourcesPlatform.cpp
-new file mode 100644
-index 0000000000000000000000000000000000000000..8b96dc01357fa9a2bdc54e5ddb3bbfd4c3162e5d
---- /dev/null
-+++ b/WebKit/SourcesPlatform.cpp
-@@ -0,0 +1,30 @@
-+/*
-+ * Copyright (C) 2023 Apple Inc. All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions
-+ * are met:
-+ * 1. Redistributions of source code must retain the above copyright
-+ *    notice, this list of conditions and the following disclaimer.
-+ * 2. Redistributions in binary form must reproduce the above copyright
-+ *    notice, this list of conditions and the following disclaimer in the
-+ *    documentation and/or other materials provided with the distribution.
-+ *
-+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
-+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
-+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+ */
-+
-+#include "common/platform.h"
-+
-+#if !(ANGLE_PLATFORM_MACOS || ANGLE_PLATFORM_MACCATALYST)
-+#include "gpu_info_util/SystemInfo_ios.cpp"
-+#endif
-diff --git a/src/common/ANGLEShaderProgramVersion.h b/src/common/ANGLEShaderProgramVersion.h
-new file mode 100644
-index 0000000000000000000000000000000000000000..1f43ebd21c99481abda24a141a89c472b3faafd0
---- /dev/null
-+++ b/src/common/ANGLEShaderProgramVersion.h
-@@ -0,0 +1,2 @@
-+#define ANGLE_PROGRAM_VERSION "fcbd6f5c2e75312e4bd4001f421d223b"
-+#define ANGLE_PROGRAM_VERSION_HASH_SIZE 16
++Contains upstream commits:
++git log --oneline 06819324b129363163068c8f7ae8396bf83b4ec5..0584ffd8fbdd1e58dffceecea77c32989751def8 --pretty=%h %s
++0584ffd8fb Unsuppress VUID-VkGraphicsPipelineCreateInfo-pStages-00739
++c114fc265b Reland: Verify shader link correctness after looking up in program cache
++5a71be901c D3D: Make non-constant loop indexing limitation a feature flag
++2a433353ef Skip unnecessary default blend equation validation
++e7ce481fe5 Consolidate parallel compilation in front-end
++32f209b83f Vulkan: Fix __samplerExternal2DY2YEXTtnd combined with swizzle
++8b4901d044 Avoid GLenum conversion in BlendStateExt blend and equation
++ad4617f5fe Metal: Fix cross-compile build
++34e5620b33 Metal: Reuse UBO conversion buffer only if size matches
++eebf069c1d Roll vulkan-deps from 8c0916849657 to c4f7658f287b (6 revisions)
++0e42512eed Roll Chromium from ab9dfa25fd4d to a63a2e689083 (785 revisions)
++ae3af8ee0c Manual roll VK-GL-CTS from 7d738783bf28 to b127977ddad4 (29 revisions)
++146a01ea1d Vulkan: Do not pad pipelineCacheData with zeroes
++f441e3ee4f Metal: Fix missing mix(float,float,bool) overload
++bfc764c553 Metal: Optimize vertex conversion using compute shader.
++0a8a7c2bc4 Vulkan: Remove rx::WaitableCompressEvent class
++59f7467a30 Metal: Add missing ScalarMatrix ops
++eaae3b4b01 Roll vulkan-deps from c604e04c8136 to 8c0916849657 (7 revisions)
++a3095f0cd9 Roll Chromium from c02a3bfd314f to ab9dfa25fd4d (687 revisions)
++9f9c35f347 Metal: Don't map index buffer in drawArraysProvokingVertexImpl
++67222ef476 Reland "Vulkan: merge client buffer data."
++221117abfb Tests: Add The Sims Mobile trace
++4cc9e0afa0 Capture Tests: Fix unintentional gen-on-bind usage
++6a879893fc Roll vulkan-deps from 54bfabb1adb0 to c604e04c8136 (9 revisions)
++fbebf772ef Roll Chromium from c274ac05ad19 to c02a3bfd314f (535 revisions)
++053aa9155a Vulkan: Disable VK_EXT_graphics_pipeline_library on RADV
++918028a253 Update bot detection in capture_replay_tests
++9a5d75de4b Vulkan: Fix incompatible redefinition of cube faces
++3e54582615 Roll vulkan-deps from e55b4f78bcf3 to 54bfabb1adb0 (11 revisions)
++f71a5bade9 Roll Chromium from 58d756134d9b to c274ac05ad19 (1331 revisions)
++4681785688 Revert "Vulkan: merge client buffer data."
++4066fddda8 Add flag to move ANGLE binaries to /system/${LIB}.
++563569acfc Vulkan: merge client buffer data.
++c0c2067375 Remove expections for some AHB tests which are now fixed
++b660767216 Test sampling from a texture with renderable levels below base
++36f4199756 D3D11: CopySubTexture: Handle sRGB source with D3D11
++2ee06400a6 Vulkan: fix dynamic buffer alignment issue.
++c6dc00d213 Manual roll vulkan-deps from 69081d0e32f7 to e55b4f78bcf3 (110 revisions)
++118a9b142e Test sampling from a texture with extra renderable levels
++907ccf8419 Vulkan: Stop compiling vulkan validation layers on Android
++f4a472332c DEPS: update reclient
++85549ffa89 Roll SwiftShader from d9ec9befba05 to 5c95af798ba4 (1 revision)
++8e8b4dc940 Aosp builds -O2 instead of -Os
++c0f94afb70 Vulkan: Limit ImageTestES3.RGBXAHBImportMultipleLayers to 1 layer
++471b50407d Vulkan: Only enable DS dynamic state if there is DS attachment.
++d67aafacd3 Keep default_optimization on Fuchsia
++5fa65ec81e ImageTest: check support before test cubemap
++e519da9a27 Tests: Add Streets of Rage 4 trace
++b48d9daf00 Capture/Replay: Gen gen-on-bind resources on replay
++bcd331f15f ImageTest: Allow writeAHBData to fail
++53c5b14506 Capture/Replay: Restore texture bindings on reset
++acb0ae0931 Vulkan: Swizzle YUV output from GL component order to vulkan
++3b555e8da6 GL: Add emulateClipOrigin workaround
++b56a72045a Roll Chromium from 63a05c417b61 to 58d756134d9b (825 revisions)
++95fe7e4704 [Android] Update NDK version check for hardware buffer.
++a7882c416c Skip InstancingTestES3.LargeDivisor on Linux ASAN
 diff --git a/src/common/utilities.cpp b/src/common/utilities.cpp
 index 34826b47554d0d89e8b9619d46828177b2c1b873..2e03a110de26a7cb888d8e9a5997deaf3745c12c 100644
 --- a/src/common/utilities.cpp
@@ -343,6 +98,19 @@ index a7607c9e529ce7a57bdc6c3c82134b144eb67130..c9ec1adec020589bd4fcfe226721042a
  /* Bison implementation for Yacc-like parsers in C
  
     Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2021 Free Software Foundation,
+diff --git a/src/compiler/translator/Compiler.cpp b/src/compiler/translator/Compiler.cpp
+index 10c1250219792691ab458b71bd45f53ea3f9a3a4..16669fcd71563dd72f09f7e10b6734dc0de57b28 100644
+--- a/src/compiler/translator/Compiler.cpp
++++ b/src/compiler/translator/Compiler.cpp
+@@ -1223,7 +1223,7 @@ bool TCompiler::checkAndSimplifyAST(TIntermBlock *root,
+ 
+ bool TCompiler::resizeClipAndCullDistanceBuiltins(TIntermBlock *root)
+ {
+-    auto resizeVariable = [=](const ImmutableString &name, uint32_t size, uint32_t maxSize) {
++    auto resizeVariable = [this, root](const ImmutableString &name, uint32_t size, uint32_t maxSize) {
+         // Skip if the variable is not used or implicitly has the maximum size
+         if (size == 0 || size == maxSize)
+             return true;
 diff --git a/src/compiler/translator/glslang_tab_autogen.cpp b/src/compiler/translator/glslang_tab_autogen.cpp
 index 233b571b7985ba9d33b245f495725851a12be569..6bd263e0b1ec4137e5b8bb1a6269ce07cc8a6b32 100644
 --- a/src/compiler/translator/glslang_tab_autogen.cpp
@@ -369,39 +137,8 @@ index d5a48edd40f382359db76acf1a1ce75b6a6dc6d5..907c62e0bb659292b391270790498186
  /* Bison interface for Yacc-like parsers in C
  
     Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2021 Free Software Foundation,
-diff --git a/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.cpp b/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.cpp
-index 55e2f8b9717ec73d2d52607d400352f5f4c0c191..4237558526274ea3e643d45ccf574b6b10eac785 100644
---- a/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.cpp
-+++ b/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.cpp
-@@ -10,6 +10,7 @@
- #include "compiler/translator/tree_util/IntermNode_util.h"
- #include "compiler/translator/tree_util/IntermTraverse.h"
- 
-+#if defined(ANGLE_ENABLE_GLSL) && defined(ANGLE_ENABLE_APPLE_WORKAROUNDS)
- namespace sh
- {
- 
-@@ -70,5 +71,5 @@ bool UnfoldShortCircuitAST(TCompiler *compiler, TIntermBlock *root)
-     root->traverse(&traverser);
-     return traverser.updateTree(compiler, root);
- }
--
-+#endif
- }  // namespace sh
-diff --git a/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.h b/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.h
-index cf1d101e072dde3449f44e8da33226f7be1735f3..641d4319b2c9914a7c3738124a0407f68c588e38 100644
---- a/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.h
-+++ b/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.h
-@@ -12,7 +12,6 @@
- 
- #include "common/angleutils.h"
- #include "common/debug.h"
--
- namespace sh
- {
- 
 diff --git a/src/libANGLE/State.cpp b/src/libANGLE/State.cpp
-index 12e40f45e02b091c76f4b22c555be19935f3efda..371c9854abc9fffb3d4422fc27545dfad74cc035 100644
+index 359e677502efe92ef9fbd52a86599afd6cd0c772..53ecd38240cb84c57891a980fe83f82ba4efe42a 100644
 --- a/src/libANGLE/State.cpp
 +++ b/src/libANGLE/State.cpp
 @@ -6,6 +6,9 @@
@@ -414,42 +151,41 @@ index 12e40f45e02b091c76f4b22c555be19935f3efda..371c9854abc9fffb3d4422fc27545dfa
  #include "libANGLE/State.h"
  
  #include <string.h>
+diff --git a/src/libANGLE/features.h b/src/libANGLE/features.h
+index a6fe076c72d043dba3fc347bf020ebf8ec895f51..add46e99c91d19bbd790d2de0d8768b8953d633e 100644
+--- a/src/libANGLE/features.h
++++ b/src/libANGLE/features.h
+@@ -44,4 +44,11 @@
+ #    define ANGLE_PROGRAM_LINK_VALIDATE_UNIFORM_PRECISION 1
+ #endif
+ 
++// Lose context on Metal command queue error
++// ENABLED check Metal command buffer status on completion for error and lose context on error.
++// DISABLED Metal backed contexts are never lost.
++#if !defined(ANGLE_METAL_LOSE_CONTEXT_ON_ERROR)
++#    define ANGLE_METAL_LOSE_CONTEXT_ON_ERROR ANGLE_ENABLED
++#endif
++
+ #endif  // LIBANGLE_FEATURES_H_
 diff --git a/src/libANGLE/formatutils.cpp b/src/libANGLE/formatutils.cpp
-index f2845dc9f9a81fe072fc4ae790c6bb3dfac5b5d8..e2b5cd91e8ce813c10d42aaf6540422b6cdc984b 100644
+index 5de0e3cd46989f2cdb31a63b0b4a230c5fa2d874..5f88309ab2d299890a7e34ac848865448380d7bf 100644
 --- a/src/libANGLE/formatutils.cpp
 +++ b/src/libANGLE/formatutils.cpp
-@@ -609,6 +609,13 @@ static GLenum EquivalentBlitInternalFormat(GLenum internalformat)
-         return GL_RGB8;
+@@ -592,7 +592,8 @@ static GLenum EquivalentBlitInternalFormat(GLenum internalformat)
+     // sized, even if there is a swizzle (for example, blitting from a
+     // multisampled RGBA8 renderbuffer to a BGRA8 texture). This could
+     // be expanded and/or autogenerated if that is found necessary.
+-    if (internalformat == GL_BGRA8_EXT || internalformat == GL_BGRA8_SRGB_ANGLEX)
++    if (internalformat == GL_SRGB8_ALPHA8_EXT || internalformat == GL_BGRA8_EXT ||
++        internalformat == GL_BGRA8_SRGB_ANGLEX)
+     {
+         return GL_RGBA8;
      }
- 
-+    // Treat ANGLE's BGRA8_SRGB as SRGB8_ALPHA8 since it's just a swizzled version
-+    // with the same components.
-+    if (internalformat == GL_BGRA8_SRGB_ANGLEX)
-+    {
-+        return GL_SRGB8_ALPHA8_EXT;
-+    }
-+
-     return internalformat;
- }
- 
-diff --git a/src/libANGLE/renderer/gl/renderergl_utils.cpp b/src/libANGLE/renderer/gl/renderergl_utils.cpp
-index fa85c5bf4dc6b6cd87ee4cf49b45a44447538a5a..bac4c1b8b9a53f770998f84ef123a5f37cf6e42a 100644
---- a/src/libANGLE/renderer/gl/renderergl_utils.cpp
-+++ b/src/libANGLE/renderer/gl/renderergl_utils.cpp
-@@ -2313,7 +2313,7 @@ void InitializeFeatures(const FunctionsGL *functions, angle::FeaturesGL *feature
-     // crbug.com/1202928
-     ANGLE_FEATURE_CONDITION(features, disableWorkerContexts,
-                             (IsWindows() && (isIntel || isAMD)) || (IsLinux() && isNvidia) ||
--                                IsIOS() || IsAndroid() || IsAndroidEmulator(functions));
-+                                IsAppleEmbedded() || IsAndroid() || IsAndroidEmulator(functions));
- 
-     bool limitMaxTextureSize = isIntel && IsLinux() && GetLinuxOSVersion() < OSVersion(5, 0, 0);
-     ANGLE_FEATURE_CONDITION(features, limitWebglMaxTextureSizeTo4096,
 diff --git a/src/libANGLE/renderer/metal/BufferMtl.mm b/src/libANGLE/renderer/metal/BufferMtl.mm
-index 746823ce009702c2e49d1397a4159570838ebc9e..7976bcadedd832cabfda3f37b69ca4577e50bdf4 100644
+index 08b431099786e24e6b27a6539812e520c92436bb..3902781af7459dc8a880bd44f957df36fcbd8c78 100644
 --- a/src/libANGLE/renderer/metal/BufferMtl.mm
 +++ b/src/libANGLE/renderer/metal/BufferMtl.mm
-@@ -390,7 +390,7 @@ bool isOffsetAndSizeMetalBlitCompatible(size_t offset, size_t size)
+@@ -390,7 +390,7 @@ ConversionBufferMtl *BufferMtl::getUniformConversionBuffer(ContextMtl *context,
          {
              if (buffer.offset.second <= offset.second &&
                  (offset.second - buffer.offset.second) % buffer.uniformBufferBlockSize == 0)
@@ -459,19 +195,34 @@ index 746823ce009702c2e49d1397a4159570838ebc9e..7976bcadedd832cabfda3f37b69ca457
      }
  
 diff --git a/src/libANGLE/renderer/metal/ContextMtl.mm b/src/libANGLE/renderer/metal/ContextMtl.mm
-index 97d935b275c0a0aaac841e5a413d38b9080b9ec0..800c93fe38d0ecf0c1732313ff143a8915158ec4 100644
+index 3ef4364a885736ae921d8e148160a4abfb9822e4..9073131849b74cbdce871fcad5e53e2f84dddd40 100644
 --- a/src/libANGLE/renderer/metal/ContextMtl.mm
 +++ b/src/libANGLE/renderer/metal/ContextMtl.mm
-@@ -2464,8 +2464,21 @@ static bool isDrawNoOp(const mtl::RenderPipelineDesc &descriptor,
+@@ -1067,6 +1067,13 @@ angle::Result ContextMtl::multiDrawElementsInstancedBaseVertexBaseInstance(
+ // Device loss
+ gl::GraphicsResetStatus ContextMtl::getResetStatus()
+ {
++#if ANGLE_METAL_LOSE_CONTEXT_ON_ERROR == ANGLE_ENABLED
++    if (cmdQueue().isDeviceLost())
++    {
++        return gl::GraphicsResetStatus::UnknownContextReset;
++    }
++#endif
++
+     return gl::GraphicsResetStatus::NoError;
+ }
+ 
+@@ -2474,8 +2481,22 @@ angle::Result ContextMtl::setupDraw(const gl::Context *context,
              return angle::Result::Continue;
          }
          // Setup with flushed state should either produce a working encoder or fail with an error
 -        // result.
 -        ASSERT(mRenderEncoder.valid());
 +        // result. if that's not the case, something's gone seriously wrong. Try to
-+        // recover from the error by bailing out of the draw call, and finishing the command buffer. This will result in an unfinished / corrupted draw,
-+        // but will avoid a browser/GPU process crash.
-+        if(ANGLE_UNLIKELY(!mRenderEncoder.valid() || !mRenderEncoder.hasPipelineState()))
++        // recover from the error by bailing out of the draw call, and finishing the command buffer.
++        // This will result in an unfinished / corrupted draw, but will avoid a browser/GPU process
++        // crash.
++        if (ANGLE_UNLIKELY(!mRenderEncoder.valid() || !mRenderEncoder.hasPipelineState()))
 +        {
 +            // Completely flush the command buffer, waiting synchronously.
 +            flushCommandBuffer(mtl::WaitUntilFinished);
@@ -487,13 +238,36 @@ index 97d935b275c0a0aaac841e5a413d38b9080b9ec0..800c93fe38d0ecf0c1732313ff143a89
      return angle::Result::Continue;
  }
 diff --git a/src/libANGLE/renderer/metal/DisplayMtl.mm b/src/libANGLE/renderer/metal/DisplayMtl.mm
-index d29e97237fad421a73f0d9a573e5618751a28b3c..58a0bbbe9cb92654fa50c6d859ff0ac2b299c994 100644
+index a860b6bbc28db080dd65108a830968b8fd97751c..641f9ad7ffb11ffb6a5d6e9b7caed3bd1b9c8ee4 100644
 --- a/src/libANGLE/renderer/metal/DisplayMtl.mm
 +++ b/src/libANGLE/renderer/metal/DisplayMtl.mm
-@@ -1401,8 +1401,7 @@ bool IsMetalDisplayAvailable()
+@@ -184,12 +184,22 @@ void DisplayMtl::terminate()
+ 
+ bool DisplayMtl::testDeviceLost()
+ {
++#if ANGLE_METAL_LOSE_CONTEXT_ON_ERROR == ANGLE_ENABLED
++    return mCmdQueue.isDeviceLost();
++#else
+      return false;
++#endif
+ }
+ 
+ egl::Error DisplayMtl::restoreLostDevice(const egl::Display *display)
+ {
++#if ANGLE_METAL_LOSE_CONTEXT_ON_ERROR == ANGLE_ENABLED
++    // A Metal device cannot be restored, the entire context would have to be
++    // re-created along with any other EGL objects that reference it.
++    return egl::EglBadDisplay();
++#else
+     return egl::NoError();
++#endif
+ }
+ 
+ std::string DisplayMtl::getRendererDescription()
+@@ -1433,8 +1443,7 @@ bool DisplayMtl::supportsMetal2_2() const
  bool DisplayMtl::supports32BitFloatFiltering() const
  {
- #if (defined(__MAC_11_0) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_11_0) ||        \
+ #if (defined(__MAC_11_0) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_11_0) || \
 -    (defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_14_0) || \
 -    (defined(__TVOS_14_0) && __TV_OS_VERSION_MIN_REQUIRED >= __TVOS_14_0)
 +    (defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_14_0)
@@ -501,152 +275,42 @@ index d29e97237fad421a73f0d9a573e5618751a28b3c..58a0bbbe9cb92654fa50c6d859ff0ac2
      {
          return [mMetalDevice supports32BitFloatFiltering];
 diff --git a/src/libANGLE/renderer/metal/FrameBufferMtl.mm b/src/libANGLE/renderer/metal/FrameBufferMtl.mm
-index f7eaf3362c8fd382ea047a68372c9b6d9213a2f8..1545a357059d17d49bf3210eef6a25c419de840f 100644
+index 5f3f10a86f707290bcad9f823dec0a9126425fde..860f798cf68bb4fad87bee1ea9cd507d95767fd1 100644
 --- a/src/libANGLE/renderer/metal/FrameBufferMtl.mm
 +++ b/src/libANGLE/renderer/metal/FrameBufferMtl.mm
-@@ -1660,8 +1660,10 @@ void RoundValueAndAdjustCorrespondingValue(float a,
+@@ -1574,8 +1574,13 @@ angle::Result FramebufferMtl::readPixelsToPBO(const gl::Context *context,
  
      ContextMtl *contextMtl = mtl::GetImpl(context);
  
 -    ANGLE_MTL_CHECK(contextMtl, packPixelsParams.offset <= std::numeric_limits<uint32_t>::max(),
-+    if constexpr (sizeof(packPixelsParams.offset) > sizeof(uint32_t)) {
-+        ANGLE_MTL_CHECK(contextMtl, static_cast<std::make_unsigned_t<decltype(packPixelsParams.offset)>>(packPixelsParams.offset) <= std::numeric_limits<uint32_t>::max(),
++    if constexpr (sizeof(packPixelsParams.offset) > sizeof(uint32_t))
++    {
++        ANGLE_MTL_CHECK(contextMtl,
++                        static_cast<std::make_unsigned_t<decltype(packPixelsParams.offset)>>(
++                            packPixelsParams.offset) <= std::numeric_limits<uint32_t>::max(),
                          GL_INVALID_OPERATION);
 +    }
      uint32_t offset = static_cast<uint32_t>(packPixelsParams.offset);
  
      BufferMtl *packBufferMtl = mtl::GetImpl(packPixelsParams.packBuffer);
-diff --git a/src/libANGLE/renderer/metal/ProgramMtl.mm b/src/libANGLE/renderer/metal/ProgramMtl.mm
-index 04fc45023497f3fdbf061b24197e40fae35f8c17..db63bd65d01aaddc48252fda8bd765988d7ddc20 100644
---- a/src/libANGLE/renderer/metal/ProgramMtl.mm
-+++ b/src/libANGLE/renderer/metal/ProgramMtl.mm
-@@ -54,8 +54,25 @@
-     std::vector<T> &mArray;
- };
- 
-+inline void memcpy_guarded(void *dst, const void *src, const void *maxSrcPtr, size_t size)
-+{
-+    size_t bytesAvailable = maxSrcPtr > src ? (const uint8_t *)maxSrcPtr - (const uint8_t *)src : 0;
-+    size_t bytesToCopy    = std::min(size, bytesAvailable);
-+    size_t bytesToZero    = size - bytesToCopy;
-+
-+    if (bytesToCopy)
-+        memcpy(dst, src, bytesToCopy);
-+    if (bytesToZero)
-+        memset((uint8_t *)dst + bytesToCopy, 0, bytesToZero);
-+}
-+
- // Copy matrix one column at a time
--inline void copy_matrix(void *dst, const void *src, size_t srcStride, size_t dstStride, GLenum type)
-+inline void copy_matrix(void *dst,
-+                        const void *src,
-+                        const void *maxSrcPtr,
-+                        size_t srcStride,
-+                        size_t dstStride,
-+                        GLenum type)
- {
-     size_t elemSize      = mtl::GetMetalSizeForGLType(gl::VariableComponentType(type));
-     const size_t dstRows = gl::VariableRowCount(type);
-@@ -64,14 +81,15 @@ inline void copy_matrix(void *dst, const void *src, size_t srcStride, size_t dst
-     for (size_t col = 0; col < dstCols; col++)
-     {
-         size_t srcOffset = col * srcStride;
--        memcpy(((uint8_t *)dst) + dstStride * col, (const uint8_t *)src + srcOffset,
--               elemSize * dstRows);
-+        memcpy_guarded(((uint8_t *)dst) + dstStride * col, (const uint8_t *)src + srcOffset,
-+                       maxSrcPtr, elemSize * dstRows);
-     }
- }
- 
- // Copy matrix one element at a time to transpose.
- inline void copy_matrix_row_major(void *dst,
-                                   const void *src,
-+                                  const void *maxSrcPtr,
-                                   size_t srcStride,
-                                   size_t dstStride,
-                                   GLenum type)
-@@ -85,8 +103,8 @@ inline void copy_matrix_row_major(void *dst,
-         for (size_t row = 0; row < dstRows; row++)
-         {
-             size_t srcOffset = row * srcStride + col * elemSize;
--            memcpy((uint8_t *)dst + dstStride * col + row * elemSize,
--                   (const uint8_t *)src + srcOffset, elemSize);
-+            memcpy_guarded((uint8_t *)dst + dstStride * col + row * elemSize,
-+                           (const uint8_t *)src + srcOffset, maxSrcPtr, elemSize);
-         }
-     }
- }
-@@ -105,6 +123,7 @@ bool compareBlockInfo(const sh::BlockMemberInfo &a, const sh::BlockMemberInfo &b
-                                        size_t *bufferOffsetOut)
- {
-     uint8_t *dst             = nullptr;
-+    const uint8_t *maxSrcPtr = sourceData + sizeToCopy;
-     dynamicBuffer->releaseInFlightBuffers(contextMtl);
- 
-     // When converting a UBO buffer, we convert all of the data
-@@ -149,12 +168,12 @@ bool compareBlockInfo(const sh::BlockMemberInfo &a, const sh::BlockMemberInfo &b
-                     // Transpose matricies into column major order, if they're row major encoded.
-                     if (stdIterator->isRowMajorMatrix)
-                     {
--                        copy_matrix_row_major(dstMat, srcMat, stdIterator->matrixStride,
-+                        copy_matrix_row_major(dstMat, srcMat, maxSrcPtr, stdIterator->matrixStride,
-                                               mtlIterator->matrixStride, mtlIterator->type);
-                     }
-                     else
-                     {
--                        copy_matrix(dstMat, srcMat, stdIterator->matrixStride,
-+                        copy_matrix(dstMat, srcMat, maxSrcPtr, stdIterator->matrixStride,
-                                     mtlIterator->matrixStride, mtlIterator->type);
-                     }
-                 }
-@@ -166,24 +185,25 @@ bool compareBlockInfo(const sh::BlockMemberInfo &a, const sh::BlockMemberInfo &b
-                     for (int boolCol = 0; boolCol < gl::VariableComponentCount(mtlIterator->type);
-                          boolCol++)
-                     {
--                        const uint8_t *srcOffset =
-+                        const uint8_t *srcBool =
-                             (sourceData + stdIterator->offset + stdArrayOffset +
-                              blockConversionInfo.stdSize() * i +
-                              gl::VariableComponentSize(GL_BOOL) * boolCol);
--                        unsigned int srcValue = *((unsigned int *)(srcOffset));
--                        bool boolVal          = bool(srcValue);
--                        memcpy(dst + mtlIterator->offset + mtlArrayOffset +
--                                   blockConversionInfo.metalSize() * i + sizeof(bool) * boolCol,
--                               &boolVal, sizeof(bool));
-+                        unsigned int srcValue =
-+                            srcBool < maxSrcPtr ? *((unsigned int *)(srcBool)) : 0;
-+                        uint8_t *dstBool = dst + mtlIterator->offset + mtlArrayOffset +
-+                                           blockConversionInfo.metalSize() * i +
-+                                           sizeof(bool) * boolCol;
-+                        *dstBool = (srcValue != 0);
-                     }
-                 }
-                 else
-                 {
--                    memcpy(dst + mtlIterator->offset + mtlArrayOffset +
-+                    memcpy_guarded(dst + mtlIterator->offset + mtlArrayOffset +
-                                        blockConversionInfo.metalSize() * i,
-                                    sourceData + stdIterator->offset + stdArrayOffset +
-                                        blockConversionInfo.stdSize() * i,
--                           mtl::GetMetalSizeForGLType(mtlIterator->type));
-+                                   maxSrcPtr, mtl::GetMetalSizeForGLType(mtlIterator->type));
-                 }
-             }
-             ++stdIterator;
-@@ -1555,7 +1575,7 @@ void operator()() override
-                                     bool uniformBuffersDirty)
+diff --git a/src/libANGLE/renderer/metal/ProgramExecutableMtl.mm b/src/libANGLE/renderer/metal/ProgramExecutableMtl.mm
+index d7e21ea1aa8fc2c29c854e2ece0e6caeee4f36cd..c6fbfb2dd449b52a1918d0b0f0b828cdaa784599 100644
+--- a/src/libANGLE/renderer/metal/ProgramExecutableMtl.mm
++++ b/src/libANGLE/renderer/metal/ProgramExecutableMtl.mm
+@@ -897,7 +897,7 @@ angle::Result ProgramExecutableMtl::setupDraw(const gl::Context *glContext,
  {
      ContextMtl *context = mtl::GetImpl(glContext);
+ 
 -    if (pipelineDescChanged)
 +    if (pipelineDescChanged || !cmdEncoder->hasPipelineState())
      {
          id<MTLFunction> vertexShader = nil;
          ANGLE_TRY(
 diff --git a/src/libANGLE/renderer/metal/VertexArrayMtl.mm b/src/libANGLE/renderer/metal/VertexArrayMtl.mm
-index 1d30b25345df8e39a4b20056b6906fc548a288e3..abf54a88cfb9ac862fa297a977f79bd32d521629 100644
+index afb9b76afdf7f31eccf55ebcea1ae577e8762298..be8a4266828e5f28f6acdedb66b38cda63fffd0a 100644
 --- a/src/libANGLE/renderer/metal/VertexArrayMtl.mm
 +++ b/src/libANGLE/renderer/metal/VertexArrayMtl.mm
-@@ -1111,16 +1111,21 @@ inline void SetDefaultVertexBufferLayout(mtl::VertexBufferLayoutDesc *layout)
+@@ -1101,16 +1101,23 @@ angle::Result VertexArrayMtl::convertVertexBufferGPU(const gl::Context *glContex
      ANGLE_TRY(conversion->data.allocate(contextMtl, numVertices * targetStride, nullptr, &newBuffer,
                                          &newBufferOffset));
  
@@ -654,7 +318,8 @@ index 1d30b25345df8e39a4b20056b6906fc548a288e3..abf54a88cfb9ac862fa297a977f79bd3
 +    GLintptr bindingOffset = binding.getOffset();
 +
 +    if constexpr (sizeof(bindingOffset) > sizeof(uint32_t))
-+        ANGLE_CHECK_GL_MATH(contextMtl, static_cast<std::make_unsigned_t<decltype(bindingOffset)>>(bindingOffset) <= std::numeric_limits<uint32_t>::max());
++        ANGLE_CHECK_GL_MATH(contextMtl, static_cast<std::make_unsigned_t<decltype(bindingOffset)>>(
++                                            bindingOffset) <= std::numeric_limits<uint32_t>::max());
      ANGLE_CHECK_GL_MATH(contextMtl, newBufferOffset <= std::numeric_limits<uint32_t>::max());
      ANGLE_CHECK_GL_MATH(contextMtl, numVertices <= std::numeric_limits<uint32_t>::max());
  
@@ -662,20 +327,39 @@ index 1d30b25345df8e39a4b20056b6906fc548a288e3..abf54a88cfb9ac862fa297a977f79bd3
      VertexConversionBufferMtl *vertexConversion =
          static_cast<VertexConversionBufferMtl *>(conversion);
 +    if constexpr (sizeof(vertexConversion->offset) > sizeof(uint32_t))
-+        ANGLE_CHECK_GL_MATH(contextMtl, vertexConversion->offset <= std::numeric_limits<uint32_t>::max());
++        ANGLE_CHECK_GL_MATH(contextMtl,
++                            vertexConversion->offset <= std::numeric_limits<uint32_t>::max());
      params.srcBuffer            = srcBuffer->getCurrentBuffer();
 -    params.srcBufferStartOffset = static_cast<uint32_t>(
 -        MIN(static_cast<GLintptr>(vertexConversion->offset), binding.getOffset()));
-+    params.srcBufferStartOffset = std::min(
-+        static_cast<uint32_t>(vertexConversion->offset), static_cast<uint32_t>(bindingOffset));
-     params.srcStride           = binding.getStride();
-     params.srcDefaultAlphaData = convertedFormat.defaultAlpha;
++    params.srcBufferStartOffset = std::min(static_cast<uint32_t>(vertexConversion->offset),
++                                           static_cast<uint32_t>(bindingOffset));
+     params.srcStride            = binding.getStride();
+     params.srcDefaultAlphaData  = convertedFormat.defaultAlpha;
  
 diff --git a/src/libANGLE/renderer/metal/mtl_command_buffer.h b/src/libANGLE/renderer/metal/mtl_command_buffer.h
-index 5f516c7c5bd4ee8844ca88905638135208cea8e6..f3ec345c613cba73cce819da7aad08baae113cdd 100644
+index 2b0ef5ddfe906ba09ad818dadeb41dd444c55f07..5a6d64e0d58fa4e976e16d1fd03b98be9033603f 100644
 --- a/src/libANGLE/renderer/metal/mtl_command_buffer.h
 +++ b/src/libANGLE/renderer/metal/mtl_command_buffer.h
-@@ -539,6 +539,7 @@ class RenderCommandEncoder final : public CommandEncoder
+@@ -87,6 +87,8 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
+     bool isTimeElapsedEntryComplete(uint64_t id);
+     double getTimeElapsedEntryInSeconds(uint64_t id);
+ 
++    bool isDeviceLost() const { return mIsDeviceLost; }
++
+   private:
+     void onCommandBufferCompleted(id<MTLCommandBuffer> buf,
+                                   uint64_t serial,
+@@ -128,6 +130,8 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
+     void recordCommandBufferTimeElapsed(std::lock_guard<std::mutex> &lg,
+                                         uint64_t id,
+                                         double seconds);
++
++    std::atomic_bool mIsDeviceLost = false;
+ };
+ 
+ class CommandBuffer final : public WrappedObject<id<MTLCommandBuffer>>, angle::NonCopyable
+@@ -538,6 +542,7 @@ class RenderCommandEncoder final : public CommandEncoder
  
      const RenderPassDesc &renderPassDesc() const { return mRenderPassDesc; }
      bool hasDrawCalls() const { return mHasDrawCalls; }
@@ -684,31 +368,64 @@ index 5f516c7c5bd4ee8844ca88905638135208cea8e6..f3ec345c613cba73cce819da7aad08ba
      uint64_t getSerial() const { return mSerial; }
  
 diff --git a/src/libANGLE/renderer/metal/mtl_command_buffer.mm b/src/libANGLE/renderer/metal/mtl_command_buffer.mm
-index d6505275894b1d3ce1b94df7d28e7894eb5ece93..75acac983a981df604c19528e3f838b0799163a3 100644
+index 145400aec715ddfadcf33dc941201e1064d33ca0..106cdcbb6fcc2ec5fd24e86026a419cb7a84d8c2 100644
 --- a/src/libANGLE/renderer/metal/mtl_command_buffer.mm
 +++ b/src/libANGLE/renderer/metal/mtl_command_buffer.mm
-@@ -372,6 +372,16 @@ inline void SetVisibilityResultModeCmd(id<MTLRenderCommandEncoder> encoder,
+@@ -373,12 +373,20 @@ inline void SetVisibilityResultModeCmd(id<MTLRenderCommandEncoder> encoder,
      [encoder setVisibilityResultMode:mode offset:offset];
  }
  
-+#if (defined(__MAC_10_15) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_15) || \
-+    (defined(__IPHONE_13_0) && __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
-+#   define ANGLE_MTL_USE_RESOURCE_USAGE_STAGES_AVAILABLE 1
-+#endif
-+
 +#if (defined(__MAC_13_0) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_13_0) || \
 +    (defined(__IPHONE_16_0) && __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_16_0)
-+#   define ANGLE_MTL_USE_RESOURCE_USAGE_DEPRECATED 1
++#    define ANGLE_MTL_USE_RESOURCE_USAGE_DEPRECATED 1
 +#endif
 +
  inline void UseResourceCmd(id<MTLRenderCommandEncoder> encoder, IntermediateCommandStream *stream)
  {
      id<MTLResource> resource = stream->fetch<id<MTLResource>>();
+     MTLResourceUsage usage   = stream->fetch<MTLResourceUsage>();
+     mtl::RenderStages stages = stream->fetch<mtl::RenderStages>();
+     ANGLE_UNUSED_VARIABLE(stages);
++#if ANGLE_MTL_USE_RESOURCE_USAGE_DEPRECATED
++    [encoder useResource:resource usage:usage stages:stages];
++#else
+ #if defined(__IPHONE_13_0) || defined(__MAC_10_15)
+     if (ANGLE_APPLE_AVAILABLE_XCI(10.15, 13.1, 13.0))
+     {
+@@ -391,6 +399,7 @@ inline void UseResourceCmd(id<MTLRenderCommandEncoder> encoder, IntermediateComm
+         [encoder useResource:resource usage:usage];
+         ANGLE_APPLE_ALLOW_DEPRECATED_END
+     }
++#endif
+     [resource ANGLE_MTL_RELEASE];
+ }
+ 
+@@ -606,6 +615,20 @@ void CommandQueue::onCommandBufferCompleted(id<MTLCommandBuffer> buf,
+ 
+     ANGLE_MTL_LOG("Completed MTLCommandBuffer %llu:%p", serial, buf);
+ 
++    MTLCommandBufferStatus status = buf.status;
++    if (status != MTLCommandBufferStatusCompleted)
++    {
++        NSError *error = buf.error;
++        // MTLCommandBufferErrorNotPermitted is non-fatal, all other errors
++        // result in device lost.
++        // TODO(djg): Should this also check error.domain for MTLCommandBufferErrorDomain?
++        mIsDeviceLost  = !error || error.code != MTLCommandBufferErrorNotPermitted;
++        if (mIsDeviceLost)
++        {
++            return;
++        }
++    }
++
+     if (timeElapsedEntry != 0)
+     {
+         // Record this command buffer's elapsed time.
 diff --git a/src/libANGLE/renderer/metal/mtl_render_utils.mm b/src/libANGLE/renderer/metal/mtl_render_utils.mm
-index 9147aa67605d151b8b8f8a40e6bad9889e544171..17e595b6bd6c14efe60cda49cc160af73ce7bd75 100644
+index 1bcef1db4c33718300336394590064503519b2a9..f9b73ab8f9d97e8a1143d38a1012e61c95fd5bec 100644
 --- a/src/libANGLE/renderer/metal/mtl_render_utils.mm
 +++ b/src/libANGLE/renderer/metal/mtl_render_utils.mm
-@@ -712,7 +712,8 @@ void DispatchCompute(ContextMtl *contextMtl,
+@@ -603,7 +603,8 @@ void DispatchCompute(ContextMtl *contextMtl,
                       id<MTLComputePipelineState> pipelineState,
                       size_t numThreads)
  {
@@ -718,85 +435,8 @@ index 9147aa67605d151b8b8f8a40e6bad9889e544171..17e595b6bd6c14efe60cda49cc160af7
      MTLSize threadsPerThreadgroup = MTLSizeMake(w, 1, 1);
  
      if (contextMtl->getDisplay()->getFeatures().hasNonUniformDispatch.enabled)
-@@ -2540,45 +2541,13 @@ ANGLE_INLINE void SetPipelineState(ComputeCommandEncoder *encoder,
-                                             bool sRGBMipmap,
-                                             NativeTexLevelArray *mipmapOutputViews)
- {
--    // Only support 3D texture for now.
--    ASSERT(srcTexture->textureType() == MTLTextureType3D);
--
-     MTLSize threadGroupSize;
-     uint32_t slices                             = 1;
-     id<MTLComputePipelineState> computePipeline = nil;
--
--    ensure3DMipGeneratorPipelineInitialized(contextMtl);
--    computePipeline = m3DMipGeneratorPipeline;
--    threadGroupSize =
--        MTLSizeMake(kGenerateMipThreadGroupSizePerDim, kGenerateMipThreadGroupSizePerDim,
--                    kGenerateMipThreadGroupSizePerDim);
--
-     // The compute shader supports up to 4 mipmaps generated per pass.
-     // See shaders/gen_mipmap.metal
-     uint32_t maxMipsPerBatch = 4;
- 
--    if (threadGroupSize.width * threadGroupSize.height * threadGroupSize.depth >
--            computePipeline.maxTotalThreadsPerThreadgroup ||
--        ANGLE_UNLIKELY(
--            !contextMtl->getDisplay()->getFeatures().allowGenMultipleMipsPerPass.enabled))
--    {
--        // Multiple mipmaps generation is not supported due to hardware's thread group size limits.
--        // Fallback to generate one mip per pass and reduce thread group size.
--        if (ANGLE_UNLIKELY(threadGroupSize.width * threadGroupSize.height >
--                           computePipeline.maxTotalThreadsPerThreadgroup))
--        {
--            // Even with reduced thread group size, we cannot proceed.
--            // HACK: use blit command encoder to generate mipmaps if it is not possible
--            // to use compute shader due to hardware limits.
--            BlitCommandEncoder *blitEncoder = contextMtl->getBlitCommandEncoder();
--            blitEncoder->generateMipmapsForTexture(srcTexture);
--            return angle::Result::Continue;
--        }
--
--        threadGroupSize.depth = 1;
--        maxMipsPerBatch       = 1;
--    }
--
-     ComputeCommandEncoder *cmdEncoder = contextMtl->getComputeCommandEncoder();
-     ASSERT(cmdEncoder);
- 
-@@ -2615,8 +2584,29 @@ ANGLE_INLINE void SetPipelineState(ComputeCommandEncoder *encoder,
-             UNREACHABLE();
-     }
- 
--    Generate3DMipmapUniform options;
-+    if (threadGroupSize.width * threadGroupSize.height * threadGroupSize.depth >
-+            computePipeline.maxTotalThreadsPerThreadgroup ||
-+        ANGLE_UNLIKELY(
-+            !contextMtl->getDisplay()->getFeatures().allowGenMultipleMipsPerPass.enabled))
-+    {
-+        // Multiple mipmaps generation is not supported due to hardware's thread group size limits.
-+        // Fallback to generate one mip per pass and reduce thread group size.
-+        if (ANGLE_UNLIKELY(threadGroupSize.width * threadGroupSize.height >
-+                           computePipeline.maxTotalThreadsPerThreadgroup))
-+        {
-+            // Even with reduced thread group size, we cannot proceed.
-+            // HACK: use blit command encoder to generate mipmaps if it is not possible
-+            // to use compute shader due to hardware limits.
-+            BlitCommandEncoder *blitEncoder = contextMtl->getBlitCommandEncoder();
-+            blitEncoder->generateMipmapsForTexture(srcTexture);
-+            return angle::Result::Continue;
-+        }
-+
-+        threadGroupSize.depth = 1;
-+        maxMipsPerBatch       = 1;
-+    }
- 
-+    Generate3DMipmapUniform options;
-     uint32_t remainMips             = srcTexture->mipmapLevels() - 1;
-     MipmapNativeLevel batchSrcLevel = kZeroNativeMipLevel;
-     options.srcLevel                = batchSrcLevel.get();
 diff --git a/src/libANGLE/renderer/metal/mtl_resource_spi.h b/src/libANGLE/renderer/metal/mtl_resource_spi.h
-index 3eaa9a64e79af26faa786102ece3f0bdea84d090..2ecf7b40bd5a2edc3fd9d69841e266b6c3cee685 100644
+index 3eaa9a64e79af26faa786102ece3f0bdea84d090..7ecb6db9d993df8985fcb6f701dfe7ca75857cae 100644
 --- a/src/libANGLE/renderer/metal/mtl_resource_spi.h
 +++ b/src/libANGLE/renderer/metal/mtl_resource_spi.h
 @@ -1,9 +1,63 @@
@@ -864,87 +504,79 @@ index 3eaa9a64e79af26faa786102ece3f0bdea84d090..2ecf7b40bd5a2edc3fd9d69841e266b6
 +    }
 +    return;
 +}
-+}
-+}
++}  // namespace mtl
++}  // namespace rx
 +#endif
 +
 +#endif /* LIBANGLE_RENDERER_METAL_RESOURCE_SPI_H_ */
+diff --git a/src/libANGLE/renderer/metal/mtl_resources.mm b/src/libANGLE/renderer/metal/mtl_resources.mm
+index 829539a2e821e01d6aa80729e9eb72cb5ea0e083..4e856a7f4039986fefb06b426eced442c4b711a9 100644
+--- a/src/libANGLE/renderer/metal/mtl_resources.mm
++++ b/src/libANGLE/renderer/metal/mtl_resources.mm
+@@ -78,12 +78,10 @@ MTLResourceOptions resourceOptionsForStorageMode(MTLStorageMode storageMode)
+             return MTLResourceStorageModePrivate;
+         case MTLStorageModeMemoryless:
+             return MTLResourceStorageModeMemoryless;
+-#if TARGET_OS_SIMULATOR
+         default:
+             // TODO(http://anglebug.com/8012): Remove me once hacked SDKs are fixed.
+             UNREACHABLE();
+             return MTLResourceStorageModeShared;
+-#endif
+     }
+ }
+ 
 diff --git a/src/libANGLE/renderer/metal/mtl_state_cache.mm b/src/libANGLE/renderer/metal/mtl_state_cache.mm
-index 6392740b2628a8b9c80a3e4413a958d9bc095d57..85e058a8257565e675bb0a5d356c4a16814b5f26 100644
+index 8534c5c32fbc218da6c00ed95804026ccab508ef..7b2e9926b29407d7870b0da20a6591d0982146e7 100644
 --- a/src/libANGLE/renderer/metal/mtl_state_cache.mm
 +++ b/src/libANGLE/renderer/metal/mtl_state_cache.mm
 @@ -21,9 +21,16 @@
  
  #define ANGLE_OBJC_CP_PROPERTY(DST, SRC, PROPERTY) \
      (DST).PROPERTY = static_cast<__typeof__((DST).PROPERTY)>(ToObjC((SRC).PROPERTY))
-+#define ANGLE_OBJC_CP_PROPERTY2(DST, SRC, PROPERTY, DST_PROPERTY)  \
++#define ANGLE_OBJC_CP_PROPERTY2(DST, SRC, PROPERTY, DST_PROPERTY) \
 +    (DST).DST_PROPERTY = static_cast<__typeof__((DST).DST_PROPERTY)>(ToObjC((SRC).PROPERTY))
  
  #define ANGLE_PROP_EQ(LHS, RHS, PROP) ((LHS).PROP == (RHS).PROP)
  
 +#if (defined(__MAC_13_0) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_13_0) || \
 +    (defined(__IPHONE_16_0) && __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_16_0)
-+#   define ANGLE_MTL_RENDER_PIPELINE_DESC_RASTER_SAMPLE_COUNT_AVAILABLE 1
++#    define ANGLE_MTL_RENDER_PIPELINE_DESC_RASTER_SAMPLE_COUNT_AVAILABLE 1
 +#endif
 +
  namespace rx
  {
  namespace mtl
-@@ -1016,23 +1023,10 @@ static bool ValidateRenderPipelineState(const MTLRenderPipelineDescriptor *descr
- 
-         auto objCDesc = desc.createMetalDesc(mVertexShader, mFragmentShader);
- 
--        // Validate Render Pipeline State:
--        if (DeviceHasMaximumRenderTargetSize(metalDevice))
--        {
--            // TODO: Is the use of NSUInteger in 32 bit systems ok without any overflow checking?
--            NSUInteger maxSize = GetMaxRenderTargetSizeForDeviceInBytes(metalDevice);
--            NSUInteger renderTargetSize =
--                ComputeTotalSizeUsedForMTLRenderPipelineDescriptor(objCDesc, context, metalDevice);
--            if (renderTargetSize > maxSize)
-+        if (!ValidateRenderPipelineState(objCDesc, context, metalDevice))
-         {
--                std::stringstream errorStream;
--                errorStream << "This set of render targets requires " << renderTargetSize
--                            << " bytes of pixel storage. This device supports " << maxSize
--                            << " bytes.";
--                ANGLE_MTL_HANDLE_ERROR(context, errorStream.str().c_str(), GL_INVALID_OPERATION);
-             return nil;
-         }
--        }
- 
-         if (!ValidateRenderPipelineState(objCDesc, context, metalDevice))
-         {
 diff --git a/src/libANGLE/renderer/metal/mtl_utils.mm b/src/libANGLE/renderer/metal/mtl_utils.mm
-index 5dd606d625abaeb53202e71a7bbd2d4eab50280e..6a6bc39a87a288a408ddebed43dacf0fa99e87c9 100644
+index 14bc3a52fbcf1043f71aa3b8d946f3c73207813f..cfd4d658c7ab9eec30930b90abfb69303f1ec9db 100644
 --- a/src/libANGLE/renderer/metal/mtl_utils.mm
 +++ b/src/libANGLE/renderer/metal/mtl_utils.mm
-@@ -1492,6 +1492,24 @@ bool SupportsAppleGPUFamily(id<MTLDevice> device, uint8_t appleFamily)
+@@ -1555,6 +1555,24 @@ bool SupportsAppleGPUFamily(id<MTLDevice> device, uint8_t appleFamily)
  #endif      // TARGET_OS_IOS || TARGET_OS_TV
  }
  
-+#if (defined(__MAC_13_0) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_13_0) || \
++#if (defined(__MAC_13_0) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_13_0) ||        \
 +    (defined(__IPHONE_16_0) && __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_16_0) || \
 +    (defined(__TVOS_16_0) && __TV_OS_VERSION_MIN_REQUIRED >= __TVOS_16_0)
-+#   define ANGLE_MTL_FEATURE_SET_DEPRECATED 1
-+#   define ANGLE_MTL_GPU_FAMILY_MAC1_DEPRECATED 1
++#    define ANGLE_MTL_FEATURE_SET_DEPRECATED 1
++#    define ANGLE_MTL_GPU_FAMILY_MAC1_DEPRECATED 1
 +#endif
 +
 +#if ANGLE_MTL_GPU_FAMILY_MAC1_DEPRECATED
-+#   define ANGLE_MTL_GPU_FAMILY_MAC1 MTLGPUFamilyMac2
-+#   define ANGLE_MTL_GPU_FAMILY_MAC2 MTLGPUFamilyMac2
++#    define ANGLE_MTL_GPU_FAMILY_MAC1 MTLGPUFamilyMac2
++#    define ANGLE_MTL_GPU_FAMILY_MAC2 MTLGPUFamilyMac2
 +#elif TARGET_OS_MACCATALYST
-+#   define ANGLE_MTL_GPU_FAMILY_MAC1 MTLGPUFamilyMacCatalyst1
-+#   define ANGLE_MTL_GPU_FAMILY_MAC2 MTLGPUFamilyMacCatalyst2
-+#else // !ANGLE_MTL_GPU_FAMILY_MAC1_DEPRECATED && !TARGET_OS_MACCATALYST
-+#   define ANGLE_MTL_GPU_FAMILY_MAC1 MTLGPUFamilyMac1
-+#   define ANGLE_MTL_GPU_FAMILY_MAC2 MTLGPUFamilyMac2
++#    define ANGLE_MTL_GPU_FAMILY_MAC1 MTLGPUFamilyMacCatalyst1
++#    define ANGLE_MTL_GPU_FAMILY_MAC2 MTLGPUFamilyMacCatalyst2
++#else  // !ANGLE_MTL_GPU_FAMILY_MAC1_DEPRECATED && !TARGET_OS_MACCATALYST
++#    define ANGLE_MTL_GPU_FAMILY_MAC1 MTLGPUFamilyMac1
++#    define ANGLE_MTL_GPU_FAMILY_MAC2 MTLGPUFamilyMac2
 +#endif
 +
  bool SupportsMacGPUFamily(id<MTLDevice> device, uint8_t macFamily)
  {
  #if TARGET_OS_OSX || TARGET_OS_MACCATALYST
-@@ -1506,10 +1524,10 @@ bool SupportsMacGPUFamily(id<MTLDevice> device, uint8_t macFamily)
+@@ -1569,10 +1587,10 @@ bool SupportsMacGPUFamily(id<MTLDevice> device, uint8_t macFamily)
  #        if TARGET_OS_MACCATALYST
              ANGLE_APPLE_ALLOW_DEPRECATED_BEGIN
              case 1:
@@ -957,7 +589,7 @@ index 5dd606d625abaeb53202e71a7bbd2d4eab50280e..6a6bc39a87a288a408ddebed43dacf0f
                  break;
                  ANGLE_APPLE_ALLOW_DEPRECATED_END
  #        else   // TARGET_OS_MACCATALYST
-@@ -1532,7 +1550,7 @@ bool SupportsMacGPUFamily(id<MTLDevice> device, uint8_t macFamily)
+@@ -1595,7 +1613,7 @@ bool SupportsMacGPUFamily(id<MTLDevice> device, uint8_t macFamily)
  
      // If device doesn't support [MTLDevice supportsFamily:], then use
      // [MTLDevice supportsFeatureSet:].
@@ -966,3 +598,74 @@ index 5dd606d625abaeb53202e71a7bbd2d4eab50280e..6a6bc39a87a288a408ddebed43dacf0f
      UNREACHABLE();
      return false;
  #    else
+diff --git a/src/libANGLE/renderer/metal/shaders/create_mtl_internal_shaders.py b/src/libANGLE/renderer/metal/shaders/create_mtl_internal_shaders.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..23e8295bcc16412d3aef3fc8e85748fa4ad77a70
+--- /dev/null
++++ b/src/libANGLE/renderer/metal/shaders/create_mtl_internal_shaders.py
+@@ -0,0 +1,65 @@
++#!/usr/bin/python3
++# Copyright 2021 The ANGLE Project Authors. All rights reserved.
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
++#
++# create_mtl_internal_shaders.py:
++#   Script to compile a metalLib into NSData, for including the compilded
++#       library in the ANGLE dylib.
++
++import os
++import sys
++import json
++from datetime import datetime
++
++sys.path.append('../..')
++
++template_header_boilerplate = """// GENERATED FILE - DO NOT EDIT.
++// Generated by {script_name}
++//
++// Copyright {copyright_year} The ANGLE Project Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++//
++"""
++
++
++# Convert content of a file to byte array and store in a header file.
++# variable_name: name of C++ variable that will hold the file content as byte array.
++# filename: the file whose content will be converted to C++ byte array.
++# dest_src_file: destination header file that will contain the byte array.
++def append_file_as_byte_array_string(variable_name, filename, dest_src_file):
++    string = '// Generated from {0}:\n'.format(filename)
++    string += 'constexpr uint8_t {0}[]={{\n'.format(variable_name)
++    bytes_ = open(filename, "rb").read()
++    for byte in bytes_:
++        string += '0x{:02x}'.format(byte) + ", "
++    string += "\n};\n"
++    with open(dest_src_file, "a") as out_file:
++        out_file.write(string)
++
++
++def main():
++    input_file = sys.argv[1]
++    output_file = sys.argv[2]
++    os.chdir(sys.path[0])
++
++    boilerplate_code = template_header_boilerplate.format(
++        script_name=os.path.basename(sys.argv[0]), copyright_year=datetime.today().year)
++
++    # -------- Compile shaders -----------
++    # boiler plate code
++    os.system("echo \"{0}\" > \"{1}\"".format(boilerplate_code, output_file))
++    os.system(
++        'echo "// Compiled binary for Metal default shaders.\n\n" >>  \"{0}\"'.format(output_file))
++    os.system('echo "#include <TargetConditionals.h>\n\n" >>  \"{0}\"'.format(output_file))
++
++    os.system('echo "// clang-format off" >> \"{0}\"'.format(output_file))
++
++    append_file_as_byte_array_string('gDefaultMetallib', input_file, output_file)
++
++    os.system('echo "// clang-format on" >> \"{0}\"'.format(output_file))
++
++
++if __name__ == '__main__':
++    sys.exit(main())

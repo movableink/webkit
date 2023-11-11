@@ -278,7 +278,7 @@ class TestGit(testing.PathTestCase):
 
     def test_alternative_default_branch(self):
         for mock in [mocks.local.Git(self.path), mocks.local.Git(self.path, git_svn=True)]:
-            with mock:
+            with mock, LoggerCapture():
                 self.assertEqual(str(local.Git(self.path).find('4@trunk')), '4@main')
                 self.assertEqual(str(local.Git(self.path).find('4@master')), '4@main')
 
@@ -746,6 +746,11 @@ class TestGitHub(testing.TestCase):
                 ['Source/main.cpp', 'Source/main.h'],
             )
 
+    def test_files_changed_no_argument(self):
+        with mocks.remote.GitHub():
+            with self.assertRaises(ValueError):
+                remote.GitHub(self.remote).files_changed()
+
     def test_checkout_url(self):
         self.assertEqual(remote.GitHub(self.remote).checkout_url(), 'git@github.example.com:WebKit/WebKit.git')
         self.assertEqual(remote.GitHub(self.remote).checkout_url(http=True), 'https://github.example.com/WebKit/WebKit.git')
@@ -891,6 +896,11 @@ class TestBitBucket(testing.TestCase):
                 remote.BitBucket(self.remote).files_changed('4@main'),
                 ['Source/main.cpp', 'Source/main.h'],
             )
+
+    def test_files_changed_no_argument(self):
+        with mocks.remote.BitBucket():
+            with self.assertRaises(ValueError):
+                remote.BitBucket(self.remote).files_changed()
 
     def test_checkout_url(self):
         self.assertEqual(remote.BitBucket(self.remote).checkout_url(), 'git@bitbucket.example.com/WEBKIT/webkit.git')

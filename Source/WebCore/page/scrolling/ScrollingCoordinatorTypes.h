@@ -91,21 +91,7 @@ struct ScrollableAreaParameters {
 
     ScrollbarWidth scrollbarWidthStyle { ScrollbarWidth::Auto };
 
-    bool operator==(const ScrollableAreaParameters& other) const
-    {
-        return horizontalScrollElasticity == other.horizontalScrollElasticity
-            && verticalScrollElasticity == other.verticalScrollElasticity
-            && horizontalScrollbarMode == other.horizontalScrollbarMode
-            && verticalScrollbarMode == other.verticalScrollbarMode
-            && horizontalOverscrollBehavior == other.horizontalOverscrollBehavior
-            && verticalOverscrollBehavior == other.verticalOverscrollBehavior
-            && allowsHorizontalScrolling == other.allowsHorizontalScrolling
-            && allowsVerticalScrolling == other.allowsVerticalScrolling
-            && horizontalNativeScrollbarVisibility == other.horizontalNativeScrollbarVisibility
-            && verticalNativeScrollbarVisibility == other.verticalNativeScrollbarVisibility
-            && useDarkAppearanceForScrollbars == other.useDarkAppearanceForScrollbars
-            && scrollbarWidthStyle == other.scrollbarWidthStyle;
-    }
+    friend bool operator==(const ScrollableAreaParameters&, const ScrollableAreaParameters&) = default;
 };
 
 enum class ViewportRectStability {
@@ -116,23 +102,36 @@ enum class ViewportRectStability {
 
 enum class ScrollRequestType : uint8_t {
     PositionUpdate,
+    DeltaUpdate,
     CancelAnimatedScroll
 };
 
 struct RequestedScrollData {
     ScrollRequestType requestType { ScrollRequestType::PositionUpdate };
-    FloatPoint scrollPosition;
+    std::variant<FloatPoint, FloatSize> scrollPositionOrDelta;
     ScrollType scrollType { ScrollType::User };
     ScrollClamping clamping { ScrollClamping::Clamped };
     ScrollIsAnimated animated { ScrollIsAnimated::No };
-    std::optional<std::tuple<FloatPoint, ScrollType, ScrollClamping>> requestedDataBeforeAnimatedScroll { };
+    std::optional<std::tuple<ScrollRequestType, std::variant<FloatPoint, FloatSize>, ScrollType, ScrollClamping>> requestedDataBeforeAnimatedScroll { };
 
     void merge(RequestedScrollData&&);
+
+    WEBCORE_EXPORT FloatPoint destinationPosition(FloatPoint currentScrollPosition) const;
+    WEBCORE_EXPORT static FloatPoint computeDestinationPosition(FloatPoint currentScrollPosition, ScrollRequestType, const std::variant<FloatPoint, FloatSize>& scrollPositionOrDelta);
+
+    bool comparePositionOrDelta(const RequestedScrollData& other) const
+    {
+        if (requestType == ScrollRequestType::PositionUpdate)
+            return std::get<FloatPoint>(scrollPositionOrDelta) == std::get<FloatPoint>(other.scrollPositionOrDelta);
+        if (requestType == ScrollRequestType::DeltaUpdate)
+            return std::get<FloatSize>(scrollPositionOrDelta) == std::get<FloatSize>(other.scrollPositionOrDelta);
+        return true;
+    }
 
     bool operator==(const RequestedScrollData& other) const
     {
         return requestType == other.requestType
-            && scrollPosition == other.scrollPosition
+            && comparePositionOrDelta(other)
             && scrollType == other.scrollType
             && clamping == other.clamping
             && animated == other.animated
@@ -150,10 +149,7 @@ struct RequestedKeyboardScrollData {
     KeyboardScrollAction action { KeyboardScrollAction::StartAnimation };
     std::optional<KeyboardScroll> keyboardScroll;
 
-    bool operator==(const RequestedKeyboardScrollData& other) const
-    {
-        return action == other.action && keyboardScroll == other.keyboardScroll;
-    }
+    friend bool operator==(const RequestedKeyboardScrollData&, const RequestedKeyboardScrollData&) = default;
 };
 
 enum class ScrollUpdateType : uint8_t {
@@ -212,11 +208,13 @@ struct WheelEventHandlingResult {
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, SynchronousScrollingReason);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollingNodeType);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollingLayerPositionAction);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollableAreaParameters);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const ScrollableAreaParameters&);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ViewportRectStability);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WheelEventHandlingResult);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WheelEventProcessingSteps);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollRequestType);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollUpdateType);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const RequestedScrollData&);
 
 } // namespace WebCore
 
@@ -238,6 +236,7 @@ template<> struct EnumTraits<WebCore::ScrollRequestType> {
     using values = EnumValues<
         WebCore::ScrollRequestType,
         WebCore::ScrollRequestType::PositionUpdate,
+        WebCore::ScrollRequestType::DeltaUpdate,
         WebCore::ScrollRequestType::CancelAnimatedScroll
     >;
 };

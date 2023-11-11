@@ -129,6 +129,12 @@ class CommandProcessorTask
 {
   public:
     CommandProcessorTask() { initTask(); }
+    ~CommandProcessorTask()
+    {
+        // Render passes are cached in RenderPassCache.  The handle stored in the task references a
+        // render pass that is managed by that cache.
+        mRenderPass.release();
+    }
 
     void initTask();
 
@@ -189,7 +195,7 @@ class CommandProcessorTask
     }
     const VkPresentInfoKHR &getPresentInfo() const { return mPresentInfo; }
     SwapchainStatus *getSwapchainStatus() const { return mSwapchainStatus; }
-    const RenderPass *getRenderPass() const { return mRenderPass; }
+    const RenderPass &getRenderPass() const { return mRenderPass; }
     OutsideRenderPassCommandBufferHelper *getOutsideRenderPassCommandBuffer() const
     {
         return mOutsideRenderPassCommandBuffer;
@@ -211,7 +217,7 @@ class CommandProcessorTask
     // ProcessCommands
     OutsideRenderPassCommandBufferHelper *mOutsideRenderPassCommandBuffer;
     RenderPassCommandBufferHelper *mRenderPassCommandBuffer;
-    const RenderPass *mRenderPass;
+    RenderPass mRenderPass;
 
     // Flush data
     VkSemaphore mSemaphore;
@@ -247,8 +253,7 @@ class CommandProcessorTask
     egl::ContextPriority mPriority;
     ProtectionType mProtectionType;
 };
-using CommandProcessorTaskQueue =
-    angle::FixedQueue<CommandProcessorTask, kMaxCommandProcessorTasksLimit>;
+using CommandProcessorTaskQueue = angle::FixedQueue<CommandProcessorTask>;
 
 struct CommandBatch final : angle::NonCopyable
 {
@@ -276,7 +281,7 @@ struct CommandBatch final : angle::NonCopyable
     QueueSerial queueSerial;
     ProtectionType protectionType;
 };
-using CommandBatchQueue = angle::FixedQueue<CommandBatch, kInFlightCommandsLimit>;
+using CommandBatchQueue = angle::FixedQueue<CommandBatch>;
 
 class DeviceQueueMap;
 
@@ -515,7 +520,7 @@ class CommandQueue : angle::NonCopyable
     std::mutex mQueueSubmitMutex;
     CommandBatchQueue mInFlightCommands;
     // Temporary storage for finished command batches that should be reset.
-    angle::FixedQueue<CommandBatch, kMaxFinishedCommandsLimit> mFinishedCommandBatches;
+    CommandBatchQueue mFinishedCommandBatches;
 
     CommandsStateMap mCommandsStateMap;
     // Keeps a free list of reusable primary command buffers.

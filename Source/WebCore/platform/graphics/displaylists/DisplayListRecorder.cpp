@@ -46,8 +46,8 @@
 namespace WebCore {
 namespace DisplayList {
 
-Recorder::Recorder(const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, const DestinationColorSpace& colorSpace, DrawGlyphsMode drawGlyphsMode)
-    : GraphicsContext(state)
+Recorder::Recorder(IsDeferred isDeferred, const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, const DestinationColorSpace& colorSpace, DrawGlyphsMode drawGlyphsMode)
+    : GraphicsContext(isDeferred, state)
     , m_initialScale(initialCTM.xScale())
     , m_colorSpace(colorSpace)
     , m_drawGlyphsMode(drawGlyphsMode)
@@ -74,14 +74,10 @@ void Recorder::appendStateChangeItem(const GraphicsContextState& state)
     
     if (state.containsOnlyInlineChanges()) {
         if (state.changes().contains(GraphicsContextState::Change::FillBrush))
-            recordSetInlineFillColor(*fillColor().tryGetAsSRGBABytes());
+            recordSetInlineFillColor(*fillColor().tryGetAsPackedInline());
 
-        if (state.changes().contains(GraphicsContextState::Change::StrokeBrush))
-            recordSetInlineStrokeColor(*strokeColor().tryGetAsSRGBABytes());
-
-        if (state.changes().contains(GraphicsContextState::Change::StrokeThickness))
-            recordSetStrokeThickness(strokeThickness());
-
+        if (state.changes().containsAny({ GraphicsContextState::Change::StrokeBrush, GraphicsContextState::Change::StrokeThickness }))
+            recordSetInlineStroke(buildSetInlineStroke(state));
         return;
     }
 
@@ -119,6 +115,21 @@ void Recorder::appendStateChangeItemIfNecessary()
     appendStateChangeItem(state);
     state.didApplyChanges();
     currentState().lastDrawingState = state;
+}
+
+SetInlineStroke Recorder::buildSetInlineStroke(const GraphicsContextState& state)
+{
+    ASSERT(state.containsOnlyInlineChanges());
+    ASSERT(state.changes().containsAny({ GraphicsContextState::Change::StrokeBrush, GraphicsContextState::Change::StrokeThickness }));
+
+    if (!state.changes().contains(GraphicsContextState::Change::StrokeBrush))
+        return SetInlineStroke(strokeThickness());
+
+    ASSERT(strokeColor().tryGetAsPackedInline());
+    if (!state.changes().contains(GraphicsContextState::Change::StrokeThickness))
+        return SetInlineStroke(*strokeColor().tryGetAsPackedInline());
+
+    return SetInlineStroke(*strokeColor().tryGetAsPackedInline(), strokeThickness());
 }
 
 const GraphicsContextState& Recorder::state() const
@@ -225,7 +236,7 @@ void Recorder::drawGlyphsAndCacheResources(const Font& font, const GlyphBufferGl
     recordDrawGlyphs(font, glyphs, advances, numGlyphs, localAnchor, smoothingMode);
 }
 
-void Recorder::drawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+void Recorder::drawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     appendStateChangeItemIfNecessary();
 
@@ -236,8 +247,16 @@ void Recorder::drawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRe
 
     recordDrawImageBuffer(imageBuffer, destRect, srcRect, options);
 }
+void Recorder::drawConsumingImageBuffer(RefPtr<ImageBuffer> imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+{
+    // ImageBuffer draws are recorded as ImageBuffer draws, not as NativeImage draws. So for consistency,
+    // record this too. This should be removed once NativeImages are the only image types drawn from.
+    if (!imageBuffer)
+        return;
+    drawImageBuffer(*imageBuffer, destRect, srcRect, options);
+}
 
-void Recorder::drawNativeImageInternal(NativeImage& image, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+void Recorder::drawNativeImageInternal(NativeImage& image, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     appendStateChangeItemIfNecessary();
     recordResourceUse(image);
@@ -260,14 +279,14 @@ void Recorder::drawSystemImage(SystemImage& systemImage, const FloatRect& destin
     recordDrawSystemImage(systemImage, destinationRect);
 }
 
-void Recorder::drawPattern(NativeImage& image, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
+void Recorder::drawPattern(NativeImage& image, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
     appendStateChangeItemIfNecessary();
     recordResourceUse(image);
     recordDrawPattern(image.renderingResourceIdentifier(), destRect, tileRect, patternTransform, phase, spacing, options);
 }
 
-void Recorder::drawPattern(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
+void Recorder::drawPattern(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
     appendStateChangeItemIfNecessary();
 
@@ -279,18 +298,22 @@ void Recorder::drawPattern(ImageBuffer& imageBuffer, const FloatRect& destRect, 
     recordDrawPattern(imageBuffer.renderingResourceIdentifier(), destRect, tileRect, patternTransform, phase, spacing, options);
 }
 
-void Recorder::save()
+void Recorder::save(GraphicsContextState::Purpose purpose)
 {
+    ASSERT(purpose == GraphicsContextState::Purpose::SaveRestore);
+
     appendStateChangeItemIfNecessary();
-    GraphicsContext::save();
+    GraphicsContext::save(purpose);
     recordSave();
     m_stateStack.append(m_stateStack.last());
 }
 
-void Recorder::restore()
+void Recorder::restore(GraphicsContextState::Purpose purpose)
 {
+    ASSERT(purpose == GraphicsContextState::Purpose::SaveRestore);
+
     appendStateChangeItemIfNecessary();
-    GraphicsContext::restore();
+    GraphicsContext::restore(purpose);
 
     if (!m_stateStack.size())
         return;
@@ -350,10 +373,8 @@ void Recorder::beginTransparencyLayer(float opacity)
     appendStateChangeItemIfNecessary();
     recordBeginTransparencyLayer(opacity);
 
-    GraphicsContext::save();
+    GraphicsContext::save(GraphicsContextState::Purpose::TransparencyLayer);
     m_stateStack.append(m_stateStack.last().cloneForTransparencyLayer());
-    
-    m_state.didBeginTransparencyLayer();
 }
 
 void Recorder::endTransparencyLayer()
@@ -364,7 +385,7 @@ void Recorder::endTransparencyLayer()
     recordEndTransparencyLayer();
 
     m_stateStack.removeLast();
-    GraphicsContext::restore();
+    GraphicsContext::restore(GraphicsContextState::Purpose::TransparencyLayer);
 }
 
 void Recorder::drawRect(const FloatRect& rect, float borderThickness)
@@ -492,7 +513,7 @@ void Recorder::strokePath(const Path& path)
     auto& state = currentState().state;
     if (state.containsOnlyInlineStrokeChanges()) {
         if (auto line = path.singleDataLine()) {
-            recordStrokeLineWithColorAndThickness(*line, *strokeColor().tryGetAsSRGBABytes(), strokeThickness());
+            recordStrokeLineWithColorAndThickness(*line, buildSetInlineStroke(state));
             state.didApplyChanges();
             currentState().lastDrawingState = state;
             return;
@@ -616,11 +637,6 @@ void Recorder::clipToImageBuffer(ImageBuffer& imageBuffer, const FloatRect& dest
     currentState().clipBounds.intersect(currentState().ctm.mapRect(destRect));
     recordResourceUse(imageBuffer);
     recordClipToImageBuffer(imageBuffer, destRect);
-}
-
-RefPtr<ImageBuffer> Recorder::createImageBuffer(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod> renderingMethod) const
-{
-    return GraphicsContext::createImageBuffer(size, resolutionScale, colorSpace, renderingMode, renderingMethod.value_or(RenderingMethod::DisplayList));
 }
 
 #if ENABLE(VIDEO)

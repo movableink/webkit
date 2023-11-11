@@ -42,6 +42,7 @@
 #include <wtf/PointerComparison.h>
 
 namespace WebCore {
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(KeyframeEffectStack);
 
 KeyframeEffectStack::KeyframeEffectStack()
 {
@@ -151,7 +152,7 @@ void KeyframeEffectStack::setCSSAnimationList(RefPtr<const AnimationList>&& cssA
     m_isSorted = false;
 }
 
-OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle& targetStyle, HashSet<AnimatableProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext)
+OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle& targetStyle, HashSet<AnimatableCSSProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext)
 {
     OptionSet<AnimationImpact> impact;
 
@@ -258,9 +259,9 @@ void KeyframeEffectStack::lastStyleChangeEventStyleDidChange(const RenderStyle* 
         effect->lastStyleChangeEventStyleDidChange(previousStyle, currentStyle);
 }
 
-void KeyframeEffectStack::cascadeDidOverrideProperties(const HashSet<AnimatableProperty>& overriddenProperties, const Document& document)
+void KeyframeEffectStack::cascadeDidOverrideProperties(const HashSet<AnimatableCSSProperty>& overriddenProperties, const Document& document)
 {
-    HashSet<AnimatableProperty> acceleratedPropertiesOverriddenByCascade;
+    HashSet<AnimatableCSSProperty> acceleratedPropertiesOverriddenByCascade;
     for (auto animatedProperty : overriddenProperties) {
         if (CSSPropertyAnimation::animationOfPropertyIsAccelerated(animatedProperty, document.settings()))
             acceleratedPropertiesOverriddenByCascade.add(animatedProperty);

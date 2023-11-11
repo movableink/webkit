@@ -52,7 +52,7 @@ typedef int SandboxFlags;
 namespace WebKit {
 
 struct LoadParameters {
-    void encode(IPC::Encoder&) const;
+    void encode(IPC::Encoder&) &&;
     static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, LoadParameters&);
 
     void platformEncode(IPC::Encoder&) const;
@@ -93,13 +93,6 @@ struct LoadParameters {
 
 #if PLATFORM(COCOA)
     std::optional<double> dataDetectionReferenceDate;
-#if !ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
-    Vector<SandboxExtension::Handle> networkExtensionSandboxExtensionHandles;
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    std::optional<SandboxExtension::Handle> contentFilterExtensionHandle;
-    std::optional<SandboxExtension::Handle> frontboardServiceExtensionHandle;
-#endif // PLATFORM(IOS) || PLATFORM(VISION)
-#endif // !ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
 #endif
 
     OptionSet<WebCore::AdvancedPrivacyProtections> advancedPrivacyProtections;

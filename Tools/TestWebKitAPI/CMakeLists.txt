@@ -73,6 +73,7 @@ set(TestWTF_SOURCES
     Tests/WTF/MetaAllocator.cpp
     Tests/WTF/MoveOnlyLifecycleLogger.cpp
     Tests/WTF/NakedPtr.cpp
+    Tests/WTF/NativePromise.cpp
     Tests/WTF/NeverDestroyed.cpp
     Tests/WTF/OptionSet.cpp
     Tests/WTF/Packed.cpp
@@ -96,12 +97,15 @@ set(TestWTF_SOURCES
     Tests/WTF/ScopedLambda.cpp
     Tests/WTF/SentinelLinkedList.cpp
     Tests/WTF/SetForScope.cpp
+    Tests/WTF/Signals.cpp
     Tests/WTF/StackTraceTest.cpp
     Tests/WTF/StdLibExtrasTests.cpp
     Tests/WTF/StringBuilder.cpp
     Tests/WTF/StringCommon.cpp
     Tests/WTF/StringConcatenate.cpp
     Tests/WTF/StringHasher.cpp
+    Tests/WTF/SuperFastHash.cpp
+    Tests/WTF/WYHash.cpp
     Tests/WTF/StringImpl.cpp
     Tests/WTF/StringOperators.cpp
     Tests/WTF/StringParsingBuffer.cpp

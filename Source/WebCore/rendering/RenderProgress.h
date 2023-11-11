@@ -43,7 +43,6 @@ public:
 
 private:
     ASCIILiteral renderName() const override { return "RenderProgress"_s; }
-    bool isProgress() const override { return true; }
     LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
 
     void animationTimerFired();
@@ -59,4 +58,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderProgress, isProgress())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderProgress, isRenderProgress())

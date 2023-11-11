@@ -83,7 +83,9 @@ StyleSheetContents* UserAgentStyle::mediaQueryStyleSheet;
 StyleSheetContents* UserAgentStyle::popoverStyleSheet;
 StyleSheetContents* UserAgentStyle::plugInsStyleSheet;
 StyleSheetContents* UserAgentStyle::horizontalFormControlsStyleSheet;
+StyleSheetContents* UserAgentStyle::htmlSwitchControlStyleSheet;
 StyleSheetContents* UserAgentStyle::counterStylesStyleSheet;
+StyleSheetContents* UserAgentStyle::rubyStyleSheet;
 #if ENABLE(FULLSCREEN_API)
 StyleSheetContents* UserAgentStyle::fullscreenStyleSheet;
 #endif
@@ -141,15 +143,15 @@ void UserAgentStyle::addToDefaultStyle(StyleSheetContents& sheet)
     // Build a stylesheet consisting of non-trivial media queries seen in default style.
     // Rulesets for these can't be global and need to be built in document context.
     for (auto& rule : sheet.childRules()) {
-        if (!is<StyleRuleMedia>(rule))
+        auto mediaRule = dynamicDowncast<StyleRuleMedia>(rule);
+        if (!mediaRule)
             continue;
-        auto& mediaRule = downcast<StyleRuleMedia>(rule);
-        auto& mediaQuery = mediaRule.mediaQueries();
+        auto& mediaQuery = mediaRule->mediaQueries();
         if (screenEval().evaluate(mediaQuery))
             continue;
         if (printEval().evaluate(mediaQuery))
             continue;
-        mediaQueryStyleSheet->parserAppendRule(mediaRule.copy());
+        mediaQueryStyleSheet->parserAppendRule(mediaRule->copy());
     }
 
     ++defaultStyleVersion;
@@ -191,7 +193,7 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
                 plugInsStyleSheet = parseUASheet(plugInsRules);
                 addToDefaultStyle(*plugInsStyleSheet);
             }
-        } else if (is<HTMLDialogElement>(element) && element.document().settings().dialogElementEnabled()) {
+        } else if (is<HTMLDialogElement>(element)) {
             if (!dialogStyleSheet) {
                 dialogStyleSheet = parseUASheet(StringImpl::createWithoutCopying(dialogUserAgentStyleSheet, sizeof(dialogUserAgentStyleSheet)));
                 addToDefaultStyle(*dialogStyleSheet);
@@ -227,6 +229,10 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
             addToDefaultStyle(*colorInputStyleSheet);
         }
 #endif // ENABLE(INPUT_TYPE_COLOR)
+        else if (!htmlSwitchControlStyleSheet && is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isSwitch()) {
+            htmlSwitchControlStyleSheet = parseUASheet(StringImpl::createWithoutCopying(htmlSwitchControlUserAgentStyleSheet, sizeof(htmlSwitchControlUserAgentStyleSheet)));
+            addToDefaultStyle(*htmlSwitchControlStyleSheet);
+        }
     } else if (is<SVGElement>(element)) {
         if (!svgStyleSheet) {
             // SVG rules.
@@ -253,6 +259,11 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
     if (!counterStylesStyleSheet) {
         counterStylesStyleSheet = parseUASheet(StringImpl::createWithoutCopying(counterStylesUserAgentStyleSheet, sizeof(counterStylesUserAgentStyleSheet)));
         addToCounterStyleRegistry(*counterStylesStyleSheet);
+    }
+
+    if (!rubyStyleSheet && element.document().settings().cssBasedRubyEnabled()) {
+        rubyStyleSheet = parseUASheet(StringImpl::createWithoutCopying(rubyUserAgentStyleSheet, sizeof(rubyUserAgentStyleSheet)));
+        addToDefaultStyle(*rubyStyleSheet);
     }
 
 #if ENABLE(FULLSCREEN_API)

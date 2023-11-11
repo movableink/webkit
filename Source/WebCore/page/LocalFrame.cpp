@@ -5,7 +5,7 @@
  *                     2000 Simon Hausmann <hausmann@kde.org>
  *                     2000 Stefan Schimanski <1Stein@gmx.de>
  *                     2001 George Staikos <staikos@kde.org>
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2005 Alexey Proskuryakov <ap@nypop.com>
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
@@ -57,6 +57,7 @@
 #include "FrameSelection.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
+#include "HTMLAttachmentElement.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLFrameElementBase.h"
@@ -77,6 +78,7 @@
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "ProcessWarming.h"
+#include "RemoteFrame.h"
 #include "RenderLayerCompositor.h"
 #include "RenderTableCell.h"
 #include "RenderText.h"
@@ -159,11 +161,8 @@ LocalFrame::LocalFrame(Page& page, UniqueRef<LocalFrameLoaderClient>&& frameLoad
     ProcessWarming::initializeNames();
     StaticCSSValuePool::init();
 
-    if (ownerElement) {
-        if (auto* localMainFrame = dynamicDowncast<LocalFrame>(mainFrame()))
-            localMainFrame->selfOnlyRef();
-        ownerElement->setContentFrame(*this);
-    }
+    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(mainFrame()); localMainFrame && ownerElement)
+        localMainFrame->selfOnlyRef();
 
 #ifndef NDEBUG
     frameCounter.increment();
@@ -172,11 +171,14 @@ LocalFrame::LocalFrame(Page& page, UniqueRef<LocalFrameLoaderClient>&& frameLoad
     // Pause future ActiveDOMObjects if this frame is being created while the page is in a paused state.
     if (LocalFrame* parent = dynamicDowncast<LocalFrame>(tree().parent()); parent && parent->activeDOMObjectsAndAnimationsSuspended())
         suspendActiveDOMObjectsAndAnimations();
+
+    if (CheckedPtr page = this->page(); page && isRootFrame())
+        page->removeRootFrame(*this);
 }
 
 void LocalFrame::init()
 {
-    m_loader->init();
+    checkedLoader()->init();
 }
 
 Ref<LocalFrame> LocalFrame::createMainFrame(Page& page, UniqueRef<LocalFrameLoaderClient>&& client, FrameIdentifier identifier)
@@ -198,11 +200,12 @@ LocalFrame::~LocalFrame()
 {
     setView(nullptr);
 
-    if (!loader().isComplete())
-        loader().closeURL();
+    CheckedRef loader = this->loader();
+    if (!loader->isComplete())
+        loader->closeURL();
 
-    loader().clear(document(), false);
-    script().updatePlatformScriptObjects();
+    loader->clear(protectedDocument(), false);
+    checkedScript()->updatePlatformScriptObjects();
 
     // FIXME: We should not be doing all this work inside the destructor
 
@@ -220,14 +223,22 @@ LocalFrame::~LocalFrame()
         localMainFrame->selfOnlyDeref();
 }
 
+bool LocalFrame::isRootFrame() const
+{
+    if (auto* parent = tree().parent())
+        return is<RemoteFrame>(parent);
+    ASSERT(&mainFrame() == this);
+    return true;
+}
+
 void LocalFrame::addDestructionObserver(FrameDestructionObserver& observer)
 {
-    m_destructionObservers.add(&observer);
+    m_destructionObservers.add(observer);
 }
 
 void LocalFrame::removeDestructionObserver(FrameDestructionObserver& observer)
 {
-    m_destructionObservers.remove(&observer);
+    m_destructionObservers.remove(observer);
 }
 
 void LocalFrame::setView(RefPtr<LocalFrameView>&& view)
@@ -235,17 +246,17 @@ void LocalFrame::setView(RefPtr<LocalFrameView>&& view)
     // We the custom scroll bars as early as possible to prevent m_doc->detach()
     // from messing with the view such that its scroll bars won't be torn down.
     // FIXME: We should revisit this.
-    if (m_view)
-        m_view->prepareForDetach();
+    if (RefPtr view = m_view)
+        view->prepareForDetach();
 
     // Prepare for destruction now, so any unload event handlers get run and the LocalDOMWindow is
     // notified. If we wait until the view is destroyed, then things won't be hooked up enough for
     // these calls to work.
     if (!view && m_doc && m_doc->backForwardCacheState() != Document::InBackForwardCache)
-        m_doc->willBeRemovedFromFrame();
+        protectedDocument()->willBeRemovedFromFrame();
     
-    if (m_view)
-        m_view->layoutContext().unscheduleLayout();
+    if (RefPtr view = m_view)
+        view->checkedLayoutContext()->unscheduleLayout();
     
     m_eventHandler->clear();
 
@@ -256,7 +267,17 @@ void LocalFrame::setView(RefPtr<LocalFrameView>&& view)
     // Only one form submission is allowed per view of a part.
     // Since this part may be getting reused as a result of being
     // pulled from the back/forward cache, reset this flag.
-    loader().resetMultipleFormSubmissionProtection();
+    checkedLoader()->resetMultipleFormSubmissionProtection();
+}
+
+CheckedRef<Editor> LocalFrame::checkedEditor()
+{
+    return editor();
+}
+
+CheckedRef<const Editor> LocalFrame::checkedEditor() const
+{
+    return editor();
 }
 
 void LocalFrame::setDocument(RefPtr<Document>&& newDocument)
@@ -269,9 +290,9 @@ void LocalFrame::setDocument(RefPtr<Document>&& newDocument)
     m_documentIsBeingReplaced = true;
 
     if (isMainFrame()) {
-        if (auto* page = this->page())
+        if (CheckedPtr page = this->page())
             page->didChangeMainDocument();
-        m_loader->client().dispatchDidChangeMainDocument();
+        checkedLoader()->client().dispatchDidChangeMainDocument();
 
         // We want to generate the same unique names whenever a page is loaded to avoid making layout tests
         // flaky and for things like form state restoration to work. To achieve this, we reset our frame
@@ -279,15 +300,15 @@ void LocalFrame::setDocument(RefPtr<Document>&& newDocument)
         tree().resetFrameIdentifiers();
     }
 
+    if (RefPtr previousDocument = m_doc) {
 #if ENABLE(ATTACHMENT_ELEMENT)
-    if (m_doc) {
-        for (auto& attachment : m_doc->attachmentElementsByIdentifier().values())
-            editor().didRemoveAttachmentElement(attachment);
-    }
+        for (Ref attachment : previousDocument->attachmentElementsByIdentifier().values())
+            checkedEditor()->didRemoveAttachmentElement(attachment);
 #endif
 
-    if (m_doc && m_doc->backForwardCacheState() != Document::InBackForwardCache)
-        m_doc->willBeRemovedFromFrame();
+        if (previousDocument->backForwardCacheState() != Document::InBackForwardCache)
+            previousDocument->willBeRemovedFromFrame();
+    }
 
     m_doc = newDocument.copyRef();
     ASSERT(!m_doc || m_doc->domWindow());
@@ -299,14 +320,15 @@ void LocalFrame::setDocument(RefPtr<Document>&& newDocument)
         newDocument->didBecomeCurrentDocumentInFrame();
 
 #if ENABLE(ATTACHMENT_ELEMENT)
-    if (m_doc) {
-        for (auto& attachment : m_doc->attachmentElementsByIdentifier().values())
-            editor().didInsertAttachmentElement(attachment);
+    if (RefPtr document = m_doc) {
+        CheckedRef editor = this->editor();
+        for (Ref attachment : document->attachmentElementsByIdentifier().values())
+            editor->didInsertAttachmentElement(attachment);
     }
 #endif
 
     if (page() && m_doc && isMainFrame() && !loader().stateMachine().isDisplayingInitialEmptyDocument())
-        page()->mainFrameDidChangeToNonInitialEmptyDocument();
+        checkedPage()->mainFrameDidChangeToNonInitialEmptyDocument();
 
     InspectorInstrumentation::frameDocumentUpdated(*this);
 
@@ -315,17 +337,27 @@ void LocalFrame::setDocument(RefPtr<Document>&& newDocument)
 
 void LocalFrame::frameDetached()
 {
-    m_loader->frameDetached();
+    checkedLoader()->frameDetached();
 }
 
 bool LocalFrame::preventsParentFromBeingComplete() const
 {
-    return !m_loader->isComplete() && (!ownerElement() || !ownerElement()->isLazyLoadObserverActive());
+    return !checkedLoader()->isComplete() && (!ownerElement() || !ownerElement()->isLazyLoadObserverActive());
 }
 
 void LocalFrame::changeLocation(FrameLoadRequest&& request)
 {
-    loader().changeLocation(WTFMove(request));
+    checkedLoader()->changeLocation(WTFMove(request));
+}
+
+void LocalFrame::broadcastFrameRemovalToOtherProcesses()
+{
+    checkedLoader()->client().broadcastFrameRemovalToOtherProcesses();
+}
+
+void LocalFrame::didFinishLoadInAnotherProcess()
+{
+    checkedLoader()->provisionalLoadFailedInAnotherProcess();
 }
 
 void LocalFrame::invalidateContentEventRegionsIfNeeded(InvalidateContentEventRegionsReason reason)
@@ -360,7 +392,7 @@ void LocalFrame::invalidateContentEventRegionsIfNeeded(InvalidateContentEventReg
         return;
 
     if (RefPtr ownerElement = this->ownerElement())
-        ownerElement->document().invalidateEventRegionsForFrame(*ownerElement);
+        ownerElement->protectedDocument()->invalidateEventRegionsForFrame(*ownerElement);
 }
 
 #if ENABLE(ORIENTATION_EVENTS)
@@ -373,7 +405,7 @@ void LocalFrame::orientationChanged()
 
 IntDegrees LocalFrame::orientation() const
 {
-    if (auto* page = this->page())
+    if (CheckedPtr page = this->page())
         return page->chrome().client().deviceOrientation();
     return 0;
 }
@@ -408,11 +440,10 @@ static JSC::Yarr::RegularExpression createRegExpForLabels(const Vector<String>& 
 
 String LocalFrame::searchForLabelsAboveCell(const JSC::Yarr::RegularExpression& regExp, HTMLTableCellElement* cell, size_t* resultDistanceFromStartOfCell)
 {
-    HTMLTableCellElement* aboveCell = cell->cellAbove();
-    if (aboveCell) {
+    if (RefPtr aboveCell = cell->cellAbove()) {
         // search within the above cell we found for a match
-        size_t lengthSearched = 0;    
-        for (Text* textNode = TextNodeTraversal::firstWithin(*aboveCell); textNode; textNode = TextNodeTraversal::next(*textNode, aboveCell)) {
+        size_t lengthSearched = 0;
+        for (RefPtr textNode = TextNodeTraversal::firstWithin(*aboveCell); textNode; textNode = TextNodeTraversal::next(*textNode, aboveCell.get())) {
             if (!textNode->renderer() || textNode->renderer()->style().visibility() != Visibility::Visible)
                 continue;
             // For each text chunk, run the regexp
@@ -444,7 +475,7 @@ String LocalFrame::searchForLabelsBeforeElement(const Vector<String>& labels, El
     // charsSearchedThreshold, to make it more likely that we'll search whole nodes.
     const unsigned int maxCharsSearched = 600;
     // If the starting element is within a table, the cell that contains it
-    HTMLTableCellElement* startingTableCell = nullptr;
+    RefPtr<HTMLTableCellElement> startingTableCell;
     bool searchedCellAbove = false;
 
     if (resultDistance)
@@ -454,7 +485,7 @@ String LocalFrame::searchForLabelsBeforeElement(const Vector<String>& labels, El
     
     // walk backwards in the node tree, until another element, or form, or end of tree
     int unsigned lengthSearched = 0;
-    Node* n;
+    RefPtr<Node> n;
     for (n = NodeTraversal::previous(*element); n && lengthSearched < charsSearchedThreshold; n = NodeTraversal::previous(*n)) {
         // We hit another form element or the start of the form - bail out
         if (is<HTMLFormElement>(*n) || (is<Element>(*n) && downcast<Element>(*n).isValidatedFormListedElement()))
@@ -463,7 +494,7 @@ String LocalFrame::searchForLabelsBeforeElement(const Vector<String>& labels, El
         if (n->hasTagName(tdTag) && !startingTableCell)
             startingTableCell = downcast<HTMLTableCellElement>(n);
         else if (is<HTMLTableRowElement>(*n) && startingTableCell) {
-            String result = searchForLabelsAboveCell(regExp, startingTableCell, resultDistance);
+            String result = searchForLabelsAboveCell(regExp, startingTableCell.get(), resultDistance);
             if (!result.isEmpty()) {
                 if (resultIsInCellAbove)
                     *resultIsInCellAbove = true;
@@ -489,7 +520,7 @@ String LocalFrame::searchForLabelsBeforeElement(const Vector<String>& labels, El
     // If we started in a cell, but bailed because we found the start of the form or the
     // previous element, we still might need to search the row above us for a label.
     if (startingTableCell && !searchedCellAbove) {
-        String result = searchForLabelsAboveCell(regExp, startingTableCell, resultDistance);
+        String result = searchForLabelsAboveCell(regExp, startingTableCell.get(), resultDistance);
         if (!result.isEmpty()) {
             if (resultIsInCellAbove)
                 *resultIsInCellAbove = true;
@@ -575,7 +606,7 @@ bool LocalFrame::requestDOMPasteAccess(DOMPasteAccessCategory pasteAccessCategor
         return false;
 
     auto gestureToken = UserGestureIndicator::currentUserGesture();
-    if (!gestureToken || !gestureToken->processingUserGesture())
+    if (!gestureToken || !gestureToken->processingUserGesture() || !gestureToken->canRequestDOMPaste())
         return false;
 
     switch (gestureToken->domPasteAccessPolicy()) {
@@ -608,26 +639,28 @@ void LocalFrame::setPrinting(bool printing, const FloatSize& pageSize, const Flo
 {
     if (!view() || !document())
         return;
+
+    RefPtr document = m_doc;
     // In setting printing, we should not validate resources already cached for the document.
     // See https://bugs.webkit.org/show_bug.cgi?id=43704
-    ResourceCacheValidationSuppressor validationSuppressor(m_doc->cachedResourceLoader());
+    ResourceCacheValidationSuppressor validationSuppressor(document->cachedResourceLoader());
 
-    m_doc->setPrinting(printing);
-    view()->adjustMediaTypeForPrinting(printing);
+    document->setPrinting(printing);
+    protectedView()->adjustMediaTypeForPrinting(printing);
 
     // FIXME: Consider invoking Page::updateRendering or an equivalent.
-    m_doc->styleScope().didChangeStyleSheetEnvironment();
-    m_doc->evaluateMediaQueriesAndReportChanges();
+    document->styleScope().didChangeStyleSheetEnvironment();
+    document->evaluateMediaQueriesAndReportChanges();
     if (!view())
         return;
 
-    auto& frameView = *view();
+    Ref frameView = *view();
     if (shouldUsePrintingLayout())
-        frameView.forceLayoutForPagination(pageSize, originalPageSize, maximumShrinkRatio, shouldAdjustViewSize);
+        frameView->forceLayoutForPagination(pageSize, originalPageSize, maximumShrinkRatio, shouldAdjustViewSize);
     else {
-        frameView.forceLayout();
+        frameView->forceLayout();
         if (shouldAdjustViewSize == AdjustViewSize)
-            frameView.adjustViewSize();
+            frameView->adjustViewSize();
     }
 
     // Subframes of the one we're printing don't lay out to the page size.
@@ -673,8 +706,9 @@ void LocalFrame::injectUserScripts(UserScriptInjectionTime injectionTime)
     if (loader().stateMachine().creatingInitialEmptyDocument() && !settings().shouldInjectUserScriptsInInitialEmptyDocument())
         return;
 
-    bool pageWasNotified = page()->hasBeenNotifiedToInjectUserScripts();
-    page()->userContentProvider().forEachUserScript([this, protectedThis = Ref { *this }, injectionTime, pageWasNotified] (DOMWrapperWorld& world, const UserScript& script) {
+    CheckedPtr page = this->page();
+    bool pageWasNotified = page->hasBeenNotifiedToInjectUserScripts();
+    page->protectedUserContentProvider()->forEachUserScript([this, protectedThis = Ref { *this }, injectionTime, pageWasNotified] (DOMWrapperWorld& world, const UserScript& script) {
         if (script.injectionTime() == injectionTime) {
             if (script.waitForNotificationBeforeInjecting() == WaitForNotificationBeforeInjecting::Yes && !pageWasNotified)
                 addUserScriptAwaitingNotification(world, script);
@@ -686,17 +720,18 @@ void LocalFrame::injectUserScripts(UserScriptInjectionTime injectionTime)
 
 void LocalFrame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserScript& script)
 {
+    CheckedRef loader = this->loader();
 #if ENABLE(APP_BOUND_DOMAINS)
-    if (loader().client().shouldEnableInAppBrowserPrivacyProtections()) {
-        if (auto* document = this->document())
+    if (loader->client().shouldEnableInAppBrowserPrivacyProtections()) {
+        if (RefPtr document = this->document())
             document->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "Ignoring user script injection for non-app bound domain."_s);
         FRAME_RELEASE_LOG_ERROR(Loading, "injectUserScriptImmediately: Ignoring user script injection for non app-bound domain");
         return;
     }
-    loader().client().notifyPageOfAppBoundBehavior();
+    loader->client().notifyPageOfAppBoundBehavior();
 #endif
 
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document)
         return;
     if (script.injectedFrames() == UserContentInjectedFrames::InjectInTopFrameOnly && !isMainFrame())
@@ -705,8 +740,8 @@ void LocalFrame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserS
         return;
 
     document->setAsRunningUserScripts();
-    loader().client().willInjectUserScript(world);
-    m_script->evaluateInWorldIgnoringException(ScriptSourceCode(script.source(), URL(script.url())), world);
+    loader->client().willInjectUserScript(world);
+    checkedScript()->evaluateInWorldIgnoringException(ScriptSourceCode(script.source(), JSC::SourceTaintedOrigin::Untainted, URL(script.url())), world);
 }
 
 void LocalFrame::addUserScriptAwaitingNotification(DOMWrapperWorld& world, const UserScript& script)
@@ -747,47 +782,67 @@ LocalFrame* LocalFrame::frameForWidget(const Widget& widget)
 
     // Assume all widgets are either a FrameView or owned by a RenderWidget.
     // FIXME: That assumption is not right for scroll bars!
-    return dynamicDowncast<LocalFrame>(downcast<LocalFrameView>(widget).frame());
+    return &downcast<LocalFrameView>(widget).frame();
 }
 
 void LocalFrame::clearTimers(LocalFrameView *view, Document *document)
 {
     if (!view)
         return;
-    view->layoutContext().unscheduleLayout();
-    if (auto* timelines = document->timelinesController())
+    view->checkedLayoutContext()->unscheduleLayout();
+    if (CheckedPtr timelines = document->timelinesController())
         timelines->suspendAnimations();
-    if (auto* localFrame = dynamicDowncast<LocalFrame>(view->frame()))
-        localFrame->eventHandler().stopAutoscrollTimer();
+    view->protectedFrame()->checkedEventHandler()->stopAutoscrollTimer();
 }
 
 void LocalFrame::clearTimers()
 {
-    clearTimers(m_view.get(), document());
+    clearTimers(protectedView().get(), protectedDocument().get());
+}
+
+CheckedRef<const FrameLoader> LocalFrame::checkedLoader() const
+{
+    return m_loader.get();
+}
+
+CheckedRef<FrameLoader> LocalFrame::checkedLoader()
+{
+    return m_loader.get();
+}
+
+CheckedRef<ScriptController> LocalFrame::checkedScript()
+{
+    return m_script.get();
+}
+
+CheckedRef<const ScriptController> LocalFrame::checkedScript() const
+{
+    return m_script.get();
 }
 
 void LocalFrame::willDetachPage()
 {
-    if (LocalFrame* parent = dynamicDowncast<LocalFrame>(tree().parent()))
-        parent->loader().checkLoadComplete();
+    if (RefPtr parent = dynamicDowncast<LocalFrame>(tree().parent()))
+        parent->checkedLoader()->checkLoadComplete();
 
     for (auto& observer : m_destructionObservers)
-        observer->willDetachPage();
+        observer.willDetachPage();
 
     // FIXME: It's unclear as to why this is called more than once, but it is,
     // so page() could be NULL.
-    if (page()) {
-        CheckedRef focusController { page()->focusController() };
+    if (CheckedPtr page = this->page()) {
+        CheckedRef focusController = page->focusController();
         if (focusController->focusedFrame() == this)
             focusController->setFocusedFrame(nullptr);
     }
 
 
     if (page() && page()->scrollingCoordinator() && m_view)
-        page()->scrollingCoordinator()->willDestroyScrollableArea(*m_view);
+        page()->protectedScrollingCoordinator()->willDestroyScrollableArea(*protectedView());
 
-    script().clearScriptObjects();
-    script().updatePlatformScriptObjects();
+    CheckedRef script = this->script();
+    script->clearScriptObjects();
+    script->updatePlatformScriptObjects();
 
     // We promise that the Frame is always connected to a Page while the render tree is live.
     //
@@ -810,15 +865,15 @@ VisiblePosition LocalFrame::visiblePositionForPoint(const IntPoint& framePoint) 
 {
     constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowVisibleChildFrameContentOnly };
     HitTestResult result = eventHandler().hitTestResultAtPoint(framePoint, hitType);
-    Node* node = result.innerNonSharedNode();
+    RefPtr node = result.innerNonSharedNode();
     if (!node)
         return VisiblePosition();
-    auto renderer = node->renderer();
+    CheckedPtr renderer = node->renderer();
     if (!renderer)
         return VisiblePosition();
     VisiblePosition visiblePos = renderer->positionForPoint(result.localPoint(), nullptr);
     if (visiblePos.isNull())
-        visiblePos = firstPositionInOrBeforeNode(node);
+        visiblePos = firstPositionInOrBeforeNode(node.get());
     return visiblePos;
 }
 
@@ -827,12 +882,12 @@ Document* LocalFrame::documentAtPoint(const IntPoint& point)
     if (!view())
         return nullptr;
 
-    IntPoint pt = view()->windowToContents(point);
+    IntPoint pt = protectedView()->windowToContents(point);
     HitTestResult result = HitTestResult(pt);
 
     if (contentRenderer()) {
         constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::AllowChildFrameContent };
-        result = eventHandler().hitTestResultAtPoint(pt, hitType);
+        result = checkedEventHandler()->hitTestResultAtPoint(pt, hitType);
     }
     return result.innerNode() ? &result.innerNode()->document() : 0;
 }
@@ -846,12 +901,12 @@ std::optional<SimpleRange> LocalFrame::rangeForPoint(const IntPoint& framePoint)
         return std::nullopt;
 
     if (auto previousCharacterRange = makeSimpleRange(position.previous(), position)) {
-        if (editor().firstRectForRange(*previousCharacterRange).contains(framePoint))
+        if (checkedEditor()->firstRectForRange(*previousCharacterRange).contains(framePoint))
             return *previousCharacterRange;
     }
 
     if (auto nextCharacterRange = makeSimpleRange(position, position.next())) {
-        if (editor().firstRectForRange(*nextCharacterRange).contains(framePoint))
+        if (checkedEditor()->firstRectForRange(*nextCharacterRange).contains(framePoint))
             return *nextCharacterRange;
     }
 
@@ -865,15 +920,15 @@ void LocalFrame::createView(const IntSize& viewportSize, const std::optional<Col
 {
     ASSERT(page());
 
-    bool isMainFrame = this->isMainFrame();
+    bool isRootFrame = this->isRootFrame();
 
-    if (isMainFrame && view())
-        view()->setParentVisible(false);
+    if (isRootFrame && view())
+        protectedView()->setParentVisible(false);
 
     setView(nullptr);
 
     RefPtr<LocalFrameView> frameView;
-    if (isMainFrame) {
+    if (isRootFrame) {
         frameView = LocalFrameView::create(*this, viewportSize);
         frameView->setFixedLayoutSize(fixedLayoutSize);
 #if USE(COORDINATED_GRAPHICS)
@@ -891,14 +946,14 @@ void LocalFrame::createView(const IntSize& viewportSize, const std::optional<Col
 
     frameView->updateBackgroundRecursively(backgroundColor);
 
-    if (isMainFrame)
+    if (isRootFrame)
         frameView->setParentVisible(true);
 
-    if (ownerRenderer())
-        ownerRenderer()->setWidget(frameView);
+    if (CheckedPtr ownerRenderer = this->ownerRenderer())
+        ownerRenderer->setWidget(frameView);
 
-    if (HTMLFrameOwnerElement* owner = ownerElement())
-        view()->setCanHaveScrollbars(owner->scrollingMode() != ScrollbarMode::AlwaysOff);
+    if (RefPtr owner = ownerElement())
+        protectedView()->setCanHaveScrollbars(owner->scrollingMode() != ScrollbarMode::AlwaysOff);
 }
 
 LocalDOMWindow* LocalFrame::window() const
@@ -920,7 +975,7 @@ String LocalFrame::trackedRepaintRectsAsText() const
 {
     if (!m_view)
         return String();
-    return m_view->trackedRepaintRectsAsText();
+    return protectedView()->trackedRepaintRectsAsText();
 }
 
 void LocalFrame::setPageZoomFactor(float factor)
@@ -938,15 +993,15 @@ void LocalFrame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomF
     if (m_pageZoomFactor == pageZoomFactor && m_textZoomFactor == textZoomFactor)
         return;
 
-    Page* page = this->page();
+    CheckedPtr page = this->page();
     if (!page)
         return;
 
-    Document* document = this->document();
+    RefPtr document = this->document();
     if (!document)
         return;
 
-    editor().dismissCorrectionPanelAsIgnored();
+    checkedEditor()->dismissCorrectionPanelAsIgnored();
 
     // Respect SVGs zoomAndPan="disabled" property in standalone SVG documents.
     // FIXME: How to handle compound documents + zoomAndPan="disabled"? Needs SVG WG clarification.
@@ -956,7 +1011,7 @@ void LocalFrame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomF
     std::optional<ScrollPosition> scrollPositionAfterZoomed;
     if (m_pageZoomFactor != pageZoomFactor) {
         // Compute the scroll position with scale after zooming to stay the same position in the content.
-        if (auto* view = this->view()) {
+        if (RefPtr view = this->view()) {
             scrollPositionAfterZoomed = view->scrollPosition();
             scrollPositionAfterZoomed->scale(pageZoomFactor / m_pageZoomFactor);
         }
@@ -971,9 +1026,9 @@ void LocalFrame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomF
             localFrame->setPageAndTextZoomFactors(m_pageZoomFactor, m_textZoomFactor);
     }
 
-    if (auto* view = this->view()) {
+    if (RefPtr view = this->view()) {
         if (document->renderView() && document->renderView()->needsLayout() && view->didFirstLayout())
-            view->layoutContext().layout();
+            view->checkedLayoutContext()->layout();
 
         // Scrolling to the calculated position must be done after the layout.
         if (scrollPositionAfterZoomed)
@@ -983,7 +1038,7 @@ void LocalFrame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomF
 
 float LocalFrame::frameScaleFactor() const
 {
-    Page* page = this->page();
+    CheckedPtr page = this->page();
 
     // Main frame is scaled with respect to he container but inner frames are not scaled with respect to the main frame.
     if (!page || !isMainFrame())
@@ -1006,8 +1061,8 @@ void LocalFrame::suspendActiveDOMObjectsAndAnimations()
 
     // FIXME: Suspend/resume calls will not match if the frame is navigated, and gets a new document.
     clearTimers(); // Suspends animations and pending relayouts.
-    if (m_doc)
-        m_doc->suspendScheduledTasks(ReasonForSuspension::PageWillBeSuspended);
+    if (RefPtr document = m_doc)
+        document->suspendScheduledTasks(ReasonForSuspension::PageWillBeSuspended);
 }
 
 void LocalFrame::resumeActiveDOMObjectsAndAnimations()
@@ -1023,15 +1078,16 @@ void LocalFrame::resumeActiveDOMObjectsAndAnimations()
     if (!m_doc)
         return;
 
+    Ref document = *m_doc;
     // FIXME: Suspend/resume calls will not match if the frame is navigated, and gets a new document.
-    m_doc->resumeScheduledTasks(ReasonForSuspension::PageWillBeSuspended);
+    document->resumeScheduledTasks(ReasonForSuspension::PageWillBeSuspended);
 
     // Frame::clearTimers() suspended animations and pending relayouts.
 
-    if (auto* timelines = m_doc->timelinesController())
+    if (CheckedPtr timelines = document->timelinesController())
         timelines->resumeAnimations();
-    if (m_view)
-        m_view->layoutContext().scheduleLayout();
+    if (RefPtr view = m_view)
+        view->checkedLayoutContext()->scheduleLayout();
 }
 
 void LocalFrame::deviceOrPageScaleFactorChanged()
@@ -1041,14 +1097,14 @@ void LocalFrame::deviceOrPageScaleFactorChanged()
             localFrame->deviceOrPageScaleFactorChanged();
     }
 
-    if (RenderView* root = contentRenderer())
+    if (CheckedPtr root = contentRenderer())
         root->compositor().deviceOrPageScaleFactorChanged();
 }
 
 void LocalFrame::dropChildren()
 {
     ASSERT(isMainFrame());
-    while (auto* child = tree().firstChild())
+    while (RefPtr child = tree().firstChild())
         tree().removeChild(*child);
 }
 
@@ -1066,7 +1122,7 @@ FloatSize LocalFrame::screenSize() const
     if (!loader || !loader->fingerprintingProtectionsEnabled())
         return defaultSize;
 
-    if (auto* page = this->page())
+    if (CheckedPtr page = this->page())
         return page->chrome().client().screenSizeForFingerprintingProtections(*this, defaultSize);
 
     return defaultSize;
@@ -1078,7 +1134,7 @@ void LocalFrame::setOverrideScreenSize(FloatSize&& screenSize)
         return;
 
     m_overrideScreenSize = WTFMove(screenSize);
-    if (auto* document = this->document())
+    if (RefPtr document = this->document())
         document->updateViewportArguments();
 }
 
@@ -1165,6 +1221,24 @@ LocalFrame* LocalFrame::contentFrameFromWindowOrFrameElement(JSContextRef contex
     return dynamicDowncast<LocalFrame>(downcast<HTMLFrameOwnerElement>(jsNode->wrapped()).contentFrame());
 }
 
+CheckedRef<EventHandler> LocalFrame::checkedEventHandler()
+{
+    return m_eventHandler.get();
+}
+
+CheckedRef<const EventHandler> LocalFrame::checkedEventHandler() const
+{
+    return m_eventHandler.get();
+}
+
+void LocalFrame::documentURLDidChange(const URL& url)
+{
+    if (CheckedPtr page = this->page(); page && isMainFrame()) {
+        page->setMainFrameURL(url);
+        checkedLoader()->client().broadcastMainFrameURLChangeToOtherProcesses(url);
+    }
+}
+
 #if ENABLE(DATA_DETECTION)
 
 DataDetectionResultsStorage& LocalFrame::dataDetectionResults()
@@ -1175,6 +1249,17 @@ DataDetectionResultsStorage& LocalFrame::dataDetectionResults()
 }
 
 #endif
+
+void LocalFrame::frameWasDisconnectedFromOwner() const
+{
+    if (!m_doc)
+        return;
+
+    if (RefPtr window = m_doc->domWindow())
+        window->willDetachDocumentFromFrame();
+
+    protectedDocument()->detachFromFrame();
+}
 
 } // namespace WebCore
 

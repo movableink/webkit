@@ -31,7 +31,9 @@
 #pragma once
 
 #include "FrameLoaderTypes.h"
+#include "LoaderMalloc.h"
 #include "Timer.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 
@@ -46,8 +48,8 @@ class SecurityOrigin;
 
 enum class NewLoadInProgress : bool { No, Yes };
     
-class NavigationScheduler {
-    WTF_MAKE_FAST_ALLOCATED;
+class NavigationScheduler : public CanMakeCheckedPtr {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     explicit NavigationScheduler(Frame&);
     ~NavigationScheduler();

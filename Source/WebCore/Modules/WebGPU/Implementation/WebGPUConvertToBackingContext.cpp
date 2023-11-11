@@ -452,6 +452,8 @@ WGPUTextureFormat ConvertToBackingContext::convertToBacking(TextureFormat textur
         return WGPUTextureFormat_BGRA8UnormSrgb;
     case TextureFormat::Rgb9e5ufloat:
         return WGPUTextureFormat_RGB9E5Ufloat;
+    case TextureFormat::Rgb10a2uint:
+        return WGPUTextureFormat_RGB10A2Uint;
     case TextureFormat::Rgb10a2unorm:
         return WGPUTextureFormat_RGB10A2Unorm;
     case TextureFormat::Rg11b10ufloat:
@@ -690,6 +692,8 @@ WGPUVertexFormat ConvertToBackingContext::convertToBacking(VertexFormat vertexFo
         return WGPUVertexFormat_Sint32x3;
     case VertexFormat::Sint32x4:
         return WGPUVertexFormat_Sint32x4;
+    case VertexFormat::Unorm10_10_10_2:
+        return WGPUVertexFormat_Unorm10_10_10_2;
     }
 }
 

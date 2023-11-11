@@ -38,9 +38,9 @@
 
 namespace WebCore {
 
-RenderLayoutState::RenderLayoutState(RenderElement& renderer, IsPaginated isPaginated)
+RenderLayoutState::RenderLayoutState(RenderElement& renderer)
     : m_clipped(false)
-    , m_isPaginated(isPaginated == IsPaginated::Yes)
+    , m_isPaginated(false)
     , m_pageLogicalHeightChanged(false)
 #if ASSERT_ENABLED
     , m_layoutDeltaXSaturated(false)
@@ -193,10 +193,6 @@ void RenderLayoutState::computeLineGridPaginationOrigin(const RenderMultiColumnF
     // at the top of each column.
     // Get the current line grid and offset.
     ASSERT(m_lineGrid);
-    // Get the hypothetical line box used to establish the grid.
-    auto* lineGridBox = m_lineGrid->lineGridBox();
-    if (!lineGridBox)
-        return;
 
     // Now determine our position on the grid. Our baseline needs to be adjusted to the nearest baseline multiple
     // as established by the line box.
@@ -204,17 +200,17 @@ void RenderLayoutState::computeLineGridPaginationOrigin(const RenderMultiColumnF
     // the grid should honor line-box-contain.
     bool isHorizontalWritingMode = m_lineGrid->isHorizontalWritingMode();
     LayoutUnit lineGridBlockOffset = isHorizontalWritingMode ? m_lineGridOffset.height() : m_lineGridOffset.width();
-    LayoutUnit firstLineTopWithLeading = lineGridBlockOffset + lineGridBox->lineBoxTop();
+    LayoutUnit firstLineTop = lineGridBlockOffset + m_lineGrid->borderAndPaddingBefore();
     LayoutUnit pageLogicalTop = isHorizontalWritingMode ? m_pageOffset.height() : m_pageOffset.width();
-    if (pageLogicalTop <= firstLineTopWithLeading)
+    if (pageLogicalTop <= firstLineTop)
         return;
 
     // Shift to the next highest line grid multiple past the page logical top. Cache the delta
     // between this new value and the page logical top as the pagination origin.
-    auto lineBoxHeight = lineGridBox->lineBoxHeight();
+    auto lineBoxHeight = m_lineGrid->style().computedLineHeight();
     if (!roundToInt(lineBoxHeight))
         return;
-    LayoutUnit remainder = roundToInt(pageLogicalTop - firstLineTopWithLeading) % roundToInt(lineBoxHeight);
+    LayoutUnit remainder = roundToInt(pageLogicalTop - firstLineTop) % roundToInt(lineBoxHeight);
     LayoutUnit paginationDelta = lineBoxHeight - remainder;
     if (isHorizontalWritingMode)
         m_lineGridPaginationOrigin.setHeight(paginationDelta);
@@ -336,16 +332,18 @@ SubtreeLayoutStateMaintainer::~SubtreeLayoutStateMaintainer()
     }
 }
 
-PaginatedLayoutStateMaintainer::PaginatedLayoutStateMaintainer(RenderBlockFlow& flow)
-    : m_context(flow.view().frameView().layoutContext())
-    , m_pushed(m_context.pushLayoutStateForPaginationIfNeeded(flow))
+ContentVisibilityForceLayoutScope::ContentVisibilityForceLayoutScope(RenderView& layoutRoot, const Element* context)
 {
+    if (context) {
+        m_context = &layoutRoot.frameView().layoutContext();
+        m_context->setNeedsSkippedContentLayout(true);
+    }
 }
 
-PaginatedLayoutStateMaintainer::~PaginatedLayoutStateMaintainer()
+ContentVisibilityForceLayoutScope::~ContentVisibilityForceLayoutScope()
 {
-    if (m_pushed)
-        m_context.popLayoutState();
+    if (m_context)
+        m_context->setNeedsSkippedContentLayout(false);
 }
 
 } // namespace WebCore

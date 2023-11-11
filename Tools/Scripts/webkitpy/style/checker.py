@@ -51,6 +51,7 @@ from webkitpy.style.checkers.jsonchecker import JSONChecker
 from webkitpy.style.checkers.jsonchecker import JSONContributorsChecker
 from webkitpy.style.checkers.jsonchecker import JSONFeaturesChecker
 from webkitpy.style.checkers.jsonchecker import JSONCSSPropertiesChecker
+from webkitpy.style.checkers.jsonchecker import JSONImportExpectationsChecker
 from webkitpy.style.checkers.jstest import JSTestChecker
 from webkitpy.style.checkers.messagesin import MessagesInChecker
 from webkitpy.style.checkers.png import PNGChecker
@@ -222,6 +223,12 @@ _PATH_RULES_SPECIFIER = [
      ["-build/include_order"]),
 
     ([
+     # GRefPtr.h must be included earlier than gst/gst.h, otherwise forward
+     # declaration in the former will cause compilation error
+     os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GRefPtrGStreamer.h')],
+     ["-build/include_order"]),
+
+    ([
       # Header files in ForwardingHeaders have no header guards or
       # exceptional header guards (e.g., WebCore_FWD_Debugger_h).
       os.path.join(os.path.sep, 'ForwardingHeaders')],
@@ -363,6 +370,17 @@ _PATH_RULES_SPECIFIER = [
      ["-runtime/wtf_make_unique",
       "-runtime/wtf_move"]),
 
+    ([  # Ignore formatting and whitespace issues in gmock.
+     os.path.join('Source', 'ThirdParty', 'gmock')],
+     ["-build",
+      "-legal/copyright",
+      "-list",
+      "-pep8",
+      "-readability",
+      "-runtime/unsigned",
+      "-runtime/wtf_move",
+      "-whitespace"]),
+
 ]
 
 
@@ -434,6 +452,7 @@ _NEVER_SKIPPED_FILES = _NEVER_SKIPPED_JS_FILES + [
     re.compile('.*TestExpectations.json$'),
     # Avoid imported WebDriverTests python machinery
     re.compile('(?!WebDriverTests).{0,14}.*.py$'),
+    re.compile('^' + re.escape(os.path.join('LayoutTests', 'imported', 'w3c', 'resources', 'import-expectations.json')) + r'$'),
 ]
 
 # Files to skip that are less obvious.
@@ -459,6 +478,7 @@ _SKIPPED_FILES_WITH_WARNING = [
 
     os.path.join('Source', 'JavaScriptCore', 'API', 'glib', 'jsc.h'),
     os.path.join('Source', 'WebCore', 'platform', 'gtk', 'GtkVersioning.h'),
+    os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gbm', 'GBMVersioning.h'),
     os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'gtk', 'webkit2.h'),
     os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'gtk', 'webkit.h'),
     os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'wpe', 'webkit.h'),
@@ -510,6 +530,7 @@ def _all_categories():
     """Return the set of all categories used by check-webkit-style."""
     # Take the union across all checkers.
     categories = CommonCategories.union(CppChecker.categories)
+    categories = categories.union(CMakeChecker.categories)
     categories = categories.union(JSChecker.categories)
     categories = categories.union(JSONChecker.categories)
     categories = categories.union(JSTestChecker.categories)
@@ -814,6 +835,8 @@ class CheckerDispatcher(object):
                 checker = JSONFeaturesChecker(file_path, handle_style_error)
             elif basename == 'CSSProperties.json':
                 checker = JSONCSSPropertiesChecker(file_path, handle_style_error)
+            elif basename == 'import-expectations.json':
+                checker = JSONImportExpectationsChecker(file_path, handle_style_error)
             else:
                 checker = JSONChecker(file_path, handle_style_error)
         elif file_type == FileType.PYTHON:

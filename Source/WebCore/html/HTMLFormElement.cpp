@@ -260,11 +260,9 @@ void HTMLFormElement::submitIfPossible(Event* event, HTMLFormControlElement* sub
     m_isSubmittingOrPreparingForSubmission = true;
     m_shouldSubmit = false;
 
-    if (UserGestureIndicator::processingUserGesture()) {
-        for (auto& element : m_listedElements) {
-            if (auto* formControlElement = dynamicDowncast<HTMLFormControlElement>(*element))
-                formControlElement->setInteractedWithSinceLastFormSubmitEvent(false);
-        }
+    for (auto& element : m_listedElements) {
+        if (auto* formControlElement = dynamicDowncast<HTMLFormControlElement>(*element))
+            formControlElement->setInteractedWithSinceLastFormSubmitEvent(true);
     }
 
     bool shouldValidate = document().page() && document().page()->settings().interactiveFormValidationEnabled() && !noValidate();
@@ -280,7 +278,7 @@ void HTMLFormElement::submitIfPossible(Event* event, HTMLFormControlElement* sub
         return;
     }
 
-    auto targetFrame = frame->loader().findFrameForNavigation(effectiveTarget(event, submitter), &document());
+    RefPtr targetFrame = frame->loader().findFrameForNavigation(effectiveTarget(event, submitter), &document());
     if (!targetFrame)
         targetFrame = frame.get();
     auto formState = FormState::create(*this, textFieldValues(), document(), NotSubmittedByJavaScript);
@@ -327,9 +325,9 @@ ExceptionOr<void> HTMLFormElement::requestSubmit(HTMLElement* submitter)
         // https://html.spec.whatwg.org/multipage/forms.html#dom-form-requestsubmit
         control = dynamicDowncast<HTMLFormControlElement>(*submitter);
         if (!control || !control->isSubmitButton())
-            return Exception { TypeError, "The specified element is not a submit button."_s };
+            return Exception { ExceptionCode::TypeError, "The specified element is not a submit button."_s };
         if (control->form() != this)
-            return Exception { NotFoundError, "The specified element is not owned by this form element."_s };
+            return Exception { ExceptionCode::NotFoundError, "The specified element is not owned by this form element."_s };
     }
 
     submitIfPossible(nullptr, control.get(), SubmittedByJavaScript);
@@ -338,18 +336,15 @@ ExceptionOr<void> HTMLFormElement::requestSubmit(HTMLElement* submitter)
 
 StringPairVector HTMLFormElement::textFieldValues() const
 {
-    StringPairVector result;
-    result.reserveInitialCapacity(m_listedElements.size());
-    for (auto& weakElement : m_listedElements) {
+    return WTF::compactMap(m_listedElements, [](auto& weakElement) -> std::optional<std::pair<String, String>> {
         RefPtr element { weakElement.get() };
         if (!is<HTMLInputElement>(element))
-            continue;
+            return std::nullopt;
         auto& input = downcast<HTMLInputElement>(*element);
         if (!input.isTextField())
-            continue;
-        result.uncheckedAppend({ input.name().string(), input.value() });
-    }
-    return result;
+            return std::nullopt;
+        return std::pair { input.name().string(), input.value() };
+    });
 }
 
 RefPtr<HTMLFormControlElement> HTMLFormElement::findSubmitButton(HTMLFormControlElement* submitter, bool needButtonActivation)
@@ -421,7 +416,7 @@ void HTMLFormElement::submit(Event* event, bool processingUserGesture, FormSubmi
 
     m_plannedFormSubmission = formSubmission;
 
-    if (document().settings().dialogElementEnabled() && formSubmission->method() == FormSubmission::Method::Dialog)
+    if (formSubmission->method() == FormSubmission::Method::Dialog)
         submitDialog(WTFMove(formSubmission));
     else
         frame->loader().submitForm(WTFMove(formSubmission));
@@ -480,7 +475,7 @@ void HTMLFormElement::attributeChanged(const QualifiedName& name, const AtomStri
         if (!m_attributes.action().isEmpty()) {
             if (RefPtr f = document().frame()) {
                 if (auto* topFrame = dynamicDowncast<LocalFrame>(f->tree().top()))
-                    MixedContentChecker::checkFormForMixedContent(*topFrame, topFrame->document()->securityOrigin(), document().completeURL(m_attributes.action()));
+                    MixedContentChecker::checkFormForMixedContent(*topFrame, document().completeURL(m_attributes.action()));
             }
         }
         break;
@@ -488,7 +483,7 @@ void HTMLFormElement::attributeChanged(const QualifiedName& name, const AtomStri
         m_attributes.setTarget(newValue);
         break;
     case AttributeNames::methodAttr:
-        m_attributes.updateMethodType(newValue, document().settings().dialogElementEnabled());
+        m_attributes.updateMethodType(newValue);
         break;
     case AttributeNames::enctypeAttr:
         m_attributes.updateEncodingType(newValue);
@@ -707,7 +702,7 @@ void HTMLFormElement::setEnctype(const AtomString& value)
 
 String HTMLFormElement::method() const
 {
-    return FormSubmission::Attributes::methodString(m_attributes.method(), document().settings().dialogElementEnabled());
+    return FormSubmission::Attributes::methodString(m_attributes.method());
 }
 
 void HTMLFormElement::setMethod(const AtomString& value)
@@ -718,7 +713,7 @@ void HTMLFormElement::setMethod(const AtomString& value)
 DOMTokenList& HTMLFormElement::relList()
 {
     if (!m_relList) {
-        m_relList = makeUnique<DOMTokenList>(*this, HTMLNames::relAttr, [](Document&, StringView token) {
+        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document&, StringView token) {
             return equalLettersIgnoringASCIICase(token, "noreferrer"_s) || equalLettersIgnoringASCIICase(token, "noopener"_s) || equalLettersIgnoringASCIICase(token, "opener"_s);
         });
     }
@@ -735,12 +730,12 @@ AtomString HTMLFormElement::effectiveTarget(const Event* event, HTMLFormControlE
     if (RefPtr submitter = overrideSubmitter ? overrideSubmitter : findSubmitter(event)) {
         auto& targetValue = submitter->attributeWithoutSynchronization(formtargetAttr);
         if (!targetValue.isNull())
-            return targetValue;
+            return makeTargetBlankIfHasDanglingMarkup(targetValue);
     }
 
     auto targetValue = target();
     if (!targetValue.isNull())
-        return targetValue;
+        return makeTargetBlankIfHasDanglingMarkup(targetValue);
 
     return document().baseTarget();
 }

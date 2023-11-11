@@ -39,22 +39,21 @@ class PathStream;
 
 class PathCairo final : public PathImpl {
 public:
-    static UniqueRef<PathCairo> create();
-    static UniqueRef<PathCairo> create(const PathStream&);
-    static UniqueRef<PathCairo> create(RefPtr<cairo_t>&&, std::unique_ptr<PathStream>&& = nullptr);
+    static Ref<PathCairo> create();
+    static Ref<PathCairo> create(const PathSegment&);
+    static Ref<PathCairo> create(const PathStream&);
+    static Ref<PathCairo> create(RefPtr<cairo_t>&&, RefPtr<PathStream>&& = nullptr);
 
     PathCairo();
-    PathCairo(RefPtr<cairo_t>&&, std::unique_ptr<PathStream>&&);
+    PathCairo(RefPtr<cairo_t>&&, RefPtr<PathStream>&&);
 
     PlatformPathPtr platformPath() const;
 
-    bool operator==(const PathImpl&) const final;
-
     void addPath(const PathCairo&, const AffineTransform&);
 
-    void applyElements(const PathElementApplier&) const;
+    bool applyElements(const PathElementApplier&) const final;
 
-    void transform(const AffineTransform&);
+    bool transform(const AffineTransform&) final;
 
     bool contains(const FloatPoint&, WindRule) const;
     bool strokeContains(const FloatPoint&, const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
@@ -62,7 +61,7 @@ public:
     FloatRect strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
 
 private:
-    UniqueRef<PathImpl> clone() const final;
+    Ref<PathImpl> copy() const final;
 
     void moveTo(const FloatPoint&) final;
 
@@ -89,7 +88,7 @@ private:
     FloatRect boundingRect() const final;
 
     RefPtr<cairo_t> m_platformPath;
-    std::unique_ptr<PathStream> m_elementsStream;
+    RefPtr<PathStream> m_elementsStream;
 };
 
 } // namespace WebCore

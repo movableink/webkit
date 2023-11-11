@@ -105,6 +105,7 @@ public:
 
     void abortIfUpdating();
     void removedFromMediaSource();
+    void computeSeekTime(const SeekTarget&, CompletionHandler<void(const MediaTime&)>&&);
     void seekToTime(const MediaTime&);
 
     bool canPlayThroughRange(const PlatformTimeRanges&);
@@ -130,7 +131,6 @@ public:
     void setBufferedDirty(bool flag);
 
     MediaTime highestPresentationTimestamp() const;
-    void readyStateChanged();
 
     size_t memoryCost() const;
 

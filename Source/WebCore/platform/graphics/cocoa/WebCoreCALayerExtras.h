@@ -41,8 +41,8 @@
 - (BOOL)_web_maskMayIntersectRect:(CGRect)rect;
 - (void)_web_clearContents;
 
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
-- (void)_web_clearCGDisplayListIfNeeded;
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+- (void)_web_clearDynamicContentScalingDisplayListIfNeeded;
 #endif
 
 @end
@@ -52,7 +52,9 @@
 namespace WebCore {
 
 using LayerAndPoint = std::pair<CALayer *, FloatPoint>;
-WEBCORE_EXPORT void collectDescendantLayersAtPoint(Vector<LayerAndPoint, 16>& layersAtPoint, CALayer *parent, CGPoint, const std::function<bool(CALayer *, CGPoint localPoint)>& pointInLayerFunction);
+WEBCORE_EXPORT void collectDescendantLayersAtPoint(Vector<LayerAndPoint, 16>& layersAtPoint, CALayer *parent, CGPoint, const std::function<bool(CALayer *, CGPoint localPoint)>& pointInLayerFunction = { });
+
+WEBCORE_EXPORT Vector<LayerAndPoint, 16> layersAtPointToCheckForScrolling(std::function<bool(CALayer*, CGPoint)> layerEventRegionContainsPoint, std::function<uint64_t(CALayer*)> scrollingNodeIDForLayer, CALayer*, const FloatPoint&, bool& hasAnyNonInteractiveScrollingLayers);
 
 } // namespace WebCore
 

@@ -28,15 +28,17 @@
 
 #if PLATFORM(IOS_FAMILY)
 
-#import "UIKitSPI.h"
-#import "UserInterfaceIdiom.h"
+#import "CompactContextMenuPresenter.h"
+#import "UIKitUtilities.h"
 #import "WKContentView.h"
 #import "WKContentViewInteraction.h"
 #import "WKFormPopover.h"
 #import "WKFormSelectControl.h"
 #import "WKWebViewPrivateForTesting.h"
 #import "WebPageProxy.h"
+#import <UIKit/UIKit.h>
 #import <WebCore/LocalizedStrings.h>
+#import <pal/system/ios/UserInterfaceIdiom.h>
 
 using namespace WebKit;
 
@@ -487,7 +489,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 #if USE(UICONTEXTMENU)
     RetainPtr<UIMenu> _selectMenu;
-    RetainPtr<UIContextMenuInteraction> _selectContextMenuInteraction;
+    std::unique_ptr<WebKit::CompactContextMenuPresenter> _selectContextMenuPresenter;
+    BOOL _isAnimatingContextMenuDismissal;
 #endif
 }
 
@@ -526,14 +529,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [_view stopRelinquishingFirstResponderToFocusedElement];
 
 #if USE(UICONTEXTMENU)
-    [self removeContextMenuInteraction];
+    [self resetContextMenuPresenter];
 #endif
 }
 
 - (void)dealloc
 {
 #if USE(UICONTEXTMENU)
-    [self removeContextMenuInteraction];
+    [self resetContextMenuPresenter];
 #endif
     [super dealloc];
 }
@@ -554,6 +557,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 #if USE(UICONTEXTMENU)
 
+static constexpr auto removeLineLimitForChildrenMenuOption = static_cast<UIMenuOptions>(1 << 6);
+
 - (UIMenu *)createMenu
 {
     if (!_view.focusedSelectElementOptions.size()) {
@@ -569,13 +574,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     while (currentIndex < _view.focusedSelectElementOptions.size()) {
         auto& optionItem = _view.focusedSelectElementOptions[currentIndex];
         if (optionItem.isGroup) {
+            auto groupID = optionItem.parentGroupID;
             NSString *groupText = optionItem.text;
             NSMutableArray *groupedItems = [NSMutableArray array];
 
             currentIndex++;
             while (currentIndex < _view.focusedSelectElementOptions.size()) {
                 auto& childOptionItem = _view.focusedSelectElementOptions[currentIndex];
-                if (childOptionItem.isGroup)
+                if (childOptionItem.isGroup || childOptionItem.parentGroupID != groupID)
                     break;
 
                 UIAction *action = [self actionForOptionItem:childOptionItem withIndex:optionIndex];
@@ -584,7 +590,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
                 currentIndex++;
             }
 
-            UIMenu *groupMenu = [UIMenu menuWithTitle:groupText image:nil identifier:nil options:(UIMenuOptionsDisplayInline | (UIMenuOptions)UIMenuOptionsPrivateRemoveLineLimitForChildren) children:groupedItems];
+            UIMenu *groupMenu = [UIMenu menuWithTitle:groupText image:nil identifier:nil options:UIMenuOptionsDisplayInline | removeLineLimitForChildrenMenuOption children:groupedItems];
             [items addObject:groupMenu];
             continue;
         }
@@ -595,7 +601,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         currentIndex++;
     }
 
-    return [UIMenu menuWithTitle:@"" image:nil identifier:nil options:(UIMenuOptionsSingleSelection | (UIMenuOptions)UIMenuOptionsPrivateRemoveLineLimitForChildren) children:items];
+    return [UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsSingleSelection | removeLineLimitForChildrenMenuOption children:items];
 }
 
 - (UIAction *)actionForOptionItem:(const OptionItem&)option withIndex:(NSInteger)optionIndex
@@ -639,20 +645,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     return nil;
 }
 
-#if HAVE(UI_CONTEXT_MENU_PREVIEW_ITEM_IDENTIFIER)
 - (UITargetedPreview *)contextMenuInteraction:(UIContextMenuInteraction *)interaction configuration:(UIContextMenuConfiguration *)configuration highlightPreviewForItemWithIdentifier:(id<NSCopying>)identifier
-#else
-- (UITargetedPreview *)contextMenuInteraction:(UIContextMenuInteraction *)interaction previewForHighlightingMenuWithConfiguration:(UIContextMenuConfiguration *)configuration
-#endif
 {
-    return [_view _createTargetedContextMenuHintPreviewForFocusedElement];
-}
-
-- (_UIContextMenuStyle *)_contextMenuInteraction:(UIContextMenuInteraction *)interaction styleForMenuWithConfiguration:(UIContextMenuConfiguration *)configuration
-{
-    _UIContextMenuStyle *style = [_UIContextMenuStyle defaultStyle];
-    style.preferredLayout = _UIContextMenuLayoutCompactMenu;
-    return style;
+    return [_view _createTargetedContextMenuHintPreviewForFocusedElement:WebKit::TargetedPreviewPositioning::Default];
 }
 
 - (UIContextMenuConfiguration *)contextMenuInteraction:(UIContextMenuInteraction *)interaction configurationForMenuAtLocation:(CGPoint)location
@@ -679,39 +674,34 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)contextMenuInteraction:(UIContextMenuInteraction *)interaction willEndForConfiguration:(UIContextMenuConfiguration *)configuration animator:(id <UIContextMenuInteractionAnimating>)animator
 {
+    _isAnimatingContextMenuDismissal = YES;
     [animator addCompletion:[weakSelf = WeakObjCPtr<WKSelectPicker>(self)] {
         auto strongSelf = weakSelf.get();
         if (strongSelf) {
             [strongSelf->_view accessoryDone];
             [strongSelf->_view.webView _didDismissContextMenu];
+            strongSelf->_isAnimatingContextMenuDismissal = NO;
         }
     }];
 }
 
-- (void)removeContextMenuInteraction
+- (void)resetContextMenuPresenter
 {
-    if (!_selectContextMenuInteraction)
+    if (!_selectContextMenuPresenter)
         return;
 
-    [_view removeInteraction:_selectContextMenuInteraction.get()];
-    _selectContextMenuInteraction = nil;
+    _selectContextMenuPresenter = nullptr;
     [_view _removeContextMenuHintContainerIfPossible];
-    [_view.webView _didDismissContextMenu];
-}
 
-- (void)ensureContextMenuInteraction
-{
-    if (_selectContextMenuInteraction)
-        return;
-
-    _selectContextMenuInteraction = adoptNS([[UIContextMenuInteraction alloc] initWithDelegate:self]);
-    [_view addInteraction:_selectContextMenuInteraction.get()];
+    if (!_isAnimatingContextMenuDismissal)
+        [_view.webView _didDismissContextMenu];
 }
 
 - (void)showSelectPicker
 {
-    [self ensureContextMenuInteraction];
-    [_view presentContextMenu:_selectContextMenuInteraction.get() atLocation:_interactionPoint];
+    if (!_selectContextMenuPresenter)
+        _selectContextMenuPresenter = makeUnique<WebKit::CompactContextMenuPresenter>(_view, self);
+    _selectContextMenuPresenter->present(_interactionPoint);
 }
 
 #endif // USE(UICONTEXTMENU)
@@ -765,6 +755,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 @interface WKSelectPickerGroupHeaderView : UIView
 @property (nonatomic, readonly) NSInteger section;
+@property (nonatomic, readonly) BOOL isCollapsible;
 @end
 
 @interface WKSelectPickerTableViewController : UITableViewController
@@ -784,12 +775,13 @@ static const CGFloat groupHeaderCollapseButtonTransitionDuration = 0.3f;
     BOOL _collapsed;
 }
 
-- (instancetype)initWithGroupName:(NSString *)groupName section:(NSInteger)section
+- (instancetype)initWithGroupName:(NSString *)groupName section:(NSInteger)section isCollapsible:(BOOL)isCollapsible
 {
     if (!(self = [super init]))
         return nil;
 
     _section = section;
+    _isCollapsible = isCollapsible;
 
     auto tapGestureRecognizer = adoptNS([[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(didTapHeader:)]);
     [self addGestureRecognizer:tapGestureRecognizer.get()];
@@ -800,33 +792,43 @@ static const CGFloat groupHeaderCollapseButtonTransitionDuration = 0.3f;
     [_label setAdjustsFontForContentSizeCategory:YES];
     [_label setAdjustsFontSizeToFitWidth:NO];
     [_label setLineBreakMode:NSLineBreakByTruncatingTail];
+    [_label setTranslatesAutoresizingMaskIntoConstraints:NO];
     [self addSubview:_label.get()];
 
-    _collapseIndicatorView = adoptNS([[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"chevron.down"]]);
-    [_collapseIndicatorView setPreferredSymbolConfiguration:[UIImageSymbolConfiguration configurationWithFont:WKSelectPickerGroupHeaderView.preferredFont scale:UIImageSymbolScaleSmall]];
-    [_collapseIndicatorView setContentCompressionResistancePriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
-    [self addSubview:_collapseIndicatorView.get()];
+    if (_isCollapsible) {
+        _collapseIndicatorView = adoptNS([[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"chevron.down"]]);
+        [_label setTranslatesAutoresizingMaskIntoConstraints:NO];
+        [_collapseIndicatorView setPreferredSymbolConfiguration:[UIImageSymbolConfiguration configurationWithFont:WKSelectPickerGroupHeaderView.preferredFont scale:UIImageSymbolScaleSmall]];
+        [_collapseIndicatorView setContentCompressionResistancePriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
+        [_collapseIndicatorView setTranslatesAutoresizingMaskIntoConstraints:NO];
+        [self addSubview:_collapseIndicatorView.get()];
 
-    [_label setTranslatesAutoresizingMaskIntoConstraints:NO];
-    [NSLayoutConstraint activateConstraints:@[
-        [[_label leadingAnchor] constraintEqualToAnchor:[self leadingAnchor] constant:WKSelectPickerGroupHeaderView.preferredMargin],
-        [[_label trailingAnchor] constraintEqualToAnchor:[_collapseIndicatorView leadingAnchor] constant:-groupHeaderLabelImageMargin],
-        [[_label topAnchor] constraintEqualToAnchor:[self topAnchor] constant:0],
-    ]];
+        [NSLayoutConstraint activateConstraints:@[
+            [[_label leadingAnchor] constraintEqualToAnchor:[self leadingAnchor] constant:WKSelectPickerGroupHeaderView.preferredMargin],
+            [[_label trailingAnchor] constraintEqualToAnchor:[_collapseIndicatorView leadingAnchor] constant:-groupHeaderLabelImageMargin],
+            [[_label topAnchor] constraintEqualToAnchor:[self topAnchor] constant:0],
+        ]];
 
-    [_collapseIndicatorView setTranslatesAutoresizingMaskIntoConstraints:NO];
-    [NSLayoutConstraint activateConstraints:@[
-        [[_collapseIndicatorView trailingAnchor] constraintEqualToAnchor:[self trailingAnchor] constant:-WKSelectPickerGroupHeaderView.preferredMargin],
-        [[_collapseIndicatorView topAnchor] constraintEqualToAnchor:[_label topAnchor] constant:0],
-        [[_collapseIndicatorView bottomAnchor] constraintEqualToAnchor:[_label bottomAnchor] constant:0],
-    ]];
+        [NSLayoutConstraint activateConstraints:@[
+            [[_collapseIndicatorView trailingAnchor] constraintEqualToAnchor:[self trailingAnchor] constant:-WKSelectPickerGroupHeaderView.preferredMargin],
+            [[_collapseIndicatorView topAnchor] constraintEqualToAnchor:[_label topAnchor] constant:0],
+            [[_collapseIndicatorView bottomAnchor] constraintEqualToAnchor:[_label bottomAnchor] constant:0],
+        ]];
+    } else {
+        [NSLayoutConstraint activateConstraints:@[
+            [[_label leadingAnchor] constraintEqualToAnchor:[self leadingAnchor] constant:WKSelectPickerGroupHeaderView.preferredMargin],
+            [[_label trailingAnchor] constraintEqualToAnchor:[self trailingAnchor] constant:-WKSelectPickerGroupHeaderView.preferredMargin],
+            [[_label topAnchor] constraintEqualToAnchor:[self topAnchor]],
+            [[_label bottomAnchor] constraintEqualToAnchor:[self bottomAnchor]],
+        ]];
+    }
 
     return self;
 }
 
 - (void)setCollapsed:(BOOL)collapsed animated:(BOOL)animated
 {
-    if (_collapsed == collapsed)
+    if (!_isCollapsible || _collapsed == collapsed)
         return;
 
     _collapsed = collapsed;
@@ -967,7 +969,7 @@ static NSString *optionCellReuseIdentifier = @"WKSelectPickerTableViewCell";
 
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section
 {
-    if (!section)
+    if (!section || ![[self tableView:tableView titleForHeaderInSection:section] length])
         return tableView.layoutMargins.left;
 
     return WKSelectPickerGroupHeaderView.preferredHeight;
@@ -1009,7 +1011,13 @@ static NSString *optionCellReuseIdentifier = @"WKSelectPickerTableViewCell";
     if (!section)
         return nil;
 
-    auto headerView = adoptNS([[WKSelectPickerGroupHeaderView alloc] initWithGroupName:[self tableView:tableView titleForHeaderInSection:section] section:section]);
+    auto title = [self tableView:tableView titleForHeaderInSection:section];
+    if (!title.length)
+        return nil;
+
+    BOOL isCollapsible = [self numberOfRowsInGroup:section] > 0;
+
+    auto headerView = adoptNS([[WKSelectPickerGroupHeaderView alloc] initWithGroupName:title section:section isCollapsible:isCollapsible]);
     [headerView setCollapsed:[_collapsedSections containsObject:@(section)] animated:NO];
     [headerView setTableViewController:self];
 
@@ -1018,6 +1026,9 @@ static NSString *optionCellReuseIdentifier = @"WKSelectPickerTableViewCell";
 
 - (void)didTapSelectPickerGroupHeaderView:(WKSelectPickerGroupHeaderView *)headerView
 {
+    if (!headerView.isCollapsible)
+        return;
+
     NSInteger section = headerView.section;
     NSInteger rowCount = [self numberOfRowsInGroup:section];
 
@@ -1191,18 +1202,16 @@ static NSString *optionCellReuseIdentifier = @"WKSelectPickerTableViewCell";
 
 - (void)configurePresentation
 {
-    if (WebKit::currentUserInterfaceIdiomIsSmallScreen()) {
+    if (PAL::currentUserInterfaceIdiomIsSmallScreen()) {
         [[_navigationController navigationBar] setBarTintColor:UIColor.systemGroupedBackgroundColor];
 
         UIPresentationController *presentationController = [_navigationController presentationController];
         presentationController.delegate = self;
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        if ([presentationController isKindOfClass:[_UISheetPresentationController class]]) {
-            _UISheetPresentationController *sheetPresentationController = (_UISheetPresentationController *)presentationController;
-            sheetPresentationController._detents = @[_UISheetDetent._mediumDetent, _UISheetDetent._largeDetent];
-ALLOW_DEPRECATED_DECLARATIONS_END
-            sheetPresentationController._widthFollowsPreferredContentSizeWhenBottomAttached = YES;
-            sheetPresentationController._wantsBottomAttachedInCompactHeight = YES;
+
+        if (auto sheetPresentationController = dynamic_objc_cast<UISheetPresentationController>(presentationController)) {
+            sheetPresentationController.detents = @[UISheetPresentationControllerDetent.mediumDetent, UISheetPresentationControllerDetent.largeDetent];
+            sheetPresentationController.widthFollowsPreferredContentSizeWhenEdgeAttached = YES;
+            sheetPresentationController.prefersEdgeAttachedInCompactHeight = YES;
         }
     } else {
         [_navigationController setModalPresentationStyle:UIModalPresentationPopover];
@@ -1228,7 +1237,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [_view startRelinquishingFirstResponderToFocusedElement];
 
     [self configurePresentation];
-    UIViewController *presentingViewController = [UIViewController _viewControllerForFullScreenPresentationFromView:_view];
+    auto presentingViewController = _view._wk_viewControllerForFullScreenPresentation;
     [presentingViewController presentViewController:_navigationController.get() animated:YES completion:nil];
 }
 

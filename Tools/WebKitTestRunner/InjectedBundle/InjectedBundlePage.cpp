@@ -683,7 +683,9 @@ static void dumpFrameScrollPosition(WKBundleFrameRef frame, StringBuilder& strin
 
 static void dumpDescendantFrameScrollPositions(WKBundleFrameRef frame, StringBuilder& stringBuilder)
 {
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     auto childFrames = adoptWK(WKBundleFrameCopyChildFrames(frame));
+    ALLOW_DEPRECATED_DECLARATIONS_END
     size_t size = WKArrayGetSize(childFrames.get());
     for (size_t i = 0; i < size; ++i) {
         WKBundleFrameRef subframe = static_cast<WKBundleFrameRef>(WKArrayGetItemAtIndex(childFrames.get(), i));
@@ -725,7 +727,9 @@ static void dumpFrameText(WKBundleFrameRef frame, StringBuilder& builder)
 
 static void dumpDescendantFramesText(WKBundleFrameRef frame, StringBuilder& stringBuilder)
 {
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     auto childFrames = adoptWK(WKBundleFrameCopyChildFrames(frame));
+    ALLOW_DEPRECATED_DECLARATIONS_END
     size_t size = WKArrayGetSize(childFrames.get());
     for (size_t i = 0; i < size; ++i) {
         WKBundleFrameRef subframe = static_cast<WKBundleFrameRef>(WKArrayGetItemAtIndex(childFrames.get(), i));

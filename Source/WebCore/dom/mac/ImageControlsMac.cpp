@@ -47,6 +47,7 @@
 #include "RenderImage.h"
 #include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
+#include "TreeScopeInlines.h"
 #include "UserAgentStyleSheets.h"
 #include <wtf/text/AtomString.h>
 
@@ -73,7 +74,7 @@ bool hasImageControls(const HTMLElement& element)
     if (!shadowRoot || shadowRoot->mode() != ShadowRootMode::UserAgent)
         return false;
 
-    return shadowRoot->hasElementWithId(*imageControlsElementIdentifier().impl());
+    return shadowRoot->hasElementWithId(imageControlsElementIdentifier());
 }
 
 static RefPtr<HTMLElement> imageControlsHost(const Node& node)
@@ -126,7 +127,7 @@ void createImageControls(HTMLElement& element)
     controlLayer->appendChild(button);
     controlLayer->setPseudo(ShadowPseudoIds::appleAttachmentControlsContainer());
     
-    if (auto* renderObject = element.renderer(); is<RenderImage>(renderObject))
+    if (CheckedPtr renderObject = element.renderer(); is<RenderImage>(renderObject))
         downcast<RenderImage>(*renderObject).setHasShadowControls(true);
 }
 
@@ -150,7 +151,7 @@ bool handleEvent(HTMLElement& element, Event& event)
     if (!frame)
         return false;
 
-    Page* page = element.document().page();
+    CheckedPtr page = element.document().page();
     if (!page)
         return false;
     
@@ -175,7 +176,7 @@ bool handleEvent(HTMLElement& element, Event& event)
         auto point = view->contentsToWindow(renderer->absoluteBoundingBoxRect()).minXMaxYCorner();
 
         if (RefPtr shadowHost = dynamicDowncast<HTMLImageElement>(node.shadowHost())) {
-            auto* image = imageFromImageElementNode(*shadowHost);
+            RefPtr image = imageFromImageElementNode(*shadowHost);
             if (!image)
                 return false;
             page->chrome().client().handleImageServiceClick(point, *image, *shadowHost);

@@ -38,6 +38,14 @@ const char* numberToString(double d, NumberToStringBuffer& buffer)
     return builder.Finalize();
 }
 
+const char* numberToStringWithTrailingPoint(double d, NumberToStringBuffer& buffer)
+{
+    double_conversion::StringBuilder builder(&buffer[0], sizeof(buffer));
+    auto& converter = double_conversion::DoubleToStringConverter::EcmaScriptConverterWithTrailingPoint();
+    converter.ToShortest(d, &builder);
+    return builder.Finalize();
+}
+
 static inline void truncateTrailingZeros(const char* buffer, double_conversion::StringBuilder& builder)
 {
     size_t length = builder.position();
@@ -137,17 +145,5 @@ const char* numberToCSSString(double d, NumberToCSSStringBuffer& buffer)
         builder.RemoveCharacters(0, 1);
     return builder.Finalize();
 }
-
-namespace Internal {
-
-double parseDoubleFromLongString(const UChar* string, size_t length, size_t& parsedLength)
-{
-    Vector<LChar> conversionBuffer(length);
-    for (size_t i = 0; i < length; ++i)
-        conversionBuffer[i] = isASCII(string[i]) ? string[i] : 0;
-    return parseDouble(conversionBuffer.data(), length, parsedLength);
-}
-
-} // namespace Internal
 
 } // namespace WTF

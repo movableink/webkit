@@ -107,15 +107,15 @@ static ReportingClient* reportingClientForContext(ScriptExecutionContext& script
 }
 
 ContentSecurityPolicy::ContentSecurityPolicy(URL&& protectedURL, ScriptExecutionContext& scriptExecutionContext)
-    : m_scriptExecutionContext(&scriptExecutionContext)
+    : m_scriptExecutionContext(scriptExecutionContext)
     , m_reportingClient { reportingClientForContext(scriptExecutionContext) }
     , m_protectedURL { WTFMove(protectedURL) }
 {
     ASSERT(scriptExecutionContext.securityOrigin());
     updateSourceSelf(*scriptExecutionContext.securityOrigin());
     // FIXME: handle the non-document case.
-    if (is<Document>(m_scriptExecutionContext)) {
-        if (auto* page = downcast<Document>(*m_scriptExecutionContext).page())
+    if (auto* document = dynamicDowncast<Document>(scriptExecutionContext)) {
+        if (auto* page = document->page())
             m_contentSecurityPolicyModeForExtension = page->contentSecurityPolicyModeForExtension();
     }
 }
@@ -306,7 +306,7 @@ void ContentSecurityPolicy::applyPolicyToScriptExecutionContext()
         m_scriptExecutionContext->disableEval(m_lastPolicyEvalDisabledErrorMessage);
     if (!m_lastPolicyWebAssemblyDisabledErrorMessage.isNull())
         m_scriptExecutionContext->disableWebAssembly(m_lastPolicyWebAssemblyDisabledErrorMessage);
-    if (m_sandboxFlags != SandboxNone && is<Document>(m_scriptExecutionContext))
+    if (m_sandboxFlags != SandboxNone && is<Document>(m_scriptExecutionContext.get()))
         m_scriptExecutionContext->enforceSandboxFlags(m_sandboxFlags, SecurityContext::SandboxFlagsSource::CSP);
     if (enableStrictMixedContentMode)
         m_scriptExecutionContext->setStrictMixedContentMode(true);
@@ -328,8 +328,8 @@ bool ContentSecurityPolicy::urlMatchesSelf(const URL& url, bool forFrameSrc) con
 
 bool ContentSecurityPolicy::allowContentSecurityPolicySourceStarToMatchAnyProtocol() const
 {
-    if (is<Document>(m_scriptExecutionContext))
-        return downcast<Document>(*m_scriptExecutionContext).settings().allowContentSecurityPolicySourceStarToMatchAnyProtocol();
+    if (auto* document = dynamicDowncast<Document>(m_scriptExecutionContext.get()))
+        return document->settings().allowContentSecurityPolicySourceStarToMatchAnyProtocol();
     return false;
 }
 
@@ -460,7 +460,7 @@ bool ContentSecurityPolicy::shouldPerformEarlyCSPCheck() const
     // We perform checks early if strict-dynamic is included in the CSP policy because
     // we have access to necessary information about the script that we do not have later on.
     for (auto& policy : m_policies) {
-        if (policy.get()->strictDynamicIncluded())
+        if (policy->strictDynamicIncluded())
             return true;
     }
     return false;
@@ -753,7 +753,9 @@ bool ContentSecurityPolicy::allowBaseURI(const URL& url, bool overrideContentSec
 
 static bool shouldReportProtocolOnly(const URL& url)
 {
-    return !url.isHierarchical() || url.protocolIsFile();
+    // FIXME: https://w3c.github.io/webappsec-csp/#strip-url-for-use-in-reports suggests this should
+    // be url.protocolIsInHTTPFamily().
+    return url.hasOpaquePath() || url.protocolIsFile();
 }
 
 String ContentSecurityPolicy::createURLForReporting(const URL& url, const String& violatedDirective, bool usesReportingAPI) const
@@ -824,15 +826,12 @@ void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirec
     info.sample = violatedDirectiveList.shouldReportSample(effectiveViolatedDirective) ? sourceContent.left(40).toString() : emptyString();
 
     if (!m_client) {
-        if (!usesReportTo && !is<Document>(m_scriptExecutionContext))
+        // Unable to ref the document as it may have started destruction.
+        auto* document = dynamicDowncast<Document>(m_scriptExecutionContext.get());
+        if (!document || !document->frame())
             return;
 
-        auto& document = downcast<Document>(*m_scriptExecutionContext);
-        auto* frame = document.frame();
-        if (!frame)
-            return;
-
-        info.documentURI = shouldReportProtocolOnly(document.url()) ? document.url().protocol().toString() : document.url().strippedForUseAsReferrer();
+        info.documentURI = shouldReportProtocolOnly(document->url()) ? document->url().protocol().toString() : document->url().strippedForUseAsReferrer();
 
         auto stack = createScriptCallStack(JSExecState::currentState(), 2);
         auto* callFrame = stack->firstNonNativeCallFrame();
@@ -842,7 +841,7 @@ void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirec
             info.columnNumber = callFrame->columnNumber();
         }
     }
-    ASSERT(m_client || is<Document>(m_scriptExecutionContext));
+    ASSERT(m_client || is<Document>(m_scriptExecutionContext.get()));
 
     // FIXME: Is it policy to not use the status code for HTTPS, or is that a bug?
     unsigned short httpStatusCode = m_selfSourceProtocol == "http"_s ? m_httpStatusCode : 0;
@@ -892,7 +891,7 @@ void ContentSecurityPolicy::reportViolation(const String& effectiveViolatedDirec
         m_client->enqueueSecurityPolicyViolationEvent(WTFMove(violationEventInit));
     else {
         auto& document = downcast<Document>(*m_scriptExecutionContext);
-        if (element && element->document() == document)
+        if (element && &element->document() == &document)
             element->enqueueSecurityPolicyViolationEvent(WTFMove(violationEventInit));
         else
             document.enqueueSecurityPolicyViolationEvent(WTFMove(violationEventInit));
@@ -1012,7 +1011,7 @@ void ContentSecurityPolicy::logToConsole(const String& message, const String& co
 void ContentSecurityPolicy::reportBlockedScriptExecutionToInspector(const String& directiveText) const
 {
     if (m_scriptExecutionContext)
-        InspectorInstrumentation::scriptExecutionBlockedByCSP(m_scriptExecutionContext, directiveText);
+        InspectorInstrumentation::scriptExecutionBlockedByCSP(m_scriptExecutionContext.get(), directiveText);
 }
 
 void ContentSecurityPolicy::upgradeInsecureRequestIfNeeded(ResourceRequest& request, InsecureRequestType requestType) const

@@ -265,6 +265,20 @@ class TestBugzilla(unittest.TestCase):
             self.assertTrue(issue.opened)
             self.assertEqual(issue.comments[-1].content, 'Need to revert, fix broke the build')
 
+    def test_duplicate(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        )):
+            tracker = bugzilla.Tracker(self.URL)
+            issue = tracker.issue(1)
+            self.assertTrue(issue.opened)
+            self.assertTrue(issue.close(original=tracker.issue(2)))
+            self.assertFalse(issue.opened)
+            self.assertEqual(issue.original, tracker.issue(2))
+
+            self.assertEqual(tracker.issue(1).original, tracker.issue(2))
+
     def test_projects(self):
         with mocks.Bugzilla(self.URL.split('://')[1], projects=mocks.PROJECTS):
             self.assertDictEqual(
@@ -432,6 +446,28 @@ What component in 'WebKit' should the bug be associated with?:
                 bugzilla.Tracker.Redaction(True, "matches 'version:Other'"),
             )
 
+    def test_redacted_duplicate(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), projects=mocks.PROJECTS):
+            tracker = bugzilla.Tracker(self.URL, redact={'component:Text': True})
+            self.assertEqual(tracker.issue(1).redacted, bugzilla.Tracker.Redaction(True, "matches 'component:Text'"))
+            self.assertEqual(tracker.issue(2).redacted, False)
+            tracker.issue(1).close(original=tracker.issue(2))
+            self.assertEqual(tracker.issue(2).redacted, bugzilla.Tracker.Redaction(True, "matches 'component:Text'"))
+
+    def test_redacted_original(self):
+        with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, environment=wkmocks.Environment(
+            BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+            BUGS_EXAMPLE_COM_PASSWORD='password',
+        ), projects=mocks.PROJECTS):
+            tracker = bugzilla.Tracker(self.URL, redact={'component:Text': True})
+            self.assertEqual(tracker.issue(1).redacted, bugzilla.Tracker.Redaction(True, "matches 'component:Text'"))
+            self.assertEqual(tracker.issue(2).redacted, False)
+            tracker.issue(2).close(original=tracker.issue(1))
+            self.assertEqual(tracker.issue(2).redacted, bugzilla.Tracker.Redaction(True, "matches 'component:Text'"))
+
     def test_redaction_exception(self):
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES, projects=mocks.PROJECTS):
             self.assertEqual(bugzilla.Tracker(
@@ -536,3 +572,21 @@ What component in 'WebKit' should the bug be associated with?:
         with mocks.Bugzilla(self.URL.split('://')[1], issues=mocks.ISSUES):
             tracker = bugzilla.Tracker(self.URL)
             self.assertEqual(tracker.issue(1).classification, '')
+
+    def test_set_keywords(self):
+        with OutputCapture(level=logging.INFO), mocks.Bugzilla(
+            self.URL.split('://')[1],
+            projects=mocks.PROJECTS,
+            environment=wkmocks.Environment(
+                BUGS_EXAMPLE_COM_USERNAME='tcontributor@example.com',
+                BUGS_EXAMPLE_COM_PASSWORD='password',
+            ), users=mocks.USERS, issues=mocks.ISSUES,
+        ):
+
+            tracker = bugzilla.Tracker(self.URL)
+            issue = tracker.issue(1)
+
+            self.assertEqual(issue.keywords, ['Keyword A'])
+            issue.set_keywords(['REGRESSION'])
+            self.assertEqual(issue.keywords, ['REGRESSION'])
+            self.assertEqual(tracker.issue(1).keywords, ['REGRESSION'])

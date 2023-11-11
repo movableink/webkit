@@ -54,8 +54,7 @@ Ref<ImmutableStyleProperties> StyleProperties::immutableCopyIfNeeded() const
 {
     if (is<ImmutableStyleProperties>(*this))
         return downcast<ImmutableStyleProperties>(const_cast<StyleProperties&>(*this));
-    const MutableStyleProperties& mutableThis = downcast<MutableStyleProperties>(*this);
-    return ImmutableStyleProperties::create(mutableThis.m_propertyVector.data(), mutableThis.m_propertyVector.size(), cssParserMode());
+    return downcast<MutableStyleProperties>(*this).immutableCopy();
 }
 
 String serializeLonghandValue(CSSPropertyID property, const CSSValue& value)
@@ -350,6 +349,18 @@ bool StyleProperties::traverseSubresources(const Function<bool(const CachedResou
     return false;
 }
 
+void StyleProperties::setReplacementURLForSubresources(const HashMap<String, String>& replacementURLStrings)
+{
+    for (auto property : *this)
+        property.value()->setReplacementURLForSubresources(replacementURLStrings);
+}
+
+void StyleProperties::clearReplacementURLForSubresources()
+{
+    for (auto property : *this)
+        property.value()->clearReplacementURLForSubresources();
+}
+
 bool StyleProperties::propertyMatches(CSSPropertyID propertyID, const CSSValue* propertyValue) const
 {
     int foundPropertyIndex = findPropertyIndex(propertyID);
@@ -365,13 +376,11 @@ Ref<MutableStyleProperties> StyleProperties::mutableCopy() const
 
 Ref<MutableStyleProperties> StyleProperties::copyProperties(std::span<const CSSPropertyID> properties) const
 {
-    Vector<CSSProperty> vector;
-    vector.reserveInitialCapacity(properties.size());
-    for (auto property : properties) {
+    auto vector = WTF::compactMap(properties, [&](auto& property) -> std::optional<CSSProperty> {
         if (auto value = getPropertyCSSValue(property))
-            vector.uncheckedAppend(CSSProperty(property, WTFMove(value), false));
-    }
-    vector.shrinkToFit();
+            return CSSProperty(property, WTFMove(value), false);
+        return std::nullopt;
+    });
     return MutableStyleProperties::create(WTFMove(vector));
 }
 

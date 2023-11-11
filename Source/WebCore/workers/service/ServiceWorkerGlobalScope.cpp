@@ -38,6 +38,7 @@
 #include "LocalFrameLoaderClient.h"
 #include "NotificationEvent.h"
 #include "PushEvent.h"
+#include "PushNotificationEvent.h"
 #include "SWContextManager.h"
 #include "SWServer.h"
 #include "ServiceWorker.h"
@@ -86,12 +87,33 @@ ServiceWorkerGlobalScope::~ServiceWorkerGlobalScope()
 
 void ServiceWorkerGlobalScope::dispatchPushEvent(PushEvent& pushEvent)
 {
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    ASSERT(!m_pushNotificationEvent && !m_pushEvent);
+#else
     ASSERT(!m_pushEvent);
+#endif
+
     m_pushEvent = &pushEvent;
     m_lastPushEventTime = MonotonicTime::now();
     dispatchEvent(pushEvent);
     m_pushEvent = nullptr;
 }
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+void ServiceWorkerGlobalScope::dispatchPushNotificationEvent(PushNotificationEvent& event)
+{
+    ASSERT(!m_pushNotificationEvent && !m_pushEvent);
+    m_pushNotificationEvent = &event;
+    m_lastPushEventTime = MonotonicTime::now();
+    dispatchEvent(event);
+}
+
+void ServiceWorkerGlobalScope::clearPushNotificationEvent()
+{
+    ASSERT(m_pushNotificationEvent);
+    m_pushNotificationEvent = nullptr;
+}
+#endif
 
 void ServiceWorkerGlobalScope::notifyServiceWorkerPageOfCreationIfNecessary()
 {
@@ -147,6 +169,15 @@ EventTargetInterface ServiceWorkerGlobalScope::eventTargetInterface() const
 ServiceWorkerThread& ServiceWorkerGlobalScope::thread()
 {
     return static_cast<ServiceWorkerThread&>(WorkerGlobalScope::thread());
+}
+
+void ServiceWorkerGlobalScope::prepareForDestruction()
+{
+    // Make sure we destroy fetch events objects before the VM goes away, since their
+    // destructor may access the VM.
+    m_extendedEvents.clear();
+
+    WorkerGlobalScope::prepareForDestruction();
 }
 
 // https://w3c.github.io/ServiceWorker/#update-service-worker-extended-events-set-algorithm
@@ -233,6 +264,13 @@ void ServiceWorkerGlobalScope::addConsoleMessage(MessageSource source, MessageLe
         });
     }
     WorkerGlobalScope::addConsoleMessage(source, level, message, requestIdentifier);
+}
+
+CookieStore& ServiceWorkerGlobalScope::cookieStore()
+{
+    if (!m_cookieStore)
+        m_cookieStore = CookieStore::create(this);
+    return *m_cookieStore;
 }
 
 } // namespace WebCore

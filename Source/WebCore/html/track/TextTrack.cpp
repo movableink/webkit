@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2011-2018 Google Inc. All rights reserved.
  * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -323,12 +323,11 @@ ExceptionOr<void> TextTrack::addCue(Ref<TextTrackCue>&& cue)
     // track kind set to metadata, throw a InvalidNodeTypeError exception and don't add the cue to the TextTrackList
     // of the TextTrack.
     if (is<DataCue>(cue) && m_kind != Kind::Metadata)
-        return Exception { InvalidNodeTypeError };
+        return Exception { ExceptionCode::InvalidNodeTypeError };
 
     INFO_LOG(LOGIDENTIFIER, cue.get());
 
-    // TODO(93143): Add spec-compliant behavior for negative time values.
-    if (!cue->startMediaTime().isValid() || !cue->endMediaTime().isValid() || cue->startMediaTime() < MediaTime::zeroTime() || cue->endMediaTime() < MediaTime::zeroTime())
+    if (!cue->startMediaTime().isValid() || !cue->endMediaTime().isValid())
         return { };
 
     // 4.8.10.12.5 Text track API
@@ -364,9 +363,9 @@ ExceptionOr<void> TextTrack::removeCue(TextTrackCue& cue)
     // 1. If the given cue is not currently listed in the method's TextTrack 
     // object's text track's text track list of cues, then throw a NotFoundError exception.
     if (cue.track() != this)
-        return Exception { NotFoundError };
+        return Exception { ExceptionCode::NotFoundError };
     if (!m_cues)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     INFO_LOG(LOGIDENTIFIER, cue);
 
@@ -429,44 +428,6 @@ VTTRegionList* TextTrack::regions()
     return &ensureVTTRegionList();
 }
 
-void TextTrack::addRegion(Ref<VTTRegion>&& region)
-{
-    auto& regionList = ensureVTTRegionList();
-
-    // 1. If the given region is in a text track list of regions, then remove
-    // region from that text track list of regions.
-    RefPtr regionTrack = region->track();
-    if (regionTrack && regionTrack != this)
-        regionTrack->removeRegion(region.get());
-
-    // 2. If the method's TextTrack object's text track list of regions contains
-    // a region with the same identifier as region replace the values of that
-    // region's width, height, anchor point, viewport anchor point and scroll
-    // attributes with those of region.
-    RefPtr existingRegion = regionList.getRegionById(region->id());
-    if (existingRegion) {
-        existingRegion->updateParametersFromRegion(region);
-        return;
-    }
-
-    // Otherwise: add region to the method's TextTrack object's text track list of regions.
-    region->setTrack(this);
-    regionList.add(WTFMove(region));
-}
-
-ExceptionOr<void> TextTrack::removeRegion(VTTRegion& region)
-{
-    // 1. If the given region is not currently listed in the method's TextTrack
-    // object's text track list of regions, then throw a NotFoundError exception.
-    if (region.track() != this)
-        return Exception { NotFoundError };
-
-    ASSERT(m_regions);
-    m_regions->remove(region);
-    region.setTrack(nullptr);
-    return { };
-}
-
 void TextTrack::cueWillChange(TextTrackCue& cue)
 {
     m_clients.forEach([&] (auto& client) {
@@ -476,10 +437,11 @@ void TextTrack::cueWillChange(TextTrackCue& cue)
     });
 }
 
-void TextTrack::cueDidChange(TextTrackCue& cue)
+void TextTrack::cueDidChange(TextTrackCue& cue, bool updateCueOrder)
 {
     // Make sure the TextTrackCueList order is up-to-date.
-    ensureTextTrackCueList().updateCueIndex(cue);
+    if (updateCueOrder)
+        ensureTextTrackCueList().updateCueIndex(cue);
 
     // ... and add it back again.
     m_clients.forEach([&] (auto& client) {

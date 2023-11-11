@@ -40,9 +40,10 @@ CallGraph::CallGraph(ShaderModule& shaderModule)
 
 class CallGraphBuilder : public AST::Visitor {
 public:
-    CallGraphBuilder(ShaderModule& shaderModule, const HashMap<String, std::optional<PipelineLayout>>& pipelineLayouts)
+    CallGraphBuilder(ShaderModule& shaderModule, const HashMap<String, std::optional<PipelineLayout>>& pipelineLayouts, PrepareResult& result)
         : m_callGraph(shaderModule)
         , m_pipelineLayouts(pipelineLayouts)
+        , m_result(result)
     {
     }
 
@@ -56,6 +57,7 @@ private:
 
     CallGraph m_callGraph;
     const HashMap<String, std::optional<PipelineLayout>>& m_pipelineLayouts;
+    PrepareResult& m_result;
     HashMap<AST::Function*, unsigned> m_calleeBuildingMap;
     Vector<CallGraph::Callee>* m_callees { nullptr };
     Deque<AST::Function*> m_queue;
@@ -79,14 +81,13 @@ void CallGraphBuilder::initializeMappings()
         if (!m_pipelineLayouts.contains(name))
             continue;
 
-        for (auto& attribute : function.attributes()) {
-            if (is<AST::StageAttribute>(attribute)) {
-                auto stage = downcast<AST::StageAttribute>(attribute).stage();
-                m_callGraph.m_entrypoints.append({ function, stage });
-                m_queue.append(&function);
-                break;
-            }
-        }
+        if (!function.stage())
+            continue;
+
+        auto addResult = m_result.entryPoints.add(function.name(), Reflection::EntryPointInformation { });
+        ASSERT(addResult.isNewEntry);
+        m_callGraph.m_entrypoints.append({ function, *function.stage(), addResult.iterator->value });
+        m_queue.append(&function);
     }
 
     while (!m_queue.isEmpty())
@@ -111,11 +112,11 @@ void CallGraphBuilder::visit(AST::CallExpression& call)
     for (auto& argument : call.arguments())
         AST::Visitor::visit(argument);
 
-    if (!is<AST::NamedTypeName>(call.target()))
+    if (!is<AST::IdentifierExpression>(call.target()))
         return;
 
-    auto& target = downcast<AST::NamedTypeName>(call.target());
-    auto it = m_callGraph.m_functionsByName.find(target.name());
+    auto& target = downcast<AST::IdentifierExpression>(call.target());
+    auto it = m_callGraph.m_functionsByName.find(target.identifier());
     if (it == m_callGraph.m_functionsByName.end())
         return;
 
@@ -127,9 +128,9 @@ void CallGraphBuilder::visit(AST::CallExpression& call)
         m_callees->at(result.iterator->value).callSites.append(&call);
 }
 
-CallGraph buildCallGraph(ShaderModule& shaderModule, const HashMap<String, std::optional<PipelineLayout>>& pipelineLayouts)
+CallGraph buildCallGraph(ShaderModule& shaderModule, const HashMap<String, std::optional<PipelineLayout>>& pipelineLayouts, PrepareResult& result)
 {
-    return CallGraphBuilder(shaderModule, pipelineLayouts).build();
+    return CallGraphBuilder(shaderModule, pipelineLayouts, result).build();
 }
 
 } // namespace WGSL

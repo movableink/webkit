@@ -87,7 +87,7 @@
 #include <WebCore/PlatformXR.h>
 #endif
 
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+#if ENABLE(CONTENT_FILTERING)
 #include <WebCore/MockContentFilterSettings.h>
 #endif
 
@@ -119,7 +119,6 @@ class Font;
 class FontPlatformData;
 class FragmentedSharedBuffer;
 class LightSource;
-class Path;
 class PaymentInstallmentConfiguration;
 class PixelBuffer;
 class ResourceError;
@@ -132,10 +131,7 @@ class SystemImage;
 
 struct CompositionUnderline;
 struct DataDetectorElementInfo;
-struct DiagnosticLoggingDictionary;
-struct KeypressCommand;
 struct Length;
-struct SerializedAttachmentData;
 struct SoupNetworkProxySettings;
 struct TextRecognitionDataDetector;
 struct ViewportArguments;
@@ -156,18 +152,6 @@ template<> struct ArgumentCoder<WebCore::DOMCacheEngine::Record> {
     static std::optional<WebCore::DOMCacheEngine::Record> decode(Decoder&);
 };
 
-template<> struct ArgumentCoder<WebCore::RectEdges<bool>> {
-    static void encode(Encoder&, const WebCore::RectEdges<bool>&);
-    static std::optional<WebCore::RectEdges<bool>> decode(Decoder&);
-};
-
-#if ENABLE(META_VIEWPORT)
-template<> struct ArgumentCoder<WebCore::ViewportArguments> {
-    static void encode(Encoder&, const WebCore::ViewportArguments&);
-    static std::optional<WebCore::ViewportArguments> decode(Decoder&);
-};
-#endif
-
 template<> struct ArgumentCoder<WebCore::Length> {
     static void encode(Encoder&, const WebCore::Length&);
     static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::Length&);
@@ -183,11 +167,6 @@ template<> struct ArgumentCoder<WebCore::Credential> {
 template<> struct ArgumentCoder<WebCore::Cursor> {
     static void encode(Encoder&, const WebCore::Cursor&);
     static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::Cursor&);
-};
-
-template<> struct ArgumentCoder<WebCore::DiagnosticLoggingDictionary> {
-    static void encode(Encoder&, const WebCore::DiagnosticLoggingDictionary&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::DiagnosticLoggingDictionary&);
 };
 
 template<> struct ArgumentCoder<RefPtr<WebCore::Image>> {
@@ -231,23 +210,6 @@ template<> struct ArgumentCoder<WebCore::ResourceError> {
     static WARN_UNUSED_RETURN bool decodePlatformData(Decoder&, WebCore::ResourceError&);
 };
 
-#if PLATFORM(COCOA)
-
-template<> struct ArgumentCoder<WebCore::KeypressCommand> {
-    static void encode(Encoder&, const WebCore::KeypressCommand&);
-    static std::optional<WebCore::KeypressCommand> decode(Decoder&);
-};
-
-#endif // PLATFORM(COCOA)
-
-#if PLATFORM(IOS_FAMILY)
-template<> struct ArgumentCoder<WebCore::InspectorOverlay::Highlight> {
-    static void encode(Encoder&, const WebCore::InspectorOverlay::Highlight&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::InspectorOverlay::Highlight&);
-};
-
-#endif
-
 #if USE(APPKIT)
 
 template<> struct ArgumentCoder<WebCore::AppKitControlSystemImage> {
@@ -272,17 +234,6 @@ template<> struct ArgumentCoder<WebCore::CurlProxySettings> {
 };
 #endif
 
-
-template<> struct ArgumentCoder<WebCore::FixedPositionViewportConstraints> {
-    static void encode(Encoder&, const WebCore::FixedPositionViewportConstraints&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::FixedPositionViewportConstraints&);
-};
-
-template<> struct ArgumentCoder<WebCore::StickyPositionViewportConstraints> {
-    static void encode(Encoder&, const WebCore::StickyPositionViewportConstraints&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::StickyPositionViewportConstraints&);
-};
-
 #if !USE(COORDINATED_GRAPHICS)
 template<> struct ArgumentCoder<WebCore::FilterOperations> {
     static void encode(Encoder&, const WebCore::FilterOperations&);
@@ -299,11 +250,6 @@ template<> struct ArgumentCoder<RefPtr<WebCore::FilterOperation>> {
     static WARN_UNUSED_RETURN bool decode(Decoder&, RefPtr<WebCore::FilterOperation>&);
 };
 #endif
-
-template<> struct ArgumentCoder<WebCore::BlobPart> {
-    static void encode(Encoder&, const WebCore::BlobPart&);
-    static std::optional<WebCore::BlobPart> decode(Decoder&);
-};
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 template<> struct ArgumentCoder<WebCore::MediaPlaybackTargetContext> {
@@ -361,29 +307,6 @@ template<> struct ArgumentCoder<WebCore::PaymentSessionError> {
 };
 
 #endif
-
-#if ENABLE(SERVICE_WORKER)
-
-template<> struct ArgumentCoder<WebCore::ServiceWorkerOrClientData> {
-    static void encode(Encoder&, const WebCore::ServiceWorkerOrClientData&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::ServiceWorkerOrClientData&);
-};
-
-template<> struct ArgumentCoder<WebCore::ServiceWorkerOrClientIdentifier> {
-    static void encode(Encoder&, const WebCore::ServiceWorkerOrClientIdentifier&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::ServiceWorkerOrClientIdentifier&);
-};
-
-#endif
-
-#if ENABLE(ATTACHMENT_ELEMENT)
-
-template<> struct ArgumentCoder<WebCore::SerializedAttachmentData> {
-    static void encode(Encoder&, const WebCore::SerializedAttachmentData&);
-    static std::optional<WebCore::SerializedAttachmentData> decode(Decoder&);
-};
-
-#endif // ENABLE(ATTACHMENT_ELEMENT)
 
 #if ENABLE(VIDEO)
 template<> struct ArgumentCoder<WebCore::SerializedPlatformDataCueValue> {
@@ -457,12 +380,6 @@ template<> struct ArgumentCoder<WebCore::Filter> {
     static std::optional<Ref<WebCore::Filter>> decode(Decoder&);
 };
 
-template<> struct ArgumentCoder<WebCore::Path> {
-    template<typename Encoder>
-    static void encode(Encoder&, const WebCore::Path&);
-    static std::optional<WebCore::Path> decode(Decoder&);
-};
-
 #if ENABLE(DATA_DETECTION)
 
 template<> struct ArgumentCoder<WebCore::DataDetectorElementInfo> {
@@ -513,20 +430,6 @@ template<> struct ArgumentCoder<WebCore::PixelBuffer> {
     static std::optional<Ref<WebCore::PixelBuffer>> decode(Decoder&);
 };
 
-#if PLATFORM(COCOA) && ENABLE(GPU_PROCESS) && ENABLE(WEBGL)
-
-template<> struct ArgumentCoder<WebCore::GraphicsContextGL::EGLImageSourceIOSurfaceHandle> {
-    static void encode(Encoder&, const WebCore::GraphicsContextGL::EGLImageSourceIOSurfaceHandle&);
-    static std::optional<WebCore::GraphicsContextGL::EGLImageSourceIOSurfaceHandle> decode(Decoder&);
-};
-
-template<> struct ArgumentCoder<WebCore::GraphicsContextGL::EGLImageSourceMTLSharedTextureHandle> {
-    static void encode(Encoder&, const WebCore::GraphicsContextGL::EGLImageSourceMTLSharedTextureHandle&);
-    static std::optional<WebCore::GraphicsContextGL::EGLImageSourceMTLSharedTextureHandle> decode(Decoder&);
-};
-
-#endif
-
 } // namespace IPC
 
 namespace WTF {
@@ -553,16 +456,6 @@ template <> struct EnumTraits<WebCore::CurlProxySettings::Mode> {
 #endif
 
 #undef Always
-template<> struct EnumTraits<WTFLogLevel> {
-    using values = EnumValues<
-    WTFLogLevel,
-    WTFLogLevel::Always,
-    WTFLogLevel::Error,
-    WTFLogLevel::Warning,
-    WTFLogLevel::Info,
-    WTFLogLevel::Debug
-    >;
-};
 
 #if ENABLE(ENCRYPTED_MEDIA)
 template <> struct EnumTraits<WebCore::CDMInstanceSession::SessionLoadFailure> {
@@ -591,7 +484,6 @@ template <> struct EnumTraits<WebCore::CDMInstance::HDCPStatus> {
 template <> struct EnumTraits<WebCore::GraphicsContextGLSimulatedEventForTesting> {
     using values = EnumValues<
     WebCore::GraphicsContextGLSimulatedEventForTesting,
-    WebCore::GraphicsContextGLSimulatedEventForTesting::ContextChange,
     WebCore::GraphicsContextGLSimulatedEventForTesting::GPUStatusFailure,
     WebCore::GraphicsContextGLSimulatedEventForTesting::Timeout
     >;

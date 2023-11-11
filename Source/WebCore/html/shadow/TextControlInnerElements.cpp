@@ -132,7 +132,7 @@ std::optional<Style::ResolvedStyle> TextControlInnerElement::resolveCustomStyle(
         // Set "flex-basis: 1em". Note that CSSPrimitiveValue::computeLength<int>() only needs the element's
         // style to calculate em lengths. Since the element might not be in a document, just pass nullptr
         // for the root element style, the parent element style, and the render view.
-        auto emSize = CSSPrimitiveValue::create(1, CSSUnitType::CSS_EMS);
+        auto emSize = CSSPrimitiveValue::create(1, CSSUnitType::CSS_EM);
         int pixels = emSize->computeLength<int>(CSSToLengthConversionData { *newStyle, nullptr, nullptr, nullptr });
         newStyle->setFlexBasis(Length { pixels, LengthType::Fixed });
     }
@@ -233,6 +233,12 @@ std::optional<Style::ResolvedStyle> TextControlPlaceholderElement::resolveCustom
 
 // MARK: SearchFieldResultsButtonElement
 
+static inline bool searchFieldStyleHasExplicitlySpecifiedTextFieldAppearance(const RenderStyle& style)
+{
+    auto appearance = style.appearance();
+    return appearance == StyleAppearance::TextField && appearance == style.effectiveAppearance();
+}
+
 inline SearchFieldResultsButtonElement::SearchFieldResultsButtonElement(Document& document)
     : HTMLDivElement(divTag, document, CreateSearchFieldResultsButtonElement)
 {
@@ -254,13 +260,16 @@ std::optional<Style::ResolvedStyle> SearchFieldResultsButtonElement::resolveCust
     if (!shadowHostStyle)
         return std::nullopt;
 
-    auto appearance = shadowHostStyle->effectiveAppearance();
-    if (appearance == StyleAppearance::TextField) {
+    if (searchFieldStyleHasExplicitlySpecifiedTextFieldAppearance(*shadowHostStyle)) {
         auto elementStyle = resolveStyle(resolutionContext);
         elementStyle.style->setDisplay(DisplayType::None);
         return elementStyle;
     }
-    if (appearance != StyleAppearance::SearchField) {
+
+    // By default, input[type=search] can use either the searchfield or textfield appearance depending
+    // on the platform and writing mode. Only adjust the style when that default is used.
+    auto effectiveAppearance = shadowHostStyle->effectiveAppearance();
+    if (effectiveAppearance != StyleAppearance::SearchField && effectiveAppearance != StyleAppearance::TextField) {
         SetForScope canAdjustStyleForAppearance(m_canAdjustStyleForAppearance, false);
         return resolveStyle(resolutionContext);
     }
@@ -272,7 +281,7 @@ void SearchFieldResultsButtonElement::defaultEventHandler(Event& event)
 {
     // On mousedown, bring up a menu, if needed
     RefPtr input = downcast<HTMLInputElement>(shadowHost());
-    if (input && event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
+    if (input && event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == MouseButton::Left) {
         input->focus();
         input->select();
 #if !PLATFORM(IOS_FAMILY)
@@ -326,7 +335,7 @@ std::optional<Style::ResolvedStyle> SearchFieldCancelButtonElement::resolveCusto
     auto& inputElement = downcast<HTMLInputElement>(*shadowHost());
     elementStyle.style->setVisibility(elementStyle.style->visibility() == Visibility::Hidden || inputElement.value().isEmpty() ? Visibility::Hidden : Visibility::Visible);
 
-    if (shadowHostStyle && shadowHostStyle->effectiveAppearance() == StyleAppearance::TextField)
+    if (shadowHostStyle && searchFieldStyleHasExplicitlySpecifiedTextFieldAppearance(*shadowHostStyle))
         elementStyle.style->setDisplay(DisplayType::None);
 
     return elementStyle;
@@ -341,7 +350,7 @@ void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)
         return;
     }
 
-    if (event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
+    if (event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == MouseButton::Left) {
         input->focus();
         input->select();
         event.setDefaultHandled();

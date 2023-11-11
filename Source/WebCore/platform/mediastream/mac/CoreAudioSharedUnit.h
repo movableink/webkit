@@ -40,6 +40,13 @@ typedef UInt32 AudioUnitRenderActionFlags;
 struct AudioBufferList;
 struct AudioTimeStamp;
 
+#if TARGET_OS_IPHONE || (defined(AUDIOCOMPONENT_NOCARBONINSTANCES) && AUDIOCOMPONENT_NOCARBONINSTANCES)
+typedef struct OpaqueAudioComponentInstance* AudioComponentInstance;
+#else
+typedef struct ComponentInstanceRecord* AudioComponentInstance;
+#endif
+typedef AudioComponentInstance AudioUnit;
+
 namespace WebCore {
 
 #if PLATFORM(IOS_FAMILY)
@@ -64,6 +71,7 @@ public:
         virtual OSStatus defaultOutputDevice(uint32_t*) = 0;
         virtual void delaySamples(Seconds) { }
         virtual Seconds verifyCaptureInterval(bool isProducingSamples) const { return isProducingSamples ? 20_s : 2_s; }
+        virtual void storeVPIOUnitIfNeeded() { }
     };
 
     WEBCORE_EXPORT static CoreAudioSharedUnit& unit();
@@ -79,7 +87,7 @@ public:
     void registerSpeakerSamplesProducer(CoreAudioSpeakerSamplesProducer&);
     void unregisterSpeakerSamplesProducer(CoreAudioSpeakerSamplesProducer&);
     bool isRunning() const { return m_ioUnitStarted; }
-    void setSampleRateRange(CapabilityValueOrRange range) { m_sampleRateCapabilities = range; }
+    void setSampleRateRange(CapabilityRange range) { m_sampleRateCapabilities = range; }
 
 #if PLATFORM(IOS_FAMILY)
     void setIsInBackground(bool);
@@ -88,10 +96,14 @@ public:
 
     bool isUsingVPIO() const { return m_shouldUseVPIO; }
 
+    void setStoredVPIOUnit(AudioUnit);
+    bool iStoredVPIOUnit(AudioUnit unit) const { return unit == m_storedVPIOUnit; }
+    AudioUnit takeStoredVPIOUnit() { return std::exchange(m_storedVPIOUnit, nullptr); }
+
 private:
     static size_t preferredIOBufferSize();
 
-    CapabilityValueOrRange sampleRateCapacities() const final { return m_sampleRateCapabilities; }
+    CapabilityRange sampleRateCapacities() const final { return m_sampleRateCapabilities; }
 
     bool hasAudioUnit() const final { return !!m_ioUnit; }
     void captureDeviceChanged() final;
@@ -106,6 +118,9 @@ private:
     bool isProducingData() const final { return m_ioUnitStarted; }
     void isProducingMicrophoneSamplesChanged() final;
     void validateOutputDevice(uint32_t deviceID) final;
+#if PLATFORM(MAC)
+    bool migrateToNewDefaultDevice(const CaptureDevice&) final;
+#endif
     int actualSampleRate() const final;
     void resetSampleRate();
 
@@ -149,7 +164,7 @@ private:
     String m_ioUnitName;
 #endif
 
-    CapabilityValueOrRange m_sampleRateCapabilities;
+    CapabilityRange m_sampleRateCapabilities;
 
     uint64_t m_microphoneProcsCalled { 0 };
     uint64_t m_microphoneProcsCalledLastTime { 0 };
@@ -168,6 +183,7 @@ private:
 #endif
 
     bool m_shouldUseVPIO { true };
+    AudioUnit m_storedVPIOUnit { nullptr };
 };
 
 } // namespace WebCore

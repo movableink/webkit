@@ -96,7 +96,7 @@ TEST(WTF_Packed, PackedAlignedPtr)
     }
     {
         PackedAlignedPtr<uint8_t, 16> key { nullptr };
-#if (OS(IOS) || OS(TVOS) || OS(WATCHOS)) && CPU(ARM64)
+#if (OS(IOS) || OS(TVOS) || OS(WATCHOS) || OS(VISION)) && CPU(ARM64) && !PLATFORM(IOS_FAMILY_SIMULATOR)
         EXPECT_EQ(sizeof(key), 4U);
 #else
         EXPECT_LE(sizeof(key), 6U);
@@ -113,7 +113,7 @@ TEST(WTF_Packed, HashMap)
     HashMap<PackedPtr<PackingTarget>, unsigned> map;
     vector.reserveCapacity(10000);
     for (unsigned i = 0; i < 10000; ++i)
-        vector.uncheckedAppend(PackingTarget { i });
+        vector.append(PackingTarget { i });
 
     for (auto& target : vector)
         map.add(&target, target.m_value);

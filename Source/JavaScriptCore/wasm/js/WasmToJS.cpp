@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WasmToJS.h"
 
-#if ENABLE(WEBASSEMBLY)
+#if ENABLE(WEBASSEMBLY) && ENABLE(JIT)
 
 #include "CCallHelpers.h"
 #include "JSCJSValueInlines.h"
@@ -89,12 +89,12 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM& vm
 
     jit.emitFunctionPrologue();
     GPRReg scratchGPR = GPRInfo::nonPreservedNonArgumentGPR0;
-    jit.move(CCallHelpers::TrustedImmPtr(CalleeBits::boxWasm(&callee)), scratchGPR);
+    jit.move(CCallHelpers::TrustedImmPtr(CalleeBits::boxNativeCallee(&callee)), scratchGPR);
     static_assert(CallFrameSlot::codeBlock + 1 == CallFrameSlot::callee);
     if constexpr (is32Bit()) {
         CCallHelpers::Address calleeSlot { GPRInfo::callFrameRegister, CallFrameSlot::callee * sizeof(Register) };
         jit.storePtr(scratchGPR, calleeSlot.withOffset(PayloadOffset));
-        jit.move(CCallHelpers::TrustedImm32(JSValue::WasmTag), scratchGPR);
+        jit.move(CCallHelpers::TrustedImm32(JSValue::NativeCalleeTag), scratchGPR);
         jit.store32(scratchGPR, calleeSlot.withOffset(TagOffset));
         jit.storePtr(GPRInfo::wasmContextInstancePointer, CCallHelpers::addressFor(CallFrameSlot::codeBlock));
     } else
@@ -156,9 +156,12 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM& vm
             case TypeKind::Eqref:
             case TypeKind::Anyref:
             case TypeKind::Nullref:
+            case TypeKind::Nullfuncref:
+            case TypeKind::Nullexternref:
             case TypeKind::I31ref:
             case TypeKind::Rec:
             case TypeKind::Sub:
+            case TypeKind::Subfinal:
             case TypeKind::V128:
                 RELEASE_ASSERT_NOT_REACHED(); // Handled above.
             case TypeKind::RefNull:
@@ -247,9 +250,12 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM& vm
             case TypeKind::Eqref:
             case TypeKind::Anyref:
             case TypeKind::Nullref:
+            case TypeKind::Nullfuncref:
+            case TypeKind::Nullexternref:
             case TypeKind::I31ref:
             case TypeKind::Rec:
             case TypeKind::Sub:
+            case TypeKind::Subfinal:
             case TypeKind::V128:
                 RELEASE_ASSERT_NOT_REACHED(); // Handled above.
             case TypeKind::RefNull:
@@ -453,18 +459,26 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM& vm
         default:  {
             if (Wasm::isRefType(returnType)) {
                 if (Wasm::isExternref(returnType))
-                    ASSERT(returnType.isNullable());
-                else if (Wasm::isFuncref(returnType)) {
-                    ASSERT(returnType.isNullable());
+                    ASSERT_IMPLIES(!Options::useWebAssemblyTypedFunctionReferences(), returnType.isNullable());
+                else if (Wasm::isFuncref(returnType) || (!Options::useWebAssemblyGC() && isRefWithTypeIndex(returnType))) {
+                    ASSERT_IMPLIES(!Options::useWebAssemblyTypedFunctionReferences(), returnType.isNullable());
                     jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
-                    jit.setupArguments<decltype(operationConvertToFuncref)>(GPRInfo::wasmContextInstancePointer, JSRInfo::returnValueJSR);
+                    jit.setupArguments<decltype(operationConvertToFuncref)>(GPRInfo::wasmContextInstancePointer, CCallHelpers::TrustedImmPtr(&typeDefinition), JSRInfo::returnValueJSR);
                     auto call = jit.call(OperationPtrTag);
                     exceptionChecks.append(jit.emitJumpIfException(vm));
                     jit.addLinkTask([=](LinkBuffer& linkBuffer) {
                         linkBuffer.link<OperationPtrTag>(call, operationConvertToFuncref);
                     });
-                } else if (Wasm::isI31ref(returnType))
-                    RELEASE_ASSERT_NOT_REACHED();
+                } else {
+                    ASSERT(Options::useWebAssemblyGC());
+                    jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
+                    jit.setupArguments<decltype(operationConvertToAnyref)>(GPRInfo::wasmContextInstancePointer, CCallHelpers::TrustedImmPtr(&typeDefinition), JSRInfo::returnValueJSR);
+                    auto call = jit.call(OperationPtrTag);
+                    exceptionChecks.append(jit.emitJumpIfException(vm));
+                    jit.addLinkTask([=](LinkBuffer& linkBuffer) {
+                        linkBuffer.link<OperationPtrTag>(call, operationConvertToAnyref);
+                    });
+                }
                 jit.moveValueRegs(JSRInfo::returnValueJSR, wasmCallInfo.results[0].location.jsr());
             } else
                 // For the JavaScript embedding, imports with these types in their type definition return are a WebAssembly.Module validation error.
@@ -550,4 +564,4 @@ void emitThrowWasmToJSException(CCallHelpers& jit, GPRReg wasmInstance, Wasm::Ex
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+#endif // ENABLE(WEBASSEMBLY) && ENABLE(JIT)

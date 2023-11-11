@@ -47,8 +47,9 @@ public:
     void markFilterEffectForRebuild();
 
 private:
-    bool isSVGResourceFilterPrimitive() const override { return true; }
     void element() const = delete;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceFilterPrimitive, isRenderSVGResourceFilterPrimitive())

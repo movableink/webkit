@@ -28,6 +28,7 @@
 #include "StyleSheet.h"
 #include <memory>
 #include <variant>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakHashSet.h>
@@ -57,7 +58,7 @@ namespace Style {
 class Scope;
 }
 
-class CSSStyleSheet final : public StyleSheet {
+class CSSStyleSheet final : public StyleSheet, public CanMakeCheckedPtr {
 public:
     struct Init {
         String baseURL;
@@ -149,6 +150,7 @@ public:
     void reattachChildRuleCSSOMWrappers();
 
     StyleSheetContents& contents() { return m_contents; }
+    Ref<StyleSheetContents> protectedContents();
 
     bool isInline() const { return m_isInlineStylesheet; }
     TextPosition startPosition() const { return m_startPosition; }
@@ -158,6 +160,8 @@ public:
     bool canAccessRules() const;
 
     String debugDescription() const final;
+    String cssTextWithReplacementURLs(const HashMap<String, String>&, const HashMap<RefPtr<CSSStyleSheet>, String>&);
+    void getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>&);
 
 private:
     CSSStyleSheet(Ref<StyleSheetContents>&&, CSSImportRule* ownerRule);
@@ -182,7 +186,7 @@ private:
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_constructorDocument;
     WeakHashSet<ContainerNode, WeakPtrImplWithEventTargetData> m_adoptingTreeScopes;
 
-    WeakPtr<Node, WeakPtrImplWithEventTargetData> m_ownerNode;
+    CheckedPtr<Node> m_ownerNode;
     WeakPtr<CSSImportRule> m_ownerRule;
 
     TextPosition m_startPosition;

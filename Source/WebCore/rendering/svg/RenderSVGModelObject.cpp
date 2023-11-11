@@ -33,13 +33,13 @@
 #include "RenderSVGModelObject.h"
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-
+#include "LegacyRenderSVGResource.h"
 #include "RenderGeometryMap.h"
 #include "RenderLayer.h"
+#include "RenderLayerInlines.h"
 #include "RenderLayerModelObject.h"
 #include "RenderObjectInlines.h"
 #include "RenderSVGModelObjectInlines.h"
-#include "RenderSVGResource.h"
 #include "RenderView.h"
 #include "SVGElementInlines.h"
 #include "SVGGraphicsElement.h"
@@ -54,13 +54,13 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGModelObject);
 
-RenderSVGModelObject::RenderSVGModelObject(Document& document, RenderStyle&& style)
-    : RenderLayerModelObject(document, WTFMove(style), 0)
+RenderSVGModelObject::RenderSVGModelObject(Type type, Document& document, RenderStyle&& style)
+    : RenderLayerModelObject(type, document, WTFMove(style), 0)
 {
 }
 
-RenderSVGModelObject::RenderSVGModelObject(SVGElement& element, RenderStyle&& style)
-    : RenderLayerModelObject(element, WTFMove(style), 0)
+RenderSVGModelObject::RenderSVGModelObject(Type type, SVGElement& element, RenderStyle&& style)
+    : RenderLayerModelObject(type, element, WTFMove(style), 0)
 {
 }
 
@@ -125,9 +125,9 @@ LayoutRect RenderSVGModelObject::outlineBoundsForRepaint(const RenderLayerModelO
     return outlineBounds;
 }
 
-void RenderSVGModelObject::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
+void RenderSVGModelObject::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& accumulatedOffset) const
 {
-    rects.append(snappedIntRect(accumulatedOffset, m_layoutRect.size()));
+    rects.append({ accumulatedOffset, m_layoutRect.size() });
 }
 
 void RenderSVGModelObject::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
@@ -212,7 +212,7 @@ static bool intersectsAllowingEmpty(const FloatRect& r, const FloatRect& other)
 // image, line, path, polygon, polyline, rect, text and use.
 static bool isGraphicsElement(const RenderElement& renderer)
 {
-    return renderer.isSVGShape() || renderer.isSVGText() || renderer.isSVGImage() || renderer.element()->hasTagName(SVGNames::useTag);
+    return renderer.isRenderSVGShape() || renderer.isRenderSVGText() || renderer.isRenderSVGImage() || renderer.element()->hasTagName(SVGNames::useTag);
 }
 
 bool RenderSVGModelObject::checkIntersection(RenderElement* renderer, const FloatRect& rect)
@@ -224,7 +224,9 @@ bool RenderSVGModelObject::checkIntersection(RenderElement* renderer, const Floa
     SVGElement* svgElement = downcast<SVGElement>(renderer->element());
     ASSERT(is<SVGGraphicsElement>(svgElement));
     auto ctm = downcast<SVGGraphicsElement>(*svgElement).getCTM(SVGLocatable::DisallowStyleUpdate);
-    return intersectsAllowingEmpty(rect, ctm.mapRect(renderer->repaintRectInLocalCoordinates()));
+    // FIXME: [SVG] checkEnclosure implementation is inconsistent
+    // https://bugs.webkit.org/show_bug.cgi?id=262709
+    return intersectsAllowingEmpty(rect, ctm.mapRect(renderer->repaintRectInLocalCoordinates(RepaintRectCalculation::Accurate)));
 }
 
 bool RenderSVGModelObject::checkEnclosure(RenderElement* renderer, const FloatRect& rect)
@@ -236,7 +238,9 @@ bool RenderSVGModelObject::checkEnclosure(RenderElement* renderer, const FloatRe
     SVGElement* svgElement = downcast<SVGElement>(renderer->element());
     ASSERT(is<SVGGraphicsElement>(svgElement));
     auto ctm = downcast<SVGGraphicsElement>(*svgElement).getCTM(SVGLocatable::DisallowStyleUpdate);
-    return rect.contains(ctm.mapRect(renderer->repaintRectInLocalCoordinates()));
+    // FIXME: [SVG] checkEnclosure implementation is inconsistent
+    // https://bugs.webkit.org/show_bug.cgi?id=262709
+    return rect.contains(ctm.mapRect(renderer->repaintRectInLocalCoordinates(RepaintRectCalculation::Accurate)));
 }
 
 LayoutSize RenderSVGModelObject::cachedSizeForOverflowClip() const
@@ -265,6 +269,14 @@ bool RenderSVGModelObject::applyCachedClipAndScrollPosition(LayoutRect& rect, co
         intersects = !rect.isEmpty();
     }
     return intersects;
+}
+
+Path RenderSVGModelObject::computeClipPath(AffineTransform& transform) const
+{
+    if (layer()->isTransformed())
+        transform.multiply(layer()->currentTransform(RenderStyle::individualTransformOperations()).toAffineTransform());
+
+    return pathFromGraphicsElement(&downcast<SVGGraphicsElement>(element()));
 }
 
 } // namespace WebCore

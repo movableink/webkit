@@ -33,13 +33,10 @@ namespace WebCore {
 
 static Vector<uint16_t> portVectorFromList(NSArray<NSNumber *> *portList)
 {
-    Vector<uint16_t> ports;
-    ports.reserveInitialCapacity(portList.count);
-
-    for (NSNumber *port : portList)
-        ports.uncheckedAppend(port.unsignedShortValue);
-
-    return ports;
+    return Vector<uint16_t>(portList.count, [portList](size_t i) {
+        NSNumber *port = portList[i];
+        return port.unsignedShortValue;
+    });
 }
 
 static NSString * _Nullable portStringFromVector(const Vector<uint16_t>& ports)
@@ -124,10 +121,7 @@ Cookie::Cookie(NSHTTPCookie *cookie)
     , commentURL { cookie.commentURL }
     , ports { portVectorFromList(cookie.portList) }
 {
-ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
-    if ([cookie respondsToSelector:@selector(sameSitePolicy)])
-        sameSite = coreSameSitePolicy(cookie.sameSitePolicy);
-ALLOW_NEW_API_WITHOUT_GUARDS_END
+    sameSite = coreSameSitePolicy(cookie.sameSitePolicy);
 }
 
 Cookie::operator NSHTTPCookie * _Nullable () const

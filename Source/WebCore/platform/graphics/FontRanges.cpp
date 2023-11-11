@@ -28,6 +28,7 @@
 
 #include "Font.h"
 #include "FontSelector.h"
+#include "platform/text/CharacterProperties.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/WTFString.h>
 
@@ -38,7 +39,11 @@ const Font* FontRanges::Range::font(ExternalResourceDownloadPolicy policy) const
     return m_fontAccessor->font(policy);
 }
 
-FontRanges::FontRanges() = default;
+FontRanges::FontRanges(FontRanges&& other, bool isGeneric)
+: m_ranges { WTFMove(other.m_ranges) }
+, m_isGeneric { isGeneric }
+{
+}
 
 class TrivialFontAccessor final : public FontAccessor {
 public:
@@ -77,6 +82,9 @@ FontRanges::~FontRanges() = default;
 GlyphData FontRanges::glyphDataForCharacter(UChar32 character, ExternalResourceDownloadPolicy policy) const
 {
     const Font* resultFont = nullptr;
+    if (isGeneric() && isPrivateUseAreaCharacter(character))
+        return GlyphData();
+
     for (auto& range : m_ranges) {
         if (range.from() <= character && character <= range.to()) {
             if (auto* font = range.font(policy)) {
@@ -86,8 +94,8 @@ GlyphData FontRanges::glyphDataForCharacter(UChar32 character, ExternalResourceD
                         resultFont = font;
                 } else {
                     auto glyphData = font->glyphDataForCharacter(character);
-                    if (glyphData.glyph) {
-                        auto* glyphDataFont = glyphData.font;
+                    if (glyphData.isValid()) {
+                        auto* glyphDataFont = glyphData.font.get();
                         if (glyphDataFont && glyphDataFont->visibility() == Font::Visibility::Visible && resultFont && resultFont->visibility() == Font::Visibility::Invisible)
                             return GlyphData(glyphData.glyph, &glyphDataFont->invisibleFont());
                         return glyphData;
@@ -110,7 +118,7 @@ GlyphData FontRanges::glyphDataForCharacter(UChar32 character, ExternalResourceD
 
 const Font* FontRanges::fontForCharacter(UChar32 character) const
 {
-    return glyphDataForCharacter(character, ExternalResourceDownloadPolicy::Allow).font;
+    return glyphDataForCharacter(character, ExternalResourceDownloadPolicy::Allow).font.get();
 }
 
 const Font& FontRanges::fontForFirstRange() const

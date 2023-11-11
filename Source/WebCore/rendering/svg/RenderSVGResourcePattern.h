@@ -22,9 +22,9 @@
 #pragma once
 
 #include "ImageBuffer.h"
+#include "LegacyRenderSVGResourceContainer.h"
 #include "Pattern.h"
 #include "PatternAttributes.h"
-#include "RenderSVGResourceContainer.h"
 #include "SVGPatternElement.h"
 #include <memory>
 #include <wtf/IsoMallocInlines.h>
@@ -39,18 +39,18 @@ public:
     AffineTransform transform;
 };
 
-class RenderSVGResourcePattern final : public RenderSVGResourceContainer {
+class RenderSVGResourcePattern final : public LegacyRenderSVGResourceContainer {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGResourcePattern);
 public:
     RenderSVGResourcePattern(SVGPatternElement&, RenderStyle&&);
     SVGPatternElement& patternElement() const;
 
-    void removeAllClientsFromCache(bool markForInvalidation = true) override;
+    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
 
     bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
     void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement*) override;
-    FloatRect resourceBoundingBox(const RenderObject&) override { return FloatRect(); }
+    FloatRect resourceBoundingBox(const RenderObject&, RepaintRectCalculation) override { return FloatRect(); }
 
     RenderSVGResourceType resourceType() const override { return PatternResourceType; }
 
@@ -73,4 +73,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_SVG_RESOURCE(RenderSVGResourcePattern, PatternResourceType)
+SPECIALIZE_TYPE_TRAITS_LEGACY_RENDER_SVG_RESOURCE(RenderSVGResourcePattern, PatternResourceType)

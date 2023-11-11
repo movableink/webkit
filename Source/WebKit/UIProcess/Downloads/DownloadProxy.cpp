@@ -114,7 +114,7 @@ void DownloadProxy::publishProgress(const URL& URL)
     if (!handle)
         return;
 
-    m_dataStore->networkProcess().send(Messages::NetworkProcess::PublishDownloadProgress(m_downloadID, URL, *handle), 0);
+    m_dataStore->networkProcess().send(Messages::NetworkProcess::PublishDownloadProgress(m_downloadID, URL, WTFMove(*handle)), 0);
 }
 #endif // PLATFORM(COCOA)
 
@@ -146,8 +146,8 @@ void DownloadProxy::willSendRequest(ResourceRequest&& proposedRequest, const Res
         m_redirectChain.append(newRequest.url());
         if (!protectedThis->m_dataStore)
             return;
-        auto& networkProcessProxy = protectedThis->m_dataStore->networkProcess();
-        networkProcessProxy.send(Messages::NetworkProcess::ContinueWillSendRequest(protectedThis->m_downloadID, newRequest), 0);
+        Ref networkProcessProxy = protectedThis->m_dataStore->networkProcess();
+        networkProcessProxy->send(Messages::NetworkProcess::ContinueWillSendRequest(protectedThis->m_downloadID, newRequest), 0);
     });
 }
 

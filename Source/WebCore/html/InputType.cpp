@@ -323,7 +323,7 @@ WallTime InputType::valueAsDate() const
 
 ExceptionOr<void> InputType::setValueAsDate(WallTime) const
 {
-    return Exception { InvalidStateError };
+    return Exception { ExceptionCode::InvalidStateError };
 }
 
 double InputType::valueAsDouble() const
@@ -338,7 +338,7 @@ ExceptionOr<void> InputType::setValueAsDouble(double doubleValue, TextFieldEvent
 
 ExceptionOr<void> InputType::setValueAsDecimal(const Decimal&, TextFieldEventBehavior) const
 {
-    return Exception { InvalidStateError };
+    return Exception { ExceptionCode::InvalidStateError };
 }
 
 bool InputType::supportsRequired() const
@@ -564,8 +564,12 @@ String InputType::validationMessage() const
     if (typeMismatch())
         return typeMismatchText();
 
-    if (patternMismatch(value))
-        return validationMessagePatternMismatchText();
+    if (patternMismatch(value)) {
+        auto title = element()->attributeWithoutSynchronization(HTMLNames::titleAttr).string().trim(isASCIIWhitespace).simplifyWhiteSpace(isASCIIWhitespace);
+        if (title.isEmpty())
+            return validationMessagePatternMismatchText();
+        return validationMessagePatternMismatchText(title);
+    }
 
     if (element()->tooShort())
         return validationMessageTooShortText(value.length(), element()->minLength());
@@ -665,7 +669,7 @@ void InputType::createShadowSubtree()
 {
 }
 
-void InputType::destroyShadowSubtree()
+void InputType::removeShadowSubtree()
 {
     ASSERT(element());
     RefPtr<ShadowRoot> root = element()->userAgentShadowRoot();
@@ -673,6 +677,7 @@ void InputType::destroyShadowSubtree()
         return;
 
     root->removeChildren();
+    m_hasCreatedShadowSubtree = false;
 }
 
 Decimal InputType::parseToNumber(const String&, const Decimal& defaultValue) const
@@ -1002,6 +1007,11 @@ bool InputType::supportsSelectionAPI() const
     return false;
 }
 
+bool InputType::dirAutoUsesValue() const
+{
+    return false;
+}
+
 unsigned InputType::height() const
 {
     return 0;
@@ -1018,7 +1028,7 @@ ExceptionOr<void> InputType::applyStep(int count, AnyStepHandling anyStepHandlin
 
     StepRange stepRange(createStepRange(anyStepHandling));
     if (!stepRange.hasStep())
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     // 3. If the element has a minimum and a maximum and the minimum is greater than the maximum, then abort these steps.
     if (stepRange.minimum() > stepRange.maximum())
@@ -1086,7 +1096,7 @@ StepRange InputType::createStepRange(AnyStepHandling) const
 ExceptionOr<void> InputType::stepUp(int n)
 {
     if (!isSteppable())
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
     return applyStep(n, AnyStepHandling::Reject, DispatchNoEvent);
 }
 

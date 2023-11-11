@@ -114,6 +114,7 @@ public:
     };
 
     enum ResultCondition {
+        Carry = Assembler::ConditionCS,
         Overflow = Assembler::ConditionVS,
         Signed = Assembler::ConditionMI,
         PositiveOrZero = Assembler::ConditionPL,
@@ -441,17 +442,22 @@ public:
         m_assembler.and_<64>(dest, dest, src);
     }
 
-    void and64(TrustedImm32 imm, RegisterID dest)
+    void and64(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
         LogicalImmediate logicalImm = LogicalImmediate::create64(static_cast<intptr_t>(static_cast<int64_t>(imm.m_value)));
 
         if (logicalImm.isValid()) {
-            m_assembler.and_<64>(dest, dest, logicalImm);
+            m_assembler.and_<64>(dest, src, logicalImm);
             return;
         }
 
         signExtend32ToPtr(imm, getCachedDataTempRegisterIDAndInvalidate());
-        m_assembler.and_<64>(dest, dest, dataTempRegister);
+        m_assembler.and_<64>(dest, src, dataTempRegister);
+    }
+
+    void and64(TrustedImm32 imm, RegisterID dest)
+    {
+        and64(imm, dest, dest);
     }
 
     void and64(TrustedImmPtr imm, RegisterID dest)
@@ -899,6 +905,8 @@ public:
 
     void lshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.lsl<64>(dest, src, imm.m_value & 0x3f);
     }
 
@@ -1068,6 +1076,13 @@ public:
         }
     }
 
+    void or16(RegisterID mask, AbsoluteAddress address)
+    {
+        load16(address.m_ptr, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.orr<32>(dataTempRegister, dataTempRegister, mask);
+        store16(dataTempRegister, address.m_ptr);
+    }
+
     void or32(RegisterID src, RegisterID dest)
     {
         or32(dest, src, dest);
@@ -1217,6 +1232,8 @@ public:
 
     void rotateRight64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.ror<64>(dest, src, imm.m_value & 63);
     }
 
@@ -1257,6 +1274,8 @@ public:
     
     void rshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.asr<64>(dest, src, imm.m_value & 0x3f);
     }
     
@@ -1419,6 +1438,8 @@ public:
     
     void urshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.lsr<64>(dest, src, imm.m_value & 0x3f);
     }
 
@@ -4061,6 +4082,11 @@ public:
         return branch32(cond, left, right);
     }
 
+    Jump branch32WithMemory16(RelationalCondition cond, Address left, RegisterID right)
+    {
+        MacroAssemblerHelpers::load16OnCondition(*this, cond, left, getCachedMemoryTempRegisterIDAndInvalidate());
+        return branch32(cond, memoryTempRegister, right);
+    }
 
     // Arithmetic control flow operations:
     //
@@ -5919,7 +5945,13 @@ public:
     {
         Assembler::replaceWithJump(instructionStart.dataLocation(), destination.dataLocation());
     }
-    
+
+    template<PtrTag startTag>
+    static void replaceWithNops(CodeLocationLabel<startTag> instructionStart, size_t memoryToFillWithNopsInBytes)
+    {
+        Assembler::replaceWithNops(instructionStart.dataLocation(), memoryToFillWithNopsInBytes);
+    }
+
     static ptrdiff_t maxJumpReplacementSize()
     {
         return Assembler::maxJumpReplacementSize();

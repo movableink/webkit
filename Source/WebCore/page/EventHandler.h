@@ -39,6 +39,7 @@
 #include "Timer.h"
 #include <memory>
 #include <utility>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -72,6 +73,7 @@ class Event;
 class EventTarget;
 class FloatQuad;
 class HTMLFrameSetElement;
+class HandleMouseEventResult;
 class HitTestResult;
 class KeyboardEvent;
 class KeyboardScrollingAnimator;
@@ -84,6 +86,7 @@ class PlatformGestureEvent;
 class PlatformKeyboardEvent;
 class PlatformTouchEvent;
 class PlatformWheelEvent;
+class RemoteFrame;
 class RenderBox;
 class RenderElement;
 class RenderLayer;
@@ -98,6 +101,7 @@ class WheelEvent;
 class Widget;
 
 struct DragState;
+struct RemoteMouseEventData;
 
 #if ENABLE(QT_GESTURE_EVENTS)
 class PlatformGestureEvent;
@@ -132,7 +136,7 @@ enum class ImmediateActionStage : uint8_t {
     ActionCompleted
 };
 
-class EventHandler {
+class EventHandler : public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit EventHandler(LocalFrame&);
@@ -168,7 +172,7 @@ public:
     bool mousePressed() const { return m_mousePressed; }
     Node* mousePressNode() const { return m_mousePressNode.get(); }
 
-    WEBCORE_EXPORT void setCapturingMouseEventsElement(Element*);
+    WEBCORE_EXPORT void setCapturingMouseEventsElement(RefPtr<Element>&&);
     void pointerCaptureElementDidChange(Element*);
 
 #if ENABLE(DRAG_SUPPORT)
@@ -198,8 +202,8 @@ public:
     IntPoint targetPositionInWindowForSelectionAutoscroll() const;
     bool shouldUpdateAutoscroll();
 
-    WEBCORE_EXPORT static RefPtr<LocalFrame> subframeForTargetNode(Node*);
-    static RefPtr<LocalFrame> subframeForHitTestResult(const MouseEventWithHitTestResults&);
+    WEBCORE_EXPORT static RefPtr<Frame> subframeForTargetNode(Node*);
+    static RefPtr<Frame> subframeForHitTestResult(const MouseEventWithHitTestResults&);
 
     WEBCORE_EXPORT bool scrollOverflow(ScrollDirection, ScrollGranularity, Node* startingNode = nullptr);
     WEBCORE_EXPORT bool scrollRecursively(ScrollDirection, ScrollGranularity, Node* startingNode = nullptr);
@@ -208,17 +212,17 @@ public:
     bool tabsToLinks(KeyboardEvent*) const;
     bool tabsToAllFormControls(KeyboardEvent*) const;
 
-    WEBCORE_EXPORT bool mouseMoved(const PlatformMouseEvent&);
+    WEBCORE_EXPORT HandleMouseEventResult mouseMoved(const PlatformMouseEvent&);
     WEBCORE_EXPORT bool passMouseMovedEventToScrollbars(const PlatformMouseEvent&);
 
     WEBCORE_EXPORT void lostMouseCapture();
 
-    WEBCORE_EXPORT bool handleMousePressEvent(const PlatformMouseEvent&);
+    WEBCORE_EXPORT HandleMouseEventResult handleMousePressEvent(const PlatformMouseEvent&);
     WEBCORE_EXPORT OptionSet<HitTestRequest::Type> getHitTypeForMouseMoveEvent(const PlatformMouseEvent&, bool onlyUpdateScrollbars = false);
     WEBCORE_EXPORT HitTestResult getHitTestResultForMouseEvent(const PlatformMouseEvent&);
-    bool handleMouseMoveEvent(const PlatformMouseEvent&, HitTestResult* = nullptr, bool onlyUpdateScrollbars = false);
-    WEBCORE_EXPORT bool handleMouseReleaseEvent(const PlatformMouseEvent&);
-    bool handleMouseForceEvent(const PlatformMouseEvent&);
+    HandleMouseEventResult handleMouseMoveEvent(const PlatformMouseEvent&, HitTestResult* = nullptr, bool onlyUpdateScrollbars = false);
+    WEBCORE_EXPORT HandleMouseEventResult handleMouseReleaseEvent(const PlatformMouseEvent&);
+    WEBCORE_EXPORT bool handleMouseForceEvent(const PlatformMouseEvent&);
 
     WEBCORE_EXPORT bool handleWheelEvent(const PlatformWheelEvent&, OptionSet<WheelEventProcessingSteps>);
     void defaultWheelEventHandler(Node*, WheelEvent&);
@@ -553,7 +557,45 @@ private:
     
     void setFrameWasScrolledByUser();
 
-    bool capturesDragging() const { return m_capturesDragging; }
+    struct CapturesDragging {
+        enum class InabilityReason : uint8_t {
+            MousePressIsCancelled,
+            MouseMoveIsCancelled,
+            Unknown,
+        };
+
+        CapturesDragging(bool capturesDragging)
+        {
+            *this = capturesDragging;
+        }
+
+        CapturesDragging(InabilityReason inabilityReason)
+            : m_state { unexpect, inabilityReason }
+        {
+        }
+
+        CapturesDragging& operator=(bool capturesDragging)
+        {
+            if (capturesDragging)
+                m_state = std::monostate { };
+            else
+                m_state = makeUnexpected(InabilityReason::Unknown);
+            return *this;
+        }
+
+        CapturesDragging& operator=(InabilityReason inabilityReason)
+        {
+            m_state = makeUnexpected(inabilityReason);
+            return *this;
+        }
+
+        operator bool() const { return m_state.has_value(); }
+        InabilityReason inabilityReason() const { return m_state.error(); }
+
+    private:
+        Expected<std::monostate, InabilityReason> m_state;
+    };
+    CapturesDragging capturesDragging() const { return m_capturesDragging; }
 
 #if PLATFORM(COCOA) && defined(__OBJC__)
     NSView *mouseDownViewIfStillGood();
@@ -584,8 +626,19 @@ private:
 
     bool canMouseDownStartSelect(const MouseEventWithHitTestResults&);
     bool mouseDownMayStartSelect() const;
-    
-    LocalFrame& m_frame;
+
+    std::optional<RemoteMouseEventData> mouseEventDataForRemoteFrame(const RemoteFrame*, const IntPoint&);
+
+    bool isCapturingMouseEventsElement() const { return m_capturingMouseEventsElement || m_isCapturingRootElementForMouseEvents; }
+    void resetCapturingMouseEventsElement()
+    {
+        m_capturingMouseEventsElement = nullptr;
+        m_isCapturingRootElementForMouseEvents = false;
+    }
+
+    Ref<LocalFrame> protectedFrame() const;
+
+    CheckedRef<LocalFrame> m_frame;
     RefPtr<Node> m_mousePressNode;
     Timer m_hoverTimer;
 #if ENABLE(IMAGE_ANALYSIS)
@@ -597,7 +650,7 @@ private:
     double m_maxMouseMovedDuration { 0 };
 
     bool m_mousePressed { false };
-    bool m_capturesDragging { false };
+    CapturesDragging m_capturesDragging { false };
     bool m_mouseDownMayStartSelect { false };
     bool m_mouseDownDelegatedFocus { false };
     bool m_mouseDownWasSingleClickInSelection { false };
@@ -615,6 +668,7 @@ private:
     SelectionInitiationState m_selectionInitiationState { HaveNotStartedSelection };
     ImmediateActionStage m_immediateActionStage { ImmediateActionStage::None };
 
+    bool m_isCapturingRootElementForMouseEvents { false };
     RefPtr<Element> m_capturingMouseEventsElement;
     RefPtr<Element> m_elementUnderMouse;
     RefPtr<Element> m_lastElementUnderMouse;

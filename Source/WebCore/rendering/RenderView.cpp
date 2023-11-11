@@ -33,6 +33,7 @@
 #include "HTMLImageElement.h"
 #include "HitTestResult.h"
 #include "ImageQualityController.h"
+#include "LayoutBoxGeometry.h"
 #include "LayoutInitialContainingBlock.h"
 #include "LayoutState.h"
 #include "LegacyRenderSVGRoot.h"
@@ -75,14 +76,13 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderView);
 
 RenderView::RenderView(Document& document, RenderStyle&& style)
-    : RenderBlockFlow(document, WTFMove(style))
+    : RenderBlockFlow(Type::View, document, WTFMove(style))
     , m_frameView(*document.view())
     , m_initialContainingBlock(makeUniqueRef<Layout::InitialContainingBlock>(RenderStyle::clone(this->style())))
+    , m_layoutState(makeUniqueRef<Layout::LayoutState>(document, *m_initialContainingBlock))
     , m_selection(*this)
     , m_lazyRepaintTimer(*this, &RenderView::lazyRepaintTimerFired)
 {
-    setIsRenderView();
-
     // FIXME: We should find a way to enforce this at compile time.
     ASSERT(document.view());
 
@@ -95,11 +95,15 @@ RenderView::RenderView(Document& document, RenderStyle&& style)
     setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
     
     setPositionState(PositionType::Absolute); // to 0,0 :)
+
+    ASSERT(isRenderView());
 }
 
 RenderView::~RenderView()
 {
     ASSERT_WITH_MESSAGE(m_rendererCount == 1, "All other renderers in this render tree should have been destroyed");
+
+    deleteLines();
 }
 
 void RenderView::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
@@ -124,7 +128,7 @@ void RenderView::scheduleLazyRepaint(RenderBox& renderer)
     if (renderer.renderBoxNeedsLazyRepaint())
         return;
     renderer.setRenderBoxNeedsLazyRepaint(true);
-    m_renderersNeedingLazyRepaint.add(&renderer);
+    m_renderersNeedingLazyRepaint.add(renderer);
     if (!m_lazyRepaintTimer.isActive())
         m_lazyRepaintTimer.startOneShot(0_s);
 }
@@ -134,16 +138,16 @@ void RenderView::unscheduleLazyRepaint(RenderBox& renderer)
     if (!renderer.renderBoxNeedsLazyRepaint())
         return;
     renderer.setRenderBoxNeedsLazyRepaint(false);
-    m_renderersNeedingLazyRepaint.remove(&renderer);
-    if (m_renderersNeedingLazyRepaint.isEmpty())
+    m_renderersNeedingLazyRepaint.remove(renderer);
+    if (m_renderersNeedingLazyRepaint.isEmptyIgnoringNullReferences())
         m_lazyRepaintTimer.stop();
 }
 
 void RenderView::lazyRepaintTimerFired()
 {
     for (auto& renderer : m_renderersNeedingLazyRepaint) {
-        renderer->repaint();
-        renderer->setRenderBoxNeedsLazyRepaint(false);
+        renderer.repaint();
+        renderer.setRenderBoxNeedsLazyRepaint(false);
     }
     m_renderersNeedingLazyRepaint.clear();
 }
@@ -180,7 +184,7 @@ LayoutUnit RenderView::availableLogicalHeight(AvailableLogicalHeightType) const
 
 bool RenderView::isChildAllowed(const RenderObject& child, const RenderStyle&) const
 {
-    return child.isBox();
+    return child.isRenderBox();
 }
 
 void RenderView::layout()
@@ -206,7 +210,7 @@ void RenderView::layout()
                 || box.style().logicalHeight().isPercentOrCalculated()
                 || box.style().logicalMinHeight().isPercentOrCalculated()
                 || box.style().logicalMaxHeight().isPercentOrCalculated()
-                || box.isSVGRootOrLegacySVGRoot()
+                || box.isRenderOrLegacyRenderSVGRoot()
                 )
                 box.setChildNeedsLayout(MarkOnlyThis);
         }
@@ -216,12 +220,12 @@ void RenderView::layout()
     if (!needsLayout())
         return;
 
-    ensureLayoutState().setViewportSize(frameView().size());
-
     LayoutStateMaintainer statePusher(*this, { }, false, valueOrDefault(m_pageLogicalSize).height(), m_pageLogicalHeightChanged);
 
     m_pageLogicalHeightChanged = false;
 
+    // FIXME: This should be called only when frame view (or the canvas we render onto) size changes.
+    updateInitialContainingBlockSize();
     RenderBlockFlow::layout();
 
 #ifndef NDEBUG
@@ -230,17 +234,15 @@ void RenderView::layout()
     clearNeedsLayout();
 }
 
-Layout::LayoutState& RenderView::ensureLayoutState()
-{
-    if (!m_layoutState)
-        m_layoutState = makeUnique<Layout::LayoutState>(document(), m_initialContainingBlock.get(), Layout::LayoutState::FormattingContextIntegrationType::Inline);
-    return *m_layoutState;
-}
-
 void RenderView::updateQuirksMode()
 {
-    if (m_layoutState)
-        m_layoutState->updateQuirksMode(document());
+    m_layoutState->updateQuirksMode(document());
+}
+
+void RenderView::updateInitialContainingBlockSize()
+{
+    // Initial containing block has no margin/padding/border.
+    m_layoutState->ensureGeometryForBox(m_initialContainingBlock).setContentBoxSize(frameView().size());
 }
 
 LayoutUnit RenderView::pageOrViewLogicalHeight() const
@@ -259,9 +261,8 @@ LayoutUnit RenderView::pageOrViewLogicalHeight() const
 LayoutUnit RenderView::clientLogicalWidthForFixedPosition() const
 {
     // FIXME: If the FrameView's fixedVisibleContentRect() is not empty, perhaps it should be consulted here too?
-    auto* localFrame = dynamicDowncast<LocalFrame>(frameView().frame());
-    if (localFrame && frameView().fixedElementsLayoutRelativeToFrame())
-        return LayoutUnit((isHorizontalWritingMode() ? frameView().visibleWidth() : frameView().visibleHeight()) / localFrame->frameScaleFactor());
+    if (frameView().fixedElementsLayoutRelativeToFrame())
+        return LayoutUnit((isHorizontalWritingMode() ? frameView().visibleWidth() : frameView().visibleHeight()) / frameView().frame().frameScaleFactor());
 
 #if PLATFORM(IOS_FAMILY)
     if (frameView().useCustomFixedPositionLayoutRect())
@@ -277,9 +278,8 @@ LayoutUnit RenderView::clientLogicalWidthForFixedPosition() const
 LayoutUnit RenderView::clientLogicalHeightForFixedPosition() const
 {
     // FIXME: If the FrameView's fixedVisibleContentRect() is not empty, perhaps it should be consulted here too?
-    auto* localFrame = dynamicDowncast<LocalFrame>(frameView().frame());
-    if (localFrame && frameView().fixedElementsLayoutRelativeToFrame())
-        return LayoutUnit((isHorizontalWritingMode() ? frameView().visibleHeight() : frameView().visibleWidth()) / localFrame->frameScaleFactor());
+    if (frameView().fixedElementsLayoutRelativeToFrame())
+        return LayoutUnit((isHorizontalWritingMode() ? frameView().visibleHeight() : frameView().visibleWidth()) / frameView().frame().frameScaleFactor());
 
 #if PLATFORM(IOS_FAMILY)
     if (frameView().useCustomFixedPositionLayoutRect())
@@ -442,7 +442,7 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
         }
     }
 
-    if (document().ownerElement())
+    if (!shouldPaintBaseBackground())
         return;
 
     if (paintInfo.skipRootBackground())
@@ -466,7 +466,7 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
     float pageScaleFactor = page ? page->pageScaleFactor() : 1;
 
     // If painting will entirely fill the view, no need to fill the background.
-    if (rootFillsViewport && rootObscuresBackground && pageScaleFactor >= 1)
+    if (rootFillsViewport && rootObscuresBackground && pageScaleFactor >= 1 && rootElementShouldPaintBaseBackground())
         return;
 
     // This code typically only executes if the root element's visibility has been set to hidden,
@@ -504,8 +504,8 @@ void RenderView::repaintRootContents()
 
     // Always use layoutOverflowRect() to fix rdar://problem/27182267.
     // This should be cleaned up via webkit.org/b/159913 and webkit.org/b/159914.
-    auto* repaintContainer = containerForRepaint().renderer;
-    repaintUsingContainer(repaintContainer, computeRectForRepaint(layoutOverflowRect(), repaintContainer));
+    CheckedPtr repaintContainer = containerForRepaint().renderer;
+    repaintUsingContainer(repaintContainer.get(), computeRectForRepaint(layoutOverflowRect(), repaintContainer.get()));
 }
 
 void RenderView::repaintViewRectangle(const LayoutRect& repaintRect) const
@@ -514,18 +514,22 @@ void RenderView::repaintViewRectangle(const LayoutRect& repaintRect) const
         return;
 
     // FIXME: enclosingRect is needed as long as we integral snap ScrollView/FrameView/RenderWidget size/position.
-    IntRect enclosingRect = enclosingIntRect(repaintRect);
+    auto enclosingRect = enclosingIntRect(repaintRect);
     if (auto ownerElement = document().ownerElement()) {
-        RenderBox* ownerBox = ownerElement->renderBox();
+        auto* ownerBox = ownerElement->renderBox();
         if (!ownerBox)
             return;
         LayoutRect viewRect = this->viewRect();
 #if PLATFORM(IOS_FAMILY)
         // Don't clip using the visible rect since clipping is handled at a higher level on iPhone.
+        // FIXME: This statement is wrong for iframes.
         LayoutRect adjustedRect = enclosingRect;
 #else
         LayoutRect adjustedRect = intersection(enclosingRect, viewRect);
 #endif
+        if (adjustedRect.isEmpty())
+            return;
+
         adjustedRect.moveBy(-viewRect.location());
         adjustedRect.moveBy(ownerBox->contentBoxRect().location());
 
@@ -610,9 +614,10 @@ bool RenderView::isScrollableOrRubberbandableBox() const
     return frameView().isScrollable(defineScrollable);
 }
 
-void RenderView::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
+void RenderView::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& accumulatedOffset) const
 {
-    rects.append(snappedIntRect(accumulatedOffset, layer()->size()));
+    // FIXME: It's weird that this gets is size from the layer.
+    rects.append(LayoutRect { accumulatedOffset, layer()->size() });
 }
 
 void RenderView::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
@@ -631,10 +636,7 @@ bool RenderView::shouldUsePrintingLayout() const
 {
     if (!printing())
         return false;
-    auto* localFrame = dynamicDowncast<LocalFrame>(frameView().frame());
-    if (!localFrame)
-        return false;
-    return localFrame->shouldUsePrintingLayout();
+    return frameView().frame().shouldUsePrintingLayout();
 }
 
 LayoutRect RenderView::viewRect() const
@@ -697,6 +699,18 @@ bool RenderView::shouldPaintBaseBackground() const
 
     return false;
 }
+
+bool RenderView::rootElementShouldPaintBaseBackground() const
+{
+    auto* documentElement = document().documentElement();
+    if (RenderElement* rootRenderer = documentElement ? documentElement->renderer() : nullptr) {
+        // The document element's renderer is currently forced to be a block, but may not always be.
+        auto* rootBox = dynamicDowncast<RenderBox>(*rootRenderer);
+        if (rootBox && rootBox->hasLayer() && rootBox->layer()->isolatesBlending())
+            return false;
+    }
+    return shouldPaintBaseBackground();
+}
     
 LayoutRect RenderView::unextendedBackgroundRect() const
 {
@@ -757,10 +771,7 @@ void RenderView::setPageLogicalSize(LayoutSize size)
 
 float RenderView::zoomFactor() const
 {
-    auto* localFrame = dynamicDowncast<LocalFrame>(frameView().frame());
-    if (!localFrame)
-        return 1.0f;
-    return localFrame->pageZoomFactor();
+    return frameView().frame().pageZoomFactor();
 }
 
 FloatSize RenderView::sizeForCSSSmallViewportUnits() const
@@ -861,52 +872,52 @@ ImageQualityController& RenderView::imageQualityController()
 
 void RenderView::registerForVisibleInViewportCallback(RenderElement& renderer)
 {
-    ASSERT(!m_visibleInViewportRenderers.contains(&renderer));
-    m_visibleInViewportRenderers.add(&renderer);
+    ASSERT(!m_visibleInViewportRenderers.contains(renderer));
+    m_visibleInViewportRenderers.add(renderer);
 }
 
 void RenderView::unregisterForVisibleInViewportCallback(RenderElement& renderer)
 {
-    ASSERT(m_visibleInViewportRenderers.contains(&renderer));
-    m_visibleInViewportRenderers.remove(&renderer);
+    ASSERT(m_visibleInViewportRenderers.contains(renderer));
+    m_visibleInViewportRenderers.remove(renderer);
 }
 
 void RenderView::updateVisibleViewportRect(const IntRect& visibleRect)
 {
     resumePausedImageAnimationsIfNeeded(visibleRect);
 
-    for (auto* renderer : m_visibleInViewportRenderers) {
-        auto state = visibleRect.intersects(enclosingIntRect(renderer->absoluteClippedOverflowRectForRepaint())) ? VisibleInViewportState::Yes : VisibleInViewportState::No;
-        renderer->setVisibleInViewportState(state);
+    for (auto& renderer : m_visibleInViewportRenderers) {
+        auto state = visibleRect.intersects(enclosingIntRect(renderer.absoluteClippedOverflowRectForRepaint())) ? VisibleInViewportState::Yes : VisibleInViewportState::No;
+        renderer.setVisibleInViewportState(state);
     }
 }
 
 void RenderView::addRendererWithPausedImageAnimations(RenderElement& renderer, CachedImage& image)
 {
-    ASSERT(!renderer.hasPausedImageAnimations() || m_renderersWithPausedImageAnimation.contains(&renderer));
+    ASSERT(!renderer.hasPausedImageAnimations() || m_renderersWithPausedImageAnimation.contains(renderer));
 
     renderer.setHasPausedImageAnimations(true);
-    auto& images = m_renderersWithPausedImageAnimation.ensure(&renderer, [] {
-        return Vector<CachedImage*>();
+    auto& images = m_renderersWithPausedImageAnimation.ensure(renderer, [] {
+        return Vector<WeakPtr<CachedImage>>();
     }).iterator->value;
     if (!images.contains(&image))
-        images.append(&image);
+        images.append(image);
 }
 
 void RenderView::removeRendererWithPausedImageAnimations(RenderElement& renderer)
 {
     ASSERT(renderer.hasPausedImageAnimations());
-    ASSERT(m_renderersWithPausedImageAnimation.contains(&renderer));
+    ASSERT(m_renderersWithPausedImageAnimation.contains(renderer));
 
     renderer.setHasPausedImageAnimations(false);
-    m_renderersWithPausedImageAnimation.remove(&renderer);
+    m_renderersWithPausedImageAnimation.remove(renderer);
 }
 
 void RenderView::removeRendererWithPausedImageAnimations(RenderElement& renderer, CachedImage& image)
 {
     ASSERT(renderer.hasPausedImageAnimations());
 
-    auto it = m_renderersWithPausedImageAnimation.find(&renderer);
+    auto it = m_renderersWithPausedImageAnimation.find(renderer);
     ASSERT(it != m_renderersWithPausedImageAnimation.end());
 
     auto& images = it->value;
@@ -921,24 +932,24 @@ void RenderView::removeRendererWithPausedImageAnimations(RenderElement& renderer
 
 void RenderView::resumePausedImageAnimationsIfNeeded(const IntRect& visibleRect)
 {
-    Vector<std::pair<RenderElement*, CachedImage*>, 10> toRemove;
-    for (auto& it : m_renderersWithPausedImageAnimation) {
-        auto* renderer = it.key;
-        for (auto* image : it.value) {
-            if (renderer->repaintForPausedImageAnimationsIfNeeded(visibleRect, *image))
-                toRemove.append(std::make_pair(renderer, image));
+    Vector<std::pair<WeakPtr<RenderElement>, WeakPtr<CachedImage>>, 10> toRemove;
+    for (auto it : m_renderersWithPausedImageAnimation) {
+        auto& renderer = it.key;
+        for (auto& image : it.value) {
+            if (renderer.repaintForPausedImageAnimationsIfNeeded(visibleRect, *image))
+                toRemove.append({ renderer, image });
         }
     }
     for (auto& pair : toRemove)
         removeRendererWithPausedImageAnimations(*pair.first, *pair.second);
 
-    Vector<SVGSVGElement*> svgSvgElementsToRemove;
+    Vector<Ref<SVGSVGElement>> svgSvgElementsToRemove;
     m_SVGSVGElementsWithPausedImageAnimation.forEach([&] (WeakPtr<SVGSVGElement, WeakPtrImplWithEventTargetData> svgSvgElement) {
         if (svgSvgElement && svgSvgElement->resumePausedAnimationsIfNeeded(visibleRect))
-            svgSvgElementsToRemove.append(svgSvgElement.get());
+            svgSvgElementsToRemove.append(*svgSvgElement);
     });
     for (auto& svgSvgElement : svgSvgElementsToRemove)
-        m_SVGSVGElementsWithPausedImageAnimation.remove(*svgSvgElement);
+        m_SVGSVGElementsWithPausedImageAnimation.remove(svgSvgElement.get());
 }
 
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
@@ -1038,7 +1049,7 @@ RenderView::RepaintRegionAccumulator::~RepaintRegionAccumulator()
         return;
     if (!m_rootView)
         return;
-    m_rootView.get()->flushAccumulatedRepaintRegion();
+    m_rootView->flushAccumulatedRepaintRegion();
 }
 
 unsigned RenderView::pageNumberForBlockProgressionOffset(int offset) const
@@ -1099,12 +1110,12 @@ RenderLayer* RenderView::takeStyleChangeLayerTreeMutationRoot()
 
 void RenderView::registerBoxWithScrollSnapPositions(const RenderBox& box)
 {
-    m_boxesWithScrollSnapPositions.add(&box);
+    m_boxesWithScrollSnapPositions.add(box);
 }
 
 void RenderView::unregisterBoxWithScrollSnapPositions(const RenderBox& box)
 {
-    m_boxesWithScrollSnapPositions.remove(&box);
+    m_boxesWithScrollSnapPositions.remove(box);
 }
 
 void RenderView::registerContainerQueryBox(const RenderBox& box)

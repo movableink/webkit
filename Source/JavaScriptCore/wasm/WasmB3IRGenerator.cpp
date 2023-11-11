@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WasmB3IRGenerator.h"
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 
 #include "AirCode.h"
 #include "AllowMacroScratchRegisterUsageIf.h"
@@ -76,7 +76,7 @@
 #include <wtf/StdLibExtras.h>
 
 #if !ENABLE(WEBASSEMBLY)
-#error ENABLE(WEBASSEMBLY_B3JIT) is enabled, but ENABLE(WEBASSEMBLY) is not.
+#error ENABLE(WEBASSEMBLY_OMGJIT) is enabled, but ENABLE(WEBASSEMBLY) is not.
 #endif
 
 void dumpProcedure(void* ptr)
@@ -619,7 +619,7 @@ public:
     PartialResult WARN_UNUSED_RETURN truncSaturated(Ext1OpType, ExpressionType operand, ExpressionType& result, Type returnType, Type operandType);
 
     // GC
-    PartialResult WARN_UNUSED_RETURN addI31New(ExpressionType value, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addRefI31(ExpressionType value, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addI31GetS(ExpressionType ref, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addI31GetU(ExpressionType ref, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addArrayNew(uint32_t index, ExpressionType size, ExpressionType value, ExpressionType& result);
@@ -632,12 +632,12 @@ public:
     PartialResult WARN_UNUSED_RETURN addArrayLen(ExpressionType arrayref, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addStructNew(uint32_t typeIndex, Vector<ExpressionType>& args, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addStructNewDefault(uint32_t index, ExpressionType& result);
-    PartialResult WARN_UNUSED_RETURN addStructGet(ExpressionType structReference, const StructType&, uint32_t fieldIndex, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addStructGet(ExtGCOpType structGetKind, ExpressionType structReference, const StructType&, uint32_t fieldIndex, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addStructSet(ExpressionType structReference, const StructType&, uint32_t fieldIndex, ExpressionType value);
     PartialResult WARN_UNUSED_RETURN addRefTest(ExpressionType reference, bool allowNull, int32_t heapType, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addRefCast(ExpressionType reference, bool allowNull, int32_t heapType, ExpressionType& result);
-    PartialResult WARN_UNUSED_RETURN addExternInternalize(ExpressionType reference, ExpressionType& result);
-    PartialResult WARN_UNUSED_RETURN addExternExternalize(ExpressionType reference, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addAnyConvertExtern(ExpressionType reference, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addExternConvertAny(ExpressionType reference, ExpressionType& result);
 
     // Basic operators
 #define X(name, opcode, short, idx, ...) \
@@ -1101,7 +1101,7 @@ B3IRGenerator::B3IRGenerator(const ModuleInformation& info, OptimizingJITCallee&
         AllowMacroScratchRegisterUsage allowScratch(jit);
         code.emitDefaultPrologue(jit);
         GPRReg scratchGPR = wasmCallingConvention().prologueScratchGPRs[0];
-        jit.move(CCallHelpers::TrustedImmPtr(CalleeBits::boxWasm(m_callee)), scratchGPR);
+        jit.move(CCallHelpers::TrustedImmPtr(CalleeBits::boxNativeCallee(m_callee)), scratchGPR);
         static_assert(CallFrameSlot::codeBlock + 1 == CallFrameSlot::callee);
         jit.storePairPtr(GPRInfo::wasmContextInstancePointer, scratchGPR, GPRInfo::callFrameRegister, CCallHelpers::TrustedImm32(CallFrameSlot::codeBlock * sizeof(Register)));
     });
@@ -1333,7 +1333,7 @@ auto B3IRGenerator::addLocal(Type type, uint32_t count) -> PartialResult
 
     for (uint32_t i = 0; i < count; ++i) {
         Variable* local = m_proc.addVariable(toB3Type(type));
-        m_locals.uncheckedAppend(local);
+        m_locals.unsafeAppendWithoutCapacityCheck(local);
         if (type.isV128())
             m_currentBlock->appendNew<VariableValue>(m_proc, Set, Origin(), local, constant(toB3Type(type), v128_t { }, Origin()));
         else {
@@ -2645,7 +2645,16 @@ void B3IRGenerator::emitStructSet(Value* structValue, uint32_t fieldIndex, const
     Value* payloadBase = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load), Int64, origin(), structValue, JSWebAssemblyStruct::offsetOfPayload());
     int32_t fieldOffset = fixupPointerPlusOffset(payloadBase, *structType.offsetOfField(fieldIndex));
 
-    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=246981
+    if (structType.field(fieldIndex).type.is<PackedType>()) {
+        switch (structType.field(fieldIndex).type.as<PackedType>()) {
+        case PackedType::I8:
+            m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Store8), origin(), argument, payloadBase, fieldOffset);
+            return;
+        case PackedType::I16:
+            m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Store16), origin(), argument, payloadBase, fieldOffset);
+            return;
+        }
+    }
     ASSERT(structType.field(fieldIndex).type.is<Type>());
 
     Type fieldType = structType.field(fieldIndex).type.as<Type>();
@@ -2911,11 +2920,12 @@ auto B3IRGenerator::truncSaturated(Ext1OpType op, ExpressionType argVar, Express
     return { };
 }
 
-auto B3IRGenerator::addI31New(ExpressionType value, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addRefI31(ExpressionType value, ExpressionType& result) -> PartialResult
 {
-    Value* i64 = m_currentBlock->appendNew<Value>(m_proc, B3::ZExt32, origin(), get(value));
-    Value* truncated = m_currentBlock->appendNew<Value>(m_proc, B3::BitAnd, origin(), i64, constant(Int64, 0x7fffffff));
-    result = push(m_currentBlock->appendNew<Value>(m_proc, B3::BitOr, origin(), truncated, constant(Int64, JSValue::NumberTag)));
+    Value* masked = m_currentBlock->appendNew<Value>(m_proc, B3::BitAnd, origin(), get(value), constant(Int64, 0x7fffffff));
+    Value* shiftLeft = m_currentBlock->appendNew<Value>(m_proc, B3::Shl, origin(), masked, constant(Int64, 0x1));
+    Value* shiftRight = m_currentBlock->appendNew<Value>(m_proc, B3::SShr, origin(), shiftLeft, constant(Int64, 0x1));
+    result = push(m_currentBlock->appendNew<Value>(m_proc, B3::BitOr, origin(), shiftRight, constant(Int64, JSValue::NumberTag)));
 
     return { };
 }
@@ -2931,10 +2941,7 @@ auto B3IRGenerator::addI31GetS(ExpressionType ref, ExpressionType& result) -> Pa
         });
     }
 
-    Value* truncated = m_currentBlock->appendNew<Value>(m_proc, B3::Trunc, origin(), get(ref));
-    Value* shiftLeft = m_currentBlock->appendNew<Value>(m_proc, B3::Shl, origin(), truncated, m_currentBlock->appendNew<Const32Value>(m_proc, origin(), 1));
-    Value* shiftRight = m_currentBlock->appendNew<Value>(m_proc, B3::SShr, origin(), shiftLeft, m_currentBlock->appendNew<Const32Value>(m_proc, origin(), 1));
-    result = push(shiftRight);
+    result = push(m_currentBlock->appendNew<Value>(m_proc, B3::Trunc, origin(), get(ref)));
 
     return { };
 }
@@ -2950,7 +2957,8 @@ auto B3IRGenerator::addI31GetU(ExpressionType ref, ExpressionType& result) -> Pa
         });
     }
 
-    result = push(m_currentBlock->appendNew<Value>(m_proc, B3::Trunc, origin(), get(ref)));
+    Value* masked = m_currentBlock->appendNew<Value>(m_proc, B3::BitAnd, origin(), get(ref), constant(Int64, 0x7fffffff));
+    result = push(m_currentBlock->appendNew<Value>(m_proc, B3::Trunc, origin(), masked));
     return { };
 }
 
@@ -3265,7 +3273,7 @@ auto B3IRGenerator::addStructNewDefault(uint32_t typeIndex, ExpressionType& resu
     return { };
 }
 
-auto B3IRGenerator::addStructGet(ExpressionType structReference, const StructType& structType, uint32_t fieldIndex, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addStructGet(ExtGCOpType structGetKind, ExpressionType structReference, const StructType& structType, uint32_t fieldIndex, ExpressionType& result) -> PartialResult
 {
     {
         CheckValue* check = m_currentBlock->appendNew<CheckValue>(m_proc, Check, origin(),
@@ -3278,7 +3286,34 @@ auto B3IRGenerator::addStructGet(ExpressionType structReference, const StructTyp
     Value* payloadBase = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load), pointerType(), origin(), get(structReference), JSWebAssemblyStruct::offsetOfPayload());
     int32_t fieldOffset = fixupPointerPlusOffset(payloadBase, *structType.offsetOfField(fieldIndex));
 
-    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=246981
+    if (structType.field(fieldIndex).type.is<PackedType>()) {
+        Value* load;
+        switch (structType.field(fieldIndex).type.as<PackedType>()) {
+        case PackedType::I8:
+            load = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load8Z), Int32, origin(), payloadBase, fieldOffset);
+            break;
+        case PackedType::I16:
+            load = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load16Z), Int32, origin(), payloadBase, fieldOffset);
+            break;
+        }
+        Value* postProcess = m_currentBlock->appendNew<Value>(m_proc, Trunc, origin(), load);
+        switch (structGetKind) {
+        case ExtGCOpType::StructGetU:
+            break;
+        case ExtGCOpType::StructGetS: {
+            size_t elementSize = structType.field(fieldIndex).type.as<PackedType>() == PackedType::I8 ? sizeof(uint8_t) : sizeof(uint16_t);
+            uint8_t bitShift = (sizeof(uint32_t) - elementSize) * 8;
+            Value* shiftLeft = m_currentBlock->appendNew<Value>(m_proc, B3::Shl, origin(), postProcess, m_currentBlock->appendNew<Const32Value>(m_proc, origin(), bitShift));
+            postProcess = m_currentBlock->appendNew<Value>(m_proc, B3::SShr, origin(), shiftLeft, m_currentBlock->appendNew<Const32Value>(m_proc, origin(), bitShift));
+            break;
+        }
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            return { };
+        }
+        result = push(postProcess);
+        return { };
+    }
     ASSERT(structType.field(fieldIndex).type.is<Type>());
 
     switch (structType.field(fieldIndex).type.as<Type>().kind) {
@@ -3389,6 +3424,8 @@ void B3IRGenerator::emitRefTestOrCast(CastKind castKind, ExpressionType referenc
         // Casts to these types cannot fail as they are the top types of their respective hierarchies, and static type-checking does not allow cross-hierarchy casts.
         break;
     case Wasm::TypeKind::Nullref:
+    case Wasm::TypeKind::Nullfuncref:
+    case Wasm::TypeKind::Nullexternref:
         // Casts to any bottom type should always fail.
         if (castKind == CastKind::Cast) {
             B3::PatchpointValue* throwException = m_currentBlock->appendNew<B3::PatchpointValue>(m_proc, B3::Void, origin());
@@ -3537,13 +3574,13 @@ Value* B3IRGenerator::emitNotRTTKind(Value* rtt, RTTKind targetKind)
     return m_currentBlock->appendNew<Value>(m_proc, NotEqual, origin(), kind, constant(Int32, static_cast<uint8_t>(targetKind)));
 }
 
-auto B3IRGenerator::addExternInternalize(ExpressionType reference, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addAnyConvertExtern(ExpressionType reference, ExpressionType& result) -> PartialResult
 {
-    result = push(callWasmOperation(m_currentBlock, toB3Type(anyrefType()), operationWasmExternInternalize, get(reference)));
+    result = push(callWasmOperation(m_currentBlock, toB3Type(anyrefType()), operationWasmAnyConvertExtern, get(reference)));
     return { };
 }
 
-auto B3IRGenerator::addExternExternalize(ExpressionType reference, ExpressionType& result) -> PartialResult
+auto B3IRGenerator::addExternConvertAny(ExpressionType reference, ExpressionType& result) -> PartialResult
 {
     result = push(get(reference));
     return { };
@@ -3910,18 +3947,39 @@ void B3IRGenerator::emitLoopTierUpCheck(uint32_t loopIndex, const Stack& enclosi
     Vector<Value*> stackmap;
     for (auto& local : m_locals)
         stackmap.append(get(local));
-    for (unsigned controlIndex = 0; controlIndex < m_parser->controlStack().size(); ++controlIndex) {
-        auto& data = m_parser->controlStack()[controlIndex].controlData;
-        auto& expressionStack = m_parser->controlStack()[controlIndex].enclosedExpressionStack;
-        for (TypedExpression value : expressionStack)
+
+    if (Options::useWasmIPInt()) {
+        // Do rethrow slots first because IPInt has them in a shadow stack.
+        for (unsigned controlIndex = 0; controlIndex < m_parser->controlStack().size(); ++controlIndex) {
+            auto& data = m_parser->controlStack()[controlIndex].controlData;
+            if (ControlType::isAnyCatch(data))
+                stackmap.append(get(data.exception()));
+        }
+
+        for (unsigned controlIndex = 0; controlIndex < m_parser->controlStack().size(); ++controlIndex) {
+            auto& expressionStack = m_parser->controlStack()[controlIndex].enclosedExpressionStack;
+            for (TypedExpression value : expressionStack)
+                stackmap.append(get(value));
+        }
+        for (TypedExpression value : enclosingStack)
             stackmap.append(get(value));
-        if (ControlType::isAnyCatch(data))
-            stackmap.append(get(data.exception()));
+        for (TypedExpression value : newStack)
+            stackmap.append(get(value));
+    } else {
+        for (unsigned controlIndex = 0; controlIndex < m_parser->controlStack().size(); ++controlIndex) {
+            auto& data = m_parser->controlStack()[controlIndex].controlData;
+            auto& expressionStack = m_parser->controlStack()[controlIndex].enclosedExpressionStack;
+            for (TypedExpression value : expressionStack)
+                stackmap.append(get(value));
+            if (ControlType::isAnyCatch(data))
+                stackmap.append(get(data.exception()));
+        }
+        for (TypedExpression value : enclosingStack)
+            stackmap.append(get(value));
+        for (TypedExpression value : newStack)
+            stackmap.append(get(value));
     }
-    for (TypedExpression value : enclosingStack)
-        stackmap.append(get(value));
-    for (TypedExpression value : newStack)
-        stackmap.append(get(value));
+
 
     PatchpointValue* patch = m_currentBlock->appendNew<PatchpointValue>(m_proc, B3::Void, origin);
     Effects effects = Effects::none();
@@ -4267,7 +4325,7 @@ auto B3IRGenerator::addDelegateToUnreachable(ControlType& target, ControlType& d
 auto B3IRGenerator::addThrow(unsigned exceptionIndex, Vector<ExpressionType>& args, Stack&) -> PartialResult
 {
     TRACE_CF("THROW");
-    PatchpointValue* patch = m_proc.add<PatchpointValue>(B3::Void, origin());
+    PatchpointValue* patch = m_proc.add<PatchpointValue>(B3::Void, origin(), cloningForbidden(Patchpoint));
     patch->effects.terminal = true;
     patch->append(instanceValue(), ValueRep::reg(GPRInfo::argumentGPR0));
     for (unsigned i = 0; i < args.size(); ++i) {
@@ -4293,7 +4351,7 @@ auto B3IRGenerator::addThrow(unsigned exceptionIndex, Vector<ExpressionType>& ar
 auto B3IRGenerator::addRethrow(unsigned, ControlType& data) -> PartialResult
 {
     TRACE_CF("RETHROW");
-    PatchpointValue* patch = m_proc.add<PatchpointValue>(B3::Void, origin());
+    PatchpointValue* patch = m_proc.add<PatchpointValue>(B3::Void, origin(), cloningForbidden(Patchpoint));
     patch->clobber(RegisterSetBuilder::registersToSaveForJSCall(m_proc.usesSIMD() ? RegisterSetBuilder::allRegisters() : RegisterSetBuilder::allScalarRegisters()));
     patch->effects.terminal = true;
     patch->append(instanceValue(), ValueRep::reg(GPRInfo::argumentGPR0));
@@ -5616,4 +5674,4 @@ void computePCToCodeOriginMap(CompilationContext& context, LinkBuffer& linkBuffe
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT)

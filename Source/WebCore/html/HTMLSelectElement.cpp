@@ -44,6 +44,7 @@
 #include "HTMLOptionsCollectionInlines.h"
 #include "HTMLParserIdioms.h"
 #include "KeyboardEvent.h"
+#include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
@@ -240,7 +241,7 @@ ExceptionOr<void> HTMLSelectElement::add(const OptionOrOptGroupElement& element,
     );
 
 
-    return insertBefore(toInsert, beforeElement.get());
+    return insertBefore(toInsert, WTFMove(beforeElement));
 }
 
 void HTMLSelectElement::remove(int optionIndex)
@@ -673,9 +674,9 @@ void HTMLSelectElement::updateListBoxSelection(bool deselectOtherOptions)
     ASSERT(renderer());
 
 #if !PLATFORM(IOS_FAMILY)
-    ASSERT(renderer()->isListBox() || m_multiple);
+    ASSERT(renderer()->isRenderListBox() || m_multiple);
 #else
-    ASSERT(renderer()->isMenuList() || m_multiple);
+    ASSERT(renderer()->isRenderMenuList() || m_multiple);
 #endif
 
     ASSERT(!listItems().size() || m_activeSelectionAnchorIndex >= 0);
@@ -1001,7 +1002,7 @@ FormControlState HTMLSelectElement::saveFormControlState() const
         auto& option = downcast<HTMLOptionElement>(*element);
         if (!option.selected())
             continue;
-        state.uncheckedAppend(option.value());
+        state.append(option.value());
         if (!multiple())
             break;
     }
@@ -1120,6 +1121,7 @@ void HTMLSelectElement::reset()
     if (!selectedOption && firstOption && !m_multiple && m_size <= 1)
         firstOption->setSelectedState(true);
 
+    setInteractedWithSinceLastFormSubmitEvent(false);
     invalidateSelectedItems();
     setOptionsChangedOnRenderer();
     invalidateStyleForSubtree();
@@ -1163,7 +1165,7 @@ bool HTMLSelectElement::platformHandleKeydownEvent(KeyboardEvent* event)
 void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
 {
     ASSERT(renderer());
-    ASSERT(renderer()->isMenuList());
+    ASSERT(renderer()->isRenderMenuList());
 
     auto& eventNames = WebCore::eventNames();
     if (event.type() == eventNames.keydownEvent) {
@@ -1280,7 +1282,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
             keyboardEvent.setDefaultHandled();
     }
 
-    if (event.type() == eventNames.mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
+    if (event.type() == eventNames.mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == MouseButton::Left) {
         focus();
 #if !PLATFORM(IOS_FAMILY)
         document().updateStyleIfNeeded();
@@ -1371,7 +1373,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
     auto& listItems = this->listItems();
 
     auto& eventNames = WebCore::eventNames();
-    if (event.type() == eventNames.mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
+    if (event.type() == eventNames.mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == MouseButton::Left) {
         focus();
         document().updateStyleIfNeeded();
 
@@ -1400,7 +1402,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
         }
     } else if (event.type() == eventNames.mousemoveEvent && is<MouseEvent>(event) && !downcast<RenderListBox>(*renderer()).canBeScrolledAndHasScrollableArea()) {
         MouseEvent& mouseEvent = downcast<MouseEvent>(event);
-        if (mouseEvent.button() != LeftButton || !mouseEvent.buttonDown())
+        if (mouseEvent.button() != MouseButton::Left || !mouseEvent.buttonDown())
             return;
 
         auto& renderListBox = downcast<RenderListBox>(*renderer());
@@ -1423,7 +1425,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
             }
             mouseEvent.setDefaultHandled();
         }
-    } else if (event.type() == eventNames.mouseupEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton && document().frame()->eventHandler().autoscrollRenderer() != renderer()) {
+    } else if (event.type() == eventNames.mouseupEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == MouseButton::Left && document().frame()->eventHandler().autoscrollRenderer() != renderer()) {
         // This click or drag event was not over any of the options.
         if (m_lastOnChangeSelection.isEmpty())
             return;
@@ -1435,6 +1437,15 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
         if (!is<KeyboardEvent>(event))
             return;
 
+        CheckedPtr renderer = this->renderer();
+        bool isHorizontalWritingMode = renderer ? renderer->style().isHorizontalWritingMode() : true;
+        bool isFlippedBlocksWritingMode = renderer ? renderer->style().isFlippedBlocksWritingMode() : false;
+
+        auto nextKeyIdentifier = isHorizontalWritingMode ? "Down"_s : "Right"_s;
+        auto previousKeyIdentifier = isHorizontalWritingMode ? "Up"_s : "Left"_s;
+        if (isFlippedBlocksWritingMode)
+            std::swap(nextKeyIdentifier, previousKeyIdentifier);
+
         KeyboardEvent& keyboardEvent = downcast<KeyboardEvent>(event);
         const String& keyIdentifier = keyboardEvent.keyIdentifier();
 
@@ -1442,27 +1453,27 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
         int endIndex = 0;
         if (m_activeSelectionEndIndex < 0) {
             // Initialize the end index
-            if (keyIdentifier == "Down"_s || keyIdentifier == "PageDown"_s) {
+            if (keyIdentifier == nextKeyIdentifier || keyIdentifier == "PageDown"_s) {
                 int startIndex = lastSelectedListIndex();
                 handled = true;
-                if (keyIdentifier == "Down"_s)
+                if (keyIdentifier == nextKeyIdentifier)
                     endIndex = nextSelectableListIndex(startIndex);
                 else
                     endIndex = nextSelectableListIndexPageAway(startIndex, SkipForwards);
-            } else if (keyIdentifier == "Up"_s || keyIdentifier == "PageUp"_s) {
+            } else if (keyIdentifier == previousKeyIdentifier || keyIdentifier == "PageUp"_s) {
                 int startIndex = optionToListIndex(selectedIndex());
                 handled = true;
-                if (keyIdentifier == "Up"_s)
+                if (keyIdentifier == previousKeyIdentifier)
                     endIndex = previousSelectableListIndex(startIndex);
                 else
                     endIndex = nextSelectableListIndexPageAway(startIndex, SkipBackwards);
             }
         } else {
             // Set the end index based on the current end index.
-            if (keyIdentifier == "Down"_s) {
+            if (keyIdentifier == nextKeyIdentifier) {
                 endIndex = nextSelectableListIndex(m_activeSelectionEndIndex);
                 handled = true;
-            } else if (keyIdentifier == "Up"_s) {
+            } else if (keyIdentifier == previousKeyIdentifier) {
                 endIndex = previousSelectableListIndex(m_activeSelectionEndIndex);
                 handled = true;
             } else if (keyIdentifier == "PageDown"_s) {
@@ -1513,7 +1524,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
                 setActiveSelectionAnchorIndex(m_activeSelectionEndIndex);
             }
 
-            downcast<RenderListBox>(*renderer()).scrollToRevealElementAtListIndex(endIndex);
+            downcast<RenderListBox>(*renderer).scrollToRevealElementAtListIndex(endIndex);
             if (selectNewItem) {
                 updateListBoxSelection(deselectOthers);
                 listBoxOnChange();
@@ -1557,7 +1568,7 @@ void HTMLSelectElement::defaultEventHandler(Event& event)
         return;
     }
 
-    if (renderer->isMenuList())
+    if (renderer->isRenderMenuList())
         menuListDefaultEventHandler(event);
     else 
         listBoxDefaultEventHandler(event);
@@ -1655,6 +1666,33 @@ unsigned HTMLSelectElement::length() const
     }
 
     return options;
+}
+
+ExceptionOr<void> HTMLSelectElement::showPicker()
+{
+    RefPtr frame = document().frame();
+    if (!frame)
+        return { };
+
+    if (!isMutable())
+        return Exception { ExceptionCode::InvalidStateError, "Select showPicker() cannot be used on immutable controls."_s };
+
+    // In cross-origin iframes it should throw a "SecurityError" DOMException. In same-origin iframes it should work fine.
+    auto* localTopFrame = dynamicDowncast<LocalFrame>(frame->tree().top());
+    if (!localTopFrame || !frame->document()->securityOrigin().isSameOriginAs(localTopFrame->document()->securityOrigin()))
+        return Exception { ExceptionCode::SecurityError, "Select showPicker() called from cross-origin iframe."_s };
+
+    auto* window = frame->window();
+    if (!window || !window->hasTransientActivation())
+        return Exception { ExceptionCode::NotAllowedError, "Select showPicker() requires a user gesture."_s };
+
+#if !PLATFORM(IOS_FAMILY)
+    auto* renderer = this->renderer();
+    if (auto* renderMenuList = dynamicDowncast<RenderMenuList>(renderer))
+        renderMenuList->showPopup();
+#endif
+
+    return { };
 }
 
 } // namespace

@@ -77,11 +77,8 @@ public:
     static bool isEnabled();
     static bool canUseFor(const RenderBlockFlow&);
     static bool canUseForPreferredWidthComputation(const RenderBlockFlow&);
-    static bool canUseForAfterStyleChange(const RenderBlockFlow&, StyleDifference);
-    static bool canUseForAfterInlineBoxStyleChange(const RenderInline&, StyleDifference);
     static bool shouldInvalidateLineLayoutPathAfterContentChange(const RenderBlockFlow& parent, const RenderObject& rendererWithNewContent, const LineLayout&);
     static bool shouldInvalidateLineLayoutPathAfterTreeMutation(const RenderBlockFlow& parent, const RenderObject& renderer, const LineLayout&, bool isRemoval);
-
     bool shouldSwitchToLegacyOnInvalidation() const;
 
     void updateInlineContentConstraints();
@@ -134,9 +131,9 @@ public:
 #endif
 
     // This is temporary, required by partial bailout check.
-    bool hasOutOfFlowContent() const;
     bool contentNeedsVisualReordering() const;
     bool isDamaged() const { return m_lineDamage && m_lineDamage->type() != Layout::InlineDamage::Type::Invalid; }
+    OptionSet<Layout::InlineDamage::Reason> damageReasons() const { return !m_lineDamage || m_lineDamage->type() == Layout::InlineDamage::Type::Invalid ? OptionSet<Layout::InlineDamage::Reason>() : m_lineDamage->reasons(); }
 #ifndef NDEBUG
     bool hasDetachedContent() const { return m_lineDamage && m_lineDamage->hasDetachedContent(); }
 #endif
@@ -151,15 +148,16 @@ private:
     void updateListMarkerDimensions(const RenderListMarker&);
 
     void prepareLayoutState();
-    void prepareFloatingState();
+    void preparePlacedFloats();
     FloatRect constructContent(const Layout::InlineLayoutState&, Layout::InlineLayoutResult&&);
-    Vector<LineAdjustment> adjustContent();
+    Vector<LineAdjustment> adjustContent(const Layout::BlockLayoutState&);
     void updateRenderTreePositions(const Vector<LineAdjustment>&);
 
     InlineContent& ensureInlineContent();
     void updateLayoutBoxDimensions(const RenderBox&);
 
     Layout::LayoutState& layoutState() { return *m_layoutState; }
+    const Layout::LayoutState& layoutState() const { return *m_layoutState; }
 
     Layout::InlineDamage& ensureLineDamage();
 
@@ -173,7 +171,7 @@ private:
     BoxTree m_boxTree;
     WeakPtr<Layout::LayoutState> m_layoutState;
     Layout::BlockFormattingState& m_blockFormattingState;
-    Layout::InlineFormattingState& m_inlineFormattingState;
+    Layout::InlineContentCache& m_inlineContentCache;
     std::optional<Layout::ConstraintsForInlineContent> m_inlineContentConstraints;
     // FIXME: This should be part of LayoutState.
     std::unique_ptr<Layout::InlineDamage> m_lineDamage;

@@ -77,7 +77,7 @@ enum class FetchMetadataSite : uint8_t { None, SameOrigin, SameSite, CrossSite }
 // are initialized without a Frame), so a Document can keep a CachedResourceLoader
 // alive past detach if scripts still reference the Document.
 class CachedResourceLoader : public RefCounted<CachedResourceLoader>, public CanMakeWeakPtr<CachedResourceLoader> {
-    WTF_MAKE_NONCOPYABLE(CachedResourceLoader); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(CachedResourceLoader); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 friend class ImageLoader;
 friend class ResourceCacheValidationSuppressor;
 
@@ -139,6 +139,7 @@ public:
     
     LocalFrame* frame() const; // Can be null
     Document* document() const { return m_document.get(); } // Can be null
+    RefPtr<Document> protectedDocument() const { return document(); }
     void setDocument(Document* document) { m_document = document; }
     void clearDocumentLoader(); 
     void loadDone(LoadCompletionType, bool shouldPerformPostLoadActions = true);
@@ -226,7 +227,7 @@ private:
 
 class ResourceCacheValidationSuppressor {
     WTF_MAKE_NONCOPYABLE(ResourceCacheValidationSuppressor);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     ResourceCacheValidationSuppressor(CachedResourceLoader& loader)
         : m_loader(loader)

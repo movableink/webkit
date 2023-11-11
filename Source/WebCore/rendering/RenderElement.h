@@ -25,6 +25,7 @@
 #include "HitTestRequest.h"
 #include "LengthFunctions.h"
 #include "RenderObject.h"
+#include <wtf/Packed.h>
 
 namespace WebCore {
 
@@ -83,11 +84,12 @@ public:
 
     // This is null for anonymous renderers.
     Element* element() const { return downcast<Element>(RenderObject::node()); }
+    RefPtr<Element> protectedElement() const { return element(); }
     Element* nonPseudoElement() const { return downcast<Element>(RenderObject::nonPseudoNode()); }
     Element* generatingElement() const;
 
-    RenderObject* firstChild() const { return m_firstChild; }
-    RenderObject* lastChild() const { return m_lastChild; }
+    RenderObject* firstChild() const { return m_firstChild.get(); }
+    RenderObject* lastChild() const { return m_lastChild.get(); }
     RenderObject* firstInFlowChild() const;
     RenderObject* lastInFlowChild() const;
 
@@ -108,6 +110,8 @@ public:
     inline bool shouldApplyLayoutOrPaintContainment() const;
     inline bool shouldApplyAnyContainment() const;
 
+    bool hasEligibleContainmentForSizeQuery() const;
+
     Color selectionColor(CSSPropertyID) const;
     std::unique_ptr<RenderStyle> selectionPseudoStyle() const;
 
@@ -118,11 +122,13 @@ public:
 
     // FIXME: Make these standalone and move to relevant files.
     bool isRenderLayerModelObject() const;
-    bool isBoxModelObject() const;
+    bool isRenderBoxModelObject() const;
     bool isRenderBlock() const;
     bool isRenderBlockFlow() const;
     bool isRenderReplaced() const;
     bool isRenderInline() const;
+    bool isRenderFlexibleBox() const;
+    bool isRenderTextControl() const;
 
     virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const { return true; }
     void didAttachChild(RenderObject& child, RenderObject* beforeChild);
@@ -157,14 +163,15 @@ public:
     virtual void layout();
 
     /* This function performs a layout only if one is needed. */
-    void layoutIfNeeded() { if (needsLayout()) layout(); }
+    void layoutIfNeeded();
 
     // Updates only the local style ptr of the object. Does not update the state of the object,
     // and so only should be called when the style is known not to have changed (or from setStyle).
     void setStyleInternal(RenderStyle&& style) { m_style = WTFMove(style); }
 
     // Repaint only if our old bounds and new bounds are different. The caller may pass in newBounds and newOutlineBox if they are known.
-    bool repaintAfterLayoutIfNeeded(const RenderLayerModelObject* repaintContainer, const LayoutRect& oldBounds, const LayoutRect& oldOutlineBox, const LayoutRect* newBoundsPtr = nullptr, const LayoutRect* newOutlineBoxPtr = nullptr);
+    enum class RequiresFullRepaint : bool { No, Yes };
+    bool repaintAfterLayoutIfNeeded(const RenderLayerModelObject* repaintContainer, RequiresFullRepaint, const LayoutRect& oldBounds, const LayoutRect& oldOutlineBox, const LayoutRect* newBoundsPtr = nullptr, const LayoutRect* newOutlineBoxPtr = nullptr);
 
     bool borderImageIsLoadedAndCanBeRendered() const;
     bool isVisibleIgnoringGeometry() const;
@@ -278,7 +285,7 @@ public:
 
     bool isWritingModeRoot() const { return !parent() || parent()->style().writingMode() != style().writingMode(); }
 
-    bool isDeprecatedFlexItem() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isDeprecatedFlexibleBox(); }
+    bool isDeprecatedFlexItem() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isRenderDeprecatedFlexibleBox(); }
     bool isFlexItemIncludingDeprecated() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isFlexibleBoxIncludingDeprecated(); }
 
     virtual LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) { return { }; }
@@ -286,6 +293,11 @@ public:
 
     virtual bool establishesIndependentFormattingContext() const;
     bool createsNewFormattingContext() const;
+
+    bool isSkippedContentRoot() const;
+    bool isSkippedContentRootForLayout() const;
+
+    void clearNeedsLayoutForDescendants();
 
 protected:
     enum BaseTypeFlag {
@@ -295,12 +307,14 @@ protected:
         RenderReplacedFlag          = 1 << 3,
         RenderBlockFlag             = 1 << 4,
         RenderBlockFlowFlag         = 1 << 5,
+        RenderFlexibleBoxFlag       = 1 << 6,
+        RenderTextControlFlag       = 1 << 7,
     };
     
     typedef unsigned BaseTypeFlags;
 
-    RenderElement(Element&, RenderStyle&&, BaseTypeFlags);
-    RenderElement(Document&, RenderStyle&&, BaseTypeFlags);
+    RenderElement(Type, Element&, RenderStyle&&, BaseTypeFlags);
+    RenderElement(Type, Document&, RenderStyle&&, BaseTypeFlags);
 
     bool layerCreationAllowedForSubtree() const;
 
@@ -343,11 +357,11 @@ protected:
     inline bool shouldApplySizeOrStyleContainment(bool) const;
 
 private:
-    RenderElement(ContainerNode&, RenderStyle&&, BaseTypeFlags);
+    RenderElement(Type, ContainerNode&, RenderStyle&&, BaseTypeFlags);
     void node() const = delete;
     void nonPseudoNode() const = delete;
     void generatingNode() const = delete;
-    void isText() const = delete;
+    void isRenderText() const = delete;
     void isRenderElement() const = delete;
 
     RenderObject* firstChildSlow() const final { return firstChild(); }
@@ -383,7 +397,8 @@ private:
     void updateReferencedSVGResources();
     void clearReferencedSVGResources();
 
-    unsigned m_baseTypeFlags : 6;
+    PackedCheckedPtr<RenderObject> m_firstChild;
+    unsigned m_baseTypeFlags : 8;
     unsigned m_ancestorLineBoxDirty : 1;
     unsigned m_hasInitializedStyle : 1;
 
@@ -391,6 +406,9 @@ private:
     unsigned m_hasPausedImageAnimations : 1;
     unsigned m_hasCounterNodeMap : 1;
     unsigned m_hasContinuationChainNode : 1;
+
+    PackedCheckedPtr<RenderObject> m_lastChild;
+
     unsigned m_isContinuation : 1;
     unsigned m_isFirstLetter : 1;
 
@@ -404,9 +422,6 @@ private:
     unsigned m_visibleInViewportState : 2;
 
     unsigned m_didContributeToVisuallyNonEmptyPixelCount : 1;
-
-    RenderObject* m_firstChild;
-    RenderObject* m_lastChild;
 
     RenderStyle m_style;
 };
@@ -437,7 +452,7 @@ inline bool RenderElement::isRenderLayerModelObject() const
     return m_baseTypeFlags & RenderLayerModelObjectFlag;
 }
 
-inline bool RenderElement::isBoxModelObject() const
+inline bool RenderElement::isRenderBoxModelObject() const
 {
     return m_baseTypeFlags & RenderBoxModelObjectFlag;
 }
@@ -462,6 +477,16 @@ inline bool RenderElement::isRenderInline() const
     return m_baseTypeFlags & RenderInlineFlag;
 }
 
+inline bool RenderElement::isRenderFlexibleBox() const
+{
+    return m_baseTypeFlags & RenderFlexibleBoxFlag;
+}
+
+inline bool RenderElement::isRenderTextControl() const
+{
+    return m_baseTypeFlags & RenderTextControlFlag;
+}
+
 inline Element* RenderElement::generatingElement() const
 {
     return downcast<Element>(RenderObject::generatingNode());
@@ -477,9 +502,9 @@ inline bool RenderObject::isRenderLayerModelObject() const
     return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderLayerModelObject();
 }
 
-inline bool RenderObject::isBoxModelObject() const
+inline bool RenderObject::isRenderBoxModelObject() const
 {
-    return is<RenderElement>(*this) && downcast<RenderElement>(*this).isBoxModelObject();
+    return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderBoxModelObject();
 }
 
 inline bool RenderObject::isRenderBlock() const
@@ -502,16 +527,31 @@ inline bool RenderObject::isRenderInline() const
     return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderInline();
 }
 
+inline bool RenderObject::isRenderFlexibleBox() const
+{
+    return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderFlexibleBox();
+}
+
+inline bool RenderObject::isRenderTextControl() const
+{
+    return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderTextControl();
+}
+
+inline bool RenderObject::isFlexibleBoxIncludingDeprecated() const
+{
+    return isRenderFlexibleBox() || isRenderDeprecatedFlexibleBox();
+}
+
 inline const RenderStyle& RenderObject::style() const
 {
-    if (isText())
+    if (isRenderText())
         return m_parent->style();
     return downcast<RenderElement>(*this).style();
 }
 
 inline const RenderStyle& RenderObject::firstLineStyle() const
 {
-    if (isText())
+    if (isRenderText())
         return m_parent->firstLineStyle();
     return downcast<RenderElement>(*this).firstLineStyle();
 }
@@ -519,6 +559,11 @@ inline const RenderStyle& RenderObject::firstLineStyle() const
 inline RenderElement* ContainerNode::renderer() const
 {
     return downcast<RenderElement>(Node::renderer());
+}
+
+inline CheckedPtr<RenderElement> ContainerNode::checkedRenderer() const
+{
+    return renderer();
 }
 
 inline RenderObject* RenderElement::firstInFlowChild() const
@@ -539,6 +584,23 @@ inline RenderObject* RenderElement::lastInFlowChild() const
         return lastChild->previousInFlowSibling();
     }
     return nullptr;
+}
+
+inline bool RenderObject::isSkippedContentRoot() const
+{
+    if (isRenderText())
+        return false;
+    return downcast<RenderElement>(*this).isSkippedContentRoot();
+}
+
+inline RenderElement* RenderObject::parent() const
+{
+    return m_parent.get();
+}
+
+inline CheckedPtr<RenderElement> RenderObject::checkedParent() const
+{
+    return m_parent;
 }
 
 } // namespace WebCore

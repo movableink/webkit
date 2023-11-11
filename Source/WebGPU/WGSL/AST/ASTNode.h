@@ -39,11 +39,13 @@ enum class NodeKind : uint8_t {
     BindingAttribute,
     BuiltinAttribute,
     ConstAttribute,
+    DiagnosticAttribute,
     GroupAttribute,
     IdAttribute,
     InterpolateAttribute,
     InvariantAttribute,
     LocationAttribute,
+    MustUseAttribute,
     SizeAttribute,
     StageAttribute,
     WorkgroupSizeAttribute,
@@ -100,11 +102,9 @@ enum class NodeKind : uint8_t {
 
     TypeAlias,
 
-    // TypeName
-    ArrayTypeName,
-    NamedTypeName,
-    ParameterizedTypeName,
-    ReferenceTypeName,
+    ArrayTypeExpression,
+    ElaboratedTypeExpression,
+    ReferenceTypeExpression,
 
     Variable,
 

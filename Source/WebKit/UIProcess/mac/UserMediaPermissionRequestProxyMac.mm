@@ -53,7 +53,7 @@ void UserMediaPermissionRequestProxyMac::promptForGetDisplayMedia(UserMediaDispl
     if (!manager())
         return;
 
-    DisplayCaptureSessionManager::singleton().promptForGetDisplayMedia(promptType, manager()->page(), topLevelDocumentSecurityOrigin().data(), [protectedThis = Ref { *this }](std::optional<CaptureDevice> device) mutable {
+    DisplayCaptureSessionManager::singleton().promptForGetDisplayMedia(promptType, Ref { manager()->page() }, topLevelDocumentSecurityOrigin().data(), [protectedThis = Ref { *this }](std::optional<CaptureDevice> device) mutable {
 
         if (!device) {
             protectedThis->deny(UserMediaPermissionRequestProxy::UserMediaAccessDenialReason::PermissionDenied);
@@ -71,7 +71,8 @@ void UserMediaPermissionRequestProxyMac::promptForGetDisplayMedia(UserMediaDispl
 bool UserMediaPermissionRequestProxyMac::canRequestDisplayCapturePermission()
 {
 #if ENABLE(MEDIA_STREAM)
-    if (!manager() || manager()->page().preferences().requireUAGetDisplayMediaPrompt())
+    auto overridePreference = DisplayCaptureSessionManager::singleton().overrideCanRequestDisplayCapturePermissionForTesting();
+    if (!manager() || (!overridePreference && manager()->page().preferences().requireUAGetDisplayMediaPrompt()))
         return false;
 
     return DisplayCaptureSessionManager::singleton().canRequestDisplayCapturePermission();

@@ -144,8 +144,6 @@ private:
 
     ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableCell (anonymous)"_s : "RenderTableCell"_s; }
 
-    bool isTableCell() const override { return true; }
-
     void willBeRemovedFromTree(IsInternalMove) override;
 
     void updateLogicalWidth() override;
@@ -328,4 +326,4 @@ inline RenderPtr<RenderBox> RenderTableCell::createAnonymousBoxWithSameTypeAs(co
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTableCell, isTableCell())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTableCell, isRenderTableCell())

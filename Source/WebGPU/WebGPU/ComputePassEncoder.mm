@@ -29,15 +29,19 @@
 #import "APIConversions.h"
 #import "BindGroup.h"
 #import "Buffer.h"
+#import "CommandEncoder.h"
 #import "ComputePipeline.h"
 #import "QuerySet.h"
 
 namespace WebGPU {
 
-ComputePassEncoder::ComputePassEncoder(id<MTLComputeCommandEncoder> computeCommandEncoder, const WGPUComputePassDescriptor& descriptor, Device& device)
+ComputePassEncoder::ComputePassEncoder(id<MTLComputeCommandEncoder> computeCommandEncoder, const WGPUComputePassDescriptor& descriptor, CommandEncoder& parentEncoder, Device& device)
     : m_computeCommandEncoder(computeCommandEncoder)
     , m_device(device)
+    , m_parentEncoder(&parentEncoder)
 {
+    m_parentEncoder->lock(true);
+
     if (m_device->baseCapabilities().counterSamplingAPI == HardwareCapabilities::BaseCapabilities::CounterSamplingAPI::CommandBoundary) {
         for (uint32_t i = 0; i < descriptor.timestampWriteCount; ++i) {
             const auto& timestampWrite = descriptor.timestampWrites[i];
@@ -72,25 +76,55 @@ void ComputePassEncoder::beginPipelineStatisticsQuery(const QuerySet& querySet, 
     UNUSED_PARAM(queryIndex);
 }
 
+void ComputePassEncoder::executePreDispatchCommands()
+{
+    if (!m_computeDynamicOffsets.size() || !m_pipeline)
+        return;
+
+    for (auto& kvp : m_bindGroupDynamicOffsets) {
+        auto& pipelineLayout = m_pipeline->pipelineLayout();
+        auto bindGroupIndex = kvp.key;
+        auto* pcomputeOffsets = pipelineLayout.computeOffsets(bindGroupIndex, kvp.value);
+        if (pcomputeOffsets && pcomputeOffsets->size()) {
+            auto& computeOffsets = *pcomputeOffsets;
+            auto startIndex = pipelineLayout.computeOffsetForBindGroup(bindGroupIndex);
+            RELEASE_ASSERT(computeOffsets.size() <= m_computeDynamicOffsets.size() + startIndex);
+            memcpy(&m_computeDynamicOffsets[startIndex], &computeOffsets[0], sizeof(computeOffsets[0]) * computeOffsets.size());
+        }
+    }
+
+    [m_computeCommandEncoder setBytes:&m_computeDynamicOffsets[0] length:m_computeDynamicOffsets.size() * sizeof(m_computeDynamicOffsets[0]) atIndex:m_device->maxBuffersForComputeStage()];
+
+    m_bindGroupDynamicOffsets.clear();
+}
+
 void ComputePassEncoder::dispatch(uint32_t x, uint32_t y, uint32_t z)
 {
+    executePreDispatchCommands();
     [m_computeCommandEncoder dispatchThreadgroups:MTLSizeMake(x, y, z) threadsPerThreadgroup:m_threadsPerThreadgroup];
 }
 
 void ComputePassEncoder::dispatchIndirect(const Buffer& indirectBuffer, uint64_t indirectOffset)
 {
     // FIXME: ensure higher levels perform validation on indirectOffset before reaching this callsite
+    executePreDispatchCommands();
     [m_computeCommandEncoder dispatchThreadgroupsWithIndirectBuffer:indirectBuffer.buffer() indirectBufferOffset:indirectOffset threadsPerThreadgroup:m_threadsPerThreadgroup];
 }
 
 void ComputePassEncoder::endPass()
 {
+    if (!m_parentEncoder) {
+        ASSERT(!m_computeCommandEncoder);
+        return;
+    }
+
     ASSERT(m_pendingTimestampWrites.isEmpty() || m_device->baseCapabilities().counterSamplingAPI == HardwareCapabilities::BaseCapabilities::CounterSamplingAPI::CommandBoundary);
     for (const auto& pendingTimestampWrite : m_pendingTimestampWrites)
         [m_computeCommandEncoder sampleCountersInBuffer:pendingTimestampWrite.querySet->counterSampleBuffer() atSampleIndex:pendingTimestampWrite.queryIndex withBarrier:NO];
     m_pendingTimestampWrites.clear();
     [m_computeCommandEncoder endEncoding];
     m_computeCommandEncoder = nil;
+    m_parentEncoder->lock(false);
 }
 
 void ComputePassEncoder::endPipelineStatisticsQuery()
@@ -150,11 +184,14 @@ void ComputePassEncoder::pushDebugGroup(String&& groupLabel)
 
 void ComputePassEncoder::setBindGroup(uint32_t groupIndex, const BindGroup& group, uint32_t dynamicOffsetCount, const uint32_t* dynamicOffsets)
 {
-    for (const auto& resource : group.resources())
-        [m_computeCommandEncoder useResources:&resource.mtlResources[0] count:resource.mtlResources.size() usage:resource.usage];
+    if (dynamicOffsetCount)
+        m_bindGroupDynamicOffsets.add(groupIndex, Vector<uint32_t>(dynamicOffsets, dynamicOffsetCount));
 
-    UNUSED_PARAM(dynamicOffsetCount);
-    UNUSED_PARAM(dynamicOffsets);
+    for (const auto& resource : group.resources()) {
+        if (resource.renderStages == BindGroup::MTLRenderStageCompute)
+            [m_computeCommandEncoder useResources:&resource.mtlResources[0] count:resource.mtlResources.size() usage:resource.usage];
+    }
+
     [m_computeCommandEncoder setBuffer:group.computeArgumentBuffer() offset:0 atIndex:groupIndex];
 }
 
@@ -165,6 +202,9 @@ void ComputePassEncoder::setPipeline(const ComputePipeline& pipeline)
         makeInvalid();
         return;
     }
+
+    m_pipeline = &pipeline;
+    m_computeDynamicOffsets.resize(m_pipeline->pipelineLayout().sizeOfComputeDynamicOffsets());
 
     ASSERT(pipeline.computePipelineState());
     [m_computeCommandEncoder setComputePipelineState:pipeline.computePipelineState()];
@@ -230,7 +270,7 @@ void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEnco
     WebGPU::fromAPI(computePassEncoder).pushDebugGroup(WebGPU::fromAPI(groupLabel));
 }
 
-void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, uint32_t dynamicOffsetCount, const uint32_t* dynamicOffsets)
+void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, const uint32_t* dynamicOffsets)
 {
     WebGPU::fromAPI(computePassEncoder).setBindGroup(groupIndex, WebGPU::fromAPI(group), dynamicOffsetCount, dynamicOffsets);
 }

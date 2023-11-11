@@ -200,8 +200,7 @@ void RenderTreeUpdater::GeneratedContent::updateBackdropRenderer(RenderElement& 
         return;
     }
 
-    // ::backdrop does not inherit style, hence using the view style as parent style
-    auto style = renderer.getCachedPseudoStyle(PseudoId::Backdrop, &renderer.view().style());
+    auto style = renderer.getCachedPseudoStyle(PseudoId::Backdrop, &renderer.style());
     if (!style || style->display() == DisplayType::None) {
         destroyBackdropIfNeeded();
         return;
@@ -211,7 +210,7 @@ void RenderTreeUpdater::GeneratedContent::updateBackdropRenderer(RenderElement& 
     if (auto backdropRenderer = renderer.backdropRenderer())
         backdropRenderer->setStyle(WTFMove(newStyle));
     else {
-        auto newBackdropRenderer = WebCore::createRenderer<RenderBlockFlow>(renderer.document(), WTFMove(newStyle));
+        auto newBackdropRenderer = WebCore::createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, renderer.document(), WTFMove(newStyle));
         newBackdropRenderer->initializeStyle();
         renderer.setBackdropRenderer(*newBackdropRenderer.get());
         m_updater.m_builder.attach(renderer.view(), WTFMove(newBackdropRenderer));

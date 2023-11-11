@@ -1009,8 +1009,6 @@ JSC_DEFINE_JIT_OPERATION(operationHasAttachment, bool, (const Element& element))
 JSC_DEFINE_JIT_OPERATION(operationMatchesDir, bool, (const Element& element, uint32_t direction))
 {
     COUNT_SELECTOR_OPERATION(operationMatchesDir);
-    if (!element.document().settings().dirPseudoEnabled())
-        return false;
     return element.effectiveTextDirection() == static_cast<TextDirection>(direction);
 }
 
@@ -1230,7 +1228,7 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     case CSSSelector::PseudoClassType::NthLastOfType:
     case CSSSelector::PseudoClassType::Drag:
     case CSSSelector::PseudoClassType::Has:
-    case CSSSelector::PseudoClassType::RelativeScope:
+    case CSSSelector::PseudoClassType::HasScope:
         return FunctionType::CannotCompile;
 
     // Optimized pseudo selectors.
@@ -1544,6 +1542,9 @@ static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, 
         case CSSSelector::Match::NestingParent:
         case CSSSelector::Match::Unknown:
             ASSERT_NOT_REACHED();
+            return FunctionType::CannotMatchAnything;
+        case CSSSelector::Match::ForgivingUnknown:
+        case CSSSelector::Match::ForgivingUnknownNestContaining:
             return FunctionType::CannotMatchAnything;
         }
 
@@ -4165,13 +4166,11 @@ void SelectorCodeGenerator::generateElementIsNthChild(Assembler::JumpList& failu
 {
     generateNthChildRelationUpdate(fragment);
 
-    Vector<std::pair<int, int>, 32> validSubsetFilters;
-    validSubsetFilters.reserveInitialCapacity(fragment.nthChildFilters.size());
-    for (const auto& slot : fragment.nthChildFilters) {
+    auto validSubsetFilters = WTF::compactMap<32>(fragment.nthChildFilters, [&](auto& slot) -> std::optional<std::pair<int, int>> {
         if (nthFilterIsAlwaysSatisified(slot.first, slot.second))
-            continue;
-        validSubsetFilters.uncheckedAppend(slot);
-    }
+            return std::nullopt;
+        return slot;
+    });
     if (validSubsetFilters.isEmpty())
         return;
 
@@ -4293,13 +4292,11 @@ void SelectorCodeGenerator::generateElementIsNthLastChild(Assembler::JumpList& f
 {
     generateNthLastChildParentCheckAndRelationUpdate(failureCases, fragment);
 
-    Vector<std::pair<int, int>, 32> validSubsetFilters;
-    validSubsetFilters.reserveInitialCapacity(fragment.nthLastChildFilters.size());
-    for (const auto& slot : fragment.nthLastChildFilters) {
+    auto validSubsetFilters = WTF::compactMap<32>(fragment.nthLastChildFilters, [&](auto& slot) -> std::optional<std::pair<int, int>> {
         if (nthFilterIsAlwaysSatisified(slot.first, slot.second))
-            continue;
-        validSubsetFilters.uncheckedAppend(slot);
-    }
+            return std::nullopt;
+        return slot;
+    });
     if (validSubsetFilters.isEmpty())
         return;
 
@@ -4329,18 +4326,16 @@ void SelectorCodeGenerator::generateElementIsNthLastChildOf(Assembler::JumpList&
 {
     generateNthLastChildParentCheckAndRelationUpdate(failureCases, fragment);
 
-    Vector<const NthChildOfSelectorInfo*> validSubsetFilters;
-    validSubsetFilters.reserveInitialCapacity(fragment.nthLastChildOfFilters.size());
-
     // The initial element must match the selector list.
     for (const NthChildOfSelectorInfo& nthLastChildOfSelectorInfo : fragment.nthLastChildOfFilters)
         generateElementMatchesSelectorList(failureCases, elementAddressRegister, nthLastChildOfSelectorInfo.selectorList);
     
-    for (const NthChildOfSelectorInfo& nthLastChildOfSelectorInfo : fragment.nthLastChildOfFilters) {
+    auto validSubsetFilters = WTF::compactMap(fragment.nthLastChildOfFilters, [](auto& nthLastChildOfSelectorInfo) -> std::optional<const NthChildOfSelectorInfo*> {
         if (nthFilterIsAlwaysSatisified(nthLastChildOfSelectorInfo.a, nthLastChildOfSelectorInfo.b))
-            continue;
-        validSubsetFilters.uncheckedAppend(&nthLastChildOfSelectorInfo);
-    }
+            return std::nullopt;
+        return &nthLastChildOfSelectorInfo;
+    });
+
     if (validSubsetFilters.isEmpty())
         return;
 

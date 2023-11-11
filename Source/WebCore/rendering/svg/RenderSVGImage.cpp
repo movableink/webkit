@@ -28,7 +28,6 @@
 #include "RenderSVGImage.h"
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-
 #include "AXObjectCache.h"
 #include "BitmapImage.h"
 #include "DocumentInlines.h"
@@ -36,12 +35,12 @@
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
 #include "LayoutRepainter.h"
+#include "LegacyRenderSVGResource.h"
 #include "PointerEventsHitRules.h"
 #include "RenderElementInlines.h"
 #include "RenderImageResource.h"
 #include "RenderLayer.h"
 #include "RenderSVGModelObjectInlines.h"
-#include "RenderSVGResource.h"
 #include "RenderSVGResourceFilter.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"
@@ -57,9 +56,10 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGImage);
 
 RenderSVGImage::RenderSVGImage(SVGImageElement& element, RenderStyle&& style)
-    : RenderSVGModelObject(element, WTFMove(style))
+    : RenderSVGModelObject(Type::SVGImage, element, WTFMove(style))
     , m_imageResource(makeUnique<RenderImageResource>())
 {
+    ASSERT(isRenderSVGImage());
     imageResource().initialize(*this);
 }
 
@@ -132,8 +132,7 @@ void RenderSVGImage::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         return;
 
     if (paintInfo.phase == PaintPhase::ClippingMask) {
-        // FIXME: [LBSE] Upstream SVGRenderSupport changes
-        // SVGRenderSupport::paintSVGClippingMask(*this, paintInfo);
+        SVGRenderSupport::paintSVGClippingMask(*this, paintInfo);
         return;
     }
 
@@ -179,7 +178,7 @@ ImageDrawResult RenderSVGImage::paintIntoRect(PaintInfo& paintInfo, const FloatR
     if (is<BitmapImage>(image))
         downcast<BitmapImage>(*image).updateFromSettings(settings());
 
-    ImagePaintingOptions options = {
+    ImagePaintingOptions options {
         CompositeOperator::SourceOver,
         DecodingMode::Synchronous,
         imageOrientation(),
@@ -203,13 +202,13 @@ void RenderSVGImage::paintForeground(PaintInfo& paintInfo, const LayoutPoint& pa
     }
 
     if (!imageResource().cachedImage()) {
-        page().addRelevantUnpaintedObject(this, visualOverflowRectEquivalent());
+        page().addRelevantUnpaintedObject(*this, visualOverflowRectEquivalent());
         return;
     }
 
     RefPtr<Image> image = imageResource().image();
     if (!image || image->isNull()) {
-        page().addRelevantUnpaintedObject(this, visualOverflowRectEquivalent());
+        page().addRelevantUnpaintedObject(*this, visualOverflowRectEquivalent());
         return;
     }
 
@@ -226,9 +225,9 @@ void RenderSVGImage::paintForeground(PaintInfo& paintInfo, const LayoutPoint& pa
         // to refine this in the future to account for the portion of the image that has painted.
         FloatRect visibleRect = intersection(replacedContentRect, contentBoxRect);
         if (cachedImage()->isLoading() || result == ImageDrawResult::DidRequestDecoding)
-            page().addRelevantUnpaintedObject(this, enclosingLayoutRect(visibleRect));
+            page().addRelevantUnpaintedObject(*this, enclosingLayoutRect(visibleRect));
         else
-            page().addRelevantRepaintedObject(this, enclosingLayoutRect(visibleRect));
+            page().addRelevantRepaintedObject(*this, enclosingLayoutRect(visibleRect));
     }
 }
 
@@ -252,7 +251,7 @@ bool RenderSVGImage::nodeAtPoint(const HitTestRequest& request, HitTestResult& r
     if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
         return false;
 
-    PointerEventsHitRules hitRules(PointerEventsHitRules::SVG_IMAGE_HITTESTING, request, style().pointerEvents());
+    PointerEventsHitRules hitRules(PointerEventsHitRules::HitTestingTargetType::SVGImage, request, style().pointerEvents());
     bool isVisible = (style().visibility() == Visibility::Visible);
     if (isVisible || !hitRules.requireVisible) {
         SVGHitTestCycleDetectionScope hitTestScope(*this);
@@ -351,7 +350,7 @@ void RenderSVGImage::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
         resources->removeClientFromCache(*this);
 
     // Eventually notify parent resources, that we've changed.
-    RenderSVGResource::markForLayoutAndParentResourceInvalidation(*this, false);
+    LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(*this, false);
 
     if (hasVisibleBoxDecorations() || hasMask() || hasShapeOutside())
         RenderSVGModelObject::imageChanged(newImage, rect);

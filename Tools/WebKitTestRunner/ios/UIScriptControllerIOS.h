@@ -116,6 +116,7 @@ private:
     JSObjectRef contentVisibleRect() const override;
     JSObjectRef selectionStartGrabberViewRect() const override;
     JSObjectRef selectionEndGrabberViewRect() const override;
+    JSObjectRef selectionEndGrabberViewShapePathDescription() const override;
     JSObjectRef selectionCaretViewRect() const override;
     JSObjectRef selectionCaretViewRectInGlobalCoordinates() const override;
     JSObjectRef selectionCaretViewRect(id<UICoordinateSpace>) const;
@@ -127,6 +128,7 @@ private:
     void simulateRotation(DeviceOrientation*, JSValueRef) override;
     void simulateRotationLikeSafari(DeviceOrientation*, JSValueRef) override;
     bool isShowingPopover() const override;
+    bool isShowingFormValidationBubble() const override;
     JSObjectRef rectForMenuAction(JSStringRef) const override;
     JSObjectRef contextMenuRect() const override;
     JSObjectRef menuRect() const override;
@@ -153,6 +155,8 @@ private:
     void copyText(JSStringRef) override;
     void installTapGestureOnWindow(JSValueRef) override;
     void setScrollViewKeyboardAvoidanceEnabled(bool) override;
+
+    bool isZoomingOrScrolling() const final;
 
     bool mayContainEditableElementsInRect(unsigned x, unsigned y, unsigned width, unsigned height) override;
 

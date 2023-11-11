@@ -180,12 +180,12 @@ GPUProcessProxy::GPUProcessProxy()
 
     platformInitializeGPUProcessParameters(parameters);
 
-    // Initialize the GPU process.
-    send(Messages::GPUProcess::InitializeGPUProcess(parameters), 0);
-
 #if PLATFORM(COCOA)
     m_hasSentGPUToolsSandboxExtensions = !parameters.gpuToolsExtensionHandles.isEmpty();
 #endif
+
+    // Initialize the GPU process.
+    send(Messages::GPUProcess::InitializeGPUProcess(WTFMove(parameters)), 0);
 
 #if HAVE(AUDIO_COMPONENT_SERVER_REGISTRATIONS) && ENABLE(AUDIO_COMPONENT_SERVER_REGISTRATIONS_IN_GPU_PROCESS)
     auto registrations = fetchAudioComponentServerRegistrations();
@@ -368,7 +368,7 @@ void GPUProcessProxy::updateSandboxAccess(bool allowAudioCapture, bool allowVide
 #endif // PLATFORM(IOS) || PLATFORM(VISION)
 
     if (!extensions.isEmpty())
-        send(Messages::GPUProcess::UpdateSandboxAccess { extensions }, 0);
+        send(Messages::GPUProcess::UpdateSandboxAccess { WTFMove(extensions) }, 0);
 #endif // PLATFORM(COCOA)
 }
 
@@ -413,9 +413,9 @@ void GPUProcessProxy::setMockCaptureDevicesInterrupted(bool isCameraInterrupted,
     send(Messages::GPUProcess::SetMockCaptureDevicesInterrupted { isCameraInterrupted, isMicrophoneInterrupted }, 0);
 }
 
-void GPUProcessProxy::triggerMockMicrophoneConfigurationChange()
+void GPUProcessProxy::triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay)
 {
-    send(Messages::GPUProcess::TriggerMockMicrophoneConfigurationChange { }, 0);
+    send(Messages::GPUProcess::TriggerMockCaptureConfigurationChange { forMicrophone, forDisplay }, 0);
 }
 #endif // ENABLE(MEDIA_STREAM)
 
@@ -448,16 +448,6 @@ std::optional<bool> GPUProcessProxy::s_hasVP9HardwareDecoder;
 std::optional<bool> GPUProcessProxy::s_hasVP9ExtensionSupport;
 #endif
 
-void GPUProcessProxy::updateWebGPUEnabled(WebProcessProxy& webProcessProxy, bool webGPUEnabled)
-{
-    send(Messages::GPUProcess::UpdateWebGPUEnabled(webProcessProxy.coreProcessIdentifier(), webGPUEnabled), 0);
-}
-
-void GPUProcessProxy::updateDOMRenderingEnabled(WebProcessProxy& webProcessProxy, bool isDOMRenderingEnabled)
-{
-    send(Messages::GPUProcess::UpdateDOMRenderingEnabled(webProcessProxy.coreProcessIdentifier(), isDOMRenderingEnabled), 0);
-}
-
 void GPUProcessProxy::createGPUProcessConnection(WebProcessProxy& webProcessProxy, IPC::Connection::Handle&& connectionIdentifier, GPUProcessConnectionParameters&& parameters)
 {
 #if ENABLE(VP9)
@@ -470,7 +460,7 @@ void GPUProcessProxy::createGPUProcessConnection(WebProcessProxy& webProcessProx
 
     RELEASE_LOG(ProcessSuspension, "%p - GPUProcessProxy is taking a background assertion because a web process is requesting a connection", this);
     startResponsivenessTimer(UseLazyStop::No);
-    sendWithAsyncReply(Messages::GPUProcess::CreateGPUConnectionToWebProcess { webProcessProxy.coreProcessIdentifier(), webProcessProxy.sessionID(), WTFMove(connectionIdentifier), parameters }, [this, weakThis = WeakPtr { *this }]() mutable {
+    sendWithAsyncReply(Messages::GPUProcess::CreateGPUConnectionToWebProcess { webProcessProxy.coreProcessIdentifier(), webProcessProxy.sessionID(), WTFMove(connectionIdentifier), WTFMove(parameters) }, [this, weakThis = WeakPtr { *this }]() mutable {
         if (!weakThis)
             return;
         stopResponsivenessTimer();
@@ -552,8 +542,7 @@ void GPUProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::Connect
     }
     
 #if USE(RUNNINGBOARD)
-    if (xpc_connection_t connection = this->connection()->xpcConnection())
-        m_throttler.didConnectToProcess(xpc_connection_get_pid(connection));
+    m_throttler.didConnectToProcess(*this);
 #endif
 
 #if PLATFORM(COCOA)
@@ -715,9 +704,9 @@ void GPUProcessProxy::updatePreferences(WebProcessProxy& webProcess)
     // For the time being, each of the below features are enabled in the GPU Process if it is enabled by at least one web page's preferences.
     // In practice, all web pages' preferences should agree on these feature flag values.
     GPUProcessPreferences gpuPreferences;
-    for (auto page : webProcess.pages()) {
-        auto& webPreferences = page->preferences();
-        if (!webPreferences.useGPUProcessForMediaEnabled())
+    for (Ref page : webProcess.pages()) {
+        Ref webPreferences = page->preferences();
+        if (!webPreferences->useGPUProcessForMediaEnabled())
             continue;
         gpuPreferences.copyEnabledWebPreferences(webPreferences);
     }
@@ -749,7 +738,7 @@ void GPUProcessProxy::platformInitializeGPUProcessParameters(GPUProcessCreationP
 #endif
 
 #if ENABLE(VIDEO)
-void GPUProcessProxy::requestBitmapImageForCurrentTime(ProcessIdentifier processIdentifier, MediaPlayerIdentifier playerIdentifier, CompletionHandler<void(ShareableBitmap::Handle&&)>&& completion)
+void GPUProcessProxy::requestBitmapImageForCurrentTime(ProcessIdentifier processIdentifier, MediaPlayerIdentifier playerIdentifier, CompletionHandler<void(std::optional<ShareableBitmap::Handle>&&)>&& completion)
 {
     sendWithAsyncReply(Messages::GPUProcess::RequestBitmapImageForCurrentTime(processIdentifier, playerIdentifier), WTFMove(completion));
 }

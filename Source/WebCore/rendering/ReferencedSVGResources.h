@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,13 +35,15 @@ namespace WebCore {
 
 class CSSSVGResourceElementClient;
 class Document;
+class LegacyRenderSVGResourceClipper;
+class LegacyRenderSVGResourceContainer;
 class ReferencePathOperation;
 class ReferenceFilterOperation;
 class RenderElement;
-class RenderSVGResourceClipper;
 class RenderSVGResourceFilter;
 class RenderStyle;
 class QualifiedName;
+class SVGClipPathElement;
 class SVGElement;
 class SVGFilterElement;
 class TreeScope;
@@ -56,11 +58,14 @@ public:
     void updateReferencedResources(TreeScope&, const Vector<std::pair<AtomString, QualifiedName>>&);
 
     // Clipping needs a renderer, filters use an element.
-    RenderSVGResourceClipper* referencedClipperRenderer(TreeScope&, const ReferencePathOperation&);
-    SVGFilterElement* referencedFilterElement(TreeScope&, const ReferenceFilterOperation&);
+    static LegacyRenderSVGResourceClipper* referencedClipperRenderer(TreeScope&, const ReferencePathOperation&);
+    static RefPtr<SVGClipPathElement> referencedClipPathElement(TreeScope&, const ReferencePathOperation&);
+    static RefPtr<SVGFilterElement> referencedFilterElement(TreeScope&, const ReferenceFilterOperation&);
+
+    static LegacyRenderSVGResourceContainer* referencedRenderResource(TreeScope&, const AtomString& fragment);
 
 private:
-    static SVGElement* elementForResourceID(TreeScope&, const AtomString& resourceID, const QualifiedName& tagName);
+    static RefPtr<SVGElement> elementForResourceID(TreeScope&, const AtomString& resourceID, const QualifiedName& tagName);
 
     void addClientForTarget(SVGElement& targetElement, const AtomString&);
     void removeClientForTarget(TreeScope&, const AtomString&);

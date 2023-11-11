@@ -195,6 +195,10 @@ def parse_args(args):
             default=False, help="Skip tests that are marked as failing or flaky. "
                  "Note: When using this option, you might miss new crashes "
                  "in these tests."),
+        optparse.make_option("--skip-flaky-tests", action="store_true",
+            default=False, help="Skip tests that are marked as flaky. "
+                 "Note: When using this option, you might miss new crashes "
+                 "in these tests."),
         optparse.make_option("--additional-drt-flag", action="append",
             default=[], help="Additional command line flag to pass to DumpRenderTree "
                  "Specify multiple times to add multiple flags."),
@@ -350,6 +354,9 @@ def parse_args(args):
             "--no-use-gpu-process", action="store_true", default=False,
             help=("Disable GPU process for DOM rendering.")),
         optparse.make_option(
+            "--use-async-uikit-interactions", action="store_true", default=False,
+            help=("Opt into async UIKit interactions (iOS-family WebKit2 ports only)")),
+        optparse.make_option(
             "--prefer-integrated-gpu", action="store_true", default=False,
             help=("Prefer using the lower-power integrated GPU on a dual-GPU system. Note that other running applications and the tests themselves can override this request.")),
         optparse.make_option("--show-window", action="store_true", default=False, help="Make the test runner window visible during testing."),
@@ -407,6 +414,13 @@ def parse_args(args):
         if options.result_report_flavor:
             raise RuntimeError('--accessibility-isolated-tree implicitly sets the result flavor, this should not be overridden')
         options.result_report_flavor = 'accessibility-isolated-tree'
+
+    if options.use_async_uikit_interactions:
+        host = Host()
+        host.initialize_scm()
+        if not options.internal_feature:
+            options.internal_feature = []
+        options.internal_feature.append('UseAsyncUIKitInteractions')
 
     return options, args
 

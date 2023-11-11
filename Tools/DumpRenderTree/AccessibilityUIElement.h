@@ -181,8 +181,6 @@ public:
     int hierarchicalLevel() const;
     double clickPointX();
     double clickPointY();
-    JSRetainPtr<JSStringRef> documentEncoding();
-    JSRetainPtr<JSStringRef> documentURI();
     JSRetainPtr<JSStringRef> url();
     JSRetainPtr<JSStringRef> classList() const;
     JSRetainPtr<JSStringRef> domIdentifier() const;
@@ -254,6 +252,7 @@ public:
     bool scrollPageRight();
     
     bool hasContainedByFieldsetTrait();
+    bool hasTextEntryTrait();
     AccessibilityUIElement fieldsetAncestorElement();
     JSRetainPtr<JSStringRef> attributedStringForElement();
     
@@ -300,6 +299,7 @@ public:
     bool setSelectedTextMarkerRange(AccessibilityTextMarkerRange*);
     bool replaceTextInRange(JSStringRef, int position, int length);
     bool insertText(JSStringRef);
+    AccessibilityTextMarkerRange textInputMarkedTextMarkerRange() const;
 
     JSRetainPtr<JSStringRef> stringForTextMarkerRange(AccessibilityTextMarkerRange*);
     JSRetainPtr<JSStringRef> attributedStringForTextMarkerRange(AccessibilityTextMarkerRange*);

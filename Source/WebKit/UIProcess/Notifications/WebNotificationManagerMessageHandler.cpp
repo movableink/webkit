@@ -39,11 +39,6 @@ WebNotificationManagerMessageHandler::WebNotificationManagerMessageHandler(WebPa
 {
 }
 
-void WebNotificationManagerMessageHandler::requestSystemNotificationPermission(const String&, CompletionHandler<void(bool)>&&)
-{
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
 void WebNotificationManagerMessageHandler::showNotification(IPC::Connection& connection, const WebCore::NotificationData& data, RefPtr<WebCore::NotificationResources>&& resources, CompletionHandler<void()>&& callback)
 {
     RELEASE_LOG(Push, "WebNotificationManagerMessageHandler showNotification called");
@@ -76,9 +71,9 @@ void WebNotificationManagerMessageHandler::clearNotifications(const Vector<WTF::
     pageNotifications.reserveInitialCapacity(notificationIDs.size());
     for (auto& notificationID : notificationIDs) {
         if (serviceWorkerNotificationHandler.handlesNotification(notificationID))
-            persistentNotifications.uncheckedAppend(notificationID);
+            persistentNotifications.append(notificationID);
         else
-            pageNotifications.uncheckedAppend(notificationID);
+            pageNotifications.append(notificationID);
     }
     if (!persistentNotifications.isEmpty())
         serviceWorkerNotificationHandler.clearNotifications(persistentNotifications);

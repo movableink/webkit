@@ -43,7 +43,7 @@ template<typename MessageType> inline auto MessageSender::sendSync(MessageType&&
     static_assert(MessageType::isSync);
     if (auto* connection = messageSenderConnection())
         return connection->sendSync(std::forward<MessageType>(message), destinationID, timeout, options);
-    return { nullptr, std::nullopt, Error::NoMessageSenderConnection };
+    return { Error::NoMessageSenderConnection };
 }
 
 template<typename MessageType, typename C> inline AsyncReplyID MessageSender::sendWithAsyncReply(MessageType&& message, C&& completionHandler, uint64_t destinationID, OptionSet<SendOption> options)
@@ -56,6 +56,31 @@ template<typename MessageType, typename C> inline AsyncReplyID MessageSender::se
     if (sendMessageWithAsyncReply(WTFMove(encoder), WTFMove(asyncHandler), options))
         return replyID;
     return { };
+}
+
+template<typename MessageType> inline bool MessageSender::sendWithoutUsingIPCConnection(MessageType&& message) const
+{
+    static_assert(!MessageType::isSync);
+    auto encoder = makeUniqueRef<IPC::Encoder>(MessageType::name(), messageSenderDestinationID());
+    encoder.get() << std::forward<MessageType>(message).arguments();
+
+    return performSendWithoutUsingIPCConnection(WTFMove(encoder));
+}
+
+template<typename MessageType, typename C> inline bool MessageSender::sendWithAsyncReplyWithoutUsingIPCConnection(MessageType&& message, C&& completionHandler) const
+{
+    static_assert(!MessageType::isSync);
+    auto encoder = makeUniqueRef<IPC::Encoder>(MessageType::name(), messageSenderDestinationID());
+    encoder.get() << std::forward<MessageType>(message).arguments();
+
+    auto asyncHandler = [completionHandler = std::forward<C>(completionHandler)] (Decoder* decoder) mutable {
+        if (decoder && decoder->isValid())
+            Connection::callReply<MessageType>(*decoder, WTFMove(completionHandler));
+        else
+            Connection::cancelReply<MessageType>(WTFMove(completionHandler));
+    };
+
+    return performSendWithAsyncReplyWithoutUsingIPCConnection(WTFMove(encoder), WTFMove(asyncHandler));
 }
 
 template<typename MessageType> inline bool MessageSender::send(MessageType&& message)

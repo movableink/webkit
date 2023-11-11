@@ -112,7 +112,7 @@ public:
 
     const std::optional<const Styleable> targetStyleable() const;
 
-    Vector<ComputedKeyframe> getKeyframes(Document&);
+    Vector<ComputedKeyframe> getKeyframes();
     ExceptionOr<void> setBindingsKeyframes(JSC::JSGlobalObject&, Document&, JSC::Strong<JSC::JSObject>&&);
     ExceptionOr<void> setKeyframes(JSC::JSGlobalObject&, Document&, JSC::Strong<JSC::JSObject>&&);
 
@@ -150,8 +150,8 @@ public:
 
     void computeDeclarativeAnimationBlendingKeyframes(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
     const KeyframeList& blendingKeyframes() const { return m_blendingKeyframes; }
-    const HashSet<AnimatableProperty>& animatedProperties();
-    bool animatesProperty(AnimatableProperty) const;
+    const HashSet<AnimatableCSSProperty>& animatedProperties();
+    bool animatesProperty(const AnimatableCSSProperty&) const;
 
     bool computeExtentOfTransformAnimation(LayoutRect&) const;
     bool computeTransformedExtentViaTransformList(const FloatRect&, const RenderStyle&, LayoutRect&) const;
@@ -216,7 +216,7 @@ private:
     Ref<const Animation> backingAnimationForCompositedRenderer() const;
     void computedNeedsForcedLayout();
     void computeStackingContextImpact();
-    void computeSomeKeyframesUseStepsTimingFunction();
+    void computeSomeKeyframesUseStepsOrLinearTimingFunctionWithPoints();
     void clearBlendingKeyframes();
     void updateBlendingKeyframes(RenderStyle& elementStyle, const Style::ResolutionContext&);
     void computeCSSAnimationBlendingKeyframes(const RenderStyle& unanimatedStyle, const Style::ResolutionContext&);
@@ -268,7 +268,7 @@ private:
 
     AtomString m_keyframesName;
     KeyframeList m_blendingKeyframes { emptyAtom() };
-    HashSet<AnimatableProperty> m_animatedProperties;
+    HashSet<AnimatableCSSProperty> m_animatedProperties;
     Vector<ParsedKeyframe> m_parsedKeyframes;
     Vector<AcceleratedAction> m_pendingAcceleratedActions;
     RefPtr<Element> m_target;
@@ -285,6 +285,7 @@ private:
     bool m_triggersStackingContext { false };
     size_t m_transformFunctionListsMatchPrefix { 0 };
     bool m_inTargetEffectStack { false };
+    bool m_someKeyframesUseLinearTimingFunctionWithPoints { false };
     bool m_someKeyframesUseStepsTimingFunction { false };
     bool m_hasImplicitKeyframeForAcceleratedProperty { false };
     bool m_hasKeyframeComposingAcceleratedProperty { false };

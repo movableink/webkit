@@ -42,12 +42,12 @@ static void removePrivilegedNoCORSRequestHeaders(HTTPHeaderMap& headers)
 static ExceptionOr<bool> canWriteHeader(const String& name, const String& value, const String& combinedValue, FetchHeaders::Guard guard)
 {
     if (!isValidHTTPToken(name))
-        return Exception { TypeError, makeString("Invalid header name: '", name, "'") };
-    ASSERT(value.isEmpty() || (!isHTTPSpace(value[0]) && !isHTTPSpace(value[value.length() - 1])));
+        return Exception { ExceptionCode::TypeError, makeString("Invalid header name: '", name, "'") };
+    ASSERT(value.isEmpty() || (!isASCIIWhitespaceWithoutFF(value[0]) && !isASCIIWhitespaceWithoutFF(value[value.length() - 1])));
     if (!isValidHTTPHeaderValue((value)))
-        return Exception { TypeError, makeString("Header '", name, "' has invalid value: '", value, "'") };
+        return Exception { ExceptionCode::TypeError, makeString("Header '", name, "' has invalid value: '", value, "'") };
     if (guard == FetchHeaders::Guard::Immutable)
-        return Exception { TypeError, "Headers object's guard is 'immutable'"_s };
+        return Exception { ExceptionCode::TypeError, "Headers object's guard is 'immutable'"_s };
     if (guard == FetchHeaders::Guard::Request && isForbiddenHeader(name, value))
         return false;
     if (guard == FetchHeaders::Guard::RequestNoCors && !isSimpleHeader(name, combinedValue))
@@ -60,9 +60,9 @@ static ExceptionOr<bool> canWriteHeader(const String& name, const String& value,
 static ExceptionOr<void> appendSetCookie(const String& value, Vector<String>& setCookieValues, FetchHeaders::Guard guard)
 {
     if (!isValidHTTPHeaderValue((value)))
-        return Exception { TypeError, makeString("Header 'Set-Cookie' has invalid value: '", value, "'") };
+        return Exception { ExceptionCode::TypeError, makeString("Header 'Set-Cookie' has invalid value: '", value, "'") };
     if (guard == FetchHeaders::Guard::Immutable)
-        return Exception { TypeError, "Headers object's guard is 'immutable'"_s };
+        return Exception { ExceptionCode::TypeError, "Headers object's guard is 'immutable'"_s };
 
     if (guard == FetchHeaders::Guard::None)
         setCookieValues.append(value);
@@ -72,7 +72,7 @@ static ExceptionOr<void> appendSetCookie(const String& value, Vector<String>& se
 
 static ExceptionOr<void> appendToHeaderMap(const String& name, const String& value, HTTPHeaderMap& headers, Vector<String>& setCookieValues, FetchHeaders::Guard guard)
 {
-    String normalizedValue = value.trim(isHTTPSpace);
+    String normalizedValue = value.trim(isASCIIWhitespaceWithoutFF<UChar>);
     if (equalIgnoringASCIICase(name, "set-cookie"_s))
         return appendSetCookie(normalizedValue, setCookieValues, guard);
 
@@ -95,7 +95,7 @@ static ExceptionOr<void> appendToHeaderMap(const String& name, const String& val
 static ExceptionOr<void> appendToHeaderMap(const HTTPHeaderMap::HTTPHeaderMapConstIterator::KeyValue& header, HTTPHeaderMap& headers, FetchHeaders::Guard guard)
 {
     ASSERT(!equalIgnoringASCIICase(header.key, "set-cookie"_s));
-    String normalizedValue = header.value.trim(isHTTPSpace);
+    String normalizedValue = header.value.trim(isASCIIWhitespaceWithoutFF<UChar>);
     auto canWriteResult = canWriteHeader(header.key, normalizedValue, header.value, guard);
     if (canWriteResult.hasException())
         return canWriteResult.releaseException();
@@ -119,7 +119,7 @@ static ExceptionOr<void> fillHeaderMap(HTTPHeaderMap& headers, Vector<String>& s
         auto& sequence = std::get<Vector<Vector<String>>>(headersInit);
         for (auto& header : sequence) {
             if (header.size() != 2)
-                return Exception { TypeError, "Header sub-sequence must contain exactly two items"_s };
+                return Exception { ExceptionCode::TypeError, "Header sub-sequence must contain exactly two items"_s };
             auto result = appendToHeaderMap(header[0], header[1], headers, setCookieValues, guard);
             if (result.hasException())
                 return result.releaseException();
@@ -181,9 +181,9 @@ ExceptionOr<void> FetchHeaders::append(const String& name, const String& value)
 ExceptionOr<void> FetchHeaders::remove(const String& name)
 {
     if (!isValidHTTPToken(name))
-        return Exception { TypeError, makeString("Invalid header name: '", name, "'") };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid header name: '", name, "'") };
     if (m_guard == FetchHeaders::Guard::Immutable)
-        return Exception { TypeError, "Headers object's guard is 'immutable'"_s };
+        return Exception { ExceptionCode::TypeError, "Headers object's guard is 'immutable'"_s };
     if (m_guard == FetchHeaders::Guard::Request && isForbiddenHeaderName(name))
         return { };
     if (m_guard == FetchHeaders::Guard::RequestNoCors && !isNoCORSSafelistedRequestHeaderName(name) && !isPriviledgedNoCORSRequestHeaderName(name))
@@ -206,7 +206,7 @@ ExceptionOr<void> FetchHeaders::remove(const String& name)
 ExceptionOr<String> FetchHeaders::get(const String& name) const
 {
     if (!isValidHTTPToken(name))
-        return Exception { TypeError, makeString("Invalid header name: '", name, "'") };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid header name: '", name, "'") };
 
     if (equalIgnoringASCIICase(name, "set-cookie"_s)) {
         if (m_setCookieValues.isEmpty())
@@ -230,7 +230,7 @@ const Vector<String>& FetchHeaders::getSetCookie() const
 ExceptionOr<bool> FetchHeaders::has(const String& name) const
 {
     if (!isValidHTTPToken(name))
-        return Exception { TypeError, makeString("Invalid header name: '", name, "'") };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid header name: '", name, "'") };
 
     if (equalIgnoringASCIICase(name, "set-cookie"_s))
         return !m_setCookieValues.isEmpty();
@@ -239,7 +239,7 @@ ExceptionOr<bool> FetchHeaders::has(const String& name) const
 
 ExceptionOr<void> FetchHeaders::set(const String& name, const String& value)
 {
-    String normalizedValue = value.trim(isHTTPSpace);
+    String normalizedValue = value.trim(isASCIIWhitespaceWithoutFF<UChar>);
     auto canWriteResult = canWriteHeader(name, normalizedValue, normalizedValue, m_guard);
     if (canWriteResult.hasException())
         return canWriteResult.releaseException();
@@ -262,7 +262,7 @@ ExceptionOr<void> FetchHeaders::set(const String& name, const String& value)
 void FetchHeaders::filterAndFill(const HTTPHeaderMap& headers, Guard guard)
 {
     for (auto& header : headers) {
-        String normalizedValue = header.value.trim(isHTTPSpace);
+        String normalizedValue = header.value.trim(isASCIIWhitespaceWithoutFF<UChar>);
         auto canWriteResult = canWriteHeader(header.key, normalizedValue, header.value, guard);
         if (canWriteResult.hasException())
             continue;
@@ -289,12 +289,12 @@ std::optional<KeyValuePair<String, String>> FetchHeaders::Iterator::next()
         bool hasSetCookie = !m_headers->m_setCookieValues.isEmpty();
         m_keys.resize(0);
         m_keys.reserveCapacity(m_headers->m_headers.size() + (hasSetCookie ? 1 : 0));
-        for (auto& header : m_headers->m_headers) {
+        m_keys.appendContainerWithMapping(m_headers->m_headers, [](auto& header) {
             ASSERT(!header.key.isNull());
-            m_keys.uncheckedAppend(header.key.convertToASCIILowercase());
-        }
+            return header.key.convertToASCIILowercase();
+        });
         if (hasSetCookie)
-            m_keys.uncheckedAppend(String());
+            m_keys.append(String());
         std::sort(m_keys.begin(), m_keys.end(), compareIteratorKeys);
 
         // We adjust the current index to work with Set-Cookie headers.

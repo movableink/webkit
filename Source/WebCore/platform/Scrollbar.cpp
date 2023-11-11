@@ -231,7 +231,7 @@ void Scrollbar::startTimerIfNeeded(Seconds delay)
 
     // We can't scroll if we've hit the beginning or end.
     ScrollDirection dir = pressedPartScrollDirection();
-    if (dir == ScrollUp || dir == ScrollLeft) {
+    if (dir == ScrollDirection::ScrollUp || dir == ScrollDirection::ScrollLeft) {
         if (m_currentPos == 0)
             return;
     } else {
@@ -252,12 +252,12 @@ ScrollDirection Scrollbar::pressedPartScrollDirection()
 {
     if (m_orientation == ScrollbarOrientation::Horizontal) {
         if (m_pressedPart == BackButtonStartPart || m_pressedPart == BackButtonEndPart || m_pressedPart == BackTrackPart)
-            return ScrollLeft;
-        return ScrollRight;
+            return ScrollDirection::ScrollLeft;
+        return ScrollDirection::ScrollRight;
     } else {
         if (m_pressedPart == BackButtonStartPart || m_pressedPart == BackButtonEndPart || m_pressedPart == BackTrackPart)
-            return ScrollUp;
-        return ScrollDown;
+            return ScrollDirection::ScrollUp;
+        return ScrollDirection::ScrollDown;
     }
 }
 
@@ -464,6 +464,7 @@ void Scrollbar::setEnabled(bool e)
         return;
     m_enabled = e;
     theme().updateEnabledState(*this);
+    m_scrollableArea.scrollbarsController().updateScrollbarEnabledState(*this);
     invalidate();
 }
 
@@ -553,6 +554,11 @@ float Scrollbar::deviceScaleFactor() const
 bool Scrollbar::shouldRegisterScrollbar() const
 {
     return m_scrollableArea.scrollbarsController().shouldRegisterScrollbars();
+}
+
+int Scrollbar::minimumThumbLength() const
+{
+    return m_scrollableArea.scrollbarsController().minimumThumbLength(m_orientation);
 }
 
 } // namespace WebCore

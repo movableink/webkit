@@ -133,6 +133,7 @@ public:
     // the list, it is moved to the end.
     AddResult appendOrMoveToLast(const ValueType&);
     AddResult appendOrMoveToLast(ValueType&&);
+    bool moveToLastIfPresent(const ValueType&);
 
     // Add the value to the beginning of the collection. If the value was already in
     // the list, it is moved to the beginning.
@@ -232,7 +233,7 @@ public:
     // postfix -- intentionally omitted
 
     // Comparison.
-    bool operator==(const iterator& other) const { return m_iterator == other.m_iterator; }
+    friend bool operator==(const iterator&, const iterator&) = default;
 
     operator const_iterator() const { return m_iterator; }
 
@@ -357,6 +358,7 @@ inline ListHashSet<T, U>::ListHashSet(std::initializer_list<T> initializerList)
 
 template<typename T, typename U>
 inline ListHashSet<T, U>::ListHashSet(const ListHashSet& other)
+    : ListHashSet<T, U>()
 {
     for (auto it = other.begin(), end = other.end(); it != end; ++it)
         add(*it);
@@ -581,6 +583,18 @@ auto ListHashSet<T, U>::appendOrMoveToLast(ValueType&& value) -> AddResult
     appendNode(node);
 
     return AddResult(makeIterator(*result.iterator), result.isNewEntry);
+}
+
+template<typename T, typename U>
+bool ListHashSet<T, U>::moveToLastIfPresent(const ValueType& value)
+{
+    auto iterator = m_impl.template find<BaseTranslator>(value);
+    if (iterator == m_impl.end())
+        return false;
+    Node* node = *iterator;
+    unlink(node);
+    appendNode(node);
+    return true;
 }
 
 template<typename T, typename U>

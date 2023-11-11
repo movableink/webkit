@@ -29,6 +29,7 @@
 #include "Connection.h"
 #include "Utilities.h"
 #include <optional>
+#include <wtf/Forward.h>
 
 namespace TestWebKitAPI {
 
@@ -37,7 +38,7 @@ std::optional<T> copyViaEncoder(const T& o)
 {
     IPC::Encoder encoder(static_cast<IPC::MessageName>(78), 0);
     encoder << o;
-    auto decoder = IPC::Decoder::create(encoder.buffer(), encoder.bufferSize(), encoder.releaseAttachments());
+    auto decoder = IPC::Decoder::create({ encoder.buffer(), encoder.bufferSize() }, encoder.releaseAttachments());
     return decoder->decode<T>();
 }
 
@@ -48,18 +49,23 @@ struct MessageInfo {
 
 struct MockTestMessage1 {
     static constexpr bool isSync = false;
+    static constexpr bool canDispatchOutOfOrder = true;
+    static constexpr bool replyCanDispatchOutOfOrder = false;
     static constexpr IPC::MessageName name()  { return static_cast<IPC::MessageName>(123); }
     std::tuple<> arguments() { return { }; }
 };
 
 struct MockTestMessageWithAsyncReply1 {
     static constexpr bool isSync = false;
+    static constexpr bool canDispatchOutOfOrder = false;
+    static constexpr bool replyCanDispatchOutOfOrder = false;
     static constexpr IPC::MessageName name()  { return static_cast<IPC::MessageName>(124); }
     // Just using WebPage_GetBytecodeProfileReply as something that is async message name.
     // If WebPage_GetBytecodeProfileReply is removed, just use another one.
     static constexpr IPC::MessageName asyncMessageReplyName() { return IPC::MessageName::WebPage_GetBytecodeProfileReply; }
     std::tuple<> arguments() { return { }; }
     using ReplyArguments = std::tuple<uint64_t>;
+    using Promise = WTF::NativePromise<uint64_t, IPC::Error>;
 };
 
 class MockConnectionClient final : public IPC::Connection::Client {

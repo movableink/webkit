@@ -1,4 +1,4 @@
-//@ runWebAssemblySuite("--useWebAssemblyTypedFunctionReferences=true", "--useWebAssemblyGC=true")
+//@ runWebAssemblySuite("--useWebAssemblyTypedFunctionReferences=true", "--useWebAssemblyGC=true", "--useWebAssemblyExtendedConstantExpressions=true")
 
 import * as assert from "../assert.js";
 import { compile, instantiate } from "./wast-wrapper.js";
@@ -147,7 +147,7 @@ function testStructJS() {
     m.exports.f(null);
   }
 
-  // JS API behavior not implemented yet, setting global errors for now.
+  // Test cast failure
   assert.throws(
     () => {
       let m = instantiate(`
@@ -159,7 +159,7 @@ function testStructJS() {
       m.exports.g.value = 42;
     },
     TypeError,
-    "Unsupported use of struct or array type"
+    "Argument value did not match reference type"
   )
 }
 
@@ -175,7 +175,7 @@ function testStructNew() {
      *   )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x06\x02\x60\x00\x00\x5f\x00\x03\x02\x01\x00\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x08\x01\x06\x00\xfb\x07\x01\x1a\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x06\x02\x60\x00\x00\x5f\x00\x03\x02\x01\x00\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x08\x01\x06\x00\xfb\x00\x01\x1a\x0b"));
     instance.exports.main();
   }
 
@@ -184,7 +184,7 @@ function testStructNew() {
       (type $Empty (struct))
       (func (export "main")
         (drop
-          (struct.new_canon $Empty)
+          (struct.new $Empty)
         )
       )
     )
@@ -193,11 +193,11 @@ function testStructNew() {
   instantiate(`
     (module
       ;; Also test with subtype.
-      (type (struct))
+      (type (sub (struct)))
       (type $Empty (sub 0 (struct)))
       (func (export "main")
         (drop
-          (struct.new_canon $Empty)
+          (struct.new $Empty)
         )
       )
     )
@@ -214,7 +214,7 @@ function testStructNew() {
      *   )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x60\x00\x00\x5f\x02\x7f\x00\x7f\x00\x03\x02\x01\x00\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0c\x01\x0a\x00\x41\x13\x41\x25\xfb\x07\x01\x1a\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x60\x00\x00\x5f\x02\x7f\x00\x7f\x00\x03\x02\x01\x00\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0c\x01\x0a\x00\x41\x13\x41\x25\xfb\x00\x01\x1a\x0b"));
     instance.exports.main();
 
     /*
@@ -231,7 +231,7 @@ function testStructNew() {
     assert.throws(
       () =>
         module(
-          "\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x60\x00\x00\x5f\x02\x7f\x00\x7f\x00\x03\x02\x01\x00\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0c\x01\x0a\x00\x41\x13\x41\x25\xfb\x07\x03\x1a\x0b"
+          "\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x60\x00\x00\x5f\x02\x7f\x00\x7f\x00\x03\x02\x01\x00\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0c\x01\x0a\x00\x41\x13\x41\x25\xfb\x00\x03\x1a\x0b"
         ),
       WebAssembly.CompileError,
       "WebAssembly.Module doesn't validate: struct.new index 3 is out of bound, in function at index 0 (evaluating 'new WebAssembly.Module(buffer)')"
@@ -263,7 +263,7 @@ function testStructNew() {
     assert.throws(
       () =>
         module(
-          "\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x60\x00\x00\x5f\x02\x7f\x00\x7f\x00\x03\x02\x01\x00\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0c\x01\x0a\x00\x00\x41\x13\x41\x25\xfb\x07\x02\x0b"
+          "\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x60\x00\x00\x5f\x02\x7f\x00\x7f\x00\x03\x02\x01\x00\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0c\x01\x0a\x00\x00\x41\x13\x41\x25\xfb\x00\x02\x0b"
         ),
       WebAssembly.CompileError,
       "WebAssembly.Module doesn't validate: struct.new index 2 is out of bound, in function at index 0 (evaluating 'new WebAssembly.Module(buffer)')"
@@ -275,7 +275,7 @@ function testStructNew() {
       (type $Point (struct (field $x i32) (field $y i32)))
       (func (export "main")
         unreachable
-        struct.new_canon $Point (i32.const 19) (i32.const 37)
+        struct.new $Point (i32.const 19) (i32.const 37)
       )
     )
   `);
@@ -287,7 +287,7 @@ function testStructNewDefault() {
       (type $Empty (struct))
       (func (export "main")
         (drop
-          (struct.new_canon_default $Empty)
+          (struct.new_default $Empty)
         )
       )
     )
@@ -296,11 +296,11 @@ function testStructNewDefault() {
   instantiate(`
     (module
       ;; Also test with subtype.
-      (type (struct))
+      (type (sub (struct)))
       (type $Empty (sub 0 (struct)))
       (func (export "main")
         (drop
-          (struct.new_canon_default $Empty)
+          (struct.new_default $Empty)
         )
       )
     )
@@ -311,7 +311,7 @@ function testStructNewDefault() {
        (type $Point (struct (field $x i32) (field $y i32)))
        (func (export "main")
          (drop
-           (struct.new_canon_default $Point)
+           (struct.new_default $Point)
          )
        )
      )
@@ -323,7 +323,7 @@ function testStructNewDefault() {
               (type $Point (struct (field $x (ref func))))
               (func (export "main")
                 (drop
-                  (struct.new_canon_default $Point)
+                  (struct.new_default $Point)
                 )
               )
             )
@@ -338,7 +338,7 @@ function testStructNewDefault() {
               (type $Point (struct (field $x i32) (field $y i32)))
               (func (export "main")
                 (drop
-                  (struct.new_canon_default 3)
+                  (struct.new_default 3)
                 )
               )
             )
@@ -353,7 +353,7 @@ function testStructNewDefault() {
               (type $Point (struct (field $x i32) (field $y i32)))
               (func (export "main")
                 unreachable
-                struct.new_canon_default 2
+                struct.new_default 2
               )
             )
          `),
@@ -376,7 +376,7 @@ function testStructGet() {
      *    )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x09\x02\x5f\x01\x7f\x00\x60\x00\x01\x7f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0d\x01\x0b\x00\x41\x25\xfb\x07\x00\xfb\x03\x00\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x09\x02\x5f\x01\x7f\x00\x60\x00\x01\x7f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0d\x01\x0b\x00\x41\x25\xfb\x00\x00\xfb\x02\x00\x00\x0b"));
     assert.eq(instance.exports.main(), 37);
   }
 
@@ -386,7 +386,7 @@ function testStructGet() {
         (type $Point (struct (field $x i32)))
          (func (export "main") (result i32)
            (struct.get $Point $x
-             (struct.new_canon $Point (i32.const 37))
+             (struct.new $Point (i32.const 37))
            )
          )
       )
@@ -400,7 +400,7 @@ function testStructGet() {
         (type $Point (struct (field $x i32)))
          (func (export "main") (result i32)
            (struct.get $Point $x
-             (struct.new_canon_default $Point)
+             (struct.new_default $Point)
            )
          )
       )
@@ -412,11 +412,11 @@ function testStructGet() {
     let main = instantiate(`
       (module
         ;; Test subtype case as well.
-        (type (struct (field i32)))
+        (type (sub (struct (field i32))))
         (type $Point (sub 0 (struct (field $x i32))))
          (func (export "main") (result i32)
            (struct.get $Point $x
-             (struct.new_canon $Point (i32.const 37))
+             (struct.new $Point (i32.const 37))
            )
          )
       )
@@ -437,7 +437,7 @@ function testStructGet() {
      *    )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x09\x02\x5f\x01\x7d\x00\x60\x00\x01\x7d\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x10\x01\x0e\x00\x43\x00\x00\x14\x42\xfb\x07\x00\xfb\x03\x00\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x09\x02\x5f\x01\x7d\x00\x60\x00\x01\x7d\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x10\x01\x0e\x00\x43\x00\x00\x14\x42\xfb\x00\x00\xfb\x02\x00\x00\x0b"));
     assert.eq(instance.exports.main(), 37);
   }
 
@@ -447,7 +447,7 @@ function testStructGet() {
         (type $Point (struct (field $x f32)))
          (func (export "main") (result f32)
            (struct.get $Point $x
-             (struct.new_canon_default $Point)
+             (struct.new_default $Point)
            )
          )
       )
@@ -471,7 +471,7 @@ function testStructGet() {
      *   )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x09\x02\x5f\x01\x7e\x00\x60\x00\x01\x7f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x10\x01\x0e\x00\x42\x25\x42\x25\xfb\x07\x00\xfb\x03\x00\x00\x51\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x09\x02\x5f\x01\x7e\x00\x60\x00\x01\x7f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x10\x01\x0e\x00\x42\x25\x42\x25\xfb\x00\x00\xfb\x02\x00\x00\x51\x0b"));
     assert.eq(instance.exports.main(), 1);
   }
 
@@ -483,7 +483,7 @@ function testStructGet() {
           (i64.eq
             (i64.const 0)
             (struct.get $Point $x
-              (struct.new_canon_default $Point)
+              (struct.new_default $Point)
             )
           )
         )
@@ -505,7 +505,7 @@ function testStructGet() {
      *    )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x09\x02\x5f\x01\x7c\x00\x60\x00\x01\x7c\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x14\x01\x12\x00\x44\x00\x00\x00\x00\x00\x80\x42\x40\xfb\x07\x00\xfb\x03\x00\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x09\x02\x5f\x01\x7c\x00\x60\x00\x01\x7c\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x14\x01\x12\x00\x44\x00\x00\x00\x00\x00\x80\x42\x40\xfb\x00\x00\xfb\x02\x00\x00\x0b"));
     assert.eq(instance.exports.main(), 37);
   }
 
@@ -515,7 +515,7 @@ function testStructGet() {
         (type $Point (struct (field $x f64)))
          (func (export "main") (result f64)
            (struct.get $Point $x
-             (struct.new_canon_default $Point)
+             (struct.new_default $Point)
            )
          )
       )
@@ -536,7 +536,7 @@ function testStructGet() {
      *    )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x5f\x01\x6f\x00\x60\x01\x6f\x01\x6f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0d\x01\x0b\x00\x20\x00\xfb\x07\x00\xfb\x03\x00\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x5f\x01\x6f\x00\x60\x01\x6f\x01\x6f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0d\x01\x0b\x00\x20\x00\xfb\x00\x00\xfb\x02\x00\x00\x0b"));
     let obj = {};
     assert.eq(instance.exports.main(obj), obj);
   }
@@ -547,7 +547,7 @@ function testStructGet() {
         (type $Point (struct (field $x externref)))
         (func (export "main") (result externref)
           (struct.get $Point $x
-            (struct.new_canon_default $Point)
+            (struct.new_default $Point)
           )
         )
       )
@@ -575,7 +575,7 @@ function testStructGet() {
      *    )
      * )
     */
-    let instance2 = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x5f\x01\x70\x00\x60\x01\x70\x01\x70\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0d\x01\x0b\x00\x20\x00\xfb\x07\x00\xfb\x03\x00\x00\x0b"));
+    let instance2 = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x5f\x01\x70\x00\x60\x01\x70\x01\x70\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0d\x01\x0b\x00\x20\x00\xfb\x00\x00\xfb\x02\x00\x00\x0b"));
     let foo = instance1.exports.f;
     assert.eq(instance2.exports.main(foo), foo);
   }
@@ -586,7 +586,7 @@ function testStructGet() {
         (type $Point (struct (field $x funcref)))
         (func (export "main") (result funcref)
           (struct.get $Point $x
-            (struct.new_canon_default $Point)
+            (struct.new_default $Point)
           )
         )
       )
@@ -607,7 +607,7 @@ function testStructGet() {
      *    )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0b\x02\x5f\x02\x7f\x00\x7f\x00\x60\x00\x01\x7f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0f\x01\x0d\x00\x41\x13\x41\x25\xfb\x07\x00\xfb\x03\x00\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0b\x02\x5f\x02\x7f\x00\x7f\x00\x60\x00\x01\x7f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x0f\x01\x0d\x00\x41\x13\x41\x25\xfb\x00\x00\xfb\x02\x00\x00\x0b"));
     assert.eq(instance.exports.main(), 19);
   }
 
@@ -624,7 +624,7 @@ function testStructGet() {
      *    )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0b\x02\x5f\x02\x7d\x00\x7d\x00\x60\x00\x01\x7d\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x15\x01\x13\x00\x43\x00\x00\x98\x41\x43\x00\x00\x14\x42\xfb\x07\x00\xfb\x03\x00\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0b\x02\x5f\x02\x7d\x00\x7d\x00\x60\x00\x01\x7d\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x15\x01\x13\x00\x43\x00\x00\x98\x41\x43\x00\x00\x14\x42\xfb\x00\x00\xfb\x02\x00\x00\x0b"));
     assert.eq(instance.exports.main(), 19);
   }
 
@@ -646,7 +646,7 @@ function testStructGet() {
      *    )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0f\x03\x5f\x02\x7f\x00\x7c\x00\x60\x00\x01\x7f\x60\x00\x01\x7c\x03\x03\x02\x01\x02\x07\x11\x02\x05\x67\x65\x74\x5f\x78\x00\x00\x05\x67\x65\x74\x5f\x79\x00\x01\x0a\x2b\x02\x14\x00\x41\x13\x44\x00\x00\x00\x00\x00\x80\x42\x40\xfb\x07\x00\xfb\x03\x00\x00\x0b\x14\x00\x41\x13\x44\x00\x00\x00\x00\x00\x80\x42\x40\xfb\x07\x00\xfb\x03\x00\x01\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0f\x03\x5f\x02\x7f\x00\x7c\x00\x60\x00\x01\x7f\x60\x00\x01\x7c\x03\x03\x02\x01\x02\x07\x11\x02\x05\x67\x65\x74\x5f\x78\x00\x00\x05\x67\x65\x74\x5f\x79\x00\x01\x0a\x2b\x02\x14\x00\x41\x13\x44\x00\x00\x00\x00\x00\x80\x42\x40\xfb\x00\x00\xfb\x02\x00\x00\x0b\x14\x00\x41\x13\x44\x00\x00\x00\x00\x00\x80\x42\x40\xfb\x00\x00\xfb\x02\x00\x01\x0b"));
     assert.eq(instance.exports.get_x(), 19);
     assert.eq(instance.exports.get_y(), 37);
   }
@@ -665,7 +665,7 @@ function testStructGet() {
      *   )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0b\x02\x5f\x02\x7f\x00\x7f\x00\x60\x00\x01\x7f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x10\x01\x0e\x00\x00\x41\x13\x41\x25\xfb\x07\x00\xfb\x03\x00\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0b\x02\x5f\x02\x7f\x00\x7f\x00\x60\x00\x01\x7f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x10\x01\x0e\x00\x00\x41\x13\x41\x25\xfb\x00\x00\xfb\x02\x00\x00\x0b"));
 
     /*
      * invalid type index for struct.get in unreachable context
@@ -683,7 +683,7 @@ function testStructGet() {
     assert.throws(
       () =>
         module(
-          "\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0b\x02\x5f\x02\x7f\x00\x7f\x00\x60\x00\x01\x7f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x10\x01\x0e\x00\x00\x41\x13\x41\x25\xfb\x07\x00\xfb\x03\x03\x00\x0b"
+          "\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0b\x02\x5f\x02\x7f\x00\x7f\x00\x60\x00\x01\x7f\x03\x02\x01\x01\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x00\x0a\x10\x01\x0e\x00\x00\x41\x13\x41\x25\xfb\x00\x00\xfb\x02\x03\x00\x0b"
         ),
       WebAssembly.CompileError,
       "WebAssembly.Module doesn't validate: struct.get index 3 is out of bound, in function at index 0 (evaluating 'new WebAssembly.Module(buffer)')"
@@ -767,7 +767,7 @@ function testStructSet() {
      *   )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0f\x03\x5f\x01\x7f\x01\x60\x01\x6b\x00\x01\x7f\x60\x00\x01\x7f\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x1c\x02\x10\x00\x20\x00\x41\x25\xfb\x06\x00\x00\x20\x00\xfb\x03\x00\x00\x0b\x09\x00\x41\x00\xfb\x07\x00\x10\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0f\x03\x5f\x01\x7f\x01\x60\x01\x64\x00\x01\x7f\x60\x00\x01\x7f\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x1c\x02\x10\x00\x20\x00\x41\x25\xfb\x05\x00\x00\x20\x00\xfb\x02\x00\x00\x0b\x09\x00\x41\x00\xfb\x00\x00\x10\x00\x0b"));
     assert.eq(instance.exports.main(), 37);
   }
 
@@ -787,7 +787,7 @@ function testStructSet() {
 
         (func (export "main") (result i32)
           (call $doTest
-            (struct.new_canon $Point (i32.const 0))
+            (struct.new $Point (i32.const 0))
           )
         )
       )
@@ -799,7 +799,7 @@ function testStructSet() {
     let main = instantiate(`
       (module
         ;; Test subtype case as well.
-        (type (struct (field (mut i32))))
+        (type (sub (struct (field (mut i32)))))
         (type $Point (sub 0 (struct (field $x (mut i32)))))
         (func $doTest (param $p (ref $Point)) (result i32)
           (struct.set $Point $x
@@ -813,7 +813,7 @@ function testStructSet() {
 
         (func (export "main") (result i32)
           (call $doTest
-            (struct.new_canon $Point (i32.const 0))
+            (struct.new $Point (i32.const 0))
           )
         )
       )
@@ -825,10 +825,10 @@ function testStructSet() {
   {
     let main = instantiate(`
       (module
-        (type $Point (struct (field $x (mut i32))))
+        (type $Point (sub (struct (field $x (mut i32)))))
         (type $Sub (sub 0 (struct (field (mut i32) (mut i32)))))
         (func $doTest (result i32) (local $p (ref null $Sub))
-          (local.set $p (struct.new_canon $Sub (i32.const 0) (i32.const 1)))
+          (local.set $p (struct.new $Sub (i32.const 0) (i32.const 1)))
           (struct.set $Point $x
             (local.get $p)
             (i32.const 37)
@@ -869,7 +869,7 @@ function testStructSet() {
      *   )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0f\x03\x5f\x01\x7d\x01\x60\x01\x6b\x00\x01\x7d\x60\x00\x01\x7d\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x22\x02\x13\x00\x20\x00\x43\x00\x00\x14\x42\xfb\x06\x00\x00\x20\x00\xfb\x03\x00\x00\x0b\x0c\x00\x43\x00\x00\x00\x00\xfb\x07\x00\x10\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0f\x03\x5f\x01\x7d\x01\x60\x01\x64\x00\x01\x7d\x60\x00\x01\x7d\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x22\x02\x13\x00\x20\x00\x43\x00\x00\x14\x42\xfb\x05\x00\x00\x20\x00\xfb\x02\x00\x00\x0b\x0c\x00\x43\x00\x00\x00\x00\xfb\x00\x00\x10\x00\x0b"));
     assert.eq(instance.exports.main(), 37);
   }
 
@@ -896,7 +896,7 @@ function testStructSet() {
      *   )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0f\x03\x5f\x01\x7e\x01\x60\x01\x6b\x00\x01\x7e\x60\x00\x01\x7e\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x1c\x02\x10\x00\x20\x00\x42\x25\xfb\x06\x00\x00\x20\x00\xfb\x03\x00\x00\x0b\x09\x00\x42\x00\xfb\x07\x00\x10\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0f\x03\x5f\x01\x7e\x01\x60\x01\x64\x00\x01\x7e\x60\x00\x01\x7e\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x1c\x02\x10\x00\x20\x00\x42\x25\xfb\x05\x00\x00\x20\x00\xfb\x02\x00\x00\x0b\x09\x00\x42\x00\xfb\x00\x00\x10\x00\x0b"));
     assert.eq(instance.exports.main() == 37, true);
   }
 
@@ -923,7 +923,7 @@ function testStructSet() {
      *   )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0f\x03\x5f\x01\x7c\x01\x60\x01\x6b\x00\x01\x7c\x60\x00\x01\x7c\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x2a\x02\x17\x00\x20\x00\x44\x00\x00\x00\x00\x00\x80\x42\x40\xfb\x06\x00\x00\x20\x00\xfb\x03\x00\x00\x0b\x10\x00\x44\x00\x00\x00\x00\x00\x00\x00\x00\xfb\x07\x00\x10\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0f\x03\x5f\x01\x7c\x01\x60\x01\x64\x00\x01\x7c\x60\x00\x01\x7c\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x2a\x02\x17\x00\x20\x00\x44\x00\x00\x00\x00\x00\x80\x42\x40\xfb\x05\x00\x00\x20\x00\xfb\x02\x00\x00\x0b\x10\x00\x44\x00\x00\x00\x00\x00\x00\x00\x00\xfb\x00\x00\x10\x00\x0b"));
     assert.eq(instance.exports.main(), 37);
   }
 
@@ -951,7 +951,7 @@ function testStructSet() {
      *   )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x11\x03\x5f\x01\x6f\x01\x60\x02\x6b\x00\x6f\x01\x6f\x60\x01\x6f\x01\x6f\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x1e\x02\x10\x00\x20\x00\x20\x01\xfb\x06\x00\x00\x20\x00\xfb\x03\x00\x00\x0b\x0b\x00\xd0\x6f\xfb\x07\x00\x20\x00\x10\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x11\x03\x5f\x01\x6f\x01\x60\x02\x64\x00\x6f\x01\x6f\x60\x01\x6f\x01\x6f\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x1e\x02\x10\x00\x20\x00\x20\x01\xfb\x05\x00\x00\x20\x00\xfb\x02\x00\x00\x0b\x0b\x00\xd0\x6f\xfb\x00\x00\x20\x00\x10\x00\x0b"));
     let obj = {};
     assert.eq(instance.exports.main(obj), obj);
   }
@@ -987,7 +987,7 @@ function testStructSet() {
      *   )
      * )
     */
-    let instance2 = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x11\x03\x5f\x01\x70\x01\x60\x02\x6b\x00\x70\x01\x70\x60\x01\x70\x01\x70\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x1e\x02\x10\x00\x20\x00\x20\x01\xfb\x06\x00\x00\x20\x00\xfb\x03\x00\x00\x0b\x0b\x00\xd0\x70\xfb\x07\x00\x20\x00\x10\x00\x0b"));
+    let instance2 = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x11\x03\x5f\x01\x70\x01\x60\x02\x64\x00\x70\x01\x70\x60\x01\x70\x01\x70\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x1e\x02\x10\x00\x20\x00\x20\x01\xfb\x05\x00\x00\x20\x00\xfb\x02\x00\x00\x0b\x0b\x00\xd0\x70\xfb\x00\x00\x20\x00\x10\x00\x0b"));
     let foo = instance1.exports.f;
     assert.eq(instance2.exports.main(foo), foo);
   }
@@ -1016,7 +1016,7 @@ function testStructSet() {
      *   )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x12\x03\x5f\x02\x7f\x01\x7f\x01\x60\x02\x6b\x00\x7f\x01\x7f\x60\x00\x01\x7f\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x20\x02\x10\x00\x20\x00\x20\x01\xfb\x06\x00\x01\x20\x00\xfb\x03\x00\x01\x0b\x0d\x00\x41\x00\x41\x00\xfb\x07\x00\x41\x13\x10\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x12\x03\x5f\x02\x7f\x01\x7f\x01\x60\x02\x64\x00\x7f\x01\x7f\x60\x00\x01\x7f\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x20\x02\x10\x00\x20\x00\x20\x01\xfb\x05\x00\x01\x20\x00\xfb\x02\x00\x01\x0b\x0d\x00\x41\x00\x41\x00\xfb\x00\x00\x41\x13\x10\x00\x0b"));
     assert.eq(instance.exports.main(), 19);
   }
 
@@ -1044,7 +1044,7 @@ function testStructSet() {
      *   )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x12\x03\x5f\x02\x7f\x01\x7e\x01\x60\x02\x6b\x00\x7f\x01\x7f\x60\x00\x01\x7f\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x20\x02\x10\x00\x20\x00\x20\x01\xfb\x06\x00\x00\x20\x00\xfb\x03\x00\x00\x0b\x0d\x00\x41\x00\x42\x00\xfb\x07\x00\x41\x13\x10\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x12\x03\x5f\x02\x7f\x01\x7e\x01\x60\x02\x64\x00\x7f\x01\x7f\x60\x00\x01\x7f\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x20\x02\x10\x00\x20\x00\x20\x01\xfb\x05\x00\x00\x20\x00\xfb\x02\x00\x00\x0b\x0d\x00\x41\x00\x42\x00\xfb\x00\x00\x41\x13\x10\x00\x0b"));
     assert.eq(instance.exports.main(), 19);
   }
 
@@ -1074,7 +1074,7 @@ function testStructSet() {
     assert.throws(
       () =>
         module(
-          "\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0f\x03\x5f\x01\x7f\x00\x60\x01\x6b\x00\x01\x7f\x60\x00\x01\x7f\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x1c\x02\x10\x00\x20\x00\x41\x25\xfb\x06\x00\x00\x20\x00\xfb\x03\x00\x00\x0b\x09\x00\x41\x00\xfb\x07\x00\x10\x00\x0b"
+          "\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0f\x03\x5f\x01\x7f\x00\x60\x01\x64\x00\x01\x7f\x60\x00\x01\x7f\x03\x03\x02\x01\x02\x07\x08\x01\x04\x6d\x61\x69\x6e\x00\x01\x0a\x1c\x02\x10\x00\x20\x00\x41\x25\xfb\x05\x00\x00\x20\x00\xfb\x02\x00\x00\x0b\x09\x00\x41\x00\xfb\x00\x00\x10\x00\x0b"
         ),
       WebAssembly.CompileError,
       "WebAssembly.Module doesn't parse at byte 9: the field 0 can't be set because it is immutable, in function at index 0 (evaluating 'new WebAssembly.Module(buffer)')"
@@ -1100,7 +1100,7 @@ function testStructSet() {
      *   )
      * )
     */
-    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0b\x02\x5f\x01\x7f\x01\x60\x01\x6b\x00\x01\x7f\x03\x02\x01\x01\x0a\x13\x01\x11\x00\x00\x20\x00\x41\x25\xfb\x06\x00\x00\x20\x00\xfb\x03\x00\x00\x0b"));
+    let instance = new WebAssembly.Instance(module("\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0b\x02\x5f\x01\x7f\x01\x60\x01\x64\x00\x01\x7f\x03\x02\x01\x01\x0a\x13\x01\x11\x00\x00\x20\x00\x41\x25\xfb\x05\x00\x00\x20\x00\xfb\x02\x00\x00\x0b"));
 
     /*
      * invalid type index for struct.set in unreachable context
@@ -1122,7 +1122,7 @@ function testStructSet() {
     assert.throws(
       () =>
         module(
-          "\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0b\x02\x5f\x01\x7f\x01\x60\x01\x6b\x00\x01\x7f\x03\x02\x01\x01\x0a\x13\x01\x11\x00\x00\x20\x00\x41\x25\xfb\x06\x00\x00\x20\x00\xfb\x03\x05\x00\x0b"
+          "\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0b\x02\x5f\x01\x7f\x01\x60\x01\x64\x00\x01\x7f\x03\x02\x01\x01\x0a\x13\x01\x11\x00\x00\x20\x00\x41\x25\xfb\x05\x00\x00\x20\x00\xfb\x02\x05\x00\x0b"
         ),
       WebAssembly.CompileError,
       "WebAssembly.Module doesn't validate: struct.get index 5 is out of bound, in function at index 0 (evaluating 'new WebAssembly.Module(buffer)')"
@@ -1162,7 +1162,7 @@ function testStructTable() {
         (type (struct (field i32)))
         (table 10 (ref null 0))
         (func (export "set") (param i32) (result)
-          (table.set (local.get 0) (struct.new_canon 0 (i32.const 42))))
+          (table.set (local.get 0) (struct.new 0 (i32.const 42))))
         (func (export "get") (param i32) (result i32)
           (struct.get 0 0 (table.get (local.get 0)))
           )
@@ -1206,13 +1206,13 @@ function testStructTable() {
         (table (export "t") 10 (ref null 0))
         (start 0)
         (func
-          (table.fill (i32.const 0) (struct.new_canon 0) (i32.const 10)))
-        (func (export "makeStruct") (result (ref 0)) (struct.new_canon 0)))
+          (table.fill (i32.const 0) (struct.new 0) (i32.const 10)))
+        (func (export "makeStruct") (result (ref 0)) (struct.new 0)))
     `);
     const m2 = instantiate(`
       (module
         (type (array i32))
-        (func (export "makeArray") (result (ref 0)) (array.new_canon_default 0 (i32.const 5))))
+        (func (export "makeArray") (result (ref 0)) (array.new_default 0 (i32.const 5))))
     `);
     assert.eq(m.exports.t.get(0) !== null, true);
     assert.throws(
@@ -1238,6 +1238,149 @@ function testStructTable() {
   }
 }
 
+function testStructPacked() {
+  compile(`
+    (module (type (struct (field i8))))
+  `);
+
+  compile(`
+    (module (type (struct (field i16))))
+  `);
+
+  {
+    const m = instantiate(`
+      (module (type (struct (field i8)))
+        (global (ref 0) (struct.new 0 (i32.const 257)))
+        (func (export "f1") (result i32)
+          (struct.get_s 0 0 (global.get 0)))
+        (func (export "f2") (result i32)
+          (struct.get_u 0 0 (global.get 0))))
+    `);
+    assert.eq(m.exports.f1(), 1);
+    assert.eq(m.exports.f2(), 1);
+  }
+
+  {
+    const m = instantiate(`
+      (module (type (struct (field i8)))
+        (global (ref 0) (struct.new 0 (i32.const 255)))
+        (func (export "f1") (result i32)
+          (struct.get_s 0 0 (global.get 0)))
+        (func (export "f2") (result i32)
+          (struct.get_u 0 0 (global.get 0))))
+    `);
+    assert.eq(m.exports.f1(), -1);
+    assert.eq(m.exports.f2(), 255);
+  }
+
+  assert.throws(
+    () => instantiate(`
+      (module (type (struct (field i8)))
+        (global (ref 0) (struct.new 0 (i32.const 257)))
+        (func (export "f") (result i32)
+          (struct.get 0 0 (global.get 0))))
+    `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't parse at byte 7: struct.get applied to packed array of I8 -- use struct.get_s or struct.get_u, in function at index 0"
+  );
+
+  {
+    const m = instantiate(`
+      (module (type (struct (field i16)))
+        (global (ref 0) (struct.new 0 (i32.const 65537)))
+        (func (export "f1") (result i32)
+          (struct.get_s 0 0 (global.get 0)))
+        (func (export "f2") (result i32)
+          (struct.get_u 0 0 (global.get 0))))
+    `);
+    assert.eq(m.exports.f1(), 1);
+    assert.eq(m.exports.f2(), 1);
+  }
+
+  {
+    const m = instantiate(`
+      (module (type (struct (field i16)))
+        (global (ref 0) (struct.new 0 (i32.const 65535)))
+        (func (export "f1") (result i32)
+          (struct.get_s 0 0 (global.get 0)))
+        (func (export "f2") (result i32)
+          (struct.get_u 0 0 (global.get 0))))
+    `);
+    assert.eq(m.exports.f1(), -1);
+    assert.eq(m.exports.f2(), 65535);
+  }
+
+  {
+    const m = instantiate(`
+      (module (type (struct (field i8 i16 i8 i16)))
+        (global (ref 0) (struct.new 0 (i32.const 1) (i32.const 2) (i32.const 3) (i32.const 4)))
+        (func (export "f0") (result i32)
+          (struct.get_s 0 0 (global.get 0)))
+        (func (export "f1") (result i32)
+          (struct.get_s 0 1 (global.get 0)))
+        (func (export "f2") (result i32)
+          (struct.get_u 0 2 (global.get 0)))
+        (func (export "f3") (result i32)
+          (struct.get_u 0 3 (global.get 0))))
+    `);
+    assert.eq(m.exports.f0(), 1);
+    assert.eq(m.exports.f1(), 2);
+    assert.eq(m.exports.f2(), 3);
+    assert.eq(m.exports.f3(), 4);
+  }
+
+  {
+    const m = instantiate(`
+      (module (type (struct (field (mut i8))))
+        (global (ref 0) (struct.new 0 (i32.const 42)))
+        (func (export "f") (result i32)
+          (struct.set 0 0 (global.get 0) (i32.const 84))
+          (struct.get_u 0 0 (global.get 0))))
+    `);
+    assert.eq(m.exports.f(), 84);
+  }
+
+  {
+    const m = instantiate(`
+      (module (type (struct (field (mut i16))))
+        (global (ref 0) (struct.new 0 (i32.const 42)))
+        (func (export "f") (result i32)
+          (struct.set 0 0 (global.get 0) (i32.const 84))
+          (struct.get_u 0 0 (global.get 0))))
+    `);
+    assert.eq(m.exports.f(), 84);
+  }
+
+  {
+    const m = instantiate(`
+      (module (type (struct (field (mut i8) (mut i16) (mut i8) (mut i16))))
+        (global (ref 0) (struct.new_default 0))
+        (func (export "init")
+          (struct.set 0 0 (global.get 0) (i32.const 1))
+          (struct.set 0 1 (global.get 0) (i32.const 2))
+          (struct.set 0 2 (global.get 0) (i32.const 3))
+          (struct.set 0 3 (global.get 0) (i32.const 4)))
+        (func (export "f0") (result i32)
+          (struct.get_u 0 0 (global.get 0)))
+        (func (export "f1") (result i32)
+          (struct.get_u 0 1 (global.get 0)))
+        (func (export "f2") (result i32)
+          (struct.get_u 0 2 (global.get 0)))
+        (func (export "f3") (result i32)
+          (struct.get_u 0 3 (global.get 0))))
+    `);
+    assert.eq(m.exports.f0(), 0);
+    assert.eq(m.exports.f1(), 0);
+    assert.eq(m.exports.f2(), 0);
+    assert.eq(m.exports.f3(), 0);
+    m.exports.init();
+    assert.eq(m.exports.f0(), 1);
+    assert.eq(m.exports.f1(), 2);
+    assert.eq(m.exports.f2(), 3);
+    assert.eq(m.exports.f3(), 4);
+  }
+}
+
 testStructDeclaration();
 testStructJS();
 testStructNew();
@@ -1245,3 +1388,4 @@ testStructNewDefault();
 testStructGet();
 testStructSet();
 testStructTable();
+testStructPacked();

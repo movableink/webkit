@@ -21,7 +21,7 @@
 #include "SVGResourcesCache.h"
 
 #include "ElementInlines.h"
-#include "RenderSVGResourceContainer.h"
+#include "LegacyRenderSVGResourceContainer.h"
 #include "SVGRenderStyle.h"
 #include "SVGResources.h"
 #include "SVGResourcesCycleSolver.h"
@@ -37,8 +37,8 @@ void SVGResourcesCache::addResourcesFromRenderer(RenderElement& renderer, const 
     ASSERT(!m_cache.contains(&renderer));
 
     // Build a list of all resources associated with the passed RenderObject
-    auto newResources = makeUnique<SVGResources>();
-    if (!newResources->buildCachedResources(renderer, style))
+    auto newResources = SVGResources::buildCachedResources(renderer, style);
+    if (!newResources)
         return;
 
     // Put object in cache.
@@ -48,7 +48,7 @@ void SVGResourcesCache::addResourcesFromRenderer(RenderElement& renderer, const 
     SVGResourcesCycleSolver::resolveCycles(renderer, resources);
 
     // Walk resources and register the render object at each resources.
-    WeakHashSet<RenderSVGResourceContainer> resourceSet;
+    WeakHashSet<LegacyRenderSVGResourceContainer> resourceSet;
     resources.buildSetOfResources(resourceSet);
 
     for (auto& resourceContainer : resourceSet)
@@ -62,7 +62,7 @@ void SVGResourcesCache::removeResourcesFromRenderer(RenderElement& renderer)
         return;
 
     // Walk resources and register the render object at each resources.
-    WeakHashSet<RenderSVGResourceContainer> resourceSet;
+    WeakHashSet<LegacyRenderSVGResourceContainer> resourceSet;
     resources->buildSetOfResources(resourceSet);
 
     for (auto& resourceContainer : resourceSet)
@@ -79,7 +79,7 @@ SVGResources* SVGResourcesCache::cachedResourcesForRenderer(const RenderElement&
     return resourcesCacheFromRenderer(renderer).m_cache.get(&renderer);
 }
 
-static bool hasPaintResourceRequiringRemovalOnClientLayoutChange(RenderSVGResource* resource)
+static bool hasPaintResourceRequiringRemovalOnClientLayoutChange(LegacyRenderSVGResource* resource)
 {
     return resource && resource->resourceType() == PatternResourceType;
 }
@@ -103,11 +103,13 @@ void SVGResourcesCache::clientLayoutChanged(RenderElement& renderer)
 
 static inline bool rendererCanHaveResources(RenderObject& renderer)
 {
-    return renderer.node() && renderer.node()->isSVGElement() && !renderer.isSVGInlineText();
+    return renderer.node() && renderer.node()->isSVGElement() && !renderer.isRenderSVGInlineText();
 }
 
 void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDifference diff, const RenderStyle* oldStyle, const RenderStyle& newStyle)
 {
+    ASSERT(!renderer.element() || renderer.element()->isSVGElement());
+
     if (!renderer.parent())
         return;
 
@@ -121,7 +123,7 @@ void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDiffere
     // so we don't return early just when diff == StyleDifference::Equal. But
     // this isn't necessary for filter primitives, to which the filter property
     // doesn't apply, so we check for it here too.
-    if (renderer.isSVGResourceFilterPrimitive() && (diff == StyleDifference::Equal || diff == StyleDifference::Repaint || diff == StyleDifference::RepaintIfText))
+    if (renderer.isRenderSVGResourceFilterPrimitive() && (diff == StyleDifference::Equal || diff == StyleDifference::Repaint || diff == StyleDifference::RepaintIfText))
         return;
 
     auto& cache = resourcesCacheFromRenderer(renderer);
@@ -164,10 +166,7 @@ void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDiffere
         cache.addResourcesFromRenderer(renderer, newStyle);
     }
 
-    RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer, false);
-
-    if (renderer.element() && !renderer.element()->isSVGElement())
-        renderer.element()->invalidateStyle();
+    LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer, false);
 }
 
 void SVGResourcesCache::clientWasAddedToTree(RenderObject& renderer)
@@ -175,7 +174,7 @@ void SVGResourcesCache::clientWasAddedToTree(RenderObject& renderer)
     if (renderer.isAnonymous())
         return;
 
-    RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer, false);
+    LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer, false);
 
     if (!rendererCanHaveResources(renderer))
         return;
@@ -188,7 +187,7 @@ void SVGResourcesCache::clientWillBeRemovedFromTree(RenderObject& renderer)
     if (renderer.isAnonymous())
         return;
 
-    RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer, false);
+    LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer, false);
 
     if (!rendererCanHaveResources(renderer))
         return;
@@ -204,7 +203,7 @@ void SVGResourcesCache::clientDestroyed(RenderElement& renderer)
     resourcesCacheFromRenderer(renderer).removeResourcesFromRenderer(renderer);
 }
 
-void SVGResourcesCache::resourceDestroyed(RenderSVGResourceContainer& resource)
+void SVGResourcesCache::resourceDestroyed(LegacyRenderSVGResourceContainer& resource)
 {
     auto& cache = resourcesCacheFromRenderer(resource);
 

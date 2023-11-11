@@ -21,6 +21,7 @@
 
 #include "TextureMapperTiledBackingStore.h"
 
+#include "BitmapTexture.h"
 #include "ImageBuffer.h"
 #include "ImageObserver.h"
 #include "TextureMapper.h"
@@ -36,8 +37,8 @@ void TextureMapperTiledBackingStore::updateContentsFromImageIfNeeded(TextureMapp
 
     updateContents(textureMapper, m_image.get(), m_image->size(), enclosingIntRect(m_image->rect()));
 
-    if (m_image->imageObserver())
-        m_image->imageObserver()->didDraw(*m_image);
+    if (auto observer = m_image->imageObserver())
+        observer->didDraw(*m_image);
     m_image = nullptr;
 }
 
@@ -51,7 +52,7 @@ void TextureMapperTiledBackingStore::paintToTextureMapper(TextureMapper& texture
     updateContentsFromImageIfNeeded(textureMapper);
     TransformationMatrix adjustedTransform = transform * adjustedTransformForRect(targetRect);
     for (auto& tile : m_tiles)
-        tile.paint(textureMapper, adjustedTransform, opacity, calculateExposedTileEdges(rect(), tile.rect()));
+        tile.paint(textureMapper, adjustedTransform, opacity, allTileEdgesExposed(rect(), tile.rect()));
 }
 
 void TextureMapperTiledBackingStore::drawBorder(TextureMapper& textureMapper, const Color& borderColor, float borderWidth, const FloatRect& targetRect, const TransformationMatrix& transform)
@@ -153,14 +154,14 @@ void TextureMapperTiledBackingStore::updateContents(TextureMapper& textureMapper
 {
     createOrDestroyTilesIfNeeded(totalSize, textureMapper.maxTextureSize(), !image->currentFrameKnownToBeOpaque());
     for (auto& tile : m_tiles)
-        tile.updateContents(textureMapper, image, dirtyRect);
+        tile.updateContents(image, dirtyRect);
 }
 
 void TextureMapperTiledBackingStore::updateContents(TextureMapper& textureMapper, GraphicsLayer* sourceLayer, const FloatSize& totalSize, const IntRect& dirtyRect)
 {
     createOrDestroyTilesIfNeeded(totalSize, textureMapper.maxTextureSize(), true);
     for (auto& tile : m_tiles)
-        tile.updateContents(textureMapper, sourceLayer, dirtyRect, m_contentsScale);
+        tile.updateContents(sourceLayer, dirtyRect, m_contentsScale);
 }
 
 } // namespace WebCore

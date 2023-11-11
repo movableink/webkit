@@ -61,8 +61,6 @@ NetworkDataTaskCurl::NetworkDataTaskCurl(NetworkSession& session, NetworkDataTas
     , m_shouldRelaxThirdPartyCookieBlocking(parameters.shouldRelaxThirdPartyCookieBlocking)
     , m_sourceOrigin(parameters.sourceOrigin)
 {
-    m_session->registerNetworkDataTask(*this);
-
     auto request = parameters.request;
     if (request.url().protocolIsInHTTPFamily()) {
         if (m_storedCredentialsPolicy == StoredCredentialsPolicy::Use) {
@@ -143,7 +141,7 @@ Ref<CurlRequest> NetworkDataTaskCurl::createCurlRequest(ResourceRequest&& reques
     // Creates a CurlRequest in suspended state.
     // Then, NetworkDataTaskCurl::resume() will be called and communication resumes.
     const auto captureMetrics = shouldCaptureExtraNetworkLoadMetrics() ? CurlRequest::CaptureNetworkLoadMetrics::Extended : CurlRequest::CaptureNetworkLoadMetrics::Basic;
-    return CurlRequest::create(request, *this, CurlRequest::EnableMultipart::No, captureMetrics);
+    return CurlRequest::create(request, *this, captureMetrics);
 }
 
 void NetworkDataTaskCurl::curlDidSendData(CurlRequest&, unsigned long long totalBytesSent, unsigned long long totalBytesExpectedToSend)
@@ -187,7 +185,7 @@ void NetworkDataTaskCurl::curlDidReceiveResponse(CurlRequest& request, CurlRespo
     invokeDidReceiveResponse();
 }
 
-void NetworkDataTaskCurl::curlDidReceiveData(CurlRequest&, const SharedBuffer& buffer)
+void NetworkDataTaskCurl::curlDidReceiveData(CurlRequest&, Ref<SharedBuffer>&& buffer)
 {
     Ref protectedThis { *this };
     if (state() == State::Canceling || state() == State::Completed || (!m_client && !isDownload()))
@@ -197,7 +195,7 @@ void NetworkDataTaskCurl::curlDidReceiveData(CurlRequest&, const SharedBuffer& b
         auto* download = m_session->networkProcess().downloadManager().download(m_pendingDownloadID);
         RELEASE_ASSERT(download);
         uint64_t bytesWritten = 0;
-        for (auto& segment : buffer) {
+        for (auto& segment : buffer.get()) {
             if (-1 == FileSystem::writeToFile(m_downloadDestinationFile, segment.segment->data(), segment.segment->size())) {
                 download->didFail(ResourceError(CURLE_WRITE_ERROR, m_response.url()), IPC::DataReference());
                 invalidateAndCancel();
@@ -210,7 +208,7 @@ void NetworkDataTaskCurl::curlDidReceiveData(CurlRequest&, const SharedBuffer& b
         return;
     }
 
-    m_client->didReceiveData(buffer);
+    m_client->didReceiveData(buffer.get());
 }
 
 void NetworkDataTaskCurl::curlDidComplete(CurlRequest&, NetworkLoadMetrics&& networkLoadMetrics)
@@ -230,15 +228,6 @@ void NetworkDataTaskCurl::curlDidComplete(CurlRequest&, NetworkLoadMetrics&& net
     updateNetworkLoadMetrics(networkLoadMetrics);
 
     m_client->didCompleteWithError({ }, WTFMove(networkLoadMetrics));
-}
-
-void NetworkDataTaskCurl::deleteDownloadFile()
-{
-    if (FileSystem::isHandleValid(m_downloadDestinationFile)) {
-        FileSystem::closeFile(m_downloadDestinationFile);
-        FileSystem::deleteFile(m_pendingDownloadLocation);
-        m_downloadDestinationFile = FileSystem::invalidPlatformFileHandle;
-    }
 }
 
 void NetworkDataTaskCurl::curlDidFailWithError(CurlRequest& request, ResourceError&& resourceError, CertificateInfo&& certificateInfo)
@@ -313,7 +302,7 @@ void NetworkDataTaskCurl::invokeDidReceiveResponse()
             invalidateAndCancel();
             break;
         case PolicyAction::Download: {
-            m_downloadDestinationFile = FileSystem::openFile(m_pendingDownloadLocation, FileSystem::FileOpenMode::Truncate);
+            m_downloadDestinationFile = FileSystem::openFile(m_pendingDownloadLocation, FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::All, !m_allowOverwriteDownload);
             if (!FileSystem::isHandleValid(m_downloadDestinationFile)) {
                 if (m_client)
                     m_client->didCompleteWithError(ResourceError(CURLE_WRITE_ERROR, m_response.url()));
@@ -346,8 +335,13 @@ void NetworkDataTaskCurl::willPerformHTTPRedirection()
         return;
     }
 
-    ResourceRequest request = m_firstRequest;
     URL redirectedURL = URL(m_response.url(), m_response.httpHeaderField(HTTPHeaderName::Location));
+    if (redirectedURL.protocolIsFile()) {
+        m_client->didCompleteWithError(ResourceError(CURLE_FILE_COULDNT_READ_FILE, m_response.url()));
+        return;
+    }
+
+    ResourceRequest request = m_firstRequest;
     if (!redirectedURL.hasFragmentIdentifier() && request.url().hasFragmentIdentifier())
         redirectedURL.setFragmentIdentifier(request.url().fragmentIdentifier());
     request.setURL(redirectedURL);
@@ -557,18 +551,6 @@ void NetworkDataTaskCurl::handleCookieHeaders(const WebCore::ResourceRequest& re
     }
 }
 
-String NetworkDataTaskCurl::suggestedFilename() const
-{
-    if (!m_suggestedFilename.isEmpty())
-        return m_suggestedFilename;
-
-    String suggestedFilename = m_response.suggestedFilename();
-    if (!suggestedFilename.isEmpty())
-        return suggestedFilename;
-
-    return PAL::decodeURLEscapeSequences(m_response.url().lastPathComponent());
-}
-
 void NetworkDataTaskCurl::blockCookies()
 {
 #if ENABLE(TRACKING_PREVENTION)
@@ -617,6 +599,33 @@ void NetworkDataTaskCurl::updateNetworkLoadMetrics(WebCore::NetworkLoadMetrics& 
     networkLoadMetrics.redirectCount = m_redirectCount;
     networkLoadMetrics.failsTAOCheck = m_failsTAOCheck;
     networkLoadMetrics.hasCrossOriginRedirect = m_hasCrossOriginRedirect;
+}
+
+void NetworkDataTaskCurl::setPendingDownloadLocation(const String& filename, SandboxExtension::Handle&& sandboxExtensionHandle, bool allowOverwrite)
+{
+    NetworkDataTask::setPendingDownloadLocation(filename, WTFMove(sandboxExtensionHandle), allowOverwrite);
+    m_allowOverwriteDownload = allowOverwrite;
+}
+
+String NetworkDataTaskCurl::suggestedFilename() const
+{
+    if (!m_suggestedFilename.isEmpty())
+        return m_suggestedFilename;
+
+    String suggestedFilename = m_response.suggestedFilename();
+    if (!suggestedFilename.isEmpty())
+        return suggestedFilename;
+
+    return PAL::decodeURLEscapeSequences(m_response.url().lastPathComponent());
+}
+
+void NetworkDataTaskCurl::deleteDownloadFile()
+{
+    if (FileSystem::isHandleValid(m_downloadDestinationFile)) {
+        FileSystem::closeFile(m_downloadDestinationFile);
+        FileSystem::deleteFile(m_pendingDownloadLocation);
+        m_downloadDestinationFile = FileSystem::invalidPlatformFileHandle;
+    }
 }
 
 } // namespace WebKit

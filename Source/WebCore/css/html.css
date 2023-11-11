@@ -102,6 +102,7 @@ hr {
     display: block;
     overflow: hidden;
     unicode-bidi: isolate;
+    color: gray;
     margin-block-start: 0.5em;
     margin-block-end: 0.5em;
     margin-inline-start: auto;
@@ -398,11 +399,6 @@ button {
     appearance: auto;
 }
 
-/* Every time a new control is supported in vertical writing mode, it should be removed from here and added in the horizontalFormControls.css rule */
-select, button, input:is([type="button"], [type="submit"], [type="reset"], [type="file"]) {
-    writing-mode: horizontal-tb !important;
-}
-
 input, textarea, select, button {
     margin: 0__qem;
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
@@ -438,9 +434,10 @@ input {
     border-radius: 5px;
     border: 1px solid -apple-system-secondary-label;
     font: 11px system-ui;
-    padding: 0.2em 0.5em 0.3em 0.5em;
+    padding-block: 0.2em 0.3em;
+    padding-inline: 0.5em;
 #else
-    border: 2px inset;
+    border: 2px inset gray;
     padding: 1px;
 #endif
     -webkit-rtl-ordering: logical;
@@ -481,7 +478,8 @@ input[type="search"]::-webkit-search-results-decoration {
     display: block;
     flex: none;
     align-self: flex-start;
-    margin: auto 0;
+    margin-block: auto;
+    margin-inline: 0;
 }
 
 input[type="search"]::-webkit-search-results-button {
@@ -490,7 +488,8 @@ input[type="search"]::-webkit-search-results-button {
     flex: none;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     align-self: flex-start;
-    margin: auto 0;
+    margin-block: auto;
+    margin-inline: 0;
 #endif
 }
 
@@ -502,7 +501,8 @@ input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"], 
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     border: 1px solid -webkit-control-background;
     font-family: system-ui;
-    padding: 0.2em 0.5em;
+    padding-block: 0.2em;
+    padding-inline: 0.5em;
 #if defined(WTF_PLATFORM_VISION) && WTF_PLATFORM_VISION
     background-color: rgba(0, 0, 0, 0.04);
     color: CanvasText;
@@ -533,9 +533,11 @@ input::-webkit-date-and-time-value {
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     margin: 0px;
     text-align: center;
-    width: 100%;
+    inline-size: 100%;
 #else
-    margin: 1px 24px 1px 4px;
+    margin-block: 1px;
+    margin-inline-start: 4px;
+    margin-inline-end: 24px;
     white-space: pre;
 #endif
 }
@@ -737,13 +739,13 @@ input::-webkit-list-button {
     flex: none;
     -webkit-user-select: none;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-    width: 11px;
+    inline-size: 11px;
     /* Make it easier to hit the button on iOS */
     padding: 7px;
     margin: -7px;
 #else
-    width: 16px;
-    height: 100%;
+    inline-size: 16px;
+    block-size: 100%;
 #endif
 }
 #endif
@@ -768,8 +770,7 @@ textarea {
     /* On iOS we want to inherit the left and right padding for consistency with
      other form controls (e.g. <input type="text">). We want to override the top
      and bottom padding to ensure we have a symmetric look for text areas. */
-    padding-top: 2px;
-    padding-bottom: 2px;
+    padding-block: 2px;
 #endif
     flex-direction: column;
     resize: auto;
@@ -833,9 +834,9 @@ input:-webkit-autofill, input:-webkit-autofill-strong-password, input:-webkit-au
 
 input:is([type="radio"], [type="checkbox"]) {
     margin: 3px 2px;
+    box-sizing: border-box;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     border: initial;
-    box-sizing: border-box;
 #else
     padding: initial;
     background-color: initial;
@@ -859,11 +860,13 @@ input:is([type="button"], [type="submit"], [type="reset"]), input[type="file"]::
     cursor: default;
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
     color: ButtonText;
-    padding: 2px 6px 3px 6px;
+    padding-block: 2px 3px;
+    padding-inline: 6px;
     border: 2px outset ButtonFace;
     background-color: ButtonFace;
 #else
-    padding: 0 1.0em;
+    padding-block: 0;
+    padding-inline: 1em;
     border: 1px solid -webkit-control-background;
     font: 11px system-ui;
     color: -apple-system-blue;
@@ -983,20 +986,16 @@ select:disabled {
 
 #endif
 
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
 input[type="checkbox"] {
-#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-    box-sizing: border-box;
-#else
     border-radius: 5px;
     width: 16px;
     height: 16px;
     padding: 0px;
     /* We want to be as close to background:transparent as possible without actually being transparent */
     background-color: rgba(255, 255, 255, 0.01);
-#endif
 }
 
-#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
 input[type="radio"] {
     appearance: auto;
     border-radius: 50%;
@@ -1027,12 +1026,6 @@ input:is([type="checkbox"], [type="radio"]):disabled {
 input:is([type="checkbox"], [type="radio"]):checked:disabled {
     opacity: initial;
     background: rgba(0, 0, 0, 0.8);
-}
-#endif
-
-#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-input[type="radio"] {
-    box-sizing: border-box;
 }
 #endif
 
@@ -1077,7 +1070,8 @@ select {
     letter-spacing: normal;
     word-spacing: normal;
     line-height: normal;
-    padding: 0 0.4em 0 0.4em;
+    padding-block: 0;
+    padding-inline: 0.4em;
     color: -apple-system-blue;
     font: 11px system-ui;
     border: 1px solid -webkit-control-background;
@@ -1425,9 +1419,10 @@ applet, embed, object, img {
     }
 }
 
-/* Default support for "Smart Invert" where all content color except media is inverted. */ 
+/* Default support for "Smart Invert" where all content color except media is inverted. */
+/* https://drafts.csswg.org/mediaqueries-5/#inverted */
 @media (inverted-colors) {
-    img, picture, video { filter: invert(100%); } /* Images and videos double-inverted. */
+    img:not(picture>img), picture, video { filter: invert(100%); } /* Images and videos double-inverted. */
 }
 
 /* https://drafts.csswg.org/css-text-decor-4/#text-decoration-skipping */

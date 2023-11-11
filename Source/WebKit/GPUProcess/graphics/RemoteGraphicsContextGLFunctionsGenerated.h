@@ -1450,10 +1450,20 @@
         assertIsCurrent(workQueue());
         m_context->drawElementsInstancedBaseVertexBaseInstanceANGLE(mode, count, type, static_cast<GCGLintptr>(offset), instanceCount, baseVertex, baseInstance);
     }
+    void clipControlEXT(uint32_t origin, uint32_t depth)
+    {
+        assertIsCurrent(workQueue());
+        m_context->clipControlEXT(origin, depth);
+    }
     void provokingVertexANGLE(uint32_t provokeMode)
     {
         assertIsCurrent(workQueue());
         m_context->provokingVertexANGLE(provokeMode);
+    }
+    void polygonModeANGLE(uint32_t face, uint32_t mode)
+    {
+        assertIsCurrent(workQueue());
+        m_context->polygonModeANGLE(face, mode);
     }
     void polygonOffsetClampEXT(float factor, float units, float clamp)
     {
@@ -1482,11 +1492,11 @@
         assertIsCurrent(workQueue());
         m_context->setDrawingBufferColorSpace(arg0);
     }
-    void paintRenderingResultsToPixelBuffer(CompletionHandler<void(RefPtr<WebCore::PixelBuffer>&&)>&& completionHandler)
+    void drawingBufferToPixelBuffer(WebCore::GraphicsContextGL::FlipY&& arg0, CompletionHandler<void(RefPtr<WebCore::PixelBuffer>&&)>&& completionHandler)
     {
         RefPtr<WebCore::PixelBuffer> returnValue = { };
         assertIsCurrent(workQueue());
-        returnValue = m_context->paintRenderingResultsToPixelBuffer();
+        returnValue = m_context->drawingBufferToPixelBuffer(arg0);
         completionHandler(WTFMove(returnValue));
     }
     void destroyEGLSync(uint64_t arg0, CompletionHandler<void(bool)>&& completionHandler)
@@ -1500,5 +1510,12 @@
     {
         assertIsCurrent(workQueue());
         m_context->clientWaitEGLSyncWithFlush(reinterpret_cast<GCEGLSync>(static_cast<intptr_t>(arg0)), timeout);
+    }
+    void enableRequiredWebXRExtensions(CompletionHandler<void(bool)>&& completionHandler)
+    {
+        bool returnValue = { };
+        assertIsCurrent(workQueue());
+        returnValue = m_context->enableRequiredWebXRExtensions();
+        completionHandler(returnValue);
     }
 

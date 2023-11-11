@@ -63,8 +63,10 @@ CaptureSourceOrError MockRealtimeAudioSource::create(String&& deviceID, String&&
 #endif
 
     auto source = adoptRef(*new MockRealtimeAudioSource(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalts)));
-    if (constraints && source->applyConstraints(*constraints))
-        return { };
+    if (constraints) {
+        if (auto error = source->applyConstraints(*constraints))
+            return CaptureSourceOrError({ WTFMove(error->badConstraint), MediaAccessDenialReason::InvalidConstraint });
+    }
 
     return CaptureSourceOrError(WTFMove(source));
 }
@@ -126,9 +128,9 @@ const RealtimeMediaSourceCapabilities& MockRealtimeAudioSource::capabilities()
         RealtimeMediaSourceCapabilities capabilities(settings().supportedConstraints());
 
         capabilities.setDeviceId(hashedId());
-        capabilities.setVolume(CapabilityValueOrRange(0.0, 1.0));
+        capabilities.setVolume(CapabilityRange(0.0, 1.0));
         capabilities.setEchoCancellation(RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite);
-        capabilities.setSampleRate(CapabilityValueOrRange(44100, 48000));
+        capabilities.setSampleRate(CapabilityRange(44100, 96000));
 
         m_capabilities = WTFMove(capabilities);
     }
@@ -163,7 +165,7 @@ void MockRealtimeAudioSource::stopProducingData()
 
 void MockRealtimeAudioSource::tick()
 {
-    if (std::isnan(m_lastRenderTime))
+    if (m_lastRenderTime.isNaN())
         m_lastRenderTime = MonotonicTime::now();
 
     MonotonicTime now = MonotonicTime::now();

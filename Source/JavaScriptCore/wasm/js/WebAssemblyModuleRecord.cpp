@@ -39,6 +39,8 @@
 #include "JSWebAssemblyModule.h"
 #include "JSWebAssemblyTag.h"
 #include "ObjectConstructor.h"
+#include "WasmConstExprGenerator.h"
+#include "WasmOperationsInlines.h"
 #include "WasmTypeDefinitionInlines.h"
 #include "WebAssemblyFunction.h"
 
@@ -462,28 +464,6 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
         RELEASE_ASSERT(calleeGroup->isSafeToRun(m_instance->instance().memory()->mode()));
     }
 
-    for (unsigned i = 0; i < moduleInformation.tableCount(); ++i) {
-        if (moduleInformation.tables[i].isImport()) {
-            // We should either have a Table import or we should have thrown an exception.
-            RELEASE_ASSERT(m_instance->table(i));
-        }
-
-        if (!m_instance->table(i)) {
-            RELEASE_ASSERT(!moduleInformation.tables[i].isImport());
-            // We create a Table when it's a Table definition.
-            RefPtr<Wasm::Table> wasmTable = Wasm::Table::tryCreate(moduleInformation.tables[i].initial(), moduleInformation.tables[i].maximum(), moduleInformation.tables[i].type(), moduleInformation.tables[i].wasmType());
-            if (!wasmTable)
-                return exception(createJSWebAssemblyLinkError(globalObject, vm, "couldn't create Table"_s));
-            JSWebAssemblyTable* table = JSWebAssemblyTable::tryCreate(globalObject, vm, globalObject->webAssemblyTableStructure(), wasmTable.releaseNonNull());
-            // We should always be able to allocate a JSWebAssemblyTable we've defined.
-            // If it's defined to be too large, we should have thrown a validation error.
-            scope.assertNoException();
-            ASSERT(table);
-            m_instance->setTable(vm, i, table);
-            RETURN_IF_EXCEPTION(scope, void());
-        }
-    }
-
     // This needs to be looked up after the memory is initialized, as the codeBlock depends on the memory mode.
     Wasm::CalleeGroup* calleeGroup = m_instance->instance().calleeGroup();
 
@@ -533,6 +513,58 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
     for (auto functionIndexSpace : moduleInformation.referencedFunctions())
         makeFunctionWrapper(functionIndexSpace);
 
+    // Tables
+    for (unsigned i = 0; i < moduleInformation.tableCount(); ++i) {
+        if (moduleInformation.tables[i].isImport()) {
+            // We should either have a Table import or we should have thrown an exception.
+            RELEASE_ASSERT(m_instance->table(i));
+        }
+
+        if (!m_instance->table(i)) {
+            RELEASE_ASSERT(!moduleInformation.tables[i].isImport());
+            // We create a Table when it's a Table definition.
+            RefPtr<Wasm::Table> wasmTable = Wasm::Table::tryCreate(moduleInformation.tables[i].initial(), moduleInformation.tables[i].maximum(), moduleInformation.tables[i].type(), moduleInformation.tables[i].wasmType());
+            if (!wasmTable)
+                return exception(createJSWebAssemblyLinkError(globalObject, vm, "couldn't create Table"_s));
+
+            Wasm::TableInformation::InitializationType initType = moduleInformation.tables[i].initType();
+            uint64_t initialBitsOrImportNumber = moduleInformation.tables[i].initialBitsOrImportNumber();
+            switch (initType) {
+            case Wasm::TableInformation::Default:
+                break;
+            case Wasm::TableInformation::FromGlobalImport:
+                ASSERT(initialBitsOrImportNumber < moduleInformation.firstInternalGlobal);
+                initialBitsOrImportNumber = m_instance->instance().loadI64Global(initialBitsOrImportNumber);
+                break;
+            case Wasm::TableInformation::FromRefFunc:
+                ASSERT(initialBitsOrImportNumber < moduleInformation.functionIndexSpaceSize());
+                ASSERT(makeFunctionWrapper(initialBitsOrImportNumber).isCallable());
+                initialBitsOrImportNumber = JSValue::encode(makeFunctionWrapper(initialBitsOrImportNumber));
+                break;
+            case Wasm::TableInformation::FromExtendedExpression:
+                ASSERT(initialBitsOrImportNumber < moduleInformation.constantExpressions.size());
+                evaluateConstantExpression(globalObject, moduleInformation.constantExpressions[initialBitsOrImportNumber], moduleInformation, moduleInformation.tables[i].wasmType(), initialBitsOrImportNumber);
+                RETURN_IF_EXCEPTION(scope, void());
+                break;
+            default:
+                ASSERT(initType == Wasm::TableInformation::FromRefNull);
+            }
+
+            JSWebAssemblyTable* table = JSWebAssemblyTable::tryCreate(globalObject, vm, globalObject->webAssemblyTableStructure(), wasmTable.releaseNonNull());
+            // We should always be able to allocate a JSWebAssemblyTable we've defined.
+            // If it's defined to be too large, we should have thrown a validation error.
+            scope.assertNoException();
+            ASSERT(table);
+            m_instance->setTable(vm, i, table);
+            RETURN_IF_EXCEPTION(scope, void());
+
+            if (initType != Wasm::TableInformation::Default) {
+                if (!tableFill(&m_instance->instance(), i, 0, initialBitsOrImportNumber, m_instance->table(i)->length()))
+                    return exception(createJSWebAssemblyLinkError(globalObject, vm, "failed to initialize Table"_s));
+            }
+        }
+    }
+
     // Globals
     {
         for (size_t globalIndex = moduleInformation.firstInternalGlobal; globalIndex < moduleInformation.globals.size(); ++globalIndex) {
@@ -575,6 +607,10 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
                 ASSERT(global.initialBits.initialBitsOrImportNumber < moduleInformation.functionIndexSpaceSize());
                 ASSERT(makeFunctionWrapper(global.initialBits.initialBitsOrImportNumber).isCallable());
                 initialBits = JSValue::encode(makeFunctionWrapper(global.initialBits.initialBitsOrImportNumber));
+            } else if (global.initializationType == Wasm::GlobalInformation::FromExtendedExpression) {
+                ASSERT(global.initialBits.initialBitsOrImportNumber < moduleInformation.constantExpressions.size());
+                evaluateConstantExpression(globalObject, moduleInformation.constantExpressions[global.initialBits.initialBitsOrImportNumber], moduleInformation, global.type, initialBits);
+                RETURN_IF_EXCEPTION(scope, void());
             } else
                 initialBits = global.initialBits.initialBitsOrImportNumber;
 
@@ -709,6 +745,19 @@ void WebAssemblyModuleRecord::initializeExports(JSGlobalObject* globalObject)
     }
 }
 
+JSValue WebAssemblyModuleRecord::evaluateConstantExpression(JSGlobalObject* globalObject, const Vector<uint8_t>& constantExpression, const Wasm::ModuleInformation& info, Wasm::Type expectedType, uint64_t& result)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto evalResult = Wasm::evaluateExtendedConstExpr(constantExpression, m_instance->instance(), info, expectedType);
+    if (UNLIKELY(!evalResult.has_value()))
+        return JSValue(throwException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, makeString("couldn't evaluate constant expression: "_s, evalResult.error()))));
+
+    result = evalResult.value();
+    return jsUndefined();
+}
+
 template <typename Scope, typename M, typename N, typename ...Args>
 NEVER_INLINE static JSValue dataSegmentFail(JSGlobalObject* globalObject, VM& vm, Scope& scope, M memorySize, N segmentSize, N offset, Args... args)
 {
@@ -720,8 +769,7 @@ JSValue WebAssemblyModuleRecord::evaluate(JSGlobalObject* globalObject)
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    Wasm::Module& module = m_instance->instance().module();
-    const Wasm::ModuleInformation& moduleInformation = module.moduleInformation();
+    Wasm::Module& module = m_instance->instance().module(); const Wasm::ModuleInformation& moduleInformation = module.moduleInformation();
 
     const Vector<Wasm::Segment::Ptr>& data = moduleInformation.data;
     
@@ -739,9 +787,17 @@ JSValue WebAssemblyModuleRecord::evaluate(JSGlobalObject* globalObject)
             ASSERT(!!m_instance->table(*element.tableIndexIfActive));
 
             const auto& offset = *element.offsetIfActive;
-            const uint32_t elementIndex = offset.isGlobalImport()
-                ? static_cast<uint32_t>(m_instance->instance().loadI32Global(offset.globalImportIndex()))
-                : offset.constValue();
+            uint32_t elementIndex = 0;
+            if (offset.isGlobalImport())
+                elementIndex = static_cast<uint32_t>(m_instance->instance().loadI32Global(offset.globalImportIndex()));
+            else if (offset.isConst())
+                elementIndex = offset.constValue();
+            else {
+                uint64_t result;
+                evaluateConstantExpression(globalObject, moduleInformation.constantExpressions[offset.constantExpressionIndex()], moduleInformation, Wasm::Types::I32, result);
+                RETURN_IF_EXCEPTION(scope, void());
+                elementIndex = static_cast<uint32_t>(result);
+            }
 
             if (fn(element, *element.tableIndexIfActive, elementIndex) == IterationStatus::Done)
                 break;
@@ -759,9 +815,17 @@ JSValue WebAssemblyModuleRecord::evaluate(JSGlobalObject* globalObject)
         for (const Wasm::Segment::Ptr& segment : data) {
             if (!segment->isActive())
                 continue;
-            uint32_t offset = segment->offsetIfActive->isGlobalImport()
-                ? static_cast<uint32_t>(m_instance->instance().loadI32Global(segment->offsetIfActive->globalImportIndex()))
-                : segment->offsetIfActive->constValue();
+            uint32_t offset = 0;
+            if (segment->offsetIfActive->isGlobalImport())
+                offset = static_cast<uint32_t>(m_instance->instance().loadI32Global(segment->offsetIfActive->globalImportIndex()));
+            else if (segment->offsetIfActive->isConst())
+                offset = segment->offsetIfActive->constValue();
+            else {
+                uint64_t result;
+                evaluateConstantExpression(globalObject, moduleInformation.constantExpressions[segment->offsetIfActive->constantExpressionIndex()], moduleInformation, Wasm::Types::I32, result);
+                RETURN_IF_EXCEPTION(scope, void());
+                offset = static_cast<uint32_t>(result);
+            }
 
             if (fn(memory, sizeInBytes, segment, offset) == IterationStatus::Done)
                 break;

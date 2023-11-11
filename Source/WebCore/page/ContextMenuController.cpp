@@ -30,6 +30,7 @@
 #if ENABLE(CONTEXT_MENUS)
 
 #include "BackForwardController.h"
+#include "BitmapImage.h"
 #include "Chrome.h"
 #include "ContextMenu.h"
 #include "ContextMenuClient.h"
@@ -54,6 +55,7 @@
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLTableElement.h"
+#include "HandleMouseEventResult.h"
 #include "HitTestResult.h"
 #include "ImageBuffer.h"
 #include "ImageOverlay.h"
@@ -93,12 +95,6 @@
 
 #if PLATFORM(COCOA)
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
-#endif
-
-#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
-#include <wtf/SoftLinking.h>
-SOFT_LINK_LIBRARY_OPTIONAL(libAccessibility)
-SOFT_LINK_OPTIONAL(libAccessibility, _AXSReduceMotionAutoplayAnimatedImagesEnabled, Boolean, (), ());
 #endif
 
 namespace WebCore {
@@ -205,14 +201,14 @@ static void prepareContextForQRCode(ContextMenuContext& context)
         return;
 
     auto nodeSnapshotImageBuffer = snapshotNode(*frame, *element, { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() });
-    auto nodeSnapshotImage = ImageBuffer::sinkIntoImage(WTFMove(nodeSnapshotImageBuffer), PreserveResolution::Yes);
+    auto nodeSnapshotImage = BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTFMove(nodeSnapshotImageBuffer)));
     context.setPotentialQRCodeNodeSnapshotImage(nodeSnapshotImage.get());
 
     // FIXME: Node snapshotting does not take transforms into account, making it unreliable for QR code detection.
     // As a fallback, also take a viewport-level snapshot. A node snapshot is still required to capture partially
     // obscured elements. This workaround can be removed once rdar://87204215 is fixed.
     auto viewportSnapshotImageBuffer = snapshotFrameRect(*frame, elementRect, { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() });
-    auto viewportSnapshotImage = ImageBuffer::sinkIntoImage(WTFMove(viewportSnapshotImageBuffer), PreserveResolution::Yes);
+    auto viewportSnapshotImage = BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTFMove(viewportSnapshotImageBuffer)));
     context.setPotentialQRCodeViewportSnapshotImage(viewportSnapshotImage.get());
 }
 
@@ -1058,10 +1054,7 @@ void ContextMenuController::populate()
         if (!frame->page() || !frame->page()->settings().imageAnimationControlEnabled())
             return false;
 
-        auto* autoplayAnimatedImagesFunction = _AXSReduceMotionAutoplayAnimatedImagesEnabledPtr();
-        // Only show these controls if autoplay of animated images has been disabled.
-        bool systemAllowsAnimationControls = autoplayAnimatedImagesFunction && !autoplayAnimatedImagesFunction();
-        return systemAllowsAnimationControls || frame->page()->settings().allowAnimationControlsOverride();
+        return frame->page()->systemAllowsAnimationControls() || frame->page()->settings().allowAnimationControlsOverride();
     };
 
     bool shouldAddPlayAllPauseAllAnimationsItem = canAddAnimationControls();
@@ -1813,7 +1806,7 @@ void ContextMenuController::showContextMenuAt(LocalFrame& frame, const IntPoint&
     clearContextMenu();
     
     // Simulate a click in the middle of the accessibility object.
-    PlatformMouseEvent mouseEvent(clickPoint, clickPoint, RightButton, PlatformEvent::Type::MousePressed, 1, { }, WallTime::now(), ForceAtClick, SyntheticClickType::NoTap);
+    PlatformMouseEvent mouseEvent(clickPoint, clickPoint, MouseButton::Right, PlatformEvent::Type::MousePressed, 1, { }, WallTime::now(), ForceAtClick, SyntheticClickType::NoTap);
     frame.eventHandler().handleMousePressEvent(mouseEvent);
     bool handled = frame.eventHandler().sendContextMenuEvent(mouseEvent);
     if (handled)

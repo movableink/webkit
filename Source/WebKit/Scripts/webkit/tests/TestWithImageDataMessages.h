@@ -47,6 +47,8 @@ public:
 
     static IPC::MessageName name() { return IPC::MessageName::TestWithImageData_SendImageData; }
     static constexpr bool isSync = false;
+    static constexpr bool canDispatchOutOfOrder = false;
+    static constexpr bool replyCanDispatchOutOfOrder = false;
 
     explicit SendImageData(const RefPtr<WebCore::ImageData>& s0)
         : m_arguments(s0)
@@ -68,10 +70,13 @@ public:
 
     static IPC::MessageName name() { return IPC::MessageName::TestWithImageData_ReceiveImageData; }
     static constexpr bool isSync = false;
+    static constexpr bool canDispatchOutOfOrder = false;
+    static constexpr bool replyCanDispatchOutOfOrder = false;
 
     static IPC::MessageName asyncMessageReplyName() { return IPC::MessageName::TestWithImageData_ReceiveImageDataReply; }
     static constexpr auto callbackThread = WTF::CompletionHandlerCallThread::ConstructionThread;
     using ReplyArguments = std::tuple<RefPtr<WebCore::ImageData>>;
+    using Promise = WTF::NativePromise<RefPtr<WebCore::ImageData>, IPC::Error>;
     auto&& arguments()
     {
         return WTFMove(m_arguments);

@@ -35,17 +35,12 @@
 #import "WebPageProxy.h"
 #import "WebProcess.h"
 #import "_WKWebExtensionWebNavigationURLFilter.h"
-#import <JavaScriptCore/APICast.h>
-#import <JavaScriptCore/ScriptCallStack.h>
-#import <JavaScriptCore/ScriptCallStackFactory.h>
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
 namespace WebKit {
 
-class JSWebExtensionWrappable;
-
-void WebExtensionAPIWebNavigationEvent::invokeListenersWithArgument(id argument1, NSURL *targetURL)
+void WebExtensionAPIWebNavigationEvent::invokeListenersWithArgument(id argument, NSURL *targetURL)
 {
     if (m_listeners.isEmpty())
         return;
@@ -55,38 +50,41 @@ void WebExtensionAPIWebNavigationEvent::invokeListenersWithArgument(id argument1
         if (filter && ![filter matchesURL:targetURL])
             continue;
 
-        listener.first->call(argument1);
+        listener.first->call(argument);
     }
 }
 
-void WebExtensionAPIWebNavigationEvent::addListener(WebPage* page, RefPtr<WebExtensionCallbackHandler> listener, NSDictionary *filter, NSString **exceptionString)
+void WebExtensionAPIWebNavigationEvent::addListener(WebPage* page, RefPtr<WebExtensionCallbackHandler> listener, NSDictionary *filter, NSString **outExceptionString)
 {
+    ASSERT(page);
+
     _WKWebExtensionWebNavigationURLFilter *parsedFilter;
     if (filter) {
-        parsedFilter = [[_WKWebExtensionWebNavigationURLFilter alloc] initWithDictionary:filter outErrorMessage:exceptionString];
+        parsedFilter = [[_WKWebExtensionWebNavigationURLFilter alloc] initWithDictionary:filter outErrorMessage:outExceptionString];
         if (!parsedFilter)
             return;
     }
 
-    FilterAndCallbackPair filterPair = FilterAndCallbackPair(listener, parsedFilter);
-    m_listeners.append(filterPair);
+    m_pageProxyIdentifier = page->webPageProxyIdentifier();
+    m_listeners.append({ listener, parsedFilter });
 
-    if (!page)
-        return;
-
-    WebProcess::singleton().send(Messages::WebExtensionContext::AddListener(page->webPageProxyIdentifier(), m_type), extensionContext().identifier());
+    WebProcess::singleton().send(Messages::WebExtensionContext::AddListener(m_pageProxyIdentifier, m_type, contentWorldType()), extensionContext().identifier());
 }
 
 void WebExtensionAPIWebNavigationEvent::removeListener(WebPage* page, RefPtr<WebExtensionCallbackHandler> listener)
 {
-    m_listeners.removeAllMatching([&](auto& entry) {
+    ASSERT(page);
+
+    auto removedCount = m_listeners.removeAllMatching([&](auto& entry) {
         return entry.first->callbackFunction() == listener->callbackFunction();
     });
 
-    if (!page)
+    if (!removedCount)
         return;
 
-    WebProcess::singleton().send(Messages::WebExtensionContext::RemoveListener(page->webPageProxyIdentifier(), m_type), extensionContext().identifier());
+    ASSERT(page->webPageProxyIdentifier() == m_pageProxyIdentifier);
+
+    WebProcess::singleton().send(Messages::WebExtensionContext::RemoveListener(m_pageProxyIdentifier, m_type, contentWorldType(), removedCount), extensionContext().identifier());
 }
 
 bool WebExtensionAPIWebNavigationEvent::hasListener(RefPtr<WebExtensionCallbackHandler> listener)
@@ -94,6 +92,16 @@ bool WebExtensionAPIWebNavigationEvent::hasListener(RefPtr<WebExtensionCallbackH
     return m_listeners.containsIf([&](auto& entry) {
         return entry.first->callbackFunction() == listener->callbackFunction();
     });
+}
+
+void WebExtensionAPIWebNavigationEvent::removeAllListeners()
+{
+    if (m_listeners.isEmpty())
+        return;
+
+    WebProcess::singleton().send(Messages::WebExtensionContext::RemoveListener(m_pageProxyIdentifier, m_type, contentWorldType(), m_listeners.size()), extensionContext().identifier());
+
+    m_listeners.clear();
 }
 
 } // namespace WebKit

@@ -25,26 +25,38 @@
 
 #pragma once
 
-#include "AuxiliaryProcessCreationParameters.h"
 #include "Connection.h"
 #include "MessageReceiverMap.h"
 #include "ProcessLauncher.h"
 #include "ProcessThrottler.h"
+#include "ProcessThrottlerClient.h"
 #include "ResponsivenessTimer.h"
-#include "SandboxExtension.h"
 #include <WebCore/ProcessIdentifier.h>
 #include <memory>
+#include <wtf/CheckedRef.h>
 #include <wtf/ProcessID.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/UniqueRef.h>
 
+namespace WebCore {
+class SharedBuffer;
+}
+
 namespace WebKit {
 
 class ProcessThrottler;
 class ProcessAssertion;
+class SandboxExtensionHandle;
 
-class AuxiliaryProcessProxy : public ThreadSafeRefCounted<AuxiliaryProcessProxy, WTF::DestructionThread::MainRunLoop>, public ResponsivenessTimer::Client, private ProcessLauncher::Client, public IPC::Connection::Client {
+struct AuxiliaryProcessCreationParameters;
+
+class AuxiliaryProcessProxy
+    : public ThreadSafeRefCounted<AuxiliaryProcessProxy, WTF::DestructionThread::MainRunLoop>
+    , public ResponsivenessTimer::Client
+    , private ProcessLauncher::Client
+    , public IPC::Connection::Client
+    , public ProcessThrottlerClient {
     WTF_MAKE_NONCOPYABLE(AuxiliaryProcessProxy);
 
 protected:
@@ -78,13 +90,13 @@ public:
     template<typename T>
     bool send(T&& message, const ObjectIdentifierGenericBase& destinationID, OptionSet<IPC::SendOption> sendOptions = { })
     {
-        return send<T>(WTFMove(message), destinationID.toUInt64(), sendOptions);
+        return send<T>(std::forward<T>(message), destinationID.toUInt64(), sendOptions);
     }
     
     template<typename T>
     SendSyncResult<T> sendSync(T&& message, const ObjectIdentifierGenericBase& destinationID, IPC::Timeout timeout = 1_s, OptionSet<IPC::SendSyncOption> sendSyncOptions = { })
     {
-        return sendSync<T>(WTFMove(message), destinationID.toUInt64(), timeout, sendSyncOptions);
+        return sendSync<T>(std::forward<T>(message), destinationID.toUInt64(), timeout, sendSyncOptions);
     }
 
     IPC::Connection* connection() const
@@ -92,6 +104,8 @@ public:
         ASSERT(m_connection);
         return m_connection.get();
     }
+
+    RefPtr<IPC::Connection> protectedConnection() const { return connection(); }
 
     bool hasConnection() const
     {
@@ -161,10 +175,16 @@ public:
 
     bool operator==(const AuxiliaryProcessProxy& other) const { return (this == &other); }
 
-    std::optional<SandboxExtension::Handle> createMobileGestaltSandboxExtensionIfNeeded() const;
+    std::optional<SandboxExtensionHandle> createMobileGestaltSandboxExtensionIfNeeded() const;
 
 #if USE(RUNNINGBOARD)
     void wakeUpTemporarilyForIPC();
+#endif
+
+#if USE(EXTENSIONKIT)
+    RetainPtr<_SEExtensionProcess> extensionProcess() const;
+    static void setManageProcessesAsExtensions(bool manageProcessesAsExtensions) { s_manageProcessesAsExtensions = manageProcessesAsExtensions; }
+    static bool manageProcessesAsExtensions() { return s_manageProcessesAsExtensions; }
 #endif
 
 protected:
@@ -178,7 +198,7 @@ protected:
     virtual ASCIILiteral processName() const = 0;
 
     virtual void getLaunchOptions(ProcessLauncher::LaunchOptions&);
-    virtual void platformGetLaunchOptions(ProcessLauncher::LaunchOptions&) { };
+    virtual void platformGetLaunchOptions(ProcessLauncher::LaunchOptions&);
 
     struct PendingMessage {
         UniqueRef<IPC::Encoder> encoder;
@@ -227,6 +247,9 @@ private:
     RefPtr<ProcessAssertion> m_boostedJetsamAssertion;
 #endif
 #endif
+#if USE(EXTENSIONKIT)
+    static bool s_manageProcessesAsExtensions;
+#endif
 };
 
 template<typename T>
@@ -246,7 +269,7 @@ AuxiliaryProcessProxy::SendSyncResult<T> AuxiliaryProcessProxy::sendSync(T&& mes
     static_assert(T::isSync, "Sync message expected");
 
     if (!m_connection)
-        return { };
+        return { IPC::Error::InvalidConnection };
 
     TraceScope scope(SyncMessageStart, SyncMessageEnd);
 
@@ -260,7 +283,7 @@ AuxiliaryProcessProxy::AsyncReplyID AuxiliaryProcessProxy::sendWithAsyncReply(T&
 
     auto encoder = makeUniqueRef<IPC::Encoder>(T::name(), destinationID);
     encoder.get() << message.arguments();
-    auto handler = IPC::Connection::makeAsyncReplyHandler<T>(WTFMove(completionHandler));
+    auto handler = IPC::Connection::makeAsyncReplyHandler<T>(std::forward<C>(completionHandler));
     auto replyID = handler.replyID;
     if (sendMessage(WTFMove(encoder), sendOptions, WTFMove(handler), shouldStartProcessThrottlerActivity))
         return replyID;

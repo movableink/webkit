@@ -144,11 +144,12 @@ OptionSet<FilterRenderingMode> FEDropShadow::supportedFilterRenderingModes() con
 
 std::optional<GraphicsStyle> FEDropShadow::createGraphicsStyle(const Filter& filter) const
 {
+    ASSERT(m_stdX == m_stdY);
+
     auto offset = filter.resolvedSize({ m_dx, m_dy });
     auto radius = FEGaussianBlur::calculateUnscaledKernelSize(filter.resolvedSize({ m_stdX, m_stdY }));
-    auto color = m_shadowColor.colorWithAlpha(m_shadowOpacity);
 
-    return GraphicsDropShadow { offset, radius, color };
+    return GraphicsDropShadow { offset, static_cast<float>(radius.width()), m_shadowColor, ShadowRadiusMode::Default, m_shadowOpacity };
 }
 
 std::unique_ptr<FilterEffectApplier> FEDropShadow::createSoftwareApplier() const

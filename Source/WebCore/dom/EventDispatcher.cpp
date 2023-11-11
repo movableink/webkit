@@ -116,15 +116,15 @@ static bool shouldSuppressEventDispatchInDOM(Node& node, Event& event)
     if (!event.isTrusted())
         return false;
 
-    auto frame = node.document().frame();
+    RefPtr frame = node.document().frame();
     if (!frame)
         return false;
 
-    auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
     if (!localFrame)
         return false;
 
-    if (!localFrame->loader().shouldSuppressTextInputFromEditing())
+    if (!localFrame->checkedLoader()->shouldSuppressTextInputFromEditing())
         return false;
 
     if (is<TextEvent>(event)) {
@@ -186,8 +186,10 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
     RefPtr inputForLegacyPreActivationBehavior = dynamicDowncast<HTMLInputElement>(node);
     if (!inputForLegacyPreActivationBehavior && event.bubbles() && event.type() == eventNames().clickEvent)
         inputForLegacyPreActivationBehavior = findInputElementInEventPath(eventPath);
-    if (inputForLegacyPreActivationBehavior)
+    if (inputForLegacyPreActivationBehavior
+        && (!event.isTrusted() || !inputForLegacyPreActivationBehavior->isDisabledFormControl())) {
         inputForLegacyPreActivationBehavior->willDispatchEvent(event, clickHandlingState);
+    }
 
     if (!event.propagationStopped() && !eventPath.isEmpty() && !shouldSuppressEventDispatchInDOM(node, event)) {
         event.setEventPath(eventPath);

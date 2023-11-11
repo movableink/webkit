@@ -46,6 +46,8 @@ public:
 
     static IPC::MessageName name() { return IPC::MessageName::TestWithSemaphore_SendSemaphore; }
     static constexpr bool isSync = false;
+    static constexpr bool canDispatchOutOfOrder = false;
+    static constexpr bool replyCanDispatchOutOfOrder = false;
 
     explicit SendSemaphore(const IPC::Semaphore& s0)
         : m_arguments(s0)
@@ -67,10 +69,13 @@ public:
 
     static IPC::MessageName name() { return IPC::MessageName::TestWithSemaphore_ReceiveSemaphore; }
     static constexpr bool isSync = false;
+    static constexpr bool canDispatchOutOfOrder = false;
+    static constexpr bool replyCanDispatchOutOfOrder = false;
 
     static IPC::MessageName asyncMessageReplyName() { return IPC::MessageName::TestWithSemaphore_ReceiveSemaphoreReply; }
     static constexpr auto callbackThread = WTF::CompletionHandlerCallThread::ConstructionThread;
     using ReplyArguments = std::tuple<IPC::Semaphore>;
+    using Promise = WTF::NativePromise<IPC::Semaphore, IPC::Error>;
     auto&& arguments()
     {
         return WTFMove(m_arguments);

@@ -1,6 +1,5 @@
 
 PASS Test VideoEncoder construction
-PASS Test VideoEncoder.configure()
 PASS Test successful configure(), encode(), and flush()
 PASS encodeQueueSize test
 PASS Test successful reset() and re-confiugre()

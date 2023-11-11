@@ -24,6 +24,7 @@
  */
 
 #import <wtf/HashSet.h>
+#import <wtf/OptionSet.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/UUID.h>
 #import <wtf/WallTime.h>
@@ -32,9 +33,19 @@
 OBJC_CLASS NSArray;
 OBJC_CLASS NSDate;
 OBJC_CLASS NSDictionary;
+OBJC_CLASS NSError;
+OBJC_CLASS NSLocale;
 OBJC_CLASS NSSet;
 OBJC_CLASS NSString;
 OBJC_CLASS NSUUID;
+
+#define THROW_UNLESS(condition, message) \
+    if (UNLIKELY(!(condition))) \
+        [NSException raise:NSInternalInconsistencyException format:message]
+
+namespace API {
+class Data;
+}
 
 namespace WebKit {
 
@@ -75,6 +86,33 @@ T *objectForKey(const RetainPtr<NSDictionary>& dictionary, id key, bool returnin
     return objectForKey<T>(dictionary.get(), key, returningNilIfEmpty, containingObjectsOfClass);
 }
 
+inline bool boolForKey(NSDictionary *dictionary, id key, bool defaultValue)
+{
+    NSNumber *value = dynamic_objc_cast<NSNumber>(dictionary[key]);
+    return value ? value.boolValue : defaultValue;
+}
+
+enum class JSONOptions {
+    FragmentsAllowed = 1 << 0, /// Allows for top-level scalar types, in addition to arrays and dictionaries.
+};
+
+using JSONOptionSet = OptionSet<JSONOptions>;
+
+bool isValidJSONObject(id, JSONOptionSet = { });
+
+id parseJSON(NSString *, JSONOptionSet = { }, NSError ** = nullptr);
+id parseJSON(NSData *, JSONOptionSet = { }, NSError ** = nullptr);
+id parseJSON(API::Data&, JSONOptionSet = { }, NSError ** = nullptr);
+
+NSString *encodeJSONString(id, JSONOptionSet = { }, NSError ** = nullptr);
+NSData *encodeJSONData(id, JSONOptionSet = { }, NSError ** = nullptr);
+
+NSDictionary *dictionaryWithLowercaseKeys(NSDictionary *);
+NSDictionary *mergeDictionaries(NSDictionary *, NSDictionary *);
+NSDictionary *mergeDictionariesAndSetValues(NSDictionary *, NSDictionary *);
+
+NSString *privacyPreservingDescription(NSError *);
+
 NSString *escapeCharactersInString(NSString *, NSString *charactersToEscape);
 
 NSDate *toAPI(const WallTime&);
@@ -82,5 +120,7 @@ WallTime toImpl(NSDate *);
 
 NSSet *toAPI(HashSet<String>&);
 NSArray *toAPIArray(HashSet<String>&);
+Vector<String> toImpl(NSArray *);
+HashSet<String> toImplSet(NSArray *);
 
 } // namespace WebKit

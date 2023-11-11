@@ -38,6 +38,8 @@
 namespace WebKit {
 using namespace WebCore;
 
+enum class AddPreviewViewToContainer : bool { No, Yes };
+
 static UIDragItem *dragItemMatchingIdentifier(id <UIDragSession> session, NSInteger identifier)
 {
     for (UIDragItem *item in session.items) {
@@ -48,14 +50,14 @@ static UIDragItem *dragItemMatchingIdentifier(id <UIDragSession> session, NSInte
     return nil;
 }
 
-static RetainPtr<UITargetedDragPreview> createTargetedDragPreview(UIImage *image, UIView *rootView, UIView *previewContainer, const FloatRect& frameInRootViewCoordinates, const Vector<FloatRect>& clippingRectsInFrameCoordinates, UIColor *backgroundColor, UIBezierPath *visiblePath)
+static RetainPtr<UITargetedDragPreview> createTargetedDragPreview(UIImage *image, UIView *rootView, UIView *previewContainer, const FloatRect& frameInRootViewCoordinates, const Vector<FloatRect>& clippingRectsInFrameCoordinates, UIColor *backgroundColor, UIBezierPath *visiblePath, AddPreviewViewToContainer addPreviewViewToContainer)
 {
     if (frameInRootViewCoordinates.isEmpty() || !image || !previewContainer.window)
-        return nullptr;
+        return nil;
 
     FloatRect frameInContainerCoordinates = [rootView convertRect:frameInRootViewCoordinates toView:previewContainer];
     if (frameInContainerCoordinates.isEmpty())
-        return nullptr;
+        return nil;
 
     FloatSize scalingRatio = frameInContainerCoordinates.size() / frameInRootViewCoordinates.size();
     auto clippingRectValuesInFrameCoordinates = createNSArray(clippingRectsInFrameCoordinates, [&] (auto rect) {
@@ -77,6 +79,9 @@ static RetainPtr<UITargetedDragPreview> createTargetedDragPreview(UIImage *image
 
     if (visiblePath)
         [parameters setVisiblePath:visiblePath];
+
+    if (addPreviewViewToContainer == AddPreviewViewToContainer::Yes)
+        [previewContainer addSubview:imageView.get()];
 
     CGPoint centerInContainerCoordinates = { CGRectGetMidX(frameInContainerCoordinates), CGRectGetMidY(frameInContainerCoordinates) };
     auto target = adoptNS([[UIDragPreviewTarget alloc] initWithContainer:previewContainer center:centerInContainerCoordinates]);
@@ -193,76 +198,64 @@ void DragDropInteractionState::dragSessionWillBegin()
     updatePreviewsForActiveDragSources();
 }
 
-void DragDropInteractionState::setDefaultDropPreview(UIDragItem *item, UITargetedDragPreview *preview)
+void DragDropInteractionState::addDefaultDropPreview(UIDragItem *item, UITargetedDragPreview *preview)
 {
-    m_defaultDropPreviews.append({ item, preview });
+    m_defaultDropPreviews.add(item, preview);
 }
 
 UITargetedDragPreview *DragDropInteractionState::defaultDropPreview(UIDragItem *item) const
 {
-    auto matchIndex = m_defaultDropPreviews.findIf([&] (auto& itemAndPreview) {
-        return itemAndPreview.item == item;
-    });
-    return matchIndex == notFound ? nil : m_defaultDropPreviews[matchIndex].preview.get();
+    return m_defaultDropPreviews.get(item).get();
 }
 
-BlockPtr<void(UITargetedDragPreview *)> DragDropInteractionState::dropPreviewProvider(UIDragItem *item)
+UITargetedDragPreview *DragDropInteractionState::finalDropPreview(UIDragItem *item) const
 {
-    auto matchIndex = m_delayedItemPreviewProviders.findIf([&] (auto& itemAndProvider) {
-        return itemAndProvider.item == item;
-    });
-
-    if (matchIndex == notFound)
-        return nil;
-
-    return m_delayedItemPreviewProviders[matchIndex].provider;
+    return m_finalDropPreviews.get(item).get();
 }
 
-void DragDropInteractionState::prepareForDelayedDropPreview(UIDragItem *item, void(^provider)(UITargetedDragPreview *preview))
+inline static bool dragItemSupportsAsynchronousUpdates()
 {
-    m_delayedItemPreviewProviders.append({ item, provider });
+    static bool hasSupport = [UIDragItem instancesRespondToSelector:@selector(_setNeedsDropPreviewUpdate)];
+    return hasSupport;
 }
 
 void DragDropInteractionState::deliverDelayedDropPreview(UIView *contentView, UIView *previewContainer, const WebCore::TextIndicatorData& indicator)
 {
-    if (m_delayedItemPreviewProviders.isEmpty())
+    auto textIndicatorImage = uiImageForImage(indicator.contentImage.get());
+    auto preview = createTargetedDragPreview(textIndicatorImage.get(), contentView, previewContainer, indicator.textBoundingRectInRootViewCoordinates, indicator.textRectsInBoundingRectCoordinates, cocoaColor(indicator.estimatedBackgroundColor).get(), nil, AddPreviewViewToContainer::No);
+    if (!preview)
         return;
 
-    auto textIndicatorImage = uiImageForImage(indicator.contentImage.get());
-    auto preview = createTargetedDragPreview(textIndicatorImage.get(), contentView, previewContainer, indicator.textBoundingRectInRootViewCoordinates, indicator.textRectsInBoundingRectCoordinates, cocoaColor(indicator.estimatedBackgroundColor).get(), nil);
-    for (auto& itemAndPreviewProvider : m_delayedItemPreviewProviders)
-        itemAndPreviewProvider.provider(preview.get());
-    m_delayedItemPreviewProviders.clear();
+    for (auto item : m_defaultDropPreviews.keys()) {
+        m_finalDropPreviews.add(item, preview.get());
+        if (dragItemSupportsAsynchronousUpdates())
+            [item _setNeedsDropPreviewUpdate];
+    }
 }
 
 void DragDropInteractionState::deliverDelayedDropPreview(UIView *contentView, CGRect unobscuredContentRect, NSArray<UIDragItem *> *items, const Vector<IntRect>& placeholderRects)
 {
     if (items.count != placeholderRects.size()) {
-        RELEASE_LOG(DragAndDrop, "Failed to animate image placeholders: number of drag items (%tu) does not match number of placeholders (%tu)", items.count, placeholderRects.size());
-        clearAllDelayedItemPreviewProviders();
+        RELEASE_LOG_ERROR(DragAndDrop, "Failed to animate image placeholders: number of drag items (%tu) does not match number of placeholders (%tu)", items.count, placeholderRects.size());
         return;
     }
 
     for (size_t i = 0; i < placeholderRects.size(); ++i) {
         UIDragItem *item = [items objectAtIndex:i];
         auto& placeholderRect = placeholderRects[i];
-        auto provider = dropPreviewProvider(item);
-        if (!provider)
-            continue;
-
         auto defaultPreview = defaultDropPreview(item);
         auto defaultPreviewSize = [defaultPreview size];
-        if (!defaultPreview || defaultPreviewSize.width <= 0 || defaultPreviewSize.height <= 0 || placeholderRect.isEmpty()) {
-            provider(nil);
+        if (!defaultPreview || defaultPreviewSize.width <= 0 || defaultPreviewSize.height <= 0 || placeholderRect.isEmpty())
             continue;
-        }
 
         FloatRect previewIntersectionRect = enclosingIntRect(CGRectIntersection(unobscuredContentRect, placeholderRect));
         if (previewIntersectionRect.isEmpty()) {
             // If the preview rect is completely offscreen, don't bother trying to clip out or scale the default preview;
             // simply retarget the default preview.
             auto target = adoptNS([[UIDragPreviewTarget alloc] initWithContainer:contentView center:placeholderRect.center()]);
-            provider([defaultPreview retargetedPreviewWithTarget:target.get()]);
+            m_finalDropPreviews.add(item, [defaultPreview retargetedPreviewWithTarget:target.get()]);
+            if (dragItemSupportsAsynchronousUpdates())
+                [item _setNeedsDropPreviewUpdate];
             continue;
         }
 
@@ -283,48 +276,55 @@ void DragDropInteractionState::deliverDelayedDropPreview(UIView *contentView, CG
         auto transform = CGAffineTransformMakeScale(placeholderRect.width() / defaultPreviewSize.width, placeholderRect.height() / defaultPreviewSize.height);
         auto target = adoptNS([[UIDragPreviewTarget alloc] initWithContainer:contentView center:previewIntersectionRect.center() transform:transform]);
         [defaultPreview parameters].visiblePath = [UIBezierPath bezierPathWithRect:insetPreviewBounds];
-        auto newPreview = adoptNS([[UITargetedDragPreview alloc] initWithView:[defaultPreview view] parameters:[defaultPreview parameters] target:target.get()]);
-        provider(newPreview.get());
+        m_finalDropPreviews.add(item, adoptNS([[UITargetedDragPreview alloc] initWithView:[defaultPreview view] parameters:[defaultPreview parameters] target:target.get()]));
+        if (dragItemSupportsAsynchronousUpdates())
+            [item _setNeedsDropPreviewUpdate];
     }
-
-    m_delayedItemPreviewProviders.clear();
 }
 
-void DragDropInteractionState::clearAllDelayedItemPreviewProviders()
+UITargetedDragPreview *DragDropInteractionState::previewForLifting(UIDragItem *item, UIView *contentView, UIView *previewContainer, const std::optional<WebCore::TextIndicatorData>& indicator) const
 {
-    for (auto& itemAndPreviewProvider : m_delayedItemPreviewProviders)
-        itemAndPreviewProvider.provider(nil);
-    m_delayedItemPreviewProviders.clear();
+    return createDragPreviewInternal(item, contentView, previewContainer, AddPreviewViewToContainer::No, indicator).autorelease();
 }
 
-UITargetedDragPreview *DragDropInteractionState::previewForDragItem(UIDragItem *item, UIView *contentView, UIView *previewContainer) const
+UITargetedDragPreview *DragDropInteractionState::previewForCancelling(UIDragItem *item, UIView *contentView, UIView *previewContainer)
+{
+    auto preview = createDragPreviewInternal(item, contentView, previewContainer, AddPreviewViewToContainer::Yes, std::nullopt);
+    m_previewViewForDragCancel = [preview view];
+    return preview.autorelease();
+}
+
+RetainPtr<UITargetedDragPreview> DragDropInteractionState::createDragPreviewInternal(UIDragItem *item, UIView *contentView, UIView *previewContainer, AddPreviewViewToContainer addPreviewViewToContainer, const std::optional<WebCore::TextIndicatorData>& indicator) const
 {
     auto foundSource = activeDragSourceForItem(item);
     if (!foundSource)
         return nil;
+
+    if (indicator) {
+        // If the context menu preview was created using the snapshot mechanism,
+        // the drag preview should be created likewise, so that the size and position
+        // of both previews match.
+        auto textIndicatorImage = uiImageForImage(indicator->contentImage.get());
+        return createTargetedDragPreview(textIndicatorImage.get(), contentView, previewContainer, indicator->textBoundingRectInRootViewCoordinates, indicator->textRectsInBoundingRectCoordinates, cocoaColor(indicator->estimatedBackgroundColor).get(), nil, addPreviewViewToContainer).autorelease();
+    }
 
     auto& source = foundSource.value();
     if (shouldUseDragImageToCreatePreviewForDragSource(source)) {
         if (shouldUseVisiblePathToCreatePreviewForDragSource(source)) {
             auto path = source.visiblePath.value();
             UIBezierPath *visiblePath = [UIBezierPath bezierPathWithCGPath:path.platformPath()];
-            return createTargetedDragPreview(source.image.get(), contentView, previewContainer, source.dragPreviewFrameInRootViewCoordinates, { }, nil, visiblePath).autorelease();
+            return createTargetedDragPreview(source.image.get(), contentView, previewContainer, source.dragPreviewFrameInRootViewCoordinates, { }, nil, visiblePath, addPreviewViewToContainer).autorelease();
         }
-        return createTargetedDragPreview(source.image.get(), contentView, previewContainer, source.dragPreviewFrameInRootViewCoordinates, { }, nil, nil).autorelease();
+        return createTargetedDragPreview(source.image.get(), contentView, previewContainer, source.dragPreviewFrameInRootViewCoordinates, { }, nil, nil, addPreviewViewToContainer).autorelease();
     }
 
     if (shouldUseTextIndicatorToCreatePreviewForDragSource(source)) {
         auto indicator = source.indicatorData.value();
         auto textIndicatorImage = uiImageForImage(indicator.contentImage.get());
-        return createTargetedDragPreview(textIndicatorImage.get(), contentView, previewContainer, indicator.textBoundingRectInRootViewCoordinates, indicator.textRectsInBoundingRectCoordinates, cocoaColor(indicator.estimatedBackgroundColor).get(), nil).autorelease();
+        return createTargetedDragPreview(textIndicatorImage.get(), contentView, previewContainer, indicator.textBoundingRectInRootViewCoordinates, indicator.textRectsInBoundingRectCoordinates, cocoaColor(indicator.estimatedBackgroundColor).get(), nil, addPreviewViewToContainer).autorelease();
     }
 
     return nil;
-}
-
-void DragDropInteractionState::dragSessionWillDelaySetDownAnimation(dispatch_block_t completion)
-{
-    m_dragCancelSetDownBlock = completion;
 }
 
 bool DragDropInteractionState::shouldRequestAdditionalItemForDragSession(id <UIDragSession> session) const
@@ -351,7 +351,6 @@ void DragDropInteractionState::stageDragItem(const DragItem& item, UIImage *drag
     m_adjustedPositionForDragEnd = item.eventPositionInContentCoordinates;
     m_stagedDragSource = {{
         item.sourceAction,
-        item.eventPositionInContentCoordinates,
         item.dragPreviewFrameInRootViewCoordinates,
         dragImage,
         item.image.indicatorData(),
@@ -376,15 +375,13 @@ void DragDropInteractionState::clearStagedDragSource(DidBecomeActive didBecomeAc
     m_stagedDragSource = std::nullopt;
 }
 
-void DragDropInteractionState::dragAndDropSessionsDidEnd()
+void DragDropInteractionState::dragAndDropSessionsDidBecomeInactive()
 {
-    clearAllDelayedItemPreviewProviders();
+    if (auto previewView = takePreviewViewForDragCancel())
+        [previewView removeFromSuperview];
 
     // If any of UIKit's completion blocks are still in-flight when the drag interaction ends, we need to ensure that they are still invoked
     // to prevent UIKit from getting into an inconsistent state.
-    if (auto completionBlock = takeDragCancelSetDownBlock())
-        completionBlock();
-
     if (auto completionBlock = takeAddDragItemCompletionBlock())
         completionBlock(@[ ]);
 
@@ -403,15 +400,20 @@ void DragDropInteractionState::updatePreviewsForActiveDragSources()
             continue;
 
         if (source.action.contains(DragSourceAction::Link)) {
-            dragItem.previewProvider = [title = retainPtr((NSString *)source.linkTitle), url = retainPtr((NSURL *)source.linkURL), center = source.adjustedOrigin] () -> UIDragPreview * {
-                UIURLDragPreviewView *previewView = [UIURLDragPreviewView viewWithTitle:title.get() URL:url.get()];
-                previewView.center = center;
-                auto parameters = adoptNS([[UIDragPreviewParameters alloc] initWithTextLineRects:@[ [NSValue valueWithCGRect:previewView.bounds] ]]);
-                [parameters setBackgroundColor:[UIColor colorWithDynamicProvider:[] (UITraitCollection *traitCollection) -> UIColor * {
+            dragItem.previewProvider = [title = retainPtr((NSString *)source.linkTitle), url = retainPtr((NSURL *)source.linkURL)] () -> UIDragPreview * {
+                RetainPtr preview = [UIDragPreview previewForURL:url.get() title:title.get()];
+#if PLATFORM(VISION)
+                // FIXME: This is a slightly unfortunate since we end up copying the preview parameters,
+                // and also create an extra `UIDragPreview` on visionOS. We can remove this workaround
+                // once UIKit addresses <rdar://114204432>.
+                auto adjustedParameters = [preview parameters];
+                adjustedParameters.backgroundColor = [UIColor colorWithDynamicProvider:[] (UITraitCollection *traitCollection) -> UIColor * {
                     WebCore::LocalCurrentTraitCollection localCurrentTraitCollection(traitCollection);
                     return [UIColor.systemBackgroundColor resolvedColorWithTraitCollection:UITraitCollection.currentTraitCollection];
-                }]];
-                return adoptNS([[UIDragPreview alloc] initWithView:previewView parameters:parameters.get()]).autorelease();
+                }];
+                preview = adoptNS([[UIDragPreview alloc] initWithView:[preview view] parameters:adjustedParameters]);
+#endif // PLATFORM(VISION)
+                return preview.autorelease();
             };
         }
 #if ENABLE(INPUT_TYPE_COLOR)

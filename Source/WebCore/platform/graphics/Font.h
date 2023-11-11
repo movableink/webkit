@@ -1,7 +1,5 @@
 /*
- * This file is part of the internal font implementation.
- *
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -30,8 +28,10 @@
 #include "GlyphMetricsMap.h"
 #include "GlyphPage.h"
 #include "RenderingResourceIdentifier.h"
+#include <variant>
 #include <wtf/BitVector.h>
 #include <wtf/Hasher.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/StringHash.h>
 
 #if PLATFORM(COCOA)
@@ -78,7 +78,7 @@ bool fontHasEitherTable(CTFontRef, unsigned tableTag1, unsigned tableTag2);
 #endif
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Font);
-class Font : public RefCounted<Font> {
+class Font : public RefCounted<Font>, public CanMakeWeakPtr<Font> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Font);
 public:
     // Used to create platform fonts.
@@ -112,9 +112,6 @@ public:
 
     const Font* variantFont(const FontDescription& description, FontVariant variant) const
     {
-#if USE(FONT_VARIANT_VIA_FEATURES)
-        ASSERT(variant != SmallCapsVariant);
-#endif
         switch (variant) {
         case SmallCapsVariant:
             return smallCapsFont(description);
@@ -175,7 +172,7 @@ public:
     bool supportsCodePoint(UChar32) const;
     bool platformSupportsCodePoint(UChar32, std::optional<UChar32> variation = std::nullopt) const;
 
-    RefPtr<Font> systemFallbackFontForCharacter(UChar32, const FontDescription&, IsForPlatformFont) const;
+    RefPtr<Font> systemFallbackFontForCharacterCluster(StringView, const FontDescription&, ResolvedEmojiPolicy, IsForPlatformFont) const;
 
     const GlyphPage* glyphPage(unsigned pageNumber) const;
 
@@ -194,7 +191,7 @@ public:
 #if PLATFORM(IOS_FAMILY)
     bool shouldNotBeUsedForArabic() const { return m_shouldNotBeUsedForArabic; };
 #endif
-#if PLATFORM(COCOA)
+#if USE(CORE_TEXT)
     CTFontRef getCTFont() const { return m_platformData.font(); }
     RetainPtr<CFDictionaryRef> getCFStringAttributes(bool enableKerning, FontOrientation, const AtomString& locale) const;
     bool supportsSmallCaps() const;
@@ -203,7 +200,7 @@ public:
     bool supportsAllPetiteCaps() const;
 #endif
 
-    bool canRenderCombiningCharacterSequence(const UChar*, size_t) const;
+    bool canRenderCombiningCharacterSequence(StringView) const;
     GlyphBufferAdvance applyTransforms(GlyphBuffer&, unsigned beginningGlyphIndex, unsigned beginningStringIndex, bool enableKerning, bool requiresShaping, const AtomString& locale, StringView text, TextDirection) const;
 
     // Returns nullopt if none of the glyphs are OT-SVG glyphs.
@@ -233,6 +230,8 @@ public:
         Font::OrientationFallback isTextOrientationFallback : 1;
     };
     const Attributes& attributes() const { return m_attributes; }
+
+    ColorGlyphType colorGlyphType(Glyph) const;
 
 private:
     WEBCORE_EXPORT Font(const FontPlatformData&, Origin, Interstitial, Visibility, OrientationFallback, std::optional<RenderingResourceIdentifier>);
@@ -293,8 +292,7 @@ private:
 
     const FontPlatformData m_platformData;
 
-    mutable RefPtr<GlyphPage> m_glyphPageZero;
-    mutable HashMap<unsigned, RefPtr<GlyphPage>> m_glyphPages;
+    mutable HashMap<unsigned, RefPtr<GlyphPage>, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_glyphPages;
     mutable GlyphMetricsMap<float> m_glyphToWidthMap;
     mutable std::unique_ptr<GlyphMetricsMap<FloatRect>> m_glyphToBoundsMap;
     // FIXME: Find a more efficient way to represent std::optional<Path>.
@@ -324,6 +322,14 @@ private:
     };
 
     mutable std::unique_ptr<DerivedFonts> m_derivedFontData;
+
+    struct NoEmojiGlyphs { };
+    struct AllEmojiGlyphs { };
+    struct SomeEmojiGlyphs {
+        BitVector colorGlyphs;
+    };
+    using EmojiType = std::variant<NoEmojiGlyphs, AllEmojiGlyphs, SomeEmojiGlyphs>;
+    EmojiType m_emojiType { NoEmojiGlyphs { } };
 
 #if PLATFORM(COCOA)
     mutable std::optional<PAL::OTSVGTable> m_otSVGTable;

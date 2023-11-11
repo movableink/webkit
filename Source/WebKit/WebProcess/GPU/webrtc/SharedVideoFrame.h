@@ -61,9 +61,6 @@ struct SharedVideoFrame {
     WebCore::VideoFrameRotation rotation { };
     using Buffer = std::variant<std::nullptr_t, RemoteVideoFrameReadReference, MachSendRight, WebCore::IntSize>;
     Buffer buffer;
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<SharedVideoFrame> decode(Decoder&);
 };
 
 class SharedVideoFrameWriter {
@@ -122,7 +119,7 @@ private:
     RefPtr<RemoteVideoFrameObjectHeap> m_objectHeap;
     WebCore::ProcessIdentity m_resourceOwner;
     UseIOSurfaceBufferPool m_useIOSurfaceBufferPool { UseIOSurfaceBufferPool::No };
-    IPC::Semaphore m_semaphore;
+    std::optional<IPC::Semaphore> m_semaphore;
     RefPtr<SharedMemory> m_storage;
 
     RetainPtr<CVPixelBufferPoolRef> m_bufferPool;
@@ -132,32 +129,6 @@ private:
     WebCore::IntSize m_blackFrameSize;
     RetainPtr<CVPixelBufferRef> m_blackFrame;
 };
-
-template<class Encoder> void SharedVideoFrame::encode(Encoder& encoder) const
-{
-    encoder << time;
-    encoder << mirrored;
-    encoder << rotation;
-    encoder << buffer;
-}
-
-template<class Decoder> std::optional<SharedVideoFrame> SharedVideoFrame::decode(Decoder& decoder)
-{
-    SharedVideoFrame frame;
-    if (!decoder.decode(frame.time))
-        return { };
-
-    if (!decoder.decode(frame.mirrored))
-        return { };
-
-    if (!decoder.decode(frame.rotation))
-        return { };
-
-    if (!decoder.decode(frame.buffer))
-        return { };
-
-    return frame;
-}
 
 }
 

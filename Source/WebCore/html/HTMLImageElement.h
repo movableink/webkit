@@ -64,8 +64,8 @@ public:
     WEBCORE_EXPORT unsigned width();
     WEBCORE_EXPORT unsigned height();
 
-    WEBCORE_EXPORT int naturalWidth() const;
-    WEBCORE_EXPORT int naturalHeight() const;
+    WEBCORE_EXPORT unsigned naturalWidth() const;
+    WEBCORE_EXPORT unsigned naturalHeight() const;
     const URL& currentURL() const { return m_currentURL; }
     const AtomString& currentSrc() const { return m_currentSrc; }
 
@@ -82,8 +82,8 @@ public:
 
     void setLoadManually(bool);
 
-    bool matchesUsemap(const AtomStringImpl&) const;
-    HTMLMapElement* associatedMapElement() const;
+    bool matchesUsemap(const AtomString&) const;
+    RefPtr<HTMLMapElement> associatedMapElement() const;
 
     WEBCORE_EXPORT const AtomString& alt() const;
 
@@ -178,8 +178,10 @@ public:
 
     bool originClean(const SecurityOrigin&) const;
 
+    void collectExtraStyleForPresentationalHints(MutableStyleProperties&);
+
 protected:
-    constexpr static auto CreateHTMLImageElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
+    static constexpr auto CreateHTMLImageElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
 
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) override;
@@ -193,7 +195,6 @@ private:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
-    void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
     void invalidateAttributeMapping();
 
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) final;
@@ -211,10 +212,12 @@ private:
     bool isURLAttribute(const Attribute&) const override;
     bool attributeContainsURL(const Attribute&) const override;
     String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::Yes) const override;
+    Attribute replaceURLsInAttributeValue(const Attribute&, const HashMap<String, String>&) const override;
 
     bool isDraggableIgnoringAttributes() const final { return true; }
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
+    void addCandidateSubresourceURLs(ListHashSet<URL>&) const override;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void removedFromAncestor(RemovalType, ContainerNode&) override;

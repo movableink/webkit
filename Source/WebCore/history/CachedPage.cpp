@@ -27,6 +27,7 @@
 #include "CachedPage.h"
 
 #include "Document.h"
+#include "DocumentLoader.h"
 #include "Element.h"
 #include "FocusController.h"
 #include "FrameLoader.h"
@@ -128,10 +129,7 @@ void CachedPage::restore(Page& page)
 {
     ASSERT(m_cachedMainFrame);
     ASSERT(m_cachedMainFrame->view());
-#if ASSERT_ENABLED
-    auto* localFrame = dynamicDowncast<LocalFrame>(m_cachedMainFrame->view()->frame());
-#endif
-    ASSERT(localFrame && localFrame->isMainFrame());
+    ASSERT(m_cachedMainFrame->view()->frame().isMainFrame());
     ASSERT(!page.subframeCount());
 
     auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
@@ -208,6 +206,11 @@ void CachedPage::clear()
 bool CachedPage::hasExpired() const
 {
     return MonotonicTime::now() > m_expirationTime;
+}
+
+RefPtr<DocumentLoader> CachedPage::protectedDocumentLoader() const
+{
+    return documentLoader();
 }
 
 } // namespace WebCore

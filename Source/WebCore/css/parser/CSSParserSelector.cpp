@@ -50,9 +50,9 @@ std::unique_ptr<CSSParserSelector> CSSParserSelector::parsePagePseudoSelector(St
     return selector;
 }
 
-std::unique_ptr<CSSParserSelector> CSSParserSelector::parsePseudoElementSelector(StringView pseudoTypeString)
+std::unique_ptr<CSSParserSelector> CSSParserSelector::parsePseudoElementSelector(StringView pseudoTypeString, CSSParserMode mode)
 {
-    auto pseudoType = CSSSelector::parsePseudoElementType(pseudoTypeString);
+    auto pseudoType = CSSSelector::parsePseudoElementType(pseudoTypeString, mode);
     if (pseudoType == CSSSelector::PseudoElementUnknown)
         return nullptr;
 
@@ -150,6 +150,18 @@ CSSParserSelector* CSSParserSelector::leftmostSimpleSelector()
     while (auto next = selector->tagHistory())
         selector = next;
     return selector;
+}
+
+bool CSSParserSelector::hasExplicitNestingParent() const
+{
+    auto selector = this;
+    while (selector) {
+        if (selector->selector()->hasExplicitNestingParent())
+            return true;
+
+        selector = selector->tagHistory();
+    }
+    return false;
 }
 
 static bool selectorListMatchesPseudoElement(const CSSSelectorList* selectorList)

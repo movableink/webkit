@@ -67,7 +67,7 @@ Color parseColor(const String& colorString, CanvasBase& canvasBase)
 
     Color color;
     if (is<HTMLCanvasElement>(canvasBase))
-        color = CSSParser::parseColor(colorString, CSSParserContext { downcast<HTMLCanvasElement>(canvasBase).document() });
+        color = CSSParser::parseColor(colorString, downcast<HTMLCanvasElement>(canvasBase).cssParserContext());
     else
         color = CSSParser::parseColorWithoutContext(colorString);
 

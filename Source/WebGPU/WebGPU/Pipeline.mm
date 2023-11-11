@@ -45,7 +45,7 @@ std::optional<LibraryCreationResult> createLibrary(id<MTLDevice> device, const S
     RELEASE_ASSERT(ast);
 
     std::optional<WGSL::PipelineLayout> wgslPipelineLayout { std::nullopt };
-    if (pipelineLayout)
+    if (pipelineLayout && pipelineLayout->numberOfBindGroupLayouts())
         wgslPipelineLayout = ShaderModule::convertPipelineLayout(*pipelineLayout);
 
     auto prepareResult = WGSL::prepare(*ast, entryPoint, wgslPipelineLayout);
@@ -60,51 +60,86 @@ std::optional<LibraryCreationResult> createLibrary(id<MTLDevice> device, const S
     return { { library, entryPointInformation } };
 }
 
-MTLFunctionConstantValues *createConstantValues(uint32_t constantCount, const WGPUConstantEntry* constants, const WGSL::Reflection::EntryPointInformation& entryPointInformation)
+std::tuple<MTLFunctionConstantValues *, HashMap<String, WGSL::ConstantValue>> createConstantValues(uint32_t constantCount, const WGPUConstantEntry* constants, const WGSL::Reflection::EntryPointInformation& entryPointInformation)
 {
+    HashMap<String, WGSL::ConstantValue> wgslConstantValues;
+
     auto constantValues = [MTLFunctionConstantValues new];
-    for (uint32_t i = 0; i < constantCount; ++i) {
-        const auto& entry = constants[i];
-        auto indexIterator = entryPointInformation.specializationConstants.find(fromAPI(entry.key));
-        if (indexIterator == entryPointInformation.specializationConstants.end())
-            return nullptr;
-        const auto& specializationConstant = indexIterator->value;
+    for (auto& kvp : entryPointInformation.specializationConstants) {
+        auto& specializationConstant = kvp.value;
+        if (!specializationConstant.defaultValue)
+            continue;
+
+        auto constantValue = WGSL::evaluate(*kvp.value.defaultValue, wgslConstantValues);
+        auto addResult = wgslConstantValues.add(specializationConstant.mangledName, constantValue);
+        ASSERT_UNUSED(addResult, addResult.isNewEntry);
+
         switch (specializationConstant.type) {
         case WGSL::Reflection::SpecializationConstantType::Boolean: {
-            bool value = entry.value;
+            auto value = std::get<bool>(constantValue);
             [constantValues setConstantValue:&value type:MTLDataTypeBool withName:specializationConstant.mangledName];
             break;
         }
         case WGSL::Reflection::SpecializationConstantType::Float: {
-            float value = entry.value;
+            auto value = std::get<float>(constantValue);
             [constantValues setConstantValue:&value type:MTLDataTypeFloat withName:specializationConstant.mangledName];
             break;
         }
         case WGSL::Reflection::SpecializationConstantType::Int: {
-            int value = entry.value;
+            auto value = std::get<int32_t>(constantValue);
             [constantValues setConstantValue:&value type:MTLDataTypeInt withName:specializationConstant.mangledName];
             break;
         }
         case WGSL::Reflection::SpecializationConstantType::Unsigned: {
-            unsigned value = entry.value;
+            auto value = std::get<uint32_t>(constantValue);
             [constantValues setConstantValue:&value type:MTLDataTypeUInt withName:specializationConstant.mangledName];
             break;
         }
         }
     }
-    return constantValues;
+
+    for (uint32_t i = 0; i < constantCount; ++i) {
+        const auto& entry = constants[i];
+        auto indexIterator = entryPointInformation.specializationConstants.find(fromAPI(entry.key));
+        if (indexIterator == entryPointInformation.specializationConstants.end())
+            return { };
+        const auto& specializationConstant = indexIterator->value;
+        switch (specializationConstant.type) {
+        case WGSL::Reflection::SpecializationConstantType::Boolean: {
+            bool value = entry.value;
+            wgslConstantValues.set(fromAPI(entry.key), value);
+            [constantValues setConstantValue:&value type:MTLDataTypeBool withName:specializationConstant.mangledName];
+            break;
+        }
+        case WGSL::Reflection::SpecializationConstantType::Float: {
+            float value = entry.value;
+            wgslConstantValues.set(fromAPI(entry.key), value);
+            [constantValues setConstantValue:&value type:MTLDataTypeFloat withName:specializationConstant.mangledName];
+            break;
+        }
+        case WGSL::Reflection::SpecializationConstantType::Int: {
+            int value = entry.value;
+            wgslConstantValues.set(fromAPI(entry.key), value);
+            [constantValues setConstantValue:&value type:MTLDataTypeInt withName:specializationConstant.mangledName];
+            break;
+        }
+        case WGSL::Reflection::SpecializationConstantType::Unsigned: {
+            unsigned value = entry.value;
+            wgslConstantValues.set(fromAPI(entry.key), value);
+            [constantValues setConstantValue:&value type:MTLDataTypeUInt withName:specializationConstant.mangledName];
+            break;
+        }
+        }
+    }
+    return { constantValues, WTFMove(wgslConstantValues) };
 }
 
-id<MTLFunction> createFunction(id<MTLLibrary> library, const WGSL::Reflection::EntryPointInformation& entryPointInformation, unsigned constantCount, const WGPUConstantEntry* constants, NSString *label)
+id<MTLFunction> createFunction(id<MTLLibrary> library, const WGSL::Reflection::EntryPointInformation& entryPointInformation, MTLFunctionConstantValues *constantValues, NSString *label)
 {
     auto functionDescriptor = [MTLFunctionDescriptor new];
     functionDescriptor.name = entryPointInformation.mangledName;
-    if (constantCount) {
-        auto constantValues = createConstantValues(constantCount, constants, entryPointInformation);
-        if (!constantValues)
-            return nullptr;
+    if (constantValues)
         functionDescriptor.constantValues = constantValues;
-    }
     NSError *error = nil;
     id<MTLFunction> function = [library newFunctionWithDescriptor:functionDescriptor error:&error];
     if (error)

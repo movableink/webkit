@@ -95,7 +95,7 @@ BoxTree::BoxTree(RenderBlock& rootRenderer)
 
     if (is<RenderBlockFlow>(rootRenderer)) {
         rootBox->setIsInlineIntegrationRoot();
-        rootBox->setIsFirstChildForIntegration(rootRenderer.parent()->firstChild() == &rootRenderer);
+        rootBox->setIsFirstChildForIntegration(!rootRenderer.parent() || rootRenderer.parent()->firstChild() == &rootRenderer);
         buildTreeForInlineContent();
     } else if (is<RenderFlexibleBox>(rootRenderer))
         buildTreeForFlexContent();
@@ -161,10 +161,12 @@ void BoxTree::adjustStyleIfNeeded(const RenderElement& renderer, RenderStyle& st
             }
             return;
         }
-        if (renderer.isLineBreak()) {
-            styleToAdjust.setDisplay(DisplayType::Inline);
+        if (renderer.isRenderLineBreak()) {
+            if (!styleToAdjust.hasOutOfFlowPosition()) {
+                // Force in-flow display value to inline (see webkit.org/b/223151).
+                styleToAdjust.setDisplay(DisplayType::Inline);
+            }
             styleToAdjust.setFloating(Float::None);
-            styleToAdjust.setPosition(PositionType::Static);
             // Clear property should only apply on block elements, however,
             // it appears that browsers seem to ignore it on <br> inline elements.
             // https://drafts.csswg.org/css2/#propdef-clear
@@ -191,8 +193,12 @@ UniqueRef<Layout::Box> BoxTree::createLayoutBox(RenderObject& renderer)
             ? (isCombinedText ? textRenderer.originalText() : textRenderer.text())
             : RenderBlock::updateSecurityDiscCharacters(style, isCombinedText ? textRenderer.originalText() : textRenderer.text());
         auto canUseSimpleFontCodePath = textRenderer.canUseSimpleFontCodePath();
-        auto canUseSimplifiedTextMeasuring = canUseSimpleFontCodePath && Layout::TextUtil::canUseSimplifiedTextMeasuring(text, style, firstLineStyle.get());
-        return makeUniqueRef<Layout::InlineTextBox>(text, isCombinedText, canUseSimplifiedTextMeasuring, canUseSimpleFontCodePath, WTFMove(style), WTFMove(firstLineStyle));
+        auto canUseSimplifiedTextMeasuring = textRenderer.canUseSimplifiedTextMeasuring();
+        if (!canUseSimplifiedTextMeasuring) {
+            canUseSimplifiedTextMeasuring = canUseSimpleFontCodePath && Layout::TextUtil::canUseSimplifiedTextMeasuring(text, style, firstLineStyle.get());
+            textRenderer.setCanUseSimplifiedTextMeasuring(*canUseSimplifiedTextMeasuring);
+        }
+        return makeUniqueRef<Layout::InlineTextBox>(text, isCombinedText, *canUseSimplifiedTextMeasuring, canUseSimpleFontCodePath, WTFMove(style), WTFMove(firstLineStyle));
     }
 
     auto& renderElement = downcast<RenderElement>(renderer);
@@ -369,7 +375,7 @@ void showInlineContent(TextStream& stream, const InlineContent& inlineContent, s
     for (size_t lineIndex = 0, boxIndex = 0; lineIndex < lines.size() && boxIndex < boxes.size(); ++lineIndex) {
         auto addSpacing = [&](auto& streamToUse) {
             size_t printedCharacters = 0;
-            streamToUse << "-------- --";
+            streamToUse << "---------- --";
             while (++printedCharacters <= depth * 2)
                 streamToUse << " ";
 

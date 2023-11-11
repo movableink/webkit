@@ -37,7 +37,7 @@ class ScrollView;
 class AccessibilityScrollView final : public AccessibilityObject {
 public:
     static Ref<AccessibilityScrollView> create(ScrollView*);
-    AccessibilityRole roleValue() const override { return AccessibilityRole::ScrollArea; }
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::ScrollArea; }
     ScrollView* scrollView() const override { return currentScrollView(); }
 
     virtual ~AccessibilityScrollView();
@@ -62,7 +62,7 @@ private:
     AccessibilityObject* scrollBar(AccessibilityOrientation) override;
     void addChildren() override;
     void clearChildren() override;
-    AXCoreObject* accessibilityHitTest(const IntPoint&) const override;
+    AccessibilityObject* accessibilityHitTest(const IntPoint&) const override;
     void updateChildrenIfNecessary() override;
     void setNeedsToUpdateChildren() override { m_childrenDirty = true; }
     void updateScrollbars();

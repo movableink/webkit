@@ -72,6 +72,7 @@ class IdleRequestCallback;
 class LocalDOMWindowProperty;
 class Location;
 class MediaQueryList;
+class Navigation;
 class Navigator;
 class Node;
 class NodeList;
@@ -100,7 +101,6 @@ struct ImageBitmapOptions;
 struct MessageWithMessagePorts;
 struct WindowFeatures;
 
-enum SetLocationLocking { LockHistoryBasedOnGestureState, LockHistoryAndBackForwardList };
 enum class IncludeTargetOrigin : bool { No, Yes };
 
 class LocalDOMWindow final
@@ -124,7 +124,7 @@ public:
     // the network load. See also SecurityContext::isSecureTransitionTo.
     void didSecureTransitionTo(Document&);
 
-    class Observer {
+    class Observer : public CanMakeWeakPtr<Observer> {
     public:
         virtual ~Observer() { }
 
@@ -143,8 +143,9 @@ public:
     void resumeFromBackForwardCache();
 
     WEBCORE_EXPORT LocalFrame* frame() const final;
+    RefPtr<LocalFrame> protectedFrame() const;
 
-    RefPtr<MediaQueryList> matchMedia(const String&);
+    RefPtr<WebCore::MediaQueryList> matchMedia(const String&);
 
     WEBCORE_EXPORT unsigned pendingUnloadEventListeners() const;
 
@@ -169,7 +170,6 @@ public:
     BarProp& toolbar();
     WEBCORE_EXPORT Navigator& navigator();
     Navigator* optionalNavigator() const { return m_navigator.get(); }
-    Navigator& clientInformation() { return navigator(); }
 
     WEBCORE_EXPORT static void overrideTransientActivationDurationForTesting(std::optional<Seconds>&&);
     void setLastActivationTimestamp(MonotonicTime lastActivationTimestamp) { m_lastActivationTimestamp = lastActivationTimestamp; }
@@ -179,9 +179,6 @@ public:
     WEBCORE_EXPORT bool hasTransientActivation() const;
     bool hasStickyActivation() const;
     WEBCORE_EXPORT bool consumeTransientActivation();
-
-    WEBCORE_EXPORT Location& location();
-    void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, SetLocationLocking = LockHistoryBasedOnGestureState);
 
     DOMSelection* getSelection();
 
@@ -230,8 +227,6 @@ public:
 
     String status() const;
     void setStatus(const String&);
-    String defaultStatus() const;
-    void setDefaultStatus(const String&);
 
     WindowProxy* opener() const;
     void disownOpener();
@@ -244,6 +239,7 @@ public:
     // DOM Level 2 AbstractView Interface
 
     WEBCORE_EXPORT Document* document() const;
+    WEBCORE_EXPORT RefPtr<Document> protectedDocument() const;
 
     // CSSOM View Module
 
@@ -262,6 +258,7 @@ public:
     RefPtr<WebKitPoint> webkitConvertPointFromNodeToPage(Node*, const WebKitPoint*) const;
 
     PageConsoleClient* console() const;
+    CheckedPtr<PageConsoleClient> checkedConsole() const;
 
     void printErrorMessage(const String&) const;
 
@@ -278,7 +275,7 @@ public:
 
     void scrollBy(const ScrollToOptions&) const;
     void scrollBy(double x, double y) const;
-    void scrollTo(const ScrollToOptions&, ScrollClamping = ScrollClamping::Clamped, ScrollSnapPointSelectionMethod = ScrollSnapPointSelectionMethod::Closest) const;
+    void scrollTo(const ScrollToOptions&, ScrollClamping = ScrollClamping::Clamped, ScrollSnapPointSelectionMethod = ScrollSnapPointSelectionMethod::Closest, std::optional<FloatSize> originalScrollDelta = std::nullopt) const;
     void scrollTo(double x, double y, ScrollClamping = ScrollClamping::Clamped) const;
 
     void moveBy(float x, float y) const;
@@ -350,6 +347,8 @@ public:
 #endif
 
     Performance& performance() const;
+    Ref<Performance> protectedPerformance() const;
+
     WEBCORE_EXPORT ReducedResolutionSeconds nowTimestamp() const;
     void freezeNowTimestamp();
     void unfreezeNowTimestamp();
@@ -385,6 +384,9 @@ public:
     WebKitNamespace* webkitNamespace();
 #endif
 
+    // Navigation API
+    Navigation& navigation();
+
     // FIXME: When this LocalDOMWindow is no longer the active LocalDOMWindow (i.e.,
     // when its document is no longer the document that is displayed in its
     // frame), we would like to zero out m_frame to avoid being confused
@@ -407,6 +409,8 @@ public:
     bool mayReuseForNavigation() const { return m_mayReuseForNavigation; }
 
     Page* page() const;
+    CheckedPtr<Page> checkedPage() const;
+
     WEBCORE_EXPORT static void forEachWindowInterestedInStorageEvents(const Function<void(LocalDOMWindow&)>&);
 
     CookieStore& cookieStore();
@@ -419,6 +423,7 @@ private:
     bool isLocalDOMWindow() const final { return true; }
     bool isRemoteDOMWindow() const final { return false; }
     void eventListenersDidChange() final;
+    void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, SetLocationLocking) final;
 
     bool allowedToChangeWindowGeometry() const;
 
@@ -444,7 +449,7 @@ private:
     bool m_isSuspendingObservers { false };
     std::optional<bool> m_canShowModalDialogOverride;
 
-    HashSet<Observer*> m_observers;
+    WeakHashSet<Observer> m_observers;
 
     mutable RefPtr<Crypto> m_crypto;
     mutable RefPtr<History> m_history;
@@ -458,11 +463,10 @@ private:
     mutable RefPtr<DOMSelection> m_selection;
     mutable RefPtr<BarProp> m_statusbar;
     mutable RefPtr<BarProp> m_toolbar;
-    mutable RefPtr<Location> m_location;
     mutable RefPtr<VisualViewport> m_visualViewport;
+    mutable RefPtr<Navigation> m_navigation;
 
     String m_status;
-    String m_defaultStatus;
 
 #if PLATFORM(IOS_FAMILY)
     unsigned m_scrollEventListenerCount { 0 };
@@ -473,7 +477,7 @@ private:
 #endif
 
 #if ENABLE(GAMEPAD)
-    unsigned m_gamepadEventListenerCount { 0 };
+    uint64_t m_gamepadEventListenerCount { 0 };
 #endif
 
     mutable RefPtr<Storage> m_sessionStorage;
@@ -506,13 +510,6 @@ inline String LocalDOMWindow::status() const
 {
     return m_status;
 }
-
-inline String LocalDOMWindow::defaultStatus() const
-{
-    return m_defaultStatus;
-}
-
-WebCoreOpaqueRoot root(LocalDOMWindow*);
 
 } // namespace WebCore
 

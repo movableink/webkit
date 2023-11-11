@@ -124,6 +124,8 @@ public:
         return IntPoint(m_y, m_x);
     }
 
+    friend bool operator==(const IntPoint&, const IntPoint&) = default;
+
 #if USE(CG)
     WEBCORE_EXPORT explicit IntPoint(const CGPoint&); // don't do this implicitly since it's lossy
     WEBCORE_EXPORT operator CGPoint() const;
@@ -185,11 +187,6 @@ inline IntPoint operator-(const IntPoint& a, const IntSize& b)
 inline IntPoint operator-(const IntPoint& point)
 {
     return IntPoint(-point.x(), -point.y());
-}
-
-inline bool operator==(const IntPoint& a, const IntPoint& b)
-{
-    return a.x() == b.x() && a.y() == b.y();
 }
 
 inline IntSize toIntSize(const IntPoint& a)

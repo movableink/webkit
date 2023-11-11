@@ -35,9 +35,10 @@ class CSSTransition;
 class RenderStyle;
 class WebAnimation;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ElementAnimationRareData);
 class ElementAnimationRareData {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ElementAnimationRareData);
     WTF_MAKE_NONCOPYABLE(ElementAnimationRareData);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit ElementAnimationRareData(PseudoId);
     ~ElementAnimationRareData();
@@ -50,8 +51,8 @@ public:
     AnimationCollection& animations() { return m_animations; }
     CSSAnimationCollection& animationsCreatedByMarkup() { return m_animationsCreatedByMarkup; }
     void setAnimationsCreatedByMarkup(CSSAnimationCollection&&);
-    AnimatablePropertyToTransitionMap& completedTransitionsByProperty() { return m_completedTransitionsByProperty; }
-    AnimatablePropertyToTransitionMap& runningTransitionsByProperty() { return m_runningTransitionsByProperty; }
+    AnimatableCSSPropertyToTransitionMap& completedTransitionsByProperty() { return m_completedTransitionsByProperty; }
+    AnimatableCSSPropertyToTransitionMap& runningTransitionsByProperty() { return m_runningTransitionsByProperty; }
     const RenderStyle* lastStyleChangeEventStyle() const { return m_lastStyleChangeEventStyle.get(); }
     void setLastStyleChangeEventStyle(std::unique_ptr<const RenderStyle>&&);
     void cssAnimationsDidUpdate() { m_hasPendingKeyframesUpdate = false; }
@@ -64,8 +65,8 @@ private:
     std::unique_ptr<const RenderStyle> m_lastStyleChangeEventStyle;
     AnimationCollection m_animations;
     CSSAnimationCollection m_animationsCreatedByMarkup;
-    AnimatablePropertyToTransitionMap m_completedTransitionsByProperty;
-    AnimatablePropertyToTransitionMap m_runningTransitionsByProperty;
+    AnimatableCSSPropertyToTransitionMap m_completedTransitionsByProperty;
+    AnimatableCSSPropertyToTransitionMap m_runningTransitionsByProperty;
     PseudoId m_pseudoId;
     bool m_hasPendingKeyframesUpdate { false };
 };

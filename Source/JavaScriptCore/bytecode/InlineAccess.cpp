@@ -411,60 +411,27 @@ bool InlineAccess::generateSelfInAccess(CodeBlock* codeBlock, StructureStubInfo&
     return linkedCodeInline;
 }
 
-void InlineAccess::rewireStubAsJumpInAccessNotUsingInlineAccess(CodeBlock* codeBlock, StructureStubInfo& stubInfo, CodeLocationLabel<JITStubRoutinePtrTag> target)
+void InlineAccess::rewireStubAsJumpInAccess(CodeBlock* codeBlock, StructureStubInfo& stubInfo, InlineCacheHandler& handler)
 {
+    stubInfo.m_handler = &handler;
     if (codeBlock->useDataIC()) {
-        stubInfo.m_codePtr = target;
-        return;
-    }
-
-    CCallHelpers::emitJITCodeOver(stubInfo.startLocation.retagged<JSInternalPtrTag>(), scopedLambda<void(CCallHelpers&)>([&](CCallHelpers& jit) {
-        // We don't need a nop sled here because nobody should be jumping into the middle of an IC.
-        auto jump = jit.jump();
-        jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-            linkBuffer.link(jump, target);
-        });
-    }), "InlineAccess: linking constant jump");
-}
-
-void InlineAccess::rewireStubAsJumpInAccess(CodeBlock* codeBlock, StructureStubInfo& stubInfo, CodeLocationLabel<JITStubRoutinePtrTag> target)
-{
-    if (codeBlock->useDataIC()) {
-        stubInfo.m_codePtr = target;
+        stubInfo.m_codePtr = handler.callTarget();
         stubInfo.m_inlineAccessBaseStructureID.clear(); // Clear out the inline access code.
         return;
     }
 
-    CCallHelpers::emitJITCodeOver(stubInfo.startLocation.retagged<JSInternalPtrTag>(), scopedLambda<void(CCallHelpers&)>([&](CCallHelpers& jit) {
-        // We don't need a nop sled here because nobody should be jumping into the middle of an IC.
-        auto jump = jit.jump();
-        jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-            linkBuffer.link(jump, target);
-        });
-    }), "InlineAccess: linking constant jump");
+    CCallHelpers::replaceWithJump(stubInfo.startLocation.retagged<JSInternalPtrTag>(), CodeLocationLabel { handler.callTarget() });
 }
 
 void InlineAccess::resetStubAsJumpInAccess(CodeBlock* codeBlock, StructureStubInfo& stubInfo)
 {
-    if (codeBlock->useDataIC()) {
-        stubInfo.m_codePtr = stubInfo.slowPathStartLocation;
-        stubInfo.m_inlineAccessBaseStructureID.clear(); // Clear out the inline access code.
+    if (JITCode::isBaselineCode(codeBlock->jitType()) && Options::useHandlerIC()) {
+        auto handler = InlineCacheCompiler::generateSlowPathHandler(codeBlock->vm(), stubInfo.accessType);
+        InlineAccess::rewireStubAsJumpInAccess(codeBlock, stubInfo, handler.get());
         return;
     }
-
-    CCallHelpers::emitJITCodeOver(stubInfo.startLocation.retagged<JSInternalPtrTag>(), scopedLambda<void(CCallHelpers&)>([&](CCallHelpers& jit) {
-        // We don't need a nop sled here because nobody should be jumping into the middle of an IC.
-        auto jump = jit.jump();
-        auto slowPathStartLocation = stubInfo.slowPathStartLocation;
-        jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-            linkBuffer.link(jump, slowPathStartLocation);
-        });
-    }), "InlineAccess: linking constant jump");
-}
-
-void InlineAccess::resetStubAsJumpInAccessNotUsingInlineAccess(CodeBlock* codeBlock, StructureStubInfo& stubInfo)
-{
-    rewireStubAsJumpInAccessNotUsingInlineAccess(codeBlock, stubInfo, stubInfo.slowPathStartLocation);
+    auto handler = InlineCacheHandler::createNonHandlerSlowPath(stubInfo.slowPathStartLocation);
+    InlineAccess::rewireStubAsJumpInAccess(codeBlock, stubInfo, handler.get());
 }
 
 } // namespace JSC

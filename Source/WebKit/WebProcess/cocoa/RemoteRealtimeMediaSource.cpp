@@ -52,9 +52,9 @@ RemoteRealtimeMediaSource::RemoteRealtimeMediaSource(RemoteRealtimeMediaSourcePr
 
 void RemoteRealtimeMediaSource::createRemoteMediaSource()
 {
-    m_proxy.createRemoteMediaSource(deviceIDHashSalts(), pageIdentifier(), [this, protectedThis = Ref { *this }](auto&& errorMessage, auto&& settings, auto&& capabilities) {
-        if (!errorMessage.isNull()) {
-            m_proxy.didFail(WTFMove(errorMessage));
+    m_proxy.createRemoteMediaSource(deviceIDHashSalts(), pageIdentifier(), [this, protectedThis = Ref { *this }](WebCore::CaptureSourceError&& error, WebCore::RealtimeMediaSourceSettings&& settings, WebCore::RealtimeMediaSourceCapabilities&& capabilities) {
+        if (error) {
+            m_proxy.didFail(WTFMove(error));
             return;
         }
 
@@ -78,6 +78,16 @@ void RemoteRealtimeMediaSource::setSettings(RealtimeMediaSourceSettings&& settin
     auto changed = m_settings.difference(settings);
     m_settings = WTFMove(settings);
     notifySettingsDidChangeObservers(changed);
+}
+
+void RemoteRealtimeMediaSource::getPhotoCapabilities(PhotoCapabilitiesHandler&& callback)
+{
+    m_proxy.getPhotoCapabilities(WTFMove(callback));
+}
+
+Ref<RealtimeMediaSource::PhotoSettingsNativePromise> RemoteRealtimeMediaSource::getPhotoSettings()
+{
+    return m_proxy.getPhotoSettings();
 }
 
 void RemoteRealtimeMediaSource::configurationChanged(String&& persistentID, WebCore::RealtimeMediaSourceSettings&& settings, WebCore::RealtimeMediaSourceCapabilities&& capabilities)
@@ -131,7 +141,7 @@ void RemoteRealtimeMediaSource::gpuProcessConnectionDidClose(GPUProcessConnectio
         return;
 
     m_proxy.updateConnection();
-    m_manager.remoteCaptureSampleManager().didUpdateSourceConnection(m_proxy.connection());
+    m_manager.remoteCaptureSampleManager().didUpdateSourceConnection(Ref { m_proxy.connection() });
     m_proxy.resetReady();
     createRemoteMediaSource();
 

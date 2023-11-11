@@ -84,7 +84,18 @@ WI.ResourceTreeElement = class ResourceTreeElement extends WI.SourceCodeTreeElem
         if (comparisonResult !== 0)
             return comparisonResult;
 
-        // Compare by title when the subtitles are the same.
+        // Compare by title without file extensions when the subtitles are the same.
+        function filenameWithoutExtension(resourceTitle) {
+            return resourceTitle.substring(0, resourceTitle.lastIndexOf("."));
+        }
+        
+        let titleA = filenameWithoutExtension(a.mainTitle);
+        let titleB = filenameWithoutExtension(b.mainTitle);
+        comparisonResult = titleA.extendedLocaleCompare(titleB);
+        if (comparisonResult !== 0)
+            return comparisonResult;
+
+        // Compare by complete title (with extensions) when the filenames are the same.
         return a.mainTitle.extendedLocaleCompare(b.mainTitle);
     }
 
@@ -192,7 +203,7 @@ WI.ResourceTreeElement = class ResourceTreeElement extends WI.SourceCodeTreeElem
         if (!this._hideOrigin) {
             if (this._resource.localResourceOverride) {
                 if (WI.NetworkManager.supportsOverridingRequests())
-                    this.subtitle = WI.LocalResourceOverride.displayNameForType(this._resource.localResourceOverride.type);
+                    this.subtitle = this._resource.localResourceOverride.displayType;
                 else {
                     // Show the host for a local resource override if it is different from the main frame.
                     let localResourceOverrideHost = urlComponents.host;
@@ -270,9 +281,13 @@ WI.ResourceTreeElement = class ResourceTreeElement extends WI.SourceCodeTreeElem
 
             if (shouldBeBlocked || localResourceOverride?.type === WI.LocalResourceOverride.InterceptType.ResponseSkippingNetwork)
                 this.addClassName("skip-network");
+
+            if (localResourceOverride?.localResource.mappedFilePath)
+                this.addClassName("mapped-file");
         } else {
             this.removeClassName("override");
             this.removeClassName("skip-network");
+            this.removeClassName("mapped-file");
         }
 
         if (wasOverridden)

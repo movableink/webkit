@@ -29,7 +29,6 @@
 #if ENABLE(GPU_PROCESS) && ENABLE(WEBGL)
 
 #include "GPUConnectionToWebProcess.h"
-#include "QualifiedRenderingResourceIdentifier.h"
 #include "RemoteGraphicsContextGLInitializationState.h"
 #include "RemoteGraphicsContextGLMessages.h"
 #include "RemoteGraphicsContextGLProxyMessages.h"
@@ -68,19 +67,19 @@ IPC::StreamConnectionWorkQueue& remoteGraphicsContextGLStreamWorkQueue()
 }
 
 #if !PLATFORM(COCOA) && !USE(GRAPHICS_LAYER_WC) && !USE(GBM)
-Ref<RemoteGraphicsContextGL> RemoteGraphicsContextGL::create(GPUConnectionToWebProcess& gpuConnectionToWebProcess, GraphicsContextGLAttributes&& attributes, GraphicsContextGLIdentifier graphicsContextGLIdentifier, RemoteRenderingBackend& renderingBackend, IPC::StreamServerConnection::Handle&& connectionHandle)
+Ref<RemoteGraphicsContextGL> RemoteGraphicsContextGL::create(GPUConnectionToWebProcess& gpuConnectionToWebProcess, GraphicsContextGLAttributes&& attributes, GraphicsContextGLIdentifier graphicsContextGLIdentifier, RemoteRenderingBackend& renderingBackend, Ref<IPC::StreamServerConnection>&& streamConnection)
 {
     ASSERT_NOT_REACHED();
-    auto instance = adoptRef(*new RemoteGraphicsContextGL(gpuConnectionToWebProcess, graphicsContextGLIdentifier, renderingBackend, WTFMove(connectionHandle)));
+    auto instance = adoptRef(*new RemoteGraphicsContextGL(gpuConnectionToWebProcess, graphicsContextGLIdentifier, renderingBackend, WTFMove(streamConnection)));
     instance->initialize(WTFMove(attributes));
     return instance;
 }
 #endif
 
-RemoteGraphicsContextGL::RemoteGraphicsContextGL(GPUConnectionToWebProcess& gpuConnectionToWebProcess, GraphicsContextGLIdentifier graphicsContextGLIdentifier, RemoteRenderingBackend& renderingBackend, IPC::StreamServerConnection::Handle&& connectionHandle)
+RemoteGraphicsContextGL::RemoteGraphicsContextGL(GPUConnectionToWebProcess& gpuConnectionToWebProcess, GraphicsContextGLIdentifier graphicsContextGLIdentifier, RemoteRenderingBackend& renderingBackend, Ref<IPC::StreamServerConnection>&& streamConnection)
     : m_gpuConnectionToWebProcess(gpuConnectionToWebProcess)
     , m_workQueue(remoteGraphicsContextGLStreamWorkQueue())
-    , m_streamConnection(IPC::StreamServerConnection::create(WTFMove(connectionHandle)))
+    , m_streamConnection(WTFMove(streamConnection))
     , m_graphicsContextGLIdentifier(graphicsContextGLIdentifier)
     , m_renderingBackend(renderingBackend)
 #if ENABLE(VIDEO)
@@ -166,16 +165,10 @@ void RemoteGraphicsContextGL::forceContextLost()
     send(Messages::RemoteGraphicsContextGLProxy::WasLost());
 }
 
-void RemoteGraphicsContextGL::dispatchContextChangedNotification()
-{
-    assertIsCurrent(workQueue());
-    send(Messages::RemoteGraphicsContextGLProxy::WasChanged());
-}
-
 void RemoteGraphicsContextGL::createAndBindEGLImage(GCGLenum target, WebCore::GraphicsContextGL::EGLImageSource source, CompletionHandler<void(uint64_t handle, WebCore::IntSize size)>&& completionHandler)
 {
     assertIsCurrent(workQueue());
-    auto attachment = m_context->createAndBindEGLImage(target, source);
+    auto attachment = m_context->createAndBindEGLImage(target, WTFMove(source));
     auto [handle, size] = attachment.value_or(std::make_tuple(nullptr, IntSize { }));
     completionHandler(static_cast<uint64_t>(reinterpret_cast<intptr_t>(handle)), size);
 }
@@ -210,56 +203,27 @@ void RemoteGraphicsContextGL::ensureExtensionEnabled(String&& extension)
     m_context->ensureExtensionEnabled(extension);
 }
 
-void RemoteGraphicsContextGL::markContextChanged()
+void RemoteGraphicsContextGL::drawSurfaceBufferToImageBuffer(WebCore::GraphicsContextGL::SurfaceBuffer buffer, WebCore::RenderingResourceIdentifier imageBufferIdentifier, CompletionHandler<void()>&& completionHandler)
 {
     assertIsCurrent(workQueue());
-    m_context->markContextChanged();
-}
-
-void RemoteGraphicsContextGL::paintRenderingResultsToCanvas(WebCore::RenderingResourceIdentifier imageBuffer, CompletionHandler<void()>&& completionHandler)
-{
-    // Immediately turn the RenderingResourceIdentifier (which is error-prone) to a QualifiedRenderingResourceIdentifier,
-    // and use a helper function to make sure that don't accidentally use the RenderingResourceIdentifier (because the helper function can't see it).
-    paintRenderingResultsToCanvasWithQualifiedIdentifier({ imageBuffer, m_webProcessIdentifier });
-    completionHandler();
-}
-
-void RemoteGraphicsContextGL::paintRenderingResultsToCanvasWithQualifiedIdentifier(QualifiedRenderingResourceIdentifier imageBuffer)
-{
-    assertIsCurrent(workQueue());
-    m_context->withDrawingBufferAsNativeImage([&](NativeImage& image) {
-        paintNativeImageToImageBuffer(image, imageBuffer);
+    m_context->withBufferAsNativeImage(buffer, [&](NativeImage& image) {
+        paintNativeImageToImageBuffer(image, imageBufferIdentifier);
     });
-}
-
-void RemoteGraphicsContextGL::paintCompositedResultsToCanvas(WebCore::RenderingResourceIdentifier imageBuffer, CompletionHandler<void()>&& completionHandler)
-{
-    // Immediately turn the RenderingResourceIdentifier (which is error-prone) to a QualifiedRenderingResourceIdentifier,
-    // and use a helper function to make sure that don't accidentally use the RenderingResourceIdentifier (because the helper function can't see it).
-    paintCompositedResultsToCanvasWithQualifiedIdentifier({ imageBuffer, m_webProcessIdentifier });
     completionHandler();
-}
-
-void RemoteGraphicsContextGL::paintCompositedResultsToCanvasWithQualifiedIdentifier(QualifiedRenderingResourceIdentifier imageBuffer)
-{
-    assertIsCurrent(workQueue());
-    m_context->withDisplayBufferAsNativeImage([&](NativeImage& image) {
-        paintNativeImageToImageBuffer(image, imageBuffer);
-    });
 }
 
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
-void RemoteGraphicsContextGL::paintCompositedResultsToVideoFrame(CompletionHandler<void(std::optional<WebKit::RemoteVideoFrameProxy::Properties>&&)>&& completionHandler)
+void RemoteGraphicsContextGL::surfaceBufferToVideoFrame(WebCore::GraphicsContextGL::SurfaceBuffer buffer, CompletionHandler<void(std::optional<WebKit::RemoteVideoFrameProxy::Properties>&&)>&& completionHandler)
 {
     assertIsCurrent(workQueue());
     std::optional<WebKit::RemoteVideoFrameProxy::Properties> result;
-    if (auto videoFrame = m_context->paintCompositedResultsToVideoFrame())
+    if (auto videoFrame = m_context->surfaceBufferToVideoFrame(buffer))
         result = m_videoFrameObjectHeap->add(videoFrame.releaseNonNull());
     completionHandler(WTFMove(result));
 }
 #endif
 
-void RemoteGraphicsContextGL::paintNativeImageToImageBuffer(NativeImage& image, QualifiedRenderingResourceIdentifier target)
+void RemoteGraphicsContextGL::paintNativeImageToImageBuffer(NativeImage& image, RenderingResourceIdentifier imageBufferIdentifier)
 {
     assertIsCurrent(workQueue());
     // FIXME: We do not have functioning read/write fences in RemoteRenderingBackend. Thus this is synchronous,
@@ -269,7 +233,7 @@ void RemoteGraphicsContextGL::paintNativeImageToImageBuffer(NativeImage& image, 
     bool isFinished = false;
 
     m_renderingBackend->dispatch([&]() mutable {
-        if (auto imageBuffer = m_renderingBackend->remoteResourceCache().cachedImageBuffer(target)) {
+        if (auto imageBuffer = m_renderingBackend->imageBuffer(imageBufferIdentifier)) {
             // Here we do not try to play back pending commands for imageBuffer. Currently this call is only made for empty
             // image buffers and there's no good way to add display lists.
             GraphicsContextGL::paintToCanvas(image, imageBuffer->backendSize(), imageBuffer->context());
@@ -300,15 +264,6 @@ void RemoteGraphicsContextGL::simulateEventForTesting(WebCore::GraphicsContextGL
             if (auto connectionToWeb = gpuConnectionToWebProcess.get())
                 connectionToWeb->releaseGraphicsContextGLForTesting(identifier);
         });
-        return;
-    }
-    if (event == WebCore::GraphicsContextGL::SimulatedEventForTesting::ContextChange) {
-#if PLATFORM(MAC)
-        callOnMainRunLoop([weakConnection = m_gpuConnectionToWebProcess]() {
-            if (auto connection = weakConnection.get())
-                connection->dispatchDisplayWasReconfiguredForTesting();
-        });
-#endif
         return;
     }
     m_context->simulateEventForTesting(event);
@@ -348,14 +303,13 @@ void RemoteGraphicsContextGL::readPixelsSharedMemory(WebCore::IntRect rect, uint
 {
     assertIsCurrent(workQueue());
     std::optional<WebCore::IntSize> readArea;
-    if (!handle.isNull()) {
-        handle.setOwnershipOfMemory(m_resourceOwner, WebKit::MemoryLedger::Default);
-        if (auto buffer = SharedMemory::map(WTFMove(handle), SharedMemory::Protection::ReadWrite))
-            readArea = m_context->readPixelsWithStatus(rect, format, type, std::span<uint8_t>(static_cast<uint8_t*>(buffer->data()), buffer->size()));
-        else
-            m_context->addError(GCGLErrorCode::InvalidOperation);
-    } else
+
+    handle.setOwnershipOfMemory(m_resourceOwner, WebKit::MemoryLedger::Default);
+    if (auto buffer = SharedMemory::map(WTFMove(handle), SharedMemory::Protection::ReadWrite))
+        readArea = m_context->readPixelsWithStatus(rect, format, type, std::span<uint8_t>(static_cast<uint8_t*>(buffer->data()), buffer->size()));
+    else
         m_context->addError(GCGLErrorCode::InvalidOperation);
+
     completionHandler(readArea);
 }
 

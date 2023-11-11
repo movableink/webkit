@@ -53,10 +53,6 @@ VT_EXPORT const CFStringRef kVTVideoEncoderSpecification_RequiredLowLatency;
 
 namespace {  // anonymous namespace
 
-// The ratio between kVTCompressionPropertyKey_DataRateLimits and
-// kVTCompressionPropertyKey_AverageBitRate. The data rate limit is set higher
-// than the average bit rate to avoid undershooting the target.
-const float kLimitToAverageBitRateFactor = 1.5f;
 // These thresholds deviate from the default h265 QP thresholds, as they
 // have been found to work better on devices that support VideoToolbox
 const int kLowh265QpThreshold = 28;
@@ -468,20 +464,16 @@ void compressionOutputCallback(void* encoder,
 
 - (void)configureCompressionSession {
   RTC_DCHECK(_compressionSession);
-  SetVTSessionProperty(_compressionSession, nullptr, kVTCompressionPropertyKey_RealTime,
+  SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_RealTime,
                        _isLowLatencyEnabled);
   // SetVTSessionProperty(_compressionSession,
   // kVTCompressionPropertyKey_ProfileLevel, _profile);
-  SetVTSessionProperty(_compressionSession, nullptr,
-                       kVTCompressionPropertyKey_AllowFrameReordering, false);
+  SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_AllowFrameReordering, false);
   [self setEncoderBitrateBps:_targetBitrateBps];
 
   // Set a relatively large value for keyframe emission (7200 frames or 4 minutes).
-  SetVTSessionProperty(_compressionSession, nullptr,
-                       kVTCompressionPropertyKey_MaxKeyFrameInterval, 7200);
-  SetVTSessionProperty(_compressionSession, nullptr,
-                       kVTCompressionPropertyKey_MaxKeyFrameIntervalDuration,
-                       240);
+  SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_MaxKeyFrameInterval, 7200);
+  SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_MaxKeyFrameIntervalDuration, 240);
   OSStatus status =
       VTCompressionSessionPrepareToEncodeFrames(_compressionSession);
   if (status != noErr) {
@@ -509,37 +501,7 @@ void compressionOutputCallback(void* encoder,
 
 - (void)setEncoderBitrateBps:(uint32_t)bitrateBps {
   if (_compressionSession) {
-    SetVTSessionProperty(_compressionSession, nullptr, 
-                         kVTCompressionPropertyKey_AverageBitRate, bitrateBps);
-
-    // TODO(tkchin): Add a helper method to set array value.
-    int64_t dataLimitBytesPerSecondValue =
-        static_cast<int64_t>(bitrateBps * kLimitToAverageBitRateFactor / 8);
-    CFNumberRef bytesPerSecond =
-        CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt64Type,
-                       &dataLimitBytesPerSecondValue);
-    int64_t oneSecondValue = 1;
-    CFNumberRef oneSecond = CFNumberCreate(
-        kCFAllocatorDefault, kCFNumberSInt64Type, &oneSecondValue);
-    const void* nums[2] = {bytesPerSecond, oneSecond};
-    CFArrayRef dataRateLimits =
-        CFArrayCreate(nullptr, nums, 2, &kCFTypeArrayCallBacks);
-    OSStatus status = VTSessionSetProperty(
-        _compressionSession, kVTCompressionPropertyKey_DataRateLimits,
-        dataRateLimits);
-    if (bytesPerSecond) {
-      CFRelease(bytesPerSecond);
-    }
-    if (oneSecond) {
-      CFRelease(oneSecond);
-    }
-    if (dataRateLimits) {
-      CFRelease(dataRateLimits);
-    }
-    if (status != noErr) {
-      RTC_LOG(LS_ERROR) << "Failed to set data rate limit";
-    }
-
+    SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_AverageBitRate, bitrateBps);
     _encoderBitrateBps = bitrateBps;
   }
 }
@@ -625,6 +587,7 @@ void compressionOutputCallback(void* encoder,
                           ? RTCVideoContentTypeScreenshare
                           : RTCVideoContentTypeUnspecified;
   frame.flags = webrtc::VideoSendTiming::kInvalid;
+  frame.temporalIndex = -1;
 
   // FIXME: QP is ignored because there is no H.265 bitstream parser.
 

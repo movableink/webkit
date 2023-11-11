@@ -138,6 +138,18 @@ bool ObjectPropertyConditionSet::structuresEnsureValidity() const
     return true;
 }
 
+bool ObjectPropertyConditionSet::isStillValid() const
+{
+    if (!isValid())
+        return false;
+
+    for (const ObjectPropertyCondition& condition : *this) {
+        if (!condition.isStillValid(Concurrency::ConcurrentThread))
+            return false;
+    }
+    return true;
+}
+
 bool ObjectPropertyConditionSet::needImpurePropertyWatchpoint() const
 {
     for (const ObjectPropertyCondition& condition : *this) {
@@ -230,13 +242,23 @@ ObjectPropertyCondition generateCondition(
         break;
     }
     case PropertyCondition::Equivalence: {
-        unsigned attributes;
-        PropertyOffset offset = structure->get(vm, concurrency, uid, attributes);
-        if (offset == invalidOffset)
-            return ObjectPropertyCondition();
-        JSValue value = object->getDirect(concurrency, structure, offset);
-        if (!value)
-            return ObjectPropertyCondition();
+        JSValue value;
+        {
+            Locker<JSCellLock> cellLocker { NoLockingNecessary };
+            if (concurrency != Concurrency::MainThread) {
+                cellLocker = Locker { object->cellLock() };
+                if (object->structure() != structure)
+                    return ObjectPropertyCondition();
+                // The structure might change from now on, but we are guaranteed to have a sane view of the butterfly.
+            }
+            unsigned attributes;
+            PropertyOffset offset = structure->get(vm, concurrency, uid, attributes);
+            if (offset == invalidOffset)
+                return ObjectPropertyCondition();
+            value = object->getDirect(cellLocker, concurrency, structure, offset);
+            if (!value)
+                return ObjectPropertyCondition();
+        }
         result = ObjectPropertyCondition::equivalence(vm, owner, object, uid, value);
         break;
     }
@@ -381,15 +403,13 @@ ObjectPropertyConditionSet generateConditionsForIndexedMiss(VM& vm, JSCell* owne
 
 ObjectPropertyConditionSet generateConditionsForPrototypePropertyHit(
     VM& vm, JSCell* owner, JSGlobalObject* globalObject, Structure* headStructure, JSObject* prototype,
-    UniquedStringImpl* uid, PropertyCondition::Kind prototypeConditionKind)
+    UniquedStringImpl* uid)
 {
-    ASSERT(prototypeConditionKind == PropertyCondition::Presence || prototypeConditionKind == PropertyCondition::Equivalence);
-
     return generateConditions(
         globalObject, headStructure, prototype, uid,
         [&](auto& conditions, JSObject* object, Structure* structure) -> bool {
             PropertyCondition::Kind kind =
-                object == prototype ? prototypeConditionKind : PropertyCondition::Absence;
+                object == prototype ? PropertyCondition::Presence : PropertyCondition::Absence;
             ObjectPropertyCondition result =
                 generateCondition(vm, owner, object, structure, uid, kind, Concurrency::MainThread);
             if (!result)

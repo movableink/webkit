@@ -51,6 +51,18 @@ const AtomString& placeholder()
     return placeholder;
 }
 
+const AtomString& thumb()
+{
+    static MainThreadNeverDestroyed<const AtomString> thumb("thumb"_s);
+    return thumb;
+}
+
+const AtomString& track()
+{
+    static MainThreadNeverDestroyed<const AtomString> track("track"_s);
+    return track;
+}
+
 const AtomString& webkitContactsAutoFillButton()
 {
     static MainThreadNeverDestroyed<const AtomString> webkitContactsAutoFillButton("-webkit-contacts-auto-fill-button"_s);
@@ -205,12 +217,6 @@ const AtomString& webkitMeterEvenLessGoodValue()
 {
     static MainThreadNeverDestroyed<const AtomString> webkitMeterEvenLessGoodValue("-webkit-meter-even-less-good-value"_s);
     return webkitMeterEvenLessGoodValue;
-}
-
-const AtomString& webkitPluginReplacement()
-{
-    static MainThreadNeverDestroyed<const AtomString> webkitPluginReplacement("-webkit-plugin-replacement"_s);
-    return webkitPluginReplacement;
 }
 
 const AtomString& webkitProgressBar()

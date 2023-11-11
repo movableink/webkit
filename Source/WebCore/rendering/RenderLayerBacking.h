@@ -32,6 +32,7 @@
 #include "RenderLayer.h"
 #include "RenderLayerCompositor.h"
 #include "ScrollingCoordinator.h"
+#include <wtf/WeakListHashSet.h>
 
 namespace WebCore {
 
@@ -61,20 +62,16 @@ public:
     explicit RenderLayerBacking(RenderLayer&);
     ~RenderLayerBacking();
 
-#if PLATFORM(IOS_FAMILY)
-    void layerWillBeDestroyed();
-#endif
-
     // Do cleanup while layer->backing() is still valid.
     void willBeDestroyed();
 
     RenderLayer& owningLayer() const { return m_owningLayer; }
 
     // Included layers are non-z-order descendant layers that are painted into this backing.
-    const Vector<WeakPtr<RenderLayer>>& backingSharingLayers() const { return m_backingSharingLayers; }
-    void setBackingSharingLayers(Vector<WeakPtr<RenderLayer>>&&);
+    const WeakListHashSet<RenderLayer>& backingSharingLayers() const { return m_backingSharingLayers; }
+    void setBackingSharingLayers(WeakListHashSet<RenderLayer>&&);
 
-    bool hasBackingSharingLayers() const { return !m_backingSharingLayers.isEmpty(); }
+    bool hasBackingSharingLayers() const { return !m_backingSharingLayers.isEmptyIgnoringNullReferences(); }
 
     void removeBackingSharingLayer(RenderLayer&);
     void clearBackingSharingLayers();
@@ -272,6 +269,8 @@ public:
     GraphicsLayer* layerForScrollCorner() const { return m_layerForScrollCorner.get(); }
     GraphicsLayer* overflowControlsContainer() const { return m_overflowControlsContainer.get(); }
 
+    GraphicsLayer* layerForContents() const;
+
     void adjustOverflowControlsPositionRelativeToAncestor(const RenderLayer&);
 
     bool canCompositeFilters() const { return m_canCompositeFilters; }
@@ -351,6 +350,7 @@ private:
     void updateBackdropFilters(const RenderStyle&);
     void updateBackdropFiltersGeometry();
 #endif
+    bool updateBackdropRoot();
 #if ENABLE(CSS_COMPOSITING)
     void updateBlendMode(const RenderStyle&);
 #endif
@@ -412,7 +412,7 @@ private:
     RenderLayer& m_owningLayer;
     
     // A list other layers that paint into this backing store, later than m_owningLayer in paint order.
-    Vector<WeakPtr<RenderLayer>> m_backingSharingLayers;
+    WeakListHashSet<RenderLayer> m_backingSharingLayers;
 
     std::unique_ptr<LayerAncestorClippingStack> m_ancestorClippingStack; // Only used if we are clipped by an ancestor which is not a stacking context.
     std::unique_ptr<LayerAncestorClippingStack> m_overflowControlsHostLayerAncestorClippingStack; // Used when we have an overflow controls host layer which was reparented, and needs clipping by ancestors.

@@ -240,8 +240,22 @@ ALWAYS_INLINE LLIntCode getWide32CodeFunctionPtr(OpcodeID opcodeID)
     return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).template taggedPtr());
 #endif
 }
+#else // not ENABLE(JIT)
+ALWAYS_INLINE void* getCodePtr(OpcodeID id)
+{
+    return reinterpret_cast<void*>(getOpcode(id));
+}
 
-#if ENABLE(WEBASSEMBLY)
+ALWAYS_INLINE void* getWide16CodePtr(OpcodeID id)
+{
+    return reinterpret_cast<void*>(getOpcodeWide16(id));
+}
+
+ALWAYS_INLINE void* getWide32CodePtr(OpcodeID id)
+{
+    return reinterpret_cast<void*>(getOpcodeWide32(id));
+}
+#endif // ENABLE(JIT)
 
 inline Opcode getOpcode(WasmOpcodeID id)
 {
@@ -340,6 +354,7 @@ ALWAYS_INLINE MacroAssemblerCodeRef<tag> getWide32CodeRef(WasmOpcodeID opcodeID)
     return MacroAssemblerCodeRef<tag>::createSelfManagedCodeRef(getWide32CodePtr<tag>(opcodeID));
 }
 
+#if ENABLE(JIT)
 template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getCodeFunctionPtr(WasmOpcodeID opcodeID)
 {
@@ -369,21 +384,18 @@ ALWAYS_INLINE LLIntCode getWide32CodeFunctionPtr(WasmOpcodeID opcodeID)
     return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).template taggedPtr());
 #endif
 }
-
-#endif // ENABLE(WEBASSEMBLY)
-
 #else // not ENABLE(JIT)
-ALWAYS_INLINE void* getCodePtr(OpcodeID id)
+ALWAYS_INLINE void* getCodePtr(WasmOpcodeID id)
 {
     return reinterpret_cast<void*>(getOpcode(id));
 }
 
-ALWAYS_INLINE void* getWide16CodePtr(OpcodeID id)
+ALWAYS_INLINE void* getWide16CodePtr(WasmOpcodeID id)
 {
     return reinterpret_cast<void*>(getOpcodeWide16(id));
 }
 
-ALWAYS_INLINE void* getWide32CodePtr(OpcodeID id)
+ALWAYS_INLINE void* getWide32CodePtr(WasmOpcodeID id)
 {
     return reinterpret_cast<void*>(getOpcodeWide32(id));
 }
@@ -392,20 +404,8 @@ ALWAYS_INLINE void* getWide32CodePtr(OpcodeID id)
 #if ENABLE(JIT)
 struct Registers {
     static constexpr GPRReg pcGPR = GPRInfo::regT4;
-
-#if CPU(X86_64) && !OS(WINDOWS)
-    static constexpr GPRReg metadataTableGPR = GPRInfo::regCS1;
-    static constexpr GPRReg pbGPR = GPRInfo::constantsRegister;
-#elif CPU(X86_64) && OS(WINDOWS)
-    static constexpr GPRReg metadataTableGPR = GPRInfo::regCS3;
-    static constexpr GPRReg pbGPR = GPRInfo::constantsRegister;
-#elif CPU(ARM64) || CPU(RISCV64)
-    static constexpr GPRReg metadataTableGPR = GPRInfo::regCS6;
-    static constexpr GPRReg pbGPR = GPRInfo::constantsRegister;
-#elif CPU(MIPS) || CPU(ARM_THUMB2)
-    static constexpr GPRReg metadataTableGPR = GPRInfo::regCS0;
-    static constexpr GPRReg pbGPR = GPRInfo::regCS1;
-#endif
+    static constexpr GPRReg pbGPR = GPRInfo::jitDataRegister;
+    static constexpr GPRReg metadataTableGPR = GPRInfo::metadataTableRegister;
 };
 #endif
 

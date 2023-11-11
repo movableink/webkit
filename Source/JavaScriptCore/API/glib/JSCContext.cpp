@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Igalia S.L.
+ * Copyright (C) 2023 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -972,18 +973,18 @@ JSCCheckSyntaxResult jsc_context_check_syntax(JSCContext* context, const char* c
     JSC::JSLockHolder locker(vm);
 
     URL sourceURL = uri ? URL(String::fromLatin1(uri)) : URL();
-    JSC::SourceCode source = JSC::makeSource(String::fromUTF8(code, length < 0 ? strlen(code) : length), JSC::SourceOrigin { sourceURL },
+    JSC::SourceCode source = JSC::makeSource(String::fromUTF8(code, length < 0 ? strlen(code) : length), JSC::SourceOrigin { sourceURL }, JSC::SourceTaintedOrigin::Untainted,
         sourceURL.string() , TextPosition(OrdinalNumber::fromOneBasedInt(lineNumber), OrdinalNumber()));
     bool success = false;
     JSC::ParserError error;
     switch (mode) {
     case JSC_CHECK_SYNTAX_MODE_SCRIPT:
         success = !!JSC::parse<JSC::ProgramNode>(vm, source, JSC::Identifier(), JSC::ImplementationVisibility::Public, JSC::JSParserBuiltinMode::NotBuiltin,
-            JSC::JSParserStrictMode::NotStrict, JSC::JSParserScriptMode::Classic, JSC::SourceParseMode::ProgramMode, JSC::SuperBinding::NotNeeded, error);
+            JSC::JSParserStrictMode::NotStrict, JSC::JSParserScriptMode::Classic, JSC::SourceParseMode::ProgramMode, JSC::FunctionMode::None, JSC::SuperBinding::NotNeeded, error);
         break;
     case JSC_CHECK_SYNTAX_MODE_MODULE:
         success = !!JSC::parse<JSC::ModuleProgramNode>(vm, source, JSC::Identifier(), JSC::ImplementationVisibility::Public, JSC::JSParserBuiltinMode::NotBuiltin,
-            JSC::JSParserStrictMode::Strict, JSC::JSParserScriptMode::Module, JSC::SourceParseMode::ModuleAnalyzeMode, JSC::SuperBinding::NotNeeded, error);
+            JSC::JSParserStrictMode::Strict, JSC::JSParserScriptMode::Module, JSC::SourceParseMode::ModuleAnalyzeMode, JSC::FunctionMode::None, JSC::SuperBinding::NotNeeded, error);
         break;
     }
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+# Copyright (C) 2005-2023 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2011 Research In Motion Limited. All rights reserved.
 # Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
@@ -63,6 +63,7 @@ BEGIN {
    @ISA         = qw(Exporter);
    @EXPORT      = qw(
        &XcodeCoverageSupportOptions
+       &XcodeExportCompileCommandsOptions
        &XcodeOptionString
        &XcodeOptionStringNoConfig
        &XcodeOptions
@@ -131,6 +132,7 @@ BEGIN {
        &isInspectorFrontend
        &isJSCOnly
        &isLinux
+       &isMacCatalystWebKit
        &isPlayStation
        &isQt
        &isWPE
@@ -142,6 +144,7 @@ BEGIN {
        &jscProductDir
        &launcherName
        &launcherPath
+       &libFuzzerIsEnabled
        &ltoMode
        &markBaseProductDirectoryAsCreatedByXcodeBuildSystem
        &maxCPULoad
@@ -158,7 +161,6 @@ BEGIN {
        &prependToEnvironmentVariableList
        &printHelpAndExitForRunAndDebugWebKitAppIfNeeded
        &productDir
-       &productDirForCMake
        &prohibitUnknownPort
        &relativeScriptsDir
        &removeCMakeCache
@@ -193,12 +195,15 @@ BEGIN {
        &splitVersionString
        &tsanIsEnabled
        &ubsanIsEnabled
+       &usesCryptexPath
        &willUseAppleTVDeviceSDK
        &willUseAppleTVSimulatorSDK
        &willUseIOSDeviceSDK
        &willUseIOSSimulatorSDK
        &willUseWatchDeviceSDK
        &willUseWatchSimulatorSDK
+       &willUseVisionDeviceSDK
+       &willUseVisionSimulatorSDK
        &winVersion
        &wrapperPrefixIfNeeded
        &xcodeSDK
@@ -219,6 +224,7 @@ use constant {
     iOS         => "iOS",
     tvOS        => "tvOS",
     watchOS     => "watchOS",
+    visionOS    => "visionOS",
     Mac         => "Mac",
     MacCatalyst => "MacCatalyst",
     JSCOnly     => "JSCOnly",
@@ -245,6 +251,7 @@ my %nativeArchitectureMap = ();
 my $asanIsEnabled;
 my $tsanIsEnabled;
 my $ubsanIsEnabled;
+my $libFuzzerIsEnabled;
 my $coverageIsEnabled;
 my $forceOptimizationLevel;
 my $ltoMode;
@@ -411,13 +418,13 @@ sub determineBaseProductDir
         $setSharedPrecompsDir = 1 if $buildLocationStyle ne "DeterminedByTargets";
 
         if (!defined($baseProductDir)) {
-            $baseProductDir = join '', readXcodeUserDefault("IDEApplicationwideBuildSettings");
-            $baseProductDir = $1 if $baseProductDir =~ /SYMROOT\s*=\s*\"(.*?)\";/s;
+            my $customPaths = join '', readXcodeUserDefault("IDEApplicationwideBuildSettings");
+            $baseProductDir = $1 if $customPaths =~ /SYMROOT\s*=\s*\"(.*?)\";/s;
         }
 
-        # Expand tilde in pathnames for compatibility
+        # Glob to expand tilde in pathnames
         # (https://bugs.webkit.org/show_bug.cgi?id=249442).
-        ($baseProductDir) = bsd_glob($baseProductDir, GLOB_TILDE) if defined($baseProductDir);
+        ($baseProductDir) = bsd_glob($baseProductDir) if defined($baseProductDir);
 
         if (defined($baseProductDir) && $baseProductDir !~ /^\//) {
             # webkitdirs can be run from arbitrary directories, so any
@@ -442,7 +449,7 @@ sub determineBaseProductDir
         $baseProductDir =~ s|^~/|$ENV{HOME}/|;
         die "Can't handle Xcode product directory with a ~ in it.\n" if $baseProductDir =~ /~/;
         die "Can't handle Xcode product directory with a variable in it.\n" if $baseProductDir =~ /\$/;
-        $baseProductDir = realpath($baseProductDir);
+        $baseProductDir = realpath($baseProductDir) if -e $baseProductDir;
         @baseProductDirOption = ("SYMROOT=$baseProductDir", "OBJROOT=$baseProductDir");
         push(@baseProductDirOption, "SHARED_PRECOMPS_DIR=${baseProductDir}/PrecompiledHeaders") if $setSharedPrecompsDir;
         push(@baseProductDirOption, "INDEX_ENABLE_DATA_STORE=YES", "INDEX_DATA_STORE_DIR=${indexDataStoreDir}") if $indexDataStoreDir;
@@ -618,6 +625,13 @@ sub determineUBSanIsEnabled
     $ubsanIsEnabled = readSanitizerConfiguration("UBSan");
 }
 
+sub determineLibFuzzerIsEnabled
+{
+    return if defined $libFuzzerIsEnabled;
+    determineBaseProductDir();
+    $libFuzzerIsEnabled = readSanitizerConfiguration("LibFuzzer");
+}
+
 sub determineForceOptimizationLevel
 {
     return if defined $forceOptimizationLevel;
@@ -718,6 +732,8 @@ sub argumentsForConfiguration()
     push(@args, '--tvos-simulator') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'appletvsimulator');
     push(@args, '--watchos-device') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'watchos');
     push(@args, '--watchos-simulator') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'watchsimulator');
+    push(@args, '--visionos-device') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'xros');
+    push(@args, '--visionos-simulator') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'xrsimulator');
     push(@args, '--maccatalyst') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'maccatalyst');
     push(@args, '--32-bit') if ($architecture eq "x86" and !isWin64());
     push(@args, '--64-bit') if (isWin64());
@@ -806,6 +822,8 @@ sub isValidXcodeSDKPlatformName($) {
         macosx
         watchos
         watchsimulator
+        xros
+        xrsimulator
         maccatalyst
     );
     return grep { $_ eq $name } @platforms;
@@ -866,6 +884,12 @@ sub determineXcodeSDKPlatformName {
     }
     if (checkForArgumentAndRemoveFromARGV("--watchos-simulator")) {
         $xcodeSDKPlatformName ||= "watchsimulator";
+    }
+    if (checkForArgumentAndRemoveFromARGV("--visionos-device")) {
+        $xcodeSDKPlatformName ||= "xros";
+    }
+    if (checkForArgumentAndRemoveFromARGV("--visionos-simulator")) {
+        $xcodeSDKPlatformName ||= "xrsimulator";
     }
     if (checkForArgumentAndRemoveFromARGV("--maccatalyst")) {
         $xcodeSDKPlatformName ||= "maccatalyst";
@@ -1014,7 +1038,7 @@ sub determineConfigurationProductDir
         if (usesPerConfigurationBuildDirectory()) {
             $configurationProductDir = "$baseProductDir";
         } else {
-            if (shouldUseFlatpak() or shouldBuildForCrossTarget() or inCrossTargetEnvironment()) {
+            if (isGtk() or isWPE() or isJSCOnly() or shouldUseFlatpak() or shouldBuildForCrossTarget() or inCrossTargetEnvironment()) {
                 $configurationProductDir = "$baseProductDir/$portName/$configuration";
             } else {
                 $configurationProductDir = "$baseProductDir/$configuration";
@@ -1121,6 +1145,12 @@ sub ubsanIsEnabled()
     return $ubsanIsEnabled;
 }
 
+sub libFuzzerIsEnabled()
+{
+    determineLibFuzzerIsEnabled();
+    return $libFuzzerIsEnabled;
+}
+
 sub coverageIsEnabled()
 {
     determineCoverageIsEnabled();
@@ -1163,11 +1193,6 @@ sub determineGenerateDsym()
     $generateDsym = checkForArgumentAndRemoveFromARGV("--dsym");
 }
 
-sub hasIOSDevelopmentCertificate()
-{
-    return !exitStatus(system("security find-identity -p codesigning | grep '" . IOS_DEVELOPMENT_CERTIFICATE_NAME_PREFIX . "' > /dev/null 2>&1"));
-}
-
 sub argumentsForXcode()
 {
     my @args = ();
@@ -1206,6 +1231,7 @@ sub XcodeOptions
     determineASanIsEnabled();
     determineTSanIsEnabled();
     determineUBSanIsEnabled();
+    determineLibFuzzerIsEnabled();
     determineForceOptimizationLevel();
     determineCoverageIsEnabled();
     determineLTOMode();
@@ -1225,15 +1251,15 @@ sub XcodeOptions
     push @options, ("ENABLE_ADDRESS_SANITIZER=YES") if $asanIsEnabled;
     push @options, ("ENABLE_THREAD_SANITIZER=YES") if $tsanIsEnabled;
     push @options, ("ENABLE_UNDEFINED_BEHAVIOR_SANITIZER=YES") if $ubsanIsEnabled;
+    push @options, ("ENABLE_LIBFUZZER=YES") if $libFuzzerIsEnabled;
     push @options, XcodeCoverageSupportOptions() if $coverageIsEnabled;
     push @options, "GCC_OPTIMIZATION_LEVEL=$forceOptimizationLevel" if $forceOptimizationLevel;
     push @options, "WK_LTO_MODE=$ltoMode" if $ltoMode;
     push @options, @baseProductDirOption;
     push @options, "ARCHS=$architecture" if $architecture;
     push @options, "SDKROOT=$xcodeSDK" if $xcodeSDK;
-    if (xcodeVersion() ge "14.0" && xcodeVersion() lt "15.0") {
-        # TAPI_USE_SRCROOT is not recognized by Xcode 14.x, but the feature flag is.
-        push @options, ("-UseSRCROOTSupportForTAPI=YES", "TAPI_USE_SRCROOT=YES");
+    if (xcodeVersion() lt "15.0") {
+        push @options, "TAPI_USE_SRCROOT=YES" if $ENV{UseSRCROOTSupportForTAPI};
     }
 
     my @features = webkitperl::FeatureList::getFeatureOptionList();
@@ -1253,15 +1279,6 @@ sub XcodeOptions
     die "Cannot enable both ASAN and TSAN at the same time\n" if $asanIsEnabled && $tsanIsEnabled;
     die "Cannot enable both (ASAN or TSAN) and Coverage at this time\n" if $coverageIsEnabled && ($asanIsEnabled || $tsanIsEnabled);
 
-    if (willUseIOSDeviceSDK() || willUseWatchDeviceSDK() || willUseAppleTVDeviceSDK()) {
-        if (hasIOSDevelopmentCertificate()) {
-            # FIXME: May match more than one installed development certificate.
-            push @options, "CODE_SIGN_IDENTITY=" . IOS_DEVELOPMENT_CERTIFICATE_NAME_PREFIX;
-        } else {
-            push @options, "CODE_SIGN_IDENTITY="; # No identity
-            push @options, "CODE_SIGNING_REQUIRED=NO";
-        }
-    }
     push @options, argumentsForXcode();
     return @options;
 }
@@ -1279,6 +1296,11 @@ sub XcodeOptionStringNoConfig
 sub XcodeCoverageSupportOptions()
 {
     return ("-xcconfig", sourceDir() . "/Tools/coverage/coverage.xcconfig");
+}
+
+sub XcodeExportCompileCommandsOptions()
+{
+    return ("OTHER_CFLAGS=\$(inherited) -gen-cdb-fragment-path \$(BUILT_PRODUCTS_DIR)/compile_commands", "GCC_PRECOMPILE_PREFIX_HEADER=NO", "CLANG_ENABLE_MODULE_DEBUGGING=NO", "COMPILER_INDEX_STORE_ENABLE=NO");
 }
 
 sub XcodeStaticAnalyzerOption()
@@ -1639,6 +1661,8 @@ sub determinePortName()
             $portName = tvOS;
         } elsif (willUseWatchDeviceSDK() || willUseWatchSimulatorSDK()) {
             $portName = watchOS;
+        } elsif (willUseVisionDeviceSDK() || willUseVisionSimulatorSDK()) {
+            $portName = visionOS;
         } elsif (willUseMacCatalystSDK()) {
             $portName = MacCatalyst;
         } else {
@@ -1859,9 +1883,14 @@ sub isWatchOSWebKit()
     return portName() eq watchOS;
 }
 
+sub isVisionOSWebKit()
+{
+    return portName() eq visionOS;
+}
+
 sub isEmbeddedWebKit()
 {
-    return isIOSWebKit() || isTVOSWebKit() || isWatchOSWebKit();
+    return isIOSWebKit() || isTVOSWebKit() || isWatchOSWebKit() || isVisionOSWebKit;
 }
 
 sub isAppleWebKit()
@@ -1882,6 +1911,11 @@ sub isMacCatalystWebKit()
 sub isAppleCocoaWebKit()
 {
     return isAppleMacWebKit() || isEmbeddedWebKit() || isMacCatalystWebKit();
+}
+
+sub usesCryptexPath
+{
+    return isAppleMacWebKit() || isMacCatalystWebKit() || isIOSWebKit();
 }
 
 sub simulatorDeviceFromJSON
@@ -1962,6 +1996,16 @@ sub willUseWatchDeviceSDK()
 sub willUseWatchSimulatorSDK()
 {
     return xcodeSDKPlatformName() eq "watchsimulator";
+}
+
+sub willUseVisionDeviceSDK()
+{
+    return xcodeSDKPlatformName() eq "xros";
+}
+
+sub willUseVisionSimulatorSDK()
+{
+    return xcodeSDKPlatformName() eq "xrsimulator";
 }
 
 sub willUseMacCatalystSDK()
@@ -2268,11 +2312,11 @@ sub getMSBuildPlatformArgument()
 
 sub getCMakeWindowsToolsetArgument()
 {
+    my @args;
     my $toolset = getVisualStudioToolset();
-    if (defined($toolset) && length($toolset)) {
-        return "-A $toolset";
-    }
-    return "";
+    push(@args, '-A', $toolset) if defined($toolset) && length($toolset);
+    push(@args, '-T', 'ClangCL') if defined($ENV{CC}) && $ENV{CC} =~ 'clang-cl';
+    return @args;
 }
 
 sub buildVisualStudioProject
@@ -2528,7 +2572,7 @@ sub shouldUseFlatpak()
 
 sub cmakeCachePath()
 {
-    return File::Spec->catdir(productDirForCMake(), "CMakeCache.txt");
+    return File::Spec->catdir(productDir(), "CMakeCache.txt");
 }
 
 sub shouldRemoveCMakeCache(@)
@@ -2539,7 +2583,7 @@ sub shouldRemoveCMakeCache(@)
     my (@buildArgs) = grep(/^-/, sort(@_, @originalArgv));
 
     # We check this first, because we always want to create this file for a fresh build.
-    my $productDir = productDirForCMake();
+    my $productDir = productDir();
     my $optionsCache = File::Spec->catdir($productDir, "build-webkit-options.txt");
     my $joinedBuildArgs = join(" ", @buildArgs);
     if (isCachedArgumentfileOutOfDate($optionsCache, $joinedBuildArgs)) {
@@ -2564,6 +2608,11 @@ sub shouldRemoveCMakeCache(@)
 
     my $globalConfiguration = File::Spec->catdir(sourceDir(), "Source", "cmake", "OptionsCommon.cmake");
     if ($cacheFileModifiedTime < stat($globalConfiguration)->mtime) {
+        return 1;
+    }
+
+    my $compilerFlagsCMake = File::Spec->catdir(sourceDir(), "Source", "cmake", "WebKitCompilerFlags.cmake");
+    if ($cacheFileModifiedTime < stat($compilerFlagsCMake)->mtime) {
         return 1;
     }
 
@@ -2647,11 +2696,11 @@ sub cmakeGeneratedBuildfile(@)
 {
     my ($willUseNinja) = @_;
     if ($willUseNinja) {
-        return File::Spec->catfile(productDirForCMake(), "build.ninja")
+        return File::Spec->catfile(productDir(), "build.ninja")
     } elsif (isAnyWindows()) {
-        return File::Spec->catfile(productDirForCMake(), "WebKit.sln")
+        return File::Spec->catfile(productDir(), "WebKit.sln")
     } else {
-        return File::Spec->catfile(productDirForCMake(), "Makefile")
+        return File::Spec->catfile(productDir(), "Makefile")
     }
 }
 
@@ -2660,7 +2709,7 @@ sub generateBuildSystemFromCMakeProject
     my ($prefixPath, @cmakeArgs) = @_;
     my $config = configuration();
     my $port = cmakeBasedPortName();
-    my $buildPath = productDirForCMake();
+    my $buildPath = productDir();
     File::Path::mkpath($buildPath) unless -d $buildPath;
     my $originalWorkingDirectory = getcwd();
     chdir($buildPath) or die;
@@ -2674,7 +2723,6 @@ sub generateBuildSystemFromCMakeProject
     my @args;
     push @args, "-DPORT=\"$port\"";
     push @args, "-DCMAKE_INSTALL_PREFIX=\"$prefixPath\"" if $prefixPath;
-    push @args, "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON";
     if ($config =~ /release/i) {
         push @args, "-DCMAKE_BUILD_TYPE=Release";
     } elsif ($config =~ /debug/i) {
@@ -2684,6 +2732,7 @@ sub generateBuildSystemFromCMakeProject
     push @args, "-DENABLE_SANITIZERS=address" if asanIsEnabled();
     push @args, "-DENABLE_SANITIZERS=thread" if tsanIsEnabled();
     push @args, "-DENABLE_SANITIZERS=undefined" if ubsanIsEnabled();
+    push @args, "-DENABLE_SANITIZERS=fuzzer" if libFuzzerIsEnabled();
 
     push @args, "-DLTO_MODE=$ltoMode" if ltoMode();
 
@@ -2742,18 +2791,11 @@ sub generateBuildSystemFromCMakeProject
     return $returnCode;
 }
 
-sub productDirForCMake() {
-    if (shouldBuildForCrossTarget() or inCrossTargetEnvironment()) {
-        return productDir();
-    }
-    return File::Spec->catdir(baseProductDir(), configuration());
-}
-
 sub buildCMakeGeneratedProject($)
 {
     my (@makeArgs) = @_;
     my $config = configuration();
-    my $buildPath = productDirForCMake();
+    my $buildPath = productDir();
     if (! -d $buildPath) {
         die "Must call generateBuildSystemFromCMakeProject() before building CMake project.";
     }
@@ -2783,7 +2825,7 @@ sub buildCMakeGeneratedProject($)
 sub cleanCMakeGeneratedProject()
 {
     my $config = configuration();
-    my $buildPath = productDirForCMake();
+    my $buildPath = productDir();
     if (-d $buildPath) {
         return systemVerbose("cmake", "--build", $buildPath, "--config", $config, "--target", "clean");
     }

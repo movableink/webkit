@@ -95,6 +95,7 @@ class SubstituteResource;
 class UserContentURLPattern;
 
 enum class ClearSiteDataValue : uint8_t;
+enum class LoadWillContinueInAnotherProcess : bool;
 enum class ShouldContinue;
 
 using ResourceLoaderMap = HashMap<ResourceLoaderIdentifier, RefPtr<ResourceLoader>>;
@@ -185,7 +186,7 @@ public:
 
     void attachToFrame(LocalFrame&);
 
-    WEBCORE_EXPORT virtual void detachFromFrame();
+    WEBCORE_EXPORT virtual void detachFromFrame(LoadWillContinueInAnotherProcess);
 
     WEBCORE_EXPORT FrameLoader* frameLoader() const;
     WEBCORE_EXPORT SubresourceLoader* mainResourceLoader() const;
@@ -418,10 +419,8 @@ public:
     WEBCORE_EXPORT void setRedirectionAsSubstituteData(ResourceResponse&&);
 
 #if ENABLE(CONTENT_FILTERING)
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     void setBlockedPageURL(const URL& blockedPageURL) { m_blockedPageURL = blockedPageURL; }
     void setSubstituteDataFromContentFilter(SubstituteData&& substituteDataFromContentFilter) { m_substituteDataFromContentFilter = WTFMove(substituteDataFromContentFilter); }
-#endif // ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     ContentFilter* contentFilter() const { return m_contentFilter.get(); }
     void ref() const final { RefCounted<DocumentLoader>::ref(); }
     void deref() const final { RefCounted<DocumentLoader>::deref(); }
@@ -549,6 +548,7 @@ private:
     void dataReceived(const SharedBuffer&);
 
     bool maybeLoadEmpty();
+    void loadErrorDocument();
 
     bool isMultipartReplacingLoad() const;
     bool isPostOrRedirectAfterPost(const ResourceRequest&, const ResourceResponse&);
@@ -669,11 +669,9 @@ private:
 
 #if ENABLE(CONTENT_FILTERING)
     std::unique_ptr<ContentFilter> m_contentFilter;
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     ResourceError m_blockedError;
     URL m_blockedPageURL;
     SubstituteData m_substituteDataFromContentFilter;
-#endif // ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
 #endif // ENABLE(CONTENT_FILTERING)
 
 #if USE(QUICK_LOOK)
@@ -746,9 +744,9 @@ private:
     bool m_finishedLoadingApplicationManifest { false };
 #endif
 
-#if ENABLE(CONTENT_FILTERING) && ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+#if ENABLE(CONTENT_FILTERING)
     bool m_blockedByContentFilter { false };
-#endif // ENABLE(CONTENT_FILTERING) && ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+#endif
 
 #if ENABLE(SERVICE_WORKER)
     bool m_canUseServiceWorkers { true };

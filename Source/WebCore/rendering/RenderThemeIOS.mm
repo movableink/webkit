@@ -70,6 +70,7 @@
 #import "PathUtilities.h"
 #import "PlatformLocale.h"
 #import "RenderAttachment.h"
+#import "RenderBoxInlines.h"
 #import "RenderButton.h"
 #import "RenderMenuList.h"
 #import "RenderMeter.h"
@@ -420,19 +421,27 @@ void RenderThemeIOS::paintCheckboxDecorations(const RenderObject& box, const Pai
                 { 11.5f / size.width, 2.5f / size.height }
             };
 
-            line.uncheckedAppend(CGPointMake(clip.x() + width * pathRatios[0].x, clip.y() + height * pathRatios[0].y));
-            line.uncheckedAppend(CGPointMake(clip.x() + width * pathRatios[1].x, clip.y() + height * pathRatios[1].y));
-            line.uncheckedAppend(CGPointMake(clip.x() + width * pathRatios[2].x, clip.y() + height * pathRatios[2].y));
+            line.appendList({
+                CGPointMake(clip.x() + width * pathRatios[0].x, clip.y() + height * pathRatios[0].y),
+                CGPointMake(clip.x() + width * pathRatios[1].x, clip.y() + height * pathRatios[1].y),
+                CGPointMake(clip.x() + width * pathRatios[2].x, clip.y() + height * pathRatios[2].y)
+            });
 
-            shadow.uncheckedAppend(shortened(line[0], line[1], lineWidth / 4.0f));
-            shadow.uncheckedAppend(line[1]);
-            shadow.uncheckedAppend(shortened(line[2], line[1], lineWidth / 4.0f));
+            shadow.appendList({
+                shortened(line[0], line[1], lineWidth / 4.0f),
+                line[1],
+                shortened(line[2], line[1], lineWidth / 4.0f)
+            });
         } else {
-            line.uncheckedAppend(CGPointMake(clip.x() + 3.5, clip.center().y()));
-            line.uncheckedAppend(CGPointMake(clip.maxX() - 3.5, clip.center().y()));
+            line.appendList({
+                CGPointMake(clip.x() + 3.5, clip.center().y()),
+                CGPointMake(clip.maxX() - 3.5, clip.center().y())
+            });
 
-            shadow.uncheckedAppend(shortened(line[0], line[1], lineWidth / 4.0f));
-            shadow.uncheckedAppend(shortened(line[1], line[0], lineWidth / 4.0f));
+            shadow.appendList({
+                shortened(line[0], line[1], lineWidth / 4.0f),
+                shortened(line[1], line[0], lineWidth / 4.0f)
+            });
         }
 
         lineWidth = std::max<float>(lineWidth, 1);
@@ -465,11 +474,15 @@ LayoutRect RenderThemeIOS::adjustedPaintRect(const RenderBox& box, const LayoutR
 
 int RenderThemeIOS::baselinePosition(const RenderBox& box) const
 {
+    auto baseline = RenderTheme::baselinePosition(box);
+    if (!box.isHorizontalWritingMode())
+        return baseline;
+
     if (box.style().effectiveAppearance() == StyleAppearance::Checkbox || box.style().effectiveAppearance() == StyleAppearance::Radio)
-        return box.marginTop() + box.height() - 2; // The baseline is 2px up from the bottom of the checkbox/radio in AppKit.
+        return baseline - 2; // The baseline is 2px up from the bottom of the checkbox/radio in AppKit.
     if (box.style().effectiveAppearance() == StyleAppearance::Menulist)
-        return box.marginTop() + box.height() - 5; // This is to match AppKit. There might be a better way to calculate this though.
-    return RenderTheme::baselinePosition(box);
+        return baseline - 5; // This is to match AppKit. There might be a better way to calculate this though.
+    return baseline;
 }
 
 bool RenderThemeIOS::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
@@ -601,7 +614,7 @@ void RenderThemeIOS::paintTextFieldInnerShadow(const PaintInfo& paintInfo, const
     const FloatSize innerShadowOffset { 0, 5 };
     constexpr auto innerShadowBlur = 10.0f;
     auto innerShadowColor = DisplayP3<float> { 0, 0, 0, 0.04f };
-    context.setShadow(innerShadowOffset, innerShadowBlur, innerShadowColor);
+    context.setDropShadow({ innerShadowOffset, innerShadowBlur, innerShadowColor, ShadowRadiusMode::Default });
     context.setFillColor(Color::black);
 
     Path innerShadowPath;
@@ -697,7 +710,7 @@ LengthBox RenderThemeIOS::popupInternalPaddingBox(const RenderStyle& style, cons
 {
     float padding = MenuListButtonPaddingAfter;
     if (settings.iOSFormControlRefreshEnabled()) {
-        auto emSize = CSSPrimitiveValue::create(1.0, CSSUnitType::CSS_EMS);
+        auto emSize = CSSPrimitiveValue::create(1.0, CSSUnitType::CSS_EM);
         padding = emSize->computeLength<float>({ style, nullptr, nullptr, nullptr });
     }
 
@@ -733,23 +746,34 @@ void RenderThemeIOS::adjustRoundBorderRadius(RenderStyle& style, RenderBox& box)
     if (!canAdjustBorderRadiusForAppearance(style.effectiveAppearance(), box) || style.backgroundLayers().hasImage())
         return;
 
-    if ((is<RenderButton>(box) || is<RenderMenuList>(box)) && box.height() >= largeButtonSize) {
-        auto largeButtonBorderRadius = std::min(box.width(), box.height()) * largeButtonBorderRadiusRatio;
+    auto boxLogicalHeight = box.logicalHeight();
+    auto minDimension = std::min(box.width(), box.height());
+
+    if ((is<RenderButton>(box) || is<RenderMenuList>(box)) && boxLogicalHeight >= largeButtonSize) {
+        auto largeButtonBorderRadius = minDimension * largeButtonBorderRadiusRatio;
         style.setBorderRadius({ { largeButtonBorderRadius, LengthType::Fixed }, { largeButtonBorderRadius, LengthType::Fixed } });
         return;
     }
 
     // FIXME: We should not be relying on border radius for the appearance of our controls <rdar://problem/7675493>.
-    style.setBorderRadius({ { std::min(box.width(), box.height()) / 2, LengthType::Fixed }, { box.height() / 2, LengthType::Fixed } });
+    auto borderRadius = LengthSize { { minDimension / 2, LengthType::Fixed }, { boxLogicalHeight / 2, LengthType::Fixed } };
+    if (!style.isHorizontalWritingMode())
+        borderRadius = { borderRadius.height, borderRadius.width };
+    style.setBorderRadius(WTFMove(borderRadius));
 }
 
 static void applyCommonButtonPaddingToStyle(RenderStyle& style, const Element& element)
 {
     Document& document = element.document();
-    auto emSize = CSSPrimitiveValue::create(0.5, CSSUnitType::CSS_EMS);
+    auto emSize = CSSPrimitiveValue::create(0.5, CSSUnitType::CSS_EM);
     // We don't need this element's parent style to calculate `em` units, so it's okay to pass nullptr for it here.
     int pixels = emSize->computeLength<int>({ style, document.renderStyle(), nullptr, document.renderView() });
-    style.setPaddingBox(LengthBox(0, pixels, 0, pixels));
+
+    auto paddingBox = LengthBox(0, pixels, 0, pixels);
+    if (!style.isHorizontalWritingMode())
+        paddingBox = LengthBox(paddingBox.left().value(), paddingBox.top().value(), paddingBox.right().value(), paddingBox.bottom().value());
+
+    style.setPaddingBox(WTFMove(paddingBox));
 }
 
 static void adjustSelectListButtonStyle(RenderStyle& style, const Element& element)
@@ -784,7 +808,7 @@ static void adjustInputElementButtonStyle(RenderStyle& style, const HTMLInputEle
     applyCommonButtonPaddingToStyle(style, inputElement);
 
     // Don't adjust the style if the width is specified.
-    if (style.width().isFixed() && style.width().value() > 0)
+    if (style.logicalWidth().isFixed() && style.logicalWidth().value() > 0)
         return;
 
     // Don't adjust for unsupported date input types.
@@ -805,7 +829,7 @@ static void adjustInputElementButtonStyle(RenderStyle& style, const HTMLInputEle
         if (inputElement.document().settings().iOSFormControlRefreshEnabled())
             width = static_cast<int>(std::ceil(maximumWidth));
 #endif
-        style.setWidth(Length(width, LengthType::Fixed));
+        style.setLogicalWidth(Length(width, LengthType::Fixed));
         style.setBoxSizing(BoxSizing::ContentBox);
     }
 }
@@ -815,10 +839,10 @@ void RenderThemeIOS::adjustMenuListButtonStyle(RenderStyle& style, const Element
     adjustStyleForAlternateFormControlDesignTransition(style, element);
 
     // Set the min-height to be at least MenuListMinHeight.
-    if (style.height().isAuto())
-        style.setMinHeight(Length(std::max(MenuListMinHeight, static_cast<int>(MenuListBaseHeight / MenuListBaseFontSize * style.fontDescription().computedSize())), LengthType::Fixed));
+    if (style.logicalHeight().isAuto())
+        style.setLogicalMinHeight(Length(std::max(MenuListMinHeight, static_cast<int>(MenuListBaseHeight / MenuListBaseFontSize * style.fontDescription().computedSize())), LengthType::Fixed));
     else
-        style.setMinHeight(Length(MenuListMinHeight, LengthType::Fixed));
+        style.setLogicalMinHeight(Length(MenuListMinHeight, LengthType::Fixed));
 
     if (!element)
         return;
@@ -922,7 +946,7 @@ void RenderThemeIOS::paintMenuListButtonDecorations(const RenderBox& box, const 
 
     // Paint Indicators.
 
-    if (box.isMenuList() && downcast<HTMLSelectElement>(box.element())->multiple()) {
+    if (box.isRenderMenuList() && downcast<HTMLSelectElement>(box.element())->multiple()) {
         int size = 2;
         int count = 3;
         int padding = 3;
@@ -1268,8 +1292,8 @@ void RenderThemeIOS::adjustButtonStyle(RenderStyle& style, const Element* elemen
     // If no size is specified, ensure the height of the button matches ControlBaseHeight scaled
     // with the font size. min-height is used rather than height to avoid clipping the contents of
     // the button in cases where the button contains more than one line of text.
-    if (style.width().isIntrinsicOrAuto() || style.height().isAuto())
-        style.setMinHeight(Length(ControlBaseHeight / ControlBaseFontSize * style.fontDescription().computedSize(), LengthType::Fixed));
+    if (style.logicalWidth().isIntrinsicOrAuto() || style.logicalHeight().isAuto())
+        style.setLogicalMinHeight(Length(ControlBaseHeight / ControlBaseFontSize * style.fontDescription().computedSize(), LengthType::Fixed));
 
 #if ENABLE(INPUT_TYPE_COLOR)
     if (style.effectiveAppearance() == StyleAppearance::ColorWell)
@@ -1280,9 +1304,14 @@ void RenderThemeIOS::adjustButtonStyle(RenderStyle& style, const Element* elemen
     // CSSPrimitiveValue::computeLengthInt only needs the element's style to calculate em lengths.
     // Since the element might not be in a document, just pass nullptr for the root element style,
     // the parent element style, and the render view.
-    auto emSize = CSSPrimitiveValue::create(1.0, CSSUnitType::CSS_EMS);
+    auto emSize = CSSPrimitiveValue::create(1.0, CSSUnitType::CSS_EM);
     int pixels = emSize->computeLength<int>({ style, nullptr, nullptr, nullptr });
-    style.setPaddingBox(LengthBox(0, pixels, 0, pixels));
+
+    auto paddingBox = LengthBox(0, pixels, 0, pixels);
+    if (!style.isHorizontalWritingMode())
+        paddingBox = LengthBox(paddingBox.left().value(), paddingBox.top().value(), paddingBox.right().value(), paddingBox.bottom().value());
+
+    style.setPaddingBox(WTFMove(paddingBox));
 
     if (!element)
         return;
@@ -1353,7 +1382,7 @@ static std::optional<Color>& cachedInsertionPointColor()
 Color RenderThemeIOS::systemFocusRingColor()
 {
     if (!cachedFocusRingColor().has_value()) {
-        // FIXME: Should be using -keyboardFocusIndicatorColor. For now, work around <rdar://problem/50838886>.
+        // FIXME: Should be using +keyboardFocusIndicatorColor. For now, work around <rdar://problem/50838886>.
         cachedFocusRingColor() = colorFromCocoaColor([PAL::getUIColorClass() systemBlueColor]);
     }
     return *cachedFocusRingColor();
@@ -1570,7 +1599,11 @@ Color RenderThemeIOS::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOpt
     ASSERT(!forVisitedLink);
 
     auto& cache = colorCache(options);
-    return cache.systemStyleColors.ensure(cssValueID, [this, cssValueID, options] () -> Color {
+    auto it = cache.systemStyleColors.find(cssValueID);
+    if (it != cache.systemStyleColors.end())
+        return it->value;
+
+    auto color = [this, cssValueID, options]() -> Color {
         const bool useDarkAppearance = options.contains(StyleColorOptions::UseDarkAppearance);
         const bool useElevatedUserInterfaceLevel = options.contains(StyleColorOptions::UseElevatedUserInterfaceLevel);
         if (!globalCSSValueToSystemColorMap().isEmpty()) {
@@ -1583,7 +1616,10 @@ Color RenderThemeIOS::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOpt
         if (color)
             return *color;
         return RenderTheme::systemColor(cssValueID, options);
-    }).iterator->value;
+    }();
+
+    cache.systemStyleColors.add(cssValueID, color);
+    return color;
 }
 
 Color RenderThemeIOS::pictureFrameColor(const RenderObject& buttonRenderer)
@@ -1764,7 +1800,7 @@ void RenderThemeIOS::paintSystemPreviewBadge(Image& image, const PaintInfo& pain
 
 #if ENABLE(IOS_FORM_CONTROL_REFRESH)
 
-constexpr auto nativeControlBorderWidth = 1.0f;
+constexpr auto nativeControlBorderInlineSize = 1.0f;
 
 constexpr auto checkboxRadioBorderWidth = 1.5f;
 constexpr auto checkboxRadioBorderDisabledOpacity = 0.3f;
@@ -1852,7 +1888,7 @@ void RenderThemeIOS::paintCheckboxRadioInnerShadow(const PaintInfo& paintInfo, c
 
     bool isEmpty = !states.containsAny({ ControlStates::States::Checked, ControlStates::States::Indeterminate });
     auto firstShadowColor = DisplayP3<float> { 0, 0, 0, isEmpty ? 0.05f : 0.1f };
-    context.setShadow(innerShadowOffset, innerShadowBlur, firstShadowColor);
+    context.setDropShadow({ innerShadowOffset, innerShadowBlur, firstShadowColor, ShadowRadiusMode::Default });
     context.setFillColor(Color::black);
 
     Path innerShadowPath;
@@ -1869,7 +1905,7 @@ void RenderThemeIOS::paintCheckboxRadioInnerShadow(const PaintInfo& paintInfo, c
     context.fillPath(innerShadowPath);
 
     constexpr auto secondShadowColor = DisplayP3<float> { 1, 1, 1, 0.5f };
-    context.setShadow(FloatSize { 0, 0 }, 1, secondShadowColor);
+    context.setDropShadow({ FloatSize { 0, 0 }, 1, secondShadowColor, ShadowRadiusMode::Default });
 
     context.fillPath(innerShadowPath);
 }
@@ -2040,43 +2076,61 @@ bool RenderThemeIOS::paintProgressBarWithFormControlRefresh(const RenderObject& 
     GraphicsContextStateSaver stateSaver(context);
 
     auto styleColorOptions = renderer.styleColorOptions();
+    auto isHorizontalWritingMode = renderer.style().isHorizontalWritingMode();
 
-    constexpr auto barHeight = 4.0f;
-    FloatRoundedRect::Radii barCornerRadii(2.5f, 1.5f);
+    constexpr auto barBlockSize = 4.0f;
 
-    if (rect.height() < barHeight) {
+    constexpr auto barCornerRadiusInlineSize = 2.5f;
+    constexpr auto barCornerRadiusBlockSize = 1.5f;
+
+    FloatRoundedRect::Radii barCornerRadii(
+        isHorizontalWritingMode ? barCornerRadiusInlineSize : barCornerRadiusBlockSize,
+        isHorizontalWritingMode ? barCornerRadiusBlockSize : barCornerRadiusInlineSize
+    );
+
+    auto logicalRect = isHorizontalWritingMode ? rect : rect.transposedRect();
+
+    float rectInlineSize = logicalRect.width();
+    float rectInlineStart = logicalRect.x();
+    float rectBlockSize = logicalRect.height();
+    float rectBlockStart = logicalRect.y();
+
+    if (rectBlockSize < barBlockSize) {
         // The rect is smaller than the standard progress bar. We clip to the
         // element's rect to avoid leaking pixels outside the repaint rect.
         context.clip(rect);
     }
 
-    float barTop = rect.y() + (rect.height() - barHeight) / 2.0f;
+    float trackInlineStart = rectInlineStart + nativeControlBorderInlineSize;
+    float trackBlockStart = rectBlockStart + (rectBlockSize - barBlockSize) / 2.0f;
+    float trackInlineSize = rectInlineSize - 2 * nativeControlBorderInlineSize;
 
-    FloatRect trackRect(rect.x() + nativeControlBorderWidth, barTop, rect.width() - 2 * nativeControlBorderWidth, barHeight);
-    FloatRoundedRect roundedTrackRect(trackRect, barCornerRadii);
+    FloatRect trackRect(trackInlineStart, trackBlockStart, trackInlineSize, barBlockSize);
+    FloatRoundedRect roundedTrackRect(isHorizontalWritingMode ? trackRect : trackRect.transposedRect(), barCornerRadii);
 
     FloatRoundedRect roundedTrackBorderRect(roundedTrackRect);
-    roundedTrackBorderRect.inflateWithRadii(nativeControlBorderWidth);
+    roundedTrackBorderRect.inflateWithRadii(nativeControlBorderInlineSize);
     context.fillRoundedRect(roundedTrackBorderRect, systemColor(CSSValueWebkitControlBackground, styleColorOptions));
 
     context.fillRoundedRect(roundedTrackRect, systemColor(CSSValueAppleSystemOpaqueFill, styleColorOptions));
 
-    float barWidth;
-    float barLeft = trackRect.x();
+    float barInlineSize;
+    float barInlineStart = trackInlineStart;
+    float barBlockStart = trackBlockStart;
     float alpha = 1.0f;
 
     if (renderProgress.isDeterminate()) {
-        barWidth = clampTo<float>(renderProgress.position(), 0.0f, 1.0f) * trackRect.width();
+        barInlineSize = clampTo<float>(renderProgress.position(), 0.0f, 1.0f) * trackInlineSize;
 
         if (!renderProgress.style().isLeftToRightDirection())
-            barLeft = trackRect.maxX() - barWidth;
+            barInlineStart = trackInlineStart + trackInlineSize - barInlineSize;
     } else {
         Seconds elapsed = MonotonicTime::now() - renderProgress.animationStartTime();
         float position = fmodf(elapsed.value(), 1.0f);
         bool reverseDirection = static_cast<int>(elapsed.value()) % 2;
 
         if (Theme::singleton().userPrefersReducedMotion()) {
-            barWidth = trackRect.width();
+            barInlineSize = trackInlineSize;
 
             float difference = position * (reducedMotionProgressAnimationMaxOpacity - reducedMotionProgressAnimationMinOpacity);
             if (reverseDirection)
@@ -2084,20 +2138,20 @@ bool RenderThemeIOS::paintProgressBarWithFormControlRefresh(const RenderObject& 
             else
                 alpha = reducedMotionProgressAnimationMinOpacity + difference;
         } else {
-            barWidth = 0.25f * trackRect.width();
+            barInlineSize = 0.25f * trackInlineSize;
 
-            float offset = position * (trackRect.width() + barWidth);
+            float offset = position * (trackInlineSize + barInlineSize);
             if (reverseDirection)
-                barLeft = trackRect.maxX() - offset;
+                barInlineStart = trackInlineStart + trackInlineSize - offset;
             else
-                barLeft -= barWidth - offset;
+                barInlineStart -= barInlineSize - offset;
 
             context.clipRoundedRect(roundedTrackRect);
         }
     }
 
-    FloatRect barRect(barLeft, barTop, barWidth, barHeight);
-    context.fillRoundedRect(FloatRoundedRect(barRect, barCornerRadii), controlTintColor(renderer.style(), styleColorOptions).colorWithAlphaMultipliedBy(alpha));
+    FloatRect barRect(barInlineStart, barBlockStart, barInlineSize, barBlockSize);
+    context.fillRoundedRect(FloatRoundedRect(isHorizontalWritingMode ? barRect : barRect.transposedRect(), barCornerRadii), controlTintColor(renderer.style(), styleColorOptions).colorWithAlphaMultipliedBy(alpha));
 
     return false;
 }
@@ -2122,21 +2176,29 @@ bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& p
     GraphicsContextStateSaver stateSaver(context);
 
     auto styleColorOptions = renderer.styleColorOptions();
+    auto isHorizontalWritingMode = renderer.style().isHorizontalWritingMode();
 
     float cornerRadius = std::min(rect.width(), rect.height()) / 2.0f;
     FloatRoundedRect roundedFillRect(rect, FloatRoundedRect::Radii(cornerRadius));
     context.fillRoundedRect(roundedFillRect, systemColor(CSSValueWebkitControlBackground, styleColorOptions));
 
-    roundedFillRect.inflateWithRadii(-nativeControlBorderWidth);
+    roundedFillRect.inflateWithRadii(-nativeControlBorderInlineSize);
     context.fillRoundedRect(roundedFillRect, systemColor(CSSValueAppleSystemOpaqueTertiaryFill, styleColorOptions));
 
     context.clipRoundedRect(roundedFillRect);
 
     FloatRect fillRect(roundedFillRect.rect());
-    if (renderMeter.style().isLeftToRightDirection())
-        fillRect.move(fillRect.width() * (element->valueRatio() - 1), 0);
-    else
-        fillRect.move(fillRect.width() * (1 - element->valueRatio()), 0);
+
+    auto fillRectInlineSize = isHorizontalWritingMode ? fillRect.width() : fillRect.height();
+    FloatSize gaugeRegionPosition(fillRectInlineSize * (element->valueRatio() - 1), 0);
+
+    if (!isHorizontalWritingMode)
+        gaugeRegionPosition = gaugeRegionPosition.transposedSize();
+
+    if (!renderer.style().isLeftToRightDirection())
+        gaugeRegionPosition = -gaugeRegionPosition;
+
+    fillRect.move(gaugeRegionPosition);
     roundedFillRect.setRect(fillRect);
 
     switch (element->gaugeRegion()) {
@@ -2312,7 +2374,7 @@ bool RenderThemeIOS::paintSliderTrackWithFormControlRefresh(const RenderObject& 
     FloatRoundedRect innerBorder(trackClip, cornerRadii);
 
     FloatRoundedRect outerBorder(innerBorder);
-    outerBorder.inflateWithRadii(nativeControlBorderWidth);
+    outerBorder.inflateWithRadii(nativeControlBorderInlineSize);
     context.fillRoundedRect(outerBorder, systemColor(CSSValueWebkitControlBackground, styleColorOptions));
 
     context.fillRoundedRect(innerBorder, systemColor(CSSValueAppleSystemOpaqueFill, styleColorOptions));
@@ -2332,7 +2394,9 @@ bool RenderThemeIOS::paintSliderTrackWithFormControlRefresh(const RenderObject& 
     } else {
         float height = trackClip.height();
         trackClip.setHeight(height * valueRatio);
-        trackClip.setY(trackClip.y() + height - trackClip.height());
+
+        if (box.style().isHorizontalWritingMode() || !box.style().isLeftToRightDirection())
+            trackClip.setY(trackClip.y() + height - trackClip.height());
     }
 
     FloatRoundedRect fillRect(trackClip, cornerRadii);
@@ -2421,7 +2485,7 @@ void RenderThemeIOS::paintMenuListButtonDecorationsWithFormControlRefresh(const 
     Path glyphPath;
     FloatSize glyphSize;
 
-    if (box.isMenuList() && downcast<HTMLSelectElement>(box.element())->multiple()) {
+    if (box.isRenderMenuList() && downcast<HTMLSelectElement>(box.element())->multiple()) {
         constexpr int length = 18;
         constexpr int count = 3;
         constexpr int padding = 12;
@@ -2467,16 +2531,26 @@ void RenderThemeIOS::paintMenuListButtonDecorationsWithFormControlRefresh(const 
         glyphPath.addBezierCurveTo({ 29.4179f, 71.8f }, { 30.541f, 72.3867f }, { 31.8593f, 72.3867 });
     }
 
-    auto emSize = CSSPrimitiveValue::create(1.0, CSSUnitType::CSS_EMS);
+    auto emSize = CSSPrimitiveValue::create(1.0, CSSUnitType::CSS_EM);
     auto emPixels = emSize->computeLength<float>({ style, nullptr, nullptr, nullptr });
     auto glyphScale = 0.65f * emPixels / glyphSize.width();
     glyphSize = glyphScale * glyphSize;
 
-    AffineTransform transform;
+    bool isHorizontalWritingMode = style.isHorizontalWritingMode();
+    auto logicalRect = isHorizontalWritingMode ? rect : rect.transposedRect();
+
+    FloatPoint glyphOrigin;
+    glyphOrigin.setY(logicalRect.center().y() - glyphSize.height() / 2.0f);
     if (style.isLeftToRightDirection())
-        transform.translate(rect.maxX() - glyphSize.width() - box.style().borderEndWidth() - valueForLength(box.style().paddingEnd(), rect.width()), rect.center().y() - glyphSize.height() / 2.0f);
+        glyphOrigin.setX(logicalRect.maxX() - glyphSize.width() - box.style().borderEndWidth() - valueForLength(box.style().paddingEnd(), logicalRect.width()));
     else
-        transform.translate(rect.x() + box.style().borderEndWidth() + valueForLength(box.style().paddingEnd(), rect.width()), rect.center().y() - glyphSize.height() / 2.0f);
+        glyphOrigin.setX(logicalRect.x() + box.style().borderEndWidth() + valueForLength(box.style().paddingEnd(), logicalRect.width()));
+
+    if (!isHorizontalWritingMode)
+        glyphOrigin = glyphOrigin.transposedPoint();
+
+    AffineTransform transform;
+    transform.translate(glyphOrigin);
     transform.scale(glyphScale);
     glyphPath.transform(transform);
 
@@ -2498,7 +2572,7 @@ void RenderThemeIOS::adjustSearchFieldDecorationPartStyle(RenderStyle& style, co
 
     CSSToLengthConversionData conversionData(style, nullptr, nullptr, nullptr);
 
-    auto emSize = CSSPrimitiveValue::create(searchFieldDecorationEmSize, CSSUnitType::CSS_EMS);
+    auto emSize = CSSPrimitiveValue::create(searchFieldDecorationEmSize, CSSUnitType::CSS_EM);
     auto size = emSize->computeLength<float>(conversionData);
 
     style.setWidth({ size, LengthType::Fixed });

@@ -163,6 +163,8 @@ public:
     virtual bool useFormSemanticContext() const { return false; }
     virtual bool supportsLargeFormControls() const { return false; }
 
+    virtual bool searchFieldShouldAppearAsTextField(const RenderStyle&) const { return false; }
+
     // Text selection colors.
     Color activeSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
     Color inactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
@@ -190,7 +192,6 @@ public:
 
     WEBCORE_EXPORT Color focusRingColor(OptionSet<StyleColorOptions>) const;
     virtual Color platformFocusRingColor(OptionSet<StyleColorOptions>) const { return Color::black; }
-    static void setCustomFocusRingColor(const Color&);
     static float platformFocusRingWidth() { return 3; }
     static float platformFocusRingOffset(float outlineWidth) { return std::max<float>(outlineWidth - platformFocusRingWidth(), 0); }
 #if ENABLE(TOUCH_EVENTS)

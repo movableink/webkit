@@ -80,14 +80,15 @@ void RemoteScrollingCoordinatorProxyMac::handleWheelEvent(const WebWheelEvent& w
 #endif
 }
 
-void RemoteScrollingCoordinatorProxyMac::wheelEventHandlingCompleted(const PlatformWheelEvent& wheelEvent, ScrollingNodeID scrollingNodeID, std::optional<WheelScrollGestureState> gestureState)
+void RemoteScrollingCoordinatorProxyMac::wheelEventHandlingCompleted(const PlatformWheelEvent& wheelEvent, ScrollingNodeID scrollingNodeID, std::optional<WheelScrollGestureState> gestureState, bool wasHandled)
 {
 #if ENABLE(SCROLLING_THREAD)
-    m_wheelEventDispatcher->wheelEventHandlingCompleted(wheelEvent, scrollingNodeID, gestureState);
+    m_wheelEventDispatcher->wheelEventHandlingCompleted(wheelEvent, scrollingNodeID, gestureState, wasHandled);
 #else
     UNUSED_PARAM(wheelEvent);
     UNUSED_PARAM(scrollingNodeID);
     UNUSED_PARAM(gestureState);
+    UNUSED_PARAM(wasHandled);
 #endif
 }
 
@@ -114,6 +115,16 @@ void RemoteScrollingCoordinatorProxyMac::hasNodeWithAnimatedScrollChanged(bool h
 
     drawingArea->setDisplayLinkWantsFullSpeedUpdates(hasAnimatedScrolls);
 #endif
+}
+
+void RemoteScrollingCoordinatorProxyMac::setRubberBandingInProgressForNode(ScrollingNodeID nodeID, bool isRubberBanding)
+{
+    if (isRubberBanding)
+        m_uiState.addNodeWithActiveRubberband(nodeID);
+    else
+        m_uiState.removeNodeWithActiveRubberband(nodeID);
+
+    sendUIStateChangedIfNecessary();
 }
 
 void RemoteScrollingCoordinatorProxyMac::clearNodesWithUserScrollInProgress()
@@ -157,7 +168,7 @@ void RemoteScrollingCoordinatorProxyMac::connectStateNodeLayers(ScrollingStateTr
         switch (currNode->nodeType()) {
         case ScrollingNodeType::MainFrame:
         case ScrollingNodeType::Subframe: {
-            ScrollingStateFrameScrollingNode& scrollingStateNode = downcast<ScrollingStateFrameScrollingNode>(*currNode);
+            ScrollingStateFrameScrollingNode& scrollingStateNode = downcast<ScrollingStateFrameScrollingNode>(currNode);
             
             if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrollContainerLayer))
                 scrollingStateNode.setScrollContainerLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.scrollContainerLayer() }));
@@ -192,7 +203,7 @@ void RemoteScrollingCoordinatorProxyMac::connectStateNodeLayers(ScrollingStateTr
             break;
         }
         case ScrollingNodeType::Overflow: {
-            ScrollingStateOverflowScrollingNode& scrollingStateNode = downcast<ScrollingStateOverflowScrollingNode>(*currNode);
+            ScrollingStateOverflowScrollingNode& scrollingStateNode = downcast<ScrollingStateOverflowScrollingNode>(currNode);
             if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrollContainerLayer))
                 scrollingStateNode.setScrollContainerLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.scrollContainerLayer() }));
 

@@ -60,7 +60,7 @@ enum class PaintBehavior : uint32_t {
     SkipSelectionHighlight              = 1 << 1,
     ForceBlackText                      = 1 << 2,
     ForceWhiteText                      = 1 << 3,
-    RenderingSVGMask                    = 1 << 4,
+    RenderingSVGClipOrMask              = 1 << 4,
     SkipRootBackground                  = 1 << 5,
     RootBackgroundOnly                  = 1 << 6,
     SelectionAndBackgroundsOnly         = 1 << 7,
@@ -73,6 +73,7 @@ enum class PaintBehavior : uint32_t {
     EventRegionIncludeForeground        = 1 << 14, // FIXME: Event region painting should use paint phases.
     EventRegionIncludeBackground        = 1 << 15,
     Snapshotting                        = 1 << 16, // Paint is updating external backing store and visits all content, including composited content and always completes image decoding of painted images. FIXME: Will be removed.
+    DontShowVisitedLinks                = 1 << 17,
 };
 
 } // namespace WebCore

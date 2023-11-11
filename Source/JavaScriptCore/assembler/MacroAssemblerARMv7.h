@@ -166,6 +166,7 @@ public:
     };
 
     enum ResultCondition {
+        Carry = ARMv7Assembler::ConditionCS,
         Overflow = ARMv7Assembler::ConditionVS,
         Signed = ARMv7Assembler::ConditionMI,
         PositiveOrZero = ARMv7Assembler::ConditionPL,
@@ -453,6 +454,13 @@ public:
         }
     }
 
+    void or16(RegisterID mask, AbsoluteAddress dest)
+    {
+        load16(setupArmAddress(dest), dataTempRegister);
+        m_assembler.orr(dataTempRegister, dataTempRegister, mask);
+        store16(dataTempRegister, Address(addressTempRegister));
+    }
+
     void or32(RegisterID src, RegisterID dest)
     {
         m_assembler.orr(dest, dest, src);
@@ -583,6 +591,13 @@ public:
     void urshift32(TrustedImm32 imm, RegisterID dest)
     {
         urshift32(dest, imm, dest);
+    }
+
+    void addUnsignedRightShift32(RegisterID src1, RegisterID src2, TrustedImm32 amount, RegisterID dest)
+    {
+        // dest = src1 + (src2 >> amount)
+        urshift32(src2, amount, dataTempRegister);
+        add32(src1, dataTempRegister, dest);
     }
 
     void sub32(RegisterID src, RegisterID dest)
@@ -1276,6 +1291,17 @@ public:
         storePair32(src1, src2, Address(armAddress.base, armAddress.u.offset));
     }
 
+    void transfer32(Address src, Address dest)
+    {
+        load32(src, dataTempRegister);
+        store32(dataTempRegister, dest);
+    }
+
+    void transferPtr(Address src, Address dest)
+    {
+        transfer32(src, dest);
+    }
+
     void storeCond8(RegisterID src, Address addr, RegisterID result)
     {
         ASSERT(!addr.offset);
@@ -1679,10 +1705,14 @@ public:
         CRASH();
     }
 
-    NO_RETURN_DUE_TO_CRASH void roundTowardNearestIntDouble(FPRegisterID, FPRegisterID)
+    // this is provided (unlike the other rounding instructions) since it is
+    // used in a more limited fashion (for Uint8ClampedArray)--its range is
+    // limited to doubles that round to a 32-bit signed int--otherwise, it will
+    // saturate (and signal an FP exception [which is non-trapping])
+    void roundTowardNearestIntDouble(FPRegisterID src, FPRegisterID dest)
     {
-        ASSERT(!supportsFloatingPointRounding());
-        CRASH();
+        m_assembler.vcvt_floatingPointToSignedNearest(asSingle(dest), src);
+        m_assembler.vcvt_signedToFloatingPoint(dest, asSingle(dest));
     }
 
     void convertInt32ToFloat(RegisterID src, FPRegisterID dest)
@@ -2142,6 +2172,12 @@ public:
     {
         ARMv7Assembler::replaceWithJump(instructionStart.dataLocation(), destination.dataLocation());
     }
+
+    template<PtrTag startTag>
+    static void replaceWithNops(CodeLocationLabel<startTag> instructionStart, size_t memoryToFillWithNopsInBytes)
+    {
+        ARMv7Assembler::replaceWithNops(instructionStart.dataLocation(), memoryToFillWithNopsInBytes);
+    }
     
     static ptrdiff_t maxJumpReplacementSize()
     {
@@ -2326,6 +2362,12 @@ public:
     {
         // use addressTempRegister incase the branch32 we call uses dataTempRegister. :-/
         load32WithUnalignedHalfWords(left, addressTempRegister);
+        return branch32(cond, addressTempRegister, right);
+    }
+
+    Jump branch32WithMemory16(RelationalCondition cond, Address left, RegisterID right)
+    {
+        MacroAssemblerHelpers::load16OnCondition(*this, cond, left, addressTempRegister);
         return branch32(cond, addressTempRegister, right);
     }
 
@@ -2644,7 +2686,7 @@ public:
 
     void breakpoint(uint8_t imm = 0)
     {
-        m_assembler.bkpt(imm);
+        m_assembler.udf(imm);
     }
 
     static bool isBreakpoint(void* address) { return ARMv7Assembler::isBkpt(address); }

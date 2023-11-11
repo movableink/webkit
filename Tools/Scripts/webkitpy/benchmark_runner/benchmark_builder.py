@@ -2,6 +2,7 @@ import logging
 import tempfile
 import os
 import re
+import requests
 import shutil
 import subprocess
 import sys
@@ -10,11 +11,6 @@ import tarfile
 from webkitpy.benchmark_runner.utils import get_path_from_project_root, force_remove
 from webkitpy.benchmark_runner.github_downloader import GithubDownloadTask
 from zipfile import ZipFile
-
-if sys.version_info > (3, 0):
-    from urllib.request import urlretrieve
-else:
-    from urllib import urlretrieve
 
 
 _log = logging.getLogger(__name__)
@@ -42,6 +38,8 @@ class BenchmarkBuilder(object):
             self._prepare_content_from_local_git_archive(self._plan['local_git_archive'])
         elif 'github_source' in self._plan:
             self._download_from_github(self._plan['github_source'], self._plan.get('github_subtree'))
+        elif 'git_repository' in self._plan:
+            self._clone_git_repository(self._plan['git_repository'])
         else:
             raise Exception('The benchmark location was not specified')
 
@@ -87,7 +85,11 @@ class BenchmarkBuilder(object):
 
         archive_path = os.path.join(self._web_root, 'archive.' + archive_type)
         _log.info('Downloading %s to %s' % (archive_url, archive_path))
-        urlretrieve(archive_url, archive_path)
+        with requests.get(archive_url, stream=True, allow_redirects=True) as response:
+            response.raise_for_status()
+            with open(archive_path, 'wb') as archive_file:
+                for chunk in response.iter_content(chunk_size=1024):
+                    archive_file.write(chunk)
 
         if archive_type == 'zip':
             with ZipFile(archive_path, 'r') as archive:
@@ -137,11 +139,14 @@ class BenchmarkBuilder(object):
             subprocess.check_call(['tar', 'zxvf', output, '-C', temp_extract_path])
             shutil.copytree(os.path.join(temp_extract_path, relpath_in_repo), self._dest)
 
+    def _clone_git_repository(self, repository_url):
+        subprocess.check_call(['git', 'clone', repository_url, self._dest])
+        git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self._dest).strip().decode()
+        _log.info('Latest commit is {}'.format(git_hash))
+
     def _apply_patch(self, patch):
-        old_working_directory = os.getcwd()
-        os.chdir(self._dest)
-        error_code = subprocess.call(['patch', '-p1', '-f', '-i', get_path_from_project_root(patch)])
-        os.chdir(old_working_directory)
+        _log.info('Applying patch %s' % (patch))
+        error_code = subprocess.call(['patch', '-p1', '-f', '-i', get_path_from_project_root(patch)], cwd=self._dest)
         if error_code:
             raise Exception('Cannot apply patch, will skip current benchmark_path - Error: %s' % error_code)
 

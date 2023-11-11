@@ -34,6 +34,7 @@ namespace Layout {
 inline InlineLevelBox::InlineLevelBox(const Box& layoutBox, const RenderStyle& style, InlineLayoutUnit logicalLeft, InlineLayoutSize logicalSize, Type type, OptionSet<PositionWithinLayoutBox> positionWithinLayoutBox)
     : m_layoutBox(layoutBox)
     , m_logicalRect({ }, logicalLeft, logicalSize.width(), logicalSize.height())
+    , m_hasContent(layoutBox.isRenderRubyBase() && layoutBox.associatedRubyAnnotationBox()) // Normally we set inline box's has-content state as we come across child content, but ruby annotations are not visible to inline layout.
     , m_isFirstWithinLayoutBox(positionWithinLayoutBox.contains(PositionWithinLayoutBox::First))
     , m_isLastWithinLayoutBox(positionWithinLayoutBox.contains(PositionWithinLayoutBox::Last))
     , m_type(type)
@@ -44,10 +45,6 @@ inline InlineLevelBox::InlineLevelBox(const Box& layoutBox, const RenderStyle& s
         m_style.verticalAlignment.baselineOffset = floatValueForLength(style.verticalAlignLength(), preferredLineHeight());
 
     auto setAnnotationIfApplicable = [&] {
-        if (auto* rubyAdjustments = layoutBox.rubyAdjustments()) {
-            m_annotation = { rubyAdjustments->annotationAbove, rubyAdjustments->annotationBelow };
-            return;
-        }
         // Generic, non-inline box inline-level content (e.g. replaced elements) can't have text-emphasis annotations.
         if (!isRootInlineBox() && !isInlineBox())
             return;

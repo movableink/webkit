@@ -75,11 +75,23 @@ static unsigned rulesCountForName(const RuleSet::AtomRuleMap& map, const AtomStr
 
 static bool isHostSelectorMatchingInShadowTree(const CSSSelector& startSelector)
 {
+    auto isHostSelectorMatchingInShadowTreeInSelectorList = [](const CSSSelectorList* selectorList) {
+        if (!selectorList || selectorList->isEmpty())
+            return false;
+        for (auto* selector = selectorList->first(); selector; selector = CSSSelectorList::next(selector)) {
+            if (isHostSelectorMatchingInShadowTree(*selector))
+                return true;
+        }
+        return false;
+    };
+
     bool hasOnlyOneCompound = true;
     bool hasHostInLastCompound = false;
     for (auto* selector = &startSelector; selector; selector = selector->tagHistory()) {
         if (selector->match() == CSSSelector::Match::PseudoClass && selector->pseudoClassType() == CSSSelector::PseudoClassType::Host)
             hasHostInLastCompound = true;
+        if (isHostSelectorMatchingInShadowTreeInSelectorList(selector->selectorList()))
+            return true;
         if (selector->tagHistory() && selector->relation() != CSSSelector::RelationType::Subselector) {
             hasOnlyOneCompound = false;
             hasHostInLastCompound = false;
@@ -215,6 +227,8 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
             }
             break;
         case CSSSelector::Match::Unknown:
+        case CSSSelector::Match::ForgivingUnknown:
+        case CSSSelector::Match::ForgivingUnknownNestContaining:
         case CSSSelector::Match::NestingParent:
         case CSSSelector::Match::PagePseudoClass:
             break;
@@ -399,10 +413,8 @@ RuleSet::CollectedMediaQueryChanges RuleSet::evaluateDynamicMediaQueryRules(cons
         return collectedChanges;
 
     traverseRuleDatas([&](RuleData& ruleData) {
-        auto it = affectedRulePositionsAndResults.find(ruleData.position());
-        if (it == affectedRulePositionsAndResults.end())
-            return;
-        ruleData.setEnabled(it->value);
+        if (auto result = affectedRulePositionsAndResults.getOptional(ruleData.position()))
+            ruleData.setEnabled(*result);
     });
 
     return collectedChanges;

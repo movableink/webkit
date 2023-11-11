@@ -228,8 +228,7 @@ void AsyncScrollingCoordinator::frameViewEventTrackingRegionsChanged(LocalFrameV
         return;
 
     setEventTrackingRegionsDirty();
-    if (auto* localFrame = dynamicDowncast<LocalFrame>(frameView.frame()))
-        DebugPageOverlays::didChangeEventHandlers(*localFrame);
+    DebugPageOverlays::didChangeEventHandlers(frameView.frame());
 }
 
 void AsyncScrollingCoordinator::frameViewRootLayerDidChange(LocalFrameView& frameView)
@@ -303,7 +302,7 @@ bool AsyncScrollingCoordinator::requestStopKeyboardScrollAnimation(ScrollableAre
     return true;
 }
 
-bool AsyncScrollingCoordinator::requestScrollToPosition(ScrollableArea& scrollableArea, const ScrollPosition& scrollPosition, ScrollType scrollType, ScrollClamping clamping, ScrollIsAnimated animated)
+bool AsyncScrollingCoordinator::requestScrollToPosition(ScrollableArea& scrollableArea, const ScrollPosition& scrollPosition, const ScrollPositionChangeOptions& options)
 {
     ASSERT(isMainThread());
     ASSERT(m_page);
@@ -320,17 +319,16 @@ bool AsyncScrollingCoordinator::requestScrollToPosition(ScrollableArea& scrollab
 
     setScrollingNodeScrollableAreaGeometry(scrollingNodeID, scrollableArea);
 
-    auto* localFrame = dynamicDowncast<LocalFrame>(frameView->frame());
-    bool inBackForwardCache = localFrame && localFrame->document()->backForwardCacheState() != Document::NotInBackForwardCache;
+    bool inBackForwardCache = frameView->frame().document()->backForwardCacheState() != Document::NotInBackForwardCache;
     bool isSnapshotting = m_page->isTakingSnapshotsForApplicationSuspension();
     bool inProgrammaticScroll = scrollableArea.currentScrollType() == ScrollType::Programmatic;
 
-    if ((inProgrammaticScroll && animated == ScrollIsAnimated::No) || inBackForwardCache) {
+    if ((inProgrammaticScroll && options.animated == ScrollIsAnimated::No) || inBackForwardCache) {
         auto scrollUpdate = ScrollUpdate { scrollingNodeID, scrollPosition, { }, ScrollUpdateType::PositionUpdate, ScrollingLayerPositionAction::Set };
         applyScrollUpdate(WTFMove(scrollUpdate), ScrollType::Programmatic);
     }
 
-    ASSERT(inProgrammaticScroll == (scrollType == ScrollType::Programmatic));
+    ASSERT(inProgrammaticScroll == (options.type == ScrollType::Programmatic));
 
     // If this frame view's document is being put into the back/forward cache, we don't want to update our
     // main frame scroll position. Just let the FrameView think that we did.
@@ -341,7 +339,13 @@ bool AsyncScrollingCoordinator::requestScrollToPosition(ScrollableArea& scrollab
     if (!stateNode)
         return false;
 
-    stateNode->setRequestedScrollData({ ScrollRequestType::PositionUpdate, scrollPosition, scrollType, clamping, animated });
+    if (options.originalScrollDelta)
+        stateNode->setRequestedScrollData({ ScrollRequestType::DeltaUpdate, *options.originalScrollDelta, options.type, options.clamping, options.animated });
+    else
+        stateNode->setRequestedScrollData({ ScrollRequestType::PositionUpdate, scrollPosition, options.type, options.clamping, options.animated });
+
+    LOG_WITH_STREAM(Scrolling, stream << "AsyncScrollingCoordinator::requestScrollToPosition " << scrollPosition << " for nodeID " << scrollingNodeID << " requestedScrollData " << stateNode->requestedScrollData());
+
     // FIXME: This should schedule a rendering update
     commitTreeStateIfNeeded();
     return true;
@@ -415,6 +419,20 @@ void AsyncScrollingCoordinator::setMouseMovedInContentArea(ScrollableArea& scrol
 
     MouseLocationState state = { horizontalScrollbar ? horizontalScrollbar->convertFromContainingView(mousePosition) : IntPoint(), verticalScrollbar ? verticalScrollbar->convertFromContainingView(mousePosition) : IntPoint() };
     stateNode->setMouseMovedInContentArea(state);
+}
+
+void AsyncScrollingCoordinator::setScrollbarEnabled(Scrollbar& scrollbar)
+{
+    ASSERT(isMainThread());
+    ASSERT(m_page);
+    auto scrollingNodeID = scrollbar.scrollableArea().scrollingNodeID();
+    if (!scrollingNodeID)
+        return;
+
+    auto stateNode = dynamicDowncast<ScrollingStateScrollingNode>(m_scrollingStateTree->stateNodeForID(scrollingNodeID));
+    if (!stateNode)
+        return;
+    stateNode->setScrollbarEnabledState(scrollbar.orientation(), scrollbar.enabled());
 }
 
 void AsyncScrollingCoordinator::applyScrollingTreeLayerPositions()
@@ -608,8 +626,7 @@ void AsyncScrollingCoordinator::updateScrollPositionAfterAsyncScroll(ScrollingNo
 
     auto& frameView = *frameViewPtr;
 
-    auto* localFrame = dynamicDowncast<LocalFrame>(frameViewPtr->frame());
-    if (localFrame && !localFrame->isMainFrame()) {
+    if (!frameViewPtr->frame().isMainFrame()) {
         if (scrollingLayerPositionAction == ScrollingLayerPositionAction::Set)
             m_page->editorClient().subFrameScrollPositionChanged();
     }
@@ -820,11 +837,7 @@ Vector<ScrollingNodeID> AsyncScrollingCoordinator::childrenOfNode(ScrollingNodeI
     if (!scrollingNode)
         return { };
 
-    auto children = scrollingNode->children();
-    if (!children || children->isEmpty())
-        return { };
-
-    return children->map([](auto& child) {
+    return scrollingNode->children().map([](auto& child) {
         return child->scrollingNodeID();
     });
 }
@@ -844,7 +857,7 @@ void AsyncScrollingCoordinator::ensureRootStateNodeForFrameView(LocalFrameView& 
 
     // For non-main frames, it is only possible to arrive in this function from
     // RenderLayerCompositor::updateBacking where the node has already been created.
-    ASSERT(is<LocalFrame>(frameView.frame()) && downcast<LocalFrame>(frameView.frame()).isMainFrame());
+    ASSERT(frameView.frame().isMainFrame());
     insertNode(ScrollingNodeType::MainFrame, frameView.scrollingNodeID(), 0, 0);
 }
 
@@ -887,8 +900,7 @@ void AsyncScrollingCoordinator::setFrameScrollingNodeState(ScrollingNodeID nodeI
     auto& settings = localMainFrame->settings();
     auto& frameScrollingNode = downcast<ScrollingStateFrameScrollingNode>(*stateNode);
 
-    if (auto* localFrame = dynamicDowncast<LocalFrame>(frameView.frame()))
-        frameScrollingNode.setFrameScaleFactor(localFrame->frameScaleFactor());
+    frameScrollingNode.setFrameScaleFactor(frameView.frame().frameScaleFactor());
     frameScrollingNode.setHeaderHeight(frameView.headerHeight());
     frameScrollingNode.setFooterHeight(frameView.footerHeight());
     frameScrollingNode.setTopContentInset(frameView.topContentInset());
@@ -927,6 +939,10 @@ void AsyncScrollingCoordinator::setScrollingNodeScrollableAreaGeometry(Scrolling
     auto* verticalScrollbar = scrollableArea.verticalScrollbar();
     auto* horizontalScrollbar = scrollableArea.horizontalScrollbar();
     scrollingNode->setScrollerImpsFromScrollbars(verticalScrollbar, horizontalScrollbar);
+    if (horizontalScrollbar)
+        scrollingNode->setScrollbarEnabledState(ScrollbarOrientation::Horizontal, horizontalScrollbar->enabled());
+    if (verticalScrollbar)
+        scrollingNode->setScrollbarEnabledState(ScrollbarOrientation::Vertical, verticalScrollbar->enabled());
 
     scrollingNode->setScrollOrigin(scrollableArea.scrollOrigin());
     scrollingNode->setScrollPosition(scrollableArea.scrollPosition());
@@ -1171,16 +1187,6 @@ bool AsyncScrollingCoordinator::scrollAnimatorEnabled() const
         return false;
     auto& settings = localMainFrame->settings();
     return settings.scrollAnimatorEnabled();
-}
-
-void AsyncScrollingCoordinator::scrollingTreeNodeScrollbarVisibilityDidChange(ScrollingNodeID nodeID, ScrollbarOrientation orientation, bool isVisible)
-{
-    auto* frameView = frameViewForScrollingNode(nodeID);
-    if (!frameView)
-        return;
-    
-    if (auto* scrollableArea = frameView->scrollableAreaForScrollingNodeID(nodeID))
-        scrollableArea->scrollbarsController().setScrollbarVisibilityState(orientation, isVisible);
 }
 
 } // namespace WebCore

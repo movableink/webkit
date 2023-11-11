@@ -27,23 +27,18 @@
 #include "config.h"
 #include "BitmapTexturePool.h"
 
-#if USE(TEXTURE_MAPPER_GL)
-#include "BitmapTextureGL.h"
-#endif
+#if USE(TEXTURE_MAPPER)
+#include "BitmapTexture.h"
 
 namespace WebCore {
 
 static const Seconds releaseUnusedSecondsTolerance { 3_s };
 static const Seconds releaseUnusedTexturesTimerInterval { 500_ms };
 
-
-#if USE(TEXTURE_MAPPER_GL)
-BitmapTexturePool::BitmapTexturePool(const TextureMapperContextAttributes& contextAttributes)
-    : m_contextAttributes(contextAttributes)
-    , m_releaseUnusedTexturesTimer(RunLoop::current(), this, &BitmapTexturePool::releaseUnusedTexturesTimerFired)
+BitmapTexturePool::BitmapTexturePool()
+    : m_releaseUnusedTexturesTimer(RunLoop::current(), this, &BitmapTexturePool::releaseUnusedTexturesTimerFired)
 {
 }
-#endif
 
 RefPtr<BitmapTexture> BitmapTexturePool::acquireTexture(const IntSize& size, const BitmapTexture::Flags flags)
 {
@@ -55,9 +50,10 @@ RefPtr<BitmapTexture> BitmapTexturePool::acquireTexture(const IntSize& size, con
         });
 
     if (selectedEntry == m_textures.end()) {
-        m_textures.append(Entry(createTexture(flags)));
+        m_textures.append(Entry(BitmapTexture::create(size, flags)));
         selectedEntry = &m_textures.last();
-    }
+    } else
+        selectedEntry->m_texture->reset(size, flags);
 
     scheduleReleaseUnusedTextures();
     selectedEntry->markIsInUse();
@@ -88,14 +84,6 @@ void BitmapTexturePool::releaseUnusedTexturesTimerFired()
         scheduleReleaseUnusedTextures();
 }
 
-RefPtr<BitmapTexture> BitmapTexturePool::createTexture(const BitmapTexture::Flags flags)
-{
-#if USE(TEXTURE_MAPPER_GL)
-    return BitmapTextureGL::create(m_contextAttributes, flags);
-#else
-    UNUSED_PARAM(flags);
-    return nullptr;
-#endif
-}
-
 } // namespace WebCore
+
+#endif // USE(TEXTURE_MAPPER)

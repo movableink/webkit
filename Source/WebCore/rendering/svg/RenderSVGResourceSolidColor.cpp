@@ -42,7 +42,7 @@ bool RenderSVGResourceSolidColor::applyResource(RenderElement& renderer, const R
 
     const SVGRenderStyle& svgStyle = style.svgStyle();
 
-    bool isRenderingMask = renderer.view().frameView().paintBehavior().contains(PaintBehavior::RenderingSVGMask);
+    bool isRenderingMask = renderer.view().frameView().paintBehavior().contains(PaintBehavior::RenderingSVGClipOrMask);
 
     if (resourceMode.contains(RenderSVGResourceMode::ApplyToFill)) {
         if (!isRenderingMask)
@@ -56,7 +56,7 @@ bool RenderSVGResourceSolidColor::applyResource(RenderElement& renderer, const R
         if (resourceMode.contains(RenderSVGResourceMode::ApplyToText))
             context->setTextDrawingMode(TextDrawingMode::Fill);
     } else if (resourceMode.contains(RenderSVGResourceMode::ApplyToStroke)) {
-        // When rendering the mask for a RenderSVGResourceClipper, the stroke code path is never hit.
+        // When rendering the mask for a LegacyRenderSVGResourceClipper, the stroke code path is never hit.
         ASSERT(!isRenderingMask);
         context->setAlpha(svgStyle.strokeOpacity());
         context->setStrokeColor(style.colorByApplyingColorFilter(m_color));

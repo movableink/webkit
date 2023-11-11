@@ -62,14 +62,15 @@ class SourceBufferPrivateRemote final
     , public IPC::MessageReceiver
 {
 public:
-    static Ref<SourceBufferPrivateRemote> create(GPUProcessConnection&, RemoteSourceBufferIdentifier, const MediaSourcePrivateRemote&, const MediaPlayerPrivateRemote&);
+    static Ref<SourceBufferPrivateRemote> create(GPUProcessConnection&, RemoteSourceBufferIdentifier, MediaSourcePrivateRemote&, const MediaPlayerPrivateRemote&);
     virtual ~SourceBufferPrivateRemote();
 
-    void clearMediaSource() { m_mediaSourcePrivate = nullptr; }
+    constexpr PlatformType platformType() const final { return PlatformType::Remote; }
+
     void disconnect() { m_disconnected = true; }
 
 private:
-    SourceBufferPrivateRemote(GPUProcessConnection&, RemoteSourceBufferIdentifier, const MediaSourcePrivateRemote&, const MediaPlayerPrivateRemote&);
+    SourceBufferPrivateRemote(GPUProcessConnection&, RemoteSourceBufferIdentifier, MediaSourcePrivateRemote&, const MediaPlayerPrivateRemote&);
 
     // SourceBufferPrivate overrides
     void setActive(bool) final;
@@ -92,21 +93,22 @@ private:
     void setGroupStartTimestamp(const MediaTime&) final;
     void setGroupStartTimestampToEndTimestamp() final;
     void setShouldGenerateTimestamps(bool) final;
-    void clientReadyStateChanged(bool) final;
-    void removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentMediaTime, bool isEnded, CompletionHandler<void()>&&) final;
-    void evictCodedFrames(uint64_t newDataSize, uint64_t maximumBufferSize, const MediaTime& currentTime, bool isEnded) final;
+    void removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentMediaTime, CompletionHandler<void()>&&) final;
+    void evictCodedFrames(uint64_t newDataSize, uint64_t maximumBufferSize, const MediaTime& currentTime) final;
     void resetTimestampOffsetInTrackBuffers() final;
     void startChangingType() final;
     void setTimestampOffset(const MediaTime&) final;
     void setAppendWindowStart(const MediaTime&) final;
     void setAppendWindowEnd(const MediaTime&) final;
+    Vector<WebCore::PlatformTimeRanges> trackBuffersRanges() const final { return m_trackBufferRanges; };
+
+    void computeSeekTime(const WebCore::SeekTarget&, CompletionHandler<void(const MediaTime&)>&&) final;
     void seekToTime(const MediaTime&) final;
+
     void updateTrackIds(Vector<std::pair<AtomString, AtomString>>&&) final;
     uint64_t totalTrackBufferSizeInBytes() const final;
 
-    void memoryPressure(uint64_t maximumBufferSize, const MediaTime& currentTime, bool isEnded) final;
-
-    bool isActive() const final { return m_isActive; }
+    void memoryPressure(uint64_t maximumBufferSize, const MediaTime& currentTime) final;
 
     // Internals Utility methods
     void bufferedSamplesForTrackId(const AtomString&, CompletionHandler<void(Vector<String>&&)>&&) final;
@@ -129,14 +131,12 @@ private:
 
     ThreadSafeWeakPtr<GPUProcessConnection> m_gpuProcessConnection;
     RemoteSourceBufferIdentifier m_remoteSourceBufferIdentifier;
-    WeakPtr<MediaSourcePrivateRemote> m_mediaSourcePrivate;
     WeakPtr<MediaPlayerPrivateRemote> m_mediaPlayerPrivate;
 
     HashMap<AtomString, TrackPrivateRemoteIdentifier> m_trackIdentifierMap;
     HashMap<AtomString, TrackPrivateRemoteIdentifier> m_prevTrackIdentifierMap;
     Vector<WebCore::PlatformTimeRanges> m_trackBufferRanges;
 
-    bool m_isActive { false };
     uint64_t m_totalTrackBufferSizeInBytes = { 0 };
 
     bool isGPURunning() const { return !m_disconnected && m_gpuProcessConnection.get(); }

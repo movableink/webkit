@@ -73,6 +73,7 @@ public:
         , m_hasShowNotificationSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:showNotification:)])
         , m_hasNotificationPermissionsSelector([m_delegate.get() respondsToSelector:@selector(notificationPermissionsForWebsiteDataStore:)])
         , m_hasWorkerUpdatedAppBadgeSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:workerOrigin:updatedAppBadge:)])
+        , m_hasNavigateToNotificationActionURLSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:navigateToNotificationActionURL:)])
         , m_hasGetDisplayedNotificationsSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:getDisplayedNotificationsForWorkerOrigin:completionHandler:)])
         , m_hasRequestBackgroundFetchPermissionSelector([m_delegate.get() respondsToSelector:@selector(requestBackgroundFetchPermission:frameOrigin:decisionHandler:)])
         , m_hasNotifyBackgroundFetchChangeSelector([m_delegate.get() respondsToSelector:@selector(notifyBackgroundFetchChange:change:)])
@@ -217,6 +218,15 @@ private:
         [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() workerOrigin:wrapper(apiOrigin.get()) updatedAppBadge:(NSNumber *)nsBadge];
     }
 
+    void navigationToNotificationActionURL(const URL& url) final
+    {
+        if (!m_hasNavigateToNotificationActionURLSelector || !m_delegate || !m_dataStore)
+            return;
+
+        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() navigateToNotificationActionURL:(NSURL *)url];
+    }
+
+
     void requestBackgroundFetchPermission(const WebCore::SecurityOriginData& topOrigin, const WebCore::SecurityOriginData& frameOrigin, CompletionHandler<void(bool)>&& completionHandler) final
     {
         if (!m_hasRequestBackgroundFetchPermissionSelector) {
@@ -266,6 +276,7 @@ private:
     bool m_hasShowNotificationSelector { false };
     bool m_hasNotificationPermissionsSelector { false };
     bool m_hasWorkerUpdatedAppBadgeSelector { false };
+    bool m_hasNavigateToNotificationActionURLSelector { false };
     bool m_hasGetDisplayedNotificationsSelector { false };
     bool m_hasRequestBackgroundFetchPermissionSelector { false };
     bool m_hasNotifyBackgroundFetchChangeSelector { false };
@@ -277,12 +288,12 @@ private:
 
 + (WKWebsiteDataStore *)defaultDataStore
 {
-    return wrapper(WebKit::WebsiteDataStore::defaultDataStore());
+    return wrapper(WebKit::WebsiteDataStore::defaultDataStore()).autorelease();
 }
 
 + (WKWebsiteDataStore *)nonPersistentDataStore
 {
-    return wrapper(WebKit::WebsiteDataStore::createNonPersistent());
+    return wrapper(WebKit::WebsiteDataStore::createNonPersistent()).autorelease();
 }
 
 - (instancetype)init
@@ -404,7 +415,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     if (!uuid || !uuid->isValid())
         [NSException raise:NSInvalidArgumentException format:@"Identifier (%s) is invalid for data store", String([identifier UUIDString]).utf8().data()];
 
-    return wrapper(WebKit::WebsiteDataStore::dataStoreForIdentifier(*uuid));
+    return wrapper(WebKit::WebsiteDataStore::dataStoreForIdentifier(*uuid)).autorelease();
 }
 
 + (void)removeDataStoreForIdentifier:(NSUUID *)identifier completionHandler:(void(^)(NSError *))completionHandler
@@ -537,13 +548,11 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         fetchOptions.add(WebKit::WebsiteDataFetchOption::ComputeSizes);
 
     _websiteDataStore->fetchData(WebKit::toWebsiteDataTypes(dataTypes), fetchOptions, [completionHandlerCopy = WTFMove(completionHandlerCopy)](auto websiteDataRecords) {
-        Vector<RefPtr<API::Object>> elements;
-        elements.reserveInitialCapacity(websiteDataRecords.size());
+        auto elements = WTF::map(websiteDataRecords, [](auto& websiteDataRecord) -> RefPtr<API::Object> {
+            return API::WebsiteDataRecord::create(WTFMove(websiteDataRecord));
+        });
 
-        for (auto& websiteDataRecord : websiteDataRecords)
-            elements.uncheckedAppend(API::WebsiteDataRecord::create(WTFMove(websiteDataRecord)));
-
-        completionHandlerCopy(wrapper(API::Array::create(WTFMove(elements))));
+        completionHandlerCopy(wrapper(API::Array::create(WTFMove(elements))).get());
     });
 }
 
@@ -673,7 +682,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         Vector<RefPtr<API::Object>> apiDomains = WTF::map(loadedSubresourceDomains, [](auto& domain) {
             return RefPtr<API::Object>(API::String::create(String(domain.string())));
         });
-        completionHandler(wrapper(API::Array::create(WTFMove(apiDomains))));
+        completionHandler(wrapper(API::Array::create(WTFMove(apiDomains))).get());
     });
 #else
     completionHandler(nil);
@@ -710,11 +719,10 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
 #if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->getAllStorageAccessEntries(webPageProxy->identifier(), [completionHandler = makeBlockPtr(completionHandler)](auto domains) {
-        Vector<RefPtr<API::Object>> apiDomains;
-        apiDomains.reserveInitialCapacity(domains.size());
-        for (auto& domain : domains)
-            apiDomains.uncheckedAppend(API::String::create(domain));
-        completionHandler(wrapper(API::Array::create(WTFMove(apiDomains))));
+        auto apiDomains = WTF::map(domains, [](auto& domain) -> RefPtr<API::Object> {
+            return API::String::create(domain);
+        });
+        completionHandler(wrapper(API::Array::create(WTFMove(apiDomains))).get());
     });
 #else
     completionHandler({ });
@@ -797,8 +805,8 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 - (void)_getResourceLoadStatisticsDataSummary:(void (^)(NSArray<_WKResourceLoadStatisticsThirdParty *> *))completionHandler
 {
 #if ENABLE(TRACKING_PREVENTION)
-    _websiteDataStore->getResourceLoadStatisticsDataSummary([completionHandler = makeBlockPtr(completionHandler)] (auto&& thirdPartyDomains) {
-        completionHandler(createNSArray(thirdPartyDomains, [] (auto&& domain) {
+    _websiteDataStore->getResourceLoadStatisticsDataSummary([completionHandler = makeBlockPtr(completionHandler)] (Vector<WebKit::ITPThirdPartyData>&& thirdPartyDomains) {
+        completionHandler(createNSArray(WTFMove(thirdPartyDomains), [] (WebKit::ITPThirdPartyData&& domain) {
             return wrapper(API::ResourceLoadStatisticsThirdParty::create(WTFMove(domain)));
         }).get());
     });
@@ -901,7 +909,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
 - (_WKWebsiteDataStoreConfiguration *)_configuration
 {
-    return wrapper(_websiteDataStore->configuration().copy());
+    return wrapper(_websiteDataStore->configuration().copy()).autorelease();
 }
 
 + (WKNotificationManagerRef)_sharedServiceWorkerNotificationManager
@@ -912,7 +920,6 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
 - (void)_allowTLSCertificateChain:(NSArray *)certificateChain forHost:(NSString *)host
 {
-    _websiteDataStore->allowSpecificHTTPSCertificateForHost(WebCore::CertificateInfo(WebCore::CertificateInfo::secTrustFromCertificateChain((__bridge CFArrayRef)certificateChain)), host);
 }
 
 - (void)_trustServerForLocalPCMTesting:(SecTrustRef)serverTrust
@@ -929,11 +936,10 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 {
 #if ENABLE(APP_BOUND_DOMAINS)
     _websiteDataStore->getAppBoundDomains([completionHandler = makeBlockPtr(completionHandler)](auto& domains) mutable {
-        Vector<RefPtr<API::Object>> apiDomains;
-        apiDomains.reserveInitialCapacity(domains.size());
-        for (auto& domain : domains)
-            apiDomains.uncheckedAppend(API::String::create(domain.string()));
-        completionHandler(wrapper(API::Array::create(WTFMove(apiDomains))));
+        auto apiDomains = WTF::map(domains, [](auto& domain) -> RefPtr<API::Object> {
+            return API::String::create(domain.string());
+        });
+        completionHandler(wrapper(API::Array::create(WTFMove(apiDomains))).get());
     });
 #else
     completionHandler({ });
@@ -944,11 +950,10 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 {
 #if ENABLE(APP_BOUND_DOMAINS)
     _websiteDataStore->getAppBoundSchemes([completionHandler = makeBlockPtr(completionHandler)](auto& schemes) mutable {
-        Vector<RefPtr<API::Object>> apiSchemes;
-        apiSchemes.reserveInitialCapacity(schemes.size());
-        for (auto& scheme : schemes)
-            apiSchemes.uncheckedAppend(API::String::create(scheme));
-        completionHandler(wrapper(API::Array::create(WTFMove(apiSchemes))));
+        auto apiSchemes = WTF::map(schemes, [](auto& scheme) -> RefPtr<API::Object> {
+            return API::String::create(scheme);
+        });
+        completionHandler(wrapper(API::Array::create(WTFMove(apiSchemes))).get());
     });
 #else
     completionHandler({ });
@@ -1046,8 +1051,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         return;
     }
 
-    RELEASE_LOG(Push, "Sending push message for scope %" SENSITIVE_LOG_STRING " to network process to handle", pushMessage->registrationURL.string().utf8().data());
-    _websiteDataStore->networkProcess().processPushMessage(_websiteDataStore->sessionID(), *pushMessage, [completionHandler = makeBlockPtr(completionHandler)] (bool wasProcessed) {
+    _websiteDataStore->processPushMessage(WTFMove(*pushMessage), [completionHandler = makeBlockPtr(completionHandler)] (bool wasProcessed) {
         RELEASE_LOG(Push, "Push message processing complete. Callback result: %d", wasProcessed);
         completionHandler(wasProcessed);
     });
@@ -1063,6 +1067,16 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         completionHandler(false);
         return;
     }
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    if (!notificationData->defaultActionURL.isEmpty() && _websiteDataStore->configuration().isDeclarativeWebPushEnabled()) {
+        RELEASE_LOG(Push, "Sending persistent notification clicked with default action URL. Requesting navigation to it now.");
+
+        _websiteDataStore->client().navigationToNotificationActionURL(notificationData->defaultActionURL);
+        completionHandler(true);
+        return;
+    }
+#endif
 
     RELEASE_LOG(Push, "Sending persistent notification click from origin %" SENSITIVE_LOG_STRING " to network process to handle", notificationData->originString.utf8().data());
 
@@ -1192,31 +1206,6 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 #if ENABLE(SERVICE_WORKER)
     _websiteDataStore->setServiceWorkerOverridePreferences(preferences ? preferences->_preferences.get() : nullptr);
 #endif
-}
-
--(void)_deletePushAndNotificationRegistration:(WKSecurityOrigin *)securityOrigin completionHandler:(void(^)(NSError *))completionHandler
-{
-    auto completionHandlerCopy = makeBlockPtr(completionHandler);
-    _websiteDataStore->networkProcess().deletePushAndNotificationRegistration(_websiteDataStore->sessionID(), securityOrigin->_securityOrigin->securityOrigin(), [completionHandlerCopy](const String& errorString) {
-        if (errorString.isEmpty()) {
-            completionHandlerCopy(nil);
-            return;
-        }
-        completionHandlerCopy([NSError errorWithDomain:@"WKWebSiteDataStore" code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey:(NSString *)errorString }]);
-    });
-}
-
--(void)_getOriginsWithPushAndNotificationPermissions:(void(^)(NSSet<WKSecurityOrigin *> *))completionHandler
-{
-    auto completionHandlerCopy = makeBlockPtr(completionHandler);
-    _websiteDataStore->networkProcess().getOriginsWithPushAndNotificationPermissions(_websiteDataStore->sessionID(), [completionHandlerCopy](const Vector<WebCore::SecurityOriginData>& origins) {
-        auto set = adoptNS([[NSMutableSet alloc] initWithCapacity:origins.size()]);
-        for (auto& origin : origins) {
-            auto apiOrigin = API::SecurityOrigin::create(origin);
-            [set addObject:wrapper(apiOrigin.get())];
-        }
-        completionHandlerCopy(set.get());
-    });
 }
 
 -(void)_scopeURL:(NSURL *)scopeURL hasPushSubscriptionForTesting:(void(^)(BOOL))completionHandler

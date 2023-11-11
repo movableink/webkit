@@ -54,10 +54,13 @@ public:
 
     WindowProxy& windowProxy() { return m_windowProxy; }
     const WindowProxy& windowProxy() const { return m_windowProxy; }
+    Ref<WindowProxy> protectedWindowProxy() const;
+
     DOMWindow* window() const { return virtualWindow(); }
     FrameTree& tree() const { return m_treeNode; }
     FrameIdentifier frameID() const { return m_frameID; }
     inline Page* page() const; // Defined in Page.h.
+    inline CheckedPtr<Page> checkedPage() const; // Defined in Page.h.
     WEBCORE_EXPORT std::optional<PageIdentifier> pageID() const;
     Settings& settings() const { return m_settings.get(); }
     Frame& mainFrame() const { return m_mainFrame; }
@@ -65,22 +68,31 @@ public:
     WEBCORE_EXPORT bool isRootFrame() const;
 
     WEBCORE_EXPORT void detachFromPage();
+
     inline HTMLFrameOwnerElement* ownerElement() const; // Defined in HTMLFrameOwnerElement.h.
+    inline RefPtr<HTMLFrameOwnerElement> protectedOwnerElement() const; // Defined in HTMLFrameOwnerElement.h.
+
     WEBCORE_EXPORT void disconnectOwnerElement();
     NavigationScheduler& navigationScheduler() const { return m_navigationScheduler.get(); }
+    CheckedRef<NavigationScheduler> checkedNavigationScheduler() const;
     WEBCORE_EXPORT void takeWindowProxyFrom(Frame&);
 
     virtual void frameDetached() = 0;
     virtual bool preventsParentFromBeingComplete() const = 0;
     virtual void changeLocation(FrameLoadRequest&&) = 0;
+    virtual void broadcastFrameRemovalToOtherProcesses() = 0;
+    virtual void didFinishLoadInAnotherProcess() = 0;
+
+    virtual FrameView* virtualView() const = 0;
 
 protected:
     Frame(Page&, FrameIdentifier, FrameType, HTMLFrameOwnerElement*, Frame* parent);
     void resetWindowProxy();
 
+    virtual void frameWasDisconnectedFromOwner() const { }
+
 private:
     virtual DOMWindow* virtualWindow() const = 0;
-    virtual FrameView* virtualView() const = 0;
 
     WeakPtr<Page> m_page;
     const FrameIdentifier m_frameID;

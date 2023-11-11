@@ -330,7 +330,7 @@ ScrollerMac::~ScrollerMac()
 void ScrollerMac::attach()
 {
     m_scrollerImpDelegate = adoptNS([[WebScrollerImpDelegateMac alloc] initWithScroller:this]);
-    m_scrollerImp = [NSScrollerImp scrollerImpWithStyle:nsScrollerStyle(m_pair.scrollbarStyle()) controlSize:nsControlSizeFromScrollbarWidth(m_pair.scrollbarWidthStyle()) horizontal:m_orientation == ScrollbarOrientation::Horizontal replacingScrollerImp:nil];
+    setScrollerImp([NSScrollerImp scrollerImpWithStyle:nsScrollerStyle(m_pair.scrollbarStyle()) controlSize:nsControlSizeFromScrollbarWidth(m_pair.scrollbarWidthStyle()) horizontal:m_orientation == ScrollbarOrientation::Horizontal replacingScrollerImp:nil]);
     [m_scrollerImp setDelegate:m_scrollerImpDelegate.get()];
 }
 
@@ -357,8 +357,7 @@ void ScrollerMac::updateValues()
     auto values = m_pair.valuesForOrientation(m_orientation);
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS
-
-    [m_scrollerImp setEnabled:!!m_hostLayer];
+    [m_scrollerImp setEnabled:m_isEnabled];
     [m_scrollerImp setBoundsSize:NSSizeFromCGSize([m_hostLayer bounds].size)];
     [m_scrollerImp setDoubleValue:values.value];
     [m_scrollerImp setPresentationValue:values.value];
@@ -369,7 +368,7 @@ void ScrollerMac::updateValues()
 
 void ScrollerMac::updateScrollbarStyle()
 {
-    m_scrollerImp = [NSScrollerImp scrollerImpWithStyle:nsScrollerStyle(m_pair.scrollbarStyle()) controlSize:nsControlSizeFromScrollbarWidth(m_pair.scrollbarWidthStyle()) horizontal:m_orientation == ScrollbarOrientation::Horizontal replacingScrollerImp:takeScrollerImp().get()];
+    setScrollerImp([NSScrollerImp scrollerImpWithStyle:nsScrollerStyle(m_pair.scrollbarStyle()) controlSize:nsControlSizeFromScrollbarWidth(m_pair.scrollbarWidthStyle()) horizontal:m_orientation == ScrollbarOrientation::Horizontal replacingScrollerImp:takeScrollerImp().get()]);
     updatePairScrollerImps();
 }
 
@@ -425,6 +424,20 @@ void ScrollerMac::visibilityChanged(bool isVisible)
         return;
     m_isVisible = isVisible;
     m_pair.node().scrollbarVisibilityDidChange(m_orientation, isVisible);
+}
+
+void ScrollerMac::updateMinimumKnobLength(int minimumKnobLength)
+{
+    if (m_minimumKnobLength == minimumKnobLength)
+        return;
+    m_minimumKnobLength = minimumKnobLength;
+    m_pair.node().scrollbarMinimumThumbLengthDidChange(m_orientation, m_minimumKnobLength);
+}
+
+void ScrollerMac::setScrollerImp(NSScrollerImp *imp)
+{
+    m_scrollerImp = imp;
+    updateMinimumKnobLength([m_scrollerImp knobMinLength]);
 }
 
 String ScrollerMac::scrollbarState() const

@@ -156,16 +156,18 @@ void JIT::emit_op_instanceof(const JSInstruction* currentInstruction)
     using BaselineJITRegisters::Instanceof::resultJSR;
     using BaselineJITRegisters::Instanceof::valueJSR;
     using BaselineJITRegisters::Instanceof::protoJSR;
-    using BaselineJITRegisters::Instanceof::FastPath::stubInfoGPR;
+    using BaselineJITRegisters::Instanceof::stubInfoGPR;
 
     emitGetVirtualRegister(value, valueJSR);
     emitGetVirtualRegister(proto, protoJSR);
-    
+
+    auto [ stubInfo, stubInfoIndex ] = addUnlinkedStructureStubInfo();
+    loadStructureStubInfo(stubInfoIndex, stubInfoGPR);
+
     // Check that proto are cells. baseVal must be a cell - this is checked by the get_by_id for Symbol.hasInstance.
     emitJumpSlowCaseIfNotJSCell(valueJSR, value);
     emitJumpSlowCaseIfNotJSCell(protoJSR, proto);
 
-    auto [ stubInfo, stubInfoIndex ] = addUnlinkedStructureStubInfo();
     JITInstanceOfGenerator gen(
         nullptr, stubInfo, JITType::BaselineJIT, CodeOrigin(m_bytecodeIndex), CallSiteIndex(m_bytecodeIndex),
         RegisterSetBuilder::stubUnavailableRegisters(),
@@ -173,9 +175,8 @@ void JIT::emit_op_instanceof(const JSInstruction* currentInstruction)
         valueJSR.payloadGPR(),
         protoJSR.payloadGPR(),
         stubInfoGPR);
-    gen.m_unlinkedStubInfoConstantIndex = stubInfoIndex;
 
-    gen.generateBaselineDataICFastPath(*this, stubInfoIndex, stubInfoGPR);
+    gen.generateBaselineDataICFastPath(*this);
 #if USE(JSVALUE32_64)
     boxBoolean(resultJSR.payloadGPR(), resultJSR);
 #endif
@@ -188,24 +189,11 @@ void JIT::emit_op_instanceof(const JSInstruction* currentInstruction)
 
 void JIT::emitSlow_op_instanceof(const JSInstruction*, Vector<SlowCaseEntry>::iterator& iter)
 {
-    linkAllSlowCases(iter);
-
+    ASSERT(BytecodeIndex(m_bytecodeIndex.offset()) == m_bytecodeIndex);
     JITInstanceOfGenerator& gen = m_instanceOfs[m_instanceOfIndex++];
-
-    Label coldPathBegin = label();
-
-    using BaselineJITRegisters::Instanceof::valueJSR;
-    using BaselineJITRegisters::Instanceof::protoJSR;
-    using BaselineJITRegisters::Instanceof::SlowPath::globalObjectGPR;
-    using BaselineJITRegisters::Instanceof::SlowPath::stubInfoGPR;
-
-    loadGlobalObject(globalObjectGPR);
-    loadConstant(gen.m_unlinkedStubInfoConstantIndex, stubInfoGPR);
-    callOperation<decltype(operationInstanceOfOptimize)>(
-        Address(stubInfoGPR, StructureStubInfo::offsetOfSlowOperation()),
-        globalObjectGPR, stubInfoGPR, valueJSR, protoJSR);
-    static_assert(BaselineJITRegisters::Instanceof::resultJSR == returnValueJSR);
-    gen.reportSlowPathCall(coldPathBegin, Call());
+    linkAllSlowCases(iter);
+    gen.reportBaselineDataICSlowPathBegin(label());
+    emitNakedNearCall(InlineCacheCompiler::generateSlowPathCode(vm(), gen.accessType()).retaggedCode<NoPtrTag>());
 }
 
 void JIT::emit_op_is_empty(const JSInstruction* currentInstruction)
@@ -251,6 +239,20 @@ void JIT::emit_op_typeof_is_undefined(const JSInstruction* currentInstruction)
     notMasqueradesAsUndefined.link(this);
     done.link(this);
     boxBoolean(regT0, jsRegT10);
+    emitPutVirtualRegister(dst, jsRegT10);
+}
+
+void JIT::emit_op_typeof_is_function(const JSInstruction* currentInstruction)
+{
+    auto bytecode = currentInstruction->as<OpTypeofIsFunction>();
+    VirtualRegister dst = bytecode.m_dst;
+    VirtualRegister value = bytecode.m_operand;
+
+    emitGetVirtualRegister(value, jsRegT10);
+    auto isNotCell = branchIfNotCell(jsRegT10);
+    addSlowCase(branchIfObject(jsRegT10.payloadGPR()));
+    isNotCell.link(this);
+    moveTrustedValue(jsBoolean(false), jsRegT10);
     emitPutVirtualRegister(dst, jsRegT10);
 }
 
@@ -942,12 +944,15 @@ void JIT::emit_op_to_number(const JSInstruction* currentInstruction)
     auto bytecode = currentInstruction->as<OpToNumber>();
     VirtualRegister dstVReg = bytecode.m_dst;
     VirtualRegister srcVReg = bytecode.m_operand;
+    UnaryArithProfile* arithProfile = &m_unlinkedCodeBlock->unaryArithProfile(bytecode.m_profileIndex);
 
     emitGetVirtualRegister(srcVReg, jsRegT10);
-    
-    addSlowCase(branchIfNotNumber(jsRegT10, regT2));
 
-    emitValueProfilingSite(bytecode, jsRegT10);
+    auto isInt32 = branchIfInt32(jsRegT10);
+    addSlowCase(branchIfNotNumber(jsRegT10, regT2));
+    if (arithProfile && shouldEmitProfiling())
+        arithProfile->emitUnconditionalSet(*this, UnaryArithProfile::observedNumberBits());
+    isInt32.link(this);
     if (srcVReg != dstVReg)
         emitPutVirtualRegister(dstVReg, jsRegT10);
 }
@@ -957,18 +962,28 @@ void JIT::emit_op_to_numeric(const JSInstruction* currentInstruction)
     auto bytecode = currentInstruction->as<OpToNumeric>();
     VirtualRegister dstVReg = bytecode.m_dst;
     VirtualRegister srcVReg = bytecode.m_operand;
+    UnaryArithProfile* arithProfile = &m_unlinkedCodeBlock->unaryArithProfile(bytecode.m_profileIndex);
 
     emitGetVirtualRegister(srcVReg, jsRegT10);
 
+    auto isInt32 = branchIfInt32(jsRegT10);
+
     Jump isNotCell = branchIfNotCell(jsRegT10);
     addSlowCase(branchIfNotHeapBigInt(jsRegT10.payloadGPR()));
+    if (arithProfile && shouldEmitProfiling())
+        move(TrustedImm32(UnaryArithProfile::observedNonNumberBits()), regT5);
     Jump isBigInt = jump();
 
     isNotCell.link(this);
     addSlowCase(branchIfNotNumber(jsRegT10, regT2));
+    if (arithProfile && shouldEmitProfiling())
+        move(TrustedImm32(UnaryArithProfile::observedNumberBits()), regT5);
     isBigInt.link(this);
 
-    emitValueProfilingSite(bytecode, jsRegT10);
+    if (arithProfile && shouldEmitProfiling())
+        arithProfile->emitUnconditionalSet(*this, regT5);
+
+    isInt32.link(this);
     if (srcVReg != dstVReg)
         emitPutVirtualRegister(dstVReg, jsRegT10);
 }
@@ -1231,6 +1246,9 @@ void JIT::emit_op_enter(const JSInstruction*)
 
     using BaselineJITRegisters::Enter::canBeOptimizedGPR;
     using BaselineJITRegisters::Enter::localsToInitGPR;
+
+    if (m_profiledCodeBlock->couldBeTainted())
+        store8(TrustedImm32(1), vm().addressOfMightBeExecutingTaintedCode());
 
     move(TrustedImm32(canBeOptimized()), canBeOptimizedGPR);
     move(TrustedImm32(localsToInit), localsToInitGPR);

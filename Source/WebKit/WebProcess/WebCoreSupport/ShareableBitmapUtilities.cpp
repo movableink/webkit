@@ -50,7 +50,7 @@ RefPtr<ShareableBitmap> createShareableBitmap(RenderImage& renderImage, CreateSh
         return { };
 
     auto colorSpaceForBitmap = screenColorSpace(localMainFrame->view());
-    if (!renderImage.isMedia() && !renderImage.opacity() && options.useSnapshotForTransparentImages == UseSnapshotForTransparentImages::Yes) {
+    if (!renderImage.isRenderMedia() && !renderImage.opacity() && options.useSnapshotForTransparentImages == UseSnapshotForTransparentImages::Yes) {
         auto snapshotRect = renderImage.absoluteBoundingBoxRect();
         if (snapshotRect.isEmpty())
             return { };
@@ -60,19 +60,19 @@ RefPtr<ShareableBitmap> createShareableBitmap(RenderImage& renderImage, CreateSh
         if (!imageBuffer)
             return { };
 
-        auto snapshotImage = ImageBuffer::sinkIntoImage(WTFMove(imageBuffer), PreserveResolution::Yes);
+        auto snapshotImage = ImageBuffer::sinkIntoNativeImage(WTFMove(imageBuffer));
         if (!snapshotImage)
             return { };
 
-        auto bitmap = ShareableBitmap::create({ snapshotRect.size(), WTFMove(colorSpaceForBitmap) });
+        auto bitmap = ShareableBitmap::create({ snapshotImage->size(), WTFMove(colorSpaceForBitmap) });
         if (!bitmap)
             return { };
 
         auto context = bitmap->createGraphicsContext();
         if (!context)
             return { };
-
-        context->drawImage(*snapshotImage, { FloatPoint::zero(), snapshotRect.size() });
+        auto imageRect = FloatRect { { }, snapshotImage->size() };
+        context->drawNativeImage(*snapshotImage, snapshotImage->size(), imageRect, imageRect);
         return bitmap;
     }
 

@@ -71,6 +71,7 @@ const TestFeatures& TestOptions::defaults()
             { "ColorFilterEnabled", true },
             { "CustomPasteboardDataEnabled", true },
             { "DOMPasteAllowed", true },
+            { "DOMTestingAPIsEnabled", true },
             { "DeveloperExtrasEnabled", true },
             { "DirectoryUploadEnabled", true },
             { "DownloadAttributeEnabled", true },
@@ -133,7 +134,6 @@ const TestFeatures& TestOptions::defaults()
             { "AllowFileAccessFromFileURLs", true },
             { "AllowTopNavigationToDataURLs", true },
             { "AllowUniversalAccessFromFileURLs", true },
-            { "AspectRatioEnabled", true },
             { "AsyncClipboardAPIEnabled", false },
             { "AttachmentElementEnabled", false },
             { "AttachmentWideLayoutEnabled", false },
@@ -213,6 +213,7 @@ const std::unordered_map<std::string, TestHeaderKeyType>& TestOptions::keyTypeMa
 
         { "additionalSupportedImageTypes", TestHeaderKeyType::StringTestRunner },
         { "jscOptions", TestHeaderKeyType::StringTestRunner },
+        { "captionDisplayMode", TestHeaderKeyType::StringTestRunner },
     };
 
     return map;

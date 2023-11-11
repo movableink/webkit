@@ -43,7 +43,6 @@
 #import "Icon.h"
 #import "Image.h"
 #import "ImageControlsButtonMac.h"
-#import "LocalCurrentGraphicsContext.h"
 #import "LocalDefaultSystemAppearance.h"
 #import "LocalFrame.h"
 #import "LocalFrameView.h"
@@ -172,6 +171,8 @@ bool RenderThemeMac::canPaint(const PaintInfo& paintInfo, const Settings&, Style
     case StyleAppearance::SliderThumbVertical:
     case StyleAppearance::SliderHorizontal:
     case StyleAppearance::SliderVertical:
+    case StyleAppearance::SwitchThumb:
+    case StyleAppearance::SwitchTrack:
     case StyleAppearance::SquareButton:
     case StyleAppearance::TextArea:
     case StyleAppearance::TextField:
@@ -216,7 +217,9 @@ bool RenderThemeMac::canCreateControlPartForRenderer(const RenderObject& rendere
         || type == StyleAppearance::SliderThumbVertical
         || type == StyleAppearance::SliderHorizontal
         || type == StyleAppearance::SliderVertical
-        || type == StyleAppearance::SquareButton;
+        || type == StyleAppearance::SquareButton
+        || type == StyleAppearance::SwitchThumb
+        || type == StyleAppearance::SwitchTrack;
 }
 
 bool RenderThemeMac::canCreateControlPartForBorderOnly(const RenderObject& renderer) const
@@ -346,10 +349,21 @@ Color RenderThemeMac::platformInactiveListBoxSelectionForegroundColor(OptionSet<
 #endif
 }
 
+inline static Color defaultFocusRingColor(OptionSet<StyleColorOptions> options)
+{
+    // Hardcoded to avoid exposing a user appearance preference to the web for fingerprinting.
+    return {
+        options.contains(StyleColorOptions::UseDarkAppearance) ? SRGBA<uint8_t> { 26, 169, 255 } : SRGBA<uint8_t> { 0, 103, 244 },
+        Color::Flags::Semantic
+    };
+}
+
 Color RenderThemeMac::platformFocusRingColor(OptionSet<StyleColorOptions> options) const
 {
     if (usesTestModeFocusRingColor())
         return oldAquaFocusRingColor();
+    if (!options.contains(StyleColorOptions::UseSystemAppearance))
+        return defaultFocusRingColor(options);
     LocalDefaultSystemAppearance localAppearance(options.contains(StyleColorOptions::UseDarkAppearance));
     // The color is expected to be opaque, since CoreGraphics will apply opacity when drawing (because opacity is normally animated).
     return colorFromCocoaColor([NSColor keyboardFocusIndicatorColor]).opaqueColor();
@@ -460,7 +474,7 @@ Color RenderThemeMac::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOpt
             return systemAppearanceColor(cache.systemActiveLinkColor, @selector(systemRedColor));
 
         // The following colors would expose user appearance preferences to the web, and could be used for fingerprinting.
-        // These should only be available when the web view is wanting the system appearance.
+        // These are available only when the web view opts into the system appearance.
         case CSSValueWebkitFocusRingColor:
         case CSSValueActiveborder:
             return focusRingColor(options);
@@ -493,7 +507,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     ASSERT(!forVisitedLink);
 
-    return cache.systemStyleColors.ensure(cssValueID, [this, cssValueID, options, useDarkAppearance] () -> Color {
+    auto it = cache.systemStyleColors.find(cssValueID);
+    if (it != cache.systemStyleColors.end())
+        return it->value;
+
+    auto color = [this, cssValueID, options, useDarkAppearance]() -> Color {
         LocalDefaultSystemAppearance localAppearance(useDarkAppearance);
 
         auto selectCocoaColor = [cssValueID] () -> SEL {
@@ -666,10 +684,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
         case CSSValueWebkitFocusRingColor:
         case CSSValueActiveborder:
-            // Hardcoded to avoid exposing a user appearance preference to the web for fingerprinting.
-            if (localAppearance.usingDarkAppearance())
-                return { SRGBA<uint8_t> { 26, 169, 255 }, Color::Flags::Semantic };
-            return { SRGBA<uint8_t> { 0, 103, 244 }, Color::Flags::Semantic };
+            return defaultFocusRingColor(options);
 
         case CSSValueAppleSystemControlAccent:
             // Hardcoded to avoid exposing a user appearance preference to the web for fingerprinting.
@@ -727,12 +742,20 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         default:
             return RenderTheme::systemColor(cssValueID, options);
         }
-    }).iterator->value;
+    }();
+
+    cache.systemStyleColors.add(cssValueID, color);
+    return color;
 }
 
 bool RenderThemeMac::usesTestModeFocusRingColor() const
 {
     return WebCore::usesTestModeFocusRingColor();
+}
+
+bool RenderThemeMac::searchFieldShouldAppearAsTextField(const RenderStyle& style) const
+{
+    return !style.isHorizontalWritingMode();
 }
 
 bool RenderThemeMac::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
@@ -741,11 +764,12 @@ bool RenderThemeMac::isControlStyled(const RenderStyle& style, const RenderStyle
     if (appearance == StyleAppearance::TextField || appearance == StyleAppearance::TextArea || appearance == StyleAppearance::SearchField || appearance == StyleAppearance::Listbox)
         return style.border() != userAgentStyle.border();
 
-    // FIXME: This is horrible, but there is not much else that can be done.  Menu lists cannot draw properly when
+    // FIXME: This is horrible, but there is not much else that can be done. Menu lists cannot draw properly when
     // scaled.  They can't really draw properly when transformed either.  We can't detect the transform case at style
     // adjustment time so that will just have to stay broken.  We can however detect that we're zooming.  If zooming
-    // is in effect we treat it like the control is styled.
-    if (appearance == StyleAppearance::Menulist && style.effectiveZoom() != 1.0f)
+    // is in effect we treat it like the control is styled. Additionally, treat the control like it is styled when
+    // using a vertical writing mode, since the AppKit control is not height resizable.
+    if (appearance == StyleAppearance::Menulist && (style.effectiveZoom() != 1.0f || !style.isHorizontalWritingMode()))
         return true;
 
     return RenderTheme::isControlStyled(style, userAgentStyle);
@@ -785,6 +809,7 @@ void RenderThemeMac::adjustRepaintRect(const RenderObject& renderer, FloatRect& 
     case StyleAppearance::DefaultButton:
     case StyleAppearance::Button:
     case StyleAppearance::InnerSpinButton:
+    case StyleAppearance::Switch:
             return RenderTheme::adjustRepaintRect(renderer, rect);
     default:
             break;
@@ -959,10 +984,7 @@ NSControlSize RenderThemeMac::controlSizeForSystemFont(const RenderStyle& style)
 void RenderThemeMac::adjustListButtonStyle(RenderStyle& style, const Element*) const
 {
     // Add a margin to place the button at end of the input field.
-    if (style.isLeftToRightDirection())
-        style.setMarginRight(Length(-4, LengthType::Fixed));
-    else
-        style.setMarginLeft(Length(-4, LengthType::Fixed));
+    style.setMarginEnd(Length(-4, LengthType::Fixed));
 }
 
 #endif
@@ -1083,7 +1105,7 @@ void RenderThemeMac::adjustMenuListStyle(RenderStyle& style, const Element* e) c
 
     // White-space is locked to pre
     style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
-    style.setTextWrap(TextWrap::NoWrap);
+    style.setTextWrapMode(TextWrapMode::NoWrap);
 
     // Set the button's vertical size.
     setSizeFromFont(style, menuListButtonSizes());
@@ -1262,8 +1284,14 @@ const int emptyResultsOffset = 9;
 void RenderThemeMac::adjustSearchFieldDecorationPartStyle(RenderStyle& style, const Element*) const
 {
     IntSize size = sizeForSystemFont(style, resultsButtonSizes());
-    style.setWidth(Length(size.width() - emptyResultsOffset, LengthType::Fixed));
-    style.setHeight(Length(size.height(), LengthType::Fixed));
+    int widthOffset = 0;
+    int heightOffset = 0;
+    if (style.isHorizontalWritingMode())
+        widthOffset = emptyResultsOffset;
+    else
+        heightOffset = emptyResultsOffset;
+    style.setWidth(Length(size.width() - widthOffset, LengthType::Fixed));
+    style.setHeight(Length(size.height() - heightOffset, LengthType::Fixed));
     style.setBoxShadow(nullptr);
 }
 
@@ -1606,7 +1634,6 @@ bool RenderThemeMac::paintAttachment(const RenderObject& renderer, const PaintIn
         progress = progressString.toFloat(&validProgress);
 
     GraphicsContext& context = paintInfo.context();
-    LocalCurrentGraphicsContext localContext(context);
     GraphicsContextStateSaver saver(context);
 
     context.translate(toFloatSize(paintRect.location()));

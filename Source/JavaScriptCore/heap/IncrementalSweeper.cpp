@@ -30,6 +30,7 @@
 #include "HeapInlines.h"
 #include "MarkedBlock.h"
 #include "VM.h"
+#include <wtf/SystemTracing.h>
 
 #if !USE(SYSTEM_MALLOC)
 #include <bmalloc/BPlatform.h>
@@ -69,19 +70,32 @@ void IncrementalSweeper::doWorkUntil(VM& vm, MonotonicTime deadline)
 
 void IncrementalSweeper::doWork(VM& vm)
 {
+    if (m_lastOpportunisticTaskDidFinishSweeping) {
+        m_lastOpportunisticTaskDidFinishSweeping = false;
+        scheduleTimer();
+        return;
+    }
     doSweep(vm, MonotonicTime::now() + sweepTimeSlice, SweepTrigger::Timer);
 }
 
 void IncrementalSweeper::doSweep(VM& vm, MonotonicTime deadline, SweepTrigger trigger)
 {
+    std::optional<TraceScope> traceScope;
+    if (UNLIKELY(Options::useTracePoints()))
+        traceScope.emplace(IncrementalSweepStart, IncrementalSweepEnd, vm.heap.size(), vm.heap.capacity());
+
     while (sweepNextBlock(vm, trigger)) {
         if (MonotonicTime::now() < deadline)
             continue;
 
         if (trigger == SweepTrigger::Timer)
             scheduleTimer();
+        else
+            m_lastOpportunisticTaskDidFinishSweeping = false;
         return;
     }
+    if (trigger == SweepTrigger::OpportunisticTask)
+        m_lastOpportunisticTaskDidFinishSweeping = true;
 
 #if !USE(SYSTEM_MALLOC)
 #if BUSE(LIBPAS)

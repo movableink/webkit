@@ -54,7 +54,7 @@ WTF_EXPORT_PRIVATE float charactersToFloat(const UChar*, size_t, size_t& parsedL
 
 template<bool isSpecialCharacter(UChar), typename CharacterType> bool containsOnly(const CharacterType*, size_t);
 
-enum TrailingZerosTruncatingPolicy { KeepTrailingZeros, TruncateTrailingZeros };
+enum class TrailingZerosPolicy : bool { Keep, Truncate };
 
 class String final {
     WTF_MAKE_FAST_ALLOCATED;
@@ -142,8 +142,8 @@ public:
     WTF_EXPORT_PRIVATE static String number(float);
     WTF_EXPORT_PRIVATE static String number(double);
 
-    WTF_EXPORT_PRIVATE static String numberToStringFixedPrecision(float, unsigned precision = 6, TrailingZerosTruncatingPolicy = TruncateTrailingZeros);
-    WTF_EXPORT_PRIVATE static String numberToStringFixedPrecision(double, unsigned precision = 6, TrailingZerosTruncatingPolicy = TruncateTrailingZeros);
+    WTF_EXPORT_PRIVATE static String numberToStringFixedPrecision(float, unsigned precision = 6, TrailingZerosPolicy = TrailingZerosPolicy::Truncate);
+    WTF_EXPORT_PRIVATE static String numberToStringFixedPrecision(double, unsigned precision = 6, TrailingZerosPolicy = TrailingZerosPolicy::Truncate);
     WTF_EXPORT_PRIVATE static String numberToStringFixedWidth(double, unsigned decimalPlaces);
 
     AtomString toExistingAtomString() const;
@@ -167,8 +167,8 @@ public:
     size_t reverseFind(ASCIILiteral literal, unsigned start = MaxLength) const { return m_impl ? m_impl->reverseFind(literal, start) : notFound; }
     size_t reverseFind(StringView, unsigned start = MaxLength) const;
 
-    WTF_EXPORT_PRIVATE Vector<UChar> charactersWithNullTermination() const;
-    WTF_EXPORT_PRIVATE Vector<UChar> charactersWithoutNullTermination() const;
+    WTF_EXPORT_PRIVATE Expected<Vector<UChar>, UTF8ConversionError> charactersWithNullTermination() const;
+    WTF_EXPORT_PRIVATE Expected<Vector<UChar>, UTF8ConversionError> charactersWithoutNullTermination() const;
 
     WTF_EXPORT_PRIVATE UChar32 characterStartingAt(unsigned) const;
 
@@ -458,7 +458,7 @@ inline UChar String::characterAt(unsigned index) const
 {
     if (!m_impl || index >= m_impl->length())
         return 0;
-    return (*m_impl)[index];
+    return m_impl->is8Bit() ? m_impl->characters8()[index] : m_impl->characters16()[index];
 }
 
 inline String WARN_UNUSED_RETURN makeStringByReplacingAll(const String& string, UChar target, UChar replacement)
@@ -585,7 +585,7 @@ inline String operator"" _str(const UChar* characters, size_t length)
 
 } // namespace WTF
 
-using WTF::KeepTrailingZeros;
+using WTF::TrailingZerosPolicy;
 using WTF::String;
 using WTF::charactersToDouble;
 using WTF::charactersToFloat;

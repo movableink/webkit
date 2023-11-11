@@ -24,16 +24,16 @@
  */
 
 #import "config.h"
-
-#if ENABLE(VIDEO_PRESENTATION_MODE)
 #import "TextTrackRepresentationCocoa.h"
 
-#import "VideoFullscreenManager.h"
-#import "VideoFullscreenManagerProxyMessages.h"
-#import "WebPage.h"
+#if ENABLE(VIDEO_PRESENTATION_MODE)
 
+#import "VideoPresentationManager.h"
+#import "VideoPresentationManagerProxyMessages.h"
+#import "WebPage.h"
 #import <WebCore/GraphicsContext.h>
 #import <WebCore/HTMLVideoElement.h>
+#import <WebCore/Page.h>
 
 namespace WebKit {
 
@@ -50,14 +50,11 @@ void WebTextTrackRepresentationCocoa::update()
 {
     if (!m_page)
         return;
-    auto& fullscreenManager = m_page->videoFullscreenManager();
+    Ref fullscreenManager = m_page->videoPresentationManager();
     if (!m_mediaElement || !is<WebCore::HTMLVideoElement>(m_mediaElement))
         return;
     
-    auto representation = m_client.createTextTrackRepresentationImage();
-    if (!representation)
-        return;
-    auto image = representation->nativeImage();
+    auto image = m_client.createTextTrackRepresentationImage();
     if (!image)
         return;
     auto imageSize = image->size();
@@ -71,7 +68,8 @@ void WebTextTrackRepresentationCocoa::update()
     auto handle = bitmap->createHandle();
     if (!handle)
         return;
-    fullscreenManager.updateTextTrackRepresentationForVideoElement(downcast<WebCore::HTMLVideoElement>(*m_mediaElement), WTFMove(*handle));
+    Ref videoElement = downcast<WebCore::HTMLVideoElement>(*m_mediaElement);
+    fullscreenManager->updateTextTrackRepresentationForVideoElement(videoElement, WTFMove(*handle));
 }
 
 void WebTextTrackRepresentationCocoa::setContentScale(float scale)
@@ -79,10 +77,11 @@ void WebTextTrackRepresentationCocoa::setContentScale(float scale)
     WebCore::TextTrackRepresentationCocoa::setContentScale(scale);
     if (!m_page)
         return;
-    auto& fullscreenManager = m_page->videoFullscreenManager();
+    Ref fullscreenManager = m_page->videoPresentationManager();
     if (!m_mediaElement || !is<WebCore::HTMLVideoElement>(m_mediaElement))
         return;
-    fullscreenManager.setTextTrackRepresentationContentScaleForVideoElement(downcast<WebCore::HTMLVideoElement>(*m_mediaElement), scale);
+    Ref videoElement = downcast<WebCore::HTMLVideoElement>(*m_mediaElement);
+    fullscreenManager->setTextTrackRepresentationContentScaleForVideoElement(videoElement, scale);
 }
 
 void WebTextTrackRepresentationCocoa::setHidden(bool hidden) const
@@ -90,13 +89,13 @@ void WebTextTrackRepresentationCocoa::setHidden(bool hidden) const
     WebCore::TextTrackRepresentationCocoa::setHidden(hidden);
     if (!m_page)
         return;
-    auto& fullscreenManager = m_page->videoFullscreenManager();
+    Ref fullscreenManager = m_page->videoPresentationManager();
     if (!m_mediaElement || !is<WebCore::HTMLVideoElement>(m_mediaElement))
         return;
-    fullscreenManager.setTextTrackRepresentationIsHiddenForVideoElement(downcast<WebCore::HTMLVideoElement>(*m_mediaElement), hidden);
+    Ref videoElement = downcast<WebCore::HTMLVideoElement>(*m_mediaElement);
+    fullscreenManager->setTextTrackRepresentationIsHiddenForVideoElement(videoElement, hidden);
 }
 
 } // namespace WebKit
 
-#endif
-
+#endif // ENABLE(VIDEO_PRESENTATION_MODE)

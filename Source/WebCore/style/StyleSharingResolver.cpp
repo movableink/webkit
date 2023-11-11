@@ -258,6 +258,9 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
     if (elementHasDirectionAuto(candidateElement))
         return false;
 
+    if (candidateElement.isRelevantToUser() != element.isRelevantToUser())
+        return false;
+
     if (candidateElement.isLink() && context.elementLinkState != style->insideLink())
         return false;
 
@@ -277,7 +280,7 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
         }
 
         // Elements that may get StyleAdjuster's inert attribute adjustment.
-        if (m_document.settings().inertAttributeEnabled() && candidateElement.hasAttributeWithoutSynchronization(HTMLNames::inertAttr) != element.hasAttributeWithoutSynchronization(HTMLNames::inertAttr))
+        if (candidateElement.hasAttributeWithoutSynchronization(HTMLNames::inertAttr) != element.hasAttributeWithoutSynchronization(HTMLNames::inertAttr))
             return false;
     }
 

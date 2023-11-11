@@ -132,6 +132,7 @@ public:
     // invalid().
     ObjectPropertyConditionSet mergedWith(const ObjectPropertyConditionSet& other) const;
     
+    bool isStillValid() const;
     bool structuresEnsureValidity() const;
     
     bool needImpurePropertyWatchpoint() const;
@@ -168,7 +169,7 @@ ObjectPropertyConditionSet generateConditionsForPropertySetterMiss(
 ObjectPropertyConditionSet generateConditionsForIndexedMiss(VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure);
 ObjectPropertyConditionSet generateConditionsForPrototypePropertyHit(
     VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype,
-    UniquedStringImpl* uid, PropertyCondition::Kind prototypeConditionKind = PropertyCondition::Presence);
+    UniquedStringImpl* uid);
 ObjectPropertyConditionSet generateConditionsForPrototypePropertyHitCustom(
     VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype,
     UniquedStringImpl* uid, unsigned attributes);

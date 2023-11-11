@@ -73,8 +73,6 @@ private:
 
     void element() const = delete;
 
-    bool isMenuList() const override { return true; }
-
     bool createsAnonymousWrapper() const override { return true; }
 
     void updateFromElement() override;
@@ -161,4 +159,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMenuList, isMenuList())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMenuList, isRenderMenuList())

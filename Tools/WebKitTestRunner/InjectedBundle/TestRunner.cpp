@@ -1107,9 +1107,19 @@ void TestRunner::setShouldLogDownloadCallbacks(bool value)
     postPageMessage("SetShouldLogDownloadCallbacks", value);
 }
 
+void TestRunner::setShouldDownloadContentDispositionAttachments(bool value)
+{
+    postPageMessage("SetShouldDownloadContentDispositionAttachments", value);
+}
+
 void TestRunner::setShouldLogDownloadSize(bool value)
 {
     postPageMessage("SetShouldLogDownloadSize", value);
+}
+
+void TestRunner::setShouldLogDownloadExpectedSize(bool value)
+{
+    postPageMessage("SetShouldLogDownloadExpectedSize", value);
 }
 
 void TestRunner::setAuthenticationUsername(JSStringRef username)
@@ -1622,6 +1632,11 @@ void TestRunner::setStatisticsNotifyPagesWhenDataRecordsWereScanned(bool value)
     postSynchronousMessage("StatisticsNotifyPagesWhenDataRecordsWereScanned", value);
 }
 
+void TestRunner::setStatisticsTimeAdvanceForTesting(double value)
+{
+    postSynchronousMessage("StatisticsSetTimeAdvanceForTesting", value);
+}
+
 void TestRunner::setStatisticsIsRunningTest(bool value)
 {
     postSynchronousMessage("StatisticsSetIsRunningTest", value);
@@ -1970,9 +1985,12 @@ void TestRunner::setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool
     }));
 }
 
-void TestRunner::triggerMockMicrophoneConfigurationChange()
+void TestRunner::triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay)
 {
-    postSynchronousMessage("TriggerMockMicrophoneConfigurationChange");
+    postSynchronousMessage("TriggerMockCaptureConfigurationChange", createWKDictionary({
+        { "microphone", adoptWK(WKBooleanCreate(forMicrophone)) },
+        { "display", adoptWK(WKBooleanCreate(forDisplay)) },
+    }));
 }
 
 #if ENABLE(GAMEPAD)
@@ -2125,6 +2143,11 @@ void TestRunner::setQuota(uint64_t quota)
     postSynchronousMessage("SetQuota", quota);
 }
 
+void TestRunner::setOriginQuotaRatioEnabled(bool enabled)
+{
+    postSynchronousPageMessage("SetOriginQuotaRatioEnabled", enabled);
+}
+
 void TestRunner::getApplicationManifestThen(JSValueRef callback)
 {
     cacheTestRunnerCallback(GetApplicationManifestCallbackID, callback);
@@ -2149,11 +2172,6 @@ size_t TestRunner::userScriptInjectedCount() const
 void TestRunner::injectUserScript(JSStringRef script)
 {
     postSynchronousMessage("InjectUserScript", toWK(script));
-}
-
-void TestRunner::sendDisplayConfigurationChangedMessageForTesting()
-{
-    postSynchronousMessage("SendDisplayConfigurationChangedMessageForTesting");
 }
 
 void TestRunner::setServiceWorkerFetchTimeout(double seconds)

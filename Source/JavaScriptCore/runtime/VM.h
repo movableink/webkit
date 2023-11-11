@@ -333,6 +333,10 @@ public:
 #if ENABLE(SAMPLING_PROFILER)
     SamplingProfiler* samplingProfiler() { return m_samplingProfiler.get(); }
     JS_EXPORT_PRIVATE SamplingProfiler& ensureSamplingProfiler(Ref<Stopwatch>&&);
+
+    JS_EXPORT_PRIVATE void enableSamplingProfiler();
+    JS_EXPORT_PRIVATE void disableSamplingProfiler();
+    JS_EXPORT_PRIVATE RefPtr<JSON::Value> takeSamplingProfilerSamplesAsJSON();
 #endif
 
     FuzzerAgent* fuzzerAgent() const { return m_fuzzerAgent.get(); }
@@ -349,6 +353,9 @@ public:
     WeakRandom& random() { return m_random; }
     WeakRandom& heapRandom() { return m_heapRandom; }
     Integrity::Random& integrityRandom() { return m_integrityRandom; }
+
+    template<typename Type, typename Functor>
+    Type& ensureSideData(void* key, const Functor&);
 
     bool hasTerminationRequest() const { return m_hasTerminationRequest; }
     void clearHasTerminationRequest()
@@ -412,7 +419,10 @@ public:
         m_entryScopeServices.add(service);
     }
 
-    JS_EXPORT_PRIVATE void performOpportunisticallyScheduledTasks(MonotonicTime deadline);
+    enum class SchedulerOptions : uint8_t {
+        HasImminentlyScheduledWork = 1 << 0,
+    };
+    JS_EXPORT_PRIVATE void performOpportunisticallyScheduledTasks(MonotonicTime deadline, OptionSet<SchedulerOptions>);
 
 private:
     VMIdentifier m_identifier;
@@ -490,6 +500,7 @@ public:
     ALWAYS_INLINE GCClient::IsoSubspace& unlinkedFunctionExecutableSpace() { return clientHeap.unlinkedFunctionExecutableSpace; }
 
     VMType vmType;
+    bool m_mightBeExecutingTaintedCode { false };
     ClientData* clientData { nullptr };
     EntryFrame* topEntryFrame { nullptr };
     // NOTE: When throwing an exception while rolling back the call frame, this may be equal to
@@ -575,6 +586,10 @@ public:
     StringSplitCache stringSplitCache;
     Vector<unsigned> stringSplitIndice;
     StringReplaceCache stringReplaceCache;
+
+    bool mightBeExecutingTaintedCode() const { return m_mightBeExecutingTaintedCode; }
+    bool* addressOfMightBeExecutingTaintedCode() { return &m_mightBeExecutingTaintedCode; }
+    void setMightBeExecutingTaintedCode(bool value = true) { m_mightBeExecutingTaintedCode = value; }
 
     AtomStringTable* atomStringTable() const { return m_atomStringTable; }
     WTF::SymbolRegistry& symbolRegistry() { return m_symbolRegistry; }
@@ -764,6 +779,8 @@ public:
     void* targetMachinePCForThrow;
     void* targetMachinePCAfterCatch;
     JSOrWasmInstruction targetInterpreterPCForThrow;
+    uintptr_t targetInterpreterMetadataPCForThrow;
+    uint32_t targetTryDepthForThrow;
 
     unsigned varargsLength;
     uint32_t osrExitIndex;
@@ -916,7 +933,12 @@ public:
     void queueMicrotask(QueuedTask&&);
     JS_EXPORT_PRIVATE void drainMicrotasks();
     void setOnEachMicrotaskTick(WTF::Function<void(VM&)>&& func) { m_onEachMicrotaskTick = WTFMove(func); }
-    void finalizeSynchronousJSExecution() { ASSERT(currentThreadIsHoldingAPILock()); m_currentWeakRefVersion++; }
+    void finalizeSynchronousJSExecution()
+    {
+        ASSERT(currentThreadIsHoldingAPILock());
+        m_currentWeakRefVersion++;
+        setMightBeExecutingTaintedCode(false);
+    }
     uintptr_t currentWeakRefVersion() const { return m_currentWeakRefVersion; }
 
     void setGlobalConstRedeclarationShouldThrow(bool globalConstRedeclarationThrow) { m_globalConstRedeclarationShouldThrow = globalConstRedeclarationThrow; }
@@ -1110,6 +1132,7 @@ private:
     WTF::Function<void(VM&)> m_onEachMicrotaskTick;
     uintptr_t m_currentWeakRefVersion { 0 };
 
+    bool m_hasSideData { false };
     bool m_hasTerminationRequest { false };
     bool m_executionForbidden { false };
     bool m_executionForbiddenOnTermination { false };

@@ -32,6 +32,7 @@
 #include "Exception.h"
 #include "JSDOMPromiseDeferred.h"
 #include "PushSubscriptionOptions.h"
+#include "PushSubscriptionOwner.h"
 #include "ScriptExecutionContext.h"
 #include "ServiceWorkerContainer.h"
 #include <JavaScriptCore/ArrayBuffer.h>
@@ -42,9 +43,9 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(PushSubscription);
 
-PushSubscription::PushSubscription(PushSubscriptionData&& data, RefPtr<ServiceWorkerRegistration>&& registration)
+PushSubscription::PushSubscription(PushSubscriptionData&& data, RefPtr<PushSubscriptionOwner>&& owner)
     : m_data(WTFMove(data))
-    , m_serviceWorkerRegistration(WTFMove(registration))
+    , m_pushSubscriptionOwner(WTFMove(owner))
 {
 }
 
@@ -102,19 +103,19 @@ ExceptionOr<RefPtr<JSC::ArrayBuffer>> PushSubscription::getKey(PushEncryptionKey
 
     auto buffer = ArrayBuffer::tryCreate(source->data(), source->size());
     if (!buffer)
-        return Exception { OutOfMemoryError };
+        return Exception { ExceptionCode::OutOfMemoryError };
     return buffer;
 }
 
 void PushSubscription::unsubscribe(ScriptExecutionContext& scriptExecutionContext, DOMPromiseDeferred<IDLBoolean>&& promise)
 {
     scriptExecutionContext.eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, pushSubscriptionIdentifier = m_data.identifier, promise = WTFMove(promise)]() mutable {
-        if (!m_serviceWorkerRegistration) {
+        if (!m_pushSubscriptionOwner) {
             promise.resolve(false);
             return;
         }
 
-        m_serviceWorkerRegistration->unsubscribeFromPushService(pushSubscriptionIdentifier, WTFMove(promise));
+        m_pushSubscriptionOwner->unsubscribeFromPushService(pushSubscriptionIdentifier, WTFMove(promise));
     });
 }
 

@@ -567,11 +567,12 @@ void webkit_network_session_set_memory_pressure_settings(WebKitMemoryPressureSet
  */
 void webkit_network_session_get_itp_summary(WebKitNetworkSession* session, GCancellable* cancellable, GAsyncReadyCallback callback, gpointer userData)
 {
+#if ENABLE(TRACKING_PREVENTION)
     g_return_if_fail(WEBKIT_IS_NETWORK_SESSION(session));
 
     auto& websiteDataStore = webkitWebsiteDataManagerGetDataStore(session->priv->websiteDataManager.get());
     GRefPtr<GTask> task = adoptGRef(g_task_new(session, cancellable, callback, userData));
-    websiteDataStore.getResourceLoadStatisticsDataSummary([task = WTFMove(task)](Vector<WebResourceLoadStatisticsStore::ThirdPartyData>&& thirdPartyList) {
+    websiteDataStore.getResourceLoadStatisticsDataSummary([task = WTFMove(task)](Vector<ITPThirdPartyData>&& thirdPartyList) {
         GList* result = nullptr;
         while (!thirdPartyList.isEmpty())
             result = g_list_prepend(result, webkitITPThirdPartyCreate(thirdPartyList.takeLast()));
@@ -579,6 +580,9 @@ void webkit_network_session_get_itp_summary(WebKitNetworkSession* session, GCanc
             g_list_free_full(static_cast<GList*>(data), reinterpret_cast<GDestroyNotify>(webkit_itp_third_party_unref));
         });
     });
+#else
+    return;
+#endif
 }
 
 /**
@@ -597,10 +601,14 @@ void webkit_network_session_get_itp_summary(WebKitNetworkSession* session, GCanc
  */
 GList* webkit_network_session_get_itp_summary_finish(WebKitNetworkSession* session, GAsyncResult* result, GError** error)
 {
+#if ENABLE(TRACKING_PREVENTION)
     g_return_val_if_fail(WEBKIT_IS_NETWORK_SESSION(session), nullptr);
     g_return_val_if_fail(g_task_is_valid(result, session), nullptr);
 
     return static_cast<GList*>(g_task_propagate_pointer(G_TASK(result), error));
+#else
+    return nullptr;
+#endif
 }
 
 /**

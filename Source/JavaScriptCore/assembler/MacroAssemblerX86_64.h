@@ -97,6 +97,12 @@ public:
         or16(imm, Address(scratchRegister()));
     }
 
+    void or16(RegisterID mask, AbsoluteAddress address)
+    {
+        move(TrustedImmPtr(address.m_ptr), scratchRegister());
+        or16(mask, Address(scratchRegister()));
+    }
+
     void sub32(TrustedImm32 imm, AbsoluteAddress address)
     {
         move(TrustedImmPtr(address.m_ptr), scratchRegister());
@@ -473,6 +479,12 @@ public:
         }
     }
 
+    void and64(TrustedImm32 imm, RegisterID src, RegisterID dest)
+    {
+        move(src, dest);
+        and64(imm, dest);
+    }
+
     void countLeadingZeros64(RegisterID src, RegisterID dst)
     {
         if (supportsLZCNT()) {
@@ -565,8 +577,17 @@ public:
         m_assembler.popcntq_mr(src.offset, src.base, dst);
     }
 
+    void addUnsignedRightShift32(RegisterID src1, RegisterID src2, TrustedImm32 amount, RegisterID dest)
+    {
+        // dest = src1 + (src2 >> amount)
+        urshift32(src2, amount, scratchRegister());
+        add32(src1, scratchRegister(), dest);
+    }
+
     void lshift64(TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return;
         m_assembler.shlq_i8r(imm.m_value, dest);
     }
     
@@ -620,6 +641,8 @@ public:
 
     void rshift64(TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return;
         m_assembler.sarq_i8r(imm.m_value, dest);
     }
 
@@ -657,6 +680,8 @@ public:
 
     void urshift64(TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return;
         m_assembler.shrq_i8r(imm.m_value, dest);
     }
 
@@ -694,6 +719,8 @@ public:
 
     void rotateRight64(TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return;
         m_assembler.rorq_i8r(imm.m_value, dest);
     }
 
@@ -731,6 +758,8 @@ public:
 
     void rotateLeft64(TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return;
         m_assembler.rolq_i8r(imm.m_value, dest);
     }
 
@@ -1114,6 +1143,11 @@ public:
         }
     }
 
+    void loadPair64(Address src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair64(src.base, TrustedImm32(src.offset), dest1, dest2);
+    }
+
     DataLabel32 load64WithAddressOffsetPatch(Address address, RegisterID dest)
     {
         padBeforePatch();
@@ -1206,6 +1240,11 @@ public:
     {
         store64(src1, Address(dest, offset.m_value));
         store64(src2, Address(dest, offset.m_value + 8));
+    }
+
+    void storePair64(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair64(src1, src2, dest.base, TrustedImm32(dest.offset));
     }
 
     void transfer32(Address src, Address dest)
@@ -1439,6 +1478,12 @@ public:
     Jump branch32(RelationalCondition cond, AbsoluteAddress left, RegisterID right)
     {
         load32(left.m_ptr, scratchRegister());
+        return branch32(cond, scratchRegister(), right);
+    }
+
+    Jump branch32WithMemory16(RelationalCondition cond, Address left, RegisterID right)
+    {
+        MacroAssemblerHelpers::load16OnCondition(*this, cond, left, scratchRegister());
         return branch32(cond, scratchRegister(), right);
     }
 

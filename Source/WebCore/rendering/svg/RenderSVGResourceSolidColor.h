@@ -21,24 +21,24 @@
 
 #include "Color.h"
 #include "FloatRect.h"
-#include "RenderSVGResource.h"
+#include "LegacyRenderSVGResource.h"
 
 namespace WebCore {
 
 class RenderObject;
 
-class RenderSVGResourceSolidColor final : public RenderSVGResource {
+class RenderSVGResourceSolidColor final : public LegacyRenderSVGResource {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     RenderSVGResourceSolidColor();
     virtual ~RenderSVGResourceSolidColor();
 
-    void removeAllClientsFromCache(bool = true) override { }
+    void removeAllClientsFromCacheIfNeeded(bool, WeakHashSet<RenderObject>*) override { }
     void removeClientFromCache(RenderElement&, bool = true) override { }
 
     bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
     void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement*) override;
-    FloatRect resourceBoundingBox(const RenderObject&) override { return FloatRect(); }
+    FloatRect resourceBoundingBox(const RenderObject&, RepaintRectCalculation) override { return FloatRect(); }
 
     RenderSVGResourceType resourceType() const override { return SolidColorResourceType; }
 
@@ -51,4 +51,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_SVG_RESOURCE(RenderSVGResourceSolidColor, SolidColorResourceType)
+SPECIALIZE_TYPE_TRAITS_LEGACY_RENDER_SVG_RESOURCE(RenderSVGResourceSolidColor, SolidColorResourceType)

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "FrameInfoData.h"
 #include "NetworkSessionCreationParameters.h"
 #include "WebDeviceOrientationAndMotionAccessController.h"
 #include "WebFramePolicyListenerProxy.h"
@@ -39,6 +40,7 @@
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/SecurityOriginHash.h>
 #include <pal/SessionID.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/Identified.h>
@@ -106,7 +108,9 @@ enum class UnifiedOriginStorageLevel : uint8_t;
 enum class WebsiteDataFetchOption : uint8_t;
 enum class WebsiteDataType : uint32_t;
 
+struct ITPThirdPartyData;
 struct NetworkProcessConnectionInfo;
+struct WebPushMessage;
 struct WebsiteDataRecord;
 struct WebsiteDataStoreParameters;
 
@@ -116,7 +120,7 @@ enum class StorageAccessStatus : uint8_t;
 enum class StorageAccessPromptStatus;
 #endif
 
-class WebsiteDataStore : public API::ObjectImpl<API::Object::Type::WebsiteDataStore>, public Identified<WebsiteDataStore>, public CanMakeWeakPtr<WebsiteDataStore>  {
+class WebsiteDataStore : public API::ObjectImpl<API::Object::Type::WebsiteDataStore>, public Identified<WebsiteDataStore>, public CanMakeWeakPtr<WebsiteDataStore>, public CanMakeCheckedPtr {
 public:
     static Ref<WebsiteDataStore> defaultDataStore();
     static bool defaultDataStoreExists();
@@ -136,6 +140,7 @@ public:
     
     NetworkProcessProxy& networkProcess() const;
     NetworkProcessProxy& networkProcess();
+    Ref<NetworkProcessProxy> protectedNetworkProcess() const;
     NetworkProcessProxy* networkProcessIfExists() { return m_networkProcess.get(); }
     
     static WebsiteDataStore* existingDataStoreForSessionID(PAL::SessionID);
@@ -216,7 +221,7 @@ public:
     void scheduleCookieBlockingUpdate(CompletionHandler<void()>&&);
     void scheduleClearInMemoryAndPersistent(WallTime modifiedSince, ShouldGrandfatherStatistics, CompletionHandler<void()>&&);
     void scheduleClearInMemoryAndPersistent(ShouldGrandfatherStatistics, CompletionHandler<void()>&&);
-    void getResourceLoadStatisticsDataSummary(CompletionHandler<void(Vector<WebResourceLoadStatisticsStore::ThirdPartyData>&&)>&&);
+    void getResourceLoadStatisticsDataSummary(CompletionHandler<void(Vector<ITPThirdPartyData>&&)>&&);
     void scheduleStatisticsAndDataRecordsProcessing(CompletionHandler<void()>&&);
     void setGrandfathered(const URL&, bool, CompletionHandler<void()>&&);
     void isGrandfathered(const URL&, CompletionHandler<void(bool)>&&);
@@ -288,20 +293,22 @@ public:
 #if ENABLE(ARKIT_INLINE_PREVIEW)
     const String& resolvedModelElementCacheDirectory() const { return m_resolvedConfiguration->modelElementCacheDirectory(); }
 #endif
+    FileSystem::Salt mediaKeysStorageSalt() const;
 
     static void setCachedProcessSuspensionDelayForTesting(Seconds);
 
+#if !PLATFORM(COCOA)
     void allowSpecificHTTPSCertificateForHost(const WebCore::CertificateInfo&, const String& host);
+#endif
     void allowTLSCertificateChainForLocalPCMTesting(const WebCore::CertificateInfo&);
 
     DeviceIdHashSaltStorage& deviceIdHashSaltStorage() { return m_deviceIdHashSaltStorage.get(); }
+    Ref<DeviceIdHashSaltStorage> protectedDeviceIdHashSaltStorage();
 
     WebsiteDataStoreParameters parameters();
     static Vector<WebsiteDataStoreParameters> parametersFromEachWebsiteDataStore();
 
     void flushCookies(CompletionHandler<void()>&&);
-
-    void setAllowsAnySSLCertificateForWebSocket(bool);
 
     void dispatchOnQueue(Function<void()>&&);
 
@@ -431,7 +438,7 @@ public:
 
     void countNonDefaultSessionSets(CompletionHandler<void(size_t)>&&);
 
-    void showServiceWorkerNotification(IPC::Connection&, const WebCore::NotificationData&);
+    bool showPersistentNotification(IPC::Connection*, const WebCore::NotificationData&);
     void cancelServiceWorkerNotification(const WTF::UUID& notificationID);
     void clearServiceWorkerNotification(const WTF::UUID& notificationID);
     void didDestroyServiceWorkerNotification(const WTF::UUID& notificationID);
@@ -446,6 +453,13 @@ public:
 
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
     void setEmulatedConditions(std::optional<int64_t>&& bytesPerSecondLimit);
+#endif
+
+    void addPage(WebPageProxy&);
+    void removePage(WebPageProxy&);
+
+#if ENABLE(SERVICE_WORKER)
+    void updateServiceWorkerInspectability();
 #endif
 
     HashSet<RefPtr<WebProcessPool>> processPools(size_t limit = std::numeric_limits<size_t>::max()) const;
@@ -465,7 +479,13 @@ public:
     void setProxyConfigData(Vector<std::pair<Vector<uint8_t>, WTF::UUID>>&&);
 #endif
     void setCompletionHandlerForRemovalFromNetworkProcess(CompletionHandler<void(String&&)>&&);
-    
+
+#if ENABLE(SERVICE_WORKER)
+    void processPushMessage(WebPushMessage&&, CompletionHandler<void(bool)>&&);
+#endif
+
+    void setOriginQuotaRatioEnabledForTesting(bool enabled, CompletionHandler<void()>&&);
+
 private:
     enum class ForceReinitialization : bool { No, Yes };
 #if ENABLE(APP_BOUND_DOMAINS)
@@ -484,6 +504,8 @@ private:
     WebsiteDataStore();
     static WorkQueue& websiteDataStoreIOQueue();
 
+    Ref<WorkQueue> protectedQueue() const;
+
     // FIXME: Only Cocoa ports respect ShouldCreateDirectory, so you cannot rely on it to create
     // directories. This is confusing.
     enum class ShouldCreateDirectory : bool { No, Yes };
@@ -495,9 +517,9 @@ private:
     // Will create a temporary process pool is none exists yet.
     HashSet<RefPtr<WebProcessPool>> ensureProcessPools() const;
 
-    static Vector<WebCore::SecurityOriginData> mediaKeyOrigins(const String& mediaKeysStorageDirectory);
-    static void removeMediaKeys(const String& mediaKeysStorageDirectory, WallTime modifiedSince);
-    static void removeMediaKeys(const String& mediaKeysStorageDirectory, const HashSet<WebCore::SecurityOriginData>&);
+    static Vector<WebCore::SecurityOriginData> mediaKeysStorageOrigins(const String& mediaKeysStorageDirectory);
+    static void removeMediaKeysStorage(const String& mediaKeysStorageDirectory, WallTime modifiedSince);
+    static void removeMediaKeysStorage(const String& mediaKeysStorageDirectory, const HashSet<WebCore::SecurityOriginData>&, const FileSystem::Salt&);
 
     void registerWithSessionIDMap();
     bool hasActivePages();
@@ -519,6 +541,8 @@ private:
     String resolvedContainerCachesNetworkingDirectory();
     String parentBundleDirectory() const;
 #endif
+
+    String migrateMediaKeysStorageIfNecessary(const String& directory);
 
     const PAL::SessionID m_sessionID;
 
@@ -560,6 +584,7 @@ private:
 #endif
 
     WeakHashSet<WebProcessProxy> m_processes;
+    WeakHashSet<WebPageProxy> m_pages;
 
     bool m_isTrackingPreventionStateExplicitlySet { false };
 
@@ -590,6 +615,9 @@ private:
 
     RefPtr<WebPreferences> m_serviceWorkerOverridePreferences;
     CompletionHandler<void(String&&)> m_completionHandlerForRemovalFromNetworkProcess;
+
+    bool m_inspectionForServiceWorkersAllowed { true };
+    FileSystem::Salt m_mediaKeysStorageSalt;
 };
 
 }

@@ -187,6 +187,14 @@ void TextFieldInputType::handleClickEvent(MouseEvent&)
     if (element()->focused() && element()->list())
         displaySuggestions(DataListSuggestionActivationType::ControlClicked);
 }
+
+void TextFieldInputType::showPicker()
+{
+#if !PLATFORM(IOS_FAMILY)
+    if (element()->list())
+        displaySuggestions(DataListSuggestionActivationType::ControlClicked);
+#endif
+}
 #endif
 
 auto TextFieldInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseEventHandler
@@ -304,7 +312,7 @@ bool TextFieldInputType::shouldSubmitImplicitly(Event& event)
 RenderPtr<RenderElement> TextFieldInputType::createInputRenderer(RenderStyle&& style)
 {
     ASSERT(element());
-    return createRenderer<RenderTextControlSingleLine>(*element(), WTFMove(style));
+    return createRenderer<RenderTextControlSingleLine>(RenderObject::Type::TextControlSingleLine, *element(), WTFMove(style));
 }
 
 bool TextFieldInputType::needsContainer() const
@@ -414,9 +422,9 @@ HTMLElement* TextFieldInputType::placeholderElement() const
     return m_placeholder.get();
 }
 
-void TextFieldInputType::destroyShadowSubtree()
+void TextFieldInputType::removeShadowSubtree()
 {
-    InputType::destroyShadowSubtree();
+    InputType::removeShadowSubtree();
     m_innerText = nullptr;
     m_placeholder = nullptr;
     m_innerBlock = nullptr;
@@ -669,7 +677,10 @@ void TextFieldInputType::updatePlaceholderText()
     }
     if (!m_placeholder) {
         m_placeholder = TextControlPlaceholderElement::create(element()->document());
-        element()->userAgentShadowRoot()->insertBefore(*m_placeholder, m_container ? m_container.get() : innerTextElement().get());
+        if (m_container)
+            element()->userAgentShadowRoot()->insertBefore(*m_placeholder, m_container.copyRef());
+        else
+            element()->userAgentShadowRoot()->insertBefore(*m_placeholder, innerTextElement());
     }
     m_placeholder->setInnerText(WTFMove(placeholderText));
 }
@@ -678,9 +689,11 @@ bool TextFieldInputType::appendFormData(DOMFormData& formData) const
 {
     InputType::appendFormData(formData);
     ASSERT(element());
-    auto& dirnameAttrValue = element()->attributeWithoutSynchronization(dirnameAttr);
-    if (!dirnameAttrValue.isNull())
-        formData.append(dirnameAttrValue, element()->directionForFormData());
+    // FIXME: should type=number be TextFieldInputType to begin with?
+    if (element()->isNumberField())
+        return true;
+    if (auto& dirname = element()->attributeWithoutSynchronization(dirnameAttr); !dirname.isNull())
+        formData.append(dirname, element()->directionForFormData());
     return true;
 }
 

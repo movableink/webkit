@@ -26,7 +26,7 @@
 
 // Version number for shader translation API.
 // It is incremented every time the API changes.
-#define ANGLE_SH_VERSION 337
+#define ANGLE_SH_VERSION 342
 
 enum ShShaderSpec
 {
@@ -396,9 +396,8 @@ struct ShCompileOptions
     // if gl_FragColor is not written.
     uint64_t initFragmentOutputVariables : 1;
 
-    // Unused.  Kept to avoid unnecessarily changing the layout of this structure and tripping up
-    // the fuzzer's hash->bug map.
-    uint64_t unused : 1;
+    // Always write explicit location layout qualifiers for fragment outputs.
+    uint64_t explicitFragmentLocations : 1;
 
     // Insert explicit casts for float/double/unsigned/signed int on macOS 10.15 with Intel driver
     uint64_t addExplicitBoolCasts : 1;
@@ -423,12 +422,18 @@ struct ShCompileOptions
     // Use an integer uniform to pass a bitset of enabled clip distances.
     uint64_t emulateClipDistanceState : 1;
 
+    // Use a uniform to emulate GL_CLIP_ORIGIN_EXT state.
+    uint64_t emulateClipOrigin : 1;
+
     // issuetracker.google.com/266235549 add aliased memory decoration to ssbo if the variable is
     // not declared with "restrict" memory qualifier in GLSL
     uint64_t aliasedUnlessRestrict : 1;
 
     // Use fragment shaders to compute and set coverage mask based on the alpha value
     uint64_t emulateAlphaToCoverage : 1;
+
+    // Rescope globals that are only used in one function to be function-local.
+    uint64_t rescopeGlobalVariables : 1;
 
     ShCompileOptionsMetal metal;
     ShPixelLocalStorageOptions pls;
@@ -970,9 +975,10 @@ enum NonSemanticInstruction
     kNonSemanticOverview,
     // The instruction identifying the entry to the shader, i.e. at the start of main()
     kNonSemanticEnter,
-    // The instruction identifying where vertex data is output.  This is before return from main()
-    // in vertex and tessellation shaders, and before OpEmitVertex in geometry shaders.
-    kNonSemanticVertexOutput,
+    // The instruction identifying where vertex or fragment data is output.
+    // This is before return from main() in vertex, tessellation, and fragment shaders,
+    // and before OpEmitVertex in geometry shaders.
+    kNonSemanticOutput,
     // The instruction identifying the location where transform feedback emulation should be
     // written.
     kNonSemanticTransformFeedbackEmulation,

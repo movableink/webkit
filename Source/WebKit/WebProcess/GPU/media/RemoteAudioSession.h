@@ -99,6 +99,7 @@ private:
 
     void beginInterruptionForTesting() final;
     void endInterruptionForTesting() final;
+    void clearInterruptionFlagForTesting() final { m_isInterruptedForTesting = false; }
 
     const RemoteAudioSessionConfiguration& configuration() const;
     RemoteAudioSessionConfiguration& configuration();
@@ -118,6 +119,7 @@ private:
     bool m_isPlayingToBluetoothOverrideChanged { false };
     std::optional<RemoteAudioSessionConfiguration> m_configuration;
     ThreadSafeWeakPtr<GPUProcessConnection> m_gpuProcessConnection;
+    bool m_isInterruptedForTesting { false };
 };
 
 }

@@ -25,8 +25,9 @@
 
 #pragma once
 
+#include "AXCoreObject.h"
 #include "AXObjectCache.h"
-#include "AccessibilityObjectInterface.h"
+#include <wtf/MonotonicTime.h>
 
 namespace WebCore {
 
@@ -69,6 +70,7 @@ public:
 private:
     bool shouldLog();
     String m_methodName;
+    MonotonicTime m_startTime;
 };
 
 #define AXTRACE(methodName) AXLogger axLogger(methodName)

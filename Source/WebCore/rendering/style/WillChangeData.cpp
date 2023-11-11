@@ -60,14 +60,17 @@ bool WillChangeData::containsProperty(CSSPropertyID property) const
     return false;
 }
 
-bool WillChangeData::createsContainingBlockForAbsolutelyPositioned() const
+bool WillChangeData::createsContainingBlockForAbsolutelyPositioned(bool isRootElement) const
 {
-    return createsContainingBlockForOutOfFlowPositioned()
+    return createsContainingBlockForOutOfFlowPositioned(isRootElement)
         || containsProperty(CSSPropertyPosition);
 }
 
-bool WillChangeData::createsContainingBlockForOutOfFlowPositioned() const
+bool WillChangeData::createsContainingBlockForOutOfFlowPositioned(bool isRootElement) const
 {
+#if !ENABLE(FILTERS_LEVEL_2)
+    UNUSED_PARAM(isRootElement);
+#endif // !ENABLE(FILTERS_LEVEL_2)
     return containsProperty(CSSPropertyPerspective)
         // CSS transforms
         || containsProperty(CSSPropertyTransform)
@@ -79,9 +82,25 @@ bool WillChangeData::createsContainingBlockForOutOfFlowPositioned() const
         // CSS filter & backdrop-filter
         // FIXME: exclude root element for those properties (bug 225034)
 #if ENABLE(FILTERS_LEVEL_2)
-        || containsProperty(CSSPropertyWebkitBackdropFilter)
+        || (containsProperty(CSSPropertyBackdropFilter) && !isRootElement)
+        || (containsProperty(CSSPropertyWebkitBackdropFilter) && !isRootElement)
 #endif
         || containsProperty(CSSPropertyFilter);
+}
+
+bool WillChangeData::canBeBackdropRoot() const
+{
+    return containsProperty(CSSPropertyOpacity)
+#if ENABLE(FILTERS_LEVEL_2)
+        || containsProperty(CSSPropertyBackdropFilter)
+        || containsProperty(CSSPropertyWebkitBackdropFilter)
+#endif
+        || containsProperty(CSSPropertyClipPath)
+        || containsProperty(CSSPropertyFilter)
+#if ENABLE(CSS_COMPOSITING)
+        || containsProperty(CSSPropertyMixBlendMode)
+#endif
+        || containsProperty(CSSPropertyMask);
 }
 
 // "If any non-initial value of a property would create a stacking context on the element,
@@ -109,9 +128,11 @@ bool WillChangeData::propertyCreatesStackingContext(CSSPropertyID property)
 #endif
     case CSSPropertyFilter:
 #if ENABLE(FILTERS_LEVEL_2)
+    case CSSPropertyBackdropFilter:
     case CSSPropertyWebkitBackdropFilter:
 #endif
     case CSSPropertyMaskImage:
+    case CSSPropertyMaskBorder:
     case CSSPropertyWebkitMaskBoxImage:
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     case CSSPropertyWebkitOverflowScrolling:
@@ -129,6 +150,7 @@ static bool propertyTriggersCompositing(CSSPropertyID property)
     case CSSPropertyOpacity:
     case CSSPropertyFilter:
 #if ENABLE(FILTERS_LEVEL_2)
+    case CSSPropertyBackdropFilter:
     case CSSPropertyWebkitBackdropFilter:
 #endif
         return true;

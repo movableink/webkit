@@ -243,9 +243,9 @@ enum class Float : uint8_t {
 };
 
 enum class UsedFloat : uint8_t {
-    None,
-    Left,
-    Right,
+    None  = 1 << 0,
+    Left  = 1 << 1,
+    Right = 1 << 2
 };
 
 // Box decoration attributes. Not inherited.
@@ -537,7 +537,7 @@ enum class WordBreak : uint8_t {
     BreakAll,
     KeepAll,
     BreakWord,
-    Auto
+    AutoPhrase
 };
 
 enum class OverflowWrap : uint8_t {
@@ -819,7 +819,6 @@ enum class CursorVisibility : bool {
 };
 #endif
 
-// The order of this enum must match the order of the display values in CSSValueKeywords.in.
 enum class DisplayType : uint8_t {
     Inline,
     Block,
@@ -843,6 +842,10 @@ enum class DisplayType : uint8_t {
     Grid,
     InlineGrid,
     FlowRoot,
+    Ruby,
+    RubyBlock,
+    RubyBase,
+    RubyAnnotation,
     None
 };
 
@@ -939,12 +942,16 @@ enum class TextOverflow : bool {
     Ellipsis
 };
 
-enum class TextWrap : uint8_t {
+enum class TextWrapMode : bool {
     Wrap,
-    NoWrap,
+    NoWrap
+};
+
+enum class TextWrapStyle : uint8_t {
+    Auto,
     Balance,
-    Stable,
-    Pretty
+    Pretty,
+    Stable
 };
 
 enum class ImageRendering : uint8_t {
@@ -1271,7 +1278,8 @@ WTF::TextStream& operator<<(WTF::TextStream&, TextOverflow);
 WTF::TextStream& operator<<(WTF::TextStream&, TextSecurity);
 WTF::TextStream& operator<<(WTF::TextStream&, TextTransform);
 WTF::TextStream& operator<<(WTF::TextStream&, TextUnderlinePosition);
-WTF::TextStream& operator<<(WTF::TextStream&, TextWrap);
+WTF::TextStream& operator<<(WTF::TextStream&, TextWrapMode);
+WTF::TextStream& operator<<(WTF::TextStream&, TextWrapStyle);
 WTF::TextStream& operator<<(WTF::TextStream&, TextBoxTrim);
 WTF::TextStream& operator<<(WTF::TextStream&, TextBoxEdgeType);
 WTF::TextStream& operator<<(WTF::TextStream&, TextZoom);

@@ -389,6 +389,7 @@ public:
         case TypeKind::RefNull:
         case TypeKind::Rec:
         case TypeKind::Sub:
+        case TypeKind::Subfinal:
         case TypeKind::Struct:
         case TypeKind::Structref:
         case TypeKind::Externref:
@@ -397,6 +398,8 @@ public:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
             return sizeof(EncodedJSValue);
         case TypeKind::Void:
             return 0;
@@ -420,6 +423,7 @@ public:
         case TypeKind::RefNull:
         case TypeKind::Rec:
         case TypeKind::Sub:
+        case TypeKind::Subfinal:
         case TypeKind::Struct:
         case TypeKind::Structref:
         case TypeKind::Externref:
@@ -428,6 +432,8 @@ public:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
             return TypeKind::I64;
         case TypeKind::Void:
             RELEASE_ASSERT_NOT_REACHED();
@@ -1428,6 +1434,8 @@ public:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
             result = Value::fromRef(type.kind, static_cast<EncodedJSValue>(value));
             LOG_INSTRUCTION("RefConst", makeString(type.kind), RESULT(result));
             break;
@@ -1689,7 +1697,6 @@ public:
             Location resultLocation = allocate(result);
             switch (type.kind) {
             case TypeKind::I32:
-            case TypeKind::I31ref:
                 m_jit.load32(Address(wasmScratchGPR), resultLocation.asGPR());
                 break;
             case TypeKind::I64:
@@ -1710,14 +1717,18 @@ public:
             case TypeKind::RefNull:
             case TypeKind::Rec:
             case TypeKind::Sub:
+            case TypeKind::Subfinal:
             case TypeKind::Struct:
             case TypeKind::Structref:
             case TypeKind::Externref:
             case TypeKind::Array:
             case TypeKind::Arrayref:
+            case TypeKind::I31ref:
             case TypeKind::Eqref:
             case TypeKind::Anyref:
             case TypeKind::Nullref:
+            case TypeKind::Nullfuncref:
+            case TypeKind::Nullexternref:
                 m_jit.load64(Address(wasmScratchGPR), resultLocation.asGPR());
                 break;
             case TypeKind::Void:
@@ -1804,7 +1815,6 @@ public:
 
             switch (type.kind) {
             case TypeKind::I32:
-            case TypeKind::I31ref:
                 m_jit.store32(valueLocation.asGPR(), Address(wasmScratchGPR));
                 break;
             case TypeKind::I64:
@@ -1825,14 +1835,18 @@ public:
             case TypeKind::RefNull:
             case TypeKind::Rec:
             case TypeKind::Sub:
+            case TypeKind::Subfinal:
             case TypeKind::Struct:
             case TypeKind::Structref:
             case TypeKind::Externref:
             case TypeKind::Array:
             case TypeKind::Arrayref:
+            case TypeKind::I31ref:
             case TypeKind::Eqref:
             case TypeKind::Anyref:
             case TypeKind::Nullref:
+            case TypeKind::Nullfuncref:
+            case TypeKind::Nullexternref:
                 m_jit.store64(valueLocation.asGPR(), Address(wasmScratchGPR));
                 break;
             case TypeKind::Void:
@@ -3645,11 +3659,11 @@ public:
     }
 
     // GC
-    PartialResult WARN_UNUSED_RETURN addI31New(ExpressionType value, ExpressionType& result)
+    PartialResult WARN_UNUSED_RETURN addRefI31(ExpressionType value, ExpressionType& result)
     {
         if (value.isConst()) {
-            result = Value::fromI64((value.asI32() & 0x7fffffff) | JSValue::NumberTag);
-            LOG_INSTRUCTION("I31New", value, RESULT(result));
+            result = Value::fromI64((((value.asI32() & 0x7fffffff) << 1) >> 1) | JSValue::NumberTag);
+            LOG_INSTRUCTION("RefI31", value, RESULT(result));
             return { };
         }
 
@@ -3659,9 +3673,11 @@ public:
         result = topValue(TypeKind::I64);
         Location resultLocation = allocateWithHint(result, initialValue);
 
-        LOG_INSTRUCTION("I31New", value, RESULT(result));
+        LOG_INSTRUCTION("RefI31", value, RESULT(result));
 
         m_jit.and32(TrustedImm32(0x7fffffff), initialValue.asGPR(), resultLocation.asGPR());
+        m_jit.lshift32(TrustedImm32(1), resultLocation.asGPR());
+        m_jit.rshift32(TrustedImm32(1), resultLocation.asGPR());
         m_jit.or64(TrustedImm64(JSValue::NumberTag), resultLocation.asGPR());
         return { };
     }
@@ -3693,8 +3709,6 @@ public:
         m_jit.move(initialValue.asGPR(), resultLocation.asGPR());
         emitThrowOnNullReference(ExceptionType::NullI31Get, resultLocation);
 
-        m_jit.lshift32(TrustedImm32(1), resultLocation.asGPR());
-        m_jit.rshift32(TrustedImm32(1), resultLocation.asGPR());
         return { };
     }
 
@@ -3702,7 +3716,7 @@ public:
     {
         if (value.isConst()) {
             if (JSValue::decode(value.asI64()).isNumber())
-                result = Value::fromI32(value.asI64());
+                result = Value::fromI32(value.asI64() & 0x7fffffffu);
             else {
                 emitThrowException(ExceptionType::NullI31Get);
                 result = Value::fromI32(0);
@@ -3724,6 +3738,7 @@ public:
 
         m_jit.move(initialValue.asGPR(), resultLocation.asGPR());
         emitThrowOnNullReference(ExceptionType::NullI31Get, resultLocation);
+        m_jit.and32(TrustedImm32(0x7fffffff), resultLocation.asGPR(), resultLocation.asGPR());
 
         return { };
     }
@@ -4004,10 +4019,26 @@ public:
         unsigned fieldOffset = *structType.offsetOfField(fieldIndex);
         RELEASE_ASSERT((std::numeric_limits<int32_t>::max() & fieldOffset) == fieldOffset);
 
-        TypeKind kind = toValueKind(structType.field(fieldIndex).type.as<Type>().kind);
+        TypeKind kind = toValueKind(structType.field(fieldIndex).type.unpacked().kind);
         if (value.isConst()) {
             switch (kind) {
             case TypeKind::I32:
+                if (structType.field(fieldIndex).type.is<PackedType>()) {
+                    ScratchScope<1, 0> scratches(*this);
+                    // If it's a packed type, we materialize the constant to ensure constant blinding.
+                    emitMoveConst(value, Location::fromGPR(scratches.gpr(0)));
+                    switch (structType.field(fieldIndex).type.as<PackedType>()) {
+                    case PackedType::I8:
+                        m_jit.store8(scratches.gpr(0), MacroAssembler::Address(wasmScratchGPR, fieldOffset));
+                        break;
+                    case PackedType::I16:
+                        m_jit.store16(scratches.gpr(0), MacroAssembler::Address(wasmScratchGPR, fieldOffset));
+                        break;
+                    }
+                    break;
+                }
+                m_jit.store32(MacroAssembler::Imm32(value.asI32()), MacroAssembler::Address(wasmScratchGPR, fieldOffset));
+                break;
             case TypeKind::F32:
                 m_jit.store32(MacroAssembler::Imm32(value.asI32()), MacroAssembler::Address(wasmScratchGPR, fieldOffset));
                 break;
@@ -4025,6 +4056,17 @@ public:
         Location valueLocation = loadIfNecessary(value);
         switch (kind) {
         case TypeKind::I32:
+            if (structType.field(fieldIndex).type.is<PackedType>()) {
+                switch (structType.field(fieldIndex).type.as<PackedType>()) {
+                case PackedType::I8:
+                    m_jit.store8(valueLocation.asGPR(), MacroAssembler::Address(wasmScratchGPR, fieldOffset));
+                    break;
+                case PackedType::I16:
+                    m_jit.store16(valueLocation.asGPR(), MacroAssembler::Address(wasmScratchGPR, fieldOffset));
+                    break;
+                }
+                break;
+            }
             m_jit.store32(valueLocation.asGPR(), MacroAssembler::Address(wasmScratchGPR, fieldOffset));
             break;
         case TypeKind::I64:
@@ -4096,9 +4138,9 @@ public:
         return { };
     }
 
-    PartialResult WARN_UNUSED_RETURN addStructGet(Value structValue, const StructType& structType, uint32_t fieldIndex, Value& result)
+    PartialResult WARN_UNUSED_RETURN addStructGet(ExtGCOpType structGetKind, Value structValue, const StructType& structType, uint32_t fieldIndex, Value& result)
     {
-        TypeKind resultKind = structType.field(fieldIndex).type.as<Type>().kind;
+        TypeKind resultKind = structType.field(fieldIndex).type.unpacked().kind;
         if (structValue.isConst()) {
             // This is the only constant struct currently possible.
             ASSERT(JSValue::decode(structValue.asRef()).isNull());
@@ -4121,6 +4163,32 @@ public:
 
         switch (result.type()) {
         case TypeKind::I32:
+            if (structType.field(fieldIndex).type.is<PackedType>()) {
+                switch (structType.field(fieldIndex).type.as<PackedType>()) {
+                case PackedType::I8:
+                    m_jit.load8(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asGPR());
+                    break;
+                case PackedType::I16:
+                    m_jit.load16(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asGPR());
+                    break;
+                }
+                switch (structGetKind) {
+                case ExtGCOpType::StructGetU:
+                    LOG_INSTRUCTION("StructGetU", structValue, fieldIndex, RESULT(result));
+                    return { };
+                case ExtGCOpType::StructGetS: {
+                    size_t elementSize = structType.field(fieldIndex).type.as<PackedType>() == PackedType::I8 ? sizeof(uint8_t) : sizeof(uint16_t);
+                    uint8_t bitShift = (sizeof(uint32_t) - elementSize) * 8;
+                    m_jit.lshift32(TrustedImm32(bitShift), resultLocation.asGPR());
+                    m_jit.rshift32(TrustedImm32(bitShift), resultLocation.asGPR());
+                    LOG_INSTRUCTION("StructGetS", structValue, fieldIndex, RESULT(result));
+                    return { };
+                }
+                default:
+                    RELEASE_ASSERT_NOT_REACHED();
+                    return { };
+                }
+            }
             m_jit.load32(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asGPR());
             break;
         case TypeKind::I64:
@@ -4194,17 +4262,17 @@ public:
     }
 
 
-    PartialResult WARN_UNUSED_RETURN addExternInternalize(ExpressionType reference, ExpressionType& result)
+    PartialResult WARN_UNUSED_RETURN addAnyConvertExtern(ExpressionType reference, ExpressionType& result)
     {
         Vector<Value, 8> arguments = {
             reference
         };
         result = topValue(TypeKind::Anyref);
-        emitCCall(&operationWasmExternInternalize, arguments, result);
+        emitCCall(&operationWasmAnyConvertExtern, arguments, result);
         return { };
     }
 
-    PartialResult WARN_UNUSED_RETURN addExternExternalize(ExpressionType reference, ExpressionType& result)
+    PartialResult WARN_UNUSED_RETURN addExternConvertAny(ExpressionType reference, ExpressionType& result)
     {
         result = reference;
         return { };
@@ -6700,12 +6768,12 @@ public:
         m_jit.emitFunctionPrologue();
         m_topLevel = ControlData(*this, BlockType::TopLevel, signature, 0);
 
-        m_jit.move(CCallHelpers::TrustedImmPtr(CalleeBits::boxWasm(&m_callee)), wasmScratchGPR);
+        m_jit.move(CCallHelpers::TrustedImmPtr(CalleeBits::boxNativeCallee(&m_callee)), wasmScratchGPR);
         static_assert(CallFrameSlot::codeBlock + 1 == CallFrameSlot::callee);
         if constexpr (is32Bit()) {
             CCallHelpers::Address calleeSlot { GPRInfo::callFrameRegister, CallFrameSlot::callee * sizeof(Register) };
             m_jit.storePtr(wasmScratchGPR, calleeSlot.withOffset(PayloadOffset));
-            m_jit.store32(CCallHelpers::TrustedImm32(JSValue::WasmTag), calleeSlot.withOffset(TagOffset));
+            m_jit.store32(CCallHelpers::TrustedImm32(JSValue::NativeCalleeTag), calleeSlot.withOffset(TagOffset));
             m_jit.storePtr(GPRInfo::wasmContextInstancePointer, CCallHelpers::addressFor(CallFrameSlot::codeBlock));
         } else
             m_jit.storePairPtr(GPRInfo::wasmContextInstancePointer, wasmScratchGPR, GPRInfo::callFrameRegister, CCallHelpers::TrustedImm32(CallFrameSlot::codeBlock * sizeof(Register)));
@@ -6813,6 +6881,7 @@ public:
             case TypeKind::Func:
             case TypeKind::Array:
             case TypeKind::Sub:
+            case TypeKind::Subfinal:
             case TypeKind::V128:
                 clear(ClearMode::Zero, type, m_locals[i]);
                 break;
@@ -6825,6 +6894,8 @@ public:
             case TypeKind::Eqref:
             case TypeKind::Anyref:
             case TypeKind::Nullref:
+            case TypeKind::Nullfuncref:
+            case TypeKind::Nullexternref:
                 clear(ClearMode::JSNull, type, m_locals[i]);
                 break;
             default:
@@ -6858,12 +6929,12 @@ public:
         auto label = m_jit.label();
         m_jit.emitFunctionPrologue();
 
-        m_jit.move(CCallHelpers::TrustedImmPtr(CalleeBits::boxWasm(&m_callee)), wasmScratchGPR);
+        m_jit.move(CCallHelpers::TrustedImmPtr(CalleeBits::boxNativeCallee(&m_callee)), wasmScratchGPR);
         static_assert(CallFrameSlot::codeBlock + 1 == CallFrameSlot::callee);
         if constexpr (is32Bit()) {
             CCallHelpers::Address calleeSlot { GPRInfo::callFrameRegister, CallFrameSlot::callee * sizeof(Register) };
             m_jit.storePtr(wasmScratchGPR, calleeSlot.withOffset(PayloadOffset));
-            m_jit.store32(CCallHelpers::TrustedImm32(JSValue::WasmTag), calleeSlot.withOffset(TagOffset));
+            m_jit.store32(CCallHelpers::TrustedImm32(JSValue::NativeCalleeTag), calleeSlot.withOffset(TagOffset));
             m_jit.storePtr(GPRInfo::wasmContextInstancePointer, CCallHelpers::addressFor(CallFrameSlot::codeBlock));
         } else
             m_jit.storePairPtr(GPRInfo::wasmContextInstancePointer, wasmScratchGPR, GPRInfo::callFrameRegister, CCallHelpers::TrustedImm32(CallFrameSlot::codeBlock * sizeof(Register)));
@@ -6924,6 +6995,8 @@ public:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
             return B3::Type(B3::Int64);
         case TypeKind::F32:
             return B3::Type(B3::Float);
@@ -6956,22 +7029,45 @@ public:
         unsigned stackMapIndex = 0;
         for (unsigned i = 0; i < m_locals.size(); i ++)
             stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(m_locals[i]), toB3Type(m_localTypes[i]));
-        for (const ControlEntry& entry : m_parser->controlStack()) {
-            for (const TypedExpression& expr : entry.enclosedExpressionStack)
-                stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(locationOf(expr.value())), toB3Type(expr.type().kind));
-            if (ControlData::isAnyCatch(entry.controlData)) {
+
+        if (Options::useWasmIPInt()) {
+            // Do rethrow slots first because IPInt has them in a shadow stack.
+            for (const ControlEntry& entry : m_parser->controlStack()) {
                 for (unsigned i = 0; i < entry.controlData.implicitSlots(); i ++) {
                     Value exception = this->exception(entry.controlData);
                     stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(locationOf(exception)), B3::Int64); // Exceptions are EncodedJSValues, so they are always Int64
                 }
             }
-        }
-        for (const TypedExpression& expr : enclosingStack)
-            stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(locationOf(expr.value())), toB3Type(expr.type().kind));
-        for (unsigned i = 0; i < data.argumentLocations().size(); i ++)
-            stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(data.argumentLocations()[i]), toB3Type(data.argumentType(i).kind));
-        RELEASE_ASSERT(stackMapIndex == numElements);
 
+            for (const ControlEntry& entry : m_parser->controlStack()) {
+                for (const TypedExpression& expr : entry.enclosedExpressionStack)
+                    stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(locationOf(expr.value())), toB3Type(expr.type().kind));
+            }
+
+            for (const TypedExpression& expr : enclosingStack)
+                stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(locationOf(expr.value())), toB3Type(expr.type().kind));
+            for (unsigned i = 0; i < data.argumentLocations().size(); i ++)
+                stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(data.argumentLocations()[i]), toB3Type(data.argumentType(i).kind));
+
+
+        } else {
+            for (const ControlEntry& entry : m_parser->controlStack()) {
+                for (const TypedExpression& expr : entry.enclosedExpressionStack)
+                    stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(locationOf(expr.value())), toB3Type(expr.type().kind));
+                if (ControlData::isAnyCatch(entry.controlData)) {
+                    for (unsigned i = 0; i < entry.controlData.implicitSlots(); i ++) {
+                        Value exception = this->exception(entry.controlData);
+                        stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(locationOf(exception)), B3::Int64); // Exceptions are EncodedJSValues, so they are always Int64
+                    }
+                }
+            }
+            for (const TypedExpression& expr : enclosingStack)
+                stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(locationOf(expr.value())), toB3Type(expr.type().kind));
+            for (unsigned i = 0; i < data.argumentLocations().size(); i ++)
+                stackMap[stackMapIndex ++] = OSREntryValue(toB3Rep(data.argumentLocations()[i]), toB3Type(data.argumentType(i).kind));
+        }
+
+        RELEASE_ASSERT(stackMapIndex == numElements);
         m_osrEntryScratchBufferSize = std::max(m_osrEntryScratchBufferSize, numElements + BBQCallee::extraOSRValuesForLoopIndex);
         return stackMap;
     }
@@ -7173,8 +7269,11 @@ public:
                 case TypeKind::Eqref:
                 case TypeKind::Anyref:
                 case TypeKind::Nullref:
+                case TypeKind::Nullfuncref:
+                case TypeKind::Nullexternref:
                 case TypeKind::Rec:
                 case TypeKind::Sub:
+                case TypeKind::Subfinal:
                 case TypeKind::Array:
                 case TypeKind::Struct:
                 case TypeKind::Func: {
@@ -7471,7 +7570,7 @@ public:
 
             for (unsigned index = 0; index < targets.size(); ++index) {
                 Box<CCallHelpers::Label> label = Box<CCallHelpers::Label>::create(m_jit.label());
-                labels.uncheckedAppend(label);
+                labels.unsafeAppendWithoutCapacityCheck(label);
                 bool isCodeEmitted = currentControlData().addExit(*this, targets[index]->targetLocations(), results);
                 if (isCodeEmitted)
                     targets[index]->addBranch(m_jit.jump());
@@ -7490,10 +7589,7 @@ public:
 
             fallThrough.link(&m_jit);
         } else {
-            Vector<int64_t> cases;
-            cases.reserveInitialCapacity(targets.size());
-            for (size_t i = 0; i < targets.size(); ++i)
-                cases.uncheckedAppend(i);
+            Vector<int64_t> cases(targets.size(), [](size_t i) { return i; });
 
             BinarySwitch binarySwitch(wasmScratchGPR, cases, BinarySwitch::Int32);
             while (binarySwitch.advance(m_jit)) {
@@ -7696,18 +7792,13 @@ public:
         // We'll directly use these when passing parameters, since no other instructions we emit here should
         // overwrite registers currently occupied by values.
 
-        Vector<Value, N> resolvedArguments;
-        resolvedArguments.reserveInitialCapacity(arguments.size());
-        for (unsigned i = 0; i < arguments.size(); i ++) {
-            if (arguments[i].isConst())
-                resolvedArguments.uncheckedAppend(arguments[i]);
-            else
-                resolvedArguments.uncheckedAppend(Value::pinned(arguments[i].type(), locationOf(arguments[i])));
-
+        auto resolvedArguments = WTF::map<N>(arguments, [&](auto& argument) {
+            auto value = argument.isConst() ? argument : Value::pinned(argument.type(), locationOf(argument));
             // Like other value uses, we count this as a use here, and end the lifetimes of any temps we passed.
             // This saves us the work of having to spill them to their canonical slots.
-            consume(arguments[i]);
-        }
+            consume(argument);
+            return value;
+        });
 
         // At this point in the program, argumentLocations doesn't represent the state of the register allocator.
         // We need to be careful not to allocate any new registers before passing them to the function, since that
@@ -7733,10 +7824,9 @@ public:
         }
 
         // Finally, we parallel-move arguments to the parameter locations.
-        Vector<Location, N> parameterLocations;
-        parameterLocations.reserveInitialCapacity(callInfo.params.size());
-        for (const auto& param : callInfo.params)
-            parameterLocations.uncheckedAppend(Location::fromArgumentLocation(param));
+        auto parameterLocations = WTF::map<N>(callInfo.params, [](auto& param) {
+            return Location::fromArgumentLocation(param);
+        });
         emitShuffle(resolvedArguments, parameterLocations);
     }
 
@@ -7778,10 +7868,10 @@ public:
     void emitCCall(Func function, const Vector<Value, N>& arguments)
     {
         // Currently, we assume the Wasm calling convention is the same as the C calling convention
-        Vector<Type, 1> resultTypes;
-        Vector<Type> argumentTypes;
-        for (const Value& value : arguments)
-            argumentTypes.append(Type { value.type(), 0u });
+        Vector<Type, 16> resultTypes;
+        auto argumentTypes = WTF::map<16>(arguments, [](auto& value) {
+            return Type { value.type(), 0u };
+        });
         RefPtr<TypeDefinition> functionType = TypeInformation::typeDefinitionForFunction(resultTypes, argumentTypes);
         CallInformation callInfo = wasmCallingConvention().callInformationFor(*functionType, CallRole::Caller);
         Checked<int32_t> calleeStackSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), callInfo.headerAndArgumentStackSizeInBytes);
@@ -7806,10 +7896,11 @@ public:
         ASSERT(result.isTemp());
 
         // Currently, we assume the Wasm calling convention is the same as the C calling convention
-        Vector<Type, 1> resultTypes = { Type { result.type(), 0u } };
-        Vector<Type> argumentTypes;
-        for (const Value& value : arguments)
-            argumentTypes.append(Type { value.type(), 0u });
+        Vector<Type, 16> resultTypes = { Type { result.type(), 0u } };
+        auto argumentTypes = WTF::map<16>(arguments, [](auto& value) {
+            return Type { value.type(), 0u };
+        });
+
         RefPtr<TypeDefinition> functionType = TypeInformation::typeDefinitionForFunction(resultTypes, argumentTypes);
         CallInformation callInfo = wasmCallingConvention().callInformationFor(*functionType, CallRole::Caller);
         Checked<int32_t> calleeStackSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), callInfo.headerAndArgumentStackSizeInBytes);
@@ -7841,8 +7932,11 @@ public:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
         case TypeKind::Rec:
         case TypeKind::Sub:
+        case TypeKind::Subfinal:
         case TypeKind::Array:
         case TypeKind::Struct:
         case TypeKind::Func: {
@@ -9349,6 +9443,8 @@ private:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
             m_jit.store64(TrustedImm64(constant.asRef()), loc.asAddress());
             break;
         case TypeKind::I64:
@@ -9390,6 +9486,8 @@ private:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
             m_jit.move(TrustedImm64(constant.asRef()), loc.asGPR());
             break;
         case TypeKind::F32:
@@ -9432,6 +9530,8 @@ private:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
             m_jit.store64(src.asGPR(), dst.asAddress());
             break;
         case TypeKind::V128:
@@ -9481,6 +9581,8 @@ private:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
             m_jit.transfer64(src.asAddress(), dst.asAddress());
             break;
         case TypeKind::V128: {
@@ -9522,6 +9624,8 @@ private:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
             m_jit.move(src.asGPR(), dst.asGPR());
             break;
         case TypeKind::F32:
@@ -9572,6 +9676,8 @@ private:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
             m_jit.load64(src.asAddress(), dst.asGPR());
             break;
         case TypeKind::V128:
@@ -10294,4 +10400,4 @@ Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileBBQ(Compilati
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT)

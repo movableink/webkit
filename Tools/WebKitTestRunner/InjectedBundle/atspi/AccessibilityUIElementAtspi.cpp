@@ -282,12 +282,12 @@ static String attributesOfElement(AccessibilityUIElement& element)
 
     builder.append("AXChildren: ", element.childrenCount(), '\n');
 
-    builder.append("AXPosition:  { ", FormattedNumber::fixedPrecision(element.x(), 6, KeepTrailingZeros));
-    builder.append(", ", FormattedNumber::fixedPrecision(element.y(), 6, KeepTrailingZeros));
+    builder.append("AXPosition:  { ", FormattedNumber::fixedPrecision(element.x(), 6, TrailingZerosPolicy::Keep));
+    builder.append(", ", FormattedNumber::fixedPrecision(element.y(), 6, TrailingZerosPolicy::Keep));
     builder.append(" }\n");
 
-    builder.append("AXSize: { ", FormattedNumber::fixedPrecision(element.width(), 6, KeepTrailingZeros));
-    builder.append(", ", FormattedNumber::fixedPrecision(element.height(), 6, KeepTrailingZeros));
+    builder.append("AXSize: { ", FormattedNumber::fixedPrecision(element.width(), 6, TrailingZerosPolicy::Keep));
+    builder.append(", ", FormattedNumber::fixedPrecision(element.height(), 6, TrailingZerosPolicy::Keep));
     builder.append(" }\n");
 
     String title = element.title()->string();
@@ -351,7 +351,7 @@ static Vector<RefPtr<AccessibilityUIElement>> elementsVector(const Vector<RefPtr
     Vector<RefPtr<AccessibilityUIElement>> elements;
     elements.reserveInitialCapacity(wrappers.size());
     for (auto& wrapper : wrappers)
-        elements.uncheckedAppend(AccessibilityUIElement::create(wrapper.get()));
+        elements.append(AccessibilityUIElement::create(wrapper.get()));
     return elements;
 }
 
@@ -1504,24 +1504,6 @@ void AccessibilityUIElement::clearSelectedChildren() const
 JSRetainPtr<JSStringRef> AccessibilityUIElement::accessibilityValue() const
 {
     return JSStringCreateWithCharacters(nullptr, 0);
-}
-
-JSRetainPtr<JSStringRef> AccessibilityUIElement::documentEncoding()
-{
-    if (!m_element->interfaces().contains(WebCore::AccessibilityObjectAtspi::Interface::Document))
-        return JSStringCreateWithCharacters(nullptr, 0);
-
-    m_element->updateBackingStore();
-    return OpaqueJSString::tryCreate(m_element->documentAttribute("Encoding"_s)).leakRef();
-}
-
-JSRetainPtr<JSStringRef> AccessibilityUIElement::documentURI()
-{
-    if (!m_element->interfaces().contains(WebCore::AccessibilityObjectAtspi::Interface::Document))
-        return JSStringCreateWithCharacters(nullptr, 0);
-
-    m_element->updateBackingStore();
-    return OpaqueJSString::tryCreate(m_element->documentAttribute("URI"_s)).leakRef();
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::url()

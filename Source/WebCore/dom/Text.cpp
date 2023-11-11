@@ -59,22 +59,22 @@ Text::~Text() = default;
 ExceptionOr<Ref<Text>> Text::splitText(unsigned offset)
 {
     if (offset > length())
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
     EventQueueScope scope;
     auto oldData = data();
-    auto newText = virtualCreate(oldData.substring(offset));
+    Ref newText = virtualCreate(oldData.substring(offset));
     setDataWithoutUpdate(oldData.left(offset));
 
     dispatchModifiedEvent(oldData);
 
-    if (auto* parent = parentNode()) {
-        auto insertResult = parent->insertBefore(newText, nextSibling());
+    if (RefPtr parent = parentNode()) {
+        auto insertResult = parent->insertBefore(newText, protectedNextSibling());
         if (insertResult.hasException())
             return insertResult.releaseException();
     }
 
-    document().textNodeSplit(*this);
+    protectedDocument()->textNodeSplit(*this);
 
     updateRendererAfterContentChange(0, oldData.length());
 
@@ -124,7 +124,7 @@ void Text::replaceWholeText(const String& newText)
 
     RefPtr parent = parentNode(); // Protect against mutation handlers moving this node during traversal
     for (RefPtr<Node> node = WTFMove(startText); is<Text>(node) && node != this && node->parentNode() == parent;) {
-        auto nodeToRemove = node.releaseNonNull();
+        Ref nodeToRemove = node.releaseNonNull();
         node = nodeToRemove->nextSibling();
         parent->removeChild(nodeToRemove);
     }
@@ -132,7 +132,7 @@ void Text::replaceWholeText(const String& newText)
     if (this != endText) {
         RefPtr nodePastEndText = endText->nextSibling();
         for (RefPtr node = nextSibling(); is<Text>(node) && node != nodePastEndText && node->parentNode() == parent;) {
-            auto nodeToRemove = node.releaseNonNull();
+            Ref nodeToRemove = node.releaseNonNull();
             node = nodeToRemove->nextSibling();
             parent->removeChild(nodeToRemove);
         }
@@ -184,12 +184,12 @@ RenderPtr<RenderText> Text::createTextRenderer(const RenderStyle& style)
     if (style.hasTextCombine())
         return createRenderer<RenderCombineText>(*this, data());
 
-    return createRenderer<RenderText>(*this, data());
+    return createRenderer<RenderText>(RenderObject::Type::Text, *this, data());
 }
 
 Ref<Text> Text::virtualCreate(String&& data)
 {
-    return create(document(), WTFMove(data));
+    return create(protectedDocument(), WTFMove(data));
 }
 
 void Text::updateRendererAfterContentChange(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData)
@@ -200,7 +200,7 @@ void Text::updateRendererAfterContentChange(unsigned offsetOfReplacedData, unsig
     if (styleValidity() >= Style::Validity::SubtreeAndRenderersInvalid)
         return;
 
-    document().updateTextRenderer(*this, offsetOfReplacedData, lengthOfReplacedData);
+    protectedDocument()->updateTextRenderer(*this, offsetOfReplacedData, lengthOfReplacedData);
 }
 
 static void appendTextRepresentation(StringBuilder& builder, const Text& text)
@@ -245,7 +245,8 @@ void Text::setDataAndUpdate(const String& newData, unsigned offsetOfReplacedData
 
     // FIXME: Does not seem correct to do this for 0 offset only.
     if (!offsetOfReplacedData) {
-        auto* textManipulationController = document().textManipulationControllerIfExists();
+        Ref document = this->document();
+        CheckedPtr textManipulationController = document->textManipulationControllerIfExists();
         if (UNLIKELY(textManipulationController && oldData != newData))
             textManipulationController->didUpdateContentForNode(*this);
     }

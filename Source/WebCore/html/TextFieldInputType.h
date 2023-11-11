@@ -73,7 +73,7 @@ protected:
 
     virtual bool needsContainer() const;
     void createShadowSubtree() override;
-    void destroyShadowSubtree() override;
+    void removeShadowSubtree() override;
     void attributeChanged(const QualifiedName&) override;
     void disabledStateChanged() final;
     void readOnlyStateChanged() final;
@@ -131,6 +131,8 @@ private:
     void dataListMayHaveChanged() final;
     void displaySuggestions(DataListSuggestionActivationType);
     void closeSuggestions();
+
+    void showPicker() override;
 
     // DataListSuggestionsClient
     IntRect elementRectInRootViewCoordinates() const final;

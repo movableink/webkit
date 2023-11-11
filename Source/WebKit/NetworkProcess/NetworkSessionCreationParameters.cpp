@@ -38,7 +38,7 @@
 
 namespace WebKit {
 
-void NetworkSessionCreationParameters::encode(IPC::Encoder& encoder) const
+void NetworkSessionCreationParameters::encode(IPC::Encoder& encoder) &&
 {
     encoder << sessionID;
     encoder << dataStoreIdentifier;
@@ -54,10 +54,10 @@ void NetworkSessionCreationParameters::encode(IPC::Encoder& encoder) const
 #endif
 #if HAVE(ALTERNATIVE_SERVICE)
     encoder << alternativeServiceDirectory;
-    encoder << alternativeServiceDirectoryExtensionHandle;
+    encoder << WTFMove(alternativeServiceDirectoryExtensionHandle);
 #endif
     encoder << hstsStorageDirectory;
-    encoder << hstsStorageDirectoryExtensionHandle;
+    encoder << WTFMove(hstsStorageDirectoryExtensionHandle);
 #if USE(SOUP)
     encoder << cookiePersistentStoragePath;
     encoder << cookiePersistentStorageType;
@@ -70,7 +70,7 @@ void NetworkSessionCreationParameters::encode(IPC::Encoder& encoder) const
     encoder << cookiePersistentStorageFile;
     encoder << proxySettings;
 #endif
-    encoder << networkCacheDirectory << networkCacheDirectoryExtensionHandle;
+    encoder << networkCacheDirectory << WTFMove(networkCacheDirectoryExtensionHandle);
 
     encoder << deviceManagementRestrictionsEnabled;
     encoder << allLoadsBlockedByDeviceManagementRestrictionsForTesting;
@@ -94,21 +94,21 @@ void NetworkSessionCreationParameters::encode(IPC::Encoder& encoder) const
     encoder << webPushMachServiceName;
     encoder << webPushPartitionString;
     encoder << enablePrivateClickMeasurementDebugMode;
-#if !HAVE(NSURLSESSION_WEBSOCKET)
-    encoder << shouldAcceptInsecureCertificatesForWebSockets;
-#endif
     encoder << isBlobRegistryTopOriginPartitioningEnabled;
 
     encoder << unifiedOriginStorageLevel;
     encoder << perOriginStorageQuota << originQuotaRatio << totalQuotaRatio << standardVolumeCapacity << volumeCapacityOverride;
-    encoder << localStorageDirectory << localStorageDirectoryExtensionHandle;
-    encoder << indexedDBDirectory << indexedDBDirectoryExtensionHandle;
-    encoder << cacheStorageDirectory << cacheStorageDirectoryExtensionHandle;
-    encoder << generalStorageDirectory << generalStorageDirectoryHandle;
+    encoder << localStorageDirectory << WTFMove(localStorageDirectoryExtensionHandle);
+    encoder << indexedDBDirectory << WTFMove(indexedDBDirectoryExtensionHandle);
+    encoder << cacheStorageDirectory << WTFMove(cacheStorageDirectoryExtensionHandle);
+    encoder << generalStorageDirectory << WTFMove(generalStorageDirectoryHandle);
 #if ENABLE(SERVICE_WORKER)
-    encoder << serviceWorkerRegistrationDirectory << serviceWorkerRegistrationDirectoryExtensionHandle << serviceWorkerProcessTerminationDelayEnabled;
+    encoder << serviceWorkerRegistrationDirectory << WTFMove(serviceWorkerRegistrationDirectoryExtensionHandle) << serviceWorkerProcessTerminationDelayEnabled << inspectionForServiceWorkersAllowed;
 #endif
-    encoder << resourceLoadStatisticsParameters;
+    encoder << WTFMove(resourceLoadStatisticsParameters);
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    encoder << isDeclarativeWebPushEnabled;
+#endif
 }
 
 std::optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters::decode(IPC::Decoder& decoder)
@@ -350,13 +350,6 @@ std::optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters
     if (!enablePrivateClickMeasurementDebugMode)
         return std::nullopt;
 
-#if !HAVE(NSURLSESSION_WEBSOCKET)
-    std::optional<bool> shouldAcceptInsecureCertificatesForWebSockets;
-    decoder >> shouldAcceptInsecureCertificatesForWebSockets;
-    if (!shouldAcceptInsecureCertificatesForWebSockets)
-        return std::nullopt;
-#endif
-
     std::optional<bool> isBlobRegistryTopOriginPartitioningEnabled;
     decoder >> isBlobRegistryTopOriginPartitioningEnabled;
     if (!isBlobRegistryTopOriginPartitioningEnabled)
@@ -447,12 +440,24 @@ std::optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters
     decoder >> serviceWorkerProcessTerminationDelayEnabled;
     if (!serviceWorkerProcessTerminationDelayEnabled)
         return std::nullopt;
+
+    std::optional<bool> inspectionForServiceWorkersAllowed;
+    decoder >> inspectionForServiceWorkersAllowed;
+    if (!inspectionForServiceWorkersAllowed)
+        return std::nullopt;
 #endif
 
     std::optional<ResourceLoadStatisticsParameters> resourceLoadStatisticsParameters;
     decoder >> resourceLoadStatisticsParameters;
     if (!resourceLoadStatisticsParameters)
         return std::nullopt;
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    std::optional<bool> isDeclarativeWebPushEnabled;
+    decoder >> isDeclarativeWebPushEnabled;
+    if (!isDeclarativeWebPushEnabled)
+        return std::nullopt;
+#endif
 
     return {{
         *sessionID
@@ -509,9 +514,6 @@ std::optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters
         , WTFMove(*webPushMachServiceName)
         , WTFMove(*webPushPartitionString)
         , WTFMove(*enablePrivateClickMeasurementDebugMode)
-#if !HAVE(NSURLSESSION_WEBSOCKET)
-        , WTFMove(*shouldAcceptInsecureCertificatesForWebSockets)
-#endif
         , *isBlobRegistryTopOriginPartitioningEnabled
         , *unifiedOriginStorageLevel
         , WTFMove(*perOriginStorageQuota)
@@ -531,6 +533,10 @@ std::optional<NetworkSessionCreationParameters> NetworkSessionCreationParameters
         , WTFMove(*serviceWorkerRegistrationDirectory)
         , WTFMove(*serviceWorkerRegistrationDirectoryExtensionHandle)
         , *serviceWorkerProcessTerminationDelayEnabled
+        , *inspectionForServiceWorkersAllowed
+#endif
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+        , *isDeclarativeWebPushEnabled
 #endif
         , WTFMove(*resourceLoadStatisticsParameters)
     }};

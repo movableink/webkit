@@ -32,7 +32,6 @@
 #include "HTMLTableCellElement.h"
 #include "HTMLTableColElement.h"
 #include "HTMLTableElement.h"
-#include "InlineFormattingState.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
@@ -87,6 +86,22 @@ static std::optional<LayoutSize> accumulatedOffsetForInFlowPositionedContinuatio
     return block.relativePositionOffset();
 }
 
+template<typename CharacterType>
+static bool canUseSimplifiedTextMeasuringForCharacters(std::span<const CharacterType> characters, const FontCascade& fontCascade, bool whitespaceIsCollapsed)
+{
+    auto& primaryFont = fontCascade.primaryFont();
+    auto* rawCharacters = characters.data();
+    for (unsigned i = 0; i < characters.size(); ++i) {
+        auto character = rawCharacters[i]; // Not using characters[i] to bypass the bounds check.
+        if (!WidthIterator::characterCanUseSimplifiedTextMeasuring(character, whitespaceIsCollapsed))
+            return false;
+        auto glyphData = fontCascade.glyphDataForCharacter(character, false);
+        if (!glyphData.isValid() || glyphData.font != &primaryFont)
+            return false;
+    }
+    return true;
+}
+
 static bool canUseSimplifiedTextMeasuring(StringView content, const FontCascade& fontCascade, bool whitespaceIsCollapsed)
 {
     if (fontCascade.codePath(TextRun(content)) == FontCascade::CodePath::Complex)
@@ -95,15 +110,9 @@ static bool canUseSimplifiedTextMeasuring(StringView content, const FontCascade&
     if (fontCascade.wordSpacing() || fontCascade.letterSpacing())
         return false;
 
-    auto& primaryFont = fontCascade.primaryFont();
-    for (unsigned i = 0; i < content.length(); ++i) {
-        if (!WidthIterator::characterCanUseSimplifiedTextMeasuring(content[i], whitespaceIsCollapsed))
-            return false;
-        auto glyphData = fontCascade.glyphDataForCharacter(content[i], false);
-        if (!glyphData.isValid() || glyphData.font != &primaryFont)
-            return false;
-    }
-    return true;
+    if (content.is8Bit())
+        return canUseSimplifiedTextMeasuringForCharacters(content.span8(), fontCascade, whitespaceIsCollapsed);
+    return canUseSimplifiedTextMeasuringForCharacters(content.span16(), fontCascade, whitespaceIsCollapsed);
 }
 
 std::unique_ptr<Layout::LayoutTree> TreeBuilder::buildLayoutTree(const RenderView& renderView)
@@ -547,7 +556,7 @@ void showLayoutTree(const InitialContainingBlock& initialContainingBlock)
 
 void printLayoutTreeForLiveDocuments()
 {
-    for (const auto* document : Document::allDocuments()) {
+    for (auto& document : Document::allDocuments()) {
         if (!document->renderView())
             continue;
         if (document->frame() && document->frame()->isMainFrame())
@@ -556,7 +565,7 @@ void printLayoutTreeForLiveDocuments()
         // FIXME: Need to find a way to output geometry without layout context.
         auto& renderView = *document->renderView();
         auto layoutTree = TreeBuilder::buildLayoutTree(renderView);
-        auto layoutState = LayoutState { *document, layoutTree->root() };
+        auto layoutState = LayoutState { document, layoutTree->root() };
 
         LayoutContext(layoutState).layout(renderView.size());
         showLayoutTree(downcast<InitialContainingBlock>(layoutState.root()), &layoutState);

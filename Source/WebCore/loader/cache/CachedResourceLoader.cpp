@@ -47,8 +47,6 @@
 #include "CrossOriginAccessControl.h"
 #include "CustomHeaderFields.h"
 #include "DateComponents.h"
-#include "DiagnosticLoggingClient.h"
-#include "DiagnosticLoggingKeys.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
@@ -93,7 +91,7 @@
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-#include "Device.h"
+#import <pal/system/ios/Device.h>
 #endif
 
 #undef CACHEDRESOURCELOADER_RELEASE_LOG
@@ -449,11 +447,7 @@ bool CachedResourceLoader::checkInsecureContent(CachedResource::Type type, const
         // These resource can inject script into the current document (Script,
         // XSL) or exfiltrate the content of the current document (CSS).
         if (auto* frame = this->frame()) {
-            if (m_document && !MixedContentChecker::canRunInsecureContent(*frame, m_document->securityOrigin(), url))
-                return false;
-            auto& top = frame->tree().top();
-            auto* localTop = dynamicDowncast<LocalFrame>(top);
-            if (&top != frame && localTop && localTop->document() && !MixedContentChecker::canRunInsecureContent(*localTop, localTop->document()->securityOrigin(), url))
+            if (m_document && !MixedContentChecker::frameAndAncestorsCanRunInsecureContent(*frame, m_document->securityOrigin(), url))
                 return false;
         }
         break;
@@ -471,11 +465,7 @@ bool CachedResourceLoader::checkInsecureContent(CachedResource::Type type, const
     case CachedResource::Type::FontResource: {
         // These resources can corrupt only the frame's pixels.
         if (auto* frame = this->frame()) {
-            if (m_document && !MixedContentChecker::canDisplayInsecureContent(*frame, m_document->securityOrigin(), contentTypeFromResourceType(type), url, MixedContentChecker::AlwaysDisplayInNonStrictMode::Yes))
-                return false;
-            auto& topFrame = frame->tree().top();
-            auto* localTopFrame = dynamicDowncast<LocalFrame>(topFrame);
-            if (!localTopFrame || !localTopFrame->document() || !MixedContentChecker::canDisplayInsecureContent(*localTopFrame, localTopFrame->document()->securityOrigin(), contentTypeFromResourceType(type), url))
+            if (m_document && !MixedContentChecker::frameAndAncestorsCanDisplayInsecureContent(*frame, contentTypeFromResourceType(type), url))
                 return false;
         }
         break;
@@ -498,12 +488,13 @@ bool CachedResourceLoader::allowedByContentSecurityPolicy(CachedResource::Type t
     if (options.contentSecurityPolicyImposition == ContentSecurityPolicyImposition::SkipPolicyCheck)
         return true;
 
-    ASSERT(m_document);
-    if (!m_document)
+    RefPtr document = m_document.get();
+    ASSERT(document);
+    if (!document)
         return true;
 
-    ASSERT(m_document->contentSecurityPolicy());
-    auto contentSecurityPolicy = m_document->contentSecurityPolicy();
+    ASSERT(document->contentSecurityPolicy());
+    CheckedPtr contentSecurityPolicy = document->contentSecurityPolicy();
     if (!contentSecurityPolicy)
         return true;
 
@@ -657,6 +648,7 @@ bool CachedResourceLoader::canRequestAfterRedirection(CachedResource::Type type,
 String convertEnumerationToString(FetchOptions::Destination);
 String convertEnumerationToString(FetchOptions::Mode);
 
+#if ENABLE(PUBLIC_SUFFIX_LIST)
 static const String& convertEnumerationToString(FetchMetadataSite enumerationValue)
 {
     static NeverDestroyed<const String> none(MAKE_STATIC_STRING_IMPL("none"));
@@ -698,6 +690,7 @@ static void updateRequestFetchMetadataHeaders(ResourceRequest& request, const Re
     request.setHTTPHeaderField(HTTPHeaderName::SecFetchMode, convertEnumerationToString(options.mode));
     request.setHTTPHeaderField(HTTPHeaderName::SecFetchSite, convertEnumerationToString(site));
 }
+#endif // ENABLE(PUBLIC_SUFFIX_LIST)
 
 FetchMetadataSite CachedResourceLoader::computeFetchMetadataSite(const ResourceRequest& request, CachedResource::Type type, FetchOptions::Mode mode, const SecurityOrigin& originalOrigin, FetchMetadataSite originalSite)
 {
@@ -741,6 +734,8 @@ bool CachedResourceLoader::updateRequestAfterRedirection(CachedResource::Type ty
         } else
             updateRequestFetchMetadataHeaders(request, options, site);
     }
+#else
+    UNUSED_PARAM(site);
 #endif // ENABLE(PUBLIC_SUFFIX_LIST)
 
     return canRequestAfterRedirection(type, request.url(), options, preRedirectURL);
@@ -869,13 +864,6 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::updateCachedResourceW
     auto resourceHandle = createResource(resource.type(), WTFMove(request), sessionID, &cookieJar, settings);
     resourceHandle->loadFrom(resource);
     return resourceHandle;
-}
-
-static inline void logMemoryCacheResourceRequest(LocalFrame* frame, const String& key, const String& description)
-{
-    if (!frame || !frame->page())
-        return;
-    frame->page()->diagnosticLoggingClient().logDiagnosticMessage(key, description, ShouldSample::Yes);
 }
 
 void CachedResourceLoader::prepareFetch(CachedResource::Type type, CachedResourceRequest& request)
@@ -1062,8 +1050,8 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
             return makeUnexpected(ResourceError { errorDomainWebKitInternal, 0, url, "Resource blocked by content blocker"_s, ResourceError::Type::AccessControl });
         }
 #endif
-        if (!madeHTTPS && type == CachedResource::Type::MainResource)
-            madeHTTPS = frame.loader().upgradeRequestforHTTPSOnlyIfNeeded(frame.document() ? frame.document()->url() : URL { }, request.resourceRequest());
+        if (!madeHTTPS && type == CachedResource::Type::MainResource && frame.loader().shouldUpgradeRequestforHTTPSOnly(frame.document() ? frame.document()->url() : URL { }, request.resourceRequest()) && m_documentLoader->frameLoader())
+            return makeUnexpected(m_documentLoader->frameLoader()->client().httpNavigationWithHTTPSOnlyError(request.resourceRequest()));
 
         if (madeHTTPS
             && type == CachedResource::Type::MainResource
@@ -1110,18 +1098,14 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
 
     // See if we can use an existing resource from the cache.
     CachedResourceHandle<CachedResource> resource;
-    if (auto* document = this->document()) {
+    if (auto* document = this->document())
         request.setDomainForCachePartition(*document);
-        request.resourceRequest().setFirstPartyForCookies(document->firstPartyForCookies());
-    }
 
     if (request.allowsCaching())
         resource = memoryCache.resourceForRequest(request.resourceRequest(), page.sessionID());
 
     if (resource && request.isLinkPreload() && !resource->isLinkPreload())
         resource->setLinkPreload();
-
-    logMemoryCacheResourceRequest(&frame, DiagnosticLoggingKeys::memoryCacheUsageKey(), resource ? DiagnosticLoggingKeys::inMemoryCacheKey() : DiagnosticLoggingKeys::notInMemoryCacheKey());
 
     auto& cookieJar = page.cookieJar();
 
@@ -1131,15 +1115,11 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
         memoryCache.remove(*resource);
         FALLTHROUGH;
     case Load:
-        if (resource) {
-            logMemoryCacheResourceRequest(&frame, DiagnosticLoggingKeys::memoryCacheEntryDecisionKey(), DiagnosticLoggingKeys::unusedKey());
+        if (resource)
             memoryCache.remove(*resource);
-        }
         resource = loadResource(type, page.sessionID(), WTFMove(request), cookieJar, page.settings());
         break;
     case Revalidate:
-        if (resource)
-            logMemoryCacheResourceRequest(&frame, DiagnosticLoggingKeys::memoryCacheEntryDecisionKey(), DiagnosticLoggingKeys::revalidatingKey());
         resource = revalidateResource(WTFMove(request), *resource);
         break;
     case Use:
@@ -1172,7 +1152,6 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
             ResourceError error;
             if (!shouldContinueAfterNotifyingLoadedFromMemoryCache(request, *resource, error))
                 return makeUnexpected(WTFMove(error));
-            logMemoryCacheResourceRequest(&frame, DiagnosticLoggingKeys::memoryCacheEntryDecisionKey(), DiagnosticLoggingKeys::usedKey());
             loadTiming.markEndTime();
 
             memoryCache.resourceAccessed(*resource);
@@ -1291,34 +1270,6 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::loadResource(CachedRe
     return resource;
 }
 
-static void logRevalidation(const String& reason, DiagnosticLoggingClient& logClient)
-{
-    logClient.logDiagnosticMessage(DiagnosticLoggingKeys::cachedResourceRevalidationReasonKey(), reason, ShouldSample::Yes);
-}
-
-static void logResourceRevalidationDecision(CachedResource::RevalidationDecision reason, const LocalFrame* frame)
-{
-    if (!frame || !frame->page())
-        return;
-    auto& logClient = frame->page()->diagnosticLoggingClient();
-    switch (reason) {
-    case CachedResource::RevalidationDecision::No:
-        break;
-    case CachedResource::RevalidationDecision::YesDueToExpired:
-        logRevalidation(DiagnosticLoggingKeys::isExpiredKey(), logClient);
-        break;
-    case CachedResource::RevalidationDecision::YesDueToNoStore:
-        logRevalidation(DiagnosticLoggingKeys::noStoreKey(), logClient);
-        break;
-    case CachedResource::RevalidationDecision::YesDueToNoCache:
-        logRevalidation(DiagnosticLoggingKeys::noCacheKey(), logClient);
-        break;
-    case CachedResource::RevalidationDecision::YesDueToCachePolicy:
-        logRevalidation(DiagnosticLoggingKeys::reloadKey(), logClient);
-        break;
-    }
-}
-
 #if ENABLE(SERVICE_WORKER)
 static inline bool mustReloadFromServiceWorkerOptions(const ResourceLoaderOptions& options, const ResourceLoaderOptions& cachedOptions)
 {
@@ -1360,7 +1311,6 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
     // If the same URL has been loaded as a different type, we need to reload.
     if (existingResource->type() != type) {
         LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicy reloading due to type mismatch.");
-        logMemoryCacheResourceRequest(frame(), DiagnosticLoggingKeys::inMemoryCacheKey(), DiagnosticLoggingKeys::unusedReasonTypeMismatchKey());
         return Reload;
     }
 
@@ -1415,7 +1365,6 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
     bool cachePolicyIsHistoryBuffer = cachePolicy == CachePolicy::HistoryBuffer;
     if (!existingResource->redirectChainAllowsReuse(cachePolicyIsHistoryBuffer ? ReuseExpiredRedirection : DoNotReuseExpiredRedirection)) {
         LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicy reloading due to not cached or expired redirections.");
-        logMemoryCacheResourceRequest(frame(), DiagnosticLoggingKeys::inMemoryCacheKey(), DiagnosticLoggingKeys::unusedReasonRedirectChainKey());
         return Reload;
     }
 
@@ -1430,7 +1379,6 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
     // Don't reuse resources with Cache-control: no-store.
     if (existingResource->response().cacheControlContainsNoStore()) {
         LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicy reloading due to Cache-control: no-store.");
-        logMemoryCacheResourceRequest(frame(), DiagnosticLoggingKeys::inMemoryCacheKey(), DiagnosticLoggingKeys::unusedReasonNoStoreKey());
         return Reload;
     }
 
@@ -1442,7 +1390,6 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
     // client's requests are made without CORS and some with.
     if (existingResource->resourceRequest().allowCookies() != request.allowCookies() || existingResource->options().credentials != cachedResourceRequest.options().credentials) {
         LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicy reloading due to difference in credentials settings.");
-        logMemoryCacheResourceRequest(frame(), DiagnosticLoggingKeys::inMemoryCacheKey(), DiagnosticLoggingKeys::unusedReasonCredentialSettingsKey());
         return Reload;
     }
 
@@ -1453,14 +1400,12 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
     // CachePolicy::Reload always reloads
     if (cachePolicy == CachePolicy::Reload) {
         LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicy reloading due to CachePolicyReload.");
-        logMemoryCacheResourceRequest(frame(), DiagnosticLoggingKeys::inMemoryCacheKey(), DiagnosticLoggingKeys::unusedReasonReloadKey());
         return Reload;
     }
     
     // We'll try to reload the resource if it failed last time.
     if (existingResource->errorOccurred()) {
         LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicye reloading due to resource being in the error state");
-        logMemoryCacheResourceRequest(frame(), DiagnosticLoggingKeys::inMemoryCacheKey(), DiagnosticLoggingKeys::unusedReasonErrorKey());
         return Reload;
     }
 
@@ -1476,7 +1421,6 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
     }
 
     auto revalidationDecision = existingResource->makeRevalidationDecision(cachePolicy);
-    logResourceRevalidationDecision(revalidationDecision, frame());
 
     // Check if the cache headers requires us to revalidate (cache expiration for example).
     if (revalidationDecision != CachedResource::RevalidationDecision::No) {
@@ -1492,7 +1436,6 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
         
         // No, must reload.
         LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicy reloading due to missing cache validators.");
-        logMemoryCacheResourceRequest(frame(), DiagnosticLoggingKeys::inMemoryCacheKey(), DiagnosticLoggingKeys::unusedReasonMustRevalidateNoValidatorKey());
         return Reload;
     }
 

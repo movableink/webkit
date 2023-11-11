@@ -198,7 +198,7 @@ private:
         return makeUnique<MediaPlayerPrivateMediaStreamAVFObjC>(player);
     }
 
-    void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types) const final
+    void getSupportedTypes(HashSet<String>& types) const final
     {
         return MediaPlayerPrivateMediaStreamAVFObjC::getSupportedTypes(types);
     }
@@ -222,7 +222,7 @@ bool MediaPlayerPrivateMediaStreamAVFObjC::isAvailable()
     return PAL::isAVFoundationFrameworkAvailable() && PAL::isCoreMediaFrameworkAvailable() && PAL::getAVSampleBufferDisplayLayerClass();
 }
 
-void MediaPlayerPrivateMediaStreamAVFObjC::getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types)
+void MediaPlayerPrivateMediaStreamAVFObjC::getSupportedTypes(HashSet<String>& types)
 {
     // FIXME: Is it really correct to list no supported types?
     types.clear();
@@ -286,19 +286,16 @@ void MediaPlayerPrivateMediaStreamAVFObjC::processNewVideoFrame(VideoFrame& vide
             Locker locker { m_currentVideoFrameLock };
             m_currentVideoFrame = &videoFrame;
         }
-        callOnMainThread([weakThis = WeakPtr { *this }, metadata, presentationTime]() mutable {
-            if (!weakThis)
-                return;
-
+        scheduleDeferredTask([this, metadata, presentationTime]() mutable {
             RefPtr<VideoFrame> videoFrame;
             {
-                Locker locker { weakThis->m_currentVideoFrameLock };
-                videoFrame = WTFMove(weakThis->m_currentVideoFrame);
+                Locker locker { m_currentVideoFrameLock };
+                videoFrame = WTFMove(m_currentVideoFrame);
             }
             if (!videoFrame)
                 return;
 
-            weakThis->processNewVideoFrame(*videoFrame, metadata, presentationTime);
+            processNewVideoFrame(*videoFrame, metadata, presentationTime);
         });
         return;
     }
@@ -376,7 +373,7 @@ void MediaPlayerPrivateMediaStreamAVFObjC::ensureLayers()
     if (!player)
         return;
 
-    auto size = IntSize { player->videoInlineSize() } ;
+    auto size = IntSize { player->videoLayerSize() };
     if (size.isEmpty())
         size = player->presentationSize();
     if (size.isEmpty() || m_intrinsicSize.isEmpty())
@@ -394,8 +391,9 @@ void MediaPlayerPrivateMediaStreamAVFObjC::ensureLayers()
     if (activeVideoTrack->source().isCaptureSource())
         m_sampleBufferDisplayLayer->setRenderPolicy(SampleBufferDisplayLayer::RenderPolicy::Immediately);
 
-    m_sampleBufferDisplayLayer->initialize(hideRootLayer(), size, [weakThis = WeakPtr { *this }, size](auto didSucceed) {
-        if (weakThis)
+    m_sampleBufferDisplayLayer->initialize(hideRootLayer(), size, [weakThis = WeakPtr { *this }, weakLayer = ThreadSafeWeakPtr { *m_sampleBufferDisplayLayer }, size](auto didSucceed) {
+        auto layer = weakLayer.get();
+        if (weakThis && layer && layer.get() == weakThis->m_sampleBufferDisplayLayer.get())
             weakThis->layersAreInitialized(size, didSucceed);
     });
 }
@@ -428,6 +426,9 @@ void MediaPlayerPrivateMediaStreamAVFObjC::layersAreInitialized(IntSize size, bo
     [m_boundsChangeListener begin:m_sampleBufferDisplayLayer->rootLayer()];
 
     m_canEnqueueDisplayLayer = true;
+
+    if (m_layerHostingContextIDCallback)
+        m_layerHostingContextIDCallback(m_sampleBufferDisplayLayer->hostingContextID());
 }
 
 void MediaPlayerPrivateMediaStreamAVFObjC::destroyLayers()
@@ -636,7 +637,7 @@ bool MediaPlayerPrivateMediaStreamAVFObjC::hasAudio() const
     return !m_audioTrackMap.isEmpty();
 }
 
-void MediaPlayerPrivateMediaStreamAVFObjC::setPageIsVisible(bool isVisible)
+void MediaPlayerPrivateMediaStreamAVFObjC::setPageIsVisible(bool isVisible, String&&)
 {
     if (m_isPageVisible == isVisible)
         return;
@@ -807,6 +808,7 @@ bool MediaPlayerPrivateMediaStreamAVFObjC::supportsPictureInPicture() const
     return true;
 }
 
+#if ENABLE(VIDEO_PRESENTATION_MODE)
 RetainPtr<PlatformLayer> MediaPlayerPrivateMediaStreamAVFObjC::createVideoFullscreenLayer()
 {
     return adoptNS([[CALayer alloc] init]);
@@ -822,6 +824,7 @@ void MediaPlayerPrivateMediaStreamAVFObjC::setVideoFullscreenFrame(FloatRect fra
 {
     m_videoLayerManager->setVideoFullscreenFrame(frame);
 }
+#endif
 
 enum class TrackState {
     Add,
@@ -1140,7 +1143,7 @@ void MediaPlayerPrivateMediaStreamAVFObjC::scheduleDeferredTask(Function<void ()
     callOnMainThread([weakThis = WeakPtr { *this }, function = WTFMove(function)] {
         if (!weakThis)
             return;
-
+        auto protectedMediaPlayer = RefPtr { weakThis->m_player.get() };
         function();
     });
 }
@@ -1191,14 +1194,23 @@ LayerHostingContextID MediaPlayerPrivateMediaStreamAVFObjC::hostingContextID() c
     return m_sampleBufferDisplayLayer ? m_sampleBufferDisplayLayer->hostingContextID() : 0;
 }
 
-void MediaPlayerPrivateMediaStreamAVFObjC::setVideoInlineSizeFenced(const FloatSize& size, const WTF::MachSendRight& fence)
+void MediaPlayerPrivateMediaStreamAVFObjC::setVideoLayerSizeFenced(const FloatSize& size, WTF::MachSendRight&& fence)
 {
     if (!m_sampleBufferDisplayLayer || size.isEmpty())
         return;
 
     m_storedBounds = m_sampleBufferDisplayLayer->rootLayer().bounds;
     m_storedBounds->size = size;
-    m_sampleBufferDisplayLayer->updateBoundsAndPosition(*m_storedBounds, fence);
+    m_sampleBufferDisplayLayer->updateBoundsAndPosition(*m_storedBounds, WTFMove(fence));
+}
+
+void MediaPlayerPrivateMediaStreamAVFObjC::requestHostingContextID(LayerHostingContextIDCallback&& callback)
+{
+    if (auto contextID = hostingContextID()) {
+        callback(contextID);
+        return;
+    }
+    m_layerHostingContextIDCallback = WTFMove(callback);
 }
 
 }

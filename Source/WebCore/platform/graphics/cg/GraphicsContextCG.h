@@ -49,8 +49,8 @@ public:
 
     const DestinationColorSpace& colorSpace() const final;
 
-    void save() final;
-    void restore() final;
+    void save(GraphicsContextState::Purpose = GraphicsContextState::Purpose::SaveRestore) final;
+    void restore(GraphicsContextState::Purpose = GraphicsContextState::Purpose::SaveRestore) final;
 
     void drawRect(const FloatRect&, float borderThickness = 1) final;
     void drawLine(const FloatPoint&, const FloatPoint&) final;
@@ -99,7 +99,7 @@ public:
     void setLineJoin(LineJoin) final;
     void setMiterLimit(float) final;
 
-    void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
+    void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) final;
     bool needsCachedNativeImageInvalidationWorkaround(RenderingMode) override;
 
     using GraphicsContext::scale;
@@ -130,7 +130,7 @@ public:
 
     virtual bool canUseShadowBlur() const;
 
-    virtual FloatRect roundToDevicePixels(const FloatRect&, RoundingMode = RoundAllSides) const;
+    FloatRect roundToDevicePixels(const FloatRect&) const;
 
     // Returns the platform context for draws.
     CGContextRef contextForDraw();
@@ -138,13 +138,14 @@ public:
     // Returns false if there has not been any potential draws since last call.
     // Returns true if there has been potential draws since last call.
     bool consumeHasDrawn();
-protected:
-    virtual void setCGShadow(RenderingMode, const FloatSize& offset, float blur, const Color&, bool shadowsIgnoreTransforms);
 
+protected:
+    void setCGShadow(const std::optional<GraphicsDropShadow>&, bool shadowsIgnoreTransforms);
+    void setCGStyle(const std::optional<GraphicsStyle>&, bool shadowsIgnoreTransforms);
 
 private:
     void convertToDestinationColorSpaceIfNeeded(RetainPtr<CGImageRef>&);
-    void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
+    void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) final;
 
     void clearCGShadow();
     // Returns the platform context for purposes of context state change, not draws.

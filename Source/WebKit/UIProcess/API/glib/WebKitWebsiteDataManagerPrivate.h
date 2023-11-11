@@ -28,4 +28,7 @@
 WebKitWebsiteDataManager* webkitWebsiteDataManagerCreate(CString&&, CString&&);
 #endif
 WebKit::WebsiteDataStore& webkitWebsiteDataManagerGetDataStore(WebKitWebsiteDataManager*);
-WebKitITPThirdParty* webkitITPThirdPartyCreate(WebKit::WebResourceLoadStatisticsStore::ThirdPartyData&&);
+
+#if ENABLE(TRACKING_PREVENTION)
+WebKitITPThirdParty* webkitITPThirdPartyCreate(WebKit::ITPThirdPartyData&&);
+#endif

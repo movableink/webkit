@@ -252,8 +252,7 @@ public:
 
     int lineNumberForBytecodeIndex(BytecodeIndex);
 
-    void expressionRangeForBytecodeIndex(BytecodeIndex, int& divot,
-        int& startOffset, int& endOffset, unsigned& line, unsigned& column) const;
+    void expressionRangeForBytecodeIndex(BytecodeIndex, unsigned& divot, unsigned& startOffset, unsigned& endOffset, unsigned& line, unsigned& column) const;
 
     bool typeProfilerExpressionInfoForBytecodeOffset(unsigned bytecodeOffset, unsigned& startDivot, unsigned& endDivot);
 
@@ -346,7 +345,7 @@ public:
 
     size_t metadataSizeInBytes()
     {
-        return m_metadata->sizeInBytes();
+        return m_metadata->sizeInBytesForGC();
     }
 
     bool loopHintsAreEligibleForFuzzingEarlyReturn()

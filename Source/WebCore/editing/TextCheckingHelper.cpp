@@ -163,7 +163,7 @@ ExceptionOr<uint64_t> TextCheckingParagraph::offsetTo(const Position& position) 
 {
     auto range = makeSimpleRange(paragraphRange().start, position);
     if (!range)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
     return characterCount(*range);
 }
 
@@ -289,7 +289,7 @@ auto TextCheckingHelper::findFirstMisspelledWordOrUngrammaticalPhrase(bool check
     if (!unifiedTextCheckerEnabled())
         return { };
 
-    if (platformDrivenTextCheckerEnabled())
+    if (platformOrClientDrivenTextCheckerEnabled())
         return { };
 
     std::variant<MisspelledWord, UngrammaticalPhrase> firstFoundItem;
@@ -499,7 +499,7 @@ TextCheckingGuesses TextCheckingHelper::guessesForMisspelledWordOrUngrammaticalP
     if (!unifiedTextCheckerEnabled())
         return { };
 
-    if (platformDrivenTextCheckerEnabled())
+    if (platformOrClientDrivenTextCheckerEnabled())
         return { };
 
     if (m_range.collapsed())
@@ -608,6 +608,15 @@ bool platformDrivenTextCheckerEnabled()
 #else
     return false;
 #endif
+}
+
+bool platformOrClientDrivenTextCheckerEnabled()
+{
+#if ENABLE(ACCESSIBILITY) && PLATFORM(MAC)
+    if (!AXObjectCache::shouldSpellCheck())
+        return true;
+#endif
+    return platformDrivenTextCheckerEnabled();
 }
 
 }

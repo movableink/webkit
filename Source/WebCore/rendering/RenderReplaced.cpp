@@ -26,6 +26,7 @@
 
 #include "BackgroundPainter.h"
 #include "DeprecatedGlobalSettings.h"
+#include "DocumentInlines.h"
 #include "DocumentMarkerController.h"
 #include "ElementRuleCollector.h"
 #include "FloatRoundedRect.h"
@@ -33,8 +34,7 @@
 #include "HTMLElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLParserIdioms.h"
-#include "HighlightData.h"
-#include "HighlightRegister.h"
+#include "HighlightRegistry.h"
 #include "InlineIteratorBox.h"
 #include "InlineIteratorLineBoxInlines.h"
 #include "LayoutRepainter.h"
@@ -44,6 +44,7 @@
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
 #include "RenderFragmentedFlow.h"
+#include "RenderHighlight.h"
 #include "RenderImage.h"
 #include "RenderLayer.h"
 #include "RenderStyleInlines.h"
@@ -64,25 +65,28 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderReplaced);
 const int cDefaultWidth = 300;
 const int cDefaultHeight = 150;
 
-RenderReplaced::RenderReplaced(Element& element, RenderStyle&& style)
-    : RenderBox(element, WTFMove(style), RenderReplacedFlag)
+RenderReplaced::RenderReplaced(Type type, Element& element, RenderStyle&& style)
+    : RenderBox(type, element, WTFMove(style), RenderReplacedFlag)
     , m_intrinsicSize(cDefaultWidth, cDefaultHeight)
 {
     setReplacedOrInlineBlock(true);
+    ASSERT(isRenderReplaced());
 }
 
-RenderReplaced::RenderReplaced(Element& element, RenderStyle&& style, const LayoutSize& intrinsicSize)
-    : RenderBox(element, WTFMove(style), RenderReplacedFlag)
+RenderReplaced::RenderReplaced(Type type, Element& element, RenderStyle&& style, const LayoutSize& intrinsicSize)
+    : RenderBox(type, element, WTFMove(style), RenderReplacedFlag)
     , m_intrinsicSize(intrinsicSize)
 {
     setReplacedOrInlineBlock(true);
+    ASSERT(isRenderReplaced());
 }
 
-RenderReplaced::RenderReplaced(Document& document, RenderStyle&& style, const LayoutSize& intrinsicSize)
-    : RenderBox(document, WTFMove(style), RenderReplacedFlag)
+RenderReplaced::RenderReplaced(Type type, Document& document, RenderStyle&& style, const LayoutSize& intrinsicSize)
+    : RenderBox(type, document, WTFMove(style), RenderReplacedFlag)
     , m_intrinsicSize(intrinsicSize)
 {
     setReplacedOrInlineBlock(true);
+    ASSERT(isRenderReplaced());
 }
 
 RenderReplaced::~RenderReplaced() = default;
@@ -142,9 +146,9 @@ bool RenderReplaced::shouldDrawSelectionTint() const
     return selectionState() != HighlightState::None && !document().printing();
 }
 
-inline static bool draggedContentContainsReplacedElement(const Vector<RenderedDocumentMarker*>& markers, const Element& element)
+inline static bool draggedContentContainsReplacedElement(const Vector<WeakPtr<RenderedDocumentMarker>>& markers, const Element& element)
 {
-    for (auto* marker : markers) {
+    for (auto& marker : markers) {
         if (std::get<RefPtr<Node>>(marker->data()) == &element)
             return true;
     }
@@ -153,17 +157,17 @@ inline static bool draggedContentContainsReplacedElement(const Vector<RenderedDo
 
 Color RenderReplaced::calculateHighlightColor() const
 {
-    HighlightData highlightData;
+    RenderHighlight renderHighlight;
 #if ENABLE(APP_HIGHLIGHTS)
-    if (auto appHighlightRegister = document().appHighlightRegisterIfExists()) {
-        if (appHighlightRegister->highlightsVisibility() == HighlightVisibility::Visible) {
-            for (auto& highlight : appHighlightRegister->map()) {
-                for (auto& rangeData : highlight.value->rangesData()) {
-                    if (!highlightData.setRenderRange(rangeData))
+    if (auto appHighlightRegistry = document().appHighlightRegistryIfExists()) {
+        if (appHighlightRegistry->highlightsVisibility() == HighlightVisibility::Visible) {
+            for (auto& highlight : appHighlightRegistry->map()) {
+                for (auto& highlightRange : highlight.value->highlightRanges()) {
+                    if (!renderHighlight.setRenderRange(highlightRange))
                         continue;
 
-                    auto state = highlightData.highlightStateForRenderer(*this);
-                    if (!isHighlighted(state, highlightData))
+                    auto state = renderHighlight.highlightStateForRenderer(*this);
+                    if (!isHighlighted(state, renderHighlight))
                         continue;
 
                     OptionSet<StyleColorOptions> styleColorOptions = { StyleColorOptions::UseSystemAppearance };
@@ -174,14 +178,14 @@ Color RenderReplaced::calculateHighlightColor() const
     }
 #endif
     if (DeprecatedGlobalSettings::highlightAPIEnabled()) {
-        if (auto highlightRegister = document().highlightRegisterIfExists()) {
-            for (auto& highlight : highlightRegister->map()) {
-                for (auto& rangeData : highlight.value->rangesData()) {
-                    if (!highlightData.setRenderRange(rangeData))
+        if (auto highlightRegistry = document().highlightRegistryIfExists()) {
+            for (auto& highlight : highlightRegistry->map()) {
+                for (auto& highlightRange : highlight.value->highlightRanges()) {
+                    if (!renderHighlight.setRenderRange(highlightRange))
                         continue;
 
-                    auto state = highlightData.highlightStateForRenderer(*this);
-                    if (!isHighlighted(state, highlightData))
+                    auto state = renderHighlight.highlightStateForRenderer(*this);
+                    if (!isHighlighted(state, renderHighlight))
                         continue;
 
                     if (auto highlightStyle = getUncachedPseudoStyle({ PseudoId::Highlight, highlight.key }, &style()))
@@ -191,14 +195,14 @@ Color RenderReplaced::calculateHighlightColor() const
         }
     }
     if (document().settings().scrollToTextFragmentEnabled()) {
-        if (auto highlightRegister = document().fragmentHighlightRegisterIfExists()) {
-            for (auto& highlight : highlightRegister->map()) {
-                for (auto& rangeData : highlight.value->rangesData()) {
-                    if (!highlightData.setRenderRange(rangeData))
+        if (auto highlightRegistry = document().fragmentHighlightRegistryIfExists()) {
+            for (auto& highlight : highlightRegistry->map()) {
+                for (auto& highlightRange : highlight.value->highlightRanges()) {
+                    if (!renderHighlight.setRenderRange(highlightRange))
                         continue;
 
-                    auto state = highlightData.highlightStateForRenderer(*this);
-                    if (!isHighlighted(state, highlightData))
+                    auto state = renderHighlight.highlightStateForRenderer(*this);
+                    if (!isHighlighted(state, renderHighlight))
                         continue;
 
                     OptionSet<StyleColorOptions> styleColorOptions = { StyleColorOptions::UseSystemAppearance };
@@ -401,6 +405,8 @@ static bool isVideoWithDefaultObjectSize(const RenderReplaced* maybeVideo)
 #if ENABLE(VIDEO)
     if (auto* video = dynamicDowncast<RenderVideo>(maybeVideo))
         return video->hasDefaultObjectSize();
+#else
+    UNUSED_PARAM(maybeVideo);
 #endif
     return false;
 } 
@@ -527,7 +533,7 @@ void RenderReplaced::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, 
             return;
     }
     // Figure out if we need to compute an intrinsic ratio.
-    if (!RenderObject::hasIntrinsicAspectRatio() && !isSVGRootOrLegacySVGRoot())
+    if (!RenderObject::hasIntrinsicAspectRatio() && !isRenderOrLegacyRenderSVGRoot())
         return;
 
     // After supporting contain-intrinsic-size, the intrinsicSize of size containment is not always empty.
@@ -570,7 +576,7 @@ static inline bool hasIntrinsicSize(RenderBox*contentRenderer, bool hasIntrinsic
     if (hasIntrinsicWidth && hasIntrinsicHeight)
         return true;
     if (hasIntrinsicWidth || hasIntrinsicHeight)
-        return contentRenderer && contentRenderer->isSVGRootOrLegacySVGRoot();
+        return contentRenderer && contentRenderer->isRenderOrLegacyRenderSVGRoot();
     return false;
 }
 
@@ -791,7 +797,7 @@ bool RenderReplaced::isSelected() const
     return isHighlighted(selectionState(), view().selection());
 }
 
-bool RenderReplaced::isHighlighted(HighlightState state, const HighlightData& rangeData) const
+bool RenderReplaced::isHighlighted(HighlightState state, const RenderHighlight& rangeData) const
 {
     if (state == HighlightState::None)
         return false;

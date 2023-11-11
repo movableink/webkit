@@ -39,7 +39,7 @@ namespace WebCore {
 typedef HashSet<String, ASCIICaseInsensitiveHash> HTTPHeaderSet;
 
 class ResourceResponse;
-enum class HTTPHeaderName;
+enum class HTTPHeaderName : uint16_t;
 
 enum class XSSProtectionDisposition {
     Invalid,
@@ -119,6 +119,8 @@ ContentTypeOptionsDisposition parseContentTypeOptionsHeader(StringView header);
 size_t parseHTTPHeader(const uint8_t* data, size_t length, String& failureReason, StringView& nameStr, String& valueStr, bool strict = true);
 size_t parseHTTPRequestBody(const uint8_t* data, size_t length, Vector<uint8_t>& body);
 
+std::optional<uint64_t> parseContentLength(StringView);
+
 // HTTP Header routine as per https://fetch.spec.whatwg.org/#terminology-headers
 bool isForbiddenHeader(const String& name, StringView value);
 bool isForbiddenHeaderName(const String&);
@@ -136,12 +138,6 @@ bool isSafeMethod(const String&);
 
 WEBCORE_EXPORT CrossOriginResourcePolicy parseCrossOriginResourcePolicyHeader(StringView);
 
-// https://fetch.spec.whatwg.org/#http-whitespace-byte
-inline bool isHTTPSpace(UChar character)
-{
-    return character <= ' ' && (character == ' ' || character == '\n' || character == '\t' || character == '\r');
-}
-
 template<class HashType>
 bool addToAccessControlAllowList(const String& string, unsigned start, unsigned end, HashSet<String, HashType>& set)
 {
@@ -150,7 +146,7 @@ bool addToAccessControlAllowList(const String& string, unsigned start, unsigned 
         return true;
 
     // Skip white space from start.
-    while (start <= end && isHTTPSpace((*stringImpl)[start]))
+    while (start <= end && isASCIIWhitespaceWithoutFF((*stringImpl)[start]))
         ++start;
 
     // only white space
@@ -158,7 +154,7 @@ bool addToAccessControlAllowList(const String& string, unsigned start, unsigned 
         return true;
 
     // Skip white space from end.
-    while (end && isHTTPSpace((*stringImpl)[end]))
+    while (end && isASCIIWhitespaceWithoutFF((*stringImpl)[end]))
         --end;
 
     auto token = string.substring(start, end - start + 1);

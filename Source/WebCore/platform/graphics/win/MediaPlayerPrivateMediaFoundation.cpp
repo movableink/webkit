@@ -92,7 +92,7 @@ public:
         return refCount;
     }
 
-    HRESULT STDMETHODCALLTYPE GetParameters(__RPC__out DWORD *pdwFlags, __RPC__out DWORD *pdwQueue) override
+    HRESULT STDMETHODCALLTYPE GetParameters(__RPC__out DWORD*, __RPC__out DWORD*) override
     {
         // Implementation of this method is optional. Returning E_NOTIMPL gives default values.
         return E_NOTIMPL;
@@ -139,7 +139,7 @@ private:
         return makeUnique<MediaPlayerPrivateMediaFoundation>(player);
     }
 
-    void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types) const final
+    void getSupportedTypes(HashSet<String>& types) const final
     {
         return MediaPlayerPrivateMediaFoundation::getSupportedTypes(types);
     }
@@ -162,9 +162,9 @@ bool MediaPlayerPrivateMediaFoundation::isAvailable()
     return isMediaFoundationAvailable;
 }
 
-static const HashSet<String, ASCIICaseInsensitiveHash>& mimeTypeCache()
+static const HashSet<String>& mimeTypeCache()
 {
-    static NeverDestroyed<HashSet<String, ASCIICaseInsensitiveHash>> cachedTypes;
+    static NeverDestroyed<HashSet<String>> cachedTypes;
 
     if (cachedTypes.get().size() > 0)
         return cachedTypes;
@@ -187,7 +187,7 @@ static const HashSet<String, ASCIICaseInsensitiveHash>& mimeTypeCache()
     return cachedTypes;
 }
 
-void MediaPlayerPrivateMediaFoundation::getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types)
+void MediaPlayerPrivateMediaFoundation::getSupportedTypes(HashSet<String>& types)
 {
     types = mimeTypeCache();
 }
@@ -261,7 +261,7 @@ bool MediaPlayerPrivateMediaFoundation::hasAudio() const
     return m_hasAudio;
 }
 
-void MediaPlayerPrivateMediaFoundation::setPageIsVisible(bool visible)
+void MediaPlayerPrivateMediaFoundation::setPageIsVisible(bool visible, String&&)
 {
     m_visible = visible;
 }
@@ -271,13 +271,13 @@ bool MediaPlayerPrivateMediaFoundation::seeking() const
     return m_seeking;
 }
 
-void MediaPlayerPrivateMediaFoundation::seek(float time)
+void MediaPlayerPrivateMediaFoundation::seekToTarget(const SeekTarget& target)
 {
     PROPVARIANT propVariant;
     PropVariantInit(&propVariant);
     propVariant.vt = VT_I8;
-    propVariant.hVal.QuadPart = static_cast<__int64>(time * tenMegahertz);
-    
+    propVariant.hVal.QuadPart = static_cast<__int64>(target.time.toFloat() * tenMegahertz);
+
     HRESULT hr = m_mediaSession->Start(&GUID_NULL, &propVariant);
     ASSERT_UNUSED(hr, SUCCEEDED(hr));
     PropVariantClear(&propVariant);
@@ -984,7 +984,7 @@ ULONG MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::Release()
     return refCount;
 }
 
-HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockStart(MFTIME hnsSystemTime, LONGLONG llClockStartOffset)
+HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockStart(MFTIME, LONGLONG llClockStartOffset)
 {
     Locker locker { m_lock };
 
@@ -1007,7 +1007,7 @@ HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockStart(MF
     return S_OK;
 }
 
-HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockStop(MFTIME hnsSystemTime)
+HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockStop(MFTIME)
 {
     Locker locker { m_lock };
 
@@ -1023,7 +1023,7 @@ HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockStop(MFT
     return S_OK;
 }
 
-HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockPause(MFTIME hnsSystemTime)
+HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockPause(MFTIME)
 {
     Locker locker { m_lock };
 
@@ -1037,7 +1037,7 @@ HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockPause(MF
     return S_OK;
 }
 
-HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockRestart(MFTIME hnsSystemTime)
+HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockRestart(MFTIME)
 {
     Locker locker { m_lock };
 
@@ -1054,7 +1054,7 @@ HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockRestart(
     return S_OK;
 }
 
-HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockSetRate(MFTIME hnsSystemTime, float rate)
+HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockSetRate(MFTIME, float rate)
 {
     Locker locker { m_lock };
 
@@ -1069,7 +1069,7 @@ HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::OnClockSetRate(
     return S_OK;
 }
 
-HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::ProcessMessage(MFVP_MESSAGE_TYPE eMessage, ULONG_PTR ulParam)
+HRESULT MediaPlayerPrivateMediaFoundation::CustomVideoPresenter::ProcessMessage(MFVP_MESSAGE_TYPE eMessage, ULONG_PTR)
 {
     Locker locker { m_lock };
 
@@ -2585,7 +2585,7 @@ MediaPlayerPrivateMediaFoundation::Direct3DPresenter::Direct3DPresenter()
 
 MediaPlayerPrivateMediaFoundation::Direct3DPresenter::~Direct3DPresenter() = default;
 
-HRESULT MediaPlayerPrivateMediaFoundation::Direct3DPresenter::getService(REFGUID guidService, REFIID riid, void** ppv)
+HRESULT MediaPlayerPrivateMediaFoundation::Direct3DPresenter::getService(REFGUID, REFIID riid, void** ppv)
 {
     ASSERT(ppv);
 
@@ -2747,7 +2747,7 @@ HRESULT MediaPlayerPrivateMediaFoundation::Direct3DPresenter::checkDeviceState(D
     return hr;
 }
 
-HRESULT MediaPlayerPrivateMediaFoundation::Direct3DPresenter::presentSample(IMFSample* sample, LONGLONG targetPresentationTime)
+HRESULT MediaPlayerPrivateMediaFoundation::Direct3DPresenter::presentSample(IMFSample* sample, LONGLONG)
 {
     HRESULT hr = S_OK;
 

@@ -60,7 +60,7 @@ class EmptyChromeClient : public ChromeClient {
     void takeFocus(FocusDirection) final { }
 
     void focusedElementChanged(Element*) final { }
-    void focusedFrameChanged(LocalFrame*) final { }
+    void focusedFrameChanged(Frame*) final { }
 
     Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&) final { return nullptr; }
     void show() final { }
@@ -117,6 +117,9 @@ class EmptyChromeClient : public ChromeClient {
     IntRect rootViewToScreen(const IntRect& r) const final { return r; }
     IntPoint accessibilityScreenToRootView(const IntPoint& p) const final { return p; };
     IntRect rootViewToAccessibilityScreen(const IntRect& r) const final { return r; };
+#if PLATFORM(IOS_FAMILY)
+    void relayAccessibilityNotification(const String&, const RetainPtr<NSData>&) const final { };
+#endif
 
     void didFinishLoadingImageForElement(HTMLImageElement&) final { }
 

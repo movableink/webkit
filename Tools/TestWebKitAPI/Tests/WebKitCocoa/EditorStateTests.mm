@@ -32,10 +32,11 @@
 #import "TestWKWebView.h"
 #import "UserInterfaceSwizzler.h"
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <wtf/Vector.h>
 
 #if PLATFORM(IOS_FAMILY)
-#import "UIKitSPI.h"
+#import "UIKitSPIForTesting.h"
 #endif
 
 static void* const SelectionAttributesObservationContext = (void*)&SelectionAttributesObservationContext;
@@ -469,7 +470,7 @@ TEST(EditorStateTests, MarkedTextRange_HorizontalRangeSelection)
     [webView _synchronouslyExecuteEditCommand:@"InsertText" argument:@"Hello world"];
 
     auto *contentView = [webView textInputContentView];
-    [contentView selectWordBackward];
+    [webView selectWordBackwardForTesting];
     [contentView setMarkedText:@"world" selectedRange:NSMakeRange(0, 5)];
     [webView waitForNextPresentationUpdate];
 
@@ -513,7 +514,7 @@ TEST(EditorStateTests, MarkedTextRange_VerticalRangeSelection)
     [webView _synchronouslyExecuteEditCommand:@"InsertText" argument:@"Hello world"];
 
     auto *contentView = [webView textInputContentView];
-    [contentView selectWordBackward];
+    [webView selectWordBackwardForTesting];
     [contentView setMarkedText:@"world" selectedRange:NSMakeRange(0, 5)];
     [webView waitForNextPresentationUpdate];
 

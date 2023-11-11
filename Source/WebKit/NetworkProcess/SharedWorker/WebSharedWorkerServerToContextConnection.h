@@ -33,6 +33,7 @@
 #include <WebCore/SharedWorkerObjectIdentifier.h>
 #include <WebCore/Timer.h>
 #include <WebCore/TransferredMessagePort.h>
+#include <wtf/CheckedRef.h>
 
 namespace WebCore {
 class RegistrableDomain;
@@ -48,7 +49,7 @@ class NetworkConnectionToWebProcess;
 class WebSharedWorker;
 class WebSharedWorkerServer;
 
-class WebSharedWorkerServerToContextConnection final : public IPC::MessageSender, public IPC::MessageReceiver {
+class WebSharedWorkerServerToContextConnection final : public IPC::MessageSender, public IPC::MessageReceiver, public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WebSharedWorkerServerToContextConnection(NetworkConnectionToWebProcess&, const WebCore::RegistrableDomain&, WebSharedWorkerServer&);
@@ -79,7 +80,7 @@ private:
     void connectionIsNoLongerNeeded();
 
     // IPC messages.
-    void postExceptionToWorkerObject(WebCore::SharedWorkerIdentifier, const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL);
+    void postErrorToWorkerObject(WebCore::SharedWorkerIdentifier, const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, bool isErrorEvent);
     void sharedWorkerTerminated(WebCore::SharedWorkerIdentifier);
 
     // IPC::MessageSender.

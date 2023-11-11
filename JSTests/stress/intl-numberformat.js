@@ -56,10 +56,10 @@ function testNumberFormat(numberFormat, possibleDifferences) {
             useGrouping: "auto",
             notation: "standard",
             signDisplay: "auto",
-            roundingMode: "halfExpand",
             roundingIncrement: 1,
-            trailingZeroDisplay: "auto",
+            roundingMode: "halfExpand",
             roundingPriority: "auto",
+            trailingZeroDisplay: "auto",
         };
         Object.assign(defaultOptions, difference);
         return JSON.stringify(defaultOptions);
@@ -168,13 +168,13 @@ shouldBe(testNumberFormat(Intl.NumberFormat('en', {minimumFractionDigits: 0}), [
 shouldBe(testNumberFormat(Intl.NumberFormat('en', {style: 'percent', minimumFractionDigits: 0}), [{locale: 'en', style: 'percent', minimumFractionDigits: 0, maximumFractionDigits: 0}]), true);
 shouldBe(testNumberFormat(Intl.NumberFormat('en', {minimumFractionDigits: 6}), [{locale: 'en', minimumFractionDigits: 6, maximumFractionDigits: 6}]), true);
 shouldThrow(() => Intl.NumberFormat('en', {minimumFractionDigits: -1}), RangeError);
-shouldThrow(() => Intl.NumberFormat('en', {minimumFractionDigits: 21}), RangeError);
+shouldThrow(() => Intl.NumberFormat('en', {minimumFractionDigits: 101}), RangeError);
 
 // The option maximumFractionDigits is processed correctly.
 shouldBe(testNumberFormat(Intl.NumberFormat('en', {maximumFractionDigits: 6}), [{locale: 'en', maximumFractionDigits: 6}]), true);
 shouldThrow(() => Intl.NumberFormat('en', {minimumFractionDigits: 7, maximumFractionDigits: 6}), RangeError);
 shouldThrow(() => Intl.NumberFormat('en', {maximumFractionDigits: -1}), RangeError);
-shouldThrow(() => Intl.NumberFormat('en', {maximumFractionDigits: 21}), RangeError);
+shouldThrow(() => Intl.NumberFormat('en', {maximumFractionDigits: 101}), RangeError);
 
 // The option minimumSignificantDigits is processed correctly.
 shouldBe(testNumberFormat(Intl.NumberFormat('en', {minimumSignificantDigits: 6}), [{locale: 'en', minimumFractionDigits: undefined, maximumFractionDigits: undefined, minimumSignificantDigits: 6, maximumSignificantDigits: 21}]), true);
@@ -438,8 +438,8 @@ shouldThrow(() => Intl.NumberFormat.prototype.resolvedOptions.call(5), TypeError
 // Returns the default options.
 {
     let options = defaultNFormat.resolvedOptions();
-    delete options.locale; 
-    shouldBe(JSON.stringify(options), `{"numberingSystem":"latn","style":"decimal","minimumIntegerDigits":1,"minimumFractionDigits":0,"maximumFractionDigits":3,"useGrouping":"auto","notation":"standard","signDisplay":"auto","roundingMode":"halfExpand","roundingIncrement":1,"trailingZeroDisplay":"auto","roundingPriority":"auto"}`);
+    delete options.locale;
+    shouldBe(JSON.stringify(options), `{"numberingSystem":"latn","style":"decimal","minimumIntegerDigits":1,"minimumFractionDigits":0,"maximumFractionDigits":3,"useGrouping":"auto","notation":"standard","signDisplay":"auto","roundingIncrement":1,"roundingMode":"halfExpand","roundingPriority":"auto","trailingZeroDisplay":"auto"}`);
 }
 
 // Legacy compatibility with ECMA-402 1.0

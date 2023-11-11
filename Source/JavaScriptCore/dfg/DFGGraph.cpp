@@ -653,9 +653,9 @@ void Graph::dump(PrintStream& out, DumpContext* context)
     prefix.clearBlockIndex();
 
     out.print(prefix, "GC Values:\n");
-    for (FrozenValue* value : m_frozenValues) {
-        if (value->pointsToHeap())
-            out.print(prefix, "    ", inContext(*value, &myContext), "\n");
+    for (FrozenValue& value : m_frozenValues) {
+        if (value.pointsToHeap())
+            out.print(prefix, "    ", inContext(value, &myContext), "\n");
     }
 
     out.print(inContext(watchpoints(), &myContext));
@@ -1341,11 +1341,12 @@ JSValue Graph::tryGetConstantProperty(
     // incompatible with the getDirect we're trying to do. The easiest way to do that is to
     // determine if the structure belongs to the proven set.
 
+    Locker cellLock { object->cellLock() };
     Structure* structure = object->structure();
     if (!structureSet.toStructureSet().contains(structure))
         return JSValue();
 
-    return object->getDirectConcurrently(structure, offset);
+    return object->getDirectConcurrently(cellLock, structure, offset);
 }
 
 JSValue Graph::tryGetConstantProperty(JSValue base, Structure* structure, PropertyOffset offset)
@@ -1376,6 +1377,17 @@ AbstractValue Graph::inferredValueForProperty(
     StructureClobberState clobberState)
 {
     if (JSValue value = tryGetConstantProperty(base, offset)) {
+        AbstractValue result;
+        result.set(*this, *freeze(value), clobberState);
+        return result;
+    }
+
+    return AbstractValue::heapTop();
+}
+
+AbstractValue Graph::inferredValueForProperty(const AbstractValue& base, const RegisteredStructureSet& structureSet, PropertyOffset offset, StructureClobberState clobberState)
+{
+    if (JSValue value = tryGetConstantProperty(base.m_value, structureSet, offset)) {
         AbstractValue result;
         result.set(*this, *freeze(value), clobberState);
         return result;
@@ -1482,22 +1494,22 @@ void Graph::registerFrozenValues()
 {
     ConcurrentJSLocker locker(m_codeBlock->m_lock);
     m_codeBlock->constants().shrink(0);
-    for (FrozenValue* value : m_frozenValues) {
-        if (!value->pointsToHeap())
+    for (FrozenValue& value : m_frozenValues) {
+        if (!value.pointsToHeap())
             continue;
         
-        ASSERT(value->structure());
-        ASSERT(m_plan.weakReferences().contains(value->structure()));
+        ASSERT(value.structure());
+        ASSERT(m_plan.weakReferences().contains(value.structure()));
 
-        switch (value->strength()) {
+        switch (value.strength()) {
         case WeakValue: {
-            m_plan.weakReferences().addLazily(value->value().asCell());
+            m_plan.weakReferences().addLazily(value.value().asCell());
             break;
         }
         case StrongValue: {
             unsigned constantIndex = m_codeBlock->addConstantLazily(locker);
             // We already have a barrier on the code block.
-            m_codeBlock->constants()[constantIndex].setWithoutWriteBarrier(value->value());
+            m_codeBlock->constants()[constantIndex].setWithoutWriteBarrier(value.value());
             break;
         } }
     }
@@ -1507,9 +1519,9 @@ void Graph::registerFrozenValues()
 template<typename Visitor>
 ALWAYS_INLINE void Graph::visitChildrenImpl(Visitor& visitor)
 {
-    for (FrozenValue* value : m_frozenValues) {
-        visitor.appendUnbarriered(value->value());
-        visitor.appendUnbarriered(value->structure());
+    for (FrozenValue& value : m_frozenValues) {
+        visitor.appendUnbarriered(value.value());
+        visitor.appendUnbarriered(value.structure());
     }
 }
 
@@ -1518,6 +1530,7 @@ void Graph::visitChildren(SlotVisitor& visitor) { visitChildrenImpl(visitor); }
 
 FrozenValue* Graph::freeze(JSValue value)
 {
+    RELEASE_ASSERT(!m_frozenValuesAreFinalized);
     if (UNLIKELY(!value))
         return FrozenValue::emptySingleton();
 
@@ -1538,7 +1551,7 @@ FrozenValue* Graph::freeze(JSValue value)
     if (Structure* structure = frozenValue.structure())
         registerStructure(structure);
     
-    return result.iterator->value = m_frozenValues.add(frozenValue);
+    return result.iterator->value = &m_frozenValues.alloc(frozenValue);
 }
 
 FrozenValue* Graph::freezeStrong(JSValue value)
@@ -1751,8 +1764,34 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
                     return MethodOfGettingAValueProfile::lazyOperandValueProfile(node->origin.semantic, node->operand());
             }
 
-            if (node->hasHeapPrediction())
-                return MethodOfGettingAValueProfile::bytecodeValueProfile(node->origin.semantic);
+            if (node->hasHeapPrediction()) {
+                auto instruction = profiledBlock->instructions().at(node->origin.semantic.bytecodeIndex());
+                OpcodeID opcodeID = instruction->opcodeID();
+                switch (opcodeID) {
+                case op_tail_call:
+                case op_tail_call_varargs:
+                case op_tail_call_forward_arguments: {
+                    InlineCallFrame* inlineCallFrame = node->origin.semantic.inlineCallFrame();
+                    if (!inlineCallFrame)
+                        return { }; // TailCall in the outermost function.
+
+                    CodeOrigin* codeOrigin = inlineCallFrame->getCallerSkippingTailCalls();
+                    if (!codeOrigin)
+                        return { };
+
+                    CodeBlock* callerBlock = baselineCodeBlockFor(*codeOrigin);
+                    auto* valueProfile = callerBlock->tryGetValueProfileForBytecodeIndex(codeOrigin->bytecodeIndex());
+                    if (!valueProfile)
+                        return { };
+
+                    return MethodOfGettingAValueProfile::bytecodeValueProfile(*codeOrigin);
+                }
+                case op_call_ignore_result:
+                    return { };
+                default:
+                    return MethodOfGettingAValueProfile::bytecodeValueProfile(node->origin.semantic);
+                }
+            }
 
             if (profiledBlock->hasBaselineJITProfiling()) {
                 if (profiledBlock->binaryArithProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex()))

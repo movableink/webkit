@@ -30,21 +30,26 @@
 #import "InsertTextOptions.h"
 #import "LoadParameters.h"
 #import "MessageSenderInlines.h"
+#import "PDFPlugin.h"
 #import "PluginView.h"
 #import "UserMediaCaptureManager.h"
 #import "WKAccessibilityWebPageObjectBase.h"
+#import "WebFrame.h"
 #import "WebPageProxyMessages.h"
 #import "WebPasteboardOverrides.h"
 #import "WebPaymentCoordinator.h"
+#import "WebProcess.h"
 #import "WebRemoteObjectRegistry.h"
 #import <WebCore/DeprecatedGlobalSettings.h>
 #import <WebCore/DictionaryLookup.h>
+#import <WebCore/DocumentInlines.h>
 #import <WebCore/DocumentMarkerController.h>
 #import <WebCore/Editing.h>
 #import <WebCore/Editor.h>
 #import <WebCore/EventHandler.h>
 #import <WebCore/EventNames.h>
 #import <WebCore/FocusController.h>
+#import <WebCore/FrameLoader.h>
 #import <WebCore/FrameView.h>
 #import <WebCore/GraphicsContextCG.h>
 #import <WebCore/HTMLBodyElement.h>
@@ -56,6 +61,7 @@
 #import <WebCore/HitTestResult.h>
 #import <WebCore/ImageOverlay.h>
 #import <WebCore/LocalFrameView.h>
+#import <WebCore/MIMETypeRegistry.h>
 #import <WebCore/MutableStyleProperties.h>
 #import <WebCore/NetworkExtensionContentFilter.h>
 #import <WebCore/NodeRenderStyle.h>
@@ -66,6 +72,8 @@
 #import <WebCore/RenderLayer.h>
 #import <WebCore/RenderedDocumentMarker.h>
 #import <WebCore/TextIterator.h>
+#import <WebCore/UTIRegistry.h>
+#import <WebCore/UTIUtilities.h>
 #import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 
@@ -82,6 +90,8 @@
 #if PLATFORM(COCOA)
 
 namespace WebKit {
+
+using namespace WebCore;
 
 void WebPage::platformInitialize(const WebPageCreationParameters& parameters)
 {
@@ -104,23 +114,13 @@ void WebPage::platformInitialize(const WebPageCreationParameters& parameters)
 #if PLATFORM(IOS_FAMILY)
     setInsertionPointColor(parameters.insertionPointColor);
 #endif
+    WebCore::setAdditionalSupportedImageTypes(parameters.additionalSupportedImageTypes);
+    WebCore::setImageSourceAllowableTypes(WebCore::allowableImageTypes());
 }
 
 void WebPage::platformDidReceiveLoadParameters(const LoadParameters& parameters)
 {
     m_dataDetectionReferenceDate = parameters.dataDetectionReferenceDate;
-
-#if !ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
-    consumeNetworkExtensionSandboxExtensions(parameters.networkExtensionSandboxExtensionHandles);
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    if (parameters.contentFilterExtensionHandle)
-        SandboxExtension::consumePermanently(*parameters.contentFilterExtensionHandle);
-    ParentalControlsContentFilter::setHasConsumedSandboxExtension(parameters.contentFilterExtensionHandle.has_value());
-
-    if (parameters.frontboardServiceExtensionHandle)
-        SandboxExtension::consumePermanently(*parameters.frontboardServiceExtensionHandle);
-#endif // PLATFORM(IOS) || PLATFORM(VISION)
-#endif // !ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
 }
 
 void WebPage::requestActiveNowPlayingSessionInfo(CompletionHandler<void(bool, bool, const String&, double, double, uint64_t)>&& completionHandler)
@@ -142,10 +142,26 @@ void WebPage::requestActiveNowPlayingSessionInfo(CompletionHandler<void(bool, bo
 
     completionHandler(hasActiveSession, registeredAsNowPlayingApplication, title, duration, elapsedTime, uniqueIdentifier);
 }
-    
+
+#if ENABLE(PDF_PLUGIN)
+bool WebPage::shouldUsePDFPlugin(const String& contentType, StringView path) const
+{
+    return pdfPluginEnabled()
+#if ENABLE(PDFJS)
+        && !corePage()->settings().pdfJSViewerEnabled()
+#endif
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
+        && PDFPlugin::pdfKitLayerControllerIsAvailable()
+#endif
+        && (MIMETypeRegistry::isPDFOrPostScriptMIMEType(contentType)
+            || (contentType.isEmpty()
+                && (path.endsWithIgnoringASCIICase(".pdf"_s) || path.endsWithIgnoringASCIICase(".ps"_s))));
+}
+#endif
+
 void WebPage::performDictionaryLookupAtLocation(const FloatPoint& floatPoint)
 {
-#if ENABLE(PDFKIT_PLUGIN)
+#if ENABLE(PDF_PLUGIN)
     if (auto* pluginView = mainFramePlugIn()) {
         if (pluginView->performDictionaryLookupAtLocation(floatPoint))
             return;
@@ -322,27 +338,26 @@ void WebPage::addDictationAlternative(const String& text, DictationContext conte
 
 void WebPage::dictationAlternativesAtSelection(CompletionHandler<void(Vector<DictationContext>&&)>&& completion)
 {
-    Vector<DictationContext> contexts;
     Ref frame = CheckedRef(m_page->focusController())->focusedOrMainFrame();
     RefPtr document = frame->document();
     if (!document) {
-        completion(WTFMove(contexts));
+        completion({ });
         return;
     }
 
     auto selection = frame->selection().selection();
     auto expandedSelectionRange = VisibleSelection { selection.visibleStart().previous(CannotCrossEditingBoundary), selection.visibleEnd().next(CannotCrossEditingBoundary) }.range();
     if (!expandedSelectionRange) {
-        completion(WTFMove(contexts));
+        completion({ });
         return;
     }
 
     auto markers = document->markers().markersInRange(*expandedSelectionRange, DocumentMarker::DictationAlternatives);
-    contexts.reserveInitialCapacity(markers.size());
-    for (auto* marker : markers) {
+    auto contexts = WTF::compactMap(markers, [](auto& marker) -> std::optional<DictationContext> {
         if (std::holds_alternative<DocumentMarker::DictationData>(marker->data()))
-            contexts.uncheckedAppend(std::get<DocumentMarker::DictationData>(marker->data()).context);
-    }
+            return std::get<DocumentMarker::DictationData>(marker->data()).context;
+        return std::nullopt;
+    });
     completion(WTFMove(contexts));
 }
 
@@ -383,7 +398,7 @@ WebPaymentCoordinator* WebPage::paymentCoordinator()
 
 void WebPage::getContentsAsAttributedString(CompletionHandler<void(const WebCore::AttributedString&)>&& completionHandler)
 {
-    completionHandler(is<LocalFrame>(m_page->mainFrame()) ? attributedString(makeRangeSelectingNodeContents(*downcast<LocalFrame>(m_page->mainFrame()).document())) : AttributedString());
+    completionHandler(is<LocalFrame>(m_page->mainFrame()) ? attributedString(makeRangeSelectingNodeContents(Ref { *downcast<LocalFrame>(m_page->mainFrame()).document() })) : AttributedString());
 }
 
 void WebPage::setRemoteObjectRegistry(WebRemoteObjectRegistry* registry)
@@ -398,18 +413,18 @@ WebRemoteObjectRegistry* WebPage::remoteObjectRegistry()
 
 void WebPage::updateMockAccessibilityElementAfterCommittingLoad()
 {
-    auto* mainFrame = dynamicDowncast<WebCore::LocalFrame>(this->mainFrame());
-    auto* document = mainFrame ? mainFrame->document() : nullptr;
+    RefPtr mainFrame = dynamicDowncast<WebCore::LocalFrame>(this->mainFrame());
+    RefPtr document = mainFrame ? mainFrame->document() : nullptr;
     [m_mockAccessibilityElement setHasMainFramePlugin:document ? document->isPluginDocument() : false];
 }
 
 RetainPtr<CFDataRef> WebPage::pdfSnapshotAtSize(IntRect rect, IntSize bitmapSize, SnapshotOptions options)
 {
-    auto* coreFrame = m_mainFrame->coreLocalFrame();
+    RefPtr coreFrame = m_mainFrame->coreLocalFrame();
     if (!coreFrame)
         return nullptr;
 
-    auto* frameView = coreFrame->view();
+    RefPtr frameView = coreFrame->view();
     if (!frameView)
         return nullptr;
 
@@ -535,7 +550,7 @@ void WebPage::getPlatformEditorStateCommon(const LocalFrame& frame, EditorState&
             }
         }
 
-        if (auto* enclosingListElement = enclosingList(selection.start().containerNode())) {
+        if (RefPtr enclosingListElement = enclosingList(RefPtr { selection.start().containerNode() }.get())) {
             if (is<HTMLUListElement>(*enclosingListElement))
                 postLayoutData.enclosingListType = ListType::UnorderedList;
             else if (is<HTMLOListElement>(*enclosingListElement))
@@ -556,24 +571,12 @@ void WebPage::getPlatformEditorStateCommon(const LocalFrame& frame, EditorState&
     }
 }
 
-#if !ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
-void WebPage::consumeNetworkExtensionSandboxExtensions(const Vector<SandboxExtension::Handle>& networkExtensionsHandles)
-{
-#if ENABLE(CONTENT_FILTERING)
-    SandboxExtension::consumePermanently(networkExtensionsHandles);
-    NetworkExtensionContentFilter::setHasConsumedSandboxExtensions(networkExtensionsHandles.size());
-#else
-    UNUSED_PARAM(networkExtensionsHandles);
-#endif
-}
-#endif
-
 void WebPage::getPDFFirstPageSize(WebCore::FrameIdentifier frameID, CompletionHandler<void(WebCore::FloatSize)>&& completionHandler)
 {
-#if !ENABLE(PDFKIT_PLUGIN)
+#if !ENABLE(LEGACY_PDFKIT_PLUGIN)
     return completionHandler({ });
 #else
-    auto* webFrame = WebProcess::singleton().webFrame(frameID);
+    RefPtr webFrame = WebProcess::singleton().webFrame(frameID);
     if (!webFrame)
         return completionHandler({ });
 
@@ -698,10 +701,10 @@ void WebPage::replaceSelectionWithPasteboardData(const Vector<String>& types, co
 
 void WebPage::readSelectionFromPasteboard(const String& pasteboardName, CompletionHandler<void(bool&&)>&& completionHandler)
 {
-    auto& frame = m_page->focusController().focusedOrMainFrame();
-    if (frame.selection().isNone())
+    Ref frame = m_page->focusController().focusedOrMainFrame();
+    if (frame->selection().isNone())
         return completionHandler(false);
-    frame.editor().readSelectionFromPasteboard(pasteboardName);
+    frame->editor().readSelectionFromPasteboard(pasteboardName);
     completionHandler(true);
 }
 
@@ -725,13 +728,13 @@ URL WebPage::applyLinkDecorationFiltering(const URL& url, LinkDecorationFilterin
     };
 
     bool shouldApplyLinkDecorationFiltering = [&] {
-        if (isLinkDecorationFilteringEnabled(mainFrame->loader().documentLoader()))
+        if (isLinkDecorationFilteringEnabled(RefPtr { mainFrame->loader().documentLoader() }.get()))
             return true;
 
-        if (isLinkDecorationFilteringEnabled(mainFrame->loader().provisionalDocumentLoader()))
+        if (isLinkDecorationFilteringEnabled(RefPtr { mainFrame->loader().provisionalDocumentLoader() }.get()))
             return true;
 
-        return isLinkDecorationFilteringEnabled(mainFrame->loader().policyDocumentLoader());
+        return isLinkDecorationFilteringEnabled(RefPtr { mainFrame->loader().policyDocumentLoader() }.get());
     }();
 
     if (!shouldApplyLinkDecorationFiltering)

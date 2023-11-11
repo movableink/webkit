@@ -50,36 +50,36 @@ RemoteRenderingBackendProxy& RemoteLayerWithRemoteRenderingBackingStoreCollectio
 void RemoteLayerWithRemoteRenderingBackingStoreCollection::prepareBackingStoresForDisplay(RemoteLayerTreeTransaction& transaction)
 {
     Vector<RemoteRenderingBackendProxy::LayerPrepareBuffersData> prepareBuffersData;
-    prepareBuffersData.reserveInitialCapacity(m_backingStoresNeedingDisplay.size());
+    prepareBuffersData.reserveInitialCapacity(m_backingStoresNeedingDisplay.computeSize());
 
-    Vector<RemoteLayerBackingStore*> backingStoreList;
-    backingStoreList.reserveInitialCapacity(m_backingStoresNeedingDisplay.size());
+    Vector<WeakPtr<RemoteLayerBackingStore>> backingStoreList;
+    backingStoreList.reserveInitialCapacity(m_backingStoresNeedingDisplay.computeSize());
 
-    Vector<RemoteLayerBackingStore*> backingStoresWithNoBuffers;
+    Vector<WeakPtr<RemoteLayerBackingStore>> backingStoresWithNoBuffers;
 
-    for (auto* backingStore : m_backingStoresNeedingDisplay) {
-        backingStore->layer()->properties().notePropertiesChanged(LayerChange::BackingStoreChanged);
-        transaction.layerPropertiesChanged(*backingStore->layer());
+    for (auto& backingStore : m_backingStoresNeedingDisplay) {
+        backingStore.layer()->properties().notePropertiesChanged(LayerChange::BackingStoreChanged);
+        transaction.layerPropertiesChanged(*backingStore.layer());
 
-        if (backingStore->performDelegatedLayerDisplay())
+        if (backingStore.performDelegatedLayerDisplay())
             continue;
 
-        if (backingStore->hasNoBuffers()) {
+        if (backingStore.hasNoBuffers()) {
             backingStoresWithNoBuffers.append(backingStore);
             continue;
         }
 
-        prepareBuffersData.uncheckedAppend({
+        prepareBuffersData.append({
             {
-                backingStore->bufferForType(RemoteLayerBackingStore::BufferType::Front),
-                backingStore->bufferForType(RemoteLayerBackingStore::BufferType::Back),
-                backingStore->bufferForType(RemoteLayerBackingStore::BufferType::SecondaryBack)
+                backingStore.bufferForType(RemoteLayerBackingStore::BufferType::Front),
+                backingStore.bufferForType(RemoteLayerBackingStore::BufferType::Back),
+                backingStore.bufferForType(RemoteLayerBackingStore::BufferType::SecondaryBack)
             },
-            backingStore->supportsPartialRepaint(),
-            backingStore->hasEmptyDirtyRegion(),
+            backingStore.supportsPartialRepaint(),
+            backingStore.hasEmptyDirtyRegion(),
         });
         
-        backingStoreList.uncheckedAppend(backingStore);
+        backingStoreList.append(backingStore);
     }
 
     if (prepareBuffersData.size()) {
@@ -89,12 +89,12 @@ void RemoteLayerWithRemoteRenderingBackingStoreCollection::prepareBackingStoresF
         RELEASE_ASSERT(swapResult.size() == backingStoreList.size());
         for (unsigned i = 0; i < swapResult.size(); ++i) {
             auto& backingStoreSwapResult = swapResult[i];
-            auto* backingStore = backingStoreList[i];
+            auto& backingStore = backingStoreList[i];
             backingStore->applySwappedBuffers(WTFMove(backingStoreSwapResult.buffers.front), WTFMove(backingStoreSwapResult.buffers.back), WTFMove(backingStoreSwapResult.buffers.secondaryBack), backingStoreSwapResult.displayRequirement);
         }
     }
     
-    for (auto* backingStore : backingStoresWithNoBuffers) {
+    for (auto& backingStore : backingStoresWithNoBuffers) {
         backingStore->applySwappedBuffers(nullptr, nullptr, nullptr, SwapBuffersDisplayRequirement::NeedsFullDisplay);
         LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerWithRemoteRenderingBackingStoreCollection::prepareBackingStoresForDisplay - allocated first buffers for layer " << backingStore->layer()->layerID() << " backing store " << *backingStore);
     }
@@ -102,8 +102,10 @@ void RemoteLayerWithRemoteRenderingBackingStoreCollection::prepareBackingStoresF
 
 RefPtr<WebCore::ImageBuffer> RemoteLayerWithRemoteRenderingBackingStoreCollection::allocateBufferForBackingStore(const RemoteLayerBackingStore& backingStore)
 {
-    auto renderingMode = backingStore.type() == RemoteLayerBackingStore::Type::IOSurface ? WebCore::RenderingMode::Accelerated : WebCore::RenderingMode::Unaccelerated;
-    return remoteRenderingBackendProxy().createImageBuffer(backingStore.size(), renderingMode, WebCore::RenderingPurpose::LayerBacking, backingStore.scale(), backingStore.colorSpace(), backingStore.pixelFormat());
+    OptionSet<ImageBufferOptions> options;
+    if (backingStore.type() == RemoteLayerBackingStore::Type::IOSurface)
+        options.add(WebCore::ImageBufferOptions::Accelerated);
+    return remoteRenderingBackendProxy().createImageBuffer(backingStore.size(), WebCore::RenderingPurpose::LayerBacking, backingStore.scale(), backingStore.colorSpace(), backingStore.pixelFormat(), options);
 }
 
 bool RemoteLayerWithRemoteRenderingBackingStoreCollection::collectBackingStoreBufferIdentifiersToMarkVolatile(RemoteLayerBackingStore& backingStore, OptionSet<VolatilityMarkingBehavior> markingBehavior, MonotonicTime now, Vector<WebCore::RenderingResourceIdentifier>& identifiers)
@@ -141,7 +143,7 @@ bool RemoteLayerWithRemoteRenderingBackingStoreCollection::collectBackingStoreBu
     collectBuffer(RemoteLayerBackingStore::BufferType::SecondaryBack);
     collectBuffer(RemoteLayerBackingStore::BufferType::Back);
 
-    if (!m_reachableBackingStoreInLatestFlush.contains(&backingStore) || markingBehavior.contains(VolatilityMarkingBehavior::IgnoreReachability))
+    if (!m_reachableBackingStoreInLatestFlush.contains(backingStore) || markingBehavior.contains(VolatilityMarkingBehavior::IgnoreReachability))
         collectBuffer(RemoteLayerBackingStore::BufferType::Front);
 
     return true;
@@ -152,11 +154,11 @@ bool RemoteLayerWithRemoteRenderingBackingStoreCollection::collectAllBufferIdent
     bool completed = true;
     auto now = MonotonicTime::now();
 
-    for (const auto& backingStore : m_liveBackingStore)
-        completed &= collectBackingStoreBufferIdentifiersToMarkVolatile(*backingStore, liveBackingStoreMarkingBehavior, now, identifiers);
+    for (auto& backingStore : m_liveBackingStore)
+        completed &= collectBackingStoreBufferIdentifiersToMarkVolatile(backingStore, liveBackingStoreMarkingBehavior, now, identifiers);
 
-    for (const auto& backingStore : m_unparentedBackingStore)
-        completed &= collectBackingStoreBufferIdentifiersToMarkVolatile(*backingStore, unparentedBackingStoreMarkingBehavior, now, identifiers);
+    for (auto& backingStore : m_unparentedBackingStore)
+        completed &= collectBackingStoreBufferIdentifiersToMarkVolatile(backingStore, unparentedBackingStoreMarkingBehavior, now, identifiers);
 
     return completed;
 }
@@ -169,8 +171,10 @@ void RemoteLayerWithRemoteRenderingBackingStoreCollection::markBackingStoreVolat
     if (identifiers.isEmpty())
         return;
 
-    sendMarkBuffersVolatile(WTFMove(identifiers), [](bool succeeded) {
+    sendMarkBuffersVolatile(WTFMove(identifiers), [weakThis = WeakPtr { *this }](bool succeeded) {
         LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerWithRemoteRenderingBackingStoreCollection::markBackingStoreVolatileAfterReachabilityChange - succeeded " << succeeded);
+        if (!succeeded && weakThis)
+            weakThis->scheduleVolatilityTimer();
     });
 }
 
@@ -179,7 +183,7 @@ void RemoteLayerWithRemoteRenderingBackingStoreCollection::tryMarkAllBackingStor
     Vector<WebCore::RenderingResourceIdentifier> identifiers;
     bool completed = collectAllBufferIdentifiersToMarkVolatile(VolatilityMarkingBehavior::IgnoreReachability, VolatilityMarkingBehavior::IgnoreReachability, identifiers);
 
-    LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerWithRemoteRenderingBackingStoreCollection::tryMarkAllBackingStoreVolatile pid " << getpid() << " - live " << m_liveBackingStore.size() << ", unparented " << m_unparentedBackingStore.size() << " " << identifiers);
+    LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerWithRemoteRenderingBackingStoreCollection::tryMarkAllBackingStoreVolatile pid " << getpid() << " - live " << m_liveBackingStore.computeSize() << ", unparented " << m_unparentedBackingStore.computeSize() << " " << identifiers);
 
     if (identifiers.isEmpty()) {
         completionHandler(true);
@@ -197,7 +201,7 @@ void RemoteLayerWithRemoteRenderingBackingStoreCollection::markAllBackingStoreVo
     Vector<WebCore::RenderingResourceIdentifier> identifiers;
     bool completed = collectAllBufferIdentifiersToMarkVolatile(VolatilityMarkingBehavior::ConsiderTimeSinceLastDisplay, { }, identifiers);
 
-    LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerWithRemoteRenderingBackingStoreCollection::markAllBackingStoreVolatileFromTimer pid " << getpid() << " - live " << m_liveBackingStore.size() << ", unparented " << m_unparentedBackingStore.size() << ", " << identifiers.size() << " buffers to set volatile: " << identifiers);
+    LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerWithRemoteRenderingBackingStoreCollection::markAllBackingStoreVolatileFromTimer pid " << getpid() << " - live " << m_liveBackingStore.computeSize() << ", unparented " << m_unparentedBackingStore.computeSize() << ", " << identifiers.size() << " buffers to set volatile: " << identifiers);
 
     if (identifiers.isEmpty()) {
         if (completed)
@@ -223,6 +227,15 @@ void RemoteLayerWithRemoteRenderingBackingStoreCollection::sendMarkBuffersVolati
         LOG_WITH_STREAM(RemoteLayerBuffers, stream << "RemoteLayerWithRemoteRenderingBackingStoreCollection::sendMarkBuffersVolatile: marked all volatile " << markedAllVolatile);
         completionHandler(markedAllVolatile);
     });
+}
+
+void RemoteLayerWithRemoteRenderingBackingStoreCollection::gpuProcessConnectionWasDestroyed()
+{
+    for (auto& backingStore : m_liveBackingStore)
+        backingStore.setNeedsDisplay();
+
+    for (auto& backingStore : m_unparentedBackingStore)
+        backingStore.setNeedsDisplay();
 }
 
 } // namespace WebKit

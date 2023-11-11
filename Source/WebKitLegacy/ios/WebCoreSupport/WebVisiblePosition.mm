@@ -29,6 +29,7 @@
 
 #import "DOMNodeInternal.h"
 #import "DOMRangeInternal.h"
+#import <WebCore/DocumentInlines.h>
 #import <WebCore/DocumentMarkerController.h>
 #import <WebCore/Editing.h>
 #import <WebCore/FrameSelection.h>
@@ -412,7 +413,7 @@ static inline SelectionDirection toSelectionDirection(WebTextAdjustmentDirection
 
     unsigned offset = position.deepEquivalent().deprecatedEditingOffset();
     auto& document = node->document();
-    for (auto marker : document.markers().markersFor(*node, DocumentMarker::DictationPhraseWithAlternatives)) {
+    for (auto& marker : document.markers().markersFor(*node, DocumentMarker::DictationPhraseWithAlternatives)) {
         if (marker->startOffset() <= offset && marker->endOffset() >= offset) {
             *alternatives = createNSArray(std::get<Vector<String>>(marker->data())).autorelease();
             return kit(makeSimpleRange(*node, *marker));
@@ -430,7 +431,7 @@ static inline SelectionDirection toSelectionDirection(WebTextAdjustmentDirection
 
     unsigned offset = position.deepEquivalent().deprecatedEditingOffset();
     auto& document = node->document();
-    for (auto marker : document.markers().markersFor(*node, DocumentMarker::Spelling)) {
+    for (auto& marker : document.markers().markersFor(*node, DocumentMarker::Spelling)) {
         if (marker->startOffset() <= offset && marker->endOffset() >= offset)
             return kit(makeSimpleRange(*node, *marker));
     }

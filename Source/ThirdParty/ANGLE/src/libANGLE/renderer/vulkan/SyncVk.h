@@ -51,7 +51,8 @@ class ExternalFence final : angle::NonCopyable
     int mFenceFd;
 };
 
-using SharedExternalFence = std::shared_ptr<ExternalFence>;
+using SharedExternalFence  = std::shared_ptr<ExternalFence>;
+using MapVkResultToApiType = std::function<void(VkResult, angle::Result, void *)>;
 
 class SyncHelperInterface : angle::NonCopyable
 {
@@ -64,7 +65,8 @@ class SyncHelperInterface : angle::NonCopyable
                                      ContextVk *contextVk,
                                      bool flushCommands,
                                      uint64_t timeout,
-                                     VkResult *outResult)                                      = 0;
+                                     MapVkResultToApiType mappingFunction,
+                                     void *outResult)                                          = 0;
     virtual angle::Result serverWait(ContextVk *contextVk)                                     = 0;
     virtual angle::Result getStatus(Context *context, ContextVk *contextVk, bool *signaledOut) = 0;
     virtual angle::Result dupNativeFenceFD(Context *context, int *fdOut) const                 = 0;
@@ -89,7 +91,8 @@ class SyncHelper final : public vk::Resource, public SyncHelperInterface
                              ContextVk *contextVk,
                              bool flushCommands,
                              uint64_t timeout,
-                             VkResult *outResult) override;
+                             MapVkResultToApiType mappingFunction,
+                             void *resultOut) override;
     angle::Result serverWait(ContextVk *contextVk) override;
     angle::Result getStatus(Context *context, ContextVk *contextVk, bool *signaledOut) override;
     angle::Result dupNativeFenceFD(Context *context, int *fdOut) const override
@@ -97,8 +100,17 @@ class SyncHelper final : public vk::Resource, public SyncHelperInterface
         return angle::Result::Stop;
     }
 
+    // Used by FenceNVVk.  Equivalent of clientWait with infinite timeout, flushCommands == true,
+    // and throw-away return value.
+    angle::Result finish(ContextVk *contextVk);
+
   private:
     angle::Result submitSyncIfDeferred(ContextVk *contextVk, RenderPassClosureReason reason);
+    angle::Result prepareForClientWait(Context *context,
+                                       ContextVk *contextVk,
+                                       bool flushCommands,
+                                       uint64_t timeout,
+                                       VkResult *resultOut);
 };
 
 // Implementation of sync types: EGLSync(EGL_SYNC_ANDROID_NATIVE_FENCE_ANDROID).
@@ -118,12 +130,19 @@ class SyncHelperNativeFence final : public SyncHelperInterface
                              ContextVk *contextVk,
                              bool flushCommands,
                              uint64_t timeout,
-                             VkResult *outResult) override;
+                             MapVkResultToApiType mappingFunction,
+                             void *resultOut) override;
     angle::Result serverWait(ContextVk *contextVk) override;
     angle::Result getStatus(Context *context, ContextVk *contextVk, bool *signaledOut) override;
     angle::Result dupNativeFenceFD(Context *context, int *fdOut) const override;
 
   private:
+    angle::Result prepareForClientWait(Context *context,
+                                       ContextVk *contextVk,
+                                       bool flushCommands,
+                                       uint64_t timeout,
+                                       VkResult *resultOut);
+
     SharedExternalFence mExternalFence;
 };
 

@@ -33,6 +33,26 @@
 #import "WebAccessibilityObjectWrapperBase.h"
 #import <wtf/cocoa/TypeCastsCocoa.h>
 
+#if PLATFORM(IOS_FAMILY)
+#import <wtf/SoftLinking.h>
+
+SOFT_LINK_PRIVATE_FRAMEWORK(AXRuntime);
+
+SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenFontName, NSString *);
+#define AccessibilityTokenFontName getUIAccessibilityTokenFontName()
+SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenFontFamily, NSString *);
+#define AccessibilityTokenFontFamily getUIAccessibilityTokenFontFamily()
+SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenFontSize, NSString *);
+#define AccessibilityTokenFontSize getUIAccessibilityTokenFontSize()
+SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenBold, NSString *);
+#define AccessibilityTokenBold getUIAccessibilityTokenBold()
+SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenItalic, NSString *);
+#define AccessibilityTokenItalic getUIAccessibilityTokenItalic()
+SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenAttachment, NSString *);
+#define AccessibilityTokenAttachment getUIAccessibilityTokenAttachment()
+
+#endif // PLATFORM(IOS_FAMILY)
+
 namespace WebCore {
 
 String AccessibilityObject::speechHintAttributeValue() const
@@ -105,7 +125,7 @@ String AccessibilityObject::descriptionAttributeValue() const
     // Determine if any visible text is available, which influences our usage of title tag.
     bool visibleTextAvailable = false;
     for (const auto& text : textOrder) {
-        if (isVisibleText(text.textSource)) {
+        if (isVisibleText(text.textSource) && !text.text.isEmpty()) {
             visibleTextAvailable = true;
             break;
         }
@@ -173,7 +193,7 @@ String AccessibilityObject::titleAttributeValue() const
 
         // If there's an element that labels this object and it's not exposed, then we should use
         // that text as our title.
-        if (text.textSource == AccessibilityTextSource::LabelByElement && !exposesTitleUIElement())
+        if (text.textSource == AccessibilityTextSource::LabelByElement)
             return text.text;
     }
 
@@ -188,7 +208,7 @@ String AccessibilityObject::helpTextAttributeValue() const
     // Determine if any descriptive text is available, which influences our usage of title tag.
     bool descriptiveTextAvailable = false;
     for (const auto& text : textOrder) {
-        if (isDescriptiveText(text.textSource)) {
+        if (isDescriptiveText(text.textSource) && !text.text.isEmpty()) {
             descriptiveTextAvailable = true;
             break;
         }
@@ -278,16 +298,16 @@ void attributedStringSetFont(NSMutableAttributedString *attributedString, CTFont
 #if PLATFORM(IOS_FAMILY)
     auto fullName = adoptCF(CTFontCopyFullName(font));
     if (fullName)
-        [fontAttributes setValue:bridge_cast(fullName.get()) forKey:UIAccessibilityTokenFontName];
+        [fontAttributes setValue:bridge_cast(fullName.get()) forKey:AccessibilityTokenFontName];
     if (familyName)
-        [fontAttributes setValue:bridge_cast(familyName.get()) forKey:UIAccessibilityTokenFontFamily];
+        [fontAttributes setValue:bridge_cast(familyName.get()) forKey:AccessibilityTokenFontFamily];
     if ([size boolValue])
-        [fontAttributes setValue:size forKey:UIAccessibilityTokenFontSize];
+        [fontAttributes setValue:size forKey:AccessibilityTokenFontSize];
     auto traits = CTFontGetSymbolicTraits(font);
     if (traits & kCTFontTraitBold)
-        [fontAttributes setValue:@YES forKey:UIAccessibilityTokenBold];
+        [fontAttributes setValue:@YES forKey:AccessibilityTokenBold];
     if (traits & kCTFontTraitItalic)
-        [fontAttributes setValue:@YES forKey:UIAccessibilityTokenItalic];
+        [fontAttributes setValue:@YES forKey:AccessibilityTokenItalic];
 
     [attributedString addAttributes:fontAttributes.get() range:range];
 #endif // PLATFORM(IOS_FAMILY)
@@ -317,7 +337,7 @@ static void attributedStringAppendWrapper(NSMutableAttributedString *attrString,
 #if PLATFORM(MAC)
         attributes:@{ NSAccessibilityAttachmentTextAttribute : (__bridge id)adoptCF(NSAccessibilityCreateAXUIElementRef(wrapper)).get() }
 #else
-        attributes:@{ UIAccessibilityTokenAttachment : wrapper }
+        attributes:@{ AccessibilityTokenAttachment : wrapper }
 #endif
     ]).get()];
 }
@@ -334,11 +354,11 @@ RetainPtr<NSArray> AccessibilityObject::contentForRange(const SimpleRange& range
         if (it.text().length()) {
             auto listMarkerText = listMarkerTextForNodeAndPosition(&node, makeContainerOffsetPosition(it.range().start));
             if (!listMarkerText.isEmpty()) {
-                if (auto attrString = attributedStringCreate(&node, listMarkerText, SpellCheck::No))
+                if (auto attrString = attributedStringCreate(&node, listMarkerText, it.range(), SpellCheck::No))
                     [result addObject:attrString.get()];
             }
 
-            if (auto attrString = attributedStringCreate(&node, it.text(), spellCheck))
+            if (auto attrString = attributedStringCreate(&node, it.text(), it.range(), spellCheck))
                 [result addObject:attrString.get()];
         } else {
             if (Node* replacedNode = it.node()) {

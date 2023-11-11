@@ -180,26 +180,11 @@ void Entry::capMaxAge(const Seconds seconds)
 }
 #endif
 
-#if ENABLE(SHAREABLE_RESOURCE)
-void Entry::initializeShareableResourceHandleFromStorageRecord() const
-{
-    auto sharedMemory = m_sourceStorageRecord.body.tryCreateSharedMemory();
-    if (!sharedMemory)
-        return;
-
-    auto shareableResource = ShareableResource::create(sharedMemory.releaseNonNull(), 0, m_sourceStorageRecord.body.size());
-    if (!shareableResource)
-        return;
-    if (auto handle = shareableResource->createHandle())
-        m_shareableResourceHandle = WTFMove(*handle);
-}
-#endif
-
 void Entry::initializeBufferFromStorageRecord() const
 {
 #if ENABLE(SHAREABLE_RESOURCE)
-    if (!shareableResourceHandle().isNull()) {
-        m_buffer = WTFMove(m_shareableResourceHandle).tryWrapInSharedBuffer();
+    if (auto handle = shareableResourceHandle()) {
+        m_buffer = WTFMove(*handle).tryWrapInSharedBuffer();
         if (m_buffer)
             return;
     }
@@ -215,13 +200,24 @@ WebCore::FragmentedSharedBuffer* Entry::buffer() const
     return m_buffer.get();
 }
 
-#if ENABLE(SHAREABLE_RESOURCE)
-ShareableResource::Handle& Entry::shareableResourceHandle() const
+RefPtr<WebCore::FragmentedSharedBuffer> Entry::protectedBuffer() const
 {
-    if (m_shareableResourceHandle.isNull())
-        initializeShareableResourceHandleFromStorageRecord();
+    return buffer();
+}
 
-    return m_shareableResourceHandle;
+#if ENABLE(SHAREABLE_RESOURCE)
+std::optional<ShareableResource::Handle> Entry::shareableResourceHandle() const
+{
+    if (m_shareableResource)
+        return m_shareableResource->createHandle();
+
+    auto sharedMemory = m_sourceStorageRecord.body.tryCreateSharedMemory();
+    if (!sharedMemory)
+        return std::nullopt;
+
+    if ((m_shareableResource = ShareableResource::create(sharedMemory.releaseNonNull(), 0, m_sourceStorageRecord.body.size())))
+        return m_shareableResource->createHandle();
+    return std::nullopt;
 }
 #endif
 

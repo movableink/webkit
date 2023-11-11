@@ -30,6 +30,9 @@
 #include <IOSurface/IOSurfaceRef.h>
 
 #ifdef __cplusplus
+#include <optional>
+#include <wtf/Vector.h>
+
 extern "C" {
 #endif
 
@@ -37,10 +40,12 @@ typedef struct WGPUExternalTextureImpl* WGPUExternalTexture;
 
 typedef void (^WGPUWorkItem)(void);
 typedef void (^WGPUScheduleWorkBlock)(WGPUWorkItem workItem);
+typedef void (^WGPUDeviceLostBlockCallback)(WGPUDeviceLostReason reason, char const * message);
 
 typedef enum WGPUBufferBindingTypeExtended {
     WGPUBufferBindingType_Float3x2 = WGPUBufferBindingType_Force32 - 1,
     WGPUBufferBindingType_Float4x3 = WGPUBufferBindingType_Force32 - 2,
+    WGPUBufferBindingType_ArrayLength = WGPUBufferBindingType_Force32 - 3,
 } WGPUBufferBindingTypeExtended;
 
 typedef enum WGPUColorSpace {
@@ -68,6 +73,8 @@ typedef struct WGPUInstanceCocoaDescriptor {
     __unsafe_unretained WGPUScheduleWorkBlock scheduleWorkBlock;
 } WGPUInstanceCocoaDescriptor;
 
+const int WGPUTextureSampleType_ExternalTexture = WGPUTextureSampleType_Force32 - 1;
+
 typedef void (^WGPURenderBuffersWereRecreatedBlockCallback)(CFArrayRef ioSurfaces);
 typedef void (^WGPUOnSubmittedWorkScheduledCallback)(WGPUWorkItem);
 typedef void (^WGPUCompositorIntegrationRegisterBlockCallback)(WGPURenderBuffersWereRecreatedBlockCallback renderBuffersWereRecreated, WGPUOnSubmittedWorkScheduledCallback onSubmittedWorkScheduledCallback);
@@ -79,11 +86,6 @@ typedef struct WGPUSurfaceDescriptorCocoaCustomSurface {
 typedef struct WGPUExternalTextureBindingLayout {
     WGPUChainedStruct const * nextInChain;
 } WGPUExternalTextureBindingLayout;
-
-typedef struct WGPUExternalTextureBindGroupLayoutEntry {
-    WGPUChainedStruct chain;
-    WGPUExternalTextureBindingLayout externalTexture;
-} WGPUExternalTextureBindGroupLayoutEntry;
 
 typedef struct WGPUBindGroupExternalTextureEntry {
     WGPUChainedStruct chain;
@@ -117,8 +119,13 @@ WGPU_EXPORT WGPUTexture wgpuSwapChainGetCurrentTexture(WGPUSwapChain swapChain);
 
 WGPU_EXPORT WGPUExternalTexture wgpuDeviceImportExternalTexture(WGPUDevice device, const WGPUExternalTextureDescriptor* descriptor);
 
+WGPU_EXPORT void wgpuDeviceSetDeviceLostCallback(WGPUDevice device, WGPUDeviceLostCallback callback, void* userdata);
+WGPU_EXPORT void wgpuDeviceSetDeviceLostCallbackWithBlock(WGPUDevice device, WGPUDeviceLostBlockCallback callback);
 WGPU_EXPORT void wgpuExternalTextureReference(WGPUExternalTexture externalTexture);
 WGPU_EXPORT void wgpuExternalTextureRelease(WGPUExternalTexture externalTexture);
+#ifdef __cplusplus
+WGPU_EXPORT void wgpuRenderBundleEncoderSetBindGroupWithDynamicOffsets(WGPURenderBundleEncoder renderBundleEncoder, uint32_t groupIndex, WGPU_NULLABLE WGPUBindGroup group, std::optional<Vector<uint32_t>>&& dynamicOffsets) WGPU_FUNCTION_ATTRIBUTE;
+#endif
 
 #endif  // !defined(WGPU_SKIP_DECLARATIONS)
 

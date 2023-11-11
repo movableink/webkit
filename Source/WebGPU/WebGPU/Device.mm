@@ -188,9 +188,7 @@ void Device::loseTheDevice(WGPUDeviceLostReason reason)
     makeInvalid();
 
     if (m_deviceLostCallback) {
-        instance().scheduleWork([deviceLostCallback = WTFMove(m_deviceLostCallback), reason]() {
-            deviceLostCallback(reason, "Device lost."_s);
-        });
+        m_deviceLostCallback(reason, "Device lost."_s);
         m_deviceLostCallback = nullptr;
     }
 
@@ -307,14 +305,24 @@ void Device::generateAnInternalError(String&& message)
 
 uint32_t Device::maxBuffersPlusVertexBuffersForVertexStage() const
 {
-    // FIXME: use value in HardwareCapabilities from https://github.com/gpuweb/gpuweb/issues/2749
-    return 8;
+    ASSERT(m_capabilities.limits.maxBindGroupsPlusVertexBuffers > 0);
+    return m_capabilities.limits.maxBindGroupsPlusVertexBuffers;
+}
+
+uint32_t Device::maxBuffersForFragmentStage() const
+{
+    return m_capabilities.limits.maxBindGroups;
+}
+
+uint32_t Device::maxBuffersForComputeStage() const
+{
+    return m_capabilities.limits.maxBindGroups;
 }
 
 uint32_t Device::vertexBufferIndexForBindGroup(uint32_t groupIndex) const
 {
-    auto maxIndex = maxBuffersPlusVertexBuffersForVertexStage();
-    return WGSL::vertexBufferIndexForBindGroup(groupIndex, maxIndex);
+    ASSERT(maxBuffersPlusVertexBuffersForVertexStage() > 0);
+    return WGSL::vertexBufferIndexForBindGroup(groupIndex, maxBuffersPlusVertexBuffersForVertexStage() - 1);
 }
 
 void Device::captureFrameIfNeeded() const
@@ -364,6 +372,15 @@ void Device::pushErrorScope(WGPUErrorFilter filter)
     ErrorScope scope { std::nullopt, filter };
 
     m_errorScopeStack.append(WTFMove(scope));
+}
+
+void Device::setDeviceLostCallback(Function<void(WGPUDeviceLostReason, String&&)>&& callback)
+{
+    m_deviceLostCallback = WTFMove(callback);
+    if (m_isLost)
+        loseTheDevice(WGPUDeviceLostReason_Destroyed);
+    else if (!m_adapter->isValid())
+        loseTheDevice(WGPUDeviceLostReason_Undefined);
 }
 
 void Device::setUncapturedErrorCallback(Function<void(WGPUErrorType, String&&)>&& callback)
@@ -498,7 +515,7 @@ size_t wgpuDeviceEnumerateFeatures(WGPUDevice device, WGPUFeatureName* features)
     return WebGPU::fromAPI(device).enumerateFeatures(features);
 }
 
-bool wgpuDeviceGetLimits(WGPUDevice device, WGPUSupportedLimits* limits)
+WGPUBool wgpuDeviceGetLimits(WGPUDevice device, WGPUSupportedLimits* limits)
 {
     return WebGPU::fromAPI(device).getLimits(*limits);
 }
@@ -508,7 +525,7 @@ WGPUQueue wgpuDeviceGetQueue(WGPUDevice device)
     return &WebGPU::fromAPI(device).getQueue();
 }
 
-bool wgpuDeviceHasFeature(WGPUDevice device, WGPUFeatureName feature)
+WGPUBool wgpuDeviceHasFeature(WGPUDevice device, WGPUFeatureName feature)
 {
     return WebGPU::fromAPI(device).hasFeature(feature);
 }
@@ -530,6 +547,22 @@ void wgpuDevicePopErrorScopeWithBlock(WGPUDevice device, WGPUErrorBlockCallback 
 void wgpuDevicePushErrorScope(WGPUDevice device, WGPUErrorFilter filter)
 {
     WebGPU::fromAPI(device).pushErrorScope(filter);
+}
+
+void wgpuDeviceSetDeviceLostCallback(WGPUDevice device, WGPUDeviceLostCallback callback, void* userdata)
+{
+    return WebGPU::fromAPI(device).setDeviceLostCallback([callback, userdata](WGPUDeviceLostReason reason, String&& message) {
+        if (callback)
+            callback(reason, message.utf8().data(), userdata);
+    });
+}
+
+void wgpuDeviceSetDeviceLostCallbackWithBlock(WGPUDevice device, WGPUDeviceLostBlockCallback callback)
+{
+    return WebGPU::fromAPI(device).setDeviceLostCallback([callback = WebGPU::fromAPI(WTFMove(callback))](WGPUDeviceLostReason reason, String&& message) {
+        if (callback)
+            callback(reason, message.utf8().data());
+    });
 }
 
 void wgpuDeviceSetUncapturedErrorCallback(WGPUDevice device, WGPUErrorCallback callback, void* userdata)

@@ -38,6 +38,7 @@
 #include "InlineIteratorTextBox.h"
 #include "LegacyRenderSVGContainer.h"
 #include "LegacyRenderSVGImage.h"
+#include "LegacyRenderSVGResourceContainer.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGShape.h"
 #include "LocalFrame.h"
@@ -67,7 +68,6 @@
 #include "RenderSVGContainer.h"
 #include "RenderSVGGradientStop.h"
 #include "RenderSVGInlineText.h"
-#include "RenderSVGResourceContainer.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGShapeInlines.h"
 #include "RenderSVGText.h"
@@ -258,7 +258,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
     }
     
     RenderBlock* cb = o.containingBlock();
-    bool adjustForTableCells = cb ? cb->isTableCell() : false;
+    bool adjustForTableCells = cb ? cb->isRenderTableCell() : false;
 
     bool enableSubpixelPrecisionForTextDump = shouldEnableSubpixelPrecisionForTextDump(o.document());
     LayoutRect r;
@@ -376,13 +376,13 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         bool overridden = o.style().borderImage().overridesBorderWidths();
         if (box.isFieldset()) {
             const auto& block = downcast<RenderBlock>(box);
-            if (o.style().writingMode() == WritingMode::TopToBottom)
+            if (o.style().blockFlowDirection() == BlockFlowDirection::TopToBottom)
                 borderTop -= block.intrinsicBorderForFieldset();
-            else if (o.style().writingMode() == WritingMode::BottomToTop)
+            else if (o.style().blockFlowDirection() == BlockFlowDirection::BottomToTop)
                 borderBottom -= block.intrinsicBorderForFieldset();
-            else if (o.style().writingMode() == WritingMode::LeftToRight)
+            else if (o.style().blockFlowDirection() == BlockFlowDirection::LeftToRight)
                 borderLeft -= block.intrinsicBorderForFieldset();
-            else if (o.style().writingMode() == WritingMode::RightToLeft)
+            else if (o.style().blockFlowDirection() == BlockFlowDirection::RightToLeft)
                 borderRight -= block.intrinsicBorderForFieldset();
             
         }
@@ -617,8 +617,8 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
         writeSVGGradientStop(ts, downcast<RenderSVGGradientStop>(o), behavior);
         return;
     }
-    if (is<RenderSVGResourceContainer>(o)) {
-        writeSVGResourceContainer(ts, downcast<RenderSVGResourceContainer>(o), behavior);
+    if (is<LegacyRenderSVGResourceContainer>(o)) {
+        writeSVGResourceContainer(ts, downcast<LegacyRenderSVGResourceContainer>(o), behavior);
         return;
     }
     if (is<LegacyRenderSVGContainer>(o)) {

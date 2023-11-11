@@ -1,13 +1,11 @@
 
-Harness Error (FAIL), message = Test named 'cookieStore.getAll with no arguments' specified 2 'cleanup' functions, and 2 failed.
-
-FAIL cookieStore.getAll with no arguments promise_test: Unhandled rejection with value: object "NotSupportedError: The operation is not supported."
-NOTRUN cookieStore.getAll with empty options
-NOTRUN cookieStore.getAll with positional name
-NOTRUN cookieStore.getAll with name in options
-NOTRUN cookieStore.getAll with name in both positional arguments and options
-NOTRUN cookieStore.getAll with absolute url in options
-NOTRUN cookieStore.getAll with relative url in options
-NOTRUN cookieStore.getAll with invalid url path in options
-NOTRUN cookieStore.getAll with invalid url host in options
+PASS cookieStore.getAll with no arguments
+PASS cookieStore.getAll with empty options
+PASS cookieStore.getAll with positional name
+PASS cookieStore.getAll with name in options
+PASS cookieStore.getAll with name in both positional arguments and options
+PASS cookieStore.getAll with absolute url in options
+PASS cookieStore.getAll with relative url in options
+PASS cookieStore.getAll with invalid url path in options
+PASS cookieStore.getAll with invalid url host in options
 

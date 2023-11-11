@@ -1342,7 +1342,7 @@ unsigned int GetMaxViewportAndScissorRectanglesPerPipeline(D3D_FEATURE_LEVEL fea
 
 bool IsMultiviewSupported(D3D_FEATURE_LEVEL featureLevel)
 {
-    // The ANGLE_multiview extension can always be supported in D3D11 through geometry shaders.
+    // The multiview extensions can always be supported in D3D11 through geometry shaders.
     switch (featureLevel)
     {
         case D3D_FEATURE_LEVEL_11_1:
@@ -1762,11 +1762,6 @@ void GenerateCaps(ID3D11Device *device,
 
     // D3D11 Feature Level 9_3 doesn't support alpha-to-coverage
     limitations->noSampleAlphaToCoverageSupport = (featureLevel <= D3D_FEATURE_LEVEL_9_3);
-
-    // D3D11 Feature Levels 9_3 and below do not support non-constant loop indexing and require
-    // additional
-    // pre-validation of the shader at compile time to produce a better error message.
-    limitations->shadersRequireIndexedLoopValidation = (featureLevel <= D3D_FEATURE_LEVEL_9_3);
 
     // D3D11 has no concept of separate masks and refs for front and back faces in the depth stencil
     // state.
@@ -2499,7 +2494,7 @@ void InitializeFeatures(const Renderer11DeviceCaps &deviceCaps,
     bool isHaswell         = false;
     bool isIvyBridge       = false;
     bool isAMD             = IsAMD(adapterDesc.VendorId);
-    bool isFeatureLevel9_3 = (deviceCaps.featureLevel <= D3D_FEATURE_LEVEL_9_3);
+    bool isFeatureLevel9_3 = deviceCaps.featureLevel <= D3D_FEATURE_LEVEL_9_3;
 
     IntelDriverVersion capsVersion = IntelDriverVersion(0);
     if (isIntel)
@@ -2595,6 +2590,11 @@ void InitializeFeatures(const Renderer11DeviceCaps &deviceCaps,
     // to work around a slow fxc compile performance issue with dynamic uniform indexing.
     ANGLE_FEATURE_CONDITION(features, allowTranslateUniformBlockToStructuredBuffer,
                             IsWindows10OrLater());
+
+    // D3D11 Feature Levels 9_3 and below do not support non-constant loop indexing and require
+    // additional
+    // pre-validation of the shader at compile time to produce a better error message.
+    ANGLE_FEATURE_CONDITION(features, supportsNonConstantLoopIndexing, !isFeatureLevel9_3);
 }
 
 void InitializeFrontendFeatures(const DXGI_ADAPTER_DESC &adapterDesc,
@@ -2603,6 +2603,10 @@ void InitializeFrontendFeatures(const DXGI_ADAPTER_DESC &adapterDesc,
     bool isAMD = IsAMD(adapterDesc.VendorId);
 
     ANGLE_FEATURE_CONDITION(features, forceDepthAttachmentInitOnClear, isAMD);
+
+    // The D3D backend's handling of compile and link is thread-safe
+    ANGLE_FEATURE_CONDITION(features, compileJobIsThreadSafe, true);
+    ANGLE_FEATURE_CONDITION(features, linkJobIsThreadSafe, true);
 }
 
 void InitConstantBufferDesc(D3D11_BUFFER_DESC *constantBufferDescription, size_t byteWidth)

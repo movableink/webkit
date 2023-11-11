@@ -123,14 +123,7 @@ static void encodeNSError(Encoder& encoder, NSError *nsError)
     id peerCertificateChain = [userInfo objectForKey:@"NSErrorPeerCertificateChainKey"];
     if (!peerCertificateChain) {
         if (SecTrustRef peerTrust = (__bridge SecTrustRef)[userInfo objectForKey:NSURLErrorFailingURLPeerTrustErrorKey]) {
-#if HAVE(SEC_TRUST_COPY_CERTIFICATE_CHAIN)
             peerCertificateChain = (__bridge NSArray *)adoptCF(SecTrustCopyCertificateChain(peerTrust)).autorelease();
-#else
-            CFIndex count = SecTrustGetCertificateCount(peerTrust);
-            peerCertificateChain = [NSMutableArray arrayWithCapacity:count];
-            for (CFIndex i = 0; i < count; ++i)
-                [peerCertificateChain addObject:(__bridge id)SecTrustGetCertificateAtIndex(peerTrust, i)];
-#endif
         }
     }
     ASSERT(!peerCertificateChain || [peerCertificateChain isKindOfClass:[NSArray class]]);
@@ -204,34 +197,11 @@ void ArgumentCoder<WebCore::Credential>::encodePlatformData(Encoder& encoder, co
 
 bool ArgumentCoder<WebCore::Credential>::decodePlatformData(Decoder& decoder, WebCore::Credential& credential)
 {
-    auto nsCredential = IPC::decode<NSURLCredential>(decoder);
+    std::optional<RetainPtr<NSURLCredential>> nsCredential = decoder.decode<RetainPtr<NSURLCredential>>();
     if (!nsCredential)
         return false;
     credential = WebCore::Credential { nsCredential->get() };
     return true;
-}
-
-void ArgumentCoder<WebCore::KeypressCommand>::encode(Encoder& encoder, const WebCore::KeypressCommand& keypressCommand)
-{
-    encoder << keypressCommand.commandName << keypressCommand.text;
-}
-    
-std::optional<WebCore::KeypressCommand> ArgumentCoder<WebCore::KeypressCommand>::decode(Decoder& decoder)
-{
-    std::optional<String> commandName;
-    decoder >> commandName;
-    if (!commandName)
-        return std::nullopt;
-    
-    std::optional<String> text;
-    decoder >> text;
-    if (!text)
-        return std::nullopt;
-    
-    WebCore::KeypressCommand command;
-    command.commandName = WTFMove(*commandName);
-    command.text = WTFMove(*text);
-    return WTFMove(command);
 }
 
 #if ENABLE(VIDEO)
@@ -239,7 +209,7 @@ void ArgumentCoder<WebCore::SerializedPlatformDataCueValue>::encodePlatformData(
 {
     ASSERT(value.platformType() == WebCore::SerializedPlatformDataCueValue::PlatformType::ObjC);
     if (value.platformType() == WebCore::SerializedPlatformDataCueValue::PlatformType::ObjC)
-        encodeObject(encoder, value.nativeValue().get());
+        encodeObjectWithWrapper(encoder, value.nativeValue().get());
 }
 
 std::optional<WebCore::SerializedPlatformDataCueValue>  ArgumentCoder<WebCore::SerializedPlatformDataCueValue>::decodePlatformData(Decoder& decoder, WebCore::SerializedPlatformDataCueValue::PlatformType platformType)
@@ -249,7 +219,7 @@ std::optional<WebCore::SerializedPlatformDataCueValue>  ArgumentCoder<WebCore::S
     if (platformType != WebCore::SerializedPlatformDataCueValue::PlatformType::ObjC)
         return std::nullopt;
 
-    auto object = decodeObject(decoder, WebCore::SerializedPlatformDataCueMac::allowedClassesForNativeValues());
+    auto object = decodeObjectFromWrapper(decoder, WebCore::SerializedPlatformDataCueMac::allowedClassesForNativeValues());
     if (!object)
         return std::nullopt;
 

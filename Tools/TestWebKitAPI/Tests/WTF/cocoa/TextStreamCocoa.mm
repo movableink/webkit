@@ -24,7 +24,7 @@
  */
 
 #import "config.h"
-#import <wtf/text/TextStream.h>
+#import <wtf/text/TextStreamCocoa.h>
 
 #import <Foundation/Foundation.h>
 
@@ -35,17 +35,38 @@ TEST(WTF_TextStream, NSString)
     EXPECT_EQ(ts.release(), "Test"_s);
 }
 
+TEST(WTF_TextStream, Class)
+{
+    TextStream ts;
+    ts << [NSString class];
+    EXPECT_EQ(ts.release(), "NSString"_s);
+}
+
 TEST(WTF_TextStream, NSArray)
 {
     {
         TextStream ts;
-        ts << @[@"Test1", @"Test2"];
+        ts << @[ @"Test1", @"Test2" ];
         EXPECT_EQ(ts.release(), "[Test1, Test2]"_s);
     }
     {
         TextStream ts;
-        ts << @[@"Test1", @[@"Test2", @"Test3"]];
+        ts << @[ @"Test1", @[ @"Test2", @"Test3" ] ];
         EXPECT_EQ(ts.release(), "[Test1, [Test2, Test3]]"_s);
+    }
+}
+
+TEST(WTF_TextStream, NSDictionary)
+{
+    {
+        TextStream ts;
+        ts << @{ @"Test1" : @(3), @"Test2" : @"Hello" };
+        EXPECT_EQ(ts.release(), "{Test1: 3, Test2: Hello}"_s);
+    }
+    {
+        TextStream ts;
+        ts << @{ @"Test1" : @(3), @"Test2" : @[ @"Hello", @" ", @"there" ] };
+        EXPECT_EQ(ts.release(), "{Test1: 3, Test2: [Hello,  , there]}"_s);
     }
 }
 
@@ -62,4 +83,23 @@ TEST(WTF_TextStream, id)
     id value = @(3);
     ts << value;
     EXPECT_EQ(ts.release(), "3"_s);
+}
+
+TEST(WTF_TextStream, CoreGraphics)
+{
+    {
+        TextStream ts;
+        ts << CGRectMake(1, 2, 3, 4);
+        EXPECT_EQ(ts.release(), "{{1.00, 2.00}, {3.00, 4.00}}"_s);
+    }
+    {
+        TextStream ts;
+        ts << CGPointMake(1, 2);
+        EXPECT_EQ(ts.release(), "{1.00, 2.00}"_s);
+    }
+    {
+        TextStream ts;
+        ts << CGSizeMake(3, 4);
+        EXPECT_EQ(ts.release(), "{3.00, 4.00}"_s);
+    }
 }

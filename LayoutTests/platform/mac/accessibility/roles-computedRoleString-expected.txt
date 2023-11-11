@@ -66,6 +66,7 @@ PASS option -> option.
 PASS sub -> subscript.
 PASS sup -> superscript.
 PASS table -> table.
+PASS caption -> caption.
 PASS tr -> row.
 PASS th -> columnheader.
 PASS tr -> row.
@@ -73,6 +74,7 @@ PASS td -> cell.
 PASS tr -> row.
 PASS td -> cell.
 PASS table[role="grid"] -> grid.
+PASS caption -> caption.
 PASS tr -> row.
 PASS th -> columnheader.
 PASS tr -> row.
@@ -115,7 +117,9 @@ PASS div[role="dialog"] -> dialog.
 PASS div[role="directory"] -> list.
 PASS div[role="document"] -> document.
 PASS div[role="figure"] -> figure.
-PASS div[role="form"] -> form.
+PASS div[role="form"]:not([aria-label]:not([aria-labelledby]) -> generic.
+PASS div[role="form"][aria-label] -> form.
+PASS div[role="form"][aria-labelledby] -> form.
 PASS div[role="graphics-document"] -> document.
 PASS div[role="graphics-object"] -> group.
 PASS div[role="graphics-symbol"] -> image.
@@ -142,10 +146,14 @@ PASS div[role="menu"] -> menu.
 PASS div[role="menuitem"] -> menuitem.
 PASS div[role="menuitemcheckbox"] -> menuitemcheckbox.
 PASS div[role="menuitemradio"] -> menuitemradio.
+PASS div[role="group"] -> group.
+PASS div[role="menuitem"] -> menuitem.
 PASS div[role="menubar"] -> menubar.
 PASS div[role="menuitem"] -> menuitem.
 PASS div[role="menuitemcheckbox"] -> menuitemcheckbox.
 PASS div[role="menuitemradio"] -> menuitemradio.
+PASS div[role="group"] -> group.
+PASS div[role="menuitem"] -> menuitem.
 PASS div[role="meter"] -> meter.
 PASS div[role="navigation"] -> navigation.
 PASS div[role="note"] -> note.
@@ -185,10 +193,10 @@ PASS div[role="generic"] -> generic.
 PASS div[role="button foo"] -> button.
 PASS div[role="foo button bar"] -> button.
 PASS div[role="foo  button  bar"] -> button.
-PASS div[role="foo	button	bar"] -> generic.
+PASS div[role="foo	button	bar"] -> button.
 PASS div[role="foo
 button
-bar"] -> generic.
+bar"] -> button.
 PASS img[role="foo"] -> image.
 PASS img[role="foo bar"] -> image.
 PASS img[role="foo  bar"] -> image.

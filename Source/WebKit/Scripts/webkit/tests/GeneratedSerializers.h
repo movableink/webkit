@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include <wtf/ArgumentCoder.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Ref.h>
+#include <wtf/RetainPtr.h>
 
 #if ENABLE(BOOL_ENUM)
 namespace EnumNamespace { enum class BoolEnumType : bool; }
@@ -54,7 +55,7 @@ namespace WebCore {
 template<typename, typename> class ScrollSnapOffsetsInfo;
 using FloatBoxExtent = ScrollSnapOffsetsInfo<float, double>;
 }
-struct NullableSoftLinkedMember;
+struct SoftLinkedMember;
 namespace WebCore { class TimingFunction; }
 #if ENABLE(TEST_FEATURE)
 namespace Namespace { class ConditionalCommonClass; }
@@ -64,6 +65,20 @@ namespace Namespace { class AnotherCommonClass; }
 namespace WebCore { class MoveOnlyBaseClass; }
 namespace WebCore { class MoveOnlyDerivedClass; }
 namespace WebKit { class PlatformClass; }
+namespace WebKit { class CustomEncoded; }
+namespace WebKit { class LayerProperties; }
+namespace WebKit { class Fabulous; }
+namespace WebCore { struct Amazing; }
+namespace JSC { enum class Incredible; }
+namespace Testing { enum class StorageSize : uint8_t; }
+namespace WebCore { class ScrollingStateFrameHostingNode; }
+namespace WebCore { class ScrollingStateFrameHostingNodeWithStuffAfterTuple; }
+#if USE(CFBAR)
+#endif
+namespace WebKit { class RValueWithFunctionCalls; }
+#if USE(CFBAR)
+typedef struct __CFBar * CFBarRef;
+#endif
 
 namespace IPC {
 
@@ -130,9 +145,9 @@ template<> struct ArgumentCoder<WebCore::FloatBoxExtent> {
     static std::optional<WebCore::FloatBoxExtent> decode(Decoder&);
 };
 
-template<> struct ArgumentCoder<NullableSoftLinkedMember> {
-    static void encode(Encoder&, const NullableSoftLinkedMember&);
-    static std::optional<NullableSoftLinkedMember> decode(Decoder&);
+template<> struct ArgumentCoder<SoftLinkedMember> {
+    static void encode(Encoder&, const SoftLinkedMember&);
+    static std::optional<SoftLinkedMember> decode(Decoder&);
 };
 
 template<> struct ArgumentCoder<WebCore::TimingFunction> {
@@ -170,6 +185,80 @@ template<> struct ArgumentCoder<WebCore::MoveOnlyDerivedClass> {
 template<> struct ArgumentCoder<WebKit::PlatformClass> {
     static void encode(Encoder&, const WebKit::PlatformClass&);
     static std::optional<WebKit::PlatformClass> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebKit::CustomEncoded> {
+    static void encode(Encoder&, const WebKit::CustomEncoded&);
+    static std::optional<WebKit::CustomEncoded> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebKit::LayerProperties> {
+    static void encode(Encoder&, const WebKit::LayerProperties&);
+    static std::optional<WebKit::LayerProperties> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebKit::TemplateTest<WebKit::Fabulous>> {
+    static void encode(Encoder&, const WebKit::TemplateTest<WebKit::Fabulous>&);
+    static std::optional<WebKit::TemplateTest<WebKit::Fabulous>> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebKit::TemplateTest<WebCore::Amazing>> {
+    static void encode(Encoder&, const WebKit::TemplateTest<WebCore::Amazing>&);
+    static std::optional<WebKit::TemplateTest<WebCore::Amazing>> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebKit::TemplateTest<JSC::Incredible>> {
+    static void encode(Encoder&, const WebKit::TemplateTest<JSC::Incredible>&);
+    static std::optional<WebKit::TemplateTest<JSC::Incredible>> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebKit::TemplateTest<Testing::StorageSize>> {
+    static void encode(Encoder&, const WebKit::TemplateTest<Testing::StorageSize>&);
+    static std::optional<WebKit::TemplateTest<Testing::StorageSize>> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebCore::ScrollingStateFrameHostingNode> {
+    static void encode(Encoder&, const WebCore::ScrollingStateFrameHostingNode&);
+    static std::optional<Ref<WebCore::ScrollingStateFrameHostingNode>> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<WebCore::ScrollingStateFrameHostingNodeWithStuffAfterTuple> {
+    static void encode(Encoder&, const WebCore::ScrollingStateFrameHostingNodeWithStuffAfterTuple&);
+    static std::optional<Ref<WebCore::ScrollingStateFrameHostingNodeWithStuffAfterTuple>> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<CFFooRef> {
+    static void encode(Encoder&, CFFooRef);
+};
+template<> struct ArgumentCoder<RetainPtr<CFFooRef>> {
+    static void encode(Encoder& encoder, const RetainPtr<CFFooRef>& retainPtr)
+    {
+        ArgumentCoder<CFFooRef>::encode(encoder, retainPtr.get());
+    }
+    static std::optional<RetainPtr<CFFooRef>> decode(Decoder&);
+};
+
+#if USE(CFBAR)
+template<> struct ArgumentCoder<CFBarRef> {
+    static void encode(Encoder&, CFBarRef);
+    static void encode(StreamConnectionEncoder&, CFBarRef);
+};
+template<> struct ArgumentCoder<RetainPtr<CFBarRef>> {
+    static void encode(Encoder& encoder, const RetainPtr<CFBarRef>& retainPtr)
+    {
+        ArgumentCoder<CFBarRef>::encode(encoder, retainPtr.get());
+    }
+    static void encode(StreamConnectionEncoder& encoder, const RetainPtr<CFBarRef>& retainPtr)
+    {
+        ArgumentCoder<CFBarRef>::encode(encoder, retainPtr.get());
+    }
+    static std::optional<RetainPtr<CFBarRef>> decode(Decoder&);
+};
+#endif
+
+template<> struct ArgumentCoder<WebKit::RValueWithFunctionCalls> {
+    static void encode(Encoder&, WebKit::RValueWithFunctionCalls&&);
+    static std::optional<WebKit::RValueWithFunctionCalls> decode(Decoder&);
 };
 
 } // namespace IPC

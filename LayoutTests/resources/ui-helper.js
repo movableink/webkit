@@ -5,6 +5,11 @@ window.UIHelper = class UIHelper {
         return testRunner.isIOSFamily;
     }
 
+    static isMac()
+    {
+        return testRunner.isMac;
+    }
+
     static isWebKit2()
     {
         return testRunner.isWebKit2;
@@ -705,10 +710,10 @@ window.UIHelper = class UIHelper {
         });
     }
 
-    static isShowingPopover()
+    static isShowingFormValidationBubble()
     {
         return new Promise(resolve => {
-            testRunner.runUIScript("uiController.isShowingPopover", result => resolve(result === "true"));
+            testRunner.runUIScript("uiController.isShowingFormValidationBubble", result => resolve(result === "true"));
         });
     }
 
@@ -724,6 +729,20 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => {
             testRunner.runUIScript("uiController.isPresentingModally", result => resolve(result === "true"));
         });
+    }
+
+    static isZoomingOrScrolling()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript("uiController.isZoomingOrScrolling", result => resolve(result === "true"));
+        });
+    }
+
+    static async waitForZoomingOrScrollingToEnd()
+    {
+        do {
+            await this.ensureStablePresentationUpdate();
+        } while (await this.isZoomingOrScrolling());
     }
 
     static deactivateFormControl(element)
@@ -953,6 +972,22 @@ window.UIHelper = class UIHelper {
             testRunner.runUIScript(`(function() {
                 uiController.doAfterNextStablePresentationUpdate(function() {
                     uiController.uiScriptComplete(JSON.stringify(uiController.selectionEndGrabberViewRect));
+                });
+            })()`, jsonString => {
+                resolve(JSON.parse(jsonString));
+            });
+        });
+    }
+
+    static getSelectionEndGrabberViewShapePathDescription()
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(function() {
+                uiController.doAfterNextStablePresentationUpdate(function() {
+                    uiController.uiScriptComplete(JSON.stringify(uiController.selectionEndGrabberViewShapePathDescription));
                 });
             })()`, jsonString => {
                 resolve(JSON.parse(jsonString));
@@ -1832,6 +1867,9 @@ window.UIHelper = class UIHelper {
 
     static async setSpellCheckerResults(results)
     {
+        if (!this.isMac() && !this.isIOSFamily())
+            return Promise.resolve();
+
         return new Promise(resolve => {
             testRunner.runUIScript(`(() => {
                 uiController.setSpellCheckerResults(${JSON.stringify(results)});
@@ -1896,7 +1934,7 @@ window.UIHelper = class UIHelper {
         });
     }
 
-    static moveToPrevByKeyboardAccessoryBar()
+    static moveToPreviousByKeyboardAccessoryBar()
     {
         return new Promise((resolve) => {
             testRunner.runUIScript(`
@@ -1942,6 +1980,18 @@ window.UIHelper = class UIHelper {
     {
        const script = `(() => uiController.dismissContactPickerWithContacts(${JSON.stringify(contacts)}))()`;
        return new Promise(resolve => testRunner.runUIScript(script, resolve));
+    }
+
+    static setAppAccentColor(red, green, blue)
+    {
+        if (!this.isWebKit2() || !this.isMac())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(() => {
+                uiController.setAppAccentColor(${red}, ${green}, ${blue});
+            })()`, resolve);
+        });
     }
 
     static addChromeInputField()

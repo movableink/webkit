@@ -40,9 +40,10 @@ struct FrameInfoData {
     WebCore::ResourceRequest request;
     WebCore::SecurityOriginData securityOrigin;
     String frameName;
-    std::optional<WebCore::FrameIdentifier> frameID;
+    WebCore::FrameIdentifier frameID;
     std::optional<WebCore::FrameIdentifier> parentFrameID;
     ProcessID processID;
+    bool isFocused { false };
 };
 
 }

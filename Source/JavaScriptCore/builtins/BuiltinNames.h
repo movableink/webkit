@@ -118,13 +118,11 @@ namespace JSC {
     macro(syncIterator) \
     macro(nextMethod) \
     macro(asyncGeneratorQueueItemNext) \
-    macro(dateTimeFormat) \
     macro(this) \
     macro(importMapStatus) \
     macro(importInRealm) \
     macro(evalInRealm) \
     macro(moveFunctionToRealm) \
-    macro(thisTimeValue) \
     macro(newTargetLocal) \
     macro(derivedConstructor) \
     macro(isTypedArrayView) \
@@ -200,6 +198,7 @@ namespace JSC {
     macro(sentinelString) \
     macro(createRemoteFunction) \
     macro(isRemoteFunction) \
+    macro(arrayFromFast) \
     macro(arraySort) \
     macro(jsonParse) \
     macro(jsonStringify) \

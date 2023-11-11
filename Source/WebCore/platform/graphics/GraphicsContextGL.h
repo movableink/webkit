@@ -100,6 +100,19 @@ DECLARE_GCGL_OWNED(Texture);
 
 #undef DECLARE_GCGL_OWNED
 
+#if PLATFORM(COCOA)
+struct GraphicsContextGLEGLImageSourceIOSurfaceHandle {
+    MachSendRight handle;
+};
+struct GraphicsContextGLEGLImageSourceMTLSharedTextureHandle {
+    MachSendRight handle;
+};
+using GraphicsContextGLEGLImageSource = std::variant<
+    GraphicsContextGLEGLImageSourceIOSurfaceHandle,
+    GraphicsContextGLEGLImageSourceMTLSharedTextureHandle
+    >;
+#endif // PLATFORM(COCOA)
+
 // Base class for graphics context for implementing WebGL rendering model.
 class GraphicsContextGL : public RefCounted<GraphicsContextGL> {
 public:
@@ -720,6 +733,9 @@ public:
     // EXT_color_buffer_half_float
     static constexpr GCGLenum FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE_EXT = 0x8211;
 
+    // GL_EXT_depth_clamp
+    static constexpr GCGLenum DEPTH_CLAMP_EXT = 0x864F;
+
     // GL_EXT_disjoint_timer_query
     static constexpr GCGLenum QUERY_COUNTER_BITS_EXT = 0x8864;
     static constexpr GCGLenum CURRENT_QUERY_EXT = 0x8865;
@@ -826,6 +842,9 @@ public:
     static constexpr GCGLenum TEXTURE_MAX_ANISOTROPY_EXT = 0x84FE;
     static constexpr GCGLenum MAX_TEXTURE_MAX_ANISOTROPY_EXT = 0x84FF;
 
+    // GL_EXT_texture_mirror_clamp_to_edge
+    static constexpr GCGLenum MIRROR_CLAMP_TO_EDGE_EXT = 0x8743;
+
     // GL_EXT_texture_norm16
     static constexpr GCGLenum R16_EXT = 0x822A;
     static constexpr GCGLenum RG16_EXT = 0x822C;
@@ -835,6 +854,14 @@ public:
     static constexpr GCGLenum RG16_SNORM_EXT = 0x8F99;
     static constexpr GCGLenum RGB16_SNORM_EXT = 0x8F9A;
     static constexpr GCGLenum RGBA16_SNORM_EXT = 0x8F9B;
+
+    // GL_EXT_clip_control
+    static constexpr GCGLenum LOWER_LEFT_EXT = 0x8CA1;
+    static constexpr GCGLenum UPPER_LEFT_EXT = 0x8CA2;
+    static constexpr GCGLenum NEGATIVE_ONE_TO_ONE_EXT = 0x935E;
+    static constexpr GCGLenum ZERO_TO_ONE_EXT = 0x935F;
+    static constexpr GCGLenum CLIP_ORIGIN_EXT = 0x935C;
+    static constexpr GCGLenum CLIP_DEPTH_MODE_EXT = 0x935D;
 
     // GL_ANGLE_clip_cull_distance
     static constexpr GCGLenum MAX_CLIP_DISTANCES_ANGLE = 0x0D32;
@@ -854,8 +881,26 @@ public:
     static constexpr GCGLenum LAST_VERTEX_CONVENTION_ANGLE = 0x8E4E;
     static constexpr GCGLenum PROVOKING_VERTEX_ANGLE = 0x8E4F;
 
+    // GL_ANGLE_polygon_mode
+    static constexpr GCGLenum POLYGON_MODE_ANGLE = 0x0B40;
+    static constexpr GCGLenum POLYGON_OFFSET_LINE_ANGLE = 0x2A02;
+    static constexpr GCGLenum LINE_ANGLE = 0x1B01;
+    static constexpr GCGLenum FILL_ANGLE = 0x1B02;
+
     // GL_EXT_polygon_offset_clamp
     static constexpr GCGLenum POLYGON_OFFSET_CLAMP_EXT = 0x8E1B;
+
+    // GL_OES_shader_multisample_interpolation
+    static constexpr GCGLenum MIN_FRAGMENT_INTERPOLATION_OFFSET_OES = 0x8E5B;
+    static constexpr GCGLenum MAX_FRAGMENT_INTERPOLATION_OFFSET_OES = 0x8E5C;
+    static constexpr GCGLenum FRAGMENT_INTERPOLATION_OFFSET_BITS_OES = 0x8E5D;
+
+    // GL_EXT_blend_func_extended
+    static constexpr GCGLenum SRC1_COLOR_EXT = 0x88F9;
+    static constexpr GCGLenum SRC1_ALPHA_EXT = 0x8589;
+    static constexpr GCGLenum ONE_MINUS_SRC1_COLOR_EXT = 0x88FA;
+    static constexpr GCGLenum ONE_MINUS_SRC1_ALPHA_EXT = 0x88FB;
+    static constexpr GCGLenum MAX_DUAL_SOURCE_DRAW_BUFFERS_EXT = 0x88FC;
 
     // GL_ARB_draw_buffers / GL_EXT_draw_buffers
     static constexpr GCGLenum MAX_DRAW_BUFFERS_EXT = 0x8824;
@@ -892,6 +937,10 @@ public:
     static constexpr GCGLenum COLOR_ATTACHMENT13_EXT = 0x8CED;
     static constexpr GCGLenum COLOR_ATTACHMENT14_EXT = 0x8CEE;
     static constexpr GCGLenum COLOR_ATTACHMENT15_EXT = 0x8CEF;
+
+    // GL_ANGLE_stencil_texturing
+    static constexpr GCGLenum DEPTH_STENCIL_TEXTURE_MODE_ANGLE = 0x90EA;
+    static constexpr GCGLenum STENCIL_INDEX_ANGLE = 0x1901;
 
     // GL_KHR_parallel_shader_compile
     static constexpr GCGLenum COMPLETION_STATUS_KHR = 0x91B1;
@@ -1156,7 +1205,6 @@ public:
         WEBCORE_EXPORT Client();
         WEBCORE_EXPORT virtual ~Client();
         virtual void forceContextLost() = 0;
-        virtual void dispatchContextChangedNotification() = 0;
     };
 
     WEBCORE_EXPORT GraphicsContextGL(GraphicsContextGLAttributes);
@@ -1476,16 +1524,9 @@ public:
     // ========== EGL related entry points.
 
 #if PLATFORM(COCOA)
-    struct EGLImageSourceIOSurfaceHandle {
-        MachSendRight handle;
-    };
-    struct EGLImageSourceMTLSharedTextureHandle {
-        MachSendRight handle;
-    };
-    using EGLImageSource = std::variant<
-        EGLImageSourceIOSurfaceHandle,
-        EGLImageSourceMTLSharedTextureHandle
-        >;
+    using EGLImageSourceIOSurfaceHandle = GraphicsContextGLEGLImageSourceIOSurfaceHandle;
+    using EGLImageSourceMTLSharedTextureHandle = GraphicsContextGLEGLImageSourceMTLSharedTextureHandle;
+    using EGLImageSource = GraphicsContextGLEGLImageSource;
 #else
     using EGLImageSource = int;
 #endif
@@ -1520,6 +1561,8 @@ public:
     // Has no other side-effects.
     virtual bool isExtensionEnabled(const String&) = 0;
 
+    virtual bool enableRequiredWebXRExtensions() { return false; }
+
     // GL_ANGLE_translated_shader_source
     virtual String getTranslatedShaderSourceANGLE(PlatformGLObject) = 0;
 
@@ -1553,8 +1596,14 @@ public:
     virtual void multiDrawArraysInstancedBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLint, const GCGLsizei, const GCGLsizei, const GCGLuint> firstsCountsInstanceCountsAndBaseInstances) = 0;
     virtual void multiDrawElementsInstancedBaseVertexBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLsizei, const GCGLsizei, const GCGLsizei, const GCGLint, const GCGLuint> countsOffsetsInstanceCountsBaseVerticesAndBaseInstances, GCGLenum type) = 0;
 
+    // GL_EXT_clip_control
+    virtual void clipControlEXT(GCGLenum origin, GCGLenum depth) = 0;
+
     // GL_ANGLE_provoking_vertex
     virtual void provokingVertexANGLE(GCGLenum provokeMode) = 0;
+
+    // GL_ANGLE_polygon_mode
+    virtual void polygonModeANGLE(GCGLenum face, GCGLenum mode) = 0;
 
     // GL_EXT_polygon_offset_clamp
     virtual void polygonOffsetClampEXT(GCGLfloat factor, GCGLfloat units, GCGLfloat clamp) = 0;
@@ -1583,34 +1632,20 @@ public:
 
     WEBCORE_EXPORT virtual void setDrawingBufferColorSpace(const DestinationColorSpace&);
 
-    virtual bool isGLES2Compliant() const = 0;
-
     virtual void prepareForDisplay() = 0;
-
-    // FIXME: should be removed, caller should keep track of changed state.
-    WEBCORE_EXPORT virtual void markContextChanged();
-
-    // FIXME: these should be removed, caller is interested in buffer clear status and
-    // should track that in a variable that the caller holds. Caller should receive
-    // the value from reshape().
-    bool layerComposited() const;
-    void setBuffersToAutoClear(GCGLbitfield);
-    GCGLbitfield getBuffersToAutoClear() const;
 
     // FIXME: these should be removed, they're part of drawing buffer and
     // display buffer abstractions that the caller should hold separate to
     // the context.
-    virtual void paintRenderingResultsToCanvas(ImageBuffer&) = 0;
-    virtual RefPtr<PixelBuffer> paintRenderingResultsToPixelBuffer() = 0;
-    virtual void paintCompositedResultsToCanvas(ImageBuffer&) = 0;
+    enum class SurfaceBuffer : uint8_t {
+        DrawingBuffer,
+        DisplayBuffer
+    };
+    virtual void drawSurfaceBufferToImageBuffer(SurfaceBuffer, ImageBuffer&) = 0;
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
-    virtual RefPtr<VideoFrame> paintCompositedResultsToVideoFrame() = 0;
+    virtual RefPtr<VideoFrame> surfaceBufferToVideoFrame(SurfaceBuffer) = 0;
 #endif
-
-    // FIXME: this should be removed. The layer should be marked composited by
-    // preparing for display, so that canvas image buffer and the layer agree
-    // on the content.
-    WEBCORE_EXPORT void markLayerComposited();
+    virtual RefPtr<PixelBuffer> drawingBufferToPixelBuffer(FlipY) = 0;
 
     using SimulatedEventForTesting = GraphicsContextGLSimulatedEventForTesting;
     virtual void simulateEventForTesting(SimulatedEventForTesting) = 0;
@@ -1673,18 +1708,14 @@ public:
     WEBCORE_EXPORT static void paintToCanvas(NativeImage&, const IntSize& canvasSize, GraphicsContext&);
     WEBCORE_EXPORT static void paintToCanvas(const GraphicsContextGLAttributes&, Ref<PixelBuffer>&&, const IntSize& canvasSize, GraphicsContext&);
 
+    bool isContextLost() const { return m_contextLost; }
 protected:
     WEBCORE_EXPORT virtual void forceContextLost();
-    WEBCORE_EXPORT void dispatchContextChangedNotification();
 
     int m_currentWidth { 0 };
     int m_currentHeight { 0 };
     Client* m_client { nullptr };
-    // A bitmask of GL buffer bits (GL_COLOR_BUFFER_BIT,
-    // GL_DEPTH_BUFFER_BIT, GL_STENCIL_BUFFER_BIT) which need to be
-    // auto-cleared.
-    GCGLbitfield m_buffersToAutoClear { 0 };
-    bool m_layerComposited { false };
+    bool m_contextLost { false };
 
 private:
     GraphicsContextGLAttributes m_attrs;
@@ -1722,5 +1753,17 @@ IMPLEMENT_GCGL_OWNED(Texture)
 #undef IMPLEMENT_GCGL_OWNED
 
 } // namespace WebCore
+
+namespace WTF {
+
+template <> struct EnumTraits<WebCore::GraphicsContextGL::SurfaceBuffer> {
+    using values = EnumValues<
+        WebCore::GraphicsContextGL::SurfaceBuffer,
+        WebCore::GraphicsContextGL::SurfaceBuffer::DrawingBuffer,
+        WebCore::GraphicsContextGL::SurfaceBuffer::DisplayBuffer
+    >;
+};
+
+}
 
 #endif

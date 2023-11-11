@@ -116,7 +116,7 @@ public:
     };
 
     static CaptureSourceOrError create(const CaptureDevice&, MediaDeviceHashSalts&&, const MediaConstraints*, PageIdentifier);
-    static CaptureSourceOrError create(Expected<UniqueRef<Capturer>, String>&&, const CaptureDevice&, MediaDeviceHashSalts&&, const MediaConstraints*, PageIdentifier);
+    static CaptureSourceOrError create(Expected<UniqueRef<Capturer>, CaptureSourceError>&&, const CaptureDevice&, MediaDeviceHashSalts&&, const MediaConstraints*, PageIdentifier);
 
     Seconds elapsedTime();
 
@@ -136,7 +136,7 @@ private:
     const RealtimeMediaSourceCapabilities& capabilities() final;
     const RealtimeMediaSourceSettings& settings() final;
     CaptureDevice::DeviceType deviceType() const { return m_capturer->deviceType(); }
-    void commitConfiguration() final { m_capturer->commitConfiguration(settings()); }
+    void endApplyingConstraints() final { commitConfiguration(); }
     IntSize computeResizedVideoFrameSize(IntSize desiredSize, IntSize actualSize) final;
     void setSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>) final;
 
@@ -148,6 +148,7 @@ private:
     void capturerFailed() final { captureFailed(); }
     void capturerConfigurationChanged() final;
 
+    void commitConfiguration() { m_capturer->commitConfiguration(settings()); }
     void emitFrame();
 
     UniqueRef<Capturer> m_capturer;

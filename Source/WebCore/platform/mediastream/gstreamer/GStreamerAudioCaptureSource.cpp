@@ -35,9 +35,9 @@
 
 namespace WebCore {
 
-static CapabilityValueOrRange defaultVolumeCapability()
+static CapabilityRange defaultVolumeCapability()
 {
-    return CapabilityValueOrRange(0.0, 1.0);
+    return CapabilityRange(0.0, 1.0);
 }
 const static RealtimeMediaSourceCapabilities::EchoCancellation defaultEchoCancellationCapability = RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite;
 
@@ -68,14 +68,14 @@ CaptureSourceOrError GStreamerAudioCaptureSource::create(String&& deviceID, Medi
     auto device = GStreamerAudioCaptureDeviceManager::singleton().gstreamerDeviceWithUID(deviceID);
     if (!device) {
         auto errorMessage = makeString("GStreamerAudioCaptureSource::create(): GStreamer did not find the device: ", deviceID, '.');
-        return CaptureSourceOrError(WTFMove(errorMessage));
+        return CaptureSourceOrError({ WTFMove(errorMessage), MediaAccessDenialReason::PermissionDenied });
     }
 
     auto source = adoptRef(*new GStreamerAudioCaptureSource(WTFMove(*device), WTFMove(hashSalts)));
 
     if (constraints) {
         if (auto result = source->applyConstraints(*constraints))
-            return WTFMove(result->badConstraint);
+            return CaptureSourceOrError({ WTFMove(result->badConstraint), MediaAccessDenialReason::InvalidConstraint });
     }
     return CaptureSourceOrError(WTFMove(source));
 }
@@ -160,7 +160,7 @@ const RealtimeMediaSourceCapabilities& GStreamerAudioCaptureSource::capabilities
     capabilities.setDeviceId(hashedId());
     capabilities.setEchoCancellation(defaultEchoCancellationCapability);
     capabilities.setVolume(defaultVolumeCapability());
-    capabilities.setSampleRate(CapabilityValueOrRange(minSampleRate, maxSampleRate));
+    capabilities.setSampleRate(CapabilityRange(minSampleRate, maxSampleRate));
     m_capabilities = WTFMove(capabilities);
 
     return m_capabilities.value();

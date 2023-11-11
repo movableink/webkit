@@ -91,8 +91,9 @@ using PlatformTextMarkerData = AXTextMarkerRef;
 using PlatformTextMarkerData = NSData *;;
 #endif
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXTextMarker);
 class AXTextMarker {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXTextMarker);
     friend class AXTextMarkerRange;
     friend std::partial_ordering partialOrder(const AXTextMarker&, const AXTextMarker&);
 public:
@@ -155,6 +156,7 @@ public:
     operator bool() const { return m_start && m_end; }
     operator VisiblePositionRange() const;
     std::optional<SimpleRange> simpleRange() const;
+    std::optional<CharacterRange> characterRange() const;
 
 #if PLATFORM(MAC)
     RetainPtr<AXTextMarkerRangeRef> platformData() const;

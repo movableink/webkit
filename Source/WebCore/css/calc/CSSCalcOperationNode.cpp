@@ -40,6 +40,7 @@
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSCalcOperationNode);
 
 // This is the result of the "To add two types type1 and type2, perform the following steps:" rules.
 
@@ -51,6 +52,11 @@ static const CalculationCategory addSubtractResult[static_cast<unsigned>(Calcula
     { CalculationCategory::PercentNumber, CalculationCategory::Other,         CalculationCategory::PercentNumber, CalculationCategory::PercentNumber, CalculationCategory::Other }, //         CalculationCategory::PercentNumber
     { CalculationCategory::Other,         CalculationCategory::PercentLength, CalculationCategory::PercentLength, CalculationCategory::Other,         CalculationCategory::PercentLength }, // CalculationCategory::PercentLength
 };
+
+static bool isSamePair(CalculationCategory a, CalculationCategory b, CalculationCategory x, CalculationCategory y)
+{
+    return (a == x && b == y) || (a == y && b == x);
+}
 
 static CalculationCategory determineCategory(const CSSCalcExpressionNode& leftSide, const CSSCalcExpressionNode& rightSide, CalcOperator op)
 {
@@ -179,9 +185,18 @@ static CalculationCategory resolvedTypeForMinOrMaxOrClamp(CalculationCategory ca
     return CalculationCategory::Other;
 }
 
-static bool isSamePair(CalculationCategory a, CalculationCategory b, CalculationCategory x, CalculationCategory y)
+static std::optional<CalculationCategory> resolvedTypeForStep(CalculationCategory a, CalculationCategory b)
 {
-    return (a == x && b == y) || (a == y && b == x);
+    if (a == b)
+        return a;
+
+    if (isSamePair(a, b, CalculationCategory::Length, CalculationCategory::Percent))
+        return CalculationCategory::PercentLength;
+
+    if (isSamePair(a, b, CalculationCategory::Number, CalculationCategory::Percent))
+        return CalculationCategory::PercentNumber;
+
+    return { };
 }
 
 enum class SortingCategory {
@@ -364,7 +379,6 @@ RefPtr<CSSCalcOperationNode> CSSCalcOperationNode::createSum(Vector<Ref<CSSCalcE
     auto newCategory = determineCategory(values, CalcOperator::Add);
     if (newCategory == CalculationCategory::Other) {
         LOG_WITH_STREAM(Calc, stream << "Failed to create sum node because unable to determine category from " << prettyPrintNodes(values));
-        newCategory = determineCategory(values, CalcOperator::Add);
         return nullptr;
     }
 
@@ -536,46 +550,38 @@ RefPtr<CSSCalcOperationNode> CSSCalcOperationNode::createStep(CalcOperator op, V
     if (values.size() != 2)
         return nullptr;
 
-    if (values[0]->category() != values[1]->category()) {
-        LOG_WITH_STREAM(Calc, stream << "Failed to create stepped value node because unable to determine category from " << prettyPrintNodes(values));
-        return nullptr;
-    }
-    return adoptRef(new CSSCalcOperationNode(values[0]->category(), op, WTFMove(values)));
-}
+    if (auto category = resolvedTypeForStep(values[0]->category(), values[1]->category()))
+        return adoptRef(new CSSCalcOperationNode(*category, op, WTFMove(values)));
 
-static bool validateRoundChildren(Vector<Ref<CSSCalcExpressionNode>>& values)
-{
-    // for 3 children 1st node must be round constant
-    if (values.size() == 3) {
-        if (!is<CSSCalcOperationNode>(values[0]) || !(downcast<CSSCalcOperationNode>(values[0].get()).isRoundOperation()))
-            return false;
-    }
-    // for 2 children should not have round constant anywhere but first node of 3
-    for (size_t i = values.size() == 2 ? 0 : 1; i < values.size(); i++) {
-        if (is<CSSCalcOperationNode>(values[i])) {
-            if (downcast<CSSCalcOperationNode>(values[i].get()).isRoundConstant())
-                return false;
-        }
-    }
-    // check that two categories of numerical values are the same
-    return values.rbegin()[1]->category() == values.rbegin()[0]->category();
-    
+    LOG_WITH_STREAM(Calc, stream << "Failed to create stepped value node because unable to determine category from " << prettyPrintNodes(values));
+    return nullptr;
 }
 
 RefPtr<CSSCalcOperationNode> CSSCalcOperationNode::createRound(Vector<Ref<CSSCalcExpressionNode>>&& values)
 {
     if (values.size() != 2 && values.size() != 3)
         return nullptr;
-    
-    if (!validateRoundChildren(values)) {
-        LOG_WITH_STREAM(Calc, stream << "Failed to create round node because unable to determine category from " << prettyPrintNodes(values));
-        return nullptr;
+
+    auto asRoundOperation = [](Ref<CSSCalcExpressionNode>& node) -> std::optional<CalcOperator> {
+        if (auto value = dynamicDowncast<CSSCalcOperationNode>(node.get()); value && value->isRoundConstant())
+            return value->calcOperator();
+        return { };
+    };
+
+    auto roundOperation = CalcOperator::Nearest;
+
+    if (values.size() == 3) {
+        if (auto operation = asRoundOperation(values[0])) {
+            roundOperation = *operation;
+            values.remove(0);
+        } else
+            return nullptr;
     }
-    
-    CalcOperator roundType = values.size() == 2 ?  CalcOperator::Nearest : downcast<CSSCalcOperationNode>(values[0].get()).calcOperator();
-    if (values.size() == 3)
-        values.remove(0);
-    return adoptRef(new CSSCalcOperationNode(values.rbegin()[0]->category(), roundType, WTFMove(values)));
+
+    if (asRoundOperation(values[0]) || asRoundOperation(values[1]))
+        return nullptr;
+
+    return createStep(roundOperation, WTFMove(values));
 }
 
 RefPtr<CSSCalcOperationNode> CSSCalcOperationNode::createRoundConstant(CalcOperator op)
@@ -684,7 +690,7 @@ void CSSCalcOperationNode::combineChildren()
             remainingChildren.add(child.ptr());
 
         while (!remainingChildren.isEmpty()) {
-            newChildren.uncheckedAppend(Ref { *remainingChildren.takeFirst() });
+            newChildren.append(Ref { *remainingChildren.takeFirst() });
             CSSUnitType previousType = primitiveTypeForCombination(newChildren.last());
             for (auto it = remainingChildren.begin(); it != remainingChildren.end();) {
                 auto currentIterator = it;
@@ -732,7 +738,7 @@ void CSSCalcOperationNode::combineChildren()
             ASSERT(lastNonNumberNode);
             auto multiplicandCategory = calcUnitCategory(primitiveTypeForCombination(*lastNonNumberNode));
             if (multiplicandCategory != CalculationCategory::Other) {
-                newChildren.uncheckedAppend(Ref { *lastNonNumberNode });
+                newChildren.append(Ref { *lastNonNumberNode });
                 downcast<CSSCalcPrimitiveValueNode>(newChildren[0].get()).multiply(multiplier);
                 didMultiply = true;
             } else if (auto* sumNode = dynamicDowncast<CSSCalcOperationNode>(*lastNonNumberNode); sumNode && sumNode->calcOperator() == CalcOperator::Add) {
@@ -762,12 +768,12 @@ void CSSCalcOperationNode::combineChildren()
         if (!didMultiply) {
             if (numberNodeCount) {
                 auto multiplierNode = CSSCalcPrimitiveValueNode::create(CSSPrimitiveValue::create(multiplier));
-                newChildren.uncheckedAppend(WTFMove(multiplierNode));
+                newChildren.append(WTFMove(multiplierNode));
             }
 
             for (auto& child : m_children) {
                 if (primitiveTypeForCombination(child) != CSSUnitType::CSS_NUMBER)
-                    newChildren.uncheckedAppend(child.copyRef());
+                    newChildren.append(child.copyRef());
             }
         }
 
@@ -910,12 +916,16 @@ Ref<CSSCalcExpressionNode> CSSCalcOperationNode::simplifyNode(Ref<CSSCalcExpress
                     return false;
             }
 
-            // At the root, preserve the root function by only merging nodes with the same function.
             auto& child = parent.children().first();
             if (!is<CSSCalcOperationNode>(child))
                 return false;
 
+            // At the root, calc(otherFunction()) should always collapse to otherFunction().
             auto parentFunction = functionFromOperator(parent.calcOperator());
+            if (parentFunction == CSSValueCalc)
+                return true;
+
+            // At the root, preserve the root function by merging nodes with the same function.
             auto childFunction = functionFromOperator(downcast<CSSCalcOperationNode>(child.get()).calcOperator());
             return childFunction == parentFunction;
         };
@@ -1010,7 +1020,7 @@ std::unique_ptr<CalcExpressionNode> CSSCalcOperationNode::createCalcExpression(c
         auto node = child->createCalcExpression(conversionData);
         if (!node)
             return nullptr;
-        nodes.uncheckedAppend(WTFMove(node));
+        nodes.append(WTFMove(node));
     }
 
     // Reverse the operation we did when creating this node, recovering a suitable destination category for otherwise-ambiguous min/max/clamp nodes.
@@ -1053,13 +1063,6 @@ void CSSCalcOperationNode::collectComputedStyleDependencies(ComputedStyleDepende
 {
     for (auto& child : m_children)
         child->collectComputedStyleDependencies(dependencies);
-}
-
-bool CSSCalcOperationNode::convertingToLengthRequiresNonNullStyle(int lengthConversion) const
-{
-    return WTF::anyOf(m_children, [lengthConversion] (auto& child) {
-        return child->convertingToLengthRequiresNonNullStyle(lengthConversion);
-    });
 }
 
 void CSSCalcOperationNode::buildCSSText(const CSSCalcExpressionNode& node, StringBuilder& builder)

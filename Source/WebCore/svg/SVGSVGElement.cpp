@@ -30,12 +30,12 @@
 #include "ElementIterator.h"
 #include "EventNames.h"
 #include "FrameSelection.h"
+#include "LegacyRenderSVGResource.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGViewportContainer.h"
 #include "LocalFrame.h"
 #include "NodeName.h"
 #include "RenderBoxInlines.h"
-#include "RenderSVGResource.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGViewportContainer.h"
 #include "RenderView.h"
@@ -52,6 +52,7 @@
 #include "SVGViewElement.h"
 #include "SVGViewSpec.h"
 #include "StaticNodeList.h"
+#include "TreeScopeInlines.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -317,25 +318,25 @@ static bool checkEnclosureWithoutUpdatingLayout(SVGElement& element, SVGRect& re
 
 Ref<NodeList> SVGSVGElement::getIntersectionList(SVGRect& rect, SVGElement* referenceElement)
 {
-    document().updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
     return collectIntersectionOrEnclosureList(rect, referenceElement, checkIntersectionWithoutUpdatingLayout);
 }
 
 Ref<NodeList> SVGSVGElement::getEnclosureList(SVGRect& rect, SVGElement* referenceElement)
 {
-    document().updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
     return collectIntersectionOrEnclosureList(rect, referenceElement, checkEnclosureWithoutUpdatingLayout);
 }
 
 bool SVGSVGElement::checkIntersection(Ref<SVGElement>&& element, SVGRect& rect)
 {
-    element->document().updateLayoutIgnorePendingStylesheets();
+    element->document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element.ptr());
     return checkIntersectionWithoutUpdatingLayout(element, rect);
 }
 
 bool SVGSVGElement::checkEnclosure(Ref<SVGElement>&& element, SVGRect& rect)
 {
-    element->document().updateLayoutIgnorePendingStylesheets();
+    element->document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element.ptr());
     return checkEnclosureWithoutUpdatingLayout(element, rect);
 }
 
@@ -686,7 +687,7 @@ AffineTransform SVGSVGElement::viewBoxToViewTransform(float viewWidth, float vie
     return transform;
 }
 
-SVGViewElement* SVGSVGElement::findViewAnchor(StringView fragmentIdentifier) const
+RefPtr<SVGViewElement> SVGSVGElement::findViewAnchor(StringView fragmentIdentifier) const
 {
     return dynamicDowncast<SVGViewElement>(document().findAnchor(fragmentIdentifier));
 }
@@ -698,8 +699,8 @@ SVGSVGElement* SVGSVGElement::findRootAnchor(const SVGViewElement* viewElement) 
 
 SVGSVGElement* SVGSVGElement::findRootAnchor(StringView fragmentIdentifier) const
 {
-    if (auto* viewElement = findViewAnchor(fragmentIdentifier))
-        return findRootAnchor(viewElement);
+    if (RefPtr viewElement = findViewAnchor(fragmentIdentifier))
+        return findRootAnchor(viewElement.get());
     return nullptr;
 }
 
@@ -716,7 +717,7 @@ bool SVGSVGElement::scrollToFragment(StringView fragmentIdentifier)
     if (fragmentIdentifier.startsWith("xpointer("_s)) {
         // FIXME: XPointer references are ignored (https://bugs.webkit.org/show_bug.cgi?id=17491)
         if (renderer && hadUseCurrentView)
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+            LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return false;
     }
 
@@ -728,7 +729,7 @@ bool SVGSVGElement::scrollToFragment(StringView fragmentIdentifier)
         else
             view->reset();
         if (renderer && (hadUseCurrentView || m_useCurrentView))
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+            LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return m_useCurrentView;
     }
 
@@ -736,8 +737,8 @@ bool SVGSVGElement::scrollToFragment(StringView fragmentIdentifier)
     // or MyDrawing.svg#xpointer(id('MyView'))) then the closest ancestor "svg" element is displayed in the viewport.
     // Any view specification attributes included on the given "view" element override the corresponding view specification
     // attributes on the closest ancestor "svg" element.
-    if (auto* viewElement = findViewAnchor(fragmentIdentifier)) {
-        if (auto* rootElement = findRootAnchor(viewElement)) {
+    if (RefPtr viewElement = findViewAnchor(fragmentIdentifier)) {
+        if (auto* rootElement = findRootAnchor(viewElement.get())) {
             if (rootElement->m_currentViewElement) {
                 ASSERT(rootElement->m_currentViewElement->targetElement() == rootElement);
 
@@ -753,7 +754,7 @@ bool SVGSVGElement::scrollToFragment(StringView fragmentIdentifier)
 
             rootElement->inheritViewAttributes(*viewElement);
             if (auto* renderer = rootElement->renderer())
-                RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+                LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
             m_currentViewFragmentIdentifier = fragmentIdentifier.toString();
             return true;
         }
@@ -784,7 +785,7 @@ void SVGSVGElement::resetScrollAnchor()
 
     m_useCurrentView = false;
     if (renderer())
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer());
+        LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer());
 }
 
 void SVGSVGElement::inheritViewAttributes(const SVGViewElement& viewElement)
@@ -837,9 +838,9 @@ Element* SVGSVGElement::getElementById(const AtomString& id)
     if (element && element->isDescendantOf(*this))
         return element.get();
     if (treeScope().containsMultipleElementsWithId(id)) {
-        for (auto* element : *treeScope().getAllElementsById(id)) {
+        for (auto& element : *treeScope().getAllElementsById(id)) {
             if (element->isDescendantOf(*this))
-                return element;
+                return element.ptr();
         }
     }
 

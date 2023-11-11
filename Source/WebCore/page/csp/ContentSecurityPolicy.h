@@ -74,13 +74,13 @@ enum class CheckUnsafeHashes : bool { No, Yes };
 
 typedef Vector<std::unique_ptr<ContentSecurityPolicyDirectiveList>> CSPDirectiveListVector;
 
-enum class ContentSecurityPolicyModeForExtension {
+enum class ContentSecurityPolicyModeForExtension : uint8_t {
     None,
     ManifestV2,
     ManifestV3
 };
 
-class ContentSecurityPolicy {
+class ContentSecurityPolicy : public CanMakeThreadSafeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit ContentSecurityPolicy(URL&&, ScriptExecutionContext&);
@@ -246,7 +246,7 @@ private:
     void reportBlockedScriptExecutionToInspector(const String& directiveText) const;
 
     // We can never have both a script execution context and a ContentSecurityPolicyClient.
-    ScriptExecutionContext* m_scriptExecutionContext { nullptr };
+    CheckedPtr<ScriptExecutionContext> m_scriptExecutionContext;
     ContentSecurityPolicyClient* m_client { nullptr };
     mutable ReportingClient* m_reportingClient { nullptr };
 
@@ -274,14 +274,3 @@ private:
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::ContentSecurityPolicyModeForExtension> {
-    using values = EnumValues<
-        WebCore::ContentSecurityPolicyModeForExtension,
-        WebCore::ContentSecurityPolicyModeForExtension::None,
-        WebCore::ContentSecurityPolicyModeForExtension::ManifestV2,
-        WebCore::ContentSecurityPolicyModeForExtension::ManifestV3
-    >;
-    };
-}

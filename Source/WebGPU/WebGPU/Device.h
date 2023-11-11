@@ -79,7 +79,7 @@ public:
     ~Device();
 
     Ref<BindGroup> createBindGroup(const WGPUBindGroupDescriptor&);
-    Ref<BindGroupLayout> createBindGroupLayout(const WGPUBindGroupLayoutDescriptor&);
+    Ref<BindGroupLayout> createBindGroupLayout(const WGPUBindGroupLayoutDescriptor&, bool isGeneratedLayout = false);
     Ref<Buffer> createBuffer(const WGPUBufferDescriptor&);
     Ref<CommandEncoder> createCommandEncoder(const WGPUCommandEncoderDescriptor&);
     Ref<ComputePipeline> createComputePipeline(const WGPUComputePipelineDescriptor&);
@@ -103,6 +103,7 @@ public:
     bool hasFeature(WGPUFeatureName);
     bool popErrorScope(CompletionHandler<void(WGPUErrorType, String&&)>&& callback);
     void pushErrorScope(WGPUErrorFilter);
+    void setDeviceLostCallback(Function<void(WGPUDeviceLostReason, String&&)>&&);
     void setUncapturedErrorCallback(Function<void(WGPUErrorType, String&&)>&&);
     void setLabel(String&&);
 
@@ -122,7 +123,11 @@ public:
     bool hasUnifiedMemory() const { return m_device.hasUnifiedMemory; }
 
     uint32_t maxBuffersPlusVertexBuffersForVertexStage() const;
+    uint32_t maxBuffersForFragmentStage() const;
+    uint32_t maxBuffersForComputeStage() const;
     uint32_t vertexBufferIndexForBindGroup(uint32_t groupIndex) const;
+
+    static bool isStencilOnlyFormat(MTLPixelFormat);
 
 private:
     Device(id<MTLDevice>, id<MTLCommandQueue> defaultQueue, HardwareCapabilities&&, Adapter&);

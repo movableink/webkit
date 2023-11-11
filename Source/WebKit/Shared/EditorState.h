@@ -127,6 +127,7 @@ struct EditorState {
         bool insideFixedPosition { false };
         bool hasPlainText { false };
         WebCore::Color caretColor; // FIXME: Maybe this should be on VisualData?
+        bool hasCaretColorAuto { false };
         bool atStartOfSentence { false };
         bool selectionStartIsAtParagraphBoundary { false };
         bool selectionEndIsAtParagraphBoundary { false };
@@ -171,13 +172,12 @@ struct EditorState {
 
     bool hasVisualData() const { return !!visualData; }
 
-    void encode(IPC::Encoder&) const;
-    static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, EditorState&);
-
     bool hasPostLayoutAndVisualData() const { return hasPostLayoutData() && hasVisualData(); }
 
     std::optional<PostLayoutData> postLayoutData;
     std::optional<VisualData> visualData;
+
+    void clipOwnedRectExtentsToNumericLimits();
 
 private:
     friend TextStream& operator<<(TextStream&, const EditorState&);

@@ -40,8 +40,6 @@ struct CandidateTextRunForBreaking;
 
 class InlineContentBreaker {
 public:
-    InlineContentBreaker(std::optional<IntrinsicWidthMode>);
-
     struct PartialRun {
         size_t length { 0 };
         InlineLayoutUnit logicalWidth { 0 };
@@ -85,14 +83,16 @@ public:
         InlineLayoutUnit logicalWidth() const { return m_logicalWidth; }
         InlineLayoutUnit leadingTrimmableWidth() const { return m_leadingTrimmableWidth; }
         InlineLayoutUnit trailingTrimmableWidth() const { return m_trailingTrimmableWidth; }
-        InlineLayoutUnit hangingContentWidth() const { return m_hangingContentWidth; }
-        bool hasTrimmableContent() const { return trailingTrimmableWidth() || leadingTrimmableWidth(); }
-        bool hasHangingContent() const { return hangingContentWidth(); }
-        bool isFullyTrimmable() const;
-        bool isHangingContent() const { return hangingContentWidth() == logicalWidth(); }
+        InlineLayoutUnit hangingContentWidth() const { return m_hangingContentWidth.value_or(0.f); }
+        bool hasTrimmableSpace() const { return trailingTrimmableWidth() || leadingTrimmableWidth(); }
+        bool hasHangingSpace() const { return hangingContentWidth(); }
+        bool hasTextContent() const { return m_hasTextContent; }
+        bool isTextOnlyContent() const { return m_isTextOnlyContent; }
+        bool isFullyTrimmable() const { return m_isFullyTrimmable; }
+        bool isHangingContent() const { return m_hangingContentWidth && *m_hangingContentWidth == logicalWidth(); }
 
         void append(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
-        void appendTextContent(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalWidth, std::optional<InlineLayoutUnit> trimmableWidth);
+        void appendTextContent(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
         void setHangingContentWidth(InlineLayoutUnit logicalWidth) { m_hangingContentWidth = logicalWidth; }
         void reset();
 
@@ -116,7 +116,10 @@ public:
         InlineLayoutUnit m_logicalWidth { 0.f };
         InlineLayoutUnit m_leadingTrimmableWidth { 0.f };
         InlineLayoutUnit m_trailingTrimmableWidth { 0.f };
-        InlineLayoutUnit m_hangingContentWidth { 0.f };
+        std::optional<InlineLayoutUnit> m_hangingContentWidth { };
+        bool m_hasTextContent { false };
+        bool m_isTextOnlyContent { true };
+        bool m_isFullyTrimmable { false };
     };
 
     struct LineStatus {
@@ -130,8 +133,8 @@ public:
         bool hasWrapOpportunityAtPreviousPosition { false };
     };
     Result processInlineContent(const ContinuousContent&, const LineStatus&);
-    void setHyphenationDisabled() { n_hyphenationIsDisabled = true; }
-
+    void setHyphenationDisabled(bool hyphenationIsDisabled) { n_hyphenationIsDisabled = hyphenationIsDisabled; }
+    void setIsMinimumInIntrinsicWidthMode(bool isMinimumInIntrinsicWidthMode) { m_isMinimumInIntrinsicWidthMode = isMinimumInIntrinsicWidthMode; }
     static bool isWrappingAllowed(const ContinuousContent::Run&);
 
 private:
@@ -153,6 +156,7 @@ private:
         std::optional<BreakingPosition> breakingPosition { }; // Where we actually break this overflowing content.
     };
     OverflowingTextContent processOverflowingContentWithText(const ContinuousContent&, const LineStatus&) const;
+    std::optional<Result> simplifiedMinimumInstrinsicWidthBreak(const ContinuousContent&, const LineStatus&) const;
     std::optional<PartialRun> tryBreakingTextRun(const ContinuousContent::RunList& runs, const CandidateTextRunForBreaking&, InlineLayoutUnit availableWidth, const LineStatus&) const;
     std::optional<OverflowingTextContent::BreakingPosition> tryBreakingOverflowingRun(const LineStatus&, const ContinuousContent::RunList&, size_t overflowingRunIndex, InlineLayoutUnit nonOverflowingContentWidth) const;
     std::optional<OverflowingTextContent::BreakingPosition> tryBreakingPreviousNonOverflowingRuns(const LineStatus&, const ContinuousContent::RunList&, size_t overflowingRunIndex, InlineLayoutUnit nonOverflowingContentWidth) const;
@@ -165,9 +169,10 @@ private:
         AtHyphenationOpportunities     = 1 << 2
     };
     OptionSet<WordBreakRule> wordBreakBehavior(const RenderStyle&, bool hasWrapOpportunityAtPreviousPosition) const;
-    bool isInIntrinsicWidthMode() const { return !!m_intrinsicWidthMode; }
+    bool isMinimumInIntrinsicWidthMode() const { return m_isMinimumInIntrinsicWidthMode; }
 
-    std::optional<IntrinsicWidthMode> m_intrinsicWidthMode;
+private:
+    bool m_isMinimumInIntrinsicWidthMode { false };
     bool n_hyphenationIsDisabled { false };
 };
 
@@ -183,11 +188,6 @@ inline InlineContentBreaker::ContinuousContent::Run::Run(const Run& other)
     , style(other.style)
     , logicalWidth(other.logicalWidth)
 {
-}
-
-inline bool InlineContentBreaker::ContinuousContent::isFullyTrimmable() const
-{
-    return m_leadingTrimmableWidth + m_trailingTrimmableWidth == logicalWidth();
 }
 
 }

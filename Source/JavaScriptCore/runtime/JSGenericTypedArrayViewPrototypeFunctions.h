@@ -276,8 +276,12 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncCopyWithin(VM& vm, JS
         // https://tc39.es/proposal-resizablearraybuffer/#sec-%typedarray%.prototype.copywithin
         if (updatedLength.value() != length) {
             length = updatedLength.value();
-            if (std::max(to, from) + count > length)
+            if (std::max(to, from) + count > length) {
+                // Either to or from index is larger than the updated length. In this case, we do not need to copy anything and finish copyWithin.
+                if (std::max(to, from) > length)
+                    return JSValue::encode(callFrame->thisValue());
                 count = length - std::max(to, from);
+            }
         }
 
         typename ViewClass::ElementType* array = thisObject->typedVector();
@@ -760,6 +764,9 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewPrivateFuncFromFast(VM& vm, JS
         if (!array)
             return JSValue::encode(jsUndefined());
 
+        if (!isJSArray(array))
+            return JSValue::encode(jsUndefined());
+
         if (!array->isIteratorProtocolFastAndNonObservable())
             return JSValue::encode(jsUndefined());
 
@@ -775,20 +782,12 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewPrivateFuncFromFast(VM& vm, JS
         RETURN_IF_EXCEPTION(scope, { });
 
         if (indexingType == Int32Shape) {
-            for (unsigned i = 0; i < length; i++) {
-                JSValue value = array->butterfly()->contiguous().at(array, i).get();
-                if (LIKELY(!!value))
-                    result->setIndexQuicklyToNativeValue(i, ViewClass::Adaptor::toNativeFromInt32(value.asInt32()));
-                else
-                    result->setIndexQuicklyToNativeValue(i, ViewClass::Adaptor::toNativeFromUndefined());
-            }
-        } else {
-            ASSERT(indexingType == DoubleShape);
-            for (unsigned i = 0; i < length; i++) {
-                double d = array->butterfly()->contiguousDouble().at(array, i);
-                result->setIndexQuicklyToNativeValue(i, ViewClass::Adaptor::toNativeFromDouble(d));
-            }
+            result->copyFromInt32ShapeArray(0, array, 0, length);
+            return JSValue::encode(result);
         }
+
+        ASSERT(indexingType == DoubleShape);
+        result->copyFromDoubleShapeArray(0, array, 0, length);
         return JSValue::encode(result);
     }
 

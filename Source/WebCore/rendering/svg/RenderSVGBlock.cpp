@@ -22,9 +22,9 @@
 #include "config.h"
 #include "RenderSVGBlock.h"
 
+#include "LegacyRenderSVGResource.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderSVGBlockInlines.h"
-#include "RenderSVGResource.h"
 #include "RenderView.h"
 #include "SVGGraphicsElement.h"
 #include "SVGRenderSupport.h"
@@ -36,8 +36,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGBlock);
 
-RenderSVGBlock::RenderSVGBlock(SVGGraphicsElement& element, RenderStyle&& style)
-    : RenderBlockFlow(element, WTFMove(style))
+RenderSVGBlock::RenderSVGBlock(Type type, SVGGraphicsElement& element, RenderStyle&& style)
+    : RenderBlockFlow(type, element, WTFMove(style))
 {
 }
 
@@ -74,11 +74,11 @@ bool RenderSVGBlock::needsHasSVGTransformFlags() const
 }
 #endif
 
-void RenderSVGBlock::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
+void RenderSVGBlock::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& accumulatedOffset) const
 {
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled()) {
-        rects.append(snappedIntRect(LayoutRect(accumulatedOffset, size())));
+        rects.append({ accumulatedOffset, size() });
         return;
     }
 #else
@@ -157,7 +157,7 @@ LayoutRect RenderSVGBlock::clippedOverflowRect(const RenderLayerModelObject* rep
     UNUSED_PARAM(context);
 #endif
 
-    return SVGRenderSupport::clippedOverflowRectForRepaint(*this, repaintContainer);
+    return SVGRenderSupport::clippedOverflowRectForRepaint(*this, repaintContainer, context);
 }
 
 std::optional<LayoutRect> RenderSVGBlock::computeVisibleRectInContainer(const LayoutRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const

@@ -98,12 +98,15 @@ namespace WebCore {
     macro(connect) \
     macro(connectionstatechange) \
     macro(connecting) \
+    macro(contentvisibilityautostatechange) \
     macro(contextmenu) \
     macro(controllerchange) \
+    macro(cookiechange) \
     macro(coordinatorstatechange) \
     macro(copy) \
     DOM_EVENT_NAME_APPLE_PAY_COUPON_CODE_CHANGED(macro) \
     macro(cuechange) \
+    macro(currententrychange) \
     macro(cut) \
     macro(dataavailable) \
     macro(datachannel) \
@@ -114,6 +117,7 @@ namespace WebCore {
     macro(deviceorientation) \
     macro(dischargingtimechange) \
     macro(disconnect) \
+    macro(dispose) \
     macro(downloading) \
     macro(drag) \
     macro(dragend) \
@@ -192,6 +196,9 @@ namespace WebCore {
     macro(mouseup) \
     macro(mousewheel) \
     macro(mute) \
+    macro(navigate) \
+    macro(navigateerror) \
+    macro(navigatesuccess) \
     macro(negotiationneeded) \
     macro(nexttrack) \
     macro(nomatch) \
@@ -229,6 +236,7 @@ namespace WebCore {
     macro(processorerror) \
     macro(progress) \
     macro(push) \
+    macro(pushnotification) \
     macro(pushsubscriptionchange) \
     macro(qualitychange) \
     macro(ratechange) \
@@ -314,7 +322,6 @@ namespace WebCore {
     macro(volumechange) \
     macro(waiting) \
     macro(waitingforkey) \
-    macro(webglcontextchanged) \
     macro(webglcontextcreationerror) \
     macro(webglcontextlost) \
     macro(webglcontextrestored) \

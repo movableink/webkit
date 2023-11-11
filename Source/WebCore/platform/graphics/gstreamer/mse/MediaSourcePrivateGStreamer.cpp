@@ -75,8 +75,6 @@ MediaSourcePrivateGStreamer::MediaSourcePrivateGStreamer(MediaSourcePrivateClien
 MediaSourcePrivateGStreamer::~MediaSourcePrivateGStreamer()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    for (auto& sourceBufferPrivate : m_sourceBuffers)
-        sourceBufferPrivate->clearMediaSource();
 }
 
 MediaSourcePrivateGStreamer::AddStatus MediaSourcePrivateGStreamer::addSourceBuffer(const ContentType& contentType, bool, RefPtr<SourceBufferPrivate>& sourceBufferPrivate)
@@ -90,20 +88,9 @@ MediaSourcePrivateGStreamer::AddStatus MediaSourcePrivateGStreamer::addSourceBuf
     if (!SourceBufferPrivateGStreamer::isContentTypeSupported(contentType))
         return MediaSourcePrivateGStreamer::AddStatus::NotSupported;
 
-    sourceBufferPrivate = SourceBufferPrivateGStreamer::create(this, contentType, m_playerPrivate);
-    RefPtr<SourceBufferPrivateGStreamer> sourceBufferPrivateGStreamer = static_cast<SourceBufferPrivateGStreamer*>(sourceBufferPrivate.get());
-    m_sourceBuffers.add(sourceBufferPrivateGStreamer);
+    m_sourceBuffers.append(SourceBufferPrivateGStreamer::create(*this, contentType, m_playerPrivate));
+    sourceBufferPrivate = m_sourceBuffers.last();
     return MediaSourcePrivateGStreamer::AddStatus::Ok;
-}
-
-void MediaSourcePrivateGStreamer::removeSourceBuffer(SourceBufferPrivate* sourceBufferPrivate)
-{
-    RefPtr<SourceBufferPrivateGStreamer> sourceBufferPrivateGStreamer = static_cast<SourceBufferPrivateGStreamer*>(sourceBufferPrivate);
-    ASSERT(m_sourceBuffers.contains(sourceBufferPrivateGStreamer));
-
-    sourceBufferPrivateGStreamer->clearMediaSource();
-    m_sourceBuffers.remove(sourceBufferPrivateGStreamer);
-    m_activeSourceBuffers.remove(sourceBufferPrivateGStreamer.get());
 }
 
 void MediaSourcePrivateGStreamer::durationChanged(const MediaTime&)
@@ -138,14 +125,7 @@ void MediaSourcePrivateGStreamer::markEndOfStream(EndOfStreamStatus endOfStreamS
 #endif
     if (endOfStreamStatus == EosNoError)
         m_playerPrivate.setNetworkState(MediaPlayer::NetworkState::Loaded);
-    m_isEnded = true;
-}
-
-void MediaSourcePrivateGStreamer::unmarkEndOfStream()
-{
-    ASSERT(isMainThread());
-    GST_DEBUG_OBJECT(m_playerPrivate.pipeline(), "Un-marking EOS");
-    m_isEnded = false;
+    MediaSourcePrivate::markEndOfStream(endOfStreamStatus);
 }
 
 MediaPlayer::ReadyState MediaSourcePrivateGStreamer::readyState() const
@@ -158,12 +138,20 @@ void MediaSourcePrivateGStreamer::setReadyState(MediaPlayer::ReadyState state)
     m_playerPrivate.setReadyState(state);
 }
 
-void MediaSourcePrivateGStreamer::seekCompleted()
+void MediaSourcePrivateGStreamer::waitForTarget(const SeekTarget& target, CompletionHandler<void(const MediaTime&)>&& completionHandler)
 {
-    // This call just informs us that the seek has been completed as far as MediaSource is concerned: that is,
-    // the samples for `currentTime` have been fed. This doesn't mean the seek is complete for the player, as
-    // they still have to be decoded and preroll has to occur before we let the "seeked" event happen.
-    // See MediaPlayerPrivateGStreamerMSE::asyncStateChangeDone().
+    if (m_mediaSource)
+        m_mediaSource->waitForTarget(target, WTFMove(completionHandler));
+    else
+        completionHandler(MediaTime::invalidTime());
+}
+
+void MediaSourcePrivateGStreamer::seekToTime(const MediaTime& time, CompletionHandler<void()>&& completionHandler)
+{
+    if (m_mediaSource)
+        m_mediaSource->seekToTime(time, WTFMove(completionHandler));
+    else
+        completionHandler();
 }
 
 MediaTime MediaSourcePrivateGStreamer::duration() const
@@ -176,14 +164,6 @@ MediaTime MediaSourcePrivateGStreamer::currentMediaTime() const
     return m_playerPrivate.currentMediaTime();
 }
 
-void MediaSourcePrivateGStreamer::sourceBufferPrivateDidChangeActiveState(SourceBufferPrivateGStreamer* sourceBufferPrivate, bool isActive)
-{
-    if (!isActive)
-        m_activeSourceBuffers.remove(sourceBufferPrivate);
-    else if (!m_activeSourceBuffers.contains(sourceBufferPrivate))
-        m_activeSourceBuffers.add(sourceBufferPrivate);
-}
-
 void MediaSourcePrivateGStreamer::startPlaybackIfHasAllTracks()
 {
     if (m_hasAllTracks) {
@@ -192,7 +172,7 @@ void MediaSourcePrivateGStreamer::startPlaybackIfHasAllTracks()
     }
 
     for (auto& sourceBuffer : m_sourceBuffers) {
-        if (!sourceBuffer->hasReceivedInitializationSegment()) {
+        if (!sourceBuffer->hasReceivedFirstInitializationSegment()) {
             GST_DEBUG_OBJECT(m_playerPrivate.pipeline(), "There are still SourceBuffers without an initialization segment, not starting source yet.");
             return;
         }
@@ -202,8 +182,10 @@ void MediaSourcePrivateGStreamer::startPlaybackIfHasAllTracks()
     m_hasAllTracks = true;
 
     Vector<RefPtr<MediaSourceTrackGStreamer>> tracks;
-    for (auto& sourceBuffer : m_sourceBuffers)
+    for (auto& privateSourceBuffer : m_sourceBuffers) {
+        auto sourceBuffer = downcast<SourceBufferPrivateGStreamer>(privateSourceBuffer);
         tracks.appendRange(sourceBuffer->tracks().begin(), sourceBuffer->tracks().end());
+    }
     m_playerPrivate.startSource(tracks);
 }
 
@@ -212,6 +194,11 @@ const PlatformTimeRanges& MediaSourcePrivateGStreamer::buffered()
     if (m_mediaSource)
         return m_mediaSource->buffered();
     return PlatformTimeRanges::emptyRanges();
+}
+
+void MediaSourcePrivateGStreamer::notifyActiveSourceBuffersChanged()
+{
+    m_playerPrivate.notifyActiveSourceBuffersChanged();
 }
 
 #if !RELEASE_LOG_DISABLED

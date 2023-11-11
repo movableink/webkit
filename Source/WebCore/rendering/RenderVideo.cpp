@@ -29,6 +29,7 @@
 #include "RenderVideo.h"
 
 #include "Document.h"
+#include "FullscreenManager.h"
 #include "GraphicsContext.h"
 #include "HTMLNames.h"
 #include "HTMLVideoElement.h"
@@ -51,9 +52,10 @@ using namespace HTMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderVideo);
 
 RenderVideo::RenderVideo(HTMLVideoElement& element, RenderStyle&& style)
-    : RenderMedia(element, WTFMove(style))
+    : RenderMedia(Type::Video, element, WTFMove(style))
 {
     setIntrinsicSize(calculateIntrinsicSize());
+    ASSERT(isRenderVideo());
 }
 
 RenderVideo::~RenderVideo()
@@ -175,9 +177,10 @@ void RenderVideo::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
     updateIntrinsicSize();
 }
 
-static bool areAspectRatiosEssentiallyEqual(const LayoutSize& intrinsicSize, const LayoutSize& contentSize, float deviceScaleFactor)
+static bool contentSizeAlmostEqualsFrameSize(const IntSize& frameContentsSize, const LayoutSize& contentSize, float deviceScaleFactor)
 {
-    return WTF::areEssentiallyEqual(intrinsicSize.aspectRatio(), contentSize.aspectRatio(), deviceScaleFactor / std::min<LayoutUnit>(contentSize.width(), contentSize.height()));
+    LayoutUnit pointSizeLayoutUnits = LayoutUnit(deviceScaleFactor);
+    return absoluteValue(frameContentsSize.width() - contentSize.width()) <= pointSizeLayoutUnits && absoluteValue(frameContentsSize.height() - contentSize.height()) <= pointSizeLayoutUnits;
 }
 
 IntRect RenderVideo::videoBox() const
@@ -191,10 +194,11 @@ IntRect RenderVideo::videoBox() const
     if (videoElement().shouldDisplayPosterImage())
         intrinsicSize = m_cachedImageSize;
 
-    if (videoElement().isFullscreen() && areAspectRatiosEssentiallyEqual(intrinsicSize, contentSize(), page().deviceScaleFactor()))
+    auto videoBoxRect = snappedIntRect(replacedContentRect(intrinsicSize));
+    if (!intrinsicSize.isEmpty() && inElementOrVideoFullscreen() && contentSizeAlmostEqualsFrameSize(view().frameView().layoutSize(), videoBoxRect.size(), page().deviceScaleFactor()))
         return snappedIntRect({ contentBoxLocation(), contentSize().fitToAspectRatio(intrinsicSize, AspectRatioFitGrow) });
 
-    return snappedIntRect(replacedContentRect(intrinsicSize));
+    return videoBoxRect;
 }
 
 bool RenderVideo::shouldDisplayVideo() const
@@ -214,20 +218,20 @@ void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
 
     if (!displayingPoster && !mediaPlayer) {
         if (paintInfo.phase == PaintPhase::Foreground)
-            page().addRelevantUnpaintedObject(this, visualOverflowRect());
+            page().addRelevantUnpaintedObject(*this, visualOverflowRect());
         return;
     }
 
     LayoutRect rect = videoBox();
     if (rect.isEmpty()) {
         if (paintInfo.phase == PaintPhase::Foreground)
-            page().addRelevantUnpaintedObject(this, visualOverflowRect());
+            page().addRelevantUnpaintedObject(*this, visualOverflowRect());
         return;
     }
     rect.moveBy(paintOffset);
 
     if (paintInfo.phase == PaintPhase::Foreground)
-        page().addRelevantRepaintedObject(this, rect);
+        page().addRelevantRepaintedObject(*this, rect);
 
     LayoutRect contentRect = contentBoxRect();
     contentRect.moveBy(paintOffset);
@@ -294,6 +298,15 @@ void RenderVideo::updateFromElement()
     updatePlayer();
 }
 
+bool RenderVideo::inElementOrVideoFullscreen() const
+{
+    bool result = videoElement().isFullscreen();
+#if ENABLE(FULLSCREEN_API)
+    result = result || document().fullscreenManager().isFullscreen();
+#endif
+    return result;
+}
+
 void RenderVideo::updatePlayer()
 {
     if (renderTreeBeingDestroyed())
@@ -310,8 +323,9 @@ void RenderVideo::updatePlayer()
     if (videoElement().inActiveDocument())
         contentChanged(VideoChanged);
 
-    bool fitToFillInFullscreen = videoElement().isFullscreen() && areAspectRatiosEssentiallyEqual(intrinsicSize(), contentSize(), page().deviceScaleFactor());
-    videoElement().updateMediaPlayer(videoBox().size(), style().objectFit() != ObjectFit::Fill && !fitToFillInFullscreen);
+    auto videoBoxSize = videoBox().size();
+    bool fitToFillInFullscreen = inElementOrVideoFullscreen() && contentSizeAlmostEqualsFrameSize(view().frameView().layoutSize(), videoBoxSize, page().deviceScaleFactor());
+    videoElement().updateMediaPlayer(videoBoxSize, style().objectFit() != ObjectFit::Fill && !fitToFillInFullscreen);
 }
 
 LayoutUnit RenderVideo::computeReplacedLogicalWidth(ShouldComputePreferred shouldComputePreferred) const

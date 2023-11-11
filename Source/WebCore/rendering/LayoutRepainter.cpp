@@ -27,6 +27,7 @@
 #include "LayoutRepainter.h"
 
 #include "RenderElement.h"
+#include "RenderLayerModelObject.h"
 
 namespace WebCore {
 
@@ -38,7 +39,7 @@ LayoutRepainter::LayoutRepainter(RenderElement& renderer, bool checkForRepaint, 
     if (!m_checkForRepaint)
         return;
 
-    m_repaintContainer = m_renderer.containerForRepaint().renderer;
+    m_repaintContainer = m_renderer.containerForRepaint().renderer.get();
     m_oldBounds = m_renderer.clippedOverflowRectForRepaint(m_repaintContainer);
 
     if (m_repaintOutlineBounds)
@@ -53,7 +54,7 @@ bool LayoutRepainter::repaintAfterLayout()
     auto newBounds = m_renderer.clippedOverflowRectForRepaint(m_repaintContainer);
     auto newOutlineBounds = m_repaintOutlineBounds ? nullptr : &m_oldOutlineBounds;
 
-    return m_renderer.repaintAfterLayoutIfNeeded(m_repaintContainer, m_oldBounds, m_oldOutlineBounds, &newBounds, newOutlineBounds);
+    return m_renderer.repaintAfterLayoutIfNeeded(m_repaintContainer, m_renderer.selfNeedsLayout() ? RenderElement::RequiresFullRepaint::Yes : RenderElement::RequiresFullRepaint::No, m_oldBounds, m_oldOutlineBounds, &newBounds, newOutlineBounds);
 }
 
 } // namespace WebCore

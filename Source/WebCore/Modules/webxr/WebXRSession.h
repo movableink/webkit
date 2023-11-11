@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia S.L. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,16 +67,16 @@ public:
     using RefCounted<WebXRSession>::ref;
     using RefCounted<WebXRSession>::deref;
 
-    using TrackingAndRenderingClient::weakPtrFactory;
-    using TrackingAndRenderingClient::WeakValueType;
-    using TrackingAndRenderingClient::WeakPtrImplType;
+    using PlatformXR::TrackingAndRenderingClient::weakPtrFactory;
+    using PlatformXR::TrackingAndRenderingClient::WeakValueType;
+    using PlatformXR::TrackingAndRenderingClient::WeakPtrImplType;
 
     XREnvironmentBlendMode environmentBlendMode() const;
     XRInteractionMode interactionMode() const;
     XRVisibilityState visibilityState() const;
     const WebXRRenderState& renderState() const;
     const WebXRInputSourceArray& inputSources() const;
-    PlatformXR::Device* device() const { return m_device.get(); }
+    RefPtr<PlatformXR::Device> device() const { return m_device.get(); }
 
     ExceptionOr<void> updateRenderState(const XRRenderStateInit&);
     void requestReferenceSpace(XRReferenceSpaceType, RequestReferenceSpacePromise&&);
@@ -98,7 +99,7 @@ public:
 
     const Vector<PlatformXR::Device::ViewData>& views() const { return m_views; }
     const PlatformXR::Device::FrameData& frameData() const { return m_frameData; }
-    const WebXRViewerSpace& viewerReferenceSpace() const { return *m_viewerReferenceSpace; }
+    const WebXRViewerSpace& viewerReferenceSpace() const { return m_viewerReferenceSpace; }
     bool posesCanBeReported(const Document&) const;
     
 #if ENABLE(WEBXR_HANDS)
@@ -142,11 +143,11 @@ private:
 
     WebXRSystem& m_xrSystem;
     XRSessionMode m_mode;
-    WeakPtr<PlatformXR::Device> m_device;
+    ThreadSafeWeakPtr<PlatformXR::Device> m_device;
     FeatureList m_requestedFeatures;
     RefPtr<WebXRRenderState> m_activeRenderState;
     RefPtr<WebXRRenderState> m_pendingRenderState;
-    std::unique_ptr<WebXRViewerSpace> m_viewerReferenceSpace;
+    Ref<WebXRViewerSpace> m_viewerReferenceSpace;
     MonotonicTime m_timeOrigin;
 
     unsigned m_nextCallbackId { 1 };

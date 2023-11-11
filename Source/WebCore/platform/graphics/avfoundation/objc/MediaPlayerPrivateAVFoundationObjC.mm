@@ -288,7 +288,7 @@ private:
         return makeUnique<MediaPlayerPrivateAVFoundationObjC>(player);
     }
 
-    void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types) const final
+    void getSupportedTypes(HashSet<String>& types) const final
     {
         return MediaPlayerPrivateAVFoundationObjC::getSupportedTypes(types);
     }
@@ -647,7 +647,7 @@ void MediaPlayerPrivateAVFoundationObjC::createAVPlayerLayer()
     [m_videoLayer addObserver:m_objcObserver.get() forKeyPath:@"readyForDisplay" options:NSKeyValueObservingOptionNew context:(void *)MediaPlayerAVFoundationObservationContextAVPlayerLayer];
     updateVideoLayerGravity();
     [m_videoLayer setContentsScale:player->playerContentsScale()];
-    m_videoLayerManager->setVideoLayer(m_videoLayer.get(), player->videoInlineSize());
+    m_videoLayerManager->setVideoLayer(m_videoLayer.get(), player->presentationSize());
 
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
     if ([m_videoLayer respondsToSelector:@selector(setPIPModeEnabled:)])
@@ -669,6 +669,7 @@ void MediaPlayerPrivateAVFoundationObjC::destroyVideoLayer()
     m_videoLayerManager->didDestroyVideoLayer();
 
     m_videoLayer = nil;
+    m_haveBeenAskedToCreateLayer = false;
 
     setNeedsRenderingModeChanged();
 }
@@ -1016,14 +1017,14 @@ void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url, Ret
     @try {
         m_avAsset = adoptNS([PAL::allocAVURLAssetInstance() initWithURL:cocoaURL options:options.get()]);
     } @catch(NSException *exception) {
-        ERROR_LOG(LOGIDENTIFIER, "-[AVURLAssetInstance initWithURL:cocoaURL options:] threw an exception: ", [[exception name] UTF8String], ", reason : ", [[exception reason] UTF8String]);
+        ERROR_LOG(LOGIDENTIFIER, "-[AVURLAssetInstance initWithURL:cocoaURL options:] threw an exception: ", exception.name, ", reason : ", exception.reason);
         cocoaURL = canonicalURL(conformFragmentIdentifierForURL(url));
 
         @try {
             m_avAsset = adoptNS([PAL::allocAVURLAssetInstance() initWithURL:cocoaURL options:options.get()]);
         } @catch(NSException *exception) {
             ASSERT_NOT_REACHED();
-            ERROR_LOG(LOGIDENTIFIER, "-[AVURLAssetInstance initWithURL:cocoaURL options:] threw a second exception, bailing: ", [[exception name] UTF8String], ", reason : ", [[exception reason] UTF8String]);
+            ERROR_LOG(LOGIDENTIFIER, "-[AVURLAssetInstance initWithURL:cocoaURL options:] threw a second exception, bailing: ", exception.name, ", reason : ", exception.reason);
             setNetworkState(MediaPlayer::NetworkState::FormatError);
             return;
         }
@@ -1321,8 +1322,9 @@ PlatformLayer* MediaPlayerPrivateAVFoundationObjC::platformLayer() const
 
 void MediaPlayerPrivateAVFoundationObjC::updateVideoFullscreenInlineImage()
 {
-    updateLastImage(UpdateType::UpdateSynchronously);
-    m_videoLayerManager->updateVideoFullscreenInlineImage(m_lastImage ? m_lastImage->platformImage() : nullptr);
+    updateLastImage([&] {
+        m_videoLayerManager->updateVideoFullscreenInlineImage(m_lastImage ? m_lastImage->platformImage() : nullptr);
+    });
 }
 
 RetainPtr<PlatformLayer> MediaPlayerPrivateAVFoundationObjC::createVideoFullscreenLayer()
@@ -1332,11 +1334,15 @@ RetainPtr<PlatformLayer> MediaPlayerPrivateAVFoundationObjC::createVideoFullscre
 
 void MediaPlayerPrivateAVFoundationObjC::setVideoFullscreenLayer(PlatformLayer* videoFullscreenLayer, Function<void()>&& completionHandler)
 {
+    auto completion = [&] {
+        m_videoLayerManager->setVideoFullscreenLayer(videoFullscreenLayer, WTFMove(completionHandler), m_lastImage ? m_lastImage->platformImage() : nullptr);
+        updateVideoLayerGravity(ShouldAnimate::Yes);
+        updateDisableExternalPlayback();
+    };
     if (videoFullscreenLayer)
-        updateLastImage(UpdateType::UpdateSynchronously);
-    m_videoLayerManager->setVideoFullscreenLayer(videoFullscreenLayer, WTFMove(completionHandler), m_lastImage ? m_lastImage->platformImage() : nullptr);
-    updateVideoLayerGravity(ShouldAnimate::Yes);
-    updateDisableExternalPlayback();
+        updateLastImage(WTFMove(completion));
+    else
+        completion();
 }
 
 void MediaPlayerPrivateAVFoundationObjC::setVideoFullscreenFrame(FloatRect frame)
@@ -1582,9 +1588,9 @@ void MediaPlayerPrivateAVFoundationObjC::currentMediaTimeDidChange(MediaTime&& t
         m_currentTimeDidChangeCallback(m_cachedCurrentMediaTime.isFinite() ? m_cachedCurrentMediaTime : MediaTime::zeroTime());
 }
 
-void MediaPlayerPrivateAVFoundationObjC::seekToTime(const MediaTime& time, const MediaTime& negativeTolerance, const MediaTime& positiveTolerance)
+void MediaPlayerPrivateAVFoundationObjC::seekToTargetInternal(const SeekTarget& target)
 {
-    ASSERT(time.isFinite());
+    ASSERT(target.time.isFinite());
 
     // setCurrentTime generates several event callbacks, update afterwards.
     setDelayCallbacks(true);
@@ -1592,9 +1598,9 @@ void MediaPlayerPrivateAVFoundationObjC::seekToTime(const MediaTime& time, const
     if (m_metadataTrack)
         m_metadataTrack->flushPartialCues();
 
-    CMTime cmTime = PAL::toCMTime(time);
-    CMTime cmBefore = PAL::toCMTime(negativeTolerance);
-    CMTime cmAfter = PAL::toCMTime(positiveTolerance);
+    CMTime cmTime = PAL::toCMTime(target.time);
+    CMTime cmBefore = PAL::toCMTime(target.negativeThreshold);
+    CMTime cmAfter = PAL::toCMTime(target.positiveThreshold);
 
     // [AVPlayerItem seekToTime] will throw an exception if a tolerance is invalid or negative.
     if (!CMTIME_IS_VALID(cmBefore) || PAL::CMTimeCompare(cmBefore, PAL::kCMTimeZero) < 0)
@@ -1607,12 +1613,11 @@ void MediaPlayerPrivateAVFoundationObjC::seekToTime(const MediaTime& time, const
     setShouldObserveTimeControlStatus(false);
     [m_avPlayerItem seekToTime:cmTime toleranceBefore:cmBefore toleranceAfter:cmAfter completionHandler:^(BOOL finished) {
         callOnMainThread([weakThis, finished] {
-            auto _this = weakThis.get();
-            if (!_this)
+            if (!weakThis)
                 return;
 
-            _this->setShouldObserveTimeControlStatus(true);
-            _this->seekCompleted(finished);
+            weakThis->setShouldObserveTimeControlStatus(true);
+            weakThis->seekCompleted(finished);
         });
     }];
 
@@ -1929,7 +1934,7 @@ MediaPlayerPrivateAVFoundation::AssetStatus MediaPlayerPrivateAVFoundationObjC::
             AVKeyValueStatus keyStatus = [m_avAsset statusOfValueForKey:keyName error:&error];
 
             if (error)
-                ERROR_LOG(LOGIDENTIFIER, "failed for ", [keyName UTF8String], ", error = ", [[error localizedDescription] UTF8String]);
+                ERROR_LOG(LOGIDENTIFIER, "failed for ", keyName, ", error = ", error);
 
             if (keyStatus < AVKeyValueStatusLoaded)
                 return MediaPlayerAVAssetStatusLoading; // At least one key is not loaded yet.
@@ -2008,21 +2013,6 @@ void MediaPlayerPrivateAVFoundationObjC::paint(GraphicsContext& context, const F
     paintCurrentFrameInContext(context, rect);
 }
 
-void MediaPlayerPrivateAVFoundationObjC::paintWithImageGenerator(GraphicsContext& context, const FloatRect& rect)
-{
-    INFO_LOG(LOGIDENTIFIER);
-
-    RetainPtr<CGImageRef> image = createImageForTimeInRect(currentTime(), rect);
-    if (image) {
-        GraphicsContextStateSaver stateSaver(context);
-        context.translate(rect.x(), rect.y() + rect.height());
-        context.scale(FloatSize(1.0f, -1.0f));
-        context.setImageInterpolationQuality(InterpolationQuality::Low);
-        IntRect paintRect(IntPoint(0, 0), IntSize(rect.width(), rect.height()));
-        CGContextDrawImage(context.platformContext(), CGRectMake(0, 0, paintRect.width(), paintRect.height()), image.get());
-    }
-}
-
 RetainPtr<CGImageRef> MediaPlayerPrivateAVFoundationObjC::createImageForTimeInRect(float time, const FloatRect& rect)
 {
     if (!m_imageGenerator)
@@ -2042,7 +2032,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     return image;
 }
 
-void MediaPlayerPrivateAVFoundationObjC::getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& supportedTypes)
+void MediaPlayerPrivateAVFoundationObjC::getSupportedTypes(HashSet<String>& supportedTypes)
 {
     supportedTypes = AVAssetMIMETypeCache::singleton().supportedTypes();
 }
@@ -2264,7 +2254,7 @@ void MediaPlayerPrivateAVFoundationObjC::updateVideoLayerGravity(ShouldAnimate s
         return;
 
     bool shouldDisableActions = shouldAnimate == ShouldAnimate::No;
-    ALWAYS_LOG(LOGIDENTIFIER, "Setting gravity to \"", String { videoGravity }, "\", animated: ", !shouldDisableActions);
+    ALWAYS_LOG(LOGIDENTIFIER, "Setting gravity to \"", videoGravity, "\", animated: ", !shouldDisableActions);
 
     [CATransaction begin];
     [CATransaction setDisableActions:shouldDisableActions];
@@ -2746,23 +2736,35 @@ bool MediaPlayerPrivateAVFoundationObjC::videoOutputHasAvailableFrame()
     return m_videoOutput->hasImageForTime(PAL::toMediaTime([m_avPlayerItem currentTime]));
 }
 
-void MediaPlayerPrivateAVFoundationObjC::updateLastImage(UpdateType type)
+void MediaPlayerPrivateAVFoundationObjC::updateLastImage(UpdateCompletion&& completion)
 {
-    if (!m_avPlayerItem || readyState() < MediaPlayer::ReadyState::HaveCurrentData)
+    if (!m_avPlayerItem || readyState() < MediaPlayer::ReadyState::HaveCurrentData) {
+        completion();
         return;
+    }
 
     auto* firstEnabledVideoTrack = firstEnabledVisibleTrack();
-    if (!firstEnabledVideoTrack)
+    if (!firstEnabledVideoTrack) {
+        completion();
         return;
+    }
 
-    if (type == UpdateType::UpdateSynchronously && !m_lastImage && !videoOutputHasAvailableFrame())
-        waitForVideoOutputMediaDataWillChange();
+    if (!m_lastImage && !videoOutputHasAvailableFrame()) {
+        if (waitForVideoOutputMediaDataWillChange() == UpdateResult::ObjectDestroyed) {
+            // NOTE: Do not call the completion handler here, as the `this` pointer is now invalid.
+            // This will cause an ASSERT that the completion handler was not called before destruction.
+            // This is intentional; this is a ASSERT-able behavior, and should not occur.
+            return;
+        }
+    }
 
     // Calls to copyPixelBufferForItemTime:itemTimeForDisplay: may return nil if the pixel buffer
     // for the requested time has already been retrieved. In this case, the last valid image (if any)
     // should be displayed.
-    if (!updateLastPixelBuffer() && (m_lastImage || !m_lastPixelBuffer))
+    if (!updateLastPixelBuffer() && (m_lastImage || !m_lastPixelBuffer)) {
+        completion();
         return;
+    }
 
     if (!m_pixelBufferConformer) {
         NSDictionary *attributes = @{ (__bridge NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA) };
@@ -2774,28 +2776,36 @@ void MediaPlayerPrivateAVFoundationObjC::updateLastImage(UpdateType type)
     m_lastImage = NativeImage::create(m_pixelBufferConformer->createImageFromPixelBuffer(m_lastPixelBuffer.get()));
 
     INFO_LOG(LOGIDENTIFIER, "creating buffer took ", (MonotonicTime::now() - start).seconds());
+
+    completion();
 }
 
 void MediaPlayerPrivateAVFoundationObjC::paintWithVideoOutput(GraphicsContext& context, const FloatRect& outputRect)
 {
-    updateLastImage(UpdateType::UpdateSynchronously);
-    if (!m_lastImage)
-        return;
+    updateLastImage([&, logIdentifier = LOGIDENTIFIER] {
+        if (!m_lastImage)
+            return;
 
-    INFO_LOG(LOGIDENTIFIER);
+        INFO_LOG(logIdentifier);
 
-    FloatRect imageRect { FloatPoint::zero(), m_lastImage->size() };
-    context.drawNativeImage(*m_lastImage, imageRect.size(), outputRect, imageRect);
+        FloatRect imageRect { FloatPoint::zero(), m_lastImage->size() };
+        context.drawNativeImage(*m_lastImage, imageRect.size(), outputRect, imageRect);
 
-    // If we have created an AVAssetImageGenerator in the past due to m_videoOutput not having an available
-    // video frame, destroy it now that it is no longer needed.
-    if (m_imageGenerator)
-        destroyImageGenerator();
-
+        // If we have created an AVAssetImageGenerator in the past due to m_videoOutput not having an available
+        // video frame, destroy it now that it is no longer needed.
+        if (m_imageGenerator)
+            destroyImageGenerator();
+    });
 }
 
 RefPtr<VideoFrame> MediaPlayerPrivateAVFoundationObjC::videoFrameForCurrentTime()
 {
+    if (!m_avPlayerItem || readyState() < MediaPlayer::ReadyState::HaveCurrentData)
+        return nullptr;
+
+    if (!m_lastPixelBuffer && !videoOutputHasAvailableFrame())
+        waitForVideoOutputMediaDataWillChange();
+
     updateLastPixelBuffer();
     if (!m_lastPixelBuffer)
         return nullptr;
@@ -2804,23 +2814,27 @@ RefPtr<VideoFrame> MediaPlayerPrivateAVFoundationObjC::videoFrameForCurrentTime(
 
 RefPtr<NativeImage> MediaPlayerPrivateAVFoundationObjC::nativeImageForCurrentTime()
 {
-    updateLastImage(UpdateType::UpdateSynchronously);
-    return m_lastImage;
+    RefPtr<NativeImage> returnValue = nullptr;
+    updateLastImage([&] {
+        returnValue = m_lastImage;
+    });
+    return returnValue;
 }
 
 DestinationColorSpace MediaPlayerPrivateAVFoundationObjC::colorSpace()
 {
-    updateLastImage(UpdateType::UpdateSynchronously);
-    if (!m_lastPixelBuffer)
-        return DestinationColorSpace::SRGB();
-
-    return DestinationColorSpace(createCGColorSpaceForCVPixelBuffer(m_lastPixelBuffer.get()));
+    DestinationColorSpace colorSpace = DestinationColorSpace::SRGB();
+    updateLastImage([&] {
+        if (m_lastPixelBuffer)
+            colorSpace = DestinationColorSpace(createCGColorSpaceForCVPixelBuffer(m_lastPixelBuffer.get()));
+    });
+    return colorSpace;
 }
 
-void MediaPlayerPrivateAVFoundationObjC::waitForVideoOutputMediaDataWillChange()
+auto MediaPlayerPrivateAVFoundationObjC::waitForVideoOutputMediaDataWillChange() -> UpdateResult
 {
     if (m_waitForVideoOutputMediaDataWillChangeTimedOut)
-        return;
+        return UpdateResult::Failed;
 
     // Wait for 1 second.
     MonotonicTime start = MonotonicTime::now();
@@ -2828,8 +2842,8 @@ void MediaPlayerPrivateAVFoundationObjC::waitForVideoOutputMediaDataWillChange()
     std::optional<RunLoop::Timer> timeoutTimer;
 
     if (!m_runLoopNestingLevel) {
-        m_waitForVideoOutputMediaDataWillChangeObserver = WTF::makeUnique<Observer<void()>>([this, logIdentifier = LOGIDENTIFIER] () mutable {
-            if (m_runLoopNestingLevel)
+        m_waitForVideoOutputMediaDataWillChangeObserver = WTF::makeUnique<Observer<void()>>([weakThis = WeakPtr { this }] () mutable {
+            if (weakThis && weakThis->m_runLoopNestingLevel)
                 RunLoop::main().stop();
         });
         m_videoOutput->addCurrentImageChangedObserver(*m_waitForVideoOutputMediaDataWillChangeObserver);
@@ -2840,21 +2854,28 @@ void MediaPlayerPrivateAVFoundationObjC::waitForVideoOutputMediaDataWillChange()
         timeoutTimer->startOneShot(1_s);
     }
 
+    auto weakThis = WeakPtr { this };
     ++m_runLoopNestingLevel;
     RunLoop::run();
+    if (!weakThis)
+        return UpdateResult::ObjectDestroyed;
+
     --m_runLoopNestingLevel;
 
     if (m_runLoopNestingLevel) {
         RunLoop::main().stop();
-        return;
+        return UpdateResult::Failed;
     }
 
     bool satisfied = timeoutTimer->isActive();
     if (!satisfied) {
         ERROR_LOG(LOGIDENTIFIER, "timed out");
         m_waitForVideoOutputMediaDataWillChangeTimedOut = true;
-    } else
-        INFO_LOG(LOGIDENTIFIER, "waiting for videoOutput took ", (MonotonicTime::now() - start).seconds());
+        return UpdateResult::TimedOut;
+    }
+
+    INFO_LOG(LOGIDENTIFIER, "waiting for videoOutput took ", (MonotonicTime::now() - start).seconds());
+    return UpdateResult::Succeeded;
 }
 
 void MediaPlayerPrivateAVFoundationObjC::outputMediaDataWillChange()

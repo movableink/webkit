@@ -25,7 +25,7 @@
 
 #include "FilterResults.h"
 #include "FilterTargetSwitcher.h"
-#include "RenderSVGResourceContainer.h"
+#include "LegacyRenderSVGResourceContainer.h"
 #include "SVGFilter.h"
 #include "SVGUnitTypes.h"
 #include <wtf/IsoMalloc.h>
@@ -53,7 +53,7 @@ public:
     FilterDataState state { PaintingSource };
 };
 
-class RenderSVGResourceFilter final : public RenderSVGResourceContainer {
+class RenderSVGResourceFilter final : public LegacyRenderSVGResourceContainer {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceFilter);
 public:
     RenderSVGResourceFilter(SVGFilterElement&, RenderStyle&&);
@@ -62,13 +62,13 @@ public:
     inline SVGFilterElement& filterElement() const;
     bool isIdentity() const;
 
-    void removeAllClientsFromCache(bool markForInvalidation = true) override;
+    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
 
     bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
     void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement*) override;
 
-    FloatRect resourceBoundingBox(const RenderObject&) override;
+    FloatRect resourceBoundingBox(const RenderObject&, RepaintRectCalculation) override;
 
     inline SVGUnitTypes::SVGUnitType filterUnits() const;
     inline SVGUnitTypes::SVGUnitType primitiveUnits() const;
@@ -83,7 +83,6 @@ private:
     void element() const = delete;
 
     ASCIILiteral renderName() const override { return "RenderSVGResourceFilter"_s; }
-    bool isSVGResourceFilter() const override { return true; }
 
     HashMap<RenderObject*, std::unique_ptr<FilterData>> m_rendererFilterDataMap;
 };
@@ -93,6 +92,6 @@ WTF::TextStream& operator<<(WTF::TextStream&, FilterData::FilterDataState);
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RenderSVGResourceFilter)
-    static bool isType(const WebCore::RenderObject& renderer) { return renderer.isSVGResourceFilter(); }
-    static bool isType(const WebCore::RenderSVGResource& resource) { return resource.resourceType() == WebCore::FilterResourceType; }
+    static bool isType(const WebCore::RenderObject& renderer) { return renderer.isRenderSVGResourceFilter(); }
+    static bool isType(const WebCore::LegacyRenderSVGResource& resource) { return resource.resourceType() == WebCore::FilterResourceType; }
 SPECIALIZE_TYPE_TRAITS_END()

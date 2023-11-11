@@ -27,6 +27,7 @@
 
 #import "AppDelegate.h"
 #import "SettingsController.h"
+#import <QuartzCore/CATextLayer.h>
 #import <SecurityInterface/SFCertificateTrustPanel.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <WebKit/WKFrameInfo.h>
@@ -68,7 +69,7 @@ static const int testFooterBannerHeight = 58;
 
 @end
 
-@interface WK2BrowserWindowController () <NSTextFinderBarContainer, WKNavigationDelegate, WKUIDelegate, _WKIconLoadingDelegate>
+@interface WK2BrowserWindowController () <NSTextFinderBarContainer, WKNavigationDelegate, WKUIDelegate, WKUIDelegatePrivate, _WKIconLoadingDelegate>
 @end
 
 @implementation WK2BrowserWindowController {
@@ -82,6 +83,8 @@ static const int testFooterBannerHeight = 58;
     MiniBrowserNSTextFinder *_textFinder;
     NSView *_textFindBarView;
     BOOL _findBarVisible;
+
+    CATextLayer *_pointerLockBanner;
 }
 
 - (void)awakeFromNib
@@ -205,10 +208,31 @@ static const int testFooterBannerHeight = 58;
 
 - (void)_webView:(WKWebView *)webView requestNotificationPermissionForSecurityOrigin:(WKSecurityOrigin *)securityOrigin decisionHandler:(void (^)(BOOL))decisionHandler
 {
-    // For testing, grant notification permission to all origins.
-    // FIXME: Consider adding a dialog and in-memory permissions manager
-    NSLog(@"Granting notifications permission to origin %@", securityOrigin);
-    decisionHandler(YES);
+    NSDictionary *permissions = [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"NotificationPermissions"];
+    NSString *originString = [NSString stringWithFormat:@"%@://%@", securityOrigin.protocol, securityOrigin.host];
+    id value = [permissions valueForKey:originString];
+    if (value) {
+        decisionHandler([(NSNumber *)value boolValue]);
+        return;
+    }
+
+    NSAlert* alert = [[NSAlert alloc] init];
+
+    [alert setMessageText:[NSString stringWithFormat:@"Allow notification permissions for %@?", originString]];
+    [alert addButtonWithTitle:@"Deny"];
+    [alert addButtonWithTitle:@"Allow"];
+
+    [alert beginSheetModalForWindow:self.window completionHandler:^void (NSModalResponse response) {
+        BOOL granted = response == NSAlertSecondButtonReturn;
+
+        NSMutableDictionary *permissions = [[[NSUserDefaults standardUserDefaults] dictionaryForKey:@"NotificationPermissions"] mutableCopy];
+        if (!permissions)
+            permissions = [NSMutableDictionary dictionaryWithCapacity:1];
+        [permissions setValue:@(granted) forKey:originString];
+        [[NSUserDefaults standardUserDefaults] setObject:permissions forKey:@"NotificationPermissions"];
+
+        decisionHandler(granted);
+    }];
 }
 
 - (IBAction)setViewScale:(id)sender
@@ -490,7 +514,6 @@ static BOOL areEssentiallyEqual(double a, double b)
     preferences._legacyLineLayoutVisualCoverageEnabled = settings.legacyLineLayoutVisualCoverageEnabled;
     preferences._acceleratedDrawingEnabled = settings.acceleratedDrawingEnabled;
     preferences._resourceUsageOverlayVisible = settings.resourceUsageOverlayVisible;
-    preferences._displayListDrawingEnabled = settings.displayListDrawingEnabled;
     preferences._largeImageAsyncDecodingEnabled = settings.largeImageAsyncDecodingEnabled;
     preferences._animatedImageAsyncDecodingEnabled = settings.animatedImageAsyncDecodingEnabled;
     preferences._colorFilterEnabled = settings.appleColorFilterEnabled;
@@ -558,6 +581,11 @@ static BOOL areEssentiallyEqual(double a, double b)
     }
 }
 
+- (void)updateTitleForBadgeChange
+{
+    [self updateTitle:_webView.title];
+}
+
 - (void)updateTitle:(NSString *)title
 {
     if (!title.length) {
@@ -567,6 +595,9 @@ static BOOL areEssentiallyEqual(double a, double b)
 
     if (!title.length)
         title = @"MiniBrowser";
+
+    if (BrowserAppDelegate.currentBadge)
+        title = [title stringByAppendingFormat:@" (%@)", BrowserAppDelegate.currentBadge];
 
     self.window.title = title;
 
@@ -964,6 +995,25 @@ static BOOL isJavaScriptURL(NSURL *url)
             }];
         }
     }];
+}
+
+- (void)_webViewDidRequestPointerLock:(WKWebView *)webView completionHandler:(void (^)(BOOL))completionHandler
+{
+    if (!_pointerLockBanner) {
+        _pointerLockBanner = [[CATextLayer alloc] init];
+        [_pointerLockBanner setString:[[NSAttributedString alloc] initWithString:@"Your mouse pointer is hidden. Press Esc (Escape) once to reveal your mouse pointer." attributes:@{ NSFontAttributeName:[NSFont systemFontOfSize:16], NSForegroundColorAttributeName:NSColor.blackColor }]];
+        [_pointerLockBanner setBackgroundColor:NSColor.lightGrayColor.CGColor];
+        [_pointerLockBanner setWrapped:YES];
+        [_pointerLockBanner setFrame:CGRectMake(0, 0, 0, testHeaderBannerHeight)];
+        [_pointerLockBanner setContentsScale:[NSScreen mainScreen].backingScaleFactor];
+    }
+    [webView _setHeaderBannerLayer:_pointerLockBanner];
+    completionHandler(YES);
+}
+
+- (void)_webViewDidLosePointerLock:(WKWebView *)webView
+{
+    [webView _setHeaderBannerLayer:nil];
 }
 
 @end

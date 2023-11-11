@@ -468,11 +468,12 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearchWithCache(VM& vm, JSGloba
             return nullptr;
         }
 
-        vm.stringReplaceCache.set(source, regExp, result, globalObject->regExpGlobalData().ovector());
+        vm.stringReplaceCache.set(source, regExp, result, globalObject->regExpGlobalData().matchResult(), globalObject->regExpGlobalData().ovector());
     } else {
         result = entry->m_result;
         auto lastMatch = entry->m_lastMatch;
-        globalObject->regExpGlobalData().resetResultFromCache(globalObject, regExp, string, WTFMove(lastMatch));
+        auto matchResult = entry->m_matchResult;
+        globalObject->regExpGlobalData().resetResultFromCache(globalObject, regExp, string, matchResult, WTFMove(lastMatch));
     }
 
     // regExp->numSubpatterns() + 1 for pattern args, + 2 for match start and string
@@ -502,7 +503,7 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearchWithCache(VM& vm, JSGloba
         int32_t start = result->get(cursor + cachedCount - 1).asInt32();
         int32_t end = start + asString(result->get(cursor))->length();
 
-        sourceRanges.uncheckedConstructAndAppend(lastIndex, start);
+        sourceRanges.constructAndAppend(lastIndex, start);
 
         cachedCall.setThis(jsUndefined());
         if (UNLIKELY(cachedCall.hasOverflowedArguments())) {
@@ -514,13 +515,13 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearchWithCache(VM& vm, JSGloba
         RETURN_IF_EXCEPTION(scope, nullptr);
         auto string = jsResult.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
-        replacements.uncheckedAppend(WTFMove(string));
+        replacements.unsafeAppendWithoutCapacityCheck(WTFMove(string));
 
         lastIndex = end;
     }
 
     if (static_cast<unsigned>(lastIndex) < sourceLen)
-        sourceRanges.uncheckedConstructAndAppend(lastIndex, sourceLen);
+        sourceRanges.constructAndAppend(lastIndex, sourceLen);
     RELEASE_AND_RETURN(scope, jsSpliceSubstringsWithSeparators(globalObject, string, source, sourceRanges.data(), sourceRanges.size(), replacements.data(), replacements.size()));
 }
 
@@ -587,8 +588,10 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearch(
 
                 if (matchStart < 0)
                     patternValue = jsUndefined();
-                else
-                    patternValue = jsSubstring(vm, source, matchStart, matchLen);
+                else {
+                    patternValue = jsSubstring(vm, globalObject, string, matchStart, matchLen);
+                    RETURN_IF_EXCEPTION(scope, nullptr);
+                }
 
                 cachedCall.appendArgument(patternValue);
 
@@ -605,8 +608,10 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearch(
                             JSValue captureValue;
                             if (captureStart < 0)
                                 captureValue = jsUndefined();
-                            else
-                                captureValue = jsSubstring(vm, source, captureStart, captureLen);
+                            else {
+                                captureValue = jsSubstring(vm, globalObject, string, captureStart, captureLen);
+                                RETURN_IF_EXCEPTION(scope, nullptr);
+                            }
                             groups->putDirect(vm, Identifier::fromString(vm, groupName), captureValue);
                         } else
                             groups->putDirect(vm, Identifier::fromString(vm, groupName), jsUndefined());
@@ -669,7 +674,7 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearch(
                     if (matchStart < 0)
                         patternValue = jsUndefined();
                     else {
-                        patternValue = jsSubstring(vm, source, matchStart, matchLen);
+                        patternValue = jsSubstring(vm, globalObject, string, matchStart, matchLen);
                         RETURN_IF_EXCEPTION(scope, nullptr);
                     }
 
@@ -689,7 +694,7 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearch(
                                 if (captureStart < 0)
                                     captureValue = jsUndefined();
                                 else {
-                                    captureValue = jsSubstring(vm, source, captureStart, captureLen);
+                                    captureValue = jsSubstring(vm, globalObject, string, captureStart, captureLen);
                                     RETURN_IF_EXCEPTION(scope, nullptr);
                                 }
                                 groups->putDirect(vm, Identifier::fromString(vm, groupName), captureValue);
@@ -2045,6 +2050,9 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToWellFormed, (JSGlobalObject* globalObj
 
     String string = stringValue->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
+
+    if (string.is8Bit())
+        return JSValue::encode(stringValue);
 
     const UChar* characters = string.characters16();
     unsigned length = string.length();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2018 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -203,8 +203,12 @@ static bool isLookalikeCharacter(const std::optional<UChar32>& previousCodePoint
     
     if (!u_isprint(codePoint)
         || u_isUWhiteSpace(codePoint)
-        || u_hasBinaryProperty(codePoint, UCHAR_DEFAULT_IGNORABLE_CODE_POINT)
-        || ublock_getCode(codePoint) == UBLOCK_IPA_EXTENSIONS)
+        || u_hasBinaryProperty(codePoint, UCHAR_DEFAULT_IGNORABLE_CODE_POINT))
+        return true;
+
+    auto block = ublock_getCode(codePoint);
+    if (block == UBLOCK_IPA_EXTENSIONS
+        || block == UBLOCK_DESERET)
         return true;
 
     switch (codePoint) {
@@ -214,6 +218,10 @@ static bool isLookalikeCharacter(const std::optional<UChar32>& previousCodePoint
     /* 0x0131 LATIN SMALL LETTER DOTLESS I is intentionally not considered a lookalike character because it is visually distinguishable from i and it has legitimate use in the Turkish language. */
     case 0x01C0: /* LATIN LETTER DENTAL CLICK */
     case 0x01C3: /* LATIN LETTER RETROFLEX CLICK */
+    case 0x1E9C: /* LATIN SMALL LETTER LONG S WITH DIAGONAL STROKE */
+    case 0x1E9D: /* LATIN SMALL LETTER LONG S WITH HIGH STROKE */
+    case 0x1EFE: /* LATIN CAPITAL LETTER Y WITH LOOP */
+    case 0x1EFF: /* LATIN SMALL LETTER Y WITH LOOP */
     case 0x0237: /* LATIN SMALL LETTER DOTLESS J */
     case 0x0251: /* LATIN SMALL LETTER ALPHA */
     case 0x0261: /* LATIN SMALL LETTER SCRIPT G */
@@ -640,8 +648,11 @@ std::optional<String> mapHostName(const String& hostName, URLDecodeFunction deco
 
     unsigned length = string.length();
 
-    auto sourceBuffer = string.charactersWithNullTermination();
-    
+    auto expectedSourceBuffer = string.charactersWithNullTermination();
+    if (!expectedSourceBuffer)
+        return std::nullopt;
+    auto sourceBuffer = expectedSourceBuffer.value();
+
     UChar destinationBuffer[URLParser::hostnameBufferLength];
     UErrorCode uerror = U_ZERO_ERROR;
     UIDNAInfo processingDetails = UIDNA_INFO_INITIALIZER;

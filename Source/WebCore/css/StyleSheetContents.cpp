@@ -80,8 +80,7 @@ StyleSheetContents::StyleSheetContents(StyleRuleImport* ownerRule, const String&
 }
 
 StyleSheetContents::StyleSheetContents(const StyleSheetContents& o)
-    : RefCounted<StyleSheetContents>()
-    , m_ownerRule(nullptr)
+    : CanMakeCheckedPtr()
     , m_originalURL(o.m_originalURL)
     , m_encodingFromCharsetRule(o.m_encodingFromCharsetRule)
     , m_layerRulesBeforeImportRules(o.m_layerRulesBeforeImportRules.size())
@@ -384,8 +383,13 @@ bool StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
     bool isSameOriginRequest = securityOrigin && securityOrigin->canRequest(baseURL(), OriginAccessPatternsForWebProcess::singleton());
     CachedCSSStyleSheet::MIMETypeCheckHint mimeTypeCheckHint = isStrictParserMode(m_parserContext.mode) || !isSameOriginRequest ? CachedCSSStyleSheet::MIMETypeCheckHint::Strict : CachedCSSStyleSheet::MIMETypeCheckHint::Lax;
     bool hasValidMIMEType = true;
-    String sheetText = cachedStyleSheet->sheetText(mimeTypeCheckHint, &hasValidMIMEType);
+    bool hasHTTPStatusOK = true;
+    String sheetText = cachedStyleSheet->sheetText(mimeTypeCheckHint, &hasValidMIMEType, &hasHTTPStatusOK);
 
+    if (!hasHTTPStatusOK) {
+        ASSERT(sheetText.isNull());
+        return false;
+    }
     if (!hasValidMIMEType) {
         ASSERT(sheetText.isNull());
         if (auto* document = singleOwnerDocument()) {
@@ -490,7 +494,7 @@ static bool traverseRulesInVector(const Vector<Ref<StyleRuleBase>>& rules, const
         }
         if (!rule->isGroupRule())
             continue;
-        if (traverseRulesInVector(downcast<StyleRuleGroup>(rule).childRules(), handler))
+        if (traverseRulesInVector(downcast<StyleRuleGroup>(rule.get()).childRules(), handler))
             return true;
     }
     return false;
@@ -540,6 +544,7 @@ bool StyleSheetContents::traverseSubresources(const Function<bool(const CachedRe
         case StyleRuleType::FontPaletteValues:
         case StyleRuleType::Margin:
         case StyleRuleType::Property:
+        case StyleRuleType::Scope:
             return false;
         };
         ASSERT_NOT_REACHED();

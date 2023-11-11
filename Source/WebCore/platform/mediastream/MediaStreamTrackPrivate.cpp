@@ -34,6 +34,7 @@
 #include "IntRect.h"
 #include "Logging.h"
 #include "PlatformMediaSessionManager.h"
+#include <wtf/NativePromise.h>
 #include <wtf/UUID.h>
 
 #if PLATFORM(COCOA)
@@ -116,6 +117,11 @@ bool MediaStreamTrackPrivate::muted() const
     return m_source->muted();
 }
 
+bool MediaStreamTrackPrivate::interrupted() const
+{
+    return m_source->interrupted();
+}
+
 bool MediaStreamTrackPrivate::isCaptureTrack() const
 {
     return m_source->isCaptureSource();
@@ -181,6 +187,16 @@ const RealtimeMediaSourceSettings& MediaStreamTrackPrivate::settings() const
 const RealtimeMediaSourceCapabilities& MediaStreamTrackPrivate::capabilities() const
 {
     return m_source->capabilities();
+}
+
+void MediaStreamTrackPrivate::getPhotoCapabilities(RealtimeMediaSource::PhotoCapabilitiesHandler&& completion)
+{
+    m_source->getPhotoCapabilities(WTFMove(completion));
+}
+
+Ref<RealtimeMediaSource::PhotoSettingsNativePromise> MediaStreamTrackPrivate::getPhotoSettings()
+{
+    return m_source->getPhotoSettings();
 }
 
 void MediaStreamTrackPrivate::applyConstraints(const MediaConstraints& constraints, RealtimeMediaSource::ApplyConstraintsHandler&& completionHandler)
@@ -252,11 +268,11 @@ void MediaStreamTrackPrivate::sourceConfigurationChanged()
     });
 }
 
-bool MediaStreamTrackPrivate::preventSourceFromStopping()
+bool MediaStreamTrackPrivate::preventSourceFromEnding()
 {
     ALWAYS_LOG(LOGIDENTIFIER, m_isEnded);
 
-    // Do not allow the source to stop if we are still using it.
+    // Do not allow the source to end if we are still using it.
     return !m_isEnded;
 }
 

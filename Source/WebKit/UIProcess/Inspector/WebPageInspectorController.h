@@ -29,6 +29,7 @@
 #include <JavaScriptCore/InspectorAgentRegistry.h>
 #include <JavaScriptCore/InspectorTargetAgent.h>
 #include <WebCore/PageIdentifier.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/text/WTFString.h>
@@ -83,6 +84,7 @@ public:
     void browserExtensionsDisabled(HashSet<String>&&);
 
 private:
+    Ref<WebPageProxy> protectedInspectedPage();
     WebPageAgentContext webPageAgentContext();
     void createLazyAgents();
 
@@ -92,7 +94,7 @@ private:
     Ref<Inspector::BackendDispatcher> m_backendDispatcher;
     Inspector::AgentRegistry m_agents;
 
-    WebPageProxy& m_inspectedPage;
+    CheckedRef<WebPageProxy> m_inspectedPage;
 
     Inspector::InspectorTargetAgent* m_targetAgent { nullptr };
     HashMap<String, std::unique_ptr<InspectorTargetProxy>> m_targets;

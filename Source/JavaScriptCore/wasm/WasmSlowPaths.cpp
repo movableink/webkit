@@ -78,14 +78,15 @@ namespace JSC { namespace LLInt {
     } while (false)
 
 #define CALLEE() \
-    static_cast<Wasm::LLIntCallee*>(callFrame->callee().asWasmCallee())
+    static_cast<Wasm::LLIntCallee*>(callFrame->callee().asNativeCallee())
 
 #define READ(virtualRegister) \
     (virtualRegister.isConstant() \
         ? JSValue::decode(CALLEE()->getConstant(virtualRegister)) \
         : callFrame->r(virtualRegister))
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_BBQJIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 enum class RequiredWasmJIT { Any, OMG };
 
 extern "C" void wasm_log_crash(CallFrame*, Wasm::Instance* instance)
@@ -249,7 +250,7 @@ WASM_SLOW_PATH_DECL(loop_osr)
     unsigned loopOSREntryBytecodeOffset = callee->bytecodeOffset(pc);
     const auto& osrEntryData = tierUpCounter.osrEntryDataForLoop(loopOSREntryBytecodeOffset);
 
-    if (Options::wasmLLIntTiersUpToBBQ() && Options::useSinglePassBBQJIT()) {
+    if (Options::wasmLLIntTiersUpToBBQ() && Options::useBBQJIT()) {
         if (!jitCompileAndSetHeuristics(callee, instance))
             WASM_RETURN_TWO(nullptr, nullptr);
 
@@ -275,29 +276,6 @@ WASM_SLOW_PATH_DECL(loop_osr)
         RELEASE_ASSERT(sharedLoopEntrypoint);
 
         WASM_RETURN_TWO(buffer, sharedLoopEntrypoint->taggedPtr());
-    } else if (Options::wasmLLIntTiersUpToBBQ() && Wasm::BBQPlan::planGeneratesLoopOSREntrypoints(instance->module().moduleInformation())) {
-        if (!jitCompileAndSetHeuristics(callee, instance))
-            WASM_RETURN_TWO(nullptr, nullptr);
-
-        Wasm::BBQCallee* bbqCallee;
-        {
-            Locker locker { instance->calleeGroup()->m_lock };
-            bbqCallee = instance->calleeGroup()->bbqCallee(locker, callee->functionIndex());
-        }
-        RELEASE_ASSERT(bbqCallee);
-
-        size_t osrEntryScratchBufferSize = bbqCallee->osrEntryScratchBufferSize();
-        RELEASE_ASSERT(osrEntryScratchBufferSize >= osrEntryData.values.size());
-        uint64_t* buffer = instance->vm().wasmContext.scratchBufferForSize(osrEntryScratchBufferSize);
-        if (!buffer)
-            WASM_RETURN_TWO(nullptr, nullptr);
-        RELEASE_ASSERT(osrEntryData.loopIndex < bbqCallee->loopEntrypoints().size());
-
-        uint32_t index = 0;
-        for (VirtualRegister reg : osrEntryData.values)
-            buffer[index++] = READ(reg).encodedJSValue();
-
-        WASM_RETURN_TWO(buffer, bbqCallee->loopEntrypoints()[osrEntryData.loopIndex].taggedPtr());
     } else {
         const auto doOSREntry = [&](Wasm::OSREntryCallee* osrEntryCallee) {
             if (osrEntryCallee->loopIndex() != osrEntryData.loopIndex)
@@ -382,6 +360,7 @@ WASM_SLOW_PATH_DECL(simd_go_straight_to_bbq_osr)
     RELEASE_ASSERT(jitCompileSIMDFunction(callee, instance));
     WASM_RETURN_TWO(callee->replacement(instance->memory()->mode())->entrypoint().taggedPtr(), nullptr);
 }
+#endif
 #endif
 
 WASM_SLOW_PATH_DECL(trace)
@@ -522,11 +501,24 @@ WASM_SLOW_PATH_DECL(struct_get)
     auto structReference = READ(instruction.m_structReference).encodedJSValue();
     if (JSValue::decode(structReference).isNull())
         WASM_THROW(Wasm::ExceptionType::NullStructGet);
-    WASM_RETURN(Wasm::structGet(structReference, instruction.m_fieldIndex));
+    Wasm::ExtGCOpType structGetKind = static_cast<Wasm::ExtGCOpType>(instruction.m_structGetKind);
+    if (structGetKind == Wasm::ExtGCOpType::StructGetS) {
+        EncodedJSValue value = Wasm::structGet(structReference, instruction.m_fieldIndex);
+        JSWebAssemblyStruct* structObject = jsCast<JSWebAssemblyStruct*>(JSValue::decode(structReference).getObject());
+        Wasm::StorageType type = structObject->fieldType(instruction.m_fieldIndex).type;
+        ASSERT(type.is<Wasm::PackedType>());
+        size_t elementSize = type.as<Wasm::PackedType>() == Wasm::PackedType::I8 ? sizeof(uint8_t) : sizeof(uint16_t);
+        uint8_t bitShift = (sizeof(uint32_t) - elementSize) * 8;
+        int32_t result = static_cast<int32_t>(value);
+        result = result << bitShift;
+        WASM_RETURN(static_cast<EncodedJSValue>(result >> bitShift));
+    } else
+        WASM_RETURN(Wasm::structGet(structReference, instruction.m_fieldIndex));
 }
 
 WASM_SLOW_PATH_DECL(struct_set)
 {
+    UNUSED_PARAM(instance);
     SlowPathFrameTracer tracer(instance->vm(), callFrame);
 
     auto instruction = pc->as<WasmStructSet>();
@@ -534,7 +526,7 @@ WASM_SLOW_PATH_DECL(struct_set)
     if (JSValue::decode(structReference).isNull())
         WASM_THROW(Wasm::ExceptionType::NullStructSet);
     auto value = READ(instruction.m_value).encodedJSValue();
-    Wasm::structSet(instance, structReference, instruction.m_fieldIndex, value);
+    Wasm::structSet(structReference, instruction.m_fieldIndex, value);
     WASM_END();
 }
 
@@ -825,7 +817,7 @@ WASM_SLOW_PATH_DECL(call_builtin)
         gprStart[0] = static_cast<EncodedJSValue>(result);
         WASM_END();
     }
-    case Wasm::LLIntBuiltin::ExternInternalize: {
+    case Wasm::LLIntBuiltin::AnyConvertExtern: {
         auto reference = takeGPR().encodedJSValue();
         gprStart[0] = Wasm::externInternalize(reference);
         WASM_END();
@@ -1176,9 +1168,8 @@ WASM_SLOW_PATH_DECL(i64_trunc_sat_f64_s)
 }
 #endif
 
-extern "C" UGPRPair slow_path_wasm_throw_exception(CallFrame* callFrame, const WasmInstruction* pc, Wasm::Instance* instance, Wasm::ExceptionType exceptionType)
+extern "C" UGPRPair slow_path_wasm_throw_exception(CallFrame* callFrame, Wasm::Instance* instance, Wasm::ExceptionType exceptionType)
 {
-    UNUSED_PARAM(pc);
     SlowPathFrameTracer tracer(instance->vm(), callFrame);
     WASM_RETURN_TWO(Wasm::throwWasmToJSException(callFrame, exceptionType, instance), nullptr);
 }

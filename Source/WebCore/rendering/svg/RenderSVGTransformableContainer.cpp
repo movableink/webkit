@@ -37,8 +37,9 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGTransformableContainer);
 
 RenderSVGTransformableContainer::RenderSVGTransformableContainer(SVGGraphicsElement& element, RenderStyle&& style)
-    : RenderSVGContainer(element, WTFMove(style))
+    : RenderSVGContainer(Type::SVGTransformableContainer, element, WTFMove(style))
 {
+    ASSERT(isRenderSVGTransformableContainer());
 }
 
 SVGGraphicsElement& RenderSVGTransformableContainer::graphicsElement() const

@@ -54,7 +54,7 @@ namespace WebKit {
 enum class AllowsCellularAccess : bool { No, Yes };
 
 struct NetworkSessionCreationParameters {
-    void encode(IPC::Encoder&) const;
+    void encode(IPC::Encoder&) &&;
     static std::optional<NetworkSessionCreationParameters> decode(IPC::Decoder&);
     
     PAL::SessionID sessionID { PAL::SessionID::defaultSessionID() };
@@ -112,9 +112,6 @@ struct NetworkSessionCreationParameters {
     String webPushMachServiceName;
     String webPushPartitionString;
     bool enablePrivateClickMeasurementDebugMode { false };
-#if !HAVE(NSURLSESSION_WEBSOCKET)
-    bool shouldAcceptInsecureCertificatesForWebSockets { false };
-#endif
     bool isBlobRegistryTopOriginPartitioningEnabled { false };
 
     UnifiedOriginStorageLevel unifiedOriginStorageLevel { UnifiedOriginStorageLevel::Standard };
@@ -135,6 +132,10 @@ struct NetworkSessionCreationParameters {
     String serviceWorkerRegistrationDirectory;
     SandboxExtension::Handle serviceWorkerRegistrationDirectoryExtensionHandle;
     bool serviceWorkerProcessTerminationDelayEnabled { true };
+    bool inspectionForServiceWorkersAllowed { true };
+#endif
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    bool isDeclarativeWebPushEnabled { false };
 #endif
 
     ResourceLoadStatisticsParameters resourceLoadStatisticsParameters;

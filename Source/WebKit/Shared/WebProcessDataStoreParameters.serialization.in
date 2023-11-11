@@ -20,7 +20,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-struct WebKit::WebProcessDataStoreParameters {
+[RValue] struct WebKit::WebProcessDataStoreParameters {
     PAL::SessionID sessionID;
     String applicationCacheDirectory;
     WebKit::SandboxExtension::Handle applicationCacheDirectoryExtensionHandle;
@@ -29,6 +29,7 @@ struct WebKit::WebProcessDataStoreParameters {
     WebKit::SandboxExtension::Handle mediaCacheDirectoryExtensionHandle;
     String mediaKeyStorageDirectory;
     WebKit::SandboxExtension::Handle mediaKeyStorageDirectoryExtensionHandle;
+    FileSystem::Salt mediaKeysStorageSalt;
     String javaScriptConfigurationDirectory;
     WebKit::SandboxExtension::Handle javaScriptConfigurationDirectoryExtensionHandle;
 #if ENABLE(TRACKING_PREVENTION)

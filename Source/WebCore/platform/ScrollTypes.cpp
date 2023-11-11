@@ -171,5 +171,28 @@ TextStream& operator<<(TextStream& ts, ScrollbarWidth width)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, ScrollPositionChangeOptions options)
+{
+    ts.dumpProperty("type", options.type);
+    ts.dumpProperty("clamping", options.clamping);
+    ts.dumpProperty("animated", options.animated == ScrollIsAnimated::Yes);
+    ts.dumpProperty("snap point selection method", options.snapPointSelectionMethod);
+    ts.dumpProperty("original scroll delta", options.originalScrollDelta ? *options.originalScrollDelta : FloatSize());
+
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollSnapPointSelectionMethod option)
+{
+    switch (option) {
+    case ScrollSnapPointSelectionMethod::Directional:
+        ts << "Directional";
+        break;
+    case ScrollSnapPointSelectionMethod::Closest:
+        ts << "Closest";
+        break;
+    }
+    return ts;
+}
 
 } // namespace WebCore

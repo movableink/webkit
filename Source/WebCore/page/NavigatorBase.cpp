@@ -46,7 +46,7 @@
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-#include "Device.h"
+#import <pal/system/ios/Device.h>
 #endif
 
 #ifndef WEBCORE_NAVIGATOR_PRODUCT
@@ -97,7 +97,7 @@ String NavigatorBase::platform() const
     });
     return platformName->isolatedCopy();
 #elif PLATFORM(IOS_FAMILY)
-    return deviceName();
+    return PAL::deviceName();
 #elif OS(MACOS)
     return "MacIntel"_s;
 #elif OS(WINDOWS)
@@ -171,7 +171,7 @@ ServiceWorkerContainer& NavigatorBase::serviceWorker()
 ExceptionOr<ServiceWorkerContainer&> NavigatorBase::serviceWorker(ScriptExecutionContext& context)
 {
     if (is<Document>(context) && downcast<Document>(context).isSandboxed(SandboxOrigin))
-        return Exception { SecurityError, "Service Worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag"_s };
+        return Exception { ExceptionCode::SecurityError, "Service Worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag"_s };
     return serviceWorker();
 }
 #endif

@@ -29,12 +29,12 @@
 
 #include "BasicShapes.h"
 #include "LegacyRenderSVGImage.h"
+#include "LegacyRenderSVGResourceClipper.h"
+#include "LegacyRenderSVGResourceMasker.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "RenderLayer.h"
-#include "RenderSVGResourceClipper.h"
 #include "RenderSVGResourceFilter.h"
-#include "RenderSVGResourceMasker.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGraphicsElement.h"
@@ -47,7 +47,7 @@ namespace WebCore {
 
 static inline bool isRenderingMaskImage(const RenderObject& object)
 {
-    return object.view().frameView().paintBehavior().contains(PaintBehavior::RenderingSVGMask);
+    return object.view().frameView().paintBehavior().contains(PaintBehavior::RenderingSVGClipOrMask);
 }
 
 SVGRenderingContext::~SVGRenderingContext()
@@ -96,7 +96,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
     // Setup transparency layers before setting up SVG resources!
     bool isRenderingMask = isRenderingMaskImage(*m_renderer);
     // RenderLayer takes care of root opacity.
-    float opacity = (renderer.isLegacySVGRoot() || isRenderingMask) ? 1 : style.opacity();
+    float opacity = (renderer.isLegacyRenderSVGRoot() || isRenderingMask) ? 1 : style.opacity();
     bool hasBlendMode = style.hasBlendMode();
     bool hasIsolation = style.hasIsolation();
     bool isolateMaskForBlending = false;
@@ -141,7 +141,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
     }
 
     if (!isRenderingMask) {
-        if (RenderSVGResourceMasker* masker = resources->masker()) {
+        if (LegacyRenderSVGResourceMasker* masker = resources->masker()) {
             GraphicsContext* contextPtr = &m_paintInfo->context();
             bool result = masker->applyResource(*m_renderer, style, contextPtr, { });
             m_paintInfo->setContext(*contextPtr);
@@ -150,7 +150,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
         }
     }
 
-    RenderSVGResourceClipper* clipper = resources->clipper();
+    LegacyRenderSVGResourceClipper* clipper = resources->clipper();
     if (!hasCSSClipping && clipper) {
         GraphicsContext* contextPtr = &m_paintInfo->context();
         bool result = clipper->applyResource(*m_renderer, style, contextPtr, { });
@@ -159,7 +159,9 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
             return;
     }
 
-    if (!isRenderingMask) {
+    // SVG roots with filters specified (using CSS or SVG presentation attributes) are applied
+    // as CSSFilter by RenderLayer, so don't reapply the filter here.
+    if (!isRenderingMask && !renderer.isRenderOrLegacyRenderSVGRoot()) {
         m_filter = resources->filter();
         if (m_filter && !m_filter->isIdentity()) {
             m_savedContext = &m_paintInfo->context();
@@ -205,7 +207,7 @@ AffineTransform SVGRenderingContext::calculateTransformationToOutermostCoordinat
     const RenderObject* ancestor = &renderer;
     while (ancestor) {
         absoluteTransform = ancestor->localToParentTransform() * absoluteTransform;
-        if (ancestor->isSVGRootOrLegacySVGRoot())
+        if (ancestor->isRenderOrLegacyRenderSVGRoot())
             break;
         ancestor = ancestor->parent();
     }

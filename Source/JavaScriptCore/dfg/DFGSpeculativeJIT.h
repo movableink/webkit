@@ -1316,6 +1316,8 @@ public:
     void compileNumberToStringWithValidRadixConstant(Node*, int32_t radix);
     void compileNewStringObject(Node*);
     void compileNewSymbol(Node*);
+    void compileNewMap(Node*);
+    void compileNewSet(Node*);
 
     void emitNewTypedArrayWithSizeInRegister(Node*, TypedArrayType, RegisteredStructure, GPRReg sizeGPR);
     void compileNewTypedArrayWithSize(Node*);
@@ -1344,6 +1346,8 @@ public:
     void compileCallDOMGetter(Node*);
     void compileCallDOM(Node*);
     void compileCheckJSCast(Node*);
+    void compileCallCustomAccessorGetter(Node*);
+    void compileCallCustomAccessorSetter(Node*);
     void compileNormalizeMapKey(Node*);
     void compileGetMapBucketHead(Node*);
     void compileGetMapBucketNext(Node*);
@@ -1525,6 +1529,7 @@ public:
     void compileNewArrayWithSpread(Node*);
     void compileGetRestLength(Node*);
     void compileArraySlice(Node*);
+    void compileArraySpliceExtract(Node*);
     void compileArrayIndexOf(Node*);
     void compileArrayPush(Node*);
     void compileNotifyWrite(Node*);

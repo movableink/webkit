@@ -35,6 +35,8 @@ MediaSource conditional=MEDIA_SOURCE
 MediaStream conditional=MEDIA_STREAM
 MediaStreamTrack conditional=MEDIA_STREAM
 MessagePort
+Navigation
+NavigationHistoryEntry
 Node
 Notification conditional=NOTIFICATIONS
 OffscreenCanvas conditional=OFFSCREEN_CANVAS
@@ -72,6 +74,8 @@ VideoTrackList conditional=VIDEO
 VisualViewport
 WakeLockSentinel
 WebAnimation
+WebCodecsAudioDecoder conditional=WEB_CODECS
+WebCodecsAudioEncoder conditional=WEB_CODECS
 WebCodecsVideoDecoder conditional=WEB_CODECS
 WebCodecsVideoEncoder conditional=WEB_CODECS
 WebKitMediaKeySession conditional=LEGACY_ENCRYPTED_MEDIA

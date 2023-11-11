@@ -64,8 +64,16 @@ RemoteSourceBufferProxy::RemoteSourceBufferProxy(GPUConnectionToWebProcess& conn
 RemoteSourceBufferProxy::~RemoteSourceBufferProxy()
 {
     m_sourceBufferPrivate->detach();
-    if (m_connectionToWebProcess)
-        m_connectionToWebProcess->messageReceiverMap().removeMessageReceiver(Messages::RemoteSourceBufferProxy::messageReceiverName(), m_identifier.toUInt64());
+    disconnect();
+}
+
+void RemoteSourceBufferProxy::disconnect()
+{
+    if (!m_connectionToWebProcess)
+        return;
+
+    m_connectionToWebProcess->messageReceiverMap().removeMessageReceiver(Messages::RemoteSourceBufferProxy::messageReceiverName(), m_identifier.toUInt64());
+    m_connectionToWebProcess = nullptr;
 }
 
 void RemoteSourceBufferProxy::sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&& segment, CompletionHandler<void(ReceiveResult)>&& completionHandler)
@@ -252,22 +260,17 @@ void RemoteSourceBufferProxy::startChangingType()
     m_sourceBufferPrivate->startChangingType();
 }
 
-void RemoteSourceBufferProxy::clientReadyStateChanged(bool sourceIsEnded)
+void RemoteSourceBufferProxy::removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentTime, CompletionHandler<void(WebCore::PlatformTimeRanges&&, uint64_t)>&& completionHandler)
 {
-    m_sourceBufferPrivate->clientReadyStateChanged(sourceIsEnded);
-}
-
-void RemoteSourceBufferProxy::removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentTime, bool isEnded, CompletionHandler<void(WebCore::PlatformTimeRanges&&, uint64_t)>&& completionHandler)
-{
-    m_sourceBufferPrivate->removeCodedFrames(start, end, currentTime, isEnded, [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
+    m_sourceBufferPrivate->removeCodedFrames(start, end, currentTime, [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
         auto buffered = m_sourceBufferPrivate->buffered();
         completionHandler(WTFMove(buffered), m_sourceBufferPrivate->totalTrackBufferSizeInBytes());
     });
 }
 
-void RemoteSourceBufferProxy::evictCodedFrames(uint64_t newDataSize, uint64_t maximumBufferSize, const MediaTime& currentTime, bool isEnded, CompletionHandler<void(WebCore::PlatformTimeRanges&&, uint64_t)>&& completionHandler)
+void RemoteSourceBufferProxy::evictCodedFrames(uint64_t newDataSize, uint64_t maximumBufferSize, const MediaTime& currentTime, CompletionHandler<void(WebCore::PlatformTimeRanges&&, uint64_t)>&& completionHandler)
 {
-    m_sourceBufferPrivate->evictCodedFrames(newDataSize, maximumBufferSize, currentTime, isEnded);
+    m_sourceBufferPrivate->evictCodedFrames(newDataSize, maximumBufferSize, currentTime);
     auto buffered = m_sourceBufferPrivate->buffered();
     completionHandler(WTFMove(buffered), m_sourceBufferPrivate->totalTrackBufferSizeInBytes());
 }
@@ -334,9 +337,14 @@ void RemoteSourceBufferProxy::setAppendWindowEnd(const MediaTime& appendWindowEn
     m_sourceBufferPrivate->setAppendWindowEnd(appendWindowEnd);
 }
 
-void RemoteSourceBufferProxy::seekToTime(const MediaTime& mediaTime)
+void RemoteSourceBufferProxy::computeSeekTime(const SeekTarget& target, CompletionHandler<void(const MediaTime&)>&& completionHandler)
 {
-    m_sourceBufferPrivate->seekToTime(mediaTime);
+    m_sourceBufferPrivate->computeSeekTime(target, WTFMove(completionHandler));
+}
+
+void RemoteSourceBufferProxy::seekToTime(const MediaTime& time)
+{
+    m_sourceBufferPrivate->seekToTime(time);
 }
 
 void RemoteSourceBufferProxy::updateTrackIds(Vector<std::pair<TrackPrivateRemoteIdentifier, TrackPrivateRemoteIdentifier>>&& identifierPairs)
@@ -365,9 +373,9 @@ void RemoteSourceBufferProxy::enqueuedSamplesForTrackID(TrackPrivateRemoteIdenti
     m_sourceBufferPrivate->enqueuedSamplesForTrackID(m_trackIds.get(trackPrivateRemoteIdentifier), WTFMove(completionHandler));
 }
 
-void RemoteSourceBufferProxy::memoryPressure(uint64_t maximumBufferSize, const MediaTime& currentTime, bool isEnded, CompletionHandler<void(WebCore::PlatformTimeRanges&&, uint64_t)>&& completionHandler)
+void RemoteSourceBufferProxy::memoryPressure(uint64_t maximumBufferSize, const MediaTime& currentTime, CompletionHandler<void(WebCore::PlatformTimeRanges&&, uint64_t)>&& completionHandler)
 {
-    m_sourceBufferPrivate->memoryPressure(maximumBufferSize, currentTime, isEnded);
+    m_sourceBufferPrivate->memoryPressure(maximumBufferSize, currentTime);
     auto buffered = m_sourceBufferPrivate->buffered();
     completionHandler(WTFMove(buffered), m_sourceBufferPrivate->totalTrackBufferSizeInBytes());
 }

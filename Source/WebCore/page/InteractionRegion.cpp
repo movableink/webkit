@@ -77,6 +77,9 @@ static bool shouldAllowElement(const Element& element)
         return false;
 
     if (auto* input = dynamicDowncast<HTMLInputElement>(element)) {
+        if (input->isDisabledFormControl())
+            return false;
+
         // Do not allow regions for the <input type='range'>, because we make one for the thumb.
         if (input->isRangeControl())
             return false;
@@ -93,8 +96,7 @@ static bool shouldAllowAccessibilityRoleAsPointerCursorReplacement(const Element
 {
     switch (AccessibilityObject::ariaRoleToWebCoreRole(element.attributeWithoutSynchronization(HTMLNames::roleAttr))) {
     case AccessibilityRole::Button:
-    case AccessibilityRole::CheckBox:
-    case AccessibilityRole::DisclosureTriangle:
+    case AccessibilityRole::Checkbox:
     case AccessibilityRole::ImageMapLink:
     case AccessibilityRole::Link:
     case AccessibilityRole::WebCoreLink:
@@ -105,6 +107,7 @@ static bool shouldAllowAccessibilityRoleAsPointerCursorReplacement(const Element
     case AccessibilityRole::MenuItemRadio:
     case AccessibilityRole::PopUpButton:
     case AccessibilityRole::RadioButton:
+    case AccessibilityRole::Switch:
     case AccessibilityRole::ToggleButton:
         return true;
     default:
@@ -112,7 +115,7 @@ static bool shouldAllowAccessibilityRoleAsPointerCursorReplacement(const Element
     }
 }
 
-static bool elementMatchesHoverRules(Element& element)
+bool elementMatchesHoverRules(Element& element)
 {
     bool foundHoverRules = false;
     bool initialValue = element.isUserActionElement() && element.document().userActionElements().isHovered(element);
@@ -157,29 +160,27 @@ static bool shouldAllowNonPointerCursorForElement(const Element& element)
     if (is<SliderThumbElement>(element))
         return true;
 
+    if (is<HTMLAnchorElement>(element))
+        return true;
+
     if (shouldAllowAccessibilityRoleAsPointerCursorReplacement(element))
         return true;
 
     return false;
 }
 
-static bool isOverlay(const RenderElement& renderer)
+static bool shouldGetOcclusion(const RenderElement& renderer)
 {
+    if (auto* renderLayerModelObject = dynamicDowncast<RenderBox>(renderer)) {
+        if (renderLayerModelObject->hasLayer() && renderLayerModelObject->layer()->isComposited())
+            return false;
+    }
+
     if (renderer.style().specifiedZIndex() > 0)
         return true;
 
     if (renderer.isFixedPositioned())
         return true;
-
-    if (auto* renderBox = dynamicDowncast<RenderBox>(renderer)) {
-        auto refContentBox = renderBox->absoluteContentBox();
-        for (auto& ancestor : ancestorsOfType<RenderBox>(renderer)) {
-            if (ancestor.absoluteContentBox() != refContentBox)
-                return false;
-            if (ancestor.isFixedPositioned())
-                return true;
-        }
-    }
 
     return false;
 }
@@ -244,7 +245,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     // FIXME: Consider also allowing elements that only receive touch events.
     bool hasListener = renderer.style().eventListenerRegionTypes().contains(EventListenerRegionType::MouseClick);
     bool hasPointer = cursorTypeForElement(*matchedElement) == CursorType::Pointer || shouldAllowNonPointerCursorForElement(*matchedElement);
-    bool isTooBigForInteraction = checkedRegionArea.value() > frameViewArea / 2;
+    bool isTooBigForInteraction = checkedRegionArea.value() > frameViewArea / 3;
 
     auto elementIdentifier = matchedElement->identifier();
 
@@ -252,7 +253,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
         // Could be a `<label for="...">` or a label with a descendant.
         // In cases where both elements get a region we want to group them by the same `elementIdentifier`.
         auto associatedElement = downcast<HTMLLabelElement>(matchedElement)->control();
-        if (associatedElement) {
+        if (associatedElement && !associatedElement->isDisabledFormControl()) {
             hasPointer = true;
             elementIdentifier = associatedElement->identifier();
         }
@@ -268,7 +269,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     }
 
     if (!hasListener || !(hasPointer || detectedHoverRules) || isTooBigForInteraction) {
-        if (isOriginalMatch && isOverlay(renderer)) {
+        if (isOriginalMatch && shouldGetOcclusion(renderer)) {
             return { {
                 InteractionRegion::Type::Occlusion,
                 elementIdentifier,
@@ -288,7 +289,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     float borderRadius = 0;
     OptionSet<InteractionRegion::CornerMask> maskedCorners;
 
-    if (auto* renderBox = dynamicDowncast<RenderBox>(regionRenderer)) {
+    if (const auto& renderBox = dynamicDowncast<RenderBox>(regionRenderer)) {
         auto borderRadii = renderBox->borderRadii();
         auto minRadius = borderRadii.minimumRadius();
         auto maxRadius = borderRadii.maximumRadius();
@@ -308,17 +309,9 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
             // We default to the minimum radius applied uniformly to all corners.
             borderRadius = minRadius;
         }
-
-        auto* input = dynamicDowncast<HTMLInputElement>(matchedElement);
-        if (input && input->containerElement()) {
-            auto borderBoxRect = renderBox->borderBoxRect();
-            auto contentBoxRect = renderBox->contentBoxRect();
-            bounds.move(IntSize(borderBoxRect.location() - contentBoxRect.location()));
-            bounds.expand(IntSize(borderBoxRect.size() - contentBoxRect.size()));
-        }
     }
 
-    if (!regionRenderer.hasVisibleBoxDecorations() && !renderer.hasVisibleBoxDecorations()) {
+    if (!regionRenderer.hasVisibleBoxDecorations() && !renderer.hasVisibleBoxDecorations() && !renderer.style().hasExplicitlySetBorderRadius()) {
         // We can safely tweak the bounds and radius without causing visual mismatch.
         borderRadius = std::max<float>(borderRadius, regionRenderer.document().settings().interactionRegionMinimumCornerRadius());
         if (isInlineNonBlock)

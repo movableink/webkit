@@ -313,7 +313,7 @@ public:
     PartialResult WARN_UNUSED_RETURN truncSaturated(Ext1OpType, ExpressionType operand, ExpressionType& result, Type, Type);
 
     // GC
-    PartialResult WARN_UNUSED_RETURN addI31New(ExpressionType value, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addRefI31(ExpressionType value, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addI31GetS(ExpressionType ref, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addI31GetU(ExpressionType ref, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addArrayNew(uint32_t index, ExpressionType size, ExpressionType value, ExpressionType& result);
@@ -326,12 +326,12 @@ public:
     PartialResult WARN_UNUSED_RETURN addArrayLen(ExpressionType arrayref, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addStructNew(uint32_t index, Vector<ExpressionType>& args, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addStructNewDefault(uint32_t index, ExpressionType& result);
-    PartialResult WARN_UNUSED_RETURN addStructGet(ExpressionType structReference, const StructType&, uint32_t fieldIndex, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addStructGet(ExtGCOpType structGetKind, ExpressionType structReference, const StructType&, uint32_t fieldIndex, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addStructSet(ExpressionType structReference, const StructType&, uint32_t fieldIndex, ExpressionType value);
     PartialResult WARN_UNUSED_RETURN addRefTest(ExpressionType reference, bool allowNull, int32_t heapType, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addRefCast(ExpressionType reference, bool allowNull, int32_t heapType, ExpressionType& result);
-    PartialResult WARN_UNUSED_RETURN addExternInternalize(ExpressionType reference, ExpressionType& result);
-    PartialResult WARN_UNUSED_RETURN addExternExternalize(ExpressionType reference, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addAnyConvertExtern(ExpressionType reference, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addExternConvertAny(ExpressionType reference, ExpressionType& result);
 
     // Basic operators
 #define X(name, opcode, short, idx, ...) \
@@ -723,9 +723,12 @@ auto LLIntGenerator::callInformationForCaller(const FunctionSignature& signature
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
         case TypeKind::I31ref:
         case TypeKind::Rec:
         case TypeKind::Sub:
+        case TypeKind::Subfinal:
             RELEASE_ASSERT_NOT_REACHED();
         }
     }
@@ -763,9 +766,12 @@ auto LLIntGenerator::callInformationForCaller(const FunctionSignature& signature
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
         case TypeKind::I31ref:
         case TypeKind::Rec:
         case TypeKind::Sub:
+        case TypeKind::Subfinal:
             RELEASE_ASSERT_NOT_REACHED();
         }
     }
@@ -833,9 +839,12 @@ auto LLIntGenerator::callInformationForCallee(const FunctionSignature& signature
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
         case TypeKind::I31ref:
         case TypeKind::Rec:
         case TypeKind::Sub:
+        case TypeKind::Subfinal:
             RELEASE_ASSERT_NOT_REACHED();
         }
     }
@@ -899,9 +908,12 @@ auto LLIntGenerator::addArguments(const TypeDefinition& signature) -> PartialRes
         case TypeKind::Eqref:
         case TypeKind::Anyref:
         case TypeKind::Nullref:
+        case TypeKind::Nullfuncref:
+        case TypeKind::Nullexternref:
         case TypeKind::I31ref:
         case TypeKind::Rec:
         case TypeKind::Sub:
+        case TypeKind::Subfinal:
             RELEASE_ASSERT_NOT_REACHED();
         }
     }
@@ -1247,7 +1259,7 @@ auto LLIntGenerator::addThrow(unsigned exceptionIndex, Vector<ExpressionType>& a
     // delayed moves, but the wasm_throw opcode expects all the arguments to be contiguous
     // in the stack. The reason we don't call materializeConstantsAndLocals here is that
     // it expects a stack, not a vector of ExpressionType arguments.
-    walkExpressionStack(args, [&](VirtualRegister& arg, VirtualRegister slot) {
+    walkExpressionStack(args, m_stackSize + args.size(), [&](VirtualRegister& arg, VirtualRegister slot) {
         if (arg == slot)
             return;
         WasmMov::emit(this, slot, arg);
@@ -1979,10 +1991,10 @@ auto LLIntGenerator::truncSaturated(Ext1OpType op, ExpressionType operand, Expre
     return { };
 }
 
-auto LLIntGenerator::addI31New(ExpressionType value, ExpressionType& result) -> PartialResult
+auto LLIntGenerator::addRefI31(ExpressionType value, ExpressionType& result) -> PartialResult
 {
     result = push();
-    WasmI31New::emit(this, result, value);
+    WasmRefI31::emit(this, result, value);
 
     return { };
 }
@@ -2132,10 +2144,10 @@ auto LLIntGenerator::addStructNewDefault(uint32_t index, ExpressionType& result)
     return { };
 }
 
-auto LLIntGenerator::addStructGet(ExpressionType structReference, const StructType&, uint32_t fieldIndex, ExpressionType& result) -> PartialResult
+auto LLIntGenerator::addStructGet(ExtGCOpType structGetKind, ExpressionType structReference, const StructType&, uint32_t fieldIndex, ExpressionType& result) -> PartialResult
 {
     result = push();
-    WasmStructGet::emit(this, result, structReference, fieldIndex);
+    WasmStructGet::emit(this, result, structReference, fieldIndex, static_cast<unsigned>(structGetKind));
 
     return { };
 }
@@ -2165,19 +2177,19 @@ auto LLIntGenerator::addRefCast(ExpressionType reference, bool allowNull, int32_
     return { };
 }
 
-auto LLIntGenerator::addExternInternalize(ExpressionType reference, ExpressionType& result) -> PartialResult
+auto LLIntGenerator::addAnyConvertExtern(ExpressionType reference, ExpressionType& result) -> PartialResult
 {
     ResultList results;
-    addCallBuiltin(LLIntBuiltin::ExternInternalize, { reference }, results);
+    addCallBuiltin(LLIntBuiltin::AnyConvertExtern, { reference }, results);
     ASSERT(results.size() == 1);
     result = results.at(0);
     return { };
 }
 
-auto LLIntGenerator::addExternExternalize(ExpressionType reference, ExpressionType& result) -> PartialResult
+auto LLIntGenerator::addExternConvertAny(ExpressionType reference, ExpressionType& result) -> PartialResult
 {
     result = push();
-    WasmExternExternalize::emit(this, result, reference);
+    WasmExternConvertAny::emit(this, result, reference);
     return { };
 }
 

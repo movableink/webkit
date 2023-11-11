@@ -1,4 +1,5 @@
 
+PASS CSS Fonts Module Level 5: getComputedStyle().fontSizeAdjust
 PASS Property font-size-adjust value 'none'
 PASS Property font-size-adjust value '0.5'
 PASS Property font-size-adjust value 'ex-height 0.5'

@@ -80,6 +80,10 @@ public:
 
     MediaStream& stream() { return m_stream.get(); }
 
+    using EventTarget::weakPtrFactory;
+    using EventTarget::WeakValueType;
+    using EventTarget::WeakPtrImplType;
+
 private:
     MediaRecorder(Document&, Ref<MediaStream>&&, Options&&);
 
@@ -138,6 +142,8 @@ private:
 
     unsigned m_audioBitsPerSecond { 0 };
     unsigned m_videoBitsPerSecond { 0 };
+
+    std::optional<Seconds> m_nextFireInterval;
 };
 
 } // namespace WebCore

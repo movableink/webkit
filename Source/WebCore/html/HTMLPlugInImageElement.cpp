@@ -136,7 +136,7 @@ RenderPtr<RenderElement> HTMLPlugInImageElement::createElementRenderer(RenderSty
         return RenderElement::createFor(*this, WTFMove(style));
 
     if (isImageType())
-        return createRenderer<RenderImage>(*this, WTFMove(style));
+        return createRenderer<RenderImage>(RenderObject::Type::Image, *this, WTFMove(style));
 
     return HTMLPlugInElement::createElementRenderer(WTFMove(style), insertionPosition);
 }
@@ -268,7 +268,7 @@ void HTMLPlugInImageElement::resumeFromDocumentSuspension()
 
 bool HTMLPlugInImageElement::shouldBypassCSPForPDFPlugin(const String& contentType) const
 {
-#if ENABLE(PDFKIT_PLUGIN)
+#if ENABLE(PDF_PLUGIN)
     // We only consider bypassing this CSP check if plugins are disabled. In that case we know that
     // any plugin used is a browser implementation detail. It is not safe to skip this check
     // if plugins are enabled in case an external plugin is used to load PDF content.
@@ -289,21 +289,22 @@ bool HTMLPlugInImageElement::canLoadPlugInContent(const String& relativeURL, con
     if (isInUserAgentShadowTree())
         return true;
 
+    Ref document = this->document();
     URL completedURL;
     if (!relativeURL.isEmpty())
-        completedURL = document().completeURL(relativeURL);
+        completedURL = document->completeURL(relativeURL);
 
-    ASSERT(document().contentSecurityPolicy());
-    const ContentSecurityPolicy& contentSecurityPolicy = *document().contentSecurityPolicy();
+    ASSERT(document->contentSecurityPolicy());
+    CheckedRef contentSecurityPolicy = *document->contentSecurityPolicy();
 
-    contentSecurityPolicy.upgradeInsecureRequestIfNeeded(completedURL, ContentSecurityPolicy::InsecureRequestType::Load);
+    contentSecurityPolicy->upgradeInsecureRequestIfNeeded(completedURL, ContentSecurityPolicy::InsecureRequestType::Load);
 
-    if (!shouldBypassCSPForPDFPlugin(mimeType) && !contentSecurityPolicy.allowObjectFromSource(completedURL))
+    if (!shouldBypassCSPForPDFPlugin(mimeType) && !contentSecurityPolicy->allowObjectFromSource(completedURL))
         return false;
 
-    auto& declaredMimeType = document().isPluginDocument() && document().ownerElement() ?
-        document().ownerElement()->attributeWithoutSynchronization(HTMLNames::typeAttr) : attributeWithoutSynchronization(HTMLNames::typeAttr);
-    return contentSecurityPolicy.allowPluginType(mimeType, declaredMimeType, completedURL);
+    auto& declaredMIMEType = document->isPluginDocument() && document->ownerElement() ?
+        document->ownerElement()->attributeWithoutSynchronization(HTMLNames::typeAttr) : attributeWithoutSynchronization(HTMLNames::typeAttr);
+    return contentSecurityPolicy->allowPluginType(mimeType, declaredMIMEType, completedURL);
 }
 
 bool HTMLPlugInImageElement::requestObject(const String& relativeURL, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues)

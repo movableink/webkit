@@ -2992,11 +2992,33 @@ void RemoteGraphicsContextGLProxy::drawElementsInstancedBaseVertexBaseInstanceAN
     }
 }
 
+void RemoteGraphicsContextGLProxy::clipControlEXT(GCGLenum origin, GCGLenum depth)
+{
+    if (isContextLost())
+        return;
+    auto sendResult = send(Messages::RemoteGraphicsContextGL::ClipControlEXT(origin, depth));
+    if (sendResult != IPC::Error::NoError) {
+        markContextLost();
+        return;
+    }
+}
+
 void RemoteGraphicsContextGLProxy::provokingVertexANGLE(GCGLenum provokeMode)
 {
     if (isContextLost())
         return;
     auto sendResult = send(Messages::RemoteGraphicsContextGL::ProvokingVertexANGLE(provokeMode));
+    if (sendResult != IPC::Error::NoError) {
+        markContextLost();
+        return;
+    }
+}
+
+void RemoteGraphicsContextGLProxy::polygonModeANGLE(GCGLenum face, GCGLenum mode)
+{
+    if (isContextLost())
+        return;
+    auto sendResult = send(Messages::RemoteGraphicsContextGL::PolygonModeANGLE(face, mode));
     if (sendResult != IPC::Error::NoError) {
         markContextLost();
         return;
@@ -3060,11 +3082,11 @@ void RemoteGraphicsContextGLProxy::setDrawingBufferColorSpace(const WebCore::Des
     }
 }
 
-RefPtr<WebCore::PixelBuffer> RemoteGraphicsContextGLProxy::paintRenderingResultsToPixelBuffer()
+RefPtr<WebCore::PixelBuffer> RemoteGraphicsContextGLProxy::drawingBufferToPixelBuffer(WebCore::GraphicsContextGL::FlipY arg0)
 {
     if (isContextLost())
         return { };
-    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::PaintRenderingResultsToPixelBuffer());
+    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::DrawingBufferToPixelBuffer(arg0));
     if (!sendResult.succeeded()) {
         markContextLost();
         return { };
@@ -3095,6 +3117,19 @@ void RemoteGraphicsContextGLProxy::clientWaitEGLSyncWithFlush(GCEGLSync arg0, ui
         markContextLost();
         return;
     }
+}
+
+bool RemoteGraphicsContextGLProxy::enableRequiredWebXRExtensions()
+{
+    if (isContextLost())
+        return { };
+    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::EnableRequiredWebXRExtensions());
+    if (!sendResult.succeeded()) {
+        markContextLost();
+        return { };
+    }
+    auto& [returnValue] = sendResult.reply();
+    return returnValue;
 }
 
 }

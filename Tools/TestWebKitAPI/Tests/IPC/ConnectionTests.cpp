@@ -38,6 +38,8 @@ static constexpr Seconds kWaitForAbsenceTimeout = 300_ms;
 
 struct MockTestMessageWithConnection {
     static constexpr bool isSync = false;
+    static constexpr bool canDispatchOutOfOrder = false;
+    static constexpr bool replyCanDispatchOutOfOrder = false;
     static constexpr IPC::MessageName name()  { return static_cast<IPC::MessageName>(123); }
     auto&& arguments() { return WTFMove(m_arguments); }
     MockTestMessageWithConnection(IPC::Connection::Handle&& handle)
@@ -45,6 +47,24 @@ struct MockTestMessageWithConnection {
     {
     }
     std::tuple<IPC::Connection::Handle&&> m_arguments;
+};
+
+struct MockTestSyncMessage {
+    static constexpr bool isSync = true;
+    static constexpr bool canDispatchOutOfOrder = false;
+    static constexpr bool replyCanDispatchOutOfOrder = false;
+    static constexpr IPC::MessageName name()  { return static_cast<IPC::MessageName>(124); }
+    using ReplyArguments = std::tuple<>;
+    auto&& arguments()
+    {
+        return WTFMove(m_arguments);
+    }
+
+    MockTestSyncMessage()
+    {
+    }
+
+    std::tuple<> m_arguments;
 };
 
 namespace {
@@ -86,6 +106,36 @@ TEST_F(SimpleConnectionTest, ConnectLocalConnection)
     clientConnection->open(m_mockClientClient);
     serverConnection->invalidate();
     clientConnection->invalidate();
+}
+
+TEST_F(SimpleConnectionTest, ClearOutgoingMessages)
+{
+    // Create a connection, but leave the client
+    // handle pending.
+    auto firstIdentifiers = IPC::Connection::createConnectionIdentifierPair();
+    ASSERT_NE(firstIdentifiers, std::nullopt);
+    Ref<IPC::Connection> firstServerConnection = IPC::Connection::createServerConnection(WTFMove(firstIdentifiers->server));
+    firstServerConnection->open(m_mockServerClient);
+
+    // Create a second connection, and send the client
+    // handle in a message over the first connection (such
+    // that it will be stored as a pending message).
+    auto secondIdentifiers = IPC::Connection::createConnectionIdentifierPair();
+    ASSERT_NE(secondIdentifiers, std::nullopt);
+    Ref<IPC::Connection> secondServerConnection = IPC::Connection::createServerConnection(WTFMove(secondIdentifiers->server));
+    MockConnectionClient mockSecondServerClient;
+    secondServerConnection->open(mockSecondServerClient);
+
+    firstServerConnection->send(MockTestMessageWithConnection { WTFMove(secondIdentifiers->client) }, 0);
+
+    // Invalidate the first connection's client handle,
+    // which should clear pending messages and also invalidate
+    // the second connection.
+    firstIdentifiers->client = IPC::Connection::Handle();
+
+    // Try a sync send over the second connection, which should
+    // fail immediately if the client handle has been released.
+    secondServerConnection->sendSync(MockTestSyncMessage(), 0, IPC::Timeout::infinity(), IPC::SendSyncOption::UseFullySynchronousModeForTesting);
 }
 
 class ConnectionTest : public testing::Test, protected ConnectionTestBase {
@@ -488,6 +538,89 @@ TEST_P(ConnectionRunLoopTest, RunLoopSendAsync)
 
     for (uint64_t i = 100u; i < 160u; ++i)
         EXPECT_TRUE(replies.contains(i));
+    localReferenceBarrier();
+}
+
+TEST_P(ConnectionRunLoopTest, RunLoopSendWithPromisedReply)
+{
+    ASSERT_TRUE(openA());
+    aClient().setAsyncMessageHandler([&] (IPC::Decoder& decoder) -> bool {
+        auto listenerID = decoder.decode<uint64_t>();
+        auto encoder = makeUniqueRef<IPC::Encoder>(MockTestMessageWithAsyncReply1::asyncMessageReplyName(), *listenerID);
+        encoder.get() << decoder.destinationID();
+        a()->sendSyncReply(WTFMove(encoder));
+        return true;
+    });
+    HashSet<uint64_t> replies;
+
+    auto runLoop = createRunLoop(RUN_LOOP_NAME);
+    dispatchAndWait(runLoop, [&] {
+        ASSERT_TRUE(openB());
+        for (uint64_t i = 100u; i < 160u; ++i) {
+            b()->sendWithPromisedReply(MockTestMessageWithAsyncReply1 { }, i)->then(runLoop,
+                [&, j = i] (uint64_t value) {
+                    if (!value)
+                        WTFLogAlways("GOT: %llu", j);
+                    EXPECT_GE(value, 100u);
+                    replies.add(value);
+                },
+                [] {
+                    // There should never be a connection failure in this case.
+                    EXPECT_TRUE(false);
+                });
+        }
+        while (replies.size() < 60u)
+            RunLoop::current().cycle();
+        b()->invalidate();
+    });
+
+    for (uint64_t i = 100u; i < 160u; ++i)
+        EXPECT_TRUE(replies.contains(i));
+    localReferenceBarrier();
+}
+
+// Ensure that replies are received in the right order.
+TEST_P(ConnectionRunLoopTest, RunLoopSendWithPromisedReplyOrder)
+{
+    using Promise = MockTestMessageWithAsyncReply1::Promise;
+
+    ASSERT_TRUE(openA());
+    uint64_t replyID = 0;
+    aClient().setAsyncMessageHandler([&] (IPC::Decoder& decoder) -> bool {
+        auto listenerID = decoder.decode<uint64_t>();
+        auto encoder = makeUniqueRef<IPC::Encoder>(MockTestMessageWithAsyncReply1::asyncMessageReplyName(), *listenerID);
+        encoder.get() << replyID++;
+        a()->sendSyncReply(WTFMove(encoder));
+        return true;
+    });
+    Vector<uint64_t> replies;
+    constexpr size_t counter = 50;
+    replies.reserveInitialCapacity(counter);
+
+    auto runLoop = createRunLoop(RUN_LOOP_NAME);
+    dispatchAndWait(runLoop, [&] {
+        ASSERT_TRUE(openB());
+        for (uint64_t i = 0; i < counter; ++i) {
+            if (!(i % 2)) {
+                b()->sendWithPromisedReply(MockTestMessageWithAsyncReply1 { }, 100)->whenSettled(runLoop, [&, i] (Promise::Result result) {
+                    EXPECT_TRUE(result.has_value());
+                    EXPECT_EQ(result.value(), i);
+                    replies.append(i);
+                });
+            } else {
+                b()->sendWithAsyncReply(MockTestMessageWithAsyncReply1 { }, [&, i] (uint64_t value) {
+                    EXPECT_EQ(value, i);
+                    replies.append(i);
+                }, 100);
+            }
+        }
+        while (replies.size() < counter)
+            RunLoop::current().cycle();
+        b()->invalidate();
+    });
+
+    for (uint64_t i = 0u; i < counter; ++i)
+        EXPECT_EQ(replies[i], i);
     localReferenceBarrier();
 }
 

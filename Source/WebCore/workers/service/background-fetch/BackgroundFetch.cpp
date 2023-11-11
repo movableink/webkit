@@ -54,9 +54,9 @@ BackgroundFetch::BackgroundFetch(SWServerRegistration& registration, const Strin
     , m_origin { m_registrationKey.topOrigin(), SecurityOriginData::fromURL(m_registrationKey.scope()) }
 {
     size_t index = 0;
-    m_records.reserveInitialCapacity(requests.size());
-    for (auto& request : requests)
-        m_records.uncheckedAppend(Record::create(*this, WTFMove(request), index++));
+    m_records = WTF::map(WTFMove(requests), [&](auto&& request) {
+        return Record::create(*this, WTFMove(request), index++);
+    });
 }
 
 BackgroundFetch::BackgroundFetch(SWServerRegistration& registration, String&& identifier, BackgroundFetchOptions&& options, Ref<BackgroundFetchStore>&& store, NotificationCallback&& notificationCallback, bool pausedFlag)
@@ -257,7 +257,7 @@ BackgroundFetch::Record::~Record()
 {
     auto callbacks = std::exchange(m_responseCallbacks, { });
     for (auto& callback : callbacks)
-        callback(makeUnexpected(ExceptionData { TypeError, "Record is gone"_s }));
+        callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "Record is gone"_s }));
 
     auto bodyCallbacks = std::exchange(m_responseBodyCallbacks, { });
     for (auto& callback : bodyCallbacks)
@@ -300,7 +300,7 @@ void BackgroundFetch::Record::abort()
 
     auto callbacks = std::exchange(m_responseCallbacks, { });
     for (auto& callback : callbacks)
-        callback(makeUnexpected(ExceptionData { AbortError, "Background fetch was aborted"_s }));
+        callback(makeUnexpected(ExceptionData { ExceptionCode::AbortError, "Background fetch was aborted"_s }));
 
     auto bodyCallbacks = std::exchange(m_responseBodyCallbacks, { });
     for (auto& callback : bodyCallbacks)
@@ -392,7 +392,7 @@ void BackgroundFetch::Record::didFinish(const ResourceError& error)
 
     auto callbacks = std::exchange(m_responseCallbacks, { });
     for (auto& callback : callbacks)
-        callback(makeUnexpected(ExceptionData { TypeError, "Fetch failed"_s }));
+        callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "Fetch failed"_s }));
 
     auto bodyCallbacks = std::exchange(m_responseBodyCallbacks, { });
     for (auto& callback : bodyCallbacks) {
@@ -409,7 +409,7 @@ void BackgroundFetch::Record::didFinish(const ResourceError& error)
 void BackgroundFetch::Record::retrieveResponse(BackgroundFetchStore&, RetrieveRecordResponseCallback&& callback)
 {
     if (m_isAborted) {
-        callback(makeUnexpected(ExceptionData { AbortError, "Background fetch was aborted"_s }));
+        callback(makeUnexpected(ExceptionData { ExceptionCode::AbortError, "Background fetch was aborted"_s }));
         return;
     }
 
@@ -419,7 +419,7 @@ void BackgroundFetch::Record::retrieveResponse(BackgroundFetchStore&, RetrieveRe
     }
 
     if (m_isCompleted) {
-        callback(makeUnexpected(ExceptionData { TypeError, "Fetch failed"_s }));
+        callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "Fetch failed"_s }));
         return;
     }
 
@@ -593,7 +593,7 @@ std::unique_ptr<BackgroundFetch> BackgroundFetch::createFromStore(std::span<cons
         auto record = Record::create(*fetch, { WTFMove(*internalRequest), WTFMove(options), *requestHeadersGuard, WTFMove(*httpHeaders), WTFMove(*referrer), WTFMove(*responseHeaders) }, index);
         if (*isCompleted)
             record->setAsCompleted();
-        records.uncheckedAppend(WTFMove(record));
+        records.append(WTFMove(record));
     }
     fetch->setRecords(WTFMove(records));
 

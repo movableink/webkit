@@ -73,6 +73,8 @@ protected:
 
     const WebCore::RealtimeMediaSourceSettings& settings() final { return m_settings; }
     const WebCore::RealtimeMediaSourceCapabilities& capabilities() final { return m_capabilities; }
+    void getPhotoCapabilities(PhotoCapabilitiesHandler&&) final;
+    Ref<PhotoSettingsNativePromise> getPhotoSettings() final;
 
 private:
     // RealtimeMediaSource
@@ -81,7 +83,7 @@ private:
     bool isCaptureSource() const final { return true; }
     void applyConstraints(const WebCore::MediaConstraints&, ApplyConstraintsHandler&&) final;
     void didEnd() final;
-    void whenReady(CompletionHandler<void(String)>&& callback) final { m_proxy.whenReady(WTFMove(callback)); }
+    void whenReady(CompletionHandler<void(WebCore::CaptureSourceError&&)>&& callback) final { m_proxy.whenReady(WTFMove(callback)); }
     WebCore::CaptureDevice::DeviceType deviceType() const final { return m_proxy.deviceType(); }
     bool interrupted() const final { return m_proxy.interrupted(); }
 
@@ -94,6 +96,7 @@ private:
     UserMediaCaptureManager& m_manager;
     std::optional<WebCore::MediaConstraints> m_constraints;
     WebCore::RealtimeMediaSourceCapabilities m_capabilities;
+    std::optional<WebCore::PhotoCapabilities> m_photoCapabilities;
     WebCore::RealtimeMediaSourceSettings m_settings;
 };
 

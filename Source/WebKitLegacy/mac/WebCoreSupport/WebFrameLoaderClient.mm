@@ -781,7 +781,7 @@ void WebFrameLoaderClient::dispatchDidReachLayoutMilestone(OptionSet<WebCore::La
         CallFrameLoadDelegate(implementations->didLayoutFunc, webView, @selector(webView:didLayout:), kitLayoutMilestones(milestones));
 #endif
 
-    if (milestones & WebCore::DidFirstLayout) {
+    if (milestones & WebCore::LayoutMilestone::DidFirstLayout) {
         // FIXME: We should consider removing the old didFirstLayout API since this is doing double duty with the
         // new didLayout API.
         if (implementations->didFirstLayoutInFrameFunc)
@@ -801,7 +801,7 @@ void WebFrameLoaderClient::dispatchDidReachLayoutMilestone(OptionSet<WebCore::La
 #endif
     }
 
-    if (milestones & WebCore::DidFirstVisuallyNonEmptyLayout) {
+    if (milestones & WebCore::LayoutMilestone::DidFirstVisuallyNonEmptyLayout) {
         // FIXME: We should consider removing the old didFirstVisuallyNonEmptyLayoutForFrame API since this is doing
         // double duty with the new didLayout API.
         if (implementations->didFirstVisuallyNonEmptyLayoutInFrameFunc)
@@ -1145,6 +1145,11 @@ WebCore::ResourceError WebFrameLoaderClient::fileDoesNotExistError(const WebCore
 }
 
 WebCore::ResourceError WebFrameLoaderClient::httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest& request) const
+{
+    RELEASE_ASSERT_NOT_REACHED(); // This error should never be created in WebKit1 because HTTPSOnly/First aren't available.
+}
+
+WebCore::ResourceError WebFrameLoaderClient::httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest& request) const
 {
     RELEASE_ASSERT_NOT_REACHED(); // This error should never be created in WebKit1 because HTTPSOnly/First aren't available.
 }
@@ -1548,10 +1553,8 @@ NSDictionary *WebFrameLoaderClient::actionDictionary(const WebCore::NavigationAc
         auto element = adoptNS([[WebElementDictionary alloc] initWithHitTestResult:core(m_webFrame.get())->eventHandler().hitTestResultAtPoint(mouseEventData->absoluteLocation, hitType)]);
         [result setObject:element.get() forKey:WebActionElementKey];
 
-        if (mouseEventData->isTrusted)
-            [result setObject:@(mouseEventData->button) forKey:WebActionButtonKey];
-        else
-            [result setObject:@(WebCore::NoButton) forKey:WebActionButtonKey];
+        auto button = enumToUnderlyingType(mouseEventData->isTrusted ? mouseEventData->button : MouseButton::None);
+        [result setObject:@(button) forKey:WebActionButtonKey];
     }
 
     if (formState)
@@ -1729,49 +1732,6 @@ private:
     }
 };
 
-#if PLATFORM(IOS_FAMILY)
-@interface WAKView (UIKitSecretsWebKitKnowsAboutSeeUIWebPlugInView)
-- (PlatformLayer *)pluginLayer;
-- (BOOL)willProvidePluginLayer;
-- (void)attachPluginLayer;
-- (void)detachPluginLayer;
-@end
-
-class PluginWidgetIOS : public PluginWidget {
-public:
-    PluginWidgetIOS(WAKView *view)
-        : PluginWidget(view)
-    {
-    }
-
-    virtual PlatformLayer* platformLayer() const
-    {
-        if (![platformWidget() respondsToSelector:@selector(pluginLayer)])
-            return nullptr;
-
-        return [platformWidget() pluginLayer];   
-    }
-
-    virtual bool willProvidePluginLayer() const
-    {
-        return [platformWidget() respondsToSelector:@selector(willProvidePluginLayer)]
-            && [platformWidget() willProvidePluginLayer];
-    }
-
-    virtual void attachPluginLayer()
-    {
-        if ([platformWidget() respondsToSelector:@selector(attachPluginLayer)])
-            [platformWidget() attachPluginLayer];
-    }
-
-    virtual void detachPluginLayer()
-    {
-        if ([platformWidget() respondsToSelector:@selector(detachPluginLayer)])
-            [platformWidget() detachPluginLayer];
-    }
-};
-#endif // PLATFORM(IOS_FAMILY)
-
 static bool shouldBlockPlugin(WebBasePluginPackage *)
 {
     return true;
@@ -1873,11 +1833,7 @@ RefPtr<WebCore::Widget> WebFrameLoaderClient::createPlugin(const WebCore::IntSiz
     }
     
     ASSERT(view);
-#if PLATFORM(IOS_FAMILY)
-    return adoptRef(new PluginWidgetIOS(view));
-#else
     return adoptRef(new PluginWidget(view));
-#endif
 
     END_BLOCK_OBJC_EXCEPTIONS
 

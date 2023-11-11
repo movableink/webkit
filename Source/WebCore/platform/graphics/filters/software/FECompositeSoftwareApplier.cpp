@@ -153,12 +153,12 @@ bool FECompositeSoftwareApplier::applyArithmetic(FilterImage& input, FilterImage
 
 bool FECompositeSoftwareApplier::applyNonArithmetic(FilterImage& input, FilterImage& input2, FilterImage& result) const
 {
-    auto resultImage = result.imageBuffer();
+    RefPtr resultImage = result.imageBuffer();
     if (!resultImage)
         return false;
 
-    auto inputImage = input.imageBuffer();
-    auto inputImage2 = input2.imageBuffer();
+    RefPtr inputImage = input.imageBuffer();
+    RefPtr inputImage2 = input2.imageBuffer();
     if (!inputImage || !inputImage2)
         return false;
 
@@ -192,17 +192,17 @@ bool FECompositeSoftwareApplier::applyNonArithmetic(FilterImage& input, FilterIm
 
     case FECOMPOSITE_OPERATOR_OUT:
         filterContext.drawImageBuffer(*inputImage, inputImageRect);
-        filterContext.drawImageBuffer(*inputImage2, inputImageRect2, { { }, inputImage2->logicalSize() }, CompositeOperator::DestinationOut);
+        filterContext.drawImageBuffer(*inputImage2, inputImageRect2, { { }, inputImage2->logicalSize() }, { CompositeOperator::DestinationOut });
         break;
 
     case FECOMPOSITE_OPERATOR_ATOP:
         filterContext.drawImageBuffer(*inputImage2, inputImageRect2);
-        filterContext.drawImageBuffer(*inputImage, inputImageRect, { { }, inputImage->logicalSize() }, CompositeOperator::SourceAtop);
+        filterContext.drawImageBuffer(*inputImage, inputImageRect, { { }, inputImage->logicalSize() }, { CompositeOperator::SourceAtop });
         break;
 
     case FECOMPOSITE_OPERATOR_XOR:
         filterContext.drawImageBuffer(*inputImage2, inputImageRect2);
-        filterContext.drawImageBuffer(*inputImage, inputImageRect, { { }, inputImage->logicalSize() }, CompositeOperator::XOR);
+        filterContext.drawImageBuffer(*inputImage, inputImageRect, { { }, inputImage->logicalSize() }, { CompositeOperator::XOR });
         break;
 
     case FECOMPOSITE_OPERATOR_ARITHMETIC:
@@ -211,7 +211,7 @@ bool FECompositeSoftwareApplier::applyNonArithmetic(FilterImage& input, FilterIm
 
     case FECOMPOSITE_OPERATOR_LIGHTER:
         filterContext.drawImageBuffer(*inputImage2, inputImageRect2);
-        filterContext.drawImageBuffer(*inputImage, inputImageRect, { { }, inputImage->logicalSize() }, CompositeOperator::PlusLighter);
+        filterContext.drawImageBuffer(*inputImage, inputImageRect, { { }, inputImage->logicalSize() }, { CompositeOperator::PlusLighter });
         break;
     }
 

@@ -34,31 +34,10 @@
 
 namespace WebKit {
 
-void WebScreenOrientationManagerProxy::platformInitialize()
-{
-    m_page.addDidMoveToWindowObserver(*this);
-    setWindow([m_page.cocoaView() window]);
-}
-
-void WebScreenOrientationManagerProxy::platformDestroy()
-{
-    m_page.removeDidMoveToWindowObserver(*this);
-}
-
-void WebScreenOrientationManagerProxy::setWindow(UIWindow *window)
-{
-    m_provider->setWindow(window);
-}
-
-void WebScreenOrientationManagerProxy::webViewDidMoveToWindow()
-{
-    setWindow([m_page.cocoaView() window]);
-}
-
 std::optional<WebCore::Exception> WebScreenOrientationManagerProxy::platformShouldRejectLockRequest() const
 {
     if (UIApplication.sharedApplication.supportsMultipleScenes)
-        return WebCore::Exception { WebCore::NotSupportedError, "Apps supporting multiple scenes (multitask) cannot lock their orientation"_s };
+        return WebCore::Exception { WebCore::ExceptionCode::NotSupportedError, "Apps supporting multiple scenes (multitask) cannot lock their orientation"_s };
     return std::nullopt;
 }
 

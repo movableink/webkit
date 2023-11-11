@@ -68,7 +68,7 @@ static_assert(sizeof(RenderTableCell) == sizeof(SameSizeAsRenderTableCell), "Ren
 static_assert(sizeof(CollapsedBorderValue) <= 24, "CollapsedBorderValue should stay small");
 
 RenderTableCell::RenderTableCell(Element& element, RenderStyle&& style)
-    : RenderBlockFlow(element, WTFMove(style))
+    : RenderBlockFlow(Type::TableCell, element, WTFMove(style))
     , m_column(unsetColumnIndex)
     , m_cellWidthChanged(false)
     , m_hasColSpan(false)
@@ -81,10 +81,11 @@ RenderTableCell::RenderTableCell(Element& element, RenderStyle&& style)
     // We only update the flags when notified of DOM changes in colSpanOrRowSpanChanged()
     // so we need to set their initial values here in case something asks for colSpan()/rowSpan() before then.
     updateColAndRowSpanFlags();
+    ASSERT(isRenderTableCell());
 }
 
 RenderTableCell::RenderTableCell(Document& document, RenderStyle&& style)
-    : RenderBlockFlow(document, WTFMove(style))
+    : RenderBlockFlow(Type::TableCell, document, WTFMove(style))
     , m_column(unsetColumnIndex)
     , m_cellWidthChanged(false)
     , m_hasColSpan(false)
@@ -94,6 +95,7 @@ RenderTableCell::RenderTableCell(Document& document, RenderStyle&& style)
     , m_hasEmptyCollapsedStartBorder(false)
     , m_hasEmptyCollapsedEndBorder(false)
 {
+    ASSERT(isRenderTableCell());
 }
 
 void RenderTableCell::willBeRemovedFromTree(IsInternalMove isInternalMove)
@@ -310,7 +312,7 @@ LayoutUnit RenderTableCell::paddingTop() const
     LayoutUnit result = computedCSSPaddingTop();
     if (!isHorizontalWritingMode())
         return result;
-    return result + (style().writingMode() == WritingMode::TopToBottom ? intrinsicPaddingBefore() : intrinsicPaddingAfter());
+    return result + (style().blockFlowDirection() == BlockFlowDirection::TopToBottom ? intrinsicPaddingBefore() : intrinsicPaddingAfter());
 }
 
 LayoutUnit RenderTableCell::paddingBottom() const
@@ -318,7 +320,7 @@ LayoutUnit RenderTableCell::paddingBottom() const
     LayoutUnit result = computedCSSPaddingBottom();
     if (!isHorizontalWritingMode())
         return result;
-    return result + (style().writingMode() == WritingMode::TopToBottom ? intrinsicPaddingAfter() : intrinsicPaddingBefore());
+    return result + (style().blockFlowDirection() == BlockFlowDirection::TopToBottom ? intrinsicPaddingAfter() : intrinsicPaddingBefore());
 }
 
 LayoutUnit RenderTableCell::paddingLeft() const
@@ -326,7 +328,7 @@ LayoutUnit RenderTableCell::paddingLeft() const
     LayoutUnit result = computedCSSPaddingLeft();
     if (isHorizontalWritingMode())
         return result;
-    return result + (style().writingMode() == WritingMode::LeftToRight ? intrinsicPaddingBefore() : intrinsicPaddingAfter());
+    return result + (style().blockFlowDirection() == BlockFlowDirection::LeftToRight ? intrinsicPaddingBefore() : intrinsicPaddingAfter());
 }
 
 LayoutUnit RenderTableCell::paddingRight() const
@@ -334,7 +336,7 @@ LayoutUnit RenderTableCell::paddingRight() const
     LayoutUnit result = computedCSSPaddingRight();
     if (isHorizontalWritingMode())
         return result;
-    return result + (style().writingMode() == WritingMode::LeftToRight ? intrinsicPaddingAfter() : intrinsicPaddingBefore());
+    return result + (style().blockFlowDirection() == BlockFlowDirection::LeftToRight ? intrinsicPaddingAfter() : intrinsicPaddingBefore());
 }
 
 LayoutUnit RenderTableCell::paddingBefore() const
@@ -455,7 +457,7 @@ void RenderTableCell::styleDidChange(StyleDifference diff, const RenderStyle* ol
 
     // If border was changed, notify table.
     RenderTable* table = this->table();
-    if (table && oldStyle && oldStyle->border() != style().border()) {
+    if (table && oldStyle && !oldStyle->borderIsEquivalentForPainting(style())) {
         table->invalidateCollapsedBorders(this);
         if (table->collapseBorders() && diff == StyleDifference::Layout) {
             markCellDirtyWhenCollapsedBorderChanges(table->cellBelow(this));

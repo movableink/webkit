@@ -33,6 +33,7 @@
 #include <WebCore/ScrollView.h>
 
 #if PLATFORM(COCOA)
+#include "MessageSenderInlines.h"
 #include <wtf/MachSendRight.h>
 #endif
 
@@ -51,6 +52,11 @@ DrawingAreaProxy::DrawingAreaProxy(DrawingAreaType type, WebPageProxy& webPagePr
 }
 
 DrawingAreaProxy::~DrawingAreaProxy() = default;
+
+Ref<WebPageProxy> DrawingAreaProxy::protectedWebPageProxy() const
+{
+    return m_webPageProxy.get();
+}
 
 void DrawingAreaProxy::startReceivingMessages(WebProcessProxy& process)
 {
@@ -96,7 +102,7 @@ MachSendRight DrawingAreaProxy::createFence()
 #if PLATFORM(MAC)
 void DrawingAreaProxy::didChangeViewExposedRect()
 {
-    if (!m_webPageProxy.hasRunningProcess())
+    if (!m_webPageProxy->hasRunningProcess())
         return;
 
     if (!m_viewExposedRectChangedTimer.isActive())
@@ -105,14 +111,14 @@ void DrawingAreaProxy::didChangeViewExposedRect()
 
 void DrawingAreaProxy::viewExposedRectChangedTimerFired()
 {
-    if (!m_webPageProxy.hasRunningProcess())
+    if (!m_webPageProxy->hasRunningProcess())
         return;
 
-    auto viewExposedRect = m_webPageProxy.viewExposedRect();
+    auto viewExposedRect = m_webPageProxy->viewExposedRect();
     if (viewExposedRect == m_lastSentViewExposedRect)
         return;
 
-    m_webPageProxy.send(Messages::DrawingArea::SetViewExposedRect(viewExposedRect), m_identifier);
+    m_webPageProxy->send(Messages::DrawingArea::SetViewExposedRect(viewExposedRect), m_identifier);
     m_lastSentViewExposedRect = viewExposedRect;
 }
 #endif // PLATFORM(MAC)

@@ -53,6 +53,14 @@ class Signature;
 class TrackedReferences;
 class VM;
 
+struct StructureStubInfoIndex {
+    explicit StructureStubInfoIndex(unsigned index)
+        : m_index(index)
+    { }
+
+    unsigned m_index { 0 };
+};
+
 enum class JITType : uint8_t {
     None = 0b000,
     HostCallThunk = 0b001,
@@ -199,6 +207,7 @@ public:
     virtual unsigned offsetOf(void* pointerIntoCode) = 0;
     
     virtual DFG::CommonData* dfgCommon();
+    virtual const DFG::CommonData* dfgCommon() const;
     virtual DFG::JITCode* dfg();
     virtual FTL::JITCode* ftl();
     virtual FTL::ForOSREntryJITCode* ftlForOSREntry();

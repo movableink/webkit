@@ -41,7 +41,7 @@ using namespace WebCore;
 
 static inline rtc::SocketAddress prepareSocketAddress(const rtc::SocketAddress& address, bool disableNonLocalhostConnections)
 {
-    auto result = RTCNetwork::isolatedCopy(address);
+    auto result = RTC::Network::SocketAddress::isolatedCopy(address);
     if (disableNonLocalhostConnections)
         result.SetIP("127.0.0.1");
     return result;
@@ -50,15 +50,15 @@ static inline rtc::SocketAddress prepareSocketAddress(const rtc::SocketAddress& 
 void LibWebRTCSocketFactory::setConnection(RefPtr<IPC::Connection>&& connection)
 {
     ASSERT(!WTF::isMainRunLoop());
-    m_connection = WTFMove(connection);
+    m_connection = connection.copyRef();
     if (!m_connection)
         return;
 
-    m_connection->send(Messages::NetworkRTCProvider::SetPlatformTCPSocketsEnabled(DeprecatedGlobalSettings::webRTCPlatformTCPSocketsEnabled()), 0);
-    m_connection->send(Messages::NetworkRTCProvider::SetPlatformUDPSocketsEnabled(DeprecatedGlobalSettings::webRTCPlatformUDPSocketsEnabled()), 0);
+    connection->send(Messages::NetworkRTCProvider::SetPlatformTCPSocketsEnabled(DeprecatedGlobalSettings::webRTCPlatformTCPSocketsEnabled()), 0);
+    connection->send(Messages::NetworkRTCProvider::SetPlatformUDPSocketsEnabled(DeprecatedGlobalSettings::webRTCPlatformUDPSocketsEnabled()), 0);
 
     while (!m_pendingMessageTasks.isEmpty())
-        m_pendingMessageTasks.takeFirst()(*m_connection);
+        m_pendingMessageTasks.takeFirst()(*connection);
 }
 
 IPC::Connection* LibWebRTCSocketFactory::connection()
@@ -142,7 +142,7 @@ void LibWebRTCSocketFactory::removeSocket(LibWebRTCSocket& socket)
 void LibWebRTCSocketFactory::forSocketInGroup(ScriptExecutionContextIdentifier contextIdentifier, const Function<void(LibWebRTCSocket&)>& callback)
 {
     ASSERT(!WTF::isMainRunLoop());
-    for (auto* socket : m_sockets.values()) {
+    for (auto& socket : m_sockets.values()) {
         if (socket->contextIdentifier() == contextIdentifier)
             callback(*socket);
     }

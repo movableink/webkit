@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "LayerProperties.h"
 #include "RemoteLayerTreeTransaction.h"
 #include <WebCore/HTMLMediaElementIdentifier.h>
 #include <WebCore/PlatformCALayer.h>
@@ -87,7 +88,7 @@ public:
     void setAcceleratedEffectsAndBaseValues(const WebCore::AcceleratedEffects&, WebCore::AcceleratedEffectValues&) override;
 #endif
 
-    void setMask(WebCore::PlatformCALayer*) override;
+    void setMaskLayer(RefPtr<WebCore::PlatformCALayer>&&) override;
 
     bool isOpaque() const override;
     void setOpaque(bool) override;
@@ -107,6 +108,8 @@ public:
     WebCore::TransformationMatrix sublayerTransform() const override;
     void setSublayerTransform(const WebCore::TransformationMatrix&) override;
 
+    void setIsBackdropRoot(bool) override;
+
     bool isHidden() const override;
     void setHidden(bool) override;
 
@@ -118,6 +121,10 @@ public:
 
     void setBackingStoreAttached(bool) override;
     bool backingStoreAttached() const override;
+
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    void setVisibleRect(const WebCore::FloatRect&) override;
+#endif
 
     bool geometryFlipped() const override;
     void setGeometryFlipped(bool) override;
@@ -224,8 +231,8 @@ public:
 
     void setClonedLayer(const PlatformCALayer*);
 
-    RemoteLayerTreeTransaction::LayerProperties& properties() { return m_properties; }
-    const RemoteLayerTreeTransaction::LayerProperties& properties() const { return m_properties; }
+    LayerProperties& properties() { return m_properties; }
+    const LayerProperties& properties() const { return m_properties; }
 
     void didCommit();
 
@@ -247,7 +254,7 @@ private:
     void updateBackingStore();
     void removeSublayer(PlatformCALayerRemote*);
 
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
     RemoteLayerBackingStore::IncludeDisplayList shouldIncludeDisplayListInBackingStore() const;
 #endif
 
@@ -255,10 +262,9 @@ private:
 
     WebCore::LayerPool& layerPool() override;
 
-    RemoteLayerTreeTransaction::LayerProperties m_properties;
+    LayerProperties m_properties;
     WebCore::PlatformCALayerList m_children;
     PlatformCALayerRemote* m_superlayer { nullptr };
-    PlatformCALayerRemote* m_maskLayer { nullptr };
     HashMap<String, RefPtr<WebCore::PlatformCAAnimation>> m_animations;
 
     bool m_acceleratesDrawing { false };

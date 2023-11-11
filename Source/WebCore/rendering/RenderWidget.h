@@ -62,7 +62,7 @@ inline void WidgetHierarchyUpdatesSuspensionScope::scheduleWidgetToMove(Widget& 
     widgetNewParentMap().set(&widget, frame);
 }
 
-class RenderWidget : public RenderReplaced, private OverlapTestRequestClient {
+class RenderWidget : public RenderReplaced, private OverlapTestRequestClient, public RefCounted<RenderWidget> {
     WTF_MAKE_ISO_ALLOCATED(RenderWidget);
 public:
     virtual ~RenderWidget();
@@ -78,15 +78,12 @@ public:
     ChildWidgetState updateWidgetPosition() WARN_UNUSED_RETURN;
     WEBCORE_EXPORT IntRect windowClipRect() const;
 
-    bool requiresAcceleratedCompositing() const;
+    virtual bool requiresAcceleratedCompositing() const;
 
     RemoteFrame* remoteFrame() const;
 
-    void ref() { ++m_refCount; }
-    void deref();
-
 protected:
-    RenderWidget(HTMLFrameOwnerElement&, RenderStyle&&);
+    RenderWidget(Type, HTMLFrameOwnerElement&, RenderStyle&&);
 
     void willBeDestroyed() override;
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
@@ -98,7 +95,7 @@ protected:
 private:
     void element() const = delete;
 
-    bool isWidget() const final { return true; }
+    bool isRenderWidget() const final { return true; }
 
     bool needsPreferredWidthsRecalculation() const final;
     RenderBox* embeddedContentBox() const final;
@@ -113,16 +110,8 @@ private:
 
     RefPtr<Widget> m_widget;
     IntRect m_clipRect; // The rectangle needs to remain correct after scrolling, so it is stored in content view coordinates, and not clipped to window.
-    unsigned m_refCount { 1 };
 };
-
-inline void RenderWidget::deref()
-{
-    ASSERT(m_refCount);
-    if (!--m_refCount)
-        delete this;
-}
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderWidget, isWidget())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderWidget, isRenderWidget())

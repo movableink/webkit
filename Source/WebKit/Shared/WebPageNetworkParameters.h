@@ -39,15 +39,12 @@ public:
     WebPageNetworkParameters(const String& attributedBundleIdentifier)
         : m_attributedBundleIdentifier(attributedBundleIdentifier) { }
 
-    void encode(IPC::Encoder&) const;
-    static std::optional<WebPageNetworkParameters> decode(IPC::Decoder&);
-
     WebPageNetworkParameters() = default;
     WebPageNetworkParameters(WTF::HashTableDeletedValueType)
         : m_attributedBundleIdentifier(WTF::HashTableDeletedValue) { }
     bool isHashTableDeletedValue() const { return m_attributedBundleIdentifier.isHashTableDeletedValue(); }
     unsigned hash() const { return m_attributedBundleIdentifier.hash(); }
-    bool operator==(const WebPageNetworkParameters& other) const { return m_attributedBundleIdentifier == other.m_attributedBundleIdentifier; }
+    friend bool operator==(const WebPageNetworkParameters&, const WebPageNetworkParameters&) = default;
 
     const String& attributedBundleIdentifier() const { return m_attributedBundleIdentifier; }
 private:

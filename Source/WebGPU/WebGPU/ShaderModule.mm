@@ -107,14 +107,14 @@ static RefPtr<ShaderModule> earlyCompileShaderModule(Device& device, std::varian
 
 Ref<ShaderModule> Device::createShaderModule(const WGPUShaderModuleDescriptor& descriptor)
 {
-    if (!descriptor.nextInChain)
+    if (!descriptor.nextInChain || !isValid())
         return ShaderModule::createInvalid(*this);
 
     auto shaderModuleParameters = findShaderModuleParameters(descriptor);
     if (!shaderModuleParameters)
         return ShaderModule::createInvalid(*this);
 
-    auto checkResult = WGSL::staticCheck(fromAPI(shaderModuleParameters->wgsl.code), std::nullopt, { maxBuffersPlusVertexBuffersForVertexStage() });
+    auto checkResult = WGSL::staticCheck(fromAPI(shaderModuleParameters->wgsl.code), std::nullopt, { maxBuffersPlusVertexBuffersForVertexStage(), maxBuffersForFragmentStage(), maxBuffersForComputeStage() });
 
     if (std::holds_alternative<WGSL::SuccessfulCheck>(checkResult)) {
         if (shaderModuleParameters->hints && descriptor.hintCount) {
@@ -129,8 +129,9 @@ Ref<ShaderModule> Device::createShaderModule(const WGPUShaderModuleDescriptor& d
         for (const auto& error : failedCheck.errors) {
             message.print("\n"_s, error);
         }
+        dataLogLn(message.toString());
         generateAValidationError(message.toString());
-        return ShaderModule::createInvalid(*this);
+        return ShaderModule::createInvalid(*this, failedCheck);
     }
 
     return ShaderModule::create(WTFMove(checkResult), { }, { }, nil, *this);
@@ -152,8 +153,8 @@ ShaderModule::ShaderModule(std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck
 {
 }
 
-ShaderModule::ShaderModule(Device& device)
-    : m_checkResult(std::monostate { })
+ShaderModule::ShaderModule(Device& device, CheckResult&& checkResult)
+    : m_checkResult(WTFMove(checkResult))
     , m_device(device)
 {
 }
@@ -166,7 +167,7 @@ struct Messages {
 };
 
 struct CompilationMessageData {
-    CompilationMessageData(Vector<WGPUCompilationMessage>&& compilationMessages, Vector<CString>&& messages)
+    CompilationMessageData(Vector<WGPUCompilationMessage>&& compilationMessages, Vector<String>&& messages)
         : compilationMessages(WTFMove(compilationMessages))
         , messages(WTFMove(messages))
     {
@@ -176,17 +177,17 @@ struct CompilationMessageData {
     CompilationMessageData(CompilationMessageData&&) = default;
 
     Vector<WGPUCompilationMessage> compilationMessages;
-    Vector<CString> messages;
+    Vector<String> messages;
 };
 
 static CompilationMessageData convertMessages(const Messages& messages1, const std::optional<Messages>& messages2 = std::nullopt)
 {
     Vector<WGPUCompilationMessage> flattenedCompilationMessages;
-    Vector<CString> flattenedMessages;
+    Vector<String> flattenedMessages;
 
     auto populateMessages = [&](const Messages& compilationMessages) {
         for (const auto& compilationMessage : compilationMessages.messages)
-            flattenedMessages.append(compilationMessage.message().utf8());
+            flattenedMessages.append(compilationMessage.message());
     };
 
     populateMessages(messages1);
@@ -198,7 +199,7 @@ static CompilationMessageData convertMessages(const Messages& messages1, const s
             const auto& compilationMessage = compilationMessages.messages[i];
             flattenedCompilationMessages.append({
                 .nextInChain = nullptr,
-                .message = flattenedMessages[i + base].data(),
+                .message = flattenedMessages[i + base],
                 .type = compilationMessages.type,
                 .lineNum = compilationMessage.lineNumber(),
                 .linePos = compilationMessage.lineOffset(),
@@ -227,9 +228,7 @@ void ShaderModule::getCompilationInfo(CompletionHandler<void(WGPUCompilationInfo
             static_cast<uint32_t>(compilationMessageData.compilationMessages.size()),
             compilationMessageData.compilationMessages.data(),
         };
-        m_device->instance().scheduleWork([compilationInfo = WTFMove(compilationInfo), callback = WTFMove(callback)]() mutable {
-            callback(WGPUCompilationInfoRequestStatus_Success, compilationInfo);
-        });
+        callback(WGPUCompilationInfoRequestStatus_Success, compilationInfo);
     }, [&](const WGSL::FailedCheck& failedCheck) {
         auto compilationMessageData(convertMessages(
             { failedCheck.errors, WGPUCompilationMessageType_Error },
@@ -239,9 +238,7 @@ void ShaderModule::getCompilationInfo(CompletionHandler<void(WGPUCompilationInfo
             static_cast<uint32_t>(compilationMessageData.compilationMessages.size()),
             compilationMessageData.compilationMessages.data(),
         };
-        m_device->instance().scheduleWork([compilationInfo = WTFMove(compilationInfo), callback = WTFMove(callback)]() mutable {
-            callback(WGPUCompilationInfoRequestStatus_Error, compilationInfo);
-        });
+        callback(WGPUCompilationInfoRequestStatus_Error, compilationInfo);
     }, [](std::monostate) {
         ASSERT_NOT_REACHED();
     });
@@ -331,7 +328,7 @@ static WGSL::BindGroupLayoutEntry::BindingMember convertBindingLayout(const Bind
     return WTF::switchOn(bindingLayout, [](const WGPUBufferBindingLayout& bindingLayout) -> WGSL::BindGroupLayoutEntry::BindingMember {
         return WGSL::BufferBindingLayout {
             .type = wgslBindingType(bindingLayout.type),
-            .hasDynamicOffset = bindingLayout.hasDynamicOffset,
+            .hasDynamicOffset = !!bindingLayout.hasDynamicOffset,
             .minBindingSize = bindingLayout.minBindingSize
         };
     }, [](const WGPUSamplerBindingLayout& bindingLayout) -> WGSL::BindGroupLayoutEntry::BindingMember {
@@ -342,7 +339,7 @@ static WGSL::BindGroupLayoutEntry::BindingMember convertBindingLayout(const Bind
         return WGSL::TextureBindingLayout {
             .sampleType = wgslSampleType(bindingLayout.sampleType),
             .viewDimension = wgslViewDimension(bindingLayout.viewDimension),
-            .multisampled = bindingLayout.multisampled
+            .multisampled = !!bindingLayout.multisampled
         };
     }, [](const WGPUStorageTextureBindingLayout& bindingLayout) -> WGSL::BindGroupLayoutEntry::BindingMember {
         return WGSL::StorageTextureBindingLayout {
@@ -363,9 +360,19 @@ WGSL::PipelineLayout ShaderModule::convertPipelineLayout(const PipelineLayout& p
         WGSL::BindGroupLayout wgslBindGroupLayout;
         for (auto& entry : bindGroupLayout.entries()) {
             WGSL::BindGroupLayoutEntry wgslEntry;
-            wgslEntry.binding = entry.binding;
-            wgslEntry.visibility.fromRaw(entry.visibility);
-            wgslEntry.bindingMember = convertBindingLayout(entry.bindingLayout);
+            wgslEntry.binding = entry.value.binding;
+            wgslEntry.visibility = wgslEntry.visibility.fromRaw(entry.value.visibility);
+            wgslEntry.bindingMember = convertBindingLayout(entry.value.bindingLayout);
+            wgslEntry.vertexArgumentBufferIndex = entry.value.argumentBufferIndices[WebGPU::ShaderStage::Vertex];
+            wgslEntry.vertexArgumentBufferSizeIndex = entry.value.bufferSizeArgumentBufferIndices[WebGPU::ShaderStage::Vertex];
+            wgslEntry.vertexBufferDynamicOffset = entry.value.vertexDynamicOffset;
+            wgslEntry.fragmentArgumentBufferIndex = entry.value.argumentBufferIndices[WebGPU::ShaderStage::Fragment];
+            wgslEntry.fragmentArgumentBufferSizeIndex = entry.value.bufferSizeArgumentBufferIndices[WebGPU::ShaderStage::Fragment];
+            if (entry.value.fragmentDynamicOffset)
+                wgslEntry.fragmentBufferDynamicOffset = *entry.value.fragmentDynamicOffset + 2;
+            wgslEntry.computeArgumentBufferIndex = entry.value.argumentBufferIndices[WebGPU::ShaderStage::Compute];
+            wgslEntry.computeArgumentBufferSizeIndex = entry.value.bufferSizeArgumentBufferIndices[WebGPU::ShaderStage::Compute];
+            wgslEntry.computeBufferDynamicOffset = entry.value.computeDynamicOffset;
             wgslBindGroupLayout.entries.append(wgslEntry);
         }
 

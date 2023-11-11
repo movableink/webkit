@@ -18,6 +18,7 @@
 
 namespace angle
 {
+
 namespace
 {
 bool LoadJSONFromFile(const std::string &fileName, rapidjson::Document *doc)
@@ -31,6 +32,69 @@ bool LoadJSONFromFile(const std::string &fileName, rapidjson::Document *doc)
     rapidjson::IStreamWrapper inWrapper(ifs);
     doc->ParseStream(inWrapper);
     return !doc->HasParseError();
+}
+
+// Branched from:
+// https://crsrc.org/c/third_party/zlib/google/compression_utils_portable.cc;drc=9fc44ce454cc889b603900ccd14b7024ea2c284c;l=167
+// Unmodified other than inlining ZlibStreamWrapperType and z_stream arg to access .msg
+int GzipUncompressHelperPatched(Bytef *dest,
+                                uLongf *dest_length,
+                                const Bytef *source,
+                                uLong source_length,
+                                z_stream &stream)
+{
+    stream.next_in  = static_cast<z_const Bytef *>(const_cast<Bytef *>(source));
+    stream.avail_in = static_cast<uInt>(source_length);
+    if (static_cast<uLong>(stream.avail_in) != source_length)
+        return Z_BUF_ERROR;
+
+    stream.next_out  = dest;
+    stream.avail_out = static_cast<uInt>(*dest_length);
+    if (static_cast<uLong>(stream.avail_out) != *dest_length)
+        return Z_BUF_ERROR;
+
+    stream.zalloc = static_cast<alloc_func>(0);
+    stream.zfree  = static_cast<free_func>(0);
+
+    int err = inflateInit2(&stream, MAX_WBITS + 16);
+    if (err != Z_OK)
+        return err;
+
+    err = inflate(&stream, Z_FINISH);
+    if (err != Z_STREAM_END)
+    {
+        inflateEnd(&stream);
+        if (err == Z_NEED_DICT || (err == Z_BUF_ERROR && stream.avail_in == 0))
+            return Z_DATA_ERROR;
+        return err;
+    }
+    *dest_length = stream.total_out;
+
+    err = inflateEnd(&stream);
+    return err;
+}
+
+bool UncompressData(const std::vector<uint8_t> &compressedData,
+                    std::vector<uint8_t> *uncompressedData)
+{
+    uint32_t uncompressedSize =
+        zlib_internal::GetGzipUncompressedSize(compressedData.data(), compressedData.size());
+
+    uncompressedData->resize(uncompressedSize + 1);  // +1 to make sure .data() is valid
+    uLong destLen = uncompressedSize;
+    z_stream stream;
+    int zResult =
+        GzipUncompressHelperPatched(uncompressedData->data(), &destLen, compressedData.data(),
+                                    static_cast<uLong>(compressedData.size()), stream);
+
+    if (zResult != Z_OK)
+    {
+        std::cerr << "Failure to decompressed binary data: " << zResult
+                  << " msg=" << (stream.msg ? stream.msg : "nil") << "\n";
+        return false;
+    }
+
+    return true;
 }
 }  // namespace
 
@@ -209,20 +273,28 @@ uint8_t *TraceLibrary::LoadBinaryData(const char *fileName)
         }
 
         std::vector<uint8_t> compressedData(size);
-        (void)fread(compressedData.data(), 1, size, fp);
-
-        uint32_t uncompressedSize =
-            zlib_internal::GetGzipUncompressedSize(compressedData.data(), compressedData.size());
-
-        mBinaryData.resize(uncompressedSize + 1);  // +1 to make sure .data() is valid
-        uLong destLen = uncompressedSize;
-        int zResult =
-            zlib_internal::GzipUncompressHelper(mBinaryData.data(), &destLen, compressedData.data(),
-                                                static_cast<uLong>(compressedData.size()));
-
-        if (zResult != Z_OK)
+        size_t bytesRead = fread(compressedData.data(), 1, size, fp);
+        if (bytesRead != static_cast<size_t>(size))
         {
-            std::cerr << "Failure to decompressed binary data: " << zResult << "\n";
+            std::cerr << "Failed to read binary data: " << bytesRead << " != " << size << "\n";
+            exit(1);
+        }
+
+        if (!UncompressData(compressedData, &mBinaryData))
+        {
+            // Temporary tests for https://anglebug.com/8307
+            std::vector<uint8_t> uncompressedData;
+            bool secondResult = UncompressData(compressedData, &uncompressedData);
+            std::cerr << "Retry: " << secondResult << " usize=" << uncompressedData.size() << "\n";
+
+            // Data from `echo test | gzip`
+            std::vector<uint8_t> gzTest{0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x03, 0x2b, 0x49, 0x2d, 0x2e, 0xe1, 0x02, 0x00, 0xc6,
+                                        0x35, 0xb9, 0x3b, 0x05, 0x00, 0x00, 0x00};
+            bool testResult = UncompressData(gzTest, &uncompressedData);
+            std::cerr << "Test attempt: " << testResult << " usize=" << uncompressedData.size()
+                      << " data[0]=" << uncompressedData[0] << "\n";
+
             exit(1);
         }
     }

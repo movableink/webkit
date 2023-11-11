@@ -45,13 +45,15 @@
 
 namespace WebCore {
 
-GraphicsContext::GraphicsContext(const GraphicsContextState::ChangeFlags& changeFlags, InterpolationQuality imageInterpolationQuality)
+GraphicsContext::GraphicsContext(IsDeferred isDeferred, const GraphicsContextState::ChangeFlags& changeFlags, InterpolationQuality imageInterpolationQuality)
     : m_state(changeFlags, imageInterpolationQuality)
+    , m_isDeferred(isDeferred)
 {
 }
 
-GraphicsContext::GraphicsContext(const GraphicsContextState& state)
+GraphicsContext::GraphicsContext(IsDeferred isDeferred, const GraphicsContextState& state)
     : m_state(state)
+    , m_isDeferred(isDeferred)
 {
 }
 
@@ -61,17 +63,22 @@ GraphicsContext::~GraphicsContext()
     ASSERT(!m_transparencyLayerCount);
 }
 
-void GraphicsContext::save()
+void GraphicsContext::save(GraphicsContextState::Purpose purpose)
 {
+    ASSERT(purpose == GraphicsContextState::Purpose::SaveRestore || purpose == GraphicsContextState::Purpose::TransparencyLayer);
     m_stack.append(m_state);
+    m_state.repurpose(purpose);
 }
 
-void GraphicsContext::restore()
+void GraphicsContext::restore(GraphicsContextState::Purpose purpose)
 {
     if (m_stack.isEmpty()) {
         LOG_ERROR("ERROR void GraphicsContext::restore() stack is empty");
         return;
     }
+
+    ASSERT_UNUSED(purpose, purpose == m_state.purpose());
+    ASSERT_UNUSED(purpose, purpose == GraphicsContextState::Purpose::SaveRestore || purpose == GraphicsContextState::Purpose::TransparencyLayer);
 
     m_state = m_stack.last();
     m_stack.removeLast();
@@ -80,6 +87,23 @@ void GraphicsContext::restore()
     // Canvas elements will immediately save() again, but that goes into inline capacity.
     if (m_stack.isEmpty())
         m_stack.clear();
+}
+
+void GraphicsContext::unwindStateStack(unsigned count)
+{
+    ASSERT(count <= stackSize());
+    while (count-- > 0) {
+        switch (m_state.purpose()) {
+        case GraphicsContextState::Purpose::SaveRestore:
+            restore();
+            break;
+        case GraphicsContextState::Purpose::TransparencyLayer:
+            endTransparencyLayer();
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+    }
 }
 
 void GraphicsContext::mergeLastChanges(const GraphicsContextState& state, const std::optional<GraphicsContextState>& lastDrawingState)
@@ -109,15 +133,6 @@ void GraphicsContext::drawRaisedEllipse(const FloatRect& rect, const Color& elli
     drawEllipse(rect);
 
     restore();
-}
-
-bool GraphicsContext::getShadow(FloatSize& offset, float& blur, Color& color) const
-{
-    offset = dropShadow().offset;
-    blur = dropShadow().blurRadius;
-    color = dropShadow().color;
-
-    return hasShadow();
 }
     
 #if PLATFORM(QT)
@@ -228,14 +243,9 @@ IntSize GraphicsContext::compatibleImageBufferSize(const FloatSize& size) const
     return scaledImageBufferSize(size, scaleFactor());
 }
 
-RefPtr<ImageBuffer> GraphicsContext::createImageBuffer(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod> renderingMethod) const
+RefPtr<ImageBuffer> GraphicsContext::createImageBuffer(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod>) const
 {
     auto bufferOptions = bufferOptionsForRendingMode(renderingMode.value_or(this->renderingMode()));
-
-    if (!renderingMethod || *renderingMethod == RenderingMethod::Local)
-        return ImageBuffer::create(size, RenderingPurpose::Unspecified, resolutionScale, colorSpace, PixelFormat::BGRA8, bufferOptions);
-
-    bufferOptions.add(ImageBufferOptions::UseDisplayList);
     return ImageBuffer::create(size, RenderingPurpose::Unspecified, resolutionScale, colorSpace, PixelFormat::BGRA8, bufferOptions);
 }
 
@@ -292,7 +302,7 @@ RefPtr<ImageBuffer> GraphicsContext::createAlignedImageBuffer(const FloatRect& r
     return createScaledImageBuffer(rect, scaleFactor(), colorSpace, renderingMode(), renderingMethod);
 }
 
-void GraphicsContext::drawNativeImage(NativeImage& image, const FloatSize& imageSize, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& options)
+void GraphicsContext::drawNativeImage(NativeImage& image, const FloatSize& imageSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options)
 {
     image.draw(*this, imageSize, destination, source, options);
 }
@@ -302,31 +312,31 @@ void GraphicsContext::drawSystemImage(SystemImage& systemImage, const FloatRect&
     systemImage.draw(*this, destinationRect);
 }
 
-ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatPoint& destination, const ImagePaintingOptions& imagePaintingOptions)
+ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatPoint& destination, ImagePaintingOptions imagePaintingOptions)
 {
     return drawImage(image, FloatRect(destination, image.size()), FloatRect(FloatPoint(), image.size()), imagePaintingOptions);
 }
 
-ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatRect& destination, const ImagePaintingOptions& imagePaintingOptions)
+ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatRect& destination, ImagePaintingOptions imagePaintingOptions)
 {
     FloatRect srcRect(FloatPoint(), image.size(imagePaintingOptions.orientation()));
     return drawImage(image, destination, srcRect, imagePaintingOptions);
 }
 
-ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& options)
+ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options)
 {
     InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
     return image.draw(*this, destination, source, options);
 }
 
-ImageDrawResult GraphicsContext::drawTiledImage(Image& image, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& options)
+ImageDrawResult GraphicsContext::drawTiledImage(Image& image, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options)
 {
     InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
     return image.drawTiled(*this, destination, source, tileSize, spacing, options);
 }
 
 ImageDrawResult GraphicsContext::drawTiledImage(Image& image, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor,
-    Image::TileRule hRule, Image::TileRule vRule, const ImagePaintingOptions& options)
+    Image::TileRule hRule, Image::TileRule vRule, ImagePaintingOptions options)
 {
     if (hRule == Image::StretchTile && vRule == Image::StretchTile) {
         // Just do a scale.
@@ -334,26 +344,36 @@ ImageDrawResult GraphicsContext::drawTiledImage(Image& image, const FloatRect& d
     }
 
     InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
-    return image.drawTiled(*this, destination, source, tileScaleFactor, hRule, vRule, options.compositeOperator());
+    return image.drawTiled(*this, destination, source, tileScaleFactor, hRule, vRule, { options.compositeOperator() });
 }
 
-void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatPoint& destination, const ImagePaintingOptions& imagePaintingOptions)
+RefPtr<NativeImage> GraphicsContext::nativeImageForDrawing(ImageBuffer& imageBuffer)
+{
+    if (m_isDeferred == IsDeferred::Yes || &imageBuffer.context() == this)
+        return imageBuffer.copyNativeImage();
+    return imageBuffer.createNativeImageReference();
+}
+
+void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatPoint& destination, ImagePaintingOptions imagePaintingOptions)
 {
     drawImageBuffer(image, FloatRect(destination, image.logicalSize()), FloatRect({ }, image.logicalSize()), imagePaintingOptions);
 }
 
-void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatRect& destination, const ImagePaintingOptions& imagePaintingOptions)
+void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatRect& destination, ImagePaintingOptions imagePaintingOptions)
 {
     drawImageBuffer(image, destination, FloatRect({ }, image.logicalSize()), imagePaintingOptions);
 }
 
-void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& options)
+void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options)
 {
     InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
-    image.draw(*this, destination, source, options);
+    FloatRect sourceScaled = source;
+    sourceScaled.scale(image.resolutionScale());
+    if (auto nativeImage = nativeImageForDrawing(image))
+        drawNativeImageInternal(*nativeImage, image.backendSize(), destination, sourceScaled, options);
 }
 
-void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatPoint& destination, const ImagePaintingOptions& imagePaintingOptions)
+void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatPoint& destination, ImagePaintingOptions imagePaintingOptions)
 {
     if (!image)
         return;
@@ -361,7 +381,7 @@ void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const 
     drawConsumingImageBuffer(WTFMove(image), FloatRect(destination, imageLogicalSize), FloatRect({ }, imageLogicalSize), imagePaintingOptions);
 }
 
-void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatRect& destination, const ImagePaintingOptions& imagePaintingOptions)
+void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatRect& destination, ImagePaintingOptions imagePaintingOptions)
 {
     if (!image)
         return;
@@ -369,12 +389,17 @@ void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const 
     drawConsumingImageBuffer(WTFMove(image), destination, FloatRect({ }, imageLogicalSize), imagePaintingOptions);
 }
 
-void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& options)
+void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options)
 {
     if (!image)
         return;
+    ASSERT(this != &image->context());
     InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
-    ImageBuffer::drawConsuming(WTFMove(image), *this, destination, source, options);
+    FloatRect scaledSource = source;
+    scaledSource.scale(image->resolutionScale());
+    auto backendSize = image->backendSize();
+    if (auto nativeImage = ImageBuffer::sinkIntoNativeImage(WTFMove(image)))
+        drawNativeImageInternal(*nativeImage, backendSize, destination, scaledSource, options);
 }
 
 void GraphicsContext::drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter& filter, FilterResults& results)
@@ -383,7 +408,7 @@ void GraphicsContext::drawFilteredImageBuffer(ImageBuffer* sourceImage, const Fl
     if (!result)
         return;
     
-    auto imageBuffer = result->imageBuffer();
+    RefPtr imageBuffer = result->imageBuffer();
     if (!imageBuffer)
         return;
 
@@ -392,9 +417,12 @@ void GraphicsContext::drawFilteredImageBuffer(ImageBuffer* sourceImage, const Fl
     scale(filter.filterScale());
 }
 
-void GraphicsContext::drawPattern(ImageBuffer& image, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
+void GraphicsContext::drawPattern(ImageBuffer& image, const FloatRect& destRect, const FloatRect& source, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
-    image.drawPattern(*this, destRect, tileRect, patternTransform, phase, spacing, options);
+    FloatRect scaledSource = source;
+    scaledSource.scale(image.resolutionScale());
+    if (auto nativeImage = nativeImageForDrawing(image))
+        drawPattern(*nativeImage, destRect, source, patternTransform, phase, spacing, options);
 }
 
 void GraphicsContext::drawControlPart(ControlPart& part, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle& style)

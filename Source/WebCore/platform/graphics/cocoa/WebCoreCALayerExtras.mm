@@ -26,13 +26,10 @@
 #import "config.h"
 #import "WebCoreCALayerExtras.h"
 
+#import "DynamicContentScalingTypes.h"
 #import "TransformationMatrix.h"
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
-
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
-#import <WebKitAdditions/CGDisplayListImageBufferAdditions.h>
-#endif
 
 @implementation CALayer (WebCoreCALayerExtras)
 
@@ -128,21 +125,21 @@
     self.contents = nil;
     self.contentsOpaque = NO;
 
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
-    [self _web_clearCGDisplayListIfNeeded];
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    [self _web_clearDynamicContentScalingDisplayListIfNeeded];
 #endif
 
 }
 
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
-- (void)_web_clearCGDisplayListIfNeeded
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+- (void)_web_clearDynamicContentScalingDisplayListIfNeeded
 {
-    if (![self valueForKeyPath:WKCGDisplayListContentsKey])
+    if (![self valueForKeyPath:WKDynamicContentScalingContentsKey])
         return;
-    [self setValue:nil forKeyPath:WKCGDisplayListContentsKey];
-    [self setValue:nil forKeyPath:WKCGDisplayListPortsKey];
-    [self setValue:@NO forKeyPath:WKCGDisplayListEnabledKey];
-    [self setValue:@NO forKeyPath:WKCGDisplayListBifurcationEnabledKey];
+    [self setValue:nil forKeyPath:WKDynamicContentScalingContentsKey];
+    [self setValue:nil forKeyPath:WKDynamicContentScalingPortsKey];
+    [self setValue:@NO forKeyPath:WKDynamicContentScalingEnabledKey];
+    [self setValue:@NO forKeyPath:WKDynamicContentScalingBifurcationEnabledKey];
 }
 #endif
 
@@ -177,7 +174,10 @@ void collectDescendantLayersAtPoint(Vector<LayerAndPoint, 16>& layersAtPoint, CA
             if (![layerWithResolvedAnimations containsPoint:subviewPoint])
                 return false;
 
-            return pointInLayerFunction(layer, subviewPoint);
+            if (pointInLayerFunction)
+                return pointInLayerFunction(layer, subviewPoint);
+
+            return true;
         }();
 
         if (handlesEvent)
@@ -186,6 +186,23 @@ void collectDescendantLayersAtPoint(Vector<LayerAndPoint, 16>& layersAtPoint, CA
         if ([layer sublayers])
             collectDescendantLayersAtPoint(layersAtPoint, layer, subviewPoint, pointInLayerFunction);
     };
+}
+
+Vector<LayerAndPoint, 16> layersAtPointToCheckForScrolling(std::function<bool(CALayer*, CGPoint)> layerEventRegionContainsPoint, std::function<uint64_t(CALayer*)> scrollingNodeIDForLayer, CALayer* layer, const FloatPoint& point, bool& hasAnyNonInteractiveScrollingLayers)
+{
+    Vector<LayerAndPoint, 16> layersAtPoint;
+    collectDescendantLayersAtPoint(layersAtPoint, layer, point, [&] (auto layer, auto point) {
+        if (layerEventRegionContainsPoint(layer, point))
+            return true;
+        if (scrollingNodeIDForLayer(layer)) {
+            hasAnyNonInteractiveScrollingLayers = true;
+            return true;
+        }
+        return false;
+    });
+    // Hit-test front to back.
+    layersAtPoint.reverse();
+    return layersAtPoint;
 }
 
 } // namespace WebCore

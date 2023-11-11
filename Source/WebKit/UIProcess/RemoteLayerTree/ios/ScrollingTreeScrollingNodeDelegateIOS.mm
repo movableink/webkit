@@ -33,6 +33,7 @@
 #import "RemoteScrollingCoordinatorProxyIOS.h"
 #import "RemoteScrollingTree.h"
 #import "UIKitSPI.h"
+#import "UIKitUtilities.h"
 #import "WKScrollView.h"
 #import "WebPageProxy.h"
 #import <QuartzCore/QuartzCore.h>
@@ -45,10 +46,6 @@
 #import <WebCore/ScrollingTreeScrollingNode.h>
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/SetForScope.h>
-
-#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
-#import <WebCore/WebCoreCALayerExtras.h>
-#endif
 
 @implementation WKScrollingNodeScrollViewDelegate
 
@@ -222,12 +219,8 @@ void ScrollingTreeScrollingNodeDelegateIOS::resetScrollViewDelegate()
 
 void ScrollingTreeScrollingNodeDelegateIOS::commitStateBeforeChildren(const ScrollingStateScrollingNode& scrollingStateNode)
 {
-    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrollContainerLayer)) {
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrollContainerLayer))
         m_scrollLayer = static_cast<CALayer*>(scrollingStateNode.scrollContainerLayer());
-#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
-        m_interactionRegionsLayer = static_cast<CALayer*>(scrollingStateNode.interactionRegionsLayer());
-#endif
-    }
 }
 
 void ScrollingTreeScrollingNodeDelegateIOS::updateScrollViewForOverscrollBehavior(UIScrollView *scrollView, const WebCore::OverscrollBehavior horizontalOverscrollBehavior, WebCore::OverscrollBehavior verticalOverscrollBehavior, AllowOverscrollToPreventScrollPropagation allowPropogation)
@@ -239,10 +232,8 @@ void ScrollingTreeScrollingNodeDelegateIOS::updateScrollViewForOverscrollBehavio
         scrollView.bouncesVertically = verticalOverscrollBehavior != OverscrollBehavior::None;
     }
     if (allowPropogation == AllowOverscrollToPreventScrollPropagation::Yes) {
-#if HAVE(UIKIT_OVERSCROLL_BEHAVIOR_SUPPORT)
-        scrollView._allowsParentToBeginHorizontally = horizontalOverscrollBehavior == OverscrollBehavior::Auto;
-        scrollView._allowsParentToBeginVertically = verticalOverscrollBehavior == OverscrollBehavior::Auto;
-#endif
+        [scrollView _wk_setTransfersHorizontalScrollingToParent:horizontalOverscrollBehavior == OverscrollBehavior::Auto];
+        [scrollView _wk_setTransfersVerticalScrollingToParent:verticalOverscrollBehavior == OverscrollBehavior::Auto];
     }
 }
 
@@ -334,7 +325,7 @@ bool ScrollingTreeScrollingNodeDelegateIOS::startAnimatedScrollToPosition(FloatP
 void ScrollingTreeScrollingNodeDelegateIOS::stopAnimatedScroll()
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
-    [scrollView() _stopScrollingAndZoomingAnimations];
+    [scrollView() _wk_stopScrollingAndZooming];
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
@@ -350,16 +341,13 @@ void ScrollingTreeScrollingNodeDelegateIOS::handleAsynchronousCancelableScrollEv
 void ScrollingTreeScrollingNodeDelegateIOS::repositionScrollingLayers()
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
-
-    if ([scrollView() _isAnimatingScroll])
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    if (scrollView()._wk_isScrollAnimating)
+ALLOW_DEPRECATED_DECLARATIONS_END
         return;
 
     [scrollView() setContentOffset:scrollingNode().currentScrollOffset()];
     END_BLOCK_OBJC_EXCEPTIONS
-
-#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
-    [m_interactionRegionsLayer _web_setLayerBoundsOrigin:scrollingNode().currentScrollOffset()];
-#endif
 }
 
 void ScrollingTreeScrollingNodeDelegateIOS::scrollWillStart() const

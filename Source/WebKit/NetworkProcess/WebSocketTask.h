@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if PLATFORM(COCOA) && HAVE(NSURLSESSION_WEBSOCKET)
+#if PLATFORM(COCOA)
 #include "WebSocketTaskCocoa.h"
 #elif USE(SOUP)
 #include "WebSocketTaskSoup.h"
@@ -39,7 +39,7 @@ namespace WebKit {
 
 struct SessionSet;
 
-class WebSocketTask {
+class WebSocketTask : public CanMakeWeakPtr<WebSocketTask> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     typedef uint64_t TaskIdentifier;

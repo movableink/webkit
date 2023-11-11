@@ -129,9 +129,9 @@ struct SameSizeAsNode : public EventTarget {
 static_assert(sizeof(Node) == sizeof(SameSizeAsNode), "Node should stay small");
 
 #if DUMP_NODE_STATISTICS
-static WeakHashSet<Node, WeakPtrImplWithEventTargetData>& liveNodeSet()
+static HashSet<CheckedPtr<Node>>& liveNodeSet()
 {
-    static NeverDestroyed<WeakHashSet<Node, WeakPtrImplWithEventTargetData>> liveNodes;
+    static NeverDestroyed<HashSet<CheckedPtr<Node>>> liveNodes;
     return liveNodes;
 }
 
@@ -190,6 +190,8 @@ static const char* stringForRareDataUseType(NodeRareData::UseType useType)
         return "Nonce";
     case NodeRareData::UseType::ExplicitlySetAttrElementsMap:
         return "ExplicitlySetAttrElementsMap";
+    case NodeRareData::UseType::Popover:
+        return "Popover";
     }
     return nullptr;
 }
@@ -223,7 +225,8 @@ void Node::dumpStatistics()
     HashMap<uint32_t, size_t> rareDataSingleUseTypeCounts;
     size_t mixedRareDataUseCount = 0;
 
-    for (auto& node : liveNodeSet()) {
+    for (auto& nodePtr : liveNodeSet()) {
+        auto& node = *nodePtr.get();
         if (node.hasRareData()) {
             ++nodesWithRareData;
             if (is<Element>(node)) {
@@ -305,7 +308,7 @@ void Node::dumpStatistics()
         }
     }
 
-    printf("Number of Nodes: %d\n\n", liveNodeSet().computeSize());
+    printf("Number of Nodes: %d\n\n", liveNodeSet().size());
     printf("Number of Nodes with RareData: %zu\n", nodesWithRareData);
     printf("  Mixed use: %zu\n", mixedRareDataUseCount);
     for (auto it : rareDataSingleUseTypeCounts)
@@ -375,7 +378,7 @@ void Node::trackForDebugging()
 #endif
 
 #if DUMP_NODE_STATISTICS
-    liveNodeSet().add(*this);
+    liveNodeSet().add(this);
 #endif
 }
 
@@ -395,9 +398,13 @@ inline void NodeRareData::operator delete(NodeRareData* nodeRareData, std::destr
 Node::Node(Document& document, ConstructionType type)
     : EventTarget(ConstructNode)
     , m_nodeFlags(type)
-    , m_treeScope(&document)
+    , m_treeScope((isDocumentNode() || isShadowRoot()) ? nullptr : &document)
 {
     ASSERT(isMainThread());
+
+    // Allow code to ref the Document while it is being constructed to make our life easier.
+    if (isDocumentNode())
+        relaxAdoptionRequirement();
 
     document.incrementReferencingNodeCount();
 
@@ -421,7 +428,7 @@ Node::~Node()
 #endif
 
 #if DUMP_NODE_STATISTICS
-    liveNodeSet().remove(*this);
+    liveNodeSet().remove(this);
 #endif
 
     ASSERT(!renderer());
@@ -429,10 +436,19 @@ Node::~Node()
     ASSERT(!m_previous);
     ASSERT(!m_next);
 
-    document().decrementReferencingNodeCount();
+    {
+        // Not refing document because it may be in the middle of destruction.
+        auto& document = this->document(); // Store document before clearing out m_treeScope.
+
+        // The call to decrementReferencingNodeCount() below may destroy the document so we need to clear our
+        // m_treeScope CheckedPtr beforehand.
+        m_treeScope = nullptr;
+
+        document.decrementReferencingNodeCount(); // This may destroy the document.
+    }
 
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY) && (ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS))
-    for (auto* document : Document::allDocuments()) {
+    for (auto& document : Document::allDocuments()) {
         ASSERT_WITH_SECURITY_IMPLICATION(!document->touchEventListenersContain(*this));
         ASSERT_WITH_SECURITY_IMPLICATION(!document->touchEventHandlersContain(*this));
         ASSERT_WITH_SECURITY_IMPLICATION(!document->touchEventTargetsContain(*this));
@@ -456,7 +472,7 @@ void Node::willBeDeletedFrom(Document& document)
     document.removeTouchEventHandler(*this, EventHandlerRemoval::All);
 #endif
 
-    if (auto* cache = document.existingAXObjectCache())
+    if (CheckedPtr cache = document.existingAXObjectCache())
         cache->remove(*this);
 }
 
@@ -519,31 +535,31 @@ Element* Node::nextElementSibling() const
     return ElementTraversal::nextSibling(*this);
 }
 
-ExceptionOr<void> Node::insertBefore(Node& newChild, Node* refChild)
+ExceptionOr<void> Node::insertBefore(Node& newChild, RefPtr<Node>&& refChild)
 {
     if (!is<ContainerNode>(*this))
-        return Exception { HierarchyRequestError };
-    return downcast<ContainerNode>(*this).insertBefore(newChild, refChild);
+        return Exception { ExceptionCode::HierarchyRequestError };
+    return downcast<ContainerNode>(*this).insertBefore(newChild, WTFMove(refChild));
 }
 
 ExceptionOr<void> Node::replaceChild(Node& newChild, Node& oldChild)
 {
     if (!is<ContainerNode>(*this))
-        return Exception { HierarchyRequestError };
+        return Exception { ExceptionCode::HierarchyRequestError };
     return downcast<ContainerNode>(*this).replaceChild(newChild, oldChild);
 }
 
 ExceptionOr<void> Node::removeChild(Node& oldChild)
 {
     if (!is<ContainerNode>(*this))
-        return Exception { NotFoundError };
+        return Exception { ExceptionCode::NotFoundError };
     return downcast<ContainerNode>(*this).removeChild(oldChild);
 }
 
 ExceptionOr<void> Node::appendChild(Node& newChild)
 {
     if (!is<ContainerNode>(*this))
-        return Exception { HierarchyRequestError };
+        return Exception { ExceptionCode::HierarchyRequestError };
     return downcast<ContainerNode>(*this).appendChild(newChild);
 }
 
@@ -582,19 +598,18 @@ ExceptionOr<RefPtr<Node>> Node::convertNodesOrStringsIntoNode(FixedVector<NodeOr
     if (nodeOrStringVector.isEmpty())
         return nullptr;
 
-    Vector<Ref<Node>> nodes;
-    nodes.reserveInitialCapacity(nodeOrStringVector.size());
-    for (auto& variant : nodeOrStringVector) {
-        WTF::switchOn(variant,
-            [&](RefPtr<Node>& node) { nodes.uncheckedAppend(*node.get()); },
-            [&](String& string) { nodes.uncheckedAppend(Text::create(document(), WTFMove(string))); }
+    Ref document = this->document();
+    auto nodes = WTF::map(WTFMove(nodeOrStringVector), [&](auto&& variant) -> Ref<Node> {
+        return WTF::switchOn(WTFMove(variant),
+            [&](RefPtr<Node>&& node) { return node.releaseNonNull(); },
+            [&](String&& string) -> Ref<Node> { return Text::create(document, WTFMove(string)); }
         );
-    }
+    });
 
     if (nodes.size() == 1)
         return RefPtr<Node> { WTFMove(nodes.first()) };
 
-    auto nodeToReturn = DocumentFragment::create(document());
+    auto nodeToReturn = DocumentFragment::create(document);
     for (auto& node : nodes) {
         auto appendResult = nodeToReturn->appendChild(node);
         if (appendResult.hasException())
@@ -605,17 +620,17 @@ ExceptionOr<RefPtr<Node>> Node::convertNodesOrStringsIntoNode(FixedVector<NodeOr
 
 ExceptionOr<void> Node::before(FixedVector<NodeOrString>&& nodeOrStringVector)
 {
-    RefPtr<ContainerNode> parent = parentNode();
+    RefPtr parent = parentNode();
     if (!parent)
         return { };
 
     auto nodeSet = nodeSetPreTransformedFromNodeOrStringVector(nodeOrStringVector);
-    auto viablePreviousSibling = firstPrecedingSiblingNotInNodeSet(*this, nodeSet);
+    RefPtr viablePreviousSibling = firstPrecedingSiblingNotInNodeSet(*this, nodeSet);
 
     auto result = convertNodesOrStringsIntoNode(WTFMove(nodeOrStringVector));
     if (result.hasException())
         return result.releaseException();
-    auto node = result.releaseReturnValue();
+    RefPtr node = result.releaseReturnValue();
     if (!node)
         return { };
 
@@ -624,55 +639,55 @@ ExceptionOr<void> Node::before(FixedVector<NodeOrString>&& nodeOrStringVector)
     else
         viablePreviousSibling = parent->firstChild();
 
-    return parent->insertBefore(*node, viablePreviousSibling.get());
+    return parent->insertBefore(*node, WTFMove(viablePreviousSibling));
 }
 
 ExceptionOr<void> Node::after(FixedVector<NodeOrString>&& nodeOrStringVector)
 {
-    RefPtr<ContainerNode> parent = parentNode();
+    RefPtr parent = parentNode();
     if (!parent)
         return { };
 
     auto nodeSet = nodeSetPreTransformedFromNodeOrStringVector(nodeOrStringVector);
-    auto viableNextSibling = firstFollowingSiblingNotInNodeSet(*this, nodeSet);
+    RefPtr viableNextSibling = firstFollowingSiblingNotInNodeSet(*this, nodeSet);
 
     auto result = convertNodesOrStringsIntoNode(WTFMove(nodeOrStringVector));
     if (result.hasException())
         return result.releaseException();
-    auto node = result.releaseReturnValue();
+    RefPtr node = result.releaseReturnValue();
     if (!node)
         return { };
 
-    return parent->insertBefore(*node, viableNextSibling.get());
+    return parent->insertBefore(*node, WTFMove(viableNextSibling));
 }
 
 ExceptionOr<void> Node::replaceWith(FixedVector<NodeOrString>&& nodeOrStringVector)
 {
-    RefPtr<ContainerNode> parent = parentNode();
+    RefPtr parent = parentNode();
     if (!parent)
         return { };
 
     auto nodeSet = nodeSetPreTransformedFromNodeOrStringVector(nodeOrStringVector);
-    auto viableNextSibling = firstFollowingSiblingNotInNodeSet(*this, nodeSet);
+    RefPtr viableNextSibling = firstFollowingSiblingNotInNodeSet(*this, nodeSet);
 
     auto result = convertNodesOrStringsIntoNode(WTFMove(nodeOrStringVector));
     if (result.hasException())
         return result.releaseException();
 
     if (parentNode() == parent) {
-        if (auto node = result.releaseReturnValue())
+        if (RefPtr node = result.releaseReturnValue())
             return parent->replaceChild(*node, *this);
         return parent->removeChild(*this);
     }
 
-    if (auto node = result.releaseReturnValue())
-        return parent->insertBefore(*node, viableNextSibling.get());
+    if (RefPtr node = result.releaseReturnValue())
+        return parent->insertBefore(*node, WTFMove(viableNextSibling));
     return { };
 }
 
 ExceptionOr<void> Node::remove()
 {
-    auto* parent = parentNode();
+    RefPtr parent = parentNode();
     if (!parent)
         return { };
     return parent->removeChild(*this);
@@ -683,9 +698,10 @@ void Node::normalize()
     // Go through the subtree beneath us, normalizing all nodes. This means that
     // any two adjacent text nodes are merged and any empty text nodes are removed.
 
-    RefPtr<Node> node = this;
-    while (Node* firstChild = node->firstChild())
-        node = firstChild;
+    Ref document = this->document();
+    RefPtr node = this;
+    while (RefPtr firstChild = node->firstChild())
+        node = WTFMove(firstChild);
     while (node) {
         NodeType type = node->nodeType();
         if (type == ELEMENT_NODE)
@@ -699,7 +715,7 @@ void Node::normalize()
             continue;
         }
 
-        RefPtr<Text> text = downcast<Text>(node.get());
+        RefPtr text = downcast<Text>(node.get());
 
         // Remove empty text nodes.
         if (!text->length()) {
@@ -710,10 +726,10 @@ void Node::normalize()
         }
 
         // Merge text nodes.
-        while (Node* nextSibling = node->nextSibling()) {
+        while (RefPtr nextSibling = node->nextSibling()) {
             if (nextSibling->nodeType() != TEXT_NODE)
                 break;
-            Ref<Text> nextText = downcast<Text>(*nextSibling);
+            Ref nextText = downcast<Text>(nextSibling.releaseNonNull());
 
             // Remove empty text nodes.
             if (!nextText->length()) {
@@ -725,7 +741,7 @@ void Node::normalize()
             unsigned offset = text->length();
 
             // Update start/end for any affected Ranges before appendData since modifying contents might trigger mutation events that modify ordering.
-            document().textNodesMerged(nextText, offset);
+            document->textNodesMerged(nextText, offset);
 
             // FIXME: DOM spec requires contents to be replaced all at once (see https://dom.spec.whatwg.org/#dom-node-normalize).
             // Appending once per sibling may trigger mutation events too many times.
@@ -740,7 +756,7 @@ void Node::normalize()
 ExceptionOr<Ref<Node>> Node::cloneNodeForBindings(bool deep)
 {
     if (UNLIKELY(isShadowRoot()))
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
     return cloneNode(deep);
 }
 
@@ -755,7 +771,7 @@ ExceptionOr<void> Node::setPrefix(const AtomString&)
     // The spec says that for nodes other than elements and attributes, prefix is always null.
     // It does not say what to do when the user tries to set the prefix on another type of
     // node, however Mozilla throws a NamespaceError exception.
-    return Exception { NamespaceError };
+    return Exception { ExceptionCode::NamespaceError };
 }
 
 const AtomString& Node::localName() const
@@ -780,8 +796,8 @@ bool Node::isContentRichlyEditable() const
 
 void Node::inspect()
 {
-    if (document().page())
-        document().page()->inspectorController().inspect(this);
+    if (CheckedPtr page = document().page())
+        page->inspectorController().inspect(this);
 }
 
 static Node::Editability computeEditabilityFromComputedStyle(const RenderStyle& style, Node::UserSelectAllTreatment treatment, PageIsEditable pageIsEditable)
@@ -862,7 +878,7 @@ LayoutRect Node::renderRect(bool* isReplaced)
     RenderObject* hitRenderer = this->renderer();
     if (!hitRenderer && is<HTMLAreaElement>(*this)) {
         auto& area = downcast<HTMLAreaElement>(*this);
-        if (auto* imageElement = area.imageElement())
+        if (RefPtr imageElement = area.imageElement())
             hitRenderer = imageElement->renderer();
     }
     RenderObject* renderer = hitRenderer;
@@ -908,8 +924,10 @@ void Node::updateAncestorsForStyleRecalc()
         return;
     if (!documentElement->childNeedsStyleRecalc() && !documentElement->needsStyleRecalc())
         return;
-    document().setChildNeedsStyleRecalc();
-    document().scheduleStyleRecalc();
+
+    Ref document = this->document();
+    document->setChildNeedsStyleRecalc();
+    document->scheduleStyleRecalc();
 }
 
 void Node::markAncestorsForInvalidatedStyle()
@@ -1056,15 +1074,15 @@ ExceptionOr<void> Node::checkSetPrefix(const AtomString& prefix)
     // Element::setPrefix() and Attr::setPrefix()
 
     if (!prefix.isEmpty() && !Document::isValidName(prefix))
-        return Exception { InvalidCharacterError };
+        return Exception { ExceptionCode::InvalidCharacterError };
 
     // FIXME: Raise NamespaceError if prefix is malformed per the Namespaces in XML specification.
 
     auto& namespaceURI = this->namespaceURI();
     if (namespaceURI.isEmpty() && !prefix.isEmpty())
-        return Exception { NamespaceError };
+        return Exception { ExceptionCode::NamespaceError };
     if (prefix == xmlAtom() && namespaceURI != XMLNames::xmlNamespaceURI)
-        return Exception { NamespaceError };
+        return Exception { ExceptionCode::NamespaceError };
 
     // Attribute-specific checks are in Attr::setPrefix().
 
@@ -1168,10 +1186,8 @@ Node* Node::pseudoAwareLastChild() const
 
 const RenderStyle* Node::computedStyle(PseudoId pseudoElementSpecifier)
 {
-    auto* composedParent = parentElementInComposedTree();
-    if (!composedParent)
-        return nullptr;
-    return composedParent->computedStyle(pseudoElementSpecifier);
+    RefPtr composedParent = parentElementInComposedTree();
+    return composedParent ? composedParent->computedStyle(pseudoElementSpecifier) : nullptr;
 }
 
 // FIXME: Shouldn't these functions be in the editing code?  Code that asks questions about HTML in the core DOM class
@@ -1317,8 +1333,8 @@ TreeScope& Node::treeScopeForSVGReferences() const
 {
     if (auto* shadowRoot = containingShadowRoot(); shadowRoot && shadowRoot->mode() == ShadowRootMode::UserAgent) {
         if (shadowRoot->host() && shadowRoot->host()->elementName() == ElementNames::SVG::use) {
-            ASSERT(m_treeScope->parentTreeScope());
-            return *m_treeScope->parentTreeScope();
+            ASSERT(treeScope().parentTreeScope());
+            return *treeScope().parentTreeScope();
         }
     }
     return treeScope();
@@ -1672,10 +1688,10 @@ static void appendTextContent(const Node* node, bool convertBRsToNewlines, bool&
         FALLTHROUGH;
     case Node::DOCUMENT_FRAGMENT_NODE:
         isNullString = false;
-        for (Node* child = node->firstChild(); child; child = child->nextSibling()) {
+        for (RefPtr child = node->firstChild(); child; child = child->nextSibling()) {
             if (child->nodeType() == Node::COMMENT_NODE || child->nodeType() == Node::PROCESSING_INSTRUCTION_NODE)
                 continue;
-            appendTextContent(child, convertBRsToNewlines, isNullString, content);
+            appendTextContent(child.get(), convertBRsToNewlines, isNullString, content);
         }
         break;
 
@@ -1984,22 +2000,21 @@ static void traverseTreeAndMark(const String& baseIndent, const Node* rootNode, 
         node->showNode();
         indent.append('\t');
         if (!node->isShadowRoot()) {
-            if (ShadowRoot* shadowRoot = node->shadowRoot())
-                traverseTreeAndMark(indent.toString(), shadowRoot, markedNode1, markedLabel1, markedNode2, markedLabel2);
+            if (RefPtr shadowRoot = node->shadowRoot())
+                traverseTreeAndMark(indent.toString(), shadowRoot.get(), markedNode1, markedLabel1, markedNode2, markedLabel2);
         }
     }
 }
 
 void Node::showTreeAndMark(const Node* markedNode1, const char* markedLabel1, const Node* markedNode2, const char* markedLabel2) const
 {
-    const Node* rootNode;
     const Node* node = this;
     while (node->parentOrShadowHostNode() && !node->hasTagName(bodyTag))
         node = node->parentOrShadowHostNode();
-    rootNode = node;
+    RefPtr rootNode = node;
 
     String startingIndent;
-    traverseTreeAndMark(startingIndent, rootNode, markedNode1, markedLabel1, markedNode2, markedLabel2);
+    traverseTreeAndMark(startingIndent, rootNode.get(), markedNode1, markedLabel1, markedNode2, markedLabel2);
 }
 
 static ContainerNode* parentOrShadowHostOrFrameOwner(const Node* node)
@@ -2019,11 +2034,11 @@ static void showSubTreeAcrossFrame(const Node* node, const Node* markedNode, con
     if (!node->isShadowRoot()) {
         if (node->isFrameOwnerElement())
             showSubTreeAcrossFrame(static_cast<const HTMLFrameOwnerElement*>(node)->contentDocument(), markedNode, indent + "\t");
-        if (ShadowRoot* shadowRoot = node->shadowRoot())
-            showSubTreeAcrossFrame(shadowRoot, markedNode, indent + "\t");
+        if (RefPtr shadowRoot = node->shadowRoot())
+            showSubTreeAcrossFrame(shadowRoot.get(), markedNode, indent + "\t");
     }
-    for (Node* child = node->firstChild(); child; child = child->nextSibling())
-        showSubTreeAcrossFrame(child, markedNode, indent + "\t");
+    for (RefPtr child = node->firstChild(); child; child = child->nextSibling())
+        showSubTreeAcrossFrame(child.get(), markedNode, indent + "\t");
 }
 
 void Node::showTreeForThisAcrossFrame() const
@@ -2062,6 +2077,11 @@ void NodeListsNodeData::invalidateCachesForAttribute(const QualifiedName& attrNa
 void Node::getSubresourceURLs(ListHashSet<URL>& urls) const
 {
     addSubresourceAttributeURLs(urls);
+}
+
+void Node::getCandidateSubresourceURLs(ListHashSet<URL>& urls) const
+{
+    addCandidateSubresourceURLs(urls);
 }
 
 Element* Node::enclosingLinkEventParentOrSelf()
@@ -2454,7 +2474,7 @@ void Node::dispatchEvent(Event& event)
 
 void Node::dispatchSubtreeModifiedEvent()
 {
-    if (isInShadowTree())
+    if (isInShadowTree() || document().shouldNotFireMutationEvents())
         return;
 
     ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(*this));
@@ -2511,26 +2531,26 @@ void Node::defaultEventHandler(Event& event)
     auto& eventNames = WebCore::eventNames();
     if (eventType == eventNames.keydownEvent || eventType == eventNames.keypressEvent || eventType == eventNames.keyupEvent) {
         if (is<KeyboardEvent>(event)) {
-            if (auto* frame = document().frame())
+            if (RefPtr frame = document().frame())
                 frame->eventHandler().defaultKeyboardEventHandler(downcast<KeyboardEvent>(event));
         }
     } else if (eventType == eventNames.clickEvent) {
         dispatchDOMActivateEvent(event);
 #if ENABLE(CONTEXT_MENUS)
     } else if (eventType == eventNames.contextmenuEvent) {
-        if (auto* frame = document().frame()) {
+        if (RefPtr frame = document().frame()) {
             if (auto* page = frame->page())
                 page->contextMenuController().handleContextMenuEvent(event);
         }
 #endif
     } else if (eventType == eventNames.textInputEvent) {
         if (is<TextEvent>(event)) {
-            if (auto* frame = document().frame())
+            if (RefPtr frame = document().frame())
                 frame->eventHandler().defaultTextInputEventHandler(downcast<TextEvent>(event));
         }
 #if ENABLE(PAN_SCROLLING)
     } else if (eventType == eventNames.mousedownEvent && is<MouseEvent>(event)) {
-        if (downcast<MouseEvent>(event).button() == MiddleButton) {
+        if (downcast<MouseEvent>(event).button() == MouseButton::Middle) {
             if (enclosingLinkEventParentOrSelf())
                 return;
 
@@ -2539,7 +2559,7 @@ void Node::defaultEventHandler(Event& event)
                 renderer = renderer->parent();
 
             if (renderer) {
-                if (auto* frame = document().frame())
+                if (RefPtr frame = document().frame())
                     frame->eventHandler().startPanScrolling(downcast<RenderBox>(*renderer));
             }
         }
@@ -2552,8 +2572,8 @@ void Node::defaultEventHandler(Event& event)
             startNode = startNode->parentOrShadowHostNode();
         
         if (startNode && startNode->renderer()) {
-            if (auto* frame = document().frame())
-                frame->eventHandler().defaultWheelEventHandler(startNode, downcast<WheelEvent>(event));
+            if (RefPtr frame = document().frame())
+                frame->eventHandler().defaultWheelEventHandler(RefPtr { startNode }.get(), downcast<WheelEvent>(event));
         }
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
     } else if (is<TouchEvent>(event) && eventNames.isTouchRelatedEventType(eventType, *this)) {
@@ -2573,8 +2593,10 @@ void Node::defaultEventHandler(Event& event)
             renderer = renderer->parent();
 
         if (renderer && renderer->node()) {
-            if (auto* frame = document().frame())
-                frame->eventHandler().defaultTouchEventHandler(*renderer->node(), downcast<TouchEvent>(event));
+            if (RefPtr frame = document().frame()) {
+                RefPtr rendererNode = renderer->node();
+                frame->eventHandler().defaultTouchEventHandler(*rendererNode, downcast<TouchEvent>(event));
+            }
         }
 #endif
     }

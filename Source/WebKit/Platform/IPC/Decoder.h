@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,15 +26,24 @@
 #pragma once
 
 #include "Attachment.h"
+#include "DataReference.h"
 #include "MessageNames.h"
 #include "ReceiverMatcher.h"
+#include <wtf/Algorithms.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Function.h>
 #include <wtf/OptionSet.h>
+#include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
 
 #if PLATFORM(MAC)
 #include "ImportanceAssertion.h"
+#endif
+
+#ifdef __OBJC__
+typedef Class ClassStructPtr;
+#else
+typedef struct objc_class* ClassStructPtr;
 #endif
 
 namespace IPC {
@@ -46,16 +55,28 @@ template<typename, typename> struct ArgumentCoder;
 template<typename, typename, typename> struct HasLegacyDecoder;
 template<typename, typename, typename> struct HasModernDecoder;
 
+#ifdef __OBJC__
+template<typename T> using IsObjCObject = std::enable_if_t<std::is_convertible<T *, id>::value, T *>;
+template<typename T> using IsNotObjCObject = std::enable_if_t<!std::is_convertible<T *, id>::value, T *>;
+template<typename T, typename = IsObjCObject<T>> std::optional<RetainPtr<T>> decodeRequiringAllowedClasses(Decoder&);
+
+template<typename T, typename = IsObjCObject<T>> Class getClass()
+{
+    return [T class];
+}
+#endif
+
 class Decoder {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static std::unique_ptr<Decoder> create(const uint8_t* buffer, size_t bufferSize, Vector<Attachment>&&);
-    using BufferDeallocator = Function<void(const uint8_t*, size_t)>;
-    static std::unique_ptr<Decoder> create(const uint8_t* buffer, size_t bufferSize, BufferDeallocator&&, Vector<Attachment>&&);
-    Decoder(const uint8_t* stream, size_t streamSize, uint64_t destinationID);
+    static std::unique_ptr<Decoder> create(DataReference buffer, Vector<Attachment>&&);
+    using BufferDeallocator = Function<void(DataReference)>;
+    static std::unique_ptr<Decoder> create(DataReference buffer, BufferDeallocator&&, Vector<Attachment>&&);
+    Decoder(DataReference stream, uint64_t destinationID);
 
     ~Decoder();
 
+    Decoder() = delete;
     Decoder(const Decoder&) = delete;
     Decoder(Decoder&&) = delete;
     Decoder& operator=(const Decoder&) = delete;
@@ -80,12 +101,16 @@ public:
 
     static std::unique_ptr<Decoder> unwrapForTesting(Decoder&);
 
-    const uint8_t* buffer() const { return m_buffer; }
-    size_t currentBufferPosition() const { return m_bufferPos - m_buffer; }
-    size_t length() const { return m_bufferEnd - m_buffer; }
+    DataReference buffer() const { return m_buffer; }
+    size_t currentBufferOffset() const { return static_cast<size_t>(std::distance(m_buffer.begin(), m_bufferPosition)); }
 
-    WARN_UNUSED_RETURN bool isValid() const { return m_bufferPos != nullptr; }
-    void markInvalid() { m_bufferPos = nullptr; }
+    WARN_UNUSED_RETURN bool isValid() const { return !!m_buffer.data(); }
+    void markInvalid()
+    {
+        auto buffer = std::exchange(m_buffer, { });
+        if (m_bufferDeallocator)
+            m_bufferDeallocator(WTFMove(buffer));
+    }
 
     template<typename T>
     WARN_UNUSED_RETURN std::span<const T> decodeSpan(size_t);
@@ -121,7 +146,7 @@ public:
     }
 
     // The preferred decode() function. Can decode T which is not default constructible when T
-    // has a  modern decoder, e.g decoding function that returns std::optional.
+    // has a modern decoder, e.g decoding function that returns std::optional.
     template<typename T>
     std::optional<T> decode()
     {
@@ -140,38 +165,58 @@ public:
         }
     }
 
+#ifdef __OBJC__
+    template<typename T, typename = IsObjCObject<T>>
+    std::optional<RetainPtr<T>> decodeWithAllowedClasses(const Vector<ClassStructPtr>& allowedClasses = { getClass<T>() })
+    {
+        m_allowedClasses = allowedClasses;
+        return IPC::decodeRequiringAllowedClasses<T>(*this);
+    }
+
+    template<typename T, typename = IsNotObjCObject<T>>
+    std::optional<T> decodeWithAllowedClasses(const Vector<ClassStructPtr>& allowedClasses)
+    {
+        m_allowedClasses = allowedClasses;
+        return decode<T>();
+    }
+#endif
+
+#if PLATFORM(COCOA)
+    const Vector<ClassStructPtr>& allowedClasses() const { return m_allowedClasses; }
+#endif
+
     std::optional<Attachment> takeLastAttachment();
 
-    static constexpr bool isIPCDecoder = true;
-
 private:
-    Decoder(const uint8_t* buffer, size_t bufferSize, BufferDeallocator&&, Vector<Attachment>&&);
+    Decoder(DataReference buffer, BufferDeallocator&&, Vector<Attachment>&&);
 
-    const uint8_t* m_buffer;
-    const uint8_t* m_bufferPos;
-    const uint8_t* m_bufferEnd;
+    DataReference m_buffer;
+    DataReference::iterator m_bufferPosition;
     BufferDeallocator m_bufferDeallocator;
 
     Vector<Attachment> m_attachments;
 
     OptionSet<MessageFlags> m_messageFlags;
-    MessageName m_messageName;
-
-    uint64_t m_destinationID;
     bool m_isAllowedWhenWaitingForSyncReplyOverride { false };
+    MessageName m_messageName { MessageName::Invalid };
 
 #if PLATFORM(MAC) || (PLATFORM(QT) && USE(MACH_PORTS))
     ImportanceAssertion m_importanceAssertion;
 #endif
+#if PLATFORM(COCOA)
+    Vector<ClassStructPtr> m_allowedClasses;
+#endif
+
+    uint64_t m_destinationID;
 };
 
-inline bool alignedBufferIsLargeEnoughToContain(const uint8_t* alignedPosition, const uint8_t* bufferStart, const uint8_t* bufferEnd, size_t size)
+inline bool alignedBufferIsLargeEnoughToContain(size_t bufferSize, const size_t alignedBufferPosition, size_t bytesNeeded)
 {
-    // When size == 0 for the last argument and it's a variable length byte array,
-    // bufferStart == alignedPosition == bufferEnd, so checking (bufferEnd >= alignedPosition)
-    // is not an off-by-one error since (static_cast<size_t>(bufferEnd - alignedPosition) >= size)
-    // will catch issues when size != 0.
-    return bufferEnd >= alignedPosition && bufferStart <= alignedPosition && static_cast<size_t>(bufferEnd - alignedPosition) >= size;
+    // When bytesNeeded == 0 for the last argument and it's a variable length byte array,
+    // alignedBufferPosition == bufferSize, so checking (bufferSize >= alignedBufferPosition)
+    // is not an off-by-one error since (bufferSize - alignedBufferPosition) >= bytesNeeded)
+    // will catch issues when bytesNeeded > 0.
+    return (bufferSize >= alignedBufferPosition) && ((bufferSize - alignedBufferPosition) >= bytesNeeded);
 }
 
 template<typename T>
@@ -180,14 +225,15 @@ inline std::span<const T> Decoder::decodeSpan(size_t size)
     if (size > std::numeric_limits<size_t>::max() / sizeof(T))
         return { };
 
-    const uint8_t* alignedPosition = roundUpToMultipleOf<alignof(T)>(m_bufferPos);
-    if (UNLIKELY(!alignedBufferIsLargeEnoughToContain(alignedPosition, m_buffer, m_bufferEnd, size * sizeof(T)))) {
+    const size_t alignedBufferPosition = static_cast<size_t>(std::distance(m_buffer.data(), roundUpToMultipleOf<alignof(T)>(std::to_address(m_bufferPosition))));
+    const size_t bytesNeeded = size * sizeof(T);
+    if (UNLIKELY(!alignedBufferIsLargeEnoughToContain(m_buffer.size_bytes(), alignedBufferPosition, bytesNeeded))) {
         markInvalid();
         return { };
     }
 
-    m_bufferPos = alignedPosition + size * sizeof(T);
-    return { reinterpret_cast<const T*>(alignedPosition), size };
+    m_bufferPosition = m_buffer.begin() + alignedBufferPosition + bytesNeeded;
+    return spanReinterpretCast<const T>(m_buffer.subspan(alignedBufferPosition, bytesNeeded));
 }
 
 template<typename T>

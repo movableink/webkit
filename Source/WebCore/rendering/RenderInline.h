@@ -33,8 +33,8 @@ class RenderFragmentContainer;
 class RenderInline : public RenderBoxModelObject {
     WTF_MAKE_ISO_ALLOCATED(RenderInline);
 public:
-    RenderInline(Element&, RenderStyle&&);
-    RenderInline(Document&, RenderStyle&&);
+    RenderInline(Type, Element&, RenderStyle&&);
+    RenderInline(Type, Document&, RenderStyle&&);
 
     LayoutUnit marginLeft() const final;
     LayoutUnit marginRight() const final;
@@ -45,7 +45,7 @@ public:
     LayoutUnit marginStart(const RenderStyle* otherStyle = 0) const final;
     LayoutUnit marginEnd(const RenderStyle* otherStyle = 0) const final;
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const final;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const final;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
     LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const final;

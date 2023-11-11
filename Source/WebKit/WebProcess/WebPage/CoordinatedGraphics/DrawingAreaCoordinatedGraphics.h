@@ -63,6 +63,7 @@ private:
 #if USE(COORDINATED_GRAPHICS) || USE(TEXTURE_MAPPER)
     void deviceOrPageScaleFactorChanged() override;
     void didChangeViewportAttributes(WebCore::ViewportAttributes&&) override;
+    bool enterAcceleratedCompositingModeIfNeeded() override;
 #endif
 
     bool supportsAsyncScrolling() const override;
@@ -73,10 +74,10 @@ private:
     void setRootCompositingLayer(WebCore::Frame&, WebCore::GraphicsLayer*) override;
     void triggerRenderingUpdate() override;
 
-#if USE(COORDINATED_GRAPHICS) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER)
-    void layerHostDidFlushLayers() override;
+#if HAVE(DISPLAY_LINK)
+    void didCompleteRenderingUpdateDisplay() override;
 #endif
-    
+
     RefPtr<WebCore::DisplayRefreshMonitor> createDisplayRefreshMonitor(WebCore::PlatformDisplayID) override;
 
     void activityStateDidChange(OptionSet<WebCore::ActivityState>, ActivityStateChangeID, CompletionHandler<void()>&&) override;
@@ -84,9 +85,10 @@ private:
 
     // IPC message handlers.
     void updateGeometry(const WebCore::IntSize&, CompletionHandler<void()>&&) override;
-    void targetRefreshRateDidChange(unsigned rate) override;
     void displayDidRefresh() override;
     void setDeviceScaleFactor(float) override;
+    void forceUpdate() override;
+    void didDiscardBackingStore() override;
 
 #if PLATFORM(GTK)
     void adjustTransientZoom(double scale, WebCore::FloatPoint origin) override;
@@ -95,7 +97,6 @@ private:
 
     void exitAcceleratedCompositingModeSoon();
     bool exitAcceleratedCompositingModePending() const { return m_exitCompositingTimer.isActive(); }
-    void discardPreviousLayerTreeHost();
 
     void suspendPainting();
     void resumePainting();
@@ -130,9 +131,6 @@ private:
 
     // The layer tree host that handles accelerated compositing.
     std::unique_ptr<LayerTreeHost> m_layerTreeHost;
-
-    std::unique_ptr<LayerTreeHost> m_previousLayerTreeHost;
-    RunLoop::Timer m_discardPreviousLayerTreeHostTimer;
 
     WebCore::Region m_dirtyRegion;
     WebCore::IntRect m_scrollRect;

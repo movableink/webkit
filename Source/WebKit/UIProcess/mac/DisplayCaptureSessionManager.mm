@@ -166,7 +166,7 @@ DisplayCaptureSessionManager::~DisplayCaptureSessionManager()
 bool DisplayCaptureSessionManager::canRequestDisplayCapturePermission()
 {
     if (useMockCaptureDevices())
-        return m_systemCanPromptForTesting;
+        return m_systemCanPromptForTesting == PromptOverride::CanPrompt;
 
 #if HAVE(SCREEN_CAPTURE_KIT)
     return WebCore::ScreenCaptureKitSharingSessionManager::useSCContentSharingPicker();
@@ -214,9 +214,9 @@ void DisplayCaptureSessionManager::promptForGetDisplayMedia(UserMediaPermissionR
             return;
         }
 
-        auto& gpuProcess = page.process().processPool().ensureGPUProcess();
-        gpuProcess.updateSandboxAccess(false, false, true);
-        gpuProcess.promptForGetDisplayMedia(toScreenCaptureKitPromptType(promptType), WTFMove(completionHandler));
+        Ref gpuProcess = page.process().processPool().ensureGPUProcess();
+        gpuProcess->updateSandboxAccess(false, false, true);
+        gpuProcess->promptForGetDisplayMedia(toScreenCaptureKitPromptType(promptType), WTFMove(completionHandler));
         return;
     }
 
@@ -245,7 +245,7 @@ void DisplayCaptureSessionManager::promptForGetDisplayMedia(UserMediaPermissionR
 #elif PLATFORM(MAC)
 
     // There is no picker on systems without ScreenCaptureKit, so share the main screen.
-    completionHandler(CGDisplayStreamScreenCaptureSource::screenCaptureDeviceForMainDisplay());
+    completionHandler(WebCore::CGDisplayStreamScreenCaptureSource::screenCaptureDeviceForMainDisplay());
 
 #endif
 }

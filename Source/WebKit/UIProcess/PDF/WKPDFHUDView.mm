@@ -26,7 +26,7 @@
 #import "config.h"
 #import "WKPDFHUDView.h"
 
-#if ENABLE(PDFKIT_PLUGIN)
+#if ENABLE(PDF_HUD)
 
 #import "WKWebViewInternal.h"
 #import "WebPageProxy.h"
@@ -166,7 +166,8 @@ static NSArray<NSString *> *controlArray()
 - (NSView *)hitTest:(NSPoint)point
 {
     ASSERT(_page);
-    return _page ? _page->cocoaView().autorelease() : self;
+    RefPtr page = _page.get();
+    return page ? page->cocoaView().autorelease() : self;
 }
 
 - (void)mouseMoved:(NSEvent *)event
@@ -247,7 +248,7 @@ static NSArray<NSString *> *controlArray()
 {
     if (!_visible)
         return;
-    auto* page = _page.get();
+    RefPtr page = _page.get();
     if (!page)
         return;
     if ([control isEqualToString:PDFHUDZoomInControl])
@@ -356,4 +357,4 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 @end
 
-#endif // ENABLE(PDFKIT_PLUGIN)
+#endif // ENABLE(PDF_HUD)

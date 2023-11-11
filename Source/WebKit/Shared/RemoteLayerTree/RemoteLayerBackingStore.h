@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "BufferAndBackendInfo.h"
 #include "ImageBufferBackendHandle.h"
 #include <WebCore/FloatRect.h>
 #include <WebCore/ImageBuffer.h>
@@ -32,6 +33,7 @@
 #include <WebCore/Region.h>
 #include <wtf/MachSendRight.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/WeakPtr.h>
 
 OBJC_CLASS CALayer;
 
@@ -51,10 +53,6 @@ class RemoteLayerBackingStoreCollection;
 class RemoteLayerTreeNode;
 enum class SwapBuffersDisplayRequirement : uint8_t;
 
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
-using UseCGDisplayListImageCache = WebCore::ImageBufferCreationContext::UseCGDisplayListImageCache;
-#endif
-
 enum class BackingStoreNeedsDisplayReason : uint8_t {
     None,
     NoFrontBuffer,
@@ -63,25 +61,7 @@ enum class BackingStoreNeedsDisplayReason : uint8_t {
     HasDirtyRegion,
 };
 
-struct BufferAndBackendInfo {
-    WebCore::RenderingResourceIdentifier resourceIdentifier;
-    unsigned backendGeneration { 0 };
-
-    BufferAndBackendInfo() = default;
-    BufferAndBackendInfo(const BufferAndBackendInfo&) = default;
-
-    explicit BufferAndBackendInfo(WebCore::ImageBuffer& imageBuffer)
-        : resourceIdentifier(imageBuffer.renderingResourceIdentifier())
-        , backendGeneration(imageBuffer.backendGeneration())
-    { }
-
-    bool operator==(const BufferAndBackendInfo&) const = default;
-
-    void encode(IPC::Encoder&) const;
-    static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, BufferAndBackendInfo&);
-};
-
-class RemoteLayerBackingStore {
+class RemoteLayerBackingStore : public CanMakeWeakPtr<RemoteLayerBackingStore> {
     WTF_MAKE_NONCOPYABLE(RemoteLayerBackingStore);
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -93,7 +73,7 @@ public:
         Bitmap
     };
 
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
     enum class IncludeDisplayList : bool { No, Yes };
 #endif
 
@@ -105,25 +85,11 @@ public:
         bool deepColor { false };
         bool isOpaque { false };
 
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
         IncludeDisplayList includeDisplayList { IncludeDisplayList::No };
-        UseCGDisplayListImageCache useCGDisplayListImageCache { UseCGDisplayListImageCache::No };
 #endif
 
-        bool operator==(const Parameters& other) const
-        {
-            return (type == other.type
-                && size == other.size
-                && colorSpace == other.colorSpace
-                && scale == other.scale
-                && deepColor == other.deepColor
-                && isOpaque == other.isOpaque
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
-                && includeDisplayList == other.includeDisplayList
-                && useCGDisplayListImageCache == other.useCGDisplayListImageCache
-#endif
-                );
-        }
+        friend bool operator==(const Parameters&, const Parameters&) = default;
     };
 
     void ensureBackingStore(const Parameters&);
@@ -194,7 +160,7 @@ public:
 private:
     RemoteLayerBackingStoreCollection* backingStoreCollection() const;
 
-    void drawInContext(WebCore::GraphicsContext&, WTF::Function<void()>&& additionalContextSetupCallback = nullptr);
+    void drawInContext(WebCore::GraphicsContext&);
 
     struct Buffer {
         RefPtr<WebCore::ImageBuffer> imageBuffer;
@@ -216,6 +182,8 @@ private:
     void ensureFrontBuffer();
     void dirtyRepaintCounterIfNecessary();
 
+    WebCore::IntRect layerBounds() const;
+
     PlatformCALayerRemote* m_layer;
 
     Parameters m_parameters;
@@ -233,7 +201,7 @@ private:
     std::optional<MachSendRight> m_contentsBufferHandle;
     std::optional<WebCore::RenderingResourceIdentifier> m_contentsRenderingResourceIdentifier;
 
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
     RefPtr<WebCore::ImageBuffer> m_displayListBuffer;
 #endif
 
@@ -251,11 +219,12 @@ class RemoteLayerBackingStoreProperties {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     RemoteLayerBackingStoreProperties() = default;
+    RemoteLayerBackingStoreProperties(RemoteLayerBackingStoreProperties&&) = default;
 
     static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, RemoteLayerBackingStoreProperties&);
 
     enum class LayerContentsType { IOSurface, CAMachPort, CachedIOSurface };
-    void applyBackingStoreToLayer(CALayer *, LayerContentsType, std::optional<WebCore::RenderingResourceIdentifier>, bool replayCGDisplayListsIntoBackingStore);
+    void applyBackingStoreToLayer(CALayer *, LayerContentsType, std::optional<WebCore::RenderingResourceIdentifier>, bool replayDynamicContentScalingDisplayListsIntoBackingStore);
 
     void updateCachedBuffers(RemoteLayerTreeNode&, LayerContentsType);
 
@@ -277,7 +246,7 @@ private:
 
     std::optional<WebCore::IntRect> m_paintedRect;
 
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
     std::optional<ImageBufferBackendHandle> m_displayListBufferHandle;
 #endif
 

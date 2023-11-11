@@ -135,7 +135,13 @@ void AudioSessionIOS::setHostProcessAttribution(audit_token_t auditToken)
         return;
     }
 
-    [[PAL::getAVAudioSessionClass() sharedInstance] setHostProcessAttribution:@[ bundleProxy.bundleIdentifier ] error:&error];
+    auto bundleIdentifier = bundleProxy.bundleIdentifier;
+    if (!bundleIdentifier) {
+        RELEASE_LOG_ERROR(WebRTC, "-[LSBundleProxy bundleIdentifier] returned nil!");
+        return;
+    }
+
+    [[PAL::getAVAudioSessionClass() sharedInstance] setHostProcessAttribution:@[ bundleIdentifier ] error:&error];
     if (error)
         RELEASE_LOG_ERROR(WebRTC, "Failed to set attribution bundleID with error: %@.", error.localizedDescription);
 #else
@@ -212,18 +218,17 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
         break;
     }
 
-    NSString *modeString = AVAudioSessionModeDefault;
-    switch (newMode) {
-    case Mode::Default:
-        modeString = AVAudioSessionModeDefault;
-        break;
-    case Mode::MoviePlayback:
-        modeString = AVAudioSessionModeMoviePlayback;
-        break;
-    case Mode::VideoChat:
-        modeString = AVAudioSessionModeVideoChat;
-        break;
-    }
+    NSString *modeString = [&] {
+        switch (newMode) {
+        case Mode::MoviePlayback:
+            return AVAudioSessionModeMoviePlayback;
+        case Mode::VideoChat:
+            return AVAudioSessionModeVideoChat;
+        case Mode::Default:
+            break;
+        }
+        return AVAudioSessionModeDefault;
+    }();
 
     bool needDeviceUpdate = false;
 #if ENABLE(MEDIA_STREAM)

@@ -80,9 +80,11 @@ public:
     virtual LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* = nullptr, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const;
     LayoutRect overflowClipRectForChildLayers(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy) { return overflowClipRect(location, fragment, relevancy); }
 
+    virtual Path computeClipPath(AffineTransform&) const;
+
 protected:
-    RenderSVGModelObject(Document&, RenderStyle&&);
-    RenderSVGModelObject(SVGElement&, RenderStyle&&);
+    RenderSVGModelObject(Type, Document&, RenderStyle&&);
+    RenderSVGModelObject(Type, SVGElement&, RenderStyle&&);
 
     void willBeDestroyed() override;
     void updateFromStyle() override;
@@ -95,7 +97,7 @@ protected:
     const RenderObject* pushMappingToContainer(const RenderLayerModelObject*, RenderGeometryMap&) const override;
     LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const override;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const override;

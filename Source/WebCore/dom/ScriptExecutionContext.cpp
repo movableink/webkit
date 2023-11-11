@@ -201,6 +201,8 @@ ScriptExecutionContext::~ScriptExecutionContext()
     while (auto* destructionObserver = m_destructionObservers.takeAny())
         destructionObserver->contextDestroyed();
 
+    setContentSecurityPolicy(nullptr);
+
 #if ASSERT_ENABLED
     m_inScriptExecutionContextDestructor = false;
 #endif
@@ -571,8 +573,9 @@ Seconds ScriptExecutionContext::minimumDOMTimerInterval() const
 
 void ScriptExecutionContext::didChangeTimerAlignmentInterval()
 {
+    auto& eventLoop = this->eventLoop();
     for (auto& timer : m_timeouts.values())
-        timer->didChangeAlignmentInterval();
+        eventLoop.didChangeTimerAlignmentInterval(timer->timer());
 }
 
 Seconds ScriptExecutionContext::domTimerAlignmentInterval(bool) const
@@ -839,6 +842,11 @@ void ScriptExecutionContext::addDeferredPromise(Ref<DeferredPromise>&& promise)
 RefPtr<DeferredPromise> ScriptExecutionContext::takeDeferredPromise(DeferredPromise* promise)
 {
     return m_deferredPromises.take(promise);
+}
+
+CheckedRef<EventLoopTaskGroup> ScriptExecutionContext::checkedEventLoop()
+{
+    return eventLoop();
 }
 
 WebCoreOpaqueRoot root(ScriptExecutionContext* context)

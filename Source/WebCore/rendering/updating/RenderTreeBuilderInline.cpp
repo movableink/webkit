@@ -81,7 +81,7 @@ static RenderBoxModelObject* continuationBefore(RenderInline& parent, RenderObje
 
 static RenderPtr<RenderInline> cloneAsContinuation(RenderInline& renderer)
 {
-    RenderPtr<RenderInline> cloneInline = createRenderer<RenderInline>(*renderer.element(), RenderStyle::clone(renderer.style()));
+    RenderPtr<RenderInline> cloneInline = createRenderer<RenderInline>(RenderObject::Type::Inline, *renderer.element(), RenderStyle::clone(renderer.style()));
     cloneInline->initializeStyle();
     cloneInline->setFragmentedFlowState(renderer.fragmentedFlowState());
     cloneInline->setHasOutlineAutoAncestor(renderer.hasOutlineAutoAncestor());
@@ -178,7 +178,7 @@ void RenderTreeBuilder::Inline::attachIgnoringContinuation(RenderInline& parent,
         if (auto positionedAncestor = inFlowPositionedInlineAncestor(parent))
             newStyle.setPosition(positionedAncestor->style().position());
 
-        auto newBox = createRenderer<RenderBlockFlow>(parent.document(), WTFMove(newStyle));
+        auto newBox = createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, parent.document(), WTFMove(newStyle));
         newBox->initializeStyle();
         newBox->setIsContinuation();
         RenderBoxModelObject* oldContinuation = parent.continuation();
@@ -326,7 +326,7 @@ void RenderTreeBuilder::Inline::splitInlines(RenderInline& parent, RenderBlock* 
     unsigned splitDepth = 1;
     const unsigned cMaxSplitDepth = 200;
     while (current && current != fromBlock) {
-        if (splitDepth < cMaxSplitDepth) {
+        if (splitDepth < cMaxSplitDepth && !current->isAnonymous()) {
             // Create a new clone.
             RenderPtr<RenderInline> cloneChild = WTFMove(cloneInline);
             cloneInline = cloneAsContinuation(downcast<RenderInline>(*current));

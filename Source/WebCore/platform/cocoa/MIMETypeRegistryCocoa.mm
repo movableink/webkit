@@ -58,9 +58,9 @@ static MemoryCompactLookupOnlyRobinHoodHashMap<String, MemoryCompactLookupOnlyRo
             }
         };
 
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         auto allUTIs = adoptCF(_UTCopyDeclaredTypeIdentifiers());
 
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         for (NSString *uti in (__bridge NSArray<NSString *> *)allUTIs.get()) {
             auto type = adoptCF(UTTypeCopyPreferredTagWithClass((__bridge CFStringRef)uti, kUTTagClassMIMEType));
             if (!type)
@@ -153,6 +153,9 @@ String MIMETypeRegistry::mimeTypeForExtension(StringView extension)
 
 Vector<String> MIMETypeRegistry::extensionsForMIMEType(const String& type)
 {
+    if (type.isNull())
+        return { };
+
     if (type.endsWith('*'))
         return extensionsForWildcardMIMEType(type);
 
@@ -169,6 +172,9 @@ Vector<String> MIMETypeRegistry::extensionsForMIMEType(const String& type)
 
 String MIMETypeRegistry::preferredExtensionForMIMEType(const String& type)
 {
+    if (type.isNull())
+        return nullString();
+
     // We accept some non-standard USD MIMETypes, so we can't rely on
     // the file type mappings.
     if (isUSDMIMEType(type))
@@ -187,7 +193,7 @@ String MIMETypeRegistry::preferredExtensionForMIMEType(const String& type)
 
 bool MIMETypeRegistry::isApplicationPluginMIMEType(const String& MIMEType)
 {
-#if ENABLE(PDFKIT_PLUGIN)
+#if ENABLE(PDF_PLUGIN)
     // FIXME: This should test if we're actually going to use PDFPlugin,
     // but we only know that in WebKit2 at the moment. This is not a problem
     // in practice because if we don't have PDFPlugin and we go to instantiate the

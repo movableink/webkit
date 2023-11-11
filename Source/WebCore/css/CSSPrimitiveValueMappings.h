@@ -383,6 +383,9 @@ constexpr CSSValueID toCSSValueID(StyleAppearance e)
     case StyleAppearance::SearchFieldCancelButton:
     case StyleAppearance::SliderThumbHorizontal:
     case StyleAppearance::SliderThumbVertical:
+    case StyleAppearance::Switch:
+    case StyleAppearance::SwitchThumb:
+    case StyleAppearance::SwitchTrack:
         ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
         return CSSValueNone;
     }
@@ -736,6 +739,14 @@ constexpr CSSValueID toCSSValueID(DisplayType e)
         return CSSValueContents;
     case DisplayType::FlowRoot:
         return CSSValueFlowRoot;
+    case DisplayType::Ruby:
+        return CSSValueRuby;
+    case DisplayType::RubyBlock:
+        return CSSValueBlockRuby;
+    case DisplayType::RubyBase:
+        return CSSValueRubyBase;
+    case DisplayType::RubyAnnotation:
+        return CSSValueRubyText;
     }
     ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
     return CSSValueInvalid;
@@ -743,12 +754,66 @@ constexpr CSSValueID toCSSValueID(DisplayType e)
 
 template<> constexpr DisplayType fromCSSValueID(CSSValueID valueID)
 {
-    if (valueID == CSSValueNone)
+    switch (valueID) {
+    case CSSValueInline:
+        return DisplayType::Inline;
+    case CSSValueBlock:
+        return DisplayType::Block;
+    case CSSValueListItem:
+        return DisplayType::ListItem;
+    case CSSValueInlineBlock:
+        return DisplayType::InlineBlock;
+    case CSSValueTable:
+        return DisplayType::Table;
+    case CSSValueInlineTable:
+        return DisplayType::InlineTable;
+    case CSSValueTableRowGroup:
+        return DisplayType::TableRowGroup;
+    case CSSValueTableHeaderGroup:
+        return DisplayType::TableHeaderGroup;
+    case CSSValueTableFooterGroup:
+        return DisplayType::TableFooterGroup;
+    case CSSValueTableRow:
+        return DisplayType::TableRow;
+    case CSSValueTableColumnGroup:
+        return DisplayType::TableColumnGroup;
+    case CSSValueTableColumn:
+        return DisplayType::TableColumn;
+    case CSSValueTableCell:
+        return DisplayType::TableCell;
+    case CSSValueTableCaption:
+        return DisplayType::TableCaption;
+    case CSSValueWebkitBox:
+        return DisplayType::Box;
+    case CSSValueWebkitInlineBox:
+        return DisplayType::InlineBox;
+    case CSSValueFlex:
+        return DisplayType::Flex;
+    case CSSValueInlineFlex:
+        return DisplayType::InlineFlex;
+    case CSSValueGrid:
+        return DisplayType::Grid;
+    case CSSValueInlineGrid:
+        return DisplayType::InlineGrid;
+    case CSSValueNone:
         return DisplayType::None;
-
-    DisplayType display = static_cast<DisplayType>(valueID - CSSValueInline);
-    ASSERT(display >= DisplayType::Inline && display <= DisplayType::None);
-    return display;
+    case CSSValueContents:
+        return DisplayType::Contents;
+    case CSSValueFlowRoot:
+        return DisplayType::FlowRoot;
+    case CSSValueRuby:
+        return DisplayType::Ruby;
+    case CSSValueBlockRuby:
+        return DisplayType::RubyBlock;
+    case CSSValueRubyBase:
+        return DisplayType::RubyBase;
+    case CSSValueRubyText:
+        return DisplayType::RubyAnnotation;
+    default:
+        break;
+    }
+    ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+    return DisplayType::Inline;
 }
 
 #define TYPE EmptyCell
@@ -1354,7 +1419,7 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef FOR_EACH
 
 #define TYPE WordBreak
-#define FOR_EACH(CASE) CASE(Normal) CASE(BreakAll) CASE(KeepAll) CASE(BreakWord) CASE(Auto)
+#define FOR_EACH(CASE) CASE(Normal) CASE(BreakAll) CASE(KeepAll) CASE(BreakWord) CASE(AutoPhrase)
 DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
@@ -1394,13 +1459,17 @@ template<> constexpr TextDirection fromCSSValueID(CSSValueID valueID)
 constexpr CSSValueID toCSSValueID(WritingMode e)
 {
     switch (e) {
-    case WritingMode::TopToBottom:
+    case WritingMode::HorizontalTb:
         return CSSValueHorizontalTb;
-    case WritingMode::RightToLeft:
+    case WritingMode::VerticalRl:
         return CSSValueVerticalRl;
-    case WritingMode::LeftToRight:
+    case WritingMode::VerticalLr:
         return CSSValueVerticalLr;
-    case WritingMode::BottomToTop:
+    case WritingMode::SidewaysRl:
+        return CSSValueSidewaysRl;
+    case WritingMode::SidewaysLr:
+        return CSSValueSidewaysLr;
+    case WritingMode::HorizontalBt:
         return CSSValueHorizontalBt;
     }
     ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
@@ -1415,20 +1484,24 @@ template<> constexpr WritingMode fromCSSValueID(CSSValueID valueID)
     case CSSValueLrTb:
     case CSSValueRl:
     case CSSValueRlTb:
-        return WritingMode::TopToBottom;
+        return WritingMode::HorizontalTb;
     case CSSValueVerticalRl:
     case CSSValueTb:
     case CSSValueTbRl:
-        return WritingMode::RightToLeft;
+        return WritingMode::VerticalRl;
     case CSSValueVerticalLr:
-        return WritingMode::LeftToRight;
+        return WritingMode::VerticalLr;
+    case CSSValueSidewaysLr:
+        return WritingMode::SidewaysLr;
+    case CSSValueSidewaysRl:
+        return WritingMode::SidewaysRl;
     case CSSValueHorizontalBt:
-        return WritingMode::BottomToTop;
+        return WritingMode::HorizontalBt;
     default:
         break;
     }
     ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
-    return WritingMode::TopToBottom;
+    return WritingMode::HorizontalTb;
 }
 
 constexpr CSSValueID toCSSValueID(TextCombine e)
@@ -1470,43 +1543,37 @@ DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
 #undef TYPE
 #undef FOR_EACH
 
-constexpr CSSValueID toCSSValueID(TextWrap wrap)
+constexpr CSSValueID toCSSValueID(TextWrapMode wrap)
 {
     switch (wrap) {
-    case TextWrap::Wrap:
+    case TextWrapMode::Wrap:
         return CSSValueWrap;
-    case TextWrap::NoWrap:
+    case TextWrapMode::NoWrap:
         return CSSValueNowrap;
-    case TextWrap::Balance:
-        return CSSValueBalance;
-    case TextWrap::Stable:
-        return CSSValueStable;
-    case TextWrap::Pretty:
-        return CSSValuePretty;
     }
     ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
     return CSSValueInvalid;
 }
 
-template<> constexpr TextWrap fromCSSValueID(CSSValueID valueID)
+template<> constexpr TextWrapMode fromCSSValueID(CSSValueID valueID)
 {
     switch (valueID) {
     case CSSValueWrap:
-        return TextWrap::Wrap;
+        return TextWrapMode::Wrap;
     case CSSValueNowrap:
-        return TextWrap::NoWrap;
-    case CSSValueBalance:
-        return TextWrap::Balance;
-    case CSSValueStable:
-        return TextWrap::Stable;
-    case CSSValuePretty:
-        return TextWrap::Pretty;
+        return TextWrapMode::NoWrap;
     default:
         break;
     }
     ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
-    return TextWrap::Wrap;
+    return TextWrapMode::Wrap;
 }
+
+#define TYPE TextWrapStyle
+#define FOR_EACH(CASE) CASE(Auto) CASE(Balance) CASE(Pretty) CASE(Stable)
+DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
+#undef TYPE
+#undef FOR_EACH
 
 #define TYPE TextEmphasisFill
 #define FOR_EACH(CASE) CASE(Filled) CASE(Open)
@@ -1825,7 +1892,7 @@ template<> constexpr WindRule fromCSSValueID(CSSValueID valueID)
 }
 
 #define TYPE AlignmentBaseline
-#define FOR_EACH(CASE) CASE(AfterEdge) CASE(Alphabetic) CASE(Auto) CASE(Baseline) \
+#define FOR_EACH(CASE) CASE(AfterEdge) CASE(Alphabetic) CASE(Baseline) \
     CASE(BeforeEdge) CASE(Central) CASE(Hanging) CASE(Ideographic) CASE(Mathematical) \
     CASE(Middle) CASE(TextAfterEdge) CASE(TextBeforeEdge)
 DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
@@ -1945,30 +2012,9 @@ enum LengthConversion {
     CalculatedConversion = 1 << 4
 };
 
-inline bool CSSPrimitiveValue::convertingToLengthRequiresNonNullStyle(int lengthConversion) const
-{
-    // This matches the implementation in CSSPrimitiveValue::computeLengthDouble().
-    //
-    // FIXME: We should probably make CSSPrimitiveValue::computeLengthDouble and
-    // CSSPrimitiveValue::computeNonCalcLengthDouble (which has the style assertion)
-    // return std::optional<double> instead of having this check here.
-    switch (primitiveUnitType()) {
-    case CSSUnitType::CSS_EMS:
-    case CSSUnitType::CSS_EXS:
-    case CSSUnitType::CSS_CHS:
-    case CSSUnitType::CSS_IC:
-    case CSSUnitType::CSS_LHS:
-        return lengthConversion & (FixedIntegerConversion | FixedFloatConversion);
-    case CSSUnitType::CSS_CALC:
-        return m_value.calc->convertingToLengthRequiresNonNullStyle(lengthConversion);
-    default:
-        return false;
-    }
-}
-
 template<int supported> Length CSSPrimitiveValue::convertToLength(const CSSToLengthConversionData& conversionData) const
 {
-    if (convertingToLengthRequiresNonNullStyle(supported) && !conversionData.style())
+    if (!convertingToLengthHasRequiredConversionData(supported, conversionData))
         return Length(LengthType::Undefined);
     if ((supported & FixedIntegerConversion) && isLength())
         return computeLength<Length>(conversionData);
@@ -2353,6 +2399,12 @@ template<> constexpr FontVariantCaps fromCSSValueID(CSSValueID valueID)
     ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
     return FontVariantCaps::Normal;
 }
+
+#define TYPE FontVariantEmoji
+#define FOR_EACH(CASE) CASE(Normal) CASE(Text) CASE(Emoji) CASE(Unicode)
+DEFINE_TO_FROM_CSS_VALUE_ID_FUNCTIONS
+#undef TYPE
+#undef FOR_EACH
 
 constexpr CSSValueID toCSSValueID(FontOpticalSizing sizing)
 {

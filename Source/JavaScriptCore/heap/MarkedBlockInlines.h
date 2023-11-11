@@ -376,7 +376,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
 
         if (destructionMode == BlockHasDestructorsAndCollectorIsRunning) {
             if constexpr (deadCellsAlwaysFitsOnStack)
-                deadCells.uncheckedAppend(i);
+                deadCells.unsafeAppendWithoutCapacityCheck(i);
             else
                 deadCells.append(i);
         } else

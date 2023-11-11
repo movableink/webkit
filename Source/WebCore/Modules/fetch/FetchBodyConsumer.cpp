@@ -95,7 +95,7 @@ static HashMap<String, String> parseParameters(StringView input, size_t position
             size_t valueBegin = position;
             while (position < input.length() && input[position] != ';')
                 position++;
-            parameterValue = input.substring(valueBegin, position - valueBegin).trim(isHTTPSpace);
+            parameterValue = input.substring(valueBegin, position - valueBegin).trim(isASCIIWhitespaceWithoutFF<UChar>);
         }
 
         if (parameterName.length()
@@ -110,7 +110,7 @@ static HashMap<String, String> parseParameters(StringView input, size_t position
 // https://mimesniff.spec.whatwg.org/#parsing-a-mime-type
 static std::optional<MimeType> parseMIMEType(const String& contentType)
 {
-    String input = contentType.trim(isHTTPSpace);
+    String input = contentType.trim(isASCIIWhitespaceWithoutFF<UChar>);
     size_t slashIndex = input.find('/');
     if (slashIndex == notFound)
         return std::nullopt;
@@ -120,7 +120,7 @@ static std::optional<MimeType> parseMIMEType(const String& contentType)
         return std::nullopt;
     
     size_t semicolonIndex = input.find(';', slashIndex);
-    String subtype = input.substring(slashIndex + 1, semicolonIndex - slashIndex - 1).trim(isHTTPSpace);
+    String subtype = input.substring(slashIndex + 1, semicolonIndex - slashIndex - 1).trim(isASCIIWhitespaceWithoutFF<UChar>);
     if (!subtype.length() || !isValidHTTPToken(subtype))
         return std::nullopt;
 
@@ -151,8 +151,8 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
 
         String header = String::fromUTF8(headerBegin, headerLength);
 
-        constexpr auto contentDispositionCharacters = "Content-Disposition:"_s;
-        size_t contentDispositionBegin = header.find(contentDispositionCharacters);
+        constexpr auto contentDispositionCharacters = "content-disposition:"_s;
+        size_t contentDispositionBegin = header.findIgnoringASCIICase(contentDispositionCharacters);
         if (contentDispositionBegin == notFound)
             return false;
         size_t contentDispositionEnd = header.find("\r\n"_s, contentDispositionBegin);
@@ -170,12 +170,12 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
         else {
             String contentType = "text/plain"_s;
 
-            constexpr auto contentTypeCharacters = "Content-Type:"_s;
+            constexpr auto contentTypeCharacters = "content-type:"_s;
             size_t contentTypePrefixLength = contentTypeCharacters.length();
-            size_t contentTypeBegin = header.find(contentTypeCharacters);
+            size_t contentTypeBegin = header.findIgnoringASCIICase(contentTypeCharacters);
             if (contentTypeBegin != notFound) {
                 size_t contentTypeEnd = header.find("\r\n"_s, contentTypeBegin);
-                contentType = StringView(header).substring(contentTypeBegin + contentTypePrefixLength, contentTypeEnd - contentTypeBegin - contentTypePrefixLength).trim(isHTTPSpace).toString();
+                contentType = StringView(header).substring(contentTypeBegin + contentTypePrefixLength, contentTypeEnd - contentTypeBegin - contentTypePrefixLength).trim(isASCIIWhitespaceWithoutFF<UChar>).toString();
             }
 
             form.append(name, File::create(context, Blob::create(context, Vector { bodyBegin, bodyLength }, Blob::normalizedContentType(contentType)).get(), filename).get(), filename);
@@ -222,7 +222,7 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
 
 static void resolveWithTypeAndData(Ref<DeferredPromise>&& promise, FetchBodyConsumer::Type type, const String& contentType, const unsigned char* data, unsigned length)
 {
-    auto* context = promise->scriptExecutionContext();
+    RefPtr context = promise->scriptExecutionContext();
 
     switch (type) {
     case FetchBodyConsumer::Type::ArrayBuffer:
@@ -240,10 +240,10 @@ static void resolveWithTypeAndData(Ref<DeferredPromise>&& promise, FetchBodyCons
         promise->resolve<IDLDOMString>(TextResourceDecoder::textFromUTF8(data, length));
         return;
     case FetchBodyConsumer::Type::FormData:
-        if (auto formData = FetchBodyConsumer::packageFormData(context, contentType, data, length))
+        if (auto formData = FetchBodyConsumer::packageFormData(context.get(), contentType, data, length))
             promise->resolve<IDLInterface<DOMFormData>>(*formData);
         else
-            promise->reject(TypeError);
+            promise->reject(ExceptionCode::TypeError);
         return;
     case FetchBodyConsumer::Type::None:
         ASSERT_NOT_REACHED();
@@ -386,7 +386,7 @@ void FetchBodyConsumer::resolve(Ref<DeferredPromise>&& promise, const String& co
         if (auto formData = packageFormData(promise->scriptExecutionContext(), contentType, buffer ? buffer->makeContiguous()->data() : nullptr, buffer ? buffer->size() : 0))
             promise->resolve<IDLInterface<DOMFormData>>(*formData);
         else
-            promise->reject(TypeError);
+            promise->reject(ExceptionCode::TypeError);
         return;
     }
     case Type::None:

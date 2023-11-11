@@ -71,6 +71,7 @@ public:
 #endif
     RefPtr<AccessibilityUIElement> elementAtPoint(int x, int y);
     RefPtr<AccessibilityUIElement> accessibleElementById(JSStringRef idAttribute);
+    void announce(JSStringRef);
 
 #if PLATFORM(COCOA)
     void executeOnAXThreadAndWait(Function<void()>&&);
@@ -89,6 +90,8 @@ public:
     void logAccessibilityEvents() { };
 
     void resetToConsistentState();
+
+    void overrideClient(JSStringRef clientType);
 
 #if !ENABLE(ACCESSIBILITY) && (PLATFORM(GTK) || PLATFORM(WPE))
     RefPtr<AccessibilityUIElement> rootElement() { return nullptr; }
@@ -111,12 +114,8 @@ private:
 
 #if PLATFORM(COCOA)
     void spinMainRunLoop() const;
-    // _AXUIElementUseSecondaryAXThread and _AXUIElementRequestServicedBySecondaryAXThread
-    // do not work for WebKitTestRunner since this is calling directly into
-    // WebCore/accessibility via JavaScript without going through HIServices.
-    // Thus to simulate the behavior of HIServices, AccessibilityController is spawning a secondary thread to service the JavaScript requests.
-    bool m_useMockAXThread { false };
 #endif
+
     bool m_accessibilityIsolatedTreeMode { false };
 #endif
 };

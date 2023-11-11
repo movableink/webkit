@@ -28,6 +28,7 @@
 #include "InlineFormattingContext.h"
 #include "InlineLineBuilder.h"
 #include "LayoutUnits.h"
+#include <wtf/Range.h>
 
 namespace WebCore {
 namespace Layout {
@@ -36,23 +37,21 @@ struct AncestorStack;
 class ElementBox;
 struct DisplayBoxTree;
 struct IsFirstLastIndex;
-class InlineFormattingGeometry;
-class InlineFormattingState;
 class LineBox;
 
 class InlineDisplayContentBuilder {
 public:
-    InlineDisplayContentBuilder(const InlineFormattingContext&, InlineFormattingState&, const InlineDisplay::Line&, size_t lineIndex);
+    InlineDisplayContentBuilder(InlineFormattingContext&, const ConstraintsForInlineContent&, const InlineDisplay::Line&, size_t lineIndex);
 
-    InlineDisplay::Boxes build(const LineBuilder::LayoutResult&, const LineBox&);
+    InlineDisplay::Boxes build(const LineLayoutResult&, const LineBox&);
 
 private:
-    void processNonBidiContent(const LineBuilder::LayoutResult&, const LineBox&, InlineDisplay::Boxes&);
-    void processBidiContent(const LineBuilder::LayoutResult&, const LineBox&, InlineDisplay::Boxes&);
-    void processFloatBoxes(const LineBuilder::LayoutResult&);
+    void processNonBidiContent(const LineLayoutResult&, const LineBox&, InlineDisplay::Boxes&);
+    void processBidiContent(const LineLayoutResult&, const LineBox&, InlineDisplay::Boxes&);
+    void processFloatBoxes(const LineLayoutResult&);
     void collectInkOverflowForInlineBoxes(InlineDisplay::Boxes&);
     void collectInkOverflowForTextDecorations(InlineDisplay::Boxes&);
-    void truncateForEllipsisPolicy(LineEndingEllipsisPolicy, const LineBuilder::LayoutResult&, InlineDisplay::Boxes&);
+    void truncateForEllipsisPolicy(LineEndingEllipsisPolicy, const LineLayoutResult&, InlineDisplay::Boxes&);
 
     void appendTextDisplayBox(const Line::Run&, const InlineRect&, InlineDisplay::Boxes&);
     void appendSoftLineBreakDisplayBox(const Line::Run&, const InlineRect&, InlineDisplay::Boxes&);
@@ -62,6 +61,9 @@ private:
     void appendInlineBoxDisplayBox(const Line::Run&, const InlineLevelBox&, const InlineRect&, bool linehasContent, InlineDisplay::Boxes&);
     void appendSpanningInlineBoxDisplayBox(const Line::Run&, const InlineLevelBox&, const InlineRect&, bool linehasContent, InlineDisplay::Boxes&);
     void appendInlineDisplayBoxAtBidiBoundary(const Box&, InlineDisplay::Boxes&);
+    void appendRubyAnnotationBox(const Box& rubyBaseLayoutBox, InlineDisplay::Boxes&);
+    void handleInlineBoxEnd(const Line::Run&, const InlineDisplay::Boxes&);
+    void applyRubyOverhang(InlineDisplay::Boxes&);
 
     void setInlineBoxGeometry(const Box&, const InlineRect&, bool isFirstInlineBoxFragment);
     void adjustVisualGeometryForDisplayBox(size_t displayBoxNodeIndex, InlineLayoutUnit& accumulatedOffset, InlineLayoutUnit lineBoxLogicalTop, const DisplayBoxTree&, InlineDisplay::Boxes&, const LineBox&, const HashMap<const Box*, IsFirstLastIndex>&);
@@ -69,25 +71,31 @@ private:
 
     InlineRect flipLogicalRectToVisualForWritingModeWithinLine(const InlineRect& logicalRect, const InlineRect& lineLogicalRect, WritingMode) const;
     InlineRect flipRootInlineBoxRectToVisualForWritingMode(const InlineRect& rootInlineBoxLogicalRect, WritingMode) const;
-    void setLeftForWritingMode(InlineDisplay::Box&, InlineLayoutUnit logicalRight, WritingMode) const;
+    template <typename BoxType, typename LayoutUnitType>
+    void setLeftForWritingMode(BoxType&, LayoutUnitType logicalLeft, WritingMode) const;
     void setRightForWritingMode(InlineDisplay::Box&, InlineLayoutUnit logicalRight, WritingMode) const;
     InlineLayoutPoint movePointHorizontallyForWritingMode(const InlineLayoutPoint& topLeft, InlineLayoutUnit horizontalOffset, WritingMode) const;
     InlineLayoutUnit outsideListMarkerVisualPosition(const ElementBox&) const;
+    void setGeometryForBlockLevelOutOfFlowBoxes(const Vector<size_t>& indexList, const LineBox&, const Line::RunList&, const Vector<int32_t>& visualOrderList = { });
 
     bool isLineFullyTruncatedInBlockDirection() const { return m_lineIsFullyTruncatedInBlockDirection; }
 
-    const ElementBox& root() const { return formattingContext().root(); }
+    const ConstraintsForInlineContent& constraints() const { return m_constraints; }
+    const ElementBox& root() const { return m_formattingContext.root(); }
     const RenderStyle& rootStyle() const { return m_lineIndex ? root().style() : root().firstLineStyle(); }
+    InlineFormattingContext& formattingContext() { return m_formattingContext; }
     const InlineFormattingContext& formattingContext() const { return m_formattingContext; }
-    InlineFormattingState& formattingState() const { return m_formattingState; } 
 
-    const InlineFormattingContext& m_formattingContext;
-    InlineFormattingState& m_formattingState;
+private:
+    InlineFormattingContext& m_formattingContext;
+    const ConstraintsForInlineContent& m_constraints;
     const InlineDisplay::Line& m_displayLine;
+    IntSize m_initialContaingBlockSize;
     const size_t m_lineIndex { 0 };
     // FIXME: This should take DisplayLine::isTruncatedInBlockDirection() for non-prefixed line-clamp.
     bool m_lineIsFullyTruncatedInBlockDirection { false };
     bool m_contentHasInkOverflow { false };
+    Vector<WTF::Range<size_t>> m_interlinearRubyColumnRangeList;
 };
 
 }

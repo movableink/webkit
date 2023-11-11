@@ -341,9 +341,9 @@ Value FunId::evaluate() const
 
         // If there are several nodes with the same id, id() should return the first one.
         // In WebKit, getElementById behaves so, too, although its behavior in this case is formally undefined.
-        Node* node = contextScope.getElementById(StringView(idList).substring(startPos, endPos - startPos));
+        RefPtr node = contextScope.getElementById(StringView(idList).substring(startPos, endPos - startPos));
         if (node && resultSet.add(*node).isNewEntry)
-            result.append(node);
+            result.append(WTFMove(node));
         
         startPos = endPos;
     }
@@ -568,10 +568,10 @@ Value FunNormalizeSpace::evaluate() const
     // https://www.w3.org/TR/1999/REC-xpath-19991116/#function-normalize-space
     if (!argumentCount()) {
         String s = Value(Expression::evaluationContext().node.get()).toString();
-        return s.simplifyWhiteSpace(isXMLSpace);
+        return s.simplifyWhiteSpace(isASCIIWhitespaceWithoutFF<UChar>);
     }
     String s = argument(0).evaluate().toString();
-    return s.simplifyWhiteSpace(isXMLSpace);
+    return s.simplifyWhiteSpace(isASCIIWhitespaceWithoutFF<UChar>);
 }
 
 Value FunTranslate::evaluate() const

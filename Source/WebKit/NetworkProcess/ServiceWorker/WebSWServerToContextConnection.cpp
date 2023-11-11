@@ -41,6 +41,7 @@
 #include "WebSWContextManagerConnectionMessages.h"
 #include "WebSWServerConnection.h"
 #include <WebCore/NotificationData.h>
+#include <WebCore/NotificationPayload.h>
 #include <WebCore/SWServer.h>
 #include <WebCore/ServiceWorkerContextData.h>
 
@@ -69,6 +70,11 @@ WebSWServerToContextConnection::~WebSWServerToContextConnection()
 
     if (auto* server = this->server(); server && server->contextConnectionForRegistrableDomain(registrableDomain()) == this)
         server->removeContextConnection(*this);
+}
+
+NetworkProcess& WebSWServerToContextConnection::networkProcess()
+{
+    return m_connection.networkProcess();
 }
 
 IPC::Connection& WebSWServerToContextConnection::ipcConnection() const
@@ -108,7 +114,7 @@ void WebSWServerToContextConnection::close()
 
 void WebSWServerToContextConnection::installServiceWorkerContext(const ServiceWorkerContextData& contextData, const ServiceWorkerData& workerData, const String& userAgent, WorkerThreadMode workerThreadMode)
 {
-    send(Messages::WebSWContextManagerConnection::InstallServiceWorker { contextData, workerData, userAgent, workerThreadMode });
+    send(Messages::WebSWContextManagerConnection::InstallServiceWorker { contextData, workerData, userAgent, workerThreadMode, m_isInspectable });
 }
 
 void WebSWServerToContextConnection::updateAppInitiatedValue(ServiceWorkerIdentifier serviceWorkerIdentifier, WebCore::LastNavigationWasAppInitiated lastNavigationWasAppInitiated)
@@ -126,7 +132,7 @@ void WebSWServerToContextConnection::fireActivateEvent(ServiceWorkerIdentifier s
     send(Messages::WebSWContextManagerConnection::FireActivateEvent(serviceWorkerIdentifier));
 }
 
-void WebSWServerToContextConnection::firePushEvent(ServiceWorkerIdentifier serviceWorkerIdentifier, const std::optional<Vector<uint8_t>>& data, CompletionHandler<void(bool)>&& callback)
+void WebSWServerToContextConnection::firePushEvent(ServiceWorkerIdentifier serviceWorkerIdentifier, const std::optional<Vector<uint8_t>>& data, std::optional<NotificationPayload>&& proposedPayload, CompletionHandler<void(bool, std::optional<NotificationPayload>&&)>&& callback)
 {
     if (!m_processingFunctionalEventCount++)
         m_connection.networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::StartServiceWorkerBackgroundProcessing { webProcessIdentifier() }, 0);
@@ -134,11 +140,11 @@ void WebSWServerToContextConnection::firePushEvent(ServiceWorkerIdentifier servi
     std::optional<IPC::DataReference> ipcData;
     if (data)
         ipcData = IPC::DataReference { data->data(), data->size() };
-    sendWithAsyncReply(Messages::WebSWContextManagerConnection::FirePushEvent(serviceWorkerIdentifier, ipcData), [weakThis = WeakPtr { *this }, callback = WTFMove(callback)](bool wasProcessed) mutable {
+    sendWithAsyncReply(Messages::WebSWContextManagerConnection::FirePushEvent(serviceWorkerIdentifier, ipcData, WTFMove(proposedPayload)), [weakThis = WeakPtr { *this }, callback = WTFMove(callback)](bool wasProcessed, std::optional<NotificationPayload>&& resultPayload) mutable {
         if (weakThis && !--weakThis->m_processingFunctionalEventCount)
             weakThis->m_connection.networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::EndServiceWorkerBackgroundProcessing { weakThis->webProcessIdentifier() }, 0);
 
-        callback(wasProcessed);
+        callback(wasProcessed, WTFMove(resultPayload));
     });
 }
 
@@ -154,12 +160,16 @@ void WebSWServerToContextConnection::fireNotificationEvent(ServiceWorkerIdentifi
         if (!--weakThis->m_processingFunctionalEventCount)
             weakThis->m_connection.networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::EndServiceWorkerBackgroundProcessing { weakThis->webProcessIdentifier() }, 0);
 
+#if ENABLE(TRACKING_PREVENTION)
         auto* session = weakThis->m_connection.networkSession();
         if (auto* resourceLoadStatistics = session ? session->resourceLoadStatistics() : nullptr; resourceLoadStatistics && wasProcessed && eventType == NotificationEventType::Click) {
             return resourceLoadStatistics->setMostRecentWebPushInteractionTime(RegistrableDomain(weakThis->registrableDomain()), [callback = WTFMove(callback), wasProcessed] () mutable {
                 callback(wasProcessed);
             });
         }
+#else
+        UNUSED_PARAM(eventType);
+#endif
 
         callback(wasProcessed);
     });
@@ -229,13 +239,13 @@ void WebSWServerToContextConnection::openWindow(WebCore::ServiceWorkerIdentifier
 {
     auto* server = this->server();
     if (!server) {
-        callback(makeUnexpected(ExceptionData { TypeError, "No SWServer"_s }));
+        callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "No SWServer"_s }));
         return;
     }
 
-    auto* worker = server->workerByID(identifier);
+    RefPtr worker = server->workerByID(identifier);
     if (!worker) {
-        callback(makeUnexpected(ExceptionData { TypeError, "No remaining service worker"_s }));
+        callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "No remaining service worker"_s }));
         return;
     }
 
@@ -247,7 +257,7 @@ void WebSWServerToContextConnection::openWindow(WebCore::ServiceWorkerIdentifier
         }
 
         if (!server) {
-            callback(makeUnexpected(ExceptionData { TypeError, "No SWServer"_s }));
+            callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "No SWServer"_s }));
             return;
         }
 
@@ -260,7 +270,7 @@ void WebSWServerToContextConnection::openWindow(WebCore::ServiceWorkerIdentifier
 void WebSWServerToContextConnection::reportConsoleMessage(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier, MessageSource source, MessageLevel level, const String& message, unsigned long requestIdentifier)
 {
     auto* server = this->server();
-    auto* worker = server ? server->workerByID(serviceWorkerIdentifier) : nullptr;
+    RefPtr worker = server ? server->workerByID(serviceWorkerIdentifier) : nullptr;
     if (!worker)
         return;
     m_connection.networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::ReportConsoleMessage { m_connection.sessionID(), worker->scriptURL(), worker->origin().clientOrigin, source, level, message, requestIdentifier }, 0);
@@ -337,32 +347,32 @@ void WebSWServerToContextConnection::focus(ScriptExecutionContextIdentifier clie
 
 void WebSWServerToContextConnection::navigate(ScriptExecutionContextIdentifier clientIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier, const URL& url, CompletionHandler<void(Expected<std::optional<ServiceWorkerClientData>, ExceptionData>&&)>&& callback)
 {
-    auto* worker = SWServerWorker::existingWorkerForIdentifier(serviceWorkerIdentifier);
+    RefPtr worker = SWServerWorker::existingWorkerForIdentifier(serviceWorkerIdentifier);
     if (!worker) {
-        callback(makeUnexpected(ExceptionData { TypeError, "no service worker"_s }));
+        callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "no service worker"_s }));
         return;
     }
 
     if (!worker->isClientActiveServiceWorker(clientIdentifier)) {
-        callback(makeUnexpected(ExceptionData { TypeError, "service worker is not the client active service worker"_s }));
+        callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "service worker is not the client active service worker"_s }));
         return;
     }
 
     auto data = worker->findClientByIdentifier(clientIdentifier);
     if (!data || !data->pageIdentifier || !data->frameIdentifier) {
-        callback(makeUnexpected(ExceptionData { TypeError, "cannot navigate service worker client"_s }));
+        callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "cannot navigate service worker client"_s }));
         return;
     }
 
     auto frameIdentifier = *data->frameIdentifier;
     m_connection.networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::NavigateServiceWorkerClient { frameIdentifier, clientIdentifier, url }, [weakThis = WeakPtr { *this }, url, clientOrigin = worker->origin(), callback = WTFMove(callback)](auto pageIdentifier, auto frameIdentifier) mutable {
         if (!weakThis || !weakThis->server()) {
-            callback(makeUnexpected(ExceptionData { TypeError, "service worker is gone"_s }));
+            callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "service worker is gone"_s }));
             return;
         }
 
         if (!pageIdentifier || !frameIdentifier) {
-            callback(makeUnexpected(ExceptionData { TypeError, "navigate failed"_s }));
+            callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "navigate failed"_s }));
             return;
         }
 
@@ -373,6 +383,15 @@ void WebSWServerToContextConnection::navigate(ScriptExecutionContextIdentifier c
         });
         callback(WTFMove(clientData));
     }, 0);
+}
+
+void WebSWServerToContextConnection::setInspectable(ServiceWorkerIsInspectable inspectable)
+{
+    if (m_isInspectable == inspectable)
+        return;
+
+    m_isInspectable = inspectable;
+    send(Messages::WebSWContextManagerConnection::SetInspectable { inspectable });
 }
 
 } // namespace WebKit

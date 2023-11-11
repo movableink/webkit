@@ -110,7 +110,7 @@ void SVGAElement::svgAttributeChanged(const QualifiedName& attrName)
 RenderPtr<RenderElement> SVGAElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     if (is<SVGElement>(parentNode()) && downcast<SVGElement>(*parentNode()).isTextContent())
-        return createRenderer<RenderSVGInline>(*this, WTFMove(style));
+        return createRenderer<RenderSVGInline>(RenderObject::Type::SVGInline, *this, WTFMove(style));
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled())
@@ -232,7 +232,7 @@ SharedStringHash SVGAElement::visitedLinkHash() const
 DOMTokenList& SVGAElement::relList()
 {
     if (!m_relList) {
-        m_relList = makeUnique<DOMTokenList>(*this, SVGNames::relAttr, [](Document&, StringView token) {
+        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, SVGNames::relAttr, [](Document&, StringView token) {
 #if USE(SYSTEM_PREVIEW)
             if (equalLettersIgnoringASCIICase(token, "ar"_s))
                 return true;

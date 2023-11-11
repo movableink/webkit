@@ -60,11 +60,11 @@ private:
 
     void didUpdateState(GraphicsContextState&) final { }
 
-    void drawNativeImageInternal(NativeImage&, const FloatSize&, const FloatRect&, const FloatRect&, const ImagePaintingOptions&) final { }
+    void drawNativeImageInternal(NativeImage&, const FloatSize&, const FloatRect&, const FloatRect&, ImagePaintingOptions) final { }
 
     void drawSystemImage(SystemImage&, const FloatRect&) final { };
 
-    void drawPattern(NativeImage&, const FloatRect&, const FloatRect&, const AffineTransform&, const FloatPoint&, const FloatSize&, const ImagePaintingOptions&) final { }
+    void drawPattern(NativeImage&, const FloatRect&, const FloatRect&, const AffineTransform&, const FloatPoint&, const FloatSize&, ImagePaintingOptions) final { }
 
     IntRect clipBounds() const final { return { }; }
 
@@ -100,8 +100,8 @@ private:
     void resetClip() final { }
     void clip(const FloatRect&) final { }
     void clipOut(const FloatRect&) final { }
-    void save() final { }
-    void restore() final { }
+    void save(GraphicsContextState::Purpose = GraphicsContextState::Purpose::SaveRestore) final { }
+    void restore(GraphicsContextState::Purpose = GraphicsContextState::Purpose::SaveRestore) final { }
 
     void drawRaisedEllipse(const FloatRect&, const Color&, const Color&) final { }
 
@@ -115,15 +115,15 @@ private:
 
     void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) final { }
 
-    ImageDrawResult drawImage(Image&, const FloatRect&, const FloatRect&, const ImagePaintingOptions& = { ImageOrientation::Orientation::FromImage }) final { return ImageDrawResult::DidNothing; }
+    ImageDrawResult drawImage(Image&, const FloatRect&, const FloatRect&, ImagePaintingOptions = { ImageOrientation::Orientation::FromImage }) final { return ImageDrawResult::DidNothing; }
 
-    ImageDrawResult drawTiledImage(Image&, const FloatRect&, const FloatPoint&, const FloatSize&, const FloatSize&, const ImagePaintingOptions& = { }) final { return ImageDrawResult::DidNothing; }
-    ImageDrawResult drawTiledImage(Image&, const FloatRect&, const FloatRect&, const FloatSize&, Image::TileRule, Image::TileRule, const ImagePaintingOptions& = { }) final { return ImageDrawResult::DidNothing; }
+    ImageDrawResult drawTiledImage(Image&, const FloatRect&, const FloatPoint&, const FloatSize&, const FloatSize&, ImagePaintingOptions = { }) final { return ImageDrawResult::DidNothing; }
+    ImageDrawResult drawTiledImage(Image&, const FloatRect&, const FloatRect&, const FloatSize&, Image::TileRule, Image::TileRule, ImagePaintingOptions = { }) final { return ImageDrawResult::DidNothing; }
 
     void drawFocusRing(const Path&, float, const Color&) final { }
     void drawFocusRing(const Vector<FloatRect>&, float, float, const Color&) final { }
 
-    void drawImageBuffer(ImageBuffer&, const FloatRect&, const FloatRect&, const ImagePaintingOptions& = { }) final { }
+    void drawImageBuffer(ImageBuffer&, const FloatRect&, const FloatRect&, ImagePaintingOptions = { }) final { }
 
     void clipRoundedRect(const FloatRoundedRect&) final { }
     void clipOutRoundedRect(const FloatRoundedRect&) final { }

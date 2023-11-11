@@ -71,7 +71,7 @@ RenderPtr<RenderElement> MathMLTokenElement::createElementRenderer(RenderStyle&&
 {
     ASSERT(hasTagName(MathMLNames::miTag) || hasTagName(MathMLNames::mnTag) || hasTagName(MathMLNames::msTag) || hasTagName(MathMLNames::mtextTag));
 
-    return createRenderer<RenderMathMLToken>(*this, WTFMove(style));
+    return createRenderer<RenderMathMLToken>(RenderObject::Type::MathMLToken, *this, WTFMove(style));
 }
 
 bool MathMLTokenElement::childShouldCreateRenderer(const Node& child) const
@@ -82,7 +82,7 @@ bool MathMLTokenElement::childShouldCreateRenderer(const Node& child) const
 
 std::optional<UChar32> MathMLTokenElement::convertToSingleCodePoint(StringView string)
 {
-    auto codePoints = string.trim(isHTTPSpace).codePoints();
+    auto codePoints = string.trim(isASCIIWhitespaceWithoutFF<UChar>).codePoints();
     auto iterator = codePoints.begin();
     if (iterator == codePoints.end())
         return std::nullopt;

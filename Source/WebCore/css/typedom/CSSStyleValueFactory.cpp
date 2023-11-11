@@ -76,7 +76,7 @@ ExceptionOr<RefPtr<CSSValue>> CSSStyleValueFactory::extractCSSValue(const CSSPro
     CSSParser::ParseResult parseResult = CSSParser::parseValue(styleDeclaration, propertyID, cssText, important, parserContext);
 
     if (parseResult == CSSParser::ParseResult::Error)
-        return Exception { TypeError, makeString(cssText, " cannot be parsed.")};
+        return Exception { ExceptionCode::TypeError, makeString(cssText, " cannot be parsed.") };
 
     return styleDeclaration->getPropertyCSSValue(propertyID);
 }
@@ -89,7 +89,7 @@ ExceptionOr<RefPtr<CSSStyleValue>> CSSStyleValueFactory::extractShorthandCSSValu
     CSSParser::ParseResult parseResult = CSSParser::parseValue(styleDeclaration, propertyID, cssText, important, parserContext);
 
     if (parseResult == CSSParser::ParseResult::Error)
-        return Exception { TypeError, makeString(cssText, " cannot be parsed.")};
+        return Exception { ExceptionCode::TypeError, makeString(cssText, " cannot be parsed.") };
 
     return constructStyleValueForShorthandSerialization(styleDeclaration->getPropertyValue(propertyID), parserContext);
 }
@@ -97,7 +97,7 @@ ExceptionOr<RefPtr<CSSStyleValue>> CSSStyleValueFactory::extractShorthandCSSValu
 ExceptionOr<Ref<CSSUnparsedValue>> CSSStyleValueFactory::extractCustomCSSValues(const String& cssText)
 {
     if (cssText.isEmpty())
-        return Exception { TypeError, "Value cannot be parsed"_s };
+        return Exception { ExceptionCode::TypeError, "Value cannot be parsed"_s };
 
     CSSTokenizer tokenizer(cssText);
     return { CSSUnparsedValue::create(tokenizer.tokenRange()) };
@@ -118,7 +118,7 @@ ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::parseStyleValue(co
     auto propertyID = cssPropertyID(property);
 
     if (propertyID == CSSPropertyInvalid)
-        return Exception { TypeError, "Property String is not a valid CSS property."_s };
+        return Exception { ExceptionCode::TypeError, "Property String is not a valid CSS property."_s };
 
     if (isShorthand(propertyID)) {
         auto result = extractShorthandCSSValues(propertyID, cssText, parserContext);
@@ -192,18 +192,27 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(const CSSValue&
             return Ref<CSSStyleValue> { CSSNumericFactory::number(primitiveValue->doubleValue()) };
         case CSSUnitType::CSS_PERCENTAGE:
             return Ref<CSSStyleValue> { CSSNumericFactory::percent(primitiveValue->doubleValue()) };
-        case CSSUnitType::CSS_EMS:
+        case CSSUnitType::CSS_EM:
             return Ref<CSSStyleValue> { CSSNumericFactory::em(primitiveValue->doubleValue()) };
-        case CSSUnitType::CSS_EXS:
-            return Ref<CSSStyleValue> { CSSNumericFactory::ex(primitiveValue->doubleValue()) };
-        case CSSUnitType::CSS_CHS:
-            return Ref<CSSStyleValue> { CSSNumericFactory::ch(primitiveValue->doubleValue()) };
-        // FIXME: Add CSSNumericFactory::ic
-        case CSSUnitType::CSS_REMS:
+        case CSSUnitType::CSS_REM:
             return Ref<CSSStyleValue> { CSSNumericFactory::rem(primitiveValue->doubleValue()) };
-        case CSSUnitType::CSS_LHS:
+        case CSSUnitType::CSS_EX:
+            return Ref<CSSStyleValue> { CSSNumericFactory::ex(primitiveValue->doubleValue()) };
+        case CSSUnitType::CSS_CAP:
+            return Ref<CSSStyleValue> { CSSNumericFactory::cap(primitiveValue->doubleValue()) };
+        case CSSUnitType::CSS_RCAP:
+            return Ref<CSSStyleValue> { CSSNumericFactory::rcap(primitiveValue->doubleValue()) };
+        case CSSUnitType::CSS_CH:
+            return Ref<CSSStyleValue> { CSSNumericFactory::ch(primitiveValue->doubleValue()) };
+        case CSSUnitType::CSS_RCH:
+            return Ref<CSSStyleValue> { CSSNumericFactory::rch(primitiveValue->doubleValue()) };
+        case CSSUnitType::CSS_IC:
+            return Ref<CSSStyleValue> { CSSNumericFactory::ic(primitiveValue->doubleValue()) };
+        case CSSUnitType::CSS_RIC:
+            return Ref<CSSStyleValue> { CSSNumericFactory::ric(primitiveValue->doubleValue()) };
+        case CSSUnitType::CSS_LH:
             return Ref<CSSStyleValue> { CSSNumericFactory::lh(primitiveValue->doubleValue()) };
-        case CSSUnitType::CSS_RLHS:
+        case CSSUnitType::CSS_RLH:
             return Ref<CSSStyleValue> { CSSNumericFactory::rlh(primitiveValue->doubleValue()) };
         case CSSUnitType::CSS_VW:
             return Ref<CSSStyleValue> { CSSNumericFactory::vw(primitiveValue->doubleValue()) };
@@ -314,7 +323,7 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(const CSSValue&
         // Refer to LayoutTests/imported/w3c/web-platform-tests/css/css-typed-om/the-stylepropertymap/inline/get.html
         auto& valueList = downcast<CSSValueList>(cssValue);
         if (!valueList.length())
-            return Exception { TypeError, "The CSSValueList should not be empty."_s };
+            return Exception { ExceptionCode::TypeError, "The CSSValueList should not be empty."_s };
         if ((valueList.length() == 1 && mayConvertCSSValueListToSingleValue(propertyID)) || (propertyID && CSSProperty::isListValuedProperty(*propertyID)))
             return reifyValue(valueList[0], propertyID, document);
     }

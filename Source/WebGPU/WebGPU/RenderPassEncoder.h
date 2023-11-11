@@ -27,6 +27,7 @@
 
 #import "CommandsMixin.h"
 #import <wtf/FastMalloc.h>
+#import <wtf/HashMap.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 #import <wtf/Vector.h>
@@ -38,6 +39,7 @@ namespace WebGPU {
 
 class BindGroup;
 class Buffer;
+class CommandEncoder;
 class Device;
 class QuerySet;
 class RenderBundle;
@@ -47,9 +49,9 @@ class RenderPipeline;
 class RenderPassEncoder : public WGPURenderPassEncoderImpl, public RefCounted<RenderPassEncoder>, public CommandsMixin {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<RenderPassEncoder> create(id<MTLRenderCommandEncoder> renderCommandEncoder, const WGPURenderPassDescriptor& descriptor, NSUInteger visibilityResultBufferSize, bool depthReadOnly, bool stencilReadOnly, Device& device)
+    static Ref<RenderPassEncoder> create(id<MTLRenderCommandEncoder> renderCommandEncoder, const WGPURenderPassDescriptor& descriptor, NSUInteger visibilityResultBufferSize, bool depthReadOnly, bool stencilReadOnly, CommandEncoder& parentEncoder, Device& device)
     {
-        return adoptRef(*new RenderPassEncoder(renderCommandEncoder, descriptor, visibilityResultBufferSize, depthReadOnly, stencilReadOnly, device));
+        return adoptRef(*new RenderPassEncoder(renderCommandEncoder, descriptor, visibilityResultBufferSize, depthReadOnly, stencilReadOnly, parentEncoder, device));
     }
     static Ref<RenderPassEncoder> createInvalid(Device& device)
     {
@@ -67,7 +69,7 @@ public:
     void endOcclusionQuery();
     void endPass();
     void endPipelineStatisticsQuery();
-    void executeBundles(Vector<std::reference_wrapper<const RenderBundle>>&& bundles);
+    void executeBundles(Vector<std::reference_wrapper<RenderBundle>>&& bundles);
     void insertDebugMarker(String&& markerLabel);
     void popDebugGroup();
     void pushDebugGroup(String&& groupLabel);
@@ -86,12 +88,13 @@ public:
     bool isValid() const { return m_renderCommandEncoder; }
 
 private:
-    RenderPassEncoder(id<MTLRenderCommandEncoder>, const WGPURenderPassDescriptor&, NSUInteger, bool depthReadOnly, bool stencilReadOnly, Device&);
+    RenderPassEncoder(id<MTLRenderCommandEncoder>, const WGPURenderPassDescriptor&, NSUInteger, bool depthReadOnly, bool stencilReadOnly, CommandEncoder&, Device&);
     RenderPassEncoder(Device&);
 
     bool validatePopDebugGroup() const;
 
     void makeInvalid();
+    void executePreDrawCommands();
 
     id<MTLRenderCommandEncoder> m_renderCommandEncoder { nil };
 
@@ -111,6 +114,13 @@ private:
     NSUInteger m_visibilityResultBufferSize { 0 };
     bool m_depthReadOnly { false };
     bool m_stencilReadOnly { false };
+    Vector<uint32_t> m_vertexDynamicOffsets;
+    Vector<uint32_t> m_fragmentDynamicOffsets;
+    const RenderPipeline* m_pipeline { nullptr };
+    RefPtr<CommandEncoder> m_parentEncoder;
+    HashMap<uint32_t, Vector<uint32_t>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupDynamicOffsets;
+    float m_minDepth { 0.f };
+    float m_maxDepth { 1.f };
 };
 
 } // namespace WebGPU

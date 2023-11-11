@@ -32,7 +32,7 @@ public:
     inline SVGGraphicsElement& graphicsElement() const;
 
 protected:
-    RenderSVGBlock(SVGGraphicsElement&, RenderStyle&&);
+    RenderSVGBlock(Type, SVGGraphicsElement&, RenderStyle&&);
     void willBeDestroyed() override;
 
     void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false) override;
@@ -47,7 +47,7 @@ private:
     void element() const = delete;
     bool isRenderSVGBlock() const final { return true; }
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const override;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)

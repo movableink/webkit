@@ -39,7 +39,6 @@
 #include "ImageObserver.h"
 #include "IntRect.h"
 #include "JSDOMWindowBase.h"
-#include "LayoutDisallowedScope.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
@@ -84,7 +83,7 @@ SVGImage::~SVGImage()
     }
 }
 
-inline RefPtr<SVGSVGElement> SVGImage::rootElement() const
+RefPtr<SVGSVGElement> SVGImage::rootElement() const
 {
     if (!m_page)
         return nullptr;
@@ -128,7 +127,7 @@ void SVGImage::setContainerSize(const FloatSize& size)
         return;
 
     auto rootElement = this->rootElement();
-    if (!rootElement || !rootElement->renderer() || !rootElement->renderer()->isSVGRootOrLegacySVGRoot())
+    if (!rootElement || !rootElement->renderer() || !rootElement->renderer()->isRenderOrLegacyRenderSVGRoot())
         return;
 
     RefPtr view = frameView();
@@ -150,7 +149,7 @@ void SVGImage::setContainerSize(const FloatSize& size)
 IntSize SVGImage::containerSize() const
 {
     auto rootElement = this->rootElement();
-    if (!rootElement || !rootElement->renderer() || !rootElement->renderer()->isSVGRootOrLegacySVGRoot())
+    if (!rootElement || !rootElement->renderer() || !rootElement->renderer()->isRenderOrLegacyRenderSVGRoot())
         return { };
 
     // If a container size is available it has precedence.
@@ -186,14 +185,12 @@ IntSize SVGImage::containerSize() const
     return IntSize(currentSize);
 }
 
-ImageDrawResult SVGImage::drawForContainer(GraphicsContext& context, const FloatSize containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+ImageDrawResult SVGImage::drawForContainer(GraphicsContext& context, const FloatSize containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& dstRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     if (!m_page)
         return ImageDrawResult::DidNothing;
 
-    LayoutDisallowedScope::AllowedScope layoutAllowedScope; // Allow layout in the SVG document for this image.
-
-    ImageObserver* observer = imageObserver();
+    auto observer = imageObserver();
     ASSERT(observer);
 
     // Temporarily reset image observer, we don't want to receive any changeInRect() calls due to this relayout.
@@ -214,7 +211,7 @@ ImageDrawResult SVGImage::drawForContainer(GraphicsContext& context, const Float
 
     ImageDrawResult result = draw(context, dstRect, scaledSrc, options);
 
-    setImageObserver(observer);
+    setImageObserver(WTFMove(observer));
     return result;
 }
 
@@ -231,22 +228,22 @@ RefPtr<NativeImage> SVGImage::nativeImage(const DestinationColorSpace& colorSpac
     if (auto contentRenderer = embeddedContentBox())
         hostWindow = contentRenderer->hostWindow();
 
-    auto imageBuffer = ImageBuffer::create(size(), RenderingPurpose::DOM, 1, colorSpace, PixelFormat::BGRA8, bufferOptions, { hostWindow });
+    auto imageBuffer = ImageBuffer::create(size(), RenderingPurpose::DOM, 1, colorSpace, PixelFormat::BGRA8, bufferOptions, hostWindow);
     if (!imageBuffer)
         return nullptr;
 
-    ImageObserver* observer = imageObserver();
+    auto observer = imageObserver();
     setImageObserver(nullptr);
     setContainerSize(size());
 
     imageBuffer->context().drawImage(*this, FloatPoint(0, 0));
 
-    setImageObserver(observer);
+    setImageObserver(WTFMove(observer));
     return ImageBuffer::sinkIntoNativeImage(WTFMove(imageBuffer));
 }
 
 void SVGImage::drawPatternForContainer(GraphicsContext& context, const FloatSize& containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& srcRect,
-    const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const FloatRect& dstRect, const ImagePaintingOptions& options)
+    const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const FloatRect& dstRect, ImagePaintingOptions options)
 {
     FloatRect zoomedContainerRect = FloatRect(FloatPoint(), containerSize);
     zoomedContainerRect.scale(containerZoom);
@@ -267,7 +264,7 @@ void SVGImage::drawPatternForContainer(GraphicsContext& context, const FloatSize
     if (context.drawLuminanceMask())
         buffer->convertToLuminanceMask();
 
-    RefPtr<Image> image = ImageBuffer::sinkIntoImage(WTFMove(buffer), PreserveResolution::Yes);
+    auto image = ImageBuffer::sinkIntoNativeImage(WTFMove(buffer));
     if (!image)
         return;
 
@@ -278,10 +275,10 @@ void SVGImage::drawPatternForContainer(GraphicsContext& context, const FloatSize
     unscaledPatternTransform.scale(1 / imageBufferScale.width(), 1 / imageBufferScale.height());
 
     context.setDrawLuminanceMask(false);
-    image->drawPattern(context, dstRect, scaledSrcRect, unscaledPatternTransform, phase, spacing, options);
+    context.drawPattern(*image, dstRect, scaledSrcRect, unscaledPatternTransform, phase, spacing, options);
 }
 
-ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     if (!m_page)
         return ImageDrawResult::DidNothing;
@@ -315,7 +312,6 @@ ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRec
 
     {
         ScriptDisallowedScope::DisableAssertionsInScope disabledScope;
-        LayoutDisallowedScope::AllowedScope layoutAllowedScope;
         if (view->needsLayout())
             view->layoutContext().layout();
     }
@@ -331,8 +327,8 @@ ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRec
 
     stateSaver.restore();
 
-    if (imageObserver())
-        imageObserver()->didDraw(*this);
+    if (auto observer = imageObserver())
+        observer->didDraw(*this);
 
     return ImageDrawResult::DidDraw;
 }
@@ -485,7 +481,7 @@ EncodedDataStatus SVGImage::dataChanged(bool allDataReceived)
         m_page->settings().setShouldAllowUserInstalledFonts(false);
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-        if (auto* observer = imageObserver())
+        if (auto observer = imageObserver())
             m_page->settings().setLayerBasedSVGEngineEnabled(observer->layerBasedSVGEngineEnabled());
 #endif
         auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());

@@ -59,7 +59,6 @@ struct NetworkProcessCreationParameters {
 #if PLATFORM(COCOA)
     String uiProcessBundleIdentifier;
     RetainPtr<CFDataRef> networkATSContext;
-    bool strictSecureDecodingForAllObjCEnabled { false };
     bool isParentProcessFullWebBrowserOrRunningTest { false };
 #endif
 
@@ -81,6 +80,9 @@ struct NetworkProcessCreationParameters {
 
     bool enablePrivateClickMeasurement { true };
     bool ftpEnabled { false };
+#if ENABLE(BUILT_IN_NOTIFICATIONS)
+    bool builtInNotificationsEnabled { false };
+#endif
 
     Vector<WebsiteDataStoreParameters> websiteDataStoreParameters;
     Vector<std::pair<WebCore::ProcessIdentifier, WebCore::RegistrableDomain>> allowedFirstPartiesForCookies;

@@ -60,7 +60,6 @@ public:
     static bool releaseThreadResources(ReleaseThreadResourceBehavior);
 
     // GraphicsContextGL overrides.
-    bool isGLES2Compliant() const final;
     void activeTexture(GCGLenum texture) final;
     void attachShader(PlatformGLObject program, PlatformGLObject shader) final;
     void bindAttribLocation(PlatformGLObject, GCGLuint index, const String& name) final;
@@ -119,7 +118,6 @@ public:
     GCGLint64 getInteger64i(GCGLenum pname, GCGLuint index) final;
     GCGLint getProgrami(PlatformGLObject program, GCGLenum pname) final;
     String getProgramInfoLog(PlatformGLObject) final;
-    String getUnmangledInfoLog(PlatformGLObject[2], GCGLsizei, const String&);
     GCGLint getRenderbufferParameteri(GCGLenum target, GCGLenum pname) final;
     GCGLint getShaderi(PlatformGLObject, GCGLenum pname) final;
     String getShaderInfoLog(PlatformGLObject) final;
@@ -326,7 +324,9 @@ public:
     void drawElementsInstancedBaseVertexBaseInstanceANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, GCGLintptr offset, GCGLsizei instanceCount, GCGLint baseVertex, GCGLuint baseInstance) final;
     void multiDrawArraysInstancedBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLint, const GCGLsizei, const GCGLsizei, const GCGLuint> firstsCountsInstanceCountsAndBaseInstances) final;
     void multiDrawElementsInstancedBaseVertexBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLsizei, const GCGLsizei, const GCGLsizei, const GCGLint, const GCGLuint> countsOffsetsInstanceCountsBaseVerticesAndBaseInstances, GCGLenum type) final;
+    void clipControlEXT(GCGLenum origin, GCGLenum depth) final;
     void provokingVertexANGLE(GCGLenum provokeMode) final;
+    void polygonModeANGLE(GCGLenum face, GCGLenum mode) final;
     void polygonOffsetClampEXT(GCGLfloat factor, GCGLfloat units, GCGLfloat clamp) final;
     void renderbufferStorageMultisampleANGLE(GCGLenum target, GCGLsizei samples, GCGLenum internalformat, GCGLsizei width, GCGLsizei height) final;
     void blitFramebufferANGLE(GCGLint srcX0, GCGLint srcY0, GCGLint srcX1, GCGLint srcY1, GCGLint dstX0, GCGLint dstY0, GCGLint dstX1, GCGLint dstY1, GCGLbitfield mask, GCGLenum filter) final;
@@ -344,14 +344,12 @@ public:
     void deleteShader(PlatformGLObject) final;
     void deleteTexture(PlatformGLObject) final;
     void simulateEventForTesting(SimulatedEventForTesting) override;
-    void paintRenderingResultsToCanvas(ImageBuffer&) override;
-    RefPtr<PixelBuffer> paintRenderingResultsToPixelBuffer() override;
-    void paintCompositedResultsToCanvas(ImageBuffer&) override;
+    void drawSurfaceBufferToImageBuffer(SurfaceBuffer, ImageBuffer&) override;
+    RefPtr<PixelBuffer> drawingBufferToPixelBuffer(FlipY) override;
 
     RefPtr<PixelBuffer> readRenderingResultsForPainting();
 
-    virtual void withDrawingBufferAsNativeImage(Function<void(NativeImage&)>);
-    virtual void withDisplayBufferAsNativeImage(Function<void(NativeImage&)>);
+    virtual void withBufferAsNativeImage(SurfaceBuffer, Function<void(NativeImage&)>);
 
     // Reads pixels from positive pixel coordinates with tight packing.
     // Returns columns, rows of executed read on success.
@@ -370,8 +368,10 @@ protected:
     bool initialize();
     // Called first by initialize(). Subclasses should override to instantiate the platform specific bits of EGLContext.
     // FIXME: Currently platforms do not share the context creation. They should.
-    virtual bool platformInitializeContext();
-    // Called last by initialize(). Subclasses should override to instantiate platform specific state that depend on
+    virtual bool platformInitializeContext() = 0;
+    // Called by initialize(). Subclasses should override to enable platform specific extensions.
+    virtual bool platformInitializeExtensions();
+    // Called by initialize(). Subclasses should override to instantiate platform specific state that depend on
     // the shared state.
     virtual bool platformInitialize();
 
@@ -392,7 +392,7 @@ protected:
     RefPtr<PixelBuffer> readPixelsForPaintResults();
 
     bool reshapeFBOs(const IntSize&);
-    virtual void prepareTexture();
+    void prepareTexture();
     void resolveMultisamplingIfNecessary(const IntRect& = IntRect());
     void attachDepthAndStencilBufferIfNeeded(GCGLuint internalDepthStencilFormat, int width, int height);
 #if PLATFORM(COCOA)
@@ -403,6 +403,8 @@ protected:
     static void platformReleaseThreadResources();
 
     virtual void invalidateKnownTextureContent(GCGLuint);
+    bool enableExtension(const String&) WARN_UNUSED_RETURN;
+    void requestExtension(const String&);
 
     // Only for non-WebGL 2.0 contexts.
     GCGLenum adjustWebGL1TextureInternalFormat(GCGLenum internalformat, GCGLenum format, GCGLenum type);
@@ -443,9 +445,9 @@ protected:
 };
 
 
-inline GCGLDisplay GraphicsContextGLANGLE::platformDisplay() const 
+inline GCGLDisplay GraphicsContextGLANGLE::platformDisplay() const
 {
-    return m_displayObj; 
+    return m_displayObj;
 }
 
 inline GCGLConfig GraphicsContextGLANGLE::platformConfig() const

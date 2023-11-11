@@ -67,8 +67,7 @@ struct StretchyCharacter {
     UChar bottomChar;
     UChar middleChar;
 };
-// The first leftRightPairsCount pairs correspond to left/right fences that can easily be mirrored in RTL.
-static const short leftRightPairsCount = 5;
+
 static const StretchyCharacter stretchyCharacters[14] = {
     { 0x28  , 0x239b, 0x239c, 0x239d, 0x0    }, // left parenthesis
     { 0x29  , 0x239e, 0x239f, 0x23a0, 0x0    }, // right parenthesis
@@ -252,7 +251,7 @@ void MathOperator::calculateDisplayStyleLargeOperator(const RenderStyle& style)
 
     // We choose the first size variant that is larger than the expected displayOperatorMinHeight and otherwise fallback to the largest variant.
     for (auto& sizeVariant : sizeVariants) {
-        GlyphData glyphData(sizeVariant, baseGlyph.font);
+        GlyphData glyphData(sizeVariant, baseGlyph.font.get());
         setSizeVariant(glyphData);
         m_maxPreferredWidth = m_width;
         m_italicCorrection = glyphData.font->mathData()->getItalicCorrection(*glyphData.font, glyphData.glyph);
@@ -386,7 +385,7 @@ void MathOperator::calculateStretchyData(const RenderStyle& style, bool calculat
         getMathVariantsWithFallback(style, isVertical, sizeVariants, assemblyParts);
         // We verify the size variants.
         for (auto& sizeVariant : sizeVariants) {
-            GlyphData glyphData(sizeVariant, baseGlyph.font);
+            GlyphData glyphData(sizeVariant, baseGlyph.font.get());
             if (calculateMaxPreferredWidth)
                 m_maxPreferredWidth = std::max(m_maxPreferredWidth, LayoutUnit(advanceWidthForGlyph(glyphData)));
             else {
@@ -410,10 +409,6 @@ void MathOperator::calculateStretchyData(const RenderStyle& style, bool calculat
         for (unsigned index = 0; index < maxIndex; ++index) {
             if (stretchyCharacters[index].character == m_baseCharacter) {
                 stretchyCharacter = &stretchyCharacters[index];
-                if (!style.isLeftToRightDirection() && index < leftRightPairsCount * 2) {
-                    // If we are in right-to-left direction we select the mirrored form by adding -1 or +1 according to the parity of index.
-                    index += index % 2 ? -1 : 1;
-                }
                 break;
             }
         }

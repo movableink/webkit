@@ -34,7 +34,7 @@ CaptureSourceOrError MockDisplayCaptureSourceGStreamer::create(const CaptureDevi
 
     if (constraints) {
         if (auto error = mockSource->applyConstraints(*constraints))
-            return WTFMove(error->message);
+            return CaptureSourceOrError({ WTFMove(error->badConstraint), MediaAccessDenialReason::InvalidConstraint });
     }
 
     Ref<RealtimeMediaSource> source = adoptRef(*new MockDisplayCaptureSourceGStreamer(device, WTFMove(mockSource), WTFMove(hashSalts), pageIdentifier));
@@ -85,9 +85,9 @@ const RealtimeMediaSourceCapabilities& MockDisplayCaptureSourceGStreamer::capabi
 
         // FIXME: what should these be?
         // Currently mimicking the values for SCREEN-1 in MockRealtimeMediaSourceCenter.cpp::defaultDevices()
-        capabilities.setWidth(CapabilityValueOrRange(1, 1920));
-        capabilities.setHeight(CapabilityValueOrRange(1, 1080));
-        capabilities.setFrameRate(CapabilityValueOrRange(.01, 30.0));
+        capabilities.setWidth(CapabilityRange(1, 1920));
+        capabilities.setHeight(CapabilityRange(1, 1080));
+        capabilities.setFrameRate(CapabilityRange(.01, 30.0));
 
         m_capabilities = WTFMove(capabilities);
     }

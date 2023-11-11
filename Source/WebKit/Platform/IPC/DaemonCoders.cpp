@@ -28,9 +28,6 @@
 
 #include "DaemonDecoder.h"
 #include "DaemonEncoder.h"
-#include "PushMessageForTesting.h"
-#include "WebPushDaemonConnectionConfiguration.h"
-#include "WebPushMessage.h"
 #include <WebCore/CertificateInfo.h>
 #include <WebCore/ExceptionData.h>
 #include <WebCore/PrivateClickMeasurement.h>
@@ -353,45 +350,6 @@ std::optional<WebCore::PCM::AttributionTriggerData> Coder<WebCore::PCM::Attribut
     } };
 }
 
-void Coder<WebPushD::WebPushDaemonConnectionConfiguration, void>::encode(Encoder& encoder, const WebPushD::WebPushDaemonConnectionConfiguration& instance)
-{
-    instance.encode(encoder);
-}
-
-std::optional<WebPushD::WebPushDaemonConnectionConfiguration> Coder<WebPushD::WebPushDaemonConnectionConfiguration, void>::decode(Decoder& decoder)
-{
-    return WebPushD::WebPushDaemonConnectionConfiguration::decode(decoder);
-}
-
-void Coder<WebPushMessage, void>::encode(Encoder& encoder, const WebPushMessage& instance)
-{
-    encoder << instance.pushData << instance.registrationURL << instance.pushPartitionString;
-}
-
-std::optional<WebPushMessage> Coder<WebPushMessage, void>::decode(Decoder& decoder)
-{
-    std::optional<std::optional<Vector<uint8_t>>> pushData;
-    decoder >> pushData;
-    if (!pushData)
-        return std::nullopt;
-
-    std::optional<URL> registrationURL;
-    decoder >> registrationURL;
-    if (!registrationURL)
-        return std::nullopt;
-
-    std::optional<String> pushPartitionString;
-    decoder >> pushPartitionString;
-    if (!pushPartitionString)
-        return std::nullopt;
-
-    return { {
-        WTFMove(*pushData),
-        WTFMove(*pushPartitionString),
-        WTFMove(*registrationURL)
-    } };
-}
-
 void Coder<WebCore::ExceptionData, void>::encode(Encoder& encoder, const WebCore::ExceptionData& instance)
 {
     encoder << instance.code;
@@ -461,12 +419,17 @@ std::optional<WebCore::RegistrableDomain> Coder<WebCore::RegistrableDomain, void
 
 void Coder<WebCore::PushSubscriptionIdentifier>::encode(Encoder& encoder, const WebCore::PushSubscriptionIdentifier& instance)
 {
-    instance.encode(encoder);
+    encoder << instance.toUInt64();
 }
 
 std::optional<WebCore::PushSubscriptionIdentifier> Coder<WebCore::PushSubscriptionIdentifier>::decode(Decoder& decoder)
 {
-    return WebCore::PushSubscriptionIdentifier::decode(decoder);
+    std::optional<uint64_t> rawID;
+    decoder >> rawID;
+    if (!rawID)
+        return std::nullopt;
+
+    return { WebCore::PushSubscriptionIdentifier(*rawID) };
 }
 
 }

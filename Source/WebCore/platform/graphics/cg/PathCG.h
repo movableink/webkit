@@ -29,29 +29,28 @@
 
 #include "PathImpl.h"
 #include "PlatformPath.h"
+#include "WindRule.h"
+#include <wtf/Function.h>
 
 namespace WebCore {
 
+class GraphicsContext;
 class PathStream;
 
 class PathCG final : public PathImpl {
 public:
-    static UniqueRef<PathCG> create();
-    static UniqueRef<PathCG> create(const PathStream&);
-    static UniqueRef<PathCG> create(RetainPtr<CGMutablePathRef>&&);
-
-    PathCG();
-    PathCG(RetainPtr<CGMutablePathRef>&&);
-
-    bool operator==(const PathImpl&) const final;
+    static Ref<PathCG> create();
+    static Ref<PathCG> create(const PathSegment&);
+    static Ref<PathCG> create(const PathStream&);
+    static Ref<PathCG> create(RetainPtr<CGMutablePathRef>&&);
 
     PlatformPathPtr platformPath() const;
 
     void addPath(const PathCG&, const AffineTransform&);
 
-    void applyElements(const PathElementApplier&) const final;
+    bool applyElements(const PathElementApplier&) const final;
 
-    void transform(const AffineTransform&);
+    bool transform(const AffineTransform&) final;
 
     bool contains(const FloatPoint&, WindRule) const;
     bool strokeContains(const FloatPoint&, const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
@@ -59,7 +58,10 @@ public:
     FloatRect strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
 
 private:
-    UniqueRef<PathImpl> clone() const final;
+    PathCG();
+    PathCG(RetainPtr<CGMutablePathRef>&&);
+
+    Ref<PathImpl> copy() const final;
 
     PlatformPathPtr ensureMutablePlatformPath();
 

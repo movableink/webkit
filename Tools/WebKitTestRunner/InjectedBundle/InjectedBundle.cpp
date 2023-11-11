@@ -427,7 +427,7 @@ void InjectedBundle::didReceiveMessageToPage(WKBundlePageRef page, WKStringRef m
         for (size_t i = 0; i < size; ++i) {
             auto item = WKArrayGetItemAtIndex(domainsArray, i);
             if (item && WKGetTypeID(item) == WKStringGetTypeID())
-                domains.uncheckedAppend(toWTFString(static_cast<WKStringRef>(item)));
+                domains.append(toWTFString(static_cast<WKStringRef>(item)));
         }
 
         m_testRunner->callDidReceiveLoadedSubresourceDomainsCallback(WTFMove(domains));
@@ -552,6 +552,10 @@ void InjectedBundle::beginTesting(WKDictionaryRef settings, BegingTestingMode te
     m_accessibilityController->setIsolatedTreeMode(m_accessibilityIsolatedTreeMode);
 #endif
 #endif
+#if ENABLE(VIDEO)
+    if (!m_captionUserPreferencesTestingModeToken)
+        m_captionUserPreferencesTestingModeToken = WKBundlePageCreateCaptionUserPreferencesTestingModeToken(page()->page());
+#endif
 
 #if PLATFORM(IOS_FAMILY)
     WKBundlePageSetUseTestingViewportConfiguration(page()->page(), !booleanValue(settings, "UseFlexibleViewport"));
@@ -579,6 +583,9 @@ void InjectedBundle::beginTesting(WKDictionaryRef settings, BegingTestingMode te
     WKBundleResetOriginAccessAllowLists(m_bundle.get());
     clearResourceLoadStatistics();
 
+#if ENABLE(VIDEO)
+    WKBundlePageSetCaptionDisplayMode(page()->page(), stringValue(settings, "CaptionDisplayMode"));
+#endif
     // [WK2] REGRESSION(r128623): It made layout tests extremely slow
     // https://bugs.webkit.org/show_bug.cgi?id=96862
     // WKBundleSetDatabaseQuota(m_bundle.get(), 5 * 1024 * 1024);

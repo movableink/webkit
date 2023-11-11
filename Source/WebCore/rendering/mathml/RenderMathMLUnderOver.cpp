@@ -42,8 +42,9 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLUnderOver);
 
 RenderMathMLUnderOver::RenderMathMLUnderOver(MathMLUnderOverElement& element, RenderStyle&& style)
-    : RenderMathMLScripts(element, WTFMove(style))
+    : RenderMathMLScripts(Type::MathMLUnderOver, element, WTFMove(style))
 {
+    ASSERT(isRenderMathMLUnderOver());
 }
 
 MathMLUnderOverElement& RenderMathMLUnderOver::element() const

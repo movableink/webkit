@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Ericsson AB. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,13 +37,19 @@
 
 #include "CaptureDevice.h"
 #include "Image.h"
+#include "MediaAccessDenialReason.h"
 #include "MediaConstraints.h"
 #include "MediaDeviceHashSalts.h"
+#include "PhotoCapabilities.h"
+#include "PhotoSettings.h"
 #include "PlatformLayer.h"
 #include "RealtimeMediaSourceCapabilities.h"
 #include "RealtimeMediaSourceFactory.h"
+#include "RealtimeMediaSourceIdentifier.h"
 #include "VideoFrameTimeMetadata.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/Forward.h>
 #include <wtf/Lock.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -73,7 +79,9 @@ class VideoFrame;
 
 enum class VideoFrameRotation : uint16_t;
 
+struct CaptureSourceError;
 struct CaptureSourceOrError;
+struct PhotoCapabilitiesOrError;
 struct VideoFrameAdaptor;
 
 class WEBCORE_EXPORT RealtimeMediaSource
@@ -95,11 +103,11 @@ public:
         virtual void sourceConfigurationChanged() { }
 
         // Observer state queries.
-        virtual bool preventSourceFromStopping() { return false; }
+        virtual bool preventSourceFromEnding() { return false; }
 
         virtual void hasStartedProducingData() { }
     };
-    class AudioSampleObserver {
+    class AudioSampleObserver : public CanMakeCheckedPtr {
     public:
         virtual ~AudioSampleObserver() = default;
 
@@ -132,7 +140,7 @@ public:
     bool isVideo() const { return m_type == Type::Video; }
     bool isAudio() const { return m_type == Type::Audio; }
 
-    virtual void whenReady(CompletionHandler<void(String)>&&);
+    virtual void whenReady(CompletionHandler<void(CaptureSourceError&&)>&&);
 
     virtual bool isProducingData() const;
     void start();
@@ -171,14 +179,20 @@ public:
     double frameRate() const { return m_frameRate; }
     void setFrameRate(double);
 
-    double zoom() const { return m_zoom; }
-    void setZoom(double);
-
     VideoFacingMode facingMode() const { return m_facingMode; }
     void setFacingMode(VideoFacingMode);
 
+    MeteringMode whiteBalanceMode() const { return m_whiteBalanceMode; }
+    void setWhiteBalanceMode(MeteringMode);
+
     double volume() const { return m_volume; }
     void setVolume(double);
+
+    double zoom() const { return m_zoom; }
+    void setZoom(double);
+
+    double torch() const { return m_torch; }
+    void setTorch(bool);
 
     int sampleRate() const { return m_sampleRate; }
     void setSampleRate(int);
@@ -196,6 +210,12 @@ public:
     virtual void ref() const = 0;
     virtual void deref() const = 0;
     virtual ThreadSafeWeakPtrControlBlock& controlBlock() const = 0;
+
+    using PhotoCapabilitiesHandler = CompletionHandler<void(PhotoCapabilitiesOrError&&)>;
+    virtual void getPhotoCapabilities(PhotoCapabilitiesHandler&&);
+
+    using PhotoSettingsNativePromise = NativePromise<PhotoSettings, String>;
+    virtual Ref<PhotoSettingsNativePromise> getPhotoSettings();
 
     struct ApplyConstraintsError {
         String badConstraint;
@@ -258,8 +278,8 @@ protected:
 
     void scheduleDeferredTask(Function<void()>&&);
 
-    virtual void beginConfiguration() { }
-    virtual void commitConfiguration() { }
+    virtual void startApplyingConstraints() { }
+    virtual void endApplyingConstraints() { }
 
     bool selectSettings(const MediaConstraints&, FlattenedConstraint&, String&);
     double fitnessDistance(const MediaConstraint&);
@@ -324,7 +344,7 @@ private:
     WeakHashSet<Observer> m_observers;
 
     mutable Lock m_audioSampleObserversLock;
-    HashSet<AudioSampleObserver*> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
+    HashSet<CheckedPtr<AudioSampleObserver>> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
 
     mutable Lock m_videoFrameObserversLock;
     HashMap<VideoFrameObserver*, std::unique_ptr<VideoFrameAdaptor>> m_videoFrameObservers WTF_GUARDED_BY_LOCK(m_videoFrameObserversLock);
@@ -336,12 +356,15 @@ private:
     // Set on sample generation thread.
     IntSize m_intrinsicSize;
     double m_frameRate { 30 };
-    double m_zoom { 1 };
     double m_volume { 1 };
     double m_sampleRate { 0 };
     double m_sampleSize { 0 };
     double m_fitnessScore { 0 };
     VideoFacingMode m_facingMode { VideoFacingMode::User };
+
+    MeteringMode m_whiteBalanceMode { MeteringMode::None };
+    double m_zoom { 1 };
+    bool m_torch { false };
 
     bool m_muted { false };
     bool m_pendingSettingsDidChangeNotification { false };
@@ -354,15 +377,47 @@ private:
     unsigned m_videoFrameObserversWithAdaptors { 0 };
 };
 
+struct CaptureSourceError {
+    CaptureSourceError() = default;
+    CaptureSourceError(String&& message, MediaAccessDenialReason reason)
+        : errorMessage(WTFMove(message))
+        , denialReason(reason)
+    { }
+
+    operator bool() const { return denialReason != MediaAccessDenialReason::NoReason; }
+
+    String errorMessage;
+    MediaAccessDenialReason denialReason = MediaAccessDenialReason::NoReason;
+};
+
 struct CaptureSourceOrError {
     CaptureSourceOrError() = default;
     CaptureSourceOrError(Ref<RealtimeMediaSource>&& source) : captureSource(WTFMove(source)) { }
-    CaptureSourceOrError(String&& message) : errorMessage(WTFMove(message)) { }
-    
-    operator bool()  const { return !!captureSource; }
+    explicit CaptureSourceOrError(CaptureSourceError&& error) : error(WTFMove(error)) { }
+
+    operator bool() const { return !!captureSource; }
     Ref<RealtimeMediaSource> source() { return captureSource.releaseNonNull(); }
-    
+
     RefPtr<RealtimeMediaSource> captureSource;
+    CaptureSourceError error;
+};
+
+struct PhotoCapabilitiesOrError {
+    PhotoCapabilitiesOrError() = default;
+    PhotoCapabilitiesOrError(std::optional<PhotoCapabilities>&& capabilities, String&& errorMessage)
+        : capabilities(WTFMove(capabilities))
+        , errorMessage(WTFMove(errorMessage))
+    { }
+    PhotoCapabilitiesOrError(PhotoCapabilities& capabilities)
+        : capabilities({ capabilities })
+    { }
+    explicit PhotoCapabilitiesOrError(String&& errorMessage)
+        : errorMessage(WTFMove(errorMessage))
+    { }
+
+    operator bool() const { return capabilities.has_value(); }
+
+    std::optional<PhotoCapabilities> capabilities;
     String errorMessage;
 };
 
@@ -373,7 +428,7 @@ inline void RealtimeMediaSource::setName(const AtomString& name)
     m_name = name;
 }
 
-inline void RealtimeMediaSource::whenReady(CompletionHandler<void(String)>&& callback)
+inline void RealtimeMediaSource::whenReady(CompletionHandler<void(CaptureSourceError&&)>&& callback)
 {
     callback({ });
 }

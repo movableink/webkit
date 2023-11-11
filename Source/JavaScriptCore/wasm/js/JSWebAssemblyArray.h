@@ -51,10 +51,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info());
-    }
+    static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     template <typename ElementType>
     static JSWebAssemblyArray* create(VM& vm, Structure* structure, Wasm::FieldType elementType, size_t size, FixedVector<ElementType>&& payload, RefPtr<const Wasm::RTT> rtt)
@@ -91,7 +88,7 @@ public:
         }
     }
 
-    void set(VM& vm, uint32_t index, EncodedJSValue value)
+    void set(uint32_t index, EncodedJSValue value)
     {
         if (m_elementType.type.is<Wasm::PackedType>()) {
             // `value` is assumed to be an unboxed int32; truncate it to either 8 or 16 bits
@@ -124,7 +121,7 @@ public:
         case Wasm::TypeKind::RefNull: {
             WriteBarrier<Unknown>* pointer = bitwise_cast<WriteBarrier<Unknown>*>(m_payload64.data());
             pointer += index;
-            pointer->set(vm, this, JSValue::decode(value));
+            pointer->set(vm(), this, JSValue::decode(value));
             break;
         }
         case Wasm::TypeKind::V128:

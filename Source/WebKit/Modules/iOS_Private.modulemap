@@ -1414,11 +1414,6 @@ framework module WebKit_Private [system] {
     export *
   }
 
-  explicit module WKMockDisplay {
-    header "WKMockDisplay.h"
-    export *
-  }
-
   explicit module WKMockMediaDevice {
     header "WKMockMediaDevice.h"
     export *
@@ -1576,11 +1571,6 @@ framework module WebKit_Private [system] {
 
   explicit module WKPageLoadTypes {
     header "WKPageLoadTypes.h"
-    export *
-  }
-
-  explicit module WKPageLoadTypesPrivate {
-    header "WKPageLoadTypesPrivate.h"
     export *
   }
 
@@ -2591,16 +2581,6 @@ framework module WebKit_Private [system] {
     export *
   }
 
-  explicit module XPCEndpoint {
-    header "XPCEndpoint.h"
-    export *
-  }
-
-  explicit module XPCEndpointClient {
-    header "XPCEndpointClient.h"
-    export *
-  }
-
   explicit module _WKAppHighlight {
     header "_WKAppHighlight.h"
     export *
@@ -3031,6 +3011,26 @@ framework module WebKit_Private [system] {
     export *
   }
 
+  explicit module _WKWebExtensionAction {
+    header "_WKWebExtensionAction.h"
+    export *
+  }
+
+  explicit module _WKWebExtensionActionPrivate {
+    header "_WKWebExtensionActionPrivate.h"
+    export *
+  }
+
+  explicit module _WKWebExtensionCommand {
+    header "_WKWebExtensionCommand.h"
+    export *
+  }
+
+  explicit module _WKWebExtensionCommandPrivate {
+    header "_WKWebExtensionCommandPrivate.h"
+    export *
+  }
+
   explicit module _WKWebExtensionContext {
     header "_WKWebExtensionContext.h"
     export *
@@ -3081,6 +3081,16 @@ framework module WebKit_Private [system] {
     export *
   }
 
+  explicit module _WKWebExtensionMessagePort {
+    header "_WKWebExtensionMessagePort.h"
+    export *
+  }
+
+  explicit module _WKWebExtensionMessagePortPrivate {
+    header "_WKWebExtensionMessagePortPrivate.h"
+    export *
+  }
+
   explicit module _WKWebExtensionPermission {
     header "_WKWebExtensionPermission.h"
     export *
@@ -3096,8 +3106,8 @@ framework module WebKit_Private [system] {
     export *
   }
 
-  explicit module _WKWebExtensionUtilities {
-    header "_WKWebExtensionUtilities.h"
+  explicit module _WKWebExtensionTabCreationOptions {
+    header "_WKWebExtensionTabCreationOptions.h"
     export *
   }
 
@@ -3108,6 +3118,11 @@ framework module WebKit_Private [system] {
 
   explicit module _WKWebExtensionWindow {
     header "_WKWebExtensionWindow.h"
+    export *
+  }
+
+  explicit module _WKWebExtensionWindowCreationOptions {
+    header "_WKWebExtensionWindowCreationOptions.h"
     export *
   }
 

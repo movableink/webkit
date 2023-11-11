@@ -34,6 +34,18 @@
 #import "TextureView.h"
 #import <wtf/EnumeratedArray.h>
 
+#if USE(APPLE_INTERNAL_SDK)
+#include <CoreVideo/CVPixelBufferPrivate.h>
+#else
+
+#if HAVE(COREVIDEO_COMPRESSED_PIXEL_FORMAT_TYPES)
+enum {
+    kCVPixelFormatType_AGX_420YpCbCr8BiPlanarVideoRange = '&8v0',
+    kCVPixelFormatType_AGX_420YpCbCr8BiPlanarFullRange = '&8f0',
+};
+#endif
+#endif
+
 namespace WebGPU {
 
 static bool bufferIsPresent(const WGPUBindGroupEntry& entry)
@@ -59,7 +71,7 @@ static MTLRenderStages metalRenderStage(ShaderStage shaderStage)
     case ShaderStage::Fragment:
         return MTLRenderStageFragment;
     case ShaderStage::Compute:
-        return (MTLRenderStages)0;
+        return BindGroup::MTLRenderStageCompute;
     }
 }
 
@@ -67,16 +79,114 @@ template <typename T>
 using ShaderStageArray = EnumeratedArray<ShaderStage, T, ShaderStage::Compute>;
 
 #if HAVE(COREVIDEO_METAL_SUPPORT)
+
+enum class TransferFunctionCV {
+    kITU_R_709_2,
+    kITU_R_601_4,
+    kITU_R_2020,
+};
+
+enum class PixelRange {
+    Video,
+    Full
+};
+
+static PixelRange pixelRangeFromPixelFormat(OSType pixelFormat)
+{
+    switch (pixelFormat) {
+    case kCVPixelFormatType_4444AYpCbCr8:
+    case kCVPixelFormatType_4444AYpCbCr16:
+    case kCVPixelFormatType_422YpCbCr_4A_8BiPlanar:
+    case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange:
+    case kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange:
+    case kCVPixelFormatType_422YpCbCr10BiPlanarVideoRange:
+    case kCVPixelFormatType_444YpCbCr10BiPlanarVideoRange:
+#if HAVE(COREVIDEO_COMPRESSED_PIXEL_FORMAT_TYPES)
+    case kCVPixelFormatType_AGX_420YpCbCr8BiPlanarVideoRange:
+#endif
+        return PixelRange::Video;
+    case kCVPixelFormatType_420YpCbCr8PlanarFullRange:
+    case kCVPixelFormatType_420YpCbCr8BiPlanarFullRange:
+    case kCVPixelFormatType_422YpCbCr8FullRange:
+    case kCVPixelFormatType_ARGB2101010LEPacked:
+    case kCVPixelFormatType_420YpCbCr10BiPlanarFullRange:
+    case kCVPixelFormatType_422YpCbCr10BiPlanarFullRange:
+    case kCVPixelFormatType_444YpCbCr10BiPlanarFullRange:
+#if HAVE(COREVIDEO_COMPRESSED_PIXEL_FORMAT_TYPES)
+    case kCVPixelFormatType_AGX_420YpCbCr8BiPlanarFullRange:
+#endif
+        return PixelRange::Full;
+    default:
+        return PixelRange::Video;
+    }
+}
+
+static TransferFunctionCV transferFunctionFromString(RetainPtr<CFStringRef> string)
+{
+    CFStringRef cfString = string.get();
+    if (!string || CFEqual(cfString, kCVImageBufferYCbCrMatrix_ITU_R_709_2))
+        return TransferFunctionCV::kITU_R_709_2;
+    if (CFEqual(cfString, kCVImageBufferYCbCrMatrix_ITU_R_601_4))
+        return TransferFunctionCV::kITU_R_601_4;
+    if (CFEqual(cfString, kCVImageBufferYCbCrMatrix_ITU_R_2020))
+        return TransferFunctionCV::kITU_R_2020;
+
+    ASSERT_NOT_REACHED("Unexpected transfer function format");
+    return TransferFunctionCV::kITU_R_709_2;
+}
+
 static simd::float4x3 colorSpaceConversionMatrixForPixelBuffer(CVPixelBufferRef pixelBuffer)
 {
     auto format = CVPixelBufferGetPixelFormatType(pixelBuffer);
-    UNUSED_PARAM(format);
+    auto range = pixelRangeFromPixelFormat(format);
+    auto transferFunction = transferFunctionFromString(adoptCF((CFStringRef)CVBufferCopyAttachment(pixelBuffer, kCVImageBufferYCbCrMatrixKey, nil)));
 
-    // FIXME: Implement other formats after https://bugs.webkit.org/show_bug.cgi?id=256724 is implemented
-    return simd::float4x3(simd::make_float3(+1.16895f, +1.16895f, +1.16895f),
-        simd::make_float3(-0.00012f, -0.21399f, +2.12073f),
-        simd::make_float3(+1.79968f, -0.53503f, +0.00012f),
-        simd::make_float3(-0.97284f, 0.30145f, -1.13348f));
+    switch (transferFunction) {
+    case TransferFunctionCV::kITU_R_709_2: {
+        switch (range) {
+        case PixelRange::Full:
+            return simd::float4x3(simd::make_float3(+1.00000f, +1.00000f, +1.00000f),
+                simd::make_float3(-0.00012f, -0.18726f, +1.85559f),
+                simd::make_float3(+1.57471f, -0.46814f, +0.00012f),
+                simd::make_float3(-0.78729f, +0.32770f, -0.92786f));
+        case PixelRange::Video:
+            return simd::float4x3(simd::make_float3(+1.16895f, +1.16895f, +1.16895f),
+                simd::make_float3(-0.00012f, -0.21399f, +2.12073f),
+                simd::make_float3(+1.79968f, -0.53503f, +0.00012f),
+                simd::make_float3(-0.97284f, +0.30145f, -1.13348f));
+        }
+    }
+
+    case TransferFunctionCV::kITU_R_601_4: {
+        switch (range) {
+        case PixelRange::Full:
+            return simd::float4x3(simd::make_float3(+1.00000f, +1.00000f, +1.00000f),
+                simd::make_float3(-0.00100f, -0.34375f, +1.77221f),
+                simd::make_float3(+1.40173f, -0.71411f, +0.00100f),
+                simd::make_float3(-0.70038f, +0.51672f, -0.88660f));
+
+        case PixelRange::Video:
+            return simd::float4x3(simd::make_float3(+1.16895f, +1.16895f, +1.16895f),
+                simd::make_float3(-0.00110f, -0.39282f, +2.02527f),
+                simd::make_float3(+1.60193f, -0.81616f, +0.00110f),
+                simd::make_float3(-0.87347f, +0.53143f, -1.08624f));
+        }
+    }
+
+    case TransferFunctionCV::kITU_R_2020: {
+        switch (range) {
+        case PixelRange::Full:
+            return simd::float4x3(simd::make_float3(+1.00000f, +1.00000f, +1.00000f),
+                simd::make_float3(+0.00000f, -0.16455f, +1.88135f),
+                simd::make_float3(+1.47461f, -0.57129f, -0.00012f),
+                simd::make_float3(-0.73730f, +0.36792f, -0.94061f));
+        case PixelRange::Video:
+            return simd::float4x3(simd::make_float3(+1.16895f, +1.16895f, +1.16895f),
+                simd::make_float3(+0.00000f, -0.18799f, +2.15015f),
+                simd::make_float3(+1.68530f, -0.65295f, +0.00012f),
+                simd::make_float3(-0.91571f, +0.34741f, -1.14807f));
+        }
+    } }
 }
 
 static MTLPixelFormat metalPixelFormat(CVPixelBufferRef pixelBuffer, size_t plane)
@@ -419,7 +529,7 @@ static MTLResourceUsage resourceUsageForBindingAcccess(BindGroupLayout::BindingA
 
 Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor)
 {
-    if (descriptor.nextInChain)
+    if (descriptor.nextInChain || !descriptor.layout || !isValid())
         return BindGroup::createInvalid(*this);
 
     // FIXME: We have to validate that the bind group is compatible with the bind group layout.
@@ -444,7 +554,6 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
     constexpr auto maxResourceUsageValue = MTLResourceUsageRead | MTLResourceUsageWrite;
     static_assert(maxResourceUsageValue == 3, "Code path assumes MTLResourceUsageRead | MTLResourceUsageWrite == 3");
     Vector<id<MTLResource>> stageResources[stageCount][maxResourceUsageValue];
-
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=257190 The bind group layout determines the layout of what gets put into the bind group.
     // We should probably iterate over the bind group layout here, rather than the bind group.
     // For each entry in the bind group layout, we should find the corresponding member of the bind group, and then process it.
@@ -473,12 +582,15 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
             return BindGroup::createInvalid(*this);
 
         for (ShaderStage stage : stages) {
-            auto optionalIndex = bindGroupLayout.indexForBinding(entry.binding, stage);
-            if (!optionalIndex)
+            auto bindingIndex = entry.binding;
+            auto index = bindGroupLayout.argumentBufferIndexForEntryIndex(bindingIndex, stage);
+            if (index == NSNotFound)
                 continue;
 
-            auto index = optionalIndex->first;
-            MTLResourceUsage resourceUsage = resourceUsageForBindingAcccess(optionalIndex->second);
+            auto optionalAccess = bindGroupLayout.bindingAccessForBindingIndex(bindingIndex, stage);
+            RELEASE_ASSERT(optionalAccess);
+            auto bufferSizeArgumentBufferIndex = bindGroupLayout.bufferSizeIndexForEntryIndex(bindingIndex, stage);
+            MTLResourceUsage resourceUsage = resourceUsageForBindingAcccess(*optionalAccess);
 
             if (bufferIsPresent) {
                 id<MTLBuffer> buffer = WebGPU::fromAPI(entry.buffer).buffer();
@@ -487,6 +599,8 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
 
                 [argumentEncoder[stage] setBuffer:buffer offset:entry.offset atIndex:index];
                 stageResources[metalRenderStage(stage)][resourceUsage - 1].append(buffer);
+                if (bufferSizeArgumentBufferIndex)
+                    *(uint32_t*)[argumentEncoder[stage] constantDataAtIndex:*bufferSizeArgumentBufferIndex] = static_cast<uint32_t>(entry.size == WGPU_WHOLE_MAP_SIZE ? buffer.length : entry.size);
             } else if (samplerIsPresent) {
                 id<MTLSamplerState> sampler = WebGPU::fromAPI(entry.sampler).samplerState();
                 [argumentEncoder[stage] setSamplerState:sampler atIndex:index];
@@ -529,6 +643,10 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
             }
         }
     }
+
+    argumentBuffer[ShaderStage::Vertex].label = bindGroupLayout.vertexArgumentEncoder().label;
+    argumentBuffer[ShaderStage::Fragment].label = bindGroupLayout.fragmentArgumentEncoder().label;
+    argumentBuffer[ShaderStage::Compute].label = bindGroupLayout.computeArgumentEncoder().label;
 
     return BindGroup::create(argumentBuffer[ShaderStage::Vertex], argumentBuffer[ShaderStage::Fragment], argumentBuffer[ShaderStage::Compute], WTFMove(resources), *this);
 }

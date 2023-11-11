@@ -133,11 +133,8 @@
 #include <WebCore/SearchFieldResultsPart.h>
 #include <WebCore/SearchPopupMenu.h>
 #include <WebCore/SecurityOrigin.h>
-#include <WebCore/SerializedAttachmentData.h>
 #include <WebCore/SerializedPlatformDataCueValue.h>
 #include <WebCore/SerializedScriptValue.h>
-#include <WebCore/ServiceWorkerClientData.h>
-#include <WebCore/ServiceWorkerData.h>
 #include <WebCore/ShareData.h>
 #include <WebCore/SharedBuffer.h>
 #include <WebCore/SkewTransformOperation.h>
@@ -146,6 +143,8 @@
 #include <WebCore/SourceAlpha.h>
 #include <WebCore/SourceGraphic.h>
 #include <WebCore/SpotLightSource.h>
+#include <WebCore/SwitchThumbPart.h>
+#include <WebCore/SwitchTrackPart.h>
 #include <WebCore/SystemImage.h>
 #include <WebCore/TestReportBody.h>
 #include <WebCore/TextAreaPart.h>
@@ -291,35 +290,13 @@ std::optional<DOMCacheEngine::Record> ArgumentCoder<DOMCacheEngine::Record>::dec
     return {{ WTFMove(identifier), WTFMove(updateResponseCounter), WTFMove(requestHeadersGuard), WTFMove(request), WTFMove(options.value()), WTFMove(referrer), WTFMove(responseHeadersGuard), WTFMove(response), WTFMove(responseBody), responseBodySize }};
 }
 
-void ArgumentCoder<RectEdges<bool>>::encode(Encoder& encoder, const RectEdges<bool>& boxEdges)
-{
-    SimpleArgumentCoder<RectEdges<bool>>::encode(encoder, boxEdges);
-}
-    
-std::optional<RectEdges<bool>> ArgumentCoder<RectEdges<bool>>::decode(Decoder& decoder)
-{
-    return SimpleArgumentCoder<RectEdges<bool>>::decode(decoder);
-}
-
-#if ENABLE(META_VIEWPORT)
-void ArgumentCoder<ViewportArguments>::encode(Encoder& encoder, const ViewportArguments& viewportArguments)
-{
-    SimpleArgumentCoder<ViewportArguments>::encode(encoder, viewportArguments);
-}
-
-std::optional<ViewportArguments> ArgumentCoder<ViewportArguments>::decode(Decoder& decoder)
-{
-    return SimpleArgumentCoder<ViewportArguments>::decode(decoder);
-}
-
-#endif // ENABLE(META_VIEWPORT)
-
 void ArgumentCoder<Length>::encode(Encoder& encoder, const Length& length)
 {
     encoder << length.type() << length.hasQuirk();
 
     switch (length.type()) {
     case LengthType::Auto:
+    case LengthType::Normal:
     case LengthType::Content:
     case LengthType::Undefined:
         break;
@@ -355,6 +332,7 @@ bool ArgumentCoder<Length>::decode(Decoder& decoder, Length& length)
         return false;
 
     switch (type) {
+    case LengthType::Normal:
     case LengthType::Auto:
     case LengthType::Content:
     case LengthType::Undefined:
@@ -541,11 +519,10 @@ std::optional<Font::Attributes> ArgumentCoder<Font::Attributes>::decode(Decoder&
 
 void ArgumentCoder<WebCore::FontCustomPlatformData>::encode(Encoder& encoder, const WebCore::FontCustomPlatformData& customPlatformData)
 {
-    WebKit::SharedMemory::Handle handle;
+    std::optional<WebKit::SharedMemory::Handle> handle;
     {
         auto sharedMemoryBuffer = WebKit::SharedMemory::copyBuffer(customPlatformData.creationData.fontFaceData);
-        if (auto memoryHandle = sharedMemoryBuffer->createHandle(WebKit::SharedMemory::Protection::ReadOnly))
-            handle = WTFMove(*memoryHandle);
+        handle = sharedMemoryBuffer->createHandle(WebKit::SharedMemory::Protection::ReadOnly);
     }
     encoder << customPlatformData.creationData.fontFaceData->size();
     encoder << WTFMove(handle);
@@ -560,12 +537,14 @@ std::optional<Ref<FontCustomPlatformData>> ArgumentCoder<FontCustomPlatformData>
     if (!bufferSize)
         return std::nullopt;
 
-    std::optional<WebKit::SharedMemory::Handle> handle;
-    decoder >> handle;
-    if (!handle)
+    auto handle = decoder.decode<std::optional<WebKit::SharedMemory::Handle>>();
+    if (UNLIKELY(!decoder.isValid()))
         return std::nullopt;
 
-    auto sharedMemoryBuffer = WebKit::SharedMemory::map(WTFMove(*handle), WebKit::SharedMemory::Protection::ReadOnly);
+    if (!*handle)
+        return std::nullopt;
+
+    auto sharedMemoryBuffer = WebKit::SharedMemory::map(WTFMove(**handle), WebKit::SharedMemory::Protection::ReadOnly);
     if (!sharedMemoryBuffer)
         return std::nullopt;
 
@@ -716,16 +695,6 @@ bool ArgumentCoder<Cursor>::decode(Decoder& decoder, Cursor& cursor)
     return true;
 }
 
-void ArgumentCoder<DiagnosticLoggingDictionary>::encode(Encoder& encoder, const DiagnosticLoggingDictionary& dictionary)
-{
-    encoder << dictionary.dictionary;
-}
-
-bool ArgumentCoder<DiagnosticLoggingDictionary>::decode(Decoder& decoder, DiagnosticLoggingDictionary& dictionary)
-{
-    return decoder.decode(dictionary.dictionary);
-}
-
 void ArgumentCoder<ResourceError>::encode(Encoder& encoder, const ResourceError& resourceError)
 {
     encoder << resourceError.type();
@@ -756,172 +725,6 @@ bool ArgumentCoder<ResourceError>::decode(Decoder& decoder, ResourceError& resou
     resourceError.setType(type);
     if (isSanitized)
         resourceError.setAsSanitized();
-
-    return true;
-}
-
-#if PLATFORM(IOS_FAMILY)
-
-void ArgumentCoder<InspectorOverlay::Highlight>::encode(Encoder& encoder, const InspectorOverlay::Highlight& highlight)
-{
-    encoder << static_cast<uint32_t>(highlight.type);
-    encoder << highlight.usePageCoordinates;
-    encoder << highlight.contentColor;
-    encoder << highlight.contentOutlineColor;
-    encoder << highlight.paddingColor;
-    encoder << highlight.borderColor;
-    encoder << highlight.marginColor;
-    encoder << highlight.quads;
-    encoder << highlight.gridHighlightOverlays;
-    encoder << highlight.flexHighlightOverlays;
-}
-
-bool ArgumentCoder<InspectorOverlay::Highlight>::decode(Decoder& decoder, InspectorOverlay::Highlight& highlight)
-{
-    uint32_t type;
-    if (!decoder.decode(type))
-        return false;
-    highlight.type = (InspectorOverlay::Highlight::Type)type;
-
-    if (!decoder.decode(highlight.usePageCoordinates))
-        return false;
-    if (!decoder.decode(highlight.contentColor))
-        return false;
-    if (!decoder.decode(highlight.contentOutlineColor))
-        return false;
-    if (!decoder.decode(highlight.paddingColor))
-        return false;
-    if (!decoder.decode(highlight.borderColor))
-        return false;
-    if (!decoder.decode(highlight.marginColor))
-        return false;
-    if (!decoder.decode(highlight.quads))
-        return false;
-    if (!decoder.decode(highlight.gridHighlightOverlays))
-        return false;
-    if (!decoder.decode(highlight.flexHighlightOverlays))
-        return false;
-    return true;
-}
-
-#endif
-
-void ArgumentCoder<FixedPositionViewportConstraints>::encode(Encoder& encoder, const FixedPositionViewportConstraints& viewportConstraints)
-{
-    encoder << viewportConstraints.alignmentOffset();
-    encoder << viewportConstraints.anchorEdges();
-
-    encoder << viewportConstraints.viewportRectAtLastLayout();
-    encoder << viewportConstraints.layerPositionAtLastLayout();
-}
-
-bool ArgumentCoder<FixedPositionViewportConstraints>::decode(Decoder& decoder, FixedPositionViewportConstraints& viewportConstraints)
-{
-    FloatSize alignmentOffset;
-    if (!decoder.decode(alignmentOffset))
-        return false;
-    
-    ViewportConstraints::AnchorEdges anchorEdges;
-    if (!decoder.decode(anchorEdges))
-        return false;
-
-    FloatRect viewportRectAtLastLayout;
-    if (!decoder.decode(viewportRectAtLastLayout))
-        return false;
-
-    FloatPoint layerPositionAtLastLayout;
-    if (!decoder.decode(layerPositionAtLastLayout))
-        return false;
-
-    viewportConstraints = FixedPositionViewportConstraints();
-    viewportConstraints.setAlignmentOffset(alignmentOffset);
-    viewportConstraints.setAnchorEdges(anchorEdges);
-
-    viewportConstraints.setViewportRectAtLastLayout(viewportRectAtLastLayout);
-    viewportConstraints.setLayerPositionAtLastLayout(layerPositionAtLastLayout);
-    
-    return true;
-}
-
-void ArgumentCoder<StickyPositionViewportConstraints>::encode(Encoder& encoder, const StickyPositionViewportConstraints& viewportConstraints)
-{
-    encoder << viewportConstraints.alignmentOffset();
-    encoder << viewportConstraints.anchorEdges();
-
-    encoder << viewportConstraints.leftOffset();
-    encoder << viewportConstraints.rightOffset();
-    encoder << viewportConstraints.topOffset();
-    encoder << viewportConstraints.bottomOffset();
-
-    encoder << viewportConstraints.constrainingRectAtLastLayout();
-    encoder << viewportConstraints.containingBlockRect();
-    encoder << viewportConstraints.stickyBoxRect();
-
-    encoder << viewportConstraints.stickyOffsetAtLastLayout();
-    encoder << viewportConstraints.layerPositionAtLastLayout();
-}
-
-bool ArgumentCoder<StickyPositionViewportConstraints>::decode(Decoder& decoder, StickyPositionViewportConstraints& viewportConstraints)
-{
-    FloatSize alignmentOffset;
-    if (!decoder.decode(alignmentOffset))
-        return false;
-    
-    ViewportConstraints::AnchorEdges anchorEdges;
-    if (!decoder.decode(anchorEdges))
-        return false;
-    
-    float leftOffset;
-    if (!decoder.decode(leftOffset))
-        return false;
-
-    float rightOffset;
-    if (!decoder.decode(rightOffset))
-        return false;
-
-    float topOffset;
-    if (!decoder.decode(topOffset))
-        return false;
-
-    float bottomOffset;
-    if (!decoder.decode(bottomOffset))
-        return false;
-    
-    FloatRect constrainingRectAtLastLayout;
-    if (!decoder.decode(constrainingRectAtLastLayout))
-        return false;
-
-    FloatRect containingBlockRect;
-    if (!decoder.decode(containingBlockRect))
-        return false;
-
-    FloatRect stickyBoxRect;
-    if (!decoder.decode(stickyBoxRect))
-        return false;
-
-    FloatSize stickyOffsetAtLastLayout;
-    if (!decoder.decode(stickyOffsetAtLastLayout))
-        return false;
-    
-    FloatPoint layerPositionAtLastLayout;
-    if (!decoder.decode(layerPositionAtLastLayout))
-        return false;
-
-    viewportConstraints = StickyPositionViewportConstraints();
-    viewportConstraints.setAlignmentOffset(alignmentOffset);
-    viewportConstraints.setAnchorEdges(anchorEdges);
-
-    viewportConstraints.setLeftOffset(leftOffset);
-    viewportConstraints.setRightOffset(rightOffset);
-    viewportConstraints.setTopOffset(topOffset);
-    viewportConstraints.setBottomOffset(bottomOffset);
-    
-    viewportConstraints.setConstrainingRectAtLastLayout(constrainingRectAtLastLayout);
-    viewportConstraints.setContainingBlockRect(containingBlockRect);
-    viewportConstraints.setStickyBoxRect(stickyBoxRect);
-
-    viewportConstraints.setStickyOffsetAtLastLayout(stickyOffsetAtLastLayout);
-    viewportConstraints.setLayerPositionAtLastLayout(layerPositionAtLastLayout);
 
     return true;
 }
@@ -1089,47 +892,6 @@ WARN_UNUSED_RETURN bool ArgumentCoder<RefPtr<WebCore::FilterOperation>>::decode(
 
 #endif // !USE(COORDINATED_GRAPHICS)
 
-void ArgumentCoder<BlobPart>::encode(Encoder& encoder, const BlobPart& blobPart)
-{
-    encoder << blobPart.type();
-    switch (blobPart.type()) {
-    case BlobPart::Type::Data:
-        encoder << blobPart.data();
-        return;
-    case BlobPart::Type::Blob:
-        encoder << blobPart.url();
-        return;
-    }
-    ASSERT_NOT_REACHED();
-}
-
-std::optional<BlobPart> ArgumentCoder<BlobPart>::decode(Decoder& decoder)
-{
-    std::optional<BlobPart::Type> type;
-    decoder >> type;
-    if (!type)
-        return std::nullopt;
-
-    switch (*type) {
-    case BlobPart::Type::Data: {
-        std::optional<Vector<uint8_t>> data;
-        decoder >> data;
-        if (!data)
-            return std::nullopt;
-        return BlobPart(WTFMove(*data));
-    }
-    case BlobPart::Type::Blob: {
-        URL url;
-        if (!decoder.decode(url))
-            return std::nullopt;
-        return BlobPart(url);
-    }
-    }
-
-    ASSERT_NOT_REACHED();
-    return std::nullopt;
-}
-
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 void ArgumentCoder<MediaPlaybackTargetContext>::encode(Encoder& encoder, const MediaPlaybackTargetContext& target)
 {
@@ -1201,96 +963,6 @@ std::optional<RefPtr<WebCore::SerializedScriptValue>> ArgumentCoder<RefPtr<WebCo
     return { scriptValue };
 }
 
-#if ENABLE(SERVICE_WORKER)
-void ArgumentCoder<ServiceWorkerOrClientData>::encode(Encoder& encoder, const ServiceWorkerOrClientData& data)
-{
-    bool isServiceWorkerData = std::holds_alternative<ServiceWorkerData>(data);
-    encoder << isServiceWorkerData;
-    if (isServiceWorkerData)
-        encoder << std::get<ServiceWorkerData>(data);
-    else
-        encoder << std::get<ServiceWorkerClientData>(data);
-}
-
-bool ArgumentCoder<ServiceWorkerOrClientData>::decode(Decoder& decoder, ServiceWorkerOrClientData& data)
-{
-    bool isServiceWorkerData;
-    if (!decoder.decode(isServiceWorkerData))
-        return false;
-    if (isServiceWorkerData) {
-        std::optional<ServiceWorkerData> workerData;
-        decoder >> workerData;
-        if (!workerData)
-            return false;
-
-        data = WTFMove(*workerData);
-    } else {
-        std::optional<ServiceWorkerClientData> clientData;
-        decoder >> clientData;
-        if (!clientData)
-            return false;
-
-        data = WTFMove(*clientData);
-    }
-    return true;
-}
-
-void ArgumentCoder<ServiceWorkerOrClientIdentifier>::encode(Encoder& encoder, const ServiceWorkerOrClientIdentifier& identifier)
-{
-    bool isServiceWorkerIdentifier = std::holds_alternative<ServiceWorkerIdentifier>(identifier);
-    encoder << isServiceWorkerIdentifier;
-    if (isServiceWorkerIdentifier)
-        encoder << std::get<ServiceWorkerIdentifier>(identifier);
-    else
-        encoder << std::get<ScriptExecutionContextIdentifier>(identifier);
-}
-
-bool ArgumentCoder<ServiceWorkerOrClientIdentifier>::decode(Decoder& decoder, ServiceWorkerOrClientIdentifier& identifier)
-{
-    bool isServiceWorkerIdentifier;
-    if (!decoder.decode(isServiceWorkerIdentifier))
-        return false;
-    if (isServiceWorkerIdentifier) {
-        std::optional<ServiceWorkerIdentifier> workerIdentifier;
-        decoder >> workerIdentifier;
-        if (!workerIdentifier)
-            return false;
-
-        identifier = WTFMove(*workerIdentifier);
-    } else {
-        std::optional<ScriptExecutionContextIdentifier> clientIdentifier;
-        decoder >> clientIdentifier;
-        if (!clientIdentifier)
-            return false;
-
-        identifier = WTFMove(*clientIdentifier);
-    }
-    return true;
-}
-
-#endif
-
-#if ENABLE(ATTACHMENT_ELEMENT)
-
-void ArgumentCoder<SerializedAttachmentData>::encode(IPC::Encoder& encoder, const WebCore::SerializedAttachmentData& data)
-{
-    encoder << data.identifier << data.mimeType << data.data;
-}
-
-std::optional<SerializedAttachmentData> ArgumentCoder<WebCore::SerializedAttachmentData>::decode(IPC::Decoder& decoder)
-{
-    auto identifier = decoder.decode<String>();
-    auto mimeType = decoder.decode<String>();
-    auto data = decoder.decode<Ref<SharedBuffer>>();
-
-    if (UNLIKELY(!decoder.isValid()))
-        return std::nullopt;
-
-    return { { WTFMove(*identifier), WTFMove(*mimeType), WTFMove(*data) } };
-}
-
-#endif // ENABLE(ATTACHMENT_ELEMENT)
-
 #if ENABLE(VIDEO)
 void ArgumentCoder<WebCore::SerializedPlatformDataCueValue>::encode(Encoder& encoder, const SerializedPlatformDataCueValue& value)
 {
@@ -1347,11 +1019,10 @@ void ArgumentCoder<WebCore::FragmentedSharedBuffer>::encode(Encoder& encoder, co
         for (const auto& element : buffer)
             encoder.encodeSpan(std::span(element.segment->data(), element.segment->size()));
     } else {
-        SharedMemory::Handle handle;
+        std::optional<SharedMemory::Handle> handle;
         {
             auto sharedMemoryBuffer = SharedMemory::copyBuffer(buffer);
-            if (auto memoryHandle = sharedMemoryBuffer->createHandle(SharedMemory::Protection::ReadOnly))
-                handle = WTFMove(*memoryHandle);
+            handle = sharedMemoryBuffer->createHandle(SharedMemory::Protection::ReadOnly);
         }
         encoder << WTFMove(handle);
     }
@@ -1373,11 +1044,14 @@ std::optional<Ref<WebCore::FragmentedSharedBuffer>> ArgumentCoder<WebCore::Fragm
         return SharedBuffer::create(data);
     }
 
-    SharedMemory::Handle handle;
-    if (!decoder.decode(handle))
+    auto handle = decoder.decode<std::optional<SharedMemory::Handle>>();
+    if (UNLIKELY(!decoder.isValid()))
         return std::nullopt;
 
-    auto sharedMemoryBuffer = SharedMemory::map(WTFMove(handle), SharedMemory::Protection::ReadOnly);
+    if (!*handle)
+        return std::nullopt;
+
+    auto sharedMemoryBuffer = SharedMemory::map(WTFMove(**handle), SharedMemory::Protection::ReadOnly);
     if (!sharedMemoryBuffer)
         return std::nullopt;
 
@@ -1400,35 +1074,21 @@ std::optional<Ref<WebCore::SharedBuffer>> ArgumentCoder<WebCore::SharedBuffer>::
 }
 
 #if ENABLE(SHAREABLE_RESOURCE) && PLATFORM(COCOA)
-static ShareableResource::Handle tryConvertToShareableResourceHandle(const ScriptBuffer& script)
+static std::optional<ShareableResource::Handle> tryConvertToShareableResourceHandle(const ScriptBuffer& script)
 {
     if (!script.containsSingleFileMappedSegment())
-        return ShareableResource::Handle { };
+        return std::nullopt;
 
     auto& segment = script.buffer()->begin()->segment;
     auto sharedMemory = SharedMemory::wrapMap(const_cast<uint8_t*>(segment->data()), segment->size(), SharedMemory::Protection::ReadOnly);
     if (!sharedMemory)
-        return ShareableResource::Handle { };
+        return std::nullopt;
 
     auto shareableResource = ShareableResource::create(sharedMemory.releaseNonNull(), 0, segment->size());
     if (!shareableResource)
-        return ShareableResource::Handle { };
-
-    ShareableResource::Handle shareableResourceHandle;
-    if (auto handle = shareableResource->createHandle())
-        return WTFMove(*handle);
-    return ShareableResource::Handle { };
-}
-
-static std::optional<WebCore::ScriptBuffer> decodeScriptBufferAsShareableResourceHandle(Decoder& decoder)
-{
-    ShareableResource::Handle handle;
-    if (!decoder.decode(handle) || handle.isNull())
         return std::nullopt;
-    auto buffer = WTFMove(handle).tryWrapInSharedBuffer();
-    if (!buffer)
-        return std::nullopt;
-    return WebCore::ScriptBuffer { WTFMove(buffer) };
+
+    return shareableResource->createHandle();
 }
 #endif
 
@@ -1436,12 +1096,10 @@ void ArgumentCoder<WebCore::ScriptBuffer>::encode(Encoder& encoder, const WebCor
 {
 #if ENABLE(SHAREABLE_RESOURCE) && PLATFORM(COCOA)
     auto handle = tryConvertToShareableResourceHandle(script);
-    bool isShareableResourceHandle = !handle.isNull();
-    encoder << isShareableResourceHandle;
-    if (isShareableResourceHandle) {
-        encoder << WTFMove(handle);
+    bool isShareableResourceHandle = !!handle;
+    encoder << WTFMove(handle);
+    if (isShareableResourceHandle)
         return;
-    }
 #endif
     encoder << RefPtr { script.buffer() };
 }
@@ -1449,12 +1107,15 @@ void ArgumentCoder<WebCore::ScriptBuffer>::encode(Encoder& encoder, const WebCor
 std::optional<WebCore::ScriptBuffer> ArgumentCoder<WebCore::ScriptBuffer>::decode(Decoder& decoder)
 {
 #if ENABLE(SHAREABLE_RESOURCE) && PLATFORM(COCOA)
-    std::optional<bool> isShareableResourceHandle;
-    decoder >> isShareableResourceHandle;
-    if (!isShareableResourceHandle)
+    auto handle = decoder.decode<std::optional<ShareableResource::Handle>>();
+    if (UNLIKELY(!decoder.isValid()))
         return std::nullopt;
-    if (*isShareableResourceHandle)
-        return decodeScriptBufferAsShareableResourceHandle(decoder);
+
+    if (*handle) {
+        if (auto buffer = WTFMove(**handle).tryWrapInSharedBuffer())
+            return WebCore::ScriptBuffer { WTFMove(buffer) };
+        return std::nullopt;
+    }
 #endif
 
     if (auto buffer = decoder.decode<RefPtr<FragmentedSharedBuffer>>())
@@ -1600,6 +1261,9 @@ void ArgumentCoder<ControlPart>::encode(Encoder& encoder, const ControlPart& par
     case WebCore::StyleAppearance::SearchFieldCancelButton:
     case WebCore::StyleAppearance::SliderThumbHorizontal:
     case WebCore::StyleAppearance::SliderThumbVertical:
+    case WebCore::StyleAppearance::Switch:
+    case WebCore::StyleAppearance::SwitchThumb:
+    case WebCore::StyleAppearance::SwitchTrack:
         break;
     }
 }
@@ -1721,6 +1385,15 @@ std::optional<Ref<ControlPart>> ArgumentCoder<ControlPart>::decode(Decoder& deco
     case WebCore::StyleAppearance::SliderThumbHorizontal:
     case WebCore::StyleAppearance::SliderThumbVertical:
         return WebCore::SliderThumbPart::create(*type);
+
+    case WebCore::StyleAppearance::Switch:
+        break;
+
+    case WebCore::StyleAppearance::SwitchThumb:
+        return WebCore::SwitchThumbPart::create();
+
+    case WebCore::StyleAppearance::SwitchTrack:
+        return WebCore::SwitchTrackPart::create();
     }
 
     ASSERT_NOT_REACHED();
@@ -2125,7 +1798,7 @@ std::optional<Ref<CSSFilter>> ArgumentCoder<CSSFilter>::decode(Decoder& decoder)
         if (!function)
             return std::nullopt;
 
-        functions.uncheckedAppend(WTFMove(*function));
+        functions.append(WTFMove(*function));
     }
 
     auto filter = CSSFilter::create(WTFMove(functions));
@@ -2251,30 +1924,6 @@ std::optional<Ref<Filter>> ArgumentCoder<Filter>::decode(Decoder& decoder)
     (*filter)->setFilterRegion(*filterRegion);
 
     return filter;
-}
-
-template<typename Encoder>
-void ArgumentCoder<Path>::encode(Encoder& encoder, const Path& path)
-{
-    if (auto* segments = path.segmentsIfExists())
-        encoder << *segments;
-    else
-        encoder << path.segments();
-}
-
-template
-void ArgumentCoder<Path>::encode<Encoder>(Encoder&, const Path&);
-template
-void ArgumentCoder<Path>::encode<StreamConnectionEncoder>(StreamConnectionEncoder&, const Path&);
-
-std::optional<Path> ArgumentCoder<Path>::decode(Decoder& decoder)
-{
-    std::optional<Vector<PathSegment>> segments;
-    decoder >> segments;
-    if (!segments)
-        return std::nullopt;
-
-    return Path(WTFMove(*segments));
 }
 
 #if ENABLE(ENCRYPTED_MEDIA)

@@ -40,9 +40,6 @@ public:
 
     bool isEmpty() const { return m_displayList.isEmpty(); }
 
-    void convertToLuminanceMask() final { }
-    void transformToColorSpace(const DestinationColorSpace&) final { }
-
 private:
     void recordSave() final;
     void recordRestore() final;
@@ -51,15 +48,14 @@ private:
     void recordScale(const FloatSize&) final;
     void recordSetCTM(const AffineTransform&) final;
     void recordConcatenateCTM(const AffineTransform&) final;
-    void recordSetInlineFillColor(SRGBA<uint8_t>) final;
-    void recordSetInlineStrokeColor(SRGBA<uint8_t>) final;
-    void recordSetStrokeThickness(float) final;
+    void recordSetInlineFillColor(PackedColor::RGBA) final;
+    void recordSetInlineStroke(SetInlineStroke&&) final;
     void recordSetState(const GraphicsContextState&) final;
     void recordSetLineCap(LineCap) final;
     void recordSetLineDash(const DashArray&, float dashOffset) final;
     void recordSetLineJoin(LineJoin) final;
     void recordSetMiterLimit(float) final;
-    void recordClearShadow() final;
+    void recordClearDropShadow() final;
     void recordResetClip() final;
     void recordClip(const FloatRect&) final;
     void recordClipRoundedRect(const FloatRoundedRect&) final;
@@ -71,10 +67,10 @@ private:
     void recordDrawFilteredImageBuffer(ImageBuffer*, const FloatRect& sourceImageRect, Filter&) final;
     void recordDrawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode) final;
     void recordDrawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final;
-    void recordDrawImageBuffer(ImageBuffer&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) final;
-    void recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) final;
+    void recordDrawImageBuffer(ImageBuffer&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) final;
+    void recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) final;
     void recordDrawSystemImage(SystemImage&, const FloatRect&) final;
-    void recordDrawPattern(RenderingResourceIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
+    void recordDrawPattern(RenderingResourceIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) final;
     void recordBeginTransparencyLayer(float) final;
     void recordEndTransparencyLayer() final;
     void recordDrawRect(const FloatRect&, float) final;
@@ -107,7 +103,7 @@ private:
     void recordStrokeRect(const FloatRect&, float) final;
 #if ENABLE(INLINE_PATH_DATA)
     void recordStrokeLine(const PathDataLine&) final;
-    void recordStrokeLineWithColorAndThickness(const PathDataLine&, SRGBA<uint8_t>, float thickness) final;
+    void recordStrokeLineWithColorAndThickness(const PathDataLine&, SetInlineStroke&&) final;
     void recordStrokeArc(const PathArc&) final;
     void recordStrokeQuadCurve(const PathDataQuadCurve&) final;
     void recordStrokeBezierCurve(const PathDataBezierCurve&) final;
@@ -131,10 +127,9 @@ private:
     bool recordResourceUse(Gradient&) final;
     bool recordResourceUse(Filter&) final;
 
-    template<typename T, class... Args>
-    void append(Args&&... args)
+    void append(Item&& item)
     {
-        m_displayList.append<T>(std::forward<Args>(args)...);
+        m_displayList.append(WTFMove(item));
     }
 
     DisplayList& m_displayList;

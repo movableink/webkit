@@ -67,8 +67,8 @@ using namespace HTMLNames;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTable);
 
-RenderTable::RenderTable(Element& element, RenderStyle&& style)
-    : RenderBlock(element, WTFMove(style), 0)
+RenderTable::RenderTable(Type type, Element& element, RenderStyle&& style)
+    : RenderBlock(type, element, WTFMove(style), 0)
     , m_columnPos(1, 0)
     , m_currentBorder(nullptr)
     , m_collapsedBordersValid(false)
@@ -84,10 +84,11 @@ RenderTable::RenderTable(Element& element, RenderStyle&& style)
     , m_columnOffsetHeight(-1)
 {
     setChildrenInline(false);
+    ASSERT(isRenderTable());
 }
 
-RenderTable::RenderTable(Document& document, RenderStyle&& style)
-    : RenderBlock(document, WTFMove(style), 0)
+RenderTable::RenderTable(Type type, Document& document, RenderStyle&& style)
+    : RenderBlock(type, document, WTFMove(style), 0)
     , m_columnPos(1, 0)
     , m_currentBorder(nullptr)
     , m_collapsedBordersValid(false)
@@ -101,6 +102,7 @@ RenderTable::RenderTable(Document& document, RenderStyle&& style)
     , m_borderEnd(0)
 {
     setChildrenInline(false);
+    ASSERT(isRenderTable());
 }
 
 RenderTable::~RenderTable() = default;
@@ -152,7 +154,7 @@ void RenderTable::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
     }
 
     // If border was changed, invalidate collapsed borders cache.
-    if (oldStyle && oldStyle->border() != style().border())
+    if (oldStyle && !oldStyle->borderIsEquivalentForPainting(style()))
         invalidateCollapsedBorders();
 }
 
@@ -234,7 +236,7 @@ void RenderTable::addColumn(const RenderTableCol*)
     invalidateCachedColumns();
 }
 
-void RenderTable::removeColumn(const RenderTableCol*)
+void RenderTable::invalidateColumns()
 {
     invalidateCachedColumns();
     // We don't really need to recompute our sections, but we need to update our
@@ -751,7 +753,7 @@ void RenderTable::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     info.updateSubtreePaintRootForChildren(this);
 
     for (auto& box : childrenOfType<RenderBox>(*this)) {
-        if (!box.hasSelfPaintingLayer() && (box.isTableSection() || box.isTableCaption())) {
+        if (!box.hasSelfPaintingLayer() && (box.isRenderTableSection() || box.isRenderTableCaption())) {
             LayoutPoint childPoint = flipForWritingModeForChild(box, paintOffset);
             box.paint(info, childPoint);
         }
@@ -1612,7 +1614,7 @@ bool RenderTable::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     // Check kids first.
     if (!hasNonVisibleOverflow() || locationInContainer.intersects(overflowClipRect(adjustedLocation, nullptr))) {
         for (RenderObject* child = lastChild(); child; child = child->previousSibling()) {
-            if (is<RenderBox>(*child) && !downcast<RenderBox>(*child).hasSelfPaintingLayer() && (child->isTableSection() || child->isTableCaption())) {
+            if (is<RenderBox>(*child) && !downcast<RenderBox>(*child).hasSelfPaintingLayer() && (child->isRenderTableSection() || child->isRenderTableCaption())) {
                 LayoutPoint childPoint = flipForWritingModeForChild(*downcast<RenderBox>(child), adjustedLocation);
                 if (child->nodeAtPoint(request, result, locationInContainer, childPoint, action)) {
                     updateHitTestResult(result, toLayoutPoint(locationInContainer.point() - childPoint));
@@ -1635,7 +1637,7 @@ bool RenderTable::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
 
 RenderPtr<RenderTable> RenderTable::createTableWithStyle(Document& document, const RenderStyle& style)
 {
-    auto table = createRenderer<RenderTable>(document, RenderStyle::createAnonymousStyleWithDisplay(style, style.display() == DisplayType::Inline ? DisplayType::InlineTable : DisplayType::Table));
+    auto table = createRenderer<RenderTable>(Type::Table, document, RenderStyle::createAnonymousStyleWithDisplay(style, style.display() == DisplayType::Inline ? DisplayType::InlineTable : DisplayType::Table));
     table->initializeStyle();
     return table;
 }

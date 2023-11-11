@@ -29,6 +29,7 @@
 #include "FontPaletteValues.h"
 #include "MediaQuery.h"
 #include "StyleRuleType.h"
+#include "css/CSSSelector.h"
 #include <map>
 #include <variant>
 #include <wtf/Ref.h>
@@ -73,6 +74,7 @@ public:
     bool isLayerRule() const { return type() == StyleRuleType::LayerBlock || type() == StyleRuleType::LayerStatement; }
     bool isContainerRule() const { return type() == StyleRuleType::Container; }
     bool isPropertyRule() const { return type() == StyleRuleType::Property; }
+    bool isScopeRule() const { return type() == StyleRuleType::Scope; }
 
     Ref<StyleRuleBase> copy() const;
 
@@ -196,10 +198,10 @@ private:
 
 class StyleRuleFontPaletteValues final : public StyleRuleBase {
 public:
-    static Ref<StyleRuleFontPaletteValues> create(const AtomString& name, const AtomString& fontFamily, std::optional<FontPaletteIndex> basePalette, Vector<FontPaletteValues::OverriddenColor>&&);
+    static Ref<StyleRuleFontPaletteValues> create(const AtomString& name, Vector<AtomString>&& fontFamilies, std::optional<FontPaletteIndex> basePalette, Vector<FontPaletteValues::OverriddenColor>&&);
 
     const AtomString& name() const { return m_name; }
-    const AtomString& fontFamily() const { return m_fontFamily; }
+    const Vector<AtomString>& fontFamilies() const { return m_fontFamilies; }
     const FontPaletteValues& fontPaletteValues() const { return m_fontPaletteValues; }
     std::optional<FontPaletteIndex> basePalette() const { return m_fontPaletteValues.basePalette(); }
     const Vector<FontPaletteValues::OverriddenColor>& overrideColors() const { return m_fontPaletteValues.overrideColors(); }
@@ -207,11 +209,11 @@ public:
     Ref<StyleRuleFontPaletteValues> copy() const { return adoptRef(*new StyleRuleFontPaletteValues(*this)); }
 
 private:
-    StyleRuleFontPaletteValues(const AtomString& name, const AtomString& fontFamily, std::optional<FontPaletteIndex> basePalette, Vector<FontPaletteValues::OverriddenColor>&& overrideColors);
+    StyleRuleFontPaletteValues(const AtomString& name, Vector<AtomString>&& fontFamilies, std::optional<FontPaletteIndex> basePalette, Vector<FontPaletteValues::OverriddenColor>&& overrideColors);
     StyleRuleFontPaletteValues(const StyleRuleFontPaletteValues&) = default;
 
     AtomString m_name;
-    AtomString m_fontFamily;
+    Vector<AtomString> m_fontFamilies;
     FontPaletteValues m_fontPaletteValues;
 };
 
@@ -381,6 +383,23 @@ private:
     Descriptor m_descriptor;
 };
 
+class StyleRuleScope final : public StyleRuleGroup {
+public:
+    static Ref<StyleRuleScope> create(CSSSelectorList&&, CSSSelectorList&&, Vector<Ref<StyleRuleBase>>&&);
+    ~StyleRuleScope();
+    Ref<StyleRuleScope> copy() const;
+
+    const CSSSelectorList& scopeStart() const;
+    const CSSSelectorList& scopeEnd() const;
+
+private:
+    StyleRuleScope(CSSSelectorList&&, CSSSelectorList&&, Vector<Ref<StyleRuleBase>>&&);
+    StyleRuleScope(const StyleRuleScope&);
+
+    CSSSelectorList m_scopeStart;
+    CSSSelectorList m_scopeEnd;
+};
+
 // This is only used by the CSS parser.
 class StyleRuleCharset final : public StyleRuleBase {
 public:
@@ -518,3 +537,6 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleProperty)
     static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isPropertyRule(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleScope)
+    static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isScopeRule(); }
+SPECIALIZE_TYPE_TRAITS_END()

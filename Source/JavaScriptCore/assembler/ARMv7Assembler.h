@@ -571,6 +571,7 @@ private:
         OP_BKPT             = 0xBE00,
         OP_IT               = 0xBF00,
         OP_NOP_T1           = 0xBF00,
+        OP_UDF              = 0xDE00
     } OpcodeID;
 
     typedef enum {
@@ -1006,6 +1007,11 @@ public:
     void bkpt(uint8_t imm = 0)
     {
         m_formatter.oneWordOp8Imm8(OP_BKPT, imm);
+    }
+
+    void udf(uint8_t imm = 0)
+    {
+        m_formatter.oneWordOp8Imm8(OP_UDF, imm);
     }
 
     static bool isBkpt(void* address)
@@ -2244,6 +2250,12 @@ public:
         // boolean values are 64bit (toInt, unsigned, roundZero)
         m_formatter.vfpOp(OP_VCVT_FPIVFP, OP_VCVT_FPIVFPb, true, vcvtOp(true, false, true), rd, rm);
     }
+
+    void vcvt_floatingPointToSignedNearest(FPSingleRegisterID rd, FPDoubleRegisterID rm)
+    {
+        // boolean values are 64bit (toInt, unsigned, roundZero)
+        m_formatter.vfpOp(OP_VCVT_FPIVFP, OP_VCVT_FPIVFPb, true, vcvtOp(true, false, false), rd, rm);
+    }
     
     void vcvt_floatingPointToUnsigned(FPSingleRegisterID rd, FPDoubleRegisterID rm)
     {
@@ -2750,7 +2762,13 @@ public:
         cacheFlush(ptr - 2, sizeof(uint16_t) * 2);
 #endif
     }
-    
+
+    static void replaceWithNops(void* instructionStart, size_t memoryToFillWithNopsInBytes)
+    {
+        fillNops<performJITMemcpy>(instructionStart, memoryToFillWithNopsInBytes);
+        cacheFlush(instructionStart, memoryToFillWithNopsInBytes);
+    }
+
     static ptrdiff_t maxJumpReplacementSize()
     {
 #if OS(LINUX)

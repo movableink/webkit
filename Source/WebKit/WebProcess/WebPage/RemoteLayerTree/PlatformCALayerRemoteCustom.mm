@@ -62,7 +62,7 @@ Ref<PlatformCALayerRemote> PlatformCALayerRemoteCustom::create(WebCore::HTMLVide
 #endif
 
 PlatformCALayerRemoteCustom::PlatformCALayerRemoteCustom(HTMLVideoElement& videoElement, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
-    : PlatformCALayerRemote(LayerTypeAVPlayerLayer, owner, context)
+    : PlatformCALayerRemote(PlatformCALayer::LayerType::LayerTypeAVPlayerLayer, owner, context)
 {
     m_layerHostingContext = LayerHostingContext::createTransportLayerForRemoteHosting(videoElement.layerHostingContextID());
     m_hasVideo = true;
@@ -111,9 +111,12 @@ uint32_t PlatformCALayerRemoteCustom::hostingContextID()
 void PlatformCALayerRemoteCustom::populateCreationProperties(RemoteLayerTreeTransaction::LayerCreationProperties& properties, const RemoteLayerTreeContext& context, PlatformCALayer::LayerType type)
 {
     PlatformCALayerRemote::populateCreationProperties(properties, context, type);
-    properties.hostingContextID = hostingContextID();
-    properties.hostingDeviceScaleFactor = context.deviceScaleFactor();
-    properties.preservesFlip = YES;
+    ASSERT(std::holds_alternative<RemoteLayerTreeTransaction::LayerCreationProperties::NoAdditionalData>(properties.additionalData));
+    properties.additionalData = RemoteLayerTreeTransaction::LayerCreationProperties::CustomData {
+        .hostingContextID = hostingContextID(),
+        .hostingDeviceScaleFactor = context.deviceScaleFactor(),
+        .preservesFlip = true
+    };
 }
 
 Ref<WebCore::PlatformCALayer> PlatformCALayerRemoteCustom::clone(PlatformCALayerClient* owner) const
@@ -121,7 +124,7 @@ Ref<WebCore::PlatformCALayer> PlatformCALayerRemoteCustom::clone(PlatformCALayer
     RetainPtr<CALayer> clonedLayer;
     bool copyContents = true;
 
-    if (layerType() == LayerTypeAVPlayerLayer) {
+    if (layerType() == PlatformCALayer::LayerType::LayerTypeAVPlayerLayer) {
         
         if (PAL::isAVFoundationFrameworkAvailable() && [platformLayer() isKindOfClass:PAL::getAVPlayerLayerClass()]) {
             clonedLayer = adoptNS([PAL::allocAVPlayerLayerInstance() init]);

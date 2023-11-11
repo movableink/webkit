@@ -27,20 +27,25 @@
 
 #if PLATFORM(IOS_FAMILY)
 
+#import "CGImagePixelReader.h"
+#import "InstanceMethodSwizzler.h"
 #import "PlatformUtilities.h"
 #import "TestCocoa.h"
 #import "TestInputDelegate.h"
 #import "TestNavigationDelegate.h"
 #import "TestProtocol.h"
 #import "TestWKWebView.h"
-#import "UIKitSPI.h"
+#import "UIKitSPIForTesting.h"
 #import "UserInterfaceSwizzler.h"
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <WebKitLegacy/WebEvent.h>
 #import <cmath>
+#import <pal/cocoa/CoreTelephonySoftLink.h>
+#import <pal/spi/cocoa/NSAttributedStringSPI.h>
 
 namespace TestWebKitAPI {
 
@@ -273,11 +278,6 @@ TEST(KeyboardInputTests, FormNavigationAssistantBarButtonItems)
 
     EXPECT_EQ(2U, [webView lastTrailingBarButtonGroup].barButtonItems.count);
     EXPECT_FALSE([webView lastTrailingBarButtonGroup].hidden);
-
-    if (![UIWebFormAccessory instancesRespondToSelector:@selector(setNextPreviousItemsVisible:)]) {
-        // The rest of this test requires UIWebFormAccessory to be able to show or hide its next and previous items.
-        return;
-    }
 
     [webView _setEditable:YES];
     EXPECT_TRUE([webView lastTrailingBarButtonGroup].hidden);
@@ -794,7 +794,7 @@ TEST(KeyboardInputTests, TestWebViewAccessoryDoneDuringStrongPasswordAssistance)
     [webView synchronouslyLoadHTMLString:@"<input type='password' id='input'>"];
     [webView evaluateJavaScriptAndWaitForInputSessionToChange:@"document.getElementById('input').focus()"];
     EXPECT_WK_STREQ("INPUT", [webView stringByEvaluatingJavaScript:@"document.activeElement.tagName"]);
-    [(id <UIWebFormAccessoryDelegate>)[webView textInputContentView] accessoryDone];
+    [webView dismissFormAccessoryView];
     EXPECT_WK_STREQ("BODY", [webView stringByEvaluatingJavaScript:@"document.activeElement.tagName"]);
     EXPECT_TRUE([webView _contentViewIsFirstResponder]);
 }
@@ -1048,6 +1048,148 @@ TEST(KeyboardInputTests, NoCrashWhenDiscardingMarkedText)
 
     Util::runFor(100_ms);
 }
+
+#if HAVE(REDESIGNED_TEXT_CURSOR)
+
+TEST(KeyboardInputTests, MarkedTextSegmentsWithUnderlines)
+{
+    auto frame = CGRectMake(0, 0, 100, 100);
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:frame configuration:configuration.get() addToWindow:NO]);
+
+    auto window = adoptNS([[UIWindow alloc] initWithFrame:[webView frame]]);
+    [window addSubview:webView.get()];
+
+    [webView _setEditable:YES];
+    [webView synchronouslyLoadHTMLString:@"<meta name='viewport' content='width=device-width'><meta charset='utf-8'><body>なんですか？</body>"];
+    [webView selectAll:nil];
+
+    auto setMarkedTextWithUnderlines = [&](NSUnderlineStyle firstUnderlineStyle, NSUnderlineStyle secondUnderlineStyle) {
+        auto composition = adoptNS([[NSMutableAttributedString alloc] initWithString:@"なんですか？"]);
+        [composition addAttributes:@{
+            NSMarkedClauseSegmentAttributeName: @(0),
+            NSUnderlineStyleAttributeName: @(firstUnderlineStyle),
+            NSUnderlineColorAttributeName: UIColor.tintColor
+        } range:NSMakeRange(0, 5)];
+
+        [composition addAttributes:@{
+            NSMarkedClauseSegmentAttributeName: @(1),
+            NSUnderlineStyleAttributeName: @(secondUnderlineStyle),
+            NSUnderlineColorAttributeName: UIColor.tintColor
+        } range:NSMakeRange(5, 1)];
+
+        [[webView textInputContentView] setAttributedMarkedText:composition.get() selectedRange:NSMakeRange(0, 6)];
+    };
+
+    setMarkedTextWithUnderlines(NSUnderlineStyleSingle, NSUnderlineStyleThick);
+    [webView waitForNextPresentationUpdate];
+
+    auto snapshotConfiguration = adoptNS([[WKSnapshotConfiguration alloc] init]);
+    [snapshotConfiguration setAfterScreenUpdates:YES];
+
+    auto takeSnapshot = [&] {
+        __block RetainPtr<CGImage> result;
+        __block bool done = false;
+        [webView takeSnapshotWithConfiguration:snapshotConfiguration.get() completionHandler:^(UIImage *snapshot, NSError *error) {
+            result = snapshot.CGImage;
+            done = true;
+        }];
+        Util::run(&done);
+        return result;
+    };
+
+    auto snapshotBefore = takeSnapshot();
+
+    setMarkedTextWithUnderlines(NSUnderlineStyleThick, NSUnderlineStyleSingle);
+    [webView waitForNextPresentationUpdate];
+
+    auto snapshotAfter = takeSnapshot();
+
+    CGImagePixelReader snapshotReaderBefore { snapshotBefore.get() };
+    CGImagePixelReader snapshotReaderAfter { snapshotAfter.get() };
+
+    unsigned numberOfDifferentPixels = 0;
+    for (int x = 0; x < 200; ++x) {
+        for (int y = 0; y < 200; ++y) {
+            if (snapshotReaderBefore.at(x, y) != snapshotReaderAfter.at(x, y))
+                numberOfDifferentPixels++;
+        }
+    }
+    EXPECT_GT(numberOfDifferentPixels, 0U);
+}
+
+#endif // HAVE(REDESIGNED_TEXT_CURSOR)
+
+#if HAVE(ESIM_AUTOFILL_SYSTEM_SUPPORT)
+
+static BOOL allowESIMAutoFillForWebKitDomains(id, SEL, NSString *domain, NSError **)
+{
+    return [domain isEqualToString:@"webkit.org"];
+}
+
+TEST(KeyboardInputTests, DeviceEIDAndIMEIAutoFill)
+{
+    auto clientClass = PAL::getCoreTelephonyClientClass();
+    auto autoFillAllowedSelector = @selector(isAutofilleSIMIdAllowedForDomain:error:);
+    if (![clientClass instancesRespondToSelector:autoFillAllowedSelector]) {
+        // Skip this test altogether if system support is missing.
+        return;
+    }
+
+    InstanceMethodSwizzler swizzler { clientClass, autoFillAllowedSelector, reinterpret_cast<IMP>(allowESIMAutoFillForWebKitDomains) };
+    [WKWebView _setApplicationBundleIdentifier:@"org.webkit.SomeTelephonyApp"];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
+    auto navigationDelegate = adoptNS([TestNavigationDelegate new]);
+    auto inputDelegate = adoptNS([TestInputDelegate new]);
+    [inputDelegate setFocusStartsInputSessionPolicyHandler:[](WKWebView *, id<_WKFocusedElementInfo>) {
+        return _WKFocusStartsInputSessionPolicyAllow;
+    }];
+    __block bool didStartInputSession = false;
+    [inputDelegate setDidStartInputSessionHandler:^(WKWebView *, id<_WKFormInputSession>) {
+        didStartInputSession = true;
+    }];
+
+    [webView setNavigationDelegate:navigationDelegate.get()];
+    [webView _setInputDelegate:inputDelegate.get()];
+
+    auto loadSimulatedRequest = ^(NSString *urlString) {
+        [webView loadSimulatedRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:urlString]] responseHTMLString:@"<body>"
+            "<input id='imei' type='number' placeholder='imei' autocomplete='device-imei' />"
+            "<input id='eid' type='number' placeholder='eid' autocomplete='device-eid' />"
+            "</body>"];
+        [navigationDelegate waitForDidFinishNavigation];
+    };
+
+    auto focusElementWithID = ^(NSString *identifier) {
+        [webView objectByEvaluatingJavaScript:[NSString stringWithFormat:@"document.getElementById('%@').focus()", identifier]];
+        Util::run(&didStartInputSession);
+    };
+
+    auto blurActiveElement = ^{
+        [webView objectByEvaluatingJavaScript:@"document.activeElement.blur()"];
+        [webView waitForNextPresentationUpdate];
+        didStartInputSession = false;
+    };
+
+    loadSimulatedRequest(@"https://webkit.org"); // AutoFill is allowed here.
+    focusElementWithID(@"imei");
+    EXPECT_WK_STREQ(UITextContentTypeCellularIMEI, [webView _textInputTraits].textContentType);
+
+    blurActiveElement();
+    focusElementWithID(@"eid");
+    EXPECT_WK_STREQ(UITextContentTypeCellularEID, [webView _textInputTraits].textContentType);
+
+    loadSimulatedRequest(@"https://apple.com"); // AutoFill is not allowed here.
+    focusElementWithID(@"imei");
+    EXPECT_NULL([webView _textInputTraits].textContentType);
+
+    blurActiveElement();
+    focusElementWithID(@"eid");
+    EXPECT_NULL([webView _textInputTraits].textContentType);
+}
+
+#endif // HAVE(ESIM_AUTOFILL_SYSTEM_SUPPORT)
 
 } // namespace TestWebKitAPI
 

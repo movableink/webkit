@@ -44,9 +44,14 @@
 #include "XPCEventHandler.h"
 #endif
 
+#if USE(EXTENSIONKIT)
+OBJC_CLASS _SEExtensionProcess;
+#endif
+
 #if PLATFORM(QT)
 #include <QProcess>
 #endif
+
 namespace WebKit {
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
@@ -89,6 +94,9 @@ public:
         HashMap<String, String> extraInitializationData;
         bool nonValidInjectedCodeAllowed { false };
         bool shouldMakeProcessLaunchFailForTesting { false };
+#if USE(EXTENSIONKIT)
+        bool launchAsExtensions { false };
+#endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
         HashMap<CString, SandboxPermission> extraSandboxPaths;
@@ -114,10 +122,15 @@ public:
     void terminateProcess();
     void invalidate();
 
+#if USE(EXTENSIONKIT)
+    RetainPtr<_SEExtensionProcess> extensionProcess() const { return m_process; }
+#endif
+
 private:
     ProcessLauncher(Client*, LaunchOptions&&);
 
     void launchProcess();
+    void finishLaunchingProcess(const char* name);
     void didFinishLaunchingProcess(ProcessID, IPC::Connection::Identifier);
 
     void platformInvalidate();
@@ -130,6 +143,10 @@ private:
 
 #if PLATFORM(COCOA)
     OSObjectPtr<xpc_connection_t> m_xpcConnection;
+#endif
+
+#if USE(EXTENSIONKIT)
+    RetainPtr<_SEExtensionProcess> m_process;
 #endif
 
 #if PLATFORM(WIN)

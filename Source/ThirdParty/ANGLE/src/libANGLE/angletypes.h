@@ -717,8 +717,16 @@ class BlendStateExt final
     void setEquationsIndexed(const size_t index,
                              const size_t otherIndex,
                              const BlendStateExt &other);
-    GLenum getEquationColorIndexed(size_t index) const;
-    GLenum getEquationAlphaIndexed(size_t index) const;
+    BlendEquationType getEquationColorIndexed(size_t index) const
+    {
+        ASSERT(index < mDrawBufferCount);
+        return EquationStorage::GetValueIndexed(index, mEquationColor);
+    }
+    BlendEquationType getEquationAlphaIndexed(size_t index) const
+    {
+        ASSERT(index < mDrawBufferCount);
+        return EquationStorage::GetValueIndexed(index, mEquationAlpha);
+    }
     DrawBufferMask compareEquations(const EquationStorage::Type color,
                                     const EquationStorage::Type alpha) const;
     DrawBufferMask compareEquations(const BlendStateExt &other) const
@@ -729,6 +737,7 @@ class BlendStateExt final
     ///////// Blend Factors /////////
 
     FactorStorage::Type expandFactorValue(const GLenum func) const;
+    FactorStorage::Type expandFactorValue(const gl::BlendFactorType func) const;
     FactorStorage::Type expandSrcColorIndexed(const size_t index) const;
     FactorStorage::Type expandDstColorIndexed(const size_t index) const;
     FactorStorage::Type expandSrcAlphaIndexed(const size_t index) const;
@@ -743,10 +752,26 @@ class BlendStateExt final
                            const GLenum srcAlpha,
                            const GLenum dstAlpha);
     void setFactorsIndexed(const size_t index, const size_t otherIndex, const BlendStateExt &other);
-    GLenum getSrcColorIndexed(size_t index) const;
-    GLenum getDstColorIndexed(size_t index) const;
-    GLenum getSrcAlphaIndexed(size_t index) const;
-    GLenum getDstAlphaIndexed(size_t index) const;
+    BlendFactorType getSrcColorIndexed(size_t index) const
+    {
+        ASSERT(index < mDrawBufferCount);
+        return FactorStorage::GetValueIndexed(index, mSrcColor);
+    }
+    BlendFactorType getDstColorIndexed(size_t index) const
+    {
+        ASSERT(index < mDrawBufferCount);
+        return FactorStorage::GetValueIndexed(index, mDstColor);
+    }
+    BlendFactorType getSrcAlphaIndexed(size_t index) const
+    {
+        ASSERT(index < mDrawBufferCount);
+        return FactorStorage::GetValueIndexed(index, mSrcAlpha);
+    }
+    BlendFactorType getDstAlphaIndexed(size_t index) const
+    {
+        ASSERT(index < mDrawBufferCount);
+        return FactorStorage::GetValueIndexed(index, mDstAlpha);
+    }
     DrawBufferMask compareFactors(const FactorStorage::Type srcColor,
                                   const FactorStorage::Type dstColor,
                                   const FactorStorage::Type srcAlpha,
@@ -773,6 +798,11 @@ class BlendStateExt final
     constexpr DrawBufferMask getUsesAdvancedBlendEquationMask() const
     {
         return mUsesAdvancedBlendEquationMask;
+    }
+
+    constexpr DrawBufferMask getUsesExtendedBlendFactorMask() const
+    {
+        return mUsesExtendedBlendFactorMask;
     }
 
     constexpr uint8_t getDrawBufferCount() const { return mDrawBufferCount; }
@@ -819,17 +849,20 @@ class BlendStateExt final
     // Cache of whether the blend equation for each index is from KHR_blend_equation_advanced.
     DrawBufferMask mUsesAdvancedBlendEquationMask;
 
+    // Cache of whether the blend factor for each index is from EXT_blend_func_extended.
+    DrawBufferMask mUsesExtendedBlendFactorMask;
+
     uint8_t mDrawBufferCount;
 
-    ANGLE_MAYBE_UNUSED_PRIVATE_FIELD uint32_t kUnused = 0;
+    ANGLE_MAYBE_UNUSED_PRIVATE_FIELD uint8_t kUnused[3] = {};
 };
 
 static_assert(sizeof(BlendStateExt) == sizeof(uint64_t) +
                                            (sizeof(BlendStateExt::FactorStorage::Type) * 4 +
                                             sizeof(BlendStateExt::EquationStorage::Type) * 2 +
                                             sizeof(BlendStateExt::ColorMaskStorage::Type) * 2 +
-                                            sizeof(DrawBufferMask) * 3 + sizeof(uint8_t)) +
-                                           sizeof(uint32_t),
+                                            sizeof(DrawBufferMask) * 4 + sizeof(uint8_t)) +
+                                           sizeof(uint8_t) * 3,
               "The BlendStateExt class must not contain gaps.");
 
 // Used in StateCache
@@ -940,6 +973,9 @@ using RenderToTextureImageMap = angle::PackedEnumMap<RenderToTextureImageIndex, 
 constexpr size_t kCubeFaceCount = 6;
 
 template <typename T>
+using CubeFaceArray = std::array<T, kCubeFaceCount>;
+
+template <typename T>
 using TextureTypeMap = angle::PackedEnumMap<TextureType, T>;
 using TextureMap     = TextureTypeMap<BindingPointer<Texture>>;
 
@@ -989,6 +1025,8 @@ using SupportedSampleSet = std::set<GLuint>;
 template <typename T>
 using TransformFeedbackBuffersArray =
     std::array<T, gl::IMPLEMENTATION_MAX_TRANSFORM_FEEDBACK_BUFFERS>;
+
+using ClipDistanceEnableBits = angle::BitSet32<IMPLEMENTATION_MAX_CLIP_DISTANCES>;
 
 template <typename T>
 using QueryTypeMap = angle::PackedEnumMap<QueryType, T>;
@@ -1147,27 +1185,33 @@ namespace angle
 // Since the function is called without any locks, care must be taken to minimize the amount of work
 // in such calls and ensure thread safety (for example by using fine grained locks inside the call
 // itself).
+//
+// Some entry points pass a void pointer argument to UnlockedTailCall::run method intended to
+// contain the return value filled by the backend, the rest of the entry points pass in a
+// nullptr.  Regardless, Display::terminate runs pending tail calls passing in a nullptr, so
+// the tail calls that return a value in the argument still have to guard against a nullptr
+// parameter.
 class UnlockedTailCall final : angle::NonCopyable
 {
   public:
-    using CallType = std::function<void(void)>;
+    using CallType = std::function<void(void *)>;
 
     UnlockedTailCall();
     ~UnlockedTailCall();
 
     void add(CallType &&call);
-    ANGLE_INLINE void run()
+    ANGLE_INLINE void run(void *resultOut)
     {
         if (!mCalls.empty())
         {
-            runImpl();
+            runImpl(resultOut);
         }
     }
 
     bool any() const { return !mCalls.empty(); }
 
   private:
-    void runImpl();
+    void runImpl(void *resultOut);
 
     // Typically, there is only one tail call.  It is possible to end up with 2 tail calls currently
     // with unMakeCurrent destroying both the read and draw surfaces, each adding a tail call in the

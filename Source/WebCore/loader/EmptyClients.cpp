@@ -82,6 +82,7 @@
 #include "UserContentProvider.h"
 #include "VisitedLinkStore.h"
 #include "WebRTCProvider.h"
+#include "WebTransportSession.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <pal/SessionID.h>
 #include <wtf/NeverDestroyed.h>
@@ -611,6 +612,14 @@ void EmptyFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const Navig
 {
 }
 
+void EmptyFrameLoaderClient::broadcastFrameRemovalToOtherProcesses()
+{
+}
+
+void EmptyFrameLoaderClient::broadcastMainFrameURLChangeToOtherProcesses(const URL&)
+{
+}
+
 void EmptyFrameLoaderClient::dispatchWillSendSubmitEvent(Ref<FormState>&&)
 {
 }
@@ -919,6 +928,11 @@ ResourceError EmptyFrameLoaderClient::httpsUpgradeRedirectLoopError(const Resour
     return { };
 }
 
+ResourceError EmptyFrameLoaderClient::httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const
+{
+    return { };
+}
+
 ResourceError EmptyFrameLoaderClient::pluginWillHandleLoadError(const ResourceResponse&) const
 {
     return { };
@@ -1109,6 +1123,10 @@ bool EmptyFrameLoaderClient::hasFrameSpecificStorageAccess()
 
 #endif
 
+void EmptyFrameLoaderClient::dispatchLoadEventToOwnerElementInAnotherProcess()
+{
+}
+
 inline EmptyFrameNetworkingContext::EmptyFrameNetworkingContext()
     : FrameNetworkingContext { nullptr }
 {
@@ -1182,6 +1200,14 @@ private:
 class EmptySocketProvider final : public SocketProvider {
 public:
     RefPtr<ThreadableWebSocketChannel> createWebSocketChannel(Document&, WebSocketChannelClient&) final { return nullptr; }
+    void initializeWebTransportSession(ScriptExecutionContext&, const URL&, CompletionHandler<void(RefPtr<WebTransportSession>&&)>&& completionHandler) { completionHandler(nullptr); }
+};
+
+class EmptyHistoryItemClient final : public HistoryItemClient {
+public:
+    static Ref<EmptyHistoryItemClient> create() { return adoptRef(*new EmptyHistoryItemClient); }
+private:
+    void historyItemChanged(const HistoryItem&) { }
 };
 
 PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier> identifier, PAL::SessionID sessionID)
@@ -1205,6 +1231,7 @@ PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier
         makeUniqueRef<DummyStorageProvider>(),
         makeUniqueRef<DummyModelPlayerProvider>(),
         EmptyBadgeClient::create(),
+        EmptyHistoryItemClient::create(),
 #if ENABLE(CONTEXT_MENUS)
         makeUniqueRef<EmptyContextMenuClient>(),
 #endif

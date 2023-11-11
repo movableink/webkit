@@ -98,9 +98,9 @@ GraphicsContextCairo* GraphicsContextCairo::platformContext() const
     return const_cast<GraphicsContextCairo*>(this);
 }
 
-void GraphicsContextCairo::save()
+void GraphicsContextCairo::save(GraphicsContextState::Purpose purpose)
 {
-    GraphicsContext::save();
+    GraphicsContext::save(purpose);
 
     m_cairoStateStack.append(CairoState());
     m_cairoState = &m_cairoStateStack.last();
@@ -108,12 +108,12 @@ void GraphicsContextCairo::save()
     cairo_save(m_cr.get());
 }
 
-void GraphicsContextCairo::restore()
+void GraphicsContextCairo::restore(GraphicsContextState::Purpose purpose)
 {
     if (!stackSize())
         return;
 
-    GraphicsContext::restore();
+    GraphicsContext::restore(purpose);
 
     if (m_cairoStateStack.isEmpty())
         return;
@@ -142,7 +142,7 @@ void GraphicsContextCairo::drawRect(const FloatRect& rect, float borderThickness
     Cairo::drawRect(*this, rect, borderThickness, fillColor(), strokeStyle(), strokeColor());
 }
 
-void GraphicsContextCairo::drawNativeImageInternal(NativeImage& nativeImage, const FloatSize&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+void GraphicsContextCairo::drawNativeImageInternal(NativeImage& nativeImage, const FloatSize&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     auto& state = this->state();
     Cairo::drawPlatformImage(*this, nativeImage.platformImage().get(), destRect, srcRect, { options, state.imageInterpolationQuality() }, state.alpha(), Cairo::ShadowState(state));
@@ -214,7 +214,7 @@ IntRect GraphicsContextCairo::clipBounds() const
 
 void GraphicsContextCairo::clipToImageBuffer(ImageBuffer& buffer, const FloatRect& destRect)
 {
-    if (auto nativeImage = buffer.copyNativeImage(DontCopyBackingStore))
+    if (auto nativeImage = nativeImageForDrawing(buffer))
         Cairo::clipToImageBuffer(*this, nativeImage->platformImage().get(), destRect);
 }
 
@@ -269,11 +269,11 @@ void GraphicsContextCairo::didUpdateState(GraphicsContextState& state)
 
     // FIXME: m_state should not be changed to flip the shadow offset. This can happen when the shadow is applied to the platform context.
     if (state.changes().contains(GraphicsContextState::Change::DropShadow)) {
-        if (state.shadowsIgnoreTransforms()) {
+        auto dropShadow = state.dropShadow();
+        if (dropShadow && state.shadowsIgnoreTransforms()) {
             // Meaning that this graphics context is associated with a CanvasRenderingContext
             // We flip the height since CG and HTML5 Canvas have opposite Y axis
-            auto& shadowOffset = state.dropShadow().offset;
-            m_state.m_dropShadow.offset = { shadowOffset.width(), -shadowOffset.height() };
+            m_state.m_dropShadow = GraphicsDropShadow { { dropShadow->offset.width(), -dropShadow->offset.height() }, dropShadow->radius, dropShadow->color, dropShadow->radiusMode };
         }
     }
 
@@ -373,7 +373,7 @@ void GraphicsContextCairo::fillRectWithRoundedHole(const FloatRect& rect, const 
     Cairo::fillRectWithRoundedHole(*this, rect, roundedHoleRect, Cairo::FillSource(state), Cairo::ShadowState(state));
 }
 
-void GraphicsContextCairo::drawPattern(NativeImage& nativeImage, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
+void GraphicsContextCairo::drawPattern(NativeImage& nativeImage, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
     if (!patternTransform.isInvertible())
         return;

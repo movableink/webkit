@@ -133,10 +133,9 @@ public:
     LayoutRect outlineBoundsForRepaint(const RenderLayerModelObject* /*repaintContainer*/, const RenderGeometryMap*) const final;
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = nullptr) const override;
     
-    FloatRect repaintRectInLocalCoordinates() const override { return borderBoxRect(); }
+    FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const override { return borderBoxRect(); }
     FloatRect objectBoundingBox() const override { return borderBoxRect(); }
 
-    const RenderBlockFlow* blockFormattingContextRoot() const;    
     // Note these functions are not equivalent of childrenOfType<RenderBox>
     RenderBox* parentBox() const;
     RenderBox* firstChildBox() const;
@@ -260,7 +259,7 @@ public:
 
     LayoutUnit constrainBlockMarginInAvailableSpaceOrTrim(const RenderBox& containingBlock, LayoutUnit availableSpace, MarginTrimType marginSide) const;
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const override;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
     
     int reflectionOffset() const;
@@ -354,8 +353,8 @@ public:
     void computeAndSetBlockDirectionMargins(const RenderBlock& containingBlock);
 
     enum RenderBoxFragmentInfoFlags { CacheRenderBoxFragmentInfo, DoNotCacheRenderBoxFragmentInfo };
-    LayoutRect borderBoxRectInFragment(RenderFragmentContainer*, RenderBoxFragmentInfoFlags = CacheRenderBoxFragmentInfo) const;
-    LayoutRect clientBoxRectInFragment(RenderFragmentContainer*) const;
+    LayoutRect borderBoxRectInFragment(const RenderFragmentContainer*, RenderBoxFragmentInfoFlags = CacheRenderBoxFragmentInfo) const;
+    LayoutRect clientBoxRectInFragment(const RenderFragmentContainer*) const;
     RenderFragmentContainer* clampToStartAndEndFragments(RenderFragmentContainer*) const;
     bool hasFragmentRangeInFragmentedFlow() const;
     virtual LayoutUnit offsetFromLogicalTopOfFirstPage() const;
@@ -449,7 +448,7 @@ public:
     inline LayoutUnit availableHeight() const;
 
     WEBCORE_EXPORT virtual int verticalScrollbarWidth() const;
-    WEBCORE_EXPORT int horizontalScrollbarHeight() const;
+    WEBCORE_EXPORT virtual int horizontalScrollbarHeight() const;
     int intrinsicScrollbarLogicalWidth() const;
     inline int scrollbarLogicalWidth() const;
     inline int scrollbarLogicalHeight() const;
@@ -526,6 +525,7 @@ public:
 
     VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
 
+    void removeFloatingAndInvalidateForLayout();
     void removeFloatingOrPositionedChildFromBlockLists();
     
     RenderLayer* enclosingFloatPaintingLayer() const;
@@ -635,7 +635,7 @@ public:
     virtual bool needsLayoutAfterFragmentRangeChange() const { return false; }
 
     bool isGridItem() const { return parent() && parent()->isRenderGrid() && !isExcludedFromNormalLayout(); }
-    bool isFlexItem() const { return parent() && parent()->isFlexibleBox() && !isExcludedFromNormalLayout(); }
+    bool isFlexItem() const { return parent() && parent()->isRenderFlexibleBox() && !isExcludedFromNormalLayout(); }
     inline bool isBlockLevelBox() const;
 
     virtual void adjustBorderBoxRectForPainting(LayoutRect&) { };
@@ -651,13 +651,14 @@ public:
     inline std::optional<LayoutUnit> explicitIntrinsicInnerLogicalHeight() const;
 
     bool establishesIndependentFormattingContext() const override;
-    bool establishesBlockFormattingContext() const;
 
     void updateFloatPainterAfterSelfPaintingLayerChange();
 
+    bool computeHasTransformRelatedProperty(const RenderStyle&) const;
+
 protected:
-    RenderBox(Element&, RenderStyle&&, BaseTypeFlags);
-    RenderBox(Document&, RenderStyle&&, BaseTypeFlags);
+    RenderBox(Type, Element&, RenderStyle&&, BaseTypeFlags);
+    RenderBox(Type, Document&, RenderStyle&&, BaseTypeFlags);
 
     void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
@@ -893,4 +894,4 @@ LayoutUnit synthesizedBaseline(const RenderBox&, const RenderStyle& parentStyle,
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderBox, isBox())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderBox, isRenderBox())

@@ -76,7 +76,6 @@ struct CSSParserContext {
     bool colorMixEnabled { false };
     bool constantPropertiesEnabled { false };
     bool counterStyleAtRuleImageSymbolsEnabled { false };
-    bool cssColor4 { false };
     bool relativeColorSyntaxEnabled { false };
     bool springTimingFunctionEnabled { false };
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
@@ -93,9 +92,12 @@ struct CSSParserContext {
     bool masonryEnabled { false };
     bool cssNestingEnabled { false };
     bool cssPaintingAPIEnabled { false };
+    bool cssScopeAtRuleEnabled { false };
     bool cssTextUnderlinePositionLeftRightEnabled { false };
-    bool cssTextWrapNewValuesEnabled { false };
-    bool cssWordBreakAutoEnabled { false };
+    bool cssWordBreakAutoPhraseEnabled { false };
+    bool popoverAttributeEnabled { false };
+    bool sidewaysWritingModesEnabled { false };
+    bool cssTextWrapPrettyEnabled { false };
 
     // Settings, those affecting properties.
     CSSPropertySettings propertySettings;
@@ -103,9 +105,9 @@ struct CSSParserContext {
     CSSParserContext(CSSParserMode, const URL& baseURL = URL());
     WEBCORE_EXPORT CSSParserContext(const Document&, const URL& baseURL = URL(), const String& charset = emptyString());
     ResolvedURL completeURL(const String&) const;
-};
 
-bool operator==(const CSSParserContext&, const CSSParserContext&);
+    bool operator==(const CSSParserContext&) const = default;
+};
 
 void add(Hasher&, const CSSParserContext&);
 

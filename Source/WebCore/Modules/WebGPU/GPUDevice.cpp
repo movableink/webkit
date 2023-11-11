@@ -118,8 +118,13 @@ GPUDevice::LostPromise& GPUDevice::lost()
         return m_lostPromise;
 
     m_waitingForDeviceLostPromise = true;
+    m_backing->resolveDeviceLostPromise([weakThis = WeakPtr { *this }](WebCore::WebGPU::DeviceLostReason reason) {
+        if (!weakThis)
+            return;
 
-    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=257656 Implement this.
+        auto ref = GPUDeviceLostInfo::create(WebCore::WebGPU::DeviceLostInfo::create(reason, ""_s));
+        weakThis->m_lostPromise->resolve(WTFMove(ref));
+    });
 
     return m_lostPromise;
 }
@@ -134,7 +139,7 @@ Ref<GPUBuffer> GPUDevice::createBuffer(const GPUBufferDescriptor& bufferDescript
 
 Ref<GPUTexture> GPUDevice::createTexture(const GPUTextureDescriptor& textureDescriptor)
 {
-    return GPUTexture::create(m_backing->createTexture(textureDescriptor.convertToBacking()), textureDescriptor.format);
+    return GPUTexture::create(m_backing->createTexture(textureDescriptor.convertToBacking()), textureDescriptor);
 }
 
 static WebGPU::SamplerDescriptor convertToBacking(const std::optional<GPUSamplerDescriptor>& samplerDescriptor)
@@ -246,7 +251,7 @@ Ref<GPURenderBundleEncoder> GPUDevice::createRenderBundleEncoder(const GPURender
 
 Ref<GPUQuerySet> GPUDevice::createQuerySet(const GPUQuerySetDescriptor& querySetDescriptor)
 {
-    return GPUQuerySet::create(m_backing->createQuerySet(querySetDescriptor.convertToBacking()));
+    return GPUQuerySet::create(m_backing->createQuerySet(querySetDescriptor.convertToBacking()), querySetDescriptor);
 }
 
 void GPUDevice::pushErrorScope(GPUErrorFilter errorFilter)

@@ -29,11 +29,13 @@
 
 #include "CDMInstance.h"
 #include "CDMInstanceSession.h"
+#include "ContentKeyGroupDataSource.h"
 #include <wtf/Function.h>
 #include <wtf/Observer.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/WeakHashSet.h>
 
+OBJC_CLASS AVContentKey;
 OBJC_CLASS AVContentKeyReportGroup;
 OBJC_CLASS AVContentKeyRequest;
 OBJC_CLASS AVContentKeySession;
@@ -41,6 +43,8 @@ OBJC_CLASS NSData;
 OBJC_CLASS NSError;
 OBJC_CLASS NSURL;
 OBJC_CLASS WebCoreFPSContentKeySessionDelegate;
+
+OBJC_PROTOCOL(WebAVContentKeyGrouping);
 
 #if !RELEASE_LOG_DISABLED
 namespace WTF {
@@ -54,7 +58,7 @@ class CDMInstanceSessionFairPlayStreamingAVFObjC;
 class CDMPrivateFairPlayStreaming;
 struct CDMMediaCapability;
 
-class AVContentKeySessionDelegateClient {
+class AVContentKeySessionDelegateClient : public CanMakeWeakPtr<AVContentKeySessionDelegateClient> {
 public:
     virtual ~AVContentKeySessionDelegateClient() = default;
     virtual void didProvideRequest(AVContentKeyRequest*) = 0;
@@ -67,11 +71,21 @@ public:
     virtual void sessionIdentifierChanged(NSData*) = 0;
     virtual void groupSessionIdentifierChanged(AVContentKeyReportGroup*, NSData*) = 0;
     virtual void outputObscuredDueToInsufficientExternalProtectionChanged(bool) = 0;
+    virtual void externalProtectionStatusDidChangeForContentKey(AVContentKey *) = 0;
     virtual void externalProtectionStatusDidChangeForContentKeyRequest(AVContentKeyRequest*) = 0;
+
+#if !RELEASE_LOG_DISABLED
+    virtual const Logger& logger() const = 0;
+    virtual const void* logIdentifier() const = 0;
+#endif
 };
 
 class CDMInstanceFairPlayStreamingAVFObjC final : public CDMInstance, public AVContentKeySessionDelegateClient, public CanMakeWeakPtr<CDMInstanceFairPlayStreamingAVFObjC> {
 public:
+    using CanMakeWeakPtr<CDMInstanceFairPlayStreamingAVFObjC>::weakPtrFactory;
+    using CanMakeWeakPtr<CDMInstanceFairPlayStreamingAVFObjC>::WeakValueType;
+    using CanMakeWeakPtr<CDMInstanceFairPlayStreamingAVFObjC>::WeakPtrImplType;
+
     CDMInstanceFairPlayStreamingAVFObjC(const CDMPrivateFairPlayStreaming&);
     virtual ~CDMInstanceFairPlayStreamingAVFObjC() = default;
 
@@ -94,7 +108,7 @@ public:
     NSURL *storageURL() const { return m_storageURL.get(); }
     bool persistentStateAllowed() const { return m_persistentStateAllowed; }
     SharedBuffer* serverCertificate() const { return m_serverCertificate.get(); }
-    AVContentKeySession* contentKeySession();
+    AVContentKeySession *contentKeySession();
 
     RetainPtr<AVContentKeyRequest> takeUnexpectedKeyRequestForInitializationData(const AtomString& initDataType, SharedBuffer& initData);
 
@@ -109,12 +123,14 @@ public:
     void sessionIdentifierChanged(NSData*) final;
     void groupSessionIdentifierChanged(AVContentKeyReportGroup*, NSData*) final;
     void outputObscuredDueToInsufficientExternalProtectionChanged(bool) final;
+    void externalProtectionStatusDidChangeForContentKey(AVContentKey *) final;
     void externalProtectionStatusDidChangeForContentKeyRequest(AVContentKeyRequest*) final;
 
     using Keys = Vector<Ref<SharedBuffer>>;
     CDMInstanceSessionFairPlayStreamingAVFObjC* sessionForKeyIDs(const Keys&) const;
-    CDMInstanceSessionFairPlayStreamingAVFObjC* sessionForGroup(AVContentKeyReportGroup*) const;
-    CDMInstanceSessionFairPlayStreamingAVFObjC* sessionForRequest(AVContentKeyRequest*) const;
+    CDMInstanceSessionFairPlayStreamingAVFObjC* sessionForGroup(WebAVContentKeyGrouping *) const;
+    CDMInstanceSessionFairPlayStreamingAVFObjC* sessionForKey(AVContentKey *) const;
+    CDMInstanceSessionFairPlayStreamingAVFObjC* sessionForRequest(AVContentKeyRequest *) const;
 
     bool isAnyKeyUsable(const Keys&) const;
 
@@ -148,13 +164,16 @@ private:
 #endif
 };
 
-class CDMInstanceSessionFairPlayStreamingAVFObjC final : public CDMInstanceSession, public AVContentKeySessionDelegateClient, public CanMakeWeakPtr<CDMInstanceSessionFairPlayStreamingAVFObjC> {
+class CDMInstanceSessionFairPlayStreamingAVFObjC final
+    : public CDMInstanceSession
+    , public AVContentKeySessionDelegateClient
+    , private ContentKeyGroupDataSource {
 public:
     CDMInstanceSessionFairPlayStreamingAVFObjC(Ref<CDMInstanceFairPlayStreamingAVFObjC>&&);
-    virtual ~CDMInstanceSessionFairPlayStreamingAVFObjC();
+    virtual ~CDMInstanceSessionFairPlayStreamingAVFObjC() = default;
 
     // CDMInstanceSession
-    void requestLicense(LicenseType, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) final;
+    void requestLicense(LicenseType, KeyGroupingStrategy, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) final;
     void updateLicense(const String&, LicenseType, Ref<SharedBuffer>&&, LicenseUpdateCallback&&) final;
     void loadSession(LicenseType, const String&, const String&, LoadSessionCallback&&) final;
     void closeSession(const String&, CloseSessionCallback&&) final;
@@ -175,33 +194,39 @@ public:
     void sessionIdentifierChanged(NSData*) final;
     void groupSessionIdentifierChanged(AVContentKeyReportGroup*, NSData*) final;
     void outputObscuredDueToInsufficientExternalProtectionChanged(bool) final;
+    void externalProtectionStatusDidChangeForContentKey(AVContentKey *) final;
     void externalProtectionStatusDidChangeForContentKeyRequest(AVContentKeyRequest*) final;
 
     using Keys = CDMInstanceFairPlayStreamingAVFObjC::Keys;
     Keys keyIDs();
-    AVContentKeySession* contentKeySession() { return m_session ? m_session.get() : m_instance->contentKeySession(); }
-    AVContentKeyReportGroup* contentKeyReportGroup() { return m_group.get(); }
+    AVContentKeySession *contentKeySession() { return m_session ? m_session.get() : m_instance->contentKeySession(); }
+    WebAVContentKeyGrouping *contentKeyReportGroup() { return m_group.get(); }
 
     struct Request {
         AtomString initType;
         Vector<RetainPtr<AVContentKeyRequest>> requests;
-        bool operator==(const Request& other) const { return initType == other.initType && requests == other.requests; }
+        friend bool operator==(const Request&, const Request&) = default;
     };
 
+    bool hasKey(AVContentKey *) const;
     bool hasRequest(AVContentKeyRequest*) const;
 
     const KeyStatusVector& keyStatuses() const { return m_keyStatuses; }
     KeyStatusVector copyKeyStatuses() const;
 
 private:
-    bool ensureSessionOrGroup();
+    bool ensureSessionOrGroup(KeyGroupingStrategy);
     bool isLicenseTypeSupported(LicenseType) const;
 
-    void updateKeyStatuses(std::optional<PlatformDisplayID> = std::nullopt);
+    void updateKeyStatuses();
     void nextRequest();
-    AVContentKeyRequest* lastKeyRequest() const;
 
-    std::optional<CDMKeyStatus> protectionStatusForDisplayID(AVContentKeyRequest *, std::optional<PlatformDisplayID>) const;
+    AVContentKeyRequest* lastKeyRequest() const;
+    Vector<RetainPtr<AVContentKey>> contentKeys() const;
+    Vector<RetainPtr<AVContentKeyRequest>> contentKeyRequests() const;
+
+    std::optional<CDMKeyStatus> protectionStatusForRequest(AVContentKeyRequest *) const;
+    void updateProtectionStatus();
 
 #if !RELEASE_LOG_DISABLED
     void setLogIdentifier(const void* logIdentifier) final { m_logIdentifier = logIdentifier; }
@@ -210,10 +235,16 @@ private:
     const char* logClassName() const { return "CDMInstanceSessionFairPlayStreamingAVFObjC"; }
 #endif
 
-    void updateProtectionStatusForDisplayID(PlatformDisplayID);
+    // ContentKeyGroupDataSource
+    Vector<RetainPtr<AVContentKey>> contentKeyGroupDataSourceKeys() const final;
+#if !RELEASE_LOG_DISABLED
+    const void* contentKeyGroupDataSourceLogIdentifier() const final;
+    const Logger& contentKeyGroupDataSourceLogger() const final;
+    WTFLogChannel& contentKeyGroupDataSourceLogChannel() const final;
+#endif // !RELEASE_LOG_DISABLED
 
     Ref<CDMInstanceFairPlayStreamingAVFObjC> m_instance;
-    RetainPtr<AVContentKeyReportGroup> m_group;
+    RetainPtr<WebAVContentKeyGrouping> m_group;
     RetainPtr<AVContentKeySession> m_session;
     std::optional<Request> m_currentRequest;
     RetainPtr<WebCoreFPSContentKeySessionDelegate> m_delegate;
@@ -240,7 +271,7 @@ private:
 #endif
 };
 
-}
+} // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_CDM_INSTANCE(WebCore::CDMInstanceFairPlayStreamingAVFObjC, WebCore::CDMInstance::ImplementationType::FairPlayStreaming)
 

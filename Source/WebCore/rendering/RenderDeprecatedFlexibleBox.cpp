@@ -129,8 +129,8 @@ private:
     unsigned m_ordinalIteration;
 };
 
-RenderDeprecatedFlexibleBox::RenderDeprecatedFlexibleBox(Element& element, RenderStyle&& style)
-    : RenderBlock(element, WTFMove(style), 0)
+RenderDeprecatedFlexibleBox::RenderDeprecatedFlexibleBox(Type type, Element& element, RenderStyle&& style)
+    : RenderBlock(type, element, WTFMove(style), 0)
 {
     setChildrenInline(false); // All of our children must be block-level
     m_stretchingChildren = false;
@@ -320,7 +320,7 @@ void RenderDeprecatedFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
         updateLogicalHeight();
 
         if (previousSize != size()
-            || (parent()->isDeprecatedFlexibleBox() && parent()->style().boxOrient() == BoxOrient::Horizontal
+            || (parent()->isRenderDeprecatedFlexibleBox() && parent()->style().boxOrient() == BoxOrient::Horizontal
                 && parent()->style().boxAlign() == BoxAlignment::Stretch))
             relayoutChildren = true;
 
@@ -355,6 +355,8 @@ void RenderDeprecatedFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
             relayoutChildren = true;
 
         layoutPositionedObjects(relayoutChildren || isDocumentElementRenderer());
+
+        updateDescendantTransformsAfterLayout();
 
         computeOverflow(oldClientAfterEdge);
     }

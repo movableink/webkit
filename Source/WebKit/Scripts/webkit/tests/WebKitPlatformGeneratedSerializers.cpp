@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,35 +28,26 @@
 #include "PlatformClass.h"
 
 template<size_t...> struct MembersInCorrectOrder;
-template<size_t onlyOffset> struct MembersInCorrectOrder<onlyOffset> { static constexpr bool value = true; };
+template<size_t onlyOffset> struct MembersInCorrectOrder<onlyOffset> {
+    static constexpr bool value = true;
+};
 template<size_t firstOffset, size_t secondOffset, size_t... remainingOffsets> struct MembersInCorrectOrder<firstOffset, secondOffset, remainingOffsets...> {
     static constexpr bool value = firstOffset > secondOffset ? false : MembersInCorrectOrder<secondOffset, remainingOffsets...>::value;
 };
 
+template<uint64_t...> struct BitsInIncreasingOrder;
+template<uint64_t onlyBit> struct BitsInIncreasingOrder<onlyBit> {
+    static constexpr bool value = true;
+};
+template<uint64_t firstBit, uint64_t secondBit, uint64_t... remainingBits> struct BitsInIncreasingOrder<firstBit, secondBit, remainingBits...> {
+    static constexpr bool value = firstBit == secondBit >> 1 && BitsInIncreasingOrder<secondBit, remainingBits...>::value;
+};
+
 template<bool, bool> struct VirtualTableAndRefCountOverhead;
-template<> struct VirtualTableAndRefCountOverhead<true, true> {
+template<> struct VirtualTableAndRefCountOverhead<true, true> : public RefCounted<VirtualTableAndRefCountOverhead<true, true>> {
     virtual ~VirtualTableAndRefCountOverhead() { }
-    unsigned refCount;
-#if ASSERT_ENABLED
-    bool m_isOwnedByMainThread;
-    bool m_areThreadingChecksEnabled;
-#endif
-#if CHECK_REF_COUNTED_LIFECYCLE
-    bool m_deletionHasBegun;
-    bool m_adoptionIsRequired;
-#endif
 };
-template<> struct VirtualTableAndRefCountOverhead<false, true> {
-    unsigned refCount;
-#if ASSERT_ENABLED
-    bool m_isOwnedByMainThread;
-    bool m_areThreadingChecksEnabled;
-#endif
-#if CHECK_REF_COUNTED_LIFECYCLE
-    bool m_deletionHasBegun;
-    bool m_adoptionIsRequired;
-#endif
-};
+template<> struct VirtualTableAndRefCountOverhead<false, true> : public RefCounted<VirtualTableAndRefCountOverhead<false, true>> { };
 template<> struct VirtualTableAndRefCountOverhead<true, false> {
     virtual ~VirtualTableAndRefCountOverhead() { }
 };
@@ -75,9 +66,10 @@ void ArgumentCoder<WebKit::PlatformClass>::encode(Encoder& encoder, const WebKit
         int value;
     };
     static_assert(sizeof(ShouldBeSameSizeAsPlatformClass) == sizeof(WebKit::PlatformClass));
-    static_assert(MembersInCorrectOrder<0
+    static_assert(MembersInCorrectOrder < 0
         , offsetof(WebKit::PlatformClass, value)
     >::value);
+
     encoder << instance.value;
 }
 

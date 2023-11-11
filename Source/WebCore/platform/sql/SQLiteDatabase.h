@@ -28,12 +28,12 @@
 
 #include <functional>
 #include <sqlite3.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Expected.h>
 #include <wtf/Lock.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Threading.h>
 #include <wtf/UniqueRef.h>
-#include <wtf/WeakPtr.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
@@ -49,7 +49,7 @@ class DatabaseAuthorizer;
 class SQLiteStatement;
 class SQLiteTransaction;
 
-class SQLiteDatabase : public CanMakeWeakPtr<SQLiteDatabase> {
+class SQLiteDatabase : public CanMakeThreadSafeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(SQLiteDatabase);
     friend class SQLiteTransaction;
@@ -68,6 +68,8 @@ public:
     bool isOpen() const { return m_db; }
     WEBCORE_EXPORT void close();
 
+    WEBCORE_EXPORT int executeSlow(StringView);
+    WEBCORE_EXPORT int execute(ASCIILiteral);
     WEBCORE_EXPORT bool executeCommandSlow(StringView);
     WEBCORE_EXPORT bool executeCommand(ASCIILiteral);
     

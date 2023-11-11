@@ -40,7 +40,12 @@
 
 namespace JSC { namespace Wasm {
 
+#if OS(WINDOWS)
+constexpr unsigned numberOfLLIntCalleeSaveRegisters = 3;
+#else
 constexpr unsigned numberOfLLIntCalleeSaveRegisters = 2;
+#endif
+constexpr unsigned numberOfIPIntCalleeSaveRegisters = 3;
 constexpr unsigned numberOfLLIntInternalRegisters = 2;
 
 struct ArgumentLocation {
@@ -184,8 +189,11 @@ public:
             case TypeKind::Eqref:
             case TypeKind::Anyref:
             case TypeKind::Nullref:
+            case TypeKind::Nullfuncref:
+            case TypeKind::Nullexternref:
             case TypeKind::I31ref:
             case TypeKind::Sub:
+            case TypeKind::Subfinal:
             case TypeKind::Rec:
                 RELEASE_ASSERT_NOT_REACHED();
             }
@@ -230,8 +238,11 @@ public:
             case TypeKind::Eqref:
             case TypeKind::Anyref:
             case TypeKind::Nullref:
+            case TypeKind::Nullfuncref:
+            case TypeKind::Nullexternref:
             case TypeKind::I31ref:
             case TypeKind::Sub:
+            case TypeKind::Subfinal:
             case TypeKind::Rec:
                 RELEASE_ASSERT_NOT_REACHED();
             }

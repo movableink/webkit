@@ -28,13 +28,20 @@
 #endif
 
 #import "config.h"
+#import "APIData.h"
 #import "CocoaHelpers.h"
+#import "WKNSData.h"
 
 namespace WebKit {
+
+static NSString * const privacyPreservingDescriptionKey = @"privacyPreservingDescription";
 
 template<>
 NSArray *filterObjects<NSArray>(NSArray *array, bool NS_NOESCAPE (^block)(__kindof id key, __kindof id value))
 {
+    if (!array)
+        return nil;
+
     switch (array.count) {
     case 0:
         return @[ ];
@@ -52,6 +59,9 @@ NSArray *filterObjects<NSArray>(NSArray *array, bool NS_NOESCAPE (^block)(__kind
 template<>
 NSDictionary *filterObjects<NSDictionary>(NSDictionary *dictionary, bool NS_NOESCAPE (^block)(__kindof id key, __kindof id value))
 {
+    if (!dictionary)
+        return nil;
+
     if (!dictionary.count)
         return @{ };
 
@@ -68,6 +78,9 @@ NSDictionary *filterObjects<NSDictionary>(NSDictionary *dictionary, bool NS_NOES
 template<>
 NSSet *filterObjects<NSSet>(NSSet *set, bool NS_NOESCAPE (^block)(__kindof id key, __kindof id value))
 {
+    if (!set)
+        return nil;
+
     if (!set.count)
         return [NSSet set];
 
@@ -79,6 +92,9 @@ NSSet *filterObjects<NSSet>(NSSet *set, bool NS_NOESCAPE (^block)(__kindof id ke
 template<>
 NSArray *mapObjects<NSArray>(NSArray *array, __kindof id NS_NOESCAPE (^block)(__kindof id key, __kindof id value))
 {
+    if (!array)
+        return nil;
+
     switch (array.count) {
     case 0:
         return @[ ];
@@ -104,6 +120,9 @@ NSArray *mapObjects<NSArray>(NSArray *array, __kindof id NS_NOESCAPE (^block)(__
 template<>
 NSDictionary *mapObjects<NSDictionary>(NSDictionary *dictionary, __kindof id NS_NOESCAPE (^block)(__kindof id key, __kindof id value))
 {
+    if (!dictionary)
+        return nil;
+
     if (!dictionary.count)
         return @{ };
 
@@ -120,6 +139,9 @@ NSDictionary *mapObjects<NSDictionary>(NSDictionary *dictionary, __kindof id NS_
 template<>
 NSSet *mapObjects<NSSet>(NSSet *set, __kindof id NS_NOESCAPE (^block)(__kindof id key, __kindof id value))
 {
+    if (!set)
+        return nil;
+
     switch (set.count) {
     case 0:
         return [NSSet set];
@@ -186,6 +208,152 @@ NSSet *objectForKey<NSSet>(NSDictionary *dictionary, id key, bool nilIfEmpty, Cl
     });
 }
 
+// MARK: JSON Helpers
+
+static inline NSJSONReadingOptions toReadingImpl(JSONOptionSet options)
+{
+    NSJSONReadingOptions result = 0;
+    if (options.contains(JSONOptions::FragmentsAllowed))
+        result |= NSJSONReadingFragmentsAllowed;
+    return result;
+}
+
+static inline NSJSONWritingOptions toWritingImpl(JSONOptionSet options)
+{
+    NSJSONWritingOptions result = 0;
+    if (options.contains(JSONOptions::FragmentsAllowed))
+        result |= NSJSONWritingFragmentsAllowed;
+    return result;
+}
+
+bool isValidJSONObject(id object, JSONOptionSet options)
+{
+    if (!object)
+        return false;
+
+    if (options.contains(JSONOptions::FragmentsAllowed))
+        return [object isKindOfClass:NSString.class] || [object isKindOfClass:NSNumber.class] || [object isKindOfClass:NSNull.class] || [NSJSONSerialization isValidJSONObject:object];
+
+    // NSJSONSerialization allows top-level arrays, but we only support dictionaries when not using FragmentsAllowed.
+    return [object isKindOfClass:NSDictionary.class] && [NSJSONSerialization isValidJSONObject:object];
+}
+
+id parseJSON(NSData *json, JSONOptionSet options, NSError **error)
+{
+    if (!json)
+        return nil;
+
+    id result = [NSJSONSerialization JSONObjectWithData:json options:toReadingImpl(options) error:error];
+    if (options.contains(JSONOptions::FragmentsAllowed))
+        return result;
+
+    return dynamic_objc_cast<NSDictionary>(result);
+}
+
+id parseJSON(NSString *json, JSONOptionSet options, NSError **error)
+{
+    return parseJSON([json dataUsingEncoding:NSUTF8StringEncoding], options, error);
+}
+
+id parseJSON(API::Data& json, JSONOptionSet options, NSError **error)
+{
+    return parseJSON(wrapper(json), options, error);
+}
+
+NSString *encodeJSONString(id object, JSONOptionSet options, NSError **error)
+{
+    if (auto *data = encodeJSONData(object, options, error))
+        return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    return nil;
+}
+
+NSData *encodeJSONData(id object, JSONOptionSet options, NSError **error)
+{
+    if (!object)
+        return nil;
+
+    ASSERT(isValidJSONObject(object, options));
+
+    if (!options.contains(JSONOptions::FragmentsAllowed) && ![object isKindOfClass:NSDictionary.class])
+        return nil;
+
+    return [NSJSONSerialization dataWithJSONObject:object options:toWritingImpl(options) error:error];
+}
+
+// MARK: NSDictionary Helpers
+
+NSDictionary *dictionaryWithLowercaseKeys(NSDictionary *dictionary)
+{
+    if (!dictionary.count)
+        return @{ };
+
+    NSMutableDictionary *newDictionary = [NSMutableDictionary dictionaryWithCapacity:dictionary.count];
+    for (NSString *key in dictionary.allKeys) {
+        if (![key isKindOfClass:NSString.class]) {
+            ASSERT_NOT_REACHED();
+            continue;
+        }
+
+        newDictionary[key.lowercaseString] = dictionary[key];
+    }
+
+    return [newDictionary copy];
+}
+
+NSDictionary *mergeDictionaries(NSDictionary *dictionaryA, NSDictionary *dictionaryB)
+{
+    if (!dictionaryB.count)
+        return dictionaryA;
+
+    if (!dictionaryA.count)
+        return dictionaryB;
+
+    NSMutableDictionary *mergedDictionary = [dictionaryA mutableCopy];
+
+    for (id key in dictionaryB.allKeys) {
+        if (!dictionaryA[key])
+            mergedDictionary[key] = dictionaryB[key];
+    }
+
+    return mergedDictionary;
+}
+
+NSDictionary *mergeDictionariesAndSetValues(NSDictionary *dictionaryA, NSDictionary *dictionaryB)
+{
+    if (!dictionaryB.count)
+        return dictionaryA;
+
+    if (!dictionaryA.count)
+        return dictionaryB;
+
+    NSMutableDictionary *newDictionary = [dictionaryA mutableCopy];
+
+    for (id key in dictionaryB.allKeys)
+        newDictionary[key] = dictionaryB[key];
+
+    return [newDictionary copy];
+}
+
+// MARK: NSError Helpers
+
+NSString *privacyPreservingDescription(NSError *error)
+{
+    NSString *privacyPreservingDescription = objectForKey<NSString>(error.userInfo, privacyPreservingDescriptionKey);
+    if (!privacyPreservingDescription) {
+        NSString *domain = error.domain;
+        if (domain.length) {
+            id (^valueProvider)(NSError *err, NSString *userInfoKey) = [NSError userInfoValueProviderForDomain:domain];
+            if (valueProvider)
+                privacyPreservingDescription = valueProvider(error, privacyPreservingDescriptionKey);
+        }
+    }
+
+    if (privacyPreservingDescription)
+        return [NSString stringWithFormat:@"Error Domain=%@ Code=%ld \"%@\"", error.domain, (long)error.code, privacyPreservingDescription];
+
+    return [NSError errorWithDomain:error.domain ?: @"" code:error.code userInfo:nil].description;
+}
+
 NSString *escapeCharactersInString(NSString *string, NSString *charactersToEscape)
 {
     ASSERT(string);
@@ -215,10 +383,10 @@ NSString *escapeCharactersInString(NSString *string, NSString *charactersToEscap
 
 NSDate *toAPI(const WallTime& time)
 {
-    if (std::isnan(time))
+    if (time.isNaN())
         return nil;
 
-    if (std::isinf(time))
+    if (time.isInfinity())
         return NSDate.distantFuture;
 
     return [NSDate dateWithTimeIntervalSince1970:time.secondsSinceEpoch().value()];
@@ -251,6 +419,24 @@ NSArray *toAPIArray(HashSet<String>& set)
         [result addObject:static_cast<NSString *>(element)];
 
     return [result copy];
+}
+
+Vector<String> toImpl(NSArray *array)
+{
+    return Vector<String>(array.count, [array](size_t i) {
+        return (NSString *)array[i];
+    });
+}
+
+HashSet<String> toImplSet(NSArray *array)
+{
+    HashSet<String> result;
+    result.reserveInitialCapacity(array.count);
+
+    for (NSString *element in array)
+        result.addVoid(element);
+
+    return result;
 }
 
 } // namespace WebKit

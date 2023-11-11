@@ -44,7 +44,6 @@ public:
     void updateFromStyle() final;
 
 private:
-    bool isSVGViewportContainer() const final { return true; }
     ASCIILiteral renderName() const final { return "RenderSVGViewportContainer"_s; }
 
     void element() const = delete;
@@ -68,6 +67,6 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGViewportContainer, isSVGViewportContainer())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGViewportContainer, isRenderSVGViewportContainer())
 
 #endif // ENABLE(LAYER_BASED_SVG_ENGINE)

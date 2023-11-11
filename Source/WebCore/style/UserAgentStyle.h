@@ -46,9 +46,11 @@ public:
     static StyleSheetContents* mediaControlsStyleSheet;
     static StyleSheetContents* mediaQueryStyleSheet;
     static StyleSheetContents* horizontalFormControlsStyleSheet;
+    static StyleSheetContents* htmlSwitchControlStyleSheet;
     static StyleSheetContents* plugInsStyleSheet;
     static StyleSheetContents* popoverStyleSheet;
     static StyleSheetContents* counterStylesStyleSheet;
+    static StyleSheetContents* rubyStyleSheet;
 #if ENABLE(FULLSCREEN_API)
     static StyleSheetContents* fullscreenStyleSheet;
 #endif

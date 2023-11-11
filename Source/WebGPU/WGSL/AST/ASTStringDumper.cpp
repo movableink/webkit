@@ -103,7 +103,7 @@ void StringDumper::visit(BindingAttribute& binding)
 
 void StringDumper::visit(BuiltinAttribute& builtin)
 {
-    m_out.print("@builtin(", builtin.name(), ")");
+    m_out.print("@builtin(", builtin.builtin(), ")");
 }
 
 void StringDumper::visit(GroupAttribute& group)
@@ -122,17 +122,7 @@ void StringDumper::visit(LocationAttribute& location)
 
 void StringDumper::visit(StageAttribute& stage)
 {
-    switch (stage.stage()) {
-    case StageAttribute::Stage::Compute:
-        m_out.print("@compute");
-        break;
-    case StageAttribute::Stage::Fragment:
-        m_out.print("@fragment");
-        break;
-    case StageAttribute::Stage::Vertex:
-        m_out.print("@vertex");
-        break;
-    }
+    m_out.print("@", stage.stage());
 }
 
 void StringDumper::visit(WorkgroupSizeAttribute& workgroupSize)
@@ -309,6 +299,12 @@ void StringDumper::visit(AssignmentStatement& statement)
     m_out.print(";");
 }
 
+void StringDumper::visit(CallStatement& statement)
+{
+    visit(statement.call());
+    m_out.print(";");
+}
+
 void StringDumper::visit(CompoundAssignmentStatement& statement)
 {
     m_out.print(m_indent);
@@ -396,7 +392,7 @@ void StringDumper::visit(ForStatement& statement)
 }
 
 // Types
-void StringDumper::visit(ArrayTypeName& type)
+void StringDumper::visit(ArrayTypeExpression& type)
 {
     m_out.print("array");
     if (type.maybeElementType()) {
@@ -410,19 +406,20 @@ void StringDumper::visit(ArrayTypeName& type)
     }
 }
 
-void StringDumper::visit(NamedTypeName& type)
+void StringDumper::visit(ElaboratedTypeExpression& type)
 {
-    m_out.print(type.name());
-}
-
-void StringDumper::visit(ParameterizedTypeName& type)
-{
-    m_out.print(ParameterizedTypeName::baseToString(type.base()), "<");
-    visit(type.elementType());
+    m_out.print(type.base(), "<");
+    bool first = true;
+    for (auto& argument : type.arguments()) {
+        if (!first)
+            m_out.print(", ");
+        first = false;
+        visit(argument);
+    }
     m_out.print(">");
 }
 
-void StringDumper::visit(ReferenceTypeName& type)
+void StringDumper::visit(ReferenceTypeExpression& type)
 {
     visit(type.type());
     m_out.print("&");
@@ -452,11 +449,7 @@ void StringDumper::visit(StructureMember& member)
 
 void StringDumper::visit(VariableQualifier& qualifier)
 {
-    constexpr ASCIILiteral accessMode[]= { "read"_s, "write"_s, "read_write"_s };
-    constexpr ASCIILiteral storageClass[] = { "function"_s, "private"_s, "workgroup"_s, "uniform"_s, "storage"_s };
-    auto sc = WTF::enumToUnderlyingType(qualifier.storageClass());
-    auto am = WTF::enumToUnderlyingType(qualifier.accessMode());
-    m_out.print("<", storageClass[sc], ",", accessMode[am], ">");
+    m_out.print("<", qualifier.addressSpace(), ",", qualifier.accessMode(), ">");
 }
 
 void dumpAST(ShaderModule& shaderModule)

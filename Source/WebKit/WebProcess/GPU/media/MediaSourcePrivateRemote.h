@@ -62,19 +62,26 @@ public:
 
     // MediaSourcePrivate overrides
     AddStatus addSourceBuffer(const WebCore::ContentType&, bool webMParserEnabled, RefPtr<WebCore::SourceBufferPrivate>&) final;
+    void removeSourceBuffer(WebCore::SourceBufferPrivate&) final { }
+    void notifyActiveSourceBuffersChanged() final { };
     void durationChanged(const MediaTime&) final;
     void bufferedChanged(const WebCore::PlatformTimeRanges&) final;
     void markEndOfStream(EndOfStreamStatus) final;
     void unmarkEndOfStream() final;
-    bool isEnded() const final;
     WebCore::MediaPlayer::ReadyState readyState() const final;
     void setReadyState(WebCore::MediaPlayer::ReadyState) final;
-    void setIsSeeking(bool) final;
-    void waitForSeekCompleted() final;
-    void seekCompleted() final;
+
+    void waitForTarget(const WebCore::SeekTarget&, CompletionHandler<void(const MediaTime&)>&&) final;
+    void seekToTime(const MediaTime&, CompletionHandler<void()>&&) final;
+
     void setTimeFudgeFactor(const MediaTime&) final;
 
-    MediaTime duration() const { return m_client ? m_client->duration() : MediaTime(); }
+    MediaTime duration() const final { return m_client ? m_client->duration() : MediaTime(); }
+    MediaTime currentMediaTime() const final
+    {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
@@ -85,7 +92,6 @@ private:
     MediaSourcePrivateRemote(GPUProcessConnection&, RemoteMediaSourceIdentifier, RemoteMediaPlayerMIMETypeCache&, const MediaPlayerPrivateRemote&, WebCore::MediaSourcePrivateClient&);
 
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
-    void seekToTime(const MediaTime&);
     void mediaSourcePrivateShuttingDown(CompletionHandler<void()>&&);
     bool isGPURunning() const { return !m_shutdown && m_gpuProcessConnection.get(); }
 
@@ -95,7 +101,6 @@ private:
     WeakPtr<MediaPlayerPrivateRemote> m_mediaPlayerPrivate;
     WeakPtr<WebCore::MediaSourcePrivateClient> m_client;
     Vector<RefPtr<SourceBufferPrivateRemote>> m_sourceBuffers;
-    bool m_ended { false };
     bool m_shutdown { false };
 
 #if !RELEASE_LOG_DISABLED

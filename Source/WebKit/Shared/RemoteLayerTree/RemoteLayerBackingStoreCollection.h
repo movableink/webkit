@@ -29,6 +29,7 @@
 #import <wtf/HashSet.h>
 #import <wtf/Noncopyable.h>
 #import <wtf/OptionSet.h>
+#import <wtf/WeakHashSet.h>
 #import <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -63,6 +64,7 @@ public:
     bool paintReachableBackingStoreContents();
 
     void willFlushLayers();
+    void willBuildTransaction();
     void willCommitLayerTree(RemoteLayerTreeTransaction&);
     Vector<std::unique_ptr<WebCore::ThreadSafeImageBufferFlusher>> didFlushLayers(RemoteLayerTreeTransaction&);
 
@@ -71,6 +73,8 @@ public:
     void scheduleVolatilityTimer();
 
     virtual RefPtr<WebCore::ImageBuffer> allocateBufferForBackingStore(const RemoteLayerBackingStore&);
+
+    virtual void gpuProcessConnectionWasDestroyed() { }
 
 protected:
     RemoteLayerTreeContext& layerTreeContext() const { return m_layerTreeContext; }
@@ -96,12 +100,12 @@ protected:
 
     RemoteLayerTreeContext& m_layerTreeContext;
 
-    HashSet<RemoteLayerBackingStore*> m_liveBackingStore;
-    HashSet<RemoteLayerBackingStore*> m_unparentedBackingStore;
+    WeakHashSet<RemoteLayerBackingStore> m_liveBackingStore;
+    WeakHashSet<RemoteLayerBackingStore> m_unparentedBackingStore;
 
     // Only used during a single flush.
-    HashSet<RemoteLayerBackingStore*> m_reachableBackingStoreInLatestFlush;
-    HashSet<RemoteLayerBackingStore*> m_backingStoresNeedingDisplay;
+    WeakHashSet<RemoteLayerBackingStore> m_reachableBackingStoreInLatestFlush;
+    WeakHashSet<RemoteLayerBackingStore> m_backingStoresNeedingDisplay;
 
     WebCore::Timer m_volatilityTimer;
 

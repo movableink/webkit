@@ -26,9 +26,7 @@
 #include "config.h"
 #include "Frame.h"
 
-#include "DocumentInlines.h"
 #include "HTMLFrameOwnerElement.h"
-#include "LocalFrame.h"
 #include "NavigationScheduler.h"
 #include "Page.h"
 #include "RemoteFrame.h"
@@ -49,6 +47,9 @@ Frame::Frame(Page& page, FrameIdentifier frameID, FrameType frameType, HTMLFrame
 {
     if (parent)
         parent->tree().appendChild(*this);
+
+    if (ownerElement)
+        ownerElement->setContentFrame(*this);
 }
 
 Frame::~Frame()
@@ -100,9 +101,7 @@ void Frame::disconnectOwnerElement()
         m_ownerElement = nullptr;
     }
 
-    // FIXME: This is a layering violation. Move this code so Frame doesn't do anything with its Document.
-    if (auto* document = is<LocalFrame>(*this) ? downcast<LocalFrame>(*this).document() : nullptr)
-        document->frameWasDisconnectedFromOwner();
+    frameWasDisconnectedFromOwner();
 }
 
 void Frame::takeWindowProxyFrom(Frame& frame)
@@ -111,6 +110,16 @@ void Frame::takeWindowProxyFrom(Frame& frame)
     m_windowProxy->detachFromFrame();
     m_windowProxy = frame.windowProxy();
     m_windowProxy->replaceFrame(*this);
+}
+
+Ref<WindowProxy> Frame::protectedWindowProxy() const
+{
+    return m_windowProxy;
+}
+
+CheckedRef<NavigationScheduler> Frame::checkedNavigationScheduler() const
+{
+    return m_navigationScheduler.get();
 }
 
 } // namespace WebCore

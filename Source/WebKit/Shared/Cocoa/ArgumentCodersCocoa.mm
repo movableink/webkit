@@ -29,8 +29,14 @@
 #if PLATFORM(COCOA)
 
 #import "ArgumentCodersCF.h"
+#import "CoreIPCData.h"
+#import "CoreIPCDate.h"
+#import "CoreIPCNSCFObject.h"
+#import "CoreIPCNumber.h"
 #import "CoreTextHelpers.h"
+#import "DataReference.h"
 #import "LegacyGlobalSettings.h"
+#import "Logging.h"
 #import "MessageNames.h"
 #import "WebPreferencesKeys.h"
 #import <CoreText/CTFont.h>
@@ -44,6 +50,7 @@
 #import <wtf/cf/CFURLExtras.h>
 #import <wtf/cocoa/NSURLExtras.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
+#import <wtf/text/StringHash.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import <UIKit/UIColor.h>
@@ -169,8 +176,6 @@
     return YES;
 }
 
-static constexpr NSString *baseURLKey = @"WK.baseURL";
-
 - (void)encodeWithCoder:(NSCoder *)coder
 {
     RELEASE_ASSERT(m_wrappedURL);
@@ -180,8 +185,8 @@ static constexpr NSString *baseURLKey = @"WK.baseURL";
 
 - (instancetype)initWithCoder:(NSCoder *)coder
 {
-    auto selfPtr = adoptNS([super initWithString:@""]);
-    if (!selfPtr)
+    self = [super initWithString:@""];
+    if (!self)
         return nil;
 
     NSUInteger length;
@@ -194,7 +199,7 @@ static constexpr NSString *baseURLKey = @"WK.baseURL";
     if (!m_wrappedURL)
         m_wrappedURL = [NSURL URLWithString:@""];
 
-    return selfPtr.leakRef();
+    return self;
 }
 
 - (instancetype)initWithURL:(NSURL *)url
@@ -231,14 +236,14 @@ static constexpr NSString *innerColorKey = @"WK.CocoaColor";
 
 - (instancetype)initWithCoder:(NSCoder *)coder
 {
-    auto selfPtr = adoptNS([super init]);
-    if (!selfPtr)
+    self = [super init];
+    if (!self)
         return nil;
 
     RetainPtr<WebCore::CocoaColor> color = static_cast<WebCore::CocoaColor *>([coder decodeObjectOfClass:[WebCore::CocoaColor class] forKey:innerColorKey]);
     m_wrappedColor = color.get().CGColor;
 
-    return selfPtr.leakRef();
+    return self;
 }
 
 - (instancetype)initWithCGColor:(CGColorRef)color
@@ -254,49 +259,9 @@ static constexpr NSString *innerColorKey = @"WK.CocoaColor";
 namespace IPC {
 using namespace WebCore;
 
-static std::optional<bool>& strictSecureDecodingForAllObjCEnabledValue()
-{
-    static std::optional<bool> value;
-    return value;
-}
-
-void setStrictSecureDecodingForAllObjCEnabled(bool enabled)
-{
-    strictSecureDecodingForAllObjCEnabledValue() = enabled;
-}
-
-bool strictSecureDecodingForAllObjCEnabled()
-{
-    if (isInAuxiliaryProcess()) {
-        ASSERT(strictSecureDecodingForAllObjCEnabledValue());
-        return *strictSecureDecodingForAllObjCEnabledValue();
-    }
-    ASSERT(!strictSecureDecodingForAllObjCEnabledValue());
-
-    static bool cachedValue { WebKit::experimentalFeatureEnabled(WebKit::WebPreferencesKey::strictSecureDecodingForAllObjCKey(), true) };
-    return cachedValue;
-}
-
-#pragma mark - Types
-
-enum class NSType {
-    Array,
-    Color,
-    Data,
-    Date,
-    Dictionary,
-    Font,
-    Number,
-    SecureCoding,
-    String,
-    URL,
-    CF,
-    Unknown,
-};
-
 #pragma mark - Helpers
 
-static NSType typeFromObject(id object)
+NSType typeFromObject(id object)
 {
     ASSERT(object);
 
@@ -348,7 +313,7 @@ static inline bool isSerializableValue(id value)
 
 #pragma mark - NSArray
 
-static void encodeArrayInternal(Encoder& encoder, NSArray *array)
+template<> void encodeObjectDirectly<NSArray>(Encoder& encoder, NSArray *array)
 {
     // Even though NSArray is toll free bridged with CFArrayRef, values may not be,
     // so we should stay within this file's code.
@@ -373,19 +338,21 @@ static void encodeArrayInternal(Encoder& encoder, NSArray *array)
     for (NSUInteger i = 0; i < array.count; ++i) {
         if (invalidIndices.contains(i))
             continue;
-        encodeObject(encoder, array[i]);
+        encodeObjectWithWrapper(encoder, array[i]);
     }
 }
 
-static std::optional<RetainPtr<id>> decodeArrayInternal(Decoder& decoder, NSArray<Class> *allowedClasses)
+template<> std::optional<RetainPtr<id>> decodeObjectDirectlyRequiringAllowedClasses<NSArray>(Decoder& decoder)
 {
+    RELEASE_ASSERT(decoder.allowedClasses().size());
+
     uint64_t size;
     if (!decoder.decode(size))
         return std::nullopt;
 
     auto array = adoptNS([[NSMutableArray alloc] init]);
     for (uint64_t i = 0; i < size; ++i) {
-        auto value = decodeObject(decoder, allowedClasses);
+        auto value = decodeObjectFromWrapper(decoder, decoder.allowedClasses());
         if (!value || !value.value())
             return std::nullopt;
         [array addObject:value.value().get()];
@@ -394,54 +361,9 @@ static std::optional<RetainPtr<id>> decodeArrayInternal(Decoder& decoder, NSArra
     return { array };
 }
 
-#pragma mark - NSColor / UIColor
-
-static inline void encodeColorInternal(Encoder& encoder, WebCore::CocoaColor *color)
-{
-    encoder << colorFromCocoaColor(color);
-}
-
-static inline std::optional<RetainPtr<id>> decodeColorInternal(Decoder& decoder)
-{
-    Color color;
-    if (!decoder.decode(color))
-        return std::nullopt;
-    return { cocoaColor(color) };
-}
-
-#pragma mark - NSData
-
-static inline void encodeDataInternal(Encoder& encoder, NSData *data)
-{
-    encoder << bridge_cast(data);
-}
-
-static inline std::optional<RetainPtr<id>> decodeDataInternal(Decoder& decoder)
-{
-    RetainPtr<CFDataRef> data;
-    if (!decoder.decode(data))
-        return std::nullopt;
-    return { bridge_cast(WTFMove(data)) };
-}
-
-#pragma mark - NSDate
-
-static inline void encodeDateInternal(Encoder& encoder, NSDate *date)
-{
-    encoder << bridge_cast(date);
-}
-
-static inline std::optional<RetainPtr<id>> decodeDateInternal(Decoder& decoder)
-{
-    RetainPtr<CFDateRef> date;
-    if (!decoder.decode(date))
-        return std::nullopt;
-    return { bridge_cast(WTFMove(date)) };
-}
-
 #pragma mark - NSDictionary
 
-static void encodeDictionaryInternal(Encoder& encoder, NSDictionary *dictionary)
+template<> void encodeObjectDirectly<NSDictionary>(Encoder& encoder, NSDictionary *dictionary)
 {
     // Even though NSDictionary is toll free bridged with CFDictionaryRef, keys/values may not be,
     // so we should stay within this file's code.
@@ -468,24 +390,32 @@ static void encodeDictionaryInternal(Encoder& encoder, NSDictionary *dictionary)
     for (id key in dictionary) {
         if (invalidKeys.contains(key))
             continue;
-        encodeObject(encoder, key);
-        encodeObject(encoder, dictionary[key]);
+        encodeObjectWithWrapper(encoder, key);
+        encodeObjectWithWrapper(encoder, dictionary[key]);
     }
 }
 
-static std::optional<RetainPtr<id>> decodeDictionaryInternal(Decoder& decoder, NSArray<Class> *allowedClasses)
+template<> void encodeObjectDirectly<NSDictionary<NSString *, id>>(Encoder& encoder, NSDictionary<NSString *, id> *dictionary)
 {
+    encodeObjectDirectly<NSDictionary>(encoder, dictionary);
+}
+
+template<> std::optional<RetainPtr<id>> decodeObjectDirectlyRequiringAllowedClasses<NSDictionary>(Decoder& decoder)
+{
+    auto allowedClasses = decoder.allowedClasses();
+    RELEASE_ASSERT(allowedClasses.size());
+
     uint64_t size;
     if (!decoder.decode(size))
         return std::nullopt;
 
     RetainPtr<NSMutableDictionary> dictionary = adoptNS([[NSMutableDictionary alloc] initWithCapacity:size]);
     for (uint64_t i = 0; i < size; ++i) {
-        auto key = decodeObject(decoder, allowedClasses);
+        auto key = decodeObjectFromWrapper(decoder, allowedClasses);
         if (!key)
             return std::nullopt;
 
-        auto value = decodeObject(decoder, allowedClasses);
+        auto value = decodeObjectFromWrapper(decoder, allowedClasses);
         if (!value)
             return std::nullopt;
 
@@ -497,44 +427,31 @@ static std::optional<RetainPtr<id>> decodeDictionaryInternal(Decoder& decoder, N
 
 #pragma mark - NSFont / UIFont
 
-static inline void encodeFontInternal(Encoder& encoder, CocoaFont *font)
+template<> void encodeObjectDirectly<WebCore::CocoaFont>(Encoder& encoder, WebCore::CocoaFont *font)
 {
-    encode(encoder, font.fontDescriptor.fontAttributes);
+    encodeObjectDirectly(encoder, font.fontDescriptor.fontAttributes);
 }
 
-static std::optional<RetainPtr<id>> decodeFontInternal(Decoder& decoder)
+template<> std::optional<RetainPtr<id>> decodeObjectDirectlyRequiringAllowedClasses<WebCore::CocoaFont>(Decoder& decoder)
 {
-    RetainPtr<NSDictionary> fontAttributes;
-    if (!decode(decoder, fontAttributes))
+    RELEASE_ASSERT(decoder.allowedClasses().size());
+
+    std::optional<RetainPtr<NSDictionary>> fontAttributes = decodeObjectDirectlyRequiringAllowedClasses<NSDictionary>(decoder);
+    if (!fontAttributes)
         return std::nullopt;
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS
 
-    return { WebKit::fontWithAttributes(fontAttributes.get(), 0) };
+    return { WebKit::fontWithAttributes(fontAttributes->get(), 0) };
 
     END_BLOCK_OBJC_EXCEPTIONS
 
     return { };
 }
 
-#pragma mark - NSNumber
-
-static inline void encodeNumberInternal(Encoder& encoder, NSNumber *number)
-{
-    encoder << bridge_cast(number);
-}
-
-static inline std::optional<RetainPtr<id>> decodeNumberInternal(Decoder& decoder)
-{
-    RetainPtr<CFNumberRef> number;
-    if (!decoder.decode(number))
-        return std::nullopt;
-    return { bridge_cast(WTFMove(number)) };
-}
-
 #pragma mark - id <NSSecureCoding>
 
-static void encodeSecureCodingInternal(Encoder& encoder, id <NSObject, NSSecureCoding> object)
+template<> void encodeObjectDirectly<NSObject<NSSecureCoding>>(Encoder& encoder, NSObject<NSSecureCoding> *object)
 {
     auto archiver = adoptNS([[NSKeyedArchiver alloc] initRequiringSecureCoding:YES]);
 
@@ -586,46 +503,7 @@ static void encodeSecureCodingInternal(Encoder& encoder, id <NSObject, NSSecureC
     encoder << (__bridge CFDataRef)[archiver encodedData];
 }
 
-#if ENABLE(DATA_DETECTION) || ENABLE(REVEAL)
-static bool haveSecureActionContext()
-{
-#if HAVE(SECURE_ACTION_CONTEXT)
-    return true;
-#else
-    return false;
-#endif // HAVE(SECURE_ACTION_CONTEXT)
-}
-#endif // ENABLE(DATA_DETECTION) || ENABLE(REVEAL)
-
-#if ENABLE(APPLE_PAY)
-static bool haveStrictDecodableCNContact()
-{
-#if HAVE(STRICT_DECODABLE_CNCONTACT)
-    return true;
-#else
-    return false;
-#endif
-}
-static bool haveStrictDecodablePKContact()
-{
-#if HAVE(STRICT_DECODABLE_PKCONTACT)
-    return true;
-#else
-    return false;
-#endif
-}
-#endif // ENABLE(APPLE_PAY)
-
-static bool haveStrictDecodableNSTextTable()
-{
-#if HAVE(STRICT_DECODABLE_NSTEXTTABLE)
-    return true;
-#else
-    return false;
-#endif
-}
-
-static bool shouldEnableStrictMode(Decoder& decoder, NSArray<Class> *allowedClasses)
+static bool shouldEnableStrictMode(Decoder& decoder, const Vector<Class>& allowedClasses)
 {
 #if ENABLE(IMAGE_ANALYSIS) && HAVE(VK_IMAGE_ANALYSIS)
     auto isDecodingKnownVKCImageAnalysisMessageFromUIProcess = [] (auto& decoder) {
@@ -634,6 +512,22 @@ static bool shouldEnableStrictMode(Decoder& decoder, NSArray<Class> *allowedClas
             || messageName == IPC::MessageName::WebPageProxy_RequestTextRecognitionReply; // UIP -> WCP
     };
 #endif
+
+#if ENABLE(IMAGE_ANALYSIS) && HAVE(VK_IMAGE_ANALYSIS)
+    // blocked by rdar://108673895
+    if (PAL::isVisionKitCoreFrameworkAvailable()
+        && allowedClasses.contains(PAL::getVKCImageAnalysisClass())
+        && isDecodingKnownVKCImageAnalysisMessageFromUIProcess(decoder)
+        && isInWebProcess())
+        return false;
+#endif
+
+#if HAVE(STRICT_DECODABLE_NSTEXTTABLE) \
+    && HAVE(STRICT_DECODABLE_PKCONTACT) \
+    && HAVE(STRICT_DECODABLE_CNCONTACT)
+    // Shortcut the following unnecessary Class checks on newer OSes to fix rdar://111926152.
+    return true;
+#else
 
     auto isDecodingKnownProtectionSpaceMessage = [] (auto& decoder) {
         auto messageName = decoder.messageName();
@@ -654,88 +548,95 @@ static bool shouldEnableStrictMode(Decoder& decoder, NSArray<Class> *allowedClas
             || messageName == IPC::MessageName::AuthenticationManager_CompleteAuthenticationChallenge; // UIP -> NP
     };
 
-#if ENABLE(IMAGE_ANALYSIS) && HAVE(VK_IMAGE_ANALYSIS)
-    // blocked by rdar://108673895
-    if (PAL::isVisionKitCoreFrameworkAvailable()
-        && [allowedClasses containsObject:PAL::getVKCImageAnalysisClass()]
-        && isDecodingKnownVKCImageAnalysisMessageFromUIProcess(decoder)
-        && isInWebProcess())
-        return false;
-#endif
-
-#if HAVE(STRICT_DECODABLE_NSTEXTTABLE) \
-    && HAVE(STRICT_DECODABLE_PKCONTACT) \
-    && HAVE(STRICT_DECODABLE_CNCONTACT)
-    // Shortcut the following unnecessary Class checks on newer OSes to fix rdar://111926152.
-    if (strictSecureDecodingForAllObjCEnabled())
-        return true;
+#if HAVE(SECURE_ACTION_CONTEXT)
+static constexpr bool haveSecureActionContext = true;
+#else
+static constexpr bool haveSecureActionContext = false;
 #endif
 
 #if ENABLE(DATA_DETECTION)
     // rdar://107553330 - don't re-introduce rdar://107676726
-    if (PAL::isDataDetectorsCoreFrameworkAvailable() && [allowedClasses containsObject:PAL::getDDScannerResultClass()])
-        return haveSecureActionContext() && strictSecureDecodingForAllObjCEnabled();
+    if (PAL::isDataDetectorsCoreFrameworkAvailable() && allowedClasses.contains(PAL::getDDScannerResultClass()))
+        return haveSecureActionContext;
 #if PLATFORM(MAC)
     // rdar://107553348 - don't re-introduce rdar://107676726
-    if (PAL::isDataDetectorsFrameworkAvailable() && [allowedClasses containsObject:PAL::getWKDDActionContextClass()])
-        return haveSecureActionContext() && strictSecureDecodingForAllObjCEnabled();
+    if (PAL::isDataDetectorsFrameworkAvailable() && allowedClasses.contains(PAL::getWKDDActionContextClass()))
+        return haveSecureActionContext;
 #endif // PLATFORM(MAC)
 #endif // ENABLE(DATA_DETECTION)
 #if ENABLE(REVEAL)
     // rdar://107553310 - don't re-introduce rdar://107673064
-    if (PAL::isRevealCoreFrameworkAvailable() && [allowedClasses containsObject:PAL::getRVItemClass()])
-        return haveSecureActionContext() && strictSecureDecodingForAllObjCEnabled();
+    if (PAL::isRevealCoreFrameworkAvailable() && allowedClasses.contains(PAL::getRVItemClass()))
+        return haveSecureActionContext;
 #endif // ENABLE(REVEAL)
 
 #if ENABLE(APPLE_PAY)
     // rdar://107553480 Don't reintroduce rdar://108235706
-    if (PAL::isPassKitCoreFrameworkAvailable() && [allowedClasses containsObject:PAL::getPKPaymentMethodClass()])
-        return haveStrictDecodableCNContact() && strictSecureDecodingForAllObjCEnabled();
+#if HAVE(STRICT_DECODABLE_CNCONTACT)
+    static constexpr bool haveStrictDecodableCNContact = true;
+#else
+    static constexpr bool haveStrictDecodableCNContact = false;
+#endif
+    if (PAL::isPassKitCoreFrameworkAvailable() && allowedClasses.contains(PAL::getPKPaymentMethodClass()))
+        return haveStrictDecodableCNContact;
 
     // Don't reintroduce rdar://108660074
-    if (PAL::isPassKitCoreFrameworkAvailable() && [allowedClasses containsObject:PAL::getPKContactClass()])
-        return haveStrictDecodablePKContact() && strictSecureDecodingForAllObjCEnabled();
+#if HAVE(STRICT_DECODABLE_PKCONTACT)
+    static constexpr bool haveStrictDecodablePKContact = true;
+#else
+    static constexpr bool haveStrictDecodablePKContact = false;
+#endif
+    if (PAL::isPassKitCoreFrameworkAvailable() && allowedClasses.contains(PAL::getPKContactClass()))
+        return haveStrictDecodablePKContact;
 #endif
 
     // rdar://107553230 don't reintroduce rdar://108038436
-    if ([allowedClasses containsObject:NSParagraphStyle.class])
-        return haveStrictDecodableNSTextTable() && strictSecureDecodingForAllObjCEnabled();
+#if HAVE(STRICT_DECODABLE_NSTEXTTABLE)
+    static constexpr bool haveStrictDecodableNSTextTable = true;
+#else
+    static constexpr bool haveStrictDecodableNSTextTable = false;
+#endif
+    if (allowedClasses.contains(NSParagraphStyle.class))
+        return haveStrictDecodableNSTextTable;
 
     // rdar://109121874
-    if ([allowedClasses containsObject:NSPresentationIntent.class])
-        return strictSecureDecodingForAllObjCEnabled();
+    if (allowedClasses.contains(NSPresentationIntent.class))
+        return true;
 
     // rdar://107553194, Don't reintroduce rdar://108339450
-    if ([allowedClasses containsObject:NSMutableURLRequest.class])
-        return strictSecureDecodingForAllObjCEnabled();
+    if (allowedClasses.contains(NSMutableURLRequest.class))
+        return true;
 
     // rdar://108674269
-    if ([allowedClasses containsObject:NSURLProtectionSpace.class] && isDecodingKnownProtectionSpaceMessage(decoder))
-        return strictSecureDecodingForAllObjCEnabled();
+    if (allowedClasses.contains(NSURLProtectionSpace.class) && isDecodingKnownProtectionSpaceMessage(decoder))
+        return true;
 
-    if ([allowedClasses containsObject:NSShadow.class] // rdar://107553244
-        || [allowedClasses containsObject:NSTextAttachment.class] // rdar://107553273
+    if (allowedClasses.contains(NSShadow.class) // rdar://107553244
+        || allowedClasses.contains(NSTextAttachment.class) // rdar://107553273
 #if ENABLE(APPLE_PAY)
-        || (PAL::isPassKitCoreFrameworkAvailable() && [allowedClasses containsObject:PAL::getPKPaymentSetupFeatureClass()]) // rdar://107553409
-        || (PAL::isPassKitCoreFrameworkAvailable() && [allowedClasses containsObject:PAL::getPKPaymentMerchantSessionClass()]) // rdar://107553452
-        || (PAL::isPassKitCoreFrameworkAvailable() && [allowedClasses containsObject:PAL::getPKPaymentClass()] && isInWebProcess())
+        || (PAL::isPassKitCoreFrameworkAvailable() && allowedClasses.contains(PAL::getPKPaymentSetupFeatureClass())) // rdar://107553409
+        || (PAL::isPassKitCoreFrameworkAvailable() && allowedClasses.contains(PAL::getPKPaymentMerchantSessionClass())) // rdar://107553452
+        || (PAL::isPassKitCoreFrameworkAvailable() && allowedClasses.contains(PAL::getPKPaymentClass()) && isInWebProcess())
 #endif // ENABLE(APPLE_PAY)
-        || ([allowedClasses containsObject:NSURLCredential.class] && isDecodingKnownNSURLCredentialMessage(decoder))) // rdar://107553367
+        || (allowedClasses.contains(NSURLCredential.class) && isDecodingKnownNSURLCredentialMessage(decoder))) // rdar://107553367
         return true;
 
     // Note: Do not add more classes to the list of strict decoded classes.
     // If you want to serialize something new, extract its contents into a
     // struct and use a *.serialization.in file to serialize its contents.
-    RELEASE_LOG_FAULT(SecureCoding, "Strict mode check found unknown classes %@", allowedClasses);
+    RetainPtr<NSMutableArray> nsAllowedClasses = adoptNS([[NSMutableArray alloc] initWithCapacity:allowedClasses.size()]);
+    for (auto classPtr : allowedClasses)
+        [nsAllowedClasses addObject:classPtr];
+    RELEASE_LOG_FAULT(SecureCoding, "Strict mode check found unknown classes %@", nsAllowedClasses.get());
     ASSERT_NOT_REACHED();
     return true;
+#endif
 }
 
-static std::optional<RetainPtr<id>> decodeSecureCodingInternal(Decoder& decoder, NSArray<Class> *allowedClasses)
+template<> std::optional<RetainPtr<id>> decodeObjectDirectlyRequiringAllowedClasses<NSObject<NSSecureCoding>>(Decoder& decoder)
 {
-    ASSERT(allowedClasses && allowedClasses.count);
-    if (!allowedClasses || !allowedClasses.count)
-        return std::nullopt;
+    const auto& allowedClasses = decoder.allowedClasses();
+    RELEASE_ASSERT(allowedClasses.size());
 
     RetainPtr<CFDataRef> data;
     if (!decoder.decode(data))
@@ -747,10 +648,12 @@ static std::optional<RetainPtr<id>> decodeSecureCodingInternal(Decoder& decoder,
     auto delegate = adoptNS([[WKSecureCodingArchivingDelegate alloc] init]);
     unarchiver.get().delegate = delegate.get();
 
-    auto allowedClassSet = adoptNS([[NSMutableSet alloc] initWithArray:allowedClasses]);
+    auto allowedClassSet = adoptNS([[NSMutableSet alloc] initWithCapacity:allowedClasses.size()]);
+    for (auto allowedClass : allowedClasses)
+        [allowedClassSet addObject:allowedClass];
 
-    if ([allowedClasses containsObject:NSMutableURLRequest.class]
-        || [allowedClasses containsObject:NSURLRequest.class]) {
+    if (allowedClasses.contains(NSMutableURLRequest.class)
+        || allowedClasses.contains(NSURLRequest.class)) {
         [allowedClassSet addObject:WKSecureCodingURLWrapper.class];
         [allowedClassSet addObject:NSMutableString.class];
         [allowedClassSet addObject:NSMutableArray.class];
@@ -761,7 +664,7 @@ static std::optional<RetainPtr<id>> decodeSecureCodingInternal(Decoder& decoder,
     if (shouldEnableStrictMode(decoder, allowedClasses))
         [unarchiver _enableStrictSecureDecodingMode];
 
-    if ([allowedClasses containsObject:NSParagraphStyle.class])
+    if (allowedClasses.contains(NSParagraphStyle.class))
         [allowedClassSet addObject:NSMutableParagraphStyle.class];
 
     @try {
@@ -778,44 +681,14 @@ static std::optional<RetainPtr<id>> decodeSecureCodingInternal(Decoder& decoder,
     }
 }
 
-#pragma mark - NSString
-
-static inline void encodeStringInternal(Encoder& encoder, NSString *string)
-{
-    encoder << bridge_cast(string);
-}
-
-static inline std::optional<RetainPtr<id>> decodeStringInternal(Decoder& decoder)
-{
-    RetainPtr<CFStringRef> string;
-    if (!decoder.decode(string))
-        return std::nullopt;
-    return { bridge_cast(WTFMove(string)) };
-}
-
-#pragma mark - NSURL
-
-static inline void encodeURLInternal(Encoder& encoder, NSURL *URL)
-{
-    encoder << bridge_cast(URL);
-}
-
-static inline std::optional<RetainPtr<id>> decodeURLInternal(Decoder& decoder)
-{
-    RetainPtr<CFURLRef> URL;
-    if (!decoder.decode(URL))
-        return std::nullopt;
-    return { bridge_cast(WTFMove(URL)) };
-}
-
 #pragma mark - CF
 
-static inline void encodeCFInternal(Encoder& encoder, CFTypeRef cf)
+template<> void encodeObjectDirectly<CFTypeRef>(Encoder& encoder, CFTypeRef cf)
 {
     ArgumentCoder<CFTypeRef>::encode(encoder, cf);
 }
 
-static inline std::optional<RetainPtr<id>> decodeCFInternal(Decoder& decoder)
+template<> std::optional<RetainPtr<id>> decodeObjectDirectlyRequiringAllowedClasses<CFTypeRef>(Decoder& decoder)
 {
     auto result = ArgumentCoder<RetainPtr<CFTypeRef>>::decode(decoder);
     if (!result)
@@ -824,121 +697,22 @@ static inline std::optional<RetainPtr<id>> decodeCFInternal(Decoder& decoder)
     return static_cast<id>(result->get());
 }
 
-#pragma mark - Entry Point Encoder / Decoder
+#pragma mark - Wrapper Encoder / Decoder Entry Points
 
-void encodeObject(Encoder& encoder, id object)
+void encodeObjectWithWrapper(Encoder& encoder, id object)
 {
-    encoder << static_cast<bool>(!object);
-    if (!object)
-        return;
-
-    NSType type = typeFromObject(object);
-    encoder << type;
-
-    switch (type) {
-    case NSType::Array:
-        encodeArrayInternal(encoder, static_cast<NSArray *>(object));
-        return;
-    case NSType::Color:
-        encodeColorInternal(encoder, static_cast<WebCore::CocoaColor *>(object));
-        return;
-    case NSType::Dictionary:
-        encodeDictionaryInternal(encoder, static_cast<NSDictionary *>(object));
-        return;
-    case NSType::Font:
-        encodeFontInternal(encoder, static_cast<CocoaFont *>(object));
-        return;
-    case NSType::Number:
-        encodeNumberInternal(encoder, static_cast<NSNumber *>(object));
-        return;
-    case NSType::SecureCoding:
-        encodeSecureCodingInternal(encoder, static_cast<id <NSObject, NSSecureCoding>>(object));
-        return;
-    case NSType::String:
-        encodeStringInternal(encoder, static_cast<NSString *>(object));
-        return;
-    case NSType::Date:
-        encodeDateInternal(encoder, static_cast<NSDate *>(object));
-        return;
-    case NSType::Data:
-        encodeDataInternal(encoder, static_cast<NSData *>(object));
-        return;
-    case NSType::URL:
-        encodeURLInternal(encoder, static_cast<NSURL *>(object));
-        return;
-    case NSType::CF:
-        encodeCFInternal(encoder, static_cast<CFTypeRef>(object));
-        return;
-    case NSType::Unknown:
-        break;
-    }
-
-    ASSERT_NOT_REACHED();
+    encoder << WebKit::CoreIPCNSCFObject(object);
 }
 
-std::optional<RetainPtr<id>> decodeObject(Decoder& decoder, NSArray<Class> *allowedClasses)
+std::optional<RetainPtr<id>> decodeObjectFromWrapper(Decoder& decoder, const Vector<Class>& allowedClasses)
 {
-    bool isNull;
-    if (!decoder.decode(isNull))
-        return std::nullopt;
-    if (isNull)
-        return { nullptr };
-
-    NSType type;
-    if (!decoder.decode(type))
+    std::optional<WebKit::CoreIPCNSCFObject> result = decoder.decodeWithAllowedClasses<WebKit::CoreIPCNSCFObject>(allowedClasses);
+    if (!result)
         return std::nullopt;
 
-    switch (type) {
-    case NSType::Array:
-        return decodeArrayInternal(decoder, allowedClasses);
-    case NSType::Color:
-        return decodeColorInternal(decoder);
-    case NSType::Dictionary:
-        return decodeDictionaryInternal(decoder, allowedClasses);
-    case NSType::Font:
-        return decodeFontInternal(decoder);
-    case NSType::Number:
-        return decodeNumberInternal(decoder);
-    case NSType::SecureCoding:
-        return decodeSecureCodingInternal(decoder, allowedClasses);
-    case NSType::String:
-        return decodeStringInternal(decoder);
-    case NSType::Date:
-        return decodeDateInternal(decoder);
-    case NSType::Data:
-        return decodeDataInternal(decoder);
-    case NSType::URL:
-        return decodeURLInternal(decoder);
-    case NSType::CF:
-        return decodeCFInternal(decoder);
-    case NSType::Unknown:
-        break;
-    }
-
-    ASSERT_NOT_REACHED();
-    return std::nullopt;
+    return result->toID();
 }
 
 } // namespace IPC
-
-namespace WTF {
-template<> struct EnumTraits<IPC::NSType> {
-    using values = EnumValues<
-        IPC::NSType,
-        IPC::NSType::Array,
-        IPC::NSType::Color,
-        IPC::NSType::Data,
-        IPC::NSType::Date,
-        IPC::NSType::Dictionary,
-        IPC::NSType::Font,
-        IPC::NSType::Number,
-        IPC::NSType::SecureCoding,
-        IPC::NSType::String,
-        IPC::NSType::URL,
-        IPC::NSType::CF,
-        IPC::NSType::Unknown
-    >;
-};
-} // namespace WTF
 
 #endif // PLATFORM(COCOA)
