@@ -65,8 +65,8 @@ QVariant QWebElementPrivate::evaluateJavaScriptString(const QString& scriptSourc
     if (!thisValue)
 	return QVariant();
 
-    ScriptSourceCode sourceCode(scriptSource);
- 
+    ScriptSourceCode sourceCode(scriptSource, JSC::SourceTaintedOrigin::Untainted);
+
     NakedPtr<JSC::Exception> evaluationException;
     JSC::JSValue evaluationResult = JSC::evaluate(lexicalGlobalObject, sourceCode.jsSourceCode(), thisValue, evaluationException);   
     if (evaluationException)

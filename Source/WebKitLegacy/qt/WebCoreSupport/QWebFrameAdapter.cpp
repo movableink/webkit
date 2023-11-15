@@ -186,7 +186,7 @@ QVariant QWebFrameAdapter::evaluateJavaScript(const QString &scriptSource)
     ScriptController& scriptController = frame->script();
     QVariant rc;
     int distance = 0;
-    JSC::JSValue value = scriptController.executeScriptIgnoringException(scriptSource);
+    JSC::JSValue value = scriptController.executeScriptIgnoringException(scriptSource, JSC::SourceTaintedOrigin::Untainted);
     JSC::JSGlobalObject* lexicalGlobalObject = scriptController.globalObject(mainThreadNormalWorld())->globalObject();
     JSValueRef* ignoredException = 0;
     JSC::JSLockHolder lock(lexicalGlobalObject);
