@@ -44,13 +44,12 @@ public:
     static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const ImageBufferCreationContext&);
     static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const GraphicsContext &);
 
-    IntSize backendSize() const override;
-
     static size_t calculateMemoryCost(const Parameters&);
     static unsigned calculateBytesPerRow(const IntSize& backendSize);
     static size_t calculateExternalMemoryCost(const Parameters&);
 
-    RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) override;
+    RefPtr<NativeImage> copyNativeImage() override;
+    RefPtr<NativeImage> createNativeImageReference() override;
 
     void transformToColorSpace(const DestinationColorSpace&) override;
 

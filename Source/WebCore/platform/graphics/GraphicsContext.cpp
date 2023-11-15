@@ -139,7 +139,7 @@ void GraphicsContext::drawRaisedEllipse(const FloatRect& rect, const Color& elli
     bool GraphicsContext::mustUseShadowBlur() const
     {
         // We can't avoid ShadowBlur if the shadow has blur.
-        if (hasBlurredShadow())
+        if (hasBlurredDropShadow())
             return true;
         // We can avoid ShadowBlur and optimize, since we're not drawing on a
         // canvas and box shadows are affected by the transformation matrix.

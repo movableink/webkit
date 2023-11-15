@@ -58,13 +58,13 @@ ImageBufferQtBackend::ImageBufferQtBackend(const Parameters& parameters, std::un
 
 std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const ImageBufferCreationContext&)
 {
-    IntSize backendSize = calculateBackendSize(parameters);
+    IntSize backendSize = parameters.backendSize;
     if (backendSize.isEmpty())
         return nullptr;
 
     QPainter* painter = new QPainter;
 
-    auto nativeImage = makeUniqueWithoutFastMallocCheck<QImage>(IntSize(parameters.logicalSize * parameters.resolutionScale), NativeImageQt::defaultFormatForAlphaEnabledImages());
+    auto nativeImage = makeUniqueWithoutFastMallocCheck<QImage>(IntSize(parameters.backendSize * parameters.resolutionScale), NativeImageQt::defaultFormatForAlphaEnabledImages());
     nativeImage->fill(QColor(Qt::transparent));
     nativeImage->setDevicePixelRatio(parameters.resolutionScale);
 
@@ -81,17 +81,12 @@ std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Paramet
 
 std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const GraphicsContext& context)
 {
-    return ImageBufferQtBackend::create(parameters, nullptr);
-}
-
-IntSize ImageBufferQtBackend::backendSize() const
-{
-    return { m_nativeImage->width(), m_nativeImage->height() };
+    return ImageBufferQtBackend::create(parameters, ImageBufferCreationContext { });
 }
 
 size_t ImageBufferQtBackend::calculateMemoryCost(const Parameters& parameters)
 {
-    IntSize backendSize = calculateBackendSize(parameters);
+    IntSize backendSize = parameters.backendSize;
     return ImageBufferBackend::calculateMemoryCost(backendSize, calculateBytesPerRow(backendSize));
 }
 
@@ -128,12 +123,14 @@ void ImageBufferQtBackend::initPainter(QPainter *painter)
     painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
 }
 
-RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyBehavior)
+RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage()
 {
-    if (copyBehavior == CopyBackingStore)
-        return NativeImage::create(m_nativeImage->copy());
+    return NativeImage::create(m_nativeImage->copy());
+}
 
-    return NativeImage::create(QImage(*m_nativeImage.get()));
+RefPtr<NativeImage> ImageBufferQtBackend::createNativeImageReference()
+{
+    return NativeImage::create(WTFMove(QImage(*m_nativeImage.get())));
 }
 
 GraphicsContext &ImageBufferQtBackend::context() { return *m_context; }

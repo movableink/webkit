@@ -44,6 +44,7 @@
 #include <qalgorithms.h>
 
 #include <limits.h>
+#include <unicode/uchar.h>
 //#include <QDebug>
 
 namespace WebCore {
@@ -131,16 +132,18 @@ static void drawQtGlyphRun(GraphicsContext& context, const QGlyphRun& qtGlyphRun
     if (context.textDrawingMode() & TextDrawingMode::Stroke)
         textStrokePath = pathForGlyphs(qtGlyphRun, point);
 
-    if (context.hasShadow()) {
+    if (context.hasDropShadow()) {
         const GraphicsContextState& state = context.state();
         if (context.mustUseShadowBlur()) {
-            ShadowBlur shadow(context.dropShadow(), context.shadowsIgnoreTransforms());
+            const auto shadow = context.dropShadow();
+            ASSERT(shadow);
+            ShadowBlur contextShadow(*shadow, context.shadowsIgnoreTransforms());
             const qreal width = qtGlyphRun.boundingRect().width();
             const QRawFont& font = qtGlyphRun.rawFont();
             const qreal height = font.ascent() + font.descent();
             const QRectF boundingRect(point.x(), point.y() - font.ascent() + baseLineOffset, width, height);
 
-            shadow.drawShadowLayer(context.getCTM(), context.clipBounds(), boundingRect,
+            contextShadow.drawShadowLayer(context.getCTM(), context.clipBounds(), boundingRect,
                 [state, point, qtGlyphRun, textStrokePath](GraphicsContext& shadowContext)
                 {
                     QPainter* shadowPainter = shadowContext.platformContext()->painter();
@@ -154,13 +157,15 @@ static void drawQtGlyphRun(GraphicsContext& context, const QGlyphRun& qtGlyphRun
                 [&context](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize)
                 {
                     GraphicsContextStateSaver shadowStateSaver(context);
-                    context.clearShadow();
-                    context.drawImageBuffer(layerImage, FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), context.compositeOperation());
+                    context.clearDropShadow();
+                    context.drawImageBuffer(layerImage, FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), ImagePaintingOptions { context.compositeOperation() });
                 });
         } else {
+            const auto shadow = context.dropShadow();
+            ASSERT(shadow);
             QPen previousPen = painter->pen();
-            painter->setPen(context.shadowColor());
-            const QPointF offset(context.shadowOffset().width(), context.shadowOffset().height());
+            painter->setPen(shadow->color);
+            const QPointF offset(shadow->offset.width(), shadow->offset.height());
             painter->translate(offset);
             if (context.textDrawingMode() & TextDrawingMode::Fill)
                 painter->drawGlyphRun(point, qtGlyphRun);
