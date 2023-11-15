@@ -95,6 +95,7 @@ public:
     void dispatchDidFinishLoading(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier) override;
     void dispatchDidFailLoading(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier, const WebCore::ResourceError&) override;
     bool dispatchDidLoadResourceFromMemoryCache(WebCore::DocumentLoader*, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&, int) override;
+    void dispatchLoadEventToOwnerElementInAnotherProcess() override { };
 
     void dispatchDidDispatchOnloadEvents() override;
     void dispatchDidReceiveServerRedirectForProvisionalLoad() override;
@@ -156,6 +157,7 @@ public:
     ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
     ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
     ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const override;
+    ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const override;
     ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
 
     bool shouldFallBack(const ResourceError&) const override;
@@ -213,6 +215,9 @@ public:
     void originatingLoadStarted() { m_isOriginatingLoad = true; }
 
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
+
+    void broadcastFrameRemovalToOtherProcesses() override { };
+    void broadcastMainFrameURLChangeToOtherProcesses(const URL&) override { };
 
     static bool dumpFrameLoaderCallbacks;
     static bool dumpUserGestureInFrameLoaderCallbacks;
