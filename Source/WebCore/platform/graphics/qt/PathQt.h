@@ -38,16 +38,17 @@ namespace WebCore {
 
 class PathQt final : public PathImpl {
 public:
-    static UniqueRef<PathQt> create();
-    static UniqueRef<PathQt> create(const PathStream&);
-    static UniqueRef<PathQt> create(QPainterPath);
+    static Ref<PathQt> create();
+    static Ref<PathQt> create(const PathQt&);
+    static Ref<PathQt> create(const PathSegment&);
+    static Ref<PathQt> create(const PathStream&);
+    static Ref<PathQt> create(QPainterPath);
 
     PathQt();
     PathQt(QPainterPath&&);
     PathQt(PathQt&&);
     PathQt(const PathQt&);
 
-    bool operator==(const PathImpl&) const final;
     PathQt& operator=(const PathQt&);
     PathQt& operator=(PathQt&& other);
 
@@ -55,9 +56,9 @@ public:
 
     void addPath(const PathQt&, const AffineTransform&);
 
-    void applyElements(const PathElementApplier&) const final;
+    bool applyElements(const PathElementApplier&) const final;
 
-    void transform(const AffineTransform&);
+    bool transform(const AffineTransform&);
 
     bool contains(const FloatPoint&, WindRule) const;
     bool strokeContains(const FloatPoint&, const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
@@ -65,7 +66,7 @@ public:
     FloatRect strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
 
 private:
-    UniqueRef<PathImpl> clone() const final;
+    Ref<PathImpl> copy() const final;
 
     QPainterPath ensurePlatformPath() { return platformPath(); }
 

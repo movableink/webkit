@@ -45,12 +45,12 @@
 
 namespace WebCore {
 
-UniqueRef<PathQt> PathQt::create()
+Ref<PathQt> PathQt::create()
 {
-    return makeUniqueRef<PathQt>();
+    return adoptRef(*new PathQt);
 }
 
-UniqueRef<PathQt> PathQt::create(const PathStream& stream)
+Ref<PathQt> PathQt::create(const PathStream& stream)
 {
     auto pathQt = PathQt::create();
 
@@ -61,9 +61,17 @@ UniqueRef<PathQt> PathQt::create(const PathStream& stream)
     return pathQt;
 }
 
-UniqueRef<PathQt> PathQt::create(QPainterPath platformPath)
+Ref<PathQt> PathQt::create(const PathSegment& segment)
 {
-    return makeUniqueRef<PathQt>(WTFMove(platformPath));
+    auto pathQt = PathQt::create();
+    pathQt->appendSegment(segment);
+
+    return pathQt;
+}
+
+Ref<PathQt> PathQt::create(QPainterPath platformPath)
+{
+    return adoptRef(*new PathQt(WTFMove(platformPath)));
 }
 
 PathQt::PathQt()
@@ -97,7 +105,7 @@ PathQt& PathQt::operator=(PathQt&& other)
     return *this;
 }
 
-UniqueRef<PathImpl> PathQt::clone() const
+Ref<PathImpl> PathQt::copy() const
 {
     return create(m_path);
 }
@@ -105,13 +113,6 @@ UniqueRef<PathImpl> PathQt::clone() const
 QPainterPath PathQt::platformPath() const
 {
     return m_path;
-}
-
-bool PathQt::operator==(const PathImpl& other) const
-{
-    if (!is<PathQt>(other))
-        return false;
-    return m_path == downcast<PathQt>(other).m_path;
 }
 
 static inline bool areCollinear(const QPointF& a, const QPointF& b, const QPointF& c)
@@ -450,13 +451,13 @@ void PathQt::applySegments(const PathSegmentApplier& applier) const
             break;
 
         case PathElement::Type::CloseSubpath:
-            applier({ std::monostate() });
+            applier({ PathCloseSubpath { } });
             break;
         }
     });
 }
 
-void PathQt::applyElements(const PathElementApplier& applier) const
+bool PathQt::applyElements(const PathElementApplier& applier) const
 {
     PathElement pelement;
     for (int i = 0; i < m_path.elementCount(); ++i) {
@@ -494,12 +495,15 @@ void PathQt::applyElements(const PathElementApplier& applier) const
                 Q_ASSERT(false);
         }
     }
+    return true;
 }
 
-void PathQt::transform(const AffineTransform& transform)
+bool PathQt::transform(const AffineTransform& transform)
 {
     QTransform qTransform(transform);
     m_path = qTransform.map(m_path);
+
+    return true;
 }
 
 }

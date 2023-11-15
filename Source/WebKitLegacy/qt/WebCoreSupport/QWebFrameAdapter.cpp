@@ -846,7 +846,7 @@ QWebHitTestResultPrivate::QWebHitTestResultPrivate(const WebCore::HitTestResult 
     if (innerNodeFrame)
         frame = QWebFrameAdapter::kit(innerNodeFrame)->handle();
 
-    enclosingBlock = QWebElement(WebCore::enclosingBlock(innerNode));
+    enclosingBlock = QWebElement(WebCore::enclosingBlock(innerNode).get());
 }
 
 QWebHitTestResultPrivate::QWebHitTestResultPrivate(const QWebHitTestResultPrivate& other)

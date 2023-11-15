@@ -603,11 +603,11 @@ std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decodeF
 
 #elif PLATFORM(QT)
 
-void Coder<WebCore::CertificateInfo>::encode(Encoder&, const WebCore::CertificateInfo&)
+void Coder<WebCore::CertificateInfo>::encodeForPersistence(Encoder&, const WebCore::CertificateInfo&)
 {
 }
 
-std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decode(Decoder&)
+std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decodeForPersistence(Decoder&)
 {
     return WebCore::CertificateInfo();
 }

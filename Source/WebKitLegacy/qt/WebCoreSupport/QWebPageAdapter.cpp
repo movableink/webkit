@@ -345,7 +345,7 @@ void QWebPageAdapter::initializeWebCorePage()
     // as expected out of the box, we use a default group similar to what other ports are doing.
     page->setGroupName("Default Group"_s);
 
-    page->addLayoutMilestones(DidFirstVisuallyNonEmptyLayout);
+    page->addLayoutMilestones(WebCore::LayoutMilestone::DidFirstVisuallyNonEmptyLayout);
 
     settings = new QWebSettings(page);
 

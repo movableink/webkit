@@ -185,7 +185,7 @@ Page* ChromeClientQt::createWindow(LocalFrame& frame, const WindowFeatures& feat
     UNUSED_PARAM(frame);
 #endif
 
-    QWebPageAdapter* newPage = m_webPage->createWindow(features.dialog);
+    QWebPageAdapter* newPage = m_webPage->createWindow(features.dialog.value_or(false));
     if (!newPage)
         return 0;
 

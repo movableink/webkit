@@ -488,7 +488,7 @@ void FrameLoaderClientQt::dispatchDidReachLayoutMilestone(OptionSet<LayoutMilest
     if (!m_webFrame)
         return;
 
-    if (milestones & DidFirstVisuallyNonEmptyLayout)
+    if (milestones & LayoutMilestone::DidFirstVisuallyNonEmptyLayout)
         m_webFrame->emitInitialLayoutCompleted();
 }
 

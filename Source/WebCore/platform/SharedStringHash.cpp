@@ -295,7 +295,7 @@ void visitedURL(const URL& base, const AtomString& attributeURL, Vector<UChar, 5
 {
     auto upconvertedCharacters = StringView(attributeURL.string()).upconvertedCharacters();
     const UChar* characters = upconvertedCharacters;
-    computeSharedStringHashInline(base, characters, attributeURL.length(), buffer);
+    computeSharedStringHashInline(base, characters, attributeURL.length());
 }
 #endif
 

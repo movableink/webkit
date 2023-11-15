@@ -639,7 +639,7 @@ QString DumpRenderTreeSupportQt::responseMimeType(QWebFrameAdapter* adapter)
 void DumpRenderTreeSupportQt::clearOpener(QWebFrameAdapter* adapter)
 {
     WebCore::LocalFrame* coreFrame = adapter->frame;
-    coreFrame->loader().setOpener(0);
+    coreFrame->loader().setOpener(nullptr);
 }
 
 void DumpRenderTreeSupportQt::addURLToRedirect(const QString& origin, const QString& destination)
