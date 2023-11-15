@@ -172,7 +172,7 @@ void ChromeClientQt::focusedElementChanged(Element* element)
     emit m_webPage->focusedElementChanged(QWebElement(element));
 }
 
-void ChromeClientQt::focusedFrameChanged(LocalFrame*)
+void ChromeClientQt::focusedFrameChanged(Frame*)
 {
 }
 

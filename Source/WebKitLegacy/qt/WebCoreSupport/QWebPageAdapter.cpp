@@ -576,7 +576,7 @@ void QWebPageAdapter::mousePressEvent(QMouseEvent* ev)
         return;
 
     RefPtr<WebCore::Node> oldNode;
-    LocalFrame* focusedFrame = page->focusController().focusedFrame();
+    LocalFrame* focusedFrame = page->focusController().focusedLocalFrame();
     if (Document* focusedDocument = focusedFrame ? focusedFrame->document() : 0)
         oldNode = focusedDocument->focusedElement();
 
@@ -594,7 +594,7 @@ void QWebPageAdapter::mousePressEvent(QMouseEvent* ev)
     ev->setAccepted(accepted);
 
     RefPtr<WebCore::Node> newNode;
-    focusedFrame = page->focusController().focusedFrame();
+    focusedFrame = page->focusController().focusedLocalFrame();
     if (Document* focusedDocument = focusedFrame ? focusedFrame->document() : 0)
         newNode = focusedDocument->focusedElement();
 
@@ -654,7 +654,7 @@ void QWebPageAdapter::mouseReleaseEvent(QMouseEvent *ev)
 
 void QWebPageAdapter::handleSoftwareInputPanel(Qt::MouseButton button, const QPoint& pos)
 {
-    LocalFrame* frame = page->focusController().focusedFrame();
+    LocalFrame* frame = page->focusController().focusedLocalFrame();
     if (!frame)
         return;
 
@@ -804,7 +804,7 @@ void QWebPageAdapter::inputMethodEvent(QInputMethodEvent *ev)
 
 QVariant QWebPageAdapter::inputMethodQuery(Qt::InputMethodQuery property) const
 {
-    LocalFrame* frame = page->focusController().focusedFrame();
+    LocalFrame* frame = page->focusController().focusedLocalFrame();
     if (!frame)
         return QVariant();
 
@@ -1363,7 +1363,7 @@ QObject* QWebPageAdapter::currentFrame() const
 bool QWebPageAdapter::hasFocusedNode() const
 {
     bool hasFocus = false;
-    LocalFrame* frame = page->focusController().focusedFrame();
+    LocalFrame* frame = page->focusController().focusedLocalFrame();
     if (frame) {
         Document* document = frame->document();
         hasFocus = document && document->focusedElement();

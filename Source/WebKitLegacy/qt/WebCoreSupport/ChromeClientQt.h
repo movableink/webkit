@@ -79,7 +79,7 @@ public:
     void takeFocus(FocusDirection) final;
 
     void focusedElementChanged(Element*) final;
-    void focusedFrameChanged(LocalFrame*) final;
+    void focusedFrameChanged(Frame*) final;
 
     Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&) final;
     void show() final;
