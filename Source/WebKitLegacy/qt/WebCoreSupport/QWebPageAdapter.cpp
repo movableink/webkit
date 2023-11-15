@@ -821,7 +821,7 @@ QVariant QWebPageAdapter::inputMethodQuery(Qt::InputMethodQuery property) const
             renderer = rootEditableElement->renderer();
     }
 
-    if (renderer && renderer->isTextControl())
+    if (renderer && renderer->isRenderTextControl())
         renderTextControl = downcast<RenderTextControl>(renderer);
 
     switch (property) {
@@ -1092,7 +1092,7 @@ static WebCore::HTMLMediaElement* mediaElement(WebCore::Node* innerNonSharedNode
     if (!innerNonSharedNode)
         return 0;
 
-    if (!(innerNonSharedNode->renderer() && innerNonSharedNode->renderer()->isMedia()))
+    if (!(innerNonSharedNode->renderer() && innerNonSharedNode->renderer()->isRenderMedia()))
         return 0;
 
     if (innerNonSharedNode->hasTagName(WebCore::HTMLNames::videoTag) || innerNonSharedNode->hasTagName(WebCore::HTMLNames::audioTag))
