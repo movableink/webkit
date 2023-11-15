@@ -64,10 +64,6 @@
 
 #include <QStyleHints>
 
-#if ENABLE(VIDEO)
-#include "UserAgentScripts.h"
-#endif
-
 namespace WebCore {
 
 using namespace HTMLNames;

@@ -419,13 +419,20 @@ if (USE_QT_MULTIMEDIA)
 endif ()
 
 if (ENABLE_VIDEO)
-    list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
-        ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsBase.css
-    )
-    set(WebCore_USER_AGENT_SCRIPTS
-        ${WEBCORE_DIR}/en.lproj/mediaControlsLocalizedStrings.js
-        ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsBase.js
-    )
+    if (ENABLE_MODERN_MEDIA_CONTROLS)
+        list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
+            ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.css
+        )
+
+        list(APPEND WebCore_USER_AGENT_SCRIPTS
+            ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.js
+        )
+    else ()
+        list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
+            ${WEBCORE_DIR}/css/mediaControls.css
+        )
+    endif ()
+
     set(WebCore_USER_AGENT_SCRIPTS_DEPENDENCIES ${WEBCORE_DIR}/platform/qt/RenderThemeQt.cpp)
 endif ()
 
