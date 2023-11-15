@@ -89,6 +89,7 @@ list(APPEND WebKitLegacy_SOURCES
     qt/WebCoreSupport/InitWebCoreQt.cpp
     qt/WebCoreSupport/InspectorClientQt.cpp
     qt/WebCoreSupport/InspectorServerQt.cpp
+    qt/WebCoreSupport/LegacyHistoryItemClient.cpp
     qt/WebCoreSupport/NotificationPresenterClientQt.cpp
     qt/WebCoreSupport/PlatformStrategiesQt.cpp
     qt/WebCoreSupport/PluginInfoProviderQt.cpp
