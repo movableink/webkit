@@ -102,7 +102,7 @@ void DragClientQt::startDrag(DragItem dragItem, DataTransfer& dataTransfer, Loca
         Qt::DropAction actualDropAction = drag->exec(dragOperationsToDropActions(dragOperationMask));
 
         // Send dragEnd event
-        PlatformMouseEvent me(m_chromeClient->screenToRootView(QCursor::pos()), QCursor::pos(), LeftButton, PlatformEvent::Type::MouseMoved, 0, { }, WallTime::now(), ForceAtClick, SyntheticClickType::NoTap, WebCore::mousePointerID);
+        PlatformMouseEvent me(m_chromeClient->screenToRootView(QCursor::pos()), QCursor::pos(), MouseButton::Left, PlatformEvent::Type::MouseMoved, 0, { }, WallTime::now(), ForceAtClick, SyntheticClickType::NoTap, WebCore::mousePointerID);
         frame.eventHandler().dragSourceEndedAt(me, dropActionToDragOperation(actualDropAction));
     }
     frame.page()->dragController().dragEnded();

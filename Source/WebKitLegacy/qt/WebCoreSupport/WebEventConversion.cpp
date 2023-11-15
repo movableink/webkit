@@ -72,13 +72,13 @@ static void mouseEventTypeAndMouseButtonFromQEvent(const QEvent* event, Platform
 
 
     if (mouseButtons & Qt::LeftButton)
-        mouseButton = LeftButton;
+        mouseButton = MouseButton::Left;
     else if (mouseButtons & Qt::RightButton)
-        mouseButton = RightButton;
+        mouseButton = MouseButton::Right;
     else if (mouseButtons & Qt::MidButton)
-        mouseButton = MiddleButton;
+        mouseButton = MouseButton::Middle;
     else
-        mouseButton = NoButton;
+        mouseButton = MouseButton::None;
 }
 
 class WebKitPlatformMouseEvent : public PlatformMouseEvent {
@@ -98,7 +98,7 @@ WebKitPlatformMouseEvent::WebKitPlatformMouseEvent(QInputEvent* event, int click
         QContextMenuEvent* ce = static_cast<QContextMenuEvent*>(event);
         m_position = IntPoint(ce->pos());
         m_globalPosition = IntPoint(ce->globalPos());
-        m_button = RightButton;
+        m_button = MouseButton::Right;
     }
 #endif
     if (!isContextMenuEvent) {

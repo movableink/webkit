@@ -243,7 +243,7 @@ void NotificationPresenterClientQt::notificationClicked(NotificationWrapper* wra
 {
     Notification::ensureOnNotificationThread(wrapper->notification(), [](auto* notification) {
         if (notification) {
-            UserGestureIndicator gestureIndicator(ProcessingUserGesture);
+            UserGestureIndicator gestureIndicator(IsProcessingUserGesture::Yes);
             notification->dispatchClickEvent();
         }
     });

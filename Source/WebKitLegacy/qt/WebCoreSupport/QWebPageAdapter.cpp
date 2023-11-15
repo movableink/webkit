@@ -80,6 +80,7 @@
 #include <WebCore/FocusController.h>
 #include <WebCore/FrameLoadRequest.h>
 #include <WebCore/FrameSelection.h>
+#include <WebCore/HandleMouseEventResult.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLInputElement.h>
 #include <WebCore/HitTestResult.h>
@@ -565,7 +566,7 @@ void QWebPageAdapter::mouseMoveEvent(QMouseEvent* ev)
     if (ev->buttons() == Qt::NoButton)
         mousePressed = false;
 
-    bool accepted = frame->eventHandler().mouseMoved(convertMouseEvent(ev, 0));
+    bool accepted = frame->eventHandler().mouseMoved(convertMouseEvent(ev, 0)).wasHandled();
     ev->setAccepted(accepted);
 }
 
@@ -589,8 +590,8 @@ void QWebPageAdapter::mousePressEvent(QMouseEvent* ev)
     bool accepted = false;
     PlatformMouseEvent mev = convertMouseEvent(ev, 1);
     // ignore the event if we can't map Qt's mouse buttons to WebCore::MouseButton
-    if (mev.button() != NoButton)
-        mousePressed = accepted = frame->eventHandler().handleMousePressEvent(mev);
+    if (mev.button() != MouseButton::None)
+        mousePressed = accepted = frame->eventHandler().handleMousePressEvent(mev).wasHandled();
     ev->setAccepted(accepted);
 
     RefPtr<WebCore::Node> newNode;
@@ -611,8 +612,8 @@ void QWebPageAdapter::mouseDoubleClickEvent(QMouseEvent *ev)
     bool accepted = false;
     PlatformMouseEvent mev = convertMouseEvent(ev, 2);
     // ignore the event if we can't map Qt's mouse buttons to WebCore::MouseButton
-    if (mev.button() != NoButton)
-        accepted = frame->eventHandler().handleMousePressEvent(mev);
+    if (mev.button() != MouseButton::None)
+        accepted = frame->eventHandler().handleMousePressEvent(mev).wasHandled();
     ev->setAccepted(accepted);
 
     tripleClickTimer.start(qGuiApp->styleHints()->mouseDoubleClickInterval(), handle());
@@ -628,8 +629,8 @@ void QWebPageAdapter::mouseTripleClickEvent(QMouseEvent *ev)
     bool accepted = false;
     PlatformMouseEvent mev = convertMouseEvent(ev, 3);
     // ignore the event if we can't map Qt's mouse buttons to WebCore::MouseButton
-    if (mev.button() != NoButton)
-        accepted = frame->eventHandler().handleMousePressEvent(mev);
+    if (mev.button() != MouseButton::None)
+        accepted = frame->eventHandler().handleMousePressEvent(mev).wasHandled();
     ev->setAccepted(accepted);
 }
 
@@ -642,8 +643,8 @@ void QWebPageAdapter::mouseReleaseEvent(QMouseEvent *ev)
     bool accepted = false;
     PlatformMouseEvent mev = convertMouseEvent(ev, 0);
     // ignore the event if we can't map Qt's mouse buttons to WebCore::MouseButton
-    if (mev.button() != NoButton)
-        accepted = frame->eventHandler().handleMouseReleaseEvent(mev);
+    if (mev.button() != MouseButton::None)
+        accepted = frame->eventHandler().handleMouseReleaseEvent(mev).wasHandled();
     ev->setAccepted(accepted);
 
     if (ev->buttons() == Qt::NoButton)
@@ -1195,7 +1196,7 @@ void QWebPageAdapter::triggerAction(QWebPageAdapter::MenuAction action, QWebHitT
     case ToggleVideoFullscreen:
         if (HTMLMediaElement* mediaElt = mediaElement(hitTestResult->innerNonSharedNode)) {
             if (mediaElt->isVideo() && mediaElt->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard)) {
-                UserGestureIndicator indicator(ProcessingUserGesture);
+                UserGestureIndicator indicator(IsProcessingUserGesture);
                 mediaElt->toggleStandardFullscreenState();
             }
         }
@@ -1440,35 +1441,35 @@ bool QWebPageAdapter::handleScrolling(QKeyEvent *ev)
 #ifndef QT_NO_SHORTCUT
     if (ev == QKeySequence::MoveToNextPage) {
         granularity = WebCore::ScrollGranularity::Page;
-        direction = WebCore::ScrollDown;
+        direction = WebCore::ScrollDirection::ScrollDown;
     } else if (ev == QKeySequence::MoveToPreviousPage) {
         granularity = WebCore::ScrollGranularity::Page;
-        direction = WebCore::ScrollUp;
+        direction = WebCore::ScrollDirection::ScrollUp;
     } else
 #endif // QT_NO_SHORTCUT
     if ((ev->key() == Qt::Key_Up && ev->modifiers() & Qt::ControlModifier) || ev->key() == Qt::Key_Home) {
         granularity = WebCore::ScrollGranularity::Document;
-        direction = WebCore::ScrollUp;
+        direction = WebCore::ScrollDirection::ScrollUp;
     } else if ((ev->key() == Qt::Key_Down && ev->modifiers() & Qt::ControlModifier) || ev->key() == Qt::Key_End) {
         granularity = WebCore::ScrollGranularity::Document;
-        direction = WebCore::ScrollDown;
+        direction = WebCore::ScrollDirection::ScrollDown;
     } else {
         switch (ev->key()) {
         case Qt::Key_Up:
             granularity = WebCore::ScrollGranularity::Line;
-            direction = WebCore::ScrollUp;
+            direction = WebCore::ScrollDirection::ScrollUp;
             break;
         case Qt::Key_Down:
             granularity = WebCore::ScrollGranularity::Line;
-            direction = WebCore::ScrollDown;
+            direction = WebCore::ScrollDirection::ScrollDown;
             break;
         case Qt::Key_Left:
             granularity = WebCore::ScrollGranularity::Line;
-            direction = WebCore::ScrollLeft;
+            direction = WebCore::ScrollDirection::ScrollLeft;
             break;
         case Qt::Key_Right:
             granularity = WebCore::ScrollGranularity::Line;
-            direction = WebCore::ScrollRight;
+            direction = WebCore::ScrollDirection::ScrollRight;
             break;
         default:
             return false;
@@ -1557,8 +1558,8 @@ bool QWebPageAdapter::touchEvent(QTouchEvent* event)
 bool QWebPageAdapter::swallowContextMenuEvent(QContextMenuEvent *event, QWebFrameAdapter *webFrame)
 {
     // Check the first and last enum values match at least, since we cast.
-    ASSERT(int(QWebPageAdapter::ScrollUp) == int(WebCore::ScrollUp));
-    ASSERT(int(QWebPageAdapter::ScrollRight) == int(WebCore::ScrollRight));
+    ASSERT(int(QWebPageAdapter::ScrollUp) == int(WebCore::ScrollDirection::ScrollUp));
+    ASSERT(int(QWebPageAdapter::ScrollRight) == int(WebCore::ScrollDirection::ScrollRight));
     ASSERT(int(QWebPageAdapter::ScrollByLine) == int(WebCore::ScrollGranularity::Line));
     ASSERT(int(QWebPageAdapter::ScrollByDocument) == int(WebCore::ScrollGranularity::Document));
 

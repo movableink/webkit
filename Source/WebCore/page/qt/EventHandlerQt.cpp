@@ -38,6 +38,7 @@
 #include "FrameLoader.h"
 #include "FrameTree.h"
 #include "FrameView.h"
+#include "HandleMouseEventResult.h"
 #include "HTMLFrameSetElement.h"
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
