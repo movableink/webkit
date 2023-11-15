@@ -111,7 +111,7 @@ public:
     class WorkItemQt;
     QThread* m_workThread;
     friend class WorkItemQt;
-#elif !USE(COCOA_EVENT_LOOP)
+#elif !USE(COCOA_EVENT_LOOP) && !(PLATFORM(QT) && USE(MACH_PORTS))
     RunLoop& runLoop() const { return *m_runLoop; }
 #endif
 

@@ -1550,7 +1550,7 @@ int FontCascade::offsetForPositionForComplexText(const TextRun& run, float x, bo
     return controller.offsetForPosition(x, includePartialGlyphs);
 }
 
-#if !PLATFORM(COCOA) && !USE(HARFBUZZ)
+#if !PLATFORM(COCOA) && !USE(HARFBUZZ) && !PLATFORM(QT)
 // FIXME: Unify this with the macOS and iOS implementation.
 const Font* FontCascade::fontForCombiningCharacterSequence(StringView stringView) const
 {
