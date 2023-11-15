@@ -848,6 +848,18 @@ String validationMessagePatternMismatchText()
     return String();
 }
 
+String validationMessagePatternMismatchText(const String& title)
+{
+    notImplemented();
+    return String();
+}
+
+String validationMessageValueMissingForSwitchText()
+{
+    notImplemented();
+    return String();
+}
+
 String validationMessageTooShortText(int, int minLength)
 {
     return QCoreApplication::translate("QWebPage", "Use at least %n characters", "Validation message", minLength);
