@@ -489,7 +489,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
 #if PLATFORM(QT)
     // Print attributes of embedded QWidgets. E.g. when the WebCore::Widget
     // is invisible the QWidget should be invisible too.
-    if (o.isWidget()) {
+    if (is<RenderWidget>(o)) {
         const RenderWidget& part = downcast<RenderWidget>(o);
         if (part.widget() && part.widget()->platformWidget()) {
             QObject* wid = part.widget()->platformWidget();

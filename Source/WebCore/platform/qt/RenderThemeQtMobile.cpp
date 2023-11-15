@@ -862,7 +862,7 @@ Seconds RenderThemeQtMobile::animationDurationForProgressBar(const RenderProgres
 
 bool RenderThemeQtMobile::paintProgressBar(const RenderObject& o, const PaintInfo& pi, const IntRect& r)
 {
-    if (!o.isProgress())
+    if (!o.isRenderProgress())
         return true;
 
     StylePainterMobile p(this, pi);

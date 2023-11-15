@@ -467,7 +467,7 @@ Seconds RenderThemeQStyle::animationDurationForProgressBar(const RenderProgress&
 
 bool RenderThemeQStyle::paintProgressBar(const RenderObject& o, const PaintInfo& pi, const IntRect& r)
 {
-    if (!o.isProgress())
+    if (!o.isRenderProgress())
         return true;
 
     StylePainterQStyle p(this, pi, o);

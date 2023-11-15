@@ -162,7 +162,7 @@ bool RenderThemeQt::supportsFocusRing(const RenderStyle& style) const
 
 int RenderThemeQt::baselinePosition(const RenderBox& o) const
 {
-    if (!o.isBox())
+    if (!o.isRenderBox())
         return 0;
 
     if (o.style().appearance() == StyleAppearance::Checkbox || o.style().appearance() == StyleAppearance::Radio)
@@ -325,7 +325,7 @@ void RenderThemeQt::adjustMenuListStyle(RenderStyle& style, const Element*) cons
 
     // White-space is locked to pre
     style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
-    style.setTextWrap(TextWrap::NoWrap);
+    style.setTextWrapMode(TextWrapMode::NoWrap);
 
     computeSizeBasedOnStyle(style);
 
@@ -340,7 +340,7 @@ void RenderThemeQt::adjustMenuListButtonStyle(RenderStyle& style, const Element*
 
     // White-space is locked to pre
     style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
-    style.setTextWrap(TextWrap::NoWrap);
+    style.setTextWrapMode(TextWrapMode::NoWrap);
 
     computeSizeBasedOnStyle(style);
 
