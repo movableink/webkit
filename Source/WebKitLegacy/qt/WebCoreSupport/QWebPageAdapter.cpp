@@ -34,6 +34,7 @@
 #include "NotificationPresenterClientQt.h"
 #include "PluginInfoProviderQt.h"
 #include "ProgressTrackerClientQt.h"
+#include "LegacyHistoryItemClient.h"
 #include "LegacySocketProvider.h"
 #include "QWebFrameAdapter.h"
 #include "QWebPageStorageSessionProvider.h"
@@ -282,14 +283,15 @@ void QWebPageAdapter::initializeWebCorePage()
         BackForwardList::create(*this),
         CookieJar::create(storageProvider.copyRef()),
         makeUniqueRef<ProgressTrackerClientQt>(this),
-        makeUniqueRef<FrameLoaderClientQt>(),
+        UniqueRef<WebCore::LocalFrameLoaderClient>(makeUniqueRef<FrameLoaderClientQt>()),
         WebCore::FrameIdentifier::generate(),
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate(isPrivateBrowsingEnabled),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
         makeUniqueRef<WebCore::DummyModelPlayerProvider>(),
-        EmptyBadgeClient::create(),
+        WebCore::EmptyBadgeClient::create(),
+        LegacyHistoryItemClient::singleton(),
 #if ENABLE(CONTEXT_MENUS)
         makeUniqueRef<ContextMenuClientQt>(),
 #endif
