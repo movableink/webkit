@@ -188,11 +188,6 @@ void DumpRenderTreeSupportQt::setDumpRenderTreeModeEnabled(bool b)
     QWebPageAdapter::drtRun = b;
 }
 
-void DumpRenderTreeSupportQt::setFrameFlatteningEnabled(QWebPageAdapter* adapter, bool enabled)
-{
-    adapter->page->settings().setFrameFlattening(enabled ? WebCore::FrameFlattening::FullyEnabled : WebCore::FrameFlattening::Disabled);
-}
-
 void DumpRenderTreeSupportQt::webPageSetGroupName(QWebPageAdapter *adapter, const QString& groupName)
 {
     adapter->page->setGroupName(groupName);
