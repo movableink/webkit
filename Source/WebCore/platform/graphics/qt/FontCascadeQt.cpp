@@ -317,8 +317,12 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
     for (int i = 0; i < numGlyphs; ++i) {
         Glyph glyph = glyphs[i];
         float advance = advances[i].x();
-        if (!glyph)
+
+        if (!glyph) {
+            width += advance;
             continue;
+        }
+
         glyphIndexes.append(glyph);
         positions.append(QPointF(width, 0));
         width += advance;
