@@ -87,6 +87,7 @@ public:
 
     void assignIdentifierToInitialRequest(WebCore::ResourceLoaderIdentifier, WebCore::DocumentLoader*, const WebCore::ResourceRequest&) override;
 
+    void dispatchLoadEventToOwnerElementInAnotherProcess() override { };
     void dispatchWillSendRequest(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier, WebCore::ResourceRequest&, const WebCore::ResourceResponse&) override;
     bool shouldUseCredentialStorage(DocumentLoader*, WebCore::ResourceLoaderIdentifier identifier) override;
     void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, WebCore::ResourceLoaderIdentifier identifier, const AuthenticationChallenge&) override;
@@ -95,7 +96,6 @@ public:
     void dispatchDidFinishLoading(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier) override;
     void dispatchDidFailLoading(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier, const WebCore::ResourceError&) override;
     bool dispatchDidLoadResourceFromMemoryCache(WebCore::DocumentLoader*, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&, int) override;
-    void dispatchLoadEventToOwnerElementInAnotherProcess() override { };
 
     void dispatchDidDispatchOnloadEvents() override;
     void dispatchDidReceiveServerRedirectForProvisionalLoad() override;
