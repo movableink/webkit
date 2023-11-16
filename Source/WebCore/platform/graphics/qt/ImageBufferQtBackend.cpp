@@ -130,7 +130,7 @@ RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage()
 
 RefPtr<NativeImage> ImageBufferQtBackend::createNativeImageReference()
 {
-    return NativeImage::create(WTFMove(QImage(*m_nativeImage.get())));
+    return NativeImage::create(QImage(*m_nativeImage.get()));
 }
 
 GraphicsContext &ImageBufferQtBackend::context() { return *m_context; }

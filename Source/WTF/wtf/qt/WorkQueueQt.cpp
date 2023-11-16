@@ -128,7 +128,9 @@ void WorkQueueBase::dispatchOnTermination(QProcess* process, WTF::Function<void(
 }
 
 WorkQueue::WorkQueue(MainTag)
-    : WorkQueueBase("main", QOS::Default)
+    : WorkQueueBase("main", Type::Serial, QOS::Default)
+{}
+
 }
 
 #include "WorkQueueQt.moc"
