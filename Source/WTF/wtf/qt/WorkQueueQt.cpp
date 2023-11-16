@@ -127,11 +127,8 @@ void WorkQueueBase::dispatchOnTermination(QProcess* process, WTF::Function<void(
     itemQt->moveToThread(m_workThread);
 }
 
-Ref<WorkQueue> WorkQueue::constructMainWorkQueue()
-{
-    return adoptRef(*new WorkQueue("main", QOS::Default));
-}
-
+WorkQueue::WorkQueue(MainTag)
+    : WorkQueueBase("main", QOS::Default)
 }
 
 #include "WorkQueueQt.moc"
