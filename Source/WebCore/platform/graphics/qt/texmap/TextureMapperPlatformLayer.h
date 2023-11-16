@@ -19,8 +19,6 @@
 
 #pragma once
 
-#if USE(TEXTURE_MAPPER)
-
 #include "TextureMapper.h"
 #include "TransformationMatrix.h"
 
@@ -54,5 +52,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // USE(TEXTURE_MAPPER)

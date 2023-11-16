@@ -326,11 +326,7 @@ void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
         m_compositedImage->setContentsToImage(image);
         m_compositedImage->updateContentsScale(pageScaleFactor() * deviceScaleFactor());
     } else {
-#if PLATFORM(QT)
         m_compositedNativeImage = nullptr;
-#else
-        m_compositedImage = nullptr;
-#endif
     }
 
     setContentsToPlatformLayer(m_compositedImage.get(), ContentsLayerPurpose::Image);

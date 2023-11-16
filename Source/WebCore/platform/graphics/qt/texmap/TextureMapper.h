@@ -90,9 +90,6 @@ public:
     virtual IntSize maxTextureSize() const = 0;
 
     virtual RefPtr<BitmapTexture> acquireTextureFromPool(const IntSize&, const BitmapTexture::Flags = BitmapTexture::SupportsAlpha);
-#if USE(GRAPHICS_LAYER_WC)
-    WEBCORE_EXPORT void releaseUnusedTexturesNow();
-#endif
 
     void setPatternTransform(const TransformationMatrix& p) { m_patternTransform = p; }
     void setWrapMode(WrapMode m) { m_wrapMode = m; }
@@ -105,14 +102,11 @@ protected:
     const TransformationMatrix& patternTransform() const { return m_patternTransform; }
 
 private:
-#if USE(TEXTURE_MAPPER_GL)
-    static std::unique_ptr<TextureMapper> platformCreateAccelerated();
-#else
     static std::unique_ptr<TextureMapper> platformCreateAccelerated()
     {
         return nullptr;
     }
-#endif
+
     bool m_isMaskMode { false };
     TransformationMatrix m_patternTransform;
     WrapMode m_wrapMode { StretchWrap };
