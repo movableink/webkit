@@ -452,16 +452,13 @@ QString DumpRenderTreeSupportQt::viewportAsText(QWebPageAdapter* adapter, int de
     WebCore::restrictMinimumScaleFactorToViewportSize(conf, availableSize, devicePixelRatio);
     WebCore::restrictScaleFactorToInitialScaleIfNotUserScalable(conf);
 
-    QString res;
-    res = res.sprintf("viewport size %dx%d scale %f with limits [%f, %f] and userScalable %f\n",
-        static_cast<int>(conf.layoutSize.width()),
-        static_cast<int>(conf.layoutSize.height()),
-        conf.initialScale,
-        conf.minimumScale,
-        conf.maximumScale,
-        conf.userScalable);
-
-    return res;
+    return QLatin1String("viewport size %1x%2 scale %3 with limits [%4, %5] and userScalable %6\n")
+        .arg(QByteArray::number(conf.layoutSize.width()))
+        .arg(QByteArray::number(conf.layoutSize.height()))
+        .arg(conf.initialScale)
+        .arg(conf.minimumScale)
+        .arg(conf.maximumScale)
+        .arg(conf.userScalable);
 }
 
 void DumpRenderTreeSupportQt::scalePageBy(QWebFrameAdapter* adapter, float scalefactor, const QPoint& origin)

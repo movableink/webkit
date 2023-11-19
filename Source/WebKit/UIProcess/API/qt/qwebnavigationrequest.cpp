@@ -63,7 +63,7 @@ void QWebNavigationRequest::setAction(QQuickWebView::NavigationRequestAction act
         return;
 
     d->action = action;
-    emit actionChanged();
+    Q_EMIT actionChanged();
 }
 
 QUrl QWebNavigationRequest::url() const

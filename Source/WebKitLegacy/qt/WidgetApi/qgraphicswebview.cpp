@@ -92,9 +92,9 @@ void QGraphicsWebViewPrivate::_q_doLoadFinished(bool success)
 {
     // If the page had no title, still make sure it gets the signal
     if (q->title().isEmpty())
-        emit q->urlChanged(q->url());
+        Q_EMIT q->urlChanged(q->url());
 
-    emit q->loadFinished(success);
+    Q_EMIT q->loadFinished(success);
 }
 
 void QGraphicsWebViewPrivate::_q_pageDestroyed()

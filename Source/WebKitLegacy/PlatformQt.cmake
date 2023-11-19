@@ -111,12 +111,12 @@ list(APPEND WebKitLegacy_SOURCES
     qt/WebCoreSupport/WebEventConversion.cpp
 )
 
-# Note: Qt5Network_INCLUDE_DIRS includes Qt5Core_INCLUDE_DIRS
+# Note: Qt6Network_INCLUDE_DIRS includes Qt6Core_INCLUDE_DIRS
 list(APPEND WebKitLegacy_SYSTEM_INCLUDE_DIRECTORIES
-    ${Qt5Gui_INCLUDE_DIRS}
-    ${Qt5Gui_PRIVATE_INCLUDE_DIRS}
-    ${Qt5Network_INCLUDE_DIRS}
-    ${Qt5Positioning_INCLUDE_DIRS}
+    ${Qt6Gui_INCLUDE_DIRS}
+    ${Qt6Gui_PRIVATE_INCLUDE_DIRS}
+    ${Qt6Network_INCLUDE_DIRS}
+    ${Qt6Positioning_INCLUDE_DIRS}
     ${SQLITE_INCLUDE_DIR}
 )
 # Build the include path with duplicates removed
@@ -138,21 +138,21 @@ endif ()
 list(APPEND WebKitLegacy_LIBRARIES
     PRIVATE
         ${WEBKIT_LIBRARY}
-        ${Qt5Quick_LIBRARIES}
-        ${Qt5WebChannel_LIBRARIES}
+        ${Qt6Quick_LIBRARIES}
+        ${Qt6WebChannel_LIBRARIES}
 )
 
 list(APPEND WebKitLegacy_LIBRARIES
     PRIVATE
         ${ICU_LIBRARIES}
-        ${Qt5Positioning_LIBRARIES}
+        ${Qt6Positioning_LIBRARIES}
         ${X11_X11_LIB}
         ${X11_Xcomposite_LIB}
         ${X11_Xrender_LIB}
     PUBLIC
-        ${Qt5Core_LIBRARIES}
-        ${Qt5Gui_LIBRARIES}
-        ${Qt5Network_LIBRARIES}
+        ${Qt6Core_LIBRARIES}
+        ${Qt6Gui_LIBRARIES}
+        ${Qt6Network_LIBRARIES}
 )
 
 if (ENABLE_GEOLOCATION)
@@ -191,7 +191,7 @@ endif ()
 # Resources have to be included directly in the final binary.
 # The linker won't pick them from a static library since they aren't referenced.
 if (NOT SHARED_CORE)
-    qt5_add_resources(WebKitLegacy_SOURCES
+    qt6_add_resources(WebKitLegacy_SOURCES
         "${WEBCORE_DIR}/WebCore.qrc"
     )
 
@@ -302,7 +302,7 @@ install(
     COMPONENT Data
 )
 
-set(WEBKIT_PKGCONFIG_DEPS "Qt5Core Qt5Gui Qt5Network")
+set(WEBKIT_PKGCONFIG_DEPS "Qt6Core Qt6Gui Qt6Network")
 set(WEBKIT_PRI_DEPS "core gui network")
 set(WEBKIT_PRI_EXTRA_LIBS "")
 set(WEBKIT_PRI_RUNTIME_DEPS "core_private gui_private")
@@ -323,15 +323,15 @@ if (USE_MEDIA_FOUNDATION)
     set(WEBKIT_PRI_EXTRA_LIBS "-lmfuuid -lstrmiids ${WEBKIT_PRI_EXTRA_LIBS}")
 endif ()
 if (USE_QT_MULTIMEDIA)
-    set(WEBKIT_PKGCONFIG_DEPS "${WEBKIT_PKGCONFIG_DEPS} Qt5Multimedia")
+    set(WEBKIT_PKGCONFIG_DEPS "${WEBKIT_PKGCONFIG_DEPS} Qt6Multimedia")
     set(WEBKIT_PRI_RUNTIME_DEPS "multimedia ${WEBKIT_PRI_RUNTIME_DEPS}")
 endif ()
 
-set(WEBKITWIDGETS_PKGCONFIG_DEPS "${WEBKIT_PKGCONFIG_DEPS} Qt5Widgets Qt5WebKit")
+set(WEBKITWIDGETS_PKGCONFIG_DEPS "${WEBKIT_PKGCONFIG_DEPS} Qt6Widgets Qt6WebKit")
 set(WEBKITWIDGETS_PRI_DEPS "${WEBKIT_PRI_DEPS} widgets webkit")
 set(WEBKITWIDGETS_PRI_RUNTIME_DEPS "${WEBKIT_PRI_RUNTIME_DEPS} widgets_private")
 
-if (Qt5OpenGL_FOUND)
+if (Qt6OpenGL_FOUND)
     set(WEBKITWIDGETS_PRI_RUNTIME_DEPS "${WEBKITWIDGETS_PRI_RUNTIME_DEPS} opengl")
 endif ()
 
@@ -340,12 +340,12 @@ if (ENABLE_PRINT_SUPPORT)
 endif ()
 
 if (USE_QT_MULTIMEDIA)
-    set(WEBKITWIDGETS_PKGCONFIG_DEPS "${WEBKITWIDGETS_PKGCONFIG_DEPS} Qt5MultimediaWidgets")
+    set(WEBKITWIDGETS_PKGCONFIG_DEPS "${WEBKITWIDGETS_PKGCONFIG_DEPS} Qt6MultimediaWidgets")
     set(WEBKITWIDGETS_PRI_RUNTIME_DEPS "${WEBKITWIDGETS_PRI_RUNTIME_DEPS} multimediawidgets")
 endif ()
 
 if (QT_STATIC_BUILD)
-    set(WEBKITWIDGETS_PKGCONFIG_DEPS "${WEBKITWIDGETS_PKGCONFIG_DEPS} Qt5PrintSupport")
+    set(WEBKITWIDGETS_PKGCONFIG_DEPS "${WEBKITWIDGETS_PKGCONFIG_DEPS} Qt6PrintSupport")
     set(WEBKITWIDGETS_PRI_DEPS "${WEBKITWIDGETS_PRI_DEPS} printsupport")
     set(EXTRA_LIBS_NAMES WebCore JavaScriptCore WTF)
     append_lib_names_to_list(EXTRA_LIBS_NAMES ${LIBXML2_LIBRARIES} ${SQLITE_LIBRARIES} ${ZLIB_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES})
@@ -373,7 +373,7 @@ endif ()
 
 if (NOT MACOS_BUILD_FRAMEWORKS)
     ecm_generate_pkgconfig_file(
-        BASE_NAME Qt5WebKit
+        BASE_NAME Qt6WebKit
         DESCRIPTION "Qt WebKit module"
         INCLUDE_INSTALL_DIR "${KDE_INSTALL_INCLUDEDIR}/QtWebKit"
         DEPS "${WEBKIT_PKGCONFIG_DEPS}"
@@ -442,7 +442,7 @@ list(APPEND QtWebKit_Private_PRI_ARGUMENTS MODULE_CONFIG "internal_module no_lin
 if (MACOS_BUILD_FRAMEWORKS)
     set(WebKitLegacy_OUTPUT_NAME QtWebKit)
 else ()
-    set(WebKitLegacy_OUTPUT_NAME Qt5WebKit)
+    set(WebKitLegacy_OUTPUT_NAME Qt6WebKit)
 endif ()
 
 ecm_generate_pri_file(
@@ -528,9 +528,10 @@ set(WebKitWidgets_SOURCES
 )
 
 set(WebKitWidgets_SYSTEM_INCLUDE_DIRECTORIES
-    ${Qt5Gui_INCLUDE_DIRS}
-    ${Qt5Network_INCLUDE_DIRS}
-    ${Qt5Widgets_INCLUDE_DIRS}
+    ${Qt6Gui_INCLUDE_DIRS}
+    ${Qt6Network_INCLUDE_DIRS}
+    ${Qt6Widgets_INCLUDE_DIRS}
+    ${Qt6OpenGLWidgets_INCLUDE_DIRS}
 )
 
 if (APPLE)
@@ -541,10 +542,11 @@ endif ()
 
 set(WebKitWidgets_LIBRARIES
     PRIVATE
-        ${Qt5MultimediaWidgets_LIBRARIES}
-        ${Qt5PrintSupport_LIBRARIES}
+        ${Qt6MultimediaWidgets_LIBRARIES}
+        ${Qt6PrintSupport_LIBRARIES}
+        ${Qt6OpenGLWidgets_LIBRARIES}
     PUBLIC
-        ${Qt5Widgets_LIBRARIES}
+        ${Qt6Widgets_LIBRARIES}
         WebKitLegacy
 )
 
@@ -554,7 +556,7 @@ if (USE_QT_MULTIMEDIA)
         qt/WidgetSupport/FullScreenVideoWidget.cpp
     )
     list(APPEND WebKitWidgets_SYSTEM_INCLUDE_DIRECTORIES
-        ${Qt5MultimediaWidgets_INCLUDE_DIRS}
+        ${Qt6MultimediaWidgets_INCLUDE_DIRS}
     )
 endif ()
 
@@ -639,7 +641,7 @@ install(
 
 if (NOT MACOS_BUILD_FRAMEWORKS)
     ecm_generate_pkgconfig_file(
-        BASE_NAME Qt5WebKitWidgets
+        BASE_NAME Qt6WebKitWidgets
         DESCRIPTION "Qt WebKitWidgets module"
         INCLUDE_INSTALL_DIR "${KDE_INSTALL_INCLUDEDIR}/QtWebKitWidgets"
         DEPS "${WEBKITWIDGETS_PKGCONFIG_DEPS}"
@@ -702,7 +704,7 @@ list(APPEND WebKitWidgets_Private_PRI_ARGUMENTS MODULE_CONFIG "internal_module n
 if (MACOS_BUILD_FRAMEWORKS)
     set(WebKitWidgets_OUTPUT_NAME QtWebKitWidgets)
 else ()
-    set(WebKitWidgets_OUTPUT_NAME Qt5WebKitWidgets)
+    set(WebKitWidgets_OUTPUT_NAME Qt6WebKitWidgets)
 endif ()
 
 ecm_generate_pri_file(
@@ -761,7 +763,7 @@ WEBKIT_COPY_FILES(WebKitWidgets_CopyHeaders
 WEBKIT_FRAMEWORK(WebKitWidgets)
 add_dependencies(WebKitWidgets WebKitLegacy)
 set_target_properties(WebKitWidgets PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR})
-install(TARGETS WebKitWidgets EXPORT Qt5WebKitWidgetsTargets
+install(TARGETS WebKitWidgets EXPORT Qt6WebKitWidgetsTargets
         DESTINATION "${LIB_INSTALL_DIR}"
         RUNTIME DESTINATION "${BIN_INSTALL_DIR}"
 )
@@ -789,7 +791,7 @@ endif ()
 if (USE_LINKER_VERSION_SCRIPT)
     set(VERSION_SCRIPT "${CMAKE_BINARY_DIR}/QtWebKitWidgets.version")
     add_custom_command(TARGET WebKitWidgets PRE_LINK
-        COMMAND ${PERL_EXECUTABLE} ${TOOLS_DIR}/qt/generate-version-script.pl ${Qt5_VERSION} > ${VERSION_SCRIPT}
+        COMMAND ${PERL_EXECUTABLE} ${TOOLS_DIR}/qt/generate-version-script.pl ${Qt6_VERSION} > ${VERSION_SCRIPT}
         VERBATIM
     )
     set_target_properties(WebKitWidgets PROPERTIES LINK_FLAGS -Wl,--version-script,${VERSION_SCRIPT})
@@ -814,10 +816,6 @@ if (COMPILER_IS_GCC_OR_CLANG)
     PROPERTIES
         COMPILE_FLAGS -frtti
     )
-endif ()
-
-if (ENABLE_API_TESTS)
-    add_subdirectory(qt/tests)
 endif ()
 
 if (ENABLE_WEBKIT)

@@ -47,7 +47,7 @@ WindowOptions windowOptions;
 #include <QFile>
 #include <QFileInfo>
 #include <QFontDatabase>
-#include <QRegExp>
+#include <QRegularExpression>
 
 int launcherMain(const QApplication& app)
 {
@@ -239,18 +239,12 @@ void LauncherApplication::handleUserOptions()
 
         windowOptions.viewportUpdateMode = static_cast<QGraphicsView::ViewportUpdateMode>(idx);
     }
-#ifdef QT_OPENGL_LIB
-    if (args.contains("-gl-viewport") || defaultForAnimations) {
-        requiresGraphicsView("-gl-viewport");
-        windowOptions.useQGLWidgetViewport = true;
-    }
 
-#endif
     if (args.contains("-webgl")) {
         windowOptions.useWebGL = true;
     }
 
-    if (args.contains("-opengl-viewport")) {
+    if (args.contains("-opengl-viewport") || defaultForAnimations) {
         requiresGraphicsView("-opengl-viewport");
         windowOptions.useQOpenGLWidgetViewport = true;
     }
@@ -285,7 +279,7 @@ void LauncherApplication::handleUserOptions()
         m_isRobotized = true;
         m_urls = QStringList(listFile);
     } else {
-        int lastArg = args.lastIndexOf(QRegExp("^-.*"));
+        int lastArg = args.lastIndexOf(QRegularExpression("^-.*"));
         m_urls = (lastArg != -1) ? args.mid(++lastArg) : args.mid(1);
     }
 
@@ -322,7 +316,7 @@ int main(int argc, char **argv)
     }
 
     LauncherWindow* window = 0;
-    foreach (QString url, urls) {
+    Q_FOREACH (QString url, urls) {
         LauncherWindow* newWindow;
         if (!window)
             newWindow = window = new LauncherWindow(&windowOptions);

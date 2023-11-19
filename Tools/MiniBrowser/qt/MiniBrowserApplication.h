@@ -37,6 +37,7 @@
 #include <QTouchEvent>
 #include <QUrl>
 #include <qpa/qwindowsysteminterface.h>
+#include <private/qeventpoint_p.h>
 
 class BrowserWindow;
 
@@ -71,7 +72,7 @@ public:
     {
         if (enabled != m_touchMockingEnabled) {
             m_touchMockingEnabled = enabled;
-            emit touchMockingEnabledChanged();
+            Q_EMIT touchMockingEnabledChanged();
         }
     }
 
@@ -101,7 +102,7 @@ public:
     virtual bool notify(QObject*, QEvent*);
 
 private:
-    void updateTouchPoint(const QMouseEvent*, QTouchEvent::TouchPoint, Qt::MouseButton);
+    void updateTouchPoint(const QMouseEvent*, QMutableEventPoint, Qt::MouseButton);
     bool sendTouchEvent(BrowserWindow*, QEvent::Type, ulong timestamp);
     void handleUserOptions();
 
@@ -113,7 +114,7 @@ private:
     int m_robotExtraTimeSeconds;
     QStringList m_urls;
 
-    QHash<int, QTouchEvent::TouchPoint> m_touchPoints;
+    QHash<int, QMutableEventPoint> m_touchPoints;
     QSet<int> m_heldTouchPoints;
 
     WindowOptions m_windowOptions;

@@ -51,7 +51,7 @@ void ItemSelectorContextObject::onIndexUpdate()
 {
     // Send the update for multi-select list.
     if (m_items.multiple())
-        emit acceptedWithOriginalIndex(m_items.selectedOriginalIndex());
+        Q_EMIT acceptedWithOriginalIndex(m_items.selectedOriginalIndex());
 }
 
 
@@ -60,11 +60,11 @@ void ItemSelectorContextObject::accept(int index)
     // If the index is not valid for multi-select lists, just hide the pop up as the selected indices have
     // already been sent.
     if ((index == -1) && m_items.multiple())
-        emit done();
+        Q_EMIT done();
     else {
         if (index != -1)
             m_items.toggleItem(index);
-        emit acceptedWithOriginalIndex(m_items.selectedOriginalIndex());
+        Q_EMIT acceptedWithOriginalIndex(m_items.selectedOriginalIndex());
     }
 }
 
@@ -126,7 +126,7 @@ QVariant PopupMenuItemModel::data(const QModelIndex& index, int role) const
 void PopupMenuItemModel::select(int index)
 {
     toggleItem(index);
-    emit indexUpdated();
+    Q_EMIT indexUpdated();
 }
 
 void PopupMenuItemModel::toggleItem(int index)
@@ -148,11 +148,11 @@ void PopupMenuItemModel::toggleItem(int index)
         if (oldIndex != -1) {
             Item& oldItem = m_items[oldIndex];
             oldItem.selected = false;
-            emit dataChanged(this->index(oldIndex), this->index(oldIndex));
+            Q_EMIT dataChanged(this->index(oldIndex), this->index(oldIndex));
         }
     }
 
-    emit dataChanged(this->index(index), this->index(index));
+    Q_EMIT dataChanged(this->index(index), this->index(index));
 }
 
 int PopupMenuItemModel::selectedOriginalIndex() const

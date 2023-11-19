@@ -169,7 +169,7 @@ void ChromeClientQt::takeFocus(FocusDirection)
 
 void ChromeClientQt::focusedElementChanged(Element* element)
 {
-    emit m_webPage->focusedElementChanged(QWebElement(element));
+    Q_EMIT m_webPage->focusedElementChanged(QWebElement(element));
 }
 
 void ChromeClientQt::focusedFrameChanged(Frame*)
@@ -481,7 +481,7 @@ void ChromeClientQt::mouseDidMoveOverElement(const HitTestResult& result, Option
 
 void ChromeClientQt::print(LocalFrame& frame, const StringWithDirection&)
 {
-    emit m_webPage->printRequested(QWebFrameAdapter::kit(frame));
+    Q_EMIT m_webPage->printRequested(QWebFrameAdapter::kit(frame));
 }
 
 void ChromeClientQt::exceededDatabaseQuota(LocalFrame& frame, const String& databaseName, DatabaseDetails)

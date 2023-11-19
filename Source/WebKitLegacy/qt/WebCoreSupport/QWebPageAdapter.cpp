@@ -825,7 +825,7 @@ QVariant QWebPageAdapter::inputMethodQuery(Qt::InputMethodQuery property) const
         renderTextControl = downcast<RenderTextControl>(renderer);
 
     switch (property) {
-    case Qt::ImMicroFocus: {
+    case Qt::ImCursorRectangle: {
         WebCore::LocalFrameView* view = frame->view();
         if (view && view->needsLayout()) {
             // We can't access absoluteCaretBounds() while the view needs to layout.

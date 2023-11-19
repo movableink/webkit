@@ -32,6 +32,7 @@ namespace TestWebKitAPI::Util {
 
 #if !PLATFORM(COCOA)
 
+#if !PLATFORM(QT)
 void run(bool* done)
 {
     while (!*done)
@@ -43,6 +44,7 @@ void spinRunLoop(uint64_t count)
     while (count--)
         RunLoop::current().cycle();
 }
+#endif
 
 bool runFor(bool* done, Seconds duration)
 {

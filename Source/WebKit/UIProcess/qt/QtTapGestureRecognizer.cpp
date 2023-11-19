@@ -160,7 +160,9 @@ void QtTapGestureRecognizer::reset()
     m_eventHandler->deactivateTapHighlight();
 
     m_candidate = SingleTapCandidate;
-    m_lastTouchPoint.setId(-1);
+    // Qt 6 error: ‘using TouchPoint = class QEventPoint’ {aka ‘class QEventPoint’} has no member named ‘setId’
+    //m_lastTouchPoint.setId(-1);
+    m_lastTouchPoint = {}; // ?
     m_highlightTimer.stop();
     m_doubleTapTimer.stop();
     m_tapAndHoldTimer.stop();

@@ -62,10 +62,10 @@ void QWebPagePrivate::fullScreenRequested(QWebFullScreenRequest request)
 
 void QWebPagePrivate::recentlyAudibleChanged(bool recentlyAudible)
 {
-    emit q->recentlyAudibleChanged(recentlyAudible);
+    Q_EMIT q->recentlyAudibleChanged(recentlyAudible);
 }
 
 void QWebPagePrivate::focusedElementChanged(const QWebElement& element)
 {
-    emit q->focusedElementChanged(element);
+    Q_EMIT q->focusedElementChanged(element);
 }

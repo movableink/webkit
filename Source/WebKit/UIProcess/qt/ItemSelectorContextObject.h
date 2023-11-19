@@ -101,8 +101,8 @@ public:
     bool allowMultiSelect() { return m_items.multiple(); }
 
     Q_INVOKABLE void accept(int index = -1);
-    Q_INVOKABLE void reject() { emit done(); }
-    Q_INVOKABLE void dismiss() { emit done(); }
+    Q_INVOKABLE void reject() { Q_EMIT done(); }
+    Q_INVOKABLE void dismiss() { Q_EMIT done(); }
 
 Q_SIGNALS:
     void acceptedWithOriginalIndex(int);

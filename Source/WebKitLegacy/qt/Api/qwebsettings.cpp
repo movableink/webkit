@@ -1166,7 +1166,8 @@ QString QWebSettings::localStoragePath() const
 
     Enables WebKit data persistence and sets the path to \a path.
     If \a path is empty, the user-specific data location specified by
-    \l{QDesktopServices::DataLocation}{DataLocation} will be used instead.
+    \l{QDesktopServices::AppLocalDataLocation}{AppLocalDataLocation} 
+    will be used instead.
 
     This method will simultaneously set and enable the iconDatabasePath(),
     localStoragePath(), offlineStoragePath() and offlineWebApplicationCachePath().
@@ -1181,7 +1182,7 @@ void QWebSettings::enablePersistentStorage(const QString& path)
 
     if (path.isEmpty()) {
 
-        storagePath = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+        storagePath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
         if (storagePath.isEmpty())
             storagePath = FileSystem::pathByAppendingComponent(String(QDir::homePath()), String(QCoreApplication::applicationName()));
     } else

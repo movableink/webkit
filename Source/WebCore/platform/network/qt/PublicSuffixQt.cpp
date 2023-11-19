@@ -56,6 +56,22 @@ bool isPublicSuffix(StringView domain)
     return qIsEffectiveTLD(fromAce(domain));
 }
 
+static QString qTopLevelDomain(const QString &domain)
+{
+    const QString domainLower = domain.toLower();
+    QVector<QString> sections = domainLower.split(QLatin1Char('.'), Qt::SkipEmptyParts);
+    if (sections.isEmpty())
+        return QString();
+
+    QString level, tld;
+    for (int j = sections.count() - 1; j >= 0; --j) {
+        level.prepend(QLatin1Char('.') + sections.at(j));
+        if (qIsEffectiveTLD(level.right(level.size() - 1)))
+            tld = level;
+    }
+    return tld;
+}
+
 String topPrivatelyControlledDomain(const String& domain)
 {
     if (domain.isEmpty())
@@ -72,8 +88,8 @@ String topPrivatelyControlledDomain(const String& domain)
         return String();
 
     QString tld = qTopLevelDomain(qLowercaseDomain);
-    auto privateLabels = qLowercaseDomain.leftRef(qLowercaseDomain.length() - tld.length());
-    auto topPrivateLabel = privateLabels.split(QLatin1Char('.'), QString::SkipEmptyParts).last();
+    auto privateLabels = qLowercaseDomain.left(qLowercaseDomain.length() - tld.length());
+    auto topPrivateLabel = privateLabels.split(QLatin1Char('.'), Qt::SkipEmptyParts).last();
     return QString(topPrivateLabel + tld);
 }
 

@@ -103,6 +103,7 @@ WEBKIT_OPTION_DEFINE(USE_LIBDRM "Whether to enable usage of libdrm." PUBLIC ON)
 WEBKIT_OPTION_DEFINE(USE_OPENJPEG "Whether to enable support for JPEG2000 images." PUBLIC ON)
 WEBKIT_OPTION_DEFINE(USE_SOUP2 "Whether to enable usage of Soup 2 instead of Soup 3." PUBLIC OFF)
 WEBKIT_OPTION_DEFINE(USE_WOFF2 "Whether to enable support for WOFF2 Web Fonts." PUBLIC ON)
+WEBKIT_OPTION_DEFINE(ENABLE_WPE_QT_API "Whether to enable support for the Qt6/QML plugin" PUBLIC OFF)
 
 # Private options specific to the WPE port.
 WEBKIT_OPTION_DEFINE(USE_GSTREAMER_HOLEPUNCH "Whether to enable GStreamer holepunch" PRIVATE OFF)

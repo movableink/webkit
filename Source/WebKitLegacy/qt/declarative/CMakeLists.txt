@@ -15,13 +15,13 @@ include_directories(
 )
 include_directories(SYSTEM
     ${ICU_INCLUDE_DIRS}
-    ${Qt5Quick_INCLUDE_DIRS}
-    ${Qt5Quick_PRIVATE_INCLUDE_DIRS}
+    ${Qt6Quick_INCLUDE_DIRS}
+    ${Qt6Quick_PRIVATE_INCLUDE_DIRS}
 )
 
 add_library(qmlwebkitplugin MODULE plugin.cpp)
 target_link_libraries(qmlwebkitplugin
-    WebKit Qt5::Quick)
+    WebKit Qt6::Quick)
 
 set(qmlwebkit_output_dir "${CMAKE_BINARY_DIR}/imports/QtWebKit")
 set(qmlwebkit_install_dir "${QML_INSTALL_DIR}/QtWebKit")

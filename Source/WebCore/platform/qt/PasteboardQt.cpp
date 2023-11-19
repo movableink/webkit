@@ -42,8 +42,8 @@
 #include <qclipboard.h>
 #include <qdebug.h>
 #include <qguiapplication.h>
+#include <qstringconverter.h>
 #include <qmimedata.h>
-#include <qtextcodec.h>
 #include <qurl.h>
 
 namespace WebCore {
@@ -333,7 +333,8 @@ String Pasteboard::readString(const String& type)
         return data->text();
 
     QByteArray rawData = data->data(mimeType);
-    QString stringData = QTextCodec::codecForName("UTF-16")->toUnicode(rawData);
+    auto toUtf16 = QStringDecoder(QStringDecoder::Utf8);
+    QString stringData = toUtf16(rawData);
     return stringData;
 }
 

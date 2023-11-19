@@ -281,7 +281,7 @@ endif ()
 # Do it in the WebCore to support SHARED_CORE since WebKitWidgets won't load WebKitLegacy in that case.
 # This should match the opposite statement in WebKitLegacy/PlatformQt.cmake
 if (SHARED_CORE)
-    qt5_add_resources(WebCore_SOURCES
+    qt6_add_resources(WebCore_SOURCES
         WebCore.qrc
     )
 
@@ -293,18 +293,18 @@ if (SHARED_CORE)
     endif ()
 endif ()
 
-# Note: Qt5Network_INCLUDE_DIRS includes Qt5Core_INCLUDE_DIRS
+# Note: Qt6Network_INCLUDE_DIRS includes Qt6Core_INCLUDE_DIRS
 list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
     ${HARFBUZZ_INCLUDE_DIRS}
     ${FREETYPE_INCLUDE_DIRS}
     ${HYPHEN_INCLUDE_DIR}
     ${LIBXML2_INCLUDE_DIR}
     ${LIBXSLT_INCLUDE_DIR}
-    ${Qt5Gui_INCLUDE_DIRS}
-    ${Qt5Gui_PRIVATE_INCLUDE_DIRS}
-    ${Qt5Network_INCLUDE_DIRS}
-    ${Qt5Network_PRIVATE_INCLUDE_DIRS}
-    ${Qt5Sensors_INCLUDE_DIRS}
+    ${Qt6Gui_INCLUDE_DIRS}
+    ${Qt6Gui_PRIVATE_INCLUDE_DIRS}
+    ${Qt6Network_INCLUDE_DIRS}
+    ${Qt6Network_PRIVATE_INCLUDE_DIRS}
+    ${Qt6Sensors_INCLUDE_DIRS}
     ${SQLITE_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIRS}
 )
@@ -316,10 +316,10 @@ list(APPEND WebCore_LIBRARIES
     ${HYPHEN_LIBRARIES}
     ${LIBXML2_LIBRARIES}
     ${LIBXSLT_LIBRARIES}
-    ${Qt5Core_LIBRARIES}
-    ${Qt5Gui_LIBRARIES}
-    ${Qt5Network_LIBRARIES}
-    ${Qt5Sensors_LIBRARIES}
+    ${Qt6Core_LIBRARIES}
+    ${Qt6Gui_LIBRARIES}
+    ${Qt6Network_LIBRARIES}
+    ${Qt6Sensors_LIBRARIES}
     ${SQLITE_LIBRARIES}
     ${X11_X11_LIB}
     ${ZLIB_LIBRARIES}
@@ -354,14 +354,14 @@ if (ENABLE_OPENGL)
         platform/graphics/qt/QFramebufferPaintDevice.cpp
     )
 
-    if (${Qt5Gui_OPENGL_IMPLEMENTATION} STREQUAL GLESv2)
+    if (${Qt6Gui_OPENGL_IMPLEMENTATION} STREQUAL GLESv2)
         list(APPEND WebCore_SOURCES
             platform/graphics/opengl/Extensions3DOpenGLES.cpp
             platform/graphics/opengl/GraphicsContext3DOpenGLES.cpp
         )
         list(APPEND WebCore_LIBRARIES
-            ${Qt5Gui_EGL_LIBRARIES}
-            ${Qt5Gui_OPENGL_LIBRARIES}
+            ${Qt6Gui_EGL_LIBRARIES}
+            ${Qt6Gui_OPENGL_LIBRARIES}
         )
     else ()
         list(APPEND WebCore_SOURCES
@@ -413,7 +413,7 @@ if (USE_QT_MULTIMEDIA)
         platform/graphics/qt/MediaPlayerPrivateQt.cpp
     )
     list(APPEND WebCore_LIBRARIES
-        ${Qt5Multimedia_LIBRARIES}
+        ${Qt6Multimedia_LIBRARIES}
     )
     QTWEBKIT_GENERATE_MOC_FILES_H(WebCore platform/graphics/qt/MediaPlayerPrivateQt.h)
 endif ()

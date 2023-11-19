@@ -26,6 +26,7 @@
 #include "config.h"
 
 #include <QString>
+#include <QStringView>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/WTFString.h>
 
@@ -39,11 +40,18 @@ String::String(const QString& qstr)
     m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(qstr.constData()), qstr.length());
 }
 
-String::String(const QStringRef& ref)
+String::String(const QLatin1StringView& view)
 {
-    if (!ref.string())
+    if (view.isNull())
         return;
-    m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(ref.unicode()), ref.length());
+    m_impl = StringImpl::create(reinterpret_cast_ptr<const LChar*>(view.data()), view.length());
+}
+
+String::String(const QStringView& view)
+{
+    if (view.isNull())
+        return;
+    m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(view.data()), view.length());
 }
 
 String::operator QString() const

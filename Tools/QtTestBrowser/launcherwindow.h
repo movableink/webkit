@@ -36,9 +36,6 @@
 #include <QtNetwork/QNetworkRequest>
 
 #ifndef QT_NO_OPENGL
-#include <QtOpenGL/QGLWidget>
-#endif
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
 #include <QOpenGLWidget>
 #endif
 
@@ -46,6 +43,8 @@
 
 #include <cstdio>
 #include <qevent.h>
+#include <QWindow>
+#include <private/qeventpoint_p.h>
 #include <qwebelement.h>
 #include <qwebframe.h>
 #include <qwebinspector.h>
@@ -86,7 +85,6 @@ public:
     bool useDiskCookies { true };
     bool enableScrollAnimator { false };
     quint64 offlineStorageDefaultQuotaSize { 0 };
-    bool useQGLWidgetViewport { false };
     bool useQOpenGLWidgetViewport { false };
     bool printLoadedUrls { false };
     QUrl inspectorUrl;
@@ -162,7 +160,6 @@ protected Q_SLOTS:
     void find(int mode);
 #endif
 #ifndef QT_NO_OPENGL
-    void toggleQGLWidgetViewport(bool enable);
     void toggleQOpenGLWidgetViewport(bool enable);
 #endif
     void toggleForcedAntialiasing(bool enable);
@@ -222,7 +219,7 @@ private:
 #if !defined(QT_NO_FILEDIALOG) && !defined(QT_NO_MESSAGEBOX)
     QNetworkReply* m_reply { nullptr };
 #endif
-    QList<QTouchEvent::TouchPoint> m_touchPoints;
+    QList<QEventPoint> m_touchPoints;
     QList<HighlightedElement> m_highlightedElements;
     bool m_touchMocking;
 

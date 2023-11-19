@@ -507,7 +507,7 @@ if (ENABLE_WPE_QT_API)
     )
 
     set(qtwpe_LIBRARIES
-        Qt5::Core Qt5::Quick
+        Qt6::Core Qt6::Quick
         WebKit
         ${GLIB_GOBJECT_LIBRARIES}
         ${GLIB_LIBRARIES}
@@ -520,8 +520,8 @@ if (ENABLE_WPE_QT_API)
         ${JavaScriptCoreGLib_FRAMEWORK_HEADERS_DIR}
         ${CMAKE_BINARY_DIR}
         ${GLIB_INCLUDE_DIRS}
-        ${Qt5_INCLUDE_DIRS}
-        ${Qt5Gui_PRIVATE_INCLUDE_DIRS}
+        ${Qt6_INCLUDE_DIRS}
+        ${Qt6Gui_PRIVATE_INCLUDE_DIRS}
         ${LIBEPOXY_INCLUDE_DIRS}
         ${LIBSOUP_INCLUDE_DIRS}
         ${WPE_INCLUDE_DIRS}

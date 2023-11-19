@@ -68,7 +68,7 @@ static QStyle::SubControl convertToQStyleSubControl(QStyleFacade::SubControl sc)
 static void initGenericStyleOption(QStyleOption* option, QWidget* widget, const QStyleFacadeOption& facadeOption)
 {
     if (widget)
-        option->init(widget);
+        option->initFrom(widget);
     else
         // If a widget is not directly available for rendering, we fallback to default
         // value for an active widget.
@@ -405,7 +405,7 @@ void QStyleFacadeImp::paintProgressBar(QPainter* painter, const QStyleFacadeOpti
         // we simulate one square animating across the progress bar.
         style()->drawControl(QStyle::CE_ProgressBarGroove, &option, painter, widget);
         int chunkWidth = style()->pixelMetric(QStyle::PM_ProgressBarChunkWidth, &option);
-        QColor color = (option.palette.highlight() == option.palette.background()) ? option.palette.color(QPalette::Active, QPalette::Highlight) : option.palette.color(QPalette::Highlight);
+        QColor color = (option.palette.highlight() == option.palette.window()) ? option.palette.color(QPalette::Active, QPalette::Highlight) : option.palette.color(QPalette::Highlight);
         if (option.direction == Qt::RightToLeft)
             painter->fillRect(option.rect.right() - chunkWidth  - animationProgress * option.rect.width(), 0, chunkWidth, option.rect.height(), color);
         else
@@ -464,7 +464,7 @@ void QStyleFacadeImp::paintScrollBar(QPainter *painter, const QStyleFacadeOption
         opt.styleObject = 0;
     }
 
-    painter->fillRect(opt.rect, opt.palette.background());
+    painter->fillRect(opt.rect, opt.palette.window());
 
     const QPoint topLeft = opt.rect.topLeft();
     painter->translate(topLeft);

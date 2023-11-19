@@ -316,6 +316,12 @@ DrawingAreaProxyCoordinatedGraphics::DrawingMonitor::~DrawingMonitor()
     stop();
 }
 
+int DrawingAreaProxyCoordinatedGraphics::DrawingMonitor::webViewDrawCallback(DrawingAreaProxyCoordinatedGraphics::DrawingMonitor* monitor)
+{
+    monitor->didDraw();
+    return 0;
+}
+
 void DrawingAreaProxyCoordinatedGraphics::DrawingMonitor::start(CompletionHandler<void()>&& callback)
 {
     m_callback = WTFMove(callback);

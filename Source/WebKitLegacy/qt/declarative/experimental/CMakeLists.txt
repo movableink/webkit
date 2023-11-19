@@ -1,6 +1,6 @@
 add_library(qmlwebkitexperimentalplugin MODULE plugin.cpp)
 target_link_libraries(qmlwebkitexperimentalplugin
-    WebKit Qt5::Quick)
+    WebKit Qt6::Quick)
 
 set(qmlwebkitexperimental_output_dir "${CMAKE_BINARY_DIR}/imports/QtWebKit/experimental")
 set(qmlwebkitexperimental_install_dir "${QML_INSTALL_DIR}/QtWebKit/experimental")

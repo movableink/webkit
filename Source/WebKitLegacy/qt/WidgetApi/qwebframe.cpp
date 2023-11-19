@@ -57,23 +57,23 @@ void QWebFramePrivate::setPage(QWebPage* newPage)
 
     page = newPage;
     pageAdapter = newPage->handle();
-    emit q->pageChanged();
+    Q_EMIT q->pageChanged();
 }
 
 void QWebFramePrivate::emitUrlChanged()
 {
     url = coreFrameUrl();
-    emit q->urlChanged(url);
+    Q_EMIT q->urlChanged(url);
 }
 
 void QWebFramePrivate::didStartProvisionalLoad()
 {
-    emit q->provisionalLoad();
+    Q_EMIT q->provisionalLoad();
 }
 
 void QWebFramePrivate::didClearWindowObject()
 {
-    emit q->javaScriptWindowObjectCleared();
+    Q_EMIT q->javaScriptWindowObjectCleared();
 }
 
 bool QWebFramePrivate::handleProgressFinished(QPoint *localPos)
@@ -87,26 +87,26 @@ bool QWebFramePrivate::handleProgressFinished(QPoint *localPos)
 
 void QWebFramePrivate::emitInitialLayoutCompleted()
 {
-    emit q->initialLayoutCompleted();
+    Q_EMIT q->initialLayoutCompleted();
 }
 
 void QWebFramePrivate::emitIconChanged()
 {
-    emit q->iconChanged();
+    Q_EMIT q->iconChanged();
 }
 
 void QWebFramePrivate::emitLoadStarted(bool originatingLoad)
 {
     if (page && originatingLoad)
-        emit page->loadStarted();
-    emit q->loadStarted();
+        Q_EMIT page->loadStarted();
+    Q_EMIT q->loadStarted();
 }
 
 void QWebFramePrivate::emitLoadFinished(bool originatingLoad, bool ok)
 {
     if (page && originatingLoad)
-        emit page->loadFinished(ok);
-    emit q->loadFinished(ok);
+        Q_EMIT page->loadFinished(ok);
+    Q_EMIT q->loadFinished(ok);
 }
 
 QWebFrameAdapter* QWebFramePrivate::createChildFrame(QWebFrameData* frameData)
@@ -117,7 +117,7 @@ QWebFrameAdapter* QWebFramePrivate::createChildFrame(QWebFrameData* frameData)
 
 void QWebFramePrivate::contentsSizeDidChange(const QSize &size)
 {
-    emit q->contentsSizeChanged(size);
+    Q_EMIT q->contentsSizeChanged(size);
 }
 
 int QWebFramePrivate::scrollBarPolicy(Qt::Orientation orientation) const
@@ -824,19 +824,19 @@ void QWebFrame::print(QPrinter *printer) const
     const qreal zoomFactorX = (qreal)printer->logicalDpiX() / qt_defaultDpi();
     const qreal zoomFactorY = (qreal)printer->logicalDpiY() / qt_defaultDpi();
 
-    QRect qprinterRect = printer->pageRect();
+    QRectF qprinterRect = printer->pageRect(QPrinter::DevicePixel);
 
-    QRect pageRect(0, 0, int(qprinterRect.width() / zoomFactorX), int(qprinterRect.height() / zoomFactorY));
+    QRectF pageRect(0, 0, qprinterRect.width() / zoomFactorX, qprinterRect.height() / zoomFactorY);
 
-    QtPrintContext printContext(&painter, pageRect, d);
+    QtPrintContext printContext(&painter, pageRect.toRect(), d);
 
     int docCopies;
     int pageCopies;
     if (printer->collateCopies()) {
         docCopies = 1;
-        pageCopies = printer->numCopies();
+        pageCopies = printer->copyCount();
     } else {
-        docCopies = printer->numCopies();
+        docCopies = printer->copyCount();
         pageCopies = 1;
     }
 
