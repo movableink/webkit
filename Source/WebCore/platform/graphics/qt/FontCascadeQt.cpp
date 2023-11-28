@@ -263,7 +263,7 @@ void FontCascade::initFormatForTextLayout(QTextLayout* layout, const TextRun& ru
     // To avoid word-spacing on any leading spaces, we exclude them from FormatRange which
     // word-spacing along with other options would be applied to. This is safe since the other
     // formatting options does not affect spaces.
-    unsigned length = run.length();
+    int length = run.length();
     for (range.start = 0; range.start < length && treatAsSpace(run[range.start]); ++range.start) { }
     range.length = length - range.start;
 
@@ -314,7 +314,7 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
 
     float width = 0;
 
-    for (int i = 0; i < numGlyphs; ++i) {
+    for (unsigned i = 0; i < numGlyphs; ++i) {
         Glyph glyph = glyphs[i];
         float advance = advances[i].x();
 

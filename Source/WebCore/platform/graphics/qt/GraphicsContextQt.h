@@ -43,7 +43,7 @@ public:
     void save(GraphicsContextState::Purpose = GraphicsContextState::Purpose::SaveRestore) final;
     void restore(GraphicsContextState::Purpose = GraphicsContextState::Purpose::SaveRestore) final;
 
-    void didUpdateState(GraphicsContextState&);
+    void didUpdateState(GraphicsContextState&) final;
 
     void drawRect(const FloatRect&, float borderThickness = 1) final;
     void drawLine(const FloatPoint&, const FloatPoint&) final;
@@ -55,7 +55,7 @@ public:
     using GraphicsContext::fillRect;
     void fillRect(const FloatRect&) final;
     void fillRect(const FloatRect&, const Color&) final;
-    void fillRect(const FloatRect&, Gradient&);
+    void fillRect(const FloatRect&, Gradient&) final;
 
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) final;
     void fillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect& roundedHoleRect, const Color&) final;
@@ -77,9 +77,9 @@ public:
     void resetClip() final;
 
     void clipPath(const Path&, WindRule = WindRule::EvenOdd) final;
-    void clipToImageBuffer(ImageBuffer& buffer, const FloatRect& destRect);
+    void clipToImageBuffer(ImageBuffer& buffer, const FloatRect& destRect) final;
 
-    void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode);
+    void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode) final;
 
     void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle) final;
     void drawLineForText(const FloatRect&, bool printing, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke);
@@ -88,7 +88,7 @@ public:
     void drawFocusRing(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) final;
     void drawFocusRing(const Path&, float outlineWidth, const Color&) final;
 
-    void setURLForRect(const URL& url, const FloatRect& rect);
+    void setURLForRect(const URL& url, const FloatRect& rect) final;
     RenderingMode renderingMode() const final;
 
     using GraphicsContext::scale;
@@ -98,7 +98,7 @@ public:
 
     void concatCTM(const AffineTransform&) final;
     void setCTM(const AffineTransform&) override;
-    IntRect clipBounds() const;
+    IntRect clipBounds() const final;
 
     AffineTransform getCTM(IncludeDeviceScale = PossiblyIncludeDeviceScale) const override;
 
