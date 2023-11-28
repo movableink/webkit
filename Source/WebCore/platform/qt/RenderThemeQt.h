@@ -50,7 +50,7 @@ using QtThemeFactoryFunction = std::add_pointer_t<RenderTheme&()>;
 class RenderThemeQt : public RenderTheme {
 
 public:
-    RenderThemeQt(Page*);
+    RenderThemeQt();
 
     static void setCustomTheme(QtThemeFactoryFunction factory, ScrollbarTheme* customScrollbarTheme);
     static ScrollbarTheme* customScrollbarTheme();

@@ -43,9 +43,9 @@
 #include "HTMLNames.h"
 #include "LocalizedStrings.h"
 #include "NotImplemented.h"
-#include "Page.h"
 #include "PaintInfo.h"
 #include "RenderBox.h"
+#include "RenderBoxInlines.h"
 #include "RenderProgress.h"
 #include "RenderTheme.h"
 #include "RenderThemeQtMobile.h"
@@ -77,9 +77,8 @@ static const float maxCancelButtonSize = 21;
 static QtThemeFactoryFunction themeFactory;
 static ScrollbarTheme* scrollbarTheme;
 
-RenderThemeQt::RenderThemeQt(Page* page)
+RenderThemeQt::RenderThemeQt()
     : RenderTheme()
-    , m_page(page)
 {
     m_buttonFontFamily = QGuiApplication::font().family();
 }

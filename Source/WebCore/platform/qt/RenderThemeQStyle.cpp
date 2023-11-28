@@ -39,10 +39,10 @@
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "NotImplemented.h"
-#include "Page.h"
 #include "PaintInfo.h"
-#include "QWebPageClient.h"
 #include "RenderBox.h"
+#include "RenderBoxInlines.h"
+#include "RenderStyleSetters.h"
 #include "RenderProgress.h"
 #include "ScrollbarThemeQStyle.h"
 #include "StyleResolver.h"
@@ -110,7 +110,7 @@ void StylePainterQStyle::setupStyleOption()
 
 RenderTheme& RenderThemeQStyle::singleton()
 {
-    static NeverDestroyed<RenderThemeQStyle> theme(nullptr);
+    static NeverDestroyed<RenderThemeQStyle> theme;
     return theme;
 }
 
@@ -126,9 +126,9 @@ QtStyleFactoryFunction RenderThemeQStyle::styleFactory()
     return styleFactoryFunction;
 }
 
-RenderThemeQStyle::RenderThemeQStyle(Page* page)
-    : RenderThemeQt(page)
-    , m_qStyle(styleFactoryFunction(page))
+RenderThemeQStyle::RenderThemeQStyle()
+    : RenderThemeQt()
+    , m_qStyle(styleFactoryFunction())
 {
     int buttonPixelSize = 0;
     m_qStyle->getButtonMetrics(&m_buttonFontFamily, &buttonPixelSize);
@@ -143,11 +143,6 @@ RenderThemeQStyle::~RenderThemeQStyle()
 
 void RenderThemeQStyle::setPaletteFromPageClientIfExists(QPalette& palette) const
 {
-    if (!m_page)
-        return;
-
-    if (QWebPageClient* pageClient = m_page->chrome().client().platformPageClient())
-        palette = pageClient->palette();
 }
 
 QRect RenderThemeQStyle::indicatorRect(QStyleFacade::ButtonType part, const QRect& originalRect) const

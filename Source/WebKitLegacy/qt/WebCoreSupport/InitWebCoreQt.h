@@ -38,7 +38,7 @@ class QStyleFacade;
 }
 class QWebPageAdapter;
 
-typedef WebCore::QStyleFacade* (*QtStyleFacadeFactoryFunction)(QWebPageAdapter*);
+typedef WebCore::QStyleFacade* (*QtStyleFacadeFactoryFunction)();
 
 namespace WebKit {
 

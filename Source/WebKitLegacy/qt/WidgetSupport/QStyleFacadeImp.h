@@ -41,11 +41,11 @@ namespace WebKit {
 
 class QStyleFacadeImp : public WebCore::QStyleFacade {
 public:
-    QStyleFacadeImp(QWebPageAdapter* = 0);
+    QStyleFacadeImp();
     ~QStyleFacadeImp() override;
 
-    static WebCore::QStyleFacade* create(QWebPageAdapter* page)
-    { return new QStyleFacadeImp(page); }
+    static WebCore::QStyleFacade* create()
+    { return new QStyleFacadeImp(); }
 
     QRect buttonSubElementRect(ButtonSubElement, State, const QRect& originalRect) const override;
 

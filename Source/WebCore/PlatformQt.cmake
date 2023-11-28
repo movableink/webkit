@@ -84,6 +84,9 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/qt/QStyleFacade.h
     platform/qt/QStyleHelpers.h
     platform/qt/QWebPageClient.h
+    platform/qt/RenderThemeQt.h
+    platform/qt/RenderThemeQStyle.h
+    platform/qt/ScrollbarThemeQStyle.h
     platform/qt/ThirdPartyCookiesQt.h
     platform/qt/UserAgentQt.h
 

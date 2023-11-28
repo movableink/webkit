@@ -39,7 +39,7 @@ namespace WebCore {
 
 class RenderThemeQtMobile final : public RenderThemeQt {
 public:
-    RenderThemeQtMobile(Page*);
+    RenderThemeQtMobile();
     ~RenderThemeQtMobile();
 
     static RenderTheme& singleton();

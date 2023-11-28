@@ -30,7 +30,6 @@
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HTMLSelectElement.h"
-#include "Page.h"
 #include "PaintInfo.h"
 #include "RenderBox.h"
 #include "RenderProgress.h"
@@ -634,12 +633,12 @@ void StylePainterMobile::drawSliderThumb(const QRect & rect, bool pressed) const
 
 RenderTheme& RenderThemeQtMobile::singleton()
 {
-    static NeverDestroyed<RenderThemeQtMobile> theme(nullptr);
+    static NeverDestroyed<RenderThemeQtMobile> theme;
     return theme;
 }
 
-RenderThemeQtMobile::RenderThemeQtMobile(Page* page)
-    : RenderThemeQt(page)
+RenderThemeQtMobile::RenderThemeQtMobile()
+    : RenderThemeQt()
 {
 }
 

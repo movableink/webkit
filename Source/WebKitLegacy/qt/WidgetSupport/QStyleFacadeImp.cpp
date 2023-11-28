@@ -31,9 +31,6 @@
 #include <QStyleFactory>
 #include <QStyleOption>
 
-#include <QWebPageAdapter.h>
-#include <WebCore/QWebPageClient.h>
-
 using namespace WebCore;
 
 namespace WebKit {
@@ -136,9 +133,8 @@ static QStyleFacade::SubControl convertToQStyleFacadeSubControl(QStyle::SubContr
 #undef CONVERT_SUBCONTROL
 }
 
-QStyleFacadeImp::QStyleFacadeImp(QWebPageAdapter* page)
-    : m_page(page)
-    , m_style(0)
+QStyleFacadeImp::QStyleFacadeImp()
+    : m_style(0)
 {
     m_fallbackStyle = QStyleFactory::create(QLatin1String("windows"));
     m_ownFallbackStyle = true;
@@ -487,11 +483,6 @@ QStyle* QStyleFacadeImp::style() const
 {
     if (m_style)
         return m_style;
-
-    if (m_page) {
-        if (QWebPageClient* pageClient = m_page->client.data())
-            m_style = pageClient->style();
-    }
 
     if (!m_style)
         m_style = QApplication::style();
