@@ -280,7 +280,7 @@ void RenderThemeQStyle::computeSizeBasedOnStyle(RenderStyle& renderStyle) const
 
 
 
-void RenderThemeQStyle::adjustButtonStyle(RenderStyle& style, const Element*) const
+void RenderThemeQStyle::adjustButtonStyle(RenderStyle& style, const Element* element) const
 {
     // Ditch the border.
     style.resetBorder();
@@ -308,10 +308,8 @@ void RenderThemeQStyle::adjustButtonStyle(RenderStyle& style, const Element*) co
     families.append(m_buttonFontFamily);
     fontDescription.setFamilies(families);
     style.setFontDescription(WTFMove(fontDescription));
-    // TODO: address no longer having styleResolver reference here
-    // style.fontCascade().update(&styleResolver.document().fontSelector());
+    style.fontCascade().update(&element->document().fontSelector());
     style.setLineHeight(RenderStyle::initialLineHeight());
-    // QTFIXME: setButtonSize() was removed
     setButtonPadding(style);
 }
 
