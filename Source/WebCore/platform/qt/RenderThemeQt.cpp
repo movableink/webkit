@@ -104,7 +104,7 @@ RenderTheme& RenderTheme::singleton()
 // Remove this when SearchFieldPart is style-able in RenderTheme::isControlStyled()
 bool RenderThemeQt::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
 {
-    switch (style.appearance()) {
+    switch (style.effectiveAppearance()) {
     case StyleAppearance::SearchField:
         // Test the style to see if the UA border and background match.
         return (style.border() != userAgentStyle.border()
@@ -135,7 +135,7 @@ bool RenderThemeQt::supportsHover(const RenderStyle&) const
 
 bool RenderThemeQt::supportsFocusRing(const RenderStyle& style) const
 {
-    switch (style.appearance()) {
+    switch (style.effectiveAppearance()) {
     case StyleAppearance::Checkbox:
     case StyleAppearance::Radio:
     case StyleAppearance::PushButton:
@@ -164,7 +164,7 @@ int RenderThemeQt::baselinePosition(const RenderBox& o) const
     if (!o.isRenderBox())
         return 0;
 
-    if (o.style().appearance() == StyleAppearance::Checkbox || o.style().appearance() == StyleAppearance::Radio)
+    if (o.style().effectiveAppearance() == StyleAppearance::Checkbox || o.style().appearance() == StyleAppearance::Radio)
         return o.marginTop() + o.height() - 2; // Same as in old khtml
     return RenderTheme::baselinePosition(o);
 }
@@ -175,7 +175,7 @@ bool RenderThemeQt::controlSupportsTints(const RenderObject& o) const
         return false;
 
     // Checkboxes only have tint when checked.
-    if (o.style().appearance() == StyleAppearance::Checkbox)
+    if (o.style().effectiveAppearance() == StyleAppearance::Checkbox)
         return isChecked(o);
 
     // For now assume other controls have tint if enabled.
@@ -207,7 +207,7 @@ void RenderThemeQt::computeControlRect(QStyleFacade::ButtonType, FloatRect&) con
 
 void RenderThemeQt::adjustRepaintRect(const RenderObject& o, FloatRect& rect)
 {
-    switch (o.style().appearance()) {
+    switch (o.style().effectiveAppearance()) {
     case StyleAppearance::Checkbox:
         computeControlRect(QStyleFacade::CheckBox, rect);
         break;
@@ -595,7 +595,7 @@ static bool mediaElementCanPlay(RenderObject& o)
 
     return mediaElement->readyState() > HTMLMediaElement::HAVE_METADATA
            || (mediaElement->readyState() == HTMLMediaElement::HAVE_NOTHING
-               && o.style().appearance() == StyleAppearance::MediaPlayButton && mediaElement->preload() == "none");
+               && o.style().effectiveAppearance() == StyleAppearance::MediaPlayButton && mediaElement->preload() == "none");
 }
 
 QColor RenderThemeQt::getMediaControlForegroundColor(RenderObject& o) const

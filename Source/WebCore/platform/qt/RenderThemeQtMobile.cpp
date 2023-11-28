@@ -648,7 +648,7 @@ RenderThemeQtMobile::~RenderThemeQtMobile()
 
 bool RenderThemeQtMobile::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
 {
-    switch (style.appearance()) {
+    switch (style.effectiveAppearance()) {
     case StyleAppearance::Checkbox:
     case StyleAppearance::Radio:
         return false;
@@ -666,7 +666,7 @@ void RenderThemeQtMobile::computeSizeBasedOnStyle(RenderStyle& renderStyle) cons
 {
     QSize size(0, 0);
 
-    switch (renderStyle.appearance()) {
+    switch (renderStyle.effectiveAppearance()) {
     case StyleAppearance::TextArea:
     case StyleAppearance::SearchField:
     case StyleAppearance::TextField: {
@@ -685,7 +685,7 @@ void RenderThemeQtMobile::computeSizeBasedOnStyle(RenderStyle& renderStyle) cons
     if (!renderStyle.width().isIntrinsicOrAuto() && !renderStyle.height().isAuto())
         return;
 
-    switch (renderStyle.appearance()) {
+    switch (renderStyle.effectiveAppearance()) {
     case StyleAppearance::Checkbox: {
         const int w = checkBoxWidth * renderStyle.effectiveZoom();
         size = QSize(w, w);
@@ -747,7 +747,7 @@ bool RenderThemeQtMobile::paintButton(const RenderObject& o, const PaintInfo& i,
     if (!p.isValid())
        return true;
 
-    StyleAppearance appearance = o.style().appearance();
+    StyleAppearance appearance = o.style().effectiveAppearance();
     if (appearance == StyleAppearance::PushButton || appearance == StyleAppearance::Button) {
         p.drawPushButton(r, isPressed(o), isEnabled(o));
     } else if (appearance == StyleAppearance::Radio)
@@ -783,7 +783,7 @@ bool RenderThemeQtMobile::paintTextField(const RenderObject& o, const PaintInfo&
     if (!p.isValid())
         return true;
 
-    StyleAppearance appearance = o.style().appearance();
+    StyleAppearance appearance = o.style().effectiveAppearance();
     if (appearance != StyleAppearance::TextField
         && appearance != StyleAppearance::SearchField
         && appearance != StyleAppearance::TextArea)
@@ -893,7 +893,7 @@ bool RenderThemeQtMobile::paintSliderTrack(const RenderObject& o, const PaintInf
     const double progress = (max - min > 0) ? (slider->valueAsNumber() - min) / (max - min) : 0;
 
     QRect rect(r);
-    const bool vertical = (o.style().appearance() == StyleAppearance::SliderVertical);
+    const bool vertical = (o.style().effectiveAppearance() == StyleAppearance::SliderVertical);
     const int groovePadding = vertical ? r.width() * sliderGrooveBorderRatio : r.height() * sliderGrooveBorderRatio;
     if (vertical) {
         rect.adjust(groovePadding, 0, -groovePadding, 0);
@@ -928,7 +928,7 @@ bool RenderThemeQtMobile::checkMultiple(const RenderObject& o) const
 
 void RenderThemeQtMobile::adjustSliderThumbSize(RenderStyle& style, const Element* element) const
 {
-    const StyleAppearance part = style.appearance();
+    const StyleAppearance part = style.effectiveAppearance();
     if (part == StyleAppearance::SliderThumbHorizontal || part == StyleAppearance::SliderThumbVertical) {
         const int size = sliderSize * style.effectiveZoom();
         style.setWidth(Length(size, LengthType::Fixed));
