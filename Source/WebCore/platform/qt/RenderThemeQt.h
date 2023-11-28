@@ -23,7 +23,6 @@
 #define RenderThemeQt_h
 
 #include "QStyleFacade.h"
-#include "StyleResolver.h"
 #include "RenderTheme.h"
 
 #include <QBrush>
