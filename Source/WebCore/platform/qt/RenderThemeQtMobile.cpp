@@ -63,7 +63,7 @@ static const float buttonPaddingTop = 2;
 static const float buttonPaddingBottom = 3;
 static const float menuListPadding = 9;
 static const float textFieldPadding = 10;
-static const float radiusFactor = 0.36;
+static const float radiusFactor = 0.16;
 static const float progressBarChunkPercentage = 0.2;
 static const int progressAnimationGranularity = 2;
 static const float sliderGrooveBorderRatio = 0.2;
@@ -799,7 +799,7 @@ bool RenderThemeQtMobile::paintTextField(const RenderObject& o, const PaintInfo&
         p.painter->drawRoundedRect(r, radius, radius);
 
         if (isFocused(o)) {
-            QPen focusPen(highlightColor, 1.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+            QPen focusPen(highlightColor, 2.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
             p.painter->setPen(focusPen);
             p.painter->setBrush(Qt::NoBrush);
             p.painter->drawRoundedRect(r, radius, radius);
