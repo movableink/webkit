@@ -60,7 +60,7 @@ typedef struct _GstMpegtsSection GstMpegtsSection;
 #undef GST_USE_UNSTABLE_API
 #endif
 
-#if USE(TEXTURE_MAPPER)
+#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
 #if USE(NICOSIA)
 #include "NicosiaContentLayer.h"
 #else
@@ -84,7 +84,7 @@ class GraphicsContextGL;
 class IntSize;
 class IntRect;
 
-#if USE(TEXTURE_MAPPER)
+#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
 class TextureMapperPlatformLayerProxy;
 #endif
 
@@ -112,7 +112,7 @@ class MediaPlayerPrivateGStreamer : public MediaPlayerPrivateInterface
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
-#if USE(TEXTURE_MAPPER)
+#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
 #if USE(NICOSIA)
     , public Nicosia::ContentLayer::Client
 #else
@@ -189,7 +189,7 @@ public:
     bool performTaskAtMediaTime(Function<void()>&&, const MediaTime&) override;
     void isLoopingChanged() final;
 
-#if USE(TEXTURE_MAPPER)
+#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
     PlatformLayer* platformLayer() const override;
 #if PLATFORM(WIN)
     // FIXME: Accelerated rendering has not been implemented for WinCairo yet.
@@ -287,7 +287,7 @@ protected:
     GstElement* createVideoSinkGL();
 #endif
 
-#if USE(TEXTURE_MAPPER)
+#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
     void pushTextureToCompositor();
 #if USE(NICOSIA)
     void swapBuffersIfNeeded() final;
@@ -335,7 +335,7 @@ protected:
     void loadingFailed(MediaPlayer::NetworkState, MediaPlayer::ReadyState = MediaPlayer::ReadyState::HaveNothing, bool forceNotifications = false);
     void loadStateChanged();
 
-#if USE(TEXTURE_MAPPER)
+#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
     void updateTextureMapperFlags();
 #endif
 
@@ -375,7 +375,7 @@ protected:
     GRefPtr<GstElement> m_source { nullptr };
     bool m_areVolumeAndMuteInitialized { false };
 
-#if USE(TEXTURE_MAPPER)
+#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
     OptionSet<TextureMapperFlags> m_textureMapperFlags;
 #endif
 
@@ -546,7 +546,7 @@ private:
     Lock m_drawLock;
     RunLoop::Timer m_drawTimer WTF_GUARDED_BY_LOCK(m_drawLock);
     RunLoop::Timer m_readyTimerHandler;
-#if USE(TEXTURE_MAPPER)
+#if USE(TEXTURE_MAPPER) && !PLATFORM(QT)
 #if USE(NICOSIA)
     RefPtr<Nicosia::ContentLayer> m_nicosiaLayer;
 #else
