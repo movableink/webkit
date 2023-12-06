@@ -90,6 +90,8 @@ QNetworkRequest ResourceRequest::toNetworkRequest(NetworkingContext *context) co
     const URL& originalUrl = url();
     request.setUrl(toQUrl(originalUrl));
     request.setOriginatingObject(context ? context->originatingObject() : 0);
+    // Qt6 now defaults to following redirects
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
 
 #if USE(HTTP2)
     static const bool NegotiateHttp2ForHttps = alpnIsSupported();
