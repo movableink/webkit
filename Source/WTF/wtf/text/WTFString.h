@@ -261,8 +261,8 @@ public:
 
 #if PLATFORM(QT)
     WTF_EXPORT_PRIVATE String(const QString&);
-    WTF_EXPORT_PRIVATE String(const QLatin1StringView&);
-    WTF_EXPORT_PRIVATE String(const QStringView&);
+    WTF_EXPORT_PRIVATE String(QLatin1StringView);
+    WTF_EXPORT_PRIVATE String(QStringView);
     WTF_EXPORT_PRIVATE operator QString() const;
 
     // String(QStringView) makes for an ambiguous constructor, so we need to make these explicit

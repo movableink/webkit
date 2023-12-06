@@ -12,7 +12,7 @@ AtomString::AtomString(const QString& qstr)
         return;
 }
 
-AtomString::AtomString(const QStringView& view)
+AtomString::AtomString(QStringView view)
     : m_string(AtomStringImpl::add(reinterpret_cast_ptr<const UChar*>(view.constData()), view.length()))
 {
     if (view.isNull())
