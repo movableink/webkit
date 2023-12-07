@@ -54,6 +54,13 @@ String::String(QStringView view)
     m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(view.data()), view.length());
 }
 
+String::String(QByteArrayView view)
+{
+    if (view.isNull())
+        return;
+    m_impl = StringImpl::create(reinterpret_cast_ptr<const LChar*>(view.data()), view.length());
+}
+
 String::operator QString() const
 {
     if (!m_impl)
