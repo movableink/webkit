@@ -183,6 +183,11 @@ void DumpRenderTreeSupportQt::initialize()
     QtDRTNodeRuntime::initialize();
 }
 
+void DumpRenderTreeSupportQt::overwritePluginDirectories()
+{
+    qWarning("Plugins have been removed from WebKit.");
+}
+
 void DumpRenderTreeSupportQt::setDumpRenderTreeModeEnabled(bool b)
 {
     QWebPageAdapter::drtRun = b;

@@ -56,6 +56,7 @@
     The plugins themselves are subclasses of QObject, but currently only plugins
     based on either QWidget or QGraphicsWidget are supported.
 
+    \deprecated Plugins have been removed from WebKit.
 */
 
 
@@ -70,16 +71,22 @@
 /*!
     \variable QWebPluginFactory::Plugin::name
     The name of the plugin.
+
+    \deprecated Plugins have been removed from WebKit.
 */
 
 /*!
     \variable QWebPluginFactory::Plugin::description
     The description of the plugin.
+
+    \deprecated Plugins have been removed from WebKit.
 */
 
 /*!
     \variable QWebPluginFactory::Plugin::mimeTypes
     The list of mime types supported by the plugin.
+
+    \deprecated Plugins have been removed from WebKit.
 */
 
 /*!
@@ -92,6 +99,8 @@
 
 /*!
     Returns true if this mimetype is the same as the \a other mime type.
+
+    \deprecated Plugins have been removed from WebKit.
 */
 bool QWebPluginFactory::MimeType::operator==(const MimeType& other) const
 {
@@ -104,17 +113,23 @@ bool QWebPluginFactory::MimeType::operator==(const MimeType& other) const
     \fn bool QWebPluginFactory::MimeType::operator!=(const MimeType& other) const
 
     Returns true if this mimetype is different from the \a other mime type.
+
+    \deprecated Plugins have been removed from WebKit.
 */
 
 /*!
     \variable QWebPluginFactory::MimeType::name
 
     The full name of the MIME type; e.g., \c{text/plain} or \c{image/png}.
+
+    \deprecated Plugins have been removed from WebKit.
 */
 
 /*!
     \variable QWebPluginFactory::MimeType::description
     The description of the mime type.
+
+    \deprecated Plugins have been removed from WebKit.
 */
 
 /*!
@@ -122,14 +137,19 @@ bool QWebPluginFactory::MimeType::operator==(const MimeType& other) const
     The list of file extensions that are used by this mime type.
 
     For example, a mime type for PDF documents would return "pdf" as its file extension.
+
+    \deprecated Plugins have been removed from WebKit.
 */
 
 /*!
     Constructs a QWebPluginFactory with parent \a parent.
+
+    \deprecated Plugins have been removed from WebKit.
 */
 QWebPluginFactory::QWebPluginFactory(QObject *parent)
     : QObject(parent)
 {
+  qWarning("Plugins have been removed from WebKit.");
 }
 
 /*!
@@ -147,11 +167,15 @@ QWebPluginFactory::~QWebPluginFactory()
 
     \note Currently, this function is only called when JavaScript programs
     access the global \c plugins or \c mimetypes objects.
+
+    \deprecated Plugins have been removed from WebKit.
 */
 
 /*!
     This function is called to refresh the list of supported plugins. It may be called after a new plugin
     has been installed in the system.
+
+    \deprecated Plugins have been removed from WebKit.
 */
 void QWebPluginFactory::refreshPlugins()
 {
@@ -203,6 +227,8 @@ void QWebPluginFactory::refreshPlugins()
     should verify that the extension is supported by calling supportsExtension().
 
     Currently there are no extensions.
+
+    \deprecated Plugins have been removed from WebKit.
 */
 
 /*!
@@ -214,6 +240,8 @@ void QWebPluginFactory::refreshPlugins()
     \inmodule QtWebKit
 
     \sa QWebPluginFactory::extension()
+
+    \deprecated Plugins have been removed from WebKit.
 */
 
 /*!
@@ -225,6 +253,8 @@ void QWebPluginFactory::refreshPlugins()
     \inmodule QtWebKit
 
     \sa QWebPluginFactory::extension()
+
+    \deprecated Plugins have been removed from WebKit.
 */
 
 /*!
@@ -240,6 +270,8 @@ void QWebPluginFactory::refreshPlugins()
     By default, no extensions are supported, and this function returns false.
 
     \sa supportsExtension(), Extension
+
+    \deprecated Plugins have been removed from WebKit.
 */
 bool QWebPluginFactory::extension(Extension extension, const ExtensionOption *option, ExtensionReturn *output)
 {
@@ -255,6 +287,8 @@ bool QWebPluginFactory::extension(Extension extension, const ExtensionOption *op
     \internal
 
     \sa extension()
+
+    \deprecated Plugins have been removed from WebKit.
 */
 bool QWebPluginFactory::supportsExtension(Extension extension) const
 {
