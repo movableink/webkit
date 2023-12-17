@@ -32,6 +32,7 @@ class Page;
 }
 
 class QWebPage;
+class QWebPluginDatabase;
 class QWebSettingsPrivate;
 QT_BEGIN_NAMESPACE
 class QUrl;
@@ -53,6 +54,7 @@ public:
         AutoLoadImages,
         JavascriptEnabled,
         JavaEnabled,
+        PluginsEnabled,
         PrivateBrowsingEnabled,
         JavascriptCanOpenWindows,
         JavascriptCanAccessClipboard,
@@ -95,6 +97,7 @@ public:
     };
     enum WebGraphic {
         MissingImageGraphic,
+        MissingPluginGraphic,
         DefaultFrameIconGraphic,
         TextAreaSizeGripCornerGraphic,
         DeleteButtonGraphic,
@@ -138,6 +141,11 @@ public:
     static QString iconDatabasePath();
     static void clearIconDatabase();
     static QIcon iconForUrl(const QUrl &url);
+
+    static void setPluginSearchPaths(const QStringList& paths);
+    static QStringList pluginSearchPaths();
+
+    //static QWebPluginDatabase *pluginDatabase();
 
     static void setWebGraphic(WebGraphic type, const QPixmap &graphic);
     static QPixmap webGraphic(WebGraphic type);

@@ -21,6 +21,7 @@
 #include "qwebsettings.h"
 
 #include "InitWebCoreQt.h"
+#include "qwebplugindatabase_p.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -322,6 +323,10 @@ QWebSettings* QWebSettings::globalSettings()
     cache, icon database, local database storage and offline
     applications storage.
 
+    \section1 Enabling Plugins
+
+    Support for browser plugins has been removed.
+
     \section1 Web Application Support
 
     WebKit provides support for features specified in \l{HTML 5} that improve the
@@ -385,6 +390,7 @@ QWebSettings* QWebSettings::globalSettings()
     This enums describes the standard graphical elements used in webpages.
 
     \value MissingImageGraphic The replacement graphic shown when an image could not be loaded.
+    \value MissingPluginGraphic The replacement graphic shown when a plugin could not be loaded.
     \value DefaultFrameIconGraphic The default icon for QWebFrame::icon().
     \value TextAreaSizeGripCornerGraphic The graphic shown for the size grip of text areas.
     \value DeleteButtonGraphic The graphic shown for the WebKit-Editing-Delete-Button in Deletion UI.
@@ -406,6 +412,8 @@ QWebSettings* QWebSettings::globalSettings()
         programs. This is enabled by default
     \value JavaEnabled Enables or disables Java applets.
         Currently Java applets are not supported.
+    \value PluginsEnabled Enables or disables plugins in Web pages (e.g. using NPAPI). Qt plugins
+        with a mimetype such as "application/x-qt-plugin" are not affected by this setting. This is disabled by default.
     \value PrivateBrowsingEnabled Private browsing prevents WebKit from
         recording visited pages in the history and storing web page icons. This is disabled by default.
     \value JavascriptCanOpenWindows Specifies whether JavaScript programs
@@ -756,10 +764,53 @@ QIcon QWebSettings::iconForUrl(const QUrl& url)
     return QIcon();
 }
 
+/*!
+    Changes the NPAPI plugin search paths to \a paths.
+
+    \sa pluginSearchPaths()
+
+    \deprecated Plugins have been removed from WebKit.
+*/
+void QWebSettings::setPluginSearchPaths(const QStringList& paths)
+{
+    qWarning("Plugins have been removed from WebKit.");
+    WebCore::initializeWebCoreQt();
+}
+
+/*!
+    Returns a list of search paths that are used by WebKit to look for NPAPI plugins.
+
+    \sa setPluginSearchPaths()
+
+    \deprecated Plugins have been removed from WebKit.
+*/
+QStringList QWebSettings::pluginSearchPaths()
+{
+    qWarning("Plugins have been removed from WebKit.");
+    WebCore::initializeWebCoreQt();
+
+    QStringList paths;
+    return paths;
+}
+
+/*
+    Returns the plugin database object.
+
+QWebPluginDatabase *QWebSettings::pluginDatabase()
+{
+    WebCore::initializeWebCoreQt();
+    static QWebPluginDatabase* database = 0;
+    if (!database)
+        database = new QWebPluginDatabase();
+    return database;
+}
+*/
+
 static const char* resourceNameForWebGraphic(QWebSettings::WebGraphic type)
 {
     switch (type) {
     case QWebSettings::MissingImageGraphic: return "missingImage";
+    case QWebSettings::MissingPluginGraphic: return "nullPlugin";
     case QWebSettings::DefaultFrameIconGraphic: return "urlIcon";
     case QWebSettings::TextAreaSizeGripCornerGraphic: return "textAreaResizeCorner";
     case QWebSettings::DeleteButtonGraphic: return "deleteButton";
@@ -1198,6 +1249,18 @@ void QWebSettings::enablePersistentStorage(const QString& path)
     QWebSettings::globalSettings()->setAttribute(QWebSettings::OfflineStorageDatabaseEnabled, true);
     QWebSettings::globalSettings()->setAttribute(QWebSettings::OfflineWebApplicationCacheEnabled, true);
 
+#if ENABLE(NETSCAPE_PLUGIN_METADATA_CACHE)
+    // All applications can share the common QtWebkit cache file(s).
+    // Path is not configurable and uses QDesktopServices::CacheLocation by default.
+    QString cachePath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    WebCore::makeAllDirectories(cachePath);
+
+    QFileInfo info(cachePath);
+    if (info.isDir() && info.isWritable()) {
+        WebCore::PluginDatabase::setPersistentMetadataCacheEnabled(true);
+        WebCore::PluginDatabase::setPersistentMetadataCachePath(cachePath);
+    }
+#endif
 #endif
 }
 
