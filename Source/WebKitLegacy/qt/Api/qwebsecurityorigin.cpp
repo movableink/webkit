@@ -262,7 +262,7 @@ QWebSecurityOrigin::QWebSecurityOrigin(const QUrl& url)
     
     Such cross origin requests are otherwise restricted as per the same-origin-policy.
 */
-void QWebSecurityOrigin::addAccessAllowlistEntry(const QString& scheme, const QString& host, SubdomainSetting subdomainSetting)
+void QWebSecurityOrigin::addAccessWhitelistEntry(const QString& scheme, const QString& host, SubdomainSetting subdomainSetting)
 {
     Ref<SecurityOrigin> sourceOrigin(SecurityOrigin::create(d->origin.protocol(), d->origin.host(), d->origin.port()));
     SecurityPolicy::addOriginAccessAllowlistEntry(sourceOrigin, scheme, host, subdomainSetting == AllowSubdomains);
@@ -272,7 +272,7 @@ void QWebSecurityOrigin::addAccessAllowlistEntry(const QString& scheme, const QS
     Removes the origin's allowlisted access to the specified \a host using the specified \a scheme
     as per the specified \a subdomainSetting.
 */
-void QWebSecurityOrigin::removeAccessAllowlistEntry(const QString& scheme, const QString& host, SubdomainSetting subdomainSetting)
+void QWebSecurityOrigin::removeAccessWhitelistEntry(const QString& scheme, const QString& host, SubdomainSetting subdomainSetting)
 {
     Ref<SecurityOrigin> sourceOrigin(SecurityOrigin::create(d->origin.protocol(), d->origin.host(), d->origin.port()));
     SecurityPolicy::removeOriginAccessAllowlistEntry(sourceOrigin, scheme, host, subdomainSetting == AllowSubdomains);
