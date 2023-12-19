@@ -35,6 +35,7 @@
 #include "Opcode.h"
 #include <variant>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 
 #if ENABLE(C_LOOP)
 #include "CLoopStack.h"
@@ -120,7 +121,7 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
     };
 
     class Interpreter {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(Interpreter);
         friend class CachedCall;
         friend class LLIntOffsetsExtractor;
         friend class JIT;
@@ -135,9 +136,9 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
         const CLoopStack& cloopStack() const { return m_cloopStack; }
 #endif
         
-        static inline Opcode getOpcode(OpcodeID);
+        static inline JSC::Opcode getOpcode(OpcodeID);
 
-        static inline OpcodeID getOpcodeID(Opcode);
+        static inline OpcodeID getOpcodeID(JSC::Opcode);
 
 #if ASSERT_ENABLED
         static bool isOpcode(Opcode);
@@ -157,6 +158,8 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
         static String stackTraceAsString(VM&, const Vector<StackFrame>&);
 
         void getStackTrace(JSCell* owner, Vector<StackFrame>& results, size_t framesToSkip = 0, size_t maxStackSize = std::numeric_limits<size_t>::max(), JSCell* caller = nullptr);
+
+        static JSValue checkVMEntryPermission();
 
     private:
         enum ExecutionFlag { Normal, InitializeAndReturn };

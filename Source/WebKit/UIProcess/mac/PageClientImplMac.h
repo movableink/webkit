@@ -64,7 +64,7 @@ public:
 
 private:
     // PageClient
-    std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy() override;
+    std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy(WebProcessProxy&) override;
     void setViewNeedsDisplay(const WebCore::Region&) override;
     void requestScroll(const WebCore::FloatPoint& scrollPosition, const WebCore::IntPoint& scrollOrigin, WebCore::ScrollIsAnimated) override;
     WebCore::FloatPoint viewScrollPosition() override;
@@ -287,6 +287,8 @@ private:
     bool windowIsFrontWindowUnderMouse(const NativeWebMouseEvent&) override;
 
     void takeFocus(WebCore::FocusDirection) override;
+
+    void performSwitchHapticFeedback() final;
 
 #if HAVE(APP_ACCENT_COLORS)
     WebCore::Color accentColor() override;

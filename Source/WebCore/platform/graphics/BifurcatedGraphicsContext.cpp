@@ -194,6 +194,14 @@ void BifurcatedGraphicsContext::fillRect(const FloatRect& rect, const Color& col
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
+void BifurcatedGraphicsContext::fillRect(const FloatRect& rect, Gradient& gradient)
+{
+    m_primaryContext.fillRect(rect, gradient);
+    m_secondaryContext.fillRect(rect, gradient);
+
+    VERIFY_STATE_SYNCHRONIZATION();
+}
+
 void BifurcatedGraphicsContext::fillRoundedRectImpl(const FloatRoundedRect& rect, const Color& color)
 {
     m_primaryContext.fillRoundedRectImpl(rect, color);
@@ -363,11 +371,6 @@ void BifurcatedGraphicsContext::drawNativeImageInternal(NativeImage& nativeImage
     m_secondaryContext.drawNativeImageInternal(nativeImage, selfSize, destRect, srcRect, options);
 
     VERIFY_STATE_SYNCHRONIZATION();
-}
-
-bool BifurcatedGraphicsContext::needsCachedNativeImageInvalidationWorkaround(RenderingMode renderingMode)
-{
-    return m_primaryContext.needsCachedNativeImageInvalidationWorkaround(renderingMode) || m_secondaryContext.needsCachedNativeImageInvalidationWorkaround(renderingMode);
 }
 
 void BifurcatedGraphicsContext::drawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)

@@ -18,7 +18,6 @@
 #include "common/platform.h"
 #include "common/system_utils.h"
 #include "common/vulkan/libvulkan_loader.h"
-#include "common/vulkan/vk_google_filtering_precision.h"
 #include "common/vulkan/vulkan_icd.h"
 #include "gpu_info_util/SystemInfo.h"
 #include "libANGLE/Context.h"
@@ -96,9 +95,17 @@ bool IsVulkan11(uint32_t apiVersion)
     return apiVersion >= VK_API_VERSION_1_1;
 }
 
-bool IsRADV(uint32_t driverId)
+bool IsRADV(uint32_t vendorId, uint32_t driverId, const char *deviceName)
 {
-    return driverId == VK_DRIVER_ID_MESA_RADV;
+    // Check against RADV driver id first.
+    if (driverId == VK_DRIVER_ID_MESA_RADV)
+    {
+        return true;
+    }
+
+    // Otherwise, look for RADV in the device name.  This works for both RADV
+    // and Venus-over-RADV.
+    return IsAMD(vendorId) && strstr(deviceName, "RADV") != nullptr;
 }
 
 bool IsVenus(uint32_t driverId, const char *deviceName)
@@ -201,6 +208,8 @@ VkResult VerifyExtensionsPresent(const vk::ExtensionNameList &haystack,
 
 // Array of Validation error/warning messages that will be ignored, should include bugID
 constexpr const char *kSkippedMessages[] = {
+    // http://anglebug.com/8401
+    "Undefined-Value-ShaderOutputNotConsumed",
     // http://anglebug.com/5304
     "VUID-vkCmdDraw-magFilter-04553", "VUID-vkCmdDrawIndexed-magFilter-04553",
     // http://anglebug.com/5309
@@ -223,7 +232,7 @@ constexpr const char *kSkippedMessages[] = {
     // http://anglebug.com/7325
     "VUID-vkCmdBindVertexBuffers2-pStrides-06209",
     // http://anglebug.com/7729
-    "VUID-vkDestroySemaphore-semaphore-01137",
+    "VUID-vkDestroySemaphore-semaphore-01137", "VUID-vkDestroySemaphore-semaphore-05149",
     // https://issuetracker.google.com/303219657
     "VUID-VkGraphicsPipelineCreateInfo-pStages-00738",
     // http://anglebug.com/7861
@@ -244,6 +253,8 @@ constexpr const char *kSkippedMessages[] = {
     "VUID-VkBufferViewCreateInfo-format-08779",
     // https://anglebug.com/8203
     "VUID-VkVertexInputBindingDivisorDescriptionEXT-divisor-01870",
+    // https://anglebug.com/8454
+    "VUID-VkVertexInputBindingDivisorDescriptionKHR-divisor-01870",
     // https://anglebug.com/8237
     "VUID-VkGraphicsPipelineCreateInfo-topology-08773",
     // https://anglebug.com/7291
@@ -255,12 +266,8 @@ constexpr const char *kSkippedMessages[] = {
     "VUID-vkCmdDrawIndexed-None-09003",
     // https://anglebug.com/8334
     "VUID-VkDescriptorImageInfo-imageView-07796",
-    // https://anglebug.com/8349
-    "VUID-VkSamplerCreateInfo-pNext-pNext",
     // https://issuetracker.google.com/303441816
     "VUID-VkRenderPassBeginInfo-renderPass-00904",
-    // http://b/223456677 VK_ANDROID_external_format_resolve: remove once ARM/ VVL are fixed.
-    "VUID-VkImageViewCreateInfo-usage-08931", "VUID-VkImageCreateInfo-pNext-02397",
     // http://anglebug.com/8401
     "Undefined-Value-ShaderOutputNotConsumed"};
 
@@ -1145,8 +1152,8 @@ angle::Result GetAndDecompressPipelineCacheVk(VkPhysicalDeviceProperties physica
         // The data must not contain corruption.
         if (chunkIndex0 != 0 || numChunks == 0 || uncompressedCacheDataSize == 0)
         {
-            FATAL() << "Unexpected values while unpacking chunk index 0: "
-                    << "cacheVersion = " << cacheVersion << ", chunkIndex = " << chunkIndex0
+            FATAL() << "Unexpected values while unpacking chunk index 0: " << "cacheVersion = "
+                    << cacheVersion << ", chunkIndex = " << chunkIndex0
                     << ", numChunks = " << numChunks
                     << ", uncompressedCacheDataSize = " << uncompressedCacheDataSize;
         }
@@ -1166,9 +1173,8 @@ angle::Result GetAndDecompressPipelineCacheVk(VkPhysicalDeviceProperties physica
         }
         else
         {
-            WARN() << "Change in cache header version detected: "
-                   << "newVersion = " << kPipelineCacheVersion
-                   << ", existingVersion = " << cacheVersion;
+            WARN() << "Change in cache header version detected: " << "newVersion = "
+                   << kPipelineCacheVersion << ", existingVersion = " << cacheVersion;
         }
         return angle::Result::Continue;
     }
@@ -1216,10 +1222,9 @@ angle::Result GetAndDecompressPipelineCacheVk(VkPhysicalDeviceProperties physica
             (compressedData.size() < compressedSize + chunkSize);
         if (isHeaderDataCorrupted)
         {
-            WARN() << "Pipeline cache chunk header corrupted: "
-                   << "checkCacheVersion = " << checkCacheVersion
-                   << ", cacheVersion = " << cacheVersion << ", checkNumChunks = " << checkNumChunks
-                   << ", numChunks = " << numChunks
+            WARN() << "Pipeline cache chunk header corrupted: " << "checkCacheVersion = "
+                   << checkCacheVersion << ", cacheVersion = " << cacheVersion
+                   << ", checkNumChunks = " << checkNumChunks << ", numChunks = " << numChunks
                    << ", checkUncompressedCacheDataSize = " << checkUncompressedCacheDataSize
                    << ", uncompressedCacheDataSize = " << uncompressedCacheDataSize
                    << ", checkCompressedDataCRC = " << checkCompressedDataCRC
@@ -1405,8 +1410,6 @@ RendererVk::RendererVk()
       mDefaultUniformBufferSize(kPreferredDefaultUniformBufferSize),
       mDevice(VK_NULL_HANDLE),
       mDeviceLost(false),
-      mCoherentStagingBufferMemoryTypeIndex(kInvalidMemoryTypeIndex),
-      mNonCoherentStagingBufferMemoryTypeIndex(kInvalidMemoryTypeIndex),
       mStagingBufferAlignment(1),
       mHostVisibleVertexConversionBufferMemoryTypeIndex(kInvalidMemoryTypeIndex),
       mDeviceLocalVertexConversionBufferMemoryTypeIndex(kInvalidMemoryTypeIndex),
@@ -1422,6 +1425,7 @@ RendererVk::RendererVk()
 {
     VkFormatProperties invalid = {0, 0, kInvalidFormatFeatureFlags};
     mFormatProperties.fill(invalid);
+    mStagingBufferMemoryTypeIndex.fill(kInvalidMemoryTypeIndex);
 
     // We currently don't have any big-endian devices in the list of supported platforms.  There are
     // a number of places in the Vulkan backend that make this assumption.  This assertion is made
@@ -1997,17 +2001,30 @@ angle::Result RendererVk::initializeMemoryAllocator(DisplayVk *displayVk)
 
     // Uncached coherent staging buffer
     VkMemoryPropertyFlags preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    ANGLE_VK_TRY(displayVk, mAllocator.findMemoryTypeIndexForBufferInfo(
-                                createInfo, requiredFlags, preferredFlags, persistentlyMapped,
-                                &mCoherentStagingBufferMemoryTypeIndex));
-    ASSERT(mCoherentStagingBufferMemoryTypeIndex != kInvalidMemoryTypeIndex);
+    ANGLE_VK_TRY(displayVk,
+                 mAllocator.findMemoryTypeIndexForBufferInfo(
+                     createInfo, requiredFlags, preferredFlags, persistentlyMapped,
+                     &mStagingBufferMemoryTypeIndex[vk::MemoryCoherency::UnCachedCoherent]));
+    ASSERT(mStagingBufferMemoryTypeIndex[vk::MemoryCoherency::UnCachedCoherent] !=
+           kInvalidMemoryTypeIndex);
 
-    // Cached (b/219974369) Non-coherent staging buffer
+    // Cached coherent staging buffer
+    preferredFlags = VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    ANGLE_VK_TRY(displayVk,
+                 mAllocator.findMemoryTypeIndexForBufferInfo(
+                     createInfo, requiredFlags, preferredFlags, persistentlyMapped,
+                     &mStagingBufferMemoryTypeIndex[vk::MemoryCoherency::CachedCoherent]));
+    ASSERT(mStagingBufferMemoryTypeIndex[vk::MemoryCoherency::CachedCoherent] !=
+           kInvalidMemoryTypeIndex);
+
+    // Cached Non-coherent staging buffer
     preferredFlags = VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
-    ANGLE_VK_TRY(displayVk, mAllocator.findMemoryTypeIndexForBufferInfo(
-                                createInfo, requiredFlags, preferredFlags, persistentlyMapped,
-                                &mNonCoherentStagingBufferMemoryTypeIndex));
-    ASSERT(mNonCoherentStagingBufferMemoryTypeIndex != kInvalidMemoryTypeIndex);
+    ANGLE_VK_TRY(displayVk,
+                 mAllocator.findMemoryTypeIndexForBufferInfo(
+                     createInfo, requiredFlags, preferredFlags, persistentlyMapped,
+                     &mStagingBufferMemoryTypeIndex[vk::MemoryCoherency::CachedNonCoherent]));
+    ASSERT(mStagingBufferMemoryTypeIndex[vk::MemoryCoherency::CachedNonCoherent] !=
+           kInvalidMemoryTypeIndex);
 
     // Alignment
     mStagingBufferAlignment =
@@ -2034,7 +2051,8 @@ angle::Result RendererVk::initializeMemoryAllocator(DisplayVk *displayVk)
 
     // Host visible and non-coherent vertex conversion buffer, which is the same as non-coherent
     // staging buffer
-    mHostVisibleVertexConversionBufferMemoryTypeIndex = mNonCoherentStagingBufferMemoryTypeIndex;
+    mHostVisibleVertexConversionBufferMemoryTypeIndex =
+        mStagingBufferMemoryTypeIndex[vk::MemoryCoherency::CachedNonCoherent];
 
     // We may use compute shader to do conversion, so we must meet
     // minStorageBufferOffsetAlignment requirement as well. Also take into account non-coherent
@@ -3689,6 +3707,12 @@ gl::Version RendererVk::getMaxSupportedESVersion() const
         maxVersion = LimitVersionTo(maxVersion, {3, 0});
     }
 
+    // SSO is in ES3.1 core, so we have to cap to ES3.0 for SSO disablement.
+    if (mFeatures.disableSeparateShaderObjects.enabled)
+    {
+        maxVersion = LimitVersionTo(maxVersion, {3, 0});
+    }
+
     // Limit to ES2.0 if there are any blockers for 3.0.
     // TODO: http://anglebug.com/3972 Limit to GLES 2.0 if flat shading can't be emulated
 
@@ -3902,7 +3926,8 @@ void RendererVk::initFeatures(DisplayVk *displayVk,
         ParseARMDriverVersion(mPhysicalDeviceProperties.driverVersion);
 
     // Distinguish between the mesa and proprietary drivers
-    const bool isRADV = IsRADV(mDriverProperties.driverID);
+    const bool isRADV = IsRADV(mPhysicalDeviceProperties.vendorID, mDriverProperties.driverID,
+                               mPhysicalDeviceProperties.deviceName);
 
     // Identify Google Pixel brand Android devices
     const bool isPixel = IsPixel();
@@ -4056,10 +4081,6 @@ void RendererVk::initFeatures(DisplayVk *displayVk,
     ANGLE_FEATURE_CONDITION(
         &mFeatures, supportsExternalMemoryFuchsia,
         ExtensionFound(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME, deviceExtensionNames));
-
-    ANGLE_FEATURE_CONDITION(
-        &mFeatures, supportsFilteringPrecision,
-        ExtensionFound(VK_GOOGLE_SAMPLER_FILTERING_PRECISION_EXTENSION_NAME, deviceExtensionNames));
 
     ANGLE_FEATURE_CONDITION(
         &mFeatures, supportsExternalSemaphoreFd,
@@ -4392,9 +4413,8 @@ void RendererVk::initFeatures(DisplayVk *displayVk,
 
     // Testing shows that on ARM GPU, doing implicit flush at framebuffer boundary improves
     // performance. Most app traces shows frame time reduced and manhattan 3.1 offscreen score
-    // improves 7%. Enable for MESA Virtio-GPU Venus driver in virtualized environment as well.
-    ANGLE_FEATURE_CONDITION(&mFeatures, preferSubmitAtFBOBoundary,
-                            isARM || isSwiftShader || isVenus);
+    // improves 7%.
+    ANGLE_FEATURE_CONDITION(&mFeatures, preferSubmitAtFBOBoundary, isARM || isSwiftShader);
 
     // In order to support immutable samplers tied to external formats, we need to overallocate
     // descriptor counts for such immutable samplers
@@ -4787,12 +4807,15 @@ void RendererVk::initFeatures(DisplayVk *displayVk,
     // virtualized environment. https://issuetracker.google.com/246378938
     ANGLE_FEATURE_CONDITION(&mFeatures, preferLinearFilterForYUV, isVenus);
 
-    // Intel mesa drivers need depthBiasConstantFactor to be doubled to align with GL.
-    ANGLE_FEATURE_CONDITION(&mFeatures, doubleDepthBiasConstantFactor, isIntel && !IsWindows());
+    // Intel and AMD mesa drivers need depthBiasConstantFactor to be doubled to align with GL.
+    ANGLE_FEATURE_CONDITION(&mFeatures, doubleDepthBiasConstantFactor,
+                            (isIntel && !IsWindows()) || isRADV);
 
-    // Required to pass android.media.codec.cts.EncodeDecodeTest with MESA Virtio-GPU Venus driver
-    // in virtualized environment. https://issuetracker.google.com/246218584
-    ANGLE_FEATURE_CONDITION(&mFeatures, mapUnspecifiedColorSpaceToPassThrough, isVenus);
+    // Required to pass android.media.codec.cts.EncodeDecodeTest
+    // https://issuetracker.google.com/246218584
+    ANGLE_FEATURE_CONDITION(
+        &mFeatures, mapUnspecifiedColorSpaceToPassThrough,
+        ExtensionFound(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME, mEnabledInstanceExtensions));
 
     ANGLE_FEATURE_CONDITION(&mFeatures, enablePipelineCacheDataCompression, true);
 
@@ -4828,7 +4851,12 @@ void RendererVk::initFeatures(DisplayVk *displayVk,
 void RendererVk::appBasedFeatureOverrides(DisplayVk *display,
                                           const vk::ExtensionNameList &extensions)
 {
-    // NOOP for now.
+    // BUG: b/239181279 Android camera app sometimes uses an uninitialized value for layerCount of
+    // the ANativeWindowBuffer. Force layerCount to 1 until we can root cause and fix the AHB
+    // creation.
+    ANGLE_FEATURE_CONDITION(
+        &mFeatures, forceAHBLayerCountToOne,
+        strcmp(mApplicationInfo.pApplicationName, "com.google.android.GoogleCamera") == 0);
 }
 
 angle::Result RendererVk::initPipelineCache(DisplayVk *display,
@@ -4836,8 +4864,11 @@ angle::Result RendererVk::initPipelineCache(DisplayVk *display,
                                             bool *success)
 {
     angle::MemoryBuffer initialData;
-    ANGLE_TRY(
-        GetAndDecompressPipelineCacheVk(mPhysicalDeviceProperties, display, &initialData, success));
+    if (!mFeatures.disablePipelineCacheLoadForTesting.enabled)
+    {
+        ANGLE_TRY(GetAndDecompressPipelineCacheVk(mPhysicalDeviceProperties, display, &initialData,
+                                                  success));
+    }
 
     VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
 
@@ -4943,6 +4974,9 @@ void RendererVk::initializeFrontendFeatures(angle::FrontendFeatures *features) c
     // The Vulkan backend's handling of compile and link is thread-safe
     ANGLE_FEATURE_CONDITION(features, compileJobIsThreadSafe, true);
     ANGLE_FEATURE_CONDITION(features, linkJobIsThreadSafe, true);
+    // Always run the link's warm up job in a thread.  It's an optimization only, and does not block
+    // the link resolution.
+    ANGLE_FEATURE_CONDITION(features, alwaysRunLinkSubJobsThreaded, true);
 }
 
 angle::Result RendererVk::getPipelineCacheSize(DisplayVk *displayVk, size_t *pipelineCacheSizeOut)

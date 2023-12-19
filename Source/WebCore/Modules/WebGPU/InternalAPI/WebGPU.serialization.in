@@ -184,12 +184,6 @@ header: <WebCore/WebGPUShaderStage.h>
 
 using WebCore::WebGPU::ShaderStageFlags = OptionSet<WebCore::WebGPU::ShaderStage>;
 
-header: <WebCore/WebGPURenderPassTimestampLocation.h>
-enum class WebCore::WebGPU::RenderPassTimestampLocation : uint8_t {
-    Beginning,
-    End,
-};
-
 header: <WebCore/WebGPUCompilationMessageType.h>
 enum class WebCore::WebGPU::CompilationMessageType : uint8_t {
     Error,
@@ -215,12 +209,6 @@ enum class WebCore::WebGPU::DeviceLostReason : uint8_t {
     Unknown,
 };
 
-header: <WebCore/WebGPUComputePassTimestampLocation.h>
-enum class WebCore::WebGPU::ComputePassTimestampLocation : uint8_t {
-    Beginning,
-    End,
-};
-
 header: <WebCore/WebGPUAddressMode.h>
 enum class WebCore::WebGPU::AddressMode : uint8_t {
     ClampToEdge,
@@ -238,6 +226,8 @@ enum class WebCore::WebGPU::BufferBindingType : uint8_t {
 header: <WebCore/WebGPUStorageTextureAccess.h>
 enum class WebCore::WebGPU::StorageTextureAccess : uint8_t {
     WriteOnly,
+    ReadOnly,
+    ReadWrite,
 };
 
 header: <WebCore/WebGPUFrontFace.h>

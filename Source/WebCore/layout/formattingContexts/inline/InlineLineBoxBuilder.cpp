@@ -63,6 +63,8 @@ LineBox LineBoxBuilder::build(size_t lineIndex)
     constructInlineLevelBoxes(lineBox);
     adjustIdeographicBaselineIfApplicable(lineBox);
     adjustInlineBoxHeightsForLineBoxContainIfApplicable(lineBox);
+    if (m_lineHasRubyContent)
+        RubyFormattingContext::applyAnnotationContributionToLayoutBounds(lineBox, formattingContext());
     computeLineBoxGeometry(lineBox);
     adjustOutsideListMarkersPosition(lineBox);
 
@@ -270,8 +272,6 @@ void LineBoxBuilder::setVerticalPropertiesForInlineLevelBox(const LineBox& lineB
         // With text-box-trim, the inline box top is not always where the content starts.
         auto fontMetricBasedAscent = primaryFontMetricsForInlineBox(inlineLevelBox, lineBox.baselineType()).ascent;
         inlineLevelBox.setInlineBoxContentOffsetForTextBoxTrim(fontMetricBasedAscent - ascentAndDescent.ascent);
-        if (inlineLevelBox.layoutBox().isRenderRubyBase())
-            RubyFormattingContext { formattingContext() }.applyAnnotationContributionToLayoutBounds(inlineLevelBox);
         return;
     }
     if (inlineLevelBox.isLineBreakBox()) {
@@ -363,15 +363,15 @@ void LineBoxBuilder::constructInlineLevelBoxes(LineBox& lineBox)
         }
         if (run.isLineSpanningInlineBoxStart()) {
             auto marginStart = LayoutUnit { };
-#if ENABLE(CSS_BOX_DECORATION_BREAK)
             if (style.boxDecorationBreak() == BoxDecorationBreak::Clone)
                 marginStart = formattingContext.geometryForBox(layoutBox).marginStart();
-#endif
             logicalLeft += std::max(0_lu, marginStart);
             auto logicalWidth = rootInlineBox.logicalRight() - logicalLeft;
             auto inlineBox = InlineLevelBox::createInlineBox(layoutBox, style, logicalLeft, logicalWidth, InlineLevelBox::LineSpanningInlineBox::Yes);
             setVerticalPropertiesForInlineLevelBox(lineBox, inlineBox);
+            inlineBox.setTextEmphasis(InlineFormattingUtils::textEmphasisForInlineBox(layoutBox, rootBox()));
             lineBox.addInlineLevelBox(WTFMove(inlineBox));
+            m_lineHasRubyContent = m_lineHasRubyContent || layoutBox.isRubyBase();
             continue;
         }
         if (run.isInlineBoxStart()) {
@@ -385,8 +385,10 @@ void LineBoxBuilder::constructInlineLevelBoxes(LineBox& lineBox)
             initialLogicalWidth = std::max(initialLogicalWidth, 0.f);
             auto inlineBox = InlineLevelBox::createInlineBox(layoutBox, style, logicalLeft, initialLogicalWidth);
             inlineBox.setIsFirstBox();
+            inlineBox.setTextEmphasis(InlineFormattingUtils::textEmphasisForInlineBox(layoutBox, rootBox()));
             setVerticalPropertiesForInlineLevelBox(lineBox, inlineBox);
             lineBox.addInlineLevelBox(WTFMove(inlineBox));
+            m_lineHasRubyContent = m_lineHasRubyContent || layoutBox.isRubyBase();
             continue;
         }
         if (run.isInlineBoxEnd()) {

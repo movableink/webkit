@@ -36,6 +36,7 @@
 #include "Types.h"
 #include "WGSLShaderModule.h"
 #include <wtf/HashSet.h>
+#include <wtf/SetForScope.h>
 #include <wtf/SortedArrayMap.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -82,6 +83,7 @@ public:
     void visit(AST::Expression&) override;
     void visit(AST::FieldAccessExpression&) override;
     void visit(AST::Float32Literal&) override;
+    void visit(AST::Float16Literal&) override;
     void visit(AST::IdentifierExpression&) override;
     void visit(AST::IndexAccessExpression&) override;
     void visit(AST::PointerDereferenceExpression&) override;
@@ -100,6 +102,8 @@ public:
     void visit(AST::PhonyAssignmentStatement&) override;
     void visit(AST::ReturnStatement&) override;
     void visit(AST::ForStatement&) override;
+    void visit(AST::LoopStatement&) override;
+    void visit(AST::Continuing&) override;
     void visit(AST::WhileStatement&) override;
     void visit(AST::SwitchStatement&) override;
     void visit(AST::BreakStatement&) override;
@@ -120,6 +124,8 @@ private:
     void generatePackingHelpers(AST::Structure&);
     bool emitPackedVector(const Types::Vector&);
     void serializeConstant(const Type*, ConstantValue);
+    void serializeBinaryExpression(AST::Expression&, AST::BinaryOperation, AST::Expression&);
+    void visitStatements(AST::Statement::List&);
 
     StringBuilder& m_stringBuilder;
     CallGraph& m_callGraph;
@@ -127,6 +133,7 @@ private:
     std::optional<AST::StructureRole> m_structRole;
     std::optional<ShaderStage> m_entryPointStage;
     unsigned m_functionConstantIndex { 0 };
+    std::optional<AST::Continuing> m_continuing;
     HashSet<AST::Function*> m_visitedFunctions;
 };
 
@@ -151,12 +158,18 @@ void FunctionDefinitionWriter::write()
 {
     emitNecessaryHelpers();
 
-    for (auto& structure : m_callGraph.ast().structures())
-        visit(structure);
-    for (auto& structure : m_callGraph.ast().structures())
-        generatePackingHelpers(structure);
-    for (auto& variable : m_callGraph.ast().variables())
-        visitGlobal(variable);
+    for (auto& declaration : m_callGraph.ast().declarations()) {
+        if (is<AST::Structure>(declaration))
+            visit(downcast<AST::Structure>(declaration));
+        else if (is<AST::Variable>(declaration))
+            visitGlobal(downcast<AST::Variable>(declaration));
+    }
+
+    for (auto& declaration : m_callGraph.ast().declarations()) {
+        if (is<AST::Structure>(declaration))
+            generatePackingHelpers(downcast<AST::Structure>(declaration));
+    }
+
     for (auto& entryPoint : m_callGraph.entrypoints())
         visit(entryPoint.function);
 }
@@ -245,6 +258,23 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
         m_stringBuilder.append(m_indent, "}\n\n");
     }
 
+    if (m_callGraph.ast().usesModulo()) {
+        m_stringBuilder.append(m_indent, "template<typename T, typename U, typename V = conditional_t<is_scalar_v<U>, T, U>>\n");
+        m_stringBuilder.append(m_indent, "V __wgslMod(T lhs, U rhs)\n");
+        m_stringBuilder.append(m_indent, "{\n");
+        {
+            IndentationScope scope(m_indent);
+            m_stringBuilder.append(m_indent, "auto predicate = V(rhs) == V(0);\n");
+            m_stringBuilder.append(m_indent, "if constexpr (is_signed_v<U>)\n");
+            {
+                IndentationScope scope(m_indent);
+                m_stringBuilder.append(m_indent, "predicate = predicate || (V(lhs) == V(numeric_limits<T>::lowest()) && V(rhs) == V(-1));\n");
+            }
+            m_stringBuilder.append(m_indent, "return select(lhs % V(rhs), V(0), predicate);\n");
+        }
+        m_stringBuilder.append(m_indent, "}\n\n");
+    }
+
 
     if (m_callGraph.ast().usesFrexp()) {
         m_stringBuilder.append(m_indent, "template<typename T, typename U>\n");
@@ -263,6 +293,28 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
             IndentationScope scope(m_indent);
             m_stringBuilder.append(m_indent, "__frexp_result<T, U> result;\n");
             m_stringBuilder.append(m_indent, "result.fract = frexp(value, result.exp);\n");
+            m_stringBuilder.append(m_indent, "return result;\n");
+        }
+        m_stringBuilder.append(m_indent, "}\n\n");
+    }
+
+    if (m_callGraph.ast().usesModf()) {
+        m_stringBuilder.append(m_indent, "template<typename T, typename U>\n");
+        m_stringBuilder.append(m_indent, "struct __modf_result {\n");
+        {
+            IndentationScope scope(m_indent);
+            m_stringBuilder.append(m_indent, "T fract;\n");
+            m_stringBuilder.append(m_indent, "U whole;\n");
+        }
+        m_stringBuilder.append(m_indent, "};\n\n");
+
+        m_stringBuilder.append(m_indent, "template<typename T>\n");
+        m_stringBuilder.append(m_indent, "__modf_result<T, T> __wgslModf(T value)\n");
+        m_stringBuilder.append(m_indent, "{\n");
+        {
+            IndentationScope scope(m_indent);
+            m_stringBuilder.append(m_indent, "__modf_result<T, T> result;\n");
+            m_stringBuilder.append(m_indent, "result.fract = modf(value, result.whole);\n");
             m_stringBuilder.append(m_indent, "return result;\n");
         }
         m_stringBuilder.append(m_indent, "}\n\n");
@@ -470,6 +522,9 @@ bool FunctionDefinitionWriter::emitPackedVector(const Types::Vector& vector)
     case Types::Primitive::AbstractFloat:
     case Types::Primitive::F32:
         m_stringBuilder.append("packed_float", String::number(vector.size));
+        break;
+    case Types::Primitive::F16:
+        m_stringBuilder.append("packed_half", String::number(vector.size));
         break;
     case Types::Primitive::Bool:
     case Types::Primitive::Void:
@@ -727,6 +782,9 @@ void FunctionDefinitionWriter::visit(const Type* type)
             case Types::Primitive::AbstractFloat:
             case Types::Primitive::F32:
                 m_stringBuilder.append("float");
+                break;
+            case Types::Primitive::F16:
+                m_stringBuilder.append("half");
                 break;
             case Types::Primitive::Void:
             case Types::Primitive::Bool:
@@ -1455,6 +1513,11 @@ static void emitAtomicMin(FunctionDefinitionWriter* writer, AST::CallExpression&
     atomicFunction("atomic_fetch_min_explicit", writer, call);
 }
 
+static void emitAtomicAnd(FunctionDefinitionWriter* writer, AST::CallExpression& call)
+{
+    atomicFunction("atomic_fetch_and_explicit", writer, call);
+}
+
 static void emitAtomicOr(FunctionDefinitionWriter* writer, AST::CallExpression& call)
 {
     atomicFunction("atomic_fetch_or_explicit", writer, call);
@@ -1558,6 +1621,7 @@ void FunctionDefinitionWriter::visit(const Type* type, AST::CallExpression& call
             { "__dynamicOffset", emitDynamicOffset },
             { "arrayLength", emitArrayLength },
             { "atomicAdd", emitAtomicAdd },
+            { "atomicAnd", emitAtomicAnd },
             { "atomicExchange", emitAtomicExchange },
             { "atomicLoad", emitAtomicLoad },
             { "atomicMax", emitAtomicMax },
@@ -1610,6 +1674,7 @@ void FunctionDefinitionWriter::visit(const Type* type, AST::CallExpression& call
             { "fwidthFine", "fwidth"_s },
             { "insertBits", "insert_bits"_s },
             { "inverseSqrt", "rsqrt"_s },
+            { "modf", "__wgslModf"_s },
             { "reverseBits", "reverse_bits"_s },
         };
         static constexpr SortedArrayMap mappedNames { directMappings };
@@ -1651,38 +1716,38 @@ void FunctionDefinitionWriter::visit(AST::UnaryExpression& unary)
     m_stringBuilder.append(")");
 }
 
-void FunctionDefinitionWriter::visit(AST::BinaryExpression& binary)
+void FunctionDefinitionWriter::serializeBinaryExpression(AST::Expression& lhs, AST::BinaryOperation operation, AST::Expression& rhs)
 {
-    if (binary.operation() == AST::BinaryOperation::Modulo) {
-        auto* leftType = binary.leftExpression().inferredType();
-        auto* rightType = binary.rightExpression().inferredType();
-        if (satisfies(leftType, Constraints::Float) || satisfies(rightType, Constraints::Float)) {
-            m_stringBuilder.append("fmod(");
-            visit(binary.leftExpression());
-            m_stringBuilder.append(", ");
-            visit(binary.rightExpression());
-            m_stringBuilder.append(")");
-            return;
-        }
-    }
+    bool isDiv = operation == AST::BinaryOperation::Divide;
+    bool isMod = !isDiv && operation == AST::BinaryOperation::Modulo;
 
-    if (binary.operation() == AST::BinaryOperation::Divide) {
-        auto* resultType = binary.inferredType();
-        if (auto* vectorType = std::get_if<Types::Vector>(resultType))
-            resultType = vectorType->element;
-        if (satisfies(resultType, Constraints::Integer)) {
-            m_stringBuilder.append("__wgslDiv(");
-            visit(binary.leftExpression());
+    if (isDiv || isMod) {
+        auto* rightType = rhs.inferredType();
+        if (auto* vectorType = std::get_if<Types::Vector>(rightType))
+            rightType = vectorType->element;
+
+        const char* helperFunction = nullptr;
+        if (satisfies(rightType, Constraints::Integer)) {
+            if (isDiv)
+                helperFunction = "__wgslDiv";
+            else
+                helperFunction = "__wgslMod";
+        } else if (isMod)
+            helperFunction = "fmod";
+
+        if (helperFunction) {
+            m_stringBuilder.append(helperFunction, "(");
+            visit(lhs);
             m_stringBuilder.append(", ");
-            visit(binary.rightExpression());
+            visit(rhs);
             m_stringBuilder.append(")");
             return;
         }
     }
 
     m_stringBuilder.append("(");
-    visit(binary.leftExpression());
-    switch (binary.operation()) {
+    visit(lhs);
+    switch (operation) {
     case AST::BinaryOperation::Add:
         m_stringBuilder.append(" + ");
         break;
@@ -1741,8 +1806,13 @@ void FunctionDefinitionWriter::visit(AST::BinaryExpression& binary)
         m_stringBuilder.append(" || ");
         break;
     }
-    visit(binary.rightExpression());
+    visit(rhs);
     m_stringBuilder.append(")");
+}
+
+void FunctionDefinitionWriter::visit(AST::BinaryExpression& binary)
+{
+    serializeBinaryExpression(binary.leftExpression(), binary.operation(), binary.rightExpression());
 }
 
 void FunctionDefinitionWriter::visit(AST::PointerDereferenceExpression& pointerDereference)
@@ -1809,6 +1879,14 @@ void FunctionDefinitionWriter::visit(AST::Float32Literal& literal)
     m_stringBuilder.append(&buffer[0]);
 }
 
+void FunctionDefinitionWriter::visit(AST::Float16Literal& literal)
+{
+    NumberToStringBuffer buffer;
+    WTF::numberToStringWithTrailingPoint(literal.value(), buffer);
+
+    m_stringBuilder.append(&buffer[0]);
+}
+
 void FunctionDefinitionWriter::visit(AST::Statement& statement)
 {
     AST::Visitor::visit(statement);
@@ -1837,24 +1915,9 @@ void FunctionDefinitionWriter::visit(AST::CallStatement& statement)
 
 void FunctionDefinitionWriter::visit(AST::CompoundAssignmentStatement& statement)
 {
-    if (statement.operation() == AST::BinaryOperation::Divide) {
-        auto* rightType = statement.rightExpression().inferredType();
-        if (auto* vectorType = std::get_if<Types::Vector>(rightType))
-            rightType = vectorType->element;
-        if (satisfies(rightType, Constraints::Integer)) {
-            visit(statement.leftExpression());
-            m_stringBuilder.append(" = __wgslDiv(");
-            visit(statement.leftExpression());
-            m_stringBuilder.append(", ");
-            visit(statement.rightExpression());
-            m_stringBuilder.append(")");
-            return;
-        }
-    }
-
     visit(statement.leftExpression());
-    m_stringBuilder.append(" ", toASCIILiteral(statement.operation()), "= ");
-    visit(statement.rightExpression());
+    m_stringBuilder.append(" = ");
+    serializeBinaryExpression(statement.leftExpression(), statement.operation(), statement.rightExpression());
 }
 
 void FunctionDefinitionWriter::visit(AST::CompoundStatement& statement)
@@ -1862,29 +1925,34 @@ void FunctionDefinitionWriter::visit(AST::CompoundStatement& statement)
     m_stringBuilder.append("{\n");
     {
         IndentationScope scope(m_indent);
-        for (auto& statement : statement.statements()) {
-            m_stringBuilder.append(m_indent);
-            checkErrorAndVisit(statement);
-            switch (statement.kind()) {
-            case AST::NodeKind::AssignmentStatement:
-            case AST::NodeKind::BreakStatement:
-            case AST::NodeKind::CallStatement:
-            case AST::NodeKind::CompoundAssignmentStatement:
-            case AST::NodeKind::ContinueStatement:
-            case AST::NodeKind::DecrementIncrementStatement:
-            case AST::NodeKind::DiscardStatement:
-            case AST::NodeKind::PhonyAssignmentStatement:
-            case AST::NodeKind::ReturnStatement:
-            case AST::NodeKind::VariableStatement:
-                m_stringBuilder.append(';');
-                break;
-            default:
-                break;
-            }
-            m_stringBuilder.append('\n');
-        }
+        visitStatements(statement.statements());
     }
     m_stringBuilder.append(m_indent, "}");
+}
+
+void FunctionDefinitionWriter::visitStatements(AST::Statement::List& statements)
+{
+    for (auto& statement : statements) {
+        m_stringBuilder.append(m_indent);
+        checkErrorAndVisit(statement);
+        switch (statement.kind()) {
+        case AST::NodeKind::AssignmentStatement:
+        case AST::NodeKind::BreakStatement:
+        case AST::NodeKind::CallStatement:
+        case AST::NodeKind::CompoundAssignmentStatement:
+        case AST::NodeKind::ContinueStatement:
+        case AST::NodeKind::DecrementIncrementStatement:
+        case AST::NodeKind::DiscardStatement:
+        case AST::NodeKind::PhonyAssignmentStatement:
+        case AST::NodeKind::ReturnStatement:
+        case AST::NodeKind::VariableStatement:
+            m_stringBuilder.append(';');
+            break;
+        default:
+            break;
+        }
+        m_stringBuilder.append('\n');
+    }
 }
 
 void FunctionDefinitionWriter::visit(AST::DecrementIncrementStatement& statement)
@@ -1952,6 +2020,43 @@ void FunctionDefinitionWriter::visit(AST::ForStatement& statement)
     visit(statement.body());
 }
 
+void FunctionDefinitionWriter::visit(AST::LoopStatement& statement)
+{
+    m_stringBuilder.append("while (true) {\n");
+    {
+        auto& continuing = statement.continuing();
+        SetForScope continuingScope(m_continuing, continuing);
+
+        IndentationScope scope(m_indent);
+        visitStatements(statement.body());
+
+        if (continuing.has_value()) {
+            m_stringBuilder.append(m_indent);
+            visit(*continuing);
+        }
+    }
+    m_stringBuilder.append(m_indent, "}");
+}
+
+void FunctionDefinitionWriter::visit(AST::Continuing& continuing)
+{
+    m_stringBuilder.append("{\n");
+    {
+        IndentationScope scope(m_indent);
+        visitStatements(continuing.body);
+
+        if (auto* breakIf = continuing.breakIf) {
+            m_stringBuilder.append(m_indent, "if (");
+            visit(*breakIf);
+            m_stringBuilder.append(")\n");
+
+            IndentationScope scope(m_indent);
+            m_stringBuilder.append(m_indent, "break;\n");
+        }
+    }
+    m_stringBuilder.append(m_indent, "}\n");
+}
+
 void FunctionDefinitionWriter::visit(AST::WhileStatement& statement)
 {
     m_stringBuilder.append("while (");
@@ -1996,6 +2101,10 @@ void FunctionDefinitionWriter::visit(AST::BreakStatement&)
 
 void FunctionDefinitionWriter::visit(AST::ContinueStatement&)
 {
+    if (m_continuing.has_value()) {
+        visit(*m_continuing);
+        m_stringBuilder.append(m_indent);
+    }
     m_stringBuilder.append("continue");
 }
 
@@ -2025,6 +2134,12 @@ void FunctionDefinitionWriter::serializeConstant(const Type* type, ConstantValue
                 NumberToStringBuffer buffer;
                 WTF::numberToStringWithTrailingPoint(std::get<float>(value), buffer);
                 m_stringBuilder.append(&buffer[0]);
+                break;
+            }
+            case Primitive::F16: {
+                NumberToStringBuffer buffer;
+                WTF::numberToStringWithTrailingPoint(std::get<half>(value), buffer);
+                m_stringBuilder.append(&buffer[0], "h");
                 break;
             }
             case Primitive::Bool:

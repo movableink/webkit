@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "FragmentScriptingPermission.h"
+#include "ParserContentPolicy.h"
 #include "PendingScriptClient.h"
 #include "ScriptableDocumentParser.h"
 #include "SegmentedString.h"
@@ -80,7 +80,7 @@ public:
     void setIsXHTMLDocument(bool isXHTML) { m_isXHTMLDocument = isXHTML; }
     bool isXHTMLDocument() const { return m_isXHTMLDocument; }
 
-    static bool parseDocumentFragment(const String&, DocumentFragment&, Element* parent = nullptr, OptionSet<ParserContentPolicy> = { ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
+    static bool parseDocumentFragment(const String&, DocumentFragment&, Element* parent = nullptr, OptionSet<ParserContentPolicy> = { ParserContentPolicy::AllowScriptingContent });
 
     // Used by XMLHttpRequest to check if the responseXML was well formed.
     bool wellFormed() const final { return !m_sawError; }

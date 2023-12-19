@@ -56,6 +56,7 @@ public:
     WTF::String linkLabel() const { return m_data.linkLabel; }
     WTF::String linkTitle() const { return m_data.linkTitle; }
     WTF::String lookupText() const { return m_data.lookupText; }
+    WTF::String sourceImageMIMEType() const { return m_data.sourceImageMIMEType; }
 
     bool isContentEditable() const { return m_data.isContentEditable; }
 
@@ -70,6 +71,8 @@ public:
     bool isOverTextInsideFormControlElement() const { return m_data.isOverTextInsideFormControlElement; }
 
     bool isDownloadableMedia() const { return m_data.isDownloadableMedia; }
+
+    bool mediaIsInFullscreen() const { return m_data.mediaIsInFullscreen; }
 
     WebKit::WebHitTestResultData::ElementType elementType() const { return m_data.elementType; }
 

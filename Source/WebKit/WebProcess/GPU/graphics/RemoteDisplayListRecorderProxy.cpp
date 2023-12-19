@@ -28,6 +28,7 @@
 
 #if ENABLE(GPU_PROCESS)
 
+#include "Logging.h"
 #include "RemoteDisplayListRecorderMessages.h"
 #include "RemoteImageBufferProxy.h"
 #include "RemoteRenderingBackendProxy.h"
@@ -54,6 +55,15 @@ RemoteDisplayListRecorderProxy::RemoteDisplayListRecorderProxy(RemoteImageBuffer
     , m_destinationBufferIdentifier(imageBuffer.renderingResourceIdentifier())
     , m_imageBuffer(imageBuffer)
     , m_renderingBackend(renderingBackend)
+    , m_renderingMode(imageBuffer.renderingMode())
+{
+}
+
+RemoteDisplayListRecorderProxy::RemoteDisplayListRecorderProxy(RemoteRenderingBackendProxy& renderingBackend, RenderingResourceIdentifier renderingResourceIdentifier, const DestinationColorSpace& colorSpace, RenderingMode renderingMode, const FloatRect& initialClip, const AffineTransform& initialCTM)
+    : DisplayList::Recorder(IsDeferred::No, { }, initialClip, initialCTM, colorSpace, DrawGlyphsMode::DeconstructUsingDrawGlyphsCommands)
+    , m_destinationBufferIdentifier(renderingResourceIdentifier)
+    , m_renderingBackend(renderingBackend)
+    , m_renderingMode(renderingMode)
 {
 }
 
@@ -61,10 +71,11 @@ template<typename T>
 ALWAYS_INLINE void RemoteDisplayListRecorderProxy::send(T&& message)
 {
     auto imageBuffer = m_imageBuffer.get();
-    if (UNLIKELY(!(m_renderingBackend && imageBuffer)))
+    if (UNLIKELY(!m_renderingBackend))
         return;
 
-    imageBuffer->backingStoreWillChange();
+    if (imageBuffer)
+        imageBuffer->backingStoreWillChange();
     auto result = m_renderingBackend->streamConnection().send(std::forward<T>(message), m_destinationBufferIdentifier, RemoteRenderingBackendProxy::defaultTimeout);
 #if !RELEASE_LOG_DISABLED
     if (UNLIKELY(result != IPC::Error::NoError)) {
@@ -79,8 +90,7 @@ ALWAYS_INLINE void RemoteDisplayListRecorderProxy::send(T&& message)
 
 RenderingMode RemoteDisplayListRecorderProxy::renderingMode() const
 {
-    auto imageBuffer = m_imageBuffer.get();
-    return imageBuffer ? imageBuffer->renderingMode() : RenderingMode::Unaccelerated;
+    return m_renderingMode;
 }
 
 void RemoteDisplayListRecorderProxy::recordSave()
@@ -219,6 +229,11 @@ void RemoteDisplayListRecorderProxy::recordDrawGlyphs(const Font& font, const Gl
 void RemoteDisplayListRecorderProxy::recordDrawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
 {
     send(Messages::RemoteDisplayListRecorder::DrawDecomposedGlyphs(font.renderingResourceIdentifier(), decomposedGlyphs.renderingResourceIdentifier()));
+}
+
+void RemoteDisplayListRecorderProxy::recordDrawDisplayListItems(const Vector<DisplayList::Item>& items, const FloatPoint& destination)
+{
+    send(Messages::RemoteDisplayListRecorder::DrawDisplayListItems(items, destination));
 }
 
 void RemoteDisplayListRecorderProxy::recordDrawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)

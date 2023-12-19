@@ -60,7 +60,7 @@ public:
 
 private:
     // PageClient
-    std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy() override;
+    std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy(WebProcessProxy&) override;
     void setViewNeedsDisplay(const WebCore::Region&) override;
     void requestScroll(const WebCore::FloatPoint& scrollPosition, const WebCore::IntPoint& scrollOrigin, WebCore::ScrollIsAnimated) override;
     void requestScrollToRect(const WebCore::FloatRect& targetRect, const WebCore::FloatPoint& origin) override;
@@ -167,10 +167,6 @@ private:
     WebCore::UserInterfaceLayoutDirection userInterfaceLayoutDirection() override;
 
     bool effectiveAppearanceIsDark() const override;
-
-#if USE(WPE_RENDERER)
-    UnixFileDescriptor hostFileDescriptor() override;
-#endif
 
     void didChangeWebPageID() const override;
 

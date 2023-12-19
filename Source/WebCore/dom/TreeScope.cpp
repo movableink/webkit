@@ -189,7 +189,7 @@ RefPtr<Element> TreeScope::getElementById(StringView elementId) const
     return nullptr;
 }
 
-const Vector<CheckedRef<Element>>* TreeScope::getAllElementsById(const AtomString& elementId) const
+const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* TreeScope::getAllElementsById(const AtomString& elementId) const
 {
     if (elementId.isEmpty())
         return nullptr;
@@ -353,7 +353,7 @@ void TreeScope::removeLabel(const AtomString& forAttributeValue, HTMLLabelElemen
     m_labelsByForAttribute->remove(forAttributeValue, element);
 }
 
-const Vector<CheckedRef<Element>>* TreeScope::labelElementsForId(const AtomString& forAttributeValue)
+const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* TreeScope::labelElementsForId(const AtomString& forAttributeValue)
 {
     if (forAttributeValue.isEmpty())
         return nullptr;
@@ -486,8 +486,8 @@ Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clie
         lastNode = node;
     }
 
-    if (m_rootNode.isDocumentNode()) {
-        if (Element* rootElement = downcast<Document>(m_rootNode).documentElement()) {
+    if (auto* rootDocument = dynamicDowncast<Document>(m_rootNode)) {
+        if (Element* rootElement = rootDocument->documentElement()) {
             if (elements.isEmpty() || elements.last() != rootElement)
                 elements.append(rootElement);
         }
@@ -531,7 +531,7 @@ static Element* focusedFrameOwnerElement(Frame* focusedFrame, LocalFrame* curren
 {
     for (; focusedFrame; focusedFrame = focusedFrame->tree().parent()) {
         if (focusedFrame->tree().parent() == currentFrame)
-            return is<LocalFrame>(focusedFrame) ? downcast<LocalFrame>(focusedFrame)->ownerElement() : nullptr;
+            return focusedFrame->ownerElement();
     }
     return nullptr;
 }
@@ -637,9 +637,6 @@ struct SVGResourcesMap {
 
     MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResources;
     MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResourcesForRemoval;
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-    MemoryCompactRobinHoodHashMap<AtomString, RenderSVGResourceContainer*> resources;
-#endif
     MemoryCompactRobinHoodHashMap<AtomString, LegacyRenderSVGResourceContainer*> legacyResources;
 };
 
@@ -649,17 +646,6 @@ SVGResourcesMap& TreeScope::svgResourcesMap() const
         const_cast<TreeScope&>(*this).m_svgResourcesMap = makeUnique<SVGResourcesMap>();
     return *m_svgResourcesMap;
 }
-
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-void TreeScope::addSVGResource(const AtomString& id, RenderSVGResourceContainer& resource)
-{
-    if (id.isEmpty())
-        return;
-
-    // Replaces resource if already present, to handle potential id changes
-    svgResourcesMap().resources.set(id, &resource);
-}
-#endif
 
 void TreeScope::addSVGResource(const AtomString& id, LegacyRenderSVGResourceContainer& resource)
 {
@@ -675,21 +661,8 @@ void TreeScope::removeSVGResource(const AtomString& id)
     if (id.isEmpty())
         return;
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-    svgResourcesMap().resources.remove(id);
-#endif
     svgResourcesMap().legacyResources.remove(id);
 }
-
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-RenderSVGResourceContainer* TreeScope::lookupSVGResourceById(const AtomString& id) const
-{
-    if (id.isEmpty())
-        return nullptr;
-
-    return svgResourcesMap().resources.get(id);
-}
-#endif
 
 LegacyRenderSVGResourceContainer* TreeScope::lookupLegacySVGResoureById(const AtomString& id) const
 {

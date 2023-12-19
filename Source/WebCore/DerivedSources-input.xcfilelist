@@ -430,6 +430,7 @@ $(PROJECT_DIR)/Modules/cookie-store/ExtendableCookieChangeEventInit.idl
 $(PROJECT_DIR)/Modules/cookie-store/LocalDOMWindow+CookieStore.idl
 $(PROJECT_DIR)/Modules/credentialmanagement/BasicCredential.idl
 $(PROJECT_DIR)/Modules/credentialmanagement/CredentialCreationOptions.idl
+$(PROJECT_DIR)/Modules/credentialmanagement/CredentialMediationRequirement.idl
 $(PROJECT_DIR)/Modules/credentialmanagement/CredentialRequestOptions.idl
 $(PROJECT_DIR)/Modules/credentialmanagement/CredentialsContainer.idl
 $(PROJECT_DIR)/Modules/credentialmanagement/Navigator+Credentials.idl
@@ -975,6 +976,7 @@ $(PROJECT_DIR)/Modules/webauthn/AuthenticatorAttestationResponse.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticatorResponse.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticatorTransport.idl
 $(PROJECT_DIR)/Modules/webauthn/PublicKeyCredential.idl
+$(PROJECT_DIR)/Modules/webauthn/PublicKeyCredentialClientCapabilities.idl
 $(PROJECT_DIR)/Modules/webauthn/PublicKeyCredentialCreationOptions.idl
 $(PROJECT_DIR)/Modules/webauthn/PublicKeyCredentialDescriptor.idl
 $(PROJECT_DIR)/Modules/webauthn/PublicKeyCredentialRequestOptions.idl
@@ -1248,12 +1250,10 @@ $(PROJECT_DIR)/css/StyleSheetList.idl
 $(PROJECT_DIR)/css/WebKitCSSViewportRule.idl
 $(PROJECT_DIR)/css/WebKitFontFamilyNames.in
 $(PROJECT_DIR)/css/counterStyles.css
-$(PROJECT_DIR)/css/dialog.css
 $(PROJECT_DIR)/css/fullscreen.css
 $(PROJECT_DIR)/css/horizontalFormControls.css
 $(PROJECT_DIR)/css/html.css
 $(PROJECT_DIR)/css/htmlSwitchControl.css
-$(PROJECT_DIR)/css/legacyFormControlsIOS.css
 $(PROJECT_DIR)/css/make-css-file-arrays.pl
 $(PROJECT_DIR)/css/makeSelectorPseudoClassAndCompatibilityElementMap.py
 $(PROJECT_DIR)/css/makeSelectorPseudoElementsMap.py
@@ -1266,6 +1266,7 @@ $(PROJECT_DIR)/css/process-css-values.py
 $(PROJECT_DIR)/css/quirks.css
 $(PROJECT_DIR)/css/ruby.css
 $(PROJECT_DIR)/css/svg.css
+$(PROJECT_DIR)/css/viewTransitions.css
 $(PROJECT_DIR)/css/typedom/CSSKeywordValue.idl
 $(PROJECT_DIR)/css/typedom/CSSNumericValue.idl
 $(PROJECT_DIR)/css/typedom/CSSOMVariableReferenceValue.idl
@@ -1326,6 +1327,7 @@ $(PROJECT_DIR)/dom/CompositionEvent.idl
 $(PROJECT_DIR)/dom/ContentVisibilityAutoStateChangeEvent.idl
 $(PROJECT_DIR)/dom/CustomElementRegistry.idl
 $(PROJECT_DIR)/dom/CustomEvent.idl
+$(PROJECT_DIR)/dom/CustomStateSet.idl
 $(PROJECT_DIR)/dom/DOMException.idl
 $(PROJECT_DIR)/dom/DOMImplementation.idl
 $(PROJECT_DIR)/dom/DOMPoint.idl
@@ -1356,6 +1358,7 @@ $(PROJECT_DIR)/dom/Document+Selection.idl
 $(PROJECT_DIR)/dom/Document+StorageAccess.idl
 $(PROJECT_DIR)/dom/Document+Touch.idl
 $(PROJECT_DIR)/dom/Document+UndoMananger.idl
+$(PROJECT_DIR)/dom/Document+ViewTransition.idl
 $(PROJECT_DIR)/dom/Document.idl
 $(PROJECT_DIR)/dom/DocumentAndElementEventHandlers.idl
 $(PROJECT_DIR)/dom/DocumentFragment.idl
@@ -1395,6 +1398,7 @@ $(PROJECT_DIR)/dom/IdleRequestCallback.idl
 $(PROJECT_DIR)/dom/IdleRequestOptions.idl
 $(PROJECT_DIR)/dom/InnerHTML.idl
 $(PROJECT_DIR)/dom/InputEvent.idl
+$(PROJECT_DIR)/dom/InvokeEvent.idl
 $(PROJECT_DIR)/dom/KeyboardEvent.idl
 $(PROJECT_DIR)/dom/MessageChannel.idl
 $(PROJECT_DIR)/dom/MessageEvent.idl
@@ -1453,6 +1457,8 @@ $(PROJECT_DIR)/dom/TreeWalker.idl
 $(PROJECT_DIR)/dom/UIEvent.idl
 $(PROJECT_DIR)/dom/UIEventInit.idl
 $(PROJECT_DIR)/dom/ValidityStateFlags.idl
+$(PROJECT_DIR)/dom/ViewTransition.idl
+$(PROJECT_DIR)/dom/ViewTransitionUpdateCallback.idl
 $(PROJECT_DIR)/dom/VisibilityState.idl
 $(PROJECT_DIR)/dom/WheelEvent.idl
 $(PROJECT_DIR)/dom/XMLDocument.idl
@@ -1562,6 +1568,7 @@ $(PROJECT_DIR)/html/ImageBitmap.idl
 $(PROJECT_DIR)/html/ImageBitmapOptions.idl
 $(PROJECT_DIR)/html/ImageData.idl
 $(PROJECT_DIR)/html/ImageDataSettings.idl
+$(PROJECT_DIR)/html/InvokerElement.idl
 $(PROJECT_DIR)/html/MediaController.idl
 $(PROJECT_DIR)/html/MediaEncryptedEvent.idl
 $(PROJECT_DIR)/html/MediaError.idl

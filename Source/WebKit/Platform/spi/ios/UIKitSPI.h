@@ -138,10 +138,6 @@
 #import <UIKit/_UIContextMenuAsyncConfiguration.h>
 #endif
 
-#if HAVE(UI_TEXT_CURSOR_DRAG_ANIMATOR)
-#import <UIKit/_UITextCursorDragAnimator.h>
-#endif
-
 #if HAVE(UIFINDINTERACTION)
 #import <UIKit/UIFindSession_Private.h>
 #import <UIKit/_UIFindInteraction.h>
@@ -219,7 +215,7 @@ typedef NS_ENUM(NSInteger, UIPreviewItemType) {
 - (void)_addActionWithTitle:(NSString *)title style:(UIAlertActionStyle)style handler:(void (^)(void))handler;
 - (void)_addActionWithTitle:(NSString *)title style:(UIAlertActionStyle)style handler:(void (^)(void))handler shouldDismissHandler:(BOOL (^)(void))shouldDismissHandler;
 @property (nonatomic) UIAlertControllerStyle preferredStyle;
-@property (nonatomic, assign, setter=_setTitleMaximumLineCount:, getter=_titleMaximumLineCount) NSInteger titleMaximumLineCount;
+@property (nonatomic, copy, setter=_setAttributedTitle:, getter=_attributedTitle) NSAttributedString *attributedTitle;
 @end
 
 WTF_EXTERN_C_BEGIN
@@ -357,7 +353,6 @@ typedef struct CGSVGDocument *CGSVGDocumentRef;
 
 @interface UIKeyboard ()
 + (instancetype)activeKeyboard;
-+ (CGSize)defaultSizeForInterfaceOrientation:(UIInterfaceOrientation)orientation;
 + (BOOL)isInHardwareKeyboardMode;
 + (BOOL)isOnScreen;
 + (BOOL)usesInputSystemUI;
@@ -371,16 +366,11 @@ typedef struct CGSVGDocument *CGSVGDocumentRef;
 @interface UIKeyboardImpl ()
 + (UIKeyboardImpl *)activeInstance;
 + (UIKeyboardImpl *)sharedInstance;
-+ (CGSize)defaultSizeForInterfaceOrientation:(UIInterfaceOrientation)orientation;
 - (BOOL)handleKeyTextCommandForCurrentEvent;
 - (BOOL)handleKeyAppCommandForCurrentEvent;
 - (BOOL)handleKeyInputMethodCommandForCurrentEvent;
-- (BOOL)isCallingInputDelegate;
-- (void)addInputString:(NSString *)string withFlags:(NSUInteger)flags;
 - (void)addInputString:(NSString *)string withFlags:(NSUInteger)flags withInputManagerHint:(NSString *)hint;
 - (BOOL)autocorrectSpellingEnabled;
-- (void)clearShiftState;
-- (void)deleteFromInput;
 - (void)deleteFromInputWithFlags:(NSUInteger)flags;
 - (void)replaceText:(id)replacement;
 @property (nonatomic, readwrite, retain) UIResponder <UIKeyInput> *delegate;
@@ -524,7 +514,6 @@ typedef enum {
 @protocol UITextInputPrivate <UITextInput, UITextInputTokenizer, UITextInputTraits_Private>
 @optional
 - (BOOL)requiresKeyEvents;
-- (NSArray *)metadataDictionariesForDictationResults;
 - (UIColor *)textColorForCaretSelection;
 - (UIFont *)fontForCaretSelection;
 - (UIView *)automaticallySelectedOverlay;
@@ -1233,7 +1222,63 @@ typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
 
 @end
 
+#if !defined(UI_DIRECTIONAL_TEXT_RANGE_STRUCT)
+
+typedef struct {
+    NSInteger offset;
+    NSInteger length;
+} UIDirectionalTextRange;
+
+#endif // !defined(UI_DIRECTIONAL_TEXT_RANGE_STRUCT)
+
+@interface UIKeyEventContext (Staging_118307536)
+@property (nonatomic, assign, readwrite) BOOL shouldEvaluateForInputSystemHandling;
+@end
+
+@protocol UIAsyncTextInputDelegate_Staging<UIAsyncTextInputDelegate>
+- (void)deferReplaceTextActionToSystem:(id)sender; // Added in rdar://118307558.
+@end
+
 #endif // HAVE(UI_ASYNC_TEXT_INTERACTION)
+
+#if HAVE(UI_CONTEXT_MENU_ASYNC_CONFIGURATION)
+
+@interface _UIContextMenuAsyncConfiguration (Staging_119442063)
+- (BOOL)fulfillUsingConfiguration:(UIContextMenuConfiguration *)configuration;
+@end
+
+#endif
+
+@interface UIResponder (Staging_118307086)
+
+- (void)addShortcut:(id)sender;
+- (void)define:(id)sender;
+- (void)promptForReplace:(id)sender;
+- (void)share:(id)sender;
+- (void)translate:(id)sender;
+- (void)transliterateChinese:(id)sender;
+
+#if HAVE(UIFINDINTERACTION)
+- (void)findSelected:(id)sender;
+#endif
+
+@end
+
+#if !defined(UI_SHIFT_KEY_STATE_ENUM)
+
+typedef NS_ENUM(NSInteger, UIShiftKeyState) {
+    UIShiftKeyStateNone = 0,
+    UIShiftKeyStateShifted,
+    UIShiftKeyStateCapsLocked
+};
+
+#endif
+
+@interface UIResponder (Internal)
+- (BOOL)_requiresKeyboardWhenFirstResponder;
+- (BOOL)_requiresKeyboardResetOnReload;
+- (UTF32Char)_characterInRelationToCaretSelection:(int)amount;
+@end
 
 WTF_EXTERN_C_BEGIN
 

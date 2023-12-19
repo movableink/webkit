@@ -40,12 +40,12 @@
 #include "ModuleFetchParameters.h"
 #include "ScriptController.h"
 #include "ScriptSourceCode.h"
+#include "ServiceWorkerGlobalScope.h"
 #include "ShadowRealmGlobalScope.h"
 #include "SubresourceIntegrity.h"
 #include "WebAssemblyScriptSourceCode.h"
 #include "WebCoreJSClientData.h"
 #include "WorkerModuleScriptLoader.h"
-#include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerOrWorkletScriptController.h"
 #include "WorkerScriptFetcher.h"
 #include "WorkerScriptLoader.h"
@@ -61,10 +61,6 @@
 #include <JavaScriptCore/JSString.h>
 #include <JavaScriptCore/SourceProvider.h>
 #include <JavaScriptCore/Symbol.h>
-
-#if ENABLE(SERVICE_WORKER)
-#include "ServiceWorkerGlobalScope.h"
-#endif
 
 namespace WebCore {
 
@@ -133,7 +129,7 @@ JSC::Identifier ScriptModuleLoader::resolve(JSC::JSGlobalObject* jsGlobalObject,
     if (!result) {
         auto* error = JSC::createTypeError(jsGlobalObject, result.error());
         ASSERT(error);
-        error->putDirect(vm, builtinNames(vm).failureKindPrivateName(), JSC::jsNumber(static_cast<int32_t>(ModuleFetchFailureKind::WasResolveError)));
+        error->putDirect(vm, builtinNames(vm).failureKindPrivateName(), JSC::jsNumber(enumToUnderlyingType(ModuleFetchFailureKind::WasResolveError)));
         JSC::throwException(jsGlobalObject, scope, error);
         return { };
     }
@@ -151,7 +147,7 @@ static void rejectToPropagateNetworkError(ScriptExecutionContext& context, Ref<D
             // https://bugs.webkit.org/show_bug.cgi?id=167553
             auto* error = JSC::createTypeError(&jsGlobalObject, message);
             ASSERT(error);
-            error->putDirect(vm, builtinNames(vm).failureKindPrivateName(), JSC::jsNumber(static_cast<int32_t>(failureKind)));
+            error->putDirect(vm, builtinNames(vm).failureKindPrivateName(), JSC::jsNumber(enumToUnderlyingType(failureKind)));
             return error;
         });
     });
@@ -165,7 +161,7 @@ static void rejectWithFetchError(ScriptExecutionContext& context, Ref<DeferredPr
             JSC::VM& vm = jsGlobalObject.vm();
             JSC::JSObject* error = JSC::jsCast<JSC::JSObject*>(createDOMException(&jsGlobalObject, ec, message));
             ASSERT(error);
-            error->putDirect(vm, builtinNames(vm).failureKindPrivateName(), JSC::jsNumber(static_cast<int32_t>(ModuleFetchFailureKind::WasFetchError)));
+            error->putDirect(vm, builtinNames(vm).failureKindPrivateName(), JSC::jsNumber(enumToUnderlyingType(ModuleFetchFailureKind::WasFetchError)));
             return error;
         });
     });
@@ -299,17 +295,6 @@ static JSC::JSInternalPromise* rejectPromise(ScriptExecutionContext& context, JS
     return jsPromise;
 }
 
-static bool isWorkletOrServiceWorker(ScriptExecutionContext& context)
-{
-    if (is<WorkletGlobalScope>(context))
-        return true;
-#if ENABLE(SERVICE_WORKER)
-    if (is<ServiceWorkerGlobalScope>(context))
-        return true;
-#endif
-    return false;
-}
-
 JSC::JSInternalPromise* ScriptModuleLoader::importModule(JSC::JSGlobalObject* jsGlobalObject, JSC::JSModuleLoader*, JSC::JSString* moduleName, JSC::JSValue parametersValue, const JSC::SourceOrigin& sourceOrigin)
 {
     JSC::VM& vm = jsGlobalObject->vm();
@@ -321,7 +306,7 @@ JSC::JSInternalPromise* ScriptModuleLoader::importModule(JSC::JSGlobalObject* js
 
     // https://html.spec.whatwg.org/multipage/webappapis.html#hostimportmoduledynamically(referencingscriptormodule,-specifier,-promisecapability)
     // If settings object's global object implements WorkletGlobalScope or ServiceWorkerGlobalScope, then:
-    if (isWorkletOrServiceWorker(*m_context)) {
+    if (is<WorkletGlobalScope>(*m_context) || is<ServiceWorkerGlobalScope>(*m_context)) {
         scope.release();
         return rejectPromise(*m_context, globalObject, ExceptionCode::TypeError, "Dynamic-import is not available in Worklets or ServiceWorkers"_s);
     }
@@ -360,8 +345,9 @@ JSC::JSInternalPromise* ScriptModuleLoader::importModule(JSC::JSGlobalObject* js
         parameters = ModuleFetchParameters::create(type, emptyString(), /* isTopLevelModule */ true);
 
         if (m_ownerType == OwnerType::Document) {
-            baseURL = downcast<Document>(*m_context).baseURL();
-            scriptFetcher = CachedScriptFetcher::create(downcast<Document>(*m_context).charset());
+            auto& document = downcast<Document>(*m_context);
+            baseURL = document.baseURL();
+            scriptFetcher = CachedScriptFetcher::create(document.charset());
         } else {
             // https://html.spec.whatwg.org/multipage/webappapis.html#default-classic-script-fetch-options
             baseURL = m_context->url();
@@ -586,10 +572,8 @@ void ScriptModuleLoader::notifyFinished(ModuleScriptLoader& moduleScriptLoader, 
                     static_cast<WorkerScriptFetcher&>(loader.scriptFetcher()).setReferrerPolicy(loader.referrerPolicy());
             }
             responseURL = canonicalizeAndRegisterResponseURL(responseURL, workerScriptLoader.isRedirected(), workerScriptLoader.responseSource());
-#if ENABLE(SERVICE_WORKER)
-            if (is<ServiceWorkerGlobalScope>(*m_context))
-                downcast<ServiceWorkerGlobalScope>(*m_context).setScriptResource(sourceURL, ServiceWorkerContextData::ImportedScript { loader.script(), responseURL, loader.responseMIMEType() });
-#endif
+            if (auto* globalScope = dynamicDowncast<ServiceWorkerGlobalScope>(*m_context))
+                globalScope->setScriptResource(sourceURL, ServiceWorkerContextData::ImportedScript { loader.script(), responseURL, loader.responseMIMEType() });
         }
         m_requestURLToResponseURLMap.add(sourceURL.string(), responseURL);
 

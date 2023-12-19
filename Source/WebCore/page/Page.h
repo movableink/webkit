@@ -219,26 +219,27 @@ enum class RenderingUpdateStep : uint32_t {
     Fullscreen                      = 1 << 4,
     AnimationFrameCallbacks         = 1 << 5,
     UpdateContentRelevancy          = 1 << 6,
-    IntersectionObservations        = 1 << 7,
-    ResizeObservations              = 1 << 8,
-    Images                          = 1 << 9,
-    WheelEventMonitorCallbacks      = 1 << 10,
-    CursorUpdate                    = 1 << 11,
-    EventRegionUpdate               = 1 << 12,
-    LayerFlush                      = 1 << 13,
+    PerformPendingViewTransitions   = 1 << 7,
+    IntersectionObservations        = 1 << 8,
+    ResizeObservations              = 1 << 9,
+    Images                          = 1 << 10,
+    WheelEventMonitorCallbacks      = 1 << 11,
+    CursorUpdate                    = 1 << 12,
+    EventRegionUpdate               = 1 << 13,
+    LayerFlush                      = 1 << 14,
 #if ENABLE(ASYNC_SCROLLING)
-    ScrollingTreeUpdate             = 1 << 14,
+    ScrollingTreeUpdate             = 1 << 15,
 #endif
-    FlushAutofocusCandidates        = 1 << 15,
-    VideoFrameCallbacks             = 1 << 16,
-    PrepareCanvasesForDisplay       = 1 << 17,
-    CaretAnimation                  = 1 << 18,
-    FocusFixup                      = 1 << 19,
-    UpdateValidationMessagePositions= 1 << 20,
+    FlushAutofocusCandidates        = 1 << 16,
+    VideoFrameCallbacks             = 1 << 17,
+    PrepareCanvasesForDisplay       = 1 << 18,
+    CaretAnimation                  = 1 << 19,
+    FocusFixup                      = 1 << 20,
+    UpdateValidationMessagePositions= 1 << 21,
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    AccessibilityRegionUpdate       = 1 << 21,
+    AccessibilityRegionUpdate       = 1 << 22,
 #endif
-    RestoreScrollPositionAndViewState = 1 << 22,
+    RestoreScrollPositionAndViewState = 1 << 23,
 };
 
 enum class LinkDecorationFilteringTrigger : uint8_t {
@@ -268,6 +269,7 @@ constexpr OptionSet<RenderingUpdateStep> updateRenderingSteps = {
     RenderingUpdateStep::PrepareCanvasesForDisplay,
     RenderingUpdateStep::CaretAnimation,
     RenderingUpdateStep::UpdateContentRelevancy,
+    RenderingUpdateStep::PerformPendingViewTransitions,
 };
 
 constexpr auto allRenderingUpdateSteps = updateRenderingSteps | OptionSet<RenderingUpdateStep> {
@@ -278,21 +280,21 @@ constexpr auto allRenderingUpdateSteps = updateRenderingSteps | OptionSet<Render
 };
 
 
-class Page : public Supplementable<Page>, public CanMakeWeakPtr<Page>, public CanMakeCheckedPtr {
+class Page : public RefCounted<Page>, public Supplementable<Page>, public CanMakeSingleThreadWeakPtr<Page> {
     WTF_MAKE_NONCOPYABLE(Page);
     WTF_MAKE_FAST_ALLOCATED;
     friend class SettingsBase;
 
 public:
+    WEBCORE_EXPORT static Ref<Page> create(PageConfiguration&&);
+    WEBCORE_EXPORT ~Page();
+
     WEBCORE_EXPORT static void updateStyleForAllPagesAfterGlobalChangeInEnvironment();
     WEBCORE_EXPORT static void clearPreviousItemFromAllPages(HistoryItem*);
 
     WEBCORE_EXPORT void setupForRemoteWorker(const URL& scriptURL, const SecurityOriginData& topOrigin, const String& referrerPolicy);
 
     void updateStyleAfterChangeInEnvironment();
-
-    WEBCORE_EXPORT explicit Page(PageConfiguration&&);
-    WEBCORE_EXPORT ~Page();
 
     // Utility pages (e.g. SVG image pages) don't have an identifier currently.
     std::optional<PageIdentifier> identifier() const { return m_identifier; }
@@ -346,11 +348,6 @@ public:
     WEBCORE_EXPORT static unsigned nonUtilityPageCount();
 
     unsigned subframeCount() const;
-
-    void incrementNestedRunLoopCount();
-    void decrementNestedRunLoopCount();
-    bool insideNestedRunLoop() const { return m_nestedRunLoopCount > 0; }
-    WEBCORE_EXPORT void whenUnnested(Function<void()>&&);
 
     void setCurrentKeyboardScrollingAnimator(KeyboardScrollingAnimator*);
     KeyboardScrollingAnimator* currentKeyboardScrollingAnimator() const { return m_currentKeyboardScrollingAnimator.get(); }
@@ -647,11 +644,9 @@ public:
 
     WEBCORE_EXPORT static Page* serviceWorkerPage(ScriptExecutionContextIdentifier);
 
-#if ENABLE(SERVICE_WORKER)
     // Service worker pages have an associated ServiceWorkerGlobalScope on the main thread.
     void setServiceWorkerGlobalScope(ServiceWorkerGlobalScope&);
     WEBCORE_EXPORT JSC::JSGlobalObject* serviceWorkerGlobalObject(DOMWrapperWorld&);
-#endif
 
     // Notifications when the Page starts and stops being presented via a native window.
     WEBCORE_EXPORT void setActivityState(OptionSet<ActivityState>);
@@ -676,7 +671,7 @@ public:
     WEBCORE_EXPORT void addActivityStateChangeObserver(ActivityStateChangeObserver&);
     WEBCORE_EXPORT void removeActivityStateChangeObserver(ActivityStateChangeObserver&);
 
-    WEBCORE_EXPORT void layoutIfNeeded();
+    WEBCORE_EXPORT void layoutIfNeeded(OptionSet<LayoutOptions> = { });
     WEBCORE_EXPORT void updateRendering();
     // A call to updateRendering() that is not followed by a call to finalizeRenderingUpdate().
     WEBCORE_EXPORT void isolatedUpdateRendering();
@@ -1064,7 +1059,7 @@ public:
     void willBeginScrolling();
     void didFinishScrolling();
 
-    const HashSet<CheckedRef<LocalFrame>>& rootFrames() const { return m_rootFrames; }
+    const HashSet<WeakRef<LocalFrame>>& rootFrames() const { return m_rootFrames; }
     WEBCORE_EXPORT void addRootFrame(LocalFrame&);
     WEBCORE_EXPORT void removeRootFrame(LocalFrame&);
 
@@ -1081,6 +1076,8 @@ public:
     WEBCORE_EXPORT String sceneIdentifier() const;
 
 private:
+    explicit Page(PageConfiguration&&);
+
     struct Navigation {
         RegistrableDomain domain;
         FrameLoadType type;
@@ -1156,7 +1153,7 @@ private:
     UniqueRef<ProgressTracker> m_progress;
 
     UniqueRef<BackForwardController> m_backForwardController;
-    HashSet<CheckedRef<LocalFrame>> m_rootFrames;
+    HashSet<WeakRef<LocalFrame>> m_rootFrames;
     UniqueRef<EditorClient> m_editorClient;
     Ref<Frame> m_mainFrame;
     URL m_mainFrameURL;
@@ -1179,9 +1176,6 @@ private:
 
     PlatformDisplayID m_displayID { 0 };
     std::optional<FramesPerSecond> m_displayNominalFramesPerSecond;
-
-    int m_nestedRunLoopCount { 0 };
-    Function<void()> m_unnestCallback;
 
     String m_groupName;
     bool m_openedByDOM { false };
@@ -1264,7 +1258,7 @@ private:
     int m_footerHeight { 0 };
 
     std::unique_ptr<RenderingUpdateScheduler> m_renderingUpdateScheduler;
-    WeakHashSet<const RenderObject> m_relevantUnpaintedRenderObjects;
+    SingleThreadWeakHashSet<const RenderObject> m_relevantUnpaintedRenderObjects;
 
     Region m_topRelevantPaintedRegion;
     Region m_bottomRelevantPaintedRegion;
@@ -1304,10 +1298,7 @@ private:
     Ref<BroadcastChannelRegistry> m_broadcastChannelRegistry;
     RefPtr<WheelEventTestMonitor> m_wheelEventTestMonitor;
     WeakHashSet<ActivityStateChangeObserver> m_activityStateChangeObservers;
-
-#if ENABLE(SERVICE_WORKER)
     WeakPtr<ServiceWorkerGlobalScope, WeakPtrImplWithEventTargetData> m_serviceWorkerGlobalScope;
-#endif
 
 #if ENABLE(RESOURCE_USAGE)
     std::unique_ptr<ResourceUsageOverlay> m_resourceUsageOverlay;
@@ -1338,6 +1329,7 @@ private:
     bool m_mediaBufferingIsSuspended { false };
     bool m_hasResourceLoadClient { false };
     bool m_delegatesScaling { false };
+
 
 #if ENABLE(EDITABLE_REGION)
     bool m_isEditableRegionEnabled { false };
@@ -1474,7 +1466,7 @@ inline Page* Frame::page() const
     return m_page.get();
 }
 
-inline CheckedPtr<Page> Frame::checkedPage() const
+inline RefPtr<Page> Frame::protectedPage() const
 {
     return m_page.get();
 }
@@ -1484,7 +1476,7 @@ inline Page* Document::page() const
     return m_frame ? m_frame->page() : nullptr;
 }
 
-inline CheckedPtr<Page> Document::checkedPage() const
+inline RefPtr<Page> Document::protectedPage() const
 {
     return page();
 }

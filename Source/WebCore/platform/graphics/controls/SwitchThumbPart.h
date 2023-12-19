@@ -33,8 +33,26 @@ class SwitchThumbPart final : public ControlPart {
 public:
     static Ref<SwitchThumbPart> create()
     {
-        return adoptRef(*new SwitchThumbPart());
+        return adoptRef(*new SwitchThumbPart(false, 0.0f));
     }
+
+    static Ref<SwitchThumbPart> create(bool isOn, float progress)
+    {
+        return adoptRef(*new SwitchThumbPart(isOn, progress));
+    }
+
+    SwitchThumbPart(bool isOn, float progress)
+        : ControlPart(StyleAppearance::SwitchThumb)
+        , m_isOn(isOn)
+        , m_progress(progress)
+    {
+    }
+
+    bool isOn() const { return m_isOn; }
+    void setIsOn(bool isOn) { m_isOn = isOn; }
+
+    float progress() const { return m_progress; }
+    void setProgress(float progress) { m_progress = progress; }
 
 private:
     SwitchThumbPart()
@@ -46,6 +64,11 @@ private:
     {
         return controlFactory().createPlatformSwitchThumb(*this);
     }
+
+    bool m_isOn;
+    float m_progress;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CONTROL_PART(SwitchThumb)

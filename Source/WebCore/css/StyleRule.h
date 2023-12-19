@@ -68,7 +68,7 @@ public:
     bool isPageRule() const { return type() == StyleRuleType::Page; }
     bool isStyleRule() const { return type() == StyleRuleType::Style || type() == StyleRuleType::StyleWithNesting; }
     bool isStyleRuleWithNesting() const { return type() == StyleRuleType::StyleWithNesting; }
-    bool isGroupRule() const { return type() == StyleRuleType::Media || type() == StyleRuleType::Supports || type() == StyleRuleType::LayerBlock || type() == StyleRuleType::Container; }
+    bool isGroupRule() const { return type() == StyleRuleType::Media || type() == StyleRuleType::Supports || type() == StyleRuleType::LayerBlock || type() == StyleRuleType::Container || type() == StyleRuleType::Scope; }
     bool isSupportsRule() const { return type() == StyleRuleType::Supports; }
     bool isImportRule() const { return type() == StyleRuleType::Import; }
     bool isLayerRule() const { return type() == StyleRuleType::LayerBlock || type() == StyleRuleType::LayerStatement; }
@@ -389,15 +389,23 @@ public:
     ~StyleRuleScope();
     Ref<StyleRuleScope> copy() const;
 
-    const CSSSelectorList& scopeStart() const;
-    const CSSSelectorList& scopeEnd() const;
+    const CSSSelectorList& scopeStart() const { return m_scopeStart; }
+    const CSSSelectorList& scopeEnd() const { return m_scopeEnd; }
+    const CSSSelectorList& originalScopeStart() const { return m_originalScopeStart; }
+    const CSSSelectorList& originalScopeEnd() const { return m_originalScopeEnd; }
+    void setScopeStart(CSSSelectorList&& scopeStart) { m_scopeStart = WTFMove(scopeStart); }
+    void setScopeEnd(CSSSelectorList&& scopeEnd) { m_scopeEnd = WTFMove(scopeEnd); }
 
 private:
     StyleRuleScope(CSSSelectorList&&, CSSSelectorList&&, Vector<Ref<StyleRuleBase>>&&);
     StyleRuleScope(const StyleRuleScope&);
 
+    // Resolved selector lists
     CSSSelectorList m_scopeStart;
     CSSSelectorList m_scopeEnd;
+    // Author written selector lists
+    CSSSelectorList m_originalScopeStart;
+    CSSSelectorList m_originalScopeEnd;
 };
 
 // This is only used by the CSS parser.

@@ -38,11 +38,13 @@
 #include "WebExtensionURLSchemeHandler.h"
 #include "WebProcessProxy.h"
 #include "WebUserContentControllerProxy.h"
+#include <WebCore/Timer.h>
 #include <wtf/Forward.h>
 #include <wtf/URLHash.h>
 #include <wtf/WeakHashSet.h>
 
 OBJC_CLASS NSError;
+OBJC_CLASS NSMenu;
 OBJC_PROTOCOL(_WKWebExtensionControllerDelegatePrivate);
 
 #ifdef __OBJC__
@@ -51,6 +53,7 @@ OBJC_PROTOCOL(_WKWebExtensionControllerDelegatePrivate);
 
 namespace WebKit {
 
+class ContextMenuContextData;
 class WebExtensionContext;
 class WebPageProxy;
 class WebProcessPool;
@@ -117,6 +120,12 @@ public:
     template<typename T>
     void sendToAllProcesses(const T& message, const ObjectIdentifierGenericBase& destinationID);
 
+#if PLATFORM(MAC)
+    void addItemsToContextMenu(WebPageProxy&, const ContextMenuContextData&, NSMenu *);
+#endif
+
+    void handleContentRuleListNotification(WebPageProxyIdentifier, URL&, WebCore::ContentRuleListResults&);
+
 #ifdef __OBJC__
     _WKWebExtensionController *wrapper() const { return (_WKWebExtensionController *)API::ObjectImpl<API::Object::Type::WebExtensionController>::wrapper(); }
     _WKWebExtensionControllerDelegatePrivate *delegate() const { return (_WKWebExtensionControllerDelegatePrivate *)wrapper().delegate; }
@@ -132,11 +141,12 @@ private:
     void addUserContentController(WebUserContentControllerProxy&, ForPrivateBrowsing);
     void removeUserContentController(WebUserContentControllerProxy&);
 
-    // Web Navigation
     void didStartProvisionalLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
     void didCommitLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
     void didFinishLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
     void didFailLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
+
+    void purgeOldMatchedRules();
 
     Ref<WebExtensionControllerConfiguration> m_configuration;
     WebExtensionControllerIdentifier m_identifier;
@@ -150,6 +160,8 @@ private:
     UserContentControllerProxySet m_allPrivateUserContentControllers;
     WebExtensionURLSchemeHandlerMap m_registeredSchemeHandlers;
     bool m_freshlyCreated { true };
+
+    std::unique_ptr<WebCore::Timer> m_purgeOldMatchedRulesTimer;
 };
 
 template<typename T>

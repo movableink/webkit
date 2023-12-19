@@ -33,18 +33,21 @@
 #include "PseudoElement.h"
 #include "ShadowRoot.h"
 #include "TouchEvent.h"
+#include <wtf/CheckedPtr.h>
 
 namespace WebCore {
 
 static inline bool shouldEventCrossShadowBoundary(Event& event, ShadowRoot& shadowRoot, EventTarget& target)
 {
-    bool targetIsInShadowRoot = is<Node>(target) && &downcast<Node>(target).treeScope().rootNode() == &shadowRoot;
+    auto* targetNode = dynamicDowncast<Node>(target);
+    bool targetIsInShadowRoot = targetNode && &targetNode->treeScope().rootNode() == &shadowRoot;
     return !targetIsInShadowRoot || event.composed();
 }
 
 static Node* nodeOrHostIfPseudoElement(Node* node)
 {
-    return is<PseudoElement>(*node) ? downcast<PseudoElement>(*node).hostElement() : node;
+    auto* pseudoElement = dynamicDowncast<PseudoElement>(*node);
+    return pseudoElement ? pseudoElement->hostElement() : node;
 }
 
 class RelatedNodeRetargeter {
@@ -62,7 +65,7 @@ private:
 
     Ref<Node> m_relatedNode;
     RefPtr<Node> m_retargetedRelatedNode;
-    Vector<TreeScope*, 8> m_ancestorTreeScopes;
+    Vector<CheckedPtr<TreeScope>, 8> m_ancestorTreeScopes;
     unsigned m_lowestCommonAncestorIndex { 0 };
     bool m_hasDifferentTreeRoot { false };
 };
@@ -71,12 +74,12 @@ EventPath::EventPath(Node& originalTarget, Event& event)
 {
     buildPath(originalTarget, event);
 
-    if (RefPtr relatedTarget = event.relatedTarget(); is<Node>(relatedTarget) && !m_path.isEmpty())
-        setRelatedTarget(originalTarget, downcast<Node>(*relatedTarget));
+    if (RefPtr relatedTarget = dynamicDowncast<Node>(event.relatedTarget()); relatedTarget && !m_path.isEmpty())
+        setRelatedTarget(originalTarget, *relatedTarget);
 
 #if ENABLE(TOUCH_EVENTS)
-    if (is<TouchEvent>(event))
-        retargetTouchLists(downcast<TouchEvent>(event));
+    if (RefPtr touchEvent = dynamicDowncast<TouchEvent>(event))
+        retargetTouchLists(*touchEvent);
 #endif
 }
 
@@ -97,20 +100,23 @@ void EventPath::buildPath(Node& originalTarget, Event& event)
     int closedShadowDepth = 0;
     // Depths are used to decided which nodes are excluded in event.composedPath when the tree is mutated during event dispatching.
     // They could be negative for nodes outside the shadow tree of the target node.
+    RefPtr<ShadowRoot> shadowRoot;
     while (node) {
         while (node) {
             m_path.append(EventContext { contextType, *node, eventTargetRespectingTargetRules(*node), target.get(), closedShadowDepth });
 
-            if (is<ShadowRoot>(*node))
+            if (RefPtr maybeShadowRoot = dynamicDowncast<ShadowRoot>(*node)) {
+                shadowRoot = WTFMove(maybeShadowRoot);
                 break;
+            }
 
             RefPtr parent = node->parentNode();
             if (UNLIKELY(!parent)) {
                 // https://dom.spec.whatwg.org/#interface-document
-                if (is<Document>(*node) && event.type() != eventNames().loadEvent) {
+                if (auto* document = dynamicDowncast<Document>(*node); document && event.type() != eventNames().loadEvent) {
                     ASSERT(target);
                     if (target) {
-                        if (RefPtr window = downcast<Document>(*node).domWindow())
+                        if (RefPtr window = document->domWindow())
                             m_path.append(EventContext { EventContext::Type::Window, node.get(), window.get(), target.get(), closedShadowDepth });
                     }
                 }
@@ -129,8 +135,7 @@ void EventPath::buildPath(Node& originalTarget, Event& event)
         }
 
         bool exitingShadowTreeOfTarget = &target->treeScope() == &node->treeScope();
-        Ref shadowRoot = downcast<ShadowRoot>(*node);
-        if (!shouldEventCrossShadowBoundary(event, shadowRoot, originalTarget))
+        if (!shouldEventCrossShadowBoundary(event, *shadowRoot, originalTarget))
             return;
         node = shadowRoot->host();
         ASSERT(node);
@@ -148,8 +153,8 @@ void EventPath::setRelatedTarget(Node& origin, Node& relatedNode)
     RelatedNodeRetargeter retargeter(relatedNode, Ref { *m_path[0].node() });
 
     bool originIsRelatedTarget = &origin == &relatedNode;
-    Node& rootNodeInOriginTreeScope = origin.treeScope().rootNode();
-    TreeScope* previousTreeScope = nullptr;
+    Ref rootNodeInOriginTreeScope = origin.treeScope().rootNode();
+    CheckedPtr<TreeScope> previousTreeScope;
     size_t originalEventPathSize = m_path.size();
     for (unsigned contextIndex = 0; contextIndex < originalEventPathSize; contextIndex++) {
         auto& context = m_path[contextIndex];
@@ -159,9 +164,9 @@ void EventPath::setRelatedTarget(Node& origin, Node& relatedNode)
         }
 
         Ref currentTarget = *context.node();
-        auto& currentTreeScope = currentTarget->treeScope();
-        if (UNLIKELY(previousTreeScope && &currentTreeScope != previousTreeScope))
-            retargeter.moveToNewTreeScope(previousTreeScope, currentTreeScope);
+        CheckedRef currentTreeScope = currentTarget->treeScope();
+        if (UNLIKELY(previousTreeScope && currentTreeScope.ptr() != previousTreeScope))
+            retargeter.moveToNewTreeScope(previousTreeScope.get(), currentTreeScope);
 
         RefPtr currentRelatedNode = retargeter.currentNode(currentTarget);
         if (UNLIKELY(!originIsRelatedTarget && context.target() == currentRelatedNode)) {
@@ -171,12 +176,12 @@ void EventPath::setRelatedTarget(Node& origin, Node& relatedNode)
 
         context.setRelatedTarget(WTFMove(currentRelatedNode));
 
-        if (UNLIKELY(originIsRelatedTarget && context.node() == &rootNodeInOriginTreeScope)) {
+        if (UNLIKELY(originIsRelatedTarget && context.node() == rootNodeInOriginTreeScope.ptr())) {
             m_path.shrink(contextIndex + 1);
             break;
         }
 
-        previousTreeScope = &currentTreeScope;
+        previousTreeScope = WTFMove(currentTreeScope);
     }
 }
 
@@ -195,17 +200,17 @@ void EventPath::adjustForDisabledFormControl()
 
 void EventPath::retargetTouch(EventContext::TouchListType type, const Touch& touch)
 {
-    RefPtr eventTarget = touch.target();
-    if (!is<Node>(eventTarget))
+    RefPtr eventTarget = dynamicDowncast<Node>(touch.target());
+    if (!eventTarget)
         return;
 
-    RelatedNodeRetargeter retargeter(downcast<Node>(eventTarget.releaseNonNull()), Ref { *m_path[0].node() });
-    TreeScope* previousTreeScope = nullptr;
+    RelatedNodeRetargeter retargeter(eventTarget.releaseNonNull(), Ref { *m_path[0].node() });
+    CheckedPtr<TreeScope> previousTreeScope;
     for (auto& context : m_path) {
         Ref currentTarget = *context.node();
-        auto& currentTreeScope = currentTarget->treeScope();
-        if (UNLIKELY(previousTreeScope && &currentTreeScope != previousTreeScope))
-            retargeter.moveToNewTreeScope(previousTreeScope, currentTreeScope);
+        CheckedRef currentTreeScope = currentTarget->treeScope();
+        if (UNLIKELY(previousTreeScope && currentTreeScope.ptr() != previousTreeScope))
+            retargeter.moveToNewTreeScope(previousTreeScope.get(), currentTreeScope);
 
         if (context.isTouchEventContext()) {
             RefPtr currentRelatedNode = retargeter.currentNode(currentTarget);
@@ -213,7 +218,7 @@ void EventPath::retargetTouch(EventContext::TouchListType type, const Touch& tou
         } else
             ASSERT(context.isWindowContext());
 
-        previousTreeScope = &currentTreeScope;
+        previousTreeScope = WTFMove(currentTreeScope);
     }
 }
 
@@ -301,7 +306,7 @@ RelatedNodeRetargeter::RelatedNodeRetargeter(Ref<Node>&& relatedNode, Node& targ
     , m_retargetedRelatedNode(m_relatedNode.copyRef())
 {
     auto& targetTreeScope = target.treeScope();
-    auto* currentTreeScope = &m_relatedNode->treeScope();
+    CheckedPtr currentTreeScope = &m_relatedNode->treeScope();
     if (LIKELY(currentTreeScope == &targetTreeScope && target.isConnected() && m_relatedNode->isConnected()))
         return;
 
@@ -320,9 +325,9 @@ RelatedNodeRetargeter::RelatedNodeRetargeter(Ref<Node>&& relatedNode, Node& targ
     collectTreeScopes();
 
     // FIXME: We should collect this while constructing the event path.
-    Vector<TreeScope*, 8> targetTreeScopeAncestors;
+    Vector<CheckedRef<TreeScope>, 8> targetTreeScopeAncestors;
     for (TreeScope* currentTreeScope = &targetTreeScope; currentTreeScope; currentTreeScope = currentTreeScope->parentTreeScope())
-        targetTreeScopeAncestors.append(currentTreeScope);
+        targetTreeScopeAncestors.append(*currentTreeScope);
     ASSERT_WITH_SECURITY_IMPLICATION(!targetTreeScopeAncestors.isEmpty());
 
     unsigned i = m_ancestorTreeScopes.size();

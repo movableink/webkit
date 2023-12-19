@@ -478,7 +478,8 @@ static const char *GetOperatorString(TOperator op,
         case TOperator::EOpCosh:
             return "metal::cosh";
         case TOperator::EOpTanh:
-            return "metal::tanh";
+            return resultType.getPrecision() == TPrecision::EbpHigh ? "metal::precise::tanh"
+                                                                    : "metal::tanh";
         case TOperator::EOpAsinh:
             return "metal::asinh";
         case TOperator::EOpAcosh:
@@ -1193,7 +1194,8 @@ void GenMetalTraverser::emitFieldDeclaration(const TField &field,
         case TQualifier::EvqFragmentOut:
         case TQualifier::EvqFragmentInOut:
         case TQualifier::EvqFragData:
-            if (mPipelineStructs.fragmentOut.external == &parent)
+            if (mPipelineStructs.fragmentOut.external == &parent ||
+                mPipelineStructs.fragmentOut.externalExtra == &parent)
             {
                 if ((type.isVector() &&
                      (basic == TBasicType::EbtInt || basic == TBasicType::EbtUInt ||
@@ -1260,7 +1262,7 @@ void GenMetalTraverser::emitFieldDeclaration(const TField &field,
             if (field.symbolType() == SymbolType::AngleInternal)
             {
                 mOut << " [[sample_mask, function_constant("
-                     << sh::mtl::kMultisampledRenderingConstName << ")]]";
+                     << sh::mtl::kSampleMaskWriteEnabledConstName << ")]]";
             }
             break;
 
@@ -2462,6 +2464,15 @@ bool GenMetalTraverser::visitDeclaration(Visit, TIntermDeclaration *declNode)
     {
         const TVariable &var = symbolNode->variable();
         emitVariableDeclaration(VarDecl(var), evdConfig);
+        if (var.getType().isArray() && var.getType().getQualifier() == EvqTemporary)
+        {
+            // The translator frontend injects a loop-based init for user arrays when the source
+            // shader is using ESSL 1.00. Some Metal drivers may fail to access elements of such
+            // arrays at runtime depending on the array size. An empty literal initializer added
+            // to the generated MSL bypasses the issue. The frontend may be further optimized to
+            // skip the loop-based init when targeting MSL.
+            mOut << "{}";
+        }
     }
     else if (TIntermBinary *initNode = node.getAsBinaryNode())
     {

@@ -77,10 +77,11 @@ public:
     WebCore::HTMLPlugInElement& pluginElement() const { return m_pluginElement; }
     const URL& mainResourceURL() const { return m_mainResourceURL; }
 
-    void setPageScaleFactor(double);
+    void didBeginMagnificationGesture();
+    void didEndMagnificationGesture();
+    void setPageScaleFactor(double, std::optional<WebCore::IntPoint> origin);
     double pageScaleFactor() const;
 
-    void pageScaleFactorDidChange();
     void topContentInsetDidChange();
 
     void webPageDestroyed();
@@ -141,6 +142,9 @@ private:
     bool wantsWheelEvents() final;
     bool shouldAllowNavigationFromDrags() const final;
     void willDetachRenderer() final;
+
+    bool usesAsyncScrolling() const final;
+    WebCore::ScrollingNodeID scrollingNodeID() const final;
 
     // WebCore::Widget
     void setFrameRect(const WebCore::IntRect&) final;

@@ -235,7 +235,8 @@ enum class ScrollingStateNodeProperty : uint64_t {
     ScrollbarHoverState                         = MouseActivityState << 1,
     ScrollbarEnabledState                       = ScrollbarHoverState << 1,
     // ScrollingStateFrameScrollingNode
-    FrameScaleFactor                            = ScrollbarEnabledState << 1,
+    KeyboardScrollData                          = ScrollbarEnabledState << 1,
+    FrameScaleFactor                            = KeyboardScrollData << 1,
     EventTrackingRegion                         = FrameScaleFactor << 1,
     RootContentsLayer                           = EventTrackingRegion << 1,
     CounterScrollingLayer                       = RootContentsLayer << 1,
@@ -257,7 +258,6 @@ enum class ScrollingStateNodeProperty : uint64_t {
     MaxLayoutViewportOrigin                     = MinLayoutViewportOrigin << 1,
     OverrideVisualViewportSize                  = MaxLayoutViewportOrigin << 1,
     OverlayScrollbarsEnabled                    = OverrideVisualViewportSize << 1,
-    KeyboardScrollData                          = OverlayScrollbarsEnabled << 1,
     // ScrollingStatePositionedNode
     RelatedOverflowScrollingNodes               = 1LLU << 1, // Same value as ScrollableAreaSize, ViewportConstraints and OverflowScrollingNode
     LayoutConstraintData                        = 1LLU << 2, // Same value as TotalContentsSize
@@ -279,9 +279,11 @@ public:
     bool isFixedNode() const { return m_nodeType == ScrollingNodeType::Fixed; }
     bool isStickyNode() const { return m_nodeType == ScrollingNodeType::Sticky; }
     bool isPositionedNode() const { return m_nodeType == ScrollingNodeType::Positioned; }
-    bool isScrollingNode() const { return isFrameScrollingNode() || isOverflowScrollingNode(); }
+    bool isScrollingNode() const { return isFrameScrollingNode() || isOverflowScrollingNode() || isPluginScrollingNode(); }
     bool isFrameScrollingNode() const { return m_nodeType == ScrollingNodeType::MainFrame || m_nodeType == ScrollingNodeType::Subframe; }
     bool isFrameHostingNode() const { return m_nodeType == ScrollingNodeType::FrameHosting; }
+    bool isPluginScrollingNode() const { return m_nodeType == ScrollingNodeType::PluginScrolling; }
+    bool isPluginHostingNode() const { return m_nodeType == ScrollingNodeType::PluginHosting; }
     bool isOverflowScrollingNode() const { return m_nodeType == ScrollingNodeType::Overflow; }
     bool isOverflowScrollProxyNode() const { return m_nodeType == ScrollingNodeType::OverflowProxy; }
 
@@ -304,6 +306,7 @@ public:
     const LayerRepresentation& layer() const { return m_layer; }
     WEBCORE_EXPORT void setLayer(const LayerRepresentation&);
 
+    bool isAttachedToScrollingStateTree() const { return !!m_scrollingStateTree; }
     ScrollingStateTree& scrollingStateTree() const
     {
         ASSERT(m_scrollingStateTree);

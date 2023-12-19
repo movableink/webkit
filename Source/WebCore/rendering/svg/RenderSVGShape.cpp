@@ -38,8 +38,8 @@
 #include "HitTestResult.h"
 #include "LayoutRepainter.h"
 #include "LegacyRenderSVGResourceMarker.h"
+#include "LegacyRenderSVGResourceSolidColor.h"
 #include "PointerEventsHitRules.h"
-#include "RenderSVGResourceSolidColor.h"
 #include "RenderSVGShapeInlines.h"
 #include "RenderStyleInlines.h"
 #include "SVGPathData.h"
@@ -195,7 +195,7 @@ void RenderSVGShape::fillShape(const RenderStyle& style, GraphicsContext& origin
         if (fillPaintingResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToFill))
             fillPaintingResource->postApplyResource(*this, context, RenderSVGResourceMode::ApplyToFill, nullptr, this);
         else if (fallbackColor.isValid()) {
-            RenderSVGResourceSolidColor* fallbackResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
+            LegacyRenderSVGResourceSolidColor* fallbackResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
             fallbackResource->setColor(fallbackColor);
             if (fallbackResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToFill))
                 fallbackResource->postApplyResource(*this, context, RenderSVGResourceMode::ApplyToFill, nullptr, this);
@@ -211,7 +211,7 @@ void RenderSVGShape::strokeShapeInternal(const RenderStyle& style, GraphicsConte
         if (strokePaintingResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToStroke))
             strokePaintingResource->postApplyResource(*this, context, RenderSVGResourceMode::ApplyToStroke, nullptr, this);
         else if (fallbackColor.isValid()) {
-            RenderSVGResourceSolidColor* fallbackResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
+            LegacyRenderSVGResourceSolidColor* fallbackResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
             fallbackResource->setColor(fallbackColor);
             if (fallbackResource->applyResource(*this, style, context, RenderSVGResourceMode::ApplyToStroke))
                 fallbackResource->postApplyResource(*this, context, RenderSVGResourceMode::ApplyToStroke, nullptr, this);
@@ -257,14 +257,13 @@ void RenderSVGShape::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         return;
 
     if (paintInfo.phase == PaintPhase::ClippingMask) {
-        SVGRenderSupport::paintSVGClippingMask(*this, paintInfo);
+        paintSVGClippingMask(paintInfo);
         return;
     }
 
     auto adjustedPaintOffset = paintOffset + currentSVGLayoutLocation();
     if (paintInfo.phase == PaintPhase::Mask) {
-        // FIXME: [LBSE] Upstream SVGRenderSupport changes
-        // SVGRenderSupport::paintSVGMask(*this, paintInfo, adjustedPaintOffset);
+        paintSVGMask(paintInfo, adjustedPaintOffset);
         return;
     }
 
@@ -430,7 +429,7 @@ Path& RenderSVGShape::ensurePath()
 
 std::unique_ptr<Path> RenderSVGShape::createPath() const
 {
-    return makeUnique<Path>(pathFromGraphicsElement(&graphicsElement()));
+    return makeUnique<Path>(pathFromGraphicsElement(graphicsElement()));
 }
 
 void RenderSVGShape::styleWillChange(StyleDifference diff, const RenderStyle& newStyle)

@@ -1229,6 +1229,7 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     case CSSSelector::PseudoClassType::Drag:
     case CSSSelector::PseudoClassType::Has:
     case CSSSelector::PseudoClassType::HasScope:
+    case CSSSelector::PseudoClassType::State:
         return FunctionType::CannotCompile;
 
     // Optimized pseudo selectors.
@@ -1256,10 +1257,6 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
         return FunctionType::SimpleSelectorChecker;
 
     case CSSSelector::PseudoClassType::Scope:
-        if (selectorContext != SelectorContext::QuerySelector) {
-            fragment.pseudoClasses.add(CSSSelector::PseudoClassType::Root);
-            return FunctionType::SimpleSelectorChecker;
-        }
         fragment.pseudoClasses.add(CSSSelector::PseudoClassType::Scope);
         return FunctionType::SelectorCheckerWithCheckingContext;
 
@@ -1483,6 +1480,7 @@ static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, 
             case CSSSelector::PseudoElementBefore:
             case CSSSelector::PseudoElementFirstLetter:
             case CSSSelector::PseudoElementFirstLine:
+            case CSSSelector::PseudoElementGrammarError:
             case CSSSelector::PseudoElementMarker:
             case CSSSelector::PseudoElementResizer:
             case CSSSelector::PseudoElementScrollbar:
@@ -1492,6 +1490,8 @@ static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, 
             case CSSSelector::PseudoElementScrollbarTrack:
             case CSSSelector::PseudoElementScrollbarTrackPiece:
             case CSSSelector::PseudoElementSelection:
+            case CSSSelector::PseudoElementSpellingError:
+            case CSSSelector::PseudoElementViewTransition:
             case CSSSelector::PseudoElementWebKitCustom:
             case CSSSelector::PseudoElementWebKitCustomLegacyPrefixed:
                 ASSERT(!fragment->pseudoElementSelector);
@@ -1506,6 +1506,10 @@ static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, 
             case CSSSelector::PseudoElementHighlight:
             case CSSSelector::PseudoElementPart:
             case CSSSelector::PseudoElementSlotted:
+            case CSSSelector::PseudoElementViewTransitionGroup:
+            case CSSSelector::PseudoElementViewTransitionImagePair:
+            case CSSSelector::PseudoElementViewTransitionOld:
+            case CSSSelector::PseudoElementViewTransitionNew:
                 return FunctionType::CannotCompile;
             }
 
@@ -2278,7 +2282,7 @@ inline void SelectorCodeGenerator::generateEpilogue(StackAllocator& stackAllocat
 
 inline void SelectorCodeGenerator::generateReturn()
 {
-#if CPU(ARM64E)
+#if CPU(ARM64E) && !ENABLE(C_LOOP)
     if (JSC::Options::useJITCage()) {
         m_assembler.farJump(Assembler::TrustedImmPtr(retagCodePtr<void*, CFunctionPtrTag, JSC::OperationPtrTag>(&JSC::vmEntryToCSSJITAfter)), JSC::OperationPtrTag);
         return;
@@ -3996,10 +4000,11 @@ void SelectorCodeGenerator::generateElementIsOnlyChild(Assembler::JumpList& fail
 JSC_DEFINE_JIT_OPERATION(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown, bool, (const Element* element, SelectorChecker::CheckingContext* checkingContext))
 {
     COUNT_SELECTOR_OPERATION(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown);
-    if (is<HTMLTextFormControlElement>(*element) && element->isTextField()) {
+    auto* formControl = dynamicDowncast<HTMLTextFormControlElement>(*element);
+    if (formControl && element->isTextField()) {
         if (checkingContext->resolvingMode == SelectorChecker::Mode::ResolvingStyle)
             checkingContext->styleRelations.append({ *element, Style::Relation::Unique, 1 });
-        return downcast<HTMLTextFormControlElement>(*element).isPlaceholderVisible();
+        return formControl->isPlaceholderVisible();
     }
     return false;
 }
@@ -4007,7 +4012,8 @@ JSC_DEFINE_JIT_OPERATION(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlac
 JSC_DEFINE_JIT_OPERATION(operationIsPlaceholderShown, bool, (const Element* element))
 {
     COUNT_SELECTOR_OPERATION(operationIsPlaceholderShown);
-    return is<HTMLTextFormControlElement>(*element) && downcast<HTMLTextFormControlElement>(*element).isPlaceholderVisible();
+    auto* formControl = dynamicDowncast<HTMLTextFormControlElement>(*element);
+    return formControl && formControl->isPlaceholderVisible();
 }
 
 JSC_DEFINE_JIT_OPERATION(operationSynchronizeStyleAttributeInternal, void, (StyledElement* styledElement))
@@ -4437,8 +4443,6 @@ void SelectorCodeGenerator::generateElementIsRoot(Assembler::JumpList& failureCa
 
 void SelectorCodeGenerator::generateElementIsScopeRoot(Assembler::JumpList& failureCases)
 {
-    ASSERT(m_selectorContext == SelectorContext::QuerySelector);
-
     LocalRegister scope(m_registerAllocator);
     loadCheckingContext(scope);
     m_assembler.loadPtr(Assembler::Address(scope, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, scope)), scope);

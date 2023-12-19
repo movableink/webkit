@@ -33,14 +33,7 @@
 #include <wtf/RetainPtr.h>
 #endif
 
-namespace IPC {
-class Decoder;
-class Encoder;
-}
-
-#if PLATFORM(COCOA)
 OBJC_CLASS NSData;
-#endif
 
 namespace API {
 
@@ -116,3 +109,5 @@ private:
 };
 
 } // namespace API
+
+SPECIALIZE_TYPE_TRAITS_API_OBJECT(Data);

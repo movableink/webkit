@@ -90,6 +90,7 @@
 #include <WebCore/PluginDocument.h>
 #include <WebCore/PolicyChecker.h>
 #include <WebCore/ProgressTracker.h>
+#include <WebCore/Quirks.h>
 #include <WebCore/ResourceError.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/RuntimeApplicationChecks.h>
@@ -140,7 +141,6 @@ std::optional<WebPageProxyIdentifier> WebLocalFrameLoaderClient::webPageProxyID(
     return std::nullopt;
 }
 
-#if ENABLE(TRACKING_PREVENTION)
 void WebLocalFrameLoaderClient::setHasFrameSpecificStorageAccess(FrameSpecificStorageAccessIdentifier&& frameSpecificStorageAccessIdentifier )
 {
     ASSERT(!m_frameSpecificStorageAccessIdentifier);
@@ -165,8 +165,6 @@ Vector<RegistrableDomain> WebLocalFrameLoaderClient::loadedSubresourceDomains() 
 
     return copyToVector(webPage->loadedSubresourceDomains());
 }
-
-#endif
 
 bool WebLocalFrameLoaderClient::hasHTMLView() const
 {
@@ -199,13 +197,11 @@ void WebLocalFrameLoaderClient::detachedFromParent2()
     if (!webPage)
         return;
 
-#if ENABLE(TRACKING_PREVENTION)
     if (m_frameSpecificStorageAccessIdentifier) {
         WebProcess::singleton().ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::RemoveStorageAccessForFrame(
             m_frameSpecificStorageAccessIdentifier->frameID, m_frameSpecificStorageAccessIdentifier->pageID), 0);
         m_frameSpecificStorageAccessIdentifier = std::nullopt;
     }
-#endif
 
     RefPtr<API::Object> userData;
 
@@ -367,7 +363,7 @@ void WebLocalFrameLoaderClient::dispatchDidReceiveServerRedirectForProvisionalLo
 
     RefPtr documentLoader = static_cast<WebDocumentLoader*>(m_frame->coreLocalFrame()->loader().provisionalDocumentLoader());
     if (!documentLoader) {
-        WebLocalFrameLoaderClient_RELEASE_LOG_FAULT(Loading, "dispatchDidReceiveServerRedirectForProvisionalLoad: Called with no provisional DocumentLoader (frameState=%hhu, stateForDebugging=%i)", m_frame->coreLocalFrame()->loader().state(), m_frame->coreLocalFrame()->loader().stateMachine().stateForDebugging());
+        WebLocalFrameLoaderClient_RELEASE_LOG_FAULT(Loading, "dispatchDidReceiveServerRedirectForProvisionalLoad: Called with no provisional DocumentLoader (frameState=%hhu, stateForDebugging=%i)", static_cast<uint8_t>(m_frame->coreLocalFrame()->loader().state()), m_frame->coreLocalFrame()->loader().stateMachine().stateForDebugging());
         return;
     }
 
@@ -438,7 +434,6 @@ void WebLocalFrameLoaderClient::dispatchDidChangeMainDocument()
 
 void WebLocalFrameLoaderClient::dispatchWillChangeDocument(const URL& currentURL, const URL& newURL)
 {
-#if ENABLE(TRACKING_PREVENTION)
     if (m_frame->isMainFrame())
         return;
 
@@ -451,7 +446,6 @@ void WebLocalFrameLoaderClient::dispatchWillChangeDocument(const URL& currentURL
             m_frameSpecificStorageAccessIdentifier->frameID, m_frameSpecificStorageAccessIdentifier->pageID), 0);
         m_frameSpecificStorageAccessIdentifier = std::nullopt;
     }
-#endif
 }
 
 void WebLocalFrameLoaderClient::didSameDocumentNavigationForFrameViaJSHistoryAPI(SameDocumentNavigationType navigationType)
@@ -482,6 +476,7 @@ void WebLocalFrameLoaderClient::didSameDocumentNavigationForFrameViaJSHistoryAPI
         false, /* openedByDOMWithOpener */
         !!m_frame->coreLocalFrame()->loader().opener(), /* hasOpener */
         { }, /* requesterOrigin */
+        { }, /* requesterTopOrigin */
         std::nullopt, /* targetBackForwardItemIdentifier */
         std::nullopt, /* sourceBackForwardItemIdentifier */
         WebCore::LockHistory::No,
@@ -644,6 +639,12 @@ void WebLocalFrameLoaderClient::dispatchDidFailProvisionalLoad(const ResourceErr
 
     // Notify the bundle client.
     webPage->injectedBundleLoaderClient().didFailProvisionalLoadWithErrorForFrame(*webPage, m_frame, error, userData);
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+    // Notify the extensions controller.
+    if (RefPtr extensionControllerProxy = webPage->webExtensionControllerProxy())
+        extensionControllerProxy->didFailLoadForFrame(*webPage, m_frame, m_frame->coreLocalFrame()->loader().provisionalLoadErrorBeingHandledURL());
+#endif
 
     webPage->sandboxExtensionTracker().didFailProvisionalLoad(m_frame.ptr());
 
@@ -945,6 +946,7 @@ void WebLocalFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const Nav
         false, /* openedByDOMWithOpener */
         navigationAction.newFrameOpenerPolicy() == NewFrameOpenerPolicy::Allow, /* hasOpener */
         { }, /* requesterOrigin */
+        { }, /* requesterTopOrigin */
         std::nullopt, /* targetBackForwardItemIdentifier */
         std::nullopt, /* sourceBackForwardItemIdentifier */
         WebCore::LockHistory::No,
@@ -1332,6 +1334,28 @@ bool WebLocalFrameLoaderClient::representationExistsForURLScheme(StringView /*UR
 {
     notImplemented();
     return false;
+}
+
+void WebLocalFrameLoaderClient::loadStorageAccessQuirksIfNeeded()
+{
+    RefPtr webPage = m_frame->page();
+
+    if (!webPage || !m_frame->coreLocalFrame() || !m_frame->coreLocalFrame()->isMainFrame() || !m_frame->coreLocalFrame()->document())
+        return;
+
+    auto* document = m_frame->coreLocalFrame()->document();
+    RegistrableDomain domain { document->url() };
+    if (!WebProcess::singleton().haveStorageAccessQuirksForDomain(domain))
+        return;
+
+    WebProcess::singleton().ensureNetworkProcessConnection().connection().sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::StorageAccessQuirkForTopFrameDomain(WTFMove(domain)), [weakDocument = WeakPtr { *document }](Vector<RegistrableDomain>&& domains) {
+        if (!domains.size())
+            return;
+        if (!weakDocument)
+            return;
+        weakDocument->quirks().setSubFrameDomainsForStorageAccessQuirk(WTFMove(domains));
+    });
+
 }
 
 String WebLocalFrameLoaderClient::generatedMIMETypeForURLScheme(StringView /*URLScheme*/) const
@@ -1901,7 +1925,6 @@ void WebLocalFrameLoaderClient::broadcastMainFrameURLChangeToOtherProcesses(cons
     webPage->send(Messages::WebPageProxy::BroadcastMainFrameURLChangeToOtherProcesses(url));
 }
 
-#if ENABLE(SERVICE_WORKER)
 void WebLocalFrameLoaderClient::didFinishServiceWorkerPageRegistration(bool success)
 {
     RefPtr webPage = m_frame->page();
@@ -1910,7 +1933,6 @@ void WebLocalFrameLoaderClient::didFinishServiceWorkerPageRegistration(bool succ
 
     webPage->send(Messages::WebPageProxy::DidFinishServiceWorkerPageRegistration(success));
 }
-#endif
 
 #if ENABLE(APP_BOUND_DOMAINS)
 bool WebLocalFrameLoaderClient::shouldEnableInAppBrowserPrivacyProtections() const
@@ -1967,6 +1989,19 @@ void WebLocalFrameLoaderClient::dispatchLoadEventToOwnerElementInAnotherProcess(
         return;
     page->send(Messages::WebPageProxy::DispatchLoadEventToFrameOwnerElement(m_frame->frameID()));
 }
+
+#if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
+
+void WebLocalFrameLoaderClient::didAccessWindowProxyPropertyViaOpener(WebCore::SecurityOriginData&& parentOrigin, WebCore::WindowProxyProperty property)
+{
+    RefPtr page = m_frame->page();
+    if (!page)
+        return;
+
+    page->send(Messages::WebPageProxy::DidAccessWindowProxyPropertyViaOpenerForFrame(m_frame->frameID(), WTFMove(parentOrigin), property));
+}
+
+#endif
 
 } // namespace WebKit
 

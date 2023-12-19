@@ -63,6 +63,8 @@ fast/forms/search/search-padding-cancel-results-buttons.html [ Pass ]
 fast/forms/search/search-results-hidden-crash.html [ Pass ]
 fast/forms/search/search-recent-searches.html [ Pass ]
 
+fast/forms/switch/ [ Pass ]
+
 fast/url/user-visible [ Pass ]
 fast/images/eps-as-image.html [ Skip ]
 
@@ -407,7 +409,7 @@ svg/stroke/zero-length-path-linecap-rendering.svg [ Failure ]
 svg/stroke/zero-length-subpaths-linecap-rendering.svg [ Failure ]
 
 webkit.org/b/110871 compositing/overlap-blending/reflection-opacity-huge.html [ ImageOnlyFailure ]
-webkit.org/b/114340 compositing/overlap-blending/nested-overlap.html [ ImageOnlyFailure ]
+webkit.org/b/114340 [ Monterey ] compositing/overlap-blending/nested-overlap.html [ ImageOnlyFailure ]
 webkit.org/b/146523 compositing/masks/compositing-clip-path-origin.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/95027 fast/block/float/016.html [ Failure ]
@@ -519,9 +521,6 @@ webkit.org/b/98560 fast/writing-mode/vertical-subst-font-vert-no-dflt.html [ Pas
 
 # This test is failing and causing subsequent tests to time out.
 webkit.org/b/98837 http/tests/security/svg-image-leak.html [ Skip ]
-
-# Should never have been a ref test.
-webkit.org/b/98456 compositing/images/truncated-direct-png-image.html [ ImageOnlyFailure ]
 
 # Timing out on Mountain Lion WK1 release sometimes
 webkit.org/b/99221 js/dom/random-array-gc-stress.html [ Pass Timeout ]
@@ -945,9 +944,14 @@ http/tests/security/contentSecurityPolicy/media-src-allowed.html [ Skip ]
 webkit.org/b/229101 http/tests/media/modern-media-controls/pip-support/pip-support-live-broadcast.html [ Pass Failure ]
 
 webkit.org/b/174066 inspector/canvas/console-record-webgl2.html [ Pass Timeout ]
+webkit.org/b/174066 inspector/canvas/console-record-offscreen-webgl2.html [ Pass Timeout ]
 webkit.org/b/173931 inspector/canvas/context-attributes.html [ Pass Timeout ]
 webkit.org/b/178028 inspector/canvas/create-context-2d.html [ Pass Failure Timeout ]
 webkit.org/b/174066 inspector/canvas/create-context-webgl2.html [ Pass Failure Timeout ]
+webkit.org/b/174066 inspector/canvas/recording-offscreen-webgl2-frameCount.html [ Pass Failure Timeout ]
+webkit.org/b/174066 inspector/canvas/recording-offscreen-webgl2-full.html [ Pass Failure Timeout ]
+webkit.org/b/174066 inspector/canvas/recording-offscreen-webgl2-memoryLimit.html [ Pass Failure Timeout ]
+webkit.org/b/174066 inspector/canvas/recording-offscreen-webgl2-snapshots.html [ Pass Failure Timeout ]
 webkit.org/b/174066 inspector/canvas/recording-webgl2-frameCount.html [ Pass Failure Timeout ]
 webkit.org/b/174066 inspector/canvas/recording-webgl2-full.html [ Pass Failure Timeout ]
 webkit.org/b/174066 inspector/canvas/recording-webgl2-memoryLimit.html [ Pass Failure Timeout ]
@@ -1025,8 +1029,6 @@ webkit.org/b/150823 imported/w3c/web-platform-tests/xhr/getresponseheader-chunke
 webkit.org/b/162668 fast/text/woff2-totalsfntsize.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/140217 http/tests/navigation/forward-and-cancel.html [ Pass Failure ]
-
-webkit.org/b/151469 imported/w3c/web-platform-tests/html/syntax/parsing/template/creating-an-element-for-the-token/template-owner-document.html [ Pass Crash ]
 
 webkit.org/b/153809 transitions/clip-path-transitions.html [ Pass Failure ]
 webkit.org/b/153809 transitions/clip-path-path-transitions.html [ Pass Failure ]
@@ -1269,7 +1271,6 @@ svg/W3C-SVG-1.1/text-intro-03-b.svg [ Failure ]
 svg/W3C-SVG-1.1/text-intro-04-t.svg [ Failure ]
 svg/custom/acid3-test-77.html [ Failure ]
 svg/custom/svg-fonts-fallback.xhtml [ Failure ]
-fast/css-generated-content/initial-letter-first-line-wrapping.html [ ImageOnlyFailure  ]
 
 # <rdar://problem/30493910> REGRESSION: LayoutTest fast/writing-mode/broken-ideograph-small-caps.html failing
 fast/writing-mode/broken-ideograph-small-caps.html [ Failure ImageOnlyFailure ]
@@ -1595,9 +1596,6 @@ webkit.org/b/205403 accessibility/presentation-role-iframe.html [ Pass Failure ]
 # Full investigation at: https://bugs.webkit.org/show_bug.cgi?id=243407
 webkit.org/b/243407 accessibility/add-children-pseudo-element.html [ Pass Failure ]
 
-# Disabled temporarily since it is causing other tests to fail.
-accessibility/mac/isolated-tree-mode-on-off.html [ Skip ]
-
 # Requires (INLINE_PREDICTIONS)
 accessibility/mac/attributed-string/attributed-string-has-completion-annotation.html [ Skip ]
 accessibility/mac/text-input-session-notifications.html [ Skip ]
@@ -1881,11 +1879,6 @@ webkit.org/b/227891 http/tests/appcache/fail-on-update.html [ Pass Timeout DumpJ
 [ x86_64 ] imported/w3c/web-platform-tests/css/filter-effects/css-filters-animation-opacity.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/filter-effects/css-filters-animation-saturate.html [ ImageOnlyFailure ]
 
-# rdar://66661355 ([ASi Layout Tests] 3 compositing tests failing with 0.01% diffs)
-[ arm64 ] compositing/backgrounds/fixed-background-on-descendant.html [ ImageOnlyFailure ]
-[ arm64 ] compositing/backgrounds/fixed-backgrounds.html [ ImageOnlyFailure ]
-[ arm64 ] compositing/patterns/direct-pattern-compositing-cover.html [ ImageOnlyFailure ]
-
 # rdar://66802945 (REGRESSION (20A2323e-20A234b): [ Layout Test] 1 canvas layout tests are a constant failure)
 [ arm64 ] fast/canvas/canvas-ellipse-zero-lineto.html [ Failure ]
 
@@ -2001,8 +1994,6 @@ webkit.org/b/222692 inspector/page/empty-or-missing-resources.html [ Pass Timeou
 # webkit.org/b/223043 the following tests have issues only on Apple Silicon
 [ arm64 ] webrtc/captureCanvas-webrtc-software-h264-high.html [ Pass Failure ]
 webrtc/h264-baseline.html  [ Failure Timeout ]
-
-webkit.org/b/238104 [ arm64 ] webrtc/vp9-profile2.html [ Skip ]
 
 webkit.org/b/223259 [ arm64 ] webgl/2.0.0/conformance2/textures/misc/tex-mipmap-levels.html [ Failure ]
 
@@ -2198,6 +2189,9 @@ webkit.org/b/231463 fast/css/accent-color/range.html [ ImageOnlyFailure ]
 [ Monterey+ ] imported/w3c/web-platform-tests/html/canvas/offscreen/wide-gamut-canvas/2d.color.space.p3.to.srgb.worker.html [ Pass ]
 [ Monterey+ ] imported/w3c/web-platform-tests/webcodecs/videoFrame-createImageBitmap.any.worker.html [ Pass ]
 [ Monterey+ ] imported/w3c/web-platform-tests/webcodecs/videoFrame-drawImage.any.worker.html [ Pass ]
+
+# Encoder specific behavior that is not covered for Monterey.
+[ Monterey ] http/wpt/webcodecs/encoder-task-failing.html [ Failure ]
 
 webkit.org/b/229521 pointer-lock/lock-already-locked.html [ Pass Failure ]
 
@@ -2403,11 +2397,6 @@ webkit.org/b/255788 [ Ventura+ Debug ] tiled-drawing/scrolling/scroll-snap/scrol
 
 webkit.org/b/256108 media/video-audio-session-mode.html [ Failure ]
 
-# VP9 is not supported on all Intel HW
-[ x86_64 ] media/media-source/media-source-webm-configuration-change.html [ Pass Failure ]
-[ x86_64 ] media/media-source/media-source-webm-configuration-framerate.html [ Pass Failure ]
-[ x86_64 ] media/media-source/media-source-webm-configuration-vp9-header-color.html [ Pass Failure ]
-
 webkit.org/b/258181 [ Debug ] inspector/debugger/async-stack-trace-truncate.html [ Slow Failure ]
 
 # webkit.org/b/258328 Umbrella Bug: Batch mark expectations slowing down EWS
@@ -2432,9 +2421,6 @@ webkit.org/b/259190 http/tests/images/heic-as-heif.html [ Pass ImageOnlyFailure 
 [ Monterey ] imported/w3c/web-platform-tests/mathml/relations/css-styling/floats/not-floating-001.html [ Pass Failure ]
 [ Monterey ] imported/w3c/web-platform-tests/mathml/relations/css-styling/width-height-001.html [ Pass Failure ]
 [ Monterey ] imported/w3c/web-platform-tests/mathml/relations/html5-tree/dynamic-childlist-002.html [ Pass Failure ]
-
-# Sonoma has one extra whitespace for some reason.
-[ Sonoma+ ] imported/w3c/web-platform-tests/accname/name/comp_host_language_label.html [ Failure ]
 
 webkit.org/b/260224 [ Ventura+ ] compositing/geometry/clipped-out-perspective.html [ ImageOnlyFailure ]
 webkit.org/b/260224 [ Ventura+ ] compositing/overlap-blending/opacity-and-infinity.html [ ImageOnlyFailure ]
@@ -2466,10 +2452,6 @@ svg/custom/hidpi-masking-clipping.svg [ Pass ImageOnlyFailure ]
 css3/color-filters/color-filter-caret-color.html [ ImageOnlyFailure ]
 fast/css/caret-color-fallback-to-color.html [ ImageOnlyFailure ]
 fast/css/caret-color-span-inside-editable-parent.html [ ImageOnlyFailure ]
-
-# rdar://111079967 (REGRESSION ( Sonoma ): [ Sonoma ] Two editing/caret/color-span-inside-editabl tests are constant image failures)
-editing/caret/color-span-inside-editable-background.html [ ImageOnlyFailure ]
-editing/caret/color-span-inside-editable.html [ ImageOnlyFailure ]
 
 # Caps lock indicator is disabled on Sonoma, as it is provided by the OS.
 fast/forms/caps-lock-indicator-width.html [ Skip ]
@@ -2517,9 +2499,6 @@ webkit.org/b/157589 fast/text-autosizing/ios/text-autosizing-after-back.html [ P
 # webkit.org/b/261308 Batch mark expectations for flaky imported/w3c/web-platform-tests
 [ Monterey+ ] imported/w3c/web-platform-tests/workers/WorkerGlobalScope_ErrorEvent_colno.htm [ Pass Failure ]
 [ Monterey+ Debug ] imported/w3c/web-platform-tests/encoding/streams/realms.window.html [ Pass Failure ]
-[ Monterey+ Debug ] imported/w3c/web-platform-tests/dom/nodes/NodeList-static-length-getter-tampered-2.html [ Pass Timeout ]
-[ Monterey+ Debug ] imported/w3c/web-platform-tests/dom/nodes/NodeList-static-length-getter-tampered-1.html [ Pass Failure Timeout ]
-[ Monterey+ Debug ] imported/w3c/web-platform-tests/dom/nodes/NodeList-static-length-getter-tampered-3.html [ Pass Failure Timeout ]
 [ Monterey+ ] imported/w3c/web-platform-tests/workers/WorkerGlobalScope_ErrorEvent_filename.htm [ Pass Failure ]
 [ Monterey+ ] imported/w3c/web-platform-tests/css/css-writing-modes/forms/text-input-vertical-overflow-no-scroll.html [ Pass Failure Timeout ]
 [ Monterey+ Debug ] imported/w3c/web-platform-tests/html/browsers/browsing-the-web/navigating-across-documents/javascript-url-return-value-handling-dynamic.html [ Pass Failure ]
@@ -2570,8 +2549,6 @@ imported/w3c/web-platform-tests/css/css-scroll-snap/input/snap-area-overflow-bou
 imported/w3c/web-platform-tests/css/css-transforms/scroll-preserve-3d.html [ Skip ]
 imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/non-passive-mousewheel-event-listener-on-div.html [ Skip ]
 imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/non-passive-wheel-event-listener-on-div.html [ Skip ]
-imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/passive-mousewheel-event-listener-on-div.html [ Skip ]
-imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/passive-wheel-event-listener-on-div.html [ Skip ]
 imported/w3c/web-platform-tests/dom/events/scrolling/iframe-chains.html [ Skip ]
 imported/w3c/web-platform-tests/dom/events/scrolling/scrollend-event-for-user-scroll.html [ Skip ]
 imported/w3c/web-platform-tests/html/semantics/popovers/popover-light-dismiss.html [ Skip ]
@@ -2611,8 +2588,18 @@ webkit.org/b/263783 [ Sonoma+ ] fast/scrolling/scroll-snap-crash.html [ Skip ]
 
 webkit.org/b/264177 requestidlecallback/requestidlecallback-deadline-shortened-by-rendering-update.html [ Pass Failure ]
 
-webkit.org/b/264349 http/tests/site-isolation/frame-access-after-window-open.html [ Timeout ]
-
 webkit.org/b/264527 imported/w3c/web-platform-tests/css/css-cascade/idlharness.html [ Pass Failure ]
 
 webkit.org/b/264607 [ Sonoma+ ] css1/box_properties/acid_test.html [ Pass Timeout ]
+
+# webkit.org/b/265536 ([ macOS ] 2 tests in inspector/layers are flaky failures)
+inspector/layers/layers-compositing-reasons.html [ Pass Failure ]
+inspector/layers/layers-blending-compositing-reasons.html [ Pass Failure ]
+
+# webkit.org/b/266168 Two wheel/mousewheel passive event listeners WPT test pass on macOS Sonoma and up
+[ Sonoma+ ] imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/passive-mousewheel-event-listener-on-div.html [ Pass ]
+[ Sonoma+ ] imported/w3c/web-platform-tests/dom/events/non-cancelable-when-passive/passive-wheel-event-listener-on-div.html [ Pass ]
+
+webkit.org/b/266356 imported/w3c/web-platform-tests/video-rvfc/request-video-frame-callback-webrtc.https.html [ Pass Failure ]
+
+webkit.org/b/265957 fullscreen/full-screen-layer-dump.html [ Failure ]

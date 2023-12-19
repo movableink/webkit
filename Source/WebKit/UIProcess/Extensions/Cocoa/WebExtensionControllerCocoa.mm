@@ -33,6 +33,7 @@
 #if ENABLE(WK_WEB_EXTENSIONS)
 
 #import "CocoaHelpers.h"
+#import "ContextMenuContextData.h"
 #import "Logging.h"
 #import "SandboxUtilities.h"
 #import "WebExtensionContext.h"
@@ -44,11 +45,14 @@
 #import "WebExtensionEventListenerType.h"
 #import "WebPageProxy.h"
 #import "WebProcessPool.h"
+#import <WebCore/ContentRuleListResults.h>
 #import <wtf/FileSystem.h>
 #import <wtf/HashMap.h>
 #import <wtf/HashSet.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/text/WTFString.h>
+
+static constexpr Seconds purgeMatchedRulesInterval = 5_min;
 
 namespace WebKit {
 
@@ -259,104 +263,77 @@ WebExtensionController::WebExtensionSet WebExtensionController::extensions() con
     return extensions;
 }
 
-// MARK: Web Navigation
+#if PLATFORM(MAC)
+void WebExtensionController::addItemsToContextMenu(WebPageProxy& page, const ContextMenuContextData& contextData, NSMenu *menu)
+{
+    [menu addItem:NSMenuItem.separatorItem];
+
+    for (auto& context : m_extensionContexts)
+        context->addItemsToContextMenu(page, contextData, menu);
+}
+#endif
 
 void WebExtensionController::didStartProvisionalLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& targetURL, WallTime timestamp)
 {
-    auto eventType = WebExtensionEventListenerType::WebNavigationOnBeforeNavigate;
-    auto listenerTypes = WebExtensionContext::EventListenerTypeSet { eventType };
-
-    for (auto& context : m_extensionContexts) {
-        if (!context->hasPermission(_WKWebExtensionPermissionWebNavigation))
-            continue;
-
-        if (!context->hasPermission(targetURL))
-            continue;
-
-        auto tab = context->getTab(pageID);
-        if (!tab)
-            continue;
-
-        context->wakeUpBackgroundContentIfNecessaryToFireEvents(listenerTypes, [&] {
-            context->sendToProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(eventType, tab->identifier(), frameID, parentFrameID, targetURL, timestamp));
-        });
-    }
+    for (auto& context : m_extensionContexts)
+        context->didStartProvisionalLoadForFrame(pageID, frameID, parentFrameID, targetURL, timestamp);
 }
 
 void WebExtensionController::didCommitLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& frameURL, WallTime timestamp)
 {
-    auto committedEventType = WebExtensionEventListenerType::WebNavigationOnCommitted;
-    auto contentLoadedtype = WebExtensionEventListenerType::WebNavigationOnDOMContentLoaded;
-    auto listenerTypes = WebExtensionContext::EventListenerTypeSet { committedEventType, contentLoadedtype };
-
-    for (auto& context : m_extensionContexts) {
-        if (!context->hasPermission(_WKWebExtensionPermissionWebNavigation))
-            continue;
-
-        if (!context->hasPermission(frameURL))
-            continue;
-
-        for (auto& styleSheet : context->dynamicallyInjectedUserStyleSheets()) {
-            auto page = WebProcessProxy::webPage(pageID);
-            WebUserContentControllerProxy& controller = page.get()->userContentController();
-            controller.removeUserStyleSheet(styleSheet);
-        }
-
-        context->dynamicallyInjectedUserStyleSheets().clear();
-
-        auto tab = context->getTab(pageID);
-        if (!tab)
-            continue;
-
-        context->wakeUpBackgroundContentIfNecessaryToFireEvents(listenerTypes, [&] {
-            context->sendToProcessesForEvent(committedEventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(committedEventType, tab->identifier(), frameID, parentFrameID, frameURL, timestamp));
-            context->sendToProcessesForEvent(contentLoadedtype, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(contentLoadedtype, tab->identifier(), frameID, parentFrameID, frameURL, timestamp));
-        });
-    }
+    for (auto& context : m_extensionContexts)
+        context->didCommitLoadForFrame(pageID, frameID, parentFrameID, frameURL, timestamp);
 }
 
 void WebExtensionController::didFinishLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& frameURL, WallTime timestamp)
 {
-    auto eventType = WebExtensionEventListenerType::WebNavigationOnCompleted;
-    auto listenerTypes = WebExtensionContext::EventListenerTypeSet { eventType };
-
-    for (auto& context : m_extensionContexts) {
-        if (!context->hasPermission(_WKWebExtensionPermissionWebNavigation))
-            continue;
-
-        if (!context->hasPermission(frameURL))
-            continue;
-
-        auto tab = context->getTab(pageID);
-        if (!tab)
-            continue;
-
-        context->wakeUpBackgroundContentIfNecessaryToFireEvents(listenerTypes, [&] {
-            context->sendToProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(eventType, tab->identifier(), frameID, parentFrameID, frameURL, timestamp));
-        });
-    }
+    for (auto& context : m_extensionContexts)
+        context->didFinishLoadForFrame(pageID, frameID, parentFrameID, frameURL, timestamp);
 }
 
 void WebExtensionController::didFailLoadForFrame(WebPageProxyIdentifier pageID, WebExtensionFrameIdentifier frameID, WebExtensionFrameIdentifier parentFrameID, const URL& frameURL, WallTime timestamp)
 {
-    auto eventType = WebExtensionEventListenerType::WebNavigationOnErrorOccurred;
-    auto listenerTypes = WebExtensionContext::EventListenerTypeSet { eventType };
+    for (auto& context : m_extensionContexts)
+        context->didFailLoadForFrame(pageID, frameID, parentFrameID, frameURL, timestamp);
+}
 
-    for (auto& context : m_extensionContexts) {
-        if (!context->hasPermission(_WKWebExtensionPermissionWebNavigation))
-            continue;
+void WebExtensionController::handleContentRuleListNotification(WebPageProxyIdentifier pageID, URL& url, WebCore::ContentRuleListResults& results)
+{
+    bool savedMatchedRule = false;
 
-        if (!context->hasPermission(frameURL))
-            continue;
+    for (const auto& result : results.results) {
+        auto contentRuleListIdentifier = result.first;
+        for (auto& context : m_extensionContexts) {
+            if (context->uniqueIdentifier() != contentRuleListIdentifier)
+                continue;
 
-        auto tab = context->getTab(pageID);
-        if (!tab)
-            continue;
+            RefPtr tab = context->getTab(pageID);
+            if (!tab)
+                break;
 
-        context->wakeUpBackgroundContentIfNecessaryToFireEvents(listenerTypes, [&] {
-            context->sendToProcessesForEvent(eventType, Messages::WebExtensionContextProxy::DispatchWebNavigationEvent(eventType, tab->identifier(), frameID, parentFrameID, frameURL, timestamp));
-        });
+            savedMatchedRule |= context->handleContentRuleListNotificationForTab(*tab, url, result.second);
+
+            break;
+        }
     }
+
+    if (!savedMatchedRule || m_purgeOldMatchedRulesTimer)
+        return;
+
+    m_purgeOldMatchedRulesTimer = makeUnique<WebCore::Timer>(*this, &WebExtensionController::purgeOldMatchedRules);
+    m_purgeOldMatchedRulesTimer->start(purgeMatchedRulesInterval, purgeMatchedRulesInterval);
+}
+
+void WebExtensionController::purgeOldMatchedRules()
+{
+    WallTime earliestDateToKeep = WallTime::now() - purgeMatchedRulesInterval;
+
+    bool stillHaveRules = false;
+    for (auto& extensionContext : m_extensionContexts)
+        stillHaveRules |= extensionContext->purgeMatchedRulesFromBefore(earliestDateToKeep);
+
+    if (!stillHaveRules)
+        m_purgeOldMatchedRulesTimer = nullptr;
 }
 
 } // namespace WebKit

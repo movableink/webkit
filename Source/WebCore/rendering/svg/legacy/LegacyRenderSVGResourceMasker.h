@@ -45,7 +45,7 @@ public:
 
     inline SVGMaskElement& maskElement() const;
 
-    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) override;
+    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
     bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
     bool drawContentIntoContext(GraphicsContext&, const FloatRect& objectBoundingBox);
@@ -65,7 +65,7 @@ private:
     bool drawContentIntoMaskImage(MaskerData*, const DestinationColorSpace&, RenderObject*);
     void calculateMaskContentRepaintRect(RepaintRectCalculation);
 
-    EnumeratedArray<RepaintRectCalculation, FloatRect> m_maskContentBoundaries;
+    EnumeratedArray<RepaintRectCalculation, FloatRect, RepaintRectCalculation::Accurate> m_maskContentBoundaries;
     HashMap<RenderObject*, std::unique_ptr<MaskerData>> m_masker;
 };
 

@@ -38,6 +38,7 @@
 #include "CCallHelpers.h"
 #include "DFGGraphSafepoint.h"
 #include "FTLJITCode.h"
+#include "JITThunks.h"
 #include "LinkBuffer.h"
 #include "PCToCodeOriginMap.h"
 #include "ThunkGenerators.h"
@@ -134,13 +135,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
     // Emit the exception handler.
     *state.exceptionHandler = jit.label();
-    CCallHelpers::Jump handler = jit.jump();
-    VM* vmPtr = &vm;
-    jit.addLinkTask(
-        [=] (LinkBuffer& linkBuffer) {
-            linkBuffer.link(handler, CodeLocationLabel(vmPtr->getCTIStub(handleExceptionGenerator).retaggedCode<NoPtrTag>()));
-        });
-
+    jit.jumpThunk(CodeLocationLabel(vm.getCTIStub(CommonJITThunkID::HandleException).template retaggedCode<NoPtrTag>()));
     state.finalizer->b3CodeLinkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, LinkBuffer::Profile::FTL, JITCompilationCanFail);
 
     if (state.finalizer->b3CodeLinkBuffer->didFailToAllocate()) {

@@ -33,22 +33,40 @@
 
 namespace WebCore {
 
+class CSSScrollValue;
 class Element;
 
-class ScrollTimeline final : public AnimationTimeline {
+class ScrollTimeline : public AnimationTimeline {
 public:
     static Ref<ScrollTimeline> create(ScrollTimelineOptions&& = { });
+    static Ref<ScrollTimeline> create(const AtomString&, ScrollAxis);
+    static Ref<ScrollTimeline> createFromCSSValue(const CSSScrollValue&);
 
     Element* source() const { return m_source.get(); }
+
     ScrollAxis axis() const { return m_axis; }
+    void setAxis(ScrollAxis axis) { m_axis = axis; }
+
+    const AtomString& name() const { return m_name; }
+    void setName(const AtomString& name) { m_name = name; }
+
+    virtual Ref<CSSValue> toCSSValue() const;
+
+protected:
+    explicit ScrollTimeline(const AtomString&, ScrollAxis);
 
 private:
+    enum class Scroller : uint8_t { Nearest, Root, Self };
+
     explicit ScrollTimeline(ScrollTimelineOptions&& = { });
+    explicit ScrollTimeline(Scroller, ScrollAxis);
 
     bool isScrollTimeline() const final { return true; }
 
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_source;
-    ScrollAxis m_axis;
+    ScrollAxis m_axis { ScrollAxis::Block };
+    AtomString m_name;
+    Scroller m_scroller { Scroller::Nearest };
 };
 
 } // namespace WebCore

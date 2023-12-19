@@ -76,17 +76,71 @@ class AbstractLocker;
 
 namespace WebCore {
 
+class ANGLEInstancedArrays;
+class EXTBlendFuncExtended;
+class EXTBlendMinMax;
+class EXTClipControl;
+class EXTColorBufferFloat;
+class EXTColorBufferHalfFloat;
+class EXTConservativeDepth;
+class EXTDepthClamp;
+class EXTDisjointTimerQuery;
+class EXTDisjointTimerQueryWebGL2;
+class EXTFloatBlend;
+class EXTFragDepth;
+class EXTPolygonOffsetClamp;
+class EXTRenderSnorm;
+class EXTShaderTextureLOD;
+class EXTsRGB;
+class EXTTextureCompressionBPTC;
+class EXTTextureCompressionRGTC;
+class EXTTextureFilterAnisotropic;
+class EXTTextureMirrorClampToEdge;
+class EXTTextureNorm16;
 class HTMLImageElement;
 class ImageData;
 class IntSize;
+class KHRParallelShaderCompile;
+class NVShaderNoperspectiveInterpolation;
+class OESDrawBuffersIndexed;
+class OESElementIndexUint;
+class OESFBORenderMipmap;
+class OESSampleVariables;
+class OESShaderMultisampleInterpolation;
+class OESStandardDerivatives;
+class OESTextureFloat;
+class OESTextureFloatLinear;
+class OESTextureHalfFloat;
+class OESTextureHalfFloatLinear;
+class OESVertexArrayObject;
 class WebCodecsVideoFrame;
 class WebCoreOpaqueRoot;
 class WebGLActiveInfo;
+class WebGLClipCullDistance;
+class WebGLColorBufferFloat;
+class WebGLCompressedTextureASTC;
+class WebGLCompressedTextureETC;
+class WebGLCompressedTextureETC1;
+class WebGLCompressedTexturePVRTC;
+class WebGLCompressedTextureS3TC;
+class WebGLCompressedTextureS3TCsRGB;
+class WebGLDebugRendererInfo;
+class WebGLDebugShaders;
 class WebGLDefaultFramebuffer;
+class WebGLDepthTexture;
+class WebGLDrawBuffers;
+class WebGLDrawInstancedBaseVertexBaseInstance;
+class WebGLLoseContext;
+class WebGLMultiDraw;
+class WebGLMultiDrawInstancedBaseVertexBaseInstance;
 class WebGLObject;
 class WebGLPolygonMode;
+class WebGLPolygonMode;
+class WebGLProvokingVertex;
+class WebGLRenderSharedExponent;
 class WebGLShader;
 class WebGLShaderPrecisionFormat;
+class WebGLStencilTexturing;
 class WebGLUniformLocation;
 
 #if ENABLE(VIDEO)
@@ -104,42 +158,14 @@ using WebGLCanvas = std::variant<RefPtr<HTMLCanvasElement>>;
 class VideoFrame;
 #endif
 
-class InspectorScopedShaderProgramHighlight {
-public:
-    InspectorScopedShaderProgramHighlight(WebGLRenderingContextBase&, WebGLProgram*);
-
-    ~InspectorScopedShaderProgramHighlight();
-
-private:
-    void showHighlight();
-    void hideHighlight();
-
-    struct {
-        GCGLfloat color[4];
-        GCGLenum equationRGB;
-        GCGLenum equationAlpha;
-        GCGLenum srcRGB;
-        GCGLenum dstRGB;
-        GCGLenum srcAlpha;
-        GCGLenum dstAlpha;
-        GCGLboolean enabled;
-    } m_savedBlend;
-
-    WebGLRenderingContextBase& m_context;
-    WebGLProgram* m_program { nullptr };
-    bool m_didApply { false };
-};
-
 class WebGLRenderingContextBase : public GraphicsContextGL::Client, public GPUBasedCanvasRenderingContext, private ActivityStateChangeObserver {
     WTF_MAKE_ISO_ALLOCATED(WebGLRenderingContextBase);
 public:
-    using WebGLVersion = GraphicsContextGLWebGLVersion;
-
     using GPUBasedCanvasRenderingContext::weakPtrFactory;
     using GPUBasedCanvasRenderingContext::WeakValueType;
     using GPUBasedCanvasRenderingContext::WeakPtrImplType;
 
-    static std::unique_ptr<WebGLRenderingContextBase> create(CanvasBase&, WebGLContextAttributes&, WebGLVersion);
+    static std::unique_ptr<WebGLRenderingContextBase> create(CanvasBase&, WebGLContextAttributes, WebGLVersion);
     virtual ~WebGLRenderingContextBase();
 
     WebGLCanvas canvas();
@@ -222,6 +248,7 @@ public:
     GCGLint getAttribLocation(WebGLProgram&, const String& name);
     WebGLAny getBufferParameter(GCGLenum target, GCGLenum pname);
     WEBCORE_EXPORT std::optional<WebGLContextAttributes> getContextAttributes();
+    WebGLContextAttributes creationAttributes() const { return m_creationAttributes; }
     GCGLenum getError();
     virtual std::optional<WebGLExtensionAny> getExtension(const String& name) = 0;
     virtual WebGLAny getFramebufferAttachmentParameter(GCGLenum target, GCGLenum attachment, GCGLenum pname) = 0;
@@ -261,7 +288,7 @@ public:
 #if ENABLE(WEBXR)
     using MakeXRCompatiblePromise = DOMPromiseDeferred<void>;
     void makeXRCompatible(MakeXRCompatiblePromise&&);
-    bool isXRCompatible() const { return m_isXRCompatible; }
+    bool isXRCompatible() const { return m_attributes.xrCompatible; }
 #endif
     void polygonOffset(GCGLfloat factor, GCGLfloat units);
     // This must be virtual so more validation can be added in WebGL 2.0.
@@ -449,7 +476,7 @@ public:
 
     WeakPtr<WebGLRenderingContextBase> createRefForContextObject();
 protected:
-    WebGLRenderingContextBase(CanvasBase&, WebGLContextAttributes);
+    WebGLRenderingContextBase(CanvasBase&, WebGLContextAttributes&&);
 
     friend class EXTDisjointTimerQuery;
     friend class EXTDisjointTimerQueryWebGL2;
@@ -479,10 +506,13 @@ protected:
     friend class WebGLVertexArrayObjectOES;
 
     // Implementation helpers.
-    friend class InspectorScopedShaderProgramHighlight;
     friend class ScopedDisableRasterizerDiscard;
-    friend class ScopedEnableBackbuffer;
     friend class ScopedDisableScissorTest;
+    friend class ScopedEnableBackbuffer;
+    friend class ScopedInspectorShaderProgramHighlight;
+    friend class ScopedWebGLRestoreFramebuffer;
+    friend class ScopedWebGLRestoreRenderbuffer;
+    friend class ScopedWebGLRestoreTexture;
 
     void initializeNewContext(Ref<GraphicsContextGL>);
     virtual void initializeContextState();
@@ -651,7 +681,8 @@ protected:
     GCGLenum m_unpackColorspaceConversion;
 
     std::optional<ContextLostState>  m_contextLostState;
-    WebGLContextAttributes m_attributes;
+    WebGLContextAttributes m_attributes; // "actual context parameters" in WebGL 1 spec.
+    WebGLContextAttributes m_creationAttributes; // "context creation parameters" in WebGL 1 spec.
 
     PredefinedColorSpace m_drawingBufferColorSpace { PredefinedColorSpace::SRGB };
 
@@ -1030,9 +1061,6 @@ private:
 
     bool m_isSuspended { false };
 
-#if ENABLE(WEBXR)
-    bool m_isXRCompatible { false };
-#endif
     // The ordinal number of when the context was last active (drew, read pixels).
     uint64_t m_activeOrdinal { 0 };
     WeakPtrFactory<WebGLRenderingContextBase> m_contextObjectWeakPtrFactory;

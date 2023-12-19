@@ -65,7 +65,10 @@ WebCodecsVideoDecoder::~WebCodecsVideoDecoder()
 
 static bool isSupportedDecoderCodec(const String& codec, const Settings::Values& settings)
 {
-    return codec.startsWith("vp8"_s) || codec.startsWith("vp09.0"_s) || codec.startsWith("avc1."_s)
+    return codec.startsWith("vp8"_s) || codec.startsWith("vp09.00"_s) || codec.startsWith("avc1."_s)
+#if ENABLE(WEB_RTC)
+        || (codec.startsWith("vp09.02"_s) && settings.webRTCVP9Profile2CodecEnabled)
+#endif
         || (codec.startsWith("hev1."_s) && settings.webCodecsHEVCEnabled)
         || (codec.startsWith("hvc1."_s) && settings.webCodecsHEVCEnabled)
         || (codec.startsWith("av01.0"_s) && settings.webCodecsAV1Enabled);
@@ -129,11 +132,12 @@ ExceptionOr<void> WebCodecsVideoDecoder::configure(ScriptExecutionContext& conte
     bool isSupportedCodec = isSupportedDecoderCodec(config.codec, context.settingsValues());
     queueControlMessageAndProcess([this, config = WTFMove(config), isSupportedCodec, identifier = scriptExecutionContext()->identifier()]() mutable {
         m_isMessageQueueBlocked = true;
-        VideoDecoder::PostTaskCallback postTaskCallback = [identifier, weakThis = WeakPtr { *this }](auto&& task) {
+        VideoDecoder::PostTaskCallback postTaskCallback = [identifier, weakThis = ThreadSafeWeakPtr { *this }](auto&& task) {
             ScriptExecutionContext::postTaskTo(identifier, [weakThis, task = WTFMove(task)](auto&) mutable {
-                if (!weakThis)
+                RefPtr protectedThis = weakThis.get();
+                if (!protectedThis)
                     return;
-                weakThis->queueTaskKeepingObjectAlive(*weakThis, TaskSource::MediaElement, [task = WTFMove(task)]() mutable {
+                protectedThis->queueTaskKeepingObjectAlive(*protectedThis, TaskSource::MediaElement, [task = WTFMove(task)]() mutable {
                     task();
                 });
             });

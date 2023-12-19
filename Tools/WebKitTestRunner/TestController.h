@@ -393,6 +393,8 @@ public:
     void setIsMediaKeySystemPermissionGranted(bool);
     WKRetainPtr<WKStringRef> takeViewPortSnapshot();
 
+    WKRetainPtr<WKArrayRef> getAndClearReportedWindowProxyAccessDomains();
+
     WKPreferencesRef platformPreferences() { return m_preferences.get(); }
 
     bool grantNotificationPermission(WKStringRef origin);
@@ -423,6 +425,12 @@ public:
 
 #if ENABLE(IMAGE_ANALYSIS)
     static uint64_t currentImageAnalysisRequestID();
+    void installFakeMachineReadableCodeResultsForImageAnalysis();
+    bool shouldUseFakeMachineReadableCodeResultsForImageAnalysis() const;
+#endif
+
+#if PLATFORM(WPE)
+    bool useWPEPlatformAPI() const { return m_useWPEPlatformAPI; }
 #endif
 
 private:
@@ -621,6 +629,9 @@ private:
 #if HAVE(UIKIT_RESIZABLE_WINDOWS)
     std::unique_ptr<InstanceMethodSwizzler> m_enhancedWindowingEnabledSwizzler;
 #endif
+#if ENABLE(DATA_DETECTION)
+    std::unique_ptr<InstanceMethodSwizzler> m_appStoreURLSwizzler;
+#endif
     bool m_verbose { false };
     bool m_printSeparators { false };
     bool m_usingServerMode { false };
@@ -652,6 +663,10 @@ private:
     RetainPtr<UIPasteboardConsistencyEnforcer> m_pasteboardConsistencyEnforcer;
     RetainPtr<UIKeyboardInputMode> m_overriddenKeyboardInputMode;
     Vector<std::unique_ptr<InstanceMethodSwizzler>> m_presentPopoverSwizzlers;
+#endif
+
+#if ENABLE(IMAGE_ANALYSIS)
+    bool m_useFakeMachineReadableCodeResultsForImageAnalysis { false };
 #endif
 
     enum State {
@@ -765,6 +780,10 @@ private:
     size_t m_downloadIndex { 0 };
     bool m_shouldDownloadContentDispositionAttachments { true };
     bool m_dumpPolicyDelegateCallbacks { false };
+
+#if PLATFORM(WPE)
+    bool m_useWPEPlatformAPI { false };
+#endif
 };
 
 } // namespace WTR

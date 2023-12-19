@@ -42,7 +42,7 @@
 #import "HTMLFrameSetElement.h"
 #import "HTMLHtmlElement.h"
 #import "HTMLIFrameElement.h"
-#import "HandleMouseEventResult.h"
+#import "HandleUserInputEventResult.h"
 #import "KeyboardEvent.h"
 #import "LocalFrame.h"
 #import "LocalFrameView.h"
@@ -144,7 +144,7 @@ inline CurrentEventScope::~CurrentEventScope()
 
 bool EventHandler::wheelEvent(NSEvent *event)
 {
-    CheckedPtr page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return false;
 
@@ -156,7 +156,7 @@ bool EventHandler::wheelEvent(NSEvent *event)
         if (m_frame->settings().wheelEventGesturesBecomeNonBlocking() && m_wheelScrollGestureState.value_or(WheelScrollGestureState::Blocking) == WheelScrollGestureState::NonBlocking)
             processingSteps = { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::NonBlockingDOMEventDispatch };
     }
-    return handleWheelEvent(wheelEvent, processingSteps);
+    return handleWheelEvent(wheelEvent, processingSteps).wasHandled();
 }
 
 bool EventHandler::keyEvent(NSEvent *event)
@@ -175,7 +175,7 @@ bool EventHandler::keyEvent(NSEvent *event)
 
 void EventHandler::focusDocumentView()
 {
-    CheckedPtr page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return;
 
@@ -259,7 +259,7 @@ bool EventHandler::passMouseDownEventToWidget(Widget* pWidget)
         return true;
     }
 
-    CheckedPtr page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return true;
 
@@ -487,7 +487,7 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& wheelEvent, 
         auto* frameView = dynamicDowncast<LocalFrameView>(widget);
         if (!frameView)
             return false;
-        return frameView->frame().eventHandler().handleWheelEvent(wheelEvent, processingSteps);
+        return frameView->frame().eventHandler().handleWheelEvent(wheelEvent, processingSteps).wasHandled();
     }
 
     if ([currentNSEvent() type] != NSEventTypeScrollWheel || m_sendingEventToSubview)
@@ -734,7 +734,7 @@ bool EventHandler::passMouseReleaseEventToSubframe(MouseEventWithHitTestResults&
 PlatformMouseEvent EventHandler::currentPlatformMouseEvent() const
 {
     NSView *windowView = nil;
-    if (CheckedPtr page = m_frame->page())
+    if (RefPtr page = m_frame->page())
         windowView = page->chrome().platformPageClient();
     return PlatformEventFactory::createPlatformMouseEvent(currentNSEvent(), correspondingPressureEvent(), windowView);
 }
@@ -746,7 +746,7 @@ bool EventHandler::eventActivatedView(const PlatformMouseEvent& event) const
 
 bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
 {
-    CheckedPtr page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return false;
 
@@ -861,7 +861,7 @@ static WeakPtr<ScrollableArea> scrollableAreaForContainerNode(ContainerNode& con
 
 void EventHandler::determineWheelEventTarget(const PlatformWheelEvent& wheelEvent, RefPtr<Element>& wheelEventTarget, WeakPtr<ScrollableArea>& scrollableArea, bool& isOverWidget)
 {
-    CheckedPtr page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return;
 
@@ -1038,7 +1038,7 @@ static IntSize autoscrollAdjustmentFactorForScreenBoundaries(const IntPoint& scr
 
 IntPoint EventHandler::targetPositionInWindowForSelectionAutoscroll() const
 {
-    CheckedPtr page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return valueOrDefault(m_lastKnownMousePosition);
 

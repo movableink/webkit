@@ -35,7 +35,7 @@ public:
 
     inline SVGMarkerElement& markerElement() const;
 
-    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) override;
+    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
 
     void draw(PaintInfo&, const AffineTransform&);
@@ -76,4 +76,7 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_LEGACY_RENDER_SVG_RESOURCE(LegacyRenderSVGResourceMarker, MarkerResourceType)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LegacyRenderSVGResourceMarker)
+static bool isType(const WebCore::RenderObject& renderer) { return renderer.isLegacyRenderSVGResourceMarker(); }
+static bool isType(const WebCore::LegacyRenderSVGResource& resource) { return resource.resourceType() == WebCore::MarkerResourceType; }
+SPECIALIZE_TYPE_TRAITS_END()

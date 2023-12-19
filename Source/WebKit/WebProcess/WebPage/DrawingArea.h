@@ -124,7 +124,7 @@ public:
     virtual WebCore::GraphicsLayerFactory* graphicsLayerFactory() { return nullptr; }
     virtual void setRootCompositingLayer(WebCore::Frame&, WebCore::GraphicsLayer*) = 0;
     virtual void addRootFrame(WebCore::FrameIdentifier) { }
-    // FIXME: Add a corresponding removeRootFrame. <rdar://116202445>
+    virtual void removeRootFrame(WebCore::FrameIdentifier) { }
 
     // Cause a rendering update to happen as soon as possible.
     virtual void triggerRenderingUpdate() = 0;
@@ -162,6 +162,10 @@ public:
     virtual void didChangeViewportAttributes(WebCore::ViewportAttributes&&) = 0;
     virtual void deviceOrPageScaleFactorChanged() = 0;
     virtual bool enterAcceleratedCompositingModeIfNeeded() = 0;
+#endif
+
+#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
+    virtual void preferredBufferFormatsDidChange() { }
 #endif
 
     virtual void adoptLayersFromDrawingArea(DrawingArea&) { }
@@ -222,7 +226,7 @@ private:
 
 #if PLATFORM(COCOA) || PLATFORM(GTK)
     virtual void adjustTransientZoom(double scale, WebCore::FloatPoint origin) { }
-    virtual void commitTransientZoom(double scale, WebCore::FloatPoint origin) { }
+    virtual void commitTransientZoom(double scale, WebCore::FloatPoint origin, CompletionHandler<void()>&&) { }
 #endif
 
     bool m_hasRemovedMessageReceiver { false };

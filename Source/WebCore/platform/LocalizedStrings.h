@@ -40,7 +40,11 @@
 namespace WebCore {
 
     class IntSize;
-    
+
+#if PLATFORM(COCOA)
+    WEBCORE_EXPORT String truncatedStringForMenuItem(const String&);
+#endif
+
     String inputElementAltText();
     String resetButtonDefaultLabel();
     String searchableIndexIntroduction();
@@ -69,8 +73,8 @@ namespace WebCore {
     String contextMenuItemTagOpenImageInNewWindow();
     String contextMenuItemTagDownloadImageToDisk();
     String contextMenuItemTagCopyImageToClipboard();
-#if PLATFORM(QT) || PLATFORM(GTK)
-    String contextMenuItemTagCopyImageUrlToClipboard();
+#if PLATFORM(GTK) || PLATFORM(QT)
+    String contextMenuItemTagCopyImageURLToClipboard();
 #endif
     String contextMenuItemTagOpenFrameInNewWindow();
     String contextMenuItemTagCopy();
@@ -184,15 +188,20 @@ namespace WebCore {
 #if HAVE(TRANSLATION_UI_SERVICES)
     String contextMenuItemTagTranslate(const String& selectedString);
 #endif
+#if ENABLE(UNIFIED_PDF)
+    WEBCORE_EXPORT String contextMenuItemPDFOpenWithPreview();
+#endif
+#if ENABLE(PDFJS) || ENABLE(UNIFIED_PDF)
+    WEBCORE_EXPORT String contextMenuItemPDFSinglePage();
+    WEBCORE_EXPORT String contextMenuItemPDFSinglePageContinuous();
+    WEBCORE_EXPORT String contextMenuItemPDFTwoPages();
+    WEBCORE_EXPORT String contextMenuItemPDFTwoPagesContinuous();
+#endif
 #if ENABLE(PDFJS)
     String contextMenuItemPDFAutoSize();
     String contextMenuItemPDFZoomIn();
     String contextMenuItemPDFZoomOut();
     String contextMenuItemPDFActualSize();
-    String contextMenuItemPDFSinglePage();
-    String contextMenuItemPDFSinglePageContinuous();
-    String contextMenuItemPDFTwoPages();
-    String contextMenuItemPDFTwoPagesContinuous();
     String contextMenuItemPDFNextPage();
     String contextMenuItemPDFPreviousPage();
 #endif

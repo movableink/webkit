@@ -32,6 +32,7 @@
 #include <wtf/Algorithms.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Function.h>
+#include <wtf/HashSet.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
@@ -91,6 +92,9 @@ public:
     ShouldDispatchWhenWaitingForSyncReply shouldDispatchMessageWhenWaitingForSyncReply() const;
     bool isAllowedWhenWaitingForSyncReply() const { return messageAllowedWhenWaitingForSyncReply(messageName()) || m_isAllowedWhenWaitingForSyncReplyOverride; }
     bool isAllowedWhenWaitingForUnboundedSyncReply() const { return messageAllowedWhenWaitingForUnboundedSyncReply(messageName()); }
+#if ENABLE(IPC_TESTING_API)
+    bool hasSyncMessageDeserializationFailure() const;
+#endif
     bool shouldUseFullySynchronousModeForTesting() const;
     bool shouldMaintainOrderingWithAsyncMessages() const;
     void setIsAllowedWhenWaitingForSyncReplyOverride(bool value) { m_isAllowedWhenWaitingForSyncReplyOverride = value; }
@@ -167,14 +171,14 @@ public:
 
 #ifdef __OBJC__
     template<typename T, typename = IsObjCObject<T>>
-    std::optional<RetainPtr<T>> decodeWithAllowedClasses(const Vector<ClassStructPtr>& allowedClasses = { getClass<T>() })
+    std::optional<RetainPtr<T>> decodeWithAllowedClasses(const HashSet<ClassStructPtr>& allowedClasses = { getClass<T>() })
     {
         m_allowedClasses = allowedClasses;
         return IPC::decodeRequiringAllowedClasses<T>(*this);
     }
 
     template<typename T, typename = IsNotObjCObject<T>>
-    std::optional<T> decodeWithAllowedClasses(const Vector<ClassStructPtr>& allowedClasses)
+    std::optional<T> decodeWithAllowedClasses(const HashSet<ClassStructPtr>& allowedClasses)
     {
         m_allowedClasses = allowedClasses;
         return decode<T>();
@@ -182,7 +186,7 @@ public:
 #endif
 
 #if PLATFORM(COCOA)
-    const Vector<ClassStructPtr>& allowedClasses() const { return m_allowedClasses; }
+    HashSet<ClassStructPtr>& allowedClasses() { return m_allowedClasses; }
 #endif
 
     std::optional<Attachment> takeLastAttachment();
@@ -204,7 +208,7 @@ private:
     ImportanceAssertion m_importanceAssertion;
 #endif
 #if PLATFORM(COCOA)
-    Vector<ClassStructPtr> m_allowedClasses;
+    HashSet<ClassStructPtr> m_allowedClasses;
 #endif
 
     uint64_t m_destinationID;

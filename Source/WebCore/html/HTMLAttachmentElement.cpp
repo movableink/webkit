@@ -366,7 +366,7 @@ DOMRectReadOnly* HTMLAttachmentElement::saveButtonClientRect() const
         return nullptr;
 
     bool unusedIsReplaced;
-    auto rect = m_saveButton->pixelSnappedRenderRect(&unusedIsReplaced);
+    auto rect = m_saveButton->pixelSnappedAbsoluteBoundingRect(&unusedIsReplaced);
     m_saveButtonClientRect = DOMRectReadOnly::create(rect.x(), rect.y(), rect.width(), rect.height());
     return m_saveButtonClientRect.get();
 }
@@ -488,10 +488,7 @@ void HTMLAttachmentElement::setUniqueIdentifier(const String& uniqueIdentifier)
 
 RefPtr<HTMLImageElement> HTMLAttachmentElement::enclosingImageElement() const
 {
-    if (auto hostElement = shadowHost(); is<HTMLImageElement>(hostElement))
-        return downcast<HTMLImageElement>(hostElement);
-
-    return { };
+    return dynamicDowncast<HTMLImageElement>(shadowHost());
 }
 
 void HTMLAttachmentElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)

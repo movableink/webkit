@@ -85,17 +85,17 @@ inline bool RenderElement::shouldApplyLayoutContainment() const
 
 inline bool RenderElement::shouldApplyLayoutOrPaintContainment(bool containsAccordingToStyle) const
 {
-    return containsAccordingToStyle && (!isInline() || isAtomicInlineLevelBox()) && !isRenderRubyText() && (!isTablePart() || isRenderBlockFlow());
+    return containsAccordingToStyle && (!isInline() || isAtomicInlineLevelBox()) && !(isRenderRubyText() || style().display() == DisplayType::RubyAnnotation) && (!isTablePart() || isRenderBlockFlow());
 }
 
 inline bool RenderElement::shouldApplyLayoutOrPaintContainment() const
 {
-    return shouldApplyLayoutOrPaintContainment(style().containsLayoutOrPaint() || style().contentVisibility() != ContentVisibility::Visible);
+    return shouldApplyLayoutOrPaintContainment(style().containsLayoutOrPaint()) || shouldApplySizeOrStyleContainment(style().contentVisibility() != ContentVisibility::Visible);
 }
 
 inline bool RenderElement::shouldApplyPaintContainment() const
 {
-    return shouldApplyLayoutOrPaintContainment(style().containsPaint() || style().contentVisibility() != ContentVisibility::Visible);
+    return shouldApplyLayoutOrPaintContainment(style().containsPaint()) || shouldApplySizeOrStyleContainment(style().contentVisibility() != ContentVisibility::Visible);
 }
 
 inline bool RenderElement::shouldApplySizeContainment() const
@@ -108,9 +108,10 @@ inline bool RenderElement::shouldApplySizeOrInlineSizeContainment() const
     return isSkippedContentRoot() || shouldApplySizeOrStyleContainment(style().containsSizeOrInlineSize());
 }
 
+// FIXME: try to avoid duplication with isSkippedContentRoot.
 inline bool RenderElement::shouldApplySizeOrStyleContainment(bool containsAccordingToStyle) const
 {
-    return containsAccordingToStyle && (!isInline() || isAtomicInlineLevelBox()) && !isRenderRubyText() && (!isTablePart() || isRenderTableCaption()) && !isRenderTable();
+    return containsAccordingToStyle && (!isInline() || isAtomicInlineLevelBox()) && !(isRenderRubyText() || style().display() == DisplayType::RubyAnnotation) && (!isTablePart() || isRenderTableCaption()) && !isRenderTable();
 }
 
 inline bool RenderElement::shouldApplyStyleContainment() const

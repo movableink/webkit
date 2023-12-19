@@ -640,7 +640,7 @@ angle::Result GLES1Renderer::compileShader(Context *context,
     ANGLE_CHECK(context, shaderObject, "Missing shader object", GL_INVALID_OPERATION);
 
     shaderObject->setSource(context, 1, &src, nullptr);
-    shaderObject->compile(context);
+    shaderObject->compile(context, angle::JobResultExpectancy::Immediate);
 
     *shaderOut = shader;
 
@@ -680,10 +680,10 @@ angle::Result GLES1Renderer::linkProgram(Context *context,
     {
         GLint index             = it.first;
         const std::string &name = it.second;
-        programObject->bindAttributeLocation(index, name.c_str());
+        programObject->bindAttributeLocation(context, index, name.c_str());
     }
 
-    ANGLE_TRY(programObject->link(context));
+    ANGLE_TRY(programObject->link(context, angle::JobResultExpectancy::Immediate));
     programObject->resolveLink(context);
 
     ANGLE_TRY(glState->setProgram(context, programObject));

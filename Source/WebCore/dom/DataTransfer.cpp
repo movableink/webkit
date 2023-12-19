@@ -66,7 +66,7 @@ public:
 
 private:
     void imageChanged(CachedImage*, const IntRect*) override;
-    CheckedRef<DataTransfer> m_dataTransfer;
+    WeakRef<DataTransfer> m_dataTransfer;
 };
 
 #endif
@@ -220,13 +220,13 @@ String DataTransfer::readStringFromPasteboard(Document& document, const String& 
     }
 
     if (!is<StaticPasteboard>(*m_pasteboard) && lowercaseType == "text/uri-list"_s) {
-        return readURLsFromPasteboardAsString(document.checkedPage().get(), *m_pasteboard, [] (auto&) {
+        return readURLsFromPasteboardAsString(document.protectedPage().get(), *m_pasteboard, [] (auto&) {
             return true;
         });
     }
 
     auto string = m_pasteboard->readString(lowercaseType);
-    if (CheckedPtr page = document.page())
+    if (RefPtr page = document.page())
         return page->applyLinkDecorationFiltering(string, LinkDecorationFilteringTrigger::Paste);
 
     return string;
@@ -279,7 +279,7 @@ void DataTransfer::setDataFromItemList(Document& document, const String& type, c
         sanitizedData = data; // Nothing to sanitize.
 
     if (type == "text/uri-list"_s || type == textPlainContentTypeAtom()) {
-        if (CheckedPtr page = document.page())
+        if (RefPtr page = document.page())
             sanitizedData = page->applyLinkDecorationFiltering(sanitizedData, LinkDecorationFilteringTrigger::Copy);
     }
 
@@ -539,8 +539,8 @@ void DataTransfer::setDragImage(Element& element, int x, int y)
         return;
 
     CachedResourceHandle<CachedImage> image;
-    if (is<HTMLImageElement>(element) && !element.isConnected())
-        image = downcast<HTMLImageElement>(element).cachedImage();
+    if (auto* imageElement = dynamicDowncast<HTMLImageElement>(element); imageElement && !imageElement->isConnected())
+        image = imageElement->cachedImage();
 
     m_dragLocation = IntPoint(x, y);
 

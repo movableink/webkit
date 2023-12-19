@@ -29,6 +29,7 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "UIKitSPI.h"
+#import <WebCore/FloatPoint.h>
 
 #if HAVE(UI_SCROLL_VIEW_TRANSFERS_SCROLLING_TO_PARENT)
 
@@ -48,6 +49,10 @@
 @end
 
 #endif // HAVE(UI_SCROLL_VIEW_APIS_ADDED_IN_RADAR_112474145)
+
+@interface UIScrollView (Staging_116693098)
+- (void)showScrollIndicatorsForContentOffsetChanges:(void (NS_NOESCAPE ^)(void))changes;
+@end
 
 @implementation UIScrollView (WebKitInternal)
 
@@ -183,6 +188,33 @@ static constexpr auto epsilonForComputingScrollability = 0.0001;
     self._allowsParentToBeginVertically = value;
     ALLOW_DEPRECATED_DECLARATIONS_END
 }
+
+static UIAxis axesForDelta(WebCore::FloatSize delta)
+{
+    UIAxis axes = UIAxisNeither;
+    if (delta.width())
+        axes |= UIAxisHorizontal;
+    if (delta.height())
+        axes |= UIAxisVertical;
+    return axes;
+}
+
+- (void)_wk_setContentOffsetAndShowScrollIndicators:(CGPoint)offset animated:(BOOL)animated
+{
+    static bool hasAPI = [UIScrollView instancesRespondToSelector:@selector(showScrollIndicatorsForContentOffsetChanges:)];
+    if (hasAPI) {
+        [self showScrollIndicatorsForContentOffsetChanges:[animated, offset, self] {
+            [self setContentOffset:offset animated:animated];
+        }];
+        return;
+    }
+
+    [self setContentOffset:offset animated:animated];
+
+    auto axes = axesForDelta(WebCore::FloatPoint(self.contentOffset) - WebCore::FloatPoint(offset));
+    [self _flashScrollIndicatorsForAxes:axes persistingPreviousFlashes:YES];
+}
+
 @end
 
 @implementation UIView (WebKitInternal)
@@ -198,12 +230,33 @@ static constexpr auto epsilonForComputingScrollability = 0.0001;
 
 @end
 
+@implementation UIGestureRecognizer (WebKitInternal)
+
+- (BOOL)_wk_isTextInteractionLoupeGesture
+{
+    return [self.name isEqualToString:@"UITextInteractionNameInteractiveRefinement"];
+}
+
+- (BOOL)_wk_isTextInteractionTapGesture
+{
+    return [self.name isEqualToString:@"UITextInteractionNameSingleTap"];
+}
+
+@end
+
 namespace WebKit {
 
 RetainPtr<UIAlertController> createUIAlertController(NSString *title, NSString *message)
 {
-    auto *alert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
-    [alert _setTitleMaximumLineCount:0]; // No limit, we need to make sure the title doesn't get truncated.
+    // FIXME: revisit this once UIKit bug is resolved (see also rdar://101140177).
+    auto alertTitle = adoptNS([[NSMutableAttributedString alloc] initWithString:title]);
+    [alertTitle addAttribute:NSFontAttributeName value:[UIFont preferredFontForTextStyle:UIFontTextStyleHeadline] range:NSMakeRange(0, title.length)];
+
+    auto alert = adoptNS([[UIAlertController alloc] init]);
+    alert.get().attributedTitle = alertTitle.get();
+    alert.get().title = title;
+    alert.get().message = message;
+    alert.get().preferredStyle = UIAlertControllerStyleAlert;
     return alert;
 }
 

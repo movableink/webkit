@@ -600,18 +600,6 @@ String InputType::validationMessage() const
     return emptyString();
 }
 
-void InputType::handleClickEvent(MouseEvent&)
-{
-}
-
-void InputType::handleMouseDownEvent(MouseEvent&)
-{
-}
-
-void InputType::handleDOMActivateEvent(Event&)
-{
-}
-
 bool InputType::allowsShowPickerAcrossFrames()
 {
     return false;
@@ -638,19 +626,14 @@ void InputType::handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&)
 {
 }
 
-#if ENABLE(TOUCH_EVENTS)
-void InputType::handleTouchEvent(TouchEvent&)
-{
-}
-#endif
-
 void InputType::forwardEvent(Event&)
 {
 }
 
 bool InputType::shouldSubmitImplicitly(Event& event)
 {
-    return is<KeyboardEvent>(event) && event.type() == eventNames().keypressEvent && downcast<KeyboardEvent>(event).charCode() == '\r';
+    auto* keyboardEvent = dynamicDowncast<KeyboardEvent>(event);
+    return keyboardEvent && event.type() == eventNames().keypressEvent && keyboardEvent->charCode() == '\r';
 }
 
 RenderPtr<RenderElement> InputType::createInputRenderer(RenderStyle&& style)
@@ -851,14 +834,6 @@ void InputType::setValue(const String& sanitizedValue, bool valueChanged, TextFi
         cache->valueChanged(element());
 }
 
-void InputType::willDispatchClick(InputElementClickState&)
-{
-}
-
-void InputType::didDispatchClick(Event&, const InputElementClickState&)
-{
-}
-
 String InputType::localizeValue(const String& proposedValue) const
 {
     return proposedValue;
@@ -963,13 +938,6 @@ void InputType::subtreeHasChanged()
     ASSERT_NOT_REACHED();
 }
 
-#if ENABLE(TOUCH_EVENTS)
-bool InputType::hasTouchEventHandler() const
-{
-    return false;
-}
-#endif
-
 String InputType::defaultToolTip() const
 {
     return String();
@@ -988,11 +956,6 @@ std::optional<Decimal> InputType::findClosestTickMarkValue(const Decimal&)
 #endif
 
 bool InputType::matchesIndeterminatePseudoClass() const
-{
-    return false;
-}
-
-bool InputType::shouldAppearIndeterminate() const
 {
     return false;
 }
@@ -1229,5 +1192,19 @@ void InputType::createShadowSubtreeIfNeeded()
     m_hasCreatedShadowSubtree = true;
     createShadowSubtree();
 }
+
+#if ENABLE(TOUCH_EVENTS)
+bool InputType::hasTouchEventHandler() const
+{
+#if ENABLE(IOS_TOUCH_EVENTS)
+    if (isSwitch())
+        return true;
+#else
+    if (isRangeControl())
+        return true;
+#endif
+    return false;
+}
+#endif
 
 } // namespace WebCore

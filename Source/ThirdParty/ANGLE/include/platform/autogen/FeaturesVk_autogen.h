@@ -139,13 +139,6 @@ struct FeaturesVk : FeatureSetBase
         &members,
     };
 
-    FeatureInfo supportsFilteringPrecision = {
-        "supportsFilteringPrecision",
-        FeatureCategory::VulkanFeatures,
-        "VkDevice supports the VK_GOOGLE_sampler_filtering_precision extension",
-        &members,
-    };
-
     FeatureInfo supportsExternalFenceCapabilities = {
         "supportsExternalFenceCapabilities",
         FeatureCategory::VulkanFeatures,
@@ -1103,6 +1096,13 @@ struct FeaturesVk : FeatureSetBase
         &members, "https://anglebug.com/7369"
     };
 
+    FeatureInfo disablePipelineCacheLoadForTesting = {
+        "disablePipelineCacheLoadForTesting",
+        FeatureCategory::VulkanWorkarounds,
+        "Disable loading the pipeline cache from the blob cache for testing",
+        &members, "https://anglebug.com/8417"
+    };
+
     FeatureInfo syncMonolithicPipelinesToBlobCache = {
         "syncMonolithicPipelinesToBlobCache",
         FeatureCategory::VulkanWorkarounds,
@@ -1305,6 +1305,20 @@ struct FeaturesVk : FeatureSetBase
         FeatureCategory::VulkanFeatures,
         "VkDevice supports the VK_ANDROID_external_format_resolve extension",
         &members,
+    };
+
+    FeatureInfo forceAHBLayerCountToOne = {
+        "forceAHBLayerCountToOne",
+        FeatureCategory::VulkanWorkarounds,
+        "Force AHB's layerCount to 1",
+        &members, "http://b/239181279"
+    };
+
+    FeatureInfo disableSeparateShaderObjects = {
+        "disableSeparateShaderObjects",
+        FeatureCategory::VulkanAppWorkarounds,
+        "Disable GL_EXT_separate_shader_objects and cap core ES version to 3.0",
+        &members, "https://issuetracker.google.com/309028728"
     };
 
 };

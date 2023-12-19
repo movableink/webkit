@@ -148,12 +148,14 @@ void LibWebRTCSocketFactory::forSocketInGroup(ScriptExecutionContextIdentifier c
     }
 }
 
-rtc::AsyncResolverInterface* LibWebRTCSocketFactory::createAsyncResolver()
+std::unique_ptr<LibWebRTCResolver> LibWebRTCSocketFactory::createAsyncDnsResolver()
 {
     auto resolver = makeUnique<LibWebRTCResolver>();
-    auto* resolverPointer = resolver.get();
-    m_resolvers.set(resolverPointer->identifier(), WTFMove(resolver));
-    return resolverPointer;
+
+    ASSERT(!m_resolvers.contains(resolver->identifier()));
+    m_resolvers.add(resolver->identifier(), resolver.get());
+
+    return resolver;
 }
 
 } // namespace WebKit

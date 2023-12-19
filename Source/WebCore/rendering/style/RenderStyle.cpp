@@ -46,6 +46,7 @@
 #include "RenderStyleSetters.h"
 #include "RenderTheme.h"
 #include "ScaleTransformOperation.h"
+#include "ScrollAxis.h"
 #include "ScrollbarGutter.h"
 #include "ShadowData.h"
 #include "StyleBuilderConverter.h"
@@ -105,11 +106,13 @@ struct SameSizeAsRenderStyle {
 
 static_assert(sizeof(RenderStyle) == sizeof(SameSizeAsRenderStyle), "RenderStyle should stay small");
 
-static_assert(PublicPseudoIDBits == static_cast<int>(PseudoId::FirstInternalPseudoId) - static_cast<int>(PseudoId::FirstPublicPseudoId));
+static_assert(PublicPseudoIDBits == enumToUnderlyingType(PseudoId::FirstInternalPseudoId) - enumToUnderlyingType(PseudoId::FirstPublicPseudoId));
 
 static_assert(!(static_cast<unsigned>(maxTextDecorationLineValue) >> TextDecorationLineBits));
 
 static_assert(!(static_cast<unsigned>(maxTextTransformValue) >> TextTransformBits));
+
+static_assert(!((enumToUnderlyingType(PseudoId::AfterLastInternalPseudoId) - 1) >> StyleTypeBits));
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PseudoStyleCache);
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(RenderStyle);
@@ -210,15 +213,12 @@ RenderStyle::RenderStyle(CreateDefaultStyleTag)
     m_nonInheritedFlags.originalDisplay = static_cast<unsigned>(initialDisplay());
     m_nonInheritedFlags.overflowX = static_cast<unsigned>(initialOverflowX());
     m_nonInheritedFlags.overflowY = static_cast<unsigned>(initialOverflowY());
-    m_nonInheritedFlags.verticalAlign = static_cast<unsigned>(initialVerticalAlign());
     m_nonInheritedFlags.clear = static_cast<unsigned>(initialClear());
     m_nonInheritedFlags.position = static_cast<unsigned>(initialPosition());
     m_nonInheritedFlags.unicodeBidi = static_cast<unsigned>(initialUnicodeBidi());
     m_nonInheritedFlags.floating = static_cast<unsigned>(initialFloating());
     m_nonInheritedFlags.tableLayout = static_cast<unsigned>(initialTableLayout());
     m_nonInheritedFlags.textDecorationLine = initialTextDecorationLine().toRaw();
-    m_nonInheritedFlags.hasExplicitlySetDirection = false;
-    m_nonInheritedFlags.hasExplicitlySetWritingMode = false;
     m_nonInheritedFlags.usesViewportUnits = false;
     m_nonInheritedFlags.usesContainerUnits = false;
     m_nonInheritedFlags.hasExplicitlyInheritedProperties = false;
@@ -393,18 +393,12 @@ inline void RenderStyle::NonInheritedFlags::copyNonInheritedFrom(const NonInheri
     originalDisplay = other.originalDisplay;
     overflowX = other.overflowX;
     overflowY = other.overflowY;
-    verticalAlign = other.verticalAlign;
     clear = other.clear;
     position = other.position;
     unicodeBidi = other.unicodeBidi;
     floating = other.floating;
     tableLayout = other.tableLayout;
     textDecorationLine = other.textDecorationLine;
-    hasExplicitlySetDirection = other.hasExplicitlySetDirection;
-    hasExplicitlySetWritingMode = other.hasExplicitlySetWritingMode;
-#if ENABLE(DARK_MODE_CSS)
-    hasExplicitlySetColorScheme = other.hasExplicitlySetColorScheme;
-#endif
     usesViewportUnits = other.usesViewportUnits;
     usesContainerUnits = other.usesContainerUnits;
     hasExplicitlyInheritedProperties = other.hasExplicitlyInheritedProperties;
@@ -851,10 +845,8 @@ static bool rareDataChangeRequiresLayout(const StyleRareNonInheritedData& first,
     }
 #endif
 
-#if ENABLE(FILTERS_LEVEL_2)
     if (first.hasBackdropFilters() != second.hasBackdropFilters())
         return true;
-#endif
 
     if (first.inputSecurity != second.inputSecurity)
         return true;
@@ -962,7 +954,8 @@ bool RenderStyle::changeRequiresLayout(const RenderStyle& other, OptionSet<Style
                 || m_nonInheritedData->boxData->maxHeight() != other.m_nonInheritedData->boxData->maxHeight())
                 return true;
 
-            if (m_nonInheritedData->boxData->verticalAlign() != other.m_nonInheritedData->boxData->verticalAlign())
+            if (m_nonInheritedData->boxData->verticalAlign() != other.m_nonInheritedData->boxData->verticalAlign()
+                || m_nonInheritedData->boxData->verticalAlignLength() != other.m_nonInheritedData->boxData->verticalAlignLength())
                 return true;
 
             if (m_nonInheritedData->boxData->boxSizing() != other.m_nonInheritedData->boxData->boxSizing())
@@ -1035,8 +1028,7 @@ bool RenderStyle::changeRequiresLayout(const RenderStyle& other, OptionSet<Style
         || m_inheritedFlags.rtlOrdering != other.m_inheritedFlags.rtlOrdering
         || m_nonInheritedFlags.position != other.m_nonInheritedFlags.position
         || m_nonInheritedFlags.floating != other.m_nonInheritedFlags.floating
-        || m_nonInheritedFlags.originalDisplay != other.m_nonInheritedFlags.originalDisplay
-        || m_nonInheritedFlags.verticalAlign != other.m_nonInheritedFlags.verticalAlign)
+        || m_nonInheritedFlags.originalDisplay != other.m_nonInheritedFlags.originalDisplay)
         return true;
 
     if (static_cast<DisplayType>(m_nonInheritedFlags.effectiveDisplay) >= DisplayType::Table) {
@@ -1146,14 +1138,10 @@ static bool rareDataChangeRequiresLayerRepaint(const StyleRareNonInheritedData& 
         return true;
 #endif
 
-#if ENABLE(FILTERS_LEVEL_2)
     if (first.backdropFilter != second.backdropFilter) {
         changedContextSensitiveProperties.add(StyleDifferenceContextSensitiveProperty::Filter);
         // Don't return true; keep looking for another change.
     }
-#else
-    UNUSED_PARAM(changedContextSensitiveProperties);
-#endif
 
     // FIXME: In SVG this needs to trigger a layout.
     if (first.maskBorder != second.maskBorder)
@@ -1545,8 +1533,6 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
             changingProperties.m_properties.set(CSSPropertyOverflowX);
         if (first.overflowY != second.overflowY)
             changingProperties.m_properties.set(CSSPropertyOverflowY);
-        if (first.verticalAlign != second.verticalAlign)
-            changingProperties.m_properties.set(CSSPropertyVerticalAlign);
         if (first.clear != second.clear)
             changingProperties.m_properties.set(CSSPropertyClear);
         if (first.position != second.position)
@@ -1562,9 +1548,6 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
         // effectiveDisplay
         // originalDisplay
         // unicodeBidi
-        // hasExplicitlySetDirection
-        // hasExplicitlySetWritingMode
-        // hasExplicitlySetColorScheme
         // usesViewportUnits
         // usesContainerUnits
         // hasExplicitlyInheritedProperties
@@ -1605,16 +1588,14 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
             changingProperties.m_properties.set(CSSPropertyMinHeight);
         if (first.maxHeight() != second.maxHeight())
             changingProperties.m_properties.set(CSSPropertyMaxHeight);
-        if (first.verticalAlign() != second.verticalAlign())
+        if (first.verticalAlign() != second.verticalAlign() || first.verticalAlignLength() != second.verticalAlignLength())
             changingProperties.m_properties.set(CSSPropertyVerticalAlign);
         if (first.specifiedZIndex() != second.specifiedZIndex() || first.hasAutoSpecifiedZIndex() != second.hasAutoSpecifiedZIndex())
             changingProperties.m_properties.set(CSSPropertyZIndex);
         if (first.boxSizing() != second.boxSizing())
             changingProperties.m_properties.set(CSSPropertyBoxSizing);
-#if ENABLE(CSS_BOX_DECORATION_BREAK)
         if (first.boxDecorationBreak() != second.boxDecorationBreak())
             changingProperties.m_properties.set(CSSPropertyWebkitBoxDecorationBreak);
-#endif
         // Non animated styles are followings.
         // usedZIndex
         // hasAutoUsedZIndex
@@ -1810,6 +1791,9 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
         // Non animated styles are followings.
         // deprecatedFlexibleBox
         // hasAttrContent
+        // hasExplicitlySetColorScheme
+        // hasExplicitlySetDirection
+        // hasExplicitlySetWritingMode
         // appearance
         // effectiveAppearance
         // userDrag
@@ -1826,10 +1810,8 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
             changingProperties.m_properties.set(CSSPropertyPerspectiveOriginY);
         if (first.initialLetter != second.initialLetter)
             changingProperties.m_properties.set(CSSPropertyWebkitInitialLetter);
-#if ENABLE(FILTERS_LEVEL_2)
         if (first.backdropFilter != second.backdropFilter)
             changingProperties.m_properties.set(CSSPropertyWebkitBackdropFilter);
-#endif
         if (first.grid != second.grid) {
             changingProperties.m_properties.set(CSSPropertyGridAutoColumns);
             changingProperties.m_properties.set(CSSPropertyGridAutoFlow);
@@ -1928,6 +1910,8 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
             changingProperties.m_properties.set(CSSPropertyOverflowAnchor);
         if (first.hasClip != second.hasClip)
             changingProperties.m_properties.set(CSSPropertyClip);
+        if (first.viewTransitionName != second.viewTransitionName)
+            changingProperties.m_properties.set(CSSPropertyViewTransitionName);
 
         // Non animated styles are followings.
         // customProperties
@@ -2730,14 +2714,14 @@ float RenderStyle::computedFontSize() const
     return fontDescription().computedSize();
 }
 
-const Length& RenderStyle::wordSpacing() const
+const Length& RenderStyle::computedLetterSpacing() const
 {
-    return m_rareInheritedData->wordSpacing;
+    return fontCascade().computedLetterSpacing();
 }
 
-float RenderStyle::letterSpacing() const
+const Length& RenderStyle::computedWordSpacing() const
 {
-    return m_inheritedData->fontCascade.letterSpacing();
+    return fontCascade().computedWordSpacing();
 }
 
 TextSpacingTrim RenderStyle::textSpacingTrim() const
@@ -2752,10 +2736,10 @@ TextAutospace RenderStyle::textAutospace() const
 
 bool RenderStyle::setFontDescription(FontCascadeDescription&& description)
 {
-    if (m_inheritedData->fontCascade.fontDescription() == description)
+    if (fontDescription() == description)
         return false;
     auto& cascade = m_inheritedData.access().fontCascade;
-    cascade = { WTFMove(description), cascade.letterSpacing(), cascade.wordSpacing() };
+    cascade = { WTFMove(description), cascade };
     return true;
 }
 
@@ -2828,40 +2812,32 @@ WhiteSpace RenderStyle::whiteSpace() const
     return WhiteSpace::Normal;
 }
 
-void RenderStyle::setWordSpacing(Length&& value)
+void RenderStyle::setLetterSpacing(Length&& spacing)
 {
-    float fontWordSpacing;
-    switch (value.type()) {
-    case LengthType::Auto:
-        fontWordSpacing = 0;
-        break;
-    case LengthType::Percent:
-        fontWordSpacing = value.percent() * fontCascade().widthOfSpaceString() / 100;
-        break;
-    case LengthType::Fixed:
-        fontWordSpacing = value.value();
-        break;
-    case LengthType::Calculated:
-        fontWordSpacing = value.nonNanCalculatedValue(static_cast<float>(maxValueForCssLength));
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-        fontWordSpacing = 0;
-        break;
+    if (fontCascade().computedLetterSpacing() == spacing)
+        return;
+
+    bool oldShouldDisableLigatures = fontDescription().shouldDisableLigaturesForSpacing();
+    m_inheritedData.access().fontCascade.setLetterSpacing(WTFMove(spacing));
+
+    // Switching letter-spacing between zero and non-zero requires updating fonts (to enable/disable ligatures)
+    bool shouldDisableLigatures = fontCascade().letterSpacing();
+    if (oldShouldDisableLigatures != shouldDisableLigatures) {
+        auto* selector = fontCascade().fontSelector();
+        auto description = fontDescription();
+        description.setShouldDisableLigaturesForSpacing(fontCascade().letterSpacing());
+        setFontDescription(WTFMove(description));
+        fontCascade().update(selector);
     }
-    m_inheritedData.access().fontCascade.setWordSpacing(fontWordSpacing);
-    m_rareInheritedData.access().wordSpacing = WTFMove(value);
 }
 
-void RenderStyle::setLetterSpacing(float letterSpacing)
+void RenderStyle::setWordSpacing(Length&& spacing)
 {
-    auto selector = fontCascade().fontSelector();
-    auto description = fontDescription();
-    description.setShouldDisableLigaturesForSpacing(letterSpacing);
-    setFontDescription(WTFMove(description));
-    fontCascade().update(selector);
+    ASSERT(LengthType::Normal != spacing); // should have converted to 0 already
+    if (fontCascade().computedWordSpacing() == spacing)
+        return;
 
-    setLetterSpacingWithoutUpdatingFontDescription(letterSpacing);
+    m_inheritedData.access().fontCascade.setWordSpacing(WTFMove(spacing));
 }
 
 void RenderStyle::setTextSpacingTrim(TextSpacingTrim value)
@@ -2882,11 +2858,6 @@ void RenderStyle::setTextAutospace(TextAutospace value)
 
     setFontDescription(WTFMove(description));
     fontCascade().update(selector);
-}
-
-void RenderStyle::setLetterSpacingWithoutUpdatingFontDescription(float letterSpacing)
-{
-    m_inheritedData.access().fontCascade.setLetterSpacing(letterSpacing);
 }
 
 void RenderStyle::setFontSize(float size)
@@ -2967,48 +2938,6 @@ void RenderStyle::setFontPalette(FontPalette value)
 
     setFontDescription(WTFMove(description));
     fontCascade().update(selector);
-}
-
-LayoutBoxExtent RenderStyle::shadowExtent(const ShadowData* shadow)
-{
-    LayoutUnit top;
-    LayoutUnit right;
-    LayoutUnit bottom;
-    LayoutUnit left;
-
-    for ( ; shadow; shadow = shadow->next()) {
-        if (shadow->style() == ShadowStyle::Inset)
-            continue;
-
-        auto extentAndSpread = shadow->paintingExtent() + LayoutUnit(shadow->spread().value());
-        top = std::min<LayoutUnit>(top, LayoutUnit(shadow->y().value()) - extentAndSpread);
-        right = std::max<LayoutUnit>(right, LayoutUnit(shadow->x().value()) + extentAndSpread);
-        bottom = std::max<LayoutUnit>(bottom, LayoutUnit(shadow->y().value()) + extentAndSpread);
-        left = std::min<LayoutUnit>(left, LayoutUnit(shadow->x().value()) - extentAndSpread);
-    }
-    
-    return { top, right, bottom, left };
-}
-
-LayoutBoxExtent RenderStyle::shadowInsetExtent(const ShadowData* shadow)
-{
-    LayoutUnit top;
-    LayoutUnit right;
-    LayoutUnit bottom;
-    LayoutUnit left;
-
-    for ( ; shadow; shadow = shadow->next()) {
-        if (shadow->style() == ShadowStyle::Normal)
-            continue;
-
-        auto extentAndSpread = shadow->paintingExtent() + LayoutUnit(shadow->spread().value());
-        top = std::max<LayoutUnit>(top, LayoutUnit(shadow->y().value()) + extentAndSpread);
-        right = std::min<LayoutUnit>(right, LayoutUnit(shadow->x().value()) - extentAndSpread);
-        bottom = std::min<LayoutUnit>(bottom, LayoutUnit(shadow->y().value()) - extentAndSpread);
-        left = std::max<LayoutUnit>(left, LayoutUnit(shadow->x().value()) + extentAndSpread);
-    }
-
-    return { top, right, bottom, left };
 }
 
 void RenderStyle::getShadowHorizontalExtent(const ShadowData* shadow, LayoutUnit &left, LayoutUnit &right)
@@ -3464,41 +3393,41 @@ void RenderStyle::setBorderImageVerticalRule(NinePieceImageRule rule)
 
 void RenderStyle::setColumnStylesFromPaginationMode(PaginationMode paginationMode)
 {
-    if (paginationMode == Unpaginated)
+    if (paginationMode == Pagination::Mode::Unpaginated)
         return;
     
     setColumnFill(ColumnFill::Auto);
     
     switch (paginationMode) {
-    case LeftToRightPaginated:
+    case Pagination::Mode::LeftToRightPaginated:
         setColumnAxis(ColumnAxis::Horizontal);
         if (isHorizontalWritingMode())
             setColumnProgression(isLeftToRightDirection() ? ColumnProgression::Normal : ColumnProgression::Reverse);
         else
             setColumnProgression(isFlippedBlocksWritingMode() ? ColumnProgression::Reverse : ColumnProgression::Normal);
         break;
-    case RightToLeftPaginated:
+    case Pagination::Mode::RightToLeftPaginated:
         setColumnAxis(ColumnAxis::Horizontal);
         if (isHorizontalWritingMode())
             setColumnProgression(isLeftToRightDirection() ? ColumnProgression::Reverse : ColumnProgression::Normal);
         else
             setColumnProgression(isFlippedBlocksWritingMode() ? ColumnProgression::Normal : ColumnProgression::Reverse);
         break;
-    case TopToBottomPaginated:
+    case Pagination::Mode::TopToBottomPaginated:
         setColumnAxis(ColumnAxis::Vertical);
         if (isHorizontalWritingMode())
             setColumnProgression(isFlippedBlocksWritingMode() ? ColumnProgression::Reverse : ColumnProgression::Normal);
         else
             setColumnProgression(isLeftToRightDirection() ? ColumnProgression::Normal : ColumnProgression::Reverse);
         break;
-    case BottomToTopPaginated:
+    case Pagination::Mode::BottomToTopPaginated:
         setColumnAxis(ColumnAxis::Vertical);
         if (isHorizontalWritingMode())
             setColumnProgression(isFlippedBlocksWritingMode() ? ColumnProgression::Normal : ColumnProgression::Reverse);
         else
             setColumnProgression(isLeftToRightDirection() ? ColumnProgression::Reverse : ColumnProgression::Normal);
         break;
-    case Unpaginated:
+    case Pagination::Mode::Unpaginated:
         ASSERT_NOT_REACHED();
         break;
     }
@@ -3881,6 +3810,46 @@ UserSelect RenderStyle::effectiveUserSelect() const
         return value == UserSelect::None ? UserSelect::Text : value;
 
     return value;
+}
+
+void RenderStyle::adjustScrollTimelines()
+{
+    auto& names = scrollTimelineNames();
+    if (!names.size() && !scrollTimelines().size())
+        return;
+
+    auto& timelines = m_nonInheritedData.access().rareData.access().scrollTimelines;
+    timelines.clear();
+
+    auto& axes = scrollTimelineAxes();
+    auto numberOfAxes = axes.size();
+
+    for (size_t i = 0; i < names.size(); ++i) {
+        auto axis = numberOfAxes ? axes[i % numberOfAxes] : ScrollAxis::Block;
+        timelines.append(ScrollTimeline::create(names[i], axis));
+    }
+}
+
+void RenderStyle::adjustViewTimelines()
+{
+    auto& names = viewTimelineNames();
+    if (!names.size() && !viewTimelines().size())
+        return;
+
+    auto& timelines = m_nonInheritedData.access().rareData.access().viewTimelines;
+    timelines.clear();
+
+    auto& axes = viewTimelineAxes();
+    auto numberOfAxes = axes.size();
+
+    auto& insets = viewTimelineInsets();
+    auto numberOfInsets = insets.size();
+
+    for (size_t i = 0; i < names.size(); ++i) {
+        auto axis = numberOfAxes ? axes[i % numberOfAxes] : ScrollAxis::Block;
+        auto inset = numberOfInsets ? insets[i % numberOfInsets] : ViewTimelineInsets();
+        timelines.append(ViewTimeline::create(names[i], axis, WTFMove(inset)));
+    }
 }
 
 } // namespace WebCore

@@ -44,8 +44,8 @@ Ref<MockMediaSourcePrivate> MockMediaSourcePrivate::create(MockMediaPlayerMediaS
 }
 
 MockMediaSourcePrivate::MockMediaSourcePrivate(MockMediaPlayerMediaSource& parent, MediaSourcePrivateClient& client)
-    : m_player(parent)
-    , m_client(client)
+    : MediaSourcePrivate(client)
+    , m_player(parent)
 #if !RELEASE_LOG_DISABLED
     , m_logger(m_player.mediaPlayerLogger())
     , m_logIdentifier(m_player.mediaPlayerLogIdentifier())
@@ -68,42 +68,30 @@ MediaSourcePrivate::AddStatus MockMediaSourcePrivate::addSourceBuffer(const Cont
 
     m_sourceBuffers.append(MockSourceBufferPrivate::create(*this));
     outPrivate = m_sourceBuffers.last();
+    outPrivate->setMediaSourceDuration(duration());
 
     return AddStatus::Ok;
 }
 
-MediaTime MockMediaSourcePrivate::duration() const
-{
-    if (m_client)
-        return m_client->duration();
-    return MediaTime::invalidTime();
-}
-
-const PlatformTimeRanges& MockMediaSourcePrivate::buffered()
-{
-    if (m_client)
-        return m_client->buffered();
-    return PlatformTimeRanges::emptyRanges();
-}
-
 void MockMediaSourcePrivate::durationChanged(const MediaTime& duration)
 {
+    MediaSourcePrivate::durationChanged(duration);
     m_player.updateDuration(duration);
 }
 
 void MockMediaSourcePrivate::markEndOfStream(EndOfStreamStatus status)
 {
-    if (status == EosNoError)
+    if (status == EndOfStreamStatus::NoError)
         m_player.setNetworkState(MediaPlayer::NetworkState::Loaded);
     MediaSourcePrivate::markEndOfStream(status);
 }
 
-MediaPlayer::ReadyState MockMediaSourcePrivate::readyState() const
+MediaPlayer::ReadyState MockMediaSourcePrivate::mediaPlayerReadyState() const
 {
     return m_player.readyState();
 }
 
-void MockMediaSourcePrivate::setReadyState(MediaPlayer::ReadyState readyState)
+void MockMediaSourcePrivate::setMediaPlayerReadyState(MediaPlayer::ReadyState readyState)
 {
     m_player.setReadyState(readyState);
 }
@@ -111,22 +99,6 @@ void MockMediaSourcePrivate::setReadyState(MediaPlayer::ReadyState readyState)
 void MockMediaSourcePrivate::notifyActiveSourceBuffersChanged()
 {
     m_player.notifyActiveSourceBuffersChanged();
-}
-
-void MockMediaSourcePrivate::waitForTarget(const SeekTarget& target, CompletionHandler<void(const MediaTime&)>&& completionHandler)
-{
-    if (m_client)
-        m_client->waitForTarget(target, WTFMove(completionHandler));
-    else
-        completionHandler(MediaTime::invalidTime());
-}
-
-void MockMediaSourcePrivate::seekToTime(const MediaTime& time, CompletionHandler<void()>&& completionHandler)
-{
-    if (m_client)
-        m_client->seekToTime(time, WTFMove(completionHandler));
-    else
-        completionHandler();
 }
 
 MediaTime MockMediaSourcePrivate::currentMediaTime() const

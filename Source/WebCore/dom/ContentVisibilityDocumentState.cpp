@@ -115,7 +115,10 @@ bool ContentVisibilityDocumentState::checkRelevancyOfContentVisibilityElement(El
     };
     if (relevancyToCheck.contains(ContentRelevancy::OnScreen)) {
         auto viewportProximityIterator = m_elementViewportProximities.find(target);
-        setRelevancyValue(ContentRelevancy::OnScreen, viewportProximityIterator->value == ViewportProximity::Near);
+        auto viewportProximity = ViewportProximity::Far;
+        if (viewportProximityIterator != m_elementViewportProximities.end())
+            viewportProximity = viewportProximityIterator->value;
+        setRelevancyValue(ContentRelevancy::OnScreen, viewportProximity == ViewportProximity::Near);
     }
 
     if (relevancyToCheck.contains(ContentRelevancy::Focused))
@@ -147,11 +150,13 @@ bool ContentVisibilityDocumentState::checkRelevancyOfContentVisibilityElement(El
     auto isSkippedContent = target.isRelevantToUser() ? IsSkippedContent::No : IsSkippedContent::Yes;
     target.invalidateStyle();
     updateAnimations(target, wasSkippedContent, isSkippedContent);
-    if (target.isConnected()) {
-        ContentVisibilityAutoStateChangeEvent::Init init;
-        init.skipped = isSkippedContent == IsSkippedContent::Yes;
-        target.queueTaskToDispatchEvent(TaskSource::DOMManipulation, ContentVisibilityAutoStateChangeEvent::create(eventNames().contentvisibilityautostatechangeEvent, init));
-    }
+    target.queueTaskKeepingThisNodeAlive(TaskSource::DOMManipulation, [&, isSkippedContent] {
+        if (target.isConnected()) {
+            ContentVisibilityAutoStateChangeEvent::Init init;
+            init.skipped = isSkippedContent == IsSkippedContent::Yes;
+            target.dispatchEvent(ContentVisibilityAutoStateChangeEvent::create(eventNames().contentvisibilityautostatechangeEvent, init));
+        }
+    });
     return true;
 }
 

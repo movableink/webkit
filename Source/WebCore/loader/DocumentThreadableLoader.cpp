@@ -38,7 +38,7 @@
 #include "CrossOriginAccessControl.h"
 #include "CrossOriginPreflightChecker.h"
 #include "CrossOriginPreflightResultCache.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
@@ -109,10 +109,8 @@ bool DocumentThreadableLoader::shouldSetHTTPHeadersToKeep() const
     if (m_options.mode == FetchOptions::Mode::Cors && shouldPerformSecurityChecks())
         return true;
 
-#if ENABLE(SERVICE_WORKER)
     if (m_options.serviceWorkersMode == ServiceWorkersMode::All && m_async)
         return m_options.serviceWorkerRegistrationIdentifier || m_document->activeServiceWorker();
-#endif
 
     return false;
 }
@@ -159,7 +157,7 @@ DocumentThreadableLoader::DocumentThreadableLoader(Document& document, Threadabl
         m_options.httpHeadersToKeep = httpHeadersToKeepFromCleaning(request.httpHeaderFields());
 
     bool shouldDisableCORS = document.isRunningUserScripts() && LegacySchemeRegistry::isUserExtensionScheme(request.url().protocol());
-    if (CheckedPtr page = document.page())
+    if (RefPtr page = document.page())
         shouldDisableCORS |= page->shouldDisableCorsForRequestTo(request.url());
 
     if (shouldDisableCORS) {
@@ -212,7 +210,6 @@ void DocumentThreadableLoader::makeCrossOriginAccessRequest(ResourceRequest&& re
         if (checkURLSchemeAsCORSEnabled(request.url()))
             makeSimpleCrossOriginAccessRequest(WTFMove(request));
     } else {
-#if ENABLE(SERVICE_WORKER)
         if (m_options.serviceWorkersMode == ServiceWorkersMode::All && m_async) {
             if (m_options.serviceWorkerRegistrationIdentifier || document().activeServiceWorker()) {
                 ASSERT(!m_bypassingPreflightForServiceWorkerRequest);
@@ -222,12 +219,11 @@ void DocumentThreadableLoader::makeCrossOriginAccessRequest(ResourceRequest&& re
                 return;
             }
         }
-#endif
         if (!needsPreflightQuirk && !checkURLSchemeAsCORSEnabled(request.url()))
             return;
 
         m_simpleRequest = false;
-        if (CheckedPtr page = document().page(); page && CrossOriginPreflightResultCache::singleton().canSkipPreflight(page->sessionID(), securityOrigin().toString(), request.url(), m_options.storedCredentialsPolicy, request.httpMethod(), request.httpHeaderFields()))
+        if (RefPtr page = document().page(); page && CrossOriginPreflightResultCache::singleton().canSkipPreflight(page->sessionID(), securityOrigin().toString(), request.url(), m_options.storedCredentialsPolicy, request.httpMethod(), request.httpHeaderFields()))
             preflightSuccess(WTFMove(request));
         else
             makeCrossOriginAccessRequestWithPreflight(WTFMove(request));
@@ -380,10 +376,8 @@ void DocumentThreadableLoader::redirectReceived(CachedResource& resource, Resour
         m_originalHeaders->remove(HTTPHeaderName::Authorization);
     request.setHTTPHeaderFields(*m_originalHeaders);
 
-#if ENABLE(SERVICE_WORKER)
     if (redirectResponse.source() != ResourceResponse::Source::ServiceWorker && redirectResponse.source() != ResourceResponse::Source::MemoryCache)
         m_options.serviceWorkersMode = ServiceWorkersMode::None;
-#endif
     makeCrossOriginAccessRequest(ResourceRequest(request));
     completionHandler(WTFMove(request));
 }
@@ -420,7 +414,6 @@ void DocumentThreadableLoader::didReceiveResponse(ResourceLoaderIdentifier ident
     ASSERT(m_client);
     ASSERT(response.type() != ResourceResponse::Type::Error);
 
-#if ENABLE(SERVICE_WORKER)
     // https://fetch.spec.whatwg.org/commit-snapshots/6257e220d70f560a037e46f1b4206325400db8dc/#main-fetch step 17.
     if (response.source() == ResourceResponse::Source::ServiceWorker && response.url() != m_resource->url()) {
         if (!isResponseAllowedByContentSecurityPolicy(response)) {
@@ -428,7 +421,6 @@ void DocumentThreadableLoader::didReceiveResponse(ResourceLoaderIdentifier ident
             return;
         }
     }
-#endif
 
     InspectorInstrumentation::didReceiveThreadableLoaderResponse(*this, identifier);
 
@@ -530,7 +522,6 @@ void DocumentThreadableLoader::didFinishLoading(ResourceLoaderIdentifier identif
 void DocumentThreadableLoader::didFail(ResourceLoaderIdentifier, const ResourceError& error)
 {
     ASSERT(m_client);
-#if ENABLE(SERVICE_WORKER)
     if (m_bypassingPreflightForServiceWorkerRequest && error.isCancellation()) {
         clearResource();
 
@@ -540,7 +531,6 @@ void DocumentThreadableLoader::didFail(ResourceLoaderIdentifier, const ResourceE
         m_bypassingPreflightForServiceWorkerRequest = std::nullopt;
         return;
     }
-#endif
 
     if (m_shouldLogError == ShouldLogError::Yes)
         logError(protectedDocument(), error, m_options.initiatorType);

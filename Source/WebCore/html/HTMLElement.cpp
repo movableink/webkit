@@ -38,6 +38,7 @@
 #include "CustomElementReactionQueue.h"
 #include "DOMTokenList.h"
 #include "DocumentFragment.h"
+#include "Editor.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "ElementInternals.h"
@@ -231,7 +232,8 @@ static bool elementAffectsDirectionality(const HTMLElement& element)
 
 static bool elementAffectsDirectionality(const Node& node)
 {
-    return is<HTMLElement>(node) && elementAffectsDirectionality(downcast<HTMLElement>(node));
+    auto* htmlElement = dynamicDowncast<HTMLElement>(node);
+    return htmlElement && elementAffectsDirectionality(*htmlElement);
 }
 
 void HTMLElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
@@ -361,7 +363,10 @@ Node::Editability HTMLElement::editabilityFromContentEditableAttr(const Node& no
     if (pageIsEditable == PageIsEditable::Yes)
         return Editability::CanEditRichly;
 
-    if (auto* startElement = is<Element>(node) ? &downcast<Element>(node) : node.parentElement()) {
+    auto* startElement = dynamicDowncast<Element>(node);
+    if (!startElement)
+        startElement = node.parentElement();
+    if (startElement) {
         for (auto& element : lineageOfType<HTMLElement>(*startElement)) {
             switch (contentEditableType(element)) {
             case ContentEditableType::True:
@@ -410,7 +415,7 @@ void HTMLElement::attributeChanged(const QualifiedName& name, const AtomString& 
         return;
     case AttributeNames::inputmodeAttr:
         if (Ref document = this->document(); this == document->focusedElement()) {
-            if (CheckedPtr page = document->page())
+            if (RefPtr page = document->page())
                 page->chrome().client().focusedElementDidChangeInputMode(*this, canonicalInputMode());
         }
         return;
@@ -418,6 +423,19 @@ void HTMLElement::attributeChanged(const QualifiedName& name, const AtomString& 
         if (document().settings().popoverAttributeEnabled() && !document().quirks().shouldDisablePopoverAttributeQuirk())
             popoverAttributeChanged(newValue);
         return;
+    case AttributeNames::spellcheckAttr: {
+        if (!document().hasEverHadSelectionInsideTextFormControl())
+            return;
+
+        bool oldEffectiveAttributeValue = !equalLettersIgnoringASCIICase(oldValue, "false"_s);
+        bool newEffectiveAttributeValue = !equalLettersIgnoringASCIICase(newValue, "false"_s);
+
+        if (oldEffectiveAttributeValue == newEffectiveAttributeValue)
+            return;
+
+        effectiveSpellcheckAttributeChanged(newEffectiveAttributeValue);
+        return;
+    }
     default:
         break;
     }
@@ -433,7 +451,8 @@ Node::InsertedIntoAncestorResult HTMLElement::insertedIntoAncestor(InsertionType
     hideNonce();
 
     if (RefPtr parent = parentOrShadowHostElement(); parent && UNLIKELY(parent->usesEffectiveTextDirection())) {
-        if (!elementAffectsDirectionality(*this) && !(is<HTMLInputElement>(*this) && downcast<HTMLInputElement>(*this).isTelephoneField())) {
+        auto* input = dynamicDowncast<HTMLInputElement>(*this);
+        if (!elementAffectsDirectionality(*this) && !(input && input->isTelephoneField())) {
             setUsesEffectiveTextDirection(true);
             setEffectiveTextDirection(parent->effectiveTextDirection());
         }
@@ -567,14 +586,13 @@ ExceptionOr<void> HTMLElement::setOuterText(String&& text)
     if (replaceResult.hasException())
         return replaceResult.releaseException();
 
-    RefPtr node = next ? next->previousSibling() : nullptr;
-    if (is<Text>(node)) {
-        auto result = mergeWithNextTextNode(downcast<Text>(*node));
+    if (RefPtr node = dynamicDowncast<Text>(next ? next->previousSibling() : nullptr)) {
+        auto result = mergeWithNextTextNode(*node);
         if (result.hasException())
             return result.releaseException();
     }
-    if (is<Text>(prev)) {
-        auto result = mergeWithNextTextNode(downcast<Text>(*prev));
+    if (RefPtr previousText = dynamicDowncast<Text>(WTFMove(prev))) {
+        auto result = mergeWithNextTextNode(*previousText);
         if (result.hasException())
             return result.releaseException();
     }
@@ -710,6 +728,27 @@ void HTMLElement::setSpellcheck(bool enable)
     setAttributeWithoutSynchronization(spellcheckAttr, enable ? trueAtom() : falseAtom());
 }
 
+void HTMLElement::effectiveSpellcheckAttributeChanged(bool newValue)
+{
+    for (auto it = descendantsOfType<HTMLElement>(*this).begin(); it;) {
+        Ref element = *it;
+
+        auto& value = element->attributeWithoutSynchronization(HTMLNames::spellcheckAttr);
+        if (!value.isNull()) {
+            it.traverseNextSkippingChildren();
+            continue;
+        }
+
+        if (element->isTextFormControlElement()) {
+            element->effectiveSpellcheckAttributeChanged(newValue);
+            it.traverseNextSkippingChildren();
+            continue;
+        }
+
+        it.traverseNext();
+    }
+}
+
 void HTMLElement::click()
 {
     simulateClick(*this, nullptr, SendNoEvents, DoNotShowPressedLook, SimulatedClickSource::Bindings);
@@ -838,16 +877,17 @@ auto HTMLElement::computeDirectionalityFromText() const -> TextDirectionWithStro
     RefPtr node = firstChild();
     while (node) {
         // Skip bdi, script, style and text form controls.
+        auto* element = dynamicDowncast<Element>(*node);
         if (node->hasTagName(bdiTag) || node->hasTagName(scriptTag) || node->hasTagName(styleTag)
-            || (is<Element>(*node) && downcast<Element>(*node).isTextField())) {
+            || (element && element->isTextField())) {
             node = NodeTraversal::nextSkippingChildren(*node, this);
             continue;
         }
 
         // Skip elements with valid dir attribute
-        if (is<Element>(*node)) {
-            if (isValidDirValue(downcast<Element>(*node).attributeWithoutSynchronization(dirAttr))) {
-                node = NodeTraversal::nextSkippingChildren(*node, this);
+        if (element) {
+            if (isValidDirValue(element->attributeWithoutSynchronization(dirAttr))) {
+                node = NodeTraversal::nextSkippingChildren(*element, this);
                 continue;
             }
         }
@@ -874,7 +914,7 @@ void HTMLElement::dirAttributeChanged(const AtomString& value)
         isValid = false;
         if (selfOrPrecedingNodesAffectDirAuto() && (!parent || !parent->selfOrPrecedingNodesAffectDirAuto()) && !is<HTMLBDIElement>(*this))
             setHasDirAutoFlagRecursively(this, false);
-        if (parent && parent->usesEffectiveTextDirection() && !(is<HTMLInputElement>(*this) && downcast<HTMLInputElement>(*this).isTelephoneField()))
+        if (auto* input = dynamicDowncast<HTMLInputElement>(*this); parent && parent->usesEffectiveTextDirection() && !(input && input->isTelephoneField()))
             updateEffectiveDirectionality(parent->effectiveTextDirection());
         else
             updateEffectiveDirectionality(std::nullopt);
@@ -895,10 +935,10 @@ void HTMLElement::dirAttributeChanged(const AtomString& value)
         break;
     }
 
-    if (is<HTMLElement>(parent) && parent->selfOrPrecedingNodesAffectDirAuto()) {
+    if (auto* htmlParent = dynamicDowncast<HTMLElement>(parent.get()); htmlParent && htmlParent->selfOrPrecedingNodesAffectDirAuto()) {
         if (isValid && direction != TextDirectionDirective::Auto)
             setHasDirAutoFlagRecursively(this, false);
-        downcast<HTMLElement>(*parent).adjustDirectionalityIfNeededAfterChildAttributeChanged(this);
+        htmlParent->adjustDirectionalityIfNeededAfterChildAttributeChanged(this);
     }
 }
 
@@ -1115,14 +1155,16 @@ bool HTMLElement::willRespondToMouseClickEventsWithEditability(Editability edita
 
 bool HTMLElement::canBeActuallyDisabled() const
 {
-    return is<HTMLButtonElement>(*this)
+    if (is<HTMLButtonElement>(*this)
         || is<HTMLInputElement>(*this)
         || is<HTMLSelectElement>(*this)
         || is<HTMLTextAreaElement>(*this)
         || is<HTMLOptGroupElement>(*this)
         || is<HTMLOptionElement>(*this)
-        || is<HTMLFieldSetElement>(*this)
-        || (is<HTMLMaybeFormAssociatedCustomElement>(*this) && downcast<HTMLMaybeFormAssociatedCustomElement>(*this).isFormAssociatedCustomElement());
+        || is<HTMLFieldSetElement>(*this))
+        return true;
+    auto* customElement = dynamicDowncast<HTMLMaybeFormAssociatedCustomElement>(*this);
+    return customElement && customElement->isFormAssociatedCustomElement();
 }
 
 bool HTMLElement::isActuallyDisabled() const
@@ -1244,7 +1286,7 @@ static ExceptionOr<bool> checkPopoverValidity(HTMLElement& element, PopoverVisib
     if (expectedDocument && &element.document() != expectedDocument)
         return Exception { ExceptionCode::InvalidStateError, "Invalid when the document changes while showing or hiding a popover element"_s };
 
-    if (is<HTMLDialogElement>(element) && downcast<HTMLDialogElement>(element).isModal())
+    if (auto* dialog = dynamicDowncast<HTMLDialogElement>(element); dialog && dialog->isModal())
         return Exception { ExceptionCode::InvalidStateError, "Element is a modal <dialog> element"_s };
 
 #if ENABLE(FULLSCREEN_API)

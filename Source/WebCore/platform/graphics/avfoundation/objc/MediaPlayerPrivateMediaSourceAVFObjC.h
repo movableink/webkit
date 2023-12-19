@@ -36,6 +36,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/MediaTime.h>
+#include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
 OBJC_CLASS AVAsset;
@@ -62,12 +63,16 @@ class WebCoreDecompressionSession;
 
 class MediaPlayerPrivateMediaSourceAVFObjC
     : public CanMakeWeakPtr<MediaPlayerPrivateMediaSourceAVFObjC>
+    , public RefCounted<MediaPlayerPrivateMediaSourceAVFObjC>
     , public MediaPlayerPrivateInterface
     , private LoggerHelper
 {
 public:
     explicit MediaPlayerPrivateMediaSourceAVFObjC(MediaPlayer*);
     virtual ~MediaPlayerPrivateMediaSourceAVFObjC();
+
+    void ref() final { RefCounted::ref(); }
+    void deref() final { RefCounted::deref(); }
 
     static void registerMediaEngine(MediaEngineRegistrar);
 
@@ -296,6 +301,7 @@ private:
 
     void setShouldDisableHDR(bool) final;
     void playerContentBoxRectChanged(const LayoutRect&) final;
+    void setShouldMaintainAspectRatio(bool) final;
 
     friend class MediaSourcePrivateAVFObjC;
 
@@ -361,6 +367,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     std::optional<VideoFrameMetadata> m_videoFrameMetadata;
     uint64_t m_lastConvertedSampleCount { 0 };
     ProcessIdentity m_resourceOwner;
+    bool m_shouldMaintainAspectRatio { true };
 };
 
 String convertEnumerationToString(MediaPlayerPrivateMediaSourceAVFObjC::SeekState);

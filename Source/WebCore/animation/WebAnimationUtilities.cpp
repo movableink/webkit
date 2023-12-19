@@ -32,8 +32,10 @@
 #include "AnimationPlaybackEvent.h"
 #include "CSSAnimation.h"
 #include "CSSAnimationEvent.h"
+#include "CSSParserContext.h"
 #include "CSSPropertyNames.h"
 #include "CSSSelector.h"
+#include "CSSSelectorParserContext.h"
 #include "CSSTransition.h"
 #include "CSSTransitionEvent.h"
 #include "DeclarativeAnimation.h"
@@ -59,7 +61,7 @@ static bool compareDeclarativeAnimationOwningElementPositionsInDocumentTreeOrder
     //     - any other pseudo-elements not mentioned specifically in this list, sorted in ascending order by the Unicode codepoints that make up each selector
     //     - ::after
     //     - element children
-    enum SortingIndex : uint8_t { NotPseudo, Marker, Before, FirstLetter, FirstLine, Highlight, Scrollbar, Selection, After, Other };
+    enum SortingIndex : uint8_t { NotPseudo, Marker, Before, FirstLetter, FirstLine, GrammarError, Highlight, Scrollbar, Selection, SpellingError, After, Other };
     auto sortingIndex = [](PseudoId pseudoId) -> SortingIndex {
         switch (pseudoId) {
         case PseudoId::None:
@@ -72,12 +74,16 @@ static bool compareDeclarativeAnimationOwningElementPositionsInDocumentTreeOrder
             return FirstLetter;
         case PseudoId::FirstLine:
             return FirstLine;
+        case PseudoId::GrammarError:
+            return GrammarError;
         case PseudoId::Highlight:
             return Highlight;
         case PseudoId::Scrollbar:
             return Scrollbar;
         case PseudoId::Selection:
             return Selection;
+        case PseudoId::SpellingError:
+            return SpellingError;
         case PseudoId::After:
             return After;
         default:
@@ -285,10 +291,17 @@ String pseudoIdAsString(PseudoId pseudoId)
     static NeverDestroyed<const String> before(MAKE_STATIC_STRING_IMPL("::before"));
     static NeverDestroyed<const String> firstLetter(MAKE_STATIC_STRING_IMPL("::first-letter"));
     static NeverDestroyed<const String> firstLine(MAKE_STATIC_STRING_IMPL("::first-line"));
+    static NeverDestroyed<const String> grammarError(MAKE_STATIC_STRING_IMPL("::grammar-error"));
     static NeverDestroyed<const String> highlight(MAKE_STATIC_STRING_IMPL("::highlight"));
     static NeverDestroyed<const String> marker(MAKE_STATIC_STRING_IMPL("::marker"));
     static NeverDestroyed<const String> selection(MAKE_STATIC_STRING_IMPL("::selection"));
-    static NeverDestroyed<const String> scrollbar(MAKE_STATIC_STRING_IMPL("::scrollbar"));
+    static NeverDestroyed<const String> scrollbar(MAKE_STATIC_STRING_IMPL("::-webkit-scrollbar"));
+    static NeverDestroyed<const String> spellingError(MAKE_STATIC_STRING_IMPL("::spelling-error"));
+    static NeverDestroyed<const String> viewTransition(MAKE_STATIC_STRING_IMPL("::view-transition"));
+    static NeverDestroyed<const String> viewTransitionGroup(MAKE_STATIC_STRING_IMPL("::view-transition-group"));
+    static NeverDestroyed<const String> viewTransitionImagePair(MAKE_STATIC_STRING_IMPL("::view-transition-image-pair"));
+    static NeverDestroyed<const String> viewTransitionOld(MAKE_STATIC_STRING_IMPL("::view-transition-old"));
+    static NeverDestroyed<const String> viewTransitionNew(MAKE_STATIC_STRING_IMPL("::view-transition-new"));
     switch (pseudoId) {
     case PseudoId::After:
         return after;
@@ -298,6 +311,8 @@ String pseudoIdAsString(PseudoId pseudoId)
         return firstLetter;
     case PseudoId::FirstLine:
         return firstLine;
+    case PseudoId::GrammarError:
+        return grammarError;
     case PseudoId::Highlight:
         return highlight;
     case PseudoId::Marker:
@@ -306,6 +321,18 @@ String pseudoIdAsString(PseudoId pseudoId)
         return selection;
     case PseudoId::Scrollbar:
         return scrollbar;
+    case PseudoId::SpellingError:
+        return spellingError;
+    case PseudoId::ViewTransition:
+        return viewTransition;
+    case PseudoId::ViewTransitionGroup:
+        return viewTransitionGroup;
+    case PseudoId::ViewTransitionImagePair:
+        return viewTransitionImagePair;
+    case PseudoId::ViewTransitionOld:
+        return viewTransitionOld;
+    case PseudoId::ViewTransitionNew:
+        return viewTransitionNew;
     default:
         return emptyString();
     }
@@ -327,7 +354,10 @@ ExceptionOr<PseudoId> pseudoIdFromString(const String& pseudoElement)
     auto isLegacy = pseudoElement == ":before"_s || pseudoElement == ":after"_s || pseudoElement == ":first-letter"_s || pseudoElement == ":first-line"_s;
     if (!isLegacy && !pseudoElement.startsWith("::"_s))
         return Exception { ExceptionCode::SyntaxError };
-    auto pseudoType = CSSSelector::parsePseudoElementType(StringView(pseudoElement).substring(isLegacy ? 1 : 2));
+
+    // FIXME: This parserContext should include a document to get the proper settings.
+    CSSSelectorParserContext parserContext { CSSParserContext { HTMLStandardMode } };
+    auto pseudoType = CSSSelector::parsePseudoElementType(StringView(pseudoElement).substring(isLegacy ? 1 : 2), parserContext);
     if (pseudoType == CSSSelector::PseudoElementUnknown || pseudoType == CSSSelector::PseudoElementWebKitCustom)
         return Exception { ExceptionCode::SyntaxError };
     return CSSSelector::pseudoId(pseudoType);

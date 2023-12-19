@@ -1318,7 +1318,7 @@ void QueryBufferPointerv(const Buffer *buffer, GLenum pname, void **params)
     }
 }
 
-void QueryProgramiv(Context *context, const Program *program, GLenum pname, GLint *params)
+void QueryProgramiv(Context *context, Program *program, GLenum pname, GLint *params)
 {
     ASSERT(program != nullptr || pname == GL_COMPLETION_STATUS_KHR);
 
@@ -1904,7 +1904,7 @@ void SetFramebufferParameteri(const Context *context,
     }
 }
 
-void SetProgramParameteri(Program *program, GLenum pname, GLint value)
+void SetProgramParameteri(const Context *context, Program *program, GLenum pname, GLint value)
 {
     ASSERT(program);
 
@@ -1914,7 +1914,7 @@ void SetProgramParameteri(Program *program, GLenum pname, GLint value)
             program->setBinaryRetrievableHint(ConvertToBool(value));
             break;
         case GL_PROGRAM_SEPARABLE:
-            program->setSeparable(ConvertToBool(value));
+            program->setSeparable(context, ConvertToBool(value));
             break;
         default:
             UNREACHABLE();
@@ -3179,7 +3179,6 @@ bool GetQueryParameterInfo(const State &glState,
         case GL_PACK_ALIGNMENT:
         case GL_UNPACK_ALIGNMENT:
         case GL_GENERATE_MIPMAP_HINT:
-        case GL_TEXTURE_FILTERING_HINT_CHROMIUM:
         case GL_RED_BITS:
         case GL_GREEN_BITS:
         case GL_BLUE_BITS:

@@ -29,6 +29,7 @@
 #include "ControlPart.h"
 #include "DashArray.h"
 #include "DestinationColorSpace.h"
+#include "DisplayListItem.h"
 #include "FloatRect.h"
 #include "FontCascade.h"
 #include "GraphicsContextState.h"
@@ -62,6 +63,7 @@ class VideoFrame;
 
 namespace DisplayList {
 class DrawNativeImage;
+class ResourceHeap;
 }
 
 class GraphicsContext {
@@ -250,8 +252,6 @@ public:
 
     WEBCORE_EXPORT void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { });
 
-    virtual bool needsCachedNativeImageInvalidationWorkaround(RenderingMode) { return true; }
-
     WEBCORE_EXPORT virtual void drawSystemImage(SystemImage&, const FloatRect&);
 
     WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatPoint& destination, ImagePaintingOptions = { ImageOrientation::Orientation::FromImage });
@@ -317,6 +317,9 @@ public:
     bool mustUseShadowBlur() const;
 #endif
     
+    // DisplayList
+    WEBCORE_EXPORT virtual void drawDisplayListItems(const Vector<DisplayList::Item>&, const DisplayList::ResourceHeap&, const FloatPoint& destination);
+
     // Transparency Layers
 
     WEBCORE_EXPORT virtual void beginTransparencyLayer(float opacity);

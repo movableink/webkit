@@ -28,14 +28,17 @@
 
 #if ENABLE(PDF_PLUGIN)
 
+#import "MessageSenderInlines.h"
 #import "PluginView.h"
 #import "WebEventConversion.h"
 #import "WebFrame.h"
 #import "WebPage.h"
+#import "WebPageProxyMessages.h"
 #import <CoreFoundation/CoreFoundation.h>
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/ArchiveResource.h>
 #import <WebCore/Chrome.h>
+#import <WebCore/Cursor.h>
 #import <WebCore/Document.h>
 #import <WebCore/FocusController.h>
 #import <WebCore/Frame.h>
@@ -84,6 +87,7 @@ PluginInfo PDFPluginBase::pluginInfo()
 
 PDFPluginBase::PDFPluginBase(HTMLPlugInElement& element)
     : m_frame(*WebFrame::fromCoreFrame(*element.document().frame()))
+    , m_element(element)
     , m_identifier(PDFPluginIdentifier::generate())
 {
 }
@@ -144,6 +148,11 @@ bool PDFPluginBase::isFullFramePlugin() const
     if (!is<PluginDocument>(document))
         return false;
     return downcast<PluginDocument>(*document).pluginWidget() == m_view;
+}
+
+bool PDFPluginBase::handlesPageScaleFactor() const
+{
+    return m_frame && m_frame->isMainFrame() && isFullFramePlugin();
 }
 
 bool PDFPluginBase::isLocked() const
@@ -240,7 +249,7 @@ void PDFPluginBase::visibilityDidChange(bool visible)
     if (!m_frame || !hudEnabled())
         return;
     if (visible)
-        m_frame->page()->createPDFHUD(*this, frameForHUD());
+        m_frame->page()->createPDFHUD(*this, frameForHUDInRootViewCoordinates());
     else
         m_frame->page()->removePDFHUD(*this);
 #endif
@@ -259,39 +268,19 @@ IntPoint PDFPluginBase::convertFromRootViewToPlugin(const IntPoint& point) const
     return m_rootViewToPluginTransform.mapPoint(point);
 }
 
-IntPoint PDFPluginBase::convertFromPluginToPDFView(const IntPoint& point) const
+IntRect PDFPluginBase::convertFromRootViewToPlugin(const IntRect& rect) const
 {
-    return IntPoint(point.x(), size().height() - point.y());
+    return m_rootViewToPluginTransform.mapRect(rect);
 }
 
-IntPoint PDFPluginBase::convertFromPDFViewToRootView(const IntPoint& point) const
+IntPoint PDFPluginBase::convertFromPluginToRootView(const IntPoint& point) const
 {
-    IntPoint pointInPluginCoordinates(point.x(), size().height() - point.y());
-    return valueOrDefault(m_rootViewToPluginTransform.inverse()).mapPoint(pointInPluginCoordinates);
+    return m_rootViewToPluginTransform.inverse()->mapPoint(point);
 }
 
-IntRect PDFPluginBase::convertFromPDFViewToRootView(const IntRect& rect) const
+IntRect PDFPluginBase::convertFromPluginToRootView(const IntRect& rect) const
 {
-    IntRect rectInPluginCoordinates(rect.x(), rect.y(), rect.width(), rect.height());
-    return valueOrDefault(m_rootViewToPluginTransform.inverse()).mapRect(rectInPluginCoordinates);
-}
-
-IntPoint PDFPluginBase::convertFromRootViewToPDFView(const IntPoint& point) const
-{
-    IntPoint pointInPluginCoordinates = m_rootViewToPluginTransform.mapPoint(point);
-    return IntPoint(pointInPluginCoordinates.x(), size().height() - pointInPluginCoordinates.y());
-}
-
-FloatRect PDFPluginBase::convertFromPDFViewToScreen(const FloatRect& rect) const
-{
-    return WebCore::Accessibility::retrieveValueFromMainThread<WebCore::FloatRect>([&] () -> WebCore::FloatRect {
-        FloatRect updatedRect = rect;
-        updatedRect.setLocation(convertFromPDFViewToRootView(IntPoint(updatedRect.location())));
-        CheckedPtr page = this->page();
-        if (!page)
-            return { };
-        return page->chrome().rootViewToScreen(enclosingIntRect(updatedRect));
-    });
+    return m_rootViewToPluginTransform.inverse()->mapRect(rect);
 }
 
 IntRect PDFPluginBase::boundsOnScreen() const
@@ -299,7 +288,7 @@ IntRect PDFPluginBase::boundsOnScreen() const
     return WebCore::Accessibility::retrieveValueFromMainThread<WebCore::IntRect>([&] () -> WebCore::IntRect {
         FloatRect bounds = FloatRect(FloatPoint(), size());
         FloatRect rectInRootViewCoordinates = valueOrDefault(m_rootViewToPluginTransform.inverse()).mapRect(bounds);
-        CheckedPtr page = this->page();
+        RefPtr page = this->page();
         if (!page)
             return { };
         return page->chrome().rootViewToScreen(enclosingIntRect(rectInRootViewCoordinates));
@@ -348,7 +337,7 @@ void PDFPluginBase::setScrollOffset(const ScrollOffset& offset)
 
 bool PDFPluginBase::isActive() const
 {
-    if (CheckedPtr page = this->page())
+    if (RefPtr page = this->page())
         return page->focusController().isActive();
 
     return false;
@@ -356,7 +345,7 @@ bool PDFPluginBase::isActive() const
 
 bool PDFPluginBase::forceUpdateScrollbarsOnMainThreadForPerformanceTesting() const
 {
-    if (CheckedPtr page = this->page())
+    if (RefPtr page = this->page())
         return page->settings().scrollingPerformanceTestingEnabled();
 
     return false;
@@ -384,7 +373,7 @@ ScrollPosition PDFPluginBase::maximumScrollPosition() const
 
 float PDFPluginBase::deviceScaleFactor() const
 {
-    if (CheckedPtr page = this->page())
+    if (RefPtr page = this->page())
         return page->deviceScaleFactor();
     return 1;
 }
@@ -511,7 +500,7 @@ Ref<Scrollbar> PDFPluginBase::createScrollbar(ScrollbarOrientation orientation)
     Ref widget = Scrollbar::createNativeScrollbar(*this, orientation, ScrollbarWidth::Auto);
     didAddScrollbar(widget.ptr(), orientation);
 
-    if (CheckedPtr page = this->page()) {
+    if (RefPtr page = this->page()) {
         if (page->isMonitoringWheelEvents())
             scrollAnimator().setWheelEventTestMonitor(page->wheelEventTestMonitor());
     }
@@ -541,22 +530,30 @@ void PDFPluginBase::updatePDFHUDLocation()
 {
     if (isLocked() || !m_frame || !m_frame->page())
         return;
-    m_frame->protectedPage()->updatePDFHUDLocation(*this, frameForHUD());
+    m_frame->protectedPage()->updatePDFHUDLocation(*this, frameForHUDInRootViewCoordinates());
 }
 
-IntRect PDFPluginBase::frameForHUD() const
+IntRect PDFPluginBase::frameForHUDInRootViewCoordinates() const
 {
-    return convertFromPDFViewToRootView(IntRect(IntPoint(), size()));
+    return convertFromPluginToRootView(IntRect(IntPoint(), size()));
 }
 
 bool PDFPluginBase::hudEnabled() const
 {
-    if (CheckedPtr page = this->page())
+    if (RefPtr page = this->page())
         return page->settings().pdfPluginHUDEnabled();
     return false;
 }
 
 #endif // ENABLE(PDF_HUD)
+
+void PDFPluginBase::notifyCursorChanged(WebCore::PlatformCursorType cursorType)
+{
+    if (!m_frame || !m_frame->page())
+        return;
+
+    m_frame->protectedPage()->send(Messages::WebPageProxy::SetCursor(WebCore::Cursor::fromType(cursorType)));
+}
 
 } // namespace WebKit
 

@@ -21,6 +21,7 @@
 
 #if USE(TEXTURE_MAPPER)
 
+#include "BitmapTexturePool.h"
 #include "ClipStack.h"
 #include "Color.h"
 #include "FilterOperation.h"
@@ -37,8 +38,6 @@
 
 namespace WebCore {
 
-class BitmapTexture;
-class BitmapTexturePool;
 class GraphicsLayer;
 class TextureMapperGLData;
 class TextureMapperShaderProgram;
@@ -88,25 +87,24 @@ public:
     void setWrapMode(WrapMode m) { m_wrapMode = m; }
     void setPatternTransform(const TransformationMatrix& p) { m_patternTransform = p; }
 
-    RefPtr<BitmapTexture> applyFilter(RefPtr<BitmapTexture> sourceTexture, const RefPtr<const FilterOperation>&, bool defersLastPass);
+    RefPtr<BitmapTexture> applyFilters(RefPtr<BitmapTexture>&, const FilterOperations&, bool defersLastPass);
 
-    WEBCORE_EXPORT RefPtr<BitmapTexture> acquireTextureFromPool(const IntSize&, const unsigned = 1);
+    WEBCORE_EXPORT RefPtr<BitmapTexture> acquireTextureFromPool(const IntSize&, OptionSet<BitmapTexture::Flags>);
 
 #if USE(GRAPHICS_LAYER_WC)
     WEBCORE_EXPORT void releaseUnusedTexturesNow();
 #endif
 
 private:
-    std::unique_ptr<BitmapTexturePool> m_texturePool;
-
     bool isInMaskMode() const { return m_isMaskMode; }
     const TransformationMatrix& patternTransform() const { return m_patternTransform; }
 
     enum class Direction { X, Y };
 
-    RefPtr<BitmapTexture> applyBlurFilter(RefPtr<BitmapTexture> sourceTexture, const BlurFilterOperation&);
-    RefPtr<BitmapTexture> applyDropShadowFilter(RefPtr<BitmapTexture> sourceTexture, const DropShadowFilterOperation&);
-    RefPtr<BitmapTexture> applySinglePassFilter(RefPtr<BitmapTexture> sourceTexture, const RefPtr<const FilterOperation>&, bool shouldDefer);
+    RefPtr<BitmapTexture> applyFilter(RefPtr<BitmapTexture>&, const RefPtr<const FilterOperation>&, bool defersLastPass);
+    RefPtr<BitmapTexture> applyBlurFilter(RefPtr<BitmapTexture>&, const BlurFilterOperation&);
+    RefPtr<BitmapTexture> applyDropShadowFilter(RefPtr<BitmapTexture>&, const DropShadowFilterOperation&);
+    RefPtr<BitmapTexture> applySinglePassFilter(RefPtr<BitmapTexture>&, const RefPtr<const FilterOperation>&, bool shouldDefer);
 
     void drawTextureCopy(const BitmapTexture& sourceTexture, const FloatRect& sourceRect, const FloatRect& targetRect);
     void drawBlurred(const BitmapTexture& sourceTexture, const FloatRect&, float radius, Direction, bool alphaBlur = false);
@@ -125,6 +123,7 @@ private:
 
     void updateProjectionMatrix();
 
+    BitmapTexturePool m_texturePool;
     bool m_isMaskMode { false };
     TransformationMatrix m_patternTransform;
     WrapMode m_wrapMode { WrapMode::Stretch };

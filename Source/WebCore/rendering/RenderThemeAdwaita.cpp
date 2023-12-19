@@ -34,6 +34,7 @@
 #include "HTMLInputElement.h"
 #include "HTMLMediaElement.h"
 #include "MediaControlTextTrackContainerElement.h"
+#include "Page.h"
 #include "PaintInfo.h"
 #include "RenderBox.h"
 #include "RenderObject.h"
@@ -73,8 +74,7 @@ static const int menuListButtonFocusOffset = -2;
 static const unsigned menuListButtonPadding = 5;
 static const int menuListButtonBorderSize = 1; // Keep in sync with buttonBorderSize in ThemeAdwaita.
 static const unsigned progressActivityBlocks = 5;
-static const unsigned progressAnimationFrameCount = 75;
-static const Seconds progressAnimationFrameRate = 33_ms; // 30fps.
+static const Seconds progressAnimationDuration = 2475_ms;
 static const unsigned progressBarSize = 6;
 static constexpr auto progressBarBackgroundColorLight = SRGBA<uint8_t> { 0, 0, 0, 40 };
 static constexpr auto progressBarBackgroundColorDark = SRGBA<uint8_t> { 255, 255, 255, 30 };
@@ -392,7 +392,7 @@ void RenderThemeAdwaita::adjustMenuListButtonStyle(RenderStyle& style, const Ele
     adjustMenuListStyle(style, element);
 }
 
-LengthBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style, const Settings&) const
+LengthBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style) const
 {
     if (style.effectiveAppearance() == StyleAppearance::None)
         return { };
@@ -409,15 +409,14 @@ bool RenderThemeAdwaita::paintMenuList(const RenderObject& renderObject, const P
     auto& graphicsContext = paintInfo.context();
     GraphicsContextStateSaver stateSaver(graphicsContext);
 
-    OptionSet<ControlStates::States> states;
+    OptionSet<ControlStyle::State> states;
     if (isEnabled(renderObject))
-        states.add(ControlStates::States::Enabled);
+        states.add(ControlStyle::State::Enabled);
     if (isPressed(renderObject))
-        states.add(ControlStates::States::Pressed);
+        states.add(ControlStyle::State::Pressed);
     if (isHovered(renderObject))
-        states.add(ControlStates::States::Hovered);
-    ControlStates controlStates(states);
-    Theme::singleton().paint(StyleAppearance::Button, controlStates, graphicsContext, rect, 1., nullptr, 1., 1., false, renderObject.useDarkAppearance(), renderObject.style().effectiveAccentColor());
+        states.add(ControlStyle::State::Hovered);
+    Theme::singleton().paint(StyleAppearance::Button, states, graphicsContext, rect, renderObject.useDarkAppearance(), renderObject.style().effectiveAccentColor());
 
     auto zoomedArrowSize = menuListButtonArrowSize * renderObject.style().effectiveZoom();
     FloatRect fieldRect = rect;
@@ -440,14 +439,14 @@ void RenderThemeAdwaita::paintMenuListButtonDecorations(const RenderBox& renderO
     paintMenuList(renderObject, paintInfo, rect);
 }
 
-Seconds RenderThemeAdwaita::animationRepeatIntervalForProgressBar(const RenderProgress&) const
+Seconds RenderThemeAdwaita::animationRepeatIntervalForProgressBar(const RenderProgress& renderer) const
 {
-    return progressAnimationFrameRate;
+    return renderer.page().preferredRenderingUpdateInterval();
 }
 
-Seconds RenderThemeAdwaita::animationDurationForProgressBar(const RenderProgress&) const
+Seconds RenderThemeAdwaita::animationDurationForProgressBar() const
 {
-    return progressAnimationFrameRate * progressAnimationFrameCount;
+    return progressAnimationDuration;
 }
 
 IntRect RenderThemeAdwaita::progressBarRectForBounds(const RenderProgress&, const IntRect& bounds) const

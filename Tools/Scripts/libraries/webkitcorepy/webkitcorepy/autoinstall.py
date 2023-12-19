@@ -405,10 +405,8 @@ class Package(object):
                 else:
                     # We might not need setup.py at all, check if we have dist-info and the library in the temporary location
                     to_be_moved = os.listdir(temp_location)
-                    has_module_or_package = self.name in to_be_moved or '{}.py'.format(self.name) in to_be_moved
                     if (
                         archive.extension != 'whl'
-                        or not has_module_or_package
                         or not any(
                             element.endswith('.dist-info') for element in to_be_moved
                         )
@@ -461,7 +459,7 @@ class AutoInstall(object):
     CA_CERT_PATH_ENV_VAR = 'AUTOINSTALL_CA_CERT_PATH'
 
     # This list of libraries is required to install other libraries, and must be installed first
-    BASE_LIBRARIES = ['setuptools', 'wheel', 'pyparsing', 'packaging', 'setuptools_scm']
+    BASE_LIBRARIES = ['setuptools', 'wheel', 'six', 'pyparsing', 'packaging', 'setuptools_scm']
     if sys.version_info >= (3, 0):
         BASE_LIBRARIES.insert(-1, 'tomli')
 

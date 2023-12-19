@@ -72,14 +72,14 @@ static std::pair<ASCIILiteral, RetainPtr<NSString>> serviceNameAndIdentifier(Pro
     switch (processType) {
     case ProcessLauncher::ProcessType::Web: {
         if (client && client->shouldEnableLockdownMode())
-            return { "com.apple.WebKit.WebContent"_s, @"com.apple.mobilesafari.WebContentExtension.CaptivePortal" };
-        return { "com.apple.WebKit.WebContent"_s, @"com.apple.mobilesafari.WebContentExtension" };
+            return { "com.apple.WebKit.WebContent"_s, @"com.apple.WebKit.WebContentExtension.CaptivePortal" };
+        return { "com.apple.WebKit.WebContent"_s, @"com.apple.WebKit.WebContentExtension" };
     }
     case ProcessLauncher::ProcessType::Network:
-        return { "com.apple.WebKit.Networking"_s, @"com.apple.mobilesafari.NetworkingExtension" };
+        return { "com.apple.WebKit.Networking"_s, @"com.apple.WebKit.NetworkingExtension" };
 #if ENABLE(GPU_PROCESS)
     case ProcessLauncher::ProcessType::GPU:
-        return { "com.apple.WebKit.GPU"_s, @"com.apple.mobilesafari.GPUExtension" };
+        return { "com.apple.WebKit.GPU"_s, @"com.apple.WebKit.GPUExtension" };
 #endif
     }
 }
@@ -139,6 +139,13 @@ static const char* serviceName(const ProcessLauncher::LaunchOptions& launchOptio
     }
 }
 
+ProcessLauncher::~ProcessLauncher()
+{
+#if USE(EXTENSIONKIT)
+    [m_process invalidate];
+#endif
+}
+
 void ProcessLauncher::launchProcess()
 {
     ASSERT(!m_xpcConnection);
@@ -146,8 +153,10 @@ void ProcessLauncher::launchProcess()
 #if USE(EXTENSIONKIT)
     auto handler = [](ThreadSafeWeakPtr<ProcessLauncher> weakProcessLauncher, _SEExtensionProcess* process, ASCIILiteral name, NSError* error)
     {
-        if (!weakProcessLauncher.get())
+        if (!weakProcessLauncher.get()) {
+            [process invalidate];
             return;
+        }
         if (error) {
             NSLog(@"Error launching process %@ error %@", process, error);
             callOnMainRunLoop([weakProcessLauncher = weakProcessLauncher] {
@@ -158,13 +167,16 @@ void ProcessLauncher::launchProcess()
                 launcher->m_xpcConnection = adoptOSObject(xpc_connection_create(name, nullptr));
                 launcher->finishLaunchingProcess(name);
             });
+            [process invalidate];
             return;
         }
         callOnMainRunLoop([weakProcessLauncher = weakProcessLauncher, name = name, process = RetainPtr<_SEExtensionProcess>(process)] {
             auto connection = [process makeLibXPCConnectionError:nil];
             auto launcher = weakProcessLauncher.get();
-            if (!launcher)
+            if (!launcher) {
+                [process invalidate];
                 return;
+            }
             launcher->m_xpcConnection = connection;
             launcher->m_process = WTFMove(process);
             launcher->finishLaunchingProcess(name.characters());
@@ -418,6 +430,10 @@ void ProcessLauncher::terminateProcess()
 
 void ProcessLauncher::platformInvalidate()
 {
+#if USE(EXTENSIONKIT)
+    [m_process invalidate];
+#endif
+
     terminateXPCConnection();
 }
 

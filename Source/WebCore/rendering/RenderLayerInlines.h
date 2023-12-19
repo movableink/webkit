@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "RenderElementInlines.h"
 #include "RenderLayer.h"
 #include "RenderObjectInlines.h"
 #include "RenderSVGResourceClipper.h"
@@ -65,11 +66,18 @@ inline bool RenderLayer::hasNonOpacityTransparency() const
         return false;
 
     // SVG clip-paths may use clipping masks, if so, flag this layer as transparent.
-    if (auto* svgClipper = svgClipperFromStyle(); svgClipper && !svgClipper->shouldApplyPathClipping())
+    if (auto* svgClipper = renderer().svgClipperResourceFromStyle(); svgClipper && !svgClipper->shouldApplyPathClipping())
         return true;
 #endif
 
     return false;
 }
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+inline RenderSVGHiddenContainer* RenderLayer::enclosingSVGHiddenOrResourceContainer() const
+{
+    return m_enclosingSVGHiddenOrResourceContainer.get();
+}
+#endif
 
 } // namespace WebCore

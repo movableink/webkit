@@ -26,6 +26,8 @@
 #include "config.h"
 #include "NetworkStorageManager.h"
 
+#include "BackgroundFetchChange.h"
+#include "BackgroundFetchStoreManager.h"
 #include "CacheStorageCache.h"
 #include "CacheStorageManager.h"
 #include "CacheStorageRegistry.h"
@@ -41,6 +43,7 @@
 #include "NetworkStorageManagerMessages.h"
 #include "OriginQuotaManager.h"
 #include "OriginStorageManager.h"
+#include "ServiceWorkerStorageManager.h"
 #include "SessionStorageManager.h"
 #include "StorageAreaBase.h"
 #include "StorageAreaMapMessages.h"
@@ -48,19 +51,13 @@
 #include "UnifiedOriginStorageLevel.h"
 #include "WebsiteDataType.h"
 #include <WebCore/SecurityOriginData.h>
+#include <WebCore/ServiceWorkerContextData.h>
 #include <WebCore/StorageUtilities.h>
 #include <WebCore/UniqueIDBDatabaseConnection.h>
 #include <WebCore/UniqueIDBDatabaseTransaction.h>
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/SuspendableWorkQueue.h>
 #include <wtf/text/Base64.h>
-
-#if ENABLE(SERVICE_WORKER)
-#include "BackgroundFetchChange.h"
-#include "BackgroundFetchStoreManager.h"
-#include "ServiceWorkerStorageManager.h"
-#include <WebCore/ServiceWorkerContextData.h>
-#endif
 
 namespace WebKit {
 
@@ -177,8 +174,8 @@ NetworkStorageManager::NetworkStorageManager(NetworkProcess& process, PAL::Sessi
     m_queue->dispatch([this, weakThis = ThreadSafeWeakPtr { *this }, path = path.isolatedCopy(), customLocalStoragePath = crossThreadCopy(customLocalStoragePath), customIDBStoragePath = crossThreadCopy(customIDBStoragePath), customCacheStoragePath = crossThreadCopy(customCacheStoragePath), customServiceWorkerStoragePath = crossThreadCopy(customServiceWorkerStoragePath), defaultOriginQuota, originQuotaRatio, totalQuotaRatio, standardVolumeCapacity, volumeCapacityOverride, level]() mutable {
         assertIsCurrent(workQueue());
 
-        auto strongThis = weakThis.get();
-        if (!strongThis)
+        auto protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
         m_defaultOriginQuota = defaultOriginQuota;
@@ -203,12 +200,10 @@ NetworkStorageManager::NetworkStorageManager(NetworkProcess& process, PAL::Sessi
             auto saltPath = FileSystem::pathByAppendingComponent(m_path, "salt"_s);
             m_salt = valueOrDefault(FileSystem::readOrMakeSalt(saltPath));
         }
-#if ENABLE(SERVICE_WORKER)
         if (shouldManageServiceWorkerRegistrationsByOrigin())
             migrateServiceWorkerRegistrationsToOrigins();
         else
             m_sharedServiceWorkerStorageManager = makeUnique<ServiceWorkerStorageManager>(m_customServiceWorkerStoragePath);
-#endif
 #if PLATFORM(IOS_FAMILY)
         // Exclude LocalStorage directory to reduce backup traffic. See https://webkit.org/b/168388.
         if (m_unifiedOriginStorageLevel == UnifiedOriginStorageLevel::None  && !m_customLocalStoragePath.isEmpty()) {
@@ -217,7 +212,7 @@ NetworkStorageManager::NetworkStorageManager(NetworkProcess& process, PAL::Sessi
         }
 #endif
 
-        RunLoop::main().dispatch([strongThis = WTFMove(strongThis)] { });
+        RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis)] { });
     });
 }
 
@@ -240,9 +235,7 @@ OptionSet<WebsiteDataType> NetworkStorageManager::allManagedTypes()
         WebsiteDataType::FileSystem,
         WebsiteDataType::IndexedDBDatabases,
         WebsiteDataType::DOMCache,
-#if ENABLE(SERVICE_WORKER)
         WebsiteDataType::ServiceWorkerRegistrations
-#endif
     };
 }
 
@@ -263,9 +256,7 @@ void NetworkStorageManager::close(CompletionHandler<void()>&& completionHandler)
         m_fileSystemStorageHandleRegistry = nullptr;
         for (auto&& completionHandler : std::exchange(m_persistCompletionHandlers, { }))
             completionHandler.second(false);
-#if ENABLE(SERVICE_WORKER)
         m_sharedServiceWorkerStorageManager = nullptr;
-#endif
 
         RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)]() mutable {
             completionHandler();
@@ -404,19 +395,19 @@ void NetworkStorageManager::prepareForEviction()
     assertIsCurrent(workQueue());
 
     RunLoop::main().dispatch([this, weakThis = ThreadSafeWeakPtr { *this }]() mutable {
-        auto strongThis = weakThis.get();
-        if (!strongThis || m_closed || !m_process)
+        auto protectedThis = weakThis.get();
+        if (!protectedThis || m_closed || !m_process)
             return;
 
         m_process->registrableDomainsWithLastAccessedTime(m_sessionID, [this, weakThis = WTFMove(weakThis)](auto result) mutable {
-            auto strongThis = weakThis.get();
-            if (!strongThis || m_closed)
+            auto protectedThis = weakThis.get();
+            if (!protectedThis || m_closed)
                 return;
 
             m_queue->dispatch([weakThis = WTFMove(weakThis), result = crossThreadCopy(WTFMove(result))]() mutable {
-                if (auto strongThis = weakThis.get()) {
-                    strongThis->donePrepareForEviction(WTFMove(result));
-                    RunLoop::main().dispatch([strongThis = WTFMove(strongThis)] { });
+                if (auto protectedThis = weakThis.get()) {
+                    protectedThis->donePrepareForEviction(WTFMove(result));
+                    RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis)] { });
                 }
             });
         });
@@ -547,9 +538,9 @@ OriginQuotaManager::Parameters NetworkStorageManager::originQuotaManagerParamete
         standardReportedQuota *= defaultThirdPartyOriginQuotaRatio;
     }
     OriginQuotaManager::NotifySpaceGrantedFunction notifySpaceGrantedFunction = [weakThis = ThreadSafeWeakPtr { *this }, origin](uint64_t spaceRequested) {
-        if (auto strongThis = weakThis.get()) {
-            strongThis->spaceGrantedForOrigin(origin, spaceRequested);
-            RunLoop::main().dispatch([strongThis = WTFMove(strongThis)] { });
+        if (auto protectedThis = weakThis.get()) {
+            protectedThis->spaceGrantedForOrigin(origin, spaceRequested);
+            RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis)] { });
         }
     };
     // Use std::ceil instead of implicit conversion to make result more definitive.
@@ -656,8 +647,8 @@ void NetworkStorageManager::fetchRegistrableDomainsForPersist()
         return didFetchRegistrableDomainsForPersist({ });
 
     m_process->registrableDomainsExemptFromWebsiteDataDeletion(m_sessionID, [weakThis = ThreadSafeWeakPtr { *this }](HashSet<WebCore::RegistrableDomain>&& domains) mutable {
-        if (auto strongThis = weakThis.get())
-            strongThis->didFetchRegistrableDomainsForPersist(std::forward<decltype(domains)>(domains));
+        if (auto protectedThis = weakThis.get())
+            protectedThis->didFetchRegistrableDomainsForPersist(std::forward<decltype(domains)>(domains));
     });
 }
 
@@ -671,8 +662,8 @@ void NetworkStorageManager::didFetchRegistrableDomainsForPersist(HashSet<WebCore
     m_queue->dispatch([this, weakThis = ThreadSafeWeakPtr { *this }, domains = crossThreadCopy(WTFMove(domains))]() mutable {
         assertIsCurrent(workQueue());
 
-        auto strongThis = weakThis.get();
-        if (!strongThis)
+        auto protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
         m_domainsExemptFromEviction = WTFMove(domains);
@@ -712,8 +703,8 @@ void NetworkStorageManager::persist(const WebCore::ClientOrigin& origin, Complet
 
     m_persistCompletionHandlers.append({ origin, WTFMove(completionHandler) });
     RunLoop::main().dispatch([weakThis = ThreadSafeWeakPtr { *this }]() mutable {
-        if (auto strongThis = weakThis.get())
-            strongThis->fetchRegistrableDomainsForPersist();
+        if (auto protectedThis = weakThis.get())
+            protectedThis->fetchRegistrableDomainsForPersist();
     });
 }
 
@@ -1752,8 +1743,6 @@ void NetworkStorageManager::cacheStorageRepresentation(CompletionHandler<void(St
     callback(builder.toString());
 }
 
-#if ENABLE(SERVICE_WORKER)
-
 void NetworkStorageManager::dispatchTaskToBackgroundFetchManager(const WebCore::ClientOrigin& origin, Function<void(BackgroundFetchStoreManager*)>&& callback)
 {
     ASSERT(RunLoop::isMain());
@@ -1927,7 +1916,5 @@ bool NetworkStorageManager::shouldManageServiceWorkerRegistrationsByOrigin()
 
     return m_unifiedOriginStorageLevel >= UnifiedOriginStorageLevel::Standard;
 }
-
-#endif // ENABLE(SERVICE_WORKER)
 
 } // namespace WebKit

@@ -34,7 +34,6 @@
 #import "WebExtensionAction.h"
 #import "WebExtensionContext.h"
 #import "WebExtensionTab.h"
-#import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/CompletionHandler.h>
 
@@ -42,14 +41,19 @@ NSNotificationName const _WKWebExtensionActionPropertiesDidChangeNotification = 
 NSNotificationName const _WKWebExtensionActionPopupWebViewContentSizeDidChangeNotification = @"_WKWebExtensionActionPopupWebViewContentSizeDidChange";
 NSNotificationName const _WKWebExtensionActionPopupWebViewDidCloseNotification = @"_WKWebExtensionActionPopupWebViewDidClose";
 
+#if USE(APPKIT)
+using CocoaMenuItem = NSMenuItem;
+#else
+using CocoaMenuItem = UIMenuElement;
+#endif
+
 @implementation _WKWebExtensionAction
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
 - (void)dealloc
 {
-    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(_WKWebExtensionAction.class, self))
-        return;
+    ASSERT(isMainRunLoop());
 
     _webExtensionAction->~WebExtensionAction();
 }
@@ -98,6 +102,11 @@ NSNotificationName const _WKWebExtensionActionPopupWebViewDidCloseNotification =
 - (BOOL)isEnabled
 {
     return _webExtensionAction->isEnabled();
+}
+
+- (NSArray<CocoaMenuItem *> *)menuItems
+{
+    return _webExtensionAction->platformMenuItems();
 }
 
 - (BOOL)presentsPopup
@@ -157,6 +166,11 @@ NSNotificationName const _WKWebExtensionActionPopupWebViewDidCloseNotification =
 - (BOOL)isEnabled
 {
     return NO;
+}
+
+- (NSArray<CocoaMenuItem *> *)menuItems
+{
+    return nil;
 }
 
 - (BOOL)presentsPopup

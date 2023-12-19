@@ -139,15 +139,15 @@ struct IPIntControlType {
     {
         ASSERT(i < branchTargetArity());
         if (blockType() == BlockType::Loop)
-            return m_signature->as<FunctionSignature>()->argumentType(i);
-        return m_signature->as<FunctionSignature>()->returnType(i);
+            return m_signature->argumentType(i);
+        return m_signature->returnType(i);
     }
 
     unsigned branchTargetArity() const
     {
         return isLoop(*this)
-            ? m_signature->as<FunctionSignature>()->argumentCount()
-            : m_signature->as<FunctionSignature>()->returnCount();
+            ? m_signature->argumentCount()
+            : m_signature->returnCount();
     }
 
 private:
@@ -299,7 +299,7 @@ public:
     PartialResult WARN_UNUSED_RETURN addStructNewDefault(uint32_t, ExpressionType&);
     PartialResult WARN_UNUSED_RETURN addStructGet(ExtGCOpType, ExpressionType, const StructType&, uint32_t, ExpressionType&);
     PartialResult WARN_UNUSED_RETURN addStructSet(ExpressionType, const StructType&, uint32_t, ExpressionType);
-    PartialResult WARN_UNUSED_RETURN addRefTest(ExpressionType, bool, int32_t, ExpressionType&);
+    PartialResult WARN_UNUSED_RETURN addRefTest(ExpressionType, bool, int32_t, bool, ExpressionType&);
     PartialResult WARN_UNUSED_RETURN addRefCast(ExpressionType, bool, int32_t, ExpressionType&);
     PartialResult WARN_UNUSED_RETURN addAnyConvertExtern(ExpressionType, ExpressionType&);
     PartialResult WARN_UNUSED_RETURN addExternConvertAny(ExpressionType, ExpressionType&);
@@ -459,6 +459,8 @@ public:
 
     PartialResult WARN_UNUSED_RETURN addReturn(const ControlType&, const Stack&);
     PartialResult WARN_UNUSED_RETURN addBranch(ControlType&, ExpressionType, const Stack&);
+    PartialResult WARN_UNUSED_RETURN addBranchNull(ControlType&, ExpressionType, Stack&, bool, ExpressionType&);
+    PartialResult WARN_UNUSED_RETURN addBranchCast(ControlType&, ExpressionType, Stack&, bool, int32_t, bool);
     PartialResult WARN_UNUSED_RETURN addSwitch(ExpressionType, const Vector<ControlType*>&, ControlType&, const Stack&);
     PartialResult WARN_UNUSED_RETURN endBlock(ControlEntry&, Stack&);
     PartialResult WARN_UNUSED_RETURN addEndToUnreachable(ControlEntry&, Stack&);
@@ -829,7 +831,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addStructNew(uint32_t, Vector<E
 PartialResult WARN_UNUSED_RETURN IPIntGenerator::addStructNewDefault(uint32_t, ExpressionType&) { return { }; }
 PartialResult WARN_UNUSED_RETURN IPIntGenerator::addStructGet(ExtGCOpType, ExpressionType, const StructType&, uint32_t, ExpressionType&) { return { }; }
 PartialResult WARN_UNUSED_RETURN IPIntGenerator::addStructSet(ExpressionType, const StructType&, uint32_t, ExpressionType) { return { }; }
-PartialResult WARN_UNUSED_RETURN IPIntGenerator::addRefTest(ExpressionType, bool, int32_t, ExpressionType&) { return { }; }
+PartialResult WARN_UNUSED_RETURN IPIntGenerator::addRefTest(ExpressionType, bool, int32_t, bool, ExpressionType&) { return { }; }
 PartialResult WARN_UNUSED_RETURN IPIntGenerator::addRefCast(ExpressionType, bool, int32_t, ExpressionType&) { return { }; }
 PartialResult WARN_UNUSED_RETURN IPIntGenerator::addAnyConvertExtern(ExpressionType, ExpressionType&) { return { }; }
 PartialResult WARN_UNUSED_RETURN IPIntGenerator::addExternConvertAny(ExpressionType, ExpressionType&) { return { }; }
@@ -1096,7 +1098,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addIf(ExpressionType, BlockSign
 
 PartialResult WARN_UNUSED_RETURN IPIntGenerator::addElse(ControlType& block, Stack& stack)
 {
-    const FunctionSignature& signature = *block.signature()->as<FunctionSignature>();
+    const FunctionSignature& signature = *block.signature();
     stack.clear();
     for (unsigned i = 0; i < signature.argumentCount(); i ++)
         stack.constructAndAppend(signature.argumentType(i), Value { });
@@ -1295,6 +1297,8 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBranch(ControlType& block, E
     WRITE_TO_METADATA(m_metadata->m_metadata.data() + size + 12, getCurrentInstructionLength(), uint8_t);
     return { };
 }
+PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBranchNull(ControlType&, ExpressionType, Stack&, bool, ExpressionType&) { return { }; }
+PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBranchCast(ControlType&, ExpressionType, Stack&, bool, int32_t, bool) { return { }; }
 PartialResult WARN_UNUSED_RETURN IPIntGenerator::addSwitch(ExpressionType, const Vector<ControlType*>& jumps, ControlType& defaultJump, const Stack& stack)
 {
     auto size = m_metadata->m_metadata.size();
@@ -1329,7 +1333,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::endBlock(ControlEntry& entry, S
 
 PartialResult WARN_UNUSED_RETURN IPIntGenerator::addEndToUnreachable(ControlEntry& entry, Stack&)
 {
-    const FunctionSignature& signature = *entry.controlData.signature()->as<FunctionSignature>();
+    const FunctionSignature& signature = *entry.controlData.signature();
     for (unsigned i = 0; i < signature.returnCount(); i ++)
         entry.enclosedExpressionStack.constructAndAppend(signature.returnType(i), Value { });
     auto block = entry.controlData;
@@ -1401,7 +1405,7 @@ auto IPIntGenerator::endTopLevel(BlockSignature signature, const Stack& expressi
 {
     if (m_usesSIMD)
         m_info.markUsesSIMD(m_metadata->functionIndex());
-    RELEASE_ASSERT(expressionStack.size() == signature->as<FunctionSignature>()->returnCount());
+    RELEASE_ASSERT(expressionStack.size() == signature->returnCount());
     m_info.doneSeeingFunction(m_metadata->m_functionIndex);
     return { };
 }

@@ -36,6 +36,7 @@
 #include "JITInlines.h"
 #include "JITOperations.h"
 #include "JITSizeStatistics.h"
+#include "JITThunks.h"
 #include "LinkBuffer.h"
 #include "MaxFrameExtentForSlowPathCall.h"
 #include "ModuleProgramCodeBlock.h"
@@ -49,11 +50,14 @@
 #include "TypeProfilerLog.h"
 #include <wtf/GraphNodeWorklist.h>
 #include <wtf/SimpleStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 namespace JITInternal {
 static constexpr const bool verbose = false;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JIT);
 
 Seconds totalBaselineCompileTime;
 Seconds totalDFGCompileTime;
@@ -730,7 +734,7 @@ void JIT::emitConsistencyCheck()
     m_consistencyCheckLabel = label();
     move(TrustedImm32(-stackPointerOffsetFor(m_unlinkedCodeBlock)), regT0);
     m_bytecodeIndex = BytecodeIndex(0);
-    emitNakedNearTailCall(vm().getCTIStub(consistencyCheckGenerator).retaggedCode<NoPtrTag>());
+    nearTailCallThunk(CodeLocationLabel { vm().getCTIStub(consistencyCheckGenerator).retaggedCode<NoPtrTag>() });
     m_bytecodeIndex = BytecodeIndex(); // Reset this, in order to guard its use with ASSERTs.
 }
 #endif
@@ -864,7 +868,7 @@ std::tuple<std::unique_ptr<LinkBuffer>, RefPtr<BaselineJITCode>> JIT::compileAnd
         getArityPadding(*m_vm, numberOfParameters, regT1, regT0, regT2, regT3, stackOverflow);
 
         move(regT0, GPRInfo::argumentGPR0);
-        emitNakedNearCall(m_vm->getCTIStub(arityFixupGenerator).retaggedCode<NoPtrTag>());
+        nearCallThunk(CodeLocationLabel { m_vm->getCTIStub(CommonJITThunkID::ArityFixup).retaggedCode<NoPtrTag>() });
 
 #if ASSERT_ENABLED
         m_bytecodeIndex = BytecodeIndex(); // Reset this, in order to guard its use with ASSERTs.
@@ -933,19 +937,6 @@ RefPtr<BaselineJITCode> JIT::link(LinkBuffer& patchBuffer)
         }
     }
 
-    if (!m_exceptionChecks.empty())
-        patchBuffer.link(m_exceptionChecks, CodeLocationLabel(vm().getCTIStub(handleExceptionGenerator).retaggedCode<NoPtrTag>()));
-    if (!m_exceptionChecksWithCallFrameRollback.empty())
-        patchBuffer.link(m_exceptionChecksWithCallFrameRollback, CodeLocationLabel(vm().getCTIStub(handleExceptionWithCallFrameRollbackGenerator).retaggedCode<NoPtrTag>()));
-
-    for (auto& record : m_nearJumps) {
-        if (record.target)
-            patchBuffer.link(record.from, record.target);
-    }
-    for (auto& record : m_nearCalls) {
-        if (record.callee)
-            patchBuffer.link(record.from, record.callee);
-    }
     for (auto& record : m_farCalls) {
         if (record.callee)
             patchBuffer.link(record.from, record.callee);
@@ -1106,6 +1097,21 @@ HashMap<CString, Seconds> JIT::compileTimeStats()
 Seconds JIT::totalCompileTime()
 {
     return totalBaselineCompileTime + totalDFGCompileTime + totalFTLCompileTime;
+}
+
+void JIT::exceptionCheck(Jump jumpToHandler)
+{
+    jumpToHandler.linkThunk(CodeLocationLabel(vm().getCTIStub(CommonJITThunkID::HandleException).retaggedCode<NoPtrTag>()), this);
+}
+
+void JIT::exceptionCheck()
+{
+    exceptionCheck(emitExceptionCheck(vm()));
+}
+
+void JIT::exceptionChecksWithCallFrameRollback(Jump jumpToHandler)
+{
+    jumpToHandler.linkThunk(CodeLocationLabel(vm().getCTIStub(CommonJITThunkID::HandleExceptionWithCallFrameRollback).retaggedCode<NoPtrTag>()), this);
 }
 
 } // namespace JSC

@@ -30,6 +30,7 @@
 
 #include "AccessibilityNodeObject.h"
 #include "LayoutRect.h"
+#include "PluginViewBase.h"
 #include "RenderObject.h"
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
@@ -98,12 +99,16 @@ public:
     String helpText() const override;
     String textUnderElement(AccessibilityTextUnderElementMode = AccessibilityTextUnderElementMode()) const override;
     String selectedText() const override;
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    Vector<AXTextRun> textRuns() final;
+#endif
 
     bool isWidget() const override;
     Widget* widget() const override;
     Widget* widgetForAttachmentView() const override;
     AccessibilityChildrenVector documentLinks() override;
     LocalFrameView* documentFrameView() const override;
+    bool isPlugin() const final { return is<PluginViewBase>(widget()); }
 
     void setSelectedTextRange(CharacterRange&&) override;
     bool setValue(const String&) override;
@@ -147,7 +152,7 @@ protected:
     virtual bool isIgnoredElementWithinMathTree() const;
 #endif
 
-    WeakPtr<RenderObject> m_renderer;
+    SingleThreadWeakPtr<RenderObject> m_renderer;
 
 private:
     bool isAccessibilityRenderObject() const final { return true; }

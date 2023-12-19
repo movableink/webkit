@@ -54,7 +54,6 @@ class LegacyRenderSVGResourceContainer;
 class IdTargetObserverRegistry;
 class Node;
 class RadioButtonGroups;
-class RenderSVGResourceContainer;
 class SVGElement;
 class ShadowRoot;
 class TreeScopeOrderedMap;
@@ -84,7 +83,7 @@ public:
     WEBCORE_EXPORT RefPtr<Element> getElementById(const AtomString&) const;
     WEBCORE_EXPORT RefPtr<Element> getElementById(const String&) const;
     RefPtr<Element> getElementById(StringView) const;
-    const Vector<CheckedRef<Element>>* getAllElementsById(const AtomString&) const;
+    const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* getAllElementsById(const AtomString&) const;
     inline bool hasElementWithId(const AtomString&) const; // Defined in TreeScopeInlines.h.
     inline bool containsMultipleElementsWithId(const AtomString& id) const; // Defined in TreeScopeInlines.h.
     void addElementById(const AtomString& elementId, Element&, bool notifyObservers = true);
@@ -118,7 +117,7 @@ public:
     bool shouldCacheLabelsByForAttribute() const { return !!m_labelsByForAttribute; }
     void addLabel(const AtomString& forAttributeValue, HTMLLabelElement&);
     void removeLabel(const AtomString& forAttributeValue, HTMLLabelElement&);
-    const Vector<CheckedRef<Element>>* labelElementsForId(const AtomString& forAttributeValue);
+    const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* labelElementsForId(const AtomString& forAttributeValue);
 
     WEBCORE_EXPORT RefPtr<Element> elementFromPoint(double clientX, double clientY);
     WEBCORE_EXPORT Vector<RefPtr<Element>> elementsFromPoint(double clientX, double clientY);
@@ -143,14 +142,8 @@ public:
     std::span<const RefPtr<CSSStyleSheet>> adoptedStyleSheets() const;
     ExceptionOr<void> setAdoptedStyleSheets(Vector<RefPtr<CSSStyleSheet>>&&);
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-    void addSVGResource(const AtomString& id, RenderSVGResourceContainer&);
-#endif
     void addSVGResource(const AtomString& id, LegacyRenderSVGResourceContainer&);
     void removeSVGResource(const AtomString& id);
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-    RenderSVGResourceContainer* lookupSVGResourceById(const AtomString& id) const;
-#endif
     LegacyRenderSVGResourceContainer* lookupLegacySVGResoureById(const AtomString& id) const;
 
     void addPendingSVGResource(const AtomString& id, SVGElement&);

@@ -41,7 +41,6 @@
 #include "RenderImageResource.h"
 #include "RenderLayer.h"
 #include "RenderSVGModelObjectInlines.h"
-#include "RenderSVGResourceFilter.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"
 #include "SVGRenderStyle.h"
@@ -132,14 +131,13 @@ void RenderSVGImage::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         return;
 
     if (paintInfo.phase == PaintPhase::ClippingMask) {
-        SVGRenderSupport::paintSVGClippingMask(*this, paintInfo);
+        paintSVGClippingMask(paintInfo);
         return;
     }
 
     auto adjustedPaintOffset = paintOffset + currentSVGLayoutLocation();
     if (paintInfo.phase == PaintPhase::Mask) {
-        // FIXME: [LBSE] Upstream SVGRenderSupport changes
-        // SVGRenderSupport::paintSVGMask(*this, paintInfo, adjustedPaintOffset);
+        paintSVGMask(paintInfo, adjustedPaintOffset);
         return;
     }
 
@@ -344,13 +342,26 @@ void RenderSVGImage::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
     if (renderTreeBeingDestroyed())
         return;
 
-    // The image resource defaults to nullImage until the resource arrives.
-    // This empty image may be cached by SVG resources which must be invalidated.
-    if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(*this))
-        resources->removeClientFromCache(*this);
+    bool invalidateLegacyResources = true;
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    invalidateLegacyResources = !document().settings().layerBasedSVGEngineEnabled();
+#endif
 
-    // Eventually notify parent resources, that we've changed.
-    LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(*this, false);
+    if (invalidateLegacyResources) {
+        // The image resource defaults to nullImage until the resource arrives.
+        // This empty image may be cached by SVG resources which must be invalidated.
+        if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(*this))
+            resources->removeClientFromCache(*this);
+
+        // Eventually notify parent resources, that we've changed.
+        LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(*this, false);
+    }
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // For LBSE it is sufficient to trigger repainting of all resources that make use of this image.
+    if (!invalidateLegacyResources)
+        repaintClientsOfReferencedSVGResources();
+#endif
 
     if (hasVisibleBoxDecorations() || hasMask() || hasShapeOutside())
         RenderSVGModelObject::imageChanged(newImage, rect);

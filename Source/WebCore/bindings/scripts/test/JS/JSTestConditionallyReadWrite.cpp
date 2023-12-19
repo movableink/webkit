@@ -110,23 +110,6 @@ STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSTestConditionallyReadWritePrototype, JSTes
 using JSTestConditionallyReadWriteDOMConstructor = JSDOMConstructorNotConstructable<JSTestConditionallyReadWrite>;
 
 /* Hash table */
-#if PLATFORM(MAC)
-
-static const struct CompactHashIndex JSTestConditionallyReadWriteTableIndex[4] = {
-    { -1, -1 },
-    { 0, -1 },
-    { -1, -1 },
-    { -1, -1 },
-};
-
-
-static const HashTableValue JSTestConditionallyReadWriteTableValues[] =
-{
-    { "enabledConditionallyReadWriteBySettingAttributeUnforgeable"_s, JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute, NoIntrinsic, { HashTableValue::GetterSetterType, jsTestConditionallyReadWrite_enabledConditionallyReadWriteBySettingAttributeUnforgeable, setJSTestConditionallyReadWrite_enabledConditionallyReadWriteBySettingAttributeUnforgeable } },
-};
-
-static const HashTable JSTestConditionallyReadWriteTable = { 1, 3, static_cast<uint8_t>(JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute | JSC::PropertyAttribute::DontDelete), JSTestConditionallyReadWrite::info(), JSTestConditionallyReadWriteTableValues, JSTestConditionallyReadWriteTableIndex };
-#else
 
 static const struct CompactHashIndex JSTestConditionallyReadWriteTableIndex[4] = {
     { 0, -1 },
@@ -142,7 +125,6 @@ static const HashTableValue JSTestConditionallyReadWriteTableValues[] =
 };
 
 static const HashTable JSTestConditionallyReadWriteTable = { 1, 3, static_cast<uint8_t>(JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::DOMAttribute | JSC::PropertyAttribute::DontDelete), JSTestConditionallyReadWrite::info(), JSTestConditionallyReadWriteTableValues, JSTestConditionallyReadWriteTableIndex };
-#endif
 template<> const ClassInfo JSTestConditionallyReadWriteDOMConstructor::s_info = { "TestConditionallyReadWrite"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestConditionallyReadWriteDOMConstructor) };
 
 template<> JSValue JSTestConditionallyReadWriteDOMConstructor::prototypeForStructure(JSC::VM& vm, const JSDOMGlobalObject& globalObject)
@@ -269,8 +251,8 @@ static inline JSValue jsTestConditionallyReadWrite_conditionallyReadWriteAttribu
 {
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    Ref impl = thisObject.wrapped();
-    RELEASE_AND_RETURN(throwScope, (toJS<IDLInterface<Node>>(lexicalGlobalObject, *thisObject.globalObject(), throwScope, impl->conditionallyReadWriteAttribute())));
+    auto& impl = thisObject.wrapped();
+    RELEASE_AND_RETURN(throwScope, (toJS<IDLInterface<Node>>(lexicalGlobalObject, *thisObject.globalObject(), throwScope, impl.conditionallyReadWriteAttribute())));
 }
 
 JSC_DEFINE_CUSTOM_GETTER(jsTestConditionallyReadWrite_conditionallyReadWriteAttribute, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName attributeName))
@@ -284,11 +266,11 @@ static inline bool setJSTestConditionallyReadWrite_conditionallyReadWriteAttribu
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     UNUSED_PARAM(vm);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    Ref impl = thisObject.wrapped();
+    auto& impl = thisObject.wrapped();
     auto nativeValue = convert<IDLInterface<Node>>(lexicalGlobalObject, value, [](JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope) { throwAttributeTypeError(lexicalGlobalObject, scope, "TestConditionallyReadWrite", "conditionallyReadWriteAttribute", "Node"); });
     RETURN_IF_EXCEPTION(throwScope, false);
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
-        return impl->setConditionallyReadWriteAttribute(*nativeValue);
+        return impl.setConditionallyReadWriteAttribute(*nativeValue);
     });
     return true;
 }
@@ -305,8 +287,8 @@ static inline JSValue jsTestConditionallyReadWrite_conditionalAndConditionallyRe
 {
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    Ref impl = thisObject.wrapped();
-    RELEASE_AND_RETURN(throwScope, (toJS<IDLInterface<Node>>(lexicalGlobalObject, *thisObject.globalObject(), throwScope, impl->conditionalAndConditionallyReadWriteAttribute())));
+    auto& impl = thisObject.wrapped();
+    RELEASE_AND_RETURN(throwScope, (toJS<IDLInterface<Node>>(lexicalGlobalObject, *thisObject.globalObject(), throwScope, impl.conditionalAndConditionallyReadWriteAttribute())));
 }
 
 JSC_DEFINE_CUSTOM_GETTER(jsTestConditionallyReadWrite_conditionalAndConditionallyReadWriteAttribute, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName attributeName))
@@ -323,11 +305,11 @@ static inline bool setJSTestConditionallyReadWrite_conditionalAndConditionallyRe
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     UNUSED_PARAM(vm);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    Ref impl = thisObject.wrapped();
+    auto& impl = thisObject.wrapped();
     auto nativeValue = convert<IDLInterface<Node>>(lexicalGlobalObject, value, [](JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope) { throwAttributeTypeError(lexicalGlobalObject, scope, "TestConditionallyReadWrite", "conditionalAndConditionallyReadWriteAttribute", "Node"); });
     RETURN_IF_EXCEPTION(throwScope, false);
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
-        return impl->setConditionalAndConditionallyReadWriteAttribute(*nativeValue);
+        return impl.setConditionalAndConditionallyReadWriteAttribute(*nativeValue);
     });
     return true;
 }
@@ -345,8 +327,8 @@ static inline JSValue jsTestConditionallyReadWrite_enabledConditionallyReadWrite
 {
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    Ref impl = thisObject.wrapped();
-    RELEASE_AND_RETURN(throwScope, (toJS<IDLInterface<Node>>(lexicalGlobalObject, *thisObject.globalObject(), throwScope, impl->enabledConditionallyReadWriteBySettingAttribute())));
+    auto& impl = thisObject.wrapped();
+    RELEASE_AND_RETURN(throwScope, (toJS<IDLInterface<Node>>(lexicalGlobalObject, *thisObject.globalObject(), throwScope, impl.enabledConditionallyReadWriteBySettingAttribute())));
 }
 
 JSC_DEFINE_CUSTOM_GETTER(jsTestConditionallyReadWrite_enabledConditionallyReadWriteBySettingAttribute, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName attributeName))
@@ -359,11 +341,11 @@ static inline bool setJSTestConditionallyReadWrite_enabledConditionallyReadWrite
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     UNUSED_PARAM(vm);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    Ref impl = thisObject.wrapped();
+    auto& impl = thisObject.wrapped();
     auto nativeValue = convert<IDLInterface<Node>>(lexicalGlobalObject, value, [](JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope) { throwAttributeTypeError(lexicalGlobalObject, scope, "TestConditionallyReadWrite", "enabledConditionallyReadWriteBySettingAttribute", "Node"); });
     RETURN_IF_EXCEPTION(throwScope, false);
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
-        return impl->setEnabledConditionallyReadWriteBySettingAttribute(*nativeValue);
+        return impl.setEnabledConditionallyReadWriteBySettingAttribute(*nativeValue);
     });
     return true;
 }
@@ -377,8 +359,8 @@ static inline JSValue jsTestConditionallyReadWrite_enabledConditionallyReadWrite
 {
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    Ref impl = thisObject.wrapped();
-    RELEASE_AND_RETURN(throwScope, (toJS<IDLInterface<Node>>(lexicalGlobalObject, *thisObject.globalObject(), throwScope, impl->enabledConditionallyReadWriteBySettingAttributeUnforgeable())));
+    auto& impl = thisObject.wrapped();
+    RELEASE_AND_RETURN(throwScope, (toJS<IDLInterface<Node>>(lexicalGlobalObject, *thisObject.globalObject(), throwScope, impl.enabledConditionallyReadWriteBySettingAttributeUnforgeable())));
 }
 
 JSC_DEFINE_CUSTOM_GETTER(jsTestConditionallyReadWrite_enabledConditionallyReadWriteBySettingAttributeUnforgeable, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName attributeName))
@@ -391,11 +373,11 @@ static inline bool setJSTestConditionallyReadWrite_enabledConditionallyReadWrite
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     UNUSED_PARAM(vm);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    Ref impl = thisObject.wrapped();
+    auto& impl = thisObject.wrapped();
     auto nativeValue = convert<IDLInterface<Node>>(lexicalGlobalObject, value, [](JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope) { throwAttributeTypeError(lexicalGlobalObject, scope, "TestConditionallyReadWrite", "enabledConditionallyReadWriteBySettingAttributeUnforgeable", "Node"); });
     RETURN_IF_EXCEPTION(throwScope, false);
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
-        return impl->setEnabledConditionallyReadWriteBySettingAttributeUnforgeable(*nativeValue);
+        return impl.setEnabledConditionallyReadWriteBySettingAttributeUnforgeable(*nativeValue);
     });
     return true;
 }
@@ -409,8 +391,8 @@ static inline JSValue jsTestConditionallyReadWrite_enabledConditionallyReadWrite
 {
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    Ref impl = thisObject.wrapped();
-    RELEASE_AND_RETURN(throwScope, (toJS<IDLInterface<Node>>(lexicalGlobalObject, *thisObject.globalObject(), throwScope, impl->enabledConditionallyReadWriteBySettingAttributeUnforgeablePrivate())));
+    auto& impl = thisObject.wrapped();
+    RELEASE_AND_RETURN(throwScope, (toJS<IDLInterface<Node>>(lexicalGlobalObject, *thisObject.globalObject(), throwScope, impl.enabledConditionallyReadWriteBySettingAttributeUnforgeablePrivate())));
 }
 
 JSC_DEFINE_CUSTOM_GETTER(jsTestConditionallyReadWrite_enabledConditionallyReadWriteBySettingAttributeUnforgeablePrivate, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName attributeName))
@@ -423,11 +405,11 @@ static inline bool setJSTestConditionallyReadWrite_enabledConditionallyReadWrite
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     UNUSED_PARAM(vm);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    Ref impl = thisObject.wrapped();
+    auto& impl = thisObject.wrapped();
     auto nativeValue = convert<IDLInterface<Node>>(lexicalGlobalObject, value, [](JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope) { throwAttributeTypeError(lexicalGlobalObject, scope, "TestConditionallyReadWrite", "enabledConditionallyReadWriteBySettingAttributeUnforgeablePrivate", "Node"); });
     RETURN_IF_EXCEPTION(throwScope, false);
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
-        return impl->setEnabledConditionallyReadWriteBySettingAttributeUnforgeablePrivate(*nativeValue);
+        return impl.setEnabledConditionallyReadWriteBySettingAttributeUnforgeablePrivate(*nativeValue);
     });
     return true;
 }
@@ -441,8 +423,8 @@ static inline JSValue jsTestConditionallyReadWrite_enabledConditionallyReadWrite
 {
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    Ref impl = thisObject.wrapped();
-    RELEASE_AND_RETURN(throwScope, (toJS<IDLPromise<IDLDouble>>(lexicalGlobalObject, *thisObject.globalObject(), throwScope, [&]() -> decltype(auto) { return impl->enabledConditionallyReadWriteBySettingAttributePromise(); })));
+    auto& impl = thisObject.wrapped();
+    RELEASE_AND_RETURN(throwScope, (toJS<IDLPromise<IDLDouble>>(lexicalGlobalObject, *thisObject.globalObject(), throwScope, [&]() -> decltype(auto) { return impl.enabledConditionallyReadWriteBySettingAttributePromise(); })));
 }
 
 JSC_DEFINE_CUSTOM_GETTER(jsTestConditionallyReadWrite_enabledConditionallyReadWriteBySettingAttributePromise, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName attributeName))
@@ -455,11 +437,11 @@ static inline bool setJSTestConditionallyReadWrite_enabledConditionallyReadWrite
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     UNUSED_PARAM(vm);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    Ref impl = thisObject.wrapped();
+    auto& impl = thisObject.wrapped();
     auto nativeValue = convert<IDLPromise<IDLDouble>>(lexicalGlobalObject, value);
     RETURN_IF_EXCEPTION(throwScope, false);
     invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
-        return impl->setEnabledConditionallyReadWriteBySettingAttributePromise(nativeValue.releaseNonNull());
+        return impl.setEnabledConditionallyReadWriteBySettingAttributePromise(nativeValue.releaseNonNull());
     });
     return true;
 }

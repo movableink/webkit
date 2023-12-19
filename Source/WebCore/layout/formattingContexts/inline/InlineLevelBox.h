@@ -147,6 +147,8 @@ private:
     void setIsFirstBox() { m_isFirstWithinLayoutBox = true; }
     void setIsLastBox() { m_isLastWithinLayoutBox = true; }
 
+    void setTextEmphasis(std::pair<InlineLayoutUnit, InlineLayoutUnit>);
+
 private:
     CheckedRef<const Box> m_layoutBox;
     // This is the combination of margin and border boxes. Inline level boxes are vertically aligned using their margin boxes.
@@ -166,7 +168,7 @@ private:
         const Length& lineHeight;
         TextBoxEdge textBoxEdge;
         TextBoxTrim textBoxTrim;
-        WTF::OptionSet<LineBoxContain> lineBoxContain;
+        OptionSet<LineBoxContain> lineBoxContain;
         InlineLayoutUnit primaryFontSize { 0 };
         VerticalAlignment verticalAlignment { };
     };

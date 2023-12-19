@@ -29,6 +29,7 @@
 
 #include "BackgroundPainter.h"
 #include "BitmapImage.h"
+#include "BlendingKeyframes.h"
 #include "CanvasRenderingContext.h"
 #include "CSSPropertyNames.h"
 #include "CachedImage.h"
@@ -46,7 +47,6 @@
 #include "HTMLPlugInElement.h"
 #include "HTMLVideoElement.h"
 #include "InspectorInstrumentation.h"
-#include "KeyframeList.h"
 #include "LayerAncestorClippingStack.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
@@ -270,6 +270,7 @@ RenderLayerBacking::~RenderLayerBacking()
     ASSERT(!m_viewportConstrainedNodeID);
     ASSERT(!m_scrollingNodeID);
     ASSERT(!m_frameHostingNodeID);
+    ASSERT(!m_pluginHostingNodeID);
     ASSERT(!m_positioningNodeID);
 
     destroyGraphicsLayers();
@@ -289,7 +290,7 @@ void RenderLayerBacking::willDestroyLayer(const GraphicsLayer* layer)
         compositor().layerTiledBackingUsageChanged(layer, false);
 }
 
-static void clearBackingSharingLayerProviders(WeakListHashSet<RenderLayer>& sharingLayers, const RenderLayer& providerLayer)
+static void clearBackingSharingLayerProviders(SingleThreadWeakListHashSet<RenderLayer>& sharingLayers, const RenderLayer& providerLayer)
 {
     for (auto& layer : sharingLayers) {
         if (layer.backingProviderLayer() == &providerLayer)
@@ -297,7 +298,7 @@ static void clearBackingSharingLayerProviders(WeakListHashSet<RenderLayer>& shar
     }
 }
 
-void RenderLayerBacking::setBackingSharingLayers(WeakListHashSet<RenderLayer>&& sharingLayers)
+void RenderLayerBacking::setBackingSharingLayers(SingleThreadWeakListHashSet<RenderLayer>&& sharingLayers)
 {
     bool sharingLayersChanged = m_backingSharingLayers.computeSize() != sharingLayers.computeSize();
     // For layers that used to share and no longer do, and are not composited, recompute repaint rects.
@@ -553,9 +554,7 @@ void RenderLayerBacking::createPrimaryGraphicsLayer()
     updateOpacity(style);
     updateTransform(style);
     updateFilters(style);
-#if ENABLE(FILTERS_LEVEL_2)
     updateBackdropFilters(style);
-#endif
     updateBackdropRoot();
 #if ENABLE(CSS_COMPOSITING)
     updateBlendMode(style);
@@ -762,7 +761,6 @@ void RenderLayerBacking::updateFilters(const RenderStyle& style)
     m_canCompositeFilters = m_graphicsLayer->setFilters(style.filter());
 }
 
-#if ENABLE(FILTERS_LEVEL_2)
 void RenderLayerBacking::updateBackdropFilters(const RenderStyle& style)
 {
     m_canCompositeBackdropFilters = m_graphicsLayer->setBackdropFilters(style.backdropFilter());
@@ -793,7 +791,6 @@ void RenderLayerBacking::updateBackdropFiltersGeometry()
 
     m_graphicsLayer->setBackdropFiltersRect(backdropFiltersRect);
 }
-#endif
 
 bool RenderLayerBacking::updateBackdropRoot()
 {
@@ -1024,9 +1021,7 @@ void RenderLayerBacking::updateConfigurationAfterStyleChange()
     updateOpacity(style);
     updateFilters(style);
 
-#if ENABLE(FILTERS_LEVEL_2)
     updateBackdropFilters(style);
-#endif
     updateBackdropRoot();
 #if ENABLE(CSS_COMPOSITING)
     updateBlendMode(style);
@@ -1392,9 +1387,7 @@ void RenderLayerBacking::updateGeometry(const RenderLayer* compositedAncestor)
     updateTransform(style);
     updateOpacity(style);
     updateFilters(style);
-#if ENABLE(FILTERS_LEVEL_2)
     updateBackdropFilters(style);
-#endif
     updateBackdropRoot();
 #if ENABLE(CSS_COMPOSITING)
     updateBlendMode(style);
@@ -1593,9 +1586,7 @@ void RenderLayerBacking::updateGeometry(const RenderLayer* compositedAncestor)
     LayoutRect ancestorCompositedBounds = compositedAncestor ? compositedAncestor->backing()->compositedBounds() : LayoutRect();
     setRequiresOwnBackingStore(compositor().requiresOwnBackingStore(m_owningLayer, compositedAncestor,
         LayoutRect(toLayoutPoint(compositedBoundsOffset.fromParentGraphicsLayer()), compositedBounds().size()), ancestorCompositedBounds));
-#if ENABLE(FILTERS_LEVEL_2)
     updateBackdropFiltersGeometry();
-#endif
     updateAfterWidgetResize();
 
     positionOverflowControlsLayers();
@@ -1934,7 +1925,7 @@ void RenderLayerBacking::updateEventRegion()
         EventRegion eventRegion;
         auto eventRegionContext = eventRegion.makeContext();
         if (visibleToHitTesting)
-            eventRegionContext.unite(enclosingIntRect(FloatRect({ }, graphicsLayer->size())), renderer(), renderer().style());
+            eventRegionContext.unite(FloatRoundedRect(FloatRect({ }, graphicsLayer->size())), renderer(), renderer().style());
 
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
         eventRegionContext.copyInteractionRegionsToEventRegion();
@@ -1950,8 +1941,8 @@ void RenderLayerBacking::updateEventRegion()
             eventRegion.ensureEditableRegion();
 #endif
         auto eventRegionContext = eventRegion.makeContext();
-        auto layerOffset = graphicsLayer.scrollOffset() - roundedIntSize(graphicsLayer.offsetFromRenderer());
-        auto layerBounds = enclosingIntRect(FloatRect(-layerOffset, graphicsLayer.size()));
+        auto layerOffset = graphicsLayer.scrollOffset() - graphicsLayer.offsetFromRenderer();
+        auto layerBounds = FloatRoundedRect(FloatRect(-layerOffset, graphicsLayer.size()));
 
         if (visibleToHitTesting) {
             if (&graphicsLayer == m_scrolledContentsLayer) {
@@ -1972,7 +1963,7 @@ void RenderLayerBacking::updateEventRegion()
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
         eventRegionContext.copyInteractionRegionsToEventRegion();
 #endif
-        eventRegion.translate(toIntSize(layerOffset));
+        eventRegion.translate(toIntSize(roundedIntPoint(layerOffset)));
         graphicsLayer.setEventRegion(WTFMove(eventRegion));
     };
 
@@ -2557,7 +2548,7 @@ bool RenderLayerBacking::updateScrollingLayers(bool needsScrollingLayers)
 
 void RenderLayerBacking::detachFromScrollingCoordinator(OptionSet<ScrollCoordinationRole> roles)
 {
-    if (!m_scrollingNodeID && !m_ancestorClippingStack && !m_frameHostingNodeID && !m_viewportConstrainedNodeID && !m_positioningNodeID)
+    if (!m_scrollingNodeID && !m_ancestorClippingStack && !m_frameHostingNodeID && !m_pluginHostingNodeID && !m_viewportConstrainedNodeID && !m_positioningNodeID)
         return;
 
     auto* scrollingCoordinator = m_owningLayer.page().scrollingCoordinator();
@@ -2590,6 +2581,12 @@ void RenderLayerBacking::detachFromScrollingCoordinator(OptionSet<ScrollCoordina
         LOG_WITH_STREAM(Compositing, stream << "Detaching FrameHosting node " << m_frameHostingNodeID);
         scrollingCoordinator->unparentChildrenAndDestroyNode(m_frameHostingNodeID);
         m_frameHostingNodeID = 0;
+    }
+
+    if (roles.contains(ScrollCoordinationRole::PluginHosting) && m_pluginHostingNodeID) {
+        LOG_WITH_STREAM(Compositing, stream << "Detaching PluginHosting node " << m_pluginHostingNodeID);
+        scrollingCoordinator->unparentChildrenAndDestroyNode(m_pluginHostingNodeID);
+        m_pluginHostingNodeID = 0;
     }
 
     if (roles.contains(ScrollCoordinationRole::ViewportConstrained) && m_viewportConstrainedNodeID) {
@@ -2631,6 +2628,9 @@ void RenderLayerBacking::setScrollingNodeIDForRole(ScrollingNodeID nodeID, Scrol
         break;
     case ScrollCoordinationRole::FrameHosting:
         m_frameHostingNodeID = nodeID;
+        break;
+    case ScrollCoordinationRole::PluginHosting:
+        m_pluginHostingNodeID = nodeID;
         break;
     case ScrollCoordinationRole::ViewportConstrained:
         m_viewportConstrainedNodeID = nodeID;
@@ -3023,10 +3023,8 @@ static std::optional<bool> intersectsWithAncestor(const RenderLayer& child, cons
 {
     // If any layers between child and ancestor are transformed, then adjusting the offset is
     // insufficient to convert coordinates into ancestor's coordinate space.
-    for (auto* layer = &child; layer != &ancestor; layer = layer->parent()) {
-        if (!layer->canUseOffsetFromAncestor())
+    if (!child.canUseOffsetFromAncestor(ancestor))
             return std::nullopt;
-    }
 
     auto overlap = child.boundingBox(&ancestor, child.offsetFromAncestor(&ancestor), RenderLayer::UseFragmentBoxesExcludingCompositing);
     return overlap.intersects(ancestorCompositedBounds);
@@ -3599,7 +3597,7 @@ static RefPtr<Pattern> patternForDescription(PatternDescription description, Flo
         fontDescription.setSpecifiedSize(10);
         fontDescription.setComputedSize(10);
         fontDescription.setWeight(FontSelectionValue(500));
-        FontCascade font(WTFMove(fontDescription), 0, 0);
+        FontCascade font(WTFMove(fontDescription));
         font.update(nullptr);
 
         TextRun textRun = TextRun(StringView { description.name });
@@ -3964,7 +3962,7 @@ void RenderLayerBacking::verifyNotPainting()
 }
 #endif
 
-bool RenderLayerBacking::startAnimation(double timeOffset, const Animation& animation, const KeyframeList& keyframes)
+bool RenderLayerBacking::startAnimation(double timeOffset, const Animation& animation, const BlendingKeyframes& keyframes)
 {
     bool shouldApplyAnimationsToTargetRenderer = renderer().isRenderBox() || renderer().isSVGLayerAwareRenderer();
 
@@ -3976,9 +3974,7 @@ bool RenderLayerBacking::startAnimation(double timeOffset, const Animation& anim
     bool hasFilter = keyframes.containsProperty(CSSPropertyFilter);
 
     bool hasBackdropFilter = false;
-#if ENABLE(FILTERS_LEVEL_2)
     hasBackdropFilter = keyframes.containsProperty(CSSPropertyWebkitBackdropFilter) || keyframes.containsProperty(CSSPropertyBackdropFilter);
-#endif
 
     if (!hasOpacity && !hasRotate && !hasScale && !hasTranslate && !hasTransform && !hasFilter && !hasBackdropFilter)
         return false;
@@ -3989,41 +3985,37 @@ bool RenderLayerBacking::startAnimation(double timeOffset, const Animation& anim
     KeyframeValueList transformVector(AnimatedProperty::Transform);
     KeyframeValueList opacityVector(AnimatedProperty::Opacity);
     KeyframeValueList filterVector(AnimatedProperty::Filter);
-#if ENABLE(FILTERS_LEVEL_2)
     KeyframeValueList backdropFilterVector(AnimatedProperty::WebkitBackdropFilter);
-#endif
 
     for (auto& currentKeyframe : keyframes) {
         const RenderStyle* keyframeStyle = currentKeyframe.style();
-        double key = currentKeyframe.key();
+        double offset = currentKeyframe.offset();
 
         if (!keyframeStyle)
             continue;
             
         auto* tf = currentKeyframe.timingFunction();
-        
-        if (currentKeyframe.containsProperty(CSSPropertyRotate))
-            rotateVector.insert(makeUnique<TransformAnimationValue>(key, keyframeStyle->rotate(), tf));
 
-        if (currentKeyframe.containsProperty(CSSPropertyScale))
-            scaleVector.insert(makeUnique<TransformAnimationValue>(key, keyframeStyle->scale(), tf));
+        if (currentKeyframe.animatesProperty(CSSPropertyRotate))
+            rotateVector.insert(makeUnique<TransformAnimationValue>(offset, keyframeStyle->rotate(), tf));
 
-        if (currentKeyframe.containsProperty(CSSPropertyTranslate))
-            translateVector.insert(makeUnique<TransformAnimationValue>(key, keyframeStyle->translate(), tf));
+        if (currentKeyframe.animatesProperty(CSSPropertyScale))
+            scaleVector.insert(makeUnique<TransformAnimationValue>(offset, keyframeStyle->scale(), tf));
 
-        if (currentKeyframe.containsProperty(CSSPropertyTransform))
-            transformVector.insert(makeUnique<TransformAnimationValue>(key, keyframeStyle->transform(), tf));
+        if (currentKeyframe.animatesProperty(CSSPropertyTranslate))
+            translateVector.insert(makeUnique<TransformAnimationValue>(offset, keyframeStyle->translate(), tf));
 
-        if (currentKeyframe.containsProperty(CSSPropertyOpacity))
-            opacityVector.insert(makeUnique<FloatAnimationValue>(key, keyframeStyle->opacity(), tf));
+        if (currentKeyframe.animatesProperty(CSSPropertyTransform))
+            transformVector.insert(makeUnique<TransformAnimationValue>(offset, keyframeStyle->transform(), tf));
 
-        if (currentKeyframe.containsProperty(CSSPropertyFilter))
-            filterVector.insert(makeUnique<FilterAnimationValue>(key, keyframeStyle->filter(), tf));
+        if (currentKeyframe.animatesProperty(CSSPropertyOpacity))
+            opacityVector.insert(makeUnique<FloatAnimationValue>(offset, keyframeStyle->opacity(), tf));
 
-#if ENABLE(FILTERS_LEVEL_2)
-        if (currentKeyframe.containsProperty(CSSPropertyWebkitBackdropFilter) || currentKeyframe.containsProperty(CSSPropertyBackdropFilter))
-            backdropFilterVector.insert(makeUnique<FilterAnimationValue>(key, keyframeStyle->backdropFilter(), tf));
-#endif
+        if (currentKeyframe.animatesProperty(CSSPropertyFilter))
+            filterVector.insert(makeUnique<FilterAnimationValue>(offset, keyframeStyle->filter(), tf));
+
+        if (currentKeyframe.animatesProperty(CSSPropertyWebkitBackdropFilter) || currentKeyframe.animatesProperty(CSSPropertyBackdropFilter))
+            backdropFilterVector.insert(makeUnique<FilterAnimationValue>(offset, keyframeStyle->backdropFilter(), tf));
     }
 
     if (!renderer().settings().acceleratedCompositedAnimationsEnabled())
@@ -4053,10 +4045,8 @@ bool RenderLayerBacking::startAnimation(double timeOffset, const Animation& anim
     if (hasFilter && m_graphicsLayer->addAnimation(filterVector, IntSize { }, &animation, keyframes.animationName(), timeOffset))
         didAnimate = true;
 
-#if ENABLE(FILTERS_LEVEL_2)
     if (hasBackdropFilter && m_graphicsLayer->addAnimation(backdropFilterVector, IntSize { }, &animation, keyframes.animationName(), timeOffset))
         didAnimate = true;
-#endif
 
     if (didAnimate) {
         m_owningLayer.setNeedsPostLayoutCompositingUpdate();
@@ -4210,11 +4200,9 @@ CSSPropertyID RenderLayerBacking::graphicsLayerToCSSProperty(AnimatedProperty pr
     case AnimatedProperty::Filter:
         cssProperty = CSSPropertyFilter;
         break;
-#if ENABLE(FILTERS_LEVEL_2)
     case AnimatedProperty::WebkitBackdropFilter:
         cssProperty = CSSPropertyWebkitBackdropFilter;
         break;
-#endif
     case AnimatedProperty::Invalid:
         ASSERT_NOT_REACHED();
     }
@@ -4238,11 +4226,9 @@ AnimatedProperty RenderLayerBacking::cssToGraphicsLayerProperty(CSSPropertyID cs
         return AnimatedProperty::BackgroundColor;
     case CSSPropertyFilter:
         return AnimatedProperty::Filter;
-#if ENABLE(FILTERS_LEVEL_2)
     case CSSPropertyBackdropFilter:
     case CSSPropertyWebkitBackdropFilter:
         return AnimatedProperty::WebkitBackdropFilter;
-#endif
     default:
         // It's fine if we see other css properties here; they are just not accelerated.
         break;
@@ -4311,6 +4297,8 @@ TextStream& operator<<(TextStream& ts, const RenderLayerBacking& backing)
 
     if (auto nodeID = backing.scrollingNodeIDForRole(ScrollCoordinationRole::FrameHosting))
         ts << " frame hosting node " << nodeID;
+    if (auto nodeID = backing.scrollingNodeIDForRole(ScrollCoordinationRole::PluginHosting))
+        ts << " plugin hosting node " << nodeID;
     if (auto nodeID = backing.scrollingNodeIDForRole(ScrollCoordinationRole::Positioning))
         ts << " positioning node " << nodeID;
     return ts;

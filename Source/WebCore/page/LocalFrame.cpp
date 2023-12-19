@@ -68,6 +68,7 @@
 #include "ImageBuffer.h"
 #include "InspectorInstrumentation.h"
 #include "JSNode.h"
+#include "JSServiceWorkerGlobalScope.h"
 #include "JSWindowProxy.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrameLoaderClient.h"
@@ -92,6 +93,7 @@
 #include "ScriptController.h"
 #include "ScriptSourceCode.h"
 #include "ScrollingCoordinator.h"
+#include "ServiceWorkerGlobalScope.h"
 #include "Settings.h"
 #include "StyleProperties.h"
 #include "StyleScope.h"
@@ -115,11 +117,6 @@
 
 #if ENABLE(DATA_DETECTION)
 #include "DataDetectionResultsStorage.h"
-#endif
-
-#if ENABLE(SERVICE_WORKER)
-#include "JSServiceWorkerGlobalScope.h"
-#include "ServiceWorkerGlobalScope.h"
 #endif
 
 #define FRAME_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - Frame::" fmt, this, ##__VA_ARGS__)
@@ -150,18 +147,27 @@ static inline float parentTextZoomFactor(LocalFrame* frame)
     return parent->textZoomFactor();
 }
 
+static bool isRootFrame(const Frame& frame)
+{
+    if (auto* parent = frame.tree().parent())
+        return is<RemoteFrame>(parent);
+    ASSERT(&frame.mainFrame() == &frame);
+    return true;
+}
+
 LocalFrame::LocalFrame(Page& page, UniqueRef<LocalFrameLoaderClient>&& frameLoaderClient, FrameIdentifier identifier, HTMLFrameOwnerElement* ownerElement, Frame* parent)
     : Frame(page, identifier, FrameType::Local, ownerElement, parent)
     , m_loader(makeUniqueRef<FrameLoader>(*this, WTFMove(frameLoaderClient)))
     , m_script(makeUniqueRef<ScriptController>(*this))
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
+    , m_isRootFrame(WebCore::isRootFrame(*this))
     , m_eventHandler(makeUniqueRef<EventHandler>(*this))
 {
     ProcessWarming::initializeNames();
     StaticCSSValuePool::init();
 
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(mainFrame()); localMainFrame && ownerElement)
+    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(mainFrame()); localMainFrame && parent)
         localMainFrame->selfOnlyRef();
 
 #ifndef NDEBUG
@@ -172,8 +178,8 @@ LocalFrame::LocalFrame(Page& page, UniqueRef<LocalFrameLoaderClient>&& frameLoad
     if (LocalFrame* parent = dynamicDowncast<LocalFrame>(tree().parent()); parent && parent->activeDOMObjectsAndAnimationsSuspended())
         suspendActiveDOMObjectsAndAnimations();
 
-    if (CheckedPtr page = this->page(); page && isRootFrame())
-        page->removeRootFrame(*this);
+    if (isRootFrame())
+        page.addRootFrame(*this);
 }
 
 void LocalFrame::init()
@@ -221,14 +227,16 @@ LocalFrame::~LocalFrame()
     auto* localMainFrame = dynamicDowncast<LocalFrame>(mainFrame());
     if (!isMainFrame() && localMainFrame)
         localMainFrame->selfOnlyDeref();
+
+    if (isRootFrame()) {
+        if (auto* page = this->page())
+            page->removeRootFrame(*this);
+    }
 }
 
 bool LocalFrame::isRootFrame() const
 {
-    if (auto* parent = tree().parent())
-        return is<RemoteFrame>(parent);
-    ASSERT(&mainFrame() == this);
-    return true;
+    return m_isRootFrame;
 }
 
 void LocalFrame::addDestructionObserver(FrameDestructionObserver& observer)
@@ -290,7 +298,7 @@ void LocalFrame::setDocument(RefPtr<Document>&& newDocument)
     m_documentIsBeingReplaced = true;
 
     if (isMainFrame()) {
-        if (CheckedPtr page = this->page())
+        if (RefPtr page = this->page())
             page->didChangeMainDocument();
         checkedLoader()->client().dispatchDidChangeMainDocument();
 
@@ -328,9 +336,13 @@ void LocalFrame::setDocument(RefPtr<Document>&& newDocument)
 #endif
 
     if (page() && m_doc && isMainFrame() && !loader().stateMachine().isDisplayingInitialEmptyDocument())
-        checkedPage()->mainFrameDidChangeToNonInitialEmptyDocument();
+        protectedPage()->mainFrameDidChangeToNonInitialEmptyDocument();
 
     InspectorInstrumentation::frameDocumentUpdated(*this);
+
+#if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
+    m_accessedWindowProxyPropertiesViaOpener = { };
+#endif
 
     m_documentIsBeingReplaced = false;
 }
@@ -405,7 +417,7 @@ void LocalFrame::orientationChanged()
 
 IntDegrees LocalFrame::orientation() const
 {
-    if (CheckedPtr page = this->page())
+    if (RefPtr page = this->page())
         return page->chrome().client().deviceOrientation();
     return 0;
 }
@@ -706,7 +718,7 @@ void LocalFrame::injectUserScripts(UserScriptInjectionTime injectionTime)
     if (loader().stateMachine().creatingInitialEmptyDocument() && !settings().shouldInjectUserScriptsInInitialEmptyDocument())
         return;
 
-    CheckedPtr page = this->page();
+    RefPtr page = this->page();
     bool pageWasNotified = page->hasBeenNotifiedToInjectUserScripts();
     page->protectedUserContentProvider()->forEachUserScript([this, protectedThis = Ref { *this }, injectionTime, pageWasNotified] (DOMWrapperWorld& world, const UserScript& script) {
         if (script.injectionTime() == injectionTime) {
@@ -758,21 +770,6 @@ void LocalFrame::injectUserScriptsAwaitingNotification()
 RenderView* LocalFrame::contentRenderer() const
 {
     return document() ? document()->renderView() : nullptr;
-}
-
-RenderWidget* LocalFrame::ownerRenderer() const
-{
-    RefPtr ownerElement = this->ownerElement();
-    if (!ownerElement)
-        return nullptr;
-    auto* object = ownerElement->renderer();
-    // FIXME: If <object> is ever fixed to disassociate itself from frames
-    // that it has started but canceled, then this can turn into an ASSERT
-    // since ownerElement would be nullptr when the load is canceled.
-    // https://bugs.webkit.org/show_bug.cgi?id=18585
-    if (!is<RenderWidget>(object))
-        return nullptr;
-    return downcast<RenderWidget>(object);
 }
 
 LocalFrame* LocalFrame::frameForWidget(const Widget& widget)
@@ -830,7 +827,8 @@ void LocalFrame::willDetachPage()
 
     // FIXME: It's unclear as to why this is called more than once, but it is,
     // so page() could be NULL.
-    if (CheckedPtr page = this->page()) {
+    // Unable to ref the page as it may have started destruction.
+    if (WeakPtr page = this->page()) {
         CheckedRef focusController = page->focusController();
         if (focusController->focusedFrame() == this)
             focusController->setFocusedFrame(nullptr);
@@ -966,6 +964,26 @@ DOMWindow* LocalFrame::virtualWindow() const
     return window();
 }
 
+void LocalFrame::disconnectView()
+{
+    setView(nullptr);
+}
+
+void LocalFrame::setOpener(Frame* opener)
+{
+    loader().setOpener(opener);
+}
+
+const Frame* LocalFrame::opener() const
+{
+    return loader().opener();
+}
+
+Frame* LocalFrame::opener()
+{
+    return loader().opener();
+}
+
 FrameView* LocalFrame::virtualView() const
 {
     return m_view.get();
@@ -993,7 +1011,7 @@ void LocalFrame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomF
     if (m_pageZoomFactor == pageZoomFactor && m_textZoomFactor == textZoomFactor)
         return;
 
-    CheckedPtr page = this->page();
+    RefPtr page = this->page();
     if (!page)
         return;
 
@@ -1038,7 +1056,7 @@ void LocalFrame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomF
 
 float LocalFrame::frameScaleFactor() const
 {
-    CheckedPtr page = this->page();
+    RefPtr page = this->page();
 
     // Main frame is scaled with respect to he container but inner frames are not scaled with respect to the main frame.
     if (!page || !isMainFrame())
@@ -1122,7 +1140,7 @@ FloatSize LocalFrame::screenSize() const
     if (!loader || !loader->fingerprintingProtectionsEnabled())
         return defaultSize;
 
-    if (CheckedPtr page = this->page())
+    if (RefPtr page = this->page())
         return page->chrome().client().screenSizeForFingerprintingProtections(*this, defaultSize);
 
     return defaultSize;
@@ -1180,13 +1198,10 @@ TextStream& operator<<(TextStream& ts, const LocalFrame& frame)
     return ts;
 }
 
-bool LocalFrame::arePluginsEnabled()
-{
-    return settings().arePluginsEnabled();
-}
-
 void LocalFrame::resetScript()
 {
+    ASSERT(windowProxy().frame() == this);
+    windowProxy().detachFromFrame();
     resetWindowProxy();
     m_script = makeUniqueRef<ScriptController>(*this);
 }
@@ -1196,10 +1211,8 @@ LocalFrame* LocalFrame::fromJSContext(JSContextRef context)
     JSC::JSGlobalObject* globalObjectObj = toJS(context);
     if (auto* window = JSC::jsDynamicCast<JSLocalDOMWindow*>(globalObjectObj))
         return window->wrapped().frame();
-#if ENABLE(SERVICE_WORKER)
     if (auto* serviceWorkerGlobalScope = JSC::jsDynamicCast<JSServiceWorkerGlobalScope*>(globalObjectObj))
         return serviceWorkerGlobalScope->wrapped().serviceWorkerPage() ? dynamicDowncast<LocalFrame>(serviceWorkerGlobalScope->wrapped().serviceWorkerPage()->mainFrame()) : nullptr;
-#endif
     return nullptr;
 }
 
@@ -1233,7 +1246,7 @@ CheckedRef<const EventHandler> LocalFrame::checkedEventHandler() const
 
 void LocalFrame::documentURLDidChange(const URL& url)
 {
-    if (CheckedPtr page = this->page(); page && isMainFrame()) {
+    if (RefPtr page = this->page(); page && isMainFrame()) {
         page->setMainFrameURL(url);
         checkedLoader()->client().broadcastMainFrameURLChangeToOtherProcesses(url);
     }
@@ -1260,6 +1273,27 @@ void LocalFrame::frameWasDisconnectedFromOwner() const
 
     protectedDocument()->detachFromFrame();
 }
+
+#if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
+
+void LocalFrame::didAccessWindowProxyPropertyViaOpener(WindowProxyProperty property)
+{
+    if (m_accessedWindowProxyPropertiesViaOpener.contains(property))
+        return;
+    m_accessedWindowProxyPropertiesViaOpener.add(property);
+
+    RefPtr parentWindow { opener() ? opener()->window() : nullptr };
+    if (!parentWindow)
+        return;
+
+    auto parentOrigin = SecurityOriginData::fromURL(parentWindow->location().url());
+    if (parentOrigin.isNull() || parentOrigin.isOpaque())
+        return;
+
+    checkedLoader()->client().didAccessWindowProxyPropertyViaOpener(WTFMove(parentOrigin), property);
+}
+
+#endif
 
 } // namespace WebCore
 

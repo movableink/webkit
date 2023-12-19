@@ -25,13 +25,13 @@
 #include "LegacyRenderSVGResource.h"
 
 #include "LegacyRenderSVGResourceClipper.h"
+#include "LegacyRenderSVGResourceFilter.h"
 #include "LegacyRenderSVGResourceMasker.h"
+#include "LegacyRenderSVGResourceSolidColor.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGShape.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
-#include "RenderSVGResourceFilter.h"
-#include "RenderSVGResourceSolidColor.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGShape.h"
 #include "RenderView.h"
@@ -65,7 +65,7 @@ static inline LegacyRenderSVGResource* requestPaintingResource(RenderSVGResource
             return nullptr;
         
         // But always use the initial fill paint server.
-        RenderSVGResourceSolidColor* colorResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
+        LegacyRenderSVGResourceSolidColor* colorResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
         colorResource->setColor(SVGRenderStyle::initialFillPaintColor().absoluteColor());
         return colorResource;
     }
@@ -102,7 +102,7 @@ static inline LegacyRenderSVGResource* requestPaintingResource(RenderSVGResource
     }
 
     // If the primary resource is just a color, return immediately.
-    RenderSVGResourceSolidColor* colorResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
+    LegacyRenderSVGResourceSolidColor* colorResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
     if (paintType < SVGPaintType::URINone) {
         if (!inheritColorFromParentStyleIfNeeded(renderer, applyToFill, color))
             return nullptr;
@@ -111,8 +111,16 @@ static inline LegacyRenderSVGResource* requestPaintingResource(RenderSVGResource
         return colorResource;
     }
 
-    // If no resources are associated with the given renderer, return the color resource.
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // FIXME: [LBSE] Add support for non-solid color resources in LBSE (gradient/pattern).
+    SVGResources* resources = nullptr;
+    if (!renderer.document().settings().layerBasedSVGEngineEnabled())
+        resources = SVGResourcesCache::cachedResourcesForRenderer(renderer);
+#else
     auto* resources = SVGResourcesCache::cachedResourcesForRenderer(renderer);
+#endif
+
+    // If no resources are associated with the given renderer, return the color resource.
     if (!resources) {
         if (paintType == SVGPaintType::URINone || !inheritColorFromParentStyleIfNeeded(renderer, applyToFill, color))
             return nullptr;
@@ -139,7 +147,7 @@ static inline LegacyRenderSVGResource* requestPaintingResource(RenderSVGResource
 
 void LegacyRenderSVGResource::removeAllClientsFromCache(bool markForInvalidation)
 {
-    WeakHashSet<RenderObject> visitedRenderers;
+    SingleThreadWeakHashSet<RenderObject> visitedRenderers;
     removeAllClientsFromCacheIfNeeded(markForInvalidation, &visitedRenderers);
 }
 
@@ -153,18 +161,18 @@ LegacyRenderSVGResource* LegacyRenderSVGResource::strokePaintingResource(RenderE
     return requestPaintingResource(RenderSVGResourceMode::ApplyToStroke, renderer, style, fallbackColor);
 }
 
-RenderSVGResourceSolidColor* LegacyRenderSVGResource::sharedSolidPaintingResource()
+LegacyRenderSVGResourceSolidColor* LegacyRenderSVGResource::sharedSolidPaintingResource()
 {
-    static RenderSVGResourceSolidColor* s_sharedSolidPaintingResource = 0;
+    static LegacyRenderSVGResourceSolidColor* s_sharedSolidPaintingResource = 0;
     if (!s_sharedSolidPaintingResource)
-        s_sharedSolidPaintingResource = new RenderSVGResourceSolidColor;
+        s_sharedSolidPaintingResource = new LegacyRenderSVGResourceSolidColor;
     return s_sharedSolidPaintingResource;
 }
 
-static void removeFromCacheAndInvalidateDependencies(RenderElement& renderer, bool needsLayout, WeakHashSet<RenderObject>* visitedRenderers)
+static void removeFromCacheAndInvalidateDependencies(RenderElement& renderer, bool needsLayout, SingleThreadWeakHashSet<RenderObject>* visitedRenderers)
 {
     if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(renderer)) {
-        if (RenderSVGResourceFilter* filter = resources->filter())
+        if (LegacyRenderSVGResourceFilter* filter = resources->filter())
             filter->removeClientFromCache(renderer);
 
         if (LegacyRenderSVGResourceMasker* masker = resources->masker())
@@ -202,13 +210,19 @@ static void removeFromCacheAndInvalidateDependencies(RenderElement& renderer, bo
 
 void LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(RenderObject& object, bool needsLayout)
 {
-    WeakHashSet<RenderObject> visitedRenderers;
+    SingleThreadWeakHashSet<RenderObject> visitedRenderers;
     markForLayoutAndParentResourceInvalidationIfNeeded(object, needsLayout, &visitedRenderers);
 }
 
-void LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidationIfNeeded(RenderObject& object, bool needsLayout, WeakHashSet<RenderObject>* visitedRenderers)
+void LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidationIfNeeded(RenderObject& object, bool needsLayout, SingleThreadWeakHashSet<RenderObject>* visitedRenderers)
 {
     ASSERT(object.node());
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (object.document().settings().layerBasedSVGEngineEnabled()) {
+        RELEASE_ASSERT_NOT_REACHED();
+        return;
+    }
+#endif
 
     if (visitedRenderers) {
         auto addResult = visitedRenderers->add(object);
@@ -221,10 +235,6 @@ void LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidationIfNeeded
         // invalidate the ancestor renderer because it may have finished its layout already.
         if (is<LegacyRenderSVGRoot>(object) && downcast<LegacyRenderSVGRoot>(object).isInLayout())
             object.setNeedsLayout(MarkOnlyThis);
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-        else if (is<RenderSVGRoot>(object) && downcast<RenderSVGRoot>(object).isInLayout())
-            object.setNeedsLayout(MarkOnlyThis);
-#endif
         else {
             if (!is<RenderElement>(object))
                 object.setNeedsLayout(MarkOnlyThis);

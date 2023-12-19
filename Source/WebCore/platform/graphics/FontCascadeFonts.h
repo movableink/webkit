@@ -32,6 +32,7 @@
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 #include <wtf/MainThread.h>
+#include <wtf/TriState.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "WebCoreThread.h"
@@ -57,10 +58,11 @@ public:
 
     bool isForPlatformFont() const { return m_isForPlatformFont; }
 
-    GlyphData glyphDataForCharacter(UChar32, const FontCascadeDescription&, FontVariant, ResolvedEmojiPolicy);
+    GlyphData glyphDataForCharacter(char32_t, const FontCascadeDescription&, FontVariant, ResolvedEmojiPolicy);
 
     bool isFixedPitch(const FontCascadeDescription&);
-    void determinePitch(const FontCascadeDescription&);
+
+    bool canTakeFixedPitchFastContentMeasuring(const FontCascadeDescription&);
 
     bool isLoadingCustomFonts() const;
 
@@ -81,8 +83,11 @@ private:
     FontCascadeFonts(RefPtr<FontSelector>&&);
     FontCascadeFonts(const FontPlatformData&);
 
-    GlyphData glyphDataForSystemFallback(UChar32, const FontCascadeDescription&, FontVariant, ResolvedEmojiPolicy, bool systemFallbackShouldBeInvisible);
-    GlyphData glyphDataForVariant(UChar32, const FontCascadeDescription&, FontVariant, ResolvedEmojiPolicy, unsigned fallbackIndex = 0);
+    GlyphData glyphDataForSystemFallback(char32_t, const FontCascadeDescription&, FontVariant, ResolvedEmojiPolicy, bool systemFallbackShouldBeInvisible);
+    GlyphData glyphDataForVariant(char32_t, const FontCascadeDescription&, FontVariant, ResolvedEmojiPolicy, unsigned fallbackIndex = 0);
+
+    WEBCORE_EXPORT void determinePitch(const FontCascadeDescription&);
+    WEBCORE_EXPORT void determineCanTakeFixedPitchFastContentMeasuring(const FontCascadeDescription&);
 
     Vector<FontRanges, 1> m_realizedFallbackRanges;
     unsigned m_lastRealizedFallbackIndex { 0 };
@@ -92,10 +97,10 @@ private:
         GlyphPageCacheEntry() = default;
         GlyphPageCacheEntry(RefPtr<GlyphPage>&&);
 
-        GlyphData glyphDataForCharacter(UChar32);
+        GlyphData glyphDataForCharacter(char32_t);
 
         void setSingleFontPage(RefPtr<GlyphPage>&&);
-        void setGlyphDataForCharacter(UChar32, GlyphData);
+        void setGlyphDataForCharacter(char32_t, GlyphData);
 
         bool isNull() const { return !m_singleFont && !m_mixedFont; }
         bool isMixedFont() const { return !!m_mixedFont; }
@@ -119,6 +124,7 @@ private:
     unsigned short m_generation;
     Pitch m_pitch { UnknownPitch };
     bool m_isForPlatformFont { false };
+    TriState m_canTakeFixedPitchFastContentMeasuring : 2 { TriState::Indeterminate };
 #if ASSERT_ENABLED
     std::optional<Ref<Thread>> m_thread;
 #endif
@@ -129,7 +135,14 @@ inline bool FontCascadeFonts::isFixedPitch(const FontCascadeDescription& descrip
     if (m_pitch == UnknownPitch)
         determinePitch(description);
     return m_pitch == FixedPitch;
-};
+}
+
+inline bool FontCascadeFonts::canTakeFixedPitchFastContentMeasuring(const FontCascadeDescription& description)
+{
+    if (m_canTakeFixedPitchFastContentMeasuring == TriState::Indeterminate)
+        determineCanTakeFixedPitchFastContentMeasuring(description);
+    return m_canTakeFixedPitchFastContentMeasuring == TriState::True;
+}
 
 inline const Font& FontCascadeFonts::primaryFont(FontCascadeDescription& description)
 {

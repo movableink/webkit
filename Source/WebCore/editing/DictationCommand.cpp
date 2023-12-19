@@ -53,7 +53,7 @@ public:
             Ref { m_dictationCommand.get() }->insertParagraphSeparator();
     }
 private:
-    CheckedRef<DictationCommand> m_dictationCommand;
+    WeakRef<DictationCommand> m_dictationCommand;
 };
 
 class DictationMarkerSupplier : public TextInsertionMarkerSupplier {
@@ -69,8 +69,8 @@ public:
         auto& markerController = document->markers();
         for (auto& alternative : m_alternatives) {
             DocumentMarker::DictationData data { alternative.context, textToBeInserted.substring(alternative.range.location, alternative.range.length) };
-            markerController.addMarker(textNode, alternative.range.location + offsetOfInsertion, alternative.range.length, DocumentMarker::DictationAlternatives, WTFMove(data));
-            markerController.addMarker(textNode, alternative.range.location + offsetOfInsertion, alternative.range.length, DocumentMarker::SpellCheckingExemption);
+            markerController.addMarker(textNode, alternative.range.location + offsetOfInsertion, alternative.range.length, DocumentMarker::Type::DictationAlternatives, WTFMove(data));
+            markerController.addMarker(textNode, alternative.range.location + offsetOfInsertion, alternative.range.length, DocumentMarker::Type::SpellCheckingExemption);
         }
     }
 

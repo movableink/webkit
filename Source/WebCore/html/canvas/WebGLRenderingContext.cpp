@@ -98,6 +98,7 @@
 #include "WebGLStencilTexturing.h"
 #include "WebGLTexture.h"
 #include "WebGLTransformFeedback.h"
+#include "WebGLUtilities.h"
 #include "WebGLVertexArrayObject.h"
 #include "WebGLVertexArrayObjectOES.h"
 #include <JavaScriptCore/GenericTypedArrayViewInlines.h>
@@ -115,9 +116,9 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLRenderingContext);
 
-std::unique_ptr<WebGLRenderingContext> WebGLRenderingContext::create(CanvasBase& canvas, GraphicsContextGLAttributes attributes)
+std::unique_ptr<WebGLRenderingContext> WebGLRenderingContext::create(CanvasBase& canvas, WebGLContextAttributes&& attributes)
 {
-    return std::unique_ptr<WebGLRenderingContext>(new WebGLRenderingContext(canvas, attributes));
+    return std::unique_ptr<WebGLRenderingContext>(new WebGLRenderingContext(canvas, WTFMove(attributes)));
 }
 
 WebGLRenderingContext::~WebGLRenderingContext()

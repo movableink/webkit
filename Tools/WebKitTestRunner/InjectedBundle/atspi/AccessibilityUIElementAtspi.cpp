@@ -1426,6 +1426,11 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::selectedTextRange()
     return OpaqueJSString::tryCreate(range).leakRef();
 }
 
+JSRetainPtr<JSStringRef> AccessibilityUIElement::intersectionWithSelectionRange()
+{
+    return nullptr;
+}
+
 bool AccessibilityUIElement::setSelectedTextRange(unsigned location, unsigned length)
 {
     if (!m_element->interfaces().contains(WebCore::AccessibilityObjectAtspi::Interface::Text))
@@ -1854,6 +1859,11 @@ bool AccessibilityUIElement::isFirstItemInSuggestion() const
 }
 
 bool AccessibilityUIElement::isLastItemInSuggestion() const
+{
+    return false;
+}
+
+bool AccessibilityUIElement::isInNonNativeTextControl() const
 {
     return false;
 }

@@ -69,9 +69,13 @@ InlineLayoutUnit TextUtil::width(const InlineTextBox& inlineTextBox, const FontC
         ++to;
     auto width = 0.f;
     auto useSimplifiedContentMeasuring = inlineTextBox.canUseSimplifiedContentMeasuring();
-    if (useSimplifiedContentMeasuring)
-        width = fontCascade.widthForSimpleText(StringView(text).substring(from, to - from));
-    else {
+    if (useSimplifiedContentMeasuring) {
+        auto view = StringView(text).substring(from, to - from);
+        if (fontCascade.canTakeFixedPitchFastContentMeasuring())
+            width = fontCascade.widthForSimpleTextWithFixedPitch(view, inlineTextBox.style().collapseWhiteSpace());
+        else
+            width = fontCascade.widthForSimpleText(view);
+    } else {
         auto& style = inlineTextBox.style();
         auto directionalOverride = style.unicodeBidi() == UnicodeBidi::Override;
         auto run = WebCore::TextRun { StringView(text).substring(from, to - from), contentLogicalLeft, { }, ExpansionBehavior::defaultBehavior(), directionalOverride ? style.direction() : TextDirection::LTR, directionalOverride };
@@ -126,12 +130,12 @@ static void fallbackFontsForRunWithIterator(WeakHashSet<const Font>& fallbackFon
     auto isSmallCaps = fontCascade.isSmallCaps();
     auto& primaryFont = fontCascade.primaryFont();
 
-    UChar32 currentCharacter = 0;
+    char32_t currentCharacter = 0;
     unsigned clusterLength = 0;
     while (textIterator.consume(currentCharacter, clusterLength)) {
 
         auto addFallbackFontForCharacterIfApplicable = [&](auto character) {
-            if (isSmallCaps && character != u_toupper(character))
+            if (isSmallCaps)
                 character = u_toupper(character);
 
             auto glyphData = fontCascade.glyphDataForCharacter(character, isRTL);
@@ -184,12 +188,12 @@ static TextUtil::EnclosingAscentDescent enclosingGlyphBoundsForRunWithIterator(c
     auto isSmallCaps = fontCascade.isSmallCaps();
     auto& primaryFont = fontCascade.primaryFont();
 
-    UChar32 currentCharacter = 0;
+    char32_t currentCharacter = 0;
     unsigned clusterLength = 0;
     while (textIterator.consume(currentCharacter, clusterLength)) {
 
         auto computeTopAndBottomForCharacter = [&](auto character) {
-            if (isSmallCaps && character != u_toupper(character))
+            if (isSmallCaps)
                 character = u_toupper(character);
 
             auto glyphData = fontCascade.glyphDataForCharacter(character, isRTL);
@@ -424,6 +428,18 @@ TextBreakIterator::ContentAnalysis TextUtil::contentAnalysis(WordBreak wordBreak
     return TextBreakIterator::ContentAnalysis::Mechanical;
 }
 
+bool TextUtil::isStrongDirectionalityCharacter(char32_t character)
+{
+    auto bidiCategory = u_charDirection(character);
+    return bidiCategory == U_RIGHT_TO_LEFT
+        || bidiCategory == U_RIGHT_TO_LEFT_ARABIC
+        || bidiCategory == U_RIGHT_TO_LEFT_EMBEDDING
+        || bidiCategory == U_RIGHT_TO_LEFT_OVERRIDE
+        || bidiCategory == U_LEFT_TO_RIGHT_EMBEDDING
+        || bidiCategory == U_LEFT_TO_RIGHT_OVERRIDE
+        || bidiCategory == U_POP_DIRECTIONAL_FORMAT;
+}
+
 bool TextUtil::containsStrongDirectionalityText(StringView text)
 {
     if (text.is8Bit())
@@ -431,18 +447,9 @@ bool TextUtil::containsStrongDirectionalityText(StringView text)
 
     auto length = text.length();
     for (size_t position = 0; position < length;) {
-        UChar32 character;
+        char32_t character;
         U16_NEXT(text.characters16(), position, length, character);
-
-        auto bidiCategory = u_charDirection(character);
-        bool hasBidiContent = bidiCategory == U_RIGHT_TO_LEFT
-            || bidiCategory == U_RIGHT_TO_LEFT_ARABIC
-            || bidiCategory == U_RIGHT_TO_LEFT_EMBEDDING
-            || bidiCategory == U_RIGHT_TO_LEFT_OVERRIDE
-            || bidiCategory == U_LEFT_TO_RIGHT_EMBEDDING
-            || bidiCategory == U_LEFT_TO_RIGHT_OVERRIDE
-            || bidiCategory == U_POP_DIRECTIONAL_FORMAT;
-        if (hasBidiContent)
+        if (isStrongDirectionalityCharacter(character))
             return true;
     }
 
@@ -457,7 +464,7 @@ size_t TextUtil::firstUserPerceivedCharacterLength(const InlineTextBox& inlineTe
     if (textContent.is8Bit())
         return 1;
     if (inlineTextBox.canUseSimpleFontCodePath()) {
-        UChar32 character;
+        char32_t character;
         size_t endOfCodePoint = startPosition;
         U16_NEXT(textContent.characters16(), endOfCodePoint, textContent.length(), character);
         ASSERT(endOfCodePoint > startPosition);
@@ -594,74 +601,13 @@ bool TextUtil::canUseSimplifiedTextMeasuring(StringView textContent, const Rende
     return canUseSimplifiedTextMeasuringForCharacters(textContent.span16(), fontCascade, primaryFont, whitespaceIsCollapsed);
 }
 
-void TextUtil::computedExpansions(const Line::RunList& runs, WTF::Range<size_t> runRange, size_t hangingTrailingWhitespaceLength, ExpansionInfo& expansionInfo)
+bool TextUtil::hasPositionDependentContentWidth(StringView textContent)
 {
-    // Collect and distribute the expansion opportunities.
-    expansionInfo.opportunityCount = 0;
-    auto rangeSize = runRange.end() - runRange.begin();
-    if (rangeSize > runs.size()) {
-        ASSERT_NOT_REACHED();
-        return;
+    for (char32_t character : StringView(textContent).codePoints()) {
+        if (character == tabCharacter)
+            return true;
     }
-    expansionInfo.opportunityList.resizeToFit(rangeSize);
-    expansionInfo.behaviorList.resizeToFit(rangeSize);
-    auto lastExpansionIndexWithContent = std::optional<size_t> { };
-
-    // Line start behaves as if we had an expansion here (i.e. fist runs should not start with allowing left expansion).
-    auto runIsAfterExpansion = true;
-    auto lastTextRunIndexForTrimming = [&]() -> std::optional<size_t> {
-        if (!hangingTrailingWhitespaceLength)
-            return { };
-        for (auto index = runs.size(); index--;) {
-            if (runs[index].isText())
-                return index;
-        }
-        return { };
-    }();
-    for (size_t index = 0; index < rangeSize; ++index) {
-        auto runIndex = runRange.begin() + index;
-        auto& run = runs[runIndex];
-        auto expansionBehavior = ExpansionBehavior::defaultBehavior();
-        size_t expansionOpportunitiesInRun = 0;
-
-        // According to the CSS3 spec, a UA can determine whether or not
-        // it wishes to apply text-align: justify to text with collapsible spaces (and this behavior matches Blink).
-        auto mayAlterSpacingWithinText = !TextUtil::shouldPreserveSpacesAndTabs(run.layoutBox()) || hangingTrailingWhitespaceLength;
-        if (run.isText() && mayAlterSpacingWithinText) {
-            if (run.hasTextCombine())
-                expansionBehavior = ExpansionBehavior::forbidAll();
-            else {
-                expansionBehavior.left = runIsAfterExpansion ? ExpansionBehavior::Behavior::Forbid : ExpansionBehavior::Behavior::Allow;
-                expansionBehavior.right = ExpansionBehavior::Behavior::Allow;
-                auto& textContent = *run.textContent();
-                auto length = textContent.length;
-                if (lastTextRunIndexForTrimming && runIndex == *lastTextRunIndexForTrimming) {
-                    // Trailing hanging whitespace sequence is ignored when computing the expansion opportunities.
-                    length -= hangingTrailingWhitespaceLength;
-                }
-                std::tie(expansionOpportunitiesInRun, runIsAfterExpansion) = FontCascade::expansionOpportunityCount(StringView(downcast<InlineTextBox>(run.layoutBox()).content()).substring(textContent.start, length), run.inlineDirection(), expansionBehavior);
-            }
-        } else if (run.isBox())
-            runIsAfterExpansion = false;
-
-        expansionInfo.behaviorList[index] = expansionBehavior;
-        expansionInfo.opportunityList[index] = expansionOpportunitiesInRun;
-        expansionInfo.opportunityCount += expansionOpportunitiesInRun;
-
-        if (run.isText() || run.isBox())
-            lastExpansionIndexWithContent = index;
-    }
-    // Forbid right expansion in the last run to prevent trailing expansion at the end of the line.
-    if (lastExpansionIndexWithContent && expansionInfo.opportunityList[*lastExpansionIndexWithContent]) {
-        expansionInfo.behaviorList[*lastExpansionIndexWithContent].right = ExpansionBehavior::Behavior::Forbid;
-        if (runIsAfterExpansion) {
-            // When the last run has an after expansion (e.g. CJK ideograph) we need to remove this trailing expansion opportunity.
-            // Note that this is not about trailing collapsible whitespace as at this point we trimmed them all.
-            ASSERT(expansionInfo.opportunityCount && expansionInfo.opportunityList[*lastExpansionIndexWithContent]);
-            --expansionInfo.opportunityCount;
-            --expansionInfo.opportunityList[*lastExpansionIndexWithContent];
-        }
-    }
+    return false;
 }
 
 }

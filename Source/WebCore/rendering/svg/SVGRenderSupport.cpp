@@ -29,6 +29,7 @@
 
 #include "ElementAncestorIteratorInlines.h"
 #include "LegacyRenderSVGResourceClipper.h"
+#include "LegacyRenderSVGResourceFilter.h"
 #include "LegacyRenderSVGResourceMarker.h"
 #include "LegacyRenderSVGResourceMasker.h"
 #include "LegacyRenderSVGRoot.h"
@@ -36,16 +37,17 @@
 #include "LegacyRenderSVGTransformableContainer.h"
 #include "LegacyRenderSVGViewportContainer.h"
 #include "NodeRenderStyle.h"
+#include "ReferencedSVGResources.h"
 #include "RenderChildIterator.h"
 #include "RenderElement.h"
 #include "RenderGeometryMap.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
 #include "RenderSVGResourceClipper.h"
-#include "RenderSVGResourceFilter.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGShapeInlines.h"
 #include "RenderSVGText.h"
+#include "SVGClipPathElement.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGeometryElement.h"
 #include "SVGRenderStyle.h"
@@ -59,8 +61,8 @@ namespace WebCore {
 LayoutRect SVGRenderSupport::clippedOverflowRectForRepaint(const RenderElement& renderer, const RenderLayerModelObject* repaintContainer, RenderObject::VisibleRectContext context)
 {
     // Return early for any cases where we don't actually paint
-    if (renderer.style().visibility() != Visibility::Visible && !renderer.enclosingLayer()->hasVisibleContent())
-        return LayoutRect();
+    if (renderer.isInsideEntirelyHiddenLayer())
+        return { };
 
     // Pass our local paint rect to computeFloatVisibleRectInContainer() which will
     // map to parent coords and recurse up the parent chain.
@@ -262,7 +264,7 @@ void SVGRenderSupport::layoutChildren(RenderElement& start, bool selfNeedsLayout
 {
     bool layoutSizeChanged = layoutSizeOfNearestViewportChanged(start);
     bool transformChanged = transformToRootChanged(&start);
-    WeakHashSet<RenderElement> elementsThatDidNotReceiveLayout;
+    SingleThreadWeakHashSet<RenderElement> elementsThatDidNotReceiveLayout;
 
     for (auto& child : childrenOfType<RenderObject>(start)) {
         bool needsLayout = selfNeedsLayout;
@@ -334,7 +336,7 @@ void SVGRenderSupport::intersectRepaintRectWithResources(const RenderElement& re
     if (!resources)
         return;
 
-    if (RenderSVGResourceFilter* filter = resources->filter())
+    if (LegacyRenderSVGResourceFilter* filter = resources->filter())
         repaintRect = filter->resourceBoundingBox(renderer, repaintRectCalculation);
 
     if (LegacyRenderSVGResourceClipper* clipper = resources->clipper())
@@ -437,6 +439,17 @@ bool SVGRenderSupport::pointInClippingArea(const RenderElement& renderer, const 
     PathOperation* clipPathOperation = renderer.style().clipPath();
     if (is<ShapePathOperation>(clipPathOperation) || is<BoxPathOperation>(clipPathOperation))
         return isPointInCSSClippingArea(renderer, point);
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (renderer.document().settings().layerBasedSVGEngineEnabled()) {
+        if (auto* layerRenderer = dynamicDowncast<RenderLayerModelObject>(renderer)) {
+            if (auto* referencedClipperRenderer = layerRenderer->svgClipperResourceFromStyle())
+                return referencedClipperRenderer->hitTestClipContent(renderer.objectBoundingBox(), LayoutPoint(point));
+        }
+
+        return true;
+    }
+#endif
 
     // We just take clippers into account to determine if a point is on the node. The Specification may
     // change later and we also need to check maskers.
@@ -549,9 +562,9 @@ SVGHitTestCycleDetectionScope::~SVGHitTestCycleDetectionScope()
     ASSERT_UNUSED(result, result);
 }
 
-WeakHashSet<RenderElement>& SVGHitTestCycleDetectionScope::visitedElements()
+SingleThreadWeakHashSet<RenderElement>& SVGHitTestCycleDetectionScope::visitedElements()
 {
-    static NeverDestroyed<WeakHashSet<RenderElement>> s_visitedElements;
+    static NeverDestroyed<SingleThreadWeakHashSet<RenderElement>> s_visitedElements;
     return s_visitedElements;
 }
 
@@ -655,27 +668,6 @@ FloatRect SVGRenderSupport::calculateApproximateStrokeBoundingBox(const RenderEl
     const auto& shape = downcast<LegacyRenderSVGShape>(renderer);
     return shape.adjustStrokeBoundingBoxForMarkersAndZeroLengthLinecaps(RepaintRectCalculation::Fast, calculate(shape));
 #endif
-}
-
-// FIXME: maybe in future RenderLayerModelObject is a better place for this.
-void SVGRenderSupport::paintSVGClippingMask(const RenderLayerModelObject& renderer, PaintInfo& paintInfo)
-{
-    ASSERT(paintInfo.phase == PaintPhase::ClippingMask);
-    auto& style = renderer.style();
-    auto& context = paintInfo.context();
-    if (!paintInfo.shouldPaintWithinRoot(renderer) || style.visibility() != Visibility::Visible || context.paintingDisabled())
-        return;
-
-    ASSERT(renderer.isSVGLayerAwareRenderer());
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-    const auto& referenceClipPathOperation = downcast<ReferencePathOperation>(*renderer.style().clipPath());
-    auto* renderResource = renderer.document().lookupSVGResourceById(referenceClipPathOperation.fragment());
-    if (!renderResource)
-        return;
-
-    if (auto clipper = dynamicDowncast<RenderSVGResourceClipper>(renderResource))
-        clipper->applyMaskClipping(paintInfo, renderer, renderer.objectBoundingBox());
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)
 }
 
 }

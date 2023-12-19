@@ -26,6 +26,7 @@
 #import "config.h"
 #import "RemoteLayerTreeHost.h"
 
+#import "LayerProperties.h"
 #import "Logging.h"
 #import "RemoteLayerTreeDrawingAreaProxy.h"
 #import "RemoteLayerTreePropertyApplier.h"
@@ -99,6 +100,11 @@ bool RemoteLayerTreeHost::replayDynamicContentScalingDisplayListsIntoBackingStor
 bool RemoteLayerTreeHost::css3DTransformInteroperabilityEnabled() const
 {
     return m_drawingArea->page().preferences().css3DTransformInteroperabilityEnabled();
+}
+
+bool RemoteLayerTreeHost::threadedAnimationResolutionEnabled() const
+{
+    return m_drawingArea->page().preferences().threadedAnimationResolutionEnabled();
 }
 
 #if PLATFORM(MAC)
@@ -396,12 +402,7 @@ std::unique_ptr<RemoteLayerTreeNode> RemoteLayerTreeHost::makeNode(const RemoteL
         return makeWithLayer(adoptNS([[CATransformLayer alloc] init]));
 
     case PlatformCALayer::LayerType::LayerTypeBackdropLayer:
-#if ENABLE(FILTERS_LEVEL_2)
         return makeWithLayer(adoptNS([[CABackdropLayer alloc] init]));
-#else
-        ASSERT_NOT_REACHED();
-        return RemoteLayerTreeNode::createWithPlainLayer(properties.layerID);
-#endif
     case PlatformCALayer::LayerType::LayerTypeCustom:
     case PlatformCALayer::LayerType::LayerTypeAVPlayerLayer:
         if (m_isDebugLayerTreeHost)
@@ -450,6 +451,23 @@ void RemoteLayerTreeHost::mapAllIOSurfaceBackingStore()
 {
     recursivelyMapIOSurfaceBackingStore(rootLayer());
 }
+
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+void RemoteLayerTreeHost::animationsWereAddedToNode(RemoteLayerTreeNode& node)
+{
+    m_drawingArea->animationsWereAddedToNode(node);
+}
+
+void RemoteLayerTreeHost::animationsWereRemovedFromNode(RemoteLayerTreeNode& node)
+{
+    m_drawingArea->animationsWereRemovedFromNode(node);
+}
+
+Seconds RemoteLayerTreeHost::acceleratedTimelineTimeOrigin() const
+{
+    return m_drawingArea->acceleratedTimelineTimeOrigin();
+}
+#endif
 
 } // namespace WebKit
 

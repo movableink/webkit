@@ -85,11 +85,6 @@ template<> Class getClass<PKPayment>()
     return PAL::getPKPaymentClass();
 }
 
-template<> Class getClass<PKContact>()
-{
-    return PAL::getPKContactClass();
-}
-
 template<> Class getClass<PKPaymentMerchantSession>()
 {
     return PAL::getPKPaymentMerchantSessionClass();
@@ -621,11 +616,6 @@ bool ArgumentCoder<WebCore::FontPlatformData::Attributes>::decodePlatformData(De
 
 #if ENABLE(DATA_DETECTION)
 
-template<> Class getClass<DDScannerResult>()
-{
-    return PAL::getDDScannerResultClass();
-}
-
 void ArgumentCoder<WebCore::DataDetectorElementInfo>::encode(Encoder& encoder, const WebCore::DataDetectorElementInfo& info)
 {
     encoder << info.result.get();
@@ -649,11 +639,6 @@ std::optional<WebCore::DataDetectorElementInfo> ArgumentCoder<WebCore::DataDetec
 #endif // ENABLE(DATA_DETECTION)
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
-
-template<> Class getClass<AVOutputContext>()
-{
-    return PAL::getAVOutputContextClass();
-}
 
 void ArgumentCoder<WebCore::MediaPlaybackTargetContext>::encodePlatformData(Encoder& encoder, const WebCore::MediaPlaybackTargetContext& target)
 {

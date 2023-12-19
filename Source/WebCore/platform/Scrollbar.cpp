@@ -42,6 +42,10 @@
 #include "PlatformGestureEvent.h"
 #endif
 
+#if PLATFORM(MAC)
+#include "ScrollbarMac.h"
+#endif
+
 #if PLATFORM(GTK)
 // The position of the scrollbar thumb affects the appearance of the steppers, so
 // when the thumb moves, we have to invalidate them for painting.
@@ -52,7 +56,11 @@ namespace WebCore {
 
 Ref<Scrollbar> Scrollbar::createNativeScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarWidth width)
 {
+#if PLATFORM(MAC)
+    return adoptRef(*new ScrollbarMac(scrollableArea, orientation, width));
+#else
     return adoptRef(*new Scrollbar(scrollableArea, orientation, width));
+#endif
 }
 
 static bool s_shouldUseFixedPixelsPerLineStepForTesting;
@@ -64,7 +72,7 @@ void Scrollbar::setShouldUseFixedPixelsPerLineStepForTesting(bool useFixedPixels
 
 int Scrollbar::pixelsPerLineStep(int viewWidthOrHeight)
 {
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
     if (!s_shouldUseFixedPixelsPerLineStepForTesting && viewWidthOrHeight > 0)
         return std::pow(viewWidthOrHeight, 2. / 3.);
 #else

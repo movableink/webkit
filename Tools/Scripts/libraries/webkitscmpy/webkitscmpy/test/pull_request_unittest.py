@@ -52,6 +52,21 @@ Reviewed by Tim Contributor.
 </pre>''',
         )
 
+    def test_create_body_single_linked_punctuation(self):
+        self.assertEqual(
+            PullRequest.create_body(None, [Commit(
+                hash='11aa76f9fc380e9fe06157154f32b304e8dc4749',
+                message='[scoping] Bug to fix\nhttps://bugs.webkit.org/1234\n(rdar://1234)\n\nReviewed by Tim Contributor.\n',
+            )]), '''#### 11aa76f9fc380e9fe06157154f32b304e8dc4749
+<pre>
+[scoping] Bug to fix
+<a href="https://bugs.webkit.org/1234">https://bugs.webkit.org/1234</a>
+(<a href="https://rdar.apple.com/1234">rdar://1234</a>)
+
+Reviewed by Tim Contributor.
+</pre>''',
+        )
+
     def test_create_body_single_no_link(self):
         self.assertEqual(
             PullRequest.create_body(None, [Commit(
@@ -1998,6 +2013,13 @@ Reviewed by NOBODY (OOPS!).
                 issue=dict(href='https://{}/issues/1'.format(result.api_remote)),
             ), draft=False,
         )]
+
+        result.statuses['95507e3a1a4a'] = PullRequest.Status.Encoder().default([
+            PullRequest.Status(name='test-webkitpy', status='pending', description='Running...'),
+            PullRequest.Status(name='test-webkitcorepy', status='success', description='Finished!'),
+            PullRequest.Status(name='test-webkitscmpy', status='failure', description='Failed webkitscmpy.test.pull_request_unittest.TestNetworkPullRequestGitHub.test_status'),
+        ])
+
         return result
 
     def test_find(self):
@@ -2087,6 +2109,17 @@ Reviewed by NOBODY (OOPS!).
             self.assertEqual(pr.comments[-1].content, 'Looks good!')
             self.assertEqual(len(pr.approvers), 2)
 
+    def test_status(self):
+        with self.webserver():
+            repo = remote.GitHub(self.remote)
+            pr = repo.pull_requests.get(1)
+            self.assertEqual(len(pr.statuses), 3)
+            self.assertEqual(
+                [pr.status for pr in pr.statuses],
+                ['pending', 'success', 'failure'],
+            )
+
+
 
 class TestNetworkPullRequestBitBucket(unittest.TestCase):
     remote = 'https://bitbucket.example.com/projects/WEBKIT/repos/webkit'
@@ -2138,6 +2171,13 @@ Reviewed by NOBODY (OOPS!).
                 ),
             ],
         )]
+
+        result.statuses['95507e3a1a4a'] = PullRequest.Status.Encoder().default([
+            PullRequest.Status(name='test-webkitpy', status='pending', description='Running...'),
+            PullRequest.Status(name='test-webkitcorepy', status='success', description='Finished!'),
+            PullRequest.Status(name='test-webkitscmpy', status='failure', description='Failed webkitscmpy.test.pull_request_unittest.TestNetworkPullRequestGitHub.test_status'),
+        ])
+
         return result
 
     def test_find(self):
@@ -2223,3 +2263,13 @@ Reviewed by NOBODY (OOPS!).
 
             self.assertEqual(pr.comments[-1].content, 'Looks good!')
             self.assertEqual(len(pr.approvers), 2)
+
+    def test_status(self):
+        with self.webserver():
+            repo = remote.BitBucket(self.remote)
+            pr = repo.pull_requests.get(1)
+            self.assertEqual(len(pr.statuses), 3)
+            self.assertEqual(
+                [pr.status for pr in pr.statuses],
+                ['pending', 'success', 'failure'],
+            )

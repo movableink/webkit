@@ -110,7 +110,7 @@ media/encrypted-media/
 printing
 
 # Tests that rely on custom domain names.
-imported/w3c/web-platform-tests/html/browsers/browsing-the-web/overlapping-navigations-and-traversals/tentative/nav-cancelation-2.sub.html [ Skip ]
+imported/w3c/web-platform-tests/html/browsers/browsing-the-web/overlapping-navigations-and-traversals/nav-cancelation-2.sub.html [ Skip ]
 imported/w3c/web-platform-tests/cookies/attributes/domain.sub.html [ Skip ]
 imported/w3c/web-platform-tests/cookies/ordering/ordering.sub.html [ Skip ]
 
@@ -133,6 +133,7 @@ fast/events/wheel [ Skip ]
 fast/scrolling/iframe-scrollable-after-back.html [ Skip ]
 fast/scrolling/overflow-scrollable-after-back.html [ Skip ]
 fast/scrolling/programmatic-scroll-to-zero-zero.html [ Skip ]
+http/tests/site-isolation/wheel-event-coordinates.html [ Skip ]
 
 # This test requires alpha-channel video support.
 compositing/video/video-background-color.html [ WontFix ]
@@ -396,6 +397,7 @@ webkit.org/b/165799 svg/animations/animations-paused-in-background-page-iframe.h
 webkit.org/b/165799 svg/animations/animations-paused-in-background-page.html [ Skip ]
 webkit.org/b/165799 webaudio/silent-audio-interrupted-in-background.html [ Skip ]
 webkit.org/b/165799 imported/w3c/web-platform-tests/screen-orientation/hidden_document.html
+webkit.org/b/165799 fast/mediastream/device-change-event-2.html [ Skip ]
 
 # AutoFill button is not supported
 fast/forms/auto-fill-button/mouse-down-input-mouse-release-auto-fill-button.html
@@ -862,6 +864,9 @@ svg/text/select-text-svgfont.html [ Skip ]
 svg/text/selection-doubleclick.svg [ Skip ]
 svg/text/selection-tripleclick.svg [ Skip ]
 imported/w3c/web-platform-tests/css/css-shadow-parts/invalidation-part-pseudo.html [ Skip ]
+
+# No test_driver.click() support for iOS testing
+webkit.org/b/264285 imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-summary-element/interactive-content.html [ Skip ]
 
 # Overscroll-behavior on iOS needs SkyEcho19E179/StarE21E168a: https://bugs.webkit.org/show_bug.cgi?id=235852
 fast/scrolling/sync-scroll-overscroll-behavior-element.html [ Skip ]
@@ -2203,6 +2208,7 @@ accessibility/menu-list-crash2.html [ Pass ]
 accessibility/multiple-attribute-change-crash.html [ Pass ]
 accessibility/node-only-inert-object.html [ Pass ]
 accessibility/node-only-object-element-rect.html [ Pass ]
+accessibility/checkbox-radio-element-rect.html [ Pass ]
 accessibility/out-of-bounds-rowspan.html [ Pass ]
 accessibility/out-of-bounds-rowspan-display-none.html [ Pass ]
 accessibility/out-of-bounds-rowspan-aria-hidden.html [ Pass ]
@@ -2419,10 +2425,6 @@ webkit.org/b/157201 css3/scroll-snap/scroll-snap-drag-scrollbar-thumb-with-stick
 
 # DumpRenderTree doesn't support logging calls to runOpenPanel and iOS's WebKitTestRunner doesn't support eventSender.mouseDown.
 fast/forms/file/open-file-panel.html [ Skip ]
-
-# Tests that are failing after bug 157170 (WPT test sync). These tests may just need rebasing.
-imported/w3c/web-platform-tests/html/semantics/selectors/pseudo-classes/readwrite-readonly.html [ Failure ]
-imported/w3c/web-platform-tests/html/semantics/selectors/pseudo-classes/inrange-outofrange.html [ Failure ]
 
 webkit.org/b/157916 http/tests/misc/slow-loading-animated-image.html [ Pass ImageOnlyFailure ]
 
@@ -3406,6 +3408,7 @@ http/tests/media/video-webm-stall.html [ Skip ]
 
 webkit.org/b/229291 imported/w3c/web-platform-tests/html/rendering/replaced-elements/images/revoked-blob-print.html [ Pass ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/rendering/widgets/input-checkbox-switch-rtl.tentative.html [ Failure ]
+imported/w3c/web-platform-tests/html/rendering/widgets/input-date-baseline-min-height.html [ Failure ]
 
 #rdar://82146367 ([Mac, iOS Release] imported/w3c/web-platform-tests/worklets/layout-worklet-csp.https.html is a flaky failure) imported/w3c/web-platform-tests/worklets/layout-worklet-csp.https.html [ Pass Failure ] 
 
@@ -4569,6 +4572,7 @@ webkit.org/b/257904 http/tests/site-isolation/basic-iframe.html [ Skip ]
 webkit.org/b/257904 http/tests/site-isolation/double-iframe.html [ Skip ]
 webkit.org/b/257904 http/tests/site-isolation/draw-after-navigation.html [ Skip ]
 webkit.org/b/257904 http/tests/site-isolation/selection-focus.html [ Skip ]
+webkit.org/b/257904 http/tests/site-isolation/basic-iframe-render-output.html [ Failure Timeout Pass ]
 
 # This test can't be enabled on iOS until EventSenderProxyIOS::keyDown() is implemented.
 http/tests/site-isolation/key-events.html [ Skip ]
@@ -4645,9 +4649,6 @@ imported/w3c/web-platform-tests/uievents/order-of-events/mouse-events/wheel-scro
 #rdar://118015813 ([ iOS ]imported/w3c/web-platform-tests/css/cssom-view/scroll-behavior-main-frame-root.html is a flaky text failure (264281))
 imported/w3c/web-platform-tests/css/cssom-view/scroll-behavior-main-frame-root.html [ Pass Failure ]
 
-#rdar://118018816 ([ iOS ] imported/w3c/web-platform-tests/screen-orientation/active-lock.html is a flaky failure (264287))
-imported/w3c/web-platform-tests/screen-orientation/active-lock.html [ Pass Failure ]
-
 # Failing word-break: auto-phrase tests.
 webkit.org/b/257698 imported/w3c/web-platform-tests/css/css-text/word-break/auto-phrase/word-break-auto-phrase-004.html [ ImageOnlyFailure ]
 webkit.org/b/257698 imported/w3c/web-platform-tests/css/css-text/word-break/auto-phrase/word-break-auto-phrase-005.html [ ImageOnlyFailure ]
@@ -4656,10 +4657,19 @@ webkit.org/b/257698 imported/w3c/web-platform-tests/css/css-text/word-break/auto
 webkit.org/b/257698 imported/w3c/web-platform-tests/css/css-text/word-break/auto-phrase/word-break-auto-phrase-wbr-nobr-001.html [ ImageOnlyFailure ]
 webkit.org/b/257698 imported/w3c/web-platform-tests/css/css-text/word-break/auto-phrase/word-break-auto-phrase-wbr-nobr-002.html [ ImageOnlyFailure ]
 
+# CSS Ruby 1px difference
+imported/w3c/web-platform-tests/css/css-ruby/ruby-text-combine-upright-002a.html [ ImageOnlyFailure ] 
+imported/w3c/web-platform-tests/css/css-ruby/ruby-text-combine-upright-002b.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-ruby/line-break-around-ruby-001.html [ Failure ]
+
 webkit.org/b/264001 [ Debug ] imported/w3c/web-platform-tests/requestidlecallback/callback-multiple-calls.html [ Pass Failure ]
 
 webkit.org/b/264177 requestidlecallback/requestidlecallback-deadline-shortened-by-rendering-update.html [ Pass Failure ]
 
-webkit.org/b/264349 http/tests/site-isolation/frame-access-after-window-open.html [ Timeout ]
-
 webkit.org/b/264527 imported/w3c/web-platform-tests/css/css-cascade/idlharness.html [ Pass Failure ]
+
+webkit.org/b/266356 imported/w3c/web-platform-tests/video-rvfc/request-video-frame-callback-webrtc.https.html [ Pass Failure ]
+
+# webkit.org/b/266345 [Test Gardening] css-contain/contain-size-block-003.html and css-contain/contain-size-inline-block-003.html only fail on GTK
+imported/w3c/web-platform-tests/css/css-contain/contain-size-block-003.html [ Failure ]
+imported/w3c/web-platform-tests/css/css-contain/contain-size-inline-block-003.html [ Failure ]

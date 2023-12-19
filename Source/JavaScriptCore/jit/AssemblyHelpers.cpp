@@ -40,6 +40,7 @@
 #include "SuperSampler.h"
 #include "ThunkGenerators.h"
 #include "UnlinkedCodeBlock.h"
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(WEBASSEMBLY)
 #include "WasmContext.h"
@@ -52,6 +53,8 @@ namespace JSC {
 namespace AssemblyHelpersInternal {
 constexpr bool dumpVerbose = false;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AssemblyHelpers);
 
 AssemblyHelpers::Jump AssemblyHelpers::branchIfFastTypedArray(GPRReg baseGPR)
 {
@@ -1121,14 +1124,7 @@ void AssemblyHelpers::emitVirtualCall(VM& vm, JSGlobalObject* globalObject, Call
 void AssemblyHelpers::emitVirtualCallWithoutMovingGlobalObject(VM& vm, GPRReg callLinkInfoGPR, CallMode callMode)
 {
     move(callLinkInfoGPR, GPRInfo::regT2);
-    Call call = nearCall();
-    addLinkTask([=, &vm] (LinkBuffer& linkBuffer) {
-        auto callLocation = linkBuffer.locationOfNearCall<JITCompilationPtrTag>(call);
-        linkBuffer.addMainThreadFinalizationTask([=, &vm] () {
-            MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunk = vm.getCTIVirtualCall(callMode);
-            MacroAssembler::repatchNearCall(callLocation, CodeLocationLabel<JITStubRoutinePtrTag>(virtualThunk.code()));
-        });
-    });
+    nearCallThunk(CodeLocationLabel<JITStubRoutinePtrTag> { vm.getCTIVirtualCall(callMode).code() });
 }
 
 #if USE(JSVALUE64)

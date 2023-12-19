@@ -96,10 +96,12 @@ SOFT_LINK_CLASS_FOR_HEADER(PAL, AVCaptureDevice)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, AVCaptureDeviceFormat)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, AVCaptureDeviceInput)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, AVCaptureOutput)
+SOFT_LINK_CLASS_FOR_HEADER(PAL, AVCapturePhotoSettings)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, AVCaptureSession)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, AVCaptureVideoDataOutput)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, AVFrameRateRange)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, AVCaptureDeviceDiscoverySession)
+SOFT_LINK_CLASS_FOR_HEADER(PAL, AVCapturePhotoOutput)
 #endif
 
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVAudioTimePitchAlgorithmSpectral, NSString *)
@@ -205,6 +207,8 @@ SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVFileTypeQuickTimeMovie, NSStr
 #define AVFileTypeQuickTimeMovie PAL::get_AVFoundation_AVFileTypeQuickTimeMovie()
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVVideoCodecKey, NSString *)
 #define AVVideoCodecKey PAL::get_AVFoundation_AVVideoCodecKey()
+SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVVideoCodecTypeJPEG, NSString *)
+#define AVVideoCodecTypeJPEG PAL::get_AVFoundation_AVVideoCodecTypeJPEG()
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVVideoCodecH264, NSString *)
 #define AVVideoCodecH264 PAL::get_AVFoundation_AVVideoCodecH264()
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVVideoWidthKey, NSString *)
@@ -223,6 +227,8 @@ SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVVideoProfileLevelH264MainAuto
 #define AVVideoProfileLevelH264MainAutoLevel PAL::get_AVFoundation_AVVideoProfileLevelH264MainAutoLevel()
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVVideoCompressionPropertiesKey, NSString *)
 #define AVVideoCompressionPropertiesKey PAL::get_AVFoundation_AVVideoCompressionPropertiesKey()
+SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVVideoQualityKey, NSString *)
+#define AVVideoQualityKey PAL::get_AVFoundation_AVVideoQualityKey()
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, AVFoundation, AVEncoderBitRateKey, NSString *)
 #define AVEncoderBitRateKey PAL::get_AVFoundation_AVEncoderBitRateKey()
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, AVFoundation, AVFormatIDKey, NSString *)
@@ -379,6 +385,8 @@ SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, AVFoundation, AVURLAssetExtendedMIME
 #if HAVE(AVAUDIOSESSION)
 SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVAudioSessionPortCarAudio, NSString *)
 #define AVAudioSessionPortCarAudio PAL::get_AVFoundation_AVAudioSessionPortCarAudio()
+SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVAudioSessionSpatialPlaybackCapabilitiesChangedNotification, NSString *)
+#define AVAudioSessionSpatialPlaybackCapabilitiesChangedNotification PAL::get_AVFoundation_AVAudioSessionSpatialPlaybackCapabilitiesChangedNotification()
 #endif // HAVE(AVAUDIOSESSION)
 
 #if HAVE(AVSPEECHSYNTHESIS_VOICES_CHANGE_NOTIFICATION)
@@ -393,5 +401,8 @@ SOFT_LINK_CONSTANT_FOR_HEADER(PAL, AVFoundation, AVCaptureMaxAvailableTorchLevel
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, AVFoundation, AVSampleBufferDisplayLayerReadyForDisplayDidChangeNotification, NSNotificationName)
 #define AVSampleBufferDisplayLayerReadyForDisplayDidChangeNotification PAL::get_AVFoundation_AVSampleBufferDisplayLayerReadyForDisplayDidChangeNotification()
 #endif
+
+SOFT_LINK_FUNCTION_FOR_HEADER(PAL, AVFoundation, AVSampleBufferAttachContentKey, BOOL, (CMSampleBufferRef sbuf, AVContentKey *contentKey, NSError **outError), (sbuf, contentKey, outError))
+#define AVSampleBufferAttachContentKey PAL::softLink_AVFoundation_AVSampleBufferAttachContentKey
 
 #endif // USE(AVFOUNDATION)

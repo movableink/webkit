@@ -26,8 +26,6 @@
 #include "config.h"
 #include "ServiceWorkerThreadProxy.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "BadgeClient.h"
 #include "CacheStorageProvider.h"
 #include "DocumentLoader.h"
@@ -66,7 +64,7 @@ static ThreadSafeWeakHashSet<ServiceWorkerThreadProxy>& allServiceWorkerThreadPr
     return set;
 }
 
-ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(UniqueRef<Page>&& page, ServiceWorkerContextData&& contextData, ServiceWorkerData&& workerData, String&& userAgent, WorkerThreadMode workerThreadMode, CacheStorageProvider& cacheStorageProvider, std::unique_ptr<NotificationClient>&& notificationClient)
+ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(Ref<Page>&& page, ServiceWorkerContextData&& contextData, ServiceWorkerData&& workerData, String&& userAgent, WorkerThreadMode workerThreadMode, CacheStorageProvider& cacheStorageProvider, std::unique_ptr<NotificationClient>&& notificationClient)
     : m_page(WTFMove(page))
     , m_document(*dynamicDowncast<LocalFrame>(m_page->mainFrame())->document())
 #if ENABLE(REMOTE_INSPECTOR)
@@ -503,5 +501,3 @@ void ServiceWorkerThreadProxy::setInspectable(bool inspectable)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

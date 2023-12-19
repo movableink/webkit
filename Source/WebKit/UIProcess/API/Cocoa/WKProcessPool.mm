@@ -438,10 +438,8 @@ static RetainPtr<WKProcessPool>& sharedProcessPool()
 - (size_t)_webPageContentProcessCount
 {
     auto result = _processPool->processes().size();
-#if ENABLE(SERVICE_WORKER)
     if (_processPool->useSeparateServiceWorkerProcess())
         result -= _processPool->serviceWorkerProxiesCount();
-#endif
     return result;
 }
 
@@ -471,11 +469,7 @@ static RetainPtr<WKProcessPool>& sharedProcessPool()
 
 - (size_t)_serviceWorkerProcessCount
 {
-#if ENABLE(SERVICE_WORKER)
     return _processPool->serviceWorkerProxiesCount();
-#else
-    return 0;
-#endif
 }
 
 + (void)_forceGameControllerFramework
@@ -564,16 +558,9 @@ static RetainPtr<WKProcessPool>& sharedProcessPool()
 
 - (void)_seedResourceLoadStatisticsForTestingWithFirstParty:(NSURL *)firstPartyURL thirdParty:(NSURL *)thirdPartyURL shouldScheduleNotification:(BOOL)shouldScheduleNotification completionHandler:(void(^)(void))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _processPool->seedResourceLoadStatisticsForTesting(WebCore::RegistrableDomain { firstPartyURL }, WebCore::RegistrableDomain { thirdPartyURL }, shouldScheduleNotification, [completionHandler = makeBlockPtr(completionHandler)] () {
         completionHandler();
     });
-#else
-    UNUSED_PARAM(firstPartyURL);
-    UNUSED_PARAM(thirdPartyURL);
-    UNUSED_PARAM(shouldScheduleNotification);
-    UNUSED_PARAM(completionHandler);
-#endif
 }
 
 + (void)_setWebProcessCountLimit:(unsigned)limit

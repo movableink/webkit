@@ -39,16 +39,15 @@
 
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
 #include "VideoFrame.h"
+#if USE(GSTREAMER)
+#include "VideoFrameGStreamer.h"
+#endif
 #endif
 
 #if USE(NICOSIA)
 #include "NicosiaGCGLANGLELayer.h"
 #else
 #include "TextureMapperGCGLPlatformLayer.h"
-#endif
-
-#if USE(GSTREAMER) && ENABLE(MEDIA_STREAM)
-#include "VideoFrameGStreamer.h"
 #endif
 
 #if USE(ANGLE_GBM)
@@ -170,7 +169,7 @@ RefPtr<VideoFrame> GraphicsContextGLTextureMapperANGLE::surfaceBufferToVideoFram
 
 bool GraphicsContextGLTextureMapperANGLE::platformInitializeContext()
 {
-    m_isForWebGL2 = contextAttributes().webGLVersion == GraphicsContextGLWebGLVersion::WebGL2;
+    m_isForWebGL2 = contextAttributes().isWebGL2;
 
     auto& sharedDisplay = PlatformDisplay::sharedDisplayForCompositing();
     m_displayObj = sharedDisplay.angleEGLDisplay();

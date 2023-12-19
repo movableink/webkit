@@ -46,6 +46,7 @@
 #include "SourceBufferPrivateGStreamer.h"
 #include "TimeRanges.h"
 #include "WebKitMediaSourceGStreamer.h"
+#include <wtf/NativePromise.h>
 #include <wtf/RefPtr.h>
 #include <wtf/glib/GRefPtr.h>
 
@@ -62,12 +63,11 @@ Ref<MediaSourcePrivateGStreamer> MediaSourcePrivateGStreamer::open(MediaSourcePr
 }
 
 MediaSourcePrivateGStreamer::MediaSourcePrivateGStreamer(MediaSourcePrivateClient& mediaSource, MediaPlayerPrivateGStreamerMSE& playerPrivate)
-    : MediaSourcePrivate()
-    , m_mediaSource(mediaSource)
+    : MediaSourcePrivate(mediaSource)
     , m_playerPrivate(playerPrivate)
 #if !RELEASE_LOG_DISABLED
-    , m_logger(m_playerPrivate.mediaPlayerLogger())
-    , m_logIdentifier(m_playerPrivate.mediaPlayerLogIdentifier())
+    , m_logger(playerPrivate.mediaPlayerLogger())
+    , m_logIdentifier(playerPrivate.mediaPlayerLogIdentifier())
 #endif
 {
 }
@@ -90,14 +90,15 @@ MediaSourcePrivateGStreamer::AddStatus MediaSourcePrivateGStreamer::addSourceBuf
 
     m_sourceBuffers.append(SourceBufferPrivateGStreamer::create(*this, contentType, m_playerPrivate));
     sourceBufferPrivate = m_sourceBuffers.last();
+    sourceBufferPrivate->setMediaSourceDuration(duration());
     return MediaSourcePrivateGStreamer::AddStatus::Ok;
 }
 
-void MediaSourcePrivateGStreamer::durationChanged(const MediaTime&)
+void MediaSourcePrivateGStreamer::durationChanged(const MediaTime& duration)
 {
     ASSERT(isMainThread());
 
-    MediaTime duration = m_mediaSource ? m_mediaSource->duration() : MediaTime::invalidTime();
+    MediaSourcePrivate::durationChanged(duration);
     GST_TRACE_OBJECT(m_playerPrivate.pipeline(), "Duration: %" GST_TIME_FORMAT, GST_TIME_ARGS(toGstClockTime(duration)));
     if (!duration.isValid() || duration.isNegativeInfinite())
         return;
@@ -111,52 +112,31 @@ void MediaSourcePrivateGStreamer::markEndOfStream(EndOfStreamStatus endOfStreamS
 #ifndef GST_DISABLE_GST_DEBUG
     const char* statusString = nullptr;
     switch (endOfStreamStatus) {
-    case EndOfStreamStatus::EosNoError:
+    case EndOfStreamStatus::NoError:
         statusString = "no-error";
         break;
-    case EndOfStreamStatus::EosDecodeError:
+    case EndOfStreamStatus::DecodeError:
         statusString = "decode-error";
         break;
-    case EndOfStreamStatus::EosNetworkError:
+    case EndOfStreamStatus::NetworkError:
         statusString = "network-error";
         break;
     }
     GST_DEBUG_OBJECT(m_playerPrivate.pipeline(), "Marking EOS, status is %s", statusString);
 #endif
-    if (endOfStreamStatus == EosNoError)
+    if (endOfStreamStatus == EndOfStreamStatus::NoError)
         m_playerPrivate.setNetworkState(MediaPlayer::NetworkState::Loaded);
     MediaSourcePrivate::markEndOfStream(endOfStreamStatus);
 }
 
-MediaPlayer::ReadyState MediaSourcePrivateGStreamer::readyState() const
+MediaPlayer::ReadyState MediaSourcePrivateGStreamer::mediaPlayerReadyState() const
 {
     return m_playerPrivate.readyState();
 }
 
-void MediaSourcePrivateGStreamer::setReadyState(MediaPlayer::ReadyState state)
+void MediaSourcePrivateGStreamer::setMediaPlayerReadyState(MediaPlayer::ReadyState state)
 {
     m_playerPrivate.setReadyState(state);
-}
-
-void MediaSourcePrivateGStreamer::waitForTarget(const SeekTarget& target, CompletionHandler<void(const MediaTime&)>&& completionHandler)
-{
-    if (m_mediaSource)
-        m_mediaSource->waitForTarget(target, WTFMove(completionHandler));
-    else
-        completionHandler(MediaTime::invalidTime());
-}
-
-void MediaSourcePrivateGStreamer::seekToTime(const MediaTime& time, CompletionHandler<void()>&& completionHandler)
-{
-    if (m_mediaSource)
-        m_mediaSource->seekToTime(time, WTFMove(completionHandler));
-    else
-        completionHandler();
-}
-
-MediaTime MediaSourcePrivateGStreamer::duration() const
-{
-    return m_mediaSource ? m_mediaSource->duration() : MediaTime::invalidTime();
 }
 
 MediaTime MediaSourcePrivateGStreamer::currentMediaTime() const
@@ -184,16 +164,10 @@ void MediaSourcePrivateGStreamer::startPlaybackIfHasAllTracks()
     Vector<RefPtr<MediaSourceTrackGStreamer>> tracks;
     for (auto& privateSourceBuffer : m_sourceBuffers) {
         auto sourceBuffer = downcast<SourceBufferPrivateGStreamer>(privateSourceBuffer);
-        tracks.appendRange(sourceBuffer->tracks().begin(), sourceBuffer->tracks().end());
+        for (auto& [_, track] : sourceBuffer->tracks())
+            tracks.append(track);
     }
     m_playerPrivate.startSource(tracks);
-}
-
-const PlatformTimeRanges& MediaSourcePrivateGStreamer::buffered()
-{
-    if (m_mediaSource)
-        return m_mediaSource->buffered();
-    return PlatformTimeRanges::emptyRanges();
 }
 
 void MediaSourcePrivateGStreamer::notifyActiveSourceBuffersChanged()

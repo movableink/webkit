@@ -51,6 +51,7 @@
 #import "_WKWebsiteDataStoreConfigurationInternal.h"
 #import "_WKWebsiteDataStoreDelegate.h"
 #import <WebCore/Credential.h>
+#import <WebCore/RegistrableDomain.h>
 #import <WebCore/ServiceWorkerClientData.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/BlockPtr.h>
@@ -77,6 +78,7 @@ public:
         , m_hasGetDisplayedNotificationsSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:getDisplayedNotificationsForWorkerOrigin:completionHandler:)])
         , m_hasRequestBackgroundFetchPermissionSelector([m_delegate.get() respondsToSelector:@selector(requestBackgroundFetchPermission:frameOrigin:decisionHandler:)])
         , m_hasNotifyBackgroundFetchChangeSelector([m_delegate.get() respondsToSelector:@selector(notifyBackgroundFetchChange:change:)])
+        , m_hasWindowProxyPropertyAccessSelector([m_delegate.get() respondsToSelector:@selector(websiteDataStore:domain:didOpenDomainViaWindowOpen:withProperty:directly:)])
     {
     }
 
@@ -268,6 +270,26 @@ private:
         [m_delegate.getAutoreleased() notifyBackgroundFetchChange:backgroundFetchIdentifier change:change];
     }
 
+    void didAccessWindowProxyProperty(const WebCore::RegistrableDomain& parentDomain, const WebCore::RegistrableDomain& childDomain, WebCore::WindowProxyProperty property, bool directlyAccessedProperty) final
+    {
+        if (!m_hasWindowProxyPropertyAccessSelector)
+            return;
+
+        WKWindowProxyProperty windowProxyProperty;
+        switch (property) {
+        case WebCore::WindowProxyProperty::PostMessage:
+            windowProxyProperty = WKWindowProxyPropertyPostMessage;
+            break;
+        case WebCore::WindowProxyProperty::Closed:
+            windowProxyProperty = WKWindowProxyPropertyClosed;
+            break;
+        default:
+            windowProxyProperty = WKWindowProxyPropertyOther;
+        }
+
+        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() domain:parentDomain.string() didOpenDomainViaWindowOpen:childDomain.string() withProperty:windowProxyProperty directly:directlyAccessedProperty];
+    }
+
     WeakObjCPtr<WKWebsiteDataStore> m_dataStore;
     WeakObjCPtr<id <_WKWebsiteDataStoreDelegate> > m_delegate;
     bool m_hasRequestStorageSpaceSelector { false };
@@ -280,6 +302,7 @@ private:
     bool m_hasGetDisplayedNotificationsSelector { false };
     bool m_hasRequestBackgroundFetchPermissionSelector { false };
     bool m_hasNotifyBackgroundFetchChangeSelector { false };
+    bool m_hasWindowProxyPropertyAccessSelector { false };
 };
 
 @implementation WKWebsiteDataStore {
@@ -569,20 +592,12 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
 - (BOOL)_resourceLoadStatisticsDebugMode
 {
-#if ENABLE(TRACKING_PREVENTION)
     return _websiteDataStore->resourceLoadStatisticsDebugMode();
-#else
-    return NO;
-#endif
 }
 
 - (void)_setResourceLoadStatisticsDebugMode:(BOOL)enabled
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->setResourceLoadStatisticsDebugMode(enabled);
-#else
-    UNUSED_PARAM(enabled);
-#endif
 }
 
 - (void)_setPrivateClickMeasurementDebugModeEnabled:(BOOL)enabled
@@ -637,7 +652,6 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
 - (void)_setResourceLoadStatisticsTestingCallback:(void (^)(WKWebsiteDataStore *, NSString *))callback
 {
-#if ENABLE(TRACKING_PREVENTION)
     if (!_websiteDataStore->isPersistent())
         return;
 
@@ -649,14 +663,29 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     }
 
     _websiteDataStore->setStatisticsTestingCallback(nullptr);
-#endif
+}
+
+- (void)_setStorageAccessPromptQuirkForTesting:(NSString *)topFrameDomain withSubFrameDomains:(NSArray<NSString *> *)subFrameDomains completionHandler:(void(^)(void))completionHandler
+{
+    if (!_websiteDataStore->isPersistent())
+        return;
+
+    _websiteDataStore->setStorageAccessPromptQuirkForTesting(topFrameDomain, makeVector<String>(subFrameDomains), makeBlockPtr(completionHandler));
+}
+
+- (void)_grantStorageAccessForTesting:(NSString *)topFrameDomain withSubFrameDomains:(NSArray<NSString *> *)subFrameDomains completionHandler:(void(^)(void))completionHandler
+{
+    if (!_websiteDataStore->isPersistent()) {
+        completionHandler();
+        return;
+    }
+
+    _websiteDataStore->grantStorageAccessForTesting(WTFMove(topFrameDomain), makeVector<String>(subFrameDomains), makeBlockPtr(completionHandler));
 }
 
 - (void)_setResourceLoadStatisticsTimeAdvanceForTesting:(NSTimeInterval)time completionHandler:(void(^)(void))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->setResourceLoadStatisticsTimeAdvanceForTesting(Seconds(time), makeBlockPtr(completionHandler));
-#endif
 }
 
 + (void)_allowWebsiteDataRecordsForAllOrigins
@@ -666,7 +695,6 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
 - (void)_loadedSubresourceDomainsFor:(WKWebView *)webView completionHandler:(void (^)(NSArray<NSString *> *domains))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     if (!webView) {
         completionHandler(nil);
         return;
@@ -684,14 +712,10 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         });
         completionHandler(wrapper(API::Array::create(WTFMove(apiDomains))).get());
     });
-#else
-    completionHandler(nil);
-#endif
 }
 
 - (void)_clearLoadedSubresourceDomainsFor:(WKWebView *)webView
 {
-#if ENABLE(TRACKING_PREVENTION)
     if (!webView)
         return;
 
@@ -700,7 +724,6 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         return;
 
     webPageProxy->clearLoadedSubresourceDomains();
-#endif
 }
 
 
@@ -717,82 +740,54 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         return;
     }
 
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->getAllStorageAccessEntries(webPageProxy->identifier(), [completionHandler = makeBlockPtr(completionHandler)](auto domains) {
         auto apiDomains = WTF::map(domains, [](auto& domain) -> RefPtr<API::Object> {
             return API::String::create(domain);
         });
         completionHandler(wrapper(API::Array::create(WTFMove(apiDomains))).get());
     });
-#else
-    completionHandler({ });
-#endif
 }
 
 - (void)_scheduleCookieBlockingUpdate:(void (^)(void))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->scheduleCookieBlockingUpdate([completionHandler = makeBlockPtr(completionHandler)]() {
         completionHandler();
     });
-#else
-    completionHandler();
-#endif
 }
 
 - (void)_logUserInteraction:(NSURL *)domain completionHandler:(void (^)(void))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->logUserInteraction(domain, [completionHandler = makeBlockPtr(completionHandler)] {
         completionHandler();
     });
-#else
-    completionHandler();
-#endif
 }
 
 - (void)_setPrevalentDomain:(NSURL *)domain completionHandler:(void (^)(void))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->setPrevalentResource(URL(domain), [completionHandler = makeBlockPtr(completionHandler)]() {
         completionHandler();
     });
-#else
-    completionHandler();
-#endif
 }
 
 - (void)_getIsPrevalentDomain:(NSURL *)domain completionHandler:(void (^)(BOOL))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->isPrevalentResource(URL(domain), [completionHandler = makeBlockPtr(completionHandler)](bool enabled) {
         completionHandler(enabled);
     });
-#else
-    completionHandler(NO);
-#endif
 }
 
 - (void)_clearPrevalentDomain:(NSURL *)domain completionHandler:(void (^)(void))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->clearPrevalentResource(URL(domain), [completionHandler = makeBlockPtr(completionHandler)]() {
         completionHandler();
     });
-#else
-    completionHandler();
-#endif
 }
 
 - (void)_clearResourceLoadStatistics:(void (^)(void))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->scheduleClearInMemoryAndPersistent(WebKit::ShouldGrandfatherStatistics::No, [completionHandler = makeBlockPtr(completionHandler)]() {
         completionHandler();
     });
-#else
-    completionHandler();
-#endif
 }
 
 - (void)_closeDatabases:(void (^)(void))completionHandler
@@ -804,15 +799,11 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
 - (void)_getResourceLoadStatisticsDataSummary:(void (^)(NSArray<_WKResourceLoadStatisticsThirdParty *> *))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->getResourceLoadStatisticsDataSummary([completionHandler = makeBlockPtr(completionHandler)] (Vector<WebKit::ITPThirdPartyData>&& thirdPartyDomains) {
         completionHandler(createNSArray(WTFMove(thirdPartyDomains), [] (WebKit::ITPThirdPartyData&& domain) {
             return wrapper(API::ResourceLoadStatisticsThirdParty::create(WTFMove(domain)));
         }).get());
     });
-#else
-    completionHandler(nil);
-#endif
 }
 
 + (void)_setCachedProcessSuspensionDelayForTesting:(double)delayInSeconds
@@ -822,57 +813,37 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 
 - (void)_isRelationshipOnlyInDatabaseOnce:(NSURL *)firstPartyURL thirdParty:(NSURL *)thirdPartyURL completionHandler:(void (^)(BOOL))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->isRelationshipOnlyInDatabaseOnce(thirdPartyURL, firstPartyURL, [completionHandler = makeBlockPtr(completionHandler)] (bool result) {
         completionHandler(result);
     });
-#else
-    completionHandler(NO);
-#endif
 }
 
 - (void)_isRegisteredAsSubresourceUnderFirstParty:(NSURL *)firstPartyURL thirdParty:(NSURL *)thirdPartyURL completionHandler:(void (^)(BOOL))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->isRegisteredAsSubresourceUnder(thirdPartyURL, firstPartyURL, [completionHandler = makeBlockPtr(completionHandler)](bool enabled) {
         completionHandler(enabled);
     });
-#else
-    completionHandler(NO);
-#endif
 }
 
 - (void)_statisticsDatabaseHasAllTables:(void (^)(BOOL))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->statisticsDatabaseHasAllTables([completionHandler = makeBlockPtr(completionHandler)](bool hasAllTables) {
         completionHandler(hasAllTables);
     });
-#else
-    completionHandler(NO);
-#endif
 }
 
 - (void)_processStatisticsAndDataRecords:(void (^)(void))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->scheduleStatisticsAndDataRecordsProcessing([completionHandler = makeBlockPtr(completionHandler)]() {
         completionHandler();
     });
-#else
-    completionHandler();
-#endif
 }
 
 - (void)_setThirdPartyCookieBlockingMode:(BOOL)enabled onlyOnSitesWithoutUserInteraction:(BOOL)onlyOnSitesWithoutUserInteraction completionHandler:(void (^)(void))completionHandler
 {
-#if ENABLE(TRACKING_PREVENTION)
     _websiteDataStore->setResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(enabled, onlyOnSitesWithoutUserInteraction, [completionHandler = makeBlockPtr(completionHandler)]() {
         completionHandler();
     });
-#else
-    completionHandler();
-#endif
 }
 
 - (void)_renameOrigin:(NSURL *)oldName to:(NSURL *)newName forDataOfTypes:(NSSet<NSString *> *)dataTypes completionHandler:(void (^)(void))completionHandler
@@ -894,6 +865,13 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 - (BOOL)_networkProcessHasEntitlementForTesting:(NSString *)entitlement
 {
     return _websiteDataStore->networkProcessHasEntitlementForTesting(entitlement);
+}
+
+- (void)_setUserAgentStringQuirkForTesting:(NSString *)domain withUserAgent:(NSString *)userAgent completionHandler:(void (^)(void))completionHandler
+{
+    _websiteDataStore->setUserAgentStringQuirkForTesting(domain, userAgent, [completionHandler = makeBlockPtr(completionHandler)] {
+        completionHandler();
+    });
 }
 
 - (id <_WKWebsiteDataStoreDelegate>)_delegate
@@ -1029,7 +1007,6 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 {
     RELEASE_LOG(Push, "Getting pending push messages");
 
-#if ENABLE(SERVICE_WORKER)
     _websiteDataStore->networkProcess().getPendingPushMessages(_websiteDataStore->sessionID(), [completionHandler = makeBlockPtr(completionHandler)] (const Vector<WebKit::WebPushMessage>& messages) {
         auto result = adoptNS([[NSMutableArray alloc] initWithCapacity:messages.size()]);
         for (auto& message : messages)
@@ -1038,12 +1015,10 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         RELEASE_LOG(Push, "Giving application %zu pending push messages", messages.size());
         completionHandler(result.get());
     });
-#endif
 }
 
 -(void)_processPushMessage:(NSDictionary *)pushMessageDictionary completionHandler:(void(^)(bool wasProcessed))completionHandler
 {
-#if ENABLE(SERVICE_WORKER)
     auto pushMessage = WebKit::WebPushMessage::fromDictionary(pushMessageDictionary);
     if (!pushMessage) {
         RELEASE_LOG_ERROR(Push, "Asked to handle an invalid push message");
@@ -1055,12 +1030,10 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         RELEASE_LOG(Push, "Push message processing complete. Callback result: %d", wasProcessed);
         completionHandler(wasProcessed);
     });
-#endif
 }
 
 -(void)_processPersistentNotificationClick:(NSDictionary *)notificationDictionaryRepresentation completionHandler:(void(^)(bool))completionHandler
 {
-#if ENABLE(SERVICE_WORKER)
     auto notificationData = WebCore::NotificationData::fromDictionary(notificationDictionaryRepresentation);
     if (!notificationData) {
         RELEASE_LOG_ERROR(Push, "Asked to handle a persistent notification click with an invalid notification dictionary representation");
@@ -1085,12 +1058,10 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         RELEASE_LOG(Push, "Notification click event processing complete. Callback result: %d", wasProcessed);
         completionHandler(wasProcessed);
     });
-#endif
 }
 
 -(void)_processPersistentNotificationClose:(NSDictionary *)notificationDictionaryRepresentation completionHandler:(void(^)(bool))completionHandler
 {
-#if ENABLE(SERVICE_WORKER)
     auto notificationData = WebCore::NotificationData::fromDictionary(notificationDictionaryRepresentation);
     if (!notificationData) {
         RELEASE_LOG_ERROR(Push, "Asked to handle a persistent notification click with an invalid notification dictionary representation");
@@ -1104,32 +1075,23 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         RELEASE_LOG(Push, "Notification close event processing complete. Callback result: %d", wasProcessed);
         completionHandler(wasProcessed);
     });
-#endif
 }
 
 -(void)_getAllBackgroundFetchIdentifiers:(void(^)(NSArray<NSString *> *identifiers))completionHandler
 {
-#if ENABLE(SERVICE_WORKER)
     _websiteDataStore->networkProcess().getAllBackgroundFetchIdentifiers(_websiteDataStore->sessionID(), [completionHandler = makeBlockPtr(completionHandler)] (auto identifiers) {
         auto result = adoptNS([[NSMutableArray alloc] initWithCapacity:identifiers.size()]);
         for (auto identifier : identifiers)
             [result addObject:(NSString *)identifier];
         completionHandler(result.autorelease());
     });
-#else
-    completionHandler(nil);
-#endif
 }
 
 -(void)_getBackgroundFetchState:(NSString *) identifier completionHandler:(void(^)(NSDictionary *state))completionHandler
 {
-#if ENABLE(SERVICE_WORKER)
     _websiteDataStore->networkProcess().getBackgroundFetchState(_websiteDataStore->sessionID(), identifier, [completionHandler = makeBlockPtr(completionHandler)] (auto state) {
         completionHandler(state ? state->toDictionary() : nil);
     });
-#else
-    completionHandler(nil);
-#endif
 }
 
 -(void)_abortBackgroundFetch:(NSString *) identifier completionHandler:(void(^)(void))completionHandler
@@ -1137,26 +1099,18 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     if (!completionHandler)
         completionHandler = [] { };
 
-#if ENABLE(SERVICE_WORKER)
     _websiteDataStore->networkProcess().abortBackgroundFetch(_websiteDataStore->sessionID(), identifier, [completionHandler = makeBlockPtr(completionHandler)] {
         completionHandler();
     });
-#else
-    completionHandler();
-#endif
 }
 -(void)_pauseBackgroundFetch:(NSString *) identifier completionHandler:(void(^)(void))completionHandler
 {
     if (!completionHandler)
         completionHandler = [] { };
 
-#if ENABLE(SERVICE_WORKER)
     _websiteDataStore->networkProcess().pauseBackgroundFetch(_websiteDataStore->sessionID(), identifier, [completionHandler = makeBlockPtr(completionHandler)] {
         completionHandler();
     });
-#else
-    completionHandler();
-#endif
 }
 
 -(void)_resumeBackgroundFetch:(NSString *) identifier completionHandler:(void(^)(void))completionHandler
@@ -1164,13 +1118,9 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     if (!completionHandler)
         completionHandler = [] { };
 
-#if ENABLE(SERVICE_WORKER)
     _websiteDataStore->networkProcess().resumeBackgroundFetch(_websiteDataStore->sessionID(), identifier, [completionHandler = makeBlockPtr(completionHandler)] {
         completionHandler();
     });
-#else
-    completionHandler();
-#endif
 }
 
 -(void)_clickBackgroundFetch:(NSString *) identifier completionHandler:(void(^)(void))completionHandler
@@ -1178,34 +1128,24 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     if (!completionHandler)
         completionHandler = [] { };
 
-#if ENABLE(SERVICE_WORKER)
     if (!completionHandler)
         completionHandler = [] { };
 
     _websiteDataStore->networkProcess().clickBackgroundFetch(_websiteDataStore->sessionID(), identifier, [completionHandler = makeBlockPtr(completionHandler)] {
         completionHandler();
     });
-#else
-    completionHandler();
-#endif
 }
 
 -(void)_storeServiceWorkerRegistrations:(void(^)(void))completionHandler
 {
-#if ENABLE(SERVICE_WORKER)
     _websiteDataStore->storeServiceWorkerRegistrations([completionHandler = makeBlockPtr(completionHandler)] {
         completionHandler();
     });
-#else
-    completionHandler();
-#endif
 }
 
 -(void)_setServiceWorkerOverridePreferences:(WKPreferences *)preferences
 {
-#if ENABLE(SERVICE_WORKER)
     _websiteDataStore->setServiceWorkerOverridePreferences(preferences ? preferences->_preferences.get() : nullptr);
-#endif
 }
 
 -(void)_scopeURL:(NSURL *)scopeURL hasPushSubscriptionForTesting:(void(^)(BOOL))completionHandler

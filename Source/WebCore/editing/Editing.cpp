@@ -576,8 +576,8 @@ RefPtr<Element> enclosingTableCell(const Position& position)
 RefPtr<Element> enclosingAnchorElement(const Position& p)
 {
     for (auto node = p.protectedDeprecatedNode(); node; node = node->parentNode()) {
-        if (is<Element>(*node) && node->isLink())
-            return downcast<Element>(node.releaseNonNull());
+        if (auto* element = dynamicDowncast<Element>(*node); element && element->isLink())
+            return element;
     }
     return nullptr;
 }
@@ -1052,7 +1052,7 @@ bool isRenderedAsNonInlineTableImageOrHR(const Node* node)
     if (!node)
         return false;
     RenderObject* renderer = node->renderer();
-    return renderer && ((renderer->isRenderTable() && !renderer->isInline()) || (renderer->isImage() && !renderer->isInline()) || renderer->isHR());
+    return renderer && !renderer->isInline() && (renderer->isRenderTable() || renderer->isImage() || renderer->isHR());
 }
 
 bool areIdenticalElements(const Node& first, const Node& second)

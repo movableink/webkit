@@ -59,6 +59,7 @@ class Page;
 class RenderBlock;
 class RenderObject;
 class RenderText;
+class RenderWidget;
 class Scrollbar;
 class ScrollView;
 class VisiblePosition;
@@ -160,11 +161,12 @@ public:
     WEBCORE_EXPORT AXCoreObject* rootObject();
     // Returns the root object for a specific frame.
     WEBCORE_EXPORT AccessibilityObject* rootObjectForFrame(LocalFrame*);
-    
-    // For AX objects with elements that back them.
+
+    // Creation/retrieval of AX objects associated with a DOM or RenderTree object.
     AccessibilityObject* getOrCreate(RenderObject*);
     AccessibilityObject* getOrCreate(Widget*);
-    WEBCORE_EXPORT AccessibilityObject* getOrCreate(Node*);
+    enum class IsPartOfRelation : bool { No, Yes };
+    WEBCORE_EXPORT AccessibilityObject* getOrCreate(Node*, IsPartOfRelation = IsPartOfRelation::No);
 
     // used for objects without backing elements
     AccessibilityObject* create(AccessibilityRole);
@@ -203,6 +205,7 @@ public:
     void onTitleChange(Document&);
     void onValidityChange(Element&);
     void onTextCompositionChange(Node&, CompositionState, bool, const String&, size_t, bool);
+    void onWidgetVisibilityChanged(RenderWidget*);
     void valueChanged(Element*);
     void checkedStateChanged(Node*);
     void autofillTypeChanged(Node*);
@@ -275,7 +278,7 @@ public:
     bool nodeIsTextControl(const Node*);
 
     AccessibilityObject* objectForID(const AXID id) const { return m_objects.get(id); }
-    Vector<RefPtr<AXCoreObject>> objectsForIDs(const Vector<AXID>&) const;
+    template<typename U> Vector<RefPtr<AXCoreObject>> objectsForIDs(const U&) const;
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void onPaint(const RenderObject&, IntRect&&) const;
@@ -345,6 +348,7 @@ public:
         AXColumnCountChanged,
         AXColumnIndexChanged,
         AXColumnSpanChanged,
+        AXContentEditableAttributeChanged,
         AXControlledObjectsChanged,
         AXCurrentStateChanged,
         AXDescribedByChanged,
@@ -386,6 +390,7 @@ public:
         AXTextCompositionEnded,
         AXURLChanged,
         AXValueChanged,
+        AXVisibilityChanged,
         AXScrolledToAnchor,
         AXLabelCreated,
         AXLiveRegionCreated,
@@ -480,7 +485,7 @@ public:
     AXTreeData treeData();
 
     // Returns the IDs of the objects that relate to the given object with the specified relationship.
-    std::optional<Vector<AXID>> relatedObjectIDsFor(const AXCoreObject&, AXRelationType);
+    std::optional<ListHashSet<AXID>> relatedObjectIDsFor(const AXCoreObject&, AXRelationType);
     void updateRelations(Element&, const QualifiedName&);
 
 #if PLATFORM(IOS_FAMILY)
@@ -506,6 +511,7 @@ private:
     void updateIsolatedTree(const Vector<std::pair<RefPtr<AccessibilityObject>, AXNotification>>&);
     void updateIsolatedTree(AccessibilityObject*, AXPropertyName) const;
     void updateIsolatedTree(AccessibilityObject&, AXPropertyName) const;
+    void startUpdateTreeSnapshotTimer();
 #endif
 
 protected:
@@ -547,8 +553,8 @@ public:
     VisiblePosition visiblePositionFromCharacterOffset(const CharacterOffset&);
 protected:
     CharacterOffset characterOffsetFromVisiblePosition(const VisiblePosition&);
-    UChar32 characterAfter(const CharacterOffset&);
-    UChar32 characterBefore(const CharacterOffset&);
+    char32_t characterAfter(const CharacterOffset&);
+    char32_t characterBefore(const CharacterOffset&);
     CharacterOffset characterOffsetForNodeAndOffset(Node&, int, TraverseOption = TraverseOptionDefault);
 
     enum class NeedsContextAtParagraphStart : bool { No, Yes };
@@ -589,6 +595,8 @@ private:
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void selectedTextRangeTimerFired();
     Seconds platformSelectedTextRangeDebounceInterval() const;
+    void updateTreeSnapshotTimerFired();
+    void processQueuedIsolatedNodeUpdates();
 #endif
 
     void deferRowspanChange(AccessibilityObject*);
@@ -629,10 +637,10 @@ private:
     // Relationships between objects.
     static Vector<QualifiedName>& relationAttributes();
     static AXRelationType attributeToRelationType(const QualifiedName&);
-    enum class AddingSymmetricRelation : bool { No, Yes };
+    enum class AddSymmetricRelation : bool { No, Yes };
     static AXRelationType symmetricRelation(AXRelationType);
     void addRelation(Element*, Element*, AXRelationType);
-    void addRelation(AccessibilityObject*, AccessibilityObject*, AXRelationType, AddingSymmetricRelation = AddingSymmetricRelation::No);
+    void addRelation(AccessibilityObject*, AccessibilityObject*, AXRelationType, AddSymmetricRelation = AddSymmetricRelation::Yes);
     void removeRelationByID(AXID originID, AXID targetID, AXRelationType);
     void addRelations(Element&, const QualifiedName&);
     void removeRelations(Element&, AXRelationType);
@@ -641,6 +649,7 @@ private:
     void relationsNeedUpdate(bool);
     HashMap<AXID, AXRelations> relations();
     const HashSet<AXID>& relationTargetIDs();
+    bool isDescendantOfRelatedNode(Node&);
 
     // Object creation.
     Ref<AccessibilityObject> createObjectFromRenderer(RenderObject*);
@@ -703,7 +712,7 @@ private:
     WeakListHashSet<Node, WeakPtrImplWithEventTargetData> m_deferredNodeAddedOrRemovedList;
     WeakHashSet<Element, WeakPtrImplWithEventTargetData> m_deferredModalChangedList;
     WeakHashSet<Element, WeakPtrImplWithEventTargetData> m_deferredMenuListChange;
-    WeakHashSet<ScrollView> m_deferredScrollbarUpdateChangeList;
+    SingleThreadWeakHashSet<ScrollView> m_deferredScrollbarUpdateChangeList;
     WeakHashMap<Element, String, WeakPtrImplWithEventTargetData> m_deferredTextFormControlValue;
     Vector<AttributeChange> m_deferredAttributeChange;
     std::optional<std::pair<WeakPtr<Node, WeakPtrImplWithEventTargetData>, WeakPtr<Node, WeakPtrImplWithEventTargetData>>> m_deferredFocusedNodeChange;
@@ -714,6 +723,8 @@ private:
     Ref<AXGeometryManager> m_geometryManager;
     DeferrableOneShotTimer m_selectedTextRangeTimer;
     AXID m_lastDebouncedTextRangeObject;
+
+    Timer m_updateTreeSnapshotTimer;
 #endif
     bool m_isSynchronizingSelection { false };
     bool m_performingDeferredCacheUpdate { false };
@@ -728,6 +739,18 @@ private:
     ListHashSet<RefPtr<AXCoreObject>> m_deferredParentChangedList;
 #endif
 };
+
+template<typename U>
+inline Vector<RefPtr<AXCoreObject>> AXObjectCache::objectsForIDs(const U& axIDs) const
+{
+    ASSERT(isMainThread());
+
+    return WTF::compactMap(axIDs, [&](auto& axID) -> std::optional<RefPtr<AXCoreObject>> {
+        if (auto* object = objectForID(axID))
+            return RefPtr { object };
+        return std::nullopt;
+    });
+}
 
 class AXAttributeCacheEnabler
 {
@@ -760,7 +783,7 @@ inline AccessibilityObject* AXObjectCache::get(Node*) { return nullptr; }
 inline AccessibilityObject* AXObjectCache::get(Widget*) { return nullptr; }
 inline AccessibilityObject* AXObjectCache::getOrCreate(RenderObject*) { return nullptr; }
 inline AccessibilityObject* AXObjectCache::create(AccessibilityRole) { return nullptr; }
-inline AccessibilityObject* AXObjectCache::getOrCreate(Node*) { return nullptr; }
+inline AccessibilityObject* AXObjectCache::getOrCreate(Node*, IsPartOfRelation) { return nullptr; }
 inline AccessibilityObject* AXObjectCache::getOrCreate(Widget*) { return nullptr; }
 inline AXCoreObject* AXObjectCache::rootObject() { return nullptr; }
 inline AccessibilityObject* AXObjectCache::rootObjectForFrame(LocalFrame*) { return nullptr; }
@@ -793,6 +816,7 @@ inline void AXObjectCache::onFocusChange(Node*, Node*) { }
 inline void AXObjectCache::onPageActivityStateChange(OptionSet<ActivityState>) { }
 inline void AXObjectCache::onPopoverToggle(const HTMLElement&) { }
 inline void AXObjectCache::onScrollbarFrameRectChange(const Scrollbar&) { }
+inline void AXObjectCache::onWidgetVisibilityChanged(RenderWidget*) { }
 inline void AXObjectCache::deferRecomputeIsIgnoredIfNeeded(Element*) { }
 inline void AXObjectCache::deferRecomputeIsIgnored(Element*) { }
 inline void AXObjectCache::deferTextChangedIfNeeded(Node*) { }
@@ -820,7 +844,6 @@ inline void AXObjectCache::onScrollbarUpdate(ScrollView*) { }
 inline void AXObjectCache::handleScrolledToAnchor(const Node*) { }
 inline void AXObjectCache::liveRegionChangedNotificationPostTimerFired() { }
 inline void AXObjectCache::notificationPostTimerFired() { }
-inline Vector<RefPtr<AXCoreObject>> AXObjectCache::objectsForIDs(const Vector<AXID>&) const { return { }; }
 inline void AXObjectCache::passwordNotificationPostTimerFired() { }
 inline void AXObjectCache::performDeferredCacheUpdate() { }
 inline void AXObjectCache::postLiveRegionChangeNotification(AccessibilityObject*) { }
@@ -838,7 +861,7 @@ inline void AXObjectCache::handleRecomputeCellSlots(AccessibilityTable&) { }
 inline void AXObjectCache::onRendererCreated(Element&) { }
 inline void AXObjectCache::updateLoadingProgress(double) { }
 inline SimpleRange AXObjectCache::rangeForNodeContents(Node& node) { return makeRangeSelectingNodeContents(node); }
-inline std::optional<Vector<AXID>> AXObjectCache::relatedObjectIDsFor(const AXCoreObject&, AXRelationType) { return std::nullopt; }
+inline std::optional<ListHashSet<AXID>> AXObjectCache::relatedObjectIDsFor(const AXCoreObject&, AXRelationType) { return std::nullopt; }
 inline void AXObjectCache::updateRelations(Element&, const QualifiedName&) { }
 inline void AXObjectCache::remove(AXID) { }
 inline void AXObjectCache::remove(RenderObject*) { }

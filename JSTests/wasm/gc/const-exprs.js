@@ -206,7 +206,7 @@ async function testInvalidConstExprs() {
         (global (export "g") i32 (struct.new 0 (i32.const 1))))
     `),
     WebAssembly.CompileError,
-    "WebAssembly.Module doesn't validate: control flow returns with unexpected type. (I32, mutable) is not a I32"
+    "WebAssembly.Module doesn't validate: control flow returns with unexpected type. (ref <struct:0>) is not a I32"
   );
 
   assert.throws(
@@ -220,5 +220,133 @@ async function testInvalidConstExprs() {
   );
 }
 
+async function testConstExprGlobalOrdering() {
+  compile(`
+    (module
+      (global i32 (i32.const 0))
+      (global i32 (global.get 0)))
+  `);
+
+  compile(`
+    (module
+      (global i32 (i32.const 0))
+      (global i32 (i32.const 1))
+      (global i32 (i32.const 2))
+      (global i32 (global.get 1))
+      (global i32 (global.get 3)))
+  `);
+
+  {
+    let m = instantiate(`
+      (module
+        (global i32 (i32.add (i32.const 0) (i32.const 1)))
+        (global (export "g") i32 (i32.add (i32.const 1 (global.get 0)))))
+    `);
+
+    assert.eq(m.exports.g.value, 2);
+  }
+
+  compile(`
+    (module
+      (global (import "m" "g") externref)
+      (table 10 externref (global.get 0))
+      )
+  `);
+
+  compile(`
+    (module
+      (global i32 (i32.const 0))
+      (global i32 (i32.const 1))
+      (global i32 (i32.const 2))
+      (global i32 (global.get 1))
+      (global i32 (global.get 3)))
+  `);
+
+  compile(`
+    (module
+      (table (export "t") 64 funcref)
+      (global i32 (i32.const 5))
+      (elem (table 0) (offset (i32.add (global.get 0) (i32.const 42))) funcref (ref.null func)))
+  `);
+
+  assert.throws(
+    () => compile(`
+      (module
+        (global i32 (global.get 1))
+        (global i32 (i32.const 0)))
+    `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't parse at byte 19: get_global's index 1 exceeds the number of globals 0"
+  );
+
+  assert.throws(
+    () => compile(`
+      (module
+        (table 10 externref (global.get 0))
+        (global externref (ref.null extern)))
+    `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't parse at byte 22: get_global's index 0 exceeds the number of globals 0"
+  );
+}
+
+async function testElementConstExprs() {
+  {
+    let m = instantiate(`
+      (module
+        (type (struct (field i32)))
+        (type (struct (field f32)))
+        (table 10 (ref null struct))
+        (elem (table 0) (offset (i32.const 0)) (ref struct) (struct.new 0 (i32.const 2)) (struct.new 1 (f32.const 3)))
+        (func (export "f0") (param i32) (result i32)
+          (struct.get 0 0 (ref.cast (ref 0) (table.get (local.get 0)))))
+        (func (export "f1") (param i32) (result f32)
+          (struct.get 1 0 (ref.cast (ref 1) (table.get (local.get 0)))))
+      )
+    `);
+    assert.eq(m.exports.f0(0), 2);
+    assert.eq(m.exports.f1(1), 3);
+  }
+
+  {
+    let m = instantiate(`
+      (module
+        (type (struct (field i32)))
+        (type (struct (field f32)))
+        (table 10 (ref null struct))
+        (elem (ref struct) (struct.new 0 (i32.const 2)) (struct.new 1 (f32.const 3)))
+        (func (export "init") (table.init 0 0 (i32.const 0) (i32.const 0) (i32.const 2)))
+        (func (export "f0") (param i32) (result i32)
+          (struct.get 0 0 (ref.cast (ref 0) (table.get (local.get 0)))))
+        (func (export "f1") (param i32) (result f32)
+          (struct.get 1 0 (ref.cast (ref 1) (table.get (local.get 0)))))
+      )
+    `);
+    m.exports.init();
+    assert.eq(m.exports.f0(0), 2);
+    assert.eq(m.exports.f1(1), 3);
+  }
+
+  {
+    let m = instantiate(`
+      (module
+        (type (struct (field i32)))
+        (type (struct (field f32)))
+        (table 10 externref)
+        (elem externref (extern.convert_any (struct.new 0 (i32.const 2)))
+                        (extern.convert_any (struct.new 1 (f32.const 4.2))))
+        (func (export "init") (table.init 0 0 (i32.const 2) (i32.const 0) (i32.const 0)))
+        (func (export "f") (param i32) (result externref)
+          (table.get (local.get 0)))
+      )
+    `);
+    m.exports.init();
+    assert.isObject(m.exports.f(0));
+    assert.isObject(m.exports.f(1));
+  }
+}
+
 assert.asyncTest(testGCConstExprs());
 assert.asyncTest(testInvalidConstExprs());
+assert.asyncTest(testConstExprGlobalOrdering())
+assert.asyncTest(testElementConstExprs());

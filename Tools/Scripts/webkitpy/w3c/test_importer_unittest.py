@@ -33,6 +33,7 @@ import unittest
 from webkitpy.common.host_mock import MockHost
 from webkitpy.common.system.filesystem_mock import MockFileSystem
 from webkitpy.common.system.executive_mock import MockExecutive2, ScriptError
+from webkitpy.port.test import TestPort
 from webkitpy.w3c.test_downloader import TestDownloader
 from webkitpy.w3c.test_importer import parse_args, TestImporter
 
@@ -82,9 +83,12 @@ class TestImporterTest(unittest.TestCase):
 
         host = MockHost()
         host.executive = MockExecutive2(exception=OSError())
-        host.filesystem = MockFileSystem(files=FAKE_FILES)
+        port = host.port_factory.get()
+        fs = host.filesystem
+        for path, contents in FAKE_FILES.items():
+            fs.write_binary_file(path, contents)
 
-        importer = TestImporter(host, [FAKE_TEST_PATH], self._parse_options(['-n', '-d', 'w3c', '-s', FAKE_SOURCE_DIR]))
+        importer = TestImporter(port, [FAKE_TEST_PATH], self._parse_options(['-n', '-d', 'w3c', '-s', FAKE_SOURCE_DIR]))
 
         with OutputCapture():
             importer.do_import()
@@ -94,9 +98,12 @@ class TestImporterTest(unittest.TestCase):
 
         host = MockHost()
         host.executive = MockExecutive2(exception=ScriptError("abort: no repository found in '/Volumes/Source/src/wk/Tools/Scripts/webkitpy/w3c' (.hg not found)!"))
-        host.filesystem = MockFileSystem(files=FAKE_FILES)
+        port = host.port_factory.get()
+        fs = host.filesystem
+        for path, contents in FAKE_FILES.items():
+            fs.write_binary_file(path, contents)
 
-        importer = TestImporter(host, [FAKE_TEST_PATH], self._parse_options(['-n', '-d', 'w3c', '-s', FAKE_SOURCE_DIR]))
+        importer = TestImporter(port, [FAKE_TEST_PATH], self._parse_options(['-n', '-d', 'w3c', '-s', FAKE_SOURCE_DIR]))
         with OutputCapture():
             importer.do_import()
 
@@ -108,9 +115,12 @@ class TestImporterTest(unittest.TestCase):
         FAKE_FILES.update(FAKE_REPOSITORIES)
 
         host = MockHost()
-        host.filesystem = MockFileSystem(files=FAKE_FILES)
+        port = host.port_factory.get()
+        fs = host.filesystem
+        for path, contents in FAKE_FILES.items():
+            fs.write_binary_file(path, contents)
 
-        importer = TestImporter(host, ['web-platform-tests/test1', 'web-platform-tests/test2'], self._parse_options(['-n', '-d', 'w3c', '-s', FAKE_SOURCE_DIR]))
+        importer = TestImporter(port, ['web-platform-tests/test1', 'web-platform-tests/test2'], self._parse_options(['-n', '-d', 'w3c', '-s', FAKE_SOURCE_DIR]))
         importer.do_import()
 
         self.assertTrue(host.filesystem.exists("/mock-checkout/LayoutTests/w3c/web-platform-tests/test1/__init__.py"))
@@ -119,31 +129,38 @@ class TestImporterTest(unittest.TestCase):
 
     def import_directory(self, args, files, test_paths):
         host = MockHost()
-        host.executive = MockExecutive2()
-        host.filesystem = MockFileSystem(files=files)
+        port = host.port_factory.get()
+        fs = host.filesystem
+        for path, contents in files.items():
+            fs.write_binary_file(path, contents)
 
         options, args = parse_args(args)
-        importer = TestImporter(host, test_paths, options)
+        importer = TestImporter(port, test_paths, options)
         importer.do_import()
         return host.filesystem
 
-    def import_downloaded_tests(self, args, files):
+    def import_downloaded_tests(self, args, files, test_port=False):
         # files are passed as parameter as we cannot clone/fetch/checkout a repo in mock system.
 
         class TestDownloaderMock(TestDownloader):
-            def __init__(self, repository_directory, host, options):
-                TestDownloader.__init__(self, repository_directory, host, options)
+            def __init__(self, repository_directory, port, options):
+                TestDownloader.__init__(self, repository_directory, port, options)
 
             def _git_submodules_status(self, repository_directory):
                 return 'adb4d391a69877d4a1eaaf51d1725c99a5b8ed84 tools/resources'
 
         host = MockHost()
-        host.executive = MockExecutive2()
-        host.filesystem = MockFileSystem(files=files)
+        if test_port:
+            port = TestPort(host)
+        else:
+            port = host.port_factory.get()
+        fs = host.filesystem
+        for path, contents in files.items():
+            fs.write_binary_file(path, contents)
 
         options, test_paths = parse_args(args)
-        importer = TestImporter(host, test_paths, options)
-        importer._test_downloader = TestDownloaderMock(importer.tests_download_path, importer.host, importer.options)
+        importer = TestImporter(port, test_paths, options)
+        importer._test_downloader = TestDownloaderMock(importer.tests_download_path, port, importer.options)
         importer.do_import()
         return host.filesystem
 
@@ -618,3 +635,22 @@ class TestImporterTest(unittest.TestCase):
         self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/t/variant.any_1-10-expected.txt'))
         self.assertTrue(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/t/variant.any_11-20-expected.txt'))
         self.assertFalse(fs.exists('/mock-checkout/LayoutTests/w3c/web-platform-tests/t/variant.any_21-30-expected.txt'))
+
+    def test_non_dangling_platform(self):
+        FAKE_FILES = {
+            '/mock-checkout/WebKitBuild/w3c-tests/web-platform-tests/t/test.html': MINIMAL_TESTHARNESS,
+            '/test.checkout/LayoutTests/imported/w3c/resources/import-expectations.json': '{}',
+            '/test.checkout/LayoutTests/w3c/web-platform-tests/t/test.html': MINIMAL_TESTHARNESS,
+            '/test.checkout/LayoutTests/w3c/web-platform-tests/t/test-expected.txt': '1',
+            '/test.checkout/LayoutTests/platform/test-mac-leopard/w3c/web-platform-tests/t/test-expected.txt': '2',
+            '/test.checkout/LayoutTests/platform/test-linux-x86_64/w3c/web-platform-tests/t/test-expected.txt': '3',
+            '/test.checkout/LayoutTests/platform/unknown-platform/w3c/web-platform-tests/t/test-expected.txt': '4',
+        }
+
+        fs = self.import_downloaded_tests(['--no-fetch', '--import-all', '--clean-dest-dir', '-d', 'w3c'], FAKE_FILES, test_port=True)
+
+        self.assertTrue(fs.exists('/test.checkout/LayoutTests/w3c/web-platform-tests/t/test.html'))
+        self.assertTrue(fs.exists('/test.checkout/LayoutTests/w3c/web-platform-tests/t/test-expected.txt'))
+        self.assertTrue(fs.exists('/test.checkout/LayoutTests/platform/test-mac-leopard/w3c/web-platform-tests/t/test-expected.txt'))
+        self.assertTrue(fs.exists('/test.checkout/LayoutTests/platform/test-linux-x86_64/w3c/web-platform-tests/t/test-expected.txt'))
+        self.assertTrue(fs.exists('/test.checkout/LayoutTests/platform/unknown-platform/w3c/web-platform-tests/t/test-expected.txt'))

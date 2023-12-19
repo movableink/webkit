@@ -466,9 +466,9 @@ Optional<gl::Version> DisplayMtl::getMaxSupportedDesktopVersion() const
     return Optional<gl::Version>::Invalid();
 }
 
-EGLSyncImpl *DisplayMtl::createSync(const egl::AttributeMap &attribs)
+EGLSyncImpl *DisplayMtl::createSync()
 {
-    return new EGLSyncMtl(attribs);
+    return new EGLSyncMtl();
 }
 
 egl::Error DisplayMtl::makeCurrent(egl::Display *display,
@@ -1314,6 +1314,8 @@ void DisplayMtl::initializeFeatures()
     ANGLE_FEATURE_CONDITION((&mFeatures), emulateAlphaToCoverage,
                             isSimulator || !supportsAppleGPUFamily(1));
 
+    ANGLE_FEATURE_CONDITION((&mFeatures), writeHelperSampleMask, supportsAppleGPUFamily(1));
+
     ANGLE_FEATURE_CONDITION((&mFeatures), multisampleColorFormatShaderReadWorkaround, isAMD());
     ANGLE_FEATURE_CONDITION((&mFeatures), copyIOSurfaceToNonIOSurfaceForReadOptimization,
                             isIntel() || isAMD());
@@ -1368,6 +1370,10 @@ void DisplayMtl::initializeFeatures()
     // http://anglebug.com/8311: Rescope global variables which are only used in one function to be
     // function local. Disabled on AMD FirePro devices: http://anglebug.com/8317
     ANGLE_FEATURE_CONDITION((&mFeatures), rescopeGlobalVariables, !isAMDFireProDevice());
+
+    // Apple-specific pre-transform for explicit cubemap derivatives
+    ANGLE_FEATURE_CONDITION((&mFeatures), preTransformTextureCubeGradDerivatives,
+                            supportsAppleGPUFamily(1));
 
     // On tile-based GPUs, always resolving MSAA render buffers to single-sampled
     // is preferred. Because it would save bandwidth by avoiding the cost of storing the MSAA

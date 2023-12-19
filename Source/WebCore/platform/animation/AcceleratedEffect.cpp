@@ -29,12 +29,12 @@
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 
 #include "AnimationEffect.h"
+#include "BlendingKeyframes.h"
 #include "CSSPropertyAnimation.h"
 #include "CSSPropertyNames.h"
 #include "DeclarativeAnimation.h"
 #include "Document.h"
 #include "KeyframeEffect.h"
-#include "KeyframeList.h"
 #include "LayoutSize.h"
 #include "WebAnimation.h"
 #include "WebAnimationTypes.h"
@@ -42,20 +42,47 @@
 
 namespace WebCore {
 
-AcceleratedEffectKeyframe AcceleratedEffectKeyframe::clone() const
+AcceleratedEffect::Keyframe::Keyframe(double offset, AcceleratedEffectValues&& values)
+    : m_offset(offset)
+    , m_values(WTFMove(values))
 {
+}
+
+AcceleratedEffect::Keyframe::Keyframe(double offset, AcceleratedEffectValues&& values, RefPtr<TimingFunction>&& timingFunction, std::optional<CompositeOperation> compositeOperation, OptionSet<AcceleratedEffectProperty>&& animatedProperties)
+    : m_offset(offset)
+    , m_values(WTFMove(values))
+    , m_timingFunction(WTFMove(timingFunction))
+    , m_compositeOperation(compositeOperation)
+    , m_animatedProperties(WTFMove(animatedProperties))
+{
+}
+
+bool AcceleratedEffect::Keyframe::animatesProperty(KeyframeInterpolation::Property property) const
+{
+    return WTF::switchOn(property, [&](const AcceleratedEffectProperty acceleratedProperty) {
+        return m_animatedProperties.contains(acceleratedProperty);
+    }, [] (auto&) {
+        ASSERT_NOT_REACHED();
+        return false;
+    });
+}
+
+AcceleratedEffect::Keyframe AcceleratedEffect::Keyframe::clone() const
+{
+    auto clonedAnimatedProperties = m_animatedProperties;
+
     RefPtr<TimingFunction> clonedTimingFunction;
-    if (auto* srcTimingFunction = timingFunction.get())
+    if (auto* srcTimingFunction = m_timingFunction.get())
         clonedTimingFunction = srcTimingFunction->clone();
 
     return {
-        offset,
-        values.clone(),
+        m_offset,
+        m_values.clone(),
         WTFMove(clonedTimingFunction),
-        compositeOperation,
-        animatedProperties
+        m_compositeOperation,
+        WTFMove(clonedAnimatedProperties)
     };
-};
+}
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(AcceleratedEffect);
 
@@ -91,14 +118,45 @@ static AcceleratedEffectProperty acceleratedPropertyFromCSSProperty(AnimatableCS
         return AcceleratedEffectProperty::OffsetRotate;
     case CSSPropertyFilter:
         return AcceleratedEffectProperty::Filter;
-#if ENABLE(FILTERS_LEVEL_2)
     case CSSPropertyBackdropFilter:
     case CSSPropertyWebkitBackdropFilter:
         return AcceleratedEffectProperty::BackdropFilter;
-#endif
     default:
         ASSERT_NOT_REACHED();
         return AcceleratedEffectProperty::Invalid;
+    }
+}
+
+static CSSPropertyID cssPropertyFromAcceleratedProperty(AcceleratedEffectProperty property)
+{
+    switch (property) {
+    case AcceleratedEffectProperty::Opacity:
+        return CSSPropertyOpacity;
+    case AcceleratedEffectProperty::Transform:
+        return CSSPropertyTransform;
+    case AcceleratedEffectProperty::Translate:
+        return CSSPropertyTranslate;
+    case AcceleratedEffectProperty::Rotate:
+        return CSSPropertyRotate;
+    case AcceleratedEffectProperty::Scale:
+        return CSSPropertyScale;
+    case AcceleratedEffectProperty::OffsetPath:
+        return CSSPropertyOffsetPath;
+    case AcceleratedEffectProperty::OffsetDistance:
+        return CSSPropertyOffsetDistance;
+    case AcceleratedEffectProperty::OffsetPosition:
+        return CSSPropertyOffsetPosition;
+    case AcceleratedEffectProperty::OffsetAnchor:
+        return CSSPropertyOffsetAnchor;
+    case AcceleratedEffectProperty::OffsetRotate:
+        return CSSPropertyOffsetRotate;
+    case AcceleratedEffectProperty::Filter:
+        return CSSPropertyFilter;
+    case AcceleratedEffectProperty::BackdropFilter:
+        return CSSPropertyWebkitBackdropFilter;
+    default:
+        ASSERT_NOT_REACHED();
+        return CSSPropertyInvalid;
     }
 }
 
@@ -107,7 +165,7 @@ Ref<AcceleratedEffect> AcceleratedEffect::create(const KeyframeEffect& effect, c
     return adoptRef(*new AcceleratedEffect(effect, borderBoxRect));
 }
 
-Ref<AcceleratedEffect> AcceleratedEffect::create(AnimationEffectTiming timing, Vector<AcceleratedEffectKeyframe>&& keyframes, WebAnimationType type, CompositeOperation composite, RefPtr<TimingFunction>&& defaultKeyframeTimingFunction, OptionSet<WebCore::AcceleratedEffectProperty>&& animatedProperties, bool paused, double playbackRate, std::optional<Seconds> startTime, std::optional<Seconds> holdTime)
+Ref<AcceleratedEffect> AcceleratedEffect::create(AnimationEffectTiming timing, Vector<Keyframe>&& keyframes, WebAnimationType type, CompositeOperation composite, RefPtr<TimingFunction>&& defaultKeyframeTimingFunction, OptionSet<WebCore::AcceleratedEffectProperty>&& animatedProperties, bool paused, double playbackRate, std::optional<Seconds> startTime, std::optional<Seconds> holdTime)
 {
     return adoptRef(*new AcceleratedEffect(WTFMove(timing), WTFMove(keyframes), type, composite, WTFMove(defaultKeyframeTimingFunction), WTFMove(animatedProperties), paused, playbackRate, startTime, holdTime));
 }
@@ -167,24 +225,17 @@ AcceleratedEffect::AcceleratedEffect(const KeyframeEffect& effect, const IntRect
         if (animatedProperties.isEmpty())
             continue;
 
-        AcceleratedEffectKeyframe acceleratedKeyframe;
-        acceleratedKeyframe.offset = srcKeyframe.key();
-        acceleratedKeyframe.compositeOperation = srcKeyframe.compositeOperation();
-        acceleratedKeyframe.animatedProperties = WTFMove(animatedProperties);
-
-        acceleratedKeyframe.values = [&]() -> AcceleratedEffectValues {
+        auto values = [&]() -> AcceleratedEffectValues {
             if (auto* style = srcKeyframe.style())
                 return { *style, borderBoxRect };
             return { };
         }();
 
-        acceleratedKeyframe.timingFunction = srcKeyframe.timingFunction();
-
-        m_keyframes.append(WTFMove(acceleratedKeyframe));
+        m_keyframes.append({ srcKeyframe.offset(), WTFMove(values), srcKeyframe.timingFunction(), srcKeyframe.compositeOperation(), WTFMove(animatedProperties) });
     }
 }
 
-AcceleratedEffect::AcceleratedEffect(AnimationEffectTiming timing, Vector<AcceleratedEffectKeyframe>&& keyframes, WebAnimationType type, CompositeOperation composite, RefPtr<TimingFunction>&& defaultKeyframeTimingFunction, OptionSet<WebCore::AcceleratedEffectProperty>&& animatedProperties, bool paused, double playbackRate, std::optional<Seconds> startTime, std::optional<Seconds> holdTime)
+AcceleratedEffect::AcceleratedEffect(AnimationEffectTiming timing, Vector<Keyframe>&& keyframes, WebAnimationType type, CompositeOperation composite, RefPtr<TimingFunction>&& defaultKeyframeTimingFunction, OptionSet<WebCore::AcceleratedEffectProperty>&& animatedProperties, bool paused, double playbackRate, std::optional<Seconds> startTime, std::optional<Seconds> holdTime)
     : m_timing(timing)
     , m_keyframes(WTFMove(keyframes))
     , m_animationType(type)
@@ -211,18 +262,19 @@ AcceleratedEffect::AcceleratedEffect(const AcceleratedEffect& source, OptionSet<
     m_defaultKeyframeTimingFunction = source.m_defaultKeyframeTimingFunction.copyRef();
 
     for (auto& srcKeyframe : source.m_keyframes) {
-        auto& animatedProperties = srcKeyframe.animatedProperties;
+        auto& animatedProperties = srcKeyframe.animatedProperties();
         if (!animatedProperties.containsAny(propertyFilter))
             continue;
 
-        AcceleratedEffectKeyframe keyframe;
-        keyframe.offset = srcKeyframe.offset;
-        keyframe.values = srcKeyframe.values;
-        keyframe.compositeOperation = srcKeyframe.compositeOperation;
-        keyframe.animatedProperties = srcKeyframe.animatedProperties & propertyFilter;
-        keyframe.timingFunction = srcKeyframe.timingFunction.copyRef();
+        Keyframe keyframe {
+            srcKeyframe.offset(),
+            srcKeyframe.values().clone(),
+            srcKeyframe.timingFunction().get(),
+            srcKeyframe.compositeOperation(),
+            srcKeyframe.animatedProperties() & propertyFilter
+        };
 
-        m_animatedProperties.add(keyframe.animatedProperties);
+        m_animatedProperties.add(keyframe.animatedProperties());
         m_keyframes.append(WTFMove(keyframe));
     }
 }
@@ -239,6 +291,44 @@ bool AcceleratedEffect::animatesTransformRelatedProperty() const
         AcceleratedEffectProperty::OffsetPosition,
         AcceleratedEffectProperty::OffsetAnchor,
         AcceleratedEffectProperty::OffsetRotate
+    });
+}
+
+const KeyframeInterpolation::Keyframe& AcceleratedEffect::keyframeAtIndex(size_t index) const
+{
+    ASSERT(index < m_keyframes.size());
+    return m_keyframes[index];
+}
+
+const TimingFunction* AcceleratedEffect::timingFunctionForKeyframe(const KeyframeInterpolation::Keyframe& keyframe) const
+{
+    if (!is<Keyframe>(keyframe)) {
+        ASSERT_NOT_REACHED();
+        return nullptr;
+    }
+
+    auto& acceleratedEffectKeyframe = downcast<Keyframe>(keyframe);
+    if (m_animationType == WebAnimationType::CSSAnimation || m_animationType == WebAnimationType::CSSTransition) {
+        // If we're dealing with a CSS Animation, the timing function may be specified on the keyframe.
+        if (m_animationType == WebAnimationType::CSSAnimation) {
+            if (auto& timingFunction = acceleratedEffectKeyframe.timingFunction())
+                return timingFunction.get();
+        }
+
+        // Failing that, or for a CSS Transition, the timing function is the default timing function.
+        return m_defaultKeyframeTimingFunction.get();
+    }
+
+    return acceleratedEffectKeyframe.timingFunction().get();
+}
+
+bool AcceleratedEffect::isPropertyAdditiveOrCumulative(KeyframeInterpolation::Property property) const
+{
+    return WTF::switchOn(property, [&](const AcceleratedEffectProperty acceleratedProperty) {
+        return CSSPropertyAnimation::isPropertyAdditiveOrCumulative(cssPropertyFromAcceleratedProperty(acceleratedProperty));
+    }, [] (auto&) {
+        ASSERT_NOT_REACHED();
+        return false;
     });
 }
 

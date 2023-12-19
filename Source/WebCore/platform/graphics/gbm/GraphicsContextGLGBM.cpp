@@ -35,12 +35,11 @@
 #include "Logging.h"
 #include "PixelBuffer.h"
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
 #include "VideoFrame.h"
-#endif
-
-#if USE(GSTREAMER) && ENABLE(MEDIA_STREAM)
+#if USE(GSTREAMER)
 #include "VideoFrameGStreamer.h"
+#endif
 #endif
 
 namespace WebCore {
@@ -117,7 +116,7 @@ bool GraphicsContextGLGBM::platformInitializeContext()
         return false;
     }
 
-    m_isForWebGL2 = contextAttributes().webGLVersion == GraphicsContextGLWebGLVersion::WebGL2;
+    m_isForWebGL2 = contextAttributes().isWebGL2;
 
     Vector<EGLint> displayAttributes {
         EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE,

@@ -34,6 +34,7 @@
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "LegacyRenderSVGResource.h"
+#include "RenderElementInlines.h"
 #include "RenderGeometryMap.h"
 #include "RenderLayer.h"
 #include "RenderLayerInlines.h"
@@ -54,13 +55,13 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGModelObject);
 
-RenderSVGModelObject::RenderSVGModelObject(Type type, Document& document, RenderStyle&& style)
-    : RenderLayerModelObject(type, document, WTFMove(style), 0)
+RenderSVGModelObject::RenderSVGModelObject(Type type, Document& document, RenderStyle&& style, OptionSet<RenderElementType> typeFlags)
+    : RenderLayerModelObject(type, document, WTFMove(style), typeFlags)
 {
 }
 
-RenderSVGModelObject::RenderSVGModelObject(Type type, SVGElement& element, RenderStyle&& style)
-    : RenderLayerModelObject(type, element, WTFMove(style), 0)
+RenderSVGModelObject::RenderSVGModelObject(Type type, SVGElement& element, RenderStyle&& style, OptionSet<RenderElementType> typeFlags)
+    : RenderLayerModelObject(type, element, WTFMove(style), typeFlags)
 {
 }
 
@@ -76,18 +77,24 @@ LayoutRect RenderSVGModelObject::overflowClipRect(const LayoutPoint&, RenderFrag
     return LayoutRect();
 }
 
-LayoutRect RenderSVGModelObject::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext context) const
+auto RenderSVGModelObject::localRectsForRepaint(RepaintOutlineBounds repaintOutlineBounds) const -> RepaintRects
 {
     if (isInsideEntirelyHiddenLayer())
         return { };
 
     ASSERT(!view().frameView().layoutContext().isPaintOffsetCacheEnabled());
-    return computeRect(visualOverflowRectEquivalent(), repaintContainer, context);
+
+    auto visualOverflowRect = visualOverflowRectEquivalent();
+    auto rects = RepaintRects { visualOverflowRect };
+    if (repaintOutlineBounds == RepaintOutlineBounds::Yes)
+        rects.outlineBoundsRect = visualOverflowRect;
+
+    return rects;
 }
 
-std::optional<LayoutRect> RenderSVGModelObject::computeVisibleRectInContainer(const LayoutRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
+auto RenderSVGModelObject::computeVisibleRectsInContainer(const RepaintRects& rects, const RenderLayerModelObject* container, VisibleRectContext context) const -> std::optional<RepaintRects>
 {
-    return computeVisibleRectInSVGContainer(rect, container, context);
+    return computeVisibleRectsInSVGContainer(rects, container, context);
 }
 
 const RenderObject* RenderSVGModelObject::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
@@ -250,7 +257,7 @@ LayoutSize RenderSVGModelObject::cachedSizeForOverflowClip() const
     return layer()->size();
 }
 
-bool RenderSVGModelObject::applyCachedClipAndScrollPosition(LayoutRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
+bool RenderSVGModelObject::applyCachedClipAndScrollPosition(RepaintRects& rects, const RenderLayerModelObject* container, VisibleRectContext context) const
 {
     // Based on RenderBox::applyCachedClipAndScrollPosition -- unused options removed.
     if (!context.options.contains(VisibleRectContextOption::ApplyContainerClip) && this == container)
@@ -261,13 +268,13 @@ bool RenderSVGModelObject::applyCachedClipAndScrollPosition(LayoutRect& rect, co
         clipRect.expandToInfiniteX();
     if (effectiveOverflowY() == Overflow::Visible)
         clipRect.expandToInfiniteY();
+
     bool intersects;
     if (context.options.contains(VisibleRectContextOption::UseEdgeInclusiveIntersection))
-        intersects = rect.edgeInclusiveIntersect(clipRect);
-    else {
-        rect.intersect(clipRect);
-        intersects = !rect.isEmpty();
-    }
+        intersects = rects.edgeInclusiveIntersect(clipRect);
+    else
+        intersects = rects.intersect(clipRect);
+
     return intersects;
 }
 
@@ -276,7 +283,7 @@ Path RenderSVGModelObject::computeClipPath(AffineTransform& transform) const
     if (layer()->isTransformed())
         transform.multiply(layer()->currentTransform(RenderStyle::individualTransformOperations()).toAffineTransform());
 
-    return pathFromGraphicsElement(&downcast<SVGGraphicsElement>(element()));
+    return pathFromGraphicsElement(downcast<SVGGraphicsElement>(element()));
 }
 
 } // namespace WebCore

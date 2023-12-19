@@ -63,9 +63,8 @@ void WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourc
 {
     m_sourceURL = WTFMove(sourceURL);
 
-#if ENABLE(SERVICE_WORKER)
-    if (is<ServiceWorkerGlobalScope>(context)) {
-        if (auto* scriptResource = downcast<ServiceWorkerGlobalScope>(context).scriptResource(m_sourceURL)) {
+    if (auto* globalScope = dynamicDowncast<ServiceWorkerGlobalScope>(context)) {
+        if (auto* scriptResource = globalScope->scriptResource(m_sourceURL)) {
             m_script = scriptResource->script;
             m_responseURL = scriptResource->responseURL;
             m_responseMIMEType = scriptResource->mimeType;
@@ -74,7 +73,6 @@ void WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourc
             return;
         }
     }
-#endif
 
     ResourceRequest request { m_sourceURL };
 

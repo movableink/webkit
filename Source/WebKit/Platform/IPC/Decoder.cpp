@@ -123,7 +123,14 @@ bool Decoder::shouldMaintainOrderingWithAsyncMessages() const
     return m_messageFlags.contains(MessageFlags::MaintainOrderingWithAsyncMessages);
 }
 
-#if PLATFORM(MAC)|| (PLATFORM(QT) && USE(MACH_PORTS))
+#if ENABLE(IPC_TESTING_API)
+bool Decoder::hasSyncMessageDeserializationFailure() const
+{
+    return m_messageFlags.contains(MessageFlags::SyncMessageDeserializationFailure);
+}
+#endif
+
+#if PLATFORM(MAC) || (PLATFORM(QT) && USE(MACH_PORTS))
 void Decoder::setImportanceAssertion(ImportanceAssertion&& assertion)
 {
     m_importanceAssertion = WTFMove(assertion);

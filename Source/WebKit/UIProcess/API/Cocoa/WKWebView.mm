@@ -105,6 +105,8 @@
 #import "_WKActivatedElementInfoInternal.h"
 #import "_WKAppHighlightDelegate.h"
 #import "_WKAppHighlightInternal.h"
+#import "_WKArchiveConfiguration.h"
+#import "_WKArchiveExclusionRule.h"
 #import "_WKDataTaskInternal.h"
 #import "_WKDiagnosticLoggingDelegate.h"
 #import "_WKFindDelegate.h"
@@ -134,6 +136,7 @@
 #import <WebCore/JSDOMExceptionHandling.h>
 #import <WebCore/LegacySchemeRegistry.h>
 #import <WebCore/MIMETypeRegistry.h>
+#import <WebCore/MarkupExclusionRule.h>
 #import <WebCore/Pagination.h>
 #import <WebCore/Permissions.h>
 #import <WebCore/PlatformScreen.h>
@@ -579,7 +582,7 @@ static void hardwareKeyboardAvailabilityChangedCallback(CFNotificationCenterRef,
     pageConfiguration->preferences()->setLegacyEncryptedMediaAPIEnabled(!![_configuration _legacyEncryptedMediaAPIEnabled]);
 #endif
 
-#if PLATFORM(IOS_FAMILY) && ENABLE(SERVICE_WORKER)
+#if PLATFORM(IOS_FAMILY)
     bool hasServiceWorkerEntitlement = (WTF::processHasEntitlement("com.apple.developer.WebKit.ServiceWorkers"_s) || WTF::processHasEntitlement("com.apple.developer.web-browser"_s)) && ![_configuration preferences]._serviceWorkerEntitlementDisabledForTesting;
     if (!hasServiceWorkerEntitlement && ![_configuration limitsNavigationsToAppBoundDomains])
         pageConfiguration->preferences()->setServiceWorkersEnabled(false);
@@ -3322,7 +3325,36 @@ static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKRenderingP
 - (void)_saveResources:(NSURL *)directory suggestedFileName:(NSString *)name completionHandler:(void (^)(NSError *error))completionHandler
 {
     THROW_IF_SUSPENDED;
-    _page->saveResources(_page->mainFrame(), directory.path, name, [completionHandler = makeBlockPtr(completionHandler)](auto result) mutable {
+    _page->saveResources(_page->mainFrame(), { }, directory.path, name, [completionHandler = makeBlockPtr(completionHandler)](auto result) mutable {
+        if (!result)
+            return completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey: WebCore::errorDescription(result.error()) }]);
+
+        completionHandler(nil);
+    });
+}
+
+- (void)_archiveWithConfiguration:(_WKArchiveConfiguration*)configuration completionHandler:(void (^)(NSError *error))completionHandler
+{
+    THROW_IF_SUSPENDED;
+
+    if (!configuration)
+        [NSException raise:NSInvalidArgumentException format:@"Configuration cannot be nil"];
+
+    Vector<WebCore::MarkupExclusionRule> markupExclusionRules;
+    for (_WKArchiveExclusionRule *rule in configuration.exclusionRules) {
+        if (!rule.elementLocalName && (!rule.attributeLocalNames || !rule.attributeLocalNames.count))
+            continue;
+        Vector<std::pair<AtomString, AtomString>> attibutes;
+        for (unsigned index = 0; index < rule.attributeLocalNames.count; ++index) {
+            NSString *attributeLocalName = [rule.attributeLocalNames objectAtIndex:index];
+            NSString *attributeValue = [rule.attributeValues objectAtIndex:index];
+            if (attributeLocalName && !attributeLocalName.length)
+                attibutes.append({ AtomString { attributeLocalName }, attributeValue });
+        }
+        markupExclusionRules.append(WebCore::MarkupExclusionRule { AtomString { rule.elementLocalName }, WTFMove(attibutes) });
+    }
+
+    _page->saveResources(_page->mainFrame(), WTFMove(markupExclusionRules), configuration.directory.path, configuration.suggestedFileName, [completionHandler = makeBlockPtr(completionHandler)](auto result) mutable {
         if (!result)
             return completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey: WebCore::errorDescription(result.error()) }]);
 
@@ -3409,15 +3441,15 @@ static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKRenderingP
 - (_WKPaginationMode)_paginationMode
 {
     switch (_page->paginationMode()) {
-    case WebCore::Unpaginated:
+    case WebCore::PaginationMode::Unpaginated:
         return _WKPaginationModeUnpaginated;
-    case WebCore::LeftToRightPaginated:
+    case WebCore::PaginationMode::LeftToRightPaginated:
         return _WKPaginationModeLeftToRight;
-    case WebCore::RightToLeftPaginated:
+    case WebCore::PaginationMode::RightToLeftPaginated:
         return _WKPaginationModeRightToLeft;
-    case WebCore::TopToBottomPaginated:
+    case WebCore::PaginationMode::TopToBottomPaginated:
         return _WKPaginationModeTopToBottom;
-    case WebCore::BottomToTopPaginated:
+    case WebCore::PaginationMode::BottomToTopPaginated:
         return _WKPaginationModeBottomToTop;
     }
 
@@ -3431,19 +3463,19 @@ static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKRenderingP
     WebCore::Pagination::Mode mode;
     switch (paginationMode) {
     case _WKPaginationModeUnpaginated:
-        mode = WebCore::Unpaginated;
+        mode = WebCore::PaginationMode::Unpaginated;
         break;
     case _WKPaginationModeLeftToRight:
-        mode = WebCore::LeftToRightPaginated;
+        mode = WebCore::PaginationMode::LeftToRightPaginated;
         break;
     case _WKPaginationModeRightToLeft:
-        mode = WebCore::RightToLeftPaginated;
+        mode = WebCore::PaginationMode::RightToLeftPaginated;
         break;
     case _WKPaginationModeTopToBottom:
-        mode = WebCore::TopToBottomPaginated;
+        mode = WebCore::PaginationMode::TopToBottomPaginated;
         break;
     case _WKPaginationModeBottomToTop:
-        mode = WebCore::BottomToTopPaginated;
+        mode = WebCore::PaginationMode::BottomToTopPaginated;
         break;
     default:
         return;

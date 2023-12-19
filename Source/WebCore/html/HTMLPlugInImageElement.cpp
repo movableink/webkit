@@ -47,6 +47,7 @@
 #include "RenderImage.h"
 #include "RenderTreeUpdater.h"
 #include "ScriptController.h"
+#include "ScriptDisallowedScope.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
@@ -171,10 +172,12 @@ void HTMLPlugInImageElement::didAttachRenderers()
     scheduleUpdateForAfterStyleResolution();
 
     // Update the RenderImageResource of the associated RenderImage.
-    if (m_imageLoader && is<RenderImage>(renderer())) {
-        auto& renderImageResource = downcast<RenderImage>(*renderer()).imageResource();
-        if (!renderImageResource.cachedImage())
-            renderImageResource.setCachedImage(m_imageLoader->image());
+    if (m_imageLoader) {
+        if (auto* renderImage = dynamicDowncast<RenderImage>(renderer())) {
+            auto& renderImageResource = renderImage->imageResource();
+            if (!renderImageResource.cachedImage())
+                renderImageResource.setCachedImage(m_imageLoader->image());
+        }
     }
 
     HTMLPlugInElement::didAttachRenderers();
@@ -322,7 +325,14 @@ bool HTMLPlugInImageElement::requestObject(const String& relativeURL, const Stri
     if (HTMLPlugInElement::requestObject(relativeURL, mimeType, paramNames, paramValues))
         return true;
 
-    return document().frame()->loader().subframeLoader().requestObject(*this, relativeURL, getNameAttribute(), mimeType, paramNames, paramValues);
+    Ref document = this->document();
+    if (ScriptDisallowedScope::InMainThread::isScriptAllowed())
+        return document->frame()->loader().subframeLoader().requestObject(*this, relativeURL, getNameAttribute(), mimeType, paramNames, paramValues);
+
+    document->eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, document, relativeURL, nameAttribute = getNameAttribute(), mimeType, paramNames, paramValues]() mutable {
+        document->frame()->loader().subframeLoader().requestObject(*this, relativeURL, nameAttribute, mimeType, paramNames, paramValues);
+    });
+    return true;
 }
 
 void HTMLPlugInImageElement::updateImageLoaderWithNewURLSoon()

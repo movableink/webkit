@@ -433,10 +433,6 @@ static Class scrollViewScrollIndicatorClass()
     self.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
 #endif
 
-#if HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING)
-    [self _setAllowsAsyncScrollEvent:YES];
-#endif
-
     return self;
 }
 

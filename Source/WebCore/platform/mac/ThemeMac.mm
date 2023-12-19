@@ -28,16 +28,9 @@
 
 #if PLATFORM(MAC)
 
-#import "AXObjectCache.h"
-#import "ColorMac.h"
-#import "ControlStates.h"
-#import "GraphicsContext.h"
-#import "GraphicsContextCG.h"
-#import "ImageBuffer.h"
+#import "FontCascade.h"
 #import "LengthSize.h"
-#import "LocalDefaultSystemAppearance.h"
 #import "ScrollView.h"
-#import <pal/spi/cocoa/NSButtonCellSPI.h>
 #import <pal/spi/mac/CoreUISPI.h>
 #import <pal/spi/mac/NSAppearanceSPI.h>
 #import <pal/spi/mac/NSGraphicsSPI.h>
@@ -195,55 +188,6 @@ static NSControlSize controlSizeFromPixelSize(const std::array<IntSize, 4>& size
     return NSControlSizeMini;
 }
 
-static void setControlSize(NSCell* cell, const std::array<IntSize, 4>& sizes, const IntSize& minZoomedSize, float zoomFactor)
-{
-    auto size = controlSizeFromPixelSize(sizes, minZoomedSize, zoomFactor);
-    if (size != [cell controlSize]) // Only update if we have to, since AppKit does work even if the size is the same.
-        [cell setControlSize:size];
-}
-
-static void updateStates(NSCell* cell, const ControlStates& controlStates, bool useAnimation = false)
-{
-    // The animated state cause this thread to start and stop repeatedly on CoreAnimation synchronize calls.
-    // This short burts of activity in between are not long enough for VoiceOver to retrieve accessibility attributes and makes the process appear unresponsive.
-    if (AXObjectCache::accessibilityEnhancedUserInterfaceEnabled())
-        useAnimation = false;
-    
-    auto states = controlStates.states();
-
-    // Hover state is not supported by Aqua.
-    
-    // Pressed state
-    bool oldPressed = [cell isHighlighted];
-    bool pressed = states.contains(ControlStates::States::Pressed);
-    if (pressed != oldPressed) {
-        [(NSButtonCell*)cell _setHighlighted:pressed animated:useAnimation];
-    }
-    
-    // Enabled state
-    bool oldEnabled = [cell isEnabled];
-    bool enabled = states.contains(ControlStates::States::Enabled);
-    if (enabled != oldEnabled)
-        [cell setEnabled:enabled];
-
-    // Checked and Indeterminate
-    bool oldIndeterminate = [cell state] == NSControlStateValueMixed;
-    bool indeterminate = states.contains(ControlStates::States::Indeterminate);
-    bool checked = states.contains(ControlStates::States::Checked);
-    bool oldChecked = [cell state] == NSControlStateValueOn;
-    if (oldIndeterminate != indeterminate || checked != oldChecked) {
-        NSControlStateValue newState = indeterminate ? NSControlStateValueMixed : (checked ? NSControlStateValueOn : NSControlStateValueOff);
-        [(NSButtonCell*)cell _setState:newState animated:useAnimation];
-    }
-
-    // Presenting state
-    if (states.contains(ControlStates::States::Presenting))
-        [(NSButtonCell*)cell _setHighlighted:YES animated:NO];
-
-    // Window inactive state does not need to be checked explicitly, since we paint parented to 
-    // a view in a window whose key state can be detected.
-}
-
 static FloatRect inflateRect(const FloatRect& zoomedRect, const IntSize& zoomedSize, const int* margins, float zoomFactor)
 {
     // Only do the inflation if the available width/height are too small.
@@ -329,48 +273,6 @@ static LengthSize radioSize(const LengthSize& zoomedSize, float zoomFactor)
 
     return sizeFromNSControlSize(NSControlSizeSmall, zoomedSize, zoomFactor, radioSizes());
 }
-    
-static void configureToggleButton(NSCell* cell, StyleAppearance appearance, const ControlStates& states, const IntSize& zoomedSize, float zoomFactor, bool isStateChange)
-{
-    // Set the control size based off the rectangle we're painting into.
-    setControlSize(cell, appearance == StyleAppearance::Checkbox ? checkboxSizes() : radioSizes(), zoomedSize, zoomFactor);
-
-    // Update the various states we respond to.
-    updateStates(cell, states, isStateChange);
-}
-    
-static RetainPtr<NSButtonCell> createToggleButtonCell(StyleAppearance appearance)
-{
-    RetainPtr<NSButtonCell> toggleButtonCell = adoptNS([[NSButtonCell alloc] init]);
-    
-    if (appearance == StyleAppearance::Checkbox) {
-        [toggleButtonCell setButtonType:NSButtonTypeSwitch];
-        [toggleButtonCell setAllowsMixedState:YES];
-    } else {
-        ASSERT(appearance == StyleAppearance::Radio);
-        [toggleButtonCell setButtonType:NSButtonTypeRadio];
-    }
-    
-    [toggleButtonCell setTitle:nil];
-    [toggleButtonCell setFocusRingType:NSFocusRingTypeExterior];
-    return toggleButtonCell;
-}
-    
-static NSButtonCell *sharedRadioCell(const ControlStates& states, const IntSize& zoomedSize, float zoomFactor)
-{
-    static NSButtonCell *radioCell = createToggleButtonCell(StyleAppearance::Radio).leakRef();
-
-    configureToggleButton(radioCell, StyleAppearance::Radio, states, zoomedSize, zoomFactor, false);
-    return radioCell;
-}
-    
-static NSButtonCell *sharedCheckboxCell(const ControlStates& states, const IntSize& zoomedSize, float zoomFactor)
-{
-    static NSButtonCell *checkboxCell = createToggleButtonCell(StyleAppearance::Checkbox).leakRef();
-
-    configureToggleButton(checkboxCell, StyleAppearance::Checkbox, states, zoomedSize, zoomFactor, false);
-    return checkboxCell;
-}
 
 // Buttons
 
@@ -394,59 +296,6 @@ static const int* buttonMargins(NSControlSize controlSize)
         { 6, 6, 6, 6 },
     };
     return margins[controlSize];
-}
-
-enum ButtonCellType { NormalButtonCell, DefaultButtonCell };
-
-static RetainPtr<NSButtonCell> buttonCell(ButtonCellType type)
-{
-    auto cell = adoptNS([[NSButtonCell alloc] init]);
-    [cell setTitle:nil];
-    [cell setButtonType:NSButtonTypeMomentaryPushIn];
-    if (type == DefaultButtonCell)
-        [cell setKeyEquivalent:@"\r"];
-    return cell;
-}
-
-static void setUpButtonCell(NSButtonCell *cell, StyleAppearance appearance, const ControlStates& states, const IntSize& zoomedSize, float zoomFactor)
-{
-    // Set the control size based off the rectangle we're painting into.
-    const std::array<IntSize, 4>& sizes = buttonSizes();
-    switch (appearance) {
-    case StyleAppearance::SquareButton:
-        [cell setBezelStyle:NSBezelStyleShadowlessSquare];
-        break;
-#if ENABLE(INPUT_TYPE_COLOR)
-    case StyleAppearance::ColorWell:
-        [cell setBezelStyle:NSBezelStyleTexturedSquare];
-        break;
-#endif
-    default:
-        auto largestControlSize = ThemeMac::supportsLargeFormControls() ? NSControlSizeLarge : NSControlSizeRegular;
-        NSBezelStyle style = (zoomedSize.height() > buttonSizes()[largestControlSize].height() * zoomFactor) ? NSBezelStyleShadowlessSquare : NSBezelStyleRounded;
-        [cell setBezelStyle:style];
-        break;
-    }
-
-    setControlSize(cell, sizes, zoomedSize, zoomFactor);
-
-    // Update the various states we respond to.
-    updateStates(cell, states);
-}
-
-static NSButtonCell *button(StyleAppearance appearance, const ControlStates& controlStates, const IntSize& zoomedSize, float zoomFactor)
-{
-    auto states = controlStates.states();
-    NSButtonCell *cell;
-    if (states.contains(ControlStates::States::Default)) {
-        static NeverDestroyed<RetainPtr<NSButtonCell>> defaultCell = buttonCell(DefaultButtonCell);
-        cell = defaultCell.get().get();
-    } else {
-        static NeverDestroyed<RetainPtr<NSButtonCell>> normalCell = buttonCell(NormalButtonCell);
-        cell = normalCell.get().get();
-    }
-    setUpButtonCell(cell, appearance, controlStates, zoomedSize, zoomFactor);
-    return cell;
 }
 
 // Stepper
@@ -473,7 +322,7 @@ static NSControlSize stepperControlSizeForFont(const FontCascade& font)
 
 // This will ensure that we always return a valid NSView, even if ScrollView doesn't have an associated document NSView.
 // If the ScrollView doesn't have an NSView, we will return a fake NSView set up in the way AppKit expects.
-NSView *ThemeMac::ensuredView(ScrollView* scrollView, const ControlStates& controlStates, bool useUnparentedView)
+NSView *ThemeMac::ensuredView(ScrollView* scrollView, OptionSet<ControlStyle::State> states, bool useUnparentedView)
 {
     if (!useUnparentedView) {
         if (NSView *documentView = scrollView->documentView())
@@ -490,7 +339,7 @@ NSView *ThemeMac::ensuredView(ScrollView* scrollView, const ControlStates& contr
         [themeView _setSemanticContext:NSViewSemanticContextForm];
 #endif
 
-    themeWindowHasKeyAppearance = controlStates.states().contains(ControlStates::States::WindowActive);
+    themeWindowHasKeyAppearance = states.contains(ControlStyle::State::WindowActive);
 
     return themeView;
 }
@@ -547,13 +396,6 @@ static LengthSize switchSize(const LengthSize& zoomedSize, float zoomFactor)
 }
 
 // Theme overrides
-
-int ThemeMac::baselinePositionAdjustment(StyleAppearance appearance, bool isHorizontalWritingMode) const
-{
-    if ((appearance == StyleAppearance::Checkbox || appearance == StyleAppearance::Radio) && isHorizontalWritingMode)
-        return -2;
-    return Theme::baselinePositionAdjustment(appearance, isHorizontalWritingMode);
-}
 
 std::optional<FontCascadeDescription> ThemeMac::controlFont(StyleAppearance appearance, const FontCascade& font, float zoomFactor) const
 {
@@ -646,31 +488,25 @@ LengthBox ThemeMac::controlPadding(StyleAppearance appearance, const FontCascade
     }
 }
 
-void ThemeMac::inflateControlPaintRect(StyleAppearance appearance, const ControlStates& states, FloatRect& zoomedRect, float zoomFactor) const
+void ThemeMac::inflateControlPaintRect(StyleAppearance appearance, FloatRect& zoomedRect, float zoomFactor) const
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     IntSize zoomRectSize = IntSize(zoomedRect.size());
     switch (appearance) {
     case StyleAppearance::Checkbox: {
-        // We inflate the rect as needed to account for padding included in the cell to accommodate the checkbox
-        // shadow" and the check. We don't consider this part of the bounds of the control in WebKit.
-        NSCell *cell = sharedCheckboxCell(states, zoomRectSize, zoomFactor);
-        NSControlSize controlSize = [cell controlSize];
-        IntSize zoomedSize = checkboxSizes()[controlSize];
+        auto size = controlSizeFromPixelSize(checkboxSizes(), zoomRectSize, zoomFactor);
+        auto zoomedSize = checkboxSizes()[size];
         zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
         zoomedSize.setWidth(zoomedSize.width() * zoomFactor);
-        zoomedRect = inflateRect(zoomedRect, zoomedSize, checkboxMargins(controlSize), zoomFactor);
+        zoomedRect = inflateRect(zoomedRect, zoomedSize, checkboxMargins(size), zoomFactor);
         break;
     }
     case StyleAppearance::Radio: {
-        // We inflate the rect as needed to account for padding included in the cell to accommodate the radio button
-        // shadow". We don't consider this part of the bounds of the control in WebKit.
-        NSCell *cell = sharedRadioCell(states, zoomRectSize, zoomFactor);
-        NSControlSize controlSize = [cell controlSize];
-        IntSize zoomedSize = radioSizes()[controlSize];
+        auto size = controlSizeFromPixelSize(radioSizes(), zoomRectSize, zoomFactor);
+        auto zoomedSize = radioSizes()[size];
         zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
         zoomedSize.setWidth(zoomedSize.width() * zoomFactor);
-        zoomedRect = inflateRect(zoomedRect, zoomedSize, radioMargins(controlSize), zoomFactor);
+        zoomedRect = inflateRect(zoomedRect, zoomedSize, radioMargins(size), zoomFactor);
         break;
     }
     case StyleAppearance::Switch: {
@@ -684,16 +520,14 @@ void ThemeMac::inflateControlPaintRect(StyleAppearance appearance, const Control
     case StyleAppearance::PushButton:
     case StyleAppearance::DefaultButton:
     case StyleAppearance::Button: {
-        NSButtonCell *cell = button(appearance, states, zoomRectSize, zoomFactor);
-        NSControlSize controlSize = [cell controlSize];
-
-        // We inflate the rect as needed to account for the Aqua button's shadow.
-        if ([cell bezelStyle] == NSBezelStyleRounded) {
-            IntSize zoomedSize = buttonSizes()[controlSize];
-            zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
-            zoomedSize.setWidth(zoomedRect.width()); // Buttons don't ever constrain width, so the zoomed width can just be honored.
-            zoomedRect = inflateRect(zoomedRect, zoomedSize, buttonMargins(controlSize), zoomFactor);
-        }
+        auto largestControlSize = ThemeMac::supportsLargeFormControls() ? NSControlSizeLarge : NSControlSizeRegular;
+        if (zoomedRect.height() > buttonSizes()[largestControlSize].height() * zoomFactor)
+            break;
+        auto size = controlSizeFromPixelSize(buttonSizes(), zoomRectSize, zoomFactor);
+        auto zoomedSize = buttonSizes()[size];
+        zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
+        zoomedSize.setWidth(zoomedRect.width()); // Buttons don't ever constrain width, so the zoomed width can just be honored.
+        zoomedRect = inflateRect(zoomedRect, zoomedSize, buttonMargins(size), zoomFactor);
         break;
     }
     case StyleAppearance::InnerSpinButton: {
@@ -711,14 +545,14 @@ void ThemeMac::inflateControlPaintRect(StyleAppearance appearance, const Control
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
-bool ThemeMac::userPrefersReducedMotion() const
-{
-    return [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion];
-}
-
 bool ThemeMac::userPrefersContrast() const
 {
     return [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldIncreaseContrast];
+}
+
+bool ThemeMac::userPrefersReducedMotion() const
+{
+    return [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion];
 }
 
 bool ThemeMac::supportsLargeFormControls()

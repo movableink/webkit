@@ -858,7 +858,7 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::updateCachedResourceW
 {
     if (!isResourceSuitableForDirectReuse(resource, request)) {
         request.setCachingPolicy(CachingPolicy::DisallowCaching);
-        return loadResource(resource.type(), sessionID, WTFMove(request), cookieJar, settings);
+        return loadResource(resource.type(), sessionID, WTFMove(request), cookieJar, settings, MayAddToMemoryCache::Yes);
     }
 
     auto resourceHandle = createResource(resource.type(), WTFMove(request), sessionID, &cookieJar, settings);
@@ -872,11 +872,9 @@ void CachedResourceLoader::prepareFetch(CachedResource::Type type, CachedResourc
     if (auto* document = this->document()) {
         if (!request.origin())
             request.setOrigin(document->securityOrigin());
-#if ENABLE(SERVICE_WORKER)
         request.setClientIdentifierIfNeeded(document->identifier());
         if (auto* activeServiceWorker = document->activeServiceWorker())
             request.setSelectedServiceWorkerRegistrationIdentifierIfNeeded(activeServiceWorker->registrationIdentifier());
-#endif
     }
 
     request.setAcceptHeaderIfNone(type);
@@ -965,6 +963,11 @@ static inline SVGImage* cachedResourceSVGImage(CachedResource* resource)
     if (!isSVGImageCachedResource(resource))
         return nullptr;
     return downcast<SVGImage>(downcast<CachedImage>(*resource).image());
+}
+
+static bool computeMayAddToMemoryCache(const CachedResourceRequest& newRequest, const CachedResource* existingResource)
+{
+    return !existingResource || !existingResource->isPreloaded() || newRequest.options().serviceWorkersMode != ServiceWorkersMode::None || existingResource->options().serviceWorkersMode == ServiceWorkersMode::None;
 }
 
 ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requestResource(CachedResource::Type type, CachedResourceRequest&& request, ForPreload forPreload, ImageLoading imageLoading)
@@ -1109,15 +1112,17 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
 
     auto& cookieJar = page.cookieJar();
 
+    auto mayAddToMemoryCache = computeMayAddToMemoryCache(request, resource.get()) ? MayAddToMemoryCache::Yes : MayAddToMemoryCache::No;
     RevalidationPolicy policy = determineRevalidationPolicy(type, request, resource.get(), forPreload, imageLoading);
     switch (policy) {
     case Reload:
-        memoryCache.remove(*resource);
+        if (mayAddToMemoryCache == MayAddToMemoryCache::Yes)
+            memoryCache.remove(*resource);
         FALLTHROUGH;
     case Load:
-        if (resource)
+        if (resource && mayAddToMemoryCache == MayAddToMemoryCache::Yes)
             memoryCache.remove(*resource);
-        resource = loadResource(type, page.sessionID(), WTFMove(request), cookieJar, page.settings());
+        resource = loadResource(type, page.sessionID(), WTFMove(request), cookieJar, page.settings(), mayAddToMemoryCache);
         break;
     case Revalidate:
         resource = revalidateResource(WTFMove(request), *resource);
@@ -1209,9 +1214,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
 
     ASSERT(resource->url() == url.string());
     m_documentResources.set(resource->url().string(), resource);
-#if ENABLE(TRACKING_PREVENTION)
     frame.loader().client().didLoadFromRegistrableDomain(RegistrableDomain(resource->resourceRequest().url()));
-#endif
     return resource;
 }
 
@@ -1252,17 +1255,17 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::revalidateResource(Ca
     return newResource;
 }
 
-CachedResourceHandle<CachedResource> CachedResourceLoader::loadResource(CachedResource::Type type, PAL::SessionID sessionID, CachedResourceRequest&& request, const CookieJar& cookieJar, const Settings& settings)
+CachedResourceHandle<CachedResource> CachedResourceLoader::loadResource(CachedResource::Type type, PAL::SessionID sessionID, CachedResourceRequest&& request, const CookieJar& cookieJar, const Settings& settings, MayAddToMemoryCache mayAddToMemoryCache)
 {
     auto& memoryCache = MemoryCache::singleton();
-    ASSERT(!request.allowsCaching() || !memoryCache.resourceForRequest(request.resourceRequest(), sessionID)
+    ASSERT(!request.allowsCaching() || mayAddToMemoryCache == MayAddToMemoryCache::No || !memoryCache.resourceForRequest(request.resourceRequest(), sessionID)
         || request.resourceRequest().cachePolicy() == ResourceRequestCachePolicy::DoNotUseAnyCache || request.resourceRequest().cachePolicy() == ResourceRequestCachePolicy::ReloadIgnoringCacheData || request.resourceRequest().cachePolicy() == ResourceRequestCachePolicy::RefreshAnyCacheData);
 
     LOG(ResourceLoading, "Loading CachedResource for '%s'.", request.resourceRequest().url().stringCenterEllipsizedToLength().latin1().data());
 
     auto resource = createResource(type, WTFMove(request), sessionID, &cookieJar, settings);
 
-    if (resource->allowsCaching())
+    if (resource->allowsCaching() && mayAddToMemoryCache == MayAddToMemoryCache::Yes)
         memoryCache.add(*resource);
 
     m_resourceTimingInfo.storeResourceTimingInitiatorInformation(resource, resource->initiatorType(), frame());
@@ -1270,7 +1273,6 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::loadResource(CachedRe
     return resource;
 }
 
-#if ENABLE(SERVICE_WORKER)
 static inline bool mustReloadFromServiceWorkerOptions(const ResourceLoaderOptions& options, const ResourceLoaderOptions& cachedOptions)
 {
     // FIXME: We should validate/specify this behavior.
@@ -1282,7 +1284,6 @@ static inline bool mustReloadFromServiceWorkerOptions(const ResourceLoaderOption
 
     return cachedOptions.mode == FetchOptions::Mode::Navigate || cachedOptions.destination == FetchOptions::Destination::Worker || cachedOptions.destination == FetchOptions::Destination::Sharedworker;
 }
-#endif
 
 CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalidationPolicy(CachedResource::Type type, CachedResourceRequest& cachedResourceRequest, CachedResource* existingResource, ForPreload forPreload, ImageLoading imageLoading) const
 {
@@ -1297,12 +1298,10 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
     if (request.cachePolicy() == ResourceRequestCachePolicy::RefreshAnyCacheData)
         return Reload;
 
-#if ENABLE(SERVICE_WORKER)
     if (mustReloadFromServiceWorkerOptions(cachedResourceRequest.options(), existingResource->options())) {
         LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicy reloading because selected service worker may differ");
         return Reload;
     }
-#endif
 
     // We already have a preload going for this URL.
     if (forPreload == ForPreload::Yes && existingResource->isPreloaded())
@@ -1426,11 +1425,9 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
     if (revalidationDecision != CachedResource::RevalidationDecision::No) {
         // See if the resource has usable ETag or Last-modified headers.
         if (existingResource->canUseCacheValidator()) {
-#if ENABLE(SERVICE_WORKER)
             // Revalidating will mean exposing headers to the service worker, let's reload given the service worker already handled it.
             if (cachedResourceRequest.options().serviceWorkerRegistrationIdentifier)
                 return Reload;
-#endif
             return Revalidate;
         }
         

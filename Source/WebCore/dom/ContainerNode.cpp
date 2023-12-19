@@ -96,9 +96,6 @@ ALWAYS_INLINE auto ContainerNode::removeAllChildrenWithScriptAssertion(ChildChan
     if (UNLIKELY(isDocumentFragmentForInnerOuterHTML())) {
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         RELEASE_ASSERT(!connectedSubframeCount() && !hasRareData() && !wrapper());
-#if !DUMP_NODE_STATISTICS
-        ASSERT(!weakPtrFactory().isInitialized());
-#endif
         bool hadElementChild = false;
         while (RefPtr child = m_firstChild) {
             hadElementChild |= is<Element>(*child);
@@ -264,11 +261,12 @@ static ContainerNode::ChildChange makeChildChangeForInsertion(ContainerNode& con
         return ContainerNode::ChildChange::Type::NonContentsChildInserted;
     }();
 
+    auto* beforeChildElement = dynamicDowncast<Element>(beforeChild);
     return {
         changeType,
         dynamicDowncast<Element>(child),
         beforeChild ? ElementTraversal::previousSibling(*beforeChild) : ElementTraversal::lastChild(containerNode),
-        !beforeChild || is<Element>(*beforeChild) ? downcast<Element>(beforeChild) : ElementTraversal::nextSibling(*beforeChild),
+        !beforeChild || beforeChildElement ? beforeChildElement : ElementTraversal::nextSibling(*beforeChild),
         source,
         changeType == ContainerNode::ChildChange::Type::ElementInserted ? ContainerNode::ChildChange::AffectsElements::Yes : ContainerNode::ChildChange::AffectsElements::No
     };
@@ -926,8 +924,8 @@ void ContainerNode::cloneChildNodes(ContainerNode& clone)
 
             hadElement = hadElement || is<Element>(clonedChild);
         }
-        if (is<ContainerNode>(*child))
-            downcast<ContainerNode>(*child).cloneChildNodes(downcast<ContainerNode>(clonedChild));
+        if (RefPtr childAsContainerNode = dynamicDowncast<ContainerNode>(*child))
+            childAsContainerNode->cloneChildNodes(downcast<ContainerNode>(clonedChild));
     }
     clone.childrenChanged(makeChildChangeForCloneInsertion(hadElement ? ClonedChildIncludesElements::Yes : ClonedChildIncludesElements::No));
 

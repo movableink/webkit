@@ -549,7 +549,6 @@ static String stringForSSLCipher(SSLCipherSuite cipher)
     completionHandler(WebCore::createHTTPBodyNSInputStream(body.releaseNonNull()).get());
 }
 
-#if ENABLE(TRACKING_PREVENTION)
 static NSURLRequest* downgradeRequest(NSURLRequest *request)
 {
     auto nsMutableRequest = adoptNS([request mutableCopy]);
@@ -570,7 +569,6 @@ static bool schemeWasUpgradedDueToDynamicHSTS(NSURLRequest *request)
     return [request respondsToSelector:@selector(_schemeWasUpgradedDueToDynamicHSTS)]
         && [request _schemeWasUpgradedDueToDynamicHSTS];
 }
-#endif
 
 static void setIgnoreHSTS(NSMutableURLRequest *request, bool ignoreHSTS)
 {
@@ -613,7 +611,6 @@ static void updateIgnoreStrictTransportSecuritySetting(RetainPtr<NSURLRequest>& 
 
     if (auto networkDataTask = [self existingTask:task]) {
         bool shouldIgnoreHSTS = false;
-#if ENABLE(TRACKING_PREVENTION)
         if (auto* sessionCocoa = networkDataTask->networkSession()) {
             auto* storageSession = sessionCocoa->networkProcess().storageSession(sessionCocoa->sessionID());
             NSURL *firstPartyForCookies = networkDataTask->isTopLevelNavigation() ? request.URL : request.mainDocumentURL;
@@ -626,7 +623,6 @@ static void updateIgnoreStrictTransportSecuritySetting(RetainPtr<NSURLRequest>& 
             }
         } else
             ASSERT_NOT_REACHED();
-#endif
 
         WebCore::ResourceResponse resourceResponse(response);
         networkDataTask->checkTAO(resourceResponse);
@@ -665,7 +661,6 @@ static void updateIgnoreStrictTransportSecuritySetting(RetainPtr<NSURLRequest>& 
 
     if (auto networkDataTask = [self existingTask:task]) {
         bool shouldIgnoreHSTS = false;
-#if ENABLE(TRACKING_PREVENTION)
         if (auto* sessionCocoa = networkDataTask->networkSession()) {
             auto* storageSession = sessionCocoa->networkProcess().storageSession(sessionCocoa->sessionID());
             shouldIgnoreHSTS = schemeWasUpgradedDueToDynamicHSTS(request)
@@ -677,7 +672,6 @@ static void updateIgnoreStrictTransportSecuritySetting(RetainPtr<NSURLRequest>& 
             }
         } else
             ASSERT_NOT_REACHED();
-#endif
 
         WebCore::ResourceResponse synthesizedResponse = WebCore::synthesizeRedirectResponseIfNecessary([task currentRequest], request, nil);
         NSString *origin = [request valueForHTTPHeaderField:@"Origin"] ?: @"*";
@@ -1416,8 +1410,10 @@ NetworkSessionCocoa::NetworkSessionCocoa(NetworkProcess& networkProcess, const N
 #endif
 
 #if HAVE(NETWORK_LOADER)
-    RELEASE_LOG_IF(parameters.useNetworkLoader, NetworkSession, "Using experimental network loader.");
-    configuration._usesNWLoader = parameters.useNetworkLoader;
+    if (parameters.useNetworkLoader) {
+        RELEASE_LOG_IF(*parameters.useNetworkLoader, NetworkSession, "Using experimental network loader.");
+        configuration._usesNWLoader = *parameters.useNetworkLoader;
+    }
 #endif
 
     if (parameters.allowsHSTSWithUntrustedRootCertificate && [configuration respondsToSelector:@selector(_allowsHSTSWithUntrustedRootCertificate)])
@@ -1574,16 +1570,12 @@ SessionWrapper& NetworkSessionCocoa::sessionWrapperForTask(WebPageProxyIdentifie
     if (isParentProcessAFullWebBrowser(networkProcess()))
         shouldBeConsideredAppBound = NavigatingToAppBoundDomain::No;
 
-#if ENABLE(TRACKING_PREVENTION)
     if (auto* storageSession = networkStorageSession()) {
         auto firstParty = WebCore::RegistrableDomain(request.firstPartyForCookies());
         if (storageSession->shouldBlockThirdPartyCookiesButKeepFirstPartyCookiesFor(firstParty))
             return sessionSetForPage(webPageProxyID).isolatedSession(storedCredentialsPolicy, firstParty, shouldBeConsideredAppBound, *this);
     } else
         ASSERT_NOT_REACHED();
-#else
-    UNUSED_PARAM(request);
-#endif
 
 #if ENABLE(APP_BOUND_DOMAINS)
     if (shouldBeConsideredAppBound == NavigatingToAppBoundDomain::Yes)
@@ -1807,8 +1799,8 @@ static CompletionHandler<void(WebKit::AuthenticationChallengeDisposition disposi
 #else
         UNUSED_PARAM(taskIdentifier);
 #endif
-        if (credential.persistence() == WebCore::CredentialPersistenceForSession && authenticationChallenge.protectionSpace().isPasswordBased()) {
-            WebCore::Credential nonPersistentCredential(credential.user(), credential.password(), WebCore::CredentialPersistenceNone);
+        if (credential.persistence() == WebCore::CredentialPersistence::ForSession && authenticationChallenge.protectionSpace().isPasswordBased()) {
+            WebCore::Credential nonPersistentCredential(credential.user(), credential.password(), WebCore::CredentialPersistence::None);
             URL urlToStore;
             if (authenticationChallenge.failureResponse().httpStatusCode() == 401)
                 urlToStore = authenticationChallenge.failureResponse().url();

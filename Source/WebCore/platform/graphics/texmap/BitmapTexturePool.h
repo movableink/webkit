@@ -37,11 +37,10 @@ class IntSize;
 
 class BitmapTexturePool {
     WTF_MAKE_NONCOPYABLE(BitmapTexturePool);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     BitmapTexturePool();
 
-    RefPtr<BitmapTexture> acquireTexture(const IntSize&, const BitmapTexture::Flags);
+    RefPtr<BitmapTexture> acquireTexture(const IntSize&, OptionSet<BitmapTexture::Flags>);
     void releaseUnusedTexturesTimerFired();
 
 private:

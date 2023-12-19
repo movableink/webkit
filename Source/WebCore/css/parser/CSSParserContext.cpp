@@ -59,9 +59,10 @@ CSSParserContext::CSSParserContext(CSSParserMode mode, const URL& baseURL)
         focusVisibleEnabled = true;
         popoverAttributeEnabled = true;
         propertySettings.cssContainmentEnabled = true;
-        propertySettings.cssIndividualTransformPropertiesEnabled = true;
         propertySettings.cssInputSecurityEnabled = true;
         propertySettings.cssCounterStyleAtRulesEnabled = true;
+        propertySettings.viewTransitionsEnabled = true;
+        thumbAndTrackPseudoElementsEnabled = true;
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
         transformStyleOptimized3DEnabled = true;
 #endif
@@ -90,7 +91,6 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , focusVisibleEnabled { document.settings().focusVisibleEnabled() }
     , hasPseudoClassEnabled { document.settings().hasPseudoClassEnabled() }
     , cascadeLayersEnabled { document.settings().cssCascadeLayersEnabled() }
-    , overflowClipEnabled { document.settings().overflowClipEnabled() }
     , gradientPremultipliedAlphaInterpolationEnabled { document.settings().cssGradientPremultipliedAlphaInterpolationEnabled() }
     , gradientInterpolationColorSpacesEnabled { document.settings().cssGradientInterpolationColorSpacesEnabled() }
     , subgridEnabled { document.settings().subgridEnabled() }
@@ -105,6 +105,10 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , popoverAttributeEnabled { document.settings().popoverAttributeEnabled() }
     , sidewaysWritingModesEnabled { document.settings().sidewaysWritingModesEnabled() }
     , cssTextWrapPrettyEnabled { document.settings().cssTextWrapPrettyEnabled() }
+    , highlightAPIEnabled { document.settings().highlightAPIEnabled() }
+    , grammarAndSpellingPseudoElementsEnabled { document.settings().grammarAndSpellingPseudoElementsEnabled() }
+    , customStateSetEnabled { document.settings().customStateSetEnabled() }
+    , thumbAndTrackPseudoElementsEnabled { document.settings().thumbAndTrackPseudoElementsEnabled() }
     , propertySettings { CSSPropertySettings { document.settings() } }
 {
 }
@@ -127,20 +131,23 @@ void add(Hasher& hasher, const CSSParserContext& context)
         | context.focusVisibleEnabled                       << 11
         | context.hasPseudoClassEnabled                     << 12
         | context.cascadeLayersEnabled                      << 13
-        | context.overflowClipEnabled                       << 14
-        | context.gradientPremultipliedAlphaInterpolationEnabled << 15
-        | context.gradientInterpolationColorSpacesEnabled   << 16
-        | context.subgridEnabled                            << 17
-        | context.masonryEnabled                            << 18
-        | context.cssNestingEnabled                         << 19
-        | context.cssPaintingAPIEnabled                     << 20
-        | context.cssScopeAtRuleEnabled                     << 21
-        | context.cssTextUnderlinePositionLeftRightEnabled  << 22
-        | context.cssWordBreakAutoPhraseEnabled             << 23
-        | context.popoverAttributeEnabled                   << 24
-        | context.sidewaysWritingModesEnabled               << 25
-        | context.cssTextWrapPrettyEnabled                  << 26
-        | (uint64_t)context.mode                            << 27; // This is multiple bits, so keep it last.
+        | context.gradientPremultipliedAlphaInterpolationEnabled << 14
+        | context.gradientInterpolationColorSpacesEnabled   << 15
+        | context.subgridEnabled                            << 16
+        | context.masonryEnabled                            << 17
+        | context.cssNestingEnabled                         << 18
+        | context.cssPaintingAPIEnabled                     << 19
+        | context.cssScopeAtRuleEnabled                     << 20
+        | context.cssTextUnderlinePositionLeftRightEnabled  << 21
+        | context.cssWordBreakAutoPhraseEnabled             << 22
+        | context.popoverAttributeEnabled                   << 23
+        | context.sidewaysWritingModesEnabled               << 24
+        | context.cssTextWrapPrettyEnabled                  << 25
+        | context.highlightAPIEnabled                       << 26
+        | context.grammarAndSpellingPseudoElementsEnabled   << 27
+        | context.customStateSetEnabled                     << 28
+        | context.thumbAndTrackPseudoElementsEnabled        << 29
+        | (uint64_t)context.mode                            << 30; // This is multiple bits, so keep it last.
     add(hasher, context.baseURL, context.charset, context.propertySettings, bits);
 }
 

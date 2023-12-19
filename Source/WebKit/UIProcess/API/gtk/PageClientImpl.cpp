@@ -75,9 +75,9 @@ PageClientImpl::PageClientImpl(GtkWidget* viewWidget)
 }
 
 // PageClient's pure virtual functions
-std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy()
+std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy(WebProcessProxy& webProcessProxy)
 {
-    return makeUnique<DrawingAreaProxyCoordinatedGraphics>(*webkitWebViewBaseGetPage(WEBKIT_WEB_VIEW_BASE(m_viewWidget)));
+    return makeUnique<DrawingAreaProxyCoordinatedGraphics>(*webkitWebViewBaseGetPage(WEBKIT_WEB_VIEW_BASE(m_viewWidget)), webProcessProxy);
 }
 
 void PageClientImpl::setViewNeedsDisplay(const WebCore::Region& region)
@@ -601,13 +601,6 @@ bool PageClientImpl::effectiveAppearanceIsDark() const
 
     return false;
 }
-
-#if USE(WPE_RENDERER)
-UnixFileDescriptor PageClientImpl::hostFileDescriptor()
-{
-    return { webkitWebViewBaseRenderHostFileDescriptor(WEBKIT_WEB_VIEW_BASE(m_viewWidget)), UnixFileDescriptor::Adopt };
-}
-#endif
 
 void PageClientImpl::didChangeWebPageID() const
 {

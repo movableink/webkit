@@ -136,6 +136,8 @@ private:
     ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const final;
     ResourceError pluginWillHandleLoadError(const ResourceResponse&) const final;
 
+    void loadStorageAccessQuirksIfNeeded() final;
+
     bool shouldFallBack(const ResourceError&) const final;
 
     bool canHandleRequest(const ResourceRequest&) const final;
@@ -198,9 +200,7 @@ private:
     RefPtr<LegacyPreviewLoaderClient> createPreviewLoaderClient(const String&, const String&) final;
 #endif
 
-#if ENABLE(TRACKING_PREVENTION)
     bool hasFrameSpecificStorageAccess() final;
-#endif
 
     void dispatchLoadEventToOwnerElementInAnotherProcess() final;
 };

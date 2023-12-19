@@ -28,8 +28,14 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "JSBlob.h"
 #include "JSPhotoCapabilities.h"
+#include "JSPhotoSettings.h"
+#include "Logging.h"
+#include "TaskSource.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/LoggerHelper.h>
+#include <wtf/RunLoop.h>
 
 namespace WebCore {
 
@@ -48,37 +54,79 @@ ExceptionOr<Ref<ImageCapture>> ImageCapture::create(Document& document, Ref<Medi
 ImageCapture::ImageCapture(Document& document, Ref<MediaStreamTrack> track)
     : ActiveDOMObject(document)
     , m_track(track)
+    , m_logger(track->logger())
+    , m_logIdentifier(track->logIdentifier())
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
 }
 
 ImageCapture::~ImageCapture() = default;
 
-void ImageCapture::getPhotoCapabilities(PhotoCapabilitiesPromise&& promise)
+void ImageCapture::takePhoto(PhotoSettings&& settings, DOMPromiseDeferred<IDLInterface<Blob>>&& promise)
 {
-    if (m_track->readyState() == MediaStreamTrack::State::Ended) {
-        promise.reject(Exception { ExceptionCode::InvalidStateError, "Track has ended"_s });
-        return;
-    }
+    auto identifier = LOGIDENTIFIER;
+    ALWAYS_LOG(identifier);
 
-    m_track->getPhotoCapabilities(WTFMove(promise));
+    m_track->takePhoto(WTFMove(settings))->whenSettled(RunLoop::main(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise), identifier = WTFMove(identifier)] (auto&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::ImageCapture, [this, promise = WTFMove(promise), result = WTFMove(result), identifier = WTFMove(identifier)] () mutable {
+            if (!result) {
+                ERROR_LOG(identifier, "rejecting promise: ", result.error().message());
+                promise.reject(WTFMove(result.error()));
+                return;
+            }
+
+            ALWAYS_LOG(identifier, "resolving promise");
+            promise.resolve(Blob::create(scriptExecutionContext(), WTFMove(get<0>(result.value())), WTFMove(get<1>(result.value()))));
+        });
+    });
 }
 
-void ImageCapture::getPhotoSettings(PhotoSettingsPromise&& promise)
+void ImageCapture::getPhotoCapabilities(DOMPromiseDeferred<IDLDictionary<PhotoCapabilities>>&& promise)
 {
-    if (m_track->readyState() == MediaStreamTrack::State::Ended) {
-        // https://w3c.github.io/mediacapture-image/#ref-for-dom-imagecapture-getphotosettings②
-        // If the readyState of track provided in the constructor is not live, return a promise
-        // rejected with a new DOMException whose name is InvalidStateError, and abort these steps.
-        promise.reject(Exception { ExceptionCode::InvalidStateError, "Track has ended"_s });
-        return;
-    }
+    auto identifier = LOGIDENTIFIER;
+    ALWAYS_LOG(identifier);
 
-    m_track->getPhotoSettings(WTFMove(promise));
+    m_track->getPhotoCapabilities()->whenSettled(RunLoop::main(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise), identifier = WTFMove(identifier)] (auto&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::ImageCapture, [this, promise = WTFMove(promise), result = WTFMove(result), identifier = WTFMove(identifier)] () mutable {
+            if (!result) {
+                ERROR_LOG(identifier, "rejecting promise: ", result.error().message());
+                promise.reject(WTFMove(result.error()));
+                return;
+            }
+
+            ALWAYS_LOG(identifier, "resolving promise");
+            promise.resolve(WTFMove(result.value()));
+        });
+    });
+}
+
+void ImageCapture::getPhotoSettings(DOMPromiseDeferred<IDLDictionary<PhotoSettings>>&& promise)
+{
+    auto identifier = LOGIDENTIFIER;
+    ALWAYS_LOG(identifier);
+
+    m_track->getPhotoSettings()->whenSettled(RunLoop::main(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise), identifier = WTFMove(identifier)] (auto&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::ImageCapture, [this, promise = WTFMove(promise), result = WTFMove(result), identifier = WTFMove(identifier)] () mutable {
+            if (!result) {
+                ERROR_LOG(identifier, "rejecting promise: ", result.error().message());
+                promise.reject(WTFMove(result.error()));
+                return;
+            }
+
+            ALWAYS_LOG(identifier, "resolving promise");
+            promise.resolve(WTFMove(result.value()));
+        });
+    });
 }
 
 const char* ImageCapture::activeDOMObjectName() const
 {
     return "ImageCapture";
+}
+
+WTFLogChannel& ImageCapture::logChannel() const
+{
+    return LogWebRTC;
 }
 
 } // namespace WebCore

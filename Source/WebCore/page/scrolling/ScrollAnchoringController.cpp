@@ -135,19 +135,19 @@ bool ScrollAnchoringController::didFindPriorityCandidate(Document& document)
 {
     auto viablePriorityCandidateForElement = [this](Element* element) -> RefPtr<Element> {
         RefPtr candidateElement = anchorElementForPriorityCandidate(element);
-        if (!candidateElement)
+        if (!candidateElement || candidateElement == elementForScrollableArea(m_owningScrollableArea))
             return nullptr;
 
-        LOG_WITH_STREAM(ScrollAnchoring, stream << "ScrollAnchoringController::viablePriorityCandidateForElement()");
         RefPtr iterElement = candidateElement;
 
         while (iterElement && iterElement.get() != elementForScrollableArea(m_owningScrollableArea)) {
-            if (auto renderer = element->renderer()) {
-                if (renderer->style().overflowAnchor() == OverflowAnchor::None)
-                    return nullptr;
-            }
+            auto candidateResult = examineAnchorCandidate(*iterElement);
+            if (candidateResult == CandidateExaminationResult::Exclude || (iterElement == candidateElement && candidateResult == CandidateExaminationResult::Skip))
+                return nullptr;
             iterElement = iterElement->parentElement();
         }
+        if (!iterElement)
+            return nullptr;
         return candidateElement;
     };
 
@@ -156,6 +156,7 @@ bool ScrollAnchoringController::didFindPriorityCandidate(Document& document)
     if (RefPtr priorityCandidate = viablePriorityCandidateForElement(document.focusedElement())) {
         m_anchorElement = priorityCandidate;
         m_lastOffsetForAnchorElement = computeOffsetFromOwningScroller(*m_anchorElement->renderer());
+        LOG_WITH_STREAM(ScrollAnchoring, stream << "ScrollAnchoringController::viablePriorityCandidateForElement() for scroller: " << m_owningScrollableArea << " found priority candidate: " << *priorityCandidate);
         return true;
     }
     return false;
@@ -170,7 +171,7 @@ static bool absolutePositionedElementOutsideScroller(RenderElement& renderer, Sc
     return false;
 }
 
-CandidateExaminationResult ScrollAnchoringController::examineCandidate(Element& element)
+CandidateExaminationResult ScrollAnchoringController::examineAnchorCandidate(Element& element)
 {
     if (elementForScrollableArea(m_owningScrollableArea) && elementForScrollableArea(m_owningScrollableArea)->identifier() == element.identifier())
         return CandidateExaminationResult::Skip;
@@ -182,19 +183,24 @@ CandidateExaminationResult ScrollAnchoringController::examineCandidate(Element& 
         if (auto* box = element->renderBox()) {
             LayoutRect paddedLayerBounds(containingRect);
             paddedLayerBounds.contract(box->scrollPaddingForViewportRect(paddedLayerBounds));
-            LOG_WITH_STREAM(ScrollAnchoring, stream << "ScrollAnchoringController::examineCandidate() contracted rect: "<< IntRect(paddedLayerBounds));
+            LOG_WITH_STREAM(ScrollAnchoring, stream << "ScrollAnchoringController::examineAnchorCandidate() contracted rect: "<< IntRect(paddedLayerBounds));
             containingRect = IntRect(paddedLayerBounds);
         }
     }
 
+    auto isExcludedSubtree = [this](RenderElement* renderer, bool intersects) {
+        return renderer->style().overflowAnchor() == OverflowAnchor::None || renderer->isStickilyPositioned() || renderer->isFixedPositioned() || renderer->isPseudoElement() || renderer->isAnonymousBlock() || (renderer->isAbsolutelyPositioned() && absolutePositionedElementOutsideScroller(*renderer, m_owningScrollableArea)) || (!intersects && renderer->style().containsPaint());
+    };
+
     if (auto renderer = element.renderer()) {
-        // TODO: we need to think about position: absolute
         // TODO: figure out how to get scrollable area for renderer to check if it is maintaining scroll anchor
-        if (renderer->style().overflowAnchor() == OverflowAnchor::None || renderer->isStickilyPositioned() || renderer->isFixedPositioned() || renderer->isPseudoElement() || renderer->isAnonymousBlock() || (renderer->isAbsolutelyPositioned() && absolutePositionedElementOutsideScroller(*renderer, m_owningScrollableArea)))
+        auto boxRect = renderer->absoluteBoundingBoxRect();
+        bool intersects = containingRect.intersects(boxRect);
+
+        if (isExcludedSubtree(renderer, intersects))
             return CandidateExaminationResult::Exclude;
         if (&element == document->bodyOrFrameset() || is<HTMLHtmlElement>(&element) || (renderer->isInline() && !renderer->isAtomicInlineLevelBox()))
             return CandidateExaminationResult::Skip;
-        auto boxRect = renderer->absoluteBoundingBoxRect();
         if (!boxRect.width() || !boxRect.height())
             return CandidateExaminationResult::Skip;
         if (containingRect.contains(boxRect))
@@ -202,7 +208,7 @@ CandidateExaminationResult ScrollAnchoringController::examineCandidate(Element& 
         auto isScrollingNode = false;
         if (auto* renderBox = dynamicDowncast<RenderBox>(renderer))
             isScrollingNode = renderBox->hasPotentiallyScrollableOverflow();
-        if (containingRect.intersects(boxRect))
+        if (intersects)
             return isScrollingNode ? CandidateExaminationResult::Select : CandidateExaminationResult::Descend;
         if (isScrollingNode)
             return CandidateExaminationResult::Exclude;
@@ -236,7 +242,7 @@ Element* ScrollAnchoringController::findAnchorElementRecursive(Element* element)
     if (!element)
         return nullptr;
 
-    auto result = examineCandidate(*element);
+    auto result = examineAnchorCandidate(*element);
     LOG_WITH_STREAM(ScrollAnchoring, stream << "ScrollAnchoringController::findAnchorElementRecursive() element: "<< *element<<" examination result: " << result);
 
     switch (result) {
@@ -317,6 +323,18 @@ void ScrollAnchoringController::adjustScrollPositionForAnchoring()
 
     FloatSize adjustment = computeOffsetFromOwningScroller(*renderer) - m_lastOffsetForAnchorElement;
     if (!adjustment.isZero()) {
+#if PLATFORM(IOS_FAMILY)
+        if (m_owningScrollableArea.isUserScrollInProgress()) {
+            invalidateAnchorElement();
+            updateAnchorElement();
+            return;
+        }
+#endif
+        if (m_owningScrollableArea.isRubberBandInProgress()) {
+            invalidateAnchorElement();
+            updateAnchorElement();
+            return;
+        }
         auto newScrollPosition = m_owningScrollableArea.scrollPosition() + IntPoint(adjustment.width(), adjustment.height());
         LOG_WITH_STREAM(ScrollAnchoring, stream << "ScrollAnchoringController::updateScrollPosition() for frame: " << frameView() << " for scroller: " << m_owningScrollableArea << " adjusting from: " << m_owningScrollableArea.scrollPosition() << " to: " << newScrollPosition);
         auto options = ScrollPositionChangeOptions::createProgrammatic();

@@ -147,6 +147,19 @@ RenderTreeBuilder::~RenderTreeBuilder()
     s_current = m_previous;
 }
 
+bool RenderTreeBuilder::isRebuildRootForChildren(const RenderElement& renderer)
+{
+    // If a (non-anonymous) child is added or removed to a rebuild root then we'll rebuild the full
+    // subtree instead of trying to maintain the correct anonymous box structure on per-child basis.
+    // This can greatly simplify the code needed to maintain the correct structure.
+
+    auto display = renderer.style().display();
+    if (display == DisplayType::Ruby || display == DisplayType::RubyBlock)
+        return true;
+
+    return false;
+}
+
 void RenderTreeBuilder::destroy(RenderObject& renderer, CanCollapseAnonymousBlock canCollapseAnonymousBlock)
 {
     RELEASE_ASSERT(RenderTreeMutationDisallowedScope::isMutationAllowed());
@@ -318,7 +331,12 @@ void RenderTreeBuilder::attachInternal(RenderElement& parent, RenderPtr<RenderOb
     }
 
     if (parent.style().display() == DisplayType::Ruby || parent.style().display() == DisplayType::RubyBlock) {
-        insertRecursiveIfNeeded(rubyBuilder().findOrCreateParentForStyleBasedRubyChild(parent, *child, beforeChild));
+        auto& parentCandidate = rubyBuilder().findOrCreateParentForStyleBasedRubyChild(parent, *child, beforeChild);
+        if (&parentCandidate == &parent) {
+            rubyBuilder().attachForStyleBasedRuby(parentCandidate, WTFMove(child), beforeChild);
+            return;
+        }
+        insertRecursiveIfNeeded(parentCandidate);
         return;
     }
 
@@ -611,7 +629,7 @@ void RenderTreeBuilder::normalizeTreeAfterStyleChange(RenderElement& renderer, R
 
             // Style change may have moved some subtree out of the fragmented flow. Their flow states have already been updated (see adjustFragmentedFlowStateOnContainingBlockChangeIfNeeded)
             // and here is where we take care of the remaining, spanner tree mutation.
-            WeakHashSet<RenderElement> spannerContainingBlockSet;
+            SingleThreadWeakHashSet<RenderElement> spannerContainingBlockSet;
             for (auto& descendant : descendantsOfType<RenderMultiColumnSpannerPlaceholder>(renderer)) {
                 if (auto* containingBlock = descendant.containingBlock(); containingBlock && containingBlock->enclosingFragmentedFlow() != enclosingFragmentedFlow)
                     spannerContainingBlockSet.add(*containingBlock);

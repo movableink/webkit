@@ -41,6 +41,8 @@ WK_CLASS_AVAILABLE(macos(10.12), ios(16.0))
 @interface _WKHitTestResult : NSObject <NSCopying>
 
 @property (nonatomic, readonly, copy) NSURL *absoluteImageURL;
+@property (nonatomic, readonly, copy) NSString *imageMIMEType WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+
 @property (nonatomic, readonly, copy) NSURL *absolutePDFURL;
 @property (nonatomic, readonly, copy) NSURL *absoluteLinkURL;
 @property (nonatomic, readonly, copy) NSURL *absoluteMediaURL;
@@ -51,6 +53,8 @@ WK_CLASS_AVAILABLE(macos(10.12), ios(16.0))
 
 @property (nonatomic, readonly, getter=isContentEditable) BOOL contentEditable;
 @property (nonatomic, readonly, getter=isSelected) BOOL selected WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+@property (nonatomic, readonly, getter=isMediaDownloadable) BOOL mediaDownloadable WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+@property (nonatomic, readonly, getter=isMediaFullscreen) BOOL mediaFullscreen WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
 
 @property (nonatomic, readonly) CGRect elementBoundingBox;
 

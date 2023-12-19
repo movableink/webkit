@@ -609,6 +609,9 @@ void TestController::initialize(int argc, const char* argv[])
     m_allowAnyHTTPSCertificateForAllowedHosts = options.allowAnyHTTPSCertificateForAllowedHosts;
     m_enableAllExperimentalFeatures = options.enableAllExperimentalFeatures;
     m_globalFeatures = std::move(options.features);
+#if PLATFORM(WPE)
+    m_useWPEPlatformAPI = options.useWPEPlatformAPI;
+#endif
 
     /* localhost is implicitly allowed and so should aliases to it. */
     for (const auto& alias : m_localhostAliases)
@@ -961,7 +964,6 @@ void TestController::createWebViewWithOptions(const TestOptions& options)
         runWebAuthenticationPanel,
         0,
         decidePolicyForMediaKeySystemPermissionRequest,
-        nullptr, // requestWebAuthenticationNoGesture
         queryPermission,
 #if PLATFORM(IOS) || PLATFORM(VISION)
         lockScreenOrientationCallback,
@@ -1068,6 +1070,7 @@ void TestController::resetPreferencesToConsistentValues(const TestOptions& optio
         if (enableAllExperimentalFeatures) {
             WKPreferencesEnableAllExperimentalFeatures(preferences);
             WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("SiteIsolationEnabled").get());
+            WKPreferencesSetExperimentalFeatureForKey(preferences, false, toWK("CFNetworkNetworkLoaderEnabled").get());
         }
 
         WKPreferencesResetAllInternalDebugFeatures(preferences);
@@ -1279,6 +1282,7 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
 
     m_downloadTotalBytesWritten = { };
     m_downloadIndex = 0;
+    m_shouldDownloadContentDispositionAttachments = true;
     m_dumpPolicyDelegateCallbacks = false;
 
     return m_doneResetting;
@@ -2084,6 +2088,13 @@ void TestController::didReceiveSynchronousMessageFromInjectedBundle(WKStringRef 
 
         if (WKStringIsEqualToUTF8CString(subMessageName, "CancelTouchPoint")) {
             m_eventSenderProxy->cancelTouchPoint(uint64Value(dictionary, "Index"));
+            return completionHandler(nullptr);
+        }
+#endif
+
+#if PLATFORM(MAC)
+        if (WKStringIsEqualToUTF8CString(subMessageName, "SmartMagnify")) {
+            m_eventSenderProxy->smartMagnify();
             return completionHandler(nullptr);
         }
 #endif
@@ -4141,6 +4152,13 @@ void TestController::setAllowedMenuActions(const Vector<String>&)
 WKRetainPtr<WKStringRef> TestController::takeViewPortSnapshot()
 {
     return adoptWK(WKStringCreateWithUTF8CString("not implemented"));
+}
+#endif
+
+#if !PLATFORM(COCOA)
+WKRetainPtr<WKArrayRef> TestController::getAndClearReportedWindowProxyAccessDomains()
+{
+    return nullptr;
 }
 #endif
 

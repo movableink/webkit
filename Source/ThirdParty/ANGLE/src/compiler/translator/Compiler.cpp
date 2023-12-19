@@ -376,6 +376,7 @@ TCompiler::TCompiler(sh::GLenum type, ShShaderSpec spec, ShShaderOutput output)
       mHasAnyPreciseType(false),
       mAdvancedBlendEquations(0),
       mHasPixelLocalStorageUniforms(false),
+      mUsesDerivatives(false),
       mCompileOptions{}
 {}
 
@@ -594,6 +595,8 @@ void TCompiler::setASTMetadata(const TParseContext &parseContext)
 
     mHasAnyPreciseType = parseContext.hasAnyPreciseType();
 
+    mUsesDerivatives = parseContext.usesDerivatives();
+
     if (mShaderType == GL_FRAGMENT_SHADER)
     {
         mAdvancedBlendEquations       = parseContext.getAdvancedBlendEquations();
@@ -767,11 +770,6 @@ bool TCompiler::checkAndSimplifyAST(TIntermBlock *root,
 
     if (shouldRunLoopAndIndexingValidation(compileOptions) &&
         !ValidateLimitations(root, mShaderType, &mSymbolTable, &mDiagnostics))
-    {
-        return false;
-    }
-
-    if (shouldLimitTypeSizes() && !ValidateTypeSizeLimitations(root, &mSymbolTable, &mDiagnostics))
     {
         return false;
     }
@@ -1057,6 +1055,13 @@ bool TCompiler::checkAndSimplifyAST(TIntermBlock *root,
         return false;
     }
 
+    // Run after RemoveUnreferencedVariables, validate that the shader does not have excessively
+    // large variables.
+    if (shouldLimitTypeSizes() && !ValidateTypeSizeLimitations(root, &mSymbolTable, &mDiagnostics))
+    {
+        return false;
+    }
+
     // Built-in function emulation needs to happen after validateLimitations pass.
     GetGlobalPoolAllocator()->lock();
     initBuiltInFunctionEmulator(&mBuiltInFunctionEmulator, compileOptions);
@@ -1188,7 +1193,8 @@ bool TCompiler::checkAndSimplifyAST(TIntermBlock *root,
 
     if (getShaderType() == GL_VERTEX_SHADER && compileOptions.clampPointSize)
     {
-        if (!ClampPointSize(this, root, mResources.MaxPointSize, &getSymbolTable()))
+        if (!ClampPointSize(this, root, mResources.MinPointSize, mResources.MaxPointSize,
+                            &getSymbolTable()))
         {
             return false;
         }

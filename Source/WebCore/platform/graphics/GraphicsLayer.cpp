@@ -724,11 +724,7 @@ static inline const FilterOperations& filterOperationsAt(const KeyframeValueList
 
 int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
 {
-#if ENABLE(FILTERS_LEVEL_2)
     ASSERT(valueList.property() == AnimatedProperty::Filter || valueList.property() == AnimatedProperty::WebkitBackdropFilter);
-#else
-    ASSERT(valueList.property() == AnimatedProperty::Filter);
-#endif
 
     if (valueList.size() < 2)
         return -1;
@@ -768,7 +764,7 @@ void GraphicsLayer::setAcceleratedEffectsAndBaseValues(AcceleratedEffects&& effe
     }
 
     if (!m_effectStack)
-        m_effectStack = makeUnique<AcceleratedEffectStack>();
+        m_effectStack = AcceleratedEffectStack::create();
 
     m_effectStack->setEffects(WTFMove(effects));
     m_effectStack->setBaseValues(WTFMove(baseValues));

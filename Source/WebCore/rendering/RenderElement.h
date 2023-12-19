@@ -31,8 +31,7 @@ namespace WebCore {
 
 class Animation;
 class ContentData;
-class ControlStates;
-class KeyframeList;
+class BlendingKeyframes;
 class ReferencedSVGResources;
 class RenderBlock;
 class RenderStyle;
@@ -77,8 +76,9 @@ public:
     // continue even if the style isn't different from the current style.
     void setStyle(RenderStyle&&, StyleDifference minimalStyleDifference = StyleDifference::Equal);
 
-    // The pseudo element style can be cached or uncached.  Use the cached method if the pseudo element doesn't respect
-    // any pseudo classes (and therefore has no concept of changing state).
+    // The pseudo element style can be cached or uncached. Use the uncached method if the pseudo element
+    // has the concept of changing state (like ::-webkit-scrollbar-thumb:hover), or if it takes additional
+    // parameters (like ::highlight(name)).
     const RenderStyle* getCachedPseudoStyle(PseudoId, const RenderStyle* parentStyle = nullptr) const;
     std::unique_ptr<RenderStyle> getUncachedPseudoStyle(const Style::PseudoElementRequest&, const RenderStyle* parentStyle = nullptr, const RenderStyle* ownStyle = nullptr) const;
 
@@ -113,22 +113,15 @@ public:
     bool hasEligibleContainmentForSizeQuery() const;
 
     Color selectionColor(CSSPropertyID) const;
-    std::unique_ptr<RenderStyle> selectionPseudoStyle() const;
+    const RenderStyle* selectionPseudoStyle() const;
 
     // Obtains the selection colors that should be used when painting a selection.
     Color selectionBackgroundColor() const;
     Color selectionForegroundColor() const;
     Color selectionEmphasisMarkColor() const;
 
-    // FIXME: Make these standalone and move to relevant files.
-    bool isRenderLayerModelObject() const;
-    bool isRenderBoxModelObject() const;
-    bool isRenderBlock() const;
-    bool isRenderBlockFlow() const;
-    bool isRenderReplaced() const;
-    bool isRenderInline() const;
-    bool isRenderFlexibleBox() const;
-    bool isRenderTextControl() const;
+    const RenderStyle* spellingErrorPseudoStyle() const;
+    const RenderStyle* grammarErrorPseudoStyle() const;
 
     virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const { return true; }
     void didAttachChild(RenderObject& child, RenderObject* beforeChild);
@@ -170,8 +163,12 @@ public:
     void setStyleInternal(RenderStyle&& style) { m_style = WTFMove(style); }
 
     // Repaint only if our old bounds and new bounds are different. The caller may pass in newBounds and newOutlineBox if they are known.
-    enum class RequiresFullRepaint : bool { No, Yes };
-    bool repaintAfterLayoutIfNeeded(const RenderLayerModelObject* repaintContainer, RequiresFullRepaint, const LayoutRect& oldBounds, const LayoutRect& oldOutlineBox, const LayoutRect* newBoundsPtr = nullptr, const LayoutRect* newOutlineBoxPtr = nullptr);
+    bool repaintAfterLayoutIfNeeded(const RenderLayerModelObject* repaintContainer, RequiresFullRepaint, const RepaintRects& oldRects, const RepaintRects& newRects);
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    void repaintClientsOfReferencedSVGResources() const;
+    void repaintRendererOrClientsOfReferencedSVGResources() const;
+#endif
 
     bool borderImageIsLoadedAndCanBeRendered() const;
     bool isVisibleIgnoringGeometry() const;
@@ -229,9 +226,6 @@ public:
     bool hasPausedImageAnimations() const { return m_hasPausedImageAnimations; }
     void setHasPausedImageAnimations(bool b) { m_hasPausedImageAnimations = b; }
 
-    void setRenderBoxNeedsLazyRepaint(bool b) { m_renderBoxNeedsLazyRepaint = b; }
-    bool renderBoxNeedsLazyRepaint() const { return m_renderBoxNeedsLazyRepaint; }
-
     bool hasCounterNodeMap() const { return m_hasCounterNodeMap; }
     void setHasCounterNodeMap(bool f) { m_hasCounterNodeMap = f; }
 
@@ -258,7 +252,7 @@ public:
     RenderObject* attachRendererInternal(RenderPtr<RenderObject> child, RenderObject* beforeChild);
     RenderPtr<RenderObject> detachRendererInternal(RenderObject&);
 
-    virtual bool startAnimation(double /* timeOffset */, const Animation&, const KeyframeList&) { return false; }
+    virtual bool startAnimation(double /* timeOffset */, const Animation&, const BlendingKeyframes&) { return false; }
     virtual void animationPaused(double /* timeOffset */, const String& /* name */) { }
     virtual void animationFinished(const String& /* name */) { }
     virtual void transformRelatedPropertyDidChange() { }
@@ -273,7 +267,7 @@ public:
     virtual void suspendAnimations(MonotonicTime = MonotonicTime()) { }
     std::unique_ptr<RenderStyle> animatedStyle();
 
-    WeakPtr<RenderBlockFlow> backdropRenderer() const;
+    SingleThreadWeakPtr<RenderBlockFlow> backdropRenderer() const;
     void setBackdropRenderer(RenderBlockFlow&);
 
     ReferencedSVGResources& ensureReferencedSVGResources();
@@ -300,21 +294,8 @@ public:
     void clearNeedsLayoutForDescendants();
 
 protected:
-    enum BaseTypeFlag {
-        RenderLayerModelObjectFlag  = 1 << 0,
-        RenderBoxModelObjectFlag    = 1 << 1,
-        RenderInlineFlag            = 1 << 2,
-        RenderReplacedFlag          = 1 << 3,
-        RenderBlockFlag             = 1 << 4,
-        RenderBlockFlowFlag         = 1 << 5,
-        RenderFlexibleBoxFlag       = 1 << 6,
-        RenderTextControlFlag       = 1 << 7,
-    };
-    
-    typedef unsigned BaseTypeFlags;
-
-    RenderElement(Type, Element&, RenderStyle&&, BaseTypeFlags);
-    RenderElement(Type, Document&, RenderStyle&&, BaseTypeFlags);
+    RenderElement(Type, Element&, RenderStyle&&, OptionSet<RenderElementType>);
+    RenderElement(Type, Document&, RenderStyle&&, OptionSet<RenderElementType>);
 
     bool layerCreationAllowedForSubtree() const;
 
@@ -357,7 +338,7 @@ protected:
     inline bool shouldApplySizeOrStyleContainment(bool) const;
 
 private:
-    RenderElement(Type, ContainerNode&, RenderStyle&&, BaseTypeFlags);
+    RenderElement(Type, ContainerNode&, RenderStyle&&, OptionSet<RenderElementType>);
     void node() const = delete;
     void nonPseudoNode() const = delete;
     void generatingNode() const = delete;
@@ -397,17 +378,19 @@ private:
     void updateReferencedSVGResources();
     void clearReferencedSVGResources();
 
-    PackedCheckedPtr<RenderObject> m_firstChild;
-    unsigned m_baseTypeFlags : 8;
+    const RenderStyle* textSegmentPseudoStyle(PseudoId) const;
+
+    SingleThreadPackedWeakPtr<RenderObject> m_firstChild;
     unsigned m_ancestorLineBoxDirty : 1;
     unsigned m_hasInitializedStyle : 1;
 
-    unsigned m_renderBoxNeedsLazyRepaint : 1;
     unsigned m_hasPausedImageAnimations : 1;
     unsigned m_hasCounterNodeMap : 1;
     unsigned m_hasContinuationChainNode : 1;
 
-    PackedCheckedPtr<RenderObject> m_lastChild;
+    // 11 bits free.
+
+    SingleThreadPackedWeakPtr<RenderObject> m_lastChild;
 
     unsigned m_isContinuation : 1;
     unsigned m_isFirstLetter : 1;
@@ -420,8 +403,9 @@ private:
 
     unsigned m_isRegisteredForVisibleInViewportCallback : 1;
     unsigned m_visibleInViewportState : 2;
-
     unsigned m_didContributeToVisuallyNonEmptyPixelCount : 1;
+
+    // 3 bits free.
 
     RenderStyle m_style;
 };
@@ -447,45 +431,6 @@ inline void RenderElement::setChildNeedsLayout(MarkingBehavior markParents)
         markContainingBlocksForLayout();
 }
 
-inline bool RenderElement::isRenderLayerModelObject() const
-{
-    return m_baseTypeFlags & RenderLayerModelObjectFlag;
-}
-
-inline bool RenderElement::isRenderBoxModelObject() const
-{
-    return m_baseTypeFlags & RenderBoxModelObjectFlag;
-}
-
-inline bool RenderElement::isRenderBlock() const
-{
-    return m_baseTypeFlags & RenderBlockFlag;
-}
-
-inline bool RenderElement::isRenderBlockFlow() const
-{
-    return m_baseTypeFlags & RenderBlockFlowFlag;
-}
-
-inline bool RenderElement::isRenderReplaced() const
-{
-    return m_baseTypeFlags & RenderReplacedFlag;
-}
-
-inline bool RenderElement::isRenderInline() const
-{
-    return m_baseTypeFlags & RenderInlineFlag;
-}
-
-inline bool RenderElement::isRenderFlexibleBox() const
-{
-    return m_baseTypeFlags & RenderFlexibleBoxFlag;
-}
-
-inline bool RenderElement::isRenderTextControl() const
-{
-    return m_baseTypeFlags & RenderTextControlFlag;
-}
 
 inline Element* RenderElement::generatingElement() const
 {
@@ -495,51 +440,6 @@ inline Element* RenderElement::generatingElement() const
 inline bool RenderElement::canEstablishContainingBlockWithTransform() const
 {
     return isRenderBlock() || (isTablePart() && !isRenderTableCol());
-}
-
-inline bool RenderObject::isRenderLayerModelObject() const
-{
-    return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderLayerModelObject();
-}
-
-inline bool RenderObject::isRenderBoxModelObject() const
-{
-    return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderBoxModelObject();
-}
-
-inline bool RenderObject::isRenderBlock() const
-{
-    return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderBlock();
-}
-
-inline bool RenderObject::isRenderBlockFlow() const
-{
-    return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderBlockFlow();
-}
-
-inline bool RenderObject::isRenderReplaced() const
-{
-    return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderReplaced();
-}
-
-inline bool RenderObject::isRenderInline() const
-{
-    return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderInline();
-}
-
-inline bool RenderObject::isRenderFlexibleBox() const
-{
-    return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderFlexibleBox();
-}
-
-inline bool RenderObject::isRenderTextControl() const
-{
-    return is<RenderElement>(*this) && downcast<RenderElement>(*this).isRenderTextControl();
-}
-
-inline bool RenderObject::isFlexibleBoxIncludingDeprecated() const
-{
-    return isRenderFlexibleBox() || isRenderDeprecatedFlexibleBox();
 }
 
 inline const RenderStyle& RenderObject::style() const
@@ -600,7 +500,7 @@ inline RenderElement* RenderObject::parent() const
 
 inline CheckedPtr<RenderElement> RenderObject::checkedParent() const
 {
-    return m_parent;
+    return m_parent.get();
 }
 
 } // namespace WebCore

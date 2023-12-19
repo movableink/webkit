@@ -97,7 +97,10 @@ def main(_argv, _stdout, _stderr):
 
     configure_logging()
 
-    test_importer = TestImporter(Host(), test_paths, options)
+    host = Host()
+    port = host.port_factory.get()
+
+    test_importer = TestImporter(port, test_paths, options)
     test_importer.do_import()
 
 
@@ -158,21 +161,21 @@ To import a web-platform-tests suite from a specific folder, use 'import-w3c-tes
 
 class TestImporter(object):
 
-    def __init__(self, host, test_paths, options):
-        self.host = host
+    def __init__(self, port, test_paths, options):
+        self.host = port.host
+        self.port = port
         self.source_directory = options.source
         self.options = options
         self.test_paths = test_paths if test_paths else []
 
-        self.port = PortFactory(host).get()
         self.filesystem = self.host.filesystem
 
         webkit_finder = WebKitFinder(self.filesystem)
         self._webkit_root = webkit_finder.webkit_base()
 
-        self.destination_directory = webkit_finder.path_from_webkit_base("LayoutTests", options.destination)
+        self.destination_directory = self.port.path_from_webkit_base("LayoutTests", options.destination)
         self.tests_w3c_relative_path = self.filesystem.join('imported', 'w3c')
-        self.layout_tests_path = webkit_finder.path_from_webkit_base('LayoutTests')
+        self.layout_tests_path = self.port.path_from_webkit_base('LayoutTests')
         self.layout_tests_w3c_path = self.filesystem.join(self.layout_tests_path, self.tests_w3c_relative_path)
         self.tests_download_path = WPTPaths.checkout_directory(webkit_finder)
 
@@ -189,6 +192,8 @@ class TestImporter(object):
         self._tests_options_json_path = self.filesystem.join(self.layout_tests_path, 'tests-options.json')
         self._tests_options = json.loads(self.filesystem.read_text_file(self._tests_options_json_path)) if self.filesystem.exists(self._tests_options_json_path) else None
         self._slow_tests = []
+
+        self._to_skip_new_directories = set()
 
         self.globalToSuffixes = {
             'window': ('html',),
@@ -245,7 +250,9 @@ class TestImporter(object):
 
         self.generate_git_submodules_description_for_all_repositories()
 
-        self.test_downloader().update_import_expectations(self.test_paths)
+        self.test_downloader().update_import_expectations(
+            self.test_paths, self._to_skip_new_directories
+        )
 
     def generate_git_submodules_description_for_all_repositories(self):
         for test_repository in self._test_downloader.test_repositories:
@@ -261,7 +268,7 @@ class TestImporter(object):
             download_options.fetch = self.options.fetch
             download_options.verbose = self.options.verbose
             download_options.import_all = self.options.import_all
-            self._test_downloader = TestDownloader(self.tests_download_path, self.host, download_options)
+            self._test_downloader = TestDownloader(self.tests_download_path, self.port, download_options)
         return self._test_downloader
 
     def should_skip_path(self, path):
@@ -273,10 +280,21 @@ class TestImporter(object):
             return True
 
         downloader = self.test_downloader()
+        paths_to_skip_new_directories = {Path(p) for p in downloader.paths_to_skip_new_directories}
         paths_to_skip = {Path(p) for p in downloader.paths_to_skip}
         paths_to_import = {Path(p) for p in downloader.paths_to_import}
 
         for parent in itertools.chain([rel_path], rel_path.parents):
+            if parent in paths_to_skip_new_directories:
+                if parent != rel_path:
+                    to_skip = parent / rel_path.relative_to(parent).parts[0]
+                    if not to_skip.is_dir():
+                        # Files directly under skip-new-directories _are_ imported.
+                        assert rel_path == to_skip
+                        return False
+                    self._to_skip_new_directories.add(str(to_skip))
+                return True
+
             if parent in paths_to_skip:
                 return True
 
@@ -304,7 +322,15 @@ class TestImporter(object):
         #FIXME: Clean also the expected files stored in all platform specific folders.
         directory = self.filesystem.join(self.destination_directory, filename)
         tests = LayoutTestFinder(self.port, None).find_tests_by_path([directory])
-        baselines_for_tests = {self.port.expected_filename(test.test_path, '.txt') for test in tests}
+        baselines_for_tests = {
+            self.filesystem.join(
+                platform_dir or self.port.layout_tests_dir(), baseline_filename
+            )
+            for test in tests
+            for platform_dir, baseline_filename in self.port.expected_baselines(
+                test.test_path, ".txt", all_baselines=True
+            )
+        }
         for relative_path in self.filesystem.files_under(directory, file_filter=self._is_baseline):
             path = self.filesystem.join(directory, relative_path)
             if path not in baselines_for_tests:
@@ -339,7 +365,7 @@ class TestImporter(object):
                     continue
 
                 mimetype = mimetypes.guess_type(fullpath)
-                if not 'html' in str(mimetype[0]) and not 'application/xhtml+xml' in str(mimetype[0]) and not 'application/xml' in str(mimetype[0]):
+                if 'html' not in str(mimetype[0]) and 'application/xhtml+xml' not in str(mimetype[0]) and 'application/xml' not in str(mimetype[0]) and 'image/svg+xml' not in str(mimetype[0]):
                     copy_list.append({'src': fullpath, 'dest': filename})
                     continue
 

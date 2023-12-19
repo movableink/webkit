@@ -51,6 +51,7 @@ class Attribute;
 class AttributeIteratorAccessor;
 class CustomElementDefaultARIA;
 class CustomElementReactionQueue;
+class CustomStateSet;
 class DatasetDOMStringMap;
 class DOMRect;
 class DOMRectList;
@@ -89,6 +90,7 @@ enum class EventHandling : uint8_t;
 enum class EventProcessing : uint8_t;
 enum class FullscreenNavigationUI : uint8_t;
 enum class IsSyntheticClick : bool { No, Yes };
+enum class ParserContentPolicy : uint8_t;
 enum class ResolveURLs : uint8_t { No, NoExcludingURLsForPrivacy, Yes, YesExcludingURLsForPrivacy };
 enum class SelectionRestorationMode : uint8_t;
 
@@ -272,7 +274,6 @@ public:
     WEBCORE_EXPORT ExceptionOr<Ref<Attr>> removeAttributeNode(Attr&);
 
     RefPtr<Attr> attrIfExists(const QualifiedName&);
-    RefPtr<Attr> attrIfExists(const AtomString& localName, bool shouldIgnoreAttributeCase);
     Ref<Attr> ensureAttr(const QualifiedName&);
 
     const Vector<RefPtr<Attr>>& attrNodeList();
@@ -484,6 +485,8 @@ public:
     virtual void blur();
     virtual void runFocusingStepsForAutofocus();
 
+    ExceptionOr<void> setHTMLUnsafe(const String&);
+
     WEBCORE_EXPORT String innerHTML() const;
     WEBCORE_EXPORT String outerHTML() const;
     WEBCORE_EXPORT ExceptionOr<void> setInnerHTML(const String&);
@@ -525,7 +528,6 @@ public:
     virtual bool matchesDefaultPseudoClass() const;
     WEBCORE_EXPORT ExceptionOr<bool> matches(const String& selectors);
     WEBCORE_EXPORT ExceptionOr<Element*> closest(const String& selectors);
-    virtual bool shouldAppearIndeterminate() const;
 
     WEBCORE_EXPORT DOMTokenList& classList();
 
@@ -583,11 +585,16 @@ public:
 
     const RenderStyle* lastStyleChangeEventStyle(PseudoId) const;
     void setLastStyleChangeEventStyle(PseudoId, std::unique_ptr<const RenderStyle>&&);
+    bool hasPropertiesOverridenAfterAnimation(PseudoId) const;
+    void setHasPropertiesOverridenAfterAnimation(PseudoId, bool);
 
     void cssAnimationsDidUpdate(PseudoId);
     void keyframesRuleDidChange(PseudoId);
     bool hasPendingKeyframesUpdate(PseudoId) const;
     // FIXME: do we need a counter style didChange here? (rdar://103018993).
+
+    bool isLink() const { return hasNodeFlag(NodeFlag::IsLink); }
+    void setIsLink(bool flag);
 
     bool isInTopLayer() const { return hasNodeFlag(NodeFlag::IsInTopLayer); }
     void addToTopLayer();
@@ -622,8 +629,8 @@ public:
     inline bool hasName() const;
     inline const SpaceSplitString& classNames() const;
 
-    IntPoint savedLayerScrollPosition() const;
-    void setSavedLayerScrollPosition(const IntPoint&);
+    ScrollPosition savedLayerScrollPosition() const;
+    void setSavedLayerScrollPosition(const ScrollPosition&);
 
     enum class EventIsDefaultPrevented : bool { No, Yes };
     enum class EventIsDispatched : bool { No, Yes };
@@ -694,8 +701,10 @@ public:
     // custom (not style based) renderers. This is expensive and should be avoided.
     // Elements newly added to the tree are also in this state.
     void invalidateStyleAndRenderersForSubtree();
+    void invalidateRenderer();
 
     void invalidateStyleInternal();
+    void invalidateStyleForAnimation();
     void invalidateStyleForSubtreeInternal();
     void invalidateForQueryContainerSizeChange();
     void invalidateForResumingQueryContainerResolution();
@@ -751,6 +760,9 @@ public:
     std::optional<OptionSet<ContentRelevancy>> contentRelevancy() const;
     void setContentRelevancy(OptionSet<ContentRelevancy>);
 
+    bool hasCustomState(const AtomString& state) const;
+    CustomStateSet& ensureCustomStateSet();
+
 protected:
     Element(const QualifiedName&, Document&, ConstructionType);
 
@@ -766,6 +778,8 @@ protected:
     void partAttributeChanged(const AtomString& newValue);
 
     void addShadowRoot(Ref<ShadowRoot>&&);
+
+    ExceptionOr<void> replaceChildrenWithMarkup(const String&, OptionSet<ParserContentPolicy>);
 
     static ExceptionOr<void> mergeWithNextTextNode(Text&);
 
@@ -832,7 +846,7 @@ private:
     void addAttributeInternal(const QualifiedName&, const AtomString& value, InSynchronizationOfLazyAttribute);
     void removeAttributeInternal(unsigned index, InSynchronizationOfLazyAttribute);
 
-    void setSavedLayerScrollPositionSlow(const IntPoint&);
+    void setSavedLayerScrollPositionSlow(const ScrollPosition&);
     void clearBeforePseudoElementSlow();
     void clearAfterPseudoElementSlow();
 
@@ -899,13 +913,16 @@ private:
     bool hasLanguageAttribute() const { return hasLangAttr() || hasXMLLangAttr(); }
     bool hasLangAttrKnownToMatchDocumentElement() const { return hasLanguageAttribute() && effectiveLangKnownToMatchDocumentElement(); }
 
+    bool hasEverHadSmoothScroll() const { return hasEventTargetFlag(EventTargetFlag::EverHadSmoothScroll); }
+    void setHasEverHadSmoothScroll(bool value) { return setEventTargetFlag(EventTargetFlag::EverHadSmoothScroll, value); }
+
     void parentOrShadowHostNode() const = delete; // Call parentNode() instead.
 
     QualifiedName m_tagName;
     RefPtr<ElementData> m_elementData;
 };
 
-inline void Element::setSavedLayerScrollPosition(const IntPoint& position)
+inline void Element::setSavedLayerScrollPosition(const ScrollPosition& position)
 {
     if (position.isZero() && !hasRareData())
         return;
@@ -947,5 +964,9 @@ inline bool isInTopLayerOrBackdrop(const RenderStyle&, const Element*);
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Element)
     static bool isType(const WebCore::Node& node) { return node.isElementNode(); }
-    static bool isType(const WebCore::EventTarget& target) { return is<WebCore::Node>(target) && isType(downcast<WebCore::Node>(target)); }
+    static bool isType(const WebCore::EventTarget& target)
+    {
+        auto* node = dynamicDowncast<WebCore::Node>(target);
+        return node && isType(*node);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

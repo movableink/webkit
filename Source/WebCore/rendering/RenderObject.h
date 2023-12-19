@@ -95,11 +95,13 @@ namespace Style {
 class PseudoElementRequest;
 }
 
-enum class RepaintRectCalculation { Fast, Accurate };
+enum class RepaintRectCalculation : bool { Fast, Accurate };
+enum class RepaintOutlineBounds : bool { No, Yes };
+enum class RequiresFullRepaint : bool { No, Yes };
 
 // Base class for all rendering tree objects.
 class RenderObject : public CachedImageClient, public CanMakeCheckedPtr {
-    WTF_MAKE_ISO_ALLOCATED(RenderObject);
+    WTF_MAKE_COMPACT_ISO_ALLOCATED(RenderObject);
     friend class RenderBlock;
     friend class RenderBlockFlow;
     friend class RenderBox;
@@ -214,14 +216,30 @@ public:
         LegacySVGPath,
         LegacySVGRect,
         LegacySVGResourceClipper,
+        LegacySVGResourceMasker,
         LegacySVGRoot,
         LegacySVGTransformableContainer,
         LegacySVGViewportContainer
     };
 
+    enum class RenderElementType : uint16_t {
+        RenderLayerModelObjectFlag = 1 << 0,
+        RenderBoxModelObjectFlag = 1 << 1,
+        RenderInlineFlag = 1 << 2,
+        RenderReplacedFlag = 1 << 3,
+        RenderBlockFlag = 1 << 4,
+        RenderBlockFlowFlag = 1 << 5,
+        RenderFlexibleBoxFlag = 1 << 6,
+        RenderTextControlFlag = 1 << 7,
+        LegacyRenderSVGContainer = 1 << 8,
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        RenderSVGContainer = 1 << 9,
+#endif
+    };
+
     // Anonymous objects should pass the document as their node, and they will then automatically be
     // marked as anonymous in the constructor.
-    RenderObject(Type, Node&);
+    RenderObject(Type, Node&, OptionSet<RenderElementType>);
     virtual ~RenderObject();
 
     Type type() const { return m_type; }
@@ -316,12 +334,12 @@ public:
     bool isPseudoElement() const { return node() && node()->isPseudoElement(); }
 
     bool isRenderElement() const { return !isRenderText(); }
-    bool isRenderReplaced() const;
-    bool isRenderBoxModelObject() const;
-    bool isRenderBlock() const;
-    bool isRenderBlockFlow() const;
-    bool isRenderInline() const;
-    bool isRenderLayerModelObject() const;
+    bool isRenderReplaced() const { return m_renderElementTypeFlags.contains(RenderElementType::RenderReplacedFlag); }
+    bool isRenderBoxModelObject() const { return m_renderElementTypeFlags.contains(RenderElementType::RenderBoxModelObjectFlag); }
+    bool isRenderBlock() const { return m_renderElementTypeFlags.contains(RenderElementType::RenderBlockFlag); }
+    bool isRenderBlockFlow() const { return m_renderElementTypeFlags.contains(RenderElementType::RenderBlockFlowFlag); }
+    bool isRenderInline() const { return m_renderElementTypeFlags.contains(RenderElementType::RenderInlineFlag); }
+    bool isRenderLayerModelObject() const { return m_renderElementTypeFlags.contains(RenderElementType::RenderLayerModelObjectFlag); }
 
     inline bool isAtomicInlineLevelBox() const;
 
@@ -365,9 +383,9 @@ public:
     bool isRenderTableCol() const { return type() == Type::TableCol; }
     bool isRenderTableCaption() const { return type() == Type::TableCaption; }
     bool isRenderTableSection() const { return type() == Type::TableSection; }
-    inline bool isRenderTextControl() const; // Defined in RenderElement.h.
+    bool isRenderTextControl() const { return m_renderElementTypeFlags.contains(RenderElementType::RenderTextControlFlag); }
     bool isRenderTextControlMultiLine() const { return type() == Type::TextControlMultiLine; }
-    virtual bool isRenderTextControlSingleLine() const { return false; }
+    bool isRenderTextControlSingleLine() const { return isRenderTextControl() && !isRenderTextControlMultiLine(); }
     bool isRenderSearchField() const { return type() == Type::SearchField; }
     bool isRenderTextControlInnerBlock() const { return type() == Type::TextControlInnerBlock; }
     bool isRenderVideo() const { return type() == Type::Video; }
@@ -446,8 +464,10 @@ public:
     virtual bool isRenderSVGBlock() const { return false; }
     bool isLegacyRenderSVGRoot() const { return type() == Type::LegacySVGRoot; }
     bool isRenderSVGRoot() const { return type() == Type::SVGRoot; }
-    virtual bool isRenderSVGContainer() const { return false; }
-    virtual bool isLegacyRenderSVGContainer() const { return false; }
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    bool isRenderSVGContainer() const { return m_renderElementTypeFlags.contains(RenderElementType::RenderSVGContainer); }
+#endif
+    bool isLegacyRenderSVGContainer() const { return m_renderElementTypeFlags.contains(RenderElementType::LegacyRenderSVGContainer); }
     bool isRenderSVGTransformableContainer() const { return type() == Type::SVGTransformableContainer; }
     bool isLegacyRenderSVGTransformableContainer() const { return type() == Type::LegacySVGTransformableContainer; }
     bool isRenderSVGViewportContainer() const { return type() == Type::SVGViewportContainer; }
@@ -469,11 +489,14 @@ public:
     bool isLegacyRenderSVGForeignObject() const { return type() == Type::LegacySVGForeignObject; }
     bool isRenderSVGForeignObject() const { return type() == Type::SVGForeignObject; }
     virtual bool isLegacyRenderSVGResourceContainer() const { return false; }
-    bool isRenderSVGResourceContainer() const { return type() == Type::SVGResourceClipper; }
+    bool isRenderSVGResourceContainer() const { return type() == Type::SVGResourceClipper || type() == Type::SVGResourceMasker; }
     bool isRenderSVGResourceFilter() const { return type() == Type::SVGResourceFilter; }
     bool isLegacyRenderSVGResourceClipper() const { return type() == Type::LegacySVGResourceClipper; }
+    bool isLegacyRenderSVGResourceMarker() const { return type() == Type::SVGResourceMarker; }
+    bool isLegacyRenderSVGResourceMasker() const { return type() == Type::LegacySVGResourceMasker; }
     bool isRenderSVGResourceClipper() const { return type() == Type::SVGResourceClipper; }
     bool isRenderSVGResourceFilterPrimitive() const { return type() == Type::SVGResourceFilterPrimitive; }
+    bool isRenderSVGResourceMasker() const { return type() == Type::SVGResourceMasker; }
     bool isRenderOrLegacyRenderSVGRoot() const { return isRenderSVGRoot() || isLegacyRenderSVGRoot(); }
     bool isRenderOrLegacyRenderSVGShape() const { return isRenderSVGShape() || isLegacyRenderSVGShape(); }
     bool isRenderOrLegacyRenderSVGPath() const { return isRenderSVGPath() || isLegacyRenderSVGPath(); }
@@ -795,11 +818,11 @@ public:
     void repaintSlowRepaintObject() const;
 
     enum class VisibleRectContextOption {
-        UseEdgeInclusiveIntersection = 1 << 0,
-        ApplyCompositedClips = 1 << 1,
-        ApplyCompositedContainerScrolls  = 1 << 2,
-        ApplyContainerClip = 1 << 3,
-        CalculateAccurateRepaintRect = 1 << 4,
+        UseEdgeInclusiveIntersection        = 1 << 0,
+        ApplyCompositedClips                = 1 << 1,
+        ApplyCompositedContainerScrolls     = 1 << 2,
+        ApplyContainerClip                  = 1 << 3,
+        CalculateAccurateRepaintRect        = 1 << 4,
     };
     struct VisibleRectContext {
         VisibleRectContext(bool hasPositionFixedDescendant = false, bool dirtyRectIsFlipped = false, OptionSet<VisibleRectContextOption> options = { })
@@ -820,30 +843,110 @@ public:
         OptionSet<VisibleRectContextOption> options;
     };
 
+    struct RepaintRects {
+        LayoutRect clippedOverflowRect; // Some rect (normally the visual overflow rect) mapped up to the repaint container, respecting clipping.
+        std::optional<LayoutRect> outlineBoundsRect; // A rect repsenting the extent of outlines and shadows, mapped to the repaint container, but not clipped.
+
+        RepaintRects(LayoutRect rect = { }, const std::optional<LayoutRect>& outlineBounds = { })
+            : clippedOverflowRect(rect)
+            , outlineBoundsRect(outlineBounds)
+        { }
+
+        bool operator==(const RepaintRects&) const = default;
+
+        void move(LayoutSize size)
+        {
+            clippedOverflowRect.move(size);
+            if (outlineBoundsRect)
+                outlineBoundsRect->move(size);
+        }
+
+        void moveBy(LayoutPoint size)
+        {
+            clippedOverflowRect.moveBy(size);
+            if (outlineBoundsRect)
+                outlineBoundsRect->moveBy(size);
+        }
+
+        void expand(LayoutSize size)
+        {
+            clippedOverflowRect.expand(size);
+            if (outlineBoundsRect)
+                outlineBoundsRect->expand(size);
+        }
+
+        void encloseToIntRects()
+        {
+            clippedOverflowRect = enclosingIntRect(clippedOverflowRect);
+            if (outlineBoundsRect)
+                *outlineBoundsRect = enclosingIntRect(*outlineBoundsRect);
+        }
+
+        void unite(const RepaintRects& other)
+        {
+            clippedOverflowRect.unite(other.clippedOverflowRect);
+            if (outlineBoundsRect && other.outlineBoundsRect)
+                outlineBoundsRect->unite(*other.outlineBoundsRect);
+        }
+
+        void flipForWritingMode(LayoutSize containerSize, bool isHorizontalWritingMode)
+        {
+            if (isHorizontalWritingMode) {
+                clippedOverflowRect.setY(containerSize.height() - clippedOverflowRect.maxY());
+                if (outlineBoundsRect)
+                    outlineBoundsRect->setY(containerSize.height() - outlineBoundsRect->maxY());
+            } else {
+                clippedOverflowRect.setX(containerSize.width() - clippedOverflowRect.maxX());
+                if (outlineBoundsRect)
+                    outlineBoundsRect->setX(containerSize.width() - outlineBoundsRect->maxX());
+            }
+        }
+
+        // Returns true if intersecting (clippedOverflowRect remains non-empty).
+        bool intersect(LayoutRect clipRect)
+        {
+            // Note the we only intersect clippedOverflowRect.
+            clippedOverflowRect.intersect(clipRect);
+            return !clippedOverflowRect.isEmpty();
+        }
+
+        // Returns true if intersecting (clippedOverflowRect remains non-empty).
+        bool edgeInclusiveIntersect(LayoutRect clipRect)
+        {
+            // Note the we only intersect clippedOverflowRect.
+            return clippedOverflowRect.edgeInclusiveIntersect(clipRect);
+        }
+
+        void transform(const TransformationMatrix&);
+        void transform(const TransformationMatrix&, float deviceScaleFactor);
+    };
+
     // Returns the rect that should be repainted whenever this object changes. The rect is in the view's
     // coordinate space. This method deals with outlines and overflow.
     LayoutRect absoluteClippedOverflowRectForRepaint() const { return clippedOverflowRect(nullptr, visibleRectContextForRepaint()); }
     LayoutRect absoluteClippedOverflowRectForSpatialNavigation() const { return clippedOverflowRect(nullptr, visibleRectContextForSpatialNavigation()); }
     LayoutRect absoluteClippedOverflowRectForRenderTreeAsText() const { return clippedOverflowRect(nullptr, visibleRectContextForRenderTreeAsText()); }
+
     WEBCORE_EXPORT IntRect pixelSnappedAbsoluteClippedOverflowRect() const;
+
     virtual LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const;
     LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const { return clippedOverflowRect(repaintContainer, visibleRectContextForRepaint()); }
     virtual LayoutRect rectWithOutlineForRepaint(const RenderLayerModelObject* repaintContainer, LayoutUnit outlineWidth) const;
-    virtual LayoutRect outlineBoundsForRepaint(const RenderLayerModelObject* /*repaintContainer*/, const RenderGeometryMap* = nullptr) const { return LayoutRect(); }
+    virtual LayoutRect outlineBoundsForRepaint(const RenderLayerModelObject* /*repaintContainer*/, const RenderGeometryMap* = nullptr) const { return { }; }
 
-    // Given a rect in the object's coordinate space, compute a rect suitable for repainting
-    // that rect in view coordinates.
-    LayoutRect computeAbsoluteRepaintRect(const LayoutRect& rect) const { return computeRect(rect, nullptr, visibleRectContextForRepaint()); }
     // Given a rect in the object's coordinate space, compute a rect  in the coordinate space
     // of repaintContainer suitable for the given VisibleRectContext.
-    LayoutRect computeRect(const LayoutRect&, const RenderLayerModelObject* repaintContainer, VisibleRectContext) const;
-    virtual LayoutRect computeRectForRepaint(const LayoutRect& rect, const RenderLayerModelObject* repaintContainer) const { return computeRect(rect, repaintContainer, visibleRectContextForRepaint()); }
+    RepaintRects computeRects(const RepaintRects&, const RenderLayerModelObject* repaintContainer, VisibleRectContext) const;
+
+    LayoutRect computeRectForRepaint(const LayoutRect& rect, const RenderLayerModelObject* repaintContainer) const { return computeRects({ rect }, repaintContainer, visibleRectContextForRepaint()).clippedOverflowRect; }
     FloatRect computeFloatRectForRepaint(const FloatRect&, const RenderLayerModelObject* repaintContainer) const;
+
+    virtual RepaintRects rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const;
 
     // Given a rect in the object's coordinate space, compute the location in container space where this rect is visible,
     // when clipping and scrolling as specified by the context. When using edge-inclusive intersection, return std::nullopt
     // rather than an empty rect if the rect is completely clipped out in container space.
-    virtual std::optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* repaintContainer, VisibleRectContext) const;
+    virtual std::optional<RepaintRects> computeVisibleRectsInContainer(const RepaintRects&, const RenderLayerModelObject* repaintContainer, VisibleRectContext) const;
     virtual std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* repaintContainer, VisibleRectContext) const;
 
     WEBCORE_EXPORT bool hasNonEmptyVisibleRectRespectingParentFrames() const;
@@ -883,10 +986,10 @@ public:
     void destroy();
 
     // Virtual function helpers for the deprecated Flexible Box Layout (display: -webkit-box).
-    virtual bool isRenderDeprecatedFlexibleBox() const { return false; }
+    bool isRenderDeprecatedFlexibleBox() const { return m_type == RenderObject::Type::DeprecatedFlexibleBox; }
     // Virtual function helper for the new FlexibleBox Layout (display: -webkit-flex).
-    inline bool isRenderFlexibleBox() const; // Defined in RenderElement.h.
-    inline bool isFlexibleBoxIncludingDeprecated() const; // Defined in RenderElement.h.
+    inline bool isRenderFlexibleBox() const { return m_renderElementTypeFlags.contains(RenderElementType::RenderFlexibleBoxFlag); }
+    inline bool isFlexibleBoxIncludingDeprecated() const { return isRenderFlexibleBox() || isRenderDeprecatedFlexibleBox(); }
 
     bool isRenderCombineText() const { return type() == Type::CombineText; }
 
@@ -948,8 +1051,6 @@ protected:
     //////////////////////////////////////////
     Node& nodeForNonAnonymous() const { ASSERT(!isAnonymous()); return m_node.get(); }
 
-    void adjustRectForOutlineAndShadow(LayoutRect&) const;
-
     virtual void willBeDestroyed();
 
     void setNeedsPositionedMovementLayoutBit(bool b) { m_bitfields.setNeedsPositionedMovementLayout(b); }
@@ -970,6 +1071,8 @@ protected:
     void issueRepaint(std::optional<LayoutRect> partialRepaintRect = std::nullopt, ClipRepaintToLayer = ClipRepaintToLayer::No, ForceRepaint = ForceRepaint::No, std::optional<LayoutBoxExtent> additionalRepaintOutsets = std::nullopt) const;
 
 private:
+    virtual RepaintRects localRectsForRepaint(RepaintOutlineBounds) const;
+
     void addAbsoluteRectForLayer(LayoutRect& result);
     void setLayerNeedsFullRepaint();
     void setLayerNeedsFullRepaintForPositionedMovementLayout();
@@ -1119,9 +1222,10 @@ private:
 
     CheckedRef<Node> m_node;
 
-    CheckedPtr<RenderElement> m_parent;
-    CheckedPtr<RenderObject> m_previous;
-    PackedCheckedPtr<RenderObject> m_next;
+    SingleThreadWeakPtr<RenderElement> m_parent;
+    SingleThreadPackedWeakPtr<RenderObject> m_previous;
+    OptionSet<RenderElementType> m_renderElementTypeFlags;
+    SingleThreadPackedWeakPtr<RenderObject> m_next;
     Type m_type;
 
     CheckedPtr<Layout::Box> m_layoutBox;
@@ -1144,7 +1248,7 @@ private:
 
         // From RenderElement
         std::unique_ptr<ReferencedSVGResources> referencedSVGResources;
-        WeakPtr<RenderBlockFlow> backdropRenderer;
+        SingleThreadWeakPtr<RenderBlockFlow> backdropRenderer;
 
         // From RenderBox
         RefPtr<ControlPart> controlPart;
@@ -1446,15 +1550,3 @@ void showNodeTree(const WebCore::RenderObject*);
 void showLineTree(const WebCore::RenderObject*);
 void showRenderTree(const WebCore::RenderObject*);
 #endif
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::RepaintRectCalculation> {
-    using values = EnumValues<
-        WebCore::RepaintRectCalculation,
-        WebCore::RepaintRectCalculation::Fast,
-        WebCore::RepaintRectCalculation::Accurate
-    >;
-};
-
-} // namespace WTF

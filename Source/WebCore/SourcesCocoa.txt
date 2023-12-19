@@ -253,6 +253,7 @@ page/scrolling/mac/ScrollingStateScrollingNodeMac.mm
 page/scrolling/mac/ScrollingTreeFrameScrollingNodeMac.mm
 page/scrolling/mac/ScrollingTreeMac.mm
 page/scrolling/mac/ScrollingTreeOverflowScrollingNodeMac.mm
+page/scrolling/mac/ScrollingTreePluginScrollingNodeMac.mm
 page/scrolling/mac/ScrollingTreeScrollingNodeDelegateMac.mm
 platform/VideoFrame.mm
 platform/animation/AcceleratedEffectStack.mm @no-unify
@@ -412,6 +413,7 @@ platform/graphics/cg/PathCG.cpp
 platform/graphics/cg/PatternCG.cpp
 platform/graphics/cg/TransformationMatrixCG.cpp
 platform/graphics/cg/UTIRegistry.cpp
+platform/graphics/cocoa/AV1UtilitiesCocoa.mm @no-unify
 platform/graphics/cocoa/AudioTrackPrivateWebM.cpp
 platform/graphics/cocoa/CMUtilities.mm @no-unify
 platform/graphics/cocoa/ColorCocoa.mm
@@ -585,6 +587,7 @@ platform/mac/RevealUtilities.mm
 platform/mac/ScrollAnimatorMac.mm @no-unify
 platform/mac/ScrollAnimationRubberBand.mm
 platform/mac/ScrollViewMac.mm
+platform/mac/ScrollbarMac.mm @no-unify
 platform/mac/ScrollbarsControllerMac.mm @no-unify
 platform/mac/ScrollbarThemeMac.mm @no-unify
 platform/mac/ScrollingEffectsController.mm
@@ -681,6 +684,7 @@ platform/text/cocoa/LocalizedDateCache.mm
 platform/text/mac/TextBoundaries.mm
 platform/text/mac/TextCheckingMac.mm
 platform/xr/cocoa/PlatformXRCocoa.mm
+platform/xr/cocoa/PlatformXRPose.cpp
 platform/text/mac/CoreTextChineseCompositionEngine.cpp
 platform/text/mac/CoreTextCompositionEngine.cpp
 rendering/AttachmentLayout.mm

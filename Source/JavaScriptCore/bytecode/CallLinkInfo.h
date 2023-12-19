@@ -459,7 +459,7 @@ struct UnlinkedCallLinkInfo {
     }
 };
 
-struct BaselineUnlinkedCallLinkInfo : public UnlinkedCallLinkInfo {
+struct BaselineUnlinkedCallLinkInfo : public JSC::UnlinkedCallLinkInfo {
     BytecodeIndex bytecodeIndex; // Currently, only used by baseline, so this can trivially produce a CodeOrigin.
 
 #if ENABLE(JIT)
@@ -527,6 +527,7 @@ public:
     void initializeFromDFGUnlinkedCallLinkInfo(VM&, const DFG::UnlinkedCallLinkInfo&);
 
 private:
+    void initializeDirectCallRepatch(CCallHelpers&);
     MacroAssembler::JumpList emitFastPath(CCallHelpers&, GPRReg calleeGPR, GPRReg callLinkInfoGPR) WARN_UNUSED_RETURN;
     MacroAssembler::JumpList emitTailCallFastPath(CCallHelpers&, GPRReg calleeGPR, GPRReg callLinkInfoGPR, ScopedLambda<void()>&& prepareForTailCall) WARN_UNUSED_RETURN;
 

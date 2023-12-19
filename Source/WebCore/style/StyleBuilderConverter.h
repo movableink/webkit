@@ -63,6 +63,7 @@
 #include "SVGPathElement.h"
 #include "SVGRenderStyle.h"
 #include "SVGURIReference.h"
+#include "ScrollAxis.h"
 #include "ScrollbarColor.h"
 #include "ScrollbarGutter.h"
 #include "Settings.h"
@@ -74,6 +75,7 @@
 #include "TextSpacing.h"
 #include "TouchAction.h"
 #include "TransformFunctions.h"
+#include "ViewTimeline.h"
 #include "WillChangeData.h"
 
 namespace WebCore {
@@ -88,10 +90,10 @@ public:
     static Length convertLengthSizing(const BuilderState&, const CSSValue&);
     static Length convertLengthMaxSizing(const BuilderState&, const CSSValue&);
     static Length convertLengthAllowingNumber(const BuilderState&, const CSSValue&); // Assumes unit is 'px' if input is a number.
+    static Length convertTextLengthOrNormal(BuilderState&, const CSSValue&); // Converts length by text zoom factor, normal to zero
     static TabSize convertTabSize(const BuilderState&, const CSSValue&);
     template<typename T> static T convertComputedLength(BuilderState&, const CSSValue&);
     template<typename T> static T convertLineWidth(BuilderState&, const CSSValue&);
-    static float convertSpacing(BuilderState&, const CSSValue&);
     static LengthSize convertRadius(BuilderState&, const CSSValue&);
     static LengthPoint convertPosition(BuilderState&, const CSSValue&);
     static LengthPoint convertPositionOrAuto(BuilderState&, const CSSValue&);
@@ -144,7 +146,6 @@ public:
     static GridAutoFlow convertGridAutoFlow(BuilderState&, const CSSValue&);
     static Vector<StyleContentAlignmentData> convertContentAlignmentDataList(BuilderState&, const CSSValue&);
     static MasonryAutoFlow convertMasonryAutoFlow(BuilderState&, const CSSValue&);
-    static std::optional<Length> convertWordSpacing(BuilderState&, const CSSValue&);
     static std::optional<float> convertPerspective(BuilderState&, const CSSValue&);
     static std::optional<Length> convertMarqueeIncrement(BuilderState&, const CSSValue&);
     static std::optional<FilterOperations> convertFilterOperations(BuilderState&, const CSSValue&);
@@ -208,8 +209,14 @@ public:
     static TextAutospace convertTextAutospace(BuilderState&, const CSSValue&);
 
     static std::optional<Length> convertBlockStepSize(BuilderState&, const CSSValue&);
+
+    static std::optional<Style::ScopedName> convertViewTransitionName(BuilderState&, const CSSValue&);
     static RefPtr<WillChangeData> convertWillChange(BuilderState&, const CSSValue&);
     
+    static Vector<AtomString> convertScrollTimelineName(BuilderState&, const CSSValue&);
+    static Vector<ScrollAxis> convertScrollTimelineAxis(BuilderState&, const CSSValue&);
+    static Vector<ViewTimelineInsets> convertViewTimelineInset(BuilderState&, const CSSValue&);
+
 private:
     friend class BuilderCustom;
 
@@ -369,18 +376,6 @@ inline T BuilderConverter::convertLineWidth(BuilderState& builderState, const CS
         ASSERT_NOT_REACHED();
         return 0;
     }
-}
-
-inline float BuilderConverter::convertSpacing(BuilderState& builderState, const CSSValue& value)
-{
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
-    if (primitiveValue.valueID() == CSSValueNormal)
-        return 0.f;
-
-    CSSToLengthConversionData conversionData = builderState.useSVGZoomRulesForLength() ?
-        builderState.cssToLengthConversionData().copyWithAdjustedZoom(1.0f)
-        : builderState.cssToLengthConversionData();
-    return primitiveValue.computeLength<float>(conversionData);
 }
 
 inline Length BuilderConverter::convertToRadiusLength(const CSSToLengthConversionData& conversionData, const CSSPrimitiveValue& value)
@@ -1141,6 +1136,9 @@ inline GridTrackSize BuilderConverter::createGridTrackSize(const CSSValue& value
     if (is<CSSPrimitiveValue>(value))
         return GridTrackSize(createGridTrackBreadth(downcast<CSSPrimitiveValue>(value), builderState));
 
+    if (!is<CSSFunctionValue>(value))
+        return GridTrackSize(GridLength(0));
+
     const auto& function = downcast<CSSFunctionValue>(value);
 
     if (function.length() == 1)
@@ -1398,11 +1396,9 @@ inline GridAutoFlow BuilderConverter::convertGridAutoFlow(BuilderState&, const C
 inline Vector<StyleContentAlignmentData> BuilderConverter::convertContentAlignmentDataList(BuilderState& builder, const CSSValue& value)
 {
     auto& list = downcast<CSSValueList>(value);
-    Vector<StyleContentAlignmentData> tracks;
-    tracks.reserveInitialCapacity(list.length());
-    for (auto& value : list)
-        tracks.append(convertContentAlignmentData(builder, downcast<CSSContentDistributionValue>(value)));
-    return tracks;
+    return WTF::map(list, [&](auto& value) {
+        return convertContentAlignmentData(builder, downcast<CSSContentDistributionValue>(value));
+    });
 }
 
 inline MasonryAutoFlow BuilderConverter::convertMasonryAutoFlow(BuilderState&, const CSSValue& value)
@@ -1459,20 +1455,25 @@ inline CSSToLengthConversionData BuilderConverter::csstoLengthConversionDataWith
     return builderState.cssToLengthConversionData().copyWithAdjustedZoom(zoom);
 }
 
-inline std::optional<Length> BuilderConverter::convertWordSpacing(BuilderState& builderState, const CSSValue& value)
+inline Length BuilderConverter::convertTextLengthOrNormal(BuilderState& builderState, const CSSValue& value)
 {
-    std::optional<Length> wordSpacing;
     auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
-    if (primitiveValue.valueID() == CSSValueNormal)
-        wordSpacing = RenderStyle::initialWordSpacing();
-    else if (primitiveValue.isLength())
-        wordSpacing = primitiveValue.computeLength<Length>(csstoLengthConversionDataWithTextZoomFactor(builderState));
-    else if (primitiveValue.isPercentage())
-        wordSpacing = Length(clampTo<double>(primitiveValue.doubleValue(), minValueForCssLength, maxValueForCssLength), LengthType::Percent);
-    else if (primitiveValue.isNumber())
-        wordSpacing = Length(primitiveValue.doubleValue(), LengthType::Fixed);
+    auto conversionData = (builderState.useSVGZoomRulesForLength())
+        ? builderState.cssToLengthConversionData().copyWithAdjustedZoom(1.0f)
+        : csstoLengthConversionDataWithTextZoomFactor(builderState);
 
-    return wordSpacing;
+    if (primitiveValue.valueID() == CSSValueNormal)
+        return RenderStyle::zeroLength();
+    if (primitiveValue.isLength())
+        return primitiveValue.computeLength<Length>(conversionData);
+    if (primitiveValue.isPercentage())
+        return Length(clampTo<double>(primitiveValue.doubleValue(), minValueForCssLength, maxValueForCssLength), LengthType::Percent);
+    if (primitiveValue.isCalculatedPercentageWithLength())
+        return Length(primitiveValue.cssCalcValue()->createCalculationValue(conversionData));
+    if (primitiveValue.isNumber())
+        return Length(primitiveValue.doubleValue(), LengthType::Fixed);
+    ASSERT_NOT_REACHED();
+    return RenderStyle::zeroLength();
 }
 
 inline std::optional<float> BuilderConverter::convertPerspective(BuilderState& builderState, const CSSValue& value)
@@ -1628,7 +1629,9 @@ inline FontSizeAdjust BuilderConverter::convertFontSizeAdjust(BuilderState&, con
         return { defaultMetric, FontSizeAdjust::ValueType::FromFont, std::nullopt };
     }
 
-    ASSERT(value.isPair());
+    if (!is<CSSValuePair>(value))
+        return FontCascadeDescription::initialFontSizeAdjust();
+
     const auto& pair = downcast<CSSValuePair>(value);
 
     auto metric = fromCSSValueID<FontSizeAdjust::Metric>(downcast<CSSPrimitiveValue>(pair.first()).valueID());
@@ -2028,6 +2031,17 @@ inline OptionSet<Containment> BuilderConverter::convertContain(BuilderState&, co
     return containment;
 }
 
+inline std::optional<Style::ScopedName> BuilderConverter::convertViewTransitionName(BuilderState& state, const CSSValue& value)
+{
+    if (!is<CSSPrimitiveValue>(value))
+        return { };
+
+    if (value.valueID() == CSSValueNone)
+        return std::nullopt;
+
+    return Style::ScopedName { AtomString { downcast<CSSPrimitiveValue>(value).stringValue() }, state.styleScopeOrdinal() };
+}
+
 inline RefPtr<WillChangeData> BuilderConverter::convertWillChange(BuilderState& builderState, const CSSValue& value)
 {
     if (value.valueID() == CSSValueAuto)
@@ -2060,6 +2074,49 @@ inline RefPtr<WillChangeData> BuilderConverter::convertWillChange(BuilderState& 
     } else
         processSingleValue(value);
     return willChange;
+}
+
+inline Vector<AtomString> BuilderConverter::convertScrollTimelineName(BuilderState&, const CSSValue& value)
+{
+    if (is<CSSPrimitiveValue>(value)) {
+        if (value.valueID() == CSSValueNone)
+            return { };
+        return { AtomString { downcast<CSSPrimitiveValue>(value).stringValue() } };
+    }
+
+    if (!is<CSSValueList>(value))
+        return { };
+
+    return WTF::map(downcast<CSSValueList>(value), [&](auto& item) {
+        return AtomString { downcast<CSSPrimitiveValue>(item).stringValue() };
+    });
+}
+
+inline Vector<ScrollAxis> BuilderConverter::convertScrollTimelineAxis(BuilderState&, const CSSValue& value)
+{
+    if (is<CSSPrimitiveValue>(value))
+        return { fromCSSValueID<ScrollAxis>(value.valueID()) };
+
+    ASSERT(is<CSSValueList>(value));
+    return WTF::map(downcast<CSSValueList>(value), [&](auto& item) {
+        return fromCSSValueID<ScrollAxis>(item.valueID());
+    });
+}
+
+inline Vector<ViewTimelineInsets> BuilderConverter::convertViewTimelineInset(BuilderState& state, const CSSValue& value)
+{
+    // While parsing, consumeViewTimelineInset() and consumeViewTimelineShorthand() yield a CSSValueList exclusively.
+    if (!is<CSSValueList>(value))
+        return { };
+
+    return WTF::map(downcast<CSSValueList>(value), [&](auto& item) -> ViewTimelineInsets {
+        // Each item is either a single value or a CSSValuePair.
+        if (auto* pair = dynamicDowncast<CSSValuePair>(item))
+            return { convertLengthOrAuto(state, pair->first()), convertLengthOrAuto(state, pair->second()) };
+        if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(item))
+            return { convertLengthOrAuto(state, *primitiveValue), std::nullopt };
+        return { };
+    });
 }
 
 } // namespace Style

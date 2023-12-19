@@ -29,30 +29,73 @@
 #if PLATFORM(COCOA)
 
 #import "ArgumentCodersCocoa.h"
+#import "CoreIPCTypes.h"
+#import "GeneratedWebKitSecureCoding.h"
 #import <wtf/cocoa/TypeCastsCocoa.h>
 
 namespace WebKit {
 
-static CoreIPCNSCFObject::ObjectValue valueFromID(id object)
+// This method helps us bridge the gap between classic NSSecureCoding types and new WebKit coding types
+// as we get more and more support in various classes.
+// The eventual goal is to remove the CoreIPCSecureCoding wrapper altogether, but for now this runtime
+// fork in behavior is necessary.
+template <typename WebKitSecureCodingWrapper, typename ObjCType> ObjectValue secureCodingValueFromID(ObjCType object)
+{
+    if (CoreIPCSecureCoding::conformsToWebKitSecureCoding(object))
+        return WebKitSecureCodingWrapper(object);
+    if (CoreIPCSecureCoding::conformsToSecureCoding(object))
+        return CoreIPCSecureCoding(object);
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+static ObjectValue valueFromID(id object)
 {
     if (!object)
         return nullptr;
 
     switch (IPC::typeFromObject(object)) {
+#if USE(AVFOUNDATION)
+    case IPC::NSType::AVOutputContext:
+        return CoreIPCAVOutputContext((AVOutputContext *)object);
+#endif
     case IPC::NSType::Array:
         return CoreIPCArray((NSArray *)object);
+#if USE(PASSKIT)
+    case IPC::NSType::CNPhoneNumber:
+        return CoreIPCCNPhoneNumber((CNPhoneNumber *)object);
+    case IPC::NSType::CNPostalAddress:
+        return CoreIPCCNPostalAddress((CNPostalAddress *)object);
+    case IPC::NSType::PKContact:
+        return CoreIPCPKContact((PKContact *)object);
+#endif
     case IPC::NSType::Color:
         return CoreIPCColor((WebCore::CocoaColor *)object);
+#if ENABLE(DATA_DETECTION)
+#if PLATFORM(MAC)
+    case IPC::NSType::DDActionContext:
+        return secureCodingValueFromID<CoreIPCDDActionContext>((DDActionContext *)object);
+#endif
+    case IPC::NSType::DDScannerResult:
+        return secureCodingValueFromID<CoreIPCDDScannerResult>((DDScannerResult *)object);
+#endif
     case IPC::NSType::Data:
         return CoreIPCData((NSData *)object);
     case IPC::NSType::Date:
         return CoreIPCDate(bridge_cast((NSDate *)object));
     case IPC::NSType::Dictionary:
         return CoreIPCDictionary((NSDictionary *)object);
+    case IPC::NSType::Error:
+        return CoreIPCError((NSError *)object);
+    case IPC::NSType::Locale:
+        return CoreIPCLocale((NSLocale *)object);
     case IPC::NSType::Font:
         return CoreIPCFont((WebCore::CocoaFont *)object);
+    case IPC::NSType::NSValue:
+        return CoreIPCNSValue((NSValue *)object);
     case IPC::NSType::Number:
         return CoreIPCNumber(bridge_cast((NSNumber *)object));
+    case IPC::NSType::PersonNameComponents:
+        return CoreIPCPersonNameComponents((NSPersonNameComponents *)object);
     case IPC::NSType::SecureCoding:
         return CoreIPCSecureCoding((NSObject<NSSecureCoding> *)object);
     case IPC::NSType::String:
@@ -67,15 +110,20 @@ static CoreIPCNSCFObject::ObjectValue valueFromID(id object)
 }
 
 CoreIPCNSCFObject::CoreIPCNSCFObject(id object)
-    : m_value(valueFromID(object))
+    : m_value(makeUniqueRefWithoutFastMallocCheck<ObjectValue>(valueFromID(object)))
 {
 }
 
-RetainPtr<id> CoreIPCNSCFObject::toID()
+CoreIPCNSCFObject::CoreIPCNSCFObject(UniqueRef<ObjectValue>&& value)
+    : m_value(WTFMove(value))
+{
+}
+
+RetainPtr<id> CoreIPCNSCFObject::toID() const
 {
     RetainPtr<id> result;
 
-    WTF::switchOn(m_value, [&](auto& object) {
+    WTF::switchOn(*m_value, [&](auto& object) {
         result = object.toID();
     }, [](std::nullptr_t) {
         // result should be nil, which is the default value initialized above.
@@ -84,6 +132,37 @@ RetainPtr<id> CoreIPCNSCFObject::toID()
     return result;
 }
 
+bool CoreIPCNSCFObject::valueIsAllowed(IPC::Decoder& decoder, ObjectValue& value)
+{
+    // The Decoder always has a set of allowedClasses,
+    // but we only check that set when considering SecureCoding classes
+    Class objectClass;
+    WTF::switchOn(value, [&](CoreIPCSecureCoding& object) {
+        objectClass = object.objectClass();
+    }, [&](auto& object) {
+        objectClass = nullptr;
+    });
+
+    return !objectClass || decoder.allowedClasses().contains(objectClass);
+}
+
 } // namespace WebKit
+
+namespace IPC {
+
+void ArgumentCoder<UniqueRef<WebKit::ObjectValue>>::encode(Encoder& encoder, const UniqueRef<WebKit::ObjectValue>& object)
+{
+    encoder << *object;
+}
+
+std::optional<UniqueRef<WebKit::ObjectValue>> ArgumentCoder<UniqueRef<WebKit::ObjectValue>>::decode(Decoder& decoder)
+{
+    auto object = decoder.decode<WebKit::ObjectValue>();
+    if (!object)
+        return std::nullopt;
+    return makeUniqueRefWithoutFastMallocCheck<WebKit::ObjectValue>(WTFMove(*object));
+}
+
+} // namespace IPC
 
 #endif // PLATFORM(COCOA)

@@ -22,11 +22,11 @@
 
 #include "FilterOperation.h"
 #include "LegacyRenderSVGResourceClipperInlines.h"
+#include "LegacyRenderSVGResourceFilterInlines.h"
 #include "LegacyRenderSVGResourceMarkerInlines.h"
 #include "LegacyRenderSVGResourceMaskerInlines.h"
 #include "LegacyRenderSVGRoot.h"
 #include "PathOperation.h"
-#include "RenderSVGResourceFilterInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGFilterElement.h"
 #include "SVGGradientElement.h"
@@ -232,12 +232,8 @@ std::unique_ptr<SVGResources> SVGResources::buildCachedResources(const RenderEle
             AtomString id(clipPath.fragment());
             if (auto* clipper = getRenderSVGResourceById<LegacyRenderSVGResourceClipper>(treeScope, id))
                 ensureResources(foundResources).setClipper(clipper);
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-            else if (!renderer.document().settings().layerBasedSVGEngineEnabled())
+            else
                 treeScope.addPendingSVGResource(id, element);
-#else
-            treeScope.addPendingSVGResource(id, element);
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)
         }
 
         if (style.hasFilter()) {
@@ -247,7 +243,7 @@ std::unique_ptr<SVGResources> SVGResources::buildCachedResources(const RenderEle
                 if (filterOperation.type() == FilterOperation::Type::Reference) {
                     const auto& referenceFilterOperation = downcast<ReferenceFilterOperation>(filterOperation);
                     AtomString id = SVGURIReference::fragmentIdentifierFromIRIString(referenceFilterOperation.url(), element.document());
-                    if (auto* filter = getRenderSVGResourceById<RenderSVGResourceFilter>(treeScope, id))
+                    if (auto* filter = getRenderSVGResourceById<LegacyRenderSVGResourceFilter>(treeScope, id))
                         ensureResources(foundResources).setFilter(filter);
                     else
                         treeScope.addPendingSVGResource(id, element);
@@ -463,7 +459,7 @@ bool SVGResources::resourceDestroyed(LegacyRenderSVGResourceContainer& resource)
     return foundResources;
 }
 
-void SVGResources::buildSetOfResources(WeakHashSet<LegacyRenderSVGResourceContainer>& set)
+void SVGResources::buildSetOfResources(SingleThreadWeakHashSet<LegacyRenderSVGResourceContainer>& set)
 {
     if (isEmpty())
         return;
@@ -521,7 +517,7 @@ void SVGResources::resetClipper()
     m_clipperFilterMaskerData->clipper = nullptr;
 }
 
-bool SVGResources::setFilter(RenderSVGResourceFilter* filter)
+bool SVGResources::setFilter(LegacyRenderSVGResourceFilter* filter)
 {
     ASSERT(filter);
     ASSERT(filter->resourceType() == FilterResourceType);

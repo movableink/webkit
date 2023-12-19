@@ -57,6 +57,7 @@
 #import <wtf/Deque.h>
 #import <wtf/FileSystem.h>
 #import <wtf/MainThread.h>
+#import <wtf/NativePromise.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/WeakPtr.h>
 
@@ -215,9 +216,9 @@ public:
 private:
     MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::AVFoundationMSE; };
 
-    std::unique_ptr<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer* player) const final
+    Ref<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer* player) const final
     {
-        return makeUnique<MediaPlayerPrivateMediaSourceAVFObjC>(player);
+        return adoptRef(*new MediaPlayerPrivateMediaSourceAVFObjC(player));
     }
 
     void getSupportedTypes(HashSet<String>& types) const final
@@ -476,7 +477,7 @@ MediaTime MediaPlayerPrivateMediaSourceAVFObjC::currentMediaTime() const
 
 bool MediaPlayerPrivateMediaSourceAVFObjC::currentMediaTimeMayProgress() const
 {
-    return m_mediaSourcePrivate ? m_mediaSourcePrivate->hasFutureTime(currentMediaTime(), durationMediaTime(), buffered()) : false;
+    return m_mediaSourcePrivate ? m_mediaSourcePrivate->hasFutureTime(currentMediaTime()) : false;
 }
 
 MediaTime MediaPlayerPrivateMediaSourceAVFObjC::clampTimeToLastSeekTime(const MediaTime& time) const
@@ -553,13 +554,14 @@ void MediaPlayerPrivateMediaSourceAVFObjC::seekInternal()
     m_lastSeekTime = pendingSeek.time;
 
     m_seekState = Seeking;
-    m_mediaSourcePrivate->waitForTarget(pendingSeek, [this, weakThis = WeakPtr { this }] (const MediaTime& seekedTime) {
+    m_mediaSourcePrivate->waitForTarget(pendingSeek)->whenSettled(RunLoop::current(), [this, weakThis = WeakPtr { *this }] (auto&& result) mutable {
         if (!weakThis)
             return;
-        if (m_seekState != Seeking || seekedTime.isInvalid()) {
+        if (m_seekState != Seeking || !result) {
             ALWAYS_LOG(LOGIDENTIFIER, "seek Interrupted, aborting");
             return;
         }
+        auto seekedTime = *result;
         m_lastSeekTime = seekedTime;
 
         ALWAYS_LOG(LOGIDENTIFIER);
@@ -578,10 +580,9 @@ void MediaPlayerPrivateMediaSourceAVFObjC::seekInternal()
         m_mediaSourcePrivate->willSeek();
         [m_synchronizer setRate:0 time:PAL::toCMTime(seekedTime)];
 
-        m_mediaSourcePrivate->seekToTime(seekedTime, [this, weakThis] {
-            if (!weakThis)
-                return;
-            maybeCompleteSeek();
+        m_mediaSourcePrivate->seekToTime(seekedTime)->whenSettled(RunLoop::current(), [this, weakThis = WTFMove(weakThis)]() mutable {
+            if (weakThis)
+                maybeCompleteSeek();
         });
     });
 }
@@ -920,6 +921,7 @@ void MediaPlayerPrivateMediaSourceAVFObjC::ensureLayer()
 #ifndef NDEBUG
     [m_sampleBufferDisplayLayer setName:@"MediaPlayerPrivateMediaSource AVSampleBufferDisplayLayer"];
 #endif
+    [m_sampleBufferDisplayLayer setVideoGravity: (m_shouldMaintainAspectRatio ? AVLayerVideoGravityResizeAspect : AVLayerVideoGravityResize)];
 
     if (!m_sampleBufferDisplayLayer) {
         ERROR_LOG(LOGIDENTIFIER, "Failed to create AVSampleBufferDisplayLayer");
@@ -1132,7 +1134,7 @@ void MediaPlayerPrivateMediaSourceAVFObjC::sizeWillChangeAtTime(const MediaTime&
 {
     auto weakThis = m_sizeChangeObserverWeakPtrFactory.createWeakPtr(*this);
     NSArray* times = @[[NSValue valueWithCMTime:PAL::toCMTime(time)]];
-    RetainPtr<id> observer = [m_synchronizer addBoundaryTimeObserverForTimes:times queue:dispatch_get_main_queue() usingBlock:[this, weakThis, size] {
+    RetainPtr<id> observer = [m_synchronizer addBoundaryTimeObserverForTimes:times queue:dispatch_get_main_queue() usingBlock:[this, weakThis = WTFMove(weakThis), size] {
         if (!weakThis)
             return;
 
@@ -1555,6 +1557,24 @@ void MediaPlayerPrivateMediaSourceAVFObjC::playerContentBoxRectChanged(const Lay
 WTFLogChannel& MediaPlayerPrivateMediaSourceAVFObjC::logChannel() const
 {
     return LogMediaSource;
+}
+
+void MediaPlayerPrivateMediaSourceAVFObjC::setShouldMaintainAspectRatio(bool shouldMaintainAspectRatio)
+{
+    if (m_shouldMaintainAspectRatio == shouldMaintainAspectRatio)
+        return;
+
+    m_shouldMaintainAspectRatio = shouldMaintainAspectRatio;
+    if (!m_sampleBufferDisplayLayer)
+        return;
+
+    [CATransaction begin];
+    [CATransaction setAnimationDuration:0];
+    [CATransaction setDisableActions:YES];
+
+    [m_sampleBufferDisplayLayer setVideoGravity: (m_shouldMaintainAspectRatio ? AVLayerVideoGravityResizeAspect : AVLayerVideoGravityResize)];
+
+    [CATransaction commit];
 }
 
 }

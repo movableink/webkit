@@ -68,6 +68,7 @@ enum class AXPropertyName : uint16_t {
     BrailleLabel,
     BrailleRoleDescription,
     ButtonState,
+    CanBeMultilineTextField,
     CanSetFocusAttribute,
     CanSetSelectedAttribute,
     CanSetSelectedChildren,
@@ -125,6 +126,7 @@ enum class AXPropertyName : uint16_t {
     IsExposable,
     IsExposedTableCell,
     IsFieldset,
+    IsFileUploadButton,
     IsIndeterminate,
     IsInlineText,
     IsInputImage,
@@ -145,7 +147,10 @@ enum class AXPropertyName : uint16_t {
     IsMathTableCell,
     IsMathMultiscript,
     IsMathToken,
+    IsMeter,
     IsMultiSelectable,
+    IsNonNativeTextControl,
+    IsPlugin,
     IsPressed,
     IsRequired,
     IsRowHeader,
@@ -227,6 +232,9 @@ enum class AXPropertyName : uint16_t {
     SupportsSetSize,
     TextContent,
     TextInputMarkedTextMarkerRange,
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    TextRuns,
+#endif
     Title,
     TitleAttributeValue,
     TitleUIElement,
@@ -239,10 +247,15 @@ enum class AXPropertyName : uint16_t {
     VisibleRows,
 };
 
+using AXPropertyNameSet = HashSet<AXPropertyName, IntHash<AXPropertyName>, WTF::StrongEnumHashTraits<AXPropertyName>>;
+
 // If this type is modified, the switchOn statment in AXIsolatedObject::setProperty must be updated as well.
 using AXPropertyValueVariant = std::variant<std::nullptr_t, AXID, String, bool, int, unsigned, double, float, uint64_t, AccessibilityButtonState, Color, URL, LayoutRect, FloatPoint, FloatRect, IntPoint, IntRect, std::pair<unsigned, unsigned>, Vector<AccessibilityText>, Vector<AXID>, Vector<std::pair<AXID, AXID>>, Vector<String>, Path, OptionSet<AXAncestorFlag>, InsideLink, Vector<Vector<AXID>>, CharacterRange, std::pair<AXID, CharacterRange>
 #if PLATFORM(COCOA)
     , RetainPtr<NSAttributedString>
+#endif
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    , Vector<AXTextRun>
 #endif
 >;
 using AXPropertyMap = HashMap<AXPropertyName, AXPropertyValueVariant, IntHash<AXPropertyName>, WTF::StrongEnumHashTraits<AXPropertyName>>;
@@ -250,6 +263,36 @@ using AXPropertyMap = HashMap<AXPropertyName, AXPropertyValueVariant, IntHash<AX
 struct AXPropertyChange {
     AXID axID; // ID of the object whose properties changed.
     AXPropertyMap properties; // Changed properties.
+};
+
+struct NodeUpdateOptions {
+    AXPropertyNameSet properties;
+    bool shouldUpdateNode { false };
+    bool shouldUpdateChildren { false };
+
+    NodeUpdateOptions(const AXPropertyNameSet& propertyNames, bool shouldUpdateNode, bool shouldUpdateChildren)
+        : properties(propertyNames)
+        , shouldUpdateNode(shouldUpdateNode)
+        , shouldUpdateChildren(shouldUpdateChildren)
+    { }
+
+    NodeUpdateOptions(const AXPropertyNameSet& propertyNames)
+        : properties(propertyNames)
+    { }
+
+    NodeUpdateOptions(AXPropertyName propertyName)
+        : properties({ propertyName })
+    { }
+
+    static NodeUpdateOptions nodeUpdate()
+    {
+        return { { }, true, false };
+    }
+
+    static NodeUpdateOptions childrenUpdate()
+    {
+        return { { }, false, true };
+    }
 };
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXIsolatedTree);
@@ -279,7 +322,7 @@ public:
     WEBCORE_EXPORT RefPtr<AXIsolatedObject> focusedNode();
 
     RefPtr<AXIsolatedObject> objectForID(const AXID) const;
-    Vector<RefPtr<AXCoreObject>> objectsForIDs(const Vector<AXID>&);
+    template<typename U> Vector<RefPtr<AXCoreObject>> objectsForIDs(const U&);
 
     void generateSubtree(AccessibilityObject&);
     void labelCreated(AccessibilityObject&);
@@ -288,9 +331,9 @@ public:
     void updateChildren(AccessibilityObject&, ResolveNodeChanges = ResolveNodeChanges::Yes);
     void updateChildrenForObjects(const ListHashSet<RefPtr<AccessibilityObject>>&);
     void updateNodeProperty(AXCoreObject& object, AXPropertyName property) { updateNodeProperties(object, { property }); };
-    void updateNodeProperties(AXCoreObject&, const Vector<AXPropertyName>&);
+    void updateNodeProperties(AXCoreObject&, const AXPropertyNameSet&);
     void updateNodeAndDependentProperties(AccessibilityObject&);
-    void updatePropertiesForSelfAndDescendants(AccessibilityObject&, const Vector<AXPropertyName>&);
+    void updatePropertiesForSelfAndDescendants(AccessibilityObject&, const AXPropertyNameSet&);
     void updateFrame(AXID, IntRect&&);
     void overrideNodeProperties(AXID, AXPropertyMap&&);
 
@@ -310,8 +353,9 @@ public:
     void setFocusedNodeID(AXID);
 
     // Relationships between objects.
-    std::optional<Vector<AXID>> relatedObjectIDsFor(const AXIsolatedObject&, AXRelationType);
+    std::optional<ListHashSet<AXID>> relatedObjectIDsFor(const AXIsolatedObject&, AXRelationType);
     void relationsNeedUpdate(bool needUpdate) { m_relationsNeedUpdate = needUpdate; }
+    void updateRelations(const HashMap<AXID, AXRelations>&);
 
     // Called on AX thread from WebAccessibilityObjectWrapper methods.
     // During layout tests, it is called on the main thread.
@@ -325,6 +369,9 @@ public:
 
     AXTextMarkerRange selectedTextMarkerRange();
     void setSelectedTextMarkerRange(AXTextMarkerRange&&);
+
+    void queueNodeUpdate(AXCoreObject&, const NodeUpdateOptions&);
+    void processQueuedNodeUpdates();
 
 private:
     AXIsolatedTree(AXObjectCache&);
@@ -417,14 +464,17 @@ private:
     std::atomic<double> m_loadingProgress { 0 };
 
     // Relationships between objects.
-    // Accessed only on the AX thread.
-    HashMap<AXID, AXRelations> m_relations;
-    // Set to true by the AXObjectCache on the main thread.
-    // Set to false on the AX thread by relatedObjectIDsFor.
-    std::atomic<bool> m_relationsNeedUpdate { true };
+    HashMap<AXID, AXRelations> m_relations WTF_GUARDED_BY_LOCK(m_changeLogLock);
+    // Set to true by the AXObjectCache and false by AXIsolatedTree.
+    bool m_relationsNeedUpdate { true };
 
     Lock m_changeLogLock;
     AXTextMarkerRange m_selectedTextMarkerRange WTF_GUARDED_BY_LOCK(m_changeLogLock);
+
+    // Queued node updates used for building a new tree snapshot.
+    ListHashSet<AXID> m_needsUpdateChildren;
+    ListHashSet<AXID> m_needsUpdateNode;
+    HashMap<AXID, AXPropertyNameSet> m_needsPropertyUpdates;
 };
 
 inline AXObjectCache* AXIsolatedTree::axObjectCache() const

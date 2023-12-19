@@ -40,6 +40,9 @@
 #import "WKWebViewInternal.h"
 #import "WebExtensionContext.h"
 #import "WebExtensionContextProxyMessages.h"
+#import "WebExtensionMenuItem.h"
+#import "WebExtensionMenuItemContextParameters.h"
+#import "WebExtensionMenuItemParameters.h"
 #import "WebPageProxy.h"
 #import "WebProcessProxy.h"
 #import "_WKWebExtensionActionInternal.h"
@@ -176,6 +179,28 @@ WebExtensionContext* WebExtensionAction::extensionContext() const
     return m_extensionContext.get();
 }
 
+void WebExtensionAction::clearCustomizations()
+{
+    if (!m_customIcons && !m_customPopupPath.isNull() && !m_customLabel.isNull() && !m_customBadgeText.isNull() && !m_customEnabled && !m_blockedResourceCount)
+        return;
+
+    m_customIcons = nil;
+    m_customPopupPath = nullString();
+    m_customLabel = nullString();
+    m_customBadgeText = nullString();
+    m_customEnabled = std::nullopt;
+    m_blockedResourceCount = 0;
+
+    propertiesDidChange();
+}
+
+void WebExtensionAction::clearBlockedResourceCount()
+{
+    m_blockedResourceCount = 0;
+
+    propertiesDidChange();
+}
+
 void WebExtensionAction::propertiesDidChange()
 {
     dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }]() {
@@ -226,6 +251,9 @@ String WebExtensionAction::popupPath() const
 
 void WebExtensionAction::setPopupPath(String path)
 {
+    if (m_customPopupPath == path)
+        return;
+
     m_customPopupPath = path;
 
     propertiesDidChange();
@@ -362,6 +390,9 @@ String WebExtensionAction::label(FallbackWhenEmpty fallback) const
 
 void WebExtensionAction::setLabel(String label)
 {
+    if (m_customLabel == label)
+        return;
+
     m_customLabel = label;
 
     propertiesDidChange();
@@ -375,6 +406,9 @@ String WebExtensionAction::badgeText() const
     if (!m_customBadgeText.isNull())
         return m_customBadgeText;
 
+    if (m_blockedResourceCount)
+        return String::number(m_blockedResourceCount);
+
     if (m_tab)
         return extensionContext()->getAction(m_tab->window().get())->badgeText();
 
@@ -386,7 +420,20 @@ String WebExtensionAction::badgeText() const
 
 void WebExtensionAction::setBadgeText(String badgeText)
 {
+    if (m_customBadgeText == badgeText)
+        return;
+
     m_customBadgeText = badgeText;
+
+    propertiesDidChange();
+}
+
+void WebExtensionAction::incrementBlockedResourceCount(ssize_t amount)
+{
+    m_blockedResourceCount += amount;
+
+    if (m_blockedResourceCount < 0)
+        m_blockedResourceCount = 0;
 
     propertiesDidChange();
 }
@@ -410,9 +457,24 @@ bool WebExtensionAction::isEnabled() const
 
 void WebExtensionAction::setEnabled(std::optional<bool> enabled)
 {
+    if (m_customEnabled == enabled)
+        return;
+
     m_customEnabled = enabled;
 
     propertiesDidChange();
+}
+
+NSArray *WebExtensionAction::platformMenuItems() const
+{
+    if (!extensionContext())
+        return @[ ];
+
+    WebExtensionMenuItemContextParameters contextParameters;
+    contextParameters.types = WebExtensionMenuItemContextType::Action;
+    contextParameters.tabIdentifier = m_tab ? std::optional { m_tab->identifier() } : std::nullopt;
+
+    return WebExtensionMenuItem::matchingPlatformMenuItems(extensionContext()->mainMenuItems(), contextParameters, webExtensionActionMenuItemTopLevelLimit);
 }
 
 } // namespace WebKit

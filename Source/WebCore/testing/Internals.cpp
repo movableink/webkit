@@ -254,7 +254,9 @@
 #include <wtf/Language.h>
 #include <wtf/MemoryPressureHandler.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/NativePromise.h>
 #include <wtf/ProcessID.h>
+#include <wtf/RunLoop.h>
 #include <wtf/URLHelpers.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -480,31 +482,31 @@ void InspectorStubFrontend::sendMessageToFrontend(const String& message)
     frontendAPIDispatcher().dispatchMessageAsync(message);
 }
 
-static bool markerTypeFrom(const String& markerType, DocumentMarker::MarkerType& result)
+static bool markerTypeFrom(const String& markerType, DocumentMarker::Type& result)
 {
     if (equalLettersIgnoringASCIICase(markerType, "spelling"_s))
-        result = DocumentMarker::Spelling;
+        result = DocumentMarker::Type::Spelling;
     else if (equalLettersIgnoringASCIICase(markerType, "grammar"_s))
-        result = DocumentMarker::Grammar;
+        result = DocumentMarker::Type::Grammar;
     else if (equalLettersIgnoringASCIICase(markerType, "textmatch"_s))
-        result = DocumentMarker::TextMatch;
+        result = DocumentMarker::Type::TextMatch;
     else if (equalLettersIgnoringASCIICase(markerType, "replacement"_s))
-        result = DocumentMarker::Replacement;
+        result = DocumentMarker::Type::Replacement;
     else if (equalLettersIgnoringASCIICase(markerType, "correctionindicator"_s))
-        result = DocumentMarker::CorrectionIndicator;
+        result = DocumentMarker::Type::CorrectionIndicator;
     else if (equalLettersIgnoringASCIICase(markerType, "rejectedcorrection"_s))
-        result = DocumentMarker::RejectedCorrection;
+        result = DocumentMarker::Type::RejectedCorrection;
     else if (equalLettersIgnoringASCIICase(markerType, "autocorrected"_s))
-        result = DocumentMarker::Autocorrected;
+        result = DocumentMarker::Type::Autocorrected;
     else if (equalLettersIgnoringASCIICase(markerType, "spellcheckingexemption"_s))
-        result = DocumentMarker::SpellCheckingExemption;
+        result = DocumentMarker::Type::SpellCheckingExemption;
     else if (equalLettersIgnoringASCIICase(markerType, "deletedautocorrection"_s))
-        result = DocumentMarker::DeletedAutocorrection;
+        result = DocumentMarker::Type::DeletedAutocorrection;
     else if (equalLettersIgnoringASCIICase(markerType, "dictationalternatives"_s))
-        result = DocumentMarker::DictationAlternatives;
+        result = DocumentMarker::Type::DictationAlternatives;
 #if ENABLE(TELEPHONE_NUMBER_DETECTION)
     else if (equalLettersIgnoringASCIICase(markerType, "telephonenumber"_s))
-        result = DocumentMarker::TelephoneNumber;
+        result = DocumentMarker::Type::TelephoneNumber;
 #endif
     else
         return false;
@@ -512,9 +514,9 @@ static bool markerTypeFrom(const String& markerType, DocumentMarker::MarkerType&
     return true;
 }
 
-static bool markerTypesFrom(const String& markerType, OptionSet<DocumentMarker::MarkerType>& result)
+static bool markerTypesFrom(const String& markerType, OptionSet<DocumentMarker::Type>& result)
 {
-    DocumentMarker::MarkerType singularResult;
+    DocumentMarker::Type singularResult;
 
     if (markerType.isEmpty() || equalLettersIgnoringASCIICase(markerType, "all"_s))
         result = DocumentMarker::allMarkers();
@@ -588,7 +590,7 @@ void Internals::resetToConsistentState(Page& page)
     localMainFrame->loader().clearTestingOverrides();
     page.applicationCacheStorage().setDefaultOriginQuota(ApplicationCacheStorage::noQuota());
 #if ENABLE(VIDEO)
-    page.group().ensureCaptionPreferences().setCaptionDisplayMode(CaptionUserPreferences::ForcedOnly);
+    page.group().ensureCaptionPreferences().setCaptionDisplayMode(CaptionUserPreferences::CaptionDisplayMode::ForcedOnly);
     page.group().ensureCaptionPreferences().setCaptionsStyleSheetOverride(emptyString());
     PlatformMediaSessionManager::sharedManager().resetHaveEverRegisteredAsNowPlayingApplicationForTesting();
     PlatformMediaSessionManager::sharedManager().resetRestrictions();
@@ -840,12 +842,12 @@ static String styleValidityToToString(Style::Validity validity)
     switch (validity) {
     case Style::Validity::Valid:
         return "NoStyleChange"_s;
+    case Style::Validity::AnimationInvalid:
+        return "AnimationInvalid"_s;
     case Style::Validity::ElementInvalid:
         return "InlineStyleChange"_s;
     case Style::Validity::SubtreeInvalid:
         return "FullStyleChange"_s;
-    case Style::Validity::SubtreeAndRenderersInvalid:
-        return "ReconstructRenderTree"_s;
     }
     ASSERT_NOT_REACHED();
     return emptyString();
@@ -1381,6 +1383,12 @@ bool Internals::hasPausedImageAnimations(Element& element)
 {
     return element.renderer() && element.renderer()->hasPausedImageAnimations();
 }
+
+bool Internals::isFullyActive(Document& document)
+{
+    return document.isFullyActive();
+}
+
     
 bool Internals::isPaintingFrequently(Element& element)
 {
@@ -1914,7 +1922,7 @@ ExceptionOr<unsigned> Internals::inspectorPaintRectCount()
 
 ExceptionOr<unsigned> Internals::markerCountForNode(Node& node, const String& markerType)
 {
-    OptionSet<DocumentMarker::MarkerType> markerTypes;
+    OptionSet<DocumentMarker::Type> markerTypes;
     if (!markerTypesFrom(markerType, markerTypes))
         return Exception { ExceptionCode::SyntaxError };
 
@@ -1926,7 +1934,7 @@ ExceptionOr<RenderedDocumentMarker*> Internals::markerAt(Node& node, const Strin
 {
     node.document().updateLayout(LayoutOptions::IgnorePendingStylesheets);
 
-    OptionSet<DocumentMarker::MarkerType> markerTypes;
+    OptionSet<DocumentMarker::Type> markerTypes;
     if (!markerTypesFrom(markerType, markerTypes))
         return Exception { ExceptionCode::SyntaxError };
 
@@ -1962,7 +1970,7 @@ ExceptionOr<String> Internals::markerDescriptionForNode(Node& node, const String
 
 ExceptionOr<String> Internals::dumpMarkerRects(const String& markerTypeString)
 {
-    DocumentMarker::MarkerType markerType;
+    DocumentMarker::Type markerType;
     if (!markerTypeFrom(markerTypeString, markerType))
         return Exception { ExceptionCode::SyntaxError };
 
@@ -2178,15 +2186,15 @@ ExceptionOr<void> Internals::setPagination(const String& mode, int gap, int page
 
     Pagination pagination;
     if (mode == "Unpaginated"_s)
-        pagination.mode = Unpaginated;
+        pagination.mode = Pagination::Mode::Unpaginated;
     else if (mode == "LeftToRightPaginated"_s)
-        pagination.mode = LeftToRightPaginated;
+        pagination.mode = Pagination::Mode::LeftToRightPaginated;
     else if (mode == "RightToLeftPaginated"_s)
-        pagination.mode = RightToLeftPaginated;
+        pagination.mode = Pagination::Mode::RightToLeftPaginated;
     else if (mode == "TopToBottomPaginated"_s)
-        pagination.mode = TopToBottomPaginated;
+        pagination.mode = Pagination::Mode::TopToBottomPaginated;
     else if (mode == "BottomToTopPaginated"_s)
-        pagination.mode = BottomToTopPaginated;
+        pagination.mode = Pagination::Mode::BottomToTopPaginated;
     else
         return Exception { ExceptionCode::SyntaxError };
 
@@ -2693,7 +2701,7 @@ void Internals::updateEditorUINowIfScheduled()
     }
 }
 
-bool Internals::hasMarkerFor(DocumentMarker::MarkerType type, int from, int length)
+bool Internals::hasMarkerFor(DocumentMarker::Type type, int from, int length)
 {
     Document* document = contextDocument();
     if (!document || !document->frame())
@@ -2706,27 +2714,27 @@ bool Internals::hasMarkerFor(DocumentMarker::MarkerType type, int from, int leng
 
 bool Internals::hasSpellingMarker(int from, int length)
 {
-    return hasMarkerFor(DocumentMarker::Spelling, from, length);
+    return hasMarkerFor(DocumentMarker::Type::Spelling, from, length);
 }
 
 bool Internals::hasGrammarMarker(int from, int length)
 {
-    return hasMarkerFor(DocumentMarker::Grammar, from, length);
+    return hasMarkerFor(DocumentMarker::Type::Grammar, from, length);
 }
 
 bool Internals::hasAutocorrectedMarker(int from, int length)
 {
-    return hasMarkerFor(DocumentMarker::Autocorrected, from, length);
+    return hasMarkerFor(DocumentMarker::Type::Autocorrected, from, length);
 }
 
 bool Internals::hasDictationAlternativesMarker(int from, int length)
 {
-    return hasMarkerFor(DocumentMarker::DictationAlternatives, from, length);
+    return hasMarkerFor(DocumentMarker::Type::DictationAlternatives, from, length);
 }
 
 bool Internals::hasCorrectionIndicatorMarker(int from, int length)
 {
-    return hasMarkerFor(DocumentMarker::CorrectionIndicator, from, length);
+    return hasMarkerFor(DocumentMarker::Type::CorrectionIndicator, from, length);
 }
 
 void Internals::setContinuousSpellCheckingEnabled(bool enabled)
@@ -4058,50 +4066,51 @@ unsigned Internals::layoutCount() const
 static const char* cursorTypeToString(Cursor::Type cursorType)
 {
     switch (cursorType) {
-    case Cursor::Pointer: return "Pointer";
-    case Cursor::Cross: return "Cross";
-    case Cursor::Hand: return "Hand";
-    case Cursor::IBeam: return "IBeam";
-    case Cursor::Wait: return "Wait";
-    case Cursor::Help: return "Help";
-    case Cursor::EastResize: return "EastResize";
-    case Cursor::NorthResize: return "NorthResize";
-    case Cursor::NorthEastResize: return "NorthEastResize";
-    case Cursor::NorthWestResize: return "NorthWestResize";
-    case Cursor::SouthResize: return "SouthResize";
-    case Cursor::SouthEastResize: return "SouthEastResize";
-    case Cursor::SouthWestResize: return "SouthWestResize";
-    case Cursor::WestResize: return "WestResize";
-    case Cursor::NorthSouthResize: return "NorthSouthResize";
-    case Cursor::EastWestResize: return "EastWestResize";
-    case Cursor::NorthEastSouthWestResize: return "NorthEastSouthWestResize";
-    case Cursor::NorthWestSouthEastResize: return "NorthWestSouthEastResize";
-    case Cursor::ColumnResize: return "ColumnResize";
-    case Cursor::RowResize: return "RowResize";
-    case Cursor::MiddlePanning: return "MiddlePanning";
-    case Cursor::EastPanning: return "EastPanning";
-    case Cursor::NorthPanning: return "NorthPanning";
-    case Cursor::NorthEastPanning: return "NorthEastPanning";
-    case Cursor::NorthWestPanning: return "NorthWestPanning";
-    case Cursor::SouthPanning: return "SouthPanning";
-    case Cursor::SouthEastPanning: return "SouthEastPanning";
-    case Cursor::SouthWestPanning: return "SouthWestPanning";
-    case Cursor::WestPanning: return "WestPanning";
-    case Cursor::Move: return "Move";
-    case Cursor::VerticalText: return "VerticalText";
-    case Cursor::Cell: return "Cell";
-    case Cursor::ContextMenu: return "ContextMenu";
-    case Cursor::Alias: return "Alias";
-    case Cursor::Progress: return "Progress";
-    case Cursor::NoDrop: return "NoDrop";
-    case Cursor::Copy: return "Copy";
-    case Cursor::None: return "None";
-    case Cursor::NotAllowed: return "NotAllowed";
-    case Cursor::ZoomIn: return "ZoomIn";
-    case Cursor::ZoomOut: return "ZoomOut";
-    case Cursor::Grab: return "Grab";
-    case Cursor::Grabbing: return "Grabbing";
-    case Cursor::Custom: return "Custom";
+    case Cursor::Type::Pointer: return "Pointer";
+    case Cursor::Type::Cross: return "Cross";
+    case Cursor::Type::Hand: return "Hand";
+    case Cursor::Type::IBeam: return "IBeam";
+    case Cursor::Type::Wait: return "Wait";
+    case Cursor::Type::Help: return "Help";
+    case Cursor::Type::EastResize: return "EastResize";
+    case Cursor::Type::NorthResize: return "NorthResize";
+    case Cursor::Type::NorthEastResize: return "NorthEastResize";
+    case Cursor::Type::NorthWestResize: return "NorthWestResize";
+    case Cursor::Type::SouthResize: return "SouthResize";
+    case Cursor::Type::SouthEastResize: return "SouthEastResize";
+    case Cursor::Type::SouthWestResize: return "SouthWestResize";
+    case Cursor::Type::WestResize: return "WestResize";
+    case Cursor::Type::NorthSouthResize: return "NorthSouthResize";
+    case Cursor::Type::EastWestResize: return "EastWestResize";
+    case Cursor::Type::NorthEastSouthWestResize: return "NorthEastSouthWestResize";
+    case Cursor::Type::NorthWestSouthEastResize: return "NorthWestSouthEastResize";
+    case Cursor::Type::ColumnResize: return "ColumnResize";
+    case Cursor::Type::RowResize: return "RowResize";
+    case Cursor::Type::MiddlePanning: return "MiddlePanning";
+    case Cursor::Type::EastPanning: return "EastPanning";
+    case Cursor::Type::NorthPanning: return "NorthPanning";
+    case Cursor::Type::NorthEastPanning: return "NorthEastPanning";
+    case Cursor::Type::NorthWestPanning: return "NorthWestPanning";
+    case Cursor::Type::SouthPanning: return "SouthPanning";
+    case Cursor::Type::SouthEastPanning: return "SouthEastPanning";
+    case Cursor::Type::SouthWestPanning: return "SouthWestPanning";
+    case Cursor::Type::WestPanning: return "WestPanning";
+    case Cursor::Type::Move: return "Move";
+    case Cursor::Type::VerticalText: return "VerticalText";
+    case Cursor::Type::Cell: return "Cell";
+    case Cursor::Type::ContextMenu: return "ContextMenu";
+    case Cursor::Type::Alias: return "Alias";
+    case Cursor::Type::Progress: return "Progress";
+    case Cursor::Type::NoDrop: return "NoDrop";
+    case Cursor::Type::Copy: return "Copy";
+    case Cursor::Type::None: return "None";
+    case Cursor::Type::NotAllowed: return "NotAllowed";
+    case Cursor::Type::ZoomIn: return "ZoomIn";
+    case Cursor::Type::ZoomOut: return "ZoomOut";
+    case Cursor::Type::Grab: return "Grab";
+    case Cursor::Type::Grabbing: return "Grabbing";
+    case Cursor::Type::Custom: return "Custom";
+    case Cursor::Type::Invalid: break;
     }
 
     ASSERT_NOT_REACHED();
@@ -4424,13 +4433,13 @@ ExceptionOr<void> Internals::setCaptionDisplayMode(const String& mode)
     auto& captionPreferences = document->page()->group().ensureCaptionPreferences();
 
     if (equalLettersIgnoringASCIICase(mode, "automatic"_s))
-        captionPreferences.setCaptionDisplayMode(CaptionUserPreferences::Automatic);
+        captionPreferences.setCaptionDisplayMode(CaptionUserPreferences::CaptionDisplayMode::Automatic);
     else if (equalLettersIgnoringASCIICase(mode, "forcedonly"_s))
-        captionPreferences.setCaptionDisplayMode(CaptionUserPreferences::ForcedOnly);
+        captionPreferences.setCaptionDisplayMode(CaptionUserPreferences::CaptionDisplayMode::ForcedOnly);
     else if (equalLettersIgnoringASCIICase(mode, "alwayson"_s))
-        captionPreferences.setCaptionDisplayMode(CaptionUserPreferences::AlwaysOn);
+        captionPreferences.setCaptionDisplayMode(CaptionUserPreferences::CaptionDisplayMode::AlwaysOn);
     else if (equalLettersIgnoringASCIICase(mode, "manual"_s))
-        captionPreferences.setCaptionDisplayMode(CaptionUserPreferences::Manual);
+        captionPreferences.setCaptionDisplayMode(CaptionUserPreferences::CaptionDisplayMode::Manual);
     else
         return Exception { ExceptionCode::SyntaxError };
 #else
@@ -4537,21 +4546,21 @@ void Internals::initializeMockMediaSource()
 
 void Internals::bufferedSamplesForTrackId(SourceBuffer& buffer, const AtomString& trackId, BufferedSamplesPromise&& promise)
 {
-    buffer.bufferedSamplesForTrackId(trackId, [promise = WTFMove(promise)](Vector<String>&& samples) mutable {
-        promise.resolve(WTFMove(samples));
+    buffer.bufferedSamplesForTrackId(parseInteger<uint64_t>(trackId).value_or(0))->whenSettled(RunLoop::current(), [promise = WTFMove(promise)](auto&& samples) mutable {
+        promise.resolve(WTFMove(*samples));
     });
 }
 
 void Internals::enqueuedSamplesForTrackID(SourceBuffer& buffer, const AtomString& trackID, BufferedSamplesPromise&& promise)
 {
-    return buffer.enqueuedSamplesForTrackID(trackID, [promise = WTFMove(promise)](Vector<String>&& samples) mutable {
-        promise.resolve(WTFMove(samples));
+    buffer.enqueuedSamplesForTrackID(parseInteger<uint64_t>(trackID).value_or(0))->whenSettled(RunLoop::current(), [promise = WTFMove(promise)](auto&& samples) mutable {
+        promise.resolve(WTFMove(*samples));
     });
 }
 
 double Internals::minimumUpcomingPresentationTimeForTrackID(SourceBuffer& buffer, const AtomString& trackID)
 {
-    return buffer.minimumUpcomingPresentationTimeForTrackID(trackID).toDouble();
+    return buffer.minimumUpcomingPresentationTimeForTrackID(parseInteger<TrackID>(trackID).value_or(0)).toDouble();
 }
 
 void Internals::setShouldGenerateTimestamps(SourceBuffer& buffer, bool flag)
@@ -4561,7 +4570,7 @@ void Internals::setShouldGenerateTimestamps(SourceBuffer& buffer, bool flag)
 
 void Internals::setMaximumQueueDepthForTrackID(SourceBuffer& buffer, const AtomString& trackID, size_t maxQueueDepth)
 {
-    buffer.setMaximumQueueDepthForTrackID(trackID, maxQueueDepth);
+    buffer.setMaximumQueueDepthForTrackID(parseInteger<TrackID>(trackID).value_or(0), maxQueueDepth);
 }
 
 #endif
@@ -4575,16 +4584,16 @@ void Internals::enableMockMediaCapabilities()
 
 ExceptionOr<void> Internals::beginMediaSessionInterruption(const String& interruptionString)
 {
-    PlatformMediaSession::InterruptionType interruption = PlatformMediaSession::SystemInterruption;
+    PlatformMediaSession::InterruptionType interruption = PlatformMediaSession::InterruptionType::SystemInterruption;
 
     if (equalLettersIgnoringASCIICase(interruptionString, "system"_s))
-        interruption = PlatformMediaSession::SystemInterruption;
+        interruption = PlatformMediaSession::InterruptionType::SystemInterruption;
     else if (equalLettersIgnoringASCIICase(interruptionString, "systemsleep"_s))
-        interruption = PlatformMediaSession::SystemSleep;
+        interruption = PlatformMediaSession::InterruptionType::SystemSleep;
     else if (equalLettersIgnoringASCIICase(interruptionString, "enteringbackground"_s))
-        interruption = PlatformMediaSession::EnteringBackground;
+        interruption = PlatformMediaSession::InterruptionType::EnteringBackground;
     else if (equalLettersIgnoringASCIICase(interruptionString, "suspendedunderlock"_s))
-        interruption = PlatformMediaSession::SuspendedUnderLock;
+        interruption = PlatformMediaSession::InterruptionType::SuspendedUnderLock;
     else
         return Exception { ExceptionCode::InvalidAccessError };
 
@@ -4594,10 +4603,10 @@ ExceptionOr<void> Internals::beginMediaSessionInterruption(const String& interru
 
 void Internals::endMediaSessionInterruption(const String& flagsString)
 {
-    PlatformMediaSession::EndInterruptionFlags flags = PlatformMediaSession::NoFlags;
+    PlatformMediaSession::EndInterruptionFlags flags = PlatformMediaSession::EndInterruptionFlags::NoFlags;
 
     if (equalLettersIgnoringASCIICase(flagsString, "mayresumeplaying"_s))
-        flags = PlatformMediaSession::MayResumePlaying;
+        flags = PlatformMediaSession::EndInterruptionFlags::MayResumePlaying;
 
     PlatformMediaSessionManager::sharedManager().endInterruption(flags);
 }
@@ -5768,22 +5777,17 @@ void Internals::simulateEventForWebGLContext(SimulatedWebGLContextEvent event, W
 
 Internals::RequestedGPU Internals::requestedGPU(WebGLRenderingContext& context)
 {
-    UNUSED_PARAM(context);
-    if (auto optionalAttributes = context.getContextAttributes()) {
-        auto attributes = *optionalAttributes;
-        if (attributes.forceRequestForHighPerformanceGPU)
-            return RequestedGPU::HighPerformance;
-        switch (attributes.powerPreference) {
-        case GraphicsContextGLPowerPreference::Default:
-            return RequestedGPU::Default;
-        case GraphicsContextGLPowerPreference::LowPower:
-            return RequestedGPU::LowPower;
-        case GraphicsContextGLPowerPreference::HighPerformance:
-            return RequestedGPU::HighPerformance;
-        }
+    switch (context.creationAttributes().powerPreference) {
+    case WebGLPowerPreference::Default:
+        return RequestedGPU::Default;
+    case WebGLPowerPreference::LowPower:
+        return RequestedGPU::LowPower;
+    case WebGLPowerPreference::HighPerformance:
+        return RequestedGPU::HighPerformance;
     }
-
+    ASSERT_NOT_REACHED();
     return RequestedGPU::Default;
+
 }
 #endif
 
@@ -6047,7 +6051,6 @@ bool Internals::audioSessionActive() const
 
 void Internals::storeRegistrationsOnDisk(DOMPromiseDeferred<void>&& promise)
 {
-#if ENABLE(SERVICE_WORKER)
     if (!contextDocument())
         return;
 
@@ -6055,9 +6058,6 @@ void Internals::storeRegistrationsOnDisk(DOMPromiseDeferred<void>&& promise)
     connection.storeRegistrationsOnDiskForTesting([promise = WTFMove(promise)]() mutable {
         promise.resolve();
     });
-#else
-    promise.resolve();
-#endif
 }
 
 void Internals::sendH2Ping(String url, DOMPromiseDeferred<IDLDouble>&& promise)
@@ -6156,7 +6156,6 @@ const String& Internals::responseNetworkLoadMetricsProtocol(const FetchResponse&
     return response.networkLoadMetrics().protocol;
 }
 
-#if ENABLE(SERVICE_WORKER)
 void Internals::hasServiceWorkerRegistration(const String& clientURL, HasRegistrationPromise&& promise)
 {
     if (!contextDocument())
@@ -6182,7 +6181,6 @@ void Internals::whenServiceWorkerIsTerminated(ServiceWorker& worker, DOMPromiseD
         promise.resolve();
     });
 }
-#endif
 
 #if ENABLE(APPLE_PAY)
 MockPaymentCoordinator& Internals::mockPaymentCoordinator(Document& document)
@@ -6469,6 +6467,23 @@ String Internals::createDoViCodecParametersString(const DoViParameterSet& parame
 std::optional<VPCodecConfigurationRecord> Internals::parseVPCodecParameters(StringView string)
 {
     return WebCore::parseVPCodecParameters(string);
+}
+
+std::optional<AV1CodecConfigurationRecord> Internals::parseAV1CodecParameters(const String& parameters)
+{
+    return WebCore::parseAV1CodecParameters(parameters);
+}
+
+String Internals::createAV1CodecParametersString(const AV1CodecConfigurationRecord& configuration)
+{
+    return WebCore::createAV1CodecParametersString(configuration);
+}
+
+bool Internals::validateAV1PerLevelConstraints(const String& parameters, const VideoConfiguration& configuration)
+{
+    if (auto record = WebCore::parseAV1CodecParameters(parameters))
+        return WebCore::validateAV1PerLevelConstraints(*record, configuration);
+    return false;
 }
 
 auto Internals::getCookies() const -> Vector<CookieData>
@@ -7117,7 +7132,6 @@ void Internals::retainTextIteratorForDocumentContent()
     m_textIterator = makeUnique<TextIterator>(range);
 }
 
-#if ENABLE(SERVICE_WORKER)
 RefPtr<PushSubscription> Internals::createPushSubscription(const String& endpoint, std::optional<EpochTimeStamp> expirationTime, const ArrayBuffer& serverVAPIDPublicKey, const ArrayBuffer& clientECDHPublicKey, const ArrayBuffer& auth)
 {
     auto myEndpoint = endpoint;
@@ -7127,7 +7141,6 @@ RefPtr<PushSubscription> Internals::createPushSubscription(const String& endpoin
 
     return PushSubscription::create(PushSubscriptionData { { }, WTFMove(myEndpoint), expirationTime, WTFMove(myServerVAPIDPublicKey), WTFMove(myClientECDHPublicKey), WTFMove(myAuth) });
 }
-#endif
 
 #if ENABLE(ARKIT_INLINE_PREVIEW_MAC)
 

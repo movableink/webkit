@@ -177,11 +177,8 @@ static WebCore::IntDegrees deviceOrientationForUIInterfaceOrientation(UIInterfac
     CGRect bounds = self.bounds;
     _scrollView = adoptNS([[WKScrollView alloc] initWithFrame:bounds]);
     [_scrollView setInternalDelegate:self];
+    [_scrollView setBaseScrollViewDelegate:self];
     [_scrollView setBouncesZoom:YES];
-
-#if HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING)
-    [_scrollView _setAllowsAsyncScrollEvent:YES];
-#endif
 
     if ([_scrollView respondsToSelector:@selector(_setAvoidsJumpOnInterruptedBounce:)]) {
         [_scrollView setTracksImmediatelyWhileDecelerating:NO];
@@ -502,7 +499,7 @@ static CGSize roundScrollViewContentSize(const WebKit::WebPageProxy& page, CGSiz
         [_customContentView web_setFixedOverlayView:_customContentFixedOverlayView.get()];
 
         _perProcessState.scrollViewBackgroundColor = WebCore::Color();
-        [_scrollView setContentOffset:[self _initialContentOffsetForScrollView]];
+        [self _resetContentOffset];
         [_scrollView panGestureRecognizer].allowedTouchTypes = _scrollViewDefaultAllowedTouchTypes.get();
         [_scrollView _setScrollEnabledInternal:YES];
 
@@ -838,7 +835,7 @@ static WebCore::Color scrollViewBackgroundColor(WKWebView *webView, AllowPageBac
 
     [_contentView setFrame:self.bounds];
     [_scrollView _setBackgroundColorInternal:[_contentView backgroundColor]];
-    [_scrollView setContentOffset:[self _initialContentOffsetForScrollView]];
+    [self _resetContentOffset];
     [_scrollView setZoomScale:1];
 }
 
@@ -1091,7 +1088,7 @@ static void changeContentOffsetBoundedInValidRange(UIScrollView *scrollView, Web
     if (_perProcessState.needsResetViewStateAfterCommitLoadForMainFrame && layerTreeTransaction.transactionID() >= _perProcessState.firstPaintAfterCommitLoadTransactionID) {
         _perProcessState.needsResetViewStateAfterCommitLoadForMainFrame = NO;
         if (![self _scrollViewIsRubberBandingForRefreshControl])
-            [_scrollView setContentOffset:[self _initialContentOffsetForScrollView]];
+            [self _resetContentOffset];
 
         if (_observedRenderingProgressEvents & _WKRenderingProgressEventFirstPaint)
             _navigationState->didFirstPaint();
@@ -1903,9 +1900,10 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
     if ([scrollView isZooming])
         *targetContentOffset = [scrollView contentOffset];
     else {
-        if ([_contentView preventsPanningInXAxis])
+        auto axesToPreventMomentumScrolling = dynamic_objc_cast<WKBaseScrollView>(scrollView).axesToPreventMomentumScrolling;
+        if ([_contentView preventsPanningInXAxis] || (axesToPreventMomentumScrolling & UIAxisHorizontal))
             targetContentOffset->x = scrollView.contentOffset.x;
-        if ([_contentView preventsPanningInYAxis])
+        if ([_contentView preventsPanningInYAxis] || (axesToPreventMomentumScrolling & UIAxisVertical))
             targetContentOffset->y = scrollView.contentOffset.y;
     }
 #if ENABLE(ASYNC_SCROLLING)
@@ -1945,29 +1943,18 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
     [self _didFinishScrolling:scrollView];
 }
 
-- (CGPoint)_scrollView:(UIScrollView *)scrollView adjustedOffsetForOffset:(CGPoint)offset translation:(CGPoint)translation startPoint:(CGPoint)start locationInView:(CGPoint)locationInView horizontalVelocity:(inout double *)hv verticalVelocity:(inout double *)vv
+#if HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING)
+
+#if !HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_SUBCLASS_HOOKS)
+
+- (void)_scrollView:(WKScrollView *)scrollView asynchronouslyHandleScrollEvent:(UIScrollEvent *)scrollEvent completion:(void (^)(BOOL handled))completion
 {
-    if (![_contentView preventsPanningInXAxis] && ![_contentView preventsPanningInYAxis]) {
-        [_contentView cancelPointersForGestureRecognizer:scrollView.panGestureRecognizer];
-        return offset;
-    }
-
-    CGPoint adjustedContentOffset = CGPointMake(offset.x, offset.y);
-    if ([_contentView preventsPanningInXAxis])
-        adjustedContentOffset.x = start.x;
-    if ([_contentView preventsPanningInYAxis])
-        adjustedContentOffset.y = start.y;
-
-    if ((![_contentView preventsPanningInXAxis] && adjustedContentOffset.x != start.x)
-        || (![_contentView preventsPanningInYAxis] && adjustedContentOffset.y != start.y)) {
-        [_contentView cancelPointersForGestureRecognizer:scrollView.panGestureRecognizer];
-    }
-
-    return adjustedContentOffset;
+    [self scrollView:scrollView handleScrollEvent:scrollEvent completion:completion];
 }
 
-#if HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING)
-- (void)_scrollView:(UIScrollView *)scrollView asynchronouslyHandleScrollEvent:(UIScrollEvent *)scrollEvent completion:(void (^)(BOOL handled))completion
+#endif // !HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_SUBCLASS_HOOKS)
+
+- (void)scrollView:(WKBaseScrollView *)scrollView handleScrollEvent:(UIScrollEvent *)scrollEvent completion:(void(^)(BOOL handled))completion
 {
     BOOL isHandledByDefault = !scrollView.scrollEnabled;
 
@@ -2035,6 +2022,7 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
     if (!isCancelable)
         completion(isHandledByDefault);
 }
+
 #endif // HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING)
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView
@@ -3462,6 +3450,31 @@ static bool isLockdownModeWarningNeeded()
     _obscuredInsets = { };
     [self _scheduleVisibleContentRectUpdate];
 }
+
+#pragma mark - WKBaseScrollViewDelegate
+
+- (UIAxis)axesToPreventScrollingForPanGestureInScrollView:(WKBaseScrollView *)scrollView
+{
+    auto panGestureRecognizer = scrollView.panGestureRecognizer;
+    if (![_contentView preventsPanningInXAxis] && ![_contentView preventsPanningInYAxis]) {
+        [_contentView cancelPointersForGestureRecognizer:panGestureRecognizer];
+        return UIAxisNeither;
+    }
+
+    UIAxis axesToPrevent = UIAxisNeither;
+    if ([_contentView preventsPanningInXAxis])
+        axesToPrevent |= UIAxisHorizontal;
+    if ([_contentView preventsPanningInYAxis])
+        axesToPrevent |= UIAxisVertical;
+
+    auto translation = [panGestureRecognizer translationInView:scrollView];
+    if ((![_contentView preventsPanningInXAxis] && std::abs(translation.x) > CGFLOAT_EPSILON)
+        || (![_contentView preventsPanningInYAxis] && std::abs(translation.y) > CGFLOAT_EPSILON))
+        [_contentView cancelPointersForGestureRecognizer:panGestureRecognizer];
+
+    return axesToPrevent;
+}
+
 @end
 
 @implementation WKWebView (WKPrivateIOS)
@@ -4132,13 +4145,18 @@ static bool isLockdownModeWarningNeeded()
 
 - (void)_overrideLayoutParametersWithMinimumLayoutSize:(CGSize)minimumLayoutSize maximumUnobscuredSizeOverride:(CGSize)maximumUnobscuredSizeOverride
 {
-    LOG_WITH_STREAM(VisibleRects, stream << "-[WKWebView " << _page->identifier() << " _overrideLayoutParametersWithMinimumLayoutSize:" << WebCore::FloatSize(minimumLayoutSize) << " maximumUnobscuredSizeOverride:" << WebCore::FloatSize(maximumUnobscuredSizeOverride) << "]");
+    [self _overrideLayoutParametersWithMinimumLayoutSize:minimumLayoutSize minimumUnobscuredSizeOverride:minimumLayoutSize maximumUnobscuredSizeOverride:maximumUnobscuredSizeOverride];
+}
+
+- (void)_overrideLayoutParametersWithMinimumLayoutSize:(CGSize)minimumLayoutSize minimumUnobscuredSizeOverride:(CGSize)minimumUnobscuredSizeOverride maximumUnobscuredSizeOverride:(CGSize)maximumUnobscuredSizeOverride
+{
+    LOG_WITH_STREAM(VisibleRects, stream << "-[WKWebView " << _page->identifier() << " _overrideLayoutParametersWithMinimumLayoutSize:" << WebCore::FloatSize(minimumLayoutSize) << " minimumUnobscuredSizeOverride:" << WebCore::FloatSize(minimumUnobscuredSizeOverride) << " maximumUnobscuredSizeOverride:" << WebCore::FloatSize(maximumUnobscuredSizeOverride) << "]");
 
     if (minimumLayoutSize.width < 0 || minimumLayoutSize.height < 0)
         RELEASE_LOG_FAULT(VisibleRects, "%s: Error: attempting to override layout parameters with negative width or height: %@", __PRETTY_FUNCTION__, NSStringFromCGSize(minimumLayoutSize));
 
     [self _setViewLayoutSizeOverride:CGSizeMake(std::max<CGFloat>(0, minimumLayoutSize.width), std::max<CGFloat>(0, minimumLayoutSize.height))];
-    [self _setMinimumUnobscuredSizeOverride:minimumLayoutSize];
+    [self _setMinimumUnobscuredSizeOverride:minimumUnobscuredSizeOverride];
     [self _setMaximumUnobscuredSizeOverride:maximumUnobscuredSizeOverride];
 }
 

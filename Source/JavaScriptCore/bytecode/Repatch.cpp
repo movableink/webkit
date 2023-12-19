@@ -49,6 +49,7 @@
 #include "IntrinsicGetterAccessCase.h"
 #include "JIT.h"
 #include "JITInlines.h"
+#include "JITThunks.h"
 #include "JSCInlines.h"
 #include "JSModuleNamespaceObject.h"
 #include "JSWebAssembly.h"
@@ -103,13 +104,6 @@ static void linkSlowPathTo(VM&, CallLinkInfo& callLinkInfo, MacroAssemblerCodeRe
     callLinkInfo.setSlowPathCallDestination(codeRef.code().template retagged<JSEntryPtrTag>());
 }
 
-#if ENABLE(JIT)
-static void linkSlowPathTo(VM& vm, CallLinkInfo& callLinkInfo, ThunkGenerator generator)
-{
-    linkSlowPathTo(vm, callLinkInfo, vm.getCTIStub(generator).retagged<JITStubRoutinePtrTag>());
-}
-#endif
-
 static void linkSlowFor(VM& vm, CallLinkInfo& callLinkInfo)
 {
     MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunk = vm.getCTIVirtualCall(callLinkInfo.callMode());
@@ -140,7 +134,7 @@ void linkMonomorphicCall(
 
 #if ENABLE(JIT)
     if (callLinkInfo.specializationKind() == CodeForCall && callLinkInfo.allowStubs()) {
-        linkSlowPathTo(vm, callLinkInfo, linkPolymorphicCallThunkGenerator);
+        linkSlowPathTo(vm, callLinkInfo, vm.getCTIStub(CommonJITThunkID::LinkPolymorphicCall).retagged<JITStubRoutinePtrTag>());
         return;
     }
 #endif
@@ -2137,10 +2131,10 @@ void linkPolymorphicCall(JSGlobalObject* globalObject, CallFrame* callFrame, Cal
 #if ASSERT_ENABLED
             // It needs to be LLInt or Baseline since we are using returnFromBaselineGenerator.
             if (!isWebAssembly)
-                ASSERT(!JITCode::isOptimizingJIT(callerCodeBlock->jitType()));
+                ASSERT(!JSC::JITCode::isOptimizingJIT(callerCodeBlock->jitType()));
 #endif
             if (callLinkInfo.isTailCall()) {
-                stubJit.move(CCallHelpers::TrustedImmPtr(vm.getCTIStub(JIT::returnFromBaselineGenerator).code().untaggedPtr()), GPRInfo::regT4);
+                stubJit.move(CCallHelpers::TrustedImmPtr(vm.getCTIStub(CommonJITThunkID::ReturnFromBaseline).code().untaggedPtr()), GPRInfo::regT4);
                 stubJit.restoreReturnAddressBeforeReturn(GPRInfo::regT4);
             }
             break;
@@ -2157,8 +2151,16 @@ void linkPolymorphicCall(JSGlobalObject* globalObject, CallFrame* callFrame, Cal
         }
     }
 
-    AssemblyHelpers::Jump slow = stubJit.jump();
-        
+    stubJit.jumpThunk(CodeLocationLabel<JITThunkPtrTag>(vm.getCTIStub(CommonJITThunkID::LinkPolymorphicCall).code()));
+
+    if (!done.empty()) {
+        ASSERT(!isDataIC);
+        done.linkThunk(callLinkInfo.doneLocation(), &stubJit);
+    }
+
+    for (CallToCodePtr callToCodePtr : calls)
+        callToCodePtr.call.linkThunk(CodeLocationLabel { callToCodePtr.codePtr.retagged<NoPtrTag>() }, &stubJit);
+
     LinkBuffer patchBuffer(stubJit, owner, LinkBuffer::Profile::InlineCache, JITCompilationCanFail);
     if (patchBuffer.didFailToAllocate()) {
         linkVirtualFor(vm, callFrame, callLinkInfo);
@@ -2166,15 +2168,6 @@ void linkPolymorphicCall(JSGlobalObject* globalObject, CallFrame* callFrame, Cal
     }
     
     RELEASE_ASSERT(callCases.size() == calls.size());
-    for (CallToCodePtr callToCodePtr : calls)
-        patchBuffer.link(callToCodePtr.call, callToCodePtr.codePtr);
-
-    if (!done.empty()) {
-        ASSERT(!isDataIC);
-        patchBuffer.link(done, callLinkInfo.doneLocation());
-    }
-    patchBuffer.link(slow, CodeLocationLabel<JITThunkPtrTag>(vm.getCTIStub(linkPolymorphicCallThunkGenerator).code()));
-    
     auto stubRoutine = adoptRef(*new PolymorphicCallStubRoutine(
         FINALIZE_CODE_FOR(
             callerCodeBlock, patchBuffer, JITStubRoutinePtrTag,

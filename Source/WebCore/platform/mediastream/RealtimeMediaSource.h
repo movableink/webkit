@@ -52,6 +52,7 @@
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
 #include <wtf/LoggerHelper.h>
+#include <wtf/NativePromise.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
@@ -81,7 +82,6 @@ enum class VideoFrameRotation : uint16_t;
 
 struct CaptureSourceError;
 struct CaptureSourceOrError;
-struct PhotoCapabilitiesOrError;
 struct VideoFrameAdaptor;
 
 class WEBCORE_EXPORT RealtimeMediaSource
@@ -211,8 +211,11 @@ public:
     virtual void deref() const = 0;
     virtual ThreadSafeWeakPtrControlBlock& controlBlock() const = 0;
 
-    using PhotoCapabilitiesHandler = CompletionHandler<void(PhotoCapabilitiesOrError&&)>;
-    virtual void getPhotoCapabilities(PhotoCapabilitiesHandler&&);
+    using TakePhotoNativePromise = NativePromise<std::pair<Vector<uint8_t>, String>, String>;
+    virtual Ref<TakePhotoNativePromise> takePhoto(PhotoSettings&&);
+
+    using PhotoCapabilitiesNativePromise = NativePromise<PhotoCapabilities, String>;
+    virtual Ref<PhotoCapabilitiesNativePromise> getPhotoCapabilities();
 
     using PhotoSettingsNativePromise = NativePromise<PhotoSettings, String>;
     virtual Ref<PhotoSettingsNativePromise> getPhotoSettings();
@@ -400,25 +403,6 @@ struct CaptureSourceOrError {
 
     RefPtr<RealtimeMediaSource> captureSource;
     CaptureSourceError error;
-};
-
-struct PhotoCapabilitiesOrError {
-    PhotoCapabilitiesOrError() = default;
-    PhotoCapabilitiesOrError(std::optional<PhotoCapabilities>&& capabilities, String&& errorMessage)
-        : capabilities(WTFMove(capabilities))
-        , errorMessage(WTFMove(errorMessage))
-    { }
-    PhotoCapabilitiesOrError(PhotoCapabilities& capabilities)
-        : capabilities({ capabilities })
-    { }
-    explicit PhotoCapabilitiesOrError(String&& errorMessage)
-        : errorMessage(WTFMove(errorMessage))
-    { }
-
-    operator bool() const { return capabilities.has_value(); }
-
-    std::optional<PhotoCapabilities> capabilities;
-    String errorMessage;
 };
 
 String convertEnumerationToString(RealtimeMediaSource::Type);

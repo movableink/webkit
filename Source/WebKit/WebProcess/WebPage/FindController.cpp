@@ -223,8 +223,8 @@ void FindController::updateFindUIAfterPageScroll(bool found, const String& strin
     }
 
     if (!shouldShowOverlay) {
-        if (m_findPageOverlay)
-            m_webPage->corePage()->pageOverlayController().uninstallPageOverlay(*m_findPageOverlay, PageOverlay::FadeMode::Fade);
+        if (RefPtr findPageOverlay = m_findPageOverlay)
+            m_webPage->corePage()->pageOverlayController().uninstallPageOverlay(*findPageOverlay, PageOverlay::FadeMode::Fade);
     } else {
         if (!m_findPageOverlay) {
             auto findPageOverlay = PageOverlay::create(*this, PageOverlay::OverlayType::Document);
@@ -369,10 +369,10 @@ void FindController::getImageForFindMatch(uint32_t matchIndex)
         return;
 
     auto handle = selectionSnapshot->createHandle();
-    if (!handle)
+    if (!handle || !selectionSnapshot->parameters())
         return;
 
-    m_webPage->send(Messages::WebPageProxy::DidGetImageForFindMatch(selectionSnapshot->parameters(), WTFMove(*handle), matchIndex));
+    m_webPage->send(Messages::WebPageProxy::DidGetImageForFindMatch(*selectionSnapshot->parameters(), WTFMove(*handle), matchIndex));
 }
 
 void FindController::selectFindMatch(uint32_t matchIndex)
@@ -403,8 +403,8 @@ void FindController::indicateFindMatch(uint32_t matchIndex)
 void FindController::hideFindUI()
 {
     m_findMatches.clear();
-    if (m_findPageOverlay)
-        m_webPage->corePage()->pageOverlayController().uninstallPageOverlay(*m_findPageOverlay, PageOverlay::FadeMode::Fade);
+    if (RefPtr findPageOverlay = m_findPageOverlay)
+        m_webPage->corePage()->pageOverlayController().uninstallPageOverlay(*findPageOverlay, PageOverlay::FadeMode::Fade);
 
 #if ENABLE(PDF_PLUGIN)
     if (auto* pluginView = mainFramePlugIn())
@@ -523,13 +523,8 @@ void FindController::redraw()
 Vector<FloatRect> FindController::rectsForTextMatchesInRect(IntRect clipRect)
 {
     Vector<FloatRect> rects;
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_webPage->corePage()->mainFrame());
-    if (!localMainFrame)
-        return rects;
-
-    auto* mainFrameView = localMainFrame->view();
-
-    for (RefPtr<Frame> frame = localMainFrame; frame; frame = frame->tree().traverseNext()) {
+    RefPtr mainFrameView = m_webPage->corePage()->mainFrame().virtualView();
+    for (RefPtr frame = &m_webPage->corePage()->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         auto* localFrame = dynamicDowncast<LocalFrame>(frame.get());
         if (!localFrame)
             continue;
@@ -537,7 +532,7 @@ Vector<FloatRect> FindController::rectsForTextMatchesInRect(IntRect clipRect)
         if (!document)
             continue;
 
-        for (FloatRect rect : document->markers().renderedRectsForMarkers(DocumentMarker::TextMatch)) {
+        for (FloatRect rect : document->markers().renderedRectsForMarkers(DocumentMarker::Type::TextMatch)) {
             if (!localFrame->isMainFrame())
                 rect = mainFrameView->windowToContents(localFrame->view()->contentsToWindow(enclosingIntRect(rect)));
 
