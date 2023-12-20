@@ -20,6 +20,8 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+
 #include "RenderSVGResourceContainer.h"
 #include "SVGUnitTypes.h"
 
@@ -54,3 +56,5 @@ private:
 }
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceMasker, isRenderSVGResourceMasker())
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)
