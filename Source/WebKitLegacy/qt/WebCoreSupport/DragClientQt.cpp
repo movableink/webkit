@@ -33,6 +33,7 @@
 #include <WebCore/Page.h>
 #include <WebCore/Pasteboard.h>
 #include <WebCore/PlatformMouseEvent.h>
+#include <WebCore/RemoteUserInputEventData.h>
 #include <WebCore/SharedBuffer.h>
 
 #include <QDrag>
@@ -80,7 +81,7 @@ void DragClientQt::willPerformDragSourceAction(DragSourceAction, const IntPoint&
 {
 }
 
-void DragClientQt::startDrag(DragItem dragItem, DataTransfer& dataTransfer, LocalFrame& frame)
+void DragClientQt::startDrag(DragItem dragItem, DataTransfer& dataTransfer, Frame& frame)
 {
 #if ENABLE(DRAG_SUPPORT)
     DragImageRef dragImage = dragItem.image.get();
@@ -88,6 +89,11 @@ void DragClientQt::startDrag(DragItem dragItem, DataTransfer& dataTransfer, Loca
     auto eventPos = dragItem.eventPositionInContentCoordinates;
     QMimeData* clipboardData = dataTransfer.pasteboard().clipboardData();
     dataTransfer.pasteboard().invalidateWritableData();
+
+    auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+    if (!localFrame)
+        return;
+
     PlatformPageClient pageClient = m_chromeClient->platformPageClient();
     QObject* view = pageClient ? pageClient->ownerWidget() : 0;
     if (view) {
@@ -103,9 +109,9 @@ void DragClientQt::startDrag(DragItem dragItem, DataTransfer& dataTransfer, Loca
 
         // Send dragEnd event
         PlatformMouseEvent me(m_chromeClient->screenToRootView(QCursor::pos()), QCursor::pos(), MouseButton::Left, PlatformEvent::Type::MouseMoved, 0, { }, WallTime::now(), ForceAtClick, SyntheticClickType::NoTap, WebCore::mousePointerID);
-        frame.eventHandler().dragSourceEndedAt(me, dropActionToDragOperation(actualDropAction));
+        localFrame->eventHandler().dragSourceEndedAt(me, dropActionToDragOperation(actualDropAction));
     }
-    frame.page()->dragController().dragEnded();
+    localFrame->page()->dragController().dragEnded();
 #endif
 }
 
