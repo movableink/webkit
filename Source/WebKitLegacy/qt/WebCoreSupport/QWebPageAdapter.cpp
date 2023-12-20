@@ -1256,7 +1256,7 @@ QString QWebPageAdapter::contextMenuItemTagForAction(QWebPageAdapter::MenuAction
     case CopyImageToClipboard:
         return contextMenuItemTagCopyImageToClipboard();
     case CopyImageUrlToClipboard:
-        return contextMenuItemTagCopyImageUrlToClipboard();
+        return contextMenuItemTagCopyImageURLToClipboard();
 
     case Cut:
         return contextMenuItemTagCut();

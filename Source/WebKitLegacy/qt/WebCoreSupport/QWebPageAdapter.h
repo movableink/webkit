@@ -79,7 +79,7 @@ public:
     F(OpenImageInNewWindow, WebCore::ContextMenuItemTagOpenImageInNewWindow) SEPARATOR \
     F(DownloadImageToDisk, WebCore::ContextMenuItemTagDownloadImageToDisk) SEPARATOR \
     F(CopyImageToClipboard, WebCore::ContextMenuItemTagCopyImageToClipboard) SEPARATOR \
-    F(CopyImageUrlToClipboard, WebCore::ContextMenuItemTagCopyImageUrlToClipboard) SEPARATOR \
+    F(CopyImageUrlToClipboard, WebCore::ContextMenuItemTagCopyImageURLToClipboard) SEPARATOR \
     F(OpenFrameInNewWindow, WebCore::ContextMenuItemTagOpenFrameInNewWindow) SEPARATOR \
     F(Copy, WebCore::ContextMenuItemTagCopy) SEPARATOR \
     F(Back, WebCore::ContextMenuItemTagGoBack) SEPARATOR \
