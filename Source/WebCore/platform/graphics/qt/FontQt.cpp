@@ -129,7 +129,7 @@ Path Font::platformPathForGlyph(Glyph glyph) const
     return { PathQt::create(WTFMove(platformPath)) };
 }
 
-bool Font::platformSupportsCodePoint(UChar32 character, std::optional<UChar32> variation) const
+bool Font::platformSupportsCodePoint(char32_t character, std::optional<char32_t> variation) const
 {
     return variation ? false : glyphForCharacter(character);
 }
