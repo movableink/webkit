@@ -60,9 +60,11 @@ public:
 
     constexpr char characterAt(unsigned index) const { return m_characters[index]; }
 
+#if !PLATFORM(QT)
 #ifdef __OBJC__
     // This function convert null strings to empty strings.
     WTF_EXPORT_PRIVATE RetainPtr<NSString> createNSString() const;
+#endif
 #endif
 
 private:
