@@ -65,18 +65,22 @@ LocalFrameView* Widget::root() const
         return const_cast<LocalFrameView*>(downcast<LocalFrameView>(top));
     return nullptr;
 }
-    
+
 void Widget::removeFromParent()
 {
     if (parent())
         parent()->removeChild(*this);
 }
 
+#if !PLATFORM(QT)
+
 void Widget::setCursor(const Cursor& cursor)
 {
     if (auto* view = root())
         view->hostWindow()->setCursor(cursor);
 }
+
+#endif // !PLATFORM(QT)
 
 IntRect Widget::convertFromRootView(const IntRect& rootRect) const
 {
@@ -253,6 +257,8 @@ Widget::Widget(PlatformWidget widget)
     init(widget);
 }
 
+#if !PLATFORM(QT)
+
 Widget::~Widget()
 {
     ASSERT(!parent());
@@ -263,10 +269,14 @@ void Widget::setFrameRect(const IntRect& rect)
     m_frame = rect;
 }
 
+#endif
+
 IntRect Widget::frameRect() const
 {
     return m_frame;
 }
+
+#if !PLATFORM(QT)
 
 void Widget::show()
 {
@@ -287,6 +297,8 @@ void Widget::setIsSelected(bool)
 void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy, RegionContext*)
 {
 }
+
+#endif // !PLATFORM(QT)
 
 IntRect Widget::convertFromRootToContainingWindow(const Widget*, const IntRect& rect)
 {
