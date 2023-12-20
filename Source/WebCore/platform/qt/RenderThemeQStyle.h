@@ -66,7 +66,7 @@ protected:
     void adjustMenuListButtonStyle(RenderStyle&, const Element*) const final;
 
     // Returns the duration of the animation for the progress bar.
-    Seconds animationDurationForProgressBar(const RenderProgress&) const final;
+    Seconds animationDurationForProgressBar() const final;
     bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
     bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) final;
@@ -82,10 +82,6 @@ protected:
 
     void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const final;
     bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) final;
-
-#ifndef QT_NO_SPINBOX
-    bool paintInnerSpinButton(const RenderObject&, const PaintInfo&, const IntRect&) final;
-#endif
 
 protected:
     void computeSizeBasedOnStyle(RenderStyle&) const final;
