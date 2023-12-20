@@ -48,12 +48,12 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGContainer);
 
 RenderSVGContainer::RenderSVGContainer(Type type, Document& document, RenderStyle&& style)
-    : RenderSVGModelObject(type, document, WTFMove(style))
+    : RenderSVGModelObject(type, document, WTFMove(style), RenderElementType::RenderSVGContainer)
 {
 }
 
 RenderSVGContainer::RenderSVGContainer(Type type, SVGElement& element, RenderStyle&& style)
-    : RenderSVGModelObject(type, element, WTFMove(style))
+    : RenderSVGModelObject(type, element, WTFMove(style), RenderElementType::RenderSVGContainer)
 {
 }
 
@@ -91,7 +91,7 @@ void RenderSVGContainer::layout()
 void RenderSVGContainer::layoutChildren()
 {
     SVGContainerLayout containerLayout(*this);
-    containerLayout.layoutChildren(selfNeedsLayout() || SVGRenderSupport::filtersForceContainerLayout(*this));
+    containerLayout.layoutChildren(selfNeedsLayout());
 
     SVGBoundingBoxComputation boundingBoxComputation(*this);
     m_objectBoundingBox = boundingBoxComputation.computeDecoratedBoundingBox(SVGBoundingBoxComputation::objectBoundingBoxDecoration, &m_objectBoundingBoxValid);
@@ -127,14 +127,13 @@ void RenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint& paintOff
         return;
 
     if (paintInfo.phase == PaintPhase::ClippingMask) {
-        SVGRenderSupport::paintSVGClippingMask(*this, paintInfo);
+        paintSVGClippingMask(paintInfo);
         return;
     }
 
     auto adjustedPaintOffset = paintOffset + currentSVGLayoutLocation();
     if (paintInfo.phase == PaintPhase::Mask) {
-        // FIXME: [LBSE] Upstream SVGRenderSupport changes
-        // SVGRenderSupport::paintSVGMask(*this, paintInfo, adjustedPaintOffset);
+        paintSVGMask(paintInfo, adjustedPaintOffset);
         return;
     }
 

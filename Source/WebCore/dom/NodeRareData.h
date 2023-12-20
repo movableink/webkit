@@ -204,8 +204,8 @@ private:
     bool deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(Node&);
 
     // These two are currently mutually exclusive and could be unioned. Not very important as this class is large anyway.
-    CheckedPtr<ChildNodeList> m_childNodeList;
-    CheckedPtr<EmptyNodeList> m_emptyChildNodeList;
+    SingleThreadWeakPtr<ChildNodeList> m_childNodeList;
+    SingleThreadWeakPtr<EmptyNodeList> m_emptyChildNodeList;
 
     NodeListCacheMap m_atomNameCaches;
     TagCollectionNSCache m_tagCollectionNSCache;
@@ -221,10 +221,10 @@ public:
     NodeMutationObserverData() { }
 };
 
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeRareData);
+DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeRareData);
 class NodeRareData {
     WTF_MAKE_NONCOPYABLE(NodeRareData);
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeRareData);
+    WTF_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeRareData);
 public:
 #if defined(DUMP_NODE_STATISTICS) && DUMP_NODE_STATISTICS
     enum class UseType : uint32_t {
@@ -255,6 +255,7 @@ public:
         ExplicitlySetAttrElementsMap = 1 << 24,
         Popover = 1 << 25,
         DisplayContentsStyle = 1 << 26,
+        CustomStateSet = 1 << 27,
     };
 #endif
 

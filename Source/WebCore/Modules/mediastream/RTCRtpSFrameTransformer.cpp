@@ -33,7 +33,9 @@
 
 namespace WebCore {
 
+#if ASSERT_ENABLED
 static constexpr unsigned AES_CM_128_HMAC_SHA256_NONCE_SIZE = 12;
+#endif
 
 static inline void writeUInt64(uint8_t* data, uint64_t value, uint8_t valueLength)
 {
@@ -286,7 +288,6 @@ RTCRtpSFrameTransformer::TransformResult RTCRtpSFrameTransformer::encryptFrame(s
 
     static const unsigned MaxHeaderSize = 17;
 
-    Vector<uint8_t> transformedData;
     SFrameCompatibilityPrefixBuffer prefixBuffer;
     switch (m_compatibilityMode) {
     case CompatibilityMode::H264:
@@ -303,7 +304,7 @@ RTCRtpSFrameTransformer::TransformResult RTCRtpSFrameTransformer::encryptFrame(s
 
     auto iv = computeIV(m_counter, m_saltKey);
 
-    transformedData.resize(prefixBuffer.size + frameSize + MaxHeaderSize + m_authenticationSize);
+    Vector<uint8_t> transformedData(prefixBuffer.size + frameSize + MaxHeaderSize + m_authenticationSize);
 
     if (prefixBuffer.data)
         std::memcpy(transformedData.data(), prefixBuffer.data, prefixBuffer.size);
@@ -321,7 +322,8 @@ RTCRtpSFrameTransformer::TransformResult RTCRtpSFrameTransformer::encryptFrame(s
     writeUInt64(newDataPointer + headerSize, m_counter, counterLength);
     headerSize += counterLength;
 
-    transformedData.resize(prefixBuffer.size + frameSize + headerSize + m_authenticationSize);
+    ASSERT(headerSize < MaxHeaderSize);
+    transformedData.shrink(transformedData.size() - (MaxHeaderSize - headerSize));
 
     // Fill encrypted data
     auto encryptedData = encryptData(frameData, frameSize, iv, m_encryptionKey);

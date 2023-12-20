@@ -28,16 +28,18 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
+#include "MediaSourcePrivateClient.h"
 #include "PlatformTimeRanges.h"
 #include "SourceBufferPrivate.h"
 
 namespace WebCore {
 
-bool MediaSourcePrivate::hasFutureTime(const MediaTime& currentTime, const MediaTime& duration, const PlatformTimeRanges& ranges) const
+bool MediaSourcePrivate::hasFutureTime(const MediaTime& currentTime) const
 {
-    if (currentTime > duration)
+    if (currentTime >= duration())
         return false;
 
+    auto& ranges = buffered();
     MediaTime nearest = ranges.nearest(currentTime);
     if (abs(nearest - currentTime) > timeFudgeFactor())
         return false;
@@ -47,16 +49,41 @@ bool MediaSourcePrivate::hasFutureTime(const MediaTime& currentTime, const Media
         return false;
 
     MediaTime localEnd = ranges.end(found);
-    if (localEnd == duration)
+    if (localEnd == duration())
         return true;
 
     return localEnd - currentTime > timeFudgeFactor();
 }
 
-MediaSourcePrivate::~MediaSourcePrivate()
+MediaSourcePrivate::MediaSourcePrivate(MediaSourcePrivateClient& client)
+    : m_client(client)
 {
-    for (auto& sourceBuffer : m_sourceBuffers)
-        sourceBuffer->clearMediaSource();
+}
+
+MediaSourcePrivate::~MediaSourcePrivate() = default;
+
+RefPtr<MediaSourcePrivateClient> MediaSourcePrivate::client() const
+{
+    return m_client.get();
+}
+
+const MediaTime& MediaSourcePrivate::duration() const
+{
+    return m_duration;
+}
+
+Ref<MediaTimePromise> MediaSourcePrivate::waitForTarget(const SeekTarget& target)
+{
+    if (RefPtr client = this->client())
+        return client->waitForTarget(target);
+    return MediaTimePromise::createAndReject(PlatformMediaError::ClientDisconnected);
+}
+
+Ref<MediaPromise> MediaSourcePrivate::seekToTime(const MediaTime& time)
+{
+    if (RefPtr client = this->client())
+        return client->seekToTime(time);
+    return MediaPromise::createAndReject(PlatformMediaError::ClientDisconnected);
 }
 
 void MediaSourcePrivate::removeSourceBuffer(SourceBufferPrivate& sourceBuffer)
@@ -99,6 +126,23 @@ bool MediaSourcePrivate::hasVideo() const
     return std::any_of(m_activeSourceBuffers.begin(), m_activeSourceBuffers.end(), [] (SourceBufferPrivate* sourceBuffer) {
         return sourceBuffer->hasVideo();
     });
+}
+
+void MediaSourcePrivate::durationChanged(const MediaTime& duration)
+{
+    m_duration = duration;
+    for (auto& sourceBuffer : m_sourceBuffers)
+        sourceBuffer->setMediaSourceDuration(duration);
+}
+
+void MediaSourcePrivate::bufferedChanged(const PlatformTimeRanges& buffered)
+{
+    m_buffered = buffered;
+}
+
+const PlatformTimeRanges& MediaSourcePrivate::buffered() const
+{
+    return m_buffered;
 }
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)

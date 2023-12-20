@@ -45,6 +45,7 @@ namespace WebCore {
     class ContentSecurityPolicy;
     class Document;
     class ThreadableLoaderClient;
+    class WeakPtrImplWithEventTargetData;
 
     class DocumentThreadableLoader : public RefCounted<DocumentThreadableLoader>, public ThreadableLoader, public CachedRawResourceClient {
         WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
@@ -150,9 +151,7 @@ namespace WebCore {
         URL m_responseURL;
 
         ShouldLogError m_shouldLogError;
-#if ENABLE(SERVICE_WORKER)
         std::optional<ResourceRequest> m_bypassingPreflightForServiceWorkerRequest;
-#endif
     };
 
 } // namespace WebCore

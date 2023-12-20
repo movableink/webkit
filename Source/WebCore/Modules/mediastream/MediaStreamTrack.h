@@ -30,10 +30,10 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "ActiveDOMObject.h"
-#include "DoubleRange.h"
+#include "Blob.h"
 #include "EventTarget.h"
 #include "IDLTypes.h"
-#include "LongRange.h"
+#include "JSDOMPromiseDeferred.h"
 #include "MediaProducer.h"
 #include "MediaStreamTrackPrivate.h"
 #include "MediaTrackCapabilities.h"
@@ -49,8 +49,6 @@ class AudioSourceProvider;
 class Document;
 
 struct MediaTrackConstraints;
-
-template<typename IDLType> class DOMPromiseDeferred;
 
 class MediaStreamTrack
     : public RefCounted<MediaStreamTrack>
@@ -130,11 +128,18 @@ public:
     using TrackCapabilities = MediaTrackCapabilities;
     TrackCapabilities getCapabilities() const;
 
-    void getPhotoCapabilities(DOMPromiseDeferred<IDLDictionary<PhotoCapabilities>>&&) const;
-    void getPhotoSettings(DOMPromiseDeferred<IDLDictionary<PhotoSettings>>&&) const;
+    using TakePhotoPromise = NativePromise<std::pair<Vector<uint8_t>, String>, Exception>;
+    Ref<TakePhotoPromise> takePhoto(PhotoSettings&&);
+
+    using PhotoCapabilitiesPromise = NativePromise<PhotoCapabilities, Exception>;
+    Ref<PhotoCapabilitiesPromise> getPhotoCapabilities();
+
+    using PhotoSettingsPromise = NativePromise<PhotoSettings, Exception>;
+    Ref<PhotoSettingsPromise> getPhotoSettings();
 
     const MediaTrackConstraints& getConstraints() const { return m_constraints; }
     void setConstraints(MediaTrackConstraints&& constraints) { m_constraints = WTFMove(constraints); }
+
     void applyConstraints(const std::optional<MediaTrackConstraints>&, DOMPromiseDeferred<void>&&);
 
     RealtimeMediaSource& source() const { return m_private->source(); }

@@ -24,7 +24,6 @@
 
 #if USE(TEXTURE_MAPPER)
 
-#include "FilterOperations.h"
 #include "GLContext.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
@@ -54,7 +53,7 @@ static const GLenum s_pixelDataType = GL_UNSIGNED_BYTE;
 
 namespace WebCore {
 
-BitmapTexture::BitmapTexture(const IntSize& size, const Flags flags, GLint internalFormat)
+BitmapTexture::BitmapTexture(const IntSize& size, OptionSet<Flags> flags, GLint internalFormat)
     : m_flags(flags)
     , m_size(size)
     , m_internalFormat(internalFormat == GL_DONT_CARE ? GL_RGBA : internalFormat)
@@ -69,12 +68,12 @@ BitmapTexture::BitmapTexture(const IntSize& size, const Flags flags, GLint inter
     glTexImage2D(GL_TEXTURE_2D, 0, m_internalFormat, m_size.width(), m_size.height(), 0, m_format, s_pixelDataType, nullptr);
 }
 
-void BitmapTexture::reset(const IntSize& size, const Flags flags)
+void BitmapTexture::reset(const IntSize& size, OptionSet<Flags> flags)
 {
     m_flags = flags;
     m_shouldClear = true;
     m_colorConvertFlags = { };
-    m_filterInfo = FilterInfo();
+    m_filterOperation = nullptr;
     if (m_size != size) {
         m_size = size;
         glBindTexture(GL_TEXTURE_2D, m_id);
@@ -180,27 +179,6 @@ void BitmapTexture::updateContents(GraphicsLayer* sourceLayer, const IntRect& ta
     updateContents(image.get(), targetRect, IntPoint());
 }
 
-RefPtr<BitmapTexture> BitmapTexture::applyFilters(TextureMapper& textureMapper, const FilterOperations& filters, bool defersLastFilterPass)
-{
-    if (filters.isEmpty())
-        return this;
-
-    RefPtr<BitmapTexture> previousSurface = textureMapper.currentSurface();
-    RefPtr<BitmapTexture> surface = this;
-
-    for (size_t i = 0; i < filters.size(); ++i) {
-        RefPtr<FilterOperation> filter = filters.operations()[i];
-        ASSERT(filter);
-
-        bool lastFilter = (i == filters.size() - 1);
-
-        surface = textureMapper.applyFilter(surface, filter, defersLastFilterPass && lastFilter);
-    }
-
-    textureMapper.bindSurface(previousSurface.get());
-    return surface;
-}
-
 void BitmapTexture::initializeStencil()
 {
 #if !USE(TEXMAP_DEPTH_STENCIL_BUFFER)
@@ -256,7 +234,7 @@ void BitmapTexture::createFboIfNeeded()
     glGenFramebuffers(1, &m_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, id(), 0);
-    if (flags() & DepthBuffer)
+    if (m_flags.contains(Flags::DepthBuffer))
         initializeDepthBuffer();
     m_shouldClear = true;
 }
@@ -267,7 +245,7 @@ void BitmapTexture::bindAsSurface()
     createFboIfNeeded();
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
     glViewport(0, 0, m_size.width(), m_size.height());
-    if (flags() & DepthBuffer)
+    if (m_flags.contains(Flags::DepthBuffer))
         glEnable(GL_DEPTH_TEST);
     else
         glDisable(GL_DEPTH_TEST);

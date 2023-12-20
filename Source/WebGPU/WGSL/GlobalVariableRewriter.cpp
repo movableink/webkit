@@ -323,6 +323,9 @@ auto RewriteGlobalVariables::pack(Packing expectedPacking, AST::Expression& expr
             case Types::Primitive::F32:
                 operation = packing == Packing::Packed ? "float3"_s : "packed_float3"_s;
                 break;
+            case Types::Primitive::F16:
+                operation = packing == Packing::Packed ? "half3"_s : "packed_half3"_s;
+                break;
             default:
                 RELEASE_ASSERT_NOT_REACHED();
             }
@@ -507,9 +510,11 @@ auto RewriteGlobalVariables::packingForType(const Type* type) -> Packing
 
 void RewriteGlobalVariables::collectGlobals()
 {
-    auto& globalVars = m_callGraph.ast().variables();
     Vector<std::tuple<AST::Variable*, unsigned>> bufferLengths;
-    for (auto& globalVar : globalVars) {
+    for (auto& declaration : m_callGraph.ast().declarations()) {
+        if (!is<AST::Variable>(declaration))
+            continue;
+        auto& globalVar = downcast<AST::Variable>(declaration);
         std::optional<Global::Resource> resource;
         if (globalVar.group().has_value()) {
             RELEASE_ASSERT(globalVar.binding().has_value());
@@ -719,7 +724,7 @@ const Type* RewriteGlobalVariables::packStructType(const Types::Struct* structTy
         AST::StructureRole::PackedResource,
         &structType->structure
     );
-    m_callGraph.ast().append(m_callGraph.ast().structures(), packedStruct);
+    m_callGraph.ast().append(m_callGraph.ast().declarations(), packedStruct);
     const Type* packedStructType = m_callGraph.ast().types().structType(packedStruct);
     m_packedStructTypes.add(structType, packedStructType);
     return packedStructType;
@@ -814,6 +819,18 @@ void RewriteGlobalVariables::collectDynamicOffsetGlobals(const PipelineLayout& p
     }
 }
 
+static WGSL::StorageTextureAccess convertAccess(const AccessMode accessMode)
+{
+    switch (accessMode) {
+    case AccessMode::Read:
+        return WGSL::StorageTextureAccess::ReadOnly;
+    case AccessMode::ReadWrite:
+        return WGSL::StorageTextureAccess::ReadWrite;
+    case AccessMode::Write:
+        return WGSL::StorageTextureAccess::WriteOnly;
+    }
+}
+
 static BindGroupLayoutEntry::BindingMember bindingMemberForGlobal(auto& global)
 {
     auto* variable = global.declaration;
@@ -826,7 +843,7 @@ static BindGroupLayoutEntry::BindingMember bindingMemberForGlobal(auto& global)
             auto& reference = downcast<AST::ReferenceTypeExpression>(*maybeReference);
             auto* referenceType = std::get_if<Types::Reference>(reference.inferredType());
             if (referenceType && referenceType->addressSpace == AddressSpace::Storage)
-                return BufferBindingType::Storage;
+                return referenceType->accessMode == AccessMode::Read ? BufferBindingType::ReadOnlyStorage : BufferBindingType::Storage;
         }
 
         return BufferBindingType::Uniform;
@@ -840,6 +857,7 @@ static BindGroupLayoutEntry::BindingMember bindingMemberForGlobal(auto& global)
         case Types::Primitive::U32:
         case Types::Primitive::AbstractFloat:
         case Types::Primitive::F32:
+        case Types::Primitive::F16:
         case Types::Primitive::Void:
         case Types::Primitive::Bool:
             return BufferBindingLayout {
@@ -920,7 +938,7 @@ static BindGroupLayoutEntry::BindingMember bindingMemberForGlobal(auto& global)
         }
 
         return TextureBindingLayout {
-            .sampleType = TextureSampleType::Float,
+            .sampleType = TextureSampleType::UnfilterableFloat,
             .viewDimension = viewDimension,
             .multisampled = multisampled
         };
@@ -942,6 +960,8 @@ static BindGroupLayoutEntry::BindingMember bindingMemberForGlobal(auto& global)
         }
 
         return StorageTextureBindingLayout {
+            .access = convertAccess(texture.access),
+            .format = texture.format,
             .viewDimension = viewDimension
         };
     }, [&](const TextureDepth& texture) -> BindGroupLayoutEntry::BindingMember {
@@ -1033,6 +1053,9 @@ void RewriteGlobalVariables::usesOverride(AST::Variable& variable)
         break;
     case Types::Primitive::F32:
         constantType = Reflection::SpecializationConstantType::Float;
+        break;
+    case Types::Primitive::F16:
+        constantType = Reflection::SpecializationConstantType::Half;
         break;
     case Types::Primitive::I32:
         constantType = Reflection::SpecializationConstantType::Int;
@@ -1160,14 +1183,15 @@ void RewriteGlobalVariables::finalizeArgumentBufferStruct(unsigned group, Vector
     for (auto& [_, member] : entries)
         structMembers.append(*member);
 
-    m_callGraph.ast().append(m_callGraph.ast().structures(), m_callGraph.ast().astBuilder().construct<AST::Structure>(
+    auto& argumentBufferStruct = m_callGraph.ast().astBuilder().construct<AST::Structure>(
         SourceSpan::empty(),
         argumentBufferStructName(group),
         WTFMove(structMembers),
         AST::Attribute::List { },
         AST::StructureRole::BindGroup
-    ));
-    m_structTypes.add(group, m_callGraph.ast().types().structType(m_callGraph.ast().structures().last()));
+    );
+    m_callGraph.ast().append(m_callGraph.ast().declarations(), argumentBufferStruct);
+    m_structTypes.add(group, m_callGraph.ast().types().structType(argumentBufferStruct));
 }
 
 Vector<unsigned> RewriteGlobalVariables::insertStructs(const PipelineLayout& layout)

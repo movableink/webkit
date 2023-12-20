@@ -27,28 +27,46 @@
 
 #if PLATFORM(COCOA)
 
+#include "CoreIPCNSCFObject.h"
 #include <wtf/ArgumentCoder.h>
+#include <wtf/KeyValuePair.h>
+#include <wtf/RetainPtr.h>
+#include <wtf/UniqueRef.h>
+#include <wtf/Vector.h>
 
 namespace WebKit {
 
 class CoreIPCDictionary {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    CoreIPCDictionary(NSDictionary *dictionary)
-        : m_dictionary(dictionary)
+    CoreIPCDictionary(NSDictionary *);
+
+    CoreIPCDictionary(const RetainPtr<NSDictionary>& dictionary)
+        : CoreIPCDictionary(dictionary.get())
     {
     }
 
-    CoreIPCDictionary(RetainPtr<NSDictionary>&& dictionary)
-        : m_dictionary(WTFMove(dictionary))
-    {
-    }
+    RetainPtr<id> toID() const;
 
-    RetainPtr<id> toID() { return m_dictionary; }
+    bool keyHasValueOfType(const String&, IPC::NSType) const;
+    bool keyIsMissingOrHasValueOfType(const String&, IPC::NSType) const;
+    bool collectionValuesAreOfType(const String& key, IPC::NSType) const;
+    bool collectionValuesAreOfType(const String& key, IPC::NSType, IPC::NSType) const;
 
 private:
     friend struct IPC::ArgumentCoder<CoreIPCDictionary, void>;
 
-    IPC::CoreIPCRetainPtr<NSDictionary> m_dictionary;
+    using ValueType = Vector<KeyValuePair<UniqueRef<CoreIPCNSCFObject>, UniqueRef<CoreIPCNSCFObject>>>;
+
+    CoreIPCDictionary(ValueType&& keyValuePairs)
+        : m_keyValuePairs(WTFMove(keyValuePairs))
+    {
+    }
+
+    void createNSDictionaryIfNeeded() const;
+
+    mutable RetainPtr<NSDictionary> m_nsDictionary;
+    ValueType m_keyValuePairs;
 };
 
 } // namespace WebKit

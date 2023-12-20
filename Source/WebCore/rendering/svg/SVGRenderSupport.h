@@ -93,8 +93,6 @@ public:
     static LegacyRenderSVGRoot* findTreeRootObject(RenderElement&);
     static const LegacyRenderSVGRoot* findTreeRootObject(const RenderElement&);
 
-    static void paintSVGClippingMask(const RenderLayerModelObject&, PaintInfo&);
-
 private:
     // This class is not constructable.
     SVGRenderSupport();
@@ -110,8 +108,8 @@ public:
     static bool isVisiting(const RenderElement&);
 
 private:
-    static WeakHashSet<RenderElement>& visitedElements();
-    WeakPtr<RenderElement> m_element;
+    static SingleThreadWeakHashSet<RenderElement>& visitedElements();
+    SingleThreadWeakPtr<RenderElement> m_element;
 };
 
 } // namespace WebCore

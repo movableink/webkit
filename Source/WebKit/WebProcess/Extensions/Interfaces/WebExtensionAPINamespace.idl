@@ -34,13 +34,21 @@
 
     [MainWorldOnly, Dynamic] readonly attribute WebExtensionAPIAction browserAction;
 
+    [MainWorldOnly, Dynamic] readonly attribute WebExtensionAPICookies cookies;
+
     [MainWorldOnly, Dynamic] readonly attribute WebExtensionAPICommands commands;
+
+    [MainWorldOnly, Dynamic] readonly attribute WebExtensionAPIMenus contextMenus;
+
+    [MainWorldOnly, Dynamic] readonly attribute WebExtensionAPIDeclarativeNetRequest declarativeNetRequest;
 
     readonly attribute WebExtensionAPIExtension extension;
 
     readonly attribute WebExtensionAPILocalization i18n;
 
     readonly attribute WebExtensionAPIRuntime runtime;
+
+    [MainWorldOnly, Dynamic] readonly attribute WebExtensionAPIMenus menus;
 
     [MainWorldOnly, Dynamic] readonly attribute WebExtensionAPINotifications notifications;
 

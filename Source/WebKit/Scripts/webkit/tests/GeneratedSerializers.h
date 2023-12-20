@@ -29,53 +29,83 @@
 #include <wtf/Ref.h>
 #include <wtf/RetainPtr.h>
 
+namespace EnumNamespace {
 #if ENABLE(BOOL_ENUM)
-namespace EnumNamespace { enum class BoolEnumType : bool; }
+enum class BoolEnumType : bool;
 #endif
-enum class EnumWithoutNamespace : uint8_t;
 #if ENABLE(UINT16_ENUM)
-namespace EnumNamespace { enum class EnumType : uint16_t; }
+enum class EnumType : uint16_t;
 #endif
+}
+
+namespace JSC {
+enum class Incredible;
+}
+
+namespace Namespace {
+class ReturnRefClass;
+struct EmptyConstructorStruct;
+class EmptyConstructorWithIf;
+#if ENABLE(TEST_FEATURE)
+class ConditionalCommonClass;
+#endif
+class CommonClass;
+class AnotherCommonClass;
+}
+
+namespace Namespace::Subnamespace {
+#if ENABLE(TEST_FEATURE)
+struct StructName;
+#endif
+}
+
+namespace Testing {
+enum class StorageSize : uint8_t;
+}
+
+namespace WTF {
+class Seconds;
+class CreateUsingClass;
+}
+
+namespace WebCore {
+class InheritsFrom;
+class InheritanceGrandchild;
+template<typename, typename> class ScrollSnapOffsetsInfo;
+using FloatBoxExtent = ScrollSnapOffsetsInfo<float, double>;
+class TimingFunction;
+class MoveOnlyBaseClass;
+class MoveOnlyDerivedClass;
+class ScrollingStateFrameHostingNode;
+class ScrollingStateFrameHostingNodeWithStuffAfterTuple;
+struct Amazing;
+}
+
+namespace WebKit {
+class PlatformClass;
+class CustomEncoded;
+class LayerProperties;
+#if USE(AVFOUNDATION)
+class CoreIPCAVOutputContext;
+#endif
+class CoreIPCNSSomeFoundationType;
+#if ENABLE(DATA_DETECTION)
+class CoreIPCDDScannerResult;
+#endif
+class RValueWithFunctionCalls;
+class Fabulous;
+}
+
+enum class EnumWithoutNamespace : uint8_t;
 enum class OptionSetEnumFirstCondition : uint32_t;
 enum class OptionSetEnumLastCondition : uint32_t;
 enum class OptionSetEnumAllCondition : uint32_t;
-#if ENABLE(TEST_FEATURE)
-namespace Namespace::Subnamespace { struct StructName; }
-#endif
-namespace Namespace { class ReturnRefClass; }
-namespace Namespace { struct EmptyConstructorStruct; }
-namespace Namespace { class EmptyConstructorWithIf; }
 class WithoutNamespace;
 class WithoutNamespaceWithAttributes;
-namespace WebCore { class InheritsFrom; }
-namespace WebCore { class InheritanceGrandchild; }
-namespace WTF { class Seconds; }
-namespace WTF { class CreateUsingClass; }
-namespace WebCore {
-template<typename, typename> class ScrollSnapOffsetsInfo;
-using FloatBoxExtent = ScrollSnapOffsetsInfo<float, double>;
-}
 struct SoftLinkedMember;
-namespace WebCore { class TimingFunction; }
-#if ENABLE(TEST_FEATURE)
-namespace Namespace { class ConditionalCommonClass; }
-#endif
-namespace Namespace { class CommonClass; }
-namespace Namespace { class AnotherCommonClass; }
-namespace WebCore { class MoveOnlyBaseClass; }
-namespace WebCore { class MoveOnlyDerivedClass; }
-namespace WebKit { class PlatformClass; }
-namespace WebKit { class CustomEncoded; }
-namespace WebKit { class LayerProperties; }
-namespace WebKit { class Fabulous; }
-namespace WebCore { struct Amazing; }
-namespace JSC { enum class Incredible; }
-namespace Testing { enum class StorageSize : uint8_t; }
-namespace WebCore { class ScrollingStateFrameHostingNode; }
-namespace WebCore { class ScrollingStateFrameHostingNodeWithStuffAfterTuple; }
-#if USE(CFBAR)
-#endif
-namespace WebKit { class RValueWithFunctionCalls; }
+struct RequestEncodedWithBody;
+struct RequestEncodedWithBodyRValue;
+
 #if USE(CFBAR)
 typedef struct __CFBar * CFBarRef;
 #endif
@@ -226,6 +256,35 @@ template<> struct ArgumentCoder<WebCore::ScrollingStateFrameHostingNodeWithStuff
     static void encode(Encoder&, const WebCore::ScrollingStateFrameHostingNodeWithStuffAfterTuple&);
     static std::optional<Ref<WebCore::ScrollingStateFrameHostingNodeWithStuffAfterTuple>> decode(Decoder&);
 };
+
+template<> struct ArgumentCoder<RequestEncodedWithBody> {
+    static void encode(Encoder&, const RequestEncodedWithBody&);
+    static std::optional<RequestEncodedWithBody> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<RequestEncodedWithBodyRValue> {
+    static void encode(Encoder&, RequestEncodedWithBodyRValue&&);
+    static std::optional<RequestEncodedWithBodyRValue> decode(Decoder&);
+};
+
+#if USE(AVFOUNDATION)
+template<> struct ArgumentCoder<WebKit::CoreIPCAVOutputContext> {
+    static void encode(Encoder&, const WebKit::CoreIPCAVOutputContext&);
+    static std::optional<WebKit::CoreIPCAVOutputContext> decode(Decoder&);
+};
+#endif
+
+template<> struct ArgumentCoder<WebKit::CoreIPCNSSomeFoundationType> {
+    static void encode(Encoder&, const WebKit::CoreIPCNSSomeFoundationType&);
+    static std::optional<WebKit::CoreIPCNSSomeFoundationType> decode(Decoder&);
+};
+
+#if ENABLE(DATA_DETECTION)
+template<> struct ArgumentCoder<WebKit::CoreIPCDDScannerResult> {
+    static void encode(Encoder&, const WebKit::CoreIPCDDScannerResult&);
+    static std::optional<WebKit::CoreIPCDDScannerResult> decode(Decoder&);
+};
+#endif
 
 template<> struct ArgumentCoder<CFFooRef> {
     static void encode(Encoder&, CFFooRef);

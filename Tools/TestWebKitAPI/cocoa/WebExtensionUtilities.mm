@@ -48,13 +48,18 @@
 
 - (instancetype)initForExtension:(_WKWebExtension *)extension
 {
+    return [self initForExtension:extension extensionControllerConfiguration:nil];
+}
+
+- (instancetype)initForExtension:(_WKWebExtension *)extension extensionControllerConfiguration:(_WKWebExtensionControllerConfiguration *)configuration
+{
     if (!(self = [super init]))
         return nil;
 
     _yieldMessage = @"";
     _extension = extension;
     _context = [[_WKWebExtensionContext alloc] initForExtension:extension];
-    _controller = [[_WKWebExtensionController alloc] initWithConfiguration:_WKWebExtensionControllerConfiguration.nonPersistentConfiguration];
+    _controller = [[_WKWebExtensionController alloc] initWithConfiguration:configuration ?: _WKWebExtensionControllerConfiguration.nonPersistentConfiguration];
 
     _context._testingMode = YES;
 
@@ -296,6 +301,9 @@ static WKUserContentController *userContentController(BOOL usingPrivateBrowsing)
     return usingPrivateBrowsing ? privateController : normalController;
 }
 
+@interface TestWebExtensionTab () <WKNavigationDelegate>
+@end
+
 @implementation TestWebExtensionTab {
     __weak _WKWebExtensionController *_extensionController;
 }
@@ -321,6 +329,8 @@ static WKUserContentController *userContentController(BOOL usingPrivateBrowsing)
         configuration.userContentController = userContentController(usingPrivateBrowsing);
 
         _mainWebView = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration];
+        _mainWebView.navigationDelegate = self;
+
         _extensionController = extensionController;
     }
 
@@ -345,6 +355,32 @@ static WKUserContentController *userContentController(BOOL usingPrivateBrowsing)
     configuration.userContentController = userContentController(usingPrivateBrowsing);
 
     _mainWebView = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration];
+    _mainWebView.navigationDelegate = self;
+}
+
+- (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation
+{
+    [_extensionController didChangeTabProperties:_WKWebExtensionTabChangedPropertiesURL | _WKWebExtensionTabChangedPropertiesLoading forTab:self];
+}
+
+- (void)webView:(WKWebView *)webView didReceiveServerRedirectForProvisionalNavigation:(WKNavigation *)navigation
+{
+    [_extensionController didChangeTabProperties:_WKWebExtensionTabChangedPropertiesURL forTab:self];
+}
+
+- (void)webView:(WKWebView *)webView didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error
+{
+    [_extensionController didChangeTabProperties:_WKWebExtensionTabChangedPropertiesURL | _WKWebExtensionTabChangedPropertiesLoading forTab:self];
+}
+
+- (void)webView:(WKWebView *)webView didCommitNavigation:(WKNavigation *)navigation
+{
+    [_extensionController didChangeTabProperties:_WKWebExtensionTabChangedPropertiesTitle | _WKWebExtensionTabChangedPropertiesURL forTab:self];
+}
+
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
+{
+    [_extensionController didChangeTabProperties:_WKWebExtensionTabChangedPropertiesLoading forTab:self];
 }
 
 - (WKWebView *)mainWebViewForWebExtensionContext:(_WKWebExtensionContext *)context
@@ -424,7 +460,7 @@ static WKUserContentController *userContentController(BOOL usingPrivateBrowsing)
 
 - (void)setParentTab:(id<_WKWebExtensionTab>)parentTab forWebExtensionContext:(_WKWebExtensionContext *)context completionHandler:(void (^)(NSError *))completionHandler
 {
-    _parentTab = parentTab;
+    _parentTab = dynamic_objc_cast<TestWebExtensionTab>(parentTab);
 
     completionHandler(nil);
 }
@@ -763,26 +799,26 @@ static WKUserContentController *userContentController(BOOL usingPrivateBrowsing)
 namespace TestWebKitAPI {
 namespace Util {
 
-RetainPtr<TestWebExtensionManager> loadAndRunExtension(_WKWebExtension *extension)
+RetainPtr<TestWebExtensionManager> loadAndRunExtension(_WKWebExtension *extension, _WKWebExtensionControllerConfiguration *configuration)
 {
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension]);
+    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension extensionControllerConfiguration:configuration]);
     [manager loadAndRun];
     return manager;
 }
 
-RetainPtr<TestWebExtensionManager> loadAndRunExtension(NSDictionary *manifest, NSDictionary *resources)
+RetainPtr<TestWebExtensionManager> loadAndRunExtension(NSDictionary *manifest, NSDictionary *resources, _WKWebExtensionControllerConfiguration *configuration)
 {
-    return loadAndRunExtension([[_WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources]);
+    return loadAndRunExtension([[_WKWebExtension alloc] _initWithManifestDictionary:manifest resources:resources], configuration);
 }
 
-RetainPtr<TestWebExtensionManager> loadAndRunExtension(NSDictionary *resources)
+RetainPtr<TestWebExtensionManager> loadAndRunExtension(NSDictionary *resources, _WKWebExtensionControllerConfiguration *configuration)
 {
-    return loadAndRunExtension([[_WKWebExtension alloc] _initWithResources:resources]);
+    return loadAndRunExtension([[_WKWebExtension alloc] _initWithResources:resources], configuration);
 }
 
-RetainPtr<TestWebExtensionManager> loadAndRunExtension(NSURL *baseURL)
+RetainPtr<TestWebExtensionManager> loadAndRunExtension(NSURL *baseURL, _WKWebExtensionControllerConfiguration *configuration)
 {
-    return loadAndRunExtension([[_WKWebExtension alloc] initWithResourceBaseURL:baseURL error:nullptr]);
+    return loadAndRunExtension([[_WKWebExtension alloc] initWithResourceBaseURL:baseURL error:nullptr], configuration);
 }
 
 NSData *makePNGData(CGSize size, SEL colorSelector)

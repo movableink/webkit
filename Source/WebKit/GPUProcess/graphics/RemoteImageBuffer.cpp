@@ -61,7 +61,7 @@ RemoteImageBuffer::~RemoteImageBuffer()
     // Volatile image buffers do not have contexts.
     if (m_imageBuffer->volatilityState() == WebCore::VolatilityState::Volatile)
         return;
-    if (!m_imageBuffer->backend())
+    if (!m_imageBuffer->hasBackend())
         return;
     // Unwind the context's state stack before destruction, since calls to restore may not have
     // been flushed yet, or the web process may have terminated.
@@ -165,17 +165,10 @@ void RemoteImageBuffer::transformToColorSpace(const WebCore::DestinationColorSpa
     m_imageBuffer->transformToColorSpace(colorSpace);
 }
 
-void RemoteImageBuffer::setFlushSignal(IPC::Signal&& signal)
-{
-    m_flushSignal = WTFMove(signal);
-}
-
 void RemoteImageBuffer::flushContext()
 {
-    RELEASE_ASSERT(m_flushSignal);
     assertIsCurrent(workQueue());
     m_imageBuffer->flushDrawingContext();
-    m_flushSignal->signal();
 }
 
 void RemoteImageBuffer::flushContextSync(CompletionHandler<void()>&& completionHandler)
@@ -184,6 +177,15 @@ void RemoteImageBuffer::flushContextSync(CompletionHandler<void()>&& completionH
     m_imageBuffer->flushDrawingContext();
     completionHandler();
 }
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+void RemoteImageBuffer::dynamicContentScalingDisplayList(CompletionHandler<void(std::optional<WebCore::DynamicContentScalingDisplayList>&&)>&& completionHandler)
+{
+    assertIsCurrent(workQueue());
+    auto displayList = m_imageBuffer->dynamicContentScalingDisplayList();
+    completionHandler({ WTFMove(displayList) });
+}
+#endif
 
 IPC::StreamConnectionWorkQueue& RemoteImageBuffer::workQueue() const
 {

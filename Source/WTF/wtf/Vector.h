@@ -714,8 +714,17 @@ public:
 
         asanSetInitialBufferSizeTo(size);
 
-        for (size_t i = 0; i < size; ++i)
-            unsafeAppendWithoutCapacityCheck(valueGenerator(i));
+        if constexpr (std::is_same_v<std::invoke_result_t<Functor, size_t>, std::optional<T>>) {
+            for (size_t i = 0; i < size; ++i) {
+                if (auto item = valueGenerator(i))
+                    unsafeAppendWithoutCapacityCheck(WTFMove(*item));
+                else
+                    return;
+            }
+        } else {
+            for (size_t i = 0; i < size; ++i)
+                unsafeAppendWithoutCapacityCheck(valueGenerator(i));
+        }
     }
 
     template<typename U = T>
@@ -838,7 +847,8 @@ public:
     template<typename U> bool appendIfNotContains(const U&);
 
     void shrink(size_t size);
-    void grow(size_t size);
+    ALWAYS_INLINE void grow(size_t size) { growImpl<FailureAction::Crash>(size); }
+    ALWAYS_INLINE bool tryGrow(size_t size) { return growImpl<FailureAction::Report>(size); }
     void resize(size_t size);
     void resizeToFit(size_t size);
     ALWAYS_INLINE void reserveCapacity(size_t newCapacity) { reserveCapacity<FailureAction::Crash>(newCapacity); }
@@ -865,6 +875,9 @@ public:
     template<typename U> ALWAYS_INLINE void appendList(std::initializer_list<U> initializerList) { append(std::data(initializerList), initializerList.size()); }
     template<typename U, size_t otherCapacity, typename OtherOverflowHandler, size_t otherMinCapacity, typename OtherMalloc> void appendVector(const Vector<U, otherCapacity, OtherOverflowHandler, otherMinCapacity, OtherMalloc>&);
     template<typename U, size_t otherCapacity, typename OtherOverflowHandler, size_t otherMinCapacity, typename OtherMalloc> void appendVector(Vector<U, otherCapacity, OtherOverflowHandler, otherMinCapacity, OtherMalloc>&&);
+
+    template<typename Functor, typename = typename std::enable_if_t<std::is_invocable_v<Functor, size_t>>>
+    void appendUsingFunctor(size_t, const Functor&);
 
     void insert(size_t position, ValueType&& value) { insert<ValueType>(position, std::forward<ValueType>(value)); }
     template<typename U> void insert(size_t position, const U*, size_t);
@@ -931,6 +944,7 @@ public:
     template<typename U> bool unsafeAppendWithoutCapacityCheck(const U*, size_t);
 
 private:
+    template<FailureAction> bool growImpl(size_t);
     template<FailureAction> bool reserveCapacity(size_t newCapacity);
     template<FailureAction> bool reserveInitialCapacity(size_t initialCapacity);
     template<FailureAction> bool growCapacityBy(size_t increment);
@@ -1181,6 +1195,15 @@ void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::appendRang
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+template<typename Functor, typename>
+void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::appendUsingFunctor(size_t size, const Functor& valueGenerator)
+{
+    reserveCapacity(this->size() + size);
+    for (size_t i = 0; i < size; ++i)
+        unsafeAppendWithoutCapacityCheck(valueGenerator(i));
+}
+
+template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
 template<FailureAction action>
 bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::expandCapacity(size_t newMinCapacity)
 {
@@ -1259,15 +1282,22 @@ void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::shrink(siz
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
-void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::grow(size_t size)
+template<FailureAction failureAction>
+bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::growImpl(size_t size)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(size >= m_size);
-    if (size > capacity())
-        expandCapacity<FailureAction::Crash>(size);
+    if (size > capacity()) {
+        bool success = expandCapacity<failureAction>(size);
+        if constexpr (failureAction == FailureAction::Report) {
+            if (UNLIKELY(!success))
+                return false;
+        }
+    }
     asanBufferSizeWillChangeTo(size);
     if (begin())
         TypeOperations::initializeIfNonPOD(end(), begin() + size);
     m_size = size;
+    return true;
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>

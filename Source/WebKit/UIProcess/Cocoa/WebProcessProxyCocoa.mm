@@ -28,6 +28,7 @@
 
 #import "AccessibilitySupportSPI.h"
 #import "CodeSigning.h"
+#import "CoreIPCAuditToken.h"
 #import "DefaultWebBrowserChecks.h"
 #import "HighPerformanceGPUManager.h"
 #import "Logging.h"
@@ -37,7 +38,6 @@
 #import "WKAPICast.h"
 #import "WKBrowsingContextControllerInternal.h"
 #import "WKBrowsingContextHandleInternal.h"
-#import "WKTypeRefWrapper.h"
 #import "WebProcessMessages.h"
 #import "WebProcessPool.h"
 #import <WebCore/ActivityState.h>
@@ -99,11 +99,6 @@ RefPtr<ObjCObjectGraph> WebProcessProxy::transformHandlesToObjects(ObjCObjectGra
         {
             if (dynamic_objc_cast<WKBrowsingContextHandle>(object))
                 return true;
-
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-            if (dynamic_objc_cast<WKTypeRefWrapper>(object))
-                return true;
-ALLOW_DEPRECATED_DECLARATIONS_END
             return false;
         }
 
@@ -118,11 +113,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
                 return [NSNull null];
             }
-
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-            if (auto* wrapper = dynamic_objc_cast<WKTypeRefWrapper>(object))
-                return adoptNS([[WKTypeRefWrapper alloc] initWithObject:toAPI(protectedWebProcessProxy()->transformHandlesToObjects(toImpl(wrapper.object)).get())]);
-ALLOW_DEPRECATED_DECLARATIONS_END
             return object;
         }
 
@@ -140,8 +130,6 @@ RefPtr<ObjCObjectGraph> WebProcessProxy::transformObjectsToHandles(ObjCObjectGra
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             if (dynamic_objc_cast<WKBrowsingContextController>(object))
                 return true;
-            if (dynamic_objc_cast<WKTypeRefWrapper>(object))
-                return true;
 ALLOW_DEPRECATED_DECLARATIONS_END
             return false;
         }
@@ -151,8 +139,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             if (auto* controller = dynamic_objc_cast<WKBrowsingContextController>(object))
                 return controller.handle;
-            if (auto* wrapper = dynamic_objc_cast<WKTypeRefWrapper>(object))
-                return adoptNS([[WKTypeRefWrapper alloc] initWithObject:toAPI(transformObjectsToHandles(toImpl(wrapper.object)).get())]);
 ALLOW_DEPRECATED_DECLARATIONS_END
             return object;
         }
@@ -253,7 +239,7 @@ void WebProcessProxy::unblockAccessibilityServerIfNeeded()
 
     Vector<SandboxExtension::Handle> handleArray;
 #if PLATFORM(IOS_FAMILY)
-    handleArray = SandboxExtension::createHandlesForMachLookup({ "com.apple.frontboard.systemappservices"_s }, auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap);
+    handleArray = SandboxExtension::createHandlesForMachLookup({ }, auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap);
 #endif
 
     send(Messages::WebProcess::UnblockServicesRequiredByAccessibility(WTFMove(handleArray)), 0);
@@ -261,9 +247,9 @@ void WebProcessProxy::unblockAccessibilityServerIfNeeded()
 }
 
 #if PLATFORM(MAC)
-void WebProcessProxy::isAXAuthenticated(audit_token_t auditToken, CompletionHandler<void(bool)>&& completionHandler)
+void WebProcessProxy::isAXAuthenticated(CoreIPCAuditToken&& auditToken, CompletionHandler<void(bool)>&& completionHandler)
 {
-    auto authenticated = TCCAccessCheckAuditToken(get_TCC_kTCCServiceAccessibility(), auditToken, nullptr);
+    auto authenticated = TCCAccessCheckAuditToken(get_TCC_kTCCServiceAccessibility(), auditToken.auditToken(), nullptr);
     completionHandler(authenticated);
 }
 #endif

@@ -101,7 +101,7 @@
 #endif
 
 #if PLATFORM(WPE)
-#include "WPEView.h"
+#include "WPEWebView.h"
 #include "WebKitOptionMenuPrivate.h"
 #include "WebKitWebViewBackendPrivate.h"
 #include "WebKitWebViewClient.h"
@@ -192,6 +192,9 @@ enum {
 
 #if PLATFORM(WPE)
     PROP_BACKEND,
+#if ENABLE(WPE_PLATFORM)
+    PROP_DISPLAY,
+#endif
 #endif
 
     PROP_WEB_CONTEXT,
@@ -277,6 +280,9 @@ struct _WebKitWebViewPrivate {
 
 #if PLATFORM(WPE)
     GRefPtr<WebKitWebViewBackend> backend;
+#if ENABLE(WPE_PLATFORM)
+    GRefPtr<WPEDisplay> display;
+#endif
     std::unique_ptr<WKWPE::View> view;
     Vector<FrameDisplayedCallback> frameDisplayedCallbacks;
     bool inFrameDisplayed;
@@ -526,14 +532,14 @@ WebKitWebResourceLoadManager* WebKitWebViewClient::webResourceLoadManager()
 }
 
 #if ENABLE(FULLSCREEN_API)
-void WebKitWebViewClient::enterFullScreen(WKWPE::View&)
+bool WebKitWebViewClient::enterFullScreen(WKWPE::View&)
 {
-    webkitWebViewEnterFullScreen(m_webView);
+    return webkitWebViewEnterFullScreen(m_webView);
 }
 
-void WebKitWebViewClient::exitFullScreen(WKWPE::View&)
+bool WebKitWebViewClient::exitFullScreen(WKWPE::View&)
 {
-    webkitWebViewExitFullScreen(m_webView);
+    return webkitWebViewExitFullScreen(m_webView);
 }
 #endif
 #endif
@@ -785,6 +791,11 @@ static void webkitWebViewConstructed(GObject* object)
     WebKitWebView* webView = WEBKIT_WEB_VIEW(object);
     WebKitWebViewPrivate* priv = webView->priv;
     if (priv->relatedView) {
+#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
+        if (priv->display)
+            g_critical("WebKitWebView display property can't be set when related-view is set too, passed display value is ignored.");
+        priv->display = webkit_web_view_get_display(priv->relatedView);
+#endif
         if (priv->context)
             g_critical("WebKitWebView web-context property can't be set when related-view is set too, passed web-context value is ignored.");
         priv->context = webkit_web_view_get_context(priv->relatedView);
@@ -805,6 +816,21 @@ static void webkitWebViewConstructed(GObject* object)
 #if !ENABLE(2022_GLIB_API)
     else if (!priv->isEphemeral)
         priv->isEphemeral = webkit_web_context_is_ephemeral(priv->context.get());
+#endif
+
+#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
+    if (!priv->display && !priv->backend)
+        priv->display = wpe_display_get_default();
+    else if (priv->backend) {
+        if (priv->display) {
+            g_critical("WebKitWebView backend can't be set when display is set too, passed backend is ignored.");
+            priv->backend = nullptr;
+        } else if (g_type_class_peek(WPE_TYPE_DISPLAY)) {
+            g_critical("WebKitWebView backend can't be set when WPE platform API is already in use, passed backend is ignored.");
+            priv->backend = nullptr;
+            priv->display = wpe_display_get_default();
+        }
+    }
 #endif
 
     if (!priv->settings)
@@ -901,6 +927,13 @@ static void webkitWebViewSetProperty(GObject* object, guint propId, const GValue
         webView->priv->backend = backend ? adoptGRef(static_cast<WebKitWebViewBackend*>(backend)) : nullptr;
         break;
     }
+#if ENABLE(WPE_PLATFORM)
+    case PROP_DISPLAY: {
+        gpointer display = g_value_get_object(value);
+        webView->priv->display = display ? WPE_DISPLAY(display) : nullptr;
+        break;
+    }
+#endif
 #endif
     case PROP_WEB_CONTEXT: {
         gpointer webContext = g_value_get_object(value);
@@ -981,6 +1014,11 @@ static void webkitWebViewGetProperty(GObject* object, guint propId, GValue* valu
     case PROP_BACKEND:
         g_value_set_static_boxed(value, webView->priv->backend.get());
         break;
+#if ENABLE(WPE_PLATFORM)
+    case PROP_DISPLAY:
+        g_value_set_object(value, webView->priv->display.get());
+        break;
+#endif
 #endif
     case PROP_WEB_CONTEXT:
         g_value_set_object(value, webView->priv->context.get());
@@ -1146,6 +1184,21 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
             nullptr, nullptr,
             WEBKIT_TYPE_WEB_VIEW_BACKEND,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+#if ENABLE(WPE_PLATFORM)
+    /**
+     * WebKitWebView:display:
+     *
+     * The #WPEDisplay of the view.
+     *
+     * Since: 2.44
+     */
+    sObjProperties[PROP_DISPLAY] =
+        g_param_spec_object(
+            "display",
+            nullptr, nullptr,
+            WPE_TYPE_DISPLAY,
+            static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+#endif
 #endif
 
     /**
@@ -2426,7 +2479,11 @@ void webkitWebViewCreatePage(WebKitWebView* webView, Ref<API::PageConfiguration>
 #if PLATFORM(GTK)
     webkitWebViewBaseCreateWebPage(WEBKIT_WEB_VIEW_BASE(webView), WTFMove(configuration));
 #elif PLATFORM(WPE)
+#if ENABLE(WPE_PLATFORM)
+    webView->priv->view.reset(WKWPE::View::create(webView->priv->backend ? webkit_web_view_backend_get_wpe_backend(webView->priv->backend.get()) : nullptr, webkit_web_view_get_display(webView), configuration.get()));
+#else
     webView->priv->view.reset(WKWPE::View::create(webkit_web_view_backend_get_wpe_backend(webView->priv->backend.get()), configuration.get()));
+#endif
 #endif
 }
 
@@ -3016,6 +3073,42 @@ WebKitWebViewBackend* webkit_web_view_get_backend(WebKitWebView* webView)
 
     return webView->priv->backend.get();
 }
+
+#if ENABLE(WPE_PLATFORM)
+/**
+ * webkit_web_view_get_display:
+ * @web_view: a #WebKitWebView
+ *
+ * Get the #WPEDisplay of @web_view
+ *
+ * Returns: (transfer none): the #WPEDisplay of @web_view
+ *
+ * Since: 2.44
+ */
+WPEDisplay* webkit_web_view_get_display(WebKitWebView* webView)
+{
+    g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), nullptr);
+
+    return webView->priv->display.get();
+}
+
+/**
+ * webkit_web_view_get_wpe_view:
+ * @web_view: a #WebKitWebView
+ *
+ * Get the #WPEView of @web_view
+ *
+ * Returns: (transfer none): the #WPEView of @web_view
+ *
+ * Since: 2.44
+ */
+WPEView* webkit_web_view_get_wpe_view(WebKitWebView* webView)
+{
+    g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), nullptr);
+
+    return webView->priv->view->wpeView();
+}
+#endif
 #endif
 
 /**

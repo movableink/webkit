@@ -30,20 +30,49 @@
 #include "ArgumentCodersCocoa.h"
 #include <wtf/RetainPtr.h>
 
+#ifdef __OBJC__
+@interface NSObject (WebKitSecureCoding)
+- (NSDictionary *)_webKitPropertyListData;
+- (id)_initWithWebKitPropertyListData:(NSDictionary *)plist;
+@end
+#endif
+
 namespace WebKit {
 
-class CoreIPCSecureCoding {
-public:
-    CoreIPCSecureCoding(NSObject<NSSecureCoding> *);
-    CoreIPCSecureCoding(RetainPtr<NSObject<NSSecureCoding>>&&);
+struct AuxiliaryProcessCreationParameters;
 
-    RetainPtr<id> toID() { return m_secureCoding; }
+namespace SecureCoding {
+
+const HashSet<String>* classNamesExemptFromSecureCodingCrash();
+void applyProcessCreationParameters(const AuxiliaryProcessCreationParameters&);
+
+} // namespace SecureCoding
+
+#ifdef __OBJC__
+
+class CoreIPCSecureCoding {
+WTF_MAKE_FAST_ALLOCATED;
+public:
+    CoreIPCSecureCoding(id);
+    CoreIPCSecureCoding(const RetainPtr<NSObject<NSSecureCoding>>& object)
+        : CoreIPCSecureCoding(object.get())
+    {
+    }
+
+    RetainPtr<id> toID() const { return m_secureCoding; }
+
+    Class objectClass() { return m_secureCoding.get().class; }
+
+    static bool conformsToWebKitSecureCoding(id);
+    static bool conformsToSecureCoding(id);
 
 private:
     friend struct IPC::ArgumentCoder<CoreIPCSecureCoding, void>;
 
     IPC::CoreIPCRetainPtr<NSObject<NSSecureCoding>> m_secureCoding;
 };
+
+#endif // __OBJC__
 
 } // namespace WebKit
 

@@ -43,6 +43,12 @@ constexpr CGFloat whiteColorComponents[4] = { 1, 1, 1, 1 };
 
 @end
 
+@interface WKWebView (WKBaseScrollViewDelegate)
+
+- (void)scrollView:(UIScrollView *)scrollView handleScrollEvent:(UIScrollEvent *)event completion:(void(^)(BOOL handled))completion;
+
+@end
+
 @implementation WKUIScrollEvent {
     UIScrollPhase _phase;
     CGPoint _location;
@@ -142,7 +148,7 @@ TEST(WKScrollViewTests, AsynchronousWheelEventHandling)
     auto synchronouslyHandleScrollEvent = ^(UIScrollPhase phase, CGPoint location, CGVector delta) {
         done = false;
         auto event = adoptNS([[WKUIScrollEvent alloc] initWithPhase:phase location:location delta:delta]);
-        [webView _scrollView:[webView scrollView] asynchronouslyHandleScrollEvent:event.get() completion:^(BOOL handled) {
+        [webView scrollView:[webView scrollView] handleScrollEvent:event.get() completion:^(BOOL handled) {
             wasHandled = handled;
             done = true;
         }];
@@ -305,16 +311,14 @@ TEST(WKScrollViewTests, AllowsKeyboardScrolling)
     [webView synchronouslyLoadTestPageNamed:@"simple-tall"];
     [webView waitForNextPresentationUpdate];
 
-    __block id<UITextInputPrivate> contentView = (id<UITextInputPrivate>)[webView wkContentView];
-
     auto pressSpacebar = ^(void(^completionHandler)(void)) {
         auto firstWebEvent = adoptNS([[WebEvent alloc] initWithKeyEventType:WebEventKeyDown timeStamp:CFAbsoluteTimeGetCurrent() characters:@" " charactersIgnoringModifiers:@" " modifiers:0 isRepeating:NO withFlags:0 withInputManagerHint:nil keyCode:0 isTabKey:NO]);
 
         auto secondWebEvent = adoptNS([[WebEvent alloc] initWithKeyEventType:WebEventKeyUp timeStamp:CFAbsoluteTimeGetCurrent() characters:@" " charactersIgnoringModifiers:@" " modifiers:0 isRepeating:NO withFlags:0 withInputManagerHint:nil keyCode:0 isTabKey:NO]);
 
-        [contentView handleKeyWebEvent:firstWebEvent.get() withCompletionHandler:^(WebEvent *theEvent, BOOL wasHandled) {
+        [webView handleKeyEvent:firstWebEvent.get() completion:^(WebEvent *theEvent, BOOL wasHandled) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                [contentView handleKeyWebEvent:secondWebEvent.get() withCompletionHandler:^(WebEvent *theEvent, BOOL wasHandled) {
+                [webView handleKeyEvent:secondWebEvent.get() completion:^(WebEvent *theEvent, BOOL wasHandled) {
                     completionHandler();
                 }];
             });

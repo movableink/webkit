@@ -160,6 +160,8 @@ public:
     ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const override;
     ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
 
+    void loadStorageAccessQuirksIfNeeded() final { }
+
     bool shouldFallBack(const ResourceError&) const override;
 
     bool canHandleRequest(const WebCore::ResourceRequest&) const override;

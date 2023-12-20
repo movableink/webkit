@@ -34,6 +34,7 @@
 #include "LayoutRect.h"
 #include "MediaPlayerEnums.h"
 #include "MediaPlayerIdentifier.h"
+#include "MediaPromiseTypes.h"
 #include "PlatformLayer.h"
 #include "PlatformTextTrack.h"
 #include "ProcessIdentity.h"
@@ -139,6 +140,15 @@ struct SeekTarget {
     class Document;
     class MediaPlayerPrivateQt;
 #endif
+
+enum class MediaPlatformType {
+    Mock,
+    AVFObjC,
+    GStreamer,
+    Remote
+};
+
+using TrackID = uint64_t;
 
 class MediaPlayerClient : public CanMakeWeakPtr<MediaPlayerClient> {
 public:
@@ -746,7 +756,7 @@ private:
 
     WeakPtr<MediaPlayerClient> m_client;
     Timer m_reloadTimer;
-    std::unique_ptr<MediaPlayerPrivateInterface> m_private;
+    RefPtr<MediaPlayerPrivateInterface> m_private;
     const MediaPlayerFactory* m_currentMediaEngine { nullptr };
     WeakHashSet<const MediaPlayerFactory> m_attemptedEngines;
     URL m_url;
@@ -770,7 +780,7 @@ private:
     PitchCorrectionAlgorithm m_pitchCorrectionAlgorithm { PitchCorrectionAlgorithm::BestAllAround };
 
 #if ENABLE(MEDIA_SOURCE)
-    WeakPtr<MediaSourcePrivateClient> m_mediaSource;
+    ThreadSafeWeakPtr<MediaSourcePrivateClient> m_mediaSource;
 #endif
 #if ENABLE(MEDIA_STREAM)
     RefPtr<MediaStreamPrivate> m_mediaStream;
@@ -791,7 +801,7 @@ public:
     virtual ~MediaPlayerFactory() = default;
 
     virtual MediaPlayerEnums::MediaEngineIdentifier identifier() const  = 0;
-    virtual std::unique_ptr<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer*) const = 0;
+    virtual Ref<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer*) const = 0;
     virtual void getSupportedTypes(HashSet<String>&) const = 0;
     virtual MediaPlayer::SupportsType supportsTypeAndCodecs(const MediaEngineSupportParameters&) const = 0;
 
@@ -831,6 +841,8 @@ inline bool MediaPlayer::hasMediaEngine() const
 }
 
 } // namespace WebCore
+
+using WebCore::TrackID;
 
 namespace WTF {
 

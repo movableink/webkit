@@ -53,6 +53,7 @@
 #import <WebCore/CredentialRequestOptions.h>
 #import <WebCore/DeviceRequestConverter.h>
 #import <WebCore/FidoConstants.h>
+#import <WebCore/MediationRequirement.h>
 #import <WebCore/MockWebAuthenticationConfiguration.h>
 #import <WebCore/PublicKeyCredentialCreationOptions.h>
 #import <WebCore/PublicKeyCredentialRequestOptions.h>
@@ -897,20 +898,20 @@ static WebCore::AuthenticationExtensionsClientInputs authenticationExtensionsCli
     return result;
 }
 
-static WebCore::CredentialRequestOptions::MediationRequirement toWebCore(_WKWebAuthenticationMediationRequirement mediation)
+static WebCore::MediationRequirement toWebCore(_WKWebAuthenticationMediationRequirement mediation)
 {
     switch (mediation) {
     case _WKWebAuthenticationMediationRequirementSilent:
-        return WebCore::CredentialRequestOptions::MediationRequirement::Silent;
+        return WebCore::MediationRequirement::Silent;
     case _WKWebAuthenticationMediationRequirementOptional:
-        return WebCore::CredentialRequestOptions::MediationRequirement::Optional;
+        return WebCore::MediationRequirement::Optional;
     case _WKWebAuthenticationMediationRequirementRequired:
-        return WebCore::CredentialRequestOptions::MediationRequirement::Required;
+        return WebCore::MediationRequirement::Required;
     case _WKWebAuthenticationMediationRequirementConditional:
-        return WebCore::CredentialRequestOptions::MediationRequirement::Conditional;
+        return WebCore::MediationRequirement::Conditional;
     default:
         ASSERT_NOT_REACHED();
-        return WebCore::CredentialRequestOptions::MediationRequirement::Optional;
+        return WebCore::MediationRequirement::Optional;
     }
 }
 #endif
@@ -988,7 +989,7 @@ static RetainPtr<_WKAuthenticatorAttestationResponse> wkAuthenticatorAttestation
             handler(nil, [NSError errorWithDomain:WKErrorDomain code:static_cast<NSInteger>(exception.code) userInfo:@{ NSLocalizedDescriptionKey: exception.message }]);
         });
     };
-    _panel->handleRequest({ WTFMove(hash), [_WKWebAuthenticationPanel convertToCoreCreationOptionsWithOptions:options], nullptr, WebKit::WebAuthenticationPanelResult::Unavailable, nullptr, std::nullopt, { }, true, String(), nullptr, std::nullopt, std::nullopt }, WTFMove(callback));
+    _panel->handleRequest({ WTFMove(hash), [_WKWebAuthenticationPanel convertToCoreCreationOptionsWithOptions:options], nullptr, WebKit::WebAuthenticationPanelResult::Unavailable, nullptr, std::nullopt, { }, String(), nullptr, std::nullopt, std::nullopt }, WTFMove(callback));
 #endif
 }
 
@@ -1002,7 +1003,7 @@ static RetainPtr<_WKAuthenticatorAttestationResponse> wkAuthenticatorAttestation
             handler(nil, [NSError errorWithDomain:WKErrorDomain code:static_cast<NSInteger>(exception.code) userInfo:@{ NSLocalizedDescriptionKey: exception.message }]);
         });
     };
-    _panel->handleRequest({ vectorFromNSData(clientDataHash), [_WKWebAuthenticationPanel convertToCoreCreationOptionsWithOptions:options], nullptr, WebKit::WebAuthenticationPanelResult::Unavailable, nullptr, std::nullopt, { }, true, String(), nullptr, toWebCore(mediation), std::nullopt }, WTFMove(callback));
+    _panel->handleRequest({ vectorFromNSData(clientDataHash), [_WKWebAuthenticationPanel convertToCoreCreationOptionsWithOptions:options], nullptr, WebKit::WebAuthenticationPanelResult::Unavailable, nullptr, std::nullopt, { }, String(), nullptr, toWebCore(mediation), std::nullopt }, WTFMove(callback));
 #endif
 }
 
@@ -1056,7 +1057,7 @@ static RetainPtr<_WKAuthenticatorAssertionResponse> wkAuthenticatorAssertionResp
             handler(nil, [NSError errorWithDomain:WKErrorDomain code:static_cast<NSInteger>(exception.code) userInfo:@{ NSLocalizedDescriptionKey: exception.message }]);
         });
     };
-    _panel->handleRequest({ WTFMove(hash), [_WKWebAuthenticationPanel convertToCoreRequestOptionsWithOptions:options], nullptr, WebKit::WebAuthenticationPanelResult::Unavailable, nullptr, std::nullopt, { }, true, String(), nullptr, std::nullopt, std::nullopt }, WTFMove(callback));
+    _panel->handleRequest({ WTFMove(hash), [_WKWebAuthenticationPanel convertToCoreRequestOptionsWithOptions:options], nullptr, WebKit::WebAuthenticationPanelResult::Unavailable, nullptr, std::nullopt, { }, String(), nullptr, std::nullopt, std::nullopt }, WTFMove(callback));
 #endif
 }
 
@@ -1070,7 +1071,7 @@ static RetainPtr<_WKAuthenticatorAssertionResponse> wkAuthenticatorAssertionResp
             handler(nil, [NSError errorWithDomain:WKErrorDomain code:static_cast<NSInteger>(exception.code) userInfo:@{ NSLocalizedDescriptionKey: exception.message }]);
         });
     };
-    _panel->handleRequest({ vectorFromNSData(clientDataHash), [_WKWebAuthenticationPanel convertToCoreRequestOptionsWithOptions:options], nullptr, WebKit::WebAuthenticationPanelResult::Unavailable, nullptr, std::nullopt, { }, true, String(), nullptr, toWebCore(mediation), std::nullopt }, WTFMove(callback));
+    _panel->handleRequest({ vectorFromNSData(clientDataHash), [_WKWebAuthenticationPanel convertToCoreRequestOptionsWithOptions:options], nullptr, WebKit::WebAuthenticationPanelResult::Unavailable, nullptr, std::nullopt, { }, String(), nullptr, toWebCore(mediation), std::nullopt }, WTFMove(callback));
 #endif
 }
 

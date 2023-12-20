@@ -26,17 +26,17 @@
     WebKit::SandboxExtension::Handle applicationCacheDirectoryExtensionHandle;
     String applicationCacheFlatFileSubdirectoryName;
     String mediaCacheDirectory;
+#if !ENABLE(GPU_PROCESS)
     WebKit::SandboxExtension::Handle mediaCacheDirectoryExtensionHandle;
+#endif
     String mediaKeyStorageDirectory;
     WebKit::SandboxExtension::Handle mediaKeyStorageDirectoryExtensionHandle;
     FileSystem::Salt mediaKeysStorageSalt;
     String javaScriptConfigurationDirectory;
     WebKit::SandboxExtension::Handle javaScriptConfigurationDirectoryExtensionHandle;
-#if ENABLE(TRACKING_PREVENTION)
     WebCore::ThirdPartyCookieBlockingMode thirdPartyCookieBlockingMode;
     HashSet<WebCore::RegistrableDomain> domainsWithUserInteraction;
     HashMap<WebCore::RegistrableDomain, WebCore::RegistrableDomain> domainsWithStorageAccessQuirk;
-#endif
 #if ENABLE(ARKIT_INLINE_PREVIEW)
     String modelElementCacheDirectory;
     WebKit::SandboxExtension::Handle modelElementCacheDirectoryExtensionHandle;

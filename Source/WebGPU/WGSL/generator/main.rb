@@ -449,6 +449,7 @@ module DSL
         i32 = PrimitiveType.new(:I32)
         u32 = PrimitiveType.new(:U32)
         f32 = PrimitiveType.new(:F32)
+        f16 = PrimitiveType.new(:F16)
         sampler = PrimitiveType.new(:Sampler)
         sampler_comparison = PrimitiveType.new(:SamplerComparison)
         texture_external = PrimitiveType.new(:TextureExternal)
@@ -504,21 +505,36 @@ module DSL
         # primitive structs
 
         __frexp_result_abstract = Constructor.new(:frexpResult, [abstract_float, abstract_int])
-        # __frexp_result_f16 = Constructor.new(:frexpResult, [f16, i32])
+        __frexp_result_f16 = Constructor.new(:frexpResult, [f16, i32])
         __frexp_result_f32 = Constructor.new(:frexpResult, [f32, i32])
 
         __frexp_result_vec2_abstract = Constructor.new(:frexpResult, [vec2[abstract_float], vec2[abstract_int]])
-        # __frexp_result_vec2_f16 = Constructor.new(:frexpResult, [vec2[f16], vec2[i32]])
+        __frexp_result_vec2_f16 = Constructor.new(:frexpResult, [vec2[f16], vec2[i32]])
         __frexp_result_vec2_f32 = Constructor.new(:frexpResult, [vec2[f32], vec2[i32]])
 
         __frexp_result_vec3_abstract = Constructor.new(:frexpResult, [vec3[abstract_float], vec3[abstract_int]])
-        # __frexp_result_vec3_f16 = Constructor.new(:frexpResult, [vec3[f16], vec3[i32]])
+        __frexp_result_vec3_f16 = Constructor.new(:frexpResult, [vec3[f16], vec3[i32]])
         __frexp_result_vec3_f32 = Constructor.new(:frexpResult, [vec3[f32], vec3[i32]])
 
         __frexp_result_vec4_abstract = Constructor.new(:frexpResult, [vec4[abstract_float], vec4[abstract_int]])
-        # __frexp_result_vec4_f16 = Constructor.new(:frexpResult, [vec4[f16], vec4[i32]])
+        __frexp_result_vec4_f16 = Constructor.new(:frexpResult, [vec4[f16], vec4[i32]])
         __frexp_result_vec4_f32 = Constructor.new(:frexpResult, [vec4[f32], vec4[i32]])
 
+        __modf_result_abstract = Constructor.new(:modfResult, [abstract_float, abstract_float])
+        __modf_result_f16 = Constructor.new(:modfResult, [f16, f16])
+        __modf_result_f32 = Constructor.new(:modfResult, [f32, f32])
+
+        __modf_result_vec2_abstract = Constructor.new(:modfResult, [vec2[abstract_float], vec2[abstract_float]])
+        __modf_result_vec2_f16 = Constructor.new(:modfResult, [vec2[f16], vec2[f16]])
+        __modf_result_vec2_f32 = Constructor.new(:modfResult, [vec2[f32], vec2[f32]])
+
+        __modf_result_vec3_abstract = Constructor.new(:modfResult, [vec3[abstract_float], vec3[abstract_float]])
+        __modf_result_vec3_f16 = Constructor.new(:modfResult, [vec3[f16], vec3[f16]])
+        __modf_result_vec3_f32 = Constructor.new(:modfResult, [vec3[f32], vec3[f32]])
+
+        __modf_result_vec4_abstract = Constructor.new(:modfResult, [vec4[abstract_float], vec4[abstract_float]])
+        __modf_result_vec4_f16 = Constructor.new(:modfResult, [vec4[f16], vec4[f16]])
+        __modf_result_vec4_f32 = Constructor.new(:modfResult, [vec4[f32], vec4[f32]])
         EOS
     end
 

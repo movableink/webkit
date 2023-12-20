@@ -302,7 +302,6 @@ static std::optional<size_t> findTrailingRunIndexBeforeBreakableRun(const Inline
 
 static bool isBreakableRun(const InlineContentBreaker::ContinuousContent::Run& run)
 {
-    ASSERT(run.inlineItem.isText() || run.inlineItem.isInlineBoxStart() || run.inlineItem.isInlineBoxEnd() || run.inlineItem.isOpaque() || run.inlineItem.layoutBox().isImage() || run.inlineItem.layoutBox().isListMarkerBox());
     if (!run.inlineItem.isText()) {
         // Can't break horizontal spacing -> e.g. <span style="padding-right: 100px;">textcontent</span>, if the [inline box end] is the overflown inline item
         // we need to check if there's another inline item beyond the [inline box end] to split.
@@ -312,7 +311,7 @@ static bool isBreakableRun(const InlineContentBreaker::ContinuousContent::Run& r
     return TextUtil::isWrappingAllowed(run.style);
 }
 
-static inline bool canBreakBefore(UChar32 character, LineBreak lineBreak)
+static inline bool canBreakBefore(char32_t character, LineBreak lineBreak)
 {
     // FIXME: This should include all the cases from https://unicode.org/reports/tr14
     // Use a breaking matrix similar to lineBreakTable in BreakLines.cpp
@@ -338,11 +337,11 @@ static inline std::optional<size_t> lastValidBreakingPosition(const InlineConten
     ASSERT(inlineTextItem.length());
     auto lineBreak = textRun.style.lineBreak();
 
-    auto adjactentTextRunIndex = nextTextRunIndex(runs, textRunIndex);
-    if (!adjactentTextRunIndex)
+    auto adjacentTextRunIndex = nextTextRunIndex(runs, textRunIndex);
+    if (!adjacentTextRunIndex)
         return inlineTextItem.end();
 
-    auto& nextInlineTextItem = downcast<InlineTextItem>(runs[*adjactentTextRunIndex].inlineItem);
+    auto& nextInlineTextItem = downcast<InlineTextItem>(runs[*adjacentTextRunIndex].inlineItem);
     auto canBreakAtRunBoundary = nextInlineTextItem.isWhitespace() ? nextInlineTextItem.style().whiteSpaceCollapse() != WhiteSpaceCollapse::BreakSpaces :
         canBreakBefore(nextInlineTextItem.inlineTextBox().content()[nextInlineTextItem.start()], lineBreak);
     if (canBreakAtRunBoundary)
@@ -683,6 +682,10 @@ std::optional<InlineContentBreaker::OverflowingTextContent::BreakingPosition> In
         return { };
 
     auto& overflowingRun = runs[overflowingRunIndex];
+    if (!is<InlineTextItem>(overflowingRun.inlineItem)) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
     // Make sure we always hyphenate before the overflow.
     auto overflowPositionWithHyphen = TextUtil::breakWord(downcast<InlineTextItem>(overflowingRun.inlineItem), fontCascade, overflowingRun.logicalWidth, availableWidthExcludingHyphen, lineStatus.contentLogicalRight).length;
     auto hyphenLocation = hyphenPosition(content, overflowingRunStartPosition + overflowPositionWithHyphen, style);
@@ -694,7 +697,10 @@ std::optional<InlineContentBreaker::OverflowingTextContent::BreakingPosition> In
     auto hyphenLocationWithinInlineTextItem = *hyphenLocation;
     size_t hyphenatedRunIndex = 0;
     for (; hyphenatedRunIndex <= overflowingRunIndex; ++hyphenatedRunIndex) {
-        auto& inlineTextItem = downcast<InlineTextItem>(runs[hyphenatedRunIndex].inlineItem);
+        auto& inlineItem = runs[hyphenatedRunIndex].inlineItem;
+        if (inlineItem.isOpaque())
+            continue;
+        auto& inlineTextItem = downcast<InlineTextItem>(inlineItem);
         if (inlineTextItem.length() >= hyphenLocationWithinInlineTextItem)
             break;
         hyphenLocationWithinInlineTextItem -= inlineTextItem.length();
@@ -726,7 +732,10 @@ InlineContentBreaker::OverflowingTextContent InlineContentBreaker::processOverfl
     auto nonOverflowingContentWidth = InlineLayoutUnit { };
     auto overflowingRunIndex = runs.size(); 
     for (size_t index = 0; index < runs.size(); ++index) {
-        auto runLogicalWidth = runs[index].logicalWidth;
+        auto& run = runs[index];
+        if (run.inlineItem.isOpaque())
+            continue;
+        auto runLogicalWidth = run.logicalWidth;
         if (nonOverflowingContentWidth + runLogicalWidth > lineStatus.availableWidth) {
             overflowingRunIndex = index;
             break;
@@ -877,6 +886,7 @@ void InlineContentBreaker::ContinuousContent::reset()
     m_leadingTrimmableWidth = { };
     m_trailingTrimmableWidth = { };
     m_hangingContentWidth = { };
+    m_minimumRequiredWidth = { };
     m_runs.clear();
     m_hasTextContent = false;
     m_isTextOnlyContent = true;

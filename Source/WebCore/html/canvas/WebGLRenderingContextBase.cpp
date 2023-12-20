@@ -133,6 +133,7 @@
 #include "WebGLTexture.h"
 #include "WebGLTransformFeedback.h"
 #include "WebGLUniformLocation.h"
+#include "WebGLUtilities.h"
 #include "WebGLVertexArrayObject.h"
 #include "WebGLVertexArrayObjectOES.h"
 #include "WebXRSystem.h"
@@ -184,7 +185,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLRenderingContextBase);
 
 static constexpr Seconds secondsBetweenRestoreAttempts { 1_s };
 static constexpr int maxGLErrorsAllowedToConsole = 256;
-static constexpr Seconds checkContextLossHandlingDelay { 3_s };
 static constexpr size_t maxActiveContexts = 16;
 static constexpr size_t maxActiveWorkerContexts = 4;
 
@@ -302,200 +302,9 @@ static const GCGLenum supportedTypesOESTextureHalfFloat[] = {
     GraphicsContextGL::HALF_FLOAT_OES,
 };
 
-// Set UNPACK_ALIGNMENT to 1, all other parameters to 0.
-class ScopedTightUnpackParameters {
-public:
-    explicit ScopedTightUnpackParameters(WebGLRenderingContextBase& context, bool enabled = true)
-        : m_context(enabled ? &context : nullptr)
-    {
-        if (!m_context)
-            return;
-        set(m_context->unpackPixelStoreParameters(), tightUnpack);
-    }
-
-    ~ScopedTightUnpackParameters()
-    {
-        if (!m_context)
-            return;
-        set(tightUnpack, m_context->unpackPixelStoreParameters());
-    }
-private:
-    using PixelStoreParameters =  WebGLRenderingContextBase::PixelStoreParameters;
-    static constexpr PixelStoreParameters tightUnpack { 1, 0, 0, 0, 0 };
-    void set(const PixelStoreParameters& oldValues, const PixelStoreParameters& newValues)
-    {
-        auto* context = m_context->graphicsContextGL();
-        if (oldValues.alignment != newValues.alignment)
-            context->pixelStorei(GraphicsContextGL::UNPACK_ALIGNMENT, newValues.alignment);
-        if (oldValues.rowLength != newValues.rowLength)
-            context->pixelStorei(GraphicsContextGL::UNPACK_ROW_LENGTH, newValues.rowLength);
-        if (oldValues.imageHeight != newValues.imageHeight)
-            context->pixelStorei(GraphicsContextGL::UNPACK_IMAGE_HEIGHT, newValues.imageHeight);
-        if (oldValues.skipPixels != newValues.skipPixels)
-            context->pixelStorei(GraphicsContextGL::UNPACK_SKIP_PIXELS, newValues.skipPixels);
-        if (oldValues.skipRows != newValues.skipRows)
-            context->pixelStorei(GraphicsContextGL::UNPACK_SKIP_ROWS, newValues.skipRows);
-        if (oldValues.skipImages != newValues.skipImages)
-            context->pixelStorei(GraphicsContextGL::UNPACK_SKIP_IMAGES, newValues.skipImages);
-    }
-    WebGLRenderingContextBase* const m_context;
-};
-
-class ScopedDisableRasterizerDiscard {
-public:
-    explicit ScopedDisableRasterizerDiscard(WebGLRenderingContextBase& context)
-        : m_context(context.m_rasterizerDiscardEnabled ? &context : nullptr)
-    {
-        if (!m_context)
-            return;
-        m_context->graphicsContextGL()->disable(GraphicsContextGL::RASTERIZER_DISCARD);
-    }
-
-    ~ScopedDisableRasterizerDiscard()
-    {
-        if (!m_context)
-            return;
-        m_context->graphicsContextGL()->enable(GraphicsContextGL::RASTERIZER_DISCARD);
-    }
-
-private:
-    WebGLRenderingContextBase* const m_context;
-};
-
-class ScopedEnableBackbuffer {
-public:
-    explicit ScopedEnableBackbuffer(WebGLRenderingContextBase& context)
-        : m_context(context.m_backDrawBuffer == GraphicsContextGL::NONE ? &context : nullptr)
-    {
-        if (!m_context)
-            return;
-        GCGLenum value[1] { GraphicsContextGL::COLOR_ATTACHMENT0 };
-        if (m_context->isWebGL2())
-            m_context->graphicsContextGL()->drawBuffers(value);
-        else
-            m_context->graphicsContextGL()->drawBuffersEXT(value);
-    }
-
-    ~ScopedEnableBackbuffer()
-    {
-        if (!m_context)
-            return;
-        GCGLenum value[1] { GraphicsContextGL::NONE };
-        if (m_context->isWebGL2())
-            m_context->graphicsContextGL()->drawBuffers(value);
-        else
-            m_context->graphicsContextGL()->drawBuffersEXT(value);
-    }
-
-private:
-    WebGLRenderingContextBase* const m_context;
-};
-
-class ScopedDisableScissorTest {
-public:
-    explicit ScopedDisableScissorTest(WebGLRenderingContextBase& context)
-        : m_context(context.m_scissorEnabled ? &context : nullptr)
-    {
-        if (!m_context)
-            return;
-        m_context->graphicsContextGL()->disable(GraphicsContextGL::SCISSOR_TEST);
-    }
-
-    ~ScopedDisableScissorTest()
-    {
-        if (!m_context)
-            return;
-        m_context->graphicsContextGL()->enable(GraphicsContextGL::SCISSOR_TEST);
-    }
-
-private:
-    WebGLRenderingContextBase* const m_context;
-};
 
 #define ADD_VALUES_TO_SET(set, arr) \
     set.add(arr, arr + std::size(arr))
-
-InspectorScopedShaderProgramHighlight::InspectorScopedShaderProgramHighlight(WebGLRenderingContextBase& context, WebGLProgram* program)
-    : m_context(context)
-    , m_program(program)
-{
-    showHighlight();
-}
-
-InspectorScopedShaderProgramHighlight::~InspectorScopedShaderProgramHighlight()
-{
-    hideHighlight();
-}
-
-void InspectorScopedShaderProgramHighlight::showHighlight()
-{
-    if (!m_program || LIKELY(!InspectorInstrumentation::isWebGLProgramHighlighted(m_context, *m_program)))
-        return;
-
-    if (m_context.m_framebufferBinding)
-        return;
-
-    auto& gl = *m_context.graphicsContextGL();
-
-    // When OES_draw_buffers_indexed extension is enabled,
-    // these state queries return the state for draw buffer 0.
-    // Constant blend color is always the same for all draw buffers.
-    gl.getFloatv(GraphicsContextGL::BLEND_COLOR, m_savedBlend.color);
-    m_savedBlend.equationRGB = gl.getInteger(GraphicsContextGL::BLEND_EQUATION_RGB);
-    m_savedBlend.equationAlpha = gl.getInteger(GraphicsContextGL::BLEND_EQUATION_ALPHA);
-    m_savedBlend.srcRGB = gl.getInteger(GraphicsContextGL::BLEND_SRC_RGB);
-    m_savedBlend.dstRGB = gl.getInteger(GraphicsContextGL::BLEND_DST_RGB);
-    m_savedBlend.srcAlpha = gl.getInteger(GraphicsContextGL::BLEND_SRC_ALPHA);
-    m_savedBlend.dstAlpha = gl.getInteger(GraphicsContextGL::BLEND_DST_ALPHA);
-    m_savedBlend.enabled = gl.isEnabled(GraphicsContextGL::BLEND);
-
-    static const GCGLfloat red = 111.0 / 255.0;
-    static const GCGLfloat green = 168.0 / 255.0;
-    static const GCGLfloat blue = 220.0 / 255.0;
-    static const GCGLfloat alpha = 2.0 / 3.0;
-    gl.blendColor(red, green, blue, alpha);
-
-    if (m_context.m_oesDrawBuffersIndexed) {
-        gl.enableiOES(GraphicsContextGL::BLEND, 0);
-        gl.blendEquationiOES(0, GraphicsContextGL::FUNC_ADD);
-        gl.blendFunciOES(0, GraphicsContextGL::CONSTANT_COLOR, GraphicsContextGL::ONE_MINUS_SRC_ALPHA);
-    } else {
-        gl.enable(GraphicsContextGL::BLEND);
-        gl.blendEquation(GraphicsContextGL::FUNC_ADD);
-        gl.blendFunc(GraphicsContextGL::CONSTANT_COLOR, GraphicsContextGL::ONE_MINUS_SRC_ALPHA);
-    }
-
-    m_didApply = true;
-}
-
-void InspectorScopedShaderProgramHighlight::hideHighlight()
-{
-    if (!m_didApply)
-        return;
-
-    auto& gl = *m_context.graphicsContextGL();
-
-    gl.blendColor(m_savedBlend.color[0], m_savedBlend.color[1], m_savedBlend.color[2], m_savedBlend.color[3]);
-
-    if (m_context.m_oesDrawBuffersIndexed) {
-        gl.blendEquationSeparateiOES(0, m_savedBlend.equationRGB, m_savedBlend.equationAlpha);
-        gl.blendFuncSeparateiOES(0, m_savedBlend.srcRGB, m_savedBlend.dstRGB, m_savedBlend.srcAlpha, m_savedBlend.dstAlpha);
-        if (!m_savedBlend.enabled)
-            gl.disableiOES(GraphicsContextGL::BLEND, 0);
-    } else {
-        gl.blendEquationSeparate(m_savedBlend.equationRGB, m_savedBlend.equationAlpha);
-        gl.blendFuncSeparate(m_savedBlend.srcRGB, m_savedBlend.dstRGB, m_savedBlend.srcAlpha, m_savedBlend.dstAlpha);
-        if (!m_savedBlend.enabled)
-            gl.disable(GraphicsContextGL::BLEND);
-    }
-
-    m_didApply = false;
-}
-
-static bool isHighPerformanceContext(const RefPtr<GraphicsContextGL>& context)
-{
-    return context->contextAttributes().powerPreference == WebGLPowerPreference::HighPerformance;
-}
 
 // Counter for determining which context has the earliest active ordinal number.
 static std::atomic<uint64_t> s_lastActiveOrdinal;
@@ -593,50 +402,54 @@ static GraphicsContextGL::SurfaceBuffer toGCGLSurfaceBuffer(CanvasRenderingConte
 {
     return buffer == CanvasRenderingContext::SurfaceBuffer::DrawingBuffer ? GraphicsContextGL::SurfaceBuffer::DrawingBuffer : GraphicsContextGL::SurfaceBuffer::DisplayBuffer;
 }
-std::unique_ptr<WebGLRenderingContextBase> WebGLRenderingContextBase::create(CanvasBase& canvas, WebGLContextAttributes& attributes, WebGLVersion type)
+
+static GraphicsContextGLAttributes resolveGraphicsContextGLAttributes(const WebGLContextAttributes& attributes, bool isWebGL2, ScriptExecutionContext& scriptExecutionContext)
+{
+    UNUSED_PARAM(scriptExecutionContext);
+    GraphicsContextGLAttributes glAttributes;
+    glAttributes.alpha = attributes.alpha;
+    glAttributes.depth = attributes.depth;
+    glAttributes.stencil = attributes.stencil;
+    glAttributes.antialias = attributes.antialias;
+    glAttributes.premultipliedAlpha = attributes.premultipliedAlpha;
+    glAttributes.preserveDrawingBuffer = attributes.preserveDrawingBuffer;
+    glAttributes.powerPreference = attributes.powerPreference;
+    glAttributes.isWebGL2 = isWebGL2;
+#if PLATFORM(MAC)
+    GraphicsClient* graphicsClient = scriptExecutionContext.graphicsClient();
+    if (graphicsClient)
+        glAttributes.windowGPUID = gpuIDForDisplay(graphicsClient->displayID());
+#endif
+#if PLATFORM(COCOA)
+    glAttributes.useMetal = scriptExecutionContext.settingsValues().webGLUsingMetal;
+#endif
+#if ENABLE(WEBXR)
+    glAttributes.xrCompatible = attributes.xrCompatible;
+#endif
+    glAttributes.failContextCreationForTesting = attributes.failContextCreationForTesting;
+    return glAttributes;
+}
+
+std::unique_ptr<WebGLRenderingContextBase> WebGLRenderingContextBase::create(CanvasBase& canvas, WebGLContextAttributes attributes, WebGLVersion type)
 {
     auto scriptExecutionContext = canvas.scriptExecutionContext();
     if (!scriptExecutionContext)
         return nullptr;
 
     GraphicsClient* graphicsClient = scriptExecutionContext->graphicsClient();
-
     auto* canvasElement = dynamicDowncast<HTMLCanvasElement>(canvas);
 
-    if (scriptExecutionContext->settingsValues().forceWebGLUsesLowPower) {
-        if (attributes.powerPreference == GraphicsContextGLPowerPreference::HighPerformance)
-            LOG(WebGL, "Overriding powerPreference from high-performance to low-power.");
+#if ENABLE(WEBXR)
+    if (attributes.xrCompatible)
+        attributes.powerPreference = GraphicsContextGLPowerPreference::HighPerformance;
+#endif
+    if (scriptExecutionContext->settingsValues().forceWebGLUsesLowPower)
         attributes.powerPreference = GraphicsContextGLPowerPreference::LowPower;
-    }
 
-    if (canvasElement) {
-        Document& document = canvasElement->document();
-        RefPtr frame = document.frame();
-        if (!frame)
-            return nullptr;
-
-        Document& topDocument = document.topDocument();
-        Page* page = topDocument.page();
-        if (page)
-            attributes.devicePixelRatio = page->deviceScaleFactor();
-    }
-
-    // FIXME: Should we try get the devicePixelRatio for workers for the page that created
-    // the worker? What if it's a shared worker, and there's multiple answers?
-    attributes.initialPowerPreference = attributes.powerPreference;
-    attributes.webGLVersion = type;
-#if PLATFORM(MAC)
-    // FIXME: Add MACCATALYST support for gpuIDForDisplay.
-    if (graphicsClient)
-        attributes.windowGPUID = gpuIDForDisplay(graphicsClient->displayID());
-#endif
-#if PLATFORM(COCOA)
-    attributes.useMetal = scriptExecutionContext->settingsValues().webGLUsingMetal;
-#endif
-
+    const bool isWebGL2 = type == WebGLVersion::WebGL2;
     RefPtr<GraphicsContextGL> context;
     if (graphicsClient)
-        context = graphicsClient->createGraphicsContextGL(attributes);
+        context = graphicsClient->createGraphicsContextGL(resolveGraphicsContextGLAttributes(attributes, isWebGL2, *scriptExecutionContext));
     if (!context) {
         if (canvasElement) {
             canvasElement->dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextcreationerrorEvent,
@@ -646,10 +459,10 @@ std::unique_ptr<WebGLRenderingContextBase> WebGLRenderingContextBase::create(Can
     }
 
     std::unique_ptr<WebGLRenderingContextBase> renderingContext;
-    if (type == WebGLVersion::WebGL2)
-        renderingContext = WebGL2RenderingContext::create(canvas, attributes);
+    if (isWebGL2)
+        renderingContext = WebGL2RenderingContext::create(canvas, WTFMove(attributes));
     else
-        renderingContext = WebGLRenderingContext::create(canvas, attributes);
+        renderingContext = WebGLRenderingContext::create(canvas, WTFMove(attributes));
     renderingContext->initializeNewContext(context.releaseNonNull());
     renderingContext->suspendIfNeeded();
     InspectorInstrumentation::didCreateCanvasRenderingContext(*renderingContext);
@@ -658,14 +471,12 @@ std::unique_ptr<WebGLRenderingContextBase> WebGLRenderingContextBase::create(Can
     return renderingContext;
 }
 
-WebGLRenderingContextBase::WebGLRenderingContextBase(CanvasBase& canvas, WebGLContextAttributes attributes)
+WebGLRenderingContextBase::WebGLRenderingContextBase(CanvasBase& canvas, WebGLContextAttributes&& attributes)
     : GPUBasedCanvasRenderingContext(canvas)
     , m_generatedImageCache(4)
-    , m_attributes(attributes)
+    , m_attributes(WTFMove(attributes))
+    , m_creationAttributes(attributes)
     , m_numGLErrorsToConsoleAllowed(canvas.scriptExecutionContext()->settingsValues().webGLErrorsToConsoleEnabled ? maxGLErrorsAllowedToConsole : 0)
-#if ENABLE(WEBXR)
-    , m_isXRCompatible(attributes.xrCompatible)
-#endif
 {
 }
 
@@ -673,8 +484,8 @@ WebGLCanvas WebGLRenderingContextBase::canvas()
 {
     auto& base = canvasBase();
 #if ENABLE(OFFSCREEN_CANVAS)
-    if (is<OffscreenCanvas>(base))
-        return &downcast<OffscreenCanvas>(base);
+    if (auto* offscreenCanvas = dynamicDowncast<OffscreenCanvas>(base))
+        return offscreenCanvas;
 #endif
     return &downcast<HTMLCanvasElement>(base);
 }
@@ -682,10 +493,7 @@ WebGLCanvas WebGLRenderingContextBase::canvas()
 #if ENABLE(OFFSCREEN_CANVAS)
 OffscreenCanvas* WebGLRenderingContextBase::offscreenCanvas()
 {
-    auto& base = canvasBase();
-    if (!is<OffscreenCanvas>(base))
-        return nullptr;
-    return &downcast<OffscreenCanvas>(base);
+    return dynamicDowncast<OffscreenCanvas>(canvasBase());
 }
 #endif
 
@@ -741,11 +549,11 @@ void WebGLRenderingContextBase::initializeContextState()
 
     GCGLint numCombinedTextureImageUnits = m_context->getInteger(GraphicsContextGL::MAX_COMBINED_TEXTURE_IMAGE_UNITS);
     m_textureUnits.clear();
-    m_textureUnits.resize(numCombinedTextureImageUnits);
+    m_textureUnits.grow(numCombinedTextureImageUnits);
 
     GCGLint numVertexAttribs = m_context->getInteger(GraphicsContextGL::MAX_VERTEX_ATTRIBS);
     m_vertexAttribValue.clear();
-    m_vertexAttribValue.resize(numVertexAttribs);
+    m_vertexAttribValue.grow(numVertexAttribs);
 
     m_maxTextureSize = m_context->getInteger(GraphicsContextGL::MAX_TEXTURE_SIZE);
     m_maxTextureLevel = WebGLTexture::computeLevelCount(m_maxTextureSize, m_maxTextureSize);
@@ -755,10 +563,20 @@ void WebGLRenderingContextBase::initializeContextState()
     m_maxViewportDims = { 0, 0 };
     m_context->getIntegerv(GraphicsContextGL::MAX_VIEWPORT_DIMS, m_maxViewportDims);
     m_isDepthStencilSupported = m_context->isExtensionEnabled("GL_OES_packed_depth_stencil"_s) || m_context->isExtensionEnabled("GL_ANGLE_depth_texture"_s);
+    auto glAttributes = m_context->contextAttributes();
+    m_attributes.powerPreference = glAttributes.powerPreference;
+    if (!isWebGL2()) {
+        // On WebGL1, the requests are not mandatory.
+        if (m_attributes.antialias)
+            m_attributes.antialias = glAttributes.antialias;
+        if (m_attributes.depth)
+            m_attributes.depth = glAttributes.depth;
+        if (m_attributes.stencil)
+            m_attributes.depth = glAttributes.depth;
+    }
     // WebXR might use multisampling in WebGL2 context. Multisample extensions are also enabled in WebGL 1 case context
     // is antialiased.
-    auto attributes = m_context->contextAttributes();
-    m_maxSamples = (isWebGL2() || attributes.antialias) ? m_context->getInteger(GraphicsContextGL::MAX_SAMPLES) : 0;
+    m_maxSamples = (isWebGL2() || m_attributes.antialias) ? m_context->getInteger(GraphicsContextGL::MAX_SAMPLES) : 0;
 
     // These two values from EXT_draw_buffers are lazily queried.
     m_maxDrawBuffers = 0;
@@ -801,7 +619,7 @@ void WebGLRenderingContextBase::addActivityStateChangeObserverIfNecessary()
 {
     // We are only interested in visibility changes for contexts
     // that are using the high-performance GPU.
-    if (!isHighPerformanceContext(m_context))
+    if (m_attributes.powerPreference != WebGLPowerPreference::HighPerformance)
         return;
 
     auto* canvas = htmlCanvas();
@@ -1767,8 +1585,7 @@ void WebGLRenderingContextBase::drawArrays(GCGLenum mode, GCGLint first, GCGLsiz
     clearIfComposited(CallerTypeDrawOrClear);
 
     {
-        InspectorScopedShaderProgramHighlight scopedHighlight(*this, m_currentProgram.get());
-
+        ScopedInspectorShaderProgramHighlight scopedHighlight { *this };
         m_context->drawArrays(mode, first, count);
     }
 
@@ -1788,8 +1605,7 @@ void WebGLRenderingContextBase::drawElements(GCGLenum mode, GCGLsizei count, GCG
     clearIfComposited(CallerTypeDrawOrClear);
 
     {
-        InspectorScopedShaderProgramHighlight scopedHighlight(*this, m_currentProgram.get());
-
+        ScopedInspectorShaderProgramHighlight scopedHighlight { *this };
         m_context->drawElements(mode, count, type, static_cast<GCGLintptr>(offset));
     }
     markContextChangedAndNotifyCanvasObserver();
@@ -2021,20 +1837,7 @@ std::optional<WebGLContextAttributes> WebGLRenderingContextBase::getContextAttri
 {
     if (isContextLost())
         return std::nullopt;
-
-    // Also, we need to enforce requested values of "false" for depth
-    // and stencil, regardless of the properties of the underlying
-    // GraphicsContextGLOpenGL.
-
-    auto attributes = m_context->contextAttributes();
-    if (!m_attributes.depth)
-        attributes.depth = false;
-    if (!m_attributes.stencil)
-        attributes.stencil = false;
-#if ENABLE(WEBXR)
-    attributes.xrCompatible = m_isXRCompatible;
-#endif
-    return attributes;
+    return m_attributes;
 }
 
 bool WebGLRenderingContextBase::updateErrors()
@@ -3069,14 +2872,14 @@ void WebGLRenderingContextBase::makeXRCompatible(MakeXRCompatiblePromise&& promi
     // Returning an exception in these two checks is not part of the spec.
     auto* canvas = htmlCanvas();
     if (!canvas) {
-        m_isXRCompatible = false;
+        m_attributes.xrCompatible = false;
         promise.reject(Exception { ExceptionCode::InvalidStateError });
         return;
     }
 
     auto* window = canvas->document().domWindow();
     if (!window) {
-        m_isXRCompatible = false;
+        m_attributes.xrCompatible = false;
         promise.reject(Exception { ExceptionCode::InvalidStateError });
         return;
     }
@@ -3087,7 +2890,7 @@ void WebGLRenderingContextBase::makeXRCompatible(MakeXRCompatiblePromise&& promi
     auto& xrSystem = NavigatorWebXR::xr(window->navigator());
     xrSystem.ensureImmersiveXRDeviceIsSelected([this, protectedThis = Ref { *this }, promise = WTFMove(promise), protectedXrSystem = Ref { xrSystem }]() mutable {
         auto rejectPromiseWithInvalidStateError = makeScopeExit([&]() {
-            m_isXRCompatible = false;
+            m_attributes.xrCompatible = false;
             promise.reject(Exception { ExceptionCode::InvalidStateError });
         });
 
@@ -3107,13 +2910,11 @@ void WebGLRenderingContextBase::makeXRCompatible(MakeXRCompatiblePromise&& promi
         //  Set context’s XR compatible boolean to true and resolve promise.
         // Otherwise: Queue a task on the WebGL task source to perform the following steps:
         // FIXME: add a way to verify that we're using a compatible graphics adapter.
-        m_isXRCompatible = true;
-
 #if PLATFORM(COCOA)
         if (!m_context->enableRequiredWebXRExtensions())
             return;
 #endif
-
+        m_attributes.xrCompatible = true;
         promise.resolve();
         rejectPromiseWithInvalidStateError.release();
     });
@@ -4734,9 +4535,8 @@ void WebGLRenderingContextBase::useProgram(WebGLProgram* program)
 
     // Extend the base useProgram method instead of overriding it in
     // WebGL2RenderingContext to keep the preceding validations in the same order.
-    if (isWebGL2()) {
-        ASSERT(is<WebGL2RenderingContext>(*this));
-        if (downcast<WebGL2RenderingContext>(*this).isTransformFeedbackActiveAndNotPaused()) {
+    if (auto* context = dynamicDowncast<WebGL2RenderingContext>(*this)) {
+        if (context->isTransformFeedbackActiveAndNotPaused()) {
             synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "useProgram", "transform feedback is active and not paused");
             return;
         }
@@ -5541,9 +5341,9 @@ void WebGLRenderingContextBase::maybeRestoreContextSoon(Seconds timeout)
         return;
 
     m_restoreTimer = scriptExecutionContext->eventLoop().scheduleTask(timeout, TaskSource::WebGL, [weakThis = WeakPtr { *this }] {
-        if (CheckedPtr checkedThis = weakThis.get()) {
-            checkedThis->m_restoreTimer = nullptr;
-            checkedThis->maybeRestoreContext();
+        if (RefPtr protectedThis = weakThis.get()) {
+            protectedThis->m_restoreTimer = nullptr;
+            protectedThis->maybeRestoreContext();
         }
     });
 }
@@ -5567,7 +5367,7 @@ void WebGLRenderingContextBase::maybeRestoreContext()
     if (!graphicsClient)
         return;
 
-    if (auto context = graphicsClient->createGraphicsContextGL(m_attributes)) {
+    if (auto context = graphicsClient->createGraphicsContextGL(resolveGraphicsContextGLAttributes(m_creationAttributes, isWebGL2(), *scriptExecutionContext))) {
         initializeNewContext(context.releaseNonNull());
         if (!m_context->isContextLost()) {
             // Context lost state is reset only here: context creation succeeded
@@ -5716,8 +5516,7 @@ void WebGLRenderingContextBase::drawArraysInstanced(GCGLenum mode, GCGLint first
     clearIfComposited(CallerTypeDrawOrClear);
 
     {
-        InspectorScopedShaderProgramHighlight scopedHighlight(*this, m_currentProgram.get());
-
+        ScopedInspectorShaderProgramHighlight scopedHighlight { *this };
         m_context->drawArraysInstanced(mode, first, count, primcount);
     }
 
@@ -5737,8 +5536,7 @@ void WebGLRenderingContextBase::drawElementsInstanced(GCGLenum mode, GCGLsizei c
     clearIfComposited(CallerTypeDrawOrClear);
 
     {
-        InspectorScopedShaderProgramHighlight scopedHighlight(*this, m_currentProgram.get());
-
+        ScopedInspectorShaderProgramHighlight scopedHighlight { *this };
         m_context->drawElementsInstanced(mode, count, type, static_cast<GCGLintptr>(offset), primcount);
     }
 

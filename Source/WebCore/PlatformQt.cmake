@@ -159,9 +159,6 @@ list(APPEND WebCore_SOURCES
     platform/graphics/qt/TileQt.cpp
     platform/graphics/qt/TransformationMatrixQt.cpp
 
-#    platform/graphics/x11/PlatformDisplayX11.cpp
-    platform/graphics/x11/XUniqueResource.cpp
-
     platform/image-decoders/qt/ImageBackingStoreQt.cpp
 
     platform/network/MIMESniffing.cpp
@@ -204,6 +201,7 @@ list(APPEND WebCore_SOURCES
     platform/qt/ScrollbarThemeQt.cpp
     platform/qt/SharedBufferQt.cpp
     platform/qt/TemporaryLinkStubsQt.cpp
+    platform/qt/ThemeQt.cpp
     platform/qt/ThirdPartyCookiesQt.cpp
     platform/qt/UserAgentQt.cpp
     platform/qt/WidgetQt.cpp
@@ -260,25 +258,6 @@ if (ENABLE_TOUCH_ADJUSTMENT)
     list(APPEND WebCore_SOURCES
         page/qt/TouchAdjustment.cpp
     )
-endif ()
-
-if (ENABLE_NETSCAPE_PLUGIN_API)
-    if (WIN32)
-        list(APPEND WebCore_SOURCES
-            platform/graphics/win/TransformationMatrixWin.cpp
-
-            platform/win/BitmapInfo.cpp
-            platform/win/WebCoreInstanceHandle.cpp
-        )
-        list(APPEND WebCore_LIBRARIES
-            shlwapi
-            version
-        )
-    elseif (PLUGIN_BACKEND_XLIB)
-        list(APPEND WebCore_SOURCES
-            plugins/qt/QtX11ImageConversion.cpp
-        )
-    endif ()
 endif ()
 
 # Do it in the WebCore to support SHARED_CORE since WebKitWidgets won't load WebKitLegacy in that case.

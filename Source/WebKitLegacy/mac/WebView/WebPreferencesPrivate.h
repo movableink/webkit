@@ -124,7 +124,6 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 @property (nonatomic) BOOL allowUniversalAccessFromFileURLs;
 @property (nonatomic) BOOL allowFileAccessFromFileURLs;
 @property (nonatomic) BOOL allowTopNavigationToDataURLs;
-@property (nonatomic) BOOL allowCrossOriginSubresourcesToAskForCredentials;
 @property (nonatomic) BOOL needsStorageAccessFromFileURLsQuirk;
 @property (nonatomic) BOOL zoomsTextOnly;
 @property (nonatomic) BOOL javaScriptCanAccessClipboard;
@@ -211,7 +210,6 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 @property (nonatomic) BOOL cacheAPIEnabled;
 @property (nonatomic) BOOL downloadAttributeEnabled;
 @property (nonatomic) BOOL directoryUploadEnabled;
-@property (nonatomic) BOOL lineHeightUnitsEnabled;
 @property (nonatomic) BOOL layoutFormattingContextIntegrationEnabled;
 @property (nonatomic, getter=isInAppBrowserPrivacyEnabled) BOOL inAppBrowserPrivacyEnabled;
 @property (nonatomic) BOOL webSQLEnabled;
@@ -305,12 +303,10 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 @property (nonatomic) BOOL highlightAPIEnabled;
 @property (nonatomic) BOOL asyncClipboardAPIEnabled;
 @property (nonatomic) BOOL visualViewportAPIEnabled;
-@property (nonatomic) BOOL syntheticEditingCommandsEnabled;
 @property (nonatomic) BOOL CSSOMViewSmoothScrollingEnabled;
 @property (nonatomic) BOOL webAnimationsCompositeOperationsEnabled;
 @property (nonatomic) BOOL webAnimationsMutableTimelinesEnabled;
 @property (nonatomic) BOOL maskWebGLStringsEnabled;
-@property (nonatomic) BOOL serverTimingEnabled;
 @property (nonatomic) BOOL CSSCustomPropertiesAndValuesEnabled;
 @property (nonatomic) BOOL privateClickMeasurementEnabled;
 @property (nonatomic) BOOL genericCueAPIEnabled;
@@ -320,7 +316,6 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 @property (nonatomic) BOOL readableByteStreamAPIEnabled;
 @property (nonatomic) BOOL mediaRecorderEnabled;
 @property (nonatomic, setter=_setMediaRecorderEnabled:) BOOL _mediaRecorderEnabled;
-@property (nonatomic) BOOL CSSIndividualTransformPropertiesEnabled;
 @property (nonatomic) BOOL contactPickerAPIEnabled;
 @property (nonatomic, setter=_setSpeechRecognitionEnabled:) BOOL _speechRecognitionEnabled;
 @property (nonatomic, setter=_setPitchCorrectionAlgorithm:) WebKitPitchCorrectionAlgorithm _pitchCorrectionAlgorithm;
@@ -331,6 +326,8 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 // The preferences in this category are deprecated and have no effect. They should
 // be removed when it is considered safe to do so.
 
+@property (nonatomic) BOOL syntheticEditingCommandsEnabled;
+@property (nonatomic) BOOL allowCrossOriginSubresourcesToAskForCredentials;
 @property (nonatomic) BOOL aspectRatioOfImgFromWidthAndHeightEnabled;
 @property (nonatomic) BOOL resizeObserverEnabled;
 @property (nonatomic) BOOL subpixelCSSOMElementMetricsEnabled;
@@ -356,6 +353,9 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification WEBKIT_DEPR
 @property (nonatomic) BOOL loadsSiteIconsIgnoringImageLoadingPreference;
 @property (nonatomic) BOOL displayListDrawingEnabled;
 @property (nonatomic) BOOL transformStreamAPIEnabled;
+@property (nonatomic) BOOL lineHeightUnitsEnabled;
+@property (nonatomic) BOOL CSSIndividualTransformPropertiesEnabled;
+@property (nonatomic) BOOL serverTimingEnabled;
 
 - (void)setDiskImageCacheEnabled:(BOOL)enabled;
 

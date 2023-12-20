@@ -33,8 +33,26 @@ class SwitchTrackPart final : public ControlPart {
 public:
     static Ref<SwitchTrackPart> create()
     {
-        return adoptRef(*new SwitchTrackPart());
+        return adoptRef(*new SwitchTrackPart(false, 0.0f));
     }
+
+    static Ref<SwitchTrackPart> create(bool isOn, float progress)
+    {
+        return adoptRef(*new SwitchTrackPart(isOn, progress));
+    }
+
+    SwitchTrackPart(bool isOn, float progress)
+        : ControlPart(StyleAppearance::SwitchTrack)
+        , m_isOn(isOn)
+        , m_progress(progress)
+    {
+    }
+
+    bool isOn() const { return m_isOn; }
+    void setIsOn(bool isOn) { m_isOn = isOn; }
+
+    float progress() const { return m_progress; }
+    void setProgress(float progress) { m_progress = progress; }
 
 private:
     SwitchTrackPart()
@@ -46,6 +64,11 @@ private:
     {
         return controlFactory().createPlatformSwitchTrack(*this);
     }
+
+    bool m_isOn;
+    float m_progress;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CONTROL_PART(SwitchTrack)

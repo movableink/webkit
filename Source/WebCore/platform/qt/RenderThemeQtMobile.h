@@ -48,7 +48,7 @@ public:
 
     bool isControlStyled(const RenderStyle&, const RenderStyle&) const final;
 
-    LengthBox popupInternalPaddingBox(const RenderStyle&, const Settings&) const final;
+    LengthBox popupInternalPaddingBox(const RenderStyle&) const final;
 
     bool delegatesMenuListRendering() const final { return true; }
 
@@ -71,7 +71,7 @@ protected:
     virtual bool paintMenuListButton(RenderObject&, const PaintInfo&, const IntRect&);
 
     // Returns the duration of the animation for the progress bar.
-    Seconds animationDurationForProgressBar(const RenderProgress&) const final;
+    Seconds animationDurationForProgressBar() const final;
     bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
     bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) final;

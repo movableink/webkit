@@ -40,7 +40,6 @@ public:
 
     static StyleSheetContents* defaultStyleSheet;
     static StyleSheetContents* quirksStyleSheet;
-    static StyleSheetContents* dialogStyleSheet;
     static StyleSheetContents* svgStyleSheet;
     static StyleSheetContents* mathMLStyleSheet;
     static StyleSheetContents* mediaControlsStyleSheet;
@@ -51,6 +50,7 @@ public:
     static StyleSheetContents* popoverStyleSheet;
     static StyleSheetContents* counterStylesStyleSheet;
     static StyleSheetContents* rubyStyleSheet;
+    static StyleSheetContents* viewTransitionsStyleSheet;
 #if ENABLE(FULLSCREEN_API)
     static StyleSheetContents* fullscreenStyleSheet;
 #endif
@@ -65,9 +65,6 @@ public:
 #endif
 #if ENABLE(INPUT_TYPE_COLOR)
     static StyleSheetContents* colorInputStyleSheet;
-#endif
-#if ENABLE(IOS_FORM_CONTROL_REFRESH)
-    static StyleSheetContents* legacyFormControlsIOSStyleSheet;
 #endif
 
     static void initDefaultStyleSheet();

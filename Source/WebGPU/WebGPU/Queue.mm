@@ -29,6 +29,7 @@
 #import "APIConversions.h"
 #import "Buffer.h"
 #import "CommandBuffer.h"
+#import "CommandEncoder.h"
 #import "Device.h"
 #import "IsValidToUseWith.h"
 #import "Texture.h"
@@ -191,7 +192,7 @@ void Queue::submit(Vector<std::reference_wrapper<CommandBuffer>>&& commands)
     for (id<MTLCommandBuffer> commandBuffer in commandBuffersToSubmit)
         commitMTLCommandBuffer(commandBuffer);
 
-    if ([MTLCaptureManager sharedCaptureManager].isCapturing)
+    if ([MTLCaptureManager sharedCaptureManager].isCapturing && m_device.shouldStopCaptureAfterSubmit())
         [[MTLCaptureManager sharedCaptureManager] stopCapture];
 }
 
@@ -330,6 +331,12 @@ static bool validateWriteTexture(const WGPUImageCopyTexture& destination, const 
     return true;
 }
 
+void Queue::clearTexture(const WGPUImageCopyTexture& destination, NSUInteger slice)
+{
+    ensureBlitCommandEncoder();
+    CommandEncoder::clearTexture(destination, slice, m_device.device(), m_blitCommandEncoder);
+}
+
 void Queue::writeTexture(const WGPUImageCopyTexture& destination, const void* data, size_t dataSize, const WGPUTextureDataLayout& dataLayout, const WGPUExtent3D& size)
 {
     if (destination.nextInChain || dataLayout.nextInChain)
@@ -356,6 +363,9 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, const void* da
 
     auto logicalSize = texture.logicalMiplevelSpecificTextureExtent(destination.mipLevel);
     auto widthForMetal = std::min(size.width, logicalSize.width);
+    if (!widthForMetal)
+        return;
+
     auto heightForMetal = std::min(size.height, logicalSize.height);
     auto depthForMetal = std::min(size.depthOrArrayLayers, logicalSize.depthOrArrayLayers);
 
@@ -382,14 +392,25 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, const void* da
         return;
     }
 
-    constexpr auto levelInfoRowBlockBytes = 0;
     id<MTLTexture> mtlTexture = texture.texture();
     auto textureDimension = texture.dimension();
-    NSUInteger maxRowBytes = textureDimension == WGPUTextureDimension_3D ? (2048 * blockSize) : bytesPerRow;
-    if (bytesPerRow % blockSize || (bytesPerRow > maxRowBytes)) {
-        auto blockHeight = Texture::texelBlockHeight(textureFormat);
-        bool isCompressed = Texture::isCompressedFormat(textureFormat);
+    uint32_t sliceCount = textureDimension == WGPUTextureDimension_3D ? 1 : size.depthOrArrayLayers;
+    for (uint32_t layer = 0; layer < sliceCount; ++layer) {
+        NSUInteger destinationSlice = textureDimension == WGPUTextureDimension_3D ? 0 : (destination.origin.z + layer);
+        if (!texture.previouslyCleared(destination.mipLevel, destinationSlice)) {
+            if (widthForMetal == logicalSize.width && heightForMetal == logicalSize.height)
+                texture.setPreviouslyCleared(destination.mipLevel, destinationSlice);
+            else if (!texture.previouslyCleared(destination.mipLevel, destinationSlice))
+                clearTexture(destination, destinationSlice);
+        }
+        texture.setPreviouslyCleared(destination.mipLevel, destinationSlice);
+    }
 
+    NSUInteger maxRowBytes = textureDimension == WGPUTextureDimension_3D ? (2048 * blockSize) : bytesPerRow;
+    bool isCompressed = Texture::isCompressedFormat(textureFormat);
+    auto blockHeight = Texture::texelBlockHeight(textureFormat);
+    auto blockWidth = Texture::texelBlockWidth(textureFormat);
+    if (!isCompressed && (bytesPerRow % blockSize || (bytesPerRow > maxRowBytes))) {
         WGPUExtent3D newSize {
             .width = size.width,
             .height = isCompressed ? blockSize : blockHeight,
@@ -403,9 +424,6 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, const void* da
                 .bytesPerRow = std::min<uint32_t>(maxRowBytes, dataLayout.bytesPerRow),
                 .rowsPerImage = newSize.height
             };
-
-            if (isCompressed)
-                bytesPerRow = levelInfoRowBlockBytes;
 
             for (uint32_t z = 0, endZ = std::max<uint32_t>(1, depthForMetal); z < endZ; ++z) {
                 WGPUImageCopyTexture newDestination = destination;
@@ -424,15 +442,33 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, const void* da
             return;
         }
 
-        if (heightForMetal == 1) {
-            bytesPerRow = 0;
-            bytesPerImage = 0;
-        } else {
-            bytesPerRow = levelInfoRowBlockBytes;
-            bytesPerImage = 0;
-            if (auto add = widthForMetal % blockSize)
-                widthForMetal = std::min<NSUInteger>(widthForMetal + (blockSize - add), logicalSize.width);
+        ASSERT(heightForMetal == 1);
+        bytesPerRow = 0;
+        bytesPerImage = 0;
+    }
+
+    Vector<uint8_t> newData;
+    const auto newBytesPerRow = blockSize * ((widthForMetal / blockWidth) + ((widthForMetal % blockWidth) ? 1 : 0));
+    if (isCompressed && newBytesPerRow != bytesPerRow && (widthForMetal == logicalSize.width && heightForMetal == logicalSize.height)) {
+
+        auto maxY = std::max<size_t>(blockHeight, heightForMetal) / blockHeight;
+        auto newBytesPerImage = newBytesPerRow * std::max<size_t>(blockHeight, logicalSize.height) / blockHeight;
+        auto maxZ = std::max<size_t>(1, size.depthOrArrayLayers);
+        newData.resize(newBytesPerImage * maxZ);
+        memset(&newData[0], 0, newData.size());
+        for (size_t z = 0; z < maxZ; ++z) {
+            for (size_t y = 0; y < maxY; ++y) {
+                auto sourceBytes = static_cast<const uint8_t*>(data) + y * bytesPerRow + z * bytesPerImage;
+                RELEASE_ASSERT(y * bytesPerRow + z * bytesPerImage + newBytesPerRow <= dataByteSize);
+                auto destBytes = &newData[0] + y * newBytesPerRow + z * newBytesPerImage;
+                memcpy(destBytes, sourceBytes, newBytesPerRow);
+            }
         }
+
+        bytesPerRow = newBytesPerRow;
+        dataByteSize = newData.size();
+        bytesPerImage = newBytesPerImage;
+        data = &newData[0];
     }
 
     // FIXME(PERFORMANCE): Instead of checking whether or not the whole queue is idle,

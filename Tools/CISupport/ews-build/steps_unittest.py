@@ -1244,6 +1244,23 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectOutcome(result=SUCCESS, state_string='Compiled WebKit')
         return self.runStep()
 
+    def test_success_architecture(self):
+        self.setupStep(CompileWebKit())
+        self.setProperty('platform', 'mac')
+        self.setProperty('fullPlatform', 'mac-monterey')
+        self.setProperty('configuration', 'release')
+        self.setProperty('architecture', 'x86_64 arm64')
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        timeout=1200,
+                        logEnviron=False,
+                        command=['perl', 'Tools/Scripts/build-webkit', '--release', '--architecture', 'x86_64 arm64', 'WK_VALIDATE_DEPENDENCIES=YES'],
+                        )
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='Compiled WebKit')
+        return self.runStep()
+
     def test_success_gtk(self):
         self.setupStep(CompileWebKit())
         self.setProperty('platform', 'gtk')
@@ -2031,6 +2048,25 @@ ts","version":4,"num_passes":42158,"pixel_tests_enabled":false,"date":"11:28AM o
         rc = self.runStep()
         self.assertEqual(self.getProperty(self.property_exceed_failure_limit), False)
         self.assertEqual(self.getProperty(self.property_failures), ['fast/scrolling/ios/reconcile-layer-position-recursive.html'])
+        return rc
+
+    def test_parse_results_invalid_json(self):
+        self.configureStep()
+        self.setProperty('fullPlatform', 'ios-simulator')
+        self.setProperty('configuration', 'release')
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        logfiles={'json': self.jsonFileName},
+                        logEnviron=False,
+                        command=['python3', 'Tools/Scripts/run-webkit-tests', '--no-build', '--no-show-results', '--no-new-test-results', '--clobber-old-results', '--release', '--results-directory', 'layout-test-results', '--debug-rwt-logging', '--exit-after-n-failures', '60', '--skip-failing-tests'],
+                        )
+            + 2
+            + ExpectShell.log('json', stdout=self.results_json_with_newlines + " non-JSON nonsense"),
+        )
+        self.expectOutcome(result=FAILURE, state_string='layout-tests (failure)')
+        rc = self.runStep()
+        self.assertEqual(self.getProperty(self.property_exceed_failure_limit), None)
+        self.assertEqual(self.getProperty(self.property_failures), None)
         return rc
 
     def test_parse_results_json_with_missing_results(self):
@@ -2974,6 +3010,33 @@ class TestRunWebKitTestsRedTree(BuildStepMixinAdditions, unittest.TestCase):
         self.assertFalse(self.getProperty('first_results_exceed_failure_limit'))
         return rc
 
+    def test_last_try_unexpected_failure_without_list_of_failing_tests_then_schedule_update_libs_and_test_without_patch(self):
+        self.configureStep()
+        self.setProperty('first_run_failures', [])
+        self.setProperty('first_run_flakies', [])
+        self.setProperty('retry_count', AnalyzeLayoutTestsResultsRedTree.MAX_RETRY)
+        next_steps = []
+        self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
+        self.patch(RunWebKitTestsRedTree, 'evaluateResult', lambda s, r: r)
+        self.step.evaluateCommand(FAILURE)
+        self.assertTrue(RevertPullRequestChanges() in next_steps)
+        self.assertTrue(InstallWpeDependencies() in next_steps)
+        self.assertTrue(CompileWebKitWithoutChange(retry_build_on_failure=True))
+        self.assertTrue(RunWebKitTestsWithoutChangeRedTree() in next_steps)
+
+    def test_flakies_but_no_failures_then_go_to_analyze_results(self):
+        self.configureStep()
+        self.setProperty('first_run_failures', [])
+        self.setProperty('first_run_flakies', ['fast/css/flaky1.html', 'fast/svg/flaky2.svg', 'imported/test/flaky3.html'])
+        next_steps = []
+        self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
+        self.patch(RunWebKitTestsRedTree, 'evaluateResult', lambda s, r: r)
+        self.step.evaluateCommand(SUCCESS)
+        self.assertFalse(RevertPullRequestChanges() in next_steps)
+        self.assertFalse(InstallWpeDependencies() in next_steps)
+        self.assertFalse(RunWebKitTestsWithoutChangeRedTree() in next_steps)
+        self.assertTrue(AnalyzeLayoutTestsResultsRedTree() in next_steps)
+
 
 class TestRunWebKitTestsRepeatFailuresRedTree(BuildStepMixinAdditions, unittest.TestCase):
     def setUp(self):
@@ -3050,6 +3113,35 @@ class TestRunWebKitTestsRepeatFailuresRedTree(BuildStepMixinAdditions, unittest.
         self.assertEqual(fake_flaky_tests, self.getProperty('with_change_repeat_failures_results_flakies'))
         self.assertTrue(self.getProperty('with_change_repeat_failures_results_exceed_failure_limit'))
         return rc
+
+    def test_last_run_with_patch_ends_with_list_of_failing_tests_then_schedule_update_libs_and_test_without_patch(self):
+        self.configureStep()
+        self.setProperty('with_change_repeat_failures_results_nonflaky_failures', ['fake/should/not/happen/failure1.html', 'imported/fake/failure2.html'])
+        self.setProperty('with_change_repeat_failures_results_flakies', [])
+        next_steps = []
+        self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
+        self.patch(RunWebKitTestsRepeatFailuresRedTree, 'evaluateResult', lambda s, r: r)
+        self.step.evaluateCommand(FAILURE)
+        self.assertTrue(RevertPullRequestChanges() in next_steps)
+        self.assertTrue(InstallWpeDependencies() in next_steps)
+        self.assertTrue(CompileWebKitWithoutChange(retry_build_on_failure=True) in next_steps)
+        self.assertTrue(RunWebKitTestsRepeatFailuresWithoutChangeRedTree() in next_steps)
+        self.assertFalse(AnalyzeLayoutTestsResultsRedTree() in next_steps)
+
+    def test_last_run_with_patch_ends_with_no_failing_tests_then_go_to_analyze(self):
+        self.configureStep()
+        self.setProperty('with_change_repeat_failures_results_nonflaky_failures', [])
+        self.setProperty('with_change_repeat_failures_results_flakies', ['fake/should/not/happen/flaky1.html', 'imported/fake/flaky2.html'])
+        next_steps = []
+        self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
+        self.patch(RunWebKitTestsRepeatFailuresRedTree, 'evaluateResult', lambda s, r: r)
+        self.step.evaluateCommand(FAILURE)
+        self.assertFalse(RevertPullRequestChanges() in next_steps)
+        self.assertFalse(InstallWpeDependencies() in next_steps)
+        self.assertFalse(CompileWebKitWithoutChange(retry_build_on_failure=True) in next_steps)
+        self.assertFalse(RunWebKitTestsRepeatFailuresWithoutChangeRedTree() in next_steps)
+        self.assertTrue(AnalyzeLayoutTestsResultsRedTree() in next_steps)
+
 
 class TestRunWebKitTestsRepeatFailuresWithoutChangeRedTree(BuildStepMixinAdditions, unittest.TestCase):
     def setUp(self):
@@ -4646,7 +4738,7 @@ class TestUploadFileToS3(BuildStepMixinAdditions, unittest.TestCase):
                         env=dict(UPLOAD_URL='https://test-s3-url'),
                         logEnviron=False,
                         command=['python3', 'Tools/Scripts/upload-file-to-url', '--filename', 'WebKitBuild/release.zip'],
-                        timeout=360,
+                        timeout=1800,
                         )
             + 0,
         )
@@ -4661,7 +4753,7 @@ class TestUploadFileToS3(BuildStepMixinAdditions, unittest.TestCase):
                         env=dict(UPLOAD_URL='https://test-s3-url'),
                         logEnviron=False,
                         command=['python3', 'Tools/Scripts/upload-file-to-url', '--filename', 'WebKitBuild/release.zip'],
-                        timeout=360,
+                        timeout=1800,
                         )
             + ExpectShell.log('stdio', stdout='''Uploading WebKitBuild/release.zip
 response: <Response [403]>, 403, Forbidden

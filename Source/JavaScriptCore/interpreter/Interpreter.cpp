@@ -30,6 +30,7 @@
 #include "config.h"
 #include "Interpreter.h"
 
+#include "AbortReason.h"
 #include "AbstractModuleRecord.h"
 #include "ArgList.h"
 #include "BatchedTransitionOptimizer.h"
@@ -96,7 +97,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
     CodeBlock* callerBaselineCodeBlock = callerCodeBlock;
     BytecodeIndex bytecodeIndex = callerCallSiteIndex.bytecodeIndex();
 #if ENABLE(DFG_JIT)
-    if (JITCode::isOptimizingJIT(callerCodeBlock->jitType())) {
+    if (JSC::JITCode::isOptimizingJIT(callerCodeBlock->jitType())) {
         CodeOrigin codeOrigin = callerCodeBlock->codeOrigin(callerCallSiteIndex);
         callerBaselineCodeBlock = baselineCodeBlockForOriginAndBaselineCodeBlock(codeOrigin, callerCodeBlock->baselineAlternative());
         bytecodeIndex = codeOrigin.bytecodeIndex();
@@ -405,7 +406,7 @@ public:
         , m_results(results)
         , m_framesToSkip(framesToSkip)
     {
-        m_results.reserveInitialCapacity(capacity);
+        m_results.grow(capacity);
     }
 
     IterationStatus operator()(StackVisitor& visitor) const
@@ -418,34 +419,34 @@ public:
         if (visitor->isImplementationVisibilityPrivate())
             return IterationStatus::Continue;
 
-        if (m_results.size() < m_results.capacity()) {
+        if (m_frameCountInResults < m_results.size()) {
             if (visitor->isNativeCalleeFrame()) {
                 auto* nativeCallee = visitor->callee().asNativeCallee();
                 switch (nativeCallee->category()) {
                 case NativeCallee::Category::Wasm: {
-                    m_results.unsafeAppendWithoutCapacityCheck(StackFrame(visitor->wasmFunctionIndexOrName()));
+                    m_results[m_frameCountInResults++] = StackFrame(visitor->wasmFunctionIndexOrName());
                     break;
                 }
                 case NativeCallee::Category::InlineCache: {
                     break;
                 }
                 }
-            } else if (!!visitor->codeBlock() && !visitor->codeBlock()->unlinkedCodeBlock()->isBuiltinFunction()) {
-                m_results.unsafeAppendWithoutCapacityCheck(
-                    StackFrame(m_vm, m_owner, visitor->callee().asCell(), visitor->codeBlock(), visitor->bytecodeIndex()));
-            } else {
-                m_results.unsafeAppendWithoutCapacityCheck(
-                    StackFrame(m_vm, m_owner, visitor->callee().asCell()));
-            }
+            } else if (!!visitor->codeBlock() && !visitor->codeBlock()->unlinkedCodeBlock()->isBuiltinFunction())
+                m_results[m_frameCountInResults++] = StackFrame(m_vm, m_owner, visitor->callee().asCell(), visitor->codeBlock(), visitor->bytecodeIndex());
+            else
+                m_results[m_frameCountInResults++] = StackFrame(m_vm, m_owner, visitor->callee().asCell());
             return IterationStatus::Continue;
         }
         return IterationStatus::Done;
     }
 
+    size_t frameCountInResults() const { return m_frameCountInResults; }
+
 private:
     VM& m_vm;
     JSCell* m_owner;
     Vector<StackFrame>& m_results;
+    mutable size_t m_frameCountInResults { 0 };
     mutable size_t m_framesToSkip;
 };
 
@@ -486,7 +487,7 @@ void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size
 
     GetStackTraceFunctor functor(vm, owner, results, skippedFrames, visitedFrames);
     StackVisitor::visit(callFrame, vm, functor);
-    ASSERT(results.size() == results.capacity());
+    ASSERT(functor.frameCountInResults() == results.size());
 }
 
 String Interpreter::stackTraceAsString(VM& vm, const Vector<StackFrame>& stackTrace)
@@ -510,7 +511,7 @@ ALWAYS_INLINE static HandlerInfo* findExceptionHandler(StackVisitor& visitor, Co
 
     CallFrame* callFrame = visitor->callFrame();
     unsigned exceptionHandlerIndex;
-    if (JITCode::isOptimizingJIT(codeBlock->jitType()))
+    if (JSC::JITCode::isOptimizingJIT(codeBlock->jitType()))
         exceptionHandlerIndex = callFrame->callSiteIndex().bits();
     else
         exceptionHandlerIndex = callFrame->bytecodeIndex().offset();
@@ -561,7 +562,7 @@ CatchInfo::CatchInfo(const HandlerInfo* handler, CodeBlock* codeBlock)
         // with this bytecode offset in the machine frame is utterly meaningless
         // and can cause an overflow. OSR exit properly exits to handler->target
         // in the proper frame.
-        if (!JITCode::isOptimizingJIT(codeBlock->jitType()))
+        if (!JSC::JITCode::isOptimizingJIT(codeBlock->jitType()))
             m_catchPCForInterpreter = { codeBlock->instructions().at(handler->target).ptr() };
         else
             m_catchPCForInterpreter = { static_cast<JSInstruction*>(nullptr) };
@@ -862,6 +863,13 @@ void Interpreter::notifyDebuggerOfExceptionToBeThrown(VM& vm, JSGlobalObject* gl
     exception->setDidNotifyInspectorOfThrow();
 }
 
+NEVER_INLINE JSValue Interpreter::checkVMEntryPermission()
+{
+    if (Options::crashOnDisallowedVMEntry() || g_jscConfig.vmEntryDisallowed)
+        CRASH_WITH_EXTRA_SECURITY_IMPLICATION_AND_INFO(VMEntryDisallowed, "VM entry disallowed"_s);
+    return jsUndefined();
+}
+
 JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, JSObject* thisObj)
 {
     VM& vm = this->vm();
@@ -885,6 +893,9 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
 
     if (UNLIKELY(!vm.isSafeToRecurseSoft()))
         return throwStackOverflowError(globalObject, throwScope);
+
+    if (UNLIKELY(vm.disallowVMEntryCount))
+        return checkVMEntryPermission();
 
     // First check if the "program" is actually just a JSON object. If so,
     // we'll handle the JSON object here. Else, we'll handle real JS code
@@ -1045,7 +1056,7 @@ failedJSONP:
     if (scope->structure()->isUncacheableDictionary())
         scope->flattenDictionaryObject(vm);
 
-    RefPtr<JITCode> jitCode;
+    RefPtr<JSC::JITCode> jitCode;
     ProtoCallFrame protoCallFrame;
     {
         DeferTraps deferTraps(vm); // We can't jettison this code if we're about to run it.
@@ -1132,12 +1143,15 @@ ALWAYS_INLINE JSValue Interpreter::executeCallImpl(VM& vm, JSObject* function, c
     if (UNLIKELY(!vm.isSafeToRecurseSoft() || args.size() > maxArguments))
         return throwStackOverflowError(globalObject, scope);
 
+    if (UNLIKELY(vm.disallowVMEntryCount))
+        return checkVMEntryPermission();
+
     if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
         if (vm.hasExceptionsAfterHandlingTraps())
             return scope.exception();
     }
 
-    RefPtr<JITCode> jitCode;
+    RefPtr<JSC::JITCode> jitCode;
     ProtoCallFrame protoCallFrame;
     {
         DeferTraps deferTraps(vm); // We can't jettison this code if we're about to run it.
@@ -1220,12 +1234,17 @@ JSObject* Interpreter::executeConstruct(JSObject* constructor, const CallData& c
         return nullptr;
     }
 
+    if (UNLIKELY(vm.disallowVMEntryCount)) {
+        checkVMEntryPermission();
+        return globalObject->globalThis();
+    }
+
     if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
         if (vm.hasExceptionsAfterHandlingTraps())
             return nullptr;
     }
 
-    RefPtr<JITCode> jitCode;
+    RefPtr<JSC::JITCode> jitCode;
     ProtoCallFrame protoCallFrame;
     {
         DeferTraps deferTraps(vm); // We can't jettison this code if we're about to run it.
@@ -1298,6 +1317,9 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
     VMEntryScope entryScope(vm, globalObject);
     if (UNLIKELY(!vm.isSafeToRecurseSoft()))
         return throwStackOverflowError(globalObject, throwScope);
+
+    if (UNLIKELY(vm.disallowVMEntryCount))
+        return checkVMEntryPermission();
 
     unsigned numVariables = eval->numVariables();
     unsigned numTopLevelFunctionDecls = eval->numTopLevelFunctionDecls();
@@ -1441,7 +1463,7 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
     else
         callee = JSCallee::create(vm, globalObject, scope);
 
-    RefPtr<JITCode> jitCode;
+    RefPtr<JSC::JITCode> jitCode;
     ProtoCallFrame protoCallFrame;
     {
         DeferTraps deferTraps(vm); // We can't jettison this code if we're about to run it.
@@ -1487,6 +1509,9 @@ JSValue Interpreter::executeModuleProgram(JSModuleRecord* record, ModuleProgramE
     if (UNLIKELY(!vm.isSafeToRecurseSoft()))
         return throwStackOverflowError(globalObject, throwScope);
 
+    if (UNLIKELY(vm.disallowVMEntryCount))
+        return checkVMEntryPermission();
+
     if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
         if (vm.hasExceptionsAfterHandlingTraps())
             return throwScope.exception();
@@ -1497,7 +1522,7 @@ JSValue Interpreter::executeModuleProgram(JSModuleRecord* record, ModuleProgramE
 
     const unsigned numberOfArguments = static_cast<unsigned>(AbstractModuleRecord::Argument::NumberOfArguments);
     JSCallee* callee = JSCallee::create(vm, globalObject, scope);
-    RefPtr<JITCode> jitCode;
+    RefPtr<JSC::JITCode> jitCode;
 
     ProtoCallFrame protoCallFrame;
     EncodedJSValue args[numberOfArguments] = {

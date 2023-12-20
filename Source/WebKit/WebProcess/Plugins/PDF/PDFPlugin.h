@@ -98,7 +98,6 @@ public:
     void notifyDisplayModeChanged(int);
 
     void notifySelectionChanged(PDFSelection *);
-    void notifyCursorChanged(uint64_t /* PDFLayerControllerCursorType */);
 
     // HUD Actions.
 #if ENABLE(PDF_HUD)
@@ -138,6 +137,12 @@ public:
     size_t decrementThreadsWaitingOnCallback() { return --m_threadsWaitingOnCallback; }
 #endif
 
+    WebCore::IntPoint convertFromPluginToPDFView(const WebCore::IntPoint&) const;
+    WebCore::IntPoint convertFromPDFViewToRootView(const WebCore::IntPoint&) const;
+    WebCore::IntRect convertFromPDFViewToRootView(const WebCore::IntRect&) const;
+    WebCore::IntPoint convertFromRootViewToPDFView(const WebCore::IntPoint&) const;
+    WebCore::FloatRect convertFromPDFViewToScreen(const WebCore::FloatRect&) const;
+
 private:
     explicit PDFPlugin(WebCore::HTMLPlugInElement&);
     bool isLegacyPDFPlugin() const override { return true; }
@@ -150,7 +155,7 @@ private:
     void invalidateScrollCornerRect(const WebCore::IntRect&) override;
     void updateScrollbars() override;
     WebCore::IntPoint lastKnownMousePositionInView() const override { return m_lastMousePositionInPluginCoordinates; }
-    Ref<Scrollbar> createScrollbar(WebCore::ScrollbarOrientation) override;
+    Ref<WebCore::Scrollbar> createScrollbar(WebCore::ScrollbarOrientation) override;
     void destroyScrollbar(WebCore::ScrollbarOrientation) override;
 
     // PDFPluginBase
@@ -170,13 +175,16 @@ private:
     WebCore::FloatSize pdfDocumentSizeForPrinting() const override;
 
     void geometryDidChange(const WebCore::IntSize& pluginSize, const WebCore::AffineTransform& pluginToRootViewTransform) override;
-    void contentsScaleFactorChanged(float) override;
+    void deviceScaleFactorChanged(float) override;
+
+    void setPageScaleFactor(double, std::optional<WebCore::IntPoint> origin) override;
 
     WebCore::IntSize contentsSize() const override;
     unsigned firstPageHeight() const override;
 
     RefPtr<WebCore::FragmentedSharedBuffer> liveResourceData() const override;
 
+    bool wantsWheelEvents() const override { return true; }
     bool handleMouseEvent(const WebMouseEvent&) override;
     bool handleWheelEvent(const WebWheelEvent&) override;
     bool handleMouseEnterEvent(const WebMouseEvent&) override;
@@ -196,6 +204,7 @@ private:
     bool performDictionaryLookupAtLocation(const WebCore::FloatPoint&) override;
     std::tuple<String, PDFSelection *, NSDictionary *> lookupTextAtLocation(const WebCore::FloatPoint&, WebHitTestResultData&) const override;
 
+    bool shouldCreateTransientPaintingSnapshot() const override { return true; }
     RefPtr<ShareableBitmap> snapshot() override;
 
     id accessibilityHitTest(const WebCore::IntPoint&) const override;
@@ -210,7 +219,6 @@ private:
 
     bool supportsForms();
 
-    bool handlesPageScaleFactor() const;
     void updatePageAndDeviceScaleFactors();
 
     void createPasswordEntryForm();

@@ -58,8 +58,8 @@ public:
     InlineFormattingContext(const ElementBox& formattingContextRoot, LayoutState&, BlockLayoutState& parentBlockLayoutState);
 
     InlineLayoutResult layout(const ConstraintsForInlineContent&, const InlineDamage* = nullptr);
-    IntrinsicWidthConstraints computedIntrinsicSizes(const InlineDamage*);
-    LayoutUnit maximumContentSize();
+    LayoutUnit minimumContentSize(const InlineDamage* = nullptr);
+    LayoutUnit maximumContentSize(const InlineDamage* = nullptr);
 
     const ElementBox& root() const { return m_rootBlockContainer; }
     const InlineFormattingUtils& formattingUtils() const { return m_inlineFormattingUtils; }
@@ -85,7 +85,9 @@ private:
     void updateBoxGeometryForPlacedFloats(const LineLayoutResult::PlacedFloatList&);
     void resetGeometryForClampedContent(const InlineItemRange& needsDisplayContentRange, const LineLayoutResult::SuspendedFloatList& suspendedFloats, LayoutPoint topleft);
     bool createDisplayContentForLineFromCachedContent(const ConstraintsForInlineContent&, InlineLayoutResult&);
+    void createDisplayContentForEmptyInlineContent(const ConstraintsForInlineContent&, InlineLayoutResult&);
     void initializeInlineLayoutState(const LayoutState&);
+    bool rebuildInlineItemListIfNeeded(const InlineDamage*);
 
     InlineContentCache& inlineContentCache() { return m_inlineContentCache; }
 

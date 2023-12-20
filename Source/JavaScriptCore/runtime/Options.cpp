@@ -44,6 +44,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/NumberOfCores.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/TranslatedProcess.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/threads/Signals.h>
@@ -72,10 +73,12 @@ namespace OptionsHelper {
 // VM run time. For now, the only field it contains is a copy of Options defaults
 // which are only used to provide more info for Options dumps.
 struct Metadata {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Metadata);
 public:
     OptionsStorage defaults;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Metadata);
 
 static LazyNeverDestroyed<std::unique_ptr<Metadata>> g_metadata;
 static LazyNeverDestroyed<WTF::BitSet<NumberOfOptions>> g_optionWasOverridden;
@@ -553,9 +556,9 @@ static void overrideDefaults()
 #endif
 
 #if OS(LINUX) && CPU(ARM)
-    Options::maximumFunctionForCallInlineCandidateBytecodeCost() = 77;
+    Options::maximumFunctionForCallInlineCandidateBytecodeCostForDFG() = 77;
     Options::maximumOptimizationCandidateBytecodeCost() = 42403;
-    Options::maximumFunctionForClosureCallInlineCandidateBytecodeCost() = 68;
+    Options::maximumFunctionForClosureCallInlineCandidateBytecodeCostForDFG() = 68;
     Options::maximumInliningCallerBytecodeCost() = 9912;
     Options::maximumInliningDepth() = 8;
     Options::maximumInliningRecursion() = 3;
@@ -584,6 +587,12 @@ static void overrideDefaults()
         Options::thresholdForOMGOptimizeAfterWarmUp() = 1500;
         Options::thresholdForOMGOptimizeSoon() = 100;
     }
+
+#if ASAN_ENABLED
+    // This is a heuristic because ASAN builds are memory hogs in terms of stack frame usage.
+    // So, we need a much larger ReservedZoneSize to allow stack overflow handlers to execute.
+    Options::reservedZoneSize() = 3 * Options::reservedZoneSize();
+#endif
 }
 
 bool Options::setAllJITCodeValidations(const char* valueStr)

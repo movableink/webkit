@@ -21,16 +21,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #if ENABLE(WEBXR)
-enum class PlatformXR::SessionFeature : uint8_t {
-    ReferenceSpaceTypeViewer,
-    ReferenceSpaceTypeLocal,
-    ReferenceSpaceTypeLocalFloor,
-    ReferenceSpaceTypeBoundedFloor,
-    ReferenceSpaceTypeUnbounded,
-#if ENABLE(WEBXR_HANDS)
-    HandTracking,
-#endif
-};
 
 struct WebKit::XRDeviceInfo {
     WebKit::XRDeviceIdentifier identifier;
@@ -40,4 +30,5 @@ struct WebKit::XRDeviceInfo {
     PlatformXR::Device::FeatureList arFeatures;
     WebCore::IntSize recommendedResolution;
 };
+
 #endif

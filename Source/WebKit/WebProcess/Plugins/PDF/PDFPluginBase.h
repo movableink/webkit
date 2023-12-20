@@ -54,6 +54,7 @@ class HTMLPlugInElement;
 class ResourceResponse;
 class Scrollbar;
 class SharedBuffer;
+enum class PlatformCursorType : uint8_t;
 }
 
 namespace WebKit {
@@ -91,6 +92,8 @@ public:
 
     virtual bool isComposited() const { return false; }
 
+    virtual bool shouldCreateTransientPaintingSnapshot() const { return false; }
+    virtual RefPtr<ShareableBitmap> snapshot() { return nullptr; }
     virtual void paint(WebCore::GraphicsContext&, const WebCore::IntRect&) { }
 
     virtual CGFloat scaleFactor() const = 0;
@@ -102,13 +105,18 @@ public:
 
     virtual void geometryDidChange(const WebCore::IntSize& pluginSize, const WebCore::AffineTransform& pluginToRootViewTransform);
     virtual void visibilityDidChange(bool);
-    virtual void contentsScaleFactorChanged(float) { }
+    virtual void deviceScaleFactorChanged(float) { }
+
+    bool handlesPageScaleFactor() const;
+    virtual void didBeginMagnificationGesture() { }
+    virtual void didEndMagnificationGesture() { }
+    virtual void setPageScaleFactor(double, std::optional<WebCore::IntPoint> origin) = 0;
 
     void updateControlTints(WebCore::GraphicsContext&);
 
     virtual RefPtr<WebCore::FragmentedSharedBuffer> liveResourceData() const = 0;
 
-    virtual bool wantsWheelEvents() const { return true; }
+    virtual bool wantsWheelEvents() const = 0;
     virtual bool handleMouseEvent(const WebMouseEvent&) = 0;
     virtual bool handleWheelEvent(const WebWheelEvent&) = 0;
     virtual bool handleMouseEnterEvent(const WebMouseEvent&) = 0;
@@ -128,8 +136,6 @@ public:
     virtual bool performDictionaryLookupAtLocation(const WebCore::FloatPoint&) = 0;
     virtual std::tuple<String, PDFSelection *, NSDictionary *> lookupTextAtLocation(const WebCore::FloatPoint&, WebHitTestResultData&) const = 0;
 
-    virtual RefPtr<ShareableBitmap> snapshot() = 0;
-
     virtual id accessibilityHitTest(const WebCore::IntPoint&) const = 0;
     virtual id accessibilityObject() const = 0;
     virtual id accessibilityAssociatedPluginParentForElement(WebCore::Element*) const = 0;
@@ -144,13 +150,10 @@ public:
     void streamDidFinishLoading();
     void streamDidFail();
 
-    // FIXME: Rationalize these (both names and behavior).
     WebCore::IntPoint convertFromRootViewToPlugin(const WebCore::IntPoint&) const;
-    WebCore::IntPoint convertFromPluginToPDFView(const WebCore::IntPoint&) const;
-    WebCore::IntPoint convertFromPDFViewToRootView(const WebCore::IntPoint&) const;
-    WebCore::IntRect convertFromPDFViewToRootView(const WebCore::IntRect&) const;
-    WebCore::IntPoint convertFromRootViewToPDFView(const WebCore::IntPoint&) const;
-    WebCore::FloatRect convertFromPDFViewToScreen(const WebCore::FloatRect&) const;
+    WebCore::IntRect convertFromRootViewToPlugin(const WebCore::IntRect&) const;
+    WebCore::IntPoint convertFromPluginToRootView(const WebCore::IntPoint&) const;
+    WebCore::IntRect convertFromPluginToRootView(const WebCore::IntRect&) const;
     WebCore::IntRect boundsOnScreen() const;
 
     WebCore::ScrollPosition scrollPositionForTesting() const { return scrollPosition(); }
@@ -166,6 +169,8 @@ public:
     virtual void save(CompletionHandler<void(const String&, const URL&, const IPC::DataReference&)>&&) = 0;
     virtual void openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, const IPC::DataReference&, const String&)>&&) = 0;
 #endif
+
+    void notifyCursorChanged(WebCore::PlatformCursorType);
 
 protected:
     explicit PDFPluginBase(WebCore::HTMLPlugInElement&);
@@ -224,12 +229,13 @@ protected:
     // HUD.
 #if ENABLE(PDF_HUD)
     void updatePDFHUDLocation();
-    WebCore::IntRect frameForHUD() const;
+    WebCore::IntRect frameForHUDInRootViewCoordinates() const;
     bool hudEnabled() const;
 #endif
 
-    WeakPtr<PluginView> m_view;
+    SingleThreadWeakPtr<PluginView> m_view;
     WeakPtr<WebFrame> m_frame;
+    WeakPtr<WebCore::HTMLPlugInElement, WebCore::WeakPtrImplWithEventTargetData> m_element;
 
     PDFPluginIdentifier m_identifier;
 

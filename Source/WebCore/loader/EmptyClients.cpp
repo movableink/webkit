@@ -243,7 +243,7 @@ class EmptyDragClient final : public DragClient {
     void willPerformDragDestinationAction(DragDestinationAction, const DragData&) final { }
     void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer&) final { }
     OptionSet<DragSourceAction> dragSourceActionMaskForPoint(const IntPoint&) final { return { }; }
-    void startDrag(DragItem, DataTransfer&, LocalFrame&) final { }
+    void startDrag(DragItem, DataTransfer&, Frame&) final { }
 };
 
 #endif // ENABLE(DRAG_SUPPORT)
@@ -943,6 +943,10 @@ bool EmptyFrameLoaderClient::shouldFallBack(const ResourceError&) const
     return false;
 }
 
+void EmptyFrameLoaderClient::loadStorageAccessQuirksIfNeeded()
+{
+}
+
 bool EmptyFrameLoaderClient::canHandleRequest(const ResourceRequest&) const
 {
     return false;
@@ -1114,14 +1118,10 @@ RefPtr<LegacyPreviewLoaderClient> EmptyFrameLoaderClient::createPreviewLoaderCli
 
 #endif
 
-#if ENABLE(TRACKING_PREVENTION)
-
 bool EmptyFrameLoaderClient::hasFrameSpecificStorageAccess()
 {
     return false;
 }
-
-#endif
 
 void EmptyFrameLoaderClient::dispatchLoadEventToOwnerElementInAnotherProcess()
 {

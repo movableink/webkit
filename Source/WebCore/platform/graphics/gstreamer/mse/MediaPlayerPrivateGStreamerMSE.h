@@ -40,10 +40,9 @@ class TrackQueue;
 class MediaSourceTrackGStreamer;
 
 class MediaPlayerPrivateGStreamerMSE : public MediaPlayerPrivateGStreamer {
-    WTF_MAKE_NONCOPYABLE(MediaPlayerPrivateGStreamerMSE); WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    explicit MediaPlayerPrivateGStreamerMSE(MediaPlayer*);
+    Ref<MediaPlayerPrivateGStreamerMSE> create(MediaPlayer* player) { return adoptRef(*new MediaPlayerPrivateGStreamerMSE(player)); }
     virtual ~MediaPlayerPrivateGStreamerMSE();
 
     static void registerMediaEngine(MediaEngineRegistrar);
@@ -77,7 +76,6 @@ public:
 
     void setNetworkState(MediaPlayer::NetworkState);
     void setReadyState(MediaPlayer::ReadyState);
-    MediaSourcePrivateClient* mediaSourcePrivateClient() { return m_mediaSource.get(); }
 
     void setInitialVideoSize(const FloatSize&);
 
@@ -91,6 +89,8 @@ public:
 #endif
 
 private:
+    explicit MediaPlayerPrivateGStreamerMSE(MediaPlayer*);
+
     friend class MediaPlayerFactoryGStreamerMSE;
     static void getSupportedTypes(HashSet<String>&);
     static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
@@ -108,7 +108,6 @@ private:
 
     void propagateReadyStateToPlayer();
 
-    WeakPtr<MediaSourcePrivateClient> m_mediaSource;
     RefPtr<MediaSourcePrivateGStreamer> m_mediaSourcePrivate;
     MediaTime m_mediaTimeDuration { MediaTime::invalidTime() };
     bool m_isPipelinePlaying = true;

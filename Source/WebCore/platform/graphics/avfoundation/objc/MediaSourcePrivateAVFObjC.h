@@ -62,20 +62,16 @@ public:
     static Ref<MediaSourcePrivateAVFObjC> create(MediaPlayerPrivateMediaSourceAVFObjC&, MediaSourcePrivateClient&);
     virtual ~MediaSourcePrivateAVFObjC();
 
+    constexpr MediaPlatformType platformType() const final { return MediaPlatformType::AVFObjC; }
+
     MediaPlayerPrivateMediaSourceAVFObjC* player() const { return m_player.get(); }
 
     AddStatus addSourceBuffer(const ContentType&, bool webMParserEnabled, RefPtr<SourceBufferPrivate>&) final;
     void durationChanged(const MediaTime&) final;
     void markEndOfStream(EndOfStreamStatus) final;
 
-    MediaPlayer::ReadyState readyState() const final;
-    void setReadyState(MediaPlayer::ReadyState) final;
-
-    void waitForTarget(const SeekTarget&, CompletionHandler<void(const MediaTime&)>&&) final;
-    void seekToTime(const MediaTime&, CompletionHandler<void()>&&) final;
-
-    MediaTime duration() const final;
-    const PlatformTimeRanges& buffered();
+    MediaPlayer::ReadyState mediaPlayerReadyState() const final;
+    void setMediaPlayerReadyState(MediaPlayer::ReadyState) final;
 
     bool hasSelectedVideo() const;
 
@@ -127,7 +123,6 @@ private:
     friend class SourceBufferPrivateAVFObjC;
 
     WeakPtr<MediaPlayerPrivateMediaSourceAVFObjC> m_player;
-    WeakPtr<MediaSourcePrivateClient> m_client;
     Deque<SourceBufferPrivateAVFObjC*> m_sourceBuffersNeedingSessions;
     SourceBufferPrivateAVFObjC* m_sourceBufferWithSelectedVideo { nullptr };
 #if ENABLE(ENCRYPTED_MEDIA)
@@ -140,6 +135,10 @@ private:
 #endif
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MediaSourcePrivateAVFObjC)
+static bool isType(const WebCore::MediaSourcePrivate& mediaSource) { return mediaSource.platformType() == WebCore::MediaPlatformType::AVFObjC; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(MEDIA_SOURCE) && USE(AVFOUNDATION)

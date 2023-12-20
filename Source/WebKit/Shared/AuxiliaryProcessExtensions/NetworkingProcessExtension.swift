@@ -26,13 +26,54 @@
 import ServiceExtensions
 @_spi(Private) import ServiceExtensions
 
-@main
-class NetworkingProcessExtension {
-    required init() {}
+@objc
+@_spi(Private)
+open class Grant: WKGrant {
+    let inner : _Capability.Grant
+
+    init(inner: _Capability.Grant) {
+        self.inner = inner
+    }
+
+    deinit {
+        do {
+            try invalidate()
+        } catch {
+            NSLog("Failed to invalidate grant")
+        }
+    }
+
+    open func invalidate() throws {
+        try self.inner.invalidate()
+    }
 }
 
-extension NetworkingProcessExtension: NetworkingServiceExtension {
+@main
+class NetworkingProcessExtension : WKProcessExtension {
+    override required init() {
+        super.init()
+        setSharedInstance(self)
+    }
+}
+
+extension NetworkingProcessExtension : NetworkingServiceExtension {
     func handle(xpcConnection: xpc_connection_t) {
         handleNewConnection(xpcConnection)
     }
+
+    override func grant(_ domain: String, name: String) -> Any {
+        do {
+            let grant = try self._request(capabilities: _Capability.assertion(domain: domain, name: name, environmentIdentifier: nil, willInvalidate: nil, didInvalidate: nil))
+            return Grant(inner: grant)
+        } catch {
+            return WKGrant()
+        }
+    }
+
+    override func lockdownSandbox(_ version: String) {
+        if let lockdownVersion = _LockdownVersion(rawValue: version) {
+            self._lockdown(version: lockdownVersion)
+        }
+    }
+
 }

@@ -206,28 +206,22 @@ TEST(WKWebExtension, ContentScriptsParsing)
     NSMutableDictionary *testManifestDictionary = [@{ @"manifest_version": @2, @"name": @"Test", @"description": @"Test", @"version": @"1.0" } mutableCopy];
 
     testManifestDictionary[@"content_scripts"] = @[ @{ @"js": @[ @"test.js", @1, @"" ], @"css": @[ @NO, @"test.css", @"" ], @"matches": @[ @"*://*/" ] } ];
-    auto testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
-
-    auto webkitURL = [NSURL URLWithString:@"https://webkit.org/"];
-    auto exampleURL = [NSURL URLWithString:@"https://example.com/"];
+    auto *testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
 
     EXPECT_NS_EQUAL(testExtension.errors, @[ ]);
-    EXPECT_TRUE([testExtension _hasStaticInjectedContentForURL:webkitURL]);
-    EXPECT_TRUE([testExtension _hasStaticInjectedContentForURL:exampleURL]);
+    EXPECT_TRUE(testExtension.hasInjectedContent);
 
     testManifestDictionary[@"content_scripts"] = @[ @{ @"js": @[ @"test.js", @1, @"" ], @"css": @[ @NO, @"test.css", @"" ], @"matches": @[ @"*://*/" ], @"exclude_matches": @[ @"*://*.example.com/" ] } ];
     testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
 
     EXPECT_NS_EQUAL(testExtension.errors, @[ ]);
-    EXPECT_TRUE([testExtension _hasStaticInjectedContentForURL:webkitURL]);
-    EXPECT_FALSE([testExtension _hasStaticInjectedContentForURL:exampleURL]);
+    EXPECT_TRUE(testExtension.hasInjectedContent);
 
     testManifestDictionary[@"content_scripts"] = @[ @{ @"js": @[ @"test.js", @1, @"" ], @"css": @[ @NO, @"test.css", @"" ], @"matches": @[ @"*://*.example.com/" ] } ];
     testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
 
     EXPECT_NS_EQUAL(testExtension.errors, @[ ]);
-    EXPECT_FALSE([testExtension _hasStaticInjectedContentForURL:webkitURL]);
-    EXPECT_TRUE([testExtension _hasStaticInjectedContentForURL:exampleURL]);
+    EXPECT_TRUE(testExtension.hasInjectedContent);
 
     // Invalid cases
 
@@ -236,32 +230,28 @@ TEST(WKWebExtension, ContentScriptsParsing)
 
     EXPECT_NE(testExtension.errors.count, 0ul);
     EXPECT_NOT_NULL(matchingError(testExtension.errors, _WKWebExtensionErrorInvalidManifestEntry));
-    EXPECT_FALSE([testExtension _hasStaticInjectedContentForURL:webkitURL]);
-    EXPECT_FALSE([testExtension _hasStaticInjectedContentForURL:exampleURL]);
+    EXPECT_FALSE(testExtension.hasInjectedContent);
 
     testManifestDictionary[@"content_scripts"] = @{ @"invalid": @YES };
     testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
 
     EXPECT_NE(testExtension.errors.count, 0ul);
     EXPECT_NOT_NULL(matchingError(testExtension.errors, _WKWebExtensionErrorInvalidManifestEntry));
-    EXPECT_FALSE([testExtension _hasStaticInjectedContentForURL:webkitURL]);
-    EXPECT_FALSE([testExtension _hasStaticInjectedContentForURL:exampleURL]);
+    EXPECT_FALSE(testExtension.hasInjectedContent);
 
     testManifestDictionary[@"content_scripts"] = @[ @{ @"js": @[ @"test.js" ], @"matches": @[ ] } ];
     testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
 
     EXPECT_NE(testExtension.errors.count, 0ul);
     EXPECT_NOT_NULL(matchingError(testExtension.errors, _WKWebExtensionErrorInvalidManifestEntry));
-    EXPECT_FALSE([testExtension _hasStaticInjectedContentForURL:webkitURL]);
-    EXPECT_FALSE([testExtension _hasStaticInjectedContentForURL:exampleURL]);
+    EXPECT_FALSE(testExtension.hasInjectedContent);
 
     testManifestDictionary[@"content_scripts"] = @[ @{ @"js": @[ @"test.js" ], @"matches": @[ @"*://*.example.com/" ], @"run_at": @"invalid" } ];
     testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
 
     EXPECT_NE(testExtension.errors.count, 0ul);
     EXPECT_NOT_NULL(matchingError(testExtension.errors, _WKWebExtensionErrorInvalidManifestEntry));
-    EXPECT_FALSE([testExtension _hasStaticInjectedContentForURL:webkitURL]);
-    EXPECT_TRUE([testExtension _hasStaticInjectedContentForURL:exampleURL]);
+    EXPECT_TRUE(testExtension.hasInjectedContent);
 }
 
 TEST(WKWebExtension, PermissionsParsing)
@@ -1126,6 +1116,115 @@ TEST(WKWebExtension, CommandsParsing)
 
     testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
     EXPECT_FALSE(testExtension.hasCommands);
+    EXPECT_EQ(testExtension.errors.count, 1ul);
+}
+
+TEST(WKWebExtension, DeclarativeNetRequestParsing)
+{
+    NSMutableDictionary *testManifestDictionary = [@{
+        @"manifest_version": @3,
+        @"name": @"Test",
+        @"description": @"Test",
+        @"version": @"1.0",
+        @"permissions": @[ @"declarativeNetRequest" ],
+        @"declarative_net_request": @{
+            @"rule_resources": @[
+                @{
+                    @"id": @"test",
+                    @"enabled": @YES,
+                    @"path": @"rules.json"
+                }
+            ]
+        }
+    } mutableCopy];
+
+    auto *testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
+    EXPECT_TRUE(testExtension.hasContentModificationRules);
+    EXPECT_NS_EQUAL(testExtension.errors, @[ ]);
+
+    // Missing id
+    testManifestDictionary[@"declarative_net_request"] = @{
+        @"rule_resources": @[
+            @{
+                @"enabled": @YES,
+                @"path": @"rules.json"
+            }
+        ]
+    };
+
+    testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
+    EXPECT_FALSE(testExtension.hasContentModificationRules);
+    EXPECT_EQ(testExtension.errors.count, 1ul);
+
+    // Missing enabled
+    testManifestDictionary[@"declarative_net_request"] = @{
+        @"rule_resources": @[
+            @{
+                @"id": @"test",
+                @"path": @"rules.json"
+            }
+        ]
+    };
+
+    testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
+    EXPECT_FALSE(testExtension.hasContentModificationRules);
+    EXPECT_EQ(testExtension.errors.count, 1ul);
+
+    // Missing path
+    testManifestDictionary[@"declarative_net_request"] = @{
+        @"rule_resources": @[
+            @{
+                @"id": @"test",
+                @"enabled": @YES
+            }
+        ]
+    };
+
+    testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
+    EXPECT_FALSE(testExtension.hasContentModificationRules);
+    EXPECT_EQ(testExtension.errors.count, 1ul);
+
+    // Duplicate names
+    testManifestDictionary[@"declarative_net_request"] = @{
+        @"rule_resources": @[
+            @{
+                @"id": @"test",
+                @"enabled": @YES,
+                @"path": @"rules.json"
+            },
+            @{
+                @"id": @"test",
+                @"enabled": @YES,
+                @"path": @"rules2.json"
+            }
+        ]
+    };
+
+    testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
+    // There should still be the first rule loaded.
+    EXPECT_TRUE(testExtension.hasContentModificationRules);
+    // But also an error.
+    EXPECT_EQ(testExtension.errors.count, 1ul);
+
+    // One valid rule, one invalid
+    testManifestDictionary[@"declarative_net_request"] = @{
+        @"rule_resources": @[
+            @{
+                @"id": @"test",
+                @"enabled": @YES,
+                @"path": @"rules.json"
+            },
+            @{
+                @"enabled": @YES,
+                @"path": @"rules2.json"
+            }
+        ]
+    };
+
+    testExtension = [[_WKWebExtension alloc] _initWithManifestDictionary:testManifestDictionary];
+    // There should still be the first rule loaded.
+    EXPECT_TRUE(testExtension.hasContentModificationRules);
+    // But also an error.
     EXPECT_EQ(testExtension.errors.count, 1ul);
 }
 

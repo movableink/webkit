@@ -447,15 +447,9 @@ void RenderThemeQStyle::paintMenuListButtonDecorations(const RenderBox& o, const
     p.paintComboBoxArrow();
 }
 
-Seconds RenderThemeQStyle::animationDurationForProgressBar(const RenderProgress& renderProgress) const
+Seconds RenderThemeQStyle::animationDurationForProgressBar() const
 {
-    if (renderProgress.position() >= 0)
-        return 0_s;
-
-    IntSize size = roundedIntSize(renderProgress.size());
-    // FIXME: Until http://bugreports.qt.nokia.com/browse/QTBUG-9171 is fixed,
-    // we simulate one square animating across the progress bar.
-    return animationRepeatIntervalForProgressBar(renderProgress) * (size.width() / m_qStyle->progressBarChunkWidth(size));
+    return Seconds(2.475);
 }
 
 bool RenderThemeQStyle::paintProgressBar(const RenderObject& o, const PaintInfo& pi, const IntRect& r)
@@ -575,20 +569,6 @@ bool RenderThemeQStyle::paintSearchFieldResultsDecorationPart(const RenderBox& o
     notImplemented();
     return RenderTheme::paintSearchFieldResultsDecorationPart(o, pi, r);
 }
-
-#ifndef QT_NO_SPINBOX
-
-bool RenderThemeQStyle::paintInnerSpinButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& rect)
-{
-    StylePainterQStyle p(this, paintInfo, o);
-    if (!p.isValid())
-        return true;
-
-    p.styleOption.rect = rect;
-    p.paintInnerSpinButton(isSpinUpButtonPartPressed(o));
-    return false;
-}
-#endif
 
 StyleAppearance RenderThemeQStyle::initializeCommonQStyleOptions(QStyleFacadeOption &option, const RenderObject& o) const
 {

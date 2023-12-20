@@ -37,9 +37,9 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "JSEventListener.h"
+#include "LegacyRenderSVGResourceContainer.h"
 #include "NodeName.h"
 #include "RenderAncestorIterator.h"
-#include "RenderSVGResourceFilter.h"
 #include "ResolvedStyle.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElementRareData.h"
@@ -455,6 +455,7 @@ static inline bool isSVGLayerAwareElement(const SVGElement& element)
     case SVG::g:
     case SVG::image:
     case SVG::line:
+    case SVG::mask:
     case SVG::path:
     case SVG::polygon:
     case SVG::polyline:

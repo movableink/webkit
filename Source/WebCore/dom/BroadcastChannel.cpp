@@ -77,6 +77,7 @@ public:
     void registerChannel();
     void unregisterChannel();
     void postMessage(Ref<SerializedScriptValue>&&);
+    void detach() { m_broadcastChannel = nullptr; }
 
     String name() const { return m_name.isolatedCopy(); }
     BroadcastChannelIdentifier identifier() const { return m_identifier; }
@@ -113,12 +114,12 @@ void BroadcastChannel::MainThreadBridge::ensureOnMainThread(Function<void(Page*)
 
     Ref protectedThis { *this };
     if (auto* document = dynamicDowncast<Document>(*context)) {
-        task(document->checkedPage().get());
+        task(document->protectedPage().get());
         return;
     }
 
     downcast<WorkerGlobalScope>(*context).thread().workerLoaderProxy().postTaskToLoader([protectedThis = WTFMove(protectedThis), task = WTFMove(task)](auto& context) {
-        task(downcast<Document>(context).checkedPage().get());
+        task(downcast<Document>(context).protectedPage().get());
     });
 }
 
@@ -168,6 +169,7 @@ BroadcastChannel::BroadcastChannel(ScriptExecutionContext& context, const String
 BroadcastChannel::~BroadcastChannel()
 {
     close();
+    m_mainThreadBridge->detach();
     {
         Locker locker { allBroadcastChannelsLock };
         allBroadcastChannels().remove(m_mainThreadBridge->identifier());

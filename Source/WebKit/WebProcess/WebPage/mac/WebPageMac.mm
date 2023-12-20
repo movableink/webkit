@@ -588,7 +588,7 @@ void WebPage::setTopOverhangImage(WebImage* image)
     if (!frameView)
         return;
 
-    auto* layer = frameView->setWantsLayerForTopOverHangArea(image);
+    RefPtr layer = frameView->setWantsLayerForTopOverHangArea(image);
     if (!layer)
         return;
 
@@ -607,7 +607,7 @@ void WebPage::setBottomOverhangImage(WebImage* image)
     if (!frameView)
         return;
 
-    auto* layer = frameView->setWantsLayerForBottomOverHangArea(image);
+    RefPtr layer = frameView->setWantsLayerForBottomOverHangArea(image);
     if (!layer)
         return;
 
@@ -1062,11 +1062,25 @@ void WebPage::playbackTargetPickerWasDismissed(PlaybackTargetClientContextIdenti
 }
 #endif
 
+void WebPage::didBeginMagnificationGesture()
+{
+#if ENABLE(PDF_PLUGIN)
+    if (auto* pluginView = mainFramePlugIn()) {
+        pluginView->didBeginMagnificationGesture();
+        return;
+    }
+#endif
+}
+
 void WebPage::didEndMagnificationGesture()
 {
 #if ENABLE(MAC_GESTURE_EVENTS)
     if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame()))
         localMainFrame->eventHandler().didEndMagnificationGesture();
+#endif
+#if ENABLE(PDF_PLUGIN)
+    if (auto* pluginView = mainFramePlugIn())
+        pluginView->didEndMagnificationGesture();
 #endif
 }
 

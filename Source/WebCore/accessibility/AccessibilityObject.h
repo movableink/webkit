@@ -57,16 +57,6 @@ class IntPoint;
 class IntSize;
 class ScrollableArea;
 
-struct AccessibilityText {
-    String text;
-    AccessibilityTextSource textSource;
-    
-    AccessibilityText(const String& t, const AccessibilityTextSource& s)
-        : text(t)
-        , textSource(s)
-    { }
-};
-
 bool nodeHasPresentationRole(Node*);
 
 class AccessibilityObject : public AXCoreObject, public CanMakeWeakPtr<AccessibilityObject>, public CanMakeCheckedPtr {
@@ -128,7 +118,7 @@ public:
     bool isListBoxOption() const override { return false; }
     bool isAttachment() const override { return false; }
     bool isMediaTimeline() const { return false; }
-    bool isFileUploadButton() const;
+    bool isFileUploadButton() const final;
     bool isInputImage() const override { return false; }
     virtual bool isSliderThumb() const { return false; }
     bool isControl() const override { return false; }
@@ -197,7 +187,7 @@ public:
     bool isARIATextControl() const;
     bool isNonNativeTextControl() const override;
     bool isRangeControl() const;
-    bool isMeter() const;
+    bool isMeter() const final;
     bool isStyleFormatGroup() const;
     bool isFigureElement() const;
     bool isKeyboardFocusable() const override;
@@ -218,7 +208,7 @@ public:
     bool isRequired() const override { return false; }
     bool supportsRequiredAttribute() const override { return false; }
     bool isExpanded() const override;
-    bool isVisible() const override { return true; }
+    bool isVisible() const override { return !isHidden(); }
     virtual bool isCollapsed() const { return false; }
     void setIsExpanded(bool) override { }
     FloatRect unobscuredContentRect() const override;
@@ -460,6 +450,7 @@ public:
     Widget* widget() const override { return nullptr; }
     PlatformWidget platformWidget() const override { return nullptr; }
     Widget* widgetForAttachmentView() const override { return nullptr; }
+    bool isPlugin() const override { return false; }
 
 #if PLATFORM(COCOA)
     RemoteAXObjectRef remoteParentObject() const override;
@@ -728,11 +719,8 @@ public:
 #if PLATFORM(COCOA)
     bool preventKeyboardDOMEventDispatch() const override;
     void setPreventKeyboardDOMEventDispatch(bool) override;
-    bool fileUploadButtonReturnsValueInTitle() const;
+    bool fileUploadButtonReturnsValueInTitle() const override;
     String speechHintAttributeValue() const override;
-    String descriptionAttributeValue() const override;
-    String helpTextAttributeValue() const override;
-    String titleAttributeValue() const override;
     bool hasApplePDFAnnotationAttribute() const override { return hasAttribute(HTMLNames::x_apple_pdf_annotationAttr); }
 #endif
 

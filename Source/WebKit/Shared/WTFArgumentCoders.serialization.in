@@ -105,7 +105,6 @@ template: enum class WebKit::ShapeDetectionIdentifierType
 template: enum class WebKit::StorageAreaImplIdentifierType
 template: enum class WebKit::StorageAreaMapIdentifierType
 template: enum class WebKit::StorageNamespaceIdentifierType
-template: enum class WebKit::TrackPrivateRemoteIdentifierType
 template: enum class WebKit::WCLayerTreeHostIdentifierType
 template: enum class WebKit::WebExtensionControllerIdentifierType
 template: enum class WebKit::XRDeviceIdentifierType
@@ -138,6 +137,7 @@ template: struct WebKit::NetworkResourceLoadIdentifierType
 template: struct WebKit::PDFPluginIdentifierType
 template: struct WebKit::PageGroupIdentifierType
 template: struct WebKit::RemoteAudioDestinationIdentifierType
+template: struct WebKit::RemoteImageBufferSetIdentifierType
 template: struct WebKit::TapIdentifierType
 template: struct WebKit::TextCheckerRequestType
 template: struct WebKit::UserContentControllerIdentifierType

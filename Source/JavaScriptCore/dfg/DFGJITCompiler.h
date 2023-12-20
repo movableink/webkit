@@ -38,9 +38,11 @@
 #include "HandlerInfo.h"
 #include "JITCode.h"
 #include "JITInlineCacheGenerator.h"
+#include "JITThunks.h"
 #include "LinkBuffer.h"
 #include "MacroAssembler.h"
 #include "PCToCodeOriginMap.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -85,6 +87,7 @@ struct CallLinkRecord {
 // compilation, and also records information used in linking (e.g. a list of all
 // call to be linked).
 class JITCompiler : public CCallHelpers {
+    WTF_MAKE_TZONE_ALLOCATED(JITCompiler);
 public:
     friend class SpeculativeJIT;
 
@@ -173,12 +176,7 @@ public:
     }
 #endif
 
-    void exceptionCheck();
-
-    void exceptionJumpWithCallFrameRollback()
-    {
-        m_exceptionChecksWithCallFrameRollback.append(jump());
-    }
+    void exceptionJumpWithCallFrameRollback();
 
     OSRExitCompilationInfo& appendExitInfo(MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList())
     {
@@ -303,7 +301,7 @@ public:
         return result;
     }
 
-    RefPtr<JITCode> jitCode() { return m_jitCode; }
+    RefPtr<DFG::JITCode> jitCode() { return m_jitCode; }
     
     Vector<Label>& blockHeads() { return m_blockHeads; }
 
@@ -421,13 +419,11 @@ protected:
 
     std::unique_ptr<Disassembler> m_disassembler;
     
-    RefPtr<JITCode> m_jitCode;
+    RefPtr<DFG::JITCode> m_jitCode;
     
     // Vector of calls out from JIT code, including exception handler information.
     // Count of the number of CallRecords with exception handlers.
     Vector<CallLinkRecord> m_calls;
-    JumpList m_exceptionChecks;
-    JumpList m_exceptionChecksWithCallFrameRollback;
 
     Vector<Label> m_blockHeads;
 

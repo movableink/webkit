@@ -285,10 +285,6 @@ void TextFieldInputType::handleFocusEvent(Node* oldFocusedNode, FocusDirection)
     ASSERT_UNUSED(oldFocusedNode, oldFocusedNode != element());
     if (RefPtr frame = element()->document().frame()) {
         frame->editor().textFieldDidBeginEditing(*element());
-#if ENABLE(DATALIST_ELEMENT)
-        if (shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited() && element()->list() && m_dataListDropdownIndicator)
-            m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, suggestions().size() ? CSSValueBlock : CSSValueNone, true);
-#endif
     }
 }
 
@@ -297,15 +293,12 @@ void TextFieldInputType::handleBlurEvent()
     InputType::handleBlurEvent();
     ASSERT(element());
     element()->endEditing();
-#if ENABLE(DATALIST_ELEMENT)
-    if (shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited() && element()->list() && m_dataListDropdownIndicator)
-        m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone, true);
-#endif
 }
 
 bool TextFieldInputType::shouldSubmitImplicitly(Event& event)
 {
-    return (event.type() == eventNames().textInputEvent && is<TextEvent>(event) && downcast<TextEvent>(event).data() == "\n"_s)
+    auto* textEvent = dynamicDowncast<TextEvent>(event);
+    return (event.type() == eventNames().textInputEvent && textEvent && textEvent->data() == "\n"_s)
         || InputType::shouldSubmitImplicitly(event);
 }
 
@@ -495,19 +488,6 @@ void TextFieldInputType::createDataListDropdownIndicator()
     m_container->appendChild(*m_dataListDropdownIndicator);
     m_dataListDropdownIndicator->setPseudo(ShadowPseudoIds::webkitListButton());
     m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone, true);
-}
-
-bool TextFieldInputType::shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited() const
-{
-#if PLATFORM(IOS_FAMILY)
-#if ENABLE(IOS_FORM_CONTROL_REFRESH)
-    return !element()->document().settings().iOSFormControlRefreshEnabled();
-#else
-    return true;
-#endif
-#else
-    return false;
-#endif
 }
 
 #endif // ENABLE(DATALIST_ELEMENT)
@@ -736,9 +716,6 @@ void TextFieldInputType::didSetValueByUserEdit()
     if (RefPtr frame = element()->document().frame())
         frame->editor().textDidChangeInTextField(*element());
 #if ENABLE(DATALIST_ELEMENT)
-    if (shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited() && element()->list() && m_dataListDropdownIndicator)
-        m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, suggestions().size() ? CSSValueBlock : CSSValueNone, true);
-
     if (element()->list())
         displaySuggestions(DataListSuggestionActivationType::TextChanged);
 #endif
@@ -931,8 +908,7 @@ void TextFieldInputType::dataListMayHaveChanged()
         createDataListDropdownIndicator();
     if (!element())
         return;
-    if (!shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited())
-        m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, element()->list() ? CSSValueBlock : CSSValueNone, true);
+    m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, element()->list() ? CSSValueBlock : CSSValueNone, true);
 }
 
 HTMLElement* TextFieldInputType::dataListButtonElement() const

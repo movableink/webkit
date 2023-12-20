@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,11 @@
 #include "JSWebAssemblyRuntimeError.h"
 #include "WasmTypeDefinitionInlines.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace Wasm {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Global);
 
 JSValue Global::get(JSGlobalObject* globalObject) const
 {
@@ -147,7 +150,7 @@ void Global::set(JSGlobalObject* globalObject, JSValue argument)
 template<typename Visitor>
 void Global::visitAggregateImpl(Visitor& visitor)
 {
-    if (isFuncref(m_type) || isExternref(m_type)) {
+    if (isRefType(m_type)) {
         RELEASE_ASSERT(m_owner);
         visitor.append(m_value.m_externref);
     }

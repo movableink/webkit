@@ -77,10 +77,29 @@
 #include <wtf/BitVector.h>
 #include <wtf/Box.h>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace DFG {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SpeculativeJIT);
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FPRTemporary);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GPRTemporary);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JSValueRegsFlushedCallResult);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JSValueRegsTemporary);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeculateInt32Operand);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeculateStrictInt32Operand);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeculateInt52Operand);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeculateStrictInt52Operand);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeculateWhicheverInt52Operand);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeculateDoubleOperand);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeculateCellOperand);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeculateBooleanOperand);
+#if USE(BIGINT32)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeculateBigInt32Operand);
+#endif
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JSValueOperand);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StorageOperand);
 
 SpeculativeJIT::SpeculativeJIT(Graph& dfg)
     : Base(dfg)
@@ -207,7 +226,6 @@ void SpeculativeJIT::compileFunction()
     // determine the correct number of arguments have been passed, or have already checked).
     // In cases where an arity check is necessary, we enter here.
     // FIXME: change this from a cti call to a DFG style operation (normal C calling conventions).
-    Call callArityFixup;
     Label arityCheck;
     bool requiresArityFixup = m_codeBlock->numParameters() != 1;
     if (requiresArityFixup) {
@@ -222,7 +240,7 @@ void SpeculativeJIT::compileFunction()
 
         emitStoreCodeOrigin(CodeOrigin(BytecodeIndex(0)));
         move(GPRInfo::regT0, GPRInfo::argumentGPR0);
-        callArityFixup = nearCall();
+        nearCallThunk(CodeLocationLabel { vm().getCTIStub(CommonJITThunkID::ArityFixup).retaggedCode<NoPtrTag>() });
         jump(fromArityCheck);
     } else
         arityCheck = entryLabel;
@@ -260,9 +278,6 @@ void SpeculativeJIT::compileFunction()
     }
     link(*linkBuffer);
     linkOSREntries(*linkBuffer);
-
-    if (requiresArityFixup)
-        linkBuffer->link(callArityFixup, vm().getCTIStub(arityFixupGenerator).code());
 
     disassemble(*linkBuffer);
 
@@ -308,7 +323,7 @@ void SpeculativeJIT::exceptionCheck()
         // We assume here that this is called after callOpeartion()/appendCall() is called.
         appendExceptionHandlingOSRExit(this, ExceptionCheck, streamIndex, opCatchOrigin, exceptionHandler, m_jitCode->common.codeOrigins->lastCallSite(), hadException);
     } else
-        m_exceptionChecks.append(emitExceptionCheck(vm()));
+        emitExceptionCheck(vm()).linkThunk(CodeLocationLabel(vm().getCTIStub(CommonJITThunkID::HandleException).retaggedCode<NoPtrTag>()), this);
 }
 
 CallSiteIndex SpeculativeJIT::recordCallSiteAndGenerateExceptionHandlingOSRExitIfNeeded(const CodeOrigin& callSiteCodeOrigin, unsigned eventStreamIndex)
@@ -6669,12 +6684,11 @@ void SpeculativeJIT::compileArithMul(Node* node)
         GPRReg op1GPR = op1.gpr();
         GPRReg op2GPR = op2.gpr();
         GPRReg resultGPR = result.gpr();
-        
-        move(op1GPR, resultGPR);
+
         speculationCheck(
             Int52Overflow, JSValueRegs(), nullptr,
-            branchMul64(Overflow, op2GPR, resultGPR));
-        
+            branchMul64(Overflow, op1GPR, op2GPR, resultGPR));
+
         if (shouldCheckNegativeZero(node->arithMode())) {
             Jump resultNonZero = branchTest64(
                 NonZero, resultGPR);

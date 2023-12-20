@@ -190,13 +190,16 @@ static const uint32_t nonLinearizedPDFSentinel = std::numeric_limits<uint32_t>::
 
 - (NSObject *)parent
 {
-    if (!_parent) {
-        if (auto* axObjectCache = _pdfPlugin->axObjectCache()) {
-            if (RefPtr pluginAxObject = axObjectCache->getOrCreate(_pluginElement.get()))
-                _parent = pluginAxObject->wrapper();
-        }
+    RetainPtr<WKPDFPluginAccessibilityObject> protectedSelf = retainPtr(self);
+    if (!protectedSelf->_parent) {
+        callOnMainRunLoopAndWait([&protectedSelf] {
+            if (auto* axObjectCache = protectedSelf->_pdfPlugin->axObjectCache()) {
+                if (RefPtr pluginAxObject = axObjectCache->getOrCreate(protectedSelf->_pluginElement.get()))
+                    protectedSelf->_parent = pluginAxObject->wrapper();
+            }
+        });
     }
-    return _parent.get().get();
+    return protectedSelf->_parent.get().get();
 }
 
 - (void)setParent:(NSObject *)parent
@@ -428,6 +431,18 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 @end
 
+static WebCore::Cursor::Type toWebCoreCursorType(PDFLayerControllerCursorType cursorType)
+{
+    switch (cursorType) {
+    case kPDFLayerControllerCursorTypePointer: return WebCore::Cursor::Type::Pointer;
+    case kPDFLayerControllerCursorTypeHand: return WebCore::Cursor::Type::Hand;
+    case kPDFLayerControllerCursorTypeIBeam: return WebCore::Cursor::Type::IBeam;
+    }
+
+    RELEASE_ASSERT_NOT_REACHED();
+    return WebCore::Cursor::Type::Pointer;
+}
+
 @implementation WKPDFLayerControllerDelegate
 
 @synthesize pdfPlugin = _pdfPlugin;
@@ -519,7 +534,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)setMouseCursor:(PDFLayerControllerCursorType)cursorType
 {
-    _pdfPlugin->notifyCursorChanged(cursorType);
+    _pdfPlugin->notifyCursorChanged(toWebCoreCursorType(cursorType));
 }
 
 - (void)didChangeAnnotationState
@@ -1373,7 +1388,7 @@ JSValueRef PDFPlugin::jsPDFDocPrint(JSContextRef ctx, JSObjectRef function, JSOb
     if (!coreFrame)
         return JSValueMakeUndefined(ctx);
 
-    CheckedPtr page = coreFrame->page();
+    RefPtr page = coreFrame->page();
     if (!page)
         return JSValueMakeUndefined(ctx);
 
@@ -1418,7 +1433,7 @@ void PDFPlugin::installPDFDocument()
     m_pdfLayerController.get().document = m_pdfDocument.get();
 
     if (handlesPageScaleFactor())
-        m_view->setPageScaleFactor([m_pdfLayerController contentScaleFactor]);
+        m_view->setPageScaleFactor([m_pdfLayerController contentScaleFactor], std::nullopt);
 
     notifyScrollPositionChanged(IntPoint([m_pdfLayerController scrollPosition]));
 
@@ -1557,7 +1572,7 @@ void PDFPlugin::updatePageAndDeviceScaleFactors()
         [m_pdfLayerController setDeviceScaleFactor:newScaleFactor];
 }
 
-void PDFPlugin::contentsScaleFactorChanged(float)
+void PDFPlugin::deviceScaleFactorChanged(float)
 {
     updatePageAndDeviceScaleFactors();
 }
@@ -1613,7 +1628,7 @@ void PDFPlugin::teardown()
 void PDFPlugin::paintControlForLayerInContext(CALayer *layer, CGContextRef context)
 {
 #if PLATFORM(MAC)
-    CheckedPtr page = this->page();
+    RefPtr page = this->page();
     if (!page)
         return;
     LocalDefaultSystemAppearance localAppearance(page->useDarkAppearance());
@@ -1673,7 +1688,7 @@ PlatformLayer* PDFPlugin::platformLayer() const
 
 void PDFPlugin::geometryDidChange(const IntSize& pluginSize, const AffineTransform& pluginToRootViewTransform)
 {
-    if (size() == pluginSize && m_view->pageScaleFactor() == [m_pdfLayerController contentScaleFactor])
+    if (size() == pluginSize)
         return;
 
     LOG_WITH_STREAM(Plugins, stream << "PDFPlugin::geometryDidChange - size " << pluginSize << " pluginToRootViewTransform " << pluginToRootViewTransform);
@@ -1686,18 +1701,6 @@ void PDFPlugin::geometryDidChange(const IntSize& pluginSize, const AffineTransfo
     CATransform3D transform = CATransform3DMakeScale(1, -1, 1);
     transform = CATransform3DTranslate(transform, 0, -pluginSize.height(), 0);
     
-    if (handlesPageScaleFactor()) {
-        CGFloat magnification = m_view->pageScaleFactor() - [m_pdfLayerController contentScaleFactor];
-
-        // FIXME: Instead of m_lastMousePositionInPluginCoordinates, we should use the zoom origin from PluginView::setPageScaleFactor.
-        if (magnification)
-            [m_pdfLayerController magnifyWithMagnification:magnification atPoint:convertFromPluginToPDFView(m_lastMousePositionInPluginCoordinates) immediately:NO];
-    } else {
-        // If we don't handle page scale ourselves, we need to respect our parent page's
-        // scale, which may have changed.
-        updatePageAndDeviceScaleFactors();
-    } 
-
     updatePDFHUDLocation();
     updateScrollbars();
 
@@ -1706,6 +1709,59 @@ void PDFPlugin::geometryDidChange(const IntSize& pluginSize, const AffineTransfo
 
     [m_contentLayer setSublayerTransform:transform];
     [CATransaction commit];
+}
+
+IntPoint PDFPlugin::convertFromPluginToPDFView(const IntPoint& point) const
+{
+    return IntPoint(point.x(), size().height() - point.y());
+}
+
+IntPoint PDFPlugin::convertFromPDFViewToRootView(const IntPoint& point) const
+{
+    IntPoint pointInPluginCoordinates(point.x(), size().height() - point.y());
+    return valueOrDefault(m_rootViewToPluginTransform.inverse()).mapPoint(pointInPluginCoordinates);
+}
+
+IntRect PDFPlugin::convertFromPDFViewToRootView(const IntRect& rect) const
+{
+    IntRect rectInPluginCoordinates(rect.x(), rect.y(), rect.width(), rect.height());
+    return valueOrDefault(m_rootViewToPluginTransform.inverse()).mapRect(rectInPluginCoordinates);
+}
+
+IntPoint PDFPlugin::convertFromRootViewToPDFView(const IntPoint& point) const
+{
+    IntPoint pointInPluginCoordinates = m_rootViewToPluginTransform.mapPoint(point);
+    return IntPoint(pointInPluginCoordinates.x(), size().height() - pointInPluginCoordinates.y());
+}
+
+FloatRect PDFPlugin::convertFromPDFViewToScreen(const FloatRect& rect) const
+{
+    return WebCore::Accessibility::retrieveValueFromMainThread<WebCore::FloatRect>([&] () -> WebCore::FloatRect {
+        FloatRect updatedRect = rect;
+        updatedRect.setLocation(convertFromPDFViewToRootView(IntPoint(updatedRect.location())));
+        RefPtr page = this->page();
+        if (!page)
+            return { };
+        return page->chrome().rootViewToScreen(enclosingIntRect(updatedRect));
+    });
+}
+
+void PDFPlugin::setPageScaleFactor(double scale, std::optional<WebCore::IntPoint> origin)
+{
+    if (!handlesPageScaleFactor()) {
+        // If we don't handle page scale ourselves, we need to respect our parent page's scale.
+        updatePageAndDeviceScaleFactors();
+        return;
+    }
+
+    if (scale == [m_pdfLayerController contentScaleFactor])
+        return;
+
+    if (!origin)
+        origin = IntRect({ }, size()).center();
+
+    if (CGFloat magnification = scale - [m_pdfLayerController contentScaleFactor])
+        [m_pdfLayerController magnifyWithMagnification:magnification atPoint:convertFromPluginToPDFView(*origin) immediately:NO];
 }
 
 static NSUInteger modifierFlagsFromWebEvent(const WebEvent& event)
@@ -1940,7 +1996,11 @@ bool PDFPlugin::handleContextMenuEvent(const WebMouseEvent& event)
             continue;
         if ([NSStringFromSelector(item.action) isEqualToString:@"openWithPreview"])
             openInPreviewIndex = i;
-        PDFContextMenuItem menuItem { String([item title]), !![item isEnabled], !![item isSeparatorItem], static_cast<int>([item state]), !![item action], i };
+        PDFContextMenuItem menuItem { String([item title]), static_cast<int>([item state]), i,
+            [item isEnabled] ? ContextMenuItemEnablement::Enabled : ContextMenuItemEnablement::Disabled,
+            [item action] ? ContextMenuItemHasAction::Yes : ContextMenuItemHasAction::No,
+            [item isSeparatorItem] ? ContextMenuItemIsSeparator::Yes : ContextMenuItemIsSeparator::No
+        };
         items.append(WTFMove(menuItem));
     }
     PDFContextMenu contextMenu { point, WTFMove(items), WTFMove(openInPreviewIndex) };
@@ -2021,11 +2081,6 @@ void PDFPlugin::invalidateScrollCornerRect(const IntRect& rect)
     [m_scrollCornerLayer setNeedsDisplay];
 }
 
-bool PDFPlugin::handlesPageScaleFactor() const
-{
-    return m_frame && m_frame->isMainFrame() && isFullFramePlugin();
-}
-
 void PDFPlugin::clickedLink(NSURL *url)
 {
     URL coreURL = url;
@@ -2075,7 +2130,7 @@ bool PDFPlugin::supportsForms()
 void PDFPlugin::notifyContentScaleFactorChanged(CGFloat scaleFactor)
 {
     if (handlesPageScaleFactor())
-        m_view->setPageScaleFactor(scaleFactor);
+        m_view->setPageScaleFactor(scaleFactor, std::nullopt);
 
     updatePDFHUDLocation();
     updateScrollbars();
@@ -2290,27 +2345,6 @@ void PDFPlugin::notifySelectionChanged(PDFSelection *)
     if (!m_frame || !m_frame->page())
         return;
     m_frame->page()->didChangeSelection(*m_frame->coreLocalFrame());
-}
-
-static const WebCore::Cursor& coreCursor(PDFLayerControllerCursorType type)
-{
-    switch (type) {
-    case kPDFLayerControllerCursorTypeHand:
-        return WebCore::handCursor();
-    case kPDFLayerControllerCursorTypeIBeam:
-        return WebCore::iBeamCursor();
-    case kPDFLayerControllerCursorTypePointer:
-    default:
-        return WebCore::pointerCursor();
-    }
-}
-
-void PDFPlugin::notifyCursorChanged(uint64_t type)
-{
-    if (!m_frame || !m_frame->page())
-        return;
-
-    m_frame->page()->send(Messages::WebPageProxy::SetCursor(coreCursor(static_cast<PDFLayerControllerCursorType>(type))));
 }
 
 String PDFPlugin::getSelectionString() const

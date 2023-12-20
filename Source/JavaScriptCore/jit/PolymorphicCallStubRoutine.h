@@ -50,11 +50,11 @@ public:
     
     void unlinkImpl(VM&);
 
-    bool hasCallLinkInfo(CallLinkInfo* info) { return m_callLinkInfo.get() == info; }
+    bool hasCallLinkInfo(CallLinkInfo* info) { return m_callLinkInfo == info; }
     void clearCallLinkInfo();
     
 private:
-    PackedPtr<CallLinkInfo> m_callLinkInfo;
+    CallLinkInfo* m_callLinkInfo;
 };
 
 class PolymorphicCallCase {
@@ -85,7 +85,7 @@ public:
     friend class JITStubRoutine;
 
     PolymorphicCallStubRoutine(
-        const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, const JSCell* owner,
+        const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, JSCell* owner,
         CallFrame* callerFrame, CallLinkInfo&, const Vector<PolymorphicCallCase>&,
         UniqueArray<uint32_t>&& fastCounts);
     

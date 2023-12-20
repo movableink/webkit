@@ -27,7 +27,6 @@
 #include "FontCascade.h"
 #include "GraphicsContext.h"
 #include "HTMLAnchorElement.h"
-#include "HTMLFontElement.h"
 #include "InlineIteratorLineBox.h"
 #include "InlineTextBoxStyle.h"
 #include "RenderBlock.h"
@@ -362,7 +361,7 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
         const auto& style = styleForRenderer(*current);
         extractDecorations(style, style.textDecorationLine());
 
-        if (current->isRenderRubyText())
+        if (current->isRenderRubyText() || current->style().display() == DisplayType::RubyAnnotation)
             return;
 
         current = current->parent();
@@ -372,7 +371,7 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
         if (remainingDecorations.isEmpty())
             break;
 
-    } while (current && !is<HTMLAnchorElement>(current->node()) && !is<HTMLFontElement>(current->node()));
+    } while (current && !is<HTMLAnchorElement>(current->node()));
 
     // If we bailed out, use the element we bailed out at (typically a <font> or <a> element).
     if (!remainingDecorations.isEmpty() && current)

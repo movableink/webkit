@@ -90,8 +90,8 @@ void GeolocationClientQt::positionUpdated(const QGeoPositionInfo& geoPosition)
     if (providesSpeed)
         m_lastPosition->speed = speed;
 
-    WebCore::Page* page = m_webPage->page;
-    GeolocationController::from(page)->positionChanged(m_lastPosition);
+    RefPtr page = m_webPage->page;
+    GeolocationController::from(page.get())->positionChanged(m_lastPosition);
 }
 
 void GeolocationClientQt::startUpdating(const String&, bool)
@@ -100,9 +100,9 @@ void GeolocationClientQt::startUpdating(const String&, bool)
         connect(m_location, SIGNAL(positionUpdated(QGeoPositionInfo)), this, SLOT(positionUpdated(QGeoPositionInfo)));
 
     if (!m_location) {
-        WebCore::Page* page = m_webPage->page;
+        RefPtr page = m_webPage->page;
         auto error = GeolocationError::create(GeolocationError::PositionUnavailable, String::fromLatin1(failedToStartServiceErrorMessage));
-        GeolocationController::from(page)->errorOccurred(error.get());
+        GeolocationController::from(page.get())->errorOccurred(error.get());
         return;
     }
 

@@ -36,7 +36,7 @@
 #import "DragState.h"
 #import "EventNames.h"
 #import "FocusController.h"
-#import "HandleMouseEventResult.h"
+#import "HandleUserInputEventResult.h"
 #import "KeyboardEvent.h"
 #import "LocalFrame.h"
 #import "LocalFrameView.h"
@@ -105,7 +105,7 @@ inline CurrentEventScope::~CurrentEventScope()
 
 bool EventHandler::wheelEvent(WebEvent *event)
 {
-    CheckedPtr page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return false;
 
@@ -121,7 +121,7 @@ bool EventHandler::wheelEvent(WebEvent *event)
             processingSteps = { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::NonBlockingDOMEventDispatch };
     }
 
-    bool eventWasHandled = handleWheelEvent(wheelEvent, processingSteps);
+    bool eventWasHandled = handleWheelEvent(wheelEvent, processingSteps).wasHandled();
     event.wasHandled = eventWasHandled;
     return eventWasHandled;
 }
@@ -130,8 +130,8 @@ bool EventHandler::wheelEvent(WebEvent *event)
 
 bool EventHandler::dispatchSimulatedTouchEvent(IntPoint location)
 {
-    bool handled = handleTouchEvent(PlatformEventFactory::createPlatformSimulatedTouchEvent(PlatformEvent::Type::TouchStart, location));
-    handled |= handleTouchEvent(PlatformEventFactory::createPlatformSimulatedTouchEvent(PlatformEvent::Type::TouchEnd, location));
+    bool handled = handleTouchEvent(PlatformEventFactory::createPlatformSimulatedTouchEvent(PlatformEvent::Type::TouchStart, location)).wasHandled();
+    handled |= handleTouchEvent(PlatformEventFactory::createPlatformSimulatedTouchEvent(PlatformEvent::Type::TouchEnd, location)).wasHandled();
     return handled;
 }
     
@@ -139,13 +139,13 @@ void EventHandler::touchEvent(WebEvent *event)
 {
     CurrentEventScope scope(event);
 
-    event.wasHandled = handleTouchEvent(PlatformEventFactory::createPlatformTouchEvent(event));
+    event.wasHandled = handleTouchEvent(PlatformEventFactory::createPlatformTouchEvent(event)).wasHandled();
 }
 #endif
 
 bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
 {
-    CheckedPtr page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return false;
 
@@ -185,7 +185,7 @@ bool EventHandler::keyEvent(WebEvent *event)
 
 void EventHandler::focusDocumentView()
 {
-    CheckedPtr page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return;
 
@@ -268,7 +268,7 @@ bool EventHandler::passMouseDownEventToWidget(Widget* pWidget)
         return true;
     }
 
-    CheckedPtr page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return true;
 

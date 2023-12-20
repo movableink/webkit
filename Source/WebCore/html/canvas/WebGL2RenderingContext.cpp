@@ -29,6 +29,21 @@
 #if ENABLE(WEBGL)
 
 #include "CachedImage.h"
+#include "EXTBlendFuncExtended.h"
+#include "EXTClipControl.h"
+#include "EXTColorBufferFloat.h"
+#include "EXTColorBufferHalfFloat.h"
+#include "EXTConservativeDepth.h"
+#include "EXTDepthClamp.h"
+#include "EXTDisjointTimerQueryWebGL2.h"
+#include "EXTFloatBlend.h"
+#include "EXTPolygonOffsetClamp.h"
+#include "EXTRenderSnorm.h"
+#include "EXTTextureCompressionBPTC.h"
+#include "EXTTextureCompressionRGTC.h"
+#include "EXTTextureFilterAnisotropic.h"
+#include "EXTTextureMirrorClampToEdge.h"
+#include "EXTTextureNorm16.h"
 #include "EventLoop.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
@@ -36,24 +51,47 @@
 #include "ImageBitmap.h"
 #include "ImageData.h"
 #include "InspectorInstrumentation.h"
+#include "KHRParallelShaderCompile.h"
 #include "Logging.h"
+#include "NVShaderNoperspectiveInterpolation.h"
+#include "OESDrawBuffersIndexed.h"
+#include "OESSampleVariables.h"
+#include "OESShaderMultisampleInterpolation.h"
+#include "OESTextureFloatLinear.h"
 #include "OffscreenCanvas.h"
 #include "RenderBox.h"
 #include "WebCodecsVideoFrame.h"
 #include "WebCoreOpaqueRootInlines.h"
 #include "WebGLActiveInfo.h"
 #include "WebGLBuffer.h"
+#include "WebGLClipCullDistance.h"
+#include "WebGLCompressedTextureASTC.h"
+#include "WebGLCompressedTextureETC.h"
+#include "WebGLCompressedTextureETC1.h"
+#include "WebGLCompressedTexturePVRTC.h"
+#include "WebGLCompressedTextureS3TC.h"
+#include "WebGLCompressedTextureS3TCsRGB.h"
+#include "WebGLDebugRendererInfo.h"
+#include "WebGLDebugShaders.h"
 #include "WebGLDefaultFramebuffer.h"
-#include "WebGLExtensionAnyInlines.h"
+#include "WebGLDrawInstancedBaseVertexBaseInstance.h"
 #include "WebGLFramebuffer.h"
+#include "WebGLLoseContext.h"
+#include "WebGLMultiDraw.h"
+#include "WebGLMultiDrawInstancedBaseVertexBaseInstance.h"
+#include "WebGLPolygonMode.h"
 #include "WebGLProgram.h"
+#include "WebGLProvokingVertex.h"
 #include "WebGLQuery.h"
+#include "WebGLRenderSharedExponent.h"
 #include "WebGLRenderbuffer.h"
 #include "WebGLSampler.h"
+#include "WebGLStencilTexturing.h"
 #include "WebGLSync.h"
 #include "WebGLTexture.h"
 #include "WebGLTransformFeedback.h"
 #include "WebGLUniformLocation.h"
+#include "WebGLUtilities.h"
 #include "WebGLVertexArrayObject.h"
 #include "WebGLVertexArrayObjectOES.h"
 #include <JavaScriptCore/GenericTypedArrayViewInlines.h>
@@ -73,9 +111,9 @@ const GCGLuint64 MaxClientWaitTimeout = 0u;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(WebGL2RenderingContext);
 
-std::unique_ptr<WebGL2RenderingContext> WebGL2RenderingContext::create(CanvasBase& canvas, GraphicsContextGLAttributes attributes)
+std::unique_ptr<WebGL2RenderingContext> WebGL2RenderingContext::create(CanvasBase& canvas, WebGLContextAttributes&& attributes)
 {
-    return std::unique_ptr<WebGL2RenderingContext>(new WebGL2RenderingContext(canvas, attributes));
+    return std::unique_ptr<WebGL2RenderingContext>(new WebGL2RenderingContext(canvas, WTFMove(attributes)));
 }
 
 WebGL2RenderingContext::~WebGL2RenderingContext()
@@ -1549,7 +1587,7 @@ void WebGL2RenderingContext::drawRangeElements(GCGLenum mode, GCGLuint start, GC
     clearIfComposited(CallerTypeDrawOrClear);
 
     {
-        InspectorScopedShaderProgramHighlight scopedHighlight(*this, m_currentProgram.get());
+        ScopedInspectorShaderProgramHighlight scopedHighlight { *this };
 
         m_context->drawRangeElements(mode, start, end, count, type, offset);
     }

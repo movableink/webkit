@@ -85,6 +85,11 @@ static NSURL *URLFromString(const WTF::String& urlString)
     return _hitTestResult->lookupText();
 }
 
+- (NSString *)imageMIMEType
+{
+    return _hitTestResult->sourceImageMIMEType();
+}
+
 - (BOOL)isContentEditable
 {
     return _hitTestResult->isContentEditable();
@@ -93,6 +98,16 @@ static NSURL *URLFromString(const WTF::String& urlString)
 - (BOOL)isSelected
 {
     return _hitTestResult->isSelected();
+}
+
+- (BOOL)isMediaDownloadable
+{
+    return _hitTestResult->isDownloadableMedia();
+}
+
+- (BOOL)isMediaFullscreen
+{
+    return _hitTestResult->mediaIsInFullscreen();
 }
 
 - (CGRect)elementBoundingBox

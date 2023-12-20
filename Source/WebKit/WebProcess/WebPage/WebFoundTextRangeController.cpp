@@ -130,9 +130,9 @@ void WebFoundTextRangeController::decorateTextRangeWithStyle(const WebFoundTextR
     }
 
     if (style == FindDecorationStyle::Normal)
-        simpleRange->start.document().markers().removeMarkers(*simpleRange, WebCore::DocumentMarker::TextMatch);
+        simpleRange->start.document().markers().removeMarkers(*simpleRange, WebCore::DocumentMarker::Type::TextMatch);
     else if (style == FindDecorationStyle::Found)
-        simpleRange->start.document().markers().addMarker(*simpleRange, WebCore::DocumentMarker::TextMatch);
+        simpleRange->start.document().markers().addMarker(*simpleRange, WebCore::DocumentMarker::Type::TextMatch);
     else if (style == FindDecorationStyle::Highlighted) {
         m_highlightedRange = range;
 
@@ -295,7 +295,7 @@ void WebFoundTextRangeController::drawRect(WebCore::PageOverlay&, WebCore::Graph
         graphicsContext.fillPath(path);
 
     if (m_textIndicator && !m_textIndicator->selectionRectInRootViewCoordinates().isEmpty()) {
-        auto* indicatorImage = m_textIndicator->contentImage();
+        RefPtr indicatorImage = m_textIndicator->contentImage();
         if (!indicatorImage)
             return;
 
@@ -353,13 +353,9 @@ void WebFoundTextRangeController::flashTextIndicatorAndUpdateSelectionWithRange(
 Vector<WebCore::FloatRect> WebFoundTextRangeController::rectsForTextMatchesInRect(WebCore::IntRect clipRect)
 {
     Vector<WebCore::FloatRect> rects;
-    RefPtr localMainFrame = dynamicDowncast<WebCore::LocalFrame>(m_webPage->corePage()->mainFrame());
-    if (!localMainFrame)
-        return rects;
-
-    RefPtr mainFrameView = localMainFrame->view();
-
-    for (RefPtr<Frame> frame = localMainFrame; frame; frame = frame->tree().traverseNext()) {
+    Ref mainFrame = m_webPage->corePage()->mainFrame();
+    RefPtr mainFrameView = mainFrame->virtualView();
+    for (RefPtr<Frame> frame = mainFrame.ptr(); frame; frame = frame->tree().traverseNext()) {
         auto* localFrame = dynamicDowncast<WebCore::LocalFrame>(*frame);
         if (!localFrame)
             continue;
@@ -367,7 +363,7 @@ Vector<WebCore::FloatRect> WebFoundTextRangeController::rectsForTextMatchesInRec
         if (!document)
             continue;
 
-        for (auto rect : document->markers().renderedRectsForMarkers(WebCore::DocumentMarker::TextMatch)) {
+        for (auto rect : document->markers().renderedRectsForMarkers(WebCore::DocumentMarker::Type::TextMatch)) {
             if (!localFrame->isMainFrame())
                 rect = mainFrameView->windowToContents(localFrame->view()->contentsToWindow(enclosingIntRect(rect)));
 

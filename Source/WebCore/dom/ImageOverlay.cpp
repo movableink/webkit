@@ -208,7 +208,7 @@ void removeOverlaySoonIfNeeded(HTMLElement& element)
             overlay->remove();
 
 #if ENABLE(IMAGE_ANALYSIS)
-        if (CheckedPtr page = element->document().page())
+        if (RefPtr page = element->document().page())
             page->resetTextRecognitionResult(*element);
 #endif
     });
@@ -216,14 +216,14 @@ void removeOverlaySoonIfNeeded(HTMLElement& element)
 
 IntRect containerRect(HTMLElement& element)
 {
-    CheckedPtr renderer = element.renderer();
-    if (!is<RenderImage>(renderer))
+    CheckedPtr renderer = dynamicDowncast<RenderImage>(element.renderer());
+    if (!renderer)
         return { };
 
     if (!renderer->opacity())
         return { 0, 0, element.offsetWidth(), element.offsetHeight() };
 
-    return enclosingIntRect(downcast<RenderImage>(*renderer).replacedContentRect());
+    return enclosingIntRect(renderer->replacedContentRect());
 }
 
 #if ENABLE(IMAGE_ANALYSIS)
@@ -231,7 +231,7 @@ IntRect containerRect(HTMLElement& element)
 static void installImageOverlayStyleSheet(ShadowRoot& shadowRoot)
 {
     static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(imageOverlayUserAgentStyleSheet, sizeof(imageOverlayUserAgentStyleSheet)));
-    Ref style = HTMLStyleElement::create(HTMLNames::styleTag, shadowRoot.document(), false);
+    Ref style = HTMLStyleElement::create(HTMLNames::styleTag, shadowRoot.protectedDocument(), false);
     style->setTextContent(String { shadowStyle });
     shadowRoot.appendChild(WTFMove(style));
 }
@@ -406,8 +406,9 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
             }
 
             if (line.hasTrailingNewline) {
-                lineElements.lineBreak = HTMLBRElement::create(document.get());
-                lineContainer->appendChild(*lineElements.lineBreak);
+                Ref lineBreak = HTMLBRElement::create(document.get());
+                lineContainer->appendChild(lineBreak.get());
+                lineElements.lineBreak = WTFMove(lineBreak);
             }
 
             elements.lines.append(WTFMove(lineElements));
@@ -606,7 +607,7 @@ void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognition
     }
 
     if (!result.dataDetectors.isEmpty()) {
-        CheckedPtr page = document->page();
+        RefPtr page = document->page();
         if (auto* overlayController = page ? page->imageOverlayControllerIfExists() : nullptr)
             overlayController->textRecognitionResultsChanged(element);
     }
@@ -694,7 +695,7 @@ void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognition
         frame->eventHandler().scheduleCursorUpdate();
 
     if (cacheTextRecognitionResults == CacheTextRecognitionResults::Yes) {
-        if (CheckedPtr page = document->page())
+        if (RefPtr page = document->page())
             page->cacheTextRecognitionResult(element, containerRect, result);
     }
 }

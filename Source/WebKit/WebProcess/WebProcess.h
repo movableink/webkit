@@ -67,12 +67,11 @@
 #endif
 
 #if PLATFORM(GTK)
-#include "DMABufRendererBufferMode.h"
 #include <WebCore/PlatformDisplay.h>
 #endif
 
-#if PLATFORM(WAYLAND)
-#include <WebCore/PlatformDisplayLibWPE.h>
+#if PLATFORM(GTK) || PLATFORM(WPE)
+#include "DMABufRendererBufferMode.h"
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -100,6 +99,7 @@ namespace WebCore {
 class ApplicationCacheStorage;
 class CPUMonitor;
 class PageGroup;
+class SecurityOriginData;
 class UserGestureToken;
 
 enum class EventMakesGamepadsVisible : bool;
@@ -111,11 +111,7 @@ struct MessagePortIdentifier;
 struct MessageWithMessagePorts;
 struct MockMediaDevice;
 struct PrewarmInformation;
-class SecurityOriginData;
-
-#if ENABLE(SERVICE_WORKER)
 struct ServiceWorkerContextData;
-#endif
 }
 
 namespace WebKit {
@@ -208,9 +204,7 @@ public:
     
     PAL::SessionID sessionID() const { ASSERT(m_sessionID); return *m_sessionID; }
 
-#if ENABLE(TRACKING_PREVENTION)
     WebCore::ThirdPartyCookieBlockingMode thirdPartyCookieBlockingMode() const { return m_thirdPartyCookieBlockingMode; }
-#endif
 
 #if PLATFORM(COCOA)
     const WTF::MachSendRight& compositingRenderServerPort() const { return m_compositingRenderServerPort; }
@@ -227,6 +221,8 @@ public:
     bool hasStylusDevice() const { return m_hasStylusDevice; }
     void setHasStylusDevice(bool);
 #endif
+
+    void updateStorageAccessUserAgentStringQuirks(HashMap<WebCore::RegistrableDomain, String>&&);
 
     WebFrame* webFrame(WebCore::FrameIdentifier) const;
     void addWebFrame(WebCore::FrameIdentifier, WebFrame*);
@@ -360,7 +356,7 @@ public:
 #if ENABLE(REMOTE_INSPECTOR)
     void enableRemoteWebInspector();
 #endif
-    void unblockServicesRequiredByAccessibility(const Vector<SandboxExtension::Handle>&);
+    void unblockServicesRequiredByAccessibility(Vector<SandboxExtension::Handle>&&);
     static id accessibilityFocusedUIElement();
 #if ENABLE(CFPREFS_DIRECT_MODE)
     void notifyPreferencesChanged(const String& domain, const String& key, const std::optional<String>& encodedValue);
@@ -381,10 +377,8 @@ public:
 
     void messagesAvailableForPort(const WebCore::MessagePortIdentifier&);
 
-#if ENABLE(SERVICE_WORKER)
     void addServiceWorkerRegistration(WebCore::ServiceWorkerRegistrationIdentifier);
     bool removeServiceWorkerRegistration(WebCore::ServiceWorkerRegistrationIdentifier);
-#endif
 
     void grantAccessToAssetServices(Vector<WebKit::SandboxExtension::Handle>&& assetServicesHandles);
     void revokeAccessToAssetServices();
@@ -434,16 +428,18 @@ public:
     void addAllowedFirstPartyForCookies(WebCore::RegistrableDomain&&);
     bool allowsFirstPartyForCookies(const URL&);
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     void revokeLaunchServicesSandboxExtension();
 #endif
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
     const OptionSet<DMABufRendererBufferMode>& dmaBufRendererBufferMode() const { return m_dmaBufRendererBufferMode; }
 #endif
 
     String mediaKeysStorageDirectory() const { return m_mediaKeysStorageDirectory; }
     FileSystem::Salt mediaKeysStorageSalt() const { return m_mediaKeysStorageSalt; }
+
+    bool haveStorageAccessQuirksForDomain(const WebCore::RegistrableDomain&);
 
 private:
     WebProcess();
@@ -502,9 +498,6 @@ private:
     void platformSetCacheModel(CacheModel);
 
     void setEnhancedAccessibility(bool);
-    void remotePostMessage(WebCore::FrameIdentifier, std::optional<WebCore::SecurityOriginData>, const WebCore::MessageWithMessagePorts&);
-
-    void renderTreeAsText(WebCore::FrameIdentifier, size_t baseIndent, OptionSet<WebCore::RenderAsTextFlag>, CompletionHandler<void(String&&)>&&);
 
     void startMemorySampler(SandboxExtension::Handle&&, const String&, const double);
     void stopMemorySampler();
@@ -576,12 +569,12 @@ private:
 
 #endif
 
-#if ENABLE(TRACKING_PREVENTION)
     void setThirdPartyCookieBlockingMode(WebCore::ThirdPartyCookieBlockingMode, CompletionHandler<void()>&&);
     void setDomainsWithUserInteraction(HashSet<WebCore::RegistrableDomain>&&);
     void setDomainsWithCrossPageStorageAccess(HashMap<TopFrameDomain, SubResourceDomain>&&, CompletionHandler<void()>&&);
     void sendResourceLoadStatisticsDataImmediately(CompletionHandler<void()>&&);
-#endif
+
+    void updateDomainsWithStorageAccessQuirks(HashSet<WebCore::RegistrableDomain>&&);
 
 #if HAVE(DISPLAY_LINK)
     void displayDidRefresh(uint32_t displayID, const WebCore::DisplayUpdate&);
@@ -602,7 +595,6 @@ private:
     void didClose(IPC::Connection&) final;
 
     // Implemented in generated WebProcessMessageReceiver.cpp
-    bool didReceiveSyncWebProcessMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&);
     void didReceiveWebProcessMessage(IPC::Connection&, IPC::Decoder&);
 
 #if PLATFORM(MAC)
@@ -768,7 +760,8 @@ private:
 
     String m_uiProcessName;
     WebCore::RegistrableDomain m_registrableDomain;
-
+#endif
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     RefPtr<SandboxExtension> m_launchServicesExtension;
 #endif
 
@@ -779,9 +772,12 @@ private:
 
     WeakHashMap<WebCore::UserGestureToken, uint64_t> m_userGestureTokens;
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    OptionSet<DMABufRendererBufferMode> m_dmaBufRendererBufferMode;
+#endif
+
 #if PLATFORM(GTK)
     std::unique_ptr<WebCore::PlatformDisplay> m_displayForCompositing;
-    OptionSet<DMABufRendererBufferMode> m_dmaBufRendererBufferMode;
 #endif
 
     bool m_hasSuspendedPageProxy { false };
@@ -797,9 +793,7 @@ private:
     float m_backlightLevel { 0 };
 #endif
 
-#if ENABLE(SERVICE_WORKER)
     HashCountedSet<WebCore::ServiceWorkerRegistrationIdentifier> m_swRegistrationCounts;
-#endif
 
     HashMap<StorageAreaMapIdentifier, WeakPtr<StorageAreaMap>> m_storageAreaMaps;
     
@@ -807,9 +801,7 @@ private:
     // By the time the WebProcess gets a WebPage, it is guaranteed to have a sessionID.
     std::optional<PAL::SessionID> m_sessionID;
 
-#if ENABLE(TRACKING_PREVENTION)
     WebCore::ThirdPartyCookieBlockingMode m_thirdPartyCookieBlockingMode { WebCore::ThirdPartyCookieBlockingMode::All };
-#endif
 
     Vector<RefPtr<SandboxExtension>> m_assetServicesExtensions;
 
@@ -839,6 +831,7 @@ private:
     FileSystem::Salt m_mediaKeysStorageSalt;
 
     HashMap<WebTransportSessionIdentifier, WeakPtr<WebTransportSession>> m_webTransportSessions;
+    HashSet<WebCore::RegistrableDomain> m_domainsWithStorageAccessQuirks;
 };
 
 } // namespace WebKit

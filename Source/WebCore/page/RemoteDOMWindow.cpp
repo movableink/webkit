@@ -74,7 +74,9 @@ bool RemoteDOMWindow::closed() const
 
 void RemoteDOMWindow::focus(LocalDOMWindow&)
 {
-    // FIXME: Implemented this. <rdar://116203970>
+    // FIXME(264713): Add security checks here equivalent to LocalDOMWindow::focus().
+    if (m_frame && m_frame->isMainFrame())
+        m_frame->client().focus();
 }
 
 void RemoteDOMWindow::blur()
@@ -110,6 +112,12 @@ WindowProxy* RemoteDOMWindow::opener() const
     return &openerFrame->windowProxy();
 }
 
+void RemoteDOMWindow::setOpener(WindowProxy*)
+{
+    // FIXME: <rdar://118263373> Implement.
+    // JSLocalDOMWindow::setOpener has some security checks. Are they needed here?
+}
+
 WindowProxy* RemoteDOMWindow::parent() const
 {
     if (!m_frame)
@@ -126,6 +134,10 @@ ExceptionOr<void> RemoteDOMWindow::postMessage(JSC::JSGlobalObject& lexicalGloba
 {
     RefPtr sourceDocument = incumbentWindow.document();
     if (!sourceDocument)
+        return { };
+
+    RefPtr sourceFrame = incumbentWindow.frame();
+    if (!sourceFrame)
         return { };
 
     auto targetSecurityOrigin = createTargetOriginForPostMessage(options.targetOrigin, *sourceDocument);
@@ -145,9 +157,13 @@ ExceptionOr<void> RemoteDOMWindow::postMessage(JSC::JSGlobalObject& lexicalGloba
     if (disentangledPorts.hasException())
         return messageData.releaseException();
 
+    // Capture the source of the message. We need to do this synchronously
+    // in order to capture the source of the message correctly.
+    auto sourceOrigin = sourceDocument->securityOrigin().toString();
+
     MessageWithMessagePorts messageWithPorts { messageData.releaseReturnValue(), disentangledPorts.releaseReturnValue() };
     if (auto* remoteFrame = frame())
-        remoteFrame->client().postMessageToRemote(remoteFrame->frameID(), target, messageWithPorts);
+        remoteFrame->client().postMessageToRemote(sourceFrame->frameID(), sourceOrigin, remoteFrame->frameID(), target, messageWithPorts);
     return { };
 }
 

@@ -40,6 +40,7 @@
 #include "DownloadProxyMessages.h"
 #include "FrameInfoData.h"
 #include "LegacyGlobalSettings.h"
+#include "LoadedWebArchive.h"
 #include "Logging.h"
 #include "MessageSenderInlines.h"
 #include "NetworkContentRuleListManagerMessages.h"
@@ -70,6 +71,7 @@
 #include "WebsiteDataStoreClient.h"
 #include "WebsiteDataStoreParameters.h"
 #include <WebCore/ClientOrigin.h>
+#include <WebCore/OrganizationStorageAccessPromptQuirk.h>
 #include <WebCore/PushPermissionState.h>
 #include <WebCore/RegistrableDomain.h>
 #include <WebCore/ResourceError.h>
@@ -97,6 +99,7 @@
 #if PLATFORM(COCOA)
 #include "DefaultWebBrowserChecks.h"
 #include "LegacyCustomProtocolManagerClient.h"
+#include "WebPrivacyHelpers.h"
 #endif
 
 #if ENABLE(BUILT_IN_NOTIFICATIONS)
@@ -244,6 +247,13 @@ NetworkProcessProxy::NetworkProcessProxy()
 #if PLATFORM(IOS_FAMILY)
     addBackgroundStateObservers();
 #endif
+
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+    m_storageAccessPromptQuirksDataUpdateObserver = StorageAccessPromptQuirkController::shared().observeUpdates([weakThis = WeakPtr { *this }] {
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->send(Messages::NetworkProcess::UpdateStorageAccessPromptQuirks(StorageAccessPromptQuirkController::shared().cachedQuirks()), 0);
+    });
+#endif
 }
 
 NetworkProcessProxy::~NetworkProcessProxy()
@@ -288,7 +298,12 @@ void NetworkProcessProxy::getNetworkProcessConnection(WebProcessProxy& webProces
 {
     RELEASE_LOG(ProcessSuspension, "%p - NetworkProcessProxy is taking a background assertion because a web process is requesting a connection", this);
     startResponsivenessTimer(UseLazyStop::No);
-    sendWithAsyncReply(Messages::NetworkProcess::CreateNetworkConnectionToWebProcess { webProcessProxy.coreProcessIdentifier(), webProcessProxy.sessionID(), { webProcessProxy.allowTestOnlyIPC() } }, [this, weakThis = WeakPtr { *this }, reply = WTFMove(reply)](auto&& identifier, auto cookieAcceptPolicy) mutable {
+    NetworkProcessConnectionParameters parameters;
+    parameters.allowTestOnlyIPC = webProcessProxy.allowTestOnlyIPC();
+#if ENABLE(IPC_TESTING_API)
+    parameters.ignoreInvalidMessageForTesting = webProcessProxy.ignoreInvalidMessageForTesting();
+#endif
+    sendWithAsyncReply(Messages::NetworkProcess::CreateNetworkConnectionToWebProcess { webProcessProxy.coreProcessIdentifier(), webProcessProxy.sessionID(), parameters }, [this, weakThis = WeakPtr { *this }, reply = WTFMove(reply)](auto&& identifier, auto cookieAcceptPolicy) mutable {
         if (!weakThis) {
             RELEASE_LOG_ERROR(Process, "NetworkProcessProxy::getNetworkProcessConnection: NetworkProcessProxy deallocated during connection establishment");
             return reply({ });
@@ -664,7 +679,6 @@ void NetworkProcessProxy::resourceLoadDidCompleteWithError(WebPageProxyIdentifie
     page->resourceLoadDidCompleteWithError(WTFMove(loadInfo), WTFMove(response), WTFMove(error));
 }
 
-#if ENABLE(TRACKING_PREVENTION)
 void NetworkProcessProxy::dumpResourceLoadStatistics(PAL::SessionID sessionID, CompletionHandler<void(String)>&& completionHandler)
 {
     if (!canSendMessage()) {
@@ -1009,7 +1023,7 @@ void NetworkProcessProxy::setGrandfathered(PAL::SessionID sessionID, const Regis
     sendWithAsyncReply(Messages::NetworkProcess::SetGrandfathered(sessionID, resourceDomain, isGrandfathered), WTFMove(completionHandler));
 }
 
-void NetworkProcessProxy::requestStorageAccessConfirm(WebPageProxyIdentifier pageID, FrameIdentifier frameID, const RegistrableDomain& subFrameDomain, const RegistrableDomain& topFrameDomain, CompletionHandler<void(bool)>&& completionHandler)
+void NetworkProcessProxy::requestStorageAccessConfirm(WebPageProxyIdentifier pageID, FrameIdentifier frameID, const RegistrableDomain& subFrameDomain, const RegistrableDomain& topFrameDomain, std::optional<WebCore::OrganizationStorageAccessPromptQuirk>&& organizationStorageAccessPromptQuirk, CompletionHandler<void(bool)>&& completionHandler)
 {
     auto page = WebProcessProxy::webPage(pageID);
     if (!page) {
@@ -1017,7 +1031,7 @@ void NetworkProcessProxy::requestStorageAccessConfirm(WebPageProxyIdentifier pag
         return;
     }
     
-    page->requestStorageAccessConfirm(subFrameDomain, topFrameDomain, frameID, WTFMove(completionHandler));
+    page->requestStorageAccessConfirm(subFrameDomain, topFrameDomain, frameID, WTFMove(organizationStorageAccessPromptQuirk), WTFMove(completionHandler));
 }
 
 void NetworkProcessProxy::getAllStorageAccessEntries(PAL::SessionID sessionID, CompletionHandler<void(Vector<String> domains)>&& completionHandler)
@@ -1362,19 +1376,12 @@ void NetworkProcessProxy::setDomainsWithCrossPageStorageAccess(HashMap<TopFrameD
         processPool->setDomainsWithCrossPageStorageAccess(HashMap<TopFrameDomain, SubResourceDomain> { domains }, [callbackAggregator] { });
 }
 
-#endif // ENABLE(TRACKING_PREVENTION)
-
 void NetworkProcessProxy::setPrivateClickMeasurementDebugMode(PAL::SessionID sessionID, bool debugMode)
 {
     if (!canSendMessage())
         return;
 
     send(Messages::NetworkProcess::SetPrivateClickMeasurementDebugMode(sessionID, debugMode), 0);
-}
-
-void NetworkProcessProxy::setBlobRegistryTopOriginPartitioningEnabled(PAL::SessionID sessionID, bool enabled)
-{
-    send(Messages::NetworkProcess::SetBlobRegistryTopOriginPartitioningEnabled(sessionID, enabled), 0);
 }
 
 void NetworkProcessProxy::sendProcessWillSuspendImminentlyForTesting()
@@ -1503,8 +1510,6 @@ void NetworkProcessProxy::establishRemoteWorkerContextConnectionToNetworkProcess
     WebProcessPool::establishRemoteWorkerContextConnectionToNetworkProcess(workerType, WTFMove(registrableDomain), requestingProcessIdentifier, serviceWorkerPageIdentifier, sessionID, WTFMove(completionHandler));
 }
 
-#if ENABLE(SERVICE_WORKER)
-
 void NetworkProcessProxy::startServiceWorkerBackgroundProcessing(WebCore::ProcessIdentifier serviceWorkerProcessIdentifier)
 {
     if (auto serviceWorkerProcess = WebProcessProxy::processForIdentifier(serviceWorkerProcessIdentifier))
@@ -1576,8 +1581,6 @@ void NetworkProcessProxy::notifyBackgroundFetchChange(PAL::SessionID sessionID, 
         return;
     store->client().notifyBackgroundFetchChange(backgroundFetchIdentifier, backgroundFetchChange);
 }
-
-#endif // ENABLE(SERVICE_WORKER)
 
 void NetworkProcessProxy::requestStorageSpace(PAL::SessionID sessionID, const WebCore::ClientOrigin& origin, uint64_t currentQuota, uint64_t currentSize, uint64_t spaceRequired, CompletionHandler<void(std::optional<uint64_t> quota)>&& completionHandler)
 {
@@ -1811,7 +1814,6 @@ void NetworkProcessProxy::didExceedMemoryLimit()
 }
 #endif
 
-#if ENABLE(SERVICE_WORKER)
 void NetworkProcessProxy::getPendingPushMessages(PAL::SessionID sessionID, CompletionHandler<void(const Vector<WebPushMessage>&)>&& completionHandler)
 {
     sendWithAsyncReply(Messages::NetworkProcess::GetPendingPushMessages { sessionID }, WTFMove(completionHandler));
@@ -1868,7 +1870,6 @@ void NetworkProcessProxy::processNotificationEvent(const NotificationData& data,
 
     sendWithAsyncReply(Messages::NetworkProcess::ProcessNotificationEvent { data, eventType }, WTFMove(innerCallback));
 }
-#endif // ENABLE(SERVICE_WORKER)
 
 void NetworkProcessProxy::setPushAndNotificationsEnabledForOrigin(PAL::SessionID sessionID, const SecurityOriginData& origin, bool enabled, CompletionHandler<void()>&& callback)
 {
@@ -1984,6 +1985,23 @@ void NetworkProcessProxy::reloadExecutionContextsForOrigin(const WebCore::Client
         if (process->canSendMessage() && !process->isDummyProcessProxy())
             process->sendWithAsyncReply(Messages::WebProcess::ReloadExecutionContextsForOrigin(origin, triggeringFrame), [callbackAggregator] { });
     }
+}
+
+void NetworkProcessProxy::addAllowedFirstPartyForCookies(WebProcessProxy& webProcessProxy, const WebCore::RegistrableDomain& firstPartyForCookies, LoadedWebArchive loadedWebArchive, CompletionHandler<void()>&& completionHandler)
+{
+    auto& pair = m_allowedFirstPartiesForCookies.ensure(webProcessProxy, [] {
+        return std::make_pair(LoadedWebArchive::No, HashSet<RegistrableDomain> { });
+    }).iterator->value;
+
+    bool madeChange = pair.second.add(firstPartyForCookies).isNewEntry;
+    if (loadedWebArchive == LoadedWebArchive::Yes && pair.first != LoadedWebArchive::Yes) {
+        madeChange = true;
+        pair.first = LoadedWebArchive::Yes;
+    }
+    if (madeChange)
+        sendWithAsyncReply(Messages::NetworkProcess::AddAllowedFirstPartyForCookies(webProcessProxy.coreProcessIdentifier(), firstPartyForCookies, loadedWebArchive), WTFMove(completionHandler));
+    else
+        completionHandler();
 }
 
 #if USE(RUNNINGBOARD)

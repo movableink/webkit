@@ -47,9 +47,9 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(MessagePort);
 
 static Lock allMessagePortsLock;
-static HashMap<MessagePortIdentifier, WeakPtr<MessagePort, WeakPtrImplWithEventTargetData>>& allMessagePorts() WTF_REQUIRES_LOCK(allMessagePortsLock)
+static HashMap<MessagePortIdentifier, ThreadSafeWeakPtr<MessagePort>>& allMessagePorts() WTF_REQUIRES_LOCK(allMessagePortsLock)
 {
-    static NeverDestroyed<HashMap<MessagePortIdentifier, WeakPtr<MessagePort, WeakPtrImplWithEventTargetData>>> map;
+    static NeverDestroyed<HashMap<MessagePortIdentifier, ThreadSafeWeakPtr<MessagePort>>> map;
     return map;
 }
 
@@ -57,32 +57,6 @@ static HashMap<MessagePortIdentifier, ScriptExecutionContextIdentifier>& portToC
 {
     static NeverDestroyed<HashMap<MessagePortIdentifier, ScriptExecutionContextIdentifier>> map;
     return map;
-}
-
-void MessagePort::ref() const
-{
-    ++m_refCount;
-}
-
-void MessagePort::deref() const
-{
-    // This custom deref() function ensures that as long as the lock to allMessagePortsLock is taken, no MessagePort will be destroyed.
-    // This allows notifyMessageAvailable to easily query the map and manipulate MessagePort instances.
-
-    if (!--m_refCount) {
-        Locker locker { allMessagePortsLock };
-
-        if (m_refCount)
-            return;
-
-        auto iterator = allMessagePorts().find(m_identifier);
-        if (iterator != allMessagePorts().end() && iterator->value == this) {
-            allMessagePorts().remove(iterator);
-            portToContextIdentifier().remove(m_identifier);
-        }
-
-        delete this;
-    }
 }
 
 bool MessagePort::isMessagePortAliveForTesting(const MessagePortIdentifier& identifier)
@@ -129,7 +103,7 @@ MessagePort::MessagePort(ScriptExecutionContext& scriptExecutionContext, const M
 
     Locker locker { allMessagePortsLock };
     // We disable threading assertions since the allMessagePorts() is used from multiple threads in a safe way, using a lock.
-    allMessagePorts().set(m_identifier, WeakPtr { *this, EnableWeakPtrThreadingAssertions::No });
+    allMessagePorts().set(m_identifier, ThreadSafeWeakPtr { *this });
     portToContextIdentifier().set(m_identifier, scriptExecutionContext.identifier());
 
     // Make sure the WeakPtrFactory gets initialized eagerly on the thread the MessagePort gets constructed on for thread-safety reasons.
@@ -144,7 +118,16 @@ MessagePort::~MessagePort()
 {
     LOG(MessagePorts, "Destroyed MessagePort %s (%p) in process %" PRIu64, m_identifier.logString().utf8().data(), this, Process::identifier().toUInt64());
 
-    ASSERT(allMessagePortsLock.isLocked());
+    Locker locker { allMessagePortsLock };
+
+    auto iterator = allMessagePorts().find(m_identifier);
+    if (iterator != allMessagePorts().end()) {
+        // ThreadSafeWeakPtr::get() returns null as soon as the object has started destruction.
+        if (RefPtr messagePort = iterator->value.get(); !messagePort) {
+            allMessagePorts().remove(iterator);
+            portToContextIdentifier().remove(m_identifier);
+        }
+    }
 
     if (m_entangled)
         close();
@@ -155,7 +138,7 @@ MessagePort::~MessagePort()
 
 void MessagePort::entangle()
 {
-    MessagePortChannelProvider::fromContext(*scriptExecutionContext()).entangleLocalPortInThisProcessToRemote(m_identifier, m_remoteIdentifier);
+    MessagePortChannelProvider::fromContext(*protectedScriptExecutionContext()).entangleLocalPortInThisProcessToRemote(m_identifier, m_remoteIdentifier);
 }
 
 ExceptionOr<void> MessagePort::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
@@ -189,7 +172,7 @@ ExceptionOr<void> MessagePort::postMessage(JSC::JSGlobalObject& state, JSC::JSVa
 
     LOG(MessagePorts, "Actually posting message to port %s (to be received by port %s)", m_identifier.logString().utf8().data(), m_remoteIdentifier.logString().utf8().data());
 
-    MessagePortChannelProvider::fromContext(*scriptExecutionContext()).postMessageToRemote(WTFMove(message), m_remoteIdentifier);
+    MessagePortChannelProvider::fromContext(*protectedScriptExecutionContext()).postMessageToRemote(WTFMove(message), m_remoteIdentifier);
     return { };
 }
 
@@ -281,20 +264,20 @@ void MessagePort::dispatchMessages()
 
         ASSERT(context->isContextThread());
         auto* globalObject = context->globalObject();
-        auto& vm = globalObject->vm();
+        Ref vm = globalObject->vm();
         auto scope = DECLARE_CATCH_SCOPE(vm);
 
-        bool contextIsWorker = is<WorkerGlobalScope>(*context);
+        auto* workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(*context);
         for (auto& message : messages) {
             // close() in Worker onmessage handler should prevent next message from dispatching.
-            if (contextIsWorker && downcast<WorkerGlobalScope>(*context).isClosing())
+            if (workerGlobalScope && workerGlobalScope->isClosing())
                 return;
 
             auto ports = MessagePort::entanglePorts(*context, WTFMove(message.transferredPorts));
             auto event = MessageEvent::create(*globalObject, message.message.releaseNonNull(), { }, { }, { }, WTFMove(ports));
             if (UNLIKELY(scope.exception())) {
                 // Currently, we assume that the only way we can get here is if we have a termination.
-                RELEASE_ASSERT(vm.hasPendingTerminationException());
+                RELEASE_ASSERT(vm->hasPendingTerminationException());
                 return;
             }
 
@@ -313,9 +296,10 @@ void MessagePort::dispatchEvent(Event& event)
     if (m_isDetached)
         return;
 
-    auto* context = scriptExecutionContext();
-    if (is<WorkerGlobalScope>(*context) && downcast<WorkerGlobalScope>(*context).isClosing())
-        return;
+    if (RefPtr globalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext())) {
+        if (globalScope->isClosing())
+            return;
+    }
 
     EventTarget::dispatchEvent(event);
 }
@@ -348,7 +332,7 @@ ExceptionOr<Vector<TransferredMessagePort>> MessagePort::disentanglePorts(Vector
         return Vector<TransferredMessagePort> { };
 
     // Walk the incoming array - if there are any duplicate ports, or null ports or cloned ports, throw an error (per section 8.3.3 of the HTML5 spec).
-    HashSet<CheckedRef<MessagePort>> portSet;
+    HashSet<Ref<MessagePort>> portSet;
     for (auto& port : ports) {
         if (!port || !port->m_entangled || !portSet.add(*port).isNewEntry)
             return Exception { ExceptionCode::DataCloneError };

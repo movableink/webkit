@@ -47,6 +47,7 @@ namespace Types {
     f(I32, "i32") \
     f(U32, "u32") \
     f(AbstractFloat, "<AbstractFloat>") \
+    f(F16, "f16") \
     f(F32, "f32") \
     f(Void, "void") \
     f(Bool, "bool") \
@@ -132,6 +133,7 @@ struct PrimitiveStruct {
 private:
     enum Kind : uint8_t {
         FrexpResult,
+        ModfResult,
     };
 
 public:
@@ -148,8 +150,22 @@ public:
         static constexpr SortedArrayMap map { mapEntries };
     };
 
+    struct ModfResult {
+        static constexpr Kind kind = Kind::ModfResult;
+        static constexpr unsigned fract = 0;
+        static constexpr unsigned whole = 1;
+
+        static constexpr std::pair<ComparableASCIILiteral, unsigned> mapEntries[] {
+            { "fract", fract },
+            { "whole", whole },
+        };
+
+        static constexpr SortedArrayMap map { mapEntries };
+    };
+
     static constexpr SortedArrayMap<std::pair<ComparableASCIILiteral, unsigned>[2]> keys[] {
         FrexpResult::map,
+        ModfResult::map,
     };
 
     String name;

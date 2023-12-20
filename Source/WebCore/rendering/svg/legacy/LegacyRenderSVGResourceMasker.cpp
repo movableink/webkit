@@ -36,13 +36,13 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceMasker);
 
 LegacyRenderSVGResourceMasker::LegacyRenderSVGResourceMasker(SVGMaskElement& element, RenderStyle&& style)
-    : LegacyRenderSVGResourceContainer(Type::SVGResourceMasker, element, WTFMove(style))
+    : LegacyRenderSVGResourceContainer(Type::LegacySVGResourceMasker, element, WTFMove(style))
 {
 }
 
 LegacyRenderSVGResourceMasker::~LegacyRenderSVGResourceMasker() = default;
 
-void LegacyRenderSVGResourceMasker::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers)
+void LegacyRenderSVGResourceMasker::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers)
 {
     m_maskContentBoundaries.fill(FloatRect { });
     m_masker.clear();

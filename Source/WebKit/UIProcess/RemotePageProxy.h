@@ -37,6 +37,7 @@ namespace IPC {
 class Connection;
 class Decoder;
 class Encoder;
+template<typename> struct ConnectionSendSyncResult;
 }
 
 namespace WebCore {
@@ -68,10 +69,11 @@ public:
     static Ref<RemotePageProxy> create(WebPageProxy& page, WebProcessProxy& process, const WebCore::RegistrableDomain& domain, WebPageProxyMessageReceiverRegistration* registrationToTransfer = nullptr) { return adoptRef(*new RemotePageProxy(page, process, domain, registrationToTransfer)); }
     ~RemotePageProxy();
 
-    WebPageProxy* page() const { return m_page.get(); }
+    WebPageProxy* page() const;
     RefPtr<WebPageProxy> protectedPage() const;
 
     template<typename M> void send(M&&);
+    template<typename M> IPC::ConnectionSendSyncResult<M> sendSync(M&& message);
     template<typename M, typename C> void sendWithAsyncReply(M&&, C&&);
     template<typename M, typename C> void sendWithAsyncReply(M&&, C&&, const ObjectIdentifierGenericBase&);
 
@@ -84,8 +86,6 @@ public:
     WebCore::PageIdentifier pageID() const { return m_webPageID; }
     const WebCore::RegistrableDomain& domain() const { return m_domain; }
 
-    void sendMouseEvent(const WebCore::FrameIdentifier&, const NativeWebMouseEvent&, std::optional<Vector<SandboxExtensionHandle>>&&);
-
 private:
     RemotePageProxy(WebPageProxy&, WebProcessProxy&, const WebCore::RegistrableDomain&, WebPageProxyMessageReceiverRegistration*);
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
@@ -96,6 +96,7 @@ private:
     void decidePolicyForNavigationActionSync(FrameInfoData&&, uint64_t navigationID, NavigationActionData&&, FrameInfoData&& originatingFrameInfo, std::optional<WebPageProxyIdentifier> originatingPageID, const WebCore::ResourceRequest& originalRequest, WebCore::ResourceRequest&&, IPC::FormDataReference&& requestBody, CompletionHandler<void(PolicyDecision&&)>&&);
     void didFailProvisionalLoadForFrame(FrameInfoData&&, WebCore::ResourceRequest&&, uint64_t navigationID, const String& provisionalURL, const WebCore::ResourceError&, WebCore::WillContinueLoading, const UserData&, WebCore::WillInternallyHandleFailure);
     void didChangeProvisionalURLForFrame(WebCore::FrameIdentifier, uint64_t, URL&&);
+    void handleMessage(const String& messageName, const UserData& messageBody);
 
     const WebCore::PageIdentifier m_webPageID;
     const Ref<WebProcessProxy> m_process;
@@ -109,6 +110,12 @@ private:
 template<typename M> void RemotePageProxy::send(M&& message)
 {
     m_process->send(std::forward<M>(message), m_webPageID, { });
+}
+
+template<typename M>
+IPC::ConnectionSendSyncResult<M> RemotePageProxy::sendSync(M&& message)
+{
+    return m_process->sendSync(std::forward<M>(message), m_webPageID);
 }
 
 template<typename M, typename C> void RemotePageProxy::sendWithAsyncReply(M&& message, C&& completionHandler)

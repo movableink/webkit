@@ -118,7 +118,7 @@ String contextMenuItemTagCopyImageToClipboard()
     return QCoreApplication::translate("QWebPage", "Copy Image", "Copy Link context menu item");
 }
 
-String contextMenuItemTagCopyImageUrlToClipboard()
+String contextMenuItemTagCopyImageURLToClipboard()
 {
     return QCoreApplication::translate("QWebPage", "Copy Image Address", "Copy Image Address menu item");
 }

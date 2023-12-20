@@ -30,6 +30,7 @@
 #include "CanvasObserver.h"
 #include "Color.h"
 #include "ContainerNode.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DocumentEventTiming.h"
 #include "FontSelectorClient.h"
 #include "FrameDestructionObserver.h"
@@ -227,6 +228,8 @@ class TreeWalker;
 class UndoManager;
 class ValidationMessage;
 class VisibilityChangeClient;
+class ViewTransition;
+class ViewTransitionUpdateCallback;
 class VisitedLinkState;
 class WakeLockManager;
 class WebAnimation;
@@ -286,6 +289,7 @@ enum class ReferrerPolicySource : uint8_t;
 enum class RouteSharingPolicy : uint8_t;
 enum class ShouldOpenExternalURLsPolicy : uint8_t;
 enum class RenderingUpdateStep : uint32_t;
+enum class ScheduleLocationChangeResult : uint8_t;
 enum class StyleColorOptions : uint8_t;
 enum class MutationObserverOptionType : uint8_t;
 enum class ViolationReportType : uint8_t;
@@ -318,7 +322,7 @@ enum class NodeListInvalidationType : uint8_t {
     InvalidateOnHRefAttrChange,
     InvalidateOnAnyAttrChange,
 };
-const uint8_t numNodeListInvalidationTypes = static_cast<uint8_t>(NodeListInvalidationType::InvalidateOnAnyAttrChange) + 1;
+const auto numNodeListInvalidationTypes = enumToUnderlyingType(NodeListInvalidationType::InvalidateOnAnyAttrChange) + 1;
 
 enum class EventHandlerRemoval : bool { One, All };
 using EventTargetSet = HashCountedSet<Node*>;
@@ -339,6 +343,8 @@ enum class LayoutOptions : uint8_t {
     RunPostLayoutTasksSynchronously = 1 << 0,
     IgnorePendingStylesheets = 1 << 1,
     ContentVisibilityForceLayout = 1 << 2,
+    UpdateCompositingLayers = 1 << 3,
+    DoNotLayoutAncestorDocuments = 1 << 4,
 };
 
 enum class HttpEquivPolicy {
@@ -451,6 +457,9 @@ public:
     bool shouldNotFireMutationEvents() const { return m_shouldNotFireMutationEvents; }
     void setShouldNotFireMutationEvents(bool fire) { m_shouldNotFireMutationEvents = fire; }
 
+    void parseMarkupUnsafe(const String&, OptionSet<ParserContentPolicy>);
+    static Ref<Document> parseHTMLUnsafe(Document&, const String&);
+
     Element* elementForAccessKey(const String& key);
     void invalidateAccessKeyCache();
 
@@ -507,7 +516,7 @@ public:
     WEBCORE_EXPORT String characterSetWithUTF8Fallback() const;
     inline PAL::TextEncoding textEncoding() const;
 
-    inline AtomString encoding() const;
+    WEBCORE_EXPORT AtomString encoding() const;
 
     WEBCORE_EXPORT void setCharset(const String&); // Used by ObjC / GOBject bindings only.
 
@@ -610,7 +619,7 @@ public:
     virtual bool isFrameSet() const { return false; }
 
     static ptrdiff_t documentClassesMemoryOffset() { return OBJECT_OFFSETOF(Document, m_documentClasses); }
-    static uint32_t isHTMLDocumentClassFlag() { return static_cast<uint32_t>(DocumentClass::HTML); }
+    static auto isHTMLDocumentClassFlag() { return enumToUnderlyingType(DocumentClass::HTML); }
 
     bool isSrcdocDocument() const { return m_isSrcdocDocument; }
 
@@ -655,8 +664,9 @@ public:
     inline LocalFrameView* view() const; // Defined in LocalFrame.h.
     RefPtr<LocalFrameView> protectedView() const;
     inline Page* page() const; // Defined in Page.h.
-    inline CheckedPtr<Page> checkedPage() const; // Defined in Page.h.
+    inline RefPtr<Page> protectedPage() const; // Defined in Page.h.
     const Settings& settings() const { return m_settings.get(); }
+    Ref<Settings> protectedSettings() const;
     EditingBehavior editingBehavior() const;
 
     Quirks& quirks() { return m_quirks; }
@@ -689,11 +699,15 @@ public:
     bool needsStyleRecalc() const;
     unsigned lastStyleUpdateSizeForTesting() const { return m_lastStyleUpdateSizeForTesting; }
 
-    WEBCORE_EXPORT void updateLayout(OptionSet<LayoutOptions> = { }, const Element* = nullptr);
+    enum class UpdateLayoutResult {
+        NoChange,
+        ChangesDone,
+    };
+    WEBCORE_EXPORT UpdateLayoutResult updateLayout(OptionSet<LayoutOptions> = { }, const Element* = nullptr);
 
     // updateLayoutIgnorePendingStylesheets() forces layout even if we are waiting for pending stylesheet loads,
     // so calling this may cause a flash of unstyled content (FOUC).
-    void updateLayoutIgnorePendingStylesheets(OptionSet<LayoutOptions> = { }, const Element* = nullptr);
+        WEBCORE_EXPORT UpdateLayoutResult updateLayoutIgnorePendingStylesheets(OptionSet<LayoutOptions> = { }, const Element* = nullptr);
 
     std::unique_ptr<RenderStyle> styleForElementIgnoringPendingStylesheets(Element&, const RenderStyle* parentStyle, PseudoId = PseudoId::None);
 
@@ -732,7 +746,7 @@ public:
 
     bool renderTreeBeingDestroyed() const { return m_renderTreeBeingDestroyed; }
     bool hasLivingRenderTree() const { return renderView() && !renderTreeBeingDestroyed(); }
-    void updateRenderTree(std::unique_ptr<const Style::Update> styleUpdate);
+    void updateRenderTree(std::unique_ptr<Style::Update> styleUpdate);
 
     bool updateLayoutIfDimensionsOutOfDate(Element&, OptionSet<DimensionsCheck> = { DimensionsCheck::All });
 
@@ -1098,7 +1112,7 @@ public:
     const URL& firstPartyForCookies() const { return m_firstPartyForCookies; }
     void setFirstPartyForCookies(const URL& url) { m_firstPartyForCookies = url; }
 
-    bool isFullyActive() const;
+    WEBCORE_EXPORT bool isFullyActive() const;
 
     // The full URL corresponding to the "site for cookies" in the Same-Site Cookies spec.,
     // <https://tools.ietf.org/html/draft-ietf-httpbis-cookie-same-site-00>. It is either
@@ -1158,7 +1172,7 @@ public:
     WEBCORE_EXPORT String designMode() const;
     WEBCORE_EXPORT void setDesignMode(const String&);
 
-    Document* parentDocument() const;
+    WEBCORE_EXPORT Document* parentDocument() const;
     RefPtr<Document> protectedParentDocument() const { return parentDocument(); }
     WEBCORE_EXPORT Document& topDocument() const;
     Ref<Document> protectedTopDocument() const { return topDocument(); }
@@ -1555,6 +1569,9 @@ public:
     WEBCORE_EXPORT void updateIsPlayingMedia();
     void pageMutedStateDidChange();
 
+    bool hasEverHadSelectionInsideTextFormControl() const { return m_hasEverHadSelectionInsideTextFormControl; }
+    void setHasEverHadSelectionInsideTextFormControl() { m_hasEverHadSelectionInsideTextFormControl = true; }
+
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     void addPlaybackTargetPickerClient(MediaPlaybackTargetClient&);
     void removePlaybackTargetPickerClient(MediaPlaybackTargetClient&);
@@ -1600,6 +1617,15 @@ public:
     void observeForContainIntrinsicSize(Element&);
     void unobserveForContainIntrinsicSize(Element&);
     void resetObservationSizeForContainIntrinsicSize(Element&);
+
+    Ref<ViewTransition> startViewTransition(RefPtr<ViewTransitionUpdateCallback>&& = nullptr);
+    ViewTransition* activeViewTransition() const;
+    void setActiveViewTransition(RefPtr<ViewTransition>&&);
+
+    bool hasViewTransitionPseudoElementTree() const;
+    void setHasViewTransitionPseudoElementTree(bool);
+
+    void performPendingViewTransitions();
 
 #if ENABLE(MEDIA_STREAM)
     void setHasCaptureMediaStreamTrack() { m_hasHadCaptureMediaStreamTrack = true; }
@@ -1700,11 +1726,9 @@ public:
     const HashMap<String, Ref<HTMLAttachmentElement>>& attachmentElementsByIdentifier() const { return m_attachmentIdentifierToElementMap; }
 #endif
 
-#if ENABLE(SERVICE_WORKER)
     void setServiceWorkerConnection(RefPtr<SWClientConnection>&&);
     void updateServiceWorkerClientData() final;
-    WEBCORE_EXPORT void navigateFromServiceWorker(const URL&, CompletionHandler<void(bool)>&&);
-#endif
+    WEBCORE_EXPORT void navigateFromServiceWorker(const URL&, CompletionHandler<void(ScheduleLocationChangeResult)>&&);
 
 #if ENABLE(VIDEO)
     void forEachMediaElement(const Function<void(HTMLMediaElement&)>&);
@@ -1714,12 +1738,10 @@ public:
     bool handlingTouchEvent() const { return m_handlingTouchEvent; }
 #endif
 
-#if ENABLE(TRACKING_PREVENTION)
     WEBCORE_EXPORT bool hasRequestedPageSpecificStorageAccessWithUserInteraction(const RegistrableDomain&);
     WEBCORE_EXPORT void setHasRequestedPageSpecificStorageAccessWithUserInteraction(const RegistrableDomain&);
     WEBCORE_EXPORT void wasLoadedWithDataTransferFromPrevalentResource();
     void downgradeReferrerToRegistrableDomain();
-#endif
 
     void registerArticleElement(Element&);
     void unregisterArticleElement(Element&);
@@ -2030,7 +2052,7 @@ private:
     mutable String m_uniqueIdentifier;
 
     WeakHashSet<NodeIterator> m_nodeIterators;
-    HashSet<CheckedRef<Range>> m_ranges;
+    HashSet<SingleThreadWeakRef<Range>> m_ranges;
 
     UniqueRef<Style::Scope> m_styleScope;
     std::unique_ptr<ExtensionStyleSheets> m_extensionStyleSheets;
@@ -2060,7 +2082,7 @@ private:
 
     std::unique_ptr<Style::Update> m_pendingRenderTreeUpdate;
 
-    CheckedPtr<Element> m_cssTarget;
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> m_cssTarget;
 
     std::unique_ptr<LazyLoadImageObserver> m_lazyLoadImageObserver;
 
@@ -2118,8 +2140,8 @@ private:
     WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElementShowingTextTrack;
 #endif
 
-    CheckedPtr<Element> m_mainArticleElement;
-    HashSet<CheckedPtr<Element>> m_articleElements;
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> m_mainArticleElement;
+    HashSet<WeakRef<Element, WeakPtrImplWithEventTargetData>> m_articleElements;
 
     WeakHashSet<VisibilityChangeClient> m_visibilityStateCallbackClients;
 
@@ -2145,6 +2167,9 @@ private:
     std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
 
     Vector<WeakPtr<ResizeObserver>> m_resizeObservers;
+
+    RefPtr<ViewTransition> m_activeViewTransition;
+    bool m_hasViewTransitionPseudoElementTree;
 
     Timer m_loadEventDelayTimer;
 
@@ -2250,14 +2275,10 @@ private:
     RefPtr<WindowEventLoop> m_eventLoop;
     std::unique_ptr<EventLoopTaskGroup> m_documentTaskGroup;
 
-#if ENABLE(SERVICE_WORKER)
     RefPtr<SWClientConnection> m_serviceWorkerConnection;
-#endif
 
-#if ENABLE(TRACKING_PREVENTION)
     RegistrableDomain m_registrableDomainRequestedPageSpecificStorageAccessWithUserInteraction { };
     String m_referrerOverride;
-#endif
     
     std::optional<FixedVector<CSSPropertyID>> m_exposedComputedCSSPropertyIDs;
 
@@ -2441,6 +2462,8 @@ private:
 
     bool m_userHasInteractedWithMediaElement { false };
 
+    bool m_hasEverHadSelectionInsideTextFormControl { false };
+
     bool m_updateTitleTaskScheduled { false };
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
@@ -2484,6 +2507,7 @@ private:
     static bool hasEverCreatedAnAXObjectCache;
 
     RefPtr<ResizeObserver> m_resizeObserverForContainIntrinsicSize;
+
     const std::optional<FrameIdentifier> m_frameIdentifier;
 };
 
@@ -2496,5 +2520,9 @@ WTF::TextStream& operator<<(WTF::TextStream&, const Document&);
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Document)
     static bool isType(const WebCore::ScriptExecutionContext& context) { return context.isDocument(); }
     static bool isType(const WebCore::Node& node) { return node.isDocumentNode(); }
-    static bool isType(const WebCore::EventTarget& target) { return is<WebCore::Node>(target) && isType(downcast<WebCore::Node>(target)); }
+    static bool isType(const WebCore::EventTarget& target)
+    {
+        auto* node = dynamicDowncast<WebCore::Node>(target);
+        return node && isType(*node);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

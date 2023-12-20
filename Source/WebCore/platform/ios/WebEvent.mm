@@ -37,6 +37,7 @@
 #import "KeyEventCodesIOS.h"
 #import "WAKAppKitStubs.h"
 #import "WebEventPrivate.h"
+#import "WindowsKeyboardCodes.h"
 #import <pal/ios/UIKitSoftLink.h>
 #import <pal/spi/cocoa/IOKitSPI.h>
 #import <pal/spi/ios/GraphicsServicesSPI.h>
@@ -47,7 +48,7 @@ using WebCore::windowsKeyCodeForCharCode;
 
 @implementation WebEvent {
 #if HAVE(UI_ASYNC_TEXT_INTERACTION)
-    RetainPtr<UIKeyEvent> _originalUIKeyEvent;
+    RetainPtr<WebSEKeyEvent> _originalKeyEvent;
 #endif
 }
 
@@ -495,14 +496,14 @@ static NSString *normalizedStringWithAppKitCompatibilityMapping(NSString *charac
 
 #if HAVE(UI_ASYNC_TEXT_INTERACTION)
 
-@implementation WebEvent (UIAsyncTextInputSupport)
+@implementation WebEvent (WebSEKeyEventSupport)
 
-static inline WebEventType webEventType(UIKeyEventType type)
+static inline WebEventType webEventType(WebSEKeyEventType type)
 {
     switch (type) {
-    case UIKeyEventKeyDown:
+    case WebSEKeyEventKeyDown:
         return WebEventKeyDown;
-    case UIKeyEventKeyUp:
+    case WebSEKeyEventKeyUp:
         return WebEventKeyUp;
     }
     ASSERT_NOT_REACHED();
@@ -520,10 +521,30 @@ static inline WebEventFlags webEventModifierFlags(UIKeyModifierFlags flags)
         modifiers |= WebEventFlagMaskControlKey;
     if (flags & UIKeyModifierShift)
         modifiers |= WebEventFlagMaskShiftKey;
+    if (flags & UIKeyModifierAlphaShift)
+        modifiers |= WebEventFlagMaskLeftCapsLockKey;
     return modifiers;
 }
 
-- (instancetype)initWithUIKeyEvent:(UIKeyEvent *)event
+static inline bool isChangingKeyModifiers(WebSEKeyEvent *event)
+{
+    switch (event.keyCode) {
+    case VK_LWIN:
+    case VK_APPS:
+    case VK_CAPITAL:
+    case VK_LSHIFT:
+    case VK_RSHIFT:
+    case VK_LMENU:
+    case VK_RMENU:
+    case VK_LCONTROL:
+    case VK_RCONTROL:
+        return true;
+    default:
+        return false;
+    }
+}
+
+- (instancetype)initWithKeyEvent:(WebSEKeyEvent *)event
 {
     if (!(self = [super init]))
         return nil;
@@ -532,7 +553,8 @@ static inline WebEventFlags webEventModifierFlags(UIKeyModifierFlags flags)
     _timestamp = static_cast<CFTimeInterval>(event.timestamp);
     _modifierFlags = webEventModifierFlags(event.modifierFlags);
     _keyboardFlags = 0;
-    // FIXME: Set WebEventKeyboardInputModifierFlagsChanged as needed.
+    if (isChangingKeyModifiers(event))
+        _keyboardFlags |= WebEventKeyboardInputModifierFlagsChanged;
     if (event.keyRepeating)
         _keyboardFlags |= WebEventKeyboardInputRepeat;
 
@@ -541,14 +563,14 @@ static inline WebEventFlags webEventModifierFlags(UIKeyModifierFlags flags)
     _charactersIgnoringModifiers = [event.charactersIgnoringModifiers retain];
     _tabKey = NO; // FIXME: Populate this field appropriately.
     _keyRepeating = event.keyRepeating;
-    _originalUIKeyEvent = event;
+    _originalKeyEvent = event;
 
     return self;
 }
 
-- (UIKeyEvent *)originalUIKeyEvent
+- (WebSEKeyEvent *)originalKeyEvent
 {
-    return _originalUIKeyEvent.get();
+    return _originalKeyEvent.get();
 }
 
 @end

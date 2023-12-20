@@ -424,6 +424,15 @@
 /* Message for requesting cross-site cookie and website data access. */
 "Do you want to allow “%@” to use cookies and website data while browsing “%@”?" = "Do you want to allow “%@” to use cookies and website data while browsing “%@”?";
 
+/* Message for requesting cross-site cookie and website data access. */
+"Are you logging in to this website, and do you want to allow other %@ sites access to your website data while browsing the websites listed below?" = "Are you logging in to this website, and do you want to allow other %@ sites access to your website data while browsing the websites listed below?";
+
+/* Informative text for requesting cross-site cookie and website data access. */
+"Allowing access to website data is necessary for the website to work correctly." = "Allowing access to website data is necessary for the website to work correctly.";
+
+/* Accessory text for requesting cross-site cookie and website data access. */
+"While you are visiting %@, the following related websites will gain access to their cookies:\n  - %@" = "While you are visiting %@, the following related websites will gain access to their cookies:\n  - %@";
+
 /* Label for the donate with Apple Pay button. */
 "Donate with Apple Pay" = "Donate with Apple Pay";
 
@@ -468,6 +477,12 @@
 
 /* Display name for easy reader (i.e. 3rd-grade level) text tracks. */
 "Easy Reader (text track)" = "Easy Reader";
+
+/* _WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for empty JSON path */
+"Empty `declarative_net_request` JSON path." = "Empty `declarative_net_request` JSON path.";
+
+/* _WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for empty ruleset id */
+"Empty `declarative_net_request` ruleset id." = "Empty `declarative_net_request` ruleset id.";
 
 /* WKWebExtensionErrorInvalidManifestEntry description for background */
 "Empty or invalid `background` manifest entry." = "Empty or invalid `background` manifest entry.";
@@ -531,6 +546,12 @@
 
 /* Custom protocol synchronous load failure description */
 "Error handling synchronous load with custom protocol" = "Error handling synchronous load with custom protocol";
+
+/* _WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for too many rulesets */
+"Exceeded maximum number of `declarative_net_request` rulesets. Ignoring extra rulesets." = "Exceeded maximum number of `declarative_net_request` rulesets. Ignoring extra rulesets.";
+
+/* _WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for too many enabled static rulesets */
+"Exceeded maximum number of enabled `declarative_net_request` static rulesets. The first %lu will be applied, the remaining will be ignored." = "Exceeded maximum number of enabled `declarative_net_request` static rulesets. The first %lu will be applied, the remaining will be ignored.";
 
 /* Button for exiting full screen when in full screen media playback */
 "Exit Full Screen" = "Exit Full Screen";
@@ -781,6 +802,9 @@
 /* WKWebExtensionErrorInvalidContentScripts description for unknown 'run_at' value */
 "Manifest `content_scripts` entry has unknown `run_at` value." = "Manifest `content_scripts` entry has unknown `run_at` value.";
 
+/* _WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for missing declarativeNetRequest permission */
+"Manifest has no `declarativeNetRequest` permission." = "Manifest has no `declarativeNetRequest` permission.";
+
 /* Validation message for input form controls requiring a constrained value according to pattern */
 "Match the requested format" = "Match the requested format";
 
@@ -892,6 +916,9 @@
 /* context menu item for PDF */
 "Open with %@" = "Open with %@";
 
+/* Open with Preview context menu item */
+"Open with Preview" = "Open with Preview";
+
 /* Label for the order with Apple Pay button. */
 "Order with Apple Pay" = "Order with Apple Pay";
 
@@ -972,6 +999,9 @@
 
 /* Previous Page context menu item */
 "Previous Page" = "Previous Page";
+
+/* Title for the webarea while the accessibility tree is being built. */
+"Processing page" = "Processing page";
 
 /* Undo action name */
 "Raise Baseline (Undo action name)" = "Raise Baseline";
@@ -1444,6 +1474,9 @@
 /* Zoom Out context menu item */
 "Zoom Out" = "Zoom Out";
 
+/* _WKWebExtensionErrorInvalidDeclarativeNetRequestEntry description for duplicate ruleset id */
+"`declarative_net_request` ruleset with id \"%@\" is invalid. Ruleset id must be unique." = "`declarative_net_request` ruleset with id \"%@\" is invalid. Ruleset id must be unique.";
+
 /* Verb stating the action that will occur when a text field is selected, as used by accessibility */
 "activate" = "activate";
 
@@ -1785,9 +1818,6 @@
 
 /* accessibility label for a date field year input. */
 "year" = "year";
-
-/* Accessibility message to indicate that a page is being processed to be accessed. */
-"Processing page" = "Processing page";
 
 /* Message for requesting access to the device motion and orientation */
 "“%@” Would Like to Access Motion and Orientation" = "“%@” Would Like to Access Motion and Orientation";

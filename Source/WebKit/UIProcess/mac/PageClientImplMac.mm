@@ -120,9 +120,9 @@ void PageClientImpl::setImpl(WebViewImpl& impl)
     m_impl = impl;
 }
 
-std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy()
+std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy(WebProcessProxy& webProcessProxy)
 {
-    return m_impl->createDrawingAreaProxy();
+    return m_impl->createDrawingAreaProxy(webProcessProxy);
 }
 
 void PageClientImpl::setViewNeedsDisplay(const WebCore::Region&)
@@ -1028,6 +1028,11 @@ void PageClientImpl::takeFocus(WebCore::FocusDirection direction)
     m_impl->takeFocus(direction);
 }
 
+void PageClientImpl::performSwitchHapticFeedback()
+{
+    [[NSHapticFeedbackManager defaultPerformer] performFeedbackPattern:NSHapticFeedbackPatternLevelChange performanceTime:NSHapticFeedbackPerformanceTimeDefault];
+}
+
 void PageClientImpl::requestDOMPasteAccess(WebCore::DOMPasteAccessCategory pasteAccessCategory, const WebCore::IntRect& elementRect, const String& originIdentifier, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&& completion)
 {
     m_impl->requestDOMPasteAccess(pasteAccessCategory, elementRect, originIdentifier, WTFMove(completion));
@@ -1053,10 +1058,10 @@ bool PageClientImpl::appUsesCustomAccentColor()
         NSDictionary *info = [bundleForAccentColor infoDictionary];
         NSString *accentColorName = info[@"NSAccentColorName"];
         if ([accentColorName length])
-            usesCustomAppAccentColor = !!adoptNS([NSColor colorNamed:accentColorName bundle:bundleForAccentColor]).get();
+            usesCustomAppAccentColor = !![NSColor colorNamed:accentColorName bundle:bundleForAccentColor];
 
         if (!usesCustomAppAccentColor && [(accentColorName = info[@"NSAppAccentColorName"]) length])
-            usesCustomAppAccentColor = !!adoptNS([NSColor colorNamed:accentColorName bundle:bundleForAccentColor]).get();
+            usesCustomAppAccentColor = !![NSColor colorNamed:accentColorName bundle:bundleForAccentColor];
     });
 
     return usesCustomAppAccentColor;

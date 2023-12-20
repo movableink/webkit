@@ -45,7 +45,9 @@
 
 namespace WebCore {
 
+#if !USE(GSTREAMER)
 static const Seconds deviceChangeDebounceTimerInterval { 200_ms };
+#endif
 
 RealtimeMediaSourceCenter& RealtimeMediaSourceCenter::singleton()
 {
@@ -419,6 +421,18 @@ DisplayCaptureFactory& RealtimeMediaSourceCenter::displayCaptureFactory()
 bool RealtimeMediaSourceCenter::shouldInterruptAudioOnPageVisibilityChange()
 {
     return false;
+}
+#endif
+
+#if ENABLE(EXTENSION_CAPABILITIES)
+const String& RealtimeMediaSourceCenter::currentMediaEnvironment() const
+{
+    return m_currentMediaEnvironment;
+}
+
+void RealtimeMediaSourceCenter::setCurrentMediaEnvironment(const String& mediaEnvironment)
+{
+    m_currentMediaEnvironment = mediaEnvironment;
 }
 #endif
 

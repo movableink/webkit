@@ -2449,9 +2449,8 @@ class CheckStatusOfPR(buildstep.BuildStep, GitHubMixin, AddToLogMixin):
     haltOnFailure = False
     EMBEDDED_CHECKS = ['ios', 'ios-sim', 'ios-wk2', 'ios-wk2-wpt', 'api-ios', 'tv', 'tv-sim', 'watch', 'watch-sim']
     MACOS_CHECKS = ['mac', 'mac-AS-debug', 'api-mac', 'mac-wk1', 'mac-wk2', 'mac-AS-debug-wk2', 'mac-wk2-stress']
-    LINUX_CHECKS = ['gtk', 'gtk-wk2', 'api-gtk', 'wpe', 'wpe-wk2']
+    LINUX_CHECKS = ['gtk', 'gtk-wk2', 'api-gtk', 'wpe', 'wpe-wk2', 'api-wpe']
     WINDOWS_CHECKS = ['wincairo']
-    QUEUES_FOR_SAFE_MERGE_QUEUE = EMBEDDED_CHECKS + MACOS_CHECKS + LINUX_CHECKS + WINDOWS_CHECKS
     EWS_WEBKIT_FAILED = 0
     EWS_WEBKIT_PASSED = 1
     EWS_WEBKIT_PENDING = 2
@@ -2534,7 +2533,13 @@ class CheckStatusOfPR(buildstep.BuildStep, GitHubMixin, AddToLogMixin):
             yield self._addToLog('stdio', f'Accessed {url} with unexpected status code {response.status_code}.\n')
             return defer.returnValue(False if response.status_code // 100 == 4 else None)
 
-        for queue in self.QUEUES_FOR_SAFE_MERGE_QUEUE:
+        # FIXME: safe-merge-queue should obtain skipped status from EWS instead of hardcoding
+        queues_for_safe_merge = self.EMBEDDED_CHECKS + self.MACOS_CHECKS
+        if self.getProperty('project') == GITHUB_PROJECTS[0]:
+            queues_for_safe_merge += self.LINUX_CHECKS
+            queues_for_safe_merge += self.WINDOWS_CHECKS
+
+        for queue in queues_for_safe_merge:
             queue_data = response.json().get(queue, None)
             if queue_data:
                 status = queue_data.get('state', None)
@@ -3154,11 +3159,9 @@ class CompileWebKit(shell.Compile, AddToLogMixin):
             # without invalidating local builds made by Xcode, and we set it
             # via xcconfigs until all building of Xcode-based webkit is done in
             # workspaces (rdar://88135402).
-            self.setCommand(self.command + ['WK_VALIDATE_DEPENDENCIES=YES'])
             if architecture:
-                self.setCommand(self.command + ['ARCHS=' + architecture])
-                if platform in ['ios', 'tvos', 'watchos']:
-                    self.setCommand(self.command + ['ONLY_ACTIVE_ARCH=NO'])
+                self.setCommand(self.command + ['--architecture', architecture])
+            self.setCommand(self.command + ['WK_VALIDATE_DEPENDENCIES=YES'])
             if buildOnly:
                 # For build-only bots, the expectation is that tests will be run on separate machines,
                 # so we need to package debug info as dSYMs. Only generating line tables makes
@@ -4556,6 +4559,7 @@ class RunWebKitTestsRedTree(RunWebKitTests):
     def evaluateCommand(self, cmd):
         first_results_failing_tests = set(self.getProperty('first_run_failures', []))
         first_results_flaky_tests = set(self.getProperty('first_run_flakies', []))
+        platform = self.getProperty('platform')
         rc = self.evaluateResult(cmd)
         next_steps = [ArchiveTestResults(), UploadTestResults(), ExtractTestResults()]
         if first_results_failing_tests:
@@ -4576,9 +4580,12 @@ class RunWebKitTestsRedTree(RunWebKitTests):
             if retry_count < AnalyzeLayoutTestsResultsRedTree.MAX_RETRY:
                 next_steps.append(AnalyzeLayoutTestsResultsRedTree())
             else:
+                next_steps.extend([UnApplyPatch(), RevertPullRequestChanges()])
+                if platform == 'wpe':
+                    next_steps.append(InstallWpeDependencies())
+                elif platform == 'gtk':
+                    next_steps.append(InstallGtkDependencies())
                 next_steps.extend([
-                    UnApplyPatch(),
-                    RevertPullRequestChanges(),
                     CompileWebKitWithoutChange(retry_build_on_failure=True),
                     ValidateChange(verifyBugClosed=False, addURLs=False),
                     RunWebKitTestsWithoutChangeRedTree(),
@@ -4609,6 +4616,7 @@ class RunWebKitTestsRepeatFailuresRedTree(RunWebKitTestsRedTree):
         with_change_repeat_failures_results_flakies = set(self.getProperty('with_change_repeat_failures_results_flakies', []))
         with_change_repeat_failures_timedout = self.getProperty('with_change_repeat_failures_timedout', False)
         first_results_flaky_tests = set(self.getProperty('first_run_flakies', []))
+        platform = self.getProperty('platform')
         rc = self.evaluateResult(cmd)
         self.setProperty('with_change_repeat_failures_retcode', rc)
         next_steps = [ArchiveTestResults(), UploadTestResults(identifier='repeat-failures'), ExtractTestResults(identifier='repeat-failures')]
@@ -4617,7 +4625,12 @@ class RunWebKitTestsRepeatFailuresRedTree(RunWebKitTestsRedTree):
                 ValidateChange(verifyBugClosed=False, addURLs=False),
                 KillOldProcesses(),
                 UnApplyPatch(),
-                RevertPullRequestChanges(),
+                RevertPullRequestChanges()])
+            if platform == 'wpe':
+                next_steps.append(InstallWpeDependencies())
+            elif platform == 'gtk':
+                next_steps.append(InstallGtkDependencies())
+            next_steps.extend([
                 CompileWebKitWithoutChange(retry_build_on_failure=True),
                 ValidateChange(verifyBugClosed=False, addURLs=False),
                 RunWebKitTestsRepeatFailuresWithoutChangeRedTree(),
@@ -4915,7 +4928,7 @@ class UploadFileToS3(shell.ShellCommandNewStyle, AddToLogMixin):
     flunkOnFailure = False
 
     def __init__(self, **kwargs):
-        super().__init__(timeout=6 * 60, logEnviron=False, **kwargs)
+        super().__init__(timeout=30 * 60, logEnviron=False, **kwargs)
 
     @defer.inlineCallbacks
     def run(self):
@@ -6443,7 +6456,7 @@ class UpdatePullRequest(shell.ShellCommandNewStyle, GitHubMixin, AddToLogMixin):
     def escape_html(cls, message):
         message = ''.join(cls.ESCAPE_TABLE.get(c, c) for c in message)
         message = re.sub(r'(https?://[^\s<>,:;]+?)(?=[\s<>,:;]|(&gt))', r'<a href="\1">\1</a>', message)
-        return re.sub(r'rdar://([^\s<>,:;]+?)(?=[\s<>,:;]|(&gt))', r'<a href="https://rdar.apple.com/\1">rdar://\1</a>', message)
+        return re.sub(r'rdar://([^\s<>,:;]+?)(?=[\s<>,:;().]|(&gt))', r'<a href="https://rdar.apple.com/\1">rdar://\1</a>', message)
 
     def __init__(self, **kwargs):
         super().__init__(logEnviron=False, timeout=300, **kwargs)

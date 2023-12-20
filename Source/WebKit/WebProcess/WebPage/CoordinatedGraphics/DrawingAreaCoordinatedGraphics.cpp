@@ -64,8 +64,6 @@ DrawingAreaCoordinatedGraphics::DrawingAreaCoordinatedGraphics(WebPage& webPage,
 #if USE(GLIB_EVENT_LOOP) && !PLATFORM(WPE)
     m_displayTimer.setPriority(RunLoopSourcePriority::NonAcceleratedDrawingTimer);
 #endif
-
-    updatePreferences(parameters.store);
 }
 
 DrawingAreaCoordinatedGraphics::~DrawingAreaCoordinatedGraphics() = default;
@@ -211,13 +209,6 @@ void DrawingAreaCoordinatedGraphics::setLayerTreeStateIsFrozen(bool isFrozen)
 void DrawingAreaCoordinatedGraphics::updatePreferences(const WebPreferencesStore& store)
 {
     Settings& settings = m_webPage->corePage()->settings();
-#if PLATFORM(WAYLAND)
-    if (PlatformDisplay::sharedDisplay().type() == PlatformDisplay::Type::Wayland
-        && &PlatformDisplay::sharedDisplayForCompositing() == &PlatformDisplay::sharedDisplay()) {
-        // We failed to create the shared display for compositing, disable accelerated compositing.
-        settings.setAcceleratedCompositingEnabled(false);
-    }
-#endif
     settings.setForceCompositingMode(store.getBoolValueForKey(WebPreferencesKey::forceCompositingModeKey()));
     // Fixed position elements need to be composited and create stacking contexts
     // in order to be scrolled by the ScrollingCoordinator.
@@ -346,15 +337,6 @@ void DrawingAreaCoordinatedGraphics::triggerRenderingUpdate()
         scheduleDisplay();
 }
 
-#if HAVE(DISPLAY_LINK)
-void DrawingAreaCoordinatedGraphics::didCompleteRenderingUpdateDisplay()
-{
-    if (m_layerTreeHost)
-        m_layerTreeHost->didCompleteRenderingUpdateDisplay();
-    DrawingArea::didCompleteRenderingUpdateDisplay();
-}
-#endif
-
 RefPtr<DisplayRefreshMonitor> DrawingAreaCoordinatedGraphics::createDisplayRefreshMonitor(PlatformDisplayID displayID)
 {
 #if HAVE(DISPLAY_LINK)
@@ -463,7 +445,7 @@ void DrawingAreaCoordinatedGraphics::adjustTransientZoom(double scale, FloatPoin
     webPage->scalePage(scale / webPage->viewScaleFactor(), roundedIntPoint(-unscrolledOrigin));
 }
 
-void DrawingAreaCoordinatedGraphics::commitTransientZoom(double scale, FloatPoint origin)
+void DrawingAreaCoordinatedGraphics::commitTransientZoom(double scale, FloatPoint origin, CompletionHandler<void()>&& completionHandler)
 {
     if (m_layerTreeHost)
         m_layerTreeHost->commitTransientZoom(scale, origin);
@@ -475,6 +457,7 @@ void DrawingAreaCoordinatedGraphics::commitTransientZoom(double scale, FloatPoin
     webPage->scalePage(scale / webPage->viewScaleFactor(), roundedIntPoint(-unscrolledOrigin));
 
     m_transientZoom = false;
+    completionHandler();
 }
 #endif
 
@@ -793,5 +776,13 @@ void DrawingAreaCoordinatedGraphics::didDiscardBackingStore()
     // Ensure the next update will cover the entire view, since the UI process discarded its backing store.
     m_dirtyRegion = m_webPage->bounds();
 }
+
+#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
+void DrawingAreaCoordinatedGraphics::preferredBufferFormatsDidChange()
+{
+    if (m_layerTreeHost)
+        m_layerTreeHost->preferredBufferFormatsDidChange();
+}
+#endif
 
 } // namespace WebKit

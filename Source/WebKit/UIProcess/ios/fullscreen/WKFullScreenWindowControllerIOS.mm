@@ -34,6 +34,7 @@
 #import "WKFullscreenStackView.h"
 #import "WKScrollView.h"
 #import "WKWebView.h"
+#import "WKWebViewIOS.h"
 #import "WKWebViewInternal.h"
 #import "WKWebViewPrivateForTesting.h"
 #import "WebFullScreenManagerProxy.h"
@@ -146,6 +147,7 @@ struct WKWebViewState {
     UIEdgeInsets _savedEdgeInset = UIEdgeInsetsZero;
     BOOL _savedHaveSetObscuredInsets = NO;
     UIEdgeInsets _savedObscuredInsets = UIEdgeInsetsZero;
+    UIRectEdge _savedObscuredInsetEdgesAffectedBySafeArea = UIRectEdgeAll;
     UIEdgeInsets _savedScrollIndicatorInsets = UIEdgeInsetsZero;
 #if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
     BOOL _savedContentInsetAdjustmentBehaviorWasExternallyOverridden = NO;
@@ -172,6 +174,8 @@ struct WKWebViewState {
         else
             [webView _resetObscuredInsets];
 
+        webView._obscuredInsetEdgesAffectedBySafeArea = _savedObscuredInsetEdgesAffectedBySafeArea;
+
         auto* scrollView = (WKScrollView *)[webView scrollView];
         if (_savedContentInsetWasExternallyOverridden)
             scrollView.contentInset = _savedEdgeInset;
@@ -194,7 +198,7 @@ struct WKWebViewState {
             [webView _resetUnobscuredSafeAreaInsets];
 
         if (_savedHasOverriddenLayoutParameters && _savedMinimumUnobscuredSizeOverride && _savedMaximumUnobscuredSizeOverride)
-            [webView _overrideLayoutParametersWithMinimumLayoutSize:*_savedMinimumUnobscuredSizeOverride maximumUnobscuredSizeOverride:*_savedMaximumUnobscuredSizeOverride];
+            [webView _overrideLayoutParametersWithMinimumLayoutSize:*_savedMinimumUnobscuredSizeOverride minimumUnobscuredSizeOverride:*_savedMinimumUnobscuredSizeOverride maximumUnobscuredSizeOverride:*_savedMaximumUnobscuredSizeOverride];
         else
             [webView _clearOverrideLayoutParameters];
 
@@ -216,6 +220,7 @@ struct WKWebViewState {
         _savedPageScale = webView._pageScale;
         _savedHaveSetObscuredInsets = webView._haveSetObscuredInsets;
         _savedObscuredInsets = webView._obscuredInsets;
+        _savedObscuredInsetEdgesAffectedBySafeArea = webView._obscuredInsetEdgesAffectedBySafeArea;
         _savedContentInsetWasExternallyOverridden = scrollView._contentInsetWasExternallyOverridden;
         _savedEdgeInset = scrollView.contentInset;
         _savedContentOffset = scrollView.contentOffset;

@@ -38,7 +38,7 @@
 #include "FrameLoader.h"
 #include "FrameTree.h"
 #include "FrameView.h"
-#include "HandleMouseEventResult.h"
+#include "HandleUserInputEventResult.h"
 #include "HTMLFrameSetElement.h"
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
@@ -86,7 +86,7 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& event, Widge
     if (!widget.isLocalFrameView())
         return false;
 
-    return downcast<LocalFrameView>(widget).frame().eventHandler().handleWheelEvent(event, { });
+    return downcast<LocalFrameView>(widget).frame().eventHandler().handleWheelEvent(event, { }).wasHandled();
 }
 
 bool EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& mev, LocalFrame& subframe)

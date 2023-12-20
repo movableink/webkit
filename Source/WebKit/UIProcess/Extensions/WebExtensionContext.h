@@ -42,6 +42,8 @@
 #include "WebExtensionFrameIdentifier.h"
 #include "WebExtensionFrameParameters.h"
 #include "WebExtensionMatchPattern.h"
+#include "WebExtensionMatchedRuleParameters.h"
+#include "WebExtensionMenuItem.h"
 #include "WebExtensionMessagePort.h"
 #include "WebExtensionPortChannelIdentifier.h"
 #include "WebExtensionTab.h"
@@ -51,6 +53,7 @@
 #include "WebExtensionWindowParameters.h"
 #include "WebPageProxyIdentifier.h"
 #include "WebProcessProxy.h"
+#include <WebCore/ContentRuleListResults.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/HashCountedSet.h>
@@ -65,27 +68,44 @@
 #include <wtf/WeakHashMap.h>
 #include <wtf/WeakPtr.h>
 
+OBJC_CLASS NSArray;
 OBJC_CLASS NSDate;
 OBJC_CLASS NSDictionary;
-OBJC_CLASS NSMapTable;
 OBJC_CLASS NSMutableDictionary;
 OBJC_CLASS NSString;
 OBJC_CLASS NSURL;
 OBJC_CLASS NSUUID;
+OBJC_CLASS WKContentRuleListStore;
 OBJC_CLASS WKNavigation;
 OBJC_CLASS WKNavigationAction;
 OBJC_CLASS WKWebView;
 OBJC_CLASS WKWebViewConfiguration;
 OBJC_CLASS _WKWebExtensionContext;
 OBJC_CLASS _WKWebExtensionContextDelegate;
+OBJC_CLASS _WKWebExtensionDeclarativeNetRequestSQLiteStore;
+OBJC_CLASS _WKWebExtensionRegisteredScriptsSQLiteStore;
 OBJC_PROTOCOL(_WKWebExtensionTab);
 OBJC_PROTOCOL(_WKWebExtensionWindow);
 
+#if PLATFORM(MAC)
+OBJC_CLASS NSEvent;
+OBJC_CLASS NSMenu;
+#endif
+
 namespace WebKit {
 
+class ContextMenuContextData;
 class WebExtension;
 class WebUserContentControllerProxy;
 struct WebExtensionContextParameters;
+struct WebExtensionMenuItemContextParameters;
+
+enum class WebExtensionContextInstallReason : uint8_t {
+    None,
+    ExtensionInstall,
+    ExtensionUpdate,
+    BrowserUpdate,
+};
 
 class WebExtensionContext : public API::ObjectImpl<API::Object::Type::WebExtensionContext>, public IPC::MessageReceiver {
     WTF_MAKE_NONCOPYABLE(WebExtensionContext);
@@ -141,6 +161,12 @@ public:
 
     using CommandsVector = Vector<Ref<WebExtensionCommand>>;
 
+    using MenuItemVector = Vector<Ref<WebExtensionMenuItem>>;
+    using MenuItemMap = HashMap<String, Ref<WebExtensionMenuItem>>;
+
+    using DeclarativeNetRequestValidatedRulesets = std::pair<std::optional<WebExtension::DeclarativeNetRequestRulesetVector>, std::optional<String>>;
+    using DeclarativeNetRequestMatchedRuleVector = Vector<WebExtensionMatchedRuleParameters>;
+
     enum class EqualityOnly : bool { No, Yes };
     enum class WindowIsClosing : bool { No, Yes };
     enum class ReloadFromOrigin : bool { No, Yes };
@@ -169,12 +195,7 @@ public:
         SkipRequestedPermissions    = 1 << 1, // Don't check requested permissions.
     };
 
-    enum class InstallReason : uint8_t {
-        None,
-        ExtensionInstall,
-        ExtensionUpdate,
-        BrowserUpdate,
-    };
+    using InstallReason = WebExtensionContextInstallReason;
 
     enum class WebViewPurpose : uint8_t {
         Any,
@@ -191,6 +212,7 @@ public:
     NSError *createError(Error, NSString *customLocalizedDescription = nil, NSError *underlyingError = nil);
 
     bool storageIsPersistent() const { return !m_storageDirectory.isEmpty(); }
+    const String& storageDirectory() const { return m_storageDirectory; }
 
     bool load(WebExtensionController&, String storageDirectory, NSError ** = nullptr);
     bool unload(NSError ** = nullptr);
@@ -215,7 +237,8 @@ public:
     void setInspectable(bool);
 
     const InjectedContentVector& injectedContents();
-    bool hasInjectedContentForURL(NSURL *);
+    bool hasInjectedContentForURL(const URL&);
+    bool hasInjectedContent();
 
     URL optionsPageURL() const;
     URL overrideNewTabPageURL() const;
@@ -241,14 +264,14 @@ public:
     void grantPermissions(PermissionsSet&&, WallTime expirationDate = WallTime::infinity());
     void denyPermissions(PermissionsSet&&, WallTime expirationDate = WallTime::infinity());
 
-    void grantPermissionMatchPatterns(MatchPatternSet&&, WallTime expirationDate = WallTime::infinity());
-    void denyPermissionMatchPatterns(MatchPatternSet&&, WallTime expirationDate = WallTime::infinity());
+    void grantPermissionMatchPatterns(MatchPatternSet&&, WallTime expirationDate = WallTime::infinity(), EqualityOnly = EqualityOnly::Yes);
+    void denyPermissionMatchPatterns(MatchPatternSet&&, WallTime expirationDate = WallTime::infinity(), EqualityOnly = EqualityOnly::Yes);
 
     bool removeGrantedPermissions(PermissionsSet&);
-    bool removeGrantedPermissionMatchPatterns(MatchPatternSet&, EqualityOnly);
+    bool removeGrantedPermissionMatchPatterns(MatchPatternSet&, EqualityOnly = EqualityOnly::Yes);
 
     bool removeDeniedPermissions(PermissionsSet&);
-    bool removeDeniedPermissionMatchPatterns(MatchPatternSet&, EqualityOnly);
+    bool removeDeniedPermissionMatchPatterns(MatchPatternSet&, EqualityOnly = EqualityOnly::Yes);
 
     PermissionsMap::KeysConstIteratorRange currentPermissions() { return grantedPermissions().keys(); }
     PermissionMatchPatternsMap::KeysConstIteratorRange currentPermissionMatchPatterns() { return grantedPermissionMatchPatterns().keys(); }
@@ -277,6 +300,7 @@ public:
     Ref<WebExtensionTab> getOrCreateTab(_WKWebExtensionTab *);
     RefPtr<WebExtensionTab> getTab(WebExtensionTabIdentifier, IgnoreExtensionAccess = IgnoreExtensionAccess::No);
     RefPtr<WebExtensionTab> getTab(WebPageProxyIdentifier, std::optional<WebExtensionTabIdentifier> = std::nullopt, IgnoreExtensionAccess = IgnoreExtensionAccess::No);
+    RefPtr<WebExtensionTab> getCurrentTab(WebPageProxyIdentifier, IgnoreExtensionAccess = IgnoreExtensionAccess::No);
 
     WindowVector openWindows() const;
     TabMapValueIterator openTabs() const { return m_tabMap.values(); }
@@ -295,7 +319,12 @@ public:
 
     void didMoveTab(const WebExtensionTab&, size_t oldIndex, const WebExtensionWindow* oldWindow = nullptr);
     void didReplaceTab(const WebExtensionTab& oldTab, const WebExtensionTab& newTab);
-    void didChangeTabProperties(const WebExtensionTab&, OptionSet<WebExtensionTab::ChangedProperties> = { });
+    void didChangeTabProperties(WebExtensionTab&, OptionSet<WebExtensionTab::ChangedProperties> = { });
+
+    void didStartProvisionalLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
+    void didCommitLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
+    void didFinishLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
+    void didFailLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
 
     WebExtensionAction& defaultAction();
     Ref<WebExtensionAction> getAction(WebExtensionWindow*);
@@ -305,7 +334,25 @@ public:
     void performAction(WebExtensionTab*, UserTriggered = UserTriggered::No);
 
     const CommandsVector& commands();
+    WebExtensionCommand* command(const String& identifier);
     void performCommand(WebExtensionCommand&, UserTriggered = UserTriggered::No);
+
+#if USE(APPKIT)
+    WebExtensionCommand* command(NSEvent *);
+    bool performCommand(NSEvent *);
+#endif
+
+    NSArray *platformMenuItems(const WebExtensionTab&) const;
+
+    const MenuItemVector& mainMenuItems() const { return m_mainMenuItems; }
+    WebExtensionMenuItem* menuItem(const String& identifier) const;
+    void performMenuItem(WebExtensionMenuItem&, const WebExtensionMenuItemContextParameters&, UserTriggered = UserTriggered::No);
+
+    CocoaMenuItem *singleMenuItemOrExtensionItemWithSubmenu(const WebExtensionMenuItemContextParameters&) const;
+
+#if PLATFORM(MAC)
+    void addItemsToContextMenu(WebPageProxy&, const ContextMenuContextData&, NSMenu *);
+#endif
 
     void userGesturePerformed(WebExtensionTab&);
     bool hasActiveUserGesture(WebExtensionTab&) const;
@@ -324,6 +371,12 @@ public:
 
     void addInjectedContent(WebUserContentControllerProxy&);
     void removeInjectedContent(WebUserContentControllerProxy&);
+
+    bool handleContentRuleListNotificationForTab(WebExtensionTab&, const URL&, WebCore::ContentRuleListResults::Result);
+    void incrementActionCountForTab(WebExtensionTab&, ssize_t incrementAmount);
+
+    // Returns whether or not there are any matched rules after the purge.
+    bool purgeMatchedRulesFromBefore(const WallTime&);
 
     UserStyleSheetVector& dynamicallyInjectedUserStyleSheets() { return m_dynamicallyInjectedUserStyleSheets; };
 
@@ -368,6 +421,8 @@ private:
 
     void moveLocalStorageIfNeeded(const URL& previousBaseURL, CompletionHandler<void()>&&);
 
+    void invalidateStorage();
+
     void postAsyncNotification(NSString *notificationName, PermissionsSet&);
     void postAsyncNotification(NSString *notificationName, MatchPatternSet&);
 
@@ -403,6 +458,37 @@ private:
     void removeInjectedContent(MatchPatternSet&);
     void removeInjectedContent(WebExtensionMatchPattern&);
 
+    // DeclarativeNetRequest methods.
+    // Loading/unloading static rules
+    void loadDeclarativeNetRequestRules(CompletionHandler<void(bool)>&&);
+    void compileDeclarativeNetRequestRules(NSArray *, CompletionHandler<void(bool)>&&);
+    void unloadDeclarativeNetRequestState();
+    String declarativeNetRequestContentRuleListFilePath();
+
+    // Updating user content controllers with new rules.
+    void addDeclarativeNetRequestRulesToPrivateUserContentControllers();
+    void removeDeclarativeNetRequestRules();
+
+    // Customizing static rulesets.
+    void saveDeclarativeNetRequestRulesetStateToStorage(NSDictionary *rulesetState);
+    void loadDeclarativeNetRequestRulesetStateFromStorage();
+    void clearDeclarativeNetRequestRulesetState();
+
+    // Displaying action count as badge text.
+    bool shouldDisplayBlockedResourceCountAsBadgeText();
+    void saveShouldDisplayBlockedResourceCountAsBadgeText(bool);
+
+    // Session and dynamic rules.
+    _WKWebExtensionDeclarativeNetRequestSQLiteStore *declarativeNetRequestDynamicRulesStore();
+    _WKWebExtensionDeclarativeNetRequestSQLiteStore *declarativeNetRequestSessionRulesStore();
+    void updateDeclarativeNetRequestRulesInStorage(_WKWebExtensionDeclarativeNetRequestSQLiteStore *, NSString *storageType, NSArray *rulesToAdd, NSArray *ruleIDsToRemove, CompletionHandler<void(std::optional<String>)>&&);
+
+    DeclarativeNetRequestMatchedRuleVector matchedRules() { return m_matchedRules; }
+
+    // Registered content scripts methods.
+    void loadRegisteredContentScripts();
+    RetainPtr<_WKWebExtensionRegisteredScriptsSQLiteStore> registeredContentScriptsStore();
+
     // Action APIs
     void actionGetTitle(std::optional<WebExtensionWindowIdentifier>, std::optional<WebExtensionTabIdentifier>, CompletionHandler<void(std::optional<String>, std::optional<String>)>&&);
     void actionSetTitle(std::optional<WebExtensionWindowIdentifier>, std::optional<WebExtensionTabIdentifier>, const String& title, CompletionHandler<void(std::optional<String>)>&&);
@@ -426,8 +512,22 @@ private:
 
     // Commands APIs
     void commandsGetAll(CompletionHandler<void(Vector<WebExtensionCommandParameters>)>&&);
-    void fireCommandEventIfNeeded(WebExtensionCommand&, WebExtensionTab*);
-    void fireCommandChangedEventIfNeeded(WebExtensionCommand&, const String& oldShortcut);
+    void fireCommandEventIfNeeded(const WebExtensionCommand&, WebExtensionTab*);
+    void fireCommandChangedEventIfNeeded(const WebExtensionCommand&, const String& oldShortcut);
+
+    // DeclarativeNetRequest APIs
+    void declarativeNetRequestGetEnabledRulesets(CompletionHandler<void(const Vector<String>&)>&&);
+    void declarativeNetRequestUpdateEnabledRulesets(const Vector<String>& rulesetIdentifiersToEnable, const Vector<String>& rulesetIdentifiersToDisable, CompletionHandler<void(std::optional<String>)>&&);
+    void declarativeNetRequestDisplayActionCountAsBadgeText(bool displayActionCountAsBadgeText, CompletionHandler<void(std::optional<String>)>&&);
+    void declarativeNetRequestIncrementActionCount(WebExtensionTabIdentifier, double increment, CompletionHandler<void(std::optional<String>)>&&);
+    DeclarativeNetRequestValidatedRulesets declarativeNetRequestValidateRulesetIdentifiers(const Vector<String>&);
+    size_t declarativeNetRequestEnabledRulesetCount();
+    void declarativeNetRequestToggleRulesets(const Vector<String>& rulesetIdentifiers, bool newValue, NSMutableDictionary *rulesetIdentifiersToEnabledState);
+    void declarativeNetRequestGetMatchedRules(std::optional<WebExtensionTabIdentifier>, std::optional<WallTime> minTimeStamp, CompletionHandler<void(std::optional<Vector<WebExtensionMatchedRuleParameters>> matchedRules, std::optional<String>)>&&);
+    void declarativeNetRequestGetDynamicRules(CompletionHandler<void(std::optional<String>, std::optional<String>)>&&);
+    void declarativeNetRequestUpdateDynamicRules(std::optional<String> rulesToAddJSON, std::optional<Vector<double>> ruleIDsToDelete, CompletionHandler<void(std::optional<String>)>&&);
+    void declarativeNetRequestGetSessionRules(CompletionHandler<void(std::optional<String>, std::optional<String>)>&&);
+    void declarativeNetRequestUpdateSessionRules(std::optional<String> rulesToAddJSON, std::optional<Vector<double>> ruleIDsToDelete, CompletionHandler<void(std::optional<String>)>&&);
 
     // Event APIs
     void addListener(WebPageProxyIdentifier, WebExtensionEventListenerType, WebExtensionContentWorldType);
@@ -435,6 +535,13 @@ private:
 
     // Extension APIs
     void extensionIsAllowedIncognitoAccess(CompletionHandler<void(bool)>&&);
+
+    // Menus APIs
+    void menusCreate(const WebExtensionMenuItemParameters&, CompletionHandler<void(std::optional<String>)>&&);
+    void menusUpdate(const String& identifier, const WebExtensionMenuItemParameters&, CompletionHandler<void(std::optional<String>)>&&);
+    void menusRemove(const String& identifier, CompletionHandler<void(std::optional<String>)>&&);
+    void menusRemoveAll(CompletionHandler<void(std::optional<String>)>&&);
+    void fireMenusClickedEventIfNeeded(const WebExtensionMenuItem&, bool wasChecked, const WebExtensionMenuItemContextParameters&);
 
     // Permissions APIs
     void permissionsGetAll(CompletionHandler<void(Vector<String> permissions, Vector<String> origins)>&&);
@@ -471,6 +578,11 @@ private:
     void scriptingExecuteScript(const WebExtensionScriptInjectionParameters&, CompletionHandler<void(std::optional<Vector<WebExtensionScriptInjectionResultParameters>>, WebExtensionDynamicScripts::Error)>&&);
     void scriptingInsertCSS(const WebExtensionScriptInjectionParameters&, CompletionHandler<void(WebExtensionDynamicScripts::Error)>&&);
     void scriptingRemoveCSS(const WebExtensionScriptInjectionParameters&, CompletionHandler<void(WebExtensionDynamicScripts::Error)>&&);
+    void scriptingRegisterContentScripts(const Vector<WebExtensionRegisteredScriptParameters>& scripts, CompletionHandler<void(WebExtensionDynamicScripts::Error)>&&);
+    void scriptingUpdateRegisteredScripts(const Vector<WebExtensionRegisteredScriptParameters>& scripts, CompletionHandler<void(WebExtensionDynamicScripts::Error)>&&);
+    void scriptingGetRegisteredScripts(const Vector<String>&, CompletionHandler<void(Vector<WebExtensionRegisteredScriptParameters> scripts)>&&);
+    void scriptingUnregisterContentScripts(const Vector<String>&, CompletionHandler<void(WebExtensionDynamicScripts::Error)>&&);
+    bool createInjectedContentForScripts(const Vector<WebExtensionRegisteredScriptParameters>&, WebExtensionDynamicScripts::WebExtensionRegisteredScript::FirstTimeRegistration, InjectedContentVector&, NSString *callingAPIName, NSString **errorMessage);
 
     // Tabs APIs
     void tabsCreate(WebPageProxyIdentifier, const WebExtensionTabParameters&, CompletionHandler<void(std::optional<WebExtensionTabParameters>, WebExtensionTab::Error)>&&);
@@ -511,8 +623,10 @@ private:
     void testFinished(bool result, String message, String sourceURL, unsigned lineNumber);
 
     // WebNavigation APIs
-    void webNavigationGetFrame(WebExtensionTabIdentifier, WebExtensionFrameIdentifier, CompletionHandler<void(std::optional<WebExtensionFrameParameters>)>&&);
-    void webNavigationGetAllFrames(WebExtensionTabIdentifier, CompletionHandler<void(std::optional<Vector<WebExtensionFrameParameters>>)>&&);
+    void webNavigationGetFrame(WebExtensionTabIdentifier, WebExtensionFrameIdentifier, CompletionHandler<void(std::optional<WebExtensionFrameParameters>, std::optional<String> error)>&&);
+    void webNavigationGetAllFrames(WebExtensionTabIdentifier, CompletionHandler<void(std::optional<Vector<WebExtensionFrameParameters>>, std::optional<String> error)>&&);
+    void webNavigationTraverseFrameTreeForFrame(_WKFrameTreeNode *, _WKFrameTreeNode *parentFrame, WebExtensionTab*, Vector<WebExtensionFrameParameters> &);
+    std::optional<WebExtensionFrameParameters> webNavigationFindFrameIdentifierInFrameTree(_WKFrameTreeNode *, _WKFrameTreeNode *parentFrame, WebExtensionTab*, WebExtensionFrameIdentifier);
 
     // Windows APIs
     void windowsCreate(const WebExtensionWindowParameters&, CompletionHandler<void(std::optional<WebExtensionWindowParameters>, WebExtensionWindow::Error)>&&);
@@ -558,8 +672,6 @@ private:
     ListHashSet<URL> m_cachedPermissionURLs;
     HashMap<URL, PermissionState> m_cachedPermissionStates;
 
-    RetainPtr<NSMapTable> m_temporaryTabPermissionMatchPatterns;
-
     bool m_requestedOptionalAccessToAllHosts { false };
     bool m_hasAccessInPrivateBrowsing { false };
 #ifdef NDEBUG
@@ -584,6 +696,9 @@ private:
     HashMap<Ref<WebExtensionMatchPattern>, UserScriptVector> m_injectedScriptsPerPatternMap;
     HashMap<Ref<WebExtensionMatchPattern>, UserStyleSheetVector> m_injectedStyleSheetsPerPatternMap;
 
+    HashMap<String, Ref<WebExtensionDynamicScripts::WebExtensionRegisteredScript>> m_registeredScriptsMap;
+    RetainPtr<_WKWebExtensionRegisteredScriptsSQLiteStore> m_registeredContentScriptsStorage;
+
     UserStyleSheetVector m_dynamicallyInjectedUserStyleSheets;
 
     HashMap<String, Ref<WebExtensionAlarm>> m_alarmMap;
@@ -603,6 +718,16 @@ private:
 
     CommandsVector m_commands;
     bool m_populatedCommands { false };
+
+    String m_declarativeNetRequestContentRuleListFilePath;
+    DeclarativeNetRequestMatchedRuleVector m_matchedRules;
+    RetainPtr<_WKWebExtensionDeclarativeNetRequestSQLiteStore> m_declarativeNetRequestDynamicRulesStore;
+    RetainPtr<_WKWebExtensionDeclarativeNetRequestSQLiteStore> m_declarativeNetRequestSessionRulesStore;
+    HashSet<double> m_sessionRulesIDs;
+    HashSet<double> m_dynamicRulesIDs;
+
+    MenuItemMap m_menuItems;
+    MenuItemVector m_mainMenuItems;
 };
 
 template<typename T>
@@ -625,19 +750,5 @@ void WebExtensionContext::sendToContentScriptProcessesForEvent(WebExtensionEvent
 }
 
 } // namespace WebKit
-
-namespace WTF {
-
-template<> struct EnumTraits<WebKit::WebExtensionContext::InstallReason> {
-    using values = EnumValues<
-        WebKit::WebExtensionContext::InstallReason,
-        WebKit::WebExtensionContext::InstallReason::None,
-        WebKit::WebExtensionContext::InstallReason::ExtensionInstall,
-        WebKit::WebExtensionContext::InstallReason::ExtensionUpdate,
-        WebKit::WebExtensionContext::InstallReason::BrowserUpdate
-    >;
-};
-
-} // namespace WTF
 
 #endif // ENABLE(WK_WEB_EXTENSIONS)

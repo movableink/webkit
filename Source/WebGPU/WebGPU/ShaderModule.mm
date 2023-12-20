@@ -27,8 +27,10 @@
 #import "ShaderModule.h"
 
 #import "APIConversions.h"
+#import "ASTFunction.h"
 #import "Device.h"
 #import "PipelineLayout.h"
+#import "WGSLShaderModule.h"
 
 #import <WebGPU/WebGPU.h>
 #import <wtf/DataLog.h>
@@ -76,6 +78,7 @@ id<MTLLibrary> ShaderModule::createLibrary(id<MTLDevice> device, const String& m
     if (error) {
         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=250442
         WTFLogAlways("MSL compilation error: %@", error);
+        WGPU_FUZZER_ASSERT_NOT_REACHED("Failed metal compilation");
     }
     library.label = label;
     return library;
@@ -122,6 +125,7 @@ Ref<ShaderModule> Device::createShaderModule(const WGPUShaderModuleDescriptor& d
             // https://bugs.webkit.org/show_bug.cgi?id=254258
             UNUSED_PARAM(earlyCompileShaderModule);
         }
+
     } else {
         auto& failedCheck = std::get<WGSL::FailedCheck>(checkResult);
         StringPrintStream message;
@@ -151,6 +155,46 @@ ShaderModule::ShaderModule(std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck
     , m_library(library)
     , m_device(device)
 {
+    bool allowVertexDefault = true, allowFragmentDefault = true, allowComputeDefault = true;
+    if (std::holds_alternative<WGSL::SuccessfulCheck>(m_checkResult)) {
+        auto& check = std::get<WGSL::SuccessfulCheck>(m_checkResult);
+        for (auto& declaration : check.ast->declarations()) {
+            if (!is<WGSL::AST::Function>(declaration))
+                continue;
+            auto& function = downcast<WGSL::AST::Function>(declaration);
+            if (!function.stage())
+                continue;
+            switch (*function.stage()) {
+            case WGSL::ShaderStage::Vertex: {
+                if (!allowVertexDefault || m_defaultVertexEntryPoint.length()) {
+                    allowVertexDefault = false;
+                    m_defaultVertexEntryPoint = emptyString();
+                    continue;
+                }
+                m_defaultVertexEntryPoint = function.name();
+            } break;
+            case WGSL::ShaderStage::Fragment: {
+                if (!allowFragmentDefault || m_defaultFragmentEntryPoint.length()) {
+                    allowFragmentDefault = false;
+                    m_defaultFragmentEntryPoint = emptyString();
+                    continue;
+                }
+                m_defaultFragmentEntryPoint = function.name();
+            } break;
+            case WGSL::ShaderStage::Compute: {
+                if (!allowComputeDefault || m_defaultComputeEntryPoint.length()) {
+                    allowComputeDefault = false;
+                    m_defaultComputeEntryPoint = emptyString();
+                    continue;
+                }
+                m_defaultComputeEntryPoint = function.name();
+            } break;
+            default:
+                ASSERT_NOT_REACHED();
+                break;
+            }
+        }
+    }
 }
 
 ShaderModule::ShaderModule(Device& device, CheckResult&& checkResult)
@@ -323,6 +367,64 @@ static auto wgslViewDimension(WGPUTextureViewDimension viewDimension)
     }
 }
 
+static WGSL::StorageTextureAccess wgslAccess(WGPUStorageTextureAccess access)
+{
+    switch (access) {
+    case WGPUStorageTextureAccess_WriteOnly:
+        return WGSL::StorageTextureAccess::WriteOnly;
+    case WGPUStorageTextureAccess_ReadOnly:
+        return WGSL::StorageTextureAccess::ReadOnly;
+    case WGPUStorageTextureAccess_ReadWrite:
+        return WGSL::StorageTextureAccess::ReadWrite;
+    case WGPUStorageTextureAccess_Undefined:
+    case WGPUStorageTextureAccess_Force32:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+}
+
+static WGSL::TexelFormat wgslFormat(WGPUTextureFormat format)
+{
+    switch (format) {
+    case WGPUTextureFormat_BGRA8Unorm:
+        return WGSL::TexelFormat::BGRA8unorm;
+    case WGPUTextureFormat_R32Float:
+        return WGSL::TexelFormat::R32float;
+    case WGPUTextureFormat_R32Sint:
+        return WGSL::TexelFormat::R32sint;
+    case WGPUTextureFormat_R32Uint:
+        return WGSL::TexelFormat::R32uint;
+    case WGPUTextureFormat_RG32Float:
+        return WGSL::TexelFormat::RG32float;
+    case WGPUTextureFormat_RG32Sint:
+        return WGSL::TexelFormat::RG32sint;
+    case WGPUTextureFormat_RG32Uint:
+        return WGSL::TexelFormat::RG32uint;
+    case WGPUTextureFormat_RGBA16Float:
+        return WGSL::TexelFormat::RGBA16float;
+    case WGPUTextureFormat_RGBA16Sint:
+        return WGSL::TexelFormat::RGBA16sint;
+    case WGPUTextureFormat_RGBA16Uint:
+        return WGSL::TexelFormat::RGBA16uint;
+    case WGPUTextureFormat_RGBA32Float:
+        return WGSL::TexelFormat::RGBA32float;
+    case WGPUTextureFormat_RGBA32Sint:
+        return WGSL::TexelFormat::RGBA32sint;
+    case WGPUTextureFormat_RGBA32Uint:
+        return WGSL::TexelFormat::RGBA32uint;
+    case WGPUTextureFormat_RGBA8Sint:
+        return WGSL::TexelFormat::RGBA8sint;
+    case WGPUTextureFormat_RGBA8Snorm:
+        return WGSL::TexelFormat::RGBA8snorm;
+    case WGPUTextureFormat_RGBA8Uint:
+        return WGSL::TexelFormat::RGBA8uint;
+    case WGPUTextureFormat_RGBA8Unorm:
+        return WGSL::TexelFormat::RGBA8unorm;
+    default:
+        ASSERT_NOT_REACHED();
+        return WGSL::TexelFormat::BGRA8unorm;
+    }
+}
+
 static WGSL::BindGroupLayoutEntry::BindingMember convertBindingLayout(const BindGroupLayout::Entry::BindingLayout& bindingLayout)
 {
     return WTF::switchOn(bindingLayout, [](const WGPUBufferBindingLayout& bindingLayout) -> WGSL::BindGroupLayoutEntry::BindingMember {
@@ -343,6 +445,8 @@ static WGSL::BindGroupLayoutEntry::BindingMember convertBindingLayout(const Bind
         };
     }, [](const WGPUStorageTextureBindingLayout& bindingLayout) -> WGSL::BindGroupLayoutEntry::BindingMember {
         return WGSL::StorageTextureBindingLayout {
+            .access = wgslAccess(bindingLayout.access),
+            .format = wgslFormat(bindingLayout.format),
             .viewDimension = wgslViewDimension(bindingLayout.viewDimension)
         };
     }, [](const WGPUExternalTextureBindingLayout&) -> WGSL::BindGroupLayoutEntry::BindingMember {
@@ -365,14 +469,22 @@ WGSL::PipelineLayout ShaderModule::convertPipelineLayout(const PipelineLayout& p
             wgslEntry.bindingMember = convertBindingLayout(entry.value.bindingLayout);
             wgslEntry.vertexArgumentBufferIndex = entry.value.argumentBufferIndices[WebGPU::ShaderStage::Vertex];
             wgslEntry.vertexArgumentBufferSizeIndex = entry.value.bufferSizeArgumentBufferIndices[WebGPU::ShaderStage::Vertex];
-            wgslEntry.vertexBufferDynamicOffset = entry.value.vertexDynamicOffset;
+            if (entry.value.vertexDynamicOffset) {
+                RELEASE_ASSERT(!(entry.value.vertexDynamicOffset.value() % sizeof(uint32_t)));
+                wgslEntry.vertexBufferDynamicOffset = *entry.value.vertexDynamicOffset / sizeof(uint32_t);
+            }
             wgslEntry.fragmentArgumentBufferIndex = entry.value.argumentBufferIndices[WebGPU::ShaderStage::Fragment];
             wgslEntry.fragmentArgumentBufferSizeIndex = entry.value.bufferSizeArgumentBufferIndices[WebGPU::ShaderStage::Fragment];
-            if (entry.value.fragmentDynamicOffset)
-                wgslEntry.fragmentBufferDynamicOffset = *entry.value.fragmentDynamicOffset + 2;
+            if (entry.value.fragmentDynamicOffset) {
+                RELEASE_ASSERT(!(entry.value.fragmentDynamicOffset.value() % sizeof(uint32_t)));
+                wgslEntry.fragmentBufferDynamicOffset = *entry.value.fragmentDynamicOffset / sizeof(uint32_t) + RenderBundleEncoder::startIndexForFragmentDynamicOffsets;
+            }
             wgslEntry.computeArgumentBufferIndex = entry.value.argumentBufferIndices[WebGPU::ShaderStage::Compute];
             wgslEntry.computeArgumentBufferSizeIndex = entry.value.bufferSizeArgumentBufferIndices[WebGPU::ShaderStage::Compute];
-            wgslEntry.computeBufferDynamicOffset = entry.value.computeDynamicOffset;
+            if (entry.value.computeDynamicOffset) {
+                RELEASE_ASSERT(!(entry.value.computeDynamicOffset.value() % sizeof(uint32_t)));
+                wgslEntry.computeBufferDynamicOffset = *entry.value.computeDynamicOffset / sizeof(uint32_t);
+            }
             wgslBindGroupLayout.entries.append(wgslEntry);
         }
 
@@ -408,6 +520,21 @@ const WGSL::Reflection::EntryPointInformation* ShaderModule::entryPointInformati
     if (iterator == m_entryPointInformation.end())
         return nullptr;
     return &iterator->value;
+}
+
+const String& ShaderModule::defaultVertexEntryPoint() const
+{
+    return m_defaultVertexEntryPoint;
+}
+
+const String& ShaderModule::defaultFragmentEntryPoint() const
+{
+    return m_defaultFragmentEntryPoint;
+}
+
+const String& ShaderModule::defaultComputeEntryPoint() const
+{
+    return m_defaultComputeEntryPoint;
 }
 
 } // namespace WebGPU

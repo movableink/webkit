@@ -1,5 +1,6 @@
 suffixes = {
     f: f32,
+    h: f16,
     i: i32,
     u: u32,
 }
@@ -10,9 +11,8 @@ suffixes = {
     end
 
     [2, 3, 4].each do |m|
-        # FIXME: add alias for F16 once we support it
-        #type_alias :"mat#{n}x#{m}f", mat[n][m](f32)[f32, n, m]
         type_alias :"mat#{n}x#{m}f", mat[n,m][f32]
+        type_alias :"mat#{n}x#{m}h", mat[n,m][f16]
     end
 end
 
@@ -248,6 +248,13 @@ constructor :f32, {
     [].() => f32,
 }
 
+constructor :f16, {
+    must_use: true,
+    const: true,
+
+    [].() => f16,
+}
+
 constructor :vec2, {
     must_use: true,
     const: true,
@@ -293,8 +300,13 @@ constructor :bool, {
     [T < ConcreteScalar].(T) => bool,
 }
 
-# 16.1.2.3. f16
-# FIXME: add support for f16
+# 16.1.2.3.
+constructor :f16, {
+    must_use: true,
+    const: true,
+
+    [T < ConcreteScalar].(T) => f16,
+}
 
 # 16.1.2.4.
 constructor :f32, {
@@ -626,19 +638,19 @@ function :frexp, {
     const: true,
 
     [].(f32) => __frexp_result_f32,
-    # [].(f16) => __frexp_result_f16,
+    [].(f16) => __frexp_result_f16,
     [].(abstract_float) => __frexp_result_abstract,
 
     [].(vec2[f32]) => __frexp_result_vec2_f32,
-    # [].(vec2[f16]) => __frexp_result_vec2_f16,
+    [].(vec2[f16]) => __frexp_result_vec2_f16,
     [].(vec2[abstract_float]) => __frexp_result_vec2_abstract,
 
     [].(vec3[f32]) => __frexp_result_vec3_f32,
-    # [].(vec3[f16]) => __frexp_result_vec3_f16,
+    [].(vec3[f16]) => __frexp_result_vec3_f16,
     [].(vec3[abstract_float]) => __frexp_result_vec3_abstract,
 
     [].(vec4[f32]) => __frexp_result_vec4_f32,
-    # [].(vec4[f16]) => __frexp_result_vec4_f16,
+    [].(vec4[f16]) => __frexp_result_vec4_f16,
     [].(vec4[abstract_float]) => __frexp_result_vec4_abstract,
 }
 
@@ -724,7 +736,21 @@ function :modf, {
     must_use: true,
     const: true,
 
-    # FIXME: this needs the special return types __modf_result_*
+    [].(f32) => __modf_result_f32,
+    [].(f16) => __modf_result_f16,
+    [].(abstract_float) => __modf_result_abstract,
+
+    [].(vec2[f32]) => __modf_result_vec2_f32,
+    [].(vec2[f16]) => __modf_result_vec2_f16,
+    [].(vec2[abstract_float]) => __modf_result_vec2_abstract,
+
+    [].(vec3[f32]) => __modf_result_vec3_f32,
+    [].(vec3[f16]) => __modf_result_vec3_f16,
+    [].(vec3[abstract_float]) => __modf_result_vec3_abstract,
+
+    [].(vec4[f32]) => __modf_result_vec4_f32,
+    [].(vec4[f16]) => __modf_result_vec4_f16,
+    [].(vec4[abstract_float]) => __modf_result_vec4_abstract,
 }
 
 # 16.5.43
@@ -1349,6 +1375,7 @@ function :atomicStore, {
     :atomicSub,
     :atomicMax,
     :atomicMin,
+    :atomicAnd,
     :atomicOr,
     :atomicXor,
     :atomicExchange,

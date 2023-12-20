@@ -122,7 +122,7 @@ messages -> WebPageProxy {
 
     # Frame lifetime messages
     DidCreateMainFrame(WebCore::FrameIdentifier frameID)
-    DidCreateSubframe(WebCore::FrameIdentifier parent, WebCore::FrameIdentifier newFrameID)
+    DidCreateSubframe(WebCore::FrameIdentifier parent, WebCore::FrameIdentifier newFrameID, String frameName)
 
     # Frame load messages
     DidStartProvisionalLoadForFrame(WebCore::FrameIdentifier frameID, struct WebKit::FrameInfoData frameInfo, WebCore::ResourceRequest request, uint64_t navigationID, URL url, URL unreachableURL, WebKit::UserData userData)
@@ -271,9 +271,7 @@ messages -> WebPageProxy {
     ShowContextMenu(WebKit::ContextMenuContextData contextMenuContextData, WebKit::UserData userData)
 #endif
 
-#if ENABLE(SERVICE_WORKER)
     DidFinishServiceWorkerPageRegistration(bool success)
-#endif
 
     # Database messages
     ExceededDatabaseQuota(WebCore::FrameIdentifier frameID, String originIdentifier, String databaseName, String databaseDisplayName, uint64_t currentQuota, uint64_t currentOriginUsage, uint64_t currentDatabaseUsage, uint64_t expectedUsage) -> (uint64_t newQuota) Synchronous
@@ -397,6 +395,7 @@ messages -> WebPageProxy {
     ElementDidFocus(struct WebKit::FocusedElementInformation information, bool userIsInteracting, bool blurPreviousNode, OptionSet<WebCore::ActivityState> activityStateChanges, WebKit::UserData userData)
     ElementDidBlur()
     UpdateInputContextAfterBlurringAndRefocusingElement()
+    UpdateFocusedElementInformation(struct WebKit::FocusedElementInformation information)
     FocusedElementDidChangeInputMode(enum:uint8_t WebCore::InputMode mode)
     ScrollingNodeScrollWillStartScroll(uint64_t nodeID)
     ScrollingNodeScrollDidEndScroll(uint64_t nodeID)
@@ -464,6 +463,8 @@ messages -> WebPageProxy {
     HandleAutoFillButtonClick(WebKit::UserData userData)
 
     DidResignInputElementStrongPasswordAppearance(WebKit::UserData userData)
+
+    PerformSwitchHapticFeedback()
 
 #if ENABLE(CONTENT_EXTENSIONS)
     ContentRuleListNotification(URL url, struct WebCore::ContentRuleListResults results)
@@ -629,9 +630,18 @@ messages -> WebPageProxy {
 
     RequestCookieConsent() -> (enum:uint8_t WebCore::CookieConsentDecisionResult result)
 
+#if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
+    DidAccessWindowProxyPropertyViaOpenerForFrame(WebCore::FrameIdentifier frameID, WebCore::SecurityOriginData openerOrigin, enum:uint8_t WebCore::WindowProxyProperty property)
+#endif
+
     DidApplyLinkDecorationFiltering(URL originalURL, URL adjustedURL)
     BroadcastFrameRemovalToOtherProcesses(WebCore::FrameIdentifier frameID)
     BroadcastMainFrameURLChangeToOtherProcesses(URL newURL)
 
     DispatchLoadEventToFrameOwnerElement(WebCore::FrameIdentifier frameID)
+
+    CloseRemoteFrame(WebCore::FrameIdentifier frameID)
+    FocusRemoteFrame(WebCore::FrameIdentifier frameID)
+    PostMessageToRemote(WebCore::FrameIdentifier source, String sourceOrigin, WebCore::FrameIdentifier target, std::optional<WebCore::SecurityOriginData> targetOrigin, struct WebCore::MessageWithMessagePorts message)
+    RenderTreeAsText(WebCore::FrameIdentifier identifier, size_t baseIndent, OptionSet<WebCore::RenderAsTextFlag> behavior) -> (String renderTreeDump) Synchronous
 }

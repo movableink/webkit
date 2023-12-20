@@ -308,7 +308,7 @@ static RefPtr<VideoFrame> adaptVideoFrame(VideoFrameAdaptor& adaptor, VideoFrame
 
 IntSize RealtimeMediaSource::computeResizedVideoFrameSize(IntSize desiredSize, IntSize actualSize)
 {
-    ASSERT(!actualSize.isEmpty());
+    ASSERT(!actualSize.isZero());
     if (desiredSize.width() && !desiredSize.height())
         return { desiredSize.width(), desiredSize.width() * actualSize.height() / actualSize.width() };
     if (desiredSize.height() && !desiredSize.width())
@@ -1456,9 +1456,14 @@ void RealtimeMediaSource::setType(Type type)
     });
 }
 
-void RealtimeMediaSource::getPhotoCapabilities(PhotoCapabilitiesHandler&& completion)
+auto RealtimeMediaSource::takePhoto(PhotoSettings&&) -> Ref<TakePhotoNativePromise>
 {
-    completion(PhotoCapabilitiesOrError("Not supported"_s));
+    return TakePhotoNativePromise::createAndReject("Not supported"_s);
+}
+
+auto RealtimeMediaSource::getPhotoCapabilities() -> Ref<PhotoCapabilitiesNativePromise>
+{
+    return PhotoCapabilitiesNativePromise::createAndReject("Not supported"_s);
 }
 
 auto RealtimeMediaSource::getPhotoSettings() -> Ref<PhotoSettingsNativePromise>

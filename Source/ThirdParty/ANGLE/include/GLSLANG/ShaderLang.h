@@ -26,7 +26,7 @@
 
 // Version number for shader translation API.
 // It is incremented every time the API changes.
-#define ANGLE_SH_VERSION 342
+#define ANGLE_SH_VERSION 345
 
 enum ShShaderSpec
 {
@@ -435,6 +435,9 @@ struct ShCompileOptions
     // Rescope globals that are only used in one function to be function-local.
     uint64_t rescopeGlobalVariables : 1;
 
+    // Pre-transform explicit cubemap derivatives for Apple GPUs.
+    uint64_t preTransformTextureCubeGradDerivatives : 1;
+
     ShCompileOptionsMetal metal;
     ShPixelLocalStorageOptions pls;
 };
@@ -638,6 +641,9 @@ struct ShBuiltInResources
 
     // maximum number of shader storage buffer bindings
     int MaxShaderStorageBufferBindings;
+
+    // minimum point size (lower limit from ALIASED_POINT_SIZE_RANGE)
+    float MinPointSize;
 
     // maximum point size (higher limit from ALIASED_POINT_SIZE_RANGE)
     float MaxPointSize;
@@ -1110,6 +1116,12 @@ extern const char kDepthWriteEnabledConstName[];
 
 // Specialization constant to enable alpha to coverage.
 extern const char kEmulateAlphaToCoverageConstName[];
+
+// Specialization constant to write helper sample mask output.
+extern const char kWriteHelperSampleMaskConstName[];
+
+// Specialization constant to enable sample mask output.
+extern const char kSampleMaskWriteEnabledConstName[];
 }  // namespace mtl
 
 }  // namespace sh

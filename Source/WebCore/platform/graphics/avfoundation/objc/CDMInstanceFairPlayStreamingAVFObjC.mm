@@ -34,6 +34,7 @@
 #import "ContentKeyGroupFactoryAVFObjC.h"
 #import "InitDataRegistry.h"
 #import "Logging.h"
+#import "MediaSampleAVFObjC.h"
 #import "MediaSessionManagerCocoa.h"
 #import "NotImplemented.h"
 #import "SharedBuffer.h"
@@ -609,6 +610,21 @@ void CDMInstanceFairPlayStreamingAVFObjC::externalProtectionStatusDidChangeForCo
     ASSERT_NOT_REACHED();
 }
 
+void CDMInstanceFairPlayStreamingAVFObjC::attachContentKeyToSample(const MediaSampleAVFObjC& sample)
+{
+    auto& keyIDs = sample.keyIDs();
+    if (keyIDs.isEmpty())
+        return;
+
+    if (auto* session = sessionForKeyIDs(keyIDs)) {
+        session->attachContentKeyToSample(sample);
+        return;
+    }
+
+    ERROR_LOG(LOGIDENTIFIER, "- no responsible session; dropping");
+    ASSERT_NOT_REACHED();
+}
+
 CDMInstanceSessionFairPlayStreamingAVFObjC* CDMInstanceFairPlayStreamingAVFObjC::sessionForKeyIDs(const Keys& keyIDs) const
 {
     for (auto& sessionInterface : m_sessions) {
@@ -662,21 +678,28 @@ CDMInstanceSessionFairPlayStreamingAVFObjC* CDMInstanceFairPlayStreamingAVFObjC:
     return nullptr;
 }
 
+static bool isPotentiallyUsableKeyStatus(CDMInstanceSession::KeyStatus status)
+{
+    switch (status) {
+    case CDMInstanceSession::KeyStatus::Expired:
+    case CDMInstanceSession::KeyStatus::Released:
+    case CDMInstanceSession::KeyStatus::InternalError:
+        // Key is unusable.
+        return false;
+    case CDMInstanceSession::KeyStatus::Usable:
+    case CDMInstanceSession::KeyStatus::OutputRestricted:
+    case CDMInstanceSession::KeyStatus::OutputDownscaled:
+    case CDMInstanceSession::KeyStatus::StatusPending:
+        // Key is (potentially) usable.
+        return true;
+    }
+}
+
 bool CDMInstanceFairPlayStreamingAVFObjC::isAnyKeyUsable(const Keys& keys) const
 {
     for (auto& sessionInterface : m_sessions) {
-        if (!sessionInterface)
-            continue;
-
-        for (auto& keyStatusPair : sessionInterface->keyStatuses()) {
-            if (keyStatusPair.second != CDMInstanceSession::KeyStatus::Usable)
-                continue;
-
-            if (keys.findIf([&] (auto& key) {
-                return key.get() == keyStatusPair.first.get();
-            }) != notFound)
-                return true;
-        }
+        if (sessionInterface && sessionInterface->isAnyKeyUsable(keys))
+            return true;
     }
     return false;
 }
@@ -850,6 +873,7 @@ void CDMInstanceSessionFairPlayStreamingAVFObjC::updateLicense(const String&, Li
             callback(false, std::nullopt, std::nullopt, std::nullopt, Failed);
             return;
         }
+        m_renewingRequest = m_requests.last();
         ALWAYS_LOG(LOGIDENTIFIER, "\"renew\", processing renewal");
         auto session = m_session ? m_session.get() : m_instance->contentKeySession();
         [session renewExpiringResponseDataForContentKeyRequest:request];
@@ -1320,7 +1344,23 @@ void CDMInstanceSessionFairPlayStreamingAVFObjC::didProvideRenewingRequest(AVCon
 
     // The assumption here is that AVContentKeyRequest will only ever notify us of a renewing request as a result of calling
     // -renewExpiringResponseDataForContentKeyRequest: with an existing request.
-    ASSERT(m_requests.contains(m_currentRequest));
+    if (!m_renewingRequest
+        || m_renewingRequest->requests.size() != 1
+        || !m_renewingRequest->requests[0]
+        || ![[m_renewingRequest->requests[0] identifier] isEqual:request.identifier])
+    {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    auto renewingIndex = m_requests.find(*m_renewingRequest);
+    if (renewingIndex == notFound) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    m_requests[renewingIndex] = *m_currentRequest;
+    m_renewingRequest = std::nullopt;
 
     RetainPtr<NSData> appIdentifier;
     if (auto* certificate = m_instance->serverCertificate())
@@ -1460,6 +1500,21 @@ bool CDMInstanceSessionFairPlayStreamingAVFObjC::hasKey(AVContentKey *key) const
 bool CDMInstanceSessionFairPlayStreamingAVFObjC::hasRequest(AVContentKeyRequest *keyRequest) const
 {
     return contentKeyRequests().contains(keyRequest);
+}
+
+bool CDMInstanceSessionFairPlayStreamingAVFObjC::isAnyKeyUsable(const Keys& keys) const
+{
+    for (auto& keyStatusPair : keyStatuses()) {
+        if (!isPotentiallyUsableKeyStatus(keyStatusPair.second))
+            continue;
+
+        if (keys.findIf([&] (auto& key) {
+            return key.get() == keyStatusPair.first.get();
+        }) != notFound)
+            return true;
+    }
+
+    return false;
 }
 
 bool CDMInstanceSessionFairPlayStreamingAVFObjC::shouldRetryRequestForReason(AVContentKeyRequest *, NSString *)
@@ -1682,6 +1737,39 @@ bool CDMInstanceSessionFairPlayStreamingAVFObjC::isLicenseTypeSupported(LicenseT
     case CDMSessionType::Temporary:
         return true;
     }
+}
+
+AVContentKey *CDMInstanceSessionFairPlayStreamingAVFObjC::contentKeyForSample(const MediaSampleAVFObjC& sample)
+{
+    auto& sampleKeyIDs = sample.keyIDs();
+    size_t keyStatusIndex = 0;
+
+    for (auto& request : contentKeyRequests()) {
+        for (auto& keyID : keyIDsForRequest(request.get())) {
+            if (!isPotentiallyUsableKeyStatus(m_keyStatuses[keyStatusIndex++].second))
+                continue;
+
+            if (!sampleKeyIDs.containsIf([&](auto& sampleKeyID) { return sampleKeyID.get() == keyID.get(); }))
+                continue;
+
+            if (AVContentKey *contentKey = [request contentKey])
+                return contentKey;
+        }
+    }
+
+    ASSERT(!isAnyKeyUsable(sampleKeyIDs));
+    return nil;
+}
+
+void CDMInstanceSessionFairPlayStreamingAVFObjC::attachContentKeyToSample(const MediaSampleAVFObjC& sample)
+{
+    AVContentKey *contentKey = contentKeyForSample(sample);
+    if (!contentKey)
+        return;
+
+    NSError *error = nil;
+    if (!AVSampleBufferAttachContentKey(sample.platformSample().sample.cmSampleBuffer, contentKey, &error))
+        ERROR_LOG(LOGIDENTIFIER, "Failed to attach content key with error: %{public}@", error);
 }
 
 Vector<RetainPtr<AVContentKey>> CDMInstanceSessionFairPlayStreamingAVFObjC::contentKeyGroupDataSourceKeys() const

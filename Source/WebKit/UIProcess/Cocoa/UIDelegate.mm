@@ -203,7 +203,6 @@ void UIDelegate::setDelegate(id <WKUIDelegate> delegate)
 
 #if ENABLE(WEB_AUTHN)
     m_delegateMethods.webViewRunWebAuthenticationPanelInitiatedByFrameCompletionHandler = [delegate respondsToSelector:@selector(_webView:runWebAuthenticationPanel:initiatedByFrame:completionHandler:)];
-    m_delegateMethods.webViewRequestWebAuthenticationNoGestureForOriginCompletionHandler = [delegate respondsToSelector:@selector(_webView:requestWebAuthenticationNoGestureForOrigin:completionHandler:)];
 #endif
     
     m_delegateMethods.webViewDidEnableInspectorBrowserDomain = [delegate respondsToSelector:@selector(_webViewDidEnableInspectorBrowserDomain:)];
@@ -214,9 +213,17 @@ void UIDelegate::setDelegate(id <WKUIDelegate> delegate)
         m_delegateMethods.webViewRequestPermissionForXRSessionOriginModeAndFeaturesWithCompletionHandler = true;
     else
         m_delegateMethods.webViewRequestPermissionForXRSessionOriginModeAndFeaturesWithCompletionHandler = [delegate respondsToSelector:@selector(_webView:requestPermissionForXRSessionOrigin:mode:grantedFeatures:consentRequiredFeatures:consentOptionalFeatures:completionHandler:)];
-    m_delegateMethods.webViewStartXRSessionWithCompletionHandler = [delegate respondsToSelector:@selector(_webView:startXRSessionWithCompletionHandler:)];
-    m_delegateMethods.webViewEndXRSession = [delegate respondsToSelector:@selector(_webViewEndXRSession:)];
+
+#if PLATFORM(IOS_FAMILY)
+    if ([delegate respondsToSelector:@selector(_webView:startXRSessionWithFeatures:completionHandler:)])
+        m_delegateMethods.webViewStartXRSessionWithCompletionHandler = true;
+    else
 #endif
+        m_delegateMethods.webViewStartXRSessionWithCompletionHandler = [delegate respondsToSelector:@selector(_webView:startXRSessionWithCompletionHandler:)];
+
+    m_delegateMethods.webViewEndXRSession = [delegate respondsToSelector:@selector(_webViewEndXRSession:)];
+#endif // ENABLE(WEBXR)
+
     m_delegateMethods.webViewRequestNotificationPermissionForSecurityOriginDecisionHandler = [delegate respondsToSelector:@selector(_webView:requestNotificationPermissionForSecurityOrigin:decisionHandler:)];
     m_delegateMethods.webViewRequestCookieConsentWithMoreInfoHandlerDecisionHandler = [delegate respondsToSelector:@selector(_webView:requestCookieConsentWithMoreInfoHandler:decisionHandler:)];
 
@@ -429,7 +436,7 @@ void UIDelegate::UIClient::runJavaScriptPrompt(WebPageProxy& page, const WTF::St
     }).get()];
 }
 
-void UIDelegate::UIClient::requestStorageAccessConfirm(WebPageProxy& webPageProxy, WebFrameProxy*, const WebCore::RegistrableDomain& requestingDomain, const WebCore::RegistrableDomain& currentDomain, CompletionHandler<void(bool)>&& completionHandler)
+void UIDelegate::UIClient::requestStorageAccessConfirm(WebPageProxy& webPageProxy, WebFrameProxy*, const WebCore::RegistrableDomain& requestingDomain, const WebCore::RegistrableDomain& currentDomain, std::optional<WebCore::OrganizationStorageAccessPromptQuirk>&& organizationStorageAccessPromptQuirk, CompletionHandler<void(bool)>&& completionHandler)
 {
     if (!m_uiDelegate)
         return completionHandler(false);
@@ -437,6 +444,13 @@ void UIDelegate::UIClient::requestStorageAccessConfirm(WebPageProxy& webPageProx
     auto delegate = m_uiDelegate->m_delegate.get();
     if (!delegate) {
         completionHandler(false);
+        return;
+    }
+
+    if (organizationStorageAccessPromptQuirk) {
+#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
+        presentStorageAccessAlertSSOQuirk(m_uiDelegate->m_webView.get().get(), organizationStorageAccessPromptQuirk->organizationName, organizationStorageAccessPromptQuirk->domainPairings, WTFMove(completionHandler));
+#endif
         return;
     }
 
@@ -1739,28 +1753,6 @@ void UIDelegate::UIClient::runWebAuthenticationPanel(WebPageProxy& page, API::We
         completionHandler(webAuthenticationPanelResult(result));
     }).get()];
 }
-
-void UIDelegate::UIClient::requestWebAuthenticationNoGesture(API::SecurityOrigin& origin, CompletionHandler<void(bool)>&& completionHandler)
-{
-    if (!m_uiDelegate)
-        return completionHandler(false);
-
-    if (!m_uiDelegate->m_delegateMethods.webViewRequestWebAuthenticationNoGestureForOriginCompletionHandler)
-        return completionHandler(false);
-
-    auto delegate = m_uiDelegate->m_delegate.get();
-    if (!delegate)
-        return completionHandler(false);
-
-    auto checker = CompletionHandlerCallChecker::create(delegate.get(), @selector(_webView:requestWebAuthenticationNoGestureForOrigin:completionHandler:));
-    [(id <WKUIDelegatePrivate>)delegate _webView:m_uiDelegate->m_webView.get().get() requestWebAuthenticationNoGestureForOrigin: wrapper(origin) completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler), checker = WTFMove(checker)] (BOOL result) mutable {
-        if (checker->completionHandlerHasBeenCalled())
-            return;
-        checker->didCallCompletionHandler();
-        completionHandler(result);
-    }).get()];
-}
-
 #endif // ENABLE(WEB_AUTHN)
 
 void UIDelegate::UIClient::hasVideoInPictureInPictureDidChange(WebPageProxy*, bool hasVideoInPictureInPicture)
@@ -2003,16 +1995,28 @@ void UIDelegate::UIClient::requestPermissionOnXRSessionFeatures(WebPageProxy&, c
     }
 }
 
-void UIDelegate::UIClient::startXRSession(WebPageProxy&, CompletionHandler<void(RetainPtr<id>)>&& completionHandler)
+#if PLATFORM(IOS_FAMILY)
+void UIDelegate::UIClient::startXRSession(WebPageProxy&, const PlatformXR::Device::FeatureList& sessionFeatures, CompletionHandler<void(RetainPtr<id>, PlatformViewController *)>&& completionHandler)
 {
     if (!m_uiDelegate || !m_uiDelegate->m_delegateMethods.webViewStartXRSessionWithCompletionHandler) {
-        completionHandler(nil);
+        completionHandler(nil, nil);
         return;
     }
 
     auto delegate = (id <WKUIDelegatePrivate>)m_uiDelegate->m_delegate.get();
     if (!delegate) {
-        completionHandler(nil);
+        completionHandler(nil, nil);
+        return;
+    }
+
+    if ([delegate respondsToSelector:@selector(_webView:startXRSessionWithFeatures:completionHandler:)]) {
+        auto checker = CompletionHandlerCallChecker::create(delegate, @selector(_webView:startXRSessionWithFeatures:completionHandler:));
+        [delegate _webView:m_uiDelegate->m_webView.get().get() startXRSessionWithFeatures:toWKXRSessionFeatureFlags(sessionFeatures) completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler), checker = WTFMove(checker)] (id result, UIViewController *viewController) mutable {
+            if (checker->completionHandlerHasBeenCalled())
+                return;
+            checker->didCallCompletionHandler();
+            completionHandler(result, viewController);
+        }).get()];
         return;
     }
 
@@ -2021,7 +2025,7 @@ void UIDelegate::UIClient::startXRSession(WebPageProxy&, CompletionHandler<void(
         if (checker->completionHandlerHasBeenCalled())
             return;
         checker->didCallCompletionHandler();
-        completionHandler(result);
+        completionHandler(result, nil);
     }).get()];
 }
 
@@ -2036,6 +2040,8 @@ void UIDelegate::UIClient::endXRSession(WebPageProxy&)
 
     [delegate _webViewEndXRSession:m_uiDelegate->m_webView.get().get()];
 }
+#endif // PLATFORM(IOS_FAMILY)
+
 #endif // ENABLE(WEBXR)
 
 } // namespace WebKit

@@ -74,6 +74,11 @@
 #include <WebCore/PlatformDisplay.h>
 #endif
 
+#if ENABLE(EXTENSION_CAPABILITIES)
+#include "ExtensionCapabilityGrant.h"
+#include "MediaCapability.h"
+#endif
+
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, this->connection())
 
 namespace WebKit {
@@ -116,9 +121,15 @@ GPUProcessProxy* GPUProcessProxy::singletonIfCreated()
 }
 
 #if USE(SANDBOX_EXTENSIONS_FOR_CACHE_AND_TEMP_DIRECTORY_ACCESS)
-static String gpuProcessCachesDirectory()
+static String gpuProcessCachesDirectory(bool isExtension)
 {
-    String path = WebsiteDataStore::cacheDirectoryInContainerOrHomeDirectory("/Library/Caches/com.apple.WebKit.GPU/"_s);
+    ASCIILiteral cacheDirectory;
+    if (isExtension)
+        cacheDirectory = "/Library/Caches/com.apple.WebKit.GPUExtension/"_s;
+    else
+        cacheDirectory = "/Library/Caches/com.apple.WebKit.GPU/"_s;
+
+    String path = WebsiteDataStore::cacheDirectoryInContainerOrHomeDirectory(cacheDirectory);
 
     FileSystem::makeAllDirectories(path);
     
@@ -154,7 +165,11 @@ GPUProcessProxy::GPUProcessProxy()
     parameters.parentPID = getCurrentProcessID();
 
 #if USE(SANDBOX_EXTENSIONS_FOR_CACHE_AND_TEMP_DIRECTORY_ACCESS)
-    auto containerCachesDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(gpuProcessCachesDirectory());
+    bool isExtension = false;
+#if USE(EXTENSIONKIT)
+    isExtension = !!extensionProcess();
+#endif
+    auto containerCachesDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(gpuProcessCachesDirectory(isExtension));
     auto containerTemporaryDirectory = WebsiteDataStore::defaultResolvedContainerTemporaryDirectory();
 
     if (!containerCachesDirectory.isEmpty()) {
@@ -487,6 +502,15 @@ void GPUProcessProxy::gpuProcessExited(ProcessTerminationReason reason)
         ASSERT_NOT_REACHED();
         break;
     }
+
+#if ENABLE(EXTENSION_CAPABILITIES)
+    // FIXME: Any ExtensionCapabilityGranter can invalidate the GPUProcessProxy grants, so we pick the first one. In the future ExtensionCapabilityGranter should be made a singleton.
+    for (auto& processPool : WebProcessPool::allProcessPools()) {
+        processPool->extensionCapabilityGranter().invalidateGrants(moveToVector(std::exchange(extensionCapabilityGrants(), { }).values()));
+        break;
+    }
+
+#endif
 
     if (singleton() == this)
         singleton() = nullptr;

@@ -160,6 +160,8 @@ Ref<AXIsolatedTree> AXIsolatedTree::create(AXObjectCache& axObjectCache)
 
     tree->updateLoadingProgress(axObjectCache.loadingProgress());
 
+    tree->updateRelations(axObjectCache.relations());
+
     // Now that the tree is ready to take client requests, add it to the tree maps so that it can be found.
     storeTree(axObjectCache, tree);
     return tree;
@@ -222,7 +224,8 @@ RefPtr<AXIsolatedObject> AXIsolatedTree::objectForID(const AXID axID) const
     return axID.isValid() ? m_readerThreadNodeMap.get(axID) : nullptr;
 }
 
-Vector<RefPtr<AXCoreObject>> AXIsolatedTree::objectsForIDs(const Vector<AXID>& axIDs)
+template<typename U>
+Vector<RefPtr<AXCoreObject>> AXIsolatedTree::objectsForIDs(const U& axIDs)
 {
     AXTRACE("AXIsolatedTree::objectsForIDs"_s);
     ASSERT(!isMainThread());
@@ -522,7 +525,7 @@ void AXIsolatedTree::updateNode(AccessibilityObject& axObject)
     }
 }
 
-void AXIsolatedTree::updatePropertiesForSelfAndDescendants(AccessibilityObject& axObject, const Vector<AXPropertyName>& properties)
+void AXIsolatedTree::updatePropertiesForSelfAndDescendants(AccessibilityObject& axObject, const AXPropertyNameSet& properties)
 {
     AXTRACE("AXIsolatedTree::updatePropertiesForSelfAndDescendants"_s);
     ASSERT(isMainThread());
@@ -530,15 +533,19 @@ void AXIsolatedTree::updatePropertiesForSelfAndDescendants(AccessibilityObject& 
     if (isUpdatingSubtree())
         return;
 
-    Accessibility::enumerateDescendants<AXCoreObject>(axObject, true, [&properties, this] (auto& descendant) {
-        updateNodeProperties(descendant, properties);
+    AXPropertyNameSet propertySet;
+    for (const auto& property : properties)
+        propertySet.add(property);
+
+    Accessibility::enumerateDescendants<AXCoreObject>(axObject, true, [&propertySet, this] (auto& descendant) {
+        queueNodeUpdate(descendant, { propertySet });
     });
 }
 
-void AXIsolatedTree::updateNodeProperties(AXCoreObject& axObject, const Vector<AXPropertyName>& properties)
+void AXIsolatedTree::updateNodeProperties(AXCoreObject& axObject, const AXPropertyNameSet& properties)
 {
     AXTRACE("AXIsolatedTree::updateNodeProperties"_s);
-    AXLOG(makeString("Updating properties ", properties, " for objectID ", axObject.objectID().loggingString()));
+    AXLOG(makeString("Updating properties for objectID ", axObject.objectID().loggingString(), ": "));
     ASSERT(isMainThread());
 
     if (isUpdatingSubtree())
@@ -546,6 +553,7 @@ void AXIsolatedTree::updateNodeProperties(AXCoreObject& axObject, const Vector<A
 
     AXPropertyMap propertyMap;
     for (const auto& property : properties) {
+        AXLOG(makeString("Property: ", property));
         switch (property) {
         case AXPropertyName::AccessKey:
             propertyMap.set(AXPropertyName::AccessKey, axObject.accessKey().isolatedCopy());
@@ -568,6 +576,9 @@ void AXIsolatedTree::updateNodeProperties(AXCoreObject& axObject, const Vector<A
             break;
         case AXPropertyName::AXColumnIndex:
             propertyMap.set(AXPropertyName::AXColumnIndex, axObject.axColumnIndex());
+            break;
+        case AXPropertyName::IsNonNativeTextControl:
+            propertyMap.set(AXPropertyName::IsNonNativeTextControl, axObject.isNonNativeTextControl());
             break;
         case AXPropertyName::CanSetFocusAttribute:
             propertyMap.set(AXPropertyName::CanSetFocusAttribute, axObject.canSetFocusAttribute());
@@ -615,6 +626,9 @@ void AXIsolatedTree::updateNodeProperties(AXCoreObject& axObject, const Vector<A
             break;
         case AXPropertyName::IsRowHeader:
             propertyMap.set(AXPropertyName::IsRowHeader, axObject.isRowHeader());
+            break;
+        case AXPropertyName::IsVisible:
+            propertyMap.set(AXPropertyName::IsVisible, axObject.isVisible());
             break;
         case AXPropertyName::MaxValueForRange:
             propertyMap.set(AXPropertyName::MaxValueForRange, axObject.maxValueForRange());
@@ -726,7 +740,7 @@ void AXIsolatedTree::updateNodeAndDependentProperties(AccessibilityObject& axObj
     bool updateTableAncestorColumns = is<AccessibilityTableRow>(axObject);
     for (auto* ancestor = axObject.parentObject(); ancestor; ancestor = ancestor->parentObject()) {
         if (ancestor->isTree()) {
-            updateNodeProperty(*ancestor, AXPropertyName::ARIATreeRows);
+            queueNodeUpdate(*ancestor, { AXPropertyName::ARIATreeRows });
             if (!updateTableAncestorColumns)
                 break;
         }
@@ -963,6 +977,16 @@ void AXIsolatedTree::setFocusedNodeID(AXID axID)
     m_pendingFocusedNodeID = axID;
 }
 
+void AXIsolatedTree::updateRelations(const HashMap<AXID, AXRelations>& relations)
+{
+    AXTRACE("AXIsolatedTree::updateRelations"_s);
+    ASSERT(isMainThread());
+
+    Locker locker { m_changeLogLock };
+    m_relations = relations;
+    m_relationsNeedUpdate = false;
+}
+
 AXTextMarkerRange AXIsolatedTree::selectedTextMarkerRange()
 {
     AXTRACE("AXIsolatedTree::selectedTextMarkerRange"_s);
@@ -983,7 +1007,7 @@ void AXIsolatedTree::labelCreated(AccessibilityObject& axObject)
 {
     ASSERT(axObject.isLabel());
     if (RefPtr correspondingControl = axObject.isLabel() ? axObject.correspondingControlForLabelElement() : nullptr)
-        updateNode(*correspondingControl);
+        queueNodeUpdate(*correspondingControl, NodeUpdateOptions::nodeUpdate());
 }
 
 void AXIsolatedTree::updateLoadingProgress(double newProgressValue)
@@ -1071,18 +1095,10 @@ void AXIsolatedTree::removeSubtreeFromNodeMap(AXID objectID, AccessibilityObject
     }
 }
 
-std::optional<Vector<AXID>> AXIsolatedTree::relatedObjectIDsFor(const AXIsolatedObject& object, AXRelationType relationType)
+std::optional<ListHashSet<AXID>> AXIsolatedTree::relatedObjectIDsFor(const AXIsolatedObject& object, AXRelationType relationType)
 {
     ASSERT(!isMainThread());
-
-    if (m_relationsNeedUpdate) {
-        m_relations = Accessibility::retrieveValueFromMainThread<HashMap<AXID, AXRelations>>([this] () -> HashMap<AXID, AXRelations> {
-            if (auto* cache = axObjectCache())
-                return cache->relations();
-            return { };
-        });
-        m_relationsNeedUpdate = false;
-    }
+    Locker locker { m_changeLogLock };
 
     auto relationsIterator = m_relations.find(object.objectID());
     if (relationsIterator == m_relations.end())
@@ -1229,6 +1245,75 @@ AXTreePtr findAXTree(Function<bool(AXTreePtr)>&& match)
     }
     return nullptr;
 #endif
+}
+
+void AXIsolatedTree::queueNodeUpdate(AXCoreObject& object, const NodeUpdateOptions& options)
+{
+    ASSERT(isMainThread());
+
+    if (!options.shouldUpdateNode && options.properties.size()) {
+        // If we're going to recompute all properties for the node (i.e., the node is in m_needsUpdateNode),
+        // don't bother queueing any individual property updates.
+        if (m_needsUpdateNode.contains(object.objectID()))
+            return;
+
+        auto addResult = m_needsPropertyUpdates.add(object.objectID(), options.properties);
+        if (!addResult.isNewEntry)
+            addResult.iterator->value.formUnion(options.properties);
+    }
+
+    if (options.shouldUpdateChildren)
+        m_needsUpdateChildren.add(object.objectID());
+
+    if (options.shouldUpdateNode)
+        m_needsUpdateNode.add(object.objectID());
+
+    if (auto* cache = axObjectCache())
+        cache->startUpdateTreeSnapshotTimer();
+}
+
+void AXIsolatedTree::processQueuedNodeUpdates()
+{
+    ASSERT(isMainThread());
+
+    WeakPtr cache = axObjectCache();
+    if (!cache)
+        return;
+
+    for (AXID nodeID : m_needsUpdateChildren) {
+        if (!cache)
+            break;
+
+        if (RefPtr axObject = cache->objectForID(nodeID))
+            updateChildren(*axObject, ResolveNodeChanges::No);
+    }
+    m_needsUpdateChildren.clear();
+
+    for (AXID objectID : m_needsUpdateNode) {
+        if (!m_unresolvedPendingAppends.contains(objectID)) {
+            m_unresolvedPendingAppends.ensure(objectID, [] {
+                return AttachWrapper::OnAXThread;
+            });
+        }
+    }
+    m_needsUpdateNode.clear();
+
+    for (const auto& propertyUpdate : m_needsPropertyUpdates) {
+        if (m_unresolvedPendingAppends.contains(propertyUpdate.key))
+            continue;
+
+        if (!cache)
+            break;
+
+        if (RefPtr axObject = cache->objectForID(propertyUpdate.key))
+            updateNodeProperties(*axObject, propertyUpdate.value);
+    }
+    m_needsPropertyUpdates.clear();
+
+    if (m_relationsNeedUpdate)
+        updateRelations(cache->relations());
+
+    queueRemovalsAndUnresolvedChanges({ });
 }
 
 } // namespace WebCore

@@ -84,6 +84,8 @@ private:
     void setObjectProperty(AXPropertyName, AXCoreObject*);
     void setObjectVectorProperty(AXPropertyName, const AccessibilityChildrenVector&);
 
+    static bool canBeMultilineTextField(AccessibilityObject&, bool isNonNativeTextControl);
+
     // FIXME: consolidate all AttributeValue retrieval in a single template method.
     bool boolAttributeValue(AXPropertyName) const;
     String stringAttributeValue(AXPropertyName) const;
@@ -192,6 +194,8 @@ private:
     bool isRequired() const final { return boolAttributeValue(AXPropertyName::IsRequired); }
     bool supportsRequiredAttribute() const final { return boolAttributeValue(AXPropertyName::SupportsRequiredAttribute); }
     bool isExpanded() const final { return boolAttributeValue(AXPropertyName::IsExpanded); }
+    bool isFileUploadButton() const final { return boolAttributeValue(AXPropertyName::IsFileUploadButton); }
+    bool isMeter() const final { return boolAttributeValue(AXPropertyName::IsMeter); };
     FloatPoint screenRelativePosition() const final;
     FloatRect relativeFrame() const final;
 #if PLATFORM(MAC)
@@ -297,10 +301,8 @@ private:
     void mathPostscripts(AccessibilityMathMultiscriptPairs&) final;
 #if PLATFORM(COCOA)
     String speechHintAttributeValue() const final { return stringAttributeValue(AXPropertyName::SpeechHint); }
-    String descriptionAttributeValue() const final;
-    String helpTextAttributeValue() const final;
-    String titleAttributeValue() const final;
 #endif
+    bool fileUploadButtonReturnsValueInTitle() const final;
 #if PLATFORM(MAC)
     bool caretBrowsingEnabled() const final { return boolAttributeValue(AXPropertyName::CaretBrowsingEnabled); }
 #endif
@@ -343,6 +345,9 @@ private:
 
     // CharacterRange support.
     CharacterRange selectedTextRange() const final { return propertyValue<CharacterRange>(AXPropertyName::SelectedTextRange); }
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    Vector<AXTextRun> textRuns() final { return vectorAttributeValue<AXTextRun>(AXPropertyName::TextRuns); }
+#endif
     int insertionPointLineNumber() const final;
     CharacterRange doAXRangeForLine(unsigned) const final;
     String doAXStringForRange(const CharacterRange&) const final;
@@ -441,12 +446,13 @@ private:
     bool isNativeTextControl() const final;
     bool isListBoxOption() const final;
     bool isMockObject() const final;
-    bool isNonNativeTextControl() const final;
+    bool isNonNativeTextControl() const final { return boolAttributeValue(AXPropertyName::IsNonNativeTextControl); }
     bool isIndeterminate() const final { return boolAttributeValue(AXPropertyName::IsIndeterminate); }
     bool isLoaded() const final { return loadingProgress() >= 1; }
     bool isOnScreen() const final;
     bool isOffScreen() const final;
     bool isPressed() const final;
+    // FIXME: isVisible should be accurate for all objects, not just widgets, on COCOA.
     bool isVisible() const final { return boolAttributeValue(AXPropertyName::IsVisible); }
     bool isSelectedOptionActive() const final;
     bool hasBoldFont() const final { return boolAttributeValue(AXPropertyName::HasBoldFont); }
@@ -494,6 +500,7 @@ private:
     Widget* widget() const final;
     PlatformWidget platformWidget() const final;
     Widget* widgetForAttachmentView() const final;
+    bool isPlugin() const final { return boolAttributeValue(AXPropertyName::IsPlugin); }
 
     HashMap<String, AXEditingStyleValueVariant> resolvedEditingStyles() const final;
 #if PLATFORM(COCOA)

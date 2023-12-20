@@ -13,6 +13,7 @@ PASS animation-fill-mode
 PASS animation-iteration-count
 PASS animation-name
 PASS animation-play-state
+PASS animation-timeline
 PASS animation-timing-function
 PASS appearance
 PASS aspect-ratio
@@ -278,6 +279,8 @@ PASS scroll-padding-top
 PASS scroll-snap-align
 PASS scroll-snap-stop
 PASS scroll-snap-type
+PASS scroll-timeline-axis
+PASS scroll-timeline-name
 PASS scrollbar-color
 PASS scrollbar-gutter
 PASS scrollbar-width
@@ -328,6 +331,7 @@ PASS transform
 PASS transform-box
 PASS transform-origin
 PASS transform-style
+PASS transition-behavior
 PASS transition-delay
 PASS transition-duration
 PASS transition-property
@@ -336,6 +340,10 @@ PASS translate
 PASS unicode-bidi
 PASS vector-effect
 PASS vertical-align
+PASS view-timeline-axis
+PASS view-timeline-inset
+PASS view-timeline-name
+PASS view-transition-name
 PASS visibility
 PASS white-space-collapse
 PASS widows

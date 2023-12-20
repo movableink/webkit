@@ -80,9 +80,14 @@ void RemoteRealtimeMediaSource::setSettings(RealtimeMediaSourceSettings&& settin
     notifySettingsDidChangeObservers(changed);
 }
 
-void RemoteRealtimeMediaSource::getPhotoCapabilities(PhotoCapabilitiesHandler&& callback)
+Ref<RealtimeMediaSource::TakePhotoNativePromise> RemoteRealtimeMediaSource::takePhoto(PhotoSettings&& settings)
 {
-    m_proxy.getPhotoCapabilities(WTFMove(callback));
+    return m_proxy.takePhoto(WTFMove(settings));
+}
+
+Ref<RealtimeMediaSource::PhotoCapabilitiesNativePromise> RemoteRealtimeMediaSource::getPhotoCapabilities()
+{
+    return m_proxy.getPhotoCapabilities();
 }
 
 Ref<RealtimeMediaSource::PhotoSettingsNativePromise> RemoteRealtimeMediaSource::getPhotoSettings()

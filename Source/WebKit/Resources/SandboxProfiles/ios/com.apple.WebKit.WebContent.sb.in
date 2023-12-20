@@ -1,4 +1,4 @@
-; Copyright (C) 2010-2022 Apple Inc. All rights reserved.
+; Copyright (C) 2010-2023 Apple Inc. All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without
 ; modification, are permitted provided that the following conditions
@@ -303,8 +303,7 @@
         "com.apple.preferences.sounds")
 
     (deny mach-lookup
-        (global-name "com.apple.frontboard.systemappservices")                 ; -[UIViewServiceInterface _createProcessAssertion] -> SBSProcessIDForDisplayIdentifier()
-    )
+        (global-name "com.apple.frontboard.systemappservices"))                 ; -[UIViewServiceInterface _createProcessAssertion] -> SBSProcessIDForDisplayIdentifier()
 
 #if !ENABLE(CARENDERSERVER_BLOCKING_IN_WEBCONTENT)
     (with-filter (require-not (state-flag "EnableExperimentalSandbox"))
@@ -930,13 +929,22 @@
         (global-name "com.apple.diagnosticd")
         (global-name "com.apple.osanalytics.osanalyticshelper")))
 
-(allow mach-lookup
+(define (mach-extension-list)
+    (global-name
+        "com.apple.iconservices"
+        "com.apple.mobileassetd.v2"
+        "com.apple.mobilegestalt.xpc"))
+
+(allow mach-lookup (with telemetry-backtrace)
     (require-all
         (extension "com.apple.webkit.extension.mach")
-        (global-name
-            "com.apple.frontboard.systemappservices"
-            "com.apple.mobileassetd.v2"
-            "com.apple.mobilegestalt.xpc")))
+        (mach-extension-list)))
+
+(with-filter (state-flag "EnableExperimentalSandbox")
+    (deny mach-lookup
+        (require-all
+            (extension "com.apple.webkit.extension.mach")
+            (mach-extension-list))))
 
 (allow mach-lookup
     (require-all
@@ -948,17 +956,7 @@
 (deny mach-lookup (with no-report)
     (require-all
         (require-not (extension "com.apple.webkit.extension.mach"))
-        (global-name
-            "com.apple.audio.AudioComponentRegistrar"
-        )
-    )
-)
-
-(allow mach-lookup
-    (require-all
-        (extension "com.apple.webkit.extension.mach")
-        (global-name
-            "com.apple.iconservices")))
+        (global-name "com.apple.audio.AudioComponentRegistrar")))
 
 #if HAVE(AGX_COMPILER_SERVICE)
 (allow iokit-open-user-client
@@ -1168,6 +1166,10 @@
 #endif
     SYS_socket))
 
+(when (defined? 'SYS_crossarch_trap)
+    (deny syscall-unix (with no-report) (syscall-number
+        SYS_crossarch_trap)))
+
 (when (defined? 'SYS_map_with_linking_np)
     (allow syscall-unix (syscall-number SYS_map_with_linking_np)))
 
@@ -1254,7 +1256,7 @@
 
 (when (defined? 'socket-option-set)
     ;; setsockopt
-    (deny socket-option-set (with telemetry))
+    (deny socket-option-set)
 )
 
 (define-once (mach-bootstrap-message-numbers)

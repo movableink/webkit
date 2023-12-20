@@ -943,6 +943,11 @@ void WebPageProxy::elementDidBlur()
     pageClient().elementDidBlur();
 }
 
+void WebPageProxy::updateFocusedElementInformation(const FocusedElementInformation& information)
+{
+    pageClient().updateFocusedElementInformation(information);
+}
+
 void WebPageProxy::focusedElementDidChangeInputMode(WebCore::InputMode mode)
 {
 #if ENABLE(TOUCH_EVENTS)
@@ -1205,14 +1210,14 @@ WebCore::FloatRect WebPageProxy::selectionBoundingRectInRootViewCoordinates() co
     return bounds;
 }
 
-void WebPageProxy::requestDocumentEditingContext(WebKit::DocumentEditingContextRequest request, CompletionHandler<void(WebKit::DocumentEditingContext)>&& completionHandler)
+void WebPageProxy::requestDocumentEditingContext(WebKit::DocumentEditingContextRequest&& request, CompletionHandler<void(WebKit::DocumentEditingContext&&)>&& completionHandler)
 {
     if (!hasRunningProcess()) {
         completionHandler({ });
         return;
     }
 
-    sendWithAsyncReply(Messages::WebPage::RequestDocumentEditingContext(request), WTFMove(completionHandler));
+    sendWithAsyncReply(Messages::WebPage::RequestDocumentEditingContext(WTFMove(request)), WTFMove(completionHandler));
 }
 
 #if ENABLE(DRAG_SUPPORT)

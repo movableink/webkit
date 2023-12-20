@@ -47,16 +47,52 @@ void Visitor::visit(ShaderModule& shaderModule)
 {
     for (auto& directive : shaderModule.directives())
         checkErrorAndVisit(directive);
-    for (auto& structure : shaderModule.structures())
-        checkErrorAndVisit(structure);
-    for (auto& variable : shaderModule.variables())
-        checkErrorAndVisit(variable);
-    for (auto& function : shaderModule.functions())
-        checkErrorAndVisit(function);
+    for (auto& declaration : shaderModule.declarations())
+        checkErrorAndVisit(declaration);
 }
 
-void Visitor::visit(AST::Directive&)
+// Directive
+
+void Visitor::visit(AST::Directive& directive)
 {
+    switch (directive.kind()) {
+    case AST::NodeKind::DiagnosticDirective:
+        checkErrorAndVisit(downcast<AST::DiagnosticDirective>(directive));
+        break;
+    default:
+        ASSERT_NOT_REACHED("Unhandled Directive");
+    }
+}
+
+void Visitor::visit(AST::DiagnosticDirective&)
+{
+}
+
+// Declarations
+
+void Visitor::visit(AST::Declaration& declaration)
+{
+    switch (declaration.kind()) {
+    case AST::NodeKind::Function:
+        checkErrorAndVisit(downcast<AST::Function>(declaration));
+        break;
+    case AST::NodeKind::Variable:
+        checkErrorAndVisit(downcast<AST::Variable>(declaration));
+        break;
+    case AST::NodeKind::Structure:
+        checkErrorAndVisit(downcast<AST::Structure>(declaration));
+        break;
+    case AST::NodeKind::TypeAlias:
+        checkErrorAndVisit(downcast<AST::TypeAlias>(declaration));
+        break;
+    default:
+        ASSERT_NOT_REACHED("Unhandled Declaration");
+    }
+}
+
+void Visitor::visit(AST::TypeAlias& alias)
+{
+    visit(alias.type());
 }
 
 // Attribute
@@ -206,6 +242,9 @@ void Visitor::visit(Expression& expression)
     case AST::NodeKind::Float32Literal:
         checkErrorAndVisit(downcast<AST::Float32Literal>(expression));
         break;
+    case AST::NodeKind::Float16Literal:
+        checkErrorAndVisit(downcast<AST::Float16Literal>(expression));
+        break;
     case AST::NodeKind::IdentifierExpression:
         checkErrorAndVisit(downcast<AST::IdentifierExpression>(expression));
         break;
@@ -274,6 +313,10 @@ void Visitor::visit(AST::FieldAccessExpression& fieldAccessExpression)
 }
 
 void Visitor::visit(AST::Float32Literal&)
+{
+}
+
+void Visitor::visit(AST::Float16Literal&)
 {
 }
 
@@ -457,8 +500,21 @@ void Visitor::visit(AST::IfStatement& ifStatement)
 
 void Visitor::visit(AST::LoopStatement& loopStatement)
 {
-    checkErrorAndVisit(loopStatement.body());
-    checkErrorAndVisit(loopStatement.continuingBody());
+    for (auto& attribute : loopStatement.attributes())
+        checkErrorAndVisit(attribute);
+    for (auto& statement : loopStatement.body())
+        checkErrorAndVisit(statement);
+    if (auto continuing = loopStatement.continuing())
+        checkErrorAndVisit(*continuing);
+}
+
+void Visitor::visit(AST::Continuing& continuing)
+{
+    for (auto& statement : continuing.body)
+        checkErrorAndVisit(statement);
+    for (auto& attribute : continuing.attributes)
+        checkErrorAndVisit(attribute);
+    maybeCheckErrorAndVisit(continuing.breakIf);
 }
 
 void Visitor::visit(AST::PhonyAssignmentStatement& phonyAssignmentStatement)

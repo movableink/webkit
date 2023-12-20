@@ -23,6 +23,9 @@
 #include "qwebelement.h"
 #include "qwebhistory.h"
 
+#include <WebCore/Page.h>
+#include <wtf/RefPtr.h>
+
 #include <memory>
 #include <qbasictimer.h>
 #include <qevent.h>
@@ -79,7 +82,7 @@ public:
     F(OpenImageInNewWindow, WebCore::ContextMenuItemTagOpenImageInNewWindow) SEPARATOR \
     F(DownloadImageToDisk, WebCore::ContextMenuItemTagDownloadImageToDisk) SEPARATOR \
     F(CopyImageToClipboard, WebCore::ContextMenuItemTagCopyImageToClipboard) SEPARATOR \
-    F(CopyImageUrlToClipboard, WebCore::ContextMenuItemTagCopyImageUrlToClipboard) SEPARATOR \
+    F(CopyImageUrlToClipboard, WebCore::ContextMenuItemTagCopyImageURLToClipboard) SEPARATOR \
     F(OpenFrameInNewWindow, WebCore::ContextMenuItemTagOpenFrameInNewWindow) SEPARATOR \
     F(Copy, WebCore::ContextMenuItemTagCopy) SEPARATOR \
     F(Back, WebCore::ContextMenuItemTagGoBack) SEPARATOR \
@@ -394,7 +397,7 @@ public:
 
     QWebSettings *settings;
 
-    WebCore::Page *page;
+    RefPtr<WebCore::Page> page;
     QScopedPointer<QWebPageClient> client;
 
     QWebPluginFactory *pluginFactory;

@@ -267,10 +267,10 @@ void FontCascade::initFormatForTextLayout(QTextLayout* layout, const TextRun& ru
     for (range.start = 0; range.start < length && treatAsSpace(run[range.start]); ++range.start) { }
     range.length = length - range.start;
 
-    if (m_wordSpacing && !run.spacingDisabled())
-        range.format.setFontWordSpacing(m_wordSpacing);
-    if (m_letterSpacing && !run.spacingDisabled())
-        range.format.setFontLetterSpacing(m_letterSpacing);
+    if (!m_spacing.letter.isZero() && !run.spacingDisabled())
+        range.format.setFontLetterSpacing(letterSpacing());
+    if (!m_spacing.word.isZero() && !run.spacingDisabled())
+        range.format.setFontWordSpacing(wordSpacing());
     if (enableKerning())
         range.format.setFontKerning(true);
     if (isSmallCaps())
@@ -336,7 +336,7 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
     drawQtGlyphRun(context, qtGlyphs, point, /* baselineOffset = */0);
 }
 
-ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariantEmoji, UChar32)
+ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariantEmoji, char32_t)
 {
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=259205 We can't return RequireText or RequireEmoji
     // unless we have a way of knowing whether a font/glyph is color or not.
@@ -366,10 +366,10 @@ QFont FontCascade::syntheticFont() const
         f.setPixelSize(rawFont.pixelSize());
     f.setWeight(QFont::Weight(rawFont.weight()));
     f.setStyle(rawFont.style());
-    if (m_letterSpacing)
-        f.setLetterSpacing(QFont::AbsoluteSpacing, m_letterSpacing);
-    if (m_wordSpacing)
-        f.setWordSpacing(m_wordSpacing);
+    if (!m_spacing.letter.isZero())
+        f.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing());
+    if (!m_spacing.word.isZero())
+        f.setWordSpacing(wordSpacing());
     return f;
 }
 

@@ -3,6 +3,24 @@
 import * as assert from "../assert.js";
 import { compile, instantiate } from "./wast-wrapper.js";
 
+function testValidation() {
+  assert.throws(
+    () => compile(`
+      (module
+        (func (export "f") (result (ref any))
+          (ref.cast (ref 256) (ref.null none))))
+    `),
+    WebAssembly.CompileError,
+    "WebAssembly.Module doesn't parse at byte 7: can't get heap type for ref.cast, in function at index 0"
+  );
+
+  compile(`
+    (module
+      (func (export "f") (result (ref any))
+        (ref.cast (ref any) (ref.null none))))
+  `);
+}
+
 function testBasicCasts() {
   instantiate(`
      (module
@@ -204,7 +222,7 @@ function testFunctionCasts() {
           drop))
     `),
     WebAssembly.CompileError,
-    "WebAssembly.Module doesn't validate: ref.cast to type I31ref expected a funcref"
+    "WebAssembly.Module doesn't validate: ref.cast to type (ref i31) expected a funcref"
   );
 
   assert.throws(
@@ -214,7 +232,7 @@ function testFunctionCasts() {
           (ref.test (ref func) (ref.i31 (i32.const 42)))))
     `),
     WebAssembly.CompileError,
-    "WebAssembly.Module doesn't validate: ref.test to type I31ref expected a funcref"
+    "WebAssembly.Module doesn't validate: ref.test to type (ref i31) expected a funcref"
   );
 
   assert.throws(
@@ -730,7 +748,7 @@ function testEqCasts() {
           drop))
     `),
     WebAssembly.CompileError,
-    "WebAssembly.Module doesn't validate: ref.cast to type Funcref expected a subtype of anyref, in function at index 1 (evaluating 'new WebAssembly.Module(binary)')"
+    "WebAssembly.Module doesn't validate: ref.cast to type (ref null func) expected a subtype of anyref, in function at index 1 (evaluating 'new WebAssembly.Module(binary)')"
   );
 }
 
@@ -813,7 +831,7 @@ function testAnyCasts() {
           drop))
     `),
     WebAssembly.CompileError,
-    "WebAssembly.Module doesn't validate: ref.cast to type Funcref expected a subtype of anyref, in function at index 1 (evaluating 'new WebAssembly.Module(binary)')"
+    "WebAssembly.Module doesn't validate: ref.cast to type (ref null func) expected a subtype of anyref, in function at index 1 (evaluating 'new WebAssembly.Module(binary)')"
   );
 }
 
@@ -958,10 +976,27 @@ function testNullCasts() {
           drop))
     `),
     WebAssembly.CompileError,
-    "WebAssembly.Module doesn't validate: ref.cast to type Funcref expected a subtype of anyref, in function at index 1 (evaluating 'new WebAssembly.Module(binary)')"
+    "WebAssembly.Module doesn't validate: ref.cast to type (ref null func) expected a subtype of anyref, in function at index 1 (evaluating 'new WebAssembly.Module(binary)')"
   );
 }
 
+function testLargeIndexCasts() {
+  {
+    let typedefs = "", casts = "";
+    for (var i = 0; i < 500; i++) {
+      typedefs += `(type (struct))\n`;
+      casts += `(ref.cast (ref ${i}) (struct.new ${i})) drop\n`
+    }
+    instantiate(`
+      (module
+        ${typedefs}
+        (start 0)
+        (func ${casts}))
+    `);
+  }
+}
+
+testValidation();
 testBasicCasts();
 testI31Casts();
 testFunctionCasts();
@@ -971,3 +1006,4 @@ testSubtypeCasts();
 testEqCasts();
 testAnyCasts();
 testNullCasts();
+testLargeIndexCasts();

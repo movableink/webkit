@@ -26,8 +26,6 @@
 #include "config.h"
 #include "WebResourceLoadStatisticsStore.h"
 
-#if ENABLE(TRACKING_PREVENTION)
-
 #include "APIDictionary.h"
 #include "ITPThirdPartyData.h"
 #include "Logging.h"
@@ -72,9 +70,7 @@ const OptionSet<WebsiteDataType>& WebResourceLoadStatisticsStore::monitoredDataT
         WebsiteDataType::OfflineWebApplicationCache,
         WebsiteDataType::SearchFieldRecentSearches,
         WebsiteDataType::SessionStorage,
-#if ENABLE(SERVICE_WORKER)
         WebsiteDataType::ServiceWorkerRegistrations,
-#endif
         WebsiteDataType::FileSystem,
     }));
 
@@ -436,7 +432,9 @@ void WebResourceLoadStatisticsStore::requestStorageAccess(RegistrableDomain&& su
                 else
                     completionHandler({ StorageAccessWasGranted::No, StorageAccessPromptWasShown::Yes, scope, topFrameDomain, subFrameDomain });
             };
-            m_networkSession->networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::RequestStorageAccessConfirm(webPageProxyID, frameID, subFrameDomain, topFrameDomain), WTFMove(requestConfirmationCompletionHandler));
+
+            auto storageAccessQuirk = NetworkStorageSession::storageAccessQuirkForDomainPair(topFrameDomain, subFrameDomain);
+            m_networkSession->networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::RequestStorageAccessConfirm(webPageProxyID, frameID, subFrameDomain, topFrameDomain, storageAccessQuirk), WTFMove(requestConfirmationCompletionHandler));
             }
             return;
         case StorageAccessStatus::HasAccess:
@@ -475,7 +473,8 @@ void WebResourceLoadStatisticsStore::requestStorageAccessEphemeral(const Registr
             completionHandler({ StorageAccessWasGranted::No, StorageAccessPromptWasShown::Yes, scope, topFrameDomain, subFrameDomain });
     };
 
-    m_networkSession->networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::RequestStorageAccessConfirm(webPageProxyID, frameID, subFrameDomain, topFrameDomain), WTFMove(requestConfirmationCompletionHandler));
+    auto storageAccessQuirk = NetworkStorageSession::storageAccessQuirkForDomainPair(topFrameDomain, subFrameDomain);
+    m_networkSession->networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::RequestStorageAccessConfirm(webPageProxyID, frameID, subFrameDomain, topFrameDomain, storageAccessQuirk), WTFMove(requestConfirmationCompletionHandler));
 }
 
 void WebResourceLoadStatisticsStore::requestStorageAccessUnderOpener(RegistrableDomain&& domainInNeedOfStorageAccess, PageIdentifier openerPageID, RegistrableDomain&& openerDomain)
@@ -1541,5 +1540,3 @@ void WebResourceLoadStatisticsStore::insertExpiredStatisticForTesting(Registrabl
 }
 
 } // namespace WebKit
-
-#endif

@@ -42,8 +42,11 @@
 #include "ProbeContext.h"
 #include "ThunkGenerators.h"
 #include "VM.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace DFG {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JITCompiler);
 
 JITCompiler::JITCompiler(Graph& dfg)
     : CCallHelpers(dfg.m_codeBlock)
@@ -301,12 +304,6 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
         ASSERT(m_jitCode->common.m_callLinkInfos.isEmpty());
     }
 
-
-    if (!m_exceptionChecks.empty())
-        linkBuffer.link(m_exceptionChecks, CodeLocationLabel(vm().getCTIStub(handleExceptionGenerator).retaggedCode<NoPtrTag>()));
-    if (!m_exceptionChecksWithCallFrameRollback.empty())
-        linkBuffer.link(m_exceptionChecksWithCallFrameRollback, CodeLocationLabel(vm().getCTIStub(handleExceptionWithCallFrameRollbackGenerator).retaggedCode<NoPtrTag>()));
-
     if (!m_graph.m_plan.isUnlinked()) {
         MacroAssemblerCodeRef<JITThunkPtrTag> osrExitThunk = vm().getCTIStub(osrExitGenerationThunkGenerator);
         auto target = CodeLocationLabel<JITThunkPtrTag>(osrExitThunk.code());
@@ -384,6 +381,11 @@ void JITCompiler::disassemble(LinkBuffer& linkBuffer)
 
     if (UNLIKELY(m_graph.m_plan.compilation()))
         m_disassembler->reportToProfiler(m_graph.m_plan.compilation(), linkBuffer);
+}
+
+void JITCompiler::exceptionJumpWithCallFrameRollback()
+{
+    jumpThunk(CodeLocationLabel(vm().getCTIStub(CommonJITThunkID::HandleExceptionWithCallFrameRollback).retaggedCode<NoPtrTag>()));
 }
 
 #if USE(JSVALUE32_64)
@@ -591,7 +593,7 @@ std::tuple<CompileTimeStructureStubInfo, StructureStubInfoIndex> JITCompiler::ad
 {
     if (m_graph.m_plan.isUnlinked()) {
         unsigned index = m_unlinkedStubInfos.size();
-        UnlinkedStructureStubInfo* stubInfo = &m_unlinkedStubInfos.alloc();
+        DFG::UnlinkedStructureStubInfo* stubInfo = &m_unlinkedStubInfos.alloc();
         return std::tuple { stubInfo, StructureStubInfoIndex { index } };
     }
     StructureStubInfo* stubInfo = jitCode()->common.m_stubInfos.add();

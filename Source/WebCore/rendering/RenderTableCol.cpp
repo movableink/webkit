@@ -46,7 +46,7 @@ using namespace HTMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTableCol);
 
 RenderTableCol::RenderTableCol(Element& element, RenderStyle&& style)
-    : RenderBox(Type::TableCol, element, WTFMove(style), 0)
+    : RenderBox(Type::TableCol, element, WTFMove(style), { })
 {
     // init RenderObject attributes
     setInline(true); // our object is not Inline
@@ -55,7 +55,7 @@ RenderTableCol::RenderTableCol(Element& element, RenderStyle&& style)
 }
 
 RenderTableCol::RenderTableCol(Document& document, RenderStyle&& style)
-    : RenderBox(Type::TableCol, document, WTFMove(style), 0)
+    : RenderBox(Type::TableCol, document, WTFMove(style), { })
 {
     setInline(true);
     ASSERT(isRenderTableCol());
@@ -139,10 +139,17 @@ LayoutRect RenderTableCol::clippedOverflowRect(const RenderLayerModelObject* rep
     // might have propagated a background color or borders into.
     // FIXME: check for repaintContainer each time here?
 
-    RenderTable* parentTable = table();
+    auto* parentTable = table();
     if (!parentTable)
-        return LayoutRect();
+        return { };
+
     return parentTable->clippedOverflowRect(repaintContainer, context);
+}
+
+auto RenderTableCol::rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const -> RepaintRects
+{
+    // Ignore RepaintOutlineBounds because it doesn't make sense to use the table's outline bounds to repaint a column.
+    return { clippedOverflowRect(repaintContainer, visibleRectContextForRepaint()) };
 }
 
 void RenderTableCol::imageChanged(WrappedImagePtr, const IntRect*)

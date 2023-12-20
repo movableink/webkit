@@ -559,6 +559,9 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
     case AXObjectCache::AXNotification::AXColumnSpanChanged:
         stream << "AXColumnSpanChanged";
         break;
+    case AXObjectCache::AXNotification::AXContentEditableAttributeChanged:
+        stream << "AXContentEditableAttributeChanged";
+        break;
     case AXObjectCache::AXNotification::AXControlledObjectsChanged:
         stream << "AXControlledObjectsChanged";
         break;
@@ -687,6 +690,9 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
         break;
     case AXObjectCache::AXNotification::AXValueChanged:
         stream << "AXValueChanged";
+        break;
+    case AXObjectCache::AXNotification::AXVisibilityChanged:
+        stream << "AXVisibilityChanged";
         break;
     case AXObjectCache::AXNotification::AXScrolledToAnchor:
         stream << "AXScrolledToAnchor";

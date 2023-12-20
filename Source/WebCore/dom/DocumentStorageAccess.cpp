@@ -26,8 +26,6 @@
 #include "config.h"
 #include "DocumentStorageAccess.h"
 
-#if ENABLE(TRACKING_PREVENTION)
-
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Document.h"
@@ -77,20 +75,19 @@ void DocumentStorageAccess::hasStorageAccess(Document& document, Ref<DeferredPro
 std::optional<bool> DocumentStorageAccess::hasStorageAccessQuickCheck()
 {
     Ref document = m_document.get();
-    ASSERT(document->settings().storageAccessAPIEnabled());
 
     RefPtr frame = document->frame();
     if (frame && hasFrameSpecificStorageAccess())
         return true;
 
-    auto& securityOrigin = document->securityOrigin();
-    if (!frame || securityOrigin.isOpaque())
+    Ref securityOrigin = document->securityOrigin();
+    if (!frame || securityOrigin->isOpaque())
         return false;
 
     if (frame->isMainFrame())
         return true;
 
-    if (securityOrigin.equal(&document->topOrigin()))
+    if (securityOrigin->equal(&document->topOrigin()))
         return true;
 
     if (!frame->page())
@@ -102,7 +99,6 @@ std::optional<bool> DocumentStorageAccess::hasStorageAccessQuickCheck()
 void DocumentStorageAccess::hasStorageAccess(Ref<DeferredPromise>&& promise)
 {
     Ref document = m_document.get();
-    ASSERT(document->settings().storageAccessAPIEnabled());
 
     auto quickCheckResult = hasStorageAccessQuickCheck();
     if (quickCheckResult) {
@@ -117,7 +113,7 @@ void DocumentStorageAccess::hasStorageAccess(Ref<DeferredPromise>&& promise)
         promise->resolve<IDLBoolean>(false);
         return;
     }
-    CheckedPtr page = frame->page();
+    RefPtr page = frame->page();
     if (!page) {
         ASSERT_NOT_REACHED();
         promise->resolve<IDLBoolean>(false);
@@ -148,7 +144,6 @@ void DocumentStorageAccess::requestStorageAccess(Document& document, Ref<Deferre
 std::optional<StorageAccessQuickResult> DocumentStorageAccess::requestStorageAccessQuickCheck()
 {
     Ref document = m_document.get();
-    ASSERT(document->settings().storageAccessAPIEnabled());
 
     RefPtr frame = document->frame();
     if (frame && hasFrameSpecificStorageAccess())
@@ -177,7 +172,6 @@ std::optional<StorageAccessQuickResult> DocumentStorageAccess::requestStorageAcc
 void DocumentStorageAccess::requestStorageAccess(Ref<DeferredPromise>&& promise)
 {
     Ref document = m_document.get();
-    ASSERT(document->settings().storageAccessAPIEnabled());
 
     auto quickCheckResult = requestStorageAccessQuickCheck();
     if (quickCheckResult) {
@@ -192,7 +186,7 @@ void DocumentStorageAccess::requestStorageAccess(Ref<DeferredPromise>&& promise)
         promise->reject();
         return;
     }
-    CheckedPtr page = frame->page();
+    RefPtr page = frame->page();
     if (!page) {
         ASSERT_NOT_REACHED();
         promise->reject();
@@ -270,13 +264,12 @@ void DocumentStorageAccess::requestStorageAccessForNonDocumentQuirk(RegistrableD
 void DocumentStorageAccess::requestStorageAccessQuirk(RegistrableDomain&& requestingDomain, CompletionHandler<void(StorageAccessWasGranted)>&& completionHandler)
 {
     Ref document = m_document.get();
-    ASSERT(document->settings().storageAccessAPIEnabled());
     RELEASE_ASSERT(document->frame() && document->frame()->page());
 
     auto topFrameDomain = RegistrableDomain(document->topDocument().url());
 
     RefPtr frame = document->frame();
-    frame->checkedPage()->chrome().client().requestStorageAccess(WTFMove(requestingDomain), WTFMove(topFrameDomain), *frame, m_storageAccessScope, [this, weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] (RequestStorageAccessResult result) mutable {
+    frame->protectedPage()->chrome().client().requestStorageAccess(WTFMove(requestingDomain), WTFMove(topFrameDomain), *frame, m_storageAccessScope, [this, weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] (RequestStorageAccessResult result) mutable {
         if (!weakThis)
             return;
 
@@ -324,5 +317,3 @@ bool DocumentStorageAccess::hasFrameSpecificStorageAccess() const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(TRACKING_PREVENTION)

@@ -122,7 +122,7 @@ SubresourceLoader::SubresourceLoader(LocalFrame& frame, CachedResource& resource
 #if ENABLE(CONTENT_EXTENSIONS)
     m_resourceType = ContentExtensions::toResourceType(resource.type(), resource.resourceRequest().requester());
 #endif
-    m_canCrossOriginRequestsAskUserForCredentials = resource.type() == CachedResource::Type::MainResource || frame.settings().allowCrossOriginSubresourcesToAskForCredentials();
+    m_canCrossOriginRequestsAskUserForCredentials = resource.type() == CachedResource::Type::MainResource;
     m_site = CachedResourceLoader::computeFetchMetadataSite(resource.resourceRequest(), resource.type(), options.mode, frame.document()->securityOrigin());
 }
 
@@ -393,7 +393,6 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
             return;
     }
 #endif
-#if ENABLE(SERVICE_WORKER)
     // Implementing step 10 of https://fetch.spec.whatwg.org/#main-fetch for service worker responses.
     if (response.source() == ResourceResponse::Source::ServiceWorker && response.url() != request().url()) {
         Ref loader = protectedDocumentLoader()->cachedResourceLoader();
@@ -403,7 +402,6 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
             return;
         }
     }
-#endif
 
     if (auto error = validateRangeRequestedFlag(request(), response)) {
         SUBRESOURCELOADER_RELEASE_LOG("didReceiveResponse: canceling load because receiving a range requested response for a non-range request");
@@ -412,10 +410,10 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
     }
 
     // We want redirect responses to be processed through willSendRequestInternal. Exceptions are
-    // redirection with no Location headers and fetch in manual redirect mode. Or in rare circumstances,
+    // redirection with no or empty Location headers and fetch in manual redirect mode. Or in rare circumstances,
     // cases of too many redirects from CFNetwork (<rdar://problem/30610988>).
 #if !PLATFORM(COCOA)
-    ASSERT(response.httpStatusCode() < 300 || response.httpStatusCode() >= 400 || response.httpStatusCode() == 304 || !response.httpHeaderField(HTTPHeaderName::Location) || response.type() == ResourceResponse::Type::Opaqueredirect);
+    ASSERT(response.httpStatusCode() < 300 || response.httpStatusCode() >= 400 || response.httpStatusCode() == 304 || response.httpHeaderField(HTTPHeaderName::Location).isEmpty() || response.type() == ResourceResponse::Type::Opaqueredirect);
 #endif
 
     // Reference the object in this method since the additional processing can do
@@ -642,7 +640,6 @@ Expected<void, String> SubresourceLoader::checkResponseCrossOriginAccessControl(
     if (!m_resource->isCrossOrigin() || options().mode != FetchOptions::Mode::Cors)
         return { };
 
-#if ENABLE(SERVICE_WORKER)
     if (response.source() == ResourceResponse::Source::ServiceWorker) {
         if (response.tainting() == ResourceResponse::Tainting::Opaque) {
             // FIXME: This should have an error message.
@@ -650,7 +647,6 @@ Expected<void, String> SubresourceLoader::checkResponseCrossOriginAccessControl(
         }
         return { };
     }
-#endif
 
     ASSERT(m_origin);
 

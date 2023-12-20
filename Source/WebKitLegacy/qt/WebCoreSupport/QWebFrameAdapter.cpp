@@ -333,7 +333,7 @@ qreal QWebFrameAdapter::zoomFactor() const
 
 void QWebFrameAdapter::init(QWebPageAdapter* pageAdapter)
 {
-    QWebFrameData frameData(pageAdapter->page);
+    QWebFrameData frameData(pageAdapter->page.get());
     init(pageAdapter, &frameData);
 }
 

@@ -48,6 +48,7 @@ use File::stat;
 use List::Util;
 use POSIX;
 use Time::HiRes qw(usleep);
+use Text::ParseWords;
 use VCSUtils;
 use webkitperl::FeatureList qw(getFeatureOptionList);
 
@@ -95,6 +96,7 @@ BEGIN {
        &configuration
        &configuredXcodeWorkspace
        &coverageIsEnabled
+       &fuzzilliIsEnabled
        &currentPerlPath
        &currentSVNRevision
        &debugMiniBrowser
@@ -247,12 +249,14 @@ use constant IOS_DEVELOPMENT_CERTIFICATE_NAME_PREFIX => "iPhone Developer: ";
 our @EXPORT_OK;
 
 my $architecture;
+my $didUserSpecifyArchitecture = 0;
 my %nativeArchitectureMap = ();
 my $asanIsEnabled;
 my $tsanIsEnabled;
 my $ubsanIsEnabled;
 my $libFuzzerIsEnabled;
 my $coverageIsEnabled;
+my $fuzzilliIsEnabled;
 my $forceOptimizationLevel;
 my $ltoMode;
 my $numberOfCPUs;
@@ -541,6 +545,13 @@ sub determineArchitecture
     return if defined $architecture;
 
     determineBaseProductDir();
+
+    # The user explicitly specified the architecture, don't assume anything
+    if (checkForArgumentAndRemoveFromARGVGettingValue("--architecture", \$architecture)) {
+        $didUserSpecifyArchitecture = 1;
+        return;
+    }
+
     $architecture = nativeArchitecture([]);
     if (isAppleCocoaWebKit() && $architecture eq "arm64") {
         determineXcodeSDK();
@@ -653,6 +664,18 @@ sub determineCoverageIsEnabled
         $coverageIsEnabled = <Coverage>;
         close Coverage;
         chomp $coverageIsEnabled;
+    }
+}
+
+sub determineFuzzilliIsEnabled
+{
+    return if defined $fuzzilliIsEnabled;
+    determineBaseProductDir();
+
+    if (open Fuzzilli, "$baseProductDir/Fuzzilli") {
+        $fuzzilliIsEnabled = <Fuzzilli>;
+        close Fuzzilli;
+        chomp $fuzzilliIsEnabled;
     }
 }
 
@@ -1157,6 +1180,12 @@ sub coverageIsEnabled()
     return $coverageIsEnabled;
 }
 
+sub fuzzilliIsEnabled()
+{
+    determineFuzzilliIsEnabled();
+    return $fuzzilliIsEnabled;
+}
+
 sub forceOptimizationLevel()
 {
     determineForceOptimizationLevel();
@@ -1234,6 +1263,7 @@ sub XcodeOptions
     determineLibFuzzerIsEnabled();
     determineForceOptimizationLevel();
     determineCoverageIsEnabled();
+    determineFuzzilliIsEnabled();
     determineLTOMode();
     if (isAppleCocoaWebKit()) {
       determineXcodeSDK();
@@ -1251,12 +1281,14 @@ sub XcodeOptions
     push @options, ("ENABLE_ADDRESS_SANITIZER=YES") if $asanIsEnabled;
     push @options, ("ENABLE_THREAD_SANITIZER=YES") if $tsanIsEnabled;
     push @options, ("ENABLE_UNDEFINED_BEHAVIOR_SANITIZER=YES") if $ubsanIsEnabled;
+    push @options, ("ENABLE_FUZZILLI=YES") if $fuzzilliIsEnabled;
     push @options, ("ENABLE_LIBFUZZER=YES") if $libFuzzerIsEnabled;
     push @options, XcodeCoverageSupportOptions() if $coverageIsEnabled;
     push @options, "GCC_OPTIMIZATION_LEVEL=$forceOptimizationLevel" if $forceOptimizationLevel;
     push @options, "WK_LTO_MODE=$ltoMode" if $ltoMode;
     push @options, @baseProductDirOption;
     push @options, "ARCHS=$architecture" if $architecture;
+    push @options, "ONLY_ACTIVE_ARCH=NO" if $didUserSpecifyArchitecture;
     push @options, "SDKROOT=$xcodeSDK" if $xcodeSDK;
     if (xcodeVersion() lt "15.0") {
         push @options, "TAPI_USE_SRCROOT=YES" if $ENV{UseSRCROOTSupportForTAPI};
@@ -2581,6 +2613,7 @@ sub shouldRemoveCMakeCache(@)
     # are probably arguments specifying build targets. Changing those should
     # not trigger a reconfiguration of the build.
     my (@buildArgs) = grep(/^-/, sort(@_, @originalArgv));
+    push @buildArgs, parse_line('\s+', 0, $ENV{'BUILD_WEBKIT_ARGS'}) if ($ENV{'BUILD_WEBKIT_ARGS'});
 
     # We check this first, because we always want to create this file for a fresh build.
     my $productDir = productDir();

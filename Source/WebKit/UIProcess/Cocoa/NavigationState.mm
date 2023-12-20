@@ -95,6 +95,12 @@
 #import <pal/spi/cocoa/LaunchServicesSPI.h>
 #endif
 
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/NavigationStateAdditions.mm>)
+#import <WebKitAdditions/NavigationStateAdditions.mm>
+#else
+#define NAVIGATION_STATE_DECIDE_POLICY_FOR_NAVIGATION_ACTION_ADDITIONS
+#endif
+
 namespace WebKit {
 using namespace WebCore;
 
@@ -177,6 +183,7 @@ void NavigationState::setNavigationDelegate(id<WKNavigationDelegate> delegate)
     m_navigationDelegateMethods.webViewDidFailLoadWithRequestInFrameWithError = [delegate respondsToSelector:@selector(_webView:didFailLoadWithRequest:inFrame:withError:)];
     m_navigationDelegateMethods.webViewDidFailLoadDueToNetworkConnectionIntegrityWithURL = [delegate respondsToSelector:@selector(_webView:didFailLoadDueToNetworkConnectionIntegrityWithURL:)];
     m_navigationDelegateMethods.webViewDidChangeLookalikeCharactersFromURLToURL = [delegate respondsToSelector:@selector(_webView:didChangeLookalikeCharactersFromURL:toURL:)];
+    m_navigationDelegateMethods.webViewDidPromptForStorageAccessForSubFrameDomainForQuirk = [delegate respondsToSelector:@selector(_webView:didPromptForStorageAccess:forSubFrameDomain:forQuirk:)];
     
     m_navigationDelegateMethods.webViewNavigationDidFailProvisionalLoadInSubframeWithError = [delegate respondsToSelector:@selector(_webView:navigation:didFailProvisionalLoadInSubframe:withError:)];
     m_navigationDelegateMethods.webViewWillPerformClientRedirect = [delegate respondsToSelector:@selector(_webView:willPerformClientRedirectToURL:delay:)];
@@ -459,6 +466,8 @@ static bool isUnsupportedWebExtensionNavigation(API::NavigationAction& navigatio
 
 void NavigationState::NavigationClient::decidePolicyForNavigationAction(WebPageProxy& webPageProxy, Ref<API::NavigationAction>&& navigationAction, Ref<WebFramePolicyListenerProxy>&& listener)
 {
+    NAVIGATION_STATE_DECIDE_POLICY_FOR_NAVIGATION_ACTION_ADDITIONS
+
     bool subframeNavigation = navigationAction->targetFrame() && !navigationAction->targetFrame()->isMainFrame();
 
     RefPtr<API::WebsitePolicies> defaultWebsitePolicies;
@@ -599,10 +608,15 @@ void NavigationState::NavigationClient::decidePolicyForNavigationAction(WebPageP
 }
 
 #if ENABLE(CONTENT_EXTENSIONS)
-void NavigationState::NavigationClient::contentRuleListNotification(WebPageProxy&, URL&& url, ContentRuleListResults&& results)
+void NavigationState::NavigationClient::contentRuleListNotification(WebPageProxy& page, URL&& url, ContentRuleListResults&& results)
 {
     if (!m_navigationState)
         return;
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+    if (RefPtr extensionController = page.webExtensionController())
+        extensionController->handleContentRuleListNotification(page.identifier(), url, results);
+#endif
 
     if (!m_navigationState->m_navigationDelegateMethods.webViewURLContentRuleListIdentifiersNotifications
         && !m_navigationState->m_navigationDelegateMethods.webViewContentRuleListWithIdentifierPerformedActionForURL)
@@ -933,6 +947,19 @@ void NavigationState::NavigationClient::didApplyLinkDecorationFiltering(WebPageP
 
     if (m_navigationState->m_navigationDelegateMethods.webViewDidChangeLookalikeCharactersFromURLToURL)
         [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:m_navigationState->webView().get() didChangeLookalikeCharactersFromURL:originalURL toURL:adjustedURL];
+}
+
+void NavigationState::NavigationClient::didPromptForStorageAccess(WebPageProxy&, const String& topFrameDomain, const String& subFrameDomain, bool hasQuirk)
+{
+    if (!m_navigationState)
+        return;
+
+    auto navigationDelegate = m_navigationState->navigationDelegate();
+    if (!navigationDelegate)
+        return;
+
+    if (m_navigationState->m_navigationDelegateMethods.webViewDidPromptForStorageAccessForSubFrameDomainForQuirk)
+        [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:m_navigationState->webView().get() didPromptForStorageAccess:topFrameDomain forSubFrameDomain:subFrameDomain forQuirk:hasQuirk];
 }
 
 void NavigationState::NavigationClient::didFailNavigationWithError(WebPageProxy& page, const FrameInfoData& frameInfo, API::Navigation* navigation, const WebCore::ResourceError& error, API::Object* userInfo)

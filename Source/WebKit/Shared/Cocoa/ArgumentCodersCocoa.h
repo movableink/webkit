@@ -29,7 +29,31 @@
 
 #if PLATFORM(COCOA)
 
+#import "WKKeyedCoder.h"
 #import <wtf/RetainPtr.h>
+
+#if ENABLE(DATA_DETECTION)
+OBJC_CLASS DDScannerResult;
+#if PLATFORM(MAC)
+#if HAVE(SECURE_ACTION_CONTEXT)
+OBJC_CLASS DDSecureActionContext;
+using WKDDActionContext = DDSecureActionContext;
+#else
+OBJC_CLASS DDActionContext;
+using WKDDActionContext = DDActionContext;
+#endif // #if HAVE(SECURE_ACTION_CONTEXT)
+#endif // #if PLATFORM(MAC)
+#endif // #if ENABLE(DATA_DETECTION)
+
+#if USE(AVFOUNDATION)
+OBJC_CLASS AVOutputContext;
+#endif
+
+#if USE(PASSKIT)
+OBJC_CLASS CNPhoneNumber;
+OBJC_CLASS CNPostalAddress;
+OBJC_CLASS PKContact;
+#endif
 
 namespace IPC {
 
@@ -55,23 +79,57 @@ public:
 };
 
 enum class NSType : uint8_t {
+#if USE(AVFOUNDATION)
+    AVOutputContext,
+#endif
     Array,
+#if USE(PASSKIT)
+    CNPhoneNumber,
+    CNPostalAddress,
+    PKContact,
+#endif
     Color,
+#if ENABLE(DATA_DETECTION)
+#if PLATFORM(MAC)
+    DDActionContext,
+#endif
+    DDScannerResult,
+#endif
     Data,
     Date,
+    Error,
     Dictionary,
     Font,
+    Locale,
     Number,
+    PersonNameComponents,
     SecureCoding,
     String,
     URL,
+    NSValue,
     CF,
     Unknown,
 };
 NSType typeFromObject(id);
+bool isSerializableValue(id);
+
+#if ENABLE(DATA_DETECTION)
+template<> Class getClass<DDScannerResult>();
+#if PLATFORM(MAC)
+template<> Class getClass<WKDDActionContext>();
+#endif
+#endif
+#if USE(AVFOUNDATION)
+template<> Class getClass<AVOutputContext>();
+#endif
+#if USE(PASSKIT)
+template<> Class getClass<CNPhoneNumber>();
+template<> Class getClass<CNPostalAddress>();
+template<> Class getClass<PKContact>();
+#endif
 
 void encodeObjectWithWrapper(Encoder&, id);
-std::optional<RetainPtr<id>> decodeObjectFromWrapper(Decoder&, const Vector<Class>& allowedClasses);
+std::optional<RetainPtr<id>> decodeObjectFromWrapper(Decoder&, const HashSet<Class>& allowedClasses);
 
 template<typename T> void encodeObjectDirectly(Encoder&, T *);
 template<typename T> void encodeObjectDirectly(Encoder&, T);
@@ -81,7 +139,7 @@ template<typename T, typename = IsObjCObject<T>> void encode(Encoder&, T *);
 
 #if ASSERT_ENABLED
 
-static inline bool isObjectClassAllowed(id object, const Vector<Class>& allowedClasses)
+static inline bool isObjectClassAllowed(id object, const HashSet<Class>& allowedClasses)
 {
     for (Class allowedClass : allowedClasses) {
         if ([object isKindOfClass:allowedClass])

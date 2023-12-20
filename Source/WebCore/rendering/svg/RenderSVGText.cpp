@@ -6,7 +6,7 @@
  * Copyright (C) 2008 Rob Buis <buis@kde.org>
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
  * Copyright (C) Research In Motion Limited 2010-2012. All rights reserved.
- * Copyright (C) 2012 Google Inc.
+ * Copyright (C) 2012-2023 Google Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -284,14 +284,12 @@ void RenderSVGText::subtreeTextDidChange(RenderSVGInlineText* text)
     }
 
     // The positioning elements cache depends on the size of each text renderer in the
-    // subtree. If this changes, clear the cache. It's going to be rebuilt below.
+    // subtree. If this changes, clear the cache. If this changes, clear the cache and mark it for rebuilding in the next layout.
     m_layoutAttributesBuilder.clearTextPositioningElements();
 
     checkLayoutAttributesConsistency(this, m_layoutAttributes);
-    for (RenderObject* descendant = text; descendant; descendant = descendant->nextInPreOrder(text)) {
-        if (is<RenderSVGInlineText>(*descendant))
-            m_layoutAttributesBuilder.buildLayoutAttributesForTextRenderer(downcast<RenderSVGInlineText>(*descendant));
-    }
+    setNeedsPositioningValuesUpdate();
+    setNeedsLayout();
 }
 
 static inline void updateFontInAllDescendants(RenderSVGText& text, SVGTextLayoutAttributesBuilder* builder = nullptr)
@@ -469,7 +467,9 @@ bool RenderSVGText::nodeAtFloatPoint(const HitTestRequest& request, HitTestResul
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
 bool RenderSVGText::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction hitTestAction)
 {
-    ASSERT(document().settings().layerBasedSVGEngineEnabled());
+    if (!document().settings().layerBasedSVGEngineEnabled())
+        return RenderSVGBlock::nodeAtPoint(request, result, locationInContainer, accumulatedOffset, hitTestAction);
+
     auto adjustedLocation = accumulatedOffset + location();
 
     PointerEventsHitRules hitRules(PointerEventsHitRules::HitTestingTargetType::SVGText, request, style().pointerEvents());
@@ -524,14 +524,13 @@ void RenderSVGText::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
             return;
 
         if (paintInfo.phase == PaintPhase::ClippingMask) {
-            SVGRenderSupport::paintSVGClippingMask(*this, paintInfo);
+            paintSVGClippingMask(paintInfo);
             return;
         }
 
         auto adjustedPaintOffset = paintOffset + location();
         if (paintInfo.phase == PaintPhase::Mask) {
-            // FIXME: [LBSE] Upstream SVGRenderSupport changes
-            // SVGRenderSupport::paintSVGMask(*this, paintInfo, adjustedPaintOffset);
+            paintSVGMask(paintInfo, adjustedPaintOffset);
             return;
         }
 

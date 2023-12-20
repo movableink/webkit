@@ -273,19 +273,9 @@ int RenderThemeQt::minimumMenuListSize(const RenderStyle&) const
     return fm.horizontalAdvance(QLatin1Char('x'));
 }
 
-void RenderThemeQt::setCheckboxSize(RenderStyle& style) const
-{
-    computeSizeBasedOnStyle(style);
-}
-
 bool RenderThemeQt::paintCheckbox(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
 {
     return paintButton(o, i, IntRect(r));
-}
-
-void RenderThemeQt::setRadioSize(RenderStyle& style) const
-{
-    computeSizeBasedOnStyle(style);
 }
 
 bool RenderThemeQt::paintRadio(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
@@ -491,16 +481,6 @@ bool RenderThemeQt::paintSearchFieldResultsDecorationPart(const RenderBox& o, co
     notImplemented();
     return RenderTheme::paintSearchFieldResultsDecorationPart(o, pi, r);
 }
-
-#ifndef QT_NO_SPINBOX
-void RenderThemeQt::adjustInnerSpinButtonStyle(RenderStyle& style, const Element*) const
-{
-    // Use the same width as our native scrollbar
-    int width = ScrollbarTheme::theme().scrollbarThickness();
-    style.setWidth(Length(width, LengthType::Fixed));
-    style.setMinWidth(Length(width, LengthType::Fixed));
-}
-#endif
 
 bool RenderThemeQt::supportsFocus(StyleAppearance appearance) const
 {

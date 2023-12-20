@@ -42,6 +42,7 @@ extern "C" {
     M(ActivityState) \
     M(AdvancedPrivacyProtections) \
     M(AppSSO) \
+    M(Animations) \
     M(Automation) \
     M(AutomationInteractions) \
     M(BackForward) \
@@ -88,6 +89,7 @@ extern "C" {
     M(Printing) \
     M(PrivateClickMeasurement) \
     M(Process) \
+    M(ProcessCapabilities) \
     M(ProcessSuspension) \
     M(ProcessSwapping) \
     M(ProximityNetworking) \

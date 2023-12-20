@@ -48,12 +48,29 @@ messages -> WebExtensionContext {
     // Commands
     CommandsGetAll() -> (Vector<WebKit::WebExtensionCommandParameters> commands);
 
+    // DeclarativeNetRequest
+    DeclarativeNetRequestGetEnabledRulesets() -> (Vector<String> rulesetIdentifiers);
+    DeclarativeNetRequestUpdateEnabledRulesets(Vector<String> rulesetIdentifiersToEnable, Vector<String> rulesetIdentifiersToDisable) -> (std::optional<String> error);
+    DeclarativeNetRequestDisplayActionCountAsBadgeText(bool result) -> (std::optional<String> error);
+    DeclarativeNetRequestIncrementActionCount(WebKit::WebExtensionTabIdentifier tabIdentifier, double increment) -> (std::optional<String> error);
+    DeclarativeNetRequestGetMatchedRules(std::optional<WebKit::WebExtensionTabIdentifier> tabIdentifier, std::optional<WallTime> minTimeStamp) -> (std::optional<Vector<WebKit::WebExtensionMatchedRuleParameters>> matchedRules, std::optional<String> error);
+    DeclarativeNetRequestGetDynamicRules() -> (std::optional<String> rulesJSON, std::optional<String> error);
+    DeclarativeNetRequestUpdateDynamicRules(std::optional<String> rulesToAddJSON, std::optional<Vector<double>> ruleIdsToRemove) -> (std::optional<String> error);
+    DeclarativeNetRequestGetSessionRules() -> (std::optional<String> rulesJSON, std::optional<String> error);
+    DeclarativeNetRequestUpdateSessionRules(std::optional<String> rulesToAddJSON, std::optional<Vector<double>> ruleIdsToRemove) -> (std::optional<String> error);
+
     // Event APIs
     AddListener(WebKit::WebPageProxyIdentifier identifier, WebKit::WebExtensionEventListenerType type, WebKit::WebExtensionContentWorldType contentWorldType);
     RemoveListener(WebKit::WebPageProxyIdentifier identifier, WebKit::WebExtensionEventListenerType type, WebKit::WebExtensionContentWorldType contentWorldType, size_t removedCount);
 
     // Extensions APIs
     ExtensionIsAllowedIncognitoAccess() -> (bool result);
+
+    // Menus APIs
+    MenusCreate(struct WebKit::WebExtensionMenuItemParameters parameters) -> (std::optional<String> error);
+    MenusUpdate(String identifier, struct WebKit::WebExtensionMenuItemParameters parameters) -> (std::optional<String> error);
+    MenusRemove(String identifier) -> (std::optional<String> error);
+    MenusRemoveAll() -> (std::optional<String> error);
 
     // Permissions APIs
     PermissionsGetAll() -> (Vector<String> permissions, Vector<String> origins);
@@ -78,6 +95,10 @@ messages -> WebExtensionContext {
     ScriptingExecuteScript(WebKit::WebExtensionScriptInjectionParameters parameters) -> (std::optional<Vector<WebKit::WebExtensionScriptInjectionResultParameters>> results, WebKit::WebExtensionDynamicScripts::Error error);
     ScriptingInsertCSS(WebKit::WebExtensionScriptInjectionParameters parameters) -> (WebKit::WebExtensionDynamicScripts::Error error);
     ScriptingRemoveCSS(WebKit::WebExtensionScriptInjectionParameters parameters) -> (WebKit::WebExtensionDynamicScripts::Error error);
+    ScriptingRegisterContentScripts(Vector<WebKit::WebExtensionRegisteredScriptParameters> scripts) -> (WebKit::WebExtensionDynamicScripts::Error error);
+    ScriptingUpdateRegisteredScripts(Vector<WebKit::WebExtensionRegisteredScriptParameters> scripts) -> (WebKit::WebExtensionDynamicScripts::Error error);
+    ScriptingGetRegisteredScripts(Vector<String> scriptIDs) -> (Vector<WebKit::WebExtensionRegisteredScriptParameters> scripts);
+    ScriptingUnregisterContentScripts(Vector<String> scriptIDs) -> (WebKit::WebExtensionDynamicScripts::Error error);
 
     // Tabs APIs
     TabsCreate(WebKit::WebPageProxyIdentifier webPageProxyIdentifier, WebKit::WebExtensionTabParameters creationParameters) -> (std::optional<WebKit::WebExtensionTabParameters> tabParameters, WebKit::WebExtensionTab::Error error);
@@ -109,8 +130,8 @@ messages -> WebExtensionContext {
     TestFinished(bool result, String message, String sourceURL, unsigned lineNumber);
 
     // WebNavigation APIs
-    WebNavigationGetAllFrames(WebKit::WebExtensionTabIdentifier tabIdentifier) -> (std::optional<Vector<WebKit::WebExtensionFrameParameters>> allFrameParameters)
-    WebNavigationGetFrame(WebKit::WebExtensionTabIdentifier tabIdentifier, WebKit::WebExtensionFrameIdentifier frameIdentifier) -> (std::optional<WebKit::WebExtensionFrameParameters> frameParameters)
+    WebNavigationGetAllFrames(WebKit::WebExtensionTabIdentifier tabIdentifier) -> (std::optional<Vector<WebKit::WebExtensionFrameParameters>> allFrameParameters, std::optional<String> error)
+    WebNavigationGetFrame(WebKit::WebExtensionTabIdentifier tabIdentifier, WebKit::WebExtensionFrameIdentifier frameIdentifier) -> (std::optional<WebKit::WebExtensionFrameParameters> frameParameters, std::optional<String> error)
 
     // Windows APIs
     WindowsCreate(WebKit::WebExtensionWindowParameters creationParameters) -> (std::optional<WebKit::WebExtensionWindowParameters> windowParameters, WebKit::WebExtensionWindow::Error error);

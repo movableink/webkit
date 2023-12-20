@@ -310,7 +310,7 @@ bool EditorClientQt::shouldInsertNode(Node& node, const std::optional<SimpleRang
 
 bool EditorClientQt::smartInsertDeleteEnabled()
 {
-    Page* page = m_page->page;
+    RefPtr page = m_page->page;
     if (!page)
         return false;
     return page->settings().smartInsertDeleteEnabled();
@@ -319,7 +319,7 @@ bool EditorClientQt::smartInsertDeleteEnabled()
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
 void EditorClientQt::toggleSmartInsertDelete()
 {
-    Page* page = m_page->page;
+    RefPtr page = m_page->page;
     if (page) {
         page->settings().setSmartInsertDeleteEnabled(!page->settings().smartInsertDeleteEnabled());
         page->settings().setSelectTrailingWhitespaceEnabled(!page->settings().selectTrailingWhitespaceEnabled());
@@ -329,7 +329,7 @@ void EditorClientQt::toggleSmartInsertDelete()
 
 bool EditorClientQt::isSelectTrailingWhitespaceEnabled() const
 {
-    Page* page = m_page->page;
+    RefPtr page = m_page->page;
     if (!page)
         return false;
     return page->settings().selectTrailingWhitespaceEnabled();

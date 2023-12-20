@@ -26,8 +26,6 @@
 #include "config.h"
 #include "BackgroundFetch.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "BackgroundFetchInformation.h"
 #include "BackgroundFetchRecordInformation.h"
 #include "CacheQueryOptions.h"
@@ -581,8 +579,9 @@ std::unique_ptr<BackgroundFetch> BackgroundFetch::createFromStore(std::span<cons
         if (!responseHeaders)
             return nullptr;
 
-        WebCore::ResourceResponse response;
-        if (!WebCore::ResourceResponse::decode(decoder, response))
+        std::optional<ResourceResponse> unusedResponseData;
+        decoder >> unusedResponseData;
+        if (!unusedResponseData)
             return nullptr;
 
         std::optional<bool> isCompleted;
@@ -601,5 +600,3 @@ std::unique_ptr<BackgroundFetch> BackgroundFetch::createFromStore(std::span<cons
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

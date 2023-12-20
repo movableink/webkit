@@ -32,6 +32,9 @@ namespace WebGPU {
 
 std::optional<LibraryCreationResult> createLibrary(id<MTLDevice> device, const ShaderModule& shaderModule, const PipelineLayout* pipelineLayout, const String& entryPoint, NSString *label)
 {
+    if (!entryPoint.length() || !shaderModule.isValid())
+        return std::nullopt;
+
     if (shaderModule.library() && pipelineLayout) {
         if (const auto* pipelineLayoutHint = shaderModule.pipelineLayoutHint(entryPoint)) {
             if (*pipelineLayoutHint == *pipelineLayout) {
@@ -71,7 +74,7 @@ std::tuple<MTLFunctionConstantValues *, HashMap<String, WGSL::ConstantValue>> cr
             continue;
 
         auto constantValue = WGSL::evaluate(*kvp.value.defaultValue, wgslConstantValues);
-        auto addResult = wgslConstantValues.add(specializationConstant.mangledName, constantValue);
+        auto addResult = wgslConstantValues.add(kvp.key, constantValue);
         ASSERT_UNUSED(addResult, addResult.isNewEntry);
 
         switch (specializationConstant.type) {
@@ -93,6 +96,11 @@ std::tuple<MTLFunctionConstantValues *, HashMap<String, WGSL::ConstantValue>> cr
         case WGSL::Reflection::SpecializationConstantType::Unsigned: {
             auto value = std::get<uint32_t>(constantValue);
             [constantValues setConstantValue:&value type:MTLDataTypeUInt withName:specializationConstant.mangledName];
+            break;
+        }
+        case WGSL::Reflection::SpecializationConstantType::Half: {
+            auto value = std::get<WGSL::half>(constantValue);
+            [constantValues setConstantValue:&value type:MTLDataTypeHalf withName:specializationConstant.mangledName];
             break;
         }
         }
@@ -127,6 +135,12 @@ std::tuple<MTLFunctionConstantValues *, HashMap<String, WGSL::ConstantValue>> cr
             unsigned value = entry.value;
             wgslConstantValues.set(fromAPI(entry.key), value);
             [constantValues setConstantValue:&value type:MTLDataTypeUInt withName:specializationConstant.mangledName];
+            break;
+        }
+        case WGSL::Reflection::SpecializationConstantType::Half: {
+            float value = entry.value;
+            wgslConstantValues.set(fromAPI(entry.key), value);
+            [constantValues setConstantValue:&value type:MTLDataTypeHalf withName:specializationConstant.mangledName];
             break;
         }
         }

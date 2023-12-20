@@ -113,7 +113,6 @@ void RenderSVGResourceClipper::applyPathClipping(GraphicsContext& context, const
         clipPathTransform.translate(objectBoundingBox.location());
         clipPathTransform.scale(objectBoundingBox.size());
     }
-
     if (layer()->isTransformed())
         clipPathTransform.multiply(layer()->transform()->toAffineTransform());
 
@@ -137,19 +136,19 @@ void RenderSVGResourceClipper::applyMaskClipping(PaintInfo& paintInfo, const Ren
     ASSERT(layer()->isSelfPaintingLayer());
     ASSERT(targetRenderer.hasLayer());
 
+    if (SVGHitTestCycleDetectionScope::isVisiting(*this))
+        return;
+
     ASSERT(currentClippingMode() == ClippingMode::NoClipping || currentClippingMode() == ClippingMode::MaskClipping);
     SetForScope<ClippingMode> switchClippingMode(currentClippingMode(), ClippingMode::MaskClipping);
 
     auto& context = paintInfo.context();
     GraphicsContextStateSaver stateSaver(context);
 
-    if (style().clipPath()) {
-        auto& referenceClipPathOperation = downcast<ReferencePathOperation>(*style().clipPath());
-
-        if (RefPtr referencedClipPathElement = ReferencedSVGResources::referencedClipPathElement(treeScopeForSVGReferences(), referenceClipPathOperation)) {
-            if (auto* referencedClipperRenderer = dynamicDowncast<RenderSVGResourceClipper>(referencedClipPathElement->renderer()))
-                referencedClipperRenderer->applyMaskClipping(paintInfo, targetRenderer, objectBoundingBox);
-        }
+    if (auto* referencedClipperRenderer = svgClipperResourceFromStyle()) {
+        // FIXME: Rename SVGHitTestCycleDetectionScope -> SVGResourceCycleDetectionScope
+        SVGHitTestCycleDetectionScope clippingScope(*this);
+        referencedClipperRenderer->applyMaskClipping(paintInfo, targetRenderer, objectBoundingBox);
     }
 
     AffineTransform contentTransform;
@@ -211,27 +210,40 @@ bool RenderSVGResourceClipper::hitTestClipContent(const FloatRect& objectBoundin
     return layer()->hitTest(hitType, result);
 }
 
-FloatRect RenderSVGResourceClipper::resourceBoundingBox(const RenderObject& object, RepaintRectCalculation)
+FloatRect RenderSVGResourceClipper::resourceBoundingBox(const RenderObject& object, RepaintRectCalculation repaintRectCalculation)
 {
-    FloatRect targetBoundingBox = object.objectBoundingBox();
+    auto targetBoundingBox = object.objectBoundingBox();
 
-    // Resource was not layouted yet. Give back the boundingBox of the object.
-    if (selfNeedsLayout())
+    if (SVGHitTestCycleDetectionScope::isVisiting(*this))
         return targetBoundingBox;
 
-    FloatRect clipRect = object.strokeBoundingBox();
+    SVGHitTestCycleDetectionScope queryScope(*this);
 
-    if (layer()->isTransformed())
-        clipRect = layer()->currentTransform(RenderStyle::individualTransformOperations()).mapRect(clipRect);
-
+    auto clipContentRepaintRect = clipPathElement().calculateClipContentRepaintRect(repaintRectCalculation);
     if (clipPathUnits() == SVGUnitTypes::SVG_UNIT_TYPE_OBJECTBOUNDINGBOX) {
         AffineTransform contentTransform;
         contentTransform.translate(targetBoundingBox.location());
         contentTransform.scale(targetBoundingBox.size());
-        clipRect = contentTransform.mapRect(clipRect);
+        return contentTransform.mapRect(clipContentRepaintRect);
     }
 
-    return clipRect;
+    return clipContentRepaintRect;
+}
+
+void RenderSVGResourceClipper::updateFromStyle()
+{
+    updateHasSVGTransformFlags();
+}
+
+void RenderSVGResourceClipper::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
+{
+    ASSERT(document().settings().layerBasedSVGEngineEnabled());
+    applySVGTransform(transform, clipPathElement(), style, boundingBox, std::nullopt, std::nullopt, options);
+}
+
+bool RenderSVGResourceClipper::needsHasSVGTransformFlags() const
+{
+    return clipPathElement().hasTransformRelatedAttributes();
 }
 
 }

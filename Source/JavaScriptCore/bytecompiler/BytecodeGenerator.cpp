@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
  * Copyright (C) 2012 Igalia, S.L.
  *
@@ -59,9 +59,13 @@
 #include <wtf/BitVector.h>
 #include <wtf/HashSet.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BytecodeGenerator);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ForInContext);
 
 template<typename CallOp, typename = std::true_type>
 struct VarArgsOp;
@@ -540,22 +544,6 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, FunctionNode* functionNode, Unlinke
     if (isSimpleParameterList)
         initializeVarLexicalEnvironment(symbolTableConstantIndex, functionSymbolTable, shouldCaptureSomeOfTheThings);
 
-    // Figure out some interesting facts about our arguments.
-    bool capturesAnyArgumentByName = false;
-    if (functionNode->hasCapturedVariables()) {
-        FunctionParameters& parameters = *functionNode->parameters();
-        for (size_t i = 0; i < parameters.size(); ++i) {
-            auto pattern = parameters.at(i).first;
-            if (!pattern->isBindingNode())
-                continue;
-            const Identifier& ident = static_cast<const BindingNode*>(pattern)->boundProperty();
-            capturesAnyArgumentByName |= captures(ident.impl());
-        }
-    }
-    
-    if (capturesAnyArgumentByName)
-        ASSERT(m_lexicalEnvironmentRegister);
-
     // Need to know what our functions are called. Parameters have some goofy behaviors when it
     // comes to functions of the same name.
     for (FunctionMetadataNode* function : functionNode->functionStack())
@@ -576,8 +564,21 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, FunctionNode* functionNode, Unlinke
         // If we captured any formal parameter by name, then we use ScopedArguments. Otherwise we
         // use DirectArguments. With ScopedArguments, we lift all of our arguments into the
         // activation.
+        bool capturesAnyParameterByName = false;
+        if (functionNode->hasCapturedVariables()) {
+            for (size_t i = 0; i < parameters.size(); ++i) {
+                auto pattern = parameters.at(i).first;
+                ASSERT(pattern->isBindingNode());
+                const Identifier& ident = static_cast<const BindingNode*>(pattern)->boundProperty();
+                if (captures(ident.impl())) {
+                    capturesAnyParameterByName = true;
+                    break;
+                }
+            }
+        }
         
-        if (capturesAnyArgumentByName) {
+        if (capturesAnyParameterByName) {
+            ASSERT(m_lexicalEnvironmentRegister);
             bool success = functionSymbolTable->trySetArgumentsLength(vm, parameters.size());
             if (UNLIKELY(!success)) {
                 m_outOfMemoryDuringConstruction = true;
@@ -2321,24 +2322,26 @@ void BytecodeGenerator::prepareLexicalScopeForNextForLoopIteration(VariableEnvir
     RegisterID* loopScope = stackEntry.m_scope;
     ASSERT(symbolTable->scopeSize());
     ASSERT(loopScope);
-    Vector<std::pair<RegisterID*, Identifier>> activationValuesToCopyOver;
 
-    {
-        activationValuesToCopyOver.reserveInitialCapacity(symbolTable->scopeSize());
+    struct SymbolTableNoLocks {
+        auto begin() const { return symbolTable->begin(NoLockingNecessary); }
+        auto end() const { return symbolTable->end(NoLockingNecessary); }
+        size_t size() const { return symbolTable->scopeSize(); }
+        SymbolTable* symbolTable;
+    } symbolTableWithoutLocks { symbolTable };
 
-        for (auto end = symbolTable->end(NoLockingNecessary), ptr = symbolTable->begin(NoLockingNecessary); ptr != end; ++ptr) {
-            if (!ptr->value.varOffset().isScope())
-                continue;
+    auto activationValuesToCopyOver = WTF::compactMap(symbolTableWithoutLocks, [&](auto& pair) -> std::optional<std::pair<RegisterID*, Identifier>> {
+        if (!pair.value.varOffset().isScope())
+            return std::nullopt;
 
-            RefPtr<UniquedStringImpl> ident = ptr->key;
-            Identifier identifier = Identifier::fromUid(m_vm, ident.get());
+        RefPtr ident = pair.key;
+        auto identifier = Identifier::fromUid(m_vm, ident.get());
 
-            RegisterID* transitionValue = newBlockScopeVariable();
-            transitionValue->ref();
-            emitGetFromScope(transitionValue, loopScope, variableForLocalEntry(identifier, ptr->value, loopSymbolTable->index(), true), DoNotThrowIfNotFound);
-            activationValuesToCopyOver.unsafeAppendWithoutCapacityCheck(std::make_pair(transitionValue, identifier));
-        }
-    }
+        auto* transitionValue = newBlockScopeVariable();
+        transitionValue->ref();
+        emitGetFromScope(transitionValue, loopScope, variableForLocalEntry(identifier, pair.value, loopSymbolTable->index(), true), DoNotThrowIfNotFound);
+        return std::make_pair(transitionValue, identifier);
+    });
 
     // We need this dynamic behavior of the executing code to ensure
     // each loop iteration has a new activation object. (It's pretty ugly).

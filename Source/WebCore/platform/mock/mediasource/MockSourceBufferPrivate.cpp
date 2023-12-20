@@ -38,6 +38,7 @@
 #include "MockTracks.h"
 #include "SourceBufferPrivateClient.h"
 #include <JavaScriptCore/ArrayBuffer.h>
+#include <wtf/NativePromise.h>
 #include <wtf/StringPrintStream.h>
 
 namespace WebCore {
@@ -50,14 +51,14 @@ public:
 private:
     MockMediaSample(const MockSampleBox& box)
         : m_box(box)
-        , m_id(AtomString::number(box.trackID()))
+        , m_id(box.trackID())
     {
     }
 
     MediaTime presentationTime() const override { return m_box.presentationTimestamp(); }
     MediaTime decodeTime() const override { return m_box.decodeTimestamp(); }
     MediaTime duration() const override { return m_box.duration(); }
-    AtomString trackID() const override { return m_id; }
+    TrackID trackID() const override { return m_id; }
     size_t sizeInBytes() const override { return sizeof(m_box); }
     SampleFlags flags() const override;
     PlatformSample platformSample() const override;
@@ -71,7 +72,7 @@ private:
     unsigned generation() const { return m_box.generation(); }
 
     MockSampleBox m_box;
-    AtomString m_id;
+    TrackID m_id;
 };
 
 MediaSample::SampleFlags MockMediaSample::flags() const
@@ -133,18 +134,16 @@ MockSourceBufferPrivate::MockSourceBufferPrivate(MockMediaSourcePrivate& parent)
 
 MockSourceBufferPrivate::~MockSourceBufferPrivate() = default;
 
-MockMediaSourcePrivate* MockSourceBufferPrivate::mediaSourcePrivate() const
+RefPtr<MockMediaSourcePrivate> MockSourceBufferPrivate::mediaSourcePrivate() const
 {
-    RELEASE_ASSERT(m_mediaSource);
-    return static_cast<MockMediaSourcePrivate*>(m_mediaSource.get());
+    return dynamicDowncast<MockMediaSourcePrivate>(m_mediaSource.get());
 }
 
-void MockSourceBufferPrivate::appendInternal(Ref<SharedBuffer>&& data)
+Ref<MediaPromise> MockSourceBufferPrivate::appendInternal(Ref<SharedBuffer>&& data)
 {
     m_inputBuffer.appendVector(data->extractData());
-    bool parsingSucceeded = true;
 
-    while (m_inputBuffer.size() && parsingSucceeded) {
+    while (m_inputBuffer.size()) {
         auto buffer = ArrayBuffer::create(m_inputBuffer.data(), m_inputBuffer.size());
         uint64_t boxLength = MockBox::peekLength(buffer.ptr());
         if (boxLength > buffer->byteLength())
@@ -157,19 +156,18 @@ void MockSourceBufferPrivate::appendInternal(Ref<SharedBuffer>&& data)
         } else if (type == MockSampleBox::type()) {
             MockSampleBox sampleBox = MockSampleBox(buffer.ptr());
             didReceiveSample(sampleBox);
-        } else
-            parsingSucceeded = false;
+        } else {
+            m_inputBuffer.clear();
+            return MediaPromise::createAndReject(PlatformMediaError::ParsingError);
+        }
         m_inputBuffer.remove(0, boxLength);
     }
 
-    SourceBufferPrivate::appendCompleted(parsingSucceeded);
+    return MediaPromise::createAndResolve();
 }
 
 void MockSourceBufferPrivate::didReceiveInitializationSegment(const MockInitializationBox& initBox)
 {
-    if (!m_client)
-        return;
-
     SourceBufferPrivateClient::InitializationSegment segment;
     segment.duration = initBox.duration();
 
@@ -193,17 +191,11 @@ void MockSourceBufferPrivate::didReceiveInitializationSegment(const MockInitiali
         }
     }
 
-    SourceBufferPrivate::didReceiveInitializationSegment(
-        WTFMove(segment),
-        [] (auto&) { return true; },
-        [] (auto) { });
+    SourceBufferPrivate::didReceiveInitializationSegment(WTFMove(segment));
 }
 
 void MockSourceBufferPrivate::didReceiveSample(const MockSampleBox& sampleBox)
 {
-    if (!m_client)
-        return;
-
     SourceBufferPrivate::didReceiveSample(MockMediaSample::create(sampleBox));
 }
 
@@ -211,43 +203,32 @@ void MockSourceBufferPrivate::resetParserStateInternal()
 {
 }
 
-MediaPlayer::ReadyState MockSourceBufferPrivate::readyState() const
+Ref<SourceBufferPrivate::SamplesPromise> MockSourceBufferPrivate::enqueuedSamplesForTrackID(TrackID)
 {
-    return m_mediaSource ? mediaSourcePrivate()->player().readyState() : MediaPlayer::ReadyState::HaveNothing;
+    return SamplesPromise::createAndResolve(copyToVector(m_enqueuedSamples));
 }
 
-void MockSourceBufferPrivate::setReadyState(MediaPlayer::ReadyState readyState)
-{
-    if (m_mediaSource)
-        mediaSourcePrivate()->player().setReadyState(readyState);
-}
-
-void MockSourceBufferPrivate::enqueuedSamplesForTrackID(const AtomString&, CompletionHandler<void(Vector<String>&&)>&& completionHandler)
-{
-    completionHandler(copyToVector(m_enqueuedSamples));
-}
-
-MediaTime MockSourceBufferPrivate::minimumUpcomingPresentationTimeForTrackID(const AtomString&)
+MediaTime MockSourceBufferPrivate::minimumUpcomingPresentationTimeForTrackID(TrackID)
 {
     return m_minimumUpcomingPresentationTime;
 }
 
-void MockSourceBufferPrivate::setMaximumQueueDepthForTrackID(const AtomString&, uint64_t maxQueueDepth)
+void MockSourceBufferPrivate::setMaximumQueueDepthForTrackID(TrackID, uint64_t maxQueueDepth)
 {
     m_maxQueueDepth = maxQueueDepth;
 }
 
-bool MockSourceBufferPrivate::canSetMinimumUpcomingPresentationTime(const AtomString&) const
+bool MockSourceBufferPrivate::canSetMinimumUpcomingPresentationTime(TrackID) const
 {
     return true;
 }
 
-void MockSourceBufferPrivate::setMinimumUpcomingPresentationTime(const AtomString&, const MediaTime& presentationTime)
+void MockSourceBufferPrivate::setMinimumUpcomingPresentationTime(TrackID, const MediaTime& presentationTime)
 {
     m_minimumUpcomingPresentationTime = presentationTime;
 }
 
-void MockSourceBufferPrivate::clearMinimumUpcomingPresentationTime(const AtomString&)
+void MockSourceBufferPrivate::clearMinimumUpcomingPresentationTime(TrackID)
 {
     m_minimumUpcomingPresentationTime = MediaTime::invalidTime();
 }
@@ -260,9 +241,10 @@ bool MockSourceBufferPrivate::canSwitchToType(const ContentType& contentType)
     return MockMediaPlayerMediaSource::supportsType(parameters) != MediaPlayer::SupportsType::IsNotSupported;
 }
 
-void MockSourceBufferPrivate::enqueueSample(Ref<MediaSample>&& sample, const AtomString&)
+void MockSourceBufferPrivate::enqueueSample(Ref<MediaSample>&& sample, TrackID)
 {
-    if (!m_mediaSource)
+    RefPtr mediaSource = mediaSourcePrivate();
+    if (!mediaSource)
         return;
 
     PlatformSample platformSample = sample->platformSample();
@@ -273,13 +255,13 @@ void MockSourceBufferPrivate::enqueueSample(Ref<MediaSample>&& sample, const Ato
     if (!box)
         return;
 
-    mediaSourcePrivate()->incrementTotalVideoFrames();
+    mediaSource->incrementTotalVideoFrames();
     if (box->isCorrupted())
-        mediaSourcePrivate()->incrementCorruptedFrames();
+        mediaSource->incrementCorruptedFrames();
     if (box->isDropped())
-        mediaSourcePrivate()->incrementDroppedFrames();
+        mediaSource->incrementDroppedFrames();
     if (box->isDelayed())
-        mediaSourcePrivate()->incrementTotalFrameDelayBy(MediaTime(1, 1));
+        mediaSource->incrementTotalFrameDelayBy(MediaTime(1, 1));
 
     m_enqueuedSamples.append(toString(sample.get()));
 }

@@ -32,12 +32,13 @@
 
 #import "WebExtensionCommand.h"
 #import "WebExtensionContext.h"
-#import <WebCore/WebCoreObjCExtras.h>
 
 #if USE(APPKIT)
 using CocoaModifierFlags = NSEventModifierFlags;
+using CocoaMenuItem = NSMenuItem;
 #else
 using CocoaModifierFlags = UIKeyModifierFlags;
+using CocoaMenuItem = UIMenuElement;
 #endif
 
 @implementation _WKWebExtensionCommand
@@ -46,8 +47,7 @@ using CocoaModifierFlags = UIKeyModifierFlags;
 
 - (void)dealloc
 {
-    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(_WKWebExtensionCommand.class, self))
-        return;
+    ASSERT(isMainRunLoop());
 
     _webExtensionCommand->~WebExtensionCommand();
 }
@@ -116,11 +116,37 @@ using CocoaModifierFlags = UIKeyModifierFlags;
 
 - (void)setModifierFlags:(CocoaModifierFlags)modifierFlags
 {
-    auto optionSet = OptionSet<WebKit::WebExtension::ModifierFlags>::fromRaw(modifierFlags);
+    auto optionSet = OptionSet<WebKit::WebExtension::ModifierFlags>::fromRaw(modifierFlags) & WebKit::WebExtension::allModifierFlags();
     NSAssert(optionSet.toRaw() == modifierFlags, @"Invalid parameter: an unsupported modifier flag was provided");
 
     _webExtensionCommand->setModifierFlags(optionSet);
 }
+
+- (CocoaMenuItem *)menuItem
+{
+    return _webExtensionCommand->platformMenuItem();
+}
+
+#if PLATFORM(IOS_FAMILY)
+- (UIKeyCommand *)keyCommand
+{
+    return _webExtensionCommand->keyCommand();
+}
+#endif
+
+- (NSString *)_shortcut
+{
+    return _webExtensionCommand->shortcutString();
+}
+
+#if USE(APPKIT)
+- (BOOL)_matchesEvent:(NSEvent *)event
+{
+    NSParameterAssert([event isKindOfClass:NSEvent.class]);
+
+    return _webExtensionCommand->matchesEvent(event);
+}
+#endif
 
 #pragma mark WKObject protocol implementation
 
@@ -168,6 +194,30 @@ using CocoaModifierFlags = UIKeyModifierFlags;
 - (void)setModifierFlags:(CocoaModifierFlags)modifierFlags
 {
 }
+
+- (CocoaMenuItem *)menuItem
+{
+    return nil;
+}
+
+#if PLATFORM(IOS_FAMILY)
+- (UIKeyCommand *)keyCommand
+{
+    return nil;
+}
+#endif
+
+- (NSString *)_shortcut
+{
+    return nil;
+}
+
+#if USE(APPKIT)
+- (BOOL)_matchesEvent:(NSEvent *)event
+{
+    return NO;
+}
+#endif
 
 #endif // ENABLE(WK_WEB_EXTENSIONS)
 

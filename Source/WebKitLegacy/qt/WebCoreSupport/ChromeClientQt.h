@@ -114,6 +114,9 @@ public:
 
     void setStatusbarText(const String&) final;
 
+    void rootFrameAdded(const LocalFrame&) final { }
+    void rootFrameRemoved(const LocalFrame&) final { }
+
     KeyboardUIMode keyboardUIMode() final;
 
     void invalidateRootView(const IntRect&) final;

@@ -21,6 +21,7 @@ function mac_process_webcontent_entitlements()
         plistbuddy Add :com.apple.QuartzCore.webkit-end-points bool YES
         if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 110000 ))
         then
+            plistbuddy Add :com.apple.developer.kernel.extended-virtual-addressing bool YES
             plistbuddy Add :com.apple.developer.videotoolbox.client-sandboxed-decoder bool YES
             plistbuddy Add :com.apple.pac.shared_region_id string WebContent
             plistbuddy Add :com.apple.private.pac.exception bool YES
@@ -120,6 +121,7 @@ function mac_process_gpu_entitlements()
         plistbuddy Add :com.apple.private.webkit.use-xpc-endpoint bool YES
         plistbuddy Add :com.apple.rootless.storage.WebKitGPUSandbox bool YES
         plistbuddy Add :com.apple.QuartzCore.webkit-end-points bool YES
+        plistbuddy Add :com.apple.private.coremedia.allow-fps-attachment bool YES
     fi
 }
 
@@ -237,6 +239,7 @@ function maccatalyst_process_webcontent_entitlements()
 
     if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 110000 ))
     then
+        plistbuddy Add :com.apple.developer.kernel.extended-virtual-addressing bool YES
         plistbuddy Add :com.apple.pac.shared_region_id string WebContent
         plistbuddy Add :com.apple.private.pac.exception bool YES
         plistbuddy Add :com.apple.private.security.message-filter bool YES
@@ -305,6 +308,7 @@ function maccatalyst_process_gpu_entitlements()
     plistbuddy Add :com.apple.private.pac.exception bool YES
     plistbuddy Add :com.apple.private.webkit.use-xpc-endpoint bool YES
     plistbuddy Add :com.apple.QuartzCore.webkit-limited-types bool YES
+    plistbuddy Add :com.apple.private.coremedia.allow-fps-attachment bool YES
 
     if [[ "${WK_USE_RESTRICTED_ENTITLEMENTS}" == YES ]]
     then
@@ -353,13 +357,13 @@ function ios_family_process_webcontent_shared_entitlements()
     plistbuddy Add :com.apple.private.coremedia.pidinheritance.allow bool YES
     plistbuddy Add :com.apple.private.memorystatus bool YES
     plistbuddy Add :com.apple.private.network.socket-delegate bool YES
-    plistbuddy Add :com.apple.private.pac.exception bool YES
     plistbuddy Add :com.apple.private.webinspector.allow-remote-inspection bool YES
     plistbuddy Add :com.apple.private.webinspector.proxy-application bool YES
     plistbuddy Add :com.apple.private.webkit.use-xpc-endpoint bool YES
     plistbuddy Add :com.apple.runningboard.assertions.webkit bool YES
 if [[ "${PRODUCT_NAME}" != WebContentExtension ]]; then
     plistbuddy Add :com.apple.private.gpu-restricted bool YES
+    plistbuddy Add :com.apple.private.pac.exception bool YES
     plistbuddy Add :com.apple.private.sandbox.profile string com.apple.WebKit.WebContent
 fi
     plistbuddy add :com.apple.coreaudio.allow-vorbis-decode bool YES
@@ -373,6 +377,7 @@ function ios_family_process_webcontent_entitlements()
         plistbuddy Add :com.apple.private.verified-jit bool YES
         plistbuddy Add :dynamic-codesigning bool YES
     fi
+    plistbuddy Add :com.apple.developer.kernel.extended-virtual-addressing bool YES
 
     ios_family_process_webcontent_shared_entitlements
 }
@@ -409,7 +414,6 @@ function ios_family_process_gpu_entitlements()
     plistbuddy Add :com.apple.private.memorystatus bool YES
     plistbuddy Add :com.apple.private.memory.ownership_transfer bool YES
     plistbuddy Add :com.apple.private.network.socket-delegate bool YES
-    plistbuddy Add :com.apple.private.pac.exception bool YES
     plistbuddy Add :com.apple.private.webkit.use-xpc-endpoint bool YES
     plistbuddy Add :com.apple.runningboard.assertions.webkit bool YES
 
@@ -424,7 +428,9 @@ function ios_family_process_gpu_entitlements()
 
 if [[ "${PRODUCT_NAME}" != GPUExtension ]]; then
     plistbuddy Add :com.apple.private.gpu-restricted bool YES
+    plistbuddy Add :com.apple.private.pac.exception bool YES
     plistbuddy Add :com.apple.private.sandbox.profile string com.apple.WebKit.GPU
+    plistbuddy Add :com.apple.private.coremedia.allow-fps-attachment bool YES
 fi
 
     plistbuddy Add :com.apple.systemstatus.activityattribution bool YES
@@ -472,8 +478,8 @@ function ios_family_process_network_entitlements()
     plistbuddy Add :com.apple.private.appstored array
     plistbuddy Add :com.apple.private.appstored:0 string InstallWebAttribution
 
-    plistbuddy Add :com.apple.private.pac.exception bool YES
 if [[ "${PRODUCT_NAME}" != NetworkingExtension ]]; then
+    plistbuddy Add :com.apple.private.pac.exception bool YES
     plistbuddy Add :com.apple.private.sandbox.profile string com.apple.WebKit.Networking
 fi
     plistbuddy Add :com.apple.symptom_analytics.configure bool YES

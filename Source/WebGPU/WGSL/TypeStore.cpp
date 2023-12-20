@@ -119,6 +119,7 @@ TypeStore::TypeStore()
     m_i32 = allocateType<Primitive>(Primitive::I32);
     m_u32 = allocateType<Primitive>(Primitive::U32);
     m_f32 = allocateType<Primitive>(Primitive::F32);
+    m_f16 = allocateType<Primitive>(Primitive::F16);
     m_sampler = allocateType<Primitive>(Primitive::Sampler);
     m_samplerComparison = allocateType<Primitive>(Primitive::SamplerComparison);
     m_textureExternal = allocateType<Primitive>(Primitive::TextureExternal);
@@ -245,6 +246,21 @@ const Type* TypeStore::frexpResultType(const Type* fract, const Type* exp)
     values[PrimitiveStruct::FrexpResult::fract] = fract;
     values[PrimitiveStruct::FrexpResult::exp] = exp;
     type = allocateType<PrimitiveStruct>("__frexp_result"_s, PrimitiveStruct::FrexpResult::kind, values);
+    m_cache.insert(key, type);
+    return type;
+}
+
+const Type* TypeStore::modfResultType(const Type* fract, const Type* whole)
+{
+    PrimitiveStructKey key { PrimitiveStruct::ModfResult::kind, fract };
+    const Type* type = m_cache.find(key);
+    if (type)
+        return type;
+
+    FixedVector<const Type*> values(2);
+    values[PrimitiveStruct::ModfResult::fract] = fract;
+    values[PrimitiveStruct::ModfResult::whole] = whole;
+    type = allocateType<PrimitiveStruct>("__modf_result"_s, PrimitiveStruct::ModfResult::kind, values);
     m_cache.insert(key, type);
     return type;
 }

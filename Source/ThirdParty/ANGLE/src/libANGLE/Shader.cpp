@@ -91,6 +91,13 @@ class CompileTask final : public angle::Closure
 
     angle::Result getResult()
     {
+        // Note: this function is called from WaitCompileJobUnlocked(), and must therefore be
+        // thread-safe if the linkJobIsThreadSafe feature is enabled.  Without linkJobIsThreadSafe,
+        // the call will end up done in the main thread, which is the case for the GL backend (which
+        // happens to be the only backend that actually does anything in getResult).
+        //
+        // Consequently, this function must not _write_ to anything, e.g. by trying to cache the
+        // result of |mTranslateTask->getResult()|.
         ANGLE_TRY(mResult);
         ANGLE_TRY(mTranslateTask->getResult(mInfoLog));
 
@@ -110,9 +117,8 @@ class CompileTask final : public angle::Closure
     size_t mMaxComputeWorkGroupInvocations;
     size_t mMaxComputeSharedMemory;
 
-    // Access to the compile information which are unchanged for the duration of compilation (for
-    // example shader source which cannot be changed until compilation is finished) or are kept
-    // alive (for example the compiler instance in CompilingState)
+    // Access to the compile information.  Note that the compiler instance is kept alive until
+    // resolveCompile.
     ShHandle mCompilerHandle;
     ShShaderOutput mOutputType;
     ShCompileOptions mOptions;
@@ -247,9 +253,10 @@ angle::Result CompileTask::postTranslate()
 #if defined(ANGLE_ENABLE_ASSERTS)
     if (!isBinaryOutput)
     {
-        // Prefix translated shader with commented out un-translated shader.
+        // Suffix the translated shader with commented out un-translated shader.
         // Useful in diagnostics tools which capture the shader source.
         std::ostringstream shaderStream;
+        shaderStream << "\n";
         shaderStream << "// GLSL\n";
         shaderStream << "//\n";
 
@@ -270,9 +277,7 @@ angle::Result CompileTask::postTranslate()
 
             shaderStream << std::endl;
         }
-        shaderStream << "\n\n";
-        shaderStream << mCompiledState->translatedSource;
-        mCompiledState->translatedSource = shaderStream.str();
+        mCompiledState->translatedSource += shaderStream.str();
     }
 #endif  // defined(ANGLE_ENABLE_ASSERTS)
 
@@ -282,6 +287,13 @@ angle::Result CompileTask::postTranslate()
     mTranslateTask->postTranslate(mCompilerHandle, *mCompiledState.get());
 
     return angle::Result::Continue;
+}
+
+template <typename T>
+void AppendHashValue(angle::base::SecureHashAlgorithm &hasher, T value)
+{
+    static_assert(std::is_fundamental<T>::value || std::is_enum<T>::value);
+    hasher.Update(&value, sizeof(T));
 }
 }  // anonymous namespace
 
@@ -335,10 +347,21 @@ std::string GetShaderDumpFileName(size_t shaderHash)
     return name.str();
 }
 
-struct Shader::CompilingState
+struct CompileJob
 {
+    virtual ~CompileJob() = default;
+    virtual bool wait() { return compileEvent->wait() == angle::Result::Continue; }
+
     std::unique_ptr<CompileEvent> compileEvent;
     ShCompilerInstance shCompilerInstance;
+};
+
+struct CompileJobDone final : public CompileJob
+{
+    CompileJobDone(bool compiledIn) : compiled(compiledIn) {}
+    bool wait() override { return compiled; }
+
+    bool compiled;
 };
 
 ShaderState::ShaderState(ShaderType shaderType)
@@ -596,7 +619,7 @@ void Shader::getTranslatedSourceWithDebugInfo(const Context *context,
     GetSourceImpl(debugInfo, bufSize, length, buffer);
 }
 
-void Shader::compile(const Context *context)
+void Shader::compile(const Context *context, angle::JobResultExpectancy resultExpectancy)
 {
     resolveCompile(context);
 
@@ -637,29 +660,23 @@ void Shader::compile(const Context *context)
     options.validateAST = true;
 #endif
 
-    mBoundCompiler.set(context, context->getCompiler());
+    // Find a shader in Blob Cache
+    Compiler *compiler = context->getCompiler();
+    setShaderKey(context, options, compiler->getShaderOutputType(),
+                 compiler->getBuiltInResources());
+    ASSERT(!mShaderHash.empty());
+    MemoryShaderCache *shaderCache = context->getMemoryShaderCache();
+    if (shaderCache && shaderCache->getShader(context, this, mShaderHash))
+    {
+        return;
+    }
 
+    mBoundCompiler.set(context, compiler);
     ASSERT(mBoundCompiler.get());
+
     ShCompilerInstance compilerInstance = mBoundCompiler->getInstance(mState.getShaderType());
     ShHandle compilerHandle             = compilerInstance.getHandle();
     ASSERT(compilerHandle);
-
-    // Find a shader in Blob Cache
-    setShaderKey(context, options, compilerInstance.getShaderOutputType(),
-                 compilerInstance.getBuiltInResources());
-    ASSERT(!mShaderHash.empty());
-    MemoryShaderCache *shaderCache = context->getMemoryShaderCache();
-    if (shaderCache)
-    {
-        angle::Result cacheResult =
-            shaderCache->getShader(context, this, options, compilerInstance, mShaderHash);
-
-        if (cacheResult == angle::Result::Continue)
-        {
-            compilerInstance.destroy();
-            return;
-        }
-    }
 
     // Cache load failed, fall through normal compiling.
     mState.mCompileStatus = CompileStatus::COMPILE_REQUESTED;
@@ -682,18 +699,16 @@ void Shader::compile(const Context *context)
     // The GL backend relies on the driver's internal parallel compilation, and thus does not use a
     // thread to compile.  A front-end feature selects whether the single-threaded pool must be
     // used.
-    std::shared_ptr<angle::WorkerThreadPool> compileWorkerPool =
+    const angle::JobThreadSafety threadSafety =
         context->getFrontendFeatures().compileJobIsThreadSafe.enabled
-            ? context->getShaderCompileThreadPool()
-            : context->getSingleThreadPool();
-
-    // TODO: add the possibility to perform this in an unlocked tail call.  http://anglebug.com/8297
+            ? angle::JobThreadSafety::Safe
+            : angle::JobThreadSafety::Unsafe;
     std::shared_ptr<angle::WaitableEvent> compileEvent =
-        compileWorkerPool->postWorkerTask(compileTask);
+        context->postCompileLinkTask(compileTask, threadSafety, resultExpectancy);
 
-    mCompilingState                     = std::make_unique<CompilingState>();
-    mCompilingState->shCompilerInstance = std::move(compilerInstance);
-    mCompilingState->compileEvent       = std::make_unique<CompileEvent>(compileTask, compileEvent);
+    mCompileJob                     = std::make_shared<CompileJob>();
+    mCompileJob->shCompilerInstance = std::move(compilerInstance);
+    mCompileJob->compileEvent       = std::make_unique<CompileEvent>(compileTask, compileEvent);
 }
 
 void Shader::resolveCompile(const Context *context)
@@ -703,15 +718,12 @@ void Shader::resolveCompile(const Context *context)
         return;
     }
 
-    ASSERT(mCompilingState.get());
+    ASSERT(mCompileJob.get());
     mState.mCompileStatus = CompileStatus::IS_RESOLVING;
 
-    angle::Result result = mCompilingState->compileEvent->wait();
-    mInfoLog             = std::move(mCompilingState->compileEvent->getInfoLog());
-
-    bool success          = result == angle::Result::Continue;
+    const bool success    = WaitCompileJobUnlocked(mCompileJob);
+    mInfoLog              = std::move(mCompileJob->compileEvent->getInfoLog());
     mState.mCompileStatus = success ? CompileStatus::COMPILED : CompileStatus::NOT_COMPILED;
-    mState.mCompiledState->successfullyCompiled = success;
 
     if (success)
     {
@@ -727,9 +739,8 @@ void Shader::resolveCompile(const Context *context)
         }
     }
 
-    mBoundCompiler->putInstance(std::move(mCompilingState->shCompilerInstance));
-    mCompilingState->compileEvent.reset();
-    mCompilingState.reset();
+    mBoundCompiler->putInstance(std::move(mCompileJob->shCompilerInstance));
+    mCompileJob.reset();
 }
 
 void Shader::addRef()
@@ -770,7 +781,27 @@ bool Shader::isCompiled(const Context *context)
 
 bool Shader::isCompleted()
 {
-    return !mState.compilePending() || !mCompilingState->compileEvent->isCompiling();
+    return !mState.compilePending() || !mCompileJob->compileEvent->isCompiling();
+}
+
+SharedCompileJob Shader::getCompileJob(SharedCompiledShaderState *compiledStateOut)
+{
+    // mState.mCompiledState is the same as the one in the current compile job, because this call is
+    // made during link which expects to pick up the currently compiled (or pending compilation)
+    // state.
+    *compiledStateOut = mState.mCompiledState;
+
+    if (mCompileJob)
+    {
+        ASSERT(mState.compilePending());
+        return mCompileJob;
+    }
+
+    ASSERT(!mState.compilePending());
+    ASSERT(mState.mCompileStatus == CompileStatus::COMPILED ||
+           mState.mCompileStatus == CompileStatus::NOT_COMPILED);
+
+    return std::make_shared<CompileJobDone>(mState.mCompileStatus == CompileStatus::COMPILED);
 }
 
 angle::Result Shader::serialize(const Context *context, angle::MemoryBuffer *binaryOut) const
@@ -786,7 +817,7 @@ angle::Result Shader::serialize(const Context *context, angle::MemoryBuffer *bin
         ANGLE_PERF_WARNING(context->getState().getDebug(), GL_DEBUG_SEVERITY_LOW,
                            "Failed to allocate enough memory to serialize a shader. (%zu bytes)",
                            stream.length());
-        return angle::Result::Incomplete;
+        return angle::Result::Stop;
     }
 
     memcpy(binaryOut->data(), stream.data(), stream.length());
@@ -794,37 +825,37 @@ angle::Result Shader::serialize(const Context *context, angle::MemoryBuffer *bin
     return angle::Result::Continue;
 }
 
-angle::Result Shader::deserialize(BinaryInputStream &stream)
+bool Shader::deserialize(BinaryInputStream &stream)
 {
     mState.mCompiledState->deserialize(stream);
 
     if (stream.error())
     {
         // Error while deserializing binary stream
-        return angle::Result::Stop;
+        return false;
     }
 
     // Note: Currently, shader binaries are only supported on backends that don't happen to have any
     // additional state used at link time.  If other backends implement this functionality, this
     // function should call into the backend object to deserialize their part.
 
-    return angle::Result::Continue;
+    return true;
 }
 
-angle::Result Shader::loadBinary(const Context *context, const void *binary, GLsizei length)
+bool Shader::loadBinary(const Context *context, const void *binary, GLsizei length)
 {
     return loadBinaryImpl(context, binary, length, false);
 }
 
-angle::Result Shader::loadShaderBinary(const Context *context, const void *binary, GLsizei length)
+bool Shader::loadShaderBinary(const Context *context, const void *binary, GLsizei length)
 {
     return loadBinaryImpl(context, binary, length, true);
 }
 
-angle::Result Shader::loadBinaryImpl(const Context *context,
-                                     const void *binary,
-                                     GLsizei length,
-                                     bool generatedWithOfflineCompiler)
+bool Shader::loadBinaryImpl(const Context *context,
+                            const void *binary,
+                            GLsizei length,
+                            bool generatedWithOfflineCompiler)
 {
     BinaryInputStream stream(binary, length);
 
@@ -867,18 +898,20 @@ angle::Result Shader::loadBinaryImpl(const Context *context,
         // Load binary from shader cache.
         if (stream.readInt<uint32_t>() != kShaderCacheIdentifier)
         {
-            return angle::Result::Stop;
+            return false;
         }
     }
 
-    ANGLE_TRY(deserialize(stream));
+    if (!deserialize(stream))
+    {
+        return false;
+    }
 
     // Only successfully-compiled shaders are serialized. If deserialization is successful, we can
     // assume the CompileStatus.
-    mState.mCompileStatus                       = CompileStatus::COMPILED;
-    mState.mCompiledState->successfullyCompiled = true;
+    mState.mCompileStatus = CompileStatus::COMPILED;
 
-    return angle::Result::Continue;
+    return true;
 }
 
 void Shader::setShaderKey(const Context *context,
@@ -887,28 +920,35 @@ void Shader::setShaderKey(const Context *context,
                           const ShBuiltInResources &resources)
 {
     // Compute shader key.
-    BinaryOutputStream hashStream;
+    angle::base::SecureHashAlgorithm hasher;
+    hasher.Init();
 
     // Start with the shader type and source.
-    hashStream.writeEnum(mState.getShaderType());
-    hashStream.writeString(mState.getSource());
+    AppendHashValue(hasher, mState.getShaderType());
+    hasher.Update(mState.getSource().c_str(), mState.getSource().length());
 
     // Include the shader program version hash.
-    hashStream.writeString(angle::GetANGLEShaderProgramVersion());
+    hasher.Update(angle::GetANGLEShaderProgramVersion(),
+                  angle::GetANGLEShaderProgramVersionHashSize());
 
-    hashStream.writeEnum(Compiler::SelectShaderSpec(context->getState()));
-    hashStream.writeEnum(outputType);
-    hashStream.writeBytes(reinterpret_cast<const uint8_t *>(&compileOptions),
-                          sizeof(compileOptions));
+    AppendHashValue(hasher, Compiler::SelectShaderSpec(context->getState()));
+    AppendHashValue(hasher, outputType);
+    hasher.Update(reinterpret_cast<const uint8_t *>(&compileOptions), sizeof(compileOptions));
 
     // Include the ShBuiltInResources, which represent the extensions and constants used by the
     // shader.
-    hashStream.writeBytes(reinterpret_cast<const uint8_t *>(&resources), sizeof(resources));
+    hasher.Update(reinterpret_cast<const uint8_t *>(&resources), sizeof(resources));
 
     // Call the secure SHA hashing function.
-    const std::vector<uint8_t> &shaderKey = hashStream.getData();
-    mShaderHash                           = {0};
-    angle::base::SHA1HashBytes(shaderKey.data(), shaderKey.size(), mShaderHash.data());
+    hasher.Final();
+    memcpy(mShaderHash.data(), hasher.Digest(), angle::base::kSHA1Length);
 }
 
+bool WaitCompileJobUnlocked(const SharedCompileJob &compileJob)
+{
+    // Simply wait for the job and return whether it succeeded.  Do nothing more as this can be
+    // called from multiple threads.  Caching of the shader results and compiler clean up will be
+    // done in resolveCompile() when the main thread happens to call it.
+    return compileJob->wait();
+}
 }  // namespace gl

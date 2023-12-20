@@ -80,7 +80,7 @@
 #include <WebCore/FocusController.h>
 #include <WebCore/FrameLoadRequest.h>
 #include <WebCore/FrameSelection.h>
-#include <WebCore/HandleMouseEventResult.h>
+#include <WebCore/HandleUserInputEventResult.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLInputElement.h>
 #include <WebCore/HitTestResult.h>
@@ -164,20 +164,25 @@ static inline OptionSet<WebCore::DragOperation> dropActionToDragOp(Qt::DropActio
     return result;
 }
 
-static inline Qt::DropAction dragOpToDropAction(std::optional<DragOperation> action)
+static inline Qt::DropAction dragOpToDropAction(std::variant<std::optional<DragOperation>, RemoteUserInputEventData> actionOrEvent)
 {
     Qt::DropAction result = Qt::IgnoreAction;
-    if (action == DragOperation::Copy)
-        result = Qt::CopyAction;
-    else if (action == DragOperation::Move)
-        result = Qt::MoveAction;
-    // DragOperationgeneric represents InternetExplorer's equivalent of Move operation,
-    // hence it should be considered as "move"
-    else if (action == DragOperation::Generic)
-        result = Qt::MoveAction;
-    else if (action == DragOperation::Link)
-        result = Qt::LinkAction;
-    return result;
+
+    if (std::holds_alternative<std::optional<DragOperation>>(actionOrEvent)) {
+        auto action = std::get<std::optional<DragOperation>>(actionOrEvent);
+        if (!action)
+            return result;
+        if (*action == DragOperation::Copy)
+            result = Qt::CopyAction;
+        else if (*action == DragOperation::Move)
+            result = Qt::MoveAction;
+        // DragOperationgeneric represents InternetExplorer's equivalent of Move operation,
+        // hence it should be considered as "move"
+        else if (*action == DragOperation::Generic)
+            result = Qt::MoveAction;
+        else if (*action == DragOperation::Link)
+            result = Qt::LinkAction;
+    }
 }
 
 static inline QWebPageAdapter::VisibilityState webCoreVisibilityStateToWebPageVisibilityState(WebCore::VisibilityState state)
@@ -246,7 +251,7 @@ static Ref<WebCore::LocalWebLockRegistry> getOrCreateWebLockRegistry(bool isPriv
 
 QWebPageAdapter::QWebPageAdapter()
     : settings(0)
-    , page(0)
+    , page(nullptr)
     , pluginFactory(0)
     , forwardUnsupportedContent(false)
     , insideOpenCall(false)
@@ -306,18 +311,18 @@ void QWebPageAdapter::initializeWebCorePage()
     pageConfiguration.storageNamespaceProvider = WebKitLegacy::WebStorageNamespaceProvider::create(
         QWebSettings::globalSettings()->localStoragePath());
     pageConfiguration.visitedLinkStore = &VisitedLinkStoreQt::singleton();
-    page = new Page(WTFMove(pageConfiguration));
+    page = WebCore::Page::create(WTFMove(pageConfiguration));
 
 #if ENABLE(GEOLOCATION)
     if (useMock) {
         // In case running in DumpRenderTree mode set the controller to mock provider.
         GeolocationClientMock* mock = new GeolocationClientMock;
-        WebCore::provideGeolocationTo(page, *mock);
-        mock->setController(WebCore::GeolocationController::from(page));
+        WebCore::provideGeolocationTo(page.get(), *mock);
+        mock->setController(WebCore::GeolocationController::from(page.get()));
     }
 #if HAVE(QTPOSITIONING)
     else
-        WebCore::provideGeolocationTo(page, *new GeolocationClientQt(this));
+        WebCore::provideGeolocationTo(page.get(), *new GeolocationClientQt(this));
 #endif
 #endif
 
@@ -333,9 +338,9 @@ void QWebPageAdapter::initializeWebCorePage()
     }
 #endif
     if (m_deviceOrientationClient)
-        WebCore::provideDeviceOrientationTo(page, m_deviceOrientationClient);
+        WebCore::provideDeviceOrientationTo(page.get(), m_deviceOrientationClient);
     if (m_deviceMotionClient)
-        WebCore::provideDeviceMotionTo(page, m_deviceMotionClient);
+        WebCore::provideDeviceMotionTo(page.get(), m_deviceMotionClient);
 #endif
 
     // By default each page is put into their own unique page group, which affects popup windows
@@ -347,10 +352,10 @@ void QWebPageAdapter::initializeWebCorePage()
 
     page->addLayoutMilestones(WebCore::LayoutMilestone::DidFirstVisuallyNonEmptyLayout);
 
-    settings = new QWebSettings(page);
+    settings = new QWebSettings(page.get());
 
 #if ENABLE(NOTIFICATIONS)
-    WebCore::provideNotification(page, NotificationPresenterClientQt::notificationPresenter());
+    WebCore::provideNotification(page.get(), NotificationPresenterClientQt::notificationPresenter());
 #endif
 
     history.d = new QWebHistoryPrivate(static_cast<BackForwardList*>(&page->backForward().client()));
@@ -358,7 +363,6 @@ void QWebPageAdapter::initializeWebCorePage()
 
 QWebPageAdapter::~QWebPageAdapter()
 {
-    delete page;
     delete settings;
 
 #if ENABLE(NOTIFICATIONS)
@@ -375,8 +379,7 @@ void QWebPageAdapter::deletePage()
     // Before we delete the page, detach the mainframe's loader
     FrameLoader& loader = mainFrameAdapter().frame->loader();
     loader.detachFromParent();
-    delete page;
-    page = 0;
+    page = nullptr;
 }
 
 QWebPageAdapter* QWebPageAdapter::kit(Page* page)
@@ -683,7 +686,7 @@ void QWebPageAdapter::wheelEvent(QWheelEvent *ev, int wheelScrollLines)
         return;
 
     PlatformWheelEvent pev = convertWheelEvent(ev, wheelScrollLines);
-    bool accepted = frame->eventHandler().handleWheelEvent(pev, { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::BlockingDOMEventDispatch });
+    bool accepted = frame->eventHandler().handleWheelEvent(pev, { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::BlockingDOMEventDispatch }).wasHandled();
     ev->setAccepted(accepted);
 }
 #endif // QT_NO_WHEELEVENT
@@ -693,19 +696,22 @@ void QWebPageAdapter::wheelEvent(QWheelEvent *ev, int wheelScrollLines)
 Qt::DropAction QWebPageAdapter::dragEntered(const QMimeData *data, const QPoint &pos, Qt::DropActions possibleActions)
 {
     DragData dragData(data, pos, QCursor::pos(), dropActionToDragOp(possibleActions));
-    return dragOpToDropAction(page->dragController().dragEntered(WTFMove(dragData)));
+    WebCore::LocalFrame* localFrame = mainFrameAdapter().frame;
+    return dragOpToDropAction(page->dragController().dragEnteredOrUpdated(*localFrame, WTFMove(dragData)));
 }
 
 void QWebPageAdapter::dragLeaveEvent()
 {
     DragData dragData(0, IntPoint(), QCursor::pos(), DragOperation::Generic);
-    page->dragController().dragExited(WTFMove(dragData));
+    WebCore::LocalFrame* localFrame = mainFrameAdapter().frame;
+    page->dragController().dragExited(*localFrame, WTFMove(dragData));
 }
 
 Qt::DropAction QWebPageAdapter::dragUpdated(const QMimeData *data, const QPoint &pos, Qt::DropActions possibleActions)
 {
     DragData dragData(data, pos, QCursor::pos(), dropActionToDragOp(possibleActions));
-    return dragOpToDropAction(page->dragController().dragUpdated(WTFMove(dragData)));
+    WebCore::LocalFrame* localFrame = mainFrameAdapter().frame;
+    return dragOpToDropAction(page->dragController().dragEnteredOrUpdated(*localFrame, WTFMove(dragData)));
 }
 
 bool QWebPageAdapter::performDrag(const QMimeData *data, const QPoint &pos, Qt::DropActions possibleActions)
@@ -937,8 +943,8 @@ QList<MenuItem> descriptionForPlatformMenu(const Vector<ContextMenuItem>& items,
     for (const auto& item : items) {
         MenuItem description;
         switch (item.type()) {
-        case WebCore::CheckableActionType: /* fall through */
-        case WebCore::ActionType: {
+        case WebCore::ContextMenuItemType::CheckableAction: /* fall through */
+        case WebCore::ContextMenuItemType::Action: {
             int action = adapterActionForContextMenuAction(item.action());
             if (action > QWebPageAdapter::NoAction) {
                 description.type = MenuItem::Action;
@@ -947,7 +953,7 @@ QList<MenuItem> descriptionForPlatformMenu(const Vector<ContextMenuItem>& items,
                 page->contextMenuController().checkOrEnableIfNeeded(it);
                 if (it.enabled())
                     description.traits |= MenuItem::Enabled;
-                if (item.type() == WebCore::CheckableActionType) {
+                if (item.type() == WebCore::ContextMenuItemType::CheckableAction) {
                     description.traits |= MenuItem::Checkable;
                     if (it.checked())
                         description.traits |= MenuItem::Checked;
@@ -956,10 +962,10 @@ QList<MenuItem> descriptionForPlatformMenu(const Vector<ContextMenuItem>& items,
             }
             break;
         }
-        case WebCore::SeparatorType:
+        case WebCore::ContextMenuItemType::Separator:
             description.type = MenuItem::Separator;
             break;
-        case WebCore::SubmenuType: {
+        case WebCore::ContextMenuItemType::Submenu: {
             description.type = MenuItem::SubMenu;
             description.subMenu = descriptionForPlatformMenu(item.subMenuItems(), page);
             description.title = item.title();
@@ -988,7 +994,7 @@ QWebHitTestResultPrivate* QWebPageAdapter::updatePositionDependentMenuActions(co
     WebCore::ContextMenu* webcoreMenu = page->contextMenuController().contextMenu();
     QList<MenuItem> itemDescriptions;
     if (client && webcoreMenu)
-        itemDescriptions = descriptionForPlatformMenu(webcoreMenu->items(), page);
+        itemDescriptions = descriptionForPlatformMenu(webcoreMenu->items(), page.get());
     createAndSetCurrentContextMenu(itemDescriptions, visitedWebActions);
     if (result.scrollbar())
         return 0;
@@ -1248,7 +1254,7 @@ QString QWebPageAdapter::contextMenuItemTagForAction(QWebPageAdapter::MenuAction
     case CopyImageToClipboard:
         return contextMenuItemTagCopyImageToClipboard();
     case CopyImageUrlToClipboard:
-        return contextMenuItemTagCopyImageUrlToClipboard();
+        return contextMenuItemTagCopyImageURLToClipboard();
 
     case Cut:
         return contextMenuItemTagCut();

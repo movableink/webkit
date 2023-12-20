@@ -988,6 +988,93 @@ bool WebPageProxy::shouldAllowAutoFillForCellularIdentifiers() const
 
 #endif
 
+#if ENABLE(EXTENSION_CAPABILITIES)
+
+const std::optional<MediaCapability>& WebPageProxy::mediaCapability() const
+{
+    return internals().mediaCapability;
+}
+
+void WebPageProxy::setMediaCapability(std::optional<MediaCapability>&& capability)
+{
+    Ref processPool = protectedProcess()->protectedProcessPool();
+
+    if (auto& oldCapability = internals().mediaCapability) {
+        WEBPAGEPROXY_RELEASE_LOG(ProcessCapabilities, "setMediaCapability: revoking (envID=%{public}s) for registrable domain '%{sensitive}s'", oldCapability->environmentIdentifier().utf8().data(), oldCapability->registrableDomain().string().utf8().data());
+        processPool->extensionCapabilityGranter().setMediaCapabilityActive(*oldCapability, false);
+        processPool->extensionCapabilityGranter().revoke(*oldCapability);
+    }
+
+    internals().mediaCapability = WTFMove(capability);
+
+    if (auto& newCapability = internals().mediaCapability) {
+        WEBPAGEPROXY_RELEASE_LOG(ProcessCapabilities, "setMediaCapability: granting (envID=%{public}s) for registrable domain '%{sensitive}s'", newCapability->environmentIdentifier().utf8().data(), newCapability->registrableDomain().string().utf8().data());
+        processPool->extensionCapabilityGranter().grant(*newCapability);
+    }
+
+    send(Messages::WebPage::SetMediaEnvironment([&]() -> String {
+        if (auto& capability = internals().mediaCapability)
+            return capability->environmentIdentifier();
+        return { };
+    }()));
+}
+
+void WebPageProxy::updateMediaCapability()
+{
+#if USE(EXTENSIONKIT)
+    if (!AuxiliaryProcessProxy::manageProcessesAsExtensions())
+        return;
+#endif
+
+    if (!preferences().mediaCapabilityGrantsEnabled())
+        return;
+
+    URL currentURL { this->currentURL() };
+
+    if (m_isClosed || !currentURL.isValid())
+        setMediaCapability(std::nullopt);
+    else if (!mediaCapability() || !mediaCapability()->registrableDomain().matches(currentURL))
+        setMediaCapability(MediaCapability { currentURL });
+
+    auto& mediaCapability = internals().mediaCapability;
+    if (!mediaCapability)
+        return;
+
+    Ref processPool = protectedProcess()->protectedProcessPool();
+
+    if (shouldActivateMediaCapability())
+        processPool->extensionCapabilityGranter().setMediaCapabilityActive(*mediaCapability, true);
+    else if (shouldDeactivateMediaCapability())
+        processPool->extensionCapabilityGranter().setMediaCapabilityActive(*mediaCapability, false);
+}
+
+bool WebPageProxy::shouldActivateMediaCapability() const
+{
+    if (!isViewVisible())
+        return false;
+
+    if (internals().mediaState.contains(MediaProducerMediaState::IsPlayingAudio))
+        return true;
+
+    if (internals().mediaState.contains(MediaProducerMediaState::IsPlayingVideo))
+        return true;
+
+    return MediaProducer::isCapturing(internals().mediaState);
+}
+
+bool WebPageProxy::shouldDeactivateMediaCapability() const
+{
+    if (internals().mediaState & WebCore::MediaProducer::MediaCaptureMask)
+        return false;
+
+    if (internals().mediaState.containsAny(MediaProducerMediaState::HasAudioOrVideo))
+        return false;
+
+    return true;
+}
+
+#endif // ENABLE(EXTENSION_CAPABILITIES)
+
 } // namespace WebKit
 
 #undef MESSAGE_CHECK_COMPLETION

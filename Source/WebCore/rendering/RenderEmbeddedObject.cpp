@@ -111,6 +111,22 @@ bool RenderEmbeddedObject::requiresAcceleratedCompositing() const
     return pluginViewBase->layerHostingStrategy() != PluginLayerHostingStrategy::None;
 }
 
+bool RenderEmbeddedObject::usesAsyncScrolling() const
+{
+    auto* pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    if (!pluginViewBase)
+        return false;
+    return pluginViewBase->usesAsyncScrolling();
+}
+
+ScrollingNodeID RenderEmbeddedObject::scrollingNodeID() const
+{
+    auto* pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    if (!pluginViewBase)
+        return false;
+    return pluginViewBase->scrollingNodeID();
+}
+
 #if !PLATFORM(IOS_FAMILY)
 static String unavailablePluginReplacementText(RenderEmbeddedObject::PluginUnavailabilityReason pluginUnavailabilityReason)
 {
@@ -304,7 +320,7 @@ void RenderEmbeddedObject::getReplacementTextGeometry(const LayoutPoint& accumul
     fontDescription.setOneFamily(SystemFontDatabase::singleton().systemFontShorthandFamily(SystemFontDatabase::FontShorthand::WebkitSmallControl));
     fontDescription.setWeight(boldWeightValue());
     fontDescription.setComputedSize(12);
-    font = FontCascade(WTFMove(fontDescription), 0, 0);
+    font = FontCascade(WTFMove(fontDescription));
     font.update(nullptr);
 
     run = TextRun(m_unavailablePluginReplacementText);

@@ -51,7 +51,7 @@ enum class TrackSizeRestriction : uint8_t {
 };
 
 RenderGrid::RenderGrid(Element& element, RenderStyle&& style)
-    : RenderBlock(Type::Grid, element, WTFMove(style), 0)
+    : RenderBlock(Type::Grid, element, WTFMove(style), { })
     , m_grid(*this)
     , m_trackSizingAlgorithm(this, currentGrid())
     , m_masonryLayout(*this)
@@ -213,16 +213,16 @@ static void cacheBaselineAlignedChildren(const RenderGrid& grid, GridTrackSizing
         uint32_t innerAxes = 0;
         RenderGrid* inner = is<RenderGrid>(child) ? downcast<RenderGrid>(child) : nullptr;
 
-        if (axes & static_cast<uint8_t>(GridAxis::GridColumnAxis)) {
+        if (axes & enumToUnderlyingType(GridAxis::GridColumnAxis)) {
             if (inner && inner->isSubgridInParentDirection(GridTrackSizingDirection::ForRows))
-                innerAxes |= GridLayoutFunctions::isOrthogonalChild(grid, *child) ? static_cast<uint8_t>(GridAxis::GridRowAxis) : static_cast<uint8_t>(GridAxis::GridColumnAxis);
+                innerAxes |= GridLayoutFunctions::isOrthogonalChild(grid, *child) ? enumToUnderlyingType(GridAxis::GridRowAxis) : enumToUnderlyingType(GridAxis::GridColumnAxis);
             else if (grid.isBaselineAlignmentForChild(*child, GridAxis::GridColumnAxis))
                 algorithm.cacheBaselineAlignedItem(*child, GridAxis::GridColumnAxis, cachingRowSubgridsForRootGrid);
         }
 
-        if (axes & static_cast<uint8_t>(GridAxis::GridRowAxis)) {
+        if (axes & enumToUnderlyingType(GridAxis::GridRowAxis)) {
             if (inner && inner->isSubgridInParentDirection(GridTrackSizingDirection::ForColumns))
-                innerAxes |= GridLayoutFunctions::isOrthogonalChild(grid, *child) ? static_cast<uint8_t>(GridAxis::GridColumnAxis) : static_cast<uint8_t>(GridAxis::GridRowAxis);
+                innerAxes |= GridLayoutFunctions::isOrthogonalChild(grid, *child) ? enumToUnderlyingType(GridAxis::GridColumnAxis) : enumToUnderlyingType(GridAxis::GridRowAxis);
             else if (grid.isBaselineAlignmentForChild(*child, GridAxis::GridRowAxis))
                 algorithm.cacheBaselineAlignedItem(*child, GridAxis::GridRowAxis, cachingRowSubgridsForRootGrid);
         }
@@ -261,7 +261,7 @@ Vector<RenderBox*> RenderGrid::computeAspectRatioDependentAndBaselineItems()
         }
     };
 
-    cacheBaselineAlignedChildren(*this, m_trackSizingAlgorithm, static_cast<uint8_t>(GridAxis::GridRowAxis) | static_cast<uint8_t>(GridAxis::GridColumnAxis), computeOrthogonalAndDependentItems, !isSubgridRows());
+    cacheBaselineAlignedChildren(*this, m_trackSizingAlgorithm, enumToUnderlyingType(GridAxis::GridRowAxis) | enumToUnderlyingType(GridAxis::GridColumnAxis), computeOrthogonalAndDependentItems, !isSubgridRows());
     return dependentGridItems;
 }
 
@@ -651,7 +651,7 @@ void RenderGrid::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, Layo
         algorithm.copyBaselineItemsCache(m_trackSizingAlgorithm, GridAxis::GridRowAxis);
     else {
         auto emptyCallback = [](RenderBox*) { };
-        cacheBaselineAlignedChildren(*this, algorithm, static_cast<uint8_t>(GridAxis::GridRowAxis), emptyCallback, !isSubgridRows());
+        cacheBaselineAlignedChildren(*this, algorithm, enumToUnderlyingType(GridAxis::GridRowAxis), emptyCallback, !isSubgridRows());
     }
 
     computeTrackSizesForIndefiniteSize(algorithm, GridTrackSizingDirection::ForColumns, &minLogicalWidth, &maxLogicalWidth);
@@ -1110,7 +1110,7 @@ void RenderGrid::placeSpecifiedMajorAxisItemsOnGrid(const Vector<RenderBox*>& au
 
     // Mapping between the major axis tracks (rows or columns) and the last auto-placed item's position inserted on
     // that track. This is needed to implement "sparse" packing for items locked to a given track.
-    // See http://dev.w3.org/csswg/css-grid/#auto-placement-algorithm
+    // See https://drafts.csswg.org/css-grid-2/#auto-placement-algo
     HashMap<unsigned, unsigned, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> minorAxisCursors;
 
     for (auto& autoGridItem : autoGridItems) {
@@ -1248,8 +1248,9 @@ Vector<LayoutUnit> RenderGrid::trackSizesForComputedStyle(GridTrackSizingDirecti
     bool hasCollapsedTracks = currentGrid().hasAutoRepeatEmptyTracks(direction);
     LayoutUnit gap = !hasCollapsedTracks ? gridGap(direction) : 0_lu;
     tracks.reserveInitialCapacity(numPositions - 1);
-    for (size_t i = 0; i < numPositions - 2; ++i)
-        tracks.append(positions[i + 1] - positions[i] - offsetBetweenTracks - gap);
+    tracks.appendUsingFunctor(numPositions - 2, [&](size_t i) {
+        return positions[i + 1] - positions[i] - offsetBetweenTracks - gap;
+    });
     tracks.append(positions[numPositions - 1] - positions[numPositions - 2]);
 
     if (!hasCollapsedTracks)
@@ -1813,7 +1814,7 @@ std::optional<LayoutUnit> RenderGrid::lastLineBaseline() const
     return baseline.value() + baselineChild->logicalTop().toInt();
 }
 
-WeakPtr<RenderBox> RenderGrid::getBaselineChild(ItemPosition alignment) const
+SingleThreadWeakPtr<RenderBox> RenderGrid::getBaselineChild(ItemPosition alignment) const
 {
     ASSERT(alignment == ItemPosition::Baseline || alignment == ItemPosition::LastBaseline);
     const RenderBox* baselineChild = nullptr;
