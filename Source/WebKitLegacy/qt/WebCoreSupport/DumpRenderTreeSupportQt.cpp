@@ -340,7 +340,7 @@ QVariantList DumpRenderTreeSupportQt::firstRectForCharacterRange(QWebPageAdapter
 
 void DumpRenderTreeSupportQt::setWindowsBehaviorAsEditingBehavior(QWebPageAdapter* adapter)
 {
-    Page* corePage = adapter->page;
+    RefPtr corePage = adapter->page;
     if (!corePage)
         return;
     corePage->settings().setEditingBehaviorType(EditingBehaviorType::Windows);
@@ -479,8 +479,8 @@ void DumpRenderTreeSupportQt::scalePageBy(QWebFrameAdapter* adapter, float scale
 void DumpRenderTreeSupportQt::setMockDeviceOrientation(QWebPageAdapter* adapter, bool canProvideAlpha, double alpha, bool canProvideBeta, double beta, bool canProvideGamma, double gamma)
 {
 #if ENABLE(DEVICE_ORIENTATION)
-    Page* corePage = adapter->page;
-    DeviceOrientationClientMock* mockClient = toDeviceOrientationClientMock(DeviceOrientationController::from(corePage)->deviceOrientationClient());
+    RefPtr corePage = adapter->page;
+    DeviceOrientationClientMock* mockClient = toDeviceOrientationClientMock(DeviceOrientationController::from(corePage.get())->deviceOrientationClient());
     mockClient->setOrientation(DeviceOrientationData::create(canProvideAlpha, alpha, canProvideBeta, beta, canProvideGamma, gamma));
 #endif
 }
@@ -488,8 +488,8 @@ void DumpRenderTreeSupportQt::setMockDeviceOrientation(QWebPageAdapter* adapter,
 void DumpRenderTreeSupportQt::resetGeolocationMock(QWebPageAdapter* adapter)
 {
 #if ENABLE(GEOLOCATION)
-    Page* corePage = adapter->page;
-    auto& mockClient = toGeolocationClientMock(GeolocationController::from(corePage)->client());
+    RefPtr corePage = adapter->page;
+    auto& mockClient = toGeolocationClientMock(GeolocationController::from(corePage.get())->client());
     mockClient.reset();
 #endif
 }
@@ -497,8 +497,8 @@ void DumpRenderTreeSupportQt::resetGeolocationMock(QWebPageAdapter* adapter)
 void DumpRenderTreeSupportQt::setMockGeolocationPermission(QWebPageAdapter* adapter, bool allowed)
 {
 #if ENABLE(GEOLOCATION)
-    Page* corePage = adapter->page;
-    auto& mockClient = toGeolocationClientMock(GeolocationController::from(corePage)->client());
+    RefPtr corePage = adapter->page;
+    auto& mockClient = toGeolocationClientMock(GeolocationController::from(corePage.get())->client());
     mockClient.setPermission(allowed);
 #endif
 }
@@ -506,8 +506,8 @@ void DumpRenderTreeSupportQt::setMockGeolocationPermission(QWebPageAdapter* adap
 void DumpRenderTreeSupportQt::setMockGeolocationPosition(QWebPageAdapter* adapter, double latitude, double longitude, double accuracy)
 {
 #if ENABLE(GEOLOCATION)
-    Page* corePage = adapter->page;
-    auto& mockClient = toGeolocationClientMock(GeolocationController::from(corePage)->client());
+    RefPtr corePage = adapter->page;
+    auto& mockClient = toGeolocationClientMock(GeolocationController::from(corePage.get())->client());
     mockClient.setPosition(GeolocationPositionData { WallTime::now().secondsSinceEpoch().seconds(), latitude, longitude, accuracy });
 #endif
 }
@@ -515,8 +515,8 @@ void DumpRenderTreeSupportQt::setMockGeolocationPosition(QWebPageAdapter* adapte
 void DumpRenderTreeSupportQt::setMockGeolocationPositionUnavailableError(QWebPageAdapter* adapter, const QString& message)
 {
 #if ENABLE(GEOLOCATION)
-    Page* corePage = adapter->page;
-    auto& mockClient = toGeolocationClientMock(GeolocationController::from(corePage)->client());
+    RefPtr corePage = adapter->page;
+    auto& mockClient = toGeolocationClientMock(GeolocationController::from(corePage.get())->client());
     mockClient.setPositionUnavailableError(message);
 #endif
 }
@@ -524,8 +524,8 @@ void DumpRenderTreeSupportQt::setMockGeolocationPositionUnavailableError(QWebPag
 int DumpRenderTreeSupportQt::numberOfPendingGeolocationPermissionRequests(QWebPageAdapter* adapter)
 {
 #if ENABLE(GEOLOCATION)
-    Page* corePage = adapter->page;
-    auto& mockClient = toGeolocationClientMock(GeolocationController::from(corePage)->client());
+    RefPtr corePage = adapter->page;
+    auto& mockClient = toGeolocationClientMock(GeolocationController::from(corePage.get())->client());
     return mockClient.numberOfPendingPermissionRequests();
 #else
     return -1;
@@ -616,14 +616,14 @@ void DumpRenderTreeSupportQt::simulateDesktopNotificationClick(const QString& ti
 
 void DumpRenderTreeSupportQt::setDefersLoading(QWebPageAdapter* adapter, bool flag)
 {
-    Page* corePage = adapter->page;
+    RefPtr corePage = adapter->page;
     if (corePage)
         corePage->setDefersLoading(flag);
 }
 
 void DumpRenderTreeSupportQt::goBack(QWebPageAdapter* adapter)
 {
-    Page* corePage = adapter->page;
+    RefPtr corePage = adapter->page;
     if (corePage)
         corePage->backForward().goBack();
 }
@@ -649,7 +649,7 @@ void DumpRenderTreeSupportQt::addURLToRedirect(const QString& origin, const QStr
 
 void DumpRenderTreeSupportQt::setInteractiveFormValidationEnabled(QWebPageAdapter* adapter, bool enable)
 {
-    Page* corePage = adapter->page;
+    RefPtr corePage = adapter->page;
     if (corePage)
         corePage->settings().setInteractiveFormValidationEnabled(enable);
 }
@@ -661,7 +661,7 @@ QStringList DumpRenderTreeSupportQt::contextMenu(QWebPageAdapter* page)
 
 bool DumpRenderTreeSupportQt::thirdPartyCookiePolicyAllows(QWebPageAdapter *adapter, const QUrl& url, const QUrl& firstPartyUrl)
 {
-    Page* corePage = adapter->page;
+    RefPtr corePage = adapter->page;
     auto* localFrame = dynamicDowncast<LocalFrame>(corePage->mainFrame());
     if (!localFrame)
         return false;

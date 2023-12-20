@@ -596,7 +596,7 @@ void QWebHistoryPrivate::goToItem(RefPtr<WebCore::HistoryItem>&& item)
     if (!item)
         return;
 
-    WebCore::Page* page = lst->page().page;
+    auto page = lst->page().page;
     page->goToItem(*item, WebCore::FrameLoadType::IndexedBackForward, WebCore::ShouldTreatAsContinuingLoad::No);
 }
 

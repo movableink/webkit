@@ -23,6 +23,9 @@
 #include "qwebelement.h"
 #include "qwebhistory.h"
 
+#include <WebCore/Page.h>
+#include <wtf/RefPtr.h>
+
 #include <memory>
 #include <qbasictimer.h>
 #include <qevent.h>
@@ -394,7 +397,7 @@ public:
 
     QWebSettings *settings;
 
-    WebCore::Page *page;
+    RefPtr<WebCore::Page> page;
     QScopedPointer<QWebPageClient> client;
 
     QWebPluginFactory *pluginFactory;

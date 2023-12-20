@@ -251,7 +251,7 @@ static Ref<WebCore::LocalWebLockRegistry> getOrCreateWebLockRegistry(bool isPriv
 
 QWebPageAdapter::QWebPageAdapter()
     : settings(0)
-    , page(0)
+    , page(nullptr)
     , pluginFactory(0)
     , forwardUnsupportedContent(false)
     , insideOpenCall(false)
@@ -311,18 +311,18 @@ void QWebPageAdapter::initializeWebCorePage()
     pageConfiguration.storageNamespaceProvider = WebKitLegacy::WebStorageNamespaceProvider::create(
         QWebSettings::globalSettings()->localStoragePath());
     pageConfiguration.visitedLinkStore = &VisitedLinkStoreQt::singleton();
-    page = new Page(WTFMove(pageConfiguration));
+    page = WebCore::Page::create(WTFMove(pageConfiguration));
 
 #if ENABLE(GEOLOCATION)
     if (useMock) {
         // In case running in DumpRenderTree mode set the controller to mock provider.
         GeolocationClientMock* mock = new GeolocationClientMock;
-        WebCore::provideGeolocationTo(page, *mock);
-        mock->setController(WebCore::GeolocationController::from(page));
+        WebCore::provideGeolocationTo(page.get(), *mock);
+        mock->setController(WebCore::GeolocationController::from(page.get()));
     }
 #if HAVE(QTPOSITIONING)
     else
-        WebCore::provideGeolocationTo(page, *new GeolocationClientQt(this));
+        WebCore::provideGeolocationTo(page.get(), *new GeolocationClientQt(this));
 #endif
 #endif
 
@@ -338,9 +338,9 @@ void QWebPageAdapter::initializeWebCorePage()
     }
 #endif
     if (m_deviceOrientationClient)
-        WebCore::provideDeviceOrientationTo(page, m_deviceOrientationClient);
+        WebCore::provideDeviceOrientationTo(page.get(), m_deviceOrientationClient);
     if (m_deviceMotionClient)
-        WebCore::provideDeviceMotionTo(page, m_deviceMotionClient);
+        WebCore::provideDeviceMotionTo(page.get(), m_deviceMotionClient);
 #endif
 
     // By default each page is put into their own unique page group, which affects popup windows
@@ -352,10 +352,10 @@ void QWebPageAdapter::initializeWebCorePage()
 
     page->addLayoutMilestones(WebCore::LayoutMilestone::DidFirstVisuallyNonEmptyLayout);
 
-    settings = new QWebSettings(page);
+    settings = new QWebSettings(page.get());
 
 #if ENABLE(NOTIFICATIONS)
-    WebCore::provideNotification(page, NotificationPresenterClientQt::notificationPresenter());
+    WebCore::provideNotification(page.get(), NotificationPresenterClientQt::notificationPresenter());
 #endif
 
     history.d = new QWebHistoryPrivate(static_cast<BackForwardList*>(&page->backForward().client()));
@@ -363,7 +363,6 @@ void QWebPageAdapter::initializeWebCorePage()
 
 QWebPageAdapter::~QWebPageAdapter()
 {
-    delete page;
     delete settings;
 
 #if ENABLE(NOTIFICATIONS)
@@ -380,8 +379,7 @@ void QWebPageAdapter::deletePage()
     // Before we delete the page, detach the mainframe's loader
     FrameLoader& loader = mainFrameAdapter().frame->loader();
     loader.detachFromParent();
-    delete page;
-    page = 0;
+    page = nullptr;
 }
 
 QWebPageAdapter* QWebPageAdapter::kit(Page* page)
@@ -996,7 +994,7 @@ QWebHitTestResultPrivate* QWebPageAdapter::updatePositionDependentMenuActions(co
     WebCore::ContextMenu* webcoreMenu = page->contextMenuController().contextMenu();
     QList<MenuItem> itemDescriptions;
     if (client && webcoreMenu)
-        itemDescriptions = descriptionForPlatformMenu(webcoreMenu->items(), page);
+        itemDescriptions = descriptionForPlatformMenu(webcoreMenu->items(), page.get());
     createAndSetCurrentContextMenu(itemDescriptions, visitedWebActions);
     if (result.scrollbar())
         return 0;

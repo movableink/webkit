@@ -189,7 +189,7 @@ Page* ChromeClientQt::createWindow(LocalFrame& frame, const WindowFeatures& feat
     if (!newPage)
         return 0;
 
-    return newPage->page;
+    return newPage->page.get();
 }
 
 void ChromeClientQt::show()
