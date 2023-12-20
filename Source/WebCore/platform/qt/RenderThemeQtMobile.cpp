@@ -38,6 +38,7 @@
 #include "RenderStyleSetters.h"
 #include "StyleResolver.h"
 
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RefPtr.h>
 
 #include <QColor>

@@ -198,6 +198,7 @@ list(APPEND WebCore_SOURCES
     platform/qt/ScrollbarThemeQt.cpp
     platform/qt/SharedBufferQt.cpp
     platform/qt/TemporaryLinkStubsQt.cpp
+    platform/qt/ThemeQt.cpp
     platform/qt/ThirdPartyCookiesQt.cpp
     platform/qt/UserAgentQt.cpp
     platform/qt/WidgetQt.cpp
