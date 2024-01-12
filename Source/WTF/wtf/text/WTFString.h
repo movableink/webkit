@@ -39,6 +39,8 @@
 QT_BEGIN_NAMESPACE
 class QString;
 class QStringView;
+class QLatin1StringView;
+class QByteArrayView;
 QT_END_NAMESPACE
 #endif
 
