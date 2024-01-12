@@ -10,7 +10,7 @@ on:
       - master
 
 env:
-  QT_VERSION: 5.15.1
+  QT_VERSION: 6.6.1
   CCACHE_VERSION: 3.7.7
   CACHE_PARTITION: dev
   HOST_N_CORES: 2
@@ -74,7 +74,7 @@ jobs:
       env:
         TOOLCHAIN: "win64_msvc2019_64"
         DIR: "msvc2019_64"
-      shell: bash --noprofile --norc -eo pipefail -x {0} 
+      shell: bash --noprofile --norc -eo pipefail -x {0}
       run: |
         py -m pip install -r Tools/qt/qt-downloader-requirements.txt
         QT_INSTALL_DIR="/c/Qt"
@@ -89,7 +89,7 @@ jobs:
       id: qt_mac
       if: runner.os == 'macOS'
       shell: bash --noprofile --norc -eo pipefail -x {0}
-      env: 
+      env:
         TOOLCHAIN: "clang_64"
       run: |
         pip3 install -r Tools/qt/qt-downloader-requirements.txt

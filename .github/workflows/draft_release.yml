@@ -7,7 +7,7 @@ on:
         description: "Coin build number, e.g. 1600955993"
         required: true
       qt_version:
-        description: "Qt version used for building artifacts, e.g. 5.15.1"
+        description: "Qt version used for building artifacts, e.g. 6.6.1"
         required: true
       tag_name:
         description: "Tag name, e.g. qtwebkit-5.212.0-alpha5"

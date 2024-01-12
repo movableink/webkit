@@ -49,7 +49,7 @@ print "git push -f $remote $commit:refs/heads/wip/qtwebkit/5.212 && git push -f 
 `git push -f $remote $commit:refs/heads/wip/qtwebkit/5.212 && git push -f $remote $commit:refs/staging/wip/qtwebkit/5.212`;
 $? == 0 or die "git exited with code $?";
 
-my $qt5TagName = "qtwebkit-5.212-" . time();
-print "git tag -a '$qt5TagName' -m '$qt5TagName' && git push qtwebkit '$qt5TagName'\n";
-`git tag -a '$qt5TagName' -m '$qt5TagName' && git push qtwebkit '$qt5TagName'`;
+my $qt6TagName = "qtwebkit-5.212-" . time();
+print "git tag -a '$qt6TagName' -m '$qt6TagName' && git push qtwebkit '$qt6TagName'\n";
+`git tag -a '$qt6TagName' -m '$qt6TagName' && git push qtwebkit '$qt6TagName'`;
 $? == 0 or die "git exited with code $?";

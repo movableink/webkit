@@ -30,7 +30,7 @@ class QtWebKitConan(ConanFile):
     license = "LGPL-2.0-or-later, LGPL-2.1-or-later, BSD-2-Clause"
     url = "https://github.com/qtwebkit/qtwebkit"
     description = "Qt port of WebKit"
-    topics = ("qt", "browser-engine", "webkit", "qt5", "qml", "qtwebkit")
+    topics = ("qt", "browser-engine", "webkit", "qt6", "qml", "qtwebkit")
     settings = "os", "compiler", "arch", "arch_build"
     generators = "cmake", "virtualenv", "txt"
     exports_sources = "../../*"
