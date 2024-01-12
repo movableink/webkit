@@ -28,12 +28,7 @@
 #include <QString>
 #include <QStringView>
 #include <QByteArrayView>
-#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
-#include <QLatin1StringView>
-#else
 #include <QLatin1String>
-using QLatin1StringView = QLatin1String;
-#endif
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/WTFString.h>
 
@@ -47,11 +42,11 @@ String::String(const QString& qstr)
     m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(qstr.constData()), qstr.length());
 }
 
-String::String(QLatin1StringView view)
+String::String(QLatin1String view)
 {
     if (view.isNull())
         return;
-    m_impl = StringImpl::create(reinterpret_cast_ptr<const LChar*>(view.data()), view.length());
+    m_impl = StringImpl::create(reinterpret_cast_ptr<const LChar*>(view.data()), view.size());
 }
 
 String::String(QStringView view)
