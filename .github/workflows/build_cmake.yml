@@ -138,7 +138,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update && sudo apt-get install \
-        ninja-build build-essential bison flex gperf libfontconfig1-dev libgl1-mesa-dev libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhyphen-dev libicu-dev libjpeg-dev libpng-dev libqt5opengl5-dev libqt5sensors5-dev libqt5webchannel5-dev libsqlite3-dev libwebp-dev libwoff-dev libxcomposite-dev libxml2-dev libxrender-dev libxslt1-dev mesa-common-dev pkg-config python3 qtbase5-private-dev qtdeclarative5-private-dev qtpositioning5-dev ruby libqt5sql5-sqlite qtbase5-doc-html qttools5-dev-tools \
+        ninja-build build-essential bison flex gperf libfontconfig1-dev libgl1-mesa-dev libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhyphen-dev libicu-dev libjpeg-dev libpng-dev libqt6opengl6-dev libqt6sensors6-dev libqt6webchannel6-dev libsqlite3-dev libwebp-dev libwoff-dev libxcomposite-dev libxml2-dev libxrender-dev libxslt1-dev mesa-common-dev pkg-config python3 qt6-base-dev qt6-base-private-dev qt6-declarative-private-dev qt6-positioning-dev ruby libqt6sql6-sqlite qt6-base-dev-tools \
         libtasn1-6-dev libgcrypt20-dev libunwind-dev libharfbuzz-dev
 
     - name: CMake version
