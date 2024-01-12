@@ -3,7 +3,7 @@ name: CMake Build Matrix
 on:
   push:
     branches:
-      - master
+      - '*'
 
   pull_request:
     branches:
