@@ -6,13 +6,13 @@
 <style>
   .test {
     background-color: red;
-    width: 100px;
-    height: 100px;
+    width: 30px;
+    height: 30px;
     display: grid;
   }
 
   .test-5 {
-    @media (min-width: 50px) {
+    @media (min-width: 10px) {
       & {
         background-color: green;
       }
@@ -20,7 +20,7 @@
   }
 
   .test-6 {
-    @media (min-width: 50px) {
+    @media (min-width: 10px) {
       background-color: green;
     }
   }
@@ -70,6 +70,6 @@
   <div class="test test-6"></div>
   <div class="test test-10"></div>
   <div class="test test-11"></div>
-  <div class="test test-12"></div>
+  <div class="test test-12"><div class="test-12"></div></div>
   <div class="test"><div class="test-13"></div></div>
 </body>

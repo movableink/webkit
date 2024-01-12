@@ -79,7 +79,7 @@ public:
     void takeFocus(FocusDirection) final;
 
     void focusedElementChanged(Element*) final;
-    void focusedFrameChanged(LocalFrame*) final;
+    void focusedFrameChanged(Frame*) final;
 
     Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&) final;
     void show() final;
@@ -113,6 +113,9 @@ public:
     bool runJavaScriptPrompt(LocalFrame&, const String& message, const String& defaultValue, String& result) final;
 
     void setStatusbarText(const String&) final;
+
+    void rootFrameAdded(const LocalFrame&) final { }
+    void rootFrameRemoved(const LocalFrame&) final { }
 
     KeyboardUIMode keyboardUIMode() final;
 
@@ -207,11 +210,11 @@ public:
 
     void requestCookieConsent(CompletionHandler<void(WebCore::CookieConsentDecisionResult)>&&) final;
 
-    IntPoint accessibilityScreenToRootView(const IntPoint&) const;
-    IntRect rootViewToAccessibilityScreen(const IntRect&) const;
-    void didFinishLoadingImageForElement(HTMLImageElement&);
-    void intrinsicContentsSizeChanged(const IntSize&) const;
-    RefPtr<Icon> createIconForFiles(const Vector<WTF::String>&);
+    IntPoint accessibilityScreenToRootView(const IntPoint&) const final;
+    IntRect rootViewToAccessibilityScreen(const IntRect&) const final;
+    void didFinishLoadingImageForElement(HTMLImageElement&) final;
+    void intrinsicContentsSizeChanged(const IntSize&) const final;
+    RefPtr<Icon> createIconForFiles(const Vector<WTF::String>&) override;
 
     QWebFullScreenVideoHandler* createFullScreenVideoHandler();
 

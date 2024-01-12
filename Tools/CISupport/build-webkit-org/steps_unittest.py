@@ -37,7 +37,7 @@ from twisted.internet import defer, error, reactor
 from twisted.python import failure, log
 from twisted.trial import unittest
 
-from steps import *
+from .steps import *
 
 CURRENT_HOSTNAME = socket.gethostname().strip()
 
@@ -178,7 +178,7 @@ class BuildStepMixinAdditions(BuildStepMixin, TestReactorMixin):
 
 class TestStepNameShouldBeValidIdentifier(BuildStepMixinAdditions, unittest.TestCase):
     def test_step_names_are_valid(self):
-        import steps
+        from . import steps
         build_step_classes = inspect.getmembers(steps, inspect.isclass)
         for build_step in build_step_classes:
             if 'name' in vars(build_step[1]):
@@ -411,14 +411,31 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expectOutcome(result=SUCCESS, state_string='compiled')
         return self.runStep()
 
+    def test_success_architecture(self):
+        self.setupStep(CompileWebKit())
+        self.setProperty('platform', 'mac')
+        self.setProperty('fullPlatform', 'mac-ventura')
+        self.setProperty('configuration', 'release')
+        self.setProperty('architecture', 'x86_64 arm64')
+        self.expectRemoteCommands(
+            ExpectShell(
+                workdir='wkdir',
+                timeout=1800,
+                logEnviron=True,
+                command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--release', '--architecture', 'x86_64 arm64', 'WK_VALIDATE_DEPENDENCIES=YES'],
+            ) + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='compiled')
+        return self.runStep()
+
     def test_bigsur_timeout(self):
         self.setupStep(CompileWebKit())
-        self.setProperty('fullPlatform', 'mac-bigsur')
+        self.setProperty('fullPlatform', 'mac-ventura')
         self.setProperty('configuration', 'release')
         self.expectRemoteCommands(
             ExpectShell(
                 workdir='wkdir',
-                timeout=3600,
+                timeout=1800,
                 logEnviron=True,
                 command=['perl', 'Tools/Scripts/build-webkit', '--no-fatal-warnings', '--release'],
             ) + 0,
@@ -471,7 +488,7 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
             ) + 2
             + ExpectShell.log('stdio', stdout='1 error generated.'),
         )
-        self.expectOutcome(result=FAILURE, state_string='compiled (failure)')
+        self.expectOutcome(result=FAILURE, state_string='Failed compile-webkit')
         return self.runStep()
 
 
@@ -511,7 +528,7 @@ class TestCompileJSCOnly(BuildStepMixinAdditions, unittest.TestCase):
             ) + 2
             + ExpectShell.log('stdio', stdout='1 error generated.'),
         )
-        self.expectOutcome(result=FAILURE, state_string='compiled (failure)')
+        self.expectOutcome(result=FAILURE, state_string='Failed compile-jsc')
         return self.runStep()
 
 

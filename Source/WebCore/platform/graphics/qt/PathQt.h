@@ -38,16 +38,17 @@ namespace WebCore {
 
 class PathQt final : public PathImpl {
 public:
-    static UniqueRef<PathQt> create();
-    static UniqueRef<PathQt> create(const PathStream&);
-    static UniqueRef<PathQt> create(QPainterPath);
+    static Ref<PathQt> create();
+    static Ref<PathQt> create(const PathQt&);
+    static Ref<PathQt> create(const PathSegment&);
+    static Ref<PathQt> create(const PathStream&);
+    static Ref<PathQt> create(QPainterPath);
 
     PathQt();
     PathQt(QPainterPath&&);
     PathQt(PathQt&&);
     PathQt(const PathQt&);
 
-    bool operator==(const PathImpl&) const final;
     PathQt& operator=(const PathQt&);
     PathQt& operator=(PathQt&& other);
 
@@ -55,9 +56,9 @@ public:
 
     void addPath(const PathQt&, const AffineTransform&);
 
-    void applyElements(const PathElementApplier&) const final;
+    bool applyElements(const PathElementApplier&) const final;
 
-    void transform(const AffineTransform&);
+    bool transform(const AffineTransform&);
 
     bool contains(const FloatPoint&, WindRule) const;
     bool strokeContains(const FloatPoint&, const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
@@ -65,24 +66,24 @@ public:
     FloatRect strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
 
 private:
-    UniqueRef<PathImpl> clone() const final;
+    Ref<PathImpl> copy() const final;
 
     QPainterPath ensurePlatformPath() { return platformPath(); }
 
-    void moveTo(const FloatPoint&) final;
+    void add(PathMoveTo) final;
 
-    void addLineTo(const FloatPoint&) final;
-    void addQuadCurveTo(const FloatPoint& controlPoint, const FloatPoint& endPoint) final;
-    void addBezierCurveTo(const FloatPoint& controlPoint1, const FloatPoint& controlPoint2, const FloatPoint& endPoint) final;
-    void addArcTo(const FloatPoint& point1, const FloatPoint& point2, float radius) final;
+    void add(PathLineTo) final;
+    void add(PathQuadCurveTo) final;
+    void add(PathBezierCurveTo) final;
+    void add(PathArcTo) final;
 
-    void addArc(const FloatPoint& center, float radius, float startAngle, float endAngle, RotationDirection) final;
-    void addEllipse(const FloatPoint& center, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, RotationDirection) final;
-    void addEllipseInRect(const FloatRect&) final;
-    void addRect(const FloatRect&) final;
-    void addRoundedRect(const FloatRoundedRect&, PathRoundedRect::Strategy) final;
+    void add(PathArc) final;
+    void add(PathEllipse) final;
+    void add(PathEllipseInRect) final;
+    void add(PathRect) final;
+    void add(PathRoundedRect) final;
 
-    void closeSubpath() final;
+    void add(PathCloseSubpath) final;
 
     void applySegments(const PathSegmentApplier&) const final;
 

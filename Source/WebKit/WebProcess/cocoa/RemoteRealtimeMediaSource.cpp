@@ -52,9 +52,9 @@ RemoteRealtimeMediaSource::RemoteRealtimeMediaSource(RemoteRealtimeMediaSourcePr
 
 void RemoteRealtimeMediaSource::createRemoteMediaSource()
 {
-    m_proxy.createRemoteMediaSource(deviceIDHashSalts(), pageIdentifier(), [this, protectedThis = Ref { *this }](auto&& errorMessage, auto&& settings, auto&& capabilities) {
-        if (!errorMessage.isNull()) {
-            m_proxy.didFail(WTFMove(errorMessage));
+    m_proxy.createRemoteMediaSource(deviceIDHashSalts(), pageIdentifier(), [this, protectedThis = Ref { *this }](WebCore::CaptureSourceError&& error, WebCore::RealtimeMediaSourceSettings&& settings, WebCore::RealtimeMediaSourceCapabilities&& capabilities) {
+        if (error) {
+            m_proxy.didFail(WTFMove(error));
             return;
         }
 
@@ -78,6 +78,21 @@ void RemoteRealtimeMediaSource::setSettings(RealtimeMediaSourceSettings&& settin
     auto changed = m_settings.difference(settings);
     m_settings = WTFMove(settings);
     notifySettingsDidChangeObservers(changed);
+}
+
+Ref<RealtimeMediaSource::TakePhotoNativePromise> RemoteRealtimeMediaSource::takePhoto(PhotoSettings&& settings)
+{
+    return m_proxy.takePhoto(WTFMove(settings));
+}
+
+Ref<RealtimeMediaSource::PhotoCapabilitiesNativePromise> RemoteRealtimeMediaSource::getPhotoCapabilities()
+{
+    return m_proxy.getPhotoCapabilities();
+}
+
+Ref<RealtimeMediaSource::PhotoSettingsNativePromise> RemoteRealtimeMediaSource::getPhotoSettings()
+{
+    return m_proxy.getPhotoSettings();
 }
 
 void RemoteRealtimeMediaSource::configurationChanged(String&& persistentID, WebCore::RealtimeMediaSourceSettings&& settings, WebCore::RealtimeMediaSourceCapabilities&& capabilities)
@@ -131,7 +146,7 @@ void RemoteRealtimeMediaSource::gpuProcessConnectionDidClose(GPUProcessConnectio
         return;
 
     m_proxy.updateConnection();
-    m_manager.remoteCaptureSampleManager().didUpdateSourceConnection(m_proxy.connection());
+    m_manager.remoteCaptureSampleManager().didUpdateSourceConnection(Ref { m_proxy.connection() });
     m_proxy.resetReady();
     createRemoteMediaSource();
 

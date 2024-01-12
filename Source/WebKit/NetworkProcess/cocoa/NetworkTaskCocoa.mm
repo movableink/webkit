@@ -24,8 +24,19 @@
  */
 
 #import "config.h"
-#include "NetworkTaskCocoa.h"
+#import "NetworkTaskCocoa.h"
 
+#import "Logging.h"
+#import "NetworkProcess.h"
+#import "NetworkSession.h"
+#import <WebCore/DNS.h>
+#import <WebCore/NetworkStorageSession.h>
+#import <WebCore/RegistrableDomain.h>
+#import <pal/spi/cf/CFNetworkSPI.h>
+#import <wtf/BlockPtr.h>
+#import <wtf/WeakObjCPtr.h>
+
+namespace WebKit {
 using namespace WebCore;
 
 static inline bool computeIsAlwaysOnLoggingAllowed(NetworkSession& session)
@@ -56,7 +67,6 @@ bool NetworkTaskCocoa::shouldApplyCookiePolicyForThirdPartyCloaking() const
     return m_networkSession->networkStorageSession() && m_networkSession->networkStorageSession()->trackingPreventionEnabled();
 }
 
-#if ENABLE(TRACKING_PREVENTION)
 NSHTTPCookieStorage *NetworkTaskCocoa::statelessCookieStorage()
 {
     static NeverDestroyed<RetainPtr<NSHTTPCookieStorage>> statelessCookieStorage;
@@ -114,7 +124,6 @@ bool NetworkTaskCocoa::needsFirstPartyCookieBlockingLatchModeQuirk(const URL& fi
 
     return quirk->value == requestDomain;
 }
-#endif
 
 void NetworkTaskCocoa::applyCookiePolicyForThirdPartyCloaking(const WebCore::ResourceRequest& request)
 {
@@ -155,7 +164,14 @@ void NetworkTaskCocoa::applyCookiePolicyForThirdPartyCloaking(const WebCore::Res
             if (!remoteAddress)
                 return cookiesSetInResponse;
 
-            if (shouldCapCookieExpiryForThirdPartyIPAddress(*remoteAddress, *firstPartyAddress)) {
+            auto needsThirdPartyIPAddressQuirk = [] (const URL& requestURL) {
+                // We only apply this quirk if we're already on google.com; otherwise, we would've
+                // already bailed at the top of this method, due to the request being third party.
+                // Note that this only applies to "accounts.google.com" (excluding subdomains).
+                return requestURL.host() == "accounts.google.com"_s;
+            };
+
+            if (shouldCapCookieExpiryForThirdPartyIPAddress(*remoteAddress, *firstPartyAddress) && !needsThirdPartyIPAddressQuirk(requestURL)) {
                 cookiesSetInResponse = cookiesByCappingExpiry(cookiesSetInResponse, ageCapForCNAMECloakedCookies);
                 if (debugLoggingEnabled) {
                     for (NSHTTPCookie *cookie in cookiesSetInResponse)
@@ -227,7 +243,6 @@ void NetworkTaskCocoa::willPerformHTTPRedirection(WebCore::ResourceResponse&& re
     request.setIsAppInitiated(request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody).attribution == NSURLRequestAttributionDeveloper);
 #endif
 
-#if ENABLE(TRACKING_PREVENTION)
     applyCookiePolicyForThirdPartyCloaking(request);
     if (!m_hasBeenSetToUseStatelessCookieStorage) {
         if (storedCredentialsPolicy() == WebCore::StoredCredentialsPolicy::EphemeralStateless
@@ -241,8 +256,9 @@ void NetworkTaskCocoa::willPerformHTTPRedirection(WebCore::ResourceResponse&& re
 #else
     LOG(NetworkSession, "%lu %s cookies for redirect URL %s", (unsigned long)[task() taskIdentifier], (m_hasBeenSetToUseStatelessCookieStorage ? "Blocking" : "Not blocking"), request.url().string().utf8().data());
 #endif
-#endif
 
     updateTaskWithFirstPartyForSameSiteCookies(task(), request);
     completionHandler(WTFMove(request));
 }
+
+} // namespace WebKit

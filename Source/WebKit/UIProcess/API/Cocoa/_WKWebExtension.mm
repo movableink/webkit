@@ -33,7 +33,6 @@
 #import "CocoaImage.h"
 #import "WebExtension.h"
 #import "_WKWebExtensionMatchPatternInternal.h"
-#import <WebCore/WebCoreObjCExtras.h>
 
 NSErrorDomain const _WKWebExtensionErrorDomain = @"_WKWebExtensionErrorDomain";
 NSNotificationName const _WKWebExtensionErrorsWereUpdatedNotification = @"_WKWebExtensionErrorsWereUpdated";
@@ -44,6 +43,8 @@ NSNotificationName const _WKWebExtensionErrorsWereUpdatedNotification = @"_WKWeb
 
 + (instancetype)extensionWithAppExtensionBundle:(NSBundle *)appExtensionBundle
 {
+    NSParameterAssert([appExtensionBundle isKindOfClass:NSBundle.class]);
+
     NSError * __autoreleasing internalError;
     auto result = WebKit::WebExtension::create(appExtensionBundle, &internalError);
 
@@ -55,6 +56,10 @@ NSNotificationName const _WKWebExtensionErrorsWereUpdatedNotification = @"_WKWeb
 
 + (instancetype)extensionWithResourceBaseURL:(NSURL *)resourceBaseURL
 {
+    NSParameterAssert([resourceBaseURL isKindOfClass:NSURL.class]);
+    NSParameterAssert([resourceBaseURL isFileURL]);
+    NSParameterAssert([resourceBaseURL hasDirectoryPath]);
+
     NSError * __autoreleasing internalError;
     auto result = WebKit::WebExtension::create(resourceBaseURL, &internalError);
 
@@ -66,7 +71,7 @@ NSNotificationName const _WKWebExtensionErrorsWereUpdatedNotification = @"_WKWeb
 
 - (instancetype)initWithAppExtensionBundle:(NSBundle *)appExtensionBundle error:(NSError **)error
 {
-    NSParameterAssert(appExtensionBundle);
+    NSParameterAssert([appExtensionBundle isKindOfClass:NSBundle.class]);
 
     if (error)
         *error = nil;
@@ -88,7 +93,7 @@ NSNotificationName const _WKWebExtensionErrorsWereUpdatedNotification = @"_WKWeb
 
 - (instancetype)initWithResourceBaseURL:(NSURL *)resourceBaseURL error:(NSError **)error
 {
-    NSParameterAssert(resourceBaseURL);
+    NSParameterAssert([resourceBaseURL isKindOfClass:NSURL.class]);
     NSParameterAssert([resourceBaseURL isFileURL]);
     NSParameterAssert([resourceBaseURL hasDirectoryPath]);
 
@@ -112,14 +117,14 @@ NSNotificationName const _WKWebExtensionErrorsWereUpdatedNotification = @"_WKWeb
 
 - (instancetype)_initWithManifestDictionary:(NSDictionary<NSString *, id> *)manifest
 {
-    NSParameterAssert(manifest);
+    NSParameterAssert([manifest isKindOfClass:NSDictionary.class]);
 
     return [self _initWithManifestDictionary:manifest resources:nil];
 }
 
 - (instancetype)_initWithManifestDictionary:(NSDictionary<NSString *, id> *)manifest resources:(NSDictionary<NSString *, id> *)resources
 {
-    NSParameterAssert(manifest);
+    NSParameterAssert([manifest isKindOfClass:NSDictionary.class]);
 
     if (!(self = [super init]))
         return nil;
@@ -131,7 +136,7 @@ NSNotificationName const _WKWebExtensionErrorsWereUpdatedNotification = @"_WKWeb
 
 - (instancetype)_initWithResources:(NSDictionary<NSString *, id> *)resources
 {
-    NSParameterAssert(resources);
+    NSParameterAssert([resources isKindOfClass:NSDictionary.class]);
 
     if (!(self = [super init]))
         return nil;
@@ -143,8 +148,7 @@ NSNotificationName const _WKWebExtensionErrorsWereUpdatedNotification = @"_WKWeb
 
 - (void)dealloc
 {
-    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(_WKWebExtension.class, self))
-        return;
+    ASSERT(isMainRunLoop());
 
     _webExtension->~WebExtension();
 }
@@ -166,8 +170,7 @@ NSNotificationName const _WKWebExtensionErrorsWereUpdatedNotification = @"_WKWeb
 
 - (NSLocale *)defaultLocale
 {
-    // FIXME: <https://webkit.org/b/246488> Handle manifest localization.
-    return nil;
+    return _webExtension->defaultLocale();
 }
 
 - (NSString *)displayName
@@ -250,6 +253,31 @@ NSNotificationName const _WKWebExtensionErrorsWereUpdatedNotification = @"_WKWeb
     return _webExtension->backgroundContentIsPersistent();
 }
 
+- (BOOL)hasInjectedContent
+{
+    return _webExtension->hasStaticInjectedContent();
+}
+
+- (BOOL)hasOptionsPage
+{
+    return _webExtension->hasOptionsPage();
+}
+
+- (BOOL)hasOverrideNewTabPage
+{
+    return _webExtension->hasOverrideNewTabPage();
+}
+
+- (BOOL)hasCommands
+{
+    return _webExtension->hasCommands();
+}
+
+- (BOOL)hasContentModificationRules
+{
+    return _webExtension->hasContentModificationRules();
+}
+
 - (BOOL)_backgroundContentIsServiceWorker
 {
     return _webExtension->backgroundContentIsServiceWorker();
@@ -258,13 +286,6 @@ NSNotificationName const _WKWebExtensionErrorsWereUpdatedNotification = @"_WKWeb
 - (BOOL)_backgroundContentUsesModules
 {
     return _webExtension->backgroundContentUsesModules();
-}
-
-- (BOOL)_hasStaticInjectedContentForURL:(NSURL *)url
-{
-    NSParameterAssert(url);
-
-    return _webExtension->hasStaticInjectedContentForURL(url);
 }
 
 #pragma mark WKObject protocol implementation
@@ -416,17 +437,37 @@ NSNotificationName const _WKWebExtensionErrorsWereUpdatedNotification = @"_WKWeb
     return NO;
 }
 
+- (BOOL)hasInjectedContent
+{
+    return NO;
+}
+
+- (BOOL)hasOptionsPage
+{
+    return NO;
+}
+
+- (BOOL)hasOverrideNewTabPage
+{
+    return NO;
+}
+
+- (BOOL)hasCommands
+{
+    return NO;
+}
+
+- (BOOL)hasContentModificationRules
+{
+    return NO;
+}
+
 - (BOOL)_backgroundContentIsServiceWorker
 {
     return NO;
 }
 
 - (BOOL)_backgroundContentUsesModules
-{
-    return NO;
-}
-
-- (BOOL)_hasStaticInjectedContentForURL:(NSURL *)url
 {
     return NO;
 }

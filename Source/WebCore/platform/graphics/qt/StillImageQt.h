@@ -56,14 +56,14 @@ namespace WebCore {
         void destroyDecodedData(bool destroyAll = true) override { Q_UNUSED(destroyAll); }
 
         FloatSize size(ImageOrientation) const override;
-        ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions&) override;
+        ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, ImagePaintingOptions) override;
 
     private:
         StillImage(const QImage&);
         StillImage(const QImage*);
         StillImage(QImage&&);
         ~StillImage() override;
-        
+
         const QImage* m_image;
         bool m_ownsImage;
     };

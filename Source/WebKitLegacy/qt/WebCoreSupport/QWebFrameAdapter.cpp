@@ -186,7 +186,7 @@ QVariant QWebFrameAdapter::evaluateJavaScript(const QString &scriptSource)
     ScriptController& scriptController = frame->script();
     QVariant rc;
     int distance = 0;
-    JSC::JSValue value = scriptController.executeScriptIgnoringException(scriptSource);
+    JSC::JSValue value = scriptController.executeScriptIgnoringException(scriptSource, JSC::SourceTaintedOrigin::Untainted);
     JSC::JSGlobalObject* lexicalGlobalObject = scriptController.globalObject(mainThreadNormalWorld())->globalObject();
     JSValueRef* ignoredException = 0;
     JSC::JSLockHolder lock(lexicalGlobalObject);
@@ -333,7 +333,7 @@ qreal QWebFrameAdapter::zoomFactor() const
 
 void QWebFrameAdapter::init(QWebPageAdapter* pageAdapter)
 {
-    QWebFrameData frameData(pageAdapter->page);
+    QWebFrameData frameData(pageAdapter->page.get());
     init(pageAdapter, &frameData);
 }
 
@@ -846,7 +846,7 @@ QWebHitTestResultPrivate::QWebHitTestResultPrivate(const WebCore::HitTestResult 
     if (innerNodeFrame)
         frame = QWebFrameAdapter::kit(innerNodeFrame)->handle();
 
-    enclosingBlock = QWebElement(WebCore::enclosingBlock(innerNode));
+    enclosingBlock = QWebElement(WebCore::enclosingBlock(innerNode).get());
 }
 
 QWebHitTestResultPrivate::QWebHitTestResultPrivate(const QWebHitTestResultPrivate& other)

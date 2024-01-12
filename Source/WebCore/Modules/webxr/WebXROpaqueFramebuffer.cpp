@@ -34,9 +34,10 @@
 #include "WebGL2RenderingContext.h"
 #include "WebGLRenderingContext.h"
 #include "WebGLRenderingContextBase.h"
+#include "WebGLUtilities.h"
 #include <wtf/Scope.h>
 
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA) || USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+#if PLATFORM(COCOA)
 #include "GraphicsContextGLCocoa.h"
 #endif
 
@@ -44,7 +45,7 @@ namespace WebCore {
 
 using GL = GraphicsContextGL;
 
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA) || USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+#if PLATFORM(COCOA)
 static std::optional<GL::EGLImageAttachResult> createAndBindCompositorTexture(GL& gl, GCGLenum target, GCGLOwnedTexture& texture, GL::EGLImageSource source)
 {
     texture.ensure(gl);
@@ -81,16 +82,17 @@ static GL::EGLImageSource makeEGLImageSource(const std::tuple<WTF::MachSendRight
 {
     auto [imageHandle, isSharedTexture] = imageSource;
     if (isSharedTexture)
-        return GL::EGLImageSourceMTLSharedTextureHandle { imageHandle };
-    return GL::EGLImageSourceIOSurfaceHandle { imageHandle };
+        return GL::EGLImageSourceMTLSharedTextureHandle { WTF::MachSendRight(imageHandle) };
+    return GL::EGLImageSourceIOSurfaceHandle { WTF::MachSendRight(imageHandle) };
 }
 #endif
 
 std::unique_ptr<WebXROpaqueFramebuffer> WebXROpaqueFramebuffer::create(PlatformXR::LayerHandle handle, WebGLRenderingContextBase& context, Attributes&& attributes, IntSize framebufferSize)
 {
     auto framebuffer = WebGLFramebuffer::createOpaque(context);
-    auto opaque = std::unique_ptr<WebXROpaqueFramebuffer>(new WebXROpaqueFramebuffer(handle, WTFMove(framebuffer), context, WTFMove(attributes), framebufferSize));
-    return opaque;
+    if (!framebuffer)
+        return nullptr;
+    return std::unique_ptr<WebXROpaqueFramebuffer>(new WebXROpaqueFramebuffer(handle, framebuffer.releaseNonNull(), context, WTFMove(attributes), framebufferSize));
 }
 
 WebXROpaqueFramebuffer::WebXROpaqueFramebuffer(PlatformXR::LayerHandle handle, Ref<WebGLFramebuffer>&& framebuffer, WebGLRenderingContextBase& context, Attributes&& attributes, IntSize framebufferSize)
@@ -105,7 +107,7 @@ WebXROpaqueFramebuffer::WebXROpaqueFramebuffer(PlatformXR::LayerHandle handle, R
 WebXROpaqueFramebuffer::~WebXROpaqueFramebuffer()
 {
     if (auto gl = m_context.graphicsContextGL()) {
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA) || USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+#if PLATFORM(COCOA)
         m_colorTexture.release(*gl);
 #endif
         m_depthStencilBuffer.release(*gl);
@@ -115,7 +117,7 @@ WebXROpaqueFramebuffer::~WebXROpaqueFramebuffer()
     } else {
         // The GraphicsContextGL is gone, so disarm the GCGLOwned objects so
         // their destructors don't assert.
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA) || USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+#if PLATFORM(COCOA)
         m_colorTexture.release(*gl);
 #endif
         m_depthStencilBuffer.leakObject();
@@ -124,7 +126,7 @@ WebXROpaqueFramebuffer::~WebXROpaqueFramebuffer()
     }
 }
 
-void WebXROpaqueFramebuffer::startFrame(const PlatformXR::Device::FrameData::LayerData& data)
+void WebXROpaqueFramebuffer::startFrame(const PlatformXR::FrameData::LayerData& data)
 {
     if (!m_context.graphicsContextGL())
         return;
@@ -132,17 +134,9 @@ void WebXROpaqueFramebuffer::startFrame(const PlatformXR::Device::FrameData::Lay
 
     auto [textureTarget, textureTargetBinding] = gl.externalImageTextureBindingPoint();
 
-    m_framebuffer->setOpaqueActive(true);
-
-    GCGLint boundFBO = gl.getInteger(GL::FRAMEBUFFER_BINDING);
-    GCGLint boundRenderbuffer = gl.getInteger(GL::RENDERBUFFER_BINDING);
-    GCGLint boundTexture = gl.getInteger(textureTargetBinding);
-
-    auto scopedBindings = makeScopeExit([=, &gl]() {
-        gl.bindFramebuffer(GL::FRAMEBUFFER, boundFBO);
-        gl.bindRenderbuffer(GL::RENDERBUFFER, boundRenderbuffer);
-        gl.bindTexture(textureTarget, boundTexture);
-    });
+    ScopedWebGLRestoreFramebuffer restoreFramebuffer { m_context };
+    ScopedWebGLRestoreTexture restoreTexture { m_context, textureTarget };
+    ScopedWebGLRestoreRenderbuffer restoreRenderBuffer { m_context };
 
     gl.bindFramebuffer(GraphicsContextGL::FRAMEBUFFER, m_framebuffer->object());
     // https://immersive-web.github.io/webxr/#opaque-framebuffer
@@ -151,21 +145,15 @@ void WebXROpaqueFramebuffer::startFrame(const PlatformXR::Device::FrameData::Lay
     // FIXME: Actually do the clearing (not using invalidateFramebuffer). This will have to be done after we've attached
     // the textures/renderbuffers.
 
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA)
-    // FIXME: This is temporary until Cocoa-specific platforms migrate to MTLTEXTURE_FOR_XR_LAYER_DATA.
-    auto colorTextureSource = makeEGLImageSource({ data.surface->createSendRight(), false });
-    auto depthStencilBufferSource = makeEGLImageSource({ { }, false });
-#elif USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+#if PLATFORM(COCOA)
     auto colorTextureSource = makeEGLImageSource(data.colorTexture);
-    auto depthStencilBufferSource = makeEGLImageSource(data.depthStencilBuffer);
-#endif
-
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA) || USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
     auto colorTextureAttachment = createAndBindCompositorTexture(gl, textureTarget, m_colorTexture, colorTextureSource);
-    auto depthStencilBufferAttachment = createAndBindCompositorBuffer(gl, m_depthStencilBuffer, depthStencilBufferSource);
 
     if (!colorTextureAttachment)
         return;
+
+    auto depthStencilBufferSource = makeEGLImageSource(data.depthStencilBuffer);
+    auto depthStencilBufferAttachment = createAndBindCompositorBuffer(gl, m_depthStencilBuffer, depthStencilBufferSource);
 
     IntSize bufferSize;
     std::tie(m_colorImage, bufferSize) = colorTextureAttachment.value();
@@ -191,46 +179,24 @@ void WebXROpaqueFramebuffer::startFrame(const PlatformXR::Device::FrameData::Lay
 
     // At this point the framebuffer should be "complete".
     ASSERT(gl.checkFramebufferStatus(GL::FRAMEBUFFER) == GL::FRAMEBUFFER_COMPLETE);
+
+    m_completionSyncEvent = std::tuple(data.completionSyncEvent);
 #else
     m_colorTexture = data.opaqueTexture;
     if (!m_multisampleColorBuffer)
         gl.framebufferTexture2D(GL::FRAMEBUFFER, GL::COLOR_ATTACHMENT0, GL::TEXTURE_2D, m_colorTexture, 0);
 #endif
-
-#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
-    m_completionSyncEvent = data.completionSyncEvent;
-#endif
 }
 
 void WebXROpaqueFramebuffer::endFrame()
 {
-    m_framebuffer->setOpaqueActive(false);
-
     if (!m_context.graphicsContextGL())
         return;
 
     auto& gl = *m_context.graphicsContextGL();
 
     if (m_multisampleColorBuffer) {
-        // FIXME: These may be needed when using ANGLE, but it didn't compile in the initial implementation.
-        // https://bugs.webkit.org/show_bug.cgi?id=245210
-        // TemporaryOpenGLSetting scopedScissor(GL::SCISSOR_TEST, 0);
-        // TemporaryOpenGLSetting scopedDither(GL::DITHER, 0);
-        // TemporaryOpenGLSetting scopedDepth(GL::DEPTH_TEST, 0);
-        // TemporaryOpenGLSetting scopedStencil(GL::STENCIL_TEST, 0);
-
-        GCGLint boundFBO { 0 };
-        GCGLint boundReadFBO { 0 };
-        GCGLint boundDrawFBO { 0 };
-        gl.getIntegerv(GL::FRAMEBUFFER_BINDING, std::span(&boundFBO, 1));
-        gl.getIntegerv(GL::READ_FRAMEBUFFER_BINDING, std::span(&boundReadFBO, 1));
-        gl.getIntegerv(GL::DRAW_FRAMEBUFFER_BINDING, std::span(&boundDrawFBO, 1));
-
-        auto scopedBindings = makeScopeExit([&gl, boundFBO, boundReadFBO, boundDrawFBO]() {
-            gl.bindFramebuffer(GL::FRAMEBUFFER, boundFBO);
-            gl.bindFramebuffer(GL::READ_FRAMEBUFFER, boundReadFBO);
-            gl.bindFramebuffer(GL::DRAW_FRAMEBUFFER, boundDrawFBO);
-        });
+        ScopedWebGLRestoreFramebuffer restoreFramebuffer { m_context };
 
         GCGLbitfield buffers = GL::COLOR_BUFFER_BIT;
         if (m_depthStencilBuffer)
@@ -241,7 +207,7 @@ void WebXROpaqueFramebuffer::endFrame()
         gl.blitFramebufferANGLE(0, 0, width(), height(), 0, 0, width(), height(), buffers, GL::NEAREST);
     }
 
-#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
+#if PLATFORM(COCOA)
     if (std::get<MachSendRight>(m_completionSyncEvent)) {
         auto completionSync = gl.createEGLSync(m_completionSyncEvent);
         ASSERT(completionSync);
@@ -250,15 +216,7 @@ void WebXROpaqueFramebuffer::endFrame()
         gl.destroyEGLSync(completionSync);
     } else
         gl.finish();
-#else
-    // FIXME: We have to call finish rather than flush because we only want to disconnect
-    // the IOSurface and signal the DeviceProxy when we know the content has been rendered.
-    // It might be possible to set this up so the completion of the rendering triggers
-    // the endFrame call.
-    gl.finish();
-#endif
 
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA) || USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
     if (m_colorImage) {
         gl.destroyEGLImage(m_colorImage);
         m_colorImage = nullptr;
@@ -267,6 +225,12 @@ void WebXROpaqueFramebuffer::endFrame()
         gl.destroyEGLImage(m_depthStencilImage);
         m_depthStencilImage = nullptr;
     }
+#else
+    // FIXME: We have to call finish rather than flush because we only want to disconnect
+    // the IOSurface and signal the DeviceProxy when we know the content has been rendered.
+    // It might be possible to set this up so the completion of the rendering triggers
+    // the endFrame call.
+    gl.finish();
 #endif
 }
 
@@ -276,29 +240,14 @@ bool WebXROpaqueFramebuffer::setupFramebuffer()
         return false;
     auto& gl = *m_context.graphicsContextGL();
 
-    // Restore bindings when exiting the function.
-    GCGLint boundFBO = gl.getInteger(GL::FRAMEBUFFER_BINDING);
-    GCGLint boundRenderbuffer = gl.getInteger(GL::RENDERBUFFER_BINDING);
-
-    auto scopedBindings = makeScopeExit([=, &gl]() {
-        gl.bindFramebuffer(GL::FRAMEBUFFER, boundFBO);
-        gl.bindRenderbuffer(GL::RENDERBUFFER, boundRenderbuffer);
-    });
+    ScopedWebGLRestoreFramebuffer restoreFramebuffer { m_context };
+    ScopedWebGLRestoreRenderbuffer restoreRenderbuffer { m_context };
 
     // Set up color, depth and stencil formats
     const bool hasDepthOrStencil = m_attributes.stencil || m_attributes.depth;
 
     // Set up recommended samples for WebXR.
-    auto sampleCount = [](GraphicsContextGL& gl, bool isAntialias) {
-        if (!isAntialias)
-            return 0;
-
-        // FIXME: check if we can get recommended values from each device platform.
-        GCGLint maxSampleCount;
-        gl.getIntegerv(GL::MAX_SAMPLES, std::span(&maxSampleCount, 1));
-        // Cap the maximum multisample count at 4. Any more than this is likely overkill and will impact performance.
-        return std::min(4, maxSampleCount);
-    }(gl, m_attributes.antialias);
+    auto sampleCount = m_attributes.antialias ? std::min(4, m_context.maxSamples()) : 0;
 
     gl.bindFramebuffer(GL::FRAMEBUFFER, m_framebuffer->object());
 

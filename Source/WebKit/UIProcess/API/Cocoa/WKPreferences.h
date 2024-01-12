@@ -62,7 +62,7 @@ WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
  @abstract If tabFocusesLinks is YES, the tab key will focus links and form controls.
  The Option key temporarily reverses this preference.
  */
-@property (nonatomic) BOOL tabFocusesLinks WK_API_AVAILABLE(macos(10.12.3));
+@property (nonatomic) BOOL tabFocusesLinks WK_API_AVAILABLE(macos(10.12.4));
 #endif
 
 /*! @abstract A Boolean value indicating whether text interaction is disabled.
@@ -78,7 +78,7 @@ WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
 /*! @abstract A Boolean value indicating whether Fullscreen API is enabled.
  @discussion The default value is NO. We can set it to YES to enable support for the fullscreen API.
  */
-@property (nonatomic, getter=isElementFullscreenEnabled) BOOL elementFullscreenEnabled WK_API_AVAILABLE(macos(12.3), ios(15.4));
+@property (nonatomic, getter=isElementFullscreenEnabled) BOOL elementFullscreenEnabled WK_API_AVAILABLE(macos(12.3), ios(15.4), tvos(17.0));
 
 /*
 @enum WKInactiveSchedulingPolicy
@@ -89,13 +89,13 @@ typedef NS_ENUM(NSInteger, WKInactiveSchedulingPolicy) {
     WKInactiveSchedulingPolicySuspend,
     WKInactiveSchedulingPolicyThrottle,
     WKInactiveSchedulingPolicyNone
-} NS_SWIFT_NAME(WKPreferences.InactiveSchedulingPolicy) WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+} NS_SWIFT_NAME(WKPreferences.InactiveSchedulingPolicy) WK_API_AVAILABLE(macos(14.0), ios(17.0));
 
 /*! @abstract Specify the scheduling policy for the web view when it is inactive
  and detached from the view hierarchy. Web views are not considered idle when playing media or loading web pages.
  A suspended web view will pause JavaScript execution and page layout.
  */
-@property (nonatomic) WKInactiveSchedulingPolicy inactiveSchedulingPolicy WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+@property (nonatomic) WKInactiveSchedulingPolicy inactiveSchedulingPolicy WK_API_AVAILABLE(macos(14.0), ios(17.0));
 
 @end
 

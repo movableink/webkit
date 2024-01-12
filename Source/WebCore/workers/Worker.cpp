@@ -213,16 +213,14 @@ void Worker::notifyFinished()
         return;
     }
 
-    const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders = m_contentSecurityPolicyResponseHeaders ? m_contentSecurityPolicyResponseHeaders.value() : context->contentSecurityPolicy()->responseHeaders();
+    const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders = m_contentSecurityPolicyResponseHeaders ? m_contentSecurityPolicyResponseHeaders.value() : context->checkedContentSecurityPolicy()->responseHeaders();
     ReferrerPolicy referrerPolicy = ReferrerPolicy::EmptyString;
     if (auto policy = parseReferrerPolicy(m_scriptLoader->referrerPolicy(), ReferrerPolicySource::HTTPHeader))
         referrerPolicy = *policy;
 
     m_didStartWorkerGlobalScope = true;
     WorkerInitializationData initializationData {
-#if ENABLE(SERVICE_WORKER)
         m_scriptLoader->takeServiceWorkerData(),
-#endif
         m_clientIdentifier,
         context->userAgent(m_scriptLoader->responseURL())
     };
@@ -240,6 +238,22 @@ void Worker::dispatchEvent(Event& event)
         auto& errorEvent = downcast<ErrorEvent>(event);
         scriptExecutionContext()->reportException(errorEvent.message(), errorEvent.lineno(), errorEvent.colno(), errorEvent.filename(), nullptr, nullptr);
     }
+}
+
+void Worker::reportError(const String& errorMessage)
+{
+    if (m_wasTerminated)
+        return;
+
+    queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, errorMessage] {
+        if (m_wasTerminated)
+            return;
+
+        auto event = Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No);
+        AbstractWorker::dispatchEvent(event);
+        if (!event->defaultPrevented() && scriptExecutionContext())
+            scriptExecutionContext()->addConsoleMessage(makeUnique<Inspector::ConsoleMessage>(MessageSource::JS, MessageType::Log, MessageLevel::Error, errorMessage));
+    });
 }
 
 #if ENABLE(WEB_RTC)

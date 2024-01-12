@@ -33,6 +33,11 @@ from .radar import Tracker as RadarTracker
 from datetime import datetime
 from webkitbugspy import User, log
 
+if sys.version_info > (3, 0):
+    from html.parser import HTMLParser
+else:
+    from HTMLParser import HTMLParser
+
 requests = webkitcorepy.CallByNeed(lambda: __import__('requests'))
 
 
@@ -43,6 +48,36 @@ class Tracker(GenericTracker):
         r'\A{}/show_bug.cgi\?id=(?P<id>\d+)\Z',
     ]
     NAME = 'Bugzilla'
+    DEFAULT_TIMEOUT = 30
+
+    class BugzillaPageParser(HTMLParser):
+        def __init__(self):
+            HTMLParser.__init__(self)
+            self.data = {}
+            self.current_value = None
+
+        def handle_starttag(self, tag, attrs):
+            if tag == 'span' and ('id', 'duplicates') in attrs:
+                self.current_value = 'duplicates'
+                self.data[self.current_value] = []
+
+        def handle_data(self, data):
+            if not self.current_value:
+                return
+            data = data.rstrip().lstrip()
+            if not data:
+                return
+            self.data[self.current_value].append(data)
+
+        def handle_endtag(self, tag):
+            if tag == 'span':
+                self.current_value = None
+
+        @staticmethod
+        def parse(html_text):
+            parser = Tracker.BugzillaPageParser()
+            parser.feed(html_text)
+            return parser.data
 
     class Encoder(GenericTracker.Encoder):
         @webkitcorepy.decorators.hybridmethod
@@ -62,10 +97,11 @@ class Tracker(GenericTracker):
                 raise TypeError('Cannot invoke parent class when classmethod')
             return super(Tracker.Encoder, context).default(obj)
 
-    def __init__(self, url, users=None, res=None, login_attempts=3, redact=None, radar_importer=None, hide_title=None, redact_exemption=None):
-        super(Tracker, self).__init__(users=users, redact=redact, redact_exemption=redact_exemption, hide_title=hide_title)
+    def __init__(self, url, users=None, res=None, login_attempts=3, redact=None, radar_importer=None, hide_title=None, redact_exemption=None, timeout=None):
+        super(Tracker, self).__init__(users=users, redact=redact, redact_exemption=redact_exemption, hide_title=hide_title, timeout=timeout or self.DEFAULT_TIMEOUT)
 
         self._logins_left = login_attempts + 1 if login_attempts else 1
+        self.session = requests.Session()
         match = self.ROOT_RE.match(url)
         if not match:
             raise TypeError("'{}' is not a valid bugzilla url".format(url))
@@ -93,13 +129,13 @@ class Tracker(GenericTracker):
 
         if not username and not email:
             raise RuntimeError("Failed to find username for '{}'".format(name))
-        response = requests.get('{url}/rest/user{query}'.format(
+        response = self.session.get('{url}/rest/user{query}'.format(
             url=self.url,
             query=self._login_arguments(
                 required=False,
                 query='names={name}'.format(name=username or email or name),
-            ),
-        ))
+            )), timeout=self.timeout,
+        )
         if response.status_code // 100 == 4 and self._logins_left:
             self._logins_left -= 1
         response = response.json().get('users') if response.status_code // 100 == 2 else None
@@ -126,7 +162,10 @@ class Tracker(GenericTracker):
     def credentials(self, required=True, validate=False):
         def validater(username, password):
             quoted_username = requests.utils.quote(username)
-            response = requests.get('{}/rest/user/{}?login={}&password={}'.format(self.url, quoted_username, quoted_username, requests.utils.quote(password)))
+            response = self.session.get(
+                '{}/rest/user/{}?login={}&password={}'.format(self.url, quoted_username, quoted_username, requests.utils.quote(password)),
+                timeout=self.timeout,
+            )
             if response.status_code == 200:
                 return True
             sys.stderr.write('Login to {} for {} failed\n'.format(self.url, username))
@@ -169,7 +208,10 @@ class Tracker(GenericTracker):
         issue._classification = ''  # Bugzilla doesn't have a concept of "classification"
 
         if member in ('title', 'timestamp', 'creator', 'opened', 'assignee', 'watchers', 'project', 'component', 'version', 'keywords'):
-            response = requests.get('{}/rest/bug/{}{}'.format(self.url, issue.id, self._login_arguments(required=False)))
+            response = self.session.get(
+                '{}/rest/bug/{}{}'.format(self.url, issue.id, self._login_arguments(required=False)),
+                timeout=self.timeout,
+            )
             if response.status_code // 100 == 4 and self._logins_left:
                 self._logins_left -= 1
             response = response.json().get('bugs', []) if response.status_code == 200 else None
@@ -186,6 +228,9 @@ class Tracker(GenericTracker):
                 else:
                     issue._creator = self.user(username=response['creator']) if response.get('creator') else None
                 issue._opened = response['status'] != 'RESOLVED'
+                dupe = response.get('dupe_of')
+                if dupe is not None:
+                    issue._original = self.issue(dupe)
                 if response.get('assigned_to_detail'):
                     issue._assignee = self.user(
                         name=response['assigned_to_detail'].get('real_name'),
@@ -207,7 +252,10 @@ class Tracker(GenericTracker):
                 sys.stderr.write("Failed to fetch '{}'\n".format(issue.link))
 
         if member in ['description', 'comments']:
-            response = requests.get('{}/rest/bug/{}/comment{}'.format(self.url, issue.id, self._login_arguments(required=False)))
+            response = self.session.get(
+                '{}/rest/bug/{}/comment{}'.format(self.url, issue.id, self._login_arguments(required=False)),
+                timeout=self.timeout,
+            )
             if response.status_code // 100 == 4 and self._logins_left:
                 self._logins_left -= 1
             if response.status_code == 200:
@@ -227,7 +275,7 @@ class Tracker(GenericTracker):
             else:
                 sys.stderr.write("Failed to fetch comments for '{}'\n".format(issue.link))
 
-        if member == 'references':
+        if member in ('duplicates', 'references'):
             issue._references = []
             refs = set()
 
@@ -254,10 +302,12 @@ class Tracker(GenericTracker):
                     issue._references.append(candidate)
                     refs.add(candidate.link)
 
-            response = requests.get('{url}/rest/bug/{id}{query}'.format(
-                url=self.url, id=issue.id,
-                query=self._login_arguments(required=False, query='include_fields=see_also'),
-            ))
+            response = self.session.get(
+                '{url}/rest/bug/{id}{query}'.format(
+                    url=self.url, id=issue.id,
+                    query=self._login_arguments(required=False, query='include_fields=see_also'),
+                ), timeout=self.timeout,
+            )
             if response.status_code // 100 == 4 and self._logins_left:
                 self._logins_left -= 1
             response = response.json().get('bugs', []) if response.status_code == 200 else None
@@ -271,9 +321,27 @@ class Tracker(GenericTracker):
             else:
                 sys.stderr.write("Failed to fetch related issues for '{}'\n".format(issue.link))
 
+            # API doesn't allow us to access duplicates, we need to parse HTML instead
+            response = self.session.get('{url}/show_bug.cgi{query}'.format(
+                    url=self.url, id=issue.id,
+                    query=self._login_arguments(required=False, query='id={}'.format(issue.id)),
+                ), timeout=self.timeout,
+            )
+            if response.status_code // 100 == 4 and self._logins_left:
+                self._logins_left -= 1
+            issue._duplicates = []
+            data = self.BugzillaPageParser.parse(response.text) if response.status_code // 100 == 2 else {}
+            for dupe_id in data.get('duplicates') or []:
+                if not dupe_id.isnumeric():
+                    continue
+                dupe = self.issue(dupe_id)
+                issue._duplicates.append(dupe)
+                if issue.link not in refs:
+                    issue._references.append(dupe)
+
         return issue
 
-    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, **properties):
+    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, **properties):
         update_dict = dict()
 
         if properties:
@@ -292,7 +360,12 @@ class Tracker(GenericTracker):
                 why = why or 'Reopening bug'
             else:
                 update_dict['status'] = 'RESOLVED'
-                update_dict['resolution'] = 'FIXED'
+                if original:
+                    update_dict['resolution'] = 'DUPLICATE'
+                    update_dict['dupe_of'] = original.id
+                    issue._original = original
+                else:
+                    update_dict['resolution'] = 'FIXED'
 
         if why is not None:
             update_dict['comment'] = dict(body=why)
@@ -327,13 +400,17 @@ class Tracker(GenericTracker):
             update_dict['component'] = component
             update_dict['version'] = version
 
+        if keywords is not None:
+            update_dict['keywords'] = dict(set=keywords)
+
         if update_dict:
             update_dict['ids'] = [issue.id]
             response = None
             try:
-                response = requests.put(
+                response = self.session.put(
                     '{}/rest/bug/{}{}'.format(self.url, issue.id, self._login_arguments(required=True)),
                     json=update_dict,
+                    timeout=self.timeout,
                 )
             except RuntimeError as e:
                 sys.stderr.write('{}\n'.format(e))
@@ -346,19 +423,23 @@ class Tracker(GenericTracker):
                     issue._opened = None
                 sys.stderr.write("Failed to modify '{}'\n".format(issue))
                 return None
-            elif project and component and version:
+
+            if project and component and version:
                 issue._project = project
                 issue._component = component
                 issue._version = version
+            if keywords is not None:
+                issue._keywords = keywords
 
         return issue
 
     def add_comment(self, issue, text):
         response = None
         try:
-            response = requests.post(
+            response = self.session.post(
                 '{}/rest/bug/{}/comment{}'.format(self.url, issue.id, self._login_arguments(required=True)),
                 json=dict(comment=text),
+                timeout=self.timeout,
             )
         except RuntimeError as e:
             sys.stderr.write('{}\n'.format(e))
@@ -383,7 +464,10 @@ class Tracker(GenericTracker):
     @property
     @webkitcorepy.decorators.Memoize()
     def projects(self):
-        response = requests.get('{}/rest/product_enterable{}'.format(self.url, self._login_arguments(required=False)))
+        response = self.session.get(
+            '{}/rest/product_enterable{}'.format(self.url, self._login_arguments(required=False)),
+            timeout=self.timeout,
+        )
         if response.status_code // 100 == 4 and self._logins_left:
             self._logins_left -= 1
         if response.status_code // 100 != 2:
@@ -392,7 +476,10 @@ class Tracker(GenericTracker):
 
         result = dict()
         for id in response.json().get('ids', []):
-            id_response = requests.get('{}/rest/product/{}{}'.format(self.url, id, self._login_arguments(required=False)))
+            id_response = self.session.get(
+                '{}/rest/product/{}{}'.format(self.url, id, self._login_arguments(required=False)),
+                timeout=self.timeout,
+            )
             if response.status_code // 100 == 4 and self._logins_left:
                 self._logins_left -= 1
             if response.status_code // 100 != 2:
@@ -464,7 +551,11 @@ class Tracker(GenericTracker):
 
         response = None
         try:
-            response = requests.post('{}/rest/bug{}'.format(self.url, self._login_arguments(required=True)), json=params)
+            response = self.session.post(
+                '{}/rest/bug{}'.format(self.url, self._login_arguments(required=True)),
+                json=params,
+                timeout=self.timeout,
+            )
         except RuntimeError as e:
             sys.stderr.write('{}\n'.format(e))
         if response and response.status_code // 100 == 4 and self._logins_left:
@@ -514,9 +605,10 @@ class Tracker(GenericTracker):
                     data['comment'] = dict(body=comment_to_make)
                 if keyword_to_add:
                     data['keywords'] = dict(add=[keyword_to_add])
-                response = requests.put(
+                response = self.session.put(
                     '{}/rest/bug/{}{}'.format(self.url, issue.id, self._login_arguments(required=True)),
                     json=data,
+                    timeout=self.timeout,
                 )
             except RuntimeError as e:
                 sys.stderr.write('{}\n'.format(e))

@@ -28,11 +28,13 @@
 
 #if ENABLE(REMOTE_INSPECTOR)
 
+#include "HardwareAccelerationManager.h"
 #include "RemoteWebInspectorUIMessages.h"
 #include "WebInspectorUIProxy.h"
 #include "WebKitInspectorWindow.h"
 #include "WebKitWebViewBasePrivate.h"
 #include "WebPageGroup.h"
+#include "WebProcessPool.h"
 #include <WebCore/CertificateInfo.h>
 #include <WebCore/GtkVersioning.h>
 #include <wtf/text/Base64.h>
@@ -62,6 +64,13 @@ WebPageProxy* RemoteWebInspectorUIProxy::platformCreateFrontendPageAndWindow()
     preferences->setDeveloperExtrasEnabled(true);
     preferences->setLogsPageMessagesToSystemConsoleEnabled(true);
 #endif
+
+    // If hardware acceleration is available and not forced already, force it always for the remote inspector view.
+    const auto& hardwareAccelerationManager = HardwareAccelerationManager::singleton();
+    if (hardwareAccelerationManager.canUseHardwareAcceleration() && !hardwareAccelerationManager.forceHardwareAcceleration()) {
+        preferences->setForceCompositingMode(true);
+        preferences->setThreadedScrollingEnabled(true);
+    }
     auto pageGroup = WebPageGroup::create(WebKit::defaultInspectorPageGroupIdentifierForPage(nullptr));
 
     auto pageConfiguration = API::PageConfiguration::create();
@@ -149,7 +158,7 @@ void RemoteWebInspectorUIProxy::platformSave(Vector<InspectorFrontendClient::Sav
     GRefPtr<GFile> file = adoptGRef(gtk_file_chooser_get_file(chooser));
     GUniquePtr<char> path(g_file_get_path(file.get()));
     g_file_replace_contents_async(file.get(), data, dataLength, nullptr, false,
-        G_FILE_CREATE_REPLACE_DESTINATION, nullptr, remoteFileReplaceContentsCallback, m_inspectorPage);
+        G_FILE_CREATE_REPLACE_DESTINATION, nullptr, remoteFileReplaceContentsCallback, protectedInspectorPage().get());
 }
 
 void RemoteWebInspectorUIProxy::platformLoad(const String&, CompletionHandler<void(const String&)>&& completionHandler)

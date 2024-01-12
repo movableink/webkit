@@ -64,115 +64,115 @@ void Cursor::ensurePlatformCursor() const
         return;
 
     switch (m_type) {
-    case Pointer:
+    case Type::Pointer:
         m_platformCursor = QCursor(Qt::ArrowCursor);
         break;
-    case Cross:
+    case Type::Cross:
         m_platformCursor = QCursor(Qt::CrossCursor);
         break;
-    case Hand:
+    case Type::Hand:
         m_platformCursor = QCursor(Qt::PointingHandCursor);
         break;
-    case IBeam:
+    case Type::IBeam:
         m_platformCursor = QCursor(Qt::IBeamCursor);
         break;
-    case Wait:
+    case Type::Wait:
         m_platformCursor = QCursor(Qt::WaitCursor);
         break;
-    case Help:
+    case Type::Help:
         m_platformCursor = QCursor(Qt::WhatsThisCursor);
         break;
-    case EastResize:
-    case EastPanning:
+    case Type::EastResize:
+    case Type::EastPanning:
         m_platformCursor = QCursor(Qt::SizeHorCursor);
         break;
-    case NorthResize:
-    case NorthPanning:
+    case Type::NorthResize:
+    case Type::NorthPanning:
         m_platformCursor = QCursor(Qt::SizeVerCursor);
         break;
-    case NorthEastResize:
-    case NorthEastPanning:
+    case Type::NorthEastResize:
+    case Type::NorthEastPanning:
         m_platformCursor = QCursor(Qt::SizeBDiagCursor);
         break;
-    case NorthWestResize:
-    case NorthWestPanning:
+    case Type::NorthWestResize:
+    case Type::NorthWestPanning:
         m_platformCursor = QCursor(Qt::SizeFDiagCursor);
         break;
-    case SouthResize:
-    case SouthPanning:
+    case Type::SouthResize:
+    case Type::SouthPanning:
         m_platformCursor = QCursor(Qt::SizeVerCursor);
         break;
-    case SouthEastResize:
-    case SouthEastPanning:
+    case Type::SouthEastResize:
+    case Type::SouthEastPanning:
         m_platformCursor = QCursor(Qt::SizeFDiagCursor);
         break;
-    case SouthWestResize:
-    case SouthWestPanning:
+    case Type::SouthWestResize:
+    case Type::SouthWestPanning:
         m_platformCursor = QCursor(Qt::SizeBDiagCursor);
         break;
-    case WestResize:
-    case WestPanning:
+    case Type::WestResize:
+    case Type::WestPanning:
         m_platformCursor = QCursor(Qt::SizeHorCursor);
         break;
-    case NorthSouthResize:
+    case Type::NorthSouthResize:
         m_platformCursor = QCursor(Qt::SizeVerCursor);
         break;
-    case EastWestResize:
+    case Type::EastWestResize:
         m_platformCursor = QCursor(Qt::SizeHorCursor);
         break;
-    case NorthEastSouthWestResize:
+    case Type::NorthEastSouthWestResize:
         m_platformCursor = QCursor(Qt::SizeBDiagCursor);
         break;
-    case NorthWestSouthEastResize:
+    case Type::NorthWestSouthEastResize:
         m_platformCursor = QCursor(Qt::SizeFDiagCursor);
         break;
-    case ColumnResize:
+    case Type::ColumnResize:
         m_platformCursor = QCursor(Qt::SplitHCursor);
         break;
-    case RowResize:
+    case Type::RowResize:
         m_platformCursor = QCursor(Qt::SplitVCursor);
         break;
-    case MiddlePanning:
-    case Move:
+    case Type::MiddlePanning:
+    case Type::Move:
         m_platformCursor = QCursor(Qt::SizeAllCursor);
         break;
-    case None:
+    case Type::None:
         m_platformCursor = QCursor(Qt::BlankCursor);
         break;
-    case NoDrop:
-    case NotAllowed:
+    case Type::NoDrop:
+    case Type::NotAllowed:
         m_platformCursor = QCursor(Qt::ForbiddenCursor);
         break;
-    case Grab:
-    case Grabbing:
+    case Type::Grab:
+    case Type::Grabbing:
         notImplemented();
         m_platformCursor = QCursor(Qt::ArrowCursor);
         break;
-    case VerticalText:
+    case Type::VerticalText:
         m_platformCursor = QCursor(QPixmap(QStringLiteral(":/webkit/resources/verticalTextCursor.png")), 7, 7);
         break;
-    case Cell:
+    case Type::Cell:
         m_platformCursor = QCursor(QPixmap(QStringLiteral(":/webkit/resources/cellCursor.png")), 7, 7);
         break;
-    case ContextMenu:
+    case Type::ContextMenu:
         m_platformCursor = QCursor(QPixmap(QStringLiteral(":/webkit/resources/contextMenuCursor.png")), 3, 2);
         break;
-    case Alias:
+    case Type::Alias:
         m_platformCursor = QCursor(QPixmap(QStringLiteral(":/webkit/resources/aliasCursor.png")), 11, 3);
         break;
-    case Progress:
+    case Type::Progress:
         m_platformCursor = QCursor(QPixmap(QStringLiteral(":/webkit/resources/progressCursor.png")), 3, 2);
         break;
-    case Copy:
+    case Type::Copy:
         m_platformCursor = QCursor(QPixmap(QStringLiteral(":/webkit/resources/copyCursor.png")), 3, 2);
         break;
-    case ZoomIn:
+    case Type::ZoomIn:
         m_platformCursor = QCursor(QPixmap(QStringLiteral(":/webkit/resources/zoomInCursor.png")), 7, 7);
         break;
-    case ZoomOut:
+    case Type::ZoomOut:
         m_platformCursor = QCursor(QPixmap(QStringLiteral(":/webkit/resources/zoomOutCursor.png")), 7, 7);
         break;
-    case Custom:
+    case Type::Custom:
         m_platformCursor = createCustomCursor(m_image.get(), m_hotSpot);
         if (!m_platformCursor)
             m_platformCursor = QCursor(Qt::ArrowCursor);

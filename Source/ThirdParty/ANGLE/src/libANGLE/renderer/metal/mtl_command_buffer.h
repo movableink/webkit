@@ -19,7 +19,6 @@
 #include <memory>
 #include <mutex>
 #include <thread>
-#include <unordered_set>
 #include <vector>
 
 #include "common/FixedVector.h"
@@ -44,6 +43,17 @@ class CommandBuffer;
 class CommandEncoder;
 class RenderCommandEncoder;
 class OcclusionQueryPool;
+
+class AtomicSerial : angle::NonCopyable
+{
+  public:
+    uint64_t load() const { return mValue.load(std::memory_order_consume); }
+    void increment(uint64_t value) { mValue.fetch_add(1, std::memory_order_release); }
+    void storeMaxValue(uint64_t value);
+
+  private:
+    std::atomic<uint64_t> mValue{0};
+};
 
 class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::NonCopyable
 {
@@ -88,6 +98,8 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
     bool isTimeElapsedEntryComplete(uint64_t id);
     double getTimeElapsedEntryInSeconds(uint64_t id);
 
+    bool isDeviceLost() const { return mIsDeviceLost; }
+
   private:
     void onCommandBufferCompleted(id<MTLCommandBuffer> buf,
                                   uint64_t serial,
@@ -102,8 +114,8 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
     std::deque<CmdBufferQueueEntry> mMetalCmdBuffers;
 
     uint64_t mQueueSerialCounter = 1;
-    std::atomic<uint64_t> mCommittedBufferSerial{0};
-    std::atomic<uint64_t> mCompletedBufferSerial{0};
+    AtomicSerial mCommittedBufferSerial;
+    AtomicSerial mCompletedBufferSerial;
     uint64_t mRenderEncoderCounter = 1;
 
     // The bookkeeping for TIME_ELAPSED queries must be managed under
@@ -129,6 +141,8 @@ class CommandQueue final : public WrappedObject<id<MTLCommandQueue>>, angle::Non
     void recordCommandBufferTimeElapsed(std::lock_guard<std::mutex> &lg,
                                         uint64_t id,
                                         double seconds);
+
+    std::atomic_bool mIsDeviceLost = false;
 };
 
 class CommandBuffer final : public WrappedObject<id<MTLCommandBuffer>>, angle::NonCopyable
@@ -199,7 +213,7 @@ class CommandBuffer final : public WrappedObject<id<MTLCommandBuffer>>, angle::N
     std::vector<std::pair<mtl::SharedEventRef, uint64_t>> mPendingSignalEvents;
     std::vector<std::string> mDebugGroups;
 
-    std::unordered_set<id> mResourceList;
+    angle::HashSet<id> mResourceList;
     size_t mWorkingResourceSize              = 0;
     bool mCommitted                          = false;
     CommandBufferFinishOperation mLastWaitOp = mtl::NoWait;

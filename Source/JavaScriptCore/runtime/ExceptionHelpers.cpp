@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -62,8 +62,13 @@ String errorDescriptionForValue(JSGlobalObject* globalObject, JSValue v)
         return tryMakeString('"', string, '"');
     }
 
-    if (v.isSymbol())
-        return asSymbol(v)->descriptiveString();
+    if (v.isSymbol()) {
+        auto expectedDescription = asSymbol(v)->tryGetDescriptiveString();
+        if (expectedDescription)
+            return expectedDescription.value();
+        ASSERT(expectedDescription.error() == ErrorTypeWithExtension::OutOfMemoryError);
+        return String("Symbol"_s);
+    }
     if (v.isObject()) {
         VM& vm = globalObject->vm();
         JSObject* object = asObject(v);
@@ -317,9 +322,19 @@ JSObject* createInvalidPrototypeError(JSGlobalObject* globalObject, JSValue valu
     return createError(globalObject, value, "is not an object or null"_s, invalidPrototypeSourceAppender);
 }
 
-JSObject* createErrorForInvalidGlobalAssignment(JSGlobalObject* globalObject, const String& propertyName)
+JSObject* createErrorForDuplicateGlobalVariableDeclaration(JSGlobalObject* globalObject, UniquedStringImpl* key)
 {
-    return createReferenceError(globalObject, makeString("Strict mode forbids implicit creation of global property '"_s, propertyName, '\''));
+    return createSyntaxError(globalObject, makeString("Can't create duplicate variable: '"_s, StringView(key), '\''));
+}
+
+JSObject* createErrorForInvalidGlobalFunctionDeclaration(JSGlobalObject* globalObject, const Identifier& ident)
+{
+    return createTypeError(globalObject, makeString("Can't declare global function '", ident.string(), "': property must be either configurable or both writable and enumerable"));
+}
+
+JSObject* createErrorForInvalidGlobalVarDeclaration(JSGlobalObject* globalObject, const Identifier& ident)
+{
+    return createTypeError(globalObject, makeString("Can't declare global variable '", ident.string(), "': global object must be extensible"));
 }
 
 JSObject* createTDZError(JSGlobalObject* globalObject)

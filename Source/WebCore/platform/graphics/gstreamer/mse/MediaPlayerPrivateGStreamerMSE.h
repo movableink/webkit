@@ -40,10 +40,9 @@ class TrackQueue;
 class MediaSourceTrackGStreamer;
 
 class MediaPlayerPrivateGStreamerMSE : public MediaPlayerPrivateGStreamer {
-    WTF_MAKE_NONCOPYABLE(MediaPlayerPrivateGStreamerMSE); WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    explicit MediaPlayerPrivateGStreamerMSE(MediaPlayer*);
+    Ref<MediaPlayerPrivateGStreamerMSE> create(MediaPlayer* player) { return adoptRef(*new MediaPlayerPrivateGStreamerMSE(player)); }
     virtual ~MediaPlayerPrivateGStreamerMSE();
 
     static void registerMediaEngine(MediaEngineRegistrar);
@@ -55,8 +54,8 @@ public:
 
     void play() override;
     void pause() override;
-    void seek(const MediaTime&) override;
-    bool doSeek(const MediaTime&, float rate) override;
+    void seekToTarget(const SeekTarget&) override;
+    bool doSeek(const SeekTarget&, float rate) override;
 
     void updatePipelineState(GstState);
 
@@ -66,6 +65,7 @@ public:
     const PlatformTimeRanges& buffered() const override;
     MediaTime maxMediaTimeSeekable() const override;
     bool currentMediaTimeMayProgress() const override;
+    void notifyActiveSourceBuffersChanged() final;
 
     void sourceSetup(GstElement*) override;
 
@@ -76,11 +76,10 @@ public:
 
     void setNetworkState(MediaPlayer::NetworkState);
     void setReadyState(MediaPlayer::ReadyState);
-    MediaSourcePrivateClient* mediaSourcePrivateClient() { return m_mediaSource.get(); }
 
     void setInitialVideoSize(const FloatSize&);
 
-    void asyncStateChangeDone() override;
+    void didPreroll() override;
 
     void startSource(const Vector<RefPtr<MediaSourceTrackGStreamer>>& tracks);
     WebKitMediaSrc* webKitMediaSrc() { return reinterpret_cast<WebKitMediaSrc*>(m_source.get()); }
@@ -90,8 +89,10 @@ public:
 #endif
 
 private:
+    explicit MediaPlayerPrivateGStreamerMSE(MediaPlayer*);
+
     friend class MediaPlayerFactoryGStreamerMSE;
-    static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>&);
+    static void getSupportedTypes(HashSet<String>&);
     static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
 
     friend class AppendPipeline;
@@ -107,7 +108,6 @@ private:
 
     void propagateReadyStateToPlayer();
 
-    WeakPtr<MediaSourcePrivateClient> m_mediaSource;
     RefPtr<MediaSourcePrivateGStreamer> m_mediaSourcePrivate;
     MediaTime m_mediaTimeDuration { MediaTime::invalidTime() };
     bool m_isPipelinePlaying = true;

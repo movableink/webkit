@@ -5,6 +5,11 @@ window.UIHelper = class UIHelper {
         return testRunner.isIOSFamily;
     }
 
+    static isMac()
+    {
+        return testRunner.isMac;
+    }
+
     static isWebKit2()
     {
         return testRunner.isWebKit2;
@@ -516,6 +521,16 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    static async initiateUserScroll()
+    {
+        if (this.isIOSFamily()) {
+            await UIHelper.scrollTo(0, 10);
+        }
+        else {
+            await UIHelper.statelessMouseWheelScrollAt(10, 10, 0, 10);
+        }
+    }
+
     static scrollTo(x, y, unconstrained)
     {
         if (!this.isWebKit2()) {
@@ -597,6 +612,22 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static async setInlinePrediction(text)
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => testRunner.runUIScript(`uiController.setInlinePrediction(\`${text}\`)`, resolve));
+    }
+
+    static async acceptInlinePrediction()
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => testRunner.runUIScript(`uiController.acceptInlinePrediction()`, resolve));
+    }
+
     static async activateAndWaitForInputSessionAt(x, y)
     {
         if (!this.isWebKit2() || !this.isIOSFamily())
@@ -658,6 +689,14 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static resizeWindowTo(width, height)
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => testRunner.runUIScript(`uiController.resizeWindowTo(${width}, ${height})`, resolve));
+    }
+
     static activateElementAndWaitForInputSession(element)
     {
         const x = element.offsetLeft + element.offsetWidth / 2;
@@ -705,10 +744,10 @@ window.UIHelper = class UIHelper {
         });
     }
 
-    static isShowingPopover()
+    static isShowingFormValidationBubble()
     {
         return new Promise(resolve => {
-            testRunner.runUIScript("uiController.isShowingPopover", result => resolve(result === "true"));
+            testRunner.runUIScript("uiController.isShowingFormValidationBubble", result => resolve(result === "true"));
         });
     }
 
@@ -724,6 +763,20 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => {
             testRunner.runUIScript("uiController.isPresentingModally", result => resolve(result === "true"));
         });
+    }
+
+    static isZoomingOrScrolling()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript("uiController.isZoomingOrScrolling", result => resolve(result === "true"));
+        });
+    }
+
+    static async waitForZoomingOrScrollingToEnd()
+    {
+        do {
+            await this.ensureStablePresentationUpdate();
+        } while (await this.isZoomingOrScrolling());
     }
 
     static deactivateFormControl(element)
@@ -960,6 +1013,22 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static getSelectionEndGrabberViewShapePathDescription()
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(function() {
+                uiController.doAfterNextStablePresentationUpdate(function() {
+                    uiController.uiScriptComplete(JSON.stringify(uiController.selectionEndGrabberViewShapePathDescription));
+                });
+            })()`, jsonString => {
+                resolve(JSON.parse(jsonString));
+            });
+        });
+    }
+
     static midPointOfRect(rect) {
         return { x: rect.left + (rect.width / 2), y: rect.top + (rect.height / 2) };
     }
@@ -1037,10 +1106,23 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => {
             testRunner.runUIScript(`
             (function() {
-                uiController.didShowContextMenuCallback = function() {
+                if (!uiController.isShowingContextMenu) {
+                    uiController.didShowContextMenuCallback = function() {
+                        uiController.uiScriptComplete(JSON.stringify(uiController.contentsOfUserInterfaceItem('selectMenu')));
+                    };
+                } else {
                     uiController.uiScriptComplete(JSON.stringify(uiController.contentsOfUserInterfaceItem('selectMenu')));
-                };
+                }
             })();`, result => resolve(JSON.parse(result).selectMenu));
+        });
+    }
+
+    static contextMenuItems()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(() => {
+                uiController.uiScriptComplete(JSON.stringify(uiController.contentsOfUserInterfaceItem('contextMenu')))
+            })()`, result => resolve(result ? JSON.parse(result).contextMenu : null));
         });
     }
 
@@ -1181,6 +1263,22 @@ window.UIHelper = class UIHelper {
     {
         const uiScript = `uiController.immediateZoomToScale(${scale})`;
         return new Promise(resolve => testRunner.runUIScript(uiScript, resolve));
+    }
+
+    static async smartMagnifyAt(x, y)
+    {
+        if (!this.isWebKit2() || !this.isMac()) {
+            console.log('Smart magnify testing is currently only supported on macOS');
+            return Promise.resolve();
+        }
+
+        await UIHelper.startMonitoringWheelEvents();
+
+        // If smartMagnify is not working, ensure you've called setWebViewAllowsMagnification(true).
+        eventSender.mouseMoveTo(x, y);
+        eventSender.smartMagnify();
+
+        await UIHelper.waitForScrollCompletion();
     }
 
     static typeCharacter(characterString)
@@ -1472,6 +1570,13 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static contextMenuPreviewRect()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript("JSON.stringify(uiController.contextMenuPreviewRect)", result => resolve(JSON.parse(result)));
+        });
+    }
+
     static setHardwareKeyboardAttached(attached)
     {
         return new Promise(resolve => testRunner.runUIScript(`uiController.setHardwareKeyboardAttached(${attached ? "true" : "false"})`, resolve));
@@ -1480,6 +1585,11 @@ window.UIHelper = class UIHelper {
     static setWebViewEditable(editable)
     {
         return new Promise(resolve => testRunner.runUIScript(`uiController.setWebViewEditable(${editable ? "true" : "false"})`, resolve));
+    }
+
+    static setWebViewAllowsMagnification(allowsMagnification)
+    {
+        return new Promise(resolve => testRunner.runUIScript(`uiController.setWebViewAllowsMagnification(${allowsMagnification ? "true" : "false"})`, resolve));
     }
 
     static rectForMenuAction(action)
@@ -1807,6 +1917,12 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => testRunner.runUIScript(`uiController.paste()`, resolve));
     }
 
+    static async pasteboardChangeCount() {
+        return new Promise(resolve => testRunner.runUIScript(`uiController.pasteboardChangeCount`, (result) => {
+            resolve(parseInt(result))
+        }));
+    }
+
     static async setContinuousSpellCheckingEnabled(enabled) {
         return new Promise(resolve => {
             testRunner.runUIScript(`uiController.setContinuousSpellCheckingEnabled(${enabled})`, resolve);
@@ -1832,6 +1948,9 @@ window.UIHelper = class UIHelper {
 
     static async setSpellCheckerResults(results)
     {
+        if (!this.isMac() && !this.isIOSFamily())
+            return Promise.resolve();
+
         return new Promise(resolve => {
             testRunner.runUIScript(`(() => {
                 uiController.setSpellCheckerResults(${JSON.stringify(results)});
@@ -1886,6 +2005,16 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static installFakeMachineReadableCodeResultsForImageAnalysis()
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript("uiController.installFakeMachineReadableCodeResultsForImageAnalysis()", resolve);
+        });
+    }
+
     static moveToNextByKeyboardAccessoryBar()
     {
         return new Promise((resolve) => {
@@ -1896,7 +2025,7 @@ window.UIHelper = class UIHelper {
         });
     }
 
-    static moveToPrevByKeyboardAccessoryBar()
+    static moveToPreviousByKeyboardAccessoryBar()
     {
         return new Promise((resolve) => {
             testRunner.runUIScript(`
@@ -1942,6 +2071,18 @@ window.UIHelper = class UIHelper {
     {
        const script = `(() => uiController.dismissContactPickerWithContacts(${JSON.stringify(contacts)}))()`;
        return new Promise(resolve => testRunner.runUIScript(script, resolve));
+    }
+
+    static setAppAccentColor(red, green, blue)
+    {
+        if (!this.isWebKit2() || !this.isMac())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(() => {
+                uiController.setAppAccentColor(${red}, ${green}, ${blue});
+            })()`, resolve);
+        });
     }
 
     static addChromeInputField()

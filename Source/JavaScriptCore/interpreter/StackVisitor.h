@@ -77,12 +77,12 @@ public:
 #endif
         }
 
-        bool isNativeFrame() const { return !codeBlock() && !isWasmFrame(); }
-        bool isInlinedDFGFrame() const { return !isWasmFrame() && !!inlineCallFrame(); }
-        bool isWasmFrame() const { return m_isWasmFrame; }
+        bool isNativeFrame() const { return !codeBlock() && !isNativeCalleeFrame(); }
+        bool isInlinedDFGFrame() const { return !isNativeCalleeFrame() && !!inlineCallFrame(); }
+        bool isNativeCalleeFrame() const { return m_callee.isNativeCallee(); }
         Wasm::IndexOrName const wasmFunctionIndexOrName()
         {
-            ASSERT(isWasmFrame());
+            ASSERT(isNativeCalleeFrame());
             return m_wasmFunctionIndexOrName;
         }
 
@@ -113,7 +113,7 @@ public:
         Frame() { }
         ~Frame() { }
 
-        void retrieveExpressionInfo(int& divot, int& startOffset, int& endOffset, unsigned& line, unsigned& column) const;
+        void retrieveExpressionInfo(unsigned& divot, unsigned& startOffset, unsigned& endOffset, unsigned& line, unsigned& column) const;
         void setToEnd();
 
 #if ENABLE(DFG_JIT)
@@ -170,7 +170,7 @@ private:
     JS_EXPORT_PRIVATE void gotoNextFrame();
 
     void readFrame(CallFrame*);
-    void readInlinableWasmFrame(CallFrame*);
+    void readInlinableNativeCalleeFrame(CallFrame*);
     void readNonInlinedFrame(CallFrame*, CodeOrigin* = nullptr);
 #if ENABLE(DFG_JIT)
     void readInlinedFrame(CallFrame*, CodeOrigin*);

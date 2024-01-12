@@ -30,6 +30,7 @@
 #include "HeapInlines.h"
 #include "MarkedBlock.h"
 #include "VM.h"
+#include <wtf/SystemTracing.h>
 
 #if !USE(SYSTEM_MALLOC)
 #include <bmalloc/BPlatform.h>
@@ -52,7 +53,7 @@ void IncrementalSweeper::scheduleTimer()
     setTimeUntilFire(sweepTimeSlice * sweepTimeMultiplier);
 }
 
-IncrementalSweeper::IncrementalSweeper(Heap* heap)
+IncrementalSweeper::IncrementalSweeper(JSC::Heap* heap)
     : Base(heap->vm())
     , m_currentDirectory(nullptr)
 {
@@ -69,19 +70,32 @@ void IncrementalSweeper::doWorkUntil(VM& vm, MonotonicTime deadline)
 
 void IncrementalSweeper::doWork(VM& vm)
 {
+    if (m_lastOpportunisticTaskDidFinishSweeping) {
+        m_lastOpportunisticTaskDidFinishSweeping = false;
+        scheduleTimer();
+        return;
+    }
     doSweep(vm, MonotonicTime::now() + sweepTimeSlice, SweepTrigger::Timer);
 }
 
 void IncrementalSweeper::doSweep(VM& vm, MonotonicTime deadline, SweepTrigger trigger)
 {
+    std::optional<TraceScope> traceScope;
+    if (UNLIKELY(Options::useTracePoints()))
+        traceScope.emplace(IncrementalSweepStart, IncrementalSweepEnd, vm.heap.size(), vm.heap.capacity());
+
     while (sweepNextBlock(vm, trigger)) {
         if (MonotonicTime::now() < deadline)
             continue;
 
         if (trigger == SweepTrigger::Timer)
             scheduleTimer();
+        else
+            m_lastOpportunisticTaskDidFinishSweeping = false;
         return;
     }
+    if (trigger == SweepTrigger::OpportunisticTask)
+        m_lastOpportunisticTaskDidFinishSweeping = true;
 
 #if !USE(SYSTEM_MALLOC)
 #if BUSE(LIBPAS)
@@ -118,7 +132,7 @@ bool IncrementalSweeper::sweepNextBlock(VM& vm, SweepTrigger trigger)
     return vm.heap.sweepNextLogicallyEmptyWeakBlock();
 }
 
-void IncrementalSweeper::startSweeping(Heap& heap)
+void IncrementalSweeper::startSweeping(JSC::Heap& heap)
 {
     scheduleTimer();
     m_currentDirectory = heap.objectSpace().firstDirectory();

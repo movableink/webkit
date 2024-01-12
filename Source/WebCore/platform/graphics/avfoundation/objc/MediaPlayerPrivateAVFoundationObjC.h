@@ -30,6 +30,7 @@
 #include "MediaPlayerPrivateAVFoundation.h"
 #include "VideoFrameMetadata.h"
 #include <CoreMedia/CMTime.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/Function.h>
 #include <wtf/Observer.h>
 #include <wtf/RobinHoodHashMap.h>
@@ -144,7 +145,7 @@ private:
     // engine support
     class Factory;
     static bool isAvailable();
-    static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types);
+    static void getSupportedTypes(HashSet<String>& types);
     static MediaPlayer::SupportsType supportsTypeAndCodecs(const MediaEngineSupportParameters&);
     static bool supportsKeySystem(const String& keySystem, const String& mimeType);
     static HashSet<SecurityOriginData> originsInMediaCache(const String&);
@@ -212,7 +213,7 @@ private:
     double effectiveRate() const final;
     void setPreservesPitch(bool) final;
     void setPitchCorrectionAlgorithm(MediaPlayer::PitchCorrectionAlgorithm) final;
-    void seekToTime(const MediaTime&, const MediaTime& negativeTolerance, const MediaTime& positiveTolerance) final;
+    void seekToTargetInternal(const SeekTarget&) final;
     unsigned long long totalBytes() const final;
     const PlatformTimeRanges& platformBufferedTimeRanges() const final;
     MediaTime platformMinTimeSeekable() const final;
@@ -259,10 +260,9 @@ private:
     void createImageGenerator();
     void destroyImageGenerator();
     RetainPtr<CGImageRef> createImageForTimeInRect(float, const FloatRect&);
-    void paintWithImageGenerator(GraphicsContext&, const FloatRect&);
 
-    enum class UpdateType { UpdateSynchronously, UpdateAsynchronously };
-    void updateLastImage(UpdateType type = UpdateType::UpdateAsynchronously);
+    using UpdateCompletion = CompletionHandler<void()>;
+    void updateLastImage(UpdateCompletion&&);
 
     void createVideoOutput();
     void destroyVideoOutput();
@@ -272,7 +272,9 @@ private:
     RefPtr<VideoFrame> videoFrameForCurrentTime() final;
     RefPtr<NativeImage> nativeImageForCurrentTime() final;
     DestinationColorSpace colorSpace() final;
-    void waitForVideoOutputMediaDataWillChange();
+
+    enum class UpdateResult { Succeeded, Failed, TimedOut, ObjectDestroyed };
+    UpdateResult waitForVideoOutputMediaDataWillChange();
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     void keyAdded() final;
@@ -436,7 +438,6 @@ private:
     RetainPtr<NSArray> m_cachedTracks;
     RetainPtr<NSArray> m_currentMetaData;
     FloatSize m_cachedPresentationSize;
-    MediaTime m_cachedDuration;
     mutable MediaPlayer::CurrentTimeDidChangeCallback m_currentTimeDidChangeCallback;
     mutable MediaTime m_cachedCurrentMediaTime { -1, 1, 0 };
     mutable MediaTime m_lastPeriodicObserverMediaTime;
@@ -488,6 +489,7 @@ private:
     std::unique_ptr<Observer<void()>> m_waitForVideoOutputMediaDataWillChangeObserver;
     ProcessIdentity m_resourceOwner;
     PlatformTimeRanges m_buffered;
+    TrackID m_currentTextTrackID { 0 };
 };
 
 }

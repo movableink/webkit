@@ -36,6 +36,8 @@
 
 namespace WebKit {
 
+class RemoteImageBufferSetProxy;
+
 class DrawingAreaWC final
     : public DrawingArea
     , public GraphicsLayerWC::Observer {
@@ -53,6 +55,7 @@ private:
     void triggerRenderingUpdate() override;
     void didChangeViewportAttributes(WebCore::ViewportAttributes&&) override { }
     void deviceOrPageScaleFactorChanged() override { }
+    bool enterAcceleratedCompositingModeIfNeeded() override { return false; }
     void setLayerTreeStateIsFrozen(bool) override;
     bool layerTreeStateIsFrozen() const override { return m_isRenderingSuspended; }
 #if USE(GRAPHICS_LAYER_TEXTURE_MAPPER)    
@@ -87,6 +90,7 @@ private:
 
     WebCore::GraphicsLayerClient m_rootLayerClient;
     std::unique_ptr<RemoteWCLayerTreeHostProxy> m_remoteWCLayerTreeHostProxy;
+    RefPtr<RemoteImageBufferSetProxy> m_flusher;
     WCLayerFactory m_layerFactory;
     DoublyLinkedList<GraphicsLayerWC> m_liveGraphicsLayers;
     WebCore::Timer m_updateRenderingTimer;

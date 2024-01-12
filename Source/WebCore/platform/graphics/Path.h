@@ -32,8 +32,8 @@
 #include "PathSegment.h"
 #include "PlatformPath.h"
 #include "WindRule.h"
+#include <wtf/DataRef.h>
 #include <wtf/FastMalloc.h>
-#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
@@ -44,20 +44,16 @@ class RoundedRect;
 class Path {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT Path();
+    Path() = default;
+    WEBCORE_EXPORT Path(PathSegment&&);
     WEBCORE_EXPORT Path(Vector<PathSegment>&&);
     explicit Path(const Vector<FloatPoint>& points);
-    Path(UniqueRef<PathImpl>&&);
+    Path(Ref<PathImpl>&&);
 
     WEBCORE_EXPORT Path(const Path&);
     Path(Path&&) = default;
-    WEBCORE_EXPORT Path& operator=(const Path&);
+    Path& operator=(const Path&) = default;
     Path& operator=(Path&&) = default;
-
-    WEBCORE_EXPORT bool operator==(const Path&) const;
-
-    // FIXME: Remove this method when the call of it from WebKitAdditions in is removed.
-    static Path polygonPathFromPoints(const Vector<FloatPoint>&);
 
     WEBCORE_EXPORT void moveTo(const FloatPoint&);
 
@@ -87,20 +83,23 @@ public:
 
     static constexpr float circleControlPoint() { return PathImpl::circleControlPoint(); }
 
-    std::optional<PathSegment> singleSegment() const;
+    WEBCORE_EXPORT std::optional<PathSegment> singleSegment() const;
     std::optional<PathDataLine> singleDataLine() const;
     std::optional<PathArc> singleArc() const;
     std::optional<PathDataQuadCurve> singleQuadCurve() const;
     std::optional<PathDataBezierCurve> singleBezierCurve() const;
 
     WEBCORE_EXPORT bool isEmpty() const;
+    bool definitelySingleLine() const;
     WEBCORE_EXPORT PlatformPathPtr platformPath() const;
 
+    const PathSegment* singleSegmentIfExists() const { return asSingle(); }
     WEBCORE_EXPORT const Vector<PathSegment>* segmentsIfExists() const;
     WEBCORE_EXPORT Vector<PathSegment> segments() const;
 
     float length() const;
     bool isClosed() const;
+    bool hasSubpaths() const;
     FloatPoint currentPoint() const;
     PathTraversalState traversalStateAtLength(float length) const;
     FloatPoint pointAtLength(float length) const;
@@ -114,8 +113,18 @@ public:
 
 private:
     PlatformPathImpl& ensurePlatformPathImpl();
+    PathImpl& setImpl(Ref<PathImpl>&&);
+    PathImpl& ensureImpl();
 
-    UniqueRef<PathImpl> m_impl;
+    PathSegment* asSingle() { return std::get_if<PathSegment>(&m_data); }
+    const PathSegment* asSingle() const { return std::get_if<PathSegment>(&m_data); }
+
+    PathImpl* asImpl();
+    const PathImpl* asImpl() const;
+
+    const PathMoveTo* asSingleMoveTo() const;
+
+    std::variant<std::monostate, PathSegment, DataRef<PathImpl>> m_data;
 };
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Path&);

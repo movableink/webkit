@@ -29,7 +29,7 @@
 
 #include <WebCore/LibWebRTCProvider.h>
 #include <WebCore/LibWebRTCSocketIdentifier.h>
-#include <wtf/Deque.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 
 ALLOW_COMMA_BEGIN
@@ -47,7 +47,7 @@ namespace WebKit {
 
 class LibWebRTCSocketFactory;
 
-class LibWebRTCSocket final : public rtc::AsyncPacketSocket {
+class LibWebRTCSocket final : public rtc::AsyncPacketSocket, public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class Type { UDP, ClientTCP, ServerConnectionTCP };
@@ -101,9 +101,6 @@ private:
     static const unsigned MAX_SOCKET_OPTION { rtc::Socket::OPT_RTP_SENDTIME_EXTN_ID + 1 };
     std::optional<int> m_options[MAX_SOCKET_OPTION];
 
-    Deque<size_t> m_beingSentPacketSizes;
-    size_t m_availableSendingBytes { 65536 };
-    bool m_shouldSignalReadyToSend { false };
     bool m_isSuspended { false };
     WebCore::ScriptExecutionContextIdentifier m_contextIdentifier;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 #include <wtf/SharedTask.h>
 #include <wtf/StdIntExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -157,6 +158,8 @@ public:
         RELEASE_ASSERT(m_sizeInBytes <= MAX_ARRAY_BUFFER_SIZE);
     }
 
+    JS_EXPORT_PRIVATE static std::optional<ArrayBufferContents> fromDataSpan(std::span<const uint8_t>);
+
     ArrayBufferContents(ArrayBufferContents&& other)
     {
         swap(other);
@@ -195,6 +198,8 @@ public:
             return m_maxByteLength;
         return std::nullopt;
     }
+
+    std::span<const uint8_t> dataSpan() const { return { static_cast<const uint8_t*>(data()), sizeInBytes() }; }
     
     bool isShared() const { return m_shared; }
     bool isResizableOrGrowableShared() const { return m_hasMaxByteLength; }
@@ -220,6 +225,8 @@ public:
         return contents;
     }
 
+    JS_EXPORT_PRIVATE void shareWith(ArrayBufferContents&);
+
 private:
     void reset()
     {
@@ -243,7 +250,6 @@ private:
     
     void makeShared();
     void copyTo(ArrayBufferContents&);
-    void shareWith(ArrayBufferContents&);
 
     using DataType = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>;
     DataType m_data { nullptr };
@@ -260,6 +266,7 @@ public:
     JS_EXPORT_PRIVATE static Ref<ArrayBuffer> create(size_t numElements, unsigned elementByteSize);
     JS_EXPORT_PRIVATE static Ref<ArrayBuffer> create(ArrayBuffer&);
     JS_EXPORT_PRIVATE static Ref<ArrayBuffer> create(const void* source, size_t byteLength);
+    JS_EXPORT_PRIVATE static Ref<ArrayBuffer> create(std::span<uint8_t>);
     JS_EXPORT_PRIVATE static Ref<ArrayBuffer> create(ArrayBufferContents&&);
     JS_EXPORT_PRIVATE static Ref<ArrayBuffer> create(const Vector<uint8_t>&);
     JS_EXPORT_PRIVATE static Ref<ArrayBuffer> createAdopted(const void* data, size_t byteLength);
@@ -268,6 +275,7 @@ public:
     JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreate(size_t numElements, unsigned elementByteSize, std::optional<size_t> maxByteLength = std::nullopt);
     JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreate(ArrayBuffer&);
     JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreate(const void* source, size_t byteLength);
+    JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreate(std::span<uint8_t>);
     JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreateShared(VM&, size_t numElements, unsigned elementByteSize, size_t maxByteLength);
 
     // Only for use by Uint8ClampedArray::tryCreateUninitialized and FragmentedSharedBuffer::tryCreateArrayBuffer.
@@ -298,6 +306,7 @@ public:
     
     inline void pin();
     inline void unpin();
+    inline bool isDetachable() const;
     inline void pinAndLock();
     inline bool isLocked();
 
@@ -397,6 +406,11 @@ void ArrayBuffer::unpin()
     m_pinCount--;
 }
 
+bool ArrayBuffer::isDetachable() const
+{
+    return !m_pinCount && !m_locked && !isShared();
+}
+
 void ArrayBuffer::pinAndLock()
 {
     m_locked = true;
@@ -417,7 +431,7 @@ JS_EXPORT_PRIVATE ASCIILiteral errorMessageForTransfer(ArrayBuffer*);
 // https://tc39.es/proposal-resizablearraybuffer/#sec-makeidempotentarraybufferbytelengthgetter
 template<std::memory_order order>
 class IdempotentArrayBufferByteLengthGetter {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(IdempotentArrayBufferByteLengthGetter);
 public:
     IdempotentArrayBufferByteLengthGetter() = default;
 

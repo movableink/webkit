@@ -98,12 +98,15 @@ namespace WebCore {
     macro(connect) \
     macro(connectionstatechange) \
     macro(connecting) \
+    macro(contentvisibilityautostatechange) \
     macro(contextmenu) \
     macro(controllerchange) \
+    macro(cookiechange) \
     macro(coordinatorstatechange) \
     macro(copy) \
     DOM_EVENT_NAME_APPLE_PAY_COUPON_CODE_CHANGED(macro) \
     macro(cuechange) \
+    macro(currententrychange) \
     macro(cut) \
     macro(dataavailable) \
     macro(datachannel) \
@@ -114,6 +117,7 @@ namespace WebCore {
     macro(deviceorientation) \
     macro(dischargingtimechange) \
     macro(disconnect) \
+    macro(dispose) \
     macro(downloading) \
     macro(drag) \
     macro(dragend) \
@@ -163,6 +167,7 @@ namespace WebCore {
     macro(inputsourceschange) \
     macro(install) \
     macro(invalid) \
+    macro(invoke) \
     macro(keydown) \
     macro(keypress) \
     macro(keystatuseschange) \
@@ -192,6 +197,9 @@ namespace WebCore {
     macro(mouseup) \
     macro(mousewheel) \
     macro(mute) \
+    macro(navigate) \
+    macro(navigateerror) \
+    macro(navigatesuccess) \
     macro(negotiationneeded) \
     macro(nexttrack) \
     macro(nomatch) \
@@ -229,6 +237,7 @@ namespace WebCore {
     macro(processorerror) \
     macro(progress) \
     macro(push) \
+    macro(pushnotification) \
     macro(pushsubscriptionchange) \
     macro(qualitychange) \
     macro(ratechange) \
@@ -314,7 +323,6 @@ namespace WebCore {
     macro(volumechange) \
     macro(waiting) \
     macro(waitingforkey) \
-    macro(webglcontextchanged) \
     macro(webglcontextcreationerror) \
     macro(webglcontextlost) \
     macro(webglcontextrestored) \
@@ -418,7 +426,7 @@ inline bool EventNames::isTouchScrollBlockingEventType(const AtomString& eventTy
 inline bool EventNames::isTouchRelatedEventType(const AtomString& eventType, const EventTarget& target) const
 {
 #if ENABLE(TOUCH_EVENTS)
-    if (is<Node>(target) && downcast<Node>(target).document().quirks().shouldDispatchSimulatedMouseEvents(&target)) {
+    if (auto* targetNode = dynamicDowncast<Node>(target); targetNode && targetNode->document().quirks().shouldDispatchSimulatedMouseEvents(&target)) {
         if (eventType == mousedownEvent || eventType == mousemoveEvent || eventType == mouseupEvent)
             return true;
     }

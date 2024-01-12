@@ -32,6 +32,7 @@
 #include "FrameLoaderClient.h"
 #include "LayoutMilestone.h"
 #include "LinkIcon.h"
+#include "LoaderMalloc.h"
 #include "RegistrableDomain.h"
 #include "ResourceLoaderIdentifier.h"
 #include <wtf/Expected.h>
@@ -102,7 +103,7 @@ enum class WasPrivateRelayed : bool;
 struct StringWithDirection;
 
 class WEBCORE_EXPORT LocalFrameLoaderClient : public FrameLoaderClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     // An inline function cannot be the first non-abstract virtual function declared
     // in the class as it results in the vtable being generated as a weak symbol.
@@ -233,9 +234,12 @@ public:
     virtual ResourceError cannotShowMIMETypeError(const ResourceResponse&) const = 0;
     virtual ResourceError fileDoesNotExistError(const ResourceResponse&) const = 0;
     virtual ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const = 0;
+    virtual ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const = 0;
     virtual ResourceError pluginWillHandleLoadError(const ResourceResponse&) const = 0;
 
     virtual bool shouldFallBack(const ResourceError&) const = 0;
+
+    virtual void loadStorageAccessQuirksIfNeeded() = 0;
 
     virtual bool canHandleRequest(const ResourceRequest&) const = 0;
     virtual bool canShowMIMEType(const String& MIMEType) const = 0;
@@ -313,9 +317,7 @@ public:
 
     virtual void willInjectUserScript(DOMWrapperWorld&) { }
 
-#if ENABLE(SERVICE_WORKER)
     virtual void didFinishServiceWorkerPageRegistration(bool success) { UNUSED_PARAM(success); }
-#endif
 
 #if ENABLE(WEB_RTC)
     virtual void dispatchWillStartUsingPeerConnectionHandler(RTCPeerConnectionHandler*) { }
@@ -346,11 +348,9 @@ public:
     virtual void finishedLoadingApplicationManifest(uint64_t, const std::optional<ApplicationManifest>&) { }
 #endif
 
-#if ENABLE(TRACKING_PREVENTION)
     virtual bool hasFrameSpecificStorageAccess() { return false; }
     virtual void didLoadFromRegistrableDomain(RegistrableDomain&&) { }
     virtual Vector<RegistrableDomain> loadedSubresourceDomains() const { return { }; }
-#endif
 
     virtual AllowsContentJavaScript allowsContentJavaScriptFromMostRecentNavigation() const { return AllowsContentJavaScript::Yes; }
 
@@ -359,7 +359,7 @@ public:
     virtual void notifyPageOfAppBoundBehavior() { }
 #endif
 
-#if ENABLE(PDFKIT_PLUGIN)
+#if ENABLE(PDF_PLUGIN)
     virtual bool shouldUsePDFPlugin(const String&, StringView) const { return false; }
 #endif
 
@@ -367,6 +367,15 @@ public:
 
 #if ENABLE(ARKIT_INLINE_PREVIEW_MAC)
     virtual void modelInlinePreviewUUIDs(CompletionHandler<void(Vector<String>)>&&) const { }
+#endif
+
+    virtual void broadcastFrameRemovalToOtherProcesses() = 0;
+    virtual void broadcastMainFrameURLChangeToOtherProcesses(const URL&) = 0;
+
+    virtual void dispatchLoadEventToOwnerElementInAnotherProcess() = 0;
+
+#if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
+    virtual void didAccessWindowProxyPropertyViaOpener(SecurityOriginData&&, WindowProxyProperty) { }
 #endif
 };
 

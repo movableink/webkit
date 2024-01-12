@@ -38,6 +38,7 @@
 #include "InlineIteratorTextBox.h"
 #include "LegacyRenderSVGContainer.h"
 #include "LegacyRenderSVGImage.h"
+#include "LegacyRenderSVGResourceContainer.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGShape.h"
 #include "LocalFrame.h"
@@ -67,7 +68,6 @@
 #include "RenderSVGContainer.h"
 #include "RenderSVGGradientStop.h"
 #include "RenderSVGInlineText.h"
-#include "RenderSVGResourceContainer.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGShapeInlines.h"
 #include "RenderSVGText.h"
@@ -258,7 +258,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
     }
     
     RenderBlock* cb = o.containingBlock();
-    bool adjustForTableCells = cb ? cb->isTableCell() : false;
+    bool adjustForTableCells = cb ? cb->isRenderTableCell() : false;
 
     bool enableSubpixelPrecisionForTextDump = shouldEnableSubpixelPrecisionForTextDump(o.document());
     LayoutRect r;
@@ -376,13 +376,13 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         bool overridden = o.style().borderImage().overridesBorderWidths();
         if (box.isFieldset()) {
             const auto& block = downcast<RenderBlock>(box);
-            if (o.style().writingMode() == WritingMode::TopToBottom)
+            if (o.style().blockFlowDirection() == BlockFlowDirection::TopToBottom)
                 borderTop -= block.intrinsicBorderForFieldset();
-            else if (o.style().writingMode() == WritingMode::BottomToTop)
+            else if (o.style().blockFlowDirection() == BlockFlowDirection::BottomToTop)
                 borderBottom -= block.intrinsicBorderForFieldset();
-            else if (o.style().writingMode() == WritingMode::LeftToRight)
+            else if (o.style().blockFlowDirection() == BlockFlowDirection::LeftToRight)
                 borderLeft -= block.intrinsicBorderForFieldset();
-            else if (o.style().writingMode() == WritingMode::RightToLeft)
+            else if (o.style().blockFlowDirection() == BlockFlowDirection::RightToLeft)
                 borderRight -= block.intrinsicBorderForFieldset();
             
         }
@@ -489,7 +489,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
 #if PLATFORM(QT)
     // Print attributes of embedded QWidgets. E.g. when the WebCore::Widget
     // is invisible the QWidget should be invisible too.
-    if (o.isWidget()) {
+    if (is<RenderWidget>(o)) {
         const RenderWidget& part = downcast<RenderWidget>(o);
         if (part.widget() && part.widget()->platformWidget()) {
             QObject* wid = part.widget()->platformWidget();
@@ -617,8 +617,8 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
         writeSVGGradientStop(ts, downcast<RenderSVGGradientStop>(o), behavior);
         return;
     }
-    if (is<RenderSVGResourceContainer>(o)) {
-        writeSVGResourceContainer(ts, downcast<RenderSVGResourceContainer>(o), behavior);
+    if (is<LegacyRenderSVGResourceContainer>(o)) {
+        writeSVGResourceContainer(ts, downcast<LegacyRenderSVGResourceContainer>(o), behavior);
         return;
     }
     if (is<LegacyRenderSVGContainer>(o)) {
@@ -947,26 +947,13 @@ static String externalRepresentation(RenderBox& renderer, OptionSet<RenderAsText
     return ts.release();
 }
 
-static void updateLayoutIgnoringPendingStylesheetsIncludingSubframes(Document& document)
-{
-    document.updateLayoutIgnorePendingStylesheets();
-    auto* frame = document.frame();
-    for (Frame* subframe = frame; subframe; subframe = subframe->tree().traverseNext(frame)) {
-        auto* localFrame = dynamicDowncast<LocalFrame>(subframe);
-        if (!localFrame)
-            continue;
-        if (auto* document = localFrame->document())
-            document->updateLayoutIgnorePendingStylesheets();
-    }
-}
-
 String externalRepresentation(LocalFrame* frame, OptionSet<RenderAsTextFlag> behavior)
 {
     ASSERT(frame);
     ASSERT(frame->document());
 
-    if (!(behavior.contains(RenderAsTextFlag::DontUpdateLayout)))
-        updateLayoutIgnoringPendingStylesheetsIncludingSubframes(*frame->document());
+    if (!(behavior.contains(RenderAsTextFlag::DontUpdateLayout)) && frame->view())
+        frame->view()->updateLayoutAndStyleIfNeededRecursive({ LayoutOptions::IgnorePendingStylesheets, LayoutOptions::UpdateCompositingLayers });
 
     auto* renderer = frame->contentRenderer();
     if (!renderer)
@@ -996,8 +983,8 @@ String externalRepresentation(Element* element, OptionSet<RenderAsTextFlag> beha
     // This function doesn't support printing mode.
     ASSERT(!(behavior.contains(RenderAsTextFlag::PrintingMode)));
 
-    if (!(behavior.contains(RenderAsTextFlag::DontUpdateLayout)))
-        updateLayoutIgnoringPendingStylesheetsIncludingSubframes(element->document());
+    if (!(behavior.contains(RenderAsTextFlag::DontUpdateLayout)) && element->document().view())
+        element->document().view()->updateLayoutAndStyleIfNeededRecursive({ LayoutOptions::IgnorePendingStylesheets, LayoutOptions::UpdateCompositingLayers });
 
     auto* renderer = element->renderer();
     if (!is<RenderBox>(renderer))

@@ -65,6 +65,7 @@ public:
     }
     ~NetworkProcessConnection();
     
+    Ref<IPC::Connection> protectedConnection() { return m_connection; }
     IPC::Connection& connection() { return m_connection.get(); }
 
     void didReceiveNetworkProcessConnectionMessage(IPC::Connection&, IPC::Decoder&);
@@ -74,9 +75,7 @@ public:
     WebIDBConnectionToServer* existingIDBConnectionToServer() const { return m_webIDBConnection.get(); };
     WebIDBConnectionToServer& idbConnectionToServer();
 
-#if ENABLE(SERVICE_WORKER)
     WebSWClientConnection& serviceWorkerConnection();
-#endif
     WebSharedWorkerObjectConnection& sharedWorkerConnection();
 
 #if HAVE(AUDIT_TOKEN)
@@ -88,8 +87,8 @@ public:
     bool cookiesEnabled() const;
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
-    void cookiesAdded(const String& host, const Vector<WebCore::Cookie>&);
-    void cookiesDeleted(const String& host, const Vector<WebCore::Cookie>&);
+    void cookiesAdded(const String& host, Vector<WebCore::Cookie>&&);
+    void cookiesDeleted(const String& host, Vector<WebCore::Cookie>&&);
     void allCookiesDeleted();
 #endif
 
@@ -129,9 +128,7 @@ private:
 
     RefPtr<WebIDBConnectionToServer> m_webIDBConnection;
 
-#if ENABLE(SERVICE_WORKER)
     RefPtr<WebSWClientConnection> m_swConnection;
-#endif
     RefPtr<WebSharedWorkerObjectConnection> m_sharedWorkerConnection;
     WebCore::HTTPCookieAcceptPolicy m_cookieAcceptPolicy;
 };

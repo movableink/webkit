@@ -66,9 +66,9 @@ WK_EXPORT void WKBundlePageSetScaleAtOrigin(WKBundlePageRef page, double scale, 
 WK_EXPORT void WKBundlePageForceRepaint(WKBundlePageRef page);
 WK_EXPORT void WKBundlePageFlushPendingEditorStateUpdate(WKBundlePageRef page);
 
-WK_EXPORT void WKBundlePageSimulateMouseDown(WKBundlePageRef page, int button, WKPoint position, int clickCount, WKEventModifiers modifiers, double time);
-WK_EXPORT void WKBundlePageSimulateMouseUp(WKBundlePageRef page, int button, WKPoint position, int clickCount, WKEventModifiers modifiers, double time);
-WK_EXPORT void WKBundlePageSimulateMouseMotion(WKBundlePageRef page, WKPoint position, double time);
+WK_EXPORT void WKBundlePageSimulateMouseDown(WKBundlePageRef page, int button, WKPoint position, int clickCount, WKEventModifiers modifiers, double time) WK_C_API_DEPRECATED;
+WK_EXPORT void WKBundlePageSimulateMouseUp(WKBundlePageRef page, int button, WKPoint position, int clickCount, WKEventModifiers modifiers, double time) WK_C_API_DEPRECATED;
+WK_EXPORT void WKBundlePageSimulateMouseMotion(WKBundlePageRef page, WKPoint position, double time) WK_C_API_DEPRECATED;
 
 WK_EXPORT uint64_t WKBundlePageGetRenderTreeSize(WKBundlePageRef page);
 WK_EXPORT void WKBundlePageCopyRenderTree(WKBundlePageRef page);
@@ -93,9 +93,11 @@ WK_EXPORT bool WKBundlePageIsUsingDarkAppearance(WKBundlePageRef page);
 
 WK_EXPORT bool WKBundlePageCanShowMIMEType(WKBundlePageRef, WKStringRef mimeType);
 
+WK_EXPORT void WKAccessibilityEnable();
 WK_EXPORT void* WKAccessibilityRootObject(WKBundlePageRef);
 WK_EXPORT void* WKAccessibilityFocusedObject(WKBundlePageRef);
-WK_EXPORT bool WKAccessibilityCanUseSecondaryAXThread(WKBundlePageRef);
+WK_EXPORT void* WKAccessibilityFocusedUIElement();
+WK_EXPORT void WKAccessibilityAnnounce(WKBundlePageRef, WKStringRef);
 WK_EXPORT void WKAccessibilityTestingInjectPreference(WKBundlePageRef, WKStringRef domain, WKStringRef key, WKStringRef encodedValue);
 
 WK_EXPORT void WKAccessibilitySetForceDeferredSpellChecking(bool);
@@ -129,6 +131,9 @@ WK_EXPORT uint64_t WKBundlePageGetAppCacheUsageForOrigin(WKBundlePageRef page, W
 WK_EXPORT void WKBundlePageSetApplicationCacheOriginQuota(WKBundlePageRef page, WKStringRef origin, uint64_t bytes);
 WK_EXPORT void WKBundlePageResetApplicationCacheOriginQuota(WKBundlePageRef page, WKStringRef origin);
 WK_EXPORT WKArrayRef WKBundlePageCopyOriginsWithApplicationCache(WKBundlePageRef page);
+
+WK_EXPORT void WKBundlePageSetCaptionDisplayMode(WKBundlePageRef page, WKStringRef mode);
+WK_EXPORT WKCaptionUserPreferencesTestingModeTokenRef WKBundlePageCreateCaptionUserPreferencesTestingModeToken(WKBundlePageRef page);
 
 enum {
     kWKEventThrottlingBehaviorResponsive = 0,

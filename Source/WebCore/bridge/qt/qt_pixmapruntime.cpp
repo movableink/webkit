@@ -39,6 +39,7 @@
 #include <QPixmap>
 #include <QVariant>
 #include <QtEndian>
+#include <QColorSpace>
 
 using namespace WebCore;
 namespace JSC {
@@ -152,11 +153,16 @@ static JSValueRef pixmapToImageData(JSContextRef context, JSObjectRef /*function
     QImage image = toImage(data);
     int width = image.width();
     int height = image.height();
+    QColorSpace colorSpace = image.colorSpace();
+    PredefinedColorSpace predefinedColorSpace = PredefinedColorSpace::SRGB;
+#if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3)
+    if (colorSpace == QColorSpace::DisplayP3) predefinedColorSpace = PredefinedColorSpace::DisplayP3;
+#endif
 
     JSGlobalObject* lexicalGlobalObject = ::toJS(context);
     JSLockHolder locker(lexicalGlobalObject);
 
-    RefPtr<ImageData> imageData = ImageData::create(IntSize(width, height));
+    RefPtr<ImageData> imageData = ImageData::create(IntSize(width, height), predefinedColorSpace);
     copyPixelsInto(image, width, height, imageData->data().data());
 
     JSDOMGlobalObject* globalObject = static_cast<JSDOMGlobalObject*>(lexicalGlobalObject);

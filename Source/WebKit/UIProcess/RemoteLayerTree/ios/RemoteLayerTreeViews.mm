@@ -76,8 +76,9 @@ static void collectDescendantViewsAtPoint(Vector<UIView *, 16>& viewsAtPoint, UI
 
             if (![view isKindOfClass:[WKCompositingView class]])
                 return true;
-            auto* node = RemoteLayerTreeNode::forCALayer(view.layer);
-            return node->eventRegion().contains(WebCore::IntPoint(subviewPoint));
+            if (auto* node = RemoteLayerTreeNode::forCALayer(view.layer))
+                return node->eventRegion().contains(WebCore::IntPoint(subviewPoint));
+            return false;
         }();
 
         if (handlesEvent)
@@ -117,8 +118,9 @@ static void collectDescendantViewsInRect(Vector<UIView *, 16>& viewsInRect, UIVi
 
             if (![view isKindOfClass:WKCompositingView.class])
                 return true;
-            auto* node = RemoteLayerTreeNode::forCALayer(view.layer);
-            return node->eventRegion().intersects(WebCore::IntRect { subviewRect });
+            if (auto* node = RemoteLayerTreeNode::forCALayer(view.layer))
+                return node->eventRegion().intersects(WebCore::IntRect { subviewRect });
+            return false;
         }();
 
         if (intersectsRect)
@@ -429,10 +431,6 @@ static Class scrollViewScrollIndicatorClass()
 // FIXME: Likely we can remove this special case for watchOS and tvOS.
 #if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
     self.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
-#endif
-
-#if HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING)
-    [self _setAllowsAsyncScrollEvent:YES];
 #endif
 
     return self;

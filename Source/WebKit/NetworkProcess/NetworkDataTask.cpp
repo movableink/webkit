@@ -57,21 +57,29 @@ using namespace WebCore;
 Ref<NetworkDataTask> NetworkDataTask::create(NetworkSession& session, NetworkDataTaskClient& client, const NetworkLoadParameters& parameters)
 {
     ASSERT(!parameters.request.url().protocolIsBlob());
+    auto dataTask = [&] {
 #if PLATFORM(COCOA)
-    return NetworkDataTaskCocoa::create(session, client, parameters);
+        return NetworkDataTaskCocoa::create(session, client, parameters);
 #else
-    if (parameters.request.url().protocolIsData())
-        return NetworkDataTaskDataURL::create(session, client, parameters);
+        if (parameters.request.url().protocolIsData())
+            return NetworkDataTaskDataURL::create(session, client, parameters);
 #if USE(SOUP)
-    return NetworkDataTaskSoup::create(session, client, parameters);
+        return NetworkDataTaskSoup::create(session, client, parameters);
 #endif
 #if USE(CURL)
-    return NetworkDataTaskCurl::create(session, client, parameters);
+        return NetworkDataTaskCurl::create(session, client, parameters);
 #endif
 #if PLATFORM(QT)
     return NetworkDataTaskQt::create(session, client, parameters.request, parameters.storedCredentialsPolicy, parameters.contentSniffingPolicy, parameters.contentEncodingSniffingPolicy, parameters.shouldClearReferrerOnHTTPSToHTTPRedirect, parameters.isMainFrameNavigation); 
 #endif
 #endif
+    }();
+
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+    dataTask->setEmulatedConditions(session.bytesPerSecondLimit());
+#endif
+
+    return dataTask;
 }
 
 NetworkDataTask::NetworkDataTask(NetworkSession& session, NetworkDataTaskClient& client, const ResourceRequest& requestWithCredentials, StoredCredentialsPolicy storedCredentialsPolicy, bool shouldClearReferrerOnHTTPSToHTTPRedirect, bool dataTaskIsForMainFrameNavigation)
@@ -101,20 +109,25 @@ NetworkDataTask::NetworkDataTask(NetworkSession& session, NetworkDataTaskClient&
         scheduleFailure(FailureType::FTPDisabled);
         return;
     }
+
+    m_session->registerNetworkDataTask(*this);
 }
 
 NetworkDataTask::~NetworkDataTask()
 {
     ASSERT(RunLoop::isMain());
     ASSERT(!m_client);
+
+    if (m_session)
+        m_session->unregisterNetworkDataTask(*this);
 }
 
 void NetworkDataTask::scheduleFailure(FailureType type)
 {
     m_failureScheduled = true;
     RunLoop::main().dispatch([this, weakThis = ThreadSafeWeakPtr { *this }, type] {
-        auto strongThis = weakThis.get();
-        if (!strongThis || !m_client)
+        auto protectedThis = weakThis.get();
+        if (!protectedThis || !m_client)
             return;
 
         switch (type) {
@@ -198,10 +211,8 @@ NetworkSession* NetworkDataTask::networkSession()
 
 void NetworkDataTask::restrictRequestReferrerToOriginIfNeeded(WebCore::ResourceRequest& request)
 {
-#if ENABLE(TRACKING_PREVENTION)
     if ((m_session->sessionID().isEphemeral() || m_session->isTrackingPreventionEnabled()) && m_session->shouldDowngradeReferrer() && request.isThirdParty())
         request.setExistingHTTPReferrerToOriginString();
-#endif
 }
 
 String NetworkDataTask::attributedBundleIdentifier(WebPageProxyIdentifier pageID)

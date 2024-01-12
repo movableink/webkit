@@ -23,6 +23,7 @@
 import re
 import sys
 
+from datetime import datetime
 from webkitcorepy import decorators, string_utils, CallByNeed
 from webkitscmpy import Commit, Contributor, PullRequest
 from webkitscmpy.remote.scm import Scm
@@ -32,6 +33,7 @@ requests = CallByNeed(lambda: __import__('requests'))
 
 class BitBucket(Scm):
     URL_RE = re.compile(r'\Ahttps?://(?P<domain>\S+)/projects/(?P<project>\S+)/repos/(?P<repository>\S+)\Z')
+    DIFF_CONTEXT = 3
 
     class PRGenerator(Scm.PRGenerator):
         TITLE_CHAR_LIMIT = 254
@@ -40,14 +42,18 @@ class BitBucket(Scm):
         def PullRequest(self, data):
             if not data:
                 return None
+            author = self.repository.contributors.create(
+                data['author']['user']['displayName'],
+                data['author']['user'].get('emailAddress', None),
+                bitbucket=data['author']['user'].get('name', None),
+            )
+
             result = PullRequest(
                 number=data['id'],
                 title=data.get('title'),
                 body=data.get('description'),
-                author=self.repository.contributors.create(
-                    data['author']['user']['displayName'],
-                    data['author']['user'].get('emailAddress', None),
-                ), head=data['fromRef']['displayId'],
+                author=author,
+                head=data['fromRef']['displayId'],
                 hash=data['fromRef'].get('latestCommit', None),
                 base=data['toRef']['displayId'],
                 opened=True if data.get('open') else (False if data.get('closed') else None),
@@ -64,6 +70,7 @@ class BitBucket(Scm):
                 reviewer = self.repository.contributors.create(
                     rdata['user']['displayName'],
                     rdata['user'].get('emailAddress', None),
+                    bitbucket=rdata['user'].get('name', None),
                 )
                 result._reviewers.append(reviewer)
                 if rdata.get('approved', False) and (not needs_status or reviewer.status == Contributor.REVIEWER):
@@ -231,7 +238,10 @@ class BitBucket(Scm):
                 pull_request.body, pull_request.commits = pull_request.parse_body(data.get('description'))
             user = data.get('author', {}).get('user', {})
             if user.get('displayName') and user.get('emailAddress'):
-                pull_request.author = self.repository.contributors.create(user['displayName'], user['emailAddress'])
+                pull_request.author = self.repository.contributors.create(
+                    user['displayName'], user['emailAddress'],
+                    bitbucket=user.get('name', None),
+                )
             pull_request.head = data.get('fromRef', {}).get('displayId', pull_request.base)
             pull_request.base = data.get('toRef', {}).get('displayId', pull_request.base)
             pull_request.generator = self
@@ -265,8 +275,12 @@ class BitBucket(Scm):
                 if not comment or not user or not comment.get('text'):
                     continue
 
+                author = self.repository.contributors.create(
+                    user['displayName'], user['emailAddress'],
+                    bitbucket=user.get('name', None),
+                )
                 yield PullRequest.Comment(
-                    author=self.repository.contributors.create(user['displayName'], user['emailAddress']),
+                    author=author,
                     timestamp=comment.get('updatedDate', comment.get('createdDate')) // 1000,
                     content=comment.get('text'),
                 )
@@ -308,10 +322,52 @@ class BitBucket(Scm):
 
             return None if failed else pull_request
 
+        def statuses(self, pull_request):
+            response = requests.get(
+                'https://{domain}/rest/build-status/1.0/commits/{ref}'.format(
+                    domain=self.repository.domain,
+                    ref=pull_request.hash,
+                ),
+            )
+            if response.status_code // 100 != 2:
+                sys.stderr.write('Failed to fetch build-status for {}\n'.format(pull_request.hash[:Commit.HASH_LABEL_SIZE]))
+                return
+            for status in response.json().get('values') or []:
+                yield PullRequest.Status(
+                    name=status.get('name') or status.get('key'),
+                    url=status.get('url'),
+                    status=dict(
+                        SUCCESSFUL='success',
+                        INPROGRESS='pending',
+                        FAILED='failure',
+                    ).get(status.get('state'), 'error'),
+                    description=status.get('description'),
+                )
+
 
     @classmethod
     def is_webserver(cls, url):
         return True if cls.URL_RE.match(url) else False
+
+    @classmethod
+    def json_to_diff(cls, data):
+        output = ''
+        for diff in data.get('diffs', []):
+            output += '--- a/{}\n'.format(diff['source']['toString'])
+            output += '+++ b/{}\n'.format(diff['destination']['toString'])
+            for hunk in diff.get('hunks', []):
+                output += '@@ -{},{} +{},{} @@\n'.format(
+                    hunk['sourceLine'], hunk['sourceSpan'],
+                    hunk['destinationLine'], hunk['destinationSpan'],
+                )
+                for segment in hunk.get('segments', []):
+                    leader = dict(
+                        ADDED='+',
+                        REMOVED='-',
+                    ).get(segment['type'], ' ')
+                    for line in segment.get('lines'):
+                        output += '{}{}\n'.format(leader, line['line'])
+        return output
 
     def __init__(self, url, dev_branches=None, prod_branches=None, contributors=None, id=None, classifier=None):
         match = self.URL_RE.match(url)
@@ -548,6 +604,11 @@ class BitBucket(Scm):
                 break
             order += 1
 
+        author = self.contributors.create(
+            commit_data.get('committer', {}).get('displayName', None),
+            commit_data.get('committer', {}).get('emailAddress', None),
+            bitbucket=commit_data.get('committer', {}).get('name', None),
+        )
         return Commit(
             repository_id=self.id,
             hash=commit_data['id'],
@@ -557,11 +618,62 @@ class BitBucket(Scm):
             branch=branch,
             timestamp=timestamp,
             order=order,
-            author=self.contributors.create(
-                commit_data.get('committer', {}).get('displayName', None),
-                commit_data.get('committer', {}).get('emailAddress', None),
-            ), message=commit_data['message'] if include_log else None,
+            author=author,
+            message=commit_data['message'] if include_log else None,
         )
+
+    def commits(self, begin=None, end=None, include_log=True, include_identifier=True):
+        begin, end = self._commit_range(begin=begin, end=end, include_identifier=include_identifier, include_log=include_log)
+
+        previous = end
+        cached = [previous]
+        while previous:
+            response = self.request('commits/{}~1'.format(previous.hash))
+            if not response:
+                break
+            branch_point = previous.branch_point
+            identifier = previous.identifier
+            if identifier is not None:
+                identifier -= 1
+            if not identifier:
+                identifier = branch_point
+                branch_point = None
+
+            matches = self.GIT_SVN_REVISION.findall(response['message'])
+            revision = int(matches[-1].split('@')[0]) if matches else None
+
+            email_match = self.EMAIL_RE.match(response['author']['emailAddress'])
+
+            previous = Commit(
+                repository_id=self.id,
+                hash=response['id'],
+                revision=revision,
+                branch=end.branch if identifier and branch_point else self.default_branch,
+                identifier=identifier if include_identifier else None,
+                branch_point=branch_point if include_identifier else None,
+                timestamp=int(response['committerTimestamp'] / 1000),
+                author=self.contributors.create(
+                    response['author']['name'],
+                    email_match.group('email') if email_match else None,
+                ), order=0,
+                message=response['message'] if include_log else None,
+            )
+            if not cached or cached[0].timestamp != previous.timestamp:
+                for c in cached:
+                    yield c
+                cached = [previous]
+            else:
+                for c in cached:
+                    c.order += 1
+                cached.append(previous)
+
+            if previous.hash == begin.hash or previous.timestamp < begin.timestamp:
+                previous = None
+                break
+
+        for c in cached:
+            c.order += begin.order
+            yield c
 
     def find(self, argument, include_log=True, include_identifier=True):
         if not isinstance(argument, string_utils.basestring):
@@ -589,9 +701,53 @@ class BitBucket(Scm):
             raise ValueError("'{}' is not an argument recognized by git".format(argument))
         return self.commit(hash=commit_data['id'], include_log=include_log, include_identifier=include_identifier)
 
+    def diff(self, head='HEAD', base=None, include_log=False):
+        if base:
+            commits = list(self.commits(dict(argument=base), end=dict(argument=head), include_identifier=False))
+        else:
+            commits = [self.find(head, include_identifier=False), None]
+
+        if not commits or not commits[0]:
+            sys.stderr.write('Failed to find commits required to generate diff\n')
+            return
+        commits = commits[:-1]
+
+        patch_count = 1
+        for commit in commits:
+            response = self.request('commits/{}/diff?contextLines={}'.format(commit.hash, self.DIFF_CONTEXT))
+            if not response:
+                sys.stderr.write('Failed to retrieve diff of {} with status code\n'.format(commit))
+                return
+
+            if include_log and commit.message:
+                yield 'From {}'.format(commit.hash)
+                yield 'From: {} <{}>'.format(commit.author.name, commit.author.email)
+                yield 'Date: {}'.format(datetime.fromtimestamp(commit.timestamp).strftime('%a %b %d %H:%M:%S %Y'))
+                if len(commits) <= 1:
+                    subject = 'Subject: [PATCH]'
+                else:
+                    subject = 'Subject: [PATCH {}/{}]'.format(patch_count, len(commits))
+                for line in commit.message.splitlines():
+                    if subject is None:
+                        yield line
+                    elif line:
+                        subject = '{} {}'.format(subject, line)
+                    else:
+                        yield subject
+                        yield line
+                        subject = None
+                if subject:
+                    yield subject
+                yield '---'
+
+            for line in self.json_to_diff(response).splitlines():
+                yield line
+
+            patch_count += 1
+
     def files_changed(self, argument=None):
         if not argument:
-            return self.modified()
+            raise ValueError('No argument provided')
         if not Commit.HASH_RE.match(argument):
             commit = self.find(argument, include_log=False, include_identifier=False)
             if not commit:

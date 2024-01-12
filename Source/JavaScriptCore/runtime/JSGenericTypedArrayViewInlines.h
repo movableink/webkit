@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -111,7 +111,7 @@ JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::create(JSGlo
 
     ASSERT(length || buffer->isResizableOrGrowableShared());
 
-    if (!ArrayBufferView::verifySubRangeLength(*buffer, byteOffset, length.value_or(0), elementSize)) {
+    if (!ArrayBufferView::verifySubRangeLength(buffer->byteLength(), byteOffset, length.value_or(0), elementSize)) {
         throwException(globalObject, scope, createRangeError(globalObject, "Length out of range of buffer"_s));
         return nullptr;
     }
@@ -343,6 +343,59 @@ bool JSGenericTypedArrayView<Adaptor>::setFromTypedArray(JSGlobalObject* globalO
 }
 
 template<typename Adaptor>
+void JSGenericTypedArrayView<Adaptor>::copyFromInt32ShapeArray(size_t offset, JSArray* array, size_t objectOffset, size_t length)
+{
+    ASSERT(canAccessRangeQuickly(offset, length));
+    ASSERT((array->indexingType() & IndexingShapeMask) == Int32Shape);
+    ASSERT(Adaptor::typeValue != TypeBigInt64 && Adaptor::typeValue != TypeBigUint64);
+    ASSERT((length + objectOffset) <= array->length());
+    ASSERT(array->isIteratorProtocolFastAndNonObservable());
+
+    // If the destination is uint32_t or int32_t, we can use copyElements.
+    // 1. int32_t -> uint32_t conversion does not change any bit representation. So we can simply copy them.
+    // 2. Hole is represented as JSEmpty in Int32Shape, which lower 32bits is zero. And we expect 0 for undefined, thus this copying simply works.
+    if constexpr (Adaptor::typeValue == TypeUint8 || Adaptor::typeValue == TypeInt8) {
+        WTF::copyElements(bitwise_cast<uint8_t*>(typedVector() + offset), bitwise_cast<const uint64_t*>(array->butterfly()->contiguous().data() + objectOffset), length);
+        return;
+    }
+    if constexpr (Adaptor::typeValue == TypeUint16 || Adaptor::typeValue == TypeInt16) {
+        WTF::copyElements(bitwise_cast<uint16_t*>(typedVector() + offset), bitwise_cast<const uint64_t*>(array->butterfly()->contiguous().data() + objectOffset), length);
+        return;
+    }
+    if constexpr (Adaptor::typeValue == TypeUint32 || Adaptor::typeValue == TypeInt32) {
+        WTF::copyElements(bitwise_cast<uint32_t*>(typedVector() + offset), bitwise_cast<const uint64_t*>(array->butterfly()->contiguous().data() + objectOffset), length);
+        return;
+    }
+    for (size_t i = 0; i < length; ++i) {
+        JSValue value = array->butterfly()->contiguous().at(array, static_cast<unsigned>(i + objectOffset)).get();
+        if (LIKELY(!!value))
+            setIndexQuicklyToNativeValue(offset + i, Adaptor::toNativeFromInt32(value.asInt32()));
+        else
+            setIndexQuicklyToNativeValue(offset + i, Adaptor::toNativeFromUndefined());
+    }
+}
+
+template<typename Adaptor>
+void JSGenericTypedArrayView<Adaptor>::copyFromDoubleShapeArray(size_t offset, JSArray* array, size_t objectOffset, size_t length)
+{
+    ASSERT(canAccessRangeQuickly(offset, length));
+    ASSERT((array->indexingType() & IndexingShapeMask) == DoubleShape);
+    ASSERT(Adaptor::typeValue != TypeBigInt64 && Adaptor::typeValue != TypeBigUint64);
+    ASSERT((length + objectOffset) <= array->length());
+    ASSERT(array->isIteratorProtocolFastAndNonObservable());
+
+    if constexpr (Adaptor::typeValue == TypeFloat64) {
+        // Double to double copy. Thus we can use memcpy (since Array will never overlap with TypedArrays' backing store).
+        WTF::copyElements(typedVector() + offset, array->butterfly()->contiguousDouble().data() + objectOffset, length);
+        return;
+    }
+    for (size_t i = 0; i < length; ++i) {
+        double d = array->butterfly()->contiguousDouble().at(array, static_cast<unsigned>(i + objectOffset));
+        setIndexQuicklyToNativeValue(offset + i, Adaptor::toNativeFromDouble(d));
+    }
+}
+
+template<typename Adaptor>
 bool JSGenericTypedArrayView<Adaptor>::setFromArrayLike(JSGlobalObject* globalObject, size_t offset, JSObject* object, size_t objectOffset, size_t length)
 {
     VM& vm = globalObject->vm();
@@ -358,26 +411,16 @@ bool JSGenericTypedArrayView<Adaptor>::setFromArrayLike(JSGlobalObject* globalOb
     size_t safeUnadjustedLength = std::min(length, static_cast<size_t>(MAX_ARRAY_INDEX) + 1);
     size_t safeLength = objectOffset <= safeUnadjustedLength ? safeUnadjustedLength - objectOffset : 0;
 
-    if constexpr (TypedArrayStorageType != TypeBigInt64 || TypedArrayStorageType != TypeBigUint64) {
-        if (JSArray* array = jsDynamicCast<JSArray*>(object); LIKELY(array)) {
-            if (safeLength == length && (safeLength + objectOffset) >= array->length() && array->isIteratorProtocolFastAndNonObservable()) {
+    if constexpr (TypedArrayStorageType != TypeBigInt64 && TypedArrayStorageType != TypeBigUint64) {
+        if (JSArray* array = jsDynamicCast<JSArray*>(object); LIKELY(array && isJSArray(array))) {
+            if (safeLength == length && (safeLength + objectOffset) <= array->length() && array->isIteratorProtocolFastAndNonObservable()) {
                 IndexingType indexingType = array->indexingType() & IndexingShapeMask;
                 if (indexingType == Int32Shape) {
-                    for (size_t i = 0; i < safeLength; ++i) {
-                        JSValue value = array->butterfly()->contiguous().at(array, static_cast<unsigned>(i + objectOffset)).get();
-                        if (LIKELY(!!value))
-                            setIndexQuicklyToNativeValue(offset + i, Adaptor::toNativeFromInt32(value.asInt32()));
-                        else
-                            setIndexQuicklyToNativeValue(offset + i, Adaptor::toNativeFromUndefined());
-                    }
+                    copyFromInt32ShapeArray(offset, array, objectOffset, safeLength);
                     return true;
                 }
-
                 if (indexingType == DoubleShape) {
-                    for (size_t i = 0; i < safeLength; ++i) {
-                        double d = array->butterfly()->contiguousDouble().at(array, static_cast<unsigned>(i + objectOffset));
-                        setIndexQuicklyToNativeValue(offset + i, Adaptor::toNativeFromDouble(d));
-                    }
+                    copyFromDoubleShapeArray(offset, array, objectOffset, safeLength);
                     return true;
                 }
             }
@@ -417,7 +460,7 @@ bool JSGenericTypedArrayView<Adaptor>::setFromArrayLike(JSGlobalObject* globalOb
         return false;
     }
 
-    if (JSArray* array = jsDynamicCast<JSArray*>(sourceValue); LIKELY(array))
+    if (JSArray* array = jsDynamicCast<JSArray*>(sourceValue); LIKELY(array && isJSArray(array)))
         RELEASE_AND_RETURN(scope, setFromArrayLike(globalObject, offset, array, 0, array->length()));
 
     size_t targetLength = this->length();
@@ -813,26 +856,42 @@ template<typename Adaptor> inline auto JSGenericTypedArrayView<Adaptor>::toAdapt
     return toNativeFromValueWithoutCoercion<Adaptor>(jsValue);
 }
 
-template<typename Adaptor> inline bool JSGenericTypedArrayView<Adaptor>::sort()
+template<typename Adaptor> inline auto JSGenericTypedArrayView<Adaptor>::sort() -> SortResult
 {
     RELEASE_ASSERT(!isDetached());
+    Vector<ElementType, 16> forShared;
+    IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
+    auto lengthValue = integerIndexedObjectLength(this, getter);
+    if (!lengthValue)
+        return SortResult::Failed;
+
+    size_t length = lengthValue.value();
+
+    ElementType* originalArray = typedVector();
+    ElementType* array = originalArray;
+    if (isShared()) {
+        if (UNLIKELY(!forShared.tryGrow(length)))
+            return SortResult::OutOfMemory;
+        WTF::copyElements(forShared.data(), originalArray, length);
+        array = forShared.data();
+    }
+
     switch (Adaptor::typeValue) {
     case TypeFloat32:
-        return sortFloat<int32_t>();
+        sortFloat<int32_t>(array, array + length);
+        break;
     case TypeFloat64:
-        return sortFloat<int64_t>();
-    default: {
-        IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
-        auto lengthValue = integerIndexedObjectLength(this, getter);
-        if (!lengthValue)
-            return false;
-
-        size_t length = lengthValue.value();
-        ElementType* array = typedVector();
+        sortFloat<int64_t>(array, array + length);
+        break;
+    default:
         std::sort(array, array + length);
-        return true;
+        break;
     }
-    }
+
+    if (isShared())
+        WTF::copyElements(originalArray, forShared.data(), length);
+
+    return SortResult::Success;
 }
 
 template<typename Adaptor> inline bool JSGenericTypedArrayView<Adaptor>::canAccessRangeQuickly(size_t offset, size_t length)
@@ -890,39 +949,24 @@ inline GCClient::IsoSubspace* JSGenericTypedArrayView<Adaptor>::subspaceFor(VM& 
 }
 
 template<typename Adaptor>  template<typename IntegralType>
-inline bool JSGenericTypedArrayView<Adaptor>::sortFloat()
+inline void JSGenericTypedArrayView<Adaptor>::sortFloat(ElementType* begin, ElementType* end)
 {
     // FIXME: Need to get m_length once.
     ASSERT(sizeof(IntegralType) == sizeof(ElementType));
-
-    IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
-    auto lengthValue = integerIndexedObjectLength(this, getter);
-    if (!lengthValue)
-        return false;
-
-    size_t length = lengthValue.value();
-
-    auto purifyArray = [&]() {
-        ElementType* array = typedVector();
-        for (size_t i = 0; i < length; i++)
-            array[i] = purifyNaN(array[i]);
-    };
 
     // Since there might be another view that sets the bits of
     // our floats to NaNs with negative sign bits we need to
     // purify the array.
     // We use a separate function here to avoid the strict aliasing rule.
     // We could use a union but ASAN seems to frown upon that.
-    purifyArray();
+    for (auto it = begin; it != end; ++it)
+        *it = purifyNaN(*it);
 
-    IntegralType* array = reinterpret_cast_ptr<IntegralType*>(typedVector());
-    std::sort(array, array + length, [] (IntegralType a, IntegralType b) {
+    std::sort(reinterpret_cast_ptr<IntegralType*>(begin), reinterpret_cast_ptr<IntegralType*>(end), [](IntegralType a, IntegralType b) {
         if (a >= 0 || b >= 0)
             return a < b;
         return a > b;
     });
-
-    return true;
 }
 
 template<typename Adaptor> RefPtr<typename Adaptor::ViewType> JSGenericTypedArrayView<Adaptor>::toWrapped(VM& vm, JSValue value)

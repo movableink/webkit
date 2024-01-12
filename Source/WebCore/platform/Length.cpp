@@ -234,6 +234,99 @@ void Length::deref() const
     calculationValues().deref(m_calculationValueHandle);
 }
 
+LengthType Length::typeFromIndex(const IPCData& data)
+{
+    static_assert(std::variant_size_v<IPCData> == 13);
+    switch (data.index()) {
+    case WTF::alternativeIndexV<AutoData, IPCData>:
+        return LengthType::Auto;
+    case WTF::alternativeIndexV<NormalData, IPCData>:
+        return LengthType::Normal;
+    case WTF::alternativeIndexV<RelativeData, IPCData>:
+        return LengthType::Relative;
+    case WTF::alternativeIndexV<PercentData, IPCData>:
+        return LengthType::Percent;
+    case WTF::alternativeIndexV<FixedData, IPCData>:
+        return LengthType::Fixed;
+    case WTF::alternativeIndexV<IntrinsicData, IPCData>:
+        return LengthType::Intrinsic;
+    case WTF::alternativeIndexV<MinIntrinsicData, IPCData>:
+        return LengthType::MinIntrinsic;
+    case WTF::alternativeIndexV<MinContentData, IPCData>:
+        return LengthType::MinContent;
+    case WTF::alternativeIndexV<MaxContentData, IPCData>:
+        return LengthType::MaxContent;
+    case WTF::alternativeIndexV<FillAvailableData, IPCData>:
+        return LengthType::FillAvailable;
+    case WTF::alternativeIndexV<FitContentData, IPCData>:
+        return LengthType::FitContent;
+    case WTF::alternativeIndexV<ContentData, IPCData>:
+        return LengthType::Content;
+    case WTF::alternativeIndexV<UndefinedData, IPCData>:
+        return LengthType::Undefined;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+Length::Length(IPCData&& data)
+    : m_type(typeFromIndex(data))
+{
+    WTF::switchOn(data, [&] (auto data) {
+        WTF::switchOn(data.value, [&] (float value) {
+            m_isFloat = true;
+            m_floatValue = value;
+        }, [&] (int value) {
+            m_isFloat = false;
+            m_intValue = value;
+        });
+        m_hasQuirk = data.hasQuirk;
+    }, [] (auto emptyData) requires std::is_empty_v<decltype(emptyData)> { });
+}
+
+auto Length::ipcData() const -> IPCData
+{
+    switch (m_type) {
+    case LengthType::Auto:
+        return AutoData { };
+    case LengthType::Normal:
+        return NormalData { };
+    case LengthType::Relative:
+        return RelativeData { floatOrInt(), m_hasQuirk };
+    case LengthType::Percent:
+        return PercentData { floatOrInt(), m_hasQuirk };
+    case LengthType::Fixed:
+        return FixedData { floatOrInt(), m_hasQuirk };
+    case LengthType::Intrinsic:
+        return IntrinsicData { floatOrInt(), m_hasQuirk };
+    case LengthType::MinIntrinsic:
+        return MinIntrinsicData { floatOrInt(), m_hasQuirk };
+    case LengthType::MinContent:
+        return MinContentData { floatOrInt(), m_hasQuirk };
+    case LengthType::MaxContent:
+        return MaxContentData { floatOrInt(), m_hasQuirk };
+    case LengthType::FillAvailable:
+        return FillAvailableData { floatOrInt(), m_hasQuirk };
+    case LengthType::FitContent:
+        return FitContentData { floatOrInt(), m_hasQuirk };
+    case LengthType::Content:
+        return ContentData { };
+    case LengthType::Undefined:
+        return UndefinedData { };
+    case LengthType::Calculated:
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+auto Length::floatOrInt() const -> FloatOrInt
+{
+    ASSERT(!isCalculated());
+    if (m_isFloat)
+        return m_floatValue;
+    return m_intValue;
+}
+
 float Length::nonNanCalculatedValue(float maxValue) const
 {
     ASSERT(isCalculated());
@@ -284,7 +377,7 @@ static Length blendMixedTypes(const Length& from, const Length& to, const Blendi
 
 Length blend(const Length& from, const Length& to, const BlendingContext& context)
 {
-    if ((from.isAuto() || to.isAuto()) || (from.isUndefined() || to.isUndefined()))
+    if (from.isAuto() || to.isAuto() || from.isUndefined() || to.isUndefined() || from.isNormal() || to.isNormal())
         return context.progress < 0.5 ? from : to;
 
     if (from.isCalculated() || to.isCalculated() || (from.type() != to.type()))
@@ -333,17 +426,18 @@ static TextStream& operator<<(TextStream& ts, LengthType type)
 {
     switch (type) {
     case LengthType::Auto: ts << "auto"; break;
-    case LengthType::Relative: ts << "relative"; break;
-    case LengthType::Percent: ts << "percent"; break;
+    case LengthType::Calculated: ts << "calc"; break;
+    case LengthType::Content: ts << "content"; break;
+    case LengthType::FillAvailable: ts << "fill-available"; break;
+    case LengthType::FitContent: ts << "fit-content"; break;
     case LengthType::Fixed: ts << "fixed"; break;
     case LengthType::Intrinsic: ts << "intrinsic"; break;
     case LengthType::MinIntrinsic: ts << "min-intrinsic"; break;
     case LengthType::MinContent: ts << "min-content"; break;
     case LengthType::MaxContent: ts << "max-content"; break;
-    case LengthType::FillAvailable: ts << "fill-available"; break;
-    case LengthType::FitContent: ts << "fit-content"; break;
-    case LengthType::Calculated: ts << "calc"; break;
-    case LengthType::Content: ts << "content"; break;
+    case LengthType::Normal: ts << "normal"; break;
+    case LengthType::Percent: ts << "percent"; break;
+    case LengthType::Relative: ts << "relative"; break;
     case LengthType::Undefined: ts << "undefined"; break;
     }
     return ts;
@@ -354,6 +448,7 @@ TextStream& operator<<(TextStream& ts, Length length)
     switch (length.type()) {
     case LengthType::Auto:
     case LengthType::Content:
+    case LengthType::Normal:
     case LengthType::Undefined:
         ts << length.type();
         break;

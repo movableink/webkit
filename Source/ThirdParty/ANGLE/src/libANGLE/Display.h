@@ -26,6 +26,7 @@
 #include "libANGLE/MemoryProgramCache.h"
 #include "libANGLE/MemoryShaderCache.h"
 #include "libANGLE/Observer.h"
+#include "libANGLE/ShareGroup.h"
 #include "libANGLE/Version.h"
 #include "platform/Feature.h"
 #include "platform/autogen/FrontendFeatures_autogen.h"
@@ -46,7 +47,6 @@ namespace rx
 {
 class DisplayImpl;
 class EGLImplFactory;
-class ShareGroupImpl;
 }  // namespace rx
 
 namespace egl
@@ -58,7 +58,6 @@ class Surface;
 class Sync;
 class Thread;
 
-using ContextMap = angle::HashMap<GLuint, gl::Context *>;
 using SurfaceMap = angle::HashMap<GLuint, Surface *>;
 using ThreadSet  = angle::HashSet<Thread *>;
 
@@ -76,50 +75,12 @@ struct DisplayState final : private angle::NonCopyable
     EGLNativeDisplayType displayId;
 };
 
-class ShareGroup final : angle::NonCopyable
-{
-  public:
-    ShareGroup(rx::EGLImplFactory *factory);
-
-    void addRef();
-
-    void release(const egl::Display *display);
-
-    rx::ShareGroupImpl *getImplementation() const { return mImplementation; }
-
-    rx::UniqueSerial generateFramebufferSerial() { return mFramebufferSerialFactory.generate(); }
-
-    angle::FrameCaptureShared *getFrameCaptureShared() { return mFrameCaptureShared.get(); }
-
-    void finishAllContexts();
-
-    const ContextMap &getContexts() const { return mContexts; }
-    void addSharedContext(gl::Context *context);
-    void removeSharedContext(gl::Context *context);
-
-    size_t getShareGroupContextCount() const { return mContexts.size(); }
-
-  protected:
-    ~ShareGroup();
-
-  private:
-    size_t mRefCount;
-    rx::ShareGroupImpl *mImplementation;
-    rx::UniqueSerialFactory mFramebufferSerialFactory;
-
-    // Note: we use a raw pointer here so we can exclude frame capture sources from the build.
-    std::unique_ptr<angle::FrameCaptureShared> mFrameCaptureShared;
-
-    // The list of contexts within the share group
-    ContextMap mContexts;
-};
-
 // Constant coded here as a reasonable limit.
 constexpr EGLAttrib kProgramCacheSizeAbsoluteMax = 0x4000000;
 
 using ImageMap  = angle::HashMap<GLuint, Image *>;
 using StreamSet = angle::HashSet<Stream *>;
-using SyncMap   = angle::HashMap<GLuint, Sync *>;
+using SyncMap   = angle::HashMap<GLuint, std::unique_ptr<Sync>>;
 
 class Display final : public LabeledObject,
                       public angle::ObserverInterface,
@@ -140,7 +101,6 @@ class Display final : public LabeledObject,
     {
         Api,
         InternalCleanup,
-        NoActiveThreads,
 
         InvalidEnum,
         EnumCount = InvalidEnum,
@@ -153,15 +113,6 @@ class Display final : public LabeledObject,
     // Called on eglReleaseThread. Backends can tear down thread-specific backend state through
     // this function.
     Error releaseThread();
-
-    // Helpers to maintain active thread set to assist with freeing invalid EGL objects.
-    void addActiveThread(Thread *thread);
-    void threadCleanup(Thread *thread);
-
-    ContextMutexManager *getSharedContextMutexManager() const
-    {
-        return mSharedContextMutexManager.get();
-    }
 
     static Display *GetDisplayFromDevice(Device *device, const AttributeMap &attribMap);
     static Display *GetDisplayFromNativeDisplay(EGLenum platform,
@@ -402,12 +353,17 @@ class Display final : public LabeledObject,
 
     ImageMap mImageMap;
     StreamSet mStreamSet;
+
     SyncMap mSyncMap;
+
+    static constexpr size_t kMaxSyncPoolSizePerType = 32;
+    using SyncPool = angle::FixedVector<std::unique_ptr<Sync>, kMaxSyncPoolSizePerType>;
+    std::map<EGLenum, SyncPool> mSyncPools;
 
     void destroyImageImpl(Image *image, ImageMap *images);
     void destroyStreamImpl(Stream *stream, StreamSet *streams);
     Error destroySurfaceImpl(Surface *surface, SurfaceMap *surfaces);
-    void destroySyncImpl(Sync *sync, SyncMap *syncs);
+    void destroySyncImpl(SyncID syncId, SyncMap *syncs);
 
     ContextMap mInvalidContextMap;
     ImageMap mInvalidImageMap;
@@ -431,8 +387,6 @@ class Display final : public LabeledObject,
     Surface *mSurface;
     EGLenum mPlatform;
     angle::LoggingAnnotator mAnnotator;
-
-    std::unique_ptr<ContextMutexManager> mSharedContextMutexManager;
 
     // mManagersMutex protects mTextureManager and mSemaphoreManager
     ContextMutex *mManagersMutex;
@@ -461,7 +415,6 @@ class Display final : public LabeledObject,
     std::mutex mProgramCacheMutex;
 
     bool mTerminatedByApi;
-    ThreadSet mActiveThreads;
 
     // Single-threaded and multithread pools for use by various parts of ANGLE, such as shader
     // compilation.  These pools are internally synchronized.

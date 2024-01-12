@@ -31,7 +31,6 @@
 #import "_WKWebExtensionMatchPatternInternal.h"
 
 #import "WebExtensionMatchPattern.h"
-#import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/URLParser.h>
 
 static NSString * const stringCodingKey = @"string";
@@ -47,14 +46,14 @@ NSErrorDomain const _WKWebExtensionMatchPatternErrorDomain = @"_WKWebExtensionMa
 
 - (instancetype)initWithCoder:(NSCoder *)coder
 {
-    NSParameterAssert(coder);
+    NSParameterAssert([coder isKindOfClass:NSCoder.class]);
 
     return [self initWithString:[coder decodeObjectOfClass:[NSString class] forKey:stringCodingKey] error:nullptr];
 }
 
 - (void)encodeWithCoder:(NSCoder *)coder
 {
-    NSParameterAssert(coder);
+    NSParameterAssert([coder isKindOfClass:NSCoder.class]);
 
     [coder encodeObject:self.string forKey:stringCodingKey];
 }
@@ -69,6 +68,7 @@ NSErrorDomain const _WKWebExtensionMatchPatternErrorDomain = @"_WKWebExtensionMa
 
 + (void)registerCustomURLScheme:(NSString *)urlScheme
 {
+    NSParameterAssert([urlScheme isKindOfClass:NSString.class]);
     NSAssert1(WTF::URLParser::maybeCanonicalizeScheme(String(urlScheme)), @"Invalid parameter: '%@' is not a valid URL scheme", urlScheme);
 
     WebKit::WebExtensionMatchPattern::registerCustomURLScheme(urlScheme);
@@ -76,40 +76,40 @@ NSErrorDomain const _WKWebExtensionMatchPatternErrorDomain = @"_WKWebExtensionMa
 
 + (instancetype)allURLsMatchPattern
 {
-    return WebKit::wrapper(WebKit::WebExtensionMatchPattern::allURLsMatchPattern());
+    return WebKit::wrapper(WebKit::WebExtensionMatchPattern::allURLsMatchPattern()).autorelease();
 }
 
 + (instancetype)allHostsAndSchemesMatchPattern
 {
-    return WebKit::wrapper(WebKit::WebExtensionMatchPattern::allHostsAndSchemesMatchPattern());
+    return WebKit::wrapper(WebKit::WebExtensionMatchPattern::allHostsAndSchemesMatchPattern()).autorelease();
 }
 
 + (instancetype)matchPatternWithString:(NSString *)patternString
 {
-    NSParameterAssert(patternString);
+    NSParameterAssert([patternString isKindOfClass:NSString.class]);
 
-    return WebKit::wrapper(WebKit::WebExtensionMatchPattern::getOrCreate(patternString));
+    return WebKit::wrapper(WebKit::WebExtensionMatchPattern::getOrCreate(patternString)).autorelease();
 }
 
 + (instancetype)matchPatternWithScheme:(NSString *)scheme host:(NSString *)host path:(NSString *)path
 {
-    NSParameterAssert(scheme);
-    NSParameterAssert(host);
-    NSParameterAssert(path);
+    NSParameterAssert([scheme isKindOfClass:NSString.class]);
+    NSParameterAssert([host isKindOfClass:NSString.class]);
+    NSParameterAssert([path isKindOfClass:NSString.class]);
 
-    return WebKit::wrapper(WebKit::WebExtensionMatchPattern::getOrCreate(scheme, host, path));
+    return WebKit::wrapper(WebKit::WebExtensionMatchPattern::getOrCreate(scheme, host, path)).autorelease();
 }
 
 - (instancetype)initWithString:(NSString *)string error:(NSError **)error
 {
-    NSParameterAssert(string);
+    NSParameterAssert([string isKindOfClass:NSString.class]);
 
     if (!error) {
         // Balance the destructor in dealloc with the empty constructor.
         API::Object::constructInWrapper<WebKit::WebExtensionMatchPattern>(self);
 
         // Use the pattern cache instead for better performance, since an error isn't needed.
-        return WebKit::wrapper(WebKit::WebExtensionMatchPattern::getOrCreate(string));
+        return WebKit::wrapper(WebKit::WebExtensionMatchPattern::getOrCreate(string)).autorelease();
     }
 
     API::Object::constructInWrapper<WebKit::WebExtensionMatchPattern>(self, string, error);
@@ -119,16 +119,16 @@ NSErrorDomain const _WKWebExtensionMatchPatternErrorDomain = @"_WKWebExtensionMa
 
 - (instancetype)initWithScheme:(NSString *)scheme host:(NSString *)host path:(NSString *)path error:(NSError **)error
 {
-    NSParameterAssert(scheme);
-    NSParameterAssert(host);
-    NSParameterAssert(path);
+    NSParameterAssert([scheme isKindOfClass:NSString.class]);
+    NSParameterAssert([host isKindOfClass:NSString.class]);
+    NSParameterAssert([path isKindOfClass:NSString.class]);
 
     if (!error) {
         // Balance the destructor in dealloc with the empty constructor.
         API::Object::constructInWrapper<WebKit::WebExtensionMatchPattern>(self);
 
         // Use the pattern cache instead for better performance, since an error isn't needed.
-        return WebKit::wrapper(WebKit::WebExtensionMatchPattern::getOrCreate(scheme, host, path));
+        return WebKit::wrapper(WebKit::WebExtensionMatchPattern::getOrCreate(scheme, host, path)).autorelease();
     }
 
     API::Object::constructInWrapper<WebKit::WebExtensionMatchPattern>(self, scheme, host, path, error);
@@ -138,8 +138,7 @@ NSErrorDomain const _WKWebExtensionMatchPatternErrorDomain = @"_WKWebExtensionMa
 
 - (void)dealloc
 {
-    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(_WKWebExtensionMatchPattern.class, self))
-        return;
+    ASSERT(isMainRunLoop());
 
     _webExtensionMatchPattern->~WebExtensionMatchPattern();
 }
@@ -234,6 +233,11 @@ static OptionSet<WebKit::WebExtensionMatchPattern::Options> toImpl(_WKWebExtensi
 {
     NSAssert(!(options & _WKWebExtensionMatchPatternOptionsMatchBidirectionally), @"Invalid parameter: WKWebExtensionMatchPatternOptionsMatchBidirectionally is not valid when matching a URL");
 
+    if (!urlToMatch)
+        return NO;
+
+    NSParameterAssert([urlToMatch isKindOfClass:NSURL.class]);
+
     return _webExtensionMatchPattern->matchesURL(urlToMatch, toImpl(options));
 }
 
@@ -246,6 +250,9 @@ static OptionSet<WebKit::WebExtensionMatchPattern::Options> toImpl(_WKWebExtensi
 {
     if (!patternToMatch)
         return NO;
+
+    NSParameterAssert([patternToMatch isKindOfClass:_WKWebExtensionMatchPattern.class]);
+
     return _webExtensionMatchPattern->matchesPattern(patternToMatch._webExtensionMatchPattern, toImpl(options));
 }
 

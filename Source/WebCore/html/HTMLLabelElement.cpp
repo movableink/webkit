@@ -30,11 +30,8 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "FormListedElement.h"
-#include "FrameSelection.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLNames.h"
-#include "LocalFrame.h"
-#include "MouseEvent.h"
 #include "SelectionRestorationMode.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/IsoMallocInlines.h>
@@ -126,15 +123,16 @@ void HTMLLabelElement::setHovered(bool over, Style::InvalidationScope invalidati
 
 bool HTMLLabelElement::isEventTargetedAtInteractiveDescendants(Event& event) const
 {
-    if (!is<Node>(event.target()))
+    auto* node = dynamicDowncast<Node>(*event.target());
+    if (!node)
         return false;
 
-    auto& node = downcast<Node>(*event.target());
-    if (!containsIncludingShadowDOM(&node))
+    if (!containsIncludingShadowDOM(node))
         return false;
 
-    for (const auto* it = &node; it && it != this; it = it->parentElementInComposedTree()) {
-        if (is<HTMLElement>(it) && downcast<HTMLElement>(*it).isInteractiveContent())
+    for (const auto* it = node; it && it != this; it = it->parentElementInComposedTree()) {
+        auto* element = dynamicDowncast<HTMLElement>(*it);
+        if (element && element->isInteractiveContent())
             return true;
     }
 
@@ -143,19 +141,12 @@ bool HTMLLabelElement::isEventTargetedAtInteractiveDescendants(Event& event) con
 void HTMLLabelElement::defaultEventHandler(Event& event)
 {
     if (event.type() == eventNames().clickEvent && !m_processingClick) {
-        // If text of label element is selected, do not pass the event to control element.
-        // Note: a click event may be not a mouse event if created by document.createEvent().
-        if (event.isMouseEvent() && !downcast<MouseEvent>(event).isSimulated()) {
-            auto* frame = document().frame();
-            if (frame && frame->selection().selection().isRange())
-                return;
-        }
-
         auto control = this->control();
 
         // If we can't find a control or if the control received the click
         // event, then there's no need for us to do anything.
-        if (!control || (is<Node>(event.target()) && control->containsIncludingShadowDOM(&downcast<Node>(*event.target())))) {
+        auto* eventTarget = dynamicDowncast<Node>(event.target());
+        if (!control || (eventTarget && control->containsIncludingShadowDOM(eventTarget))) {
             HTMLElement::defaultEventHandler(event);
             return;
         }

@@ -263,8 +263,6 @@ PASS 'function SVGPathSeg() {    [native code]}' is 'function SVGPathSeg() {    
 PASS 'function SVGPathSeg() {    [native code]}' is 'function SVGPathSeg() {    [native code]}'
 PASS 'function SVGPreserveAspectRatio() {    [native code]}' is 'function SVGPreserveAspectRatio() {    [native code]}'
 PASS 'function SVGPreserveAspectRatio() {    [native code]}' is 'function SVGPreserveAspectRatio() {    [native code]}'
-PASS 'function SVGRenderingIntent() {    [native code]}' is 'function SVGRenderingIntent() {    [native code]}'
-PASS 'function SVGRenderingIntent() {    [native code]}' is 'function SVGRenderingIntent() {    [native code]}'
 PASS 'function SVGTextContentElement() {    [native code]}' is 'function SVGTextContentElement() {    [native code]}'
 PASS 'function SVGTextContentElement() {    [native code]}' is 'function SVGTextContentElement() {    [native code]}'
 PASS 'function SVGTextPathElement() {    [native code]}' is 'function SVGTextPathElement() {    [native code]}'
@@ -381,10 +379,6 @@ PASS win['onunload'] is null
 PASS win['onunload'] is null
 PASS win['opener'] is null
 PASS win['opener'] is null
-FAIL win['defaultStatus'] should be undefined (of type undefined). Was  (of type string).
-FAIL win['defaultStatus'] should be undefined (of type undefined). Was  (of type string).
-FAIL win['defaultstatus'] should be undefined (of type undefined). Was  (of type string).
-FAIL win['defaultstatus'] should be undefined (of type undefined). Was  (of type string).
 FAIL win['name'] should be undefined (of type undefined). Was  (of type string).
 FAIL win['name'] should be undefined (of type undefined). Was  (of type string).
 FAIL win['status'] should be undefined (of type undefined). Was  (of type string).

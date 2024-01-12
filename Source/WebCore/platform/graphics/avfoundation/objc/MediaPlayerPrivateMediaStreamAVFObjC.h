@@ -34,6 +34,7 @@
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
 #include <wtf/LoggerHelper.h>
+#include <wtf/RefCounted.h>
 #include <wtf/RobinHoodHashMap.h>
 
 OBJC_CLASS AVSampleBufferDisplayLayer;
@@ -52,6 +53,7 @@ enum class VideoFrameRotation : uint16_t;
 
 class MediaPlayerPrivateMediaStreamAVFObjC final
     : public MediaPlayerPrivateInterface
+    , public RefCounted<MediaPlayerPrivateMediaStreamAVFObjC>
     , private MediaStreamPrivate::Observer
     , public MediaStreamTrackPrivate::Observer
     , public RealtimeMediaSource::VideoFrameObserver
@@ -62,6 +64,9 @@ public:
     explicit MediaPlayerPrivateMediaStreamAVFObjC(MediaPlayer*);
     virtual ~MediaPlayerPrivateMediaStreamAVFObjC();
 
+    void ref() final { RefCounted::ref(); }
+    void deref() final { RefCounted::deref(); }
+
     static void registerMediaEngine(MediaEngineRegistrar);
 
     using NativeImageCreator = RefPtr<NativeImage> (*)(const VideoFrame&);
@@ -69,7 +74,7 @@ public:
 
     // MediaPlayer Factory Methods
     static bool isAvailable();
-    static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types);
+    static void getSupportedTypes(HashSet<String>& types);
     static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
 
     MediaPlayer::NetworkState networkState() const override;
@@ -126,14 +131,15 @@ private:
     bool hasVideo() const override;
     bool hasAudio() const override;
 
-    void setPageIsVisible(bool) final;
+    void setPageIsVisible(bool, String&& sceneIdentifier) final;
     void setVisibleForCanvas(bool) final;
     void setVisibleInViewport(bool) final;
 
     MediaTime durationMediaTime() const override;
     MediaTime currentMediaTime() const override;
 
-    bool seeking() const override { return false; }
+    void seekToTarget(const SeekTarget&) final { };
+    bool seeking() const final { return false; }
 
     const PlatformTimeRanges& seekable() const override;
     const PlatformTimeRanges& buffered() const override;
@@ -170,6 +176,7 @@ private:
     std::optional<VideoFrameMetadata> videoFrameMetadata() final;
     void setResourceOwner(const ProcessIdentity&) final { ASSERT_NOT_REACHED(); }
     void renderVideoWillBeDestroyed() final { destroyLayers(); }
+    void setShouldMaintainAspectRatio(bool) final;
 
     MediaPlayer::ReadyState currentReadyState();
     void updateReadyState();
@@ -180,6 +187,8 @@ private:
     void checkSelectedVideoTrack();
     void updateDisplayLayer();
 
+    enum class SizeChanged : bool { No, Yes };
+    void scheduleTaskForCharacteristicsChanged(SizeChanged);
     void scheduleDeferredTask(Function<void ()>&&);
 
     void layersAreInitialized(IntSize, bool);
@@ -220,9 +229,11 @@ private:
     // RealtimeMediaSouce::VideoFrameObserver
     void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) final;
 
+#if ENABLE(VIDEO_PRESENTATION_MODE)
     RetainPtr<PlatformLayer> createVideoFullscreenLayer() override;
     void setVideoFullscreenLayer(PlatformLayer*, Function<void()>&& completionHandler) override;
     void setVideoFullscreenFrame(FloatRect) override;
+#endif
 
     AudioSourceProvider* audioSourceProvider() final;
 
@@ -233,7 +244,8 @@ private:
     MediaStreamTrackPrivate* activeVideoTrack() const;
 
     LayerHostingContextID hostingContextID() const final;
-    void setVideoInlineSizeFenced(const FloatSize&, const WTF::MachSendRight&) final;
+    void setVideoLayerSizeFenced(const FloatSize&, WTF::MachSendRight&&) final;
+    void requestHostingContextID(LayerHostingContextIDCallback&&) final;
 
     ThreadSafeWeakPtr<MediaPlayer> m_player;
     RefPtr<MediaStreamPrivate> m_mediaStreamPrivate;
@@ -297,11 +309,12 @@ private:
     uint64_t m_sampleCount { 0 };
     uint64_t m_lastVideoFrameMetadataSampleCount { 0 };
     Seconds m_presentationTime { 0 };
-    FloatSize m_videoFrameSize;
     VideoFrameTimeMetadata m_sampleMetadata;
 
     std::optional<CGRect> m_storedBounds;
     static NativeImageCreator m_nativeImageCreator;
+    LayerHostingContextIDCallback m_layerHostingContextIDCallback;
+    bool m_shouldMaintainAspectRatio { true };
 };
 
 }

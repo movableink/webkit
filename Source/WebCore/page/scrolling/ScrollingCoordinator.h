@@ -126,7 +126,7 @@ public:
     virtual bool requestStartKeyboardScrollAnimation(ScrollableArea&, const KeyboardScroll&) { return false; }
     virtual bool requestStopKeyboardScrollAnimation(ScrollableArea&, bool) { return false; }
 
-    virtual bool requestScrollToPosition(ScrollableArea&, const ScrollPosition&, ScrollType = ScrollType::Programmatic, ScrollClamping = ScrollClamping::Clamped, ScrollIsAnimated = ScrollIsAnimated::No) { return false; }
+    virtual bool requestScrollToPosition(ScrollableArea&, const ScrollPosition&, const ScrollPositionChangeOptions&) { return false; }
     virtual void stopAnimatedScroll(ScrollableArea&) { }
 
     virtual WheelEventHandlingResult handleWheelEventForScrolling(const PlatformWheelEvent&, ScrollingNodeID, std::optional<WheelScrollGestureState>) { return WheelEventHandlingResult::unhandled(WheelEventProcessingSteps::SynchronousScrolling); }
@@ -183,7 +183,7 @@ public:
     virtual bool hasSubscrollers() const { return false; }
 
     // Generated a unique id for scrolling nodes.
-    ScrollingNodeID uniqueScrollingNodeID();
+    WEBCORE_EXPORT ScrollingNodeID uniqueScrollingNodeID();
 
     bool shouldUpdateScrollLayerPositionSynchronously(const LocalFrameView&) const;
 
@@ -208,6 +208,7 @@ public:
     WEBCORE_EXPORT virtual void setMouseIsOverContentArea(ScrollableArea&, bool) { }
     WEBCORE_EXPORT virtual void setMouseMovedInContentArea(ScrollableArea&) { }
     WEBCORE_EXPORT virtual void setMouseIsOverScrollbar(Scrollbar*, bool) { }
+    WEBCORE_EXPORT virtual void setScrollbarEnabled(Scrollbar&) { }
 
 protected:
     explicit ScrollingCoordinator(Page*);
@@ -223,7 +224,7 @@ protected:
 
     virtual void willCommitTree() { }
 
-    WeakPtr<Page> m_page; // FIXME: ideally this would be a reference but it gets nulled on async teardown.
+    SingleThreadWeakPtr<Page> m_page; // FIXME: ideally this would be a WeakRef but it gets nulled on async teardown.
 
 private:
     virtual bool hasVisibleSlowRepaintViewportConstrainedObjects(const LocalFrameView&) const;

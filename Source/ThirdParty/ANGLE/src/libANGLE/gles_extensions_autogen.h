@@ -470,6 +470,12 @@ struct Extensions
     // GL_OES_texture_compression_astc
     bool textureCompressionAstcOES = false;
 
+    // GL_EXT_texture_compression_astc_decode_mode
+    bool textureCompressionAstcDecodeModeEXT = false;
+
+    // GL_EXT_texture_compression_astc_decode_mode_rgb9e5
+    bool textureCompressionAstcDecodeModeRgb9e5EXT = false;
+
     // GL_KHR_texture_compression_astc_hdr
     bool textureCompressionAstcHdrKHR = false;
 
@@ -727,9 +733,6 @@ struct Extensions
 
     // GL_ANGLE_texture_external_update
     bool textureExternalUpdateANGLE = false;
-
-    // GL_CHROMIUM_texture_filtering_hint
-    bool textureFilteringHintCHROMIUM = false;
 
     // GL_ANGLE_texture_multisample
     bool textureMultisampleANGLE = false;

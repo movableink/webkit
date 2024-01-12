@@ -53,8 +53,7 @@ class GPUConnectionToWebProcess;
 class RemoteMediaPlayerProxy;
 
 class RemoteMediaSourceProxy final
-    : public RefCounted<RemoteMediaSourceProxy>
-    , public WebCore::MediaSourcePrivateClient
+    : public WebCore::MediaSourcePrivateClient
     , private IPC::MessageReceiver {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -63,10 +62,8 @@ public:
 
     // MediaSourcePrivateClient overrides
     void setPrivateAndOpen(Ref<WebCore::MediaSourcePrivate>&&) final;
-    MediaTime duration() const final;
-    const WebCore::PlatformTimeRanges& buffered() const final;
-    void seekToTime(const MediaTime&) final;
-    void monitorSourceBuffers() final;
+    Ref<WebCore::MediaTimePromise> waitForTarget(const WebCore::SeekTarget&) final;
+    Ref<WebCore::MediaPromise> seekToTime(const MediaTime&) final;
 
 #if !RELEASE_LOG_DISABLED
     void setLogIdentifier(const void*) final;
@@ -87,20 +84,15 @@ private:
     void bufferedChanged(WebCore::PlatformTimeRanges&&);
     void markEndOfStream(WebCore::MediaSourcePrivate::EndOfStreamStatus);
     void unmarkEndOfStream();
-    void setReadyState(WebCore::MediaPlayerEnums::ReadyState);
-    void setIsSeeking(bool);
-    void waitForSeekCompleted();
-    void seekCompleted();
+    void setMediaPlayerReadyState(WebCore::MediaPlayerEnums::ReadyState);
     void setTimeFudgeFactor(const MediaTime&);
+    void disconnect();
 
     WeakPtr<GPUConnectionToWebProcess> m_connectionToWebProcess;
     RemoteMediaSourceIdentifier m_identifier;
     bool m_webMParserEnabled { false };
     RefPtr<WebCore::MediaSourcePrivate> m_private;
     WeakPtr<RemoteMediaPlayerProxy> m_remoteMediaPlayerProxy;
-
-    MediaTime m_duration;
-    WebCore::PlatformTimeRanges m_buffered;
 
     Vector<RefPtr<RemoteSourceBufferProxy>> m_sourceBuffers;
 };

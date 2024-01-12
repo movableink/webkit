@@ -20,6 +20,7 @@
 #include "config.h"
 #include "SVGPathData.h"
 
+#include "NodeName.h"
 #include "Path.h"
 #include "RenderElement.h"
 #include "RenderStyle.h"
@@ -37,6 +38,7 @@
 #include "SVGPolylineElement.h"
 #include "SVGRectElement.h"
 #include "SVGRenderStyle.h"
+#include "SVGUseElement.h"
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -140,57 +142,90 @@ static Path pathFromRectElement(const SVGElement& element)
 
     auto& style = renderer->style();
     SVGLengthContext lengthContext(&element);
-    float width = lengthContext.valueForLength(style.width(), SVGLengthMode::Width);
-    if (width <= 0)
+    auto size = FloatSize {
+        lengthContext.valueForLength(style.width(), SVGLengthMode::Width),
+        lengthContext.valueForLength(style.height(), SVGLengthMode::Height)
+    };
+
+    if (size.isEmpty())
         return { };
 
-    float height = lengthContext.valueForLength(style.height(), SVGLengthMode::Height);
-    if (height <= 0)
-        return { };
+    auto location = FloatPoint {
+        lengthContext.valueForLength(style.svgStyle().x(), SVGLengthMode::Width),
+        lengthContext.valueForLength(style.svgStyle().y(), SVGLengthMode::Height)
+    };
+
+    auto radii = FloatSize {
+        lengthContext.valueForLength(style.svgStyle().rx(), SVGLengthMode::Width),
+        lengthContext.valueForLength(style.svgStyle().ry(), SVGLengthMode::Height)
+    };
+
+    // Per SVG spec: if one of radii.x() and radii.y() is auto or negative, then the other corner
+    // radius value is used. If both are auto or negative, then they are both set to 0.
+    if (style.svgStyle().rx().isAuto() || radii.width() < 0)
+        radii.setWidth(std::max(0.f, radii.height()));
+    if (style.svgStyle().ry().isAuto() || radii.height() < 0)
+        radii.setHeight(std::max(0.f, radii.width()));
 
     Path path;
-    float x = lengthContext.valueForLength(style.svgStyle().x(), SVGLengthMode::Width);
-    float y = lengthContext.valueForLength(style.svgStyle().y(), SVGLengthMode::Height);
-    float rx = lengthContext.valueForLength(style.svgStyle().rx(), SVGLengthMode::Width);
-    float ry = lengthContext.valueForLength(style.svgStyle().ry(), SVGLengthMode::Height);
-    bool hasRx = rx > 0;
-    bool hasRy = ry > 0;
-    if (hasRx || hasRy) {
-        if (!hasRx)
-            rx = ry;
-        else if (!hasRy)
-            ry = rx;
-        // FIXME: We currently enforce using beziers here, as at least on CoreGraphics/Lion, as
-        // the native method uses a different line dash origin, causing svg/custom/dashOrigin.svg to fail.
-        // See bug https://bugs.webkit.org/show_bug.cgi?id=79932 which tracks this issue.
-        path.addRoundedRect(FloatRect(x, y, width, height), FloatSize(rx, ry), PathRoundedRect::Strategy::PreferBezier);
+    if (radii.width() <= 0 && radii.height() <= 0) {
+        path.addRect({ location, size });
         return path;
     }
 
-    path.addRect(FloatRect(x, y, width, height));
+    // The used values of ‘rx’ and 'ry' for a ‘rect’ are never more than 50% of the used
+    // value of width for the same shape.
+    radii.constrainedBetween(radii, size / 2);
+
+    // FIXME: We currently enforce using beziers here, as at least on CoreGraphics/Lion, as
+    // the native method uses a different line dash origin, causing svg/custom/dashOrigin.svg to fail.
+    // See bug https://bugs.webkit.org/show_bug.cgi?id=79932 which tracks this issue.
+    path.addRoundedRect(FloatRect { location, size }, radii, PathRoundedRect::Strategy::PreferBezier);
     return path;
 }
 
-Path pathFromGraphicsElement(const SVGElement* element)
+static Path pathFromUseElement(const SVGElement& element)
 {
-    ASSERT(element);
+    const auto& useElement = downcast<SVGUseElement>(element);
 
-    typedef Path (*PathFromFunction)(const SVGElement&);
-    static HashMap<AtomStringImpl*, PathFromFunction>* map = 0;
-    if (!map) {
-        map = new HashMap<AtomStringImpl*, PathFromFunction>;
-        map->set(SVGNames::circleTag->localName().impl(), pathFromCircleElement);
-        map->set(SVGNames::ellipseTag->localName().impl(), pathFromEllipseElement);
-        map->set(SVGNames::lineTag->localName().impl(), pathFromLineElement);
-        map->set(SVGNames::pathTag->localName().impl(), pathFromPathElement);
-        map->set(SVGNames::polygonTag->localName().impl(), pathFromPolygonElement);
-        map->set(SVGNames::polylineTag->localName().impl(), pathFromPolylineElement);
-        map->set(SVGNames::rectTag->localName().impl(), pathFromRectElement);
+    RefPtr clipChildElement = useElement.clipChild();
+    if (!clipChildElement)
+        return { };
+
+    SVGLengthContext lengthContext(&element);
+    auto x = useElement.x().value(lengthContext);
+    auto y = useElement.y().value(lengthContext);
+
+    auto path = pathFromGraphicsElement(*clipChildElement.get());
+    if (x || y)
+        path.translate(FloatSize(x, y));
+
+    return path;
+}
+
+Path pathFromGraphicsElement(const SVGElement& element)
+{
+    switch (element.tagQName().nodeName()) {
+    case ElementNames::SVG::circle:
+        return pathFromCircleElement(element);
+    case ElementNames::SVG::ellipse:
+        return pathFromEllipseElement(element);
+    case ElementNames::SVG::line:
+        return pathFromLineElement(element);
+    case ElementNames::SVG::path:
+        return pathFromPathElement(element);
+    case ElementNames::SVG::polygon:
+        return pathFromPolygonElement(element);
+    case ElementNames::SVG::polyline:
+        return pathFromPolylineElement(element);
+    case ElementNames::SVG::rect:
+        return pathFromRectElement(element);
+    case ElementNames::SVG::use:
+        return pathFromUseElement(element);
+    default:
+        break;
     }
 
-    if (PathFromFunction pathFromFunction = map->get(element->localName().impl()))
-        return (*pathFromFunction)(*element);
-    
     return { };
 }
 

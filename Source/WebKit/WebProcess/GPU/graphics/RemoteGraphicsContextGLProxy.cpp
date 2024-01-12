@@ -79,17 +79,23 @@ RefPtr<RemoteGraphicsContextGLProxy> RemoteGraphicsContextGLProxy::create(IPC::C
 {
     constexpr unsigned defaultConnectionBufferSizeLog2 = 21;
     unsigned connectionBufferSizeLog2 = defaultConnectionBufferSizeLog2;
-    if (attributes.remoteIPCBufferSizeLog2ForTesting)
-        connectionBufferSizeLog2 = attributes.remoteIPCBufferSizeLog2ForTesting;
-    auto [clientConnection, serverConnectionHandle] = IPC::StreamClientConnection::create(connectionBufferSizeLog2);
-    if (!clientConnection)
+    if (attributes.failContextCreationForTesting == WebCore::GraphicsContextGLAttributes::SimulatedCreationFailure::IPCBufferOOM)
+        connectionBufferSizeLog2 = 50; // Expect this to fail.
+    auto connectionPair = IPC::StreamClientConnection::create(connectionBufferSizeLog2);
+    if (!connectionPair)
         return nullptr;
-    auto instance = platformCreate(connection, clientConnection.releaseNonNull(), attributes
+    auto [clientConnection, serverConnectionHandle] = WTFMove(*connectionPair);
+    auto instance = platformCreate(connection, clientConnection, attributes
 #if ENABLE(VIDEO)
         , WTFMove(videoFrameObjectHeapProxy)
 #endif
     );
     instance->initializeIPC(WTFMove(serverConnectionHandle), renderingBackend);
+    if (attributes.failContextCreationForTesting == WebCore::GraphicsContextGLAttributes::SimulatedCreationFailure::CreationTimeout)
+        instance->markContextLost();
+    // TODO: We must wait until initialized, because at the moment we cannot receive IPC messages
+    // during wait while in synchronous stream send. Should be fixed as part of https://bugs.webkit.org/show_bug.cgi?id=217211.
+    instance->waitUntilInitialized();
     return instance;
 }
 
@@ -112,9 +118,6 @@ void RemoteGraphicsContextGLProxy::initializeIPC(IPC::StreamServerConnection::Ha
 {
     m_connection->send(Messages::GPUConnectionToWebProcess::CreateGraphicsContextGL(contextAttributes(), m_graphicsContextGLIdentifier, renderingBackend.ensureBackendCreated(), WTFMove(serverConnectionHandle)), 0, IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply);
     m_streamConnection->open(*this, renderingBackend.dispatcher());
-    // TODO: We must wait until initialized, because at the moment we cannot receive IPC messages
-    // during wait while in synchronous stream send. Should be fixed as part of https://bugs.webkit.org/show_bug.cgi?id=217211.
-    waitUntilInitialized();
 }
 
 RemoteGraphicsContextGLProxy::~RemoteGraphicsContextGLProxy()
@@ -125,24 +128,6 @@ RemoteGraphicsContextGLProxy::~RemoteGraphicsContextGLProxy()
 void RemoteGraphicsContextGLProxy::setContextVisibility(bool)
 {
     notImplemented();
-}
-
-bool RemoteGraphicsContextGLProxy::isGLES2Compliant() const
-{
-    return contextAttributes().webGLVersion == GraphicsContextGLWebGLVersion::WebGL2;
-}
-
-void RemoteGraphicsContextGLProxy::markContextChanged()
-{
-    // FIXME: The caller should track this state.
-    if (m_layerComposited) {
-        GraphicsContextGL::markContextChanged();
-        if (isContextLost())
-            return;
-        auto sendResult = send(Messages::RemoteGraphicsContextGL::MarkContextChanged());
-        if (sendResult != IPC::Error::NoError)
-            markContextLost();
-    }
 }
 
 bool RemoteGraphicsContextGLProxy::supportsExtension(const String& name)
@@ -211,34 +196,12 @@ void RemoteGraphicsContextGLProxy::reshape(int width, int height)
         markContextLost();
 }
 
-void RemoteGraphicsContextGLProxy::paintRenderingResultsToCanvas(ImageBuffer& buffer)
+void RemoteGraphicsContextGLProxy::drawSurfaceBufferToImageBuffer(SurfaceBuffer buffer, ImageBuffer& imageBuffer)
 {
     if (isContextLost())
         return;
-    // FIXME: the buffer is "relatively empty" always, but for consistency, we need to ensure
-    // no pending operations are targeted for the `buffer`.
-    buffer.flushDrawingContext();
-
-    // FIXME: We cannot synchronize so that we would know no pending operations are using the `buffer`.
-
-    // FIXME: Currently RemoteImageBufferProxy::getPixelBuffer et al do not wait for the flushes of the images
-    // inside the display lists. Rather, it assumes that processing its sequence (e.g. the display list) will equal to read flush being
-    // fulfilled. For below, we cannot create a new flush id since we go through different sequence (RemoteGraphicsContextGL sequence)
-
-    // FIXME: Maybe implement IPC::Fence or something similar.
-    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::PaintRenderingResultsToCanvas(buffer.renderingResourceIdentifier()));
-    if (!sendResult.succeeded()) {
-        markContextLost();
-        return;
-    }
-}
-
-void RemoteGraphicsContextGLProxy::paintCompositedResultsToCanvas(ImageBuffer& buffer)
-{
-    if (isContextLost())
-        return;
-    buffer.flushDrawingContext();
-    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::PaintCompositedResultsToCanvas(buffer.renderingResourceIdentifier()));
+    imageBuffer.flushDrawingContext();
+    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::DrawSurfaceBufferToImageBuffer(buffer, imageBuffer.renderingResourceIdentifier()));
     if (!sendResult.succeeded()) {
         markContextLost();
         return;
@@ -246,12 +209,12 @@ void RemoteGraphicsContextGLProxy::paintCompositedResultsToCanvas(ImageBuffer& b
 }
 
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
-RefPtr<WebCore::VideoFrame> RemoteGraphicsContextGLProxy::paintCompositedResultsToVideoFrame()
+RefPtr<WebCore::VideoFrame> RemoteGraphicsContextGLProxy::surfaceBufferToVideoFrame(SurfaceBuffer buffer)
 {
     ASSERT(isMainRunLoop());
     if (isContextLost())
         return nullptr;
-    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::PaintCompositedResultsToVideoFrame());
+    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::SurfaceBufferToVideoFrame(buffer));
     if (!sendResult.succeeded()) {
         markContextLost();
         return nullptr;
@@ -259,7 +222,7 @@ RefPtr<WebCore::VideoFrame> RemoteGraphicsContextGLProxy::paintCompositedResults
     auto [result] = sendResult.takeReply();
     if (!result)
         return nullptr;
-    return RemoteVideoFrameProxy::create(WebProcess::singleton().ensureGPUProcessConnection().connection(), WebProcess::singleton().ensureGPUProcessConnection().videoFrameObjectHeapProxy(), WTFMove(*result));
+    return RemoteVideoFrameProxy::create(WebProcess::singleton().ensureGPUProcessConnection().protectedConnection(), WebProcess::singleton().ensureGPUProcessConnection().videoFrameObjectHeapProxy(), WTFMove(*result));
 }
 #endif
 
@@ -283,7 +246,7 @@ bool RemoteGraphicsContextGLProxy::copyTextureFromVideoFrame(WebCore::VideoFrame
         auto sendResult = send(Messages::RemoteGraphicsContextGL::SetSharedVideoFrameSemaphore { semaphore });
         if (sendResult != IPC::Error::NoError)
             markContextLost();
-    }, [this](auto&& handle) {
+    }, [this](SharedMemory::Handle&& handle) {
         auto sendResult = send(Messages::RemoteGraphicsContextGL::SetSharedVideoFrameMemory { WTFMove(handle) });
         if (sendResult != IPC::Error::NoError)
             markContextLost();
@@ -291,7 +254,7 @@ bool RemoteGraphicsContextGLProxy::copyTextureFromVideoFrame(WebCore::VideoFrame
     if (!sharedVideoFrame || isContextLost())
         return false;
 
-    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::CopyTextureFromVideoFrame(*sharedVideoFrame, texture, target, level, internalFormat, format, type, premultiplyAlpha, flipY));
+    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::CopyTextureFromVideoFrame(WTFMove(*sharedVideoFrame), texture, target, level, internalFormat, format, type, premultiplyAlpha, flipY));
     if (!sendResult.succeeded()) {
         markContextLost();
         return false;
@@ -390,7 +353,7 @@ void RemoteGraphicsContextGLProxy::readPixels(IntRect rect, GCGLenum format, GCG
         if (!replyBuffer)
             goto inlineCase;
         auto handle = replyBuffer->createHandle(SharedMemory::Protection::ReadWrite);
-        if (!handle || handle->isNull())
+        if (!handle)
             goto inlineCase;
         auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::ReadPixelsSharedMemory(rect, format, type, WTFMove(*handle)));
         if (!sendResult.succeeded()) {
@@ -492,13 +455,6 @@ void RemoteGraphicsContextGLProxy::wasLost()
 
 }
 
-void RemoteGraphicsContextGLProxy::wasChanged()
-{
-    if (isContextLost())
-        return;
-    dispatchContextChangedNotification();
-}
-
 void RemoteGraphicsContextGLProxy::markContextLost()
 {
     disconnectGpuProcessIfNeeded();
@@ -514,8 +470,7 @@ bool RemoteGraphicsContextGLProxy::handleMessageToRemovedDestination(IPC::Connec
     //    time, it might be in the message delivery callback.
     // When adding new messages to RemoteGraphicsContextGLProxy, add them to this list.
     ASSERT(decoder.messageName() == Messages::RemoteGraphicsContextGLProxy::WasCreated::name()
-        || decoder.messageName() == Messages::RemoteGraphicsContextGLProxy::WasLost::name()
-        || decoder.messageName() == Messages::RemoteGraphicsContextGLProxy::WasChanged::name());
+        || decoder.messageName() == Messages::RemoteGraphicsContextGLProxy::WasLost::name());
     return true;
 }
 

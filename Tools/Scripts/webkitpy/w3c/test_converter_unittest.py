@@ -264,7 +264,7 @@ CONTENT OF TEST
 </html>
 """
         converter = _W3CTestConverter(DUMMY_PATH, DUMMY_FILENAME, None)
-        test_content = self.generate_test_content_properties_and_values(converter.prefixed_properties, converter.prefixed_property_values, 18, test_html)
+        test_content = self.generate_test_content_properties_and_values(converter.prefixed_properties, converter.prefixed_property_values, 17, test_html)
 
         with OutputCapture():
             converter.feed(test_content[2])
@@ -365,8 +365,8 @@ CONTENT OF TEST
             converted = BeautifulSoup(converted)
 
         orig_path_pattern = re.compile('^/resources/testharness')
-        self.assertEquals(len(converted.findAll(src=orig_path_pattern)), num_src_paths, 'testharness src path should not have been converted')
-        self.assertEquals(len(converted.findAll(href=orig_path_pattern)), num_href_paths, 'testharness href path should not have been converted')
+        self.assertEqual(len(converted.findAll(src=orig_path_pattern)), num_src_paths, 'testharness src path should not have been converted')
+        self.assertEqual(len(converted.findAll(href=orig_path_pattern)), num_href_paths, 'testharness href path should not have been converted')
 
     def verify_prefixed_properties(self, converted, test_properties):
         self.assertEqual(len(set(converted[0])), len(set(test_properties)), 'Incorrect number of properties converted')

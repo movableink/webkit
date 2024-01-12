@@ -35,7 +35,7 @@
 #import "TestInputDelegate.h"
 #import "TestUIMenuBuilder.h"
 #import "TestWKWebView.h"
-#import "UIKitSPI.h"
+#import "UIKitSPIForTesting.h"
 #import "WKWebViewConfigurationExtras.h"
 #import <WebCore/LocalizedStrings.h>
 #import <WebKit/WKPreferencesPrivate.h>
@@ -347,7 +347,7 @@ static BOOL simulateEditContextMenuAppearance(TestWKWebView *webView, CGPoint lo
 {
     __block BOOL result;
     __block bool done = false;
-    [webView.textInputContentView prepareSelectionForContextMenuWithLocationInView:location completionHandler:^(BOOL shouldPresent, RVItem *) {
+    [webView selectTextForContextMenuWithLocationInView:location completion:^(BOOL shouldPresent) {
         result = shouldPresent;
         done = true;
     }];

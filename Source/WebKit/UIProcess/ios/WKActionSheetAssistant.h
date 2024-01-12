@@ -28,6 +28,7 @@
 #import "GestureTypes.h"
 #import "WKActionSheet.h"
 #import <UIKit/UIPopoverController.h>
+#import <WebCore/ElementContext.h>
 #import <WebCore/MediaControlsContextMenuItem.h>
 #import <pal/spi/ios/DataDetectorsUISPI.h>
 #import <wtf/Forward.h>
@@ -93,6 +94,7 @@ typedef NS_ENUM(NSInteger, _WKElementActionType);
 - (BOOL)_allowAnimationControls;
 - (void)_actionSheetAssistant:(WKActionSheetAssistant *)assistant performAction:(WebKit::SheetAction)action onElements:(Vector<WebCore::ElementContext>&&)elements;
 #endif
+- (NSArray<UIMenuElement *> *)additionalMediaControlsContextMenuItemsForActionSheetAssistant:(WKActionSheetAssistant *)assistant;
 @end
 
 #if USE(UICONTEXTMENU)

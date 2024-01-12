@@ -51,7 +51,6 @@ static NSString * const LoadsAllSiteIconsKey = @"LoadsAllSiteIcons";
 static NSString * const UsesGameControllerFrameworkKey = @"UsesGameControllerFramework";
 static NSString * const IncrementalRenderingSuppressedPreferenceKey = @"IncrementalRenderingSuppressed";
 static NSString * const AcceleratedDrawingEnabledPreferenceKey = @"AcceleratedDrawingEnabled";
-static NSString * const DisplayListDrawingEnabledPreferenceKey = @"DisplayListDrawingEnabled";
 static NSString * const ResourceLoadStatisticsEnabledPreferenceKey = @"ResourceLoadStatisticsEnabled";
 
 static NSString * const NonFastScrollableRegionOverlayVisiblePreferenceKey = @"NonFastScrollableRegionOverlayVisible";
@@ -68,6 +67,7 @@ static NSString * const PunchOutWhiteBackgroundsInDarkModePreferenceKey = @"Punc
 static NSString * const UseSystemAppearancePreferenceKey = @"UseSystemAppearance";
 static NSString * const DataDetectorsEnabledPreferenceKey = @"DataDetectorsEnabled";
 static NSString * const UseMockCaptureDevicesPreferenceKey = @"UseMockCaptureDevices";
+static NSString * const AttachmentElementEnabledPreferenceKey = @"AttachmentElementEnabled";
 
 // This default name intentionally overlaps with the key that WebKit2 checks when creating a view.
 static NSString * const UseRemoteLayerTreeDrawingAreaPreferenceKey = @"WebKit2UseRemoteLayerTreeDrawingArea";
@@ -81,6 +81,12 @@ typedef NS_ENUM(NSInteger, DebugOverylayMenuItemTag) {
     InteractionRegionOverlayTag,
     ExperimentalFeatureTag,
     InternalDebugFeatureTag,
+};
+
+typedef NS_ENUM(NSInteger, AttachmentElementEnabledMenuItemTag) {
+    AttachmentElementDisabledTag = 100,
+    AttachmentElementEnabledTag,
+    AttachmentElementWideLayoutEnabledTag,
 };
 
 @implementation SettingsController
@@ -99,7 +105,7 @@ typedef NS_ENUM(NSInteger, DebugOverylayMenuItemTag) {
         WebViewFillsWindowKey,
         ResourceLoadStatisticsEnabledPreferenceKey,
     ];
-    
+
     NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
     for (NSString *prefName in onByDefaultPrefs) {
         if (![userDefaults objectForKey:prefName])
@@ -157,7 +163,7 @@ static NSMenu *addSubmenuToMenu(NSMenu *menu, NSString *title)
     __auto_type addSubmenu = ^(NSString *title) {
         return addSubmenuToMenu(menu, title);
     };
-    
+
     addItem(@"Use WebKit2 By Default", @selector(toggleUseWebKit2ByDefault:));
     addItem(@"Create Editor By Default", @selector(toggleCreateEditorByDefault:));
     addItem(@"Set Default URL to Current URL", @selector(setDefaultURLToCurrentURL:));
@@ -175,7 +181,6 @@ static NSMenu *addSubmenuToMenu(NSMenu *menu, NSString *title)
     addItem(@"Enable Legacy Line Layout Visual Coverage", @selector(toggleLegacyLineLayoutVisualCoverageEnabled:));
     addItem(@"Suppress Incremental Rendering in New Windows", @selector(toggleIncrementalRenderingSuppressed:));
     addItem(@"Enable Accelerated Drawing", @selector(toggleAcceleratedDrawingEnabled:));
-    addItem(@"Enable Display List Drawing", @selector(toggleDisplayListDrawingEnabled:));
     addItem(@"Enable Resource Load Statistics", @selector(toggleResourceLoadStatisticsEnabled:));
     addItem(@"Enable Large Image Async Decoding", @selector(toggleLargeImageAsyncDecodingEnabled:));
     addItem(@"Enable Animated Image Async Decoding", @selector(toggleAnimatedImageAsyncDecodingEnabled:));
@@ -184,6 +189,11 @@ static NSMenu *addSubmenuToMenu(NSMenu *menu, NSString *title)
     addItem(@"Use System Appearance", @selector(toggleUseSystemAppearance:));
     addItem(@"Enable Data Detectors", @selector(toggleDataDetectorsEnabled:));
     addItem(@"Use Mock Capture Devices", @selector(toggleUseMockCaptureDevices:));
+
+    NSMenu *attachmentElementMenu = addSubmenu(@"Enable Attachment Element");
+    addItemToMenu(attachmentElementMenu, @"Disabled", @selector(changeAttachmentElementEnabled:), NO, AttachmentElementDisabledTag);
+    addItemToMenu(attachmentElementMenu, @"Enable with default layout", @selector(changeAttachmentElementEnabled:), NO, AttachmentElementEnabledTag);
+    addItemToMenu(attachmentElementMenu, @"Enable with wide layout", @selector(changeAttachmentElementEnabled:), NO, AttachmentElementWideLayoutEnabledTag);
 
     addSeparator();
     addItem(@"WebKit2-only Settings", nil);
@@ -317,7 +327,7 @@ static NSMenu *addSubmenuToMenu(NSMenu *menu, NSString *title)
 
     for (NSDictionary *userAgentData in SettingsController.userAgentData) {
         NSString *name = userAgentData[@"label"];
-        
+
         if ([name isEqualToString:@"-"]) {
             addSeparator();
             continue;
@@ -351,8 +361,6 @@ static NSMenu *addSubmenuToMenu(NSMenu *menu, NSString *title)
         [menuItem setState:[self incrementalRenderingSuppressed] ? NSControlStateValueOn : NSControlStateValueOff];
     else if (action == @selector(toggleAcceleratedDrawingEnabled:))
         [menuItem setState:[self acceleratedDrawingEnabled] ? NSControlStateValueOn : NSControlStateValueOff];
-    else if (action == @selector(toggleDisplayListDrawingEnabled:))
-        [menuItem setState:[self displayListDrawingEnabled] ? NSControlStateValueOn : NSControlStateValueOff];
     else if (action == @selector(toggleResourceLoadStatisticsEnabled:))
         [menuItem setState:[self resourceLoadStatisticsEnabled] ? NSControlStateValueOn : NSControlStateValueOff];
     else if (action == @selector(toggleLargeImageAsyncDecodingEnabled:))
@@ -396,7 +404,8 @@ static NSMenu *addSubmenuToMenu(NSMenu *menu, NSString *title)
             [menuItem setState:isCurrentUA ? NSControlStateValueOn : NSControlStateValueOff];
         } else
             [menuItem setState:NSControlStateValueOff];
-    }
+    } else if (action == @selector(changeAttachmentElementEnabled:))
+        [menuItem setState:[self attachmentElementEnabled:menuItem] ? NSControlStateValueOn : NSControlStateValueOff];
 
     WKPreferences *defaultPreferences = [[NSApplication sharedApplication] browserAppDelegate].defaultPreferences;
     if (menuItem.tag == ExperimentalFeatureTag) {
@@ -536,16 +545,6 @@ static NSMenu *addSubmenuToMenu(NSMenu *menu, NSString *title)
 - (BOOL)acceleratedDrawingEnabled
 {
     return [[NSUserDefaults standardUserDefaults] boolForKey:AcceleratedDrawingEnabledPreferenceKey];
-}
-
-- (void)toggleDisplayListDrawingEnabled:(id)sender
-{
-    [self _toggleBooleanDefault:DisplayListDrawingEnabledPreferenceKey];
-}
-
-- (BOOL)displayListDrawingEnabled
-{
-    return [[NSUserDefaults standardUserDefaults] boolForKey:DisplayListDrawingEnabledPreferenceKey];
 }
 
 - (void)toggleReserveSpaceForBanners:(id)sender
@@ -810,8 +809,41 @@ static NSMenu *addSubmenuToMenu(NSMenu *menu, NSString *title)
     NSString *uaIdentifier = userAgentDict[@"identifier"];
     if (uaIdentifier)
         [[NSUserDefaults standardUserDefaults] setObject:uaIdentifier forKey:CustomUserAgentPreferenceKey];
-        
+
     [[NSNotificationCenter defaultCenter] postNotificationName:kUserAgentChangedNotificationName object:self];
+}
+
+- (AttachmentElementEnabledState)attachmentElementEnabled
+{
+    return (AttachmentElementEnabledState)[[NSUserDefaults standardUserDefaults] integerForKey:AttachmentElementEnabledPreferenceKey];
+}
+
+- (NSInteger)preferenceValueForAttachmentElementEnabledTag:(NSUInteger)tag
+{
+    switch (tag) {
+    case AttachmentElementDisabledTag:
+        return AttachmentElementEnabledStateDisabled;
+
+    case AttachmentElementEnabledTag:
+        return AttachmentElementEnabledStateEnabled;
+
+    case AttachmentElementWideLayoutEnabledTag:
+        return AttachmentElementEnabledStateWideLayoutEnabled;
+    }
+    return AttachmentElementEnabledStateDisabled;
+}
+
+- (BOOL)attachmentElementEnabled:(NSMenuItem *)menuItem
+{
+    NSInteger value = [[NSUserDefaults standardUserDefaults] integerForKey:AttachmentElementEnabledPreferenceKey];
+    return [self preferenceValueForAttachmentElementEnabledTag:[menuItem tag]] == value ? YES : NO;
+}
+
+- (void)changeAttachmentElementEnabled:(id)sender
+{
+    NSInteger value = [self preferenceValueForAttachmentElementEnabledTag:[sender tag]];
+    [[NSUserDefaults standardUserDefaults] setInteger:value forKey:AttachmentElementEnabledPreferenceKey];
+    [[[NSApplication sharedApplication] browserAppDelegate] didChangeSettings];
 }
 
 - (NSString *)defaultURL

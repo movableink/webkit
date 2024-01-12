@@ -72,6 +72,8 @@ list(APPEND WebKitLegacy_SOURCES
     qt/Api/qwebhistoryinterface.cpp
     qt/Api/qwebkitglobal.cpp
     qt/Api/qwebkitplatformplugin.h
+    qt/Api/qwebplugindatabase.cpp
+    qt/Api/qwebpluginfactory.cpp
     qt/Api/qwebscriptworld.cpp
     qt/Api/qwebsecurityorigin.cpp
     qt/Api/qwebsettings.cpp
@@ -89,6 +91,7 @@ list(APPEND WebKitLegacy_SOURCES
     qt/WebCoreSupport/InitWebCoreQt.cpp
     qt/WebCoreSupport/InspectorClientQt.cpp
     qt/WebCoreSupport/InspectorServerQt.cpp
+    qt/WebCoreSupport/LegacyHistoryItemClient.cpp
     qt/WebCoreSupport/NotificationPresenterClientQt.cpp
     qt/WebCoreSupport/PlatformStrategiesQt.cpp
     qt/WebCoreSupport/PluginInfoProviderQt.cpp
@@ -212,6 +215,7 @@ set(QtWebKit_PUBLIC_FRAMEWORK_HEADERS
     qt/Api/qwebhistoryinterface.h
     qt/Api/qwebkitglobal.h
     qt/Api/qwebkitplatformplugin.h
+    qt/Api/qwebpluginfactory.h
     qt/Api/qwebscriptworld.h
     qt/Api/qwebsecurityorigin.h
     qt/Api/qwebsettings.h
@@ -231,7 +235,8 @@ ecm_generate_headers(
         QWebFullScreenRequest
         QWebHistory,QWebHistoryItem
         QWebHistoryInterface
-        QWebKitPlatformPlugin,QWebFullScreenVideoHandler,QWebNotificationData,QWebNotificationPresenter,QWebSelectData,QWebSelectMethod,QWebSpellChecker,QWebTouchModifier
+        QWebKitPlatformPlugin,QWebHapticFeedbackPlayer,QWebFullScreenVideoHandler,QWebNotificationData,QWebNotificationPresenter,QWebSelectData,QWebSelectMethod,QWebSpellChecker,QWebTouchModifier
+        QWebPluginFactory
         QWebSecurityOrigin
         QWebSettings
     COMMON_HEADER
@@ -801,6 +806,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
         qt/Api/qwebfullscreenrequest.cpp
         qt/Api/qwebhistory.cpp
         qt/Api/qwebhistoryinterface.cpp
+        qt/Api/qwebpluginfactory.cpp
         qt/Api/qwebscriptworld.cpp
         qt/Api/qwebsecurityorigin.cpp
         qt/Api/qwebsettings.cpp

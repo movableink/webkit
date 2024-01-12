@@ -52,7 +52,7 @@ namespace LLInt {
 #define WASM_SLOW_PATH_HIDDEN_DECL(name) \
     WASM_SLOW_PATH_DECL(name) REFERENCED_FROM_ASM WTF_INTERNAL
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 WASM_SLOW_PATH_HIDDEN_DECL(prologue_osr);
 WASM_SLOW_PATH_HIDDEN_DECL(loop_osr);
 WASM_SLOW_PATH_HIDDEN_DECL(epilogue_osr);
@@ -72,11 +72,13 @@ WASM_SLOW_PATH_HIDDEN_DECL(grow_memory);
 WASM_SLOW_PATH_HIDDEN_DECL(memory_init);
 WASM_SLOW_PATH_HIDDEN_DECL(call);
 WASM_SLOW_PATH_HIDDEN_DECL(call_indirect);
+
 WASM_SLOW_PATH_HIDDEN_DECL(call_ref);
 WASM_SLOW_PATH_HIDDEN_DECL(tail_call);
 WASM_SLOW_PATH_HIDDEN_DECL(tail_call_indirect);
 WASM_SLOW_PATH_HIDDEN_DECL(call_builtin);
 WASM_SLOW_PATH_HIDDEN_DECL(set_global_ref);
+
 WASM_SLOW_PATH_HIDDEN_DECL(set_global_ref_portable_binding);
 WASM_SLOW_PATH_HIDDEN_DECL(memory_atomic_wait32);
 WASM_SLOW_PATH_HIDDEN_DECL(memory_atomic_wait64);
@@ -92,7 +94,7 @@ WASM_SLOW_PATH_HIDDEN_DECL(struct_get);
 WASM_SLOW_PATH_HIDDEN_DECL(struct_set);
 
 extern "C" NO_RETURN void wasm_log_crash(CallFrame*, Wasm::Instance* instance) REFERENCED_FROM_ASM WTF_INTERNAL;
-extern "C" UGPRPair slow_path_wasm_throw_exception(CallFrame*, const WasmInstruction*, Wasm::Instance* instance, Wasm::ExceptionType) REFERENCED_FROM_ASM WTF_INTERNAL;
+extern "C" UGPRPair slow_path_wasm_throw_exception(CallFrame*, Wasm::Instance* instance, Wasm::ExceptionType) REFERENCED_FROM_ASM WTF_INTERNAL;
 extern "C" UGPRPair slow_path_wasm_popcount(const WasmInstruction* pc, uint32_t) REFERENCED_FROM_ASM WTF_INTERNAL;
 extern "C" UGPRPair slow_path_wasm_popcountll(const WasmInstruction* pc, uint64_t) REFERENCED_FROM_ASM WTF_INTERNAL;
 

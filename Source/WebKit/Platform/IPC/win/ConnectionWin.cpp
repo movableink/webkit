@@ -142,7 +142,7 @@ void Connection::readEventHandler()
 
         if (!m_readBuffer.isEmpty()) {
             // We have a message, let's dispatch it.
-            auto decoder = Decoder::create(m_readBuffer.data(), m_readBuffer.size(), { });
+            auto decoder = Decoder::create(m_readBuffer.span(), { });
             ASSERT(decoder);
             if (!decoder)
                 return;
@@ -314,14 +314,6 @@ bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
     return false;
 }
 
-void Connection::willSendSyncMessage(OptionSet<SendSyncOption>)
-{
-}
-
-void Connection::didReceiveSyncReply(OptionSet<SendSyncOption>)
-{
-}
-
 void Connection::EventListener::open(Function<void()>&& handler)
 {
     m_handler = WTFMove(handler);
@@ -331,7 +323,7 @@ void Connection::EventListener::open(Function<void()>&& handler)
 
     BOOL result;
     result = ::RegisterWaitForSingleObject(&m_waitHandle, m_state.hEvent, callback, this, INFINITE, WT_EXECUTEDEFAULT);
-    ASSERT(result);
+    ASSERT_UNUSED(result, result);
 }
 
 void Connection::EventListener::callback(void* data, BOOLEAN timerOrWaitFired)

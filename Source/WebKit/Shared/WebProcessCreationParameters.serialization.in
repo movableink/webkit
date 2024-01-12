@@ -20,7 +20,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-struct WebKit::WebProcessCreationParameters {
+[RValue] struct WebKit::WebProcessCreationParameters {
     WebKit::AuxiliaryProcessCreationParameters auxiliaryProcessParameters;
     String injectedBundlePath;
     WebKit::SandboxExtension::Handle injectedBundlePathExtensionHandle;
@@ -116,10 +116,13 @@ struct WebKit::WebProcessCreationParameters {
 
 #if PLATFORM(COCOA)
     Vector<String> mediaMIMETypes;
+#endif
+
+#if PLATFORM(COCOA) || PLATFORM(GTK)
     WebCore::ScreenProperties screenProperties;
 #endif
 
-#if ENABLE(TRACKING_PREVENTION) && !RELEASE_LOG_DISABLED
+#if !RELEASE_LOG_DISABLED
     bool shouldLogUserInteraction;
 #endif
 
@@ -153,14 +156,17 @@ struct WebKit::WebProcessCreationParameters {
     Vector<WebKit::SandboxExtension::Handle> dynamicIOKitExtensionHandles;
 #endif
 
+#if PLATFORM(VISION)
+    Vector<WebKit::SandboxExtension::Handle> metalCacheDirectoryExtensionHandles;
+#endif
+
 #if PLATFORM(COCOA)
     bool systemHasBattery;
     bool systemHasAC;
-    bool strictSecureDecodingForAllObjCEnabled;
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    WebKit::UserInterfaceIdiom currentUserInterfaceIdiom;
+    PAL::UserInterfaceIdiom currentUserInterfaceIdiom;
     bool supportsPictureInPicture;
     WebCore::RenderThemeIOS::CSSValueToSystemColorMap cssValueToSystemColorMap;
     WebCore::Color focusRingColor;
@@ -172,8 +178,11 @@ struct WebKit::WebProcessCreationParameters {
     String renderDeviceFile;
 #endif
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    OptionSet<WebKit::DMABufRendererBufferMode> dmaBufRendererBufferMode;
+#endif
+
 #if PLATFORM(GTK)
-    bool useDMABufSurfaceForCompositing;
     bool useSystemAppearanceForScrollbars;
     WebKit::GtkSettingsState gtkSettings;
 #endif
@@ -210,4 +219,7 @@ struct WebKit::WebProcessCreationParameters {
 #endif
 
     String timeZoneOverride;
+
+    HashMap<WebCore::RegistrableDomain, String> storageAccessUserAgentStringQuirksData;
+    HashSet<WebCore::RegistrableDomain> storageAccessPromptQuirksDomains;
 };

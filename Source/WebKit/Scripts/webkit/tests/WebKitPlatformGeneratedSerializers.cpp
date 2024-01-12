@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,39 +24,31 @@
 
 #include "config.h"
 #include "GeneratedSerializers.h"
+#include "GeneratedWebKitSecureCoding.h"
 
 #include "PlatformClass.h"
 
 template<size_t...> struct MembersInCorrectOrder;
-template<size_t onlyOffset> struct MembersInCorrectOrder<onlyOffset> { static constexpr bool value = true; };
+template<size_t onlyOffset> struct MembersInCorrectOrder<onlyOffset> {
+    static constexpr bool value = true;
+};
 template<size_t firstOffset, size_t secondOffset, size_t... remainingOffsets> struct MembersInCorrectOrder<firstOffset, secondOffset, remainingOffsets...> {
     static constexpr bool value = firstOffset > secondOffset ? false : MembersInCorrectOrder<secondOffset, remainingOffsets...>::value;
 };
 
+template<uint64_t...> struct BitsInIncreasingOrder;
+template<uint64_t onlyBit> struct BitsInIncreasingOrder<onlyBit> {
+    static constexpr bool value = true;
+};
+template<uint64_t firstBit, uint64_t secondBit, uint64_t... remainingBits> struct BitsInIncreasingOrder<firstBit, secondBit, remainingBits...> {
+    static constexpr bool value = firstBit == secondBit >> 1 && BitsInIncreasingOrder<secondBit, remainingBits...>::value;
+};
+
 template<bool, bool> struct VirtualTableAndRefCountOverhead;
-template<> struct VirtualTableAndRefCountOverhead<true, true> {
+template<> struct VirtualTableAndRefCountOverhead<true, true> : public RefCounted<VirtualTableAndRefCountOverhead<true, true>> {
     virtual ~VirtualTableAndRefCountOverhead() { }
-    unsigned refCount;
-#if ASSERT_ENABLED
-    bool m_isOwnedByMainThread;
-    bool m_areThreadingChecksEnabled;
-#endif
-#if CHECK_REF_COUNTED_LIFECYCLE
-    bool m_deletionHasBegun;
-    bool m_adoptionIsRequired;
-#endif
 };
-template<> struct VirtualTableAndRefCountOverhead<false, true> {
-    unsigned refCount;
-#if ASSERT_ENABLED
-    bool m_isOwnedByMainThread;
-    bool m_areThreadingChecksEnabled;
-#endif
-#if CHECK_REF_COUNTED_LIFECYCLE
-    bool m_deletionHasBegun;
-    bool m_adoptionIsRequired;
-#endif
-};
+template<> struct VirtualTableAndRefCountOverhead<false, true> : public RefCounted<VirtualTableAndRefCountOverhead<false, true>> { };
 template<> struct VirtualTableAndRefCountOverhead<true, false> {
     virtual ~VirtualTableAndRefCountOverhead() { }
 };
@@ -75,9 +67,10 @@ void ArgumentCoder<WebKit::PlatformClass>::encode(Encoder& encoder, const WebKit
         int value;
     };
     static_assert(sizeof(ShouldBeSameSizeAsPlatformClass) == sizeof(WebKit::PlatformClass));
-    static_assert(MembersInCorrectOrder<0
+    static_assert(MembersInCorrectOrder < 0
         , offsetof(WebKit::PlatformClass, value)
     >::value);
+
     encoder << instance.value;
 }
 
@@ -92,6 +85,105 @@ std::optional<WebKit::PlatformClass> ArgumentCoder<WebKit::PlatformClass>::decod
         }
     };
 }
+
+#if USE(AVFOUNDATION)
+void ArgumentCoder<WebKit::CoreIPCAVOutputContext>::encode(Encoder& encoder, const WebKit::CoreIPCAVOutputContext& instance)
+{
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.m_propertyList)>, WebKit::CoreIPCDictionary>);
+    struct ShouldBeSameSizeAsAVOutputContext : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<WebKit::CoreIPCAVOutputContext>, false> {
+        WebKit::CoreIPCDictionary m_propertyList;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsAVOutputContext) == sizeof(WebKit::CoreIPCAVOutputContext));
+    static_assert(MembersInCorrectOrder < 0
+        , offsetof(WebKit::CoreIPCAVOutputContext, m_propertyList)
+    >::value);
+
+    encoder << instance.m_propertyList;
+}
+
+std::optional<WebKit::CoreIPCAVOutputContext> ArgumentCoder<WebKit::CoreIPCAVOutputContext>::decode(Decoder& decoder)
+{
+    auto m_propertyList = decoder.decode<WebKit::CoreIPCDictionary>();
+    if (UNLIKELY(!decoder.isValid()))
+        return std::nullopt;
+
+    if (!(WebKit::CoreIPCAVOutputContext::isValidDictionary(*m_propertyList)))
+        return std::nullopt;
+    if (UNLIKELY(!decoder.isValid()))
+        return std::nullopt;
+    return {
+        WebKit::CoreIPCAVOutputContext {
+            WTFMove(*m_propertyList)
+        }
+    };
+}
+
+#endif
+
+void ArgumentCoder<WebKit::CoreIPCNSSomeFoundationType>::encode(Encoder& encoder, const WebKit::CoreIPCNSSomeFoundationType& instance)
+{
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.m_propertyList)>, WebKit::CoreIPCDictionary>);
+    struct ShouldBeSameSizeAsNSSomeFoundationType : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<WebKit::CoreIPCNSSomeFoundationType>, false> {
+        WebKit::CoreIPCDictionary m_propertyList;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsNSSomeFoundationType) == sizeof(WebKit::CoreIPCNSSomeFoundationType));
+    static_assert(MembersInCorrectOrder < 0
+        , offsetof(WebKit::CoreIPCNSSomeFoundationType, m_propertyList)
+    >::value);
+
+    encoder << instance.m_propertyList;
+}
+
+std::optional<WebKit::CoreIPCNSSomeFoundationType> ArgumentCoder<WebKit::CoreIPCNSSomeFoundationType>::decode(Decoder& decoder)
+{
+    auto m_propertyList = decoder.decode<WebKit::CoreIPCDictionary>();
+    if (UNLIKELY(!decoder.isValid()))
+        return std::nullopt;
+
+    if (!(WebKit::CoreIPCNSSomeFoundationType::isValidDictionary(*m_propertyList)))
+        return std::nullopt;
+    if (UNLIKELY(!decoder.isValid()))
+        return std::nullopt;
+    return {
+        WebKit::CoreIPCNSSomeFoundationType {
+            WTFMove(*m_propertyList)
+        }
+    };
+}
+
+#if ENABLE(DATA_DETECTION)
+void ArgumentCoder<WebKit::CoreIPCDDScannerResult>::encode(Encoder& encoder, const WebKit::CoreIPCDDScannerResult& instance)
+{
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(instance.m_propertyList)>, WebKit::CoreIPCDictionary>);
+    struct ShouldBeSameSizeAsDDScannerResult : public VirtualTableAndRefCountOverhead<std::is_polymorphic_v<WebKit::CoreIPCDDScannerResult>, false> {
+        WebKit::CoreIPCDictionary m_propertyList;
+    };
+    static_assert(sizeof(ShouldBeSameSizeAsDDScannerResult) == sizeof(WebKit::CoreIPCDDScannerResult));
+    static_assert(MembersInCorrectOrder < 0
+        , offsetof(WebKit::CoreIPCDDScannerResult, m_propertyList)
+    >::value);
+
+    encoder << instance.m_propertyList;
+}
+
+std::optional<WebKit::CoreIPCDDScannerResult> ArgumentCoder<WebKit::CoreIPCDDScannerResult>::decode(Decoder& decoder)
+{
+    auto m_propertyList = decoder.decode<WebKit::CoreIPCDictionary>();
+    if (UNLIKELY(!decoder.isValid()))
+        return std::nullopt;
+
+    if (!(WebKit::CoreIPCDDScannerResult::isValidDictionary(*m_propertyList)))
+        return std::nullopt;
+    if (UNLIKELY(!decoder.isValid()))
+        return std::nullopt;
+    return {
+        WebKit::CoreIPCDDScannerResult {
+            WTFMove(*m_propertyList)
+        }
+    };
+}
+
+#endif
 
 } // namespace IPC
 

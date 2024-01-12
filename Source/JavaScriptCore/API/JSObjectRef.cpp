@@ -153,7 +153,7 @@ JSObjectRef JSObjectMakeFunction(JSContextRef ctx, JSStringRef name, unsigned pa
     }
 
     auto sourceURL = sourceURLString ? URL({ }, sourceURLString->string()) : URL();
-    JSObject* result = constructFunction(globalObject, args, nameID, SourceOrigin { sourceURL }, sourceURL.string(), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()));
+    JSObject* result = constructFunction(globalObject, args, nameID, SourceOrigin { sourceURL }, sourceURL.string(), SourceTaintedOrigin::Untainted, TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()));
     if (handleExceptionIfNeeded(scope, ctx, exception) == ExceptionStatus::DidThrow)
         result = nullptr;
     return toRef(result);
@@ -809,10 +809,9 @@ JSPropertyNameArrayRef JSObjectCopyPropertyNames(JSContextRef ctx, JSObjectRef o
     PropertyNameArray array(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
     jsObject->getPropertyNames(globalObject, array, DontEnumPropertiesMode::Exclude);
 
-    size_t size = array.size();
-    propertyNames->array.reserveInitialCapacity(size);
-    for (size_t i = 0; i < size; ++i)
-        propertyNames->array.uncheckedAppend(OpaqueJSString::tryCreate(array[i].string()).releaseNonNull());
+    propertyNames->array = WTF::map(array, [](auto& item) {
+        return OpaqueJSString::tryCreate(item.string()).releaseNonNull();
+    });
 
     return JSPropertyNameArrayRetain(propertyNames);
 }

@@ -23,6 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#undef ASSERT_ENABLED
 #define ASSERT_ENABLED 1
 #include "config.h"
 
@@ -1381,6 +1382,54 @@ static void testCFStrings(void)
 }
 #endif
 
+static bool samplingProfilerTest(void)
+{
+#if ENABLE(SAMPLING_PROFILER)
+    JSContextGroupRef contextGroup = JSContextGroupCreate();
+    JSGlobalContextRef context = JSGlobalContextCreateInGroup(contextGroup, NULL);
+    {
+        bool result = JSContextGroupEnableSamplingProfiler(contextGroup);
+        if (result)
+            printf("PASS: Enabled sampling profiler.\n");
+        else {
+            printf("FAIL: Failed to enable sampling profiler.\n");
+            return true;
+        }
+        JSStringRef script = JSStringCreateWithUTF8CString("var start = Date.now(); while ((start + 200) > Date.now()) { new Error().stack; }");
+        JSEvaluateScript(context, script, NULL, NULL, 1, NULL);
+        JSStringRelease(script);
+        JSContextGroupDisableSamplingProfiler(contextGroup);
+    }
+
+    {
+        JSStringRef json = JSContextGroupTakeSamplesFromSamplingProfiler(contextGroup);
+        if (json)
+            printf("PASS: Taking JSON from sampling profiler.\n");
+        else {
+            printf("FAIL: Failed to enable sampling profiler.\n");
+            return true;
+        }
+
+        size_t sizeUTF8 = JSStringGetMaximumUTF8CStringSize(json);
+        char* stringUTF8 = (char*)malloc(sizeUTF8);
+        JSStringGetUTF8CString(json, stringUTF8, sizeUTF8);
+        if (sizeUTF8)
+            printf("PASS: Some JSON data is generated.\n");
+        else {
+            printf("FAIL: Failed to take JSON data.\n");
+            return true;
+        }
+        free(stringUTF8);
+
+        JSStringRelease(json);
+    }
+
+    JSGlobalContextRelease(context);
+    JSContextGroupRelease(contextGroup);
+#endif
+    return false;
+}
+
 #if PLATFORM(QT)
 int qt_main(int argc, char* argv[])
 #else
@@ -1801,7 +1850,7 @@ int main(int argc, char* argv[])
     ASSERT(!JSObjectMakeFunction(context, NULL, 0, NULL, functionBody, NULL, 1, &exception));
     ASSERT(JSValueIsObject(context, exception));
     v = JSObjectGetProperty(context, JSValueToObject(context, exception, NULL), line, NULL);
-    assertEqualsAsNumber(v, 2);
+    assertEqualsAsNumber(v, 3);
     JSStringRelease(functionBody);
     JSStringRelease(line);
 
@@ -1811,7 +1860,7 @@ int main(int argc, char* argv[])
     ASSERT(!JSObjectMakeFunction(context, NULL, 0, NULL, functionBody, NULL, -42, &exception));
     ASSERT(JSValueIsObject(context, exception));
     v = JSObjectGetProperty(context, JSValueToObject(context, exception, NULL), line, NULL);
-    assertEqualsAsNumber(v, 2);
+    assertEqualsAsNumber(v, 3);
     JSStringRelease(functionBody);
     JSStringRelease(line);
 
@@ -1821,7 +1870,7 @@ int main(int argc, char* argv[])
     ASSERT(!JSObjectMakeFunction(context, NULL, 0, NULL, functionBody, NULL, 1, &exception));
     ASSERT(JSValueIsObject(context, exception));
     v = JSObjectGetProperty(context, JSValueToObject(context, exception, NULL), line, NULL);
-    assertEqualsAsNumber(v, 3);
+    assertEqualsAsNumber(v, 4);
     JSStringRelease(functionBody);
     JSStringRelease(line);
 
@@ -1855,7 +1904,7 @@ int main(int argc, char* argv[])
     JSStringRelease(functionBody);
     
     string = JSValueToStringCopy(context, function, NULL);
-    assertEqualsAsUTF8String(JSValueMakeString(context, string), "function foo(foo) {\nreturn foo;\n}");
+    assertEqualsAsUTF8String(JSValueMakeString(context, string), "function foo(foo\n) {\nreturn foo;\n}");
     JSStringRelease(string);
 
     JSStringRef print = JSStringCreateWithUTF8CString("print");
@@ -2173,6 +2222,7 @@ int main(int argc, char* argv[])
     customGlobalObjectClassTest();
     globalObjectSetPrototypeTest();
     globalObjectPrivatePropertyTest();
+    failed |= samplingProfilerTest();
 
     failed |= finalizeMultithreadedMultiVMExecutionTest();
 

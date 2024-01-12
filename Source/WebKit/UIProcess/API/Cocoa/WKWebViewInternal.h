@@ -30,6 +30,7 @@
 #import "_WKAttachmentInternal.h"
 #import "_WKWebViewPrintFormatterInternal.h"
 #import <variant>
+#import <wtf/BlockPtr.h>
 #import <wtf/CompletionHandler.h>
 #import <wtf/NakedPtr.h>
 #import <wtf/RefPtr.h>
@@ -42,6 +43,7 @@
 #import "WKContentView.h"
 #import "WKContentViewInteraction.h"
 #import "WKFullScreenWindowControllerIOS.h"
+#import "WKSEDefinitions.h"
 #import <WebCore/FloatRect.h>
 #import <WebCore/IntDegrees.h>
 #import <WebCore/LengthBox.h>
@@ -50,7 +52,7 @@
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-#define WK_WEB_VIEW_PROTOCOLS <UIScrollViewDelegate>
+#define WK_WEB_VIEW_PROTOCOLS <WKSEScrollViewDelegate>
 #endif
 
 #if PLATFORM(MAC)
@@ -212,10 +214,9 @@ struct PerWebProcessState {
 #if PLATFORM(MAC)
     std::unique_ptr<WebKit::WebViewImpl> _impl;
     RetainPtr<WKTextFinderClient> _textFinderClient;
-
-    // Only used with UI-side compositing.
-    RetainPtr<WKScrollView> _scrollView;
-    RetainPtr<WKContentView> _contentView;
+#if HAVE(NSWINDOW_SNAPSHOT_READINESS_HANDLER)
+    BlockPtr<void()> _windowSnapshotReadinessHandler;
+#endif
 #endif // PLATFORM(MAC)
 
 #if PLATFORM(IOS_FAMILY)
@@ -230,6 +231,7 @@ struct PerWebProcessState {
 
     BOOL _findInteractionEnabled;
 #if HAVE(UIFINDINTERACTION)
+    RetainPtr<UIView> _findOverlay;
     RetainPtr<UIFindInteraction> _findInteraction;
 #endif
 
@@ -324,6 +326,10 @@ struct PerWebProcessState {
 - (BOOL)_isValid;
 - (void)_didChangeEditorState;
 
+#if PLATFORM(MAC) && HAVE(NSWINDOW_SNAPSHOT_READINESS_HANDLER)
+- (void)_invalidateWindowSnapshotReadinessHandler;
+#endif
+
 #if ENABLE(ATTACHMENT_ELEMENT)
 - (void)_didRemoveAttachment:(API::Attachment&)attachment;
 - (void)_didInsertAttachment:(API::Attachment&)attachment withSource:(NSString *)source;
@@ -355,7 +361,10 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const WebCore::ExceptionDetails&)
 
 #if ENABLE(FULLSCREEN_API) && PLATFORM(IOS_FAMILY)
 @interface WKWebView (FullScreenAPI_Internal)
--(WKFullScreenWindowController *)fullScreenWindowController;
+- (WKFullScreenWindowController *)fullScreenWindowController;
+#if PLATFORM(VISION)
+- (UIMenu *)fullScreenWindowSceneDimmingAction;
+#endif
 @end
 #endif
 

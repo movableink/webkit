@@ -103,10 +103,7 @@ public:
 
 protected:
     bool paintCheckbox(const RenderObject&, const PaintInfo&, const FloatRect&) override;
-    void setCheckboxSize(RenderStyle&) const override;
-
     bool paintRadio(const RenderObject&, const PaintInfo&, const FloatRect&) override;
-    void setRadioSize(RenderStyle&) const override;
 
     void adjustTextFieldStyle(RenderStyle&, const Element*) const override;
 
@@ -136,10 +133,6 @@ protected:
 
     void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const override;
     bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) override;
-
-#ifndef QT_NO_SPINBOX
-    void adjustInnerSpinButtonStyle(RenderStyle&, const Element*) const override;
-#endif
 
     String m_mediaControlsStyleSheet;
 

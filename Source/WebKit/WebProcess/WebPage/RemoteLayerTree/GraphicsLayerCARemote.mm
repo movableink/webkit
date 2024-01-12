@@ -127,26 +127,23 @@ public:
         auto clone = buffer.clone();
         if (!clone)
             return false;
-        auto* backend = clone->ensureBackendCreated();
-        if (!backend)
-            return false;
 
         clone->flushDrawingContext();
 
-        auto* sharing = dynamicDowncast<ImageBufferBackendHandleSharing>(backend->toBackendSharing());
+        auto* sharing = dynamicDowncast<ImageBufferBackendHandleSharing>(clone->toBackendSharing());
         if (!sharing)
             return false;
 
         auto backendHandle = sharing->createBackendHandle(SharedMemory::Protection::ReadOnly);
-        ASSERT(std::holds_alternative<MachSendRight>(backendHandle));
+        ASSERT(backendHandle && std::holds_alternative<MachSendRight>(*backendHandle));
 
         {
             Locker locker { m_surfaceLock };
-            m_surfaceSendRight = std::get<MachSendRight>(backendHandle);
+            m_surfaceSendRight = MachSendRight { std::get<MachSendRight>(*backendHandle) };
             m_surfaceIdentifier = clone->renderingResourceIdentifier();
         }
 
-        m_connection->send(Messages::RemoteLayerTreeDrawingAreaProxy::AsyncSetLayerContents(m_layerID, WTFMove(backendHandle), clone->renderingResourceIdentifier()), m_drawingArea.toUInt64());
+        m_connection->send(Messages::RemoteLayerTreeDrawingAreaProxy::AsyncSetLayerContents(m_layerID, WTFMove(*backendHandle), clone->renderingResourceIdentifier()), m_drawingArea.toUInt64());
 
         return true;
     }
@@ -155,13 +152,15 @@ public:
     {
         Locker locker { m_surfaceLock };
         if (m_surfaceSendRight)
-            layer.setDelegatedContents({ *m_surfaceSendRight, { }, std::optional<RenderingResourceIdentifier>(m_surfaceIdentifier) });
+            layer.setDelegatedContents({ MachSendRight { *m_surfaceSendRight }, { }, std::optional<RenderingResourceIdentifier>(m_surfaceIdentifier) });
     }
 
     void setDestinationLayerID(WebCore::PlatformLayerIdentifier layerID)
     {
         m_layerID = layerID;
     }
+
+    bool isGraphicsLayerCARemoteAsyncContentsDisplayDelegate() const final { return true; }
 
 private:
     Ref<IPC::Connection> m_connection;
@@ -172,12 +171,19 @@ private:
     WebCore::RenderingResourceIdentifier m_surfaceIdentifier WTF_GUARDED_BY_LOCK(m_surfaceLock);
 };
 
-RefPtr<WebCore::GraphicsLayerAsyncContentsDisplayDelegate> GraphicsLayerCARemote::createAsyncContentsDisplayDelegate()
+RefPtr<WebCore::GraphicsLayerAsyncContentsDisplayDelegate> GraphicsLayerCARemote::createAsyncContentsDisplayDelegate(GraphicsLayerAsyncContentsDisplayDelegate* existing)
 {
     if (!m_context || !m_context->drawingAreaIdentifier() || !WebProcess::singleton().parentProcessConnection())
         return nullptr;
 
-    auto delegate = adoptRef(new GraphicsLayerCARemoteAsyncContentsDisplayDelegate(*WebProcess::singleton().parentProcessConnection(), m_context->drawingAreaIdentifier()));
+    RefPtr<GraphicsLayerCARemoteAsyncContentsDisplayDelegate> delegate;
+    if (existing && existing->isGraphicsLayerCARemoteAsyncContentsDisplayDelegate())
+        delegate = static_cast<GraphicsLayerCARemoteAsyncContentsDisplayDelegate*>(existing);
+
+    if (!delegate) {
+        ASSERT(!existing);
+        delegate = adoptRef(new GraphicsLayerCARemoteAsyncContentsDisplayDelegate(*WebProcess::singleton().parentProcessConnection(), m_context->drawingAreaIdentifier()));
+    }
 
     auto layerID = setContentsToAsyncDisplayDelegate(delegate, ContentsLayerPurpose::Canvas);
 

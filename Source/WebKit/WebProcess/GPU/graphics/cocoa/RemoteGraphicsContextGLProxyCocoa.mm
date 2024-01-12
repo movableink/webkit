@@ -81,22 +81,21 @@ private:
 
 class DisplayBufferDisplayDelegate final : public WebCore::GraphicsLayerContentsDisplayDelegate {
 public:
-    static Ref<DisplayBufferDisplayDelegate> create(bool isOpaque, float contentsScale)
+    static Ref<DisplayBufferDisplayDelegate> create(bool isOpaque)
     {
-        return adoptRef(*new DisplayBufferDisplayDelegate(isOpaque, contentsScale));
+        return adoptRef(*new DisplayBufferDisplayDelegate(isOpaque));
     }
 
     // WebCore::GraphicsLayerContentsDisplayDelegate overrides.
     void prepareToDelegateDisplay(WebCore::PlatformCALayer& layer) final
     {
         layer.setOpaque(m_isOpaque);
-        layer.setContentsScale(m_contentsScale);
     }
 
     void display(WebCore::PlatformCALayer& layer) final
     {
         if (m_displayBuffer)
-            layer.setDelegatedContents({ m_displayBuffer, m_finishedFence, std::nullopt });
+            layer.setDelegatedContents({ MachSendRight { m_displayBuffer }, m_finishedFence, std::nullopt });
         else
             layer.clearContents();
     }
@@ -106,7 +105,7 @@ public:
         return WebCore::GraphicsLayer::CompositingCoordinatesOrientation::BottomUp;
     }
 
-    void setDisplayBuffer(const MachSendRight& displayBuffer, RefPtr<DisplayBufferFence> finishedFence)
+    void setDisplayBuffer(MachSendRight&& displayBuffer, RefPtr<DisplayBufferFence> finishedFence)
     {
         if (!displayBuffer) {
             m_finishedFence = nullptr;
@@ -116,19 +115,17 @@ public:
         if (m_displayBuffer && displayBuffer.sendRight() == m_displayBuffer.sendRight())
             return;
         m_finishedFence = WTFMove(finishedFence);
-        m_displayBuffer = displayBuffer.copySendRight();
+        m_displayBuffer = WTFMove(displayBuffer);
     }
 
 private:
-    DisplayBufferDisplayDelegate(bool isOpaque, float contentsScale)
-        : m_contentsScale(contentsScale)
-        , m_isOpaque(isOpaque)
+    DisplayBufferDisplayDelegate(bool isOpaque)
+        : m_isOpaque(isOpaque)
     {
     }
 
     MachSendRight m_displayBuffer;
     RefPtr<DisplayBufferFence> m_finishedFence;
-    const float m_contentsScale;
     const bool m_isOpaque;
 };
 
@@ -148,7 +145,7 @@ public:
 private:
     RemoteGraphicsContextGLProxyCocoa(IPC::Connection& connection,  Ref<IPC::StreamClientConnection> streamConnection, const WebCore::GraphicsContextGLAttributes& attributes, Ref<RemoteVideoFrameObjectHeapProxy>&& videoFrameObjectHeapProxy)
         : RemoteGraphicsContextGLProxy(connection, WTFMove(streamConnection), attributes, WTFMove(videoFrameObjectHeapProxy))
-        , m_layerContentsDisplayDelegate(DisplayBufferDisplayDelegate::create(!attributes.alpha, attributes.devicePixelRatio))
+        , m_layerContentsDisplayDelegate(DisplayBufferDisplayDelegate::create(!attributes.alpha))
     {
     }
     void addNewFence(Ref<DisplayBufferFence> newFence);
@@ -164,7 +161,7 @@ std::optional<WebCore::GraphicsContextGL::EGLImageAttachResult> RemoteGraphicsCo
 {
     if (isContextLost())
         return std::nullopt;
-    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::CreateAndBindEGLImage(target, source));
+    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::CreateAndBindEGLImage(target, WTFMove(source)));
     if (!sendResult.succeeded()) {
         markContextLost();
         return std::nullopt;
@@ -180,7 +177,7 @@ GCEGLSync RemoteGraphicsContextGLProxyCocoa::createEGLSync(ExternalEGLSyncEvent 
     if (isContextLost())
         return { };
     auto [eventHandle, signalValue] = syncEvent;
-    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::CreateEGLSync(eventHandle, signalValue));
+    auto sendResult = sendSync(Messages::RemoteGraphicsContextGL::CreateEGLSync(WTFMove(eventHandle), signalValue));
     if (!sendResult.succeeded()) {
         markContextLost();
         return { };
@@ -202,7 +199,6 @@ void RemoteGraphicsContextGLProxyCocoa::prepareForDisplay()
     auto [displayBufferSendRight] = sendResult.takeReply();
     if (!displayBufferSendRight)
         return;
-    markLayerComposited();
     auto finishedFence = DisplayBufferFence::create(WTFMove(finishedSignaller));
     addNewFence(finishedFence);
     m_layerContentsDisplayDelegate->setDisplayBuffer(WTFMove(displayBufferSendRight), WTFMove(finishedFence));

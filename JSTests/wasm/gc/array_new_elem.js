@@ -35,7 +35,7 @@ function testArrayNewCanonElem() {
         (func (export "f") (result funcref)
           (i32.const 0)
           (i32.const ` + arraySize + `)
-          (array.new_canon_elem $a 0)
+          (array.new_elem $a 0)
           (i32.const ` + i + `)
           (array.get $a)))`;
 
@@ -56,7 +56,7 @@ function testArrayNewCanonElemExternref() {
         (func (export "f") (result externref)
           (i32.const 0)
           (i32.const ` + arraySize + `)
-          (array.new_canon_elem $a 0)
+          (array.new_elem $a 0)
           (i32.const ` + i + `)
           (array.get $a)))`;
 
@@ -76,11 +76,11 @@ function testBadTypeIndex() {
         (func (export "f") (result funcref)
           (i32.const 0)
           (i32.const 2)
-          (array.new_canon_elem 1 0)
+          (array.new_elem 1 0)
           (i32.const 0)
           (array.get 0)))`);
 
-    assert.throws(f, WebAssembly.CompileError, "WebAssembly.Module doesn't validate: array.new_elem type index 1 does not reference an array definition, in function at index 1");
+    assert.throws(f, WebAssembly.CompileError, "WebAssembly.Module doesn't validate: array.new_elem index 1 does not reference an array definition, in function at index 1");
 }
 
 function testNonArrayType() {
@@ -93,11 +93,11 @@ function testNonArrayType() {
         (func (export "f") (result funcref)
           (i32.const 0)
           (i32.const 2)
-          (array.new_canon_elem 1 0)
+          (array.new_elem 1 0)
           (i32.const 0)
           (array.get 0)))`);
 
-    assert.throws(f, WebAssembly.CompileError, "WebAssembly.Module doesn't validate: array.new_elem type index 1 does not reference an array definition, in function at index 1");
+    assert.throws(f, WebAssembly.CompileError, "WebAssembly.Module doesn't validate: array.new_elem index 1 does not reference an array definition, in function at index 1");
 }
 
 function testImmutableArrayType() {
@@ -109,7 +109,7 @@ function testImmutableArrayType() {
         (func (export "f") (result funcref)
           (i32.const 0)
           (i32.const 2)
-          (array.new_canon_elem 0 0)
+          (array.new_elem 0 0)
           (i32.const 0)
           (array.get 0)))`);
 
@@ -125,7 +125,7 @@ function testWrongTypeOffset() {
         (func (export "f") (result funcref)
           (f32.const 0)
           (i32.const 2)
-          (array.new_canon_elem 0 0)
+          (array.new_elem 0 0)
           (i32.const 0)
           (array.get 0)))`);
 
@@ -141,7 +141,7 @@ function testWrongTypeSize() {
         (func (export "f") (result funcref)
           (i32.const 0)
           (f32.const 2)
-          (array.new_canon_elem 0 0)
+          (array.new_elem 0 0)
           (i32.const 0)
           (array.get 0)))`);
 
@@ -156,7 +156,7 @@ function testNoElementSegments() {
         (func (export "f") (result funcref)
           (f32.const 0)
           (i32.const 2)
-          (array.new_canon_elem 0 0)
+          (array.new_elem 0 0)
           (i32.const 0)
           (array.get 0)))`);
 
@@ -174,7 +174,7 @@ function testOutOfBoundsElementSegmentIndex() {
         (func (export "f") (result funcref)
           (f32.const 0)
           (i32.const 2)
-          (array.new_canon_elem 0 3)
+          (array.new_elem 0 3)
           (i32.const 0)
           (array.get 0)))`);
 
@@ -191,11 +191,11 @@ function testTypeMismatch() {
         (func (export "f") (result funcref)
           (i32.const 0)
           (i32.const 2)
-          (array.new_canon_elem $a2 0)
+          (array.new_elem $a2 0)
           (i32.const 0)
           (array.get 0)))`);
 
-    assert.throws(f, WebAssembly.CompileError, "WebAssembly.Module doesn't validate: type mismatch in array.new_elem: segment elements have type funcref but array.new_elem operation expects elements of type I32, in function at index 1");
+    assert.throws(f, WebAssembly.CompileError, "WebAssembly.Module doesn't validate: type mismatch in array.new_elem: segment elements have type (ref null func) but array.new_elem operation expects elements of type I32, in function at index 1");
 }
 
 function testWrongNumberOfArguments() {
@@ -206,7 +206,7 @@ function testWrongNumberOfArguments() {
         (elem $elem0 funcref (ref.func $f) (ref.func $f) (ref.func $f) (ref.func $f))
         (type $a1 (array (mut funcref)))
         (func (export "f") (result funcref)
-          (array.new_canon_elem $a1 0)
+          (array.new_elem $a1 0)
           (i32.const 0)
           (array.get 0)))`);
 
@@ -220,7 +220,7 @@ function testWrongNumberOfArguments() {
         (type $a1 (array (mut funcref)))
         (func (export "f") (result funcref)
           (i32.const 0)
-          (array.new_canon_elem $a1 0)
+          (array.new_elem $a1 0)
           (i32.const 0)
           (array.get 0)))`);
 
@@ -236,7 +236,7 @@ function testWrongNumberOfArguments() {
           (i32.const 0)
           (i32.const 0)
           (i32.const 0)
-          (array.new_canon_elem $a1 0)
+          (array.new_elem $a1 0)
           (i32.const 0)
           (array.get 0)))`);
 
@@ -253,7 +253,7 @@ function testInt32Overflow() {
         (func (export "f") (result i32)
           (i32.const ` + offset + `)
           (i32.const ` + len + `)
-          (array.new_canon_elem 0 0)
+          (array.new_elem 0 0)
           (array.len)))`).exports.f();
     let maxUint32 = 0xffffffff;
     assert.throws(() => instantiate(f(0, maxUint32)),
@@ -295,7 +295,7 @@ function testZeroLengthArray() {
         (func (export "f") (result i32)
           (i32.const ` + offset + `)
           (i32.const 0)
-          (array.new_canon_elem 0 0)
+          (array.new_elem 0 0)
           (array.len)))`);
     // zero-length array from zero-length element segment; zero offset
     var m = f("", 0);
@@ -320,7 +320,7 @@ function testZeroLengthArray() {
 }
 
 function testArrayNewCanonElemSubtype() {
-    // Test array,new_canon_elem $t $e where $e: rt and rt <: $t
+    // Test array.new_elem $t $e where $e: rt and rt <: $t
     let arraySize = 2;
     let m = instantiate(`
       (module
@@ -331,7 +331,7 @@ function testArrayNewCanonElemSubtype() {
         (func (export "f") (param $i i32) (result funcref)
           (i32.const 0)
           (i32.const 2)
-          (array.new_canon_elem $aty 0)
+          (array.new_elem $aty 0)
           (local.get $i)
           (array.get $aty)))`);
 
@@ -353,7 +353,7 @@ function testRefCallNullary() {
       (func (export "test") (param $i i32) (result i32)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (local.get $i)
          (array.get $a)
          (call_ref $fty)))`);
@@ -380,7 +380,7 @@ function testRefCall() {
          (i32.const 42)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (local.get $i)
          (array.get $a)
          (call_ref $fty)))`);
@@ -405,7 +405,7 @@ function testIndirectCallNullary() {
          (i32.const 0)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (local.get $i)
          (array.get $a)
          (table.set $t)
@@ -432,7 +432,7 @@ function testIndirectCall() {
       (elem $e funcref (ref.func $f) (ref.func $g))
       (func (export "test") (param $i i32) (result i32)
          (table.set $t (i32.const 0)
-           (array.get $a (array.new_canon_elem $a 0 (i32.const 0) (i32.const 2))
+           (array.get $a (array.new_elem $a 0 (i32.const 0) (i32.const 2))
                          (local.get $i)))
          (call_indirect $t (type $fty) (i32.const 42) (i32.const 0))))`);
 
@@ -467,7 +467,7 @@ function testAllElementSegmentKinds() {
       (func (export "test") (param $i i32) (result funcref)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (local.get $i)
          (array.get $a)))`);
     var returnedFun = m.exports.test(0);
@@ -487,7 +487,7 @@ function testAllElementSegmentKinds() {
       (func (export "test") (param $i i32) (result funcref)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (local.get $i)
          (array.get $a)))`);
     returnedFun = m.exports.test(0);
@@ -508,7 +508,7 @@ function testAllElementSegmentKinds() {
       (func (export "test") (param $i i32) (result funcref)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (local.get $i)
          (array.get $a)))`);
     returnedFun = m.exports.test(0);
@@ -529,7 +529,7 @@ function testAllElementSegmentKinds() {
       (func (export "test") (param $i i32) (result funcref)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (local.get $i)
          (array.get $a)))`);
     returnedFun = m.exports.test(0);
@@ -550,7 +550,7 @@ function testAllElementSegmentKinds() {
       (func (export "test") (param $i i32) (result funcref)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (local.get $i)
          (array.get $a)))`);
     returnedFun = m.exports.test(0);
@@ -559,9 +559,6 @@ function testAllElementSegmentKinds() {
     assert.eq(returnedFun(42), 45);
 
     // elem ::= 5 et:reftype el*:vec(expr)
-
-    // FIXME: Replace m with the following once https://bugs.webkit.org/show_bug.cgi?id=251874 is fixed
-    /*
     m = instantiate(`
     (module
       (type $fty (func (param i32) (result i32)))
@@ -575,7 +572,7 @@ function testAllElementSegmentKinds() {
          (i32.const 42)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (local.get $i)
          (array.get $a)
          (call_ref $fty)))`);
@@ -583,9 +580,8 @@ function testAllElementSegmentKinds() {
     assert.eq(retVal, 44);
     retVal = m.exports.test(1);
     assert.eq(retVal, 45);
-*/
 
-        m = instantiate(`
+    m = instantiate(`
     (module
       (type $fty (func (param i32) (result i32)))
       (type $a (array (mut funcref)))
@@ -599,7 +595,7 @@ function testAllElementSegmentKinds() {
          (i32.const 0)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (array.get $a (local.get $i))
          (table.set $t)
          (call_indirect $t (type $fty) (i32.const 42) (i32.const 0))))`);
@@ -609,8 +605,6 @@ function testAllElementSegmentKinds() {
     assert.eq(retVal, 45);
 
     // elem ::= 6 x:tableidx e:expr et:reftype el*:vec(expr) et:reftype el*:vec(expr)
-    // FIXME: Replace m with the following once https://bugs.webkit.org/show_bug.cgi?id=251874 is fixed
-    /*
     m = instantiate(`
     (module
       (type $fty (func (param i32) (result i32)))
@@ -625,11 +619,17 @@ function testAllElementSegmentKinds() {
          (i32.const 42)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (local.get $i)
          (array.get $a)
-         (call_ref $fty)))`);
-    */
+         (call_ref $fty)))
+`);
+
+    var retVal = m.exports.test(0);
+    assert.eq(retVal, 44);
+    retVal = m.exports.test(1);
+    assert.eq(retVal, 45);
+
     m = instantiate(`
     (module
       (type $fty (func (param i32) (result i32)))
@@ -645,7 +645,7 @@ function testAllElementSegmentKinds() {
          (i32.const 0)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (array.get $a (local.get $i))
          (table.set $t1)
          (call_indirect $t1 (type $fty) (i32.const 42) (i32.const 0))))`);
@@ -656,8 +656,6 @@ function testAllElementSegmentKinds() {
     assert.eq(retVal, 45);
 
     // elem ::= 7 et:reftype el*:vec(expr)
-    // FIXME: Replace m with the following once https://bugs.webkit.org/show_bug.cgi?id=251874 is fixed
-/*
     m = instantiate(`
     (module
       (type $fty (func (param i32) (result i32)))
@@ -672,11 +670,15 @@ function testAllElementSegmentKinds() {
          (i32.const 42)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (local.get $i)
          (array.get $a)
          (call_ref $fty)))`);
-*/
+    var retVal = m.exports.test(0);
+    assert.eq(retVal, 44);
+    retVal = m.exports.test(1);
+    assert.eq(retVal, 45);
+
     m = instantiate(`
     (module
       (type $fty (func (param i32) (result i32)))
@@ -691,7 +693,7 @@ function testAllElementSegmentKinds() {
          (i32.const 0)
          (i32.const 0)
          (i32.const 2)
-         (array.new_canon_elem $a 0)
+         (array.new_elem $a 0)
          (array.get $a (local.get $i))
          (table.set $t)
          (call_indirect $t (type $fty) (i32.const 42) (i32.const 0))))`);
@@ -713,7 +715,7 @@ function testNullFunctionIndex() {
         (func (export "f") (result funcref)
           (i32.const 0)
           (i32.const 4)
-          (array.new_canon_elem 0 0)
+          (array.new_elem 0 0)
           (i32.const 2)
           (array.get 0)))`);
     var retVal = m.exports.f();
@@ -728,12 +730,12 @@ function testNullFunctionIndex() {
         (func (export "f") (result funcref)
           (i32.const 0)
           (i32.const 4)
-          (array.new_canon_elem 0 0)
+          (array.new_elem 0 0)
           (i32.const 2)
           (array.get 0)))`);
     assert.throws(() => compile(m),
                   WebAssembly.CompileError,
-                  "WebAssembly.Module doesn't validate: type mismatch in array.new_elem: segment elements have type funcref but array.new_elem operation expects elements of type Ref, in function at index 2");
+                  "WebAssembly.Module doesn't validate: type mismatch in array.new_elem: segment elements have type (ref null func) but array.new_elem operation expects elements of type (ref func), in function at index 2");
 
     // Element segment type is a subtype of declared array type: this should work
     m = instantiate(`(module
@@ -744,7 +746,7 @@ function testNullFunctionIndex() {
         (func (export "f") (result funcref)
           (i32.const 0)
           (i32.const 4)
-          (array.new_canon_elem 0 0)
+          (array.new_elem 0 0)
           (i32.const 2)
           (array.get 0)))`);
     var retVal = m.exports.f();
@@ -779,7 +781,7 @@ function testImportFunctions() {
       (func (export "f") (result funcref)
         (i32.const 0)
         (i32.const 3)
-        (array.new_canon_elem 0 0)
+        (array.new_elem 0 0)
         (i32.const 2)
         (array.get $a)))`, imports);
 
@@ -807,19 +809,19 @@ function testJSFunctions() {
         (func (export "f") (result funcref)
           (i32.const 0)
           (i32.const 3)
-          (array.new_canon_elem 0 0)
+          (array.new_elem 0 0)
           (i32.const 0)
           (array.get $a))
         (func (export "g") (result funcref)
           (i32.const 0)
           (i32.const 3)
-          (array.new_canon_elem 0 0)
+          (array.new_elem 0 0)
           (i32.const 1)
           (array.get $a))
         (func (export "h") (result funcref)
           (i32.const 0)
           (i32.const 3)
-          (array.new_canon_elem 0 0)
+          (array.new_elem 0 0)
           (i32.const 2)
           (array.get $a)))`, imports);
 
@@ -831,12 +833,27 @@ function testJSFunctions() {
     assert.eq(retVal, 47.5);
 }
 
-// FIXME: uncomment these tests once https://bugs.webkit.org/show_bug.cgi?id=251874 is fixed
-// testRefCallNullary();
-// testRefCall();
-// testArrayNewCanonElemExternref();
-// testArrayNewCanonElemSubtype();
+function testRecGroup() {
+    instantiate(`
+        (module
+          (func $f)
+          (func $g)
+          (rec (type (array (mut funcref)))
+               (type (struct)))
+          (elem (ref func) (ref.func $f) (item ref.func $f) (ref.func $g) (ref.func $g))
+          (func (export "f") (result funcref)
+            (i32.const 0)
+            (i32.const 4)
+            (array.new_elem 0 0)
+            (i32.const 2)
+            (array.get 0)))
+    `);
+}
 
+testRefCallNullary();
+testRefCall();
+testArrayNewCanonElemExternref();
+testArrayNewCanonElemSubtype();
 testArrayNewCanonElem();
 testIndirectCallNullary();
 testIndirectCall();
@@ -855,3 +872,4 @@ testZeroLengthArray();
 testNullFunctionIndex();
 testImportFunctions();
 testJSFunctions();
+testRecGroup();

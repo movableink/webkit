@@ -54,7 +54,7 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 @end
 
 @implementation WKInspectorViewController {
-    NakedPtr<WebKit::WebPageProxy> _inspectedPage;
+    CheckedPtr<WebKit::WebPageProxy> _inspectedPage;
     RetainPtr<WKInspectorWKWebView> _webView;
     WeakObjCPtr<id <WKInspectorViewControllerDelegate>> _delegate;
     RetainPtr<_WKInspectorConfiguration> _configuration;
@@ -145,6 +145,7 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
         if ([_delegate inspectorViewControllerInspectorIsUnderTest:self]) {
             preferences._hiddenPageDOMTimerThrottlingEnabled = NO;
             preferences._pageVisibilityBasedProcessSuppressionEnabled = NO;
+            preferences.inactiveSchedulingPolicy = WKInactiveSchedulingPolicyNone;
         }
     }
 
@@ -152,7 +153,7 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
     // If not specified or the inspection level is >1, use the default strategy.
     // This ensures that Inspector^2 cannot be affected by client (mis)configuration.
     auto* customProcessPool = configuration.get().processPool;
-    auto inspectorLevel = WebKit::inspectorLevelForPage(_inspectedPage);
+    auto inspectorLevel = WebKit::inspectorLevelForPage(_inspectedPage.get());
     auto useDefaultProcessPool = inspectorLevel > 1 || !customProcessPool;
     if (customProcessPool && !useDefaultProcessPool)
         WebKit::prepareProcessPoolForInspector(*customProcessPool->_processPool.get());
@@ -162,7 +163,7 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 
     // Ensure that a page group identifier is set. This is for computing inspection levels.
     if (!configuration.get()._groupIdentifier)
-        [configuration _setGroupIdentifier:WebKit::defaultInspectorPageGroupIdentifierForPage(_inspectedPage)];
+        [configuration _setGroupIdentifier:WebKit::defaultInspectorPageGroupIdentifierForPage(_inspectedPage.get())];
     
     return configuration.autorelease();
 }
@@ -199,6 +200,7 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 {
     NSOpenPanel *openPanel = [NSOpenPanel openPanel];
     openPanel.allowsMultipleSelection = parameters.allowsMultipleSelection;
+    openPanel.canChooseDirectories = parameters.allowsDirectories;
 
     auto reportSelectedFiles = ^(NSInteger result) {
         if (result == NSModalResponseOK)
@@ -227,7 +229,7 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
         case kWKContextMenuItemTagOpenImageInNewWindow:
         case kWKContextMenuItemTagOpenFrameInNewWindow:
         case kWKContextMenuItemTagOpenMediaInNewWindow:
-        case kWKContextMenuItemTagCopyImageUrlToClipboard:
+        case kWKContextMenuItemTagCopyImageURLToClipboard:
         case kWKContextMenuItemTagCopyImageToClipboard:
         case kWKContextMenuItemTagDownloadLinkToDisk:
         case kWKContextMenuItemTagDownloadImageToDisk:
@@ -270,8 +272,8 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
     }
 
     // Try to load the request in the inspected page if the delegate can't handle it.
-    if (_inspectedPage)
-        _inspectedPage->loadRequest(navigationAction.request);
+    if (RefPtr page = _inspectedPage.get())
+        page->loadRequest(navigationAction.request);
 }
 
 // MARK: WKInspectorWKWebViewDelegate methods
@@ -284,22 +286,24 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 
 - (void)inspectorWKWebViewReload:(WKInspectorWKWebView *)webView
 {
-    if (!_inspectedPage)
+    RefPtr page = _inspectedPage.get();
+    if (!page)
         return;
 
     OptionSet<WebCore::ReloadOption> reloadOptions;
     if (linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ExpiredOnlyReloadBehavior))
         reloadOptions.add(WebCore::ReloadOption::ExpiredOnly);
 
-    _inspectedPage->reload(reloadOptions);
+    page->reload(reloadOptions);
 }
 
 - (void)inspectorWKWebViewReloadFromOrigin:(WKInspectorWKWebView *)webView
 {
-    if (!_inspectedPage)
+    RefPtr page = _inspectedPage.get();
+    if (!page)
         return;
 
-    _inspectedPage->reload(WebCore::ReloadOption::FromOrigin);
+    page->reload(WebCore::ReloadOption::FromOrigin);
 }
 
 - (void)inspectorWKWebView:(WKInspectorWKWebView *)webView willMoveToWindow:(NSWindow *)newWindow

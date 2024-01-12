@@ -33,7 +33,7 @@
 #include <wtf/NumberOfCores.h>
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #if PLATFORM(IOS_FAMILY)
-#include "UserInterfaceIdiom.h"
+#import <pal/system/ios/UserInterfaceIdiom.h>
 #endif
 #endif
 
@@ -70,12 +70,12 @@ bool defaultShouldPrintBackgrounds()
 
 bool defaultAlternateFormControlDesignEnabled()
 {
-    return currentUserInterfaceIdiomIsReality();
+    return PAL::currentUserInterfaceIdiomIsVisionOrVisionLegacy();
 }
 
 bool defaultVideoFullscreenRequiresElementFullscreen()
 {
-    return currentUserInterfaceIdiomIsReality();
+    return PAL::currentUserInterfaceIdiomIsVisionOrVisionLegacy();
 }
 
 #endif
@@ -175,13 +175,10 @@ bool defaultManageCaptureStatusBarInGPUProcessEnabled()
 
 #endif // ENABLE(MEDIA_STREAM)
 
-#if ENABLE(MANAGED_MEDIA_SOURCE) && ENABLE(MEDIA_SOURCE)
+#if ENABLE(MEDIA_SOURCE)
 bool defaultManagedMediaSourceEnabled()
 {
-#if PLATFORM(IOS_FAMILY)
-    // Enable everywhere that MediaSource is enabled
-    return defaultMediaSourceEnabled();
-#elif PLATFORM(MAC)
+#if PLATFORM(COCOA)
     return true;
 #else
     return false;
@@ -189,7 +186,7 @@ bool defaultManagedMediaSourceEnabled()
 }
 #endif
 
-#if ENABLE(MANAGED_MEDIA_SOURCE) && ENABLE(MEDIA_SOURCE) && ENABLE(WIRELESS_PLAYBACK_TARGET)
+#if ENABLE(MEDIA_SOURCE) && ENABLE(WIRELESS_PLAYBACK_TARGET)
 bool defaultManagedMediaSourceNeedsAirPlay()
 {
 #if PLATFORM(IOS_FAMILY) || PLATFORM(MAC)
@@ -292,7 +289,7 @@ bool defaultPopoverAttributeEnabled()
     static bool newSDK = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::PopoverAttributeEnabled);
     return newSDK;
 #else
-    return false;
+    return true;
 #endif
 }
 

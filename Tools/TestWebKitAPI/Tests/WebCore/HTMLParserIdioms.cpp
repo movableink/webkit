@@ -27,7 +27,6 @@
 
 #include "Test.h"
 #include <WebCore/DocumentFragment.h>
-#include <WebCore/FragmentScriptingPermission.h>
 #include <WebCore/HTMLBodyElement.h>
 #include <WebCore/HTMLDivElement.h>
 #include <WebCore/HTMLDocument.h>
@@ -35,6 +34,7 @@
 #include <WebCore/HTMLHtmlElement.h>
 #include <WebCore/HTMLInputElement.h>
 #include <WebCore/HTMLParserIdioms.h>
+#include <WebCore/ParserContentPolicy.h>
 #include <WebCore/ProcessWarming.h>
 #include <WebCore/Settings.h>
 #include <WebCore/Text.h>
@@ -216,7 +216,7 @@ TEST(WebCoreHTMLParser, FastPathComplexHTMLEntityParsing)
 
     auto testFastParser = [&](const String& input) -> String {
         auto fragment = DocumentFragment::create(document);
-        bool result = tryFastParsingHTMLFragment(input, document, fragment, div, { ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
+        bool result = tryFastParsingHTMLFragment(input, document, fragment, div, { ParserContentPolicy::AllowScriptingContent });
         EXPECT_TRUE(result);
         auto textChild = dynamicDowncast<Text>(fragment->firstChild());
         EXPECT_TRUE(textChild);
@@ -229,6 +229,46 @@ TEST(WebCoreHTMLParser, FastPathComplexHTMLEntityParsing)
     EXPECT_STREQ(testFastParser("&nbsp&"_s).utf8().data(), String::fromUTF8(" &").utf8().data());
     EXPECT_STREQ(testFastParser("&nbsp-"_s).utf8().data(), String::fromUTF8(" -").utf8().data());
     EXPECT_STREQ(testFastParser("food & water"_s).utf8().data(), String("food & water"_s).utf8().data());
+}
+
+TEST(WebCoreHTMLParser, FastPathHandlesLi)
+{
+    ProcessWarming::initializeNames();
+
+    auto settings = Settings::create(nullptr);
+    auto document = HTMLDocument::create(nullptr, settings.get(), aboutBlankURL());
+    auto documentElement = HTMLHtmlElement::create(document);
+    document->appendChild(documentElement);
+    auto body = HTMLBodyElement::create(document);
+    documentElement->appendChild(body);
+
+    auto div = HTMLDivElement::create(document);
+    document->body()->appendChild(div);
+
+    auto fragment = DocumentFragment::create(document);
+    bool result = tryFastParsingHTMLFragment("<div><li></li></div>"_s, document, fragment, div, { ParserContentPolicy::AllowScriptingContent });
+    EXPECT_TRUE(result);
+    EXPECT_STREQ("DIV", fragment->firstChild()->nodeName().utf8().data());
+    EXPECT_STREQ("LI", fragment->firstChild()->firstChild()->nodeName().utf8().data());
+}
+
+TEST(WebCoreHTMLParser, FastPathFailsWithNestedLi)
+{
+    ProcessWarming::initializeNames();
+
+    auto settings = Settings::create(nullptr);
+    auto document = HTMLDocument::create(nullptr, settings.get(), aboutBlankURL());
+    auto documentElement = HTMLHtmlElement::create(document);
+    document->appendChild(documentElement);
+    auto body = HTMLBodyElement::create(document);
+    documentElement->appendChild(body);
+
+    auto div = HTMLDivElement::create(document);
+    document->body()->appendChild(div);
+
+    auto fragment = DocumentFragment::create(document);
+    bool result = tryFastParsingHTMLFragment("<li><li></li></li>"_s, document, fragment, div, { ParserContentPolicy::AllowScriptingContent });
+    EXPECT_FALSE(result);
 }
 
 } // namespace TestWebKitAPI

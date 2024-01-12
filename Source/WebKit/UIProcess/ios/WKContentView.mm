@@ -75,6 +75,11 @@
 #import <wtf/threads/BinarySemaphore.h>
 #import "AppKitSoftLink.h"
 
+#if USE(EXTENSIONKIT)
+#import <UIKit/UIInteraction.h>
+#import "ExtensionKitSPI.h"
+#endif
+
 @interface _WKPrintFormattingAttributes : NSObject
 @property (nonatomic, readonly) size_t pageCount;
 @property (nonatomic, readonly) WebCore::FrameIdentifier frameID;
@@ -165,6 +170,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     RetainPtr<WKInspectorHighlightView> _inspectorHighlightView;
 
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
+#if USE(EXTENSIONKIT)
+    RetainPtr<id<UIInteraction>> _visibilityPropagationInteractionForWebProcess;
+    RetainPtr<id<UIInteraction>> _visibilityPropagationInteractionForGPUProcess;
+    RetainPtr<UIView> _visibilityPropagationViewForWebProcess;
+    RetainPtr<UIView> _visibilityPropagationViewForGPUProcess;
+#else
 #if HAVE(NON_HOSTING_VISIBILITY_PROPAGATION_VIEW)
     RetainPtr<_UINonHostingVisibilityPropagationView> _visibilityPropagationViewForWebProcess;
 #else
@@ -173,6 +184,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #if ENABLE(GPU_PROCESS)
     RetainPtr<_UILayerHostView> _visibilityPropagationViewForGPUProcess;
 #endif // ENABLE(GPU_PROCESS)
+#endif // !USE(EXTENSIONKIT)
 #endif // HAVE(VISIBILITY_PROPAGATION_VIEW)
 
     WebCore::HistoricalVelocityData _historicalKinematicData;
@@ -203,6 +215,9 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
 
     _page = processPool.createWebPage(*_pageClient, WTFMove(configuration));
     _page->initializeWebPage();
+
+    [self _updateRuntimeProtocolConformanceIfNeeded];
+
     _page->setIntrinsicDeviceScaleFactor(WebCore::screenScaleFactor([UIScreen mainScreen]));
     _page->setUseFixedLayout(true);
     _page->setScreenIsBeingCaptured([[[self window] screen] isCaptured]);
@@ -261,6 +276,19 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
 - (void)_setupVisibilityPropagationViewForWebProcess
 {
+#if USE(EXTENSIONKIT)
+    if (!_visibilityPropagationInteractionForWebProcess && !_visibilityPropagationViewForWebProcess) {
+        SEL selector = NSSelectorFromString(@"createVisibilityPropagationInteraction");
+        if ([_page->process().extensionProcess().get() respondsToSelector:selector])
+            _visibilityPropagationInteractionForWebProcess = [_page->process().extensionProcess() performSelector:selector];
+        if (_visibilityPropagationInteractionForWebProcess) {
+            _visibilityPropagationViewForWebProcess = adoptNS([[UIView alloc] initWithFrame:CGRectZero]);
+            [_visibilityPropagationViewForWebProcess addInteraction:_visibilityPropagationInteractionForWebProcess.get()];
+            [self addSubview:_visibilityPropagationViewForWebProcess.get()];
+            return;
+        }
+    }
+#endif
     auto processID = _page->process().processID();
     auto contextID = _page->contextIDForVisibilityPropagationInWebProcess();
 #if HAVE(NON_HOSTING_VISIBILITY_PROPAGATION_VIEW)
@@ -288,6 +316,20 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
     auto* gpuProcess = _page->process().processPool().gpuProcess();
     if (!gpuProcess)
         return;
+#if USE(EXTENSIONKIT)
+    if (!_visibilityPropagationInteractionForGPUProcess && !_visibilityPropagationInteractionForGPUProcess) {
+        SEL selector = NSSelectorFromString(@"createVisibilityPropagationInteraction");
+        if ([_page->process().extensionProcess().get() respondsToSelector:selector])
+            _visibilityPropagationInteractionForGPUProcess = [_page->process().extensionProcess() performSelector:selector];
+        if (_visibilityPropagationInteractionForGPUProcess) {
+            _visibilityPropagationViewForGPUProcess = adoptNS([[UIView alloc] initWithFrame:CGRectZero]);
+            [_visibilityPropagationViewForGPUProcess addInteraction:_visibilityPropagationInteractionForGPUProcess.get()];
+            [self addSubview:_visibilityPropagationViewForGPUProcess.get()];
+            return;
+        }
+    }
+#endif
+
     auto processID = gpuProcess->processID();
     auto contextID = _page->contextIDForVisibilityPropagationInGPUProcess();
     if (!processID || !contextID)
@@ -305,6 +347,13 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
 
 - (void)_removeVisibilityPropagationViewForWebProcess
 {
+#if USE(EXTENSIONKIT)
+    if (_visibilityPropagationInteractionForWebProcess) {
+        [_visibilityPropagationViewForWebProcess removeInteraction:_visibilityPropagationInteractionForWebProcess.get()];
+        _visibilityPropagationInteractionForWebProcess = nullptr;
+    }
+#endif
+
     if (!_visibilityPropagationViewForWebProcess)
         return;
 
@@ -315,6 +364,13 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
 
 - (void)_removeVisibilityPropagationViewForGPUProcess
 {
+#if USE(EXTENSIONKIT)
+    if (_visibilityPropagationInteractionForGPUProcess) {
+        [_visibilityPropagationViewForGPUProcess removeInteraction:_visibilityPropagationInteractionForGPUProcess.get()];
+        _visibilityPropagationInteractionForGPUProcess = nullptr;
+    }
+#endif
+
     if (!_visibilityPropagationViewForGPUProcess)
         return;
 
@@ -419,6 +475,8 @@ static NSArray *keyCommandsPlaceholderHackForEvernote(id self, SEL _cmd)
 {
     [super didMoveToWindow];
 
+    _cachedHasCustomTintColor = std::nullopt;
+
     if (self.window)
         [self setUpInteraction];
     else
@@ -498,7 +556,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!_needsDeferredEndScrollingSelectionUpdate)
         return;
 
-    [_textInteractionAssistant deactivateSelection];
+    [_textInteractionWrapper deactivateSelection];
 }
 
 static WebCore::FloatBoxExtent floatBoxExtent(UIEdgeInsets insets)
@@ -555,9 +613,9 @@ static WebCore::FloatBoxExtent floatBoxExtent(UIEdgeInsets insets)
         floatBoxExtent(unobscuredSafeAreaInsets),
         zoomScale,
         viewStability,
-        _sizeChangedSinceLastVisibleContentRectUpdate,
-        self.webView._allowsViewportShrinkToFit,
-        enclosedInScrollableAncestorView,
+        !!_sizeChangedSinceLastVisibleContentRectUpdate,
+        !!self.webView._allowsViewportShrinkToFit,
+        !!enclosedInScrollableAncestorView,
         velocityData,
         downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*drawingArea).lastCommittedLayerTreeTransactionID());
 
@@ -573,7 +631,7 @@ static WebCore::FloatBoxExtent floatBoxExtent(UIEdgeInsets insets)
     _sizeChangedSinceLastVisibleContentRectUpdate = NO;
 
     drawingArea->updateDebugIndicator();
-    
+
     [self updateFixedClippingView:layoutViewport];
 
     if (wasStableState && !inStableState)
@@ -717,9 +775,9 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 
 #pragma mark PageClientImpl methods
 
-- (std::unique_ptr<WebKit::DrawingAreaProxy>)_createDrawingAreaProxy
+- (std::unique_ptr<WebKit::DrawingAreaProxy>)_createDrawingAreaProxy:(WebKit::WebProcessProxy&)webProcessProxy
 {
-    return makeUnique<WebKit::RemoteLayerTreeDrawingAreaProxyIOS>(*_page);
+    return makeUnique<WebKit::RemoteLayerTreeDrawingAreaProxyIOS>(*_page, webProcessProxy);
 }
 
 - (void)_processDidExit
@@ -1022,7 +1080,7 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
         RELEASE_LOG(Printing, "Beginning to generate print preview image. Page count = %zu", [formatterAttributes pageCount]);
 
         // Begin generating the image in expectation of a (eventual) request for the drawn data.
-        auto callbackID = retainedSelf->_page->drawToImage([formatterAttributes frameID], [formatterAttributes printInfo], [isPrintingOnBackgroundThread, printFormatter, retainedSelf](WebKit::ShareableBitmap::Handle&& imageHandle) mutable {
+        auto callbackID = retainedSelf->_page->drawToImage([formatterAttributes frameID], [formatterAttributes printInfo], [isPrintingOnBackgroundThread, printFormatter, retainedSelf](std::optional<WebKit::ShareableBitmap::Handle>&& imageHandle) mutable {
             if (!isPrintingOnBackgroundThread)
                 retainedSelf->_printRenderingCallbackID = { };
             else {
@@ -1030,12 +1088,12 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
                 [retainedSelf->_pendingBackgroundPrintFormatters removeObject:printFormatter.get()];
             }
 
-            if (imageHandle.isNull()) {
+            if (!imageHandle) {
                 [printFormatter _setPrintPreviewImage:nullptr];
                 return;
             }
 
-            auto bitmap = WebKit::ShareableBitmap::create(WTFMove(imageHandle), WebKit::SharedMemory::Protection::ReadOnly);
+            auto bitmap = WebKit::ShareableBitmap::create(WTFMove(*imageHandle), WebKit::SharedMemory::Protection::ReadOnly);
             if (!bitmap) {
                 [printFormatter _setPrintPreviewImage:nullptr];
                 return;

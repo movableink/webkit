@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebProcessCache.h"
 
+#include "APIPageConfiguration.h"
 #include "LegacyGlobalSettings.h"
 #include "Logging.h"
 #include "WebProcessPool.h"
@@ -121,10 +122,11 @@ bool WebProcessCache::addProcess(std::unique_ptr<CachedProcess>&& cachedProcess)
     ASSERT(!cachedProcess->process().suspendedPageCount());
     ASSERT(!cachedProcess->process().isRunningServiceWorkers());
 
-    if (!canCacheProcess(cachedProcess->process()))
+    Ref process = cachedProcess->process();
+    if (!canCacheProcess(process))
         return false;
 
-    auto registrableDomain = cachedProcess->process().registrableDomain();
+    auto registrableDomain = process->registrableDomain();
     RELEASE_ASSERT(!registrableDomain.isEmpty());
 
     if (auto previousProcess = m_processesPerRegistrableDomain.take(registrableDomain))
@@ -146,7 +148,7 @@ bool WebProcessCache::addProcess(std::unique_ptr<CachedProcess>&& cachedProcess)
     return true;
 }
 
-RefPtr<WebProcessProxy> WebProcessCache::takeProcess(const WebCore::RegistrableDomain& registrableDomain, WebsiteDataStore& dataStore, WebProcessProxy::LockdownMode lockdownMode)
+RefPtr<WebProcessProxy> WebProcessCache::takeProcess(const WebCore::RegistrableDomain& registrableDomain, WebsiteDataStore& dataStore, WebProcessProxy::LockdownMode lockdownMode, const API::PageConfiguration& pageConfiguration)
 {
     auto it = m_processesPerRegistrableDomain.find(registrableDomain);
     if (it == m_processesPerRegistrableDomain.end())
@@ -156,6 +158,9 @@ RefPtr<WebProcessProxy> WebProcessCache::takeProcess(const WebCore::RegistrableD
         return nullptr;
 
     if (it->value->process().lockdownMode() != lockdownMode)
+        return nullptr;
+
+    if (!it->value->process().hasSameGPUProcessPreferencesAs(pageConfiguration))
         return nullptr;
 
     auto process = it->value->takeProcess();
@@ -174,6 +179,7 @@ RefPtr<WebProcessProxy> WebProcessCache::takeProcess(const WebCore::RegistrableD
 
 void WebProcessCache::updateCapacity(WebProcessPool& processPool)
 {
+#if ENABLE(WEBPROCESS_CACHE)
     if (!processPool.configuration().processSwapsOnNavigation() || !processPool.configuration().usesWebProcessCache() || LegacyGlobalSettings::singleton().cacheModel() != CacheModel::PrimaryWebBrowser || processPool.configuration().usesSingleWebProcess()) {
         if (!processPool.configuration().processSwapsOnNavigation())
             WEBPROCESSCACHE_RELEASE_LOG("updateCapacity: Cache is disabled because process swap on navigation is disabled", 0);
@@ -185,19 +191,27 @@ void WebProcessCache::updateCapacity(WebProcessPool& processPool)
             WEBPROCESSCACHE_RELEASE_LOG("updateCapacity: Cache is disabled because cache model is not PrimaryWebBrowser", 0);
         m_capacity = 0;
     } else {
-        size_t memorySize = ramSize() / GB;
+#if PLATFORM(IOS_FAMILY)
+        constexpr unsigned maxProcesses = 10;
+        size_t memorySize = WTF::ramSizeDisregardingJetsamLimit() / GB;
+#else
+        constexpr unsigned maxProcesses = 30;
+        size_t memorySize = WTF::ramSize() / GB;
+#endif
+        WEBPROCESSCACHE_RELEASE_LOG("memory size %zu GB", 0, memorySize);
         if (memorySize < 3) {
             m_capacity = 0;
             WEBPROCESSCACHE_RELEASE_LOG("updateCapacity: Cache is disabled because device does not have enough RAM", 0);
         } else {
-            // Allow 4 processes in the cache per GB of RAM, up to 30 processes.
-            m_capacity = std::min<unsigned>(memorySize * 4, 30);
+            // Allow 4 processes in the cache per GB of RAM, up to maxProcesses.
+            m_capacity = std::min<unsigned>(memorySize * 4, maxProcesses);
             WEBPROCESSCACHE_RELEASE_LOG("updateCapacity: Cache has a capacity of %u processes", 0, capacity());
         }
     }
 
     if (!m_capacity)
         clear();
+#endif
 }
 
 void WebProcessCache::clear()
@@ -320,7 +334,8 @@ Ref<WebProcessProxy> WebProcessCache::CachedProcess::takeProcess()
 void WebProcessCache::CachedProcess::evictionTimerFired()
 {
     ASSERT(m_process);
-    m_process->processPool().webProcessCache().removeProcess(*m_process, ShouldShutDownProcess::Yes);
+    auto process = m_process.copyRef();
+    process->processPool().checkedWebProcessCache()->removeProcess(*process, ShouldShutDownProcess::Yes);
 }
 
 #if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(WPE)

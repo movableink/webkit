@@ -26,11 +26,9 @@ constexpr char kPayloadNameAv1[] = "AV1";
 // needed.
 constexpr char kPayloadNameAv1x[] = "AV1X";
 constexpr char kPayloadNameH264[] = "H264";
-#ifndef DISABLE_H265
-constexpr char kPayloadNameH265[] = "H265";
-#endif
 constexpr char kPayloadNameGeneric[] = "Generic";
 constexpr char kPayloadNameMultiplex[] = "Multiplex";
+constexpr char kPayloadNameH265[] = "H265";
 }  // namespace
 
 bool VideoCodecVP8::operator==(const VideoCodecVP8& other) const {
@@ -105,6 +103,23 @@ const VideoCodecH264& VideoCodec::H264() const {
   return codec_specific_.H264;
 }
 
+#ifdef WEBRTC_USE_H265
+VideoCodecH265* VideoCodec::H265() {
+  RTC_DCHECK_EQ(codecType, kVideoCodecH265);
+  return &codec_specific_.H265;
+}
+#endif
+
+VideoCodecAV1* VideoCodec::AV1() {
+  RTC_DCHECK_EQ(codecType, kVideoCodecAV1);
+  return &codec_specific_.AV1;
+}
+
+const VideoCodecAV1& VideoCodec::AV1() const {
+  RTC_DCHECK_EQ(codecType, kVideoCodecAV1);
+  return codec_specific_.AV1;
+}
+
 const char* CodecTypeToPayloadString(VideoCodecType type) {
   switch (type) {
     case kVideoCodecVP8:
@@ -115,14 +130,12 @@ const char* CodecTypeToPayloadString(VideoCodecType type) {
       return kPayloadNameAv1;
     case kVideoCodecH264:
       return kPayloadNameH264;
-#ifndef DISABLE_H265
-    case kVideoCodecH265:
-      return kPayloadNameH265;
-#endif
     case kVideoCodecMultiplex:
       return kPayloadNameMultiplex;
     case kVideoCodecGeneric:
       return kPayloadNameGeneric;
+    case kVideoCodecH265:
+      return kPayloadNameH265;
   }
   RTC_CHECK_NOTREACHED();
 }
@@ -137,12 +150,10 @@ VideoCodecType PayloadStringToCodecType(const std::string& name) {
     return kVideoCodecAV1;
   if (absl::EqualsIgnoreCase(name, kPayloadNameH264))
     return kVideoCodecH264;
-#ifndef DISABLE_H265
-  if (absl::EqualsIgnoreCase(name, kPayloadNameH265))
-    return kVideoCodecH265;
-#endif
   if (absl::EqualsIgnoreCase(name, kPayloadNameMultiplex))
     return kVideoCodecMultiplex;
+  if (absl::EqualsIgnoreCase(name, kPayloadNameH265))
+    return kVideoCodecH265;
   return kVideoCodecGeneric;
 }
 

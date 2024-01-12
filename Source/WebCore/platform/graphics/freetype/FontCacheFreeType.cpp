@@ -35,7 +35,6 @@
 #include "RefPtrCairo.h"
 #include "RefPtrFontconfig.h"
 #include "StyleFontSizeFunctions.h"
-#include "UTF16UChar32Iterator.h"
 #include <cairo-ft.h>
 #include <cairo.h>
 #include <fontconfig/fcfreetype.h>
@@ -124,9 +123,9 @@ static void getFontPropertiesFromPattern(FcPattern* pattern, const FontDescripti
     }
 }
 
-RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& description, const Font&, IsForPlatformFont, PreferColoredFont preferColoredFont, const UChar* characters, unsigned length)
+RefPtr<Font> FontCache::systemFallbackForCharacterCluster(const FontDescription& description, const Font&, IsForPlatformFont, PreferColoredFont preferColoredFont, StringView stringView)
 {
-    RefPtr<FcPattern> resultPattern = m_fontSetCache.bestForCharacters(description, preferColoredFont == PreferColoredFont::Yes, characters, length);
+    RefPtr<FcPattern> resultPattern = m_fontSetCache.bestForCharacters(description, preferColoredFont == PreferColoredFont::Yes, stringView);
     if (!resultPattern)
         return nullptr;
 
@@ -350,8 +349,7 @@ static bool areStronglyAliased(const String& familyA, const String& familyB)
 
 static inline bool isCommonlyUsedGenericFamily(const String& familyNameString)
 {
-    return equalLettersIgnoringASCIICase(familyNameString, "sans"_s)
-        || equalLettersIgnoringASCIICase(familyNameString, "sans-serif"_s)
+    return equalLettersIgnoringASCIICase(familyNameString, "sans-serif"_s)
         || equalLettersIgnoringASCIICase(familyNameString, "serif"_s)
         || equalLettersIgnoringASCIICase(familyNameString, "monospace"_s)
         || equalLettersIgnoringASCIICase(familyNameString, "fantasy"_s)

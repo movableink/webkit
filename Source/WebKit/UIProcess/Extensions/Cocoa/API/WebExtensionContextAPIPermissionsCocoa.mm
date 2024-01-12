@@ -40,14 +40,14 @@
 #import "WebExtensionMatchPattern.h"
 #import "_WKWebExtensionControllerInternal.h"
 #import <WebKit/_WKWebExtensionContext.h>
-#import <WebKit/_WKWebExtensionControllerDelegate.h>
+#import <WebKit/_WKWebExtensionControllerDelegatePrivate.h>
 #import <WebKit/_WKWebExtensionMatchPattern.h>
 #import <WebKit/_WKWebExtensionPermission.h>
 
 namespace WebKit {
 
-static NSString *permissionsKey = @"permissions";
-static NSString *originsKey = @"origins";
+static NSString * const permissionsKey = @"permissions";
+static NSString * const originsKey = @"origins";
 
 void WebExtensionContext::permissionsGetAll(CompletionHandler<void(Vector<String>, Vector<String>)>&& completionHandler)
 {
@@ -93,7 +93,7 @@ void WebExtensionContext::permissionsRequest(HashSet<String> permissions, HashSe
 
     __block MatchPatternSet grantedPatterns;
     __block PermissionsSet grantedPermissions = permissions;
-    auto delegate = extensionController()->wrapper().delegate;
+    auto delegate = extensionController()->delegate();
 
     auto originsCompletionHandler = ^(NSSet<_WKWebExtensionMatchPattern *> *allowedOrigins) {
         // No granted origins were sent back, but origins were requested.
@@ -163,8 +163,8 @@ void WebExtensionContext::firePermissionsEventListenerIfNecessary(WebExtensionEv
     ASSERT(type == WebExtensionEventListenerType::PermissionsOnAdded || type == WebExtensionEventListenerType::PermissionsOnRemoved);
 
     HashSet<String> origins = toStrings(matchPatterns);
-    auto listenerTypes = WebExtensionContext::EventListenerTypeSet { type };
-    wakeUpBackgroundContentIfNecessaryToFireEvents(listenerTypes, [&] {
+
+    wakeUpBackgroundContentIfNecessaryToFireEvents({ type }, [&] {
         sendToProcessesForEvent(type, Messages::WebExtensionContextProxy::DispatchPermissionsEvent(type, permissions, origins));
     });
 }

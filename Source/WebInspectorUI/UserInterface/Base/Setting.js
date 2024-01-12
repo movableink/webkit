@@ -198,6 +198,7 @@ WI.settings = {
     enableControlFlowProfiler: new WI.Setting("enable-control-flow-profiler", false),
     enableElementsTabIndependentStylesDetailsSidebarPanel: new WI.Setting("elements-tab-independent-styles-details-panel", true),
     enableLineWrapping: new WI.Setting("enable-line-wrapping", true),
+    enableNarrowLayoutMode: new WI.Setting("enable-narrow-layout-mode", true),
     flexOverlayShowOrderNumbers: new WI.Setting("flex-overlay-show-order-numbers", false),
     frontendAppearance: new WI.Setting("frontend-appearance", "system"),
     gridOverlayShowAreaNames: new WI.Setting("grid-overlay-show-area-names", false),
@@ -237,6 +238,7 @@ WI.settings = {
     experimentalAllowInspectingInspector: new WI.Setting("experimental-allow-inspecting-inspector", false),
     experimentalCSSSortPropertyNameAutocompletionByUsage: new WI.Setting("experimental-css-sort-property-name-autocompletion-by-usage", true),
     experimentalEnableNetworkEmulatedCondition: new WI.Setting("experimental-enable-network-emulated-condition", false),
+    experimentalGroupSourceMapErrors: new WI.Setting("experimental-group-source-map-errors", true),
     experimentalLimitSourceCodeHighlighting: new WI.Setting("engineering-limit-source-code-highlighting", false),
 
     // Protocol

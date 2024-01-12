@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,13 +30,22 @@
 #include "StreamConnectionWorkQueue.h"
 #include <mutex>
 #include <wtf/NeverDestroyed.h>
+
 namespace IPC {
 
-Ref<StreamServerConnection> StreamServerConnection::create(Handle&& handle)
+RefPtr<StreamServerConnection> StreamServerConnection::tryCreate(Handle&& handle, const StreamServerConnectionParameters& params)
 {
-    auto connection = IPC::Connection::createClientConnection(IPC::Connection::Identifier { WTFMove(handle.outOfStreamConnection) });
     auto buffer = StreamServerConnectionBuffer::map(WTFMove(handle.buffer));
-    RELEASE_ASSERT(buffer); // FIXME: make callers call this outside constructor.
+    if (!buffer)
+        return { };
+
+    auto connection = IPC::Connection::createClientConnection(IPC::Connection::Identifier { WTFMove(handle.outOfStreamConnection) });
+
+#if ENABLE(IPC_TESTING_API)
+    if (params.ignoreInvalidMessageForTesting)
+        connection->setIgnoreInvalidMessageForTesting();
+#endif
+
     return adoptRef(*new StreamServerConnection(WTFMove(connection), WTFMove(*buffer)));
 }
 
@@ -133,7 +142,7 @@ StreamServerConnection::DispatchResult StreamServerConnection::dispatchStreamMes
         auto span = m_buffer.tryAcquire();
         if (!span)
             return DispatchResult::HasNoMessages;
-        IPC::Decoder decoder { span->data(), span->size(), m_currentDestinationID };
+        IPC::Decoder decoder { *span, m_currentDestinationID };
         if (!decoder.isValid()) {
             m_connection->dispatchDidReceiveInvalidMessage(decoder.messageName());
             return DispatchResult::HasNoMessages;
@@ -188,7 +197,7 @@ bool StreamServerConnection::processSetStreamDestinationID(Decoder&& decoder, Re
         m_currentDestinationID = destinationID;
         currentReceiver = nullptr;
     }
-    auto result = m_buffer.release(decoder.currentBufferPosition());
+    auto result = m_buffer.release(decoder.currentBufferOffset());
     if (result == WakeUpClient::Yes)
         m_clientWaitSemaphore.signal();
     return true;
@@ -201,6 +210,10 @@ bool StreamServerConnection::dispatchStreamMessage(Decoder&& decoder, StreamMess
     receiver.didReceiveStreamMessage(*this, decoder);
     m_isDispatchingStreamMessage = false;
     if (!decoder.isValid()) {
+#if ENABLE(IPC_TESTING_API)
+        if (m_connection->ignoreInvalidMessageForTesting())
+            return false;
+#endif // ENABLE(IPC_TESTING_API)
         m_connection->dispatchDidReceiveInvalidMessage(decoder.messageName());
         return false;
     }
@@ -208,7 +221,7 @@ bool StreamServerConnection::dispatchStreamMessage(Decoder&& decoder, StreamMess
     if (decoder.isSyncMessage())
         result = m_buffer.releaseAll();
     else
-        result = m_buffer.release(decoder.currentBufferPosition());
+        result = m_buffer.release(decoder.currentBufferOffset());
     if (result == WakeUpClient::Yes)
         m_clientWaitSemaphore.signal();
     return true;
@@ -235,6 +248,10 @@ bool StreamServerConnection::dispatchOutOfStreamMessage(Decoder&& decoder)
     if (receiver) {
         receiver->didReceiveStreamMessage(*this, *message);
         if (!message->isValid()) {
+#if ENABLE(IPC_TESTING_API)
+            if (m_connection->ignoreInvalidMessageForTesting())
+                return false;
+#endif // ENABLE(IPC_TESTING_API)
             m_connection->dispatchDidReceiveInvalidMessage(message->messageName());
             return false;
         }
@@ -242,10 +259,20 @@ bool StreamServerConnection::dispatchOutOfStreamMessage(Decoder&& decoder)
     // If receiver does not exist if it has been removed but messages are still pending to be
     // processed. It's ok to skip such messages.
     // FIXME: Note, corresponding skip is not possible at the moment for stream messages.
-    auto result = m_buffer.release(decoder.currentBufferPosition());
+    auto result = m_buffer.release(decoder.currentBufferOffset());
     if (result == WakeUpClient::Yes)
         m_clientWaitSemaphore.signal();
     return true;
 }
+
+#if ENABLE(IPC_TESTING_API)
+void StreamServerConnection::sendDeserializationErrorSyncReply(Connection::SyncRequestID syncRequestID)
+{
+    auto encoder = makeUniqueRef<Encoder>(MessageName::SyncMessageReply, syncRequestID.toUInt64());
+    encoder->setSyncMessageDeserializationFailure();
+    m_connection->sendSyncReply(WTFMove(encoder));
+}
+#endif
+
 
 }

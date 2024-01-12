@@ -28,7 +28,6 @@
 
 #if PLATFORM(IOS_FAMILY)
 
-#import "UserInterfaceIdiom.h"
 #import "WKContentView.h"
 #import "WKContentViewInteraction.h"
 #import "WKFormPopover.h"
@@ -36,6 +35,7 @@
 #import "WKFormSelectPopover.h"
 #import "WebPageProxy.h"
 #import <UIKit/UIPickerView.h>
+#import <pal/system/ios/UserInterfaceIdiom.h>
 #import <wtf/RetainPtr.h>
 
 using namespace WebKit;
@@ -75,7 +75,6 @@ CGFloat adjustedFontSize(CGFloat textWidth, UIFont *font, CGFloat initialFontSiz
 
     RetainPtr<NSObject <WKFormControl>> control;
 
-#if ENABLE(IOS_FORM_CONTROL_REFRESH)
     if (view._shouldUseContextMenusForFormControls) {
         if (view.focusedElementInformation.isMultiSelect)
             control = adoptNS([[WKSelectMultiplePicker alloc] initWithView:view]);
@@ -85,9 +84,8 @@ CGFloat adjustedFontSize(CGFloat textWidth, UIFont *font, CGFloat initialFontSiz
         self = [super initWithView:view control:WTFMove(control)];
         return self;
     }
-#endif
 
-    if (!currentUserInterfaceIdiomIsSmallScreen())
+    if (!PAL::currentUserInterfaceIdiomIsSmallScreen())
         control = adoptNS([[WKSelectPopover alloc] initWithView:view hasGroups:hasGroups]);
     else if (view.focusedElementInformation.isMultiSelect || hasGroups)
         control = adoptNS([[WKMultipleSelectPicker alloc] initWithView:view]);

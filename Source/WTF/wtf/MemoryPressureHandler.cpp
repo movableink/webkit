@@ -172,6 +172,10 @@ MemoryUsagePolicy MemoryPressureHandler::policyForFootprint(size_t footprint)
 
 MemoryUsagePolicy MemoryPressureHandler::currentMemoryUsagePolicy()
 {
+    if (m_isSimulatingMemoryWarning)
+        return MemoryUsagePolicy::Conservative;
+    if (m_isSimulatingMemoryPressure)
+        return MemoryUsagePolicy::Strict;
     return policyForFootprint(memoryFootprint());
 }
 
@@ -251,6 +255,23 @@ ASCIILiteral MemoryPressureHandler::processStateDescription()
     return "unknown"_s;
 }
 
+void MemoryPressureHandler::beginSimulatedMemoryWarning()
+{
+    if (m_isSimulatingMemoryWarning)
+        return;
+    m_isSimulatingMemoryWarning = true;
+    memoryPressureStatusChanged();
+    respondToMemoryPressure(Critical::No, Synchronous::Yes);
+}
+
+void MemoryPressureHandler::endSimulatedMemoryWarning()
+{
+    if (!m_isSimulatingMemoryWarning)
+        return;
+    m_isSimulatingMemoryWarning = false;
+    memoryPressureStatusChanged();
+}
+
 void MemoryPressureHandler::beginSimulatedMemoryPressure()
 {
     if (m_isSimulatingMemoryPressure)
@@ -320,7 +341,7 @@ void MemoryPressureHandler::ReliefLogger::logMemoryUsageChange()
 void MemoryPressureHandler::platformInitialize() { }
 #endif
 
-MemoryPressureHandler::Configuration::Configuration()
+MemoryPressureHandlerConfiguration::MemoryPressureHandlerConfiguration()
     : baseThreshold(std::min(3 * GB, ramSize()))
     , conservativeThresholdFraction(s_conservativeThresholdFraction)
     , strictThresholdFraction(s_strictThresholdFraction)
@@ -329,7 +350,7 @@ MemoryPressureHandler::Configuration::Configuration()
 {
 }
 
-MemoryPressureHandler::Configuration::Configuration(size_t base, double conservative, double strict, std::optional<double> kill, Seconds interval)
+MemoryPressureHandlerConfiguration::MemoryPressureHandlerConfiguration(size_t base, double conservative, double strict, std::optional<double> kill, Seconds interval)
     : baseThreshold(base)
     , conservativeThresholdFraction(conservative)
     , strictThresholdFraction(strict)

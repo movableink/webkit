@@ -2,13 +2,12 @@
     Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
                   2004, 2005, 2010 Rob Buis <buis@kde.org>
     Copyright (C) Research In Motion Limited 2010. All rights reserved.
-    Copyright (C) 2015 Google Inc. All rights reserved.
 
     Based on khtml code by:
     Copyright (C) 1999 Antti Koivisto (koivisto@kde.org)
     Copyright (C) 1999-2003 Lars Knoll (knoll@kde.org)
     Copyright (C) 2002-2003 Dirk Mueller (mueller@kde.org)
-    Copyright (C) 2002-2023 Apple Inc. All rights reserved.
+    Copyright (C) 2002 Apple Inc.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -163,8 +162,8 @@ bool SVGRenderStyle::changeRequiresLayout(const SVGRenderStyle& other) const
     if (m_inheritedFlags.textAnchor != other.m_inheritedFlags.textAnchor
         || m_inheritedFlags.glyphOrientationHorizontal != other.m_inheritedFlags.glyphOrientationHorizontal
         || m_inheritedFlags.glyphOrientationVertical != other.m_inheritedFlags.glyphOrientationVertical
-        || m_inheritedFlags.dominantBaseline != other.m_inheritedFlags.dominantBaseline
         || m_nonInheritedFlags.flagBits.alignmentBaseline != other.m_nonInheritedFlags.flagBits.alignmentBaseline
+        || m_nonInheritedFlags.flagBits.dominantBaseline != other.m_nonInheritedFlags.flagBits.dominantBaseline
         || m_nonInheritedFlags.flagBits.baselineShift != other.m_nonInheritedFlags.flagBits.baselineShift)
         return true;
 
@@ -231,6 +230,141 @@ bool SVGRenderStyle::changeRequiresRepaint(const SVGRenderStyle& other, bool cur
         return true;
 
     return false;
+}
+
+void SVGRenderStyle::conservativelyCollectChangedAnimatableProperties(const SVGRenderStyle& other, CSSPropertiesBitSet& changingProperties) const
+{
+    // FIXME: Consider auto-generating this function from CSSProperties.json.
+
+    auto conservativelyCollectChangedAnimatablePropertiesViaFillData = [&](auto& first, auto& second) {
+        if (first.opacity != second.opacity)
+            changingProperties.m_properties.set(CSSPropertyFillOpacity);
+        if (first.paintColor != second.paintColor
+            || first.visitedLinkPaintColor != second.visitedLinkPaintColor
+            || first.paintUri != second.paintUri
+            || first.visitedLinkPaintUri != second.visitedLinkPaintUri
+            || first.paintType != second.paintType
+            || first.visitedLinkPaintType != second.visitedLinkPaintType)
+            changingProperties.m_properties.set(CSSPropertyFill);
+    };
+
+    auto conservativelyCollectChangedAnimatablePropertiesViaStrokeData = [&](auto& first, auto& second) {
+        if (first.opacity != second.opacity)
+            changingProperties.m_properties.set(CSSPropertyStrokeOpacity);
+        if (first.dashOffset != second.dashOffset)
+            changingProperties.m_properties.set(CSSPropertyStrokeDashoffset);
+        if (first.dashArray != second.dashArray)
+            changingProperties.m_properties.set(CSSPropertyStrokeDasharray);
+        if (first.paintColor != second.paintColor
+            || first.visitedLinkPaintColor != second.visitedLinkPaintColor
+            || first.paintUri != second.paintUri
+            || first.visitedLinkPaintUri != second.visitedLinkPaintUri
+            || first.paintType != second.paintType
+            || first.visitedLinkPaintType != second.visitedLinkPaintType)
+            changingProperties.m_properties.set(CSSPropertyStroke);
+    };
+
+    auto conservativelyCollectChangedAnimatablePropertiesViaTextData = [&](auto& first, auto& second) {
+        if (first.kerning != second.kerning)
+            changingProperties.m_properties.set(CSSPropertyKerning);
+    };
+
+    auto conservativelyCollectChangedAnimatablePropertiesViaStopData = [&](auto& first, auto& second) {
+        if (first.opacity != second.opacity)
+            changingProperties.m_properties.set(CSSPropertyStopOpacity);
+        if (first.color != second.color)
+            changingProperties.m_properties.set(CSSPropertyStopColor);
+    };
+
+    auto conservativelyCollectChangedAnimatablePropertiesViaMiscData = [&](auto& first, auto& second) {
+        if (first.floodOpacity != second.floodOpacity)
+            changingProperties.m_properties.set(CSSPropertyFloodOpacity);
+        if (first.floodColor != second.floodColor)
+            changingProperties.m_properties.set(CSSPropertyFloodColor);
+        if (first.lightingColor != second.lightingColor)
+            changingProperties.m_properties.set(CSSPropertyLightingColor);
+        if (first.baselineShiftValue != second.baselineShiftValue)
+            changingProperties.m_properties.set(CSSPropertyBaselineShift);
+    };
+
+    auto conservativelyCollectChangedAnimatablePropertiesViaLayoutData = [&](auto& first, auto& second) {
+        if (first.cx != second.cx)
+            changingProperties.m_properties.set(CSSPropertyCx);
+        if (first.cy != second.cy)
+            changingProperties.m_properties.set(CSSPropertyCy);
+        if (first.r != second.r)
+            changingProperties.m_properties.set(CSSPropertyR);
+        if (first.rx != second.rx)
+            changingProperties.m_properties.set(CSSPropertyRx);
+        if (first.ry != second.ry)
+            changingProperties.m_properties.set(CSSPropertyRy);
+        if (first.x != second.x)
+            changingProperties.m_properties.set(CSSPropertyX);
+        if (first.y != second.y)
+            changingProperties.m_properties.set(CSSPropertyY);
+    };
+
+    auto conservativelyCollectChangedAnimatablePropertiesViaInheritedResourceData = [&](auto& first, auto& second) {
+        if (first.markerStart != second.markerStart)
+            changingProperties.m_properties.set(CSSPropertyMarkerStart);
+        if (first.markerMid != second.markerMid)
+            changingProperties.m_properties.set(CSSPropertyMarkerMid);
+        if (first.markerEnd != second.markerEnd)
+            changingProperties.m_properties.set(CSSPropertyMarkerEnd);
+    };
+
+    auto conservativelyCollectChangedAnimatablePropertiesViaInheritedFlags = [&](auto& first, auto& second) {
+        if (first.shapeRendering != second.shapeRendering)
+            changingProperties.m_properties.set(CSSPropertyShapeRendering);
+        if (first.clipRule != second.clipRule)
+            changingProperties.m_properties.set(CSSPropertyClipRule);
+        if (first.fillRule != second.fillRule)
+            changingProperties.m_properties.set(CSSPropertyFillRule);
+        if (first.textAnchor != second.textAnchor)
+            changingProperties.m_properties.set(CSSPropertyTextAnchor);
+        if (first.colorInterpolation != second.colorInterpolation)
+            changingProperties.m_properties.set(CSSPropertyColorInterpolation);
+        if (first.colorInterpolationFilters != second.colorInterpolationFilters)
+            changingProperties.m_properties.set(CSSPropertyColorInterpolationFilters);
+
+        // Non animated styles are followings.
+        // glyphOrientationHorizontal
+        // glyphOrientationVertical
+    };
+
+    auto conservativelyCollectChangedAnimatablePropertiesViaNonInheritedFlags = [&](auto& first, auto& second) {
+        if (first.flagBits.dominantBaseline != second.flagBits.dominantBaseline)
+            changingProperties.m_properties.set(CSSPropertyDominantBaseline);
+        if (first.flagBits.baselineShift != second.flagBits.baselineShift)
+            changingProperties.m_properties.set(CSSPropertyBaselineShift);
+        if (first.flagBits.vectorEffect != second.flagBits.vectorEffect)
+            changingProperties.m_properties.set(CSSPropertyVectorEffect);
+        if (first.flagBits.maskType != second.flagBits.maskType)
+            changingProperties.m_properties.set(CSSPropertyMaskType);
+
+        // Non animated styles are followings.
+        // alignmentBaseline
+        // bufferedRendering
+    };
+
+    if (m_fillData.ptr() != other.m_fillData.ptr())
+        conservativelyCollectChangedAnimatablePropertiesViaFillData(*m_fillData, *other.m_fillData);
+    if (m_strokeData != other.m_strokeData)
+        conservativelyCollectChangedAnimatablePropertiesViaStrokeData(*m_strokeData, *other.m_strokeData);
+    if (m_textData != other.m_textData)
+        conservativelyCollectChangedAnimatablePropertiesViaTextData(*m_textData, *other.m_textData);
+    if (m_stopData != other.m_stopData)
+        conservativelyCollectChangedAnimatablePropertiesViaStopData(*m_stopData, *other.m_stopData);
+    if (m_miscData != other.m_miscData)
+        conservativelyCollectChangedAnimatablePropertiesViaMiscData(*m_miscData, *other.m_miscData);
+    if (m_layoutData != other.m_layoutData)
+        conservativelyCollectChangedAnimatablePropertiesViaLayoutData(*m_layoutData, *other.m_layoutData);
+    if (m_inheritedResourceData != other.m_inheritedResourceData)
+        conservativelyCollectChangedAnimatablePropertiesViaInheritedResourceData(*m_inheritedResourceData, *other.m_inheritedResourceData);
+    if (m_inheritedFlags != other.m_inheritedFlags)
+        conservativelyCollectChangedAnimatablePropertiesViaInheritedFlags(m_inheritedFlags, other.m_inheritedFlags);
+    if (m_nonInheritedFlags != other.m_nonInheritedFlags)
+        conservativelyCollectChangedAnimatablePropertiesViaNonInheritedFlags(m_nonInheritedFlags, other.m_nonInheritedFlags);
 }
 
 }

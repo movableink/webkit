@@ -51,6 +51,7 @@ public:
         Cancelled = 302,
         FileDoesNotExist = 303,
         HTTPSUpgradeRedirectLoop = 304,
+        HTTPNavigationWithHTTPSOnlyError = 305,
     };
     static const WTF::String& webKitNetworkErrorDomain();
 
@@ -114,3 +115,5 @@ private:
 };
 
 } // namespace API
+
+SPECIALIZE_TYPE_TRAITS_API_OBJECT(Error);

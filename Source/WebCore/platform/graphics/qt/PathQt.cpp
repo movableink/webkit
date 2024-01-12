@@ -45,25 +45,33 @@
 
 namespace WebCore {
 
-UniqueRef<PathQt> PathQt::create()
+Ref<PathQt> PathQt::create()
 {
-    return makeUniqueRef<PathQt>();
+    return adoptRef(*new PathQt);
 }
 
-UniqueRef<PathQt> PathQt::create(const PathStream& stream)
+Ref<PathQt> PathQt::create(const PathStream& stream)
 {
     auto pathQt = PathQt::create();
 
     stream.applySegments([&](const PathSegment& segment) {
-        pathQt->appendSegment(segment);
+        pathQt->addSegment(segment);
     });
 
     return pathQt;
 }
 
-UniqueRef<PathQt> PathQt::create(QPainterPath platformPath)
+Ref<PathQt> PathQt::create(const PathSegment& segment)
 {
-    return makeUniqueRef<PathQt>(WTFMove(platformPath));
+    auto pathQt = PathQt::create();
+    pathQt->addSegment(segment);
+
+    return pathQt;
+}
+
+Ref<PathQt> PathQt::create(QPainterPath platformPath)
+{
+    return adoptRef(*new PathQt(WTFMove(platformPath)));
 }
 
 PathQt::PathQt()
@@ -97,7 +105,7 @@ PathQt& PathQt::operator=(PathQt&& other)
     return *this;
 }
 
-UniqueRef<PathImpl> PathQt::clone() const
+Ref<PathImpl> PathQt::copy() const
 {
     return create(m_path);
 }
@@ -105,13 +113,6 @@ UniqueRef<PathImpl> PathQt::clone() const
 QPainterPath PathQt::platformPath() const
 {
     return m_path;
-}
-
-bool PathQt::operator==(const PathImpl& other) const
-{
-    if (!is<PathQt>(other))
-        return false;
-    return m_path == downcast<PathQt>(other).m_path;
 }
 
 static inline bool areCollinear(const QPointF& a, const QPointF& b, const QPointF& c)
@@ -220,29 +221,32 @@ FloatRect PathQt::strokeBoundingRect(const Function<void(GraphicsContext&)>& str
     return stroke.createStroke(m_path).boundingRect();
 }
 
-void PathQt::moveTo(const FloatPoint& point)
+void PathQt::add(PathMoveTo moveTo)
 {
-    m_path.moveTo(point);
+    m_path.moveTo(moveTo.point);
 }
 
-void PathQt::addLineTo(const FloatPoint& p)
+void PathQt::add(PathLineTo lineTo)
 {
-    m_path.lineTo(p);
+    m_path.lineTo(lineTo.point);
 }
 
-void PathQt::addQuadCurveTo(const FloatPoint& cp, const FloatPoint& p)
+void PathQt::add(PathQuadCurveTo quadCurveTo)
 {
-    m_path.quadTo(cp, p);
+    m_path.quadTo(quadCurveTo.controlPoint, quadCurveTo.endPoint);
 }
 
-void PathQt::addBezierCurveTo(const FloatPoint& cp1, const FloatPoint& cp2, const FloatPoint& p)
+void PathQt::add(PathBezierCurveTo bezierCurveTo)
 {
-    m_path.cubicTo(cp1, cp2, p);
+    m_path.cubicTo(bezierCurveTo.controlPoint1, bezierCurveTo.controlPoint2, bezierCurveTo.endPoint);
 }
 
-void PathQt::addArcTo(const FloatPoint& p1, const FloatPoint& p2, float radius)
+void PathQt::add(PathArcTo arcTo)
 {
     FloatPoint p0(m_path.currentPosition());
+    FloatPoint p1 = arcTo.controlPoint1;
+    FloatPoint p2 = arcTo.controlPoint2;
+    float radius = arcTo.radius;
 
     FloatPoint p1p0((p0.x() - p1.x()), (p0.y() - p1.y()));
     FloatPoint p1p2((p2.x() - p1.x()), (p2.y() - p1.y()));
@@ -297,10 +301,10 @@ void PathQt::addArcTo(const FloatPoint& p1, const FloatPoint& p2, float radius)
 
     m_path.lineTo(t_p1p0);
 
-    addArc(p, radius, sa, ea, rotationDirection);
+    add(PathArc { p, radius, sa, ea, rotationDirection });
 }
 
-void PathQt::closeSubpath()
+void PathQt::add(PathCloseSubpath)
 {
     m_path.closeSubpath();
 }
@@ -361,28 +365,28 @@ static void addEllipticArc(QPainterPath &path, qreal xc, qreal yc, qreal radiusX
     path.arcTo(xs, ys, width, height, sa, span);
 }
 
-void PathQt::addArc(const FloatPoint& p, float r, float sar, float ear, RotationDirection rotationDirection)
+void PathQt::add(PathArc arc)
 {
-    addEllipticArc(m_path, p.x(), p.y(), r, r, sar, ear, rotationDirection);
+    addEllipticArc(m_path, arc.center.x(), arc.center.y(), arc.radius, arc.radius, arc.startAngle, arc.endAngle, arc.direction);
 }
 
-void PathQt::addRect(const FloatRect& r)
+void PathQt::add(PathRect r)
 {
-    m_path.addRect(r.x(), r.y(), r.width(), r.height());
+    m_path.addRect(r.rect.x(), r.rect.y(), r.rect.width(), r.rect.height());
 }
 
-void PathQt::addRoundedRect(const FloatRoundedRect& roundedRect, PathRoundedRect::Strategy)
+void PathQt::add(PathRoundedRect rect)
 {
-    addBeziersForRoundedRect(roundedRect);
+    addBeziersForRoundedRect(rect.roundedRect);
 }
 
-void PathQt::addEllipse(const FloatPoint& center, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, RotationDirection rotationDirection)
+void PathQt::add(PathEllipse ellipse)
 {
-    if (!qFuzzyIsNull(rotation)) {
+    if (!qFuzzyIsNull(ellipse.rotation)) {
         QPainterPath subPath;
         QTransform t;
-        t.translate(center.x(), center.y());
-        t.rotateRadians(rotation);
+        t.translate(ellipse.center.x(), ellipse.center.y());
+        t.rotateRadians(ellipse.rotation);
 
         bool isEmpty = m_path.elementCount() == 0;
         if (!isEmpty) {
@@ -390,7 +394,7 @@ void PathQt::addEllipse(const FloatPoint& center, float radiusX, float radiusY, 
             subPath.moveTo(invTransform.map(m_path.currentPosition()));
         }
 
-        addEllipticArc(subPath, 0, 0, radiusX, radiusY, startAngle, endAngle, rotationDirection);
+        addEllipticArc(subPath, 0, 0, ellipse.radiusX, ellipse.radiusY, ellipse.startAngle, ellipse.endAngle, ellipse.direction);
         subPath = t.map(subPath);
 
         if (isEmpty)
@@ -400,12 +404,12 @@ void PathQt::addEllipse(const FloatPoint& center, float radiusX, float radiusY, 
         return;
     }
 
-    addEllipticArc(m_path, center.x(), center.y(), radiusX, radiusY, startAngle, endAngle, rotationDirection);
+    addEllipticArc(m_path, ellipse.center.x(), ellipse.center.y(), ellipse.radiusX, ellipse.radiusY, ellipse.startAngle, ellipse.endAngle, ellipse.direction);
 }
 
-void PathQt::addEllipseInRect(const FloatRect& r)
+void PathQt::add(PathEllipseInRect ellipse)
 {
-    m_path.addEllipse(r.x(), r.y(), r.width(), r.height());
+    m_path.addEllipse(ellipse.rect.x(), ellipse.rect.y(), ellipse.rect.width(), ellipse.rect.height());
 }
 
 void PathQt::addPath(const PathQt& path, const AffineTransform& transform)
@@ -450,13 +454,13 @@ void PathQt::applySegments(const PathSegmentApplier& applier) const
             break;
 
         case PathElement::Type::CloseSubpath:
-            applier({ std::monostate() });
+            applier({ PathCloseSubpath { } });
             break;
         }
     });
 }
 
-void PathQt::applyElements(const PathElementApplier& applier) const
+bool PathQt::applyElements(const PathElementApplier& applier) const
 {
     PathElement pelement;
     for (int i = 0; i < m_path.elementCount(); ++i) {
@@ -494,12 +498,15 @@ void PathQt::applyElements(const PathElementApplier& applier) const
                 Q_ASSERT(false);
         }
     }
+    return true;
 }
 
-void PathQt::transform(const AffineTransform& transform)
+bool PathQt::transform(const AffineTransform& transform)
 {
     QTransform qTransform(transform);
     m_path = qTransform.map(m_path);
+
+    return true;
 }
 
 }

@@ -36,7 +36,7 @@ class TParseContext;
 class TranslatorHLSL;
 #endif  // ANGLE_ENABLE_HLSL
 #ifdef ANGLE_ENABLE_METAL
-class TranslatorMetalDirect;
+class TranslatorMSL;
 #endif  // ANGLE_ENABLE_METAL
 
 using SpecConstUsageBits = angle::PackedEnumBitSet<vk::SpecConstUsage, uint32_t>;
@@ -64,12 +64,12 @@ class TShHandleBase
   public:
     TShHandleBase();
     virtual ~TShHandleBase();
-    virtual TCompiler *getAsCompiler() { return 0; }
+    virtual TCompiler *getAsCompiler() { return nullptr; }
 #ifdef ANGLE_ENABLE_HLSL
-    virtual TranslatorHLSL *getAsTranslatorHLSL() { return 0; }
+    virtual TranslatorHLSL *getAsTranslatorHLSL() { return nullptr; }
 #endif  // ANGLE_ENABLE_HLSL
 #ifdef ANGLE_ENABLE_METAL
-    virtual TranslatorMetalDirect *getAsTranslatorMetalDirect() { return nullptr; }
+    virtual TranslatorMSL *getAsTranslatorMSL() { return nullptr; }
 #endif  // ANGLE_ENABLE_METAL
 
   protected:
@@ -191,6 +191,8 @@ class TCompiler : public TShHandleBase
 
     bool hasPixelLocalStorageUniforms() const { return mHasPixelLocalStorageUniforms; }
 
+    ShPixelLocalStorageType getPixelLocalStorageType() const { return mCompileOptions.pls.type; }
+
     unsigned int getSharedMemorySize() const;
 
     sh::GLenum getShaderType() const { return mShaderType; }
@@ -226,6 +228,8 @@ class TCompiler : public TShHandleBase
     bool isClipDistanceRedeclared() const { return mClipDistanceRedeclared; }
 
     bool hasClipDistance() const { return mClipDistanceUsed; }
+
+    bool usesDerivatives() const { return mUsesDerivatives; }
 
   protected:
     // Add emulated functions to the built-in function emulator.
@@ -386,6 +390,9 @@ class TCompiler : public TShHandleBase
 
     // ANGLE_shader_pixel_local_storage.
     bool mHasPixelLocalStorageUniforms;
+
+    // Fragment shader uses screen-space derivatives
+    bool mUsesDerivatives;
 
     // name hashing.
     NameMap mNameMap;

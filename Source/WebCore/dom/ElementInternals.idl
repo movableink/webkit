@@ -23,8 +23,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-typedef (File or USVString or DOMFormData) FormValue;
-
 [
     GenerateIsReachable=ImplElementRoot,
     GenerateAddOpaqueRoot=element,
@@ -33,7 +31,7 @@ typedef (File or USVString or DOMFormData) FormValue;
 ] interface ElementInternals {
     readonly attribute ShadowRoot? shadowRoot;
 
-    undefined setFormValue(FormValue? value, optional FormValue? state);
+    [Custom] undefined setFormValue(any value, optional any state);
 
     readonly attribute HTMLFormElement? form;
 
@@ -45,6 +43,8 @@ typedef (File or USVString or DOMFormData) FormValue;
     boolean reportValidity();
 
     readonly attribute NodeList labels;
+
+    [EnabledBySetting=CustomStateSetEnabled, SameObject] readonly attribute CustomStateSet states;
 
     [Reflect, EnabledBySetting=DefaultARIAForCustomElementsEnabled] attribute DOMString? role;
     [Reflect=aria_activedescendant, EnabledBySetting=DefaultARIAForCustomElementsEnabled] attribute Element? ariaActiveDescendantElement;

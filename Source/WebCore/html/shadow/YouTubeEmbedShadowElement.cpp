@@ -37,7 +37,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(YouTubeEmbedShadowElement);
 Ref<YouTubeEmbedShadowElement> YouTubeEmbedShadowElement::create(Document& document)
 {
     auto element = adoptRef(*new YouTubeEmbedShadowElement(document));
-    element->setPseudo(ShadowPseudoIds::webkitPluginReplacement());
+    element->setInlineStyleProperty(CSSPropertyAll, CSSValueInitial);
     return element;
 }
 
@@ -48,7 +48,7 @@ YouTubeEmbedShadowElement::YouTubeEmbedShadowElement(Document& document)
 
 RenderPtr<RenderElement> YouTubeEmbedShadowElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderBlockFlow>(*this, WTFMove(style));
+    return createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, *this, WTFMove(style));
 }
 
 }

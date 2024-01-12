@@ -31,8 +31,34 @@
 #include "CGSubimageCacheWithTimer.h"
 #include "GeometryUtilities.h"
 #include "GraphicsContextCG.h"
+#include <limits>
+#include <pal/spi/cg/CoreGraphicsSPI.h>
 
 namespace WebCore {
+
+RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& image, RenderingResourceIdentifier renderingResourceIdentifier)
+{
+    if (!image)
+        return nullptr;
+    if (CGImageGetWidth(image.get()) > std::numeric_limits<int>::max() || CGImageGetHeight(image.get()) > std::numeric_limits<int>::max())
+        return nullptr;
+    return adoptRef(*new NativeImage(WTFMove(image), renderingResourceIdentifier));
+}
+
+RefPtr<NativeImage> NativeImage::createTransient(PlatformImagePtr&& image, RenderingResourceIdentifier identifier)
+{
+    if (!image)
+        return nullptr;
+    // FIXME: GraphicsContextCG caching should be made better and this should be the default mode
+    // for NativeImage, as we cannot guarantee all the places that draw images to not cache unwanted
+    // images.
+    RetainPtr<CGImage> transientImage = adoptCF(CGImageCreateCopy(image.get())); // Make a shallow copy so the metadata change doesn't affect the caller.
+    if (!transientImage)
+        return nullptr;
+    image = nullptr;
+    CGImageSetCachingFlags(transientImage.get(), kCGImageCachingTransient);
+    return create(WTFMove(transientImage), identifier);
+}
 
 IntSize NativeImage::size() const
 {
@@ -70,7 +96,7 @@ DestinationColorSpace NativeImage::colorSpace() const
     return DestinationColorSpace(CGImageGetColorSpace(m_platformImage.get()));
 }
 
-void NativeImage::draw(GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, const ImagePaintingOptions& options)
+void NativeImage::draw(GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions options)
 {
     auto isHDRColorSpace = [](CGColorSpaceRef colorSpace) -> bool {
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
@@ -98,7 +124,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
     };
 
-    auto drawHDRNativeImage = [&](GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, const ImagePaintingOptions& options) -> bool {
+    auto drawHDRNativeImage = [&](GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions options) -> bool {
         if (sourceRect.isEmpty() || !isHDRNativeImage(*this))
             return false;
 
@@ -119,8 +145,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         auto scaleFactor = destinationRect.size() / sourceRect.size();
         sourceRectScaled.scale(scaleFactor * context.scaleFactor());
 
-        // Draw the ImageBuffer to destinationRect in the destination context.
-        imageBuffer->draw(context, destinationRect, sourceRectScaled, { });
+        context.drawImageBuffer(*imageBuffer, destinationRect, sourceRectScaled, { });
         return true;
     };
 

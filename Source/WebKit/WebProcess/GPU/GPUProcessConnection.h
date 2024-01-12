@@ -34,12 +34,15 @@
 #include "SharedMemory.h"
 #include <WebCore/AudioSession.h>
 #include <WebCore/PlatformMediaSession.h>
+#include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/ThreadSafeWeakHashSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 class CAAudioStreamDescription;
+struct PageIdentifierType;
+using PageIdentifier = ObjectIdentifier<PageIdentifierType>;
 }
 
 namespace IPC {
@@ -66,6 +69,7 @@ public:
     ~GPUProcessConnection();
     
     IPC::Connection& connection() { return m_connection.get(); }
+    Ref<IPC::Connection> protectedConnection() { return m_connection; }
     IPC::MessageReceiverMap& messageReceiverMap() { return m_messageReceiverMap; }
 
 #if HAVE(AUDIT_TOKEN)
@@ -97,6 +101,10 @@ public:
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
     void createVisibilityPropagationContextForPage(WebPage&);
     void destroyVisibilityPropagationContextForPage(WebPage&);
+#endif
+
+#if ENABLE(EXTENSION_CAPABILITIES)
+    void setMediaEnvironment(WebCore::PageIdentifier, const String&);
 #endif
 
     void configureLoggingChannel(const String&, WTFLogChannelState, WTFLogLevel);

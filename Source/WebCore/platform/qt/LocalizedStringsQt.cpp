@@ -118,7 +118,7 @@ String contextMenuItemTagCopyImageToClipboard()
     return QCoreApplication::translate("QWebPage", "Copy Image", "Copy Link context menu item");
 }
 
-String contextMenuItemTagCopyImageUrlToClipboard()
+String contextMenuItemTagCopyImageURLToClipboard()
 {
     return QCoreApplication::translate("QWebPage", "Copy Image Address", "Copy Image Address menu item");
 }
@@ -843,6 +843,18 @@ String validationMessageTypeMismatchForURLText()
 }
 
 String validationMessagePatternMismatchText()
+{
+    notImplemented();
+    return String();
+}
+
+String validationMessagePatternMismatchText(const String& title)
+{
+    notImplemented();
+    return String();
+}
+
+String validationMessageValueMissingForSwitchText()
 {
     notImplemented();
     return String();

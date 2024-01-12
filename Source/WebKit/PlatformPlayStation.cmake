@@ -66,8 +66,6 @@ list(APPEND WebKit_SOURCES
 
     Shared/API/c/playstation/WKEventPlayStation.cpp
 
-    Shared/Plugins/Netscape/NetscapePluginModuleNone.cpp
-
     Shared/cairo/ShareableBitmapCairo.cpp
 
     Shared/curl/WebCoreArgumentCodersCurl.cpp
@@ -82,13 +80,13 @@ list(APPEND WebKit_SOURCES
 
     Shared/unix/AuxiliaryProcessMain.cpp
 
-    UIProcess/BackingStore.cpp
     UIProcess/DefaultUndoController.cpp
     UIProcess/LegacySessionStateCodingNone.cpp
     UIProcess/WebGrammarDetail.cpp
     UIProcess/WebMemoryPressureHandler.cpp
     UIProcess/WebViewportAttributes.cpp
 
+    UIProcess/API/C/WKUserScriptRef.cpp
     UIProcess/API/C/WKViewportAttributes.cpp
 
     UIProcess/API/C/curl/WKProtectionSpaceCurl.cpp
@@ -109,7 +107,7 @@ list(APPEND WebKit_SOURCES
 
     UIProcess/WebsiteData/playstation/WebsiteDataStorePlayStation.cpp
 
-    UIProcess/cairo/BackingStoreCairo.cpp
+    UIProcess/cairo/BackingStore.cpp
 
     UIProcess/libwpe/WebPasteboardProxyLibWPE.cpp
 
@@ -151,6 +149,7 @@ list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/UIProcess/API/libwpe"
     "${WEBKIT_DIR}/UIProcess/API/playstation"
     "${WEBKIT_DIR}/UIProcess/CoordinatedGraphics"
+    "${WEBKIT_DIR}/UIProcess/cairo"
     "${WEBKIT_DIR}/UIProcess/playstation"
     "${WEBKIT_DIR}/WebProcess/WebCoreSupport/curl"
     "${WEBKIT_DIR}/WebProcess/WebPage/CoordinatedGraphics"

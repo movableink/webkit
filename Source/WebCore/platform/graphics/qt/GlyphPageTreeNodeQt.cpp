@@ -40,11 +40,12 @@ bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
 
     for (unsigned i = 0; i < GlyphPage::size; ++i) {
         Glyph glyph = (i < indexSize) ? indexes.at(i) : 0;
+        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=259205 Determine if the glyph is a color glyph or not.
         if (!glyph)
-            setGlyphForIndex(i, 0);
+            setGlyphForIndex(i, 0, ColorGlyphType::Outline);
         else {
             haveGlyphs = true;
-            setGlyphForIndex(i, glyph);
+            setGlyphForIndex(i, glyph, font().colorGlyphType(glyph));
         }
     }
     return haveGlyphs;

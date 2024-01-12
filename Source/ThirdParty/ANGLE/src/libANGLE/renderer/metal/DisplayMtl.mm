@@ -29,15 +29,11 @@
 #include "platform/PlatformMethods.h"
 
 #if ANGLE_METAL_XCODE_BUILDS_SHADERS
-#   include "libANGLE/renderer/metal/mtl_default_shaders_compiled.inc"
-#elif TARGET_OS_SIMULATOR
-#    include "libANGLE/renderer/metal/shaders/mtl_internal_shaders_src_autogen.h"
-#elif defined(ANGLE_PLATFORM_MACOS)
-#    include "libANGLE/renderer/metal/shaders/mtl_internal_shaders_2_0_macos_autogen.h"
-#    include "libANGLE/renderer/metal/shaders/mtl_internal_shaders_2_1_macos_autogen.h"
+#    include "libANGLE/renderer/metal/shaders/mtl_internal_shaders_metallib.h"
+#elif ANGLE_METAL_HAS_PREBUILT_INTERNAL_SHADERS
+#    include "mtl_internal_shaders_metallib.h"
 #else
-#    include "libANGLE/renderer/metal/shaders/mtl_internal_shaders_2_0_ios_autogen.h"
-#    include "libANGLE/renderer/metal/shaders/mtl_internal_shaders_2_1_ios_autogen.h"
+#    include "libANGLE/renderer/metal/shaders/mtl_internal_shaders_src_autogen.h"
 #endif
 
 #include "EGL/eglext.h"
@@ -104,7 +100,7 @@ DisplayImpl *CreateMetalDisplay(const egl::DisplayState &state)
 }
 
 DisplayMtl::DisplayMtl(const egl::DisplayState &state)
-    : DisplayImpl(state), mDisplay(nullptr), mStateCache(mFeatures), mUtils(this)
+    : DisplayImpl(state), mDisplay(nullptr), mStateCache(mFeatures)
 {}
 
 DisplayMtl::~DisplayMtl() {}
@@ -116,6 +112,7 @@ egl::Error DisplayMtl::initialize(egl::Display *display)
     angle::Result result = initializeImpl(display);
     if (result != angle::Result::Continue)
     {
+        terminate();
         return egl::EglNotInitialized();
     }
     return egl::NoError();
@@ -138,18 +135,21 @@ angle::Result DisplayMtl::initializeImpl(egl::Display *display)
 
         mCapsInitialized = false;
 
-        if (!mState.featuresAllDisabled)
-        {
-            initializeFeatures();
-        }
+        initializeFeatures();
 
-        if (mFeatures.disableMetalOnGpuFamily1.enabled)
+        if (mFeatures.requireGpuFamily2.enabled && !supportsEitherGPUFamily(1, 2))
         {
             ANGLE_MTL_LOG("Could not initialize: Metal device does not support Mac GPU family 2.");
             return angle::Result::Stop;
         }
 
-        if (mFeatures.disableMetalOnNvidia.enabled)
+        if (mFeatures.requireMsl21.enabled && !supportsMetal2_1())
+        {
+            ANGLE_MTL_LOG("Could not initialize: MSL 2.1 is not available.");
+            return angle::Result::Stop;
+        }
+
+        if (mFeatures.disableMetalOnNvidia.enabled && isNVIDIA())
         {
             ANGLE_MTL_LOG("Could not initialize: Metal not supported on NVIDIA GPUs.");
             return angle::Result::Stop;
@@ -160,13 +160,15 @@ angle::Result DisplayMtl::initializeImpl(egl::Display *display)
         ANGLE_TRY(mFormatTable.initialize(this));
         ANGLE_TRY(initializeShaderLibrary());
 
-        return mUtils.initialize();
+        mUtils = std::make_unique<mtl::RenderUtils>(this);
+
+        return angle::Result::Continue;
     }
 }
 
 void DisplayMtl::terminate()
 {
-    mUtils.onDestroy();
+    mUtils = nullptr;
     mCmdQueue.reset();
     mDefaultShaders = nil;
     mMetalDevice    = nil;
@@ -182,12 +184,22 @@ void DisplayMtl::terminate()
 
 bool DisplayMtl::testDeviceLost()
 {
-    return false;
+#if ANGLE_METAL_LOSE_CONTEXT_ON_ERROR == ANGLE_ENABLED
+    return mCmdQueue.isDeviceLost();
+#else
+     return false;
+#endif
 }
 
 egl::Error DisplayMtl::restoreLostDevice(const egl::Display *display)
 {
+#if ANGLE_METAL_LOSE_CONTEXT_ON_ERROR == ANGLE_ENABLED
+    // A Metal device cannot be restored, the entire context would have to be
+    // re-created along with any other EGL objects that reference it.
+    return egl::EglBadDisplay();
+#else
     return egl::NoError();
+#endif
 }
 
 std::string DisplayMtl::getRendererDescription()
@@ -407,9 +419,9 @@ StreamProducerImpl *DisplayMtl::createStreamProducerD3DTexture(
     return nullptr;
 }
 
-ShareGroupImpl *DisplayMtl::createShareGroup()
+ShareGroupImpl *DisplayMtl::createShareGroup(const egl::ShareGroupState &state)
 {
-    return new ShareGroupMtl();
+    return new ShareGroupMtl(state);
 }
 
 ExternalImageSiblingImpl *DisplayMtl::createExternalImageSibling(const gl::Context *context,
@@ -454,9 +466,9 @@ Optional<gl::Version> DisplayMtl::getMaxSupportedDesktopVersion() const
     return Optional<gl::Version>::Invalid();
 }
 
-EGLSyncImpl *DisplayMtl::createSync(const egl::AttributeMap &attribs)
+EGLSyncImpl *DisplayMtl::createSync()
 {
-    return new EGLSyncMtl(attribs);
+    return new EGLSyncMtl();
 }
 
 egl::Error DisplayMtl::makeCurrent(egl::Display *display,
@@ -508,6 +520,18 @@ void DisplayMtl::generateExtensions(egl::DisplayExtensions *outExtensions) const
 void DisplayMtl::generateCaps(egl::Caps *outCaps) const
 {
     outCaps->textureNPOT = true;
+}
+
+void DisplayMtl::initializeFrontendFeatures(angle::FrontendFeatures *features) const
+{
+    // The Metal backend's handling of compile is thread-safe
+    ANGLE_FEATURE_CONDITION(features, compileJobIsThreadSafe, true);
+
+    // The link job in this backend references gl::Context and ContextMtl, and thread-safety is not
+    // guaranteed.  The link subtasks are safe however, they are still parallelized.
+    //
+    // Once the link jobs are made thread-safe and using mtl::Context, this feature can be removed.
+    ANGLE_FEATURE_CONDITION(features, linkJobIsThreadSafe, false);
 }
 
 void DisplayMtl::populateFeatureList(angle::FeatureList *features)
@@ -1224,27 +1248,21 @@ void DisplayMtl::initializeLimitations()
 
 void DisplayMtl::initializeFeatures()
 {
-    bool isMetal2_1 = false;
-    bool isMetal2_2 = false;
-    if (ANGLE_APPLE_AVAILABLE_XCI(10.14, 13.1, 12.0))
-    {
-        isMetal2_1 = true;
-    }
-
-    if (ANGLE_APPLE_AVAILABLE_XCI(10.15, 13.1, 13.0))
-    {
-        isMetal2_2 = true;
-    }
-
     bool isOSX       = TARGET_OS_OSX;
     bool isCatalyst  = TARGET_OS_MACCATALYST;
     bool isSimulator = TARGET_OS_SIMULATOR;
     bool isARM       = ANGLE_APPLE_IS_ARM;
 
+    ApplyFeatureOverrides(&mFeatures, getState());
+    if (mState.featuresAllDisabled)
+    {
+        return;
+    }
+
     ANGLE_FEATURE_CONDITION((&mFeatures), allowGenMultipleMipsPerPass, true);
     ANGLE_FEATURE_CONDITION((&mFeatures), forceBufferGPUStorage, false);
     ANGLE_FEATURE_CONDITION((&mFeatures), hasExplicitMemBarrier,
-                            isMetal2_1 && (isOSX || isCatalyst) && !isARM);
+                            supportsMetal2_1() && (isOSX || isCatalyst) && !isARM);
     ANGLE_FEATURE_CONDITION((&mFeatures), hasDepthAutoResolve, supportsEitherGPUFamily(3, 2));
     ANGLE_FEATURE_CONDITION((&mFeatures), hasStencilAutoResolve, supportsEitherGPUFamily(5, 2));
     ANGLE_FEATURE_CONDITION((&mFeatures), allowMultisampleStoreAndResolve,
@@ -1260,16 +1278,16 @@ void DisplayMtl::initializeFeatures()
     // http://anglebug.com/4919
     // Stencil blit shader is not compiled on Intel & NVIDIA, need investigation.
     ANGLE_FEATURE_CONDITION((&mFeatures), hasShaderStencilOutput,
-                            isMetal2_1 && !isIntel() && !isNVIDIA());
+                            supportsMetal2_1() && !isIntel() && !isNVIDIA());
 
     ANGLE_FEATURE_CONDITION((&mFeatures), hasTextureSwizzle,
-                            isMetal2_2 && supportsEitherGPUFamily(3, 2) && !isSimulator);
+                            supportsMetal2_2() && supportsEitherGPUFamily(3, 2) && !isSimulator);
 
     ANGLE_FEATURE_CONDITION((&mFeatures), avoidStencilTextureSwizzle, isIntel());
 
     // http://crbug.com/1136673
     // Fence sync is flaky on Nvidia
-    ANGLE_FEATURE_CONDITION((&mFeatures), hasEvents, isMetal2_1 && !isNVIDIA());
+    ANGLE_FEATURE_CONDITION((&mFeatures), hasEvents, supportsMetal2_1() && !isNVIDIA());
 
     ANGLE_FEATURE_CONDITION((&mFeatures), hasCheapRenderPass, (isOSX || isCatalyst) && !isARM);
 
@@ -1295,6 +1313,8 @@ void DisplayMtl::initializeFeatures()
 
     ANGLE_FEATURE_CONDITION((&mFeatures), emulateAlphaToCoverage,
                             isSimulator || !supportsAppleGPUFamily(1));
+
+    ANGLE_FEATURE_CONDITION((&mFeatures), writeHelperSampleMask, supportsAppleGPUFamily(1));
 
     ANGLE_FEATURE_CONDITION((&mFeatures), multisampleColorFormatShaderReadWorkaround, isAMD());
     ANGLE_FEATURE_CONDITION((&mFeatures), copyIOSurfaceToNonIOSurfaceForReadOptimization,
@@ -1333,52 +1353,47 @@ void DisplayMtl::initializeFeatures()
 
     ANGLE_FEATURE_CONDITION((&mFeatures), generateShareableShaders, true);
 
-    // TODO(anglebug.com/7952): GPUs that don't support Mac GPU family 2 or greater are
-    // unsupported by the Metal backend.
-    ANGLE_FEATURE_CONDITION((&mFeatures), disableMetalOnGpuFamily1, !supportsEitherGPUFamily(1, 2));
-
     // http://anglebug.com/8170: NVIDIA GPUs are unsupported due to scarcity of the hardware.
-    ANGLE_FEATURE_CONDITION((&mFeatures), disableMetalOnNvidia, isNVIDIA());
+    ANGLE_FEATURE_CONDITION((&mFeatures), disableMetalOnNvidia, true);
 
     // The AMDMTLBronzeDriver seems to have bugs flushing vertex data to the GPU during some kinds
     // of buffer uploads which require a flush to work around.
     ANGLE_FEATURE_CONDITION((&mFeatures), flushAfterStreamVertexData, isAMDBronzeDriver());
 
-    ApplyFeatureOverrides(&mFeatures, getState());
+    // TODO(anglebug.com/7952): GPUs that don't support Mac GPU family 2 or greater are
+    // unsupported by the Metal backend.
+    ANGLE_FEATURE_CONDITION((&mFeatures), requireGpuFamily2, true);
+
+    // anglebug.com/8258 Builtin shaders currently require MSL 2.1
+    ANGLE_FEATURE_CONDITION((&mFeatures), requireMsl21, true);
+
+    // http://anglebug.com/8311: Rescope global variables which are only used in one function to be
+    // function local. Disabled on AMD FirePro devices: http://anglebug.com/8317
+    ANGLE_FEATURE_CONDITION((&mFeatures), rescopeGlobalVariables, !isAMDFireProDevice());
+
+    // Apple-specific pre-transform for explicit cubemap derivatives
+    ANGLE_FEATURE_CONDITION((&mFeatures), preTransformTextureCubeGradDerivatives,
+                            supportsAppleGPUFamily(1));
+
+    // On tile-based GPUs, always resolving MSAA render buffers to single-sampled
+    // is preferred. Because it would save bandwidth by avoiding the cost of storing the MSAA
+    // textures to memory. Traditional desktop GPUs almost always store MSAA textures to memory
+    // anyway, so this feature would have no benefit besides adding additional resolve step and
+    // memory overhead of the hidden single-sampled textures.
+    ANGLE_FEATURE_CONDITION((&mFeatures), alwaysResolveMultisampleRenderBuffers, isARM);
 }
 
 angle::Result DisplayMtl::initializeShaderLibrary()
 {
     mtl::AutoObjCPtr<NSError *> err = nil;
-#ifdef ANGLE_METAL_XCODE_BUILDS_SHADERS
-    const uint8_t *compiled_shader_binary;
-    size_t compiled_shader_binary_len;
-    compiled_shader_binary                           = gMetalBinaryShaders;
-    compiled_shader_binary_len                       = gMetalBinaryShaders_len;
-    mDefaultShaders =
-        mtl::CreateShaderLibraryFromBinary(getMetalDevice(), compiled_shader_binary, compiled_shader_binary_len, &err);
+#if ANGLE_METAL_XCODE_BUILDS_SHADERS || ANGLE_METAL_HAS_PREBUILT_INTERNAL_SHADERS
+    mDefaultShaders = mtl::CreateShaderLibraryFromBinary(getMetalDevice(), gDefaultMetallib,
+                                                         std::size(gDefaultMetallib), &err);
 #else
-#if TARGET_OS_SIMULATOR
     mDefaultShaders = mtl::CreateShaderLibrary(getMetalDevice(), gDefaultMetallibSrc,
                                                std::size(gDefaultMetallibSrc), &err);
-#else
-    const uint8_t *metalLibData = nullptr;
-    size_t metalLibDataSize     = 0;
-    if (ANGLE_APPLE_AVAILABLE_XCI(10.14, 13.1, 12.0))
-    {
-        metalLibData     = gDefaultMetallib_2_1;
-        metalLibDataSize = std::size(gDefaultMetallib_2_1);
-    }
-    else
-    {
-        metalLibData     = gDefaultMetallib_2_0;
-        metalLibDataSize = std::size(gDefaultMetallib_2_0);
-    }
+#endif
 
-    mDefaultShaders =
-        mtl::CreateShaderLibraryFromBinary(getMetalDevice(), metalLibData, metalLibDataSize, &err);
-#endif
-#endif
     if (err)
     {
         ERR() << "Internal error: " << err.get().localizedDescription.UTF8String;
@@ -1406,6 +1421,29 @@ bool DisplayMtl::supportsMacGPUFamily(uint8_t macFamily) const
 bool DisplayMtl::supportsEitherGPUFamily(uint8_t iOSFamily, uint8_t macFamily) const
 {
     return supportsAppleGPUFamily(iOSFamily) || supportsMacGPUFamily(macFamily);
+}
+
+bool DisplayMtl::supportsMetal2_1() const
+{
+    if (ANGLE_APPLE_AVAILABLE_XCI(10.14, 13.1, 12.0))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+bool DisplayMtl::supportsMetal2_2() const
+{
+    if (ANGLE_APPLE_AVAILABLE_XCI(10.15, 13.1, 13.0))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool DisplayMtl::supports32BitFloatFiltering() const
@@ -1471,6 +1509,16 @@ bool DisplayMtl::isAMDBronzeDriver() const
 
     mComputedAMDBronze = true;
     return mIsAMDBronze;
+}
+
+bool DisplayMtl::isAMDFireProDevice() const
+{
+    if (!isAMD())
+    {
+        return false;
+    }
+
+    return [[mMetalDevice name] containsString:@"FirePro"];
 }
 
 bool DisplayMtl::isIntel() const

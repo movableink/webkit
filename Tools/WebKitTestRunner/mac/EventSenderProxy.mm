@@ -35,6 +35,7 @@
 #import "TestRunnerWKWebView.h"
 #import "WebKitTestRunnerWindow.h"
 #import <Carbon/Carbon.h>
+#import <WebCore/PlatformMouseEvent.h>
 #import <WebKit/WKString.h>
 #import <WebKit/WKPagePrivate.h>
 #import <WebKit/WKWebView.h>
@@ -72,7 +73,10 @@
 
 - (id)initPressureEventAtLocation:(NSPoint)location globalLocation:(NSPoint)globalLocation stage:(NSInteger)stage pressure:(float)pressure stageTransition:(float)stageTransition phase:(NSEventPhase)phase time:(NSTimeInterval)time eventNumber:(NSInteger)eventNumber window:(NSWindow *)window;
 - (id)initMagnifyEventAtLocation:(NSPoint)location globalLocation:(NSPoint)globalLocation magnification:(CGFloat)magnification phase:(NSEventPhase)phase time:(NSTimeInterval)time eventNumber:(NSInteger)eventNumber window:(NSWindow *)window;
+- (id)initSmartMagnifyEventAtLocation:(NSPoint)location globalLocation:(NSPoint)globalLocation time:(NSTimeInterval)time eventNumber:(NSInteger)eventNumber window:(NSWindow *)window;
+
 - (NSTimeInterval)timestamp;
+
 @end
 
 static CGSGesturePhase EventSenderCGGesturePhaseFromNSEventPhase(NSEventPhase phase)
@@ -153,6 +157,25 @@ static CGSGesturePhase EventSenderCGGesturePhaseFromNSEventPhase(NSEventPhase ph
 
     return self;
 }
+
+- (id)initSmartMagnifyEventAtLocation:(NSPoint)location globalLocation:(NSPoint)globalLocation time:(NSTimeInterval)time eventNumber:(NSInteger)eventNumber window:(NSWindow *)window
+{
+    auto cgEvent = adoptCF(CGEventCreate(nullptr));
+    CGEventSetType(cgEvent.get(), (CGEventType)kCGSEventGesture);
+    CGEventSetIntegerValueField(cgEvent.get(), kCGEventGestureHIDType, kIOHIDEventTypeZoomToggle);
+
+    if (!(self = [super _initWithCGEvent:cgEvent.get() eventRef:nullptr]))
+        return nil;
+
+    _eventSender_type = NSEventTypeSmartMagnify;
+    _eventSender_location = location;
+    _eventSender_locationInWindow = globalLocation;
+    _eventSender_timestamp = time;
+    _eventSender_window = window;
+
+    return self;
+}
+
 
 - (CGFloat)stageTransition
 {
@@ -339,7 +362,7 @@ void EventSenderProxy::mouseDown(unsigned buttonNumber, WKEventModifiers modifie
                                          context:[NSGraphicsContext currentContext] 
                                      eventNumber:++m_eventNumber 
                                       clickCount:m_clickCount 
-                                        pressure:0.0];
+                                        pressure:WebCore::ForceAtClick];
 
     NSView *targetView = [m_testController->mainWebView()->platformView() hitTest:[event locationInWindow]];
     if (targetView) {
@@ -397,7 +420,7 @@ void EventSenderProxy::sendMouseDownToStartPressureEvents()
         context:[NSGraphicsContext currentContext]
         eventNumber:++m_eventNumber
         clickCount:m_clickCount
-        pressure:0.0];
+        pressure:WebCore::ForceAtClick];
 
     [NSApp sendEvent:event];
 }
@@ -830,6 +853,27 @@ void EventSenderProxy::sendWheelEvent(EventTimestamp timestamp, double windowX, 
     } else {
         NSPoint windowLocation = [event locationInWindow];
         WTFLogAlways("EventSenderProxy::sendWheelEvent failed to find the target view at %f,%f\n", windowLocation.x, windowLocation.y);
+    }
+}
+
+void EventSenderProxy::smartMagnify()
+{
+    auto* mainWebView = m_testController->mainWebView();
+    NSView *platformView = mainWebView->platformView();
+
+    auto event = adoptNS([[EventSenderSyntheticEvent alloc] initSmartMagnifyEventAtLocation:NSMakePoint(m_position.x, m_position.y)
+        globalLocation:([mainWebView->platformWindow() convertRectToScreen:NSMakeRect(m_position.x, m_position.y, 1, 1)].origin)
+        time:absoluteTimeForEventTime(currentEventTime())
+        eventNumber:++m_eventNumber
+        window:platformView.window]);
+
+    if (NSView *targetView = [platformView hitTest:[event locationInWindow]]) {
+        [NSApp _setCurrentEvent:event.get()];
+        [targetView smartMagnifyWithEvent:event.get()];
+        [NSApp _setCurrentEvent:nil];
+    } else {
+        NSPoint windowLocation = [event locationInWindow];
+        WTFLogAlways("gestureStart failed to find the target view at %f,%f\n", windowLocation.x, windowLocation.y);
     }
 }
 

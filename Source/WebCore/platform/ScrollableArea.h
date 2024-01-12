@@ -28,9 +28,11 @@
 #include "KeyboardScroll.h"
 #include "RectEdges.h"
 #include "ScrollAlignment.h"
+#include "ScrollAnchoringController.h"
 #include "ScrollSnapOffsetsInfo.h"
 #include "ScrollTypes.h"
 #include "Scrollbar.h"
+#include "ScrollbarColor.h"
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
@@ -51,9 +53,11 @@ class ScrollAnimator;
 class ScrollbarsController;
 class GraphicsLayer;
 class TiledBacking;
+class Element;
 
 enum class WheelScrollGestureState : uint8_t;
 
+struct ScrollbarColor;
 struct ScrollbarGutter;
 
 inline int offsetForOrientation(ScrollOffset offset, ScrollbarOrientation orientation)
@@ -76,7 +80,7 @@ public:
     WEBCORE_EXPORT void endKeyboardScroll(bool);
 
     WEBCORE_EXPORT bool scroll(ScrollDirection, ScrollGranularity, unsigned stepCount = 1);
-    WEBCORE_EXPORT void scrollToPositionWithAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
+    WEBCORE_EXPORT void scrollToPositionWithAnimation(const FloatPoint&, const ScrollPositionChangeOptions& options = ScrollPositionChangeOptions::createProgrammatic());
     WEBCORE_EXPORT void scrollToPositionWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
 
     WEBCORE_EXPORT void scrollToOffsetWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
@@ -89,7 +93,7 @@ public:
     // Allows subclasses to handle scroll position updates themselves. If this member function
     // returns true, the scrollable area won't actually update the scroll position and instead
     // expect it to happen sometime in the future.
-    virtual bool requestScrollToPosition(const ScrollPosition&, ScrollType = ScrollType::Programmatic, ScrollClamping = ScrollClamping::Clamped, ScrollIsAnimated = ScrollIsAnimated::No) { return false; }
+    virtual bool requestScrollToPosition(const ScrollPosition&, const ScrollPositionChangeOptions& = ScrollPositionChangeOptions::createProgrammatic()) { return false; }
     virtual void stopAsyncAnimatedScroll() { }
 
     virtual bool requestStartKeyboardScrollAnimation(const KeyboardScroll&) { return false; }
@@ -143,6 +147,8 @@ public:
     virtual OverscrollBehavior horizontalOverscrollBehavior() const { return OverscrollBehavior::Auto; }
     virtual OverscrollBehavior verticalOverscrollBehavior() const { return OverscrollBehavior::Auto; }
 
+    WEBCORE_EXPORT virtual Color scrollbarThumbColorStyle() const;
+    WEBCORE_EXPORT virtual Color scrollbarTrackColorStyle() const;
     WEBCORE_EXPORT virtual ScrollbarGutter scrollbarGutterStyle() const;
     virtual ScrollbarWidth scrollbarWidthStyle() const { return ScrollbarWidth::Auto; }
 
@@ -240,11 +246,11 @@ public:
     Scrollbar* scrollbarForDirection(ScrollDirection direction) const
     {
         switch (direction) {
-        case ScrollUp:
-        case ScrollDown:
+        case ScrollDirection::ScrollUp:
+        case ScrollDirection::ScrollDown:
             return verticalScrollbar();
-        case ScrollLeft:
-        case ScrollRight:
+        case ScrollDirection::ScrollLeft:
+        case ScrollDirection::ScrollRight:
             return horizontalScrollbar();
         }
         return nullptr;
@@ -406,6 +412,9 @@ public:
     FloatSize deltaForPropagation(const FloatSize&) const;
     WEBCORE_EXPORT virtual float adjustVerticalPageScrollStepForFixedContent(float step);
     virtual bool needsAnimatedScroll() const { return false; }
+    virtual void updateScrollAnchoringElement() { }
+    virtual void updateScrollPositionForScrollAnchoringController() { }
+    virtual void invalidateScrollAnchoringElement() { }
 
 protected:
     WEBCORE_EXPORT ScrollableArea();

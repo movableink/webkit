@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,17 +27,16 @@
 
 #include <unicode/utypes.h>
 
-namespace WTF {
-namespace Unicode {
+namespace WTF::Unicode {
 
 // Names here are taken from the Unicode standard.
 
-// Most of these are UChar constants, not UChar32, which makes them
+// Most of these are UChar constants, not char32_t, which makes them
 // more convenient for WebCore code that mostly uses UTF-16.
 
 constexpr UChar HiraganaLetterSmallA = 0x3041;
-constexpr UChar32 aegeanWordSeparatorDot = 0x10101;
-constexpr UChar32 aegeanWordSeparatorLine = 0x10100;
+constexpr char32_t aegeanWordSeparatorDot = 0x10101;
+constexpr char32_t aegeanWordSeparatorLine = 0x10100;
 constexpr UChar apostrophe = 0x0027;
 constexpr UChar blackCircle = 0x25CF;
 constexpr UChar blackLeftPointingSmallTriangle = 0x25C2;
@@ -66,6 +65,7 @@ constexpr UChar hebrewPunctuationGeresh = 0x05F3;
 constexpr UChar hebrewPunctuationGershayim = 0x05F4;
 constexpr UChar horizontalEllipsis = 0x2026;
 constexpr UChar hyphen = 0x2010;
+constexpr UChar emojiVariationSelector = 0xFE0F; // Technical name is "VARIATION SELECTOR-16"
 constexpr UChar enDash = 0x2013;
 constexpr UChar formFeed = 0x000C;
 constexpr UChar hyphenMinus = 0x002D;
@@ -120,10 +120,11 @@ constexpr UChar smallLetterSharpS = 0x00DF;
 constexpr UChar softHyphen = 0x00AD;
 constexpr UChar space = 0x0020;
 constexpr UChar tabCharacter = 0x0009;
+constexpr UChar textVariationSelector = 0xFE0E; // Technical name is "VARIATION SELECTOR-15"
 constexpr UChar thinSpace = 0x2009;
 constexpr UChar tibetanMarkDelimiterTshegBstar = 0x0F0C;
 constexpr UChar tibetanMarkIntersyllabicTsheg = 0x0F0B;
-constexpr UChar32 ugariticWordDivider = 0x1039F;
+constexpr char32_t ugariticWordDivider = 0x1039F;
 constexpr UChar upArrowhead = 0x2303;
 constexpr UChar verticalEllipsis = 0x22EE;
 constexpr UChar verticalTabulation = 0x000b;
@@ -137,9 +138,20 @@ constexpr UChar zeroWidthJoiner = 0x200D;
 constexpr UChar zeroWidthNoBreakSpace = 0xFEFF;
 constexpr UChar zeroWidthNonJoiner = 0x200C;
 constexpr UChar zeroWidthSpace = 0x200B;
+constexpr UChar lineSeparator = 0x2028;
+constexpr UChar paragraphSeparator = 0x2029;
+constexpr UChar mediumShade = 0x2592;
+constexpr UChar functionApplication = 0x2061;
+constexpr UChar invisibleTimes = 0x2062;
+constexpr UChar invisibleSeparator = 0x2063;
+constexpr UChar inhibitSymmetricSwapping = 0x206A;
+constexpr UChar activateSymmetricSwapping = 0x206B;
+constexpr UChar inhibitArabicFormShaping = 0x206C;
+constexpr UChar activateArabicFormShaping = 0x206D;
+constexpr UChar nationalDigitShapes = 0x206E;
+constexpr UChar nominalDigitShapes = 0x206F;
 
-} // namespace Unicode
-} // namespace WTF
+} // namespace WTF::Unicode
 
 using WTF::Unicode::HiraganaLetterSmallA;
 using WTF::Unicode::aegeanWordSeparatorDot;
@@ -164,6 +176,7 @@ using WTF::Unicode::hebrewPunctuationGeresh;
 using WTF::Unicode::hebrewPunctuationGershayim;
 using WTF::Unicode::horizontalEllipsis;
 using WTF::Unicode::hyphen;
+using WTF::Unicode::emojiVariationSelector;
 using WTF::Unicode::enDash;
 using WTF::Unicode::formFeed;
 using WTF::Unicode::hyphenMinus;
@@ -223,6 +236,7 @@ using WTF::Unicode::sesameDot;
 using WTF::Unicode::softHyphen;
 using WTF::Unicode::space;
 using WTF::Unicode::tabCharacter;
+using WTF::Unicode::textVariationSelector;
 using WTF::Unicode::thinSpace;
 using WTF::Unicode::tibetanMarkDelimiterTshegBstar;
 using WTF::Unicode::tibetanMarkIntersyllabicTsheg;
@@ -240,3 +254,15 @@ using WTF::Unicode::zeroWidthJoiner;
 using WTF::Unicode::zeroWidthNoBreakSpace;
 using WTF::Unicode::zeroWidthNonJoiner;
 using WTF::Unicode::zeroWidthSpace;
+using WTF::Unicode::lineSeparator;
+using WTF::Unicode::paragraphSeparator;
+using WTF::Unicode::mediumShade;
+using WTF::Unicode::functionApplication;
+using WTF::Unicode::invisibleTimes;
+using WTF::Unicode::invisibleSeparator;
+using WTF::Unicode::inhibitSymmetricSwapping;
+using WTF::Unicode::activateSymmetricSwapping;
+using WTF::Unicode::inhibitArabicFormShaping;
+using WTF::Unicode::activateArabicFormShaping;
+using WTF::Unicode::nationalDigitShapes;
+using WTF::Unicode::nominalDigitShapes;

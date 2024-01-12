@@ -40,8 +40,8 @@ enum ImageSizeChangeType {
 class RenderImage : public RenderReplaced {
     WTF_MAKE_ISO_ALLOCATED(RenderImage);
 public:
-    RenderImage(Element&, RenderStyle&&, StyleImage* = nullptr, const float = 1.0f);
-    RenderImage(Document&, RenderStyle&&, StyleImage* = nullptr);
+    RenderImage(Type, Element&, RenderStyle&&, StyleImage* = nullptr, const float = 1.0f);
+    RenderImage(Type, Document&, RenderStyle&&, StyleImage* = nullptr);
     virtual ~RenderImage();
 
     RenderImageResource& imageResource() { return *m_imageResource; }
@@ -52,7 +52,7 @@ public:
 
     void updateAltText();
 
-    HTMLMapElement* imageMap() const;
+    RefPtr<HTMLMapElement> imageMap() const;
     void areaElementFocusChanged(HTMLAreaElement*);
     
 #if PLATFORM(IOS_FAMILY)

@@ -26,6 +26,7 @@
 #import "config.h"
 
 #import "DeprecatedGlobalValues.h"
+#import "FrameTreeChecks.h"
 #import "HTTPServer.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
@@ -7178,8 +7179,7 @@ window.onload = function() {
 
 static const char* openedPage = "Hello World";
 
-// FIXME: Get this working.
-TEST(ProcessSwap, DISABLED_SameSiteWindowWithOpenerNavigateToFile)
+TEST(ProcessSwap, SameSiteWindowWithOpenerNavigateToFile)
 {
     auto processPoolConfiguration = psonProcessPoolConfiguration();
     auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
@@ -7232,6 +7232,15 @@ TEST(ProcessSwap, DISABLED_SameSiteWindowWithOpenerNavigateToFile)
     auto pid3 = [createdWebView _webProcessIdentifier];
     EXPECT_TRUE(!!pid3);
     EXPECT_NE(pid2, pid3);
+
+    using namespace TestWebKitAPI;
+    checkFrameTreesInProcesses(webView.get(), {
+        { "pson://www.webkit.org"_s }, { RemoteFrame }
+    });
+
+    checkFrameTreesInProcesses(createdWebView.get(), {
+        { RemoteFrame }, { "file://"_s }
+    });
 
     [createdWebView goBack];
     TestWebKitAPI::Util::run(&done);
@@ -7413,6 +7422,55 @@ TEST(ProcessSwap, ResponsePolicyDownloadAfterCOOPProcessSwap)
         }];
         Util::run(&done);
     } while (isFrozen);
+}
+
+TEST(ProcessSwap, MainFrameURLAfterServerSideRedirectToCOOP)
+{
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/source.html"_s, { "<a href='redirect.html' target='_blank' id='testLink'>Click here</a>"_s } },
+        { "/redirect.html"_s, { 302, { { "Location"_s, "destination.html"_s } }, "redirecting..."_s } },
+        { "/destination.html"_s, { { { "Content-Type"_s, "text/html"_s }, { "Cross-Origin-Opener-Policy"_s, "same-origin"_s } }, "bar"_s } },
+    }, HTTPServer::Protocol::Https);
+
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    auto webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [webViewConfiguration setProcessPool:processPool.get()];
+    for (_WKFeature *feature in [WKPreferences _features]) {
+        if ([feature.key isEqualToString:@"CrossOriginOpenerPolicyEnabled"])
+            [[webViewConfiguration preferences] _setEnabled:YES forFeature:feature];
+        else if ([feature.key isEqualToString:@"CrossOriginEmbedderPolicyEnabled"])
+            [[webViewConfiguration preferences] _setEnabled:YES forFeature:feature];
+    }
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+    auto navigationDelegate = adoptNS([[PSONNavigationDelegate alloc] init]);
+    [webView setNavigationDelegate:navigationDelegate.get()];
+    auto uiDelegate = adoptNS([[PSONUIDelegate alloc] initWithNavigationDelegate:navigationDelegate.get()]);
+    [webView setUIDelegate:uiDelegate.get()];
+
+    done = false;
+    [webView loadRequest:server.request("/source.html"_s)];
+    Util::run(&done);
+
+    done = false;
+    [webView evaluateJavaScript:@"document.getElementById('testLink').click()" completionHandler:nil];
+
+    TestWebKitAPI::Util::run(&didCreateWebView);
+    didCreateWebView = false;
+
+    TestWebKitAPI::Util::run(&done);
+
+    auto pid1 = [webView _webProcessIdentifier];
+    EXPECT_TRUE(!!pid1);
+    auto pid2 = [createdWebView _webProcessIdentifier];
+    EXPECT_TRUE(!!pid2);
+    EXPECT_NE(pid1, pid2);
+
+    EXPECT_WK_STREQ(server.request("/destination.html"_s).URL.absoluteString, [[createdWebView URL] absoluteString]);
+    EXPECT_WK_STREQ(server.request("/destination.html"_s).URL.absoluteString, [[createdWebView _mainFrameURL] absoluteString]);
 }
 
 TEST(ProcessSwap, NavigateBackAfterNavigatingAwayFromCOOP)
@@ -7985,16 +8043,13 @@ static void checkSettingsControlledByLockdownMode(WKWebView *webView, ShouldBeEn
     String embedElementCheck = makeString("document.createElement('embed').__proto__ == ", shouldBeEnabled == ShouldBeEnabled::Yes ? "HTMLEmbedElement" : "HTMLUnknownElement", ".prototype");
     EXPECT_EQ(runJSCheck(embedElementCheck), true); // Embed Element.
 
-    EXPECT_EQ(runJSCheck("CSS.supports('content-visibility: visible')"_s), shouldBeEnabled == ShouldBeEnabled::Yes);
-    EXPECT_EQ(runJSCheck("CSS.supports('overflow-anchor:none')"_s), shouldBeEnabled == ShouldBeEnabled::Yes);
     EXPECT_EQ(runJSCheck("CSS.supports('text-justify: auto')"_s), shouldBeEnabled == ShouldBeEnabled::Yes);
     EXPECT_EQ(runJSCheck("!!navigator.contacts"_s), isShowingInitialEmptyDocument != IsShowingInitialEmptyDocument::Yes && shouldBeEnabled == ShouldBeEnabled::Yes);
     EXPECT_EQ(runJSCheck("!!window.DeprecationReportBody"_s), shouldBeEnabled == ShouldBeEnabled::Yes);
-    EXPECT_EQ(runJSCheck("!!window.Highlight"_s), shouldBeEnabled == ShouldBeEnabled::Yes);
 
     // Confirm unstable settings are always off in Lockdown Mode.
     EXPECT_EQ(runJSCheck("!!navigator.requestCookieConsent"_s), false);
-    EXPECT_EQ(runJSCheck("!!window.requestIdleCallback"_s), false);
+    EXPECT_EQ(runJSCheck("!!document.undoManager"_s), false);
 }
 
 @interface LockdownMessageHandler : NSObject <WKScriptMessageHandler, WKNavigationDelegate>
@@ -8748,6 +8803,70 @@ TEST(ProcessSwap, ChangeViewSizeDuringNavigationActionPolicyDecision)
 
 #endif // PLATFORM(IOS_FAMILY)
 
+TEST(ProcessSwap, NewProcessAfterNavigatingToCrossOriginThroughAboutPage)
+{
+    using namespace TestWebKitAPI;
+
+    HTTPServer server({
+        { "/source.html"_s, { ""_s } },
+        { "/destination.html"_s, { ""_s } },
+    });
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600)]);
+
+    [webView synchronouslyLoadRequest:server.request("/source.html"_s)];
+    [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"about:blank"]]];
+
+    auto pid1 = [webView _webProcessIdentifier];
+
+    [webView synchronouslyLoadRequest:server.requestWithLocalhost("/destination.html"_s)];
+
+    auto pid2 = [webView _webProcessIdentifier];
+    EXPECT_NE(pid1, pid2);
+}
+
+TEST(ProcessSwap, ReuseProcessAfterNavigatingToSameOriginThroughAboutPage)
+{
+    using namespace TestWebKitAPI;
+
+    HTTPServer server({
+        { "/source.html"_s, { ""_s } },
+        { "/destination.html"_s, { ""_s } },
+    });
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600)]);
+
+    [webView synchronouslyLoadRequest:server.request("/source.html"_s)];
+    [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"about:blank"]]];
+
+    auto pid1 = [webView _webProcessIdentifier];
+
+    [webView synchronouslyLoadRequest:server.request("/destination.html"_s)];
+
+    auto pid2 = [webView _webProcessIdentifier];
+    EXPECT_EQ(pid1, pid2);
+}
+
+TEST(ProcessSwap, ReuseProcessAfterNavigatingFromAboutPage)
+{
+    using namespace TestWebKitAPI;
+
+    HTTPServer server({
+        { "/destination.html"_s, { ""_s } },
+    });
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600)]);
+
+    [webView synchronouslyLoadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"about:blank"]]];
+
+    auto pid1 = [webView _webProcessIdentifier];
+
+    [webView synchronouslyLoadRequest:server.request("/destination.html"_s)];
+
+    auto pid2 = [webView _webProcessIdentifier];
+    EXPECT_EQ(pid1, pid2);
+}
+
 // The WebProcess cache cannot be enabled on devices with too little RAM so we need to disable
 // tests relying on it on iOS. The WebProcess cache is disabled by default on iOS anyway.
 #if !PLATFORM(IOS_FAMILY)
@@ -8907,3 +9026,34 @@ TEST(WebProcessCache, ReusedCrashedBackForwardSuspendedWebProcess)
 
     EXPECT_EQ(crashCount, 1u);
 }
+
+#if PLATFORM(MAC)
+TEST(ProcessSwap, MouseEventDuringCrossSiteProvisionalNavigation)
+{
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    auto webViewConfiguration = adoptNS([WKWebViewConfiguration new]);
+    [webViewConfiguration setProcessPool:processPool.get()];
+
+    auto handler = adoptNS([PSONScheme new]);
+    [webViewConfiguration setURLSchemeHandler:handler.get() forURLScheme:@"PSON"];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 800) configuration:webViewConfiguration.get()]);
+    auto navigationDelegate = adoptNS([PSONNavigationDelegate new]);
+    [webView setNavigationDelegate:navigationDelegate.get()];
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.webkit.org/source.html"]]];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    navigationDelegate->didStartProvisionalNavigationHandler = ^{
+        for (unsigned i = 0; i < 5; ++i)
+            [webView mouseMoveToPoint:CGPointMake(50 + i, 50 + i) withFlags:0];
+    };
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.apple.com/destination.html"]]];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+}
+#endif

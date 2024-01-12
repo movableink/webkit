@@ -329,7 +329,7 @@ JxlDecoderStatus JPEGXLImageDecoder::processInput(Query query)
             }
 
             if (m_currentFrame >= m_frameBufferCache.size())
-                m_frameBufferCache.resize(m_frameCount + 1);
+                m_frameBufferCache.grow(m_frameCount + 1);
 
             auto& buffer = m_frameBufferCache[m_currentFrame];
             if (buffer.isInvalid() && buffer.initialize(size(), m_premultiplyAlpha)) {
@@ -427,12 +427,21 @@ void JPEGXLImageDecoder::prepareColorTransform()
 LCMSProfilePtr JPEGXLImageDecoder::tryDecodeICCColorProfile()
 {
     size_t profileSize = 0;
+#if JPEGXL_NUMERIC_VERSION < JPEGXL_COMPUTE_NUMERIC_VERSION(0, 9, 0)
     if (JxlDecoderGetICCProfileSize(m_decoder.get(), &s_pixelFormat, JXL_COLOR_PROFILE_TARGET_DATA, &profileSize) != JXL_DEC_SUCCESS)
         return nullptr;
 
     Vector<uint8_t> profileData(profileSize);
     if (JxlDecoderGetColorAsICCProfile(m_decoder.get(), &s_pixelFormat, JXL_COLOR_PROFILE_TARGET_DATA, profileData.data(), profileData.size()) != JXL_DEC_SUCCESS)
         return nullptr;
+#else
+    if (JxlDecoderGetICCProfileSize(m_decoder.get(), JXL_COLOR_PROFILE_TARGET_DATA, &profileSize) != JXL_DEC_SUCCESS)
+        return nullptr;
+
+    Vector<uint8_t> profileData(profileSize);
+    if (JxlDecoderGetColorAsICCProfile(m_decoder.get(), JXL_COLOR_PROFILE_TARGET_DATA, profileData.data(), profileData.size()) != JXL_DEC_SUCCESS)
+        return nullptr;
+#endif
 
     return LCMSProfilePtr(cmsOpenProfileFromMem(profileData.data(), profileData.size()));
 }

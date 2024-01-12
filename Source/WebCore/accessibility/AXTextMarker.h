@@ -91,8 +91,9 @@ using PlatformTextMarkerData = AXTextMarkerRef;
 using PlatformTextMarkerData = NSData *;;
 #endif
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXTextMarker);
 class AXTextMarker {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXTextMarker);
     friend class AXTextMarkerRange;
     friend std::partial_ordering partialOrder(const AXTextMarker&, const AXTextMarker&);
 public:
@@ -129,9 +130,7 @@ public:
     Node* node() const;
     bool isIgnored() const { return m_data.ignored; }
 
-#if ENABLE(TREE_DEBUGGING)
     String debugDescription() const;
-#endif
 
     // Sets m_data.node when the marker was created with a PlatformTextMarkerData that lacks the node pointer because it was created off the main thread.
     void setNodeIfNeeded() const;
@@ -155,6 +154,9 @@ public:
     operator bool() const { return m_start && m_end; }
     operator VisiblePositionRange() const;
     std::optional<SimpleRange> simpleRange() const;
+    std::optional<CharacterRange> characterRange() const;
+
+    std::optional<AXTextMarkerRange> intersectionWith(const AXTextMarkerRange&) const;
 
 #if PLATFORM(MAC)
     RetainPtr<AXTextMarkerRangeRef> platformData() const;
@@ -168,6 +170,8 @@ public:
     AXTextMarker start() const { return m_start; }
     AXTextMarker end() const { return m_end; }
     bool isConfinedTo(AXID) const;
+
+    String debugDescription() const;
 private:
     AXTextMarker m_start;
     AXTextMarker m_end;

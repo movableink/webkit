@@ -92,11 +92,13 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (NSString *)accessibilityARIARelevantStatus;
 - (NSString *)accessibilityInvalidStatus;
 - (UIAccessibilityTraits)_axContainedByFieldsetTrait;
+- (UIAccessibilityTraits)_axTextEntryTrait;
 - (id)_accessibilityFieldsetAncestor;
 - (BOOL)_accessibilityHasTouchEventListener;
 - (NSString *)accessibilityExpandedTextValue;
 - (NSString *)accessibilitySortDirection;
 - (BOOL)accessibilityIsExpanded;
+- (BOOL)accessibilitySupportsARIAExpanded;
 - (BOOL)accessibilityIsIndeterminate;
 - (NSUInteger)accessibilityBlockquoteLevel;
 - (NSArray *)accessibilityFindMatchingObjects:(NSDictionary *)parameters;
@@ -127,6 +129,7 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (BOOL)accessibilityIsFirstItemInSuggestion;
 - (BOOL)accessibilityIsLastItemInSuggestion;
 - (BOOL)accessibilityIsMarkAnnotation;
+- (BOOL)accessibilityIsInNonNativeTextControl;
 
 // TextMarker related
 - (NSArray *)textMarkerRange;
@@ -704,6 +707,11 @@ bool AccessibilityUIElement::isExpanded() const
     return [m_element accessibilityIsExpanded];
 }
 
+bool AccessibilityUIElement::supportsExpanded() const
+{
+    return [m_element accessibilitySupportsARIAExpanded];
+}
+
 bool AccessibilityUIElement::isChecked() const
 {
     return false;
@@ -870,6 +878,12 @@ bool AccessibilityUIElement::hasContainedByFieldsetTrait()
     return (traits & [m_element _axContainedByFieldsetTrait]) == [m_element _axContainedByFieldsetTrait];
 }
 
+bool AccessibilityUIElement::hasTextEntryTrait()
+{
+    UIAccessibilityTraits traits = [m_element accessibilityTraits];
+    return (traits & [m_element _axTextEntryTrait]) == [m_element _axTextEntryTrait];
+}
+
 RefPtr<AccessibilityUIElement> AccessibilityUIElement::fieldsetAncestorElement()
 {
     id ancestorElement = [m_element _accessibilityFieldsetAncestor];
@@ -972,6 +986,11 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::selectedTextRange()
     return [rangeDescription createJSStringRef];
 }
 
+JSRetainPtr<JSStringRef> AccessibilityUIElement::intersectionWithSelectionRange()
+{
+    return nullptr;
+}
+
 bool AccessibilityUIElement::setSelectedTextMarkerRange(AccessibilityTextMarkerRange*)
 {
     return false;
@@ -1029,16 +1048,6 @@ void AccessibilityUIElement::clearSelectedChildren() const
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::accessibilityValue() const
-{
-    return createJSString();
-}
-
-JSRetainPtr<JSStringRef> AccessibilityUIElement::documentEncoding()
-{
-    return createJSString();
-}
-
-JSRetainPtr<JSStringRef> AccessibilityUIElement::documentURI()
 {
     return createJSString();
 }
@@ -1514,6 +1523,11 @@ bool AccessibilityUIElement::isLastItemInSuggestion() const
 bool AccessibilityUIElement::isMarkAnnotation() const
 {
     return [m_element accessibilityIsMarkAnnotation];
+}
+
+bool AccessibilityUIElement::isInNonNativeTextControl() const
+{
+    return [m_element accessibilityIsInNonNativeTextControl];
 }
 
 } // namespace WTR

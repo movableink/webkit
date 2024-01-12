@@ -76,9 +76,9 @@ void BaseAudioSharedUnit::clearClients()
 void BaseAudioSharedUnit::forEachClient(const Function<void(CoreAudioCaptureSource&)>& apply) const
 {
     ASSERT(isMainThread());
-    for (auto* client : copyToVector(m_clients)) {
+    for (auto& client : copyToVector(m_clients)) {
         // Make sure the client has not been destroyed.
-        if (!m_clients.contains(client))
+        if (!m_clients.contains(client.get()))
             continue;
         apply(*client);
     }
@@ -153,6 +153,9 @@ void BaseAudioSharedUnit::setCaptureDevice(String&& persistentID, uint32_t captu
     bool hasChanged = this->persistentID() != persistentID || this->captureDeviceID() != captureDeviceID;
     m_capturingDevice = { WTFMove(persistentID), captureDeviceID };
 
+    auto devices = RealtimeMediaSourceCenter::singleton().audioCaptureFactory().audioCaptureDeviceManager().captureDevices();
+    m_isCapturingWithDefaultMicrophone = devices.size() && devices[0].persistentId() == m_capturingDevice->first;
+
     if (hasChanged)
         captureDeviceChanged();
 }
@@ -166,6 +169,16 @@ void BaseAudioSharedUnit::devicesChanged()
 
     if (WTF::anyOf(devices, [&persistentID] (auto& device) { return persistentID == device.persistentId(); })) {
         validateOutputDevice(m_outputDeviceID);
+        return;
+    }
+
+    if (!m_producingCount) {
+        RELEASE_LOG_ERROR(WebRTC, "BaseAudioSharedUnit::devicesChanged - returning early as not capturing");
+        return;
+    }
+
+    if (devices.size() && m_isCapturingWithDefaultMicrophone && migrateToNewDefaultDevice(devices[0])) {
+        RELEASE_LOG_ERROR(WebRTC, "BaseAudioSharedUnit::devicesChanged - migrating to new default device");
         return;
     }
 
@@ -294,7 +307,7 @@ void BaseAudioSharedUnit::audioSamplesAvailable(const MediaTime& time, const Pla
     // For performance reasons, we forbid heap allocations while doing rendering on the capture audio thread.
     ForbidMallocUseForCurrentThreadScope forbidMallocUse;
 
-    for (auto* client : m_audioThreadClients) {
+    for (auto& client : m_audioThreadClients) {
         if (client->isProducingData())
             client->audioSamplesAvailable(time, data, description, numberOfFrames);
     }

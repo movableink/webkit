@@ -66,7 +66,7 @@ void AccessibilityObject::detachFromParent()
         overrideAttachmentParent(nullptr);
 }
 
-void AccessibilityObject::overrideAttachmentParent(AXCoreObject* parent)
+void AccessibilityObject::overrideAttachmentParent(AccessibilityObject* parent)
 {
     if (!isAttachment())
         return;
@@ -137,9 +137,6 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
     if (isMenuListPopup() || isMenuListOption())
         return AccessibilityObjectInclusion::IgnoreObject;
 
-    if (roleValue() == AccessibilityRole::Caption && ariaRoleAttribute() == AccessibilityRole::Unknown)
-        return AccessibilityObjectInclusion::IgnoreObject;
-    
     if (roleValue() == AccessibilityRole::Mark)
         return AccessibilityObjectInclusion::IncludeObject;
 
@@ -644,23 +641,30 @@ static void attributedStringSetElement(NSMutableAttributedString *attrString, NS
         [attrString addAttribute:attribute value:(__bridge id)axElement.get() range:range];
 }
 
-static void attributedStringSetCompositionAttributes(NSMutableAttributedString *attrString, Node& node)
+static void attributedStringSetCompositionAttributes(NSMutableAttributedString *attrString, Node& node, const SimpleRange& textSimpleRange)
 {
 #if HAVE(INLINE_PREDICTIONS)
     auto& editor = node.document().editor();
     if (&node != editor.compositionNode())
         return;
 
+    auto scope = makeRangeSelectingNodeContents(node);
+    auto textRange = characterRange(scope, textSimpleRange);
+
     auto& annotations = editor.customCompositionAnnotations();
     if (auto it = annotations.find(NSTextCompletionAttributeName); it != annotations.end()) {
-        for (auto& range : it->value) {
-            if (attributedStringContainsRange(attrString, range))
-                attributedStringSetNumber(attrString, NSAccessibilityTextCompletionAttribute, @YES, range);
+        for (auto& annotationRange : it->value) {
+            auto intersectionRange = NSIntersectionRange(textRange, annotationRange);
+            if (intersectionRange.length) {
+                auto completionRange = NSMakeRange(intersectionRange.location - textRange.location, intersectionRange.length);
+                attributedStringSetNumber(attrString, NSAccessibilityTextCompletionAttribute, @YES, completionRange);
+            }
         }
     }
 #else
     UNUSED_PARAM(attrString);
     UNUSED_PARAM(node);
+    UNUSED_PARAM(textSimpleRange);
 #endif
 }
 
@@ -714,7 +718,7 @@ void attributedStringSetSpelling(NSMutableAttributedString *attrString, Node& no
     }
 }
 
-RetainPtr<NSAttributedString> attributedStringCreate(Node* node, StringView text, AXCoreObject::SpellCheck spellCheck)
+RetainPtr<NSAttributedString> attributedStringCreate(Node* node, StringView text, const SimpleRange& textRange, AXCoreObject::SpellCheck spellCheck)
 {
     if (!node || !text.length())
         return nil;
@@ -733,7 +737,7 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node* node, StringView text
     attributedStringSetBlockquoteLevel(result.get(), renderer.get(), range);
     attributedStringSetExpandedText(result.get(), renderer.get(), range);
     attributedStringSetElement(result.get(), NSAccessibilityLinkTextAttribute, AccessibilityObject::anchorElementForNode(node), range);
-    attributedStringSetCompositionAttributes(result.get(), *node);
+    attributedStringSetCompositionAttributes(result.get(), *node, textRange);
     // Do spelling last because it tends to break up the range.
     if (spellCheck == AXCoreObject::SpellCheck::Yes) {
         if (AXObjectCache::shouldSpellCheck())
@@ -757,7 +761,7 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::Unknown, NSAccessibilityUnknownRole },
         { AccessibilityRole::Button, NSAccessibilityButtonRole },
         { AccessibilityRole::RadioButton, NSAccessibilityRadioButtonRole },
-        { AccessibilityRole::CheckBox, NSAccessibilityCheckBoxRole },
+        { AccessibilityRole::Checkbox, NSAccessibilityCheckBoxRole },
         { AccessibilityRole::Slider, NSAccessibilitySliderRole },
         { AccessibilityRole::TabGroup, NSAccessibilityTabGroupRole },
         { AccessibilityRole::TextField, NSAccessibilityTextFieldRole },
@@ -774,7 +778,6 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::List, NSAccessibilityListRole },
         { AccessibilityRole::Directory, NSAccessibilityListRole },
         { AccessibilityRole::ScrollBar, NSAccessibilityScrollBarRole },
-        { AccessibilityRole::ValueIndicator, NSAccessibilityValueIndicatorRole },
         { AccessibilityRole::Image, NSAccessibilityImageRole },
         { AccessibilityRole::MenuBar, NSAccessibilityMenuBarRole },
         { AccessibilityRole::Menu, NSAccessibilityMenuRole },
@@ -784,28 +787,14 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::Column, NSAccessibilityColumnRole },
         { AccessibilityRole::Row, NSAccessibilityRowRole },
         { AccessibilityRole::Toolbar, NSAccessibilityToolbarRole },
-        { AccessibilityRole::BusyIndicator, NSAccessibilityBusyIndicatorRole },
         { AccessibilityRole::ProgressIndicator, NSAccessibilityProgressIndicatorRole },
         { AccessibilityRole::Meter, NSAccessibilityLevelIndicatorRole },
-        { AccessibilityRole::Window, NSAccessibilityWindowRole },
-        { AccessibilityRole::Drawer, NSAccessibilityDrawerRole },
-        { AccessibilityRole::SystemWide, NSAccessibilitySystemWideRole },
-        { AccessibilityRole::Outline, NSAccessibilityOutlineRole },
         { AccessibilityRole::Incrementor, NSAccessibilityIncrementorRole },
-        { AccessibilityRole::Browser, NSAccessibilityBrowserRole },
         { AccessibilityRole::ComboBox, NSAccessibilityComboBoxRole },
-        { AccessibilityRole::SplitGroup, NSAccessibilitySplitGroupRole },
         { AccessibilityRole::Splitter, NSAccessibilitySplitterRole },
         { AccessibilityRole::Code, NSAccessibilityGroupRole },
         { AccessibilityRole::ColorWell, NSAccessibilityColorWellRole },
-        { AccessibilityRole::GrowArea, NSAccessibilityGrowAreaRole },
-        { AccessibilityRole::Sheet, NSAccessibilitySheetRole },
-        { AccessibilityRole::HelpTag, NSAccessibilityHelpTagRole },
-        { AccessibilityRole::Matte, NSAccessibilityMatteRole },
-        { AccessibilityRole::Ruler, NSAccessibilityRulerRole },
-        { AccessibilityRole::RulerMarker, NSAccessibilityRulerMarkerRole },
         { AccessibilityRole::Link, NSAccessibilityLinkRole },
-        { AccessibilityRole::DisclosureTriangle, NSAccessibilityDisclosureTriangleRole },
         { AccessibilityRole::Grid, NSAccessibilityTableRole },
         { AccessibilityRole::TreeGrid, NSAccessibilityTableRole },
         { AccessibilityRole::WebCoreLink, NSAccessibilityLinkRole },
@@ -881,7 +870,7 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::RubyRun, NSAccessibilityGroupRole },
         { AccessibilityRole::RubyText, NSAccessibilityGroupRole },
         { AccessibilityRole::Details, NSAccessibilityGroupRole },
-        { AccessibilityRole::Summary, NSAccessibilityButtonRole },
+        { AccessibilityRole::Summary, NSAccessibilityDisclosureTriangleRole },
         { AccessibilityRole::SVGTextPath, NSAccessibilityGroupRole },
         { AccessibilityRole::SVGText, NSAccessibilityGroupRole },
         { AccessibilityRole::SVGTSpan, NSAccessibilityGroupRole },

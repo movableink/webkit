@@ -45,6 +45,10 @@
 #include <wtf/linux/CurrentProcessMemoryStatus.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
+#if USE(NICOSIA)
+#include "NicosiaBuffer.h"
+#endif
+
 namespace WebCore {
 
 static float cpuPeriod()
@@ -104,6 +108,9 @@ void ResourceUsageThread::platformSaveStateBeforeStarting()
         if (auto* thread = profiler->thread())
             m_samplingProfilerThreadID = thread->id();
     }
+#endif
+#if USE(NICOSIA)
+    Nicosia::Buffer::resetMemoryUsage();
 #endif
 }
 
@@ -243,14 +250,13 @@ void ResourceUsageThread::platformCollectCPUData(JSC::VM*, ResourceUsageData& da
 
     HashMap<pid_t, String> knownWorkerThreads;
     {
-        Locker locker { WorkerOrWorkletThread::workerOrWorkletThreadsLock() };
-        for (auto* thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
+        for (auto& thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
             // Ignore worker threads that have not been fully started yet.
-            if (!thread->thread())
+            if (!thread.thread())
                 continue;
 
-            if (auto id = thread->thread()->id())
-                knownWorkerThreads.set(id, thread->inspectorIdentifier().isolatedCopy());
+            if (auto id = thread.thread()->id())
+                knownWorkerThreads.set(id, thread.inspectorIdentifier().isolatedCopy());
         }
     }
 
@@ -319,6 +325,10 @@ void ResourceUsageThread::platformCollectMemoryData(JSC::VM* vm, ResourceUsageDa
         imagesDecodedSize = MemoryCache::singleton().getStatistics().images.decodedSize;
     });
     data.categories[MemoryCategory::Images].dirtySize = imagesDecodedSize;
+
+#if USE(NICOSIA)
+    data.categories[MemoryCategory::Layers].dirtySize = Nicosia::Buffer::getMemoryUsage();
+#endif
 
     size_t categoriesTotalSize = 0;
     for (auto& category : data.categories)

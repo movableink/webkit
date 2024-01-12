@@ -36,6 +36,7 @@
 #include "SerializedScriptValue.h"
 #include <memory>
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -63,30 +64,23 @@ class Image;
 class ResourceRequest;
 enum class PruningReason;
 
-WEBCORE_EXPORT extern void (*notifyHistoryItemChanged)(HistoryItem&);
+class HistoryItemClient : public RefCounted<HistoryItemClient> {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    virtual ~HistoryItemClient() = default;
+    virtual void historyItemChanged(const HistoryItem&) = 0;
+protected:
+    HistoryItemClient() = default;
+};
 
-class HistoryItem : public RefCounted<HistoryItem> {
+class HistoryItem : public RefCounted<HistoryItem>, public CanMakeWeakPtr<HistoryItem> {
     friend class BackForwardCache;
 
-public: 
-    static Ref<HistoryItem> create()
+public:
+    using Client = HistoryItemClient;
+    static Ref<HistoryItem> create(Client& client, const String& urlString = { }, const String& title = { }, const String& alternateTitle = { }, std::optional<BackForwardItemIdentifier> identifier = { })
     {
-        return adoptRef(*new HistoryItem);
-    }
-
-    static Ref<HistoryItem> create(const String& urlString, const String& title)
-    {
-        return adoptRef(*new HistoryItem(urlString, title));
-    }
-
-    static Ref<HistoryItem> create(const String& urlString, const String& title, const String& alternateTitle)
-    {
-        return adoptRef(*new HistoryItem(urlString, title, alternateTitle));
-    }
-
-    static Ref<HistoryItem> create(const String& urlString, const String& title, const String& alternateTitle, BackForwardItemIdentifier identifier)
-    {
-        return adoptRef(*new HistoryItem(urlString, title, alternateTitle, identifier));
+        return adoptRef(*new HistoryItem(client, urlString, title, alternateTitle, identifier));
     }
     
     WEBCORE_EXPORT ~HistoryItem();
@@ -232,10 +226,7 @@ public:
     void setPolicyContainer(const PolicyContainer& policyContainer) { m_policyContainer = policyContainer; }
 
 private:
-    WEBCORE_EXPORT HistoryItem();
-    WEBCORE_EXPORT HistoryItem(const String& urlString, const String& title);
-    WEBCORE_EXPORT HistoryItem(const String& urlString, const String& title, const String& alternateTitle);
-    WEBCORE_EXPORT HistoryItem(const String& urlString, const String& title, const String& alternateTitle, BackForwardItemIdentifier);
+    WEBCORE_EXPORT HistoryItem(Client&, const String& urlString, const String& title, const String& alternateTitle, std::optional<BackForwardItemIdentifier>);
 
     void setCachedPage(std::unique_ptr<CachedPage>&&);
     std::unique_ptr<CachedPage> takeCachedPage();
@@ -306,6 +297,7 @@ private:
 
     BackForwardItemIdentifier m_identifier;
     std::optional<PolicyContainer> m_policyContainer;
+    Ref<Client> m_client;
 
 #if PLATFORM(QT)
     QVariant m_userData;

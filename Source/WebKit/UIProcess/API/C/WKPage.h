@@ -58,7 +58,7 @@ extern "C" {
 WK_EXPORT WKTypeID WKPageGetTypeID(void);
 
 WK_EXPORT WKContextRef WKPageGetContext(WKPageRef page);
-WK_EXPORT WKPageGroupRef WKPageGetPageGroup(WKPageRef page);
+WK_EXPORT WKPageGroupRef WKPageGetPageGroup(WKPageRef page) WK_C_API_DEPRECATED;
 
 WK_EXPORT WKPageConfigurationRef WKPageCopyPageConfiguration(WKPageRef page);
 
@@ -135,6 +135,8 @@ WK_EXPORT WKStringRef WKPageCopyCustomTextEncodingName(WKPageRef page);
 WK_EXPORT void WKPageSetCustomTextEncodingName(WKPageRef page, WKStringRef encodingName);
 
 WK_EXPORT void WKPageTerminate(WKPageRef page);
+
+WK_EXPORT void WKPageResetProcessState(WKPageRef pageRef);
 
 WK_EXPORT WKStringRef WKPageGetSessionHistoryURLValueType(void);
 WK_EXPORT WKStringRef WKPageGetSessionBackForwardListItemValueType(void);

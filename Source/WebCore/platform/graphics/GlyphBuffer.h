@@ -35,6 +35,7 @@
 #include "GlyphBufferMembers.h"
 #include <climits>
 #include <limits>
+#include <wtf/CheckedRef.h>
 #include <wtf/Vector.h>
 
 #if PLATFORM(QT)
@@ -47,7 +48,7 @@ static const constexpr GlyphBufferGlyph deletedGlyph = 0xFFFF;
 
 class Font;
 
-class GlyphBuffer {
+class GlyphBuffer : public CanMakeCheckedPtr {
 public:
     bool isEmpty() const { return m_fonts.isEmpty(); }
     unsigned size() const { return m_fonts.size(); }

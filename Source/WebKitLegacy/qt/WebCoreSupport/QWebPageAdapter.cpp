@@ -34,6 +34,7 @@
 #include "NotificationPresenterClientQt.h"
 #include "PluginInfoProviderQt.h"
 #include "ProgressTrackerClientQt.h"
+#include "LegacyHistoryItemClient.h"
 #include "LegacySocketProvider.h"
 #include "QWebFrameAdapter.h"
 #include "QWebPageStorageSessionProvider.h"
@@ -79,6 +80,7 @@
 #include <WebCore/FocusController.h>
 #include <WebCore/FrameLoadRequest.h>
 #include <WebCore/FrameSelection.h>
+#include <WebCore/HandleUserInputEventResult.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLInputElement.h>
 #include <WebCore/HitTestResult.h>
@@ -162,20 +164,25 @@ static inline OptionSet<WebCore::DragOperation> dropActionToDragOp(Qt::DropActio
     return result;
 }
 
-static inline Qt::DropAction dragOpToDropAction(std::optional<DragOperation> action)
+static inline Qt::DropAction dragOpToDropAction(std::variant<std::optional<DragOperation>, RemoteUserInputEventData> actionOrEvent)
 {
     Qt::DropAction result = Qt::IgnoreAction;
-    if (action == DragOperation::Copy)
-        result = Qt::CopyAction;
-    else if (action == DragOperation::Move)
-        result = Qt::MoveAction;
-    // DragOperationgeneric represents InternetExplorer's equivalent of Move operation,
-    // hence it should be considered as "move"
-    else if (action == DragOperation::Generic)
-        result = Qt::MoveAction;
-    else if (action == DragOperation::Link)
-        result = Qt::LinkAction;
-    return result;
+
+    if (std::holds_alternative<std::optional<DragOperation>>(actionOrEvent)) {
+        auto action = std::get<std::optional<DragOperation>>(actionOrEvent);
+        if (!action)
+            return result;
+        if (*action == DragOperation::Copy)
+            result = Qt::CopyAction;
+        else if (*action == DragOperation::Move)
+            result = Qt::MoveAction;
+        // DragOperationgeneric represents InternetExplorer's equivalent of Move operation,
+        // hence it should be considered as "move"
+        else if (*action == DragOperation::Generic)
+            result = Qt::MoveAction;
+        else if (*action == DragOperation::Link)
+            result = Qt::LinkAction;
+    }
 }
 
 static inline QWebPageAdapter::VisibilityState webCoreVisibilityStateToWebPageVisibilityState(WebCore::VisibilityState state)
@@ -244,7 +251,7 @@ static Ref<WebCore::LocalWebLockRegistry> getOrCreateWebLockRegistry(bool isPriv
 
 QWebPageAdapter::QWebPageAdapter()
     : settings(0)
-    , page(0)
+    , page(nullptr)
     , pluginFactory(0)
     , forwardUnsupportedContent(false)
     , insideOpenCall(false)
@@ -282,14 +289,15 @@ void QWebPageAdapter::initializeWebCorePage()
         BackForwardList::create(*this),
         CookieJar::create(storageProvider.copyRef()),
         makeUniqueRef<ProgressTrackerClientQt>(this),
-        makeUniqueRef<FrameLoaderClientQt>(),
+        UniqueRef<WebCore::LocalFrameLoaderClient>(makeUniqueRef<FrameLoaderClientQt>()),
         WebCore::FrameIdentifier::generate(),
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate(isPrivateBrowsingEnabled),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
         makeUniqueRef<WebCore::DummyModelPlayerProvider>(),
-        EmptyBadgeClient::create(),
+        WebCore::EmptyBadgeClient::create(),
+        LegacyHistoryItemClient::singleton(),
 #if ENABLE(CONTEXT_MENUS)
         makeUniqueRef<ContextMenuClientQt>(),
 #endif
@@ -303,18 +311,18 @@ void QWebPageAdapter::initializeWebCorePage()
     pageConfiguration.storageNamespaceProvider = WebKitLegacy::WebStorageNamespaceProvider::create(
         QWebSettings::globalSettings()->localStoragePath());
     pageConfiguration.visitedLinkStore = &VisitedLinkStoreQt::singleton();
-    page = new Page(WTFMove(pageConfiguration));
+    page = WebCore::Page::create(WTFMove(pageConfiguration));
 
 #if ENABLE(GEOLOCATION)
     if (useMock) {
         // In case running in DumpRenderTree mode set the controller to mock provider.
         GeolocationClientMock* mock = new GeolocationClientMock;
-        WebCore::provideGeolocationTo(page, *mock);
-        mock->setController(WebCore::GeolocationController::from(page));
+        WebCore::provideGeolocationTo(page.get(), *mock);
+        mock->setController(WebCore::GeolocationController::from(page.get()));
     }
 #if HAVE(QTPOSITIONING)
     else
-        WebCore::provideGeolocationTo(page, *new GeolocationClientQt(this));
+        WebCore::provideGeolocationTo(page.get(), *new GeolocationClientQt(this));
 #endif
 #endif
 
@@ -330,9 +338,9 @@ void QWebPageAdapter::initializeWebCorePage()
     }
 #endif
     if (m_deviceOrientationClient)
-        WebCore::provideDeviceOrientationTo(page, m_deviceOrientationClient);
+        WebCore::provideDeviceOrientationTo(page.get(), m_deviceOrientationClient);
     if (m_deviceMotionClient)
-        WebCore::provideDeviceMotionTo(page, m_deviceMotionClient);
+        WebCore::provideDeviceMotionTo(page.get(), m_deviceMotionClient);
 #endif
 
     // By default each page is put into their own unique page group, which affects popup windows
@@ -342,12 +350,12 @@ void QWebPageAdapter::initializeWebCorePage()
     // as expected out of the box, we use a default group similar to what other ports are doing.
     page->setGroupName("Default Group"_s);
 
-    page->addLayoutMilestones(DidFirstVisuallyNonEmptyLayout);
+    page->addLayoutMilestones(WebCore::LayoutMilestone::DidFirstVisuallyNonEmptyLayout);
 
-    settings = new QWebSettings(page);
+    settings = new QWebSettings(page.get());
 
 #if ENABLE(NOTIFICATIONS)
-    WebCore::provideNotification(page, NotificationPresenterClientQt::notificationPresenter());
+    WebCore::provideNotification(page.get(), NotificationPresenterClientQt::notificationPresenter());
 #endif
 
     history.d = new QWebHistoryPrivate(static_cast<BackForwardList*>(&page->backForward().client()));
@@ -355,7 +363,6 @@ void QWebPageAdapter::initializeWebCorePage()
 
 QWebPageAdapter::~QWebPageAdapter()
 {
-    delete page;
     delete settings;
 
 #if ENABLE(NOTIFICATIONS)
@@ -372,8 +379,7 @@ void QWebPageAdapter::deletePage()
     // Before we delete the page, detach the mainframe's loader
     FrameLoader& loader = mainFrameAdapter().frame->loader();
     loader.detachFromParent();
-    delete page;
-    page = 0;
+    page = nullptr;
 }
 
 QWebPageAdapter* QWebPageAdapter::kit(Page* page)
@@ -563,7 +569,7 @@ void QWebPageAdapter::mouseMoveEvent(QMouseEvent* ev)
     if (ev->buttons() == Qt::NoButton)
         mousePressed = false;
 
-    bool accepted = frame->eventHandler().mouseMoved(convertMouseEvent(ev, 0));
+    bool accepted = frame->eventHandler().mouseMoved(convertMouseEvent(ev, 0)).wasHandled();
     ev->setAccepted(accepted);
 }
 
@@ -574,7 +580,7 @@ void QWebPageAdapter::mousePressEvent(QMouseEvent* ev)
         return;
 
     RefPtr<WebCore::Node> oldNode;
-    LocalFrame* focusedFrame = page->focusController().focusedFrame();
+    LocalFrame* focusedFrame = page->focusController().focusedLocalFrame();
     if (Document* focusedDocument = focusedFrame ? focusedFrame->document() : 0)
         oldNode = focusedDocument->focusedElement();
 
@@ -587,12 +593,12 @@ void QWebPageAdapter::mousePressEvent(QMouseEvent* ev)
     bool accepted = false;
     PlatformMouseEvent mev = convertMouseEvent(ev, 1);
     // ignore the event if we can't map Qt's mouse buttons to WebCore::MouseButton
-    if (mev.button() != NoButton)
-        mousePressed = accepted = frame->eventHandler().handleMousePressEvent(mev);
+    if (mev.button() != MouseButton::None)
+        mousePressed = accepted = frame->eventHandler().handleMousePressEvent(mev).wasHandled();
     ev->setAccepted(accepted);
 
     RefPtr<WebCore::Node> newNode;
-    focusedFrame = page->focusController().focusedFrame();
+    focusedFrame = page->focusController().focusedLocalFrame();
     if (Document* focusedDocument = focusedFrame ? focusedFrame->document() : 0)
         newNode = focusedDocument->focusedElement();
 
@@ -609,8 +615,8 @@ void QWebPageAdapter::mouseDoubleClickEvent(QMouseEvent *ev)
     bool accepted = false;
     PlatformMouseEvent mev = convertMouseEvent(ev, 2);
     // ignore the event if we can't map Qt's mouse buttons to WebCore::MouseButton
-    if (mev.button() != NoButton)
-        accepted = frame->eventHandler().handleMousePressEvent(mev);
+    if (mev.button() != MouseButton::None)
+        accepted = frame->eventHandler().handleMousePressEvent(mev).wasHandled();
     ev->setAccepted(accepted);
 
     tripleClickTimer.start(qGuiApp->styleHints()->mouseDoubleClickInterval(), handle());
@@ -626,8 +632,8 @@ void QWebPageAdapter::mouseTripleClickEvent(QMouseEvent *ev)
     bool accepted = false;
     PlatformMouseEvent mev = convertMouseEvent(ev, 3);
     // ignore the event if we can't map Qt's mouse buttons to WebCore::MouseButton
-    if (mev.button() != NoButton)
-        accepted = frame->eventHandler().handleMousePressEvent(mev);
+    if (mev.button() != MouseButton::None)
+        accepted = frame->eventHandler().handleMousePressEvent(mev).wasHandled();
     ev->setAccepted(accepted);
 }
 
@@ -640,8 +646,8 @@ void QWebPageAdapter::mouseReleaseEvent(QMouseEvent *ev)
     bool accepted = false;
     PlatformMouseEvent mev = convertMouseEvent(ev, 0);
     // ignore the event if we can't map Qt's mouse buttons to WebCore::MouseButton
-    if (mev.button() != NoButton)
-        accepted = frame->eventHandler().handleMouseReleaseEvent(mev);
+    if (mev.button() != MouseButton::None)
+        accepted = frame->eventHandler().handleMouseReleaseEvent(mev).wasHandled();
     ev->setAccepted(accepted);
 
     if (ev->buttons() == Qt::NoButton)
@@ -652,7 +658,7 @@ void QWebPageAdapter::mouseReleaseEvent(QMouseEvent *ev)
 
 void QWebPageAdapter::handleSoftwareInputPanel(Qt::MouseButton button, const QPoint& pos)
 {
-    LocalFrame* frame = page->focusController().focusedFrame();
+    LocalFrame* frame = page->focusController().focusedLocalFrame();
     if (!frame)
         return;
 
@@ -680,7 +686,7 @@ void QWebPageAdapter::wheelEvent(QWheelEvent *ev, int wheelScrollLines)
         return;
 
     PlatformWheelEvent pev = convertWheelEvent(ev, wheelScrollLines);
-    bool accepted = frame->eventHandler().handleWheelEvent(pev, { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::BlockingDOMEventDispatch });
+    bool accepted = frame->eventHandler().handleWheelEvent(pev, { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::BlockingDOMEventDispatch }).wasHandled();
     ev->setAccepted(accepted);
 }
 #endif // QT_NO_WHEELEVENT
@@ -690,19 +696,22 @@ void QWebPageAdapter::wheelEvent(QWheelEvent *ev, int wheelScrollLines)
 Qt::DropAction QWebPageAdapter::dragEntered(const QMimeData *data, const QPoint &pos, Qt::DropActions possibleActions)
 {
     DragData dragData(data, pos, QCursor::pos(), dropActionToDragOp(possibleActions));
-    return dragOpToDropAction(page->dragController().dragEntered(WTFMove(dragData)));
+    WebCore::LocalFrame* localFrame = mainFrameAdapter().frame;
+    return dragOpToDropAction(page->dragController().dragEnteredOrUpdated(*localFrame, WTFMove(dragData)));
 }
 
 void QWebPageAdapter::dragLeaveEvent()
 {
     DragData dragData(0, IntPoint(), QCursor::pos(), DragOperation::Generic);
-    page->dragController().dragExited(WTFMove(dragData));
+    WebCore::LocalFrame* localFrame = mainFrameAdapter().frame;
+    page->dragController().dragExited(*localFrame, WTFMove(dragData));
 }
 
 Qt::DropAction QWebPageAdapter::dragUpdated(const QMimeData *data, const QPoint &pos, Qt::DropActions possibleActions)
 {
     DragData dragData(data, pos, QCursor::pos(), dropActionToDragOp(possibleActions));
-    return dragOpToDropAction(page->dragController().dragUpdated(WTFMove(dragData)));
+    WebCore::LocalFrame* localFrame = mainFrameAdapter().frame;
+    return dragOpToDropAction(page->dragController().dragEnteredOrUpdated(*localFrame, WTFMove(dragData)));
 }
 
 bool QWebPageAdapter::performDrag(const QMimeData *data, const QPoint &pos, Qt::DropActions possibleActions)
@@ -802,7 +811,7 @@ void QWebPageAdapter::inputMethodEvent(QInputMethodEvent *ev)
 
 QVariant QWebPageAdapter::inputMethodQuery(Qt::InputMethodQuery property) const
 {
-    LocalFrame* frame = page->focusController().focusedFrame();
+    LocalFrame* frame = page->focusController().focusedLocalFrame();
     if (!frame)
         return QVariant();
 
@@ -818,7 +827,7 @@ QVariant QWebPageAdapter::inputMethodQuery(Qt::InputMethodQuery property) const
             renderer = rootEditableElement->renderer();
     }
 
-    if (renderer && renderer->isTextControl())
+    if (renderer && renderer->isRenderTextControl())
         renderTextControl = downcast<RenderTextControl>(renderer);
 
     switch (property) {
@@ -934,8 +943,8 @@ QList<MenuItem> descriptionForPlatformMenu(const Vector<ContextMenuItem>& items,
     for (const auto& item : items) {
         MenuItem description;
         switch (item.type()) {
-        case WebCore::CheckableActionType: /* fall through */
-        case WebCore::ActionType: {
+        case WebCore::ContextMenuItemType::CheckableAction: /* fall through */
+        case WebCore::ContextMenuItemType::Action: {
             int action = adapterActionForContextMenuAction(item.action());
             if (action > QWebPageAdapter::NoAction) {
                 description.type = MenuItem::Action;
@@ -944,7 +953,7 @@ QList<MenuItem> descriptionForPlatformMenu(const Vector<ContextMenuItem>& items,
                 page->contextMenuController().checkOrEnableIfNeeded(it);
                 if (it.enabled())
                     description.traits |= MenuItem::Enabled;
-                if (item.type() == WebCore::CheckableActionType) {
+                if (item.type() == WebCore::ContextMenuItemType::CheckableAction) {
                     description.traits |= MenuItem::Checkable;
                     if (it.checked())
                         description.traits |= MenuItem::Checked;
@@ -953,10 +962,10 @@ QList<MenuItem> descriptionForPlatformMenu(const Vector<ContextMenuItem>& items,
             }
             break;
         }
-        case WebCore::SeparatorType:
+        case WebCore::ContextMenuItemType::Separator:
             description.type = MenuItem::Separator;
             break;
-        case WebCore::SubmenuType: {
+        case WebCore::ContextMenuItemType::Submenu: {
             description.type = MenuItem::SubMenu;
             description.subMenu = descriptionForPlatformMenu(item.subMenuItems(), page);
             description.title = item.title();
@@ -985,7 +994,7 @@ QWebHitTestResultPrivate* QWebPageAdapter::updatePositionDependentMenuActions(co
     WebCore::ContextMenu* webcoreMenu = page->contextMenuController().contextMenu();
     QList<MenuItem> itemDescriptions;
     if (client && webcoreMenu)
-        itemDescriptions = descriptionForPlatformMenu(webcoreMenu->items(), page);
+        itemDescriptions = descriptionForPlatformMenu(webcoreMenu->items(), page.get());
     createAndSetCurrentContextMenu(itemDescriptions, visitedWebActions);
     if (result.scrollbar())
         return 0;
@@ -1089,7 +1098,7 @@ static WebCore::HTMLMediaElement* mediaElement(WebCore::Node* innerNonSharedNode
     if (!innerNonSharedNode)
         return 0;
 
-    if (!(innerNonSharedNode->renderer() && innerNonSharedNode->renderer()->isMedia()))
+    if (!(innerNonSharedNode->renderer() && innerNonSharedNode->renderer()->isRenderMedia()))
         return 0;
 
     if (innerNonSharedNode->hasTagName(WebCore::HTMLNames::videoTag) || innerNonSharedNode->hasTagName(WebCore::HTMLNames::audioTag))
@@ -1193,7 +1202,7 @@ void QWebPageAdapter::triggerAction(QWebPageAdapter::MenuAction action, QWebHitT
     case ToggleVideoFullscreen:
         if (HTMLMediaElement* mediaElt = mediaElement(hitTestResult->innerNonSharedNode)) {
             if (mediaElt->isVideo() && mediaElt->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard)) {
-                UserGestureIndicator indicator(ProcessingUserGesture);
+                UserGestureIndicator indicator(IsProcessingUserGesture);
                 mediaElt->toggleStandardFullscreenState();
             }
         }
@@ -1245,7 +1254,7 @@ QString QWebPageAdapter::contextMenuItemTagForAction(QWebPageAdapter::MenuAction
     case CopyImageToClipboard:
         return contextMenuItemTagCopyImageToClipboard();
     case CopyImageUrlToClipboard:
-        return contextMenuItemTagCopyImageUrlToClipboard();
+        return contextMenuItemTagCopyImageURLToClipboard();
 
     case Cut:
         return contextMenuItemTagCut();
@@ -1361,7 +1370,7 @@ QObject* QWebPageAdapter::currentFrame() const
 bool QWebPageAdapter::hasFocusedNode() const
 {
     bool hasFocus = false;
-    LocalFrame* frame = page->focusController().focusedFrame();
+    LocalFrame* frame = page->focusController().focusedLocalFrame();
     if (frame) {
         Document* document = frame->document();
         hasFocus = document && document->focusedElement();
@@ -1438,35 +1447,35 @@ bool QWebPageAdapter::handleScrolling(QKeyEvent *ev)
 #ifndef QT_NO_SHORTCUT
     if (ev == QKeySequence::MoveToNextPage) {
         granularity = WebCore::ScrollGranularity::Page;
-        direction = WebCore::ScrollDown;
+        direction = WebCore::ScrollDirection::ScrollDown;
     } else if (ev == QKeySequence::MoveToPreviousPage) {
         granularity = WebCore::ScrollGranularity::Page;
-        direction = WebCore::ScrollUp;
+        direction = WebCore::ScrollDirection::ScrollUp;
     } else
 #endif // QT_NO_SHORTCUT
     if ((ev->key() == Qt::Key_Up && ev->modifiers() & Qt::ControlModifier) || ev->key() == Qt::Key_Home) {
         granularity = WebCore::ScrollGranularity::Document;
-        direction = WebCore::ScrollUp;
+        direction = WebCore::ScrollDirection::ScrollUp;
     } else if ((ev->key() == Qt::Key_Down && ev->modifiers() & Qt::ControlModifier) || ev->key() == Qt::Key_End) {
         granularity = WebCore::ScrollGranularity::Document;
-        direction = WebCore::ScrollDown;
+        direction = WebCore::ScrollDirection::ScrollDown;
     } else {
         switch (ev->key()) {
         case Qt::Key_Up:
             granularity = WebCore::ScrollGranularity::Line;
-            direction = WebCore::ScrollUp;
+            direction = WebCore::ScrollDirection::ScrollUp;
             break;
         case Qt::Key_Down:
             granularity = WebCore::ScrollGranularity::Line;
-            direction = WebCore::ScrollDown;
+            direction = WebCore::ScrollDirection::ScrollDown;
             break;
         case Qt::Key_Left:
             granularity = WebCore::ScrollGranularity::Line;
-            direction = WebCore::ScrollLeft;
+            direction = WebCore::ScrollDirection::ScrollLeft;
             break;
         case Qt::Key_Right:
             granularity = WebCore::ScrollGranularity::Line;
-            direction = WebCore::ScrollRight;
+            direction = WebCore::ScrollDirection::ScrollRight;
             break;
         default:
             return false;
@@ -1555,8 +1564,8 @@ bool QWebPageAdapter::touchEvent(QTouchEvent* event)
 bool QWebPageAdapter::swallowContextMenuEvent(QContextMenuEvent *event, QWebFrameAdapter *webFrame)
 {
     // Check the first and last enum values match at least, since we cast.
-    ASSERT(int(QWebPageAdapter::ScrollUp) == int(WebCore::ScrollUp));
-    ASSERT(int(QWebPageAdapter::ScrollRight) == int(WebCore::ScrollRight));
+    ASSERT(int(QWebPageAdapter::ScrollUp) == int(WebCore::ScrollDirection::ScrollUp));
+    ASSERT(int(QWebPageAdapter::ScrollRight) == int(WebCore::ScrollDirection::ScrollRight));
     ASSERT(int(QWebPageAdapter::ScrollByLine) == int(WebCore::ScrollGranularity::Line));
     ASSERT(int(QWebPageAdapter::ScrollByDocument) == int(WebCore::ScrollGranularity::Document));
 

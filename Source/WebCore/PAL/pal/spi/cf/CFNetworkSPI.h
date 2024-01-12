@@ -28,6 +28,8 @@
 #pragma once
 
 #include <CFNetwork/CFNetwork.h>
+#include <dispatch/dispatch.h>
+#include <os/object.h>
 #include <pal/spi/cf/CFNetworkConnectionCacheSPI.h>
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -89,6 +91,33 @@ typedef enum {
 #define NW_CONTEXT_HAS_PRIVACY_LEVEL_SILENT    1
 #endif
 #endif // HAVE(LOGGING_PRIVACY_LEVEL)
+
+#if HAVE(NW_PROXY_CONFIG) || HAVE(SYSTEM_SUPPORT_FOR_ADVANCED_PRIVACY_PROTECTIONS)
+
+#if OS_OBJECT_USE_OBJC
+OS_OBJECT_DECL(nw_context);
+OS_OBJECT_DECL(nw_endpoint);
+OS_OBJECT_DECL(nw_proxy_config);
+#else
+struct nw_context;
+typedef struct nw_context *nw_context_t;
+struct nw_endpoint;
+typedef struct nw_endpoint *nw_endpoint_t;
+struct nw_proxy_config;
+typedef struct nw_proxy_config *nw_proxy_config_t;
+#endif // OS_OBJECT_USE_OBJC
+
+typedef void (^nw_context_tracker_lookup_callback_t)(nw_endpoint_t endpoint, const char **tracker_name, const char **tracker_owner, bool *can_block);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+DISPATCH_RETURNS_RETAINED dispatch_data_t nw_proxy_config_copy_agent_data(nw_proxy_config_t);
+void nw_proxy_config_get_identifier(nw_proxy_config_t, uuid_t out_identifier);
+#ifdef __cplusplus
+}
+#endif
+#endif // HAVE(NW_PROXY_CONFIG) || HAVE(SYSTEM_SUPPORT_FOR_ADVANCED_PRIVACY_PROTECTIONS)
 
 typedef CF_ENUM(int64_t, _TimingDataOptions)
 {
@@ -214,8 +243,6 @@ typedef enum {
 #endif
 
 @interface NSURLRequest ()
-+ (NSArray *)allowsSpecificHTTPSCertificateForHost:(NSString *)host;
-+ (void)setAllowsSpecificHTTPSCertificate:(NSArray *)allow forHost:(NSString *)host;
 + (void)setDefaultTimeoutInterval:(NSTimeInterval)seconds;
 - (NSArray *)contentDispositionEncodingFallbackArray;
 - (CFMutableURLRequestRef)_CFURLRequest;
@@ -227,6 +254,10 @@ typedef enum {
 - (BOOL)_ignoreHSTS;
 #if HAVE(NETWORK_CONNECTION_PRIVACY_STANCE)
 @property (setter=_setPrivacyProxyFailClosed:) BOOL _privacyProxyFailClosed;
+@property (readonly) BOOL _useEnhancedPrivacyMode;
+#endif
+#if HAVE(PRIVACY_PROXY_FAIL_CLOSED_FOR_UNREACHABLE_HOSTS)
+@property (readonly) BOOL _privacyProxyFailClosedForUnreachableNonMainHosts;
 #endif
 @end
 
@@ -519,5 +550,11 @@ WTF_EXTERN_C_END
 @interface NSMutableURLRequest (Staging_103362732)
 @property (setter=_setWebSearchContent:) BOOL _isWebSearchContent;
 @end
+
+#if HAVE(ALTERNATIVE_SERVICE)
+@interface _NSHTTPAlternativeServicesStorage (Staging_116927813)
+@property BOOL canSuspendLocked;
+@end
+#endif
 
 #endif // defined(__OBJC__)

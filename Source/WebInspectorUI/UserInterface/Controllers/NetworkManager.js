@@ -42,6 +42,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
 
         this._sourceMapURLMap = new Map;
         this._downloadingSourceMaps = new Set;
+        this._failedSourceMapURLs = new Set;
 
         this._localResourceOverrides = [];
         this._harImportLocalResourceMap = new Set;
@@ -84,6 +85,10 @@ WI.NetworkManager = class NetworkManager extends WI.Object
 
                     case WI.LocalResourceOverride.InterceptType.Response:
                         supported = WI.NetworkManager.supportsOverridingResponses();
+                        break;
+
+                    case WI.LocalResourceOverride.InterceptType.ResponseMappedDirectory:
+                        supported = WI.NetworkManager.supportsOverridingResponses() && WI.LocalResource.canMapToFile();
                         break;
 
                     case WI.LocalResourceOverride.InterceptType.ResponseSkippingNetwork:
@@ -322,6 +327,11 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         }
 
         loadAndParseSourceMap();
+    }
+
+    isSourceMapURL(url)
+    {
+        return this._downloadingSourceMaps.has(url) || this._failedSourceMapURLs.has(url);
     }
 
     get bootstrapScriptEnabled()
@@ -962,6 +972,9 @@ WI.NetworkManager = class NetworkManager extends WI.Object
             if (localResourceOverride.disabled)
                 continue;
 
+            if (localResourceOverride.networkStage !== WI.NetworkManager.NetworkStage.Request)
+                continue;
+
             let isPassthrough = localResourceOverride.isPassthrough;
             let originalHeaders = isPassthrough ? request.headers : {};
 
@@ -1025,7 +1038,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         // used instead (e.g. it was added first).
         target.NetworkAgent.interceptContinue.invoke({
             requestId,
-            stage: InspectorBackend.Enum.Network.NetworkStage.Request,
+            stage: WI.NetworkManager.NetworkStage.Request,
         });
     }
 
@@ -1033,6 +1046,9 @@ WI.NetworkManager = class NetworkManager extends WI.Object
     {
         for (let localResourceOverride of this.localResourceOverridesForURL(response.url)) {
             if (localResourceOverride.disabled)
+                continue;
+
+            if (localResourceOverride.networkStage !== WI.NetworkManager.NetworkStage.Response)
                 continue;
 
             let isPassthrough = localResourceOverride.isPassthrough;
@@ -1056,7 +1072,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
                             return localResource.statusCode;
 
                         if (isPassthrough)
-                            return response.statusCode;
+                            return response.status;
 
                         return 200;
                     })(),
@@ -1075,6 +1091,41 @@ WI.NetworkManager = class NetworkManager extends WI.Object
                     headers: {...originalHeaders, ...localResource.responseHeaders},
                 });
                 return;
+
+            case WI.LocalResourceOverride.InterceptType.ResponseMappedDirectory: {
+                let subpath = localResourceOverride.generateSubpathForMappedDirectory(WI.urlWithoutUserQueryOrFragment(response.url));
+                let content = await localResource.requestContentFromMappedDirectory(subpath);
+                if (typeof content === "string") {
+                    let mimeType = WI.mimeTypeForFileExtension(WI.fileExtensionForURL(response.url));
+                    target.NetworkAgent.interceptWithResponse.invoke({
+                        requestId,
+                        content,
+                        base64Encoded: !WI.shouldTreatMIMETypeAsText(mimeType),
+                        mimeType,
+                        status: (function() {
+                            if (response.status < 400)
+                                return response.status;
+                            return 200;
+                        })(),
+                        statusText: (function() {
+                            if (response.status < 400) {
+                                if (response.statusText)
+                                    return response.statusText;
+                                return WI.HTTPUtilities.statusTextForStatusCode(response.status);
+                            }
+                            return WI.HTTPUtilities.statusTextForStatusCode(200);
+                        })(),
+                    });
+                } else {
+                    // Be lenient by allowing for a very general directory mapping to not have to
+                    // contain files for every single possible request that could be intercepted.
+                    target.NetworkAgent.interceptContinue.invoke({
+                        requestId,
+                        stage: WI.NetworkManager.NetworkStage.Response,
+                    });
+                }
+                return;
+            }
             }
         }
 
@@ -1083,7 +1134,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         // used instead (e.g. it was added first).
         target.NetworkAgent.interceptContinue.invoke({
             requestId,
-            stage: InspectorBackend.Enum.Network.NetworkStage.Response,
+            stage: WI.NetworkManager.NetworkStage.Response,
         });
     }
 
@@ -1398,7 +1449,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
 
         return {
             url: localResourceOverride.url,
-            stage: localResourceOverride.type === WI.LocalResourceOverride.InterceptType.Response ? InspectorBackend.Enum.Network.NetworkStage.Response : InspectorBackend.Enum.Network.NetworkStage.Request,
+            stage: localResourceOverride.networkStage,
             caseSensitive: localResourceOverride.isCaseSensitive,
             isRegex: localResourceOverride.isRegex,
         };
@@ -1516,6 +1567,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
     _sourceMapLoadAndParseFailed(sourceMapURL)
     {
         this._downloadingSourceMaps.delete(sourceMapURL);
+        this._failedSourceMapURLs.add(sourceMapURL);
     }
 
     _sourceMapLoadAndParseSucceeded(sourceMapURL, sourceMap)
@@ -1614,9 +1666,18 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         if (!event.target.isMainFrame())
             return;
 
+        WI.LocalResource.resetPathsThatFailedToLoadFromFileSystem();
+
         this._sourceMapURLMap.clear();
         this._downloadingSourceMaps.clear();
+        this._failedSourceMapURLs.clear();
     }
+};
+
+// Keep this in sync with `Network.NetworkStage`.
+WI.NetworkManager.NetworkStage = {
+    Request: "request",
+    Response: "response",
 };
 
 WI.NetworkManager.EmulatedCondition = {

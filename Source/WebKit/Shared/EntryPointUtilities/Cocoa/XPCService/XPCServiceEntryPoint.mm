@@ -26,6 +26,7 @@
 #import "config.h"
 
 #import "ArgumentCodersCF.h"
+#import "Logging.h"
 #import "SandboxUtilities.h"
 #import "XPCServiceEntryPoint.h"
 #import <WebCore/ProcessIdentifier.h>
@@ -53,7 +54,7 @@ bool XPCServiceInitializerDelegate::checkEntitlements()
         xpc_connection_get_audit_token(m_connection.get(), &auditToken);
         if (auto rc = sandbox_check_by_audit_token(auditToken, "mach-lookup", static_cast<enum sandbox_filter_type>(SANDBOX_FILTER_GLOBAL_NAME | SANDBOX_CHECK_NO_REPORT), "com.apple.nsurlsessiond")) {
             // FIXME (rdar://problem/54178641): This requirement is too strict, it should be possible to load file:// resources without network access.
-            NSLog(@"Application does not have permission to communicate with network resources. rc=%d : errno=%d", rc, errno);
+            RELEASE_LOG_FAULT(Network, "Application does not have permission to communicate with network resources. rc=%d : errno=%d", rc, errno);
             return false;
         }
     }
@@ -119,20 +120,12 @@ bool XPCServiceInitializerDelegate::getExtraInitializationData(HashMap<String, S
     if (!inspectorProcess.isEmpty())
         extraInitializationData.add("inspector-process"_s, inspectorProcess);
 
-#if ENABLE(SERVICE_WORKER)
     auto serviceWorkerProcess = String::fromLatin1(xpc_dictionary_get_string(extraDataInitializationDataObject, "service-worker-process"));
     if (!serviceWorkerProcess.isEmpty())
         extraInitializationData.add("service-worker-process"_s, WTFMove(serviceWorkerProcess));
     auto registrableDomain = String::fromLatin1(xpc_dictionary_get_string(extraDataInitializationDataObject, "registrable-domain"));
     if (!registrableDomain.isEmpty())
         extraInitializationData.add("registrable-domain"_s, WTFMove(registrableDomain));
-#endif
-
-#if ENABLE(WEBCONTENT_CRASH_TESTING)
-    auto isWebcontentCrashy = String::fromLatin1(xpc_dictionary_get_string(extraDataInitializationDataObject, "is-webcontent-crashy"));
-    if (!isWebcontentCrashy.isEmpty())
-        extraInitializationData.add("is-webcontent-crashy"_s, WTFMove(isWebcontentCrashy));
-#endif
 
     auto isPrewarmedProcess = String::fromLatin1(xpc_dictionary_get_string(extraDataInitializationDataObject, "is-prewarmed"));
     if (!isPrewarmedProcess.isEmpty())

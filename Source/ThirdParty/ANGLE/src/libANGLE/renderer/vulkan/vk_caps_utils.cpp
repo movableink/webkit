@@ -196,6 +196,29 @@ bool CanSupportYuvInternalFormat(const RendererVk *rendererVk)
 
     return twoPlane8bitYuvFormatSupported && threePlane8bitYuvFormatSupported;
 }
+
+uint32_t GetTimestampValidBits(const std::vector<VkQueueFamilyProperties> &queueFamilyProperties,
+                               uint32_t queueFamilyIndex)
+{
+    ASSERT(!queueFamilyProperties.empty());
+
+    if (queueFamilyIndex < queueFamilyProperties.size())
+    {
+        // If a queue family is already selected (which is only currently the case if there is only
+        // one family), get the timestamp valid bits from that queue.
+        return queueFamilyProperties[queueFamilyIndex].timestampValidBits;
+    }
+
+    // If a queue family is not already selected, we cannot know which queue family will end up
+    // being used until a surface is used.  Take the minimum valid bits from all queues as a safe
+    // measure.
+    uint32_t timestampValidBits = queueFamilyProperties[0].timestampValidBits;
+    for (const VkQueueFamilyProperties &properties : queueFamilyProperties)
+    {
+        timestampValidBits = std::min(timestampValidBits, properties.timestampValidBits);
+    }
+    return timestampValidBits;
+}
 }  // namespace
 }  // namespace vk
 
@@ -216,9 +239,6 @@ void RendererVk::ensureCapsInitialized() const
         return;
     mCapsInitialized = true;
 
-    ASSERT(mCurrentQueueFamilyIndex < mQueueFamilyProperties.size());
-    const VkQueueFamilyProperties &queueFamilyProperties =
-        mQueueFamilyProperties[mCurrentQueueFamilyIndex];
     const VkPhysicalDeviceLimits &limitsVk = mPhysicalDeviceProperties.limits;
 
     mNativeExtensions.setTextureExtensionSupport(mNativeTextureCaps);
@@ -283,6 +303,7 @@ void RendererVk::ensureCapsInitialized() const
     mNativeExtensions.robustnessEXT                 = true;
     mNativeExtensions.discardFramebufferEXT         = true;
     mNativeExtensions.stencilTexturingANGLE         = true;
+    mNativeExtensions.packReverseRowOrderANGLE      = true;
     mNativeExtensions.textureBorderClampOES = getFeatures().supportsCustomBorderColor.enabled;
     mNativeExtensions.textureBorderClampEXT = getFeatures().supportsCustomBorderColor.enabled;
     mNativeExtensions.polygonModeNV         = mPhysicalDeviceFeatures.fillModeNonSolid == VK_TRUE;
@@ -366,9 +387,12 @@ void RendererVk::ensureCapsInitialized() const
     if (vk::OutsideRenderPassCommandBuffer::SupportsQueries(mPhysicalDeviceFeatures) &&
         vk::RenderPassCommandBuffer::SupportsQueries(mPhysicalDeviceFeatures))
     {
-        mNativeExtensions.disjointTimerQueryEXT = queueFamilyProperties.timestampValidBits > 0;
-        mNativeCaps.queryCounterBitsTimeElapsed = queueFamilyProperties.timestampValidBits;
-        mNativeCaps.queryCounterBitsTimestamp   = queueFamilyProperties.timestampValidBits;
+        const uint32_t timestampValidBits =
+            vk::GetTimestampValidBits(mQueueFamilyProperties, mCurrentQueueFamilyIndex);
+
+        mNativeExtensions.disjointTimerQueryEXT = timestampValidBits > 0;
+        mNativeCaps.queryCounterBitsTimeElapsed = timestampValidBits;
+        mNativeCaps.queryCounterBitsTimestamp   = timestampValidBits;
     }
 
     mNativeExtensions.textureFilterAnisotropicEXT =
@@ -401,8 +425,9 @@ void RendererVk::ensureCapsInitialized() const
     // Implemented in the translator
     mNativeExtensions.shaderNonConstantGlobalInitializersEXT = true;
 
-    // Implemented in the front end
-    mNativeExtensions.separateShaderObjectsEXT = true;
+    // Implemented in the front end. Enable SSO if not explicitly disabled.
+    mNativeExtensions.separateShaderObjectsEXT =
+        !getFeatures().disableSeparateShaderObjects.enabled;
 
     // Vulkan has no restrictions of the format of cubemaps, so if the proper formats are supported,
     // creating a cube of any of these formats should be implicitly supported.
@@ -423,9 +448,6 @@ void RendererVk::ensureCapsInitialized() const
     mNativeExtensions.shaderIoBlocksEXT = true;
 
     mNativeExtensions.gpuShader5EXT = vk::CanSupportGPUShader5EXT(mPhysicalDeviceFeatures);
-
-    mNativeExtensions.textureFilteringHintCHROMIUM =
-        getFeatures().supportsFilteringPrecision.enabled;
 
     // Only expose texture cubemap array if the physical device supports it.
     mNativeExtensions.textureCubeMapArrayOES = getFeatures().supportsImageCubeArray.enabled;
@@ -818,8 +840,7 @@ void RendererVk::ensureCapsInitialized() const
          getFeatures().enablePreRotateSurfaces.enabled ||
          getFeatures().emulatedPrerotation90.enabled ||
          getFeatures().emulatedPrerotation180.enabled ||
-         getFeatures().emulatedPrerotation270.enabled ||
-         !getFeatures().supportsNegativeViewport.enabled))
+         getFeatures().emulatedPrerotation270.enabled))
     {
         reservedVaryingComponentCount += kReservedVaryingComponentsForTransformFeedbackExtension;
     }
@@ -1138,7 +1159,7 @@ void RendererVk::ensureCapsInitialized() const
     mNativeExtensions.textureUsageANGLE = true;
 
     // GL_KHR_parallel_shader_compile
-    mNativeExtensions.parallelShaderCompileKHR = false;
+    mNativeExtensions.parallelShaderCompileKHR = mFeatures.enableParallelCompileAndLink.enabled;
 
     // GL_NV_read_depth, GL_NV_read_depth_stencil, GL_NV_read_stencil
     mNativeExtensions.readDepthNV        = true;
@@ -1174,10 +1195,23 @@ void RendererVk::ensureCapsInitialized() const
     }
 
     mNativeExtensions.logicOpANGLE = mPhysicalDeviceFeatures.logicOp == VK_TRUE;
+
+    mNativeExtensions.YUVTargetEXT = mFeatures.supportsExternalFormatResolve.enabled;
 }
 
 namespace vk
 {
+
+bool CanSupportTransformFeedbackExtension(
+    const VkPhysicalDeviceTransformFeedbackFeaturesEXT &xfbFeatures)
+{
+    return xfbFeatures.transformFeedback == VK_TRUE;
+}
+
+bool CanSupportTransformFeedbackEmulation(const VkPhysicalDeviceFeatures &features)
+{
+    return features.vertexPipelineStoresAndAtomics == VK_TRUE;
+}
 
 bool CanSupportGPUShader5EXT(const VkPhysicalDeviceFeatures &features)
 {

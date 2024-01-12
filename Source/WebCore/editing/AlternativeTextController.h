@@ -27,8 +27,8 @@
 
 #include "AlternativeTextClient.h"
 #include "DocumentMarker.h"
+#include "EventLoop.h"
 #include "Position.h"
-#include "SuspendableTimer.h"
 #include <variant>
 #include <wtf/Noncopyable.h>
 
@@ -56,7 +56,7 @@ struct TextCheckingResult;
 #define UNLESS_ENABLED(functionBody) functionBody
 #endif
 
-class AlternativeTextController {
+class AlternativeTextController : public CanMakeWeakPtr<AlternativeTextController> {
     WTF_MAKE_NONCOPYABLE(AlternativeTextController);
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -119,7 +119,7 @@ private:
     FloatRect rootViewRectForRange(const SimpleRange&) const;
     void markPrecedingWhitespaceForDeletedAutocorrectionAfterCommand(EditCommand*);
 
-    SuspendableTimer m_timer;
+    EventLoopTimerHandle m_timer;
     std::optional<SimpleRange> m_rangeWithAlternative;
     bool m_isActive { };
     bool m_isDismissedByEditing { };
@@ -131,14 +131,15 @@ private:
     Position m_positionForLastDeletedAutocorrection;
 #endif
 #if USE(DICTATION_ALTERNATIVES) || USE(AUTOCORRECTION_PANEL)
-    String markerDescriptionForAppliedAlternativeText(AlternativeTextType, DocumentMarker::MarkerType);
-    void applyAlternativeTextToRange(const SimpleRange&, const String&, AlternativeTextType, OptionSet<DocumentMarker::MarkerType>);
+    String markerDescriptionForAppliedAlternativeText(AlternativeTextType, DocumentMarker::Type);
+    void applyAlternativeTextToRange(const SimpleRange&, const String&, AlternativeTextType, OptionSet<DocumentMarker::Type>);
     AlternativeTextClient* alternativeTextClient();
 #endif
+    Ref<Document> protectedDocument() const { return m_document.get(); }
 
     void removeCorrectionIndicatorMarkers();
 
-    Document& m_document;
+    CheckedRef<Document> m_document;
 };
 
 #undef UNLESS_ENABLED

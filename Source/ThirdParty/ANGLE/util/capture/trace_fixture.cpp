@@ -139,6 +139,8 @@ EGLDisplay gEGLDisplay;
 
 std::string gBinaryDataDir = ".";
 
+angle::ReplayResourceMode gReplayResourceMode = angle::ReplayResourceMode::Active;
+
 template <typename T>
 T *AllocateZeroedValues(size_t count)
 {
@@ -348,6 +350,11 @@ struct TraceFunctionsImpl : angle::TraceFunctions
 
     void SetBinaryDataDir(const char *dataDir) override { gBinaryDataDir = dataDir; }
 
+    void SetReplayResourceMode(const angle::ReplayResourceMode resourceMode) override
+    {
+        gReplayResourceMode = resourceMode;
+    }
+
     void SetTraceInfo(const angle::TraceInfo &traceInfo) override { gTraceInfo = traceInfo; }
 
     void SetTraceGzPath(const std::string &traceGzPath) override { gTraceGzPath = traceGzPath; }
@@ -451,29 +458,24 @@ void UpdateVertexArrayID(GLuint id, GLsizei readBufferOffset)
     UpdateResourceMap(gVertexArrayMap, id, readBufferOffset);
 }
 
-void SetResourceID(GLuint *map, GLuint id)
-{
-    map[id] = id;
-}
-
 void SetFramebufferID(GLuint id)
 {
-    SetResourceID(gFramebufferMap, id);
+    glGenFramebuffers(1, &gFramebufferMap[id]);
 }
 
 void SetBufferID(GLuint id)
 {
-    SetResourceID(gBufferMap, id);
+    glGenBuffers(1, &gBufferMap[id]);
 }
 
 void SetRenderbufferID(GLuint id)
 {
-    SetResourceID(gRenderbufferMap, id);
+    glGenRenderbuffers(1, &gRenderbufferMap[id]);
 }
 
 void SetTextureID(GLuint id)
 {
-    SetResourceID(gTextureMap, id);
+    glGenTextures(1, &gTextureMap[id]);
 }
 
 void ValidateSerializedState(const char *serializedState, const char *fileName, uint32_t line)

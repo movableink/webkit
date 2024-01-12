@@ -35,6 +35,8 @@
 #include <wtf/Function.h>
 #include <wtf/Lock.h>
 #include <wtf/LoggerHelper.h>
+#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
@@ -42,12 +44,20 @@ class InbandMetadataTextTrackPrivateAVF;
 class InbandTextTrackPrivateAVF;
 
 // Use eager initialization for the WeakPtrFactory since we construct WeakPtrs on another thread.
-class MediaPlayerPrivateAVFoundation : public CanMakeWeakPtr<MediaPlayerPrivateAVFoundation, WeakPtrFactoryInitialization::Eager>, public MediaPlayerPrivateInterface, public AVFInbandTrackParent
+class MediaPlayerPrivateAVFoundation
+    : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaPlayerPrivateAVFoundation>
+    , public MediaPlayerPrivateInterface
+    , public AVFInbandTrackParent
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
 {
 public:
+    virtual ~MediaPlayerPrivateAVFoundation();
+
+    void ref() final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
+    void deref() final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
+
     virtual void metadataLoaded();
     virtual void playabilityKnown();
     virtual void rateChanged();
@@ -135,12 +145,6 @@ public:
         Function<void()> m_function;
     };
 
-    void scheduleMainThreadNotification(Notification&&);
-    void scheduleMainThreadNotification(Notification::Type, const MediaTime& = MediaTime::zeroTime());
-    void scheduleMainThreadNotification(Notification::Type, bool completed);
-    void dispatchNotification();
-    void clearMainThreadPendingFlag();
-
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     static bool extractKeyURIKeyIDAndCertificateFromInitData(Uint8Array* initData, String& keyURI, String& keyID, RefPtr<Uint8Array>& certificate);
 #endif
@@ -160,7 +164,6 @@ public:
 
 protected:
     explicit MediaPlayerPrivateAVFoundation(MediaPlayer*);
-    virtual ~MediaPlayerPrivateAVFoundation();
 
     // MediaPlayerPrivatePrivateInterface overrides.
     void load(const String& url) override;
@@ -180,12 +183,11 @@ protected:
     FloatSize naturalSize() const override;
     bool hasVideo() const override { return m_cachedHasVideo; }
     bool hasAudio() const override { return m_cachedHasAudio; }
-    void setPageIsVisible(bool) final;
+    void setPageIsVisible(bool, String&& sceneIdentifier) final;
     MediaTime durationMediaTime() const override;
     MediaTime currentMediaTime() const override = 0;
-    void seek(const MediaTime&) override;
-    void seekWithTolerance(const MediaTime&, const MediaTime&, const MediaTime&) override;
-    bool seeking() const override;
+    void seekToTarget(const SeekTarget&) final;
+    bool seeking() const final;
     bool paused() const override;
     void setVolume(float) override = 0;
     bool hasClosedCaptions() const override { return m_cachedHasCaptions; }
@@ -214,6 +216,7 @@ protected:
     bool supportsScanning() const override { return true; }
     unsigned long long fileSize() const override { return totalBytes(); }
 
+protected:
     // Required interfaces for concrete derived classes.
     virtual void createAVAssetForURL(const URL&) = 0;
     virtual void createAVPlayer() = 0;
@@ -246,7 +249,7 @@ protected:
     virtual void platformPlay() = 0;
     virtual void platformPause() = 0;
     virtual bool platformPaused() const { return !rate(); }
-    virtual void seekToTime(const MediaTime&, const MediaTime& negativeTolerance, const MediaTime& positiveTolerance) = 0;
+    virtual void seekToTargetInternal(const SeekTarget&) = 0;
     unsigned long long totalBytes() const override = 0;
     virtual const PlatformTimeRanges& platformBufferedTimeRanges() const = 0;
     virtual MediaTime platformMaxTimeSeekable() const = 0;
@@ -274,7 +277,7 @@ protected:
     virtual bool isHLS() const { return false; }
 
     static bool isUnsupportedMIMEType(const String&);
-    static const HashSet<String, ASCIICaseInsensitiveHash>& staticMIMETypeList();
+    static const HashSet<String>& staticMIMETypeList();
 
     void updateStates();
 
@@ -283,7 +286,6 @@ protected:
     void setHasClosedCaptions(bool);
     void characteristicsChanged();
     void setDelayCharacteristicsChangedNotification(bool);
-    void setDelayCallbacks(bool) const;
     void setIgnoreLoadStateChanges(bool delay) { m_ignoreLoadStateChanges = delay; }
     void setNaturalSize(FloatSize);
     bool isLiveStream() const { return std::isinf(duration()); }
@@ -331,10 +333,11 @@ protected:
 
     bool shouldEnableInheritURIQueryComponent() const;
 
-private:
+protected:
     ThreadSafeWeakPtr<MediaPlayer> m_player;
 
     Function<void()> m_pendingSeek;
+    MediaTime m_lastSeekTime;
 
     mutable Lock m_queuedNotificationsLock;
     Deque<Notification> m_queuedNotifications WTF_GUARDED_BY_LOCK(m_queuedNotificationsLock);
@@ -359,9 +362,7 @@ private:
     mutable MediaTime m_cachedMaxTimeSeekable;
     mutable MediaTime m_cachedMinTimeSeekable;
     mutable MediaTime m_cachedDuration;
-    MediaTime m_reportedDuration;
     mutable MediaTime m_maxTimeLoadedAtLastDidLoadingProgress;
-    mutable int m_delayCallbacks;
     int m_delayCharacteristicsChangedNotification;
     bool m_mainThreadCallPending;
     bool m_assetIsPlayable;
@@ -373,7 +374,6 @@ private:
     bool m_cachedHasCaptions;
     bool m_ignoreLoadStateChanges;
     bool m_haveReportedFirstVideoFrame;
-    bool m_inbandTrackConfigurationPending;
     bool m_characteristicsChanged;
     bool m_shouldMaintainAspectRatio;
     bool m_seeking;
@@ -388,15 +388,6 @@ namespace WTF {
 
 template<typename Type>
 struct LogArgument;
-
-template<> struct EnumTraits<WebCore::MediaPlayerPrivateAVFoundation::MediaRenderingMode> {
-using values = EnumValues<
-    WebCore::MediaPlayerPrivateAVFoundation::MediaRenderingMode,
-    WebCore::MediaPlayerPrivateAVFoundation::MediaRenderingMode::MediaRenderingNone,
-    WebCore::MediaPlayerPrivateAVFoundation::MediaRenderingMode::MediaRenderingToContext,
-    WebCore::MediaPlayerPrivateAVFoundation::MediaRenderingMode::MediaRenderingToLayer
-    >;
-};
 
 }; // namespace WTF
 

@@ -217,6 +217,13 @@ struct FeaturesGL : FeatureSetBase
         &members,
     };
 
+    FeatureInfo preTransformTextureCubeGradDerivatives = {
+        "preTransformTextureCubeGradDerivatives",
+        FeatureCategory::OpenGLWorkarounds,
+        "Apply a vendor-specific transformation to explicit cubemap derivatives",
+        &members,
+    };
+
     FeatureInfo disableBlendFuncExtended = {
         "disableBlendFuncExtended",
         FeatureCategory::OpenGLWorkarounds,
@@ -237,20 +244,6 @@ struct FeaturesGL : FeatureSetBase
         FeatureCategory::OpenGLWorkarounds,
         "Drivers generate errors when querying the number of bits in timer queries",
         &members, "http://anglebug.com/3027"
-    };
-
-    FeatureInfo dontRelinkProgramsInParallel = {
-        "dontRelinkProgramsInParallel",
-        FeatureCategory::OpenGLWorkarounds,
-        "Relinking a program in parallel is buggy",
-        &members, "http://anglebug.com/3045"
-    };
-
-    FeatureInfo disableWorkerContexts = {
-        "disableWorkerContexts",
-        FeatureCategory::OpenGLWorkarounds,
-        "Some tests have been seen to fail using worker contexts",
-        &members, "http://crbug.com/849576"
     };
 
     FeatureInfo limitWebglMaxTextureSizeTo4096 = {
@@ -604,6 +597,13 @@ struct FeaturesGL : FeatureSetBase
         &members,
     };
 
+    FeatureInfo emulateClipOrigin = {
+        "emulateClipOrigin",
+        FeatureCategory::OpenGLWorkarounds,
+        "Some drivers incorrectly apply GL_CLIP_ORIGIN_EXT state.",
+        &members,
+    };
+
     FeatureInfo bindCompleteFramebufferForTimerQueries = {
         "bindCompleteFramebufferForTimerQueries",
         FeatureCategory::OpenGLWorkarounds,
@@ -615,7 +615,7 @@ struct FeaturesGL : FeatureSetBase
     FeatureInfo disableBaseInstanceVertex = {
         "disableBaseInstanceVertex",
         FeatureCategory::OpenGLWorkarounds,
-        "Some Mali drivers have buggy implementations of glDraw*BaseVertex*.",
+        "Some drivers have buggy implementations of glDraw*BaseVertex*.",
         &members, "http://anglebug.com/8172"
     };
 
@@ -664,8 +664,50 @@ struct FeaturesGL : FeatureSetBase
     FeatureInfo disableClipControl = {
         "disableClipControl",
         FeatureCategory::OpenGLFeatures,
-        "Some ARM Mali devices genenerate errors when querying the clip control state.",
+        "Some devices genenerate errors when querying the clip control state",
         &members, "http://crbug.com/1434317"
+    };
+
+    FeatureInfo scalarizeVecAndMatConstructorArgs = {
+        "scalarizeVecAndMatConstructorArgs",
+        FeatureCategory::OpenGLWorkarounds,
+        "Rewrite vec/mat constructors to work around driver bugs",
+        &members, "http://crbug.com/1420130"
+    };
+
+    FeatureInfo ensureNonEmptyBufferIsBoundForDraw = {
+        "ensureNonEmptyBufferIsBoundForDraw",
+        FeatureCategory::OpenGLFeatures,
+        "Apple OpenGL drivers crash when drawing with a zero-sized buffer bound using a non-zero divisor.",
+        &members, "http://crbug.com/1456243"
+    };
+
+    FeatureInfo explicitFragmentLocations = {
+        "explicitFragmentLocations",
+        FeatureCategory::OpenGLWorkarounds,
+        "Always write explicit location layout qualifiers for fragment outputs.",
+        &members, "https://anglebug.com/8308"
+    };
+
+    FeatureInfo disableRenderSnorm = {
+        "disableRenderSnorm",
+        FeatureCategory::OpenGLWorkarounds,
+        "Disable EXT_render_snorm extension.",
+        &members, "https://anglebug.com/8315"
+    };
+
+    FeatureInfo disableTextureMirrorClampToEdge = {
+        "disableTextureMirrorClampToEdge",
+        FeatureCategory::OpenGLWorkarounds,
+        "Disable EXT_texture_mirror_clamp_to_edge extension.",
+        &members, "https://anglebug.com/8319"
+    };
+
+    FeatureInfo resyncDepthRangeOnClipControl = {
+        "resyncDepthRangeOnClipControl",
+        FeatureCategory::OpenGLWorkarounds,
+        "Resync depth range to apply clip control updates.",
+        &members, "https://anglebug.com/8381"
     };
 
 };

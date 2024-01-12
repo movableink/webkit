@@ -92,9 +92,7 @@ constexpr ComparableCaseFoldingASCIILiteral supportedImageMIMETypeArray[] = {
     "application/x-tiff",
     "application/x-win-bitmap",
 #endif
-#if USE(CG) || ENABLE(APNG)
     "image/apng",
-#endif
 #if HAVE(AVIF) || USE(AVIF)
     "image/avif",
 #endif
@@ -236,10 +234,10 @@ HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::supportedNonImageMI
     return types;
 }
 
-const HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::supportedMediaMIMETypes()
+const HashSet<String>& MIMETypeRegistry::supportedMediaMIMETypes()
 {
     static NeverDestroyed types = [] {
-        HashSet<String, ASCIICaseInsensitiveHash> types;
+        HashSet<String> types;
 #if ENABLE(VIDEO)
         MediaPlayer::getSupportedTypes(types);
 #endif

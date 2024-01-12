@@ -25,18 +25,25 @@
 
 #pragma once
 
+#include <WebCore/CookieChangeListener.h>
 #include <WebCore/CookieJar.h>
 #include <WebCore/SameSiteInfo.h>
+#include <wtf/Forward.h>
 #include <wtf/HashSet.h>
+#include <wtf/RefCounter.h>
 
 namespace WebCore {
+struct Cookie;
 class NetworkStorageSession;
 enum class ShouldRelaxThirdPartyCookieBlocking : bool;
 }
 
 namespace WebKit {
 
-class WebCookieCache {
+enum PendingCookieUpdateCounterType { };
+using PendingCookieUpdateCounter = RefCounter<PendingCookieUpdateCounterType>;
+
+class WebCookieCache : public WebCore::CookieChangeListener {
 public:
     WebCookieCache() = default;
 
@@ -45,8 +52,9 @@ public:
     String cookiesForDOM(const URL& firstParty, const WebCore::SameSiteInfo&, const URL&, WebCore::FrameIdentifier, WebCore::PageIdentifier, WebCore::IncludeSecureCookies);
     void setCookiesFromDOM(const URL& firstParty, const WebCore::SameSiteInfo&, const URL&, WebCore::FrameIdentifier, WebCore::PageIdentifier, const String& cookieString, WebCore::ShouldRelaxThirdPartyCookieBlocking);
 
-    void cookiesAdded(const String& host, const Vector<WebCore::Cookie>&);
-    void cookiesDeleted(const String& host, const Vector<WebCore::Cookie>&);
+    PendingCookieUpdateCounter::Token WARN_UNUSED_RETURN willSetCookieFromDOM();
+    void didSetCookieFromDOM(PendingCookieUpdateCounter::Token, const URL& firstParty, const WebCore::SameSiteInfo&, const URL&, WebCore::FrameIdentifier, WebCore::PageIdentifier, const WebCore::Cookie&, WebCore::ShouldRelaxThirdPartyCookieBlocking);
+
     void allCookiesDeleted();
 
     void clear();
@@ -55,9 +63,16 @@ public:
 private:
     WebCore::NetworkStorageSession& inMemoryStorageSession();
     void pruneCacheIfNecessary();
+    bool cacheMayBeOutOfSync() const;
+
+    // CookieChangeListener
+    void cookiesAdded(const String& host, const Vector<WebCore::Cookie>&) final;
+    void cookiesDeleted(const String& host, const Vector<WebCore::Cookie>&) final;
 
     HashSet<String> m_hostsWithInMemoryStorage;
     std::unique_ptr<WebCore::NetworkStorageSession> m_inMemoryStorageSession;
+
+    PendingCookieUpdateCounter m_pendingCookieUpdateCounter;
 };
 
 } // namespace WebKit

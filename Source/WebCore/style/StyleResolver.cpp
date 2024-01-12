@@ -30,6 +30,7 @@
 #include "config.h"
 #include "StyleResolver.h"
 
+#include "BlendingKeyframes.h"
 #include "CSSCustomPropertyValue.h"
 #include "CSSFontSelector.h"
 #include "CSSKeyframeRule.h"
@@ -46,7 +47,6 @@
 #include "ElementRuleCollector.h"
 #include "FrameSelection.h"
 #include "InspectorInstrumentation.h"
-#include "KeyframeList.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
@@ -99,10 +99,6 @@ public:
         : m_element(&element)
         , m_parentStyle(parentStyle)
     {
-        bool resetStyleInheritance = hasShadowRootParent(element) && downcast<ShadowRoot>(element.parentNode())->resetStyleInheritance();
-        if (resetStyleInheritance)
-            m_parentStyle = nullptr;
-
         auto& document = element.document();
         auto* documentElement = document.documentElement();
         if (!documentElement || documentElement == &element)
@@ -227,11 +223,6 @@ void Resolver::addKeyframeStyle(Ref<StyleRuleKeyframes>&& rule)
     document().keyframesRuleDidChange(animationName);
 }
 
-static inline bool isAtShadowBoundary(const Element& element)
-{
-    return is<ShadowRoot>(element.parentNode());
-}
-
 BuilderContext Resolver::builderContext(const State& state)
 {
     return {
@@ -301,7 +292,7 @@ ResolvedStyle Resolver::styleForElement(const Element& element, const Resolution
     return { state.takeStyle(), WTFMove(elementStyleRelations), collector.releaseMatchResult() };
 }
 
-std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(const Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, const StyleRuleKeyframe& keyframe, KeyframeValue& keyframeValue)
+std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(const Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, const StyleRuleKeyframe& keyframe, BlendingKeyframe& blendingKeyframe)
 {
     // Add all the animating properties to the keyframe.
     bool hasRevert = false;
@@ -311,14 +302,14 @@ std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(const Element& element, 
         // because they are not animated; they just describe the composite operation and timing
         // function between this keyframe and the next.
         if (CSSProperty::isDirectionAwareProperty(unresolvedProperty))
-            keyframeValue.setContainsDirectionAwareProperty(true);
+            blendingKeyframe.setContainsDirectionAwareProperty(true);
         if (auto* value = propertyReference.value()) {
             auto resolvedProperty = CSSProperty::resolveDirectionAwareProperty(unresolvedProperty, elementStyle.direction(), elementStyle.writingMode());
             if (resolvedProperty != CSSPropertyAnimationTimingFunction && resolvedProperty != CSSPropertyAnimationComposition) {
                 if (value->isCustomPropertyValue())
-                    keyframeValue.addProperty(downcast<CSSCustomPropertyValue>(*value).name());
+                    blendingKeyframe.addProperty(downcast<CSSCustomPropertyValue>(*value).name());
                 else
-                    keyframeValue.addProperty(resolvedProperty);
+                    blendingKeyframe.addProperty(resolvedProperty);
             }
             if (isValueID(*value, CSSValueRevert))
                 hasRevert = true;
@@ -438,7 +429,7 @@ Vector<Ref<StyleRuleKeyframe>> Resolver::keyframeRulesForName(const AtomString& 
     return deduplicatedKeyframes;
 }
 
-void Resolver::keyframeStylesForAnimation(const Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, KeyframeList& list)
+void Resolver::keyframeStylesForAnimation(const Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, BlendingKeyframes& list)
 {
     list.clear();
 
@@ -450,16 +441,16 @@ void Resolver::keyframeStylesForAnimation(const Element& element, const RenderSt
     for (auto& keyframeRule : keyframeRules) {
         // Add this keyframe style to all the indicated key times
         for (auto key : keyframeRule->keys()) {
-            KeyframeValue keyframeValue(0, nullptr);
-            keyframeValue.setStyle(styleForKeyframe(element, elementStyle, context, keyframeRule.get(), keyframeValue));
-            keyframeValue.setKey(key);
+            BlendingKeyframe blendingKeyframe(0, nullptr);
+            blendingKeyframe.setStyle(styleForKeyframe(element, elementStyle, context, keyframeRule.get(), blendingKeyframe));
+            blendingKeyframe.setOffset(key);
             if (auto timingFunctionCSSValue = keyframeRule->properties().getPropertyCSSValue(CSSPropertyAnimationTimingFunction))
-                keyframeValue.setTimingFunction(TimingFunction::createFromCSSValue(*timingFunctionCSSValue.get()));
+                blendingKeyframe.setTimingFunction(TimingFunction::createFromCSSValue(*timingFunctionCSSValue.get()));
             if (auto compositeOperationCSSValue = keyframeRule->properties().getPropertyCSSValue(CSSPropertyAnimationComposition)) {
                 if (auto compositeOperation = toCompositeOperation(*compositeOperationCSSValue))
-                    keyframeValue.setCompositeOperation(*compositeOperation);
+                    blendingKeyframe.setCompositeOperation(*compositeOperation);
             }
-            list.insert(WTFMove(keyframeValue));
+            list.insert(WTFMove(blendingKeyframe));
             list.updatePropertiesMetadata(keyframeRule->properties());
         }
     }
@@ -620,7 +611,10 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
         // element context. This is fast and saves memory by reusing the style data structures.
         style.copyNonInheritedFrom(*cacheEntry->renderStyle);
 
-        if (parentStyle.inheritedEqual(*cacheEntry->parentRenderStyle) && !isAtShadowBoundary(element)) {
+        bool hasExplicitlyInherited = cacheEntry->renderStyle->hasExplicitlyInheritedProperties();
+        bool inheritedStyleEqual = parentStyle.inheritedEqual(*cacheEntry->parentRenderStyle);
+
+        if (inheritedStyleEqual && !hasExplicitlyInherited) {
             InsideLink linkStatus = state.style()->insideLink();
             // If the cache item parent style has identical inherited properties to the current parent style then the
             // resulting style will be identical too. We copy the inherited properties over from the cache and are done.
@@ -635,9 +629,11 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
             return;
         }
 
-        includedProperties = { PropertyCascade::PropertyType::Inherited };
-
-        if (!parentStyle.inheritedCustomPropertiesEqual(*cacheEntry->parentRenderStyle))
+        if (!inheritedStyleEqual)
+            includedProperties.add(PropertyCascade::PropertyType::Inherited);
+        if (hasExplicitlyInherited)
+            includedProperties.add(PropertyCascade::PropertyType::ExplicitlyInherited);
+        if (!inheritedStyleEqual && !parentStyle.inheritedCustomPropertiesEqual(*cacheEntry->parentRenderStyle))
             includedProperties.add(PropertyCascade::PropertyType::VariableReference);
     }
 

@@ -76,7 +76,7 @@ public:
     using InvalidConstraintsHandler = Function<void(const String& invalidConstraint)>;
     WEBCORE_EXPORT void validateRequestConstraints(ValidConstraintsHandler&&, InvalidConstraintsHandler&&, const MediaStreamRequest&, MediaDeviceHashSalts&&);
 
-    using NewMediaStreamHandler = Function<void(Expected<Ref<MediaStreamPrivate>, String>&&)>;
+    using NewMediaStreamHandler = Function<void(Expected<Ref<MediaStreamPrivate>, CaptureSourceError>&&)>;
     void createMediaStream(Ref<const Logger>&&, NewMediaStreamHandler&&, MediaDeviceHashSalts&&, CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, const MediaStreamRequest&);
 
     WEBCORE_EXPORT void getMediaStreamDevices(CompletionHandler<void(Vector<CaptureDevice>&&)>&&);
@@ -109,6 +109,11 @@ public:
 #if ENABLE(APP_PRIVACY_REPORT)
     void setIdentity(OSObjectPtr<tcc_identity_t>&& identity) { m_identity = WTFMove(identity); }
     OSObjectPtr<tcc_identity_t> identity() const { return m_identity; }
+#endif
+
+#if ENABLE(EXTENSION_CAPABILITIES)
+    const String& currentMediaEnvironment() const;
+    void setCurrentMediaEnvironment(const String&);
 #endif
 
 private:
@@ -144,6 +149,10 @@ private:
 
 #if ENABLE(APP_PRIVACY_REPORT)
     OSObjectPtr<tcc_identity_t> m_identity;
+#endif
+
+#if ENABLE(EXTENSION_CAPABILITIES)
+    String m_currentMediaEnvironment;
 #endif
 
     bool m_useMockCaptureDevices { false };

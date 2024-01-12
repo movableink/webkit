@@ -139,13 +139,6 @@ struct FeaturesVk : FeatureSetBase
         &members,
     };
 
-    FeatureInfo supportsFilteringPrecision = {
-        "supportsFilteringPrecision",
-        FeatureCategory::VulkanFeatures,
-        "VkDevice supports the VK_GOOGLE_sampler_filtering_precision extension",
-        &members,
-    };
-
     FeatureInfo supportsExternalFenceCapabilities = {
         "supportsExternalFenceCapabilities",
         FeatureCategory::VulkanFeatures,
@@ -423,6 +416,13 @@ struct FeaturesVk : FeatureSetBase
         &members, "https://anglebug.com/6574"
     };
 
+    FeatureInfo forceDelayedDeviceCreationForTesting = {
+        "forceDelayedDeviceCreationForTesting",
+        FeatureCategory::VulkanWorkarounds,
+        "Artificially defer device creation to after surface is enabled for testing multi-queue scenarios",
+        &members, "https://anglebug.com/8300"
+    };
+
     FeatureInfo supportsShaderFloat16 = {
         "supportsShaderFloat16",
         FeatureCategory::VulkanFeatures,
@@ -495,6 +495,13 @@ struct FeaturesVk : FeatureSetBase
         "Enable VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT by default for ICDs "
         "that support VK_KHR_image_format_list",
         &members, "http://anglebug.com/5281"
+    };
+
+    FeatureInfo allowMultisampledRenderToTextureEmulation = {
+        "allowMultisampledRenderToTextureEmulation",
+        FeatureCategory::VulkanWorkarounds,
+        "Allow emulation of EXT_multisampled_render_to_texture",
+        &members, "http://anglebug.com/8291"
     };
 
     FeatureInfo enableMultisampledRenderToTexture = {
@@ -617,13 +624,6 @@ struct FeaturesVk : FeatureSetBase
         FeatureCategory::VulkanWorkarounds,
         "Emulate r32f images with r32ui to support imageAtomicExchange.",
         &members, "http://anglebug.com/5535"
-    };
-
-    FeatureInfo supportsNegativeViewport = {
-        "supportsNegativeViewport",
-        FeatureCategory::VulkanFeatures,
-        "The driver supports inverting the viewport with a negative height.",
-        &members,
     };
 
     FeatureInfo forceFragmentShaderPrecisionHighpToMediump = {
@@ -773,6 +773,13 @@ struct FeaturesVk : FeatureSetBase
         FeatureCategory::VulkanWorkarounds,
         "Round output after dithering to workaround a driver bug that rounds the output up",
         &members, "http://anglebug.com/6953"
+    };
+
+    FeatureInfo adjustClearColorPrecision = {
+        "adjustClearColorPrecision",
+        FeatureCategory::VulkanWorkarounds,
+        "Adjust normalized clear color precision based on framebuffer color channel bits count",
+        &members, "https://issuetracker.google.com/292282210"
     };
 
     FeatureInfo emulateAdvancedBlendEquations = {
@@ -1089,6 +1096,13 @@ struct FeaturesVk : FeatureSetBase
         &members, "https://anglebug.com/7369"
     };
 
+    FeatureInfo disablePipelineCacheLoadForTesting = {
+        "disablePipelineCacheLoadForTesting",
+        FeatureCategory::VulkanWorkarounds,
+        "Disable loading the pipeline cache from the blob cache for testing",
+        &members, "https://anglebug.com/8417"
+    };
+
     FeatureInfo syncMonolithicPipelinesToBlobCache = {
         "syncMonolithicPipelinesToBlobCache",
         FeatureCategory::VulkanWorkarounds,
@@ -1241,6 +1255,70 @@ struct FeaturesVk : FeatureSetBase
         FeatureCategory::VulkanWorkarounds,
         "Enable use of VK_KHR_portability_enumeration extension",
         &members, "http://anglebug.com/8229"
+    };
+
+    FeatureInfo supportsTimelineSemaphore = {
+        "supportsTimelineSemaphore",
+        FeatureCategory::VulkanFeatures,
+        "VkDevice supports the VK_KHR_timeline_semaphore extension",
+        &members,
+    };
+
+    FeatureInfo supportsFormatFeatureFlags2 = {
+        "supportsFormatFeatureFlags2",
+        FeatureCategory::VulkanFeatures,
+        "VkDevice supports the VK_KHR_format_feature_flags2 extension",
+        &members,
+    };
+
+    FeatureInfo supportsHostImageCopy = {
+        "supportsHostImageCopy",
+        FeatureCategory::VulkanFeatures,
+        "VkDevice supports the VK_EXT_host_image_copy extension",
+        &members,
+    };
+
+    FeatureInfo allowHostImageCopyDespiteNonIdenticalLayout = {
+        "allowHostImageCopyDespiteNonIdenticalLayout",
+        FeatureCategory::VulkanFeatures,
+        "When using VK_EXT_host_image_copy, allow VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT even if"
+        "perf query indicates only optimalDeviceAccess, but not identicalMemoryLayout",
+        &members,
+    };
+
+    FeatureInfo enableParallelCompileAndLink = {
+        "enableParallelCompileAndLink",
+        FeatureCategory::VulkanFeatures,
+        "Expose the GL_KHR_parallel_shader_compile extension",
+        &members, "http://anglebug.com/8297"
+    };
+
+    FeatureInfo preferHostCachedForNonStaticBufferUsage = {
+        "preferHostCachedForNonStaticBufferUsage",
+        FeatureCategory::VulkanFeatures,
+        "prefer host cached memory for non static buffer usage",
+        &members, "https://issuetracker.google.com/288119108"
+    };
+
+    FeatureInfo supportsExternalFormatResolve = {
+        "supportsExternalFormatResolve",
+        FeatureCategory::VulkanFeatures,
+        "VkDevice supports the VK_ANDROID_external_format_resolve extension",
+        &members,
+    };
+
+    FeatureInfo forceAHBLayerCountToOne = {
+        "forceAHBLayerCountToOne",
+        FeatureCategory::VulkanWorkarounds,
+        "Force AHB's layerCount to 1",
+        &members, "http://b/239181279"
+    };
+
+    FeatureInfo disableSeparateShaderObjects = {
+        "disableSeparateShaderObjects",
+        FeatureCategory::VulkanAppWorkarounds,
+        "Disable GL_EXT_separate_shader_objects and cap core ES version to 3.0",
+        &members, "https://issuetracker.google.com/309028728"
     };
 
 };

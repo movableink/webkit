@@ -42,12 +42,13 @@ WebNotificationProvider::WebNotificationProvider(const WKNotificationProviderBas
     initialize(provider);
 }
 
-void WebNotificationProvider::show(WebPageProxy* page, WebNotification& notification, RefPtr<WebCore::NotificationResources>&&)
+bool WebNotificationProvider::show(WebPageProxy* page, WebNotification& notification, RefPtr<WebCore::NotificationResources>&&)
 {
     if (!m_client.show)
-        return;
+        return false;
 
     m_client.show(toAPI(page), toAPI(&notification), m_client.base.clientInfo);
+    return true;
 }
 
 void WebNotificationProvider::cancel(WebNotification& notification)
@@ -105,7 +106,7 @@ HashMap<WTF::String, bool> WebNotificationProvider::notificationPermissions()
 
     Ref<API::Array> knownOrigins = knownPermissions->keys();
     for (size_t i = 0; i < knownOrigins->size(); ++i) {
-        API::String* origin = knownOrigins->at<API::String>(i);
+        RefPtr origin = knownOrigins->at<API::String>(i);
         permissions.set(origin->string(), knownPermissions->get<API::Boolean>(origin->string())->value());
     }
     return permissions;

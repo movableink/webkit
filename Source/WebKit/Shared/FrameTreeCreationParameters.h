@@ -33,7 +33,7 @@ namespace WebKit {
 
 struct FrameTreeCreationParameters {
     WebCore::FrameIdentifier frameID;
-    WebCore::ProcessIdentifier remoteProcessIdentifier;
+    String frameName;
     Vector<FrameTreeCreationParameters> children;
 };
 

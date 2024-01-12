@@ -26,6 +26,7 @@
 interface TestRunner {
     readonly attribute boolean isWebKit2;
     readonly attribute boolean isIOSFamily;
+    readonly attribute boolean isMac;
     readonly attribute boolean isKeyboardImmediatelyAvailable;
 
     // The basics.
@@ -41,6 +42,8 @@ interface TestRunner {
     undefined waitUntilDownloadFinished();
     undefined setShouldLogDownloadCallbacks(boolean value);
     undefined setShouldLogDownloadSize(boolean value);
+    undefined setShouldLogDownloadExpectedSize(boolean value);
+    undefined setShouldDownloadContentDispositionAttachments(boolean value);
 
     const unsigned short RENDER_TREE_SHOW_ALL_LAYERS            = 1;
     const unsigned short RENDER_TREE_SHOW_LAYER_NESTING         = 2;
@@ -76,6 +79,7 @@ interface TestRunner {
     unsigned long domCacheSize(DOMString origin);
     undefined setAllowStorageQuotaIncrease(boolean value);
     undefined setQuota(unsigned long long quota);
+    undefined setOriginQuotaRatioEnabled(boolean value);
 
     // Special options.
     undefined keepWebHistory();
@@ -345,6 +349,7 @@ interface TestRunner {
     boolean statisticsNotifyObserver();
     undefined statisticsProcessStatisticsAndDataRecords();
     undefined statisticsUpdateCookieBlocking(object completionHandler);
+    undefined setStatisticsTimeAdvanceForTesting(double value);
     undefined setStatisticsIsRunningTest(boolean value);
     undefined setStatisticsShouldClassifyResourcesBeforeDataRecordsRemoval(boolean value);
     undefined setStatisticsMinimumTimeBetweenDataRecordsRemoval(double seconds);
@@ -412,7 +417,7 @@ interface TestRunner {
     undefined setMockCameraOrientation(unsigned long orientation);
     boolean isMockRealtimeMediaSourceCenterEnabled();
     undefined setMockCaptureDevicesInterrupted(boolean isCameraInterrupted, boolean isMicrophoneInterrupted);
-    undefined triggerMockMicrophoneConfigurationChange();
+    undefined triggerMockCaptureConfigurationChange(boolean forMicrophone, boolean forDisplay);
 
     boolean hasAppBoundSession();
     undefined clearAppBoundSession();
@@ -424,8 +429,6 @@ interface TestRunner {
 
     undefined injectUserScript(DOMString string);
     readonly attribute unsigned long userScriptInjectedCount;
-
-    undefined sendDisplayConfigurationChangedMessageForTesting();
 
     undefined setServiceWorkerFetchTimeout(double seconds);
 
@@ -460,4 +463,6 @@ interface TestRunner {
 
     // Reporting API
     undefined generateTestReport(DOMString message, DOMString group);
+
+    undefined getAndClearReportedWindowProxyAccessDomains(object callback);
 };

@@ -94,7 +94,6 @@ const TestFeatures& TestOptions::defaults()
             { "DirectoryUploadEnabled", true },
             { "EventHandlerDrivenSmoothKeyboardScrollingEnabled", eventHandlerDrivenSmoothKeyboardScrollingEnabledValue },
             { "ExposeSpeakersEnabled", true },
-            { "FrameFlatteningEnabled", false },
             { "FullScreenEnabled", true },
             { "GenericCueAPIEnabled", false },
             { "HiddenPageCSSAnimationSuspensionEnabled", false },
@@ -119,7 +118,7 @@ const TestFeatures& TestOptions::defaults()
             { "NeedsStorageAccessFromFileURLsQuirk", false },
             { "OfflineWebApplicationCacheEnabled", true },
             { "PageVisibilityBasedProcessSuppressionEnabled", false },
-            { "PdfJSViewerEnabled", false },
+            { "PDFJSViewerEnabled", false },
             { "PluginsEnabled", true },
             { "PushAPIEnabled", true },
             { "RequiresUserGestureForAudioPlayback", false },
@@ -135,6 +134,9 @@ const TestFeatures& TestOptions::defaults()
             { "WebAuthenticationEnabled", true },
 #if ENABLE(WEBGL) && PLATFORM(COCOA)
             { "WebGLUsingMetal", true },
+#endif
+#if ENABLE(WEBGL)
+            { "WebGLDraftExtensionsEnabled", true },
 #endif
             { "WebRTCRemoteVideoFrameEnabled", true },
             { "XSSAuditorEnabled", false },
@@ -173,6 +175,7 @@ const TestFeatures& TestOptions::defaults()
             { "isAppInitiated", true },
             { "advancedPrivacyProtectionsEnabled", false },
             { "runSingly", false },
+            { "runInCrossOriginIFrame", false },
             { "shouldHandleRunOpenPanel", true },
             { "shouldPresentPopovers", true },
             { "shouldShowTouches", false },
@@ -187,6 +190,10 @@ const TestFeatures& TestOptions::defaults()
             { "noUseRemoteLayerTree", false },
             { "useThreadedScrolling", false },
             { "suppressInputAccessoryView", false },
+            { "allowsInlinePredictions", false },
+            { "showsScrollIndicators", true },
+            { "longPressActionsEnabled", true },
+            { "enhancedWindowingEnabled", false },
         };
         features.doubleTestRunnerFeatures = {
             { "contentInset.top", 0 },
@@ -205,6 +212,7 @@ const TestFeatures& TestOptions::defaults()
             { "dragInteractionPolicy", { } },
             { "focusStartsInputSessionPolicy", { } },
             { "jscOptions", { } },
+            { "captionDisplayMode", { } },
             { "standaloneWebApplicationURL", { } },
         };
         features.stringVectorTestRunnerFeatures = {
@@ -234,6 +242,7 @@ const std::unordered_map<std::string, TestHeaderKeyType>& TestOptions::keyTypeMa
         { "isAppInitiated", TestHeaderKeyType::BoolTestRunner },
         { "advancedPrivacyProtectionsEnabled", TestHeaderKeyType::BoolTestRunner },
         { "runSingly", TestHeaderKeyType::BoolTestRunner },
+        { "runInCrossOriginIFrame", TestHeaderKeyType::BoolTestRunner },
         { "shouldHandleRunOpenPanel", TestHeaderKeyType::BoolTestRunner },
         { "shouldPresentPopovers", TestHeaderKeyType::BoolTestRunner },
         { "shouldShowTouches", TestHeaderKeyType::BoolTestRunner },
@@ -247,6 +256,10 @@ const std::unordered_map<std::string, TestHeaderKeyType>& TestOptions::keyTypeMa
         { "useRemoteLayerTree", TestHeaderKeyType::BoolTestRunner },
         { "useThreadedScrolling", TestHeaderKeyType::BoolTestRunner },
         { "suppressInputAccessoryView", TestHeaderKeyType::BoolTestRunner },
+        { "allowsInlinePredictions", TestHeaderKeyType::BoolTestRunner },
+        { "showsScrollIndicators", TestHeaderKeyType::BoolTestRunner },
+        { "longPressActionsEnabled", TestHeaderKeyType::BoolTestRunner },
+        { "enhancedWindowingEnabled", TestHeaderKeyType::BoolTestRunner },
     
         { "contentInset.top", TestHeaderKeyType::DoubleTestRunner },
         { "obscuredInset.top", TestHeaderKeyType::DoubleTestRunner },
@@ -263,6 +276,7 @@ const std::unordered_map<std::string, TestHeaderKeyType>& TestOptions::keyTypeMa
         { "dragInteractionPolicy", TestHeaderKeyType::StringTestRunner },
         { "focusStartsInputSessionPolicy", TestHeaderKeyType::StringTestRunner },
         { "jscOptions", TestHeaderKeyType::StringTestRunner },
+        { "captionDisplayMode", TestHeaderKeyType::StringTestRunner },
         { "standaloneWebApplicationURL", TestHeaderKeyType::StringURLTestRunner },
 
         { "language", TestHeaderKeyType::StringVectorTestRunner },

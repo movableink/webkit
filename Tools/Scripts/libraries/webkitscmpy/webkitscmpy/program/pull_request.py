@@ -25,12 +25,13 @@ import re
 import sys
 
 from .command import Command
+from .commit import Commit
 from .branch import Branch
 from .install_hooks import InstallHooks
 from .squash import Squash
 
 from webkitbugspy import Tracker, radar
-from webkitcorepy import arguments, run, Terminal, OutputCapture
+from webkitcorepy import arguments, run, string_utils, Terminal, OutputCapture
 from webkitscmpy import local, log, remote
 
 
@@ -212,7 +213,7 @@ class PullRequest(Command):
             sys.stderr.write("'--remote={}' is incompatible with '--redacted'\n".format(args.remote))
             return None
 
-        branch_point = Branch.branch_point(repository)
+        branch_point = repository.branch_point()
         if not branch_point:
             sys.stderr.write('Failed to determine where pull-request diverged from production branch\n')
             return None
@@ -272,9 +273,27 @@ class PullRequest(Command):
             ):
                 sys.stderr.write("Abandoning pushing pull-request because '{}' could not be created\n".format(args.issue))
                 return None
+
         elif args.issue and repository.branch != args.issue:
-            sys.stderr.write("Creating a pull-request for '{}' but we're on '{}'\n".format(args.issue, repository.branch))
-            return None
+            error = "Creating a pull-request for '{}' but we're on '{}'\n".format(args.issue, repository.branch)
+            if not repository.dev_branches.match(repository.branch):
+                sys.stderr.write(error)
+                return None
+
+            if string_utils.decode(args.issue).isnumeric():
+                issue = Tracker.instance().issue(int(args.issue))
+            else:
+                issue = Tracker.from_string(args.issue)
+            if not issue:
+                sys.stderr.write(error)
+                return None
+            if not repository.branch.endswith('/{}'.format(issue.id)) and not repository.branch.endswith('/{}'.format(Branch.to_branch_name(issue.title))):
+                sys.stderr.write(error)
+                return None
+
+            if not issue.tracker.hide_title:
+                args._title = issue.title
+            args._bug_urls = Commit.bug_urls(issue)
 
         if not repository.config().get('remote.{}.url'.format(source_remote)):
             sys.stderr.write("'{}' is not a remote in this repository\n".format(source_remote))
@@ -295,10 +314,11 @@ class PullRequest(Command):
         return branch_point
 
     @classmethod
-    def find_existing_pull_request(cls, repository, remote):
+    def find_existing_pull_request(cls, repository, remote, branch=None):
+        branch = branch or repository.branch
         existing_pr = None
         user, _ = remote.credentials(required=False)
-        for pr in remote.pull_requests.find(opened=None, head=repository.branch):
+        for pr in remote.pull_requests.find(opened=None, head=branch):
             existing_pr = pr
             if not existing_pr.opened:
                 continue
@@ -307,7 +327,7 @@ class PullRequest(Command):
         return existing_pr
 
     @classmethod
-    def pre_pr_checks(cls, repository):
+    def pre_pr_checks(cls, repository, attempts=3, add_edits=True):
         num_checks = 0
         log.info('Running pre-PR checks...')
         for key, path in repository.config().items():
@@ -316,18 +336,42 @@ class PullRequest(Command):
             num_checks += 1
             name = key.split('.')[-1]
             log.info('    Running {}...'.format(name))
-            command = run(path.split(' '), cwd=repository.root_path)
-            if command.returncode:
-                if Terminal.choose(
-                    '{} failed, continue uploading pull request?'.format(name),
+            for attempt in range(attempts):
+                command_line = path.split(' ')
+                if command_line[0] == 'python3' and os.name == 'nt':
+                    command_line[0] = sys.executable
+                command = run(command_line, cwd=repository.root_path)
+                if command.returncode == 0:
+                    log.info('    Ran {}!'.format(name))
+                    break
+                options = ['Yes', 'Retry', 'No']
+                response = Terminal.choose(
+                    '{} failed, continue uploading pull request?\nRetry will amend the commit with your changes.'.format(name),
+                    options=(options[0], options[2]) if attempt + 1 == attempts else options,
                     default='No',
-                ) == 'No':
+                )
+                if response == 'No':
                     sys.stderr.write('Pre-PR check {} failed\n'.format(name))
                     return False
-                else:
+                if response == 'Yes':
                     log.info('    {} failed, continuing PR upload anyway'.format(name))
-            else:
-                log.info('    Ran {}!'.format(name))
+                    break
+
+                modified = [] if add_edits is False else repository.modified()
+                if add_edits:
+                    modified = list(set(modified).union(set(repository.modified(staged=False))))
+                for file in set(modified) - set(repository.modified(staged=True)):
+                    log.info('    Adding {}...'.format(file))
+                    if run([repository.executable(), 'add', file], cwd=repository.root_path).returncode:
+                        sys.stderr.write("Failed to add '{}'\n".format(file))
+                        return False
+
+                if modified and run(
+                    [repository.executable(), 'commit', '--amend', '--date=now', '--no-edit'],
+                    cwd=repository.root_path,
+                ).returncode:
+                    sys.stderr.write('Pre-PR check {} failed, and commit amend \n'.format(name))
+                    return False
 
         if num_checks:
             log.info('All pre-PR checks run!')
@@ -385,7 +429,7 @@ class PullRequest(Command):
 
         if args.checks is None:
             args.checks = repository.config().get('webkitscmpy.auto-check', 'false') == 'true'
-        if args.checks and not cls.pre_pr_checks(repository):
+        if args.checks and not cls.pre_pr_checks(repository, add_edits=not (args.will_add is False)):
             sys.stderr.write('Checks have failed, aborting pull request.\n')
             return 1
 
@@ -399,7 +443,7 @@ class PullRequest(Command):
         radar_issue = next(iter(filter(lambda issue: isinstance(issue.tracker, radar.Tracker), issues)), None)
         not_radar = next(iter(filter(lambda issue: not isinstance(issue.tracker, radar.Tracker), issues)), None)
         radar_cc_default = repository.config().get('webkitscmpy.cc-radar', 'true') == 'true'
-        if radar_issue and not_radar and radar_issue.tracker.radarclient() and (args.cc_radar or (radar_cc_default and args.cc_radar is not False)):
+        if update_issue and radar_issue and not_radar and radar_issue.tracker.radarclient() and (args.cc_radar or (radar_cc_default and args.cc_radar is not False)):
             not_radar.cc_radar(radar=radar_issue)
 
         redaction_exemption = None

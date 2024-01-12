@@ -31,6 +31,7 @@
 
 #include "WebEvent.h"
 #include "WebEventModifier.h"
+#include "WebEventType.h"
 
 #include <wtf/EnumTraits.h>
 #include <wtf/OptionSet.h>
@@ -45,46 +46,6 @@ class Encoder;
 }
 
 namespace WebKit {
-
-enum class WebEventType : int8_t {
-    NoType = -1,
-    
-    // WebMouseEvent
-    MouseDown,
-    MouseUp,
-    MouseMove,
-    MouseForceChanged,
-    MouseForceDown,
-    MouseForceUp,
-
-    // WebWheelEvent
-    Wheel,
-
-    // WebKeyboardEvent
-    KeyDown,
-    KeyUp,
-    RawKeyDown,
-    Char,
-
-#if ENABLE(QT_GESTURE_EVENTS)
-        // WebGestureEvent
-        GestureSingleTap,
-#endif
-
-#if ENABLE(TOUCH_EVENTS)
-    // WebTouchEvent
-    TouchStart,
-    TouchMove,
-    TouchEnd,
-    TouchCancel,
-#endif
-
-#if ENABLE(MAC_GESTURE_EVENTS)
-    GestureStart,
-    GestureChange,
-    GestureEnd,
-#endif
-};
 
 class WebEvent {
     WTF_MAKE_FAST_ALLOCATED;
@@ -105,9 +66,6 @@ public:
     WallTime timestamp() const { return m_timestamp; }
 
     WTF::UUID authorizationToken() const { return m_authorizationToken; }
-
-protected:
-    WebEvent();
 
 private:
     WebEventType m_type;

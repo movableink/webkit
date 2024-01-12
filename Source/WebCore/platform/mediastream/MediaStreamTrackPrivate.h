@@ -84,6 +84,7 @@ public:
 
     bool muted() const;
     void setMuted(bool muted) { m_source->setMuted(muted); }
+    bool interrupted() const;
 
     void setIsInBackground(bool value) { m_source->setIsInBackground(value); }
 
@@ -110,6 +111,10 @@ public:
     WEBCORE_EXPORT const RealtimeMediaSourceSettings& settings() const;
     const RealtimeMediaSourceCapabilities& capabilities() const;
 
+    Ref<RealtimeMediaSource::TakePhotoNativePromise> takePhoto(PhotoSettings&&);
+    Ref<RealtimeMediaSource::PhotoCapabilitiesNativePromise> getPhotoCapabilities();
+    Ref<RealtimeMediaSource::PhotoSettingsNativePromise> getPhotoSettings();
+
     void applyConstraints(const MediaConstraints&, RealtimeMediaSource::ApplyConstraintsHandler&&);
 
     RefPtr<WebAudioSourceProvider> createAudioSourceProvider();
@@ -135,7 +140,7 @@ private:
     void sourceMutedChanged() final;
     void sourceSettingsChanged() final;
     void sourceConfigurationChanged() final;
-    bool preventSourceFromStopping() final;
+    bool preventSourceFromEnding() final;
     void audioUnitWillStart() final;
     void hasStartedProducingData() final;
 

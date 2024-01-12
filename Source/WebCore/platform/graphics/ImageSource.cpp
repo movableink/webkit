@@ -64,7 +64,7 @@ ImageSource::ImageSource(Ref<NativeImage>&& nativeImage)
 ImageSource::~ImageSource()
 {
     ASSERT(!hasAsyncDecodingQueue());
-    ASSERT(&m_runLoop == &RunLoop::current());
+    assertIsCurrent(m_runLoop);
 }
 
 bool ImageSource::ensureDecoderAvailable(FragmentedSharedBuffer* data)
@@ -77,8 +77,8 @@ bool ImageSource::ensureDecoderAvailable(FragmentedSharedBuffer* data)
         return false;
 
     m_decoder->setEncodedDataStatusChangeCallback([weakThis = ThreadSafeWeakPtr { *this }] (auto status) {
-        if (RefPtr strongThis = weakThis.get())
-            strongThis->encodedDataStatusChanged(status);
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->encodedDataStatusChanged(status);
     });
 
     if (auto expectedContentSize = expectedContentLength())
@@ -166,16 +166,20 @@ void ImageSource::encodedDataStatusChanged(EncodedDataStatus status)
     if (status >= EncodedDataStatus::SizeAvailable)
         growFrames();
 
-    if (m_image && m_image->imageObserver())
-        m_image->imageObserver()->encodedDataStatusChanged(*m_image, status);
+    if (!m_image)
+        return;
+
+    if (auto observer = m_image->imageObserver())
+        observer->encodedDataStatusChanged(*m_image, status);
 }
 
 void ImageSource::decodedSizeChanged(long long decodedSize)
 {
-    if (!decodedSize || !m_image || !m_image->imageObserver())
+    if (!decodedSize || !m_image)
         return;
 
-    m_image->imageObserver()->decodedSizeChanged(*m_image, decodedSize);
+    if (auto imageObserver = m_image->imageObserver())
+        imageObserver->decodedSizeChanged(*m_image, decodedSize);
 }
 
 void ImageSource::decodedSizeIncreased(unsigned decodedSize)
@@ -436,7 +440,7 @@ const ImageFrame& ImageSource::frameAtIndexCacheIfNeeded(size_t index, ImageFram
 {
     if (index >= m_frames.size())
         return ImageFrame::defaultFrame();
-    
+
     ImageFrame& frame = m_frames[index];
     if (!isDecoderAvailable() || frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(index, DecodingOptions(DecodingMode::Asynchronous)))
         return frame;
@@ -603,7 +607,7 @@ IntSize ImageSource::sourceSize(ImageOrientation orientation)
     else
 #endif
         size = firstFrameMetadataCacheIfNeeded(m_size, MetadataType::Size, &ImageFrame::size, ImageFrame::Caching::Metadata, SubsamplingLevel::Default);
-    
+
     if (orientation == ImageOrientation::Orientation::FromImage)
         orientation = this->orientation();
 

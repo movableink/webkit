@@ -48,6 +48,7 @@
 - (IBAction)openLocation:(id)sender;
 
 - (IBAction)saveAsPDF:(id)sender;
+- (IBAction)saveAsImage:(id)sender;
 - (IBAction)saveAsWebArchive:(id)sender;
 
 - (IBAction)fetch:(id)sender;
@@ -91,6 +92,8 @@
 - (NSView *)mainContentView;
 
 - (CGFloat)pageScaleForMenuItemTag:(NSInteger)tag;
+
+- (void)updateTitleForBadgeChange;
 
 @property (nonatomic, assign, getter=isEditable) BOOL editable;
 - (IBAction)toggleEditable:(id)sender;

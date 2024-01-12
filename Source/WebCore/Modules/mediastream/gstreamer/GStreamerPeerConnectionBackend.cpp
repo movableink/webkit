@@ -199,7 +199,7 @@ void GStreamerPeerConnectionBackend::doCreateOffer(RTCOfferOptions&& options)
 void GStreamerPeerConnectionBackend::doCreateAnswer(RTCAnswerOptions&&)
 {
     if (!m_isRemoteDescriptionSet) {
-        createAnswerFailed(Exception { InvalidStateError, "No remote description set"_s });
+        createAnswerFailed(Exception { ExceptionCode::InvalidStateError, "No remote description set"_s });
         return;
     }
     m_endpoint->doCreateAnswer();
@@ -256,9 +256,9 @@ static inline RefPtr<RTCRtpSender> findExistingSender(const Vector<RefPtr<RTCRtp
 ExceptionOr<Ref<RTCRtpSender>> GStreamerPeerConnectionBackend::addTrack(MediaStreamTrack& track, FixedVector<String>&& mediaStreamIds)
 {
     GST_DEBUG_OBJECT(m_endpoint->pipeline(), "Adding new track.");
-    auto senderBackend = WTF::makeUnique<GStreamerRtpSenderBackend>(*this, nullptr, nullptr);
+    auto senderBackend = WTF::makeUnique<GStreamerRtpSenderBackend>(*this, nullptr);
     if (!m_endpoint->addTrack(*senderBackend, track, mediaStreamIds))
-        return Exception { TypeError, "Unable to add track"_s };
+        return Exception { ExceptionCode::TypeError, "Unable to add track"_s };
 
     if (auto sender = findExistingSender(m_peerConnection.currentTransceivers(), *senderBackend)) {
         GST_DEBUG_OBJECT(m_endpoint->pipeline(), "Existing sender found, associating track to it.");
@@ -351,11 +351,7 @@ void GStreamerPeerConnectionBackend::dispatchPendingTrackEvents(MediaStream& med
 {
     auto events = WTFMove(m_pendingTrackEvents);
     for (auto& event : events) {
-        Vector<RefPtr<MediaStream>> pendingStreams;
-        pendingStreams.reserveInitialCapacity(1);
-        pendingStreams.uncheckedAppend(&mediaStream);
-        event.streams = WTFMove(pendingStreams);
-
+        event.streams = Vector<RefPtr<MediaStream>>({ &mediaStream });
         dispatchTrackEvent(event);
     }
 }

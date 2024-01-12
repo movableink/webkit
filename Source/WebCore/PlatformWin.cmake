@@ -96,21 +96,14 @@ list(APPEND WebCore_SOURCES
     platform/win/BitmapInfo.cpp
     platform/win/ClipboardUtilitiesWin.cpp
     platform/win/CursorWin.cpp
-    platform/win/DefWndProcWindowClass.cpp
-    platform/win/DelayLoadedModulesEnumerator.cpp
     platform/win/DragDataWin.cpp
     platform/win/DragImageCairoWin.cpp
     platform/win/DragImageWin.cpp
-    platform/win/GDIObjectCounter.cpp
     platform/win/GDIUtilities.cpp
-    platform/win/ImportedFunctionsEnumerator.cpp
-    platform/win/ImportedModulesEnumerator.cpp
     platform/win/KeyEventWin.cpp
-    platform/win/LocalizedStringsWin.cpp
     platform/win/LoggingWin.cpp
     platform/win/MIMETypeRegistryWin.cpp
     platform/win/MainThreadSharedTimerWin.cpp
-    platform/win/PEImage.cpp
     platform/win/PasteboardWin.cpp
     platform/win/PlatformMouseEventWin.cpp
     platform/win/PlatformScreenWin.cpp
@@ -122,7 +115,6 @@ list(APPEND WebCore_SOURCES
     platform/win/WebCoreInstanceHandle.cpp
     platform/win/WebCoreTextRenderer.cpp
     platform/win/WheelEventWin.cpp
-    platform/win/WidgetWin.cpp
     platform/win/WindowMessageBroadcaster.cpp
     platform/win/WindowsKeyNames.cpp
 )
@@ -144,20 +136,16 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/win/BString.h
     platform/win/BitmapInfo.h
     platform/win/COMPtr.h
-    platform/win/DefWndProcWindowClass.h
-    platform/win/GDIObjectCounter.h
     platform/win/GDIUtilities.h
     platform/win/HWndDC.h
     platform/win/SearchPopupMenuDB.h
     platform/win/SystemInfo.h
     platform/win/WCDataObject.h
     platform/win/WebCoreBundleWin.h
-    platform/win/WebCoreInstanceHandle.h
     platform/win/WebCoreTextRenderer.h
     platform/win/WindowMessageBroadcaster.h
     platform/win/WindowMessageListener.h
     platform/win/WindowsKeyNames.h
-    platform/win/WindowsTouch.h
 )
 
 list(APPEND WebCore_LIBRARIES
@@ -191,6 +179,7 @@ if (ENABLE_VIDEO AND USE_MEDIA_FOUNDATION)
     target_link_libraries(MediaFoundation INTERFACE
         d3d9
         delayimp
+        dwrite
         dxva2
         evr
         mf
@@ -221,10 +210,4 @@ endif ()
 list(APPEND WebCoreTestSupport_LIBRARIES
     Cairo::Cairo
     shlwapi
-)
-
-file(COPY
-    "${WEBCORE_DIR}/en.lproj/Localizable.strings"
-    DESTINATION
-    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/WebKit.resources/en.lproj
 )

@@ -160,6 +160,7 @@ WI.Popover = class Popover extends WI.Object
         window.removeEventListener("scroll", this, true);
         window.removeEventListener("resize", this, true);
         window.removeEventListener("keypress", this, true);
+        WI.tabBrowser.contentViewContainer.removeEventListener(WI.ContentViewContainer.Event.CurrentContentViewDidChange, this.dismiss, this);
 
         this._prefersDarkColorSchemeMediaQueryList.removeListener(this._boundUpdate);
 
@@ -369,7 +370,7 @@ WI.Popover = class Popover extends WI.Object
         var startTime = Date.now();
         var duration = 350;
         var epsilon = 1 / (200 * duration);
-        var spline = new WI.CubicBezier(0.25, 0.1, 0.25, 1);
+        var spline = new WI.CubicBezierTimingFunction(0.25, 0.1, 0.25, 1);
 
         var fromFrame = this._frame.copy();
         var fromAnchor = this._anchorPoint.copy();
@@ -609,6 +610,7 @@ WI.Popover = class Popover extends WI.Object
             window.addEventListener("scroll", this, true);
             window.addEventListener("resize", this, true);
             window.addEventListener("keypress", this, true);
+            WI.tabBrowser.contentViewContainer.addEventListener(WI.ContentViewContainer.Event.CurrentContentViewDidChange, this.dismiss, this);
 
             if (!this._boundUpdate)
                 this._boundUpdate = this._update.bind(this);

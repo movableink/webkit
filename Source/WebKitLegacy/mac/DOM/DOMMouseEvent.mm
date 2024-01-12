@@ -95,7 +95,7 @@
 - (short)button
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->button();
+    return IMPL->buttonAsShort();
 }
 
 - (id <DOMEventTarget>)relatedTarget
@@ -119,13 +119,13 @@
 - (int)x
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->x();
+    return IMPL->clientX();
 }
 
 - (int)y
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->y();
+    return IMPL->clientY();
 }
 
 - (DOMNode *)fromElement

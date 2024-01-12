@@ -25,11 +25,12 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 
 #include "BytecodeIndex.h"
 #include "MacroAssembler.h"
 #include "WasmOpcodeOrigin.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 
@@ -42,7 +43,7 @@ namespace Wasm {
 class BBQCallee;
 
 class BBQDisassembler {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(BBQDisassembler);
 public:
     BBQDisassembler();
     ~BBQDisassembler();
@@ -80,4 +81,4 @@ private:
 } // namespace Wasm
 } // namespace JSC
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT)

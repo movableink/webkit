@@ -31,8 +31,6 @@
 #include <iterator>
 #include <wtf/FileSystem.h>
 
-#if ENABLE(SERVICE_WORKER)
-
 using namespace WebCore;
 
 // Due to argument-dependent lookup, equality operators have to be in the WebCore namespace for gtest to find them.
@@ -348,7 +346,7 @@ public:
         bool done = false;
         Vector<RemovedPushRecord> removedRecords;
 
-        db->removeRecordsBySubscriptionSet(subscriptionSetIdentifier, [&done, &removedRecords](auto&& result) {
+        db->removeRecordsBySubscriptionSet(subscriptionSetIdentifier, [&done, &removedRecords](Vector<RemovedPushRecord>&& result) {
             removedRecords = WTFMove(result);
             done = true;
         });
@@ -806,6 +804,3 @@ TEST(PushDatabase, CanMigrateV2DatabaseToCurrentSchema)
 }
 
 } // namespace TestWebKitAPI
-
-#endif // ENABLE(SERVICE_WORKER)
-

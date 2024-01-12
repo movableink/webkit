@@ -60,21 +60,17 @@ public:
     void registerScrollbar(Scrollbar&) override;
     void unregisterScrollbar(Scrollbar&) override;
 
-    void setNewPainterForScrollbar(Scrollbar&, RetainPtr<NSScrollerImp>&&);
-    static NSScrollerImp *painterForScrollbar(Scrollbar&);
+    static NSScrollerImp *scrollerImpForScrollbar(Scrollbar&);
 
     void setPaintCharacteristicsForScrollbar(Scrollbar&);
 
     static bool isCurrentlyDrawingIntoLayer();
     static void setIsCurrentlyDrawingIntoLayer(bool);
 
-    void didCreateScrollerImp(Scrollbar&);
+    void didCreateScrollerImp(Scrollbar&) override;
     bool isLayoutDirectionRTL(Scrollbar&);
 
 #if HAVE(RUBBER_BANDING)
-    WEBCORE_EXPORT static void setUpOverhangAreaBackground(CALayer *, const Color& customBackgroundColor = Color());
-    WEBCORE_EXPORT static void removeOverhangAreaBackground(CALayer *);
-
     WEBCORE_EXPORT static void setUpOverhangAreaShadow(CALayer *);
     WEBCORE_EXPORT static void removeOverhangAreaShadow(CALayer *);
 #endif
@@ -94,11 +90,6 @@ protected:
     ScrollbarButtonPressAction handleMousePressEvent(Scrollbar&, const PlatformMouseEvent&, ScrollbarPart) override;
     bool shouldDragDocumentInsteadOfThumb(Scrollbar&, const PlatformMouseEvent&) override;
     int scrollbarPartToHIPressedState(ScrollbarPart);
-
-#if HAVE(RUBBER_BANDING)
-    void setUpOverhangAreasLayerContents(GraphicsLayer*, const Color&) override;
-    void setUpContentShadowLayer(GraphicsLayer*) override;
-#endif
 };
 
 }

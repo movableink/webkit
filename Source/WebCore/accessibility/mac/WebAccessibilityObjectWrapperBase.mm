@@ -31,12 +31,12 @@
 
 #if ENABLE(ACCESSIBILITY)
 
+#import "AXCoreObject.h"
 #import "AXIsolatedObject.h"
 #import "AXObjectCache.h"
 #import "AccessibilityARIAGridRow.h"
 #import "AccessibilityList.h"
 #import "AccessibilityListBox.h"
-#import "AccessibilityObjectInterface.h"
 #import "AccessibilityRenderObject.h"
 #import "AccessibilityScrollView.h"
 #import "AccessibilitySpinButton.h"
@@ -827,7 +827,7 @@ static AccessibilitySearchKeyMap* createAccessibilitySearchKeyMap()
         { NSAccessibilityBlockquoteSearchKey, AccessibilitySearchKey::Blockquote },
         { NSAccessibilityBoldFontSearchKey, AccessibilitySearchKey::BoldFont },
         { NSAccessibilityButtonSearchKey, AccessibilitySearchKey::Button },
-        { NSAccessibilityCheckBoxSearchKey, AccessibilitySearchKey::CheckBox },
+        { NSAccessibilityCheckBoxSearchKey, AccessibilitySearchKey::Checkbox },
         { NSAccessibilityControlSearchKey, AccessibilitySearchKey::Control },
         { NSAccessibilityDifferentTypeSearchKey, AccessibilitySearchKey::DifferentType },
         { NSAccessibilityFontChangeSearchKey, AccessibilitySearchKey::FontChange },

@@ -92,7 +92,7 @@ public:
 
         m_position = pointForEvent(event);
         m_globalPosition = globalPointForEvent(event);
-        m_button = LeftButton; // This has always been the LeftButton on iOS.
+        m_button = MouseButton::Left; // This has always been the LeftButton on iOS.
         m_clickCount = 1; // This has always been 1 on iOS.
         m_modifiers = modifiersForEvent(event);
     }
@@ -611,13 +611,12 @@ public:
         m_globalPosition = globalPointForEvent(event);
 
         unsigned touchCount = event.touchCount;
-        m_touchPoints.reserveInitialCapacity(touchCount);
-        for (unsigned i = 0; i < touchCount; ++i) {
+        m_touchPoints = Vector<PlatformTouchPoint>(touchCount, [&](size_t i) -> PlatformTouchPoint {
             unsigned identifier = [(NSNumber *)[event.touchIdentifiers objectAtIndex:i] unsignedIntValue];
             IntPoint location = IntPoint([(NSValue *)[event.touchLocations objectAtIndex:i] pointValue]);
             PlatformTouchPoint::TouchPhaseType touchPhase = convertTouchPhase([event.touchPhases objectAtIndex:i]);
-            m_touchPoints.uncheckedAppend(PlatformTouchPointBuilder(identifier, location, touchPhase));
-        }
+            return PlatformTouchPointBuilder(identifier, location, touchPhase);
+        });
     }
     
     PlatformTouchEventBuilder(PlatformEvent::Type type, IntPoint location)
@@ -632,10 +631,7 @@ public:
         m_globalPosition = location;
         m_isPotentialTap = true;
         
-        unsigned touchCount = 1;
-        m_touchPoints.reserveInitialCapacity(touchCount);
-        for (unsigned i = 0; i < touchCount; ++i)
-            m_touchPoints.uncheckedAppend(PlatformTouchPointBuilder(1, location, touchPhaseFromPlatformEventType(type)));
+        m_touchPoints = Vector<PlatformTouchPoint>({ PlatformTouchPointBuilder(1, location, touchPhaseFromPlatformEventType(type)) });
     }
 };
 

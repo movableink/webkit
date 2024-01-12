@@ -239,6 +239,11 @@ void EventSendingController::mouseMoveTo(int x, int y, JSStringRef pointerType)
         setValue(body, "PointerType", pointerType);
     m_position = WKPointMake(x, y);
     postSynchronousPageMessage("EventSender", body);
+
+    WKBundlePageFlushDeferredDidReceiveMouseEventForTesting(InjectedBundle::singleton().pageRef());
+    auto waitForDidReceiveEventBody = adoptWK(WKMutableDictionaryCreate());
+    setValue(waitForDidReceiveEventBody, "SubMessage", "WaitForDeferredMouseEvents");
+    postSynchronousPageMessage("EventSender", waitForDidReceiveEventBody);
 }
 
 void EventSendingController::mouseForceClick()
@@ -655,6 +660,15 @@ void EventSendingController::cancelTouchPoint(int index)
 }
 
 #endif
+
+void EventSendingController::smartMagnify()
+{
+#if PLATFORM(MAC)
+    auto body = adoptWK(WKMutableDictionaryCreate());
+    setValue(body, "SubMessage", "SmartMagnify");
+    postSynchronousPageMessage("EventSender", body);
+#endif
+}
 
 #if ENABLE(MAC_GESTURE_EVENTS)
 

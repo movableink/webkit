@@ -36,7 +36,7 @@
 #import <wtf/RetainPtr.h>
 
 #if PLATFORM(IOS_FAMILY)
-#import "UIKitSPI.h"
+#import "UIKitSPIForTesting.h"
 #import <WebKit/WKWebViewPrivate.h>
 
 @interface WKWebView ()
@@ -50,10 +50,6 @@
 @end
 #endif
 
-#if HAVE(PEPPER_UI_CORE)
-#import "PepperUICoreSPI.h"
-#endif
-
 struct CustomMenuActionInfo {
     RetainPtr<NSString> name;
     BOOL dismissesAutomatically { NO };
@@ -65,7 +61,7 @@ struct CustomMenuActionInfo {
     , UIGestureRecognizerDelegate
 #endif
 > {
-    RetainPtr<NSNumber> m_stableStateOverride;
+    RetainPtr<NSNumber> _stableStateOverride;
     BOOL _isInteractingWithFormControl;
     BOOL _scrollingUpdatesDisabled;
     RetainPtr<NSArray<NSString *>> _allowedMenuActions;
@@ -82,6 +78,7 @@ struct CustomMenuActionInfo {
 @property (nonatomic, getter=isShowingMenu, setter=setIsShowingMenu:) BOOL showingMenu;
 @property (nonatomic, getter=isDismissingMenu, setter=setIsDismissingMenu:) BOOL dismissingMenu;
 @property (nonatomic, getter=isShowingPopover, setter=setIsShowingPopover:) BOOL showingPopover;
+@property (nonatomic, getter=isShowingFormValidationBubble, setter=setIsShowingFormValidationBubble:) BOOL showingFormValidationBubble;
 @property (nonatomic, getter=isShowingContextMenu, setter=setIsShowingContextMenu:) BOOL showingContextMenu;
 @property (nonatomic, getter=isShowingContactPicker, setter=setIsShowingContactPicker:) BOOL showingContactPicker;
 
@@ -117,7 +114,7 @@ IGNORE_WARNINGS_END
         [center addObserver:self selector:@selector(_willHideMenu) name:UIMenuControllerWillHideMenuNotification object:nil];
         [center addObserver:self selector:@selector(_didHideMenu) name:UIMenuControllerDidHideMenuNotification object:nil];
         ALLOW_DEPRECATED_DECLARATIONS_END
-        [center addObserver:self selector:@selector(_willPresentPopover) name:@"UIPopoverControllerWillPresentPopoverNotification" object:nil];
+        [center addObserver:self selector:@selector(_willPresentPopover:) name:@"UIPopoverControllerWillPresentPopoverNotification" object:nil];
         [center addObserver:self selector:@selector(_didDismissPopover) name:@"UIPopoverControllerDidDismissPopoverNotification" object:nil];
         self.inspectable = YES;
         self.UIDelegate = self;
@@ -271,14 +268,22 @@ IGNORE_WARNINGS_END
 - (void)_dismissAllContextMenuInteractions
 {
 #if USE(UICONTEXTMENU)
-    for (id <UIInteraction> interaction in self.contentView.interactions) {
-        if (auto contextMenuInteraction = dynamic_objc_cast<UIContextMenuInteraction>(interaction)) {
-            [UIView performWithoutAnimation:^{
-                [contextMenuInteraction dismissMenu];
-            }];
+    auto dismissContextMenuInteractionsForView = ^(UIView *view) {
+        for (id<UIInteraction> interaction in view.interactions) {
+            if (auto contextMenuInteraction = dynamic_objc_cast<UIContextMenuInteraction>(interaction)) {
+                [UIView performWithoutAnimation:^{
+                    [contextMenuInteraction dismissMenu];
+                }];
+            }
         }
+    };
+
+    for (UIView *subview in self.contentView.subviews) {
+        if ([subview isKindOfClass:UIButton.class])
+            dismissContextMenuInteractionsForView(subview);
     }
-#endif
+    dismissContextMenuInteractionsForView(self.contentView);
+#endif // USE(UICONTEXTMENU)
 }
 
 - (void)setAllowedMenuActions:(NSArray<NSString *> *)actions
@@ -326,11 +331,16 @@ IGNORE_WARNINGS_END
         self.didHideKeyboardCallback();
 }
 
-- (void)_willPresentPopover
+- (void)_willPresentPopover:(NSNotification *)notification
 {
     if (self.showingPopover)
         return;
 
+    auto controller = dynamic_objc_cast<UIPopoverPresentationController>(notification.object);
+    static Class validationBubbleDelegateClass = [&] {
+        return NSClassFromString(@"WebValidationBubbleDelegate");
+    }();
+    self.showingFormValidationBubble = controller.delegate.class == validationBubbleDelegateClass;
     self.showingPopover = YES;
     if (self.willPresentPopoverCallback)
         self.willPresentPopoverCallback();
@@ -341,6 +351,7 @@ IGNORE_WARNINGS_END
     if (!self.showingPopover)
         return;
 
+    self.showingFormValidationBubble = NO;
     self.showingPopover = NO;
     if (self.didDismissPopoverCallback)
         self.didDismissPopoverCallback();
@@ -367,6 +378,31 @@ IGNORE_WARNINGS_END
     }
 }
 
+- (BOOL)isZoomingOrScrolling
+{
+    auto scroller = self.scrollView;
+    if (scroller.isZooming || scroller.isAnimatingZoom || scroller.isAnimatingScroll
+        || scroller.isVerticalBouncing || scroller.isHorizontalBouncing || scroller.isZoomBouncing)
+        return YES;
+
+    if (self._keyboardScrollingAnimationRunning)
+        return YES;
+
+    static NeverDestroyed<RetainPtr<NSSet>> animationKeyNames = [NSSet setWithArray:@[
+        @"bounds.size",
+        @"bounds.origin",
+        @"bounds",
+        @"transform"
+    ]];
+
+    for (NSString *key in scroller.layer.animationKeys) {
+        if ([animationKeyNames.get() containsObject:key])
+            return YES;
+    }
+
+    return NO;
+}
+
 - (void)_didFinishScrolling:(UIScrollView *)scrollView
 {
     [super _didFinishScrolling:scrollView];
@@ -377,12 +413,12 @@ IGNORE_WARNINGS_END
 
 - (NSNumber *)_stableStateOverride
 {
-    return m_stableStateOverride.get();
+    return _stableStateOverride.get();
 }
 
 - (void)_setStableStateOverride:(NSNumber *)overrideBoolean
 {
-    m_stableStateOverride = overrideBoolean;
+    _stableStateOverride = overrideBoolean;
     [self _scheduleVisibleContentRectUpdate];
 }
 
@@ -492,10 +528,10 @@ IGNORE_WARNINGS_END
 static bool isQuickboardViewController(UIViewController *viewController)
 {
 #if HAVE(PEPPER_UI_CORE)
-    if ([viewController isKindOfClass:PUICQuickboardViewController.class])
+    if ([viewController isKindOfClass:NSClassFromString(@"PUICQuickboardViewController")])
         return true;
 #if HAVE(QUICKBOARD_CONTROLLER)
-    if ([viewController isKindOfClass:PUICQuickboardRemoteViewController.class])
+    if ([viewController isKindOfClass:NSClassFromString(@"PUICQuickboardRemoteViewController")])
         return true;
 #endif // HAVE(QUICKBOARD_CONTROLLER)
 #endif // HAVE(PEPPER_UI_CORE)

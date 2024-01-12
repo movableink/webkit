@@ -39,7 +39,7 @@ void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
     if (!range)
         return;
 
-    pasteboard.writeSelection(*range, canSmartCopyOrDelete(), *m_document.frame(), IncludeImageAltTextForDataTransfer);
+    pasteboard.writeSelection(*range, canSmartCopyOrDelete(), *m_document->frame(), IncludeImageAltTextForDataTransfer);
 }
 
 void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& element, const URL& url, const String& title)
@@ -55,7 +55,7 @@ void Editor::pasteWithPasteboard(Pasteboard* pasteboard, OptionSet<PasteOption> 
         return;
 
     bool chosePlainText;
-    RefPtr<DocumentFragment> fragment = pasteboard->documentFragment(*m_document.frame(), *range, options.contains(PasteOption::AllowPlainText), chosePlainText);
+    RefPtr<DocumentFragment> fragment = pasteboard->documentFragment(*m_document->frame(), *range, options.contains(PasteOption::AllowPlainText), chosePlainText);
 
     if (fragment && options.contains(PasteOption::AsQuotation))
         quoteFragmentForPasting(*fragment);

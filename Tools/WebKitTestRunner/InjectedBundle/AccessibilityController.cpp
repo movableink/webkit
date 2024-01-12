@@ -107,7 +107,7 @@ Ref<AccessibilityUIElement> AccessibilityController::rootElement()
 void AccessibilityController::executeOnAXThreadAndWait(Function<void()>&& function)
 {
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    if (m_useMockAXThread) {
+    if (m_accessibilityIsolatedTreeMode) {
         std::atomic<bool> complete = false;
         AXThread::dispatch([&function, &complete] {
             function();
@@ -128,7 +128,7 @@ void AccessibilityController::executeOnAXThreadAndWait(Function<void()>&& functi
 void AccessibilityController::executeOnAXThread(Function<void()>&& function)
 {
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    if (m_useMockAXThread) {
+    if (m_accessibilityIsolatedTreeMode) {
         AXThread::dispatch([function = WTFMove(function)] {
             function();
         });
@@ -163,6 +163,12 @@ RefPtr<AccessibilityUIElement> AccessibilityController::elementAtPoint(int x, in
 {
     auto uiElement = rootElement();
     return uiElement->elementAtPoint(x, y);
+}
+
+void AccessibilityController::announce(JSStringRef message)
+{
+    auto page = InjectedBundle::singleton().page()->page();
+    WKAccessibilityAnnounce(page, toWK(message).get());
 }
 
 #if PLATFORM(COCOA)

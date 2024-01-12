@@ -34,18 +34,26 @@
 #include "WebExtensionContextIdentifier.h"
 #include "WebExtensionControllerConfiguration.h"
 #include "WebExtensionControllerIdentifier.h"
+#include "WebExtensionFrameIdentifier.h"
 #include "WebExtensionURLSchemeHandler.h"
 #include "WebProcessProxy.h"
 #include "WebUserContentControllerProxy.h"
+#include <WebCore/Timer.h>
 #include <wtf/Forward.h>
 #include <wtf/URLHash.h>
 #include <wtf/WeakHashSet.h>
 
 OBJC_CLASS NSError;
-OBJC_CLASS _WKWebExtensionController;
+OBJC_CLASS NSMenu;
+OBJC_PROTOCOL(_WKWebExtensionControllerDelegatePrivate);
+
+#ifdef __OBJC__
+#import "_WKWebExtensionController.h"
+#endif
 
 namespace WebKit {
 
+class ContextMenuContextData;
 class WebExtensionContext;
 class WebPageProxy;
 class WebProcessPool;
@@ -63,13 +71,15 @@ public:
 
     using WebExtensionContextSet = HashSet<Ref<WebExtensionContext>>;
     using WebExtensionSet = HashSet<Ref<WebExtension>>;
-    using WebExtensionContextBaseURLMap = HashMap<URL, Ref<WebExtensionContext>>;
+    using WebExtensionContextBaseURLMap = HashMap<String, Ref<WebExtensionContext>>;
     using WebExtensionURLSchemeHandlerMap = HashMap<String, Ref<WebExtensionURLSchemeHandler>>;
 
     using WebProcessProxySet = WeakHashSet<WebProcessProxy>;
     using WebProcessPoolSet = WeakHashSet<WebProcessPool>;
     using WebPageProxySet = WeakHashSet<WebPageProxy>;
     using UserContentControllerProxySet = WeakHashSet<WebUserContentControllerProxy>;
+
+    enum class ForPrivateBrowsing { No, Yes };
 
     WebExtensionControllerConfiguration& configuration() const { return m_configuration.get(); }
     WebExtensionControllerIdentifier identifier() const { return m_identifier; }
@@ -81,6 +91,7 @@ public:
     String storageDirectory(WebExtensionContext&) const;
 
     bool hasLoadedContexts() const { return !m_extensionContexts.isEmpty(); }
+    bool isFreshlyCreated() const { return m_freshlyCreated; }
 
     bool load(WebExtensionContext&, NSError ** = nullptr);
     bool unload(WebExtensionContext&, NSError ** = nullptr);
@@ -91,7 +102,11 @@ public:
     void removePage(WebPageProxy&);
 
     WebPageProxySet allPages() const { return m_pages; }
-    UserContentControllerProxySet allUserContentControllers() const { return m_userContentControllers; }
+
+    // Includes both non-private and private browsing content controllers.
+    UserContentControllerProxySet allUserContentControllers() const { return m_allUserContentControllers; }
+    UserContentControllerProxySet allNonPrivateUserContentControllers() const { return m_allNonPrivateUserContentControllers; }
+    UserContentControllerProxySet allPrivateUserContentControllers() const { return m_allPrivateUserContentControllers; }
 
     WebProcessPoolSet allProcessPools() const { return m_processPools; }
     WebProcessProxySet allProcesses() const;
@@ -105,25 +120,33 @@ public:
     template<typename T>
     void sendToAllProcesses(const T& message, const ObjectIdentifierGenericBase& destinationID);
 
+#if PLATFORM(MAC)
+    void addItemsToContextMenu(WebPageProxy&, const ContextMenuContextData&, NSMenu *);
+#endif
+
+    void handleContentRuleListNotification(WebPageProxyIdentifier, URL&, WebCore::ContentRuleListResults&);
+
 #ifdef __OBJC__
     _WKWebExtensionController *wrapper() const { return (_WKWebExtensionController *)API::ObjectImpl<API::Object::Type::WebExtensionController>::wrapper(); }
+    _WKWebExtensionControllerDelegatePrivate *delegate() const { return (_WKWebExtensionControllerDelegatePrivate *)wrapper().delegate; }
 #endif
 
 private:
-    // IPC::MessageReceiver.
+    // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
     void addProcessPool(WebProcessPool&);
     void removeProcessPool(WebProcessPool&);
 
-    void addUserContentController(WebUserContentControllerProxy&);
+    void addUserContentController(WebUserContentControllerProxy&, ForPrivateBrowsing);
     void removeUserContentController(WebUserContentControllerProxy&);
 
-    // MARK: webNavigation support.
-    void didStartProvisionalLoadForFrame(WebPageProxyIdentifier, WebCore::FrameIdentifier, URL targetURL);
-    void didCommitLoadForFrame(WebPageProxyIdentifier, WebCore::FrameIdentifier, URL);
-    void didFinishLoadForFrame(WebPageProxyIdentifier, WebCore::FrameIdentifier, URL);
-    void didFailLoadForFrame(WebPageProxyIdentifier, WebCore::FrameIdentifier, URL);
+    void didStartProvisionalLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
+    void didCommitLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
+    void didFinishLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
+    void didFailLoadForFrame(WebPageProxyIdentifier, WebExtensionFrameIdentifier, WebExtensionFrameIdentifier parentFrameID, const URL&, WallTime);
+
+    void purgeOldMatchedRules();
 
     Ref<WebExtensionControllerConfiguration> m_configuration;
     WebExtensionControllerIdentifier m_identifier;
@@ -132,8 +155,13 @@ private:
     WebExtensionContextBaseURLMap m_extensionContextBaseURLMap;
     WebPageProxySet m_pages;
     WebProcessPoolSet m_processPools;
-    UserContentControllerProxySet m_userContentControllers;
+    UserContentControllerProxySet m_allUserContentControllers;
+    UserContentControllerProxySet m_allNonPrivateUserContentControllers;
+    UserContentControllerProxySet m_allPrivateUserContentControllers;
     WebExtensionURLSchemeHandlerMap m_registeredSchemeHandlers;
+    bool m_freshlyCreated { true };
+
+    std::unique_ptr<WebCore::Timer> m_purgeOldMatchedRulesTimer;
 };
 
 template<typename T>

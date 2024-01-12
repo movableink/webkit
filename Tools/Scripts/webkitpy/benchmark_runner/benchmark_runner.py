@@ -1,5 +1,6 @@
 import json
 import logging
+import shutil
 import sys
 import os
 from collections import defaultdict, OrderedDict
@@ -23,7 +24,7 @@ _log = logging.getLogger(__name__)
 class BenchmarkRunner(object):
     name = 'benchmark_runner'
 
-    def __init__(self, plan_file, local_copy, count_override, timeout_override, build_dir, output_file, platform, browser, browser_path, subtests=None, scale_unit=True, show_iteration_values=False, device_id=None, diagnose_dir=None, pgo_profile_output_dir=None, profile_output_dir=None, browser_args=None):
+    def __init__(self, plan_file, local_copy, count_override, timeout_override, build_dir, output_file, platform, browser, browser_path, subtests=None, scale_unit=True, show_iteration_values=False, device_id=None, diagnose_dir=None, pgo_profile_output_dir=None, profile_output_dir=None, trace_type=None, profiling_interval=None, browser_args=None):
         self._plan_name, self._plan = BenchmarkRunner._load_plan_data(plan_file)
         if 'options' not in self._plan:
             self._plan['options'] = {}
@@ -49,6 +50,8 @@ class BenchmarkRunner(object):
         if self._profile_output_dir:
             os.makedirs(self._profile_output_dir, exist_ok=True)
             _log.info('Collecting profiles to {}'.format(self._profile_output_dir))
+        self._trace_type = trace_type
+        self._profiling_interval = profiling_interval
         self._output_file = output_file
         self._scale_unit = scale_unit
         self._show_iteration_values = show_iteration_values
@@ -149,6 +152,9 @@ class BenchmarkRunner(object):
             self._browser_driver.prepare_initial_env(self._config)
             for iteration in range(1, count + 1):
                 _log.info('Start the iteration {current_iteration} of {iterations} for current benchmark'.format(current_iteration=iteration, iterations=count))
+                if self._pgo_profile_output_dir:
+                    shutil.rmtree(self._pgo_profile_output_dir, ignore_errors=True)
+                    os.mkdir(self._pgo_profile_output_dir)
                 try:
                     self._browser_driver.prepare_env(self._config)
                     if 'entry_point' in self._plan:
@@ -174,6 +180,8 @@ class BenchmarkRunner(object):
 
                 finally:
                     self._browser_driver.restore_env()
+                if self._pgo_profile_output_dir:
+                    shutil.copytree(self._pgo_profile_output_dir, self._diagnose_dir, dirs_exist_ok=True)
 
                 _log.info('End the iteration {current_iteration} of {iterations} for current benchmark'.format(current_iteration=iteration, iterations=count))
         finally:

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "ServiceWorkerDownloadTask.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "DownloadManager.h"
 #include "Logging.h"
 #include "NetworkProcess.h"
@@ -48,7 +46,7 @@ static WorkQueue& sharedServiceWorkerDownloadTaskQueue()
     return queue.get();
 }
 
-ServiceWorkerDownloadTask::ServiceWorkerDownloadTask(NetworkSession& session, NetworkDataTaskClient& client, WebSWServerToContextConnection& serviceWorkerConnection, ServiceWorkerIdentifier serviceWorkerIdentifier, SWServerConnectionIdentifier serverConnectionIdentifier, FetchIdentifier fetchIdentifier, const WebCore::ResourceRequest& request, DownloadID downloadID)
+ServiceWorkerDownloadTask::ServiceWorkerDownloadTask(NetworkSession& session, NetworkDataTaskClient& client, WebSWServerToContextConnection& serviceWorkerConnection, ServiceWorkerIdentifier serviceWorkerIdentifier, SWServerConnectionIdentifier serverConnectionIdentifier, FetchIdentifier fetchIdentifier, const WebCore::ResourceRequest& request, const ResourceResponse& response, DownloadID downloadID)
     : NetworkDataTask(session, client, request, StoredCredentialsPolicy::DoNotUse, false, false)
     , m_serviceWorkerConnection(serviceWorkerConnection)
     , m_serviceWorkerIdentifier(serviceWorkerIdentifier)
@@ -57,6 +55,9 @@ ServiceWorkerDownloadTask::ServiceWorkerDownloadTask(NetworkSession& session, Ne
     , m_downloadID(downloadID)
     , m_networkProcess(serviceWorkerConnection.networkProcess())
 {
+    auto expectedContentLength = response.expectedContentLength();
+    if (expectedContentLength != -1)
+        m_expectedContentLength = expectedContentLength;
     serviceWorkerConnection.registerDownload(*this);
 }
 
@@ -201,7 +202,7 @@ void ServiceWorkerDownloadTask::didReceiveData(const IPC::SharedBufferReference&
     callOnMainRunLoop([this, protectedThis = Ref { *this }, bytesWritten] {
         m_downloadBytesWritten += bytesWritten;
         if (auto* download = m_networkProcess->downloadManager().download(m_pendingDownloadID))
-            download->didReceiveData(bytesWritten, m_downloadBytesWritten, 0);
+            download->didReceiveData(bytesWritten, m_downloadBytesWritten, std::max(m_expectedContentLength.value_or(0), m_downloadBytesWritten));
     });
 }
 
@@ -276,5 +277,3 @@ void ServiceWorkerDownloadTask::didFailDownload(std::optional<ResourceError>&& e
 }
 
 } // namespace WebKit
-
-#endif // ENABLE(SERVICE_WORKER)

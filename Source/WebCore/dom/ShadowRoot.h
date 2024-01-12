@@ -44,6 +44,8 @@ class SlotAssignment;
 class StyleSheetList;
 class WebAnimation;
 
+enum class ParserContentPolicy : uint8_t;
+
 class ShadowRoot final : public DocumentFragment, public TreeScope {
     WTF_MAKE_ISO_ALLOCATED(ShadowRoot);
 public:
@@ -65,14 +67,22 @@ public:
 
     virtual ~ShadowRoot();
 
+    // Resolve ambiguity for CanMakeCheckedPtr.
+    void incrementPtrCount() const { static_cast<const DocumentFragment*>(this)->incrementPtrCount(); }
+    void decrementPtrCount() const { static_cast<const DocumentFragment*>(this)->decrementPtrCount(); }
+#if CHECKED_POINTER_DEBUG
+    void registerCheckedPtr(const void* pointer) const { static_cast<const DocumentFragment*>(this)->registerCheckedPtr(pointer); }
+    void copyCheckedPtr(const void* source, const void* destination) const { static_cast<const DocumentFragment*>(this)->copyCheckedPtr(source, destination); }
+    void moveCheckedPtr(const void* source, const void* destination) const { static_cast<const DocumentFragment*>(this)->moveCheckedPtr(source, destination); }
+    void unregisterCheckedPtr(const void* pointer) const { static_cast<const DocumentFragment*>(this)->unregisterCheckedPtr(pointer); }
+#endif // CHECKED_POINTER_DEBUG
+
     using TreeScope::getElementById;
     using TreeScope::rootNode;
 
-    WEBCORE_EXPORT Style::Scope& styleScope();
+    Style::Scope& styleScope() { return *m_styleScope; }
+    CheckedRef<Style::Scope> checkedStyleScope() const;
     StyleSheetList& styleSheets();
-
-    bool resetStyleInheritance() const { return m_resetStyleInheritance; }
-    void setResetStyleInheritance(bool);
 
     bool delegatesFocus() const { return m_delegatesFocus; }
     bool containsFocusedElement() const { return m_containsFocusedElement; }
@@ -86,7 +96,10 @@ public:
     void setIsDeclarativeShadowRoot(bool flag) { m_isDeclarativeShadowRoot = flag; }
 
     Element* host() const { return m_host.get(); }
+    RefPtr<Element> protectedHost() const { return m_host.get(); }
     void setHost(WeakPtr<Element, WeakPtrImplWithEventTargetData>&& host) { m_host = WTFMove(host); }
+
+    ExceptionOr<void> setHTMLUnsafe(const String&);
 
     String innerHTML() const;
     ExceptionOr<void> setInnerHTML(const String&);
@@ -144,7 +157,8 @@ private:
 
     void childrenChanged(const ChildChange&) override;
 
-    bool m_resetStyleInheritance : 1 { false };
+    ExceptionOr<void> replaceChildrenWithMarkup(const String&, OptionSet<ParserContentPolicy>);
+
     bool m_hasBegunDeletingDetachedChildren : 1 { false };
     bool m_delegatesFocus : 1 { false };
     bool m_isCloneable : 1 { false };
@@ -169,15 +183,21 @@ inline Element* ShadowRoot::activeElement() const
 
 inline bool Node::isUserAgentShadowRoot() const
 {
-    return isShadowRoot() && downcast<ShadowRoot>(*this).mode() == ShadowRootMode::UserAgent;
+    auto* shadowRoot = dynamicDowncast<ShadowRoot>(*this);
+    return shadowRoot && shadowRoot->mode() == ShadowRootMode::UserAgent;
 }
 
 inline ContainerNode* Node::parentOrShadowHostNode() const
 {
     ASSERT(isMainThreadOrGCThread());
-    if (is<ShadowRoot>(*this))
-        return downcast<ShadowRoot>(*this).host();
+    if (auto* shadowRoot = dynamicDowncast<ShadowRoot>(*this))
+        return shadowRoot->host();
     return parentNode();
+}
+
+inline RefPtr<ContainerNode> Node::protectedParentOrShadowHostNode() const
+{
+    return parentOrShadowHostNode();
 }
 
 inline bool hasShadowRootParent(const Node& node)
@@ -185,7 +205,7 @@ inline bool hasShadowRootParent(const Node& node)
     return node.parentNode() && node.parentNode()->isShadowRoot();
 }
 
-Vector<ShadowRoot*> assignedShadowRootsIfSlotted(const Node&);
+Vector<Ref<ShadowRoot>> assignedShadowRootsIfSlotted(const Node&);
 
 } // namespace WebCore
 

@@ -108,11 +108,15 @@ class Tracker(GenericTracker):
         super(Tracker, self).__init__(users=users, redact=redact, redact_exemption=redact_exemption, hide_title=hide_title)
         self._projects = [project] if project else (projects or [])
 
+        self._keywords = dict()
+        self._invalid_keywords = set()
+
         self.library = self.radarclient()
         authentication = authentication or (self.authentication() if self.library else None)
         if authentication:
             self.client = self.library.RadarClient(
                 authentication, self.library.ClientSystemIdentifier(library_name, str(library_version)),
+                retry_policy=self.radarclient().RetryPolicy(),
             )
         else:
             self.client = None
@@ -204,6 +208,8 @@ class Tracker(GenericTracker):
         )
         issue._description = '\n'.join([desc.text for desc in radar.description.items()])
         issue._opened = False if radar.state in ('Verify', 'Closed') else True
+        if radar.duplicateOfProblemID is not None:
+            issue._original = self.issue(radar.duplicateOfProblemID)
         issue._creator = self.user(
             name='{} {}'.format(radar.originator.firstName, radar.originator.lastName),
             username=radar.originator.dsid,
@@ -268,9 +274,15 @@ class Tracker(GenericTracker):
                     issue._component = issue._component[len(project):].lstrip()
                     break
 
+        if member == 'duplicates':
+            issue._duplicates = []
+            for r in radar.relationships([self.radarclient().Relationship.TYPE_ORIGINAL_OF]):
+                if r.related_radar:
+                    issue._duplicates.append(self.issue(r.related_radar.id))
+
         return issue
 
-    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, **properties):
+    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, **properties):
         if not self.client or not self.library:
             sys.stderr.write('radarclient inaccessible on this machine\n')
             return None
@@ -302,7 +314,12 @@ class Tracker(GenericTracker):
                 radar.resolution = 'Unresolved'
             else:
                 radar.state = 'Verify'
-                radar.resolution = 'Software Changed'
+                if original:
+                    radar.resolution = 'Duplicate'
+                    radar.duplicateOfProblemID = original.id
+                    issue._original = original
+                else:
+                    radar.resolution = 'Software Changed'
             did_change = True
 
         if project or component or version:
@@ -344,6 +361,26 @@ class Tracker(GenericTracker):
             issue._project = project
             issue._component = component
             issue._version = version
+
+        if keywords is not None:
+            for keyword in keywords + issue.keywords:
+                if keyword not in self._invalid_keywords and keyword not in self._keywords:
+                    candidates = self.client.keywords_for_name(keyword)
+                    for candidate in candidates:
+                        self._keywords[candidate.name] = candidate
+                if keyword in self._keywords:
+                    continue
+                self._invalid_keywords.add(keyword)
+                raise ValueError("'{}' is not a valid keyword".format(keyword))
+
+            for word in issue.keywords:
+                if word not in keywords:
+                    radar.remove_keyword(self._keywords[word])
+            for word in keywords:
+                if word not in issue.keywords:
+                    radar.add_keyword(self._keywords[word])
+            did_change = True
+            issue._keywords = keywords
 
         if did_change:
             radar.commit_changes()
@@ -510,3 +547,17 @@ class Tracker(GenericTracker):
         if assign:
             result.assign(self.me())
         return result
+
+    # FIXME: This function is untested because it doesn't have a mock.
+    def search(self, query):
+        if not query or len(query) == 0:
+            raise ValueError('Query must be provided')
+
+        radars = self.client.find_radars(query, return_find_results_directly=True)
+        issues = []
+        for radar in radars:
+            if radar.id:
+                issue = Issue(id=radar.id, tracker=self)
+                issues.append(issue)
+
+        return issues

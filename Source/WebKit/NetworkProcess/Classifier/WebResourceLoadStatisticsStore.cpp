@@ -26,15 +26,14 @@
 #include "config.h"
 #include "WebResourceLoadStatisticsStore.h"
 
-#if ENABLE(TRACKING_PREVENTION)
-
 #include "APIDictionary.h"
+#include "ITPThirdPartyData.h"
 #include "Logging.h"
 #include "NetworkProcess.h"
 #include "NetworkProcessProxyMessages.h"
 #include "NetworkSession.h"
 #include "PrivateClickMeasurementManager.h"
-#include "ResourceLoadStatisticsDatabaseStore.h"
+#include "ResourceLoadStatisticsStore.h"
 #include "ShouldGrandfatherStatistics.h"
 #include "StorageAccessStatus.h"
 #include "WebFrameProxy.h"
@@ -71,9 +70,7 @@ const OptionSet<WebsiteDataType>& WebResourceLoadStatisticsStore::monitoredDataT
         WebsiteDataType::OfflineWebApplicationCache,
         WebsiteDataType::SearchFieldRecentSearches,
         WebsiteDataType::SessionStorage,
-#if ENABLE(SERVICE_WORKER)
         WebsiteDataType::ServiceWorkerRegistrations,
-#endif
         WebsiteDataType::FileSystem,
     }));
 
@@ -161,7 +158,7 @@ WebResourceLoadStatisticsStore::WebResourceLoadStatisticsStore(NetworkSession& n
 
     if (!resourceLoadStatisticsDirectory.isEmpty()) {
         postTask([this, resourceLoadStatisticsDirectory = resourceLoadStatisticsDirectory.isolatedCopy(), shouldIncludeLocalhost, sessionID = networkSession.sessionID()] {
-            m_statisticsStore = makeUnique<ResourceLoadStatisticsDatabaseStore>(*this, m_statisticsQueue, shouldIncludeLocalhost, resourceLoadStatisticsDirectory, sessionID);
+            m_statisticsStore = makeUnique<ResourceLoadStatisticsStore>(*this, m_statisticsQueue, shouldIncludeLocalhost, resourceLoadStatisticsDirectory, sessionID);
 
             auto legacyPlistFilePath = FileSystem::pathByAppendingComponent(resourceLoadStatisticsDirectory, "full_browsing_session_resourceLog.plist"_s);
             if (FileSystem::fileExists(legacyPlistFilePath))
@@ -234,13 +231,12 @@ void WebResourceLoadStatisticsStore::populateMemoryStoreFromDisk(CompletionHandl
     ASSERT(RunLoop::isMain());
     
     postTask([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
-        if (m_statisticsStore && is<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore)) {
-            auto& databaseStore = downcast<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore);
-            if (databaseStore.isNewResourceLoadStatisticsDatabaseFile()) {
+        if (m_statisticsStore) {
+            if (m_statisticsStore->isNewResourceLoadStatisticsDatabaseFile()) {
                 m_statisticsStore->grandfatherExistingWebsiteData([protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)]() mutable {
                     postTaskReply(WTFMove(completionHandler));
                 });
-                databaseStore.setIsNewResourceLoadStatisticsDatabaseFile(false);
+                m_statisticsStore->setIsNewResourceLoadStatisticsDatabaseFile(false);
             } else
                 postTaskReply([this, protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)]() mutable {
                     logTestingEvent("PopulatedWithoutGrandfathering"_s);
@@ -304,12 +300,12 @@ void WebResourceLoadStatisticsStore::statisticsDatabaseHasAllTables(CompletionHa
     ASSERT(RunLoop::isMain());
     
     postTask([this, completionHandler = WTFMove(completionHandler)]() mutable { 
-        if (!m_statisticsStore || !is<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore)) {
+        if (!m_statisticsStore) {
             completionHandler(false);
             ASSERT_NOT_REACHED();
             return;
         }
-        auto missingTables = downcast<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore).checkForMissingTablesInSchema();
+        auto missingTables = m_statisticsStore->checkForMissingTablesInSchema();
         postTaskReply([hasAllTables = missingTables ? false : true, completionHandler = WTFMove(completionHandler)] () mutable {
             completionHandler(hasAllTables);
         });
@@ -436,7 +432,9 @@ void WebResourceLoadStatisticsStore::requestStorageAccess(RegistrableDomain&& su
                 else
                     completionHandler({ StorageAccessWasGranted::No, StorageAccessPromptWasShown::Yes, scope, topFrameDomain, subFrameDomain });
             };
-            m_networkSession->networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::RequestStorageAccessConfirm(webPageProxyID, frameID, subFrameDomain, topFrameDomain), WTFMove(requestConfirmationCompletionHandler));
+
+            auto storageAccessQuirk = NetworkStorageSession::storageAccessQuirkForDomainPair(topFrameDomain, subFrameDomain);
+            m_networkSession->networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::RequestStorageAccessConfirm(webPageProxyID, frameID, subFrameDomain, topFrameDomain, storageAccessQuirk), WTFMove(requestConfirmationCompletionHandler));
             }
             return;
         case StorageAccessStatus::HasAccess:
@@ -475,7 +473,8 @@ void WebResourceLoadStatisticsStore::requestStorageAccessEphemeral(const Registr
             completionHandler({ StorageAccessWasGranted::No, StorageAccessPromptWasShown::Yes, scope, topFrameDomain, subFrameDomain });
     };
 
-    m_networkSession->networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::RequestStorageAccessConfirm(webPageProxyID, frameID, subFrameDomain, topFrameDomain), WTFMove(requestConfirmationCompletionHandler));
+    auto storageAccessQuirk = NetworkStorageSession::storageAccessQuirkForDomainPair(topFrameDomain, subFrameDomain);
+    m_networkSession->networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::RequestStorageAccessConfirm(webPageProxyID, frameID, subFrameDomain, topFrameDomain, storageAccessQuirk), WTFMove(requestConfirmationCompletionHandler));
 }
 
 void WebResourceLoadStatisticsStore::requestStorageAccessUnderOpener(RegistrableDomain&& domainInNeedOfStorageAccess, PageIdentifier openerPageID, RegistrableDomain&& openerDomain)
@@ -741,8 +740,7 @@ void WebResourceLoadStatisticsStore::performDailyTasks()
     postTask([this] {
         if (m_statisticsStore) {
             m_statisticsStore->includeTodayAsOperatingDateIfNecessary();
-            if (is<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore))
-                downcast<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore).runIncrementalVacuumCommand();
+            m_statisticsStore->runIncrementalVacuumCommand();
         }
     });
 }
@@ -903,12 +901,12 @@ void WebResourceLoadStatisticsStore::isRelationshipOnlyInDatabaseOnce(Registrabl
     ASSERT(RunLoop::isMain());
 
     postTask([this, subDomain = WTFMove(subDomain).isolatedCopy(), topDomain = WTFMove(topDomain).isolatedCopy(), completionHandler = WTFMove(completionHandler)]() mutable {
-        if (!m_statisticsStore || !is<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore)) {
+        if (!m_statisticsStore) {
             completionHandler(false);
             return;
         }
         
-        bool isRelationshipOnlyInDatabaseOnce = downcast<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore).isCorrectSubStatisticsCount(subDomain, topDomain);
+        bool isRelationshipOnlyInDatabaseOnce = m_statisticsStore->isCorrectSubStatisticsCount(subDomain, topDomain);
         
         postTaskReply([isRelationshipOnlyInDatabaseOnce, completionHandler = WTFMove(completionHandler)]() mutable {
             completionHandler(isRelationshipOnlyInDatabaseOnce);
@@ -1176,8 +1174,7 @@ void WebResourceLoadStatisticsStore::scheduleClearInMemoryAndPersistent(ShouldGr
             if (shouldGrandfather == ShouldGrandfatherStatistics::Yes) {
                 if (m_statisticsStore) {
                     m_statisticsStore->grandfatherExistingWebsiteData([callbackAggregator = WTFMove(callbackAggregator)]() mutable { });
-                    if (is<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore))
-                        downcast<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore).setIsNewResourceLoadStatisticsDatabaseFile(true);
+                    m_statisticsStore->setIsNewResourceLoadStatisticsDatabaseFile(true);
                 } else
                     RELEASE_LOG(ResourceLoadStatistics, "WebResourceLoadStatisticsStore::scheduleClearInMemoryAndPersistent After being cleared, m_statisticsStore is null when trying to grandfather data.");
             }
@@ -1210,12 +1207,11 @@ void WebResourceLoadStatisticsStore::domainIDExistsInDatabase(int domainID, Comp
     ASSERT(RunLoop::isMain());
 
     postTask([this, domainID, completionHandler = WTFMove(completionHandler)]() mutable {
-        if (!m_statisticsStore || !is<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore)) {
+        if (!m_statisticsStore) {
             completionHandler(false);
             return;
         }
-        auto& databaseStore = downcast<ResourceLoadStatisticsDatabaseStore>(*m_statisticsStore);
-        bool domainIDExists = databaseStore.domainIDExistsInDatabase(domainID);
+        bool domainIDExists = m_statisticsStore->domainIDExistsInDatabase(domainID);
         postTaskReply([domainIDExists, completionHandler = WTFMove(completionHandler)]() mutable {
             completionHandler(domainIDExists);
         });
@@ -1501,7 +1497,7 @@ void WebResourceLoadStatisticsStore::sendDiagnosticMessageWithValue(const String
         const_cast<WebResourceLoadStatisticsStore*>(this)->networkSession()->logDiagnosticMessageWithValue(message, description, value, sigDigits, shouldSample);
 }
 
-void WebResourceLoadStatisticsStore::aggregatedThirdPartyData(CompletionHandler<void(Vector<WebResourceLoadStatisticsStore::ThirdPartyData>&&)>&& completionHandler)
+void WebResourceLoadStatisticsStore::aggregatedThirdPartyData(CompletionHandler<void(Vector<ITPThirdPartyData>&&)>&& completionHandler)
 {
     ASSERT(RunLoop::isMain());
 
@@ -1522,7 +1518,7 @@ void WebResourceLoadStatisticsStore::aggregatedThirdPartyData(CompletionHandler<
 void WebResourceLoadStatisticsStore::suspend(CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(RunLoop::isMain());
-    sharedStatisticsQueue()->suspend(ResourceLoadStatisticsDatabaseStore::interruptAllDatabases, WTFMove(completionHandler));
+    sharedStatisticsQueue()->suspend(ResourceLoadStatisticsStore::interruptAllDatabases, WTFMove(completionHandler));
 }
 
 void WebResourceLoadStatisticsStore::resume()
@@ -1543,79 +1539,4 @@ void WebResourceLoadStatisticsStore::insertExpiredStatisticForTesting(Registrabl
     });
 }
 
-String WebResourceLoadStatisticsStore::ThirdPartyDataForSpecificFirstParty::toString() const
-{
-    return makeString("Has been granted storage access under ", firstPartyDomain.string(), ": ", storageAccessGranted ? '1' : '0', "; Has been seen under ", firstPartyDomain.string(), " in the last 24 hours: ", WallTime::now().secondsSinceEpoch() - timeLastUpdated < 24_h ? '1' : '0');
-}
-
-void WebResourceLoadStatisticsStore::ThirdPartyDataForSpecificFirstParty::encode(IPC::Encoder& encoder) const
-{
-    encoder << firstPartyDomain;
-    encoder << storageAccessGranted;
-    encoder << timeLastUpdated;
-}
-
-auto WebResourceLoadStatisticsStore::ThirdPartyDataForSpecificFirstParty::decode(IPC::Decoder& decoder) -> std::optional<ThirdPartyDataForSpecificFirstParty>
-{
-    std::optional<WebCore::RegistrableDomain> decodedDomain;
-    decoder >> decodedDomain;
-    if (!decodedDomain)
-        return std::nullopt;
-
-    std::optional<bool> decodedStorageAccess;
-    decoder >> decodedStorageAccess;
-    if (!decodedStorageAccess)
-        return std::nullopt;
-
-    std::optional<Seconds> decodedTimeLastUpdated;
-    decoder >> decodedTimeLastUpdated;
-    if (!decodedTimeLastUpdated)
-        return std::nullopt;
-
-    return {{ WTFMove(*decodedDomain), WTFMove(*decodedStorageAccess), WTFMove(*decodedTimeLastUpdated) }};
-}
-
-bool WebResourceLoadStatisticsStore::ThirdPartyDataForSpecificFirstParty::operator==(const ThirdPartyDataForSpecificFirstParty& other) const
-{
-    return firstPartyDomain == other.firstPartyDomain && storageAccessGranted == other.storageAccessGranted;
-}
-
-String WebResourceLoadStatisticsStore::ThirdPartyData::toString() const
-{
-    StringBuilder stringBuilder;
-    stringBuilder.append("Third Party Registrable Domain: ", thirdPartyDomain.string(), "\n    {");
-    for (auto firstParty : underFirstParties)
-        stringBuilder.append("{ ", firstParty.toString(), " },");
-    stringBuilder.append('}');
-    return stringBuilder.toString();
-}
-
-void WebResourceLoadStatisticsStore::ThirdPartyData::encode(IPC::Encoder& encoder) const
-{
-    encoder << thirdPartyDomain;
-    encoder << underFirstParties;
-}
-
-auto WebResourceLoadStatisticsStore::ThirdPartyData::decode(IPC::Decoder& decoder) -> std::optional<ThirdPartyData>
-{
-    std::optional<WebCore::RegistrableDomain> decodedDomain;
-    decoder >> decodedDomain;
-    if (!decodedDomain)
-        return std::nullopt;
-
-    std::optional<Vector<ThirdPartyDataForSpecificFirstParty>> decodedFirstParties;
-    decoder >> decodedFirstParties;
-    if (!decodedFirstParties)
-        return std::nullopt;
-
-    return {{ WTFMove(*decodedDomain), WTFMove(*decodedFirstParties) }};
-}
-
-bool WebResourceLoadStatisticsStore::ThirdPartyData::operator<(const ThirdPartyData &other) const
-{
-    return underFirstParties.size() < other.underFirstParties.size();
-}
-
 } // namespace WebKit
-
-#endif

@@ -188,6 +188,12 @@ bool MacApplication::isEpsonSoftwareUpdater()
     return isEpsonSoftwareUpdater;
 }
 
+bool MacApplication::isMimeoPhotoProject()
+{
+    static bool isMimeoPhotoProject = applicationBundleIsEqualTo("com.mimeo.Mimeo.PhotoProject"_s);
+    return isMimeoPhotoProject;
+}
+
 #endif // PLATFORM(MAC)
 
 #if PLATFORM(IOS_FAMILY)
@@ -443,6 +449,12 @@ bool IOSApplication::isLutron()
 {
     static bool isLutronApp = applicationBundleIsEqualTo("com.lutron.lsb"_s);
     return isLutronApp;
+}
+
+bool IOSApplication::isDOFUSTouch()
+{
+    static bool isDOFUSTouch = applicationBundleIsEqualTo("com.ankama.dofustouch"_s);
+    return isDOFUSTouch;
 }
 
 #endif

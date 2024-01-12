@@ -42,6 +42,10 @@
 #include "PlatformGestureEvent.h"
 #endif
 
+#if PLATFORM(MAC)
+#include "ScrollbarMac.h"
+#endif
+
 #if PLATFORM(GTK)
 // The position of the scrollbar thumb affects the appearance of the steppers, so
 // when the thumb moves, we have to invalidate them for painting.
@@ -52,7 +56,11 @@ namespace WebCore {
 
 Ref<Scrollbar> Scrollbar::createNativeScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarWidth width)
 {
+#if PLATFORM(MAC)
+    return adoptRef(*new ScrollbarMac(scrollableArea, orientation, width));
+#else
     return adoptRef(*new Scrollbar(scrollableArea, orientation, width));
+#endif
 }
 
 static bool s_shouldUseFixedPixelsPerLineStepForTesting;
@@ -64,7 +72,7 @@ void Scrollbar::setShouldUseFixedPixelsPerLineStepForTesting(bool useFixedPixels
 
 int Scrollbar::pixelsPerLineStep(int viewWidthOrHeight)
 {
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
     if (!s_shouldUseFixedPixelsPerLineStepForTesting && viewWidthOrHeight > 0)
         return std::pow(viewWidthOrHeight, 2. / 3.);
 #else
@@ -231,7 +239,7 @@ void Scrollbar::startTimerIfNeeded(Seconds delay)
 
     // We can't scroll if we've hit the beginning or end.
     ScrollDirection dir = pressedPartScrollDirection();
-    if (dir == ScrollUp || dir == ScrollLeft) {
+    if (dir == ScrollDirection::ScrollUp || dir == ScrollDirection::ScrollLeft) {
         if (m_currentPos == 0)
             return;
     } else {
@@ -252,12 +260,12 @@ ScrollDirection Scrollbar::pressedPartScrollDirection()
 {
     if (m_orientation == ScrollbarOrientation::Horizontal) {
         if (m_pressedPart == BackButtonStartPart || m_pressedPart == BackButtonEndPart || m_pressedPart == BackTrackPart)
-            return ScrollLeft;
-        return ScrollRight;
+            return ScrollDirection::ScrollLeft;
+        return ScrollDirection::ScrollRight;
     } else {
         if (m_pressedPart == BackButtonStartPart || m_pressedPart == BackButtonEndPart || m_pressedPart == BackTrackPart)
-            return ScrollUp;
-        return ScrollDown;
+            return ScrollDirection::ScrollUp;
+        return ScrollDirection::ScrollDown;
     }
 }
 
@@ -464,6 +472,7 @@ void Scrollbar::setEnabled(bool e)
         return;
     m_enabled = e;
     theme().updateEnabledState(*this);
+    m_scrollableArea.scrollbarsController().updateScrollbarEnabledState(*this);
     invalidate();
 }
 
@@ -553,6 +562,11 @@ float Scrollbar::deviceScaleFactor() const
 bool Scrollbar::shouldRegisterScrollbar() const
 {
     return m_scrollableArea.scrollbarsController().shouldRegisterScrollbars();
+}
+
+int Scrollbar::minimumThumbLength() const
+{
+    return m_scrollableArea.scrollbarsController().minimumThumbLength(m_orientation);
 }
 
 } // namespace WebCore

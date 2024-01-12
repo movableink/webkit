@@ -192,7 +192,7 @@
     if (!(self = [super initWithFrame:frame webView:webView]))
         return nil;
 
-    _keyboardScrollingAnimator = adoptNS([[WKKeyboardScrollViewAnimator alloc] initWithScrollView:webView.scrollView]);
+    _keyboardScrollingAnimator = adoptNS([[WKKeyboardScrollViewAnimator alloc] initWithScrollView:webView._scrollViewInternal]);
     _webView = webView;
 
     [self updateBackgroundColor];
@@ -651,7 +651,9 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     };
 ALLOW_DEPRECATED_DECLARATIONS_END
 
-    [UIPasteboard generalPasteboard].items = @[ representations ];
+    [UIPasteboard _performAsDataOwner:[_webView _effectiveDataOwner:self._dataOwnerForCopy] block:^{
+        UIPasteboard.generalPasteboard.items = @[ representations ];
+    }];
 }
 
 - (void)actionSheetAssistant:(WKActionSheetAssistant *)assistant openElementAtLocation:(CGPoint)location

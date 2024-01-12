@@ -52,13 +52,13 @@ PageClientImpl::PageClientImpl(WebView& view)
 }
 
 // PageClient's pure virtual functions
-std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy()
+std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy(WebProcessProxy& webProcessProxy)
 {
 #if USE(GRAPHICS_LAYER_WC)
     if (m_view.page()->preferences().useGPUProcessForWebGLEnabled())
-        return makeUnique<DrawingAreaProxyWC>(*m_view.page());
+        return makeUnique<DrawingAreaProxyWC>(*m_view.page(), webProcessProxy);
 #endif
-    return makeUnique<DrawingAreaProxyCoordinatedGraphics>(*m_view.page());
+    return makeUnique<DrawingAreaProxyCoordinatedGraphics>(*m_view.page(), webProcessProxy);
 }
 
 void PageClientImpl::setViewNeedsDisplay(const WebCore::Region& region)
@@ -262,9 +262,7 @@ bool PageClientImpl::handleRunOpenPanel(WebPageProxy*, WebFrameProxy*, const Fra
     ofn.hwndOwner = viewWindow;
     ofn.lpstrFile = fileBuffer.data();
     ofn.nMaxFile = fileBuffer.size();
-    auto dialogTitle = uploadFileText();
-    auto dialogTitleCharacters = dialogTitle.wideCharacters(); // Retain buffer long enough to make the GetOpenFileName call
-    ofn.lpstrTitle = dialogTitleCharacters.data();
+    ofn.lpstrTitle = L"Upload";
     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER;
     if (isAllowMultipleFiles)
         ofn.Flags |= OFN_ALLOWMULTISELECT;

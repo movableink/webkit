@@ -488,7 +488,7 @@ void FrameLoaderClientQt::dispatchDidReachLayoutMilestone(OptionSet<LayoutMilest
     if (!m_webFrame)
         return;
 
-    if (milestones & DidFirstVisuallyNonEmptyLayout)
+    if (milestones & LayoutMilestone::DidFirstVisuallyNonEmptyLayout)
         m_webFrame->emitInitialLayoutCompleted();
 }
 
@@ -801,6 +801,12 @@ WebCore::ResourceError FrameLoaderClientQt::fileDoesNotExistError(const WebCore:
 {
     return ResourceError("QtNetwork"_s, QNetworkReply::ContentNotFoundError, response.url(),
         QCoreApplication::translate("QWebFrame", "File does not exist", 0));
+}
+
+WebCore::ResourceError FrameLoaderClientQt::httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("QtNetwork"_s, QNetworkReply::InsecureRedirectError, request.url(),
+        QCoreApplication::translate("QWebFrame", "HTTPS-only cannot navigate to http", 0));
 }
 
 WebCore::ResourceError FrameLoaderClientQt::httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest& request) const

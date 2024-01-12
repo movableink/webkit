@@ -112,6 +112,11 @@
     [self doesNotRecognizeSelector:_cmd];
 }
 
+- (IBAction)saveAsImage:(id)sender
+{
+    [self doesNotRecognizeSelector:_cmd];
+}
+
 - (IBAction)saveAsWebArchive:(id)sender
 {
     [self doesNotRecognizeSelector:_cmd];
@@ -342,6 +347,11 @@ static CGRect coreGraphicsScreenRectForAppKitScreenRect(NSRect rect)
 {
     *sharingContentScope = NSSharingContentScopeFull;
     return self.window;
+}
+
+- (void)updateTitleForBadgeChange
+{
+    // Only implemented in WebKit2
 }
 
 @end

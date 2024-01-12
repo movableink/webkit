@@ -174,24 +174,22 @@ enum PathDrawingStyle {
 
 static void drawShadowLayerBuffer(GraphicsContextCairo& platformContext, ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize, const ShadowState& shadowState)
 {
-    if (auto nativeImage = layerImage.copyNativeImage(DontCopyBackingStore)) {
+    if (auto nativeImage = platformContext.nativeImageForDrawing(layerImage))
         drawPlatformImage(platformContext, nativeImage->platformImage().get(), FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), { shadowState.globalCompositeOperator }, shadowState.globalAlpha, ShadowState());
-    }
 }
 
 // FIXME: This is mostly same as drawShadowLayerBuffer, so we should merge two.
 static void drawShadowImage(GraphicsContextCairo& platformContext, ImageBuffer& layerImage, const FloatRect& destRect, const FloatRect& srcRect, const ShadowState& shadowState)
 {
-    if (auto nativeImage = layerImage.copyNativeImage(DontCopyBackingStore)) {
+    if (auto nativeImage = platformContext.nativeImageForDrawing(layerImage))
         drawPlatformImage(platformContext, nativeImage->platformImage().get(), destRect, srcRect, { shadowState.globalCompositeOperator }, shadowState.globalAlpha, ShadowState());
-    }
 }
 
 static void fillShadowBuffer(GraphicsContextCairo& platformContext, ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize, const ShadowState& shadowState)
 {
     platformContext.save();
 
-    if (auto nativeImage = layerImage.copyNativeImage(DontCopyBackingStore))
+    if (auto nativeImage = platformContext.nativeImageForDrawing(layerImage))
         clipToImageBuffer(platformContext, nativeImage->platformImage().get(), FloatRect(layerOrigin, expandedIntSize(layerSize)));
 
     FillSource fillSource;
@@ -318,7 +316,7 @@ static void drawGlyphsToContext(cairo_t* context, cairo_scaled_font_t* scaledFon
     }
 }
 
-static void drawGlyphsShadow(GraphicsContextCairo& platformContext, const ShadowState& shadowState, TextDrawingModeFlags textDrawingMode, const FloatSize& shadowOffset, const Color& shadowColor, const FloatPoint& point, cairo_scaled_font_t* scaledFont, double syntheticBoldOffset, const Vector<cairo_glyph_t>& glyphs, FontSmoothingMode fontSmoothingMode)
+static void drawGlyphsShadow(GraphicsContextCairo& platformContext, const ShadowState& shadowState, TextDrawingModeFlags textDrawingMode, const GraphicsDropShadow& dropShadow, const FloatPoint& point, cairo_scaled_font_t* scaledFont, double syntheticBoldOffset, const Vector<cairo_glyph_t>& glyphs, FontSmoothingMode fontSmoothingMode)
 {
     ShadowBlur shadow({ shadowState.blur, shadowState.blur }, shadowState.offset, shadowState.color, shadowState.ignoreTransforms);
     if (!textDrawingMode.contains(TextDrawingMode::Fill) || shadow.type() == ShadowBlur::NoShadow)
@@ -329,8 +327,8 @@ static void drawGlyphsShadow(GraphicsContextCairo& platformContext, const Shadow
         cairo_t* context = platformContext.cr();
         cairo_save(context);
 
-        cairo_translate(context, shadowOffset.width(), shadowOffset.height());
-        setSourceRGBAFromColor(context, shadowColor);
+        cairo_translate(context, dropShadow.offset.width(), dropShadow.offset.height());
+        setSourceRGBAFromColor(context, dropShadow.color);
         drawGlyphsToContext(context, scaledFont, syntheticBoldOffset, glyphs, fontSmoothingMode);
 
         cairo_restore(context);
@@ -551,13 +549,15 @@ StrokeSource::StrokeSource(const GraphicsContextState& state)
 }
 
 ShadowState::ShadowState(const GraphicsContextState& state)
-    : offset(state.dropShadow().offset)
-    , blur(state.dropShadow().blurRadius)
-    , color(state.dropShadow().color)
-    , ignoreTransforms(state.shadowsIgnoreTransforms())
+    : ignoreTransforms(state.shadowsIgnoreTransforms())
     , globalAlpha(state.alpha())
     , globalCompositeOperator(state.compositeMode().operation)
 {
+    if (state.dropShadow()) {
+        offset = state.dropShadow()->offset;
+        blur = state.dropShadow()->radius;
+        color = state.dropShadow()->color;
+    }
 }
 
 bool ShadowState::isVisible() const
@@ -790,12 +790,14 @@ void clearRect(GraphicsContextCairo& platformContext, const FloatRect& rect)
     cairo_restore(cr);
 }
 
-void drawGlyphs(GraphicsContextCairo& platformContext, const FillSource& fillSource, const StrokeSource& strokeSource, const ShadowState& shadowState, const FloatPoint& point, cairo_scaled_font_t* scaledFont, double syntheticBoldOffset, const Vector<cairo_glyph_t>& glyphs, float xOffset, TextDrawingModeFlags textDrawingMode, float strokeThickness, const FloatSize& shadowOffset, const Color& shadowColor, FontSmoothingMode fontSmoothingMode)
+void drawGlyphs(GraphicsContextCairo& platformContext, const FillSource& fillSource, const StrokeSource& strokeSource, const ShadowState& shadowState, const FloatPoint& point, cairo_scaled_font_t* scaledFont, double syntheticBoldOffset, const Vector<cairo_glyph_t>& glyphs, float xOffset, TextDrawingModeFlags textDrawingMode, float strokeThickness, std::optional<GraphicsDropShadow> dropShadow, FontSmoothingMode fontSmoothingMode)
 {
 #if USE(FREETYPE)
     Locker cairoFontLocker(cairoFontLock());
 #endif
-    drawGlyphsShadow(platformContext, shadowState, textDrawingMode, shadowOffset, shadowColor, point, scaledFont, syntheticBoldOffset, glyphs, fontSmoothingMode);
+
+    if (dropShadow)
+        drawGlyphsShadow(platformContext, shadowState, textDrawingMode, *dropShadow, point, scaledFont, syntheticBoldOffset, glyphs, fontSmoothingMode);
 
     cairo_t* cr = platformContext.cr();
     cairo_save(cr);
@@ -822,7 +824,7 @@ void drawGlyphs(GraphicsContextCairo& platformContext, const FillSource& fillSou
     cairo_restore(cr);
 }
 
-void drawPlatformImage(GraphicsContextCairo& platformContext, cairo_surface_t* surface, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options, float globalAlpha, const ShadowState& shadowState)
+void drawPlatformImage(GraphicsContextCairo& platformContext, cairo_surface_t* surface, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options, float globalAlpha, const ShadowState& shadowState)
 {
     platformContext.save();
 
@@ -850,7 +852,7 @@ void drawPlatformImage(GraphicsContextCairo& platformContext, cairo_surface_t* s
     platformContext.restore();
 }
 
-void drawPattern(GraphicsContextCairo& platformContext, cairo_surface_t* surface, const IntSize& size, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
+void drawPattern(GraphicsContextCairo& platformContext, cairo_surface_t* surface, const IntSize& size, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
     // FIXME: Investigate why the size has to be passed in as an IntRect.
     drawPatternToCairoContext(platformContext.cr(), surface, size, tileRect, patternTransform, phase, spacing, toCairoOperator(options.compositeOperator(), options.blendMode()), options.interpolationQuality(), destRect);
@@ -898,8 +900,10 @@ void drawSurface(GraphicsContextCairo& platformContext, cairo_surface_t* surface
 
     switch (imageInterpolationQuality) {
     case InterpolationQuality::DoNotInterpolate:
-    case InterpolationQuality::Low:
         cairo_pattern_set_filter(pattern.get(), CAIRO_FILTER_FAST);
+        break;
+    case InterpolationQuality::Low:
+        cairo_pattern_set_filter(pattern.get(), CAIRO_FILTER_BILINEAR);
         break;
     case InterpolationQuality::Medium:
     case InterpolationQuality::Default:

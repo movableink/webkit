@@ -1142,7 +1142,7 @@ PASS HTMLMediaElement interface: document.createElement("video") must inherit pr
 PASS HTMLMediaElement interface: document.createElement("video") must inherit property "paused" with the proper type
 PASS HTMLMediaElement interface: document.createElement("video") must inherit property "defaultPlaybackRate" with the proper type
 PASS HTMLMediaElement interface: document.createElement("video") must inherit property "playbackRate" with the proper type
-FAIL HTMLMediaElement interface: document.createElement("video") must inherit property "preservesPitch" with the proper type assert_inherits: property "preservesPitch" not found in prototype chain
+PASS HTMLMediaElement interface: document.createElement("video") must inherit property "preservesPitch" with the proper type
 PASS HTMLMediaElement interface: document.createElement("video") must inherit property "played" with the proper type
 PASS HTMLMediaElement interface: document.createElement("video") must inherit property "seekable" with the proper type
 PASS HTMLMediaElement interface: document.createElement("video") must inherit property "ended" with the proper type
@@ -1203,7 +1203,7 @@ PASS HTMLMediaElement interface: document.createElement("audio") must inherit pr
 PASS HTMLMediaElement interface: document.createElement("audio") must inherit property "paused" with the proper type
 PASS HTMLMediaElement interface: document.createElement("audio") must inherit property "defaultPlaybackRate" with the proper type
 PASS HTMLMediaElement interface: document.createElement("audio") must inherit property "playbackRate" with the proper type
-FAIL HTMLMediaElement interface: document.createElement("audio") must inherit property "preservesPitch" with the proper type assert_inherits: property "preservesPitch" not found in prototype chain
+PASS HTMLMediaElement interface: document.createElement("audio") must inherit property "preservesPitch" with the proper type
 PASS HTMLMediaElement interface: document.createElement("audio") must inherit property "played" with the proper type
 PASS HTMLMediaElement interface: document.createElement("audio") must inherit property "seekable" with the proper type
 PASS HTMLMediaElement interface: document.createElement("audio") must inherit property "ended" with the proper type
@@ -1252,7 +1252,7 @@ PASS HTMLMediaElement interface: new Audio() must inherit property "getStartDate
 PASS HTMLMediaElement interface: new Audio() must inherit property "paused" with the proper type
 PASS HTMLMediaElement interface: new Audio() must inherit property "defaultPlaybackRate" with the proper type
 PASS HTMLMediaElement interface: new Audio() must inherit property "playbackRate" with the proper type
-FAIL HTMLMediaElement interface: new Audio() must inherit property "preservesPitch" with the proper type assert_inherits: property "preservesPitch" not found in prototype chain
+PASS HTMLMediaElement interface: new Audio() must inherit property "preservesPitch" with the proper type
 PASS HTMLMediaElement interface: new Audio() must inherit property "played" with the proper type
 PASS HTMLMediaElement interface: new Audio() must inherit property "seekable" with the proper type
 PASS HTMLMediaElement interface: new Audio() must inherit property "ended" with the proper type
@@ -1346,7 +1346,7 @@ PASS HTMLMediaElement interface: operation getStartDate()
 PASS HTMLMediaElement interface: attribute paused
 PASS HTMLMediaElement interface: attribute defaultPlaybackRate
 PASS HTMLMediaElement interface: attribute playbackRate
-FAIL HTMLMediaElement interface: attribute preservesPitch assert_true: The prototype object must have a property "preservesPitch" expected true got false
+PASS HTMLMediaElement interface: attribute preservesPitch
 PASS HTMLMediaElement interface: attribute played
 PASS HTMLMediaElement interface: attribute seekable
 PASS HTMLMediaElement interface: attribute ended
@@ -3423,7 +3423,7 @@ PASS HTMLTextAreaElement interface: attribute selectionEnd
 PASS HTMLTextAreaElement interface: attribute selectionDirection
 PASS HTMLTextAreaElement interface: operation setRangeText(DOMString)
 PASS HTMLTextAreaElement interface: operation setRangeText(DOMString, unsigned long, unsigned long, optional SelectionMode)
-FAIL HTMLTextAreaElement interface: operation setSelectionRange(unsigned long, unsigned long, optional DOMString) assert_equals: property has wrong .length expected 2 but got 0
+PASS HTMLTextAreaElement interface: operation setSelectionRange(unsigned long, unsigned long, optional DOMString)
 PASS HTMLTextAreaElement must be primary interface of document.createElement("textarea")
 PASS Stringification of document.createElement("textarea")
 PASS HTMLTextAreaElement interface: document.createElement("textarea") must inherit property "autocomplete" with the proper type
@@ -3460,9 +3460,7 @@ PASS HTMLTextAreaElement interface: calling setRangeText(DOMString) on document.
 PASS HTMLTextAreaElement interface: document.createElement("textarea") must inherit property "setRangeText(DOMString, unsigned long, unsigned long, optional SelectionMode)" with the proper type
 PASS HTMLTextAreaElement interface: calling setRangeText(DOMString, unsigned long, unsigned long, optional SelectionMode) on document.createElement("textarea") with too few arguments must throw TypeError
 PASS HTMLTextAreaElement interface: document.createElement("textarea") must inherit property "setSelectionRange(unsigned long, unsigned long, optional DOMString)" with the proper type
-FAIL HTMLTextAreaElement interface: calling setSelectionRange(unsigned long, unsigned long, optional DOMString) on document.createElement("textarea") with too few arguments must throw TypeError assert_throws_js: Called with 0 arguments function "function() {
-            fn.apply(obj, args);
-        }" did not throw
+PASS HTMLTextAreaElement interface: calling setSelectionRange(unsigned long, unsigned long, optional DOMString) on document.createElement("textarea") with too few arguments must throw TypeError
 PASS HTMLOutputElement interface: existence and properties of interface object
 PASS HTMLOutputElement interface object length
 PASS HTMLOutputElement interface object name

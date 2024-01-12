@@ -47,6 +47,7 @@ PACKAGES=(
     libevent-dev
     libfile-copy-recursive-perl
     libinput-dev
+    $(aptIfExists libjxl-dev)
     $(aptIfElse libgcrypt20-dev libgcrypt11-dev)
     libgstreamer1.0-dev
     libgstreamer-plugins-bad1.0-dev
@@ -55,6 +56,7 @@ PACKAGES=(
     libkate-dev
     liblcms2-dev
     $(aptIfExists libmanette-0.2-dev)
+    libnghttp2-dev
     libopenjp2-7-dev
     libpng-dev
     libseccomp-dev
@@ -70,6 +72,7 @@ PACKAGES=(
     $(aptIfExists libwpebackend-fdo-1.0-dev)
     libxml2-utils
     libxslt1-dev
+    mesa-common-dev
     ninja-build
     patch
     ruby

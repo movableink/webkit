@@ -37,6 +37,7 @@
 #import <QuickLook/QuickLook.h>
 #import <UIKit/UIViewController.h>
 #import <WebCore/MIMETypeRegistry.h>
+#import <WebCore/SecurityOriginData.h>
 #import <WebCore/UTIUtilities.h>
 #import <pal/ios/QuickLookSoftLink.h>
 #import <pal/spi/cocoa/FoundationSPI.h>
@@ -279,7 +280,8 @@ static NSString * const _WKARQLWebsiteURLParameterKey = @"ARQLWebsiteURLParamete
 
 - (BOOL)isValidMIMEType:(NSString *)MIMEType
 {
-    return WebCore::MIMETypeRegistry::isUSDMIMEType(MIMEType);
+    // We need to be liberal in which MIME types we accept, because some servers are not configured for USD.
+    return WebCore::MIMETypeRegistry::isUSDMIMEType(MIMEType) || [MIMEType isEqualToString:@"application/octet-stream"];
 }
 
 - (BOOL)isValidFileExtension:(NSString *)extension
@@ -363,8 +365,13 @@ static NSString * const _WKARQLWebsiteURLParameterKey = @"ARQLWebsiteURLParamete
 
 namespace WebKit {
 
-void SystemPreviewController::begin(const URL& url, const WebCore::SystemPreviewInfo& systemPreviewInfo, CompletionHandler<void()>&& completionHandler)
+void SystemPreviewController::begin(const URL& url, const WebCore::SecurityOriginData& topOrigin, const WebCore::SystemPreviewInfo& systemPreviewInfo, CompletionHandler<void()>&& completionHandler)
 {
+    if (m_state != State::Initial) {
+        RELEASE_LOG(SystemPreview, "SystemPreview didn't start because an existing preview is in progress");
+        return completionHandler();
+    }
+
     ASSERT(!m_qlPreviewController);
     if (m_qlPreviewController)
         return completionHandler();
@@ -380,16 +387,16 @@ void SystemPreviewController::begin(const URL& url, const WebCore::SystemPreview
 
     auto request = WebCore::ResourceRequest(url);
     WeakPtr weakThis { *this };
-    m_webPageProxy.dataTaskWithRequest(WTFMove(request), [weakThis, completionHandler = WTFMove(completionHandler)] (Ref<API::DataTask>&& task) mutable {
+    m_webPageProxy.dataTaskWithRequest(WTFMove(request), topOrigin, [weakThis, completionHandler = WTFMove(completionHandler)] (Ref<API::DataTask>&& task) mutable {
         if (!weakThis)
             return completionHandler();
 
-        auto strongThis = weakThis.get();
+        auto protectedThis = weakThis.get();
 
         _WKDataTask *dataTask = wrapper(task);
-        strongThis->m_wkSystemPreviewDataTaskDelegate = adoptNS([[_WKSystemPreviewDataTaskDelegate alloc] initWithSystemPreviewController:strongThis]);
-        [dataTask setDelegate:strongThis->m_wkSystemPreviewDataTaskDelegate.get()];
-        strongThis->takeActivityToken();
+        protectedThis->m_wkSystemPreviewDataTaskDelegate = adoptNS([[_WKSystemPreviewDataTaskDelegate alloc] initWithSystemPreviewController:protectedThis]);
+        [dataTask setDelegate:protectedThis->m_wkSystemPreviewDataTaskDelegate.get()];
+        protectedThis->takeActivityToken();
         completionHandler();
     });
 
@@ -408,7 +415,7 @@ void SystemPreviewController::begin(const URL& url, const WebCore::SystemPreview
     [presentingViewController presentViewController:m_qlPreviewController.get() animated:YES completion:nullptr];
 #endif
 
-    m_state = State::Began;
+    m_state = State::Initial;
 }
 
 void SystemPreviewController::loadStarted(const URL& localFileURL)
@@ -437,16 +444,16 @@ void SystemPreviewController::loadCompleted(const URL& localFileURL)
 #if PLATFORM(VISION)
     if ([getASVLaunchPreviewClass() respondsToSelector:@selector(launchPreviewApplicationWithURLs:completion:)])
         [getASVLaunchPreviewClass() launchPreviewApplicationWithURLs:localFileURLs() completion:^(NSError *error) { }];
+    m_state = State::Initial;
 #else
     if (m_qlPreviewControllerDataSource)
         [m_qlPreviewControllerDataSource finish:m_localFileURL];
+    m_state = State::Viewing;
 #endif
     releaseActivityTokenIfNecessary();
 
     if (m_testingCallback)
         m_testingCallback(true);
-
-    m_state = State::Succeeded;
 }
 
 void SystemPreviewController::loadFailed()
@@ -473,7 +480,7 @@ void SystemPreviewController::loadFailed()
     if (m_testingCallback)
         m_testingCallback(false);
 
-    m_state = State::Failed;
+    m_state = State::Initial;
 }
 
 void SystemPreviewController::end()
@@ -487,7 +494,7 @@ void SystemPreviewController::end()
     m_wkSystemPreviewDataTaskDelegate = nullptr;
 #endif
 
-    m_state = State::Ended;
+    m_state = State::Initial;
 }
 
 void SystemPreviewController::updateProgress(float progress)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,7 +60,6 @@ UnlinkedCodeBlock::UnlinkedCodeBlock(VM& vm, Structure* structure, CodeType code
     , m_derivedContextType(static_cast<unsigned>(info.derivedContextType()))
     , m_evalContextType(static_cast<unsigned>(info.evalContextType()))
     , m_codeType(static_cast<unsigned>(codeType))
-    , m_didOptimize(static_cast<unsigned>(TriState::Indeterminate))
     , m_age(0)
     , m_hasCheckpoints(false)
     , m_parseMode(info.parseMode())
@@ -69,7 +68,6 @@ UnlinkedCodeBlock::UnlinkedCodeBlock(VM& vm, Structure* structure, CodeType code
 {
     ASSERT(m_constructorKind == static_cast<unsigned>(info.constructorKind()));
     ASSERT(m_codeType == static_cast<unsigned>(codeType));
-    ASSERT(m_didOptimize == static_cast<unsigned>(TriState::Indeterminate));
     if (info.needsClassFieldInitializer() == NeedsClassFieldInitializer::Yes) {
         Locker locker { cellLock() };
         createRareDataIfNecessary(locker);
@@ -108,7 +106,7 @@ void UnlinkedCodeBlock::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     for (auto& barrier : thisObject->m_functionExprs)
         visitor.append(barrier);
     visitor.appendValues(thisObject->m_constantRegisters.data(), thisObject->m_constantRegisters.size());
-    size_t extraMemory = thisObject->m_metadata->sizeInBytes();
+    size_t extraMemory = thisObject->metadataSizeInBytes();
     if (thisObject->m_instructions)
         extraMemory += thisObject->m_instructions->sizeInBytes();
     if (thisObject->hasRareData())
@@ -129,7 +127,7 @@ DEFINE_VISIT_CHILDREN(UnlinkedCodeBlock);
 size_t UnlinkedCodeBlock::estimatedSize(JSCell* cell, VM& vm)
 {
     UnlinkedCodeBlock* thisObject = jsCast<UnlinkedCodeBlock*>(cell);
-    size_t extraSize = thisObject->m_metadata->sizeInBytes();
+    size_t extraSize = thisObject->metadataSizeInBytes();
     if (thisObject->m_instructions)
         extraSize += thisObject->m_instructions->sizeInBytes();
     return Base::estimatedSize(cell, vm) + extraSize;
@@ -155,9 +153,9 @@ size_t UnlinkedCodeBlock::RareData::sizeInBytes(const AbstractLocker&) const
 int UnlinkedCodeBlock::lineNumberForBytecodeIndex(BytecodeIndex bytecodeIndex)
 {
     ASSERT(bytecodeIndex.offset() < instructions().size());
-    int divot { 0 };
-    int startOffset { 0 };
-    int endOffset { 0 };
+    unsigned divot { 0 };
+    unsigned startOffset { 0 };
+    unsigned endOffset { 0 };
     unsigned line { 0 };
     unsigned column { 0 };
     expressionRangeForBytecodeIndex(bytecodeIndex, divot, startOffset, endOffset, line, column);
@@ -220,8 +218,7 @@ void UnlinkedCodeBlock::dumpExpressionRangeInfo()
 }
 #endif
 
-void UnlinkedCodeBlock::expressionRangeForBytecodeIndex(BytecodeIndex bytecodeIndex,
-    int& divot, int& startOffset, int& endOffset, unsigned& line, unsigned& column) const
+void UnlinkedCodeBlock::expressionRangeForBytecodeIndex(BytecodeIndex bytecodeIndex, unsigned& divot, unsigned& startOffset, unsigned& endOffset, unsigned& line, unsigned& column) const
 {
     ASSERT(bytecodeIndex.offset() < instructions().size());
 
@@ -388,12 +385,7 @@ void UnlinkedCodeBlock::allocateSharedProfiles(unsigned numBinaryArithProfiles, 
     {
         unsigned numberOfValueProfiles = numParameters();
         if (m_metadata->hasMetadata()) {
-#define COUNT(__op) \
-            numberOfValueProfiles += m_metadata->numEntries<__op>();
-            FOR_EACH_OPCODE_WITH_VALUE_PROFILE(COUNT)
-#undef COUNT
-            numberOfValueProfiles += m_metadata->numEntries<OpIteratorOpen>() * 3;
-            numberOfValueProfiles += m_metadata->numEntries<OpIteratorNext>() * 3;
+            numberOfValueProfiles += m_metadata->numValueProfiles();
         }
 
         m_valueProfiles = FixedVector<UnlinkedValueProfile>(numberOfValueProfiles);

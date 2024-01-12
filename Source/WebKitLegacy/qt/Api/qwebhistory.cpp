@@ -22,6 +22,7 @@
 
 #include "BackForwardList.h"
 #include "HistorySerialization.h"
+#include "LegacyHistoryItemClient.h"
 #include "QWebPageAdapter.h"
 #include "VisitedLinkStoreQt.h"
 
@@ -222,7 +223,7 @@ QVariantMap QWebHistoryItem::toMap() const
 void QWebHistoryItem::loadFromMap(const QVariantMap& map)
 {
     WebCore::KeyedDecoderQt decoder { QVariantMap(map) };
-    auto item = WebCore::HistoryItem::create();
+    auto item = WebCore::HistoryItem::create(LegacyHistoryItemClient::singleton());
     if (WebCore::decodeBackForwardTree(decoder, item))
         d = new QWebHistoryItemPrivate(item);
 }
@@ -523,7 +524,7 @@ void QWebHistory::loadFromMap(const QVariantMap& map)
     auto* lst = d->lst;
     Vector<int> ignore;
     bool result = decoder.decodeObjects("history"_s, ignore, [&lst, &decoder](WebCore::KeyedDecoder&, int&) -> bool {
-        auto item = WebCore::HistoryItem::create();
+        auto item = WebCore::HistoryItem::create(LegacyHistoryItemClient::singleton());
         if (!WebCore::decodeBackForwardTree(decoder, item))
             return false;
         lst->addItem(WTFMove(item));
@@ -595,7 +596,7 @@ void QWebHistoryPrivate::goToItem(RefPtr<WebCore::HistoryItem>&& item)
     if (!item)
         return;
 
-    WebCore::Page* page = lst->page().page;
+    auto page = lst->page().page;
     page->goToItem(*item, WebCore::FrameLoadType::IndexedBackForward, WebCore::ShouldTreatAsContinuingLoad::No);
 }
 

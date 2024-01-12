@@ -45,14 +45,12 @@
 #endif
 
 #if PLATFORM(GTK)
+#if USE(EGL)
 #include "AcceleratedBackingStoreDMABuf.h"
+#include "DMABufRendererBufferMode.h"
 #include <WebCore/PlatformDisplaySurfaceless.h>
-#include <gtk/gtk.h>
-
-#if PLATFORM(WAYLAND)
-#include <wpe/wpe.h>
-#include <wpe/fdo.h>
 #endif
+#include <gtk/gtk.h>
 
 #if PLATFORM(X11)
 #include <WebCore/PlatformDisplayX11.h>
@@ -158,6 +156,26 @@ static const char* openGLAPI()
     return "OpenGL ES 2 (libepoxy)";
 }
 
+#if PLATFORM(GTK)
+static String dmabufRendererWithSupportedBuffers()
+{
+    StringBuilder buffers;
+    buffers.append("DMABuf (Supported buffers: "_s);
+#if USE(EGL)
+    auto mode = AcceleratedBackingStoreDMABuf::rendererBufferMode();
+    if (mode.contains(DMABufRendererBufferMode::Hardware))
+        buffers.append("Hardware"_s);
+    if (mode.contains(DMABufRendererBufferMode::SharedMemory)) {
+        if (mode.contains(DMABufRendererBufferMode::Hardware))
+            buffers.append(", ");
+        buffers.append("Shared Memory"_s);
+    }
+#endif
+    buffers.append(')');
+    return buffers.toString();
+}
+#endif
+
 void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
 {
     GString* html = g_string_new(
@@ -250,16 +268,10 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
 #if PLATFORM(GTK)
     addTableRow(versionObject, "GTK version"_s, makeString(GTK_MAJOR_VERSION, '.', GTK_MINOR_VERSION, '.', GTK_MICRO_VERSION, " (build) "_s, gtk_get_major_version(), '.', gtk_get_minor_version(), '.', gtk_get_micro_version(), " (runtime)"_s));
 
+#if USE(EGL)
     bool usingDMABufRenderer = AcceleratedBackingStoreDMABuf::checkRequirements();
-
-#if PLATFORM(WAYLAND)
-    if (PlatformDisplay::sharedDisplay().type() == PlatformDisplay::Type::Wayland && !usingDMABufRenderer) {
-        addTableRow(versionObject, "WPE version"_s, makeString(WPE_MAJOR_VERSION, '.', WPE_MINOR_VERSION, '.', WPE_MICRO_VERSION, " (build) "_s, wpe_get_major_version(), '.', wpe_get_minor_version(), '.', wpe_get_micro_version(), " (runtime)"_s));
-
-#if WPE_FDO_CHECK_VERSION(1, 6, 1)
-        addTableRow(versionObject, "WPEBackend-fdo version"_s, makeString(WPE_FDO_MAJOR_VERSION, '.', WPE_FDO_MINOR_VERSION, '.', WPE_FDO_MICRO_VERSION, " (build) "_s, wpe_fdo_get_major_version(), '.', wpe_fdo_get_minor_version(), '.', wpe_fdo_get_micro_version(), " (runtime)"_s));
-#endif
-    }
+#else
+    bool usingDMABufRenderer = false;
 #endif
 #endif
 
@@ -297,7 +309,7 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
     addTableRow(displayObject, "Depth"_s, String::number(screenDepth(nullptr)));
     addTableRow(displayObject, "Bits per color component"_s, String::number(screenDepthPerComponent(nullptr)));
     addTableRow(displayObject, "DPI"_s, String::number(screenDPI()));
-#if USE(GBM)
+#if USE(LIBDRM)
     if (strcmp(policy, "never")) {
         auto deviceFile = PlatformDisplay::sharedDisplay().drmDeviceFile();
         if (!deviceFile.isEmpty())
@@ -322,13 +334,9 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
     std::unique_ptr<PlatformDisplay> renderDisplay;
     if (strcmp(policy, "never")) {
         addTableRow(jsonObject, "API"_s, String::fromUTF8(openGLAPI()));
-#if PLATFORM(WAYLAND)
-        if (PlatformDisplay::sharedDisplay().type() == PlatformDisplay::Type::Wayland)
-            addTableRow(hardwareAccelerationObject, "Renderer"_s, usingDMABufRenderer ? "DMABuf"_s : "WPE"_s);
-#endif
-#if PLATFORM(X11)
-        if (PlatformDisplay::sharedDisplay().type() == PlatformDisplay::Type::X11)
-            addTableRow(hardwareAccelerationObject, "Renderer"_s, usingDMABufRenderer ? "DMABuf"_s : "XWindow"_s);
+#if PLATFORM(GTK)
+        if (usingDMABufRenderer)
+            addTableRow(hardwareAccelerationObject, "Renderer"_s, dmabufRendererWithSupportedBuffers());
 #endif
         addTableRow(hardwareAccelerationObject, "Native interface"_s, uiProcessContextIsEGL() ? "EGL"_s : "None"_s);
 

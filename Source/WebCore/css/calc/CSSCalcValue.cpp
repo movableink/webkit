@@ -74,8 +74,8 @@ static Vector<Ref<CSSCalcExpressionNode>> createCSS(const Vector<std::unique_ptr
 
 static RefPtr<CSSCalcExpressionNode> createCSSIgnoringZeroLength(const CalcExpressionNode& node, const RenderStyle& style)
 {
-    if (node.type() == CalcExpressionNodeType::Length) {
-        auto& length = downcast<CalcExpressionLength>(node).length();
+    if (auto* lengthNode = dynamicDowncast<CalcExpressionLength>(node)) {
+        auto& length = lengthNode->length();
         if (!length.isPercent() && length.isZero())
             return nullptr;
     }
@@ -277,6 +277,7 @@ static RefPtr<CSSCalcExpressionNode> createCSS(const Length& length, const Rende
     case LengthType::Calculated:
         return createCSS(length.calculationValue().expression(), style);
     case LengthType::Auto:
+    case LengthType::Normal:
     case LengthType::Content:
     case LengthType::Intrinsic:
     case LengthType::MinIntrinsic:
@@ -355,11 +356,6 @@ double CSSCalcValue::doubleValue() const
 double CSSCalcValue::computeLengthPx(const CSSToLengthConversionData& conversionData) const
 {
     return clampToPermittedRange(m_expression->computeLengthPx(conversionData));
-}
-
-bool CSSCalcValue::convertingToLengthRequiresNonNullStyle(int lengthConversion) const
-{
-    return m_expression->convertingToLengthRequiresNonNullStyle(lengthConversion);
 }
 
 bool CSSCalcValue::isCalcFunction(CSSValueID functionId)

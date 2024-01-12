@@ -34,6 +34,7 @@
 #include <WebCore/EventHandler.h>
 #include <WebCore/Frame.h>
 #include <WebCore/FrameLoader.h>
+#include <WebCore/HandleUserInputEventResult.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/ProgressTracker.h>
 

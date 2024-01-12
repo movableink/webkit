@@ -87,6 +87,8 @@ public:
     LayoutUnit& operator=(const LayoutUnit&) = default;
     LayoutUnit& operator=(const float& other) { return *this = LayoutUnit(other); }
 
+    friend bool operator==(LayoutUnit, LayoutUnit) = default;
+
     static LayoutUnit fromFloatCeil(float value)
     {
         LayoutUnit v;
@@ -374,11 +376,6 @@ inline bool operator>(const double a, const LayoutUnit& b)
     return a > b.toDouble();
 }
 
-inline bool operator==(const LayoutUnit& a, const LayoutUnit& b)
-{
-    return a.rawValue() == b.rawValue();
-}
-
 inline bool operator==(const LayoutUnit& a, int b)
 {
     return a == LayoutUnit(b);
@@ -639,6 +636,10 @@ inline float operator-(const float a, const LayoutUnit& b)
 
 inline LayoutUnit operator-(const LayoutUnit& a)
 {
+    // -min() is saturated to max().
+    if (a == LayoutUnit::min())
+        return LayoutUnit::max();
+
     LayoutUnit returnVal;
     returnVal.setRawValue(-a.rawValue());
     return returnVal;

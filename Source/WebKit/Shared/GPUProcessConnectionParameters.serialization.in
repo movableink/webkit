@@ -22,17 +22,15 @@
 
 #if ENABLE(GPU_PROCESS)
 
-struct WebKit::GPUProcessConnectionParameters {
+[RValue] struct WebKit::GPUProcessConnectionParameters {
     WebCore::ProcessIdentity webProcessIdentity;
-    bool isDOMRenderingEnabled;
+    WebKit::GPUProcessPreferencesForWebProcess preferences;
     bool isLockdownModeEnabled;
-    bool isWebGPUEnabled;
 #if ENABLE(IPC_TESTING_API)
     bool ignoreInvalidMessageForTesting;
 #endif
-    bool allowTestOnlyIPC;
 #if HAVE(AUDIT_TOKEN)
-    std::optional<audit_token_t> presentingApplicationAuditToken;
+    std::optional<WebKit::CoreIPCAuditToken> presentingApplicationAuditToken;
 #endif
 #if ENABLE(VP9)
     std::optional<bool> hasVP9HardwareDecoder;

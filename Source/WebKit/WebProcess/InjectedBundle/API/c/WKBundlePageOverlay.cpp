@@ -118,7 +118,7 @@ private:
             return m_client.mouseUp(toAPI(&pageOverlay), WebKit::toAPI(event.position()), WebKit::toAPI(event.button()), m_client.base.clientInfo);
         }
         case WebCore::PlatformMouseEvent::Type::MouseMoved: {
-            if (event.button() == WebCore::MouseButton::NoButton) {
+            if (event.button() == WebCore::MouseButton::None) {
                 if (!m_client.mouseMoved)
                     return false;
 
@@ -210,7 +210,7 @@ private:
         for (size_t k = 0; k < count; k++) {
             WKTypeRef item = WKArrayGetItemAtIndex(wkNames, k);
             if (WebKit::toImpl(item)->type() == API::String::APIType)
-                names.uncheckedAppend(WebKit::toWTFString(static_cast<WKStringRef>(item)));
+                names.append(WebKit::toWTFString(static_cast<WKStringRef>(item)));
         }
         names.shrinkToFit();
 

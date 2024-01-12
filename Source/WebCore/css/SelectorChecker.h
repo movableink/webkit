@@ -93,9 +93,10 @@ public:
         const SelectorChecker::Mode resolvingMode;
         PseudoId pseudoId { PseudoId::None };
         std::optional<StyleScrollbarState> scrollbarState;
-        AtomString nameForHightlightPseudoElement;
+        AtomString nameIdentifier;
         const ContainerNode* scope { nullptr };
-        bool matchesAllScopes { false };
+        const Element* hasScope { nullptr };
+        bool matchesAllHasScopes { false };
         Style::ScopeOrdinal styleScopeOrdinal { Style::ScopeOrdinal::Element };
         Style::SelectorMatchingState* selectorMatchingState { nullptr };
 

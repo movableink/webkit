@@ -58,9 +58,8 @@ std::unique_ptr<ImageBufferShareableMappedIOSurfaceBackend> ImageBufferShareable
         return nullptr;
 
     CGContextClearRect(cgContext.get(), FloatRect(FloatPoint::zero(), backendSize));
-    CGContextFlush(cgContext.get());
 
-    return makeUnique<ImageBufferShareableMappedIOSurfaceBackend>(parameters, WTFMove(surface), WTFMove(cgContext), 0, creationContext.surfacePool);
+    return std::unique_ptr<ImageBufferShareableMappedIOSurfaceBackend> { new ImageBufferShareableMappedIOSurfaceBackend { parameters, WTFMove(surface), WTFMove(cgContext), 0, creationContext.surfacePool } };
 }
 
 std::unique_ptr<ImageBufferShareableMappedIOSurfaceBackend> ImageBufferShareableMappedIOSurfaceBackend::create(const Parameters& parameters, ImageBufferBackendHandle handle)
@@ -78,24 +77,12 @@ std::unique_ptr<ImageBufferShareableMappedIOSurfaceBackend> ImageBufferShareable
         return nullptr;
 
     ASSERT(surface->colorSpace() == parameters.colorSpace);
-    return makeUnique<ImageBufferShareableMappedIOSurfaceBackend>(parameters, WTFMove(surface), WTFMove(cgContext), 0, nullptr);
+    return std::unique_ptr<ImageBufferShareableMappedIOSurfaceBackend> { new ImageBufferShareableMappedIOSurfaceBackend { parameters, WTFMove(surface), WTFMove(cgContext), 0, nullptr } };
 }
 
-ImageBufferBackendHandle ImageBufferShareableMappedIOSurfaceBackend::createBackendHandle(SharedMemory::Protection) const
+std::optional<ImageBufferBackendHandle> ImageBufferShareableMappedIOSurfaceBackend::createBackendHandle(SharedMemory::Protection) const
 {
     return ImageBufferBackendHandle(m_surface->createSendRight());
-}
-
-RefPtr<NativeImage> ImageBufferShareableMappedIOSurfaceBackend::copyNativeImage(BackingStoreCopy copyBehavior)
-{
-    auto currentSeed = m_surface->seed();
-
-    // Invalidate the cached image before getting a new one because GPUProcess might
-    // have drawn something to the IOSurface since last time this function was called.
-    if (std::exchange(m_lastSeedWhenCopyingImage, currentSeed) != currentSeed)
-        invalidateCachedNativeImage();
-
-    return ImageBufferIOSurfaceBackend::copyNativeImage(copyBehavior);
 }
 
 String ImageBufferShareableMappedIOSurfaceBackend::debugDescription() const

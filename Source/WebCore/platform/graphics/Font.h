@@ -1,7 +1,5 @@
 /*
- * This file is part of the internal font implementation.
- *
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -30,8 +28,11 @@
 #include "GlyphMetricsMap.h"
 #include "GlyphPage.h"
 #include "RenderingResourceIdentifier.h"
+#include <variant>
 #include <wtf/BitVector.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Hasher.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/StringHash.h>
 
 #if PLATFORM(COCOA)
@@ -68,25 +69,41 @@ class GlyphPage;
 
 struct GlyphData;
 
-enum FontVariant { AutoVariant, NormalVariant, SmallCapsVariant, EmphasisMarkVariant, BrokenIdeographVariant };
-enum Pitch { UnknownPitch, FixedPitch, VariablePitch };
+enum FontVariant : uint8_t { AutoVariant, NormalVariant, SmallCapsVariant, EmphasisMarkVariant, BrokenIdeographVariant };
+enum Pitch : uint8_t { UnknownPitch, FixedPitch, VariablePitch };
 enum class IsForPlatformFont : bool { No, Yes };
+
+// Used to create platform fonts.
+enum class FontOrigin : bool { Remote, Local };
+enum class FontIsInterstitial : bool { No, Yes };
+enum class FontVisibility : bool { Visible, Invisible };
+enum class FontIsOrientationFallback : bool { No, Yes };
 
 #if USE(CORE_TEXT)
 bool fontHasTable(CTFontRef, unsigned tableTag);
 bool fontHasEitherTable(CTFontRef, unsigned tableTag1, unsigned tableTag2);
 #endif
 
+struct FontInternalAttributes {
+    WEBCORE_EXPORT RenderingResourceIdentifier ensureRenderingResourceIdentifier() const;
+
+    mutable std::optional<RenderingResourceIdentifier> renderingResourceIdentifier;
+    FontOrigin origin : 1;
+    FontIsInterstitial isInterstitial : 1;
+    FontVisibility visibility : 1;
+    FontIsOrientationFallback isTextOrientationFallback : 1;
+};
+
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Font);
-class Font : public RefCounted<Font> {
+class Font : public RefCounted<Font>, public CanMakeWeakPtr<Font>, public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Font);
 public:
-    // Used to create platform fonts.
-    enum class Origin : bool { Remote, Local };
-    enum class Interstitial : bool { No, Yes };
-    enum class Visibility : bool { Visible, Invisible };
-    enum class OrientationFallback : bool { No, Yes };
-    WEBCORE_EXPORT static Ref<Font> create(const FontPlatformData&, Origin = Origin::Local, Interstitial = Interstitial::No, Visibility = Visibility::Visible, OrientationFallback = OrientationFallback::No, std::optional<RenderingResourceIdentifier> = std::nullopt);
+    using Origin = FontOrigin;
+    using IsInterstitial = FontIsInterstitial;
+    using Visibility = FontVisibility;
+    using IsOrientationFallback = FontIsOrientationFallback;
+
+    WEBCORE_EXPORT static Ref<Font> create(const FontPlatformData&, Origin = Origin::Local, IsInterstitial = IsInterstitial::No, Visibility = Visibility::Visible, IsOrientationFallback = IsOrientationFallback::No, std::optional<RenderingResourceIdentifier> = std::nullopt);
     WEBCORE_EXPORT static Ref<Font> create(Ref<SharedBuffer>&& fontFaceData, Font::Origin, float fontSize, bool syntheticBold, bool syntheticItalic);
 
     WEBCORE_EXPORT ~Font();
@@ -112,9 +129,6 @@ public:
 
     const Font* variantFont(const FontDescription& description, FontVariant variant) const
     {
-#if USE(FONT_VARIANT_VIA_FEATURES)
-        ASSERT(variant != SmallCapsVariant);
-#endif
         switch (variant) {
         case SmallCapsVariant:
             return smallCapsFont(description);
@@ -137,7 +151,7 @@ public:
     const Font& invisibleFont() const;
 
     bool hasVerticalGlyphs() const { return m_hasVerticalGlyphs; }
-    bool isTextOrientationFallback() const { return m_attributes.isTextOrientationFallback == OrientationFallback::Yes; }
+    bool isTextOrientationFallback() const { return m_attributes.isTextOrientationFallback == IsOrientationFallback::Yes; }
 
     const FontMetrics& fontMetrics() const { return m_fontMetrics; }
     float sizePerUnit() const { return platformData().size() / (fontMetrics().unitsPerEm() ? fontMetrics().unitsPerEm() : 1); }
@@ -170,20 +184,21 @@ public:
     Glyph zeroWidthSpaceGlyph() const { return m_zeroWidthSpaceGlyph; }
     bool isZeroWidthSpaceGlyph(Glyph glyph) const { return glyph == m_zeroWidthSpaceGlyph && glyph; }
 
-    GlyphData glyphDataForCharacter(UChar32) const;
-    Glyph glyphForCharacter(UChar32) const;
-    bool supportsCodePoint(UChar32) const;
-    bool platformSupportsCodePoint(UChar32, std::optional<UChar32> variation = std::nullopt) const;
+    GlyphData glyphDataForCharacter(char32_t) const;
+    Glyph glyphForCharacter(char32_t) const;
+    bool supportsCodePoint(char32_t) const;
+    bool platformSupportsCodePoint(char32_t, std::optional<char32_t> variation = std::nullopt) const;
 
-    RefPtr<Font> systemFallbackFontForCharacter(UChar32, const FontDescription&, IsForPlatformFont) const;
+    RefPtr<Font> systemFallbackFontForCharacterCluster(StringView, const FontDescription&, ResolvedEmojiPolicy, IsForPlatformFont) const;
 
     const GlyphPage* glyphPage(unsigned pageNumber) const;
 
     void determinePitch();
     Pitch pitch() const { return m_treatAsFixedPitch ? FixedPitch : VariablePitch; }
+    bool canTakeFixedPitchFastContentMeasuring() const { return m_canTakeFixedPitchFastContentMeasuring; }
 
     Origin origin() const { return m_attributes.origin; }
-    bool isInterstitial() const { return m_attributes.isInterstitial == Interstitial::Yes; }
+    bool isInterstitial() const { return m_attributes.isInterstitial == IsInterstitial::Yes; }
     Visibility visibility() const { return m_attributes.visibility; }
     bool allowsAntialiasing() const { return m_allowsAntialiasing; }
 
@@ -194,7 +209,7 @@ public:
 #if PLATFORM(IOS_FAMILY)
     bool shouldNotBeUsedForArabic() const { return m_shouldNotBeUsedForArabic; };
 #endif
-#if PLATFORM(COCOA)
+#if USE(CORE_TEXT)
     CTFontRef getCTFont() const { return m_platformData.font(); }
     RetainPtr<CFDictionaryRef> getCFStringAttributes(bool enableKerning, FontOrientation, const AtomString& locale) const;
     bool supportsSmallCaps() const;
@@ -203,7 +218,7 @@ public:
     bool supportsAllPetiteCaps() const;
 #endif
 
-    bool canRenderCombiningCharacterSequence(const UChar*, size_t) const;
+    bool canRenderCombiningCharacterSequence(StringView) const;
     GlyphBufferAdvance applyTransforms(GlyphBuffer&, unsigned beginningGlyphIndex, unsigned beginningStringIndex, bool enableKerning, bool requiresShaping, const AtomString& locale, StringView text, TextDirection) const;
 
     // Returns nullopt if none of the glyphs are OT-SVG glyphs.
@@ -222,20 +237,13 @@ public:
     void setIsUsedInSystemFallbackFontCache() { m_isUsedInSystemFallbackFontCache = true; }
     bool isUsedInSystemFallbackFontCache() const { return m_isUsedInSystemFallbackFontCache; }
 
-    class Attributes {
-    public:
-        WEBCORE_EXPORT RenderingResourceIdentifier ensureRenderingResourceIdentifier() const;
-
-        mutable std::optional<RenderingResourceIdentifier> renderingResourceIdentifier;
-        Font::Origin origin : 1;
-        Font::Interstitial isInterstitial : 1;
-        Font::Visibility visibility : 1;
-        Font::OrientationFallback isTextOrientationFallback : 1;
-    };
+    using Attributes = FontInternalAttributes;
     const Attributes& attributes() const { return m_attributes; }
 
+    ColorGlyphType colorGlyphType(Glyph) const;
+
 private:
-    WEBCORE_EXPORT Font(const FontPlatformData&, Origin, Interstitial, Visibility, OrientationFallback, std::optional<RenderingResourceIdentifier>);
+    WEBCORE_EXPORT Font(const FontPlatformData&, Origin, IsInterstitial, Visibility, IsOrientationFallback, std::optional<RenderingResourceIdentifier>);
 
     void platformInit();
     void platformGlyphInit();
@@ -293,8 +301,7 @@ private:
 
     const FontPlatformData m_platformData;
 
-    mutable RefPtr<GlyphPage> m_glyphPageZero;
-    mutable HashMap<unsigned, RefPtr<GlyphPage>> m_glyphPages;
+    mutable HashMap<unsigned, RefPtr<GlyphPage>, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_glyphPages;
     mutable GlyphMetricsMap<float> m_glyphToWidthMap;
     mutable std::unique_ptr<GlyphMetricsMap<FloatRect>> m_glyphToBoundsMap;
     // FIXME: Find a more efficient way to represent std::optional<Path>.
@@ -325,6 +332,14 @@ private:
 
     mutable std::unique_ptr<DerivedFonts> m_derivedFontData;
 
+    struct NoEmojiGlyphs { };
+    struct AllEmojiGlyphs { };
+    struct SomeEmojiGlyphs {
+        BitVector colorGlyphs;
+    };
+    using EmojiType = std::variant<NoEmojiGlyphs, AllEmojiGlyphs, SomeEmojiGlyphs>;
+    EmojiType m_emojiType { NoEmojiGlyphs { } };
+
 #if PLATFORM(COCOA)
     mutable std::optional<PAL::OTSVGTable> m_otSVGTable;
     mutable std::optional<ComplexColorFormatGlyphs> m_glyphsWithComplexColorFormat; // SVG and sbix
@@ -351,6 +366,7 @@ private:
     float m_syntheticBoldOffset { 0 };
 
     unsigned m_treatAsFixedPitch : 1;
+    unsigned m_canTakeFixedPitchFastContentMeasuring : 1 { false };
     unsigned m_isBrokenIdeographFallback : 1;
     unsigned m_hasVerticalGlyphs : 1;
 
@@ -417,36 +433,3 @@ WEBCORE_EXPORT TextStream& operator<<(TextStream&, const Font&);
 #endif
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::Font::Origin> {
-    using values = EnumValues<
-        WebCore::Font::Origin,
-        WebCore::Font::Origin::Remote,
-        WebCore::Font::Origin::Local
-    >;
-};
-template<> struct EnumTraits<WebCore::Font::Interstitial> {
-    using values = EnumValues<
-        WebCore::Font::Interstitial,
-        WebCore::Font::Interstitial::Yes,
-        WebCore::Font::Interstitial::No
-    >;
-};
-template<> struct EnumTraits<WebCore::Font::Visibility> {
-    using values = EnumValues<
-        WebCore::Font::Visibility,
-        WebCore::Font::Visibility::Visible,
-        WebCore::Font::Visibility::Invisible
-    >;
-};
-template<> struct EnumTraits<WebCore::Font::OrientationFallback> {
-    using values = EnumValues<
-        WebCore::Font::OrientationFallback,
-        WebCore::Font::OrientationFallback::Yes,
-        WebCore::Font::OrientationFallback::No
-    >;
-};
-
-}

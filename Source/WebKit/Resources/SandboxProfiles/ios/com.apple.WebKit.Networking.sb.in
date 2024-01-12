@@ -1,4 +1,4 @@
-; Copyright (C) 2014-2022 Apple Inc. All rights reserved.
+; Copyright (C) 2014-2023 Apple Inc. All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without
 ; modification, are permitted provided that the following conditions
@@ -63,8 +63,28 @@
 
 (allow socket-option-get
     (require-all
+        (socket-option-level IPPROTO_IP)
+        (socket-option-name 25)))
+
+(allow socket-option-get
+    (require-all
         (socket-option-level IPPROTO_IPV6)
         (socket-option-name 125)))
+
+(allow socket-option-get
+    (require-all
+        (socket-option-level IPPROTO_TCP)
+        (socket-option-name 262 SO_REUSEPORT)))
+
+(allow socket-option-set
+    (require-all
+        (socket-option-level IPPROTO_IP)
+        (socket-option-name 7 20 27)))
+
+(allow socket-option-set
+    (require-all
+        (socket-option-level IPPROTO_TCP)
+        (socket-option-name 513)))
 
 (allow socket-option-set
     (require-all
@@ -75,13 +95,18 @@
     (require-all
         (socket-option-level SOL_SOCKET)
         (socket-option-name
-            131072
+            0 ;; Replace with 131072 when 32 bit size is supported
+            SO_DELEGATED
             SO_MARK_KNOWN_TRACKER
+            SO_MARK_KNOWN_TRACKER_NON_APP_INITIATED
+            SO_NECP_ATTRIBUTES
+            SO_NECP_CLIENTUUID
             SO_NECP_LISTENUUID
             SO_NOSIGPIPE
             SO_RCVBUF
             SO_REUSEADDR
-            SO_REUSEPORT)))
+            SO_REUSEPORT
+            SO_TIMESTAMP)))
 
 (with-filter (mac-policy-name "vnguard")
     (allow system-mac-syscall (mac-syscall-number 1)))
@@ -219,9 +244,7 @@
         (prefix "/private/var/db/com.apple.networkextension.")
     )
 
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     (allow file-read* (literal "/private/var/Managed Preferences/mobile/com.apple.webcontentfilter.plist"))
-#endif
 
     (allow mach-lookup
            (global-name "com.apple.AppSSO.service-xpc"))
@@ -713,6 +736,9 @@
 
 (when (defined? 'syscall-unix)
     (deny syscall-unix (with telemetry))
+    (when (defined? 'SYS_crossarch_trap)
+        (deny syscall-unix (with no-report) (syscall-number
+            SYS_crossarch_trap)))
     (allow syscall-unix (syscall-number
         SYS___channel_get_info
         SYS___channel_open
@@ -745,6 +771,7 @@
         SYS_ffsctl
         SYS_fileport_makefd
         SYS_fileport_makeport
+        SYS_fsctl
         SYS_fsgetpath
         SYS_fstat64
         SYS_fstat64_extended
@@ -766,6 +793,7 @@
         SYS_gettid
         SYS_gettimeofday
         SYS_getuid
+        SYS_getxattr
         SYS_guarded_close_np
         SYS_guarded_open_dprotected_np
         SYS_guarded_open_np
@@ -842,7 +870,9 @@
         SYS_shm_open
         SYS_shutdown
         SYS_sigaction
+#if ASAN_ENABLED
         SYS_sigaltstack
+#endif
         SYS_sigprocmask
         SYS_socket
         SYS_socketpair

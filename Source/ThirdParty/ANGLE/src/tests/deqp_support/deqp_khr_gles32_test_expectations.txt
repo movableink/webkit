@@ -6,6 +6,9 @@
 
 // For now we only log Vulkan test expectations. More back-ends can follow as we need them.
 
+// Pipeline cache failure with older drivers
+8431 VULKAN NVIDIA : KHR-GLES32.core.tessellation_shader.single.primitive_coverage = FAIL
+
 // Geometry shader support (conditioned to windows as that's our only bot capable of running these
 // tests)
 // API validation bugs
@@ -84,12 +87,6 @@
 5557 VULKAN LINUX : KHR-GLES32.core.texture_cube_map_array.sampling = SKIP
 
 6008 VULKAN NVIDIA LINUX :  KHR-GLES32.core.framebuffer_completeness.cube_map_layered_attachment_valid_size_and_format = SKIP
-
-// https://gitlab.khronos.org/Tracker/vk-gl-cts/-/issues/4292
-5978 VULKAN WIN NVIDIA : KHR-GLES32.core.texture_border_clamp.Texture2DDC16Linear = SKIP
-5978 VULKAN WIN NVIDIA : KHR-GLES32.core.texture_border_clamp.Texture2DDC32FLinear = SKIP
-5978 VULKAN PIXEL6 : KHR-GLES32.core.texture_border_clamp.Texture2DDC16Linear = SKIP
-5978 VULKAN PIXEL6 : KHR-GLES32.core.texture_border_clamp.Texture2DDC32FLinear = SKIP
 
 // Lack of border clamp support on older drivers.
 3577 VULKAN LINUX NVIDIA : KHR-GLES32.core.texture_border_clamp.* = SKIP

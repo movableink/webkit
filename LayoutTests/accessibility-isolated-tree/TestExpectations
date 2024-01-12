@@ -1,18 +1,16 @@
 # Crashes
-accessibility/mac/resolved-text-editing.html [ Crash ]
-accessibility/mac/rowheader-outside-table-role.html [ Crash ]
+#
+# This test crashes when run repeatedly.
+accessibility/mac/resolved-text-editing.html [ Crash Pass ]
 
 # Timeouts
-accessibility/aria-controls-with-tabs.html [ Timeout ]
+accessibility/aria-combobox-no-owns.html [ Timeout ]
 accessibility/frame-disconnect-textmarker-cache-crash.html [ Timeout ]
-accessibility/slider-with-lost-renderer.html [ Timeout ]
-accessibility/mac/combobox-activedescendant-notifications.html [ Timeout ]
-accessibility/mac/relationships-in-frames.html [ Timeout ]
 
 # Text failures
-accessibility/aria-current.html [ Failure ]
-accessibility/aria-labelledby-overrides-aria-label.html [ Failure ]
-accessibility/dialog-showModal.html [ Failure ]
+#
+# Potentially caused by: https://github.com/WebKit/WebKit/commit/2517a540e6f5a2037c6843102f3a9cb753f2f9f0
+accessibility/content-editable-set-inner-text-generates-axvalue-notification.html [ Failure Pass ]
 accessibility/dynamically-ignored-canvas.html [ Failure ]
 accessibility/element-reflection-ariacontrols.html [ Failure ]
 accessibility/element-reflection-ariadetails.html [ Failure ]
@@ -20,48 +18,25 @@ accessibility/element-reflection-ariaerrormessage.html [ Failure ]
 accessibility/element-reflection-ariaflowto.html [ Failure ]
 accessibility/element-reflection-ariaowns.html [ Failure ]
 accessibility/frame-disconnect-textmarker-cache-crash.html [ Failure ]
-accessibility/insert-children-assert.html [ Failure ]
+accessibility/image-link-inline-cont.html [ Failure ]
 accessibility/keyevents-for-actions-mimic-real-key-events.html [ Failure ]
 accessibility/keyevents-posted-for-increment-actions.html [ Failure ]
 accessibility/mac/area-with-aria-label.html [ Failure ]
-accessibility/mac/aria-tree.html [ Failure ]
-accessibility/mac/crash-invalid-text-marker-node.html [ Failure ]
 accessibility/mac/document-attributes.html [ Failure ]
 accessibility/mac/focus-setting-selection-syncronizing-not-clearing.html [ Failure ]
 accessibility/mac/frame-with-title.html [ Failure ]
 accessibility/mac/press-action-not-exposed-for-event-delegation.html [ Failure ]
 accessibility/mac/pseudo-element-text-markers.html [ Failure ]
-accessibility/mac/ruby-hierarchy-roles.html [ Failure ]
+accessibility/mac/ruby-hierarchy-roles.html [ Failure Pass ]
 accessibility/mac/search-predicate-from-ignored-element.html [ Failure ]
 accessibility/mac/search-predicate-immediate-descendants-only.html [ Failure ]
-accessibility/mac/selection-value-changes-for-aria-textbox.html [ Failure ]
 accessibility/mac/set-value-editable-types.html [ Failure ]
 accessibility/mac/setting-attributes-is-asynchronous.html [ Failure ]
-accessibility/mac/test-convenience-methods.html [ Failure ]
-accessibility/mac/title-attribute-used-as-last-resort.html [ Failure ]
-accessibility/scroll-to-global-point-iframe-nested.html [ Failure ]
-accessibility/scroll-to-global-point-iframe.html [ Failure ]
-accessibility/scroll-to-global-point-main-window.html [ Failure ]
-accessibility/scroll-to-global-point-nested.html [ Failure ]
-accessibility/scroll-to-make-visible-div-overflow.html [ Failure ]
-accessibility/scroll-to-make-visible-iframe-offscreen.html [ Failure ]
-accessibility/scroll-to-make-visible-iframe.html [ Failure ]
-accessibility/scroll-to-make-visible-nested-2.html [ Failure ]
-accessibility/scroll-to-make-visible-nested.html [ Failure ]
-accessibility/scroll-to-make-visible-with-subfocus.html [ Failure ]
-accessibility/slider-with-lost-renderer.html [ Failure ]
-accessibility/textarea-insertion-point-line-number.html [ Failure ]
-accessibility/title-ui-element-correctness.html [ Failure ]
-accessibility/text-alternative-calculation-hidden-nodes.html [ Failure ]
-accessibility/math-multiscript-attributes.html [ Failure ]
+accessibility/mac/attributed-string/attributed-string-has-completion-annotation.html [ Failure ]
 
 # Frames are off by 1px vs. non-ITM mode.
 accessibility/table-cells.html [ Failure ]
 accessibility/mac/document-links.html [ Failure ]
 
-# Fails because aria-labelledby text changes don't update in isolated tree mode
-accessibility/aria-labelledby-on-password-input.html [ Failure ]
-
-accessibility/aria-selected-menu-items.html [ Failure ]
 accessibility/aria-owns-hierarchy-remap.html [ Failure ]
 accessibility/element-reflection-ariaactivedescendant.html [ Failure ]

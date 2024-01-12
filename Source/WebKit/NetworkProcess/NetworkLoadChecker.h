@@ -27,16 +27,12 @@
 
 #include "UserContentControllerIdentifier.h"
 #include "WebPageProxyIdentifier.h"
-#include <WebCore/ContentExtensionActions.h>
 #include <WebCore/ContentSecurityPolicyResponseHeaders.h>
 #include <WebCore/CrossOriginEmbedderPolicy.h>
 #include <WebCore/FetchOptions.h>
 #include <WebCore/NetworkLoadInformation.h>
-#include <WebCore/ResourceError.h>
 #include <pal/SessionID.h>
 #include <variant>
-#include <wtf/CompletionHandler.h>
-#include <wtf/Expected.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -44,6 +40,7 @@ class ContentSecurityPolicy;
 class OriginAccessPatterns;
 struct ContentRuleListResults;
 struct ContentSecurityPolicyClient;
+class ResourceError;
 class SecurityOrigin;
 enum class AdvancedPrivacyProtections : uint16_t;
 enum class PreflightPolicy : uint8_t;
@@ -140,6 +137,8 @@ private:
     using ContentExtensionCallback = CompletionHandler<void(ContentExtensionResultOrError&&)>;
     void processContentRuleListsForLoad(WebCore::ResourceRequest&&, ContentExtensionCallback&&);
 #endif
+
+    RefPtr<WebCore::SecurityOrigin> parentOrigin() const { return m_parentOrigin; }
 
     WebCore::FetchOptions m_options;
     WebCore::StoredCredentialsPolicy m_storedCredentialsPolicy;

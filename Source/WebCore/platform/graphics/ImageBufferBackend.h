@@ -54,6 +54,7 @@ struct ImageBufferCreationContext;
 class GraphicsContext;
 class GraphicsContextGL;
 #if HAVE(IOSURFACE)
+class IOSurface;
 class IOSurfacePool;
 #endif
 class Image;
@@ -105,7 +106,6 @@ public:
 
     WEBCORE_EXPORT virtual ~ImageBufferBackend();
 
-    WEBCORE_EXPORT static IntSize calculateBackendSize(const Parameters&);
     WEBCORE_EXPORT static size_t calculateMemoryCost(const IntSize& backendSize, unsigned bytesPerRow);
     static size_t calculateExternalMemoryCost(const Parameters&) { return 0; }
     WEBCORE_EXPORT static AffineTransform calculateBaseTransform(const Parameters&, bool originAtBottomLeftCorner);
@@ -113,12 +113,8 @@ public:
     virtual GraphicsContext& context() = 0;
     virtual void flushContext() { }
 
-    virtual IntSize backendSize() const { return { }; }
-
-    virtual void finalizeDrawIntoContext(GraphicsContext&) { }
-    virtual RefPtr<NativeImage> copyNativeImage(BackingStoreCopy) = 0;
-
-    WEBCORE_EXPORT virtual RefPtr<NativeImage> copyNativeImageForDrawing(GraphicsContext& destination);
+    virtual RefPtr<NativeImage> copyNativeImage() = 0;
+    virtual RefPtr<NativeImage> createNativeImageReference() = 0;
     WEBCORE_EXPORT virtual RefPtr<NativeImage> sinkIntoNativeImage();
 
     WEBCORE_EXPORT void convertToLuminanceMask();
@@ -127,7 +123,9 @@ public:
     virtual void getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) = 0;
     virtual void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) = 0;
 
-    virtual bool copyToPlatformTexture(GraphicsContextGL&, GCGLenum, PlatformGLObject, GCGLenum, bool, bool) { return false; }
+#if HAVE(IOSURFACE)
+    virtual IOSurface* surface() { return nullptr; }
+#endif
 
 #if USE(CAIRO)
     virtual RefPtr<cairo_surface_t> createCairoSurface() { return nullptr; }
@@ -160,15 +158,6 @@ public:
 
     const Parameters& parameters() { return m_parameters; }
 
-    template<typename T>
-    T toBackendCoordinates(T t) const
-    {
-        static_assert(std::is_same<T, IntPoint>::value || std::is_same<T, IntSize>::value || std::is_same<T, IntRect>::value);
-        if (resolutionScale() != 1)
-            t.scale(resolutionScale());
-        return t;
-    }
-
     WEBCORE_EXPORT virtual String debugDescription() const = 0;
 
 protected:
@@ -176,15 +165,10 @@ protected:
 
     virtual unsigned bytesPerRow() const = 0;
 
-
-    IntSize logicalSize() const { return IntSize(m_parameters.logicalSize); }
+    IntSize size() const { return m_parameters.backendSize; };
     float resolutionScale() const { return m_parameters.resolutionScale; }
     const DestinationColorSpace& colorSpace() const { return m_parameters.colorSpace; }
     PixelFormat pixelFormat() const { return m_parameters.pixelFormat; }
-    RenderingPurpose renderingPurpose() const { return m_parameters.purpose; }
-
-    IntRect logicalRect() const { return IntRect(IntPoint::zero(), logicalSize()); };
-    IntRect backendRect() const { return IntRect(IntPoint::zero(), backendSize()); };
 
     WEBCORE_EXPORT void getPixelBuffer(const IntRect& srcRect, void* data, PixelBuffer& destination);
     WEBCORE_EXPORT void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* destination);

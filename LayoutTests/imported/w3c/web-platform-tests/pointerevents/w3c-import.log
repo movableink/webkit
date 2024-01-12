@@ -17,11 +17,12 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/META.yml
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/README.md
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/capturing_boundary_event_handler_at_ua_shadowdom.html
-/LayoutTests/imported/w3c/web-platform-tests/pointerevents/coalesced_events_attributes.html
-/LayoutTests/imported/w3c/web-platform-tests/pointerevents/coalesced_events_attributes_under_load.html
-/LayoutTests/imported/w3c/web-platform-tests/pointerevents/idlharness.window.js
+/LayoutTests/imported/w3c/web-platform-tests/pointerevents/coalesced_events_attributes.https.html
+/LayoutTests/imported/w3c/web-platform-tests/pointerevents/coalesced_events_attributes_under_load.https.html
+/LayoutTests/imported/w3c/web-platform-tests/pointerevents/idlharness.https.window.js
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/inheritance.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/mouse-pointer-boundary-events-for-shadowdom.html
+/LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_after_target_appended.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_after_target_removed.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_attributes_hoverable_pointers.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_attributes_hoverable_rightbutton.html
@@ -29,6 +30,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_auxclick_is_a_pointerevent.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_boundary_events_at_implicit_release_hoverable_pointers.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_boundary_events_in_capturing.html
+/LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_bubble_ancestors_none.html
+/LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_bubble_display_none.html
+/LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_bubble_mousedown_mouseup_different_target.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_capture_mouse.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_capture_suppressing_mouse.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_change-touch-action-onpointerdown_touch.html
@@ -36,6 +40,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_click_is_a_pointerevent.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_click_is_a_pointerevent_multiple_clicks.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_constructor.html
+/LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_constructor.https.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_contextmenu_is_a_pointerevent.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_disabled_form_control.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_element_haspointercapture.html
@@ -71,6 +76,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_pointerout_pen.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_pointerout_received_once.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_pointerrawupdate.html
+/LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_pointerrawupdate.https.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_releasepointercapture_events_to_original_target.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_releasepointercapture_invalid_pointerid.html
 /LayoutTests/imported/w3c/web-platform-tests/pointerevents/pointerevent_releasepointercapture_onpointercancel_touch.html

@@ -26,16 +26,11 @@
                 "expected": {
                     "all": {"status": ["PASS", "TIMEOUT"], "bug": "webkit.org/b/224175"}
                 }
-            }
-        }
-    },
-    "TestGeolocationManager": {
-        "subtests": {
-            "/webkit/WebKitGeolocationManager/current-position": {
-                "expected": {"gtk": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/213786"}}
             },
-            "/webkit/WebKitGeolocationManager/watch-position": {
-                "expected": {"gtk": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/213786"}}
+            "/webkit/WebKitWebView/session-state": {
+                "expected": {
+                    "wpe": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/264508"}
+                }
             }
         }
     },
@@ -65,20 +60,6 @@
             }
         }
     },
-    "TestUIClient": {
-        "subtests": {
-            "/webkit/WebKitWebView/geolocation-permission-requests": {
-                "expected": {"all": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/235955"}}
-            }
-        }
-    },
-    "TestCookieManager": {
-        "subtests": {
-            "/webkit/WebKitCookieManager/persistent-storage": {
-                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/134580"}}
-            }
-        }
-    },
     "TestPrinting": {
         "subtests": {
             "/webkit/WebKitPrintOperation/custom-widget": {
@@ -86,78 +67,15 @@
             }
         }
     },
-    "TestWebViewEditor": {
+    "TestWebKitFaviconDatabase": {
         "subtests": {
-            "/webkit/WebKitWebView/editable/editable": {
-                "expected": {"gtk@Debug": {"status": ["FAIL"], "bug": "webkit.org/b/134580"}}
-            }
-        }
-    },
-    "TestWebProcessExtensions": {
-        "subtests": {
-            "/webkit/WebKitWebProcessExtension/document-loaded-signal": {
-                "expected": {
-                    "wpe@Debug": {"status": ["CRASH"], "bug": "webkit.org/b/219980"},
-                    "gtk": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/254002"}
-                }
-            },
-            "/webkit/WebKitWebProcessExtension/form-submission-steps": {
-                "expected": {"all": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/205333"}}
-            },
-            "/webkit/WebKitWebProcessExtension/user-messages": {
-                "expected": {"all": {"slow": true}}
-            },
-            "/webkit/WebKitWebProcessExtension/dom-document-title": {
-                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/254002"}}
-            },
-            "/webkit/WebKitWebProcessExtension/dom-input-element-is-user-edited": {
-                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/254002"}}
-            },
-            "/webkit/WebKitWebProcessExtension/form-controls-associated-signal": {
-                "expected": {"gtk": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/254002"}}
-            },
-            "/webkit/WebKitWebProcessExtension/isolated-world": {
-                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/254002"}}
-            },
-            "/webkit/WebKitWebProcessExtension/web-process-crashed": {
-                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/254002"}}
-            }
-        }
-    },
-    "TestWebsiteData": {
-        "subtests": {
-            "/webkit/WebKitWebsiteData/appcache": {
-                "expected": {"all": {"status": ["PASS", "FAIL"], "bug": "webkit.org/b/188117"}}
-            },
-            "/webkit/WebKitWebsiteData/cache": {
-                "expected": {"gtk": {"status": ["PASS", "FAIL"], "bug": "webkit.org/b/254002"}}
-            },
-            "/webkit/WebKitWebsiteData/configuration": {
-                "expected": {"wpe": {"status": ["FAIL"], "bug": "webkit.org/b/256557"}}
-            },
-            "/webkit/WebKitWebsiteData/ephemeral": {
-                "expected": {"wpe": {"status": ["FAIL"], "bug": "webkit.org/b/256557"}}
-            },
-            "/webkit/WebKitWebsiteData/hsts": {
-                "expected": {"wpe": {"status": ["FAIL"], "bug": "webkit.org/b/256557"}}
-            },
-            "/webkit/WebKitWebsiteData/handle-corrupted-local-storage": {
-                "expected": {"wpe": {"status": ["FAIL"], "bug": "webkit.org/b/256557"}}
-            }
-        }
-    },
-    "TestWebKitWebContext": {
-        "subtests": {
-            "/webkit/WebKitWebContext/proxy": {
-                "expected": {"all": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/222090"}}
+            "/webkit/WebKitFaviconDatabase/get-favicon": {
+                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/205381"}}
             }
         }
     },
     "TestWebKitWebView": {
         "subtests": {
-            "/webkit/WebKitWebView/is-playing-audio": {
-                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/210635"}}
-            },
             "/webkit/WebKitWebView/is-web-process-responsive": {
                 "expected": {"all": {"slow": true }}
             },
@@ -166,6 +84,22 @@
             },
             "/webkit/WebKitWebView/fullscreen": {
                 "expected": {"gtk": {"status": ["SKIP"], "bug": "webkit.org/b/248203"}}
+            },
+            "/webkit/WebKitWebView/external-audio-rendering": {
+                "expected": {"wpe": {"status": ["FAIL", "TIMEOUT"], "bug": "webkit.org/b/262625"}}
+            },
+            "/webkit/WebKitWebView/cut-copy-paste/editable": {
+                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/263417"}}
+            },
+            "/webkit/WebKitWebView/notification": {
+                "expected": {"all": {"status": ["CRASH", "PASS"], "bug": "webkit.org/b/265886"}}
+            }
+        }
+    },
+    "TestWebViewEditor": {
+        "subtests": {
+            "/webkit/WebKitWebView/cut-copy-paste/editable": {
+                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/263417"}}
             }
         }
     },
@@ -177,17 +111,10 @@
         },
         "expected": {"all": {"slow": true}}
     },
-    "TestWebKitFaviconDatabase": {
-        "subtests": {
-            "/webkit/WebKitFaviconDatabase/get-favicon": {
-                "expected": {"gtk": {"status": ["FAIL", "PASS", "TIMEOUT"], "bug": ["webkit.org/b/205381", "webkit.org/b/220992"]}}
-            }
-        }
-    },
     "TestLoaderClient": {
         "subtests": {
             "/webkit/WebKitWebPage/get-uri": {
-                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/206728"}}
+                "expected": {"all": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/206728"}}
             },
             "/webkit/WebKitWebView/title": {
                 "expected": {"all@Debug": {"status": ["CRASH"], "bug": "webkit.org/b/221119"}}
@@ -196,11 +123,6 @@
     },
     "TestWebKit": {
         "subtests": {
-            "WebKit.MouseMoveAfterCrash": {
-                "expected": {
-                    "gtk": {"status": ["CRASH", "PASS"], "bug": "webkit.org/b/85066"}
-                }
-            },
             "WebKit.NewFirstVisuallyNonEmptyLayoutForImages": {
                 "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/85066"}}
             },
@@ -209,9 +131,6 @@
             },
             "WebKit.WKConnection": {
                 "expected": {"gtk": {"status": ["FAIL", "TIMEOUT"], "bug": "webkit.org/b/84959"}}
-            },
-            "WebKit.ReloadPageAfterCrash": {
-                "expected": {"gtk": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/110129"}}
             },
             "WebKit.DidAssociateFormControls": {
                 "expected": {"gtk": {"status": ["TIMEOUT"], "bug": "webkit.org/b/120302"}}
@@ -236,106 +155,106 @@
             }
         }
     },
-    "TestWebKitUserContentManager": {
-        "subtests": {
-            "WebKit.MouseMoveAfterCrash": {
-                "expected": {
-                    "gtk": {"status": ["FAIL"], "bug": "webkit.org/b/254002"}
-                }
-            }
-        }
-    },
     "TestWTF": {
         "subtests": {
             "ThreadMessage.MultipleSenders": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Condition.TenProducersOneConsumerHundredSlotsNotifyOne": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Condition.TenProducersOneConsumerHundredSlotsNotifyAll": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Condition.TenProducersTenConsumersHundredSlotsNotifyOne": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Condition.TenProducersTenConsumersHundredSlotsNotifyAll": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Condition.TenProducersTenConsumersOneSlot": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Condition.TenProducersOneConsumerOneSlot": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Condition.OneProducerOneConsumerHundredSlots": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Condition.OneProducerOneConsumerOneSlot": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Condition.OneProducerOneConsumerOneSlotTimeout": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Condition.OneProducerTenConsumersOneSlot": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Condition.OneProducerTenConsumersHundredSlotsNotifyAll": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Condition.OneProducerTenConsumersHundredSlotsNotifyOne": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
-            },
-            "WTF_DateMath.calculateLocalTimeOffset": {
-                "expected": {"wpe": {"status": ["FAIL", "PASS"]}}
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_Lock.ContendedShortSection": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/260029" }}
             },
             "WTF_Lock.ContendedLongSection": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/260029" }}
             },
             "WTF_Lock.ManyContendedLongSections": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/260029" }}
             },
             "WTF_Lock.ManyContendedShortSections": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/260029" }}
+            },
+            "WTF_Lock.SectionAddressCollision": {
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/260029" }}
             },
             "WTF_ParkingLot.HundredUnparkAllOneFast": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/259945" }}
             },
             "WTF_ParkingLot.UnparkAllHundred": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/259945" }}
             },
             "WTF_ParkingLot.UnparkAllHundredFast": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/259945" }}
             },
             "WTF_ParkingLot.UnparkAllOneFast": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/259945" }}
+            },
+            "WTF_ParkingLot.UnparkOneFifty": {
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/259945" }}
+            },
+            "WTF_ParkingLot.UnparkOneFiftyThenFiftyAll": {
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/259945" }}
             },
             "WTF_ParkingLot.UnparkOneFiftyThenFiftyAllFast": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/259945" }}
             },
             "WTF_ParkingLot.UnparkOneHundredFast": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/259945" }}
             },
             "WTF_RunLoop.ManyTimes": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
+                "expected": {"gtk": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246472" }}
             },
             "WTF_WordLock.ContendedShortSection": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/260209" }}
             },
             "WTF_WordLock.ContendedLongSection": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/260209" }}
             },
             "WTF_WordLock.ManyContendedShortSections": {
-                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"]}}
+                "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/260209" }}
             },
             "WTF_WordLock.ManyContendedLongSections": {
                 "expected": {"all": {"slow": true, "status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/246603"}}
             },
             "WTF.WorkerPoolDecrease": {
                 "expected": {"gtk": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/214803"}}
+            },
+            "WTF_WorkQueue.DestroyDispatchedOnDispatchQueue": {
+                "expected": {"all": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/260211" }}
             }
         }
     },
@@ -372,27 +291,8 @@
             }
         }
     },
-    "TestSSL": {
-        "subtests": {
-            "/webkit/WebKitWebView/load-failed-with-tls-errors": {
-                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/224955"}}
-            },
-            "/webkit/WebKitWebView/tls-errors-policy": {
-                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/224955"}}
-            },
-            "/webkit/WebKitWebView/tls-http-auth": {
-                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/224955"}}
-            },
-            "/webkit/WebKitWebView/tls-errors-redirect-to-http": {
-                "expected": {"gtk": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/224955"}}
-            }
-        }
-    },
     "TestDownloads": {
         "subtests": {
-            "/webkit/Downloads/local-file-error": {
-                "expected": {"gtk": {"status": ["CRASH", "PASS"], "bug": "webkit.org/b/254002"}}
-            },
             "/webkit/Downloads/remote-file-error": {
                 "expected": {"gtk": {"status": ["TIMEOUT", "PASS"], "bug": "webkit.org/b/254002"}}
             }
@@ -405,5 +305,40 @@
             }
         }
 
+    },
+    "TestNetworkProcessMemoryPressure": {
+        "subtests": {
+            "/webkit/WebKitWebsiteData/memory-pressure": {
+                "expected": {"gtk": {"status": ["TIMEOUT"], "bug": "webkit.org/b/263016"}}
+            }
+        }
+    },
+    "TestWebKitNetworkSession": {
+        "subtests": {
+            "/webkit/WebKitNetworkSession/proxy": {
+                "expected": {"wpe": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/264485"}}
+            }
+        }
+    },
+    "TestWebProcessExtensions": {
+        "subtests": {
+            "/webkit/WebKitWebProcessExtension/page-id": {
+                "expected": {"all": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/264505"}}
+            }
+        }
+    },
+    "TestSSL": {
+        "subtests": {
+            "/webkit/WebKitWebView/client-side-certificate": {
+                "expected": {"all": {"status": ["FAIL", "PASS"], "bug": "webkit.org/b/264507"}}
+            }
+        }
+    },
+    "TestResources": {
+        "subtests": {
+            "afterAll": {
+                "expected": {"all": {"status": ["CRASH", "PASS"], "bug": "webkit.org/b/264509"}}
+            }
+        }
     }
 }

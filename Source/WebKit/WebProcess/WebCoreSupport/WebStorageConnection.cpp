@@ -44,19 +44,19 @@ Ref<WebStorageConnection> WebStorageConnection::create()
 
 void WebStorageConnection::getPersisted(WebCore::ClientOrigin&& origin, StorageConnection::PersistCallback&& completionHandler)
 {
-    connection().sendWithAsyncReply(Messages::NetworkStorageManager::Persisted(origin), WTFMove(completionHandler));
+    Ref { connection() }->sendWithAsyncReply(Messages::NetworkStorageManager::Persisted(origin), WTFMove(completionHandler));
 }
 
 void WebStorageConnection::persist(const WebCore::ClientOrigin& origin, StorageConnection::PersistCallback&& completionHandler)
 {
-    connection().sendWithAsyncReply(Messages::NetworkStorageManager::Persist(origin), WTFMove(completionHandler));
+    Ref { connection() }->sendWithAsyncReply(Messages::NetworkStorageManager::Persist(origin), WTFMove(completionHandler));
 }
 
 void WebStorageConnection::getEstimate(WebCore::ClientOrigin&& origin, StorageConnection::GetEstimateCallback&& completionHandler)
 {
-    connection().sendWithAsyncReply(Messages::NetworkStorageManager::Estimate(origin), [completionHandler = WTFMove(completionHandler)](auto result) mutable {
+    Ref { connection() }->sendWithAsyncReply(Messages::NetworkStorageManager::Estimate(origin), [completionHandler = WTFMove(completionHandler)](auto result) mutable {
         if (!result)
-            return completionHandler(WebCore::Exception { WebCore::TypeError });
+            return completionHandler(WebCore::Exception { WebCore::ExceptionCode::TypeError });
 
         return completionHandler(WTFMove(*result));
     });
@@ -64,14 +64,13 @@ void WebStorageConnection::getEstimate(WebCore::ClientOrigin&& origin, StorageCo
 
 void WebStorageConnection::fileSystemGetDirectory(WebCore::ClientOrigin&& origin, StorageConnection::GetDirectoryCallback&& completionHandler)
 {
-    auto& connection = WebProcess::singleton().ensureNetworkProcessConnection().connection();
-    connection.sendWithAsyncReply(Messages::NetworkStorageManager::FileSystemGetDirectory(origin), [completionHandler = WTFMove(completionHandler)](auto result) mutable {
+    Ref { connection() }->sendWithAsyncReply(Messages::NetworkStorageManager::FileSystemGetDirectory(origin), [completionHandler = WTFMove(completionHandler)](auto result) mutable {
         if (!result)
             return completionHandler(convertToException(result.error()));
 
         auto identifier = result.value();
         if (!identifier.isValid())
-            return completionHandler(WebCore::Exception { WebCore::UnknownError, "Connection is lost"_s });
+            return completionHandler(WebCore::Exception { WebCore::ExceptionCode::UnknownError, "Connection is lost"_s });
 
         auto connection = RefPtr<WebCore::FileSystemStorageConnection> { &WebProcess::singleton().fileSystemStorageConnection() };
         return completionHandler(std::pair { identifier, WTFMove(connection) });

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,12 +32,15 @@
 #include "ScriptArguments.h"
 #include "ScriptCallStackFactory.h"
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 
 namespace Inspector {
 
 static constexpr unsigned maximumConsoleMessages = 100;
 static constexpr int expireConsoleMessagesStep = 10;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorConsoleAgent);
 
 InspectorConsoleAgent::InspectorConsoleAgent(AgentContext& context)
     : InspectorAgentBase("Console"_s)
@@ -252,15 +255,14 @@ void InspectorConsoleAgent::addConsoleMessage(std::unique_ptr<ConsoleMessage> co
         if (m_enabled)
             previousMessage->updateRepeatCountInConsole(*m_frontendDispatcher);
     } else {
-        ConsoleMessage* newMessage = consoleMessage.get();
-        m_consoleMessages.append(WTFMove(consoleMessage));
         if (m_enabled) {
             auto generatePreview = !m_isAddingMessageToFrontend;
             SetForScope isAddingMessageToFrontend(m_isAddingMessageToFrontend, true);
 
-            newMessage->addToFrontend(*m_frontendDispatcher, m_injectedScriptManager, generatePreview);
+            consoleMessage->addToFrontend(*m_frontendDispatcher, m_injectedScriptManager, generatePreview);
         }
 
+        m_consoleMessages.append(WTFMove(consoleMessage));
         if (m_consoleMessages.size() >= maximumConsoleMessages) {
             m_expiredConsoleMessageCount += expireConsoleMessagesStep;
             m_consoleMessages.remove(0, expireConsoleMessagesStep);

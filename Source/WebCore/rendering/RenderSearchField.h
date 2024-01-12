@@ -39,7 +39,6 @@ public:
     void updateCancelButtonVisibility() const;
 
     void addSearchResult();
-    void stopSearchEventTimer();
 
     bool popupIsVisible() const { return m_searchPopupIsVisible; }
     void showPopup();
@@ -47,8 +46,6 @@ public:
     WEBCORE_EXPORT std::span<const RecentSearch> recentSearches();
 
 private:
-    bool isSearchField() const final { return true; }
-
     void willBeDestroyed() override;
     LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const override;
     void updateFromElement() override;
@@ -94,4 +91,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSearchField, isSearchField())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSearchField, isRenderSearchField())

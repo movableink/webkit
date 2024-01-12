@@ -90,12 +90,6 @@ using JSC::Yarr::RegularExpression;
 
 @implementation WebHTMLRepresentation
 
-static RetainPtr<NSArray> createNSArray(const HashSet<String, ASCIICaseInsensitiveHash>& set)
-{
-    auto vector = copyToVectorOf<NSString *>(set);
-    return adoptNS([[NSArray alloc] initWithObjects:vector.data() count:vector.size()]);
-}
-
 + (NSArray *)supportedMIMETypes
 {
     static NeverDestroyed<RetainPtr<NSArray>> staticSupportedMIMETypes = [[[self supportedNonImageMIMETypes] arrayByAddingObjectsFromArray:
@@ -327,7 +321,7 @@ static HTMLInputElement* inputElementFromDOMElement(DOMElement* element)
 
 - (DOMElement *)currentForm
 {
-    return kit(core([_private->dataSource webFrame])->selection().currentForm());
+    return kit(core([_private->dataSource webFrame])->selection().currentForm().get());
 }
 
 - (NSArray *)controlsInForm:(DOMElement *)form

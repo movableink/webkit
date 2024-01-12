@@ -29,6 +29,7 @@
 #include "AnimationFrameRate.h"
 #include "AnimationFrameRatePreset.h"
 #include "CSSNumericValue.h"
+#include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "IDLTypes.h"
@@ -67,6 +68,8 @@ public:
     virtual bool isDeclarativeAnimation() const { return false; }
     virtual bool isCSSAnimation() const { return false; }
     virtual bool isCSSTransition() const { return false; }
+
+    bool isSkippedContentAnimation() const;
 
     const String& id() const { return m_id; }
     void setId(String&&);

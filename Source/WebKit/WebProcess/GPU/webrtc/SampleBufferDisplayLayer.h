@@ -51,7 +51,7 @@ public:
 
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
 
-    WebCore::LayerHostingContextID hostingContextID() const final { return m_hostingContextID; }
+    WebCore::LayerHostingContextID hostingContextID() const final { return m_hostingContextID.value_or(0); }
 
     void ref() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCore::SampleBufferDisplayLayer, WTF::DestructionThread::MainRunLoop>::ref(); }
     void deref() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCore::SampleBufferDisplayLayer, WTF::DestructionThread::MainRunLoop>::deref(); }
@@ -61,7 +61,7 @@ private:
     SampleBufferDisplayLayer(SampleBufferDisplayLayerManager&, WebCore::SampleBufferDisplayLayer::Client&);
 
     // WebCore::SampleBufferDisplayLayer
-    void initialize(bool hideRootLayer, WebCore::IntSize, CompletionHandler<void(bool)>&&) final;
+    void initialize(bool hideRootLayer, WebCore::IntSize, bool shouldMaintainAspectRatio, CompletionHandler<void(bool)>&&) final;
 #if !RELEASE_LOG_DISABLED
     void setLogIdentifier(String&&) final;
 #endif
@@ -76,6 +76,7 @@ private:
     void enqueueVideoFrame(WebCore::VideoFrame&) final;
     void clearVideoFrames() final;
     PlatformLayer* rootLayer() final;
+    void setShouldMaintainAspectRatio(bool) final;
 
     // GPUProcessConnection::Client
     void gpuProcessConnectionDidClose(GPUProcessConnection&) final;
@@ -92,7 +93,7 @@ private:
     bool m_paused { false };
 
     SharedVideoFrameWriter m_sharedVideoFrameWriter;
-    WebCore::LayerHostingContextID m_hostingContextID { 0 };
+    std::optional<WebCore::LayerHostingContextID> m_hostingContextID;
 };
 
 }

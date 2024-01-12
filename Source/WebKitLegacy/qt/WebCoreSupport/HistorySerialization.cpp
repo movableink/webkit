@@ -25,6 +25,7 @@
  */
 
 #include "HistorySerialization.h"
+#include "LegacyHistoryItemClient.h"
 
 #include <WebCore/FormData.h>
 #include <WebCore/KeyedDecoderQt.h>
@@ -227,7 +228,7 @@ static bool decodeBackForwardTreeNode(KeyedDecoder& decoder, HistoryItem& item)
 
     Vector<int> ignore;
     decoder.decodeObjects("children"_s, ignore, [&item](KeyedDecoder& decoder, int&) {
-        Ref<HistoryItem> element = HistoryItem::create();
+        Ref<HistoryItem> element = HistoryItem::create(LegacyHistoryItemClient::singleton());
         if (decodeBackForwardTreeNode(decoder, element)) {
             item.addChildItem(WTFMove(element));
             return true;

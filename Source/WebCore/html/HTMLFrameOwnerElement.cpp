@@ -49,9 +49,7 @@ RenderWidget* HTMLFrameOwnerElement::renderWidget() const
 {
     // HTMLObjectElement and HTMLEmbedElement may return arbitrary renderers
     // when using fallback content.
-    if (!is<RenderWidget>(renderer()))
-        return nullptr;
-    return downcast<RenderWidget>(renderer());
+    return dynamicDowncast<RenderWidget>(renderer());
 }
 
 void HTMLFrameOwnerElement::setContentFrame(Frame& frame)
@@ -80,6 +78,8 @@ void HTMLFrameOwnerElement::clearContentFrame()
 void HTMLFrameOwnerElement::disconnectContentFrame()
 {
     if (RefPtr frame = m_contentFrame.get()) {
+        if (frame->settings().siteIsolationEnabled())
+            frame->broadcastFrameRemovalToOtherProcesses();
         frame->frameDetached();
         frame->disconnectOwnerElement();
     }

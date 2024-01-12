@@ -31,7 +31,7 @@
 #include <WebCore/GamepadProviderLibWPE.h>
 
 #if PLATFORM(WPE)
-#include "WPEView.h"
+#include "WPEWebView.h"
 #endif
 
 using namespace WebCore;
@@ -48,9 +48,6 @@ void UIGamepadProvider::platformSetDefaultGamepadProvider()
 
 WebPageProxy* UIGamepadProvider::platformWebPageProxyForGamepadInput()
 {
-    if (GamepadProvider::singleton().isMockGamepadProvider())
-        return nullptr;
-
 #if PLATFORM(WPE)
     return WKWPE::View::platformWebPageProxyForGamepadInput();
 #else

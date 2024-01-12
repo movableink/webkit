@@ -32,6 +32,13 @@ test(function() {
     var ctx3 = offscreenCanvas2.getContext('webgl');
     var ctx4 = offscreenCanvas2.getContext('2d');
     assert_equals(ctx4, null);
+    var ctx5 = offscreenCanvas2.getContext('webgl2');
+    assert_equals(ctx5, null);
+
+    var offscreenCanvas3 = new OffscreenCanvas(1, 1);
+    var ctx6 = offscreenCanvas3.getContext('webgl2');
+    var ctx7 = offscreenCanvas3.getContext('webgl');
+    assert_equals(ctx7, null);
 }, "Test that getContext twice with different context type returns null the second time");
 
 test(function() {
@@ -55,7 +62,7 @@ test(function() {
     var ctx = offscreenCanvas.getContext('2d', {alpha: false});
     ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
     ctx.fillRect(0, 0, 10, 10);
-    _assertPixelApprox(offscreenCanvas, 5,5, 0,127,0,255, "5,5", "0,127,0,255", 2);
+    _assertPixelApprox(offscreenCanvas, 5,5, 0,127,0,255, 2);
 }, "Test that OffscreenCanvasRenderingContext2D with alpha disabled makes the OffscreenCanvas opaque");
 
 test(function() {
@@ -63,7 +70,7 @@ test(function() {
     var ctx = offscreenCanvas.getContext('2d', {alpha: true});
     ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
     ctx.fillRect(0, 0, 10, 10);
-    _assertPixelApprox(offscreenCanvas, 5,5, 0,255,0,127, "5,5", "0,255,0,127", 2);
+    _assertPixelApprox(offscreenCanvas, 5,5, 0,255,0,127, 2);
 }, "Test that OffscreenCanvasRenderingContext2D with alpha enabled preserves the alpha");
 
 test(function() {
@@ -71,7 +78,7 @@ test(function() {
     var ctx = offscreenCanvas.getContext('2d');
     ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
     ctx.fillRect(0, 0, 10, 10);
-    _assertPixelApprox(offscreenCanvas, 5,5, 0,255,0,127, "5,5", "0,255,0,127", 2);
+    _assertPixelApprox(offscreenCanvas, 5,5, 0,255,0,127, 2);
 }, "Test that 'alpha' context creation attribute is true by default");
 
 done();

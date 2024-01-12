@@ -402,6 +402,8 @@ std::optional<Protocol::CSS::PseudoId> InspectorCSSAgent::protocolValueForPseudo
         return Protocol::CSS::PseudoId::FirstLine;
     case PseudoId::FirstLetter:
         return Protocol::CSS::PseudoId::FirstLetter;
+    case PseudoId::GrammarError:
+        return Protocol::CSS::PseudoId::GrammarError;
     case PseudoId::Marker:
         return Protocol::CSS::PseudoId::Marker;
     case PseudoId::Backdrop:
@@ -426,8 +428,20 @@ std::optional<Protocol::CSS::PseudoId> InspectorCSSAgent::protocolValueForPseudo
         return Protocol::CSS::PseudoId::ScrollbarTrackPiece;
     case PseudoId::ScrollbarCorner:
         return Protocol::CSS::PseudoId::ScrollbarCorner;
+    case PseudoId::SpellingError:
+        return Protocol::CSS::PseudoId::SpellingError;
     case PseudoId::Resizer:
         return Protocol::CSS::PseudoId::Resizer;
+    case PseudoId::ViewTransition:
+        return Protocol::CSS::PseudoId::ViewTransition;
+    case PseudoId::ViewTransitionGroup:
+        return Protocol::CSS::PseudoId::ViewTransitionGroup;
+    case PseudoId::ViewTransitionImagePair:
+        return Protocol::CSS::PseudoId::ViewTransitionImagePair;
+    case PseudoId::ViewTransitionOld:
+        return Protocol::CSS::PseudoId::ViewTransitionOld;
+    case PseudoId::ViewTransitionNew:
+        return Protocol::CSS::PseudoId::ViewTransitionNew;
 
     default:
         ASSERT_NOT_REACHED();
@@ -1296,12 +1310,13 @@ Ref<JSON::ArrayOf<Protocol::CSS::RuleMatch>> InspectorCSSAgent::buildArrayForMat
 
 RefPtr<Protocol::CSS::CSSStyle> InspectorCSSAgent::buildObjectForAttributesStyle(StyledElement& element)
 {
-    // FIXME: Ugliness below.
-    auto* attributeStyle = const_cast<MutableStyleProperties*>(element.presentationalHintStyle());
-    if (!attributeStyle)
+    auto* presentationalHintStyle = element.presentationalHintStyle();
+    if (!presentationalHintStyle)
         return nullptr;
 
-    auto inspectorStyle = InspectorStyle::create(InspectorCSSId(), attributeStyle->ensureCSSStyleDeclaration(), nullptr);
+    auto mutableStyle = presentationalHintStyle->mutableCopy();
+
+    auto inspectorStyle = InspectorStyle::create(InspectorCSSId(), mutableStyle->ensureCSSStyleDeclaration(), nullptr);
     return inspectorStyle->buildObjectForStyle();
 }
 

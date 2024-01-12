@@ -21,9 +21,10 @@
 
 #if USE(GSTREAMER)
 
+#include <wtf/glib/GRefPtr.h>
+
 #include <gst/gst.h>
 #include <gst/pbutils/encoding-profile.h>
-#include <wtf/glib/GRefPtr.h>
 
 typedef struct _WebKitVideoSink WebKitVideoSink;
 struct WebKitWebSrc;
@@ -46,6 +47,11 @@ typedef struct _GstWebRTCRTPSender GstWebRTCRTPSender;
 typedef struct _GstWebRTCRTPTransceiver GstWebRTCRTPTransceiver;
 typedef struct _GstRTPHeaderExtension GstRTPHeaderExtension;
 typedef struct _GstWebRTCICE GstWebRTCICE;
+#endif
+
+#if USE(GSTREAMER_TRANSCODER)
+typedef struct _GstTranscoder GstTranscoder;
+typedef struct _GstTranscoderSignalAdapter GstTranscoderSignalAdapter;
 #endif
 
 namespace WTF {
@@ -105,6 +111,10 @@ template<> void derefGPtr<GstBufferList>(GstBufferList*);
 template<> GRefPtr<GstBufferPool> adoptGRef(GstBufferPool*);
 template<> GstBufferPool* refGPtr<GstBufferPool>(GstBufferPool*);
 template<> void derefGPtr<GstBufferPool>(GstBufferPool*);
+
+template<> GRefPtr<GstMemory> adoptGRef(GstMemory*);
+template<> GstMemory* refGPtr<GstMemory>(GstMemory*);
+template<> void derefGPtr<GstMemory>(GstMemory*);
 
 template<> GRefPtr<GstSample> adoptGRef(GstSample* ptr);
 template<> GstSample* refGPtr<GstSample>(GstSample* ptr);
@@ -220,6 +230,16 @@ template<> GstWebRTCICE* refGPtr<GstWebRTCICE>(GstWebRTCICE*);
 template<> void derefGPtr<GstWebRTCICE>(GstWebRTCICE*);
 
 #endif
+
+#if USE(GSTREAMER_TRANSCODER)
+template<> GRefPtr<GstTranscoder> adoptGRef(GstTranscoder*);
+template<> GstTranscoder* refGPtr<GstTranscoder>(GstTranscoder*);
+template<> void derefGPtr<GstTranscoder>(GstTranscoder*);
+
+template<> GRefPtr<GstTranscoderSignalAdapter> adoptGRef(GstTranscoderSignalAdapter*);
+template<> GstTranscoderSignalAdapter* refGPtr<GstTranscoderSignalAdapter>(GstTranscoderSignalAdapter*);
+template<> void derefGPtr<GstTranscoderSignalAdapter>(GstTranscoderSignalAdapter*);
+#endif // USE(GSTREAMER_TRANSCODER)
 
 } // namespace WTF
 

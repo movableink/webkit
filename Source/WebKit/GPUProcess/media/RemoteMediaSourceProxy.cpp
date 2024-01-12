@@ -52,10 +52,19 @@ RemoteMediaSourceProxy::RemoteMediaSourceProxy(GPUConnectionToWebProcess& connec
 
 RemoteMediaSourceProxy::~RemoteMediaSourceProxy()
 {
+    disconnect();
+}
+
+void RemoteMediaSourceProxy::disconnect()
+{
+    for (auto& sourceBuffer : m_sourceBuffers)
+        sourceBuffer->disconnect();
+
     if (!m_connectionToWebProcess)
         return;
 
     m_connectionToWebProcess->messageReceiverMap().removeMessageReceiver(Messages::RemoteMediaSourceProxy::messageReceiverName(), m_identifier.toUInt64());
+    m_connectionToWebProcess = nullptr;
 }
 
 void RemoteMediaSourceProxy::setPrivateAndOpen(Ref<MediaSourcePrivate>&& mediaSourcePrivate)
@@ -64,27 +73,24 @@ void RemoteMediaSourceProxy::setPrivateAndOpen(Ref<MediaSourcePrivate>&& mediaSo
     m_private = WTFMove(mediaSourcePrivate);
 }
 
-MediaTime RemoteMediaSourceProxy::duration() const
-{
-    return m_duration;
-}
-
-const PlatformTimeRanges& RemoteMediaSourceProxy::buffered() const
-{
-    return m_buffered;
-}
-
-void RemoteMediaSourceProxy::seekToTime(const MediaTime& time)
+Ref<MediaTimePromise> RemoteMediaSourceProxy::waitForTarget(const SeekTarget& target)
 {
     if (!m_connectionToWebProcess)
-        return;
+        return MediaTimePromise::createAndReject(PlatformMediaError::IPCError);
 
-    m_connectionToWebProcess->connection().send(Messages::MediaSourcePrivateRemote::SeekToTime(time), m_identifier);
+    return m_connectionToWebProcess->connection().sendWithPromisedReply(Messages::MediaSourcePrivateRemote::ProxyWaitForTarget(target), m_identifier)->whenSettled(RunLoop::current(), [](auto&& result) {
+        return result ? MediaTimePromise::createAndSettle(WTFMove(*result)) : MediaTimePromise::createAndReject(PlatformMediaError::IPCError);
+    });
 }
 
-void RemoteMediaSourceProxy::monitorSourceBuffers()
+Ref<MediaPromise> RemoteMediaSourceProxy::seekToTime(const MediaTime& time)
 {
-    notImplemented();
+    if (!m_connectionToWebProcess)
+        return MediaPromise::createAndReject(PlatformMediaError::IPCError);
+
+    return m_connectionToWebProcess->connection().sendWithPromisedReply(Messages::MediaSourcePrivateRemote::ProxySeekToTime(time), m_identifier)->whenSettled(RunLoop::current(), [](auto&& result) {
+        return result ? MediaPromise::createAndSettle(WTFMove(*result)) : MediaPromise::createAndReject(PlatformMediaError::IPCError);
+    });
 }
 
 #if !RELEASE_LOG_DISABLED
@@ -120,19 +126,14 @@ void RemoteMediaSourceProxy::addSourceBuffer(const WebCore::ContentType& content
 
 void RemoteMediaSourceProxy::durationChanged(const MediaTime& duration)
 {
-    if (m_duration == duration)
-        return;
-
-    m_duration = duration;
     if (m_private)
         m_private->durationChanged(duration);
 }
 
 void RemoteMediaSourceProxy::bufferedChanged(WebCore::PlatformTimeRanges&& buffered)
 {
-    m_buffered = WTFMove(buffered);
     if (m_private)
-        m_private->bufferedChanged(m_buffered);
+        m_private->bufferedChanged(WTFMove(buffered));
 }
 
 void RemoteMediaSourceProxy::markEndOfStream(WebCore::MediaSourcePrivate::EndOfStreamStatus status )
@@ -148,28 +149,10 @@ void RemoteMediaSourceProxy::unmarkEndOfStream()
 }
 
 
-void RemoteMediaSourceProxy::setReadyState(WebCore::MediaPlayerEnums::ReadyState readyState)
+void RemoteMediaSourceProxy::setMediaPlayerReadyState(WebCore::MediaPlayerEnums::ReadyState readyState)
 {
     if (m_private)
-        m_private->setReadyState(readyState);
-}
-
-void RemoteMediaSourceProxy::setIsSeeking(bool isSeeking)
-{
-    if (m_private)
-        m_private->setIsSeeking(isSeeking);
-}
-
-void RemoteMediaSourceProxy::waitForSeekCompleted()
-{
-    if (m_private)
-        m_private->waitForSeekCompleted();
-}
-
-void RemoteMediaSourceProxy::seekCompleted()
-{
-    if (m_private)
-        m_private->seekCompleted();
+        m_private->setMediaPlayerReadyState(readyState);
 }
 
 void RemoteMediaSourceProxy::setTimeFudgeFactor(const MediaTime& fudgeFactor)
@@ -183,7 +166,9 @@ void RemoteMediaSourceProxy::shutdown()
     if (!m_connectionToWebProcess)
         return;
 
-    m_connectionToWebProcess->connection().sendWithAsyncReply(Messages::MediaSourcePrivateRemote::MediaSourcePrivateShuttingDown(), [self = RefPtr { this }] { }, m_identifier);
+    m_connectionToWebProcess->connection().sendWithAsyncReply(Messages::MediaSourcePrivateRemote::MediaSourcePrivateShuttingDown(), [this, protectedThis = Ref { *this }, protectedConnection = Ref { *m_connectionToWebProcess }] {
+        disconnect();
+    }, m_identifier);
 }
 
 } // namespace WebKit

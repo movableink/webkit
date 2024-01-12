@@ -30,7 +30,7 @@ enum HighlightType {
 };
 
 [
-    EnabledByDeprecatedGlobalSetting=HighlightAPIEnabled,
+    EnabledBySetting=HighlightAPIEnabled,
     Exposed=Window
 ] interface Highlight {
     constructor(AbstractRange... initialRanges);
@@ -38,5 +38,4 @@ enum HighlightType {
     setlike<AbstractRange>;
     attribute long priority;
     attribute HighlightType type;
-    // FIXME: Add readonly attribute CSSStyleDeclaration style;
 };

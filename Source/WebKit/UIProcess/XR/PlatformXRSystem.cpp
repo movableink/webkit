@@ -54,6 +54,14 @@ void PlatformXRSystem::invalidate()
         xrCoordinator()->endSessionIfExists(m_page);
 }
 
+void PlatformXRSystem::ensureImmersiveSessionActivity()
+{
+    if (m_immersiveSessionActivity && m_immersiveSessionActivity->isValid())
+        return;
+
+    m_immersiveSessionActivity = m_page.process().throttler().foregroundActivity("XR immersive session"_s).moveToUniquePtr();
+}
+
 void PlatformXRSystem::enumerateImmersiveXRDevices(CompletionHandler<void(Vector<XRDeviceInfo>&&)>&& completionHandler)
 {
     auto* xrCoordinator = PlatformXRSystem::xrCoordinator();
@@ -74,7 +82,7 @@ void PlatformXRSystem::enumerateImmersiveXRDevices(CompletionHandler<void(Vector
     });
 }
 
-void PlatformXRSystem::requestPermissionOnSessionFeatures(const WebCore::SecurityOriginData& securityOriginData, PlatformXR::SessionMode mode, const PlatformXR::Device::FeatureList& granted, const PlatformXR::Device::FeatureList& consentRequired, const PlatformXR::Device::FeatureList& consentOptional,  CompletionHandler<void(std::optional<PlatformXR::Device::FeatureList>&&)>&& completionHandler)
+void PlatformXRSystem::requestPermissionOnSessionFeatures(const WebCore::SecurityOriginData& securityOriginData, PlatformXR::SessionMode mode, const PlatformXR::Device::FeatureList& granted, const PlatformXR::Device::FeatureList& consentRequired, const PlatformXR::Device::FeatureList& consentOptional, const PlatformXR::Device::FeatureList& requiredFeaturesRequested, const PlatformXR::Device::FeatureList& optionalFeaturesRequested, CompletionHandler<void(std::optional<PlatformXR::Device::FeatureList>&&)>&& completionHandler)
 {
     auto* xrCoordinator = PlatformXRSystem::xrCoordinator();
     if (!xrCoordinator) {
@@ -82,7 +90,7 @@ void PlatformXRSystem::requestPermissionOnSessionFeatures(const WebCore::Securit
         return;
     }
 
-    xrCoordinator->requestPermissionOnSessionFeatures(m_page, securityOriginData, mode, granted, consentRequired, consentOptional, WTFMove(completionHandler));
+    xrCoordinator->requestPermissionOnSessionFeatures(m_page, securityOriginData, mode, granted, consentRequired, consentOptional, requiredFeaturesRequested, optionalFeaturesRequested, WTFMove(completionHandler));
 }
 
 void PlatformXRSystem::initializeTrackingAndRendering(const WebCore::SecurityOriginData& securityOriginData, PlatformXR::SessionMode mode, const PlatformXR::Device::FeatureList& requestedFeatures)
@@ -91,7 +99,7 @@ void PlatformXRSystem::initializeTrackingAndRendering(const WebCore::SecurityOri
     if (!xrCoordinator)
         return;
 
-    m_immersiveSessionActivity = m_page.process().throttler().foregroundActivity("XR immersive session"_s).moveToUniquePtr();
+    ensureImmersiveSessionActivity();
 
     WeakPtr weakThis { *this };
     xrCoordinator->startSession(m_page, weakThis, securityOriginData, mode, requestedFeatures);
@@ -103,7 +111,7 @@ void PlatformXRSystem::shutDownTrackingAndRendering()
         xrCoordinator->endSessionIfExists(m_page);
 }
 
-void PlatformXRSystem::requestFrame(CompletionHandler<void(PlatformXR::Device::FrameData&&)>&& completionHandler)
+void PlatformXRSystem::requestFrame(CompletionHandler<void(PlatformXR::FrameData&&)>&& completionHandler)
 {
     if (auto* xrCoordinator = PlatformXRSystem::xrCoordinator())
         xrCoordinator->scheduleAnimationFrame(m_page, WTFMove(completionHandler));
@@ -118,23 +126,23 @@ void PlatformXRSystem::submitFrame()
 void PlatformXRSystem::sessionDidEnd(XRDeviceIdentifier deviceIdentifier)
 {
     ensureOnMainRunLoop([weakThis = WeakPtr { *this }, deviceIdentifier]() mutable {
-        auto strongThis = weakThis.get();
-        if (!strongThis)
+        auto protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
-        strongThis->m_page.send(Messages::PlatformXRSystemProxy::SessionDidEnd(deviceIdentifier));
-        strongThis->m_immersiveSessionActivity = nullptr;
+        protectedThis->m_page.send(Messages::PlatformXRSystemProxy::SessionDidEnd(deviceIdentifier));
+        protectedThis->m_immersiveSessionActivity = nullptr;
     });
 }
 
 void PlatformXRSystem::sessionDidUpdateVisibilityState(XRDeviceIdentifier deviceIdentifier, PlatformXR::VisibilityState visibilityState)
 {
     ensureOnMainRunLoop([weakThis = WeakPtr { *this }, deviceIdentifier, visibilityState]() mutable {
-        auto strongThis = weakThis.get();
-        if (!strongThis)
+        auto protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
-        strongThis->m_page.send(Messages::PlatformXRSystemProxy::SessionDidUpdateVisibilityState(deviceIdentifier, visibilityState));
+        protectedThis->m_page.send(Messages::PlatformXRSystemProxy::SessionDidUpdateVisibilityState(deviceIdentifier, visibilityState));
     });
 }
 

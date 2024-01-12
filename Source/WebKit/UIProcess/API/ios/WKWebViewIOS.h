@@ -23,18 +23,21 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import "WKBaseScrollView.h"
 #import "WKWebViewInternal.h"
 #import "_WKTapHandlingResult.h"
 
-@class UIScrollEvent;
-
 #if PLATFORM(IOS_FAMILY)
+
+#import "UIKitSPI.h"
+
+@class UIScrollEvent;
 
 namespace WebKit {
 enum class TapHandlingResult : uint8_t;
 }
 
-@interface WKWebView (WKViewInternalIOS)
+@interface WKWebView (WKViewInternalIOS) <WKBaseScrollViewDelegate>
 
 - (void)_setupScrollAndContentViews;
 - (void)_registerForNotifications;
@@ -124,7 +127,6 @@ enum class TapHandlingResult : uint8_t;
 - (void)_define:(id)sender;
 - (void)_lookup:(id)sender;
 - (void)_share:(id)sender;
-- (void)_showTextStyleOptions:(id)sender;
 - (void)_promptForReplace:(id)sender;
 - (void)_transliterateChinese:(id)sender;
 - (void)replace:(id)sender;
@@ -139,6 +141,9 @@ enum class TapHandlingResult : uint8_t;
 - (void)_findSelected:(id)sender;
 
 - (id<UITextSearching>)_searchableObject;
+
+- (void)_showFindOverlay;
+- (void)_hideFindOverlay;
 #endif
 
 - (void)_nextAccessoryTab:(id)sender;
@@ -153,9 +158,12 @@ enum class TapHandlingResult : uint8_t;
 - (void)_dispatchSetDeviceOrientation:(WebCore::IntDegrees)deviceOrientation;
 - (WebCore::FloatSize)activeViewLayoutSize:(const CGRect&)bounds;
 - (void)_updateScrollViewInsetAdjustmentBehavior;
+- (void)_resetScrollViewInsetAdjustmentBehavior;
 
 - (BOOL)_effectiveAppearanceIsDark;
 - (BOOL)_effectiveUserInterfaceLevelIsElevated;
+
+- (_UIDataOwner)_effectiveDataOwner:(_UIDataOwner)clientSuppliedDataOwner;
 
 #if HAVE(UI_WINDOW_SCENE_LIVE_RESIZE)
 - (void)_beginLiveResize;
@@ -166,11 +174,9 @@ enum class TapHandlingResult : uint8_t;
 + (void)_clearLockdownModeWarningNeeded;
 #endif
 
-#if HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING)
-- (void)_scrollView:(UIScrollView *)scrollView asynchronouslyHandleScrollEvent:(UIScrollEvent *)scrollEvent completion:(void (^)(BOOL handled))completion;
-#endif
-
 - (UIColor *)_insertionPointColor;
+
+- (BOOL)_tryToHandleKeyEventInCustomContentView:(UIPressesEvent *)event;
 
 @property (nonatomic, readonly) WKPasswordView *_passwordView;
 @property (nonatomic, readonly) WKWebViewContentProviderRegistry *_contentProviderRegistry;
@@ -189,6 +195,18 @@ enum class TapHandlingResult : uint8_t;
 #if HAVE(UIKIT_RESIZABLE_WINDOWS)
 @property (nonatomic, readonly) BOOL _isWindowResizingEnabled;
 #endif
+
+@property (nonatomic, readonly) WKVelocityTrackingScrollView *_scrollViewInternal;
+@property (nonatomic, readonly) CGRect _contentRectForUserInteraction;
+
+@property (nonatomic, readonly) BOOL _haveSetUnobscuredSafeAreaInsets;
+@property (nonatomic, readonly) BOOL _hasOverriddenLayoutParameters;
+@property (nonatomic, readonly) std::optional<CGSize> _viewLayoutSizeOverride;
+@property (nonatomic, readonly) std::optional<CGSize> _minimumUnobscuredSizeOverride;
+@property (nonatomic, readonly) std::optional<CGSize> _maximumUnobscuredSizeOverride;
+- (void)_resetContentOffset;
+- (void)_resetUnobscuredSafeAreaInsets;
+- (void)_resetObscuredInsets;
 
 @end
 

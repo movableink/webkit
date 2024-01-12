@@ -71,7 +71,7 @@ private:
     Ref<WebCore::CurlRequest> createCurlRequest(WebCore::ResourceRequest&&, RequestStatus = RequestStatus::NewRequest);
     void curlDidSendData(WebCore::CurlRequest&, unsigned long long, unsigned long long) override;
     void curlDidReceiveResponse(WebCore::CurlRequest&, WebCore::CurlResponse&&) override;
-    void curlDidReceiveData(WebCore::CurlRequest&, const WebCore::SharedBuffer&) override;
+    void curlDidReceiveData(WebCore::CurlRequest&, Ref<WebCore::SharedBuffer>&&) override;
     void curlDidComplete(WebCore::CurlRequest&, WebCore::NetworkLoadMetrics&&) override;
     void curlDidFailWithError(WebCore::CurlRequest&, WebCore::ResourceError&&, WebCore::CertificateInfo&&) override;
 
@@ -83,9 +83,8 @@ private:
 
     void tryHttpAuthentication(WebCore::AuthenticationChallenge&&);
     void tryProxyAuthentication(WebCore::AuthenticationChallenge&&);
-    void restartWithCredential(const WebCore::ProtectionSpace&, const WebCore::Credential&);
-
     void tryServerTrustEvaluation(WebCore::AuthenticationChallenge&&);
+    void restartWithCredential(const WebCore::ProtectionSpace&, const WebCore::Credential&);
 
     void appendCookieHeader(WebCore::ResourceRequest&);
     void handleCookieHeaders(const WebCore::ResourceRequest&, const WebCore::CurlResponse&);
@@ -97,6 +96,7 @@ private:
 
     void updateNetworkLoadMetrics(WebCore::NetworkLoadMetrics&);
 
+    void setPendingDownloadLocation(const String&, SandboxExtension::Handle&&, bool /*allowOverwrite*/) override;
     String suggestedFilename() const override;
     void deleteDownloadFile();
 
@@ -112,6 +112,7 @@ private:
     unsigned m_redirectCount { 0 };
     unsigned m_authFailureCount { 0 };
 
+    bool m_allowOverwriteDownload { false };
     FileSystem::PlatformFileHandle m_downloadDestinationFile { FileSystem::invalidPlatformFileHandle };
 
     bool m_blockingCookies { false };

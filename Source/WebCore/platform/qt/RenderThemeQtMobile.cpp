@@ -38,6 +38,7 @@
 #include "RenderStyleSetters.h"
 #include "StyleResolver.h"
 
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RefPtr.h>
 
 #include <QColor>
@@ -658,7 +659,7 @@ bool RenderThemeQtMobile::isControlStyled(const RenderStyle& style, const Render
     }
 }
 
-LengthBox RenderThemeQtMobile::popupInternalPaddingBox(const RenderStyle&, const Settings&) const
+LengthBox RenderThemeQtMobile::popupInternalPaddingBox(const RenderStyle&) const
 {
     return { 0, 0, 1, 0 };
 }
@@ -851,18 +852,14 @@ bool RenderThemeQtMobile::paintMenuListButton(RenderObject& o, const PaintInfo& 
     return false;
 }
 
-Seconds RenderThemeQtMobile::animationDurationForProgressBar(const RenderProgress& renderProgress) const
+Seconds RenderThemeQtMobile::animationDurationForProgressBar() const
 {
-    if (renderProgress.isDeterminate())
-        return 0_s;
-    // Our animation goes back and forth so we need to make it last twice as long
-    // and we need the numerator to be an odd number to ensure we get a progress value of 0.5.
-    return animationRepeatIntervalForProgressBar(renderProgress) * (progressAnimationGranularity * 2 + 1) / progressBarChunkPercentage;
+    return Seconds(2.475);
 }
 
 bool RenderThemeQtMobile::paintProgressBar(const RenderObject& o, const PaintInfo& pi, const IntRect& r)
 {
-    if (!o.isProgress())
+    if (!o.isRenderProgress())
         return true;
 
     StylePainterMobile p(this, pi);

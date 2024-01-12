@@ -170,7 +170,7 @@ ContentSecurityPolicySourceListDirective* ContentSecurityPolicyDirectiveList::op
     }
 
     if (m_childSrc.get()) {
-        m_childSrc.get()->setNameForReporting(nameForReporting);
+        m_childSrc->setNameForReporting(nameForReporting);
         return m_childSrc.get();
     }
 
@@ -185,7 +185,7 @@ ContentSecurityPolicySourceListDirective* ContentSecurityPolicyDirectiveList::op
     }
 
     if (m_defaultSrc.get())
-        m_defaultSrc.get()->setNameForReporting(nameForReporting);
+        m_defaultSrc->setNameForReporting(nameForReporting);
 
     return m_defaultSrc.get();
 }
@@ -449,7 +449,7 @@ void ContentSecurityPolicyDirectiveList::parse(const String& policy, ContentSecu
     // A meta tag delievered CSP could contain invalid HTTP header values depending on how it was formatted in the document.
     // We want to store the CSP as a valid HTTP header for e.g. blob URL inheritance.
     if (policyFrom == ContentSecurityPolicy::PolicyFrom::HTTPEquivMeta) {
-        m_header = policy.trim(isHTTPSpace).removeCharacters([](auto c) {
+        m_header = policy.trim(isASCIIWhitespaceWithoutFF<UChar>).removeCharacters([](auto c) {
             return c == 0x00 || c == '\r' || c == '\n';
         });
     } else

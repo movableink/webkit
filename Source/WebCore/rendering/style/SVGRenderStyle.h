@@ -1,8 +1,7 @@
 /*
     Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
                   2004, 2005 Rob Buis <buis@kde.org>
-    Copyright (C) 2005-2023 Apple Inc. All rights reserved.
-    Copyright (C) 2015 Google Inc. All rights reserved.
+    Copyright (C) 2005-2017 Apple Inc. All rights reserved.
     Copyright (C) Research In Motion Limited 2010. All rights reserved.
     Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
 
@@ -51,7 +50,7 @@ public:
     bool operator==(const SVGRenderStyle&) const;
 
     // Initial values for all the properties
-    static AlignmentBaseline initialAlignmentBaseline() { return AlignmentBaseline::Auto; }
+    static AlignmentBaseline initialAlignmentBaseline() { return AlignmentBaseline::Baseline; }
     static DominantBaseline initialDominantBaseline() { return DominantBaseline::Auto; }
     static BaselineShift initialBaselineShift() { return BaselineShift::Baseline; }
     static VectorEffect initialVectorEffect() { return VectorEffect::None; }
@@ -88,7 +87,7 @@ public:
 
     // SVG CSS Property setters
     void setAlignmentBaseline(AlignmentBaseline val) { m_nonInheritedFlags.flagBits.alignmentBaseline = static_cast<unsigned>(val); }
-    void setDominantBaseline(DominantBaseline val) { m_inheritedFlags.dominantBaseline = static_cast<unsigned>(val); }
+    void setDominantBaseline(DominantBaseline val) { m_nonInheritedFlags.flagBits.dominantBaseline = static_cast<unsigned>(val); }
     void setBaselineShift(BaselineShift val) { m_nonInheritedFlags.flagBits.baselineShift = static_cast<unsigned>(val); }
     void setVectorEffect(VectorEffect val) { m_nonInheritedFlags.flagBits.vectorEffect = static_cast<unsigned>(val); }
     void setBufferedRendering(BufferedRendering val) { m_nonInheritedFlags.flagBits.bufferedRendering = static_cast<unsigned>(val); }
@@ -130,7 +129,7 @@ public:
 
     // Read accessors for all the properties
     AlignmentBaseline alignmentBaseline() const { return static_cast<AlignmentBaseline>(m_nonInheritedFlags.flagBits.alignmentBaseline); }
-    DominantBaseline dominantBaseline() const { return static_cast<DominantBaseline>(m_inheritedFlags.dominantBaseline); }
+    DominantBaseline dominantBaseline() const { return static_cast<DominantBaseline>(m_nonInheritedFlags.flagBits.dominantBaseline); }
     BaselineShift baselineShift() const { return static_cast<BaselineShift>(m_nonInheritedFlags.flagBits.baselineShift); }
     VectorEffect vectorEffect() const { return static_cast<VectorEffect>(m_nonInheritedFlags.flagBits.vectorEffect); }
     BufferedRendering bufferedRendering() const { return static_cast<BufferedRendering>(m_nonInheritedFlags.flagBits.bufferedRendering); }
@@ -183,6 +182,8 @@ public:
     bool hasStroke() const { return strokePaintType() != SVGPaintType::None; }
     bool hasFill() const { return fillPaintType() != SVGPaintType::None; }
 
+    void conservativelyCollectChangedAnimatableProperties(const SVGRenderStyle&, CSSPropertiesBitSet&) const;
+
 private:
     SVGRenderStyle();
     SVGRenderStyle(const SVGRenderStyle&);
@@ -193,7 +194,7 @@ private:
     void setBitDefaults();
 
     struct InheritedFlags {
-        bool operator==(const InheritedFlags&) const;
+        friend bool operator==(const InheritedFlags&, const InheritedFlags&) = default;
 
         unsigned shapeRendering : 2; // ShapeRendering
         unsigned clipRule : 1; // WindRule
@@ -203,7 +204,6 @@ private:
         unsigned colorInterpolationFilters : 2; // ColorInterpolation
         unsigned glyphOrientationHorizontal : 3; // GlyphOrientation
         unsigned glyphOrientationVertical : 3; // GlyphOrientation
-        unsigned dominantBaseline : 4; // DominantBaseline
     };
 
     struct NonInheritedFlags {
@@ -213,10 +213,11 @@ private:
         union {
             struct {
                 unsigned alignmentBaseline : 4; // AlignmentBaseline
+                unsigned dominantBaseline : 4; // DominantBaseline
                 unsigned baselineShift : 2; // BaselineShift
-                unsigned vectorEffect: 1; // VectorEffect
-                unsigned bufferedRendering: 2; // BufferedRendering
-                unsigned maskType: 1; // MaskType
+                unsigned vectorEffect : 1; // VectorEffect
+                unsigned bufferedRendering : 2; // BufferedRendering
+                unsigned maskType : 1; // MaskType
                 // 18 bits unused
             } flagBits;
             uint32_t flags;
@@ -465,27 +466,14 @@ inline void SVGRenderStyle::setBitDefaults()
     m_inheritedFlags.colorInterpolationFilters = static_cast<unsigned>(initialColorInterpolationFilters());
     m_inheritedFlags.glyphOrientationHorizontal = static_cast<unsigned>(initialGlyphOrientationHorizontal());
     m_inheritedFlags.glyphOrientationVertical = static_cast<unsigned>(initialGlyphOrientationVertical());
-    m_inheritedFlags.dominantBaseline = static_cast<unsigned>(initialDominantBaseline());
 
     m_nonInheritedFlags.flags = 0;
     m_nonInheritedFlags.flagBits.alignmentBaseline = static_cast<unsigned>(initialAlignmentBaseline());
+    m_nonInheritedFlags.flagBits.dominantBaseline = static_cast<unsigned>(initialDominantBaseline());
     m_nonInheritedFlags.flagBits.baselineShift = static_cast<unsigned>(initialBaselineShift());
     m_nonInheritedFlags.flagBits.vectorEffect = static_cast<unsigned>(initialVectorEffect());
     m_nonInheritedFlags.flagBits.bufferedRendering = static_cast<unsigned>(initialBufferedRendering());
     m_nonInheritedFlags.flagBits.maskType = static_cast<unsigned>(initialMaskType());
-}
-
-inline bool SVGRenderStyle::InheritedFlags::operator==(const InheritedFlags& other) const
-{
-    return shapeRendering == other.shapeRendering
-        && clipRule == other.clipRule
-        && fillRule == other.fillRule
-        && textAnchor == other.textAnchor
-        && colorInterpolation == other.colorInterpolation
-        && colorInterpolationFilters == other.colorInterpolationFilters
-        && glyphOrientationHorizontal == other.glyphOrientationHorizontal
-        && glyphOrientationVertical == other.glyphOrientationVertical
-        && dominantBaseline == other.dominantBaseline;
 }
 
 } // namespace WebCore

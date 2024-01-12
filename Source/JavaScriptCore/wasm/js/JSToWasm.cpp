@@ -26,7 +26,7 @@
 #include "config.h"
 #include "JSToWasm.h"
 
-#if ENABLE(WEBASSEMBLY)
+#if ENABLE(WEBASSEMBLY) && ENABLE(JIT)
 
 #include "CCallHelpers.h"
 #include "JSCJSValueInlines.h"
@@ -42,8 +42,8 @@ namespace JSC { namespace Wasm {
 void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, const CallInformation& wasmFrameConvention, const RegisterAtOffsetList& savedResultRegisters)
 {
     const auto& signature = *typeDefinition.as<FunctionSignature>();
-    auto boxWasmResult = [](CCallHelpers& jit, Type type, ValueLocation src, JSValueRegs dst) {
-        JIT_COMMENT(jit, "boxWasmResult ", type);
+    auto boxNativeCalleeResult = [](CCallHelpers& jit, Type type, ValueLocation src, JSValueRegs dst) {
+        JIT_COMMENT(jit, "boxNativeCalleeResult ", type);
         switch (type.kind) {
         case TypeKind::Void:
             jit.moveTrustedValue(jsUndefined(), dst);
@@ -83,9 +83,9 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
             JSValueRegs inputJSR = wasmFrameConvention.results[0].location.jsr();
             jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
             jit.setupArguments<decltype(operationConvertToBigInt)>(GPRInfo::wasmContextInstancePointer, inputJSR);
-            jit.callOperation(operationConvertToBigInt);
+            jit.callOperation<OperationPtrTag>(operationConvertToBigInt);
         } else
-            boxWasmResult(jit, signature.returnType(0), wasmFrameConvention.results[0].location, JSRInfo::returnValueJSR);
+            boxNativeCalleeResult(jit, signature.returnType(0), wasmFrameConvention.results[0].location, JSRInfo::returnValueJSR);
     } else {
         IndexingType indexingType = ArrayWithUndecided;
         JSValueRegs scratchJSR = JSValueRegs {
@@ -118,14 +118,14 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
                 switch (type.kind) {
                 case TypeKind::F32:
                 case TypeKind::F64:
-                    boxWasmResult(jit, type, loc, scratchJSR);
+                    boxNativeCalleeResult(jit, type, loc, scratchJSR);
                     jit.storeValue(scratchJSR, address.withOffset(savedResultRegisters.find(loc.fpr())->offset()));
                     break;
                 case TypeKind::I64:
                     jit.storeValue(loc.jsr(), address.withOffset(savedResultRegisters.find(loc.jsr().payloadGPR())->offset()));
                     break;
                 default:
-                    boxWasmResult(jit, type, loc, scratchJSR);
+                    boxNativeCalleeResult(jit, type, loc, scratchJSR);
                     jit.storeValue(scratchJSR, address.withOffset(savedResultRegisters.find(loc.jsr().payloadGPR())->offset()));
                     break;
                 }
@@ -151,7 +151,7 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
                         jit.loadValue(location, scratchJSR);
                         break;
                     }
-                    boxWasmResult(jit, type, tmp, scratchJSR);
+                    boxNativeCalleeResult(jit, type, tmp, scratchJSR);
                     jit.storeValue(scratchJSR, location);
                 }
             }
@@ -193,7 +193,7 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
                 jit.loadValue(address, valueJSR);
                 jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
                 jit.setupArguments<decltype(operationConvertToBigInt)>(GPRInfo::wasmContextInstancePointer, valueJSR);
-                jit.callOperation(operationConvertToBigInt);
+                jit.callOperation<OperationPtrTag>(operationConvertToBigInt);
                 jit.storeValue(JSRInfo::returnValueJSR, address);
             }
         }
@@ -206,7 +206,7 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
         jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
         jit.setupArguments<decltype(operationAllocateResultsArray)>(GPRInfo::wasmContextInstancePointer, CCallHelpers::TrustedImmPtr(&typeDefinition), indexingType, savedResultsGPR);
         JIT_COMMENT(jit, "operationAllocateResultsArray");
-        jit.callOperation(operationAllocateResultsArray);
+        jit.callOperation<OperationPtrTag>(operationAllocateResultsArray);
         if constexpr (!!maxFrameExtentForSlowPathCall)
             jit.addPtr(CCallHelpers::TrustedImm32(maxFrameExtentForSlowPathCall), CCallHelpers::stackPointerRegister);
 
@@ -221,11 +221,11 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CCallHelpers& jit, Calle
     jit.emitFunctionPrologue();
 
     // |codeBlock| and |this| slots are already initialized by the caller of this function because it is JS->Wasm transition.
-    jit.move(CCallHelpers::TrustedImmPtr(CalleeBits::boxWasm(&callee)), GPRInfo::nonPreservedNonReturnGPR);
+    jit.move(CCallHelpers::TrustedImmPtr(CalleeBits::boxNativeCallee(&callee)), GPRInfo::nonPreservedNonReturnGPR);
     CCallHelpers::Address calleeSlot { GPRInfo::callFrameRegister, CallFrameSlot::callee * sizeof(Register) };
     jit.storePtr(GPRInfo::nonPreservedNonReturnGPR, calleeSlot.withOffset(PayloadOffset));
 #if USE(JSVALUE32_64)
-    jit.store32(CCallHelpers::TrustedImm32(JSValue::WasmTag), calleeSlot.withOffset(TagOffset));
+    jit.store32(CCallHelpers::TrustedImm32(JSValue::NativeCalleeTag), calleeSlot.withOffset(TagOffset));
 #endif
 
     // Pessimistically save callee saves in BoundsChecking mode since the LLInt / single-pass BBQ always can clobber bound checks
@@ -362,4 +362,4 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CCallHelpers& jit, Calle
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+#endif // ENABLE(WEBASSEMBLY) && ENABLE(JIT)

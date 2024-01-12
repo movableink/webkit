@@ -184,7 +184,7 @@ Inspector::FrontendChannel* InspectorClientQt::openLocalFrontend(WebCore::Inspec
 
     // Is 'controller' the same object as 'inspectorController' (which appears to be unused)?
     InspectorController& controller = inspectorPage->page->inspectorController();
-    m_frontendClient = std::make_unique<InspectorFrontendClientQt>(m_inspectedWebPage, inspectorController, WTFMove(inspectorView), inspectorPage->page, this);
+    m_frontendClient = std::make_unique<InspectorFrontendClientQt>(m_inspectedWebPage, inspectorController, WTFMove(inspectorView), inspectorPage->page.get(), this);
     controller.setInspectorFrontendClient(m_frontendClient.get());
     m_frontendWebPage = inspectorPage;
 

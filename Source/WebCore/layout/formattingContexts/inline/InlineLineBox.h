@@ -39,6 +39,7 @@ class BoxGeometry;
 class InlineFormattingContext;
 class LineBoxBuilder;
 class LineBoxVerticalAligner;
+class RubyFormattingContext;
 
 //   ____________________________________________________________ Line Box
 // |                                    --------------------
@@ -71,6 +72,7 @@ public:
     InlineRect logicalRectForRootInlineBox() const { return m_rootInlineBox.logicalRect(); }
     InlineRect logicalBorderBoxForAtomicInlineLevelBox(const Box&, const BoxGeometry&) const;
     InlineRect logicalBorderBoxForInlineBox(const Box&, const BoxGeometry&) const;
+    InlineRect logicalRectForOpaqueBox(const Line::Run& opaqueRun, const BoxGeometry&) const;
 
     const InlineLevelBox* inlineLevelBoxFor(const Box& layoutBox) const { return const_cast<LineBox&>(*this).inlineLevelBoxFor(layoutBox); }
     const InlineLevelBox& inlineLevelBoxFor(const Line::Run& lineRun) const { return const_cast<LineBox&>(*this).inlineLevelBoxFor(lineRun); }
@@ -88,6 +90,7 @@ public:
 private:
     friend class LineBoxBuilder;
     friend class LineBoxVerticalAligner;
+    friend class RubyFormattingContext;
 
     void addInlineLevelBox(InlineLevelBox&&);
     InlineLevelBoxList& nonRootInlineLevelBoxes() { return m_nonRootInlineLevelBoxList; }

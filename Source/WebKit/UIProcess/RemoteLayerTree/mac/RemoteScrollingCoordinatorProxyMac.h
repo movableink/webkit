@@ -44,11 +44,12 @@ private:
     void cacheWheelEventScrollingAccelerationCurve(const NativeWebWheelEvent&) override;
 
     void handleWheelEvent(const WebWheelEvent&, WebCore::RectEdges<bool> rubberBandableEdges) override;
-    void wheelEventHandlingCompleted(const WebCore::PlatformWheelEvent&, WebCore::ScrollingNodeID, std::optional<WebCore::WheelScrollGestureState>) override;
+    void wheelEventHandlingCompleted(const WebCore::PlatformWheelEvent&, WebCore::ScrollingNodeID, std::optional<WebCore::WheelScrollGestureState>, bool wasHandled) override;
 
     bool scrollingTreeNodeRequestsScroll(WebCore::ScrollingNodeID, const WebCore::RequestedScrollData&) override;
     bool scrollingTreeNodeRequestsKeyboardScroll(WebCore::ScrollingNodeID, const WebCore::RequestedKeyboardScrollData&) override;
     void hasNodeWithAnimatedScrollChanged(bool) override;
+    void setRubberBandingInProgressForNode(WebCore::ScrollingNodeID, bool isRubberBanding) override;
 
     void scrollingTreeNodeWillStartScroll(WebCore::ScrollingNodeID) override;
     void scrollingTreeNodeDidEndScroll(WebCore::ScrollingNodeID) override;
@@ -68,8 +69,13 @@ private:
     void didCommitLayerAndScrollingTrees() override;
     void applyScrollingTreeLayerPositionsAfterCommit() override;
 
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+    void animationsWereAddedToNode(RemoteLayerTreeNode&) override;
+    void animationsWereRemovedFromNode(RemoteLayerTreeNode&) override;
+#endif
+
 #if ENABLE(SCROLLING_THREAD)
-    RefPtr<RemoteLayerTreeEventDispatcher> m_wheelEventDispatcher;
+    RefPtr<RemoteLayerTreeEventDispatcher> m_eventDispatcher;
 #endif
 };
 

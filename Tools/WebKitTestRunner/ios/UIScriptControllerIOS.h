@@ -28,12 +28,14 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "UIScriptControllerCocoa.h"
+#import "WKSEDefinitions.h"
 #import <wtf/BlockPtr.h>
 
 typedef struct CGRect CGRect;
 OBJC_CLASS UITextSelectionDisplayInteraction;
 
 @protocol UICoordinateSpace;
+@protocol WKSETextInput;
 
 namespace WebCore {
 class FloatPoint;
@@ -116,6 +118,7 @@ private:
     JSObjectRef contentVisibleRect() const override;
     JSObjectRef selectionStartGrabberViewRect() const override;
     JSObjectRef selectionEndGrabberViewRect() const override;
+    JSObjectRef selectionEndGrabberViewShapePathDescription() const override;
     JSObjectRef selectionCaretViewRect() const override;
     JSObjectRef selectionCaretViewRectInGlobalCoordinates() const override;
     JSObjectRef selectionCaretViewRect(id<UICoordinateSpace>) const;
@@ -127,8 +130,10 @@ private:
     void simulateRotation(DeviceOrientation*, JSValueRef) override;
     void simulateRotationLikeSafari(DeviceOrientation*, JSValueRef) override;
     bool isShowingPopover() const override;
+    bool isShowingFormValidationBubble() const override;
     JSObjectRef rectForMenuAction(JSStringRef) const override;
     JSObjectRef contextMenuRect() const override;
+    JSObjectRef contextMenuPreviewRect() const final;
     JSObjectRef menuRect() const override;
     bool isDismissingMenu() const override;
     void chooseMenuAction(JSStringRef, JSValueRef) override;
@@ -153,6 +158,8 @@ private:
     void copyText(JSStringRef) override;
     void installTapGestureOnWindow(JSValueRef) override;
     void setScrollViewKeyboardAvoidanceEnabled(bool) override;
+
+    bool isZoomingOrScrolling() const final;
 
     bool mayContainEditableElementsInRect(unsigned x, unsigned y, unsigned width, unsigned height) override;
 
@@ -185,7 +192,18 @@ private:
     void becomeFirstResponder() override;
     void resignFirstResponder() override;
 
+    void setInlinePrediction(JSStringRef) final;
+    void acceptInlinePrediction() final;
+
     void simulateRotation(DeviceOrientation, JSValueRef callback);
+
+    int64_t pasteboardChangeCount() const final;
+
+    void clipSelectionViewRectToContentView(CGRect&) const;
+
+#if HAVE(UI_ASYNC_TEXT_INTERACTION)
+    id<WKSETextInput> asyncTextInput() const;
+#endif
 
 #if HAVE(UI_TEXT_SELECTION_DISPLAY_INTERACTION)
     UITextSelectionDisplayInteraction *textSelectionDisplayInteraction() const;

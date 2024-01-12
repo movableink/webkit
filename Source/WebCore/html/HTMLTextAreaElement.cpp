@@ -135,11 +135,11 @@ void HTMLTextAreaElement::collectPresentationalHintsForAttribute(const Qualified
     if (name == wrapAttr) {
         if (m_wrap != NoWrap) {
             addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpaceCollapse, CSSValuePreserve);
-            addPropertyToPresentationalHintStyle(style, CSSPropertyTextWrap, CSSValueWrap);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyTextWrapMode, CSSValueWrap);
             addPropertyToPresentationalHintStyle(style, CSSPropertyOverflowWrap, CSSValueBreakWord);
         } else {
             addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpaceCollapse, CSSValuePreserve);
-            addPropertyToPresentationalHintStyle(style, CSSPropertyTextWrap, CSSValueNowrap);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyTextWrapMode, CSSValueNowrap);
             addPropertyToPresentationalHintStyle(style, CSSPropertyOverflowWrap, CSSValueNormal);
         }
     } else
@@ -220,6 +220,7 @@ bool HTMLTextAreaElement::appendFormData(DOMFormData& formData)
 
 void HTMLTextAreaElement::reset()
 {
+    setInteractedWithSinceLastFormSubmitEvent(false);
     setNonDirtyValue(defaultValue(), TextControlSetValueSelection::SetSelectionToEnd);
 }
 
@@ -237,10 +238,12 @@ void HTMLTextAreaElement::updateFocusAppearance(SelectionRestorationMode restora
 
 void HTMLTextAreaElement::defaultEventHandler(Event& event)
 {
-    if (renderer() && (event.isMouseEvent() || event.type() == eventNames().blurEvent))
-        forwardEvent(event);
-    else if (renderer() && is<BeforeTextInsertedEvent>(event))
-        handleBeforeTextInsertedEvent(downcast<BeforeTextInsertedEvent>(event));
+    if (renderer()) {
+        if (event.isMouseEvent() || event.type() == eventNames().blurEvent)
+            forwardEvent(event);
+        else if (auto* insertedEvent = dynamicDowncast<BeforeTextInsertedEvent>(event))
+            handleBeforeTextInsertedEvent(*insertedEvent);
+    }
 
     HTMLTextFormControlElement::defaultEventHandler(event);
 }
@@ -427,6 +430,11 @@ String HTMLTextAreaElement::validationMessage() const
     return String();
 }
 
+void HTMLTextAreaElement::setSelectionRangeForBindings(unsigned start, unsigned end, const String& direction)
+{
+    setSelectionRange(start, end, direction, AXTextStateChangeIntent(), ForBindings::Yes);
+}
+
 bool HTMLTextAreaElement::valueMissing() const
 {
     return valueMissing({ });
@@ -518,7 +526,7 @@ void HTMLTextAreaElement::updatePlaceholderText()
     }
     if (!m_placeholder) {
         m_placeholder = TextControlPlaceholderElement::create(document());
-        userAgentShadowRoot()->insertBefore(*m_placeholder, innerTextElement()->nextSibling());
+        userAgentShadowRoot()->insertBefore(*m_placeholder, innerTextElement()->protectedNextSibling());
     }
     m_placeholder->setInnerText(String { placeholderText });
 }

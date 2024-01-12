@@ -46,8 +46,8 @@ public:
     static void removeLocalScheme(const QString& scheme);
     static QStringList localSchemes();
 
-    void addAccessAllowlistEntry(const QString& scheme, const QString& host, SubdomainSetting subdomainSetting);
-    void removeAccessAllowlistEntry(const QString& scheme, const QString& host, SubdomainSetting subdomainSetting);
+    void addAccessWhitelistEntry(const QString& scheme, const QString& host, SubdomainSetting subdomainSetting);
+    void removeAccessWhitelistEntry(const QString& scheme, const QString& host, SubdomainSetting subdomainSetting);
 
     explicit QWebSecurityOrigin(const QUrl& url);
     ~QWebSecurityOrigin();

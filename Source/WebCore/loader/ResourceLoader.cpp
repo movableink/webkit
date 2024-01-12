@@ -36,6 +36,7 @@
 #include "DataURLDecoder.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
+#include "Document.h"
 #include "DocumentLoader.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
@@ -50,6 +51,7 @@
 #include "PageConsoleClient.h"
 #include "PlatformStrategies.h"
 #include "ProgressTracker.h"
+#include "Quirks.h"
 #include "ResourceError.h"
 #include "ResourceHandle.h"
 #include "SecurityOrigin.h"
@@ -285,17 +287,28 @@ FrameLoader* ResourceLoader::frameLoader() const
     return &m_frame->loader();
 }
 
+RefPtr<DocumentLoader> ResourceLoader::protectedDocumentLoader() const
+{
+    return m_documentLoader;
+}
+
 void ResourceLoader::loadDataURL()
 {
     auto url = m_request.url();
     ASSERT(url.protocolIsData());
+
+    auto shouldValidatePadding = DataURLDecoder::ShouldValidatePadding::Yes;
+    if (RefPtr document = m_frame ? m_frame->document() : nullptr) {
+        if (document->quirks().shouldDisableDataURLPaddingValidation())
+            shouldValidatePadding = DataURLDecoder::ShouldValidatePadding::No;
+    }
 
     DataURLDecoder::ScheduleContext scheduleContext;
 #if USE(COCOA_EVENT_LOOP)
     if (auto page = m_frame->page())
         scheduleContext.scheduledPairs = *page->scheduledRunLoopPairs();
 #endif
-    DataURLDecoder::decode(url, scheduleContext, [this, protectedThis = Ref { *this }, url](auto decodeResult) mutable {
+    DataURLDecoder::decode(url, scheduleContext, shouldValidatePadding, [this, protectedThis = Ref { *this }, url](auto decodeResult) mutable {
         if (this->reachedTerminalState())
             return;
         if (!decodeResult) {
@@ -448,9 +461,7 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest&& request, const Re
     if (isRedirect) {
         RESOURCELOADER_RELEASE_LOG("willSendRequestInternal: Processing cross-origin redirect");
         platformStrategies()->loaderStrategy()->crossOriginRedirectReceived(this, request.url());
-#if ENABLE(TRACKING_PREVENTION)
         frameLoader()->client().didLoadFromRegistrableDomain(RegistrableDomain(request.url()));
-#endif
     }
     m_request = request;
 

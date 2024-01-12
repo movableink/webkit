@@ -69,7 +69,7 @@ FloatSize StillImage::size(ImageOrientation) const
     return FloatSize(m_image->width(), m_image->height());
 }
 
-ImageDrawResult StillImage::draw(GraphicsContext& ctxt, const FloatRect& dst, const FloatRect& src, const ImagePaintingOptions& options)
+ImageDrawResult StillImage::draw(GraphicsContext& ctxt, const FloatRect& dst, const FloatRect& src, ImagePaintingOptions options)
 {
     if (m_image->isNull())
         return ImageDrawResult::DidNothing;
@@ -84,10 +84,14 @@ ImageDrawResult StillImage::draw(GraphicsContext& ctxt, const FloatRect& dst, co
     BlendMode previousBlendMode = ctxt.blendMode();
     ctxt.setCompositeOperation(options.compositeOperator(), options.blendMode());
 
-    if (false && ctxt.hasShadow()) {
-        ShadowBlur shadow(ctxt.dropShadow(), ctxt.shadowsIgnoreTransforms());
+#if FALSE
+    if (ctxt.hasShadow()) {
+        const auto shadow = dropShadow();
+        ASSERT(shadow);
+
+        ShadowBlur contextShadow(*shadow, ctxt.shadowsIgnoreTransforms());
         const auto& pixmap = *m_image;
-        shadow.drawShadowLayer(ctxt.getCTM(), ctxt.clipBounds(), normalizedDst,
+        contextShadow.drawShadowLayer(ctxt.getCTM(), ctxt.clipBounds(), normalizedDst,
             [normalizedSrc, normalizedDst, &pixmap](GraphicsContext& shadowContext)
             {
                 QPainter* shadowPainter = shadowContext.platformContext()->painter();
@@ -98,6 +102,7 @@ ImageDrawResult StillImage::draw(GraphicsContext& ctxt, const FloatRect& dst, co
                 ctxt.drawImageBuffer(layerImage, FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), ctxt.compositeOperation());
             });
     }
+#endif
 
     ctxt.platformContext()->painter()->drawImage(normalizedDst, *m_image, normalizedSrc);
     ctxt.setCompositeOperation(previousOperator, previousBlendMode);

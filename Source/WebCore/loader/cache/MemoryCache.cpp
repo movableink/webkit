@@ -145,7 +145,8 @@ void MemoryCache::revalidationSucceeded(CachedResource& revalidatingResource, co
     RELEASE_ASSERT(isMainThread());
     ASSERT(response.source() == ResourceResponse::Source::MemoryCacheAfterValidation);
     ASSERT(revalidatingResource.resourceToRevalidate());
-    CachedResource& resource = *revalidatingResource.resourceToRevalidate();
+    CachedResourceHandle protectedRevalidatingResource { revalidatingResource };
+    auto& resource = *revalidatingResource.resourceToRevalidate();
     ASSERT(!resource.inCache());
     ASSERT(resource.isLoaded());
 
@@ -156,11 +157,20 @@ void MemoryCache::revalidationSucceeded(CachedResource& revalidatingResource, co
 
     remove(revalidatingResource);
 
-    auto& resources = ensureSessionResourceMap(resource.sessionID());
-    auto key = std::make_pair(resource.url(), resource.cachePartition());
+    // A resource with the same URL may have been added back in the cache during revalidation.
+    // In this case, we remove the cached resource and replace it with our freshly revalidated
+    // one.
+    std::pair key { resource.url(), resource.cachePartition() };
+    if (auto* existingResources = sessionResourceMap(resource.sessionID())) {
+        if (auto existingResource = existingResources->get(key))
+            remove(*existingResource);
+    }
 
-    RELEASE_ASSERT(!resources.get(key));
-    resources.set(key, &resource);
+    // Don't move the call to ensureSessionResourceMap() in this function as the calls to
+    // remove() above could invalidate the reference returned by ensureSessionResourceMap().
+    auto& resources = ensureSessionResourceMap(resource.sessionID());
+    ASSERT(!resources.contains(key));
+    resources.add(key, &resource);
     resource.setInCache(true);
     resource.updateResponseAfterRevalidation(response);
     insertInLRUList(resource);
@@ -172,7 +182,7 @@ void MemoryCache::revalidationSucceeded(CachedResource& revalidatingResource, co
 
     revalidatingResource.switchClientsToRevalidatedResource();
     ASSERT(!revalidatingResource.m_deleted);
-    // this deletes the revalidating resource
+    // This deletes the revalidating resource.
     revalidatingResource.clearResourceToRevalidate();
 }
 
@@ -201,7 +211,7 @@ CachedResource* MemoryCache::resourceForRequestImpl(const ResourceRequest& reque
     URL url = removeFragmentIdentifierIfNeeded(request.url());
 
     auto key = std::make_pair(url, request.cachePartition());
-    return resources.get(key);
+    return resources.get(key).get();
 }
 
 unsigned MemoryCache::deadCapacity() const 
@@ -237,8 +247,7 @@ void MemoryCache::forEachResource(const Function<void(CachedResource&)>& functio
     Vector<WeakPtr<CachedResource>> allResources;
     for (auto& lruList : m_allResources) {
         allResources.reserveCapacity(allResources.size() + lruList->computeSize());
-        for (auto& resource : *lruList)
-            allResources.uncheckedAppend(resource);
+        allResources.appendRange(lruList->begin(), lruList->end());
     }
     for (auto& resource : allResources) {
         if (CachedResourceHandle resourceHandle = resource.get())
@@ -254,8 +263,10 @@ void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, const Functio
     if (it == m_sessionResources.end())
         return;
 
-    for (auto& resource : copyToVector(it->value->values()))
-        function(*resource);
+    for (auto& resource : copyToVector(it->value->values())) {
+        if (resource)
+            function(*resource);
+    }
 }
 
 void MemoryCache::destroyDecodedDataForAllImages()
@@ -423,6 +434,8 @@ void MemoryCache::setCapacities(unsigned minDeadBytes, unsigned maxDeadBytes, un
 void MemoryCache::remove(CachedResource& resource)
 {
     RELEASE_ASSERT(isMainThread());
+    CachedResourceHandle protectedResource { resource };
+
     LOG(ResourceLoading, "Evicting resource %p for '%.255s' from cache", &resource, resource.url().string().latin1().data());
     // The resource may have already been removed by someone other than our caller,
     // who needed a fresh copy for a reload. See <http://bugs.webkit.org/show_bug.cgi?id=12479#c6>.
@@ -452,9 +465,6 @@ void MemoryCache::remove(CachedResource& resource)
         }
     }
     RELEASE_ASSERT(!resource.inCache());
-
-    if (resource.canDelete())
-        resource.deleteThis();
 }
 
 auto MemoryCache::lruListFor(CachedResource& resource) -> LRUList&
@@ -468,7 +478,7 @@ auto MemoryCache::lruListFor(CachedResource& resource) -> LRUList&
 
     m_allResources.reserveCapacity(queueIndex + 1);
     while (m_allResources.size() <= queueIndex)
-        m_allResources.uncheckedAppend(makeUnique<LRUList>());
+        m_allResources.append(makeUnique<LRUList>());
     return *m_allResources[queueIndex];
 }
 
@@ -531,23 +541,25 @@ bool MemoryCache::inLiveDecodedResourcesList(CachedResource& resource) const
 void MemoryCache::removeResourcesWithOrigin(const SecurityOrigin& origin, const String& cachePartition)
 {
     RELEASE_ASSERT(isMainThread());
-    Vector<CachedResource*> resourcesWithOrigin;
+    Vector<WeakPtr<CachedResource>> resourcesWithOrigin;
     for (auto& resources : m_sessionResources.values()) {
         for (auto& keyValue : *resources) {
             auto& resource = *keyValue.value;
             auto& partitionName = keyValue.key.second;
             if (partitionName == cachePartition) {
-                resourcesWithOrigin.append(&resource);
+                resourcesWithOrigin.append(resource);
                 continue;
             }
             auto resourceOrigin = SecurityOrigin::create(resource.url());
             if (resourceOrigin->equal(&origin))
-                resourcesWithOrigin.append(&resource);
+                resourcesWithOrigin.append(resource);
         }
     }
 
-    for (auto* resource : resourcesWithOrigin)
-        remove(*resource);
+    for (auto& resource : resourcesWithOrigin) {
+        if (resource)
+            remove(*resource);
+    }
 }
 
 void MemoryCache::removeResourcesWithOrigin(const SecurityOrigin& origin)
@@ -576,20 +588,22 @@ void MemoryCache::removeResourcesWithOrigins(PAL::SessionID sessionID, const Has
     for (auto& origin : origins)
         originPartitions.add(ResourceRequest::partitionName(origin->host()));
 
-    Vector<CachedResource*> resourcesToRemove;
+    Vector<WeakPtr<CachedResource>> resourcesToRemove;
     for (auto& keyValuePair : *resourceMap) {
         auto& resource = *keyValuePair.value;
         auto& partitionName = keyValuePair.key.second;
         if (originPartitions.contains(partitionName)) {
-            resourcesToRemove.append(&resource);
+            resourcesToRemove.append(resource);
             continue;
         }
         if (origins.contains(SecurityOrigin::create(resource.url()).ptr()))
-            resourcesToRemove.append(&resource);
+            resourcesToRemove.append(resource);
     }
 
-    for (auto& resource : resourcesToRemove)
-        remove(*resource);
+    for (auto& resource : resourcesToRemove) {
+        if (resource)
+            remove(*resource);
+    }
 }
 
 void MemoryCache::getOriginsWithCache(SecurityOriginSet& origins)
@@ -697,7 +711,7 @@ MemoryCache::Statistics MemoryCache::getStatistics()
     Statistics stats;
 
     for (auto& resources : m_sessionResources.values()) {
-        for (auto* resource : resources->values()) {
+        for (auto& resource : resources->values()) {
             switch (resource->type()) {
             case CachedResource::Type::ImageResource:
                 stats.images.addResource(*resource);

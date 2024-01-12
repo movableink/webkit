@@ -33,12 +33,11 @@
 
 namespace TestWebKitAPI {
 
-PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRef)
+PlatformWebView::PlatformWebView(WKContextRef contextRef)
     : m_window(nullptr)
 {
     WKRetainPtr<WKPageConfigurationRef> configuration = adoptWK(WKPageConfigurationCreate());
     WKPageConfigurationSetContext(configuration.get(), contextRef);
-    WKPageConfigurationSetPageGroup(configuration.get(), pageGroupRef);
 
     initialize(configuration.get());
 }
@@ -54,7 +53,6 @@ PlatformWebView::PlatformWebView(WKPageRef relatedPage)
 {
     WKRetainPtr<WKPageConfigurationRef> configuration = adoptWK(WKPageConfigurationCreate());
     WKPageConfigurationSetContext(configuration.get(), WKPageGetContext(relatedPage));
-    WKPageConfigurationSetPageGroup(configuration.get(), WKPageGetPageGroup(relatedPage));
     WKPageConfigurationSetRelatedPage(configuration.get(), relatedPage);
 
     auto relatedConfiguration = adoptWK(WKPageCopyPageConfiguration(relatedPage));
@@ -72,7 +70,7 @@ PlatformWebView::~PlatformWebView()
 void PlatformWebView::initialize(WKPageConfigurationRef configuration)
 {
     m_window = new WPEToolingBackends::HeadlessViewBackend(800, 600);
-    m_view = WKViewCreate(m_window->backend(), configuration);
+    m_view = WKViewCreateDeprecated(m_window->backend(), configuration);
 }
 
 WKPageRef PlatformWebView::page() const

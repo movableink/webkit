@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,8 +30,11 @@
 #include "FuzzerPredictions.h"
 #include "JSCellInlines.h"
 #include <wtf/AnsiColors.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FileBasedFuzzerAgent);
 
 FileBasedFuzzerAgent::FileBasedFuzzerAgent(VM& vm)
     : FileBasedFuzzerAgentBase(vm)
@@ -55,22 +58,16 @@ SpeculatedType FileBasedFuzzerAgent::getPredictionInternal(CodeBlock* codeBlock,
 
     // FIXME: the output of codeBlock->expressionRangeForBytecodeIndex() allows for some of
     // these opcodes to have predictions, but not all instances can be reliably targeted.
-    case op_bitand: // partially broken https://bugs.webkit.org/show_bug.cgi?id=203604
-    case op_bitor: // partially broken https://bugs.webkit.org/show_bug.cgi?id=203604
-    case op_bitxor: // partially broken https://bugs.webkit.org/show_bug.cgi?id=203604
-    case op_bitnot: // partially broken
     case op_get_from_scope: // partially broken https://bugs.webkit.org/show_bug.cgi?id=203603
     case op_get_from_arguments: // partially broken https://bugs.webkit.org/show_bug.cgi?id=203608
     case op_get_by_val: // partially broken https://bugs.webkit.org/show_bug.cgi?id=203665
-    case op_rshift: // partially broken https://bugs.webkit.org/show_bug.cgi?id=203664
-    case op_lshift: // partially broken https://bugs.webkit.org/show_bug.cgi?id=203664
-    case op_to_number: // partially broken
     case op_get_by_id: // sometimes occurs implicitly for things related to Symbol.iterator
         if (!generated)
             return original;
         break;
 
     case op_call: // op_call appears implicitly in for-of loops, generators, spread/rest elements, destructuring assignment
+    case op_call_ignore_result:
         if (!generated) {
             if (sourceAfterDivot.containsIgnoringASCIICase("of "_s))
                 return original;

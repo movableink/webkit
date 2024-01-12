@@ -40,22 +40,27 @@ void AXIsolatedObject::initializePlatformProperties(const Ref<const Accessibilit
     setProperty(AXPropertyName::SpeechHint, object->speechHintAttributeValue().isolatedCopy());
 
     RetainPtr<NSAttributedString> attributedText;
-    if (object->hasAttributedText()) {
-        std::optional<SimpleRange> range;
-        if (isTextControl())
-            range = rangeForCharacterRange({ 0, object->text().length() });
-        else
-            range = object->simpleRange();
-        if (range) {
-            if ((attributedText = object->attributedStringForRange(*range, SpellCheck::Yes)))
-                setProperty(AXPropertyName::AttributedText, attributedText);
+    // FIXME: Don't eagerly cache textarea/contenteditable values longer than 12500 characters as rangeForCharacterRange is very expensive.
+    // This should be cached once rangeForCharacterRange is more performant for large text control values.
+    unsigned textControlLength = isTextControl() ? object->text().length() : 0;
+    if (textControlLength < 12500) {
+        if (object->hasAttributedText()) {
+            std::optional<SimpleRange> range;
+            if (isTextControl())
+                range = rangeForCharacterRange({ 0, textControlLength });
+            else
+                range = object->simpleRange();
+            if (range) {
+                if ((attributedText = object->attributedStringForRange(*range, SpellCheck::Yes)))
+                    setProperty(AXPropertyName::AttributedText, attributedText);
+            }
         }
-    }
 
-    // Cache the TextContent only if it is not empty and differs from the AttributedText.
-    if (auto text = object->textContent()) {
-        if (!attributedText || (text->length() && *text != String([attributedText string])))
-            setProperty(AXPropertyName::TextContent, text->isolatedCopy());
+        // Cache the TextContent only if it is not empty and differs from the AttributedText.
+        if (auto text = object->textContent()) {
+            if (!attributedText || (text->length() && *text != String([attributedText string])))
+                setProperty(AXPropertyName::TextContent, text->isolatedCopy());
+        }
     }
 
     // Cache the StringValue only if it differs from the AttributedText.
@@ -177,18 +182,19 @@ RetainPtr<NSAttributedString> AXIsolatedObject::attributedStringForTextMarkerRan
     if (!markerRange)
         return nil;
 
-    if (markerRange.start().objectID() != objectID() && markerRange.isConfinedTo(markerRange.start().objectID())) {
+    // At the moment we are only handling ranges that are confined to a single object, and for which we cached the AttributeString.
+    // FIXME: Extend to cases where the range expands multiple objects.
+
+    bool isConfined = markerRange.isConfinedTo(markerRange.start().objectID());
+    if (isConfined && markerRange.start().objectID() != objectID()) {
         // markerRange is confined to an object different from this. That is the case when clients use the webarea to request AttributedStrings for a range obtained from an inner descendant.
         // Delegate to the inner object in this case.
         if (RefPtr object = markerRange.start().object())
             return object->attributedStringForTextMarkerRange(WTFMove(markerRange), spellCheck);
     }
 
-    // At the moment we are only handling ranges that are contained in a single object, and for which we cached the AttributeString.
-    // FIXME: Extend to cases where the range expands multiple objects.
-
     auto attributedText = propertyValue<RetainPtr<NSAttributedString>>(AXPropertyName::AttributedText);
-    if (!attributedText) {
+    if (!isConfined || !attributedText) {
         return Accessibility::retrieveValueFromMainThread<RetainPtr<NSAttributedString>>([markerRange = WTFMove(markerRange), &spellCheck, this] () mutable -> RetainPtr<NSAttributedString> {
             if (RefPtr axObject = associatedAXObject()) {
                 // Ensure that the TextMarkers have valid Node references, in case the range was created on the AX thread.
@@ -320,27 +326,6 @@ String AXIsolatedObject::computedRoleString() const
     });
 }
 // End purposely un-cached properties block.
-
-String AXIsolatedObject::descriptionAttributeValue() const
-{
-    if (!shouldComputeDescriptionAttributeValue())
-        return { };
-
-    return const_cast<AXIsolatedObject*>(this)->getOrRetrievePropertyValue<String>(AXPropertyName::DescriptionAttributeValue);
-}
-
-String AXIsolatedObject::helpTextAttributeValue() const
-{
-    return const_cast<AXIsolatedObject*>(this)->getOrRetrievePropertyValue<String>(AXPropertyName::HelpText);
-}
-
-String AXIsolatedObject::titleAttributeValue() const
-{
-    if (!shouldComputeTitleAttributeValue())
-        return { };
-
-    return const_cast<AXIsolatedObject*>(this)->getOrRetrievePropertyValue<String>(AXPropertyName::TitleAttributeValue);
-}
 
 } // WebCore
 

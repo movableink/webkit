@@ -57,6 +57,7 @@ public:
     void invalidate();
 
     bool hasActiveSession() const { return !!m_immersiveSessionActivity; }
+    void ensureImmersiveSessionActivity();
 
 private:
     static PlatformXRCoordinator* xrCoordinator();
@@ -66,10 +67,10 @@ private:
 
     // Message handlers
     void enumerateImmersiveXRDevices(CompletionHandler<void(Vector<XRDeviceInfo>&&)>&&);
-    void requestPermissionOnSessionFeatures(const WebCore::SecurityOriginData&, PlatformXR::SessionMode, const PlatformXR::Device::FeatureList&, const PlatformXR::Device::FeatureList&, const PlatformXR::Device::FeatureList&, CompletionHandler<void(std::optional<PlatformXR::Device::FeatureList>&&)>&&);
+    void requestPermissionOnSessionFeatures(const WebCore::SecurityOriginData&, PlatformXR::SessionMode, const PlatformXR::Device::FeatureList&, const PlatformXR::Device::FeatureList&, const PlatformXR::Device::FeatureList&, const PlatformXR::Device::FeatureList&, const PlatformXR::Device::FeatureList&, CompletionHandler<void(std::optional<PlatformXR::Device::FeatureList>&&)>&&);
     void initializeTrackingAndRendering(const WebCore::SecurityOriginData&, PlatformXR::SessionMode, const PlatformXR::Device::FeatureList&);
     void shutDownTrackingAndRendering();
-    void requestFrame(CompletionHandler<void(PlatformXR::Device::FrameData&&)>&&);
+    void requestFrame(CompletionHandler<void(PlatformXR::FrameData&&)>&&);
     void submitFrame();
 
     // PlatformXRCoordinator::SessionEventClient

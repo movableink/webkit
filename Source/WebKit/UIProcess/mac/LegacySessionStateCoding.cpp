@@ -71,7 +71,7 @@ static const uint32_t maximumSessionStateDataSize = std::numeric_limits<uint32_t
 template<typename T> void isValidEnum(T);
 
 
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HistoryEntryDataEncoder);
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(HistoryEntryDataEncoder, WTF_INTERNAL);
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HistoryEntryDataEncoder);
 
 class HistoryEntryDataEncoder {
@@ -405,8 +405,8 @@ static RetainPtr<CFDictionaryRef> createDictionary(std::initializer_list<std::pa
     values.reserveInitialCapacity(keyValuePairs.size());
 
     for (const auto& keyValuePair : keyValuePairs) {
-        keys.uncheckedAppend(keyValuePair.first);
-        values.uncheckedAppend(keyValuePair.second);
+        keys.append(keyValuePair.first);
+        values.append(keyValuePair.second);
     }
 
     return adoptCF(CFDictionaryCreate(kCFAllocatorDefault, keys.data(), values.data(), keyValuePairs.size(), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));

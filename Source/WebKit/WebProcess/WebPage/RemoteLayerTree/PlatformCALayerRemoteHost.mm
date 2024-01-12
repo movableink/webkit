@@ -36,7 +36,7 @@ Ref<PlatformCALayerRemote> PlatformCALayerRemoteHost::create(WebCore::LayerHosti
 }
 
 PlatformCALayerRemoteHost::PlatformCALayerRemoteHost(WebCore::LayerHostingContextIdentifier identifier, WebCore::PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
-    : PlatformCALayerRemote(WebCore::PlatformCALayer::LayerTypeHost, owner, context)
+    : PlatformCALayerRemote(WebCore::PlatformCALayer::LayerType::LayerTypeHost, owner, context)
     , m_identifier(identifier)
 {
 }
@@ -44,7 +44,8 @@ PlatformCALayerRemoteHost::PlatformCALayerRemoteHost(WebCore::LayerHostingContex
 void PlatformCALayerRemoteHost::populateCreationProperties(RemoteLayerTreeTransaction::LayerCreationProperties& properties, const RemoteLayerTreeContext& context, WebCore::PlatformCALayer::LayerType type)
 {
     PlatformCALayerRemote::populateCreationProperties(properties, context, type);
-    properties.hostIdentifier = m_identifier;
+    ASSERT(std::holds_alternative<RemoteLayerTreeTransaction::LayerCreationProperties::NoAdditionalData>(properties.additionalData));
+    properties.additionalData = m_identifier;
 }
 
 } // namespace WebKit

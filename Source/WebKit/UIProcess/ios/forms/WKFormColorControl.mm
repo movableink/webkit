@@ -30,10 +30,11 @@
 
 #import "FocusedElementInformation.h"
 #import "UIKitSPI.h"
-#import "UserInterfaceIdiom.h"
+#import "UIKitUtilities.h"
 #import "WKContentViewInteraction.h"
 #import "WebPageProxy.h"
 #import <WebCore/ColorCocoa.h>
+#import <pal/system/ios/UserInterfaceIdiom.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 #pragma mark - WKColorPicker
@@ -118,8 +119,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [self updateColorPickerState];
     [self configurePresentation];
 
-    UIViewController *presentingViewController = [UIViewController _viewControllerForFullScreenPresentationFromView:_view];
+    auto presentingViewController = _view._wk_viewControllerForFullScreenPresentation;
     [presentingViewController presentViewController:_colorPickerViewController.get() animated:YES completion:nil];
+}
+
+- (void)controlUpdateEditing
+{
 }
 
 - (void)controlEndEditing

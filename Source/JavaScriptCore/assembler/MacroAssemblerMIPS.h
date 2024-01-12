@@ -93,6 +93,7 @@ public:
     };
 
     enum ResultCondition {
+        Carry, // <- not implemented
         Overflow,
         Signed,
         PositiveOrZero,
@@ -515,6 +516,13 @@ public:
         }
     }
 
+    void or16(RegisterID mask, AbsoluteAddress dest)
+    {
+        load16(dest.m_ptr, immTempRegister);
+        or32(mask, immTempRegister);
+        store16(immTempRegister, dest.m_ptr);
+    }
+
     void or32(RegisterID src, RegisterID dest)
     {
         m_assembler.orInsn(dest, dest, src);
@@ -683,6 +691,13 @@ public:
     void urshift32(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.srl(dest, src, imm.m_value);
+    }
+
+    void addUnsignedRightShift32(RegisterID src1, RegisterID src2, TrustedImm32 amount, RegisterID dest)
+    {
+        // dest = src1 + (src2 >> amount)
+        urshift32(src2, amount, dataTempRegister);
+        add32(src1, dataTempRegister, dest);
     }
 
     void sub32(RegisterID src, RegisterID dest)
@@ -895,6 +910,16 @@ public:
     {
         ASSERT(!supportsFloatingPointRounding());
         CRASH();
+    }
+
+    // this is provided (unlike the other rounding instructions) since it is
+    // used in a more limited fashion (for Uint8ClampedArray)--its range is
+    // limited to doubles that round to a 32-bit signed int--otherwise, it will
+    // saturate (and signal an FP exception [which is non-trapping])
+    void roundTowardNearestIntDouble(FPRegisterID src, FPRegisterID dest)
+    {
+        m_assembler.roundwd(dest, src);
+        m_assembler.cvtdw(dest, dest);
     }
 
     ConvertibleLoadLabel convertibleLoadPtr(Address address, RegisterID dest)
@@ -1716,6 +1741,17 @@ public:
         storePair32(src1, src2, addrTempRegister);
     }
 
+    void transfer32(Address src, Address dest)
+    {
+        load32(src, dataTempRegister);
+        store32(dataTempRegister, dest);
+    }
+
+    void transferPtr(Address src, Address dest)
+    {
+        transfer32(src, dest);
+    }
+
     // Floating-point operations:
 
     static bool supportsFloatingPoint()
@@ -1997,6 +2033,12 @@ public:
     Jump branch32WithUnalignedHalfWords(RelationalCondition cond, BaseIndex left, TrustedImm32 right)
     {
         load32WithUnalignedHalfWords(left, dataTempRegister);
+        return branch32(cond, dataTempRegister, right);
+    }
+
+    Jump branch32WithMemory16(RelationalCondition cond, Address left, RegisterID right)
+    {
+        MacroAssemblerHelpers::load16OnCondition(*this, cond, left, dataTempRegister);
         return branch32(cond, dataTempRegister, right);
     }
 

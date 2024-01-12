@@ -94,5 +94,29 @@ bool RemoteScrollbarsController::shouldDrawIntoScrollbarLayer(WebCore::Scrollbar
     return scrollbar.isCustomScrollbar() || scrollbar.isMockScrollbar();
 }
 
+bool RemoteScrollbarsController::shouldRegisterScrollbars() const
+{
+    return scrollableArea().isListBox();
+}
+
+void RemoteScrollbarsController::setScrollbarMinimumThumbLength(WebCore::ScrollbarOrientation orientation, int minimumThumbLength)
+{
+    if (orientation == WebCore::ScrollbarOrientation::Horizontal)
+        m_horizontalMinimumThumbLength = minimumThumbLength;
+    else
+        m_verticalMinimumThumbLength = minimumThumbLength;
+}
+
+int RemoteScrollbarsController::minimumThumbLength(WebCore::ScrollbarOrientation orientation)
+{
+    return orientation == WebCore::ScrollbarOrientation::Horizontal ? m_horizontalMinimumThumbLength : m_verticalMinimumThumbLength;
+}
+
+void RemoteScrollbarsController::updateScrollbarEnabledState(WebCore::Scrollbar& scrollbar)
+{
+    if (auto scrollingCoordinator = m_coordinator.get())
+        scrollingCoordinator->setScrollbarEnabled(scrollbar);
+}
+
 }
 #endif // PLATFORM(MAC)

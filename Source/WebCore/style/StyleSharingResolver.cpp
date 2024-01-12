@@ -111,6 +111,8 @@ std::unique_ptr<RenderStyle> SharingResolver::resolve(const Styleable& searchSty
     // FIXME: Do something smarter here, for example RuleSet based matching like with attribute/sibling selectors.
     if (Scope::forNode(element).usesHasPseudoClass())
         return nullptr;
+    if (m_ruleSets.hasScopeRules())
+        return nullptr;
 
     Context context {
         update,
@@ -258,6 +260,9 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
     if (elementHasDirectionAuto(candidateElement))
         return false;
 
+    if (candidateElement.isRelevantToUser() != element.isRelevantToUser())
+        return false;
+
     if (candidateElement.isLink() && context.elementLinkState != style->insideLink())
         return false;
 
@@ -277,7 +282,7 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
         }
 
         // Elements that may get StyleAdjuster's inert attribute adjustment.
-        if (m_document.settings().inertAttributeEnabled() && candidateElement.hasAttributeWithoutSynchronization(HTMLNames::inertAttr) != element.hasAttributeWithoutSynchronization(HTMLNames::inertAttr))
+        if (candidateElement.hasAttributeWithoutSynchronization(HTMLNames::inertAttr) != element.hasAttributeWithoutSynchronization(HTMLNames::inertAttr))
             return false;
     }
 

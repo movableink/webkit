@@ -127,7 +127,8 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 #endif
 
 #if PLATFORM(WPE)
-    if (!parameters.isServiceWorkerProcess) {
+    m_dmaBufRendererBufferMode = parameters.dmaBufRendererBufferMode;
+    if (!parameters.isServiceWorkerProcess && m_dmaBufRendererBufferMode.isEmpty()) {
         auto& implementationLibraryName = parameters.implementationLibraryName;
         if (!implementationLibraryName.isNull() && implementationLibraryName.data()[0] != '\0')
             wpe_loader_init(parameters.implementationLibraryName.data());
@@ -141,29 +142,25 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     WebCore::GBMDevice::singleton().initialize(parameters.renderDeviceFile);
 #endif
 
-#if PLATFORM(GTK)
-    if (parameters.useDMABufSurfaceForCompositing) {
+#if PLATFORM(WPE)
+    if (!parameters.isServiceWorkerProcess && !m_dmaBufRendererBufferMode.isEmpty())
+        WebCore::PlatformDisplay::setUseDMABufForRendering(true);
+#endif
+
+#if PLATFORM(GTK) && USE(EGL)
+    m_dmaBufRendererBufferMode = parameters.dmaBufRendererBufferMode;
+    if (!m_dmaBufRendererBufferMode.isEmpty()) {
 #if USE(GBM)
-        const char* disableGBM = getenv("WEBKIT_DMABUF_RENDERER_DISABLE_GBM");
-        if (!disableGBM || !strcmp(disableGBM, "0")) {
-            if (auto* device = WebCore::GBMDevice::singleton().device())
-                m_displayForCompositing = WebCore::PlatformDisplayGBM::create(device);
+        if (m_dmaBufRendererBufferMode.contains(DMABufRendererBufferMode::Hardware)) {
+            const char* disableGBM = getenv("WEBKIT_DMABUF_RENDERER_DISABLE_GBM");
+            if (!disableGBM || !strcmp(disableGBM, "0")) {
+                if (auto* device = WebCore::GBMDevice::singleton().device())
+                    m_displayForCompositing = WebCore::PlatformDisplayGBM::create(device);
+            }
         }
 #endif
         if (!m_displayForCompositing)
             m_displayForCompositing = WebCore::PlatformDisplaySurfaceless::create();
-    }
-#endif
-
-#if PLATFORM(WAYLAND)
-    if (PlatformDisplay::sharedDisplay().type() == PlatformDisplay::Type::Wayland && !parameters.isServiceWorkerProcess && !parameters.useDMABufSurfaceForCompositing) {
-        auto hostClientFileDescriptor = parameters.hostClientFileDescriptor.release();
-        if (hostClientFileDescriptor != -1) {
-            wpe_loader_init(parameters.implementationLibraryName.data());
-            m_displayForCompositing = WebCore::PlatformDisplayLibWPE::create();
-            if (!downcast<WebCore::PlatformDisplayLibWPE>(*m_displayForCompositing).initialize(hostClientFileDescriptor))
-                m_displayForCompositing = nullptr;
-        }
     }
 #endif
 
@@ -198,6 +195,7 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 
 #if PLATFORM(GTK)
     GtkSettingsManagerProxy::singleton().applySettings(WTFMove(parameters.gtkSettings));
+    WebCore::setScreenProperties(parameters.screenProperties);
 #endif
 }
 
@@ -249,6 +247,15 @@ void WebProcess::releaseSystemMallocMemory()
 #endif
 #endif
 }
+
+#if PLATFORM(GTK)
+void WebProcess::setScreenProperties(const WebCore::ScreenProperties& properties)
+{
+    WebCore::setScreenProperties(properties);
+    for (auto& page : m_pageMap.values())
+        page->screenPropertiesDidChange();
+}
+#endif
 
 } // namespace WebKit
 

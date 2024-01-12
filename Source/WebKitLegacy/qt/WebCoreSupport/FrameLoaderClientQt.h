@@ -87,6 +87,7 @@ public:
 
     void assignIdentifierToInitialRequest(WebCore::ResourceLoaderIdentifier, WebCore::DocumentLoader*, const WebCore::ResourceRequest&) override;
 
+    void dispatchLoadEventToOwnerElementInAnotherProcess() override { };
     void dispatchWillSendRequest(WebCore::DocumentLoader*, WebCore::ResourceLoaderIdentifier, WebCore::ResourceRequest&, const WebCore::ResourceResponse&) override;
     bool shouldUseCredentialStorage(DocumentLoader*, WebCore::ResourceLoaderIdentifier identifier) override;
     void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, WebCore::ResourceLoaderIdentifier identifier, const AuthenticationChallenge&) override;
@@ -156,7 +157,10 @@ public:
     ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
     ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
     ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const override;
+    ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const override;
     ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
+
+    void loadStorageAccessQuirksIfNeeded() final { }
 
     bool shouldFallBack(const ResourceError&) const override;
 
@@ -213,6 +217,9 @@ public:
     void originatingLoadStarted() { m_isOriginatingLoad = true; }
 
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
+
+    void broadcastFrameRemovalToOtherProcesses() override { };
+    void broadcastMainFrameURLChangeToOtherProcesses(const URL&) override { };
 
     static bool dumpFrameLoaderCallbacks;
     static bool dumpUserGestureInFrameLoaderCallbacks;

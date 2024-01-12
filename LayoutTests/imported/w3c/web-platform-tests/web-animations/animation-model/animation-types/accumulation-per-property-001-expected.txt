@@ -263,6 +263,9 @@ PASS font-variant-caps: "small-caps" onto "unicase"
 PASS font-variant-east-asian (type: discrete) has testAccumulation function
 PASS font-variant-east-asian: "proportional-width" onto "full-width"
 PASS font-variant-east-asian: "full-width" onto "proportional-width"
+PASS font-variant-emoji (type: discrete) has testAccumulation function
+PASS font-variant-emoji: "emoji" onto "text"
+PASS font-variant-emoji: "text" onto "emoji"
 PASS font-variant-ligatures (type: discrete) has testAccumulation function
 PASS font-variant-ligatures: "no-common-ligatures" onto "common-ligatures"
 PASS font-variant-ligatures: "common-ligatures" onto "no-common-ligatures"
@@ -301,8 +304,8 @@ PASS grid-row-start (type: discrete) has testAccumulation function
 PASS grid-row-start: "5" onto "1"
 PASS grid-row-start: "1" onto "5"
 PASS grid-template-areas (type: discrete) has testAccumulation function
-PASS grid-template-areas: "none" onto "". . a b" ". .a b""
-FAIL grid-template-areas: "". . a b" ". .a b"" onto "none" assert_equals: The value should be ". . a b" ". .a b" at 0ms expected "\". . a b\" \". .a b\"" but got "\". . a b\" \". . a b\""
+PASS grid-template-areas: "none" onto "". . a b" ". . a b""
+PASS grid-template-areas: "". . a b" ". . a b"" onto "none"
 PASS hyphens (type: discrete) has testAccumulation function
 PASS hyphens: "none" onto "manual"
 PASS hyphens: "manual" onto "none"

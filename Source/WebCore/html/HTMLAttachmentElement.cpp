@@ -198,6 +198,36 @@ static const AtomString& saveAtom()
     return identifier;
 }
 
+class AttachmentImageEventsListener final : public EventListener {
+public:
+    static void addToImageForAttachment(HTMLImageElement& image, HTMLAttachmentElement& attachment)
+    {
+        auto listener = create(attachment);
+        image.addEventListener(eventNames().loadEvent, listener, { });
+        image.addEventListener(eventNames().errorEvent, listener, { });
+    }
+
+    void handleEvent(ScriptExecutionContext&, Event& event) final
+    {
+        const auto& type = event.type();
+        if (type == eventNames().loadEvent || type == eventNames().errorEvent)
+            m_attachment->dispatchEvent(Event::create(type, Event::CanBubble::No, Event::IsCancelable::No));
+        else
+            ASSERT_NOT_REACHED();
+    }
+
+private:
+    explicit AttachmentImageEventsListener(HTMLAttachmentElement& attachment)
+        : EventListener(CPPEventListenerType)
+        , m_attachment(attachment)
+    {
+    }
+
+    static Ref<AttachmentImageEventsListener> create(HTMLAttachmentElement& attachment) { return adoptRef(*new AttachmentImageEventsListener(attachment)); }
+
+    WeakPtr<HTMLAttachmentElement, WeakPtrImplWithEventTargetData> m_attachment;
+};
+
 template <typename ElementType>
 static Ref<ElementType> createContainedElement(HTMLElement& container, const AtomString& id, String&& textContent = { })
 {
@@ -228,6 +258,7 @@ void HTMLAttachmentElement::ensureWideLayoutShadowTree(ShadowRoot& root)
     auto previewArea = createContainedElement<HTMLDivElement>(*m_containerElement, attachmentPreviewAreaIdentifier());
 
     m_imageElement = createContainedElement<HTMLImageElement>(previewArea, attachmentIconIdentifier());
+    AttachmentImageEventsListener::addToImageForAttachment(*m_imageElement, *this);
     setNeedsWideLayoutIconRequest();
     updateImage();
 
@@ -335,7 +366,7 @@ DOMRectReadOnly* HTMLAttachmentElement::saveButtonClientRect() const
         return nullptr;
 
     bool unusedIsReplaced;
-    auto rect = m_saveButton->pixelSnappedRenderRect(&unusedIsReplaced);
+    auto rect = m_saveButton->pixelSnappedAbsoluteBoundingRect(&unusedIsReplaced);
     m_saveButtonClientRect = DOMRectReadOnly::create(rect.x(), rect.y(), rect.width(), rect.height());
     return m_saveButtonClientRect.get();
 }
@@ -457,10 +488,7 @@ void HTMLAttachmentElement::setUniqueIdentifier(const String& uniqueIdentifier)
 
 RefPtr<HTMLImageElement> HTMLAttachmentElement::enclosingImageElement() const
 {
-    if (auto hostElement = shadowHost(); is<HTMLImageElement>(hostElement))
-        return downcast<HTMLImageElement>(hostElement);
-
-    return { };
+    return dynamicDowncast<HTMLImageElement>(shadowHost());
 }
 
 void HTMLAttachmentElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
@@ -642,11 +670,13 @@ void HTMLAttachmentElement::updateImage()
         return;
 
     if (!m_thumbnailForWideLayout.isEmpty()) {
+        dispatchEvent(Event::create(eventNames().loadeddataEvent, Event::CanBubble::No, Event::IsCancelable::No));
         m_imageElement->setSrc(AtomString { DOMURL::createObjectURL(document(), Blob::create(&document(), Vector<uint8_t>(m_thumbnailForWideLayout), "image/png"_s)) });
         return;
     }
 
     if (!m_iconForWideLayout.isEmpty()) {
+        dispatchEvent(Event::create(eventNames().loadeddataEvent, Event::CanBubble::No, Event::IsCancelable::No));
         m_imageElement->setSrc(AtomString { DOMURL::createObjectURL(document(), Blob::create(&document(), Vector<uint8_t>(m_iconForWideLayout), "image/png"_s)) });
         return;
     }
@@ -672,14 +702,23 @@ void HTMLAttachmentElement::updateThumbnailForWideLayout(Vector<uint8_t>&& thumb
 void HTMLAttachmentElement::updateIconForNarrowLayout(const RefPtr<Image>& icon, const WebCore::FloatSize& iconSize)
 {
     ASSERT(!isWideLayout());
+    if (!icon) {
+        dispatchEvent(Event::create(eventNames().loadingerrorEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        return;
+    }
     m_icon = icon;
     m_iconSize = iconSize;
     invalidateRendering();
+    dispatchEvent(Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void HTMLAttachmentElement::updateIconForWideLayout(Vector<uint8_t>&& iconSrcData)
 {
     ASSERT(isWideLayout());
+    if (iconSrcData.isEmpty()) {
+        dispatchEvent(Event::create(eventNames().loadingerrorEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        return;
+    }
     m_iconForWideLayout = WTFMove(iconSrcData);
     updateImage();
 }
@@ -694,20 +733,25 @@ void HTMLAttachmentElement::requestWideLayoutIconIfNeeded()
     if (!m_needsWideLayoutIconRequest)
         return;
 
-    if (!m_imageElement || !document().page() || !document().page()->attachmentElementClient())
+    if (!document().page() || !document().page()->attachmentElementClient())
         return;
 
     m_needsWideLayoutIconRequest = false;
 
+    if (!m_imageElement)
+        return;
+
+    dispatchEvent(Event::create(eventNames().beforeloadEvent, Event::CanBubble::No, Event::IsCancelable::No));
     document().page()->attachmentElementClient()->requestAttachmentIcon(uniqueIdentifier(), FloatSize(attachmentIconSize, attachmentIconSize));
 }
 
-void HTMLAttachmentElement::requestIconWithSize(const FloatSize& size) const
+void HTMLAttachmentElement::requestIconWithSize(const FloatSize& size)
 {
     ASSERT(!isWideLayout());
     if (!document().page() || !document().page()->attachmentElementClient())
         return;
 
+    queueTaskToDispatchEvent(TaskSource::InternalAsyncTask, Event::create(eventNames().beforeloadEvent, Event::CanBubble::No, Event::IsCancelable::No));
     document().page()->attachmentElementClient()->requestAttachmentIcon(uniqueIdentifier(), size);
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,8 +48,10 @@ XRDeviceProxy::XRDeviceProxy(XRDeviceInfo&& deviceInfo, PlatformXRSystemProxy& x
     m_supportsStereoRendering = deviceInfo.supportsStereoRendering;
     m_supportsOrientationTracking = deviceInfo.supportsOrientationTracking;
     m_recommendedResolution = deviceInfo.recommendedResolution;
-    if (!deviceInfo.features.isEmpty())
-        setSupportedFeatures(SessionMode::ImmersiveVr, deviceInfo.features);
+    if (!deviceInfo.vrFeatures.isEmpty())
+        setSupportedFeatures(SessionMode::ImmersiveVr, deviceInfo.vrFeatures);
+    if (!deviceInfo.arFeatures.isEmpty())
+        setSupportedFeatures(SessionMode::ImmersiveAr, deviceInfo.arFeatures);
 }
 
 void XRDeviceProxy::sessionDidEnd()
@@ -66,7 +68,7 @@ void XRDeviceProxy::updateSessionVisibilityState(PlatformXR::VisibilityState vis
 
 void XRDeviceProxy::initializeTrackingAndRendering(const WebCore::SecurityOriginData& securityOriginData, PlatformXR::SessionMode sessionMode, const PlatformXR::Device::FeatureList& requestedFeatures)
 {
-    if (sessionMode != PlatformXR::SessionMode::ImmersiveVr)
+    if (!isImmersive(sessionMode))
         return;
 
     if (!m_xrSystem)
@@ -77,8 +79,9 @@ void XRDeviceProxy::initializeTrackingAndRendering(const WebCore::SecurityOrigin
     // This is called from the constructor of WebXRSession. Since sessionDidInitializeInputSources()
     // ends up calling queueTaskKeepingObjectAlive() which refs the WebXRSession object, we
     // should delay this call after the WebXRSession has finished construction.
-    callOnMainRunLoop([this, weakThis = WeakPtr { *this }]() {
-        if (!weakThis)
+    callOnMainRunLoop([this, weakThis = ThreadSafeWeakPtr { *this }]() {
+        auto protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
         if (trackingAndRenderingClient())

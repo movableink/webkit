@@ -84,9 +84,9 @@ void WebSharedWorkerContextManagerConnection::establishConnection(CompletionHand
     m_connectionToNetworkProcess->sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::EstablishSharedWorkerContextConnection { m_webPageProxyID, m_registrableDomain }, WTFMove(completionHandler), 0);
 }
 
-void WebSharedWorkerContextManagerConnection::postExceptionToWorkerObject(WebCore::SharedWorkerIdentifier sharedWorkerIdentifier, const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL)
+void WebSharedWorkerContextManagerConnection::postErrorToWorkerObject(WebCore::SharedWorkerIdentifier sharedWorkerIdentifier, const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, bool isErrorEvent)
 {
-    m_connectionToNetworkProcess->send(Messages::WebSharedWorkerServerToContextConnection::PostExceptionToWorkerObject { sharedWorkerIdentifier, errorMessage, lineNumber, columnNumber, sourceURL }, 0);
+    m_connectionToNetworkProcess->send(Messages::WebSharedWorkerServerToContextConnection::PostErrorToWorkerObject { sharedWorkerIdentifier, errorMessage, lineNumber, columnNumber, sourceURL, isErrorEvent }, 0);
 }
 
 void WebSharedWorkerContextManagerConnection::updatePreferencesStore(const WebPreferencesStore& store)
@@ -110,7 +110,7 @@ void WebSharedWorkerContextManagerConnection::launchSharedWorker(WebCore::Client
 
     pageConfiguration.clientForMainFrame = UniqueRef<WebCore::LocalFrameLoaderClient>(makeUniqueRef<RemoteWorkerFrameLoaderClient>(m_webPageProxyID, m_pageID, m_userAgent));
 
-    auto page = makeUniqueRef<WebCore::Page>(WTFMove(pageConfiguration));
+    Ref page = WebCore::Page::create(WTFMove(pageConfiguration));
     if (m_preferencesStore) {
         WebPage::updateSettingsGenerated(*m_preferencesStore, page->settings());
         page->settings().setStorageBlockingPolicy(static_cast<WebCore::StorageBlockingPolicy>(m_preferencesStore->getUInt32ValueForKey(WebPreferencesKey::storageBlockingPolicyKey())));

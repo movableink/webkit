@@ -64,10 +64,6 @@
 
 #include <QStyleHints>
 
-#if ENABLE(VIDEO)
-#include "UserAgentScripts.h"
-#endif
-
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -166,7 +162,7 @@ bool RenderThemeQt::supportsFocusRing(const RenderStyle& style) const
 
 int RenderThemeQt::baselinePosition(const RenderBox& o) const
 {
-    if (!o.isBox())
+    if (!o.isRenderBox())
         return 0;
 
     if (o.style().appearance() == StyleAppearance::Checkbox || o.style().appearance() == StyleAppearance::Radio)
@@ -278,19 +274,9 @@ int RenderThemeQt::minimumMenuListSize(const RenderStyle&) const
     return fm.width(QLatin1Char('x'));
 }
 
-void RenderThemeQt::setCheckboxSize(RenderStyle& style) const
-{
-    computeSizeBasedOnStyle(style);
-}
-
 bool RenderThemeQt::paintCheckbox(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
 {
     return paintButton(o, i, IntRect(r));
-}
-
-void RenderThemeQt::setRadioSize(RenderStyle& style) const
-{
-    computeSizeBasedOnStyle(style);
 }
 
 bool RenderThemeQt::paintRadio(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
@@ -329,7 +315,7 @@ void RenderThemeQt::adjustMenuListStyle(RenderStyle& style, const Element*) cons
 
     // White-space is locked to pre
     style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
-    style.setTextWrap(TextWrap::NoWrap);
+    style.setTextWrapMode(TextWrapMode::NoWrap);
 
     computeSizeBasedOnStyle(style);
 
@@ -344,7 +330,7 @@ void RenderThemeQt::adjustMenuListButtonStyle(RenderStyle& style, const Element*
 
     // White-space is locked to pre
     style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
-    style.setTextWrap(TextWrap::NoWrap);
+    style.setTextWrapMode(TextWrapMode::NoWrap);
 
     computeSizeBasedOnStyle(style);
 
@@ -496,16 +482,6 @@ bool RenderThemeQt::paintSearchFieldResultsDecorationPart(const RenderBox& o, co
     notImplemented();
     return RenderTheme::paintSearchFieldResultsDecorationPart(o, pi, r);
 }
-
-#ifndef QT_NO_SPINBOX
-void RenderThemeQt::adjustInnerSpinButtonStyle(RenderStyle& style, const Element*) const
-{
-    // Use the same width as our native scrollbar
-    int width = ScrollbarTheme::theme().scrollbarThickness();
-    style.setWidth(Length(width, LengthType::Fixed));
-    style.setMinWidth(Length(width, LengthType::Fixed));
-}
-#endif
 
 bool RenderThemeQt::supportsFocus(StyleAppearance appearance) const
 {

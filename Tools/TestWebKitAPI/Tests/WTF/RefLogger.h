@@ -26,13 +26,16 @@
 #pragma once
 
 #include "Logger.h"
+#include <wtf/FastMalloc.h>
 
 namespace TestWebKitAPI {
 
 struct RefLogger {
+    WTF_MAKE_STRUCT_FAST_COMPACT_ALLOCATED;
+
     RefLogger(const char* name);
-    void ref();
-    void deref();
+    void ref() const;
+    void deref() const;
     const char& name;
 };
 

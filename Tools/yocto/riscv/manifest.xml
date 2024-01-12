@@ -6,11 +6,11 @@
   <remote fetch="https://git.yoctoproject.org/git/" name="yocto"/>
   <remote fetch="https://github.com" name="github"/>
 
-  <!-- Yocto version: langdale -->
+  <!-- Yocto version: mickledore -->
 
-  <project remote="yocto"  revision="965c2ec095267c917bac66880b14884b399943ce" name="poky" path="sources/poky"/>
-  <project remote="github" revision="b4ff73905b887cf7c489248de80dab2721090cbf" name="openembedded/meta-openembedded" path="sources/meta-openembedded"/>
-  <project remote="github" revision="d5628ffd5adadb879dee96b3beb076ca2abfcf6d" name="riscv/meta-riscv" path="sources/meta-riscv"/>
-  <project remote="github" revision="18e5909021ba6aa1b3e428719abac08ddcd74691" name="Igalia/meta-webkit.git" path="sources/meta-webkit"/>
+  <project remote="yocto"  revision="7235399a86b134e57d5eb783d7f1f57ca0439ae5" name="poky" path="sources/poky"/>
+  <project remote="github" revision="f29290563cb821fae95340ba959749641c69ed7f" name="openembedded/meta-openembedded" path="sources/meta-openembedded"/>
+  <project remote="github" revision="84924c3b4a794f5a11be8e39e99c970aa96c05be" name="riscv/meta-riscv" path="sources/meta-riscv"/>
+  <project remote="github" revision="d14b0311f852651a0b0a48c4bc5be7cdde7ab2af" name="Igalia/meta-webkit.git" path="sources/meta-webkit"/>
 
 </manifest>

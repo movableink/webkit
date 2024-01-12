@@ -149,6 +149,8 @@ protected:
     virtual void preferenceDidUpdate(const String& domain, const String& key, const std::optional<String>& encodedValue);
     virtual void handlePreferenceChange(const String& domain, const String& key, id value);
     virtual void dispatchSimulatedNotificationsForPreferenceChange(const String& key) { }
+
+    virtual void accessibilitySettingsDidChange() { }
 #endif
     void applyProcessCreationParameters(const AuxiliaryProcessCreationParameters&);
 
@@ -165,9 +167,14 @@ protected:
     // IPC::Connection::Client.
     void didClose(IPC::Connection&) override;
 
+    bool allowsFirstPartyForCookies(const URL&, Function<bool()>&&);
     bool allowsFirstPartyForCookies(const WebCore::RegistrableDomain&, HashSet<WebCore::RegistrableDomain>&);
 
 private:
+#if ENABLE(CFPREFS_DIRECT_MODE)
+    void handleAXPreferenceChange(const String& domain, const String& key, id value);
+#endif
+
     virtual bool shouldOverrideQuarantine() { return true; }
 
     // IPC::MessageSender

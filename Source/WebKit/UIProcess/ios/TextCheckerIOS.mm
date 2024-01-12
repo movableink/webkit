@@ -130,11 +130,7 @@ bool TextChecker::isTestingMode()
 
 bool TextChecker::isSmartInsertDeleteEnabled()
 {
-#if HAVE(UIKEYBOARDIMPL_SMARTINSERTDELETE_CLASS_METHOD)
     return [UIKeyboardImpl smartInsertDeleteIsEnabled];
-#else
-    return [[UIKeyboardImpl sharedInstance] smartInsertDeleteIsEnabled];
-#endif
 }
 
 void TextChecker::setSmartInsertDeleteEnabled(bool)
@@ -265,7 +261,7 @@ Vector<TextCheckingResult> TextChecker::checkTextOfParagraph(SpellDocumentTag sp
                     detail.range = detailNSRange;
                     detail.userDescription = [incomingDetail objectForKey:@"NSGrammarUserDescription"];
                     detail.guesses = makeVector<String>([incomingDetail objectForKey:@"NSGrammarCorrections"]);
-                    result.details.uncheckedAppend(WTFMove(detail));
+                    result.details.append(WTFMove(detail));
                 }
                 results.append(WTFMove(result));
             } else if (resultType == NSTextCheckingTypeCorrection && checkingTypes.contains(TextCheckingType::Correction)) {
@@ -289,7 +285,7 @@ Vector<TextCheckingResult> TextChecker::checkTextOfParagraph(SpellDocumentTag sp
                         detail.range = detailNSRange;
                         detail.userDescription = [incomingDetail objectForKey:@"NSGrammarUserDescription"];
                         detail.guesses = makeVector<String>([incomingDetail objectForKey:@"NSGrammarCorrections"]);
-                        result.details.uncheckedAppend(WTFMove(detail));
+                        result.details.append(WTFMove(detail));
                     }
                 }
                 results.append(WTFMove(result));

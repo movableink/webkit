@@ -120,11 +120,13 @@ void RemoteAudioSessionProxy::configurationChanged()
 
 void RemoteAudioSessionProxy::beginInterruption()
 {
+    m_isInterrupted = true;
     connection().send(Messages::RemoteAudioSession::BeginInterruptionRemote(), { });
 }
 
 void RemoteAudioSessionProxy::endInterruption(AudioSession::MayResume mayResume)
 {
+    m_isInterrupted = false;
     connection().send(Messages::RemoteAudioSession::EndInterruptionRemote(mayResume), { });
 }
 
@@ -141,6 +143,11 @@ void RemoteAudioSessionProxy::endInterruptionRemote(AudioSession::MayResume mayR
 RemoteAudioSessionProxyManager& RemoteAudioSessionProxy::audioSessionManager()
 {
     return m_gpuConnection.gpuProcess().audioSessionManager();
+}
+
+bool RemoteAudioSessionProxy::allowTestOnlyIPC()
+{
+    return m_gpuConnection.allowTestOnlyIPC();
 }
 
 IPC::Connection& RemoteAudioSessionProxy::connection()

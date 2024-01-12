@@ -138,9 +138,9 @@ String localizedString(const char* key)
 }
 #endif
 
-#if ENABLE(CONTEXT_MENUS) && PLATFORM(COCOA)
+#if PLATFORM(COCOA)
 
-static String truncatedStringForMenuItem(const String& original)
+String truncatedStringForMenuItem(const String& original)
 {
     // Truncate the string if it's too long. This number is roughly the same as the one used by AppKit.
     unsigned maxNumberOfGraphemeClustersInLookupMenuItem = 24;
@@ -483,12 +483,12 @@ String contextMenuItemTagPauseAllAnimations()
 
 String contextMenuItemTagPlayAnimation()
 {
-    return WEB_UI_STRING("Play Animation", "Play animation context menu item");
+    return WEB_UI_STRING("Play Animation", "Title for play animation action button or context menu item");
 }
 
 String contextMenuItemTagPauseAnimation()
 {
-    return WEB_UI_STRING("Pause Animation", "Pause animation context menu item");
+    return WEB_UI_STRING("Pause Animation", "Title for pause animation action button or context menu item");
 }
 #endif // ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
 
@@ -502,6 +502,35 @@ String contextMenuItemTagTranslate(const String& selectedString)
 {
     auto selectedCFString = truncatedStringForMenuItem(selectedString).createCFString();
     return WEB_UI_FORMAT_CFSTRING("Translate “%@”", "Translate context menu item with selected word", selectedCFString.get());
+}
+#endif
+
+#if ENABLE(UNIFIED_PDF)
+String contextMenuItemPDFOpenWithPreview()
+{
+    return WEB_UI_STRING("Open with Preview", "Open with Preview context menu item");
+}
+#endif
+
+#if ENABLE(PDFJS) || ENABLE(UNIFIED_PDF)
+String contextMenuItemPDFSinglePage()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Single Page", "_Single Page", "Single Page context menu item");
+}
+
+String contextMenuItemPDFSinglePageContinuous()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Single Page Continuous", "_Single Page Continuous", "Single Page Continuous context menu item");
+}
+
+String contextMenuItemPDFTwoPages()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Two Pages", "_Two Pages", "Two Pages context menu item");
+}
+
+String contextMenuItemPDFTwoPagesContinuous()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Two Pages Continuous", "_Two Pages Continuous", "Two Pages Continuous context menu item");
 }
 #endif
 
@@ -524,26 +553,6 @@ String contextMenuItemPDFZoomOut()
 String contextMenuItemPDFActualSize()
 {
     return WEB_UI_STRING_WITH_MNEMONIC("Actual Size", "_Actual Size", "Actual Size context menu item");
-}
-
-String contextMenuItemPDFSinglePage()
-{
-    return WEB_UI_STRING_WITH_MNEMONIC("Single Page", "_Single Page", "Single Page context menu item");
-}
-
-String contextMenuItemPDFSinglePageContinuous()
-{
-    return WEB_UI_STRING_WITH_MNEMONIC("Single Page Continuous", "_Single Page Continuous", "Single Page Continuous context menu item");
-}
-
-String contextMenuItemPDFTwoPages()
-{
-    return WEB_UI_STRING_WITH_MNEMONIC("Two Pages", "_Two Pages", "Two Pages context menu item");
-}
-
-String contextMenuItemPDFTwoPagesContinuous()
-{
-    return WEB_UI_STRING_WITH_MNEMONIC("Two Pages Continuous", "_Two Pages Continuous", "Two Pages Continuous context menu item");
 }
 
 String contextMenuItemPDFNextPage()
@@ -817,12 +826,12 @@ String AXTextFieldActionVerb()
     return WEB_UI_STRING("activate", "Verb stating the action that will occur when a text field is selected, as used by accessibility");
 }
 
-String AXCheckedCheckBoxActionVerb()
+String AXCheckedCheckboxActionVerb()
 {
     return WEB_UI_STRING("uncheck", "Verb stating the action that will occur when a checked checkbox is clicked, as used by accessibility");
 }
 
-String AXUncheckedCheckBoxActionVerb()
+String AXUncheckedCheckboxActionVerb()
 {
     return WEB_UI_STRING("check", "Verb stating the action that will occur when an unchecked checkbox is clicked, as used by accessibility");
 }
@@ -950,6 +959,11 @@ String AXAutoFillLoadingLabel()
 String autoFillStrongPasswordLabel()
 {
     return WEB_UI_STRING("Strong Password", "Label for strong password.");
+}
+
+String AXProcessingPage()
+{
+    return WEB_UI_STRING("Processing page", "Title for the webarea while the accessibility tree is being built.");
 }
 
 String missingPluginText()
@@ -1149,7 +1163,7 @@ String validationMessageValueMissingText()
 
 String validationMessageValueMissingForCheckboxText()
 {
-    return WEB_UI_STRING("Select this checkbox", "Validation message for required checkboxes that have not be selected");
+    return WEB_UI_STRING("Select this checkbox", "Validation message for required checkboxes that have not been selected");
 }
 
 String validationMessageValueMissingForFileText()
@@ -1170,6 +1184,11 @@ String validationMessageValueMissingForRadioText()
 String validationMessageValueMissingForSelectText()
 {
     return WEB_UI_STRING("Select an item in the list", "Validation message for required menu list controls that have no selection");
+}
+
+String validationMessageValueMissingForSwitchText()
+{
+    return WEB_UI_STRING("Tap this switch", "Validation message for required switches that are not on");
 }
 
 String validationMessageTypeMismatchText()
@@ -1195,6 +1214,18 @@ String validationMessageTypeMismatchForURLText()
 String validationMessagePatternMismatchText()
 {
     return WEB_UI_STRING("Match the requested format", "Validation message for input form controls requiring a constrained value according to pattern");
+}
+
+String validationMessagePatternMismatchText(const String& title)
+{
+#if PLATFORM(COCOA)
+    return WEB_UI_FORMAT_CFSTRING("Match the requested format: %@", "Validation message for input form controls requiring a constrained value according to pattern followed by a website-provided description of the pattern", title.createCFString().get());
+#elif USE(GLIB)
+    return WEB_UI_FORMAT_STRING("Match the requested format: %s", "Validation message for input form controls requiring a constrained value according to pattern followed by a website-provided description of the pattern", title.utf8().data());
+#else
+    UNUSED_PARAM(title);
+    return validationMessagePatternMismatchText();
+#endif
 }
 
 #if !PLATFORM(GTK)

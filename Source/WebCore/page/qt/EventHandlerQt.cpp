@@ -38,6 +38,7 @@
 #include "FrameLoader.h"
 #include "FrameTree.h"
 #include "FrameView.h"
+#include "HandleUserInputEventResult.h"
 #include "HTMLFrameSetElement.h"
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
@@ -60,10 +61,10 @@ bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
 
 void EventHandler::focusDocumentView()
 {
-    Page* page = m_frame.page();
+    Page* page = m_frame->page();
     if (!page)
         return;
-    page->focusController().setFocusedFrame(&m_frame);
+    page->focusController().setFocusedFrame(m_frame.ptr());
 }
 
 bool EventHandler::passWidgetMouseDownEventToWidget(const MouseEventWithHitTestResults&)
@@ -85,7 +86,7 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& event, Widge
     if (!widget.isLocalFrameView())
         return false;
 
-    return dynamicDowncast<LocalFrame>(downcast<LocalFrameView>(widget).frame())->eventHandler().handleWheelEvent(event, { });
+    return downcast<LocalFrameView>(widget).frame().eventHandler().handleWheelEvent(event, { }).wasHandled();
 }
 
 bool EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& mev, LocalFrame& subframe)

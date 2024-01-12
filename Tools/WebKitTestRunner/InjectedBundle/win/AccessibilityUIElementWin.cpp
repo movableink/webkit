@@ -658,6 +658,12 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::selectedTextRange()
     return nullptr;
 }
 
+JSRetainPtr<JSStringRef> AccessibilityUIElement::intersectionWithSelectionRange()
+{
+    notImplemented();
+    return nullptr;
+}
+
 bool AccessibilityUIElement::setSelectedTextRange(unsigned, unsigned)
 {
     notImplemented();
@@ -711,18 +717,6 @@ void AccessibilityUIElement::clearSelectedChildren() const
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::accessibilityValue() const
-{
-    notImplemented();
-    return nullptr;
-}
-
-JSRetainPtr<JSStringRef> AccessibilityUIElement::documentEncoding()
-{
-    notImplemented();
-    return nullptr;
-}
-
-JSRetainPtr<JSStringRef> AccessibilityUIElement::documentURI()
 {
     notImplemented();
     return nullptr;
@@ -1078,6 +1072,12 @@ bool AccessibilityUIElement::isFirstItemInSuggestion() const
 
 
 bool AccessibilityUIElement::isLastItemInSuggestion() const
+{
+    notImplemented();
+    return false;
+}
+
+bool AccessibilityUIElement::isInNonNativeTextControl() const
 {
     notImplemented();
     return false;

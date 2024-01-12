@@ -52,11 +52,11 @@
 namespace WebKit {
 using namespace WebCore;
 
-Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(LayerType layerType, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(PlatformCALayer::LayerType layerType, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
 {
     RefPtr<PlatformCALayerRemote> layer;
 
-    if (layerType == LayerTypeTiledBackingLayer ||  layerType == LayerTypePageTiledBackingLayer)
+    if (layerType == WebCore::PlatformCALayer::LayerType::LayerTypeTiledBackingLayer ||  layerType == WebCore::PlatformCALayer::LayerType::LayerTypePageTiledBackingLayer)
         layer = adoptRef(new PlatformCALayerRemoteTiledBacking(layerType, owner, context));
     else
         layer = adoptRef(new PlatformCALayerRemote(layerType, owner, context));
@@ -98,7 +98,7 @@ PlatformCALayerRemote::PlatformCALayerRemote(LayerType layerType, PlatformCALaye
     : PlatformCALayer(layerType, owner)
     , m_context(&context)
 {
-    if (owner && layerType != LayerTypeContentsProvidedLayer && layerType != LayerTypeTransformLayer) {
+    if (owner && layerType != PlatformCALayer::LayerType::LayerTypeContentsProvidedLayer && layerType != PlatformCALayer::LayerType::LayerTypeTransformLayer) {
         m_properties.contentsScale = owner->platformCALayerDeviceScaleFactor();
         m_properties.notePropertiesChanged(LayerChange::ContentsScaleChanged);
     }
@@ -185,16 +185,16 @@ void PlatformCALayerRemote::updateClonedLayerProperties(PlatformCALayerRemote& c
 
 void PlatformCALayerRemote::recursiveBuildTransaction(RemoteLayerTreeContext& context, RemoteLayerTreeTransaction& transaction)
 {
-    ASSERT(!m_properties.backingStore || owner());
+    ASSERT(!m_properties.backingStoreOrProperties.store || owner());
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&context == m_context);
     
     bool usesBackingStore = owner() && (owner()->platformCALayerDrawsContent() || owner()->platformCALayerDelegatesDisplay(this));
-    if (m_properties.backingStore && !usesBackingStore) {
-        m_properties.backingStore = nullptr;
+    if (m_properties.backingStoreOrProperties.store && !usesBackingStore) {
+        m_properties.backingStoreOrProperties.store = nullptr;
         m_properties.notePropertiesChanged(LayerChange::BackingStoreChanged);
     }
 
-    if (m_properties.backingStore && m_properties.backingStoreAttached && m_properties.backingStore->layerWillBeDisplayed())
+    if (m_properties.backingStoreOrProperties.store && m_properties.backingStoreAttached && m_properties.backingStoreOrProperties.store->layerWillBeDisplayed())
         m_properties.notePropertiesChanged(LayerChange::BackingStoreChanged);
 
     if (m_properties.changedProperties) {
@@ -223,13 +223,13 @@ void PlatformCALayerRemote::recursiveBuildTransaction(RemoteLayerTreeContext& co
     }
 
     if (m_maskLayer)
-        m_maskLayer->recursiveBuildTransaction(context, transaction);
+        downcast<PlatformCALayerRemote>(*m_maskLayer).recursiveBuildTransaction(context, transaction);
 }
 
 void PlatformCALayerRemote::didCommit()
 {
-    m_properties.addedAnimations.clear();
-    m_properties.keysOfAnimationsToRemove.clear();
+    m_properties.animationChanges.addedAnimations.clear();
+    m_properties.animationChanges.keysOfAnimationsToRemove.clear();
     m_properties.resetChangedProperties();
 }
 
@@ -239,18 +239,23 @@ void PlatformCALayerRemote::ensureBackingStore()
 
     ASSERT(m_properties.backingStoreAttached);
 
-    if (!m_properties.backingStore)
-        m_properties.backingStore = makeUnique<RemoteLayerBackingStore>(this);
+    if (!m_properties.backingStoreOrProperties.store && m_context)
+        m_properties.backingStoreOrProperties.store = m_context->backingStoreCollection().createRemoteLayerBackingStore(this);
 
     updateBackingStore();
 }
 
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+bool PlatformCALayerRemote::containsBitmapOnly() const
+{
+    return owner() && owner()->platformCALayerContainsBitmapOnly(this);
+}
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
 RemoteLayerBackingStore::IncludeDisplayList PlatformCALayerRemote::shouldIncludeDisplayListInBackingStore() const
 {
-    if (!m_context->useCGDisplayListsForDOMRendering())
+    if (!m_context->useDynamicContentScalingDisplayListsForDOMRendering())
         return RemoteLayerBackingStore::IncludeDisplayList::No;
-    if (owner() && owner()->platformCALayerContainsBitmapOnly(this))
+    if (containsBitmapOnly())
         return RemoteLayerBackingStore::IncludeDisplayList::No;
     return RemoteLayerBackingStore::IncludeDisplayList::Yes;
 }
@@ -258,7 +263,7 @@ RemoteLayerBackingStore::IncludeDisplayList PlatformCALayerRemote::shouldInclude
 
 void PlatformCALayerRemote::updateBackingStore()
 {
-    if (!m_properties.backingStore)
+    if (!m_properties.backingStoreOrProperties.store)
         return;
 
     ASSERT(m_properties.backingStoreAttached);
@@ -278,13 +283,11 @@ void PlatformCALayerRemote::updateBackingStore()
     parameters.deepColor = m_wantsDeepColorBackingStore;
     parameters.isOpaque = m_properties.opaque;
 
-#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
     parameters.includeDisplayList = shouldIncludeDisplayListInBackingStore();
-    if (m_context->useCGDisplayListImageCache())
-        parameters.useCGDisplayListImageCache = UseCGDisplayListImageCache::Yes;
 #endif
 
-    m_properties.backingStore->ensureBackingStore(parameters);
+    m_properties.backingStoreOrProperties.store->ensureBackingStore(parameters);
 }
 
 void PlatformCALayerRemote::setNeedsDisplayInRect(const FloatRect& rect)
@@ -295,7 +298,7 @@ void PlatformCALayerRemote::setNeedsDisplayInRect(const FloatRect& rect)
     ensureBackingStore();
 
     // FIXME: Need to map this through contentsRect/etc.
-    m_properties.backingStore->setNeedsDisplay(enclosingIntRect(rect));
+    m_properties.backingStoreOrProperties.store->setNeedsDisplay(enclosingIntRect(rect));
 }
 
 void PlatformCALayerRemote::setNeedsDisplay()
@@ -305,7 +308,7 @@ void PlatformCALayerRemote::setNeedsDisplay()
 
     ensureBackingStore();
 
-    m_properties.backingStore->setNeedsDisplay();
+    m_properties.backingStoreOrProperties.store->setNeedsDisplay();
 }
 
 void PlatformCALayerRemote::copyContentsFromLayer(PlatformCALayer* layer)
@@ -422,7 +425,7 @@ void PlatformCALayerRemote::addAnimationForKey(const String& key, PlatformCAAnim
         // process yet, we update the key properties before it happens. Otherwise, we just append it
         // to the list of animations to be added: PlatformCAAnimationRemote::updateLayerAnimations
         // will actually take care of replacing the existing animation.
-        for (auto& keyAnimationPair : m_properties.addedAnimations) {
+        for (auto& keyAnimationPair : m_properties.animationChanges.addedAnimations) {
             if (keyAnimationPair.first == key) {
                 keyAnimationPair.second = downcast<PlatformCAAnimationRemote>(animation).properties();
                 appendToAddedAnimations = false;
@@ -431,7 +434,7 @@ void PlatformCALayerRemote::addAnimationForKey(const String& key, PlatformCAAnim
         }
     }
     if (appendToAddedAnimations)
-        m_properties.addedAnimations.append(std::pair<String, PlatformCAAnimationRemote::Properties>(key, downcast<PlatformCAAnimationRemote>(animation).properties()));
+        m_properties.animationChanges.addedAnimations.append(std::pair<String, PlatformCAAnimationRemote::Properties>(key, downcast<PlatformCAAnimationRemote>(animation).properties()));
     
     m_properties.notePropertiesChanged(LayerChange::AnimationsChanged);
 
@@ -442,11 +445,11 @@ void PlatformCALayerRemote::addAnimationForKey(const String& key, PlatformCAAnim
 void PlatformCALayerRemote::removeAnimationForKey(const String& key)
 {
     if (m_animations.remove(key)) {
-        m_properties.addedAnimations.removeFirstMatching([&key](auto& pair) {
+        m_properties.animationChanges.addedAnimations.removeFirstMatching([&key](auto& pair) {
             return pair.first == key;
         });
     }
-    m_properties.keysOfAnimationsToRemove.add(key);
+    m_properties.animationChanges.keysOfAnimationsToRemove.add(key);
     m_properties.notePropertiesChanged(LayerChange::AnimationsChanged);
 }
 
@@ -477,18 +480,17 @@ void PlatformCALayerRemote::animationEnded(const String& key)
         m_owner->platformCALayerAnimationEnded(key);
 }
 
-void PlatformCALayerRemote::setMask(PlatformCALayer* layer)
+void PlatformCALayerRemote::setMaskLayer(RefPtr<WebCore::PlatformCALayer>&& layer)
 {
-    if (isEquivalentLayer(layer, m_properties.maskLayerID))
+    if (isEquivalentLayer(layer.get(), m_properties.maskLayerID))
         return;
-    
-    if (layer) {
-        m_maskLayer = downcast<PlatformCALayerRemote>(layer);
-        m_properties.maskLayerID = m_maskLayer->layerID();
-    } else {
-        m_maskLayer = nullptr;
+
+    PlatformCALayer::setMaskLayer(WTFMove(layer));
+
+    if (auto* layer = maskLayer())
+        m_properties.maskLayerID = layer->layerID();
+    else
         m_properties.maskLayerID = { };
-    }
 
     m_properties.notePropertiesChanged(LayerChange::MaskLayerChanged);
 }
@@ -588,6 +590,12 @@ void PlatformCALayerRemote::setSublayerTransform(const TransformationMatrix& val
     m_properties.notePropertiesChanged(LayerChange::SublayerTransformChanged);
 }
 
+void PlatformCALayerRemote::setIsBackdropRoot(bool isBackdropRoot)
+{
+    m_properties.backdropRoot = isBackdropRoot;
+    m_properties.notePropertiesChanged(LayerChange::BackdropRootChanged);
+}
+
 bool PlatformCALayerRemote::isHidden() const
 {
     return m_properties.hidden;
@@ -641,13 +649,21 @@ void PlatformCALayerRemote::setBackingStoreAttached(bool attached)
     if (attached)
         setNeedsDisplay();
     else
-        m_properties.backingStore = nullptr;
+        m_properties.backingStoreOrProperties.store = nullptr;
 }
 
 bool PlatformCALayerRemote::backingStoreAttached() const
 {
     return m_properties.backingStoreAttached;
 }
+
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+void PlatformCALayerRemote::setVisibleRect(const FloatRect& value)
+{
+    m_properties.visibleRect = value;
+    m_properties.notePropertiesChanged(LayerChange::VisibleRectChanged);
+}
+#endif
 
 void PlatformCALayerRemote::setGeometryFlipped(bool value)
 {
@@ -709,7 +725,7 @@ void PlatformCALayerRemote::setWantsDeepColorBackingStore(bool wantsDeepColorBac
 
 bool PlatformCALayerRemote::hasContents() const
 {
-    return !!m_properties.backingStore;
+    return !!m_properties.backingStoreOrProperties.store;
 }
 
 CFTypeRef PlatformCALayerRemote::contents() const
@@ -719,17 +735,17 @@ CFTypeRef PlatformCALayerRemote::contents() const
 
 void PlatformCALayerRemote::setContents(CFTypeRef value)
 {
-    if (!m_properties.backingStore)
+    if (!m_properties.backingStoreOrProperties.store)
         return;
     if (!value)
-        m_properties.backingStore->clearBackingStore();
+        m_properties.backingStoreOrProperties.store->clearBackingStore();
 }
 
 void PlatformCALayerRemote::setDelegatedContents(const PlatformCALayerDelegatedContents& contents)
 {
     ASSERT(m_acceleratesDrawing);
     ensureBackingStore();
-    m_properties.backingStore->setDelegatedContents(contents);
+    m_properties.backingStoreOrProperties.store->setDelegatedContents(contents);
 }
 
 void PlatformCALayerRemote::setContentsRect(const FloatRect& value)
@@ -847,7 +863,7 @@ float PlatformCALayerRemote::contentsScale() const
 
 void PlatformCALayerRemote::setContentsScale(float value)
 {
-    if (m_layerType == LayerTypeTransformLayer)
+    if (m_layerType == PlatformCALayer::LayerType::LayerTypeTransformLayer)
         return;
 
     m_properties.contentsScale = value;
@@ -909,26 +925,26 @@ void PlatformCALayerRemote::setShapeRoundedRect(const FloatRoundedRect& roundedR
 
 Path PlatformCALayerRemote::shapePath() const
 {
-    ASSERT(m_layerType == LayerTypeShapeLayer);
+    ASSERT(m_layerType == PlatformCALayer::LayerType::LayerTypeShapeLayer);
     return m_properties.shapePath;
 }
 
 void PlatformCALayerRemote::setShapePath(const Path& path)
 {
-    ASSERT(m_layerType == LayerTypeShapeLayer);
+    ASSERT(m_layerType == PlatformCALayer::LayerType::LayerTypeShapeLayer);
     m_properties.shapePath = path;
     m_properties.notePropertiesChanged(LayerChange::ShapePathChanged);
 }
 
 WindRule PlatformCALayerRemote::shapeWindRule() const
 {
-    ASSERT(m_layerType == LayerTypeShapeLayer);
+    ASSERT(m_layerType == PlatformCALayer::LayerType::LayerTypeShapeLayer);
     return m_properties.windRule;
 }
 
 void PlatformCALayerRemote::setShapeWindRule(WindRule windRule)
 {
-    ASSERT(m_layerType == LayerTypeShapeLayer);
+    ASSERT(m_layerType == PlatformCALayer::LayerType::LayerTypeShapeLayer);
     m_properties.windRule = windRule;
     m_properties.notePropertiesChanged(LayerChange::WindRuleChanged);
 }
@@ -1030,7 +1046,7 @@ Ref<PlatformCALayer> PlatformCALayerRemote::createCompatibleLayer(PlatformCALaye
 
 void PlatformCALayerRemote::enumerateRectsBeingDrawn(WebCore::GraphicsContext& context, void (^block)(WebCore::FloatRect))
 {
-    m_properties.backingStore->enumerateRectsBeingDrawn(context, block);
+    m_properties.backingStoreOrProperties.store->enumerateRectsBeingDrawn(context, block);
 }
 
 uint32_t PlatformCALayerRemote::hostingContextID()
@@ -1041,10 +1057,10 @@ uint32_t PlatformCALayerRemote::hostingContextID()
 
 unsigned PlatformCALayerRemote::backingStoreBytesPerPixel() const
 {
-    if (!m_properties.backingStore)
+    if (!m_properties.backingStoreOrProperties.store)
         return 4;
 
-    return m_properties.backingStore->bytesPerPixel();
+    return m_properties.backingStoreOrProperties.store->bytesPerPixel();
 }
 
 LayerPool& PlatformCALayerRemote::layerPool()
@@ -1055,16 +1071,16 @@ LayerPool& PlatformCALayerRemote::layerPool()
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 void PlatformCALayerRemote::clearAcceleratedEffectsAndBaseValues()
 {
-    m_properties.effects = { };
-    m_properties.baseValues = { };
+    m_properties.animationChanges.effects = { };
+    m_properties.animationChanges.baseValues = { };
 
     m_properties.notePropertiesChanged(LayerChange::AnimationsChanged);
 }
 
 void PlatformCALayerRemote::setAcceleratedEffectsAndBaseValues(const AcceleratedEffects& effects, AcceleratedEffectValues& baseValues)
 {
-    m_properties.effects = effects;
-    m_properties.baseValues = baseValues;
+    m_properties.animationChanges.effects = effects;
+    m_properties.animationChanges.baseValues = baseValues;
 
     m_properties.notePropertiesChanged(LayerChange::AnimationsChanged);
 }

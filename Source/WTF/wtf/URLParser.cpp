@@ -41,15 +41,13 @@ namespace WTF {
 #define URL_PARSER_LOG(...)
 #endif
 
-ALWAYS_INLINE static void appendCodePoint(Vector<UChar>& destination, UChar32 codePoint)
+ALWAYS_INLINE static void appendCodePoint(Vector<UChar>& destination, char32_t codePoint)
 {
     if (U_IS_BMP(codePoint)) {
         destination.append(static_cast<UChar>(codePoint));
         return;
     }
-    destination.reserveCapacity(destination.size() + 2);
-    destination.uncheckedAppend(U16_LEAD(codePoint));
-    destination.uncheckedAppend(U16_TRAIL(codePoint));
+    destination.appendList({ U16_LEAD(codePoint), U16_TRAIL(codePoint) });
 }
 
 enum URLCharacterClass {
@@ -398,7 +396,7 @@ ALWAYS_INLINE bool URLParser::isWindowsDriveLetter(CodePointIterator<CharacterTy
     return iterator.atEnd() || *iterator == '/' || *iterator == '\\' || *iterator == '?' || *iterator == '#';
 }
 
-ALWAYS_INLINE void URLParser::appendToASCIIBuffer(UChar32 codePoint)
+ALWAYS_INLINE void URLParser::appendToASCIIBuffer(char32_t codePoint)
 {
     ASSERT(isASCII(codePoint));
     if (UNLIKELY(m_didSeeSyntaxViolation))
@@ -488,11 +486,11 @@ void URLParser::percentEncodeByte(uint8_t byte)
 const char replacementCharacterUTF8PercentEncoded[10] = "%EF%BF%BD";
 const size_t replacementCharacterUTF8PercentEncodedLength = sizeof(replacementCharacterUTF8PercentEncoded) - 1;
 
-template<bool(*isInCodeSet)(UChar32), typename CharacterType>
+template<bool(*isInCodeSet)(char32_t), typename CharacterType>
 ALWAYS_INLINE void URLParser::utf8PercentEncode(const CodePointIterator<CharacterType>& iterator)
 {
     ASSERT(!iterator.atEnd());
-    UChar32 codePoint = *iterator;
+    char32_t codePoint = *iterator;
     if (LIKELY(isASCII(codePoint))) {
         if (UNLIKELY(isInCodeSet(codePoint))) {
             syntaxViolation(iterator);
@@ -520,7 +518,7 @@ template<typename CharacterType>
 ALWAYS_INLINE void URLParser::utf8QueryEncode(const CodePointIterator<CharacterType>& iterator)
 {
     ASSERT(!iterator.atEnd());
-    UChar32 codePoint = *iterator;
+    char32_t codePoint = *iterator;
     if (LIKELY(isASCII(codePoint))) {
         if (UNLIKELY(shouldPercentEncodeQueryByte(codePoint, m_urlIsSpecial))) {
             syntaxViolation(iterator);
@@ -731,7 +729,9 @@ std::optional<String> URLParser::maybeCanonicalizeScheme(StringView scheme)
         return std::nullopt;
     }
 
-    return scheme.convertToASCIILowercase();
+    return scheme.convertToASCIILowercase().removeCharacters([](auto character) {
+        return isTabOrNewline(character);
+    });
 }
 
 bool URLParser::isSpecialScheme(StringView schemeArg)
@@ -865,7 +865,7 @@ void URLParser::copyURLPartsUntil(const URL& base, URLPart part, const CodePoint
     ASSERT_NOT_REACHED();
 }
 
-static const char dotASCIICode[2] = {'2', 'e'};
+constexpr uint8_t dotASCIICode[2] = { '2', 'e' };
 
 template<typename CharacterType>
 ALWAYS_INLINE bool URLParser::isSingleDotPathSegment(CodePointIterator<CharacterType> c)
@@ -884,7 +884,7 @@ ALWAYS_INLINE bool URLParser::isSingleDotPathSegment(CodePointIterator<Character
     advance<CharacterType, ReportSyntaxViolation::No>(c);
     if (c.atEnd())
         return false;
-    if (toASCIILower(*c) == dotASCIICode[1]) {
+    if (isASCIIAlphaCaselessEqual(*c, dotASCIICode[1])) {
         advance<CharacterType, ReportSyntaxViolation::No>(c);
         return c.atEnd() || isSlashQuestionOrHash(*c);
     }
@@ -908,7 +908,7 @@ ALWAYS_INLINE bool URLParser::isDoubleDotPathSegment(CodePointIterator<Character
     advance<CharacterType, ReportSyntaxViolation::No>(c);
     if (c.atEnd())
         return false;
-    if (toASCIILower(*c) == dotASCIICode[1]) {
+    if (isASCIIAlphaCaselessEqual(*c, dotASCIICode[1])) {
         advance<CharacterType, ReportSyntaxViolation::No>(c);
         return isSingleDotPathSegment(c);
     }
@@ -932,7 +932,7 @@ void URLParser::consumeSingleDotPathSegment(CodePointIterator<CharacterType>& c)
         advance(c);
         ASSERT(*c == dotASCIICode[0]);
         advance(c);
-        ASSERT(toASCIILower(*c) == dotASCIICode[1]);
+        ASSERT(isASCIIAlphaCaselessEqual(*c, dotASCIICode[1]));
         advance(c);
         if (!c.atEnd()) {
             if (*c == '/' || *c == '\\')
@@ -954,7 +954,7 @@ void URLParser::consumeDoubleDotPathSegment(CodePointIterator<CharacterType>& c)
         advance(c);
         ASSERT(*c == dotASCIICode[0]);
         advance(c);
-        ASSERT(toASCIILower(*c) == dotASCIICode[1]);
+        ASSERT(isASCIIAlphaCaselessEqual(*c, dotASCIICode[1]));
         advance(c);
     }
     consumeSingleDotPathSegment(c);
@@ -999,11 +999,10 @@ void URLParser::syntaxViolation(const CodePointIterator<CharacterType>& iterator
     ASSERT(m_asciiBuffer.isEmpty());
     size_t codeUnitsToCopy = iterator.codeUnitsSince(reinterpret_cast<const CharacterType*>(m_inputBegin));
     RELEASE_ASSERT(codeUnitsToCopy <= m_inputString.length());
-    m_asciiBuffer.reserveCapacity(m_inputString.length());
-    for (size_t i = 0; i < codeUnitsToCopy; ++i) {
-        ASSERT(isASCII(m_inputString[i]));
-        m_asciiBuffer.uncheckedAppend(m_inputString[i]);
-    }
+    if (m_inputString.is8Bit())
+        m_asciiBuffer.append(m_inputString.characters8(), codeUnitsToCopy);
+    else
+        m_asciiBuffer.append(m_inputString.characters16(), codeUnitsToCopy);
 }
 
 void URLParser::failure()
@@ -1013,7 +1012,7 @@ void URLParser::failure()
 }
 
 template<typename CharacterType>
-bool URLParser::checkLocalhostCodePoint(CodePointIterator<CharacterType>& iterator, UChar32 codePoint)
+bool URLParser::checkLocalhostCodePoint(CodePointIterator<CharacterType>& iterator, char32_t codePoint)
 {
     if (iterator.atEnd() || toASCIILower(*iterator) != codePoint)
         return false;
@@ -1082,7 +1081,7 @@ URLParser::URLParser(String&& input, const URL& base, const URLTextEncoding* non
     : m_inputString(WTFMove(input))
 {
     if (m_inputString.isNull()) {
-        if (base.isValid() && !base.m_cannotBeABaseURL) {
+        if (base.isValid() && !base.m_hasOpaquePath) {
             m_url = base;
             m_url.removeFragmentIdentifier();
         }
@@ -1126,7 +1125,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
     Vector<UChar> queryBuffer;
 
     unsigned endIndex = length;
-    if (UNLIKELY(nonUTF8QueryEncoding == URLTextEncodingSentinelAllowingC0AtEndOfHash))
+    if (UNLIKELY(nonUTF8QueryEncoding == URLTextEncodingSentinelAllowingC0AtEnd))
         nonUTF8QueryEncoding = nullptr;
     else {
         while (UNLIKELY(endIndex && isC0ControlOrSpace(input[endIndex - 1]))) {
@@ -1160,7 +1159,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
         FileHost,
         PathStart,
         Path,
-        CannotBeABaseURLPath,
+        OpaquePath,
         UTF8Query,
         NonUTF8Query,
         Fragment,
@@ -1208,8 +1207,8 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                     return;
                 }
                 m_url.m_schemeEnd = schemeEnd;
-                StringView urlScheme = parsedDataView(0, m_url.m_schemeEnd);
                 appendToASCIIBuffer(':');
+                StringView urlScheme = parsedDataView(0, m_url.m_schemeEnd);
                 switch (scheme(urlScheme)) {
                 case Scheme::File:
                     m_urlIsSpecial = true;
@@ -1258,8 +1257,8 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                         m_url.m_hostEnd = m_url.m_userStart;
                         m_url.m_portLength = 0;
                         m_url.m_pathAfterLastSlash = m_url.m_userStart;
-                        m_url.m_cannotBeABaseURL = true;
-                        state = State::CannotBeABaseURLPath;
+                        m_url.m_hasOpaquePath = true;
+                        state = State::OpaquePath;
                     }
                     break;
                 }
@@ -1279,11 +1278,11 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
             break;
         case State::NoScheme:
             LOG_STATE("NoScheme");
-            if (!base.isValid() || (base.m_cannotBeABaseURL && *c != '#')) {
+            if (!base.isValid() || (base.m_hasOpaquePath && *c != '#')) {
                 failure();
                 return;
             }
-            if (base.m_cannotBeABaseURL && *c == '#') {
+            if (base.m_hasOpaquePath && *c == '#') {
                 copyURLPartsUntil(base, URLPart::QueryEnd, c, nonUTF8QueryEncoding);
                 state = State::Fragment;
                 appendToASCIIBuffer('#');
@@ -1747,8 +1746,8 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
             utf8PercentEncode<isInDefaultEncodeSet>(c);
             ++c;
             break;
-        case State::CannotBeABaseURLPath:
-            LOG_STATE("CannotBeABaseURLPath");
+        case State::OpaquePath:
+            LOG_STATE("OpaquePath");
             if (*c == '?') {
                 m_url.m_pathEnd = currentPosition(c);
                 appendToASCIIBuffer('?');
@@ -1808,7 +1807,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
     switch (state) {
     case State::SchemeStart:
         LOG_FINAL_STATE("SchemeStart");
-        if (!currentPosition(c) && base.isValid() && !base.m_cannotBeABaseURL) {
+        if (!currentPosition(c) && base.isValid() && !base.m_hasOpaquePath) {
             m_url = base;
             m_url.removeFragmentIdentifier();
             return;
@@ -1998,8 +1997,8 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
         m_url.m_pathEnd = currentPosition(c);
         m_url.m_queryEnd = m_url.m_pathEnd;
         break;
-    case State::CannotBeABaseURLPath:
-        LOG_FINAL_STATE("CannotBeABaseURLPath");
+    case State::OpaquePath:
+        LOG_FINAL_STATE("OpaquePath");
         m_url.m_pathEnd = currentPosition(c);
         m_url.m_queryEnd = m_url.m_pathEnd;
         break;
@@ -2478,16 +2477,16 @@ URLParser::LCharBuffer URLParser::percentDecode(const LChar* input, size_t lengt
     for (size_t i = 0; i < length; ++i) {
         uint8_t byte = input[i];
         if (byte != '%')
-            output.uncheckedAppend(byte);
+            output.append(byte);
         else if (length > 2 && i < length - 2) {
             if (isASCIIHexDigit(input[i + 1]) && isASCIIHexDigit(input[i + 2])) {
                 syntaxViolation(iteratorForSyntaxViolationPosition);
-                output.uncheckedAppend(toASCIIHexValue(input[i + 1], input[i + 2]));
+                output.append(toASCIIHexValue(input[i + 1], input[i + 2]));
                 i += 2;
             } else
-                output.uncheckedAppend(byte);
+                output.append(byte);
         } else
-            output.uncheckedAppend(byte);
+            output.append(byte);
     }
     return output;
 }
@@ -2500,15 +2499,15 @@ URLParser::LCharBuffer URLParser::percentDecode(const LChar* input, size_t lengt
     for (size_t i = 0; i < length; ++i) {
         uint8_t byte = input[i];
         if (byte != '%')
-            output.uncheckedAppend(byte);
+            output.append(byte);
         else if (length > 2 && i < length - 2) {
             if (isASCIIHexDigit(input[i + 1]) && isASCIIHexDigit(input[i + 2])) {
-                output.uncheckedAppend(toASCIIHexValue(input[i + 1], input[i + 2]));
+                output.append(toASCIIHexValue(input[i + 1], input[i + 2]));
                 i += 2;
             } else
-                output.uncheckedAppend(byte);
+                output.append(byte);
         } else
-            output.uncheckedAppend(byte);
+            output.append(byte);
     }
     return output;
 }
@@ -2540,20 +2539,18 @@ template<typename CharacterType> std::optional<URLParser::LCharBuffer> URLParser
         size_t length = domain.length();
         if (domain.is8Bit()) {
             const LChar* characters = domain.characters8();
-            ascii.reserveInitialCapacity(length);
-            for (size_t i = 0; i < length; ++i) {
+            ascii.appendUsingFunctor(length, [&](size_t i) {
                 if (UNLIKELY(isASCIIUpper(characters[i])))
                     syntaxViolation(iteratorForSyntaxViolationPosition);
-                ascii.uncheckedAppend(toASCIILower(characters[i]));
-            }
+                return toASCIILower(characters[i]);
+            });
         } else {
             const UChar* characters = domain.characters16();
-            ascii.reserveInitialCapacity(length);
-            for (size_t i = 0; i < length; ++i) {
+            ascii.appendUsingFunctor(length, [&](size_t i) {
                 if (UNLIKELY(isASCIIUpper(characters[i])))
                     syntaxViolation(iteratorForSyntaxViolationPosition);
-                ascii.uncheckedAppend(toASCIILower(characters[i]));
-            }
+                return toASCIILower(characters[i]);
+            });
         }
         return ascii;
     }
@@ -2977,7 +2974,7 @@ bool URLParser::allValuesEqual(const URL& a, const URL& b)
 {
     URL_PARSER_LOG("%d %d %d %d %d %d %d %d %d %d %d %d %s\n%d %d %d %d %d %d %d %d %d %d %d %d %s",
         a.m_isValid,
-        a.m_cannotBeABaseURL,
+        a.m_hasOpaquePath,
         a.m_protocolIsInHTTPFamily,
         a.m_schemeEnd,
         a.m_userStart,
@@ -2990,7 +2987,7 @@ bool URLParser::allValuesEqual(const URL& a, const URL& b)
         a.m_queryEnd,
         a.m_string.utf8().data(),
         b.m_isValid,
-        b.m_cannotBeABaseURL,
+        b.m_hasOpaquePath,
         b.m_protocolIsInHTTPFamily,
         b.m_schemeEnd,
         b.m_userStart,
@@ -3005,7 +3002,7 @@ bool URLParser::allValuesEqual(const URL& a, const URL& b)
 
     return a.m_string == b.m_string
         && a.m_isValid == b.m_isValid
-        && a.m_cannotBeABaseURL == b.m_cannotBeABaseURL
+        && a.m_hasOpaquePath == b.m_hasOpaquePath
         && a.m_protocolIsInHTTPFamily == b.m_protocolIsInHTTPFamily
         && a.m_schemeEnd == b.m_schemeEnd
         && a.m_userStart == b.m_userStart

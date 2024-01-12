@@ -32,6 +32,7 @@
 #include "Logging.h"
 #include "NativeWebWheelEvent.h"
 #include "RemoteLayerTreeDrawingAreaProxyMac.h"
+#include "RemoteLayerTreeNode.h"
 #include "RemoteScrollingCoordinatorProxyMac.h"
 #include "RemoteScrollingTree.h"
 #include "WebEventConversion.h"
@@ -274,7 +275,7 @@ WheelEventHandlingResult RemoteLayerTreeEventDispatcher::internalHandleWheelEven
     return scrollingTree->handleWheelEvent(filteredEvent, processingSteps);
 }
 
-void RemoteLayerTreeEventDispatcher::wheelEventHandlingCompleted(const PlatformWheelEvent& wheelEvent, ScrollingNodeID scrollingNodeID, std::optional<WheelScrollGestureState> gestureState)
+void RemoteLayerTreeEventDispatcher::wheelEventHandlingCompleted(const PlatformWheelEvent& wheelEvent, ScrollingNodeID scrollingNodeID, std::optional<WheelScrollGestureState> gestureState, bool wasHandled)
 {
     ASSERT(isMainRunLoop());
 
@@ -283,15 +284,15 @@ void RemoteLayerTreeEventDispatcher::wheelEventHandlingCompleted(const PlatformW
     if (auto scrollingTree = this->scrollingTree())
         scrollingTree->receivedEventAfterDefaultHandling(wheelEvent, gestureState);
 
-    ScrollingThread::dispatch([protectedThis = Ref { *this }, wheelEvent, scrollingNodeID, gestureState] {
+    ScrollingThread::dispatch([protectedThis = Ref { *this }, wheelEvent, scrollingNodeID, gestureState, wasHandled] {
         auto scrollingTree = protectedThis->scrollingTree();
         if (!scrollingTree)
             return;
 
         auto result = scrollingTree->handleWheelEventAfterDefaultHandling(wheelEvent, scrollingNodeID, gestureState);
-        RunLoop::main().dispatch([protectedThis, result]() {
+        RunLoop::main().dispatch([protectedThis, wasHandled, result]() {
             if (auto* scrollingCoordinator = protectedThis->scrollingCoordinator())
-                scrollingCoordinator->webPageProxy().wheelEventHandlingCompleted(result.wasHandled);
+                scrollingCoordinator->webPageProxy().wheelEventHandlingCompleted(wasHandled || result.wasHandled);
         });
 
     });
@@ -555,6 +556,20 @@ void RemoteLayerTreeEventDispatcher::renderingUpdateComplete()
 
     m_state = SynchronizationState::Idle;
 }
+
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+void RemoteLayerTreeEventDispatcher::animationsWereAddedToNode(RemoteLayerTreeNode& node)
+{
+    auto effectStack = node.takeEffectStack();
+    ASSERT(effectStack);
+    m_effectStacks.set(node.layerID(), effectStack.releaseNonNull());
+}
+
+void RemoteLayerTreeEventDispatcher::animationsWereRemovedFromNode(RemoteLayerTreeNode& node)
+{
+    m_effectStacks.remove(node.layerID());
+}
+#endif
 
 void RemoteLayerTreeEventDispatcher::windowScreenWillChange()
 {

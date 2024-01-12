@@ -45,6 +45,7 @@
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WKWebViewPrivateForTesting.h>
 #import <mach/mach_time.h>
+#import <pal/spi/mac/NSApplicationSPI.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/WorkQueue.h>
 
@@ -72,7 +73,7 @@ void UIScriptControllerMac::zoomToScale(double scale, JSValueRef callback)
     auto* webView = this->webView();
     [webView _setPageScale:scale withOrigin:CGPointZero];
 
-    [webView _doAfterNextPresentationUpdate:makeBlockPtr([this, strongThis = Ref { *this }, callbackID] {
+    [webView _doAfterNextPresentationUpdate:makeBlockPtr([this, protectedThis = Ref { *this }, callbackID] {
         if (!m_context)
             return;
         m_context->asyncTaskComplete(callbackID);
@@ -92,7 +93,7 @@ void UIScriptControllerMac::simulateAccessibilitySettingsChangeNotification(JSVa
     NSNotificationCenter *center = [[NSWorkspace sharedWorkspace] notificationCenter];
     [center postNotificationName:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification object:webView];
 
-    [webView _doAfterNextPresentationUpdate:makeBlockPtr([this, strongThis = Ref { *this }, callbackID] {
+    [webView _doAfterNextPresentationUpdate:makeBlockPtr([this, protectedThis = Ref { *this }, callbackID] {
         if (!m_context)
             return;
         m_context->asyncTaskComplete(callbackID);
@@ -212,7 +213,7 @@ void UIScriptControllerMac::chooseMenuAction(JSStringRef jsAction, JSValueRef ca
         [activeMenu cancelTracking];
     }
 
-    WorkQueue::main().dispatch([this, strongThis = Ref { *this }, callbackID] {
+    WorkQueue::main().dispatch([this, protectedThis = Ref { *this }, callbackID] {
         if (!m_context)
             return;
         m_context->asyncTaskComplete(callbackID);
@@ -269,17 +270,21 @@ void UIScriptControllerMac::toggleCapsLock(JSValueRef callback)
 {
     m_capsLockOn = !m_capsLockOn;
     NSWindow *window = [webView() window];
-    NSEvent *fakeEvent = [NSEvent keyEventWithType:NSEventTypeFlagsChanged
-        location:NSZeroPoint
-        modifierFlags:m_capsLockOn ? NSEventModifierFlagCapsLock : 0
-        timestamp:0
-        windowNumber:window.windowNumber
-        context:nullptr
-        characters:@""
-        charactersIgnoringModifiers:@""
-        isARepeat:NO
-        keyCode:57];
-    [window sendEvent:fakeEvent];
+    const auto makeFakeCapsLockKeyEventWithType = [capsLockOn = m_capsLockOn, window] (NSEventType eventType) {
+        return [NSEvent keyEventWithType:eventType
+            location:NSZeroPoint
+            modifierFlags:capsLockOn ? NSEventModifierFlagCapsLock : 0
+            timestamp:0
+            windowNumber:window.windowNumber
+            context:nullptr
+            characters:@""
+            charactersIgnoringModifiers:@""
+            isARepeat:NO
+            keyCode:57];
+    };
+    NSArray<NSEvent *> *fakeEventsToBeSent = @[ makeFakeCapsLockKeyEventWithType(NSEventTypeKeyDown), makeFakeCapsLockKeyEventWithType(NSEventTypeKeyUp), makeFakeCapsLockKeyEventWithType(NSEventTypeFlagsChanged) ];
+    for (NSEvent *fakeEvent in fakeEventsToBeSent)
+        [window sendEvent:fakeEvent];
     doAsyncTask(callback);
 }
 
@@ -302,11 +307,16 @@ void UIScriptControllerMac::activateAtPoint(long x, long y, JSValueRef callback)
     eventSender->mouseDown(0, 0);
     eventSender->mouseUp(0, 0);
 
-    WorkQueue::main().dispatch([this, strongThis = Ref { *this }, callbackID] {
+    WorkQueue::main().dispatch([this, protectedThis = Ref { *this }, callbackID] {
         if (!m_context)
             return;
         m_context->asyncTaskComplete(callbackID);
     });
+}
+
+int64_t UIScriptControllerMac::pasteboardChangeCount() const
+{
+    return NSPasteboard.generalPasteboard.changeCount;
 }
 
 void UIScriptControllerMac::copyText(JSStringRef text)
@@ -422,7 +432,7 @@ void UIScriptControllerMac::sendEventStream(JSStringRef eventsJSON, JSValueRef c
         currentTime += nanosecondsEventInterval;
     }
 
-    WorkQueue::main().dispatch([this, strongThis = Ref { *this }, callbackID] {
+    WorkQueue::main().dispatch([this, protectedThis = Ref { *this }, callbackID] {
         if (!m_context)
             return;
         m_context->asyncTaskComplete(callbackID);
@@ -432,6 +442,16 @@ void UIScriptControllerMac::sendEventStream(JSStringRef eventsJSON, JSValueRef c
 JSRetainPtr<JSStringRef> UIScriptControllerMac::scrollbarStateForScrollingNodeID(unsigned long long scrollingNodeID, bool isVertical) const
 {
     return adopt(JSStringCreateWithCFString((CFStringRef) [webView() _scrollbarStateForScrollingNodeID:scrollingNodeID isVertical:isVertical]));
+}
+
+void UIScriptControllerMac::setAppAccentColor(unsigned short red, unsigned short green, unsigned short blue)
+{
+    NSApp._accentColor = [NSColor colorWithRed:red / 255. green:green / 255. blue:blue / 255. alpha:1];
+}
+
+void UIScriptControllerMac::setWebViewAllowsMagnification(bool allowsMagnification)
+{
+    webView().allowsMagnification = allowsMagnification;
 }
 
 } // namespace WTR

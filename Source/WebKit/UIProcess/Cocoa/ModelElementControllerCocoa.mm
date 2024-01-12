@@ -32,6 +32,7 @@
 
 #import "Logging.h"
 #import "WebPageProxy.h"
+#import "WebPreferences.h"
 #import <WebCore/LayoutPoint.h>
 #import <WebCore/LayoutUnit.h>
 #import <WebCore/ResourceError.h>
@@ -303,7 +304,7 @@ void ModelElementController::modelElementSizeDidChange(const String& uuid, WebCo
 
             auto fenceSendRight = MachSendRight::adopt([strongFenceHandle copyPort]);
             [strongFenceHandle invalidate];
-            handler(fenceSendRight);
+            handler(WTFMove(fenceSendRight));
         });
     }).get()];
 }

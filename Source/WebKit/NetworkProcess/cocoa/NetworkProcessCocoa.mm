@@ -50,8 +50,13 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+#if ENABLE(CONTENT_FILTERING)
 #import <pal/spi/cocoa/NEFilterSourceSPI.h>
+#endif
+
+#if USE(EXTENSIONKIT)
+#import "ExtensionKitSPI.h"
+#import "WKProcessExtension.h"
 #endif
 
 namespace WebKit {
@@ -81,7 +86,6 @@ void NetworkProcess::platformInitializeNetworkProcessCocoa(const NetworkProcessC
     m_isParentProcessFullWebBrowserOrRunningTest = parameters.isParentProcessFullWebBrowserOrRunningTest;
 
     _CFNetworkSetATSContext(parameters.networkATSContext.get());
-    IPC::setStrictSecureDecodingForAllObjCEnabled(parameters.strictSecureDecodingForAllObjCEnabled);
 
     m_uiProcessBundleIdentifier = parameters.uiProcessBundleIdentifier;
 
@@ -105,7 +109,7 @@ void NetworkProcess::platformInitializeNetworkProcessCocoa(const NetworkProcessC
     auto urlCache(adoptNS([[NSURLCache alloc] initWithMemoryCapacity:0 diskCapacity:0 diskPath:nil]));
     [NSURLCache setSharedURLCache:urlCache.get()];
 
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+#if ENABLE(CONTENT_FILTERING)
     auto auditToken = parentProcessConnection()->getAuditToken();
     ASSERT(auditToken);
     if (auditToken && [NEFilterSource respondsToSelector:@selector(setDelegation:)])
@@ -151,12 +155,6 @@ void NetworkProcess::deleteHSTSCacheForHostNames(PAL::SessionID sessionID, const
         for (auto& hostName : hostNames)
             [networkSession->hstsStorage() resetHSTSForHost:hostName];
     }
-}
-
-void NetworkProcess::allowSpecificHTTPSCertificateForHost(PAL::SessionID, const WebCore::CertificateInfo& certificateInfo, const String& host)
-{
-    // FIXME: Remove this once rdar://30655740 is fixed.
-    [NSURLRequest setAllowsSpecificHTTPSCertificate:(NSArray *)WebCore::CertificateInfo::certificateChainFromSecTrust(certificateInfo.trust().get()).get() forHost:host];
 }
 
 void NetworkProcess::clearHSTSCache(PAL::SessionID sessionID, WallTime modifiedSince)
@@ -257,5 +255,30 @@ void NetworkProcess::setProxyConfigData(PAL::SessionID sessionID, Vector<std::pa
     session->setProxyConfigData(WTFMove(proxyConfigurations));
 }
 #endif // HAVE(NW_PROXY_CONFIG)
+
+#if USE(RUNNINGBOARD) && USE(EXTENSIONKIT)
+bool NetworkProcess::aqcuireLockedFileGrant()
+{
+    m_holdingLockedFileGrant = [WKProcessExtension.sharedInstance grant:@"com.apple.common" name:@"FinishTaskInterruptable"];
+    if (m_holdingLockedFileGrant)
+        RELEASE_LOG(Process, "Successfully took assertion on Network process for locked file.");
+    else
+        RELEASE_LOG_ERROR(Process, "Unable to take assertion on Network process for locked file.");
+    return !!m_holdingLockedFileGrant;
+}
+
+void NetworkProcess::invalidateGrant()
+{
+    if (!hasAcquiredGrant())
+        return;
+
+    m_holdingLockedFileGrant = nil;
+}
+
+bool NetworkProcess::hasAcquiredGrant() const
+{
+    return !!m_holdingLockedFileGrant;
+}
+#endif
 
 } // namespace WebKit

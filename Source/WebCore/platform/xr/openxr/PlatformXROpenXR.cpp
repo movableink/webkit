@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia, S.L.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -52,8 +53,6 @@ OpenXRDevice::OpenXRDevice(XrInstance instance, XrSystemId system, Ref<WorkQueue
     , m_extensions(extensions)
 {
 }
-
-OpenXRDevice::~OpenXRDevice() = default;
 
 void OpenXRDevice::initialize(CompletionHandler<void()>&& callback)
 {
@@ -190,7 +189,7 @@ void OpenXRDevice::requestFrame(RequestFrameCallback&& callback)
         result = xrBeginFrame(m_session, &frameBeginInfo);
         RETURN_IF_FAILED(result, "xrBeginFrame", m_instance);
 
-        Device::FrameData frameData;
+        FrameData frameData;
         frameData.predictedDisplayTime = m_frameState.predictedDisplayTime;
         frameData.shouldRender = m_frameState.shouldRender;
         frameData.stageParameters = m_stageParameters;
@@ -499,8 +498,9 @@ void OpenXRDevice::endSession()
         return;
 
     // Notify did end event
-    callOnMainThread([this, weakThis = WeakPtr { *this }]() {
-        if (!weakThis)
+    callOnMainThread([this, weakThis = ThreadSafeWeakPtr { *this }]() {
+        auto protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
         if (m_trackingAndRenderingClient)
             m_trackingAndRenderingClient->sessionDidEnd();
@@ -588,8 +588,9 @@ void OpenXRDevice::updateInteractionProfile()
 
     didNotifyInputInitialization = true;
     auto inputSources = m_input->collectInputSources(m_frameState);
-    callOnMainThread([this, weakThis = WeakPtr { *this }, inputSources = WTFMove(inputSources)]() mutable {
-        if (!weakThis)
+    callOnMainThread([this, weakThis = ThreadSafeWeakPtr { *this }, inputSources = WTFMove(inputSources)]() mutable {
+        auto protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
         if (m_trackingAndRenderingClient)
             m_trackingAndRenderingClient->sessionDidInitializeInputSources(WTFMove(inputSources));

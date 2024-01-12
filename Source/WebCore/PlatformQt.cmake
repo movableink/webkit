@@ -1,5 +1,5 @@
 include(platform/ImageDecoders.cmake)
-include(platform/TextureMapper.cmake)
+include(platform/graphics/qt/texmap/TextureMapper.cmake)
 
 set(WebCore_OUTPUT_NAME WebCore)
 
@@ -156,9 +156,6 @@ list(APPEND WebCore_SOURCES
     platform/graphics/qt/TileQt.cpp
     platform/graphics/qt/TransformationMatrixQt.cpp
 
-#    platform/graphics/x11/PlatformDisplayX11.cpp
-    platform/graphics/x11/XUniqueResource.cpp
-
     platform/image-decoders/qt/ImageBackingStoreQt.cpp
 
     platform/network/MIMESniffing.cpp
@@ -201,6 +198,7 @@ list(APPEND WebCore_SOURCES
     platform/qt/ScrollbarThemeQt.cpp
     platform/qt/SharedBufferQt.cpp
     platform/qt/TemporaryLinkStubsQt.cpp
+    platform/qt/ThemeQt.cpp
     platform/qt/ThirdPartyCookiesQt.cpp
     platform/qt/UserAgentQt.cpp
     platform/qt/WidgetQt.cpp
@@ -257,25 +255,6 @@ if (ENABLE_TOUCH_ADJUSTMENT)
     list(APPEND WebCore_SOURCES
         page/qt/TouchAdjustment.cpp
     )
-endif ()
-
-if (ENABLE_NETSCAPE_PLUGIN_API)
-    if (WIN32)
-        list(APPEND WebCore_SOURCES
-            platform/graphics/win/TransformationMatrixWin.cpp
-
-            platform/win/BitmapInfo.cpp
-            platform/win/WebCoreInstanceHandle.cpp
-        )
-        list(APPEND WebCore_LIBRARIES
-            shlwapi
-            version
-        )
-    elseif (PLUGIN_BACKEND_XLIB)
-        list(APPEND WebCore_SOURCES
-            plugins/qt/QtX11ImageConversion.cpp
-        )
-    endif ()
 endif ()
 
 # Do it in the WebCore to support SHARED_CORE since WebKitWidgets won't load WebKitLegacy in that case.
@@ -419,13 +398,20 @@ if (USE_QT_MULTIMEDIA)
 endif ()
 
 if (ENABLE_VIDEO)
-    list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
-        ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsBase.css
-    )
-    set(WebCore_USER_AGENT_SCRIPTS
-        ${WEBCORE_DIR}/en.lproj/mediaControlsLocalizedStrings.js
-        ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsBase.js
-    )
+    if (ENABLE_MODERN_MEDIA_CONTROLS)
+        list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
+            ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.css
+        )
+
+        list(APPEND WebCore_USER_AGENT_SCRIPTS
+            ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.js
+        )
+    else ()
+        list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
+            ${WEBCORE_DIR}/css/mediaControls.css
+        )
+    endif ()
+
     set(WebCore_USER_AGENT_SCRIPTS_DEPENDENCIES ${WEBCORE_DIR}/platform/qt/RenderThemeQt.cpp)
 endif ()
 
