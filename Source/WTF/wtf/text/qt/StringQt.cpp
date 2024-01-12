@@ -28,7 +28,12 @@
 #include <QString>
 #include <QStringView>
 #include <QByteArrayView>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
 #include <QLatin1StringView>
+#else
+#include <QLatin1String>
+using QLatin1StringView = QLatin1String;
+#endif
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/WTFString.h>
 
