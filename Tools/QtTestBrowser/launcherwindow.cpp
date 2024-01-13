@@ -694,10 +694,24 @@ bool LauncherWindow::eventFilter(QObject* obj, QEvent* event)
         // If the keyboard point is already pressed, release it.
         // Otherwise create it and append to m_touchPoints.
         if (m_touchPoints.size() > 0 && m_touchPoints[0].id() == 1) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
+            QMutableEventPoint point;
+            point.updateFrom(m_touchPoints[0]);
+            point.setState(QEventPoint::Released);
+            m_touchPoints[0] = point;
+#else
             QMutableEventPoint::setState(m_touchPoints[0], QEventPoint::Released);
+#endif
             sendTouchEvent();
         } else if (m_touchPoints.size() > 1 && m_touchPoints[1].id() == 1) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
+            QMutableEventPoint point;
+            point.updateFrom(m_touchPoints[0]);
+            point.setState(QEventPoint::Released);
+            m_touchPoints[1] = point;
+#else
             QMutableEventPoint::setState(m_touchPoints[1], QEventPoint::Released);
+#endif
             sendTouchEvent();
         } else {
             QEventPoint touchPoint(1, QEventPoint::Pressed, m_view->mapFromGlobal(QCursor::pos()), QCursor::pos());
@@ -705,7 +719,14 @@ bool LauncherWindow::eventFilter(QObject* obj, QEvent* event)
             sendTouchEvent();
 
             // After sending the event, change the touchpoint state to stationary
+#if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
+            QMutableEventPoint point;
+            point.updateFrom(m_touchPoints.last());
+            point.setState(QEventPoint::Stationary);
+            m_touchPoints[m_touchPoints.length() - 1] = point;
+#else
             QMutableEventPoint::setState(m_touchPoints.last(), QEventPoint::Stationary);
+#endif
         }
     }
 
