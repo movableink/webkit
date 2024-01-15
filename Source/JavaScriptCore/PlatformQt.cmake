@@ -15,11 +15,11 @@ list(APPEND JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
 )
 
 list(APPEND JavaScriptCore_SYSTEM_INCLUDE_DIRECTORIES
-    ${Qt5Core_INCLUDE_DIRS}
+    ${Qt6Core_INCLUDE_DIRS}
 )
 
 list(APPEND JavaScriptCore_LIBRARIES
-    ${Qt5Core_LIBRARIES}
+    ${Qt6Core_LIBRARIES}
 )
 
 if (QT_STATIC_BUILD)

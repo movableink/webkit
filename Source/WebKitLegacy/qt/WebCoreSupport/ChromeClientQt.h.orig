@@ -214,7 +214,11 @@ public:
     IntRect rootViewToAccessibilityScreen(const IntRect&) const final;
     void didFinishLoadingImageForElement(HTMLImageElement&) final;
     void intrinsicContentsSizeChanged(const IntSize&) const final;
+<<<<<<< HEAD
     RefPtr<Icon> createIconForFiles(const Vector<WTF::String>&) final;
+=======
+    RefPtr<Icon> createIconForFiles(const Vector<WTF::String>&) override;
+>>>>>>> merge-upstream-2023-12-18
 
     QWebFullScreenVideoHandler* createFullScreenVideoHandler();
 

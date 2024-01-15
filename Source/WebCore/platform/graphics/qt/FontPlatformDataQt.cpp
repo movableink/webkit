@@ -75,7 +75,7 @@ void FontPlatformDataPrivate::platformDataInit(FontPlatformData& q, float size, 
     q.updateSize(size);
 }
 
-FontPlatformData::FontPlatformData(const FontDescription& description, const AtomString& familyName, const FontCustomPlatformData* customPlatformData)
+FontPlatformData::FontPlatformData(const FontDescription& description, const AtomString& familyName, const FontCustomPlatformData*)
 {
     QFont font;
     auto requestedSize = description.computedSize();
@@ -97,7 +97,7 @@ FontPlatformData::FontPlatformData(const FontDescription& description, const Ato
     FontPlatformDataPrivate::platformDataInit(*this, size, QRawFont::fromFont(font, QFontDatabase::Any));
 }
 
-FontPlatformData::FontPlatformData(const QRawFont& rawFont, const FontCustomPlatformData* customPlatformData)
+FontPlatformData::FontPlatformData(const QRawFont& rawFont, const FontCustomPlatformData*)
 {
     FontPlatformDataPrivate::platformDataInit(*this, rawFont.pixelSize(), rawFont);
 }

@@ -38,6 +38,9 @@
 #if PLATFORM(QT)
 QT_BEGIN_NAMESPACE
 class QString;
+class QStringView;
+class QLatin1String;
+class QByteArrayView;
 QT_END_NAMESPACE
 #endif
 
@@ -260,8 +263,15 @@ public:
 
 #if PLATFORM(QT)
     WTF_EXPORT_PRIVATE String(const QString&);
-    WTF_EXPORT_PRIVATE String(const QStringRef&);
+    WTF_EXPORT_PRIVATE String(QLatin1String);
+    WTF_EXPORT_PRIVATE String(QStringView);
+    WTF_EXPORT_PRIVATE String(QByteArrayView);
     WTF_EXPORT_PRIVATE operator QString() const;
+
+    // String(QStringView) makes for an ambiguous constructor, so we need to make these explicit
+    ALWAYS_INLINE String(Vector<UChar, 64> characters) : String(characters.data(), characters.size()) {}
+    ALWAYS_INLINE String(Vector<UChar, 32> characters) : String(characters.data(), characters.size()) {}
+    ALWAYS_INLINE String(Vector<UChar> characters) : String(characters.data(), characters.size()) {}
 #endif
 
 #if OS(WINDOWS)

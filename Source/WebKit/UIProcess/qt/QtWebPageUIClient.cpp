@@ -84,13 +84,13 @@ void QtWebPageUIClient::mouseDidMoveOverElement(const QUrl& linkURL, const QStri
         return;
     m_lastHoveredURL = linkURL;
     m_lastHoveredTitle = linkTitle;
-    emit m_webView->linkHovered(m_lastHoveredURL, m_lastHoveredTitle);
+    Q_EMIT m_webView->linkHovered(m_lastHoveredURL, m_lastHoveredTitle);
 }
 
 void QtWebPageUIClient::permissionRequest(QWebPermissionRequest* request)
 {
     request->setParent(m_webView);
-    emit m_webView->experimental()->permissionRequested(request);
+    Q_EMIT m_webView->experimental()->permissionRequested(request);
 }
 
 static QtWebPageUIClient* toQtWebPageUIClient(const void* clientInfo)

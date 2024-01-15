@@ -8,6 +8,6 @@ if (ENABLE_WPE_QT_API)
     endif ()
 
     add_executable(qt-wpe-mini-browser "main.cpp" "qml.qrc")
-    target_link_libraries(qt-wpe-mini-browser Qt5::Core Qt5::Quick)
+    target_link_libraries(qt-wpe-mini-browser Qt6::Core Qt6::Quick)
     install(TARGETS qt-wpe-mini-browser DESTINATION "${LIBEXEC_INSTALL_DIR}")
 endif ()

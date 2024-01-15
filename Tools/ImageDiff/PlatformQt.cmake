@@ -3,9 +3,9 @@ set(ImageDiff_SOURCES
 )
 
 list(APPEND ImageDiff_SYSTEM_INCLUDE_DIRECTORIES
-    ${Qt5Gui_INCLUDE_DIRS}
+    ${Qt6Gui_INCLUDE_DIRS}
 )
 
 set(ImageDiff_LIBRARIES
-    ${Qt5Gui_LIBRARIES}
+    ${Qt6Gui_LIBRARIES}
 )

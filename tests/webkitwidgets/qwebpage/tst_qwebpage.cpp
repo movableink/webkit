@@ -28,8 +28,7 @@
 #include <QMenu>
 #include <QMimeDatabase>
 #include <QPushButton>
-#include <QRegExp>
-#include <QStateMachine>
+#include <QRegularExpression>
 #include <QStyle>
 #include <QtTest/QtTest>
 #include <QTextCharFormat>
@@ -137,13 +136,6 @@ private Q_SLOTS:
     void contextMenuCrash();
     void updatePositionDependentActionsCrash();
     void database();
-    void createPluginWithPluginsEnabled();
-    void createPluginWithPluginsDisabled();
-    void destroyPlugin_data();
-    void destroyPlugin();
-    void createViewlessPlugin_data();
-    void createViewlessPlugin();
-    void graphicsWidgetPlugin();
 
 #ifdef HAVE_QTTESTSUPPORT
     void multiplePageGroupsAndLocalStorage();
@@ -156,10 +148,6 @@ private Q_SLOTS:
     void frameAt();
     void requestCache();
     void loadCachedPage();
-
-#ifdef HAVE_QTTESTSUPPORT
-    void protectBindingsRuntimeObjectsFromCollector();
-#endif
 
     void localURLSchemes();
     void testOptionalJSObjects();
@@ -317,41 +305,47 @@ void tst_QWebPage::domainSpecificKeyEvent()
         "window.onkeyup = keyEvent; window.onkeypress = keyEvent; window.onkeydown = keyEvent;"
         "</script></head><body>test</body></html>"));
 
+    {
     // Enable settings to use nativeVirtualKey as DOM key value.
     webView.page()->setProperty("_q_useNativeVirtualKeyAsDOMKey", true);
     // Simulate domain specific keyevent to WebKit by passing it as nativeVirtualKey in QKeyEvent.
     // Qt::Key_Pause --> 0x51
     QKeyEvent keyEvent(QEvent::KeyPress, Qt::Key_Pause, Qt::NoModifier, 0, 81, 0);
     QApplication::sendEvent(&webView, &keyEvent);
-    keyEvent = QKeyEvent(QEvent::KeyRelease, Qt::Key_Pause, Qt::NoModifier, 0, 81, 0);
-    QApplication::sendEvent(&webView, &keyEvent);
+    QKeyEvent releaseKeyEvent(QEvent::KeyRelease, Qt::Key_Pause, Qt::NoModifier, 0, 81, 0);
+    QApplication::sendEvent(&webView, &releaseKeyEvent);
     const QLatin1String expectedReceivedKeyArray1("keydown:81:0,keyup:81:0");
     QString receivedKeyArray = webView.page()->mainFrame()->evaluateJavaScript(QLatin1String("receivedKeyArray")).toStringList().join(",");
     QVERIFY(receivedKeyArray == expectedReceivedKeyArray1);
+    }
 
+    {
     // Normal PC keyboard key converstion flow shouldn't be affected when sending nativeVirtual key as 0.
     // Qt::Key_Pause --> VK_PAUSE(0x13)
     webView.page()->mainFrame()->evaluateJavaScript(QLatin1String("receivedKeyArray = new Array()")); // Reset
-    keyEvent = QKeyEvent(QEvent::KeyPress, Qt::Key_Pause, Qt::NoModifier, 0, 0, 0);
+    QKeyEvent keyEvent(QEvent::KeyPress, Qt::Key_Pause, Qt::NoModifier, 0, 0, 0);
     QApplication::sendEvent(&webView, &keyEvent);
-    keyEvent = QKeyEvent(QEvent::KeyRelease, Qt::Key_Pause, Qt::NoModifier, 0, 0, 0);
-    QApplication::sendEvent(&webView, &keyEvent);
+    QKeyEvent releaseKeyEvent(QEvent::KeyRelease, Qt::Key_Pause, Qt::NoModifier, 0, 0, 0);
+    QApplication::sendEvent(&webView, &releaseKeyEvent);
     const QLatin1String expectedReceivedKeyArray2("keydown:19:0,keyup:19:0");
-    receivedKeyArray = webView.page()->mainFrame()->evaluateJavaScript(QLatin1String("receivedKeyArray")).toStringList().join(",");
+    QString receivedKeyArray = webView.page()->mainFrame()->evaluateJavaScript(QLatin1String("receivedKeyArray")).toStringList().join(",");
     QVERIFY(receivedKeyArray == expectedReceivedKeyArray2);
+    }
 
+    {
     // Negative case.
     // Disable settings to use nativeVirtualKey as DOM key value.
     webView.page()->setProperty("_q_useNativeVirtualKeyAsDOMKey", false);
     // Qt::Key_Pause --> VK_PAUSE(0x13)
     webView.page()->mainFrame()->evaluateJavaScript(QLatin1String("receivedKeyArray = new Array()")); // Reset
-    keyEvent = QKeyEvent(QEvent::KeyPress, Qt::Key_Pause, Qt::NoModifier, 0, 81, 0);
+    QKeyEvent keyEvent(QEvent::KeyPress, Qt::Key_Pause, Qt::NoModifier, 0, 81, 0);
     QApplication::sendEvent(&webView, &keyEvent);
-    keyEvent = QKeyEvent(QEvent::KeyRelease, Qt::Key_Pause, Qt::NoModifier, 0, 81, 0);
-    QApplication::sendEvent(&webView, &keyEvent);
+    QKeyEvent releaseKeyEvent(QEvent::KeyRelease, Qt::Key_Pause, Qt::NoModifier, 0, 81, 0);
+    QApplication::sendEvent(&webView, &releaseKeyEvent);
     const QLatin1String expectedReceivedKeyArray3("keydown:19:0,keyup:19:0");
-    receivedKeyArray = webView.page()->mainFrame()->evaluateJavaScript(QLatin1String("receivedKeyArray")).toStringList().join(",");
+    QString receivedKeyArray = webView.page()->mainFrame()->evaluateJavaScript(QLatin1String("receivedKeyArray")).toStringList().join(",");
     QVERIFY(receivedKeyArray == expectedReceivedKeyArray3);
+    }
 }
 
 class JSTestPage : public QWebPage
@@ -727,7 +721,7 @@ void tst_QWebPage::updatePositionDependentActionsCrash()
     QPoint pos(0, 0);
     view.page()->updatePositionDependentActions(pos);
     QMenu* contextMenu = 0;
-    foreach (QObject* child, view.children()) {
+    for (QObject* child : view.children()) {
         contextMenu = qobject_cast<QMenu*>(child);
         if (contextMenu)
             break;
@@ -745,7 +739,7 @@ void tst_QWebPage::contextMenuCrash()
     view.page()->swallowContextMenuEvent(&event);
     view.page()->updatePositionDependentActions(pos);
     QMenu* contextMenu = 0;
-    foreach (QObject* child, view.children()) {
+    for (QObject* child : view.children()) {
         contextMenu = qobject_cast<QMenu*>(child);
         if (contextMenu)
             break;
@@ -806,305 +800,6 @@ void tst_QWebPage::database()
     // Remove removed test :-)
     QWebDatabase::removeAllDatabases();
     QVERIFY(!origin.databases().size());
-}
-
-class PluginPage : public QWebPage
-{
-public:
-    PluginPage(QObject *parent = 0)
-        : QWebPage(parent) {}
-
-    struct CallInfo
-    {
-        CallInfo(const QString &c, const QUrl &u,
-                 const QStringList &pn, const QStringList &pv,
-                 QObject *r)
-            : classid(c), url(u), paramNames(pn),
-              paramValues(pv), returnValue(r)
-            {}
-        QString classid;
-        QUrl url;
-        QStringList paramNames;
-        QStringList paramValues;
-        QObject *returnValue;
-    };
-
-    QList<CallInfo> calls;
-
-protected:
-    virtual QObject *createPlugin(const QString &classid, const QUrl &url,
-                                  const QStringList &paramNames,
-                                  const QStringList &paramValues)
-    {
-        QObject *result = 0;
-        if (classid == "pushbutton")
-            result = new QPushButton();
-#ifndef QT_NO_INPUTDIALOG
-        else if (classid == "lineedit")
-            result = new QLineEdit();
-#endif
-        else if (classid == "graphicswidget")
-            result = new QGraphicsWidget();
-        if (result)
-            result->setObjectName(classid);
-        calls.append(CallInfo(classid, url, paramNames, paramValues, result));
-        return result;
-    }
-};
-
-static void createPlugin(QWebView *view)
-{
-    QSignalSpy loadSpy(view, SIGNAL(loadFinished(bool)));
-
-    PluginPage* newPage = new PluginPage(view);
-    view->setPage(newPage);
-
-    // type has to be application/x-qt-plugin
-    view->setHtml(QString("<html><body><object type='application/x-foobarbaz' classid='pushbutton' id='mybutton'/></body></html>"));
-    QTRY_COMPARE(loadSpy.count(), 1);
-    QCOMPARE(newPage->calls.count(), 0);
-
-    view->setHtml(QString("<html><body><object type='application/x-qt-plugin' classid='pushbutton' id='mybutton'/></body></html>"));
-    QTRY_COMPARE(loadSpy.count(), 2);
-    QCOMPARE(newPage->calls.count(), 1);
-    {
-        PluginPage::CallInfo ci = newPage->calls.takeFirst();
-        QCOMPARE(ci.classid, QString::fromLatin1("pushbutton"));
-        QCOMPARE(ci.url, QUrl());
-        QCOMPARE(ci.paramNames.count(), 3);
-        QCOMPARE(ci.paramValues.count(), 3);
-        QCOMPARE(ci.paramNames.at(0), QString::fromLatin1("type"));
-        QCOMPARE(ci.paramValues.at(0), QString::fromLatin1("application/x-qt-plugin"));
-        QCOMPARE(ci.paramNames.at(1), QString::fromLatin1("classid"));
-        QCOMPARE(ci.paramValues.at(1), QString::fromLatin1("pushbutton"));
-        QCOMPARE(ci.paramNames.at(2), QString::fromLatin1("id"));
-        QCOMPARE(ci.paramValues.at(2), QString::fromLatin1("mybutton"));
-        QVERIFY(ci.returnValue != 0);
-        QVERIFY(ci.returnValue->inherits("QPushButton"));
-    }
-    // test JS bindings
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("document.getElementById('mybutton').toString()").toString(),
-             QString::fromLatin1("[object HTMLObjectElement]"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("mybutton.toString()").toString(),
-             QString::fromLatin1("[object HTMLObjectElement]"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("typeof mybutton.objectName").toString(),
-             QString::fromLatin1("string"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("mybutton.objectName").toString(),
-             QString::fromLatin1("pushbutton"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("typeof mybutton.clicked").toString(),
-             QString::fromLatin1("function"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("mybutton.clicked.toString()").toString(),
-             QString::fromLatin1("function clicked() {\n    [native code]\n}"));
-
-    view->setHtml(QString("<html><body><table>"
-                            "<tr><object type='application/x-qt-plugin' classid='lineedit' id='myedit'/></tr>"
-                            "<tr><object type='application/x-qt-plugin' classid='pushbutton' id='mybutton'/></tr>"
-                            "</table></body></html>"), QUrl("http://foo.bar.baz"));
-    QTRY_COMPARE(loadSpy.count(), 3);
-    QCOMPARE(newPage->calls.count(), 2);
-    {
-        PluginPage::CallInfo ci = newPage->calls.takeFirst();
-        QCOMPARE(ci.classid, QString::fromLatin1("lineedit"));
-        QCOMPARE(ci.url, QUrl());
-        QCOMPARE(ci.paramNames.count(), 3);
-        QCOMPARE(ci.paramValues.count(), 3);
-        QCOMPARE(ci.paramNames.at(0), QString::fromLatin1("type"));
-        QCOMPARE(ci.paramValues.at(0), QString::fromLatin1("application/x-qt-plugin"));
-        QCOMPARE(ci.paramNames.at(1), QString::fromLatin1("classid"));
-        QCOMPARE(ci.paramValues.at(1), QString::fromLatin1("lineedit"));
-        QCOMPARE(ci.paramNames.at(2), QString::fromLatin1("id"));
-        QCOMPARE(ci.paramValues.at(2), QString::fromLatin1("myedit"));
-        QVERIFY(ci.returnValue != 0);
-        QVERIFY(ci.returnValue->inherits("QLineEdit"));
-    }
-    {
-        PluginPage::CallInfo ci = newPage->calls.takeFirst();
-        QCOMPARE(ci.classid, QString::fromLatin1("pushbutton"));
-        QCOMPARE(ci.url, QUrl());
-        QCOMPARE(ci.paramNames.count(), 3);
-        QCOMPARE(ci.paramValues.count(), 3);
-        QCOMPARE(ci.paramNames.at(0), QString::fromLatin1("type"));
-        QCOMPARE(ci.paramValues.at(0), QString::fromLatin1("application/x-qt-plugin"));
-        QCOMPARE(ci.paramNames.at(1), QString::fromLatin1("classid"));
-        QCOMPARE(ci.paramValues.at(1), QString::fromLatin1("pushbutton"));
-        QCOMPARE(ci.paramNames.at(2), QString::fromLatin1("id"));
-        QCOMPARE(ci.paramValues.at(2), QString::fromLatin1("mybutton"));
-        QVERIFY(ci.returnValue != 0);
-        QVERIFY(ci.returnValue->inherits("QPushButton"));
-    }
-}
-
-void tst_QWebPage::graphicsWidgetPlugin()
-{
-    m_view->settings()->setAttribute(QWebSettings::PluginsEnabled, true);
-    QGraphicsWebView webView;
-
-    QSignalSpy loadSpy(&webView, SIGNAL(loadFinished(bool)));
-
-    PluginPage* newPage = new PluginPage(&webView);
-    webView.setPage(newPage);
-
-    // type has to be application/x-qt-plugin
-    webView.setHtml(QString("<html><body><object type='application/x-foobarbaz' classid='graphicswidget' id='mygraphicswidget'/></body></html>"));
-    QTRY_COMPARE(loadSpy.count(), 1);
-    QCOMPARE(newPage->calls.count(), 0);
-
-    webView.setHtml(QString("<html><body><object type='application/x-qt-plugin' classid='graphicswidget' id='mygraphicswidget'/></body></html>"));
-    QTRY_COMPARE(loadSpy.count(), 2);
-    QCOMPARE(newPage->calls.count(), 1);
-    {
-        PluginPage::CallInfo ci = newPage->calls.takeFirst();
-        QCOMPARE(ci.classid, QString::fromLatin1("graphicswidget"));
-        QCOMPARE(ci.url, QUrl());
-        QCOMPARE(ci.paramNames.count(), 3);
-        QCOMPARE(ci.paramValues.count(), 3);
-        QCOMPARE(ci.paramNames.at(0), QString::fromLatin1("type"));
-        QCOMPARE(ci.paramValues.at(0), QString::fromLatin1("application/x-qt-plugin"));
-        QCOMPARE(ci.paramNames.at(1), QString::fromLatin1("classid"));
-        QCOMPARE(ci.paramValues.at(1), QString::fromLatin1("graphicswidget"));
-        QCOMPARE(ci.paramNames.at(2), QString::fromLatin1("id"));
-        QCOMPARE(ci.paramValues.at(2), QString::fromLatin1("mygraphicswidget"));
-        QVERIFY(ci.returnValue);
-        QVERIFY(ci.returnValue->inherits("QGraphicsWidget"));
-    }
-    // test JS bindings
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("document.getElementById('mygraphicswidget').toString()").toString(),
-             QString::fromLatin1("[object HTMLObjectElement]"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("mygraphicswidget.toString()").toString(),
-             QString::fromLatin1("[object HTMLObjectElement]"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("typeof mygraphicswidget.objectName").toString(),
-             QString::fromLatin1("string"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("mygraphicswidget.objectName").toString(),
-             QString::fromLatin1("graphicswidget"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("typeof mygraphicswidget.geometryChanged").toString(),
-             QString::fromLatin1("function"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("mygraphicswidget.geometryChanged.toString()").toString(),
-             QString::fromLatin1("function geometryChanged() {\n    [native code]\n}"));
-}
-
-void tst_QWebPage::createPluginWithPluginsEnabled()
-{
-    m_view->settings()->setAttribute(QWebSettings::PluginsEnabled, true);
-    createPlugin(m_view);
-}
-
-void tst_QWebPage::createPluginWithPluginsDisabled()
-{
-    // Qt Plugins should be loaded by QtWebKit even when PluginsEnabled is
-    // false. The client decides whether a Qt plugin is enabled or not when
-    // it decides whether or not to instantiate it.
-    m_view->settings()->setAttribute(QWebSettings::PluginsEnabled, false);
-    createPlugin(m_view);
-}
-
-// Standard base class for template PluginTracerPage. In tests it is used as interface.
-class PluginCounterPage : public QWebPage {
-public:
-    int m_count;
-    QPointer<QObject> m_widget;
-    QObject* m_pluginParent;
-    PluginCounterPage(QObject* parent = 0)
-        : QWebPage(parent)
-        , m_count(0)
-        , m_pluginParent(0)
-    {
-       settings()->setAttribute(QWebSettings::PluginsEnabled, true);
-    }
-    ~PluginCounterPage()
-    {
-        if (m_pluginParent)
-            m_pluginParent->deleteLater();
-    }
-};
-
-template<class T>
-class PluginTracerPage : public PluginCounterPage {
-public:
-    PluginTracerPage(QObject* parent = 0)
-        : PluginCounterPage(parent)
-    {
-        // this is a dummy parent object for the created plugin
-        m_pluginParent = new T;
-    }
-    virtual QObject* createPlugin(const QString&, const QUrl&, const QStringList&, const QStringList&)
-    {
-        m_count++;
-        m_widget = new T;
-        // need a cast to the specific type, as QObject::setParent cannot be called,
-        // because it is not virtual. Instead it is necesary to call QWidget::setParent,
-        // which also takes a QWidget* instead of a QObject*. Therefore we need to
-        // upcast to T*, which is a QWidget.
-        static_cast<T*>(m_widget.data())->setParent(static_cast<T*>(m_pluginParent));
-        return m_widget.data();
-    }
-};
-
-class PluginFactory {
-public:
-    enum FactoredType {QWidgetType, QGraphicsWidgetType};
-    static PluginCounterPage* create(FactoredType type, QObject* parent = 0)
-    {
-        PluginCounterPage* result = 0;
-        switch (type) {
-        case QWidgetType:
-            result = new PluginTracerPage<QWidget>(parent);
-            break;
-        case QGraphicsWidgetType:
-            result = new PluginTracerPage<QGraphicsWidget>(parent);
-            break;
-        default: {/*Oops*/};
-        }
-        return result;
-    }
-
-    static void prepareTestData()
-    {
-        QTest::addColumn<int>("type");
-        QTest::newRow("QWidget") << (int)PluginFactory::QWidgetType;
-        QTest::newRow("QGraphicsWidget") << (int)PluginFactory::QGraphicsWidgetType;
-    }
-};
-
-void tst_QWebPage::destroyPlugin_data()
-{
-    PluginFactory::prepareTestData();
-}
-
-void tst_QWebPage::destroyPlugin()
-{
-    QFETCH(int, type);
-    PluginCounterPage* page = PluginFactory::create((PluginFactory::FactoredType)type, m_view);
-    m_view->setPage(page);
-
-    // we create the plugin, so the widget should be constructed
-    QString content("<html><body><object type=\"application/x-qt-plugin\" classid=\"QProgressBar\"></object></body></html>");
-    m_view->setHtml(content);
-    QVERIFY(page->m_widget);
-    QCOMPARE(page->m_count, 1);
-
-    // navigate away, the plugin widget should be destructed
-    m_view->setHtml("<html><body>Hi</body></html>");
-    QTestEventLoop::instance().enterLoop(1);
-    QVERIFY(!page->m_widget);
-}
-
-void tst_QWebPage::createViewlessPlugin_data()
-{
-    PluginFactory::prepareTestData();
-}
-
-void tst_QWebPage::createViewlessPlugin()
-{
-    QFETCH(int, type);
-    PluginCounterPage* page = PluginFactory::create((PluginFactory::FactoredType)type);
-    QString content("<html><body><object type=\"application/x-qt-plugin\" classid=\"QProgressBar\"></object></body></html>");
-    page->mainFrame()->setHtml(content);
-    QCOMPARE(page->m_count, 1);
-    QVERIFY(page->m_widget);
-    QVERIFY(page->m_pluginParent);
-    QVERIFY(page->m_widget.data()->parent() == page->m_pluginParent);
-    delete page;
-
 }
 
 #ifdef HAVE_QTTESTSUPPORT
@@ -1192,8 +887,7 @@ void tst_QWebPage::cursorMovements()
     page->mainFrame()->evaluateJavaScript(script);
     QCOMPARE(page->selectedText().trimmed(), QString::fromLatin1("The quick brown fox"));
 
-    QRegExp regExp(" style=\".*\"");
-    regExp.setMinimal(true);
+    QRegularExpression regExp(" style=\"(.*?)\"");
     QCOMPARE(page->selectedHtml().trimmed().replace(regExp, ""), QString::fromLatin1("<p id=\"one\">The quick brown fox</p>"));
 
     // these actions must exist
@@ -1425,8 +1119,7 @@ void tst_QWebPage::textSelection()
         "getSelection().addRange(range);";
     page->mainFrame()->evaluateJavaScript(selectScript);
     QCOMPARE(page->selectedText().trimmed(), QString::fromLatin1("The quick brown fox"));
-    QRegExp regExp(" style=\".*\"");
-    regExp.setMinimal(true);
+    QRegularExpression regExp(" style=\"(.*?)\"");
     QCOMPARE(page->selectedHtml().trimmed().replace(regExp, ""), QString::fromLatin1("<p id=\"one\">The quick brown fox</p>"));
 
     // Make sure hasSelection returns true, since there is selected text now...
@@ -1660,7 +1353,7 @@ void tst_QWebPage::backActionUpdate()
     QTRY_COMPARE(loadSpy.count(), 1);
     QEXPECT_FAIL("", "https://github.com/qtwebkit/qtwebkit/issues/913", Continue);
     QVERIFY(!action->isEnabled());
-    QTest::mouseClick(&view, Qt::LeftButton, 0, QPoint(10, 10));
+    QTest::mouseClick(&view, Qt::LeftButton, { }, QPoint(10, 10));
     QTRY_COMPARE(loadSpy.count(), 2);
 
     QVERIFY(action->isEnabled());
@@ -1793,7 +1486,7 @@ void tst_QWebPage::inputMethods()
     QVERIFY(testContext.isInputPanelVisible());
 
     //ImMicroFocus
-    QVariant variant = page->inputMethodQuery(Qt::ImMicroFocus);
+    QVariant variant = page->inputMethodQuery(Qt::ImCursorRectangle);
     QVERIFY(inputs.at(0).geometry().contains(variant.toRect().topLeft()));
 
     // We assigned the serif font famility to be the same as the fixef font family.
@@ -2471,30 +2164,6 @@ void tst_QWebPage::inputMethodsTextFormat()
     delete view;
 }
 
-#ifdef HAVE_QTTESTSUPPORT
-void tst_QWebPage::protectBindingsRuntimeObjectsFromCollector()
-{
-    QSignalSpy loadSpy(m_view, SIGNAL(loadFinished(bool)));
-
-    PluginPage* newPage = new PluginPage(m_view);
-    m_view->setPage(newPage);
-
-    m_view->settings()->setAttribute(QWebSettings::PluginsEnabled, true);
-
-    m_view->setHtml(QString("<html><body><object type='application/x-qt-plugin' classid='lineedit' id='mylineedit'/></body></html>"));
-    QTRY_COMPARE(loadSpy.count(), 1);
-
-    newPage->mainFrame()->evaluateJavaScript("function testme(text) { var lineedit = document.getElementById('mylineedit'); lineedit.setText(text); lineedit.selectAll(); }");
-
-    newPage->mainFrame()->evaluateJavaScript("testme('foo')");
-
-    DumpRenderTreeSupportQt::garbageCollectorCollect();
-
-    // don't crash!
-    newPage->mainFrame()->evaluateJavaScript("testme('bar')");
-}
-#endif
-
 void tst_QWebPage::localURLSchemes()
 {
     int i = QWebSecurityOrigin::localSchemes().size();
@@ -2835,8 +2504,6 @@ void tst_QWebPage::screenshot_data()
 {
     QTest::addColumn<QString>("html");
     QTest::newRow("WithoutPlugin") << "<html><body id='b'>text</body></html>";
-    QTest::newRow("WindowedPlugin") << QString("<html><body id='b'>text<embed src='resources/test.swf'></embed></body></html>");
-    QTest::newRow("WindowlessPlugin") << QString("<html><body id='b'>text<embed src='resources/test.swf' wmode='transparent'></embed></body></html>");
 }
 
 void tst_QWebPage::screenshot()
@@ -2848,7 +2515,6 @@ void tst_QWebPage::screenshot()
 
     QFETCH(QString, html);
     QWebPage* page = new QWebPage;
-    page->settings()->setAttribute(QWebSettings::PluginsEnabled, true);
     QWebFrame* mainFrame = page->mainFrame();
     mainFrame->setHtml(html, QUrl::fromLocalFile(TESTS_SOURCE_DIR));
     ::waitForSignal(mainFrame, SIGNAL(loadFinished(bool)), 2000);
@@ -3065,7 +2731,7 @@ void tst_QWebPage::findText()
     QVERIFY(m_page->selectedText().isEmpty());
     QVERIFY(m_page->selectedHtml().isEmpty());
     QStringList words = (QStringList() << "foo" << "bar");
-    foreach (QString subString, words) {
+    for (QString subString : words) {
         m_page->findText(subString, QWebPage::FindWrapsAroundDocument);
         QCOMPARE(m_page->selectedText(), subString);
         QVERIFY(m_page->selectedHtml().contains(subString));
@@ -3410,38 +3076,49 @@ void tst_QWebPage::renderOnRepaintRequestedShouldNotRecurse()
     QVERIFY(::waitForSignal(&r, SIGNAL(finished())));
 }
 
-class SpyForLoadSignalsOrder : public QStateMachine {
+class SpyForLoadSignalsOrder : public QObject {
     Q_OBJECT
 public:
-    SpyForLoadSignalsOrder(QWebPage* page, QObject* parent = 0)
-        : QStateMachine(parent)
+    SpyForLoadSignalsOrder(QWebPage* page, QObject* parent = 0) : QObject(parent)
     {
-        connect(page, SIGNAL(loadProgress(int)), SLOT(onLoadProgress(int)));
-
-        QState* waitingForLoadStarted = new QState(this);
-        QState* waitingForLastLoadProgress = new QState(this);
-        QState* waitingForLoadFinished = new QState(this);
-        QFinalState* final = new QFinalState(this);
-
-        waitingForLoadStarted->addTransition(page, SIGNAL(loadStarted()), waitingForLastLoadProgress);
-        waitingForLastLoadProgress->addTransition(this, SIGNAL(lastLoadProgress()), waitingForLoadFinished);
-        waitingForLoadFinished->addTransition(page, SIGNAL(loadFinished(bool)), final);
-
-        setInitialState(waitingForLoadStarted);
-        start();
+        connect(page, &QWebPage::loadStarted, this, &SpyForLoadSignalsOrder::onLoadStarted);
+        connect(page, &QWebPage::loadProgress, this, &SpyForLoadSignalsOrder::onLoadProgress);
+        connect(page, &QWebPage::loadFinished, this, &SpyForLoadSignalsOrder::onLoadFinished);
     }
+
+    enum class State { WaitingForLoadStarted, WaitingForLastLoadProgress, WaitingForLoadFinished, Finished };
+    State currentState = State::WaitingForLoadStarted;
+
     bool isFinished() const
     {
-        return !isRunning();
+        return currentState == State::Finished;
     }
+
 public Q_SLOTS:
+    void onLoadStarted()
+    {
+        QVERIFY(currentState == State::WaitingForLoadStarted);
+        currentState = State::WaitingForLastLoadProgress;
+        Q_EMIT started();
+    }
+
     void onLoadProgress(int progress)
     {
-        if (progress == 100)
-            emit lastLoadProgress();
+        QVERIFY(currentState == State::WaitingForLastLoadProgress);
+
+        if (progress < 100)
+            currentState = State::WaitingForLastLoadProgress;
+        else
+            currentState = State::WaitingForLoadFinished;
+    }
+
+    void onLoadFinished()
+    {
+        QVERIFY(currentState == State::WaitingForLoadFinished);
+        currentState = State::Finished;
     }
 Q_SIGNALS:
-    void lastLoadProgress();
+    void started();
 };
 
 void tst_QWebPage::loadSignalsOrder_data()

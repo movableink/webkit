@@ -26,7 +26,11 @@
 #include <QNetworkConfigurationManager>
 #include <QTimer>
 
+#endif
+
 namespace WebCore {
+  
+#ifndef QT_NO_BEARERMANAGEMENT
 
 NetworkStateNotifierPrivate::NetworkStateNotifierPrivate(NetworkStateNotifier& notifier)
     : m_online(false)
@@ -69,32 +73,25 @@ void NetworkStateNotifierPrivate::initialize()
 
 NetworkStateNotifierPrivate::~NetworkStateNotifierPrivate() = default;
 
-void NetworkStateNotifier::updateStateWithoutNotifying()
-{
-    m_isOnLine = p->effectivelyOnline();
-}
-
-void NetworkStateNotifier::startObserving()
-{
-    p = std::make_unique<NetworkStateNotifierPrivate>(*this);
-    m_isOnLine = p->effectivelyOnline();
-}
-
 void NetworkStateNotifier::setNetworkAccessAllowed(bool isAllowed)
 {
     p->setNetworkAccessAllowed(isAllowed);
 }
 
+#endif
+
+void NetworkStateNotifier::updateStateWithoutNotifying()
+{
+    // Qt 6 : always online
+    m_isOnLine = true;
+}
+
+void NetworkStateNotifier::startObserving()
+{
+    // Qt 6 : always online
+    m_isOnLine = true;
+}
+
 } // namespace WebCore
 
 #include "moc_NetworkStateNotifierPrivate.cpp"
-
-#else
-
-namespace WebCore {
-
-void NetworkStateNotifier::updateStateWithoutNotifying() { }
-void NetworkStateNotifier::startObserving() { }
-}
-
-#endif

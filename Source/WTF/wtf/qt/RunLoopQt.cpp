@@ -242,6 +242,12 @@ bool RunLoop::TimerBase::isActive() const
     return m_isActive;
 }
 
+Seconds RunLoop::TimerBase::secondsUntilFire() const
+{
+    // FIXME: implement for WebKit
+    return 0_s;
+}
+
 #include "RunLoopQt.moc"
 
 } // namespace WTF

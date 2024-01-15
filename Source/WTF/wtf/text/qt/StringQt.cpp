@@ -20,12 +20,15 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
 
 #include <QString>
+#include <QStringView>
+#include <QByteArrayView>
+#include <QLatin1String>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/WTFString.h>
 
@@ -39,11 +42,25 @@ String::String(const QString& qstr)
     m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(qstr.constData()), qstr.length());
 }
 
-String::String(const QStringRef& ref)
+String::String(QLatin1String view)
 {
-    if (!ref.string())
+    if (view.isNull())
         return;
-    m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(ref.unicode()), ref.length());
+    m_impl = StringImpl::create(reinterpret_cast_ptr<const LChar*>(view.data()), view.size());
+}
+
+String::String(QStringView view)
+{
+    if (view.isNull())
+        return;
+    m_impl = StringImpl::create(reinterpret_cast_ptr<const UChar*>(view.data()), view.length());
+}
+
+String::String(QByteArrayView view)
+{
+    if (view.isNull())
+        return;
+    m_impl = StringImpl::create(reinterpret_cast_ptr<const LChar*>(view.data()), view.length());
 }
 
 String::operator QString() const

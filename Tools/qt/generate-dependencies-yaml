@@ -33,7 +33,7 @@ my @qt_dependencies = qw(qtbase qtdeclarative qtlocation qtmultimedia qtsensors 
 sub qtModuleRef {
     my ($module, $tag) = @_;
 
-    -d $module or die "No such directory $module - this script must be run in qt5";
+    -d $module or die "No such directory $module - this script must be run in qt6";
     my $output = `git ls-tree $tag $module`;
 
     # Format is "<mode> SP <type> SP <object> TAB <file>"

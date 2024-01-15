@@ -204,7 +204,7 @@ void EditorClientQt::respondToChangedSelection(LocalFrame* frame)
 
     m_page->respondToChangedSelection();
     if (!frame->editor().ignoreSelectionChanges()) // QTFIXME: check
-        emit m_page->microFocusChanged();
+        Q_EMIT m_page->microFocusChanged();
 }
 
 void EditorClientQt::didEndEditing()
@@ -622,7 +622,7 @@ void EditorClientQt::setInputMethodState(WebCore::Element* element)
         webPageClient->setInputMethodHints(hints);
         webPageClient->setInputMethodEnabled(active);
     }
-    emit m_page->microFocusChanged();
+    Q_EMIT m_page->microFocusChanged();
 }
 
 bool EditorClientQt::supportsGlobalSelection()

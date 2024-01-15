@@ -83,7 +83,7 @@ void QtDownloadManager::didCreateDestination(WKContextRef, WKDownloadRef downloa
     QWebDownloadItem* downloadItem = q->m_downloads.value(WKDownloadGetID(download));
     ASSERT(downloadItem);
     downloadItem->d->destinationPath = WKStringCopyQString(path);
-    emit downloadItem->destinationFileCreated(downloadItem->d->destinationPath);
+    Q_EMIT downloadItem->destinationFileCreated(downloadItem->d->destinationPath);
 }
 
 void QtDownloadManager::didFinishDownload(WKContextRef, WKDownloadRef download, const void *clientInfo)
@@ -93,7 +93,7 @@ void QtDownloadManager::didFinishDownload(WKContextRef, WKDownloadRef download, 
     // Will be called when download finishes with success.
     QWebDownloadItem* downloadItem = q->m_downloads.take(WKDownloadGetID(download));
     ASSERT(downloadItem);
-    emit downloadItem->succeeded();
+    Q_EMIT downloadItem->succeeded();
 }
 
 void QtDownloadManager::didFailDownload(WKContextRef, WKDownloadRef download, WKErrorRef error, const void* clientInfo)
@@ -114,7 +114,7 @@ void QtDownloadManager::didFailDownload(WKContextRef, WKDownloadRef download, WK
     }
 
     QtWebError qtError(error);
-    emit downloadItem->failed(qtError.errorCodeAsDownloadError(), qtError.url(), qtError.description());
+    Q_EMIT downloadItem->failed(qtError.errorCodeAsDownloadError(), qtError.url(), qtError.description());
 }
 
 void QtDownloadManager::didReceiveDataForDownload(WKContextRef, WKDownloadRef download, uint64_t length, const void* clientInfo)
@@ -125,7 +125,7 @@ void QtDownloadManager::didReceiveDataForDownload(WKContextRef, WKDownloadRef do
     QWebDownloadItem* downloadItem = q->m_downloads.value(WKDownloadGetID(download));
     ASSERT(downloadItem);
     downloadItem->d->totalBytesReceived += length;
-    emit downloadItem->totalBytesReceivedChanged(length);
+    Q_EMIT downloadItem->totalBytesReceivedChanged(length);
 }
 
 } // namespace WebKit

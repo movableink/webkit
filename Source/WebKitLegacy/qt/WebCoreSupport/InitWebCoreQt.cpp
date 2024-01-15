@@ -40,6 +40,9 @@
 #include <WebCore/SecurityPolicy.h>
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
+#include <WebCore/RenderThemeQt.h>
+#include <WebCore/RenderThemeQStyle.h>
+#include <WebCore/ScrollbarThemeQStyle.h>
 
 namespace WebKit {
 
@@ -50,22 +53,19 @@ Q_DECL_EXPORT void setWebKitWidgetsInitCallback(QtStyleFacadeFactoryFunction cal
     initCallback = callback;
 }
 
-//static WebCore::QStyleFacade* createStyleForPage(WebCore::Page* page)
-//{
-//    QWebPageAdapter* pageAdapter = 0;
-//    if (page)
-//        pageAdapter = static_cast<WebCore::ChromeClientQt&>(page->chrome().client()).m_webPage;
-//    return initCallback(pageAdapter);
-//}
+static WebCore::QStyleFacade* createStyleForPage()
+{
+    return initCallback();
+}
 
 // Called also from WebKit2's WebProcess
 Q_DECL_EXPORT void initializeWebKitQt()
 {
     // QTFIXME
-//    if (initCallback) {
-//        WebCore::RenderThemeQStyle::setStyleFactoryFunction(createStyleForPage);
-//        WebCore::RenderThemeQt::setCustomTheme(WebCore::RenderThemeQStyle::create, new WebCore::ScrollbarThemeQStyle);
-//    }
+    if (initCallback) {
+        WebCore::RenderThemeQStyle::setStyleFactoryFunction(createStyleForPage);
+        WebCore::RenderThemeQt::setCustomTheme(WebCore::RenderThemeQStyle::singleton, new WebCore::ScrollbarThemeQStyle);
+    }
 }
 
 Q_DECL_EXPORT void setImagePlatformResource(const char* name, const QPixmap& pixmap)

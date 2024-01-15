@@ -90,7 +90,7 @@ bool FontCache::isSystemFontForbiddenForEditing(const String&)
 
 Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescription)
 {
-    const AtomString fallbackFamily = AtomString(QFont(/*fontDescription.firstFamily()*/).lastResortFamily()); // FIXME
+    const AtomString fallbackFamily = AtomString("helvetica"_s); // FIXME
     FontPlatformData platformData(fontDescription, fallbackFamily);
     return fontForPlatformData(platformData);
 }

@@ -397,7 +397,7 @@ public:
     Q_INVOKABLE void myInvokableWithDefaultArgs(int arg1, const QString& arg2 = QString())
     {
         m_qtFunctionInvoked = 47;
-        m_actuals << QVariant::fromValue(arg1) << qVariantFromValue(arg2);
+        m_actuals << QVariant::fromValue(arg1) << QVariant::fromValue(arg2);
     }
     Q_INVOKABLE QObject& myInvokableReturningRef()
     {
@@ -424,23 +424,23 @@ public:
 
     void emitMySignal()
     {
-        emit mySignal();
+        Q_EMIT mySignal();
     }
     void emitMySignalWithIntArg(int arg)
     {
-        emit mySignalWithIntArg(arg);
+        Q_EMIT mySignalWithIntArg(arg);
     }
     void emitMySignal2(bool arg)
     {
-        emit mySignal2(arg);
+        Q_EMIT mySignal2(arg);
     }
     void emitMySignal2()
     {
-        emit mySignal2();
+        Q_EMIT mySignal2();
     }
     void emitMySignalWithDateTimeArg(QDateTime dt)
     {
-        emit mySignalWithDateTimeArg(dt);
+        Q_EMIT mySignalWithDateTimeArg(dt);
     }
 
 public Q_SLOTS:
@@ -641,7 +641,6 @@ private Q_SLOTS:
     void qObjectWrapperWithSameIdentity();
     void introspectQtMethods_data();
     void introspectQtMethods();
-    void scriptablePlugin();
     void exceptionInSlot();
 
 private:
@@ -1007,10 +1006,6 @@ void tst_QObjectBridge::getSetChildren()
 //  QCOMPARE(evalJS("myObject.hasOwnProperty('child')"), sFalse);
     QCOMPARE(evalJS("typeof myObject.child == 'undefined'"), sTrue);
 }
-
-Q_DECLARE_METATYPE(QVector<int>)
-Q_DECLARE_METATYPE(QVector<double>)
-Q_DECLARE_METATYPE(QVector<QString>)
 
 void tst_QObjectBridge::callQtInvokable()
 {
@@ -2196,15 +2191,6 @@ void tst_QObjectBridge::webElementSlotOnly()
     QCOMPARE(evalJS("myWebElementSlotObject.tagName"), QString("BODY"));
 }
 
-class TestPluginWidget : public QWidget {
-    Q_OBJECT
-public:
-    TestPluginWidget() { }
-
-public Q_SLOTS:
-    int slotWithReturnValue() { return 42; }
-};
-
 class TestWebPage : public QWebPage {
     Q_OBJECT
 public:
@@ -2214,31 +2200,7 @@ public:
     { }
 
     int creationCount;
-
-protected:
-    virtual QObject* createPlugin(const QString&, const QUrl&, const QStringList&, const QStringList&)
-    {
-        creationCount++;
-        return new TestPluginWidget;
-    }
 };
-
-void tst_QObjectBridge::scriptablePlugin()
-{
-//#if !PLUGIN_VIEW_IS_BROKEN
-    QWebView view;
-    TestWebPage* page = new TestWebPage;
-    view.setPage(page);
-    page->setParent(&view);
-    view.settings()->setAttribute(QWebSettings::PluginsEnabled, true);
-
-    page->mainFrame()->setHtml("<object width=100 height=100 type=\"application/x-qt-plugin\"></object>");
-    QCOMPARE(page->creationCount, 1);
-
-    QVariant result = page->mainFrame()->evaluateJavaScript("document.querySelector(\"object\").slotWithReturnValue()");
-    QCOMPARE(result.toString(), QLatin1String("42"));
-//#endif
-}
 
 class WebPageWithConsoleCapture : public QWebPage
 {

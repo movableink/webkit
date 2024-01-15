@@ -31,9 +31,6 @@
 #include <QStyleFactory>
 #include <QStyleOption>
 
-#include <QWebPageAdapter.h>
-#include <WebCore/QWebPageClient.h>
-
 using namespace WebCore;
 
 namespace WebKit {
@@ -68,7 +65,7 @@ static QStyle::SubControl convertToQStyleSubControl(QStyleFacade::SubControl sc)
 static void initGenericStyleOption(QStyleOption* option, QWidget* widget, const QStyleFacadeOption& facadeOption)
 {
     if (widget)
-        option->init(widget);
+        option->initFrom(widget);
     else
         // If a widget is not directly available for rendering, we fallback to default
         // value for an active widget.
@@ -136,9 +133,8 @@ static QStyleFacade::SubControl convertToQStyleFacadeSubControl(QStyle::SubContr
 #undef CONVERT_SUBCONTROL
 }
 
-QStyleFacadeImp::QStyleFacadeImp(QWebPageAdapter* page)
-    : m_page(page)
-    , m_style(0)
+QStyleFacadeImp::QStyleFacadeImp()
+    : m_style(0)
 {
     m_fallbackStyle = QStyleFactory::create(QLatin1String("windows"));
     m_ownFallbackStyle = true;
@@ -405,7 +401,7 @@ void QStyleFacadeImp::paintProgressBar(QPainter* painter, const QStyleFacadeOpti
         // we simulate one square animating across the progress bar.
         style()->drawControl(QStyle::CE_ProgressBarGroove, &option, painter, widget);
         int chunkWidth = style()->pixelMetric(QStyle::PM_ProgressBarChunkWidth, &option);
-        QColor color = (option.palette.highlight() == option.palette.background()) ? option.palette.color(QPalette::Active, QPalette::Highlight) : option.palette.color(QPalette::Highlight);
+        QColor color = (option.palette.highlight() == option.palette.window()) ? option.palette.color(QPalette::Active, QPalette::Highlight) : option.palette.color(QPalette::Highlight);
         if (option.direction == Qt::RightToLeft)
             painter->fillRect(option.rect.right() - chunkWidth  - animationProgress * option.rect.width(), 0, chunkWidth, option.rect.height(), color);
         else
@@ -464,7 +460,7 @@ void QStyleFacadeImp::paintScrollBar(QPainter *painter, const QStyleFacadeOption
         opt.styleObject = 0;
     }
 
-    painter->fillRect(opt.rect, opt.palette.background());
+    painter->fillRect(opt.rect, opt.palette.window());
 
     const QPoint topLeft = opt.rect.topLeft();
     painter->translate(topLeft);
@@ -487,11 +483,6 @@ QStyle* QStyleFacadeImp::style() const
 {
     if (m_style)
         return m_style;
-
-    if (m_page) {
-        if (QWebPageClient* pageClient = m_page->client.data())
-            m_style = pageClient->style();
-    }
 
     if (!m_style)
         m_style = QApplication::style();

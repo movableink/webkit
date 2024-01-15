@@ -64,7 +64,7 @@ QUrl QWebIconImageProvider::iconURLForPageURLInContext(const QString &pageURL, Q
 
 QImage QWebIconImageProvider::requestImage(const QString& id, QSize* size, const QSize& requestedSize)
 {
-    QString pageURL = QString::fromUtf8(QByteArray::fromBase64(id.midRef(id.indexOf('#') + 1).toLatin1()));
+    QString pageURL = QString::fromUtf8(QByteArray::fromBase64(id.mid(id.indexOf('#') + 1).toLatin1()));
 
     QtWebIconDatabaseClient* iconDatabase = QtWebContext::defaultContext()->iconDatabase();
     Q_ASSERT(iconDatabase);

@@ -37,17 +37,10 @@
 #endif
 #include "private/qquickwebview_p.h"
 #include "utils.h"
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QEvent>
 #include <QMouseEvent>
 #include <QTouchEvent>
-
-static inline QRectF touchRectForPosition(QPointF centerPoint)
-{
-    QRectF touchRect(0, 0, 40, 40);
-    touchRect.moveCenter(centerPoint);
-    return touchRect;
-}
 
 static inline bool isTouchEvent(const QEvent* event)
 {
@@ -133,12 +126,12 @@ bool MiniBrowserApplication::notify(QObject* target, QEvent* event)
     }
 
     if (event->type() == QEvent::KeyRelease && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Control) {
-        foreach (int id, m_heldTouchPoints)
+        Q_FOREACH (int id, m_heldTouchPoints)
             if (m_touchPoints.contains(id) && !QGuiApplication::mouseButtons().testFlag(Qt::MouseButton(id))) {
-                m_touchPoints[id].setState(Qt::TouchPointReleased);
+                m_touchPoints[id].setState(QEventPoint::Released);
                 m_heldTouchPoints.remove(id);
             } else
-                m_touchPoints[id].setState(Qt::TouchPointStationary);
+                m_touchPoints[id].setState(QEventPoint::Stationary);
 
         sendTouchEvent(browserWindow, m_heldTouchPoints.isEmpty() ? QEvent::TouchEnd : QEvent::TouchUpdate, static_cast<QKeyEvent*>(event)->timestamp());
     }
@@ -146,7 +139,7 @@ bool MiniBrowserApplication::notify(QObject* target, QEvent* event)
     if (isMouseEvent(event)) {
         const QMouseEvent* const mouseEvent = static_cast<QMouseEvent*>(event);
 
-        QTouchEvent::TouchPoint touchPoint;
+        QMutableEventPoint touchPoint;
         touchPoint.setPressure(1);
 
         QEvent::Type touchType = QEvent::None;
@@ -155,10 +148,10 @@ bool MiniBrowserApplication::notify(QObject* target, QEvent* event)
         case QEvent::MouseButtonPress:
             touchPoint.setId(mouseEvent->button());
             if (m_touchPoints.contains(touchPoint.id())) {
-                touchPoint.setState(Qt::TouchPointMoved);
+                touchPoint.setState(QEventPoint::Updated);
                 touchType = QEvent::TouchUpdate;
             } else {
-                touchPoint.setState(Qt::TouchPointPressed);
+                touchPoint.setState(QEventPoint::Pressed);
                 // Check if more buttons are held down than just the event triggering one.
                 if (mouseEvent->buttons() > mouseEvent->button())
                     touchType = QEvent::TouchUpdate;
@@ -177,7 +170,7 @@ bool MiniBrowserApplication::notify(QObject* target, QEvent* event)
             }
             touchType = QEvent::TouchUpdate;
             touchPoint.setId(mouseEvent->buttons());
-            touchPoint.setState(Qt::TouchPointMoved);
+            touchPoint.setState(QEventPoint::Updated);
             break;
         case QEvent::MouseButtonRelease:
             // Check if any buttons are still held down after this event.
@@ -186,7 +179,7 @@ bool MiniBrowserApplication::notify(QObject* target, QEvent* event)
             else
                 touchType = QEvent::TouchEnd;
             touchPoint.setId(mouseEvent->button());
-            touchPoint.setState(Qt::TouchPointReleased);
+            touchPoint.setState(QEventPoint::Released);
             break;
         case QEvent::MouseButtonDblClick:
             // Eat double-clicks, their accompanying press event is all we need.
@@ -199,12 +192,12 @@ bool MiniBrowserApplication::notify(QObject* target, QEvent* event)
         // A move can have resulted in multiple buttons, so we need check them individually.
         if (touchPoint.id() & Qt::LeftButton)
             updateTouchPoint(mouseEvent, touchPoint, Qt::LeftButton);
-        if (touchPoint.id() & Qt::MidButton)
-            updateTouchPoint(mouseEvent, touchPoint, Qt::MidButton);
+        if (touchPoint.id() & Qt::MiddleButton)
+            updateTouchPoint(mouseEvent, touchPoint, Qt::MiddleButton);
         if (touchPoint.id() & Qt::RightButton)
             updateTouchPoint(mouseEvent, touchPoint, Qt::RightButton);
 
-        if (m_holdingControl && touchPoint.state() == Qt::TouchPointReleased) {
+        if (m_holdingControl && touchPoint.state() == QEventPoint::Released) {
             // We avoid sending the release event because the Flickable is
             // listening to mouse events and would start a bounce-back
             // animation if it received a mouse release.
@@ -213,9 +206,9 @@ bool MiniBrowserApplication::notify(QObject* target, QEvent* event)
         }
 
         // Update states for all other touch-points
-        for (QHash<int, QTouchEvent::TouchPoint>::iterator it = m_touchPoints.begin(), end = m_touchPoints.end(); it != end; ++it) {
+        for (QHash<int, QMutableEventPoint>::iterator it = m_touchPoints.begin(), end = m_touchPoints.end(); it != end; ++it) {
             if (!(it.value().id() & touchPoint.id()))
-                it.value().setState(Qt::TouchPointStationary);
+                it.value().setState(QEventPoint::Stationary);
         }
 
         Q_ASSERT(touchType != QEvent::None);
@@ -230,14 +223,14 @@ bool MiniBrowserApplication::notify(QObject* target, QEvent* event)
     return QGuiApplication::notify(target, event);
 }
 
-void MiniBrowserApplication::updateTouchPoint(const QMouseEvent* mouseEvent, QTouchEvent::TouchPoint touchPoint, Qt::MouseButton mouseButton)
+void MiniBrowserApplication::updateTouchPoint(const QMouseEvent* mouseEvent, QMutableEventPoint touchPoint, Qt::MouseButton mouseButton)
 {
     // Ignore inserting additional touch points if Ctrl isn't held because it produces
     // inconsistent touch events and results in assers in the gesture recognizers.
     if (!m_holdingControl && m_touchPoints.size() && !m_touchPoints.contains(mouseButton))
         return;
 
-    if (m_holdingControl && touchPoint.state() == Qt::TouchPointReleased) {
+    if (m_holdingControl && touchPoint.state() == QEventPoint::Released) {
         m_heldTouchPoints.insert(mouseButton);
         return;
     }
@@ -246,16 +239,16 @@ void MiniBrowserApplication::updateTouchPoint(const QMouseEvent* mouseEvent, QTo
     // but since the canvas translates touch events we actually need to pass
     // the screen position as the scene position to deliver the appropriate
     // coordinates to the target.
-    touchPoint.setRect(touchRectForPosition(mouseEvent->localPos()));
-    touchPoint.setSceneRect(touchRectForPosition(mouseEvent->screenPos()));
+    touchPoint.setPosition(mouseEvent->localPos());
+    touchPoint.setScenePosition(mouseEvent->screenPos());
+    touchPoint.setEllipseDiameters({40, 40});
 
-    if (touchPoint.state() == Qt::TouchPointPressed)
-        touchPoint.setStartScenePos(mouseEvent->screenPos());
+    if (touchPoint.state() == QEventPoint::Pressed)
+        touchPoint.setGlobalPressPosition(mouseEvent->globalPosition());
     else {
-        const QTouchEvent::TouchPoint& oldTouchPoint = m_touchPoints[mouseButton];
-        touchPoint.setStartScenePos(oldTouchPoint.startScenePos());
-        touchPoint.setLastPos(oldTouchPoint.pos());
-        touchPoint.setLastScenePos(oldTouchPoint.scenePos());
+        const QMutableEventPoint& oldTouchPoint = m_touchPoints[mouseButton];
+        touchPoint.setGlobalPressPosition(oldTouchPoint.globalPressPosition());
+        touchPoint.setGlobalLastPosition(oldTouchPoint.globalPosition());
     }
 
     // Update current touch-point.
@@ -266,19 +259,21 @@ void MiniBrowserApplication::updateTouchPoint(const QMouseEvent* mouseEvent, QTo
 
 bool MiniBrowserApplication::sendTouchEvent(BrowserWindow* browserWindow, QEvent::Type type, ulong timestamp)
 {
-    static QTouchDevice* device = 0;
+    static QPointingDevice* device = nullptr;
     if (!device) {
-        device = new QTouchDevice;
-        device->setType(QTouchDevice::TouchScreen);
-        QWindowSystemInterface::registerTouchDevice(device);
+        device = new QPointingDevice;
+        device->setType(QInputDevice::DeviceType::TouchScreen);
+        QWindowSystemInterface::registerInputDevice(device);
     }
 
     m_pendingFakeTouchEventCount++;
 
-    const QList<QTouchEvent::TouchPoint>& currentTouchPoints = m_touchPoints.values();
-    Qt::TouchPointStates touchPointStates = 0;
-    foreach (const QTouchEvent::TouchPoint& touchPoint, currentTouchPoints)
+    QList<QEventPoint> currentTouchPoints;
+    QEventPoint::States touchPointStates{};
+    Q_FOREACH (const QMutableEventPoint& touchPoint, m_touchPoints.values()) {
+        currentTouchPoints.append(touchPoint);
         touchPointStates |= touchPoint.state();
+    }
 
     QTouchEvent event(type, device, Qt::NoModifier, touchPointStates, currentTouchPoints);
     event.setTimestamp(timestamp);
@@ -287,11 +282,11 @@ bool MiniBrowserApplication::sendTouchEvent(BrowserWindow* browserWindow, QEvent
     QGuiApplication::notify(browserWindow, &event);
 
     if (QQuickWebViewExperimental::flickableViewportEnabled())
-        browserWindow->updateVisualMockTouchPoints(m_holdingControl ? currentTouchPoints : QList<QTouchEvent::TouchPoint>());
+        browserWindow->updateVisualMockTouchPoints(m_holdingControl ? currentTouchPoints : QList<QEventPoint>());
 
     // Get rid of touch-points that are no longer valid
-    foreach (const QTouchEvent::TouchPoint& touchPoint, currentTouchPoints) {
-        if (touchPoint.state() ==  Qt::TouchPointReleased)
+    Q_FOREACH (const QEventPoint& touchPoint, currentTouchPoints) {
+        if (touchPoint.state() == QEventPoint::Released)
             m_touchPoints.remove(touchPoint.id());
     }
 
@@ -344,7 +339,7 @@ void MiniBrowserApplication::handleUserOptions()
 
     if (args.contains("--window-size")) {
         QString value = takeOptionValue(&args, "--window-size");
-        QStringList list = value.split(QRegExp("\\D+"), QString::SkipEmptyParts);
+        QStringList list = value.split(QRegularExpression("\\D+"), Qt::SkipEmptyParts);
         if (list.length() == 2)
             m_windowOptions.setRequestedWindowSize(QSize(list.at(0).toInt(), list.at(1).toInt()));
     }
@@ -376,7 +371,7 @@ void MiniBrowserApplication::handleUserOptions()
     } else {
         int urlArg;
 
-        while ((urlArg = args.indexOf(QRegExp("^[^-].*"))) != -1)
+        while ((urlArg = args.indexOf(QRegularExpression("^[^-].*"))) != -1)
             m_urls += args.takeAt(urlArg);
     }
 

@@ -116,17 +116,17 @@ BrowserWindow* BrowserWindow::newWindow(const QString& url)
     return window;
 }
 
-void BrowserWindow::updateVisualMockTouchPoints(const QList<QTouchEvent::TouchPoint>& touchPoints)
+void BrowserWindow::updateVisualMockTouchPoints(const QList<QEventPoint>& touchPoints)
 {
     if (touchPoints.isEmpty()) {
         // Hide all touch indicator items.
-        foreach (QQuickItem* item, m_activeMockComponents.values())
+        Q_FOREACH (QQuickItem* item, m_activeMockComponents.values())
             item->setProperty("pressed", false);
 
         return;
     }
 
-    foreach (const QTouchEvent::TouchPoint& touchPoint, touchPoints) {
+    Q_FOREACH (const QEventPoint& touchPoint, touchPoints) {
         QQuickItem* mockTouchPointItem = m_activeMockComponents.value(touchPoint.id());
 
         if (!mockTouchPointItem) {
@@ -139,12 +139,11 @@ void BrowserWindow::updateVisualMockTouchPoints(const QList<QTouchEvent::TouchPo
             mockTouchPointItem->setParentItem(rootObject());
         }
 
-        QRectF touchRect = touchPoint.rect();
-        mockTouchPointItem->setX(touchRect.center().x());
-        mockTouchPointItem->setY(touchRect.center().y());
-        mockTouchPointItem->setWidth(touchRect.width());
-        mockTouchPointItem->setHeight(touchRect.height());
-        mockTouchPointItem->setProperty("pressed", QVariant(touchPoint.state() != Qt::TouchPointReleased));
+        mockTouchPointItem->setX(touchPoint.position().x());
+        mockTouchPointItem->setY(touchPoint.position().y());
+        mockTouchPointItem->setWidth(touchPoint.ellipseDiameters().width());
+        mockTouchPointItem->setHeight(touchPoint.ellipseDiameters().height());
+        mockTouchPointItem->setProperty("pressed", QVariant(touchPoint.state() != QEventPoint::Released));
     }
 }
 
@@ -197,8 +196,8 @@ void BrowserWindow::keyPressEvent(QKeyEvent* event)
 
 void BrowserWindow::wheelEvent(QWheelEvent* event)
 {
-    if (event->modifiers() & Qt::ControlModifier && event->orientation() == Qt::Vertical) {
-        if (event->delta() > 0)
+    if (event->modifiers() & Qt::ControlModifier && qAbs(event->angleDelta().y()) > 0) {
+        if (event->angleDelta().y() > 0)
             zoomIn();
         else
             zoomOut();

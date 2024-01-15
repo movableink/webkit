@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#if ENABLE(VIDEO) && USE(GSTREAMER) && USE(TEXTURE_MAPPER)
+#if ENABLE(VIDEO) && USE(GSTREAMER) && USE(TEXTURE_MAPPER) && !PLATFORM(QT)
 #include "GStreamerVideoFrameHolder.h"
 
 #include "BitmapTexture.h"

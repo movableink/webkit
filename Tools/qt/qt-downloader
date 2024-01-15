@@ -72,10 +72,10 @@ def discover_kits(args):
       versions_dict = {}
       versions = discover_dirs(BaseUrl + os_type + target)
       for version in versions:
-        if version.startswith('tools_') or version.endswith('_preview/') or version.endswith('_wasm/') or '_src' in version or not version.startswith('qt5_'):
+        if version.startswith('tools_') or version.endswith('_preview/') or version.endswith('_wasm/') or '_src' in version or not version.startswith('qt6_'):
           continue
 
-        ver = decode_version(version[len('qt5_'):-1])
+        ver = decode_version(version[len('qt6_'):-1])
         versions_dict[ver] = None
 
         if not (args.version == 'discover' and args.all or args.version != 'discover' and args.version != 'latest' and args.version == ver):
@@ -97,7 +97,7 @@ def discover_kits(args):
 
 def build_url(args):
   ver = args.version.replace('.', '')
-  return BaseUrl + '{}/{}/qt5_{}/'.format(OsMap[args.os], args.target, ver)
+  return BaseUrl + '{}/{}/qt6_{}/'.format(OsMap[args.os], args.target, ver)
 
 
 def toolchain_build_url(args, tools):
@@ -174,7 +174,7 @@ def download_and_extract(archives_url, archives, output, req_modules):
         suggestion = ' Run sudo apt install p7zip-full on Ubuntu'
       elif os_type == 'macos':
         suggestion = ' Run brew install p7zip on macOS'
-        
+
       raise RuntimeError('Check that 7z command is in your PATH.{}'.format(suggestion))
     except KeyboardInterrupt:
       print('Interrupted')
@@ -218,7 +218,7 @@ def show_discover_context(args, parser):
 
 def show_discovered_parameters(args, params, labels):
   print('Discovering available ', end='')
-  
+
   discoverables = []
   for index, param in enumerate(params):
     if param == 'discover':

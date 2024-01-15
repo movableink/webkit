@@ -48,7 +48,7 @@ bool QtWebComboBox::eventFilter(QObject* watched, QEvent* event)
 {
     Q_ASSERT(watched == view());
     if (event->type() == QEvent::Hide)
-        emit didHide();
+        Q_EMIT didHide();
     return false;
 }
 

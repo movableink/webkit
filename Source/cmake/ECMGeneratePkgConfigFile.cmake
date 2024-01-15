@@ -65,7 +65,7 @@
 #
 #   ecm_generate_pkgconfig_file(
 #       BASE_NAME KF5Archive
-#       DEPS Qt5Core
+#       DEPS Qt6Core
 #       FILENAME_VAR pkgconfig_filename
 #       INSTALL
 #   )
