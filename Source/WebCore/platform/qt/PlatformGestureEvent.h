@@ -37,7 +37,7 @@ namespace WebCore {
 class PlatformGestureEvent : public PlatformEvent {
 public:
     PlatformGestureEvent()
-        : PlatformEvent(PlatformEvent::GestureTap)
+        : PlatformEvent(PlatformEventType::GestureTap)
     {
     }
 

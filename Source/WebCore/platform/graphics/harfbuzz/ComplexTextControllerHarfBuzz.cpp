@@ -397,20 +397,30 @@ void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cha
 #elif PLATFORM(QT)
     const QRawFont& rawFont = fontPlatformData.rawFont();
     QFontEngine* fe = QRawFontPrivate::get(rawFont)->fontEngine;
+    
+    NakedPtr<hb_blob_t> blob = hb_face_reference_blob(hb_qt_face_get_for_engine(fe));
+    NakedPtr<hb_face_t> face = hb_face_create(blob.get(), 0);
+    NakedPtr<hb_font_t> harfBuzzFont(hb_font_create(face.get()));
+    
+    const float size = fontPlatformData.size();
+    if (floorf(size) == size)
+        hb_font_set_ppem(harfBuzzFont.get(), size, size);
+    int scale = floatToHarfBuzzPosition(size);
+    hb_font_set_scale(harfBuzzFont.get(), scale, scale);
+    
     //qDebug() << Q_FUNC_INFO << __LINE__ << fe << fe->type();
-    hb_font_t* fnt = hb_qt_font_get_for_engine(fe);
+    //hb_font_t* fnt = hb_qt_font_get_for_engine(fe);
     //qDebug() << Q_FUNC_INFO << __LINE__ << "hb_qt_font_get_for_engine" << fnt;
     //qDebug() << Q_FUNC_INFO << __LINE__ << hb_font_get_face(fnt);
-
-//    qDebug() << Q_FUNC_INFO << __LINE__ << fe->harfbuzzFace();
+    //qDebug() << Q_FUNC_INFO << __LINE__ << fe->harfbuzzFace();
     //qDebug() << Q_FUNC_INFO << __LINE__ << "hb_qt_face_get_for_engine" << hb_qt_face_get_for_engine(fe);
-//    qDebug() << Q_FUNC_INFO << __LINE__ << hb_qt_font_get_for_engine(fe);
-//    qDebug() << Q_FUNC_INFO << __LINE__ << hb_font_get_face(hb_qt_font_get_for_engine(fe));
-    NakedPtr<hb_face_t> face(hb_qt_face_get_for_engine(fe));
-    NakedPtr<hb_font_t> harfBuzzFont(hb_qt_font_get_for_engine(fe));
-//    qDebug() << Q_FUNC_INFO << __LINE__ << face.get();
-//    qDebug() << Q_FUNC_INFO << __LINE__ << harfBuzzFont.get();
-//    qDebug() << Q_FUNC_INFO << __LINE__ << hb_font_get_face(harfBuzzFont.get());
+    //qDebug() << Q_FUNC_INFO << __LINE__ << hb_qt_font_get_for_engine(fe);
+    //qDebug() << Q_FUNC_INFO << __LINE__ << hb_font_get_face(hb_qt_font_get_for_engine(fe));
+    //NakedPtr<hb_face_t> face(hb_qt_face_get_for_engine(fe));
+    //NakedPtr<hb_font_t> harfBuzzFont(hb_qt_font_get_for_engine(fe));
+    //qDebug() << Q_FUNC_INFO << __LINE__ << face.get();
+    //qDebug() << Q_FUNC_INFO << __LINE__ << harfBuzzFont.get();
+    //qDebug() << Q_FUNC_INFO << __LINE__ << hb_font_get_face(harfBuzzFont.get());
 #endif
 
     auto features = fontFeatures(m_font, fontPlatformData);
@@ -429,6 +439,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cha
             // Leaving direction to HarfBuzz to guess is *really* bad, but will do for now.
             hb_buffer_guess_segment_properties(buffer.get());
         }
+        
         hb_buffer_add_utf16(buffer.get(), reinterpret_cast<const uint16_t*>(characters), length, run.startIndex, run.endIndex - run.startIndex);
 
         hb_shape(harfBuzzFont.get(), buffer.get(), features.isEmpty() ? nullptr : features.data(), features.size());

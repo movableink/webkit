@@ -41,7 +41,7 @@
 #include <QScreen>
 
 #if ENABLE(TOUCH_EVENTS)
-#include <QTouchDevice>
+#include <QInputDevice>
 #endif
 
 namespace WebCore {
@@ -118,7 +118,14 @@ bool screenIsTouchPrimaryInputDevice()
 
 bool screenHasTouchDevice()
 {
-    return !QTouchDevice::devices().isEmpty();
+    for(auto dev : QInputDevice::devices())
+    {
+        if(dev->type() == QInputDevice::DeviceType::TouchScreen)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 #endif
 
